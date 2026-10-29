@@ -1251,7 +1251,13 @@ it and has been retired completely. Build only on what's here.
   `HOUSE_SOLIDS` join the grids when the chunk loads (`addSolids()`). Drawn by
   `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
   windows at night, details near only); the hipped roofs are `roofs3d.ts`
-  (shared with Crestmont's estates).
+  (shared with Crestmont's estates). Phase 3 (the yards) is built:
+  `sunyards.ts` (DOM-free, the chunk's, tested in `tests/sunyards.test.ts`):
+  `YARDS` (desert or lawn fronts and their plants, the bins, the back yard's
+  ground, patio, ramada, grill, pool, extras, the gates), `WALLS` (block walls
+  between and behind the lots, one to a line, none on the perimeter wall's,
+  the returns with gates), `YARD_SOLIDS` (joined when the chunk loads); drawn
+  by `sunyards3d.ts`.
 - **The raised highway** (the owner's call, planned, nothing built yet): the
   ring highway rebuilt on a concrete viaduct with real exits (diamond
   interchanges, numbered, made-up names on the gantries) and traffic that

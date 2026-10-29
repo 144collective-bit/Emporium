@@ -139,9 +139,24 @@ These are my recommendations, made so the plan is complete; any can change.
    sideways round a turning circle's stem; Palo Verde Court's laid first), so
    101 lots, not 120: the amenities' land keeps its room.
    The hipped-roof helpers Crestmont's estates used are shared in `roofs3d.ts`.
-3. **The yards:** front yards (desert or green), the block walls, the back
-   yards and their pools; `SUNRIDGE_SOLIDS` (the walls, the houses) in
-   `SOLIDS`, the rest drawn in the chunk.
+3. **The yards** (built): `sunyards.ts` (DOM-free, the chunk's, tested in
+   `tests/sunyards.test.ts`): a yard a house (`YARDS`). The front desert
+   (decomposed granite in tan, rose or gold, `GROUNDS`: a palo verde or a
+   saguaro, agave, barrel cactus, prickly pear, ocotillo, boulders) or lawn (a
+   queen palm or a shade tree, shrubs along the house, a flower bed), about
+   half each and never three alike in a row; the bins by the garage. The back
+   yard behind block walls (`WALLS`, world numbers: along every lot's sides
+   from a little behind the house's front, one wall where two lots meet,
+   along its back unless the perimeter wall or a neighbour's wall is there,
+   and a return from the house to each side line with a gate); its ground
+   decomposed granite with a lawn patch, a patio, a ramada on about half, a
+   grill, a table and chairs, a pool with its coping, deck and loungers on
+   about one in five (where the yard is deep enough), a shed, a trampoline or
+   a swing set on some. `YARD_SOLIDS` (the walls in cells along them, the
+   sheds) join the grids when the chunk loads. Drawn by `sunyards3d.ts`: a site
+   a yard and the walls a site a tile; the trees, walls, pools and ground at
+   every distance, the small plants and the back yards' things near only,
+   fewer on phones (half the small plants, no furniture, trampolines or swings).
 4. **The amenities and places:** the park, the school, the community
    centre; spots, pins, directory entries, panels, `PLACES` and
    `LIVE_PLACES`.

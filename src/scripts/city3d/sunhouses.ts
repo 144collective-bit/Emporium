@@ -99,7 +99,7 @@ export const toWorld = (
 ): Pt => [h.o[0] + h.u[0] * u + h.v[0] * v, h.o[1] + h.u[1] * u + h.v[1] * v];
 
 /** The lot's frame, and its corners in it */
-function frameOf(l: Lot) {
+export function frameOf(l: Lot) {
   const [a, b] = l.front;
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const u: Pt = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
@@ -122,7 +122,7 @@ function frameOf(l: Lot) {
   };
 }
 /** The lot's width at a depth v in its frame: the left and right edges there */
-function across(f: ReturnType<typeof frameOf>, v: number): [number, number] {
+export function across(f: ReturnType<typeof frameOf>, v: number): [number, number] {
   const at = (p: Pt, q: Pt) => {
     const t = Math.max(0, Math.min(1, (v - p[1]) / (q[1] - p[1] || 1e-9)));
     return p[0] + (q[0] - p[0]) * t;
@@ -130,7 +130,7 @@ function across(f: ReturnType<typeof frameOf>, v: number): [number, number] {
   return [at(f.fl, f.bl), at(f.fr, f.br)];
 }
 /** The lot's depth along its middle (its back edge where u is 0) */
-function depthAt(f: ReturnType<typeof frameOf>, u: number) {
+export function depthAt(f: ReturnType<typeof frameOf>, u: number) {
   const [p, q] = [f.bl, f.br];
   const t = Math.max(0, Math.min(1, (u - p[0]) / (q[0] - p[0] || 1e-9)));
   return p[1] + (q[1] - p[1]) * t;

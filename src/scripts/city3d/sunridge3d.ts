@@ -13,6 +13,7 @@ import { SLAB } from './world';
 import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { registerHouses } from './sunhouses3d';
+import { registerYards } from './sunyards3d';
 import { COURT } from './mall';
 import { EW_ROADS, MEDIAN, WALK_W } from './layout';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
@@ -80,6 +81,8 @@ const rectOf = (pts: Pt[], pad: number): Rect => [Math.min(...pts.map((p) => p[0
 export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // The houses (Phase 2: sunhouses3d.ts)
   registerHouses(low, scene);
+  // The yards and their walls (Phase 3: sunyards3d.ts)
+  registerYards(low, scene);
   const crossings = SUN_CROSSINGS.map((c) => c.at);
   const nearCrossing = (x: number, z: number, r: number) => crossings.some((c) => Math.hypot(c[0] - x, c[1] - z) < r);
 
