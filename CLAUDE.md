@@ -1048,11 +1048,12 @@ it and has been retired completely. Build only on what's here.
   gates' walks dining (`NORTH_OPEN`) and the north avenue luxe. The square
   and the walks' granite are `uptownnorth3d.ts` (`registerNorth()`, from
   uptown3d.ts). The flying traffic clears them (the highrise test).
-- **The Hills** (the owner's call: a north-east town in the style of
-  Beverly Hills, ultra-premium buildings, palm trees and hills) on the open
+- **Crestmont** (the owner's call: a north-east town in the style of
+  Beverly Hills, ultra-premium buildings, palm trees and gentle hills to
+  about 45-60 m, no hillside sign, a metro station) on the open
   land outside the ring highway's north-east corner (the Flats east of its
   east side, the hills rising north to the world's corner), planned in
-  `docs/hills-plan.md` in phases, each with the owner's sign-off; keep it up
+  `docs/crestmont-plan.md` in phases, each with the owner's sign-off; keep it up
   to date. Phase 1 is the first ground that isn't flat (`terrain.ts`: 0
   everywhere outside the town). Nothing is built yet; made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:

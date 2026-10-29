@@ -1,4 +1,4 @@
-# The Hills: a north-east town in the style of Beverly Hills (the owner's call)
+# Crestmont: a north-east town in the style of Beverly Hills (the owner's call)
 
 The owner wants a new town in the north-east, in the style of Beverly Hills:
 ultra-premium buildings, palm trees and hills. It's the biggest district yet
@@ -6,9 +6,7 @@ and the first ground in Sector 7 that isn't flat, so it's built in phases,
 each a PR with the owner's sign-off. Keep this plan up to date as each is
 built.
 
-Working name: **the Hills** (the owner picks the real one in Phase 0; it's
-made up, never a real place's name, and not "Palm ..." since Palm Court is
-taken).
+Its name is **Crestmont** (the owner's pick; made up).
 
 ## Where
 
@@ -31,32 +29,22 @@ Nothing that exists moves (`tests/snapshot.test.ts`): the kart park, the
 highway, its junctions and slips, the airport's land south of the river and
 Palm Court stay as they are.
 
-## Questions for the owner (Phase 0)
+## The owner's answers
 
-1. **The name** of the town and its main streets (made up). Ideas: Crestmont,
-   Sunridge, Golden Hills, Palisade Heights, Sector 7 Hills.
-2. **How high the hills go.** The Emporium's roof is 12.5 tiles (about
-   22 m). Real hills there are 100 m and more, which would dwarf the city.
-   Recommendation: the Flats at street level, the hills rising gently to
-   about 25-35 tiles (45-60 m) at the far corner, the buildings on them
-   low (two or three storeys), so "the Emporium is the tallest building"
-   holds (it's about buildings; Uptown's towers are the owner's one
-   exception). The airliners' turn north past the runway and the aircraft
-   you fly must clear the hills (the flight tests get the ground's height).
-3. **A sign on the hillside?** Big letters on the slope are the look
-   people know. Recommendation: SECTOR 7 in white letters, lit at night,
-   the city's own name (fixed copy, nothing else).
-4. **Getting there:** the highway and the Flats' streets (Phase 2) for
-   sure. Should the metro run on from Kart Park station to a Hills station
-   (Phase 9)? Taxis, fast travel and the world map come with it anyway.
-5. **Places to go into or only scenery?** Recommendation: scenery first,
-   then a few places with pins and panels (the grand hotel, the shopping
-   street, the overlook, the country club) saying "coming soon" like the
-   others, and later (optional, Phase 10) an estate you can buy for
-   Dorras.
-6. **What goes in.** Picks for the landmarks (Phase 7): a grand hotel in
-   its gardens, a civic hall with a tiled tower, a country club with a golf
-   course, a hilltop overlook park, a reservoir. Anything else?
+- **The name:** Crestmont.
+- **The hills:** gentle, rising from the Flats at street level to about
+  25-35 tiles (45-60 m) at the far corner. The buildings on them stay low
+  (two or three storeys), so the Emporium stays the tallest building. The
+  airliners' turn north past the runway and the aircraft you fly must clear
+  the hills (the flight tests get the ground's height).
+- **Places or scenery:** scenery first. Then a few places with pins and
+  panels saying "coming soon", like the others: the grand hotel, the Drive,
+  the overlook and the country club.
+- **Landmarks:** the grand hotel, the civic hall, the country club, the
+  overlook and the reservoir.
+- **No sign on the hillside.** Keep the hills natural.
+- **The metro:** yes. The line runs on from Kart Park station east over the
+  highway to a Crestmont station by the Flats (Phase 9).
 
 ## The rules for it
 
@@ -84,7 +72,7 @@ Palm Court stay as they are.
 
 ### Phase 0: decisions and measuring
 
-- The owner's answers to the questions above, written into this plan.
+- The owner's answers (above): done.
 - A sketch of the land: the Flats' grid, the hill roads, the terraces, the
   landmarks, as a picture in `docs/` for sign-off (like the kart plan's).
 - Bench views over the Flats and the hills (`BENCH_VIEWS`) so every phase
@@ -180,7 +168,7 @@ follow it, with the hills empty.
 
 ### Phase 7: the landmarks
 
-The owner's picks from question 6, each scenery or a place (spot, pin,
+The owner's picks, scenery first, then each a place (spot, pin,
 directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
 
 - **The grand hotel** in its gardens off the boulevard (a pastel
@@ -191,7 +179,7 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
 - **The country club** (a golf course over the lower slopes: fairways and
   greens shaped into the ground, bunkers, a clubhouse, carts).
 - **The overlook** on the ridge (a little park looking back over Sector 7,
-  benches, viewers, the hillside sign below it if the owner says yes).
+  benches, viewers; no sign on the hillside, the owner's call).
 - **The reservoir** in a canyon (still water, the city's water shader).
 
 ### Phase 8: its life, night and sound
@@ -201,15 +189,17 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
   the crowd's rows). Traffic: more convertibles, coupes and the town car;
   a tour bus round the town (no real people's homes).
 - Night: the palms uplit, the pools glowing, the Drive's windows and signs
-  lit, the estates' windows, the sign on the hill.
+  lit, the estates' windows.
 - Sound (`ambience.ts`): a quiet hum, birds and sprinklers by day,
   crickets and an owl at night, fountains on the Drive.
 
 ### Phase 9: getting there
 
 - The town's places on the world map, taxis and fast travel.
-- If the owner wants it: the metro on from Kart Park station east to a
-  Hills station by the Flats (`metro.ts`, its viaduct over the highway).
+- The metro (the owner's call): the line on from Kart Park station east
+  over the highway to **Crestmont** station by the Flats (`metro.ts`: a new
+  track end, pillars on open land or a median, the station's stair tower
+  on the ground's height; the timetable's `LEGS` gain the run out and back).
 
 ### Phase 10 (optional, the owner's call): an estate of your own
 
