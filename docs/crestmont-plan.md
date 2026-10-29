@@ -78,7 +78,27 @@ Palm Court stay as they are.
 - Bench views over the Flats and the hills (`BENCH_VIEWS`) so every phase
   measures before and after; the boot's budget room checked.
 
-### Phase 1: the ground that rises (the hard one)
+### Phase 1: the ground that rises (built)
+
+**What's built:** `terrain.ts` (DOM-free, tested in `tests/terrain.test.ts`): `HILLS` (the foot at x 285 /
+z -75, rising over `rise` to a `peak` of 26 tiles, a seeded `swell()` taking the ridge to about 32 tiles, 58 m,
+falling away towards `end` past the world's north-east corner so the skyline ring stands on level ground),
+`TERRAIN_RECT`, `heightAt()` (0 outside it: the tests hold every street, block, solid and place of the plan to
+0), `slopeAt()` (0.68 at its steepest), `onHills()`, `LEVELS` (cut and fill, none yet: Phase 2's roads and
+Phase 5-6's pads come through it) and `hillsAlong()` (where a ray first meets the hills). Read by: the ground
+(world.ts `hillsPlane()`: the grass over the hills a grid a vertex every 2 tiles, tinted by height and slope,
+`tintHills()`: the city's green in the valleys, sage up the slopes, pale gold over the ridge); walking (walk.ts
+`groundAt()`, so driving, riding, the kart and flying follow it too; he keeps his feet going downhill); the walk
+and chase cameras (`cameraRoom()` keeps above the slope); shots (solids.ts `rayBoxes()`, the server's too);
+the outskirts' trees and the woods (world.ts `scatterOutskirts()`, set into the slope). The aircraft: none of
+today's routes crosses the hills (the test holds any that does well over them). The boot's code grew 1 KB
+(652.3 of 670).
+
+**Left for later phases:** the world map doesn't shade the hills yet (Phase 2, with its streets); up on the
+ridge the skyline ring's towers past the edge are near enough to look big (Phase 11: set them back behind the
+hills, or lower there); the City view's camera can dip into a slope when it looks low across them (Phase 2).
+
+**As planned:**
 
 The whole world is flat today, at y 0 but for decks and bridges. This phase
 makes ground that rises, and everything that stands or moves on the ground

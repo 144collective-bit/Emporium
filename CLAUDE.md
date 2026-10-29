@@ -1054,8 +1054,16 @@ it and has been retired completely. Build only on what's here.
   land outside the ring highway's north-east corner (the Flats east of its
   east side, the hills rising north to the world's corner), planned in
   `docs/crestmont-plan.md` in phases, each with the owner's sign-off; keep it up
-  to date. Phase 1 is the first ground that isn't flat (`terrain.ts`: 0
-  everywhere outside the town). Nothing is built yet; made-up names only.
+  to date. Phase 1 (the ground that rises) is built: `terrain.ts`
+  (DOM-free, tested in `tests/terrain.test.ts`): `HILLS`, `TERRAIN_RECT`,
+  `heightAt()` (0 everywhere outside the hills' land: under every street,
+  block, solid and place), `slopeAt()`, `onHills()`, `LEVELS` (ground held
+  level, cut and fill, for later phases' roads and pads), `hillsAlong()`
+  (where a ray meets them). Read by world.ts (`hillsPlane()`: the grass a
+  grid over the hills, `tintHills()` by height and slope), walk.ts
+  `groundAt()` (so walking, driving and flying follow them), `cameraRoom()`,
+  solids.ts `rayBoxes()` and the outskirts' trees. Anything new standing on
+  the hills stands at `heightAt()`. Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back

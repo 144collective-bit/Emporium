@@ -23,6 +23,7 @@ import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, off
 import { RUNWAY } from './airfield';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
+import { TERRAIN_RECT, heightAt, onHills, slopeAt } from './terrain';
 import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
@@ -635,6 +636,53 @@ function riverBanks(b: Batch, e0: number, e1: number) {
 }
 
 /**
+ * A piece of grass over Crestmont's hills (terrain.ts): a grid a vertex every `HILL_STEP` with its heights, or
+ * null where the piece is flat (most of the world: one plane, two triangles)
+ */
+const HILL_STEP = 2;
+function hillsPlane(x0: number, z0: number, x1: number, z1: number) {
+  if (x1 <= TERRAIN_RECT[0] || x0 >= TERRAIN_RECT[2] || z1 <= TERRAIN_RECT[1] || z0 >= TERRAIN_RECT[3]) return null;
+  const nx = Math.max(1, Math.ceil((x1 - x0) / HILL_STEP));
+  const nz = Math.max(1, Math.ceil((z1 - z0) / HILL_STEP));
+  const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0, nx, nz).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
+  const pos = g.getAttribute('position');
+  let any = false;
+  for (let i = 0; i < pos.count; i++) {
+    const h = heightAt(pos.getX(i), pos.getZ(i));
+    if (h > 0) any = true;
+    pos.setY(i, h);
+  }
+  if (!any) {
+    g.dispose();
+    return null;
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * The hills' grass by height and slope (Crestmont's: the valley floors the city's green, drying to sage up the
+ * slopes and a pale gold over the ridge, the steep sides a shade darker), so their shape reads in the flat shading
+ */
+const HILL_LOW = new THREE.Color('#245c45');
+const HILL_MID = new THREE.Color('#4f7445');
+const HILL_TOP = new THREE.Color('#8f8a52');
+const HILL_TINT = new THREE.Color();
+function tintHills(g: THREE.BufferGeometry) {
+  const pos = g.getAttribute('position');
+  const col = g.getAttribute('color') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const [x, z] = [pos.getX(i), pos.getZ(i)];
+    const h = pos.getY(i);
+    const up = Math.min(1, h / 16);
+    HILL_TINT.copy(HILL_LOW).lerp(HILL_MID, up * up * (3 - 2 * up));
+    if (h > 16) HILL_TINT.lerp(HILL_TOP, Math.min(1, (h - 16) / 14) * 0.8);
+    HILL_TINT.multiplyScalar(1 - 0.35 * Math.min(1, slopeAt(x, z) / 0.6));
+    col.setXYZ(i, HILL_TINT.r, HILL_TINT.g, HILL_TINT.b);
+  }
+}
+
+/**
  * The ground. `lots` picks a surface for a block (by its plan id, like 'dt-c' or
  * 'district-N1') or for a landmark's own lot inside its block (by its old block, layout.ts SEATS).
  */
@@ -654,7 +702,12 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       [z0, Math.min(z1, RIVER[0])],
       [Math.max(z0, RIVER[1]), z1],
     ])
-      if (c > a) b.add(new THREE.PlaneGeometry(x1 - x0, c - a).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (a + c) / 2), grass);
+      if (c > a) {
+        const hill = hillsPlane(x0, a, x1, c);
+        b.add(hill ?? new THREE.PlaneGeometry(x1 - x0, c - a).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (a + c) / 2), grass);
+        // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex)
+        if (hill) tintHills(hill);
+      }
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
   // (on past the edge with the grass, walled at its ends)
@@ -1002,7 +1055,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
  */
 export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
   // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
-  for (const t of outskirtsTrees(count, sparse, CLEAR)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, 0);
+  for (const t of outskirtsTrees(count, sparse, CLEAR)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : 0);
 }
 
 /** Land the outskirts' trees keep off besides the town (The Trenches', the metro's el over open land) */

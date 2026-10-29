@@ -43,6 +43,7 @@ import { NORTH_SOLIDS } from './uptownnorth';
 import { MALL_INSIDE_SOLIDS } from './mallinside';
 import { UPTOWN_SITE_SOLIDS } from './uptownsites';
 import { SKYDECK_SOLIDS } from './skydeck';
+import { hillsAlong } from './terrain';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -338,6 +339,8 @@ export function addSolids(boxes: readonly Box[]) {
 export function rayBoxes(from: { x: number; y: number; z: number }, dir: { x: number; y: number; z: number }, max: number, extra: Box[] = []) {
   let t = max;
   if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
+  // (and Crestmont's hills, terrain.ts: the ground there rises)
+  t = hillsAlong(from, dir, t, 0, 0.5);
   const o = [from.x, from.y, from.z];
   const v = [dir.x, dir.y, dir.z];
   // Only the boxes under the ray's path can stop it
