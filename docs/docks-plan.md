@@ -173,13 +173,15 @@ What was built, in metro.ts (DOM-free, tested in `tests/metro.test.ts`):
   (index.ts `keepTreesOff()`; row W's trees along the highway skip the el,
   streetwall3d.ts); the docks' lamps keep off the arch's feet (docks.ts
   `DOCK_LAMPS`).
-- **The timetable** (`LEGS`, 12 now): down to South Bank, out through The
-  Trenches and the Docks to Uptown and back, out to the Airport and back,
-  up again; `ROUND_TRIP` about 326 s. The run west of The Trenches is the
+- **The timetable** (`LEGS`, 14 with Crestmont's spur, merged from
+  docs/crestmont-plan.md Phase 9): from Crestmont to Kart Park, down to
+  South Bank, out through The Trenches and the Docks to Uptown and back,
+  out to the Airport and back, up again; `ROUND_TRIP` about 392 s. The run west of The Trenches is the
   express (`speedOf()`, unchanged at 24: a faster express hardly helps,
   the runs are mostly speeding up and slowing down). The longest ride,
   Uptown to the Airport turning round at South Bank, is about 60.7 s
-  (`rideAt()`; it was about 50.8).
+  (`rideAt()`; it was about 50.8), and out to Crestmont, Uptown's is about
+  75.4 s (from The Trenches it was about 70).
 - **Tests:** the main line's length from its straights and bends, smooth
   all the way, over nothing taller than 4.5; every pillar in a median clear
   of the junctions or on open ground, the spans at most 18; the stations'

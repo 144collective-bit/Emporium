@@ -7,6 +7,7 @@
  * lamps are placed at the boot (index.ts, `CREST_LAMPS`).
  */
 import * as THREE from 'three';
+import type { Tick } from './world';
 import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { offsetLine, type Pt } from './streetplan';
@@ -18,6 +19,7 @@ import { registerCoral } from './coral3d';
 import { registerEstates } from './estates3d';
 import { registerMansions } from './mansions3d';
 import { registerSites } from './crestsites3d';
+import { registerLife } from './crestlife3d';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS, type Rect } from './crestmont';
 
 export const SELF = import.meta.url;
@@ -99,7 +101,7 @@ function dashes(list: THREE.Matrix4[], pts: Pt[], off: number, gap: number, l: n
   }
 }
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // The palms, jacarandas, oaks and scrub, the hill roads' walls and rails (Phase 3: landscape3d.ts)
   registerLandscape(low);
   // The Drive: the boutiques, Via Coral, the bays and their cars (Phase 4: coral3d.ts)
@@ -110,6 +112,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   registerMansions(low, scene);
   // The landmarks: the grand hotel, the civic hall, the country club, the overlook, the reservoir (Phase 7: crestsites3d.ts)
   registerSites(low, scene);
+  // Its life: the dogs on their leads, the gardeners' wheelbarrows (Phase 8: crestlife3d.ts)
+  registerLife(scene, tick, low);
   const asphalt = toon('#26243f');
   const kerbTop = toon('#5a5290');
   const grass = toon('#3f7a4a');

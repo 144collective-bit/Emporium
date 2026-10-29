@@ -12,6 +12,9 @@ import {
   ARCH,
   BRANCH,
   BEND_R,
+  CREST,
+  CREST_END,
+  CREST_S,
   DECK_HALF,
   NORTH_R,
   WEST_R,
@@ -57,6 +60,10 @@ import { FLIGHTS, PERIOD, REACH, poseAt } from '../src/scripts/city3d/airfield';
 import { ANCHOR_X, SHIP } from '../src/scripts/city3d/liberty';
 import { WATER_Y } from '../src/scripts/city3d/river';
 import { AVENUE_Z } from '../src/scripts/city3d/trenches';
+import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
+import { KART_PARK } from '../src/scripts/city3d/kartpark';
+import { heightAt } from '../src/scripts/city3d/terrain';
+import { PALMS } from '../src/scripts/city3d/landscape';
 
 const roads = PLAN.streets.filter((s) => s.kind !== 'alley');
 const near = (a: [number, number], b: [number, number], e = 1e-6) => Math.hypot(a[0] - b[0], a[1] - b[1]) < e;
@@ -86,6 +93,30 @@ test('the line runs down the east ring avenue, bends west onto Trench Avenue and
   // West of The Trenches: along Trench Avenue's line into the docks, north on their line over the river, east along the
   // north bank avenue's median
   assert.ok(main.pts.some((p) => near(p, [EL_X, RING_HI + NORTH_R])) && main.pts.some((p) => near(p, [UP_X - UP_R, RING_HI])));
+  // Crestmont's spur: off the main line south of Kart Park station, round outside the highway's north-east corner, to its
+  // station past Alder Way; smooth all the way, nothing under it on the highway or the kart park
+  const { crest } = TRACKS;
+  assert.ok(near(crest.pts[0], pointOn('main', CREST_S).at));
+  assert.ok(near(crest.pts[crest.pts.length - 1], [CREST_END, CREST.station]));
+  const kart = STATIONS.find((s) => s.id === 'kart')!;
+  assert.ok(CREST_S > kart.s + PLATFORM.half, "the spur leaves after Kart Park's platform");
+  for (let i = 2; i < crest.pts.length; i++) {
+    const [a, b, c] = [crest.pts[i - 2], crest.pts[i - 1], crest.pts[i]];
+    const t = Math.atan2(c[1] - b[1], c[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]);
+    assert.ok(Math.abs(Math.atan2(Math.sin(t), Math.cos(t))) < 0.08, `the spur kinks at ${b}`);
+  }
+  for (let s = 12; s <= crest.len; s += 1) {
+    const p = pointOn('crest', s).at;
+    assert.ok(fromHighway(...p) > HIGHWAY_HALF + DECK_HALF + 1, `the spur over the highway at ${p.map((v) => v.toFixed(1))}`);
+    assert.ok(!(p[0] > KART_PARK.x0 && p[0] < KART_PARK.x1 && p[1] > KART_PARK.z0 && p[1] < KART_PARK.z1 + DECK_HALF), 'the spur over the kart park');
+    assert.ok(heightAt(...p) < 1, `the spur over the hills at ${p.map((v) => v.toFixed(1))}`);
+  }
+  // Nothing grows under it: no palm within reach of its deck
+  for (const p of PALMS) for (let s = 0; s <= crest.len; s += 2) {
+    const q = pointOn('crest', s).at;
+    assert.ok(Math.hypot(q[0] - p.x, q[1] - p.z) > DECK_HALF + 1.5, `a palm under the spur at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`);
+  }
+  // (the main line's length is held to its straights and quarter circles above); and it's smooth all the way
   for (let i = 2; i < main.pts.length; i++) {
     const [a, b, c] = [main.pts[i - 2], main.pts[i - 1], main.pts[i]];
     const t = Math.atan2(c[1] - b[1], c[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]);
@@ -112,8 +143,8 @@ test('the pillars stand in a median clear of every junction or on open ground, o
   for (const t of Object.values(TRACKS)) {
     // (held up by pillars, portal frames where there's no median, and between the arch's feet its hangers)
     const ss = [...PILLARS, ...PORTALS].filter((p) => p.track === t.id).map((p) => p.s).concat(t.id === 'main' ? HANGERS : []).sort((a, b) => a - b);
-    // (the branch's first stretch is held up by the main line's pillar at the switch)
-    const all = t.id === 'branch' ? [0, ...ss] : ss;
+    // (a spur's first stretch is held up by the main line's pillar at its junction)
+    const all = t.id !== 'main' ? [0, ...ss] : ss;
     for (let i = 1; i < all.length; i++) assert.ok(all[i] - all[i - 1] <= 18.1, `${t.id}: ${all[i - 1].toFixed(1)} to ${all[i].toFixed(1)}`);
     assert.ok(all[0] < 3 && t.len - all[all.length - 1] < 3, `${t.id} is held up at both ends`);
   }
@@ -185,8 +216,10 @@ test('the train keeps to its tracks, stops at every station, and never jumps', (
     prev = p;
   }
   assert.deepEqual([...seen].sort(), STATIONS.map((s) => s.id).sort());
-  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 340);
-  assert.equal(LEGS.length, 12);
+  // (since Crestmont's spur, docs/crestmont-plan.md Phase 9: out to Crestmont and back from Kart Park too; and since the
+  // line runs round by the Docks, docs/docks-plan.md Phase 2, through them both ways)
+  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 420);
+  assert.equal(LEGS.length, 14);
 });
 
 test('a ride goes there in about a minute at most, and the timetable carries on from where it stops', () => {
@@ -194,9 +227,11 @@ test('a ride goes there in about a minute at most, and the timetable carries on 
     for (const b of STATIONS) {
       if (a === b) continue;
       const r = rideAt(a.id, b.id, 0);
-      // (the longest, Uptown to the Airport out on the world's south edge, turning round at South Bank: about 60.7 s since
-      // the line runs round by the Docks, the express runs out on the branch and out west)
-      assert.ok(r.total < 62, `${a.id} to ${b.id} takes ${r.total.toFixed(1)}`);
+      // (the longest: to Crestmont, the whole main line and the spur, turning round at Kart Park; Uptown's since the line
+      // runs round by the Docks, docs/docks-plan.md Phase 2: about 75.4 s, Skip ride is there for it. Without
+      // Crestmont, Uptown to the Airport is the longest, about 60.7 s)
+      const limit = a.id === 'crestmont' || b.id === 'crestmont' ? 77 : 62;
+      assert.ok(r.total < limit, `${a.id} to ${b.id} takes ${r.total.toFixed(1)}`);
       assert.ok(near(pointOn(r.track, r.s).at, stationAt(a).at));
       const end = rideAt(a.id, b.id, r.total);
       assert.ok(near(pointOn(end.track, end.s).at, stationAt(b).at, 1e-6), `${a.id} to ${b.id} ends at ${b.id}`);

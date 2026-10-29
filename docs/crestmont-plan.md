@@ -304,7 +304,7 @@ people by the pools are Phase 8's.
   Gates with columns and lamps, hedged walls, parked supercars. Each on a
   pad (`PADS`), its solids from its parts, every one under the Emporium.
 
-### Phase 7: the landmarks (step 1, the scenery: built; step 2, each a place: next)
+### Phase 7: the landmarks (built: step 1, the scenery; step 2, each a place)
 
 **What's built (step 1):**
 
@@ -331,7 +331,14 @@ people by the pools are Phase 8's.
   in the banks where they rise past it, concrete dams on the sides where they fall away, a valve tower, an iron fence
   round it (solid: nobody walks in); the water is the city's own shader, on the main thread.
 
-**Next (step 2):** each a place: spot, pin, directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries.
+**Step 2 (built), each a place:** spots `hotel`, `civichall`, `golfclub`, `overlook` and `reservoir` (`crestspots.ts`,
+`buildCrestSpots()` at the boot: plain boxes on the `PICK` layer and a hover ring at each one's ground, the drawing
+still Crestmont's chunk), their pins over the hotel's tower, the dome, the clubhouse, the overlook and the valve
+tower, directory entries, panels (`data-panel-tpl`, numbered 21-25, "Crestmont") with **Walk in** to where you
+arrive at each (`SITE_SPAWNS` in crestsites.ts), `PLACES` and `LIVE_PLACES` entries. A taxi only aims for streets
+that join the network (routes.ts `project()`: the hills' cul-de-sacs join none), so one to the overlook stops on
+Ridge Road, the nearest street it can reach; the travel test allows the hills' places 20 s more, as it
+does the airport 12. Nothing to do inside any of them yet: coming soon.
 
 **As planned:**
 
@@ -349,7 +356,34 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
   benches, viewers; no sign on the hillside, the owner's call).
 - **The reservoir** in a canyon (still water, the city's water shader).
 
-### Phase 8: its life, night and sound
+### Phase 8: its life, night and sound (built)
+
+**What's built:**
+
+- `crestlife.ts` (DOM-free, tested in `tests/crestlife.test.ts`): joggers up and down Ridge Road and dog walkers on
+  Canyon Drive (`LANES`: out along a hill road's left shoulder and back along its right, `SHOULDER`, at the ground's
+  height, clear of the traffic's lanes, the lamps and the walls; everyone in a lane at its pace and evenly spread),
+  the park's kind of crowd person (`CREST_PEOPLE`, life.ts), their dogs on leads (`CREST_DOGS`); standing about
+  (`CREST_IDLE`, phones half): the valets by their stands, doormen at every other boutique and two under the hotel's
+  porte-cochère, diners at the cafés' tables, people by the piazza's fountain, sunbathers on the loungers (every other
+  estate's, every mansion's, the hotel's), friends by the hotel's pool, two on the overlook, a group on the
+  clubhouse's terrace, a pair on the civic hall's walk, and the gardeners in every third estate's front garden
+  (`GARDENERS`, a wheelbarrow beside each). The Drive's blocks join the town's walks (life.ts), two shoppers in three
+  carrying a shopping bag (wardrobe.ts item `shopping`, the crowd's only: never the player's `Look`).
+- The traffic: Crestmont's own (`opts.crest`: 6, 5, 3 by tier), its tour bus in cream (`TOUR_PAINT`) and coupes,
+  Midnight Execs and Hyper Comets (`CREST_MIX`), started on routes that keep to its streets at least half the way
+  round and put back on them (`CREST_RECT`) when they wander off, out of sight; never spent round the camera. No
+  convertible: no such model exists yet (the vehicle plan's to add).
+- Night: the Flats' palms uplit (landscape3d.ts: their trunks washed warm, a flush fixture at their feet; the hills'
+  aren't), the pools glowing (`POOL` in estates3d.ts, the estates', mansions' and hotel's); the Drive's windows and
+  signs and the estates' windows were lit already.
+- Sound (`ambience.ts` `crest`, `CREST_HUM`; sound.ts): a quiet hum without the arcade's beat, little wind, birds by
+  day and the owl at night as the park's, the sprinklers' hiss by day and crickets at night (both quiet in the rain),
+  the Drive's and the civic hall's fountains (`fountain`).
+- Drawn by `crestlife3d.ts` (from crestmont3d.ts's `register()`): the dogs and their leads on the main thread with
+  the tick (the dog's shape shared with the park, `dogs3d.ts`), the barrows as sites.
+
+**As planned:**
 
 - People: shoppers with bags on the Drive, valets and doormen, joggers and
   dog walkers on the hill roads, gardeners, people by the pools (acts from
@@ -360,7 +394,25 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
 - Sound (`ambience.ts`): a quiet hum, birds and sprinklers by day,
   crickets and an owl at night, fountains on the Drive.
 
-### Phase 9: getting there
+### Phase 9: getting there (built)
+
+**What's built:**
+
+- The town's places came with Phase 7 step 2: on the world map, taxis (to streets that join the network) and fast
+  travel.
+- The metro's **Crestmont spur** (`metro.ts`, track `crest`, `CREST`, `CREST_S`, `CREST_END`; tested in
+  `tests/metro.test.ts`): off the main line just south of Kart Park station, a tight bend east into the corridor
+  between Kart Road and the ring highway's north side, east past the kart park, round outside the highway's
+  north-east corner on a bend about its own centre, south down the strip between the highway and Alder Way (off the
+  hills' land), and a tight bend east over Alder Way to **Crestmont station** on the block kept for it (crest-0-0),
+  its platform north of the track and its stair tower on the block's lawn. Pillars on open land, nothing on the
+  highway, the kart park or the hills; no palm or outskirts tree under it (`SPUR_CLEAR`, `underSpur()`). It leaves the
+  main line facing north, so a run from it to anywhere but Kart Park turns round there (`runsBetween()`), at the
+  express's speed on the spur; the timetable runs out to Crestmont and back from Kart Park (`LEGS`, 12). The longest
+  ride is now The Trenches to Crestmont, about 70 s (Skip ride). The station is a place like the others
+  (`metro-crestmont`), drawn by metro3d.ts with the rest of the line.
+
+**As planned:**
 
 - The town's places on the world map, taxis and fast travel.
 - The metro (the owner's call): the line on from Kart Park station east
@@ -374,7 +426,29 @@ directory entry, a panel with Walk in, `PLACES` and `LIVE_PLACES` entries):
   at it for your cars and bike, a place on the business card. Planned
   separately with `docs/tycoon-plan.md` if the owner wants it.
 
-### Phase 11: polish and performance
+### Phase 11: polish and performance (built)
+
+**What was measured and done:**
+
+- `?bench` has three Crestmont views (bench.ts `BENCH_VIEWS`: `crest-drive` at street level on Coral Drive,
+  `crest-flats` over the Flats, `crest-hills` from the foot of Ridge Road).
+- Draws and triangles from the `?fps` readout (headless, so counts only, not frame rates): Crestmont is lighter than
+  the districts the city already runs. Desktop (medium tier): about 210 draws and 0.8-1.0M triangles on the Drive and
+  over the Flats, 142 draws and 0.5M in the hills, against downtown's 514 and 2.0M and Uptown's 218 and 1.3M. Phones:
+  110-130 draws and about 0.3M, against downtown's 259 and 0.41M. So **no far forms** for the estates or the hotel:
+  the plan only wanted them if the draws needed them.
+- Phones lighter (the low tier only, in the chunk): every other palm (landscape3d.ts, about 16k triangles), the
+  estates' fountains, chimneys and gate globes near only (estates3d.ts, about 370 triangles an estate off the far
+  form), and the pools plain water instead of glowing (`poolOf()` in estates3d.ts: one material fewer). The
+  headless counts swing by about a fifth from run to run with the traffic and crowds, too much to show these.
+- Every width (320, 375, 768, 1024, 1440): every Crestmont panel on screen, no sideways scroll; at 320 the shared
+  panel's draft line ran past its edge (every panel's, not only Crestmont's) and now wraps (city.css).
+- The boot: Crestmont's data in it is about 33 KB minified (crestmont.ts, mansions.ts, crestsites.ts, coral.ts,
+  crestlife.ts, estates.ts, terrain.ts, crestspots.ts, hills.ts; landscape.ts is the chunk's). All of it is what the
+  boot needs (the ground's height, what's solid, the pads' levels, the people, the places); baking it at build time
+  wouldn't shrink it (the code that makes it stays as the fallback). It stays: 666.3 of 670 KB.
+
+**As planned:**
 
 - Every width (320 to 1440), both tiers, day and night; the bench before
   and after; phones lighter (half the palms, simpler estates far, no pool

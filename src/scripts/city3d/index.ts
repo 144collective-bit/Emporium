@@ -33,8 +33,11 @@ import { createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
+import { buildCrestSpots } from './crestspots';
+import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
+import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
@@ -45,7 +48,7 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { AIRPORT_END, ARCH, BRANCH, LINE_X, NORTH_R, WEST_END, WEST_R } from './metro';
+import { AIRPORT_END, ARCH, BRANCH, LINE_X, NORTH_R, SPUR_CLEAR, WEST_END, WEST_R } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
@@ -119,9 +122,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -292,6 +295,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(buildTower(scene).spot);
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
   spots.push(...buildMallSpots(scene));
+  spots.push(...buildCrestSpots(scene));
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
@@ -299,6 +303,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (and its run west past The Trenches over the highway to Southbank Docks and north over the river: docs/docks-plan.md Phase 2)
   keepTreesOff([WEST_END - WEST_R - 6, AVENUE_Z - 6, -186, AVENUE_Z + 6]);
   keepTreesOff([ARCH.x - 6, RING_HI - 2, ARCH.x + NORTH_R + 4, AVENUE_Z]);
+  // (and Crestmont's spur, round outside the highway's north-east corner: docs/crestmont-plan.md Phase 9)
+  for (const r of SPUR_CLEAR) keepTreesOff(r);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
@@ -309,6 +315,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
   // The Docks' (docks.ts): sodium, along their sidewalks (world.ts)
   for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
+  // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)
+  CREST_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...its formal garden's lanterns and people (gardens.ts, the north side's stage 3)
   for (const [x, z, ry] of GARDEN_LAMPS) addLamp(x, z, ry);
   for (const p of GARDEN_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act });
@@ -348,7 +356,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   await waited(nextFrame());
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
   let lifeSfx: ((kind: LifeSfx, gain: number) => void) | null = null;
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, trucks: Q.trucks, police: Q.police, bikes: Q.bikes, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, trucks: Q.trucks, police: Q.police, bikes: Q.bikes, crest: Q.crest, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
   // (the medium tier's smaller shadow maps a touch softer: shadows.ts)
   const sky = createSky(scene, { shadows: Q.shadows, shadowRadius: tier === 'medium' ? 1.6 : 1, rainDrops: Q.rain, clouds: Q.clouds, storms: !reduced });
   progress(0.85);
@@ -647,6 +655,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(INSIDE_SPAWN);
       });
+    // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
+    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir') {
+      const at = SITE_SPAWNS[id];
+      panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(at);
+      });
+    }
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
       panelBody.querySelector('[data-block-walkin]')?.addEventListener('click', () => {

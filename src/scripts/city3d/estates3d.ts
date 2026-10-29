@@ -43,6 +43,10 @@ const DARK = toon('#2a2a30');
 const LAMP = neon('#ffe2a8', 0.2, 1.3);
 /** Windows: dark glass by day, warm light at night */
 export const WINDOW = siteMat('estate-window', lit(toon('#3b4c60', { emissive: '#ffd59a' }), 0, 0.85));
+/** A pool's water: lit from under at night, a soft glowing turquoise (Phase 8; under the bloom's threshold) */
+export const POOL = siteMat('crest-pool', lit(toon('#56b6d6', { emissive: '#2fd2ff' }), 0, 0.6));
+/** The pools' water: glowing, but plain water on phones (Phase 11: one material fewer, no glow to draw) */
+export const poolOf = (low: boolean) => (low ? WATER : POOL);
 
 /** A house's walls, its trims and its roof, by style */
 const WALL: Record<EstateStyle, THREE.Material> = { spanish: RENDER_WHITE, villa: OCHRE, tudor: CREAM, georgian: BRICK, modern: RENDER_WHITE };
@@ -237,7 +241,8 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
         });
       }
 
-      // The chimneys
+      // The chimneys (phones: near only, Phase 11)
+      if (low) b.lod = 'near';
       const m = e.house.main;
       const mt = wallTop(m);
       if (style === 'tudor') box(m.u1 - 1.2, mt - 0.5, m.v1 + 1.4, m.u1 - 0.6, mt + ROOF_H.tudor + 0.6, m.v1 + 0.8, BRICK_DARK);
@@ -247,6 +252,7 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
         box(m.u0 + 0.72, mt + ROOF_H.spanish + 0.3, m.v1 + 1.38, m.u0 + 1.48, mt + ROOF_H.spanish + 0.42, m.v1 + 0.62, TILE_DARK);
       }
 
+      b.lod = 'all';
       // The front door and its surround, on the main block's front
       const fu = e.hc;
       const dv = m.v0;
@@ -283,7 +289,9 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
       for (const [u, v] of piersOf(e)) {
         box(u - GATE.pier, 0, v - GATE.pier, u + GATE.pier, GATE.h, v + GATE.pier, STONE);
         box(u - GATE.pier - 0.05, GATE.h, v - GATE.pier - 0.05, u + GATE.pier + 0.05, GATE.h + 0.1, v + GATE.pier + 0.05, STONE_SHADE);
-        add(new THREE.SphereGeometry(0.12, 8, 6).translate(u, GATE.h + 0.3, v), BULB);
+        // (phones: the piers' globes near only)
+        if (low) b.detail(() => add(new THREE.SphereGeometry(0.12, 8, 6).translate(u, GATE.h + 0.3, v), BULB));
+        else add(new THREE.SphereGeometry(0.12, 8, 6).translate(u, GATE.h + 0.3, v), BULB);
       }
       b.detail(() => {
         // (the iron gates, swung open into the forecourt)
@@ -296,11 +304,14 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
 
       /* ---------- The forecourt's fountain ---------- */
       const [cu, cv] = fountainOf(e);
+      // (phones: the fountain near only, Phase 11; the forecourt's paving shows far)
+      if (low) b.lod = 'near';
       cyl(FOUNTAIN.r, 0.4, cu, 0, cv, STONE, 16, FOUNTAIN.r, true);
       add(new THREE.RingGeometry(FOUNTAIN.r - 0.15, FOUNTAIN.r, 16).rotateX(-Math.PI / 2).translate(cu, 0.4, cv), STONE_SHADE);
       add(new THREE.CircleGeometry(FOUNTAIN.r - 0.14, 16).rotateX(-Math.PI / 2).translate(cu, 0.36, cv), WATER);
       cyl(0.09, 0.6, cu, 0.3, cv, STONE_SHADE, 8);
       cyl(0.32, 0.1, cu, 0.9, cv, STONE, 12, 0.2);
+      b.lod = 'all';
       b.detail(() => add(new THREE.ConeGeometry(0.08, 0.35, 6, 1, true).translate(cu, 1.18, cv), SPRAY));
 
       /* ---------- The garden: the pool on its deck, loungers ---------- */
@@ -323,7 +334,7 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
       pave(rectToWorld(e, e.hc - GATE.half, 0, e.hc + GATE.half, e.court[0]), 0.008, PAVING);
       pave(rectToWorld(e, e.hc - COURT_HALF, e.court[0], e.hc + COURT_HALF, e.court[1]), 0.008, PAVING);
       pave(rectToWorld(e, pu0 - 1.2, pv0 + 0.7, pu1 + 1.2, pv1 - 0.7), 0.006, PAVING);
-      pave(rectToWorld(e, pu0, pv0, pu1, pv1), 0.014, WATER);
+      pave(rectToWorld(e, pu0, pv0, pu1, pv1), 0.014, poolOf(low));
       if (!low) pave(rectToWorld(e, pu0 + 0.2, pv1 + 0.3, pu1 - 0.2, pv1 + 0.36), 0.016, DARK);
       p.build(into, { cast: false, receive: true });
     });

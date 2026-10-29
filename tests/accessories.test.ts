@@ -132,5 +132,16 @@ for (const q of [3, 2] as Detail[]) {
       for (let k = 0; k < H.count; k += 3) near = Math.min(near, v.distanceTo(w.fromBufferAttribute(H, k)));
     }
     assert.ok(near < 0.003, `the handle ${(near * 1000).toFixed(1)} mm from the fingers`);
+    // The crowd's shopping bag (Crestmont's Drive) the same: under the hand, its cord in the fingers' hook
+    const [bag, cord] = all.find((i) => i.id === 'shopping')!.pieces.map((p) => p.geo);
+    bag.computeBoundingBox();
+    assert.ok(bag.boundingBox!.max.y < lowest, 'the shopping bag under the hand');
+    const C = cord.attributes.position;
+    let close = 9;
+    for (let i = 0; i < C.count; i++) {
+      v.fromBufferAttribute(C, i);
+      for (let k = 0; k < H.count; k += 3) close = Math.min(close, v.distanceTo(w.fromBufferAttribute(H, k)));
+    }
+    assert.ok(close < 0.003, `the bag's cord ${(close * 1000).toFixed(1)} mm from the fingers`);
   });
 }

@@ -71,3 +71,17 @@ test('Uptown: a quieter hum, the plaza\'s fountain by its pool and water wall, t
   // The circle: its traffic by its ring
   assert.ok(ambienceAt(CIRCLE.x + CIRCLE.r + 1, CIRCLE.z).road >= 0.5);
 });
+
+test("Crestmont: its quiet hum and little wind, its birds and crickets, the Drive's fountains; none of it in town", async () => {
+  const { CREST_RECT } = await import('../src/scripts/city3d/crestmont');
+  const { FOUNTAINS } = await import('../src/scripts/city3d/coral');
+  const { CREST_HUM } = await import('../src/scripts/city3d/ambience');
+  const mid = ambienceAt((CREST_RECT[0] + CREST_RECT[2]) / 2, (CREST_RECT[1] + CREST_RECT[3]) / 2);
+  assert.ok(mid.crest > 0.95, 'Crestmont on its land');
+  assert.ok(mid.city >= CREST_HUM - 1e-9 && mid.city < 0.6, `its hum ${mid.city}`);
+  assert.ok(mid.open < 0.3, 'little wind');
+  const f = FOUNTAINS[FOUNTAINS.length - 1];
+  assert.ok(ambienceAt(f.x + f.r + 0.5, f.z).fountain > 0.7, "the piazza's fountain");
+  const e = DOORS.find((d) => d.id === 'emporium')!;
+  assert.equal(ambienceAt(e.x, e.z).crest, 0);
+});

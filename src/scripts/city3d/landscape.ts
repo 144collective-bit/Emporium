@@ -25,6 +25,7 @@ import { onDrive } from './coral';
 import { ESTATES, gardenPalmsOf, inGateway, toWorld } from './estates';
 import { onMansion } from './mansions';
 import { HOTEL_PALMS, inHotelDrive, onSite } from './crestsites';
+import { underSpur } from './metro';
 
 type Pt = [number, number];
 
@@ -100,7 +101,8 @@ function palms(): Palm[] {
     const [x, z] = [end[0] + dx, end[1] + dz];
     if (!nearHillRoad(x, z, 0.9)) date(x, z);
   }
-  return out;
+  // (none under the metro's spur where it crosses Alder Way: docs/crestmont-plan.md Phase 9)
+  return out.filter((p) => !underSpur(p.x, p.z));
 }
 
 /** A road's point, its way along and the right of it, at a distance along it */
