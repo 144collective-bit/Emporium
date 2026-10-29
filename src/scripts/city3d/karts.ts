@@ -19,8 +19,10 @@
  * his head. kartSilhouette() draws the side view for the hut's cards.
  */
 import * as THREE from 'three';
-import { carMaterials, wheelGeometry, type CarSpec } from './cars';
-import { HIP_HEIGHT, reachArm, torsoFrame, type Degen } from './character';
+import { carMaterials, merge } from './cars';
+import type { Degen } from './character';
+import { paintAll } from './carparts';
+import { DRIVER_SCALE, KART_SHAPES, SEAT_X, WHEEL_R, WHEEL_TILT, driverRoot, kartPose, pedalsOf, wheelOf } from './kartframe';
 import { FONT_DISPLAY, liveTex, mergeMeshes, moving, neon, PAL, toon } from './kit';
 import { KART_L } from './kartpark';
 import type { KartId } from './mykart';
@@ -37,40 +39,11 @@ const ARMOUR = '#4e5160';
 const PAD = '#3a3848';
 const TAIL = '#ff2b2b';
 
-/** The driver's size in the kart (walk.ts draws the player at this scale too) */
-export const DRIVER_SCALE = 0.85;
-
-/* ---------- Shapes ---------- */
-
-type V2 = [number, number];
-interface Shape {
-  /** Wheel radius and tyre width; rear and front axle (x); the wheels' half track (z) */
-  r: number;
-  tw: number;
-  axles: V2;
-  track: number;
-  /** The floor pan's underside, and the seat cushion's top */
-  floor: number;
-  seat: number;
-  /** The side pods: x range, height and how far out they reach (z) */
-  pod: { x0: number; x1: number; h: number; z: number };
-  /** The engine box (w, h, d) and whether it carries a big air filter */
-  engine: [number, number, number];
-  filter?: boolean;
-  /** What's behind the seat */
-  rear: 'wing' | 'hoop' | 'fin';
-  armour?: boolean;
-  bullbar?: boolean;
-  /** How long the nose is */
-  nose: number;
-}
-const SHAPES: Record<KartId, Shape> = {
-  rocket: { r: 0.14, tw: 0.15, axles: [-0.4, 0.42], track: 0.4, floor: 0.07, seat: 0.24, pod: { x0: -0.28, x1: 0.22, h: 0.15, z: 0.36 }, engine: [0.22, 0.2, 0.26], rear: 'wing', nose: 0.3 },
-  bigwheel: { r: 0.19, tw: 0.21, axles: [-0.38, 0.4], track: 0.37, floor: 0.11, seat: 0.3, pod: { x0: -0.26, x1: 0.2, h: 0.16, z: 0.3 }, engine: [0.28, 0.26, 0.3], filter: true, rear: 'hoop', nose: 0.26 },
-  zip: { r: 0.11, tw: 0.12, axles: [-0.38, 0.4], track: 0.4, floor: 0.05, seat: 0.19, pod: { x0: -0.26, x1: 0.24, h: 0.1, z: 0.34 }, engine: [0.18, 0.16, 0.22], rear: 'fin', nose: 0.34 },
-  tank: { r: 0.15, tw: 0.17, axles: [-0.4, 0.4], track: 0.39, floor: 0.08, seat: 0.25, pod: { x0: -0.3, x1: 0.22, h: 0.18, z: 0.34 }, engine: [0.24, 0.22, 0.28], rear: 'hoop', armour: true, bullbar: true, nose: 0.28 },
-};
+export { DRIVER_SCALE } from './kartframe';
+const SHAPES = KART_SHAPES;
 const HALF = KART_L / 2;
+type V2 = [number, number];
+type V3 = [number, number, number];
 
 /* ---------- The number roundel ---------- */
 
@@ -98,15 +71,61 @@ function plateMat(n: number) {
   return m;
 }
 
-/** A wheel: the cars' tyre and rim, at the kart's size (wheelGeometry reads only r, tw, rim and spokes) */
-const wheelGeos = new Map<KartId, THREE.BufferGeometry>();
-function kartWheel(id: KartId) {
-  let g = wheelGeos.get(id);
-  if (!g) {
-    const s = SHAPES[id];
-    g = wheelGeometry({ r: s.r, tw: s.tw, rim: RIM, spokes: 4 } as CarSpec);
-    wheelGeos.set(id, g);
+/**
+ * A kart wheel (vehicle plan Phase 9): a fat tyre with a rounded shoulder and its tread (two staggered rows of
+ * blocks round it, but on the far karts), on a magnesium rim with six spokes, a lip each side, the hub and a valve.
+ * Axle along z, the rim facing +z; coloured per vertex for the cars' detail material
+ */
+const wheelGeos = new Map<string, THREE.BufferGeometry>();
+function kartWheel(id: KartId, detail: number) {
+  const key = `${id}:${detail}`;
+  let g = wheelGeos.get(key);
+  if (g) return g;
+  const s = SHAPES[id];
+  const r = s.r;
+  const h = s.tw / 2;
+  const tread = detail > 0 ? 0.006 : 0;
+  const rt = r - tread;
+  const geos: THREE.BufferGeometry[] = [];
+  const col = (geo: THREE.BufferGeometry, hex: string) => void geos.push(paintAll(geo.index ? geo.toNonIndexed() : geo, hex));
+  const prof: THREE.Vector2[] = [
+    [rt * 0.6, -h],
+    [rt * 0.86, -h],
+    [rt * 0.98, -h * 0.82],
+    [rt, -h * 0.5],
+    [rt, h * 0.5],
+    [rt * 0.98, h * 0.82],
+    [rt * 0.86, h],
+    [rt * 0.6, h],
+  ].map(([x, y]) => new THREE.Vector2(x, y));
+  col(new THREE.LatheGeometry(prof, detail > 1 ? 20 : 14).rotateX(Math.PI / 2), WHEEL);
+  // The tread: shallow blocks in two rows, staggered, standing just proud of the tyre (narrow grooves between)
+  if (tread) {
+    const n = detail > 1 ? 18 : 12;
+    for (let k = 0; k < n; k++)
+      for (const row of [-1, 1]) {
+        const a = ((k + (row > 0 ? 0.5 : 0)) / n) * Math.PI * 2;
+        const blk = new THREE.BoxGeometry(((Math.PI * 2 * r) / n) * 0.8, tread * 2, h * 0.86)
+          .translate(0, rt, row * h * 0.46)
+          .rotateZ(a);
+        col(blk, '#1d1b26');
+      }
   }
+  // The rim: a lip each side, its dished face, six spokes, the hub and its nut, a valve
+  for (const side of [-1, 1]) col(new THREE.CylinderGeometry(rt * 0.62, rt * 0.62, 0.012, 16, 1, true).rotateX(Math.PI / 2).translate(0, 0, side * (h - 0.004)), RIM);
+  col(new THREE.CircleGeometry(rt * 0.58, 16).translate(0, 0, h - 0.016), '#3a3848');
+  for (let k = 0; k < 6; k++)
+    col(
+      new THREE.BoxGeometry(rt * 0.42, rt * 0.12, 0.018)
+        .translate(rt * 0.3, 0, h - 0.008)
+        .rotateZ((k / 6) * Math.PI * 2),
+      RIM
+    );
+  col(new THREE.CylinderGeometry(rt * 0.17, rt * 0.17, 0.03, 10).rotateX(Math.PI / 2).translate(0, 0, h), RIM);
+  col(new THREE.CylinderGeometry(rt * 0.07, rt * 0.07, 0.03, 6).rotateX(Math.PI / 2).translate(0, 0, h + 0.012), FRAME);
+  if (detail > 1) col(new THREE.CylinderGeometry(0.006, 0.006, 0.03).rotateX(Math.PI / 2).translate(0, rt * 0.5, h - 0.004), CHROME);
+  g = merge(geos, true)!;
+  wheelGeos.set(key, g);
   return g;
 }
 
@@ -148,51 +167,185 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
   };
   const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
   const tube = (r: number, len: number, seg = 8) => new THREE.CylinderGeometry(r, r, len, seg);
+  /** A tube bent through points (the frame's rails, the exhaust), its corners rounded */
+  const bend = (pts: V3[], r: number, color: string, round = 0.25) => {
+    const curve = new THREE.CatmullRomCurve3(
+      pts.map((p) => new THREE.Vector3(...p)),
+      false,
+      'catmullrom',
+      round
+    );
+    add(new THREE.TubeGeometry(curve, pts.length * (detail > 1 ? 6 : 3), r, detail > 1 ? 7 : 5, false), color);
+  };
+  /** A side profile (x, y) pushed `w` across, its edges rounded, at z */
+  const profile = (pts: V2[], w: number, color: string, z = 0, round = 0.02) => {
+    const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))), {
+      depth: Math.max(0.001, w - round * 2),
+      bevelEnabled: true,
+      bevelThickness: round,
+      bevelSize: round,
+      bevelOffset: -round,
+      bevelSegments: detail > 1 ? 2 : 1,
+      curveSegments: 6,
+    });
+    add(g.translate(0, 0, z - (w - round * 2) / 2), color);
+  };
   const [ra, fa] = s.axles;
   const floorY = s.floor;
+  const f = floorY + 0.035;
 
-  // The frame: two side rails and three cross tubes, on a floor pan
-  const railLen = fa - ra + 0.5;
-  for (const z of [-0.2, 0.2]) add(tube(0.022, railLen), FRAME, (fa + ra) / 2 + 0.05, floorY + 0.03, z, 0, 0, Math.PI / 2);
-  for (const x of [ra, (ra + fa) / 2 + 0.05, fa]) add(tube(0.02, s.track * 2 - s.tw), FRAME, x, floorY + 0.03, 0, Math.PI / 2);
-  add(box(0.72, 0.03, 0.42), PAD, 0.05, floorY + 0.015, 0);
-  // Side pods (the paint), with a dark lip along the bottom
-  for (const side of [-1, 1]) {
-    const pw = s.pod.z - 0.21;
-    add(box(s.pod.x1 - s.pod.x0, s.pod.h, pw), paint, (s.pod.x0 + s.pod.x1) / 2, floorY + s.pod.h / 2, side * (0.21 + pw / 2));
-    if (detail > 0) add(box(s.pod.x1 - s.pod.x0, 0.03, pw + 0.02), FRAME, (s.pod.x0 + s.pod.x1) / 2, floorY + 0.015, side * (0.21 + pw / 2));
+  // The tube frame: two rails bent in towards the nose and out round the seat, cross tubes, the rear axle and its
+  // bearings, the floor pan; nerf bars outboard between the wheels; a rear bumper behind the back wheels
+  for (const z of [-1, 1]) {
+    bend(
+      [
+        [fa + 0.12, f, z * 0.1],
+        [fa - 0.04, f, z * 0.17],
+        [SEAT_X + 0.1, f, z * 0.22],
+        [ra + 0.04, f, z * 0.22],
+        [ra - 0.12, f + 0.02, z * 0.17],
+      ],
+      0.02,
+      FRAME
+    );
+    if (detail > 0)
+      bend(
+        [
+          [fa - 0.1, f + 0.01, z * 0.21],
+          [fa - 0.2, f + 0.05, z * (s.track - 0.02)],
+          [ra + 0.2, f + 0.05, z * (s.track - 0.02)],
+          [ra + 0.1, f + 0.01, z * 0.22],
+        ],
+        0.016,
+        FRAME
+      );
   }
-  // The nose cone: a flattened four-sided taper, the paint, over a dark bumper
+  for (const x of [fa, (ra + fa) / 2]) add(tube(0.018, 0.4), FRAME, x, f, 0, Math.PI / 2);
+  add(tube(0.022, s.track * 2 - s.tw * 0.6), CHROME, ra, s.r, 0, Math.PI / 2);
+  for (const z of [-0.2, 0.2]) add(box(0.06, s.r - f + 0.03, 0.05), FRAME, ra, (s.r + f) / 2, z);
+  add(box(0.7, 0.02, 0.38), PAD, SEAT_X + 0.12, floorY + 0.012, 0);
+  if (detail > 0) {
+    bend(
+      [
+        [ra - 0.1, f + 0.02, -0.18],
+        [ra - s.r - 0.12, f + 0.05, -0.22],
+        [ra - s.r - 0.12, f + 0.05, 0.22],
+        [ra - 0.1, f + 0.02, 0.18],
+      ],
+      0.018,
+      FRAME,
+      0.1
+    );
+    // The front stub axles out to the wheels (they steer on their own), the tie rods
+    for (const z of [-1, 1]) add(tube(0.014, s.track - 0.2), FRAME, fa, s.r, z * (0.1 + s.track / 2), Math.PI / 2);
+  }
+
+  // Side pods (the paint): a wedge rounded off, lower at the front, on the nerf bars
+  const pw = s.pod.z - 0.21;
+  for (const side of [-1, 1]) {
+    const { x0, x1, h } = s.pod;
+    profile(
+      [
+        [x0, floorY + 0.02],
+        [x1, floorY + 0.02],
+        [x1 - 0.02, floorY + h * 0.6],
+        [x1 - 0.12, floorY + h],
+        [x0 + 0.04, floorY + h],
+        [x0, floorY + h * 0.7],
+      ],
+      pw,
+      paint,
+      side * (0.21 + pw / 2),
+      0.025
+    );
+    if (detail > 0) add(box(x1 - x0 - 0.04, 0.03, pw + 0.02), FRAME, (x0 + x1) / 2, floorY + 0.015, side * (0.21 + pw / 2));
+  }
+  // The nose: a full rounded fairing over the front, the paint, its spoiler lip under it in the frame's black
   const noseX0 = fa + 0.08;
-  const nose = new THREE.CylinderGeometry(0.07, 0.2, s.nose, 4).rotateY(Math.PI / 4).rotateZ(-Math.PI / 2).scale(1, 0.55, 1.2);
-  add(nose, paint, noseX0 + s.nose / 2, floorY + 0.1, 0);
-  add(box(0.06, 0.05, 0.3), FRAME, noseX0 + s.nose + 0.01, floorY + 0.06, 0);
-  // The bucket seat: a cushion and a back leaning back, with the paint's trim down its sides
-  const seatX = -0.1;
+  const nn = s.nose;
+  profile(
+    [
+      [noseX0 - 0.16, floorY + 0.04],
+      [noseX0 + nn, floorY + 0.04],
+      [noseX0 + nn + 0.02, floorY + 0.09],
+      [noseX0 + nn - 0.06, floorY + 0.15],
+      [noseX0 + 0.04, floorY + 0.22],
+      [noseX0 - 0.16, floorY + 0.24],
+    ],
+    0.46,
+    paint,
+    0,
+    0.04
+  );
+  add(box(0.12, 0.025, 0.56), FRAME, noseX0 + nn - 0.02, floorY + 0.025, 0);
+  if (s.bullbar) {
+    const bx = noseX0 + nn + 0.07;
+    for (const y of [floorY + 0.05, floorY + 0.17]) add(tube(0.018, 0.42), FRAME, bx, y, 0, Math.PI / 2);
+    for (const z of [-0.18, 0.18]) add(tube(0.018, 0.2), FRAME, bx, floorY + 0.11, z);
+  }
+
+  // The bucket seat: a cushion, a back leaning back with bolsters each side, the paint's trim down its sides
+  const seatX = SEAT_X;
   const seatTop = s.seat;
-  add(box(0.3, 0.06, 0.34), SEAT, seatX, seatTop - 0.03, 0);
-  add(box(0.06, 0.38, 0.34), SEAT, seatX - 0.17, seatTop + 0.16, 0, 0, 0, -0.28);
-  for (const side of [-1, 1]) add(box(0.3, 0.1, 0.03), paint, seatX, seatTop + 0.02, side * 0.17);
-  // The steering column (the wheel itself is its own mesh, below)
-  const colX = seatX + 0.3;
-  const wheelAt = new THREE.Vector3(colX + 0.1, seatTop + 0.24, 0);
-  add(tube(0.016, 0.26), FRAME, colX + 0.03, seatTop + 0.12, 0, 0, 0, -0.5);
-  // The engine box behind the seat, its pull cord and the exhaust pipe out the back
+  add(box(0.3, 0.06, 0.32), SEAT, seatX, seatTop - 0.03, 0);
+  add(box(0.06, 0.4, 0.32), SEAT, seatX - 0.17, seatTop + 0.17, 0, 0, 0, -0.28);
+  for (const side of [-1, 1]) {
+    add(box(0.32, 0.16, 0.04), SEAT, seatX - 0.02, seatTop + 0.05, side * 0.17);
+    add(box(0.32, 0.06, 0.045), paint, seatX - 0.02, seatTop + 0.14, side * 0.172);
+  }
+  // The pedals on their stalks, the steering column from the front cross tube up to the wheel
+  for (const [x, y, z] of pedalsOf(id)) {
+    add(box(0.03, 0.09, 0.06), CHROME, x, y, z, 0, 0, -0.35);
+    if (detail > 0) add(tube(0.008, 0.08), FRAME, x + 0.02, y - 0.06, z);
+  }
+  const [wx, wy] = wheelOf(id);
+  bend(
+    [
+      [fa - 0.02, f + 0.02, 0],
+      [fa - 0.08, f + 0.12, 0],
+      [wx + 0.02, wy - 0.02, 0],
+    ],
+    0.015,
+    FRAME,
+    0.3
+  );
+
+  // The engine behind the seat: the crankcase, the finned cylinder standing up on it, the carburettor and its air box
+  // (a big round filter on the Big Wheel), the chain guard down to the sprocket on the rear axle
   const [ew, eh, ed] = s.engine;
   const engX = seatX - 0.27 - ew / 2;
-  add(box(ew, eh, ed), ENGINE, engX, floorY + eh / 2 + 0.02, 0);
-  if (detail > 0) add(box(ew * 0.6, 0.03, ed * 0.6), CHROME, engX, floorY + eh + 0.035, 0);
-  if (s.filter) add(tube(0.07, 0.16, 10), CHROME, engX, floorY + eh + 0.1, -ed / 4);
-  const exX = -HALF + 0.02;
-  const exY = floorY + 0.12;
-  const exZ = 0.16;
-  add(tube(0.03, 0.26, 10), CHROME, exX + 0.1, exY, exZ, 0, 0, Math.PI / 2);
-  if (detail > 0) add(tube(0.036, 0.04, 10), FRAME, exX - 0.02, exY, exZ, 0, 0, Math.PI / 2);
-  const exhausts: [number, number, number][] = [[exX - 0.03, exY, exZ]];
-  if (s.filter) {
-    add(tube(0.03, 0.26, 10), CHROME, exX + 0.1, exY, -exZ, 0, 0, Math.PI / 2);
-    exhausts.push([exX - 0.03, exY, -exZ]);
+  add(box(ew, eh * 0.55, ed), ENGINE, engX, floorY + eh * 0.275 + 0.02, 0);
+  const cylH = eh * 0.55;
+  const cylY = floorY + eh * 0.55 + 0.02 + cylH / 2;
+  add(tube(ew * 0.26, cylH, 10), ENGINE, engX, cylY, 0.02);
+  if (detail > 0) for (let k = 0; k < 4; k++) add(tube(ew * 0.38, 0.012, 10), '#6a6880', engX, cylY - cylH * 0.35 + k * cylH * 0.22, 0.02);
+  add(tube(ew * 0.2, 0.03, 8), CHROME, engX, cylY + cylH / 2 + 0.015, 0.02);
+  if (s.filter) add(tube(0.07, 0.16, 10), CHROME, engX + 0.02, floorY + eh + 0.06, -ed / 2 - 0.03, Math.PI / 2);
+  else add(box(0.08, 0.08, 0.1), '#2c2f40', engX + 0.02, cylY, -ed / 2 - 0.04);
+  if (detail > 0) {
+    add(box(Math.abs(engX - ra) + 0.06, 0.08, 0.02), FRAME, (engX + ra) / 2, (floorY + s.r) / 2 + 0.04, -0.13, 0, 0, 0.3);
+    add(tube(s.r * 0.6, 0.015, 12), '#6a6880', ra, s.r, -0.15, Math.PI / 2);
   }
+  // The exhaust: a pipe bent out of the cylinder's head and round to a silencer canister behind, out the back
+  const exX = -HALF + 0.02;
+  const exY = floorY + 0.14;
+  const exhausts: V3[] = [];
+  for (const z of s.filter ? [0.16, -0.16] : [0.16]) {
+    bend(
+      [
+        [engX + ew * 0.2, cylY + cylH * 0.2, 0.02 + Math.sign(z) * ew * 0.25],
+        [engX + ew * 0.1, cylY, z * 0.9],
+        [engX - ew * 0.2, exY + 0.04, z],
+        [exX + 0.24, exY, z],
+      ],
+      0.02,
+      CHROME
+    );
+    add(tube(0.045, 0.2, 10), CHROME, exX + 0.12, exY, z, 0, 0, Math.PI / 2);
+    if (detail > 0) add(tube(0.05, 0.02, 10), FRAME, exX + 0.02, exY, z, 0, 0, Math.PI / 2);
+    exhausts.push([exX - 0.01, exY, z]);
+  }
+
   // Behind the seat: a wing on struts, a roll hoop, or a little fin
   if (s.rear === 'wing') {
     const wy = seatTop + 0.3;
@@ -206,20 +359,14 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
   } else {
     add(box(0.16, 0.14, 0.02), paint, engX - 0.02, floorY + eh + 0.08, 0, 0, 0, 0.5);
   }
-  // Armour: a plate down each side and over the nose, riveted; and a bull bar out front
+  // Armour: a plate down each side, riveted
   if (s.armour) {
     for (const side of [-1, 1]) {
       add(box(0.6, 0.22, 0.03), ARMOUR, 0, floorY + 0.14, side * (s.pod.z + 0.02), side * 0.1);
       if (detail > 1) for (const x of [-0.22, 0, 0.22]) add(box(0.03, 0.03, 0.02), CHROME, x, floorY + 0.22, side * (s.pod.z + 0.04));
     }
-    add(box(0.24, 0.03, 0.3), ARMOUR, noseX0 + 0.1, floorY + 0.2, 0, 0, 0, 0.3);
   }
-  if (s.bullbar) {
-    const bx = noseX0 + s.nose + 0.07;
-    for (const y of [floorY + 0.05, floorY + 0.17]) add(tube(0.018, 0.42), FRAME, bx, y, 0, Math.PI / 2);
-    for (const z of [-0.18, 0.18]) add(tube(0.018, 0.2), FRAME, bx, floorY + 0.11, z);
-  }
-  // Mudguards over the rear wheels (the paint), and a dark strip behind the seat
+  // Mudguards over the rear wheels (the paint)
   if (detail > 0) for (const side of [-1, 1]) add(box(s.r * 1.6, 0.025, s.tw + 0.04), paint, ra, s.r * 2 + 0.04, side * s.track, side * 0.1);
   // The rear light
   const light = new THREE.Mesh(box(0.02, 0.05, 0.18), neon(TAIL, 1.2, 2));
@@ -231,27 +378,38 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
   for (const g of temp) g.dispose();
   group.add(body);
 
-  // The steering wheel, on an axle tilted back towards the driver; its grips are where the hands go
-  const tilt = 0.55;
-  const axis = new THREE.Vector3(Math.cos(tilt), -Math.sin(tilt), 0).normalize();
-  const wheelGeo = new THREE.TorusGeometry(0.095, 0.02, 8, 16).rotateY(Math.PI / 2).rotateZ(-tilt);
-  const spokeGeo = new THREE.BoxGeometry(0.02, 0.012, 0.17).rotateZ(-tilt);
+  // The steering wheel, on an axle tilted back towards the driver: its rim, three spokes and the hub
+  const axis = new THREE.Vector3(Math.cos(WHEEL_TILT), -Math.sin(WHEEL_TILT), 0).normalize();
+  const wheelGeo = new THREE.TorusGeometry(WHEEL_R, 0.02, 8, 18).rotateY(Math.PI / 2).rotateZ(-WHEEL_TILT);
+  const spokeGeo = merge(
+    [0, 1, 2].map((k) =>
+      paintAll(
+        new THREE.BoxGeometry(0.014, 0.012, WHEEL_R)
+          .translate(0, 0, WHEEL_R / 2)
+          .rotateX(Math.PI / 2 + (k * Math.PI * 2) / 3)
+          .rotateZ(-WHEEL_TILT)
+          .toNonIndexed(),
+        WHEEL
+      )
+    ).concat(paintAll(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 10).rotateZ(Math.PI / 2 - WHEEL_TILT).toNonIndexed(), '#e219e5')),
+    true
+  )!;
   const wheel = new THREE.Mesh(wheelGeo, toon(WHEEL));
-  const spoke = new THREE.Mesh(spokeGeo, toon(WHEEL));
+  const spoke = new THREE.Mesh(spokeGeo, carMaterials().detail);
   wheel.add(spoke);
-  wheel.position.copy(wheelAt);
+  wheel.position.set(...wheelOf(id));
   group.add(wheel);
 
   // The number on the nose
   const plateGeo = new THREE.PlaneGeometry(0.17, 0.17).rotateY(Math.PI / 2);
   const plate = new THREE.Mesh(plateGeo, plateMat(1));
   // Lying on the nose's sloping top, so it reads from the chase camera
-  plate.position.set(noseX0 + s.nose * 0.5, floorY + 0.2, 0);
+  plate.position.set(noseX0 + s.nose * 0.45, floorY + 0.205, 0);
   plate.rotation.z = 1.3;
   group.add(plate);
 
   // The wheels: a pivot each (steers about y, rolls about z), the rim facing out
-  const wheelGeoR = kartWheel(id);
+  const wheelGeoR = kartWheel(id, detail);
   const { detail: detailMat } = carMaterials();
   const wheels = s.axles.flatMap((x) =>
     [s.track, -s.track].map((z) => {
@@ -273,40 +431,11 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
   let leanAmt = 0;
   let headYaw = 0;
   let wheelTurn = 0;
-  const M = new THREE.Matrix4();
-  const inv = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const grip = new THREE.Vector3();
-  const chest = new THREE.Matrix4();
 
-  /** Pose the driver: seated, leaning, hands on the wheel's grips */
+  /** Pose the driver: seated low, feet on the pedals, leaning, hands on the wheel's grips (kartframe.ts) */
   function poseDriver() {
     if (!driver) return;
-    const p = driver.pose;
-    p.bob = 0;
-    p.lean = 0.16 + Math.abs(leanAmt) * 0.04;
-    p.twist = 0;
-    // Tipping into the drift: the hips roll (a positive side tilts him to his right)
-    p.side = leanAmt * 0.22;
-    p.headYaw = headYaw;
-    p.headPitch = 0.06;
-    for (const l of p.legs) {
-      l.fwd = 1.2;
-      l.out = 0.1;
-      l.bend = 0.5;
-      l.twist = 0;
-    }
-    // The torso frame in kart space: root (seat, facing +x, scaled) > the body's own (hips rolled, spine leaned)
-    const g = driver.g;
-    chest.compose(g.position, g.quaternion, g.scale);
-    chest.multiply(torsoFrame(p, M));
-    inv.copy(chest).invert();
-    // The grips: 3 and 9 o'clock on the wheel, turned with it; arm 0 (the rig's -x) is on the kart's +z side
-    for (const i of [0, 1] as const) {
-      grip.set(0, 0, i === 0 ? 0.095 : -0.095).applyQuaternion(q.setFromAxisAngle(axis, wheelTurn)).add(wheelAt);
-      grip.applyMatrix4(inv);
-      reachArm(p, i, grip);
-    }
+    kartPose(driver.pose, id, leanAmt, headYaw, wheelTurn);
     driver.update();
   }
 
@@ -343,7 +472,7 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
       const g = degen.g;
       g.rotation.set(0, Math.PI / 2, 0);
       g.scale.setScalar(DRIVER_SCALE);
-      g.position.set(seatAt.x, seatAt.y - HIP_HEIGHT * DRIVER_SCALE + 0.01, seatAt.z);
+      g.position.set(...driverRoot(id));
       // Whatever he carries stays put away while he drives
       if (degen.held) degen.held.visible = false;
       group.add(g);
