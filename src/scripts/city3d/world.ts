@@ -29,6 +29,7 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampKind } from './trenches';
+import { BASIN, CHANNEL, DOCK_BRIDGE, inDocks, type Rect } from './docks';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF, WATERFRONT_RECT } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
@@ -284,8 +285,10 @@ function ring(poly: Pt[], w: number, y: number) {
 /** A big outline raised to h, in pieces: its top a piece per tile, its sides a wall each edge */
 function tiledSlab(poly: Pt[], h: number): THREE.BufferGeometry[] {
   const pos: number[] = [];
-  const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
-  const cz = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+  // (which way round the outline runs: the plan's, counter-clockwise from above, has every wall facing out as wound;
+  // read from its area, not each edge against the middle, so a block with a notch, the Docks' round their basin,
+  // faces out all round)
+  const area = poly.reduce((s, p, i) => s + p[0] * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * p[1], 0);
   for (let i = 0; i < poly.length; i++) {
     const [p, q] = [poly[i], poly[(i + 1) % poly.length]];
     const quad = [
@@ -294,9 +297,8 @@ function tiledSlab(poly: Pt[], h: number): THREE.BufferGeometry[] {
       [q[0], h, q[1]],
       [p[0], h, p[1]],
     ];
-    // Wound 0-1-2 it faces (-ez, ex): turned round if that faces in
-    const [ex, ez] = [q[0] - p[0], q[1] - p[1]];
-    const out = -ez * (p[0] - cx) + ex * (p[1] - cz) > 0;
+    // Wound 0-1-2 it faces (-ez, ex): turned round if the outline runs the other way
+    const out = area < 0;
     for (const k of out ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]) pos.push(...quad[k]);
   }
   const walls = new THREE.BufferGeometry();
@@ -360,14 +362,14 @@ export const puddleMat = new THREE.MeshBasicMaterial({
 });
 
 /**
- * Where the highway, or a street of The Trenches (trenches.ts) or Uptown (uptown.ts), meets road `i` (an east-west
+ * Where the highway, or a street of The Trenches (trenches.ts), Uptown (uptown.ts) or the Docks (docks.ts), meets road `i` (an east-west
  * road's x, a north-south road's z), each widened to the asphalt of the road that meets it: gaps in that road's median
  * and lines (and where Uptown's axis crosses it on foot, for its zebra)
  */
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-'))))
+    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-'))))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];
@@ -579,8 +581,10 @@ function riverBanks(b: Batch, e0: number, e1: number) {
       if (Math.abs(p.top - quayLine) > 0.01 || Math.abs(q.top - quayLine) > 0.01)
         b.add(quad3([[x0, 0, quayLine], [x1, 0, quayLine], [x1, 0, q.top], [x0, 0, p.top]], [0, 1, 0]), grass);
       if (slope < 0.35) {
-        // The quay: its coping on the land side of the edge, its face straight down into the water
+        // The quay: its coping on the land side of the edge, its face straight down into the water (none across the
+        // Docks' mouth, open to the basin under the avenue's bridge: docks.ts; its coping there is the bridge's kerb)
         b.box(x0, 0, Math.min(p.e, q.e) + (sign < 0 ? -0.25 : 0), x1 - x0, 0.12, 0.25 + Math.abs(q.e - p.e), stone);
+        if (bank === 'south' && x0 > CHANNEL[0] - 0.01 && x1 < CHANNEL[2] + 0.01) continue;
         b.add(quad3([[x0, 0, p.e], [x1, 0, q.e], [x1, UNDER, q.e], [x0, UNDER, p.e]], [0, 0, out]), wall);
         continue;
       }
@@ -683,6 +687,75 @@ function tintHills(g: THREE.BufferGeometry) {
   }
 }
 
+/** A rectangle less the parts of it inside `holes` (x0, z0, x1, z1 each): up to four pieces a hole */
+function minusRects(r: Rect, holes: Rect[]): Rect[] {
+  let out: Rect[] = [r];
+  for (const [hx0, hz0, hx1, hz1] of holes)
+    out = out.flatMap((q): Rect[] => {
+      const [x0, z0, x1, z1] = q;
+      if (hx0 >= x1 || hx1 <= x0 || hz0 >= z1 || hz1 <= z0) return [q];
+      const [a, c] = [Math.max(z0, hz0), Math.min(z1, hz1)];
+      const pieces: Rect[] = [
+        [x0, z0, x1, a],
+        [x0, c, x1, z1],
+        [x0, a, Math.max(x0, hx0), c],
+        [Math.min(x1, hx1), a, x1, c],
+      ];
+      return pieces.filter((p) => p[2] - p[0] > 1e-6 && p[3] - p[1] > 1e-6);
+    });
+  return out;
+}
+
+/** The Docks' water (docks.ts): the basin and its mouth from the river's quay line, at the river's height, all of it deep */
+function basinWater() {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  for (const [x0, z0, x1, z1] of [CHANNEL, BASIN]) {
+    const k = pos.length / 3;
+    pos.push(x0, WATER_Y, z0, x1, WATER_Y, z0, x1, WATER_Y, z1, x0, WATER_Y, z1);
+    idx.push(k, k + 2, k + 1, k, k + 3, k + 2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('shore', new THREE.Float32BufferAttribute(new Array(pos.length / 3).fill(1), 1));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  return new THREE.Mesh(g, riverMat);
+}
+
+/**
+ * The Docks' quay walls (docks.ts): from the quays' edge down into the water all round the basin and its mouth,
+ * facing the water, in pieces no longer than a tile's share; and under the avenue over the mouth, the bridge's
+ * concrete deck (its asphalt, the promenade and its sidewalk on top are the street's and the plan's)
+ */
+function basinWalls(b: Batch) {
+  const wall = toon('#57537a');
+  const deck = toon('#8a879c');
+  const UNDER = WATER_Y - 0.25;
+  const PIECE = 10;
+  const run = (ax: number, az: number, bx: number, bz: number, face: [number, number, number]) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / PIECE));
+    for (let i = 0; i < n; i++) {
+      const [p, q] = [i / n, (i + 1) / n];
+      const [x0, z0, x1, z1] = [ax + (bx - ax) * p, az + (bz - az) * p, ax + (bx - ax) * q, az + (bz - az) * q];
+      b.add(quad3([[x0, 0, z0], [x1, 0, z1], [x1, UNDER, z1], [x0, UNDER, z0]], face), wall);
+    }
+  };
+  const [cx0, cz0, cx1] = CHANNEL;
+  const [bx0, bz0, bx1, bz1] = BASIN;
+  run(cx0, cz0, cx0, bz0, [1, 0, 0]);
+  run(cx1, cz0, cx1, bz0, [-1, 0, 0]);
+  run(bx0, bz0, cx0, bz0, [0, 0, 1]);
+  run(cx1, bz0, bx1, bz0, [0, 0, 1]);
+  run(bx0, bz0, bx0, bz1, [1, 0, 0]);
+  run(bx1, bz0, bx1, bz1, [-1, 0, 0]);
+  run(bx0, bz1, bx1, bz1, [0, 0, -1]);
+  // (the deck's sides a hair inside the walls it spans between)
+  const [dx0, dz0, dx1, dz1] = DOCK_BRIDGE;
+  b.box(dx0 + 0.01, -0.7, dz0 + 0.01, dx1 - dx0 - 0.02, 0.7 - 0.006, dz1 - dz0 - 0.02, deck);
+}
+
 /**
  * The ground. `lots` picks a surface for a block (by its plan id, like 'dt-c' or
  * 'district-N1') or for a landmark's own lot inside its block (by its old block, layout.ts SEATS).
@@ -703,17 +776,23 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       [z0, Math.min(z1, RIVER[0])],
       [Math.max(z0, RIVER[1]), z1],
     ])
-      if (c > a) {
-        const hill = hillsPlane(x0, a, x1, c);
-        b.add(hill ?? new THREE.PlaneGeometry(x1 - x0, c - a).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (a + c) / 2), grass);
-        // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex)
-        if (hill) tintHills(hill);
-      }
+      if (c > a)
+        // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts)
+        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL])) {
+          const hill = hillsPlane(px0, pz0, px1, pz1);
+          b.add(hill ?? new THREE.PlaneGeometry(px1 - px0, pz1 - pz0).rotateX(-Math.PI / 2).translate((px0 + px1) / 2, 0, (pz0 + pz1) / 2), grass);
+          // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex)
+          if (hill) tintHills(hill);
+        }
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
   // (on past the edge with the grass, walled at its ends)
   scene.add(riverWater(g0, g1));
   riverBanks(b, g0, g1);
+  // The Docks' basin and its mouth (docks.ts): water at the river's height between stone quay walls, the avenue over
+  // the mouth on a deck
+  scene.add(basinWater());
+  basinWalls(b);
 
   // A promenade on each bank: between the north-bank avenue and the water, and the water and the south bank avenue
   const northBank = EW_ROADS.filter((r) => r.c < RIVER[0]).at(-1)!;
@@ -834,6 +913,18 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
     if (blk.id.startsWith('trench-')) {
       b.add(slabPoly(slab, SLAB), trenchKerb);
       b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.005, YARD_REPEAT), LOTS.yard);
+      return;
+    }
+    // (the Docks' as The Trenches': grey sidewalks, worn concrete, in pieces a tile each round the basin; their strips
+    // along the basin's south quay and over its mouth all sidewalk)
+    if (blk.ref === 'docks') {
+      const [walls, ...top] = tiledSlab(slab, SLAB);
+      b.add(walls, trenchKerb);
+      if (!blk.walk) for (const g of top) b.add(g, trenchKerb);
+      else {
+        for (const g of tiled(slab, SLAB, YARD_REPEAT)) b.add(g, LOTS.yard);
+        b.add(ring(slab, blk.walk + 0.4, SLAB + 0.004), trenchKerb);
+      }
       return;
     }
     const kind: LotKind =
@@ -1233,7 +1324,8 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
   const toneOf = lamps.map((l, i): Tone | 'dead' => {
     // (the waterfront's are all sodium, none flickering: it's kept up)
     const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
-    const k = l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1 ? 'sodium' : lampKind(l.x, l.z);
+    // (and the Docks' too, a working port: docks.ts)
+    const k = (l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1) || inDocks(l.x, l.z) ? 'sodium' : lampKind(l.x, l.z);
     return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
   });
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)

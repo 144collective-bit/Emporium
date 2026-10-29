@@ -30,6 +30,7 @@ import { RIVER } from './layout';
 import { edgeSamples, topsAt } from './river';
 import { riverCrossings } from './streetplan';
 import { LAKE_C, LAKE_WALLS } from './westlake';
+import { BASIN_WALLS, inDocks } from './docks';
 
 export interface DriveTune {
   /** Top speed and reverse top speed (tiles/s) */
@@ -249,7 +250,12 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
   // Soft collisions: push each circle out of whatever it overlaps and lose the speed going into it
   let hit = 0;
   // (Westlake Park's lake only when the car's anywhere near it)
-  const walls = world.boxes.concat(c.z > RIVER[0] - 8 && c.z < RIVER[1] + 8 ? riverWallsNear(c.x, 6) : [], Math.hypot(c.x - LAKE_C[0], c.z - LAKE_C[1]) < 50 ? LAKE_WALLS : []);
+  // (and the Docks' basin when it's in the docks: docks.ts)
+  const walls = world.boxes.concat(
+    c.z > RIVER[0] - 8 && c.z < RIVER[1] + 8 ? riverWallsNear(c.x, 6) : [],
+    Math.hypot(c.x - LAKE_C[0], c.z - LAKE_C[1]) < 50 ? LAKE_WALLS : [],
+    inDocks(c.x, c.z, 8) ? BASIN_WALLS : []
+  );
   /** Move the car (and the circle being checked) out along n */
   const push = (cc: { x: number; z: number }, nx: number, nz: number, depth: number, soft: boolean) => {
     c.x += nx * depth;

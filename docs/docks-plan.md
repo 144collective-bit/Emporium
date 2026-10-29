@@ -73,26 +73,66 @@ only, nothing threatening.
 
 ## The phases
 
-### Phase 1: the land, the streets and the quays
+### Phase 1: the land, the streets and the quays (built)
 
-- `docks.ts` (DOM-free, tested in `tests/docks.test.ts`): `DOCKS_RECT` /
-  `inDocks()`; the docks' streets in the street plan (`DOCK_STREETS`,
-  `DOCK_CROSSINGS`, `DOCK_BLOCKS`, joined in `cityPlan()`): the south bank
-  avenue carried on as the docks' main road with traffic, a lit junction
-  where it meets the highway's west side (slip lanes on its outer corners,
-  as the stadium's and the airport's: `OUTER_SLIPS`), Dock Road down the
-  middle, the gate road to the terminal; the basin (`BASIN`: its outline,
-  mouth and quay walls; river.ts's `inWater()`, `edgesAt()` and the
-  channel grow it, so walking, driving, the boats and the world map read
-  it); the quay line along the frontage (`BANKS` split); the woods and the
-  outskirts' trees kept off (`WOODS_OFF`, `keepTreesOff()`).
-- Drawn as a district loaded as you approach (`LAZY_DISTRICTS` id `docks`,
-  `docks3d.ts`): the streets, the quay walls, the basin's water (the
-  river's `waterMat`), the paving and cobbles, lamps; the world map draws
-  its blocks and the basin.
-- Tests: the streets join the plan and carry traffic, nothing on a road,
-  the basin open to the river and clear of the boat lanes, the snapshot
-  unchanged (nothing that exists moves), both world sizes.
+What was built, in `docks.ts` (DOM-free, tested in `tests/docks.test.ts`),
+in today's world numbers (no `SOUTH_SHIFT` / `WIDEN` to add), the docks
+x -400 to -244, z 131 to 290 (`DOCKS_RECT`, `inDocks()`), 20 short of the
+world's west edge today:
+
+- **The streets** (`DOCK_STREETS`, `DOCK_CROSSINGS`, joined in
+  `cityPlan()`; one lane each way, `HALF`): the south bank avenue carries
+  traffic on west of the highway now (the junction's south-west corner got
+  a slip lane: `OUTER_SLIPS` takes a single turn, `highway-ew4-1-0`; its
+  north-west corner is the river); the docks' ring off it, `docks-ring`
+  (Dock Road south at `DOCK_X` -248, Yard Road west at `YARD_Z` 286, West
+  Road north at `WEST_X` -396 back to the avenue, both its ends lit
+  junctions), and Quay Road across it (`QUAY_Z` 202.5) along the basin's
+  south side. Traffic drives them all (routes.ts), the avenue's median and
+  lines break at the junctions (world.ts `highwayGaps()`).
+- **The basin** (`BASIN`, x -345 to -275, z 148 to 200) and its mouth
+  (`CHANNEL`, x -316 to -302) open to the river at the quay line; the avenue
+  and its promenade cross the mouth on a flat bridge at the street's
+  height (`DOCK_BRIDGE`: a concrete deck under the asphalt, railings both
+  sides). The water is at the river's height (`WATER_Y`) between stone
+  quay walls all round (world.ts `basinWater()`, `basinWalls()`, at the
+  boot, the grass cut round it: `minusRects()`); the river's own quay wall
+  is open across the mouth (`riverBanks()`). Not part of river.ts's
+  `inWater()` (the river's tests and the boats read that): walking stops at
+  its edge (`inBasin()` in walk.ts's `blocked()`), cars at `BASIN_WALLS`
+  (drive-sim.ts, near the docks). The south boat lane passes the mouth
+  about 10 out in the river.
+- **The frontage** is a straight quay: river.ts's south bank wandering
+  stretch west of the highway now ends at `DOCKS_QUAY[0]` (x -404) and
+  wanders on west of it.
+- **The blocks** (`DOCK_BLOCKS`, ref `docks` in the plan): the west quay
+  (round the basin's west side and the mouth's, to West Road: the container
+  terminal in Phase 3), the east quay (its mirror, to Dock Road: the old
+  docks), the basin's south quay and the bridge's sidewalk (strips all
+  sidewalk, `walk` 0), the yards south of Quay Road. Grey sidewalks over worn
+  concrete, as The Trenches' (world.ts; the big blocks a piece a tile, their
+  walls facing out round the notch: `tiledSlab()` reads which way an outline
+  runs from its area now).
+- **Lamps** (`DOCK_LAMPS`, placed at the boot in index.ts): sodium
+  (world.ts `buildLamps()`), along the sidewalks, none on the basin's south
+  quay (kept clear for a berth).
+- **Drawn as you approach** (`LAZY_DISTRICTS` id `docks`, `docks3d.ts`):
+  the streets (asphalt, a dashed yellow centre line, zebras on every arm of
+  the avenue's lit junctions), the bridge's railings, a pale stone coping
+  along the water's edge and, near only, mooring bollards every 8 and iron
+  ladders down the walls every 24 (none on phones). The world map draws the
+  basin.
+- **The trees** keep off the docks (outskirts.ts `treeSpot()`, `inDocks()`;
+  the woods with them, through the same check: not `WOODS_OFF`, whose 120
+  of clearance would have thinned the woods west of the highway).
+- **Tests:** the docks inside the world and off the highway and The
+  Trenches; the streets in the plan with traffic on every one; the blocks on
+  no street, over no water, none over another, their edges at the water's;
+  the basin open to the river under the bridge, the frontage straight, the
+  boats' lane well out; the walls over the open water and nothing solid in
+  it; the lamps on sidewalks; no trees. Both world sizes pass; the
+  snapshot gained the new streets and the slip lane (nothing that existed
+  moved). The boot grew 2 KB (662.6 to 664.6 of 670).
 
 ### Phase 2: the metro via the docks, the red arch moved
 

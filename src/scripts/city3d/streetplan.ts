@@ -27,6 +27,7 @@ import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './st
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
 import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './mall';
 import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS, crestPoly } from './crestmont';
+import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
 
 export type Pt = [number, number];
 
@@ -340,14 +341,18 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
  * the Southside Loop, the landscaped blocks round the plots and lots, their
  * squares and pocket parks.
  */
+/** The highway's junction with the south bank avenue on its west side, its south-west corner's turn (docks.ts) */
+const DOCKS_SLIP = 'highway-ew4-1-0';
 /**
  * The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north
  * roads to the stadium and the kart park, and to the airport since docs/airport-plan.md Phase 3: the south bank avenue
  * east to Airport Drive, the east ring avenue south to the GA road; and Crestmont's Flats since its Phase 2:
  * downtown's east-west roads east past the highway, crestmont.ts; but never one over the river's promenade, as the bank
- * avenue's corner on the water would be)
+ * avenue's corner on the water would be). An entry with a turn's number after it (`<junction>-<k>`) is that one
+ * turn alone: the south bank avenue west to the Docks has only its south-west corner (docks.ts; its north-west one
+ * is the river)
  */
-export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0', 'highway-ew0-0', 'highway-ew1-0', 'highway-ew2-0', 'highway-ew3-0'];
+export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0', 'highway-ew0-0', 'highway-ew1-0', 'highway-ew2-0', 'highway-ew3-0', DOCKS_SLIP];
 
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
@@ -379,6 +384,9 @@ export function cityPlan(): StreetPlan {
   // highway, Foothill Road, and the hill roads up from it
   for (const t of CREST_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.median ? { median: t.median } : {}) });
   for (const c of CREST_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // The Docks (docks.ts, docs/docks-plan.md Phase 1): the ring off the south bank avenue west of the highway, Quay Road across it
+  for (const t of DOCK_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
+  for (const c of DOCK_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -407,7 +415,7 @@ export function cityPlan(): StreetPlan {
       // Only on the town side: the arterials past the highway carry no traffic yet
       // (none from the north bank avenue towards the river: its corner there is the promenade's)
       const overWater = m.along === 0 && m.road.c < RIVER[0] && m.road.c + m.road.half + 3 > RIVER[0] && pts.some((p) => p[1] > m.at[1] + 0.5);
-      if (insideHighway(...pts[3]) || (OUTER_SLIPS.includes(m.id) && !overWater)) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
+      if (insideHighway(...pts[3]) || (OUTER_SLIPS.includes(m.id) && !overWater) || OUTER_SLIPS.includes(`${m.id}-${k}`)) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
     });
   }
   // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
@@ -480,6 +488,8 @@ export function cityPlan(): StreetPlan {
     ).map(([id, r, use]): Block => ({ id, poly: square(r[0], r[1], r[2] - r[0], r[3] - r[1]), use, ref: 'mall', walk: WALK_W })),
     // Crestmont's Flats (crestmont.ts)
     ...CREST_BLOCKS.map((b): Block => ({ id: b.id, poly: crestPoly(b.id), use: 'plain', ref: 'crestmont', walk: WALK_W })),
+    // The Docks' quays and yards round the basin (docks.ts)
+    ...DOCK_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'docks', walk: b.walk })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

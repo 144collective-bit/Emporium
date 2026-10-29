@@ -88,6 +88,7 @@ import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
+import { inBasin } from './docks';
 import { heightAt, hillsAlong, onHills } from './terrain';
 import { HIRE } from './riverbus';
 import type { Boat } from './boat';
@@ -666,6 +667,8 @@ export function createWalk(d: WalkDeps) {
     if (mallWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
+    // ...and the Docks' basin at its quays' edge (docks.ts; the avenue crosses its mouth on a bridge)
+    if (inBasin(x, z, -0.3)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;

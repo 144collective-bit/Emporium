@@ -20,6 +20,7 @@ import { createPost } from './post';
 import { CENTER, SLAB, addLamp, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { CREST_LAMPS } from './crestmont';
+import { DOCK_LAMPS } from './docks';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
 import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './boulevard';
@@ -302,6 +303,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
+  // The Docks' (docks.ts): sodium, along their sidewalks (world.ts)
+  for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
   // ...its formal garden's lanterns and people (gardens.ts, the north side's stage 3)
   for (const [x, z, ry] of GARDEN_LAMPS) addLamp(x, z, ry);
   for (const p of GARDEN_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act });

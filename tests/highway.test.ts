@@ -49,12 +49,14 @@ test('a lit junction wherever it meets an arterial, two slip lanes on the town s
     assert.ok(fromHighway(c.at[0], c.at[1]) < 1e-6);
     const slips = PLAN.streets.filter((s) => s.id.startsWith(`slip-${c.id}-`));
     const outer = OUTER_SLIPS.includes(c.id);
+    // (one turn alone past it: the south bank avenue west to the Docks has its south-west corner, docks.ts)
+    const one = OUTER_SLIPS.filter((id) => id.startsWith(`${c.id}-`)).length;
     // (the north bank avenue's past the highway has none over the river's promenade: three)
-    assert.equal(slips.length, c.id === 'highway-ew3-0' ? 3 : outer ? 4 : 2, c.id);
+    assert.equal(slips.length, c.id === 'highway-ew3-0' ? 3 : outer ? 4 : 2 + one, c.id);
     for (const s of slips) {
       assert.equal(s.oneway, 1);
       // From the one road's outer lane to the other's, out across the corner, on the town side (or either side)
-      if (!outer) for (const p of s.pts) assert.ok(insideHighway(p[0], p[1]) || fromHighway(p[0], p[1]) < HIGHWAY_HALF);
+      if (!outer && !OUTER_SLIPS.includes(s.id.slice('slip-'.length))) for (const p of s.pts) assert.ok(insideHighway(p[0], p[1]) || fromHighway(p[0], p[1]) < HIGHWAY_HALF);
       const mid = s.pts[3];
       assert.ok(fromHighway(mid[0], mid[1]) > HIGHWAY_HALF, `${s.id} cuts across the corner, off the highway`);
       const art = PLAN.streets.find((t) => t.id === c.streets[0])!;

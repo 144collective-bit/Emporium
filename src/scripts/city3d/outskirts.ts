@@ -13,6 +13,7 @@
 import { MALL_AREA } from './mall';
 import { CITY_EXT, EW_ROADS, EXT, LANE, NS_ROADS, RIVER, nsRuns } from './layout';
 import { inChannel } from './river';
+import { inDocks } from './docks';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_RECTS } from './kartfacility';
 import { AIRPORT_AREAS, RUNWAY } from './airfield';
@@ -60,6 +61,8 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (naturalAt(x, z) > 0.4) return false;
   // The kart park, Kart Road and the car park (kartfacility.ts)
   if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
+  // The Docks (docks.ts): their own quays and yards, the basin
+  if (inDocks(x, z, 3)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
   if (inTown([x, z], 1.2)) return false;
   // Clear of the airport (airside, landside, the forecourt) and of the low end of its approach, off the runway's west end
