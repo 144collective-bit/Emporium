@@ -29,9 +29,12 @@ const BUDGETS = {
    * Bridge is; and from 666 for step 4, the owner's picks: more boats (the lane boats doubled, the police launch, the
    * river's life loaded as you approach) and the river bus's stops as places (their gangways' prompts, the railings
    * and the promenades' lamps, trees and benches opening round them, the stops on the world map), 2 KB: the boats,
-   * the landings, the bus's loop, its timetable and its rides are their own chunks')
+   * the landings, the bus's loop, its timetable and its rides are their own chunks'); and from 670 for Sunridge
+   * (docs/suburb-plan.md, the owner's call: "raise the limit when needed, we want quality"): its streets, blocks, wall
+   * and lamps in the street plan and the traffic's routes round its loop (about 8 KB, less the 5 KB the baked data's
+   * makers gave back when they folded out of the browser's code)
    */
-  bootJs: 670,
+  bootJs: 680,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */
