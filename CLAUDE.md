@@ -1632,7 +1632,9 @@ it and has been retired completely. Build only on what's here.
   (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
   asked for and never knows; a texture redrawn live in pixels afterwards
   must stay under that size, and goes through `liveTex()`). Phones draw the bloom at 3 of its 5 blur levels (`bloomMips` in
-  `post.ts`: a softer glow, 4 fewer passes a frame); desktop draws all 5.
+  `post.ts`: a softer glow, 4 fewer passes a frame); desktop draws all 5. Phones draw the ink outlines thinner (`thinInk` in
+  `post.ts`: each line on one side of its edge only, one texel out, about half
+  the width); desktop's are as they are.
 - **Start-up stays light** (performance phase 2,
   `docs/performance-plan.md`):
   - Data that's the same for everyone is worked out when the site is
