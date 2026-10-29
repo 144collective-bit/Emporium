@@ -8,12 +8,15 @@
  *   drawn by boulevard3d.ts); two tenders inside the pontoon (`TENDERS`).
  * - **The planted median** (`MEDIAN_RUNS`, `MEDIAN_TREES`): a low clipped
  *   hedge along the bank avenue's median through Uptown, broken well short
- *   of every junction and the axis's zebra, slim columnar trees along it.
+ *   of every junction and the axis's zebra, and round the metro's pillars
+ *   where the el runs over it (docs/docks-plan.md Phase 2); slim columnar
+ *   trees along it but under the el.
  * - **The terraces' names** (`TERRACE_NAMES`): made up, one to a terrace.
  */
 import { MEDIAN } from './layout';
 import { AXIS_X, E, LANE_HALF, ROWS_Z, W, crossingsOn } from './uptown';
 import { ESPLANADE, GANGWAYS, PONTOON, ROOF_TERRACES } from './boulevard';
+import { PILLARS, PILLAR_HALF, UP_R, UP_X } from './metro';
 
 export interface Yacht {
   /** Its middle (x, z) and length along the water, beam across it */
@@ -61,7 +64,12 @@ export const HEDGE = { w: MEDIAN - 0.22, h: 0.36 };
 export const MEDIAN_Z = BANK.c;
 export const MEDIAN_RUNS: [number, number][] = (() => {
   // (the crossing streets' widest half is the diagonal's, with its median: 2.3)
-  const cuts = [...crossingsOn(BANK).map((x): [number, number] => [x - 2.3 - 1.6, x + 2.3 + 1.6]), [AXIS_X - LANE_HALF - 1.8, AXIS_X + LANE_HALF + 1.8] as [number, number]].sort((a, b) => a[0] - b[0]);
+  const cuts = [
+    ...crossingsOn(BANK).map((x): [number, number] => [x - 2.3 - 1.6, x + 2.3 + 1.6]),
+    [AXIS_X - LANE_HALF - 1.8, AXIS_X + LANE_HALF + 1.8] as [number, number],
+    // (the el's pillars standing in it, metro.ts)
+    ...PILLARS.filter((p) => Math.abs(p.at[1] - BANK.c) < 0.01).map((p): [number, number] => [p.at[0] - PILLAR_HALF - 0.35, p.at[0] + PILLAR_HALF + 0.35]),
+  ].sort((a, b) => a[0] - b[0]);
   const runs: [number, number][] = [];
   let at = W + 3;
   for (const [a, b] of cuts) {
@@ -75,10 +83,12 @@ export const MEDIAN_RUNS: [number, number][] = (() => {
     return Array.from({ length: n }, (_, k): [number, number] => [a + ((b - a) * k) / n, a + ((b - a) * (k + 1)) / n]);
   });
 })();
-/** Slim columnar trees along the hedge, every 8, a little in from each run's ends */
+/** Where the el runs over the median (west of its bend north into the one-way pair's street): no trees under its deck */
+export const UNDER_EL = UP_X - UP_R + 1;
+/** Slim columnar trees along the hedge, every 8, a little in from each run's ends, none under the el */
 export const MEDIAN_TREES: number[] = MEDIAN_RUNS.flatMap(([a, b]) => {
   const out: number[] = [];
-  for (let x = a + 2; x < b - 1.5; x += 8) out.push(x);
+  for (let x = a + 2; x < b - 1.5; x += 8) if (x > UNDER_EL) out.push(x);
   return out;
 });
 

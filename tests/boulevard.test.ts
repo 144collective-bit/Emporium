@@ -20,6 +20,7 @@ import {
   WATER_TREES,
   onEsplanade,
 } from '../src/scripts/city3d/boulevard';
+import { PILLARS, PILLAR_HALF, TRACKS, pointOn } from '../src/scripts/city3d/metro';
 import { HEDGE, MEDIAN_RUNS, MEDIAN_TREES, MEDIAN_Z, TENDERS, TERRACE_NAMES, YACHTS } from '../src/scripts/city3d/boulevarddress';
 import { AXIS_X, BOULEVARD_X, E, NS_X, ROWS_Z, W } from '../src/scripts/city3d/uptown';
 import { HIGHRISES, PODIUM } from '../src/scripts/city3d/highrise';
@@ -147,6 +148,14 @@ test('the planted median: along the bank avenue\'s median through Uptown, never 
       assert.ok(b < c.at[0] - 2 || a > c.at[0] + 2, `a hedge into ${c.id}`);
   }
   for (const x of MEDIAN_TREES) assert.ok(MEDIAN_RUNS.some(([a, b]) => x > a + 1 && x < b - 1));
+  // Where the metro's el runs over it (docs/docks-plan.md Phase 2): the hedge broken round its pillars, no tree under its deck
+  const pillars = PILLARS.filter((p) => Math.abs(p.at[1] - bank.c) < 0.01 && p.at[0] > W && p.at[0] < E);
+  assert.ok(pillars.length >= 3);
+  for (const p of pillars) for (const [a, b] of MEDIAN_RUNS) assert.ok(b < p.at[0] - PILLAR_HALF - 0.2 || a > p.at[0] + PILLAR_HALF + 0.2, `a hedge round the pillar at ${p.at[0].toFixed(1)}`);
+  for (const x of MEDIAN_TREES) for (let s = 0; s <= TRACKS.main.len; s += 0.5) {
+    const q = pointOn('main', s).at;
+    assert.ok(Math.hypot(q[0] - x, q[1] - bank.c) > 2, `a tree under the el at ${x}`);
+  }
 });
 
 test('the town car: a long black saloon inside a lane, in scale with the city\'s cars', () => {

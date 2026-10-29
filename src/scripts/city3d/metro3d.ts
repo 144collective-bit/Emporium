@@ -25,6 +25,7 @@ import * as THREE from 'three';
 import { Batch, PAL, boxAt, canvasTex, FONT_DISPLAY, fx, glowTex, lit, mergeMeshes, neon, roundRect, toon } from './kit';
 import { SLAB, addPool, type Tick } from './world';
 import { inTrenches } from './trenches';
+import { inDocks } from './docks';
 import { EL_SPANS, PLINTH } from './grit';
 import {
   ARCH,
@@ -161,6 +162,9 @@ function piecesOf(id: TrackId, s0: number, s1: number): [number, number][] {
   return cuts.slice(1).map((c, i) => [cuts[i], c]);
 }
 
+/** Where the el is dark steel: over The Trenches and on west through the docks (the highway and Dock Road between) */
+const grim = (x: number, z: number) => inTrenches(x, z) || inDocks(x, z, 30);
+
 export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { reduced: boolean; low: boolean }) {
   const concrete = toon('#b9b4cc');
   const pier = toon('#7d7898');
@@ -207,7 +211,8 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
         const f = trackFrame(b, t.id, a);
         const l = c - a + 0.02;
         const arch = onArch(t.id, (a + c) / 2);
-        const el = !arch && inTrenches(...pointOn(t.id, (a + c) / 2).at);
+        // (dark steel over The Trenches and on through Southbank Docks: docs/docks-plan.md Phase 2)
+        const el = !arch && grim(...pointOn(t.id, (a + c) / 2).at);
         f.box(0, DECK_Y - DECK_T, -DECK_HALF, l, DECK_T, DECK_HALF * 2, el ? grimy : concrete);
         if (arch) {
           // Hung from the arch: a steel box girder under each edge in the arch's red
@@ -242,7 +247,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   // The pillars, each with a hammerhead under the deck across the track
   for (const p of PILLARS) {
     const f = trackFrame(b, p.track, p.s);
-    if (inTrenches(...p.at)) {
+    if (grim(...p.at)) {
       // A flanged steel column on a concrete plinth, a steel hammerhead
       const H = PLINTH.half;
       const y0 = SLAB + PLINTH.h;

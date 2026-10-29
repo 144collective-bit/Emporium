@@ -67,7 +67,11 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // (and to or from Crestmont's hills, the overlook up Vista Lane and the reservoir out past the ring highway's
       // north-east corner, from the stadium about 81 s; between the world's two far corners, the airport and the hills,
       // about 80 s)
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
-      assert.ok(r!.len / TAXI_SPEED < Math.min(84, 62 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (and Southbank Docks' metro station out on the docks' east quay past the highway's west side, docs/docks-plan.md
+      // Phase 2: from Crestmont's grand hotel across the whole city about 67 s)
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || id === 'metro-docks' ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
+      // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
+      const most = a.id === 'metro-docks' || b.id === 'metro-docks' ? 96 : 84;
+      assert.ok(r!.len / TAXI_SPEED < Math.min(most, 62 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

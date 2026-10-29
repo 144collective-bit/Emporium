@@ -1,9 +1,10 @@
 // The Sector 7 Metro (metro.ts, growth plan Phases 8 and 9): the line runs down the east ring avenue's median, bends
-// west to The Trenches over Trench Avenue's median and on to Uptown (finance plan Phase 7: a tight bend north, portal
-// frames, a steel arch over the river with nothing in the water), and the Airport's branch carries on south from the bend; its
+// west to The Trenches over Trench Avenue's median and on over the highway to Southbank Docks (docs/docks-plan.md
+// Phase 2), north over the river on the red arch with nothing in the water, east along the north bank avenue's median
+// and north into Uptown on portal frames, and the Airport's branch carries on south from the bend; its
 // pillars stand only in a median clear of the junctions, or on open ground, over the river only in its bridge's median, never too far
 // apart; its stations sit between junctions, their stair towers on open ground off every road, pad and solid; and the
-// train keeps to its tracks and its timetable, and every ride takes well under a minute.
+// train keeps to its tracks and its timetable, and every ride takes about a minute at most.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -15,6 +16,8 @@ import {
   CREST_END,
   CREST_S,
   DECK_HALF,
+  NORTH_R,
+  WEST_R,
   DECK_Y,
   HANGERS,
   LEGS,
@@ -47,7 +50,10 @@ import {
 } from '../src/scripts/city3d/metro';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { DEPARTURES, LOOP } from '../src/scripts/city3d/airfield';
-import { MEDIAN, RIVER } from '../src/scripts/city3d/layout';
+import { MEDIAN, RING_HI, RIVER, SOUTH_ROAD } from '../src/scripts/city3d/layout';
+import { BASIN, CHANNEL, DOCKS_NAME, EL_X, inBasin, inDocks } from '../src/scripts/city3d/docks';
+import { BOAT_LANES } from '../src/scripts/city3d/liberty';
+import { laneAt } from '../src/scripts/city3d/river';
 import { PADS } from '../src/scripts/city3d/outer';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { FLIGHTS, PERIOD, REACH, poseAt } from '../src/scripts/city3d/airfield';
@@ -62,7 +68,7 @@ import { PALMS } from '../src/scripts/city3d/landscape';
 const roads = PLAN.streets.filter((s) => s.kind !== 'alley');
 const near = (a: [number, number], b: [number, number], e = 1e-6) => Math.hypot(a[0] - b[0], a[1] - b[1]) < e;
 
-test('the line runs down the east ring avenue, bends west onto Trench Avenue, and the Airport branch carries on south and out east to the terminal', () => {
+test('the line runs down the east ring avenue, bends west onto Trench Avenue and on to the Docks and Uptown, and the Airport branch carries on south and out east to the terminal', () => {
   const { main, branch } = TRACKS;
   assert.ok(near(main.pts[0], [LINE_X, NORTH_END]));
   assert.ok(near(main.pts[main.pts.length - 1], [UP_X, UP_END]));
@@ -80,6 +86,13 @@ test('the line runs down the east ring avenue, bends west onto Trench Avenue, an
   const st = stationAt(STATIONS.find((s) => s.id === 'airport')!).at;
   assert.ok(Math.hypot(st[0] - (DEPARTURES.x0 + DEPARTURES.x1) / 2, st[1] - DEPARTURES.z0) < 60);
   assert.ok(st[1] < LOOP.out - LOOP.half - 3, 'the station stands over the loop');
+  // The bends are quarter circles: about BEND_R * pi / 2 long and the rest; and the main line is smooth all the way
+  const q = (r: number) => (r * Math.PI) / 2;
+  const legs = [SWITCH_S, q(BEND_R), LINE_X - BEND_R - WEST_END, q(WEST_R), AVENUE_Z - WEST_R - (RING_HI + NORTH_R), q(NORTH_R), UP_X - UP_R - (EL_X + NORTH_R), q(UP_R), RING_HI - UP_R - UP_END];
+  assert.ok(Math.abs(main.len - legs.reduce((a, b) => a + b, 0)) < 0.05);
+  // West of The Trenches: along Trench Avenue's line into the docks, north on their line over the river, east along the
+  // north bank avenue's median
+  assert.ok(main.pts.some((p) => near(p, [EL_X, RING_HI + NORTH_R])) && main.pts.some((p) => near(p, [UP_X - UP_R, RING_HI])));
   // Crestmont's spur: off the main line south of Kart Park station, round outside the highway's north-east corner, to its
   // station past Alder Way; smooth all the way, nothing under it on the highway or the kart park
   const { crest } = TRACKS;
@@ -103,8 +116,7 @@ test('the line runs down the east ring avenue, bends west onto Trench Avenue, an
     const q = pointOn('crest', s).at;
     assert.ok(Math.hypot(q[0] - p.x, q[1] - p.z) > DECK_HALF + 1.5, `a palm under the spur at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`);
   }
-  // The bends are quarter circles: about BEND_R * pi / 2 and UP_R * pi / 2 long; and the main line is smooth all the way
-  assert.ok(Math.abs(main.len - (SWITCH_S + (BEND_R * Math.PI) / 2 + (LINE_X - BEND_R - WEST_END) + (UP_R * Math.PI) / 2 + (AVENUE_Z - UP_R - UP_END))) < 0.05);
+  // (the main line's length is held to its straights and quarter circles above); and it's smooth all the way
   for (let i = 2; i < main.pts.length; i++) {
     const [a, b, c] = [main.pts[i - 2], main.pts[i - 1], main.pts[i]];
     const t = Math.atan2(c[1] - b[1], c[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]);
@@ -204,19 +216,21 @@ test('the train keeps to its tracks, stops at every station, and never jumps', (
     prev = p;
   }
   assert.deepEqual([...seen].sort(), STATIONS.map((s) => s.id).sort());
-  // (since Crestmont's spur, docs/crestmont-plan.md Phase 9: out to Crestmont and back from Kart Park too)
-  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 400);
-  assert.equal(LEGS.length, 12);
+  // (since Crestmont's spur, docs/crestmont-plan.md Phase 9: out to Crestmont and back from Kart Park too; and since the
+  // line runs round by the Docks, docs/docks-plan.md Phase 2, through them both ways)
+  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 420);
+  assert.equal(LEGS.length, 14);
 });
 
-test('a ride goes there in well under a minute, and the timetable carries on from where it stops', () => {
+test('a ride goes there in about a minute at most, and the timetable carries on from where it stops', () => {
   for (const a of STATIONS)
     for (const b of STATIONS) {
       if (a === b) continue;
       const r = rideAt(a.id, b.id, 0);
-      // (the longest, The Trenches to Crestmont, the whole main line and the spur, turning round at Kart Park: about
-      // 70 s; Skip ride is there for it. Without Crestmont, Uptown to the Airport is the longest, about 50.8 s)
-      const limit = a.id === 'crestmont' || b.id === 'crestmont' ? 72 : 52;
+      // (the longest: to Crestmont, the whole main line and the spur, turning round at Kart Park; Uptown's since the line
+      // runs round by the Docks, docs/docks-plan.md Phase 2: about 75.4 s, Skip ride is there for it. Without
+      // Crestmont, Uptown to the Airport is the longest, about 60.7 s)
+      const limit = a.id === 'crestmont' || b.id === 'crestmont' ? 77 : 62;
       assert.ok(r.total < limit, `${a.id} to ${b.id} takes ${r.total.toFixed(1)}`);
       assert.ok(near(pointOn(r.track, r.s).at, stationAt(a).at));
       const end = rideAt(a.id, b.id, r.total);
@@ -237,7 +251,7 @@ test('a ride goes there in well under a minute, and the timetable carries on fro
     }
 });
 
-test("Uptown's extension: portal frames on the blocks' edges either side of the street, the arch's feet off the water", () => {
+test("west of The Trenches: portal frames on the blocks' edges either side of the street, the arch's feet off the water", () => {
   const others = SOLIDS.filter((b) => !METRO_SOLIDS.includes(b));
   for (const p of PORTALS)
     for (const k of [-1, 1]) {
@@ -256,6 +270,9 @@ test("Uptown's extension: portal frames on the blocks' edges either side of the 
 test('the arch: the tall ship keeps east of it, the boats pass under its deck, and what flies over keeps well over its crown', () => {
   assert.ok(ANCHOR_X[0] - SHIP.len / 2 > ARCH.x + ARCH.half + 5);
   assert.ok(DECK_Y - 0.6 - WATER_Y > 4);
+  // (its feet on the docks' east quay, clear of the basin's mouth, and on the north bank; the boats' lanes out in the river under it)
+  assert.ok(ARCH.x - ARCH.half > CHANNEL[2] + 2 && ARCH.x - ARCH.half > BASIN[2] + 0.2);
+  for (const z of BOAT_LANES) assert.ok(laneAt(z, ARCH.x) > ARCH.z1 + 2 && laneAt(z, ARCH.x) < ARCH.z0 - 2);
   for (let t = 0; t < PERIOD; t += 0.5)
     for (const f of FLIGHTS) {
       const p = poseAt(f, t);
@@ -263,4 +280,22 @@ test('the arch: the tall ship keeps east of it, the boats pass under its deck, a
       const over = Math.abs(p.x - ARCH.x) < ARCH.half + r && p.z > ARCH.z1 - r && p.z < ARCH.z0 + r;
       assert.ok(!over || p.y > ARCH.top + r, `${f.id} at ${t} over the arch at ${p.y.toFixed(1)}`);
     }
+});
+
+test('Southbank Docks: its station on the east quay between Dock Road and the bend, the line clear of the basin', () => {
+  const st = STATIONS.find((s) => s.id === 'docks')!;
+  assert.equal(st.name, DOCKS_NAME);
+  const at = stationAt(st).at;
+  assert.ok(inDocks(at[0], at[1]) && near(at, [at[0], AVENUE_Z]));
+  for (const [x, z] of [
+    [st.tower[0], st.tower[1]],
+    [st.tower[2], st.tower[3]],
+  ])
+    assert.ok(inDocks(x, z) && !inBasin(x, z, -1));
+  // The deck never over the basin's water, and the line over the docks' land from the avenue's south kerb to the quay
+  for (let s = 0; s <= TRACKS.main.len; s += 0.5) {
+    const [x, z] = pointOn('main', s).at;
+    assert.ok(!inBasin(x, z, -DECK_HALF), `over the basin at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+  }
+  assert.ok(ARCH.z0 > SOUTH_ROAD + 3.7 + 0.8);
 });

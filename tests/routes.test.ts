@@ -12,6 +12,7 @@ import { DIAGONALS } from '../src/scripts/city3d/downtown';
 import { HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { CARGO_ROAD, GA_ROAD, LOOP as AIR_LOOP, ROAD as AIR_ROAD } from '../src/scripts/city3d/airfield';
 import { CREST_RECT } from '../src/scripts/city3d/crestmont';
+import { inDocks } from '../src/scripts/city3d/docks';
 
 const roads = PLAN.streets.filter((s) => s.lanes > 0);
 /** Every point of a route, about every half tile */
@@ -48,6 +49,8 @@ const stadiumWay = (q: Pt) =>
 /** The airport's drive off the south bank avenue east of the highway (and the slip lanes on that junction's outer corners), and its streets round the car park (airfield.ts) */
 /** Crestmont's streets east of the highway (crestmont.ts): the Flats, Foothill Road and the hill roads */
 const crestWay = (q: Pt) => q[0] > HIGHWAY_BOX[2] && q[0] < CREST_RECT[2] && q[1] > CREST_RECT[1] && q[1] < CREST_RECT[3];
+/** The Docks' streets west of the highway (docks.ts): the south bank avenue out to them, their ring and Quay Road */
+const docksWay = (q: Pt) => q[0] < HIGHWAY_BOX[0] && inDocks(q[0], q[1], 30);
 const airportWay = (q: Pt) =>
   (q[0] > HIGHWAY_BOX[2] && q[0] < AIR_ROAD.x + 3 && q[1] > AIR_ROAD.z0 - 14 && q[1] < AIR_LOOP.out) ||
   // (Cargo Road off it and the truck yard's loop: step 3)
@@ -58,7 +61,7 @@ const airportWay = (q: Pt) =>
   (q[0] > GA_ROAD.x0 - 14 && q[0] < GA_ROAD.x1 + 3 && q[1] > HIGHWAY_BOX[3] && q[1] < GA_ROAD.z + 3) ||
   (q[0] > GA_ROAD.x0 + 4 && q[0] < GA_ROAD.x1 + 3 && q[1] > GA_ROAD.z && q[1] < GA_ROAD.loopZ + 3);
 
-test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's and Crestmont's streets)", () => {
+test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's and the Docks' streets)", () => {
   for (const [i, r] of ROUTES.entries())
     for (const { at: q } of points(r)) {
       assert.ok(
@@ -66,7 +69,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 

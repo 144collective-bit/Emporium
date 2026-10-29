@@ -229,7 +229,7 @@ it and has been retired completely. Build only on what's here.
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world).
   - **The edge is data** (growth plan Phase 5): `EXT` is set in one place, and a test run can set another (`WORLD_EXT=x0,x1`, `npm run test:wide` at Phase 10's -680 to 720); both must pass. Nothing that exists reads the edge: the airport's `SITE` is fixed numbers, the river walls and their bridge gaps come from the street plan (`riverCrossings()` in `streetplan.ts`), flying turns back at whatever bounds it's given. Anything new written against the edge must work at both sizes.
-  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built, and the second, **Westlake Park**, is under way (below); the next, **the Docks** (the owner's call: a port on the south bank west of The Trenches past the highway, scenery first, the metro run through it over the red arch moved there), is planned in `docs/docks-plan.md`; follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
+  - **Growing the city** (many more buildings, then a bigger world) is planned in `docs/growth-plan.md`. Part A (Phases 0-4) makes size cheap: the measuring kit and a snapshot test that nothing moves, tiles and a collision grid, near and far building forms, building as you go, building kits. Part B (Phases 5-10) grows the world: the edge as data (the airport's site frozen, trees per tile), `EXT` out to about 880 across, roads to reach it (a ring highway, more bridges, traffic spent near you), getting about (a world map, waypoints, and the owner's pick of metro, taxis or fast travel), districts one at a time, then optionally about 1,400 across. Phases 0 (the measuring kit), 1 (tiles, the collision grid, the city's fixed geometry merged per tile, crowds and traffic culled for the shadow map), 2 (near and far forms: details near only, far forms for the places and the cars) 3 (building as you go: sites built round the home view at the boot and the rest after it, near forms let go past a budget), 4 (building kits: kits, recipes for blocks, a test district behind `?district=test`), 5 (the edge as data: `EXT` in one place, tests at both sizes) 6 (the edge moves out: `EXT` -420 to 460, the woods, the far plane and sky dome from the edge) 7 (roads to reach it: the ring highway, its bridges and slip lanes, routes generated from the street plan, traffic and boats spent near you) and 8 (getting about: the world map, waypoints, Bring my car, taxis, fast travel, the metro, sound by district) are built, and Phase 9's first district, **The Trenches**, is built, and the second, **Westlake Park**, is under way (below); the third, **the Docks** (the owner's call: a port on the south bank west of The Trenches past the highway, scenery first, the metro run through it over the red arch moved there), is planned in `docs/docks-plan.md` and under way (below); follow the rest one phase at a time with the owner's sign-off, and never add buildings in bulk outside the tiles (`tileBatch()`) or outside sites (`site()`).
   - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) and performance phase 4, the foundations (sites built off the main thread, textures made at build time, and districts loaded as you approach, built with Westlake Park) are built. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
@@ -277,16 +277,21 @@ it and has been retired completely. Build only on what's here.
     crosses the highway's junction on a span) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
-    south row and Trench Avenue's median to The Trenches, and on (Uptown's
-    Phase 7, `docs/finance-plan.md`) to `WEST_END`, a tight bend (`UP_R`)
-    into the cross street at `UP_X` (x -150), north on portal frames
-    (`PORTALS`, `PORTAL`: a leg each side on the blocks' edges, none on a
-    road or its sidewalk), over the river on a steel arch with nothing in
-    the water (`ARCH`, `archY()`: its ribs springing from the block edges
-    in The Trenches and from Uptown's esplanade, its crown 16 over the
-    ground, well under the prop plane's turn; the deck hung from it,
-    `HANGERS`; no pillar under it) and up the one-way pair's northbound
-    street to Uptown station, `UP_END`; `branch` straight
+    south row and Trench Avenue's median to The Trenches, and on (via the
+    docks since `docs/docks-plan.md` Phase 2, the owner's call) west along
+    Trench Avenue's line over row W and the highway to Southbank Docks
+    station on the docks' east quay, a bend north (`WEST_R`, `WEST_END`)
+    onto the docks' line (`EL_X` in docks.ts), over the river on the red
+    steel arch with nothing in the water (`ARCH`, `archY()`: its ribs
+    springing from the east quay and the north bank's promenade, its crown
+    16 over the ground, well under what flies over; the deck hung from it,
+    `HANGERS`; no pillar under it), a bend east (`NORTH_R`) onto the north
+    bank avenue's median, east along it into Uptown (its planted median
+    broken round the pillars, no tree under the deck: boulevarddress.ts), a
+    bend north (`UP_R`) into the one-way pair's northbound street at `UP_X`
+    and up it on portal frames (`PORTALS`, `PORTAL`: a leg each side on the
+    blocks' edges, none on a road or its sidewalk; the arch's feet first)
+    to Uptown station, `UP_END`; `branch` straight
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
     the highway to Airport Station by Airport Drive, `AIRPORT_END`; and
@@ -301,20 +306,20 @@ it and has been retired completely. Build only on what's here.
     clear of its junctions, or open land off every road; over the river
     only on Harbour Bridge's median, where they're steel posts from its
     deck, river plan step 2);
-    seven stations (`STATIONS`: Kart Park, Downtown, South Bank, The
-    Trenches, Airport, Uptown, Crestmont; each a track and distance, a platform on the
+    eight stations (`STATIONS`: Kart Park, Downtown, South Bank, The
+    Trenches, Southbank Docks, Airport, Uptown, Crestmont; each a track and distance, a platform on the
     track's left (`PLATFORM_SIDE`; Uptown's on its right, `side`,
     `sideAt()`), a stair tower with its door at street level and the way
     out of it, `face`; Uptown's on the plaza's café terrace), `METRO_SOLIDS`
     (in `SOLIDS`: pillars, portal legs, towers), the train
     (`TRAIN`, two cars) on a timetable from the clock (`trainAt()`, `LEGS`:
-    from Crestmont to Kart Park, down to South Bank, out through The Trenches to Uptown and back, out to
-    the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
+    from Crestmont to Kart Park, down to South Bank, out through The Trenches and the Docks to Uptown and
+    back, out to the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
     South Bank between the west and the Airport, at Kart Park from
-    Crestmont; at most about 51 s, Uptown to the Airport, but Crestmont's,
-    up to about 70 s from The Trenches)
+    Crestmont; at most about 61 s, Uptown to the Airport, but Crestmont's,
+    up to about 75 s from Uptown)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
     (the deck in short straight pieces between its pillars, portals and
     hangers, rails, parapets
@@ -468,7 +473,7 @@ it and has been retired completely. Build only on what's here.
     trenches.ts, `buildLamps()` in world.ts: about one in ten flickering,
     in two sets going out together through `flickerTogether()` in kit.ts,
     the odd one dead). The el over Trench Avenue is dark steel
-    (`metro3d.ts`: a grimy deck, deep plate girders braced across, flanged
+    (`metro3d.ts`, on through Southbank Docks too, `grim()`: a grimy deck, deep plate girders braced across, flanged
     steel columns on concrete plinths, steel hammerheads, a sodium lamp
     under each span with its pool, sparks off the wheels as the train goes
     over (not under reduced motion), and `rumbleAt()` for the sound). The
@@ -769,7 +774,8 @@ it and has been retired completely. Build only on what's here.
   spire about 40 tiles since the redesign, the rest 14 to 32; the Sky Wheel
   about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
-  Emporium" holds everywhere else but Uptown North, below); the flying traffic and your own
+  Emporium" holds everywhere else but Uptown North, below, and Southbank
+  Docks' cranes); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:
@@ -1151,6 +1157,38 @@ it and has been retired completely. Build only on what's here.
   for its houses; phones draw every other palm, the estates' fountains,
   chimneys and gate globes near only and the pools as plain water
   (`poolOf()` in estates3d.ts). Made-up names only.
+- **Southbank Docks** (the owner's name, `DOCKS_NAME`; growth plan Phase
+  9c, the owner's call: a working port on the south bank west of The
+  Trenches past the ring highway, scenery first, the metro to run on through
+  it over the red arch moved there; its ship-to-shore cranes tall, the
+  owner's call, over the Emporium at about real height, clear of what flies:
+  nothing else there over it), planned in
+  `docs/docks-plan.md` in four phases, each with the owner's sign-off; keep
+  it up to date. Phase 1 (the land, the streets and the quays) is built:
+  `docks.ts` (DOM-free, tested in `tests/docks.test.ts`; today's world
+  numbers, `DOCKS_RECT` / `inDocks()`, well short of the west edge): the
+  south bank avenue carrying traffic on west of the highway (a slip lane on
+  that junction's south-west corner only: `OUTER_SLIPS` takes one turn,
+  `highway-ew4-1-0`), the docks' ring off it (`docks-ring`: Dock Road,
+  Yard Road, West Road; lit where it meets the avenue) and Quay Road across
+  it (`DOCK_STREETS`, `DOCK_CROSSINGS` in the street plan); the basin
+  (`BASIN`) and its mouth (`CHANNEL`) open to the river under the avenue's
+  flat bridge (`DOCK_BRIDGE`), its water at `WATER_Y` between quay walls
+  (world.ts `basinWater()` / `basinWalls()` at the boot, the grass cut round
+  it, the river's quay wall open across the mouth), not part of river.ts's
+  `inWater()`: walking stops at it through `inBasin()` (walk.ts), cars at
+  `BASIN_WALLS` (drive-sim.ts); the frontage a straight quay (river.ts's
+  south bank stretch ends at `DOCKS_QUAY`); the blocks round the basin
+  (`DOCK_BLOCKS`, ref `docks`: grey sidewalks over worn concrete, the strips
+  along the basin's south quay and over the mouth all sidewalk, `walk` 0);
+  sodium lamps (`DOCK_LAMPS`); the trees kept off (`treeSpot()`). Drawn as
+  you approach by `docks3d.ts` (`LAZY_DISTRICTS` id `docks`: the streets,
+  the bridge's railings, the quays' coping, near only bollards and
+  ladders); the world map draws the basin. Phase 2 (the metro via the
+  docks, the red arch moved) is built: Southbank Docks station on the east
+  quay (`EL_STATION`), the line north over the river on the arch along
+  `EL_X` and east along the north bank avenue into Uptown (the metro,
+  above). Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1410,7 +1448,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -3846,7 +3884,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

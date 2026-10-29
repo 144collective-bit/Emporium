@@ -25,7 +25,7 @@ import { drawLot } from './kits3d';
 import { SLAB as S, addTree } from './world';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
-import { TRENCH_BLOCKS } from './trenches';
+import { AVENUE_Z, TRENCH_BLOCKS } from './trenches';
 import { LOWRISE, LOWRISE_NAMES, LOW_CARS, TENEMENTS, VACANT, lowFrame, type LowLot, type Vacant } from './streetwall';
 import { buildFx, poster, tag, atlasQuad } from './grime';
 import type { Idle } from './landmarks';
@@ -335,7 +335,8 @@ export function buildStreetWalls(scene: THREE.Scene, crowd: Idle[], opts: { low:
   parkedCars(scene, S, LOW_CARS as [CarId, number, number, number, string][]);
   const w = TRENCH_BLOCKS.find((b) => b.row === 'W')!;
   const [x0, z0, , z1] = [Math.min(...w.poly.map((p) => p[0])), Math.min(...w.poly.map((p) => p[1])), Math.max(...w.poly.map((p) => p[0])), Math.max(...w.poly.map((p) => p[1]))];
-  for (let z = z0 + 1.5; z < z1 - 1; z += 3.4) if (hash(z, 7) < 0.8) addTree(x0 + 1.2, z, 0.9 + hash(z, 3) * 0.35, hash(z, 11) < 0.4);
+  // (none under the metro's el, carried on west along Trench Avenue's line over the strip: docs/docks-plan.md Phase 2)
+  for (let z = z0 + 1.5; z < z1 - 1; z += 3.4) if (hash(z, 7) < 0.8 && Math.abs(z - AVENUE_Z) > 3) addTree(x0 + 1.2, z, 0.9 + hash(z, 3) * 0.35, hash(z, 11) < 0.4);
   for (const l of LOWRISE) {
     if (l.kind === 'lockups' || l.kind === 'warehouse') continue;
     const F = lowFrame(l);
