@@ -1049,6 +1049,7 @@ export function createWalk(d: WalkDeps) {
         sfx: d.sfx,
         reduced: d.reduced,
         low: d.low,
+        motion: () => (anim && mocapData && onFoot ? { anim, data: mocapData, onFoot } : null),
       });
       return fight;
     }));

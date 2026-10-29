@@ -17,7 +17,12 @@
  *   the strike is at full reach on the first active frame (the frame the sim
  *   lands the hit on) and holds through the active frames, and the recovery
  *   pulls back into the guard. The sim moves the fighter's root itself (the
- *   move's `lunge`); a clip never moves the root except `bob`.
+ *   move's `lunge`); a clip never moves the root except `bob`. Between the
+ *   wind-up and the hit a strike has a drive key (`drive()`, the animation
+ *   revamp's Phase 7): the hips most of the way, the shoulders held back, so
+ *   the hips lead what they drive (fightrubric.ts measures it).
+ * - The feet are planted on the canvas by fightfeet.ts after sampling (the
+ *   legs here are the stance's shape; `plantLegs()` reaches them down).
  * - Every one-shot clip starts and ends on the guard's first frame, so the
  *   view can cut between them; `knockdown` ends on `KNOCKDOWN_LIE`, which
  *   `down` loops and `getup` starts from.
@@ -219,7 +224,43 @@ const clip = (id: ClipId, frames: number, keys: Key[], opts: { loop?: boolean; l
 });
 
 /** A move's three phases from fight-sim.ts, so the strike lands on the sim's frame */
-const phases = (startup: number, active: number, recovery: number) => ({ wind: Math.round(startup * 0.55), hit: startup, held: startup + active - 1, end: startup + active + recovery - 1 });
+const phases = (startup: number, active: number, recovery: number) => {
+  const wind = Math.round(startup * 0.55);
+  return { wind, drive: wind + Math.round((startup - wind) * 0.5), hit: startup, held: startup + active - 1, end: startup + active + recovery - 1 };
+};
+
+/**
+ * The drive between a strike's wind-up `a` and its hit `b` (the revamp's
+ * Phase 7): the hips most of the way there (`hips`), the shoulders held back
+ * (turned against the hips: the stretch the strike comes off, `shoulders` of
+ * their way), the arms (and the kicking leg) only starting (`limb`). Keyed
+ * half-way through the drive, so the hips lead what they drive.
+ */
+function drive(a: PosePart, b: PosePart, kicking?: 'legR', hips = 0.8, shoulders = 0.3, limb = 0.2): PosePart {
+  const A = { ...GUARD, ...a };
+  const B = { ...GUARD, ...b };
+  const mix = (x: number, y: number, k: number) => x + (y - x) * k;
+  const limbAt = (x: Limb, y: Limb, k: number): Limb => {
+    const l = arm(mix(x.fwd, y.fwd, k), mix(x.out, y.out, k), mix(x.bend, y.bend, k), mix(x.twist ?? 0, y.twist ?? 0, k));
+    if (x.wrist || y.wrist) l.wrist = W(mix(x.wrist?.roll ?? 0, y.wrist?.roll ?? 0, k), mix(x.wrist?.bend ?? 0, y.wrist?.bend ?? 0, k));
+    return l;
+  };
+  const turn = mix(A.turn, B.turn, hips);
+  return {
+    bob: mix(A.bob, B.bob, hips),
+    side: mix(A.side, B.side, hips),
+    sway: mix(A.sway, B.sway, hips),
+    turn,
+    twist: mix(A.turn + A.twist, B.turn + B.twist, shoulders) - turn,
+    lean: mix(A.lean, B.lean, shoulders),
+    headYaw: mix(A.headYaw, B.headYaw, shoulders),
+    headPitch: mix(A.headPitch, B.headPitch, shoulders),
+    armL: limbAt(A.armL, B.armL, limb),
+    armR: limbAt(A.armR, B.armR, limb),
+    legL: limbAt(A.legL, B.legL, hips),
+    legR: limbAt(A.legR, B.legR, kicking ? limb : hips),
+  };
+}
 
 /** The guard's bounce: a rise and a drop every `period` frames */
 const bounceKeys = (frames: number, period: number, up: number, extra: (i: number) => PosePart = () => ({})) => {
@@ -240,6 +281,20 @@ const FKICK = phases(10, 4, 16);
 const RHOUSE = phases(14, 5, 22);
 const DODGE = phases(4, 10, 8);
 
+/* The strikes' wind-ups and hits (the drive key between them is drive()'s) */
+const JAB_WIND = guard({ twist: 0.3, turn: 0.16, lean: 0.1, sway: 0.01, armL: arm(0.35, 0.1, 2.4, 0, W(0, -0.35)), side: 0.03 });
+const JAB_HIT = guard({ twist: 0.05, turn: 0.0, sway: -0.02, lean: 0.22, side: -0.03, headPitch: -0.12, armL: arm(1.6, 0.05, 0.1, 0, W(0, 0.1)), armR: arm(0.3, 0.05, 2.5), legL: leg(0.32, 0.1, 0.42), legR: leg(-0.27, 0.15, 0.22) });
+const CROSS_WIND = guard({ twist: 0.3, turn: 0.28, lean: 0.08, side: 0.05, sway: 0.02, armR: arm(0.2, 0.15, 2.5, 0, W(0, -0.4)), armL: arm(0.55, 0.1, 2.2), legR: leg(-0.25, 0.15, 0.45) });
+const CROSS_HIT = guard({ twist: -0.3, turn: -0.3, lean: 0.3, side: -0.06, sway: -0.03, headPitch: -0.1, headYaw: 0.1, armR: arm(1.65, 0.02, 0.08, 0, W(0, 0.1)), armL: arm(0.5, 0.0, 2.45), legL: leg(0.38, 0.1, 0.5), legR: leg(-0.42, 0.2, 0.2), bob: -0.025 });
+const HOOK_WIND = guard({ twist: 0.35, turn: 0.32, lean: 0.1, side: 0.06, sway: -0.03, armL: arm(0.35, 0.85, 1.5, -0.3, W(-0.5, -0.3)), armR: arm(0.35, 0.05, 2.5), legL: leg(0.3, 0.15, 0.45) });
+const HOOK_HIT = guard({ twist: -0.3, turn: -0.28, lean: 0.18, side: -0.08, sway: 0.02, headYaw: 0.15, headPitch: -0.1, armL: arm(1.8, 0.0, 1.1, 1.3, W(0.4, 0.15)), armR: arm(0.3, 0.05, 2.5), legL: leg(0.3, 0.12, 0.4), legR: leg(-0.3, 0.2, 0.3), bob: -0.015 });
+const UPPER_WIND = guard({ bob: -0.07, lean: 0.3, twist: 0.3, turn: 0.3, side: 0.05, sway: 0.03, headPitch: -0.15, armR: arm(-0.3, 0.2, 2.0, 0, W(0.2, -0.4)), armL: arm(0.5, 0.1, 2.3), legL: leg(0.4, 0.1, 0.8), legR: leg(-0.1, 0.15, 0.85) });
+const UPPER_HIT = guard({ bob: 0.01, lean: 0.05, twist: -0.25, turn: -0.32, side: -0.06, sway: -0.02, headPitch: 0.05, armR: arm(1.4, 0.05, 0.85, 0.1, W(1.0, -0.1)), armL: arm(0.45, 0.05, 2.45), legL: leg(0.3, 0.1, 0.25), legR: leg(-0.35, 0.2, 0.15) });
+const FKICK_WIND = guard({ lean: 0.0, bob: -0.01, side: 0.08, sway: -0.04, twist: 0.1, turn: 0.05, legR: leg(1.1, 0.1, 2.2), legL: leg(0.05, 0.08, 0.25), armL: arm(0.5, 0.15, 2.2), armR: arm(0.35, 0.15, 2.3) });
+const FKICK_HIT = guard({ lean: -0.2, bob: 0.0, side: 0.1, sway: -0.05, twist: 0.1, turn: -0.15, headPitch: -0.05, legR: leg(1.45, 0.1, 0.0), legL: leg(-0.05, 0.08, 0.2), armL: arm(0.55, 0.2, 2.1), armR: arm(0.4, 0.2, 2.2) });
+const RHOUSE_WIND = guard({ lean: 0.05, twist: 0.25, turn: 0.3, side: 0.12, sway: -0.05, bob: -0.01, legR: leg(0.6, 0.9, 1.9), legL: leg(0.0, 0.12, 0.3), armL: arm(0.6, 0.35, 2.0), armR: arm(0.2, 0.3, 2.3) });
+const RHOUSE_HIT = guard({ lean: -0.35, twist: -0.1, turn: -0.75, side: -0.22, sway: -0.07, bob: 0.0, headYaw: 0.2, headPitch: 0.02, legR: leg(1.9, 0.15, 0.45), legL: leg(-0.1, 0.1, 0.15), armL: arm(0.2, 0.6, 1.6), armR: arm(0.9, 0.55, 1.4) });
+
 const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   // The boxer's idle: a bounce on the balls of the feet, the weight shifting from foot to foot with the hips, the lead hand pumping
   clip(
@@ -256,8 +311,9 @@ const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   // the hand comes straight back to the chin (a touch past the guard, then settles)
   clip('jab', JAB.end + 1, [
     key(0, guard()),
-    key(JAB.wind, guard({ twist: 0.3, turn: 0.16, lean: 0.1, sway: 0.01, armL: arm(0.35, 0.1, 2.4, 0, W(0, -0.35)), side: 0.03 })),
-    key(JAB.hit, guard({ twist: 0.05, turn: 0.0, sway: -0.02, lean: 0.22, side: -0.03, headPitch: -0.12, armL: arm(1.6, 0.05, 0.1, 0, W(0, 0.1)), armR: arm(0.3, 0.05, 2.5), legL: leg(0.32, 0.1, 0.42), legR: leg(-0.27, 0.15, 0.22) }), 'out'),
+    key(JAB.wind, JAB_WIND),
+    key(JAB.drive, drive(JAB_WIND, JAB_HIT)),
+    key(JAB.hit, JAB_HIT, 'out'),
     key(JAB.held, guard({ twist: 0.05, turn: 0.0, sway: -0.02, lean: 0.22, side: -0.03, headPitch: -0.12, armL: arm(1.6, 0.05, 0.1, 0, W(0, 0.1)), armR: arm(0.3, 0.05, 2.5), legL: leg(0.32, 0.1, 0.42), legR: leg(-0.27, 0.15, 0.22) }), 'linear'),
     key(JAB.end - 3, guard({ twist: 0.24, turn: 0.13, armL: arm(0.5, 0.12, 2.4) }), 'in'),
     key(JAB.end, guard()),
@@ -267,8 +323,9 @@ const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   // the front foot; the hips swing back past the guard as the hand returns
   clip('cross', CROSS.end + 1, [
     key(0, guard()),
-    key(CROSS.wind, guard({ twist: 0.3, turn: 0.28, lean: 0.08, side: 0.05, sway: 0.02, armR: arm(0.2, 0.15, 2.5, 0, W(0, -0.4)), armL: arm(0.55, 0.1, 2.2), legR: leg(-0.25, 0.15, 0.45) })),
-    key(CROSS.hit, guard({ twist: -0.3, turn: -0.3, lean: 0.3, side: -0.06, sway: -0.03, headPitch: -0.1, headYaw: 0.1, armR: arm(1.65, 0.02, 0.08, 0, W(0, 0.1)), armL: arm(0.5, 0.0, 2.45), legL: leg(0.38, 0.1, 0.5), legR: leg(-0.42, 0.2, 0.2), bob: -0.025 }), 'out'),
+    key(CROSS.wind, CROSS_WIND),
+    key(CROSS.drive, drive(CROSS_WIND, CROSS_HIT)),
+    key(CROSS.hit, CROSS_HIT, 'out'),
     key(CROSS.held, guard({ twist: -0.3, turn: -0.3, lean: 0.3, side: -0.06, sway: -0.03, headPitch: -0.1, headYaw: 0.1, armR: arm(1.65, 0.02, 0.08, 0, W(0, 0.1)), armL: arm(0.5, 0.0, 2.45), legL: leg(0.38, 0.1, 0.5), legR: leg(-0.42, 0.2, 0.2), bob: -0.025 }), 'linear'),
     key(CROSS.end - 5, guard({ twist: 0.28, turn: 0.16, sway: 0.01, armR: arm(0.4, 0.1, 2.4) }), 'in'),
     key(CROSS.end, guard()),
@@ -280,8 +337,9 @@ const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   clip('hook', HOOK.end + 1, [
     key(0, guard()),
     // (the upper arm's twist sets which way the forearm folds: here across the front; the wrist then sets the fist)
-    key(HOOK.wind, guard({ twist: 0.35, turn: 0.32, lean: 0.1, side: 0.06, sway: -0.03, armL: arm(0.35, 0.85, 1.5, -0.3, W(-0.5, -0.3)), armR: arm(0.35, 0.05, 2.5), legL: leg(0.3, 0.15, 0.45) })),
-    key(HOOK.hit, guard({ twist: -0.3, turn: -0.28, lean: 0.18, side: -0.08, sway: 0.02, headYaw: 0.15, headPitch: -0.1, armL: arm(1.8, 0.0, 1.1, 1.3, W(0.4, 0.15)), armR: arm(0.3, 0.05, 2.5), legL: leg(0.3, 0.12, 0.4), legR: leg(-0.3, 0.2, 0.3), bob: -0.015 }), 'out'),
+    key(HOOK.wind, HOOK_WIND),
+    key(HOOK.drive, drive(HOOK_WIND, HOOK_HIT)),
+    key(HOOK.hit, HOOK_HIT, 'out'),
     key(HOOK.held, guard({ twist: -0.38, turn: -0.32, lean: 0.18, side: -0.08, sway: 0.02, headYaw: 0.15, headPitch: -0.1, armL: arm(1.9, -0.2, 1.2, 1.4, W(0.5, 0.2)), armR: arm(0.3, 0.05, 2.5), legL: leg(0.3, 0.12, 0.4), legR: leg(-0.3, 0.2, 0.3), bob: -0.015 }), 'linear'),
     key(HOOK.end - 6, guard({ twist: 0.05, turn: 0.04, armL: arm(0.7, 0.25, 2.0, 0, W(0.15, 0.05)) }), 'in'),
     key(HOOK.end, guard()),
@@ -291,8 +349,9 @@ const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   // legs as the hip turns through, the wrist rolling it palm-up as it rises past the chin (the palm to the puncher)
   clip('uppercut', UPPER.end + 1, [
     key(0, guard()),
-    key(UPPER.wind, guard({ bob: -0.07, lean: 0.3, twist: 0.3, turn: 0.3, side: 0.05, sway: 0.03, headPitch: -0.15, armR: arm(-0.3, 0.2, 2.0, 0, W(0.2, -0.4)), armL: arm(0.5, 0.1, 2.3), legL: leg(0.4, 0.1, 0.8), legR: leg(-0.1, 0.15, 0.85) })),
-    key(UPPER.hit, guard({ bob: 0.01, lean: 0.05, twist: -0.25, turn: -0.32, side: -0.06, sway: -0.02, headPitch: 0.05, armR: arm(1.4, 0.05, 0.85, 0.1, W(1.0, -0.1)), armL: arm(0.45, 0.05, 2.45), legL: leg(0.3, 0.1, 0.25), legR: leg(-0.35, 0.2, 0.15) }), 'out'),
+    key(UPPER.wind, UPPER_WIND),
+    key(UPPER.drive, drive(UPPER_WIND, UPPER_HIT)),
+    key(UPPER.hit, UPPER_HIT, 'out'),
     key(UPPER.held, guard({ bob: 0.02, lean: 0.0, twist: -0.3, turn: -0.34, side: -0.06, sway: -0.02, headPitch: 0.08, armR: arm(1.5, 0.05, 1.4, 0.1, W(1.2, 0.1)), armL: arm(0.45, 0.05, 2.45), legL: leg(0.3, 0.1, 0.2), legR: leg(-0.35, 0.2, 0.1) }), 'linear'),
     key(UPPER.end - 10, guard({ twist: -0.05, turn: -0.04, lean: 0.15, armR: arm(0.6, 0.1, 2.0, 0, W(0.3, 0)) }), 'in'),
     key(UPPER.end, guard()),
@@ -302,8 +361,9 @@ const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   // out with the shin, a lean back to balance, the arms up
   clip('frontKick', FKICK.end + 1, [
     key(0, guard()),
-    key(FKICK.wind, guard({ lean: 0.0, bob: -0.01, side: 0.08, sway: -0.04, twist: 0.1, turn: 0.05, legR: leg(1.1, 0.1, 2.2), legL: leg(0.05, 0.08, 0.25), armL: arm(0.5, 0.15, 2.2), armR: arm(0.35, 0.15, 2.3) })),
-    key(FKICK.hit, guard({ lean: -0.2, bob: 0.0, side: 0.1, sway: -0.05, twist: 0.1, turn: -0.15, headPitch: -0.05, legR: leg(1.45, 0.1, 0.0), legL: leg(-0.05, 0.08, 0.2), armL: arm(0.55, 0.2, 2.1), armR: arm(0.4, 0.2, 2.2) }), 'out'),
+    key(FKICK.wind, FKICK_WIND),
+    key(FKICK.drive, drive(FKICK_WIND, FKICK_HIT, 'legR')),
+    key(FKICK.hit, FKICK_HIT, 'out'),
     key(FKICK.held, guard({ lean: -0.2, bob: 0.0, side: 0.1, sway: -0.05, twist: 0.1, turn: -0.15, headPitch: -0.05, legR: leg(1.45, 0.1, 0.0), legL: leg(-0.05, 0.08, 0.2), armL: arm(0.55, 0.2, 2.1), armR: arm(0.4, 0.2, 2.2) }), 'linear'),
     key(FKICK.end - 7, guard({ lean: 0.05, side: 0.06, sway: -0.02, turn: 0.05, legR: leg(0.8, 0.1, 1.8) }), 'in'),
     key(FKICK.end, guard()),
@@ -313,8 +373,9 @@ const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   // arc at waist height, the body leaning away and the arms out for balance
   clip('roundhouse', RHOUSE.end + 1, [
     key(0, guard()),
-    key(RHOUSE.wind, guard({ lean: 0.05, twist: 0.25, turn: 0.3, side: 0.12, sway: -0.05, bob: -0.01, legR: leg(0.6, 0.9, 1.9), legL: leg(0.0, 0.12, 0.3), armL: arm(0.6, 0.35, 2.0), armR: arm(0.2, 0.3, 2.3) })),
-    key(RHOUSE.hit, guard({ lean: -0.35, twist: -0.1, turn: -0.75, side: -0.22, sway: -0.07, bob: 0.0, headYaw: 0.2, headPitch: 0.02, legR: leg(1.9, 0.15, 0.45), legL: leg(-0.1, 0.1, 0.15), armL: arm(0.2, 0.6, 1.6), armR: arm(0.9, 0.55, 1.4) }), 'out'),
+    key(RHOUSE.wind, RHOUSE_WIND),
+    key(RHOUSE.drive, drive(RHOUSE_WIND, RHOUSE_HIT, 'legR')),
+    key(RHOUSE.hit, RHOUSE_HIT, 'out'),
     key(RHOUSE.held, guard({ lean: -0.35, twist: -0.2, turn: -0.85, side: -0.22, sway: -0.07, bob: 0.0, headYaw: 0.3, headPitch: 0.02, legR: leg(1.85, 0.0, 0.5), legL: leg(-0.1, 0.1, 0.15), armL: arm(0.15, 0.65, 1.6), armR: arm(1.0, 0.5, 1.4) }), 'linear'),
     key(RHOUSE.end - 10, guard({ lean: 0.0, twist: 0.0, turn: -0.15, side: 0.05, sway: -0.02, legR: leg(0.5, 0.3, 1.6), armL: arm(0.5, 0.2, 2.1), armR: arm(0.4, 0.2, 2.2) }), 'in'),
     key(RHOUSE.end, guard()),
@@ -347,19 +408,23 @@ const CLIP_LIST: (Clip & { base: Required<PosePart> })[] = [
   // (the view mirrors them for the other side): the head snaps away from it, the left shoulder and hip are
   // knocked back, the weight goes onto the far foot.
 
-  // Hit to the head: the head snaps back and away, the shoulders and hips follow, a step's bob, the arms drop a little
+  // Hit to the head: the head snaps back and away first, the shoulders and then the hips following it a couple of
+  // frames behind (the revamp's Phase 7: the struck part leads), a step's bob, the arms drop a little
   clip('hitHead', 14, [
     key(0, guard()),
-    key(3, guard({ headPitch: 0.5, headYaw: 0.55, lean: -0.22, twist: -0.25, turn: -0.08, sway: 0.04, side: 0.06, bob: -0.02, armL: arm(0.3, 0.3, 1.7), armR: arm(0.15, 0.3, 1.8), legL: leg(0.15, 0.12, 0.45), legR: leg(-0.3, 0.2, 0.4) }), 'out'),
-    key(6, guard({ headPitch: 0.4, headYaw: 0.45, lean: -0.15, twist: -0.18, turn: -0.06, sway: 0.035, side: 0.04, bob: -0.025, armL: arm(0.3, 0.3, 1.7), armR: arm(0.15, 0.3, 1.8), legL: leg(0.15, 0.12, 0.45), legR: leg(-0.3, 0.2, 0.4) }), 'linear'),
+    key(3, guard({ headPitch: 0.5, headYaw: 0.55, lean: -0.16, twist: -0.05, turn: 0.06, sway: 0.012, side: 0.02, bob: -0.008, armL: arm(0.32, 0.25, 1.85), armR: arm(0.2, 0.25, 1.95), legL: leg(0.18, 0.11, 0.4), legR: leg(-0.25, 0.17, 0.38) }), 'out'),
+    key(5, guard({ headPitch: 0.45, headYaw: 0.5, lean: -0.22, twist: -0.22, turn: -0.09, sway: 0.04, side: 0.06, bob: -0.02, armL: arm(0.3, 0.3, 1.7), armR: arm(0.15, 0.3, 1.8), legL: leg(0.15, 0.12, 0.45), legR: leg(-0.3, 0.2, 0.4) })),
+    key(7, guard({ headPitch: 0.38, headYaw: 0.42, lean: -0.15, twist: -0.16, turn: -0.07, sway: 0.035, side: 0.04, bob: -0.025, armL: arm(0.3, 0.3, 1.7), armR: arm(0.15, 0.3, 1.8), legL: leg(0.15, 0.12, 0.45), legR: leg(-0.3, 0.2, 0.4) }), 'linear'),
     key(13, guard(), 'in'),
   ]),
 
-  // Hit to the body: fold forward at the waist round the blow, the struck side turned away, elbows in, a knee bends
+  // Hit to the body: fold forward at the waist round the blow, the chest first and the hips knocked round after it,
+  // the struck side turned away, elbows in, a knee bends
   clip('hitBody', 16, [
     key(0, guard()),
-    key(4, guard({ lean: 0.6, bob: -0.08, headPitch: -0.3, twist: -0.15, turn: -0.12, sway: 0.03, side: 0.05, armL: arm(0.3, -0.1, 2.2), armR: arm(0.2, -0.1, 2.3), legL: leg(0.35, 0.1, 0.5), legR: leg(0.0, 0.15, 0.9) }), 'out'),
-    key(8, guard({ lean: 0.55, bob: -0.075, headPitch: -0.3, twist: -0.12, turn: -0.1, sway: 0.03, side: 0.04, armL: arm(0.3, -0.1, 2.2), armR: arm(0.2, -0.1, 2.3), legL: leg(0.35, 0.1, 0.5), legR: leg(0.0, 0.15, 0.9) }), 'linear'),
+    key(3, guard({ lean: 0.55, bob: -0.06, headPitch: -0.28, twist: 0.05, turn: 0.06, sway: 0.01, side: 0.02, armL: arm(0.3, -0.1, 2.2), armR: arm(0.2, -0.1, 2.3), legL: leg(0.3, 0.1, 0.45), legR: leg(-0.1, 0.15, 0.7) }), 'out'),
+    key(5, guard({ lean: 0.6, bob: -0.08, headPitch: -0.3, twist: -0.15, turn: -0.13, sway: 0.03, side: 0.05, armL: arm(0.3, -0.1, 2.2), armR: arm(0.2, -0.1, 2.3), legL: leg(0.35, 0.1, 0.5), legR: leg(0.0, 0.15, 0.9) })),
+    key(9, guard({ lean: 0.55, bob: -0.075, headPitch: -0.3, twist: -0.12, turn: -0.1, sway: 0.03, side: 0.04, armL: arm(0.3, -0.1, 2.2), armR: arm(0.2, -0.1, 2.3), legL: leg(0.35, 0.1, 0.5), legR: leg(0.0, 0.15, 0.9) }), 'linear'),
     key(15, guard(), 'in'),
   ]),
 

@@ -126,7 +126,7 @@ be. The phases below work through it.
 | The market, your units, the Car tab | buttons | a crate lifted into the boot, a crate set on the stand (Phase 4) |
 | Emotes (wave, dance, salute, cheer) | keyed sine poses | re-keyed on the bone pose, or from capture where one fits (Phase 5: built, keyed clips in emotes.ts, the dance on planted feet) |
 | Other players | the procedural walk | the animator, fed from what the server sends (Phase 5) |
-| The fighters round the ring | procedural legs under the guard | the animator's legs under the guard; the fight clips measured by the rubric (Phase 7) |
+| The fighters round the ring | procedural legs under the guard | the animator's legs under the guard; the fight clips measured by the rubric (Phase 7: built, the feet planted, the hips leading) |
 | The crowd walking | one recorded walk, one jog | two or three walks and the jog from capture; nobody in step (Phase 5) |
 | The crowd standing, chatting, sitting | sine idles | idles, chats, sitting from capture; sit-down and stand-up transitions (Phase 5) |
 | Waiting at a kerb, crossing | the idle, then the walk | a wait with a look both ways, a brisk crossing step (Phase 6) |
@@ -971,7 +971,7 @@ phase only gives them the moves):
 - Each row from capture where a take fits, keyed where none does; no row
   threatening, none explicit (the content rules).
 
-### Phase 7: the Fight Club
+### Phase 7: the Fight Club (built, for the owner's sign-off)
 
 - The fighters' legs round the ring on the animator (the guard's upper
   body over them, as the gun's is over the player's).
@@ -981,6 +981,66 @@ phase only gives them the moves):
   under the keyed timing (a move's clip stays exactly its sim frames
   long, the strike on the first active frame: `fight-anim.ts`'s rule).
 - Nothing changes in `fight-sim.ts`; the tests hold the timing.
+
+What it built (and how it differs from the plan):
+
+- **The audit first.** Measured on the bones, the keyed clips slid their
+  feet: the hips' turn swung both legs round with it (7 to 11 cm at the
+  fighters' scale through the cross, the hook and the uppercut; 28 cm
+  through the roundhouse's standing leg), and the guard's bent knees with
+  the hips at full height left the feet floating up to 3 cm off the
+  canvas. The hips and the shoulders turned on the same frames, so nothing
+  drove a punch; the reactions moved the head and the hips together. The
+  sim also moves a fighter's root through a move (the lunge, up to 0.35
+  tiles and the step in; the knock back), which slid both feet with it.
+- **The feet planted** (`fightfeet.ts`, DOM-free): `STANCE` is where the
+  guard's feet stand (the balls of the feet on the canvas, each foot's
+  heading); `PLANTS` says per clip which legs are on the canvas and when a
+  leg leaves it (`free`: the kicking leg, the stagger's stumble, the fall,
+  the get-up until its last frames; eased over `RAMP`), how a foot turns
+  on its ball with the hips (`pivot`: the rear foot through the cross and
+  the uppercut, the lead foot under the hook, the standing foot through the
+  roundhouse) and its heel comes up as it does (`heel`); `plantLegs()`
+  reaches each leg down to its foot (`reachLeg()`), keeps the foot's
+  heading on the ground whatever the leg does, keeps the toes flat as the
+  heel lifts and brings the hips down (at most `DROP`) where a leg can't
+  reach. Each rig leg keeps its own spot, so a reaction played mirrored
+  keeps the fighter's own stance. The guard now stands lower, its feet on
+  the canvas.
+- **Footwork** (`createFootwork()`): the feet keep their place on the
+  canvas while the sim moves the fighter and step after it (`STEP`: one
+  foot at a time, the one further out first, the way it's going when
+  they're alike, so a jab steps in lead foot first and a knock back steps
+  the rear foot back; a smaller miss settles after a moment standing).
+- **The rubric for the fight** (`fightrubric.ts`, `FIGHT_BANDS`; over every
+  clip, planted): the planted feet (the walk's slide band), the hips' swing
+  into each strike (`drive`), the hips half-way through their swing at
+  least a frame before the shoulders (a punch) or the kicking leg's snap
+  (a kick), the rear heel up through the cross and the uppercut with the
+  toes on the canvas, the reactions led by the struck part (the head, the
+  chest folding round a body shot) with the hips in them, and every
+  one-shot clip back in the guard exactly.
+- **Re-keyed where it failed:** every strike has a drive key between its
+  wind-up and its hit (`drive()` in fight-anim.ts: the hips 80% of the way,
+  the shoulders held back at 30%, turned against the hips, the stretch the
+  strike comes off, the arm or the kicking leg only starting); the hit
+  reactions' heads and chests snap first and the hips follow two frames
+  later. Every clip keeps its length and its keys on the sim's frames.
+- **The legs round the ring on the animator** (`fight-figure.ts`): moving
+  in the guard, each fighter's animator (its springs facing the opponent,
+  so the strafes and the backpedal are matched) gives the legs and hips
+  under the guard's upper body (`applyTo(..., upper 1, yaw)`); the
+  planted-feet walk stands in until walk mode has the capture (`FightDeps.motion`;
+  the `?fight` demo fetches it itself). Where the walk hands the feet back,
+  the footwork takes them from where it put them.
+- The street fists (`brawl.ts`) and the character screen's guard
+  (`stage.ts`) play the planted clips too.
+- **Held back:** capture under the keyed strikes. CMU's boxing takes
+  (subjects 13 to 15 in the table below) are shadowboxing at the actor's
+  own tempo; laid under clips that must be exactly the sim's frames long,
+  they'd need retiming per move and a review by eye in the lab. The keyed
+  clips now pass the rubric; a capture pass is a data step for later, with
+  the owner.
 
 ### Phase 8: polish and feel
 

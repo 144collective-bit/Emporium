@@ -194,7 +194,9 @@ test("the fists' clip over the walk: the upper body only, the legs left to the w
   const R = walk();
   k.lay(R, 1, 1);
   assert.notEqual(JSON.stringify(R.legs), before, 'a kick takes the legs');
-  assert.equal(R.legs[0].foot, undefined, "the walk's foot fields cleared");
+  // (the standing foot is the clip's, planted under it: fightfeet.ts)
+  assert.notEqual(R.legs[0].foot, 0.2, "the walk's foot replaced");
+  assert.equal(typeof R.legs[0].foot, 'number', 'the clip\'s planted foot');
 });
 
 test('every street move ends back on the guard, where the guard clip starts', () => {

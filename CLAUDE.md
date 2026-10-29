@@ -1307,7 +1307,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (659.9 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts). Phase 4 (handling with
+  boot is under its budget (660.5 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -2016,7 +2016,27 @@ it and has been retired completely. Build only on what's here.
   keepers, The Block's two on two (grown-ups), and a kid on every swing
   seat (`swingsOf()`, the `swing` row, seated); the commons' rings on the
   courts went, the playground's and skate spot's stay. A formula row's
-  loop eases towards its own start (`looped(f, seconds)`). The clips file's limits are 640 KB (test) and 660 KB (budget),
+  loop eases towards its own start (`looped(f, seconds)`). Phase 7 (the
+  Fight Club) is built: the fight clips' feet are planted
+  (`fightfeet.ts`, DOM-free: `STANCE`, the guard's feet on the canvas;
+  `PLANTS`, which legs each clip plants, when a leg's `free` (the kicking
+  leg, the stagger, the fall, the get-up), a foot's `pivot` on its ball
+  and its `heel` up with the hips' turn; `plantLegs()` reaches each leg
+  down to its foot through `reachLeg()`, the hips down at most `DROP`;
+  `createFootwork()`: the feet keep their place on the canvas while the
+  sim lunges or knocks a fighter back and step after it, `STEP`); the
+  rubric for the fight is `fightrubric.ts` (`FIGHT_BANDS`, `fightRows()`:
+  planted feet, the hips' swing into each strike, the hips half-way before
+  the shoulders or the kick's snap, the rear heel up through the cross and
+  the uppercut, reactions led by the struck part with the hips in them,
+  back in the guard; `tests/fightrubric.test.ts`); every strike has a
+  drive key (`drive()` in fight-anim.ts: the hips 80%, the shoulders held
+  back at 30%) and the reactions' hips follow the head or chest; moving in
+  the guard, a fighter's legs and hips are its own animator's under the
+  guard's upper body (`fight-figure.ts`, `FightDeps.motion`; locomotion.ts
+  until the capture's in; the `?fight` demo fetches it); the street fists
+  and the character screen's guard play the planted clips. Capture under
+  the strikes is held back (a data step). The clips file's limits are 640 KB (test) and 660 KB (budget),
   raised for the takes on purpose:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
@@ -3716,7 +3736,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
