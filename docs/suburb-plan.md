@@ -114,8 +114,31 @@ These are my recommendations, made so the plan is complete; any can change.
    uplights) and the footpath. The road helpers Crestmont's streets used are
    shared in `roads3d.ts`. The outskirts' trees keep off (`inSunridge()`);
    the north ring avenue's median breaks at both entrances.
-2. **The houses:** the `tract` kit and its recipe, a house to a lot (plans,
-   elevations, colours), garages and driveways, their solids; far forms.
+2. **The houses** (built): `sunhouses.ts` (DOM-free, the chunk's, tested in
+   `tests/sunhouses.test.ts`): a house on 99 of the 101 lots (`HOUSES`), each
+   in its lot's frame (`toWorld()`), set back until the lot is wide enough
+   (pie-shaped lots widen as they go back) with side yards and a back yard;
+   four plans (`Plan`: a one-storey ranch with its garage stepped forward and
+   a bedroom wing, a one-storey L round an entry court, a two-storey, a
+   two-storey with a porch), about three in ten two storeys; three entries
+   (`Elevation`: an arched recess, a stone wainscot with a pier, an entry
+   tower); six render colours with their trims (`SCHEMES`) and three tile
+   roofs (`ROOFS`), no two neighbours the same colour; a two-car garage
+   (narrower on a narrow lot), its driveway and the walk to the door; solar
+   panels on some back slopes, a chimney on a few. Drawn by `sunhouses3d.ts`
+   (a site a house, from `register()` in sunridge3d.ts): walls on a
+   foundation, hipped roofs in concrete tile (a tiled texture a colour, its
+   rows along each slope's eave), soffits and fascias, windows in foam
+   surrounds about half lit at night, the panelled garage door and coach
+   lamps, the front door, the two-storey's band, the porch on posts; near
+   only the side and back windows, the fascias, the lamps and the air
+   conditioner (none on phones). Their solids (`HOUSE_SOLIDS`: a box where a
+   house is square to the axes, small cells where it's turned) join the grids
+   when the chunk comes in (`addSolids()`). The lots tightened with it
+   (`sunridgelots.ts`: none narrowing to under 4.4 at the back or swung
+   sideways round a turning circle's stem; Palo Verde Court's laid first), so
+   101 lots, not 120: the amenities' land keeps its room.
+   The hipped-roof helpers Crestmont's estates used are shared in `roofs3d.ts`.
 3. **The yards:** front yards (desert or green), the block walls, the back
    yards and their pools; `SUNRIDGE_SOLIDS` (the walls, the houses) in
    `SOLIDS`, the rest drawn in the chunk.

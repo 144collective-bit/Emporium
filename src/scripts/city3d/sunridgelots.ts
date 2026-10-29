@@ -24,7 +24,7 @@ export interface Lot {
   depth: number;
 }
 
-const ORDER = (s: string) => (s.startsWith('sun-court') ? 1 : s === 'sun-mesa' ? 2 : 0);
+const ORDER = (s: string) => (s === 'sun-court-2' ? 0 : s.startsWith('sun-court') ? 2 : s === 'sun-mesa' ? 3 : 1);
 
 /** Do two convex outlines overlap (more than touching) */
 function overlap(a: Pt[], b: Pt[]) {
@@ -60,6 +60,9 @@ function along(pts: Pt[], cum: number[], d: number): { p: Pt; u: Pt } {
 /** The narrowest a lot's front may be (round a turning circle), and the widest its back */
 export const MIN_W = 4.6;
 const BACK_MOST = LOT_W * 2.5;
+const BACK_LEAST = 4.4;
+/** How far a lot's back may swing sideways off its front's middle (round the end of a turning circle's stem) */
+const SKEW = 2.2;
 
 /** A lot from `s0` along a run, `w` wide (narrower if its back would fan out too wide), if one fits there */
 function fit(b: (typeof SUN_BLOCKS)[number], street: string, pts: Pt[], cum: number[], s0: number, w: number, placed: Lot[], keep: Pt[][]): Omit<Lot, 'id'> | null {
@@ -76,7 +79,15 @@ function fit(b: (typeof SUN_BLOCKS)[number], street: string, pts: Pt[], cum: num
         [A.p[0] + n0[0] * depth, A.p[1] + n0[1] * depth],
         [B.p[0] + n1[0] * depth, B.p[1] + n1[1] * depth],
       ];
-      if (Math.hypot(back[1][0] - back[0][0], back[1][1] - back[0][1]) > BACK_MOST) continue;
+      const bw = Math.hypot(back[1][0] - back[0][0], back[1][1] - back[0][1]);
+      if (bw > BACK_MOST) continue;
+      // (nor narrowing to nothing at the back, on the inside of a tight bend: no house would fit)
+      if (bw < BACK_LEAST) break;
+      {
+        const [ux, uz] = [(B.p[0] - A.p[0]) / ww, (B.p[1] - A.p[1]) / ww];
+        const mb: Pt = [(back[0][0] + back[1][0]) / 2 - (A.p[0] + B.p[0]) / 2, (back[0][1] + back[1][1]) / 2 - (A.p[1] + B.p[1]) / 2];
+        if (Math.abs(mb[0] * ux + mb[1] * uz) > SKEW) continue;
+      }
       const lot = { block: b.id, street, front: [A.p, B.p] as [Pt, Pt], back, depth };
       const o = outline({ ...lot, id: '' });
       const mid: Pt = [(back[0][0] + back[1][0]) / 2, (back[0][1] + back[1][1]) / 2];

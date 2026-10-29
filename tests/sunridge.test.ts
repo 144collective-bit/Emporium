@@ -83,8 +83,8 @@ test('the blocks: the land between the streets, wound as the plan wants, never o
   assert.ok(a > land * 0.78 && a < land, `the blocks cover ${((a / land) * 100).toFixed(0)}% of the land`);
 });
 
-test('the lots: about 120, on their blocks, none over another, a street, the amenities or the footpath', () => {
-  assert.ok(LOTS.length >= 105 && LOTS.length <= 135, `${LOTS.length} lots`);
+test('the lots: about a hundred and ten, on their blocks, none over another, a street, the amenities or the footpath', () => {
+  assert.ok(LOTS.length >= 100 && LOTS.length <= 135, `${LOTS.length} lots`);
   const blocks = new Map(SUN_BLOCKS.map((b) => [b.id, b]));
   for (const l of LOTS) {
     const b = blocks.get(l.block)!;

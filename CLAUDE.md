@@ -1240,10 +1240,18 @@ it and has been retired completely. Build only on what's here.
   kerb or the land's edge), the amenities' land (`ZONES`), the footpath from
   Palm Court (`PATH`), the perimeter wall and the entrance monuments
   (`WALL_RUNS`, `MONUMENTS`, `SUN_SOLIDS` in `SOLIDS`), `SUN_LAMPS` at the
-  boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 110, 6.6 x 13,
+  boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 101, 6.6 x 13,
   pie-shaped round the turning circles). Drawn by `sunridge3d.ts`
   (`LAZY_DISTRICTS` id `sunridge`); the road helpers are `roads3d.ts`
-  (shared with Crestmont).
+  (shared with Crestmont). Phase 2 (the houses) is built: `sunhouses.ts`
+  (DOM-free, the chunk's, tested in `tests/sunhouses.test.ts`): `HOUSES`, a
+  house a lot in its frame (`toWorld()`), four plans (`Plan`), three entries
+  (`Elevation`), `SCHEMES` and `ROOFS` (neighbours never the same colour),
+  the garage, its driveway and the walk, solar and chimneys;
+  `HOUSE_SOLIDS` join the grids when the chunk loads (`addSolids()`). Drawn by
+  `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
+  windows at night, details near only); the hipped roofs are `roofs3d.ts`
+  (shared with Crestmont's estates).
 - **The raised highway** (the owner's call, planned, nothing built yet): the
   ring highway rebuilt on a concrete viaduct with real exits (diamond
   interchanges, numbered, made-up names on the gantries) and traffic that

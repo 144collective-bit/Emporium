@@ -12,6 +12,7 @@ import type { Tick } from './world';
 import { SLAB } from './world';
 import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
+import { registerHouses } from './sunhouses3d';
 import { COURT } from './mall';
 import { EW_ROADS, MEDIAN, WALK_W } from './layout';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
@@ -76,7 +77,9 @@ function wallBox(b: Batch, a: Pt, c: Pt, w: number, y0: number, y1: number, m: T
 }
 const rectOf = (pts: Pt[], pad: number): Rect => [Math.min(...pts.map((p) => p[0])) - pad, Math.min(...pts.map((p) => p[1])) - pad, Math.max(...pts.map((p) => p[0])) + pad, Math.max(...pts.map((p) => p[1])) + pad];
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  // The houses (Phase 2: sunhouses3d.ts)
+  registerHouses(low, scene);
   const crossings = SUN_CROSSINGS.map((c) => c.at);
   const nearCrossing = (x: number, z: number, r: number) => crossings.some((c) => Math.hypot(c[0] - x, c[1] - z) < r);
 
