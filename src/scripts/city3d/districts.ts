@@ -26,6 +26,7 @@ import { UPTOWN_RECT } from './uptown';
 import { SITE } from './airfield';
 import { EXT, RIVER } from './layout';
 import { MALL_AREA } from './mall';
+import { CREST_RECT } from './crestmont';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -54,6 +55,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Palm Court and Starlight Mall north of downtown (mall.ts, docs/mall-plan.md): the shops, the cinema, the mall, the
   // loop, the car parks (mall3d.ts)
   { id: 'mall', rect: MALL_AREA, load: () => import('./mall3d') },
+  // Crestmont, the north-east town (crestmont.ts, docs/crestmont-plan.md): its streets in the Flats and up the hills (crestmont3d.ts)
+  { id: 'crestmont', rect: CREST_RECT, load: () => import('./crestmont3d') },
 ];
 
 

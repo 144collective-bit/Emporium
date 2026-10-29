@@ -160,8 +160,10 @@ function tangent(w: Way, along: number, d: 1 | -1): Pt {
     if (l > 1e-9 && (d === 1 ? along < run + l - 1e-6 : along <= run + l + 1e-6) && (d === 1 ? along >= run - 1e-6 : along > run + 1e-6)) return [((pts[i][0] - pts[i - 1][0]) / l) * d, ((pts[i][1] - pts[i - 1][1]) / l) * d];
     run += l;
   }
-  // At the very end (or the loop's seam): its last or first stretch
-  const [p, q] = d === 1 ? [pts[0], pts[1]] : [pts[pts.length - 2], pts[pts.length - 1]];
+  // At the very end (or the loop's seam): its last or first stretch (a loop's seam carries on round it; a street that
+  // ends there arrives along its last stretch, or its first going back: a curved one's ends point their own ways)
+  const end = !w.s.loop && (d === 1 ? along >= run - 1e-6 : along <= 1e-6);
+  const [p, q] = (d === 1) !== end ? [pts[0], pts[1]] : [pts[pts.length - 2], pts[pts.length - 1]];
   const l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
   return [((q[0] - p[0]) / l) * d, ((q[1] - p[1]) / l) * d];
 }
@@ -254,6 +256,21 @@ function joinLegs(list: Leg[]): Pt[] {
 }
 
 /**
+ * Whether the highway's junction `j` has a slip lane on the corner a car arriving along `u` turns right round (it
+ * hasn't where none was laid: the north bank avenue's corner on the river's promenade, streetplan.ts): there it
+ * takes the junction's own corner
+ */
+const SLIPS = PLAN.streets.filter((s) => s.kind === 'slip');
+function slipAt(j: Junction, u: Pt) {
+  const [rx, rz] = rightOf(...u);
+  return SLIPS.some((s) => {
+    const m = s.pts[Math.floor(s.pts.length / 2)];
+    const [dx, dz] = [m[0] - j.at[0], m[1] - j.at[1]];
+    return Math.hypot(dx, dz) < 15 && dx * rx + dz * rz > 0 && dx * u[0] + dz * u[1] < 0;
+  });
+}
+
+/**
  * The legs of a closed drive (its moves in order, each with the turn it ends
  * in; the last turns onto the first): moves on one street run together into
  * one leg, each in the lane for its next turn
@@ -270,7 +287,9 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
   });
   for (const l of legs) {
     l.turn = moves[l.lastIx].turn;
-    l.slip = l.turn === 'right' && !!WAYS[l.last.w].stations[next(l.last)!].j?.highway;
+    const n = next(l.last)!;
+    const j = WAYS[l.last.w].stations[n].j;
+    l.slip = l.turn === 'right' && !!j?.highway && slipAt(j, tangent(WAYS[l.last.w], WAYS[l.last.w].stations[n].along, l.last.d));
   }
   legs.forEach((l, k) => (legs[(k + 1) % legs.length].inSlip = l.slip));
   for (const l of legs) {
@@ -483,11 +502,37 @@ const mm = (v: number) => Math.round(v * 1000) / 1000 + 0;
 /** How long a seeded drive goes before heading back */
 const DRIVE_MOVES = 9;
 
-/** A route as plain data (its junctions by number), for the build to bake (baked.ts) */
-export type PackedRoute = { pts: Pt[]; stops: [number, number, number, Phase][] };
-export const packRoutes = (routes: Route[]): PackedRoute[] => routes.map((r) => ({ pts: r.pts, stops: r.stops.map((s): [number, number, number, Phase] => [s.j.ix, s.enter, s.exit, s.phase]) }));
+/**
+ * A route as plain data (its junctions by number), for the build to bake (baked.ts): its points (already to the
+ * millimetre) as whole millimetres, each the step from the one before, in one string (half the size gzipped of the
+ * numbers as they are), and decoded to exactly the same numbers
+ */
+export type PackedRoute = { d: string; stops: [number, number, number, Phase][] };
+const packPts = (pts: Pt[]) => {
+  let [px, pz] = [0, 0];
+  const out: number[] = [];
+  for (const [x, z] of pts) {
+    const [ix, iz] = [Math.round(x * 1000), Math.round(z * 1000)];
+    out.push(ix - px, iz - pz);
+    [px, pz] = [ix, iz];
+  }
+  return out.join(',');
+};
+const unpackPts = (d: string): Pt[] => {
+  const v = d.split(',').map(Number);
+  const out: Pt[] = [];
+  let [ix, iz] = [0, 0];
+  for (let k = 0; k < v.length; k += 2) {
+    ix += v[k];
+    iz += v[k + 1];
+    out.push([ix / 1000 + 0, iz / 1000 + 0]);
+  }
+  return out;
+};
+export const packRoutes = (routes: Route[]): PackedRoute[] => routes.map((r) => ({ d: packPts(r.pts), stops: r.stops.map((s): [number, number, number, Phase] => [s.j.ix, s.enter, s.exit, s.phase]) }));
 export const unpackRoutes = (packed: PackedRoute[]): Route[] =>
-  packed.map(({ pts, stops }) => {
+  packed.map(({ d, stops }) => {
+    const pts = unpackPts(d);
     const cum = cumOf(pts);
     return { pts, cum, len: cum.at(-1)!, stops: stops.map(([ix, enter, exit, phase]) => ({ j: JUNCTIONS[ix], enter, exit, phase })) };
   });
@@ -707,7 +752,7 @@ export function pathBetween(a: Pt, b: Pt): Route | null {
       turn = cross > 0 ? 'right' : 'left';
     }
     const at = way.stations.find((s) => Math.abs(s.along - r.b) < 0.5)?.j;
-    return { pts: between(way, r.a, r.b, r.d), off: 0, turn, slip: turn === 'right' && !!at?.highway };
+    return { pts: between(way, r.a, r.b, r.d), off: 0, turn, slip: turn === 'right' && !!at?.highway && slipAt(at, tangent(way, r.b, r.d)) };
   });
   legs.forEach((l, k) => {
     const way = WAYS[runs[k].w];

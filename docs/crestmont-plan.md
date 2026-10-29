@@ -129,23 +129,40 @@ follow it, with the hills empty.
 - Risks: the ink outlines on long slopes (check the depth pass), triangles
   per tile on phones, the far form of a hill (a coarser grid far).
 
-### Phase 2: the streets
+### Phase 2: the streets (built)
 
-- `hills.ts` (DOM-free, tested): the Flats' grid (the four east-west roads
-  given traffic and kerbs, north-south streets between them every block,
-  a planted-median boulevard through the middle lined with palms, the
-  shopping street, **the Drive**, short and wide, two blocks long); the hill
-  roads (winding canyon drives up from the Flats, switchbacks round the
-  spurs, cul-de-sacs to the estates, the ridge road along the crest to the
-  overlook), each at its grade from Phase 1; junctions (lit in the Flats,
-  stop signs up the hills); the blocks and their slabs; lamps (ornate twin
-  lanterns in the Flats, low ones up the hills).
-- Joined to the street plan (`cityPlan()`), so traffic (`routes.ts`),
-  taxis, walking, the world map and the sound read them; the highway's
-  junctions on its east side get their outer slip lanes (`OUTER_SLIPS`).
-- Drawn by `hills3d.ts` (the district's chunk): asphalt following the
-  ground, kerbs, sidewalks, zebras, the medians. Clean: no wear (the
-  opposite of The Trenches).
+**What's built:** `crestmont.ts` (DOM-free, tested in `tests/crestmont.test.ts`):
+- **The Flats** east of the highway: five streets north from the north bank avenue (`FLATS_X`: Alder Way, **Coral
+  Drive** (the shopping street, Phase 4), **Crestmont Boulevard** with a planted median for its palms
+  (`BOULEVARD_MEDIAN`), Linden Way, Hollis Way) across downtown's four east-west roads (carried on past the
+  highway, traffic on them now; lit junctions at the avenues), up to **Foothill Road** (`FOOTHILL_Z`) along the
+  hills' foot; twenty blocks (`CREST_BLOCKS`), lawns inside their sidewalks for now.
+- **The hill roads** (`HILL_ROADS`): smooth lines (`curve()`) graded (`grade()`: the hills' heights averaged,
+  pinned level with the Flats at their feet and with each other where they meet, never steeper than
+  `MAX_GRADE`, 14%): **Ridge Road** up from Hollis Way's top round the hills' east side and along the crest to
+  the overlook, **Canyon Drive** up from Coral Drive's top to meet it square, and two cul-de-sacs off the ridge,
+  **Summit Lane** and **Vista Lane**. Traffic goes up one and down the other; none on the cul-de-sacs or past
+  Canyon Drive's top (they go nowhere). The plan's Sage Canyon Road was folded into Ridge Road: on its own it
+  couldn't climb to the ridge at 14%. terrain.ts cuts each into the hills as a bed (`BED`: level across, its banks
+  eased over 12 tiles; cut up to 8 deep where the grade lags the hills, banks up to about 1.4: Phase 3's
+  retaining walls).
+- **Lamps** (`CREST_LAMPS`): both sidewalks of the Flats' streets, one verge of the hill roads at their beds'
+  height (their pools of light sit on the slope, world.ts).
+- Joined to the street plan (`cityPlan()`; the highway's junctions on its east side get slip lanes on their outer
+  corners, `OUTER_SLIPS`, but none over the river's promenade), so traffic, taxis (both riding the slopes:
+  `riseAlong()` in terrain.ts), walking, the world map (the hills shaded by height with a contour every 5 tiles)
+  and the sound read them. Drawn by `crestmont3d.ts`, a district loaded as you approach (`LAZY_DISTRICTS` id
+  `crestmont`): asphalt, centre lines, the boulevard's median, zebras at the lit junctions; the hill roads laid on
+  the ground's height with white edge lines. The outskirts' trees keep off the Flats and the hill roads.
+
+**Fixed along the way:** a car reaching the end of a curved street took its direction from the street's first
+stretch (routes.ts `tangent()`; only straight streets had ended at junctions before); a right turn at the highway
+takes the wide slip-lane curve only where there's a slip lane (`slipAt()`). The traffic's routes are baked as
+millimetre steps in one string (`packRoutes()`: 28 KB gzipped where the plain numbers made 53), so the boot is
+smaller than before the phase (644.3 of 670 KB).
+
+**Left for later:** stop signs up the hills and the Flats' kerbside dressing (Phase 3 on), the City view's camera
+low across the slopes.
 
 ### Phase 3: palm trees and the landscape
 

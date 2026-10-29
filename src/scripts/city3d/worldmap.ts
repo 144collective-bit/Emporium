@@ -27,6 +27,7 @@ import { HIGHRISES } from './highrise';
 import { HIGHWAY_BOX } from './highway';
 import { STADIUM_AREA } from './stadium';
 import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, SHOPS as MALL_SHOPS } from './mall';
+import { TERRAIN_RECT, heightAt } from './terrain';
 
 export interface WorldMapDeps {
   /** Where you are and which way you face (walking), else where the camera looks */
@@ -110,6 +111,32 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     view.z = Math.min(EXT[1], Math.max(EXT[0], view.z));
   };
 
+  /** The hills' shading, worked out once: a pixel every HILL_PX tiles over their land */
+  let shade: HTMLCanvasElement | null = null;
+  const HILL_PX = 1.5;
+  const hillShade = () => {
+    if (shade) return shade;
+    const [x0, z0, x1, z1] = TERRAIN_RECT;
+    const [nw, nh] = [Math.ceil((x1 - x0) / HILL_PX), Math.ceil((z1 - z0) / HILL_PX)];
+    shade = document.createElement('canvas');
+    [shade.width, shade.height] = [nw, nh];
+    const c = shade.getContext('2d')!;
+    const img = c.createImageData(nw, nh);
+    for (let j = 0; j < nh; j++)
+      for (let i = 0; i < nw; i++) {
+        const [x, z] = [x0 + (i + 0.5) * HILL_PX, z0 + (j + 0.5) * HILL_PX];
+        const h = heightAt(x, z);
+        if (h <= 0.05) continue;
+        // (a contour where the height crosses a multiple of 5 between this pixel and the next)
+        const contour = Math.floor(h / 5) !== Math.floor(heightAt(x + HILL_PX, z) / 5) || Math.floor(h / 5) !== Math.floor(heightAt(x, z + HILL_PX) / 5);
+        const k = (j * nw + i) * 4;
+        const f = Math.min(1, h / 32);
+        [img.data[k], img.data[k + 1], img.data[k + 2], img.data[k + 3]] = contour ? [24, 30, 40, 120] : [196, 186, 118, Math.round(30 + f * 90)];
+      }
+    c.putImageData(img, 0, 0);
+    return shade;
+  };
+
   /* ---------- Drawing ---------- */
   const poly = (pts: Pt[]) => {
     ctx.beginPath();
@@ -142,6 +169,17 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     for (let i = banks.length - 1; i >= 0; i--) ctx.lineTo(...toScreen(banks[i].x, banks[i].s));
     ctx.closePath();
     ctx.fill();
+    // Crestmont's hills (terrain.ts): shaded by height, a contour every 5 tiles
+    const [hx0, hy0] = toScreen(TERRAIN_RECT[0], TERRAIN_RECT[1]);
+    const [hx1, hy1] = toScreen(TERRAIN_RECT[2], TERRAIN_RECT[3]);
+    ctx.imageSmoothingEnabled = true;
+    // (only over the land: the hills carry on a little past the world's edge, under the skyline)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ax, ay, bx - ax, by - ay);
+    ctx.clip();
+    ctx.drawImage(hillShade(), hx0, hy0, hx1 - hx0, hy1 - hy0);
+    ctx.restore();
     // The airport and the kart park's grounds
     const rect = (r: number[], fill: string) => {
       const [x0, y0] = toScreen(r[0], r[1]);

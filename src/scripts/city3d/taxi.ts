@@ -16,6 +16,7 @@ import { SPOTS, lightState, pathBetween, pointOn, type Route } from './routes';
 import { bodies, stoppers } from './life';
 import { deckSlope, deckY, onHarbour } from './harbour';
 import { departuresRoadY, departuresSlope } from './airfield';
+import { heightAt, onHills, riseAlong } from './terrain';
 import type { Place } from './places';
 import type { Ride } from './walk';
 
@@ -127,12 +128,15 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     seg = o.seg;
     // (over Harbour Bridge's hump, its nose along the deck: harbour.ts)
     // (and up and down the airport's departures deck: airfield.ts)
+    // (and up and down Crestmont's hill roads: terrain.ts)
     const harbour = onHarbour(o.at[0], o.at[1]);
-    const hb = harbour ? deckY(o.at[1]) : departuresRoadY(o.at[0], o.at[1]);
+    const hill = onHills(o.at[0], o.at[1]);
+    const hb = hill ? heightAt(o.at[0], o.at[1]) : harbour ? deckY(o.at[1]) : departuresRoadY(o.at[0], o.at[1]);
     pos.set(o.at[0], ROAD_Y + hb, o.at[1]);
     fwd.set(o.dir[0], o.dir[1]);
     car.group.position.copy(pos);
-    car.group.rotation.set(0, Math.atan2(-o.dir[1], o.dir[0]), harbour ? Math.atan(o.dir[1] * deckSlope(o.at[1])) : Math.atan(o.dir[0] * departuresSlope(o.at[0], o.at[1])), 'YXZ');
+    const pitch = hill ? Math.atan(riseAlong(o.at[0], o.at[1], o.dir[0], o.dir[1])) : harbour ? Math.atan(o.dir[1] * deckSlope(o.at[1])) : Math.atan(o.dir[0] * departuresSlope(o.at[0], o.at[1]));
+    car.group.rotation.set(0, Math.atan2(-o.dir[1], o.dir[0]), pitch, 'YXZ');
   }
   /** Drive on along the route, for the lights and the traffic ahead, easing to a stop at its end */
   function drive(dt: number, t: number) {

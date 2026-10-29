@@ -49,7 +49,8 @@ test('a lit junction wherever it meets an arterial, two slip lanes on the town s
     assert.ok(fromHighway(c.at[0], c.at[1]) < 1e-6);
     const slips = PLAN.streets.filter((s) => s.id.startsWith(`slip-${c.id}-`));
     const outer = OUTER_SLIPS.includes(c.id);
-    assert.equal(slips.length, outer ? 4 : 2, c.id);
+    // (the north bank avenue's past the highway has none over the river's promenade: three)
+    assert.equal(slips.length, c.id === 'highway-ew3-0' ? 3 : outer ? 4 : 2, c.id);
     for (const s of slips) {
       assert.equal(s.oneway, 1);
       // From the one road's outer lane to the other's, out across the corner, on the town side (or either side)

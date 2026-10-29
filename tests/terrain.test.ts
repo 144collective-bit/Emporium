@@ -4,7 +4,8 @@
 // away before the skyline ring, and every aircraft flies well over them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HILLS, TERRAIN_RECT, heightAt, hillsAlong, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { HILLS, TERRAIN_RECT, heightAt, hillsAlong, naturalAt, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { SOLIDS, rayBoxes } from '../src/scripts/city3d/solids';
 import { PLACES } from '../src/scripts/city3d/places';
@@ -29,7 +30,8 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
   ])
     assert.equal(heightAt(x, z), 0, `the ground rises at ${x}, ${z}`);
   // Every street of the plan, along its centre line and out to its edges, and every block's outline
-  for (const s of PLAN.streets)
+  // (but the hill roads, which climb the hills on their beds: crestmont.ts, tests/crestmont.test.ts)
+  for (const s of PLAN.streets.filter((s) => !HILL_ROADS.some((r) => r.id === s.id)))
     for (let i = 0; i + 1 < s.pts.length; i++) {
       const [a, b] = [s.pts[i], s.pts[i + 1]];
       const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
@@ -62,16 +64,21 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
 test("gentle hills to 45-60 m (the owner's call), never under the ground, smooth enough to walk and drive", () => {
   let top = 0;
   let steep = 0;
+  let banks = 0;
   grid(1, (x, z) => {
     const h = heightAt(x, z);
     assert.ok(h >= 0 && Number.isFinite(h), `the ground at ${x}, ${z}`);
     top = Math.max(top, h);
-    steep = Math.max(steep, slopeAt(x, z));
-    // No steps: within half a tile the ground never moves more than the steepest slope allows
-    assert.ok(Math.abs(heightAt(x + 0.5, z) - h) < 0.4 && Math.abs(heightAt(x, z + 0.5) - h) < 0.4, `a step at ${x}, ${z}`);
+    // The hills' own slopes, and where the roads are cut in, their banks (steeper: Phase 3's retaining walls)
+    const e = 0.25;
+    steep = Math.max(steep, Math.hypot(naturalAt(x + e, z) - naturalAt(x - e, z), naturalAt(x, z + e) - naturalAt(x, z - e)) / (2 * e));
+    banks = Math.max(banks, slopeAt(x, z));
+    // No steps: within half a tile the ground never moves more than the steepest bank allows
+    assert.ok(Math.abs(heightAt(x + 0.5, z) - h) < 0.8 && Math.abs(heightAt(x, z + 0.5) - h) < 0.8, `a step at ${x}, ${z}`);
   });
   assert.ok(top * TILE_M >= 45 && top * TILE_M <= 62, `the ridge is ${(top * TILE_M).toFixed(0)} m`);
   assert.ok(steep < 0.75, `a slope of ${steep.toFixed(2)}`);
+  assert.ok(banks < 1.5, `a bank of ${banks.toFixed(2)}`);
   // It rises from its foot: low by the Flats, high at the ridge
   assert.ok(heightAt(HILLS.foot.x + 5, HILLS.foot.z - 5) < 1);
   assert.ok(heightAt(380, -320) > 20);

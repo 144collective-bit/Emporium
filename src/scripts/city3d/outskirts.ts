@@ -11,7 +11,7 @@
  * district's).
  */
 import { MALL_AREA } from './mall';
-import { CITY_EXT, EW_ROADS, EXT, NS_ROADS, RIVER, nsRuns } from './layout';
+import { CITY_EXT, EW_ROADS, EXT, LANE, NS_ROADS, RIVER, nsRuns } from './layout';
 import { inChannel } from './river';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_RECTS } from './kartfacility';
@@ -22,6 +22,7 @@ import { KART_PARK } from './kartpark';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { PLAN } from './streetplan';
 import type { Rect } from './downtown';
+import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
 
 const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
 const SOUTHSIDE_BOTTOM = Math.max(...SOUTHSIDE.map((p) => p[1]));
@@ -51,6 +52,9 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (highway && (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || MEETS.some((m) => Math.abs(x - m[0]) < 17 && Math.abs(z - m[1]) < 17))) return false;
   // The shopping plaza, the mall and its loop and car parks (mall.ts)
   if (x > MALL_AREA[0] && x < MALL_AREA[2] && z > MALL_AREA[1] && z < MALL_AREA[3]) return false;
+  // Crestmont (crestmont.ts): not on the Flats (their own planting comes in Phase 3) nor on a hill road and its bed
+  if (x > CREST_RECT[0] && x < CREST_RECT[2] && z > FOOTHILL_Z - LANE - 2 && z < CREST_RECT[3]) return false;
+  if (nearHillRoad(x, z, BED.shoulder + 1.5)) return false;
   // The kart park, Kart Road and the car park (kartfacility.ts)
   if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves

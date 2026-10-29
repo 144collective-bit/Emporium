@@ -12,6 +12,7 @@ import { DOWNTOWN, EXT, MARKET } from './layout';
 import { DECK_STROLLS, HIGH_Y as LIBERTY_HIGH } from './liberty';
 import { deckSlope, deckY, onHarbour } from './harbour';
 import { departuresRoadY, departuresSlope } from './airfield';
+import { heightAt, onHills, riseAlong } from './terrain';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
@@ -198,7 +199,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     for (let tries = 0; tries < 16 && near.length; tries++) {
       const s = near[Math.floor(rand() * near.length)];
       if (Math.hypot(s.x - x, s.z - z) < 40) continue;
-      carBall.center.set(s.x, 0.6, s.z);
+      carBall.center.set(s.x, (onHills(s.x, s.z) ? heightAt(s.x, s.z) : 0) + 0.6, s.z);
       carBall.radius = 3;
       // In sight only far off, past what the camera's looking at (where it's a speck in its far form)
       const fromEye = Math.hypot(s.x - CROWD_VIEW.eye.x, s.z - CROWD_VIEW.eye.z);
@@ -467,7 +468,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       for (const v of vehicles) {
         const d = Math.hypot(v.x - f.x, v.z - f.z);
         if (d < POOL_R) continue;
-        carBall.center.set(v.x, 0.6, v.z);
+        carBall.center.set(v.x, (onHills(v.x, v.z) ? heightAt(v.x, v.z) : 0) + 0.6, v.z);
         carBall.radius = v.len / 2 + 1;
         if (d < POOL_FAR && CROWD_VIEW.frustum.intersectsSphere(carBall)) continue;
         respawn(v, f.x, f.z);
@@ -485,8 +486,10 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       bodyMotion(v.body, v.v, v.yaw, dt);
       // (over Harbour Bridge's hump: up it, its nose along the deck's slope; harbour.ts)
       // (and up and down the airport's departures deck: its ramps climb along x; airfield.ts)
-      const hb = onHarbour(v.x, v.z) ? deckY(v.z) : departuresRoadY(v.x, v.z);
-      const climb = onHarbour(v.x, v.z) ? Math.atan(-Math.sin(v.yaw) * deckSlope(v.z)) : Math.atan(Math.cos(v.yaw) * departuresSlope(v.x, v.z));
+      // (and up and down Crestmont's hill roads, on their beds: terrain.ts)
+      const hill = onHills(v.x, v.z);
+      const hb = hill ? heightAt(v.x, v.z) : onHarbour(v.x, v.z) ? deckY(v.z) : departuresRoadY(v.x, v.z);
+      const climb = hill ? Math.atan(riseAlong(v.x, v.z, Math.cos(v.yaw), -Math.sin(v.yaw))) : onHarbour(v.x, v.z) ? Math.atan(-Math.sin(v.yaw) * deckSlope(v.z)) : Math.atan(Math.cos(v.yaw) * departuresSlope(v.x, v.z));
       q.setFromAxisAngle(up, v.yaw).multiply(q2.setFromEuler(lean.set(v.body.roll, 0, v.body.pitch + climb)));
       M.makeRotationFromQuaternion(q).setPosition(v.x, ROAD_Y + hb, v.z);
       v.matrix.copy(M);
@@ -496,7 +499,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       if (!v.near) farCars.place(v.far, M);
       else if (!CROWD_VIEW.on) f.front.push(v);
       else {
-        carBall.center.set(v.x, 0.6, v.z);
+        carBall.center.set(v.x, hb + 0.6, v.z);
         carBall.radius = v.len / 2 + 0.6;
         const shadow = !CROWD_VIEW.shadowOn || CROWD_VIEW.shadow.intersectsSphere(carBall);
         if (shadow) f.front.push(v);

@@ -11,6 +11,7 @@ import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
 import { DISTRICTS } from '../src/scripts/city3d/layout';
+import { CREST_BLOCKS, CREST_CROSSINGS } from '../src/scripts/city3d/crestmont';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
 
@@ -74,13 +75,13 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   for (const a of alleys) assert.deepEqual(lanePaths(a), [], 'no cars down an alley');
   // Lights where downtown's cross streets meet, where the highway meets an arterial, along Trench Avenue (trenches.ts) and
   // at every junction in Uptown (uptown.ts) but round its circle (its traffic gives way), and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')));
+  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')) || CREST_CROSSINGS.some((k) => k.id === c.id && k.lights));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
   // (and the stadium's, north of the highway)
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + 1 + 1 + 3);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + CREST_BLOCKS.length + 1 + 1 + 3);
   // (Uptown North's block too, on Palm Court's old land)
   // (the stadium's, Uptown North's, and the mall's three: Palm Court, the mall, its car park)
   // Every plot and every lot sits on an outer block

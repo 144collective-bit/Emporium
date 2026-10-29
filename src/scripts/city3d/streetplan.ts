@@ -26,6 +26,7 @@ import { NORTH_BLOCK } from './uptownnorth';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
 import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './mall';
+import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS } from './crestmont';
 
 export type Pt = [number, number];
 
@@ -342,9 +343,11 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
 /**
  * The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north
  * roads to the stadium and the kart park, and to the airport since docs/airport-plan.md Phase 3: the south bank avenue
- * east to Airport Drive, the east ring avenue south to the GA road)
+ * east to Airport Drive, the east ring avenue south to the GA road; and Crestmont's Flats since its Phase 2:
+ * downtown's east-west roads east past the highway, crestmont.ts; but never one over the river's promenade, as the bank
+ * avenue's corner on the water would be)
  */
-export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0'];
+export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0', 'highway-ew0-0', 'highway-ew1-0', 'highway-ew2-0', 'highway-ew3-0'];
 
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
@@ -372,6 +375,10 @@ export function cityPlan(): StreetPlan {
   // Kart Road off the east ring avenue past the highway, and the one-way loop round the kart park's car park (kartpark.ts)
   for (const t of KART_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of KART_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  // Crestmont (crestmont.ts, docs/crestmont-plan.md Phase 2): the Flats' streets across the east-west roads past the
+  // highway, Foothill Road, and the hill roads up from it
+  for (const t of CREST_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.median ? { median: t.median } : {}) });
+  for (const c of CREST_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -398,7 +405,9 @@ export function cityPlan(): StreetPlan {
     turns.forEach(([uA, offA, offB], k) => {
       const pts = slipCurve(m.at, uA, offA, [-uA[1], uA[0]], offB);
       // Only on the town side: the arterials past the highway carry no traffic yet
-      if (insideHighway(...pts[3]) || OUTER_SLIPS.includes(m.id)) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
+      // (none from the north bank avenue towards the river: its corner there is the promenade's)
+      const overWater = m.along === 0 && m.road.c < RIVER[0] && m.road.c + m.road.half + 3 > RIVER[0] && pts.some((p) => p[1] > m.at[1] + 0.5);
+      if (insideHighway(...pts[3]) || (OUTER_SLIPS.includes(m.id) && !overWater)) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
     });
   }
   // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
@@ -469,6 +478,8 @@ export function cityPlan(): StreetPlan {
         ['mall-park', PARK_BLOCK, 'lot'],
       ] as const
     ).map(([id, r, use]): Block => ({ id, poly: square(r[0], r[1], r[2] - r[0], r[3] - r[1]), use, ref: 'mall', walk: WALK_W })),
+    // Crestmont's Flats (crestmont.ts)
+    ...CREST_BLOCKS.map((b): Block => ({ id: b.id, poly: square(b.rect[0], b.rect[1], b.rect[2] - b.rect[0], b.rect[3] - b.rect[1]), use: 'plain', ref: 'crestmont', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

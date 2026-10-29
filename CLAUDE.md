@@ -1063,7 +1063,17 @@ it and has been retired completely. Build only on what's here.
   grid over the hills, `tintHills()` by height and slope), walk.ts
   `groundAt()` (so walking, driving and flying follow them), `cameraRoom()`,
   solids.ts `rayBoxes()` and the outskirts' trees. Anything new standing on
-  the hills stands at `heightAt()`. Made-up names only.
+  the hills stands at `heightAt()`. Phase 2 (the streets) is built:
+  `crestmont.ts` (DOM-free, tested in `tests/crestmont.test.ts`): the Flats'
+  grid (`FLATS_X`, Coral Drive, Crestmont Boulevard with its median, Foothill
+  Road, `CREST_BLOCKS`) across downtown's east-west roads past the highway,
+  and the hill roads (`HILL_ROADS`: Ridge Road and Canyon Drive, the
+  cul-de-sacs Summit Lane and Vista Lane; `curve()`, `grade()` at most
+  `MAX_GRADE`), cut into the hills as beds (`BED`; terrain.ts reads them,
+  the hills' own shape is hills.ts's `natural()`); `CREST_STREETS` /
+  `CREST_CROSSINGS` in the street plan, `CREST_LAMPS` at the boot, drawn by
+  `crestmont3d.ts` (`LAZY_DISTRICTS` id `crestmont`); traffic and taxis
+  ride the slopes (`riseAlong()`). Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1323,7 +1333,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (651.3 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules). Phase 4 (handling with
+  boot is under its budget (644.3 of 670 KB since Crestmont's Phase 2 packed the routes tighter; 651.3 with Build mode gone and the inventory plan's Phase 3 merged: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -1411,7 +1421,7 @@ it and has been retired completely. Build only on what's here.
     JSON string; `scripts/bake.mjs`, run from `astro.config.mjs`, loads the
     modules in Node and records what each `make()` made), or works it out
     with `make()` where there's none (the tests, the game server). Today:
-    the traffic's routes (`routes.ts`, packed with `packRoutes()`), the
+    the traffic's routes (`routes.ts`, packed with `packRoutes()`: each route's points as millimetre steps in one string), the
     crowd's walk, jog and march cycles (`crowdclips.ts`) and The Trenches'
     amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to

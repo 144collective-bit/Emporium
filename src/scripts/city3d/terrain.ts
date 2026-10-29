@@ -1,41 +1,18 @@
 /**
- * Crestmont's hills (docs/crestmont-plan.md Phase 1, the owner's call): the first ground in Sector 7 that
+ * The ground over Crestmont's hills (docs/crestmont-plan.md, the owner's call): the first ground in Sector 7 that
  * isn't flat. DOM-free: the ground's mesh (world.ts), walking, driving and flying (walk.ts `groundAt()`), the
- * outskirts' trees and the tests read it.
+ * traffic, the outskirts' trees, shots (solids.ts) and the tests read it.
  *
- * The hills rise from the Flats, east of the ring highway's east side and north of z `HILLS.foot.z`, up to a ridge
- * (`HILLS.peak` high, a little more or less where the seeded swell says so: spurs and canyons), and fall away again
- * towards the world's north-east corner, so they end before the skyline ring. Everywhere outside `TERRAIN_RECT` the
+ * The hills' own shape is hills.ts's (`natural()`); here the hill roads' beds are cut into them (crestmont.ts
+ * `HILL_ROADS`: each level across, at its graded height, its banks eased into the slope over `BED.ease`), then any
+ * `LEVELS` (ground held level: a building's pad, the plan's later phases). Everywhere outside `TERRAIN_RECT` the
  * ground is 0, as it always was: nothing that stands in the city moves (tests/terrain.test.ts holds every street of
- * the plan to it).
- *
- * Written in fixed world numbers (north of the river, so no `SOUTH_SHIFT` / `WIDEN`), never against the world's
- * edge: the same hills at both sizes.
- *
- * `LEVELS` are ground held level (cut and fill: a building's pad, later a road's bed), eased into the slope round
- * them; none yet (the plan's later phases add them).
+ * the plan but the hill roads to it).
  */
+import { HILLS, TERRAIN_RECT, natural, smooth, swell, type Rect } from './hills';
+import { BED, HILL_ROADS } from './crestmont';
 
-/** A rectangle: x0, z0, x1, z1 */
-export type Rect = [number, number, number, number];
-
-export const HILLS = {
-  /** The foot of the hills: they begin east of x and north of z (the ring highway's east side is x 275) */
-  foot: { x: 285, z: -75 },
-  /** How far in from the foot they take to rise to the ridge */
-  rise: 110,
-  /** The ridge's height before the swell (tiles: 26 is about 47 m; the swell takes it to about 32, 58 m) */
-  peak: 26,
-  /** Where they've fallen away to nothing beyond the ridge, towards the north-east corner (x, z) */
-  end: { x: 490, z: -450 },
-  /** How far before that end they start to fall */
-  fall: 80,
-  /** How round the corners are where the foot's two lines (and the end's) meet */
-  round: 30,
-} as const;
-
-/** Where the ground can be anything but 0 (outside it heightAt() is 0) */
-export const TERRAIN_RECT: Rect = [HILLS.foot.x, HILLS.end.z, HILLS.end.x, HILLS.foot.z];
+export { HILLS, TERRAIN_RECT, swell, type Rect };
 
 /** Ground held level at `y` inside its rectangle, eased back into the hills over `ease` round it */
 export interface Level {
@@ -45,39 +22,6 @@ export interface Level {
 }
 export const LEVELS: Level[] = [];
 
-const smooth = (a: number, b: number, v: number) => {
-  const t = Math.min(1, Math.max(0, (v - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
-/** A soft minimum: the corner where two lines meet rounded over `k` */
-const smin = (a: number, b: number, k: number) => {
-  const h = Math.max(k - Math.abs(a - b), 0) / k;
-  return Math.min(a, b) - (h * h * k) / 4;
-};
-
-/** The seeded swell over the ridge: spurs and canyons, about 0.62 to 1.24 (fixed waves, the same for everyone) */
-const WAVES: [number, number, number, number][] = [
-  // amplitude, direction (radians), wavelength (tiles), phase
-  [0.17, 0.55, 150, 1.3],
-  [0.12, 2.2, 95, 4.1],
-  [0.07, 1.25, 58, 0.4],
-  [0.04, 2.9, 34, 2.6],
-];
-export function swell(x: number, z: number) {
-  let n = 0.93;
-  for (const [a, dir, len, ph] of WAVES) n += a * Math.sin(((Math.cos(dir) * x + Math.sin(dir) * z) / len) * Math.PI * 2 + ph);
-  return n;
-}
-
-/** The hills before anything is cut into them */
-function natural(x: number, z: number) {
-  const into = smin(x - HILLS.foot.x, HILLS.foot.z - z, HILLS.round);
-  if (into <= 0) return 0;
-  const left = smin(HILLS.end.x - x, z - HILLS.end.z, HILLS.round);
-  if (left <= 0) return 0;
-  return HILLS.peak * smooth(0, HILLS.rise, into) * smooth(0, HILLS.fall, left) * swell(x, z);
-}
-
 /** How far a level's hold reaches at a point: 1 inside its rectangle, easing to 0 over `ease` round it */
 function hold(l: Level, x: number, z: number) {
   const [x0, z0, x1, z1] = l.rect;
@@ -85,16 +29,76 @@ function hold(l: Level, x: number, z: number) {
   return 1 - smooth(0, l.ease, d);
 }
 
+/* ---------- The hill roads' beds, found through a grid of their pieces ---------- */
+
+interface Piece {
+  ax: number;
+  az: number;
+  bx: number;
+  bz: number;
+  ya: number;
+  yb: number;
+  /** Level out to here from the centre line */
+  core: number;
+}
+const CELL = 16;
+const BEDS = new Map<number, Piece[]>();
+const cellKey = (i: number, j: number) => i * 100003 + j;
+for (const r of HILL_ROADS) {
+  const core = r.half + BED.shoulder;
+  const reach = core + BED.ease;
+  for (let k = 1; k < r.pts.length; k++) {
+    const [a, b] = [r.pts[k - 1], r.pts[k]];
+    const p: Piece = { ax: a[0], az: a[1], bx: b[0], bz: b[1], ya: r.y[k - 1], yb: r.y[k], core };
+    for (let i = Math.floor((Math.min(a[0], b[0]) - reach) / CELL); i <= Math.floor((Math.max(a[0], b[0]) + reach) / CELL); i++)
+      for (let j = Math.floor((Math.min(a[1], b[1]) - reach) / CELL); j <= Math.floor((Math.max(a[1], b[1]) + reach) / CELL); j++) {
+        const key = cellKey(i, j);
+        if (!BEDS.has(key)) BEDS.set(key, []);
+        BEDS.get(key)!.push(p);
+      }
+  }
+}
+
+/**
+ * The beds over a point: their height there (each piece's weighed by how firmly it holds, sharpened so the one under
+ * you all but decides, so nowhere steps where two beds' banks meet) and how firmly the firmest holds (1 on a road)
+ */
+function bedAt(x: number, z: number): { y: number; w: number } | null {
+  const list = BEDS.get(cellKey(Math.floor(x / CELL), Math.floor(z / CELL)));
+  if (!list) return null;
+  let most = 0;
+  let sum = 0;
+  let weight = 0;
+  for (const p of list) {
+    const [vx, vz] = [p.bx - p.ax, p.bz - p.az];
+    const l2 = vx * vx + vz * vz || 1;
+    const t = Math.max(0, Math.min(1, ((x - p.ax) * vx + (z - p.az) * vz) / l2));
+    const d = Math.hypot(x - p.ax - vx * t, z - p.az - vz * t);
+    const w = 1 - smooth(p.core, p.core + BED.ease, d);
+    if (w <= 0) continue;
+    most = Math.max(most, w);
+    const k = w ** 6 * (1 / (1 + d));
+    sum += (p.ya + (p.yb - p.ya) * t) * k;
+    weight += k;
+  }
+  return most > 0 ? { y: sum / weight, w: most } : null;
+}
+
 /** The ground's height at a point (tiles; 0 outside `TERRAIN_RECT`) */
 export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS) {
   if (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3]) return 0;
   let h = natural(x, z);
+  const bed = bedAt(x, z);
+  if (bed) h += (bed.y - h) * bed.w;
   for (const l of levels) {
     const w = hold(l, x, z);
     if (w > 0) h += (l.y - h) * w;
   }
   return h;
 }
+
+/** The hills' height before the roads were cut in (the tests compare) */
+export const naturalAt = (x: number, z: number) => (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3] ? 0 : natural(x, z));
 
 /** Whether a point (with `m` round it) is on the hills' land at all: a cheap test before heightAt() */
 export const onHills = (x: number, z: number, m = 0) =>
@@ -106,6 +110,12 @@ export function slopeAt(x: number, z: number, levels: readonly Level[] = LEVELS)
   const gx = (heightAt(x + e, z, levels) - heightAt(x - e, z, levels)) / (2 * e);
   const gz = (heightAt(x, z + e, levels) - heightAt(x, z - e, levels)) / (2 * e);
   return Math.hypot(gx, gz);
+}
+
+/** The ground's rise along a way (dx, dz a unit vector): a car's nose up or down the hill (traffic, taxis) */
+export function riseAlong(x: number, z: number, dx: number, dz: number) {
+  const e = 0.6;
+  return (heightAt(x + dx * e, z + dz * e) - heightAt(x - dx * e, z - dz * e)) / (2 * e);
 }
 
 /**

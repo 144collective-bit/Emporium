@@ -366,7 +366,7 @@ export const puddleMat = new THREE.MeshBasicMaterial({
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-'))))
+    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-'))))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];
@@ -1254,7 +1254,10 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
     const tone = toneOf[i];
     if (tone === 'dead') return;
     halos[tone].push(l.x + dir.x * 2, l.y + 1.5, l.z + dir.z * 2);
-    poolsOf[tone].push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 0.02, l.z + dir.z * 2), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
+    // (on Crestmont's hill roads the ground under the bulb: a pool flat on a slope sits a little up, terrain.ts)
+    const [px, pz] = [l.x + dir.x * 2, l.z + dir.z * 2];
+    const py = onHills(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + 0.02;
+    poolsOf[tone].push(new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
   for (const p of pools) poolsOf[p.sodium ? 'sodium' : 'white'].push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size)));
   // Each tone's materials: the flickering ones going out together
