@@ -5,7 +5,8 @@
  * and the page says the city needs 3D graphics.
  */
 import * as THREE from 'three';
-import { WIDEN } from './layout';
+import { RING_HI, WIDEN } from './layout';
+import { AVENUE_Z } from './trenches';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { CROWD_PACK, loadMocap } from './mocap-load';
@@ -44,7 +45,7 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { AIRPORT_END, BRANCH, LINE_X } from './metro';
+import { AIRPORT_END, ARCH, BRANCH, LINE_X, NORTH_R, WEST_END, WEST_R } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
@@ -295,6 +296,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
   keepTreesOff([LINE_X - 6, BRANCH.south - 4, AIRPORT_END + 6, BRANCH.z + 6]);
+  // (and its run west past The Trenches over the highway to Southbank Docks and north over the river: docs/docks-plan.md Phase 2)
+  keepTreesOff([WEST_END - WEST_R - 6, AVENUE_Z - 6, -186, AVENUE_Z + 6]);
+  keepTreesOff([ARCH.x - 6, RING_HI - 2, ARCH.x + NORTH_R + 4, AVENUE_Z]);
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)

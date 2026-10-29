@@ -134,32 +134,62 @@ world's west edge today:
   snapshot gained the new streets and the slip lane (nothing that existed
   moved). The boot grew 2 KB (662.6 to 664.6 of 670).
 
-### Phase 2: the metro via the docks, the red arch moved
+### Phase 2: the metro via the docks, the red arch moved (built)
 
-- metro.ts: the main track runs on west along Trench Avenue's median past
-  West Street, over row W and the highway's west side on a span (as the
-  Kart Park line crosses its north side), into the docks to **Docks
-  station** (a platform, a stair tower, the M roundel, a totem; a place:
-  `STATIONS`, `PLACES`); a bend north; over the river on the red arch
-  (`ARCH` moved: its ribs springing from the docks' quay and the north
-  bank, its crown kept as it is, nothing in the water, clear of the boat
-  lanes and the tall ship's line); a bend east onto the north bank
-  avenue's median; over the highway's junction on a span; along Uptown's
-  waterfront avenue's median (the planted median, `MEDIAN_RUNS`, broken
-  round the pillars); a bend north at x -150 onto Uptown's portals as they
-  are, to Uptown station, unchanged.
-- What goes: the bend into the cross street at x -150 (`WEST_END`,
-  `UP_R`), the portals on The Trenches' side and the arch there (the cross
-  street stays a street). The Trenches' station stays where it is.
-- The timetable grows (`LEGS`, `ROUND_TRIP`): out through The Trenches and
-  the Docks to Uptown and back; the run past The Trenches is the express
-  (`speedOf()`); the longest ride (`rideAt()`'s cap) is measured and
-  written here.
-- Tests (`tests/metro.test.ts`): every pillar clear of every road and
-  sidewalk, the spans over the highway high enough, the arch clear of the
-  water's lanes and the tall ship, every station's door on a sidewalk, the
-  rides and the timetable; the world map's metro line; the el's rumble
-  where it now runs (`rumbleAt()`).
+What was built, in metro.ts (DOM-free, tested in `tests/metro.test.ts`):
+
+- **The route west of The Trenches:** the main track carries on west along
+  Trench Avenue's line (z 175) past West Street, over row W and the
+  highway's west side (no pillar on the highway: a span of about 9.5), over
+  Dock Road and onto the docks' east quay to **Southbank Docks station**
+  (`docks` in `STATIONS`, named `DOCKS_NAME`; its middle `EL_STATION`
+  x -258, its platform south of the track, its stair tower on the quay with
+  its door facing north; a `PLACES` entry, `metro-docks`, through
+  places.ts); round a bend north (`WEST_R` 8, `WEST_END`) onto the docks'
+  line (`EL_X` x -272, docks.ts); over the south bank avenue and the river
+  on **the red arch** (`ARCH` moved: its south feet on the east quay at the
+  avenue's sidewalk, z 142, its north feet on the north bank's promenade,
+  z 70.3, its crown 16 over the ground as before, nothing in the water, clear
+  of the basin's mouth and the boats' lanes; its hangers every 4); round a
+  bend east (`NORTH_R` 5.5) onto the north bank avenue's median (`RING_HI`);
+  east along it, over the highway's junction on a span, into Uptown; round a
+  bend north (`UP_R` 6, was 8) into the one-way pair's northbound street and
+  up it on the portal frames to Uptown station, unchanged.
+- **What went:** the bend into the cross street at x -150 in The Trenches,
+  the portal frames there and the arch over the river at x -150 (the cross
+  street stays a street, The Trenches' station where it was).
+- **The pillars** follow from the street plan as before (`PILLARS`): the
+  avenues' medians clear of their junctions, open land, the docks' quay,
+  never under the arch; the spans between are at most 18 (the highway's
+  are about 9.5). Through the docks the el is dark steel like The Trenches'
+  (metro3d.ts `grim()`: flanged columns on plinths, plate girders).
+- **Uptown's waterfront avenue:** the el runs over the bank avenue's
+  planted median from the highway to the bend at x -156: the hedge is
+  broken round each pillar and no columnar tree stands under the deck
+  (boulevarddress.ts `MEDIAN_RUNS`, `MEDIAN_TREES`, `UNDER_EL`); the
+  esplanade's keep-out for the old arch's north feet is gone
+  (boulevard.ts), so its trees, benches and lamps carry on there.
+- **Trees** keep off the line west of The Trenches and the arch's land
+  (index.ts `keepTreesOff()`; row W's trees along the highway skip the el,
+  streetwall3d.ts); the docks' lamps keep off the arch's feet (docks.ts
+  `DOCK_LAMPS`).
+- **The timetable** (`LEGS`, 12 now): down to South Bank, out through The
+  Trenches and the Docks to Uptown and back, out to the Airport and back,
+  up again; `ROUND_TRIP` about 326 s. The run west of The Trenches is the
+  express (`speedOf()`, unchanged at 24: a faster express hardly helps,
+  the runs are mostly speeding up and slowing down). The longest ride,
+  Uptown to the Airport turning round at South Bank, is about 60.7 s
+  (`rideAt()`; it was about 50.8).
+- **Tests:** the main line's length from its straights and bends, smooth
+  all the way, over nothing taller than 4.5; every pillar in a median clear
+  of the junctions or on open ground, the spans at most 18; the stations'
+  platforms between junctions and their towers off every road and solid;
+  the portals' legs off the streets and their sidewalks; the arch's feet
+  off the water and the basin's mouth, the boats' lanes under it, the tall
+  ship east of it, every flight well over its crown; Southbank Docks'
+  station on the east quay and the deck never over the basin; the Uptown
+  median broken round the pillars with no tree under the el. Both world
+  sizes pass. The boot grew 0.2 KB (664.6 to 664.8 of 670).
 
 ### Phase 3: the port
 

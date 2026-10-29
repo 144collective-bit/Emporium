@@ -277,16 +277,21 @@ it and has been retired completely. Build only on what's here.
     crosses the highway's junction on a span) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
-    south row and Trench Avenue's median to The Trenches, and on (Uptown's
-    Phase 7, `docs/finance-plan.md`) to `WEST_END`, a tight bend (`UP_R`)
-    into the cross street at `UP_X` (x -150), north on portal frames
-    (`PORTALS`, `PORTAL`: a leg each side on the blocks' edges, none on a
-    road or its sidewalk), over the river on a steel arch with nothing in
-    the water (`ARCH`, `archY()`: its ribs springing from the block edges
-    in The Trenches and from Uptown's esplanade, its crown 16 over the
-    ground, well under the prop plane's turn; the deck hung from it,
-    `HANGERS`; no pillar under it) and up the one-way pair's northbound
-    street to Uptown station, `UP_END`; `branch` straight
+    south row and Trench Avenue's median to The Trenches, and on (via the
+    docks since `docs/docks-plan.md` Phase 2, the owner's call) west along
+    Trench Avenue's line over row W and the highway to Southbank Docks
+    station on the docks' east quay, a bend north (`WEST_R`, `WEST_END`)
+    onto the docks' line (`EL_X` in docks.ts), over the river on the red
+    steel arch with nothing in the water (`ARCH`, `archY()`: its ribs
+    springing from the east quay and the north bank's promenade, its crown
+    16 over the ground, well under what flies over; the deck hung from it,
+    `HANGERS`; no pillar under it), a bend east (`NORTH_R`) onto the north
+    bank avenue's median, east along it into Uptown (its planted median
+    broken round the pillars, no tree under the deck: boulevarddress.ts), a
+    bend north (`UP_R`) into the one-way pair's northbound street at `UP_X`
+    and up it on portal frames (`PORTALS`, `PORTAL`: a leg each side on the
+    blocks' edges, none on a road or its sidewalk; the arch's feet first)
+    to Uptown station, `UP_END`; `branch` straight
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
     the highway to Airport Station by Airport Drive, `AIRPORT_END`; runs on
@@ -296,18 +301,18 @@ it and has been retired completely. Build only on what's here.
     clear of its junctions, or open land off every road; over the river
     only on Harbour Bridge's median, where they're steel posts from its
     deck, river plan step 2);
-    six stations (`STATIONS`: Kart Park, Downtown, South Bank, The
-    Trenches, Airport, Uptown; each a track and distance, a platform on the
+    seven stations (`STATIONS`: Kart Park, Downtown, South Bank, The
+    Trenches, Southbank Docks, Airport, Uptown; each a track and distance, a platform on the
     track's left (`PLATFORM_SIDE`; Uptown's on its right, `side`,
     `sideAt()`), a stair tower with its door at street level and the way
     out of it, `face`; Uptown's on the plaza's café terrace), `METRO_SOLIDS`
     (in `SOLIDS`: pillars, portal legs, towers), the train
     (`TRAIN`, two cars) on a timetable from the clock (`trainAt()`, `LEGS`:
-    down to South Bank, out through The Trenches to Uptown and back, out to
-    the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
+    down to South Bank, out through The Trenches and the Docks to Uptown and
+    back, out to the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
-    South Bank between the west and the Airport; at most about 51 s, Uptown
+    South Bank between the west and the Airport; at most about 61 s, Uptown
     to the Airport)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
     (the deck in short straight pieces between its pillars, portals and
@@ -462,7 +467,7 @@ it and has been retired completely. Build only on what's here.
     trenches.ts, `buildLamps()` in world.ts: about one in ten flickering,
     in two sets going out together through `flickerTogether()` in kit.ts,
     the odd one dead). The el over Trench Avenue is dark steel
-    (`metro3d.ts`: a grimy deck, deep plate girders braced across, flanged
+    (`metro3d.ts`, on through Southbank Docks too, `grim()`: a grimy deck, deep plate girders braced across, flanged
     steel columns on concrete plinths, steel hammerheads, a sodium lamp
     under each span with its pool, sparks off the wheels as the train goes
     over (not under reduced motion), and `rumbleAt()` for the sound). The
@@ -1149,7 +1154,11 @@ it and has been retired completely. Build only on what's here.
   sodium lamps (`DOCK_LAMPS`); the trees kept off (`treeSpot()`). Drawn as
   you approach by `docks3d.ts` (`LAZY_DISTRICTS` id `docks`: the streets,
   the bridge's railings, the quays' coping, near only bollards and
-  ladders); the world map draws the basin. Made-up names only.
+  ladders); the world map draws the basin. Phase 2 (the metro via the
+  docks, the red arch moved) is built: Southbank Docks station on the east
+  quay (`EL_STATION`), the line north over the river on the arch along
+  `EL_X` and east along the north bank avenue into Uptown (the metro,
+  above). Made-up names only.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back

@@ -40,6 +40,14 @@ export const QUAY_Z = 202.5;
 export const YARD_Z = 286;
 export const HALF = LANE;
 
+/**
+ * The metro across the docks (docs/docks-plan.md Phase 2; metro.ts reads these): along Trench Avenue's line west over
+ * the east quay to Southbank Docks station (`EL_STATION`, its middle), round a bend north and up `EL_X` over the quay
+ * and the avenue to the red arch over the river (its ribs either side of it)
+ */
+export const EL_STATION = -258;
+export const EL_X = -272;
+
 /** The basin (x0, z0, x1, z1): its water between quay walls */
 export const BASIN: Rect = [-345, 148, -275, QUAY_Z - HALF - WALK_W];
 /** Its mouth from the river (the quay line) in to the basin, under the avenue's bridge */
@@ -191,7 +199,7 @@ export const DOCK_LAMPS: [number, number, number, number][] = (() => {
     out.push([x, QUAY_Z + IN, -Math.PI / 2, SLAB_Y]);
     out.push([x, YARD_Z - IN, Math.PI / 2, SLAB_Y]);
   }
-  // The avenue's south sidewalk, clear of the ring's ends and the bridge
-  for (let x = X0 + 6; x < X1 - 3; x += 14) if (x < CHANNEL[0] - 2 || x > CHANNEL[2] + 2) out.push([x, AVENUE_KERB + 0.45, -Math.PI / 2, SLAB_Y]);
+  // The avenue's south sidewalk, clear of the ring's ends, the bridge and the metro's arch (its feet either side of `EL_X`)
+  for (let x = X0 + 6; x < X1 - 3; x += 14) if ((x < CHANNEL[0] - 2 || x > CHANNEL[2] + 2) && Math.abs(x - EL_X) > 4.5) out.push([x, AVENUE_KERB + 0.45, -Math.PI / 2, SLAB_Y]);
   return out;
 })();
