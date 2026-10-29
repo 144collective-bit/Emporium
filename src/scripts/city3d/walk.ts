@@ -31,11 +31,12 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { PLAYER, createDegen, type Outfit } from './character';
+import { HOLDING, PLAYER, RELAXED, createDegen, type Outfit } from './character';
 import { LAND_CROUCH, LAND_ROLL, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { Contact } from './contact';
 import { loadMocap } from './mocap-load';
+import { createFollow } from './follow';
 import type { Interest } from './gaze';
 import { GAITS, STAIRS, climbAhead, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
 import { slidePose } from './poses';
@@ -150,6 +151,8 @@ const JUMP = 3.9;
 const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
+/** How much of the hips' rise and fall the first-person eye takes (the head steadies some of it) */
+const FP_BOB = 0.7;
 /**
  * A menu whose module loads the first time it's opened (the gun store, the garage's, the hangar's and the
  * trainer's: none in the boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
@@ -316,6 +319,10 @@ export function createWalk(d: WalkDeps) {
   let mocapData: MoData | null = null;
   let animLoading = false;
   let mocapW = 0;
+  /** The capture's hips' height, slowly followed: the first-person eye rides what's left (its steps and landings) */
+  let hipMean = 0;
+  /** The head's follow-through in turns (follow.ts) */
+  const headFollow = createFollow();
   /** How much of his upper body is his own pose over the motion capture's legs (the gun's hold, an arm out aiming) */
   let upperW = 0;
   /**
@@ -2515,6 +2522,11 @@ export function createWalk(d: WalkDeps) {
     const free = gunInHand ? 1 - combat.cheek : 1;
     P.headYaw += (headYaw + lookAround) * free;
     P.headPitch += (headPitch + gazePitch) * free;
+    // The hands on the motion capture: as the playing take closes them (animator.ts GRIP), unless something's in them
+    if (animator && mocapW > 0 && !P.grip) {
+      const g = RELAXED + (animator.grip - RELAXED) * mocapW;
+      P.grip = [g, hero.held?.visible ? Math.max(g, HOLDING) : g];
+    }
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
     if (!animator && !animLoading) {
@@ -2543,6 +2555,7 @@ export function createWalk(d: WalkDeps) {
       if ((mocapW < 0.01 && mocapOn) || lastPos.distanceToSquared(pos) > 4) {
         animator.reset();
         contact?.reset();
+        headFollow.reset();
       }
       // (over a quarter second back in, less going out so a slide or an emote still answers at once: quicker, the two poses swapped with a jolt)
       mocapW = THREE.MathUtils.clamp(mocapW + (mocapOn ? dt / 0.25 : -dt / 0.15), 0, 1);
@@ -2575,6 +2588,9 @@ export function createWalk(d: WalkDeps) {
         }
         anim.applyTo(hero.rig, rot, animator.hips, w, u, face - drawFace);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5 + gazePitch, w * (1 - u));
+        // Follow-through (follow.ts): the head a few frames behind the chest as it turns
+        const trail = headFollow.update(dt, drawFace + anim.chestYaw(hero.rig));
+        if (!firstPerson) anim.addLook(hero.rig, trail, 0, w * (1 - u));
         // (anything in his hand held out in front of it, clear of his leg)
         if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u));
       }
@@ -2628,7 +2644,17 @@ export function createWalk(d: WalkDeps) {
       camera.position.z -= Math.sin(shakeT * 71) * k * Math.sin(yaw);
       camera.position.y += Math.sin(shakeT * 53 + 1) * k;
     }
-    if (firstPerson) camera.position.y += Math.sin(phase * 2) * 0.025 * stride * (1 - air) * (1 - combat.aimed * 0.8);
+    // First person, the eye rides the steps: on the motion capture its hips' rise and fall (high-passed: each
+    // step's bob and a landing's squash, not the crouch, which lowers the eye itself), else the procedural walk's
+    if (animator && mocapW > 0) {
+      hipMean += (animator.hips.y - hipMean) * damp(2.5, dt);
+      if (Math.abs(animator.hips.y - hipMean) > 0.3) hipMean = animator.hips.y;
+    }
+    if (firstPerson && !d.reduced) {
+      const steps = Math.sin(phase * 2) * 0.025 * stride * (1 - air);
+      const hips = animator ? (animator.hips.y - hipMean) * SCALE * FP_BOB : 0;
+      camera.position.y += (steps * (1 - mocapW) + hips * mocapW) * (1 - combat.aimed * 0.8);
+    }
     view.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
     lookAt.copy(camera.position).sub(view);
     camera.lookAt(lookAt);

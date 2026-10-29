@@ -275,8 +275,8 @@ export interface Degen {
 
 /** Each hand's grip when the pose doesn't set one: relaxed, closed on what's held, or fists for fighting */
 // (relaxed: the fingers curled a little, as a hand hangs, not held out straight)
-const RELAXED = 0.3;
-const HOLDING = 0.62;
+export const RELAXED = 0.3;
+export const HOLDING = 0.62;
 
 /** A piece in the figure's own space, with each vertex's bones (`restSkin()`) and its colour */
 function skinPiece(p: Piece, rest: THREE.Matrix4, color: THREE.Color) {

@@ -187,6 +187,14 @@ export const STANCE = { most: 0.045, reach: 0.999, soft: 0.997, upright: 0.75, l
  * the head stays level; laid on as far into standing straight as he is
  */
 export const BREATH = { rate: 0.24, wander: 0.15, spine: 0.012, chest: 0.014 };
+/**
+ * The hands (the revamp's Phase 8): the capture has no fingers, so each take
+ * says how far they close (`MoClip.grip`: loosely curled running, hanging
+ * open standing); the animator eases to the playing take's over `ease`
+ * seconds (a half-life), `base` where a take doesn't say (the figure's
+ * relaxed hand). The figure takes it as `Pose.grip`.
+ */
+export const GRIP = { base: 0.3, ease: 0.12 };
 /** The standing takes' wander (the weight shifts) eased in and out with this half-life */
 export const WANDER = { ease: 0.25 };
 /** The game's jump and gravity, when the input doesn't say (walk.ts's) */
@@ -364,6 +372,8 @@ export function createAnimator(data: MoData) {
   let breathK = 1;
   let still = 0;
   let clip = 0;
+  /** How far the hands close (GRIP) */
+  let grip = GRIP.base;
   let t = 0;
   let searchIn = 0;
   let started = false;
@@ -562,6 +572,9 @@ export function createAnimator(data: MoData) {
   function update(inp: AnimInput) {
     const dt = Math.min(inp.dt, 0.1);
     const m = inp.move;
+    // (the hands to the take's grip: what was playing last frame, eased)
+    const gripTo = db.clips[clip].grip ?? GRIP.base;
+    grip = started ? gripTo + (grip - gripTo) * Math.pow(0.5, dt / GRIP.ease) : gripTo;
     if (!started) face = m.face;
     trajectory(inp);
     if (!started) {
@@ -1077,6 +1090,10 @@ export function createAnimator(data: MoData) {
     get face() {
       return face;
     },
+    /** How far the hands close, from the playing take (`GRIP`): the figure's `Pose.grip` */
+    get grip() {
+      return grip;
+    },
     /** Start again from scratch (walking starts, a teleport) */
     reset() {
       started = false;
@@ -1104,7 +1121,7 @@ export function createAnimator(data: MoData) {
     },
     /** What it's doing, for the lab */
     get debug() {
-      return { clip: db.clips[clip].name, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, crouch: crouchW, squash, tall: tallW, up: stanceUp, climbing, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
+      return { clip: db.clips[clip].name, grip, frame: t, rate, warp, cost: lastCost, blend: inertia.left, jumps, drop, lift, bank, air: inAir, crouch: crouchW, squash, tall: tallW, up: stanceUp, climbing, arms: AIR.arms * THREE.MathUtils.smoothstep(held, AIR.armsAfter, AIR.armsAfter + AIR.armsIn) };
     },
   };
 }
@@ -1219,6 +1236,15 @@ export function addLook(sk: Skeleton, yaw: number, pitch: number, w = 1) {
   }
 }
 const UPV = new THREE.Vector3(0, 1, 0);
+const cq = new THREE.Quaternion();
+const cfw = new THREE.Vector3();
+/** The way the chest faces in the figure's own frame (yaw, 0 = +z), from the hips up through the spine: for the follow-through (follow.ts) */
+export function chestYaw(sk: Skeleton): number {
+  const b = sk.bones;
+  cq.copy(b.hips.quaternion).multiply(b.spine1.quaternion).multiply(b.spine2.quaternion).multiply(b.chest.quaternion);
+  cfw.set(0, 0, 1).applyQuaternion(cq);
+  return Math.atan2(cfw.x, cfw.z);
+}
 
 /**
  * Something carried in his right hand (a coffee, a phone): the arm `out`

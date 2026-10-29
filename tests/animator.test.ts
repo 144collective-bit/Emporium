@@ -726,3 +726,28 @@ test('fed as another player (the revamp\'s Phase 5: positions between snapshots,
   assert.ok(step < 0.7, `the biggest turn between frames ${step.toFixed(2)} rad`);
   assert.ok(hipsLo > 0.47 && hipsHi < 0.64, `the hips between ${hipsLo.toFixed(3)} and ${hipsHi.toFixed(3)}`);
 });
+
+test('the hands close as the playing take says: curled running, open standing (the revamp\'s Phase 8)', () => {
+  // Every take of the core says its grip, and a run closes them more than a walk, a walk more than standing
+  for (const c of data.clips) assert.ok(c.grip !== undefined && c.grip >= 0 && c.grip <= 1, `${c.name} grip`);
+  const of = (tag: string, not = 'jump') => data.clips.filter((c) => tagged(c, tag) && !tagged(c, not) && !tagged(c, 'jump')).map((c) => c.grip!);
+  assert.ok(Math.min(...of('run')) > Math.max(...of('walk', 'run')), 'a run closes them more than a walk');
+  assert.ok(Math.min(...of('walk', 'run')) > Math.max(...of('stand')), 'a walk more than standing');
+  // The animator eases to the playing take's
+  const an = createAnimator(data);
+  const m = newMove(0);
+  let z = 0;
+  let moving = 0;
+  let still = 0;
+  for (let i = 0; i < 60 * 8; i++) {
+    const gz = i < 60 * 4 ? GAITS.run : 0;
+    stepMove(m, 0, gz, true, DT);
+    z += m.vz * DT;
+    an.update({ dt: DT, x: 0, y: 0, z, move: m, gx: 0, gz, scale: SCALE, ground: () => 0, sprint: 0 });
+    if (i === 60 * 4 - 1) moving = an.grip;
+    if (i === 60 * 8 - 1) still = an.grip;
+  }
+  assert.ok(moving > 0.45, `running ${moving.toFixed(2)}`);
+  assert.ok(still < 0.3, `standing ${still.toFixed(2)}`);
+  assert.equal(an.debug.grip, an.grip);
+});

@@ -31,7 +31,7 @@
  */
 import * as THREE from 'three';
 import { ANKLE_H, HIP_Y, LEG_X, type Limb, type Pose, type Wrist } from './skeleton';
-import { LEG_REACH, reachLeg } from './locomotion';
+import { LEG_REACH, reachLeg } from './skeleton';
 import { idlePose } from './poses';
 
 export type EmoteId = 'wave' | 'dance' | 'salute' | 'cheer';
