@@ -14,6 +14,7 @@ import type { Look } from '../net/profile-data';
 import { createDegen, idlePose, lookOutfit, walkPose, type Degen } from './character';
 import { emotePose, emoteSeconds } from './emotes';
 import { newFightPose, sampleClip } from './fight-anim';
+import { plantLegs } from './fightfeet';
 import { lit, liveTex, toon } from './kit';
 import { createPost } from './post';
 
@@ -159,10 +160,11 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
     if (pose === 'guard') {
       // The Fight Club's guard, hands closed (the hips' turn taken back out of the head, as fight-figure.ts does)
       sampleClip('guard', t * 60, fight);
+      plantLegs(fight, 'guard', t * 60);
       Object.assign(P, { bob: fight.bob, lean: fight.lean, twist: fight.twist, side: fight.side, turn: fight.turn, sway: fight.sway, headPitch: fight.headPitch, headYaw: fight.headYaw - fight.turn });
       for (let i = 0; i < 2; i++) {
         Object.assign(P.arms[i], { ...fight.arms[i], wrist: fight.arms[i].wrist ? { ...fight.arms[i].wrist! } : undefined, reach: undefined });
-        Object.assign(P.legs[i], { ...fight.legs[i], foot: undefined });
+        Object.assign(P.legs[i], fight.legs[i]);
       }
       P.grip = [1, 1];
       return;

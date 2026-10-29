@@ -342,7 +342,7 @@ export function createDrive(d: DriveDeps) {
     },
     /** What you're driving */
     get vehicle() {
-      return out ? { kind: out.kind, name: out.name } : null;
+      return out ? { kind: out.kind, name: out.name, model: out.model } : null;
     },
     /** How far Degen is from a vehicle he can get into (Infinity if there isn't one), and which it is */
     nearCar(x: number, z: number) {

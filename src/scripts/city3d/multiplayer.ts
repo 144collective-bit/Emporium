@@ -18,7 +18,7 @@
 import * as THREE from 'three';
 import { createNetClient, type NetState } from '../net/client';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
-import { FLAG, INPUT_HZ, modeBits, moveOk, v3, type Mode, type OwnProfile, type ServerMsg } from '../net/protocol';
+import { FLAG, INPUT_HZ, modeBits, moveOk, sameVehicle, v3, type Mode, type OwnProfile, type ServerMsg, type Vehicle } from '../net/protocol';
 import type { Combat } from './combat';
 import type { ProfileUI } from './profile-ui';
 import { createRemotes, type Motion } from './remote';
@@ -29,7 +29,10 @@ interface Walker {
   readonly active: boolean;
   /** The motion capture and its animator, once walking has them (the animation revamp's Phase 5: other players move on it too) */
   readonly motion: Motion | null;
-  netState(): { pos: THREE.Vector3; face: number; pitch: number; speed: number; air: boolean; run: boolean; aim: boolean; mode: Mode };
+  /** In a vehicle: its place (an aircraft's height too), its heading as a facing (protocol.ts `vehFace()`), an aircraft's gear */
+  netState(): { pos: THREE.Vector3; face: number; pitch: number; speed: number; air: boolean; run: boolean; aim: boolean; mode: Mode; gear: boolean };
+  /** What he's in, for the others to draw (null on foot) */
+  netVehicle(): Vehicle | null;
   fix(x: number, y: number, z: number): void;
   playEmote(id: string): void;
 }
@@ -76,6 +79,8 @@ export function createMultiplayer(d: MultiplayerDeps) {
   const dir = new THREE.Vector3();
   /** Where we were last sent from, and when (ms): a move further than the way we're going allows is a jump */
   const sent = { x: 0, z: 0, at: 0 };
+  /** What we last told the room we're in (undefined: not told yet in this city) */
+  let sentVeh: Vehicle | null | undefined;
   const online = () => net.state === 'online' && myId > 0;
   const changed = () => d.changed({ state: net.state, room: online() ? room : '', players: online() ? remotes.list().length + 1 : 0 });
 
@@ -153,6 +158,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
     switch (m.t) {
       case 'welcome':
         myId = m.you;
+        sentVeh = undefined;
         room = m.room;
         remotes.clear();
         for (const p of m.players) remotes.add(p);
@@ -302,6 +308,12 @@ export function createMultiplayer(d: MultiplayerDeps) {
       if (sendAcc < 1 / INPUT_HZ) return;
       sendAcc = 0;
       const s = walk.netState();
+      // Got in or out of something: the room tells everyone what to draw us in
+      const veh = walk.netVehicle();
+      if (sentVeh === undefined || !sameVehicle(veh, sentVeh)) {
+        sentVeh = veh;
+        net.send({ t: 'veh', v: veh });
+      }
       camera.getWorldDirection(dir);
       // Fast travel, the end of a ride or a race, a reset: say it's a jump, or the server puts us back
       const now = performance.now();
@@ -318,6 +330,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
         (combat.takePull() && combat.armed ? FLAG.fire : 0) |
         (s.run ? FLAG.run : 0) |
         (s.air ? FLAG.air : 0) |
+        (s.gear ? FLAG.gear : 0) |
         (combat.reloading > 0 ? FLAG.reload : 0) |
         (combat.assisted ? FLAG.assist : 0);
       net.send({

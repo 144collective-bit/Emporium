@@ -22,6 +22,7 @@ import { crewOutfit } from './crew';
 import { PARTNERS, partnerNear, type PartnerId } from './brawlsite';
 import { createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { newFightPose, sampleClip, type FightPose } from './fight-anim';
+import { plantLegs } from './fightfeet';
 import { BRAWL, NO_BRAWL, createBrawl, type BrawlEvent, type BrawlInput } from './brawl-sim';
 import { MOVES, createFightSim, yawTo, type Fighter, type FightSim, type MoveId, type StyleId } from './fight-sim';
 
@@ -42,7 +43,13 @@ function mixLimb(to: Limb, from: Limb, k: number, arm: boolean) {
     to.twist = mix(to.twist ?? 0, from.twist ?? 0, k);
     const w = from.wrist;
     if (w || to.wrist) to.wrist = { roll: mix(to.wrist?.roll ?? 0, w?.roll ?? 0, k), bend: mix(to.wrist?.bend ?? 0, w?.bend ?? 0, k) };
-  } else if (k > 0.5) to.foot = to.footYaw = to.footRoll = to.toe = undefined;
+  } else if (k > 0.5) {
+    // (the clip's feet planted under it, fightfeet.ts, keep their own turn on the ground)
+    to.foot = from.foot;
+    to.footYaw = from.footYaw;
+    to.footRoll = from.footRoll;
+    to.toe = from.toe;
+  }
 }
 
 export function createStreetFists(style: StyleId) {
@@ -60,6 +67,7 @@ export function createStreetFists(style: StyleId) {
       if (upper < 0.01 && whole < 0.01) return;
       const c = brawl.clip();
       sampleClip(c.id, c.frame, clip);
+      plantLegs(clip, c.id, c.frame);
       const turn = clip.turn ?? 0;
       const k = Math.max(upper, whole);
       // The upper body: the arms, the lean, the spine's twist (with the clip's hip turn while the walk keeps his hips) and the head

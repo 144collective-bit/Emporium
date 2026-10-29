@@ -29,11 +29,46 @@ The server was parked while the city grew. Getting it fit for today's city:
      told, cleaned to whole levels 0-3).
    - The server's type check passes again (`CarId` lives in `mycar.ts`).
    - `PROTOCOL` 3: tabs on the old version are told to reload.
-2. **What others see** *(next)*: other players driving, karting, flying or
-   riding (the mode is in each snapshot row's flags already, `modeOf()`),
-   and jumps drawn as jumps rather than slides.
+2. **What others see** *(built)*:
+   - **What you're in** goes to the room: a `veh` message (`Vehicle` in
+     protocol.ts: your car, motorbike, kart, aircraft or the hire boat, its
+     model and paint), sent by multiplayer.ts whenever it changes
+     (`walk.netVehicle()`). The server takes only what `cleanVehicle()`
+     passes (a player's own models, `vehicleids.ts`, and the garage's
+     paints), keeps it on the player and tells everyone (`PlayerInfo.veh`,
+     in `welcome`, `join` and `info`). `PROTOCOL` 5.
+   - **Where it is:** in a vehicle the controls carry the vehicle's place
+     and heading, not Degen's (`walk.netState()`: the heading as a facing,
+     `vehFace()`; an aircraft's height, and `FLAG.gear` while its wheels are
+     down). The world's height check reaches an aircraft's ceiling
+     (`inWorld()`: aircraft over 40 were dropped before).
+   - **How it's drawn** (`remoteveh.ts`, from remote.ts):
+     - the car (`createCar()`): its wheels roll and steer from how it
+       turns, and its brake lights come on as it slows;
+     - the motorbike (bikes.ts): it leans into its turns, the rider's foot
+       comes down as it stops;
+     - the kart (karts.ts): its driver tips into a drift;
+     - the aircraft (a fleet of one, `createFleet()`): it pitches with its
+       climb and banks with its turn, its surfaces and gear airframe.ts's;
+     - the hire boat: its driver at the wheel (boat.ts `seatAtHelm()` /
+       `helmPose()`), the bow up with speed.
+     Their Degen sits on the bike, in the kart and at the boat's wheel. In a
+     taxi, on the metro or the river bus they're out of sight. The bike,
+     the kart and the boat are their own chunks, fetched the first time
+     anyone is seen in one.
+   - **Jumps:** a move between two snapshots further than the way they're
+     moving allows (`jumped()`: fast travel, the end of a ride or a race)
+     is drawn as a jump, not a slide across the city.
+   - **Checked** on a local Worker (`wrangler dev` against a build with
+     `PUBLIC_GAME_SERVER` set to it) with one browser watching a scripted
+     player drive round in each vehicle. Held back: the getting in and out
+     itself on their figure, and your car's garage look (wheels, kit,
+     livery, glow) on theirs (they're seen in its model and paint).
+   - The server's type check passes again (the vehicles' saves are read
+     through `readSaved()`, typed without the DOM).
 3. **The owner's test** on workers.dev: two browsers (one private, since
-   each browser is its own guest), walk mode, Online on; see each other
+   each browser is its own guest), walk mode, Online on; see each other in
+   a car, on a bike, in the kart, in an aircraft and the hire boat; see each other
    downtown and in The Trenches, emotes and phrases, the same dummies, and
    driving and fast travel with no snap-backs.
 

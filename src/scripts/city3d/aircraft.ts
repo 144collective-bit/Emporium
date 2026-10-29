@@ -730,6 +730,13 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
     set(i: number, p: FleetPose) {
       poses[i] = p;
     },
+    /** Take it out of the scene and let its instance buffers go (the models' geometry is shared and stays) */
+    dispose() {
+      group.removeFromParent();
+      group.traverse((o) => o instanceof THREE.InstancedMesh && o.dispose());
+      surf?.geometry.dispose();
+      shadow.geometry.dispose();
+    },
     /** Repaint one aircraft's livery colour (your own, picked at the hangar) */
     paint(i: number, hex: string) {
       liveries[i] = hex;

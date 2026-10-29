@@ -264,7 +264,7 @@ Asked before planning (2026-10-28):
   dash's six, all near you. Geometry 195 MB (205). The boot 669.28 KB (663.83 with main's tailoring plan merged),
   the cars' chunk 10.7 KB (6.0).
 
-### Phase 3: getting in and out (built, but for other players seeing it)
+### Phase 3: getting in and out (built; others see you in it, not yet the move into it)
 
 - **Both front doors** are cut out now (`makeShell()`: each side at the
   door's seams, `doors[0]` the driver's, `doors[1]` the passenger's) and
@@ -303,12 +303,12 @@ Asked before planning (2026-10-28):
 - **Reviewed** in the city (walking up to the turntable's car, the door
   opening, the duck in, getting out) and in the tests; the animation lab
   has no vehicles, so it wasn't the place for this one.
-- **Held back: other players seeing it.** Other players' vehicles aren't
-  drawn yet (a driving player shows as their Degen moving at the car's
-  speed): that's the multiplayer plan's next step ("What others see",
-  `docs/multiplayer-plan.md`). Once others' cars are drawn, the mode
-  changing from walk to drive (already in each snapshot row's flags) plays
-  this move on their figure.
+- **Other players** see you in your vehicle now (the multiplayer plan's
+  "What others see", `docs/multiplayer-plan.md`: remoteveh.ts draws their
+  car, bike, kart, aircraft or the hire boat). **Held back:** the getting
+  in and out itself on their figure (they're in it, then out of it); the
+  mode changing from walk to drive in their snapshot rows is where it
+  would start.
 
 ### Phase 4: handling with depth (built)
 

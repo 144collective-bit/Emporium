@@ -13,10 +13,8 @@
  * Bike space as the cars': +x the front, y up, +z the bike's right; the
  * origin on the ground under its middle.
  */
-import { CAR_PAINTS, type PaintId } from './mycar';
-
-export const PLAYER_BIKES = ['scooter', 'streetbike', 'sportbike'] as const;
-export type BikeId = (typeof PLAYER_BIKES)[number];
+import { CAR_PAINTS, PLAYER_BIKES, readSaved, type BikeId, type PaintId } from './vehicleids';
+export { PLAYER_BIKES, type BikeId };
 
 export interface BikeSpec {
   id: BikeId;
@@ -83,7 +81,7 @@ export const BIKE_KEY = 'degen-city-bike-v1';
 /** Your saved bike (or the scooter); garage-ui.ts saves it */
 export function loadBike(): MyBike {
   try {
-    return cleanBike(JSON.parse(localStorage.getItem(BIKE_KEY) ?? 'null'));
+    return cleanBike(readSaved(BIKE_KEY));
   } catch {
     return { ...DEFAULT_BIKE };
   }

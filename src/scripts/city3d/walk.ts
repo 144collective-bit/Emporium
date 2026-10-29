@@ -98,7 +98,7 @@ import type { Partners, StreetFists } from './brawl';
 import type { PartnerId } from './fight-moves';
 import type { FightStart } from './fight-types';
 import type { GameDeps } from './ui';
-import type { Mode } from '../net/protocol';
+import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
 
@@ -420,6 +420,8 @@ export function createWalk(d: WalkDeps) {
   let jumpBuffer = 0;
   let jumpHeld = false;
   let face = 0;
+  /** Where the others are told he is, in a vehicle (its height, an aircraft's in the air) */
+  const netPos = new THREE.Vector3();
   let phase = 0;
   let runAmt = 0;
   let air = 0;
@@ -1052,6 +1054,7 @@ export function createWalk(d: WalkDeps) {
         sfx: d.sfx,
         reduced: d.reduced,
         low: d.low,
+        motion: () => (anim && mocapData && onFoot ? { anim, data: mocapData, onFoot } : null),
       });
       return fight;
     }));
@@ -2890,7 +2893,29 @@ export function createWalk(d: WalkDeps) {
     /** What other players need to see of us, for the game server */
     netState() {
       const mode: Mode = ride ? 'ride' : fly.active ? 'fly' : karts.active ? 'kart' : drive.active || boating() ? 'drive' : fighting() ? 'fight' : 'walk';
-      return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim: aimNow, mode };
+      // In a vehicle the others see it (docs/multiplayer-plan.md "What others see"): its heading and height, not his
+      const v = fly.active ? fly.state : boating() ? boat!.state : karts.active ? karts.sim?.player : drive.active ? drive.state : null;
+      if (!v) return { pos, face, pitch, speed: speedNow, air: !grounded, run: runAmt > 0.5, aim: aimNow, mode, gear: false };
+      const y = fly.active ? fly.state.y : boating() ? WATER_Y : karts.active ? (karts.sim?.player.y ?? pos.y) : pos.y;
+      netPos.set(pos.x, y, pos.z);
+      return { pos: netPos, face: vehFace(v.yaw), pitch, speed: speedNow, air: fly.active && !fly.state.ground, run: false, aim: false, mode, gear: fly.active && fly.state.gear };
+    },
+    /** What he's in, for everyone else to draw: your car, bike or kart, your aircraft or the hire boat (null on foot or riding) */
+    netVehicle(): NetVehicle | null {
+      if (fly.active) {
+        const p = loadPlane();
+        return { k: 'plane', id: p.model, p: p.paint };
+      }
+      if (boating()) return { k: 'boat', id: 'hire', p: 'magenta' };
+      if (karts.active) {
+        const k = d.game.save().karts;
+        return { k: 'kart', id: k.model, p: k.paint };
+      }
+      const v = drive.vehicle;
+      if (!v) return null;
+      if (v.kind === 'kart') return { k: 'kart', id: v.model, p: d.game.save().karts.paint };
+      if (v.kind === 'bike') return { k: 'bike', id: v.model, p: loadBike().paint };
+      return { k: 'car', id: v.model, p: loadCar().paint };
     },
     /** The server put us back (we moved somewhere impossible); only on foot (a car, a kart, an aircraft or a ride says where Degen is) */
     fix(x: number, y: number, z: number) {

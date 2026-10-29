@@ -6,9 +6,11 @@
 import { MOD_LEVELS, type GunMods } from '../city3d/catalog';
 import { WEAPON_IDS, type WeaponId } from '../city3d/combat-sim';
 import { WORLD_BOUNDS } from '../city3d/layout';
+import { CAR_PAINTS, PLAYER_AIRCRAFT, PLAYER_BIKES, PLAYER_CARS, PLAYER_KARTS, type PaintId } from '../city3d/vehicleids';
+import { CEILING } from '../city3d/flight-sim';
 import type { EmoteId, Look, PublicProfile, SkinId } from './profile-data';
 
-export const PROTOCOL = 4;
+export const PROTOCOL = 5;
 export const ROOM_SIZE = 16;
 /** How often a browser sends its controls, and how often the room sends positions */
 export const INPUT_HZ = 20;
@@ -22,10 +24,10 @@ export const SHOT_REACH = 18;
 
 /**
  * Per-player state bits in inputs and snapshots (`assist`: firing from a touch screen; `warp`: this
- * move is a jump, fast travel or the end of a ride or a race, not a step). The way they're getting
- * about (`MODES`) rides in the bits from `MODE_SHIFT` up.
+ * move is a jump, fast travel or the end of a ride or a race, not a step; `gear`: an aircraft's wheels
+ * are down). The way they're getting about (`MODES`) rides in the three bits from `MODE_SHIFT` up.
  */
-export const FLAG = { armed: 1, aim: 2, fire: 4, run: 8, air: 16, reload: 32, assist: 64, warp: 128 } as const;
+export const FLAG = { armed: 1, aim: 2, fire: 4, run: 8, air: 16, reload: 32, assist: 64, warp: 128, gear: 2048 } as const;
 
 /** How a player is getting about: on foot, in their car, in a kart, flying, in a taxi or on the metro, in the ring */
 export const MODES = ['walk', 'drive', 'kart', 'fly', 'ride', 'fight'] as const;
@@ -51,8 +53,45 @@ export const moveOk = (a: { x: number; z: number }, b: { x: number; z: number },
   const v = SPEEDS[modeOf(fl)];
   return Math.hypot(b.x - a.x, b.z - a.z) <= v * dt + Math.max(0.75, v / INPUT_HZ);
 };
-/** Inside the playable world (and not under it or far over it) */
-export const inWorld = (x: number, y: number, z: number) => x >= WORLD[0] && x <= WORLD[2] && z >= WORLD[1] && z <= WORLD[3] && y > -1 && y < 40;
+/** Inside the playable world (and not under it, nor over an aircraft's ceiling, flight-sim.ts `CEILING`) */
+export const inWorld = (x: number, y: number, z: number) => x >= WORLD[0] && x <= WORLD[2] && z >= WORLD[1] && z <= WORLD[3] && y > -3 && y < CEILING + 8;
+
+/**
+ * What a player is in (the vehicle plan's last step, docs/multiplayer-plan.md "What others see"): their car,
+ * motorbike, kart, aircraft or the hire boat, its model and its paint (mycar.ts `CAR_PAINTS`, every vehicle's).
+ * A snapshot row's position is the vehicle's (an aircraft's height too) and its facing the vehicle's heading, as
+ * a walker's (`vehFace()`).
+ */
+export const VEH_KINDS = ['car', 'bike', 'kart', 'plane', 'boat'] as const;
+export type VehKind = (typeof VEH_KINDS)[number];
+export interface Vehicle {
+  k: VehKind;
+  id: string;
+  p: PaintId;
+}
+const VEH_IDS: Record<VehKind, readonly string[]> = { car: PLAYER_CARS, bike: PLAYER_BIKES, kart: PLAYER_KARTS, plane: PLAYER_AIRCRAFT, boat: ['hire'] };
+/** A vehicle a browser says it's in, made safe: null when anything about it is wrong */
+export function cleanVehicle(raw: unknown): Vehicle | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const k = VEH_KINDS.find((v) => v === o.k);
+  if (!k || typeof o.id !== 'string' || !VEH_IDS[k].includes(o.id)) return null;
+  const p = CAR_PAINTS.find((c) => c.id === o.p)?.id;
+  return p ? { k, id: o.id, p } : null;
+}
+export const sameVehicle = (a: Vehicle | null | undefined, b: Vehicle | null | undefined) => (a?.k ?? '') === (b?.k ?? '') && (a?.id ?? '') === (b?.id ?? '') && (a?.p ?? '') === (b?.p ?? '');
+/**
+ * A vehicle's heading (its sim's `yaw`: forward (cos, -sin)) as the facing a snapshot carries (a walker's: forward
+ * (sin, cos)), and back
+ */
+export const vehFace = (yaw: number) => yaw + Math.PI / 2;
+export const faceYaw = (face: number) => face - Math.PI / 2;
+/**
+ * A snapshot pair further apart than the way they're moving allows in the time between them (and more than a step):
+ * a jump (fast travel, the end of a ride or a race), drawn as one, not a slide
+ */
+export const jumped = (a: { x: number; z: number }, b: { x: number; z: number }, dt: number, fl: number) =>
+  Math.hypot(b.x - a.x, b.z - a.z) > SPEEDS[modeOf(fl)] * Math.max(0, dt) + 1.5;
 
 /** The Armoury's mods a browser says its guns carry (the save is the browser's), tidied: whole levels, 0 to MOD_LEVELS */
 export function cleanMods(raw: unknown): Partial<Record<WeaponId, GunMods>> {
@@ -114,6 +153,8 @@ export type ClientMsg =
   /** A fixed phrase, by its index in PHRASES */
   | { t: 'say'; i: number }
   | { t: 'look'; look: Look }
+  /** What you're in now (null: on foot): your car, bike, kart, aircraft or the hire boat */
+  | { t: 'veh'; v: Vehicle | null }
   | { t: 'skin'; skin: SkinId }
   /** Pick a new guest name */
   | { t: 'rename' }
@@ -129,6 +170,8 @@ export interface PlayerInfo {
   rank: string;
   /** The gun they carry (or last took from the store) */
   weapon: WeaponId;
+  /** What they're in (their car, bike, kart, aircraft or the hire boat), if anything */
+  veh?: Vehicle | null;
 }
 /** `wallet`: logged in with this wallet (wallet profiles only); `since`: when the profile was made (ms) */
 export type OwnProfile = PublicProfile & { rank: string; wallet?: string; since?: number };
