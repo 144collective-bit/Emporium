@@ -22,6 +22,7 @@ import { HILLS, TERRAIN_RECT } from './hills';
 import { heightAt, naturalAt, slopeAt } from './terrain';
 import { rng } from './recipes';
 import { onDrive } from './coral';
+import { ESTATES, gardenPalmsOf, inGateway, toWorld } from './estates';
 
 type Pt = [number, number];
 
@@ -67,11 +68,13 @@ function palms(): Palm[] {
       // (the last street's east side is the last row of blocks; its west side every street's)
       for (let z = FOOTHILL_Z + 7; z < BANK.c - 5; z += 8) {
         const px = x + side * off;
-        if (!offJunction(z, 4) || !offLamps(px, z, 1.8) || px > FLATS_EAST - 0.5 || inBay(px, z, 0.5) || onDrive(px, z, 0.4)) continue;
+        if (!offJunction(z, 4) || !offLamps(px, z, 1.8) || px > FLATS_EAST - 0.5 || inBay(px, z, 0.5) || onDrive(px, z, 0.4) || inGateway(px, z, 0.6)) continue;
         fan(px, z);
       }
     }
   });
+  // The estates (Phase 5): a date palm either side of each forecourt
+  for (const e of ESTATES) for (const [u, v] of gardenPalmsOf(e)) date(...toWorld(e, u, v));
   // Foothill Road: date palms along its south side, every 14 between the streets
   for (let x = FLATS_X[0] + 8; x < FLATS_X[FLATS_X.length - 1] - 6; x += 14) {
     const z = FOOTHILL_Z + LANE + WALK_W + 0.9;

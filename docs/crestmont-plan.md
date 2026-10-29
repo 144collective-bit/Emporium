@@ -237,7 +237,34 @@ Phase 8's life; the cafés are scenery, not places.
   (`parkedCars()`), café terraces. Built from kits and recipes like
   downtown's infill (new kits: the boutique, the arcade).
 
-### Phase 5: the Flats' estates
+### Phase 5: the Flats' estates (built)
+
+**What's built:**
+
+- `estates.ts` (DOM-free, tested in `tests/estates.test.ts`): 34 estates on the fourteen Flats blocks the Drive
+  doesn't take (`ESTATE_BLOCKS`), two blocks kept for later (`KEPT`: the grand hotel's off the boulevard, crest-2-0,
+  and the metro station's, crest-0-0). Each block is cut back to back so every lot faces a north-south street (the
+  last column, out to the Flats' edge, one deep lot facing west), and along it into lots about `LOT_W` wide.
+- Each estate in its own frame: a hedge round it (`HEDGE`; the front one behind the street's palms), a gate with stone
+  piers and lamps and iron gates standing open (`GATE`), the drive in to a paved forecourt with a fountain
+  (`FOUNTAIN`) and on most a car (`ESTATE_CARS`: supercars, Midnight Execs, coupes), the house (`House`: a main block,
+  a wing on most, a villa's tower) in one of five styles (`EstateStyle`): Spanish Colonial, Mediterranean villa,
+  Tudor, Georgian, white modern; the pool behind it on a deck with loungers; a date palm either side of the forecourt
+  where there's room (landscape.ts `PALMS`). Every top under `TALLEST` (8.5). `ESTATE_SOLIDS` (in `SOLIDS`), and
+  the street's palms keep out of the gateways (`inGateway()`).
+- Drawn by `estates3d.ts` (`registerEstates()`, from crestmont3d.ts): a site an estate, the house built in its frame
+  and turned into the world. Spanish: white render, low red tile hips, arched ground-floor openings, an iron
+  balcony, a tiled chimney. Villa: ochre, red tile, shutters, the tower's pyramid roof. Tudor: brick below, cream and
+  dark timbers above, steep slate gables, a gabled porch, a tall chimney. Georgian: brick, white quoins and cornice, a
+  slate hip, a portico of four columns under a pediment, chimneys at both ends. Modern: white boxes, flat roofs, the
+  upper floor cantilevered over the forecourt, a glass ground floor, timber slats. Windows lit at night; trims,
+  shutters, timbers, gates and the garden near only.
+
+**Left for later:** the plan named a house kit and a recipe through `layBlock()`; the estates are their own data, as
+the Drive is (34 lots in five styles didn't need the kits' generality). The gardens' people (gardeners, people by
+the pools) and the pools lit at night are Phase 8's.
+
+**As planned:**
 
 - Big houses on big lots behind hedges and gates: Spanish Colonial (white
   render, red tile roofs, arches), Mediterranean villas, Tudor, Georgian

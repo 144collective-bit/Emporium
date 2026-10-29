@@ -15,6 +15,7 @@ import { SLAB } from './world';
 import { heightAt } from './terrain';
 import { registerLandscape } from './landscape3d';
 import { registerCoral } from './coral3d';
+import { registerEstates } from './estates3d';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS, type Rect } from './crestmont';
 
 export const SELF = import.meta.url;
@@ -101,6 +102,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   registerLandscape(low);
   // The Drive: the boutiques, Via Coral, the bays and their cars (Phase 4: coral3d.ts)
   registerCoral(low, scene);
+  // The Flats' estates (Phase 5: estates3d.ts)
+  registerEstates(low, scene);
   const asphalt = toon('#26243f');
   const kerbTop = toon('#5a5290');
   const grass = toon('#3f7a4a');
