@@ -17,7 +17,7 @@
 import { LANE, MEDIAN } from './layout';
 import { PLAN, distToStreet, offsetLine, type Street } from './streetplan';
 import { SLIP_CUT, cornerCurve } from './highway';
-import { baked } from './baked';
+import { BUILT, baked } from './baked';
 
 export type Pt = [number, number];
 /** Which way traffic crosses a junction: along x, along z, or down a diagonal (each gets its own green) */
@@ -548,8 +548,35 @@ export const unpackRoutes = (packed: PackedRoute[]): Route[] =>
     return { pts, cum, len: cum.at(-1)!, stops: stops.map(([ix, enter, exit, phase]) => ({ j: JUNCTIONS[ix], enter, exit, phase })) };
   });
 
+/** How far a route's line may stray from the lanes it was drawn along when its points are thinned (`simplify()`) */
+const SIMPLIFY = 0.012;
+/** A line with the points it doesn't need left out (Douglas-Peucker, within `tol`): a gentle bend keeps a point every few tiles, not every one and a half */
+function simplify(pts: Pt[], tol: number): Pt[] {
+  const keep = new Uint8Array(pts.length);
+  keep[0] = keep[pts.length - 1] = 1;
+  const stack: [number, number][] = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop()!;
+    const [ax, az] = pts[a];
+    const [vx, vz] = [pts[b][0] - ax, pts[b][1] - az];
+    const l2 = vx * vx + vz * vz || 1;
+    let worst = -1;
+    let at = -1;
+    for (let i = a + 1; i < b; i++) {
+      const t = Math.max(0, Math.min(1, ((pts[i][0] - ax) * vx + (pts[i][1] - az) * vz) / l2));
+      const d = Math.hypot(pts[i][0] - ax - vx * t, pts[i][1] - az - vz * t);
+      if (d > worst) [worst, at] = [d, i];
+    }
+    if (worst > tol) {
+      keep[at] = 1;
+      stack.push([a, at], [at, b]);
+    }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+
 /** Every route the traffic drives (worked out when the site is built: baked.ts) */
-export const ROUTES: Route[] = baked('routes', allRoutes, packRoutes, unpackRoutes);
+export const ROUTES: Route[] = baked('routes', BUILT ? undefined : allRoutes, packRoutes, unpackRoutes);
 function allRoutes(): Route[] {
   const r = rng(7007);
   const routes: Pt[][] = [highwayLoop(1, IN), highwayLoop(1, OUT), highwayLoop(-1, IN), highwayLoop(-1, OUT)];
@@ -582,7 +609,8 @@ function allRoutes(): Route[] {
       const n = next(at)!;
       const opts = onward(at.w, n, at.d);
       // Keep on the highway a while, rather than off at the next junction
-      const weight = (o: { turn: Turn }) => (o.turn === 'straight' ? (WAYS[at.w].s.kind === 'highway' ? 5 : 3) : 1.5);
+      // (and off a loop that isn't the highway, rather than round it again: Sunridge's)
+      const weight = (o: { turn: Turn }) => (o.turn === 'straight' ? (WAYS[at.w].s.kind === 'highway' ? 5 : WAYS[at.w].s.loop && !WAYS[at.w].s.oneway ? 0.5 : 3) : 1.5);
       const total = opts.reduce((a, o) => a + weight(o), 0);
       let pick = r() * total;
       const o = k === 0 && turn ? turn.o : (opts.find((x) => (pick -= weight(x)) < 0) ?? opts[0]);
@@ -605,7 +633,7 @@ function allRoutes(): Route[] {
     routes.push(loopOf(legsOf(cycle, r)));
   }
   // (to the millimetre: the baked copy in the page is a third the size, and still exactly what's worked out here)
-  return routes.map((pts) => makeRoute(pts.map(([x, z]): Pt => [mm(x), mm(z)])));
+  return routes.map((pts) => makeRoute(simplify(pts, SIMPLIFY).map(([x, z]): Pt => [mm(x), mm(z)])));
 }
 
 /**

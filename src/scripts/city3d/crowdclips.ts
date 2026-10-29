@@ -38,7 +38,7 @@ import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestr
 import { ridePose, CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
-import { baked as atBuild } from './baked';
+import { BUILT, baked as atBuild } from './baked';
 import { MOCAP_BONES, MOCAP_FPS, NB, type MoClip, type MoData } from './mocap';
 
 export type CrowdClip =
@@ -224,9 +224,9 @@ const WALK_SPEED = 0.83;
 const JOG_SPEED = 2.6;
 const MARCH_SPEED = 0.5;
 // (recorded when the site is built: baked.ts)
-const walk = atBuild('walk-cycle', () => recordWalk(WALK_SPEED, 32));
-const jog = atBuild('jog-cycle', () => recordWalk(JOG_SPEED, 24));
-const march = atBuild('march-cycle', () => recordWalk(MARCH_SPEED, 32));
+const walk = atBuild('walk-cycle', BUILT ? undefined : () => recordWalk(WALK_SPEED, 32));
+const jog = atBuild('jog-cycle', BUILT ? undefined : () => recordWalk(JOG_SPEED, 24));
+const march = atBuild('march-cycle', BUILT ? undefined : () => recordWalk(MARCH_SPEED, 32));
 /** How far one walk (or march) cycle goes at scale 1: a person at scale s and speed v plays v / (STRIDE s) cycles a second */
 export const WALK_STRIDE = walk.stride;
 export const JOG_STRIDE = jog.stride;

@@ -36,15 +36,21 @@ const STONE = toon('#8b7b68');
 const PAVING = toon('#cbbfa6');
 const UPLIGHT = neon('#ffd9a0', 0.15, 1.3);
 
-/** The name on the monuments: bronze letters on the stucco */
+/** The name on the monuments: bronze letters on a stone plaque */
 const NAME = siteMat(
   'sunridge-name',
   lit(
     new THREE.MeshBasicMaterial({
       map: canvasTex(512, 96, (c) => {
-        c.fillStyle = '#dcc69e';
+        // (a stone plaque set in the stucco, a bevelled frame round it)
+        c.fillStyle = '#8f7a5e';
         c.fillRect(0, 0, 512, 96);
-        c.fillStyle = '#6b4a2a';
+        c.fillStyle = '#b9a27e';
+        c.fillRect(7, 7, 498, 82);
+        c.strokeStyle = '#6f5c43';
+        c.lineWidth = 3;
+        c.strokeRect(12, 12, 488, 72);
+        c.fillStyle = '#4a321b';
         c.textAlign = 'center';
         c.textBaseline = 'middle';
         c.font = '600 64px "Big Shoulders Display", Georgia, serif';

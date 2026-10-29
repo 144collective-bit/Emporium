@@ -10,17 +10,24 @@
  * comes back exactly as `make()` makes it.
  */
 declare const __CITY_BAKED__: string | undefined;
+declare const __CITY_BUILT__: boolean | undefined;
+/**
+ * The site's own build (astro.config.mjs): every key is in the page, so a `make()` passed as `BUILT ? undefined :
+ * make` folds away with what only it uses (the traffic's route generator: what the boot downloads is the data)
+ */
+export const BUILT: boolean = typeof __CITY_BUILT__ !== 'undefined' && __CITY_BUILT__ === true;
 
 // (a string for JSON.parse: much quicker for the browser than the same data as a literal in the code)
 const FROM_BUILD: Record<string, unknown> = typeof __CITY_BAKED__ !== 'undefined' ? JSON.parse(__CITY_BAKED__) : {};
 /** A bake run's record of what each key made (scripts/bake.mjs sets it before loading the modules) */
 const BAKING = (globalThis as { __cityBake?: Map<string, unknown> }).__cityBake ?? null;
 
-export function baked<T, P = T>(key: string, make: () => T, pack?: (v: T) => P, unpack?: (p: P) => T): T {
+export function baked<T, P = T>(key: string, make: (() => T) | undefined, pack?: (v: T) => P, unpack?: (p: P) => T): T {
   if (key in FROM_BUILD) {
     const raw = FROM_BUILD[key] as P;
     return unpack ? unpack(raw) : (raw as unknown as T);
   }
+  if (!make) throw new Error(`baked: ${key} is missing from the page`);
   const v = make();
   BAKING?.set(key, pack ? pack(v) : v);
   return v;

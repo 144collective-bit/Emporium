@@ -1202,12 +1202,27 @@ it and has been retired completely. Build only on what's here.
   quay (`EL_STATION`), the line north over the river on the arch along
   `EL_X` and east along the north bank avenue into Uptown (the metro,
   above). Made-up names only.
-- **Sunridge** (the owner's call, planned, nothing built yet): a middle-class
-  suburb of about 120 Southwest stucco tract houses on the north-east land
-  inside the ring highway (curving loops and cul-de-sacs, block-walled back
-  yards with pools, a park, a school, a community pool and clubhouse),
-  planned in `docs/suburb-plan.md` in phases, each with the owner's sign-off;
-  keep it up to date. Made-up names only, under the Emporium.
+- **Sunridge** (the owner's call): a middle-class suburb of about 120
+  Southwest stucco tract houses on the north-east land inside the ring
+  highway (curving loops and cul-de-sacs, block-walled back yards with pools,
+  a park, a school, a community pool and clubhouse), planned in
+  `docs/suburb-plan.md` in phases, each with the owner's sign-off; keep it up
+  to date. Made-up names only, under the Emporium. Phase 1 (the land and the
+  streets) is built: `sunridge.ts` (DOM-free, tested in
+  `tests/sunridge.test.ts`): `LAND`, `SUNRIDGE_RECT` / `inSunridge()` (the
+  outskirts' trees keep off), Sunridge Parkway (`PARKWAY_LOOP`, a two-way
+  `loop` street in the plan), its entrances off the north ring avenue
+  (`ENTRIES`, the main one with a median and lights), Mesa Drive (`MESA`), the
+  cul-de-sacs (`COURTS`, turning circles `BULB`, no traffic); `SUN_STREETS` /
+  `SUN_CROSSINGS` / `SUN_BLOCKS` in the street plan (ref `sunridge`; the blocks
+  worked out from the streets by `faces()`, each with its `runs`: a street's
+  kerb or the land's edge), the amenities' land (`ZONES`), the footpath from
+  Palm Court (`PATH`), the perimeter wall and the entrance monuments
+  (`WALL_RUNS`, `MONUMENTS`, `SUN_SOLIDS` in `SOLIDS`), `SUN_LAMPS` at the
+  boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 110, 6.6 x 13,
+  pie-shaped round the turning circles). Drawn by `sunridge3d.ts`
+  (`LAZY_DISTRICTS` id `sunridge`); the road helpers are `roads3d.ts`
+  (shared with Crestmont).
 - **The raised highway** (the owner's call, planned, nothing built yet): the
   ring highway rebuilt on a concrete viaduct with real exits (diamond
   interchanges, numbered, made-up names on the gantries) and traffic that
@@ -1588,6 +1603,10 @@ it and has been retired completely. Build only on what's here.
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
+    Pass `BUILT ? undefined : make` (`BUILT` is the site's own build,
+    `__CITY_BUILT__` in astro.config.mjs) and what only `make()` uses folds
+    out of the browser's code (the route generator, the amenities' layout,
+    the crowd's recorded cycles); the tests, the server and the bake run it.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
     first opens: `loadFight()` in `walk.ts`; the menu itself, `fight-ui.ts`,
