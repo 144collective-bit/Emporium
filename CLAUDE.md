@@ -3191,6 +3191,9 @@ it and has been retired completely. Build only on what's here.
   `data-walk-*` element to exist.
 - Buildings only lift and glow on hover in City view; while walking nothing
   is hovered and nothing lifts (Degen stands on the same ground).
+- The over-the-shoulder camera starts 3.3 tiles behind him, 3.2 on an upright screen (`homeZoom()` in
+  walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
+  the middle (all of it armed, so the crosshair stays off his head).
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
 - While walking (`body.is-walking`, set in `index.ts`) the header drops the

@@ -438,8 +438,13 @@ export function createWalk(d: WalkDeps) {
 
   let yaw = SPAWN_YAW;
   let pitch = 0.5;
-  let zoom = 5.2;
-  let camDist = 5.2;
+  /**
+   * How far behind him the camera sits to begin with (the mouse wheel sets it after): closer on an upright
+   * screen, whose narrow view leaves him small at the distance a wide one frames him well
+   */
+  const homeZoom = () => (innerHeight > innerWidth ? 3.2 : 3.3);
+  let zoom = homeZoom();
+  let camDist = zoom;
   let firstPerson = false;
   let aim = false;
   /** Aiming right now: held aim, or the sight brought up by firing (Aim when firing) */
@@ -1336,7 +1341,7 @@ export function createWalk(d: WalkDeps) {
   function setFirstPerson(on: boolean) {
     firstPerson = on;
     root.classList.toggle('is-fp', on);
-    if (!on && zoom < 1.5) zoom = 4.5;
+    if (!on && zoom < 1.5) zoom = homeZoom();
     fpBtn.setAttribute('aria-pressed', String(on));
     if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
     else pitch = Math.max(pitch, -0.55);
@@ -2620,7 +2625,9 @@ export function createWalk(d: WalkDeps) {
     // Camera: over the shoulder, pulled in when something's in the way
     // Armed, he steps further left of the crosshair so it never sits on his head
     armAmt += ((combat.armed ? 1 : 0) - armAmt) * damp(6, dt);
-    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 + armAmt * 0.42;
+    // (less of it on an upright screen, whose narrow view would put him at its edge; armed, all of it, so the
+    // crosshair stays off his head)
+    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 * Math.min(1, camera.aspect) + armAmt * 0.42;
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
     let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
     // (lower crouched, lower still sliding)
@@ -2982,7 +2989,7 @@ export function createWalk(d: WalkDeps) {
       }
       // Over the shoulder by default; V (or the Controls panel) swaps to first person
       pitch = 0.35;
-      zoom = camDist = 5.2;
+      zoom = camDist = homeZoom();
       pivot.set(0, 0, 0);
       setFirstPerson(false);
       baseFov = camera.fov;
