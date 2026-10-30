@@ -276,7 +276,15 @@ export const HANGERS: number[] = (() => {
 
 /* ---------- Pillars ---------- */
 
-const ROADS = PLAN.streets.filter((s) => s.kind !== 'alley');
+const ROADS = PLAN.streets
+  .filter((s) => s.kind !== 'alley')
+  // (with its bounds out as far as `clearFor()` looks: a point outside them is off it, no need to measure)
+  .map((s) => {
+    const m = s.half + PILLAR_HALF + 0.3;
+    const xs = s.pts.map((p) => p[0]);
+    const zs = s.pts.map((p) => p[1]);
+    return { s, box: [Math.min(...xs) - m, Math.min(...zs) - m, Math.max(...xs) + m, Math.max(...zs) + m] };
+  });
 /**
  * Can a pillar stand here: in an avenue's median clear of every other road, or on open ground off every road; over
  * the river only in the median of the bridge it crosses on (the east avenue's, river plan step 1); never under the arch
@@ -286,7 +294,8 @@ function clearFor(p: Pt) {
   if (Math.abs(p[0] - ARCH.x) < 0.5 && p[1] > ARCH.z1 - 1 && p[1] < ARCH.z0 + 1) return false;
   const wet = p[1] > RIVER[0] - 0.5 && p[1] < RIVER[1] + 0.5;
   let median: Street | null = null;
-  for (const s of ROADS) {
+  for (const { s, box } of ROADS) {
+    if (p[0] < box[0] || p[0] > box[2] || p[1] < box[1] || p[1] > box[3]) continue;
     const d = distToStreet(s, p);
     if (d > s.half + PILLAR_HALF + 0.3) continue;
     // In the middle of an avenue: its median

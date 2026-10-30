@@ -1531,7 +1531,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -1646,7 +1646,7 @@ it and has been retired completely. Build only on what's here.
     modules in Node and records what each `make()` made), or works it out
     with `make()` where there's none (the tests, the game server). Today:
     the traffic's routes (`routes.ts`, packed with `packRoutes()`: each route's points as millimetre steps in one string), the
-    crowd's walk, jog and march cycles (`crowdclips.ts`) and The Trenches'
+    crowd's walk, jog and march cycles (`crowdclips.ts`, rounded to a ten-thousandth as they're recorded, `rounded()`) and The Trenches'
     amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
@@ -1665,7 +1665,9 @@ it and has been retired completely. Build only on what's here.
     fetched when walking starts; until it's in an emote is skipped, the
     gaze still, nothing vaulted and a moment plays no pose; the hologram
     fetches the emotes on its own after the boot), the stage of the fitting room
-    and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
+    and the character screen (`stage.ts`), SMAA and the phones' FXAA (`post.ts`), the sound's synth
+    (`sound.ts`, on the first tap of Sound: the boot holds `soundlazy.ts`, silent until it's in, which makes
+    the audio context in the tap for `createSound(given)`), the fight
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
     the world map (`worldmap.ts`, when it first opens: `loadMap()` in

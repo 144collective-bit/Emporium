@@ -510,7 +510,10 @@ const mirror = (pts: [number, number][]) => pts.map(([x, y]) => [-x, y] as [numb
 const grow = (secs: Sec[], k: number, dz = 0): Sec[] => secs.map(([y, hw, hd, z = 0]) => [y, hw * k, hd * k, z + dz]);
 /** A loft's cross-section at height y, between its sections */
 function secAt(secs: Sec[], y: number): Sec {
-  const ss = sorted(secs);
+  return secAtSorted(sorted(secs), y);
+}
+/** `secAt()` for sections already sorted up y (asked many times over one shape: no sort each time) */
+function secAtSorted(ss: Sec[], y: number): Sec {
   let i = 0;
   while (i < ss.length - 2 && y > ss[i + 1][0]) i++;
   const [y0, w0, d0, z0 = 0] = ss[i];
@@ -2159,23 +2162,41 @@ export function items(q: Detail, hero = false): Item[] {
     { kind: 'puffer', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
   ];
   /** A top's outline as tests: inside it, its middle (z) at a height, and the top of its shoulder at x */
+  // (once per top: every strap and bag on it asks)
+  const torsos = new Map<(typeof TORSOS)[number], ReturnType<typeof makeTorso>>();
   const torsoOf = (t: (typeof TORSOS)[number]) => {
+    if (!torsos.has(t)) torsos.set(t, makeTorso(t));
+    return torsos.get(t)!;
+  };
+  function makeTorso(t: (typeof TORSOS)[number]) {
     const [main, n] = t.shells[0];
-    const lo = sorted(main)[0][0];
+    // (each shell sorted once: the straps ask hundreds of points of each)
+    const shells = t.shells.map(([secs, k]) => [sorted(secs), k] as const);
+    const mainSorted = sorted(main);
+    const lo = mainSorted[0][0];
     const inside = (x: number, y: number, z: number) =>
-      t.shells.some(([secs, k]) => {
-        const ss = sorted(secs);
+      shells.some(([ss, k]) => {
         if (y < ss[0][0] || y > ss[ss.length - 1][0]) return false;
-        const [, hw, hd, zc = 0] = secAt(ss, y);
+        const [, hw, hd, zc = 0] = secAtSorted(ss, y);
         return Math.abs(x / hw) ** k + Math.abs((z - zc) / hd) ** k < 1;
       });
-    const mid = (y: number) => secAt(main, Math.max(lo, y))[3] ?? 0;
+    const mid = (y: number) => secAtSorted(mainSorted, Math.max(lo, y))[3] ?? 0;
+    const tops = new Map<number, number>();
     const topAt = (x: number) => {
-      for (let y = 0.5; y > 0.2; y -= 0.002) if (inside(x, y, mid(y))) return y;
-      return 0.2;
+      let top = tops.get(x);
+      if (top === undefined) {
+        top = 0.2;
+        for (let y = 0.5; y > 0.2; y -= 0.002)
+          if (inside(x, y, mid(y))) {
+            top = y;
+            break;
+          }
+        tops.set(x, top);
+      }
+      return top;
     };
     return { inside, mid, topAt, front: surface(main, n), back: surface(main, n, -1) };
-  };
+  }
   /**
    * A strap laid over a top: a smooth line through rough points (only their side, front or back, and their height
    * matter), each of its points put `lift` off the top's surface: straight out from its middle front or back, up

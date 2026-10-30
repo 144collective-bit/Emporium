@@ -183,6 +183,16 @@ function looped(f: (p: Pose, t: number) => void, seconds = WINDOW): ClipDef['sam
  * 1), recorded over one full cycle (two steps). Returns the frames and how
  * far one cycle goes.
  */
+/** A pose's every number to a ten-thousandth (a fifth of a millimetre, a hundredth of a degree): what the build bakes is half the size */
+function rounded<T>(v: T): T {
+  if (typeof v === 'number') return (Math.round(v * 1e4) / 1e4 + 0) as T;
+  if (Array.isArray(v)) return v.map(rounded) as T;
+  if (v && typeof v === 'object') {
+    for (const k of Object.keys(v)) (v as Record<string, unknown>)[k] = rounded((v as Record<string, unknown>)[k]);
+    return v;
+  }
+  return v;
+}
 function recordWalk(speed: number, frames: number) {
   const loco = createLocomotion();
   const dt = 1 / 240;
@@ -208,7 +218,7 @@ function recordWalk(speed: number, frames: number) {
     while (loco.cycle < f / frames && guard++ < 2400) step();
     const p = fresh();
     copyPose(loco.pose, p);
-    out.push(p);
+    out.push(rounded(p));
   }
   // On round to the next wrap: the whole cycle's distance
   last = loco.cycle;

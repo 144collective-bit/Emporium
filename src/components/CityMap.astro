@@ -1178,9 +1178,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   if (root) {
     // The owner's live settings (live.ts): asked for now; the 3D city's boot waits for them (briefly)
     const liveFirst = live.start();
-    // WebGL2 here? (the 3D city needs it; without it the page says so, [data-no3d])
-    const gl = document.createElement('canvas').getContext('webgl2');
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    // WebGL2 here? (the 3D city needs it; without it the page says so, [data-no3d]). Only asked of the browser: a
+    // context made to test and thrown away cost a phone a second context's start-up (and the GPU's memory for it);
+    // where the browser has WebGL 2 but no context can be made, the renderer's own fails and bootCity() says so
+    const gl = 'WebGL2RenderingContext' in window;
     // ?anim (the animation lab, anim-lab.ts) opens over the page with no city behind it: not a missing 3D
     const lab = new URLSearchParams(location.search).has('anim');
 

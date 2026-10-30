@@ -97,6 +97,13 @@ function inPoly(poly: Pt[], p: Pt) {
   }
   return inside;
 }
+/** Every street with its bounds, out as far as `frontage()` looks for one */
+const STREET_BOUNDS = PLAN.streets.map((q) => {
+  const xs = q.pts.map((p) => p[0]);
+  const zs = q.pts.map((p) => p[1]);
+  const e = q.half + 0.1;
+  return [q, [Math.min(...xs) - e, Math.min(...zs) - e, Math.max(...xs) + e, Math.max(...zs) + e] as Rect] as const;
+});
 /** What stops the margin in front of a wall: the lanes, the plaza's terraces, the lay-bys, the other towers' lots */
 const STOPS: Rect[] = [...UPTOWN_LANES, ...TERRACES, ...LAYBYS.map(laybyRect), ...SITE_RECTS];
 
@@ -116,10 +123,13 @@ export function frontage(t: Highrise, a: Pt, c: Pt, n: Pt): { street: string | n
   }
   // (Uptown North's square and the park's gates' walks through it: open ground, its ground floors dining)
   for (let d = 0.3; d <= depth + 0.3; d += 0.3) if (NORTH_OPEN.some((r) => inRect([m[0] + n[0] * d, m[1] + n[1] * d], r))) return { street: 'square', char: 'dining', depth };
+  // (only the streets whose bounds reach the way out are measured, in the plan's order)
+  const [ex, ez] = [m[0] + n[0] * (depth + 4), m[1] + n[1] * (depth + 4)];
+  const near = STREET_BOUNDS.filter(([, b]) => b[0] <= Math.max(m[0], ex) && b[2] >= Math.min(m[0], ex) && b[1] <= Math.max(m[1], ez) && b[3] >= Math.min(m[1], ez)).map(([q]) => q);
   for (let d = depth; d < depth + 4; d += 0.1) {
     const p: Pt = [m[0] + n[0] * d, m[1] + n[1] * d];
     if (others.some((r) => inRect(p, r))) break;
-    const s = PLAN.streets.find((q) => distToStreet(q, p) <= q.half + 0.05);
+    const s = near.find((q) => distToStreet(q, p) <= q.half + 0.05);
     if (s) return { street: s.id, char: characterOf(s.id, s.kind), depth };
     // (the axis's lanes are alleys in the plan, and the plaza's terraces beside them its dining too)
     if (UPTOWN_LANES.some((r) => inRect(p, r)) || TERRACES.some((r) => inRect(p, r))) return { street: 'lane', char: 'dining', depth };

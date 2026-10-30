@@ -210,10 +210,11 @@ export function roadY(r: HillRoad, d: number) {
 }
 
 /** The hill roads' pieces in a grid of cells `NEAR_CELL` across (a point asks only its own cell's) */
-const NEAR_CELL = 8;
+const NEAR_CELL = 4;
 /** The widest anyone asks round a road (`nearHillRoad()`'s `m` past its half) */
 const NEAR_MOST = 6;
-const NEAR = new Map<number, [number, number, number, number, number][]>();
+/** Each cell's pieces, five numbers a piece (ax, az, bx, bz, half): Crestmont's layouts ask this tens of thousands of times */
+const NEAR = new Map<number, number[]>();
 for (const r of HILL_ROADS)
   for (let i = 1; i < r.pts.length; i++) {
     const [a, b] = [r.pts[i - 1], r.pts[i]];
@@ -222,7 +223,7 @@ for (const r of HILL_ROADS)
       for (let cz = Math.floor((Math.min(a[1], b[1]) - reach) / NEAR_CELL); cz <= Math.floor((Math.max(a[1], b[1]) + reach) / NEAR_CELL); cz++) {
         const k = cx * 100003 + cz;
         if (!NEAR.has(k)) NEAR.set(k, []);
-        NEAR.get(k)!.push([a[0], a[1], b[0], b[1], r.half]);
+        NEAR.get(k)!.push(a[0], a[1], b[0], b[1], r.half);
       }
   }
 /** Whether a point is on a hill road or within `m` (at most `NEAR_MOST`) of its asphalt (the outskirts' trees keep off) */
@@ -230,10 +231,16 @@ export function nearHillRoad(x: number, z: number, m = 0) {
   const list = NEAR.get(Math.floor(x / NEAR_CELL) * 100003 + Math.floor(z / NEAR_CELL));
   if (!list) return false;
   const mm = Math.min(m, NEAR_MOST);
-  for (const [ax, az, bx, bz, half] of list) {
-    const [vx, vz] = [bx - ax, bz - az];
+  for (let i = 0; i < list.length; i += 5) {
+    const ax = list[i];
+    const az = list[i + 1];
+    const vx = list[i + 2] - ax;
+    const vz = list[i + 3] - az;
     const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz || 1)));
-    if (Math.hypot(x - ax - vx * t, z - az - vz * t) < half + mm) return true;
+    const dx = x - ax - vx * t;
+    const dz = z - az - vz * t;
+    const r = list[i + 4] + mm;
+    if (dx * dx + dz * dz < r * r) return true;
   }
   return false;
 }

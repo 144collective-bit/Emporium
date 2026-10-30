@@ -16,7 +16,8 @@
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
 
-export function createSound() {
+/** `given`: the context made in the visitor's tap (soundlazy.ts: this module loads after it, and iOS starts audio only in the tap) */
+export function createSound(given?: AudioContext) {
   let ctx: AudioContext | null = null;
   let master: GainNode;
   /** Two seconds of white noise, made once and reused by every short sound */
@@ -84,7 +85,7 @@ export function createSound() {
   }
 
   function init() {
-    ctx = new AudioContext();
+    ctx = given ?? new AudioContext();
     master = ctx.createGain();
     master.gain.value = 0;
     master.connect(ctx.destination);

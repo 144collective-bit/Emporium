@@ -58,7 +58,7 @@ import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
-import { createSound } from './sound';
+import { createSound } from './soundlazy';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import type { Fitting } from './fitting';

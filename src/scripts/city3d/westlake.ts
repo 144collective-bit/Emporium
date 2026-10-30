@@ -319,8 +319,15 @@ export function distToLine(pts: Pt[], p: Pt, loop = false) {
   }
   return best;
 }
+/** Each path's centre line's bounds (a point further than its half and `m` out from them is off it: not measured) */
+const PATH_BOX = new Map(PATHS.map((q) => [q, [Math.min(...q.pts.map((p) => p[0])), Math.min(...q.pts.map((p) => p[1])), Math.max(...q.pts.map((p) => p[0])), Math.max(...q.pts.map((p) => p[1]))] as Rect]));
 /** Is a point on a path (`m` more either side) */
-export const onPath = (p: Pt, m = 0) => PATHS.some((q) => distToLine(q.pts, p, q.loop) < q.half + m);
+export const onPath = (p: Pt, m = 0) =>
+  PATHS.some((q) => {
+    const b = PATH_BOX.get(q)!;
+    const e = q.half + m;
+    return p[0] > b[0] - e && p[0] < b[2] + e && p[1] > b[1] - e && p[1] < b[3] + e && distToLine(q.pts, p, q.loop) < e;
+  });
 
 /* ---------- What stands in it ---------- */
 

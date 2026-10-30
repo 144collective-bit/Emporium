@@ -488,3 +488,49 @@ two maps instead of one; outside it, none.
   boot's download is 629.7 KB gzipped, 36 KB under where it stood before
   the airport moved; nothing the traffic does changed by more than a
   millimetre.
+
+## The start-up pass (the owner's picks, after the districts grew)
+
+Measured first (headless Chromium in software, phone tier; numbers say what's
+heaviest, not how fast a phone is): the boot's own work about 6.5 s, the boot's
+download 677.5 of 680 KB, 100-330 draws and 250-430k triangles a view, about
+190 MB of geometry with every district loaded. Then, the owner's picks 1 to 4:
+
+1. **No throwaway WebGL context.** The page made a WebGL 2 context to test for
+   3D and threw it away (a second context's start-up and GPU memory on every
+   visit). It asks the browser for `WebGL2RenderingContext` instead; where that's
+   there but no context can be made, the renderer's own fails and `bootCity()`
+   returns null as before (CityMap.astro).
+2. **The city's data worked out quicker.** The street plan itself costs little:
+   the time went in the data modules' own top-level layouts. Profiled per module
+   (Node, a fast CPU), each sped up with the same answer to the last digit (each
+   constant hashed before and after): the metro's pillars, each street's bounds
+   checked before it's measured (345 to 67 ms); the gardens' kerbs and edges and
+   Westlake's `onPath()`, each path's bounds first (126 to 74 ms; the kerbs
+   are 34 KB gzipped, too big to bake into the boot); Uptown's frontages, only the
+   streets near the wall measured (77 to 22 ms); `nearHillRoad()` in crestmont.ts
+   a flat array in smaller cells without square roots, which Crestmont's landmarks
+   and mansions lean on (136 to 35 ms, 112 to 42 ms); terrain.ts's road beds in
+   smaller cells, a piece past its bank's reach skipped (about 10%).
+3. **The wardrobe built 2.5-3 times faster** (rather than the far crowd held back
+   for after the boot): the straps' and bags' test of a top's shape sorted its
+   sections on every point it asked (hundreds a strap); each top's shells are now
+   sorted once (`secAtSorted()`), its shape made once a top and its shoulder's
+   height kept per point (`makeTorso()` in wardrobe.ts). Every piece's geometry is
+   the same to the byte at every detail level; a phone's boot levels (0, 1, 2)
+   went from about 1.6 s to 0.6 s in Node.
+4. **Room in the boot's download.** The synth is a chunk of its own, fetched on
+   the first tap of Sound (sound is off until then): `soundlazy.ts` is what the
+   boot holds, silent until it's in, and makes the audio context in the tap
+   (iOS starts audio only there) for `createSound(given)`. The crowd's recorded
+   walk, jog and march cycles are rounded to a ten-thousandth as they're
+   recorded (`rounded()` in crowdclips.ts: a fifth of a millimetre), so the page's
+   copy is still exactly what `make()` makes: 20.3 to 7.2 KB gzipped. The routes
+   were left as they are (already millimetre steps; coarser would move the cars).
+
+What it measured, the same headless phone, three runs each taking turns: the page
+up in a median 7.8 s against 8.8 s before (the boot's own readout 6.0-6.4 s
+against 6.5-6.9); the boot's download 659.9 KB gzipped (17.6 KB off, 20 KB under
+its budget). Not done: target practice as a chunk of its own (walk mode calls it in
+67 places, synchronously: a bigger change), and letting far districts go on
+phones and far districts as simple blocks (items 5 and 6 of the survey, next).

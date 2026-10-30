@@ -116,9 +116,18 @@ export const KERB = { w: 0.14, h: 0.07 };
 /** The small paths' flush stone edge (inside their edge) */
 export const EDGE_W = 0.18;
 
+/** Each path's bounds, out as far as `edgeCut()` looks (a point outside them is off it: no need to measure) */
+const REACH = new Map(
+  PATHS.map((r) => {
+    const m = r.half + 0.15;
+    const xs = r.pts.map((p) => p[0]);
+    const zs = r.pts.map((p) => p[1]);
+    return [r, [Math.min(...xs) - m, Math.min(...zs) - m, Math.max(...xs) + m, Math.max(...zs) + m] as Rect];
+  })
+);
 /** Where a walk's edge mustn't run: across another path, the jetty, a terrace, or between a gate's piers */
 function edgeCut(q: ParkPath, p: Pt) {
-  if (PATHS.some((r) => r !== q && distToLine(r.pts, p, r.loop) < r.half + 0.15)) return true;
+  if (PATHS.some((r) => r !== q && inRect(REACH.get(r)!, p) && distToLine(r.pts, p, r.loop) < r.half + 0.15)) return true;
   if (Math.abs(p[0] - JETTY.x) < JETTY.half + 0.4 && p[1] > JETTY.z0 - 0.6 && p[1] < JETTY.z1) return true;
   // (and the garden's round places, which the walks open into)
   if (ROUND_AT.some(([x, z]) => Math.hypot(p[0] - x, p[1] - z) < ROUND_R + 0.1)) return true;
