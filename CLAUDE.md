@@ -339,8 +339,9 @@ it and has been retired completely. Build only on what's here.
     hum, the river (and Westlake's lake), the traffic's rush (the highway,
     the avenues inside it), wind over open land, the Emporium's beat, The
     Trenches' own (`hood`, `boombox`: the grit step), Westlake Park's
-    (`park`: birds by day, an owl at night) and Uptown's (a quieter hum, the
-    plaza's `fountain`, the circle's traffic); `sound.update()` mixes its layers
+    (`park`: birds by day, an owl at night), Uptown's (a quieter hum, the
+    plaza's `fountain`, the circle's traffic), Crestmont's (`crest`) and
+    Sunridge's (`suburb`: sprinklers, crickets, a lawnmower); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks.
 - **The Trenches** (growth plan Phase 9, the owner's call): a
@@ -1266,7 +1267,33 @@ it and has been retired completely. Build only on what's here.
   and bus, `AMENITY_SOLIDS` joined when the chunk loads); spots `sunclub`,
   `sunpark`, `sunschool` (pins, directory entries, panels with Walk in,
   `data-sun-walkin`, `PLACES` and `LIVE_PLACES` entries); drawn by
-  `sunamenities3d.ts`.
+  `sunamenities3d.ts`. Phase 5 (life, night and sound) is built: `sunlife.ts`
+  (DOM-free, the chunk's, tested in `tests/sunlife.test.ts`): walkers and dog
+  walkers along the loop's kerbs and joggers along Mesa Drive's (`LANES`, a
+  lane out along one kerb and back along the other, `KERB_IN` off the asphalt,
+  inside the lamps), joggers and walkers either way round the park's walk,
+  kids running loops on the park's lawn and the school's field and on the
+  swings (`SUN_PEOPLE`, the park's kind of crowd person, `SUN_DOGS` on their
+  leads), people standing about (`SUN_IDLE`: the club's sunbathers,
+  lifeguard and pickleball players, the park's benches, tables and
+  playground, the school's playground and flag, the residents on their
+  porches, at their grills, patio tables and pool loungers) and the
+  residents' cars on about a driveway in three (`DRIVEWAY_CARS`, nosed up to
+  the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
+  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 128, 64 on
+  phones; `addPeople()` fills them when the chunk loads, or queues them
+  before the crowd's built) and life.ts's home cars are per district
+  (`Home`: Crestmont's and Sunridge's, `SUN_MIX` / `SCHOOL_BUS_PAINT` in
+  sunridge.ts, `opts.sun`); bus stops round the collector (transit.ts
+  `SUN_STOP_GAP`, the school bus serves them); lamps at the boot round the
+  park, in the club's pool yard and by the school's front (`SUN_PLACE_LAMPS`
+  in sunplaces.ts; the coach lamps, half the windows and the pools already
+  glow at night); its sound (ambience.ts `suburb`, `SUN_HUM`: the town's
+  hum hushed, sprinklers by day, crickets at night, its birds as the park's,
+  and a lawnmower now and then by day, sound.ts `mower()`). Drawn by
+  `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
+  people into the crowd, the dogs and leads on the main thread, the cars
+  through `parkedCars()`).
 - **The raised highway** (the owner's call, planned, nothing built yet): the
   ring highway rebuilt on a concrete viaduct with real exits (diamond
   interchanges, numbered, made-up names on the gantries) and traffic that
@@ -1426,7 +1453,8 @@ it and has been retired completely. Build only on what's here.
   sitters go in past 0.6 of rain). Nothing new is drawn. Phase 4 (buses,
   boats and the weather's small reactions) is built: `transit.ts`
   (DOM-free, tested in `tests/transit.test.ts`: `BUS_STOPS` from the
-  street plan, along every avenue in town each way, in the kerb lane,
+  street plan, along every avenue in town each way (and a few round
+  Sunridge's collector, `SUN_STOP_GAP`), in the kerb lane,
   clear of the crossings, the bridges and anything solid on the sidewalk;
   `routeStops()`, `pullIn()` (a bus in the inner lane eases over to the
   kerb and back), `busStep()` (slowing in, a `DWELL` with the brake

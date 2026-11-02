@@ -85,3 +85,17 @@ test("Crestmont: its quiet hum and little wind, its birds and crickets, the Driv
   const e = DOORS.find((d) => d.id === 'emporium')!;
   assert.equal(ambienceAt(e.x, e.z).crest, 0);
 });
+
+test("Sunridge: its quiet hum, its sprinklers and crickets (the suburb layer); none of it in town or in Crestmont", async () => {
+  const { SUNRIDGE_RECT } = await import('../src/scripts/city3d/sunridge');
+  const { CREST_RECT } = await import('../src/scripts/city3d/crestmont');
+  const { SUN_HUM } = await import('../src/scripts/city3d/ambience');
+  const mid = ambienceAt((SUNRIDGE_RECT[0] + SUNRIDGE_RECT[2]) / 2, (SUNRIDGE_RECT[1] + SUNRIDGE_RECT[3]) / 2 - 20);
+  assert.ok(mid.suburb > 0.95, `Sunridge on its land: ${mid.suburb}`);
+  assert.ok(mid.city >= SUN_HUM - 1e-9 && mid.city < 0.6, `its hum ${mid.city}`);
+  assert.ok(mid.open < 0.3, 'little wind');
+  assert.equal(mid.crest, 0, "not Crestmont's");
+  const e = DOORS.find((d) => d.id === 'emporium')!;
+  assert.equal(ambienceAt(e.x, e.z).suburb, 0);
+  assert.equal(ambienceAt((CREST_RECT[0] + CREST_RECT[2]) / 2, (CREST_RECT[1] + CREST_RECT[3]) / 2).suburb, 0);
+});

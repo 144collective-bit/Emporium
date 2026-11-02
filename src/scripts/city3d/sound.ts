@@ -49,9 +49,12 @@ export function createSound(given?: AudioContext) {
   let parkGain: GainNode;
   let nextBird = 0;
   let nextOwl = 0;
-  /** Crestmont (Phase 8): the sprinklers' hiss and tick by day, the crickets at night through their own */
+  /** Crestmont (Phase 8) and Sunridge (docs/suburb-plan.md Phase 5): the sprinklers' hiss and tick by day, the crickets at night through their own */
   let sprinklerGain: GainNode;
   let cricketGain: GainNode;
+  /** Sunridge: a lawnmower now and then by day, a few gardens off */
+  let mowerGain: GainNode;
+  let nextMower = 0;
   let nextCricket = 0;
   const BOOM_BPM = 88;
   const CLUB_BPM = 124;
@@ -207,6 +210,49 @@ export function createSound(given?: AudioContext) {
     cricketGain = ctx.createGain();
     cricketGain.gain.value = 0;
     cricketGain.connect(master);
+    mowerGain = ctx.createGain();
+    mowerGain.gain.value = 0;
+    mowerGain.connect(master);
+    nextMower = ctx.currentTime + 20 + Math.random() * 40;
+  }
+
+  /** A lawnmower a few gardens off: a low two-stroke drone through a low-pass, wavering as it's pushed, up and back down over a quarter minute */
+  function mower(t: number) {
+    const dur = 14 + Math.random() * 10;
+    const f = 78 + Math.random() * 14;
+    const lp = ctx!.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 520;
+    lp.Q.value = 0.7;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.028, t + 1.5);
+    g.gain.setValueAtTime(0.028, t + dur - 2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    lp.connect(g).connect(mowerGain);
+    // (the engine and its second, and a slow waver on both as the mower's pushed out and back)
+    const lfo = ctx!.createOscillator();
+    lfo.frequency.value = 0.23;
+    const depth = ctx!.createGain();
+    depth.gain.value = 3.5;
+    lfo.connect(depth);
+    for (const [mul, level] of [
+      [1, 1],
+      [2, 0.45],
+      [3, 0.2],
+    ]) {
+      const o = ctx!.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = f * mul;
+      depth.connect(o.frequency);
+      const og = ctx!.createGain();
+      og.gain.value = level;
+      o.connect(og).connect(lp);
+      o.start(t);
+      o.stop(t + dur + 0.1);
+    }
+    lfo.start(t);
+    lfo.stop(t + dur + 0.1);
   }
 
   /** A cricket: a few quick high pulses, then a rest (a chorus of them comes from calling often, at different pitches) */
@@ -948,8 +994,8 @@ export function createSound(given?: AudioContext) {
         nextDog = t + 14 + Math.random() * 30;
       }
       // Westlake Park: birds by day (fewer in the rain), an owl now and then at night
-      // (and Crestmont's: its gardens' birds and its owl as the park's)
-      const birds = Math.max(a.park, a.crest);
+      // (and Crestmont's and Sunridge's: their gardens' birds and their owl as the park's)
+      const birds = Math.max(a.park, a.crest, a.suburb * 0.7);
       parkGain.gain.setTargetAtTime(birds, t, 1);
       if (birds > 0.15 && night < 0.5 && t > nextBird) {
         bird(t);
@@ -959,18 +1005,25 @@ export function createSound(given?: AudioContext) {
         owl(t);
         nextOwl = t + 12 + Math.random() * 20;
       }
-      // Crestmont: the lawns' sprinklers by day (off in the rain), the crickets at night
-      sprinklerGain.gain.setTargetAtTime(a.crest * (1 - night) * (1 - rain) * 0.025, t, 1.5);
-      cricketGain.gain.setTargetAtTime(a.crest * night * (1 - rain), t, 1.5);
-      if (a.crest > 0.15 && night > 0.5 && rain < 0.5 && t > nextCricket) {
+      // Crestmont and Sunridge: the lawns' sprinklers by day (off in the rain), the crickets at night
+      const yards = Math.max(a.crest, a.suburb);
+      sprinklerGain.gain.setTargetAtTime(yards * (1 - night) * (1 - rain) * 0.025, t, 1.5);
+      cricketGain.gain.setTargetAtTime(yards * night * (1 - rain), t, 1.5);
+      if (yards > 0.15 && night > 0.5 && rain < 0.5 && t > nextCricket) {
         cricket(t);
         nextCricket = t + 0.15 + Math.random() * 0.5;
+      }
+      // ...and in Sunridge a lawnmower now and then by day
+      mowerGain.gain.setTargetAtTime(a.suburb * (1 - night) * (1 - rain), t, 1.5);
+      if (a.suburb > 0.15 && night < 0.5 && rain < 0.5 && t > nextMower) {
+        mower(t);
+        nextMower = t + 70 + Math.random() * 90;
       }
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium
       buzzGain.gain.setTargetAtTime(night * 0.012 * a.city, t, 0.5);
-      // (Crestmont's hum is its own: none of the arcade's beat out there)
-      beatGain.gain.setTargetAtTime(0.06 * a.city * (1 - a.crest) + a.beat * 0.5, t, 0.3);
+      // (Crestmont's and Sunridge's hum is their own: none of the arcade's beat out there)
+      beatGain.gain.setTargetAtTime(0.06 * a.city * (1 - yards) + a.beat * 0.5, t, 0.3);
       humGain.gain.setTargetAtTime(0.15 + 0.35 * a.city, t, 1);
       waterGain.gain.setTargetAtTime(a.water * 0.22, t, 1);
       fountainGain.gain.setTargetAtTime(a.fountain * 0.07, t, 0.6);

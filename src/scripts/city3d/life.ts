@@ -29,6 +29,7 @@ import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { CREST_MIX, CREST_PEOPLE, TOUR_PAINT } from './crestlife';
 import { CREST_RECT } from './crestmont';
+import { SCHOOL_BUS_PAINT, SUNRIDGE_RECT, SUN_MIX } from './sunridge';
 import { DRIVE_BLOCKS } from './coral';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
@@ -51,6 +52,10 @@ export interface LifeOpts {
   bikes?: number;
   /** Crestmont's own cars, its tour bus first (crestlife.ts) */
   crest?: number;
+  /** Sunridge's own cars, its school bus first (sunridge.ts, docs/suburb-plan.md Phase 5) */
+  sun?: number;
+  /** Crowd slots kept for people who come with a district's chunk (`addPeople()`: Sunridge's, sunlife.ts) */
+  reserve?: number;
   /** Leave the characters' small details out (phones) */
   light?: boolean;
   /** How far from the camera a car is drawn in full (beyond, its far form: growth plan Phase 2) */
@@ -66,8 +71,8 @@ export type LifeSfx = 'horn' | 'doors' | 'boatHorn';
 
 interface Vehicle {
   route: Route;
-  /** One of Crestmont's own (crestlife.ts): put back on its streets, never spent round the camera */
-  home?: boolean;
+  /** One of a district's own (Crestmont's, crestlife.ts; Sunridge's, sunlife.ts): put back on its streets, never spent round the camera */
+  home?: Home;
   /** Distance along the route, and the segment it's on */
   p: number;
   seg: number;
@@ -170,13 +175,23 @@ function spotsNear(x: number, z: number, r: number) {
   return out;
 }
 
-/** Crestmont's streets (crestmont.ts), padded `m` */
-const inHome = (x: number, z: number, m = 0) => x > CREST_RECT[0] - m && x < CREST_RECT[2] + m && z > CREST_RECT[1] - m && z < CREST_RECT[3] + m;
-/** Where Crestmont's own cars are put: on its streets, on routes that keep to them at least half the way round */
-const HOME_SPOTS = (() => {
-  const share = ROUTES.map((r) => r.pts.filter(([x, z]) => inHome(x, z)).length / Math.max(1, r.pts.length));
-  return SPOTS.filter((s) => inHome(s.x, s.z) && share[s.r] >= 0.5);
-})();
+/** A district with cars of its own: its land, where they're put (on its streets, on routes that keep to them at least
+ * half the way round), its bus's livery and its cars in turn */
+interface Home {
+  rect: readonly [number, number, number, number];
+  spots: typeof SPOTS;
+  bus: string;
+  mix: CarId[];
+}
+const inRect = (r: readonly [number, number, number, number], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+const homeOf = (rect: readonly [number, number, number, number], bus: string, mix: CarId[]): Home => {
+  const share = ROUTES.map((r) => r.pts.filter(([x, z]) => inRect(rect, x, z)).length / Math.max(1, r.pts.length));
+  return { rect, spots: SPOTS.filter((s) => inRect(rect, s.x, s.z) && share[s.r] >= 0.5), bus, mix };
+};
+/** Crestmont's (crestmont.ts: its tour bus and its coupes, town cars and supercars) and Sunridge's (sunridge.ts: its
+ * school bus and its family cars) */
+const CREST_HOME = homeOf(CREST_RECT, TOUR_PAINT, CREST_MIX);
+const SUN_HOME = homeOf(SUNRIDGE_RECT, SCHOOL_BUS_PAINT, SUN_MIX);
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows, then the trucks and the patrol cars) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup', 'exec'];
 /** The delivery trucks, in turn */
@@ -280,6 +295,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const nPolice = opts.police ?? 0;
   const nBikes = opts.bikes ?? 0;
   const nCrest = opts.crest ?? 0;
+  const nSun = opts.sun ?? 0;
   const total = opts.cars + opts.buses + nTrucks + nPolice;
   /** Where each route turns (traffic.ts), for the indicators */
   const turnsBy = new Map<Route, Turn[]>();
@@ -352,13 +368,18 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     const spot = start[Math.floor(((i * 7919) % 1000) / 1000 * start.length)] ?? SPOTS[i % SPOTS.length];
     vehicles.push(newVehicle(i, model, false, spot));
   }
-  // Crestmont's own (docs/crestmont-plan.md Phase 8): its tour bus and its coupes, town cars and supercars, on the
-  // routes that keep mostly to its streets
-  for (let k = 0; k < nCrest && HOME_SPOTS.length; k++) {
-    const v = newVehicle(total + k, k === 0 ? 'bus' : CREST_MIX[(k - 1) % CREST_MIX.length], false, HOME_SPOTS[Math.floor(((k * 7919) % 1000) / 1000 * HOME_SPOTS.length)]);
-    v.home = true;
-    vehicles.push(v);
-  }
+  // The districts' own (docs/crestmont-plan.md Phase 8: Crestmont's tour bus and its coupes, town cars and supercars;
+  // docs/suburb-plan.md Phase 5: Sunridge's school bus and its family cars), on the routes that keep mostly to their streets
+  let extra = 0;
+  for (const [home, n] of [
+    [CREST_HOME, nCrest],
+    [SUN_HOME, nSun],
+  ] as const)
+    for (let k = 0; k < n && home.spots.length; k++) {
+      const v = newVehicle(total + extra++, k === 0 ? 'bus' : home.mix[(k - 1) % home.mix.length], false, home.spots[Math.floor((((k * 7919) % 1000) / 1000) * home.spots.length)]);
+      v.home = home;
+      vehicles.push(v);
+    }
   /** Put a car back on the road near x, z: out of sight, clear of the others; it keeps its speed */
   const respawn = (v: Vehicle, x: number, z: number, near = spotsNear(x, z, POOL_R)) => {
     for (let tries = 0; tries < 16 && near.length; tries++) {
@@ -477,8 +498,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     const tg = trailerGeometry();
     addFleet('trailer', nRigs, ['#f3f2f7', '#f3f2f7', '#9a96b8', '#ffd23f'], pair(tg.paint, tg.detail, nRigs), (v) => v.trailer!.matrix);
   }
-  // (the tour bus in its own livery)
-  for (const v of vehicles) if (v.home && v.model === 'bus') fleets.get('bus')!.paints[v.slot].set(TOUR_PAINT);
+  // (the tour bus and the school bus in their own liveries)
+  for (const v of vehicles) if (v.home && v.model === 'bus') fleets.get('bus')!.paints[v.slot].set(v.home.bus);
   // Each car's far form, in its own paint, in the city's one mesh of far cars (one draw for all of them; the trailer its own)
   const farCars = theFarCars();
   for (const v of vehicles) {
@@ -709,13 +730,13 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     if (CROWD_VIEW.on) {
       const f = CROWD_VIEW.focus;
       for (const v of vehicles) {
-        // (Crestmont's own: back on its streets once it's wandered off them, out of sight)
+        // (a district's own: back on its streets once it's wandered off them, out of sight)
         if (v.home) {
-          if (inHome(v.x, v.z, 20)) continue;
+          if (inRect(v.home.rect, v.x, v.z, 20)) continue;
           carBall.center.set(v.x, 0.6, v.z);
           carBall.radius = v.len / 2 + 1;
           if (Math.hypot(v.x - CROWD_VIEW.eye.x, v.z - CROWD_VIEW.eye.z) < POOL_FAR && CROWD_VIEW.frustum.intersectsSphere(carBall)) continue;
-          respawn(v, f.x, f.z, HOME_SPOTS);
+          respawn(v, f.x, f.z, v.home.spots);
           continue;
         }
         const d = Math.hypot(v.x - f.x, v.z - f.z);
@@ -919,6 +940,29 @@ interface Person {
   /** Brushed by you (the revamp's Phase 3): a step aside, out and back over `BUMP.t` */
   bump?: { x: number; z: number; t: number };
 }
+/** Slots kept in the crowd for people who come with a district's chunk (`LifeOpts.reserve`), and those who came before it was built */
+const spare: Person[] = [];
+const early: { idle: Idle[]; movers: ParkPerson[] }[] = [];
+/**
+ * People who come with a district's chunk (Sunridge's, sunlife.ts): each takes a spare slot in the crowd, with
+ * whatever outfit the boot gave it; past the spare slots the rest are left out. The chunk trims its own lists for phones.
+ */
+export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) {
+  if (!bodies.people.length) {
+    early.push({ idle: [...idle], movers: [...movers] });
+    return;
+  }
+  for (const c of idle) {
+    const p = spare.pop();
+    if (!p) return;
+    Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry });
+  }
+  for (const pp of movers) {
+    const p = spare.pop();
+    if (!p) return;
+    Object.assign(p, { kind: 'park', park: pp, m: moment(), face: NaN });
+  }
+}
 /** The row an idle person's act plays (a queue stands in their own idle) */
 const clipOf = (act: IdleAct, idle: CrowdClip): CrowdClip => (act === 'queue' ? idle : act);
 /** The bump: within `r` (plus the walker's reach) of you going by, they step `out` aside and back over `t` seconds */
@@ -1042,7 +1086,14 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE, ...CREST_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // The traffic's riders (vehicle plan Phase 8): sat on their bikes wherever the traffic puts them (buildTraffic)
   riders.forEach((_, k) => people.push({ kind: 'ride', ride: k, seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: 0, x: -1e5, z: -1e5, ry: 0, face: 0, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } }));
+  // The spare slots (`addPeople()`): idle, far out of the world until a district's chunk fills them
+  for (let k = 0; k < (opts.reserve ?? 0); k++) {
+    const p: Person = { kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: -1e5, z: -1e5, ry: 0, face: 0, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } };
+    people.push(p);
+    spare.push(p);
+  }
   bodies.people = people;
+  for (const e of early.splice(0)) addPeople(e.idle, e.movers);
 
   // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones; a phone in the hand
   // of those reading one (the revamp's Phase 6: an idle whose act is 'phone', and one walker in seven)

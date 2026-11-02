@@ -16,7 +16,7 @@ test('there are stops on every avenue in town, in the kerb lane, with the shelte
   for (const a of avenues) assert.ok(BUS_STOPS.some((b) => b.street === a), `no stop on ${a}`);
   for (const b of BUS_STOPS) {
     const s = streetOf(b.street);
-    assert.equal(s.kind, 'avenue');
+    assert.ok(s.kind === 'avenue' || s.id === 'sun-parkway', `a stop on ${s.id}`);
     // The bus halts in the kerb lane: a lane's middle in from the asphalt's edge
     assert.ok(Math.abs(distToStreet(s, b.at) - (s.half - LANE / 2)) < 0.05, `${b.id} off its lane (${distToStreet(s, b.at)})`);
     // The shelter stands on the sidewalk, off the asphalt

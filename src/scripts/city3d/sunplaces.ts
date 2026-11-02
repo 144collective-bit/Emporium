@@ -41,6 +41,25 @@ export const SUN_DOORS = [
   { id: 'sunschool' as const, x: 212, z: SCHOOL.wings[0][3] + 0.4 },
 ];
 
+/** Lamps at the boot (Phase 5, the night): round the park's walk, in the club's pool yard and by its courts, by the
+ * school's front walk: x, z, the way the arm reaches, the ground's height (the lots' SLAB) */
+const lamp = (x: number, z: number, dx: number, dz: number): [number, number, number, number] => [x, z, Math.atan2(-dz, dx), SLAB_Y];
+export const SUN_PLACE_LAMPS: [number, number, number, number][] = [
+  lamp(174, -40, 1, 0),
+  lamp(174, -52, 1, 0),
+  lamp(198, -40, -1, 0),
+  lamp(198, -52, -1, 0),
+  lamp(180, -33.7, 0, -1),
+  lamp(192, -33.7, 0, -1),
+  lamp(180, -59.8, 0, 1),
+  lamp(192, -59.8, 0, 1),
+  lamp(145, -44, 1, 0),
+  lamp(161.5, -56.9, -1, 0),
+  lamp(171.9, -51.8, -1, 0),
+  lamp(209.6, -33.1, 0, -1),
+  lamp(214.6, -33.1, 0, -1),
+];
+
 type Box = [number, number, number, number, number];
 /** The buildings, solid (in `SOLIDS`): the clubhouse, the school's wings and its hall; the rest is the chunk's */
 export const SUNPLACE_SOLIDS: Box[] = [

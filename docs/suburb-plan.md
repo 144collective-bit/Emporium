@@ -182,17 +182,63 @@ These are my recommendations, made so the plan is complete; any can change.
    cars and the bus through `parkedCars()`, `AMENITY_SOLIDS` (the fences, the
    ramada's posts, the play towers, the goals, the cars) joined when the chunk loads.
    The houses' tile roofs are shared (`roofOf()`, `ROOF_MATS` in sunhouses3d.ts).
-5. **Life, night and sound:** the people, kids and dogs, the residents'
-   cars, the school bus, the bus stops; porch lights and pools at night;
-   `ambience.ts` `suburb` (sprinklers, a lawnmower now and then, crickets).
+5. **Life, night and sound** (built): `sunlife.ts` (DOM-free, the chunk's,
+   tested in `tests/sunlife.test.ts`). **On the sidewalks** (`SUN_PEOPLE`, the
+   park's kind of crowd person): walkers and dog walkers round Sunridge
+   Parkway and joggers along Mesa Drive, each street a lane out along one
+   kerb and back along the other (`LANES`, `KERB_IN` off the asphalt, inside
+   the lamps, clear of the junctions' mouths), everyone in a lane at its pace
+   and evenly spread; joggers one way round the park's walk and walkers the
+   other; kids (`KID` size) running loops on the park's lawn (`LAWN_LOOP`)
+   and the school's field (`FIELD_LOOP`) and two on the swings
+   (`SWING_SEATS`); a dog on its lead ahead of each dog walker (`SUN_DOGS`,
+   `LEAD`). **Standing about** (`SUN_IDLE`, about 90): at the club the
+   sunbathers on the loungers, the lifeguard in the chair, a pair at the
+   splash pool, the pickleball players; in the park people on the benches
+   and at the ramada's tables, parents by the playground, a kid at the
+   slide's foot, someone at the drinking fountain; at the school kids by its
+   playground's tower and someone at the flagpole; the residents on every
+   other porch (behind the posts, off a tower or wing), at every fifth grill
+   (`cook`), at every eighth patio table (two eating) and on every other
+   pool's first lounger. **The residents' cars** (`DRIVEWAY_CARS`): a family
+   car on about one driveway in three, the longest that fits nosed up to the
+   garage door (`NOSE_GAP`), solid (`DRIVEWAY_SOLIDS`, joined when the chunk
+   loads). Since the houses, yards and amenities are the chunk's, the crowd
+   keeps spare slots for a district's people (life.ts `LifeOpts.reserve`:
+   128, 64 on phones; `addPeople()` fills them when the chunk loads, or
+   queues them if the crowd isn't built yet) and the chunk trims its lists
+   for phones (every other idle person, the movers' trimmed half). **The
+   traffic:** life.ts's home cars are per district now (`Home`: a land, the
+   spots on routes that keep to it half the way round, its bus's livery, its
+   cars in turn): Sunridge's school bus (`SCHOOL_BUS_PAINT`, yellow; the one
+   parked at the school stays) and its family cars (`SUN_MIX` in sunridge.ts,
+   `opts.sun`: 3 / 2 / 1 by tier), put back on its streets when they wander
+   off; bus stops round the collector (transit.ts `SUN_STOP_GAP`, 95: a few
+   each way; the school bus serves them, the shelters are transit3d.ts's).
+   **Night:** the coach lamps, half the windows and the pools already glow;
+   lamps at the boot round the park's walk, in the club's pool yard and by
+   its courts, and by the school's front (`SUN_PLACE_LAMPS` in sunplaces.ts).
+   **Sound:** ambience.ts `suburb` (all of its land, fading over 30 past the
+   wall; the town's hum hushed to `SUN_HUM` 0.3 there, little wind) and
+   sound.ts: the sprinklers by day and the crickets at night as Crestmont's,
+   its birds as the park's (a little fewer), and a lawnmower a few gardens
+   off now and then by day (`mower()`: a low two-stroke drone through a
+   low-pass, wavering, up and down over a quarter minute), no arcade beat.
+   Drawn by `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's
+   `register()`, main thread only: the people into the crowd, the dogs and
+   their leads with the city's tick while the camera's near, the cars through
+   `parkedCars()`). Kids on bikes and scooters were left out (they'd need a
+   ridden bike of their own); the school bus parked by day and gone in the
+   morning waits on a timetable.
 6. **Polish and performance:** `?bench` views (the street, the cul-de-sac,
    the pool), phone checks, the boot budget.
 7. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
 
-- The boot is at 668.9 of 670 KB: what the boot needs (the streets, blocks
-  and solids) is kept small and packed; everything drawn is the chunk's. If
-  Phase 1 can't fit, the budget is raised only with the owner's say.
+- The boot is at 661.1 of 680 KB after Phase 5 (the start-up pass made room,
+  docs/performance-plan.md): what the boot needs (the streets, blocks and
+  solids, the places' lamps) is kept small and packed; everything drawn, and
+  its life, is the chunk's. The budget is raised only with the owner's say.
 - Made-up names only; nothing for sale on any sign.
 - Everything under the Emporium's height.

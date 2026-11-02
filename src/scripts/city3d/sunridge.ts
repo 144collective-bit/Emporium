@@ -21,6 +21,7 @@
  *
  * Names are made up. Written in fixed world numbers (north of the river: no `SOUTH_SHIFT` / `WIDEN`).
  */
+import type { CarId } from './mycar';
 import { EW_ROADS, LANE, WALK_W } from './layout';
 import { curve } from './crestmont';
 
@@ -562,3 +563,10 @@ export const SUN_SOLIDS: Box[] = (() => {
   for (const m of MONUMENTS) out.push([...m.rect, 0.15 + m.top]);
   return out;
 })();
+
+/* ---------- The traffic (Phase 5) ---------- */
+
+/** Sunridge's own cars (life.ts: after its school bus), in turn: family cars */
+export const SUN_MIX: CarId[] = ['sedan', 'hatch', 'van', 'pickup', 'sedan', 'hatch'];
+/** The school bus's livery: school-bus yellow (the City Bus's own model; the one parked at the school is the same) */
+export const SCHOOL_BUS_PAINT = '#f2c21b';
