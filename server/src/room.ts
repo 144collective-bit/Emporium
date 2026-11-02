@@ -419,6 +419,9 @@ export class Room extends DurableObject<Env> {
       origin: this.origin,
       dir: this.dir.normalize(),
       view: m.pt,
+      // Moving and jumping open the cone (gunfeel.ts): the speed they say, within their mode's top speed
+      move: p.speed,
+      air: (p.flags & FLAG.air) !== 0,
     });
   }
 
@@ -477,7 +480,8 @@ export class Room extends DurableObject<Env> {
       case 'empty':
         return ['e', pid];
       case 'reload':
-        return ['l', pid, e.phase === 'done' ? 1 : 0];
+        // (a shell in goes without saying: the snapshots carry the magazine)
+        return e.phase === 'shell' ? null : ['l', pid, e.phase === 'done' || e.phase === 'stop' ? 1 : 0];
       case 'armed':
         return ['a', pid, e.on ? 1 : 0];
       default:

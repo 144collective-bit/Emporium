@@ -22,6 +22,13 @@
  *   or drone in front of a player, inside the move's reach and arc and at its
  *   height; its hits and takedowns are marked `melee` (the counters keep the
  *   ones by hand apart).
+ * - How each gun feels is gunfeel.ts's (docs/weapons-plan.md Phase 1): the
+ *   sight comes up over the gun's `ADS` time (`ads`, the cone easing from the
+ *   hip's to the aim's), moving and jumping open the cone (`moveSpread()`,
+ *   from the speed and the air the input says), each shot's place in its
+ *   string goes out with it (`n`, for the view's recoil pattern), and the
+ *   shotgun loads a shell at a time (`SHELLS`), a pull with a shell in
+ *   stopping the reload and firing after the pump.
  */
 import * as THREE from 'three';
 import { CORE_ROADS, NS_ROADS, design } from './layout';
@@ -29,6 +36,7 @@ import { PRACTICE } from './downtown';
 import { applyGunMods, type GunMods } from './catalog';
 import { FREE_PLAY } from './freeplay';
 import { MOVES, strikeHeight, type MoveId } from './fight-moves';
+import { ADS, SHELLS, STRING_GAP, moveSpread, shellsTime } from './gunfeel';
 
 export const TICK = 1 / 60;
 
@@ -172,6 +180,9 @@ export interface SimInput {
   dir: THREE.Vector3;
   /** The drone clock the shooter saw (their screen lags the server a little); drones are hit-tested there */
   view?: number;
+  /** How fast they're moving (tiles a second) and whether they're in the air: both open the cone (gunfeel.ts) */
+  move?: number;
+  air?: boolean;
 }
 
 export interface SimPlayer {
@@ -184,8 +195,19 @@ export interface SimPlayer {
   /** Ammo left in the other guns carried (swapped out); a gun not in here is full */
   stash: Partial<Record<WeaponId, [mag: number, reserve: number]>>;
   cooldown: number;
-  /** Seconds of reload left (0 when not reloading) */
+  /** Seconds of reload left (0 when not reloading), and how long the whole reload takes */
   reload: number;
+  reloadTotal: number;
+  /** A shell-at-a-time reload (gunfeel.ts SHELLS): the shells it's loading, and how many are in so far (0, 0 otherwise) */
+  shells: number;
+  loaded: number;
+  /** A pull that stopped a shell reload: it fires once the pump's done */
+  pending: boolean;
+  /** 0 at the hip, 1 down the sight (eased over the gun's ADS time) */
+  ads: number;
+  /** Shots in the string under way (the next shot's place in it), and when the last was fired */
+  string: number;
+  lastShot: number;
   spread: number;
   score: number;
   streak: number;
@@ -202,12 +224,13 @@ export interface SimPlayer {
 }
 
 export type SimEvent =
-  /** One per pellet; `pellet` 0 is the one that makes the noise */
-  | { type: 'shot'; player: string; weapon: WeaponId; pellet: number; from: THREE.Vector3; to: THREE.Vector3; target: number | null; dist: number }
+  /** One per pellet; `pellet` 0 is the one that makes the noise; `n` the shot's place in its string (gunfeel.ts recoilAt()) */
+  | { type: 'shot'; player: string; weapon: WeaponId; pellet: number; from: THREE.Vector3; to: THREE.Vector3; target: number | null; dist: number; n: number }
   | { type: 'hit'; player: string; target: number; damage: number; at: THREE.Vector3; hp: number; melee?: boolean }
   | { type: 'takedown'; player: string; target: number; at: THREE.Vector3; points: number; streak: number; melee?: boolean }
   | { type: 'empty'; player: string }
-  | { type: 'reload'; player: string; phase: 'start' | 'done' }
+  /** `shell`: a shell in (a shell-at-a-time reload); `stop`: one stopped by a pull of the trigger */
+  | { type: 'reload'; player: string; phase: 'start' | 'shell' | 'stop' | 'done' }
   | { type: 'armed'; player: string; on: boolean }
   | { type: 'gear'; player: string; weapon: WeaponId }
   /** Swapped to another gun in the field (no refill) */
@@ -308,12 +331,34 @@ export function createSim(o: SimOptions) {
     return m ? applyGunMods(WEAPONS[weapon], m) : WEAPONS[weapon];
   }
 
+  /** The grip mod's quicker reload, as a share of the stock gun's time (for the shell-at-a-time timings) */
+  const reloadPace = (W: Weapon) => W.reload / WEAPONS[W.id].reload;
   function startReload(p: SimPlayer) {
     const W = weaponOf(p);
     if (!p.armed || p.reload > 0 || p.mag === W.mag || p.reserve === 0) return;
-    p.reload = W.reload;
+    if (SHELLS[W.id]) {
+      p.shells = Math.min(W.mag - p.mag, p.reserve);
+      p.loaded = 0;
+      p.reload = shellsTime(W.id, p.shells) * reloadPace(W);
+    } else {
+      p.shells = 0;
+      p.reload = W.reload;
+    }
+    p.reloadTotal = p.reload;
     p.burst = 0;
+    p.pending = false;
     events.push({ type: 'reload', player: p.id, phase: 'start' });
+  }
+  /** Drop whatever reload is under way (a swap, putting the gun away) */
+  function dropReload(p: SimPlayer) {
+    p.reload = 0;
+    p.shells = 0;
+    p.loaded = 0;
+    p.pending = false;
+  }
+  /** The cone a player's next shot flies in: the bloom, the hip's or the aim's (by how far down the sight), and moving */
+  function coneOf(p: SimPlayer, W = weaponOf(p)) {
+    return p.spread + W.spreadHip + (W.spreadAim - W.spreadHip) * p.ads + moveSpread(W.id, p.input.move ?? 0, !!p.input.air, p.ads);
   }
 
   const hitsOn = new Map<SimTarget, { damage: number; at: THREE.Vector3 }>();
@@ -330,6 +375,11 @@ export function createSim(o: SimOptions) {
     }
     p.mag--;
     p.cooldown += 1 / W.rate;
+    p.pending = false;
+    // A new string after a pause longer than the gun's own time between shots
+    if (time - p.lastShot > 1 / W.rate + STRING_GAP) p.string = 0;
+    const n = p.string++;
+    p.lastShot = time;
     aim.copy(inp.dir).normalize();
     if (inp.assist) {
       let best = ASSIST.cone;
@@ -344,7 +394,7 @@ export function createSim(o: SimOptions) {
         }
       }
     }
-    const s = p.spread + (inp.aim ? W.spreadAim : W.spreadHip);
+    const s = coneOf(p, W);
     hitsOn.clear();
     // Each pellet flies on its own; damage on a target adds up into one hit
     for (let k = 0; k < W.pellets; k++) {
@@ -364,7 +414,7 @@ export function createSim(o: SimOptions) {
         }
       }
       const at = ray.at(dist, new THREE.Vector3());
-      events.push({ type: 'shot', player: p.id, weapon: W.id, pellet: k, from: inp.origin.clone(), to: at, target: hit ? hit.id : null, dist });
+      events.push({ type: 'shot', player: p.id, weapon: W.id, pellet: k, from: inp.origin.clone(), to: at, target: hit ? hit.id : null, dist, n });
       if (hit) {
         const h = hitsOn.get(hit);
         if (h) h.damage += W.damage;
@@ -453,13 +503,38 @@ export function createSim(o: SimOptions) {
       const W = weaponOf(p);
       p.cooldown = Math.max(p.cooldown - TICK, -1 / W.rate);
       p.spread = Math.max(0, p.spread - W.bloomDecay * TICK);
+      // The sight comes up over the gun's ADS time (not while reloading), and goes down a touch quicker
+      const sight = p.armed && p.input.aim && p.reload <= 0 ? 1 : 0;
+      const adsStep = TICK / ADS[W.id];
+      p.ads = sight ? Math.min(1, p.ads + adsStep) : Math.max(0, p.ads - adsStep * 1.5);
+      const S = p.shells ? SHELLS[W.id] : undefined;
+      // A pull with a shell in stops a shell-at-a-time reload: the pump, then the shot
+      if (S && p.reload > 0 && p.input.fire && !p.held && p.mag > 0) {
+        dropReload(p);
+        p.cooldown = Math.max(p.cooldown, S.stop * reloadPace(W));
+        p.pending = true;
+        events.push({ type: 'reload', player: p.id, phase: 'stop' });
+      }
       if (p.reload > 0) {
         p.reload -= TICK;
+        if (S) {
+          // A shell in every `shell` seconds after opening up
+          const k = reloadPace(W);
+          const due = Math.min(p.shells, Math.floor((p.reloadTotal - p.reload - S.open * k) / (S.shell * k) + 1e-9));
+          while (p.loaded < due && p.mag < W.mag && p.reserve > 0) {
+            p.mag++;
+            p.reserve--;
+            p.loaded++;
+            events.push({ type: 'reload', player: p.id, phase: 'shell' });
+          }
+        }
         if (p.reload <= 0) {
-          p.reload = 0;
-          const take = Math.min(W.mag - p.mag, p.reserve);
-          p.mag += take;
-          p.reserve -= take;
+          if (!S) {
+            const take = Math.min(W.mag - p.mag, p.reserve);
+            p.mag += take;
+            p.reserve -= take;
+          }
+          dropReload(p);
           events.push({ type: 'reload', player: p.id, phase: 'done' });
         }
       }
@@ -473,7 +548,7 @@ export function createSim(o: SimOptions) {
       // (a burst under way carries on at the gun's rate, trigger or not)
       if (!p.input.fire && p.burst === 0) p.cooldown = Math.max(p.cooldown, 0);
       // Semi-auto guns need the trigger let go between shots (and between bursts)
-      const pull = p.input.fire && (W.auto || !p.held);
+      const pull = (p.input.fire && (W.auto || !p.held)) || p.pending;
       if (p.armed && p.cooldown <= 0 && p.reload <= 0) {
         if (p.burst > 0) {
           // The rest of the burst; it ends early on an empty magazine, then the pause
@@ -493,8 +568,9 @@ export function createSim(o: SimOptions) {
     p.armed = next;
     if (!next) {
       p.input.fire = false;
-      p.reload = 0;
+      dropReload(p);
       p.burst = 0;
+      p.ads = 0;
     }
     events.push({ type: 'armed', player: id, on: next });
   }
@@ -520,6 +596,13 @@ export function createSim(o: SimOptions) {
         stash: {},
         cooldown: 0,
         reload: 0,
+        reloadTotal: 0,
+        shells: 0,
+        loaded: 0,
+        pending: false,
+        ads: 0,
+        string: 0,
+        lastShot: -1e9,
         spread: 0,
         score: 0,
         streak: 0,
@@ -548,6 +631,10 @@ export function createSim(o: SimOptions) {
       p.mods[weapon] = { ...mods };
       delete modded.get(id)?.[weapon];
     },
+    /** The cone a player's next shot would fly in (radians; the crosshair shows it) */
+    spreadOf(id: string) {
+      return coneOf(player(id));
+    },
     /** The rules of the gun a player carries, with their mods on (what the HUD shows) */
     weaponOf(id: string) {
       return weaponOf(player(id));
@@ -566,7 +653,7 @@ export function createSim(o: SimOptions) {
       p.mag = W.mag;
       p.reserve = W.reserve;
       p.stash = {};
-      p.reload = 0;
+      dropReload(p);
       p.cooldown = 0;
       p.spread = 0;
       p.burst = 0;
@@ -586,7 +673,7 @@ export function createSim(o: SimOptions) {
       [p.mag, p.reserve] = p.stash[weapon] ?? [W.mag, W.reserve];
       delete p.stash[weapon];
       p.weapon = weapon;
-      p.reload = 0;
+      dropReload(p);
       p.cooldown = SWAP_TIME;
       p.spread = 0;
       p.burst = 0;
@@ -614,7 +701,7 @@ export function createSim(o: SimOptions) {
         [p.mag, p.reserve] = p.stash[kit[0]] ?? [W.mag, W.reserve];
         delete p.stash[kit[0]];
         p.weapon = kit[0];
-        p.reload = 0;
+        dropReload(p);
         p.cooldown = SWAP_TIME;
         p.spread = 0;
         p.burst = 0;
@@ -677,7 +764,7 @@ export function createSim(o: SimOptions) {
       if (s.weapon !== p.weapon && s.weapon in WEAPONS) {
         delete p.stash[s.weapon];
         p.weapon = s.weapon;
-        p.reload = 0;
+        dropReload(p);
         p.burst = 0;
       }
       p.score = s.score;

@@ -1299,6 +1299,14 @@ export function createWalk(d: WalkDeps) {
   let aimAmt = 0;
   let armAmt = 0;
   let recoil = 0;
+  /**
+   * The recoil the view will give back once the string ends (gunfeel.ts `recover`): up (radians of pitch) and to
+   * the side (of yaw). Pulling against it yourself (`look()`) uses it up, so the view never overshoots.
+   */
+  let owedPitch = 0;
+  let owedYaw = 0;
+  /** Seconds since the last shot's kick */
+  let sinceKick = 1;
 
   /* ---------- Input ---------- */
 
@@ -1320,10 +1328,15 @@ export function createWalk(d: WalkDeps) {
     }
     // Finer control down the sight
     k *= 1 - combat.aimed * 0.4;
-    yaw -= dx * k * settings.sens;
+    const dyaw = -dx * k * settings.sens;
+    yaw += dyaw;
     const limit = firstPerson ? 1.35 : 1.3;
     const low = firstPerson ? -1.35 : -0.55;
+    const was = pitch;
     pitch = THREE.MathUtils.clamp(pitch + dy * k * settings.sens * (settings.invert ? -1 : 1), low, limit);
+    // Pulling against the recoil uses up what the view would give back (down against the climb, across against the side)
+    if (owedPitch > 0 && pitch > was) owedPitch = Math.max(0, owedPitch - (pitch - was));
+    if (owedYaw * dyaw > 0) owedYaw = Math.abs(dyaw) >= Math.abs(owedYaw) ? 0 : owedYaw - dyaw;
     d.touched();
   };
   const tryJump = () => {
@@ -2511,12 +2524,27 @@ export function createWalk(d: WalkDeps) {
         done();
       }
     }
-    // Recoil kicks the view up a touch; the rifle rides the shoulder
-    const kick = combat.update(dt, t, aimNow);
-    if (kick) {
-      pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick);
-      recoil = Math.min(0.04, recoil + kick);
+    // Recoil kicks the view up and to the side by the gun's pattern (gunfeel.ts); the rifle rides the shoulder.
+    // When the string ends the view comes back part of the way, less what you pulled back yourself.
+    const kick = combat.update(dt, t, aimNow, speed, !grounded);
+    if (kick.up || kick.side) {
+      const was = pitch;
+      pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick.up);
+      yaw -= kick.side;
+      owedPitch += (was - pitch) * kick.recover;
+      owedYaw += kick.side * kick.recover;
+      recoil = Math.min(0.04, recoil + kick.up);
+      sinceKick = 0;
+    } else sinceKick += dt;
+    if (sinceKick > 0.12 && (owedPitch || owedYaw)) {
+      const back = Math.min(1, dt * 9);
+      pitch += owedPitch * back;
+      yaw += owedYaw * back;
+      owedPitch *= 1 - back;
+      owedYaw *= 1 - back;
+      if (Math.abs(owedPitch) + Math.abs(owedYaw) < 1e-4) owedPitch = owedYaw = 0;
     }
+    if (!combat.armed) owedPitch = owedYaw = 0;
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
     if (hero.held) hero.held.visible = (hotbar ? hotbar.heldOut : !combat.armed) && !carrying;

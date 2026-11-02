@@ -10,6 +10,7 @@
  */
 import * as THREE from 'three';
 import type { WeaponId } from './combat-sim';
+import { SHELLS } from './gunfeel';
 
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
@@ -153,13 +154,8 @@ export const RELOAD_CUES: Record<ReloadKind, [number, ReloadCue][]> = {
     [0.66, 'magin'],
     [0.84, 'bolt'],
   ],
-  shells: [
-    [0.25, 'magin'],
-    [0.42, 'magin'],
-    [0.59, 'magin'],
-    [0.76, 'magin'],
-    [0.89, 'bolt'],
-  ],
+  // (a shell at a time: the rules' own `shell`, `stop` and `done` play each push and the pump, combat.ts)
+  shells: [],
   cylinder: [
     [0.12, 'magout'],
     [0.26, 'magout'],
@@ -184,10 +180,12 @@ const tv = new THREE.Vector3();
 
 /**
  * Where everything is `r` (0..1) of the way through gun `id`'s reload. Every
- * clip starts and ends at rest, so a reload cut short (a swap, holstering)
- * just eases back.
+ * clip starts and ends at rest, so a reload cut short (a swap, holstering, a
+ * shot stopping a shell-at-a-time reload) just eases back. `shells`: how many
+ * shells a shell-at-a-time reload is loading (gunfeel.ts SHELLS: the clip is
+ * timed as the rules load them, one push a shell; four if not given).
  */
-export function reloadAt(id: WeaponId, r: number, out = newReloadFrame()): ReloadFrame {
+export function reloadAt(id: WeaponId, r: number, out = newReloadFrame(), shells = 4): ReloadFrame {
   const f = FIT[id];
   out.hand = out.away = out.magRoll = out.roll = out.pitch = out.pull = out.bolt = out.slide = 0;
   out.mag.set(0, 0, 0);
@@ -213,19 +211,26 @@ export function reloadAt(id: WeaponId, r: number, out = newReloadFrame()): Reloa
       break;
     }
     case 'shells': {
-      // Rolled over to show the port; four shells from the belt one by one; then the pump
-      out.roll = 0.75 * span(r, 0.02, 0.12, 0.78, 0.86);
-      out.pitch = 0.12 * span(r, 0.02, 0.12, 0.78, 0.86);
-      out.pull = 0.05 * span(r, 0.02, 0.12, 0.8, 0.9);
-      const loop = THREE.MathUtils.clamp((r - 0.1) / 0.68, 0, 1) * 4;
-      const k = Math.min(3, Math.floor(loop));
+      // Rolled over to show the port (opening up, to `a`); the shells from the belt one by one (to `b`), as the
+      // rules load them (gunfeel.ts SHELLS); then the pump
+      const S = SHELLS[id] ?? { open: 0.3, shell: 0.42, close: 0.35 };
+      const n = Math.max(1, Math.round(shells));
+      const T = S.open + S.shell * n + S.close;
+      const a = S.open / T;
+      const b = 1 - S.close / T;
+      const c = 1 - b;
+      out.roll = 0.75 * span(r, 0.02, a, b, b + c * 0.35);
+      out.pitch = 0.12 * span(r, 0.02, a, b, b + c * 0.35);
+      out.pull = 0.05 * span(r, 0.02, a, b + c * 0.1, b + c * 0.55);
+      const loop = THREE.MathUtils.clamp((r - a) / (b - a), 0, 1) * n;
+      const k = Math.min(n - 1, Math.floor(loop));
       const u = loop - k;
       // Each shell: from the port to the pouch, back with a shell and pushed in
-      const inLoop = r > 0.1 && r < 0.78;
-      out.hand = inLoop ? 1 : span(r, 0.04, 0.1, 0.78, 0.86);
+      const inLoop = r > a && r < b;
+      out.hand = inLoop ? 1 : span(r, a * 0.3, a, b, b + c * 0.35);
       out.away = inLoop ? span(u, 0, 0.35, 0.45, 0.85) : 0;
       // Then back on the pump to rack it, back and forward
-      out.bolt = bump(r, 0.86, 0.97);
+      out.bolt = bump(r, b + c * 0.35, b + c * 0.95);
       out.slide = -0.07 * out.bolt;
       break;
     }
