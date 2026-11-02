@@ -105,6 +105,8 @@ export interface HoldState {
   recoil: number;
   /** 0..1 through a reload, 0 when not reloading */
   reload: number;
+  /** A shell-at-a-time reload: the shells it's loading (gunfit.ts reloadAt()) */
+  shells?: number;
   /** Seconds since the last frame (0 snaps straight to the stance) */
   dt: number;
 }
@@ -219,7 +221,7 @@ function inHands(p: Pose, s: HoldState, carry: 'long' | 'pistol', f: ReloadFrame
  */
 export function holdGun(p: Pose, st: Stance, pivot: THREE.Object3D, gun: HeldGun, s: HoldState) {
   const fit = FIT[gun.id];
-  const f = reloadAt(gun.id, s.reload, st.frame);
+  const f = reloadAt(gun.id, s.reload, st.frame, s.shells);
   const draw = s.draw ?? 1;
   const ready = Math.max(s.ready ?? 1, s.aim, s.reload > 0 ? 1 : 0);
   // Drawing: the hand reaches for the gun, then the gun comes round to his hands

@@ -58,8 +58,11 @@ const spots: Record<SpotId, Spot> = {
   overlook: { title: 'The Overlook', sub: 'The view' },
   reservoir: { title: 'The Reservoir', sub: 'In the hills' },
   harbourmaster: { title: 'Harbour Master', sub: 'Southbank Docks' },
+  sunclub: { title: 'Sunridge Club', sub: 'Pool & clubhouse' },
+  sunpark: { title: 'Sunridge Park', sub: 'Playground' },
+  sunschool: { title: 'Sunridge Elementary', sub: 'School' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1102,6 +1105,27 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="chip-link kart-walkin" data-docks-walkin>Walk in</button>
   </template>
 
+  <template data-panel-tpl="sunclub">
+    <p class="kicker"><span class="kicker-num">27</span> Sunridge</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sunridge Club</h2>
+    <p class="city-panel-text">The neighbourhood's clubhouse by the main entrance, its lap pool and splash pool behind a black iron fence, umbrellas and loungers on the deck, and two pickleball courts beside. Memberships: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="sunpark">
+    <p class="kicker"><span class="kicker-num">28</span> Sunridge</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sunridge Park</h2>
+    <p class="city-panel-text">A green in the middle of the suburb: a playground under shade sails, a ramada with picnic tables, a field for a kickabout and a walk all the way round.</p>
+    <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="sunschool">
+    <p class="kicker"><span class="kicker-num">29</span> Sunridge</p>
+    <h2 id="city-panel-title" class="city-panel-title">Sunridge Elementary</h2>
+    <p class="city-panel-text">The suburb's school: low stucco classroom wings round a covered walk, the multipurpose room, a field with its goals, the playground, and the yellow bus out front. Classes: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
+  </template>
+
   <div class="city-hud" data-city-hud>
     {/* The owner's notice (live settings, live.ts): one at a time, from the command center; its × hides that one for good */}
     <div class="city-banner" data-live-banner role="status" hidden>
@@ -1151,12 +1175,31 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
   const root = document.querySelector<HTMLElement>('[data-city-root]');
 
+  // A part of the city loaded when it's first used (the gun store, the garage's menu, the 3D city's own code...)
+  // that won't load is almost always a page opened before a new version went live, asking for a file the new
+  // version replaced: reload once to pick the new version up (the city's game is in this browser's save, so
+  // nothing is lost but where you stood). Not twice within a minute, so a file that's really missing can't loop it.
+  addEventListener('vite:preloadError', (e) => {
+    const KEY = 'degen-city-reloaded-at';
+    let last = 0;
+    try {
+      last = Number(sessionStorage.getItem(KEY)) || 0;
+    } catch {}
+    if (Date.now() - last < 60_000) return;
+    try {
+      sessionStorage.setItem(KEY, String(Date.now()));
+    } catch {}
+    e.preventDefault();
+    location.reload();
+  });
+
   if (root) {
     // The owner's live settings (live.ts): asked for now; the 3D city's boot waits for them (briefly)
     const liveFirst = live.start();
-    // WebGL2 here? (the 3D city needs it; without it the page says so, [data-no3d])
-    const gl = document.createElement('canvas').getContext('webgl2');
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    // WebGL2 here? (the 3D city needs it; without it the page says so, [data-no3d]). Only asked of the browser: a
+    // context made to test and thrown away cost a phone a second context's start-up (and the GPU's memory for it);
+    // where the browser has WebGL 2 but no context can be made, the renderer's own fails and bootCity() says so
+    const gl = 'WebGL2RenderingContext' in window;
     // ?anim (the animation lab, anim-lab.ts) opens over the page with no city behind it: not a missing 3D
     const lab = new URLSearchParams(location.search).has('anim');
 

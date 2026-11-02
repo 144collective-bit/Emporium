@@ -11,6 +11,7 @@ import { STRIP_RECT } from '../src/scripts/city3d/strip';
 import { inTown } from '../src/scripts/city3d/outer';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
 import { HIGHWAY_BOX, HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
+import { SUNRIDGE_RECT, inSunridge } from '../src/scripts/city3d/sunridge';
 
 /** The world before Phase 6 (the densities were worked out on it), Phase 6's and Phase 10's */
 const TODAY: [number, number] = [-200, 240];
@@ -46,9 +47,22 @@ function stripWas(r: readonly number[], skip?: readonly number[]) {
   let n = 0;
   for (let x = o[0] + 1; x < o[2]; x += 2)
     for (let z = o[1] + 1; z < o[3]; z += 2) {
-      if (skip && inBox(skip, x, z)) continue;
+      // (Sunridge's land counted by sunWas)
+      if ((skip && inBox(skip, x, z)) || inSunridge(x, z, 2)) continue;
       if (inTown([x, z], 1.2) || EW_ROADS.some((q) => Math.abs(z - q.c) < q.half + 0.8)) continue;
       if (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || EW_ROADS.some((q) => Math.abs(x - HIGHWAY_BOX[2]) < 17 && Math.abs(z - q.c) < 17)) continue;
+      n++;
+    }
+  return n * 4;
+}
+/** The land Sunridge took that a tree could stand on before (docs/suburb-plan.md Phase 1: open land; as freeLand counts), the kart park's old land in it left out unless `kart` */
+function sunWas(r: readonly number[], skip?: readonly number[], kart = false) {
+  const o = overlap(r, SUNRIDGE_RECT);
+  let n = 0;
+  for (let x = o[0] + 1; x < o[2]; x += 2)
+    for (let z = o[1] + 1; z < o[3]; z += 2) {
+      if ((skip && inBox(skip, x, z)) || (!kart && inBox(OLD_KART, x, z)) || !inSunridge(x, z, 2)) continue;
+      if (Math.abs(z - -4.5) < 3.7 + 0.8) continue;
       n++;
     }
   return n * 4;
@@ -61,9 +75,9 @@ test('the densities still fit the land the world had before Phase 6', () => {
   const away = (r: [number, number, number, number], skip?: [number, number, number, number]) => OLD.reduce((n, o) => n + freeLand(overlap(r, o), 2, skip), 0);
   // (and the mall's land added back: built on since, docs/mall-plan.md; it was free but for the roads across it and
   // the highway's junctions)
-  // (and the Strip's, laid out since: docs/strip-plan.md)
-  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT) + stripWas(BELT);
-  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT) + stripWas(outer, BELT);
+  // (and the Strip's, laid out since: docs/strip-plan.md; and Sunridge's, docs/suburb-plan.md: open land but the kart park's old site)
+  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT) + stripWas(BELT) + sunWas(BELT);
+  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT) + stripWas(outer, BELT) + sunWas(outer, BELT);
   assert.ok(Math.abs(belt - BELT_FREE) / BELT_FREE < 0.03, `belt ${belt} against ${BELT_FREE}`);
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });
@@ -75,8 +89,10 @@ test('the world before Phase 6 keeps the trees it had (but by the highway), each
     // airport's old land left out of the count, as it's open again)
     const trees = all.filter((t) => !inBox(OLD_AIRPORT, t.x, t.z));
     // (less the belt's share the Neon Mile took since, docs/strip-plan.md: its land carries no trees now)
-    const kept = count * 1.6 * (1 - stripWas(BELT) / BELT_FREE);
-    assert.ok(trees.length <= kept * 1.08 && trees.length > kept * 0.86, `${trees.length} for ${count}`);
+    // (and less the ones Sunridge's land took, at the belt's and the open land's densities)
+    const want = count * (1.6 - sunWas(BELT, undefined, true) / BELT_FREE - (0.6 * sunWas([TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4], BELT, true)) / OPEN_FREE) - (count * 1.6 * stripWas(BELT)) / BELT_FREE;
+    const had = trees.length + (count * 1.6 - want);
+    assert.ok(had <= count * 1.6 * 1.08 && had > count * 1.6 * 0.86, `${trees.length} for ${count} (${had.toFixed(0)} with the Strip's and Sunridge's land's)`);
     for (const t of trees) {
       assert.ok(treeSpot(t.x, t.z));
       assert.ok(t.x > TODAY[0] + 4 && t.x < TODAY[1] - 4 && t.z > TODAY[0] + 4 && t.z < TODAY[1] - 4);

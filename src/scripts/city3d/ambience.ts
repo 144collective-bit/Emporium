@@ -15,7 +15,9 @@
  * (`UPTOWN_HUSH`), the plaza's pool and water wall splash (`fountain`) and the
  * circle's traffic comes round it (`road`). In Crestmont (docs/crestmont-plan.md Phase 8) a quiet hum
  * (`CREST_HUM`) and little wind, birds by day and an owl at night as the park's, the sprinklers by day and the crickets
- * at night (`crest`), and the Drive's and the civic hall's fountains (`fountain`).
+ * at night (`crest`), and the Drive's and the civic hall's fountains (`fountain`). In Sunridge (docs/suburb-plan.md
+ * Phase 5) the same quiet hum (`SUN_HUM`), its sprinklers, crickets and birds as Crestmont's and a lawnmower now and
+ * then (`suburb`).
  */
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
@@ -31,6 +33,7 @@ import { CENTRE, POOL, WALL_RUNS, WATER_WALL } from './plaza';
 import { CREST_RECT } from './crestmont';
 import { FOUNTAINS as DRIVE_FOUNTAINS } from './coral';
 import { CIVIC } from './crestsites';
+import { SUNRIDGE_RECT, inSunridge } from './sunridge';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -55,11 +58,15 @@ export interface Ambience {
   fountain: number;
   /** Crestmont: the sprinklers by day, the crickets at night (and its birds and owl, as the park's), 0-1 */
   crest: number;
+  /** Sunridge: the sprinklers and a lawnmower by day, the crickets at night, 0-1 */
+  suburb: number;
 }
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
 export const CREST_HUM = 0.4;
 /** Crestmont's fountains: x, z, the basin's radius */
 const CREST_FOUNTAINS: [number, number, number][] = [...DRIVE_FOUNTAINS.map((f): [number, number, number] => [f.x, f.z, f.r]), ...CIVIC.fountains.map(([x, z]): [number, number, number] => [x, z, CIVIC.fountainR])];
+/** How much of the town's hum Sunridge has (a suburb's quiet) */
+export const SUN_HUM = 0.3;
 /** How much quieter the town's hum is deep in Uptown (its offices, glass and the river) */
 export const UPTOWN_HUSH = 0.35;
 
@@ -119,6 +126,11 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   let spring = Infinity;
   for (const [fx, fz, r] of CREST_FOUNTAINS) spring = Math.min(spring, Math.max(0, Math.hypot(x - fx, z - fz) - r));
   const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, spring + lift * 0.5)));
-  const town = Math.max(city * hush, CREST_HUM * crest);
-  return { city: town, water: Math.max(water, lake) * k, road: Math.max(road, circle) * k, open: (1 - town) * (1 - 0.6 * crest) * k, beat, hood: hood * k, boombox, club, park: park * k, fountain, crest: crest * k };
+  // Sunridge: all of it on its land, fading out over 30 past its wall
+  const [sx0, sz0, sx1, sz1] = SUNRIDGE_RECT;
+  const suburb = 1 - smooth(0, 30, inSunridge(x, z, 0) ? 0 : Math.hypot(Math.max(sx0 - x, x - sx1, 0), Math.max(sz0 - z, z - sz1, 0)) + 2);
+  const yards = Math.max(crest, suburb);
+  // (the town's hum reaches Sunridge, inside the highway: hushed there to a suburb's)
+  const town = Math.max(city * hush * (1 - (1 - SUN_HUM) * suburb), CREST_HUM * crest, SUN_HUM * suburb);
+  return { city: town, water: Math.max(water, lake) * k, road: Math.max(road, circle) * k, open: (1 - town) * (1 - 0.6 * yards) * k, beat, hood: hood * k, boombox, club, park: park * k, fountain, crest: crest * k, suburb: suburb * k };
 }

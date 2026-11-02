@@ -153,6 +153,10 @@ export interface ViewState {
   air: number;
   /** 0..1 through a reload (0 when not reloading) */
   reload: number;
+  /** A shell-at-a-time reload: the shells it's loading */
+  shells?: number;
+  /** Seconds the gun takes from the hip to down the sight (gunfeel.ts ADS) */
+  adsTime?: number;
 }
 
 export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: WeaponId = 'rifle') {
@@ -214,7 +218,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
     }
     spec = gunSpec(id);
     ADS = adsPose(id);
-    gun = buildGun(id, skinNow, { sight: true, mat: flat });
+    gun = buildGun(id, skinNow, { sight: true, mat: flat, detail: 2 });
     gun.group.rotation.y = Math.PI;
     gun.group.scale.setScalar(S);
     left.position.copy(spec.fore);
@@ -250,8 +254,8 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
   const rf = newReloadFrame();
   const POUCH = new THREE.Vector3(0.18, -0.34, 0.05);
   const tmp = new THREE.Vector3();
-  function reloadPose(r: number) {
-    reloadAt(gun.id, r, rf);
+  function reloadPose(r: number, shells?: number) {
+    reloadAt(gun.id, r, rf, shells);
     tmp.copy(spec.fore);
     tmp.z += rf.slide;
     left.position.lerpVectors(tmp, tmp.copy(rf.at).add(rf.mag), rf.hand);
@@ -306,7 +310,10 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
     /** Each frame after the camera has moved */
     update(camera: THREE.Camera, dt: number, t: number, s: ViewState, firstPerson: boolean) {
       draw += ((s.armed && firstPerson ? 1 : 0) - draw) * Math.min(1, dt * (s.armed ? 9 : 12));
-      ads += ((s.aim && !s.reload && s.armed ? 1 : 0) - ads) * Math.min(1, dt * 14);
+      // Up at the gun's own pace (its ADS time, as the rules ease the cone), down a touch quicker
+      const adsWant = s.aim && !s.reload && s.armed ? 1 : 0;
+      const adsRate = 3 / (s.adsTime ?? 0.21);
+      ads += (adsWant - ads) * Math.min(1, dt * (adsWant > ads ? adsRate : adsRate * 1.5));
       // Fully down a scope the full-screen scope view takes over (see combat.ts)
       root.visible = firstPerson && draw > 0.02 && !(spec.sight.kind === 'scope' && ads > 0.92);
       if (!root.visible) {
@@ -354,7 +361,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
       const P = { x: L(HIP.x * wide, ADS.x, ads), y: L(HIP.y, ADS.y, ads), z: L(HIP.z, ADS.z, ads), ry: L(HIP.ry, ADS.ry, ads), rz: L(HIP.rz, ADS.rz, ads) };
       const swayK = 1 - ads * 0.65;
       const r = s.reload;
-      reloadPose(r);
+      reloadPose(r, s.shells);
       const tilt = rf.roll;
       const bolt = rf.bolt;
       const down = 1 - draw;

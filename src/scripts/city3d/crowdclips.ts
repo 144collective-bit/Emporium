@@ -38,7 +38,7 @@ import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestr
 import { ridePose, CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
-import { baked as atBuild } from './baked';
+import { BUILT, baked as atBuild } from './baked';
 import { MOCAP_BONES, MOCAP_FPS, NB, type MoClip, type MoData } from './mocap';
 
 export type CrowdClip =
@@ -183,6 +183,16 @@ function looped(f: (p: Pose, t: number) => void, seconds = WINDOW): ClipDef['sam
  * 1), recorded over one full cycle (two steps). Returns the frames and how
  * far one cycle goes.
  */
+/** A pose's every number to a ten-thousandth (a fifth of a millimetre, a hundredth of a degree): what the build bakes is half the size */
+function rounded<T>(v: T): T {
+  if (typeof v === 'number') return (Math.round(v * 1e4) / 1e4 + 0) as T;
+  if (Array.isArray(v)) return v.map(rounded) as T;
+  if (v && typeof v === 'object') {
+    for (const k of Object.keys(v)) (v as Record<string, unknown>)[k] = rounded((v as Record<string, unknown>)[k]);
+    return v;
+  }
+  return v;
+}
 function recordWalk(speed: number, frames: number) {
   const loco = createLocomotion();
   const dt = 1 / 240;
@@ -208,7 +218,7 @@ function recordWalk(speed: number, frames: number) {
     while (loco.cycle < f / frames && guard++ < 2400) step();
     const p = fresh();
     copyPose(loco.pose, p);
-    out.push(p);
+    out.push(rounded(p));
   }
   // On round to the next wrap: the whole cycle's distance
   last = loco.cycle;
@@ -224,9 +234,9 @@ const WALK_SPEED = 0.83;
 const JOG_SPEED = 2.6;
 const MARCH_SPEED = 0.5;
 // (recorded when the site is built: baked.ts)
-const walk = atBuild('walk-cycle', () => recordWalk(WALK_SPEED, 32));
-const jog = atBuild('jog-cycle', () => recordWalk(JOG_SPEED, 24));
-const march = atBuild('march-cycle', () => recordWalk(MARCH_SPEED, 32));
+const walk = atBuild('walk-cycle', BUILT ? undefined : () => recordWalk(WALK_SPEED, 32));
+const jog = atBuild('jog-cycle', BUILT ? undefined : () => recordWalk(JOG_SPEED, 24));
+const march = atBuild('march-cycle', BUILT ? undefined : () => recordWalk(MARCH_SPEED, 32));
 /** How far one walk (or march) cycle goes at scale 1: a person at scale s and speed v plays v / (STRIDE s) cycles a second */
 export const WALK_STRIDE = walk.stride;
 export const JOG_STRIDE = jog.stride;

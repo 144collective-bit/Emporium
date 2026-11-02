@@ -121,10 +121,11 @@ test('driving: a car only given the boxes near it ends every step exactly where 
   const T = tune(DRIVE.super, { L: 2.5, W: 1.05, wheelbase: 1.55 });
   let bumps = 0;
   for (let run = 0; run < 60; run++) {
-    // (a car starts outside every building, as in the city: started inside a stack of a tower's footprints
-    // it's pushed out further in one step than the boxes near where it started reach)
+    // (a car starts outside every building, as in the city, its whole body clear: started inside a stack of a
+    // tower's footprints, or with its nose in the Docks' container stacks, it's pushed out further in one step than
+    // the boxes near where it started reach)
     let [x, z] = spot();
-    while (CAR.some((q) => inBox(q, x, z))) [x, z] = spot();
+    while (CAR.some((q) => inBox(q, x, z, 1.4))) [x, z] = spot();
     const yaw = r() * Math.PI * 2;
     const a = newCar(x, z, yaw);
     const b = newCar(x, z, yaw);

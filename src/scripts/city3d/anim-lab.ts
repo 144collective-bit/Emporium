@@ -580,7 +580,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       gun = null;
     }
     if (gunId !== 'none') {
-      gun = buildGun(gunId, 'olive');
+      gun = buildGun(gunId, 'olive', { detail: 2 });
       pivot.add(gun.group);
     }
     pivot.visible = pocketDot.visible = !!gun;

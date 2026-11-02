@@ -21,6 +21,8 @@ const InkShader = {
     cameraFar: { value: 400 },
     ink: { value: new THREE.Color('#05050a') },
     thickness: { value: 1 },
+    /** 1 on phones: each line drawn on one side of its edge only, about half as wide (`PostOpts.thinInk`) */
+    thin: { value: 0 },
     fadeNear: { value: 60 },
     fadeFar: { value: 140 },
   },
@@ -38,6 +40,7 @@ const InkShader = {
     uniform float cameraFar;
     uniform vec3 ink;
     uniform float thickness;
+    uniform float thin;
     uniform float fadeNear;
     uniform float fadeFar;
     varying vec2 vUv;
@@ -57,13 +60,18 @@ const InkShader = {
       float dd = dist(vUv - vec2(0.0, o.y));
       // Second derivative of depth: flat or evenly sloping surfaces cancel out,
       // silhouettes and steps don't.
-      float lap = (abs(dl + dr - 2.0 * d0) + abs(du + dd - 2.0 * d0)) / max(d0, 0.1);
-      float depthEdge = smoothstep(0.012, 0.03, lap);
+      // Thin: only the nearer side of a silhouette (its neighbours further away) takes the ink
+      float lx = dl + dr - 2.0 * d0, ly = du + dd - 2.0 * d0;
+      float lap = mix(abs(lx) + abs(ly), max(lx, 0.0) + max(ly, 0.0), thin) / max(d0, 0.1);
+      // Thin (phones): wider ramps, so an edge's ink fades in over its strength and FXAA has a gradient to smooth
+      float depthEdge = smoothstep(mix(0.012, 0.007, thin), mix(0.03, 0.05, thin), lap);
 
       vec3 n0 = nrm(vUv);
-      float nd = (1.0 - dot(n0, nrm(vUv - vec2(o.x, 0.0)))) + (1.0 - dot(n0, nrm(vUv + vec2(o.x, 0.0))))
-               + (1.0 - dot(n0, nrm(vUv + vec2(0.0, o.y)))) + (1.0 - dot(n0, nrm(vUv - vec2(0.0, o.y))));
-      float normalEdge = smoothstep(0.35, 0.8, nd);
+      // Thin: a crease is found from one side (the right and up neighbours, counted twice), so one pixel row takes it
+      float fr = 1.0 - dot(n0, nrm(vUv + vec2(o.x, 0.0)));
+      float fu = 1.0 - dot(n0, nrm(vUv + vec2(0.0, o.y)));
+      float nd = mix(fr + fu + (1.0 - dot(n0, nrm(vUv - vec2(o.x, 0.0)))) + (1.0 - dot(n0, nrm(vUv - vec2(0.0, o.y)))), 2.0 * (fr + fu), thin);
+      float normalEdge = smoothstep(mix(0.35, 0.25, thin), mix(0.8, 1.1, thin), nd);
 
       float nearest = min(min(min(dl, dr), min(du, dd)), d0);
       float fade = 1.0 - smoothstep(fadeNear, fadeFar, nearest);
@@ -79,6 +87,10 @@ export interface PostOpts {
   smaa: boolean;
   /** How many of the bloom's blur levels to draw (5, all of them, if not given): phones draw 3 */
   bloomMips?: number;
+  /** Phones: the ink lines drawn about half as wide (one side of each edge, one texel out), their edges soft */
+  thinInk?: boolean;
+  /** Phones: FXAA last, one cheap pass smoothing the stepped edges (in its own chunk, after the boot) */
+  fxaa?: boolean;
   /**
    * Draws the shadow maps itself (sky.ts: the fixed map now and then, the moving one every frame), given three's own
    * drawing; without it three draws every shadow-casting light's map each frame
@@ -109,6 +121,7 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   const ink = new ShaderPass(InkShader);
   ink.uniforms.tNormal.value = normalTarget.texture;
   ink.uniforms.tDepth.value = depthTexture;
+  ink.uniforms.thin.value = opts.thinInk ? 1 : 0;
   composer.addPass(ink);
 
   const bloom = new UnrealBloomPass(new THREE.Vector2(size.x * opts.bloomScale, size.y * opts.bloomScale), 0.8, 0.55, 0.86);
@@ -124,6 +137,15 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   // SMAA (desktops at a low pixel ratio, the fitting room on phones) comes in its own chunk, after the boot:
   // its look-up textures are 60 KB nobody else needs (until it's there the frame goes out without it)
   if (opts.smaa) import('three/addons/postprocessing/SMAAPass.js').then(({ SMAAPass }) => composer.addPass(new SMAAPass()));
+  // FXAA (phones, which draw no MSAA or SMAA): after the output pass, on the finished picture
+  const px = new THREE.Vector2(size.x, size.y);
+  let fxaa: ShaderPass | null = null;
+  if (opts.fxaa)
+    import('three/addons/shaders/FXAAShader.js').then(({ FXAAShader }) => {
+      fxaa = new ShaderPass(FXAAShader);
+      fxaa.uniforms.resolution.value.set(1 / px.x, 1 / px.y);
+      composer.addPass(fxaa);
+    });
 
   function setSize(w: number, h: number, pr: number) {
     composer.setPixelRatio(pr);
@@ -134,7 +156,9 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     bloom.resolution.set(W * opts.bloomScale, H * opts.bloomScale);
     bloom.setSize(W * opts.bloomScale, H * opts.bloomScale);
     ink.uniforms.texel.value.set(1 / W, 1 / H);
-    ink.uniforms.thickness.value = Math.max(1, pr * 0.9);
+    px.set(W, H);
+    fxaa?.uniforms.resolution.value.set(1 / W, 1 / H);
+    ink.uniforms.thickness.value = opts.thinInk ? 1 : Math.max(1, pr * 0.9);
   }
 
   const clear = new THREE.Color();

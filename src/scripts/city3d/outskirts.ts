@@ -25,6 +25,7 @@ import { HIGHWAY_HALF, fromHighway } from './highway';
 import { PLAN } from './streetplan';
 import type { Rect } from './downtown';
 import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
+import { inSunridge } from './sunridge';
 import { naturalAt } from './terrain';
 
 const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
@@ -66,6 +67,8 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (inDocks(x, z, 3)) return false;
   // The Neon Mile (strip.ts): its boulevard and lots
   if (inStrip(x, z, 3)) return false;
+  // Sunridge (sunridge.ts): its own planting comes with its yards (docs/suburb-plan.md Phase 3)
+  if (inSunridge(x, z, 2)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
   if (inTown([x, z], 1.2)) return false;
   // Clear of the airport (airside, landside, the forecourt) and of the low end of its approach, off the runway's west end

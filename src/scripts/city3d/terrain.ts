@@ -44,7 +44,7 @@ interface Piece {
   /** Level out to here from the centre line */
   core: number;
 }
-const CELL = 16;
+const CELL = 8;
 const BEDS = new Map<number, Piece[]>();
 const cellKey = (i: number, j: number) => i * 100003 + j;
 for (const r of HILL_ROADS) {
@@ -73,10 +73,16 @@ function bedAt(x: number, z: number): { y: number; w: number } | null {
   let sum = 0;
   let weight = 0;
   for (const p of list) {
-    const [vx, vz] = [p.bx - p.ax, p.bz - p.az];
+    const vx = p.bx - p.ax;
+    const vz = p.bz - p.az;
     const l2 = vx * vx + vz * vz || 1;
     const t = Math.max(0, Math.min(1, ((x - p.ax) * vx + (z - p.az) * vz) / l2));
-    const d = Math.hypot(x - p.ax - vx * t, z - p.az - vz * t);
+    const dx = x - p.ax - vx * t;
+    const dz = z - p.az - vz * t;
+    // (past its bank's reach a piece holds nothing: no need for the square root)
+    const reach = p.core + BED.ease;
+    if (dx * dx + dz * dz >= reach * reach) continue;
+    const d = Math.hypot(dx, dz);
     const w = 1 - smooth(p.core, p.core + BED.ease, d);
     if (w <= 0) continue;
     most = Math.max(most, w);

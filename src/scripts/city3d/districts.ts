@@ -29,6 +29,7 @@ import { MALL_AREA } from './mall';
 import { CREST_RECT } from './crestmont';
 import { DOCKS_RECT } from './docks';
 import { STRIP_RECT } from './strip';
+import { SUNRIDGE_RECT } from './sunridge';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -63,6 +64,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'docks', rect: DOCKS_RECT, load: () => import('./docks3d') },
   // The Neon Mile, the Strip east of town (strip.ts, docs/strip-plan.md): its boulevard and east road (strip3d.ts)
   { id: 'strip', rect: STRIP_RECT, load: () => import('./strip3d') },
+  // Sunridge, the suburb north-east inside the highway (sunridge.ts, docs/suburb-plan.md): its streets and walls (sunridge3d.ts)
+  { id: 'sunridge', rect: SUNRIDGE_RECT, load: () => import('./sunridge3d') },
 ];
 
 

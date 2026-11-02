@@ -24,6 +24,7 @@ import { TOWER_SPAWN } from './skydeck';
 import { COURT_SPAWN, MALL_SPAWN } from './mall';
 import { SITE_SPAWNS } from './crestsites';
 import { HM_SPAWN } from './docksport';
+import { SUN_SPAWNS } from './sunplaces';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus';
 export interface Place {
@@ -81,6 +82,8 @@ export const PLACES: Place[] = [
   ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
   // Southbank Docks' Harbour Master (docksport.ts): on the sidewalk, facing its door
   { id: 'harbourmaster', kind: 'spot', spot: 'harbourmaster', at: HM_SPAWN },
+  // Sunridge's club, park and school (sunplaces.ts): on the loop's sidewalk in front of each, facing it
+  ...(['sunclub', 'sunpark', 'sunschool'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SUN_SPAWNS[id] })),
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

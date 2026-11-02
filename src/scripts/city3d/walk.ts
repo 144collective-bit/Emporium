@@ -29,6 +29,7 @@
  *   camera looks into the hangar while you pick); get in your aircraft and
  *   fly (fly.ts), land anywhere and get out.
  */
+import { SUN_DOORS } from './sunplaces';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { HOLDING, PLAYER, RELAXED, createDegen, type Outfit } from './character';
@@ -100,7 +101,7 @@ import { bodies, swing } from './life';
 import type { Partners, StreetFists } from './brawl';
 import type { PartnerId } from './fight-moves';
 import type { FightStart } from './fight-types';
-import type { GameDeps } from './ui';
+import { onTap, type GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
@@ -111,7 +112,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS];
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put']);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
@@ -164,14 +165,26 @@ const FP_BOB = 0.7;
 function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T & { loaded(): Promise<T> } {
   let real: T | null = null;
   let loading: Promise<T> | null = null;
-  const get = () => (loading ??= load().then((m) => (real = m)));
+  // (a load that failed is forgotten, so the next try asks again; the page's own `vite:preloadError` handler,
+  // CityMap.astro, reloads a page whose files a new version replaced)
+  const get = () =>
+    (loading ??= load()
+      .then((m) => (real = m))
+      .catch((err) => {
+        loading = null;
+        throw err;
+      }));
   return new Proxy({} as T & { loaded(): Promise<T> }, {
     get(_, k) {
       // (fetch it without opening it: a street spar wants the fight's HUD with no menu first)
       if (k === 'loaded') return get;
       if (real) return (real as Record<PropertyKey, unknown>)[k];
       if (k === 'open') return false;
-      if (typeof k === 'string' && opens.includes(k as keyof T & string)) return (...a: unknown[]) => void get().then((m) => (m as Record<string, (...x: unknown[]) => void>)[k](...a));
+      if (typeof k === 'string' && opens.includes(k as keyof T & string))
+        return (...a: unknown[]) =>
+          void get()
+            .then((m) => (m as Record<string, (...x: unknown[]) => void>)[k](...a))
+            .catch(() => {});
       return () => {};
     },
   });
@@ -321,6 +334,11 @@ export function createWalk(d: WalkDeps) {
   /** ...and the clips it plays (other players' animators play the same: `motion`) */
   let mocapData: MoData | null = null;
   let animLoading = false;
+  /** The motion capture's state, for ?fps: loading, on, or failed to fetch (the procedural walk stands in and it's tried again) */
+  let mocapState: 'loading' | 'on' | 'failed' = 'loading';
+  let mocapWarned = false;
+  /** After a failed fetch, when it's next tried (ms, performance.now) */
+  let mocapRetryAt = 0;
   let mocapW = 0;
   /** The capture's hips' height, slowly followed: the first-person eye rides what's left (its steps and landings) */
   let hipMean = 0;
@@ -437,8 +455,13 @@ export function createWalk(d: WalkDeps) {
 
   let yaw = SPAWN_YAW;
   let pitch = 0.5;
-  let zoom = 5.2;
-  let camDist = 5.2;
+  /**
+   * How far behind him the camera sits to begin with (the mouse wheel sets it after): closer on an upright
+   * screen, whose narrow view leaves him small at the distance a wide one frames him well
+   */
+  const homeZoom = () => (innerHeight > innerWidth ? 3.2 : 3.3);
+  let zoom = homeZoom();
+  let camDist = zoom;
   let firstPerson = false;
   let aim = false;
   /** Aiming right now: held aim, or the sight brought up by firing (Aim when firing) */
@@ -1288,6 +1311,14 @@ export function createWalk(d: WalkDeps) {
   let aimAmt = 0;
   let armAmt = 0;
   let recoil = 0;
+  /**
+   * The recoil the view will give back once the string ends (gunfeel.ts `recover`): up (radians of pitch) and to
+   * the side (of yaw). Pulling against it yourself (`look()`) uses it up, so the view never overshoots.
+   */
+  let owedPitch = 0;
+  let owedYaw = 0;
+  /** Seconds since the last shot's kick */
+  let sinceKick = 1;
 
   /* ---------- Input ---------- */
 
@@ -1309,10 +1340,15 @@ export function createWalk(d: WalkDeps) {
     }
     // Finer control down the sight
     k *= 1 - combat.aimed * 0.4;
-    yaw -= dx * k * settings.sens;
+    const dyaw = -dx * k * settings.sens;
+    yaw += dyaw;
     const limit = firstPerson ? 1.35 : 1.3;
     const low = firstPerson ? -1.35 : -0.55;
+    const was = pitch;
     pitch = THREE.MathUtils.clamp(pitch + dy * k * settings.sens * (settings.invert ? -1 : 1), low, limit);
+    // Pulling against the recoil uses up what the view would give back (down against the climb, across against the side)
+    if (owedPitch > 0 && pitch > was) owedPitch = Math.max(0, owedPitch - (pitch - was));
+    if (owedYaw * dyaw > 0) owedYaw = Math.abs(dyaw) >= Math.abs(owedYaw) ? 0 : owedYaw - dyaw;
     d.touched();
   };
   const tryJump = () => {
@@ -1335,7 +1371,7 @@ export function createWalk(d: WalkDeps) {
   function setFirstPerson(on: boolean) {
     firstPerson = on;
     root.classList.toggle('is-fp', on);
-    if (!on && zoom < 1.5) zoom = 4.5;
+    if (!on && zoom < 1.5) zoom = homeZoom();
     fpBtn.setAttribute('aria-pressed', String(on));
     if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
     else pitch = Math.max(pitch, -0.55);
@@ -1608,8 +1644,9 @@ export function createWalk(d: WalkDeps) {
   });
   jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
   jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
-  runBtn.addEventListener('click', () => setSprintLock(!sprintLock));
-  crouchBtn.addEventListener('click', () => {
+  // (the touch buttons answer a finger at once, with the thumb still on the stick: onTap() in ui.ts)
+  onTap(runBtn, () => setSprintLock(!sprintLock));
+  onTap(crouchBtn, () => {
     crouchPress();
     // (a crouch lets go of the locked sprint, which would stand him straight back up)
     if (crouched) setSprintLock(false);
@@ -1652,18 +1689,14 @@ export function createWalk(d: WalkDeps) {
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
   }
   // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
-  root.querySelector('[data-fight-punch]')?.addEventListener('click', () => {
-    fightBtns.punch = true;
-    d.touched();
-  });
-  root.querySelector('[data-fight-kick]')?.addEventListener('click', () => {
-    fightBtns.kick = true;
-    d.touched();
-  });
-  root.querySelector('[data-fight-dodge]')?.addEventListener('click', () => {
-    fightBtns.dodge = true;
-    d.touched();
-  });
+  for (const k of ['punch', 'kick', 'dodge'] as const) {
+    const b = root.querySelector(`[data-fight-${k}]`);
+    if (b)
+      onTap(b, () => {
+        fightBtns[k] = true;
+        d.touched();
+      });
+  }
   const blockBtn = root.querySelector<HTMLButtonElement>('[data-fight-block]');
   if (blockBtn) {
     blockBtn.addEventListener('pointerdown', (e) => {
@@ -1684,7 +1717,7 @@ export function createWalk(d: WalkDeps) {
     settings.invert = invertInput.checked;
     saveSettings();
   });
-  prompt.addEventListener('click', act);
+  onTap(prompt, act);
   // Touch: hold Fire (and drag it to aim, so one thumb shoots and steers), tap Reload, tap Swap
   const fireBtn = $('[data-walk-fire]');
   let fireAt: { id: number; x: number; y: number } | null = null;
@@ -1706,9 +1739,12 @@ export function createWalk(d: WalkDeps) {
       fireAt = null;
       combat.trigger(false, true);
     });
-  $('[data-walk-reload]').addEventListener('click', () => combat.reload());
+  onTap($('[data-walk-reload]'), () => {
+    combat.reload();
+    d.touched();
+  });
   // (the hotbar's step: through the fists and the guns)
-  $('[data-walk-swap]').addEventListener('click', () => {
+  onTap($('[data-walk-swap]'), () => {
     stepSlot(1);
     d.touched();
   });
@@ -1718,7 +1754,7 @@ export function createWalk(d: WalkDeps) {
     aim = on;
     aimBtn.setAttribute('aria-pressed', String(on));
   };
-  aimBtn.addEventListener('click', () => {
+  onTap(aimBtn, () => {
     setAim(!aim);
     d.touched();
   });
@@ -2500,12 +2536,27 @@ export function createWalk(d: WalkDeps) {
         done();
       }
     }
-    // Recoil kicks the view up a touch; the rifle rides the shoulder
-    const kick = combat.update(dt, t, aimNow);
-    if (kick) {
-      pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick);
-      recoil = Math.min(0.04, recoil + kick);
+    // Recoil kicks the view up and to the side by the gun's pattern (gunfeel.ts); the rifle rides the shoulder.
+    // When the string ends the view comes back part of the way, less what you pulled back yourself.
+    const kick = combat.update(dt, t, aimNow, speed, !grounded);
+    if (kick.up || kick.side) {
+      const was = pitch;
+      pitch = Math.max(firstPerson ? -1.35 : -0.55, pitch - kick.up);
+      yaw -= kick.side;
+      owedPitch += (was - pitch) * kick.recover;
+      owedYaw += kick.side * kick.recover;
+      recoil = Math.min(0.04, recoil + kick.up);
+      sinceKick = 0;
+    } else sinceKick += dt;
+    if (sinceKick > 0.12 && (owedPitch || owedYaw)) {
+      const back = Math.min(1, dt * 9);
+      pitch += owedPitch * back;
+      yaw += owedYaw * back;
+      owedPitch *= 1 - back;
+      owedYaw *= 1 - back;
+      if (Math.abs(owedPitch) + Math.abs(owedYaw) < 1e-4) owedPitch = owedYaw = 0;
     }
+    if (!combat.armed) owedPitch = owedYaw = 0;
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
     if (hero.held) hero.held.visible = (hotbar ? hotbar.heldOut : !combat.armed) && !carrying;
@@ -2540,7 +2591,7 @@ export function createWalk(d: WalkDeps) {
     }
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
-    if (!animator && !animLoading) {
+    if (!animator && !animLoading && performance.now() >= mocapRetryAt) {
       animLoading = true;
       Promise.all([import('./animator'), import('./contact'), loadMocap(), import('./onfoot')]).then(
         ([m, cm, data, of]) => {
@@ -2552,9 +2603,20 @@ export function createWalk(d: WalkDeps) {
           contactMod = cm;
           contact = cm.createContact({ hands: !d.low });
           contactRot = new Float32Array(animator.rot.length);
+          mocapState = 'on';
         },
-        // (it can be tried again: the procedural walk carries on meanwhile)
-        () => (animLoading = false),
+        // (it can be tried again: the procedural walk carries on meanwhile; say so once, so a reverted-looking
+        // run is never a silent fallback)
+        (err) => {
+          animLoading = false;
+          mocapState = 'failed';
+          mocapRetryAt = performance.now() + 10000;
+          console.warn('Sector 7: the motion capture did not load, the simpler walk stands in', err);
+          if (!mocapWarned) {
+            mocapWarned = true;
+            d.game.toast("The motion capture didn't load: the simpler walk for now. Reload to try again.", 5000);
+          }
+        },
       );
     }
     let drawFace = face;
@@ -2619,7 +2681,9 @@ export function createWalk(d: WalkDeps) {
     // Camera: over the shoulder, pulled in when something's in the way
     // Armed, he steps further left of the crosshair so it never sits on his head
     armAmt += ((combat.armed ? 1 : 0) - armAmt) * damp(6, dt);
-    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 + armAmt * 0.42;
+    // (less of it on an upright screen, whose narrow view would put him at its edge; armed, all of it, so the
+    // crosshair stays off his head)
+    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 * Math.min(1, camera.aspect) + armAmt * 0.42;
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
     let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
     // (lower crouched, lower still sliding)
@@ -2921,6 +2985,10 @@ export function createWalk(d: WalkDeps) {
       return anim && mocapData && onFoot ? { anim, data: mocapData, onFoot } : null;
     },
     /** What other players need to see of us, for the game server */
+    /** The motion capture: loading, on, or failed to fetch (the ?fps readout) */
+    get mocap() {
+      return mocapState;
+    },
     netState() {
       const mode: Mode = ride ? 'ride' : fly.active ? 'fly' : karts.active ? 'kart' : drive.active || boating() ? 'drive' : fighting() ? 'fight' : 'walk';
       // In a vehicle the others see it (docs/multiplayer-plan.md "What others see"): its heading and height, not his
@@ -2981,7 +3049,7 @@ export function createWalk(d: WalkDeps) {
       }
       // Over the shoulder by default; V (or the Controls panel) swaps to first person
       pitch = 0.35;
-      zoom = camDist = 5.2;
+      zoom = camDist = homeZoom();
       pivot.set(0, 0, 0);
       setFirstPerson(false);
       baseFov = camera.fov;

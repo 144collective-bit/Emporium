@@ -11,6 +11,8 @@ export default defineConfig({
   vite: {
     define: {
       __CITY_BAKED__: JSON.stringify(JSON.stringify(BAKED)),
+      // (the page carries its baked data: what only works it out leaves the browser's code, baked.ts `BUILT`)
+      __CITY_BUILT__: 'true',
       // Free play (src/scripts/city3d/freeplay.ts): everything in the city's game costs nothing; a test build only
       __FREE_PLAY__: JSON.stringify(process.env.PUBLIC_FREE_PLAY === '1'),
     },

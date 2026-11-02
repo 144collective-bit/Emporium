@@ -8,7 +8,8 @@
  *   crossing, never on a bridge, never inside something solid on the
  *   sidewalk. A stop is where the bus's front halts (`at`), the way it
  *   faces (`dir`), and where its shelter stands on the sidewalk (`kerb`,
- *   facing the road).
+ *   facing the road). Sunridge's collector has stops too (docs/suburb-plan.md
+ *   Phase 5), further apart (`SUN_STOP_GAP`); its school bus serves them.
  * - `routeStops()` finds where a route passes the stops (a bus takes any
  *   route; it serves the stops it passes in their direction).
  * - `busStep()` is the rule: a bus coming up to its next stop slows to a
@@ -21,6 +22,7 @@ import { LANE, RIVER, WALK_W } from './layout';
 import { PLAN, pointAt, streetLength, type Pt, type Street } from './streetplan';
 import { inTown } from './outer';
 import { inTrenches } from './trenches';
+import { inSunridge } from './sunridge';
 import { SOLIDS, type Box } from './solids';
 import { pointOn, rightOf, type Route } from './routes';
 
@@ -39,6 +41,8 @@ export interface BusStop {
 
 /** About how far apart the stops are along an avenue */
 export const STOP_GAP = 32;
+/** ...and along Sunridge Parkway (a suburb's: a few round the loop) */
+export const SUN_STOP_GAP = 95;
 /** How far a stop keeps from a crossing (the junction's queue) */
 export const STOP_CLEAR = 9;
 /** Half the shelter's length along the kerb */
@@ -51,18 +55,18 @@ export const APPROACH = 12;
 const inBox = (p: Pt, b: Box, m: number) => p[0] > b[0] - m && p[0] < b[2] + m && p[1] > b[1] - m && p[1] < b[3] + m;
 
 /** The stops along one avenue, each way (exported for the tests) */
-export function stopsOn(s: Street, crossings: Pt[], solids: readonly Box[] = SOLIDS): BusStop[] {
+export function stopsOn(s: Street, crossings: Pt[], solids: readonly Box[] = SOLIDS, gap = STOP_GAP): BusStop[] {
   const out: BusStop[] = [];
   const len = streetLength(s);
   for (const way of [1, -1] as const) {
     // Staggered: the two directions' stops don't face each other across the avenue
-    for (let d = STOP_GAP / 2 + (way === -1 ? 6 : 0), k = 0; d < len - 3; d += STOP_GAP, k++) {
+    for (let d = gap / 2 + (way === -1 ? 6 : 0), k = 0; d < len - 3; d += gap, k++) {
       const { at, dir } = pointAt(s, d);
       const u: Pt = way === 1 ? dir : [-dir[0], -dir[1]];
       const r = rightOf(u[0], u[1]);
       // In town only (an avenue runs on to the world's edge), never on a bridge or by a junction
       // (and the Strip's boulevard: strip.ts)
-      if (!inTown(at, 2) && !inTrenches(at[0], at[1]) && !inStrip(at[0], at[1])) continue;
+      if (!inTown(at, 2) && !inTrenches(at[0], at[1]) && !inSunridge(at[0], at[1], 0) && !inStrip(at[0], at[1])) continue;
       if (at[1] > RIVER[0] - 6 && at[1] < RIVER[1] + 6 && Math.abs(dir[1]) > 0.5) continue;
       if (crossings.some((c) => Math.hypot(c[0] - at[0], c[1] - at[1]) < STOP_CLEAR)) continue;
       const lane: Pt = [at[0] + r[0] * (s.half - LANE / 2), at[1] + r[1] * (s.half - LANE / 2)];
@@ -76,13 +80,15 @@ export function stopsOn(s: Street, crossings: Pt[], solids: readonly Box[] = SOL
   return out;
 }
 
-/** Every bus stop in the city */
+/** Every bus stop in the city: along the avenues, and round Sunridge's collector */
 export const BUS_STOPS: BusStop[] = PLAN.streets
-  .filter((s) => s.kind === 'avenue')
+  .filter((s) => s.kind === 'avenue' || s.id === 'sun-parkway')
   .flatMap((s) =>
     stopsOn(
       s,
-      PLAN.crossings.filter((c) => c.streets.includes(s.id)).map((c) => c.at)
+      PLAN.crossings.filter((c) => c.streets.includes(s.id)).map((c) => c.at),
+      SOLIDS,
+      s.kind === 'avenue' ? STOP_GAP : SUN_STOP_GAP
     )
   );
 

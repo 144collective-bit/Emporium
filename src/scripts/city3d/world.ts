@@ -374,7 +374,7 @@ function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   // (an east-west road past the Strip is its east piece, `ew<i>e`: layout.ts STRIP_GAP)
   const mine = (id: string) => id === road || id === `${road}e`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.some(mine) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('strip-'))))
+    .filter((c) => c.streets.some(mine) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('strip-') || id.startsWith('sun-'))))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];

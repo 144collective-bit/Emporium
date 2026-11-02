@@ -21,6 +21,8 @@ import { createPost } from './post';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { CREST_LAMPS } from './crestmont';
+import { SUN_LAMPS } from './sunridge';
+import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
@@ -57,7 +59,7 @@ import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
 import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
-import { createSound } from './sound';
+import { createSound } from './soundlazy';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import type { Fitting } from './fitting';
@@ -124,9 +126,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, reserve: 128, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, reserve: 128, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, reserve: 64, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -305,6 +307,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (it faces the river: the fly-in comes from the north, the port behind it)
     spots.push({ ...pickSpot(scene, 'harbourmaster', SLAB, [{ rect: H.rect, h: H.h }, { rect: H.tower, h: H.towerH }], H.rect, H.mast + 1.2, [tx, tz]), faces: 'n' });
   }
+  // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
+  {
+    const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
+    spots.push(pickSpot(scene, 'sunclub', SLAB, [{ rect: CLUBHOUSE.rect, h: CLUBHOUSE.h + 1.2 }], CLUB_LAND, CLUBHOUSE.h + 3.6, mid(CLUBHOUSE.rect)));
+    spots.push(pickSpot(scene, 'sunpark', SLAB, [{ rect: PARK_LAND, h: 1 }], PARK_LAND, 4.2));
+    spots.push(pickSpot(scene, 'sunschool', SLAB, [...SCHOOL.wings.map((rect) => ({ rect, h: SCHOOL.h + 0.3 })), { rect: SCHOOL.hall.rect, h: SCHOOL.hall.h + 0.3 }], SCHOOL_LAND, SCHOOL.hall.h + 2.8, mid(SCHOOL.hall.rect)));
+  }
   // ...and the metro's el where it crosses the open land south of the south row: no trees under it
   keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
   // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
@@ -322,6 +331,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z, ry, y] of SUN_LAMPS) addLamp(x, z, ry, y);
+  // ...and round its park, its club's pool and courts and its school's front (sunplaces.ts, docs/suburb-plan.md Phase 5)
+  for (const [x, z, ry, y] of SUN_PLACE_LAMPS) addLamp(x, z, ry, y);
   // The Docks' (docks.ts): sodium, along their sidewalks (world.ts)
   for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
   // The Neon Mile's (strip.ts): along its boulevard and east road
@@ -369,7 +381,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   await waited(nextFrame());
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
   let lifeSfx: ((kind: LifeSfx, gain: number) => void) | null = null;
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, trucks: Q.trucks, police: Q.police, bikes: Q.bikes, crest: Q.crest, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, trucks: Q.trucks, police: Q.police, bikes: Q.bikes, crest: Q.crest, sun: Q.sun, reserve: Q.reserve, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
   // (the medium tier's smaller shadow maps a touch softer: shadows.ts)
   const sky = createSky(scene, { shadows: Q.shadows, shadowRadius: tier === 'medium' ? 1.6 : 1, rainDrops: Q.rain, clouds: Q.clouds, storms: !reduced });
   progress(0.85);
@@ -398,7 +410,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
-  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, shadows: sky });
+  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, thinInk: tier === 'low', fxaa: tier === 'low', shadows: sky });
   /**
    * Shaders compiled for where the city really draws: the post chain's target (linear colour), not the
    * screen. Compiled for the screen, each material gets a program no frame uses, and the real one is
@@ -672,6 +684,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(at);
+      });
+    }
+    // Sunridge's club, park and school: Walk in on the loop's sidewalk in front of each
+    if (id === 'sunclub' || id === 'sunpark' || id === 'sunschool') {
+      const at = SUN_SPAWNS[id];
+      panelBody.querySelector('[data-sun-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(at);
       });
@@ -1517,7 +1537,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}`] : []),
+          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
         ].join('\n');
         Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
       }

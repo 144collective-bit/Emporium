@@ -339,8 +339,9 @@ it and has been retired completely. Build only on what's here.
     hum, the river (and Westlake's lake), the traffic's rush (the highway,
     the avenues inside it), wind over open land, the Emporium's beat, The
     Trenches' own (`hood`, `boombox`: the grit step), Westlake Park's
-    (`park`: birds by day, an owl at night) and Uptown's (a quieter hum, the
-    plaza's `fountain`, the circle's traffic); `sound.update()` mixes its layers
+    (`park`: birds by day, an owl at night), Uptown's (a quieter hum, the
+    plaza's `fountain`, the circle's traffic), Crestmont's (`crest`) and
+    Sunridge's (`suburb`: sprinklers, crickets, a lawnmower); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks.
 - **The Trenches** (growth plan Phase 9, the owner's call): a
@@ -1247,6 +1248,81 @@ it and has been retired completely. Build only on what's here.
   out (routes.ts `wide()`). Drawn by `strip3d.ts` (`LAZY_DISTRICTS` id
   `strip`: asphalt, the median's palms with neon uplights, lines, zebras;
   the palms' shapes are `palms3d.ts`, Crestmont's too).
+- **Sunridge** (the owner's call): a middle-class suburb of about 120
+  Southwest stucco tract houses on the north-east land inside the ring
+  highway (curving loops and cul-de-sacs, block-walled back yards with pools,
+  a park, a school, a community pool and clubhouse), planned in
+  `docs/suburb-plan.md` in phases, each with the owner's sign-off; keep it up
+  to date. Made-up names only, under the Emporium. Phase 1 (the land and the
+  streets) is built: `sunridge.ts` (DOM-free, tested in
+  `tests/sunridge.test.ts`): `LAND`, `SUNRIDGE_RECT` / `inSunridge()` (the
+  outskirts' trees keep off), Sunridge Parkway (`PARKWAY_LOOP`, a two-way
+  `loop` street in the plan), its entrances off the north ring avenue
+  (`ENTRIES`, the main one with a median and lights), Mesa Drive (`MESA`), the
+  cul-de-sacs (`COURTS`, turning circles `BULB`, no traffic); `SUN_STREETS` /
+  `SUN_CROSSINGS` / `SUN_BLOCKS` in the street plan (ref `sunridge`; the blocks
+  worked out from the streets by `faces()`, each with its `runs`: a street's
+  kerb or the land's edge), the amenities' land (`ZONES`), the footpath from
+  Palm Court (`PATH`), the perimeter wall and the entrance monuments
+  (`WALL_RUNS`, `MONUMENTS`, `SUN_SOLIDS` in `SOLIDS`), `SUN_LAMPS` at the
+  boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 101, 6.6 x 13,
+  pie-shaped round the turning circles). Drawn by `sunridge3d.ts`
+  (`LAZY_DISTRICTS` id `sunridge`); the road helpers are `roads3d.ts`
+  (shared with Crestmont). Phase 2 (the houses) is built: `sunhouses.ts`
+  (DOM-free, the chunk's, tested in `tests/sunhouses.test.ts`): `HOUSES`, a
+  house a lot in its frame (`toWorld()`), four plans (`Plan`), three entries
+  (`Elevation`), `SCHEMES` and `ROOFS` (neighbours never the same colour),
+  the garage, its driveway and the walk, solar and chimneys;
+  `HOUSE_SOLIDS` join the grids when the chunk loads (`addSolids()`). Drawn by
+  `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
+  windows at night, details near only); the hipped roofs are `roofs3d.ts`
+  (shared with Crestmont's estates). Phase 3 (the yards) is built:
+  `sunyards.ts` (DOM-free, the chunk's, tested in `tests/sunyards.test.ts`):
+  `YARDS` (desert or lawn fronts and their plants, the bins, the back yard's
+  ground, patio, ramada, grill, pool, extras, the gates), `WALLS` (block walls
+  between and behind the lots, one to a line, none on the perimeter wall's,
+  the returns with gates), `YARD_SOLIDS` (joined when the chunk loads); drawn
+  by `sunyards3d.ts`. Phase 4 (the amenities and places) is built:
+  `sunplaces.ts` (DOM-free, the boot's: the club's, park's and school's land, the
+  clubhouse and the school's buildings, `SUNPLACE_SOLIDS` in `SOLIDS`, the front
+  doors `SUN_DOORS`, `SUN_SPAWNS`) and `sunamenities.ts` (DOM-free, the chunk's,
+  tested in `tests/sunamenities.test.ts`: the pool yard, courts, car park, the park's
+  walk, playground and ramada, the school's covered walks, field, playground, bus bay
+  and bus, `AMENITY_SOLIDS` joined when the chunk loads); spots `sunclub`,
+  `sunpark`, `sunschool` (pins, directory entries, panels with Walk in,
+  `data-sun-walkin`, `PLACES` and `LIVE_PLACES` entries); drawn by
+  `sunamenities3d.ts`. Phase 5 (life, night and sound) is built: `sunlife.ts`
+  (DOM-free, the chunk's, tested in `tests/sunlife.test.ts`): walkers and dog
+  walkers along the loop's kerbs and joggers along Mesa Drive's (`LANES`, a
+  lane out along one kerb and back along the other, `KERB_IN` off the asphalt,
+  inside the lamps), joggers and walkers either way round the park's walk,
+  kids running loops on the park's lawn and the school's field and on the
+  swings (`SUN_PEOPLE`, the park's kind of crowd person, `SUN_DOGS` on their
+  leads), people standing about (`SUN_IDLE`: the club's sunbathers,
+  lifeguard and pickleball players, the park's benches, tables and
+  playground, the school's playground and flag, the residents on their
+  porches, at their grills, patio tables and pool loungers) and the
+  residents' cars on about a driveway in three (`DRIVEWAY_CARS`, nosed up to
+  the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
+  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 128, 64 on
+  phones; `addPeople()` fills them when the chunk loads, or queues them
+  before the crowd's built) and life.ts's home cars are per district
+  (`Home`: Crestmont's and Sunridge's, `SUN_MIX` / `SCHOOL_BUS_PAINT` in
+  sunridge.ts, `opts.sun`); bus stops round the collector (transit.ts
+  `SUN_STOP_GAP`, the school bus serves them); lamps at the boot round the
+  park, in the club's pool yard and by the school's front (`SUN_PLACE_LAMPS`
+  in sunplaces.ts; the coach lamps, half the windows and the pools already
+  glow at night); its sound (ambience.ts `suburb`, `SUN_HUM`: the town's
+  hum hushed, sprinklers by day, crickets at night, its birds as the park's,
+  and a lawnmower now and then by day, sound.ts `mower()`). Drawn by
+  `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
+  people into the crowd, the dogs and leads on the main thread, the cars
+  through `parkedCars()`).
+- **The raised highway** (the owner's call, planned, nothing built yet): the
+  ring highway rebuilt on a concrete viaduct with real exits (diamond
+  interchanges, numbered, made-up names on the gantries) and traffic that
+  uses its ramps, planned in `docs/highway-plan.md` in phases, each with the
+  owner's sign-off; keep it up to date.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1401,7 +1477,8 @@ it and has been retired completely. Build only on what's here.
   sitters go in past 0.6 of rain). Nothing new is drawn. Phase 4 (buses,
   boats and the weather's small reactions) is built: `transit.ts`
   (DOM-free, tested in `tests/transit.test.ts`: `BUS_STOPS` from the
-  street plan, along every avenue in town each way, in the kerb lane,
+  street plan, along every avenue in town each way (and a few round
+  Sunridge's collector, `SUN_STOP_GAP`), in the kerb lane,
   clear of the crossings, the bridges and anything solid on the sidewalk;
   `routeStops()`, `pullIn()` (a bus in the inner lane eases over to the
   kerb and back), `busStep()` (slowing in, a `DWELL` with the brake
@@ -1506,7 +1583,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; 676.6 with the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; NEONMILE1 with the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -1607,7 +1684,11 @@ it and has been retired completely. Build only on what's here.
   (`canvasTex()` in `kit.ts`; a draw function works in the numbers it
   asked for and never knows; a texture redrawn live in pixels afterwards
   must stay under that size, and goes through `liveTex()`). Phones draw the bloom at 3 of its 5 blur levels (`bloomMips` in
-  `post.ts`: a softer glow, 4 fewer passes a frame); desktop draws all 5.
+  `post.ts`: a softer glow, 4 fewer passes a frame); desktop draws all 5. Phones draw the ink outlines thinner (`thinInk` in
+  `post.ts`: each line on one side of its edge only, one texel out, about half
+  the width, its edges soft) and smooth the picture with FXAA last (`fxaa`,
+  three's shader in its own chunk after the boot; phones draw no MSAA or
+  SMAA); desktop's are as they are.
 - **Start-up stays light** (performance phase 2,
   `docs/performance-plan.md`):
   - Data that's the same for everyone is worked out when the site is
@@ -1617,11 +1698,15 @@ it and has been retired completely. Build only on what's here.
     modules in Node and records what each `make()` made), or works it out
     with `make()` where there's none (the tests, the game server). Today:
     the traffic's routes (`routes.ts`, packed with `packRoutes()`: each route's points as millimetre steps in one string), the
-    crowd's walk, jog and march cycles (`crowdclips.ts`) and The Trenches'
+    crowd's walk, jog and march cycles (`crowdclips.ts`, rounded to a ten-thousandth as they're recorded, `rounded()`) and The Trenches'
     amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
+    Pass `BUILT ? undefined : make` (`BUILT` is the site's own build,
+    `__CITY_BUILT__` in astro.config.mjs) and what only `make()` uses folds
+    out of the browser's code (the route generator, the amenities' layout,
+    the crowd's recorded cycles); the tests, the server and the bake run it.
   - Features load when they're used, each its own chunk (`import()`):
     the fight (`fight.ts` and the figures' clips, when the trainer's menu
     first opens: `loadFight()` in `walk.ts`; the menu itself, `fight-ui.ts`,
@@ -1632,7 +1717,9 @@ it and has been retired completely. Build only on what's here.
     fetched when walking starts; until it's in an emote is skipped, the
     gaze still, nothing vaulted and a moment plays no pose; the hologram
     fetches the emotes on its own after the boot), the stage of the fitting room
-    and the character screen (`stage.ts`), SMAA (`post.ts`), the fight
+    and the character screen (`stage.ts`), SMAA and the phones' FXAA (`post.ts`), the sound's synth
+    (`sound.ts`, on the first tap of Sound: the boot holds `soundlazy.ts`, silent until it's in, which makes
+    the audio context in the tap for `createSound(given)`), the fight
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
     the world map (`worldmap.ts`, when it first opens: `loadMap()` in
@@ -3156,6 +3243,9 @@ it and has been retired completely. Build only on what's here.
   `data-walk-*` element to exist.
 - Buildings only lift and glow on hover in City view; while walking nothing
   is hovered and nothing lifts (Degen stands on the same ground).
+- The over-the-shoulder camera starts 3.3 tiles behind him, 3.2 on an upright screen (`homeZoom()` in
+  walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
+  the middle (all of it armed, so the crosshair stays off his head).
 - Esc frees the mouse first and only then stops walking. Door panels free
   the mouse so their links can be clicked.
 - While walking (`body.is-walking`, set in `index.ts`) the header drops the
@@ -3628,7 +3718,7 @@ it and has been retired completely. Build only on what's here.
 - **The gun store** (`gunshop.ts`, markup `data-shop` in `CityMap.astro`)
   opens at the Armoury counter. Four guns, each defined once in
   `combat-sim.ts` `WEAPONS` (stats, `need` = lifetime score that unlocks it)
-  and modelled in `guns.ts` `SPECS` (parts, muzzle, sight, hand spots): the
+  and modelled in `gunshapes.ts` `SHAPES` (parts round gunfit.ts's muzzle, sight and hand spots): the
   Assault Rifle (holo red-dot, also carried by the soldiers via
   `rifleGeometry()`), Buzz SMG, Street Sweeper shotgun (pellets, iron sights)
   and Long Shot marksman rifle (scope, full-screen scope view) unlock with
@@ -3640,7 +3730,7 @@ it and has been retired completely. Build only on what's here.
   names, brands or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
   button), a `FIT` entry in `gunfit.ts` (its hand spots, muzzle and sight, a long gun's `butt`,
   third-person `hold` spot for the front hand, `carry`, `reload` kind and
-  `kick`), a `SPECS` entry in `guns.ts` (its parts), store art (`ART` in
+  `kick`), a `SHAPES` entry in `gunshapes.ts` (its parts, at each level), store art (`ART` in
   `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`); the tests
   check the hands land on it.
 - In third person (the player and other players), `stance.ts` `holdGun()`
@@ -3674,6 +3764,29 @@ it and has been retired completely. Build only on what's here.
   hands (`viewmodel.ts`) alike; the magazine rides in the hand while it's
   `carried`, and the sounds follow `RELOAD_CUES`. Every clip starts and
   ends at rest.
+- **The weapons plan** (the owner's call: gun feel and design quality) is
+  `docs/weapons-plan.md`; keep it up to date, one phase at a time with the
+  owner's sign-off. Phase 1 (gun feel) is built: `gunfeel.ts` (DOM-free,
+  tested in `tests/gunfeel.test.ts`, read by the sim, the server and the
+  view): recoil patterns by each shot's place in its string (`RECOIL`,
+  `recoilAt()`, the sim's `string` and the shot's `n`; walk.ts kicks the
+  view up and across and gives back `recover` of it after, less what you
+  pulled back yourself), aiming over each gun's `ADS` time (the sim's
+  `ads` eases the cone; the first-person hands at the same pace), moving
+  and jumping opening the cone (`moveSpread()`, the input's `move` and
+  `air`; the crosshair is `sim.spreadOf()`), and the shotgun loading a
+  shell at a time (`SHELLS`; a pull with a shell in stops it and fires
+  after the pump; `reloadAt(..., shells)` one trip a shell). New feel
+  goes in gunfeel.ts and the sim first. Phase 2 (design quality, the
+  owner's call: "less blocky") is built: the guns' shapes are
+  `gunshapes.ts` (DOM-free, tested in `tests/gunshapes.test.ts`): side
+  outlines with rounded corners extruded with a bevel (`side()`,
+  `fillet()`, `inset()`, `sound()`), rounded sections (`section()`), turned
+  barrels, muzzles, scope and cylinder (`turned()`), tube trigger guards,
+  rounded boxes (`rbox()`), at three levels (`GunDetail`: 2 first person,
+  1 in a figure's hands, 0 the soldiers' rifle, `rifleGeometry()`); guns.ts
+  gives them materials and finishes (`buildGun(..., { detail })`). Draw a
+  new gun's shape there, round its `FIT` spots.
 - Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
@@ -3938,7 +4051,7 @@ it and has been retired completely. Build only on what's here.
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
-  (`combat-sim.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
+  (`combat-sim.ts`), how the guns feel (`gunfeel.ts`) and their shapes (`gunshapes.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
@@ -3961,10 +4074,15 @@ it and has been retired completely. Build only on what's here.
 
 ## Hosting
 
-- degenemporium.com is a static build hosted on Hostinger (`dist/`
-  extracted into `public_html`). The "Build site" GitHub Action builds
-  every push to `main` into a downloadable zip (artifact
-  `degenemporium-site`).
+- degenemporium.com is a static build hosted on Hostinger, deployed from
+  GitHub (the owner linked them, 2026-11: a push to `main` goes live by
+  itself; no more zips extracted into `public_html` by hand). The "Build
+  site" GitHub Action still builds every push to `main` into a downloadable
+  zip (artifact `degenemporium-site`) and runs the checks.
+- If the live site ever shows the procedural walk instead of the motion
+  capture, the clips file didn't fetch: walk.ts says so once in a toast and
+  `?fps` reads `motion capture failed` (a stale or partial upload is the
+  usual cause; it's tried again on the next walk).
 - Keep the site fully static (no server routes) and keep `public/.htaccess`
   in the build.
 - **No multiplayer on degenemporium.com** (the owner's call): the "Build

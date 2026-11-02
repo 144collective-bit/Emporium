@@ -31,7 +31,7 @@ import { TRENCH_BLOCKS, inTrenches } from './trenches';
 import { PILLARS } from './metro';
 import { WALK_W } from './layout';
 import { rng } from './recipes';
-import { baked } from './baked';
+import { BUILT, baked } from './baked';
 
 export type AmenityKind = 'playground' | 'halfcourt' | 'soccer' | 'skate' | 'garden' | 'chess' | 'washing';
 /** Each kind's size (w along x before turning, d along z) */
@@ -117,7 +117,7 @@ export const REC_DOORS = {
 };
 
 /** The amenities, block by block */
-export const AMENITIES: Amenity[] = baked('amenities', () => {
+export const AMENITIES: Amenity[] = baked('amenities', BUILT ? undefined : () => {
   const out: Amenity[] = [];
   for (const blk of TRENCH_BLOCKS) {
     const mix = MIX[blk.id];
