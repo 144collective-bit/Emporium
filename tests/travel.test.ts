@@ -2,11 +2,12 @@
 // there counts it as visited (for fast travel, kept in the save); and a taxi can drive from any place to any
 // other along the streets, to the kerb nearest it, in about a minute at most.
 import { test } from 'node:test';
+import { RESORTS } from '../src/scripts/city3d/resorts';
 import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import assert from 'node:assert/strict';
 import { PLACES, PLACE_IDS, SEEN_R, seen } from '../src/scripts/city3d/places';
 import { SOLIDS } from '../src/scripts/city3d/solids';
-import { RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { RIVER, STRIP_BLVD, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { cleanSave, newSave, visit } from '../src/scripts/city3d/tycoon';
 import { pathBetween, pointOn } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
@@ -60,7 +61,10 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const end = r!.pts[r!.pts.length - 1];
       // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street)
       const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
-      assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
+      // (to a Neon Mile resort a taxi may stop on the boulevard's far kerb, the planted median between, by the way it
+      // comes: no U-turns; the resorts' own drives come with the limos, docs/strip-plan.md Phase 5)
+      const across = RESORTS.some((r) => r.id === b.id) ? STRIP_BLVD.half : 0;
+      assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4 + across, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
       // (the longest in town, from The Trenches to Westlake Park's stadium, is about 59 s since the river was widened;
       // to or from the airport, out on the world's south edge since docs/airport-plan.md Phase 3, the longest is the
       // stadium to the airport's metro station by the terminal, corner to corner of the city, about 72 s)

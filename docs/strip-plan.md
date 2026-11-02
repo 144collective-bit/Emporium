@@ -121,9 +121,9 @@ What was built:
   Parkway, the new streets added, nothing else moved.
 - **The boot** grew 4.2 KB, to 676.6 of 680: the traffic's baked routes
   now drive the boulevard (2.7 KB) and the street plan carries its streets
-  (0.9 KB). Phase 2's resorts will need it raised (their solids and places).
+  (0.9 KB). (Merged with main's start-up pass since: 669.2.)
 
-### The resorts (Phase 2)
+### The resorts (Phase 2, built)
 
 Seven resorts on their lots, every name made up (draft names, the owner to
 change any):
@@ -154,6 +154,89 @@ change any):
   (like Uptown's) and the city's wall atlas, one sign atlas of fixed made-up
   copy, LED faces from one texture of made-up animations (never a number,
   never a real brand), far forms from the sites' own levels.
+
+What was built:
+
+- **The data:** `resorts.ts` (DOM-free, tested in `tests/resorts.test.ts`):
+  `RESORTS`, each on its own stretch of a row, written in its own frame
+  (`frame()`: `u` along the boulevard from its west end, `v` back from the
+  row's boulevard edge), so a resort reads the same on either row; its
+  `parts` (boxes, drums, upright prisms, pyramids, cones, the saucer, the
+  dome; `windows` for the hotels' floors, `solid: false` for what's over
+  something else), the sign pylon (`pylon`: its LED screen and the column
+  of the LED texture it shows, `row`), the porte-cochère (`porte`, its
+  posts `portePosts()`), a car under it (`cars`), the door (`door`, a walk
+  prompt that opens the panel), the spot you walk in at, facing it
+  (`spawn`), the water at the ground (`water`, held in by a rim, `RIM`),
+  the pool deck on the podium (`pool`), its `top` and neon colours. The
+  themes' own: `WILD_ACE` (the star, the cowboy, the marquee), `DRAWBRIDGE`,
+  `SCARAB` (the apex, the sphinx, the obelisk, the portal), `BIG_CITY` (the
+  crowns, the spire, the bridge over the pool), `COASTER` and `coasterAt()`
+  (the rollercoaster round the cluster, a closed Catmull-Rom curve through
+  its points, `COASTER_SAMPLES`), `GONDOLIER` (the bridge over the canal,
+  the gondolas), `LAGOON` (the islet where the volcano will stand, the
+  palms), `ORBIT` (the shaft, the saucer, the mast, the fins). `SPHERE_LOT`
+  with its hoardings until Phase 3. `RESORT_SOLIDS` (in `SOLIDS`: the parts
+  as boxes, drums as three crossing boxes, the crescent in strips,
+  `polyStrips()`, the pyramid in steps; the pylons, the porte-cochères'
+  posts, the waters' rims (open at the drawbridge and the canal's bridge),
+  the cars, the sphinx and the obelisk, the hoardings), `RESORT_TALLEST`.
+- **The heights:** Wild Ace 11.5 (under the Emporium); Big City's towers
+  14.6 to 22 with its spire to 30.5; the Golden Scarab's pyramid 15 and its
+  stepped towers 21; Lava Lagoon's crescent 23.5 to 28; the Gondolier 27
+  (its bell tower 23.6); Dragonspire's tower 24 with its spires to 32.4;
+  Orbit's shaft 33, its saucer to 36.6, its mast 44, the tallest. Every
+  flight passes well over them (the test).
+- **The places:** spots `wildace`, `dragonspire`, `scarab`, `bigcity`,
+  `gondolier`, `lagoon`, `orbit` (index.ts: pick boxes from the solid parts,
+  the pin over the highest; the south row's fly-in from the north), pins,
+  directory entries, panels (`data-panel-tpl`, kickers 30 to 36, coming
+  soon, **Walk in** to the spawn, `data-strip-walkin`), `PLACES` and
+  `LIVE_PLACES` entries, the doors' prompts (walk.ts `ALL_DOORS`).
+- **Taxis:** a taxi comes by the shortest way and may stop on the
+  boulevard's far kerb, the planted median between (no U-turns); the test
+  allows it. The resorts' own drives, with taxis and limos pulling in under
+  the porte-cochères, are for Phase 5.
+- **Drawing:** `resorts3d.ts` (`registerResorts()` from strip3d.ts's
+  `register()`): each resort two sites (its shell; its front and theme) and
+  the coaster a site, the Sphere's hoardings one. The Strip's own
+  curtain-wall atlas (`strip-glass`: gold, blue, dark and silver glass,
+  cream stucco and brick with punched windows, four floors to a band, lit
+  windows at night from its light map; plain bands for Wild Ace's red
+  panels, Orbit's white podium with its lit ribbon, Dragonspire's stone,
+  Big City's brick shops, the Gondolier's palace front of arcades and
+  diamonds, Lava Lagoon's bronze ribbons), laid on in world units, stacked
+  so a band never wraps (the pyramid's slopes in strips a band high). The
+  signs (`strip-signs`: the names in their neon, VALET, THE SPHERE · COMING
+  SOON) and the LED faces (`strip-led`: a column of four made-up slides a
+  resort, its name, card suits and stars, a show, a starburst; stepped on
+  together every 4 s by the tick). Every resort: the forecourt's paving, the
+  drop-off's asphalt, the pylon (a dark column, gold base, its screen and
+  name both ways, neon up its edges and round its crown), the porte-cochère
+  (a white canopy on gold posts, neon round its fascia, its soffit lit, a
+  valet's stand), the pool deck with loungers and umbrellas, its name high
+  on its tower, neon along its podium's roofline, the doorway. Wild Ace:
+  the marquee and bulbs round its front, the roofline and the star, chasing
+  in three sets, starbursts, the star on its post, the cowboy (a neon
+  cut-out, his arm waving on the main thread). Dragonspire: merlons, the
+  gatehouse's arch, the drawbridge on its chains, flags on the spires,
+  banners. The Golden Scarab: gold neon up the ridges, the gold capstone,
+  the portal, the sphinx, the obelisk with its screen, the beam from the tip
+  at night (an additive column in the FX layer). Big City: the crowns and
+  the spire, neon up the towers' corners, the bridge over the pool, the
+  coaster (two red rails, ties, white supports down to the ground or the
+  podium's roof, a train of four cars round it on the clock, a lap every
+  26 s). The Gondolier: white merlons, the belfry's arches, the bridge over
+  the canal, the gondolas and their striped poles, lanterns along the lake.
+  Lava Lagoon: gold neon along the crescent, the islet, rocks and two
+  waterfalls down from the podium (a streaked texture the tick scrolls),
+  palms round the lagoon. Orbit: three fins up the shaft with neon edges,
+  rings of neon round the saucer, a band of lit windows, the dome, the mast
+  and its red light. On the main thread: the water (the city's
+  `waterMat`) with its rims, the cars (`parkedCars()`), the cowboy's arm,
+  the beam, the train, the chase and the slides.
+- **The boot** grew 4.2 KB, to 673.4 of 680 (the resorts' solids, places,
+  doors and spawns); the Strip's chunk is 12.6 KB.
 
 ### The landmarks (Phase 3)
 
@@ -220,16 +303,15 @@ change any):
 
 - **The resorts' names:** the draft names above, change any you like.
 - **Which side each resort stands on:** the table above is a proposal.
-- **The boot's size:** the boot is at 672.4 of its 680 KB. The Strip's
-  streets, solids and places will need a few KB; the budget may need
-  raising again, asked when it comes up.
+- **The boot's size:** 673.4 of its 680 KB with Phase 2 (main's start-up
+  pass made room). Phases 3 to 5 may need it raised; asked when it comes up.
 - **The monorail's west end:** carry it on west to the metro (above), or
   stop it at the Strip's west end with a walk to the metro?
 
 ## The phases
 
-1. The boulevard and the land (the streets, the lots, traffic).
-2. The resorts (the seven, as places).
+1. The boulevard and the land (the streets, the lots, traffic). Built.
+2. The resorts (the seven, as places). Built.
 3. The landmarks (the welcome sign, the fountain show, the volcano, the
    Sphere, the searchlights).
 4. The monorail.

@@ -13,6 +13,8 @@ import { SWAY } from './dusk';
 import { EW_ROADS, LANE, MEDIAN, RING_HI, STRIP_BLVD, STRIP_EAST_X } from './layout';
 import { BLVD_WEST, type Rect } from './strip';
 import { crown, trunk } from './palms3d';
+import { registerResorts } from './resorts3d';
+import type { Tick } from './world';
 
 export const SELF = import.meta.url;
 
@@ -36,7 +38,9 @@ const PALM_GAP = 7;
 /** Where the median stops short of each end (its noses), so the turns and the crossings are clear */
 const MEDIAN_END = 9;
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  // The resorts (Phase 2: resorts3d.ts)
+  registerResorts({ low, scene, tick });
   const asphalt = toon('#2a2838');
   const white = toon('#eceaf6');
   const yellow = neon('#f5d76e', 0.9, 1.1);

@@ -38,6 +38,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
+import { RESORTS, resortOf } from './resorts';
 import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
@@ -306,6 +307,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const [tx, tz] = [(H.tower[0] + H.tower[2]) / 2, (H.tower[1] + H.tower[3]) / 2];
     // (it faces the river: the fly-in comes from the north, the port behind it)
     spots.push({ ...pickSpot(scene, 'harbourmaster', SLAB, [{ rect: H.rect, h: H.h }, { rect: H.tower, h: H.towerH }], H.rect, H.mast + 1.2, [tx, tz]), faces: 'n' });
+  }
+  // ...and the Neon Mile's resorts (docs/strip-plan.md Phase 2): their spots (drawn in the Strip's chunk); the pin over
+  // each one's highest part, the south row's fly-in from the north (they face the boulevard)
+  for (const r of RESORTS) {
+    const boxes = r.parts.filter((p) => p.solid !== false).map((p) => ({ rect: p.rect, h: p.y1 }));
+    const high = r.parts.reduce((a, b) => (b.y1 > a.y1 ? b : a));
+    const pin: [number, number] = [(high.rect[0] + high.rect[2]) / 2, (high.rect[1] + high.rect[3]) / 2];
+    const s = pickSpot(scene, r.id, SLAB, boxes, r.land, r.top + 1.2, pin);
+    spots.push(r.face < 0 ? { ...s, faces: 'n' } : s);
   }
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
@@ -696,6 +706,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(at);
       });
     }
+    // A Neon Mile resort's panel: Walk in under its porte-cochère, facing its door
+    const resort = resortOf(id);
+    if (resort)
+      panelBody.querySelector('[data-strip-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(resort.spawn);
+      });
     // The Harbour Master's panel (Southbank Docks): Walk in on the sidewalk, facing its door
     if (id === 'harbourmaster')
       panelBody.querySelector('[data-docks-walkin]')?.addEventListener('click', () => {
