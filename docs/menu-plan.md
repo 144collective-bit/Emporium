@@ -143,6 +143,41 @@ The design system, as CSS and a little code every menu then uses.
 The owner signs off the palette, the look and the feel on the gun store
 before anything else moves to it.
 
+**Built** (waiting on the owner's sign-off):
+
+- `src/styles/menus.css` took `armoury.css`'s place in `Base.astro`'s order
+  (the old file is gone; its `.pips` moved to `cards.css`, which the
+  trainer's and the kart hut's menus still use). The pixel face is Pixelify
+  Sans (Google Fonts, with the site's others). A menu is a `.mk` section:
+  the element is the frame's colour and its `::before`, 2 pixels in, the
+  fill with the scanlines, both cut by the same stepped `clip-path`
+  (`--notch-4` / `-3` / `-2`). Parts: `.mk-bar` (`.mk-kind`, `.mk-title`,
+  `.mk-wallet`, `.mk-x`), `.mk-marquee`, `.mk-tabs`, `.mk-body` and
+  `.mk-page`, `.mk-cards` / `.mk-card`, `.mk-slots` / `.mk-slot`,
+  `.mk-stats` (`.mk-bar-meter`: pixel blocks), `.mk-btn` (`is-main`,
+  `is-small`), `.mk-mod` with `.mk-pips`, `.mk-confirm`, `.mk-note`,
+  `.mk-empty`, `.mk-foot` with `.mk-hints` and `.mk-small`, `.mk-grab`.
+  Desktops: a panel on the right under the header; tablets a centred card;
+  phones upright a bottom sheet (the cards in one row that scrolls across,
+  the grabber, no hints on touch); on their side a narrower side panel.
+- `menukit.ts` is one call, `menuKit(el, { close, onTab })`, returning
+  `showTab()`, `step()` (Q / E, LB / RB), `move()` (arrows, the d-pad),
+  `press()` (Enter, A), `focusFirst()`, `input()` and `shown()`; a sideways
+  swipe across the body steps a tab (not from inside the cards' row), the
+  grabber's drag or flick closes; the hints row follows what you last used
+  (`data-input`: keys, pad, touch). Opening one at a time, Esc and the tap
+  outside stay with each menu's own code until the hub (Phase 2) gathers
+  them. `menunav.ts` (DOM-free, `tests/menunav.test.ts`): `nextFocus()`,
+  `tabStep()`, `swipeCloses()`, `swipeTab()`.
+- The gun store (`gunshop.ts`, its markup in `CityMap.astro`): Guns and
+  Workbench as tabs, the loadout's two slots, the guns as cards with the ▶
+  selector, the picked gun's details, stats and actions; the workbench's
+  mods with pips, or an empty state with a way back to the guns. walk.ts
+  feeds it the d-pad, LB / RB, A and B / Y.
+- Checked at 320, 390, 820, 1280 wide, upright and on its side, with a
+  mouse, touch (swipe and grabber) and under reduced motion (nothing
+  moves); the CSS went from 34.1 to 36.2 KB gzipped of its 60.
+
 ## Phase 2: the hub
 
 One menu for everything that isn't a place or a shop: the PAUSE screen.

@@ -1038,7 +1038,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (root.dataset.view !== '3d') return;
     if (accountUI?.isOpen) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
-    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : true)) return;
+    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
         if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;

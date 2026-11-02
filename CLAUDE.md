@@ -2730,9 +2730,15 @@ it and has been retired completely. Build only on what's here.
   tabs (Esc, the header's hub button, Start); phone-first sheets; full
   controller and keyboard use; motion but no UI sounds; the design system
   first (`menus.css`, `menukit.ts`, shown on the gun store), then rolled
-  out. The 3D city and the comic page keep their look. Nothing is built
-  yet: until a menu moves to the new kit it keeps today's look and rules.
-  One phase at a time with the owner's sign-off; keep it up to date.
+  out. The 3D city and the comic page keep their look. Phase 1 is built,
+  waiting on the owner's sign-off: `menus.css` (in `armoury.css`'s old
+  place in `Base.astro`'s order; the pixel face Pixelify Sans), `menukit.ts`
+  (`menuKit(el, { close })`: tabs, the d-pad and arrows, the grabber, the
+  hints by input), `menunav.ts` (DOM-free, tested in
+  `tests/menunav.test.ts`) and the gun store rebuilt in them (`.mk` in
+  `CityMap.astro`, `gunshop.ts`). Until a menu moves to the new kit it
+  keeps today's look and rules. One phase at a time with the owner's
+  sign-off; keep it up to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
