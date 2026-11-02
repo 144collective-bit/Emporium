@@ -6,9 +6,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BELT, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
 import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS } from '../src/scripts/city3d/bounds';
-import { EXT, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EW_ROADS, EXT, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { STRIP_RECT } from '../src/scripts/city3d/strip';
+import { inTown } from '../src/scripts/city3d/outer';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
-import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
+import { HIGHWAY_BOX, HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
 
 /** The world before Phase 6 (the densities were worked out on it), Phase 6's and Phase 10's */
 const TODAY: [number, number] = [-200, 240];
@@ -35,6 +37,22 @@ function mallWas(r: readonly number[], skip?: readonly number[]) {
     }
   return n * 4;
 }
+/**
+ * The land a tree could stand on in the Neon Mile's land before it was laid out (docs/strip-plan.md Phase 1, as
+ * freeLand counts): off the town and its bends, the east-west roads across it, the highway and its junctions
+ */
+function stripWas(r: readonly number[], skip?: readonly number[]) {
+  const o = overlap(r, [STRIP_RECT[0] - 3, STRIP_RECT[1] - 3, STRIP_RECT[2] + 3, STRIP_RECT[3] + 3]);
+  let n = 0;
+  for (let x = o[0] + 1; x < o[2]; x += 2)
+    for (let z = o[1] + 1; z < o[3]; z += 2) {
+      if (skip && inBox(skip, x, z)) continue;
+      if (inTown([x, z], 1.2) || EW_ROADS.some((q) => Math.abs(z - q.c) < q.half + 0.8)) continue;
+      if (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || EW_ROADS.some((q) => Math.abs(x - HIGHWAY_BOX[2]) < 17 && Math.abs(z - q.c) < 17)) continue;
+      n++;
+    }
+  return n * 4;
+}
 const overlap = (a: readonly number[], b: readonly number[]): [number, number, number, number] => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
 
 test('the densities still fit the land the world had before Phase 6', () => {
@@ -43,8 +61,9 @@ test('the densities still fit the land the world had before Phase 6', () => {
   const away = (r: [number, number, number, number], skip?: [number, number, number, number]) => OLD.reduce((n, o) => n + freeLand(overlap(r, o), 2, skip), 0);
   // (and the mall's land added back: built on since, docs/mall-plan.md; it was free but for the roads across it and
   // the highway's junctions)
-  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT);
-  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT);
+  // (and the Strip's, laid out since: docs/strip-plan.md)
+  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT) + stripWas(BELT);
+  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT) + stripWas(outer, BELT);
   assert.ok(Math.abs(belt - BELT_FREE) / BELT_FREE < 0.03, `belt ${belt} against ${BELT_FREE}`);
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });
@@ -55,7 +74,9 @@ test('the world before Phase 6 keeps the trees it had (but by the highway), each
     // (less the ones where the ring highway now runs, Phase 7: its north side crosses that land; the ones on the
     // airport's old land left out of the count, as it's open again)
     const trees = all.filter((t) => !inBox(OLD_AIRPORT, t.x, t.z));
-    assert.ok(trees.length <= count * 1.6 * 1.08 && trees.length > count * 1.6 * 0.86, `${trees.length} for ${count}`);
+    // (less the belt's share the Neon Mile took since, docs/strip-plan.md: its land carries no trees now)
+    const kept = count * 1.6 * (1 - stripWas(BELT) / BELT_FREE);
+    assert.ok(trees.length <= kept * 1.08 && trees.length > kept * 0.86, `${trees.length} for ${count}`);
     for (const t of trees) {
       assert.ok(treeSpot(t.x, t.z));
       assert.ok(t.x > TODAY[0] + 4 && t.x < TODAY[1] - 4 && t.z > TODAY[0] + 4 && t.z < TODAY[1] - 4);

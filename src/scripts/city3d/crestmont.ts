@@ -20,7 +20,7 @@
  *
  * Names are made up. Written in fixed world numbers (north of the river: no `SOUTH_SHIFT` / `WIDEN`).
  */
-import { EW_ROADS, LANE, WALK_W } from './layout';
+import { EW_ROADS, LANE, WALK_W, ewStreet } from './layout';
 import { HILLS, natural } from './hills';
 
 type Pt = [number, number];
@@ -284,7 +284,7 @@ export const CREST_CROSSINGS: CrestCrossing[] = (() => {
   FLATS_X.forEach((x, i) => {
     for (const [j, r] of EW_ROADS.entries()) {
       if (r.c > BANK.c) continue;
-      out.push({ id: `crest-ns${i}-ew${j}`, at: [x, r.c], streets: [`crest-ns${i}`, `ew${j}`], lights: r.lanes === 2 });
+      out.push({ id: `crest-ns${i}-ew${j}`, at: [x, r.c], streets: [`crest-ns${i}`, ewStreet(j, x)], lights: r.lanes === 2 });
     }
     // ...and at Foothill Road (its ends at the first and the last; the hill roads go up from Coral Drive's top and Hollis Way's)
     const streets = [`crest-ns${i}`, 'crest-foothill'];

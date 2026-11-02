@@ -11,8 +11,9 @@
  * district's).
  */
 import { MALL_AREA } from './mall';
-import { CITY_EXT, EW_ROADS, EXT, LANE, NS_ROADS, RIVER, nsRuns } from './layout';
+import { CITY_EXT, EW_ROADS, EXT, LANE, NS_ROADS, RIVER, ewRuns, nsRuns } from './layout';
 import { inChannel } from './river';
+import { inStrip } from './strip';
 import { inDocks } from './docks';
 import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { KART_RECTS } from './kartfacility';
@@ -63,12 +64,14 @@ export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], high
   if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
   // The Docks (docks.ts): their own quays and yards, the basin
   if (inDocks(x, z, 3)) return false;
+  // The Neon Mile (strip.ts): its boulevard and lots
+  if (inStrip(x, z, 3)) return false;
   // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
   if (inTown([x, z], 1.2)) return false;
   // Clear of the airport (airside, landside, the forecourt) and of the low end of its approach, off the runway's west end
   if (AIRPORT_AREAS.some((r) => x > r[0] - 1 && x < r[2] + 1 && z > r[1] - 1 && z < r[3] + 1)) return false;
   if (x > RUNWAY.x0 - 200 && x < RUNWAY.x0 && Math.abs(z - RUNWAY.z) < 14) return false;
-  if (EW_ROADS.some((r) => Math.abs(z - r.c) < r.half + 0.8) || NS_ROADS.some((r, i) => Math.abs(x - r.c) < r.half + 0.8 && nsRuns(i, z))) return false;
+  if (EW_ROADS.some((r, i) => Math.abs(z - r.c) < r.half + 0.8 && ewRuns(i, x)) || NS_ROADS.some((r, i) => Math.abs(x - r.c) < r.half + 0.8 && nsRuns(i, z))) return false;
   // Off the promenades along the quay lines, and the water wherever its edges curve (river.ts): trees grow on the banks it leaves
   if ((z > RIVER[0] - 2.8 && z < RIVER[0] + 0.5) || (z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6) || inChannel(x, z, 0.8)) return false;
   return true;

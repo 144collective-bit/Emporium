@@ -132,6 +132,19 @@ export const BRIDGED_NS = [NS_ROADS.length - 1];
 export const SHORT_NS: Record<number, number> = { 1: -39, 2: -39 };
 /** Does north-south road `i` run at z (the short ones not north of the Parkway) */
 export const nsRuns = (i: number, z: number) => !(i in SHORT_NS) || z > SHORT_NS[i];
+/**
+ * The Neon Mile (docs/strip-plan.md Phase 1, strip.ts): downtown's two small east-west roads (`ew1`, `ew2`) stop at
+ * the Parkway's east side (x, a hair inside its line: streetplan.ts ends each exactly at its crossing) and start again
+ * at the Strip's east road (`STRIP_EAST_X`), its boulevard between them. The east pieces are `ew<i>e`.
+ */
+export const STRIP_EAST_X = 252;
+export const STRIP_GAP: Record<number, [number, number]> = { 1: [123.09, STRIP_EAST_X], 2: [123.96, STRIP_EAST_X] };
+/** Does east-west road `i` run at x (not across the Strip) */
+export const ewRuns = (i: number, x: number) => !(i in STRIP_GAP) || x <= STRIP_GAP[i][0] + 0.01 || x >= STRIP_GAP[i][1] - 1e-6;
+/** The plan's id for east-west road `i` at x (its east piece's, past the Strip) */
+export const ewStreet = (i: number, x: number) => (i in STRIP_GAP && x >= STRIP_GAP[i][1] - 1e-6 ? `ew${i}e` : `ew${i}`);
+/** The Strip's boulevard (strip.ts): its line (z), half its paved width, its planted median's width */
+export const STRIP_BLVD = { z: 30, half: 5.4, median: 4 };
 /** The plan's id for north-south road `i` at z (its south half's, past the river, where it has no bridge) */
 export const nsStreet = (i: number, z: number) => (BRIDGED_NS.includes(i) || z < (RIVER[0] + RIVER[1]) / 2 ? `ns${i}` : `ns${i}s`);
 /** Roads running east-west, at these z (the south bank avenue only runs east-west) */

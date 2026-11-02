@@ -22,6 +22,7 @@ import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, build
 import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
 import { CREST_LAMPS } from './crestmont';
 import { DOCK_LAMPS } from './docks';
+import { STRIP_LAMPS } from './strip';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
 import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './boulevard';
@@ -323,6 +324,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
   // The Docks' (docks.ts): sodium, along their sidewalks (world.ts)
   for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
+  // The Neon Mile's (strip.ts): along its boulevard and east road
+  for (const [x, z, ry, y] of STRIP_LAMPS) addLamp(x, z, ry, y);
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
   for (const [x, z] of PORT_MASTS) addPool(x, z, 12, SLAB, true);
   // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)

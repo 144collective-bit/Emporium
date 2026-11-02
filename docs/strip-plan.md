@@ -61,7 +61,7 @@ casino, brand, show or person, and nothing about the token.
 
 ## What the Neon Mile is
 
-### The boulevard and the land (Phase 1)
+### The boulevard and the land (Phase 1, built)
 
 - **The Strip itself** (`STRIP_BLVD`): one grand boulevard along z 30 from
   the Parkway to an east road short of the highway's slip lanes. Two lanes
@@ -83,6 +83,45 @@ casino, brand, show or person, and nothing about the token.
   travel reach its places.
 - **The snapshot** (`tests/fixtures/layout.json`) is rewritten for the
   streets that change: the owner's call.
+
+What was built:
+
+- **Data:** `strip.ts` (DOM-free, tested in `tests/strip.test.ts`): the
+  boulevard (`strip-blvd`, layout.ts `STRIP_BLVD`: z 30, two lanes each way
+  either side of a 4-wide planted median, 10.8 across) from the Parkway's
+  line (`BLVD_WEST`, `parkwayX()`) to the east road (`strip-east`, Mile End
+  Road, x `STRIP_EAST_X` 252, one lane each way); `STRIP_CROSSINGS` (lit at
+  the Parkway, at the boulevard's east end and where the east road meets the
+  ring's north avenue and the north bank avenue); `STRIP_BLOCKS`, the north
+  and south rows (about 23 deep and 125 long each), their west sides along
+  the Parkway's outer sidewalk, a 1.2 sidewalk round them (`STRIP_WALK`),
+  grass until the resorts come; `STRIP_LAMPS`; `STRIP_RECT` / `inStrip()`.
+- **The small streets:** layout.ts `STRIP_GAP`, `ewRuns()`, `ewStreet()`:
+  `ew1` and `ew2` end at the Parkway's crossing, and their east pieces
+  (`ew1e`, `ew2e`) run from the east road past the highway into Crestmont,
+  so the highway's junctions and slip lanes and Crestmont's crossings are
+  the east pieces' (streetplan.ts, crestmont.ts). The Parkway's outer
+  sidewalk runs on where they crossed it and breaks at the boulevard
+  (outer.ts `onRoad()`); world.ts leaves their asphalt and lines off the
+  Strip (`stripGap()`), and a crossing with a `strip-` street breaks the
+  avenues' medians and lines (`highwayGaps()`).
+- **Traffic:** routes.ts reads it (an avenue's planted `median` pushes its
+  lanes out, `wide()`); buses stop along the boulevard (transit.ts reads
+  `inStrip()`).
+- **Drawing:** `strip3d.ts`, a district loaded as you approach
+  (`LAZY_DISTRICTS` id `strip`): the boulevard's asphalt in pieces, its
+  raised median with grass, palms every 7 with magenta and cyan neon
+  uplights at their feet, white lane dashes and edge lines, zebras at its
+  ends; the east road with its yellow centre line and zebras at the
+  avenues. The palms' shapes are `palms3d.ts`, shared with Crestmont's
+  planting. The lamps are the boot's (index.ts), the lots' slabs world.ts's.
+- **Trees** keep off the Strip (outskirts.ts `treeSpot()`); the trees'
+  density tests count its land as the mall's was.
+- **The snapshot:** rewritten (the owner's call): `ew1` and `ew2` end at the
+  Parkway, the new streets added, nothing else moved.
+- **The boot** grew 4.2 KB, to 676.6 of 680: the traffic's baked routes
+  now drive the boulevard (2.7 KB) and the street plan carries its streets
+  (0.9 KB). Phase 2's resorts will need it raised (their solids and places).
 
 ### The resorts (Phase 2)
 
