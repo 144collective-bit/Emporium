@@ -305,11 +305,16 @@ Little changes on screen but the trees' edges.
   (`OUT`), and where it's open land (`openAt()`: off every street of the
   plan and the highway, Uptown's lay-bys and Coral Drive's bays, every
   slab, the water, the docks' basin and the airport) the stretch is a
-  verge, a step in from the corners; and the Parkway's and the Southside
-  Loop's outer kerbs, a verge a piece where the belt lies past them. 248
-  in all: about 1,800 tiles of block edge (The Trenches along the highway,
-  Westlake Park, Sunridge's land, the stadium, Palm Court, the mall,
-  Uptown and Uptown North, Crestmont) and 360 of the bends'.
+  verge, a step in from the corners, if the open land runs at least `DEEP`
+  (5) past it (a sliver between two blocks gives neither a verge); and the
+  Parkway's and the Southside Loop's outer kerbs, a verge a piece where the
+  belt lies past them. 189 in all: about 1,300 tiles of block edge (The
+  Trenches along the highway, Sunridge's land, the stadium, Westlake Park,
+  Crestmont, the mall, Uptown and Uptown North, Palm Court) and 280 of the
+  bends'. The page carries them packed (the blocks' a few numbers each,
+  the bends' one flag a kerb piece; `pack()` / `unpack()`), and the areas
+  they take after are `areas.ts` (small, so the boot never takes the seam
+  map).
 - **The bank:** along each the slab eases down to the ground over `RAMP`
   (1.1), drawn by world.ts's `buildVerges()` in pieces a tile or less long:
   the block's own cover at the top, the ground's colour there at the foot
@@ -330,8 +335,11 @@ Little changes on screen but the trees' edges.
   was needed; both are the palette's.
 - Not done: the block's corners keep their kerb step (the verges stop a
   step short of each corner, so the bank and the kerb never fight).
-- Measured: the boot 668 KB of 680; about 2,000 bank triangles and 514
-  hedge and wall boxes (the bends' in short slanting pieces).
+- Measured: the boot 672.2 KB of 680 (4.2 more than Phase 2: the verges'
+  code and their packed list); about 1,500 bank triangles and 412 hedge
+  and wall boxes (the bends' in short slanting pieces). The shots take a
+  one-off camera too (`SHOTS_EXTRA`) for a close look:
+  `docs/blend-shots/phase-3-close/`.
 
 ### Phase 4: gentle rolls
 

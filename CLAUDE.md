@@ -1357,7 +1357,9 @@ it and has been retired completely. Build only on what's here.
   - Phase 3 (the block edges) is built: `verges.ts` (DOM-free, tested in
     `tests/verges.test.ts`, baked at build time, `baked()` key `verges`):
     `VERGES`, every stretch of a block's edge (and the bends' outer kerbs)
-    that meets open land (`openAt()`); world.ts's `buildVerges()` eases
+    that meets open land at least `DEEP` out (`openAt()`; packed for the
+    page, `pack()` / `unpack()`; the districts they take after are
+    `areas.ts`, small, so the boot never takes the seam map); world.ts's `buildVerges()` eases
     the slab down to the ground there over `RAMP` (the block's cover at the
     top, the ground's at the foot; `vergeY()` in walk.ts's `groundAt()`)
     and stands the district's hedge or low wall along the foot

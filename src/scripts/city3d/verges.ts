@@ -43,6 +43,8 @@ export const OUT = 1.2;
 const STEP = 1;
 /** How far out the land past a verge must be open: past its bank's foot and the hedge or wall along it */
 const CLEAR = RAMP + 0.65;
+/** How deep the open land past a verge must run (a sliver between two blocks isn't open land: neither gets a verge there) */
+export const DEEP = 5;
 /** Stretches shorter than this are left as they are (a corner's worth) */
 export const MIN_RUN = 2;
 
@@ -176,7 +178,8 @@ function findVerges(): Verge[] {
         const p: Pt = [a[0] + d[0] * at + n[0] * OUT, a[1] + d[1] * at + n[1] * OUT];
         // (and the ramp's foot too: nothing of it on a street)
         const foot: Pt = [a[0] + d[0] * at + n[0] * CLEAR, a[1] + d[1] * at + n[1] * CLEAR];
-        const open = openAt(p) && openAt(foot);
+        const deep: Pt = [a[0] + d[0] * at + n[0] * DEEP, a[1] + d[1] * at + n[1] * DEEP];
+        const open = openAt(p) && openAt(foot) && openAt(deep);
         if (open && from < 0) from = at;
         else if (!open && from >= 0) close(at - STEP);
       }
@@ -189,7 +192,7 @@ function findVerges(): Verge[] {
     if (
       [0, 0.5, 1].every((t) => {
         const m: Pt = [v.a[0] + (v.b[0] - v.a[0]) * t, v.a[1] + (v.b[1] - v.a[1]) * t];
-        return openAt([m[0] + v.n[0] * OUT, m[1] + v.n[1] * OUT]) && openAt([m[0] + v.n[0] * CLEAR, m[1] + v.n[1] * CLEAR]);
+        return [OUT, CLEAR, DEEP].every((d) => openAt([m[0] + v.n[0] * d, m[1] + v.n[1] * d]));
       })
     )
       out.push(v);
