@@ -61,6 +61,7 @@ import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './soundlazy';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
+import type { Hub } from './hub';
 import type { Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
@@ -143,7 +144,7 @@ const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /** `wallet`: Connect wallet and the profile card, made with the page (CityMap.astro); the city plugs its parts into `hooks` */
-export async function bootCity(root: HTMLElement, wallet?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null) {
+export async function bootCity(root: HTMLElement, wallet?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null, hub?: Hub) {
   const host = root.querySelector<HTMLElement>('[data-city3d]')!;
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
@@ -575,6 +576,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const s = spots.find((sp) => sp.id === id);
     const tpl = root.querySelector<HTMLTemplateElement>(`template[data-panel-tpl="${id}"]`);
     if (!s || !tpl) return;
+    hub?.close();
     // Walking: the panel opens where you stand, the camera stays with Degen
     if (!active && !walking) returnView = { pos: camera.position.clone(), target: controls.target.clone() };
     active = s;
@@ -815,6 +817,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera,
     canvas,
     root,
+    hub,
     // What's built on your units and big lots
     placedSolids: () => {
       const u = units.solids();
@@ -883,6 +886,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
+    hub,
     walker: () => (walking && !walk.driving && !walk.flying ? { x: walk.position.x, z: walk.position.z } : null),
     car: () => {
       const c = walk.car;
@@ -909,6 +913,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     openSpot: (id) => open(id),
     mayCarry: (id) => walk.combat.canTake(id),
   });
+
+  /* ---------- The hub (hub.ts, the menu plan's Phase 2): the pause screen ---------- */
+  if (hub) {
+    hub.hooks.opened = () => {
+      // One card at a time: a place's panel closes; walking, Degen stands still and the mouse is freed
+      close();
+      if (walking) walk.pause();
+    };
+    hub.hooks.closed = () => {
+      root.classList.remove('is-stall');
+      if (walking) canvas.focus({ preventScroll: true });
+      dirty = true;
+    };
+    hub.hooks.tab = (id) => {
+      root.classList.toggle('is-stall', id === 'business');
+      if (id === 'business') tycoon!.paint();
+    };
+    root.querySelector('[data-hub-leave]')?.addEventListener('click', () => stopWalking());
+    root.querySelector('[data-hub-bag]')?.addEventListener('click', () => tycoon!.openCard('bag'));
+  }
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {
@@ -979,6 +1003,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const shut = live.closed('walk');
     if (shut) return tycoon?.toast(shut, 3500);
     close();
+    hub?.close();
     setHover(null);
     beforeWalk = { pos: camera.position.clone(), target: controls.target.clone() };
     flight = null;
@@ -999,6 +1024,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walking = false;
     walker.on = false;
     walk.exit();
+    hub?.close();
     taxis.reset();
     metroUI?.close();
     riverBusUI?.close();
@@ -1023,10 +1049,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   head.city.hidden = false;
   root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
 
-  // Esc closes an open drop-open menu (walk panels, City settings, Directory) before it closes
+  // Esc closes an open drop-open menu (the emotes) before it closes
   // a panel or leaves a mode
   const closePop = () => {
-    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open], .head-pop[open]');
+    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open]');
     if (!open) return false;
     open.open = false;
     open.querySelector('summary')?.focus({ preventScroll: true });
@@ -1037,18 +1063,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape' && accountUI?.close()) return;
     if (root.dataset.view !== '3d') return;
     if (accountUI?.isOpen) return;
+    // The hub (hub.ts): Esc closes it (from outside it too: its own keys take Esc inside it)
+    if (e.key === 'Escape' && hub?.close()) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
     if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
         if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
-        active ? close() : stopWalking();
+        // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
+        active ? close() : hub ? hub.show() : stopWalking();
       }
       else if (!active) walk.onKey(e, true);
       return;
     }
     if (e.key === 'Escape' && closePop()) return;
-    if (e.key === 'Escape') close();
+    // (a panel closes first; with nothing open, the hub)
+    if (e.key === 'Escape') active ? close() : hub?.show();
   });
   document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
   let down: { x: number; y: number } | null = null;
@@ -1091,7 +1121,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     a.addEventListener('click', (e) => {
       if (root.dataset.view !== '3d') return;
       e.preventDefault();
-      a.closest('details')?.removeAttribute('open');
       open(a.dataset.dirSpot!);
     })
   );
@@ -1272,7 +1301,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // City / Walk switch never sits on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

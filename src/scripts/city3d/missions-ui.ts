@@ -47,11 +47,11 @@ export interface MissionsHooks {
 }
 
 export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: MissionsHooks) {
-  const levelEl = root.querySelector<HTMLDetailsElement>('[data-level]');
-  const levelSummary = levelEl?.querySelector<HTMLElement>('summary') ?? null;
+  // The level pill in the header opens the hub on Missions (hub.ts: its `data-hub-tab`), where the level card and the badges are
+  const levelEl = root.querySelector<HTMLElement>('[data-level]');
+  const levelSummary = levelEl;
   const levelTag = levelEl?.querySelector<HTMLElement>('[data-level-tag]') ?? null;
   const levelBar = levelEl?.querySelector<HTMLElement>('[data-level-bar]') ?? null;
-  const levelBody = levelEl?.querySelector<HTMLElement>('[data-level-body]') ?? null;
   const tracker = root.querySelector<HTMLElement>('[data-missions-tracker]');
   const trackerPill = tracker?.querySelector<HTMLButtonElement>('[data-tracker-toggle]') ?? null;
   const trackerCount = tracker?.querySelector<HTMLElement>('[data-tracker-count]') ?? null;
@@ -60,7 +60,6 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   const popsEl = root.querySelector<HTMLElement>('[data-mission-pops]');
   const guideEl = root.querySelector<HTMLElement>('[data-guide]');
   const guideBody = guideEl?.querySelector<HTMLElement>('[data-guide-body]') ?? null;
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let lastLevel = level(game.save());
   /** The first pass catches an older save up (badges it already earned): pops and toasts, no sounds (the sound engine comes after the economy) */
   let booted = false;
@@ -187,28 +186,8 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       levelSummary.setAttribute('aria-label', label);
       levelSummary.title = `${title} · ${toGo}`;
     }
-    if (levelBody)
-      repaint(
-        levelBody,
-        `<p class="level-row"><b class="level-title">${esc(title)}</b><span class="level-xp">${fmt.format(s.xp)} XP</span></p>
-        <i class="stall-bar" style="--v:${lp.into}"></i>
-        <small class="level-togo">${esc(toGo)}</small>
-        <p class="level-row level-badges"><span>Badges</span><b>${earned} / ${BADGES.length}</b></p>
-        <p class="level-fine">XP comes from selling, delivering, racing, target practice and the mission board at the Signal tower. Badges and the Profile tab show while walking.</p>`
-      );
   }
-  // Walking: the pill opens the Profile tab on its badges instead of its own card
-  levelSummary?.addEventListener('click', (e) => {
-    if (root.dataset.mode !== 'walk') return;
-    e.preventDefault();
-    if (levelEl) levelEl.open = false;
-    const profile = root.querySelector<HTMLDetailsElement>('[data-profile]');
-    if (!profile) return;
-    profile.open = true;
-    requestAnimationFrame(() => badgesEl?.scrollIntoView({ block: 'start', behavior: reduced.matches ? 'auto' : 'smooth' }));
-  });
-
-  /* ---------- The Profile tab: level and badges ---------- */
+  /* ---------- The hub's Missions tab: level and badges ---------- */
 
   function badgesHtml() {
     const s = game.save();

@@ -206,124 +206,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <div class="city-head-id">
       <p class="city-head-text"><b data-head-title>The Trenches</b><small data-head-sub>Loading the city</small></p>
     </div>
+    {/* Emotes and phrases (multiplayer.ts, online only; T opens it): the one walk tab left, the hub has the rest */}
     <div class="walk-top">
-      <details class="walk-settings walk-pop" data-pop>
-        <summary>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
-          <span class="walk-pill-text">Controls</span>
-        </summary>
-        <div class="walk-settings-body">
-          <div class="pop-head">
-            <p class="pop-title">Controls</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close controls">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-            </button>
-          </div>
-          <p class="walk-section">Look</p>
-          <label class="walk-field">
-            <span>Look speed</span>
-            <input type="range" data-walk-sens min="0.3" max="2.5" step="0.1" value="1" />
-          </label>
-          <label class="walk-check">
-            <input type="checkbox" data-walk-invert />
-            <span>Invert look up / down</span>
-          </label>
-          <button type="button" class="walk-fp" data-walk-fp aria-pressed="true">First person</button>
-          <p class="walk-section">Shooting</p>
-          <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
-            <span id="auto-ads-label">Aim when firing</span>
-            <div class="walk-seg">
-              <button type="button" data-auto-ads="off" aria-pressed="true">Off</button>
-              <button type="button" data-auto-ads="touch" aria-pressed="false">Touch only</button>
-              <button type="button" data-auto-ads="always" aria-pressed="false">Always</button>
-            </div>
-            <p class="walk-pad">Firing brings the gun up to the sight (steadier shots), and it drops again when you stop. Touch only: the on-screen Fire button.</p>
-          </div>
-          <dl class="walk-keys">
-            <dt><kbd>WASD</kbd></dt><dd>Move</dd>
-            <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
-            <dt><kbd>Shift</kbd></dt><dd>Sprint (hold)</dd>
-            <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Walk (toggle)</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher); going at a low wall or barrier, over it; fists up and standing, dodge</dd>
-            <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight); empty hands, block (hold)</dd>
-            <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
-            <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
-            <dt><kbd>V</kbd></dt><dd>First / third person</dd>
-            <dt><kbd>Scroll</kbd></dt><dd>Next / previous slot (mouse captured), camera distance (mouse free)</dd>
-            <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
-            <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out); empty hands, punch (again quickly: combos)</dd>
-            <dt><kbd>R</kbd></dt><dd>Reload</dd>
-            <dt><kbd>Tab</kbd></dt><dd>Inventory: drag guns into weapon slots 1 and 2</dd>
-            <dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Draw weapon 1 or 2 (again: put it away, fists)</dd>
-            <dt><kbd>3</kbd>–<kbd>7</kbd></dt><dd>What's in your hand, snacks</dd>
-            <dt><kbd>X</kbd></dt><dd>Next of your weapons and empty hands</dd>
-            <dt><kbd>G</kbd></dt><dd>Holster (with a gun out); empty hands, kick</dd>
-            <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
-            <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then stop</dd>
-          </dl>
-          <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
-          <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory (Tab), refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB and the D-pad step through the hotbar; with empty hands X punches, Y kicks, LB blocks, A dodges and the left stick pressed sprints; View opens the inventory, the right stick pressed swaps first and third person. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons (Jump dodges with your fists up, standing), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
-        </div>
-      </details>
-      <details class="walk-pop walk-profile" data-pop data-profile>
-        <summary aria-label="Profile">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
-          <span class="walk-pill-text">Profile</span>
-        </summary>
-        <div class="walk-settings-body">
-          <div class="pop-head">
-            <p class="pop-title">Profile</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close profile">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-            </button>
-          </div>
-          <div class="profile-head">
-            <p class="profile-name"><b data-profile-name>Degen</b> <span class="mp-rank" data-profile-rank data-rank="rookie">Rookie</span></p>
-            <button type="button" class="walk-fp" data-profile-rename hidden>New name</button>
-            <button type="button" class="walk-fp" data-account-open hidden>Log in with wallet</button>
-            <p class="walk-pad" data-profile-note>Go online to get your player name. Your look and rifle finish are saved in this browser.</p>
-          </div>
-          <div class="walk-skins" data-skins>
-            <p class="walk-skins-head"><span>Rifle finish</span><span>Lifetime score <b data-lifetime>0</b></span></p>
-            <div class="walk-skins-row">
-              <button type="button" data-skin="olive" aria-pressed="true"><i class="sw sw-olive"></i>Field Olive<small>Equipped</small></button>
-              <button type="button" data-skin="ink" aria-pressed="false" disabled><i class="sw sw-ink"></i>Black Ink<small>2,500 pts</small></button>
-              <button type="button" data-skin="neon" aria-pressed="false" disabled><i class="sw sw-neon"></i>Pulse Neon<small>10,000 pts</small></button>
-            </div>
-          </div>
-          <div class="wardrobe" data-wardrobe>
-            <p class="walk-skins-head"><span>Wardrobe</span></p>
-            <p class="walk-pad">Pick your fit, headwear, bag, kicks and merch in the fitting room at Drop 001.</p>
-            <button type="button" class="walk-fp" data-open-char>See your Degen</button>
-            <button type="button" class="walk-fp" data-open-fitting>Open the fitting room</button>
-          </div>
-          {/* Level, XP and badges (missions-ui.ts) */}
-          <div class="walk-badges" data-badges></div>
-        </div>
-      </details>
-      {/* The inventory (inventory-ui.ts): Tab opens it too, View on a gamepad */}
-      <button type="button" class="walk-map-tab walk-bag" data-inv-open aria-label="Inventory (Tab)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2" /></svg>
-        <span class="walk-pill-text">Bag</span>
-      </button>
-      <details class="walk-pop walk-online" data-pop data-mp hidden>
-        <summary aria-label="Multiplayer">
-          <i class="mp-dot" data-mp-dot aria-hidden="true"></i>
-          <span class="walk-pill-text" data-mp-label>Go online</span>
-        </summary>
-        <div class="walk-settings-body">
-          <div class="pop-head">
-            <p class="pop-title">Online</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close multiplayer">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-            </button>
-          </div>
-          <p class="walk-skins-head"><span>Multiplayer (beta)</span><span data-mp-ping></span></p>
-          <p class="mp-status" data-mp-status>Walk the city with other Degens. Emotes and set phrases only, nothing typed.</p>
-          <button type="button" class="walk-fp" data-mp-join>Go online</button>
-          <ul class="mp-list" data-mp-list></ul>
-        </div>
-      </details>
       <details class="walk-pop walk-emotes" data-pop data-emotes hidden>
         <summary aria-label="Emotes and phrases">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
@@ -341,11 +225,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <p class="walk-pad">Press T to open this. Others see a bubble over your head.</p>
         </div>
       </details>
-      {/* The world map (worldmap.ts): M opens it too */}
-      <button type="button" class="walk-map-tab" data-worldmap-open aria-label="World map (M)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" /></svg>
-        <span class="walk-pill-text">Map</span>
-      </button>
     </div>
     {/* Walking with a gun: ammo and score (combat.ts paints them) */}
     <div class="city-head-stats" aria-live="off">
@@ -371,45 +250,150 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     {/* Settings and the menu (directory, PulseChain native, X, Telegram), and Connect wallet when there's a game server */}
     <div class="city-head-tools">
       {/* Your Dorras (tycoon-ui.ts): opens your stall's card; a dot when the till has takings */}
-      <button type="button" class="dorras-pill" data-dorras aria-label="Dorras: open your stall">
+      <button type="button" class="dorras-pill" data-dorras data-hub-keep aria-label="Dorras: open your business">
         <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".18" /><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" /><path d="M9 7h3.5a5 5 0 0 1 0 10H9zM7 12h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
         <span class="dorras-amount" data-dorras-amount>0</span>
         <i class="dorras-dot" aria-hidden="true"></i>
       </button>
       {/* Your level (missions-ui.ts): "Lv 7" over its XP bar. Drops a card in the city; while walking it opens the Profile tab's badges. */}
-      <details class="head-pop level-pop" data-level>
-        <summary aria-label="Level 1, Newcomer" title="Newcomer">
-          <span class="level-tag" data-level-tag>Lv 1</span>
-          <i class="level-bar" data-level-bar style="--v:0" aria-hidden="true"></i>
-        </summary>
-        <div class="head-panel level-panel">
-          <div class="pop-head">
-            <p class="pop-title">Your level</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close your level">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-            </button>
-          </div>
-          <div class="level-body" data-level-body></div>
-        </div>
-      </details>
+      <button type="button" class="level-pill" data-level data-hub-tab="missions" aria-label="Level 1, Newcomer" title="Newcomer">
+        <span class="level-tag" data-level-tag>Lv 1</span>
+        <i class="level-bar" data-level-bar style="--v:0" aria-hidden="true"></i>
+      </button>
       {server && (
         <button type="button" class="nav-account" data-account-nav aria-label="Connect your wallet" onclick="this.dataset.wanted='1'">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v4" /><path d="M3 7.5v10A2.5 2.5 0 0 0 5.5 20H20V9H5.5A2.5 2.5 0 0 1 3 7.5z" /><circle cx="16" cy="14.5" r="1.2" /></svg>
           <span class="nav-account-label" data-account-label>Connect<span class="nav-account-more"> wallet</span></span>
         </button>
       )}
-      <details class="city-controls head-pop" data-controls>
-        <summary aria-label="City settings">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
-          <span class="head-btn-text">Settings</span>
-        </summary>
-        <div class="city-controls-body head-panel">
-          <div class="pop-head">
-            <p class="pop-title">City settings</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close city settings">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-            </button>
+      {/* The hub (hub.ts): the menu for everything that isn't a place or a shop; Esc and Start open it too */}
+      <button type="button" class="hub-btn" data-hub-open aria-controls="hub" aria-expanded="false" aria-label="Menu (Esc)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        <span class="head-btn-text">Menu</span>
+      </button>
+    </div>
+  </header>
+
+  {/* The hub (hub.ts, docs/menu-plan.md Phase 2): the pause screen in the menus' arcade kit (menus.css), its
+      tabs Map, Bag, Business, Missions, Profile, Settings (and Online with a game server). `data-hub-walk`
+      shows only while walking, `data-hub-city` only in the City view. Without the 3D city only Map is there. */}
+  <section class="mk mk-hub" id="hub" data-hub data-input="keys" hidden role="dialog" aria-labelledby="hub-title">
+    <div class="mk-grab" data-mk-grab aria-hidden="true"><span></span></div>
+    <header class="mk-bar">
+      <div class="mk-heading">
+        <p class="mk-kind"><span data-hub-walk>Paused</span><span data-hub-city>Menu</span></p>
+        <h2 id="hub-title" class="mk-title">The Trenches</h2>
+      </div>
+      <button type="button" class="mk-x" data-hub-close aria-label="Close the menu"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg></button>
+    </header>
+    <nav class="mk-tabs hub-tabs" data-mk-tabs role="tablist" aria-label="Menu">
+      <button type="button" role="tab" data-tab="map" aria-selected="true">Map</button>
+      <button type="button" role="tab" data-tab="bag" aria-selected="false" class="hub-3d">Bag</button>
+      <button type="button" role="tab" data-tab="business" aria-selected="false" class="hub-3d">Business</button>
+      <button type="button" role="tab" data-tab="missions" aria-selected="false" class="hub-3d">Missions</button>
+      <button type="button" role="tab" data-tab="profile" aria-selected="false" class="hub-3d">Profile</button>
+      <button type="button" role="tab" data-tab="settings" aria-selected="false" class="hub-3d">Settings</button>
+      <button type="button" role="tab" data-tab="online" aria-selected="false" class="hub-3d" data-mp hidden><i class="mp-dot" data-mp-dot data-state="off" aria-hidden="true"></i>Online</button>
+    </nav>
+    <div class="mk-body" data-mk-swipe>
+      <div class="mk-page hub-page" data-page="map" role="tabpanel" aria-label="Map">
+        <button type="button" class="mk-btn is-main hub-wide hub-3d" data-worldmap-open>World map<span class="hub-key" aria-hidden="true">M</span></button>
+        <p class="mk-label hub-label hub-3d">Places</p>
+        <ul class="hub-places dir-places hub-3d">
+            {directory.map((id) => {
+              const s = spots[id];
+              return (
+                <li>
+                  <a href="#city-title" data-dir-spot={id}>
+                    <span>{s.title}</span>
+                    <small>{s.sub}</small>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        <p class="mk-label hub-label">More</p>
+          <ul class="hub-links dir-links">
+            <li>
+              <a href="/emporium">
+                <span>The Emporium comic</span>
+                <small>The six windows</small>
+              </a>
+            </li>
+            {SHOP_OPEN && (
+              <li>
+                <a href={SHOP_URL} {...ext}>
+                  <span>Merch store</span>
+                  <small>Drop 001</small>
+                </a>
+              </li>
+            )}
+          </ul>
+          <div class="hub-social">
+            <span class="chain-badge">
+              <Image src={pulsechain} alt="" width={18} densities={[1, 2, 3]} class="chain-badge-mark" />
+              <span>PulseChain native</span>
+            </span>
+            <a href={X_URL} target="_blank" rel="noopener noreferrer" class="icon-link" aria-label={`@${X_HANDLE} on X`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" class="icon-link" aria-label="Telegram">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            </a>
           </div>
+      </div>
+      <div class="mk-page hub-page" data-page="bag" role="tabpanel" aria-label="Bag" hidden>
+        <p class="hub-text">Two weapon slots and sixteen spaces: your guns, the thing in your hand and your snacks. Drag a gun into a slot to carry it; 1 and 2 draw them.</p>
+        <button type="button" class="mk-btn is-main hub-wide" data-inv-open data-hub-walk>Open your bag<span class="hub-key" aria-hidden="true">Tab</span></button>
+        <p class="mk-note" data-hub-city>Your bag opens on foot: walk into the city and press Tab, or tap Bag.</p>
+        <button type="button" class="mk-btn hub-wide" data-hub-bag>See what you carry</button>
+      </div>
+      <div class="mk-page hub-page" data-page="business" role="tabpanel" aria-label="Business" hidden>
+        {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop, Car and Bag. Opens on this tab from the Dorras readout, or at your stall or a unit. */}
+  <section class="shop stall-card" data-biz aria-labelledby="biz-title">
+    <header class="shop-head">
+      <h2 id="biz-title" class="shop-title">Your business</h2>
+      <p class="shop-score stall-balance" data-biz-balance></p>
+      <button type="button" class="shop-close" data-biz-close aria-label="Close your business">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </header>
+    <div class="seg biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
+    <div class="stall-body" data-biz-body></div>
+    <p class="shop-foot">Dorras are earned in the city. They can't be cashed out.</p>
+  </section>
+      </div>
+      <div class="mk-page hub-page" data-page="missions" role="tabpanel" aria-label="Missions" hidden>
+        {/* Level, XP and badges (missions-ui.ts); the mission board is at the Signal tower */}
+        <div class="walk-badges" data-badges></div>
+        <p class="hub-text">XP comes from selling, delivering, racing, target practice and the mission board at the Signal tower.</p>
+      </div>
+      <div class="mk-page hub-page hub-profile" data-page="profile" role="tabpanel" aria-label="Profile" hidden>
+        <div class="profile-head">
+            <p class="profile-name"><b data-profile-name>Degen</b> <span class="mp-rank" data-profile-rank data-rank="rookie">Rookie</span></p>
+            <button type="button" class="walk-fp" data-profile-rename hidden>New name</button>
+            <button type="button" class="walk-fp" data-account-open hidden>Log in with wallet</button>
+            <p class="walk-pad" data-profile-note>Go online to get your player name. Your look and rifle finish are saved in this browser.</p>
+          </div>
+          <div class="walk-skins" data-skins>
+            <p class="walk-skins-head"><span>Rifle finish</span><span>Lifetime score <b data-lifetime>0</b></span></p>
+            <div class="walk-skins-row">
+              <button type="button" data-skin="olive" aria-pressed="true"><i class="sw sw-olive"></i>Field Olive<small>Equipped</small></button>
+              <button type="button" data-skin="ink" aria-pressed="false" disabled><i class="sw sw-ink"></i>Black Ink<small>2,500 pts</small></button>
+              <button type="button" data-skin="neon" aria-pressed="false" disabled><i class="sw sw-neon"></i>Pulse Neon<small>10,000 pts</small></button>
+            </div>
+          </div>
+          <div class="wardrobe" data-wardrobe>
+            <p class="walk-skins-head"><span>Wardrobe</span></p>
+            <p class="walk-pad">Pick your fit, headwear, bag, kicks and merch in the fitting room at Drop 001.</p>
+            <button type="button" class="walk-fp" data-open-char>See your Degen</button>
+            <button type="button" class="walk-fp" data-open-fitting>Open the fitting room</button>
+          </div>
+      </div>
+      <div class="mk-page hub-page hub-settings" data-page="settings" role="tabpanel" aria-label="Settings" hidden>
+        <p class="mk-label hub-label">The city</p>
+        {/* (index.ts and the start menu press these: keep `data-controls` on them) */}
+        <div class="hub-sets" data-controls>
           <div class="seg" role="group" aria-label="Time of day">
             <span class="seg-label">Time</span>
             <button type="button" data-time="live" aria-pressed="false">Live</button>
@@ -431,69 +415,76 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <button type="button" class="seg-wide" data-reset>Reset view</button>
           </div>
         </div>
-      </details>
-      <details class="city-dir head-pop" data-menu>
-        <summary aria-label="Menu">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-          <span class="head-btn-text">Menu</span>
-        </summary>
-        <div class="head-panel">
-          <div class="pop-head">
-            <p class="pop-title">Directory</p>
-            <button type="button" class="pop-close" data-pop-close aria-label="Close menu">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
-            </button>
+        <p class="mk-label hub-label">On foot</p>
+        <div class="hub-walkset">
+          <label class="walk-field">
+            <span>Look speed</span>
+            <input type="range" data-walk-sens min="0.3" max="2.5" step="0.1" value="1" />
+          </label>
+          <label class="walk-check">
+            <input type="checkbox" data-walk-invert />
+            <span>Invert look up / down</span>
+          </label>
+          <button type="button" class="walk-fp" data-walk-fp aria-pressed="true">First person</button>
+          <p class="walk-section">Shooting</p>
+          <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
+            <span id="auto-ads-label">Aim when firing</span>
+            <div class="walk-seg">
+              <button type="button" data-auto-ads="off" aria-pressed="true">Off</button>
+              <button type="button" data-auto-ads="touch" aria-pressed="false">Touch only</button>
+              <button type="button" data-auto-ads="always" aria-pressed="false">Always</button>
+            </div>
+            <p class="walk-pad">Firing brings the gun up to the sight (steadier shots), and it drops again when you stop. Touch only: the on-screen Fire button.</p>
           </div>
-          <button type="button" class="dir-map" data-worldmap-open>
-            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" /></svg> World map</span>
-            <small>Get about</small>
-          </button>
-          <ul class="dir-places">
-            {directory.map((id) => {
-              const s = spots[id];
-              return (
-                <li>
-                  <a href="#city-title" data-dir-spot={id}>
-                    <span>{s.title}</span>
-                    <small>{s.sub}</small>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-          <p class="dir-label">More</p>
-          <ul class="dir-links">
-            <li>
-              <a href="/emporium">
-                <span>The Emporium comic</span>
-                <small>The six windows</small>
-              </a>
-            </li>
-            {SHOP_OPEN && (
-              <li>
-                <a href={SHOP_URL} {...ext}>
-                  <span>Merch store</span>
-                  <small>Drop 001</small>
-                </a>
-              </li>
-            )}
-          </ul>
-          <div class="head-menu-foot">
-            <span class="chain-badge">
-              <Image src={pulsechain} alt="" width={18} densities={[1, 2, 3]} class="chain-badge-mark" />
-              <span>PulseChain native</span>
-            </span>
-            <a href={X_URL} target="_blank" rel="noopener noreferrer" class="icon-link" aria-label={`@${X_HANDLE} on X`}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            </a>
-            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" class="icon-link" aria-label="Telegram">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
-            </a>
-          </div>
+          <details class="hub-more">
+            <summary>Keys, gamepad and touch</summary>
+            <dl class="walk-keys">
+            <dt><kbd>WASD</kbd></dt><dd>Move</dd>
+            <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
+            <dt><kbd>Shift</kbd></dt><dd>Sprint (hold)</dd>
+            <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Walk (toggle)</dd>
+            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher); going at a low wall or barrier, over it; fists up and standing, dodge</dd>
+            <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight); empty hands, block (hold)</dd>
+            <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
+            <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
+            <dt><kbd>V</kbd></dt><dd>First / third person</dd>
+            <dt><kbd>Scroll</kbd></dt><dd>Next / previous slot (mouse captured), camera distance (mouse free)</dd>
+            <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
+            <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out); empty hands, punch (again quickly: combos)</dd>
+            <dt><kbd>R</kbd></dt><dd>Reload</dd>
+            <dt><kbd>Tab</kbd></dt><dd>Inventory: drag guns into weapon slots 1 and 2</dd>
+            <dt><kbd>M</kbd></dt><dd>World map</dd>
+            <dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Draw weapon 1 or 2 (again: put it away, fists)</dd>
+            <dt><kbd>3</kbd>–<kbd>7</kbd></dt><dd>What's in your hand, snacks</dd>
+            <dt><kbd>X</kbd></dt><dd>Next of your weapons and empty hands</dd>
+            <dt><kbd>G</kbd></dt><dd>Holster (with a gun out); empty hands, kick</dd>
+            <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
+            <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then this menu (Back to City view is at its foot)</dd>
+          </dl>
+            <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
+          <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory (Tab), refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB and the D-pad step through the hotbar; with empty hands X punches, Y kicks, LB blocks, A dodges and the left stick pressed sprints; View opens the inventory, Start this menu, the right stick pressed swaps first and third person. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons (Jump dodges with your fists up, standing), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
+          </details>
         </div>
-      </details>
+        <details class="hub-more">
+          <summary>Credits</summary>
+          <p class="hub-text">Degen's movement is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217, in Bruce Hahne's BVH conversion.</p>
+        </details>
+      </div>
+      <div class="mk-page hub-page" data-page="online" role="tabpanel" aria-label="Online" hidden>
+        <p class="walk-skins-head"><span>Multiplayer (beta)</span><span data-mp-ping></span></p>
+          <p class="mp-status" data-mp-status>Walk the city with other Degens. Emotes and set phrases only, nothing typed.</p>
+          <button type="button" class="walk-fp" data-mp-join>Go online</button>
+          <ul class="mp-list" data-mp-list></ul>
+      </div>
     </div>
-  </header>
+    <footer class="mk-foot hub-foot">
+      <p class="mk-hints" data-mk-hints aria-hidden="true">
+        <span data-for="keys"><kbd>↑↓←→</kbd> Move <kbd>Enter</kbd> Select <kbd>Q</kbd><kbd>E</kbd> Tabs <kbd>Esc</kbd> Close</span>
+        <span data-for="pad"><kbd>D-pad</kbd> Move <kbd>A</kbd> Select <kbd>LB</kbd><kbd>RB</kbd> Tabs <kbd>B</kbd> Close</span>
+      </p>
+      <button type="button" class="mk-btn is-small" data-hub-leave data-hub-walk>Back to City view</button>
+    </footer>
+  </section>
 
   {/* Walk mode: controls panel, hints, touch joystick, run and jump, door prompt */}
   <div class="walk-hud">
@@ -919,19 +910,6 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   </div>
   <p class="city-toast" data-toast role="status" aria-live="polite"></p>
 
-  {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop and Car tabs. Opens from the Dorras readout, or at your stall or a unit. */}
-  <section class="shop stall-card" data-biz hidden aria-labelledby="biz-title">
-    <header class="shop-head">
-      <h2 id="biz-title" class="shop-title">Your business</h2>
-      <p class="shop-score stall-balance" data-biz-balance></p>
-      <button type="button" class="shop-close" data-biz-close aria-label="Close your business">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-      </button>
-    </header>
-    <div class="seg biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
-    <div class="stall-body" data-biz-body></div>
-    <p class="shop-foot">Dorras are earned in the city. They can't be cashed out.</p>
-  </section>
   <p class="city-toast econ-toast" data-econ-toast role="status" aria-live="polite"></p>
   {/* Level-ups and badges (missions-ui.ts): pops under the header, gone after a moment */}
   <div class="mission-pops" data-mission-pops aria-live="polite"></div>
@@ -1260,11 +1238,15 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       root.querySelector<HTMLElement>('[data-city3d] canvas')?.focus({ preventScroll: true });
     });
 
-    // Drop-open menus (City settings, Directory, walk mode's panels) close with their ×, a tap
-    // outside or Esc (in 3D, index.ts handles Esc so it can come before leaving a mode)
-    const openMenus = () => root.querySelectorAll<HTMLDetailsElement>('.head-pop[open], [data-pop][open]');
-    // One drop-down at a time (the header's settings and menu, walk mode's panels)
-    const pops = root.querySelectorAll<HTMLDetailsElement>('.head-pop, [data-pop]');
+    // The hub (hub.ts): the menu for everything that isn't a place or a shop, made with the page so it opens
+    // before the 3D city is up and where it can't run (its own chunk, so the page's script stays small)
+    const hubReady = import('../scripts/city3d/hub').then(({ createHub }) => createHub(root));
+
+    // Drop-open menus (the emotes) close with their ×, a tap outside or Esc (in 3D, index.ts handles Esc so it
+    // can come before leaving a mode)
+    const openMenus = () => root.querySelectorAll<HTMLDetailsElement>('[data-pop][open]');
+    // One drop-down at a time
+    const pops = root.querySelectorAll<HTMLDetailsElement>('[data-pop]');
     pops.forEach((d) =>
       d.addEventListener('toggle', () => {
         if (d.open) pops.forEach((o) => o !== d && (o.open = false));
@@ -1286,6 +1268,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || root.dataset.view === '3d') return;
       openMenus().forEach((menu) => (menu.open = false));
+      // (no 3D here: Esc opens and closes the hub; it closes itself from inside)
+      if (!root.classList.contains('has-start')) void hubReady.then((hub) => hub.open || hub.show());
     });
 
     /* ---------- Connect wallet (made with the page; the 3D city plugs in when it starts) ---------- */
@@ -1340,7 +1324,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       booting = true;
       try {
         const { bootCity } = await import('../scripts/city3d/index');
-        city = await bootCity(root!, await wallet);
+        city = await bootCity(root!, await wallet, await hubReady);
       } catch (err) {
         console.error(err);
       }
