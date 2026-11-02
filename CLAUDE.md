@@ -1223,6 +1223,17 @@ it and has been retired completely. Build only on what's here.
   (`PORT_TALLEST`), the cranes well under every flight (the test). Drawn by
   `docksport3d.ts` (sites in the docks' chunk, one sign atlas of fixed
   made-up copy). Made-up names only.
+- **The Neon Mile** (the owner's call: a strip like Las Vegas, lights and
+  casinos) on the open land between the Parkway's east side and the ring
+  highway's east side, north of the river (the kart park's old land),
+  planned in `docs/strip-plan.md` in six phases, each with the owner's
+  sign-off; keep it up to date. One grand boulevard in place of the two
+  small streets there, seven resorts (themed, glass and old-school neon,
+  made-up names) with towers over the Emporium (the owner's call: the
+  Strip's only, every flight clear of them), the welcome sign, a fountain
+  show, a volcano, a giant LED sphere, searchlights, a monorail to the
+  metro, crowds, limos and party buses, its own sound. Scenery first: the
+  resorts are places that say coming soon, no betting. Nothing built yet.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
