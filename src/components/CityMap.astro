@@ -1175,6 +1175,24 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
 
   const root = document.querySelector<HTMLElement>('[data-city-root]');
 
+  // A part of the city loaded when it's first used (the gun store, the garage's menu, the 3D city's own code...)
+  // that won't load is almost always a page opened before a new version went live, asking for a file the new
+  // version replaced: reload once to pick the new version up (the city's game is in this browser's save, so
+  // nothing is lost but where you stood). Not twice within a minute, so a file that's really missing can't loop it.
+  addEventListener('vite:preloadError', (e) => {
+    const KEY = 'degen-city-reloaded-at';
+    let last = 0;
+    try {
+      last = Number(sessionStorage.getItem(KEY)) || 0;
+    } catch {}
+    if (Date.now() - last < 60_000) return;
+    try {
+      sessionStorage.setItem(KEY, String(Date.now()));
+    } catch {}
+    e.preventDefault();
+    location.reload();
+  });
+
   if (root) {
     // The owner's live settings (live.ts): asked for now; the 3D city's boot waits for them (briefly)
     const liveFirst = live.start();
