@@ -1299,6 +1299,15 @@ it and has been retired completely. Build only on what's here.
   interchanges, numbered, made-up names on the gantries) and traffic that
   uses its ramps, planned in `docs/highway-plan.md` in phases, each with the
   owner's sign-off; keep it up to date.
+- **Blending the city** (the owner's call, planned, nothing built yet): a
+  polish and clean-up so the districts read as one city that grew (lived-in
+  realism in the toon style): one ground palette blended at every seam, a
+  kerb on streets only, gentle rolls outside the town, the gaps inside the
+  highway filled by their neighbours, transitions between districts, paths,
+  hedges, utilities and wild bits, countryside outside the highway, and the
+  corridors after the raised highway. Planned in `docs/blend-plan.md` in
+  phases, each with the owner's sign-off; free on phones, nothing that
+  exists moves; keep it up to date.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
