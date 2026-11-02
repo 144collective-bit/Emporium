@@ -52,7 +52,7 @@ import {
   type Slot,
 } from './inventory';
 import { gunMods, type TycoonSave } from './tycoon';
-import { esc, fmt, repaint, whyNot, type GameDeps } from './ui';
+import { esc, fmt, onTap, repaint, whyNot, type GameDeps } from './ui';
 import type { Held } from '../net/profile-data';
 
 export const HELD_NAMES: Record<Held, string> = { coffee: 'Iced coffee', boombox: 'Boombox', phone: 'Phone', briefcase: 'Briefcase' };
@@ -623,10 +623,8 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     }
   });
 
-  bar.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-hb]');
-    if (b) pick(Number(b.dataset.hb));
-  });
+  // (a finger's tap acts at once, with the thumb still on the walk stick: onTap() in ui.ts)
+  onTap(bar, (b) => pick(Number(b.dataset.hb)), '[data-hb]');
   root.querySelector('[data-inv-open]')?.addEventListener('click', () => (open ? close() : show()));
 
   return {

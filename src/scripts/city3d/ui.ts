@@ -67,6 +67,30 @@ export function morphChildren(to: Node, from: Node) {
  * in place rather than replaced: a button under a finger, the mouse or the
  * keyboard's focus stays the same button.
  */
+/**
+ * A button that answers a finger at once, whatever other fingers are down. A phone makes no click for a tap while
+ * another finger is on the screen (a thumb on the walk stick: Reload while running), so a finger acts on its
+ * pointerdown and the click it may still make after is let go; a mouse and the keyboard act on the click. With
+ * `match`, `el` is a bar of buttons and the one under the press (`closest(match)`) is handed to `fn`.
+ */
+export function onTap(el: Element, fn: (b: HTMLElement) => void, match?: string) {
+  let at = -1e9;
+  const pick = (t: EventTarget | null) => (match ? ((t as Element | null)?.closest?.<HTMLElement>(match) ?? null) : (el as HTMLElement));
+  el.addEventListener('pointerdown', (e) => {
+    if ((e as PointerEvent).pointerType === 'mouse') return;
+    const b = pick(e.target);
+    if (!b || (b as HTMLButtonElement).disabled) return;
+    at = performance.now();
+    fn(b);
+  });
+  el.addEventListener('click', (e) => {
+    // (the click a finger's tap makes after its pointerdown already acted)
+    if (performance.now() - at < 800) return;
+    const b = pick(e.target);
+    if (b && !(b as HTMLButtonElement).disabled) fn(b);
+  });
+}
+
 export function repaint(el: HTMLElement, html: string) {
   if (el.dataset.html === html) return;
   el.dataset.html = html;
