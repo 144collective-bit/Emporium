@@ -2800,9 +2800,15 @@ it and has been retired completely. Build only on what's here.
   keys and the gamepad are its: `hub.pad()`), its foot's Back to City view
   (`[data-hub-leave]`) leaves walk mode; what opens a screen of its own
   from it closes it first; a place's panel closes it and it closes one.
-  `data-hub-walk` / `data-hub-city` show by mode. Until a menu moves to the
-  new kit it keeps today's look and rules (the business card's insides
-  until Phase 5). One phase at a time with the owner's sign-off; keep it up
+  `data-hub-walk` / `data-hub-city` show by mode. Phase 3 is built, waiting
+  on the owner's sign-off: **the skin** (`.mk-skin` on a menu's root, at the
+  end of `menus.css`): the shops and game menus that keep their own markup
+  (the garage, the hangar, the kart hut, the trainer, their result cards and
+  HUDs, the metro, river bus and taxi cards and bars, the business card)
+  take the kit's look by having the brand's tokens redefined inside them;
+  give a new panel of that kind the class too. The kart hut and the trainer
+  step their tabs with Q / E and LB / RB (`stepTab()`). Until a menu moves to
+  the new kit it keeps today's look and rules. One phase at a time with the owner's sign-off; keep it up
   to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.

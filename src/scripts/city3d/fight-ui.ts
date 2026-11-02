@@ -354,9 +354,18 @@ ${partnersHtml(f)}
       paint();
     }
   });
+  /** Q / E, LB / RB: round the tabs (the menus' kit, docs/menu-plan.md) */
+  const TAB_ORDER: Tab[] = ['spar', 'bout', 'record', 'styles'];
+  function stepTab(dir: number) {
+    if (!menuOpen) return;
+    const i = TAB_ORDER.indexOf(tab);
+    setTab(TAB_ORDER[(i + Math.sign(dir) + TAB_ORDER.length) % TAB_ORDER.length]);
+  }
   const arrows = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') step(1);
     else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') step(-1);
+    else if (e.key === 'q' || e.key === 'Q') stepTab(-1);
+    else if (e.key === 'e' || e.key === 'E') stepTab(1);
     else return;
     e.preventDefault();
   };
@@ -544,6 +553,7 @@ ${paid}${res.levels > 0 ? `<p class="race-levelup">Level up! You're now ${LV(lev
     show,
     close,
     step,
+    stepTab,
     take,
     showHud,
     paintHud,

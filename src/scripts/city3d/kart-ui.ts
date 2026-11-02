@@ -704,9 +704,18 @@ ${countersHtml(s)}
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-kart]');
     if (b && b.dataset.kart && b.dataset.kart !== sel) select(b.dataset.kart as KartId);
   });
+  /** Q / E, LB / RB: round the tabs (the menus' kit, docs/menu-plan.md) */
+  const TAB_ORDER: Tab[] = ['race', 'karts', 'boards'];
+  function stepTab(dir: number) {
+    if (!menuOpen) return;
+    const i = TAB_ORDER.indexOf(tab);
+    setTab(TAB_ORDER[(i + Math.sign(dir) + TAB_ORDER.length) % TAB_ORDER.length]);
+  }
   const arrows = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') step(1);
     else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') step(-1);
+    else if (e.key === 'q' || e.key === 'Q') stepTab(-1);
+    else if (e.key === 'e' || e.key === 'E') stepTab(1);
     else return;
     e.preventDefault();
   };
@@ -920,6 +929,7 @@ ${laps}
     show,
     close,
     step,
+    stepTab,
     take,
     showHud,
     paintHud,
