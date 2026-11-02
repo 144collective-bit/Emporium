@@ -4027,10 +4027,15 @@ it and has been retired completely. Build only on what's here.
 
 ## Hosting
 
-- degenemporium.com is a static build hosted on Hostinger (`dist/`
-  extracted into `public_html`). The "Build site" GitHub Action builds
-  every push to `main` into a downloadable zip (artifact
-  `degenemporium-site`).
+- degenemporium.com is a static build hosted on Hostinger, deployed from
+  GitHub (the owner linked them, 2026-11: a push to `main` goes live by
+  itself; no more zips extracted into `public_html` by hand). The "Build
+  site" GitHub Action still builds every push to `main` into a downloadable
+  zip (artifact `degenemporium-site`) and runs the checks.
+- If the live site ever shows the procedural walk instead of the motion
+  capture, the clips file didn't fetch: walk.ts says so once in a toast and
+  `?fps` reads `motion capture failed` (a stale or partial upload is the
+  usual cause; it's tried again on the next walk).
 - Keep the site fully static (no server routes) and keep `public/.htaccess`
   in the build.
 - **No multiplayer on degenemporium.com** (the owner's call): the "Build

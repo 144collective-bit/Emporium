@@ -322,6 +322,11 @@ export function createWalk(d: WalkDeps) {
   /** ...and the clips it plays (other players' animators play the same: `motion`) */
   let mocapData: MoData | null = null;
   let animLoading = false;
+  /** The motion capture's state, for ?fps: loading, on, or failed to fetch (the procedural walk stands in and it's tried again) */
+  let mocapState: 'loading' | 'on' | 'failed' = 'loading';
+  let mocapWarned = false;
+  /** After a failed fetch, when it's next tried (ms, performance.now) */
+  let mocapRetryAt = 0;
   let mocapW = 0;
   /** The capture's hips' height, slowly followed: the first-person eye rides what's left (its steps and landings) */
   let hipMean = 0;
@@ -2546,7 +2551,7 @@ export function createWalk(d: WalkDeps) {
     }
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
-    if (!animator && !animLoading) {
+    if (!animator && !animLoading && performance.now() >= mocapRetryAt) {
       animLoading = true;
       Promise.all([import('./animator'), import('./contact'), loadMocap(), import('./onfoot')]).then(
         ([m, cm, data, of]) => {
@@ -2558,9 +2563,20 @@ export function createWalk(d: WalkDeps) {
           contactMod = cm;
           contact = cm.createContact({ hands: !d.low });
           contactRot = new Float32Array(animator.rot.length);
+          mocapState = 'on';
         },
-        // (it can be tried again: the procedural walk carries on meanwhile)
-        () => (animLoading = false),
+        // (it can be tried again: the procedural walk carries on meanwhile; say so once, so a reverted-looking
+        // run is never a silent fallback)
+        (err) => {
+          animLoading = false;
+          mocapState = 'failed';
+          mocapRetryAt = performance.now() + 10000;
+          console.warn('Sector 7: the motion capture did not load, the simpler walk stands in', err);
+          if (!mocapWarned) {
+            mocapWarned = true;
+            d.game.toast("The motion capture didn't load: the simpler walk for now. Reload to try again.", 5000);
+          }
+        },
       );
     }
     let drawFace = face;
@@ -2929,6 +2945,10 @@ export function createWalk(d: WalkDeps) {
       return anim && mocapData && onFoot ? { anim, data: mocapData, onFoot } : null;
     },
     /** What other players need to see of us, for the game server */
+    /** The motion capture: loading, on, or failed to fetch (the ?fps readout) */
+    get mocap() {
+      return mocapState;
+    },
     netState() {
       const mode: Mode = ride ? 'ride' : fly.active ? 'fly' : karts.active ? 'kart' : drive.active || boating() ? 'drive' : fighting() ? 'fight' : 'walk';
       // In a vehicle the others see it (docs/multiplayer-plan.md "What others see"): its heading and height, not his
