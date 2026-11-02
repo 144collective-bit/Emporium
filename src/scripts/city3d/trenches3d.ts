@@ -12,12 +12,10 @@
  * (each inside its lane, clear of the lines), cracks, and manhole covers;
  * the lamps are sodium orange (world.ts, `lampKind()`).
  */
-import { keepTreesOff } from './world';
-import { TRENCH_CROSSINGS, TRENCH_RECT, TRENCH_STREETS } from './trenches';
+import { TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { drawStreets } from './streets3d';
 
 /** The Trenches' streets, each stretch a site; and the lamps along them (before the city's lamps are built) */
 export function buildTrenches() {
-  keepTreesOff(TRENCH_RECT);
   drawStreets(TRENCH_STREETS, TRENCH_CROSSINGS, 'trench', true);
 }

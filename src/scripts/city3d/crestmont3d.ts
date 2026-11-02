@@ -26,6 +26,7 @@ import { LAND_SOLIDS } from './crestland';
 import { GARDEN_SOLIDS } from './crestgardens';
 import { addSolids } from './solids';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS } from './crestmont';
+import { COVER, KERB } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -52,8 +53,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerLand(low);
   if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS]);
   const asphalt = toon('#26243f');
-  const kerbTop = toon('#5a5290');
-  const grass = toon('#3f7a4a');
+  const kerbTop = toon(KERB.town);
+  const grass = toon(COVER.planted);
   const yellow = neon('#f5d76e', 0.9, 1.1);
   const white = toon('#d9d5ee');
   const zebra = toon('#e8e4f8');

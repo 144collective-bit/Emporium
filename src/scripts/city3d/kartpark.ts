@@ -32,9 +32,6 @@ export const KART_PARK = { x0: X0 - 14, z0: Z0 - 16, x1: X0 + 98, z1: Z0 + 104 }
 /** Local numbers: u east, v south */
 export const toWorld = ([u, v]: Pt): Pt => [X0 + u, Z0 + v];
 export const toLocal = ([x, z]: Pt): Pt => [x - X0, z - Z0];
-/** The circuit's frame (its run-off, the pits and the hut inside it); the site reaches past it */
-export const SITE_U = 84;
-export const SITE_V = 86;
 
 /** A kart's radius (for bumping), length and width (the models in karts.ts keep to these) */
 export const KART_R = 0.5;

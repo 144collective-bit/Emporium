@@ -37,6 +37,7 @@ import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
+import { COVER, KERB, LAMP, TREE } from './palette';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one pad each (layout.ts DISTRICTS). */
@@ -89,7 +90,7 @@ export function usePlaced(p: Placed) {
 /* ---------- Ground ---------- */
 
 const paving = canvasTex(256, 256, (ctx) => {
-  ctx.fillStyle = '#3a3470';
+  ctx.fillStyle = COVER.paving;
   ctx.fillRect(0, 0, 256, 256);
   ctx.strokeStyle = '#4a4388';
   ctx.lineWidth = 4;
@@ -170,10 +171,10 @@ const yard = canvasTex(512, 512, (c) => {
 yard.wrapS = yard.wrapT = THREE.RepeatWrapping;
 
 const LOTS: Record<string, THREE.Material> = {
-  grass: toon('#2f7a52'),
+  grass: toon(COVER.lawn),
   paving: new THREE.MeshToonMaterial({ map: paving, color: '#ffffff' }),
-  concrete: toon('#4b4766'),
-  dirt: toon('#6a4a3c'),
+  concrete: toon(COVER.concrete),
+  dirt: toon(COVER.dirt),
   yard: new THREE.MeshToonMaterial({ map: yard, color: '#ffffff' }),
 };
 export type LotKind = keyof typeof LOTS;
@@ -552,7 +553,7 @@ function quad3(p: [number, number, number][], toward: [number, number, number]) 
 function riverBanks(b: Batch, e0: number, e1: number) {
   const stone = toon('#6b6790');
   const wall = toon('#57537a');
-  const grass = toon('#245c45');
+  const grass = toon(COVER.rough);
   const bankGrass = toon('#2c6a4b');
   const sand = toon('#cdbb8e');
   const pebbles = toon('#8f8a80');
@@ -669,7 +670,7 @@ function hillsPlane(x0: number, z0: number, x1: number, z1: number) {
  * The hills' grass by height and slope (Crestmont's: the valley floors the city's green, drying to sage up the
  * slopes and a pale gold over the ridge, the steep sides a shade darker), so their shape reads in the flat shading
  */
-const HILL_LOW = new THREE.Color('#245c45');
+const HILL_LOW = new THREE.Color(COVER.rough);
 const HILL_MID = new THREE.Color('#4f7445');
 const HILL_TOP = new THREE.Color('#8f8a52');
 const HILL_TINT = new THREE.Color();
@@ -790,7 +791,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
 
   // Grass everywhere, a tile at a time (growth plan Phase 5), and on past the edge under the skyline's towers
   // (so they stand on land, not on nothing); then the river cut in on top
-  const grass = toon('#245c45');
+  const grass = toon(COVER.rough);
   const [g0, g1] = [e0 - SKIRT, e1 + SKIRT];
   for (const [i, j] of tilesIn(g0, g0, g1 - 1e-6, g1 - 1e-6)) {
     const [x0, z0, x1, z1] = [Math.max(g0, i * TILE), Math.max(g0, j * TILE), Math.min(g1, (i + 1) * TILE), Math.min(g1, (j + 1) * TILE)];
@@ -857,8 +858,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       b.box(r.c - r.half, 0.002, top, r.half * 2, 0.03, RING_HI - top, asphalt);
       b.box(r.c - r.half, 0.002, SOUTH_ROAD, r.half * 2, 0.03, e1 - SOUTH_ROAD, asphalt);
     }
-  const median = toon('#3f5a4a');
-  const kerbTop = toon('#5a5290');
+  const median = toon(COVER.median);
+  const kerbTop = toon(KERB.town);
   /** Stretches of a road between the roads crossing it (and any other gaps, like the river) */
   const runsBetween = (cross: Road[], gaps: [number, number][] = []): [number, number][] => {
     const cuts = [...cross.map((r): [number, number] => [r.c - r.half - 0.2, r.c + r.half + 0.2]), ...gaps].sort((p, q) => p[0] - q[0]);
@@ -926,9 +927,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
   }
 
   // Block slabs: the sidewalk round every block (the kerb) and the lot inside: downtown's blocks, the districts and the extra lots
-  const kerb = toon('#5a5290');
+  const kerb = toon(KERB.town);
   // (The Trenches' sidewalks are plain grey concrete, their yards worn concrete: the grit step)
-  const trenchKerb = toon('#5f5c70');
+  const trenchKerb = toon(KERB.grit);
   PLAN.blocks.forEach((blk, i) => {
     // (The bends' outer sidewalks are drawn as one kerb each, below)
     if (blk.id.startsWith('kerb-')) return;
@@ -979,12 +980,12 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
       b.box(ox + 0.2, SLAB, oz + 0.2, BS - 0.4, 0.008, BS - 0.4, LOTS[kind]);
     }
   // The plots' and lots' pads on their blocks' lawns: a paved rim round each (the lots their own ground)
-  const rim = toon('#4b4766');
+  const rim = toon(COVER.concrete);
   const padGround: Record<string, LotKind> = { garage: 'concrete', market: 'paving', units: 'paving' };
   for (const p of PADS) {
     const [x0, z0, x1, z1] = p.rect;
     b.box(x0, SLAB, z0, x1 - x0, 0.007, z1 - z0, rim);
-    b.box(x0 + 0.3, SLAB, z0 + 0.3, x1 - x0 - 0.6, 0.01, z1 - z0 - 0.6, padGround[p.id] ? LOTS[padGround[p.id]] : toon('#367f5a'));
+    b.box(x0 + 0.3, SLAB, z0 + 0.3, x1 - x0 - 0.6, 0.01, z1 - z0 - 0.6, padGround[p.id] ? LOTS[padGround[p.id]] : toon(COVER.pad));
   }
   // The bending streets: asphalt wide enough to fill their corners at the avenues (the kerbs cover the rest)
   for (const bend of BENDS) {
@@ -1170,14 +1171,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
  */
 export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
   // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
-  for (const t of outskirtsTrees(count, sparse, CLEAR)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : 0);
+  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : 0);
 }
 
-/** Land the outskirts' trees keep off besides the town (The Trenches', the metro's el over open land) */
-const CLEAR: [number, number, number, number][] = [];
-export function keepTreesOff(rect: [number, number, number, number]) {
-  CLEAR.push(rect);
-}
 
 /** The world's half-width the skyline's `count` is for (before Phase 6): a wider world's ring has more towers, as far apart */
 const SKYLINE_REACH = 220;
@@ -1288,7 +1284,7 @@ export function buildTrees(low = false) {
   const pineCard = crossedCards([[-0.42, 0.28], [0.42, 0.28], [0, 1.56]]);
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
-  const greens = ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'];
+  const greens = TREE.crowns;
   // Every tile's trees a site, merged with the city's fixed geometry (split by tile, only those in view drawn: tileBatch())
   for (const [key, list] of byTile(trees))
     site(`trees ${key}`, keyRect(key), (into) => {
@@ -1312,10 +1308,10 @@ export function buildTrees(low = false) {
         ]);
       const b = new Batch();
       if (low) b.lod = 'near';
-      b.instances(trunkGeo, toon('#6b4630'), trunks);
+      b.instances(trunkGeo, toon(TREE.trunk), trunks);
       // The canopies sway in the wind (city life plan, Phase 4, dusk.ts): desktop only, the sway in their normals' lengths
       greens.forEach((g, i) => b.instances(canopyGeo, toon(g), canopies[i], low ? 0 : SWAY));
-      b.instances(coneGeo, toon('#1d7a55'), cones, low ? 0 : SWAY * 0.6);
+      b.instances(coneGeo, toon(TREE.pine), cones, low ? 0 : SWAY * 0.6);
       if (low) {
         b.lod = 'far';
         const cards: THREE.Matrix4[][] = greens.map(() => []);
@@ -1325,7 +1321,7 @@ export function buildTrees(low = false) {
         });
         greens.forEach((g, i) => b.instances(roundCard, toon(g), cards[i]));
         const pines = list.filter((t) => t.pine).map((t) => new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion().setFromAxisAngle(up, turnAt(t.x, t.z)), new THREE.Vector3(t.s, t.s, t.s)));
-        b.instances(pineCard, toon('#1d7a55'), pines);
+        b.instances(pineCard, toon(TREE.pine), pines);
       }
       b.build(into);
     });
@@ -1337,7 +1333,7 @@ export function buildTrees(low = false) {
  */
 type Tone = 'white' | 'sodium' | 'flickA' | 'flickB';
 const TONES: Tone[] = ['white', 'sodium', 'flickA', 'flickB'];
-const SODIUM = { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' };
+const SODIUM = LAMP.sodium;
 /**
  * `tick`: the lamps come on one by one at dusk (city life plan, Phase 4, dusk.ts): each halo and pool its own glow
  * that frame, a colour per point and per instance over its tone's material (the bulbs, in the Batches' shared
@@ -1382,9 +1378,9 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
     TONES.map((t) => {
       const white = t === 'white';
       // (a flickering bulb keeps its own material, not the Batch's shared neon, so it goes out with its halo and pool)
-      const bulb = white ? neon('#fff1c2', 0.6, 2.4) : flicker(t) ? siteMat(`lamp-bulb-${t}`, lit(new THREE.MeshBasicMaterial({ color: SODIUM.bulb, toneMapped: true }), 0.6, 2.4, flicker(t))) : neon(SODIUM.bulb, 0.6, 2.4);
-      const halo = lit(new THREE.PointsMaterial({ color: white ? '#ffe2a0' : SODIUM.halo, map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, vertexColors: true }), 0, white ? 0.3 : 0.34, flicker(t));
-      const pool = lit(glowMat(white ? '#ffd98a' : SODIUM.pool, 1), 0, white ? 0.26 : 0.3, flicker(t));
+      const bulb = white ? neon(LAMP.white.bulb, 0.6, 2.4) : flicker(t) ? siteMat(`lamp-bulb-${t}`, lit(new THREE.MeshBasicMaterial({ color: SODIUM.bulb, toneMapped: true }), 0.6, 2.4, flicker(t))) : neon(SODIUM.bulb, 0.6, 2.4);
+      const halo = lit(new THREE.PointsMaterial({ color: white ? LAMP.white.halo : SODIUM.halo, map: glowTex, size: 1.1, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, vertexColors: true }), 0, white ? 0.3 : 0.34, flicker(t));
+      const pool = lit(glowMat(white ? LAMP.white.pool : SODIUM.pool, 1), 0, white ? 0.26 : 0.3, flicker(t));
       if (flicker(t)) flickerTogether([bulb, halo, pool], t === 'flickA' ? 11 : 47);
       return [t, { bulb, halo, pool }];
     })

@@ -66,6 +66,7 @@ import { CELL_ARROW, CELL_CHEVRON, atlasTex, cellMarker, cellNumber, chequerBand
 import { KART_VIEW } from './kartpark3d';
 import { buildFx, chainMesh } from './grime';
 import type { Tick } from './world';
+import { COVER } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -92,12 +93,12 @@ const TUBE_T = 0.3;
 const PAVED_V = SITE.garages.v0 - 0.6;
 
 const ASPHALT = toon('#26243f');
-const LAWN_C = toon('#2f7a52');
+const LAWN_C = toon(COVER.lawn);
 const GRASS = toon('#3a8a5b');
 const BANK_C = toon('#357f55');
 const GRAVEL = toon('#c2a878');
 const EARTH = toon('#3b6447');
-const PAVE = toon('#4b4766');
+const PAVE = toon(COVER.concrete);
 const PLAZA_C = toon('#56506f');
 const PIT_C = toon('#34314f');
 const INK = toon('#1b1830');

@@ -23,16 +23,17 @@
 import * as THREE from 'three';
 import { Batch, PAL, canvasTex, fx, glowMat, lit, neon, toon } from './kit';
 import { INK, METAL, WOOD, glow, soft } from './infill';
-import { SLAB as S, addLamp, addPool, addTree, keepTreesOff, type Tick } from './world';
+import { SLAB as S, addLamp, addPool, addTree, type Tick } from './world';
 import { site } from './tilework';
 import { RIVER } from './layout';
 import { WATER_Y } from './river';
 import type { Pt, Rect } from './downtown';
 import type { Idle, Spot } from './landmarks';
-import { ARCH, BARGE, BENCHES, BINOCULARS, BOARDWALK, BOLLARDS, CRANE, DECK_Y, FISHERS, KIOSK, LAMPS, PIER, PLANTERS, RAIL_GAPS, RINGS, WATERFRONT_RECT } from './waterfront';
+import { ARCH, BARGE, BENCHES, BINOCULARS, BOARDWALK, BOLLARDS, CRANE, DECK_Y, FISHERS, KIOSK, LAMPS, PIER, PLANTERS, RAIL_GAPS, RINGS } from './waterfront';
 import { GANGWAY, STOPS } from './riverbus';
 import { PIER_HOUSE } from './riverside';
 import { SIGNS, archFrame, archPane, box, signPlane } from './riverside3d';
+import { LAMP } from './palette';
 
 /** The river bus's gangway off the boardwalk (riverbus.ts): its railing opens there */
 const BOARDWALK_GANGWAYS = STOPS.filter((s) => s.quay === BOARDWALK[1]).map((s): [number, number] => [s.door.x - GANGWAY.half - 0.05, s.door.x + GANGWAY.half + 0.05]);
@@ -250,7 +251,6 @@ function drawDocks(b: Batch, low: boolean) {
 
 /** The boardwalk in sites a tile or so long, the docks a site; its lamps and planters' trees (before the city's lamps and trees are built) */
 export function buildWaterfront(low: boolean) {
-  keepTreesOff(WATERFRONT_RECT);
   const n = Math.ceil((BX1 - BX0) / 30);
   for (let k = 0; k < n; k++) {
     const xa = BX0 + ((BX1 - BX0) * k) / n;
@@ -497,7 +497,7 @@ function drawPier(b: Batch, crowd: Idle[], low: boolean) {
   ];
   for (const [x, z] of poles) {
     b.add(new THREE.CylinderGeometry(0.05, 0.07, 2.6, 8).translate(x, T + 1.3, z), RAIL);
-    b.add(new THREE.SphereGeometry(0.14, 10, 8).translate(x, T + 2.7, z), glow('#ffb35c'));
+    b.add(new THREE.SphereGeometry(0.14, 10, 8).translate(x, T + 2.7, z), glow(LAMP.sodium.bulb));
     addPool(x, z, 3, T + 0.02, true);
   }
   b.detail(() => {

@@ -64,6 +64,7 @@ import {
   UMBRELLAS,
   WALK_W,
 } from './sunamenities';
+import { COVER } from './palette';
 
 type Pt = [number, number];
 
@@ -84,7 +85,7 @@ const LINE = toon('#e8e4f0');
 const COURT_IN = toon('#3a6ea6');
 const COURT_OUT = toon('#3f7d5a');
 const WINDSCREEN = toon('#1f3a2c');
-const LAWN = toon('#4f9a49');
+const LAWN = toon(COVER.garden);
 const FIELD_GRASS = toon('#4c9446');
 const RUBBER = toon('#a24f3b');
 const RUBBER_BLUE = toon('#3d6fa3');

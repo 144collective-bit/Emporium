@@ -69,7 +69,7 @@ export const XP = {
   property: 60,
   /** Per upgrade bought (a mod, a building level) */
   upgrade: 25,
-  /** Per dummy, drone and crew member knocked down */
+  /** Per dummy and drone knocked down */
   dummy: 4,
   drone: 8,
   /** Finishing a kart race; a podium and a win (on top); a time trial's new best */

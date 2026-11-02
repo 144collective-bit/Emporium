@@ -236,7 +236,7 @@ it and has been retired completely. Build only on what's here.
   - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - **River life** (river plan step 4, the owner's picks: more boats, the river bus, boating yourself; all three built). Everything on the water keeps to a line of its own, a function of the clock, and the tests hold each clear of everything else there (`tests/water.ts`: the piers, decks, moored boats and landings). 4a, more boats: two traffic boats to a lane and the police launch in the middle one (life.ts), and `riverlife.ts` (DOM-free, tested in `tests/riverlife.test.ts`): the cruise boat (`CRUISE`, round the town's reach), the rowing eight (`CREW`) and the dinghies out west (`DINGHIES`), drawn by `riverlife3d.ts`, a district loaded as you approach the river (`LAZY_DISTRICTS` id `river`). The highway's bridges' piers stand between the lanes (`BRIDGE_PIERS` in waterfront.ts). 4b, the river bus (below, under Getting about). 4c, boating yourself (below, after Driving your car).
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway, every plan street and slip lane, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world).
@@ -1337,6 +1337,13 @@ it and has been retired completely. Build only on what's here.
     `docs/blend-shots/<label>/` (`SHOTS_BENCH=1` adds the headless bench's
     draws and triangles). Shoot before and after every phase; change a view
     only between phases.
+  - Phase 1 (foundations) is built: the ground palette, `palette.ts`
+    (DOM-free, tested in `tests/palette.test.ts`: `COVER`, `KERB`, `TREE`,
+    `LAMP`): the ground's covers, the kerbs, the trees and the street lamps'
+    light; every file that draws ground takes its colours from it, never a
+    hex of its own (the test holds it); the one clearing rule for the
+    outskirts' trees (`landuse.ts`, above under the world's size) and the
+    belt eased out.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1972,9 +1979,9 @@ it and has been retired completely. Build only on what's here.
     in Phase 9 (the owner's call: The Trenches took its land); the recipes'
     test lays its 20-block grid as a fixture instead. A district laid by
     recipes joins every grid through `addSolids()` (`solids.ts`,
-    `BoxGrid.add()`) and `addSlabs()` (`walk.ts`) when its blocks aren't
-    the street plan's, and the outskirts' trees keep off it
-    (`keepTreesOff()`).
+    `BoxGrid.add()`), its blocks go in the street plan (so walking's slabs
+    have them), and the outskirts' trees keep off it (its land in `KEEPS`,
+    `landuse.ts`).
   - Tested in `tests/recipes.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
@@ -3451,8 +3458,8 @@ it and has been retired completely. Build only on what's here.
   (`groundAt()` in `walk.ts`, `bankY()`; your kart climbs them too).
 - **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 113-225,
   z -311.5 to -191.5, its fence), local numbers via `toWorld()` /
-  `toLocal()` (u east, v south from the circuit frame's corner; `SITE_U`
-  x `SITE_V` is the circuit's frame, the site reaches past it on every
+  `toLocal()` (u east, v south from the circuit frame's corner; the
+  circuit's frame is kartcircuit.ts's, the site reaches past it on every
   side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
   one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
   `KART_CROSSINGS` (traffic drives them, off the highway at ns3, whose

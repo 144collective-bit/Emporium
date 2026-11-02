@@ -203,10 +203,6 @@ const BOUNDS = WORLD_BOUNDS;
 /** Downtown's blocks, the districts and the extra lots (garage, market...) with their sidewalks: the raised ground (with bounding boxes for a quick test first) */
 const slabOf = (poly: Pt[]) => ({ poly, box: [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1])), 0] as Box });
 const slabs = PLAN.slabs.map(slabOf);
-/** More raised blocks to walk on (a district laid by a recipe: growth plan Phase 4) */
-export function addSlabs(polys: Pt[][]) {
-  slabs.push(...polys.map(slabOf));
-}
 /** The garage's turntable in a grid's copy (the grids hold their own copies of the boxes: matched by numbers) */
 const isTurntable = (b: Box) => b[0] === TURNTABLE_BOX[0] && b[1] === TURNTABLE_BOX[1] && b[2] === TURNTABLE_BOX[2] && b[3] === TURNTABLE_BOX[3];
 /** The turntable's disc: stood on while getting into your car at home, its top over the forecourt */

@@ -453,11 +453,6 @@ export function gaps(map: LandMap = landMap()): Gap[] {
   });
 }
 
-/** Where each of GAP_NAMES' points falls: the id of the gap holding it, or null (on no gap: a test's failure) */
-export function gapOf(id: string, map: LandMap = landMap()) {
-  return gaps(map).find((g) => g.id === id) ?? null;
-}
-
 /** The share of the land inside the highway that's open (no district, street or water), 0-1 */
 export function openShare(map: LandMap = landMap()) {
   let [open, inside] = [0, 0];

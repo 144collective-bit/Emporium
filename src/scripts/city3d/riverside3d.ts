@@ -24,10 +24,10 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { ATLAS, INK, METAL, ROOF, kit, glow, soft, type Band, type Frame, type Kit } from './infill';
-import { SLAB as S, keepTreesOff } from './world';
+import { SLAB as S } from './world';
 import { site } from './tilework';
 import type { Pt, Rect } from './downtown';
-import { BLOCK_RECT, REFINERY, RIVER_BLOCKS, STORES, WHARF } from './riverside';
+import { REFINERY, STORES, WHARF } from './riverside';
 
 /** Drawing in world numbers with the infill's kit: u is x, v is z */
 export const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0], n: [0, 1] };
@@ -407,9 +407,8 @@ function drawStores(b: Batch, low: boolean) {
 
 /* ---------- The riverside ---------- */
 
-/** The riverside's three landmarks as sites; no outskirts' trees on its blocks */
+/** The riverside's three landmarks as sites (the outskirts' trees keep off its blocks: landuse.ts) */
 export function buildRiverside(low: boolean) {
-  for (const id of RIVER_BLOCKS) keepTreesOff(BLOCK_RECT[id]);
   const builds: [string, Rect, (b: Batch) => void][] = [
     ['riverside wharf', WHARF.lot, (b) => drawWharf(b, low)],
     ['riverside refinery', REFINERY.lot, (b) => drawRefinery(b, low)],
