@@ -1794,10 +1794,16 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     // The store: D-pad picks, A takes, B (or Y again) closes
+    // (the menus' kit, menukit.ts: the d-pad moves round its buttons, A presses, LB / RB the tabs)
     if (shop.open) {
-      if (edge(14) || edge(12)) shop.step(-1);
-      if (edge(15) || edge(13)) shop.step(1);
-      if (edge(0)) shop.take();
+      if (b.some((x, i) => x && !pad.prev[i])) shop.input('pad');
+      if (edge(12)) shop.move('up');
+      if (edge(13)) shop.move('down');
+      if (edge(14)) shop.move('left');
+      if (edge(15)) shop.move('right');
+      if (edge(4)) shop.tab(-1);
+      if (edge(5)) shop.tab(1);
+      if (edge(0)) shop.press();
       if (edge(1) || edge(3)) shop.close();
       pad.x = pad.y = 0;
       pad.prev = b;

@@ -1,6 +1,6 @@
 ---
 /*
- * The homepage: Sector 7.
+ * The homepage: The Trenches, the game, set in the city of Sector 7.
  *
  * The 3D city (src/scripts/city3d) boots behind the start menu: buildings
  * you hover and click, a camera that flies in, glass panels with each
@@ -15,6 +15,7 @@ import degen from '../assets/degen.png';
 import logo from '../assets/logo.png';
 import pulsechain from '../assets/pulsechain.png';
 import flame from '../assets/liberty-flame.png';
+import trenches from '../assets/trenches-logo.png';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -76,8 +77,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       The ☰ Menu still has the comic page and the links. */}
   <div class="city-no3d" data-no3d hidden>
     <div class="city-no3d-card" role="status">
-      <p class="kicker"><span class="kicker-num">3D</span> Sector 7</p>
-      <p class="city-no3d-text">Sector 7 needs a device with 3D graphics (WebGL&nbsp;2).</p>
+      <p class="kicker"><span class="kicker-num">3D</span> The Trenches</p>
+      <p class="city-no3d-text">The Trenches needs a device with 3D graphics (WebGL&nbsp;2).</p>
       <p class="city-no3d-note">Try another browser or device. The comic and the links are in the Menu.</p>
     </div>
   </div>
@@ -107,9 +108,9 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   {/* Maintenance (live settings, live.ts): over everything, the start menu too, while the owner has the city closed.
       The city doesn't boot behind it; when it lifts the page reloads. */}
   <div class="city-start city-maint" data-maint role="dialog" aria-modal="true" aria-labelledby="city-maint-title" hidden>
-    <div class="city-start-card">
-      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
-      <p class="city-start-kicker">Sector 7</p>
+    <div class="city-start-card city-start-box">
+      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[240, 480, 720]} sizes="240px" alt="" loading="eager" class="city-start-logo" />
+      <p class="city-start-kicker">The Trenches</p>
       <p class="city-start-title" id="city-maint-title">Back <span class="hl">soon</span></p>
       <p class="city-maint-text" data-maint-text></p>
       <p class="city-maint-eta" data-maint-eta hidden></p>
@@ -117,12 +118,30 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     </div>
   </div>
 
-  <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="Sector 7">
+  {/* The title screen (start.css, in the menus' arcade kit): the game's logo, the log-in screen, then the start
+       menu. Logging in isn't built yet: the form sends nothing anywhere and says so; Play as guest goes on to the
+       menu with the save in this browser, as before. */}
+  <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="The Trenches">
     <div class="city-start-card">
-      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
-      <p class="city-start-kicker">Welcome to</p>
-      <p class="city-start-title">Sector <span class="hl">7</span></p>
-      <div class="city-start-main" data-start-main>
+      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[320, 480, 640, 960, 1280]} sizes="(max-width: 600px) 92vw, 560px" alt="The Trenches" loading="eager" fetchpriority="high" class="city-start-brand" />
+      <div class="city-start-box">
+      <form class="city-start-login" data-start-login novalidate>
+        <p class="city-start-head">Log in</p>
+        <label class="city-start-field">
+          <span class="city-start-label">Player name or email</span>
+          <input type="text" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="64" />
+        </label>
+        <label class="city-start-field">
+          <span class="city-start-label">Password</span>
+          <input type="password" name="password" autocomplete="current-password" maxlength="128" />
+        </label>
+        <p class="city-start-msg" data-start-msg aria-live="polite" hidden></p>
+        <button type="submit" class="mk-btn is-main city-start-go">Log in</button>
+        <p class="city-start-or"><span>or</span></p>
+        <button type="button" class="mk-btn city-start-go" data-start-guest>Play as guest</button>
+        <p class="city-start-new">New here? <button type="button" class="city-start-link" data-start-signup>Create an account</button></p>
+      </form>
+      <div class="city-start-main" data-start-main hidden>
         <button type="button" class="city-start-btn" data-start-single>
           <span class="city-start-btn-name">Single player</span>
           <span class="city-start-btn-sub">The whole city, in this browser</span>
@@ -135,6 +154,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <span class="city-start-btn-name">Options</span>
           <span class="city-start-btn-sub">Time, weather, sound, credits</span>
         </button>
+        <p class="city-start-who">Playing as guest · <button type="button" class="city-start-link" data-start-relog>Log in</button></p>
       </div>
       <div class="city-start-options" data-start-pane hidden>
         <div class="city-start-row">
@@ -166,10 +186,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <summary><span class="city-start-label">Credits</span></summary>
           <p>Degen's movement is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217, in Bruce Hahne's BVH conversion.</p>
         </details>
-        <button type="button" class="city-start-back" data-start-back>Back</button>
+        <button type="button" class="mk-btn is-small city-start-back" data-start-back>Back</button>
       </div>
       <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
       <div class="city-start-bar" data-start-bar><span></span></div>
+      </div>
       <p class="city-start-note">Draft · v0{build && ` · ${build}`} · Everything in the city is its own game: Dorras, never real money.</p>
     </div>
   </div>
@@ -179,11 +200,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk switch.
        Its title and subtitle are painted by head.ts. */}
   <header class="city-head" data-city-head>
-    <a href="/" class="city-head-logo" aria-label="The Degen Emporium, home">
-      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[72, 144, 216]} sizes="72px" alt="" loading="eager" class="city-head-logo-img" />
+    <a href="/" class="city-head-logo" aria-label="The Trenches, home">
+      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[80, 160, 240]} sizes="80px" alt="" loading="eager" class="city-head-logo-img" />
     </a>
     <div class="city-head-id">
-      <p class="city-head-text"><b data-head-title>Sector 7</b><small data-head-sub>Loading the city</small></p>
+      <p class="city-head-text"><b data-head-title>The Trenches</b><small data-head-sub>Loading the city</small></p>
     </div>
     <div class="walk-top">
       <details class="walk-settings walk-pop" data-pop>
@@ -546,21 +567,47 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="inv-grid" data-inv-grid role="group" aria-label="Your bag"></div>
       <div class="inv-info" data-inv-info aria-live="polite"></div>
     </section>
-    <section class="shop armoury" data-shop hidden aria-labelledby="shop-title">
-      <header class="shop-head">
-        <h2 id="shop-title" class="shop-title">Armoury</h2>
-        <p class="shop-score shop-dorras"><span class="shop-score-label">Dorras</span> <span data-shop-dorras></span></p>
-        <p class="shop-score"><span class="shop-score-label">Score</span> <b data-shop-score>0</b></p>
-        <button type="button" class="shop-close" data-shop-close aria-label="Close the Armoury">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+    {/* The Armoury's gun store and workbench (gunshop.ts) in the menus' arcade design (menus.css, menukit.ts;
+        docs/menu-plan.md Phase 1): the title bar, the marquee, the Guns and Workbench tabs, the loadout, the
+        gun cards and the picked gun's details, the hints row. Nothing here is real money. */}
+    <section class="mk mk-store" data-shop data-input="keys" hidden aria-labelledby="shop-title">
+      <div class="mk-grab" data-mk-grab aria-hidden="true"><span></span></div>
+      <header class="mk-bar">
+        <div class="mk-heading">
+          <p class="mk-kind">Gun store</p>
+          <h2 id="shop-title" class="mk-title">Armoury</h2>
+        </div>
+        <p class="mk-wallet">
+          <span class="mk-coin" data-shop-dorras></span>
+          <span class="mk-score">Score <b data-shop-score>0</b></span>
+        </p>
+        <button type="button" class="mk-x" data-shop-close aria-label="Close the Armoury">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
-      {/* The loadout (inventory.ts): the two guns he carries, drawn anywhere from the hotbar; the rest wait in the locker here */}
-      <div class="shop-loadout" data-shop-loadout role="group" aria-label="Loadout"></div>
-      <div class="shop-list" data-shop-list role="listbox" aria-label="Guns"></div>
-      <div class="shop-detail" data-shop-detail></div>
-      <section class="bench" data-shop-bench aria-label="Workbench" hidden></section>
-      <p class="shop-foot">The starters are free and unlock with your score; the rest cost Dorras you earn in the city. Ammo is free: the counter refills every gun. Nothing here is real money.</p>
+      <p class="mk-marquee">Free ammo at the counter · Starters unlock with your score</p>
+      <nav class="mk-tabs" data-mk-tabs role="tablist" aria-label="Armoury">
+        <button type="button" role="tab" data-tab="guns" aria-selected="true">Guns</button>
+        <button type="button" role="tab" data-tab="bench" aria-selected="false">Workbench</button>
+      </nav>
+      <div class="mk-body" data-mk-swipe>
+        <div class="mk-page mk-store-guns" data-page="guns" role="tabpanel" aria-label="Guns">
+          {/* The loadout (inventory.ts): the two guns he carries, drawn anywhere from the hotbar; the rest wait in his bag */}
+          <div class="mk-loadout" data-shop-loadout role="group" aria-label="Loadout"></div>
+          <div class="mk-cards" data-shop-list role="listbox" aria-label="Guns"></div>
+          <div class="mk-detail" data-shop-detail></div>
+        </div>
+        <div class="mk-page" data-page="bench" role="tabpanel" aria-label="Workbench" hidden>
+          <section class="mk-bench" data-shop-bench></section>
+        </div>
+      </div>
+      <footer class="mk-foot">
+        <p class="mk-hints" data-mk-hints aria-hidden="true">
+          <span data-for="keys"><kbd>&uarr;&darr;&larr;&rarr;</kbd> Move <kbd>Enter</kbd> Select <kbd>Q</kbd><kbd>E</kbd> Tabs <kbd>F</kbd> Close</span>
+          <span data-for="pad"><kbd>D-pad</kbd> Move <kbd>A</kbd> Select <kbd>LB</kbd><kbd>RB</kbd> Tabs <kbd>B</kbd> Close</span>
+        </p>
+        <p class="mk-small">The starters are free; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
+      </footer>
     </section>
     {/* The garage on the south bank (garage-ui.ts): the dealership and tuning shop. The five starters are free, the rest
         cost Dorras earned in the city (catalog.ts); the stat bars, the deal (Buy, or the Tune section) and the balance
@@ -1271,7 +1318,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     /* ---------- The 3D city ---------- */
     let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
     let booting = false;
-    const NO_3D = 'Sector 7 needs a device with 3D graphics (WebGL 2).';
+    const NO_3D = 'The Trenches needs a device with 3D graphics (WebGL 2).';
     /** No 3D here: the page says so, and so does the start menu (the header's Menu keeps the comic page and the links) */
     function no3d() {
       root!.dataset.view = 'none';
@@ -1356,6 +1403,37 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     const headSound = root.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
     if (headSound) new MutationObserver(() => paintOpt('sound', headSound.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')).observe(headSound, { attributes: true, attributeFilter: ['aria-pressed'] });
 
+    // The log-in screen comes first (no accounts yet: nothing is sent or kept), then the menu
+    const login = start.querySelector<HTMLFormElement>('[data-start-login]')!;
+    const loginMsg = login.querySelector<HTMLElement>('[data-start-msg]')!;
+    const pass = login.querySelector<HTMLInputElement>('input[type="password"]')!;
+    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    function say(text: string) {
+      loginMsg.textContent = text;
+      loginMsg.hidden = false;
+    }
+    function showLogin(on: boolean) {
+      login.hidden = !on;
+      startMain.hidden = on;
+      startPane.hidden = true;
+      optionsBtn.setAttribute('aria-expanded', 'false');
+      // (a phone's keyboard stays down until the field is tapped)
+      if (on) (fine ? login.querySelector<HTMLInputElement>('input') : null)?.focus({ preventScroll: true });
+      else start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
+    }
+    login.addEventListener('submit', (e) => {
+      e.preventDefault();
+      pass.value = '';
+      say('Accounts are coming soon. Play as guest for now: your progress is saved in this browser.');
+    });
+    start.querySelector('[data-start-guest]')!.addEventListener('click', () => {
+      pass.value = '';
+      loginMsg.hidden = true;
+      showLogin(false);
+    });
+    start.querySelector('[data-start-signup]')!.addEventListener('click', () => say('Creating an account is coming soon. Play as guest for now.'));
+    start.querySelector('[data-start-relog]')!.addEventListener('click', () => showLogin(true));
+
     function showPane(on: boolean) {
       startPane.hidden = !on;
       startMain.hidden = on;
@@ -1399,7 +1477,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       }
       enter(true);
     });
-    start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
+    showLogin(true);
 
     /* ---------- Live settings: maintenance and the owner's notice ---------- */
     const maint = root.querySelector<HTMLElement>('[data-maint]')!;

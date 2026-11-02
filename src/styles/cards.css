@@ -277,3 +277,22 @@
     animation: none;
   }
 }
+
+/* Level dots (the garage's, the kart hut's and the trainer's mods; moved from the old armoury.css when the gun store
+   went to the menus' arcade design, menus.css) */
+.pips {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+}
+.pips i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #ffffff3a;
+  border-radius: 50%;
+}
+.pips i.is-on {
+  border-color: #0000;
+  background: var(--pulse);
+  box-shadow: 0 0 8px -2px #00eaff;
+}
