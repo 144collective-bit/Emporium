@@ -323,6 +323,18 @@ the buy and sell steps as clear buttons, the ledger as a list, the loan
 and the save's download and load as their own cards. The rules stay
 `tycoon.ts`'s; the views still patch in place (`repaint()`).
 
+**Built** (waiting on the owner's sign-off): these views already sit in the
+skinned place panel and business card (Phases 3 and 4); inside the skin
+(menus.css, "Business and missions") goods and contracts are cards
+(`.market-row`: the bezel's fill, a frame, stepped corners), the buy and
+sell steps are clear buttons (`.market-btns`: the first step lit coin, the
+rest outlined in coin, a step you can't take greyed, Give up in warning
+orange), price trends go green and hot orange, the fill bars (stock,
+progress) pixel blocks. The Vault's worth, ledger, loan and save, the
+Workshop's jobs, the Post office and the Apartments take the same. No
+markup or rules changed. Checked on a desktop: the market hall, Signal
+tower, the Workshop, the Vault, the Post office and the Apartments.
+
 ## Phase 6: clothes, pops and the rest
 
 Drop 001's fitting room and the character screen, the toasts, the badge
