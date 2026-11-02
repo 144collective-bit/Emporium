@@ -38,6 +38,7 @@ import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './rive
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 import { COVER, KERB, LAMP, TREE } from './palette';
+import { colourAt, groundStep } from './ground';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one pad each (layout.ts DISTRICTS). */
@@ -554,7 +555,7 @@ function riverBanks(b: Batch, e0: number, e1: number) {
   const stone = toon('#6b6790');
   const wall = toon('#57537a');
   const grass = toon(COVER.rough);
-  const bankGrass = toon('#2c6a4b');
+  const bankGrass = toon(COVER.bank);
   const sand = toon('#cdbb8e');
   const pebbles = toon('#8f8a80');
   const reedMats = [toon('#6f9a45'), toon('#88a854'), toon('#5c8a3e')];
@@ -670,7 +671,6 @@ function hillsPlane(x0: number, z0: number, x1: number, z1: number) {
  * The hills' grass by height and slope (Crestmont's: the valley floors the city's green, drying to sage up the
  * slopes and a pale gold over the ridge, the steep sides a shade darker), so their shape reads in the flat shading
  */
-const HILL_LOW = new THREE.Color(COVER.rough);
 const HILL_MID = new THREE.Color('#4f7445');
 const HILL_TOP = new THREE.Color('#8f8a52');
 const HILL_TINT = new THREE.Color();
@@ -681,10 +681,32 @@ function tintHills(g: THREE.BufferGeometry) {
     const [x, z] = [pos.getX(i), pos.getZ(i)];
     const h = pos.getY(i);
     const up = Math.min(1, h / 16);
-    HILL_TINT.copy(HILL_LOW).lerp(HILL_MID, up * up * (3 - 2 * up));
+    // (the foot of the hills the ground's own cover, ground.ts, so they rise out of the land round them)
+    const [r, g, bl] = colourAt(x, z, RGB);
+    HILL_TINT.setRGB(r, g, bl, THREE.SRGBColorSpace).lerp(HILL_MID, up * up * (3 - 2 * up));
     if (h > 16) HILL_TINT.lerp(HILL_TOP, Math.min(1, (h - 16) / 14) * 0.8);
     HILL_TINT.multiplyScalar(1 - 0.35 * Math.min(1, slopeAt(x, z) / 0.6));
     col.setXYZ(i, HILL_TINT.r, HILL_TINT.g, HILL_TINT.b);
+  }
+}
+
+/** A piece of the ground, flat, its grid as fine as what covers it needs (ground.ts `groundStep()`) */
+const RGB: [number, number, number] = [0, 0, 0];
+function groundPlane(x0: number, z0: number, x1: number, z1: number, low: boolean) {
+  const step = groundStep(x0, z0, x1, z1, low);
+  const nx = Math.max(1, Math.ceil((x1 - x0) / step));
+  const nz = Math.max(1, Math.ceil((z1 - z0) / step));
+  return new THREE.PlaneGeometry(x1 - x0, z1 - z0, nx, nz).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
+}
+const GROUND_TINT = new THREE.Color();
+/** Each vertex of a piece of the ground in what covers it there (ground.ts) */
+function paintGround(g: THREE.BufferGeometry) {
+  const pos = g.getAttribute('position');
+  const col = g.getAttribute('color') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const [r, gr, bl] = colourAt(pos.getX(i), pos.getZ(i), RGB);
+    GROUND_TINT.setRGB(r, gr, bl, THREE.SRGBColorSpace);
+    col.setXYZ(i, GROUND_TINT.r, GROUND_TINT.g, GROUND_TINT.b);
   }
 }
 
@@ -784,7 +806,7 @@ function basinWalls(b: Batch) {
  * The ground. `lots` picks a surface for a block (by its plan id, like 'dt-c' or
  * 'district-N1') or for a landmark's own lot inside its block (by its old block, layout.ts SEATS).
  */
-export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
+export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, low = false) {
   const [e0, e1] = EXT;
   const L = e1 - e0;
   const b = new Batch();
@@ -804,9 +826,12 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts)
         for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
-          b.add(hill ?? new THREE.PlaneGeometry(px1 - px0, pz1 - pz0).rotateX(-Math.PI / 2).translate((px0 + px1) / 2, 0, (pz0 + pz1) / 2), grass);
-          // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex)
+          const flat = hill ? null : groundPlane(px0, pz0, px1, pz1, low);
+          b.add(hill ?? flat!, grass);
+          // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex;
+          // what covers the ground, ground.ts, docs/blend-plan.md Phase 2)
           if (hill) tintHills(hill);
+          else paintGround(flat!);
         }
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
