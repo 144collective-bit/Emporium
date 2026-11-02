@@ -2718,6 +2718,15 @@ it and has been retired completely. Build only on what's here.
   switch, then the walk tabs, ammo and score). Its live height is
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
+- **The menu redesign** (the owner's call: "redesign all menus and upgrade
+  their quality and functions") is planned in `docs/menu-plan.md`: comic
+  book on dark ink (halftone panels, ink outlines, slanted edges, caption
+  boxes and speech bubbles, plain words on buttons), one hub menu
+  replacing the ☰ Menu, Settings and the walk tabs (Esc, the header's hub
+  button, Start), phone-first sheets, full controller and keyboard use,
+  motion but no UI sounds; the design system first (`menus.css`,
+  `menukit.ts`, shown on the gun store), then rolled out. Nothing is built
+  yet; one phase at a time with the owner's sign-off; keep it up to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
