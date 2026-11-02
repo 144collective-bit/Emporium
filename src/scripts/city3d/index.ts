@@ -476,8 +476,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     worker: siteWorker,
     meshesOf,
     // Phones hold only the city round what the camera looks at: sites well past the swap distance wait, and
-    // tiles that far let go of everything their sites drew (tileplan.ts `DROP_LEAD`)
-    reach: tier === 'low' ? DROP_LEAD : undefined,
+    // tiles that far let go of everything their sites drew (tileplan.ts `DROP_LEAD`; `?reach=tiles` in the
+    // address overrides it, for testing: a huge one keeps it all, as a desktop does)
+    reach: tier === 'low' ? Number(new URLSearchParams(location.search).get('reach')) || DROP_LEAD : undefined,
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
   const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });

@@ -125,12 +125,12 @@ export function toRebuild(released: readonly { key: string; d: number }[], far: 
 }
 
 /**
- * The tiles to let go whole (phones): every one past `far` + `DROP_LEAD` from
+ * The tiles to let go whole (phones): every one past `far` + `reach` from
  * the camera that isn't drawn near, whatever the budget, furthest first
  */
-export function toDrop(held: readonly { key: string; d: number; near: boolean }[], far: number): string[] {
+export function toDrop(held: readonly { key: string; d: number; near: boolean }[], far: number, reach = DROP_LEAD): string[] {
   return held
-    .filter((t) => !t.near && t.d > far + DROP_LEAD)
+    .filter((t) => !t.near && t.d > far + reach)
     .sort((a, b) => b.d - a.d)
     .map((t) => t.key);
 }

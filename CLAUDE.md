@@ -1902,7 +1902,8 @@ it and has been retired completely. Build only on what's here.
     never let go.
   - **Far districts let go** (phones only, the owner's call; the start-up
     pass's item 5 in `docs/performance-plan.md`): the low tier passes
-    `reach` (`DROP_LEAD`, 230) to `createTileWork()`. A site further than
+    `reach` (`DROP_LEAD`, 230; `?reach=tiles` in the address overrides it,
+    for testing) to `createTileWork()`. A site further than
     `far` + `reach` from what the camera looks at (the focus) isn't built at
     all until it comes closer (it waits in the queue, out of `pending()` and
     the ?fps "waiting", counted as "beyond reach"; the site worker closes

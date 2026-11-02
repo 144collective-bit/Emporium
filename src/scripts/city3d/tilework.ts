@@ -239,7 +239,7 @@ export function createTileWork(
         }
         if (opts.reach !== undefined) {
           const whole = tiled.held(fx, 0, fz).filter((h) => !h.dropped && (h.all > 0 || h.released));
-          for (const key of toDrop(whole, far)) {
+          for (const key of toDrop(whole, far, opts.reach)) {
             if (tiled.drop(key) || released.has(key)) {
               dropped.add(key);
               released.delete(key);

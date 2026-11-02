@@ -532,5 +532,56 @@ What it measured, the same headless phone, three runs each taking turns: the pag
 up in a median 7.8 s against 8.8 s before (the boot's own readout 6.0-6.4 s
 against 6.5-6.9); the boot's download 659.9 KB gzipped (17.6 KB off, 20 KB under
 its budget). Not done: target practice as a chunk of its own (walk mode calls it in
-67 places, synchronously: a bigger change), and letting far districts go on
-phones and far districts as simple blocks (items 5 and 6 of the survey, next).
+67 places, synchronously: a bigger change). Items 5 and 6 of the survey came
+next, below.
+
+### Far districts let go (item 5; phones only, the owner's call)
+
+Measured first on the same headless phone, the City view taken from district
+to district round the map and back (the bench's views in turn, the sites
+left to build at each): the geometry climbed from 121 MB at the home view to
+183 MB once every district had been visited and never came down, every
+district's walls and roofs held for good; only their near pieces were ever
+let go (the 32 MB budget), about a sixth of what a district holds.
+
+Now the low tier holds only the city round what the camera looks at
+(tileplan.ts `DROP_LEAD` 230 past the swap distance, `DROP_BACK` 170;
+tilework.ts `reach`; tilebatch.ts `drop()`, `shrink()`):
+
+- A site further than that from the focus isn't built at all until it comes
+  closer: it waits in the queue, out of `pending()` (the ?fps readout counts
+  it "beyond reach"). The site worker closes once nothing within reach
+  waits, so a district's sites reached later are built on the main thread in
+  the spare frames, as near pieces built again always were.
+- A built tile that far lets go of everything its sites drew, near and far,
+  whatever the budget: the pieces in the shared materials and in the sites'
+  named ones (`siteMat()`; the tile batches key a named material by its
+  name, so a site making its material afresh each run still joins one mesh).
+  Nothing of it is drawn until the site runs again and puts it all back,
+  within `DROP_BACK` of the focus, before it's in view. Two tiles a step.
+- A batched mesh left more than half empty (over 2 MB) gives its room back:
+  packed (`optimize()`), then cut to what's used (`setGeometrySize()`), one
+  mesh a check, so a phone's GPU holds what's in reach, not what was ever
+  built.
+- The ground, the roads, the landmarks and the districts' boot data stay
+  (walking, driving, the traffic and the world map never read the drawing),
+  and so does what a district draws on the main thread itself (its water,
+  dogs and parked cars: small).
+
+The same trip after: 120 MB at the home view, 86 at the airport (nothing but
+the airport in reach), 120-135 through The Trenches, the Docks and Uptown,
+143 back home with everything round town built; the sites' pieces held
+36-64 MB wherever it stood. Up to 404 tiles let go whole over the trip and
+606 built again on the way back through (28 s of main-thread building over
+the whole trip against 13 before, spread through the spare frames). The
+views look the same: the line sits well into the haze on a phone (the City
+view's lowest angle, zoomed right out, was checked looking across town at a
+district let go). Desktops are as they were (no `reach`). `?reach=tiles` in
+the address overrides it on a phone, for testing (a huge one keeps it all).
+
+What's left on a phone is the base, about 85 MB of geometry: the landmarks,
+downtown's monolithic builders, the ground and roads, the crowds and the
+cars, none of it a site. Item 6 (far districts as simple blocks while let
+go) waits: nothing visibly pops at a phone's angles, so it isn't worth its
+boot-side block lists yet; if a later district stands tall enough to show
+through the haze, it comes then.
