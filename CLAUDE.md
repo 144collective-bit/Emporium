@@ -56,7 +56,7 @@ it and has been retired completely. Build only on what's here.
   Pin copy and panel copy live in `src/components/CityMap.astro`.
 - **Buildings are places in the city's game** (the owner's call): each opens
   its own panel (a game menu), never the comic page or an outside link. The comic page (`/emporium`), the merch store and X /
-  Telegram live in the ☰ Menu only. Places not built yet say "coming soon"
+  Telegram live in the hub's Map tab only. Places not built yet say "coming soon"
   (the plan is `docs/tycoon-plan.md`).
 - **The redesign** (the owner's call): the city is moving from a grid to an
   organic layout, planned downtown and looser further out (diagonals, varied
@@ -259,8 +259,8 @@ it and has been retired completely. Build only on what's here.
     Bridge, the metro line), the places with their pins' names
     (`placeName()`), you, your car, your aircraft when it's away, your
     waypoint. Drag or two fingers pan, scroll or pinch zoom, + / − / Fit /
-    You, "Find a place" (the keyboard's way in). From the ☰ Menu's World
-    map, the Map walk tab, or M (walking with no panel open, or the City
+    You, "Find a place" (the keyboard's way in). From the hub's Map tab
+    (World map), or M (walking with no panel open, or the City
     view); M, Esc or × close it. Tapping a place opens a card: Open and
     Walk here (City view), Set waypoint, Taxi here, Fast travel (on foot,
     places you've been); yourself: Bring my car; open ground: a waypoint.
@@ -2717,9 +2717,9 @@ it and has been retired completely. Build only on what's here.
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.
 - Every card and menu can be closed: panels, the gun store and the buy
-  dialog have an × (`.city-panel-close` / `.shop-close`); drop-open menus
-  (City settings, Directory, walk panels with their `.pop-head` ×) also
-  close on a tap outside and on Esc. The welcome card is a one-line
+  dialog have an × (`.city-panel-close` / `.shop-close`); the hub
+  (`.mk-x`) and the emotes' pop (its `.pop-head` ×) also close on a tap
+  outside and on Esc. The welcome card is a one-line
   first-visit tip under the header (`.city-card` in `.city-hud`: GM, "Welcome
   to Sector 7" (the page's h1), how to move, the draft note, an ×). It's
   closed for good with its × (remembered as `city-card` in localStorage) and
@@ -2752,22 +2752,17 @@ it and has been retired completely. Build only on what's here.
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
   other pages. Left to right: The Trenches' logo (home link), the mode title and
   subtitle (City view, Walk mode), then on the
-  right (walk tabs, ammo and score while walking), the City / Walk
-  switch (the current mode lit with a glow and a gradient underline, the
-  other dimmed), and the tools: a ⚙ Settings button (time, weather, sound, reset
-  view; 3D only, not while walking; never open by default) and a
-  ☰ Menu (the city's places, 3D only (`.dir-places`); then under "More" the
-  Emporium comic page and the merch store (`.dir-links`); then PulseChain
-  native, X and Telegram; not while walking). Left of them, in the 3D city
-  (not while walking on phones), the Dorras readout
-  (`[data-dorras]`, painted by `tycoon-ui.ts`, a green dot when the stall's
-  till has takings); it opens your business card. Beside it the level pill
-  (`[data-level]`, `missions-ui.ts`: level, XP bar, title). Their cards drop down under them (`.head-panel`, one open at a
-  time, with a `.pop-head` ×), spanning the width on phones, never taller
-  than the screen under the header (they scroll inside). Tablets show
-  Settings and Menu as icons; phones put logo, title, ⚙ and ☰ on the first
-  row and the switch, with names, across the second (walking: title and
-  switch, then the walk tabs, ammo and score). Its live height is
+  right (the emotes, online, and ammo and score while walking), the City /
+  Walk switch (the current mode lit with a glow and a gradient underline,
+  the other dimmed), and the tools: in the 3D city (not while walking on
+  phones) the Dorras readout (`[data-dorras]`, painted by `tycoon-ui.ts`, a
+  green dot when the stall's till has takings; it opens the hub on
+  Business) and the level pill (`[data-level]`, `missions-ui.ts`: level,
+  XP bar, title; it opens the hub on Missions), then the hub's button
+  (`[data-hub-open]`, ☰ Menu, in both modes: the hub, below). Tablets show
+  the hub's button as an icon; phones put logo, title, the pills and ☰ on
+  the first row and the switch, with names, across the second (walking:
+  one row). Its live height is
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
 - **The menu redesign** (the owner's call: "redesign all menus and upgrade
@@ -2778,8 +2773,8 @@ it and has been retired completely. Build only on what's here.
   (pixel-edged panels, pixel headings, scanlines, blocky buttons that press
   down, a blinking selector) on a new palette with no PulseChain colours
   (the plan's arcade-cabinet palette, for the owner's approval on the
-  first sample); one hub menu replacing the ☰ Menu, Settings and the walk
-  tabs (Esc, the header's hub button, Start); phone-first sheets; full
+  first sample); one hub menu replacing the old ☰ Menu, Settings and the
+  walk tabs (Esc, the header's hub button, Start); phone-first sheets; full
   controller and keyboard use; motion but no UI sounds; the design system
   first (`menus.css`, `menukit.ts`, shown on the gun store), then rolled
   out. The 3D city and the comic page keep their look. Phase 1 is built,
@@ -2788,9 +2783,27 @@ it and has been retired completely. Build only on what's here.
   (`menuKit(el, { close })`: tabs, the d-pad and arrows, the grabber, the
   hints by input), `menunav.ts` (DOM-free, tested in
   `tests/menunav.test.ts`) and the gun store rebuilt in them (`.mk` in
-  `CityMap.astro`, `gunshop.ts`). Until a menu moves to the new kit it
-  keeps today's look and rules. One phase at a time with the owner's
-  sign-off; keep it up to date.
+  `CityMap.astro`, `gunshop.ts`). Phase 2 is built, waiting on the owner's
+  sign-off: **the hub** (`hub.ts`, markup `[data-hub]` in `CityMap.astro`,
+  styles `.mk-hub` in `menus.css`), the pause screen: tabs Map (World map,
+  every place, More's comic and store, PulseChain native, X and Telegram),
+  Bag (opens the inventory; what you carry is Business's Bag), Business
+  (the business card `[data-biz]`, moved in), Missions (level and badges),
+  Profile (look, finish, wardrobe, wallet), Settings (`[data-controls]`:
+  time, sky, sound, reset view; the walk controls; keys; credits) and Online
+  with a game server (`[data-mp]` is its tab). The page makes it (its own
+  chunk, `hubReady`), so it works before 3D and where 3D can't run (Map
+  only, `.hub-3d` off); `bootCity(root, wallet, hub)` fills in its hooks.
+  It opens from its button, Esc (after whatever else Esc closes; walking,
+  after the mouse is freed), Start walking (walk.ts; the fight keeps
+  Start) and the pills; walking it pauses the walk (`walk.pause()`, the
+  keys and the gamepad are its: `hub.pad()`), its foot's Back to City view
+  (`[data-hub-leave]`) leaves walk mode; what opens a screen of its own
+  from it closes it first; a place's panel closes it and it closes one.
+  `data-hub-walk` / `data-hub-city` show by mode. Until a menu moves to the
+  new kit it keeps today's look and rules (the business card's insides
+  until Phase 5). One phase at a time with the owner's sign-off; keep it up
+  to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
@@ -3095,7 +3108,7 @@ it and has been retired completely. Build only on what's here.
   and the ink are rows of their own; a note says when it won't show (no
   cap or beanie, a suit's dress shoes).
 - **The character screen** (`charscreen.ts`, markup `[data-char]` in
-  `CityMap.astro`, styles in `fitting.css`), from the Profile tab's "See
+  `CityMap.astro`, styles in `fitting.css`), from the hub's Profile tab's "See
   your Degen": an overlay under the header with the same stage
   (`createStage(..., { zoom: true })`): drag turns him, scroll, pinch or
   Full / Face zoom to his face, poses (idle, walk, the fighter's guard and
@@ -3185,9 +3198,8 @@ it and has been retired completely. Build only on what's here.
   straight there at the market hall). Stock on sale (stall, shops) can't be
   loaded back; that keeps the delivery bonus from being farmed.
 - **Screens:** `tycoon-ui.ts` (save `degen-city-tycoon-v1`): the Dorras
-  readout, your business card (`[data-biz]`, on the gun store's `.shop`
-  panel: right side under the header on wide screens, the bottom sheet on
-  phones; the till on top, then the Stall / Units / Workshop / Car / Bag tabs; the Bag is the inventory's, read-only), the
+  readout, your business card (`[data-biz]`, the hub's Business tab:
+  `openCard()` shows the hub on it, `h.hub`; the till on top, then the Stall / Units / Workshop / Car / Bag tabs; the Bag is the inventory's, read-only), the
   market hall, filled into the Emporium's panel (`[data-market]`, with its
   deliver-to / sell-from picker, your car included when it's parked outside),
   and the Workshop's (`[data-workshop]`), Signal tower's (`[data-contracts]`:
@@ -3238,8 +3250,8 @@ it and has been retired completely. Build only on what's here.
   `levelFor`, `levelProgress`, `titleFor`, `XP` per deed), on the save in
   `tycoon.ts`. The screens are `missions-ui.ts` (styles in `missions.css`):
   the level pill in the header tools next to the Dorras readout
-  (`[data-level]`, a `.head-pop` card in the city; while walking it opens
-  the Profile tab's badges `[data-badges]`), the mission board at the end
+  (`[data-level]`, opening the hub on Missions, where the badges are,
+  `[data-badges]`), the mission board at the end
   of the Signal tower's panel (appended by `tycoon-ui.ts` after the
   contracts; its Take / Claim / Give up go through `missions.act()` before
   the economy's buttons), the mission tracker in the walk HUD
@@ -3286,10 +3298,11 @@ it and has been retired completely. Build only on what's here.
 
 - `src/scripts/city3d/walk.ts`: the playable Degen, over-the-shoulder and
   first-person camera, mouse (pointer lock), keyboard, touch and gamepad
-  controls, collisions and door prompts. The Controls panel's settings
+  controls, collisions and door prompts. The walk controls' settings (the
+  hub's Settings tab)
   (Look: speed, invert, first person; Shooting: "Aim when firing"
   `settings.autoAds` = off / touch / always) are saved under
-  `degen-city-walk-v1` in localStorage. The HUD markup (Controls panel, Run
+  `degen-city-walk-v1` in localStorage. The HUD markup (the controls, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
 - Buildings only lift and glow on hover in City view; while walking nothing
@@ -3297,12 +3310,13 @@ it and has been retired completely. Build only on what's here.
 - The over-the-shoulder camera starts 3.3 tiles behind him, 3.2 on an upright screen (`homeZoom()` in
   walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
-- Esc frees the mouse first and only then stops walking. Door panels free
-  the mouse so their links can be clicked.
+- Esc frees the mouse first and only then opens the hub (its Back to City
+  view stops walking). Door panels free the mouse so their links can be
+  clicked.
 - While walking (`body.is-walking`, set in `index.ts`) the header drops the
-  logo on tablets and phones and the Settings and Menu buttons, and carries the walk tabs
-  (Controls, Profile, Online, Emote), ammo and score at the top (two rows on
-  phones). The touch buttons stay at the bottom.
+  logo on tablets and phones and carries the emotes (online), ammo and score
+  and the hub's button. The touch buttons stay at the bottom (hidden while
+  the hub is open, `.is-hub`).
 - The gun store is compact: a 2 x 2 grid of guns beside the picked gun's
   details; on upright phones a short bottom sheet with the guns in one row.
   Check it at phone widths upright and on its side (no scrolling needed).
@@ -3665,7 +3679,7 @@ it and has been retired completely. Build only on what's here.
   bottom-right on desktops with the slots' names; square slots over the
   right-hand buttons on touch screens upright, the door prompt above them,
   low between the stick and the buttons on their side; in `chrome`), **the
-  inventory** (`[data-inv]`: Tab, the walk tabs' Bag button
+  inventory** (`[data-inv]`: Tab, the hub's Bag tab's button
   `[data-inv-open]` or the gamepad's View open and close it, Esc and × close
   it; open, Degen stops, the mouse is freed and `.city.is-inv` hides the
   HUD's buttons, the hotbar and the prompt; the two weapon slots over the
@@ -3842,7 +3856,7 @@ it and has been retired completely. Build only on what's here.
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
 - Over the shoulder is the default when walking starts (V or the
-  Controls panel swaps to first person). The first-person hands
+  hub's Settings swap to first person). The first-person hands
   (`viewmodel.ts`, Degen's own from `bakedHand()` in `body.ts`: the right
   closed round the pistol grip, the left under the front) wear the sleeves of Degen's outfit (`setOutfit()`, called
   from `walk.setLook()` through `combat.setOutfit()`: a suit sleeve with a
@@ -4063,7 +4077,7 @@ it and has been retired completely. Build only on what's here.
   name or look carried over), and its look never overwrites the browser's
   own guest look. The **Connect wallet** button sits in the header's tools (`.nav-account`,
   rendered by `CityMap.astro` when there's a game server,
-  "Connect" on phones) and in the walk Profile tab (`[data-account-open]`);
+  "Connect" on phones) and in the hub's Profile tab (`[data-account-open]`);
   both open the profile card (`[data-account]`). The account and card are
   made with the page (`CityMap.astro`), not with the 3D city, so they work
   before 3D has loaded; `bootCity()` gets them and fills
