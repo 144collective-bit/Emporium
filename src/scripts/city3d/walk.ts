@@ -165,14 +165,26 @@ const FP_BOB = 0.7;
 function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T & { loaded(): Promise<T> } {
   let real: T | null = null;
   let loading: Promise<T> | null = null;
-  const get = () => (loading ??= load().then((m) => (real = m)));
+  // (a load that failed is forgotten, so the next try asks again; the page's own `vite:preloadError` handler,
+  // CityMap.astro, reloads a page whose files a new version replaced)
+  const get = () =>
+    (loading ??= load()
+      .then((m) => (real = m))
+      .catch((err) => {
+        loading = null;
+        throw err;
+      }));
   return new Proxy({} as T & { loaded(): Promise<T> }, {
     get(_, k) {
       // (fetch it without opening it: a street spar wants the fight's HUD with no menu first)
       if (k === 'loaded') return get;
       if (real) return (real as Record<PropertyKey, unknown>)[k];
       if (k === 'open') return false;
-      if (typeof k === 'string' && opens.includes(k as keyof T & string)) return (...a: unknown[]) => void get().then((m) => (m as Record<string, (...x: unknown[]) => void>)[k](...a));
+      if (typeof k === 'string' && opens.includes(k as keyof T & string))
+        return (...a: unknown[]) =>
+          void get()
+            .then((m) => (m as Record<string, (...x: unknown[]) => void>)[k](...a))
+            .catch(() => {});
       return () => {};
     },
   });
