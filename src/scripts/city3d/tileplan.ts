@@ -70,6 +70,20 @@ export const sitesNear = <S extends SiteArea>(queue: readonly S[], x: number, z:
 export const KEEP_LEAD = 40;
 export const REBUILD_LEAD = 24;
 
+/**
+ * Far districts let go (phones; docs/performance-plan.md, the start-up pass's
+ * item 5): how far past the swap distance a site is built at all (`inReach()`;
+ * further out it waits in the queue), and past which a built tile lets go of
+ * everything its sites drew, near and far (`toDrop()`); and how much closer a
+ * tile that let it all go is built again whole, before it's in view
+ * (`DROP_BACK`, through `toRebuild()`)
+ */
+export const DROP_LEAD = 230;
+export const DROP_BACK = 170;
+
+/** Whether a site `d` from the focus is built, with the tier's `reach` past the swap distance (none: always) */
+export const inReach = (d: number, far: number, reach: number | undefined) => reach === undefined || d <= far + reach;
+
 /** A tile holding near pieces that could be let go (or that has let them go) */
 export interface HeldTile {
   key: string;
@@ -98,11 +112,26 @@ export function toRelease(held: readonly HeldTile[], budget: number, far: number
   return out;
 }
 
-/** The tiles that let their near pieces go and are now close enough to need them back, nearest first */
-export function toRebuild(released: readonly { key: string; d: number }[], far: number): string[] {
+/**
+ * The tiles that let their pieces go and are now close enough to need them
+ * back, nearest first: within `far` + `lead` (`REBUILD_LEAD` for near pieces
+ * let go, `DROP_BACK` for a tile let go whole)
+ */
+export function toRebuild(released: readonly { key: string; d: number }[], far: number, lead = REBUILD_LEAD): string[] {
   return released
-    .filter((t) => t.d <= far + REBUILD_LEAD)
+    .filter((t) => t.d <= far + lead)
     .sort((a, b) => a.d - b.d)
+    .map((t) => t.key);
+}
+
+/**
+ * The tiles to let go whole (phones): every one past `far` + `DROP_LEAD` from
+ * the camera that isn't drawn near, whatever the budget, furthest first
+ */
+export function toDrop(held: readonly { key: string; d: number; near: boolean }[], far: number): string[] {
+  return held
+    .filter((t) => !t.near && t.d > far + DROP_LEAD)
+    .sort((a, b) => b.d - a.d)
     .map((t) => t.key);
 }
 

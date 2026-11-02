@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { createTileWork, site } from '../src/scripts/city3d/tilework';
 import { tileBatch } from '../src/scripts/city3d/tilebatch';
 import { tilesNear } from '../src/scripts/city3d/tiles';
+import { DROP_BACK, DROP_LEAD } from '../src/scripts/city3d/tileplan';
 
 const paint = new THREE.MeshBasicMaterial();
 paint.userData.shared = true;
@@ -78,4 +79,65 @@ test('a place asked for is built before it is shown, and near forms come back af
   assert.equal(works.stats().released, 0);
   // b, never built and never asked for, still waits
   assert.equal(works.stats().waiting, 1);
+});
+
+test('on phones, sites beyond reach wait, and a tile far from what the camera looks at lets everything go and comes back whole', () => {
+  const runs: string[] = [];
+  const own = new THREE.MeshBasicMaterial({ map: new THREE.Texture() });
+  own.userData.siteKey = 'sign';
+  // A building: its walls at every distance, its details near only, and a sign in the site's own named material
+  const block = (id: string, x: number, z: number) =>
+    site(id, [x - 2, z - 2, x + 2, z + 2], (into) => {
+      runs.push(id);
+      for (const [lod, mat] of [['all', paint], ['near', paint], ['all', own]] as const) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1).translate(x, 0.5, z), mat);
+        m.userData.batched = true;
+        m.userData.lod = lod;
+        into.add(m);
+      }
+    });
+  block('a', 15, 15);
+  block('b', 200, 15);
+  block('c', 615, 15);
+  const scene = new THREE.Scene();
+  const far = 90;
+  const works = createTileWork(scene, { budget: 1e9, compile: () => {}, reach: DROP_LEAD });
+  const tiled = tileBatch(scene, [scene, ...works.boot(tilesNear(15, 15, 40))]);
+  works.attach(tiled);
+  tiled.update(15, 30, 15, far);
+  // From the home view b is within reach and c beyond it: b is built, c waits (and isn't counted as waiting)
+  works.step(1e6, 15, 30, 15, 0.016, far);
+  assert.deepEqual(runs, ['a', 'b']);
+  assert.equal(works.pending(), 0);
+  assert.equal(works.stats().beyond, 1);
+  const piecesHome = tiled.pieces();
+  assert.equal(works.stats().sites, tiled.siteBytes());
+  // Looking at c (a fly-in there): c is built, and half a second on, b, now far beyond reach, lets everything go
+  works.want(615, 15, 30);
+  assert.deepEqual(runs, ['a', 'b', 'c']);
+  tiled.update(615, 30, 15, far);
+  // (what's let go is checked twice a second)
+  for (const t = performance.now(); performance.now() - t < 520; );
+  works.step(0, 615, 30, 15, 0.6, far);
+  // (a, the boot's, is a site too: it goes with b)
+  assert.equal(works.stats().dropped, 2);
+  assert.equal(works.stats().released, 0);
+  assert.equal(works.stats().beyond, 0);
+  assert.equal(tiled.pieces(), 3);
+  // Coming back towards b: it's built again whole, walls, details and sign, before it's in view; a stays let go
+  works.step(0, 200 + far + DROP_BACK - 1, 30, 15, 0.016, far);
+  assert.deepEqual(runs, ['a', 'b', 'c', 'b']);
+  assert.equal(works.stats().dropped, 1);
+  assert.equal(works.stats().rebuilt, 1);
+  assert.equal(tiled.pieces(), piecesHome);
+  // A desktop (no reach) builds everything and lets nothing go whole
+  runs.length = 0;
+  block('d', 15, 15);
+  block('e', 2015, 15);
+  const all = createTileWork(new THREE.Scene(), { budget: 1e9, compile: () => {} });
+  const t2 = tileBatch(scene, [scene, ...all.boot([])]);
+  all.attach(t2);
+  all.step(1e6, 15, 30, 15, 0.6, far);
+  assert.deepEqual(runs, ['d', 'e']);
+  assert.equal(all.stats().dropped, 0);
 });

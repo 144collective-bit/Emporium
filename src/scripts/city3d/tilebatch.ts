@@ -21,6 +21,13 @@
  * back the room let go), and a tile far away can let go of its sites' near
  * pieces in the shared materials (`release()`): it's drawn in its far form
  * until they're built again (`add()` with `keep`).
+ *
+ * Far districts let go (phones, docs/performance-plan.md, the start-up
+ * pass's item 5): a tile far past that lets go of everything its sites drew,
+ * near and far, in the shared materials and the sites' named ones
+ * (`drop()`): nothing of it is drawn until it's built again whole, before
+ * it's in view; and a mesh left mostly empty gives the room back
+ * (`shrink()`), so a phone holds only the city round you.
  */
 import * as THREE from 'three';
 import { boxDistance, isNear, tileKey, tileOf, tileRect } from './tiles';
@@ -50,6 +57,8 @@ interface Tile {
   lod: boolean;
   /** Its sites' near pieces were let go: drawn far until they're built again */
   released: boolean;
+  /** Everything its sites drew was let go (phones): nothing of it drawn until it's built again whole */
+  dropped: boolean;
   pieces: Piece[];
   /** The sites that drew into it */
   sites: Set<string>;
@@ -78,20 +87,30 @@ export interface TileBatches {
   /**
    * Merge Batches built later onto `parents` (a site, `site` its name), as
    * at the boot. `keep` picks which tiles' and levels' pieces are kept
-   * (building a tile's near pieces again). Returns the batched meshes it
-   * made (new materials), to compile.
+   * (building a tile's pieces again: only those in the shared materials and
+   * the sites' named ones, the only ones let go; `shared` says which).
+   * Returns the batched meshes it made (new materials), to compile.
    */
-  add(parents: THREE.Object3D[], opts?: { site?: string; keep?: (tile: string, lod: Lod) => boolean }): THREE.BatchedMesh[];
+  add(parents: THREE.Object3D[], opts?: { site?: string; keep?: (tile: string, lod: Lod, shared: boolean) => boolean }): THREE.BatchedMesh[];
   /** Let a tile's sites' near pieces in the shared materials go; the bytes freed */
   release(tile: string): number;
-  /** Mark a tile's near pieces built again */
+  /** Let everything a tile's sites drew go, near and far (phones); the bytes freed */
+  drop(tile: string): number;
+  /** Mark a tile's pieces built again */
   restored(tile: string): void;
-  /** The tiles holding near pieces that could be let go, and those that let them go */
-  held(x: number, y: number, z: number): { key: string; d: number; bytes: number; near: boolean; released: boolean }[];
-  /** The sites whose near pieces a tile let go */
+  /**
+   * The tiles holding pieces that could be let go, and those that let them go: `bytes` the near pieces that
+   * `release()` lets go, `all` everything `drop()` lets go
+   */
+  held(x: number, y: number, z: number): { key: string; d: number; bytes: number; all: number; near: boolean; released: boolean; dropped: boolean }[];
+  /** The sites whose pieces a tile let go */
   lostSites(tile: string): string[];
   /** Bytes of near pieces that could be let go, held now */
   heldBytes(): number;
+  /** Bytes of everything the sites drew, held now */
+  siteBytes(): number;
+  /** Give back the room one mesh left mostly empty by what was let go (the one wasting most); the bytes freed */
+  shrink(): number;
 }
 
 /** The triangles of `g` whose middle falls in each tile, each as its own compact geometry */
@@ -152,6 +171,12 @@ const bytesOf = (g: THREE.BufferGeometry) =>
 
 /** How much room a batched mesh is made with past what it holds, so sites built later mostly fit */
 const ROOM = 1.25;
+/** A mesh gives its room back once this share of it is empty (and it's over `SHRINK_MIN` bytes) */
+const SHRINK_SHARE = 0.5;
+const SHRINK_MIN = 2 * 2 ** 20;
+
+/** A material whose pieces can be let go and built again: a shared one, or a site's named one (one name, one material: kit.ts) */
+const letGo = (mat: THREE.Material) => !!mat.userData.shared || !!mat.userData.siteKey;
 
 /**
  * Merge the Batches built onto `parents` (`userData.batched` meshes) into
@@ -170,14 +195,14 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
     if (!tile) {
       const [i, j] = t.split(',').map(Number);
       const [x0, z0, x1, z1] = tileRect(i, j);
-      tiles.set(t, (tile = { key: t, x0, z0, x1, z1, top: 0, near: true, lod: false, released: false, pieces: [], sites: new Set(), lost: new Set() }));
+      tiles.set(t, (tile = { key: t, x0, z0, x1, z1, top: 0, near: true, lod: false, released: false, dropped: false, pieces: [], sites: new Set(), lost: new Set() }));
     }
     return tile;
   };
   const shown = (tile: Tile, lod: Lod) => (lod === 'all' ? true : lod === 'near' ? tile.near : !tile.near);
   const nearOf = (t: Tile) => !t.released && isNear(boxDistance(cam.x, cam.y, cam.z, t.x0, 0, t.z0, t.x1, t.top, t.z1), cam.far, t.near);
 
-  function add(list: THREE.Object3D[], opts: { site?: string; keep?: (tile: string, lod: Lod) => boolean } = {}) {
+  function add(list: THREE.Object3D[], opts: { site?: string; keep?: (tile: string, lod: Lod, shared: boolean) => boolean } = {}) {
     for (const p of list) p.updateWorldMatrix(true, true);
     // Each material set's new tile pieces
     interface Incoming {
@@ -200,15 +225,18 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         if (!m.isMesh || !m.userData.batched || Array.isArray(m.material) || !m.visible || !m.geometry.index) continue;
         taken.push(m);
         const lod: Lod = m.userData.lod ?? 'all';
-        // Building near pieces again: only the shared materials' (the only ones let go)
-        if (opts.keep && !m.material.userData.shared) continue;
+        // Building pieces again: only the materials whose pieces are let go
+        if (opts.keep && !letGo(m.material)) continue;
+        const shared = !!m.material.userData.shared;
         const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
-        const key = `${m.material.uuid}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.renderOrder}|${shapeOf(g)}`;
+        // (a site's named material stands for one look however many times the site makes it)
+        const mat: string = m.material.userData.siteKey ? `site:${m.material.userData.siteKey}` : m.material.uuid;
+        const key = `${mat}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.renderOrder}|${shapeOf(g)}`;
         const k2 = `${key}|${site}`;
         let inc = incoming.get(k2);
         if (!inc) incoming.set(k2, (inc = { key, site, mat: m.material, layers: m.layers.mask, cast: m.castShadow, receive: m.receiveShadow, order: m.renderOrder, pieces: new Map() }));
         for (const [t, part] of splitByTile(g)) {
-          if (opts.keep && !opts.keep(t, lod)) {
+          if (opts.keep && !opts.keep(t, lod, shared)) {
             part.dispose();
             continue;
           }
@@ -320,6 +348,39 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
   }
 
   const evictable = (p: Piece) => p.lod === 'near' && p.site !== '' && !!p.set.bm.material && !!(p.set.bm.material as THREE.Material).userData.shared;
+  const droppable = (p: Piece) => p.site !== '' && !!p.set.bm.material && letGo(p.set.bm.material as THREE.Material);
+
+  /** Let go of a tile's pieces `may` lets go; the bytes freed */
+  function letGoOf(t: Tile, may: (p: Piece) => boolean) {
+    let freed = 0;
+    t.pieces = t.pieces.filter((p) => {
+      if (!may(p)) return true;
+      p.set.bm.deleteGeometry(p.geo);
+      p.set.holes++;
+      t.lost.add(p.site);
+      freed += p.bytes;
+      return false;
+    });
+    return freed;
+  }
+  /** What a mesh's geometry takes, and how much of it is used */
+  function roomOf(bm: THREE.BatchedMesh) {
+    const g = bm.geometry;
+    const fields = bm as unknown as { _maxVertexCount: number; _maxIndexCount: number };
+    const perVert = Object.values(g.attributes).reduce((n, a) => n + (a as THREE.BufferAttribute).itemSize * (a as THREE.BufferAttribute).array.BYTES_PER_ELEMENT, 0);
+    const perIndex = g.index ? g.index.array.BYTES_PER_ELEMENT : 0;
+    const bytes = fields._maxVertexCount * perVert + fields._maxIndexCount * perIndex;
+    // (what the pieces still there reserve: the room let go counts as free, packed or not)
+    const info = (bm as unknown as { _geometryInfo: { active: boolean; reservedVertexCount: number; reservedIndexCount: number }[] })._geometryInfo;
+    let usedV = 0;
+    let usedI = 0;
+    for (const g of info) {
+      if (!g.active) continue;
+      usedV += g.reservedVertexCount;
+      usedI += g.reservedIndexCount;
+    }
+    return { bytes, used: usedV * perVert + usedI * perIndex, usedV, usedI };
+  }
 
   add(parents);
   return {
@@ -340,32 +401,40 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
     add,
     release(key) {
       const t = tiles.get(key);
-      if (!t || t.released || t.near) return 0;
-      let freed = 0;
-      t.pieces = t.pieces.filter((p) => {
-        if (!evictable(p)) return true;
-        p.set.bm.deleteGeometry(p.geo);
-        p.set.holes++;
-        t.lost.add(p.site);
-        freed += p.bytes;
-        return false;
-      });
+      if (!t || t.released || t.dropped || t.near) return 0;
+      const freed = letGoOf(t, evictable);
       if (freed) t.released = true;
+      return freed;
+    },
+    drop(key) {
+      const t = tiles.get(key);
+      if (!t || t.dropped || t.near) return 0;
+      const freed = letGoOf(t, droppable);
+      if (freed || t.released) {
+        t.dropped = true;
+        t.released = false;
+      }
       return freed;
     },
     restored(key) {
       const t = tiles.get(key);
       if (!t) return;
       t.released = false;
+      t.dropped = false;
       t.lost.clear();
     },
     held(x, y, z) {
-      const out: { key: string; d: number; bytes: number; near: boolean; released: boolean }[] = [];
+      const out: { key: string; d: number; bytes: number; all: number; near: boolean; released: boolean; dropped: boolean }[] = [];
       for (const t of tiles.values()) {
         if (!t.sites.size) continue;
-        const bytes = t.pieces.reduce((n, p) => n + (evictable(p) ? p.bytes : 0), 0);
-        if (!bytes && !t.released) continue;
-        out.push({ key: t.key, d: boxDistance(x, y, z, t.x0, 0, t.z0, t.x1, t.top, t.z1), bytes, near: t.near, released: t.released });
+        let bytes = 0;
+        let all = 0;
+        for (const p of t.pieces) {
+          if (evictable(p)) bytes += p.bytes;
+          if (droppable(p)) all += p.bytes;
+        }
+        if (!all && !t.released && !t.dropped) continue;
+        out.push({ key: t.key, d: boxDistance(x, y, z, t.x0, 0, t.z0, t.x1, t.top, t.z1), bytes, all, near: t.near, released: t.released, dropped: t.dropped });
       }
       return out;
     },
@@ -374,6 +443,29 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       let n = 0;
       for (const t of tiles.values()) for (const p of t.pieces) if (evictable(p)) n += p.bytes;
       return n;
+    },
+    siteBytes: () => {
+      let n = 0;
+      for (const t of tiles.values()) for (const p of t.pieces) if (droppable(p)) n += p.bytes;
+      return n;
+    },
+    shrink() {
+      // The mesh wasting most, if it's big and mostly empty
+      let pick: { set: MatSet; waste: number; usedV: number; usedI: number } | null = null;
+      for (const set of sets.values()) {
+        if (!set.holes) continue;
+        const { bytes, used, usedV, usedI } = roomOf(set.bm);
+        if (bytes < SHRINK_MIN || used > bytes * (1 - SHRINK_SHARE)) continue;
+        if (!pick || bytes - used > pick.waste) pick = { set, waste: bytes - used, usedV, usedI };
+      }
+      if (!pick) return 0;
+      const bm = pick.set.bm;
+      const before = roomOf(bm).bytes;
+      // Packed first, then cut to what's used (with the usual room to grow); the pieces keep their ids
+      bm.optimize();
+      pick.set.holes = 0;
+      bm.setGeometrySize(Math.max(64, Math.ceil(pick.usedV * ROOM)), Math.max(192, Math.ceil(pick.usedI * ROOM)));
+      return before - roomOf(bm).bytes;
     },
   };
 }

@@ -138,3 +138,68 @@ test('room let go is taken back before a mesh grows', () => {
   }
   assert.ok((bm as unknown as { _maxVertexCount: number })._maxVertexCount <= size * 1.3);
 });
+
+test('a tile far from the focus lets everything its sites drew go, a mesh left mostly empty gives its room back, and it all comes back whole', () => {
+  const scene = new THREE.Scene();
+  piece(scene, 5, 5);
+  const tiled = tileBatch(scene, [scene]);
+  tiled.update(0, 10, 0, 100);
+  // A district a long way off: walls at every distance, details near only, and signs in the site's named material
+  // (made afresh by each run of the site, one name: they join one mesh)
+  const sign = () => {
+    const m = new THREE.MeshBasicMaterial({ map: new THREE.Texture() });
+    m.userData.siteKey = 'signs';
+    return m;
+  };
+  const build = (keep?: (tile: string, lod: 'near' | 'far' | 'all', shared: boolean) => boolean) => {
+    const site = new THREE.Group();
+    scene.add(site);
+    for (let k = 0; k < 30; k++) {
+      // (a big box: the mesh is worth shrinking)
+      const g = new THREE.SphereGeometry(1, 48, 32).translate(400 + k * 2, 1, 400);
+      const m = new THREE.Mesh(g, paint);
+      m.userData.batched = true;
+      site.add(m);
+      piece(site, 400 + k * 2, 400, 'near');
+      piece(site, 400 + k * 2, 400, undefined, sign());
+    }
+    return tiled.add([site], { site: 'district', keep: keep as never });
+  };
+  assert.equal(build().length, 1);
+  assert.equal(tiled.meshes.length, 2);
+  const pieces = tiled.pieces();
+  const bytes = tiled.siteBytes();
+  assert.ok(bytes > 0 && tiled.heldBytes() < bytes);
+  const held = tiled.held(0, 10, 0);
+  assert.ok(held.length > 1);
+  assert.equal(
+    held.reduce((n, t) => n + t.all, 0),
+    bytes
+  );
+  assert.ok(held.every((t) => !t.dropped && !t.near));
+  // Let go whole: every piece of it, the signs too
+  const freed = held.reduce((n, t) => n + tiled.drop(t.key), 0);
+  assert.equal(freed, bytes);
+  assert.equal(tiled.siteBytes(), 0);
+  assert.equal(tiled.pieces(), 1);
+  assert.deepEqual(tiled.lostSites(held[0].key), ['district']);
+  assert.ok(tiled.held(0, 10, 0).every((t) => t.dropped));
+  // Its mesh was mostly empty: it gives the room back, and the boot's piece is still drawn
+  const room = () => tiled.meshes.reduce((n, m) => n + m.geometry.attributes.position.array.byteLength, 0);
+  const before = room();
+  assert.ok(tiled.shrink() > 0);
+  assert.ok(room() < before / 2);
+  assert.equal(tiled.shrink(), 0);
+  assert.equal(visible(tiled.meshes[0]), 1);
+  // Built again whole (the site run once more, keeping this tile's pieces at every level)
+  const keys = new Set(held.map((t) => t.key));
+  build((t) => keys.has(t));
+  for (const k of keys) tiled.restored(k);
+  assert.equal(tiled.pieces(), pieces);
+  assert.equal(tiled.siteBytes(), bytes);
+  assert.equal(tiled.meshes.length, 2);
+  assert.ok(tiled.held(0, 10, 0).every((t) => !t.dropped));
+  // A tile drawn near is never let go whole
+  tiled.update(405, 3, 400, 100);
+  assert.equal(tiled.drop(held[0].key), 0);
+});

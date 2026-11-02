@@ -113,6 +113,7 @@ import type { Bench } from './bench';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
+import { DROP_LEAD } from './tileplan';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
@@ -474,6 +475,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     compile: (meshes) => meshes.forEach((m) => compileFor(m)),
     worker: siteWorker,
     meshesOf,
+    // Phones hold only the city round what the camera looks at: sites well past the swap distance wait, and
+    // tiles that far let go of everything their sites drew (tileplan.ts `DROP_LEAD`)
+    reach: tier === 'low' ? DROP_LEAD : undefined,
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
   const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
@@ -1530,8 +1534,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           stat.mem,
           `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
-          (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
-          (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
+          (({ built, waiting, beyond, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting${beyond ? ` (${beyond} more beyond reach)` : ''} · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
+          (({ released, dropped, held, sites, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · sites' pieces ${mb(sites)} · ${released} tiles let near go${dropped ? ` · ${dropped} let go whole` : ''} · ${rebuilt} built again`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),

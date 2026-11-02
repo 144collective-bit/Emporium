@@ -3,7 +3,7 @@
 // first past the budget, never near the camera, and built again before they're needed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { KEEP_LEAD, LOOK_AHEAD, REBUILD_LEAD, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, type HeldTile, type SiteArea } from '../src/scripts/city3d/tileplan';
+import { DROP_BACK, DROP_LEAD, KEEP_LEAD, LOOK_AHEAD, REBUILD_LEAD, bootSites, focusOf, inReach, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toDrop, toRebuild, toRelease, type HeldTile, type SiteArea } from '../src/scripts/city3d/tileplan';
 import { TILE, tileKey, tileOf, tilesNear } from '../src/scripts/city3d/tiles';
 
 let seed = 7;
@@ -94,4 +94,38 @@ test('near forms are let go past the budget, furthest first, never near the came
   );
   // Between where it's let go and where it's built again there's room, so a tile on the line doesn't churn
   assert.ok(KEEP_LEAD > REBUILD_LEAD);
+});
+
+test('on phones, far tiles let go of everything their sites drew, whatever the budget, and come back whole before they are in view', () => {
+  const far = 90;
+  const held: HeldTile[] = [
+    { key: 'a', d: 20, bytes: 40, near: true },
+    { key: 'b', d: far + DROP_LEAD, bytes: 40, near: false },
+    { key: 'c', d: far + DROP_LEAD + 1, bytes: 0, near: false },
+    { key: 'd', d: 900, bytes: 30, near: false },
+    // (a tile still drawn near is never let go, however far its box reads)
+    { key: 'e', d: 900, bytes: 30, near: true },
+  ];
+  // Every tile past the line goes, furthest first; the budget has no say
+  assert.deepEqual(toDrop(held, far), ['d', 'c']);
+  // Letting go whole starts past where near pieces are let go, well past the swap distance
+  assert.ok(DROP_LEAD > KEEP_LEAD);
+  // A tile let go whole is built again within `DROP_BACK`, nearest first, with room between so a tile on the line doesn't churn
+  assert.ok(DROP_BACK < DROP_LEAD && DROP_BACK > REBUILD_LEAD);
+  assert.deepEqual(
+    toRebuild(
+      [
+        { key: 'x', d: far + DROP_BACK + 1 },
+        { key: 'y', d: far + DROP_BACK },
+        { key: 'z', d: far + 10 },
+      ],
+      far,
+      DROP_BACK
+    ),
+    ['z', 'y']
+  );
+  // A site past the reach isn't built at all until it comes closer; a desktop (no reach) builds everything
+  assert.ok(inReach(far + DROP_LEAD, far, DROP_LEAD));
+  assert.ok(!inReach(far + DROP_LEAD + 1, far, DROP_LEAD));
+  assert.ok(inReach(5000, far, undefined));
 });

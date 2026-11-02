@@ -1900,6 +1900,26 @@ it and has been retired completely. Build only on what's here.
     (`BatchedMesh.optimize()`) before a mesh grows. The places, the
     landmarks and downtown's monolithic builders are built at the boot and
     never let go.
+  - **Far districts let go** (phones only, the owner's call; the start-up
+    pass's item 5 in `docs/performance-plan.md`): the low tier passes
+    `reach` (`DROP_LEAD`, 230) to `createTileWork()`. A site further than
+    `far` + `reach` from what the camera looks at (the focus) isn't built at
+    all until it comes closer (it waits in the queue, out of `pending()` and
+    the ?fps "waiting", counted as "beyond reach"; the site worker closes
+    once nothing within reach waits, so those are built on the main thread
+    later, as near pieces are), and a built tile that far lets go of
+    everything its sites drew, near and far, whatever the budget
+    (`toDrop()`, `TileBatches.drop()`: the pieces in the shared materials
+    and in the sites' named ones, `siteMat()`; a material without a name is
+    kept, as it's never built again): nothing of it is drawn until the
+    site runs again and puts it all back, within `far` + `DROP_BACK`
+    (170) of the focus, before it's in view. A mesh left mostly empty
+    gives its room back (`TileBatches.shrink()`: packed, then cut to what's
+    used; one a check). The ground, the roads and the districts' boot data
+    stay (walking, driving, traffic and the world map don't read the
+    drawing), and so do what a district draws on the main thread itself
+    (its water, dogs, parked cars). Desktops (no `reach`) build and keep it
+    all, as before. `?fps` reads "sites' pieces", "let go whole".
   - The rules are DOM-free in `tileplan.ts` (tested in
     `tests/tileplan.test.ts`); the tile pieces and the scheduler are
     tested too (`tests/tilebatch.test.ts`, `tests/tilework.test.ts`).
