@@ -106,6 +106,7 @@ import { onTap, type GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
+import { vergeY } from './verges';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -646,6 +647,11 @@ export function createWalk(d: WalkDeps) {
   const leavesOpen = () => d.reduced || !leavesAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
+    // (a block's edge onto open land eases down to the ground, verges.ts: the bank's slope)
+    if (slab === 0.035) {
+      const v = vergeY(x, z);
+      if (v > 0) return v + 0.035;
+    }
     // (Crestmont's hills, terrain.ts: open ground that rises; nothing else stands there yet)
     if (slab === 0.035 && onHills(x, z)) return heightAt(x, z) + 0.035;
     // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)

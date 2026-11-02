@@ -37,7 +37,8 @@ import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
-import { COVER, KERB, LAMP, TREE } from './palette';
+import { COVER, KERB, LAMP, TREE, VERGE } from './palette';
+import { EDGE, RAMP, VERGES, edgePieces, pieceLine } from './verges';
 import { colourAt, groundStep } from './ground';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
@@ -710,6 +711,70 @@ function paintGround(g: THREE.BufferGeometry) {
   }
 }
 
+/**
+ * Where a block meets open land (verges.ts, docs/blend-plan.md Phase 3): the slab eases down to the ground over
+ * `RAMP` (a bank from its top edge to its foot, in pieces a tile or less long, the top in the block's own cover and
+ * the foot in the ground's there, so it blends; its ends closed), and along the foot the district's hedge or low
+ * wall, in pieces with gaps between (their coping and the hedge's top near only)
+ */
+function buildVerges(b: Batch, low: boolean) {
+  const PIECE = 10;
+  const FOOT = 0.012;
+  const hedge = toon(VERGE.hedge);
+  const hedgeTop = toon(VERGE.hedgeTop);
+  const wall = toon(VERGE.wall);
+  const coping = toon(VERGE.coping);
+  const at = (p: Pt, n: Pt, d: number, y: number): [number, number, number] => [p[0] + n[0] * d, y, p[1] + n[1] * d];
+  for (const v of VERGES) {
+    const len = Math.hypot(v.b[0] - v.a[0], v.b[1] - v.a[1]);
+    const d: Pt = [(v.b[0] - v.a[0]) / len, (v.b[1] - v.a[1]) / len];
+    const up: [number, number, number] = [v.n[0] * 0.1, 1, v.n[1] * 0.1];
+    const bank = toon(COVER[v.cover]);
+    const pieces = Math.max(1, Math.ceil(len / PIECE));
+    for (let k = 0; k < pieces; k++) {
+      const p: Pt = [v.a[0] + d[0] * ((len * k) / pieces), v.a[1] + d[1] * ((len * k) / pieces)];
+      const q: Pt = [v.a[0] + d[0] * ((len * (k + 1)) / pieces), v.a[1] + d[1] * ((len * (k + 1)) / pieces)];
+      const g = quad3([at(p, v.n, 0, SLAB), at(q, v.n, 0, SLAB), at(q, v.n, RAMP, FOOT), at(p, v.n, RAMP, FOOT)], up);
+      b.add(g, bank);
+      // (the foot in the ground's own colour there, ground.ts: painted once the Batch has given it the bank's)
+      const col = g.getAttribute('color') as THREE.BufferAttribute;
+      for (const i of [2, 3]) {
+        const [r, gr, bl] = colourAt(g.getAttribute('position').getX(i), g.getAttribute('position').getZ(i), RGB);
+        GROUND_TINT.setRGB(r, gr, bl, THREE.SRGBColorSpace);
+        col.setXYZ(i, GROUND_TINT.r, GROUND_TINT.g, GROUND_TINT.b);
+      }
+    }
+    // Its ends closed: a triangle from the slab's top edge down to the foot, facing along it
+    for (const [p, s] of [
+      [v.a, -1],
+      [v.b, 1],
+    ] as [Pt, number][])
+      b.add(quad3([at(p, v.n, 0, SLAB), at(p, v.n, 0, 0), at(p, v.n, RAMP, 0), at(p, v.n, RAMP, FOOT)], [d[0] * s, 0, d[1] * s]), bank);
+    // The hedge or the wall along its foot
+    if (!v.edge) continue;
+    const { w, h } = EDGE[v.edge];
+    for (const piece of edgePieces(v)) {
+      const { a, b: e } = pieceLine(v, piece);
+      const l = Math.hypot(e[0] - a[0], e[1] - a[1]);
+      const n = Math.max(1, Math.ceil(l / PIECE));
+      const yaw = Math.atan2(-(e[1] - a[1]), e[0] - a[0]);
+      for (let k = 0; k < n; k++) {
+        const m: Pt = [a[0] + ((e[0] - a[0]) * (k + 0.5)) / n, a[1] + ((e[1] - a[1]) * (k + 0.5)) / n];
+        const seg = l / n;
+        if (v.edge === 'hedge') {
+          // (phones leave out the lighter top: the hedge itself its full height)
+          const hh = low ? h : h - 0.06;
+          b.add(new THREE.BoxGeometry(seg, hh, w).rotateY(yaw).translate(m[0], hh / 2, m[1]), hedge);
+          if (!low) b.detail(() => b.add(new THREE.BoxGeometry(seg - 0.04, 0.06, w - 0.06).rotateY(yaw).translate(m[0], h - 0.03, m[1]), hedgeTop));
+        } else {
+          b.add(new THREE.BoxGeometry(seg, h - 0.05, w).rotateY(yaw).translate(m[0], (h - 0.05) / 2, m[1]), wall);
+          b.detail(() => b.add(new THREE.BoxGeometry(seg + 0.02, 0.05, w + 0.08).rotateY(yaw).translate(m[0], h - 0.025, m[1]), coping));
+        }
+      }
+    }
+  }
+}
+
 /** A rectangle less the parts of it inside `holes` (x0, z0, x1, z1 each): up to four pieces a hole */
 function minusRects(r: Rect, holes: Rect[]): Rect[] {
   let out: Rect[] = [r];
@@ -1012,6 +1077,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     b.box(x0, SLAB, z0, x1 - x0, 0.007, z1 - z0, rim);
     b.box(x0 + 0.3, SLAB, z0 + 0.3, x1 - x0 - 0.6, 0.01, z1 - z0 - 0.6, padGround[p.id] ? LOTS[padGround[p.id]] : toon(COVER.pad));
   }
+  buildVerges(b, low);
   // The bending streets: asphalt wide enough to fill their corners at the avenues (the kerbs cover the rest)
   for (const bend of BENDS) {
     const hw = BEND_REACH + 0.4;

@@ -60,6 +60,14 @@ export const KERB = {
   grit: '#5f5c70',
 } as const;
 
+/** What stands along a block's edge onto open land (verges.ts): a clipped hedge, its top a shade lighter, and a low stone wall with its coping */
+export const VERGE = {
+  hedge: '#22643f',
+  hedgeTop: '#2b7449',
+  wall: '#8d87a8',
+  coping: '#a7a2bf',
+} as const;
+
 /** The trees: the round ones' crowns (a few greens, picked per tree), their trunks, the pines */
 export const TREE = {
   crowns: ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'],
