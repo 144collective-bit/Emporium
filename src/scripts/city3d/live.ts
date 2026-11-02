@@ -61,6 +61,7 @@ export const LIVE_PLACES = [
   { id: 'gondolier', name: 'The Gondolier' },
   { id: 'lagoon', name: 'Lava Lagoon' },
   { id: 'orbit', name: 'Orbit' },
+  { id: 'sphere', name: 'The Sphere' },
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 

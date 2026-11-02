@@ -16,7 +16,7 @@
  *   a walk prompt that opens the panel) and the spot you walk in at, facing it (`spawn`); water at the ground
  *   (`water`: the lake, the lagoon, the canal, the moat, a pool), each held in by a low rim (`RIM`).
  * - **The theme** (`WILD_ACE`, `SCARAB`, `COASTER`, `GONDOLIER`, `LAGOON`, `ORBIT`): what only one resort has.
- * - **The Sphere's lot** (`SPHERE_LOT`): the giant LED sphere's, Phase 3; hoardings round it for now.
+ * - **The Sphere's lot** (`SPHERE_LOT`): the giant LED sphere's (stripmarks.ts, Phase 3).
  * - `RESORT_SOLIDS` (in `SOLIDS`), `RESORT_TALLEST`.
  */
 import { ROWS, type Rect } from './strip';
@@ -465,9 +465,8 @@ export const RESORTS: Resort[] = [wildAce, dragonspire, scarab, bigCity, gondoli
 export const resortOf = (id: string) => RESORTS.find((r) => r.id === id);
 export const RESORT_IDS = RESORTS.map((r) => r.id);
 
-/** The Sphere's lot (Phase 3), east end of the south row: hoardings round it for now */
+/** The Sphere's lot, east end of the south row (its landmark is stripmarks.ts's, Phase 3) */
 export const SPHERE_LOT: Rect = S(226).r(0.8, 0.8, 22.4, DEPTH - 0.8);
-export const HOARDING = { h: 2.6, t: 0.2 };
 
 /** The tallest point on the Strip (Orbit's mast) */
 export const RESORT_TALLEST = Math.max(...RESORTS.map((r) => r.top));
@@ -557,10 +556,5 @@ export const RESORT_SOLIDS: Box[] = (() => {
   const [ox, oz] = SCARAB.obelisk.at;
   const ob = SCARAB.obelisk.base / 2;
   out.push([ox - ob, oz - ob, ox + ob, oz + ob, SLAB_Y + SCARAB.obelisk.h]);
-  // The Sphere's hoardings
-  const [x0, z0, x1, z1] = SPHERE_LOT;
-  const t = HOARDING.t;
-  const H = SLAB_Y + HOARDING.h;
-  out.push([x0, z0, x1, z0 + t, H], [x0, z1 - t, x1, z1, H], [x0, z0, x0 + t, z1, H], [x1 - t, z0, x1, z1, H]);
   return out;
 })();

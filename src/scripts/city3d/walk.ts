@@ -92,6 +92,7 @@ import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { inBasin } from './docks';
 import { HARBOUR_MASTER } from './docksport';
 import { RESORTS } from './resorts';
+import { SPHERE_DOOR } from './stripmarks';
 import { heightAt, hillsAlong, onHills } from './terrain';
 import { HIRE } from './riverbus';
 import type { Boat } from './boat';
@@ -113,7 +114,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door }))];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }];
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put']);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));

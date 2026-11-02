@@ -5,7 +5,7 @@
  */
 
 /** The places with a pin */
-export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments' | 'karts' | 'airport' | 'fightclub' | 'liberty' | 'harbour' | 'trenches' | 'club' | 'bar' | 'arms' | 'pier' | 'stadium' | 'nightmarket' | 'tower' | 'palmcourt' | 'mall' | 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir' | 'harbourmaster' | 'sunclub' | 'sunpark' | 'sunschool' | 'wildace' | 'dragonspire' | 'scarab' | 'bigcity' | 'gondolier' | 'lagoon' | 'orbit';
+export type SpotId = 'emporium' | 'shop' | 'workshop' | 'vault' | 'signal' | 'telegram' | 'plan' | 'apartments' | 'karts' | 'airport' | 'fightclub' | 'liberty' | 'harbour' | 'trenches' | 'club' | 'bar' | 'arms' | 'pier' | 'stadium' | 'nightmarket' | 'tower' | 'palmcourt' | 'mall' | 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir' | 'harbourmaster' | 'sunclub' | 'sunpark' | 'sunschool' | 'wildace' | 'dragonspire' | 'scarab' | 'bigcity' | 'gondolier' | 'lagoon' | 'orbit' | 'sphere';
 
 export interface Spot {
   /** Pin title and subline */

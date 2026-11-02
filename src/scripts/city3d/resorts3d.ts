@@ -23,13 +23,11 @@ import {
   COASTER_SAMPLES,
   DRAWBRIDGE,
   GONDOLIER,
-  HOARDING,
   LAGOON,
   ORBIT,
   RESORTS,
   RIM,
   SCARAB,
-  SPHERE_LOT,
   WILD_ACE,
   coasterAt,
   portePosts,
@@ -324,7 +322,7 @@ const SIGN_CELLS: { text: string; fg: string; bg?: string }[] = [
   ...RESORTS.map((r) => ({ text: r.name.toUpperCase(), fg: r.neon[0] })),
   { text: 'VALET', fg: '#ffffff', bg: '#16141f' },
   { text: 'HOTEL', fg: '#ffd23a' },
-  { text: 'THE SPHERE · COMING SOON', fg: '#ffffff', bg: '#1a1240' },
+  { text: 'THE SPHERE', fg: '#ffffff', bg: '#1a1240' },
   { text: 'THE NEON MILE', fg: '#2ef2ff' },
 ];
 const SIGN_TEX = canvasTex(1024, 1024, (c) => {
@@ -1229,21 +1227,6 @@ function orbit(b: Batch, r: Resort, low: boolean) {
   sign(b, 'ORBIT', (pod.rect[0] + pod.rect[2]) / 2, SLAB + 4.1, (r.face > 0 ? pod.rect[3] : pod.rect[1]) + n[1] * 0.02, n, 6, 0.75);
 }
 
-/** The Sphere's lot: hoardings round it with its notice, for now */
-function hoardings(b: Batch) {
-  const [x0, z0, x1, z1] = SPHERE_LOT;
-  const t = HOARDING.t;
-  const H = SLAB + HOARDING.h;
-  const blue = toon('#1a1240');
-  box(b, x0, SLAB, z0, x1, H, z0 + t, blue);
-  box(b, x0, SLAB, z1 - t, x1, H, z1, blue);
-  box(b, x0, SLAB, z0, x0 + t, H, z1, blue);
-  box(b, x1 - t, SLAB, z0, x1, H, z1, blue);
-  trim(b, [[x0, z0], [x0, z1], [x1, z1], [x1, z0]], H + 0.03, neonOf('#a15bff'), 0.05);
-  // (the notice along the boulevard side, both ways along it)
-  for (let x = x0 + 3; x < x1 - 2; x += 8) sign(b, 'THE SPHERE · COMING SOON', x + 2, SLAB + HOARDING.h * 0.55, z0, [0, -1], 7, 0.9, 0.02);
-}
-
 /* ---------- Register: the sites, and on the main thread what moves ---------- */
 
 const THEMES: Record<string, (b: Batch, r: Resort, low: boolean) => void> = { dragonspire, scarab, bigcity: bigCity, gondolier, lagoon, orbit };
@@ -1272,11 +1255,6 @@ export function registerResorts({ low, scene, tick }: { low: boolean; scene: THR
         b.build(into, { cast: true, receive: true });
       });
   }
-  site('strip sphere lot', SPHERE_LOT, (into) => {
-    const b = new Batch();
-    hoardings(b);
-    b.build(into, { cast: true, receive: true });
-  });
   if (!scene) return;
 
   // The water: the lake, the lagoon, the canal, the moat, Big City's pool, under their rims (the rims themselves too)
@@ -1380,3 +1358,6 @@ export function registerResorts({ low, scene, tick }: { low: boolean; scene: THR
     FALLS_TEX.offset.y = (t * 0.9) % 1;
   });
 }
+
+/** For the landmarks (stripmarks3d.ts): the same paint, signs and bulbs (the welcome sign's chase with Wild Ace's) */
+export { BULB, BULBS, beam, box, bulbs, cutout, cyl, mat4, neonOf, pane, sign, starPts };

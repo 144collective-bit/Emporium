@@ -68,8 +68,9 @@ const spots: Record<SpotId, Spot> = {
   gondolier: { title: 'The Gondolier', sub: 'Canal palace' },
   lagoon: { title: 'Lava Lagoon', sub: 'Lagoon resort' },
   orbit: { title: 'Orbit', sub: 'Space-age tower' },
+  sphere: { title: 'The Sphere', sub: 'Shows' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1180,6 +1181,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Orbit</h2>
     <p class="city-panel-text">The space-age tower, the tallest on the Strip: a flying saucer of a sky deck ringed in neon, fins sweeping up the shaft. The sky deck, the tables and the rooms: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="sphere">
+    <p class="kicker"><span class="kicker-num">37</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Sphere</h2>
+    <p class="city-panel-text">A ball of light twenty tiles across at the Strip's east end, its whole skin a screen playing an eye, the moon, a planet, a wave and the Emporium's diamond in turn, seen from across the city. Shows inside: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-sphere-walkin>Walk in</button>
   </template>
 
   <div class="city-hud" data-city-hud>

@@ -38,7 +38,8 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
-import { RESORTS, resortOf } from './resorts';
+import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
+import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
@@ -316,6 +317,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const pin: [number, number] = [(high.rect[0] + high.rect[2]) / 2, (high.rect[1] + high.rect[3]) / 2];
     const s = pickSpot(scene, r.id, SLAB, boxes, r.land, r.top + 1.2, pin);
     spots.push(r.face < 0 ? { ...s, faces: 'n' } : s);
+  }
+  // ...and the Sphere (Phase 3): the ball and its pavilion, fly-in from the north (it faces the boulevard)
+  {
+    const [x, z] = SPHERE.at;
+    const ball: [number, number, number, number] = [x - SPHERE.r, z - SPHERE.r, x + SPHERE.r, z + SPHERE.r];
+    spots.push({ ...pickSpot(scene, 'sphere', SLAB, [{ rect: ball, h: SPHERE_TOP }, { rect: SPHERE.pavilion, h: SPHERE.pavilionH }], SPHERE_LOT, SPHERE_TOP + 1.2, [x, z]), faces: 'n' });
   }
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
@@ -706,6 +713,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(at);
       });
     }
+    // The Sphere's panel: Walk in on the sidewalk in front of its pavilion
+    if (id === 'sphere')
+      panelBody.querySelector('[data-sphere-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(SPHERE_SPAWN);
+      });
     // A Neon Mile resort's panel: Walk in under its porte-cochère, facing its door
     const resort = resortOf(id);
     if (resort)
@@ -1505,7 +1518,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
     // (the el rumbles where the train is: walking, by Degen; in the City view, where it looks, softened by height)
     const ear = walking ? walk.position : controls.target;
-    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * (walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120)));
+    const heard = walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120);
+    // (the el's rumble overhead, and Lava Lagoon's volcano erupting: stripmarks.ts; still under reduced motion)
+    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * heard, reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard);
 
     if ((!reduced || dirty || flight) && (!covered || frames === 0 || t - coveredAt >= 1)) {
       if (covered) coveredAt = t;

@@ -61,9 +61,9 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const end = r!.pts[r!.pts.length - 1];
       // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street)
       const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
-      // (to a Neon Mile resort a taxi may stop on the boulevard's far kerb, the planted median between, by the way it
+      // (to a Neon Mile resort or the Sphere a taxi may stop on the boulevard's far kerb, the planted median between, by the way it
       // comes: no U-turns; the resorts' own drives come with the limos, docs/strip-plan.md Phase 5)
-      const across = RESORTS.some((r) => r.id === b.id) ? STRIP_BLVD.half : 0;
+      const across = RESORTS.some((r) => r.id === b.id) || b.id === 'sphere' ? STRIP_BLVD.half : 0;
       assert.ok(Math.hypot(end[0] - b.at.x, end[1] - b.at.z) < nearest + 4 + across, `${a.id} to ${b.id} stops ${Math.hypot(end[0] - b.at.x, end[1] - b.at.z).toFixed(1)} away`);
       // (the longest in town, from The Trenches to Westlake Park's stadium, is about 59 s since the river was widened;
       // to or from the airport, out on the world's south edge since docs/airport-plan.md Phase 3, the longest is the

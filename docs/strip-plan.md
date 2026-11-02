@@ -238,7 +238,7 @@ What was built:
 - **The boot** grew 4.2 KB, to 673.4 of 680 (the resorts' solids, places,
   doors and spawns); the Strip's chunk is 12.6 KB.
 
-### The landmarks (Phase 3)
+### The landmarks (Phase 3, built)
 
 - **The welcome sign:** a diamond-shaped neon sign in the boulevard's
   median at the west end, WELCOME TO THE NEON MILE, bulbs chasing round its
@@ -254,6 +254,51 @@ What was built:
 - **Searchlights:** beams sweeping the sky at night from several resorts
   (like Club PULSE's), the pyramid's straight up.
 - Under reduced motion every timetable shows still frames: nothing moves.
+
+What was built:
+
+- **The data:** `stripmarks.ts` (DOM-free, tested in
+  `tests/stripmarks.test.ts`): `WELCOME` (the diamond on two posts in the
+  median between its first two palms, `WELCOME_TOP`); the fountain's `JETS`
+  (two rows along the Gondolier's lake and five shooters down its middle,
+  `JET_MAX`), its timetable `SHOW` (a show of six movements of 9 s every
+  three minutes: a wave along the rows, the rows taking turns, a sweep, the
+  shooters in turn, the crescendo, the finale; the lake still between),
+  `showAt()`, `jetHeights()`, `SHOW_STILL`; the volcano (`VOLCANO` on the
+  lagoon's islet, `ERUPT`: an eruption every 150 s, the glow building, the
+  flames bursting, dying down; embers in the crater between; `eruptionAt()`,
+  `ERUPT_STILL`, `volcanoRumble()`); the Sphere (`SPHERE`: a ball 18 across
+  on its plinth at the south row's east end, its pavilion facing the
+  boulevard, `SPHERE_TOP` 19.2, `SPHERE_DOOR`, `SPHERE_SPAWN`); the
+  `SEARCHLIGHTS` on five resorts' roofs and either side of the Sphere's
+  pavilion; `MARK_SOLIDS` (in `SOLIDS`: the sign's posts, the ball, the
+  pavilion, the plaza's drums). The hoardings came down.
+- **The place:** spot `sphere` (pin, directory entry, panel kicker 37,
+  shows coming soon, Walk in `data-sphere-walkin`, `PLACES` and
+  `LIVE_PLACES` entries, its door in walk.ts `ALL_DOORS`).
+- **The sound:** the volcano's roar, a deep layer of its own in sound.ts
+  (`quakeGain`, `update()`'s `quake`, soundlazy.ts too) from
+  `volcanoRumble()` where you hear from (index.ts); none under reduced
+  motion.
+- **Drawing:** `stripmarks3d.ts` (`registerMarks()`, from strip3d.ts):
+  sites for the welcome sign (its face a small texture of its own,
+  `strip-welcome`, on both sides, a neon border, bulbs chasing round it with
+  Wild Ace's, the star), the fountain's lit nozzles, the volcano (a rugged
+  cone, lava streaks and its crater in `strip-lava`, which the tick heats),
+  the Sphere's plaza (paving, the plinth with its ring of light, uplights,
+  the glass pavilion under a white canopy, THE SPHERE over its doors) and
+  the searchlights' drums. On the main thread: the jets (an instanced
+  column and spray, from `jetHeights()` every frame), the volcano's flames
+  (one instanced flame: from the crater and a ring on the water), the
+  Sphere (its skin a shader of LED dots playing an eye that looks round and
+  blinks, the moon turning, a banded planet with its storm, a wave and the
+  Emporium's diamond turning, 12 s each with a crossfade), the searchlights'
+  beams (one instanced cone at night). Under reduced motion each stands at
+  its still frame. The Strip's chunk loads from further out
+  (`STRIP_REACH` in districts.ts), so the towers and the Sphere are seen
+  from across town.
+- **Left for Phase 5:** the crowd stopping to watch the fountains.
+- **The boot** grew 1.4 KB, to 674.8 of 680; the Strip's chunk is 17 KB.
 
 ### The monorail (Phase 4)
 
@@ -303,8 +348,8 @@ What was built:
 
 - **The resorts' names:** the draft names above, change any you like.
 - **Which side each resort stands on:** the table above is a proposal.
-- **The boot's size:** 673.4 of its 680 KB with Phase 2 (main's start-up
-  pass made room). Phases 3 to 5 may need it raised; asked when it comes up.
+- **The boot's size:** 674.8 of its 680 KB with Phase 3 (673.4 with Phase 2 (main's start-up
+  pass made room). Phases 4 and 5 may need it raised; asked when it comes up.
 - **The monorail's west end:** carry it on west to the metro (above), or
   stop it at the Strip's west end with a walk to the metro?
 
@@ -313,7 +358,7 @@ What was built:
 1. The boulevard and the land (the streets, the lots, traffic). Built.
 2. The resorts (the seven, as places). Built.
 3. The landmarks (the welcome sign, the fountain show, the volcano, the
-   Sphere, the searchlights).
+   Sphere, the searchlights). Built.
 4. The monorail.
 5. Life and sound.
 6. Polish and performance.

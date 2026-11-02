@@ -35,6 +35,8 @@ export function createSound(given?: AudioContext) {
   /** The Trenches: the el's rumble and screech, the boombox, the hood's own (sirens, dogs) */
   let elGain: GainNode;
   let screechGain: GainNode;
+  /** The Neon Mile's volcano erupting (stripmarks.ts `volcanoRumble()`): a deep roar, lower than the el's */
+  let quakeGain: GainNode;
   let boomGain: GainNode;
   let hoodGain: GainNode;
   let nextBoom = 0;
@@ -178,6 +180,7 @@ export function createSound(given?: AudioContext) {
     // The el overhead: a deep rumble, and the wheels' screech on the rails swaying in and out
     elGain = layer('lowpass', 150, 0.8, 0.3, 0.7, true);
     screechGain = layer('bandpass', 3100, 9, 0.8, 0.45);
+    quakeGain = layer('lowpass', 85, 0.9, 0.45, 1.3, true);
     // The boombox: its own beat through a small speaker (a band, a bit of crunch)
     boomGain = ctx.createGain();
     boomGain.gain.value = 0;
@@ -976,12 +979,13 @@ export function createSound(given?: AudioContext) {
       set(a.out.gain, revs >= 0 ? 0.04 + r * 0.07 : 0, revs >= 0 ? 0.2 : 0.3);
     },
     /** Called every frame with the scene's state and the district's layers where you are (ambience.ts) */
-    update(rain: number, night: number, a: Ambience, rumble = 0) {
+    update(rain: number, night: number, a: Ambience, rumble = 0, quake = 0) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
       // The Trenches: the el as the train goes over, the boombox, sirens and dogs now and then
       elGain.gain.setTargetAtTime(rumble * 0.5, t, 0.3);
       screechGain.gain.setTargetAtTime(rumble * rumble * 0.035, t, 0.3);
+      quakeGain.gain.setTargetAtTime(quake * 0.75, t, 0.5);
       boomGain.gain.setTargetAtTime(a.boombox * 0.32, t, 0.4);
       clubGain.gain.setTargetAtTime(a.club * 0.55, t, 0.4);
       hoodGain.gain.setTargetAtTime(a.hood, t, 1);
