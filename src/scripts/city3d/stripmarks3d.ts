@@ -129,14 +129,6 @@ function welcome(b: Batch, low: boolean, chase: THREE.Matrix4[][]) {
   cutout(b, starPts(5, W.star, 0.42), W.x, top + W.star * 1.3, W.z, [1, 0], neonOf('#ffd23a'), 0.1);
 }
 
-/* ---------- The fountain's nozzles and lights ---------- */
-
-function nozzles(b: Batch) {
-  const lights: THREE.Matrix4[] = [];
-  for (const j of JETS) lights.push(mat4(j.x, SLAB + 0.255, j.z, 0, j.kind === 'shooter' ? 0.32 : 0.18, 1));
-  b.instances(new THREE.CylinderGeometry(1, 1, 0.012, 10).translate(0, 0, 0), neonOf('#bfe8ff'), lights);
-}
-
 /* ---------- The volcano ---------- */
 
 function volcano(b: Batch, low: boolean) {
@@ -280,7 +272,11 @@ const SPHERE_FRAG = /* glsl */ `
   }
   vec3 moon(vec3 d, float t) {
     vec3 r = vec3(d.x * cos(t * 0.05) - d.z * sin(t * 0.05), d.y, d.x * sin(t * 0.05) + d.z * cos(t * 0.05));
+    #ifdef LOW
+    float n = noise(r * 3.0) * 0.6 + noise(r * 7.0) * 0.4;
+    #else
     float n = noise(r * 3.0) * 0.5 + noise(r * 7.0) * 0.3 + noise(r * 16.0) * 0.2;
+    #endif
     float craters = smoothstep(0.62, 0.7, noise(r * 5.0 + 3.0));
     return vec3(0.82, 0.82, 0.86) * (0.55 + 0.45 * n) - craters * 0.22;
   }
@@ -328,7 +324,11 @@ const SPHERE_FRAG = /* glsl */ `
     vec3 d = normalize(vDir);
     float a = mod(uSlide, ${SPHERE_SLIDES}.0);
     float b = mod(uSlide + 1.0, ${SPHERE_SLIDES}.0);
+    #ifdef LOW
+    vec3 col = slide(uFade > 0.5 ? b : a, d, uTime);
+    #else
     vec3 col = mix(slide(a, d, uTime), slide(b, d, uTime), uFade);
+    #endif
     // The panels: a grid of dots
     float lon = atan(d.x, d.z);
     float lat = asin(clamp(d.y, -1.0, 1.0));
@@ -363,13 +363,6 @@ export function registerMarks({ low, scene, tick }: { low: boolean; scene: THREE
     spherePlaza(b, low);
     b.build(into, { cast: true, receive: true });
   });
-  const jx = JETS.map((j) => j.x);
-  const jz = JETS.map((j) => j.z);
-  site('strip fountain', [Math.min(...jx), Math.min(...jz), Math.max(...jx), Math.max(...jz)], (into) => {
-    const b = new Batch();
-    nozzles(b);
-    b.build(into, { cast: false, receive: true });
-  });
   const sx = SEARCHLIGHTS.map((p) => p[0]);
   const sz = SEARCHLIGHTS.map((p) => p[2]);
   site('strip searchlights', [Math.min(...sx), Math.min(...sz), Math.max(...sx), Math.max(...sz)], (into) => {
@@ -395,6 +388,12 @@ export function registerMarks({ low, scene, tick }: { low: boolean; scene: THREE
     m.userData.keep = true;
     scene.add(fx(moving(m)));
   }
+  // The nozzles' lights on the water, in the FX layer too (the ink drew each as a blob), lit at night
+  const nozzleMat = lit(new THREE.MeshBasicMaterial({ color: '#bfe8ff', transparent: true, opacity: 0.85, depthWrite: false }), 0.25, 1);
+  const nozzles = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 12).rotateX(-Math.PI / 2), nozzleMat, n);
+  JETS.forEach((j, i) => nozzles.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(j.x, SLAB + 0.268, j.z), new THREE.Quaternion(), new THREE.Vector3(j.kind === 'shooter' ? 0.32 : 0.18, 1, j.kind === 'shooter' ? 0.32 : 0.18))));
+  nozzles.userData.keep = true;
+  scene.add(fx(nozzles));
   const heights = new Float32Array(n);
   const M = new THREE.Matrix4();
   const Q = new THREE.Quaternion();
@@ -419,7 +418,8 @@ export function registerMarks({ low, scene, tick }: { low: boolean; scene: THREE
   /* --- The volcano's flames: a plume from the crater with a yellow core, a ring on the water, a glow over it --- */
   const ring = low ? 8 : 12;
   const crater = 5;
-  const flameGeo = new THREE.ConeGeometry(0.5, 1, 9, 1, true).translate(0, 0.5, 0);
+  // (a flame's shape: wide near its foot, bulging, tapering to a point)
+  const flameGeo = new THREE.LatheGeometry([new THREE.Vector2(0.28, 0), new THREE.Vector2(0.5, 0.18), new THREE.Vector2(0.44, 0.45), new THREE.Vector2(0.24, 0.72), new THREE.Vector2(0.08, 0.9), new THREE.Vector2(0, 1)], low ? 7 : 10);
   const flame = (color: string, count: number) => {
     const m = new THREE.InstancedMesh(flameGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }), count);
     m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -464,6 +464,8 @@ export function registerMarks({ low, scene, tick }: { low: boolean; scene: THREE
     uniforms: { uTime: { value: 0 }, uSlide: { value: 0 }, uFade: { value: 0 }, uBright: { value: 0.9 } },
     vertexShader: SPHERE_VERT,
     fragmentShader: SPHERE_FRAG,
+    // (phones: no crossfade between slides (one slide's maths a pixel, not two), the moon's and the planet's finest noise left out)
+    defines: low ? { LOW: 1 } : {},
   });
   const ball = new THREE.Mesh(new THREE.SphereGeometry(SPHERE.r, low ? 40 : 72, low ? 24 : 40), sphereMat);
   ball.position.set(SPHERE.at[0], SLAB + SPHERE.y, SPHERE.at[1]);

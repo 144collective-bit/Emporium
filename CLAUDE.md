@@ -1306,7 +1306,11 @@ it and has been retired completely. Build only on what's here.
   doormen, the crowds at the fountains, the volcano and the Sphere, added
   from the chunk through `addPeople()`, the crowd's `reserve` now 192); its
   sound (ambience.ts `strip`, `casino`, `show`: the crowd's babble, slot
-  chimes by the casino doors, the fountain show's music while a show is on).
+  chimes by the casino doors, the fountain show's music while a show is on). Phase 6 (polish and performance) is built and the plan
+  is done: `?bench` views `strip` and `strip-street`; phones draw the Sphere's
+  shader on a lighter path (`LOW`) and the coaster at half its samples; the
+  fountain's nozzle lights in the FX layer; the volcano's flames shaped as
+  flames. It draws lighter than Uptown on desktop and phones.
 - **Sunridge** (the owner's call): a middle-class suburb of about 120
   Southwest stucco tract houses on the north-east land inside the ring
   highway (curving loops and cul-de-sacs, block-walled back yards with pools,
@@ -2033,7 +2037,7 @@ it and has been retired completely. Build only on what's here.
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
-  The Trenches round The Block,
+  The Trenches round The Block, the Neon Mile from over its boulevard and down it,
   where the edge was before Phase 6, the far edge (from `EXT`)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,

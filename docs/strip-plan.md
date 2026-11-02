@@ -403,10 +403,33 @@ What was built:
 - **The boot** grew 0.9 KB, to 678.2 of 680: still under it, so the budget
   wasn't raised (the owner's go stands for when it's needed).
 
-### Polish and performance (Phase 6)
+### Polish and performance (Phase 6, built)
 
 - `?bench` views over the Strip by day and at night; phones draw fewer
   details, simpler LED faces and fewer people; the boot's size checked.
+
+What was built:
+
+- **Measured** (the `?fps` readout, the same software renderer for each,
+  so the numbers compare, not the frame rates): over the boulevard from the
+  west by day, 258 draws and 1.19M triangles (1.10M at night), against 290
+  and 1.42M for Uptown's towers from the river; on the phone tier, 169 draws
+  and 0.28M triangles against Uptown's 173 and 0.47M. The Strip draws lighter
+  than Uptown on both, so nothing needed taking out.
+- **`?bench` views** (bench.ts): `strip` (over the boulevard from the west)
+  and `strip-street` (down the boulevard at street level); `?bench=night`
+  for the night.
+- **Phones:** the Sphere's shader a lighter path (`LOW`: no crossfade
+  between slides, the moon's finest noise left out), the coaster's track at
+  half its samples with supports twice as far apart, the flames fewer-sided;
+  already from earlier phases: every other person, every other bulb set off
+  the walls, the loungers, flags and rocks left out, the big canvas textures
+  at half size (kit.ts).
+- **Polish:** the fountain's nozzle lights moved into the FX layer (the ink
+  drew each as an outlined blob) and lit at night; the volcano's flames
+  shaped as flames (a lathe bulging and tapering to a point) instead of
+  cones.
+- **The boot** unchanged at 678.2 of 680.
 
 ## Rules for every phase
 
@@ -438,4 +461,4 @@ What was built:
    Sphere, the searchlights). Built.
 4. The monorail. Built.
 5. Life and sound. Built.
-6. Polish and performance.
+6. Polish and performance. Built: the plan is done.

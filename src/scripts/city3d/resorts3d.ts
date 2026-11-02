@@ -1060,7 +1060,8 @@ function bigCity(b: Batch, r: Resort) {
 }
 
 function coaster(b: Batch, r: Resort, low: boolean) {
-  const N = COASTER_SAMPLES;
+  // (phones: the track at half the samples)
+  const N = low ? COASTER_SAMPLES / 2 : COASTER_SAMPLES;
   const pts = Array.from({ length: N }, (_, k) => coasterAt(k / N));
   const red = toon('#e23b3b');
   const tie = toon('#2b2a33');
@@ -1081,9 +1082,9 @@ function coaster(b: Batch, r: Resort, low: boolean) {
     if (side2.lengthSq() < 1e-4) side2.set(1, 0, 0);
     side2.normalize().multiplyScalar(0.32);
     for (const s of [1, -1]) beam(b, [p[0] + side.x * s, SLAB + p[1], p[2] + side.z * s], [q[0] + side2.x * s, SLAB + q[1], q[2] + side2.z * s], 0.09, red);
-    if (k % (low ? 4 : 2) === 0) beam(b, [p[0] + side.x, SLAB + p[1] - 0.06, p[2] + side.z], [p[0] - side.x, SLAB + p[1] - 0.06, p[2] - side.z], 0.07, tie);
+    if (k % 2 === 0) beam(b, [p[0] + side.x, SLAB + p[1] - 0.06, p[2] + side.z], [p[0] - side.x, SLAB + p[1] - 0.06, p[2] - side.z], 0.07, tie);
     // Supports down to the ground, or the podium's roof
-    if (k % 14 === 0) {
+    if (k % (low ? 7 : 14) === 0) {
       const base = onPodium(p[0], p[2]) ? podium.y1 : 0;
       beam(b, [p[0], SLAB + base, p[2]], [p[0], SLAB + p[1] - 0.1, p[2]], 0.14, support);
     }
