@@ -7,9 +7,13 @@ it and has been retired completely. Build only on what's here.
 
 - The game is **The Trenches** (the owner's call, 2026-11): its title logo
   (`src/assets/trenches-logo.png`, the owner's art with its white
-  background cut away) heads the title screen. The city it's set in is
-  still Sector 7, and The Trenches is also the neighbourhood of that name
-  (below).
+  background cut away) heads the title screen, the city's header (its home
+  link, "The Trenches, home") and the maintenance cover. The homepage's tab
+  reads "The Trenches | The Degen Emporium"; the header's title while the
+  city loads, the no-3D card and the maintenance cover say The Trenches.
+  The city it's set in is still Sector 7 (the welcome tip, the map, the
+  places), and The Trenches is also the neighbourhood of that name
+  (below). The comic page keeps the Emporium's own name and logo.
 
 ## The city's name
 
@@ -44,8 +48,8 @@ it and has been retired completely. Build only on what's here.
     building flies the camera in and opens a glass panel.
   - **The 2D map was retired** (the owner's call, river plan step 1): no
     loading poster, no 2D view, no fallback. Where 3D can't run (no WebGL
-    2, or `bootCity()` returns null) the page shows a card saying Sector 7
-    needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
+    2, or `bootCity()` returns null) the page shows a card saying The
+    Trenches needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
     `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`).
     `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
     Don't bring the 2D map back without the owner.
@@ -2713,7 +2717,7 @@ it and has been retired completely. Build only on what's here.
 - The city page has **one header**: the city's own bar (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
-  other pages. Left to right: the logo (home link), the mode title and
+  other pages. Left to right: The Trenches' logo (home link), the mode title and
   subtitle (City view, Walk mode), then on the
   right (walk tabs, ammo and score while walking), the City / Walk
   switch (the current mode lit with a glow and a gradient underline, the

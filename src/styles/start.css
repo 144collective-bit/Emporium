@@ -83,7 +83,8 @@
 }
 /* (the maintenance cover's own logo, kicker and title) */
 .city-start-logo {
-  width: 104px;
+  width: 240px;
+  max-width: 100%;
   height: auto;
 }
 .city-start-kicker {

@@ -2161,3 +2161,12 @@
 .city-bench-copy[hidden] {
   display: none;
 }
+
+/* The narrowest phones: The Trenches' logo is wider than it is tall, so it comes down a little to leave the
+   mode's title room beside it */
+@media (max-width: 380px) {
+  .city-head-logo {
+    height: 28px;
+    padding-right: 8px;
+  }
+}

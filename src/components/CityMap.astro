@@ -1,6 +1,6 @@
 ---
 /*
- * The homepage: Sector 7.
+ * The homepage: The Trenches, the game, set in the city of Sector 7.
  *
  * The 3D city (src/scripts/city3d) boots behind the start menu: buildings
  * you hover and click, a camera that flies in, glass panels with each
@@ -77,8 +77,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       The ☰ Menu still has the comic page and the links. */}
   <div class="city-no3d" data-no3d hidden>
     <div class="city-no3d-card" role="status">
-      <p class="kicker"><span class="kicker-num">3D</span> Sector 7</p>
-      <p class="city-no3d-text">Sector 7 needs a device with 3D graphics (WebGL&nbsp;2).</p>
+      <p class="kicker"><span class="kicker-num">3D</span> The Trenches</p>
+      <p class="city-no3d-text">The Trenches needs a device with 3D graphics (WebGL&nbsp;2).</p>
       <p class="city-no3d-note">Try another browser or device. The comic and the links are in the Menu.</p>
     </div>
   </div>
@@ -109,8 +109,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       The city doesn't boot behind it; when it lifts the page reloads. */}
   <div class="city-start city-maint" data-maint role="dialog" aria-modal="true" aria-labelledby="city-maint-title" hidden>
     <div class="city-start-card city-start-box">
-      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
-      <p class="city-start-kicker">Sector 7</p>
+      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[240, 480, 720]} sizes="240px" alt="" loading="eager" class="city-start-logo" />
+      <p class="city-start-kicker">The Trenches</p>
       <p class="city-start-title" id="city-maint-title">Back <span class="hl">soon</span></p>
       <p class="city-maint-text" data-maint-text></p>
       <p class="city-maint-eta" data-maint-eta hidden></p>
@@ -200,11 +200,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk switch.
        Its title and subtitle are painted by head.ts. */}
   <header class="city-head" data-city-head>
-    <a href="/" class="city-head-logo" aria-label="The Degen Emporium, home">
-      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[72, 144, 216]} sizes="72px" alt="" loading="eager" class="city-head-logo-img" />
+    <a href="/" class="city-head-logo" aria-label="The Trenches, home">
+      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[80, 160, 240]} sizes="80px" alt="" loading="eager" class="city-head-logo-img" />
     </a>
     <div class="city-head-id">
-      <p class="city-head-text"><b data-head-title>Sector 7</b><small data-head-sub>Loading the city</small></p>
+      <p class="city-head-text"><b data-head-title>The Trenches</b><small data-head-sub>Loading the city</small></p>
     </div>
     <div class="walk-top">
       <details class="walk-settings walk-pop" data-pop>
@@ -1318,7 +1318,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     /* ---------- The 3D city ---------- */
     let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
     let booting = false;
-    const NO_3D = 'Sector 7 needs a device with 3D graphics (WebGL 2).';
+    const NO_3D = 'The Trenches needs a device with 3D graphics (WebGL 2).';
     /** No 3D here: the page says so, and so does the start menu (the header's Menu keeps the comic page and the links) */
     function no3d() {
       root!.dataset.view = 'none';
