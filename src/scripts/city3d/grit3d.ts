@@ -20,8 +20,9 @@ import { buildFx, poster, tag } from './grime';
 import { TENEMENTS } from './streetwall';
 import type { Lot } from './kits';
 import type { Idle } from './landmarks';
+import { COVER } from './palette';
 
-const PATCH = { grass: toon('#5f7f3f'), dirt: toon('#6b5848'), lawn: toon('#4c7d47') };
+const PATCH = { grass: toon(COVER.worn), dirt: toon(COVER.bare), lawn: toon(COVER.wornLawn) };
 const SOIL = toon('#3b2f2a');
 const BAGS = ['#1b1a22', '#22262a', '#2e3a2c', '#1b1a22', '#cfcad8'].map((c) => toon(c));
 const DUMPSTER_PAINT = ['#2f6b4a', '#2b4f7a', '#3d3a4a'].map((c) => toon(c));

@@ -16,6 +16,7 @@ import { heightAt } from './terrain';
 import { CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y, TEE, bunkersOf, flagOf, type Hole } from './crestsites';
 import { WINDOW, hip, poolOf } from './estates3d';
 import { BULB, LED, PAVING, SPRAY, WATER, flat } from './mallkit';
+import { COVER } from './palette';
 
 type Rect = [number, number, number, number];
 type Pt = [number, number];
@@ -38,7 +39,7 @@ const GREEN = toon('#82d46b');
 const TEE_GREEN = toon('#77c862');
 const SAND = toon('#ead9a2');
 const FLAG = toon('#e23b3b');
-const ISLAND = toon('#3f7a4a');
+const ISLAND = toon(COVER.planted);
 const CABANA = toon('#f4ead2');
 const STRIPE = toon('#2f7f9e');
 const CART = toon('#f1ede2');

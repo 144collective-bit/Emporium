@@ -33,6 +33,7 @@ import { ARCH, BARGE, BENCHES, BINOCULARS, BOARDWALK, BOLLARDS, CRANE, DECK_Y, F
 import { GANGWAY, STOPS } from './riverbus';
 import { PIER_HOUSE } from './riverside';
 import { SIGNS, archFrame, archPane, box, signPlane } from './riverside3d';
+import { LAMP } from './palette';
 
 /** The river bus's gangway off the boardwalk (riverbus.ts): its railing opens there */
 const BOARDWALK_GANGWAYS = STOPS.filter((s) => s.quay === BOARDWALK[1]).map((s): [number, number] => [s.door.x - GANGWAY.half - 0.05, s.door.x + GANGWAY.half + 0.05]);
@@ -496,7 +497,7 @@ function drawPier(b: Batch, crowd: Idle[], low: boolean) {
   ];
   for (const [x, z] of poles) {
     b.add(new THREE.CylinderGeometry(0.05, 0.07, 2.6, 8).translate(x, T + 1.3, z), RAIL);
-    b.add(new THREE.SphereGeometry(0.14, 10, 8).translate(x, T + 2.7, z), glow('#ffb35c'));
+    b.add(new THREE.SphereGeometry(0.14, 10, 8).translate(x, T + 2.7, z), glow(LAMP.sodium.bulb));
     addPool(x, z, 3, T + 0.02, true);
   }
   b.detail(() => {

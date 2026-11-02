@@ -111,6 +111,7 @@ import {
 } from './mall';
 import { BOLLARD, BOLLARDS, DOOR, WALL, WALLS } from './mallinside';
 import { registerInside } from './mallinside3d';
+import { COVER } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -215,9 +216,9 @@ const TOTEM = siteMat(
 /* ---------- Helpers ---------- */
 
 /** The islands' grass, hedges, grasses, flowers, and the EV bays' paint */
-const LAWN = toon('#6f9a4e');
+const LAWN = toon(COVER.island);
 const HEDGE = toon('#2f6430');
-const GRASS = toon('#b9b06a');
+const GRASS = toon(COVER.dry);
 const FLOWERS = [toon('#e58fb3'), toon('#f3f1ea'), toon('#9d7ad6'), toon('#f2c14e')];
 const EV_GREEN = toon('#3f8f5a');
 

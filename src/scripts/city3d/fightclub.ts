@@ -31,6 +31,7 @@ import type { Spot } from './landmarks';
 import type { FightClub } from './fight-types';
 import { BAGS, BLEACHERS, COUNTER, FIGHT_CLUB, LOCKERS, POSTS, POST_R, RING, RING_H, RING_HALF, ROPES, SHED, SIGN } from './fightsite';
 import { FIGHTCLUB_FIX } from './solids';
+import { COVER, KERB as KERB_C } from './palette';
 
 /** The place's id (city.ts SpotId lists it once index.ts wires the pin and panel) */
 const ID = 'fightclub';
@@ -43,8 +44,8 @@ const STEEL = toon('#2b2a40');
 const WALL = toon('#3d4a6b');
 const WALL_D = toon('#2c3550');
 const ROOF = toon('#25223a');
-const PAVE = toon('#4b4766');
-const KERB = toon('#5a5290');
+const PAVE = toon(COVER.concrete);
+const KERB = toon(KERB_C.town);
 const LINE = toon('#d9d4ef');
 const RED = toon('#e23b3b');
 const WOOD = toon('#8a5a3c');

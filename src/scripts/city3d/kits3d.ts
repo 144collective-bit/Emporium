@@ -20,6 +20,7 @@ import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, SIGN_ATLAS, STONE, WALL_COLOR, WO
 import { KIT_TALLEST, RIDGE, bigParts, type BigKit, type Lot } from './kits';
 import { rng } from './recipes';
 import { SLAB as S } from './world';
+import { KERB, LAMP } from './palette';
 
 const asInfill = (l: Lot) => l as unknown as Infill;
 
@@ -441,7 +442,7 @@ const GROUND: Record<'paving' | 'grass' | 'concrete', string> = { paving: '#5d58
 /** A block's raised slab (its sidewalk) and the ground inside, and the bollards and floor of its alleys */
 export function drawBlock(b: Batch, slab: Rect, inner: Pt[], ground: keyof typeof GROUND, alleys: { box: Rect; bollards: Pt[] }[], low: boolean) {
   const [x0, z0, x1, z1] = slab;
-  b.box(x0, 0, z0, x1 - x0, S, z1 - z0, toon('#5a5290'));
+  b.box(x0, 0, z0, x1 - x0, S, z1 - z0, toon(KERB.town));
   const xs = inner.map((p) => p[0]);
   const zs = inner.map((p) => p[1]);
   b.box(Math.min(...xs), S, Math.min(...zs), Math.max(...xs) - Math.min(...xs), 0.005, Math.max(...zs) - Math.min(...zs), toon(GROUND[ground]));
@@ -458,7 +459,7 @@ export function drawBlock(b: Batch, slab: Rect, inner: Pt[], ground: keyof typeo
     if (low) return;
     const lamp = (x: number, z: number) => {
       b.add(new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6).translate(x, S + 0.8, z), INK);
-      b.add(new THREE.BoxGeometry(0.2, 0.07, 0.2).translate(x, S + 1.62, z), glow('#fff1c2'));
+      b.add(new THREE.BoxGeometry(0.2, 0.07, 0.2).translate(x, S + 1.62, z), glow(LAMP.white.bulb));
     };
     for (let x = x0 + 2; x < x1 - 1; x += 8) {
       lamp(x, z0 + 0.25);

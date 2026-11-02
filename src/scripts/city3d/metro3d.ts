@@ -57,6 +57,7 @@ import {
   type TrackId,
 } from './metro';
 import { deckY, onHarbour } from './harbour';
+import { LAMP } from './palette';
 
 /** The platform's top and the train's floor */
 export const PLATFORM_Y = DECK_Y + 0.4;
@@ -172,7 +173,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   // (the el over The Trenches)
   const grimy = toon('#6b6780');
   const plinth = toon('#8a8698');
-  const sodium = neon('#ffb35c', 0.5, 2.4);
+  const sodium = neon(LAMP.sodium.bulb, 0.5, 2.4);
   const paving = toon('#cfcadf');
   const dark = toon('#3b3756');
   const roof = toon('#25223a');

@@ -17,9 +17,10 @@ import { HOUSES, SCHEMES, type House } from './sunhouses';
 import { BLOCK, GROUNDS, WALLS, YARDS, YARD_SOLIDS, type Plant, type Yard } from './sunyards';
 import { LOTS } from './sunridgelots';
 import type { Pt } from './sunridge';
+import { COVER } from './palette';
 
 const DG = GROUNDS.map((c) => toon(c));
-const LAWN = toon('#4f9a49');
+const LAWN = toon(COVER.garden);
 const BLOCK_WALL = toon('#c9b799');
 const BLOCK_CAP = toon('#b19f80');
 const GATE = toon('#2f2d2b');
