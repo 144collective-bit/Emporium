@@ -292,6 +292,28 @@ and take the kit's type, bars and tags.
   cards that don't pile on each other (one stack, under the header, the
   newest on top), the live banner.
 
+**Built** (waiting on the owner's sign-off):
+
+- The place panel (`.city-panel`, one shell for every place's template)
+  wears the skin: the cabinet's frame and fill with stepped corners, the
+  kicker as the kit's kind line with the place's number on a key, its name
+  in pixels, and under it the **marquee strip**: a line each, made-up,
+  fixed copy, on each template (`data-marquee`), put in by `open()` in
+  index.ts (kept when the owner's live settings close the place). Its ways
+  in (Walk in, Open the market hall, `.chip-link`) are the coin action; the
+  closed note is the kit's warning line; the × a square key. Its content
+  (the market hall, the Workshop's jobs, the records) is mounted as before,
+  in the skin.
+- The header wears the skin too (the City / Walk switch lit coin, the pills
+  and the hub's button square, the mode title in pixels, the XP bar coin),
+  and so do the City view's cards (`.city-hud`: the live banner, the
+  welcome tip, Getting started), framed with stepped corners. They already
+  stack under the header without piling up, so that's unchanged.
+- The start menu was done early (the title screen).
+- Checked at 1280 and on phones at 390, 375 and 320: the City view, the
+  market hall, the kart park's and Liberty Bridge's panels, the header in
+  both modes. No sideways scroll.
+
 ## Phase 5: business and missions
 
 The market hall, the Workshop, Signal tower (news, contracts, the mission
