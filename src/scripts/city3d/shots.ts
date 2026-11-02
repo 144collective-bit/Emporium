@@ -43,11 +43,12 @@ export function createShots(d: ShotsDeps, night: boolean) {
     ready: false,
     frames: 0,
     view: '' as string,
-    show(id: string) {
-      const v = BLEND_VIEWS.find((w) => w.id === id);
+    /** A review view by its id, or a one-off camera (a close look between phases: never the before and after) */
+    show(id: string | ReviewView) {
+      const v = typeof id === 'string' ? BLEND_VIEWS.find((w) => w.id === id) : id;
       if (!v) throw new Error(`no review view ${id}`);
       view = v;
-      api.view = id;
+      api.view = v.id;
       api.frames = 0;
       fresh = true;
       hold = HOLD;

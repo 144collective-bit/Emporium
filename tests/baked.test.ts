@@ -6,7 +6,7 @@ import { bake } from '../scripts/bake.mjs';
 import { JUNCTIONS, ROUTES, packRoutes, unpackRoutes, type PackedRoute } from '../src/scripts/city3d/routes';
 import { AMENITIES } from '../src/scripts/city3d/commons';
 import { JOG_STRIDE, WALK_STRIDE, MARCH_STRIDE } from '../src/scripts/city3d/crowdclips';
-import { VERGES } from '../src/scripts/city3d/verges';
+import { VERGES, packVerges } from '../src/scripts/city3d/verges';
 
 const made: Record<string, unknown> = await bake({ quiet: true });
 /** Into the page and back, as the browser gets it */
@@ -43,5 +43,6 @@ test('the amenities and the crowd\'s walk cycles from the page are the ones work
 });
 
 test("the blocks' verges from the page are the ones worked out here", () => {
-  assert.deepStrictEqual(viaPage(made.verges), VERGES);
+  assert.equal(typeof made.verges, 'string');
+  assert.equal(viaPage(made.verges), packVerges(VERGES));
 });

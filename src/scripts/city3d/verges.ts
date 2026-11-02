@@ -26,7 +26,7 @@ import { inBasin } from './docks';
 import { LAYBYS, laybyRect } from './uptown';
 import { inBay } from './crestmont';
 import { AIRPORT_AREAS } from './airfield';
-import { areaOfBlock, AREAS, type Character } from './seams';
+import { areaOfBlock, AREAS, type Character } from './areas';
 import { BENDS, BEND_REACH, KERB_RUNS } from './outer';
 import { BUILT, baked } from './baked';
 import type { Cover } from './palette';
@@ -91,29 +91,37 @@ interface Seg {
   b: Pt;
   r: number;
 }
-/** Every plan street's stretches (not the highway's: `fromHighway()` measures it), filed by tile */
-const STREET_SEGS = new Map<string, Seg[]>();
-const fileBox = <T>(into: Map<string, T[]>, box: Rect, item: T) => {
+function fileBox<T>(into: Map<string, T[]>, box: Rect, item: T) {
   for (let j = Math.floor(box[1] / TILE); j <= Math.floor(box[3] / TILE); j++)
     for (let i = Math.floor(box[0] / TILE); i <= Math.floor(box[2] / TILE); i++) {
       const k = tileKey(i, j);
       (into.get(k) ?? into.set(k, []).get(k)!).push(item);
     }
-};
-for (const s of PLAN.streets) {
-  if (s.kind === 'highway') continue;
-  const pts = s.loop ? [...s.pts, s.pts[0]] : s.pts;
-  for (let i = 1; i < pts.length; i++) {
-    const seg = { a: pts[i - 1], b: pts[i], r: s.half };
-    fileBox(STREET_SEGS, [Math.min(seg.a[0], seg.b[0]) - s.half, Math.min(seg.a[1], seg.b[1]) - s.half, Math.max(seg.a[0], seg.b[0]) + s.half, Math.max(seg.a[1], seg.b[1]) + s.half], seg);
-  }
 }
-const SLABS = new Map<string, { poly: Pt[]; box: Rect }[]>();
-for (const poly of PLAN.slabs) {
-  const xs = poly.map((p) => p[0]);
-  const zs = poly.map((p) => p[1]);
-  const box: Rect = [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
-  fileBox(SLABS, box, { poly, box });
+/**
+ * Every plan street's stretches (not the highway's: `fromHighway()` measures it) and every slab, filed by tile: made
+ * the first time they're asked for (the search runs when the site is built; the browser gets its answer, `VERGES`)
+ */
+let idx: { streets: Map<string, Seg[]>; slabs: Map<string, { poly: Pt[]; box: Rect }[]>; laybys: Rect[] } | null = null;
+function indexes() {
+  if (idx) return idx;
+  const streets = new Map<string, Seg[]>();
+  for (const s of PLAN.streets) {
+    if (s.kind === 'highway') continue;
+    const pts = s.loop ? [...s.pts, s.pts[0]] : s.pts;
+    for (let i = 1; i < pts.length; i++) {
+      const seg = { a: pts[i - 1], b: pts[i], r: s.half };
+      fileBox(streets, [Math.min(seg.a[0], seg.b[0]) - s.half, Math.min(seg.a[1], seg.b[1]) - s.half, Math.max(seg.a[0], seg.b[0]) + s.half, Math.max(seg.a[1], seg.b[1]) + s.half], seg);
+    }
+  }
+  const slabs = new Map<string, { poly: Pt[]; box: Rect }[]>();
+  for (const poly of PLAN.slabs) {
+    const xs = poly.map((p) => p[0]);
+    const zs = poly.map((p) => p[1]);
+    const box: Rect = [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
+    fileBox(slabs, box, { poly, box });
+  }
+  return (idx = { streets, slabs, laybys: LAYBYS.map(laybyRect) });
 }
 const key = (p: Pt) => tileKey(Math.floor(p[0] / TILE), Math.floor(p[1] / TILE));
 const segDist = (p: Pt, a: Pt, b: Pt) => {
@@ -123,15 +131,15 @@ const segDist = (p: Pt, a: Pt, b: Pt) => {
   const t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vz) / l2)) : 0;
   return Math.hypot(p[0] - a[0] - vx * t, p[1] - a[1] - vz * t);
 };
-const LAYBY_RECTS = LAYBYS.map(laybyRect);
 const inRect = (r: Rect, p: Pt, m = 0) => p[0] > r[0] - m && p[0] < r[2] + m && p[1] > r[1] - m && p[1] < r[3] + m;
 
 /** Whether p is open land: off every street, lay-by and bay, every slab, the water, the basin and the airport */
 export function openAt(p: Pt) {
   if (fromHighway(p[0], p[1]) < HIGHWAY_HALF + 0.3) return false;
-  for (const s of STREET_SEGS.get(key(p)) ?? []) if (segDist(p, s.a, s.b) < s.r + 0.3) return false;
-  for (const s of SLABS.get(key(p)) ?? []) if (inRect(s.box, p) && inPoly(s.poly, p)) return false;
-  if (LAYBY_RECTS.some((r) => inRect(r, p, 0.3)) || inBay(p[0], p[1], 0.3)) return false;
+  const { streets, slabs, laybys } = indexes();
+  for (const s of streets.get(key(p)) ?? []) if (segDist(p, s.a, s.b) < s.r + 0.3) return false;
+  for (const s of slabs.get(key(p)) ?? []) if (inRect(s.box, p) && inPoly(s.poly, p)) return false;
+  if (laybys.some((r) => inRect(r, p, 0.3)) || inBay(p[0], p[1], 0.3)) return false;
   if (inWater(p[0], p[1], -0.5) || inBasin(p[0], p[1], 0.5)) return false;
   if (AIRPORT_AREAS.some((r) => inRect(r, p))) return false;
   return true;
@@ -175,9 +183,23 @@ function findVerges(): Verge[] {
       if (from >= 0) close(len);
     }
   });
-  // The bends' outer sidewalks (outer.ts: the Parkway and the Southside Loop, short kerb pieces along a curve): a verge
-  // a piece, out from the bend's centre, wherever it faces open land
-  const { edge, cover } = BY_CHARACTER.town;
+  // (the bends' are bendVerges(), each kept where it faces open land all along: at both ends and the middle, out to the
+  // edge's look and the bank's foot)
+  for (const v of bendVerges())
+    if (
+      [0, 0.5, 1].every((t) => {
+        const m: Pt = [v.a[0] + (v.b[0] - v.a[0]) * t, v.a[1] + (v.b[1] - v.a[1]) * t];
+        return openAt([m[0] + v.n[0] * OUT, m[1] + v.n[1] * OUT]) && openAt([m[0] + v.n[0] * CLEAR, m[1] + v.n[1] * CLEAR]);
+      })
+    )
+      out.push(v);
+  return out;
+}
+
+/** The bends' outer sidewalks (outer.ts: the Parkway and the Southside Loop, short kerb pieces along a curve) as verges, a piece each, out from the bend's centre: every one with a kerb (which face open land is `findVerges()`'s) */
+function bendVerges(): Verge[] {
+  const out: Verge[] = [];
+  const { edge, cover } = BY_CHARACTER.walk;
   BENDS.forEach((bend, bi) => {
     let s = 0;
     for (let i = 1; i < bend.pts.length; i++) {
@@ -187,25 +209,51 @@ function findVerges(): Verge[] {
         let n: Pt = [-(q[1] - p[1]) / len, (q[0] - p[0]) / len];
         const mid: Pt = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
         if (n[0] * (mid[0] - bend.centre[0]) + n[1] * (mid[1] - bend.centre[1]) < 0) n = [-n[0], -n[1]];
-        const a: Pt = [p[0] + n[0] * BEND_REACH, p[1] + n[1] * BEND_REACH];
-        const b: Pt = [q[0] + n[0] * BEND_REACH, q[1] + n[1] * BEND_REACH];
-        // (open past it all along: at both ends and the middle, out to the edge's look and the bank's foot)
-        const open = [0, 0.5, 1].every((t) => {
-          const m: Pt = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-          return openAt([m[0] + n[0] * OUT, m[1] + n[1] * OUT]) && openAt([m[0] + n[0] * CLEAR, m[1] + n[1] * CLEAR]);
-        });
-        if (open)
-          out.push({ block: `bend-${bend.id}`, area: 'walk', a, b, n, edge, cover, s0: s });
+        out.push({ block: `bend-${bend.id}:${i}`, area: 'walk', a: [p[0] + n[0] * BEND_REACH, p[1] + n[1] * BEND_REACH], b: [q[0] + n[0] * BEND_REACH, q[1] + n[1] * BEND_REACH], n, edge, cover, s0: s });
       }
       s += len;
     }
   });
-  // (rounded: what the page carries, the same as what's worked out here)
-  const r = (v: number) => Math.round(v * 1000) / 1000 + 0;
-  return out.map((v) => ({ ...v, a: [r(v.a[0]), r(v.a[1])], b: [r(v.b[0]), r(v.b[1])], n: [r(v.n[0]), r(v.n[1])], s0: r(v.s0) }));
+  return out;
 }
-/** Worked out when the site is built (baked.ts): the boot carries the list, not the search */
-export const VERGES: Verge[] = baked('verges', BUILT ? undefined : findVerges);
+
+/**
+ * The verges packed for the page (the boot's code carries it: `baked()`): the blocks' a run of numbers each (the
+ * block's index in the plan, its ends to the centimetre, which side is out: +1 to the right of a to b looking down,
+ * and how far along its run it starts), then after a '|' the bends' as one flag a kerb piece ('1' a verge); everything
+ * else is worked out again (`unpack()`)
+ */
+function pack(vs: Verge[]): string {
+  const c = (v: number) => String(Math.round(v * 100) / 100 + 0);
+  const blocks = vs
+    .filter((v) => !v.block.startsWith('bend-'))
+    .map((v) => {
+      const right = (v.b[1] - v.a[1]) * v.n[0] - (v.b[0] - v.a[0]) * v.n[1] < 0 ? 1 : -1;
+      return [PLAN.blocks.findIndex((b) => b.id === v.block), c(v.a[0]), c(v.a[1]), c(v.b[0]), c(v.b[1]), right, c(v.s0)].join(',');
+    })
+    .join(';');
+  const kept = new Set(vs.filter((v) => v.block.startsWith('bend-')).map((v) => v.block));
+  return `${blocks}|${bendVerges().map((v) => (kept.has(v.block) ? '1' : '0')).join('')}`;
+}
+function unpack(packed: string): Verge[] {
+  const [blocks, bends] = packed.split('|');
+  const out: Verge[] = (blocks ? blocks.split(';') : []).map((row) => {
+    const [bi, ax, az, bx, bz, side, s0] = row.split(',').map(Number);
+    const blk = PLAN.blocks[bi];
+    const area = areaOfBlock(blk) ?? 'walk';
+    const character = area === 'walk' ? 'walk' : AREAS.find((a) => a.id === area)!.character;
+    const l = Math.hypot(bx - ax, bz - az);
+    // (+1: to the right of a to b seen from above, x east and z south: (-dz, dx))
+    const n: Pt = [(-(bz - az) / l) * side + 0, ((bx - ax) / l) * side + 0];
+    return { block: blk.id, area, a: [ax, az], b: [bx, bz], n, ...BY_CHARACTER[character], s0 };
+  });
+  bendVerges().forEach((v, i) => bends?.[i] === '1' && out.push(v));
+  return out;
+}
+
+export const VERGES: Verge[] = unpack(baked('verges', BUILT ? undefined : () => pack(findVerges())));
+/** For the bake's test: the verges as the page carries them */
+export const packVerges = pack;
 
 /* ---------- Standing on them ---------- */
 
