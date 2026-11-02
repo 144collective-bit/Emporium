@@ -30,6 +30,7 @@ import { LOWRISE, LOWRISE_NAMES, LOW_CARS, TENEMENTS, VACANT, lowFrame, type Low
 import { buildFx, poster, tag, atlasQuad } from './grime';
 import type { Idle } from './landmarks';
 import type { Pt, Rect } from './downtown';
+import { COVER } from './palette';
 
 /** The low lots' signs (made-up names), one row each, and the vacant lots' billboards */
 const NAMES = Object.entries(LOWRISE_NAMES) as [Exclude<LowLot['kind'], 'lockups'>, string][];
@@ -80,9 +81,9 @@ const DOOR = toon('#77748a');
 const DOOR_LINE = toon('#5a576c');
 const DARK = toon('#141226');
 const APRON = toon('#6e6a80');
-const DIRT = toon('#6b5848');
+const DIRT = toon(COVER.bare);
 const RUBBLE = ['#8a8698', '#7a4a40', '#9a96b4', '#5a576c'].map((c) => toon(c));
-const WEED = toon('#5f7f3f');
+const WEED = toon(COVER.worn);
 const RUST = ['#8a4a2f', '#6b3a2a', '#9a6a3a', '#4f5a6b', '#7a2f2f', '#3d5a4a'].map((c) => toon(c));
 const TYRE = toon('#1b1a22');
 const DRUM = toon('#2b4f7a');

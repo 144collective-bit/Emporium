@@ -103,6 +103,7 @@ import { bodies, swing } from './life';
 import type { Partners, StreetFists } from './brawl';
 import type { PartnerId } from './fight-moves';
 import type { FightStart } from './fight-types';
+import type { Hub } from './hub';
 import { onTap, type GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
@@ -204,10 +205,6 @@ const BOUNDS = WORLD_BOUNDS;
 /** Downtown's blocks, the districts and the extra lots (garage, market...) with their sidewalks: the raised ground (with bounding boxes for a quick test first) */
 const slabOf = (poly: Pt[]) => ({ poly, box: [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1])), 0] as Box });
 const slabs = PLAN.slabs.map(slabOf);
-/** More raised blocks to walk on (a district laid by a recipe: growth plan Phase 4) */
-export function addSlabs(polys: Pt[][]) {
-  slabs.push(...polys.map(slabOf));
-}
 /** The garage's turntable in a grid's copy (the grids hold their own copies of the boxes: matched by numbers) */
 const isTurntable = (b: Box) => b[0] === TURNTABLE_BOX[0] && b[1] === TURNTABLE_BOX[1] && b[2] === TURNTABLE_BOX[2] && b[3] === TURNTABLE_BOX[3];
 /** The turntable's disc: stood on while getting into your car at home, its top over the forecourt */
@@ -253,6 +250,8 @@ export interface Ride {
 }
 
 export interface WalkDeps {
+  /** The hub, the pause screen (hub.ts): while it's open the keys and the gamepad are its; Start opens it */
+  hub?: Hub;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   canvas: HTMLCanvasElement;
@@ -987,7 +986,7 @@ export function createWalk(d: WalkDeps) {
    * The hut's menu and the race (kart-ui.ts, kart.ts) come in their own chunk (kartgame.ts), loaded when Degen comes
    * near the park or asks at the hut; until then they stand idle
    */
-  const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
+  const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, stepTab() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
   const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {} };
   let kartUI: KartUI = NO_KART_UI;
   let karts: KartRace = NO_KARTS;
@@ -1389,6 +1388,8 @@ export function createWalk(d: WalkDeps) {
     const c = e.code;
     // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
     if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
+    // The hub open: its own keys (menukit.ts), and walking keys wait
+    if (d.hub?.open) return false;
     // The inventory open: its keys (Tab closes it; Esc too, index.ts), and walking keys wait
     if (hotbar?.open) return hotbar.key(e, down);
     // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
@@ -1788,6 +1789,13 @@ export function createWalk(d: WalkDeps) {
     if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
     const b = gp.buttons.map((x) => x.pressed);
     const edge = (i: number) => b[i] && !pad.prev[i];
+    // The hub: the D-pad moves round it, LB / RB the tabs, A presses, B or Start closes
+    if (d.hub?.open) {
+      d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]));
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
     // The inventory: the D-pad moves round it, A does the selected thing, B or View closes
     if (hotbar?.open) {
       hotbar.pad(edge);
@@ -1796,10 +1804,16 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     // The store: D-pad picks, A takes, B (or Y again) closes
+    // (the menus' kit, menukit.ts: the d-pad moves round its buttons, A presses, LB / RB the tabs)
     if (shop.open) {
-      if (edge(14) || edge(12)) shop.step(-1);
-      if (edge(15) || edge(13)) shop.step(1);
-      if (edge(0)) shop.take();
+      if (b.some((x, i) => x && !pad.prev[i])) shop.input('pad');
+      if (edge(12)) shop.move('up');
+      if (edge(13)) shop.move('down');
+      if (edge(14)) shop.move('left');
+      if (edge(15)) shop.move('right');
+      if (edge(4)) shop.tab(-1);
+      if (edge(5)) shop.tab(1);
+      if (edge(0)) shop.press();
       if (edge(1) || edge(3)) shop.close();
       pad.x = pad.y = 0;
       pad.prev = b;
@@ -1833,11 +1847,20 @@ export function createWalk(d: WalkDeps) {
     }
     // The trainer's menu: D-pad moves, A takes, B closes
     if (fightUI.open) {
+      if (edge(4)) fightUI.stepTab(-1);
+      if (edge(5)) fightUI.stepTab(1);
       if (edge(12) || edge(14)) fightUI.step(-1);
       if (edge(13) || edge(15)) fightUI.step(1);
       if (edge(0)) fightUI.take();
       if (edge(1)) fightUI.close();
       padFight.x = padFight.y = 0;
+      return;
+    }
+    // Start opens the hub (the pause screen), but in a fight, where it quits
+    if (edge(9) && d.hub && !fighting()) {
+      still(false);
+      d.hub.show();
+      pad.prev = b;
       return;
     }
     // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits
@@ -1879,6 +1902,8 @@ export function createWalk(d: WalkDeps) {
     }
     // The kart hut's menu: D-pad moves, A takes, B (or Y again) closes
     if (kartUI.open) {
+      if (edge(4)) kartUI.stepTab(-1);
+      if (edge(5)) kartUI.stepTab(1);
       if (edge(12) || edge(14)) kartUI.step(-1);
       if (edge(13) || edge(15)) kartUI.step(1);
       if (edge(0)) kartUI.take();
@@ -3123,6 +3148,10 @@ export function createWalk(d: WalkDeps) {
     /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
       return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
+    },
+    /** The hub opened: Degen stands still, the mouse is freed */
+    pause() {
+      still();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

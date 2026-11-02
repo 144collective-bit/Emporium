@@ -523,20 +523,8 @@ button.inv-cell {
     opacity: 0;
   }
 }
-/* The inventory open: the walk HUD's buttons, the hotbar and the door prompt step aside */
-.city.is-inv .hotbar,
-.city.is-inv .walk-prompt,
-.city.is-inv .walk-look,
-.city.is-inv .combat-cross,
-.city.is-inv .walk-fire,
-.city.is-inv .walk-aim,
-.city.is-inv .walk-reload,
-.city.is-inv .walk-swap,
-.city.is-inv .walk-stick,
-.city.is-inv .walk-run,
-.city.is-inv .walk-crouch,
-.city.is-inv .walk-jump,
-.city.is-inv .mission-tracker {
+/* The inventory open (or the hub, hub.ts): the walk HUD's buttons, the hotbar and the door prompt step aside */
+.city:is(.is-inv, .is-hub) :is(.hotbar, .walk-prompt, .walk-look, .combat-cross, .walk-fire, .walk-aim, .walk-reload, .walk-swap, .walk-stick, .walk-run, .walk-crouch, .walk-jump, .mission-tracker) {
   display: none;
 }
 .city.is-inv [data-inv-open] {
@@ -648,8 +636,7 @@ button.inv-cell {
   .city[data-mode="walk"] .walk-top {
     gap: 4px;
   }
-  .city[data-mode="walk"] .walk-top .walk-pop summary,
-  .city[data-mode="walk"] .walk-top .walk-map-tab {
+  .city[data-mode="walk"] .walk-top .walk-pop summary {
     padding: 8px 9px;
   }
   .city[data-mode="walk"] .city-head-stats {

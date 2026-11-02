@@ -3,6 +3,18 @@
 This is **the** Degen Emporium site. An older multi-page site existed before
 it and has been retired completely. Build only on what's here.
 
+## The game's name
+
+- The game is **The Trenches** (the owner's call, 2026-11): its title logo
+  (`src/assets/trenches-logo.png`, the owner's art with its white
+  background cut away) heads the title screen, the city's header (its home
+  link, "The Trenches, home") and the maintenance cover. The homepage's tab
+  reads "The Trenches | The Degen Emporium"; the header's title while the
+  city loads, the no-3D card and the maintenance cover say The Trenches.
+  The city it's set in is still Sector 7 (the welcome tip, the map, the
+  places), and The Trenches is also the neighbourhood of that name
+  (below). The comic page keeps the Emporium's own name and logo.
+
 ## The city's name
 
 - The city is **Sector 7** (the owner's call; it was "Degen City" before).
@@ -36,15 +48,15 @@ it and has been retired completely. Build only on what's here.
     building flies the camera in and opens a glass panel.
   - **The 2D map was retired** (the owner's call, river plan step 1): no
     loading poster, no 2D view, no fallback. Where 3D can't run (no WebGL
-    2, or `bootCity()` returns null) the page shows a card saying Sector 7
-    needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
+    2, or `bootCity()` returns null) the page shows a card saying The
+    Trenches needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
     `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`).
     `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
     Don't bring the 2D map back without the owner.
   Pin copy and panel copy live in `src/components/CityMap.astro`.
 - **Buildings are places in the city's game** (the owner's call): each opens
   its own panel (a game menu), never the comic page or an outside link. The comic page (`/emporium`), the merch store and X /
-  Telegram live in the ☰ Menu only. Places not built yet say "coming soon"
+  Telegram live in the hub's Map tab only. Places not built yet say "coming soon"
   (the plan is `docs/tycoon-plan.md`).
 - **The redesign** (the owner's call): the city is moving from a grid to an
   organic layout, planned downtown and looser further out (diagonals, varied
@@ -224,7 +236,7 @@ it and has been retired completely. Build only on what's here.
   - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - **River life** (river plan step 4, the owner's picks: more boats, the river bus, boating yourself; all three built). Everything on the water keeps to a line of its own, a function of the clock, and the tests hold each clear of everything else there (`tests/water.ts`: the piers, decks, moored boats and landings). 4a, more boats: two traffic boats to a lane and the police launch in the middle one (life.ts), and `riverlife.ts` (DOM-free, tested in `tests/riverlife.test.ts`): the cruise boat (`CRUISE`, round the town's reach), the rowing eight (`CREW`) and the dinghies out west (`DINGHIES`), drawn by `riverlife3d.ts`, a district loaded as you approach the river (`LAZY_DISTRICTS` id `river`). The highway's bridges' piers stand between the lanes (`BRIDGE_PIERS` in waterfront.ts). 4b, the river bus (below, under Getting about). 4c, boating yourself (below, after Driving your car).
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; trees keep off land in `keepTreesOff()`). Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway, every plan street and slip lane, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 720 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: today that's the whole world).
@@ -247,8 +259,8 @@ it and has been retired completely. Build only on what's here.
     Bridge, the metro line), the places with their pins' names
     (`placeName()`), you, your car, your aircraft when it's away, your
     waypoint. Drag or two fingers pan, scroll or pinch zoom, + / − / Fit /
-    You, "Find a place" (the keyboard's way in). From the ☰ Menu's World
-    map, the Map walk tab, or M (walking with no panel open, or the City
+    You, "Find a place" (the keyboard's way in). From the hub's Map tab
+    (World map), or M (walking with no panel open, or the City
     view); M, Esc or × close it. Tapping a place opens a card: Open and
     Walk here (City view), Set waypoint, Taxi here, Fast travel (on foot,
     places you've been); yourself: Bring my car; open ground: a waypoint.
@@ -1386,6 +1398,49 @@ it and has been retired completely. Build only on what's here.
   interchanges, numbered, made-up names on the gantries) and traffic that
   uses its ramps, planned in `docs/highway-plan.md` in phases, each with the
   owner's sign-off; keep it up to date.
+- **Blending the city** (the owner's call): a
+  polish and clean-up so the districts read as one city that grew (lived-in
+  realism in the toon style): one ground palette blended at every seam, a
+  kerb on streets only, gentle rolls outside the town, the gaps inside the
+  highway filled by their neighbours, transitions between districts, paths,
+  hedges, utilities and wild bits, countryside outside the highway, and the
+  corridors after the raised highway. Planned in `docs/blend-plan.md` in
+  phases, each with the owner's sign-off; free on phones, nothing that
+  exists moves; keep it up to date. Phase 0 (the seam map and the review
+  kit) is built:
+  - `seams.ts` (DOM-free, tested in `tests/seams.test.ts`; `npm run seams`):
+    `landMap()` (the world on a grid of `CELL`: the highway, streets by kind,
+    water, walks, the `AREAS` with their `Character`, open land in or out of
+    the highway), `seams()` (where areas meet, across what, ranked) and
+    `gaps()` (the open land inside the highway in patches, each named in
+    `GAP_NAMES`: a new patch fails the test until it's named). Nothing in the
+    browser reads it yet.
+  - The review views are `BLEND_VIEWS` (`blendviews.ts`); `?shots`
+    (`shots.ts`, its own chunk: straight in, clear sky, every district
+    loaded, the city's chrome hidden, `window.__shots`) holds the camera on
+    each, and `npm run shots -- <label>` (`scripts/shots.mjs`, after a
+    build) shoots them on the desktop and phone tiers by day and at night,
+    still, into `shots/<label>/` (not in git) and a contact sheet per run in
+    `docs/blend-shots/<label>/` (`SHOTS_BENCH=1` adds the headless bench's
+    draws and triangles). Shoot before and after every phase; change a view
+    only between phases.
+  - Phase 1 (foundations) is built: the ground palette, `palette.ts`
+    (DOM-free, tested in `tests/palette.test.ts`: `COVER`, `KERB`, `TREE`,
+    `LAMP`): the ground's covers, the kerbs, the trees and the street lamps'
+    light; every file that draws ground takes its colours from it, never a
+    hex of its own (the test holds it); the one clearing rule for the
+    outskirts' trees (`landuse.ts`, above under the world's size) and the
+    belt eased out.
+  - Phase 2 (the ground) is built: `ground.ts` (DOM-free, tested in
+    `tests/ground.test.ts`): `coverAt()` / `colourAt()`, the open land's
+    mix (rough grass, meadow and dry grass patches, `openMix()`) with each
+    of `INFLUENCES` laid over it (a worn verge along every street, the
+    highway's dry verges, each district's ground fading out round it over a
+    wobbled reach); world.ts paints it on the ground's vertices
+    (`paintGround()`, the grid from `groundStep()`: one quad under a
+    district, coarse far out, coarser on phones), the hills starting from
+    it. A district's ground round it goes in `INFLUENCES`, its colours in
+    the palette.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1646,7 +1701,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; the owner has said to raise it when needed). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -2021,9 +2076,9 @@ it and has been retired completely. Build only on what's here.
     in Phase 9 (the owner's call: The Trenches took its land); the recipes'
     test lays its 20-block grid as a fixture instead. A district laid by
     recipes joins every grid through `addSolids()` (`solids.ts`,
-    `BoxGrid.add()`) and `addSlabs()` (`walk.ts`) when its blocks aren't
-    the street plan's, and the outskirts' trees keep off it
-    (`keepTreesOff()`).
+    `BoxGrid.add()`), its blocks go in the street plan (so walking's slabs
+    have them), and the outskirts' trees keep off it (its land in `KEEPS`,
+    `landuse.ts`).
   - Tested in `tests/recipes.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
@@ -2759,9 +2814,9 @@ it and has been retired completely. Build only on what's here.
   logo) need `occlude()` from `kit.ts`, or the ink outlines of whatever is
   behind them get drawn across them.
 - Every card and menu can be closed: panels, the gun store and the buy
-  dialog have an × (`.city-panel-close` / `.shop-close`); drop-open menus
-  (City settings, Directory, walk panels with their `.pop-head` ×) also
-  close on a tap outside and on Esc. The welcome card is a one-line
+  dialog have an × (`.city-panel-close` / `.shop-close`); the hub
+  (`.mk-x`) and the emotes' pop (its `.pop-head` ×) also close on a tap
+  outside and on Esc. The welcome card is a one-line
   first-visit tip under the header (`.city-card` in `.city-hud`: GM, "Welcome
   to Sector 7" (the page's h1), how to move, the draft note, an ×). It's
   closed for good with its × (remembered as `city-card` in localStorage) and
@@ -2772,7 +2827,14 @@ it and has been retired completely. Build only on what's here.
   always-visible city overlay to that list.
 - **The start menu** (the owner's call): on every open, `[data-start]` in
   `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
-  while the 3D city boots behind it.
+  while the 3D city boots behind it. It's the game's title screen (the
+  owner's call: The Trenches' logo over a dark brick wall, the box in the
+  menus' arcade kit, its tokens shared from menus.css): first **the log-in
+  screen** (`[data-start-login]`: player name or email, password, Log in,
+  Play as guest, Create an account). Logging in isn't built yet: the form
+  sends and keeps nothing (the password is cleared) and says accounts are
+  coming soon; Play as guest goes on to the menu, whose "Playing as guest ·
+  Log in" goes back. A phone's keyboard stays down until a field is tapped.
   Single player enters the city (the fly-in runs again, `city.intro()` in
   `index.ts`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
@@ -2781,35 +2843,84 @@ it and has been retired completely. Build only on what's here.
   Weather and Sound, driving the header's own
   settings controls (pressed when the city is up, queued until then). The
   root carries `has-start` until a choice is made; the loader and the
-  welcome tip wait behind it. Gradient-bordered buttons, white text.
+  welcome tip wait behind it.
 - The city page has **one header**: the city's own bar (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
-  other pages. Left to right: the logo (home link), the mode title and
+  other pages. Left to right: The Trenches' logo (home link), the mode title and
   subtitle (City view, Walk mode), then on the
-  right (walk tabs, ammo and score while walking), the City / Walk
-  switch (the current mode lit with a glow and a gradient underline, the
-  other dimmed), and the tools: a ⚙ Settings button (time, weather, sound, reset
-  view; 3D only, not while walking; never open by default) and a
-  ☰ Menu (the city's places, 3D only (`.dir-places`); then under "More" the
-  Emporium comic page and the merch store (`.dir-links`); then PulseChain
-  native, X and Telegram; not while walking). Left of them, in the 3D city
-  (not while walking on phones), the Dorras readout
-  (`[data-dorras]`, painted by `tycoon-ui.ts`, a green dot when the stall's
-  till has takings); it opens your business card. Beside it the level pill
-  (`[data-level]`, `missions-ui.ts`: level, XP bar, title). Their cards drop down under them (`.head-panel`, one open at a
-  time, with a `.pop-head` ×), spanning the width on phones, never taller
-  than the screen under the header (they scroll inside). Tablets show
-  Settings and Menu as icons; phones put logo, title, ⚙ and ☰ on the first
-  row and the switch, with names, across the second (walking: title and
-  switch, then the walk tabs, ammo and score). Its live height is
+  right (the emotes, online, and ammo and score while walking), the City /
+  Walk switch (the current mode lit with a glow and a gradient underline,
+  the other dimmed), and the tools: in the 3D city (not while walking on
+  phones) the Dorras readout (`[data-dorras]`, painted by `tycoon-ui.ts`, a
+  green dot when the stall's till has takings; it opens the hub on
+  Business) and the level pill (`[data-level]`, `missions-ui.ts`: level,
+  XP bar, title; it opens the hub on Missions), then the hub's button
+  (`[data-hub-open]`, ☰ Menu, in both modes: the hub, below). Tablets show
+  the hub's button as an icon; phones put logo, title, the pills and ☰ on
+  the first row and the switch, with names, across the second (walking:
+  one row). Its live height is
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
+- **The menu redesign** (the owner's call: "redesign all menus and upgrade
+  their quality and functions", then "no PulseChain colours, make a new
+  design completely") is planned in `docs/menu-plan.md`: every menu in the
+  city (start menu, header, hub, place panels, shops, business screens,
+  fitting room, cards and pops) in a new **retro arcade** design
+  (pixel-edged panels, pixel headings, scanlines, blocky buttons that press
+  down, a blinking selector) on a new palette with no PulseChain colours
+  (the plan's arcade-cabinet palette, for the owner's approval on the
+  first sample); one hub menu replacing the old ☰ Menu, Settings and the
+  walk tabs (Esc, the header's hub button, Start); phone-first sheets; full
+  controller and keyboard use; motion but no UI sounds; the design system
+  first (`menus.css`, `menukit.ts`, shown on the gun store), then rolled
+  out. The 3D city and the comic page keep their look. Phase 1 is built,
+  waiting on the owner's sign-off: `menus.css` (in `armoury.css`'s old
+  place in `Base.astro`'s order; the pixel face Pixelify Sans), `menukit.ts`
+  (`menuKit(el, { close })`: tabs, the d-pad and arrows, the grabber, the
+  hints by input), `menunav.ts` (DOM-free, tested in
+  `tests/menunav.test.ts`) and the gun store rebuilt in them (`.mk` in
+  `CityMap.astro`, `gunshop.ts`). Phase 2 is built, waiting on the owner's
+  sign-off: **the hub** (`hub.ts`, markup `[data-hub]` in `CityMap.astro`,
+  styles `.mk-hub` in `menus.css`), the pause screen: tabs Map (World map,
+  every place, More's comic and store, PulseChain native, X and Telegram),
+  Bag (opens the inventory; what you carry is Business's Bag), Business
+  (the business card `[data-biz]`, moved in), Missions (level and badges),
+  Profile (look, finish, wardrobe, wallet), Settings (`[data-controls]`:
+  time, sky, sound, reset view; the walk controls; keys; credits) and Online
+  with a game server (`[data-mp]` is its tab). The page makes it (its own
+  chunk, `hubReady`), so it works before 3D and where 3D can't run (Map
+  only, `.hub-3d` off); `bootCity(root, wallet, hub)` fills in its hooks.
+  It opens from its button, Esc (after whatever else Esc closes; walking,
+  after the mouse is freed), Start walking (walk.ts; the fight keeps
+  Start) and the pills; walking it pauses the walk (`walk.pause()`, the
+  keys and the gamepad are its: `hub.pad()`), its foot's Back to City view
+  (`[data-hub-leave]`) leaves walk mode; what opens a screen of its own
+  from it closes it first; a place's panel closes it and it closes one.
+  `data-hub-walk` / `data-hub-city` show by mode. Phase 3 is built, waiting
+  on the owner's sign-off: **the skin** (`.mk-skin` on a menu's root, at the
+  end of `menus.css`): the shops and game menus that keep their own markup
+  (the garage, the hangar, the kart hut, the trainer, their result cards and
+  HUDs, the metro, river bus and taxi cards and bars, the business card)
+  take the kit's look by having the brand's tokens redefined inside them;
+  give a new panel of that kind the class too. The kart hut and the trainer
+  step their tabs with Q / E and LB / RB (`stepTab()`). Phase 4 is built,
+  waiting on the owner's sign-off: the place panel, the header and the City
+  view's cards wear the skin too; each place's template carries its marquee
+  line (`data-marquee`: made-up, fixed copy; a new place needs one), which
+  `open()` puts under its name. Phase 5 is built, waiting on the owner's
+  sign-off: inside the skin the business views' goods and contracts are
+  cards and their steps clear buttons (`.market-row`, `.market-btns`: the
+  first step coin). Until a menu moves to the new kit it keeps today's
+  look and rules. One phase at a time with the owner's sign-off; keep it up
+  to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
   borders, glows and large type; `--p-cyan` for small text; buttons are
-  gradient-bordered with white text, never gradient-filled.
+  gradient-bordered with white text, never gradient-filled. The menus are
+  leaving it (the owner's call): as each moves to the menu plan's arcade
+  kit it takes that palette instead (`docs/menu-plan.md`).
 - Type: Big Shoulders Display (headlines), Inter (body), JetBrains Mono
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
@@ -3107,7 +3218,7 @@ it and has been retired completely. Build only on what's here.
   and the ink are rows of their own; a note says when it won't show (no
   cap or beanie, a suit's dress shoes).
 - **The character screen** (`charscreen.ts`, markup `[data-char]` in
-  `CityMap.astro`, styles in `fitting.css`), from the Profile tab's "See
+  `CityMap.astro`, styles in `fitting.css`), from the hub's Profile tab's "See
   your Degen": an overlay under the header with the same stage
   (`createStage(..., { zoom: true })`): drag turns him, scroll, pinch or
   Full / Face zoom to his face, poses (idle, walk, the fighter's guard and
@@ -3197,9 +3308,8 @@ it and has been retired completely. Build only on what's here.
   straight there at the market hall). Stock on sale (stall, shops) can't be
   loaded back; that keeps the delivery bonus from being farmed.
 - **Screens:** `tycoon-ui.ts` (save `degen-city-tycoon-v1`): the Dorras
-  readout, your business card (`[data-biz]`, on the gun store's `.shop`
-  panel: right side under the header on wide screens, the bottom sheet on
-  phones; the till on top, then the Stall / Units / Workshop / Car / Bag tabs; the Bag is the inventory's, read-only), the
+  readout, your business card (`[data-biz]`, the hub's Business tab:
+  `openCard()` shows the hub on it, `h.hub`; the till on top, then the Stall / Units / Workshop / Car / Bag tabs; the Bag is the inventory's, read-only), the
   market hall, filled into the Emporium's panel (`[data-market]`, with its
   deliver-to / sell-from picker, your car included when it's parked outside),
   and the Workshop's (`[data-workshop]`), Signal tower's (`[data-contracts]`:
@@ -3250,8 +3360,8 @@ it and has been retired completely. Build only on what's here.
   `levelFor`, `levelProgress`, `titleFor`, `XP` per deed), on the save in
   `tycoon.ts`. The screens are `missions-ui.ts` (styles in `missions.css`):
   the level pill in the header tools next to the Dorras readout
-  (`[data-level]`, a `.head-pop` card in the city; while walking it opens
-  the Profile tab's badges `[data-badges]`), the mission board at the end
+  (`[data-level]`, opening the hub on Missions, where the badges are,
+  `[data-badges]`), the mission board at the end
   of the Signal tower's panel (appended by `tycoon-ui.ts` after the
   contracts; its Take / Claim / Give up go through `missions.act()` before
   the economy's buttons), the mission tracker in the walk HUD
@@ -3298,10 +3408,11 @@ it and has been retired completely. Build only on what's here.
 
 - `src/scripts/city3d/walk.ts`: the playable Degen, over-the-shoulder and
   first-person camera, mouse (pointer lock), keyboard, touch and gamepad
-  controls, collisions and door prompts. The Controls panel's settings
+  controls, collisions and door prompts. The walk controls' settings (the
+  hub's Settings tab)
   (Look: speed, invert, first person; Shooting: "Aim when firing"
   `settings.autoAds` = off / touch / always) are saved under
-  `degen-city-walk-v1` in localStorage. The HUD markup (Controls panel, Run
+  `degen-city-walk-v1` in localStorage. The HUD markup (the controls, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
 - Buildings only lift and glow on hover in City view; while walking nothing
@@ -3309,12 +3420,13 @@ it and has been retired completely. Build only on what's here.
 - The over-the-shoulder camera starts 3.3 tiles behind him, 3.2 on an upright screen (`homeZoom()` in
   walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
-- Esc frees the mouse first and only then stops walking. Door panels free
-  the mouse so their links can be clicked.
+- Esc frees the mouse first and only then opens the hub (its Back to City
+  view stops walking). Door panels free the mouse so their links can be
+  clicked.
 - While walking (`body.is-walking`, set in `index.ts`) the header drops the
-  logo on tablets and phones and the Settings and Menu buttons, and carries the walk tabs
-  (Controls, Profile, Online, Emote), ammo and score at the top (two rows on
-  phones). The touch buttons stay at the bottom.
+  logo on tablets and phones and carries the emotes (online), ammo and score
+  and the hub's button. The touch buttons stay at the bottom (hidden while
+  the hub is open, `.is-hub`).
 - The gun store is compact: a 2 x 2 grid of guns beside the picked gun's
   details; on upright phones a short bottom sheet with the guns in one row.
   Check it at phone widths upright and on its side (no scrolling needed).
@@ -3450,8 +3562,8 @@ it and has been retired completely. Build only on what's here.
   (`groundAt()` in `walk.ts`, `bankY()`; your kart climbs them too).
 - **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 113-225,
   z -311.5 to -191.5, its fence), local numbers via `toWorld()` /
-  `toLocal()` (u east, v south from the circuit frame's corner; `SITE_U`
-  x `SITE_V` is the circuit's frame, the site reaches past it on every
+  `toLocal()` (u east, v south from the circuit frame's corner; the
+  circuit's frame is kartcircuit.ts's, the site reaches past it on every
   side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
   one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
   `KART_CROSSINGS` (traffic drives them, off the highway at ns3, whose
@@ -3677,7 +3789,7 @@ it and has been retired completely. Build only on what's here.
   bottom-right on desktops with the slots' names; square slots over the
   right-hand buttons on touch screens upright, the door prompt above them,
   low between the stick and the buttons on their side; in `chrome`), **the
-  inventory** (`[data-inv]`: Tab, the walk tabs' Bag button
+  inventory** (`[data-inv]`: Tab, the hub's Bag tab's button
   `[data-inv-open]` or the gamepad's View open and close it, Esc and × close
   it; open, Degen stops, the mouse is freed and `.city.is-inv` hides the
   HUD's buttons, the hotbar and the prompt; the two weapon slots over the
@@ -3854,7 +3966,7 @@ it and has been retired completely. Build only on what's here.
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
 - Over the shoulder is the default when walking starts (V or the
-  Controls panel swaps to first person). The first-person hands
+  hub's Settings swap to first person). The first-person hands
   (`viewmodel.ts`, Degen's own from `bakedHand()` in `body.ts`: the right
   closed round the pistol grip, the left under the front) wear the sleeves of Degen's outfit (`setOutfit()`, called
   from `walk.setLook()` through `combat.setOutfit()`: a suit sleeve with a
@@ -4075,7 +4187,7 @@ it and has been retired completely. Build only on what's here.
   name or look carried over), and its look never overwrites the browser's
   own guest look. The **Connect wallet** button sits in the header's tools (`.nav-account`,
   rendered by `CityMap.astro` when there's a game server,
-  "Connect" on phones) and in the walk Profile tab (`[data-account-open]`);
+  "Connect" on phones) and in the hub's Profile tab (`[data-account-open]`);
   both open the profile card (`[data-account]`). The account and card are
   made with the page (`CityMap.astro`), not with the 3D city, so they work
   before 3D has loaded; `bootCity()` gets them and fills
@@ -4118,7 +4230,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map (`seams.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

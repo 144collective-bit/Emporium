@@ -418,22 +418,6 @@
   bottom: auto;
   transform: translate(-50%, -12px);
 }
-
-/* The menu: the city's places (3D only), then under "More" the comic page and the merch store */
-.city-dir .dir-label {
-  margin: 4px 0 0;
-  padding: 8px 10px 2px;
-  border-top: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.city:not([data-view="3d"]) .city-dir .dir-places,
-.city:not([data-view="3d"]) .city-dir .dir-label {
-  display: none;
-}
 @media (max-width: 640px) {
   .dorras-pill {
     height: 32px;

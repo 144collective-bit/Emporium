@@ -893,15 +893,6 @@
   .city-draft-tag {
     display: inline-flex;
   }
-  /* 3D on phones: settings top-left, the panel becomes a bottom sheet */
-  .city-controls {
-    top: calc(var(--head-h) + 8px);
-    right: auto;
-    left: 12px;
-  }
-  .city-controls[open] {
-    right: 12px;
-  }
   .city-panel {
     top: auto;
     right: 12px;
@@ -977,21 +968,9 @@
     order: 2;
     flex: none;
   }
-  /* Settings and menu: the menu last, and their cards span the width under the header */
-  .city-head .city-dir {
+  /* The hub's button last in the tools */
+  .city-head .hub-btn {
     order: 1;
-    align-self: auto;
-  }
-  .city-head .head-pop {
-    position: static;
-  }
-  .city-head .head-panel {
-    top: calc(100% + 8px);
-    right: 12px;
-    left: 12px;
-    width: auto;
-    min-width: 0;
-    max-width: none;
   }
   .city-head-text b {
     font-size: 16px;
@@ -1012,9 +991,6 @@
   }
   .walk-pop summary {
     padding: 9px 12px;
-  }
-  .walk-online summary {
-    padding: 9px 11px;
   }
   .city-pin-sub {
     font-size: 8.5px;
@@ -1454,7 +1430,7 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  .city-head .head-pop > summary {
+  .city-head .hub-btn {
     padding: 0 11px;
   }
   .city[data-mode="walk"] .city-head-logo {
@@ -2160,4 +2136,13 @@
 }
 .city-bench-copy[hidden] {
   display: none;
+}
+
+/* The narrowest phones: The Trenches' logo is wider than it is tall, so it comes down a little to leave the
+   mode's title room beside it */
+@media (max-width: 380px) {
+  .city-head-logo {
+    height: 28px;
+    padding-right: 8px;
+  }
 }

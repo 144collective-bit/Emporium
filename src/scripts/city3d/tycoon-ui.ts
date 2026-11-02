@@ -221,6 +221,8 @@ const clock = (ms: number) => {
 };
 
 export interface TycoonHooks {
+  /** The hub (hub.ts): the business card is its Business tab */
+  hub?: { show(tab: 'business'): void; close(): boolean; readonly open: boolean; readonly tab: string };
   /** Where Degen is standing in walk mode, on foot (null otherwise) */
   walker(): { x: number; z: number } | null;
   /** Your car, if it's out of the garage */
@@ -884,8 +886,10 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       <ul class="market-list biz-estate">${rows}</ul>`;
   }
 
+  /** The card is showing: the hub open on Business (or, without a hub, the card's own panel) */
+  const cardOpen = () => (h.hub ? h.hub.open && h.hub.tab === 'business' : !card.hidden);
   function paintCard() {
-    if (card.hidden) return;
+    if (!cardOpen()) return;
     const now = Date.now();
     tabsEl.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
     const view = tab === 'stall' ? stallView(now) : tab === 'units' ? unitView(now) : tab === 'workshop' ? workshopView() : tab === 'car' ? carView(now) : bagView();
@@ -921,16 +925,20 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       unitSel = ROW_IDS.length + Number(at.slice(1));
     }
     note = '';
-    if (card.hidden) {
-      card.hidden = false;
-      root.classList.add('is-shopping', 'is-stall');
+    if (!cardOpen()) {
+      if (h.hub) h.hub.show('business');
+      else {
+        card.hidden = false;
+        root.classList.add('is-shopping', 'is-stall');
+        card.querySelector<HTMLButtonElement>('[data-biz-close]')?.focus({ preventScroll: true });
+      }
       h.opened();
-      card.querySelector<HTMLButtonElement>('[data-biz-close]')?.focus({ preventScroll: true });
     }
     paintCard();
   }
   function closeCard() {
-    if (card.hidden) return false;
+    if (!cardOpen()) return false;
+    if (h.hub) return h.hub.close();
     card.hidden = true;
     root.classList.remove('is-shopping', 'is-stall');
     return true;
@@ -1093,7 +1101,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const input = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-backup-file]');
     if (input) void readFile(input);
   };
-  pill.addEventListener('click', () => (card.hidden ? openCard() : closeCard()));
+  pill.addEventListener('click', () => (cardOpen() ? closeCard() : openCard()));
   // Esc closes the card first (before it can close a panel or leave walk mode)
   document.addEventListener(
     'keydown',
@@ -1218,8 +1226,10 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     openCard,
     closeCard,
     get cardOpen() {
-      return !card.hidden;
+      return cardOpen();
     },
+    /** Paint the card (the hub showed its Business tab) */
+    paint: () => paintCard(),
     get save() {
       return save;
     },

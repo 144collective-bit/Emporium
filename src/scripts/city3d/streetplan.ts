@@ -2,18 +2,17 @@
  * The street plan as data: streets (centre lines with a kind and a width),
  * the crossings where they meet, the blocks between them as outlines, and
  * the plazas. DOM-free and scene-free, like layout.ts, so the 3D city, the
- * world map, traffic, pedestrians, collisions, the plots and the game
- * server can all read one plan.
+ * world map, traffic, pedestrians, collisions and the game server can all
+ * read one plan.
  *
- * `gridPlan()` describes the straight grid of layout.ts (edge-to-edge
- * streets, square blocks). `PLAN` is the city as built: the grid outside
- * downtown, and downtown (downtown.ts) with its diagonals, triangle blocks,
- * walk-only alleys, pocket parks and the hangout square
- * (docs/city-plan.md).
+ * `gridStreets()` / `gridCrossings()` are the arterials of layout.ts, edge to
+ * edge, and where they meet. `PLAN` is the city as built on them: downtown
+ * (downtown.ts) with its diagonals, triangle blocks, walk-only alleys, pocket
+ * parks and the hangout square (docs/city-plan.md), and every district since.
  *
  * Coordinates are world units on the ground: [x, z].
  */
-import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, DISTRICTS, EW_ROADS, EXT, EXTRA_LOTS, GARAGE, LANE, MARKET, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, UNITS, WALK_W, ewStreet, nsRuns, nsStreet, type Road } from './layout';
+import { BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, ewStreet, nsRuns, nsStreet, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
@@ -267,7 +266,7 @@ const kindOf = (r: Road): StreetKind => (r.lanes === 2 ? 'avenue' : 'street');
  * step 1) stop at the bank avenues, a street each side of the river (`nsStreet()`), and the short ones start at the
  * Parkway (`SHORT_NS`: the mall's land past it, docs/mall-plan.md)
  */
-function gridStreets(): Street[] {
+export function gridStreets(): Street[] {
   const [e0, e1] = EXT;
   const parkway = BENDS.find((b) => b.id === 'parkway')!.pts;
   return [
@@ -288,7 +287,7 @@ function gridStreets(): Street[] {
 }
 
 /** A crossing wherever a north-south and an east-west road meet; lights where downtown's cross streets meet */
-function gridCrossings(): Crossing[] {
+export function gridCrossings(): Crossing[] {
   const out: Crossing[] = [];
   NS_ROADS.forEach((nr, i) =>
     EW_ROADS.forEach((er, j) => out.push({ id: `x${i}-${j}`, at: [nr.c, er.c], streets: [nsStreet(i, er.c), `ew${j}`], lights: CORE_ROADS.includes(nr.c) && CORE_ROADS.includes(er.c) }))
@@ -296,25 +295,7 @@ function gridCrossings(): Crossing[] {
   return out;
 }
 
-const outerBlocks = (): Block[] => [
-  ...DISTRICTS.map((d): Block => ({ id: `district-${d.id}`, poly: square(d.ox, d.oz, BS), use: 'district', ref: d.id, walk: WALK_W })),
-  ...EXTRA_LOTS.map((l, i): Block => {
-    const ref = l === GARAGE ? 'garage' : l === MARKET ? 'market' : l === UNITS ? 'units' : `lot-${i - 3}`;
-    return { id: `lot-${ref}`, poly: square(l.ox, l.oz, BS), use: 'lot', ref, walk: WALK_W };
-  }),
-];
-
 const withSlabs = (p: Omit<StreetPlan, 'slabs'>): StreetPlan => ({ ...p, slabs: p.blocks.map(slabOf) });
-
-/** The straight grid: 3 x 3 square blocks between the streets of layout.ts */
-export function gridPlan(): StreetPlan {
-  return withSlabs({
-    streets: gridStreets(),
-    crossings: gridCrossings(),
-    blocks: [...BLOCKS.flatMap((ox) => BLOCKS.map((oz): Block => ({ id: `core-${ox}-${oz}`, poly: square(ox, oz, BS), use: 'plain', walk: WALK_W }))), ...outerBlocks()],
-    plazas: [],
-  });
-}
 
 /** Landmark spot ids by their old block on the drawing grid (layout.ts SEATS) */
 const SPOT_OF: Record<string, string> = {

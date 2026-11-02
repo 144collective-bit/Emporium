@@ -1,12 +1,12 @@
 /*
  * The city's mode header: says which view you're in (City view, Walk mode;
- * "Sector 7" while the city loads or where it can't run) with a line on what
+ * "The Trenches", the game's name, while the city loads or where it can't run) with a line on what
  * you can do there, and keeps the City / Walk switch in step. It watches the city root
  * (data-view, data-mode, data-kart, data-plane, data-boat, data-fight, is-fp, is-online, is-driving, is-flying) so every mode change updates it.
  */
 const COPY = {
   /** Before the 3D city is up (data-view="loading"), or where it can't run (data-view="none") */
-  still: { title: 'Sector 7', sub: (root: HTMLElement) => (root.dataset.view === 'none' ? 'Needs 3D graphics' : 'Loading the city') },
+  still: { title: 'The Trenches', sub: (root: HTMLElement) => (root.dataset.view === 'none' ? 'Needs 3D graphics' : 'Loading the city') },
   explore: {
     title: 'City view',
     sub: () => (narrow() ? 'Tap a building to go in' : touch() ? 'Drag to move · tap a building to go in' : 'Drag to move · click a building to go in'),

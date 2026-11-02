@@ -4,13 +4,12 @@
 // sees as far as the skyline past the edge. Runs at today's size and at Phase 10's (npm run test:wide).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BELT, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
+import { BELT, BELT_EASE, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, beltShare, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
+import { TOWN_BOX } from '../src/scripts/city3d/landuse';
 import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS } from '../src/scripts/city3d/bounds';
-import { EW_ROADS, EXT, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
-import { STRIP_RECT } from '../src/scripts/city3d/strip';
-import { inTown } from '../src/scripts/city3d/outer';
+import { EW_ROADS, EXT, NS_ROADS, STRIP_GAP, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
-import { HIGHWAY_BOX, HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
+import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
 import { SUNRIDGE_RECT, inSunridge } from '../src/scripts/city3d/sunridge';
 
 /** The world before Phase 6 (the densities were worked out on it), Phase 6's and Phase 10's */
@@ -38,23 +37,6 @@ function mallWas(r: readonly number[], skip?: readonly number[]) {
     }
   return n * 4;
 }
-/**
- * The land a tree could stand on in the Neon Mile's land before it was laid out (docs/strip-plan.md Phase 1, as
- * freeLand counts): off the town and its bends, the east-west roads across it, the highway and its junctions
- */
-function stripWas(r: readonly number[], skip?: readonly number[]) {
-  const o = overlap(r, [STRIP_RECT[0] - 3, STRIP_RECT[1] - 3, STRIP_RECT[2] + 3, STRIP_RECT[3] + 3]);
-  let n = 0;
-  for (let x = o[0] + 1; x < o[2]; x += 2)
-    for (let z = o[1] + 1; z < o[3]; z += 2) {
-      // (Sunridge's land counted by sunWas)
-      if ((skip && inBox(skip, x, z)) || inSunridge(x, z, 2)) continue;
-      if (inTown([x, z], 1.2) || EW_ROADS.some((q) => Math.abs(z - q.c) < q.half + 0.8)) continue;
-      if (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || EW_ROADS.some((q) => Math.abs(x - HIGHWAY_BOX[2]) < 17 && Math.abs(z - q.c) < 17)) continue;
-      n++;
-    }
-  return n * 4;
-}
 /** The land Sunridge took that a tree could stand on before (docs/suburb-plan.md Phase 1: open land; as freeLand counts), the kart park's old land in it left out unless `kart` */
 function sunWas(r: readonly number[], skip?: readonly number[], kart = false) {
   const o = overlap(r, SUNRIDGE_RECT);
@@ -67,6 +49,21 @@ function sunWas(r: readonly number[], skip?: readonly number[], kart = false) {
     }
   return n * 4;
 }
+/**
+ * The Neon Mile's land counts as it was (its keep is `since`, landuse.ts), but for downtown's two small east-west
+ * roads, which ran across it then and stop either side of it now (layout.ts STRIP_GAP): the land under them, as
+ * freeLand counts it today, to take back off
+ */
+function stripRoads(r: readonly number[], skip?: readonly number[]) {
+  let n = 0;
+  for (const [k, [x0, x1]] of Object.entries(STRIP_GAP)) {
+    const q = EW_ROADS[+k];
+    const o = overlap(r, [x0, q.c - q.half - 0.8, x1, q.c + q.half + 0.8]);
+    for (let x = r[0] + 1; x < r[2]; x += 2)
+      for (let z = r[1] + 1; z < r[3]; z += 2) if (inBox(o, x, z) && !(skip && inBox(skip, x, z)) && treeSpot(x, z, [], false)) n++;
+  }
+  return n * 4;
+}
 const overlap = (a: readonly number[], b: readonly number[]): [number, number, number, number] => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
 
 test('the densities still fit the land the world had before Phase 6', () => {
@@ -75,29 +72,40 @@ test('the densities still fit the land the world had before Phase 6', () => {
   const away = (r: [number, number, number, number], skip?: [number, number, number, number]) => OLD.reduce((n, o) => n + freeLand(overlap(r, o), 2, skip), 0);
   // (and the mall's land added back: built on since, docs/mall-plan.md; it was free but for the roads across it and
   // the highway's junctions)
-  // (and the Strip's, laid out since: docs/strip-plan.md; and Sunridge's, docs/suburb-plan.md: open land but the kart park's old site)
-  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT) + stripWas(BELT) + sunWas(BELT);
-  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT) + stripWas(outer, BELT) + sunWas(outer, BELT);
+  // (and Sunridge's, docs/suburb-plan.md: open land but the kart park's old site)
+  // (and the roads that ran across the Neon Mile's land taken back off: docs/strip-plan.md)
+  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT) + sunWas(BELT) - stripRoads(BELT);
+  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT) + sunWas(outer, BELT) - stripRoads(outer, BELT);
   assert.ok(Math.abs(belt - BELT_FREE) / BELT_FREE < 0.03, `belt ${belt} against ${BELT_FREE}`);
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });
 
-test('the world before Phase 6 keeps the trees it had (but by the highway), each where a tree may stand', () => {
-  for (const count of [250, 150, 90]) {
-    const all = outskirtsTrees(count, 0.6, [], TODAY);
-    // (less the ones where the ring highway now runs, Phase 7: its north side crosses that land; the ones on the
-    // airport's old land left out of the count, as it's open again)
-    const trees = all.filter((t) => !inBox(OLD_AIRPORT, t.x, t.z));
-    // (less the belt's share the Neon Mile took since, docs/strip-plan.md: its land carries no trees now)
-    // (and less the ones Sunridge's land took, at the belt's and the open land's densities)
-    const want = count * (1.6 - sunWas(BELT, undefined, true) / BELT_FREE - (0.6 * sunWas([TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4], BELT, true)) / OPEN_FREE) - (count * 1.6 * stripWas(BELT)) / BELT_FREE;
-    const had = trees.length + (count * 1.6 - want);
-    assert.ok(had <= count * 1.6 * 1.08 && had > count * 1.6 * 0.86, `${trees.length} for ${count} (${had.toFixed(0)} with the Strip's and Sunridge's land's)`);
+test('as many trees as the densities give the land free today, each where a tree may stand, the belt easing out', () => {
+  // (the world before Phase 6 is mostly districts now: its trees are counted against the land a tree may stand on
+  // today, at the belt's density by the town easing to the open land's, docs/blend-plan.md Phase 1)
+  const land: [number, number, number, number] = [TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4];
+  // (2,500 for the count: enough trees that the random tries' noise is a few per cent; the tiers' 250, 150 and 90 for
+  // where they stand)
+  for (const count of [2500, 250, 150, 90]) {
+    const trees = outskirtsTrees(count, 0.6, [], TODAY);
+    const [belt, open] = [count / BELT_FREE, (count * 0.6) / OPEN_FREE];
+    let want = 0;
+    for (let x = land[0] + 1; x < land[2]; x += 2)
+      for (let z = land[1] + 1; z < land[3]; z += 2) if (treeSpot(x, z)) want += 4 * (open + (belt - open) * beltShare(x, z));
+    if (count === 2500) assert.ok(Math.abs(trees.length - want) / want < 0.08, `${trees.length} for ${count}, the land gives ${want.toFixed(0)}`);
     for (const t of trees) {
       assert.ok(treeSpot(t.x, t.z));
-      assert.ok(t.x > TODAY[0] + 4 && t.x < TODAY[1] - 4 && t.z > TODAY[0] + 4 && t.z < TODAY[1] - 4);
+      assert.ok(t.x > land[0] && t.x < land[2] && t.z > land[1] && t.z < land[3]);
     }
   }
+  // The belt's share eases from 1 by the town to 0, never a step
+  let last = 1;
+  for (let d = 0; d < BELT_EASE.fade + 10; d += 0.5) {
+    const k = beltShare(TOWN_BOX[2] + d, (TOWN_BOX[1] + TOWN_BOX[3]) / 2);
+    assert.ok(k <= last + 1e-9 && last - k < 0.05, `the belt's share at ${d} past the town`);
+    last = k;
+  }
+  assert.equal(last, 0);
   assert.deepEqual(outskirtsTrees(150, 0.6, [], TODAY), outskirtsTrees(150, 0.6, [], TODAY), 'seeded');
 });
 

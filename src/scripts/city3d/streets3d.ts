@@ -10,11 +10,12 @@
 import * as THREE from 'three';
 import { Batch, neon, rng, toon } from './kit';
 import { LANE, MEDIAN } from './layout';
-import { SLAB, addLamp, keepTreesOff } from './world';
+import { SLAB, addLamp } from './world';
 import { site } from './tilework';
 import { PLAN, offsetLine, type Pt, type Street } from './streetplan';
 import type { Rect } from './downtown';
-import { AXIS_X, AXIS_ZEBRAS, CIRCLE, LANE_HALF, LAYBYS, UPTOWN_CROSSINGS, UPTOWN_LAMPS, UPTOWN_RECT, UPTOWN_STREETS, laybyRect } from './uptown';
+import { AXIS_X, AXIS_ZEBRAS, CIRCLE, LANE_HALF, LAYBYS, UPTOWN_CROSSINGS, UPTOWN_LAMPS, UPTOWN_STREETS, laybyRect } from './uptown';
+import { COVER, KERB } from './palette';
 
 /** A street a district adds to the plan: straight, along x or z */
 export interface DistrictStreet {
@@ -65,8 +66,8 @@ function stretches(s: DistrictStreet, crossings: DistrictCrossing[]) {
  */
 export function drawStreets(streets: DistrictStreet[], crossings: DistrictCrossing[], key: string, wear: boolean) {
   const asphalt = toon('#26243f');
-  const kerbTop = toon('#5a5290');
-  const median = toon('#3f5a4a');
+  const kerbTop = toon(KERB.town);
+  const median = toon(COVER.median);
   const yellow = neon('#f5d76e', 0.9, 1.1);
   const white = toon('#d9d5ee');
   const zebra = toon('#e8e4f8');
@@ -274,8 +275,8 @@ function clearRuns(s: Street, m: ReturnType<typeof measure>, pad: number): [numb
 /** Uptown's streets (uptown.ts, Phase 5), clean: asphalt along any line, the circle's ring, planted medians, centre lines, zebras on every arm, the lay-bys, lamps */
 function drawUptown() {
   const asphalt = toon('#26243f');
-  const kerbTop = toon('#5a5290');
-  const grass = toon('#3f7a4a');
+  const kerbTop = toon(KERB.town);
+  const grass = toon(COVER.planted);
   const shrub = toon('#2f6a3c');
   const yellow = neon('#f5d76e', 0.9, 1.1);
   const zebra = toon('#e8e4f8');
@@ -400,7 +401,6 @@ function drawUptown() {
 
 /** Uptown's streets (uptown.ts), clean (`drawUptown()`); the lamps along its avenues and cross streets; the axis's zebras over them */
 export function buildUptownStreets() {
-  keepTreesOff(UPTOWN_RECT);
   drawUptown();
   for (const [x, z, ry] of UPTOWN_LAMPS) addLamp(x, z, ry);
   // Zebras where the Mall's axis crosses each avenue and cross street (either side of an avenue's median)

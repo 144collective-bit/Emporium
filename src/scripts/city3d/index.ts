@@ -5,8 +5,6 @@
  * and the page says the city needs 3D graphics.
  */
 import * as THREE from 'three';
-import { RING_HI, WIDEN } from './layout';
-import { AVENUE_Z } from './trenches';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { CROWD_PACK, loadMocap } from './mocap-load';
@@ -18,8 +16,8 @@ import { buildBusStops } from './transit3d';
 import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
-import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
-import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
+import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { PARK_LAMPS, PARK_TREES } from './westlake';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
@@ -46,7 +44,7 @@ import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
 import { LIFT, TOWER_SPAWN } from './skydeck';
-import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
+import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -54,7 +52,6 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { AIRPORT_END, ARCH, BRANCH, LINE_X, NORTH_R, SPUR_CLEAR, WEST_END, WEST_R } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
@@ -64,6 +61,7 @@ import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './soundlazy';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
+import type { Hub } from './hub';
 import type { Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
@@ -115,6 +113,7 @@ import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW, figureDetail } from './character';
 import type { GameDeps } from './ui';
 import type { Bench } from './bench';
+import type { Shots } from './shots';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
@@ -148,7 +147,7 @@ const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /** `wallet`: Connect wallet and the profile card, made with the page (CityMap.astro); the city plugs its parts into `hooks` */
-export async function bootCity(root: HTMLElement, wallet?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null) {
+export async function bootCity(root: HTMLElement, wallet?: { account: Account; hooks: AccountHooks; ui: AccountUI } | null, hub?: Hub) {
   const host = root.querySelector<HTMLElement>('[data-city3d]')!;
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
@@ -235,7 +234,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const tick = (f: Tick) => ticks.push(f);
 
   // Downtown's blocks are paved; the landmarks' own lots (by their old block, layout.ts SEATS) get their own ground
-  const { streaks } = buildGround(scene, { 'dt-se': 'concrete', '22,22': 'concrete', '22,11': 'concrete', '11,22': 'concrete', '11,0': 'grass', '22,0': 'grass', '0,22': 'grass' });
+  const { streaks } = buildGround(scene, { 'dt-se': 'concrete', '22,22': 'concrete', '22,11': 'concrete', '11,22': 'concrete', '11,0': 'grass', '22,0': 'grass', '0,22': 'grass' }, tier === 'low');
   progress(0.3);
   await waited(nextFrame());
   // Every far-away car, parked or driving, in one mesh (growth plan Phase 2): before anything parks one
@@ -333,19 +332,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     spots.push(pickSpot(scene, 'sunpark', SLAB, [{ rect: PARK_LAND, h: 1 }], PARK_LAND, 4.2));
     spots.push(pickSpot(scene, 'sunschool', SLAB, [...SCHOOL.wings.map((rect) => ({ rect, h: SCHOOL.h + 0.3 })), { rect: SCHOOL.hall.rect, h: SCHOOL.hall.h + 0.3 }], SCHOOL_LAND, SCHOOL.hall.h + 2.8, mid(SCHOOL.hall.rect)));
   }
-  // ...and the metro's el where it crosses the open land south of the south row: no trees under it
-  keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
-  // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
-  keepTreesOff([LINE_X - 6, BRANCH.south - 4, AIRPORT_END + 6, BRANCH.z + 6]);
-  // (and its run west past The Trenches over the highway to Southbank Docks and north over the river: docs/docks-plan.md Phase 2)
-  keepTreesOff([WEST_END - WEST_R - 6, AVENUE_Z - 6, -186, AVENUE_Z + 6]);
-  keepTreesOff([ARCH.x - 6, RING_HI - 2, ARCH.x + NORTH_R + 4, AVENUE_Z]);
-  // (and Crestmont's spur, round outside the highway's north-east corner: docs/crestmont-plan.md Phase 9)
-  for (const r of SPUR_CLEAR) keepTreesOff(r);
+  // (the outskirts' trees keep off the metro's line, the districts and the streets by one rule: landuse.ts)
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
-  keepTreesOff(WESTLAKE_RECT);
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
@@ -380,8 +370,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...the vendors at their carts and their customers
   for (const p of STREETLIFE_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB, ry: p.ry, act: p.act });
   for (const [x, z] of UPTOWN_GARDEN_TREES) addTree(x, z, 0.8, false);
-  // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
-  for (const r of STADIUM_RECTS) keepTreesOff(r);
+  // ...and the stadium's, north of the highway (stadium.ts)
   for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
@@ -597,18 +586,27 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const s = spots.find((sp) => sp.id === id);
     const tpl = root.querySelector<HTMLTemplateElement>(`template[data-panel-tpl="${id}"]`);
     if (!s || !tpl) return;
+    hub?.close();
     // Walking: the panel opens where you stand, the camera stays with Degen
     if (!active && !walking) returnView = { pos: camera.position.clone(), target: controls.target.clone() };
     active = s;
     lastFocus = document.activeElement as HTMLElement;
     panelBody.replaceChildren(tpl.content.cloneNode(true));
+    // The marquee strip under its name (the menu plan's Phase 4: its line is the template's, fixed copy)
+    const marquee = tpl.dataset.marquee;
+    if (marquee) {
+      const strip = document.createElement('p');
+      strip.className = 'mk-marquee city-panel-marquee';
+      strip.textContent = marquee;
+      panelBody.querySelector('.city-panel-title')?.after(strip);
+    }
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
     // Closed for now by the owner (live settings): its kicker and name, and the closed line; nothing to do in it
     const gate = live.place(id);
     if (!gate.open) {
       const title = panelBody.querySelector('.city-panel-title');
-      for (const el of [...panelBody.children]) if (el !== title && !el.classList.contains('kicker')) el.remove();
+      for (const el of [...panelBody.children]) if (el !== title && !el.classList.contains('kicker') && !el.classList.contains('mk-marquee')) el.remove();
       const line = document.createElement('p');
       line.className = 'live-closed';
       line.textContent = closedLine(title?.textContent?.trim() || 'This place', gate);
@@ -878,6 +876,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera,
     canvas,
     root,
+    hub,
     // What's built on your units and big lots
     placedSolids: () => {
       const u = units.solids();
@@ -953,6 +952,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   /* ---------- The economy: Dorras, your stall and units, the Workshop, the market hall ---------- */
   tycoon = createTycoonUI(root, {
+    hub,
     walker: () => (walking && !walk.driving && !walk.flying ? { x: walk.position.x, z: walk.position.z } : null),
     car: () => {
       const c = walk.car;
@@ -979,6 +979,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     openSpot: (id) => open(id),
     mayCarry: (id) => walk.combat.canTake(id),
   });
+
+  /* ---------- The hub (hub.ts, the menu plan's Phase 2): the pause screen ---------- */
+  if (hub) {
+    hub.hooks.opened = () => {
+      // One card at a time: a place's panel closes; walking, Degen stands still and the mouse is freed
+      close();
+      if (walking) walk.pause();
+    };
+    hub.hooks.closed = () => {
+      root.classList.remove('is-stall');
+      if (walking) canvas.focus({ preventScroll: true });
+      dirty = true;
+    };
+    hub.hooks.tab = (id) => {
+      root.classList.toggle('is-stall', id === 'business');
+      if (id === 'business') tycoon!.paint();
+    };
+    root.querySelector('[data-hub-leave]')?.addEventListener('click', () => stopWalking());
+    root.querySelector('[data-hub-bag]')?.addEventListener('click', () => tycoon!.openCard('bag'));
+  }
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {
@@ -1049,6 +1069,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const shut = live.closed('walk');
     if (shut) return tycoon?.toast(shut, 3500);
     close();
+    hub?.close();
     setHover(null);
     beforeWalk = { pos: camera.position.clone(), target: controls.target.clone() };
     flight = null;
@@ -1069,6 +1090,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walking = false;
     walker.on = false;
     walk.exit();
+    hub?.close();
     taxis.reset();
     metroUI?.close();
     riverBusUI?.close();
@@ -1094,10 +1116,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   head.city.hidden = false;
   root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
 
-  // Esc closes an open drop-open menu (walk panels, City settings, Directory) before it closes
+  // Esc closes an open drop-open menu (the emotes) before it closes
   // a panel or leaves a mode
   const closePop = () => {
-    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open], .head-pop[open]');
+    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open]');
     if (!open) return false;
     open.open = false;
     open.querySelector('summary')?.focus({ preventScroll: true });
@@ -1108,18 +1130,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape' && accountUI?.close()) return;
     if (root.dataset.view !== '3d') return;
     if (accountUI?.isOpen) return;
+    // The hub (hub.ts): Esc closes it (from outside it too: its own keys take Esc inside it)
+    if (e.key === 'Escape' && hub?.close()) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
-    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : true)) return;
+    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
         if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
-        active ? close() : stopWalking();
+        // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
+        active ? close() : hub ? hub.show() : stopWalking();
       }
       else if (!active) walk.onKey(e, true);
       return;
     }
     if (e.key === 'Escape' && closePop()) return;
-    if (e.key === 'Escape') close();
+    // (a panel closes first; with nothing open, the hub)
+    if (e.key === 'Escape') active ? close() : hub?.show();
   });
   document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
   let down: { x: number; y: number } | null = null;
@@ -1162,7 +1188,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     a.addEventListener('click', (e) => {
       if (root.dataset.view !== '3d') return;
       e.preventDefault();
-      a.closest('details')?.removeAttribute('open');
       open(a.dataset.dirSpot!);
     })
   );
@@ -1290,6 +1315,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     void import('./bench').then(({ createBench }) => {
       bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
     });
+  // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
+  let shots: Shots | null = null;
+  if (query.has('shots'))
+    void import('./shots').then(({ createShots }) => {
+      shots = createShots(
+        {
+          root,
+          conditions: benchSky,
+          built: () => !works.stats().waiting && !districts.pending(),
+          want: (cam) => works.wantView(planesOf(cam), Q.far, cam.position.x, cam.position.y, cam.position.z),
+        },
+        query.get('shots') === 'night'
+      );
+    });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
@@ -1344,7 +1383,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // City / Walk switch never sits on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, .head-panel, .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
@@ -1401,8 +1440,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
 
-    // The benchmark has the camera while it runs
-    if (bench?.active && !walking) {
+    // The benchmark has the camera while it runs (and the review shots while they hold a view)
+    if (shots?.place(camera, controls.target) && !walking) dirty = true;
+    else if (bench?.active && !walking) {
       if (flight) {
         flight = null;
         controls.enabled = true;
@@ -1466,7 +1506,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
-    if (bench) districts.all();
+    if (bench || shots) districts.all();
     districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
@@ -1568,6 +1608,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         post.shadowStat.calls = post.shadowStat.tris = 0;
       }
       post.render();
+      shots?.drawn();
       dirty = false;
       if (!bootAt.first) {
         bootAt.first = performance.now();

@@ -5,33 +5,38 @@
  * gets more trees, never thinner ones, and a tile's trees are the same
  * whatever the world's size. A belt round the town (out past the Parkway
  * and the Southside Loop) is planted thickly, the open land out to the edge
- * lightly, and well away from the city pine woods stand in patches; all
- * keep off the town, the roads, the river, the airport and its approach,
- * the kart park and its slip road, and any land kept clear (the test
- * district's).
+ * lightly (the belt easing out into it, no edge), and well away from the
+ * city pine woods stand in patches; all keep off what the one clearing rule
+ * lists (landuse.ts) and any land kept clear.
  */
-import { MALL_AREA } from './mall';
-import { CITY_EXT, EW_ROADS, EXT, LANE, NS_ROADS, RIVER, ewRuns, nsRuns } from './layout';
-import { inChannel } from './river';
-import { inStrip } from './strip';
-import { inDocks } from './docks';
-import { PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
-import { KART_RECTS } from './kartfacility';
-import { AIRPORT_AREAS, RUNWAY } from './airfield';
+import { CITY_EXT, EXT } from './layout';
+import { KART_PARK } from './kartpark';
+import { AIRPORT_AREAS } from './airfield';
 import { TILE, tileKey, tilesIn } from './tiles';
 import { rng } from './recipes';
-import { KART_PARK } from './kartpark';
-import { HIGHWAY_HALF, fromHighway } from './highway';
-import { PLAN } from './streetplan';
+import { TOWN_BOX, keptOff } from './landuse';
 import type { Rect } from './downtown';
-import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
-import { inSunridge } from './sunridge';
-import { naturalAt } from './terrain';
 
-const PARKWAY_TOP = Math.min(...PARKWAY.map((p) => p[1]));
-const SOUTHSIDE_BOTTOM = Math.max(...SOUTHSIDE.map((p) => p[1]));
-/** The belt: a band round the town (inside the Parkway and the Southside Loop), out to about 20 past them (x0, z0, x1, z1) */
-export const BELT: Rect = [PROMENADE.x[0] - 24, PARKWAY_TOP - 24, PROMENADE.x[1] + 24, SOUTHSIDE_BOTTOM + 24];
+/** The belt: a band round the town (inside the Parkway and the Southside Loop), out to about 20 past them (x0, z0, x1, z1); where its density was measured */
+export const BELT: Rect = [TOWN_BOX[0] - 24, TOWN_BOX[1] - 24, TOWN_BOX[2] + 24, TOWN_BOX[3] + 24];
+/**
+ * The belt's density eased out (docs/blend-plan.md Phase 1: no cliff where it ends): the belt's own out to `full`
+ * past the town's box, easing to the open land's by `fade`; the band's trees as many as the belt's were (`full`
+ * plus half the ease is the belt's 24)
+ */
+export const BELT_EASE = { full: 8, fade: 40 };
+/** How far x, z is outside the town's box (0 inside it) */
+const fromTown = (x: number, z: number) => Math.hypot(Math.max(TOWN_BOX[0] - x, 0, x - TOWN_BOX[2]), Math.max(TOWN_BOX[1] - z, 0, z - TOWN_BOX[3]));
+/** The belt's share at x, z: 1 by the town, 0 on the open land past the ease */
+export function beltShare(x: number, z: number) {
+  const d = fromTown(x, z);
+  if (d <= BELT_EASE.full) return 1;
+  if (d >= BELT_EASE.fade) return 0;
+  const t = (d - BELT_EASE.full) / (BELT_EASE.fade - BELT_EASE.full);
+  return 1 - t * t * (3 - 2 * t);
+}
+/** Where the belt reaches (its ease's end) */
+const NEAR: Rect = [TOWN_BOX[0] - BELT_EASE.fade, TOWN_BOX[1] - BELT_EASE.fade, TOWN_BOX[2] + BELT_EASE.fade, TOWN_BOX[3] + BELT_EASE.fade];
 
 /**
  * How much land a tree may stand on in the world before Phase 6 (-200 to
@@ -43,41 +48,15 @@ export const BELT: Rect = [PROMENADE.x[0] - 24, PARKWAY_TOP - 24, PROMENADE.x[1]
 export const BELT_FREE = 11790;
 export const OPEN_FREE = 86920;
 
-/** Where the highway meets the arterials (its slip lanes are round them) */
-const MEETS = PLAN.crossings.filter((c) => c.streets.includes('highway')).map((c) => c.at);
-
 /**
- * Whether a tree may stand at x, z (`highway` false leaves the ring highway
- * out: the densities were worked out before it)
+ * Whether a tree may stand at x, z: clear of land kept clear (`clear`, 2 round) and of everything the one rule keeps
+ * the trees off (landuse.ts: the streets, the districts, the river, the metro, with their margins wobbled). `all`
+ * false is the land as it was when the densities were worked out (no ring highway, nothing built since, the margins
+ * not wobbled)
  */
-export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], highway = true) {
+export function treeSpot(x: number, z: number, clear: readonly Rect[] = [], all = true) {
   if (clear.some((c) => x > c[0] - 2 && x < c[2] + 2 && z > c[1] - 2 && z < c[3] + 2)) return false;
-  // Off the ring highway, its verges and the slip lanes at its junctions (highway.ts)
-  if (highway && (fromHighway(x, z) < HIGHWAY_HALF + 1.5 || MEETS.some((m) => Math.abs(x - m[0]) < 17 && Math.abs(z - m[1]) < 17))) return false;
-  // The shopping plaza, the mall and its loop and car parks (mall.ts)
-  if (x > MALL_AREA[0] && x < MALL_AREA[2] && z > MALL_AREA[1] && z < MALL_AREA[3]) return false;
-  // Crestmont (crestmont.ts): not on the Flats (their own planting comes in Phase 3) nor on a hill road and its bed
-  if (x > CREST_RECT[0] && x < CREST_RECT[2] && z > FOOTHILL_Z - LANE - 2 && z < CREST_RECT[3]) return false;
-  if (nearHillRoad(x, z, BED.shoulder + 1.5)) return false;
-  // ...nor on the hills themselves: they carry their own oaks and scrub (Phase 3, landscape.ts)
-  if (naturalAt(x, z) > 0.4) return false;
-  // The kart park, Kart Road and the car park (kartfacility.ts)
-  if (KART_RECTS.some((r) => x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3)) return false;
-  // The Docks (docks.ts): their own quays and yards, the basin
-  if (inDocks(x, z, 3)) return false;
-  // The Neon Mile (strip.ts): its boulevard and lots
-  if (inStrip(x, z, 3)) return false;
-  // Sunridge (sunridge.ts): its own planting comes with its yards (docs/suburb-plan.md Phase 3)
-  if (inSunridge(x, z, 2)) return false;
-  // Clear of the town (inside the bends, the river and its banks) and of the bends themselves
-  if (inTown([x, z], 1.2)) return false;
-  // Clear of the airport (airside, landside, the forecourt) and of the low end of its approach, off the runway's west end
-  if (AIRPORT_AREAS.some((r) => x > r[0] - 1 && x < r[2] + 1 && z > r[1] - 1 && z < r[3] + 1)) return false;
-  if (x > RUNWAY.x0 - 200 && x < RUNWAY.x0 && Math.abs(z - RUNWAY.z) < 14) return false;
-  if (EW_ROADS.some((r, i) => Math.abs(z - r.c) < r.half + 0.8 && ewRuns(i, x)) || NS_ROADS.some((r, i) => Math.abs(x - r.c) < r.half + 0.8 && nsRuns(i, z))) return false;
-  // Off the promenades along the quay lines, and the water wherever its edges curve (river.ts): trees grow on the banks it leaves
-  if ((z > RIVER[0] - 2.8 && z < RIVER[0] + 0.5) || (z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6) || inChannel(x, z, 0.8)) return false;
-  return true;
+  return keptOff(x, z, all) === null;
 }
 
 /**
@@ -165,9 +144,10 @@ export function outskirtsTrees(count: number, sparse = 0.6, clear: readonly Rect
         if (keep(x, z) && treeSpot(x, z, clear)) out.push({ x, z, s, pine });
       }
     };
-    const inBelt = overlap(here, BELT);
-    if (inBelt) plant(inBelt, belt, () => true);
-    plant(here, open, (x, z) => !inside(BELT, x, z));
+    // Near the town at the belt's density, kept in the share the ease gives (the open land's at least); past it the open land's
+    const near = overlap(here, NEAR);
+    if (near) plant(near, belt, (x, z) => r() < open / belt + (1 - open / belt) * beltShare(x, z));
+    plant(here, open, (x, z) => !inside(NEAR, x, z));
     // The woods, after the rest (so the trees before them stay as they were), in tiles reaching out past the clearance
     // (the distance is greatest at a corner)
     if (Math.max(fromCity(here[0], here[1]), fromCity(here[2], here[1]), fromCity(here[0], here[3]), fromCity(here[2], here[3])) > WOODS.clear) {
@@ -193,7 +173,7 @@ function hash(key: string) {
   return h | 0;
 }
 
-/** The land a tree may stand on in a rectangle, measured on a grid (`step` apart): for checking `BELT_FREE` and `OPEN_FREE` */
+/** The land a tree could stand on in a rectangle when the densities were worked out, measured on a grid (`step` apart): for checking `BELT_FREE` and `OPEN_FREE` */
 export function freeLand(rect: Rect, step: number, skip?: Rect) {
   let n = 0;
   for (let x = rect[0] + step / 2; x < rect[2]; x += step)

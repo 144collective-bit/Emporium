@@ -20,6 +20,7 @@ import { BX as LIBERTY_X, DECK_HALF } from './liberty';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
 import { DRESS } from './outerdress3d';
+import { COVER } from './palette';
 
 const INK = toon('#1b1830');
 const STONE = toon('#8f8ab0');
@@ -136,7 +137,7 @@ function centrepiece(b: Batch, scene: THREE.Scene, l: SquareLayout, tick: (f: Ti
 function square(b: Batch, scene: THREE.Scene, l: SquareLayout, crowd: Idle[], tick: (f: Tick) => void, low: boolean, reduced: boolean) {
   const [x0, z0, x1, z1] = l.square.rect;
   // Paving with a border, the centrepiece, trees in the corners, benches round it, a kiosk, lamps
-  box(b, x0, S, z0, x1, S + 0.012, z1, toon('#4b4766'));
+  box(b, x0, S, z0, x1, S + 0.012, z1, toon(COVER.concrete));
   b.box(x0 + 0.25, S, z0 + 0.25, x1 - x0 - 0.5, 0.016, z1 - z0 - 0.5, lotMat('paving'));
   // Inlays in a paler stone: a ring round the centrepiece and bands out from it along both axes to the edges
   {

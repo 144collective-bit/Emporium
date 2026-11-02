@@ -102,6 +102,8 @@ export interface FightUI {
   close(): boolean;
   /** Gamepad / keys: move the pick, take it */
   step(dir: number): void;
+  /** On a tab or back one (Q / E, LB / RB) */
+  stepTab(dir: number): void;
   take(): void;
   /** The fight HUD: on, then painted every frame */
   showHud(on: boolean): void;

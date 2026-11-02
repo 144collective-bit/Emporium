@@ -97,8 +97,7 @@ body.is-walking .nav {
   gap: 12px;
   pointer-events: none;
 }
-.city-card,
-.city-dir {
+.city-card {
   pointer-events: auto;
   border: 1px solid #0000;
   border-radius: 6px;
@@ -150,60 +149,6 @@ body.is-walking .nav {
   .city-draft {
     white-space: normal;
   }
-}
-.city-dir summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  list-style: none;
-  cursor: pointer;
-}
-.city-dir summary::-webkit-details-marker {
-  display: none;
-}
-.city-dir summary::after {
-  content: "+";
-  margin-left: auto;
-  color: var(--p-cyan);
-}
-.city-dir[open] summary::after {
-  content: "×";
-  font-size: 18px;
-  line-height: 0.6;
-}
-.city-dir ul {
-  display: grid;
-  gap: 2px;
-  min-width: 250px;
-  padding: 0 8px 10px;
-  list-style: none;
-}
-.city-dir a {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 8px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: background 0.2s;
-}
-.city-dir a:hover {
-  background: var(--pulse-wash);
-}
-.city-dir small {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--p-cyan);
-  white-space: nowrap;
 }
 
 /* 3D city: canvas, pins, loader, settings, panel */
@@ -367,7 +312,6 @@ body.is-walking .nav {
   transition: transform 0.4s var(--ease);
 }
 
-.city-controls,
 .city-panel {
   z-index: 4;
   border: 1px solid #0000;
@@ -378,52 +322,6 @@ body.is-walking .nav {
   box-shadow: 0 18px 50px -20px #000, 0 0 40px -18px #8000ffa6;
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-}
-.city-controls {
-  position: absolute;
-  top: calc(var(--head-h) + 12px);
-  right: 16px;
-  display: none;
-  max-width: calc(100% - 32px);
-}
-.city[data-view="3d"] .city-controls {
-  display: block;
-}
-.city.has-panel .city-controls {
-  visibility: hidden;
-}
-.city-controls summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  list-style: none;
-  cursor: pointer;
-}
-.city-controls summary::-webkit-details-marker {
-  display: none;
-}
-.city-controls summary svg {
-  color: var(--p-cyan);
-}
-/* Open, the toggle shows an × to close it again */
-.city-controls[open] summary::after {
-  content: "×";
-  margin-left: auto;
-  padding-left: 12px;
-  font-size: 18px;
-  line-height: 0.6;
-  color: var(--p-cyan);
-}
-.city-controls-body {
-  display: grid;
-  gap: 8px;
-  padding: 0 12px 12px;
 }
 .seg {
   display: flex;
@@ -541,9 +439,6 @@ body.is-walking .nav {
   gap: 10px;
   margin-top: 6px;
 }
-.city.has-panel .city-dir {
-  visibility: hidden;
-}
 
 /* The mode header across the top of the city (head.ts): which view you're in, the walk
    tabs, ammo and score while walking, and the City / Walk switch. Its height is
@@ -594,7 +489,7 @@ body.is-walking .nav {
   display: block;
   width: auto;
   height: 100%;
-  filter: drop-shadow(0 0 1px #ffffffaa) drop-shadow(0 0 6px #a855ff80);
+  filter: drop-shadow(0 2px 4px #000000b3);
   transition: transform 0.3s var(--ease);
 }
 .city-head-logo:hover .city-head-logo-img {
@@ -802,33 +697,8 @@ body.is-walking .nav {
   align-items: center;
   gap: 6px;
 }
-.city-head .head-pop {
-  position: relative;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  visibility: visible;
-}
-.city-head .city-controls {
-  top: auto;
-  right: auto;
-  display: none;
-  max-width: none;
-}
-.city[data-view="3d"]:not([data-mode="walk"]) .city-head .city-controls {
-  display: block;
-}
-.city[data-mode="walk"] .city-head .city-dir {
-  display: none;
-}
-/* Still there while a building's panel is open (the old floating versions hid then) */
-.city.has-panel .city-head .head-pop {
-  visibility: visible;
-}
-.city-head .head-pop > summary {
+.city-head .hub-btn,
+.city-head .level-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -849,66 +719,21 @@ body.is-walking .nav {
   list-style: none;
   cursor: pointer;
 }
-.city-head .head-pop > summary::-webkit-details-marker {
-  display: none;
-}
-.city-head .head-pop > summary::after {
-  content: none;
-}
-.city-head .head-pop > summary svg {
+.city-head .hub-btn svg {
   flex: none;
   color: var(--p-cyan);
 }
-.city-head .head-pop[open] > summary {
+.city-head .hub-btn[aria-expanded="true"],
+.city.is-hub .city-head .level-pill:hover {
   background:
     var(--pulse-wash) padding-box,
     linear-gradient(#14102a, #14102a) padding-box,
     var(--pulse) border-box;
 }
-.city-head .head-pop > summary:focus-visible {
+.city-head .hub-btn:focus-visible,
+.city-head .level-pill:focus-visible {
   outline: 2px solid var(--p-cyan);
   outline-offset: 2px;
-}
-/* The drop-down card under its button */
-.city-head .head-panel {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  display: grid;
-  gap: 8px;
-  width: max-content;
-  min-width: 260px;
-  max-width: min(400px, calc(100vw - 24px));
-  padding: 12px;
-  border: 1px solid #0000;
-  border-radius: 8px;
-  background:
-    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
-    var(--pulse) border-box;
-  box-shadow: 0 18px 50px -20px #000, 0 0 40px -18px #8000ffa6;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  /* (never taller than the screen under the header: a long menu scrolls) */
-  max-height: calc(100dvh - var(--head-h, 56px) - 24px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.city-head .head-panel .pop-head {
-  margin-bottom: 2px;
-}
-.city-head .city-dir ul {
-  min-width: 0;
-  padding: 0;
-}
-.head-menu-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-.head-menu-foot .chain-badge {
-  margin-right: auto;
 }
 .city-mode-btn {
   display: none;
@@ -942,8 +767,7 @@ body.is-walking .nav {
     linear-gradient(#14102a, #14102a) padding-box,
     var(--pulse) border-box;
 }
-.city[data-mode="walk"] .city-hud,
-.city[data-mode="walk"] .city-controls {
+.city[data-mode="walk"] .city-hud {
   display: none;
 }
 .city-modal[hidden] {

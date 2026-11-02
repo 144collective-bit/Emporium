@@ -12,7 +12,9 @@
     "test:wide": "WORLD_EXT=-680,720 node scripts/test.mjs",
     "budget": "node scripts/budget.mjs",
     "bake:textures": "node scripts/bake-textures.mjs",
-    "mocap": "node scripts/mocap.mjs"
+    "mocap": "node scripts/mocap.mjs",
+    "seams": "node scripts/seams.mjs",
+    "shots": "node scripts/shots.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

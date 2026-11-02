@@ -7,6 +7,7 @@
  */
 import * as THREE from 'three';
 import { Batch, neon, toon } from './kit';
+import { KERB } from './palette';
 import { site } from './tilework';
 import { SLAB } from './world';
 import { SWAY } from './dusk';
@@ -55,7 +56,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   const white = toon('#eceaf6');
   const yellow = neon('#f5d76e', 0.9, 1.1);
   const zebra = toon('#e8e4f8');
-  const kerbTop = toon('#5a5290');
+  const kerbTop = toon(KERB.town);
   const grass = toon('#3f7a4a');
   const trunkMat = toon('#8f7458');
   const fronds = [toon('#3d9a4c'), toon('#4aa95a')];
