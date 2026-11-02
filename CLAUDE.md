@@ -3,6 +3,18 @@
 This is **the** Degen Emporium site. An older multi-page site existed before
 it and has been retired completely. Build only on what's here.
 
+## The game's name
+
+- The game is **The Trenches** (the owner's call, 2026-11): its title logo
+  (`src/assets/trenches-logo.png`, the owner's art with its white
+  background cut away) heads the title screen, the city's header (its home
+  link, "The Trenches, home") and the maintenance cover. The homepage's tab
+  reads "The Trenches | The Degen Emporium"; the header's title while the
+  city loads, the no-3D card and the maintenance cover say The Trenches.
+  The city it's set in is still Sector 7 (the welcome tip, the map, the
+  places), and The Trenches is also the neighbourhood of that name
+  (below). The comic page keeps the Emporium's own name and logo.
+
 ## The city's name
 
 - The city is **Sector 7** (the owner's call; it was "Degen City" before).
@@ -36,8 +48,8 @@ it and has been retired completely. Build only on what's here.
     building flies the camera in and opens a glass panel.
   - **The 2D map was retired** (the owner's call, river plan step 1): no
     loading poster, no 2D view, no fallback. Where 3D can't run (no WebGL
-    2, or `bootCity()` returns null) the page shows a card saying Sector 7
-    needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
+    2, or `bootCity()` returns null) the page shows a card saying The
+    Trenches needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
     `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`).
     `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
     Don't bring the 2D map back without the owner.
@@ -2711,7 +2723,14 @@ it and has been retired completely. Build only on what's here.
   always-visible city overlay to that list.
 - **The start menu** (the owner's call): on every open, `[data-start]` in
   `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
-  while the 3D city boots behind it.
+  while the 3D city boots behind it. It's the game's title screen (the
+  owner's call: The Trenches' logo over a dark brick wall, the box in the
+  menus' arcade kit, its tokens shared from menus.css): first **the log-in
+  screen** (`[data-start-login]`: player name or email, password, Log in,
+  Play as guest, Create an account). Logging in isn't built yet: the form
+  sends and keeps nothing (the password is cleared) and says accounts are
+  coming soon; Play as guest goes on to the menu, whose "Playing as guest ·
+  Log in" goes back. A phone's keyboard stays down until a field is tapped.
   Single player enters the city (the fly-in runs again, `city.intro()` in
   `index.ts`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
@@ -2720,11 +2739,11 @@ it and has been retired completely. Build only on what's here.
   Weather and Sound, driving the header's own
   settings controls (pressed when the city is up, queued until then). The
   root carries `has-start` until a choice is made; the loader and the
-  welcome tip wait behind it. Gradient-bordered buttons, white text.
+  welcome tip wait behind it.
 - The city page has **one header**: the city's own bar (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
-  other pages. Left to right: the logo (home link), the mode title and
+  other pages. Left to right: The Trenches' logo (home link), the mode title and
   subtitle (City view, Walk mode), then on the
   right (walk tabs, ammo and score while walking), the City / Walk
   switch (the current mode lit with a glow and a gradient underline, the
@@ -2744,11 +2763,34 @@ it and has been retired completely. Build only on what's here.
   switch, then the walk tabs, ammo and score). Its live height is
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
+- **The menu redesign** (the owner's call: "redesign all menus and upgrade
+  their quality and functions", then "no PulseChain colours, make a new
+  design completely") is planned in `docs/menu-plan.md`: every menu in the
+  city (start menu, header, hub, place panels, shops, business screens,
+  fitting room, cards and pops) in a new **retro arcade** design
+  (pixel-edged panels, pixel headings, scanlines, blocky buttons that press
+  down, a blinking selector) on a new palette with no PulseChain colours
+  (the plan's arcade-cabinet palette, for the owner's approval on the
+  first sample); one hub menu replacing the ☰ Menu, Settings and the walk
+  tabs (Esc, the header's hub button, Start); phone-first sheets; full
+  controller and keyboard use; motion but no UI sounds; the design system
+  first (`menus.css`, `menukit.ts`, shown on the gun store), then rolled
+  out. The 3D city and the comic page keep their look. Phase 1 is built,
+  waiting on the owner's sign-off: `menus.css` (in `armoury.css`'s old
+  place in `Base.astro`'s order; the pixel face Pixelify Sans), `menukit.ts`
+  (`menuKit(el, { close })`: tabs, the d-pad and arrows, the grabber, the
+  hints by input), `menunav.ts` (DOM-free, tested in
+  `tests/menunav.test.ts`) and the gun store rebuilt in them (`.mk` in
+  `CityMap.astro`, `gunshop.ts`). Until a menu moves to the new kit it
+  keeps today's look and rules. One phase at a time with the owner's
+  sign-off; keep it up to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
   borders, glows and large type; `--p-cyan` for small text; buttons are
-  gradient-bordered with white text, never gradient-filled.
+  gradient-bordered with white text, never gradient-filled. The menus are
+  leaving it (the owner's call): as each moves to the menu plan's arcade
+  kit it takes that palette instead (`docs/menu-plan.md`).
 - Type: Big Shoulders Display (headlines), Inter (body), JetBrains Mono
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways

@@ -594,7 +594,7 @@ body.is-walking .nav {
   display: block;
   width: auto;
   height: 100%;
-  filter: drop-shadow(0 0 1px #ffffffaa) drop-shadow(0 0 6px #a855ff80);
+  filter: drop-shadow(0 2px 4px #000000b3);
   transition: transform 0.3s var(--ease);
 }
 .city-head-logo:hover .city-head-logo-img {

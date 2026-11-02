@@ -11,10 +11,13 @@
  * spending are tycoon.ts (through `d.game`), and the mods reach the rules
  * through `d.setMods()`. Nothing here is real money.
  *
- * Opens from the counter prompt in walk mode (E, a tap, or Y on a gamepad).
- * Arrow keys or the D-pad pick a gun, Enter / A takes or buys it, Esc / B / E
- * closes. The views are patched in place (repaint), so a button never changes
- * under a finger.
+ * Opens from the counter prompt in walk mode (F, a tap, or Y on a gamepad).
+ * Drawn in the menus' arcade design (menus.css; docs/menu-plan.md Phase 1):
+ * the Guns and Workbench tabs, moved round with the arrow keys or the d-pad,
+ * Q / E or LB / RB for the tabs, Enter / A presses (on a gun card: takes or
+ * buys it), F / Esc / B closes, a phone's sheet swiped down closes
+ * (menukit.ts). Focusing a gun card picks it. The views are patched in place
+ * (repaint), so a button never changes under a finger.
  */
 import { WEAPONS, WEAPON_IDS, type WeaponId } from './combat-sim';
 import { GUN_CATALOG, GUN_MODS, GUN_MOD_IDS, MOD_LEVELS, applyGunMods, type GunModId } from './catalog';
@@ -22,6 +25,8 @@ import { buyGun, gunModCost, gunMods, level, modGun, ownsGun } from './tycoon';
 import { carryGun } from './inventory';
 import { D, LV, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
 import { ART, STATS } from './gunart';
+import { menuKit, type Input } from './menukit';
+import type { Dir } from './menunav';
 
 export interface ShopDeps {
   /** Lifetime score (decides which starters are unlocked) */
@@ -101,12 +106,15 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
           : s.premium
           ? s.owned
             ? 'Yours'
-            : `<span class="shop-sale-word">For sale · </span>${D(s.c.price)}`
+            : D(s.c.price)
           : s.unlocked
             ? 'Ready'
             : `${pts(w.need)} pts`;
       const tag = s.premium && !s.owned ? LV(s.c.level) : '';
-      return `<button type="button" class="shop-card${locked ? ' is-locked' : ''}${s.premium && !s.owned ? ' is-sale' : ''}${choosing !== null && s.ready ? ' is-choice' : ''}${s.slot >= 0 ? ' is-carried' : ''}" data-gun="${id}" role="option" aria-selected="${id === pick}">` + `<svg viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg><b>${esc(w.name)}</b><small>${state}</small>${tag}</button>`;
+      return (
+        `<button type="button" class="mk-card${locked ? ' is-locked' : ''}${s.premium && !s.owned ? ' is-sale' : ''}${choosing !== null && s.ready ? ' is-choice' : ''}${s.slot >= 0 ? ' is-carried' : ''}" data-gun="${id}" role="option" aria-selected="${id === pick}">` +
+        `<svg class="mk-card-art" viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg><b class="mk-card-name">${esc(w.name)}</b><small class="mk-card-state">${state}</small>${tag}</button>`
+      );
     }).join('');
     repaint(list, html);
   }
@@ -120,65 +128,70 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
       const a = Math.max(0.06, st.of(w));
       const b = Math.max(a, st.of(W));
       // The stock gun's bar, and the bonus from its mods lit on top
-      return `<div data-stat="${st.key}"><dt>${st.label}</dt><dd><i style="--v:${a.toFixed(3)}"></i>${b > a + 0.001 ? `<em style="--a:${a.toFixed(3)};--b:${b.toFixed(3)}"></em>` : ''}</dd></div>`;
+      return `<div data-stat="${st.key}"><dt>${st.label}</dt><dd class="mk-bar-meter"><i style="--v:${a.toFixed(3)}"></i>${b > a + 0.001 ? `<em style="--a:${a.toFixed(3)};--b:${b.toFixed(3)}"></em>` : ''}</dd></div>`;
     }).join('');
     let action: string;
     let note = '';
     if (s.ready && s.slot >= 0) {
-      action = `<button type="button" class="shop-take" data-act="take">${s.carrying ? 'Refill ammo' : 'Refill &amp; draw'}</button>`;
+      action = `<button type="button" class="mk-btn is-main" data-act="take">${s.carrying ? 'Refill ammo' : 'Refill &amp; draw'}</button>`;
       note = !guns()[s.slot === 0 ? 1 : 0] ? 'Carry a second gun: tap the empty slot above, then a gun you own (or press Tab anywhere).' : '';
     } else if (s.ready) {
-      action = `<div class="shop-confirm-row"><button type="button" class="shop-take" data-act="carry0">Weapon slot 1</button><button type="button" class="shop-take" data-act="carry1">Weapon slot 2</button></div>`;
+      action = `<button type="button" class="mk-btn is-main" data-act="carry0">Weapon slot 1</button><button type="button" class="mk-btn is-main" data-act="carry1">Weapon slot 2</button>`;
       note = 'In your bag. Put it in a weapon slot here or with Tab anywhere.';
     } else if (s.premium) {
       if (confirming) {
-        action = `<div class="shop-confirm"><p>Buy the ${esc(w.name)} for ${D(s.c.price)}?</p><div class="shop-confirm-row"><button type="button" class="shop-take" data-act="confirm">Buy it</button><button type="button" class="shop-cancel" data-act="cancel">Not now</button></div></div>`;
+        action = `<div class="mk-confirm"><p>Buy the ${esc(w.name)} for ${D(s.c.price)}?</p><button type="button" class="mk-btn is-main" data-act="confirm">Buy it</button><button type="button" class="mk-btn" data-act="cancel">Not now</button></div>`;
       } else {
-        action = `<button type="button" class="shop-take" data-act="buy">Buy · ${D(s.c.price)}</button>`;
+        action = `<button type="button" class="mk-btn is-main" data-act="buy">Buy · ${D(s.c.price)}</button>`;
       }
       const save = d.game.save();
       if (s.lowLevel) note = `Needs level ${s.c.level} (you're level ${s.lv}). Earn XP by trading, delivering and shooting.`;
       else if (save.dorras < s.c.price) note = `You're ${D(s.c.price - save.dorras)} short. Dorras are earned in the city.`;
     } else {
-      action = `<button type="button" class="shop-take" disabled>Unlocks at ${pts(w.need)} pts</button>`;
+      action = `<button type="button" class="mk-btn" disabled>Unlocks at ${pts(w.need)} pts</button>`;
       note = `${pts(w.need - d.lifetime())} more points to unlock. Score by knocking down dummies and drones.`;
     }
     repaint(
       detail,
-      `<div class="shop-name-row"><h3 class="shop-name" data-shop-name>${esc(w.name)}</h3><p class="shop-mode">${esc(mode)}</p></div>` +
-        `<p class="shop-blurb">${esc(w.blurb)}</p><p class="shop-pitch">${esc(s.c.pitch)}</p>` +
-        `<dl class="shop-stats">${stats}</dl>${action}<p class="shop-note"${note ? '' : ' hidden'}>${note}</p>`
+      `<h3 class="mk-name" data-shop-name>${esc(w.name)}</h3><p class="mk-mode">${esc(mode)}</p>` +
+        `<p class="mk-blurb">${esc(w.blurb)}</p><p class="mk-pitch">${esc(s.c.pitch)}</p>` +
+        `<dl class="mk-stats">${stats}</dl><div class="mk-actions">${action}</div><p class="mk-note"${note ? '' : ' hidden'}>${note}</p>`
     );
   }
 
   function paintBench() {
     const s = stateOf(pick);
-    bench.hidden = !s.ready;
-    if (!s.ready) return;
+    if (!s.ready) {
+      repaint(
+        bench,
+        `<div class="mk-empty"><b>${esc(WEAPONS[pick].name)}</b><p>${s.premium ? 'Buy this gun to upgrade it here: a better barrel, an extended mag, a grip and stock.' : 'Unlock this gun with your score to upgrade it here.'}</p><button type="button" class="mk-btn" data-act="toguns">Back to the guns</button></div>`
+      );
+      return;
+    }
     const rows = GUN_MOD_IDS.map((mod) => {
       const lvl = s.mods[mod];
       const cost = gunModCost(pick, mod, s.mods);
       const pips = Array.from({ length: MOD_LEVELS }, (_, i) => `<i${i < lvl ? ' class="is-on"' : ''}></i>`).join('');
       return (
-        `<div class="bench-row${cost === null ? ' is-maxed' : ''}"><div class="bench-info"><b>${GUN_MODS[mod].name}</b><small>${GUN_MODS[mod].blurb}</small></div>` +
-        `<span class="pips" aria-label="Level ${lvl} of ${MOD_LEVELS}">${pips}</span>` +
-        `<button type="button" class="bench-btn" data-mod="${mod}"${cost === null ? ' disabled' : ''}>${cost === null ? 'Maxed' : `Upgrade · ${D(cost)}`}</button></div>`
+        `<div class="mk-mod${cost === null ? ' is-maxed' : ''}"><div class="mk-mod-info"><b>${GUN_MODS[mod].name}</b><small>${GUN_MODS[mod].blurb}</small></div>` +
+        `<span class="mk-pips" aria-label="Level ${lvl} of ${MOD_LEVELS}">${pips}</span>` +
+        `<button type="button" class="mk-btn is-small${cost === null ? '' : ' is-main'}" data-mod="${mod}"${cost === null ? ' disabled' : ''}>${cost === null ? 'Maxed' : `Upgrade · ${D(cost)}`}</button></div>`
       );
     }).join('');
-    repaint(bench, `<h3 class="bench-title">Workbench <span>· ${esc(WEAPONS[pick].name)}</span></h3><div class="bench-rows">${rows}</div>`);
+    repaint(bench, `<h3 class="mk-sub">${esc(WEAPONS[pick].name)}</h3><div class="mk-mods">${rows}</div>`);
   }
 
   /** The Loadout row: the two guns he carries, each a slot to tap and fill */
   function paintLoadout() {
     const [a, b] = guns();
     const slot = (i: 0 | 1, id: WeaponId | null) =>
-      `<button type="button" class="shop-slot${choosing === i ? ' is-on' : ''}${id ? '' : ' is-empty'}" data-slot="${i}" aria-pressed="${choosing === i}">` +
+      `<button type="button" class="mk-slot${choosing === i ? ' is-on' : ''}${id ? '' : ' is-empty'}" data-slot="${i}" aria-pressed="${choosing === i}">` +
       `<small>Slot ${i + 1}</small>${id ? `<svg viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg><b>${esc(WEAPONS[id].short)}</b>` : '<b>Empty</b>'}</button>`;
     const hint =
       choosing === null
-        ? '<p class="shop-loadout-hint">Tap a slot, then a gun you own. Press 1 or 2 to draw them; Tab changes them anywhere.</p>'
-        : `<p class="shop-loadout-hint is-on">Pick a gun for slot ${choosing + 1}.${(choosing === 0 ? a : b) ? ' <button type="button" class="chip-link" data-act="empty">Leave it empty</button>' : ''} <button type="button" class="chip-link" data-act="unchoose">Cancel</button></p>`;
-    repaint(loadout, `<span class="shop-loadout-label">Weapons</span><div class="shop-slots">${slot(0, a)}${slot(1, b)}</div>${hint}`);
+        ? '<p class="mk-hint">Pick a slot, then a gun you own. 1 and 2 draw them; Tab changes them anywhere.</p>'
+        : `<p class="mk-hint is-on">Pick a gun for slot ${choosing + 1}.${(choosing === 0 ? a : b) ? ' <button type="button" class="mk-link" data-act="empty">Leave it empty</button>' : ''} <button type="button" class="mk-link" data-act="unchoose">Cancel</button></p>`;
+    repaint(loadout, `<span class="mk-label">Weapons</span><div class="mk-slots">${slot(0, a)}${slot(1, b)}</div>${hint}`);
   }
 
   function paint() {
@@ -262,6 +275,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
       }
     }
   }
+  const kit = menuKit(el, { close: () => void close() });
   const title = el.querySelector<HTMLElement>('#shop-title');
   const closeBtn = el.querySelector<HTMLElement>('[data-shop-close]');
   /** Open it: at the Armoury's counter, or another counter with the same stock (Trench Arms) under its own name */
@@ -273,8 +287,10 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     pick = d.weapon();
     confirming = false;
     choosing = null;
+    kit.showTab('guns');
     paint();
     el.hidden = false;
+    kit.shown();
     root.classList.add('is-shopping');
     d.onOpen();
     // Sales tick on while it's open: keep the balance honest
@@ -292,12 +308,6 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     clearInterval(timer);
     d.onClose();
     return true;
-  }
-  /** Step through the guns (keys, D-pad) */
-  function step(dir: number) {
-    const i = WEAPON_IDS.indexOf(pick);
-    select(WEAPON_IDS[(i + dir + WEAPON_IDS.length) % WEAPON_IDS.length]);
-    list.querySelector<HTMLButtonElement>(`[data-gun="${pick}"]`)?.focus({ preventScroll: true });
   }
 
   el.addEventListener('click', (e) => {
@@ -333,16 +343,24 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
       paint();
       return;
     }
+    if (act === 'toguns') {
+      kit.showTab('guns', true);
+      list.querySelector<HTMLButtonElement>(`[data-gun="${pick}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     const mod = t.closest<HTMLElement>('[data-mod]')?.dataset.mod as GunModId | undefined;
     if (mod) upgrade(mod);
   });
+  // Enter on a gun card takes (or buys) it instead of just picking it (the arrows are the kit's)
   el.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') step(1);
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') step(-1);
-    // Enter on a gun card takes (or buys) it instead of just picking it
-    else if (e.key === 'Enter' && (e.target as HTMLElement).closest('[data-gun]')) take();
-    else return;
+    if (e.key !== 'Enter' || !(e.target as HTMLElement).closest('[data-gun]')) return;
     e.preventDefault();
+    take();
+  });
+  // Moving onto a gun card (the arrows, the d-pad) picks it
+  list.addEventListener('focusin', (e) => {
+    const id = (e.target as HTMLElement).closest<HTMLElement>('[data-gun]')?.dataset.gun as WeaponId | undefined;
+    if (id && id !== pick) select(id);
   });
 
   return {
@@ -351,8 +369,19 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     },
     show,
     close,
-    step,
     take,
+    /** The d-pad: the next button that way (a gun card picks its gun) */
+    move: (dir: Dir) => kit.move(dir),
+    /** A: press what's focused (a gun card takes or buys its gun) */
+    press() {
+      const a = document.activeElement as HTMLElement | null;
+      if (a?.closest('[data-gun]') && el.contains(a)) take();
+      else kit.press();
+    },
+    /** LB / RB: the next tab or the one before */
+    tab: (dir: 1 | -1) => kit.step(dir),
+    /** What was last used (the hints row follows it) */
+    input: (kind: Input) => kit.input(kind),
     /** Score or the save changed while it's open (online profile updates, a commit) */
     refresh() {
       if (open) paint();
