@@ -2782,8 +2782,7 @@ it and has been retired completely. Build only on what's here.
   fitting room, cards and pops) in a new **retro arcade** design
   (pixel-edged panels, pixel headings, scanlines, blocky buttons that press
   down, a blinking selector) on a new palette with no PulseChain colours
-  (the plan's arcade-cabinet palette, for the owner's approval on the
-  first sample); one hub menu replacing the old ☰ Menu, Settings and the
+  (the plan's arcade-cabinet palette); one hub menu replacing the old ☰ Menu, Settings and the
   walk tabs (Esc, the header's hub button, Start); phone-first sheets; full
   controller and keyboard use; motion but no UI sounds; the design system
   first (`menus.css`, `menukit.ts`, shown on the gun store), then rolled
@@ -2832,13 +2831,18 @@ it and has been retired completely. Build only on what's here.
   to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
-- Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
+- Palette is the PulseChain gradient for the comic page and the site
+  outside the city's menus. Follow `brand/README.md`: gradient for
   borders, glows and large type; `--p-cyan` for small text; buttons are
-  gradient-bordered with white text, never gradient-filled. The menus are
-  leaving it (the owner's call): as each moves to the menu plan's arcade
-  kit it takes that palette instead (`docs/menu-plan.md`).
+  gradient-bordered with white text, never gradient-filled. **Every menu
+  in the city is the menu plan's arcade kit instead** (the owner's call,
+  `docs/menu-plan.md`: the cabinet's palette `--m-*`, no PulseChain
+  colours): `.mk` menus, and `.mk-skin` on the rest, which redefines the
+  brand's tokens inside it. A new menu or card in the city uses one of the
+  two, never the gradient.
 - Type: Big Shoulders Display (headlines), Inter (body), JetBrains Mono
-  (labels).
+  (labels); in the menus' kit Pixelify Sans for headings, tabs and
+  buttons (`--font-pixel`).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
   scroll, no text clipped by a slanted edge.
 - Styles: `global.css` (the site: tokens, the comic page, the nav, small
@@ -3343,9 +3347,11 @@ it and has been retired completely. Build only on what's here.
   logo on tablets and phones and carries the emotes (online), ammo and score
   and the hub's button. The touch buttons stay at the bottom (hidden while
   the hub is open, `.is-hub`).
-- The gun store is compact: a 2 x 2 grid of guns beside the picked gun's
-  details; on upright phones a short bottom sheet with the guns in one row.
-  Check it at phone widths upright and on its side (no scrolling needed).
+- The gun store is the menus' kit's sample (`.mk-store`, gunshop.ts): the
+  guns as cards in a grid of four with the picked
+  gun's details under them; on upright phones a bottom sheet with the guns
+  in one row that scrolls across. Check it at phone widths upright and on
+  its side.
 - Collision footprints (`SOLIDS`) and door spots (`DOORS`), both in
   `solids.ts` with the walk-mode start (`WALK_SPAWN`), mirror
   `landmarks.ts`. When a landmark moves or changes size, update both.
@@ -3373,8 +3379,8 @@ it and has been retired completely. Build only on what's here.
   has no pin and links nowhere; it's walk-mode only. Its footprints, the
   turntable and the office door are `GARAGE_SITE` in `solids.ts`.
 - The office door's prompt opens the garage menu (`garage-ui.ts`, markup
-  `data-garage` in `CityMap.astro`, built on the gun store's `.shop`
-  panel): five models (`PLAYER_CARS`: the bus is city-only) with card
+  `data-garage` in `CityMap.astro`, on the `.shop` panel in the kit's
+  skin): five models (`PLAYER_CARS`: the bus is city-only) with card
   silhouettes drawn from each model's outline at one scale, three stat bars
   and twelve paints; tabs (`data-garage-tabs`: Model, Paint, Wheels, Kit,
   Livery, Glow) for the free customisation (vehicle plan Phase 5, above). Each pick shows on the turntable; Keep saves it,
