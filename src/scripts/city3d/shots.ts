@@ -24,6 +24,9 @@ export interface ShotsDeps {
   want(camera: THREE.PerspectiveCamera): void;
 }
 
+/** Frames drawn on a view before it rests */
+const HOLD = 12;
+
 export function createShots(d: ShotsDeps, night: boolean) {
   d.root.classList.add('is-shots');
   const style = document.createElement('style');
@@ -33,6 +36,8 @@ export function createShots(d: ShotsDeps, night: boolean) {
   d.conditions(night);
   let view: ReviewView | null = null;
   let fresh = false;
+  /** Frames still to draw on the view (then it rests: the city stands still, so the page can be shot) */
+  let hold = 0;
   const api = {
     views: BLEND_VIEWS.map((v) => ({ id: v.id, name: v.name })),
     ready: false,
@@ -45,11 +50,12 @@ export function createShots(d: ShotsDeps, night: boolean) {
       api.view = id;
       api.frames = 0;
       fresh = true;
+      hold = HOLD;
     },
   };
   (window as unknown as { __shots: typeof api }).__shots = api;
   return {
-    /** The camera, while a view is held (true: it's placed) */
+    /** The camera, while a view is held (true: it wants drawing) */
     place(camera: THREE.PerspectiveCamera, target: THREE.Vector3) {
       if (!api.ready && d.built()) api.ready = true;
       if (!view) return false;
@@ -59,11 +65,12 @@ export function createShots(d: ShotsDeps, night: boolean) {
       camera.updateMatrixWorld();
       if (fresh) d.want(camera);
       fresh = false;
-      return true;
+      return hold > 0;
     },
     /** A frame drawn */
     drawn() {
       api.frames++;
+      hold = Math.max(0, hold - 1);
     },
   };
 }

@@ -84,7 +84,7 @@ try {
         await page.evaluate((id) => globalThis.__shots.show(id), v.id);
         // A few frames drawn on the view, and what it asked for built
         await page.waitForFunction(() => globalThis.__shots.frames >= 12, null, { timeout: 600000, polling: 250 });
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1500);
         const file = join(out, `${set}-${time}-${v.id}.png`);
         await page.screenshot({ path: file, clip, timeout: 600000 });
         shot.push({ ...v, file });

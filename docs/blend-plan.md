@@ -119,27 +119,95 @@ keep this file up to date.
 
 ## Phases
 
-### Phase 0: the seam map and the review kit
+### Phase 0: the seam map and the review kit (built)
 
 Nothing changes on screen.
 
-- **The seam map:** `seams.ts` (DOM-free, tested): every place two areas
-  meet, worked out from the street plan, the districts' land and the open
-  ground: which two, how long, what's on each side (towers, homes, park,
-  industry, open land), what's between (a street, an arterial, the
-  highway, nothing). It's what later phases read to decide a verge, a
-  buffer or a lamp mix, and the plan's checklist. The gaps inside the
-  highway measured exactly and named (`GAPS`).
-- **The review views:** `BLEND_VIEWS`, about a dozen fixed cameras on the
-  worst seams (The Trenches meeting the south row, Uptown meeting Westlake
-  Park and downtown, Uptown North meeting the mall, Sunridge's wall on the
-  open land, the band south of the south row, the old airport land, the
-  highway's north-east bend, the Docks over the highway, the Parkway's belt,
-  the far countryside) and a script that shoots them by day and at night on
-  the desktop and phone tiers (`npm run shots`, Playwright against
-  `npm run preview`), into a folder the PR links. Run at the start of each
-  phase and at its end.
-- **The baseline:** `?bench` on desktop and the phone tier, recorded here.
+- **The seam map** is `seams.ts` (DOM-free, tested in
+  `tests/seams.test.ts`, at both world sizes; `npm run seams` prints it,
+  `-- --md` as the tables below). `landMap()` lays the world on a grid of
+  `CELL` (2 tiles), each cell one thing: the highway, a street (its kind),
+  water (the river, its banks past the promenades, the docks' basin), a
+  sidewalk-only strip (the bends' kerbs, the town's promenades), one of the
+  `AREAS` (fourteen: downtown, the town, Uptown, Uptown North, Westlake
+  Park, the stadium, the mall, Palm Court, Sunridge, Crestmont, The
+  Trenches, the Docks, the airport, the kart park; each with its
+  `Character`: core, town, towers, park, retail, homes, estates, grit,
+  industry, airport, sport), by the street plan block it's on or the land
+  the district holds, or open land (inside the highway or out). `seams()`
+  walks straight out from every district's edge over streets and sidewalks
+  (at most `REACH`, 40) to what's on the far side, and cuts what it finds
+  into stretches: which two, the widest way between (none, a walk, an
+  alley, a street, a slip, an avenue, the highway), how long, a point on it
+  and its box, ranked by length and nearness to downtown (`rank`, the order
+  for Phase 6). `gaps()` is the open land inside the highway in connected
+  patches of at least `GAP_MIN` (600 square tiles), each named by a point
+  in it (`GAP_NAMES`): the test fails on a patch with no name, so a gap
+  appearing or closing is noticed. 52 seams, 10 gaps; worked out in about
+  0.4 s, so nothing in the browser reads it yet (Phase 1's clearing rule
+  builds on `landMap()`).
+- **The review views** are `BLEND_VIEWS` in `blendviews.ts` (DOM-free):
+  thirteen fixed cameras: The Trenches meeting the south row, Uptown across
+  the ring avenue from Westlake Park, Uptown meeting the town, Uptown North
+  across the avenue from the mall, Sunridge's wall from the east strips,
+  Crestmont's Flats meeting the open land, the south band, the south
+  strips, the east strips, Westlake's west verge, the highway's north-east
+  bend, the Docks across the highway from The Trenches, and the open land
+  outside the highway looking in. `?shots` (`?shots=night`; `shots.ts`, a
+  chunk of its own) goes straight into the city as `?bench` does, clear
+  sky, every district loaded, live settings off, the city's header, HUD,
+  cards and pins hidden, and holds the camera on a view while
+  `window.__shots` asks (`ready`, `show(id)`, `frames`); a view is drawn a
+  dozen frames, then rests. `npm run shots -- <label>` (`scripts/shots.mjs`,
+  after `npm run build`) serves the built site to a headless Chromium as a
+  desktop (1280 x 800, the high tier) and a phone (390 x 844, the low tier),
+  by day and at night, still (reduced motion: no traffic, so the same view
+  is the same picture) at a fixed clock, and shoots every view: full size
+  in `shots/<label>/` (not kept in git), a contact sheet per tier and time
+  in `docs/blend-shots/<label>/` for the PR. `SHOTS_BENCH=1` also runs
+  `?bench` on each tier and keeps its draws, triangles and memory
+  (`bench.md`; headless on the CPU, its frame times mean nothing).
+- **The baseline:** the shots and the headless bench in
+  `docs/blend-shots/phase-0/`. A real device's `?bench` (Copy results) is
+  the owner's to paste here for frame times.
+
+**What the seam map found** (the seams between districts, ranked; the rest
+are districts meeting open land or the water, `npm run seams`):
+
+| # | One side | The other | Between | Length (tiles) | Where (x, z) |
+|---|---|---|---|---|---|
+| 4 | Downtown | The town | the ring avenue | 164 | 27, 5 |
+| 12 | Uptown | Westlake Park | the ring avenue | 148 | -123, 1 |
+| 17 | Starlight Mall | Palm Court | the east ring avenue | 114 | 69, -99 |
+| 21 | Uptown North | Westlake Park | nothing (side by side) | 114 | -41, -99 |
+| 22 | Uptown North | Starlight Mall | the north avenue | 108 | 1, -101 |
+| 31 | The town | Starlight Mall | a street | 48 | 35, -37 |
+| 32 | The town | Uptown | a street | 42 | -37, 37 |
+| 34 | The town | The Trenches | a street | 47 | -29, 159 |
+
+The longest seams are districts meeting open land: the airport (1,338
+tiles round its fence), Crestmont (790), the kart park and the Docks (460
+each), Sunridge's wall inside the highway (402), Westlake (278), The
+Trenches along the highway (210) and the stadium (246).
+
+**The gaps** (open land inside the ring highway: 25% of it):
+
+| Gap | Area (sq tiles) | Box (x0, z0, x1, z1) | Next to | Already on it |
+|---|---|---|---|---|
+| The south band, the airport's old land (`south-band`) | 33,140 | 69, 141, 269, 315 | the town | the metro's pillars (18) |
+| Sunridge's fringe (`sunridge-fringe`) | 5,360 | 69, -165, 269, -9 | Sunridge, Palm Court, the town | 2 solids |
+| South strip, middle (`south-strip-m`) | 3,476 | 19, 169, 41, 315 | the town | metro pillars (3) |
+| East strip, middle (`east-strip-m`) | 3,428 | 125, 19, 269, 41 | the town | nothing |
+| South strip, west (`south-strip-w`) | 2,320 | 1, 169, 15, 315 | The Trenches, the town | metro pillars (2) |
+| South strip, east (`south-strip-e`) | 2,320 | 45, 169, 59, 315 | the town | metro pillars (2) |
+| East strip, by the east road (`east-strip-n`) | 2,308 | 125, 1, 269, 15 | Sunridge, the town | nothing |
+| East strip, by the river (`east-strip-s`) | 2,284 | 127, 45, 269, 59 | the town | nothing |
+| Westlake's west verge (`westlake-verge`) | 1,316 | -209, -165, -143, -9 | Westlake Park, the stadium | nothing |
+| The north verge (`north-verge`) | 904 | -137, -165, -9, -157 | Westlake, Uptown North, the stadium | nothing |
+
+No place's arrival spot stands on a gap (the test holds it). The south band
+alone is about two thirds of the open land; the metro's main line crosses
+it and the south strips on its way west.
 
 ### Phase 1: foundations (the clean-up)
 
@@ -152,11 +220,10 @@ Little changes on screen but the trees' edges.
   its colours from here in place of its own hex values; a district picks its
   mix, never a colour of its own. The first pass keeps every colour as it is
   today (the shots don't change); Phase 2 retunes them together.
-- **One clearing rule:** `landuse.ts` (DOM-free, tested): a coarse grid over
-  the world (a cell a tile or two) of what each cell is (street, highway,
-  built, place, park, water, rail, open), filled once from the street plan,
-  `SOLIDS`, the districts' land and the metro, and a distance from built per
-  cell. The outskirts' trees, the woods and later the props ask it, with a
+- **One clearing rule:** `landuse.ts` (DOM-free, tested), on the seam map's
+  `landMap()` (Phase 0): what each cell is (street, highway, built, place,
+  park, water, rail, open), with `SOLIDS` and the metro added, and a
+  distance from built per cell. The outskirts' trees, the woods and later the props ask it, with a
   seeded wobble on the margin so edges are ragged, not straight. It replaces
   the scattered `keepTreesOff()` rectangles, the junction boxes and the
   arterial strips (the tests hold that no tree stands where one couldn't
