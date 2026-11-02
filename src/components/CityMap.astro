@@ -350,7 +350,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
       <div class="mk-page hub-page" data-page="business" role="tabpanel" aria-label="Business" hidden>
         {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop, Car and Bag. Opens on this tab from the Dorras readout, or at your stall or a unit. */}
-  <section class="shop stall-card" data-biz aria-labelledby="biz-title">
+  <section class="shop stall-card mk-skin" data-biz aria-labelledby="biz-title">
     <header class="shop-head">
       <h2 id="biz-title" class="shop-title">Your business</h2>
       <p class="shop-score stall-balance" data-biz-balance></p>
@@ -604,7 +604,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         cost Dorras earned in the city (catalog.ts); the stat bars, the deal (Buy, or the Tune section) and the balance
         are painted from the save. The tabs (data-garage-tabs) show the models, the paint, or the free customisation
         (data-garage-style: wheels, kit, livery, glow; vehicle plan Phase 5). Nothing here is real money. */}
-    <section class="shop garage" data-garage hidden aria-labelledby="garage-title">
+    <section class="shop garage mk-skin" data-garage hidden aria-labelledby="garage-title">
       <header class="shop-head">
         <h2 id="garage-title" class="shop-title">Garage</h2>
         <p class="shop-score">Dorras <span data-garage-dorras></span></p>
@@ -633,7 +633,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     {/* The hangar menu (hangar-ui.ts), opened at the hangar office's door at the airport: your aircraft and its paint,
         on the garage's .shop panel and styles. data-hangar-list the three cards (painted), data-hangar-stats the bars,
         data-hangar-paints the paints, data-hangar-keep Keep, data-hangar-close its ×. */}
-    <section class="shop garage hangar" data-hangar hidden aria-labelledby="hangar-title">
+    <section class="shop garage hangar mk-skin" data-hangar hidden aria-labelledby="hangar-title">
       <header class="shop-head">
         <h2 id="hangar-title" class="shop-title">Hangar</h2>
         <p class="shop-score">Free to fly</p>
@@ -670,7 +670,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         data-kart-result-close.
         Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal; walk.ts wires it.
         .kart-hint is the key line. */}
-    <section class="shop karts" data-karts hidden aria-labelledby="karts-title">
+    <section class="shop karts mk-skin" data-karts hidden aria-labelledby="karts-title">
       <header class="shop-head">
         <h2 id="karts-title" class="shop-title">Kart hut</h2>
         <p class="shop-score karts-dorras"><span class="shop-score-label">Dorras</span> <span data-karts-dorras></span></p>
@@ -687,8 +687,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="karts-body" data-karts-body></div>
       <p class="shop-foot">Prizes and prices are Dorras, earned in the city. Nothing here is real money.</p>
     </section>
-    <div class="race-count kart-count" data-kart-count hidden aria-live="assertive"></div>
-    <div class="kart-hud" data-kart-hud hidden>
+    <div class="race-count kart-count mk-skin" data-kart-count hidden aria-live="assertive"></div>
+    <div class="kart-hud mk-skin" data-kart-hud hidden>
       <div class="kart-hud-left">
         <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
         <p class="kart-gap" data-kart-gap hidden aria-label="Gap to the ghost">+0.00</p>
@@ -705,8 +705,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="race-quit kart-quit" data-kart-quit>Quit</button>
       </div>
     </div>
-    <div class="kart-pops" data-kart-pops aria-live="polite"></div>
-    <section class="shop race-result kart-result" data-kart-result hidden aria-labelledby="kart-result-title">
+    <div class="kart-pops mk-skin" data-kart-pops aria-live="polite"></div>
+    <section class="shop race-result kart-result mk-skin" data-kart-result hidden aria-labelledby="kart-result-title">
       <header class="shop-head">
         <h2 id="kart-result-title" class="shop-title" data-kart-result-title>Finished</h2>
         <button type="button" class="shop-close" data-kart-result-close aria-label="Close the results">
@@ -737,7 +737,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         Touch, while .city.is-fighting (fight-ui.ts sets it with the HUD): data-fight-punch and data-fight-kick where
         Fire and Aim sit, data-fight-block (held) above them and data-fight-dodge in Jump's spot; walk.ts wires them.
         .fight-hint is the key line. */}
-    <section class="shop fight-menu" data-fight hidden aria-labelledby="fight-title">
+    <section class="shop fight-menu mk-skin" data-fight hidden aria-labelledby="fight-title">
       <header class="shop-head">
         <h2 id="fight-title" class="shop-title">Fight Club</h2>
         <p class="shop-score fight-dorras"><span class="shop-score-label">Dorras</span> <span data-fight-dorras></span></p>
@@ -756,10 +756,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <p class="shop-foot">Prizes are Dorras and XP, earned in the ring. Nothing here is real money.</p>
     </section>
     <div class="fight-centre">
-      <div class="race-count fight-count" data-fight-count hidden aria-live="assertive"></div>
+      <div class="race-count fight-count mk-skin" data-fight-count hidden aria-live="assertive"></div>
       <div class="fight-knockdown" data-fight-knockdown hidden aria-live="polite"><b data-fight-count-n>3</b><small data-fight-count-who>Get up!</small></div>
     </div>
-    <div class="fight-hud" data-fight-hud hidden>
+    <div class="fight-hud mk-skin" data-fight-hud hidden>
       <div class="fight-side fight-you">
         <p class="fight-name" data-fight-you>You</p>
         <div class="fight-bar fight-health" role="img" aria-label="Your health"><b class="fight-ghost" data-fight-health-ghost></b><i data-fight-health></i></div>
@@ -777,8 +777,8 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <p class="fight-acts"><button type="button" class="race-quit fight-snack" data-fight-snack hidden aria-label="Eat a snack: some health back">Snack <b data-fight-snack-n>0</b></button><button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button></p>
       </div>
     </div>
-    <div class="fight-pops" data-fight-pops aria-live="polite"></div>
-    <section class="shop race-result fight-result" data-fight-result hidden aria-labelledby="fight-result-title">
+    <div class="fight-pops mk-skin" data-fight-pops aria-live="polite"></div>
+    <section class="shop race-result fight-result mk-skin" data-fight-result hidden aria-labelledby="fight-result-title">
       <header class="shop-head">
         <h2 id="fight-result-title" class="shop-title" data-fight-result-title>You win</h2>
         <button type="button" class="shop-close" data-fight-result-close aria-label="Close the bout card">
@@ -833,7 +833,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <kbd>F</kbd> <span data-walk-label>Enter</span>
   </button>
   {/* A taxi (taxi.ts, growth plan Phase 8): on its way, waiting (Get in), or the ride (Skip ride) */}
-  <div class="taxi-bar" data-taxi hidden aria-live="polite">
+  <div class="taxi-bar mk-skin" data-taxi hidden aria-live="polite">
     <span class="taxi-mark" aria-hidden="true">TAXI</span>
     <p class="taxi-text" data-taxi-text></p>
     <button type="button" class="taxi-btn" data-taxi-in hidden>Get in</button>
@@ -841,7 +841,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <button type="button" class="taxi-btn taxi-cancel" data-taxi-cancel hidden>Cancel</button>
   </div>
   {/* The metro (metro-ui.ts, growth plan Phase 8): a station's card (the other stations, a ride each), and the ride's bar */}
-  <section class="metro-card" data-metro hidden aria-labelledby="metro-title">
+  <section class="metro-card mk-skin" data-metro hidden aria-labelledby="metro-title">
     <div class="pop-head">
       <p class="pop-title"><span class="metro-roundel" aria-hidden="true">M</span> <span id="metro-title" data-metro-title>Station</span></p>
       <button type="button" class="pop-close" data-metro-close aria-label="Close the station card">
@@ -851,13 +851,13 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="metro-note">Sector 7 Metro: pick a station and ride. Free.</p>
     <ul class="metro-list" data-metro-list></ul>
   </section>
-  <div class="taxi-bar metro-bar" data-metro-bar hidden aria-live="polite">
+  <div class="taxi-bar metro-bar mk-skin" data-metro-bar hidden aria-live="polite">
     <span class="taxi-mark metro-mark" aria-hidden="true">M</span>
     <p class="taxi-text" data-metro-text></p>
     <button type="button" class="taxi-btn" data-metro-skip>Skip ride</button>
   </div>
   {/* The river bus (riverbus-ui.ts, river plan step 4b): a pier's card with the other stops, and the bar while you ride */}
-  <section class="metro-card riverbus-card" data-riverbus hidden aria-labelledby="riverbus-title">
+  <section class="metro-card riverbus-card mk-skin" data-riverbus hidden aria-labelledby="riverbus-title">
     <div class="pop-head">
       <p class="pop-title"><span class="metro-roundel riverbus-roundel" aria-hidden="true"></span> <span id="riverbus-title" data-riverbus-title>Pier</span></p>
       <button type="button" class="pop-close" data-riverbus-close aria-label="Close the river bus card">
@@ -867,7 +867,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <p class="metro-note">Sector 7 River Bus: pick a stop and ride. Free.</p>
     <ul class="metro-list" data-riverbus-list></ul>
   </section>
-  <div class="taxi-bar metro-bar riverbus-bar" data-riverbus-bar hidden aria-live="polite">
+  <div class="taxi-bar metro-bar riverbus-bar mk-skin" data-riverbus-bar hidden aria-live="polite">
     <span class="taxi-mark metro-mark riverbus-roundel" aria-hidden="true"></span>
     <p class="taxi-text" data-riverbus-text></p>
     <button type="button" class="taxi-btn" data-riverbus-skip>Skip ride</button>

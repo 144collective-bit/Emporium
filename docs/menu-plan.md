@@ -255,6 +255,29 @@ bus and taxi cards: each in the kit, a bottom sheet on phones, the d-pad
 and LB/RB through it. The race and fight HUDs keep their places on screen
 and take the kit's type, bars and tags.
 
+**Built** (waiting on the owner's sign-off):
+
+- Rather than rebuild ~3,000 lines of these menus' markup and logic, they
+  wear the kit through **the skin**: `.mk-skin` on each one's root (the
+  garage, the hangar, the kart hut and its results card, the trainer and
+  its bout card, the race and fight HUDs, their countdowns and pops, the
+  metro and river bus cards, the ride bars, the business card), and at the
+  end of menus.css: inside it the brand's tokens (`--pulse`, `--p-cyan`,
+  `--pulse-wash`, `--font-display`, `--muted` and the rest) are the kit's,
+  so every border, glow and small line drawn with them follows the arcade
+  palette; corners go square, headings pixel, the panel takes the
+  cabinet's fill, frame and stepped corners, the main action (`.shop-take`)
+  is coin yellow and presses down, a pressed choice is lit coin, a picked
+  card gets a coin frame, the stat bars are pixel blocks, the purple glows
+  are gone. The paint swatches keep their paint.
+- Tabs with Q / E and LB / RB: the kart hut and the trainer got
+  `stepTab()` (the garage had it); the d-pad, A and B work as before.
+- Checked by opening each at its door on a desktop and a phone (the
+  garage, the hangar, the kart hut, the trainer, the metro card) and the
+  business card in the hub. The CSS is 38.0 KB gzipped of its 60.
+- Left for later: the HUDs' bars and tags keep their own colours (health is
+  still red and green), and the walk HUD's prompt and hints are Phase 6's.
+
 ## Phase 4: the place panels and the City view
 
 - One panel template for the ~30 places: the title bar (its number and
