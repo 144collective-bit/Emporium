@@ -15,6 +15,7 @@ import degen from '../assets/degen.png';
 import logo from '../assets/logo.png';
 import pulsechain from '../assets/pulsechain.png';
 import flame from '../assets/liberty-flame.png';
+import trenches from '../assets/trenches-logo.png';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -107,7 +108,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   {/* Maintenance (live settings, live.ts): over everything, the start menu too, while the owner has the city closed.
       The city doesn't boot behind it; when it lifts the page reloads. */}
   <div class="city-start city-maint" data-maint role="dialog" aria-modal="true" aria-labelledby="city-maint-title" hidden>
-    <div class="city-start-card">
+    <div class="city-start-card city-start-box">
       <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
       <p class="city-start-kicker">Sector 7</p>
       <p class="city-start-title" id="city-maint-title">Back <span class="hl">soon</span></p>
@@ -117,12 +118,30 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     </div>
   </div>
 
-  <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="Sector 7">
+  {/* The title screen (start.css, in the menus' arcade kit): the game's logo, the log-in screen, then the start
+       menu. Logging in isn't built yet: the form sends nothing anywhere and says so; Play as guest goes on to the
+       menu with the save in this browser, as before. */}
+  <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="The Trenches">
     <div class="city-start-card">
-      <Picture src={logo} formats={['avif', 'webp']} fallbackFormat="webp" widths={[132, 264, 396]} sizes="132px" alt="" loading="eager" class="city-start-logo" />
-      <p class="city-start-kicker">Welcome to</p>
-      <p class="city-start-title">Sector <span class="hl">7</span></p>
-      <div class="city-start-main" data-start-main>
+      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[320, 480, 640, 960, 1280]} sizes="(max-width: 600px) 92vw, 560px" alt="The Trenches" loading="eager" fetchpriority="high" class="city-start-brand" />
+      <div class="city-start-box">
+      <form class="city-start-login" data-start-login novalidate>
+        <p class="city-start-head">Log in</p>
+        <label class="city-start-field">
+          <span class="city-start-label">Player name or email</span>
+          <input type="text" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="64" />
+        </label>
+        <label class="city-start-field">
+          <span class="city-start-label">Password</span>
+          <input type="password" name="password" autocomplete="current-password" maxlength="128" />
+        </label>
+        <p class="city-start-msg" data-start-msg aria-live="polite" hidden></p>
+        <button type="submit" class="mk-btn is-main city-start-go">Log in</button>
+        <p class="city-start-or"><span>or</span></p>
+        <button type="button" class="mk-btn city-start-go" data-start-guest>Play as guest</button>
+        <p class="city-start-new">New here? <button type="button" class="city-start-link" data-start-signup>Create an account</button></p>
+      </form>
+      <div class="city-start-main" data-start-main hidden>
         <button type="button" class="city-start-btn" data-start-single>
           <span class="city-start-btn-name">Single player</span>
           <span class="city-start-btn-sub">The whole city, in this browser</span>
@@ -135,6 +154,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <span class="city-start-btn-name">Options</span>
           <span class="city-start-btn-sub">Time, weather, sound, credits</span>
         </button>
+        <p class="city-start-who">Playing as guest · <button type="button" class="city-start-link" data-start-relog>Log in</button></p>
       </div>
       <div class="city-start-options" data-start-pane hidden>
         <div class="city-start-row">
@@ -166,10 +186,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
           <summary><span class="city-start-label">Credits</span></summary>
           <p>Degen's movement is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217, in Bruce Hahne's BVH conversion.</p>
         </details>
-        <button type="button" class="city-start-back" data-start-back>Back</button>
+        <button type="button" class="mk-btn is-small city-start-back" data-start-back>Back</button>
       </div>
       <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
       <div class="city-start-bar" data-start-bar><span></span></div>
+      </div>
       <p class="city-start-note">Draft · v0{build && ` · ${build}`} · Everything in the city is its own game: Dorras, never real money.</p>
     </div>
   </div>
@@ -1382,6 +1403,37 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     const headSound = root.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
     if (headSound) new MutationObserver(() => paintOpt('sound', headSound.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')).observe(headSound, { attributes: true, attributeFilter: ['aria-pressed'] });
 
+    // The log-in screen comes first (no accounts yet: nothing is sent or kept), then the menu
+    const login = start.querySelector<HTMLFormElement>('[data-start-login]')!;
+    const loginMsg = login.querySelector<HTMLElement>('[data-start-msg]')!;
+    const pass = login.querySelector<HTMLInputElement>('input[type="password"]')!;
+    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    function say(text: string) {
+      loginMsg.textContent = text;
+      loginMsg.hidden = false;
+    }
+    function showLogin(on: boolean) {
+      login.hidden = !on;
+      startMain.hidden = on;
+      startPane.hidden = true;
+      optionsBtn.setAttribute('aria-expanded', 'false');
+      // (a phone's keyboard stays down until the field is tapped)
+      if (on) (fine ? login.querySelector<HTMLInputElement>('input') : null)?.focus({ preventScroll: true });
+      else start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
+    }
+    login.addEventListener('submit', (e) => {
+      e.preventDefault();
+      pass.value = '';
+      say('Accounts are coming soon. Play as guest for now: your progress is saved in this browser.');
+    });
+    start.querySelector('[data-start-guest]')!.addEventListener('click', () => {
+      pass.value = '';
+      loginMsg.hidden = true;
+      showLogin(false);
+    });
+    start.querySelector('[data-start-signup]')!.addEventListener('click', () => say('Creating an account is coming soon. Play as guest for now.'));
+    start.querySelector('[data-start-relog]')!.addEventListener('click', () => showLogin(true));
+
     function showPane(on: boolean) {
       startPane.hidden = !on;
       startMain.hidden = on;
@@ -1425,7 +1477,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       }
       enter(true);
     });
-    start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
+    showLogin(true);
 
     /* ---------- Live settings: maintenance and the owner's notice ---------- */
     const maint = root.querySelector<HTMLElement>('[data-maint]')!;

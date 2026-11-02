@@ -3,6 +3,14 @@
 This is **the** Degen Emporium site. An older multi-page site existed before
 it and has been retired completely. Build only on what's here.
 
+## The game's name
+
+- The game is **The Trenches** (the owner's call, 2026-11): its title logo
+  (`src/assets/trenches-logo.png`, the owner's art with its white
+  background cut away) heads the title screen. The city it's set in is
+  still Sector 7, and The Trenches is also the neighbourhood of that name
+  (below).
+
 ## The city's name
 
 - The city is **Sector 7** (the owner's call; it was "Degen City" before).
@@ -2685,7 +2693,14 @@ it and has been retired completely. Build only on what's here.
   always-visible city overlay to that list.
 - **The start menu** (the owner's call): on every open, `[data-start]` in
   `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
-  while the 3D city boots behind it.
+  while the 3D city boots behind it. It's the game's title screen (the
+  owner's call: The Trenches' logo over a dark brick wall, the box in the
+  menus' arcade kit, its tokens shared from menus.css): first **the log-in
+  screen** (`[data-start-login]`: player name or email, password, Log in,
+  Play as guest, Create an account). Logging in isn't built yet: the form
+  sends and keeps nothing (the password is cleared) and says accounts are
+  coming soon; Play as guest goes on to the menu, whose "Playing as guest ·
+  Log in" goes back. A phone's keyboard stays down until a field is tapped.
   Single player enters the city (the fly-in runs again, `city.intro()` in
   `index.ts`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
@@ -2694,7 +2709,7 @@ it and has been retired completely. Build only on what's here.
   Weather and Sound, driving the header's own
   settings controls (pressed when the city is up, queued until then). The
   root carries `has-start` until a choice is made; the loader and the
-  welcome tip wait behind it. Gradient-bordered buttons, white text.
+  welcome tip wait behind it.
 - The city page has **one header**: the city's own bar (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the

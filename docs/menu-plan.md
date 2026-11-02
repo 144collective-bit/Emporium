@@ -222,7 +222,8 @@ and take the kit's type, bars and tags.
   settings), its own content mounted as today (the market hall, the
   Workshop's jobs, the records at the kart park and the Fight Club).
 - The start menu as the arcade's attract screen (the logo, Single player,
-  Multiplayer, Options, the draft note), the header slimmed (the switch,
+  Multiplayer, Options, the draft note; built early, the owner's call, as
+  The Trenches' title screen with its log-in screen first: start.css), the header slimmed (the switch,
   Dorras, level, the hub button), the welcome tip and Getting started as
   cards that don't pile on each other (one stack, under the header, the
   newest on top), the live banner.

@@ -6,7 +6,9 @@
    outline (`--notch-*`), and its ::before, the same outline 2px in, is the fill (scanlines in the panel's). So the
    frame follows the steps. Nothing moves or blinks under reduced motion. */
 
-.mk {
+/* The kit's tokens: every menu in the kit, and the title screen (start.css) */
+.mk,
+.city-start {
   /* The arcade cabinet's palette (the menu plan's; contrast on --m-cab: text 16.9, dim 7.1, coin 12.3, hot 6.3, go 11.2) */
   --m-cab: #0c0d10;
   --m-bezel: #1a1c22;
@@ -23,8 +25,10 @@
   --notch-4: polygon(0 8px, 4px 8px, 4px 4px, 8px 4px, 8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px, calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px, 100% calc(100% - 8px), calc(100% - 4px) calc(100% - 8px), calc(100% - 4px) calc(100% - 4px), calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 4px), 4px calc(100% - 4px), 4px calc(100% - 8px), 0 calc(100% - 8px));
   --notch-3: polygon(0 6px, 3px 6px, 3px 3px, 6px 3px, 6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px));
   --notch-2: polygon(0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 2px, calc(100% - 2px) 2px, calc(100% - 2px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 2px) calc(100% - 4px), calc(100% - 2px) calc(100% - 2px), calc(100% - 4px) calc(100% - 2px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 2px), 2px calc(100% - 2px), 2px calc(100% - 4px), 0 calc(100% - 4px));
+}
 
-  /* The panel: beside the city on wide screens */
+/* The panel: beside the city on wide screens */
+.mk {
   position: absolute;
   top: calc(var(--head-h) + 12px);
   right: 12px;
