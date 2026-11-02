@@ -1,18 +1,23 @@
 # The menu plan
 
 The owner's call (2026-11): "redesign all menus and upgrade their quality
-and functions". Build it one phase at a time, each with the owner's
-sign-off. Keep this file up to date.
+and functions", then "no PulseChain colours, make a new design
+completely". Build it one phase at a time, each with the owner's sign-off.
+Keep this file up to date.
 
 ## The owner's picks
 
-- **Look: comic book on dark ink.** Near-black panels with a faint
-  halftone dot texture, thick ink outlines and slanted panel edges like the
-  Emporium comic page, the PulseChain gradient for highlights. It sits over
-  the city by day and night and matches the city's own ink outlines.
-- **Comic level: bold but readable.** Panel shapes, ink outlines, caption
-  boxes for headings and tips, a speech bubble for a place's owner or GM.
-  Plain words on buttons (no sound-effect words, no tilting panels).
+- **A new design, no PulseChain colours, for every menu in the city:** the
+  start menu, the header, the hub, every place panel, shop and game menu,
+  the business screens, the fitting room, cards, toasts and pops. The 3D
+  city itself (its neon signs, lights, pins and glows) and the site's other
+  pages (the Emporium comic page, 404) keep their look.
+- **Style: retro arcade**, after the Emporium arcade: pixel-edged panels,
+  chunky pixel headings, a faint scanline texture, blocky buttons that
+  press down, a soft screen glow on lit text, a blinking selector on the
+  focused row. Plain words on buttons.
+- **Palette: picked by us**, shown on a sample menu for the owner to
+  approve before anything is rolled out (below).
 - **Functions:** one hub menu, phone-first layouts, full controller and
   keyboard use. (3D previews in the shops weren't picked.)
 - **The hub replaces the ☰ Menu, Settings and the walk tabs** (Controls,
@@ -20,15 +25,37 @@ sign-off. Keep this file up to date.
   a gamepad. Place panels and shops stay their own menus, in the same
   design.
 - **Feel: motion only.** Panels slide and fade in, tabs glide, buttons
-  answer a press; no UI sounds. Everything still under reduced motion.
+  press down; no UI sounds. Everything still under reduced motion (the
+  selector stops blinking, nothing slides).
 - **Order: the design system first**, shown on one menu, then rolled out.
+
+## The palette (proposed, for the owner's approval)
+
+An arcade cabinet's colours, none of the PulseChain gradient's (no
+red-to-cyan sweep, no magenta, violet or cyan):
+
+| Token | Hex | Used for |
+| --- | --- | --- |
+| `--m-cab` | `#0c0d10` | Panels: the cabinet's black |
+| `--m-bezel` | `#1a1c22` | Cards, rows, insets |
+| `--m-edge` | `#3a3e48` | Pixel edges, rules, disabled |
+| `--m-text` | `#f1efe6` | Text: warm screen white |
+| `--m-dim` | `#9a9ca4` | Secondary text |
+| `--m-coin` | `#ffc531` | Actions, focus, the selected tab, Dorras: coin-slot yellow |
+| `--m-hot` | `#ff5a36` | Warnings, damage, prices falling, "can't" |
+| `--m-go` | `#7bd88f` | Success, prices rising, owned (small marks only) |
+
+Contrast on `--m-cab`: text 17:1, dim 7:1, coin 12:1, hot 6:1, go 11:1,
+all past WCAG AA for small text. Buttons: coin-yellow face with black text
+for the main action, an edged dark face with white text for the rest.
+
+**Type:** a pixel face for headings and tabs (Pixelify Sans, Google Fonts,
+OFL: readable at small sizes, unlike the widest arcade faces), Inter for
+body text, JetBrains Mono for numbers, prices and keys. Big Shoulders
+Display stays for the comic page.
 
 ## What stays as it is
 
-- The brand rules (`brand/README.md`): the gradient carries borders, rules,
-  glows and large type; small text accents are `--p-cyan`; buttons are a
-  gradient border with white text, never a gradient fill. Big Shoulders
-  Display for headings, Inter for body, JetBrains Mono for labels.
 - The content rules: Dorras are a game's money (never real money, never an
   investment), made-up names, the draft note, no token details.
 - Every menu can be closed (×, Esc, a tap outside a drop-down); one card at
@@ -39,6 +66,9 @@ sign-off. Keep this file up to date.
 - The menus' code loads when first used (`lazyMenu()`), and the budgets
   (`scripts/budget.mjs`: the CSS 60 KB gzipped, 34 KB today) hold.
 - No new pages: the hub, panels and shops all open over the city.
+- The PulseChain gradient stays where it is outside the menus (the comic
+  page, `brand/README.md`) until the owner says otherwise; the menus leave
+  it for this palette.
 
 ## Today's menus (what the plan covers)
 
@@ -67,41 +97,41 @@ sign-off. Keep this file up to date.
   worldmap.css, fitting.css, start.css, live.css, fly.css (about 13,000
   lines, each menu its own layout).
 
-## Phase 1: the ink kit, shown on the gun store
+## Phase 1: the arcade kit, shown on the gun store
 
 The design system, as CSS and a little code every menu then uses.
 
-- **`menus.css`** (after the global styles in `Base.astro`'s order),
-  tokens and parts:
-  - the **panel**: dark ink paper (`--ink` with a halftone dot texture made
-    in CSS, no image), a thick ink outline with the gradient as a thin
-    inner rule, slanted corners by `clip-path` (the comic page's way:
-    `--clip`), a drop shadow like a printed panel;
-  - the **caption box** (the kicker and title: a slanted ink
-    box, Big Shoulders, the gradient in large type), the **speech bubble**
-    (a place's owner or the GM: one line of tip or flavour), the **close**
-    button;
-  - **tabs** (a strip of slanted tabs, the current one lit, a gliding
-    underline), **buttons** (primary: gradient border and white text;
-    secondary: ink border; danger; disabled with the reason), **list rows**
-    and **cards** (a slanted card with an ink edge, the selected one lit),
-    **stat bars**, the **price tag** (Dorras, `Lv n`, locked), **chips**,
-    **toggles**, **sliders**, **empty states**;
+- **`menus.css`** (after the global styles in `Base.astro`'s order), the
+  palette above as tokens and these parts:
+  - the **panel**: cabinet black with a pixel-stepped edge (`clip-path`
+    in steps, a 2-pixel `--m-edge` frame and a 1-pixel inner highlight),
+    a faint scanline texture made in CSS (no image, never over text);
+  - the **title bar**: the place's kind as a small label, its name in the
+    pixel face, the close button as a square key; the **marquee strip**
+    for a place's tagline (one line, made-up fixed copy);
+  - **tabs** (blocky tabs, the current one coin yellow with a gliding
+    underline), **buttons** (the main action coin yellow with black text,
+    the rest edged dark with white text, danger in `--m-hot`, disabled
+    saying why; each sits on a 2-pixel shadow and drops onto it when
+    pressed), **list rows** and **cards** (the focused one with the
+    blinking ▶ selector and a coin edge), **stat bars** in pixel blocks,
+    the **price tag** (Dorras, `Lv n`, locked), **chips**, **toggles**,
+    **sliders**, **empty states**;
   - **sheets**: on phones upright every menu is a bottom sheet over the
-    lower part of the screen, its tabs within thumb reach, a grabber;
-    on their side a side panel; on desktops a panel beside the city;
+    lower part of the screen, its tabs within thumb reach, a grabber; on
+    their side a side panel; on desktops a panel beside the city;
   - **motion** (`--ease`, `--in`, `--out`): a panel slides in from its
-    edge and fades, tabs glide, a press dips the button; nothing moves
-    under reduced motion.
+    edge and fades, tabs glide, a press drops the button; nothing moves
+    and nothing blinks under reduced motion.
 - **`menukit.ts`** (DOM, small, in the boot): `openMenu()` / `closeMenu()`
   (one at a time, focus moved in and given back, Esc and × close, a tap
   outside closes a drop-down), `tabs()` (click, swipe on phones, ←/→ and
   LB/RB), `focusNav()` (arrows and the d-pad move between the menu's
-  buttons in a grid, A / Enter presses, B / Esc goes back; a visible focus
-  ring), `sheet()` (drag the grabber or swipe down to close), and the
-  controller hints row (A Select · B Back · LB/RB Tabs, by what's plugged
-  in). Its rules (which button the d-pad moves to, the tab order, when a
-  swipe closes) are DOM-free in `menunav.ts`, tested.
+  buttons in a grid, A / Enter presses, B / Esc goes back; the selector
+  shows where you are), `sheet()` (drag the grabber or swipe down to
+  close), and the hints row (A Select · B Back · LB/RB Tabs, or the keys,
+  by what's plugged in). Its rules (which button the d-pad moves to, the
+  tab order, when a swipe closes) are DOM-free in `menunav.ts`, tested.
 - **The sample: the gun store and workbench** rebuilt in the kit: the guns
   as cards in a grid (a bottom sheet with the guns in one swipeable row on
   phones), the picked gun's details, stats and mods beside it, the loadout
@@ -110,18 +140,19 @@ The design system, as CSS and a little code every menu then uses.
   by day and at night, with a mouse, touch and a gamepad, under reduced
   motion; the CSS budget measured.
 
-The owner signs off the look and the feel on the gun store before
-anything else moves to it.
+The owner signs off the palette, the look and the feel on the gun store
+before anything else moves to it.
 
 ## Phase 2: the hub
 
-One menu for everything that isn't a place or a shop.
+One menu for everything that isn't a place or a shop: the PAUSE screen.
 
 - Opens with **Esc** (walking, the first Esc still frees the mouse; the
   next opens the hub), the **hub button** in the header (it takes the
   ☰ Menu's place; on phones in the first row), and **Start** on a gamepad
   (the fight keeps Start for quitting while it's on). In the City view
-  Esc closes what's open first, then opens the hub.
+  Esc closes what's open first, then opens the hub. Going back to the City
+  view from walking moves into the hub.
 - Tabs: **Map** (the world map inside it), **Bag** (the inventory and
   your loadout), **Business** (the business card), **Missions** (the
   board, the badges, Getting started), **Profile** (your look, the
@@ -150,16 +181,16 @@ and take the kit's type, bars and tags.
 
 ## Phase 4: the place panels and the City view
 
-- One panel template for the ~30 places: the caption box (its number and
-  kind, its name), the owner's speech bubble (a line each, made-up, fixed
-  copy), what it does, its actions (Walk in, Open, the closed note from the
-  live settings), its own content mounted as today (the market hall, the
+- One panel template for the ~30 places: the title bar (its number and
+  kind, its name), the marquee strip (a line each, made-up, fixed copy),
+  what it does, its actions (Walk in, Open, the closed note from the live
+  settings), its own content mounted as today (the market hall, the
   Workshop's jobs, the records at the kart park and the Fight Club).
-- The start menu redrawn in the kit (the logo, Single player, Multiplayer,
-  Options, the draft note), the header slimmed (the switch, Dorras, level,
-  the hub button), the welcome tip and Getting started as caption boxes
-  that don't pile on each other (one stack, under the header, the newest
-  on top), the live banner.
+- The start menu as the arcade's attract screen (the logo, Single player,
+  Multiplayer, Options, the draft note), the header slimmed (the switch,
+  Dorras, level, the hub button), the welcome tip and Getting started as
+  cards that don't pile on each other (one stack, under the header, the
+  newest on top), the live banner.
 
 ## Phase 5: business and missions
 
@@ -180,5 +211,6 @@ prompt: in the kit's type and shapes.
 
 Every menu checked at every width, upright and on its side, by day and at
 night, with a mouse, touch and a gamepad, under reduced motion; the old
-styles each menu left behind removed; the budgets measured and this plan
+styles each menu left behind removed (and the PulseChain gradient with
+them, wherever only the menus used it); the budgets measured and this plan
 marked done.

@@ -2719,19 +2719,27 @@ it and has been retired completely. Build only on what's here.
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
 - **The menu redesign** (the owner's call: "redesign all menus and upgrade
-  their quality and functions") is planned in `docs/menu-plan.md`: comic
-  book on dark ink (halftone panels, ink outlines, slanted edges, caption
-  boxes and speech bubbles, plain words on buttons), one hub menu
-  replacing the ☰ Menu, Settings and the walk tabs (Esc, the header's hub
-  button, Start), phone-first sheets, full controller and keyboard use,
-  motion but no UI sounds; the design system first (`menus.css`,
-  `menukit.ts`, shown on the gun store), then rolled out. Nothing is built
-  yet; one phase at a time with the owner's sign-off; keep it up to date.
+  their quality and functions", then "no PulseChain colours, make a new
+  design completely") is planned in `docs/menu-plan.md`: every menu in the
+  city (start menu, header, hub, place panels, shops, business screens,
+  fitting room, cards and pops) in a new **retro arcade** design
+  (pixel-edged panels, pixel headings, scanlines, blocky buttons that press
+  down, a blinking selector) on a new palette with no PulseChain colours
+  (the plan's arcade-cabinet palette, for the owner's approval on the
+  first sample); one hub menu replacing the ☰ Menu, Settings and the walk
+  tabs (Esc, the header's hub button, Start); phone-first sheets; full
+  controller and keyboard use; motion but no UI sounds; the design system
+  first (`menus.css`, `menukit.ts`, shown on the gun store), then rolled
+  out. The 3D city and the comic page keep their look. Nothing is built
+  yet: until a menu moves to the new kit it keeps today's look and rules.
+  One phase at a time with the owner's sign-off; keep it up to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient. Follow `brand/README.md`: gradient for
   borders, glows and large type; `--p-cyan` for small text; buttons are
-  gradient-bordered with white text, never gradient-filled.
+  gradient-bordered with white text, never gradient-filled. The menus are
+  leaving it (the owner's call): as each moves to the menu plan's arcade
+  kit it takes that palette instead (`docs/menu-plan.md`).
 - Type: Big Shoulders Display (headlines), Inter (body), JetBrains Mono
   (labels).
 - Check every change at 320, 375, 768, 1024 and 1440px wide: no sideways
