@@ -18,9 +18,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import * as THREE from 'three';
 import { POINTS, WEAPON_IDS, createSim, weaponUnlocked, type SimEvent, type WeaponId } from '../../src/scripts/city3d/combat-sim';
-import { RACK, rayBoxes } from '../../src/scripts/city3d/solids';
 import { MOVES, type MoveId } from '../../src/scripts/city3d/fight-moves';
-import { ARMS } from '../../src/scripts/city3d/avenue';
 import { EMOTES, PHRASES } from '../../src/scripts/net/profile-data';
 import {
   FLAG,
@@ -53,6 +51,7 @@ import {
 import type { Env } from './index';
 import type { Profile } from './profile';
 import { guestKey, walletKey } from './keys';
+import { COUNTERS, rayBoxes } from './world';
 
 const LOOP_HZ = 30;
 /** Silent this long: left out of snapshots, and free to reappear anywhere */
@@ -60,8 +59,6 @@ const AWAY = 3000;
 /** No controls for this long (hidden tab, rejected move): the trigger is let go */
 const INPUT_STALE = 250;
 const IDLE_KICK = 90_000;
-/** Where a player may gear up: the gun stores' counters */
-const COUNTERS = [RACK, ARMS.counter];
 /** Fists: a punch or a kick of the fight's moves (not the dodge), and the shortest gap between two (ms: a jab's start-up and active frames) */
 const isStrike = (m: unknown): m is MoveId => typeof m === 'string' && m in MOVES && MOVES[m as MoveId].kind !== 'dodge';
 const MELEE_GAP = ((MOVES.jab.startup + MOVES.jab.active) * 1000) / 60;

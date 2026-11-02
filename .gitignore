@@ -11,6 +11,8 @@ scratch/
 
 # Cloudflare dev state
 .wrangler/
+# The game server's baked geometry (server/scripts/bake-world.mjs, made by its build)
+server/src/world.gen.txt
 
 # Built site zips (download from the "Build site" Action instead)
 *.zip

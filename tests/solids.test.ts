@@ -8,6 +8,10 @@ import { METRO_SOLIDS } from '../src/scripts/city3d/metro';
 import { test } from 'node:test';
 import { BRIDGE_RECT, CAR_PARK, STADIUM_SOLIDS } from '../src/scripts/city3d/stadium';
 import assert from 'node:assert/strict';
+import { BoxGrid, boxesAlong, groundAlong } from '../src/scripts/city3d/boxgrid';
+import { DRONE_LOOPS, DUMMIES, WEAPONS } from '../src/scripts/city3d/combat-sim';
+import { GUN_MOD_EFFECT, MOD_LEVELS } from '../src/scripts/city3d/catalog';
+import { TERRAIN_RECT } from '../src/scripts/city3d/hills';
 import { CAMERA_ONLY, DOORS, FIGHTCLUB_SITE, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
 import { BIG_LOTS, EW_ROADS, GARAGE, BS, LANE, MARKET, NS_ROADS, UNITS, nsRuns } from '../src/scripts/city3d/layout';
 import { CIRCUIT_SOLIDS as KART_SOLIDS } from '../src/scripts/city3d/kartcircuit';
@@ -165,4 +169,35 @@ test('bullets stop at walls but not at the dummies\' own footprints', () => {
   assert.ok(Math.abs(from.z + t - GARAGE_SITE.building[1]) < 1e-6, `stopped at z ${from.z + t}`);
   // Down at the ground
   assert.ok(Math.abs(rayBoxes({ x: 0, y: 2.1, z: 0 }, { x: 0, y: -1, z: 0 }, 100) - 2) < 1e-6);
+});
+
+// The game server's ray (server/src/world.ts): solids.ts's boxes baked at deploy (server/scripts/bake-world.mjs),
+// the same check (boxgrid.ts `boxesAlong()`), less Crestmont's hills, so the Worker starts without building the city
+test('the game server\'s shots stop where the browser\'s do, and the hills never decide a hit', () => {
+  const grid = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY]);
+  const server = (from: { x: number; y: number; z: number }, dir: { x: number; y: number; z: number }, max: number) => boxesAlong(grid, from, dir, groundAlong(from, dir, max));
+  // Every gun's reach, fully tuned
+  const reach = Math.max(...Object.values(WEAPONS).map((w) => w.range)) * (1 + GUN_MOD_EFFECT.range * MOD_LEVELS);
+  const [hx0, hz0, hx1, hz1] = TERRAIN_RECT;
+  const toHills = (x: number, z: number) => Math.hypot(Math.max(hx0 - x, 0, x - hx1), Math.max(hz0 - z, 0, z - hz1));
+  // A shot that could reach a target lies within a gun's reach of it: no target may stand that close to the hills
+  for (const [x, z] of DUMMIES) assert.ok(toHills(x, z) > reach + 1, `a dummy at ${x}, ${z} is within reach of the hills`);
+  for (const [x0, z0, x1, z1] of DRONE_LOOPS)
+    for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) assert.ok(toHills(x, z) > reach + 1, `a drone's loop at ${x}, ${z} is within reach of the hills`);
+  // Off the hills, the two rays are the same, shot for shot
+  let seed = 7;
+  const rand = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  let hits = 0;
+  for (let i = 0; i < 4000; i++) {
+    const from = { x: -150 + rand() * 300, y: 0.5 + rand() * 4, z: -120 + rand() * 300 };
+    const a = rand() * Math.PI * 2;
+    const p = (rand() - 0.6) * 0.5;
+    const dir = { x: Math.cos(a) * Math.cos(p), y: Math.sin(p), z: Math.sin(a) * Math.cos(p) };
+    const max = 150;
+    if (toHills(from.x, from.z) <= max + 1) continue;
+    const t = server(from, dir, max);
+    assert.equal(t, rayBoxes(from, dir, max));
+    if (t < max) hits++;
+  }
+  assert.ok(hits > 500, `only ${hits} rays met anything`);
 });

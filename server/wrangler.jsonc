@@ -15,8 +15,10 @@
     "run_worker_first": ["/play", "/health", "/auth/*"]
   },
   "build": {
-    // Installs the website's packages first if the build machine hasn't (Cloudflare's build may only install server/'s)
-    "command": "cd .. && (test -d node_modules/astro || npm ci) && PUBLIC_GAME_SERVER=https://emporium.144collective.workers.dev PUBLIC_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo dev) npm run build"
+    // Installs the website's packages first if the build machine hasn't (Cloudflare's build may only install server/'s),
+    // builds the site, then bakes the city's geometry for the server (scripts/bake-world.mjs: building it in the
+    // Worker went over Cloudflare's startup CPU limit, code 10021)
+    "command": "cd .. && (test -d node_modules/astro || npm ci) && PUBLIC_GAME_SERVER=https://emporium.144collective.workers.dev PUBLIC_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo dev) npm run build && node server/scripts/bake-world.mjs"
   },
   "durable_objects": {
     "bindings": [

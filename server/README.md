@@ -13,9 +13,24 @@ bought with Dorras in the city's own game, in the browser.) The same Worker also
 | `src/profile.ts` | One per player: player name, wardrobe look, rifle finish, lifetime score (rank comes from the score). Addressed by a hash of the browser's secret guest token, or of the wallet address once logged in (`src/keys.ts`). |
 | `src/accounts.ts` | One for the game: logging in with a wallet (`/auth/nonce`, `/auth/session`, `/auth/me`, `/auth/rename`, `/auth/logout`). The wallet signs a one-time message (no gas); the session token (30 days, only its hash stored) opens the wallet's profile in the rooms. |
 
+| `src/world.ts` | The city's geometry the Room needs (the boxes bullets stop on, the gun stores' counters), read from `world.gen.txt`, which `scripts/bake-world.mjs` writes from `solids.ts` when the Worker is built (`build` in `wrangler.jsonc`; not in git). |
+
 Shared with the site (bundled in): `src/scripts/net/` (protocol, names, ranks,
 wardrobe, emotes, phrases, the sign-in message), `src/scripts/city3d/combat-sim.ts`
-and `src/scripts/city3d/solids.ts`. Keep those free of DOM and scene code.
+and `src/scripts/city3d/boxgrid.ts`. Keep those free of DOM and scene code.
+
+**Keep the Worker's startup light.** Cloudflare refuses a Worker whose
+startup (everything at module level) takes too much CPU: the deploy fails
+with "Script startup exceeded CPU time limit" [code: 10021]. Importing
+`solids.ts` builds every district's layout (about 0.4 s), so the server
+never imports it: its boxes are baked at build time instead
+(`scripts/bake-world.mjs`, about 40 ms of startup left; `wrangler deploy`
+prints "Worker Startup Time"). Don't import `solids.ts`, `layout`-heavy
+district modules or anything that works the city out at module level into
+`server/src`; bake what's needed the same way. The ray leaves out
+Crestmont's hills: no target stands within a gun's reach of them
+(`tests/solids.test.ts` holds that, and that the server's ray matches the
+browser's everywhere else).
 
 ## Deploying from GitHub through Cloudflare (Workers Builds)
 
@@ -30,15 +45,17 @@ publishes `../dist` as static assets. Its build settings (*Workers & Pages* →
 | Setting | Value |
 | --- | --- |
 | Git branch | `main` |
-| Root directory | `server` |
+| Root directory | `server` (where `wrangler.jsonc` is; a deploy that doesn't use it publishes the site alone as static files, with no game server: `/health` is a 404) |
 | Build command | `cd .. && npm ci && cd server && npm ci` (the server bundles shared code from `src/`, which needs the site's three.js) |
 | Deploy command | `npx wrangler deploy` |
+| Non-production branch deploy command | `npx wrangler versions upload` (the PRs' check) |
 | Build watch paths | leave empty (the Worker carries the website now, so every change should redeploy it) |
 
 The server and the site live at `https://emporium.144collective.workers.dev`;
 the site is built against that address. With this
-in place, the GitHub Action route below isn't needed (leave its secrets unset
-so only one system deploys).
+in place, the GitHub Action route below isn't needed: leave its secrets unset
+(or remove them) so only one system deploys. With both on, every push deploys
+twice and the later one wins.
 
 ## One-time setup with GitHub Actions instead (the owner)
 

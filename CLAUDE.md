@@ -3966,7 +3966,14 @@ it and has been retired completely. Build only on what's here.
   The server decides hits, scores and profiles; browsers only predict their
   own shots. New rules go in `combat-sim.ts` (shared), never only in the view.
 - Shared code the server bundles must stay free of DOM and scene code:
-  `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`.
+  `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `boxgrid.ts`.
+  The server never imports `solids.ts` (it builds every district at
+  module level, about 0.4 s: Cloudflare refused the Worker for its startup
+  CPU, code 10021): what it needs of the city (the boxes bullets stop on,
+  the gun counters) is baked when the Worker is built
+  (`server/scripts/bake-world.mjs` → `server/src/world.gen.txt`, read by
+  `server/src/world.ts`; the ray is boxgrid.ts's `boxesAlong()`, as the
+  browser's). Keep the Worker's startup light: see `server/README.md`.
   `src/scripts/net/protocol.ts` is the wire format; bump `PROTOCOL` when it
   changes incompatibly.
 - Nothing typed by players ever shows: guest names come from the word lists

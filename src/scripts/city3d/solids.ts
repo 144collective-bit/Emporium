@@ -20,7 +20,7 @@ import { LIBERTY_SOLIDS } from './liberty';
 import { HARBOUR_SOLIDS } from './harbour';
 import { BAGS, BLEACHERS, COUNTER, LOCKERS, POSTS, POST_R, SHED, SIGN } from './fightsite';
 import type { LotKind, UnitKind } from './tycoon';
-import { BoxGrid } from './boxgrid';
+import { BoxGrid, boxesAlong, groundAlong } from './boxgrid';
 import { METRO_SOLIDS } from './metro';
 import { PROJECT_SOLIDS } from './projects';
 import { COMMONS_SOLIDS } from './commons';
@@ -344,35 +344,9 @@ export function addSolids(boxes: readonly Box[]) {
  * surroundings) are ignored. `extra` adds more boxes (placed buildings).
  */
 export function rayBoxes(from: { x: number; y: number; z: number }, dir: { x: number; y: number; z: number }, max: number, extra: Box[] = []) {
-  let t = max;
-  if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
+  let t = groundAlong(from, dir, max);
   // (and Crestmont's hills, terrain.ts: the ground there rises)
   t = hillsAlong(from, dir, t, 0, 0.5);
-  const o = [from.x, from.y, from.z];
-  const v = [dir.x, dir.y, dir.z];
-  // Only the boxes under the ray's path can stop it
-  for (const list of [SHOT_GRID.alongRay(from, dir, t), extra]) {
-    for (const b of list) {
-      if (b[4] < 0.3) continue;
-      const lo = [b[0], 0, b[1]];
-      const hi = [b[2], b[4], b[3]];
-      let t0 = 0;
-      let t1 = t;
-      let hit = true;
-      for (let k = 0; k < 3 && hit; k++) {
-        if (Math.abs(v[k]) < 1e-6) {
-          if (o[k] < lo[k] || o[k] > hi[k]) hit = false;
-          continue;
-        }
-        let a = (lo[k] - o[k]) / v[k];
-        let c = (hi[k] - o[k]) / v[k];
-        if (a > c) [a, c] = [c, a];
-        t0 = Math.max(t0, a);
-        t1 = Math.min(t1, c);
-        if (t0 > t1) hit = false;
-      }
-      if (hit && t0 > 0.6) t = Math.min(t, t0);
-    }
-  }
-  return t;
+  // Only the boxes under the ray's path can stop it (boxgrid.ts: the game server runs the same check)
+  return boxesAlong(SHOT_GRID, from, dir, t, extra);
 }

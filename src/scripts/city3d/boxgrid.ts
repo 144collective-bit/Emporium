@@ -98,3 +98,45 @@ export class BoxGrid {
 
 /** A cell's key: both indices in one number (cells run to about ±500,000 either way) */
 const key = (cx: number, cz: number) => (cx + 0x80000) * 0x100000 + (cz + 0x80000);
+
+type Ray = { x: number; y: number; z: number };
+
+/** Distance along a ray to the ground (y 0.1), up to `max` (the flat ground: Crestmont's hills are terrain.ts's `hillsAlong()`) */
+export function groundAlong(from: Ray, dir: Ray, max: number) {
+  return dir.y < 0 ? Math.min(max, (from.y - 0.1) / -dir.y) : max;
+}
+
+/**
+ * Distance along a ray to the first box in `grid` (or in `extra`) it meets, up to `t`. Boxes lower than 0.3
+ * and those the ray starts inside or very near (the shooter's own surroundings) are ignored. solids.ts's
+ * `rayBoxes()` (the browser) and the game server (server/src/world.ts, its boxes baked at deploy) both use it.
+ */
+export function boxesAlong(grid: BoxGrid, from: Ray, dir: Ray, t: number, extra: readonly Box[] = []) {
+  const o = [from.x, from.y, from.z];
+  const v = [dir.x, dir.y, dir.z];
+  // Only the boxes under the ray's path can stop it
+  for (const list of [grid.alongRay(from, dir, t), extra]) {
+    for (const b of list) {
+      if (b[4] < 0.3) continue;
+      const lo = [b[0], 0, b[1]];
+      const hi = [b[2], b[4], b[3]];
+      let t0 = 0;
+      let t1 = t;
+      let hit = true;
+      for (let k = 0; k < 3 && hit; k++) {
+        if (Math.abs(v[k]) < 1e-6) {
+          if (o[k] < lo[k] || o[k] > hi[k]) hit = false;
+          continue;
+        }
+        let a = (lo[k] - o[k]) / v[k];
+        let c = (hi[k] - o[k]) / v[k];
+        if (a > c) [a, c] = [c, a];
+        t0 = Math.max(t0, a);
+        t1 = Math.min(t1, c);
+        if (t0 > t1) hit = false;
+      }
+      if (hit && t0 > 0.6) t = Math.min(t, t0);
+    }
+  }
+  return t;
+}
