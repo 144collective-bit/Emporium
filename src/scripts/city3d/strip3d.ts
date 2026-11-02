@@ -16,6 +16,8 @@ import { crown, trunk } from './palms3d';
 import { registerResorts } from './resorts3d';
 import { registerMarks } from './stripmarks3d';
 import { registerMono } from './monorail3d';
+import { addPeople } from './life';
+import { STRIP_IDLE } from './striplife';
 import type { Tick } from './world';
 
 export const SELF = import.meta.url;
@@ -47,6 +49,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerMarks({ low, scene, tick });
   // The monorail (Phase 4: monorail3d.ts)
   registerMono({ low, scene, tick });
+  // Its people standing about (Phase 5: striplife.ts): valets, doormen, the crowds at the shows (phones every other one)
+  if (scene) addPeople(STRIP_IDLE.filter((_, i) => !low || i % 2 === 0), []);
   const asphalt = toon('#2a2838');
   const white = toon('#eceaf6');
   const yellow = neon('#f5d76e', 0.9, 1.1);

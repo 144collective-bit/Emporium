@@ -19,6 +19,7 @@
  */
 import { EW_ROADS, LANE, RING_HI, STRIP_BLVD, STRIP_EAST_X, WALK_W } from './layout';
 import { BENDS, BEND_REACH } from './outer';
+import type { CarId } from './carspec';
 
 type Pt = [number, number];
 export type Rect = [number, number, number, number];
@@ -152,3 +153,13 @@ export const STRIP_LAMPS: [number, number, number, number][] = (() => {
   for (let z = NORTH.c + 8; z < BANK.c - 6; z += 12) if ([17, BZ, 43].every((c) => Math.abs(z - c) > 6)) out.push([X1 + W - 0.45, z, 0, SLAB_Y]);
   return out;
 })();
+
+/* ---------- Its traffic (Phase 5) ---------- */
+
+/**
+ * The Strip's own cars (life.ts, as Crestmont's and Sunridge's): the open-top party bus first (`STRIP_LEAD`), then
+ * these in turn, put back on its streets when they wander off; its Cruisers in taxi yellow (`STRIP_PAINTS`)
+ */
+export const STRIP_LEAD: CarId = 'partybus';
+export const STRIP_MIX: CarId[] = ['limo', 'sedan', 'super', 'limo', 'exec', 'sedan', 'coupe', 'limo'];
+export const STRIP_PAINTS: Partial<Record<CarId, string>> = { sedan: '#ffc23d' };

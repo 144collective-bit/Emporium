@@ -355,7 +355,7 @@ What was built:
 - `MONO_SOLIDS` (in `SOLIDS`: the pillars, the towers). The boot grew 2.5
   KB, to 677.3 of 680.
 
-### Life and sound (Phase 5)
+### Life and sound (Phase 5, built)
 
 - **Crowds:** busy sidewalks day and night (walkers round the Strip's
   blocks, people with shopping bags and phones, crowds watching the
@@ -367,6 +367,41 @@ What was built:
 - **Sound** (ambience.ts `strip`): the crowd's hum, slot-machine chimes by
   the casino doors, the fountains' music swelling with the show, the
   volcano's rumble.
+
+What was built:
+
+- **Two new models** (in the traffic only, made-up names): the **Velvet
+  Stretch** (`limo`: the Midnight Exec drawn out to 4.6, five tinted side
+  windows, chrome along its windows and sills, a lit roof fin) and the
+  **Party Liner** (`partybus`: the city bus's body, its lower deck enclosed
+  with lit windows, the top deck open behind chrome railings with a lit band
+  under them, a canopy over its front third, the DJ's booth, speaker stacks,
+  magenta and cyan stripes down its sides). Each across the model tables
+  (carspec.ts `CARS` and `PAINTS`, vehicleids.ts, suspension.ts, carinside.ts;
+  cars.ts `EXTRAS`); the party bus drawn as a bus where the bus is special.
+- **Its traffic** (strip.ts `STRIP_LEAD`, `STRIP_MIX`, `STRIP_PAINTS`; life.ts
+  `STRIP_HOME`, as Crestmont's and Sunridge's, a Home now naming its lead
+  model and paints of its own): the party bus, then limos, Cruisers in taxi
+  yellow, a supercar, a town car and a coupe, put back on its streets when
+  they wander off; 7 on desktops, 6 medium, 4 on phones (`strip` in `TIERS`).
+  The party bus cruises at a bus's pace and doesn't stop at bus stops; the
+  limos take it easy.
+- **Its people:** walkers round both rows' sidewalks, most with shopping bags
+  (life.ts's walks, after Crestmont's Drive); and standing about
+  (`striplife.ts`, DOM-free, tested in `tests/striplife.test.ts`, added to
+  the crowd's spare slots from the chunk; the crowd keeps more of them now,
+  `reserve` 192, 96 on phones): two valets at every porte-cochère, doormen
+  either side of every door (closer in on Dragonspire's drawbridge and the
+  Gondolier's bridge), a crowd along the Gondolier's lake for the fountains,
+  another in front of the lagoon for the volcano, an arc on the Sphere's
+  plaza looking up at it; phones every other one.
+- **Its sound** (ambience.ts `strip`, `casino`, `show`; sound.ts): the
+  crowd's babble on the Strip, slot machines' chimes (quick pentatonic bell
+  runs) by every casino door, and round the Gondolier's lake the fountain
+  show's music while a show is on (a made-up tune a beat at a time over a
+  soft chord, `showAt()`), with the jets' water; the volcano's roar (Phase 3).
+- **The boot** grew 0.9 KB, to 678.2 of 680: still under it, so the budget
+  wasn't raised (the owner's go stands for when it's needed).
 
 ### Polish and performance (Phase 6)
 
@@ -391,8 +426,8 @@ What was built:
 
 - **The resorts' names:** the draft names above, change any you like.
 - **Which side each resort stands on:** the table above is a proposal.
-- **The boot's size:** 677.3 of its 680 KB with Phase 4 (674.8 with Phase 3, 673.4 with Phase 2 (main's start-up
-  pass made room). Phase 5 will likely need it raised; asked when it comes up.
+- **The boot's size:** 678.2 of its 680 KB with Phase 5 (677.3 with Phase 4, 674.8 with Phase 3, 673.4 with Phase 2 (main's start-up
+  pass made room). The owner has said to raise it when it's needed.
 - **The monorail's west end:** answered: on through to the metro (built).
 
 ## The phases
@@ -402,5 +437,5 @@ What was built:
 3. The landmarks (the welcome sign, the fountain show, the volcano, the
    Sphere, the searchlights). Built.
 4. The monorail. Built.
-5. Life and sound.
+5. Life and sound. Built.
 6. Polish and performance.
