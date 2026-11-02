@@ -570,13 +570,21 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     active = s;
     lastFocus = document.activeElement as HTMLElement;
     panelBody.replaceChildren(tpl.content.cloneNode(true));
+    // The marquee strip under its name (the menu plan's Phase 4: its line is the template's, fixed copy)
+    const marquee = tpl.dataset.marquee;
+    if (marquee) {
+      const strip = document.createElement('p');
+      strip.className = 'mk-marquee city-panel-marquee';
+      strip.textContent = marquee;
+      panelBody.querySelector('.city-panel-title')?.after(strip);
+    }
     // One card at a time: a panel closes your stall's card
     tycoon?.closeCard();
     // Closed for now by the owner (live settings): its kicker and name, and the closed line; nothing to do in it
     const gate = live.place(id);
     if (!gate.open) {
       const title = panelBody.querySelector('.city-panel-title');
-      for (const el of [...panelBody.children]) if (el !== title && !el.classList.contains('kicker')) el.remove();
+      for (const el of [...panelBody.children]) if (el !== title && !el.classList.contains('kicker') && !el.classList.contains('mk-marquee')) el.remove();
       const line = document.createElement('p');
       line.className = 'live-closed';
       line.textContent = closedLine(title?.textContent?.trim() || 'This place', gate);

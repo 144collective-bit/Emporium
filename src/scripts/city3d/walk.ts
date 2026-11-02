@@ -984,7 +984,7 @@ export function createWalk(d: WalkDeps) {
    * The hut's menu and the race (kart-ui.ts, kart.ts) come in their own chunk (kartgame.ts), loaded when Degen comes
    * near the park or asks at the hut; until then they stand idle
    */
-  const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
+  const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, stepTab() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
   const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {} };
   let kartUI: KartUI = NO_KART_UI;
   let karts: KartRace = NO_KARTS;
@@ -1845,6 +1845,8 @@ export function createWalk(d: WalkDeps) {
     }
     // The trainer's menu: D-pad moves, A takes, B closes
     if (fightUI.open) {
+      if (edge(4)) fightUI.stepTab(-1);
+      if (edge(5)) fightUI.stepTab(1);
       if (edge(12) || edge(14)) fightUI.step(-1);
       if (edge(13) || edge(15)) fightUI.step(1);
       if (edge(0)) fightUI.take();
@@ -1898,6 +1900,8 @@ export function createWalk(d: WalkDeps) {
     }
     // The kart hut's menu: D-pad moves, A takes, B (or Y again) closes
     if (kartUI.open) {
+      if (edge(4)) kartUI.stepTab(-1);
+      if (edge(5)) kartUI.stepTab(1);
       if (edge(12) || edge(14)) kartUI.step(-1);
       if (edge(13) || edge(15)) kartUI.step(1);
       if (edge(0)) kartUI.take();

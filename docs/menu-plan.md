@@ -255,6 +255,29 @@ bus and taxi cards: each in the kit, a bottom sheet on phones, the d-pad
 and LB/RB through it. The race and fight HUDs keep their places on screen
 and take the kit's type, bars and tags.
 
+**Built** (waiting on the owner's sign-off):
+
+- Rather than rebuild ~3,000 lines of these menus' markup and logic, they
+  wear the kit through **the skin**: `.mk-skin` on each one's root (the
+  garage, the hangar, the kart hut and its results card, the trainer and
+  its bout card, the race and fight HUDs, their countdowns and pops, the
+  metro and river bus cards, the ride bars, the business card), and at the
+  end of menus.css: inside it the brand's tokens (`--pulse`, `--p-cyan`,
+  `--pulse-wash`, `--font-display`, `--muted` and the rest) are the kit's,
+  so every border, glow and small line drawn with them follows the arcade
+  palette; corners go square, headings pixel, the panel takes the
+  cabinet's fill, frame and stepped corners, the main action (`.shop-take`)
+  is coin yellow and presses down, a pressed choice is lit coin, a picked
+  card gets a coin frame, the stat bars are pixel blocks, the purple glows
+  are gone. The paint swatches keep their paint.
+- Tabs with Q / E and LB / RB: the kart hut and the trainer got
+  `stepTab()` (the garage had it); the d-pad, A and B work as before.
+- Checked by opening each at its door on a desktop and a phone (the
+  garage, the hangar, the kart hut, the trainer, the metro card) and the
+  business card in the hub. The CSS is 38.0 KB gzipped of its 60.
+- Left for later: the HUDs' bars and tags keep their own colours (health is
+  still red and green), and the walk HUD's prompt and hints are Phase 6's.
+
 ## Phase 4: the place panels and the City view
 
 - One panel template for the ~30 places: the title bar (its number and
@@ -269,6 +292,28 @@ and take the kit's type, bars and tags.
   cards that don't pile on each other (one stack, under the header, the
   newest on top), the live banner.
 
+**Built** (waiting on the owner's sign-off):
+
+- The place panel (`.city-panel`, one shell for every place's template)
+  wears the skin: the cabinet's frame and fill with stepped corners, the
+  kicker as the kit's kind line with the place's number on a key, its name
+  in pixels, and under it the **marquee strip**: a line each, made-up,
+  fixed copy, on each template (`data-marquee`), put in by `open()` in
+  index.ts (kept when the owner's live settings close the place). Its ways
+  in (Walk in, Open the market hall, `.chip-link`) are the coin action; the
+  closed note is the kit's warning line; the × a square key. Its content
+  (the market hall, the Workshop's jobs, the records) is mounted as before,
+  in the skin.
+- The header wears the skin too (the City / Walk switch lit coin, the pills
+  and the hub's button square, the mode title in pixels, the XP bar coin),
+  and so do the City view's cards (`.city-hud`: the live banner, the
+  welcome tip, Getting started), framed with stepped corners. They already
+  stack under the header without piling up, so that's unchanged.
+- The start menu was done early (the title screen).
+- Checked at 1280 and on phones at 390, 375 and 320: the City view, the
+  market hall, the kart park's and Liberty Bridge's panels, the header in
+  both modes. No sideways scroll.
+
 ## Phase 5: business and missions
 
 The market hall, the Workshop, Signal tower (news, contracts, the mission
@@ -277,6 +322,18 @@ loans, your save) in the kit: goods as cards with their price and trend,
 the buy and sell steps as clear buttons, the ledger as a list, the loan
 and the save's download and load as their own cards. The rules stay
 `tycoon.ts`'s; the views still patch in place (`repaint()`).
+
+**Built** (waiting on the owner's sign-off): these views already sit in the
+skinned place panel and business card (Phases 3 and 4); inside the skin
+(menus.css, "Business and missions") goods and contracts are cards
+(`.market-row`: the bezel's fill, a frame, stepped corners), the buy and
+sell steps are clear buttons (`.market-btns`: the first step lit coin, the
+rest outlined in coin, a step you can't take greyed, Give up in warning
+orange), price trends go green and hot orange, the fill bars (stock,
+progress) pixel blocks. The Vault's worth, ledger, loan and save, the
+Workshop's jobs, the Post office and the Apartments take the same. No
+markup or rules changed. Checked on a desktop: the market hall, Signal
+tower, the Workshop, the Vault, the Post office and the Apartments.
 
 ## Phase 6: clothes, pops and the rest
 
