@@ -263,23 +263,38 @@ Little changes on screen but the trees' edges.
   pre-existing console error (a geometry with NaN positions,
   `computeBoundingBox()`), the same before this phase: one for the fixes.
 
-### Phase 2: the ground
+### Phase 2: the ground (built)
 
-- **Covers on the ground's own grid:** the base ground's tiles carry a
-  colour per vertex from the land cover (`coverAt(x, z)` in a DOM-free
-  `ground.ts`): lawn by homes and parks, rough grass on open land, dry grass
-  and dirt by industry and the highway, meadow further out, worn patches
-  where people walk, blended over a few tiles with a seeded noise so no edge
-  is straight. The tile planes get a finer grid only where it's needed
-  (near the town; a vertex every few tiles far out), phones a coarser one:
-  no texture, no new draws.
-- **Districts on the palette:** each district's lots, lawns and yards
-  retuned to the palette's covers, their edges blended with the ground
-  round them (The Trenches' worn concrete fading to scrub, the Docks' to
-  gravel and dry grass, Sunridge's desert yards to dry grass, Westlake's
-  lawns to rough grass).
-- **The greens unified:** one family of greens, shades of it by cover, so
-  the seven separate greens become one palette.
+- **Covers on the ground's own grid:** `ground.ts` (DOM-free, tested in
+  `tests/ground.test.ts` at both world sizes). `coverAt(x, z)` is a mix of
+  the palette's covers: the open land rough grass with seeded patches of
+  meadow and dry grass (`openMix()`, `PATCHES`), and over it, in turn, each
+  of `INFLUENCES`: a worn verge along every street (one influence a street,
+  measured to its nearest stretch), dry grass along the highway's verges,
+  lawn round the town, Westlake Park, Uptown, the mall, the stadium and the
+  kart park, dry grass round Sunridge, Crestmont and the airport, gravel
+  and dry grass round the Docks, worn grass and bare dirt round The
+  Trenches, lusher grass down to the river. Each eases out over its reach,
+  the reach itself wobbled by a noise (`REACH_WOBBLE`), so nothing ends on a
+  line; the test holds every half tile's change small. `colourAt()` is the
+  same worked out straight into a colour (every vertex asks it).
+- **Painted on the vertices:** world.ts's `buildGround()` makes each piece
+  of the ground a grid only as fine as it needs (`groundStep()`, `GRID`: one
+  quad where a district covers it all, 15 apart past 60 from the built-up
+  area, 5 near the city, 10 on phones) and paints it (`paintGround()`); the
+  hills rise out of the same colours (`tintHills()` starts from them). No
+  texture, no new draw. Measured: about 35,000 vertices and 49,000
+  triangles on the desktop (the ground was 2,500), 15,000 and 15,000 on
+  phones; about 40 ms to paint on the desktop warm, about 85 ms the first
+  time (a phone's boot pays that, several times slower).
+- **The greens one family:** the palette's planted verges, Sunridge's
+  lawns, the mall's islands and the worn lawn drawn in towards the city's
+  green (`#3a7a50`, `#4a9257`, `#5f925a`, `#4a7a4e`); new covers meadow,
+  dry grass, gravel and the river's bank grass (moved from world.ts).
+- Not in this phase: the worn patches where people walk come with Phase
+  7's paths; the blocks' slabs still step up from the ground (Phase 3).
+- **Seen:** `docs/blend-shots/phase-2-try/before-after.webp` (five views,
+  desktop by day, before and after).
 
 ### Phase 3: the block edges
 

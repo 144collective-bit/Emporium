@@ -6,37 +6,47 @@
  * at the seams. A district picks from here; it never writes a ground colour
  * of its own.
  *
- * Phase 1 moved the colours here as they were (nothing changed on screen);
- * several are near neighbours today (seven greens), which Phase 2 folds into
- * one family.
+ * Phase 1 moved the colours here as they were; Phase 2 drew the greens into
+ * one family and added the open land's covers (ground.ts mixes them).
  */
 
-/** What the ground is covered in */
+/**
+ * What the ground is covered in. The greens are one family (Phase 2: the planted verges, Sunridge's lawns, the
+ * mall's islands and the worn lawn drawn in towards the city's own green), the dry and worn ones yellower
+ */
 export const COVER = {
-  /** The open land (the base ground, the river's grass banks, the foot of the hills) */
+  /** The open land (the base ground, the foot of the hills) */
   rough: '#245c45',
-  /** A block's grass lot (world.ts `LOTS`), the kart park's lawns */
+  /** Meadow: the open land's lighter, yellower patches */
+  meadow: '#3d6b48',
+  /** Dry grass: the open land's sun-dried patches, the highway's verges, round the airport, the Docks, Sunridge and Crestmont */
+  dryGrass: '#566b47',
+  /** The grass running down to the river, lusher */
+  bank: '#2c6a4b',
+  /** A block's grass lot (world.ts `LOTS`), the kart park's lawns; round the park and the town */
   lawn: '#2f7a52',
   /** A district's open pad (outer.ts `PADS`) */
   pad: '#367f5a',
   /** A planted median or island (Uptown's, Crestmont's, Sunridge's) */
-  planted: '#3f7a4a',
+  planted: '#3a7a50',
   /** The top of an avenue's raised median */
   median: '#3f5a4a',
   /** Sunridge's lawns, front and back */
-  garden: '#4f9a49',
+  garden: '#4a9257',
   /** The mall's car park islands */
-  island: '#6f9a4e',
-  /** Dry grass (the islands' grasses) */
+  island: '#5f925a',
+  /** Dry grass in a bed (the islands' grasses) */
   dry: '#b9b06a',
-  /** Worn grass and weeds (The Trenches' yards, its vacant lots) */
+  /** Worn grass and weeds (The Trenches' yards, its vacant lots, a street's verge) */
   worn: '#5f7f3f',
   /** A worn lawn (The Trenches' rec block) */
-  wornLawn: '#4c7d47',
+  wornLawn: '#4a7a4e',
   /** A dirt lot */
   dirt: '#6a4a3c',
-  /** Bare dirt (The Trenches' patches, the vacant lots) */
+  /** Bare dirt (The Trenches' patches, the vacant lots, its edge) */
   bare: '#6b5848',
+  /** Gravel (round the Docks' yards) */
+  gravel: '#6d6a72',
   /** Paving's ground colour (the paved lots' tile texture) */
   paving: '#3a3470',
   /** Concrete (a concrete lot, a paved rim) */

@@ -229,7 +229,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const tick = (f: Tick) => ticks.push(f);
 
   // Downtown's blocks are paved; the landmarks' own lots (by their old block, layout.ts SEATS) get their own ground
-  const { streaks } = buildGround(scene, { 'dt-se': 'concrete', '22,22': 'concrete', '22,11': 'concrete', '11,22': 'concrete', '11,0': 'grass', '22,0': 'grass', '0,22': 'grass' });
+  const { streaks } = buildGround(scene, { 'dt-se': 'concrete', '22,22': 'concrete', '22,11': 'concrete', '11,22': 'concrete', '11,0': 'grass', '22,0': 'grass', '0,22': 'grass' }, tier === 'low');
   progress(0.3);
   await waited(nextFrame());
   // Every far-away car, parked or driving, in one mesh (growth plan Phase 2): before anything parks one

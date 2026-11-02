@@ -6,11 +6,13 @@
 // Full-size pictures go to shots/<label>/ (not kept in git); a contact sheet per tier and time of day (every view,
 // small, with its name) to docs/blend-shots/<label>/, for the PR.
 //   SHOTS_ONLY=view1,view2   only these views        SHOTS_SETS=full   only one tier        SHOTS_TIMES=day   only day
+//   SHOTS_RESUME=1           keep the pictures already taken under this label (a long run cut short goes on)
 //   SHOTS_BENCH=1            also run ?bench on each tier (bench.ts) and keep its draws and triangles (headless and
 //                            on the CPU: its frame times mean nothing, its draws, triangles and memory do)
 //   CHROMIUM_PATH=...        the browser (default: Playwright's own, else /opt/pw-browsers/chromium)
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+const resume = !!process.env.SHOTS_RESUME;
 import { extname, join, resolve } from 'node:path';
 import sharp from 'sharp';
 import { chromium } from 'playwright-core';
@@ -62,6 +64,8 @@ mkdirSync(sheets, { recursive: true });
 try {
   for (const set of sets)
     for (const time of times) {
+      // (resuming: a set whose every view is taken is only made into its sheet again)
+      const done = (id) => resume && existsSync(join(out, `${set}-${time}-${id}.png`));
       const ctx = await browser.newContext({ ...SETS[set], reducedMotion: 'reduce' });
       const page = await ctx.newPage();
       await page.clock.setFixedTime(new Date(TIMES[time]));
@@ -76,10 +80,11 @@ try {
       await page.goto(`${origin}/?shots${time === 'night' ? '=night' : ''}`);
       await page.waitForFunction(() => globalThis.__shots?.ready, null, { timeout: 1800000, polling: 1000 });
       log(`${set} ${time}: the city built in ${Math.round((Date.now() - t0) / 1000)} s`);
-      const views = (await page.evaluate(() => globalThis.__shots.views)).filter((v) => !only || only.includes(v.id));
+      const all = (await page.evaluate(() => globalThis.__shots.views)).filter((v) => !only || only.includes(v.id));
+      const views = all.filter((v) => !done(v.id));
       // (the 3D view's box: the page screenshot clipped to it, with time for the software renderer's frame)
       const clip = await page.locator('[data-city3d]').boundingBox();
-      const shot = [];
+      const shot = all.filter((v) => done(v.id)).map((v) => ({ ...v, file: join(out, `${set}-${time}-${v.id}.png`) }));
       for (const v of views) {
         await page.evaluate((id) => globalThis.__shots.show(id), v.id);
         // A few frames drawn on the view, and what it asked for built
@@ -92,6 +97,7 @@ try {
       }
       if (errors.length) log(`${set} ${time}: page errors:\n  ${errors.join('\n  ')}`);
       await ctx.close();
+      shot.sort((a, b) => all.findIndex((v) => v.id === a.id) - all.findIndex((v) => v.id === b.id));
       await contactSheet(shot, join(sheets, `${set}-${time}.webp`), `${label} · ${set === 'low' ? 'phone' : 'desktop'} · ${time}`);
     }
   if (process.env.SHOTS_BENCH) {
