@@ -27,8 +27,9 @@ import { HM_SPAWN } from './docksport';
 import { SUN_SPAWNS } from './sunplaces';
 import { RESORTS } from './resorts';
 import { SPHERE_SPAWN } from './stripmarks';
+import { MONO_STATIONS } from './monorail';
 
-export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus';
+export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono';
 export interface Place {
   id: string;
   kind: PlaceKind;
@@ -97,6 +98,8 @@ export const PLACES: Place[] = [
   ...STATIONS.map((s): Place => ({ id: `metro-${s.id}`, kind: 'metro', name: `${s.name} station`, at: { x: s.door.x + s.face[0] * 0.4, z: s.door.z + s.face[1] * 0.4, yaw: Math.atan2(s.face[0], s.face[1]) } })),
   // The river bus's stops (river plan step 4b): at the top of each landing's gangway, facing the river
   ...STOPS.map((s): Place => ({ id: `riverbus-${s.id}`, kind: 'riverbus', name: s.pier, at: s.arrive })),
+  // The Neon Mile's monorail (monorail.ts): at each station's door
+  ...MONO_STATIONS.map((s): Place => ({ id: `mono-${s.id}`, kind: 'mono', name: s.name, at: s.at })),
 ];
 export const PLACE_IDS = PLACES.map((p) => p.id);
 
@@ -111,7 +114,7 @@ interface Copy {
 }
 /** A place's name and a line under it: the copy on its pin (CityMap.astro's directory, found under `root`), or its own */
 export function placeName(root: Copy, p: Place) {
-  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'riverbus' ? 'River bus' : '' };
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'riverbus' ? 'River bus' : p.kind === 'mono' ? 'Monorail' : '' };
   const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
   return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
 }

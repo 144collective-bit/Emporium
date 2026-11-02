@@ -542,7 +542,7 @@ export function createWalk(d: WalkDeps) {
     }
     if (n.id.startsWith('place:')) {
       const id = n.id.slice(6);
-      if (!(id.startsWith('lift:') || id.startsWith('metro:'))) return null;
+      if (!(id.startsWith('lift:') || id.startsWith('metro:') || id.startsWith('mono:'))) return null;
       const pl = d.places().find((q) => q.id === id);
       if (!pl) return null;
       // (a lift: walked into, turned to face out, then the fade; a station's door is pushed)

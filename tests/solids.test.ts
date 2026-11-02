@@ -5,6 +5,7 @@ import { WHEEL_SOLIDS } from '../src/scripts/city3d/wheel';
 import { HARBOUR_SOLIDS } from '../src/scripts/city3d/harbour';
 import { KERBSIDE_SOLIDS, LAYBY_CARS } from '../src/scripts/city3d/kerbside';
 import { METRO_SOLIDS } from '../src/scripts/city3d/metro';
+import { MONO_PILLAR_SOLIDS } from '../src/scripts/city3d/monorail';
 import { test } from 'node:test';
 import { WELCOME_SOLIDS } from '../src/scripts/city3d/stripmarks';
 import { BRIDGE_RECT, CAR_PARK, STADIUM_SOLIDS } from '../src/scripts/city3d/stadium';
@@ -28,16 +29,16 @@ import { HOTEL, SITE_SOLIDS } from '../src/scripts/city3d/crestsites';
 const R = 0.22;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => pointIn(x, z, b, R));
 
-test('every solid box stands on a block, district or the garage lot (the kart park and the airport are flat open ground, tested in kart.test.ts and airfield.test.ts; Liberty Bridge stands on the promenades and in the river too, tested in liberty.test.ts, and Harbour Bridge, harbour.test.ts; the waterfront\'s on the boardwalk, tested in waterfront.test.ts, and the night market\'s on its deck, nightmarket.test.ts; the metro on the avenue\'s median and the lawns, tested in metro.test.ts; the stadium\'s parked cars on its open car park and its footbridge\'s piers over the highway, stadium.test.ts; Uptown\'s cars parked in its lay-bys, kerbside.test.ts, and Coral Drive\'s in its bays, coral.test.ts, and the hills\' mansions on their pads, mansions.test.ts, and Crestmont\'s landmarks off the Flats on their ground, crestsites.test.ts, and its wheel on the esplanade, wheel.test.ts; the welcome sign on the Neon Mile, in the boulevard median, stripmarks.test.ts)', () => {
+test('every solid box stands on a block, district or the garage lot (the kart park and the airport are flat open ground, tested in kart.test.ts and airfield.test.ts; Liberty Bridge stands on the promenades and in the river too, tested in liberty.test.ts, and Harbour Bridge, harbour.test.ts; the waterfront\'s on the boardwalk, tested in waterfront.test.ts, and the night market\'s on its deck, nightmarket.test.ts; the metro on the avenue\'s median and the lawns, tested in metro.test.ts; the stadium\'s parked cars on its open car park and its footbridge\'s piers over the highway, stadium.test.ts; Uptown\'s cars parked in its lay-bys, kerbside.test.ts, and Coral Drive\'s in its bays, coral.test.ts, and the hills\' mansions on their pads, mansions.test.ts, and Crestmont\'s landmarks off the Flats on their ground, crestsites.test.ts, and its wheel on the esplanade, wheel.test.ts; the welcome sign on the Neon Mile, in the boulevard median, stripmarks.test.ts, and the monorail in the north bank avenue median, monorail.test.ts)', () => {
   const laybyCar = (b: (typeof SOLIDS)[number]) => KERBSIDE_SOLIDS.indexOf(b) >= 0 && KERBSIDE_SOLIDS.indexOf(b) < LAYBY_CARS.length;
   const bayCar = (b: (typeof SOLIDS)[number]) => CORAL_SOLIDS.indexOf(b) >= CORAL_SOLIDS.length - CORAL_CARS.length;
   const stadiumOpen = (b: (typeof SOLIDS)[number]) => STADIUM_SOLIDS.includes(b) && [CAR_PARK, BRIDGE_RECT].some((r) => (b[0] + b[2]) / 2 > r[0] && (b[0] + b[2]) / 2 < r[2] && (b[1] + b[3]) / 2 > r[1] && (b[1] + b[3]) / 2 < r[3]);
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !MONO_PILLAR_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
 test('no solid box sits on a road (but the metro\'s pillars in an avenue\'s median, metro.test.ts)', () => {
   for (const b of SOLIDS) {
-    if (METRO_SOLIDS.includes(b)) continue;
+    if (METRO_SOLIDS.includes(b) || MONO_PILLAR_SOLIDS.includes(b)) continue;
     // (the short north-south streets only from the Parkway south: the mall's land past it, docs/mall-plan.md)
     NS_ROADS.forEach((r, i) => assert.ok(b[2] <= r.c - r.half || b[0] >= r.c + r.half || !nsRuns(i, b[3]), `box ${b.join(', ')} on the road at x ${r.c}`));
     // (and the small east-west streets don't run across the Neon Mile: docs/strip-plan.md)

@@ -324,6 +324,11 @@ const SIGN_CELLS: { text: string; fg: string; bg?: string }[] = [
   { text: 'HOTEL', fg: '#ffd23a' },
   { text: 'THE SPHERE', fg: '#ffffff', bg: '#1a1240' },
   { text: 'THE NEON MILE', fg: '#2ef2ff' },
+  { text: 'MONORAIL', fg: '#ffb21e' },
+  { text: 'DOWNTOWN LINK', fg: '#ffffff', bg: '#2a1a08' },
+  { text: 'NEON MILE WEST', fg: '#ffffff', bg: '#2a1a08' },
+  { text: 'NEON MILE CENTRAL', fg: '#ffffff', bg: '#2a1a08' },
+  { text: 'THE SPHERE · MONORAIL', fg: '#ffffff', bg: '#2a1a08' },
 ];
 const SIGN_TEX = canvasTex(1024, 1024, (c) => {
   c.fillStyle = '#07060c';

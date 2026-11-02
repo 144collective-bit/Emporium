@@ -79,6 +79,8 @@ import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
 import type { RiverBusUI } from './riverbus-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
+import type { MonoUI } from './monorail-ui';
+import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
 import { PLACES } from './places';
@@ -806,6 +808,34 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          monoUI?.close();
+        },
+      }))
+    ));
+  // The Neon Mile's monorail (monorail.ts, docs/strip-plan.md Phase 4): its card and rides loaded when a station's door first opens
+  let monoUI: MonoUI | null = null;
+  let monoLoad: Promise<MonoUI> | null = null;
+  const MONO_DOORS = MONO_STATIONS.map((s) => ({ id: `mono:${s.id}`, x: s.door.x, z: s.door.z, label: 'Monorail' }));
+  const loadMono = () =>
+    (monoLoad ??= import('./monorail-ui').then(({ createMonoUI }) =>
+      (monoUI = createMonoUI(root, {
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (s) => {
+          works.want(s.at.x, s.at.z, 70);
+          walk.placeAt(s.at);
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          riverBusUI?.close();
         },
       }))
     ));
@@ -864,7 +894,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, whine) => sound.engine(revs, whine),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -877,6 +907,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         const [, way, i] = id.split(':');
         const l = LIBERTY_LIFTS[Number(i)];
         return rideTo(way === 'up' ? l.up : l.down, 'liberty', 'Liberty Bridge', way === 'up' ? 'Liberty Bridge · High walkway' : 'Liberty Bridge · Deck');
+      }
+      if (id.startsWith('mono:')) {
+        const shut = live.closed('monorail');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadMono()
+          .then((ui) => ui.open(id.slice(5)))
+          .catch(() => game.toast('The monorail is not running: try again in a moment'));
       }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
@@ -1035,6 +1072,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     taxis.reset();
     metroUI?.close();
     riverBusUI?.close();
+    monoUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
     close();
@@ -1074,7 +1112,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         active ? close() : stopWalking();
       }
       else if (!active) walk.onKey(e, true);
@@ -1184,6 +1222,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       close();
       tycoon?.closeCard();
       riverBusUI?.close();
+      monoUI?.close();
     },
   });
 

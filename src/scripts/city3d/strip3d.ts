@@ -15,6 +15,7 @@ import { BLVD_WEST, type Rect } from './strip';
 import { crown, trunk } from './palms3d';
 import { registerResorts } from './resorts3d';
 import { registerMarks } from './stripmarks3d';
+import { registerMono } from './monorail3d';
 import type { Tick } from './world';
 
 export const SELF = import.meta.url;
@@ -44,6 +45,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerResorts({ low, scene, tick });
   // The landmarks (Phase 3: stripmarks3d.ts)
   registerMarks({ low, scene, tick });
+  // The monorail (Phase 4: monorail3d.ts)
+  registerMono({ low, scene, tick });
   const asphalt = toon('#2a2838');
   const white = toon('#eceaf6');
   const yellow = neon('#f5d76e', 0.9, 1.1);

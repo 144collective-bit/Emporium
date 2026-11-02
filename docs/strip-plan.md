@@ -300,7 +300,7 @@ What was built:
 - **Left for Phase 5:** the crowd stopping to watch the fountains.
 - **The boot** grew 1.4 KB, to 674.8 of 680; the Strip's chunk is 17 KB.
 
-### The monorail (Phase 4)
+### The monorail (Phase 4, built)
 
 - A beam on pillars along the strip between the south row and the north
   bank avenue, three stations (west end, middle, east end), a sleek train on
@@ -311,6 +311,49 @@ What was built:
   from the metro's Downtown station. Its exact run is measured in this
   phase (it crosses the eastern districts' blocks on a beam).
 - Its stations are places (the world map, taxis, fast travel).
+
+What was built:
+
+- **The line** (`monorail.ts`, DOM-free, tested in `tests/monorail.test.ts`;
+  the owner's call: on through to the metro): a single concrete beam over
+  the north bank avenue's median (`MONO`, as the metro's el keeps to an
+  avenue's median), straight from just east of the east ring avenue's
+  junction (x 73) to past the Sphere (x 231), the cars' floor at `FLOOR`
+  (7.45, well over the buses); T-shaped pillars in the median every 10 or
+  less, clear of the Parkway's junction (`MONO_PILLARS`).
+- **Four stations** (`MONO_STATIONS`): **Downtown Link** (its lift tower on
+  the lawn north of the avenue, its door facing the ring avenue, about 25
+  from the metro's Downtown station), **Neon Mile West** (between the
+  Gondolier and Lava Lagoon), **Neon Mile Central** (between Lava Lagoon
+  and Orbit) and **The Sphere** (between Orbit and the Sphere's lot): the
+  Strip's towers at the back of the walks between the resorts, their doors
+  on the walk, a short stroll from the boulevard. Each a platform beside
+  the beam over the avenue's westbound lanes, clear of the cars' sides, a
+  glazed skybridge over the sidewalk to its tower.
+- **The train** (`MONO_TRAIN`: three cars): a shuttle on a timetable
+  (`monoAt()`, a function of the clock): the Link out to the Sphere and
+  back, 12 s at each station, a gentle start and stop (`MONO_PERIOD` about
+  110 s). **Rides** (`monoRide()`): straight between any two stations, 7 to
+  25 s; after one the timetable picks up from that station (`monoResume()`,
+  through `MONO_VIEW`, which the drawing reads).
+- **Getting on:** each station's door is a walk prompt, "Monorail"
+  (`mono:<id>` in index.ts, `MONO_DOORS`), which loads the ride's card the
+  first time (`monorail-ui.ts`, its own chunk: the metro's card and ride
+  bar with buttons of its own; Skip ride or Esc cuts to the end; reduced
+  motion: a cut). Free. The live settings can close it (`monorail` in
+  `LIVE_FEATURES`).
+- **The map and getting about:** places `mono-<id>` (kind `mono`: taxis,
+  fast travel, the world map's amber line and dots).
+- **Drawing:** `monorail3d.ts` (`registerMono()`, from strip3d.ts): the
+  beam in pieces (pale concrete, an amber neon edge each side) with its
+  pillars, each station a site (the platform with its yellow edge and glass
+  rail, a white canopy on slim posts with amber edges and the station's
+  name on boards both ways, the skybridge, the glass tower between white
+  piers with MONORAIL over its door); the train on the main thread (white
+  cars straddling the beam, an amber stripe, a band of windows lit at night,
+  rounded noses).
+- `MONO_SOLIDS` (in `SOLIDS`: the pillars, the towers). The boot grew 2.5
+  KB, to 677.3 of 680.
 
 ### Life and sound (Phase 5)
 
@@ -348,10 +391,9 @@ What was built:
 
 - **The resorts' names:** the draft names above, change any you like.
 - **Which side each resort stands on:** the table above is a proposal.
-- **The boot's size:** 674.8 of its 680 KB with Phase 3 (673.4 with Phase 2 (main's start-up
-  pass made room). Phases 4 and 5 may need it raised; asked when it comes up.
-- **The monorail's west end:** carry it on west to the metro (above), or
-  stop it at the Strip's west end with a walk to the metro?
+- **The boot's size:** 677.3 of its 680 KB with Phase 4 (674.8 with Phase 3, 673.4 with Phase 2 (main's start-up
+  pass made room). Phase 5 will likely need it raised; asked when it comes up.
+- **The monorail's west end:** answered: on through to the metro (built).
 
 ## The phases
 
@@ -359,6 +401,6 @@ What was built:
 2. The resorts (the seven, as places). Built.
 3. The landmarks (the welcome sign, the fountain show, the volcano, the
    Sphere, the searchlights). Built.
-4. The monorail.
+4. The monorail. Built.
 5. Life and sound.
 6. Polish and performance.
