@@ -1583,3 +1583,25 @@
     transform: none;
   }
 }
+
+/* ==========================================================================
+   Clothes, pops and the rest (the menu plan's Phase 6): Drop 001's fitting room (in the skinned panel), the
+   character screen, the inventory, the world map's frame, the walk HUD's prompt, hints, toasts, pops, the
+   mission tracker, the compass and the hotbar wear the skin (CityMap.astro). Headings the brand drew as
+   gradient text are plain coin (a lost result's in warning orange); the 3D city and the map's own drawing
+   keep their look.
+   ========================================================================== */
+.mk-skin :is(.fit-section span, .char-title, .race-result-time, .fight-pop.is-good, .fight-result .race-meta, .fight-result.is-won .shop-title, .fight-result-time, .kart-place b, .kart-pop.is-good, .kart-series-final.is-trophy, .mission-pop b, .combat-pop b),
+.mk-skin:is(.fight-pop.is-good, .kart-pop.is-good) {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--m-coin);
+}
+.mk-skin.fight-result.is-lost .shop-title {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--m-hot);
+}
+.charscreen.mk-skin .char-title {
+  font-family: var(--font-pixel);
+}

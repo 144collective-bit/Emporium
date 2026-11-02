@@ -489,20 +489,20 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   {/* Walk mode: controls panel, hints, touch joystick, run and jump, door prompt */}
   <div class="walk-hud">
     <div class="mp-tags" data-mp-tags aria-hidden="true"></div>
-    <p class="mp-toast" data-mp-toast hidden></p>
-    <p class="walk-look">Click the city to look around</p>
+    <p class="mp-toast mk-skin" data-mp-toast hidden></p>
+    <p class="walk-look mk-skin">Click the city to look around</p>
     <span class="walk-crosshair" aria-hidden="true"></span>
     {/* The hotbar (inventory-ui.ts): fists, gun 1, gun 2, the thing in his hand, the snacks; 1-7 pick, a tap picks */}
-    <div class="hotbar" data-hotbar role="toolbar" aria-label="Hotbar"></div>
+    <div class="hotbar mk-skin" data-hotbar role="toolbar" aria-label="Hotbar"></div>
     <div class="combat-hud">
       <div class="combat-cross" data-cross aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="combat-hit" data-hitmark aria-hidden="true"></div>
       <div class="combat-dmg" data-dmg aria-hidden="true"></div>
-      <div class="combat-pops" data-pops aria-live="polite"></div>
+      <div class="combat-pops mk-skin" data-pops aria-live="polite"></div>
       <div class="combat-scope" aria-hidden="true"><i></i></div>
     </div>
     {/* The waypoint's compass (worldmap.ts, index.ts): which way and how far, and its name */}
-    <div class="wm-compass" data-compass hidden aria-live="off">
+    <div class="wm-compass mk-skin" data-compass hidden aria-live="off">
       <span class="wm-compass-arrow" data-compass-arrow aria-hidden="true"></span>
       <span class="wm-compass-text"><b data-compass-dist></b><small data-compass-name></small></span>
       <button type="button" class="wm-compass-clear" data-compass-clear aria-label="Clear the waypoint">
@@ -510,7 +510,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </button>
     </div>
     {/* Your missions on the go (missions-ui.ts): a line and a bar each; on phones a pill that opens on a tap */}
-    <div class="mission-tracker" data-missions-tracker hidden>
+    <div class="mission-tracker mk-skin" data-missions-tracker hidden>
       <button type="button" class="mission-tracker-pill" data-tracker-toggle aria-expanded="false" aria-controls="mission-tracker-list">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6" /></svg>
         <span data-tracker-count>0</span>
@@ -518,7 +518,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <ul class="mission-tracker-list" id="mission-tracker-list" data-tracker-list></ul>
     </div>
     {/* The character screen (charscreen.ts), from the Profile tab: your Degen full size on the podium, turning, zooming to his face, posing, under three lights, with what he wears */}
-    <section class="charscreen" data-char hidden role="dialog" aria-modal="true" aria-labelledby="char-title">
+    <section class="charscreen mk-skin" data-char hidden role="dialog" aria-modal="true" aria-labelledby="char-title">
       <header class="char-head">
         <h2 id="char-title" class="char-title">Your Degen</h2>
         <button type="button" class="city-panel-close" data-char-close aria-label="Close the character screen">
@@ -544,7 +544,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     {/* The Armoury's store and workbench at its counter (gunshop.ts). The starters unlock with lifetime score; the rest cost Dorras earned in the city, never real money. */}
     {/* The inventory (inventory-ui.ts, Tab): the two weapon slots over a 4 x 4 grid of everything else he carries;
         drag between them, tap to see what a thing does, double tap to use it */}
-    <section class="inv" data-inv hidden role="dialog" aria-labelledby="inv-title">
+    <section class="inv mk-skin" data-inv hidden role="dialog" aria-labelledby="inv-title">
       <header class="inv-head">
         <h2 id="inv-title" class="shop-title">Inventory</h2>
         <p class="inv-keys"><kbd>Tab</kbd> close</p>
@@ -719,7 +719,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="shop-take" data-kart-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint kart-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
         data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
@@ -790,22 +790,22 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="shop-take" data-fight-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint fight-hint"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>Esc</kbd> quit</p>
     <button type="button" class="fight-btn fight-punch" data-fight-punch aria-label="Punch">Punch</button>
     <button type="button" class="fight-btn fight-kick" data-fight-kick aria-label="Kick">Kick</button>
     <button type="button" class="fight-btn fight-block" data-fight-block aria-label="Block (hold)">Block</button>
     <button type="button" class="fight-btn fight-dodge" data-fight-dodge aria-label="Dodge">Dodge</button>
-    <p class="walk-hint"><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> stop</p>
+    <p class="walk-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> menu</p>
     {/* Fists on the street (brawl.ts): empty hands, the keys instead (.city.is-fists); on touch the fight's Punch, Kick and Block above take Fire's, Aim's and Reload's places */}
-    <p class="walk-hint fists-hint"><kbd>WASD</kbd> move · <kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge (guard up, standing) · <kbd>1</kbd><kbd>2</kbd> draw</p>
+    <p class="walk-hint fists-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge (guard up, standing) · <kbd>1</kbd><kbd>2</kbd> draw</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
-    <p class="walk-hint drive-hint"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
+    <p class="walk-hint drive-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
     </div>
     {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
-    <p class="walk-hint boat-hint"><kbd>W</kbd><kbd>S</kbd> ahead / astern · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out at a landing</p>
-    <p class="walk-hint fly-hint"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
+    <p class="walk-hint boat-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> ahead / astern · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out at a landing</p>
+    <p class="walk-hint fly-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
     <div class="fly-hud" data-fly-hud hidden aria-hidden="true">
       <span class="fly-read"><b data-fly-speed>0</b><small>km/h</small></span>
       <span class="fly-read"><b data-fly-alt>0</b><small>m up</small></span>
@@ -829,7 +829,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
     </button>
   </div>
-  <button type="button" class="walk-prompt" data-walk-prompt hidden>
+  <button type="button" class="walk-prompt mk-skin" data-walk-prompt hidden>
     <kbd>F</kbd> <span data-walk-label>Enter</span>
   </button>
   {/* A taxi (taxi.ts, growth plan Phase 8): on its way, waiting (Get in), or the ride (Skip ride) */}
@@ -874,7 +874,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
   </div>
   {/* The world map (worldmap.ts, growth plan Phase 8): the whole city drawn from the street plan, places,
       you, your car and aircraft and your waypoint; a card for what's tapped (waypoint, taxi, fast travel, bring my car) */}
-  <section class="worldmap" data-worldmap hidden role="dialog" aria-modal="true" aria-labelledby="wm-title">
+  <section class="worldmap mk-skin" data-worldmap hidden role="dialog" aria-modal="true" aria-labelledby="wm-title">
     <div class="wm-head">
       <p class="wm-title" id="wm-title">World map</p>
       <p class="wm-sub">Tap a place: set a waypoint, take a taxi, or fast travel where you've been</p>
@@ -908,11 +908,11 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="city-modal-body" data-account-body></div>
     </div>
   </div>
-  <p class="city-toast" data-toast role="status" aria-live="polite"></p>
+  <p class="city-toast mk-skin" data-toast role="status" aria-live="polite"></p>
 
-  <p class="city-toast econ-toast" data-econ-toast role="status" aria-live="polite"></p>
+  <p class="city-toast econ-toast mk-skin" data-econ-toast role="status" aria-live="polite"></p>
   {/* Level-ups and badges (missions-ui.ts): pops under the header, gone after a moment */}
-  <div class="mission-pops" data-mission-pops aria-live="polite"></div>
+  <div class="mission-pops mk-skin" data-mission-pops aria-live="polite"></div>
 
   {/* One glass panel; its content comes from the templates below */}
   <aside class="city-panel mk-skin" data-panel hidden role="dialog" aria-labelledby="city-panel-title">
