@@ -16,3 +16,6 @@ scratch/
 *.zip
 .test-build/
 .claude/worktrees/
+
+# The blending plan's review shots at full size (npm run shots; the contact sheets go in docs/blend-shots/)
+shots/
