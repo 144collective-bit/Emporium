@@ -1389,3 +1389,124 @@
 .mk-skin .shop-stats dd {
   height: 8px;
 }
+
+/* ==========================================================================
+   The place panels and the City view (the menu plan's Phase 4): the panel (`.city-panel`), the header
+   (`.city-head`) and the City view's cards (`.city-hud`: the live banner, the welcome tip, Getting started)
+   wear the skin; the panel's kicker is the kit's kind line with its number on a key, its name pixel, the
+   marquee strip under it (`data-marquee` on each place's template, put in by index.ts's open()), and its
+   way in (Walk in and the rest, `.chip-link`) the coin action.
+   ========================================================================== */
+.city-panel.mk-skin {
+  border: 2px solid #0000;
+  background:
+    repeating-linear-gradient(to bottom, #ffffff05 0 1px, #0000 1px 3px) padding-box,
+    linear-gradient(#0c0d10f2, #0c0d10f2) padding-box,
+    linear-gradient(var(--m-edge), var(--m-edge)) border-box;
+  box-shadow: 0 18px 40px -16px #000c;
+  clip-path: var(--notch-4);
+  color: var(--m-text);
+}
+.city-panel.mk-skin .kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--m-coin);
+  font: 700 12px/1 var(--font-pixel);
+  letter-spacing: 0.14em;
+}
+.city-panel.mk-skin .kicker-num {
+  padding: 3px 6px 2px;
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  color: var(--m-text);
+  font: 700 11px/1 var(--font-mono);
+}
+.city-panel.mk-skin .kicker-num::after {
+  content: none;
+}
+.city-panel.mk-skin .city-panel-title {
+  font: 700 30px/1 var(--font-pixel);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--m-text);
+  -webkit-text-fill-color: currentColor;
+  background: none;
+}
+.city-panel-marquee.mk-marquee {
+  display: block;
+  align-self: stretch;
+  margin: -4px 0 0;
+}
+.city-panel.mk-skin .city-panel-text {
+  color: #cfcdc5;
+}
+.city-panel.mk-skin .city-panel-close {
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  clip-path: var(--notch-2);
+  color: var(--m-text);
+}
+.city-panel.mk-skin .city-panel-close:hover,
+.city-panel.mk-skin .city-panel-close:focus-visible {
+  outline: none;
+  border-color: var(--m-coin);
+  color: var(--m-coin);
+}
+/* A place's way in (Walk in, Open the market hall...): the coin action, pressing down */
+.city-panel.mk-skin .chip-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 16px 12px;
+  border: 0;
+  background: var(--m-coin);
+  box-shadow: inset 0 -4px 0 var(--m-coin-low);
+  clip-path: var(--notch-3);
+  color: #0c0d10;
+  font: 700 13px/1 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.city-panel.mk-skin .chip-link:hover:not(:disabled) {
+  background: #ffd25a;
+}
+.city-panel.mk-skin .chip-link:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: inset 0 -1px 0 var(--m-coin-low);
+}
+.city-panel.mk-skin .chip-link:disabled {
+  background: #15161b;
+  box-shadow: none;
+  color: var(--m-dim);
+}
+.city-panel.mk-skin .live-closed {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 4px solid var(--m-hot);
+  background: #ff5a361a;
+  color: var(--m-text);
+}
+.city-panel.mk-skin .city-draft {
+  color: var(--m-dim);
+  font-family: var(--font-mono);
+}
+
+/* The City view's cards: the cabinet's fill, a frame, stepped corners */
+.city-hud.mk-skin :is(.city-card, .city-guide, .city-banner) {
+  background:
+    linear-gradient(#0c0d10eb, #0c0d10eb) padding-box,
+    linear-gradient(var(--m-edge), var(--m-edge)) border-box;
+  box-shadow: 0 12px 30px -14px #000c;
+  clip-path: var(--notch-3);
+}
+.city-hud.mk-skin :is(.city-card, .city-guide, .city-banner) :is(h1, h2, b, strong) {
+  -webkit-text-fill-color: currentColor;
+}
+/* (the header's XP bar fills coin, where the brand's gradient was) */
+.city-head.mk-skin .level-bar::before {
+  background: var(--m-coin);
+}

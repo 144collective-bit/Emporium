@@ -2807,8 +2807,12 @@ it and has been retired completely. Build only on what's here.
   HUDs, the metro, river bus and taxi cards and bars, the business card)
   take the kit's look by having the brand's tokens redefined inside them;
   give a new panel of that kind the class too. The kart hut and the trainer
-  step their tabs with Q / E and LB / RB (`stepTab()`). Until a menu moves to
-  the new kit it keeps today's look and rules. One phase at a time with the owner's sign-off; keep it up
+  step their tabs with Q / E and LB / RB (`stepTab()`). Phase 4 is built,
+  waiting on the owner's sign-off: the place panel, the header and the City
+  view's cards wear the skin too; each place's template carries its marquee
+  line (`data-marquee`: made-up, fixed copy; a new place needs one), which
+  `open()` puts under its name. Until a menu moves to the new kit it keeps
+  today's look and rules. One phase at a time with the owner's sign-off; keep it up
   to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
