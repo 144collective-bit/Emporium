@@ -1,14 +1,14 @@
-// The street plan as data (streetplan.ts): the straight grid of layout.ts, the
-// city as built (downtown's diagonals, blocks, alleys and squares on top), and
-// the geometry helpers they're made with.
+// The street plan as data (streetplan.ts): the arterials of layout.ts, the
+// city as built on them (downtown's diagonals, blocks, alleys and squares, every
+// district since), and the geometry helpers they're made with.
 import { SUN_BLOCKS, SUN_CROSSINGS } from '../src/scripts/city3d/sunridge';
 import { TRENCH_BLOCKS } from '../src/scripts/city3d/trenches';
 import { WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
 import { UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PLAN, blockAt, cityPlan, distToStreet, gridPlan, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
-import { BLOCKS, BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SHORT_NS, SOUTH_ROAD, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
+import { PLAN, blockAt, cityPlan, distToStreet, gridCrossings, gridStreets, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
+import { BRIDGED_NS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SHORT_NS, SOUTH_ROAD, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
 import { DISTRICTS } from '../src/scripts/city3d/layout';
@@ -16,8 +16,10 @@ import { CREST_BLOCKS, CREST_CROSSINGS } from '../src/scripts/city3d/crestmont';
 import { DOCK_BLOCKS, DOCK_CROSSINGS } from '../src/scripts/city3d/docks';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
+/** The arterials and where they meet (the grid the city is built on) */
+const gridPlan = () => ({ streets: gridStreets(), crossings: gridCrossings() });
 
-test('the grid plan has every road of layout.ts, edge to edge (but those with no bridge stop at the bank avenues)', () => {
+test('the arterials: every road of layout.ts, edge to edge (but those with no bridge stop at the bank avenues)', () => {
   const p = gridPlan();
   const halves = NS_ROADS.length - BRIDGED_NS.length;
   assert.equal(p.streets.length, NS_ROADS.length + halves + EW_ROADS.length);
@@ -42,17 +44,6 @@ test('a crossing wherever two roads meet, lights only on the core streets', () =
   // Each crossing's streets really pass through it
   const byId = new Map(p.streets.map((s) => [s.id, s]));
   for (const c of p.crossings) for (const id of c.streets) assert.ok(distToStreet(byId.get(id)!, c.at) < 1e-6, `${id} at ${c.id}`);
-});
-
-test('grid blocks: the core, every district and every extra lot, off the roads', () => {
-  const p = gridPlan();
-  assert.equal(p.blocks.length, BLOCKS.length * BLOCKS.length + DISTRICTS.length + EXTRA_LOTS.length);
-  assert.equal(new Set(p.blocks.map((b) => b.id)).size, p.blocks.length, 'ids are unique');
-  for (const d of DISTRICTS) assert.ok(p.blocks.some((b) => b.use === 'district' && b.ref === d.id), `district ${d.id}`);
-  for (const b of p.blocks) {
-    assert.ok(near(polyArea(b.poly), BS * BS), `${b.id} is a ${BS} x ${BS} block, counter-clockwise`);
-    for (const s of p.streets) for (const q of b.poly) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
-  }
 });
 
 test('the city as built: the grid\'s roads, three diagonals from the ring\'s corners, and walk-only alleys', () => {

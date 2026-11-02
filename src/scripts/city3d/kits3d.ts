@@ -15,12 +15,11 @@
  */
 import * as THREE from 'three';
 import { Batch, PAL, shadeHex, toon } from './kit';
-import { SHOP_H, FLOOR, type Infill, type Pt, type Rect } from './downtown';
+import { SHOP_H, FLOOR, type Infill, type Pt } from './downtown';
 import { ATLAS, CREAM, INK, LEAF, METAL, ROOF, SIGN_ATLAS, STONE, WALL_COLOR, WOOD, acUnit, frameOf, glow, infillBuilding, kit, planter, roof, shell, soft, type Band, type Kit, type WallKind } from './infill';
 import { KIT_TALLEST, RIDGE, bigParts, type BigKit, type Lot } from './kits';
 import { rng } from './recipes';
 import { SLAB as S } from './world';
-import { KERB, LAMP } from './palette';
 
 const asInfill = (l: Lot) => l as unknown as Infill;
 
@@ -435,51 +434,4 @@ function big(b: Batch, lot: Lot, r: () => number, low: boolean) {
   bx(0.8, d - 2, 2.6, d - 0.9, S, S + 0.6, toon('#ff8a3d'));
 }
 
-/* ---------- The ground: blocks, streets, alleys ---------- */
-
-const GROUND: Record<'paving' | 'grass' | 'concrete', string> = { paving: '#5d5888', grass: '#2f8f5c', concrete: '#6e6a8c' };
-
-/** A block's raised slab (its sidewalk) and the ground inside, and the bollards and floor of its alleys */
-export function drawBlock(b: Batch, slab: Rect, inner: Pt[], ground: keyof typeof GROUND, alleys: { box: Rect; bollards: Pt[] }[], low: boolean) {
-  const [x0, z0, x1, z1] = slab;
-  b.box(x0, 0, z0, x1 - x0, S, z1 - z0, toon(KERB.town));
-  const xs = inner.map((p) => p[0]);
-  const zs = inner.map((p) => p[1]);
-  b.box(Math.min(...xs), S, Math.min(...zs), Math.max(...xs) - Math.min(...xs), 0.005, Math.max(...zs) - Math.min(...zs), toon(GROUND[ground]));
-  b.detail(() => {
-    for (const a of alleys) {
-      const [a0, c0, a1, c1] = a.box;
-      b.box(a0, S + 0.004, c0, a1 - a0, 0.008, c1 - c0, toon('#3f3a5c'));
-      for (const [x, z] of a.bollards) {
-        b.add(new THREE.CylinderGeometry(0.08, 0.09, 0.6, 8).translate(x, S + 0.3, z), INK);
-        b.add(new THREE.CylinderGeometry(0.085, 0.085, 0.06, 8).translate(x, S + 0.49, z), glow(PAL.warm));
-      }
-    }
-    // Lamp posts round the sidewalk, their bulbs lit at night
-    if (low) return;
-    const lamp = (x: number, z: number) => {
-      b.add(new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6).translate(x, S + 0.8, z), INK);
-      b.add(new THREE.BoxGeometry(0.2, 0.07, 0.2).translate(x, S + 1.62, z), glow(LAMP.white.bulb));
-    };
-    for (let x = x0 + 2; x < x1 - 1; x += 8) {
-      lamp(x, z0 + 0.25);
-      lamp(x, z1 - 0.25);
-    }
-    for (let z = z0 + 6; z < z1 - 5; z += 8) {
-      lamp(x0 + 0.25, z);
-      lamp(x1 - 0.25, z);
-    }
-  });
-}
-
-/** A street: asphalt, a dashed line down the middle */
-export function drawStreet(b: Batch, [x0, z0, x1, z1]: Rect) {
-  b.box(x0, 0, z0, x1 - x0, 0.03, z1 - z0, toon('#26243f'));
-  const along = x1 - x0 > z1 - z0;
-  const dash = toon('#e6e3f2');
-  b.detail(() => {
-    if (along) for (let x = x0 + 1; x < x1 - 1; x += 2.4) b.box(x, 0.031, (z0 + z1) / 2 - 0.05, 1.2, 0.004, 0.1, dash);
-    else for (let z = z0 + 1; z < z1 - 1; z += 2.4) b.box((x0 + x1) / 2 - 0.05, 0.031, z, 0.1, 0.004, 1.2, dash);
-  });
-}
 

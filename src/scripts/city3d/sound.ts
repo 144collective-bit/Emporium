@@ -720,7 +720,6 @@ export function createSound(given?: AudioContext) {
           [784, 1046, 1318, 1568, 2093].forEach((f, i) => tone(t + i * 0.08, 'triangle', f, f, 0.18, 0.28));
           crack(t, 'bandpass', 1200, 0.6, 0.3, 0.3, true);
           break;
-        // The crew on the south bank: a shove, and one going down
         // The kart park: a boost's whoosh, a cartoon boing when you're spun, a ding when you land one
         case 'kartBoost':
           tone(t, 'sawtooth', 180, 720, 0.16, 0.3);

@@ -1979,9 +1979,9 @@ it and has been retired completely. Build only on what's here.
     in Phase 9 (the owner's call: The Trenches took its land); the recipes'
     test lays its 20-block grid as a fixture instead. A district laid by
     recipes joins every grid through `addSolids()` (`solids.ts`,
-    `BoxGrid.add()`) and `addSlabs()` (`walk.ts`) when its blocks aren't
-    the street plan's, and the outskirts' trees keep off it (its land in
-    `KEEPS`, `landuse.ts`).
+    `BoxGrid.add()`), its blocks go in the street plan (so walking's slabs
+    have them), and the outskirts' trees keep off it (its land in `KEEPS`,
+    `landuse.ts`).
   - Tested in `tests/recipes.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
@@ -3438,8 +3438,8 @@ it and has been retired completely. Build only on what's here.
   (`groundAt()` in `walk.ts`, `bankY()`; your kart climbs them too).
 - **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 113-225,
   z -311.5 to -191.5, its fence), local numbers via `toWorld()` /
-  `toLocal()` (u east, v south from the circuit frame's corner; `SITE_U`
-  x `SITE_V` is the circuit's frame, the site reaches past it on every
+  `toLocal()` (u east, v south from the circuit frame's corner; the
+  circuit's frame is kartcircuit.ts's, the site reaches past it on every
   side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
   one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
   `KART_CROSSINGS` (traffic drives them, off the highway at ns3, whose

@@ -35,7 +35,6 @@
  * and stairs.
  */
 import { WALK_W } from './layout';
-import { HIGHWAY_BOX } from './highway';
 import { MALL } from './westlake';
 
 export type Pt = [number, number];
@@ -265,5 +264,3 @@ export const STADIUM_RECTS: Rect[] = [
 ];
 /** All of it, for loading its grounds as you approach (districts.ts) */
 export const STADIUM_AREA: Rect = [Math.min(...STADIUM_RECTS.map((r) => r[0])), Math.min(...STADIUM_RECTS.map((r) => r[1])), Math.max(...STADIUM_RECTS.map((r) => r[2])), Math.max(...STADIUM_RECTS.map((r) => r[3]))];
-/** The highway's north side (z), for the tests: everything here is north of it */
-export const HIGHWAY_NORTH = HIGHWAY_BOX[1];

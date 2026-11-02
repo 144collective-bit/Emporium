@@ -209,33 +209,59 @@ No place's arrival spot stands on a gap (the test holds it). The south band
 alone is about two thirds of the open land; the metro's main line crosses
 it and the south strips on its way west.
 
-### Phase 1: foundations (the clean-up)
+### Phase 1: foundations (the clean-up) (built)
 
 Little changes on screen but the trees' edges.
 
-- **The palette:** `palette.ts` (DOM-free): the ground covers (`Cover`:
-  lawn, rough, dry, meadow, dirt, gravel, worn concrete, paving, field
-  crops), the kerbs, the verges, the lamp kinds and the tree kinds, each a
-  colour (and a night colour where it glows). Every district's file reads
-  its colours from here in place of its own hex values; a district picks its
-  mix, never a colour of its own. The first pass keeps every colour as it is
-  today (the shots don't change); Phase 2 retunes them together.
-- **One clearing rule:** `landuse.ts` (DOM-free, tested), on the seam map's
-  `landMap()` (Phase 0): what each cell is (street, highway, built, place,
-  park, water, rail, open), with `SOLIDS` and the metro added, and a
-  distance from built per cell. The outskirts' trees, the woods and later the props ask it, with a
-  seeded wobble on the margin so edges are ragged, not straight. It replaces
-  the scattered `keepTreesOff()` rectangles, the junction boxes and the
-  arterial strips (the tests hold that no tree stands where one couldn't
-  before). Baked at build time if it costs the boot (`baked()`).
-- **The belt without a cliff:** the outskirts' density eases with the
-  distance from built (dense by the town, thinning outwards to the woods)
-  instead of two rates on a hard edge; the same count per area overall.
-- **Leftovers out:** an audit of code and data left from retired things
-  (Build mode beyond the save's refund, `gridPlan()` if nothing reads it,
-  the stadium's and the kart park's old sites, Sector 7 Central, the street
-  races, the old crew), each removed with its tests and comments, the
-  boot's size recorded. The save's migrations stay.
+- **The palette** is `palette.ts` (DOM-free, tested in
+  `tests/palette.test.ts`): `COVER` (rough, the open land; lawn, pad,
+  planted, median, garden, island, dry, worn, worn lawn, dirt, bare,
+  paving, concrete), `KERB` (town, grit), `TREE` (the crowns' greens, the
+  trunk, the pines) and `LAMP` (white, sodium: bulb, halo, pool). world.ts
+  and every file that drew ground of its own (the fight club, the kart
+  park, the squares, the kits, Sunridge, Harbour Bridge, Uptown's streets,
+  Crestmont, The Trenches' grit and street walls, the mall, the el's and
+  Pier 7's lamps) take their colours from it; the test fails if a file
+  writes one of the ground's own colours. Every value as it was: nothing
+  changed on screen. The white lamps' warm light is also the city's warm
+  light (lanterns, lit windows, a dozen files): it stays where it is until
+  Phase 6 mixes the lamps.
+- **One clearing rule** is `landuse.ts` (DOM-free, tested in
+  `tests/landuse.test.ts` at both world sizes): `KEEPS`, everything the
+  outskirts' trees keep off (the highway and its verges, every street of
+  the plan and its slip lanes with a verge, `STREET_VERGE`, the town, the
+  mall, Crestmont's Flats, hill roads and hills, the kart park, the Docks,
+  Sunridge, The Trenches, the waterfront, Uptown, Westlake, the stadium,
+  the airport and its approach, the river and the metro's line,
+  `EL_CLEAR`), filed by tile; each margin wobbled further out by a smooth
+  seeded noise (`wobble()`, 0 to `WOBBLE` 3 tiles, never in), so a tree
+  line along a street or a district comes out ragged (the test holds the
+  verge's width varying along a straight avenue). `treeSpot()` asks it. It
+  replaced the `keepTreesOff()` calls in five modules (four of them made by
+  drawing code), the 34 x 34 boxes round the highway's junctions (the slip
+  lanes themselves are kept off now) and the strips along the arterials.
+  Keeps added since the densities were measured carry `since`, so the old
+  land's measure (`freeLand()`) still matches `BELT_FREE` / `OPEN_FREE`.
+  Placing the trees takes about 70 ms where it took about 165.
+- **The belt without a cliff:** `beltShare()` in outskirts.ts: the belt's
+  density out to `BELT_EASE.full` (8) past the town's box, easing to the
+  open land's by `fade` (40), as many trees in the band as before. The test
+  counts the trees against the land free today at the densities.
+- **Leftovers out:** the test district's ground (`drawBlock()`,
+  `drawStreet()` in kits3d.ts) and its walking slabs (`addSlabs()` in
+  walk.ts), `gridPlan()` and its blocks (streetplan.ts; the arterials,
+  `gridStreets()` / `gridCrossings()`, keep their tests), the old sites'
+  `HIGHWAY_NORTH` (stadium.ts) and `SITE_U` / `SITE_V` (kartpark.ts), and
+  the crew's last mentions in sound.ts and catalog.ts. Nothing else of the
+  retired features was left. Not retired, but unused, and left for now:
+  a few exports nothing reads (airfield.ts `CONNECTOR_NAMES`, docks.ts
+  `SIDE_NAMES`, karts.ts `kartSilhouette()`, movesim.ts `bendPull`,
+  skydeck.ts `PAVILION`, wallet.ts's helpers, site.ts `SITE_URL`) and two
+  CSS rules (`.fight-style.is-soon`, `.nowrap`).
+- **Measured:** the boot 666.7 KB of 680 (up 0.7 for the palette and the
+  rule); 995 tests at both world sizes. A headless boot logs one
+  pre-existing console error (a geometry with NaN positions,
+  `computeBoundingBox()`), the same before this phase: one for the fixes.
 
 ### Phase 2: the ground
 
