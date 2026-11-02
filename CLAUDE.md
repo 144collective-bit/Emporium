@@ -2811,8 +2811,11 @@ it and has been retired completely. Build only on what's here.
   waiting on the owner's sign-off: the place panel, the header and the City
   view's cards wear the skin too; each place's template carries its marquee
   line (`data-marquee`: made-up, fixed copy; a new place needs one), which
-  `open()` puts under its name. Until a menu moves to the new kit it keeps
-  today's look and rules. One phase at a time with the owner's sign-off; keep it up
+  `open()` puts under its name. Phase 5 is built, waiting on the owner's
+  sign-off: inside the skin the business views' goods and contracts are
+  cards and their steps clear buttons (`.market-row`, `.market-btns`: the
+  first step coin). Until a menu moves to the new kit it keeps today's
+  look and rules. One phase at a time with the owner's sign-off; keep it up
   to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.

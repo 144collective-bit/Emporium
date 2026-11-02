@@ -1510,3 +1510,76 @@
 .city-head.mk-skin .level-bar::before {
   background: var(--m-coin);
 }
+
+/* ==========================================================================
+   Business and missions (the menu plan's Phase 5): the market hall, the Workshop, Signal tower's contracts
+   and board, the Post office, the Apartments and the Vault, inside the skinned panel or the business card.
+   Goods and contracts are cards (`.market-row`), the buy and sell steps clear buttons (`.market-btns`: the
+   first step lit coin, the rest outlined, giving up in warning orange), the trends in go green and hot
+   orange, the fill bars in pixel blocks. The rules and the patching in place are tycoon-ui.ts's as before.
+   ========================================================================== */
+.mk-skin .market-row {
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  clip-path: var(--notch-2);
+}
+.mk-skin .market-top b {
+  color: var(--m-text);
+}
+.mk-skin .good-dot {
+  border: 2px solid #000;
+  box-shadow: none;
+}
+.mk-skin .market-btns button,
+.mk-skin .stall-seg button {
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 2px solid var(--m-coin);
+  background: none;
+  clip-path: var(--notch-2);
+  color: var(--m-coin);
+  font: 700 11px/1 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mk-skin .market-btns button:first-child:not(:disabled) {
+  background: var(--m-coin);
+  color: #0c0d10;
+}
+.mk-skin .market-btns button:hover:not(:disabled) {
+  border-color: #ffd25a;
+}
+.mk-skin .market-btns button:active:not(:disabled) {
+  transform: translateY(2px);
+}
+.mk-skin .market-btns button[data-drop]:not(:disabled) {
+  border-color: var(--m-hot);
+  background: none;
+  color: var(--m-hot);
+}
+.mk-skin .market-btns button:disabled,
+.mk-skin .stall-seg button:disabled {
+  border-color: var(--m-edge);
+  background: none;
+  color: #5a5d66;
+  cursor: default;
+}
+.mk-skin .trend[data-t="1"] {
+  color: var(--m-go);
+}
+.mk-skin .trend[data-t="-1"] {
+  color: var(--m-hot);
+}
+.mk-skin .stall-bar {
+  height: 8px;
+  background: repeating-linear-gradient(90deg, #ffffff12 0 6px, #0000 6px 8px);
+}
+.mk-skin .stall-bar::before {
+  background: repeating-linear-gradient(90deg, var(--m-coin) 0 6px, #0000 6px 8px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mk-skin .market-btns button:active:not(:disabled) {
+    transform: none;
+  }
+}
