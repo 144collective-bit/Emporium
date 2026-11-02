@@ -218,7 +218,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
     }
     spec = gunSpec(id);
     ADS = adsPose(id);
-    gun = buildGun(id, skinNow, { sight: true, mat: flat });
+    gun = buildGun(id, skinNow, { sight: true, mat: flat, detail: 2 });
     gun.group.rotation.y = Math.PI;
     gun.group.scale.setScalar(S);
     left.position.copy(spec.fore);

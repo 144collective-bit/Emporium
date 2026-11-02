@@ -3694,7 +3694,7 @@ it and has been retired completely. Build only on what's here.
 - **The gun store** (`gunshop.ts`, markup `data-shop` in `CityMap.astro`)
   opens at the Armoury counter. Four guns, each defined once in
   `combat-sim.ts` `WEAPONS` (stats, `need` = lifetime score that unlocks it)
-  and modelled in `guns.ts` `SPECS` (parts, muzzle, sight, hand spots): the
+  and modelled in `gunshapes.ts` `SHAPES` (parts round gunfit.ts's muzzle, sight and hand spots): the
   Assault Rifle (holo red-dot, also carried by the soldiers via
   `rifleGeometry()`), Buzz SMG, Street Sweeper shotgun (pellets, iron sights)
   and Long Shot marksman rifle (scope, full-screen scope view) unlock with
@@ -3706,7 +3706,7 @@ it and has been retired completely. Build only on what's here.
   names, brands or markings. A new gun needs a `WEAPONS` entry (with a `short` name for the Swap
   button), a `FIT` entry in `gunfit.ts` (its hand spots, muzzle and sight, a long gun's `butt`,
   third-person `hold` spot for the front hand, `carry`, `reload` kind and
-  `kick`), a `SPECS` entry in `guns.ts` (its parts), store art (`ART` in
+  `kick`), a `SHAPES` entry in `gunshapes.ts` (its parts, at each level), store art (`ART` in
   `gunshop.ts`) and a shot sound (`SHOT_SOUND` in `combat.ts`); the tests
   check the hands land on it.
 - In third person (the player and other players), `stance.ts` `holdGun()`
@@ -3753,7 +3753,16 @@ it and has been retired completely. Build only on what's here.
   `air`; the crosshair is `sim.spreadOf()`), and the shotgun loading a
   shell at a time (`SHELLS`; a pull with a shell in stops it and fires
   after the pump; `reloadAt(..., shells)` one trip a shell). New feel
-  goes in gunfeel.ts and the sim first.
+  goes in gunfeel.ts and the sim first. Phase 2 (design quality, the
+  owner's call: "less blocky") is built: the guns' shapes are
+  `gunshapes.ts` (DOM-free, tested in `tests/gunshapes.test.ts`): side
+  outlines with rounded corners extruded with a bevel (`side()`,
+  `fillet()`, `inset()`, `sound()`), rounded sections (`section()`), turned
+  barrels, muzzles, scope and cylinder (`turned()`), tube trigger guards,
+  rounded boxes (`rbox()`), at three levels (`GunDetail`: 2 first person,
+  1 in a figure's hands, 0 the soldiers' rifle, `rifleGeometry()`); guns.ts
+  gives them materials and finishes (`buildGun(..., { detail })`). Draw a
+  new gun's shape there, round its `FIT` spots.
 - Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
@@ -4018,7 +4027,7 @@ it and has been retired completely. Build only on what's here.
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
-  (`combat-sim.ts`) and how the guns feel (`gunfeel.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
+  (`combat-sim.ts`), how the guns feel (`gunfeel.ts`) and their shapes (`gunshapes.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),

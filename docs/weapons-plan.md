@@ -53,28 +53,47 @@ rules, the server and the view:
 No wire change: the shot's `n` is the browser's own prediction, the
 reload's `shell` events aren't sent and `stop` goes as a reload done.
 
-## Phase 2: design quality (next, waiting for sign-off)
+## Phase 2: design quality (built)
 
-Sharper guns, as the vehicle plan did for the cars. Today every gun in
-`guns.ts` is boxes and plain cylinders.
+The owner's go: "the guns need to look less blocky". Every gun was boxes
+and plain cylinders; their shapes are now `gunshapes.ts` (DOM-free, tested
+in `tests/gunshapes.test.ts`), and guns.ts only gives them materials and
+finishes.
 
-- Each gun's receiver, stock and grip as a side outline extruded with a
-  bevel (as the cars' bodies), barrels and sights lathe-turned, a rail
-  with its slots, the ejection port, the charging handle, the safety and
-  pins, the magazine with its ribs and witness holes, the shotgun's pump
-  grooves, the revolver's fluted cylinder, the Belt Feeder's feed cover,
-  bipod and belt.
-- The finishes (`SKINS`) on the new parts, and a light edge wear on the
-  steel.
-- Detail by distance: the first-person gun gets the most (it fills the
-  screen), the gun in Degen's hands a middle level, other players' and
-  the soldiers' rifles the plainest; each merged per material, so a gun
-  stays a few draws.
-- `FIT` doesn't move: the hands, sights, muzzles and butts stay where
-  `tests/gunfit.test.ts` holds them. The store's art (`gunart.ts`) is
-  drawn again from the new outlines.
-- Checked close up in first person and over the shoulder, by day and at
-  night, on the phone tier, and measured with `?fps` and `?bench`.
+- Receivers, stocks, grips and magazines are side outlines with rounded
+  corners (`fillet()`), extruded across the gun with a bevelled edge
+  (`side()`; the faces are inset by the bevel with `inset()`, since three's
+  negative `bevelOffset` closes holes up, and a bevel too big for a thin
+  wall is halved until the shape is `sound()`); handguards, the pump and the
+  holo's hood are rounded sections along the barrel (`section()`); barrels,
+  muzzle brakes, flash hiders, the scope, the revolver's cylinder and the
+  foregrip are turned (`turned()`, `turnedY()`: a lathe a profile segment,
+  so every shoulder keeps a hard edge; muzzles bored); trigger guards are
+  tubes along a curve; small parts are boxes with rounded edges (`rbox()`).
+- What's new on them: a raked pistol grip with finger grooves and a
+  beavertail, a curved trigger in a bent guard; the rifle's flared magwell,
+  curved magazine, slip ring, slotted handguard, folding front sight,
+  ported brake, castle nut and stock lever; the SMG's vented shroud,
+  grooved foregrip and charging knob; the shotgun's vent rib, grooved pump,
+  barrel clamp, side saddle of round shells and ghost ring; the marksman
+  rifle's slotted handguard, adjustable cheek piece, turned scope with its
+  bells, rings and turrets; the revolver's frame round the cylinder's
+  window, round barrel with its underlug and vented rib, hammer, grip frame
+  under wooden panels, fluted cylinder with its chambers; the Tri-Tap's
+  shaped bullpup body and open carry handle; the Belt Feeder's turned
+  cooling fins, top cover and belt links. The rails have their teeth, the
+  holo sights a hooded frame with a brightness knob.
+- Three levels (`GunDetail`): 2 the first-person gun (viewmodel.ts, the
+  lab), about 5-9k triangles; 1 the gun in a figure's hands (yours, other
+  players'), about 2-4k; 0 the soldiers' parade rifle and the Armoury's
+  counter (`rifleGeometry()`), under 1.2k, no bevels or small details
+  (`fine()`). Each gun stays four draws (one a material).
+- `FIT` didn't move: the tests hold the muzzle at the front, the butt pad
+  at the back, the line through a holo or the scope clear, and the front
+  hand's reload spot on the magazine, at every level.
+- The neon finish's gradient runs front to back along each accent
+  (`byKey()` lays its uv along z).
+- The store's 2D art (`gunart.ts`) is as it was.
 
 ## Later (not picked yet)
 
