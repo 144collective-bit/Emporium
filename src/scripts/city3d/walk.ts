@@ -101,6 +101,7 @@ import { bodies, swing } from './life';
 import type { Partners, StreetFists } from './brawl';
 import type { PartnerId } from './fight-moves';
 import type { FightStart } from './fight-types';
+import type { Hub } from './hub';
 import { onTap, type GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
@@ -251,6 +252,8 @@ export interface Ride {
 }
 
 export interface WalkDeps {
+  /** The hub, the pause screen (hub.ts): while it's open the keys and the gamepad are its; Start opens it */
+  hub?: Hub;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   canvas: HTMLCanvasElement;
@@ -1387,6 +1390,8 @@ export function createWalk(d: WalkDeps) {
     const c = e.code;
     // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
     if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
+    // The hub open: its own keys (menukit.ts), and walking keys wait
+    if (d.hub?.open) return false;
     // The inventory open: its keys (Tab closes it; Esc too, index.ts), and walking keys wait
     if (hotbar?.open) return hotbar.key(e, down);
     // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
@@ -1786,6 +1791,13 @@ export function createWalk(d: WalkDeps) {
     if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
     const b = gp.buttons.map((x) => x.pressed);
     const edge = (i: number) => b[i] && !pad.prev[i];
+    // The hub: the D-pad moves round it, LB / RB the tabs, A presses, B or Start closes
+    if (d.hub?.open) {
+      d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]));
+      pad.x = pad.y = 0;
+      pad.prev = b;
+      return;
+    }
     // The inventory: the D-pad moves round it, A does the selected thing, B or View closes
     if (hotbar?.open) {
       hotbar.pad(edge);
@@ -1842,6 +1854,13 @@ export function createWalk(d: WalkDeps) {
       if (edge(0)) fightUI.take();
       if (edge(1)) fightUI.close();
       padFight.x = padFight.y = 0;
+      return;
+    }
+    // Start opens the hub (the pause screen), but in a fight, where it quits
+    if (edge(9) && d.hub && !fighting()) {
+      still(false);
+      d.hub.show();
+      pad.prev = b;
       return;
     }
     // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits
@@ -3127,6 +3146,10 @@ export function createWalk(d: WalkDeps) {
     /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
       return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
+    },
+    /** The hub opened: Degen stands still, the mouse is freed */
+    pause() {
+      still();
     },
     /** True if Esc was used to free the mouse (so it shouldn't also stop walking). */
     releaseMouse() {

@@ -62,9 +62,11 @@ export function menuKit(el: HTMLElement, o: KitOpts) {
     strip.style.setProperty('--tab-x', `${btn.offsetLeft}px`);
     strip.style.setProperty('--tab-w', `${btn.offsetWidth}px`);
   }
-  /** On a tab (1) or back one (-1), wrapping */
+  /** On a tab (1) or back one (-1), wrapping, past any this mode leaves out (hidden, or not shown by the CSS) */
   function tab(dir: 1 | -1) {
-    const ids = tabBtns().map((b) => b.dataset.tab!);
+    const ids = tabBtns()
+      .filter((b) => !b.hidden && getComputedStyle(b).display !== 'none')
+      .map((b) => b.dataset.tab!);
     if (ids.length < 2) return;
     showTab(ids[tabStep(ids.length, Math.max(0, ids.indexOf(current)), dir)], true);
   }

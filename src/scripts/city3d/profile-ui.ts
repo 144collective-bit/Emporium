@@ -76,16 +76,11 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
     if (share) for (const f of lookFns) f(look);
   }
 
-  $('[data-open-fitting]').addEventListener('click', () => {
-    root.querySelector<HTMLDetailsElement>('[data-profile]')!.open = false;
-    d.openFitting();
-  });
-  root.querySelector('[data-open-char]')?.addEventListener('click', () => {
-    root.querySelector<HTMLDetailsElement>('[data-profile]')!.open = false;
-    d.openChar();
-  });
+  // (the hub closes itself first: hub.ts)
+  $('[data-open-fitting]').addEventListener('click', () => d.openFitting());
+  root.querySelector('[data-open-char]')?.addEventListener('click', () => d.openChar());
   renameBtn.addEventListener('click', () => renameFns.forEach((f) => f()));
-  // One panel open at a time in walk mode's top-left row (Controls, Profile, Online, Emote)
+  // One panel open at a time in walk mode's top-left row (the emotes: the hub has the rest)
   for (const det of root.querySelectorAll<HTMLDetailsElement>('[data-pop]')) {
     det.addEventListener('toggle', () => {
       if (!det.open) return;

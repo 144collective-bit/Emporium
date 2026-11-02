@@ -862,3 +862,371 @@
     transition: none !important;
   }
 }
+
+/* ==========================================================================
+   The hub (hub.ts, the menu plan's Phase 2): the pause screen, `[data-hub]`. Its tabs scroll across where
+   they don't fit; without the 3D city only Map shows (`.hub-3d`). Inside it the content that moved in from
+   the old pop-ups (the city's settings, the walk controls, the profile, the online list) takes the kit's
+   look; the business card keeps its own until Phase 5.
+   ========================================================================== */
+.mk-hub {
+  z-index: 8;
+}
+.mk-tabs [hidden],
+.mk-hub [hidden] {
+  display: none !important;
+}
+.city:not([data-view="3d"]) .mk-hub .hub-3d {
+  display: none;
+}
+.hub-tabs {
+  flex: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+.hub-tabs::-webkit-scrollbar {
+  display: none;
+}
+.hub-tabs button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.hub-tabs .mp-dot {
+  width: 8px;
+  height: 8px;
+}
+.hub-page {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+.hub-label {
+  margin: 6px 0 -2px;
+}
+.hub-text {
+  margin: 0;
+  color: var(--m-dim);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.mk-btn.hub-wide {
+  width: 100%;
+  justify-content: space-between;
+}
+.hub-key {
+  padding: 3px 6px 2px;
+  border: 2px solid currentColor;
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+/* Map: the places, then More and the links */
+.hub-places,
+.hub-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hub-places a,
+.hub-links a {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  height: 100%;
+  padding: 9px 10px 10px 22px;
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  clip-path: var(--notch-2);
+  color: var(--m-text);
+  text-decoration: none;
+}
+.hub-places a span,
+.hub-links a span {
+  font: 700 13px/1.1 var(--font-pixel);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.hub-places a small,
+.hub-links a small {
+  color: var(--m-dim);
+  font: 500 10px/1.25 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.hub-places a::before,
+.hub-links a::before {
+  content: "▶";
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  color: var(--m-coin);
+  font-size: 9px;
+  opacity: 0;
+}
+.hub-places a:hover,
+.hub-links a:hover,
+.hub-places a:focus-visible,
+.hub-links a:focus-visible {
+  outline: none;
+  border-color: var(--m-coin);
+}
+.hub-places a:hover::before,
+.hub-links a:hover::before,
+.hub-places a:focus-visible::before,
+.hub-links a:focus-visible::before {
+  opacity: 1;
+  animation: mk-blink 0.9s steps(1) infinite;
+}
+.hub-social {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 2px solid var(--m-edge);
+  color: var(--m-dim);
+}
+
+/* Settings: the city's time, sky and sound, the walk controls, the keys and the credits */
+.hub-sets,
+.hub-walkset {
+  display: grid;
+  gap: 10px;
+}
+.mk-hub .seg {
+  gap: 6px;
+}
+.mk-hub .seg-label {
+  width: 52px;
+  color: var(--m-dim);
+  font: 700 11px/1 var(--font-pixel);
+  letter-spacing: 0.1em;
+}
+.mk-hub .seg button,
+.mk-hub .walk-seg button,
+.mk-hub .walk-fp,
+.mk-hub .mp-mute {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 2px solid var(--m-edge);
+  border-radius: 0;
+  background: var(--m-bezel);
+  box-shadow: none;
+  clip-path: var(--notch-2);
+  color: var(--m-text);
+  font: 700 12px/1 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mk-hub .seg button:hover,
+.mk-hub .walk-seg button:hover,
+.mk-hub .walk-fp:hover {
+  border-color: #505663;
+}
+.mk-hub .seg button[aria-pressed="true"],
+.mk-hub .walk-seg button[aria-pressed="true"],
+.mk-hub .walk-fp[aria-pressed="true"] {
+  border-color: var(--m-coin);
+  background: var(--m-coin);
+  box-shadow: none;
+  color: #0c0d10;
+}
+.mk-hub .seg button:focus-visible,
+.mk-hub .walk-seg button:focus-visible,
+.mk-hub .walk-fp:focus-visible,
+.mk-hub .mp-mute:focus-visible {
+  outline: none;
+  border-color: var(--m-text);
+}
+.mk-hub .seg-wide {
+  flex: 1 1 auto;
+}
+.mk-hub .walk-field span,
+.mk-hub .walk-check span {
+  color: var(--m-dim);
+  font: 700 11px/1.2 var(--font-pixel);
+  letter-spacing: 0.08em;
+}
+.mk-hub .walk-field input,
+.mk-hub .walk-check input {
+  accent-color: var(--m-coin);
+}
+.mk-hub .walk-section {
+  margin: 4px 0 -2px;
+  padding-top: 10px;
+  border-top: 2px solid var(--m-edge);
+  color: var(--m-dim);
+  font: 700 11px/1 var(--font-pixel);
+}
+.mk-hub .walk-pad {
+  color: var(--m-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.hub-more {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 2px solid var(--m-edge);
+}
+.hub-more summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--m-coin);
+  font: 700 12px/1 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  list-style: none;
+  cursor: pointer;
+}
+.hub-more summary::-webkit-details-marker {
+  display: none;
+}
+.hub-more summary::after {
+  content: "+";
+}
+.hub-more[open] summary::after {
+  content: "−";
+}
+.hub-more summary:focus-visible {
+  outline: 2px solid var(--m-coin);
+  outline-offset: 2px;
+}
+.mk-hub .walk-keys {
+  margin-top: 6px;
+  color: var(--m-text);
+  font-size: 12.5px;
+}
+.mk-hub kbd {
+  display: inline-block;
+  padding: 2px 5px;
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  color: var(--m-text);
+  font: 700 10.5px/1.2 var(--font-mono);
+}
+
+/* Profile, Missions and Online: the old pop-ups' content on the kit's colours */
+.mk-hub .profile-name b,
+.mk-hub .walk-skins-head span:first-child {
+  color: var(--m-text);
+}
+.mk-hub .walk-skins-head {
+  font-family: var(--font-pixel);
+  color: var(--m-dim);
+}
+.mk-hub .walk-skins-row button {
+  border-radius: 0;
+  clip-path: var(--notch-2);
+}
+.mk-hub .walk-skins-row button[aria-pressed="true"] {
+  border-color: var(--m-coin);
+  box-shadow: none;
+}
+.mk-hub .wardrobe {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+.mk-hub .mp-status {
+  color: var(--m-dim);
+}
+.mk-hub [data-mp-join] {
+  justify-self: start;
+}
+
+/* Business: the card in the page, its own panel's frame, place and × left out */
+.mk-hub .stall-card {
+  position: static;
+  inset: auto;
+  display: grid;
+  width: auto;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  transform: none;
+  animation: none;
+}
+.mk-hub .stall-card .shop-title,
+.mk-hub .stall-card .shop-close {
+  display: none;
+}
+.mk-hub .stall-card .shop-head {
+  justify-content: flex-start;
+}
+
+/* The foot: the hints and, walking, Back to City view */
+.hub-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hub-foot .mk-btn {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  /* (on touch the foot keeps Back to City view, walking; nothing else) */
+  .mk-hub[data-input="touch"][data-walking="true"] .hub-foot {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .hub-places,
+  .hub-links {
+    gap: 5px;
+  }
+  .hub-places a,
+  .hub-links a {
+    padding: 8px 8px 9px 20px;
+  }
+  .hub-places a span,
+  .hub-links a span {
+    font-size: 12px;
+  }
+}
+@media (max-width: 340px) {
+  .hub-places,
+  .hub-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Phones on their side: the bar slimmer (no kicker), so the page has the height */
+@media (max-height: 500px) and (min-width: 641px) {
+  .mk-hub .mk-kind {
+    display: none;
+  }
+  .mk-hub .mk-title {
+    font-size: 20px;
+  }
+  .hub-foot {
+    padding-top: 6px;
+    padding-bottom: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hub-places a:hover::before,
+  .hub-links a:hover::before,
+  .hub-places a:focus-visible::before,
+  .hub-links a:focus-visible::before {
+    animation: none;
+  }
+}

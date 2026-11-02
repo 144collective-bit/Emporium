@@ -205,6 +205,47 @@ One menu for everything that isn't a place or a shop: the PAUSE screen.
 - Everything a test reads stays where it is (the save, the walk settings'
   key `degen-city-walk-v1`, the guide's steps).
 
+**Built** (waiting on the owner's sign-off):
+
+- `hub.ts` (markup `[data-hub]` in CityMap.astro, styles `.mk-hub` at the end
+  of menus.css): made by the page in a chunk of its own (`hubReady`), so it
+  opens before the 3D city is up and where 3D can't run (then only Map, its
+  comic and store links and X / Telegram: `.hub-3d` off); `bootCity(root,
+  wallet, hub)` gives the city its hooks (`opened`, `closed`, `tab`).
+- Opens from the header's ☰ Menu (`[data-hub-open]`, both modes), Esc (City
+  view: after a panel or the emotes; walking: after the mouse is freed and
+  whatever else Esc closes), Start walking (the fight keeps Start), the
+  Dorras readout (Business) and the level pill (Missions). Esc, its ×, B or
+  Start, and a tap outside close it. Walking it pauses the walk (Degen
+  still, the mouse freed, the keys and the gamepad its own); the walk HUD's
+  buttons and the hotbar step aside (`.is-hub`); its foot has **Back to City
+  view**.
+- Tabs: Map, Bag, Business, Missions, Profile, Settings, and Online with a
+  game server. The old pop-ups' content moved in with its `data-*` hooks, so
+  walk.ts, profile-ui.ts, multiplayer.ts and the start menu's Options work
+  as before. ☰ Menu, ⚙ Settings, the level card and the walk tabs
+  (Controls, Profile, Bag, Online, Map) are gone, and their styles with them.
+- Where it differs from the plan above:
+  - **Map** holds the World map button (M still opens it straight away), the
+    places and the links. The world map stays its own full screen: it needs
+    the room, and a canvas in a side panel would be worse.
+  - **Bag** opens the inventory, also its own full screen (drag and drop
+    across the grid), and "See what you carry" shows the business card's
+    read-only Bag.
+  - **Missions** is your level, XP and badges; the mission board and
+    Getting started stay where they are (the Signal tower's panel, the
+    City view's card).
+  - **Emote** stays a small pop in the header while online (T opens it); the
+    long-press wheel is left for later.
+  - Start opens it while walking only: the City view doesn't read a gamepad
+    yet.
+  - The business card's insides keep their look until Phase 5.
+- Checked at 320, 375, 768, 1024 and 1440 wide and on a phone on its side,
+  in both modes, and with no 3D; every way in and out, Q / E past the
+  hidden Online tab, the pills, a place from the list, the inventory from
+  Bag, Back to City view. The CSS went from 37.2 to 37.4 KB gzipped of its
+  60 (the old menus' rules went).
+
 ## Phase 3: the shops and game menus
 
 The garage (Model, Paint, Wheels, Kit, Livery, Glow, Cars / Bikes), the
