@@ -8,12 +8,13 @@ import { UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN, blockAt, cityPlan, distToStreet, gridCrossings, gridStreets, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
-import { BRIDGED_NS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SHORT_NS, SOUTH_ROAD, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
+import { BRIDGED_NS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
 import { DISTRICTS } from '../src/scripts/city3d/layout';
 import { CREST_BLOCKS, CREST_CROSSINGS } from '../src/scripts/city3d/crestmont';
 import { DOCK_BLOCKS, DOCK_CROSSINGS } from '../src/scripts/city3d/docks';
+import { BLVD_WEST, STRIP_BLOCKS, STRIP_CROSSINGS } from '../src/scripts/city3d/strip';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
 /** The arterials and where they meet (the grid the city is built on) */
@@ -22,12 +23,18 @@ const gridPlan = () => ({ streets: gridStreets(), crossings: gridCrossings() });
 test('the arterials: every road of layout.ts, edge to edge (but those with no bridge stop at the bank avenues)', () => {
   const p = gridPlan();
   const halves = NS_ROADS.length - BRIDGED_NS.length;
-  assert.equal(p.streets.length, NS_ROADS.length + halves + EW_ROADS.length);
+  // (downtown's two small east-west roads a piece either side of the Strip: layout.ts STRIP_GAP)
+  assert.equal(p.streets.length, NS_ROADS.length + halves + EW_ROADS.length + Object.keys(STRIP_GAP).length);
   for (const r of NS_ROADS) assert.ok(p.streets.some((s) => s.pts[0][0] === r.c && s.pts.at(-1)![0] === r.c && s.half === r.half && s.lanes === r.lanes), `north-south road at x ${r.c}`);
   for (const r of EW_ROADS) assert.ok(p.streets.some((s) => s.pts[0][1] === r.c && s.pts.at(-1)![1] === r.c && s.half === r.half && s.lanes === r.lanes), `east-west road at z ${r.c}`);
   for (const s of p.streets) {
     const i = NS_ROADS.findIndex((r) => s.pts[0][0] === r.c && s.pts.at(-1)![0] === r.c);
-    if (i < 0 || BRIDGED_NS.includes(i)) assert.ok(near(streetLength(s), EXT[1] - EXT[0]), `${s.id} runs edge to edge`);
+    const j = EW_ROADS.findIndex((r) => s.pts[0][1] === r.c && s.pts.at(-1)![1] === r.c);
+    if (i < 0 && j in STRIP_GAP) {
+      // (the west piece to the Parkway's crossing, the east one from the Strip's east road)
+      if (s.id === `ew${j}`) assert.ok(s.pts[0][0] === EXT[0] && Math.abs(s.pts[1][0] - STRIP_GAP[j][0]) < 0.01, `${s.id} runs from the edge to the Parkway`);
+      else assert.ok(s.id === `ew${j}e` && s.pts[0][0] === STRIP_GAP[j][1] && s.pts[1][0] === EXT[1], `${s.id} runs from the Strip's east road to the edge`);
+    } else if (i < 0 || BRIDGED_NS.includes(i)) assert.ok(near(streetLength(s), EXT[1] - EXT[0]), `${s.id} runs edge to edge`);
     else if (s.id.endsWith('s') || !(i in SHORT_NS)) assert.ok(near(streetLength(s), s.id.endsWith('s') ? EXT[1] - SOUTH_ROAD : RING_HI - EXT[0]), `${s.id} runs from the edge to its bank avenue`);
     // (the short ones from the Parkway: the mall's land past it, docs/mall-plan.md)
     else assert.ok(s.pts[0][1] < SHORT_NS[i] && s.pts[0][1] > SHORT_NS[i] - 1 && s.pts.at(-1)![1] === RING_HI, `${s.id} runs from the Parkway to its bank avenue`);
@@ -69,13 +76,13 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   // Lights where downtown's cross streets meet, where the highway meets an arterial, along Trench Avenue (trenches.ts) and
   // at every junction in Uptown (uptown.ts) but round its circle (its traffic gives way), Crestmont's and the Docks' at
   // the avenues, and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')) || CREST_CROSSINGS.some((k) => k.id === c.id && k.lights) || DOCK_CROSSINGS.some((k) => k.id === c.id && k.lights) || SUN_CROSSINGS.some((k) => k.id === c.id && k.lights));
+  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')) || CREST_CROSSINGS.some((k) => k.id === c.id && k.lights) || DOCK_CROSSINGS.some((k) => k.id === c.id && k.lights) || SUN_CROSSINGS.some((k) => k.id === c.id && k.lights) || STRIP_CROSSINGS.some((k) => k.id === c.id && k.lights));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
   // (and the stadium's, north of the highway)
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + CREST_BLOCKS.length + DOCK_BLOCKS.length + SUN_BLOCKS.length + 1 + 1 + 3);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + CREST_BLOCKS.length + DOCK_BLOCKS.length + SUN_BLOCKS.length + STRIP_BLOCKS.length + 1 + 1 + 3);
   // (Uptown North's block too, on Palm Court's old land)
   // (the stadium's, Uptown North's, and the mall's three: Palm Court, the mall, its car park)
   // Every plot and every lot sits on an outer block
@@ -89,7 +96,10 @@ test('the city\'s blocks: downtown\'s outlines, every district and lot, off the 
     // Every corner, with its sidewalk round it, stays off every road's asphalt (Uptown's circle's island: off its
     // carriageway, which its streets join at its middle)
     // (and Sunridge's entrances end on its loop's middle: a block across the loop, north of that, is off them)
-    for (const s of roads) if (b.id !== 'uptown-circle' || s.id === 'uptown-circle') for (const q of b.poly) if (!(b.ref === 'sunridge' && s.id.startsWith('sun-entry') && q[1] < s.pts[1][1])) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
+    // (and the Strip's boulevard, which ends at a T on the Parkway's line: the blocks across the Parkway are past its end)
+    for (const s of roads)
+      if (b.id !== 'uptown-circle' || s.id === 'uptown-circle')
+        for (const q of b.poly) if ((s.id !== 'strip-blvd' || q[0] > BLVD_WEST) && !(b.ref === 'sunridge' && s.id.startsWith('sun-entry') && q[1] < s.pts[1][1])) assert.ok(distToStreet(s, q) >= s.half + b.walk - 1e-6, `${b.id} corner ${q} on ${s.id}`);
   }
   // Every landmark has its block
   const places = p.blocks.flatMap((b) => b.places ?? []);

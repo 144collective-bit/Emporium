@@ -26,6 +26,7 @@ import { naturalAt } from './terrain';
 import { KART_RECTS } from './kartfacility';
 import { DOCKS_RECT, inDocks } from './docks';
 import { SUNRIDGE_RECT, inSunridge } from './sunridge';
+import { STRIP_RECT } from './strip';
 import { BEND_REACH, PARKWAY, PROMENADE, SOUTHSIDE, inTown } from './outer';
 import { TERRAIN_RECT } from './hills';
 import { AIRPORT_AREAS, RUNWAY } from './airfield';
@@ -139,6 +140,8 @@ export const KEEPS: Keep[] = [
   // The Docks (their own quays and yards, the basin), Sunridge (its own planting), The Trenches and its waterfront
   shaped('docks', DOCKS_RECT, 3, (x, z, m) => inDocks(x, z, m)),
   shaped('sunridge', SUNRIDGE_RECT, 2, (x, z, m) => inSunridge(x, z, m)),
+  // The Neon Mile: its boulevard and lots, laid out on the kart park's old land since (strip.ts)
+  land('strip', STRIP_RECT, 3, true),
   land('trenches', TRENCH_RECT, 2, true),
   land('waterfront', WATERFRONT_RECT, 2, true),
   // Uptown, Westlake Park and the stadium's block, road, car park and footbridge

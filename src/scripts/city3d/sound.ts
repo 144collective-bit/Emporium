@@ -13,6 +13,7 @@
  * Nothing plays until the visitor turns it on.
  */
 
+import { showAt } from './stripmarks';
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
 
@@ -35,6 +36,8 @@ export function createSound(given?: AudioContext) {
   /** The Trenches: the el's rumble and screech, the boombox, the hood's own (sirens, dogs) */
   let elGain: GainNode;
   let screechGain: GainNode;
+  /** The Neon Mile's volcano erupting (stripmarks.ts `volcanoRumble()`): a deep roar, lower than the el's */
+  let quakeGain: GainNode;
   let boomGain: GainNode;
   let hoodGain: GainNode;
   let nextBoom = 0;
@@ -54,6 +57,13 @@ export function createSound(given?: AudioContext) {
   let cricketGain: GainNode;
   /** Sunridge: a lawnmower now and then by day, a few gardens off */
   let mowerGain: GainNode;
+  /** The Neon Mile (docs/strip-plan.md Phase 5): its crowd's babble, the casinos' chimes, the fountain show's music */
+  let stripGain: GainNode;
+  let casinoGain: GainNode;
+  let showGain: GainNode;
+  let nextChime = 0;
+  let nextNote = 0;
+  let noteK = 0;
   let nextMower = 0;
   let nextCricket = 0;
   const BOOM_BPM = 88;
@@ -178,6 +188,7 @@ export function createSound(given?: AudioContext) {
     // The el overhead: a deep rumble, and the wheels' screech on the rails swaying in and out
     elGain = layer('lowpass', 150, 0.8, 0.3, 0.7, true);
     screechGain = layer('bandpass', 3100, 9, 0.8, 0.45);
+    quakeGain = layer('lowpass', 85, 0.9, 0.45, 1.3, true);
     // The boombox: its own beat through a small speaker (a band, a bit of crunch)
     boomGain = ctx.createGain();
     boomGain.gain.value = 0;
@@ -213,6 +224,14 @@ export function createSound(given?: AudioContext) {
     mowerGain = ctx.createGain();
     mowerGain.gain.value = 0;
     mowerGain.connect(master);
+    // The Neon Mile: a crowd's babble (noise in the voices' band, swaying), the chimes and the show's music through gains of their own
+    stripGain = layer('bandpass', 650, 0.9, 0.5, 0.35);
+    casinoGain = ctx.createGain();
+    casinoGain.gain.value = 0;
+    casinoGain.connect(master);
+    showGain = ctx.createGain();
+    showGain.gain.value = 0;
+    showGain.connect(master);
     nextMower = ctx.currentTime + 20 + Math.random() * 40;
   }
 
@@ -333,6 +352,46 @@ export function createSound(given?: AudioContext) {
     o.connect(lp).connect(g).connect(hoodGain);
     o.start(t);
     o.stop(t + len + 0.1);
+  }
+  /** Slot machines through a casino's doors: a quick run of bright bell notes, up a pentatonic scale */
+  function chime(t: number) {
+    const scale = [1568, 1760, 2093, 2349, 2637, 3136];
+    const n = 3 + Math.floor(Math.random() * 4);
+    const start = Math.floor(Math.random() * 3);
+    for (let k = 0; k < n; k++) {
+      const at = t + k * 0.07;
+      const o = ctx!.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = scale[(start + k) % scale.length];
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.05, at + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.35);
+      o.connect(g).connect(casinoGain);
+      o.start(at);
+      o.stop(at + 0.4);
+    }
+  }
+  /** The fountain show's music: a soft pad chord and a melody note over it, a step of a made-up tune each beat */
+  const TUNE = [0, 4, 7, 9, 7, 4, 2, 4, 5, 9, 12, 9, 7, 5, 4, 2];
+  const CHORDS = [[0, 4, 7], [5, 9, 12], [7, 11, 14], [4, 7, 11]];
+  const note = (semi: number) => 261.63 * Math.pow(2, semi / 12);
+  function showNote(t: number, k: number) {
+    const play = (f: number, len: number, peak: number, type: OscillatorType) => {
+      const o = ctx!.createOscillator();
+      o.type = type;
+      o.frequency.value = f;
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + Math.min(0.12, len * 0.2));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g).connect(showGain);
+      o.start(t);
+      o.stop(t + len + 0.05);
+    };
+    play(note(TUNE[k % TUNE.length] + 12), 0.9, 0.05, 'triangle');
+    // (a chord every four beats, under it)
+    if (k % 4 === 0) for (const s of CHORDS[Math.floor(k / 4) % CHORDS.length]) play(note(s - 12), 2.6, 0.022, 'sine');
   }
   /** A dog a few yards over: two or three barks */
   function dog(t: number) {
@@ -975,12 +1034,13 @@ export function createSound(given?: AudioContext) {
       set(a.out.gain, revs >= 0 ? 0.04 + r * 0.07 : 0, revs >= 0 ? 0.2 : 0.3);
     },
     /** Called every frame with the scene's state and the district's layers where you are (ambience.ts) */
-    update(rain: number, night: number, a: Ambience, rumble = 0) {
+    update(rain: number, night: number, a: Ambience, rumble = 0, quake = 0) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
       // The Trenches: the el as the train goes over, the boombox, sirens and dogs now and then
       elGain.gain.setTargetAtTime(rumble * 0.5, t, 0.3);
       screechGain.gain.setTargetAtTime(rumble * rumble * 0.035, t, 0.3);
+      quakeGain.gain.setTargetAtTime(quake * 0.75, t, 0.5);
       boomGain.gain.setTargetAtTime(a.boombox * 0.32, t, 0.4);
       clubGain.gain.setTargetAtTime(a.club * 0.55, t, 0.4);
       hoodGain.gain.setTargetAtTime(a.hood, t, 1);
@@ -1018,6 +1078,20 @@ export function createSound(given?: AudioContext) {
         mower(t);
         nextMower = t + 70 + Math.random() * 90;
       }
+      // The Neon Mile: its crowd's babble, slot machines' chimes by the casino doors, the fountain show's music while a
+      // show is on (stripmarks.ts: the same show for everyone)
+      stripGain.gain.setTargetAtTime(a.strip * 0.09, t, 1);
+      casinoGain.gain.setTargetAtTime(a.casino, t, 0.4);
+      if (a.casino > 0.15 && t > nextChime) {
+        chime(t);
+        nextChime = t + 0.5 + Math.random() * 1.6;
+      }
+      const showOn = showAt(Date.now() / 1000) >= 0;
+      showGain.gain.setTargetAtTime(showOn ? a.show : 0, t, 0.8);
+      if (showOn && a.show > 0.05 && t > nextNote) {
+        showNote(t, noteK++);
+        nextNote = t + 0.5;
+      }
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium
       buzzGain.gain.setTargetAtTime(night * 0.012 * a.city, t, 0.5);
@@ -1025,7 +1099,8 @@ export function createSound(given?: AudioContext) {
       beatGain.gain.setTargetAtTime(0.06 * a.city * (1 - yards) + a.beat * 0.5, t, 0.3);
       humGain.gain.setTargetAtTime(0.15 + 0.35 * a.city, t, 1);
       waterGain.gain.setTargetAtTime(a.water * 0.22, t, 1);
-      fountainGain.gain.setTargetAtTime(a.fountain * 0.07, t, 0.6);
+      // (and the Gondolier's jets while the show's on)
+      fountainGain.gain.setTargetAtTime(Math.max(a.fountain, showAt(Date.now() / 1000) >= 0 ? a.show * 0.8 : 0) * 0.07, t, 0.6);
       roadGain.gain.setTargetAtTime(a.road * 0.09, t, 1);
       windGain.gain.setTargetAtTime(a.open * 0.16 * (1 + rain * 0.5), t, 1.5);
     },

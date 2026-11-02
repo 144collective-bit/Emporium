@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { BELT, BELT_EASE, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, beltShare, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
 import { TOWN_BOX } from '../src/scripts/city3d/landuse';
 import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS } from '../src/scripts/city3d/bounds';
-import { EXT, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EW_ROADS, EXT, NS_ROADS, STRIP_GAP, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
 import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
 import { SUNRIDGE_RECT, inSunridge } from '../src/scripts/city3d/sunridge';
@@ -49,6 +49,21 @@ function sunWas(r: readonly number[], skip?: readonly number[], kart = false) {
     }
   return n * 4;
 }
+/**
+ * The Neon Mile's land counts as it was (its keep is `since`, landuse.ts), but for downtown's two small east-west
+ * roads, which ran across it then and stop either side of it now (layout.ts STRIP_GAP): the land under them, as
+ * freeLand counts it today, to take back off
+ */
+function stripRoads(r: readonly number[], skip?: readonly number[]) {
+  let n = 0;
+  for (const [k, [x0, x1]] of Object.entries(STRIP_GAP)) {
+    const q = EW_ROADS[+k];
+    const o = overlap(r, [x0, q.c - q.half - 0.8, x1, q.c + q.half + 0.8]);
+    for (let x = r[0] + 1; x < r[2]; x += 2)
+      for (let z = r[1] + 1; z < r[3]; z += 2) if (inBox(o, x, z) && !(skip && inBox(skip, x, z)) && treeSpot(x, z, [], false)) n++;
+  }
+  return n * 4;
+}
 const overlap = (a: readonly number[], b: readonly number[]): [number, number, number, number] => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
 
 test('the densities still fit the land the world had before Phase 6', () => {
@@ -58,8 +73,9 @@ test('the densities still fit the land the world had before Phase 6', () => {
   // (and the mall's land added back: built on since, docs/mall-plan.md; it was free but for the roads across it and
   // the highway's junctions)
   // (and Sunridge's, docs/suburb-plan.md: open land but the kart park's old site)
-  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT) + sunWas(BELT);
-  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT) + sunWas(outer, BELT);
+  // (and the roads that ran across the Neon Mile's land taken back off: docs/strip-plan.md)
+  const belt = freeLand(BELT, 2) - away(BELT) + mallWas(BELT) + sunWas(BELT) - stripRoads(BELT);
+  const open = freeLand(outer, 2, BELT) - away(outer, BELT) + mallWas(outer, BELT) + sunWas(outer, BELT) - stripRoads(outer, BELT);
   assert.ok(Math.abs(belt - BELT_FREE) / BELT_FREE < 0.03, `belt ${belt} against ${BELT_FREE}`);
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });

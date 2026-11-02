@@ -62,8 +62,16 @@ const spots: Record<SpotId, Spot> = {
   sunclub: { title: 'Sunridge Club', sub: 'Pool & clubhouse' },
   sunpark: { title: 'Sunridge Park', sub: 'Playground' },
   sunschool: { title: 'Sunridge Elementary', sub: 'School' },
+  wildace: { title: 'Wild Ace', sub: 'Neon casino' },
+  dragonspire: { title: 'Dragonspire', sub: 'Castle resort' },
+  scarab: { title: 'The Golden Scarab', sub: 'Pyramid resort' },
+  bigcity: { title: 'Big City', sub: 'Skyline resort' },
+  gondolier: { title: 'The Gondolier', sub: 'Canal palace' },
+  lagoon: { title: 'Lava Lagoon', sub: 'Lagoon resort' },
+  orbit: { title: 'Orbit', sub: 'Space-age tower' },
+  sphere: { title: 'The Sphere', sub: 'Shows' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1150,6 +1158,62 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     <h2 id="city-panel-title" class="city-panel-title">Sunridge Elementary</h2>
     <p class="city-panel-text">The suburb's school: low stucco classroom wings round a covered walk, the multipurpose room, a field with its goals, the playground, and the yellow bus out front. Classes: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="wildace" data-marquee="Bulbs, starbursts and a cowboy waving">
+    <p class="kicker"><span class="kicker-num">30</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">Wild Ace</h2>
+    <p class="city-panel-text">An old-school casino covered in bulbs and starbursts, its neon star on the roof and the neon cowboy waving over the door. The tables, the lounge and the show: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="dragonspire" data-marquee="Over the drawbridge, into the castle">
+    <p class="kicker"><span class="kicker-num">31</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">Dragonspire</h2>
+    <p class="city-panel-text">A castle on the boulevard: turrets and spires in bright colours, a drawbridge over the moat into the gatehouse, the hotel tower behind. The great hall, the tables and the tower rooms: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="scarab" data-marquee="A beam of light from the tip at night">
+    <p class="kicker"><span class="kicker-num">32</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Golden Scarab</h2>
+    <p class="city-panel-text">A pyramid of dark glass with a beam of light from its tip at night, two stepped towers beside it and a sphinx at the gate. The tomb-dark casino floor and the rooms up the slopes: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="bigcity" data-marquee="A whole skyline and a coaster round it">
+    <p class="kicker"><span class="kicker-num">33</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">Big City</h2>
+    <p class="city-panel-text">A whole skyline in one resort: little skyscrapers of a city that never was, a rollercoaster looping round them and a bridge over the pool out front. The rides, the tables and the rooms: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="gondolier" data-marquee="Gondolas at the steps, fountains on the lake">
+    <p class="kicker"><span class="kicker-num">34</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Gondolier</h2>
+    <p class="city-panel-text">An old-world palace of arcades on its own canal, gondolas at the steps, the bell tower over the lake where the fountains will dance. The gondola rides, the galleries and the rooms: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="lagoon" data-marquee="Palms, waterfalls and a volcano">
+    <p class="kicker"><span class="kicker-num">35</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">Lava Lagoon</h2>
+    <p class="city-panel-text">A curved tower of gold glass behind the palms, a lagoon out front with rocks and waterfalls, and room in it for a volcano. The tables, the lagoon bar and the rooms: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="orbit" data-marquee="The saucer deck over the Strip">
+    <p class="kicker"><span class="kicker-num">36</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">Orbit</h2>
+    <p class="city-panel-text">The space-age tower, the tallest on the Strip: a flying saucer of a sky deck ringed in neon, fins sweeping up the shaft. The sky deck, the tables and the rooms: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="sphere" data-marquee="A ball of light at the Strip's east end">
+    <p class="kicker"><span class="kicker-num">37</span> The Neon Mile</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Sphere</h2>
+    <p class="city-panel-text">A ball of light twenty tiles across at the Strip's east end, its whole skin a screen playing an eye, the moon, a planet, a wave and the Emporium's diamond in turn, seen from across the city. Shows inside: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-sphere-walkin>Walk in</button>
   </template>
 
   <div class="city-hud mk-skin" data-city-hud>

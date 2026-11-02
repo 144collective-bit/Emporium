@@ -65,6 +65,7 @@ export const AREAS: Area[] = [
   { id: 'crestmont', name: 'Crestmont', character: 'estates' },
   { id: 'trenches', name: 'The Trenches', character: 'grit' },
   { id: 'docks', name: 'Southbank Docks', character: 'industry' },
+  { id: 'strip', name: 'The Neon Mile', character: 'retail' },
   { id: 'airport', name: 'Sector 7 Airport', character: 'airport' },
   { id: 'karts', name: 'The kart park', character: 'sport' },
 ];
@@ -79,7 +80,7 @@ export function areaOfBlock(b: Block): string | null {
   if (b.id === 'uptown-north') return 'uptown-north';
   if (b.id === 'palm-court') return 'palm-court';
   if (b.id === 'mall' || b.id === 'mall-park') return 'mall';
-  const byRef: Record<string, string> = { uptown: 'uptown', westlake: 'westlake', stadium: 'stadium', sunridge: 'sunridge', crestmont: 'crestmont', trenches: 'trenches', docks: 'docks' };
+  const byRef: Record<string, string> = { uptown: 'uptown', westlake: 'westlake', stadium: 'stadium', sunridge: 'sunridge', crestmont: 'crestmont', trenches: 'trenches', docks: 'docks', strip: 'strip' };
   return (b.ref && byRef[b.ref]) ?? null;
 }
 
@@ -365,10 +366,7 @@ export const GAP_NAMES: { id: string; name: string; at: Pt }[] = [
   { id: 'south-strip-w', name: 'South strip, west', at: [7, 243] },
   { id: 'south-strip-m', name: 'South strip, middle', at: [29, 241] },
   { id: 'south-strip-e', name: 'South strip, east', at: [53, 243] },
-  // East of town north of the river, between the east roads (docs/suburb-plan.md: "stay open land for now"), north to south
-  { id: 'east-strip-n', name: 'East strip, by the east road', at: [197, 7] },
-  { id: 'east-strip-m', name: 'East strip, middle', at: [197, 29] },
-  { id: 'east-strip-s', name: 'East strip, by the river', at: [197, 53] },
+  // (the east strip, east of town north of the river, is the Neon Mile's now: docs/strip-plan.md)
   // Round Sunridge's wall to the highway and the Parkway
   { id: 'sunridge-fringe', name: "Sunridge's fringe", at: [191, -151] },
   // The verges between the park and the highway: the west, and the north (with the stadium's footbridge)

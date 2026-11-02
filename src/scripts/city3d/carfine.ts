@@ -66,7 +66,7 @@ function within(poly: V2[], conv: V2[]) {
 function crew(p: Parts, s: CarSpec) {
   const n = INTERIORS[s.id];
   if (!n) return;
-  const bus = s.id === 'bus';
+  const bus = s.id === 'bus' || s.id === 'partybus';
   const cw = s.W * s.cabinW;
   const round = bus ? 0.05 : 0.055;
   const [rb, rr, fr] = s.cabin;
@@ -135,7 +135,7 @@ function add(p: Parts, s: CarSpec, wheels: boolean, low: boolean, withCrew = fal
   const half = s.L / 2;
   const [rb, , fr, fb] = s.cabin;
   const cw = s.W * s.cabinW;
-  const bus = s.id === 'bus';
+  const bus = s.id === 'bus' || s.id === 'partybus';
 
   // The wheel wells: a dark liner round the inside of each arch and a dark wall behind the tyre, so the arch
   // is dark inside instead of open to the other side

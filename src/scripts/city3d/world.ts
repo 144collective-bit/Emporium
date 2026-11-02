@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
 import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
-import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, WALK_W, type Road } from './layout';
+import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, pointAt, riverBridges, streetLength, type Pt, type Street } from './streetplan';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
@@ -368,17 +368,22 @@ export const puddleMat = new THREE.MeshBasicMaterial({
  * road's x, a north-south road's z), each widened to the asphalt of the road that meets it: gaps in that road's median
  * and lines (and where Uptown's axis crosses it on foot, for its zebra)
  */
+/** Where east-west road `i` doesn't run across the Strip (layout.ts STRIP_GAP): its lines stop short of the Parkway and the east road */
+const stripGap = (i: number): [number, number][] => (i in STRIP_GAP ? [[STRIP_GAP[i][0] - 2, STRIP_GAP[i][1] + 2]] : []);
+
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
+  // (an east-west road past the Strip is its east piece, `ew<i>e`: layout.ts STRIP_GAP)
+  const mine = (id: string) => id === road || id === `${road}e`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.includes(road) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('sun-'))))
+    .filter((c) => c.streets.some(mine) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('strip-') || id.startsWith('sun-'))))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];
       const across = (axis === 'ew' ? EW_ROADS : NS_ROADS)[i].half;
       // Each street meeting it (a diagonal's asphalt slants across it: as far along it as it reaches)
       return c.streets
-        .filter((id) => id !== road)
+        .filter((id) => !mine(id))
         .map((id): [number, number] => {
           const s = PLAN.streets.find((q) => q.id === id)!;
           const k = s.pts.findIndex((p) => Math.hypot(p[0] - c.at[0], p[1] - c.at[1]) < 1e-6);
@@ -808,7 +813,6 @@ function basinWalls(b: Batch) {
  */
 export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, low = false) {
   const [e0, e1] = EXT;
-  const L = e1 - e0;
   const b = new Batch();
 
   // Grass everywhere, a tile at a time (growth plan Phase 5), and on past the edge under the skyline's towers
@@ -869,7 +873,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
 
   // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)
   const asphalt = toon('#26243f');
-  for (const r of EW_ROADS) b.box(e0, 0, r.c - r.half, L, 0.03, r.half * 2, asphalt);
+  // (downtown's two small east-west roads not across the Strip: layout.ts STRIP_GAP, strip.ts; its streets are strip3d.ts's)
+  EW_ROADS.forEach((r, i) => {
+    for (const [a0, a1] of i in STRIP_GAP ? [[e0, STRIP_GAP[i][0]], [STRIP_GAP[i][1], e1]] : [[e0, e1]]) b.box(a0, 0, r.c - r.half, a1 - a0, 0.03, r.half * 2, asphalt);
+  });
   // (the north-south roads with no bridge end at the bank avenues: river plan step 1)
   const bridged = (r: Road) => BRIDGED_NS.includes(NS_ROADS.indexOf(r));
   for (const r of NS_ROADS)
@@ -1104,7 +1111,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const lines = (r: Road) => (r.lanes === 1 ? [{ off: 0, yellow: true }] : [-1, 1].map((sd) => ({ off: sd * (MEDIAN / 2 + LANE), yellow: false })));
   for (const r of EW_ROADS)
     for (const { off, yellow } of lines(r))
-      for (const [a0, a1] of runsBetween(NS_ROADS, highwayGaps('ew', EW_ROADS.indexOf(r))))
+      for (const [a0, a1] of runsBetween(NS_ROADS, [...highwayGaps('ew', EW_ROADS.indexOf(r)), ...stripGap(EW_ROADS.indexOf(r))]))
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(p, 0.036, r.c + off), q0, new THREE.Vector3(0.55, 0.01, 0.07)));
   for (const r of NS_ROADS)
     for (const { off, yellow } of lines(r))

@@ -66,11 +66,11 @@ test('his feet are on the floor and the pedals inside the body', () => {
   }
 });
 
-test('the driver\'s door is between two seams, wide and tall enough to get in by; the bus has none', () => {
+test('the driver\'s door is between two seams, wide and tall enough to get in by; the buses have none', () => {
   assert.equal(INTERIORS.bus.door, undefined);
   for (const s of MODELS) {
     const d = INTERIORS[s.id].door;
-    if (s.id === 'bus') continue;
+    if (s.id === 'bus' || s.id === 'partybus') continue;
     assert.ok(d, s.id);
     assert.ok(s.seams!.includes(d.hinge) && s.seams!.includes(d.back), `${s.id}: on the body's seams`);
     assert.ok(d.hinge - d.back > 0.45, `${s.id}: wide enough`);
