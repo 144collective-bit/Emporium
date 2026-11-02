@@ -190,7 +190,7 @@ export type TargetRow = [number, number, number];
  * takedown ['k', player, target, at xyz, points, streak]
  * respawn  ['r', target]
  * empty    ['e', player]
- * reload   ['l', player, 0 started / 1 done]
+ * reload   ['l', player, 0 started / 1 done or stopped by a shot]
  * armed    ['a', player, 0 / 1]
  */
 export type NetEvent =

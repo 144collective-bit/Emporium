@@ -3740,6 +3740,20 @@ it and has been retired completely. Build only on what's here.
   hands (`viewmodel.ts`) alike; the magazine rides in the hand while it's
   `carried`, and the sounds follow `RELOAD_CUES`. Every clip starts and
   ends at rest.
+- **The weapons plan** (the owner's call: gun feel and design quality) is
+  `docs/weapons-plan.md`; keep it up to date, one phase at a time with the
+  owner's sign-off. Phase 1 (gun feel) is built: `gunfeel.ts` (DOM-free,
+  tested in `tests/gunfeel.test.ts`, read by the sim, the server and the
+  view): recoil patterns by each shot's place in its string (`RECOIL`,
+  `recoilAt()`, the sim's `string` and the shot's `n`; walk.ts kicks the
+  view up and across and gives back `recover` of it after, less what you
+  pulled back yourself), aiming over each gun's `ADS` time (the sim's
+  `ads` eases the cone; the first-person hands at the same pace), moving
+  and jumping opening the cone (`moveSpread()`, the input's `move` and
+  `air`; the crosshair is `sim.spreadOf()`), and the shotgun loading a
+  shell at a time (`SHELLS`; a pull with a shell in stops it and fires
+  after the pump; `reloadAt(..., shells)` one trip a shell). New feel
+  goes in gunfeel.ts and the sim first.
 - Finishes (`SKINS`) are cosmetic and work on every gun. Lifetime score,
   finish and last gun are saved in the browser under `degen-city-combat-v1`
   (or the player profile online).
@@ -4004,7 +4018,7 @@ it and has been retired completely. Build only on what's here.
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
-  (`combat-sim.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
+  (`combat-sim.ts`) and how the guns feel (`gunfeel.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),

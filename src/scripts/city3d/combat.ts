@@ -17,6 +17,11 @@
  *   magazine numbers follow the modded gun.
  * - Left mouse fires full auto, one shot a pull or a burst a pull (the gun
  *   decides), right mouse aims (the holo red-dot in first person), R reloads.
+ * - Each shot kicks the view by its place in the string (gunfeel.ts
+ *   `recoilAt()`: up and to the side, the same pattern every time), handed to
+ *   walk mode by `update()` with the share it takes back after (`recover`);
+ *   the crosshair opens with the cone the rules will fire in (moving and
+ *   jumping too); the shotgun's shells go in one at a time, each its sound.
  *   Phones get Fire, Aim and Reload buttons and a little aim assist; gamepads
  *   fire on RT and reload on X.
  * - Targets: cardboard dummies and patrol drones. People and cars are never
@@ -34,6 +39,7 @@ import { MOVES, type MoveId } from './fight-moves';
 import { SKINS, buildGun, gunSpec, type Gun, type SkinId } from './guns';
 import { holdGun, newStance } from './stance';
 import { FIT, RELOAD_CUES } from './gunfit';
+import { ADS, RECOIL, recoilAt } from './gunfeel';
 import type { Outfit, Pose } from './character';
 import { createViewmodel, type ViewState } from './viewmodel';
 import { gunMods, ownsGun } from './tycoon';
@@ -287,6 +293,8 @@ export function createCombat(d: CombatDeps) {
   me.weapon = profile.weapon;
   /** The gun's rules (rate, spread, kick...) for whatever Degen is carrying, with its mods on */
   const W = () => sim.weaponOf(ME);
+  /** 0..1 through the reload under way (0 when not reloading); a shell-at-a-time one's length is its shells' */
+  const reloadFrac = () => (me.reload > 0 && me.reloadTotal > 0 ? 1 - me.reload / me.reloadTotal : 0);
   /** May Degen have this gun: a starter his score unlocked, or a gun he bought at the Armoury */
   const owns = (id: WeaponId) => weaponUnlocked(id, (netProfile ?? profile).total) && ownsGun(d.game.save(), id);
   /** The loadout he carries (the save's inventory): the guns he may have, gun 1 first */
@@ -356,7 +364,9 @@ export function createCombat(d: CombatDeps) {
   const byHand = (target: number, melee?: boolean) => !!melee || (lastMelee.target === target && performance.now() - lastMelee.at < 800);
   let aiming = false;
   let firstPerson = false;
-  let kick = 0;
+  /** The recoil since the last frame: up and to the side (radians), and the share walk mode gives back after the string */
+  const kick = { up: 0, side: 0, recover: 0 };
+  const shotKick = { up: 0, side: 0 };
   let flashT = 0;
   let hitT = 0;
   let killT = 0;
@@ -626,10 +636,14 @@ export function createCombat(d: CombatDeps) {
       case 'shot': {
         if (e.player !== ME) break;
         const w = WEAPONS[e.weapon];
-        // One bang and one kick per pull; every pellet gets its tracer and its puff
+        // One bang and one kick per pull (its place in the string sets which way); every pellet gets its tracer and its puff
         if (e.pellet === 0) {
           d.sfx(SHOT_SOUND[e.weapon]);
-          kick += aiming ? w.kick * 0.7 : w.kick;
+          const k = e.weapon === me.weapon ? W().kick : w.kick;
+          recoilAt(e.weapon, aiming ? k * 0.7 : k, e.n, shotKick);
+          kick.up += shotKick.up;
+          kick.side += shotKick.side;
+          kick.recover = RECOIL[e.weapon].recover;
           flashT = 0.05;
           vm.kick(Math.min(2.4, 0.7 + w.kick * 30));
         }
@@ -683,6 +697,11 @@ export function createCombat(d: CombatDeps) {
         break;
       case 'reload':
         lastReload = 0;
+        // A shell at a time: each push, and the pump when it's done or stopped by a shot
+        if (e.player === ME && FIT[me.weapon].reload === 'shells') {
+          if (e.phase === 'shell') d.sfx('magin');
+          else if (e.phase === 'stop' || e.phase === 'done') d.sfx('bolt');
+        }
         break;
       case 'armed':
         if (e.player === ME) {
@@ -831,7 +850,7 @@ export function createCombat(d: CombatDeps) {
     },
     /** 0..1 through a reload (0 when not reloading) */
     get reloading() {
-      return me.reload > 0 ? 1 - me.reload / W().reload : 0;
+      return reloadFrac();
     },
     /** The gun Degen carries (or will get at the store) */
     get weapon() {
@@ -977,21 +996,26 @@ export function createCombat(d: CombatDeps) {
       if (t) lastMelee = { target: t.id, at: performance.now(), kick: MOVES[move].kind === 'kick' };
       return !!t;
     },
-    /** Per frame while walking, before the camera moves (t is 0 under reduced motion). Returns the recoil to add to the camera pitch. */
-    update(dt: number, t: number, aim: boolean) {
+    /**
+     * Per frame while walking, before the camera moves (t is 0 under reduced motion); `move` how fast he's going
+     * (tiles a second) and `air` off the ground, for the cone. Returns the recoil since the last frame (the view
+     * up and to the side, and the share to give back after the string; read it before the next call).
+     */
+    update(dt: number, t: number, aim: boolean, move = 0, air = false) {
       aiming = aim;
       motion = t > 0;
       steppedAt = performance.now();
       applyMods();
       camera.getWorldDirection(fwd);
-      sim.setInput(ME, { fire: me.armed && (trigger || touchFire), aim, assist: touchFire && !trigger, origin: camera.position, dir: fwd });
+      kick.up = kick.side = 0;
+      sim.setInput(ME, { fire: me.armed && (trigger || touchFire), aim, assist: touchFire && !trigger, origin: camera.position, dir: fwd, move, air });
       sim.advance(dt, motion);
       for (const e of sim.drain()) onEvent(e);
       step(dt, t);
 
       showWeapon(me.weapon);
       // Reload sounds, in step with the hands (each gun's clip in gunfit.ts)
-      const r = me.reload > 0 ? 1 - me.reload / W().reload : 0;
+      const r = reloadFrac();
       if (r > 0) for (const [at, cue] of RELOAD_CUES[FIT[me.weapon].reload]) if (lastReload < at && r >= at) d.sfx(cue);
       lastReload = r;
       paintHud();
@@ -1007,7 +1031,7 @@ export function createCombat(d: CombatDeps) {
         hud.hit.classList.toggle('is-kill', hitNow === 'kill');
         hitShown = hitNow;
       }
-      const spread = `${Math.round(Math.min(0.08, me.spread + (aim ? W().spreadAim : W().spreadHip)) * 600)}px`;
+      const spread = `${Math.round(Math.min(0.08, sim.spreadOf(ME)) * 600)}px`;
       if (spread !== crossShown) {
         hud.cross.style.setProperty('--spread', spread);
         crossShown = spread;
@@ -1020,14 +1044,12 @@ export function createCombat(d: CombatDeps) {
           pops.splice(i, 1);
         }
       }
-      const k = kick;
-      kick = 0;
-      return k;
+      return kick;
     },
     /** Per frame while walking, after the camera has moved: the first-person hands */
     view(dt: number, t: number, s: Omit<ViewState, 'armed' | 'reload'> & { firstPerson: boolean }) {
       firstPerson = s.firstPerson;
-      vm.update(camera, dt, t, { ...s, armed: me.armed, reload: me.reload > 0 ? 1 - me.reload / W().reload : 0 }, s.firstPerson);
+      vm.update(camera, dt, t, { ...s, armed: me.armed, reload: reloadFrac(), shells: me.shells || undefined, adsTime: ADS[me.weapon] }, s.firstPerson);
       root.classList.toggle('is-ads', s.firstPerson && vm.aimed > 0.6);
       // All the way down the Long Shot's scope: a full-screen scope view (walk.css)
       root.classList.toggle('is-scoped', s.firstPerson && me.armed && gunSpec(me.weapon).sight.kind === 'scope' && vm.aimed > 0.92);
@@ -1043,7 +1065,7 @@ export function createCombat(d: CombatDeps) {
         drawn = 0;
         return false;
       }
-      const reload = me.reload > 0 ? 1 - me.reload / W().reload : 0;
+      const reload = reloadFrac();
       // Out of the hands to swap: the old gun goes away, the new one comes out (SWAP_TIME both ways)
       const swapping = me.weapon !== shownWeapon;
       const want = me.armed && !swapping ? 1 : 0;
@@ -1053,7 +1075,7 @@ export function createCombat(d: CombatDeps) {
       // Ready for a while after shooting, aiming or reloading; otherwise (and sprinting) carried relaxed
       readyT = s.aim > 0.05 || reload > 0 || trigger || touchFire ? READY_HOLD : Math.max(0, readyT - s.dt);
       ready += ((readyT > 0 && s.run < 0.5 ? 1 : 0) - ready) * Math.min(1, s.dt * 6);
-      holdGun(pose, stance, pivot, gun, { aim: s.aim, ready, draw: drawn, pitch: s.pitch, recoil: s.recoil, reload, dt: s.dt });
+      holdGun(pose, stance, pivot, gun, { aim: s.aim, ready, draw: drawn, pitch: s.pitch, recoil: s.recoil, reload, shells: me.shells || undefined, dt: s.dt });
       return drawn > 0;
     },
     /** How far his head is down on the stock (0..1): the look added after it goes only the rest of the way */
