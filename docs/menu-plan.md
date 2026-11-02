@@ -341,6 +341,17 @@ Drop 001's fitting room and the character screen, the toasts, the badge
 and level-up pops, the mission tracker, the compass, the hotbar, the
 prompt: in the kit's type and shapes.
 
+**Built** (waiting on the owner's sign-off): `.mk-skin` on Drop 001's fitting
+room (in the skinned panel), the character screen, the inventory, the world
+map's frame, and the walk HUD's prompt, key hints, toasts, pops, the
+mission tracker, the compass and the hotbar (CityMap.astro). Headings the
+brand drew as gradient text are plain coin (a lost result's in warning
+orange). The walk hint's Esc reads "menu" now (Esc opens the hub). The
+touch buttons (the stick, Fire, Punch and the rest) keep their round look:
+they're the game's controls, not a menu. Checked on a desktop and a phone:
+the fitting room, the walk HUD, the inventory, the world map and the
+character screen.
+
 ## Phase 7: polish and clean-up
 
 Every menu checked at every width, upright and on its side, by day and at
