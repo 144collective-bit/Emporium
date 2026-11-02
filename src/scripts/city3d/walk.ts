@@ -101,7 +101,7 @@ import { bodies, swing } from './life';
 import type { Partners, StreetFists } from './brawl';
 import type { PartnerId } from './fight-moves';
 import type { FightStart } from './fight-types';
-import type { GameDeps } from './ui';
+import { onTap, type GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
@@ -1644,8 +1644,9 @@ export function createWalk(d: WalkDeps) {
   });
   jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
   jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
-  runBtn.addEventListener('click', () => setSprintLock(!sprintLock));
-  crouchBtn.addEventListener('click', () => {
+  // (the touch buttons answer a finger at once, with the thumb still on the stick: onTap() in ui.ts)
+  onTap(runBtn, () => setSprintLock(!sprintLock));
+  onTap(crouchBtn, () => {
     crouchPress();
     // (a crouch lets go of the locked sprint, which would stand him straight back up)
     if (crouched) setSprintLock(false);
@@ -1688,18 +1689,14 @@ export function createWalk(d: WalkDeps) {
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
   }
   // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
-  root.querySelector('[data-fight-punch]')?.addEventListener('click', () => {
-    fightBtns.punch = true;
-    d.touched();
-  });
-  root.querySelector('[data-fight-kick]')?.addEventListener('click', () => {
-    fightBtns.kick = true;
-    d.touched();
-  });
-  root.querySelector('[data-fight-dodge]')?.addEventListener('click', () => {
-    fightBtns.dodge = true;
-    d.touched();
-  });
+  for (const k of ['punch', 'kick', 'dodge'] as const) {
+    const b = root.querySelector(`[data-fight-${k}]`);
+    if (b)
+      onTap(b, () => {
+        fightBtns[k] = true;
+        d.touched();
+      });
+  }
   const blockBtn = root.querySelector<HTMLButtonElement>('[data-fight-block]');
   if (blockBtn) {
     blockBtn.addEventListener('pointerdown', (e) => {
@@ -1720,7 +1717,7 @@ export function createWalk(d: WalkDeps) {
     settings.invert = invertInput.checked;
     saveSettings();
   });
-  prompt.addEventListener('click', act);
+  onTap(prompt, act);
   // Touch: hold Fire (and drag it to aim, so one thumb shoots and steers), tap Reload, tap Swap
   const fireBtn = $('[data-walk-fire]');
   let fireAt: { id: number; x: number; y: number } | null = null;
@@ -1742,9 +1739,12 @@ export function createWalk(d: WalkDeps) {
       fireAt = null;
       combat.trigger(false, true);
     });
-  $('[data-walk-reload]').addEventListener('click', () => combat.reload());
+  onTap($('[data-walk-reload]'), () => {
+    combat.reload();
+    d.touched();
+  });
   // (the hotbar's step: through the fists and the guns)
-  $('[data-walk-swap]').addEventListener('click', () => {
+  onTap($('[data-walk-swap]'), () => {
     stepSlot(1);
     d.touched();
   });
@@ -1754,7 +1754,7 @@ export function createWalk(d: WalkDeps) {
     aim = on;
     aimBtn.setAttribute('aria-pressed', String(on));
   };
-  aimBtn.addEventListener('click', () => {
+  onTap(aimBtn, () => {
     setAim(!aim);
     d.touched();
   });
