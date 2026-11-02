@@ -116,10 +116,10 @@ export const INFLUENCES: Influence[] = [
   around('crestmont', CREST_RECT, 'dryGrass', 22, 0.5),
   // The airport's mown, sun-dried grass, and the Docks' gravel and dry grass
   ...AIRPORT_AREAS.map((r, i) => around(`airport-${i}`, r, 'dryGrass', 30, 0.55)),
-  around('docks', DOCKS_RECT, 'dryGrass', 28, 0.5),
+  around('docks', DOCKS_RECT, 'dryGrass', 28, 0.45),
   around('docks-yard', DOCKS_RECT, 'gravel', 9, 0.6),
   // The Trenches: worn grass, bare dirt at its edge
-  around('trenches', TRENCH_RECT, 'worn', 20, 0.65),
+  around('trenches', TRENCH_RECT, 'worn', 20, 0.5),
   around('trenches-edge', TRENCH_RECT, 'bare', 6, 0.4),
   // Lusher by the river (its banks are the river's own, river.ts; this is the grass running down to them)
   { id: 'river', cover: 'bank', reach: 10, strength: 0.6, box: [SKY[0], RIVER[0] - 10, SKY[2], RIVER[1] + 10], dist: (_x, z) => Math.max(0, RIVER[0] - z, z - RIVER[1]) },

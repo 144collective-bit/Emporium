@@ -1344,6 +1344,16 @@ it and has been retired completely. Build only on what's here.
     hex of its own (the test holds it); the one clearing rule for the
     outskirts' trees (`landuse.ts`, above under the world's size) and the
     belt eased out.
+  - Phase 2 (the ground) is built: `ground.ts` (DOM-free, tested in
+    `tests/ground.test.ts`): `coverAt()` / `colourAt()`, the open land's
+    mix (rough grass, meadow and dry grass patches, `openMix()`) with each
+    of `INFLUENCES` laid over it (a worn verge along every street, the
+    highway's dry verges, each district's ground fading out round it over a
+    wobbled reach); world.ts paints it on the ground's vertices
+    (`paintGround()`, the grid from `groundStep()`: one quad under a
+    district, coarse far out, coarser on phones), the hills starting from
+    it. A district's ground round it goes in `INFLUENCES`, its colours in
+    the palette.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
