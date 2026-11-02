@@ -5,8 +5,6 @@
  * and the page says the city needs 3D graphics.
  */
 import * as THREE from 'three';
-import { RING_HI, WIDEN } from './layout';
-import { AVENUE_Z } from './trenches';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { CROWD_PACK, loadMocap } from './mocap-load';
@@ -18,8 +16,8 @@ import { buildBusStops } from './transit3d';
 import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
-import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, keepTreesOff, scatterOutskirts, waterMat, type Env, type Tick } from './world';
-import { PARK_LAMPS, PARK_TREES, WESTLAKE_RECT } from './westlake';
+import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { PARK_LAMPS, PARK_TREES } from './westlake';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
@@ -43,7 +41,7 @@ import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
 import { LIFT, TOWER_SPAWN } from './skydeck';
-import { STADIUM_LAMPS, STADIUM_RECTS, STADIUM_SPAWN } from './stadium';
+import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -51,7 +49,6 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { AIRPORT_END, ARCH, BRANCH, LINE_X, NORTH_R, SPUR_CLEAR, WEST_END, WEST_R } from './metro';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
@@ -314,19 +311,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     spots.push(pickSpot(scene, 'sunpark', SLAB, [{ rect: PARK_LAND, h: 1 }], PARK_LAND, 4.2));
     spots.push(pickSpot(scene, 'sunschool', SLAB, [...SCHOOL.wings.map((rect) => ({ rect, h: SCHOOL.h + 0.3 })), { rect: SCHOOL.hall.rect, h: SCHOOL.hall.h + 0.3 }], SCHOOL_LAND, SCHOOL.hall.h + 2.8, mid(SCHOOL.hall.rect)));
   }
-  // ...and the metro's el where it crosses the open land south of the south row: no trees under it
-  keepTreesOff([-10, 125 + WIDEN, 56, 135 + WIDEN]);
-  // (and its Airport branch, bending east off the avenue over the open land to the airport: docs/airport-plan.md Phase 3)
-  keepTreesOff([LINE_X - 6, BRANCH.south - 4, AIRPORT_END + 6, BRANCH.z + 6]);
-  // (and its run west past The Trenches over the highway to Southbank Docks and north over the river: docs/docks-plan.md Phase 2)
-  keepTreesOff([WEST_END - WEST_R - 6, AVENUE_Z - 6, -186, AVENUE_Z + 6]);
-  keepTreesOff([ARCH.x - 6, RING_HI - 2, ARCH.x + NORTH_R + 4, AVENUE_Z]);
-  // (and Crestmont's spur, round outside the highway's north-east corner: docs/crestmont-plan.md Phase 9)
-  for (const r of SPUR_CLEAR) keepTreesOff(r);
+  // (the outskirts' trees keep off the metro's line, the districts and the streets by one rule: landuse.ts)
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
-  keepTreesOff(WESTLAKE_RECT);
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
@@ -359,8 +347,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...the vendors at their carts and their customers
   for (const p of STREETLIFE_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB, ry: p.ry, act: p.act });
   for (const [x, z] of UPTOWN_GARDEN_TREES) addTree(x, z, 0.8, false);
-  // ...and the stadium's, north of the highway (stadium.ts): no trees on its block, its road and car park or under its footbridge
-  for (const r of STADIUM_RECTS) keepTreesOff(r);
+  // ...and the stadium's, north of the highway (stadium.ts)
   for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);

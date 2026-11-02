@@ -1170,14 +1170,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>) {
  */
 export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
   // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
-  for (const t of outskirtsTrees(count, sparse, CLEAR)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : 0);
+  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : 0);
 }
 
-/** Land the outskirts' trees keep off besides the town (The Trenches', the metro's el over open land) */
-const CLEAR: [number, number, number, number][] = [];
-export function keepTreesOff(rect: [number, number, number, number]) {
-  CLEAR.push(rect);
-}
 
 /** The world's half-width the skyline's `count` is for (before Phase 6): a wider world's ring has more towers, as far apart */
 const SKYLINE_REACH = 220;

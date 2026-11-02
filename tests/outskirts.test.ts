@@ -4,7 +4,8 @@
 // sees as far as the skyline past the edge. Runs at today's size and at Phase 10's (npm run test:wide).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BELT, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
+import { BELT, BELT_EASE, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, beltShare, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
+import { TOWN_BOX } from '../src/scripts/city3d/landuse';
 import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS } from '../src/scripts/city3d/bounds';
 import { EXT, NS_ROADS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
@@ -63,21 +64,32 @@ test('the densities still fit the land the world had before Phase 6', () => {
   assert.ok(Math.abs(open - OPEN_FREE) / OPEN_FREE < 0.03, `open land ${open} against ${OPEN_FREE}`);
 });
 
-test('the world before Phase 6 keeps the trees it had (but by the highway), each where a tree may stand', () => {
-  for (const count of [250, 150, 90]) {
-    const all = outskirtsTrees(count, 0.6, [], TODAY);
-    // (less the ones where the ring highway now runs, Phase 7: its north side crosses that land; the ones on the
-    // airport's old land left out of the count, as it's open again)
-    const trees = all.filter((t) => !inBox(OLD_AIRPORT, t.x, t.z));
-    // (and less the ones Sunridge's land took, at the belt's and the open land's densities)
-    const want = count * (1.6 - sunWas(BELT, undefined, true) / BELT_FREE - (0.6 * sunWas([TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4], BELT, true)) / OPEN_FREE);
-    const had = trees.length + (count * 1.6 - want);
-    assert.ok(had <= count * 1.6 * 1.08 && had > count * 1.6 * 0.86, `${trees.length} for ${count} (${had.toFixed(0)} with Sunridge's land's)`);
+test('as many trees as the densities give the land free today, each where a tree may stand, the belt easing out', () => {
+  // (the world before Phase 6 is mostly districts now: its trees are counted against the land a tree may stand on
+  // today, at the belt's density by the town easing to the open land's, docs/blend-plan.md Phase 1)
+  const land: [number, number, number, number] = [TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4];
+  // (2,500 for the count: enough trees that the random tries' noise is a few per cent; the tiers' 250, 150 and 90 for
+  // where they stand)
+  for (const count of [2500, 250, 150, 90]) {
+    const trees = outskirtsTrees(count, 0.6, [], TODAY);
+    const [belt, open] = [count / BELT_FREE, (count * 0.6) / OPEN_FREE];
+    let want = 0;
+    for (let x = land[0] + 1; x < land[2]; x += 2)
+      for (let z = land[1] + 1; z < land[3]; z += 2) if (treeSpot(x, z)) want += 4 * (open + (belt - open) * beltShare(x, z));
+    if (count === 2500) assert.ok(Math.abs(trees.length - want) / want < 0.08, `${trees.length} for ${count}, the land gives ${want.toFixed(0)}`);
     for (const t of trees) {
       assert.ok(treeSpot(t.x, t.z));
-      assert.ok(t.x > TODAY[0] + 4 && t.x < TODAY[1] - 4 && t.z > TODAY[0] + 4 && t.z < TODAY[1] - 4);
+      assert.ok(t.x > land[0] && t.x < land[2] && t.z > land[1] && t.z < land[3]);
     }
   }
+  // The belt's share eases from 1 by the town to 0, never a step
+  let last = 1;
+  for (let d = 0; d < BELT_EASE.fade + 10; d += 0.5) {
+    const k = beltShare(TOWN_BOX[2] + d, (TOWN_BOX[1] + TOWN_BOX[3]) / 2);
+    assert.ok(k <= last + 1e-9 && last - k < 0.05, `the belt's share at ${d} past the town`);
+    last = k;
+  }
+  assert.equal(last, 0);
   assert.deepEqual(outskirtsTrees(150, 0.6, [], TODAY), outskirtsTrees(150, 0.6, [], TODAY), 'seeded');
 });
 

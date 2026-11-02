@@ -10,11 +10,11 @@
 import * as THREE from 'three';
 import { Batch, neon, rng, toon } from './kit';
 import { LANE, MEDIAN } from './layout';
-import { SLAB, addLamp, keepTreesOff } from './world';
+import { SLAB, addLamp } from './world';
 import { site } from './tilework';
 import { PLAN, offsetLine, type Pt, type Street } from './streetplan';
 import type { Rect } from './downtown';
-import { AXIS_X, AXIS_ZEBRAS, CIRCLE, LANE_HALF, LAYBYS, UPTOWN_CROSSINGS, UPTOWN_LAMPS, UPTOWN_RECT, UPTOWN_STREETS, laybyRect } from './uptown';
+import { AXIS_X, AXIS_ZEBRAS, CIRCLE, LANE_HALF, LAYBYS, UPTOWN_CROSSINGS, UPTOWN_LAMPS, UPTOWN_STREETS, laybyRect } from './uptown';
 
 /** A street a district adds to the plan: straight, along x or z */
 export interface DistrictStreet {
@@ -400,7 +400,6 @@ function drawUptown() {
 
 /** Uptown's streets (uptown.ts), clean (`drawUptown()`); the lamps along its avenues and cross streets; the axis's zebras over them */
 export function buildUptownStreets() {
-  keepTreesOff(UPTOWN_RECT);
   drawUptown();
   for (const [x, z, ry] of UPTOWN_LAMPS) addLamp(x, z, ry);
   // Zebras where the Mall's axis crosses each avenue and cross street (either side of an avenue's median)
