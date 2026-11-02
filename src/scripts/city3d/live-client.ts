@@ -5,12 +5,12 @@
  * for a visit when the backend can't be reached. Everything that's gated asks
  * `live` as it happens, and `onChange()` hears when something changed.
  *
- * Off for the texture bake and the benchmark (`?bake-textures`, `?bench`),
- * so neither depends on the backend.
+ * Off for the texture bake, the benchmark and the review shots (`?bake-textures`, `?bench`, `?shots`),
+ * so none of them depends on the backend.
  */
 import { LIVE_KEY, LIVE_TIMEOUT, LIVE_URL, NO_LIVE, POLL_MS, closedLine, featureGate, featureName, placeGate, readLive, sameLive, type FeatureId, type Live } from './live';
 
-const OFF = /[?&](bake-textures|bench)\b/.test(location.search);
+const OFF = /[?&](bake-textures|bench|shots)\b/.test(location.search);
 
 function lastCopy(): Live {
   if (OFF) return NO_LIVE;

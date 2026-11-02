@@ -110,6 +110,7 @@ import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW, figureDetail } from './character';
 import type { GameDeps } from './ui';
 import type { Bench } from './bench';
+import type { Shots } from './shots';
 import { mb, sceneMemory } from './perf';
 import { tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
@@ -1218,6 +1219,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     void import('./bench').then(({ createBench }) => {
       bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
     });
+  // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
+  let shots: Shots | null = null;
+  if (query.has('shots'))
+    void import('./shots').then(({ createShots }) => {
+      shots = createShots(
+        {
+          root,
+          conditions: benchSky,
+          built: () => !works.stats().waiting && !districts.pending(),
+          want: (cam) => works.wantView(planesOf(cam), Q.far, cam.position.x, cam.position.y, cam.position.z),
+        },
+        query.get('shots') === 'night'
+      );
+    });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   function bootTimes() {
@@ -1329,8 +1344,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
 
-    // The benchmark has the camera while it runs
-    if (bench?.active && !walking) {
+    // The benchmark has the camera while it runs (and the review shots while they hold a view)
+    if (shots?.place(camera, controls.target) && !walking) dirty = true;
+    else if (bench?.active && !walking) {
       if (flight) {
         flight = null;
         controls.enabled = true;
@@ -1394,7 +1410,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
-    if (bench) districts.all();
+    if (bench || shots) districts.all();
     districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
@@ -1494,6 +1510,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         post.shadowStat.calls = post.shadowStat.tris = 0;
       }
       post.render();
+      shots?.drawn();
       dirty = false;
       if (!bootAt.first) {
         bootAt.first = performance.now();

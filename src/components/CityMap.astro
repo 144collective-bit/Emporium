@@ -1466,7 +1466,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
     live.onChange(paintLive);
     // (a notice's from and until come round on their own)
     setInterval(() => paintBanner(live.now), 60_000);
-    // ?bench (the benchmark, bench.ts): straight into the 3D city, no menu
-    if (new URLSearchParams(location.search).has('bench') && gl) enter(false);
+    // ?bench (the benchmark, bench.ts) and ?shots (the review shots, shots.ts): straight into the 3D city, no menu
+    if ((new URLSearchParams(location.search).has('bench') || new URLSearchParams(location.search).has('shots')) && gl) enter(false);
   }
 </script>
