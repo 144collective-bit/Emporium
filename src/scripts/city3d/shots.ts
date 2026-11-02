@@ -30,8 +30,8 @@ const HOLD = 12;
 export function createShots(d: ShotsDeps, night: boolean) {
   d.root.classList.add('is-shots');
   const style = document.createElement('style');
-  // (only the city: its header, HUD, cards and pins hidden)
-  style.textContent = '.city.is-shots > :not([data-city3d]), .city.is-shots .city-pins, .city.is-shots .city-stats { visibility: hidden !important; }';
+  // (only the city: its header, HUD, cards and pins hidden; opacity, which nothing inside can turn back on as it can visibility)
+  style.textContent = '.city.is-shots > :not([data-city3d]), .city.is-shots .city-pins, .city.is-shots .city-stats { opacity: 0 !important; pointer-events: none !important; }';
   document.head.append(style);
   d.conditions(night);
   let view: ReviewView | null = null;
