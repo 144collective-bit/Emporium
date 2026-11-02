@@ -296,21 +296,42 @@ Little changes on screen but the trees' edges.
 - **Seen:** `docs/blend-shots/phase-2-try/before-after.webp` (five views,
   desktop by day, before and after).
 
-### Phase 3: the block edges
+### Phase 3: the block edges (built)
 
-- **A kerb on streets only:** each block's outline split into runs (Sunridge
-  already has them: a street's kerb or the land's edge): along a street the
-  slab and kerb as today, along open land or a park the slab eased down to
-  the ground over a short slope, its edge a verge by district: a hedge
-  (homes, Westlake, Crestmont), a low wall (Uptown, the mall), a chain-link
-  fence or a concrete kerb (The Trenches, the Docks, yards), or just grass.
-  Rounded outer corners where the outline allows.
-- **Walking and driving:** the eased edge is ground (`groundAt()` and the
-  slabs in walk.ts), the hedges and walls solid where they're tall, the
-  tests holding every way in open.
-- **One kerb colour family:** kerbs from the palette, the grey and the
-  purple each kept where they are but meeting through a shared stone where
-  districts touch.
+- **The verges** are `verges.ts` (DOM-free, tested in
+  `tests/verges.test.ts`; worked out when the site is built, `baked()` key
+  `verges`, so the boot carries the list, not the search): each straight
+  side of every block's slab walked a tile at a time and looked past
+  (`OUT`), and where it's open land (`openAt()`: off every street of the
+  plan and the highway, Uptown's lay-bys and Coral Drive's bays, every
+  slab, the water, the docks' basin and the airport) the stretch is a
+  verge, a step in from the corners; and the Parkway's and the Southside
+  Loop's outer kerbs, a verge a piece where the belt lies past them. 248
+  in all: about 1,800 tiles of block edge (The Trenches along the highway,
+  Westlake Park, Sunridge's land, the stadium, Palm Court, the mall,
+  Uptown and Uptown North, Crestmont) and 360 of the bends'.
+- **The bank:** along each the slab eases down to the ground over `RAMP`
+  (1.1), drawn by world.ts's `buildVerges()` in pieces a tile or less long:
+  the block's own cover at the top, the ground's colour there at the foot
+  (ground.ts), its ends closed. Walking and driving follow it
+  (`vergeY()` in walk.ts's `groundAt()`).
+- **The district's edge** along the foot (`BY_CHARACTER`): a clipped hedge
+  round the town and Crestmont's estates (its top a shade lighter, near
+  only), a low stone wall with a coping round Uptown, Uptown North, Palm
+  Court and the mall; the park, the stadium, The Trenches, the Docks and
+  Sunridge (its own perimeter wall) just the bank. A way through `GAP`
+  wide every `GAP_EVERY` (12) along a run (a bend's verges count from its
+  start, `s0`, so their gaps keep one spacing). Solid (`VERGE_SOLIDS`, in
+  `SOLIDS`), low enough to vault (in vault.ts's `LOW_THINGS`), clear of
+  everything else solid and every place's spot (the test); the outskirts'
+  trees keep off the banks and the hedges (`KEEPS` in landuse.ts).
+- **Kerbs:** the grey and the purple never meet (the seam map: a street
+  between The Trenches and the south row everywhere), so no shared stone
+  was needed; both are the palette's.
+- Not done: the block's corners keep their kerb step (the verges stop a
+  step short of each corner, so the bank and the kerb never fight).
+- Measured: the boot 668 KB of 680; about 2,000 bank triangles and 514
+  hedge and wall boxes (the bends' in short slanting pieces).
 
 ### Phase 4: gentle rolls
 
