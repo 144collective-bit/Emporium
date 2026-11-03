@@ -1572,6 +1572,22 @@ it and has been retired completely. Build only on what's here.
     `lampTone()` (each lamp seeded from where it stands; The Trenches' dead
     and flickering ones its own), read by `buildLamps()` in world.ts. A new
     sodium district goes in `SODIUM_AREAS`.
+  - Phase 6b (the first seam, downtown and the town across the ring avenue)
+    is built: `ringstreet.ts` (DOM-free, tested in `tests/ringstreet.test.ts`):
+    `RING_SIDES`, the same town lamp on both sidewalks (`RING_LAMPS`, by the
+    kerb, `KERB_IN`; about every `LAMP_GAP` between junctions,
+    `JUNCTION_CLEAR` from them; clear of the shelters, alley mouths, the
+    metro's door and solids; added in neighbourhoods.ts) and Uptown's planted
+    median carried round downtown (`RING_MEDIAN`, `HEDGE`, `HEDGE_CLEAR`,
+    `TREE_GAP`; round the el's pillars, no tree under the el; drawn with the
+    medians in world.ts).
+  - Phase 6c (the second seam, Uptown and Westlake Park across the north
+    avenue) is built in `ringstreet.ts` too: `PARK_SIDE_LAMPS` (the same lamp
+    across from each of Uptown's on the park's sidewalk, flanking the gates,
+    `GATE_CLEAR`), the north side's planted median carried on west to
+    Uptown's west edge (its `median` span, broken at the axis's zebra) and
+    `PARK_EDGE_TREES` (a row just inside the park's wall, `EDGE_TREE_GAP`,
+    `EDGE_TREE_IN`), added in neighbourhoods.ts.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -2981,9 +2997,9 @@ it and has been retired completely. Build only on what's here.
   screen; the title with a shadow under it, each button its own dark chip,
   touches between them going through to the game). The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
-  other pages. In play (walk mode: walking, driving, flying, boating,
-  karting, fighting) only the hub's button stays, with the gun's readout and
-  the emotes where they are (controls.css). Left to right: the mode title and
+  other pages. Walk mode carries the same header as the City view (the
+  owner's call, after Phase 5 had it down to ☰ in play), so City / Walk
+  switches between the two from either. Left to right: the mode title and
   subtitle (City view, Walk mode), then on the
   right (the emotes, online, and ammo and score while walking), the City /
   Walk switch (the current mode lit with a glow and a gradient underline,
@@ -3088,7 +3104,8 @@ it and has been retired completely. Build only on what's here.
   icon and word, and its slot in `LAYOUTS`; anything new pinned near the
   buttons goes in `clash()`. Phase 5 (the clear header and the installed
   game) is built, waiting on the owner's sign-off: the header clear and
-  without its logo on every screen, only ☰ in play (above); installed (added
+  without its logo on every screen (walk mode's the City view's, above, the
+  owner's later call); installed (added
   to the home screen) the game opens full screen with no browser bars
   (`public/site.webmanifest`: `display` fullscreen, standalone on iPhones,
   whose status bar stays, black; the meta tags in `Base.astro`). Phase 6
@@ -3614,8 +3631,9 @@ it and has been retired completely. Build only on what's here.
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
   clicked.
-- While walking (`body.is-walking`, set in `index.ts`) the header carries
-  only the emotes (online), ammo and score and the hub's button (on phones the ammo is the hotbar's, the score the
+- While walking (`body.is-walking`, set in `index.ts`) the header is the
+  City view's (the title, Dorras, the level, City / Walk, ☰) and carries
+  the emotes (online), ammo and score too (on phones the ammo is the hotbar's, the score the
   hub's and the emotes the hub's Online tab's: the controls plan's Phase 3). The touch buttons stay at the bottom (hidden while
   the hub is open, `.is-hub`).
 - The gun store is the menus' kit's sample (`.mk-store`, gunshop.ts): the
@@ -4423,7 +4441,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway and the lamps' mix (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix and the ring avenue (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

@@ -292,6 +292,10 @@
   .city[data-view][data-mode] .city-head .walk-top {
     display: none;
   }
+  /* (with the walk tabs gone the title pushes the rest to the right in walk mode too, as in the City view) */
+  .city[data-mode="walk"] .city-head-id {
+    margin-right: auto;
+  }
   .hotbar .hb-res {
     display: block;
   }
@@ -332,9 +336,9 @@
 /* ---------- The clear header (docs/controls-plan.md Phase 5; the owner's picks) ----------
    No bar and no logo on any screen: the title floats over the game with a shadow under it, and the buttons
    (Dorras, the level, City / Walk, the hub's) keep their own dark fills, so each reads as a chip over a bright
-   street. Touches between them go through to the game. In play (walking, driving, flying, boating, karting,
-   fighting) only the hub's button stays, with the gun's readout and the emotes where they are; the title,
-   Dorras, the level, City / Walk, the Online switch and Connect wallet are in the City view and the hub. */
+   street. Touches between them go through to the game. Walk mode carries the same header as the City view (the
+   owner's call, after Phase 5 had it down to ☰ in play): the title, Dorras, the level, City / Walk to switch
+   between the two, and ☰, with the gun's readout and the emotes where they are. */
 .city .city-head {
   background: none;
   -webkit-backdrop-filter: none;
@@ -353,12 +357,6 @@
     0 1px 0 #000,
     0 0 3px #000,
     0 0 10px #000c;
-}
-.city[data-mode="walk"] .city-head :is(.city-head-id, .city-head-modes, .dorras-pill, .level-pill, .city-online, .nav-account) {
-  display: none;
-}
-.city[data-mode="walk"] .city-head {
-  justify-content: flex-end;
 }
 
 /* ---------- Arranging the buttons (docs/controls-plan.md Phase 6, arrange-ui.ts) ----------
