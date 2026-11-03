@@ -2,7 +2,7 @@
 // one is bundled first with esbuild (packages like three stay as imports).
 //   npm test                 every test
 //   npm test -- drive        only files whose name contains "drive"
-//   npm run test:wide        every test in a bigger world (growth plan Phase 10's: WORLD_EXT=-680,720)
+//   npm run test:wide        every test in a bigger world than the site's (WORLD_EXT=-940,980; the site's is -680 to 720)
 import { build } from 'esbuild';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readdirSync, rmSync } from 'node:fs';

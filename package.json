@@ -9,7 +9,7 @@
     "preview": "astro preview",
     "typecheck": "astro sync && tsc --noEmit -p . --noUnusedLocals",
     "test": "node scripts/test.mjs",
-    "test:wide": "WORLD_EXT=-680,720 node scripts/test.mjs",
+    "test:wide": "WORLD_EXT=-940,980 node scripts/test.mjs",
     "budget": "node scripts/budget.mjs",
     "bake:textures": "node scripts/bake-textures.mjs",
     "mocap": "node scripts/mocap.mjs",
