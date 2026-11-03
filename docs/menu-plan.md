@@ -359,3 +359,26 @@ night, with a mouse, touch and a gamepad, under reduced motion; the old
 styles each menu left behind removed (and the PulseChain gradient with
 them, wherever only the menus used it); the budgets measured and this plan
 marked done.
+
+**Built.** The plan is done (the owner's sign-off on the last phase to come):
+
+- Checked the hub's every tab, a place panel, walk mode and the hub over it
+  at 320, 375, 768, 1024 and 1440 wide and on a phone on its side
+  (Playwright, the software renderer): nothing off the screen, no sideways
+  scroll, no text cut by its box (the only flags were labels hidden on
+  purpose for screen readers, and panels caught mid-slide). At night
+  (Settings' Night) the kit reads the same: its panels are their own dark,
+  not the sky's. Under reduced motion nothing in the kit moves (the hub and
+  its pages: no animation). A real gamepad wasn't available to test; its
+  wiring (Start, the d-pad, LB / RB, A, B) is walk.ts's and was checked by
+  reading.
+- Clean-up: every rule for the menus that went (the old ☰ Menu, Settings,
+  the level card, the walk tabs, `armoury.css`) was removed in its phase; a
+  scan for classes no source mentions finds only ones the code builds at
+  run time. The PulseChain gradient stays defined: the comic page and the
+  site use it, and inside the city's menus `.mk-skin` redefines it as the
+  kit's palette. CLAUDE.md says a new menu in the city uses `.mk` or
+  `.mk-skin`, never the gradient.
+- Budgets: the CSS is 38.6 KB gzipped of its 60 (34.1 before the plan),
+  the boot's script 666.0 of 680, the page's own script 5.9 of 8.
+
