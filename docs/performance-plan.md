@@ -534,3 +534,16 @@ against 6.5-6.9); the boot's download 659.9 KB gzipped (17.6 KB off, 20 KB under
 its budget). Not done: target practice as a chunk of its own (walk mode calls it in
 67 places, synchronously: a bigger change), and letting far districts go on
 phones and far districts as simple blocks (items 5 and 6 of the survey, next).
+
+## Reduced motion draws the whole crowd (found by the first-person plan's Phase 7)
+
+- Under `prefers-reduced-motion` the city's life runs once and stands
+  still, so the crowds aren't culled to the view (`CROWD_VIEW.on = !reduced`
+  in index.ts): everyone is drawn, at the near level. Measured headless at
+  the airport's hangar: about 40M triangles a frame, against about 2.3M for
+  the same view with motion on. The controls work; it's only heavy, worst
+  on a phone.
+- The fix, when it's taken up: cull the still crowd again whenever the
+  camera moves (its people in place, the clock held), so a still city
+  draws only what's in view, as a moving one does. Not built yet.
+

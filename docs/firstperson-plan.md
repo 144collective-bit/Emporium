@@ -447,11 +447,41 @@ hold.
   that opens; the controls' reach was worked out for one pilot in the
   middle of each cabin (none of them has a second seat).
 
-### Phase 7: checked
+### Phase 7: checked (built)
 
-- Every view at 320, 375, 768, 1024 and 1440 wide, upright and on its
-  side, by day and at night, in rain, under reduced motion; `?bench`
-  before and after on a phone and a laptop; the budgets.
+- **The sweep** (headless Chromium on a software GPU, against the dev
+  server): on foot, the three cockpits and the hire boat's helm at 1440,
+  1024, 768 upright, 667 on its side, 375 and 320 upright (the narrow ones
+  as touch screens with the touch controls), by day, at sunset and at
+  night, in rain and under reduced motion. No page errors, nothing
+  scrolling sideways at any width. The panels read at night (the gauges'
+  faces and the jet's screens lit under the bloom, the cabins dark round
+  them); rain beads on the boat's windscreen.
+- **Found and fixed**: on an upright screen the views were narrow across
+  (a phone held upright cut the Sky Hopper's outer gauges, a tablet the
+  Neon Dart's speed tape). `fpFov()` in fpcam.ts (tested) widens every
+  first-person view a little on an upright screen (`PORTRAIT`: 24 degrees
+  a step of aspect under 1, at most 12): on foot, the car's, bike's and
+  kart's seats, the helm, the cockpits and the ring's eyes. Phones line
+  the cockpits with fewer facets.
+- **Found, not first person's** (left for the performance plan): under
+  reduced motion the crowd is drawn whole (`CROWD_VIEW.on` is off: the
+  city's life runs once and stands still, so the crowd isn't culled to
+  the view), about 40M triangles a frame where the same view draws about
+  2.3M with motion on. The controls still work (the Sky Hopper ran up to
+  speed); it's only heavy. The fix would cull the still crowd again
+  whenever the camera moves, with the clock held.
+- **The bench** (headless, the medium tier; draws and triangles, its frame
+  times a software GPU's), against Phase 0's: `fp-street` 635 draws,
+  2.29M (was 635, 2.32M); `fp-square` 571, 2.66M (was 549, 2.57M: the
+  square's own view grew as much, 455 from 427, with what's been built
+  since); `fp-seat` 464, 2.35M (was 469, 2.41M). A phone's and a
+  laptop's numbers are the owner's to paste back from `?bench`.
+- **The budgets**: the boot's code 690.4 KB of 700, the biggest lazy chunk
+  37.4 of 60, the CSS 38.7 of 60; everything first person added past the
+  boot is in its chunks (the cockpits, the gun hands' polish, the seats'
+  eyes, the boat's helm).
+- **The plan is done.**
 
 ## Not in it
 

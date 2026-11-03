@@ -1757,7 +1757,11 @@ it and has been retired completely. Build only on what's here.
   part (aircraft.ts role `glass`, `fleet.glass()`), hidden from the seat;
   fly.ts lays the seat's eye (seateye.ts `seatEye('plane')`) on the camera,
   banking with it, the near plane in (the numbers and the eye ride in the
-  chunk: `cockpit.view`, `cockpit.look()`). The boot is at 690.4 KB; its
+  chunk: `cockpit.view`, `cockpit.look()`). Phase 7 (checked at every
+  width, upright and on its side, by day and at night, in rain and under
+  reduced motion) is built, and the plan is done: every first-person view
+  widens a little on an upright screen (`fpFov()` in fpcam.ts, `PORTRAIT`;
+  a new first-person view goes through it). The boot is at 690.4 KB; its
   budget was raised to 700 on the owner's go ("raise the budget when
   needed").
 - **The vehicle upgrade** (the owner's call: more detail and more function
@@ -2877,7 +2881,8 @@ it and has been retired completely. Build only on what's here.
     `index.ts`; people in the shadow box take instances from the front,
     the rest from the back (moved up behind them at `commit()`), and the
     shadow map draws only the front ones. Under reduced motion it's off and
-    everyone is drawn near. A new crowd move is a new clip in `CLIP_DEFS`.
+    everyone is drawn near (heavy: about 40M triangles a frame at the
+    airport; the fix waits in `docs/performance-plan.md`). A new crowd move is a new clip in `CLIP_DEFS`.
   - Outfits (`suit`, `hoodie`, `track`, `soldier`) only change clothes and
     colours; poses come from the helpers in `poses.ts` (DOM-free; walk/run
     by formula, idle, look, chat, sit, march, attention/salute, dance, the
