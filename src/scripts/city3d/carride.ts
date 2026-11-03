@@ -14,7 +14,13 @@
  *   reduced motion).
  * - `eye()` for the driver's-seat camera: his eyes, turned as you look
  *   round, and no rain falling inside the cabin while you sit in it (the
- *   rain's shader is given a hole round it, `hole`).
+ *   rain's shader is given a hole round it, `hole`). From the seat
+ *   (docs/firstperson-plan.md, Phase 4) the eye moves on fpcam.ts's rules
+ *   over the springs' own ride (`stepFp()` in `ride()`: a lurch on the
+ *   throttle and the brakes, a sway against the turn, the eyes into it, a
+ *   jolt on a kerb or a knock, `jolt()`); his right hand goes to the hub
+ *   for the horn (`horn()`); the indicators' arrows light as they tick;
+ *   the mirror greys in the rain.
  * - `door()` (Phase 3): a front door swung open as the hand lands on its
  *   handle getting in (walk.ts) or as you get out (drive.ts), and shut after;
  *   `seat()`, wrapped: the door you came in by shuts after you, from the
@@ -28,7 +34,9 @@ import type { Car } from './cars';
 import type { Moving } from './carcabin';
 import { INTERIORS } from './carinside';
 import { SPRINGS, newSprings, stepSprings, wheelsOf } from './suspension';
-import { fx, glowTex, lit } from './kit';
+import { fx, glowTex, lit, litOf } from './kit';
+import { joltFp, newFpCam, stepFp } from './fpcam';
+import { ARROW_OFF, ARROW_ON, mirrorMat } from './carcabin';
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const now = () => performance.now() / 1000;
@@ -46,6 +54,14 @@ const SWEEP = 2.3;
 const WIPE = 1.1;
 const WET = 0.2;
 const WIPE_ARC = 1.6;
+/** The horn: how long his hand stays on the hub after a press, and how quickly it goes there and back */
+const HORN_HOLD = 0.35;
+const HORN_EASE = 14;
+/** A kerb's step under a wheel (tiles) that knocks through the seat, and the jolt for each tile of it */
+const KERB_KNOCK = 0.05;
+const KNOCK = 5;
+/** The mirror in the rain: grey over the painted view */
+const RAIN_GREY = new THREE.Color(0.7, 0.72, 0.78);
 
 /* ---------- Skid marks ---------- */
 
@@ -201,10 +217,17 @@ export function rideOn(car: Car, m: Moving) {
   pools.visible = false;
   car.group.add(pools);
   const lights = car.lights;
+  let shown: string | null = null;
   car.lights = (brake, reverse, turn) => {
     lights(brake, reverse, turn);
     (brake ? BRAKE_WASH : DARK).toArray(col, 3);
     poolGeo.attributes.color.needsUpdate = true;
+    // (the indicators' arrows in the binnacle, as the lamps tick)
+    if (turn !== shown) {
+      shown = turn;
+      m.arrows[0]?.material.color.set(turn === 'L' ? ARROW_ON : ARROW_OFF);
+      m.arrows[1]?.material.color.set(turn === 'R' ? ARROW_ON : ARROW_OFF);
+    }
   };
   const dispose = car.dispose;
   car.dispose = () => {
@@ -255,6 +278,15 @@ export function rideOn(car: Car, m: Moving) {
     slid = from && !reduced ? 0 : 1;
   };
 
+  // From the seat: the eye's motion over the springs' ride (fpcam.ts), a knock on a kerb; the horn's hand
+  const fp = newFpCam();
+  let view = fp.out;
+  const last = [0, 0, 0, 0];
+  let hornT = 0;
+  let hornK = 0;
+  car.jolt = (k) => joltFp(fp, k);
+  car.horn = () => void (hornT = HORN_HOLD);
+
   car.ride = (st, dt, slip, accel, revs, top, y, groundAt) => {
     const c = Math.cos(st.yaw);
     const sn = Math.sin(st.yaw);
@@ -266,6 +298,10 @@ export function rideOn(car: Car, m: Moving) {
       ground[i] = Math.abs(g) < 0.3 ? g : 0;
     }
     stepSprings(sp, tune, at, { ax: Math.max(-12, Math.min(12, accel)), ay: st.speed * st.yawRate, ground }, dt);
+    let knock = 0;
+    for (let i = 0; i < 4; i++) (knock = Math.max(knock, Math.abs(ground[i] - last[i]))), (last[i] = ground[i]);
+    if (knock > KERB_KNOCK) joltFp(fp, Math.min(0.6, knock * KNOCK));
+    view = stepFp(fp, 'car', { speed: Math.abs(st.speed), top: 0, fwd: Math.max(-12, Math.min(12, accel)), side: -st.speed * st.yawRate, turn: st.yawRate, bob: 0, reduced }, dt);
     const b = m.body;
     b.rotation.set(sp.r, 0, sp.p);
     b.position.set(0, sp.h, 0).add(pivot).sub(P.copy(pivot).applyEuler(b.rotation));
@@ -281,7 +317,9 @@ export function rideOn(car: Car, m: Moving) {
     const turn = st.steer * STEER_RATIO;
     m.steer.rotation.x = turn;
     const hold = Math.max(-HANDS_MOST, Math.min(HANDS_MOST, turn));
-    if (!(Math.abs(hold - turned) < 0.003)) m.hands((turned = hold));
+    hornT -= dt;
+    const hk = hornK + ((hornT > 0 && !reduced ? 1 : 0) - hornK) * Math.min(1, dt * HORN_EASE);
+    if (!(Math.abs(hold - turned) < 0.003) || Math.abs(hk - hornK) > 0.002) m.hands((turned = hold), (hornK = hk));
     const [speedo, rev] = m.needles;
     if (speedo) speedo.rotation.x += (-SWEEP + 2 * SWEEP * Math.min(1, Math.abs(st.speed) / (top * 1.05)) - speedo.rotation.x) * Math.min(1, dt * 10);
     if (rev) rev.rotation.x += (-SWEEP + 2 * SWEEP * revs - rev.rotation.x) * Math.min(1, dt * 12);
@@ -294,6 +332,8 @@ export function rideOn(car: Car, m: Moving) {
     if (!reduced && (wet > WET || wipe % 1 > 0.02)) wipe += dt / WIPE;
     const k = 0.5 - 0.5 * Math.cos(2 * Math.PI * wipe);
     for (const w of m.wipers) w.rotation.y = -WIPE_ARC * k;
+    // (the mirror greys as it rains: its painted view's colour, under the time of day's)
+    litOf(mirrorMat())?.base?.setRGB(1, 1, 1).lerp(RAIN_GREY, Math.min(1, wet * 1.5));
 
     // The skid marks under the rear wheels (a piece per 0.15 moved), and their fading
     clock += dt;
@@ -323,11 +363,13 @@ export function rideOn(car: Car, m: Moving) {
     const w = m.body;
     w.updateWorldMatrix(true, false);
     pos.set(n.eye[0] + 0.02, n.eye[1], n.eye[2]).applyMatrix4(w.matrixWorld);
+    pos.y += view.y;
     head(false);
     const up = -0.2 - pitch * 0.7;
     dir.set(Math.cos(up) * Math.cos(yaw), Math.sin(up), -Math.cos(up) * Math.sin(yaw)).transformDirection(w.matrixWorld);
     look.copy(pos).addScaledVector(dir, 5);
     Q.copy(cabin).applyMatrix4(w.matrixWorld);
     hole.set(Q.x, Q.y, Q.z, roomy);
+    return view;
   };
 }

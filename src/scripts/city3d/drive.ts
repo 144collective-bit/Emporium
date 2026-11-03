@@ -47,6 +47,7 @@ import { bodies } from './life';
 import { DRIVE, FEEL, type MyCar, type PlayerCar } from './mycar';
 import type { KartId } from './mykart';
 import type { Box } from './solids';
+import type { FpView } from './fpcam';
 
 export interface DriveDeps {
   scene: THREE.Scene;
@@ -127,6 +128,9 @@ export function createDrive(d: DriveDeps) {
     /** The roof camera's height and how far forward it sits */
     roof: number;
     roofFwd: number;
+    /** The bike's helmet and the kart's seat from his own eyes (seateye.ts, V's second view), and when it's down */
+    eye?(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number, dt: number, st: CarState): FpView;
+    eyeOff?(): void;
   }
   let car: Out | null = null;
   let kart: Out | null = null;
@@ -210,6 +214,8 @@ export function createDrive(d: DriveDeps) {
       bank: 0,
       roof: taken.bike.eye.y,
       roofFwd: taken.bike.eye.x,
+      eye: taken.bike.look,
+      eyeOff: taken.bike.lookOff,
     };
     v.tune = tuneOf(v);
     place(v);
@@ -239,6 +245,8 @@ export function createDrive(d: DriveDeps) {
       bank: 0,
       roof: 0.95,
       roofFwd: -0.1,
+      eye: taken.kart.eye,
+      eyeOff: taken.kart.eyeOff,
     };
     v.tune = tuneOf(v);
     place(v);
@@ -427,7 +435,7 @@ export function createDrive(d: DriveDeps) {
       v.seat?.(null);
       place(v);
       hud.hidden = true;
-      root.classList.remove('is-driving', 'in-car', 'on-bike');
+      root.classList.remove('is-driving', 'in-car', 'on-bike', 'is-visor');
       delete root.dataset.car;
       d.engine(-1);
       d.tyres(0);
@@ -523,6 +531,7 @@ export function createDrive(d: DriveDeps) {
       if (!out || out.kind === 'kart' || clock - lastHorn < 0.5) return;
       lastHorn = clock;
       d.sfx('horn');
+      out.car?.horn?.();
     },
     /** Is the car locked (a countdown)? */
     get frozen() {
@@ -552,6 +561,7 @@ export function createDrive(d: DriveDeps) {
       if (hit > 1.2) {
         d.sfx('bump', Math.min(1, hit / 7));
         shake = Math.min(0.25, hit * 0.03);
+        v.car?.jolt?.(hit / 7);
       }
       // The lights (drive-sim.ts carLights): brake lights, reversing lights, the indicators flashing
       const lights = carLights(s, frozen ? { throttle: 0, steer: 0, handbrake: false } : inp, signal, dt);
@@ -600,10 +610,12 @@ export function createDrive(d: DriveDeps) {
       const yaw = camYaw + lookYaw;
       const fx = Math.cos(yaw);
       const fz = -Math.sin(yaw);
-      if (view > 1 && v.car?.eye) {
-        v.car.eye(camPos, at, lookYaw, lookPitch);
-        camera.position.copy(camPos);
-      } else if (view && v.bike) {
+      // From the seat (your car's, the bike's helmet, the kart's): the eye and its motion (fpcam.ts), laid on below
+      const fe = view > 1 ? v.car?.eye?.(camPos, at, lookYaw, lookPitch) : view ? v.eye?.(camPos, at, lookYaw, lookPitch, dt, s) : undefined;
+      if (!fe || view !== 1) v.eyeOff?.();
+      root.classList.toggle('is-visor', !!fe && !!v.bike);
+      if (fe) camera.position.copy(camPos);
+      else if (view && v.bike) {
         // Your helmet: his eyes, leaning with the bike, looking up the road
         camPos.copy(v.bike.eye);
         v.group.localToWorld(camPos);
@@ -632,12 +644,17 @@ export function createDrive(d: DriveDeps) {
         shake = Math.max(0, shake - dt * 1.2);
       }
       camera.lookAt(at);
+      if (fe) {
+        camera.rotateY(fe.yaw);
+        camera.rotateX(fe.pitch);
+        camera.rotateZ(-fe.roll);
+      }
       // (the helmet's view tips with the lean)
       if (view && v.bike) camera.rotateZ(-roll * 0.6);
       const wantFov = (view ? 68 : 58) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
       fov += (wantFov - fov) * damp(4, dt);
       // (the seat's view is close to the dash and the wheel: the near plane comes in for it)
-      const close = view > 1 ? 0.08 : near0;
+      const close = view > 1 || fe ? 0.08 : near0;
       if (Math.abs(camera.fov - fov) > 0.05 || camera.near !== close) {
         camera.fov = fov;
         camera.near = close;

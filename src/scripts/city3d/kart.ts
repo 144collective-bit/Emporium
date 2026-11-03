@@ -242,6 +242,9 @@ interface View {
   flames: THREE.Mesh[];
 }
 
+/** From the driver's seat or behind (V): kept from race to race */
+let eyes = false;
+
 export function createKartRace(d: KartRaceDeps): KartRace {
   const { scene, camera, root } = d;
   const group = new THREE.Group();
@@ -316,8 +319,51 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   const side = new THREE.Vector3();
   const at = new THREE.Vector3();
 
+  /**
+   * From the driver's seat (V; docs/firstperson-plan.md, Phase 4): his own eyes over the wheel and his hands on it,
+   * the pods and the nose, the kerbs coming at you (karts.ts `eye()`, seateye.ts); kept for the next race
+   */
+  let lastYaw = NaN;
+  const near0 = camera.near;
+  const seatNear = (on: boolean) => {
+    const n = on ? 0.08 : near0;
+    if (camera.near !== n) {
+      camera.near = n;
+      camera.updateProjectionMatrix();
+    }
+  };
+  function placeEye(p: Racer, dt: number) {
+    const v = views[p.i];
+    if (!v) return;
+    const turn = Number.isFinite(lastYaw) && dt > 0 ? wrap(p.yaw - lastYaw) / dt : 0;
+    lastYaw = p.yaw;
+    const fe = v.kart.eye(camPos, at, 0, 0, dt, { speed: p.speed, yawRate: turn });
+    camera.position.copy(camPos);
+    if (shake > 0 && !d.reduced) {
+      camera.position.y += (Math.random() - 0.5) * shake * 0.3;
+      shake = Math.max(0, shake - dt * 1.4);
+    }
+    camera.lookAt(at);
+    camera.rotateY(fe.yaw);
+    camera.rotateX(fe.pitch);
+    camera.rotateZ(-fe.roll);
+    seatNear(true);
+    const wantFov = 68 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 8 + (p.boostT > 0 ? 5 : 0);
+    fov += (wantFov - fov) * damp(4, dt);
+    if (Math.abs(camera.fov - fov) > 0.05) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
+  }
+  const eyesOff = () => {
+    if (sim) views[sim.player.i]?.kart.eyeOff();
+    lastYaw = NaN;
+    seatNear(false);
+  };
+
   function placeCamera(p: Racer, dt: number) {
     if (!sim) return;
+    if (eyes) return placeEye(p, dt);
     camYaw = camReady ? camYaw + wrap(p.yaw - camYaw) * damp(4, dt) : p.yaw;
     const fxx = Math.cos(camYaw);
     const fzz = -Math.sin(camYaw);
@@ -913,8 +959,13 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       ghostsOn = { yours: !!on.yours, par: !!on.par };
       showGhosts();
     },
+    toggleView() {
+      eyes = !eyes;
+      if (!eyes) eyesOff();
+    },
     exit() {
       if (active) {
+        eyesOff();
         clearRace();
         active = false;
         if (Math.abs(camera.fov - fov0) > 0.05) {

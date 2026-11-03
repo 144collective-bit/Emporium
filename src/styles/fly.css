@@ -149,3 +149,14 @@
     "detail"
     "foot";
 }
+
+/* The bike's helmet from his own eyes (drive.ts `is-visor`, docs/firstperson-plan.md Phase 4): the visor's edge
+   round the top and the sides, soft, the road clear in the middle */
+.city.is-visor .city3d::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(120% 92% at 50% 80%, transparent 60%, #07060d99 78%, #07060dee 94%);
+}

@@ -296,18 +296,50 @@ hold.
   from one.
 - **Cost**: the boot's code is 688.8 KB of 690.
 
-### Phase 4: the car, the bike and the kart
+### Phase 4: the car, the bike and the kart (built)
 
-- **Car:** the eye on `fpcam.ts` from its springs (`suspension.ts`): the
-  body's lurch on the brakes and the throttle, bumps through the seat, a
-  look into the turn with the steering; the hand to the horn; more on the
-  dash by model (indicator arrows lit as they tick, the electric's screen,
-  the classic's chrome dials); the painted mirrors tinted by the time and
-  the weather.
-- **Bike:** the bars, the clocks and his gloved hands on the grips in
-  view, the visor's edge, the lean and the wind (a little FOV with speed).
-- **Kart:** a driver's view (V in a race and out of the pits): the wheel
-  under his hands, the pods and the nose, the kerbs coming at you.
+- **The car's seat** (carride.ts, the cars' fine-detail chunk): the eye
+  moves on fpcam.ts's rules over the springs' own ride (`stepFp('car')` in
+  `ride()`: a lurch on the throttle and the brakes, a sway against the
+  turn, the eyes a little into it), knocked through the seat by a kerb
+  under a wheel (`KERB_KNOCK`) or a bump into something (`car.jolt()`, from
+  drive.ts); `car.eye()` hands drive.ts the view to lay on the camera. His
+  right hand goes to the hub when you sound the horn (`car.horn()`,
+  `Moving.hands(turn, horn)`, `HUB`; from the seat it's just under the
+  view, from outside it shows).
+- **The dash by model** (carcabin.ts): the indicators' arrows outside the
+  gauges, lit green as they tick (`Moving.arrows`, `ARROW_ON`); the Glow
+  Pod's screen on the dash with its route; the Boulevardier's cream dials
+  in chrome on a walnut dash (`DIALS`). The rear-view mirror's glass on a
+  material of its own (`mirrorMat()`), dimmed by night through `lit()` and
+  greyed in the rain.
+- **The bike from the helmet** (bikes.ts `look()`, seateye.ts): the eye
+  at his own eyes, his head folded away, looking down the road enough that
+  the bars, the mirrors, the clocks (a speedo in its pod on the bars,
+  facing him, its needle) and his hands on the grips are in view; the
+  lean, the lurch and the lead from fpcam.ts; the visor's edge round the
+  top and the sides (`is-visor` on the city, fly.css); the field of view
+  widening with speed as before.
+- **The kart from the seat** (karts.ts `eye()`, seateye.ts): the wheel
+  under his hands, the pods and the nose, out of the pits (V, as the bike's
+  helmet) and in a race (V or the right stick, `toggleView()`, kept for the
+  next race; kart.ts `placeEye()`).
+- **One seat eye** (`seateye.ts`, tested in `tests/seateye.test.ts`, the
+  bike's and the kart's chunks' only): `look()` (the eye, his head folded,
+  ahead along the vehicle and round as you look, the motion) and `off()`
+  (his head back). drive.ts lays every seat's view on the camera
+  (`rotateY` the lead, `rotateX` the lurch, `rotateZ` the sway) and brings
+  the near plane in for it.
+- **Not done**: gloves on the bike (his hands are his own); the horn's
+  hand isn't seen from the seat (the hub is under the view).
+- **Checked** in the city headless: the hatch, the Boulevardier and the
+  Glow Pod from the seat, driving, turning, braking and the horn; the Hop
+  Scoot from the helmet; the Pocket Rocket out of the pits. The race's
+  view wasn't driven headless (the same `eye()`).
+- **Cost**: the boot's code is 689.6 KB of 690 (0.8 KB more: drive.ts's
+  seat view and the race's V in walk.ts); everything else is in the cars',
+  the bike's and the kart's chunks. Phase 5 on needs the budget raised (the
+  owner's go).
 
 ### Phase 5: the hire boat
 

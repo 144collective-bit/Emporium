@@ -24,6 +24,11 @@
  * the pegs through reachLeg(); `pose()` puts his left foot down as it stops
  * (bike-sim.ts `footDown()`). The lean is the whole bike's (drive.ts tips
  * its group), rider and all.
+ *
+ * From the helmet (docs/firstperson-plan.md, Phase 4): `look()` is the eye
+ * at his own eyes, his head folded away (seateye.ts), the bars, the grips
+ * under his hands and the clocks on the bars (a speedo in its pod, facing
+ * him) in view.
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -34,6 +39,8 @@ import { paintAll } from './carparts';
 import { BIKES, steeringHead, type BikeId } from './mybike';
 import { ridePose, riderRoot } from './acts';
 import { DRIVER_SCALE } from './carinside';
+import { seatEye, type SeatMotion } from './seateye';
+import type { FpView } from './fpcam';
 
 const FRAME = '#2a2838';
 const DARK = '#1b1830';
@@ -43,6 +50,8 @@ const GRIP = '#14121f';
 const SCREEN = '#5cc8e8';
 const TAIL = '#ff2b2b';
 const HEAD = '#fff4c2';
+const DIAL = '#e6eeff';
+const NEEDLE = '#ff3b5c';
 
 type V2 = [number, number];
 const shape = (pts: V2[]) => new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
@@ -78,8 +87,11 @@ export interface Bike {
   pose(steer: number, foot: number): void;
   /** Sit a Degen on it (null takes him off) */
   seat(degen: Degen | null): void;
-  /** His eyes, in bike space (the helmet camera) */
+  /** His eyes, in bike space (the helmet camera with nobody on it) */
   eye: THREE.Vector3;
+  /** The helmet's view from his own eyes: `pos` and `at` set, the eye's motion returned; `lookOff()` when it's down */
+  look(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number, dt: number, st: SeatMotion): FpView;
+  lookOff(): void;
   dispose(): void;
 }
 
@@ -157,6 +169,16 @@ function shapeBike(id: BikeId, add: Add, paint: Col, tailLamp: Col, headLamp: Co
     add(rod(0.008, [bx, by], [bx + 0.02, by + 0.12], z * (bh - 0.02)), FRAME, 0, 0, 0, true);
     add(box(0.02, 0.05, 0.07), DARK, bx + 0.02, by + 0.14, z * (bh - 0.02), true);
   }
+  // The clocks on the bars, facing him and tipped up to his eyes: a pod, the dial, a needle (they steer)
+  const tip = (g: THREE.BufferGeometry) => g.rotateZ(Math.PI / 2 - 0.6);
+  const [cx, cy] = [bx + (id === 'scooter' ? 0.02 : 0.05), by + (id === 'scooter' ? 0.03 : 0.06)];
+  add(tip(new THREE.CylinderGeometry(0.048, 0.052, 0.035, 16)), DARK, cx, cy, 0, true);
+  // (the pod's axis, out of its face towards him)
+  const ax = new THREE.Vector3(-Math.cos(0.6), Math.sin(0.6), 0);
+  add(tip(new THREE.CylinderGeometry(0.04, 0.04, 0.002, 16)).translate(ax.x * 0.018, ax.y * 0.018, 0), DIAL, cx, cy, 0, true);
+  // (the needle from the dial's middle, lying on its face, pointing up and over)
+  const needle = box(0.003, 0.03, 0.003).translate(0, 0.013, 0).rotateZ(-0.6).applyMatrix4(new THREE.Matrix4().makeRotationAxis(ax, -0.8));
+  add(needle, NEEDLE, cx + ax.x * 0.0205, cy + ax.y * 0.0205, 0, true);
   // Footpegs (the street and sport bikes')
   if (id !== 'scooter') for (const z of [-1, 1]) add(tube(0.012, 0.07).rotateX(Math.PI / 2), FRAME, s.pegs[0], s.pegs[1], z * s.pegs[2]);
 
@@ -217,10 +239,13 @@ export function createBike(id: BikeId, paint: string): Bike {
   }
 
   let roll = 0;
+  const seat = seatEye('bike');
   return {
     group,
     id,
     eye,
+    look: (pos, at, yaw, pitch, dt, st) => seat.look(group, rider, DRIVER_SCALE, eye, pos, at, yaw, pitch, dt, st, 0.24),
+    lookOff: () => seat.off(),
     drive(dist: number, steer = 0) {
       roll -= dist / s.r;
       rear.rotation.z = front.rotation.z = roll;
@@ -235,6 +260,7 @@ export function createBike(id: BikeId, paint: string): Bike {
       poseRider();
     },
     seat(degen: Degen | null) {
+      seat.off();
       if (rider) {
         rider.g.removeFromParent();
         if (rider.held) rider.held.visible = true;

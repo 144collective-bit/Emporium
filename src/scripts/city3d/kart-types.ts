@@ -178,4 +178,6 @@ export interface KartRace {
   takeOut(): { kart: Kart; model: KartId; name: string; x: number; z: number; yaw: number } | null;
   /** The kart is back in the pits (the show kart is shown again) */
   bringBack(): void;
+  /** From the driver's seat or behind (V in a race; kept for the next) */
+  toggleView?(): void;
 }

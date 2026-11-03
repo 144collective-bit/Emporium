@@ -23,6 +23,12 @@
  * - **Its wheels:** the discs and sidewall rings on the turning wheels, the
  *   calipers on the body behind them.
  *
+ * - **From the seat** (docs/firstperson-plan.md, Phase 4): the indicators'
+ *   arrows in the binnacle, lit as they tick (`Moving.arrows`); the Glow
+ *   Pod's screen on the dash; the Boulevardier's chrome-rimmed cream dials
+ *   on a walnut dash (`DIALS`); the rear-view mirror's glass on a material
+ *   of its own, dimmed by night and greyed in the rain (carride.ts).
+ *
  * Each model's pieces are made once and shared by every car of yours of it.
  */
 import * as THREE from 'three';
@@ -56,6 +62,16 @@ const DASH_RIM = '#55506a';
 const DASH_LIGHT = '#ff5ad8';
 const MIRROR_SKY = '#a9c8ea';
 const MIRROR_ROAD = '#5e6070';
+/** The dials by model: faces, rims and the dash (the classic's cream in chrome on walnut) */
+const DIALS: Partial<Record<string, { face: string; rim: string; dash: string }>> = {
+  classic: { face: '#efe3c2', rim: '#e4e8f2', dash: '#5a3a24' },
+};
+/** The indicators' arrows: dark until they tick, then green (under the bloom's threshold) */
+export const ARROW_OFF = '#1f2a24';
+export const ARROW_ON = '#6dff9a';
+/** The Glow Pod's screen: its glass and the route on it */
+const SCREEN = '#10304c';
+const ROUTE = '#3fd0ff';
 
 /** The cabin's rounding (cars.ts builds every model but the bus with it) */
 const CABIN_ROUND = 0.055;
@@ -402,6 +418,10 @@ interface Inside {
   gauges: THREE.Vector3[];
   /** A wiper's arm and blade along -z from its spindle */
   wiper: THREE.BufferGeometry;
+  /** The rear-view mirror's glass (its own material: carride.ts tints it) */
+  mirror: THREE.BufferGeometry;
+  /** The indicators' arrows in the binnacle, left then right */
+  arrows: THREE.BufferGeometry[];
 }
 /** How far the gauges' faces lean back towards him */
 export const GAUGE_TILT = 0.35;
@@ -469,16 +489,33 @@ function insideOf(s: CarSpec, n: Interior, h0: number, h1: number): Inside {
   // needles turning: carride.ts), a strip of light along it, the console
   const [dx, dy] = n.dash;
   const dashBack = n.wheel[0] + 0.05;
-  box(h1 - dashBack + 0.02, 0.2, inW, (dashBack + h1) / 2, dy - 0.1, 0, DASH);
-  box(0.14, 0.09, 0.26, dashBack + 0.05, dy + 0.02, n.hip[2], DASH);
+  const dial = DIALS[s.id];
+  box(h1 - dashBack + 0.02, 0.2, inW, (dashBack + h1) / 2, dy - 0.1, 0, dial?.dash ?? DASH);
+  box(0.14, 0.09, 0.26, dashBack + 0.05, dy + 0.02, n.hip[2], dial?.dash ?? DASH);
   const gauges: THREE.Vector3[] = [];
+  const face = (g: THREE.BufferGeometry, at: THREE.Vector3) => g.rotateY(-Math.PI / 2).rotateZ(-GAUGE_TILT).translate(at.x, at.y, at.z);
   for (const e of [-1, 1]) {
     // (in front of the binnacle's back, under its hood)
     const g = new THREE.Vector3(dashBack - 0.034, dy + 0.018, n.hip[2] + e * 0.05);
-    add(new THREE.CircleGeometry(0.032, 16).rotateY(-Math.PI / 2).rotateZ(-GAUGE_TILT).translate(g.x, g.y, g.z), GAUGE, dashParts);
-    // (a darker ring round each, its rim)
-    add(new THREE.RingGeometry(0.032, 0.038, 16).rotateY(-Math.PI / 2).rotateZ(-GAUGE_TILT).translate(g.x, g.y, g.z), DASH_RIM, dashParts);
+    add(face(new THREE.CircleGeometry(0.032, 16), g), dial?.face ?? GAUGE, dashParts);
+    // (a darker ring round each, its rim; the classic's chrome and thicker)
+    add(face(new THREE.RingGeometry(0.032, dial ? 0.041 : 0.038, 16), g), dial?.rim ?? DASH_RIM, dashParts);
     gauges.push(g);
+  }
+  // The indicators' arrows, outside the gauges (+z is the car's right), each its own mesh so it can light
+  const arrows = [-1, 1].map((e) => {
+    const tri = new THREE.ShapeGeometry(shape([[e * 0.013, 0], [-e * 0.006, 0.01], [-e * 0.006, -0.01]]));
+    return face(tri, new THREE.Vector3(dashBack - 0.033, dy + 0.018, n.hip[2] + e * 0.1));
+  });
+  // The Glow Pod's screen on the dash's middle, turned to him: its glass, the route across it, the rows under it
+  if (s.id === 'ev') {
+    const at = new THREE.Vector3(dashBack + 0.03, dy + 0.04, n.hip[2] * 0.15);
+    box(0.02, 0.11, 0.18, at.x + 0.012, at.y, at.z, BLACKOUT, -GAUGE_TILT);
+    add(face(new THREE.PlaneGeometry(0.16, 0.09), at), SCREEN, dashParts);
+    const lift = (dz: number, dy2: number, w: number, h: number) => face(new THREE.PlaneGeometry(w, h).translate(dz, dy2, 0.001), at);
+    add(lift(-0.02, 0.01, 0.09, 0.006), ROUTE, dashParts);
+    add(lift(0.025, 0.026, 0.006, 0.04), ROUTE, dashParts);
+    for (const r of [-0.02, -0.032]) add(lift(-0.03, r, 0.07, 0.004), GAUGE, dashParts);
   }
   box(0.006, 0.005, inW * 0.7, dashBack - 0.013, dy - 0.035, -n.hip[2] * 0.3, DASH_LIGHT, 0, dashParts);
   box(Math.max(0.1, dx - n.hip[0] - 0.1), n.hip[1] - floorY - 0.04, 0.12, (dx + n.hip[0]) / 2 + 0.06, (n.hip[1] + floorY) / 2 - 0.02, 0, DASH);
@@ -489,12 +526,14 @@ function insideOf(s: CarSpec, n: Interior, h0: number, h1: number): Inside {
   // The rear-view mirror under the roof behind the windscreen's top, turned to him: its glass a painted view behind
   // (the sky over the road)
   const mirror: THREE.BufferGeometry[] = [];
-  const mbox = (w: number, h: number, d: number, x: number, y: number, hex: string) => void mirror.push(paintAll(new THREE.BoxGeometry(w, h, d).translate(x, y, 0).toNonIndexed(), hex));
+  const glassOf: THREE.BufferGeometry[] = [];
+  const mbox = (w: number, h: number, d: number, x: number, y: number, hex: string, to = mirror) => void to.push(paintAll(new THREE.BoxGeometry(w, h, d).translate(x, y, 0).toNonIndexed(), hex));
   mbox(0.03, 0.055, 0.17, 0, 0, BLACKOUT);
-  mbox(0.004, 0.022, 0.15, -0.017, 0.011, MIRROR_SKY);
-  mbox(0.004, 0.022, 0.15, -0.017, -0.011, MIRROR_ROAD);
+  mbox(0.004, 0.022, 0.15, -0.017, 0.011, MIRROR_SKY, glassOf);
+  mbox(0.004, 0.022, 0.15, -0.017, -0.011, MIRROR_ROAD, glassOf);
   mbox(0.012, 0.05, 0.012, 0.004, 0.05, BLACKOUT);
-  for (const g of mirror) parts.push(g.rotateY(-0.25).translate(fr[0] - 0.05, roofY - 0.085, 0));
+  for (const g of [...mirror, ...glassOf]) g.rotateY(-0.25).translate(fr[0] - 0.05, roofY - 0.085, 0);
+  parts.push(...mirror);
   // The steering wheel, tilted back towards him, on its column into the dash (the wheel itself turns, about its
   // middle: carride.ts)
   const tilt = n.wheelTilt;
@@ -520,6 +559,8 @@ function insideOf(s: CarSpec, n: Interior, h0: number, h1: number): Inside {
     needle: merged([paintAll(new THREE.BoxGeometry(0.004, 0.027, 0.005).translate(-0.004, 0.01, 0), NEEDLE)]),
     gauges,
     wiper,
+    mirror: merged(glassOf),
+    arrows,
   };
 }
 
@@ -532,9 +573,14 @@ let theGlass: THREE.MeshToonMaterial | null = null;
 /** The dash's light: the gauges' faces and needles, lit faintly by day and fully at night (under the bloom's threshold) */
 const dashMat = () => (theDash ??= lit(new THREE.MeshBasicMaterial({ vertexColors: true, name: 'car-dash' }), 0.8, 1));
 let theDash: THREE.MeshBasicMaterial | null = null;
+/** The rear-view mirror's glass: the painted view behind, dimmed by night (`lit()`), greyed in the rain (carride.ts) */
+export const mirrorMat = () => (theMirror ??= lit(new THREE.MeshBasicMaterial({ vertexColors: true, name: 'car-mirror' }), 1, 0.3));
+let theMirror: THREE.MeshBasicMaterial | null = null;
 
 const X = new THREE.Vector3(1, 0, 0);
 const grip = new THREE.Vector3();
+/** Where his hand presses the horn: the hub's front, just off it towards him (the wheel's own numbers) */
+const HUB = new THREE.Vector3(-0.045, 0.01, 0.015);
 const ankle = new THREE.Vector3();
 
 /** Your car's pieces that move (carride.ts drives them) */
@@ -549,8 +595,10 @@ export interface Moving {
   steer: THREE.Object3D;
   needles: THREE.Object3D[];
   wipers: THREE.Object3D[];
-  /** His hands on the wheel, turned this far (radians) */
-  hands(turn: number): void;
+  /** His hands on the wheel, turned this far (radians); `horn` 0..1 his right hand on its way to the hub */
+  hands(turn: number, horn?: number): void;
+  /** The indicators' arrows, left then right (each its own material, to light) */
+  arrows: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[];
   /** Who's at the wheel */
   driver(): Degen | null;
 }
@@ -595,6 +643,8 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
   glass(sh.glass, body);
   mesh(sh.inside.all, detail);
   mesh(sh.inside.dash, dashMat(), body, false);
+  mesh(sh.inside.mirror, mirrorMat(), body, false);
+  const arrows = sh.inside.arrows.map((g) => mesh(g, new THREE.MeshBasicMaterial({ color: ARROW_OFF }), body, false) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>);
   // The steering wheel on its column, the needles in their gauges
   const pivot = (at: THREE.Vector3Tuple, tilt: number) => {
     const p = new THREE.Object3D();
@@ -636,11 +686,14 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
   let driver: Degen | null = null;
   const toTorso = new THREE.Matrix4();
   const onWheel = new THREE.Matrix4().compose(new THREE.Vector3(...n.wheel), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -n.wheelTilt)), new THREE.Vector3(1, 1, 1));
-  // His hands at a quarter to three (arm 0, the rig's -x, is on the car's right, +z), the wheel turned `turn`
-  const hands = (turn: number) => {
+  // His hands at a quarter to three (arm 0, the rig's -x, is on the car's right, +z), the wheel turned `turn`; the
+  // horn: his right hand to the hub's front, `horn` of the way
+  const hands = (turn: number, horn = 0) => {
     if (!driver) return;
     for (const i of [0, 1] as const) {
-      grip.set(0, 0, (i === 0 ? 1 : -1) * n.wheelR).applyAxisAngle(X, turn).applyMatrix4(onWheel).applyMatrix4(toTorso);
+      grip.set(0, 0, (i === 0 ? 1 : -1) * n.wheelR).applyAxisAngle(X, turn);
+      if (i === 0 && horn > 0) grip.lerp(HUB, horn);
+      grip.applyMatrix4(onWheel).applyMatrix4(toTorso);
       reachArm(driver.pose, i, grip);
     }
     driver.update();
@@ -675,7 +728,7 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
     toTorso.compose(g.position, g.quaternion, g.scale).multiply(torsoFrame(p, toTorso.clone())).invert();
     hands(0);
   };
-  rideOn(car, { body, wheels, doors, steer, needles, wipers, hands, driver: () => driver });
+  rideOn(car, { body, wheels, doors, steer, needles, wipers, hands, arrows, driver: () => driver });
   // Dressed as the garage left it (vehicle plan Phase 5)
   if (paint && s.id in STOCK_PARTS) dress(car, look, { body, wheels, doors, paint, low: o.low });
   o.ready(car.group);

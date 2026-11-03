@@ -26,6 +26,8 @@ import { DRIVER_SCALE, KART_SHAPES, SEAT_X, WHEEL_R, WHEEL_TILT, driverRoot, kar
 import { FONT_DISPLAY, liveTex, mergeMeshes, moving, neon, PAL, toon } from './kit';
 import { KART_L } from './kartpark';
 import type { KartId } from './mykart';
+import { seatEye, type SeatMotion } from './seateye';
+import type { FpView } from './fpcam';
 
 /* ---------- Colours ---------- */
 
@@ -148,6 +150,12 @@ export interface Kart {
   lean(amount: number): void;
   /** Turn the driver's head (radians, left positive) */
   look(yaw: number): void;
+  /**
+   * The driver's view from his own eyes (docs/firstperson-plan.md, Phase 4; seateye.ts): `pos` and `at` set, the
+   * eye's motion returned, the wheel under his hands, the pods and the nose ahead; `eyeOff()` when it's down
+   */
+  eye(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number, dt: number, st: SeatMotion): FpView;
+  eyeOff(): void;
   dispose(): void;
 }
 
@@ -440,11 +448,15 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
   }
 
   let roll = 0;
+  const view = seatEye('kart');
+  const nobody = new THREE.Vector3(seatX + 0.05, seatTop + 0.55, 0);
   return {
     group,
     id,
     exhausts,
     seatAt,
+    eye: (pos, at, yaw, pitch, dt, st) => view.look(group, driver, DRIVER_SCALE, nobody, pos, at, yaw, pitch, dt, st, 0.22),
+    eyeOff: () => view.off(),
     drive(dist: number, steer = 0) {
       roll -= dist / s.r;
       for (const w of wheels) {
@@ -463,6 +475,7 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
       plate.material = plateMat(Math.max(1, Math.min(8, Math.round(n))));
     },
     seat(degen: Degen | null) {
+      view.off();
       if (driver) {
         driver.g.removeFromParent();
         if (driver.held) driver.held.visible = true;

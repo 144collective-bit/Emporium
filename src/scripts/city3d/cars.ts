@@ -1158,5 +1158,8 @@ export type Car = ReturnType<typeof createCar> & {
   seat?(degen: Degen | null, from?: number): void;
   door?(side: number, hold: number): void;
   ride?(s: CarState, dt: number, slip: number, accel: number, revs: number, top: number, y: number, ground: (x: number, z: number, y?: number) => number): boolean;
-  eye?(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number): void;
+  eye?(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number): import('./fpcam').FpView;
+  /** A knock through the seat (0..1: a bump into something), and his hand to the horn */
+  jolt?(k: number): void;
+  horn?(): void;
 };

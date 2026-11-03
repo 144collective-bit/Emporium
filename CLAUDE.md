@@ -1717,9 +1717,19 @@ it and has been retired completely. Build only on what's here.
   lamp's white or sodium, world.ts `lampTone()`) through the viewmodel's
   shared `tint`; the gun moves with crouch, slide and vault (`ViewState`).
   From the eye his body takes no aim or recoil (walk.ts): the viewmodel does
-  both, and his head on the stock swung the cap and tie into view. The boot
-  is at 688.8 of 690 KB: put later phases' code in the chunks where it can
-  go.
+  both, and his head on the stock swung the cap and tie into view. Phase 4
+  (the car, the bike and the kart from the seat) is built: the car's seat
+  eye on fpcam.ts over its springs (carride.ts: `car.eye()` returns the view,
+  `car.jolt()`, a knock on a kerb, the horn's hand `car.horn()`), the dash by
+  model (carcabin.ts: indicator arrows `Moving.arrows`, the Glow Pod's
+  screen, the Boulevardier's chrome dials `DIALS`, the mirror's own
+  `mirrorMat()` dimmed by night and greyed in the rain); the bike's helmet
+  and the kart's seat from his own eyes through `seateye.ts` (tested:
+  bikes.ts `look()`, karts.ts `eye()`, his head folded away), the bars'
+  clocks, the visor's edge (`is-visor`, fly.css), the kart's driver's view
+  in a race too (V or the right stick, kart.ts `toggleView()`); drive.ts
+  lays every seat's view on the camera. The boot is at 689.6 of 690 KB:
+  the next phases need it raised, on the owner's go.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,

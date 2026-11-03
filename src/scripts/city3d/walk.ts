@@ -1500,11 +1500,12 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    // Karting: steer and pedal with the move keys, Space hops into a drift (F does nothing in a race: no getting out mid-lap)
+    // Karting: steer and pedal with the move keys, Space hops into a drift, V the driver's seat (F does nothing in a race: no getting out mid-lap)
     if (karts.active) {
       if (c === 'KeyF') {
         /* swallowed */
-      } else if (c === 'Space') jumpHeld = down;
+      } else if (down && !e.repeat && c === 'KeyV') karts.toggleView?.();
+      else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
         else keys.delete(c);
@@ -1984,6 +1985,7 @@ export function createWalk(d: WalkDeps) {
       padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padKart.drift = !!b[0];
       if (edge(3)) abandonKart();
+      if (edge(11)) karts.toggleView?.();
       if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
