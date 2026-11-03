@@ -107,17 +107,18 @@
     transform: scale(0.94);
   }
 }
-/* Touch screens: square slots without names (the number and the art), over the right-hand buttons */
+/* Touch screens: square slots without names (the number and the art), placed clear of the touch buttons by
+   touchlayout.ts (controls.ts sets --hb-*): over the arc upright, low left of it on their side */
 @media (pointer: coarse) {
   .hotbar {
-    right: 12px;
-    bottom: 262px;
+    right: calc(env(safe-area-inset-right) + var(--hb-right, 12px));
+    bottom: calc(env(safe-area-inset-bottom) + var(--hb-bottom, 262px));
     gap: 4px;
   }
   .hb-slot {
     grid-template-rows: 22px;
-    width: 44px;
-    height: 44px;
+    width: var(--hb-slot, 44px);
+    height: var(--hb-slot, 44px);
     padding: 0;
     touch-action: manipulation;
   }
@@ -131,29 +132,6 @@
   .hb-count,
   .hotbar .hb-key {
     font-size: 8px;
-  }
-  /* (on foot the door prompt goes above it) */
-  .city[data-mode="walk"]:not(.is-driving):not(.is-fighting) .walk-prompt {
-    bottom: 318px;
-  }
-}
-/* Narrow phones: tighter slots */
-@media (pointer: coarse) and (max-width: 360px) {
-  .hb-slot {
-    width: 42px;
-    height: 42px;
-  }
-}
-/* Phones on their side: low, between the stick and the right-hand buttons */
-@media (pointer: coarse) and (max-height: 500px) {
-  .hotbar {
-    right: auto;
-    bottom: 10px;
-    left: calc(50% - 19px);
-    transform: translateX(-50%);
-  }
-  .city[data-mode="walk"]:not(.is-driving):not(.is-fighting) .walk-prompt {
-    bottom: 150px;
   }
 }
 
@@ -524,7 +502,7 @@ button.inv-cell {
   }
 }
 /* The inventory open (or the hub, hub.ts): the walk HUD's buttons, the hotbar and the door prompt step aside */
-.city:is(.is-inv, .is-hub) :is(.hotbar, .walk-prompt, .walk-look, .combat-cross, .walk-fire, .walk-aim, .walk-reload, .walk-swap, .walk-stick, .walk-run, .walk-crouch, .walk-jump, .mission-tracker) {
+.city:is(.is-inv, .is-hub) :is(.hotbar, .walk-prompt, .walk-look, .combat-cross, .walk-fire, .walk-aim, .walk-reload, .walk-swap, .walk-stick, .walk-run, .walk-crouch, .walk-jump, .fight-btn, .mission-tracker) {
   display: none;
 }
 .city.is-inv [data-inv-open] {

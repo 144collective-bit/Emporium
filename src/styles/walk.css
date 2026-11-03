@@ -136,9 +136,7 @@
 .walk-check input {
   accent-color: var(--p-cyan);
 }
-.walk-fp,
-.walk-run,
-.walk-crouch {
+.walk-fp {
   border: 1px solid #0000;
   background:
     linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
@@ -232,9 +230,7 @@
   padding: 8px 14px;
   border-radius: 999px;
 }
-.walk-fp[aria-pressed="true"],
-.walk-run[aria-pressed="true"],
-.walk-crouch[aria-pressed="true"] {
+.walk-fp[aria-pressed="true"] {
   background:
     var(--pulse-wash) padding-box,
     linear-gradient(#14102a, #14102a) padding-box,
@@ -628,193 +624,20 @@
   .walk-keys {
     display: none;
   }
+  /* Which touch buttons show; where they stand and how they look is controls.css's (docs/controls-plan.md) */
   .city.is-armed .walk-fire,
   .city.is-armed .walk-reload,
   .city.is-armed .walk-aim,
-  .city.is-armed .walk-swap {
-    position: absolute;
-    z-index: 4;
+  .city.is-armed .walk-swap,
+  .walk-run,
+  .walk-crouch,
+  .walk-stick,
+  .walk-jump {
     display: grid;
-    place-items: center;
-    border: 1px solid #0000;
-    border-radius: 50%;
-    background:
-      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
-      var(--pulse) border-box;
-    color: #fff;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    touch-action: none;
-  }
-  .city.is-armed .walk-fire {
-    right: 104px;
-    bottom: 34px;
-    width: 76px;
-    height: 76px;
-    font-size: 11px;
-    box-shadow: 0 0 24px -6px #ff2fb9;
-  }
-  .city.is-armed .walk-reload {
-    right: 116px;
-    bottom: 122px;
-    width: 52px;
-    height: 52px;
-    font-size: 9px;
-  }
-  .city.is-armed .walk-aim {
-    right: 30px;
-    bottom: 194px;
-    width: 56px;
-    height: 56px;
-    font-size: 10px;
-  }
-  /* Swap: above Fire, beside Aim; shows the gun in hand */
-  .city.is-armed .walk-swap {
-    right: 112px;
-    bottom: 190px;
-    align-content: center;
-    gap: 2px;
-    width: 58px;
-    height: 58px;
-    font-size: 8px;
-    letter-spacing: 0.02em;
-  }
-  .walk-swap span {
-    max-width: 52px;
-    overflow: hidden;
-    line-height: 1.1;
-    text-align: center;
-    white-space: nowrap;
-  }
-  .walk-swap svg {
-    color: var(--p-cyan);
-  }
-  .walk-swap:active,
-  .walk-reload:active,
-  .walk-jump:active {
-    transform: scale(0.92);
-  }
-  .walk-fire:active {
-    box-shadow: 0 0 30px -2px #ff2fb9;
   }
   /* The swap button carries the gun's name on touch screens */
   .combat-gun {
     display: none;
-  }
-  .city.is-armed .walk-aim[aria-pressed="true"] {
-    background:
-      var(--pulse-wash) padding-box,
-      linear-gradient(#14102a, #14102a) padding-box,
-      var(--pulse) border-box;
-    box-shadow: 0 0 20px -6px #00eaffaa;
-  }
-  .walk-run {
-    position: absolute;
-    right: 30px;
-    bottom: 122px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    font-size: 10px;
-    touch-action: manipulation;
-  }
-  /* Crouch (a slide when sprinting): over the stick, clear of the right-hand cluster armed or not */
-  .walk-crouch {
-    position: absolute;
-    left: 56px;
-    bottom: 160px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    font-size: 9px;
-    touch-action: manipulation;
-  }
-  .walk-stick {
-    position: absolute;
-    left: 22px;
-    bottom: 26px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 120px;
-    height: 120px;
-    border: 1px solid #ffffff30;
-    border-radius: 50%;
-    background: radial-gradient(circle, #0b0a1299, #0b0a1255);
-    touch-action: none;
-  }
-  .walk-stick span {
-    width: 52px;
-    height: 52px;
-    border: 2px solid var(--p-cyan);
-    border-radius: 50%;
-    background: #00eaff33;
-    box-shadow: 0 0 18px #00eaff66;
-  }
-  .walk-jump {
-    position: absolute;
-    right: 26px;
-    bottom: 42px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 64px;
-    height: 64px;
-    border: 1px solid #0000;
-    border-radius: 50%;
-    background:
-      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
-      var(--pulse) border-box;
-    color: #fff;
-    touch-action: manipulation;
-  }
-  /* (over the Crouch button on the left and Sprint on the right) */
-  .walk-prompt {
-    bottom: 222px;
-  }
-  /* Geared up, the right-hand buttons stand taller: the door prompt goes above them */
-  .city.is-armed .walk-prompt {
-    bottom: 264px;
-  }
-}
-/* Phones on their side: the buttons sit far right, so the door prompt can stay low */
-@media (pointer: coarse) and (max-height: 500px) {
-  .walk-prompt,
-  .city.is-armed .walk-prompt {
-    bottom: 150px;
-  }
-}
-/* Narrow phones: a smaller stick and a tighter right-hand cluster, so nothing touches */
-@media (pointer: coarse) and (max-width: 360px) {
-  .walk-stick {
-    left: 14px;
-    width: 108px;
-    height: 108px;
-  }
-  .walk-crouch {
-    left: 42px;
-    bottom: 146px;
-  }
-  .walk-stick span {
-    width: 46px;
-    height: 46px;
-  }
-  .city.is-armed .walk-fire {
-    right: 96px;
-  }
-  .city.is-armed .walk-reload {
-    right: 108px;
-  }
-  .city.is-armed .walk-swap {
-    right: 102px;
   }
 }
 

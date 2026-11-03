@@ -109,6 +109,7 @@ import { onTap, type GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
+import { layoutControls } from './controls';
 import { vergeY } from './verges';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
@@ -415,6 +416,8 @@ export function createWalk(d: WalkDeps) {
   const knob = stick.querySelector<HTMLElement>('span')!;
   const runBtn = $<HTMLButtonElement>('[data-walk-run]');
   const crouchBtn = $<HTMLButtonElement>('[data-walk-crouch]');
+  // The touch controls' places: the same slots in every mode (touchlayout.ts, docs/controls-plan.md)
+  layoutControls(root);
   const sensInput = $<HTMLInputElement>('[data-walk-sens]');
   const invertInput = $<HTMLInputElement>('[data-walk-invert]');
   const fpBtn = $<HTMLButtonElement>('[data-walk-fp]');

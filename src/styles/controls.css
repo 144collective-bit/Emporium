@@ -1,0 +1,165 @@
+/* controls: the touch controls in the menus' arcade kit (docs/controls-plan.md; the owner's picks). Round
+   buttons on a dark cap with a light rim and a hard black ring outside it, so they read over a bright street or
+   the night; a pixel icon over a short word (the sprite from src/data/tcicons.ts in CityMap.astro); the main
+   action coin-yellow (`.tc-main`), Jump green (`.tc-go`), the rest quiet. Held, a button brightens and nothing
+   moves; a toggle that's on (Sprint locked, Crouch, Aim) lights its rim and icon in coin with a glow and a pip.
+   The words are the kit's labels' face (JetBrains Mono): Pixelify's small capital C reads as an O.
+   Where they stand comes from touchlayout.ts (controls.ts sets --tc-x / --tc-y / --tc-d and data-tc on each).
+   Last in Base.astro's order, so it wins over the modes' older placements. Touch screens only. */
+
+.tc-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+@media (pointer: coarse) {
+  .city .tc {
+    position: absolute;
+    z-index: 4;
+    box-sizing: border-box;
+    place-items: center;
+    align-content: center;
+    gap: 3px;
+    width: var(--tc-d, 58px);
+    height: var(--tc-d, 58px);
+    padding: 0;
+    border: 2px solid var(--m-edge);
+    border-radius: 50%;
+    background: #1a1c22e0;
+    box-shadow:
+      0 0 0 2px #0c0d10cc,
+      inset 0 -3px 0 #00000059;
+    color: var(--m-text);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-transform: uppercase;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .tc-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    shape-rendering: crispEdges;
+  }
+  .tc-word {
+    max-width: calc(var(--tc-d, 58px) - 12px);
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+  }
+  /* The main action: the coin's yellow, a bigger icon */
+  .city .tc-main {
+    border-color: var(--m-coin-low);
+    background: var(--m-coin);
+    color: var(--m-cab);
+    font-size: 10px;
+  }
+  .tc-main .tc-icon {
+    width: 30px;
+    height: 30px;
+  }
+  /* Jump (and Dodge in the ring): green */
+  .city .tc-go {
+    border-color: #3f8a52;
+    background: var(--m-go);
+    color: var(--m-cab);
+  }
+  /* Held: brighter, nothing moves */
+  .city .tc:active {
+    border-color: var(--m-text);
+    background: #3a3e48f0;
+  }
+  .city .tc-main:active,
+  .city .tc-go:active {
+    border-color: var(--m-text);
+    filter: brightness(1.18);
+  }
+  .city .tc-main:active {
+    background: var(--m-coin);
+  }
+  .city .tc-go:active {
+    background: var(--m-go);
+  }
+  /* On (a toggle that stays on): the coin lights its rim and icon, with a glow and a pip on the rim */
+  .city .tc[aria-pressed="true"] {
+    border-color: var(--m-coin);
+    background: #26231ae8;
+    box-shadow:
+      0 0 0 2px #0c0d10cc,
+      0 0 16px -2px #ffc531b3;
+    color: var(--m-coin);
+  }
+  .city .tc[aria-pressed="true"]::after {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: calc(50% - 4px);
+    width: 8px;
+    height: 8px;
+    border: 2px solid var(--m-cab);
+    background: var(--m-coin);
+  }
+  .city .tc:disabled {
+    border-color: var(--m-edge);
+    color: var(--m-dim);
+    filter: none;
+  }
+
+  /* On foot: every button where touchlayout.ts put it, the safe areas added (not in the ring, nor at the
+     wheel: their places are the modes' own until docs/controls-plan.md Phase 2) */
+  .city:not(.is-fighting) .tc[data-tc="r"] {
+    right: calc(env(safe-area-inset-right) + var(--tc-x) - var(--tc-d) / 2);
+    bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
+  }
+  .city:not(.is-fighting) .tc[data-tc="l"] {
+    left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
+    bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
+  }
+
+  /* The stick: today's ring and thumb in the cabinet's colours */
+  .walk-stick {
+    position: absolute;
+    z-index: 4;
+    place-items: center;
+    border: 2px solid #3a3e48cc;
+    border-radius: 50%;
+    background: radial-gradient(circle, #0c0d1099, #0c0d1055);
+    box-shadow: 0 0 0 2px #0c0d1066;
+    touch-action: none;
+  }
+  .city:not(.is-driving):not(.is-karting) .walk-stick[data-tc] {
+    left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
+    bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
+    width: var(--tc-d);
+    height: var(--tc-d);
+  }
+  .walk-stick span {
+    width: 44%;
+    height: 44%;
+    border: 2px solid var(--m-text);
+    border-radius: 50%;
+    background: #f1efe62e;
+    box-shadow: 0 0 0 2px #0c0d1099;
+  }
+  .walk-stick:active span {
+    border-color: var(--m-coin);
+    background: #ffc5313d;
+  }
+
+  /* The door prompt on foot: where touchlayout.ts keeps it clear of the buttons and the hotbar */
+  .city[data-mode="walk"]:not(.is-driving):not(.is-fighting) .walk-prompt {
+    left: calc(env(safe-area-inset-left) + var(--pr-cx, 50%));
+    bottom: calc(env(safe-area-inset-bottom) + var(--pr-bottom, 222px));
+    max-width: calc(100vw - 24px);
+    white-space: nowrap;
+  }
+}
