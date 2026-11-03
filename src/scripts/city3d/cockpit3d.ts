@@ -21,6 +21,7 @@ import { PANELS } from './airframe';
 import { Batch, FONT_DISPLAY, canvasTex, fx, lit, liveTex, moving, neon, toon } from './kit';
 import type { FlyState } from './flight-sim';
 import type { PlaneId } from './myplane';
+import { seatEye } from './seateye';
 
 const LINING = toon('#454a63');
 const FRAME = toon('#23263a');
@@ -548,6 +549,8 @@ export function createCockpit(id: PlaneId, outfit: Outfit, opts: { low: boolean;
   if (pilot.held) pilot.held.visible = false;
   group.add(pilot.g);
 
+  const eye = seatEye('plane');
+  const nobody = new THREE.Vector3(k.seat[0] + 0.09, k.seat[1] + 0.5, 0);
   let gear = 1;
   let screenT = 0;
   const Q1 = new THREE.Quaternion();
@@ -558,6 +561,15 @@ export function createCockpit(id: PlaneId, outfit: Outfit, opts: { low: boolean;
   return {
     id,
     group,
+    /** From his eyes (cockpits.ts `view`) and his size, for fly.ts, which keeps the numbers out of the boot */
+    view: k.view,
+    /** His own eyes (seateye.ts): `pos` and `at` set, the eye's motion returned; `eyeOff()` gives him his head back */
+    look(pos: THREE.Vector3, at: THREE.Vector3, yaw: number, pitch: number, dt: number, st: FlyState) {
+      return eye.look(group, pilot, PILOT_SCALE, nobody, pos, at, yaw, pitch, dt, { speed: st.speed, yawRate: st.yawRate }, k.view.down);
+    },
+    eyeOff() {
+      eye.off();
+    },
     get pilot() {
       return pilot;
     },
@@ -625,6 +637,7 @@ export function createCockpit(id: PlaneId, outfit: Outfit, opts: { low: boolean;
       if (shade) shade.opacity = st.spool > 0.3 ? read.sun * 0.16 * Math.max(0, Math.sin(t * 7.3)) ** 3 : 0;
     },
     dispose() {
+      eye.off();
       group.removeFromParent();
       if (pilot) {
         pilot.g.removeFromParent();

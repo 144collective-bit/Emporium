@@ -440,6 +440,9 @@ hold.
   aircraft, fpcam.ts's lurch and lead on top, the field of view per
   aircraft widening a little with speed; looking round (the look) shows
   the cabin and out of its side windows.
+- **Cost**: the boot's code is 690.4 KB of 700 (0.8 KB more: fly.ts's
+  seat wiring and the glazing as its own part); the cockpits' numbers, the
+  drawing and the eye are all `cockpit3d.ts`'s chunk.
 - **Not done**: the Sky Hopper's door-side window is glass, not a door
   that opens; the controls' reach was worked out for one pilot in the
   middle of each cabin (none of them has a second seat).

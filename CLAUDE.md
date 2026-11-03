@@ -1756,8 +1756,10 @@ it and has been retired completely. Build only on what's here.
   rotor's shadow, the seated pilot); the aircraft's glazing is its own
   part (aircraft.ts role `glass`, `fleet.glass()`), hidden from the seat;
   fly.ts lays the seat's eye (seateye.ts `seatEye('plane')`) on the camera,
-  banking with it, the near plane in. The boot is at 689.6 KB; its budget
-  was raised to 700 on the owner's go ("raise the budget when needed").
+  banking with it, the near plane in (the numbers and the eye ride in the
+  chunk: `cockpit.view`, `cockpit.look()`). The boot is at 690.4 KB; its
+  budget was raised to 700 on the owner's go ("raise the budget when
+  needed").
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
