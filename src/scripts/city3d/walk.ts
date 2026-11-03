@@ -90,6 +90,7 @@ import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { inBasin } from './docks';
+import { DOWN as TUNNEL_DOWN, inTunnelZone, tunnelRoom, tunnelWall, tunnelY } from './lot9';
 import { HARBOUR_MASTER } from './docksport';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
@@ -678,6 +679,9 @@ export function createWalk(d: WalkDeps) {
   /** Liberty Bridge's leaves are down and its gates open (liberty.ts: they lift for the tall ship; never under reduced motion) */
   const leavesOpen = () => d.reduced || !leavesAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
+    // (Lot 9's tunnel under the highway, lot9.ts: its ramps and open cuttings, and its floor under the roof when `yNow` is down there)
+    const tn = tunnelY(x, z, yNow);
+    if (tn !== null) return tn;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
     // (a block's edge onto open land eases down to the ground, verges.ts: the bank's slope)
     if (slab === 0.035) {
@@ -718,6 +722,11 @@ export function createWalk(d: WalkDeps) {
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
+    // Lot 9's tunnel (lot9.ts): down in it only its walls stop you (the highway's over the roof); at street level its open cuttings' edges do
+    if (inTunnelZone(x, z)) {
+      if (y < TUNNEL_DOWN) return tunnelWall(x, z, y, RADIUS);
+      if (tunnelWall(x, z, y, RADIUS)) return true;
+    }
     const open = leavesOpen();
     if (footbridgeY(x, z, y, RADIUS, open) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS, open)) return true;
@@ -747,15 +756,20 @@ export function createWalk(d: WalkDeps) {
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
+    // (down in Lot 9's tunnel, lot9.ts: its walls, floor and roof, under the ground)
+    const under = from.y < 0.6 && inTunnelZone(from.x, from.z);
+    if (under) t = tunnelRoom(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
     // Ground (and kerb) below
-    if (dir.y < 0) {
+    if (dir.y < 0 && !under) {
       const floor = Math.max(groundAt(from.x, from.z, from.y), 0.035) + 0.22;
       t = Math.min(t, (from.y - floor) / -dir.y);
     }
-    // (and Crestmont's hills along the way, terrain.ts: a slope rising behind him)
-    t = hillsAlong(from, dir, t);
-    // (and the rolls outside the town, rolls.ts)
-    t = rollsAlong(from, dir, t);
+    // (and Crestmont's hills along the way, terrain.ts: a slope rising behind him; and the rolls outside the town,
+    // rolls.ts: neither down in the tunnel, whose own room is the ground's there)
+    if (!under) {
+      t = hillsAlong(from, dir, t);
+      t = rollsAlong(from, dir, t);
+    }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
     for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
@@ -2782,7 +2796,9 @@ export function createWalk(d: WalkDeps) {
     pivot.y += (pivotWant.y + dip - pivot.y) * damp(firstPerson ? 25 : 10, dt);
     // Looking up tilts the view but keeps the camera behind him (not down at his feet),
     // so he drops to the bottom of the frame and the sky opens up
-    const camPitch = firstPerson ? pitch : Math.max(pitch, -0.12);
+    // (down in Lot 9's tunnel the camera keeps low behind him, under its roof, instead of pinned to his head: lot9.ts)
+    const lowRoof = !firstPerson && pos.y < TUNNEL_DOWN && inTunnelZone(pos.x, pos.z);
+    const camPitch = firstPerson ? pitch : lowRoof ? THREE.MathUtils.clamp(pitch, -0.12, 0.1) : Math.max(pitch, -0.12);
     offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
     const want = firstPerson ? 0 : zoom * (aimNow ? 0.62 : 1);
     // (seated, a bench's back or anything else that low doesn't pull the camera in onto him)

@@ -1395,6 +1395,66 @@ it and has been retired completely. Build only on what's here.
   `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
   people into the crowd, the dogs and leads on the main thread, the cars
   through `parkedCars()`).
+- **Lot 9** (the owner's call: a trailer park, "a little run down, rough
+  community", the grittier edge: a burnt-out shell, boarded and condemned
+  units, chained dogs, KEEP OUT signs, moody but nothing threatening; tied to
+  the storyline, coming soon) on the open land just south of the ring
+  highway's south-west corner, under The Trenches, planned in
+  `docs/trailer-plan.md` (the owner's answers; built in one go); keep it up
+  to date. Made-up names only, under the Emporium.
+  - `lot9.ts` (DOM-free, the boot's, tested in `tests/lot9.test.ts`): the
+    chain-link `FENCE`, `LOT9_RECT` / `inLot9()`, the gate on the east side
+    (`GATE`), the lane in off the south avenue (ns0s, `ROAD_Z`, `ROAD_HALF`)
+    and two one-way loops off it (`LOT9_STREETS` / `LOT9_CROSSINGS` in the
+    street plan: traffic drives in, off the highway at ns0, whose outer
+    corners got slip lanes, `OUTER_SLIPS`), the lots' grid (`COL0`, `LOT_W`,
+    `COLS`), the fire pit (`FIRE_LOT`, `FIRE`, `FIRE_SEATS`, `FIRE_POLES`,
+    the zapper and the radio), the office and the coin laundry by the gate
+    (`OFFICE`, `LAUNDRY`), the junk corner along the west fence (`JUNK`:
+    the boat, the mechanic's `BAY`, `TYRES`, `SCRAP`, dead cars),
+    `LOT9_SOLIDS` (in `SOLIDS`), sodium lamps (`LOT9_LAMPS`, lampmix.ts's
+    `SODIUM_AREAS`; the odd one dead and a few flickering, `inLot9Lamps()`),
+    people (`LOT9_IDLE`: the fire pit's crowd, the mechanic, the manager;
+    `LOT9_PEOPLE`: kids on BMXs and running round the loops, life.ts),
+    `LOT9_SPAWN`, `LOT9_PIN`, a bus stop each way on the avenue by the lane
+    (`STOP_ZONE`, transit.ts), its sound (ambience.ts `hood`, the radio as a
+    `boombox`), the trees and rolls kept off (`KEEPS`), worn and bare ground
+    round it (ground.ts).
+  - **The tunnel** (`TUNNEL`, the owner's pick): a pedestrian underpass
+    straight under the highway in line with The Trenches' x -112 street,
+    between row C's blocks: a ramp down from Bottom Street's side, the
+    passage under the roof (the highway over it), a ramp up on Lot 9's side,
+    the footpath to the hole cut in the fence (`HOLE`, `FOOTPATH`). It's
+    the city's first ground below street level for walking: `tunnelY()`
+    (walk.ts `groundAt()`: the ramps and open cuttings always, the floor
+    under the roof only when Degen is down there, `DOWN`), `tunnelWall()`
+    (walk.ts `blocked()`: down there only its walls stop him; at street
+    level the open cuttings' edges), `tunnelRoom()` (the walk camera's room
+    down there, `cameraRoom()`), `TUNNEL_HOLES` (world.ts cuts the ground
+    over the open cuttings), `TUNNEL_SOLIDS` (parapets, headwalls and the
+    bollards at each ramp's top: cars stop, a walker gets through). Down
+    there the walk camera keeps low (its pitch held under the roof) and
+    skips the hills' and rolls' checks, which read anything under street
+    level as under the ground.
+    Anything new below ground goes through the same three.
+  - `lot9homes.ts` (DOM-free, the chunk's, tested): the lots in six rows
+    and a home on each, seeded (`Home`: kind single, double, caravan, rv or
+    bus; condition kept, worn, rough, condemned or burnt; deck, car,
+    carport, shed, lean-to, dog run, junk, KEEP OUT, dish, AC, tarp, boarded
+    windows, flowers, skirting, porch bulb, TV glow), `HOME_SOLIDS` (joined
+    through `addSolids()` when the chunk loads), `HOME_CARS`,
+    `PORCH_SITTERS` (the crowd's spare slots, `addPeople()`),
+    `CHAINED_DOGS`. The boot never carries it.
+  - Drawn by `lot9-3d.ts` (`LAZY_DISTRICTS` id `lot9`): the gravel lanes,
+    a site a home, the fence (its mesh in the FX layer), the gate and its
+    LOT 9 board, the office, the laundry, the fire pit, the junk corner,
+    the tunnel (walls, floor, ceiling with fluorescent tubes, some
+    flickering, tags), one sign atlas of fixed made-up copy (`LOT9_SIGNS`);
+    on the main thread the parked cars, the kids' BMXs, the dogs (loose
+    after the kids, chained in their runs) and the fire's glow.
+  - A place: spot `lot9` (pin over the fire pit, directory entry, panel
+    `data-panel-tpl="lot9"` with Walk in, `data-lot9-walkin`, marquee "Lot 9
+    keeps its secrets"), `PLACES` and `LIVE_PLACES` entries.
 - **The raised highway** (the owner's call, planned, nothing built yet): the
   ring highway rebuilt on a concrete viaduct with real exits (diamond
   interchanges, numbered, made-up names on the gantries) and traffic that
@@ -1772,7 +1832,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -4363,7 +4423,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway and the lamps' mix (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway and the lamps' mix (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

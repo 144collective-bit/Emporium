@@ -71,8 +71,9 @@ const spots: Record<SpotId, Spot> = {
   lagoon: { title: 'Lava Lagoon', sub: 'Lagoon resort' },
   orbit: { title: 'Orbit', sub: 'Space-age tower' },
   sphere: { title: 'The Sphere', sub: 'Shows' },
+  lot9: { title: 'Lot 9', sub: 'Trailer park' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1239,6 +1240,13 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">The Sphere</h2>
     <p class="city-panel-text">A ball of light twenty tiles across at the Strip's east end, its whole skin a screen playing an eye, the moon, a planet, a wave and the Emporium's diamond in turn, seen from across the city. Shows inside: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-sphere-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="lot9" data-marquee="Lot 9 keeps its secrets">
+    <p class="kicker"><span class="kicker-num">38</span> South of the highway</p>
+    <h2 id="city-panel-title" class="city-panel-title">Lot 9</h2>
+    <p class="city-panel-text">A trailer park behind chain-link on the far side of the highway from The Trenches. Single-wides and double-wides gone to rust, old caravans and campers, tarps and lean-tos, dogs on their chains and KEEP OUT on half the gates. The fire pit's lit most nights. You get in by the gravel lane off the south avenue, or on foot through the tunnel under the highway from Bottom Street. Somebody here knows something: the story comes through here, coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-lot9-walkin>Walk in</button>
   </template>
 
   <div class="city-hud mk-skin" data-city-hud>

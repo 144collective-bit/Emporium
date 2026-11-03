@@ -23,6 +23,7 @@ import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
+import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
@@ -326,6 +327,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const ball: [number, number, number, number] = [x - SPHERE.r, z - SPHERE.r, x + SPHERE.r, z + SPHERE.r];
     spots.push({ ...pickSpot(scene, 'sphere', SLAB, [{ rect: ball, h: SPHERE_TOP }, { rect: SPHERE.pavilion, h: SPHERE.pavilionH }], SPHERE_LOT, SPHERE_TOP + 1.2, [x, z]), faces: 'n' });
   }
+  // ...and Lot 9, the trailer park south of the highway (lot9.ts, docs/trailer-plan.md): its spot over the whole fenced
+  // land (drawn in its chunk), the pin over the fire pit, the fly-in from the north (from over the highway)
+  spots.push({ ...pickSpot(scene, 'lot9', LOT9_Y, [{ rect: LOT9_FENCE, h: 1.9 }, { rect: LOT9_OFFICE.rect, h: LOT9_OFFICE.h + 0.4 }], LOT9_FENCE, 5.2, LOT9_PIN), faces: 'n' });
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -355,6 +359,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, size] of SF_POOLS) addPool(x, z, size, SLAB, true);
   for (const [x, z, s] of [...SF_PARK_TREES, ...SF_STRIP_TREES]) addTree(x, z, s, false);
   SF_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  // Lot 9's (lot9.ts): sodium along its lanes, by the gate and at the tunnel's mouth; its people about (phones: half)
+  for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z, s] of LOT9_TREES) addTree(x, z, s, false, LOT9_Y);
+  LOT9_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
   for (const [x, z] of PORT_MASTS) addPool(x, z, 12, SLAB, true);
   // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)
@@ -739,6 +747,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-docks-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(HM_SPAWN);
+      });
+    // Lot 9's panel: Walk in on the lane outside its gate, facing in
+    if (id === 'lot9')
+      panelBody.querySelector('[data-lot9-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(LOT9_SPAWN);
       });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
