@@ -1528,6 +1528,13 @@ it and has been retired completely. Build only on what's here.
     Uptown's west edge (its `median` span, broken at the axis's zebra) and
     `PARK_EDGE_TREES` (a row just inside the park's wall, `EDGE_TREE_GAP`,
     `EDGE_TREE_IN`), added in neighbourhoods.ts.
+  - Phase 6d (the third seam, Starlight Mall and Palm Court across the east
+    avenue) is built in `ringstreet.ts` too: `MALL_SIDE_LAMPS` (both sides
+    from the mall's north edge to the Parkway, `MALL_STRETCH`, on the
+    sidewalks or the grass strip, off the verges' banks, clear of Palm Court's
+    zebra), the east side's median carried north under the el (cut at the
+    zebra) and `STRIP_TREES` (down the grass strip by the mall's loop,
+    `STRIP_X`, `STRIP_TREE_GAP`), added in neighbourhoods.ts.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
