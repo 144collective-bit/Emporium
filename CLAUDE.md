@@ -2917,6 +2917,15 @@ it and has been retired completely. Build only on what's here.
   (checked at every width, sideways, at night and under reduced motion; the
   old menus' styles gone) is built, and the plan is done. One phase at a time with the owner's sign-off; keep it up
   to date.
+- **The controls plan** (the owner's call: "upgrade the header and
+  controls buttons on phone", in the menus' design) is planned in
+  `docs/controls-plan.md`: every touch control in the arcade kit (round
+  buttons recoloured, a pixel icon and a word, the main action coin-yellow
+  and Jump green, the rest quiet; brighter while held, lit while on), the
+  same slots in an arc round the thumb in every mode (`touchlayout.ts`),
+  the header one slim row on phones, then size, opacity, left-handed and
+  moving the buttons. One phase at a time with the owner's sign-off; keep
+  it up to date. Nothing is built yet.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
