@@ -494,9 +494,16 @@ For each seam in the seam map, the treatment it needs:
 - **Shared streets:** the streets and arterials between districts get one
   look both sides: sidewalks where people would walk, street trees, the
   same lamps, a shared kerb.
-- **Lamps mixed at the edges:** `lampKind()` grows a blend zone a block or
-  two wide at each district's edge, each lamp seeded white or sodium in
-  proportion to how far in it stands.
+- **6a, lamps mixed at the edges (built):** `lampmix.ts` (DOM-free, tested
+  in `tests/lampmix.test.ts`): the sodium districts (`SODIUM_AREAS`: The
+  Trenches, the waterfront, the Docks, Southfield Yards) and how far a point
+  stands inside them (`sodiumDepth()`, each district's own test with its
+  margin halved down to the edge); within `MIX` (18, about a block) either
+  side of the edge a lamp is sodium with a share easing from 0 outside to 1
+  inside (`sodiumShare()`), picked by its own number from where it stands
+  (`lampTone()`); The Trenches' dead and flickering lamps stay its own.
+  world.ts's `buildLamps()` takes each lamp's tone from it. No new draws;
+  the boot 694.7 KB.
 - **Stepped heights:** where towers meet low-rise (Uptown's edge by
   Westlake and downtown, Uptown North by the mall), the edge lots step down;
   where The Trenches meets the south row, its tenements step to the row's
@@ -508,7 +515,10 @@ For each seam in the seam map, the treatment it needs:
   a bit of each style (brick shopfronts with a cleaner face towards Uptown,
   stucco and brick where Sunridge meets Palm Court).
 - One seam a step, in the order the seam map ranks them (what's seen most
-  first).
+  first). Ranked today (district against district): Downtown and the town
+  across the ring avenue, Uptown and Westlake Park, the mall and Palm Court,
+  Uptown North and Westlake Park, Sunridge and the Neon Mile, Uptown North
+  and the mall, Southfield and its yards, The Trenches and the yards.
 
 ### Phase 7: the in-between details
 

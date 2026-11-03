@@ -483,7 +483,8 @@ it and has been retired completely. Build only on what's here.
     ramps and the el's pillars. The streets are worn too (`trenches3d.ts`:
     patched asphalt inside the lanes, never across a line, cracks,
     manholes). The lamps there are sodium orange (`lampKind()` in
-    trenches.ts, `buildLamps()` in world.ts: about one in ten flickering,
+    trenches.ts, mixed with the town's white for a block at its edges by
+    `lampTone()` in lampmix.ts, `buildLamps()` in world.ts: about one in ten flickering,
     in two sets going out together through `flickerTogether()` in kit.ts,
     the odd one dead). The el over Trench Avenue is dark steel
     (`metro3d.ts`, on through Southbank Docks too, `grim()`: a grimy deck, deep plate girders braced across, flanged
@@ -1503,6 +1504,13 @@ it and has been retired completely. Build only on what's here.
     closer to the highway (`REGIONS`; Sunridge's desert plants, brambles,
     gorse and grass elsewhere). Nothing of theirs comes within
     `HIGHWAY_KEEP` (6) of the highway's centre line: its lamps stand at 4.7.
+  - Phase 6a (lamps mixed at the edges) is built: `lampmix.ts` (DOM-free,
+    tested in `tests/lampmix.test.ts`): `SODIUM_AREAS` (The Trenches, the
+    waterfront, the Docks, Southfield Yards), `sodiumDepth()`,
+    `sodiumShare()` (0 to 1 across `MIX`, 18, either side of their edge) and
+    `lampTone()` (each lamp seeded from where it stands; The Trenches' dead
+    and flickering ones its own), read by `buildLamps()` in world.ts. A new
+    sodium district goes in `SODIUM_AREAS`.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -4331,7 +4339,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield and the slivers by the highway (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway and the lamps' mix (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
