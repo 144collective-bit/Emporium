@@ -120,7 +120,13 @@ hold.
   the body drawn close, the eye on `fpcam.ts` (`foot`), drag to look round
   (`look=` the pitch), a readout row. **`?bench`** views `fp-street`,
   `fp-square` (70°, near 0.5) and `fp-seat` (68°, near 0.08), each view
-  able to carry its own lens (`BenchView.fov` / `near`).
+  able to carry its own lens (`BenchView.fov` / `near`). Their first
+  numbers (headless Chromium, medium tier: draws and triangles only, its
+  frame times are a software GPU's): `fp-street` 635 draws, 2.32M (the
+  downtown street view, 531 and 1.74M); `fp-square` 549, 2.57M (the
+  square's, 427 and 1.57M); `fp-seat` 469, 2.41M (driving's, 321 and
+  1.44M). First person's 70° takes in much more of the city than the City
+  view's 34°: measure these on real devices before and after each phase.
 - **What the lab shows for Phase 1** (its shots, for the owner's review):
   looking down, the collar, the shirt and the tie fill the view a few
   centimetres off (the neck and the collar want folding with the head, or
