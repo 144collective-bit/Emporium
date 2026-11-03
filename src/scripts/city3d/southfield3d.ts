@@ -26,8 +26,9 @@ import { SLAB as S } from './world';
 import { COVER } from './palette';
 import { drawLot } from './kits3d';
 import { parkedCars } from './cars';
+import { LINES } from './docksport';
 import {
-  AVENUE_KERB, BAYS, DEPOT_GATE, DEPOT_SHED, EAST_BEDS, EAST_GARDEN, EAST_TUNNEL, GARDEN_LOT, GARDEN_TUNNEL, HALF, HUTS, LOCKUP_W, LOCKUPS,
+  AVENUE_KERB, BAYS, CONTAINERS, SKIPS, SKIP_H, DEPOT_GATE, DEPOT_SHED, EAST_BEDS, EAST_GARDEN, EAST_TUNNEL, GARDEN_LOT, GARDEN_TUNNEL, HALF, HUTS, LOCKUP_W, LOCKUPS,
   MERCHANT, PARK_BENCHES, PARK_LOT, PARK_PATHS, PATH_W, PLOTS, POND, RAIL_BENCHES, RAIL_WALK, RAISED_BEDS, SF_CARS, SF_CROSSINGS, SF_SIGNS, SF_STREETS,
   SHED_H, STACKS, STRIPS, STRIP_WALK, TABLES, TRUCK_OFFICE, WALK_PATH_W, WEST_LOCKUPS, YARD_LOTS, shedOf, type Rect, type Shed,
 } from './southfield';
@@ -349,6 +350,33 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       b.add(new THREE.CylinderGeometry(r, r, z1 - z0, low ? 8 : 14, 1, false, -Math.PI / 2, Math.PI).rotateX(Math.PI / 2).scale(1, s.h / r, 1).translate((x0 + x1) / 2, S, (z0 + z1) / 2), film);
       b.build(into, { cast: true, receive: true });
     });
+
+  // The works' back yard: the containers (corrugated sides near only), the skips
+  const lineMats = LINES.map((l) => toon(l.color));
+  site('southfield containers', grow([Math.min(...CONTAINERS.map((c) => c.rect[0])), Math.min(...CONTAINERS.map((c) => c.rect[1])), Math.max(...SKIPS.map((r) => r[2])), Math.max(...CONTAINERS.map((c) => c.rect[3]))], 1), (into) => {
+    const b = new Batch();
+    for (const c of CONTAINERS) {
+      const tiers = Math.round(c.h / 1.44);
+      for (let t = 0; t < tiers; t++) {
+        const m = lineMats[(c.line + t) % lineMats.length];
+        rbox(b, grow(c.rect, -0.01 * t), S + t * 1.44, 1.42, m);
+        b.detail(() => {
+          if (low) return;
+          // (ribs down its long sides)
+          for (let x = c.rect[0] + 0.3; x < c.rect[2] - 0.2; x += 0.45) {
+            b.box(x, S + t * 1.44 + 0.08, c.rect[1] - 0.012, 0.06, 1.26, 0.012, m);
+            b.box(x, S + t * 1.44 + 0.08, c.rect[3], 0.06, 1.26, 0.012, m);
+          }
+        });
+      }
+    }
+    const skip = toon('#d8a23a');
+    for (const [x0, z0, x1, z1] of SKIPS) {
+      rbox(b, [x0, z0, x1, z1], S, SKIP_H, skip);
+      b.box(x0 + 0.1, S + SKIP_H - 0.2, z0 + 0.1, x1 - x0 - 0.2, 0.012, z1 - z0 - 0.2, toon(COVER.bare));
+    }
+    b.build(into, { cast: true, receive: true });
+  });
 
   /* ---------- The park ---------- */
   // Its paths: pale gravel a hair over the lawn, in pieces

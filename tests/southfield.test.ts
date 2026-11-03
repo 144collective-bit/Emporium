@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BAYS, DEPOT_GATE, DEPOT_SHED, EAST_GARDEN, EAST_TUNNEL, FUTURE_SITES, GARDEN_LOT, GARDEN_TUNNEL, HUTS, LOCKUPS, MERCHANT, PARK_BENCHES, PARK_LAMPS, PARK_LOT, PARK_PATHS, PARK_TREES, PLOTS,
+  BAYS, CONTAINERS, SKIPS, DEPOT_GATE, DEPOT_SHED, EAST_GARDEN, EAST_TUNNEL, FUTURE_SITES, GARDEN_LOT, GARDEN_TUNNEL, HUTS, LOCKUPS, MERCHANT, PARK_BENCHES, PARK_LAMPS, PARK_LOT, PARK_PATHS, PARK_TREES, PLOTS,
   POND, RAIL_BENCHES, RAIL_WALK, SF_BLOCKS, SF_CARS, SF_CROSSINGS, SF_LAMPS, SF_PEOPLE, SF_SIGNS, SF_STREETS, SOUTHFIELD_SOLIDS, STRIPS, STRIP_TREES, STRIP_WALK, TRUCK_OFFICE, WEST_LOCKUPS,
   YARD_LOTS, inPond, shedOf, type Rect,
 } from '../src/scripts/city3d/southfield';
@@ -75,6 +75,8 @@ test("its buildings, sheds and huts don't overlap each other; the parked vehicle
     ...YARD_LOTS.map((l, i): [string, Rect] => [`lot ${i}`, l.box]),
     ...[DEPOT_SHED, DEPOT_GATE, MERCHANT, TRUCK_OFFICE, ...LOCKUPS, ...WEST_LOCKUPS, ...HUTS, GARDEN_TUNNEL, EAST_TUNNEL].map((s): [string, Rect] => [s.id, s.rect]),
     ...BAYS.map((r, i): [string, Rect] => [`bay ${i}`, r]),
+    ...CONTAINERS.map((c, i): [string, Rect] => [`container ${i}`, c.rect]),
+    ...SKIPS.map((r, i): [string, Rect] => [`skip ${i}`, r]),
     ...PLOTS.filter((p) => p.shed).map((p, i): [string, Rect] => [`plot shed ${i}`, shedOf(p)]),
   ];
   for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++) assert.ok(!overlap(things[i][1], things[j][1], 0.01), `${things[i][0]} and ${things[j][0]}`);

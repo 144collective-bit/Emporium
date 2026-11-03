@@ -25,6 +25,7 @@ import { heightOf, KIT_SPEC, lotSolids, type KitId, type Lot } from './kits';
 import type { Face } from './downtown';
 import type { IdleAct } from './crowdclips';
 import type { CarId } from './carspec';
+import { BOX, LINES } from './docksport';
 
 type Pt = [number, number];
 export type Rect = [number, number, number, number];
@@ -225,6 +226,25 @@ export const WEST_LOCKUPS: Shed[] = (() => {
 /** A lock-up row's doors: one every so far along it */
 export const LOCKUP_W = 3;
 
+/** The works' back yard (east of the lock-ups, south of the works): containers stacked one to three high in rows with
+ * aisles between (40-foot boxes in the port's made-up lines), and skips by the fence */
+export const CONTAINERS: { rect: Rect; h: number; line: number }[] = (() => {
+  const out: { rect: Rect; h: number; line: number }[] = [];
+  const x0 = KX - 4 * (BOX.L + 0.4) - 6;
+  [WORKS_LOT[1] + 30, WORKS_LOT[1] + 37.5, WORKS_LOT[1] + 45].forEach((z, row) => {
+    for (let k = 0; k < 4; k++)
+      for (let j = 0; j < 2; j++) {
+        const x = x0 + k * (BOX.L + 0.4);
+        const zz = z + j * (BOX.W + BOX.gap);
+        const tiers = 1 + ((row * 7 + k * 3 + j * 5) % 3);
+        out.push({ rect: [x, zz, x + BOX.L, zz + BOX.W], h: tiers * BOX.H, line: (row * 4 + k * 2 + j) % LINES.length });
+      }
+  });
+  return out;
+})();
+export const SKIPS: Rect[] = [0, 1, 2].map((i): Rect => [KX - 4.4, WORKS_LOT[1] + 30 + i * 6, KX - 1, WORKS_LOT[1] + 31.8 + i * 6]);
+export const SKIP_H = 1.1;
+
 /** Parked: the buses on the depot's forecourt and in its bays, the trucks in the truck depot, a van at the merchant's */
 export const SF_CARS: [CarId, number, number, number, string][] = (() => {
   const out: [CarId, number, number, number, string][] = [];
@@ -390,6 +410,8 @@ export const SOUTHFIELD_SOLIDS: Box[] = [
   ]),
   ...STACKS.map(([x, z, w, d, h]): Box => [x, z, x + w, z + d, h]),
   ...PLOTS.filter((p) => p.shed).map((p) => boxOf(shedOf(p), SHED_H)),
+  ...CONTAINERS.map((c) => boxOf(c.rect, c.h)),
+  ...SKIPS.map((r) => boxOf(r, SKIP_H)),
   ...pondBoxes(),
   ...SF_CARS.map(([id, x, z, ry]) => carBox(id, x, z, ry)),
 ];
