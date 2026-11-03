@@ -2921,9 +2921,9 @@ it and has been retired completely. Build only on what's here.
   screen; the title with a shadow under it, each button its own dark chip,
   touches between them going through to the game). The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
-  other pages. In play (walk mode: walking, driving, flying, boating,
-  karting, fighting) only the hub's button stays, with the gun's readout and
-  the emotes where they are (controls.css). Left to right: the mode title and
+  other pages. Walk mode carries the same header as the City view (the
+  owner's call, after Phase 5 had it down to ☰ in play), so City / Walk
+  switches between the two from either. Left to right: the mode title and
   subtitle (City view, Walk mode), then on the
   right (the emotes, online, and ammo and score while walking), the City /
   Walk switch (the current mode lit with a glow and a gradient underline,
@@ -3028,7 +3028,8 @@ it and has been retired completely. Build only on what's here.
   icon and word, and its slot in `LAYOUTS`; anything new pinned near the
   buttons goes in `clash()`. Phase 5 (the clear header and the installed
   game) is built, waiting on the owner's sign-off: the header clear and
-  without its logo on every screen, only ☰ in play (above); installed (added
+  without its logo on every screen (walk mode's the City view's, above, the
+  owner's later call); installed (added
   to the home screen) the game opens full screen with no browser bars
   (`public/site.webmanifest`: `display` fullscreen, standalone on iPhones,
   whose status bar stays, black; the meta tags in `Base.astro`). Phase 6
@@ -3554,8 +3555,9 @@ it and has been retired completely. Build only on what's here.
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
   clicked.
-- While walking (`body.is-walking`, set in `index.ts`) the header carries
-  only the emotes (online), ammo and score and the hub's button (on phones the ammo is the hotbar's, the score the
+- While walking (`body.is-walking`, set in `index.ts`) the header is the
+  City view's (the title, Dorras, the level, City / Walk, ☰) and carries
+  the emotes (online), ammo and score too (on phones the ammo is the hotbar's, the score the
   hub's and the emotes the hub's Online tab's: the controls plan's Phase 3). The touch buttons stay at the bottom (hidden while
   the hub is open, `.is-hub`).
 - The gun store is the menus' kit's sample (`.mk-store`, gunshop.ts): the
