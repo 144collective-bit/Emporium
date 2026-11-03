@@ -19,7 +19,9 @@
  * `scripts/seams.mjs` (`npm run seams`, the report in the plan).
  */
 import { EXT, CENTER_XZ } from './layout';
-import { PLAN, slabOf, inPoly, type Block, type Pt, type StreetKind } from './streetplan';
+import { AREA_IDS, areaOfBlock } from './areas';
+export { AREAS, AREA_IDS, areaOfBlock, type Area, type Character } from './areas';
+import { PLAN, slabOf, inPoly, type Pt, type StreetKind } from './streetplan';
 import { HIGHWAY_HALF, fromHighway, insideHighway } from './highway';
 import { inWater } from './river';
 import { inBasin, DOCKS_RECT } from './docks';
@@ -41,48 +43,7 @@ export const CELL = 2;
 /** How far a seam is looked for across streets and sidewalks (tiles) */
 export const REACH = 40;
 
-/** What an area is like: what a seam between two of them needs depends on it */
-export type Character = 'core' | 'town' | 'towers' | 'park' | 'retail' | 'homes' | 'estates' | 'grit' | 'industry' | 'airport' | 'sport';
-
-export interface Area {
-  id: string;
-  name: string;
-  character: Character;
-}
-
-/** The areas, in the order a cell is given to one (the first that claims it) */
-export const AREAS: Area[] = [
-  { id: 'downtown', name: 'Downtown', character: 'core' },
-  // (the districts' landscaped blocks round downtown, the south row, the squares and the parks: outer.ts)
-  { id: 'town', name: 'The town', character: 'town' },
-  { id: 'uptown', name: 'Uptown', character: 'towers' },
-  { id: 'uptown-north', name: 'Uptown North', character: 'towers' },
-  { id: 'westlake', name: 'Westlake Park', character: 'park' },
-  { id: 'stadium', name: 'Sector 7 Stadium', character: 'sport' },
-  { id: 'mall', name: 'Starlight Mall', character: 'retail' },
-  { id: 'palm-court', name: 'Palm Court', character: 'retail' },
-  { id: 'sunridge', name: 'Sunridge', character: 'homes' },
-  { id: 'crestmont', name: 'Crestmont', character: 'estates' },
-  { id: 'trenches', name: 'The Trenches', character: 'grit' },
-  { id: 'docks', name: 'Southbank Docks', character: 'industry' },
-  { id: 'strip', name: 'The Neon Mile', character: 'retail' },
-  { id: 'airport', name: 'Sector 7 Airport', character: 'airport' },
-  { id: 'karts', name: 'The kart park', character: 'sport' },
-];
-export const AREA_IDS = AREAS.map((a) => a.id);
 const AREA_IX = new Map(AREA_IDS.map((id, i) => [id, i]));
-
-/** The area a street plan block belongs to (null: a sidewalk-only strip, the bends' kerbs) */
-export function areaOfBlock(b: Block): string | null {
-  if (b.id.startsWith('kerb')) return null;
-  if (b.id.startsWith('dt-')) return 'downtown';
-  if (b.id.startsWith('o-')) return 'town';
-  if (b.id === 'uptown-north') return 'uptown-north';
-  if (b.id === 'palm-court') return 'palm-court';
-  if (b.id === 'mall' || b.id === 'mall-park') return 'mall';
-  const byRef: Record<string, string> = { uptown: 'uptown', westlake: 'westlake', stadium: 'stadium', sunridge: 'sunridge', crestmont: 'crestmont', trenches: 'trenches', docks: 'docks', strip: 'strip' };
-  return (b.ref && byRef[b.ref]) ?? null;
-}
 
 /** Land an area holds that isn't a street plan block (the airport, the kart park, the stadium's grounds, Crestmont's hills,
  * Sunridge's club, park and school, Uptown's free sites, The Trenches' land along the highway, the docks' quays), later

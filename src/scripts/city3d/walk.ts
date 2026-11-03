@@ -94,6 +94,7 @@ import { HARBOUR_MASTER } from './docksport';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
 import { heightAt, hillsAlong, onHills } from './terrain';
+import { onRolls, rollsAlong, rollsAt } from './rolls';
 import { HIRE } from './riverbus';
 import type { Boat } from './boat';
 import { harbourY, onHarbour } from './harbour';
@@ -109,6 +110,7 @@ import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol'
 import { live } from './live-client';
 import type { FeatureId } from './live';
 import { layoutControls } from './controls';
+import { vergeY } from './verges';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -651,8 +653,18 @@ export function createWalk(d: WalkDeps) {
   const leavesOpen = () => d.reduced || !leavesAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
+    // (a block's edge onto open land eases down to the ground, verges.ts: the bank's slope)
+    if (slab === 0.035) {
+      const v = vergeY(x, z);
+      if (v > 0) return v + 0.035;
+    }
     // (Crestmont's hills, terrain.ts: open ground that rises; nothing else stands there yet)
     if (slab === 0.035 && onHills(x, z)) return heightAt(x, z) + 0.035;
+    // (the open land outside the town's gentle rolls, rolls.ts: exactly 0 wherever anything stands)
+    if (slab === 0.035) {
+      const r = rollsAt(x, z);
+      if (r !== 0) return r + 0.035;
+    }
     // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
     const hb = harbourY(x, z);
     if (hb !== null) return Math.max(slab, hb + 0.035);
@@ -716,6 +728,8 @@ export function createWalk(d: WalkDeps) {
     }
     // (and Crestmont's hills along the way, terrain.ts: a slope rising behind him)
     t = hillsAlong(from, dir, t);
+    // (and the rolls outside the town, rolls.ts)
+    t = rollsAlong(from, dir, t);
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
     for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
@@ -2487,7 +2501,7 @@ export function createWalk(d: WalkDeps) {
     const fall = vy;
     const wasGrounded = grounded;
     // Down a slope (Crestmont's hills) he keeps his feet rather than stepping off into the air at every stride
-    if (wasGrounded && vy <= 0 && !over && pos.y > ground && pos.y - ground < 0.05 + speed * dt * 0.9 && onHills(pos.x, pos.z)) pos.y = ground;
+    if (wasGrounded && vy <= 0 && !over && pos.y > ground && pos.y - ground < 0.05 + speed * dt * 0.9 && (onHills(pos.x, pos.z) || onRolls(pos.x, pos.z))) pos.y = ground;
     if (pos.y <= ground) {
       // Kerbs: step up smoothly rather than pop
       pos.y = pos.y < ground - 0.05 ? pos.y + (ground - pos.y) * damp(20, dt) : ground;

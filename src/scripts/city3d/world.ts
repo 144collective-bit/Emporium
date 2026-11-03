@@ -37,8 +37,10 @@ import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
-import { COVER, KERB, LAMP, TREE } from './palette';
+import { COVER, KERB, LAMP, TREE, VERGE } from './palette';
+import { EDGE, RAMP, VERGES, edgePieces, pieceLine } from './verges';
 import { colourAt, groundStep } from './ground';
+import { ROLL, rollGrad, rollSlope, rollsAt, rollsIn } from './rolls';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one pad each (layout.ts DISTRICTS). */
@@ -703,15 +705,126 @@ function groundPlane(x0: number, z0: number, x1: number, z1: number, low: boolea
   const nz = Math.max(1, Math.ceil((z1 - z0) / step));
   return new THREE.PlaneGeometry(x1 - x0, z1 - z0, nx, nz).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
 }
+/**
+ * A piece of the ground over the rolls (rolls.ts, docs/blend-plan.md Phase 4), or null where it's flat: its grid on
+ * the rolls' lattice (as fine as `groundStep()` asks, in whole shares of a cell, never finer: phones' near grid is
+ * coarser than a cell, so they draw a cell a quad), each quad split from its low corner (x, z) to its high one, as
+ * `rollsAt()` reads it, so what's drawn is what's walked on
+ */
+function rolledPlane(x0: number, z0: number, x1: number, z1: number, low: boolean) {
+  if (!rollsIn(x0, z0, x1, z1)) return null;
+  const step = ROLL.cell / Math.max(1, Math.floor(ROLL.cell / Math.min(ROLL.cell, groundStep(x0, z0, x1, z1, low))));
+  const at = (a: number, b: number) => {
+    const out = [a];
+    for (let v = (Math.floor(a / step) + 1) * step; v < b - 1e-6; v += step) out.push(v);
+    out.push(b);
+    return out;
+  };
+  const xs = at(x0, x1);
+  const zs = at(z0, z1);
+  const pos: number[] = [];
+  for (const z of zs) for (const x of xs) pos.push(x, rollsAt(x, z), z);
+  const idx: number[] = [];
+  const n = xs.length;
+  for (let j = 0; j + 1 < zs.length; j++)
+    for (let i = 0; i + 1 < n; i++) {
+      const a = j * n + i;
+      const [b, c, d] = [a + 1, a + n + 1, a + n];
+      // (x, z) to (x', z'): the triangle with the cell's (x', z) corner, and the one with its (x, z')
+      idx.push(a, c, b, a, d, c);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((pos.length / 3) * 2).fill(0), 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
 const GROUND_TINT = new THREE.Color();
-/** Each vertex of a piece of the ground in what covers it there (ground.ts) */
+const ROLL_LOW = new THREE.Color(COVER.bank);
+const ROLL_HIGH = new THREE.Color(COVER.dryGrass);
+/** The rolls' shade: slopes facing a light from the north-west (x -, z -) a shade brighter, those facing away a shade darker, by `SHADE` a unit of slope (a map's hill shading: a metre or two of rise reads from above, by day or night) */
+const SHADE_TO = [-0.6, -0.8] as const;
+const SHADE = 3.2;
+/** Each vertex of a piece of the ground in what covers it there (ground.ts); over the rolls the lows lusher, the crests drier, the slopes shaded */
 function paintGround(g: THREE.BufferGeometry) {
   const pos = g.getAttribute('position');
   const col = g.getAttribute('color') as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
-    const [r, gr, bl] = colourAt(pos.getX(i), pos.getZ(i), RGB);
+    const [x, h, z] = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+    const [r, gr, bl] = colourAt(x, z, RGB);
     GROUND_TINT.setRGB(r, gr, bl, THREE.SRGBColorSpace);
+    if (h > 0) GROUND_TINT.lerp(ROLL_HIGH, 0.6 * Math.min(1, h / ROLL.up));
+    else if (h < 0) GROUND_TINT.lerp(ROLL_LOW, 0.6 * Math.min(1, -h / ROLL.down));
+    if (h !== 0) {
+      const [gx, gz] = rollGrad(x, z, ROLL.cell / 2);
+      GROUND_TINT.multiplyScalar(Math.max(0.7, Math.min(1.3, 1 - SHADE * (gx * SHADE_TO[0] + gz * SHADE_TO[1]))));
+    }
     col.setXYZ(i, GROUND_TINT.r, GROUND_TINT.g, GROUND_TINT.b);
+  }
+}
+
+/**
+ * Where a block meets open land (verges.ts, docs/blend-plan.md Phase 3): the slab eases down to the ground over
+ * `RAMP` (a bank from its top edge to its foot, in pieces a tile or less long, the top in the block's own cover and
+ * the foot in the ground's there, so it blends; its ends closed), and along the foot the district's hedge or low
+ * wall, in pieces with gaps between (their coping and the hedge's top near only)
+ */
+function buildVerges(b: Batch, low: boolean) {
+  const PIECE = 10;
+  const FOOT = 0.012;
+  const hedge = toon(VERGE.hedge);
+  const hedgeTop = toon(VERGE.hedgeTop);
+  const wall = toon(VERGE.wall);
+  const coping = toon(VERGE.coping);
+  const at = (p: Pt, n: Pt, d: number, y: number): [number, number, number] => [p[0] + n[0] * d, y, p[1] + n[1] * d];
+  for (const v of VERGES) {
+    const len = Math.hypot(v.b[0] - v.a[0], v.b[1] - v.a[1]);
+    const d: Pt = [(v.b[0] - v.a[0]) / len, (v.b[1] - v.a[1]) / len];
+    const up: [number, number, number] = [v.n[0] * 0.1, 1, v.n[1] * 0.1];
+    const bank = toon(COVER[v.cover]);
+    const pieces = Math.max(1, Math.ceil(len / PIECE));
+    for (let k = 0; k < pieces; k++) {
+      const p: Pt = [v.a[0] + d[0] * ((len * k) / pieces), v.a[1] + d[1] * ((len * k) / pieces)];
+      const q: Pt = [v.a[0] + d[0] * ((len * (k + 1)) / pieces), v.a[1] + d[1] * ((len * (k + 1)) / pieces)];
+      const g = quad3([at(p, v.n, 0, SLAB), at(q, v.n, 0, SLAB), at(q, v.n, RAMP, FOOT), at(p, v.n, RAMP, FOOT)], up);
+      b.add(g, bank);
+      // (the foot in the ground's own colour there, ground.ts: painted once the Batch has given it the bank's)
+      const col = g.getAttribute('color') as THREE.BufferAttribute;
+      for (const i of [2, 3]) {
+        const [r, gr, bl] = colourAt(g.getAttribute('position').getX(i), g.getAttribute('position').getZ(i), RGB);
+        GROUND_TINT.setRGB(r, gr, bl, THREE.SRGBColorSpace);
+        col.setXYZ(i, GROUND_TINT.r, GROUND_TINT.g, GROUND_TINT.b);
+      }
+    }
+    // Its ends closed: a triangle from the slab's top edge down to the foot, facing along it
+    for (const [p, s] of [
+      [v.a, -1],
+      [v.b, 1],
+    ] as [Pt, number][])
+      b.add(quad3([at(p, v.n, 0, SLAB), at(p, v.n, 0, 0), at(p, v.n, RAMP, 0), at(p, v.n, RAMP, FOOT)], [d[0] * s, 0, d[1] * s]), bank);
+    // The hedge or the wall along its foot
+    if (!v.edge) continue;
+    const { w, h } = EDGE[v.edge];
+    for (const piece of edgePieces(v)) {
+      const { a, b: e } = pieceLine(v, piece);
+      const l = Math.hypot(e[0] - a[0], e[1] - a[1]);
+      const n = Math.max(1, Math.ceil(l / PIECE));
+      const yaw = Math.atan2(-(e[1] - a[1]), e[0] - a[0]);
+      for (let k = 0; k < n; k++) {
+        const m: Pt = [a[0] + ((e[0] - a[0]) * (k + 0.5)) / n, a[1] + ((e[1] - a[1]) * (k + 0.5)) / n];
+        const seg = l / n;
+        if (v.edge === 'hedge') {
+          // (phones leave out the lighter top: the hedge itself its full height)
+          const hh = low ? h : h - 0.06;
+          b.add(new THREE.BoxGeometry(seg, hh, w).rotateY(yaw).translate(m[0], hh / 2, m[1]), hedge);
+          if (!low) b.detail(() => b.add(new THREE.BoxGeometry(seg - 0.04, 0.06, w - 0.06).rotateY(yaw).translate(m[0], h - 0.03, m[1]), hedgeTop));
+        } else {
+          b.add(new THREE.BoxGeometry(seg, h - 0.05, w).rotateY(yaw).translate(m[0], (h - 0.05) / 2, m[1]), wall);
+          b.detail(() => b.add(new THREE.BoxGeometry(seg + 0.02, 0.05, w + 0.08).rotateY(yaw).translate(m[0], h - 0.025, m[1]), coping));
+        }
+      }
+    }
   }
 }
 
@@ -830,7 +943,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts)
         for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
-          const flat = hill ? null : groundPlane(px0, pz0, px1, pz1, low);
+          // (the open land outside the town rolls, rolls.ts; flat everywhere anything stands)
+          const flat = hill ? null : (rolledPlane(px0, pz0, px1, pz1, low) ?? groundPlane(px0, pz0, px1, pz1, low));
           b.add(hill ?? flat!, grass);
           // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex;
           // what covers the ground, ground.ts, docs/blend-plan.md Phase 2)
@@ -1019,6 +1133,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     b.box(x0, SLAB, z0, x1 - x0, 0.007, z1 - z0, rim);
     b.box(x0 + 0.3, SLAB, z0 + 0.3, x1 - x0 - 0.6, 0.01, z1 - z0 - 0.6, padGround[p.id] ? LOTS[padGround[p.id]] : toon(COVER.pad));
   }
+  buildVerges(b, low);
   // The bending streets: asphalt wide enough to fill their corners at the avenues (the kerbs cover the rest)
   for (const bend of BENDS) {
     const hw = BEND_REACH + 0.4;
@@ -1203,7 +1318,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
  */
 export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
   // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
-  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : 0);
+  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
 }
 
 

@@ -37,6 +37,7 @@ import { UPTOWN_RECT } from './uptown';
 import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
+import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
 
@@ -155,6 +156,8 @@ export const KEEPS: Keep[] = [
   { id: 'quay-north', box: [WORLD[0], RIVER[0] - 2.8 - WOBBLE, WORLD[2], RIVER[0] + 0.5 + WOBBLE], hit: (_x, z, w) => z > RIVER[0] - 2.8 - w && z < RIVER[0] + 0.5 },
   { id: 'quay-south', box: [WORLD[0], RIVER[1] - 0.5 - WOBBLE, WORLD[2], RIVER[1] + 2.6 + WOBBLE], hit: (_x, z, w) => z > RIVER[1] - 0.5 && z < RIVER[1] + 2.6 + w },
   shaped('river', [WORLD[0], RIVER[0] - 30, WORLD[2], RIVER[1] + 30], 0.8, (x, z, m) => inChannel(x, z, m)),
+  // The blocks' banks onto open land and the hedges and walls along their feet (verges.ts): a tree stands past them
+  ...VERGES.flatMap((v) => line(`verge:${v.block}`, [[v.a[0] + v.n[0] * RAMP * 0.6, v.a[1] + v.n[1] * RAMP * 0.6], [v.b[0] + v.n[0] * RAMP * 0.6, v.b[1] + v.n[1] * RAMP * 0.6]], RAMP, false, true)),
   // The metro's line: no tree under the el (metro.ts)
   ...Object.values(TRACKS).flatMap((t) => line(`metro:${t.id}`, t.pts, EL_CLEAR, false, true)),
 ];

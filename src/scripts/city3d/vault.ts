@@ -8,8 +8,9 @@
  * - `LOW_THINGS`: what can be gone over, from the data that knows their real
  *   heights (the solids' boxes elsewhere are rough, for the camera): The
  *   Trenches' jersey barriers, the yards' concrete kerbs and the dumpsters,
- *   Westlake Park's walls, hedges, beds and planters, and downtown's alley
- *   crates, pallets and bins. Never a building, a car, a kiosk or a stall.
+ *   Westlake Park's walls, hedges, beds and planters, downtown's alley
+ *   crates, pallets and bins, and the hedges and low walls along the
+ *   blocks' edges onto open land (verges.ts). Never a building, a car, a kiosk or a stall.
  * - `overAhead()`: the nearest low thing straight ahead within reach, thin
  *   enough to go over, and where he'd land (walk.ts checks the way and the
  *   landing are clear).
@@ -20,6 +21,7 @@
 import * as THREE from 'three';
 import type { Box } from './solids';
 import { ALLEY_PROPS } from './downtown';
+import { VERGE_SOLIDS } from './verges';
 import { BARRIERS, DUMPSTER, DUMPSTERS, JERSEY, barrierRect } from './grit';
 import { GARDEN_LOW } from './gardens';
 import { EDGES, edgeSolid } from './streetwall';
@@ -31,6 +33,8 @@ export const LOW_THINGS: Box[] = [
   ...EDGES.map((e) => edgeSolid(e) as Box),
   ...GARDEN_LOW,
   ...ALLEY_PROPS.map((p): Box => [...p.box, p.h]),
+  // (the hedges and low walls along the blocks' edges onto open land, verges.ts)
+  ...VERGE_SOLIDS,
 ];
 const key = (b: Box) => `${b[0].toFixed(3)},${b[1].toFixed(3)},${b[2].toFixed(3)},${b[3].toFixed(3)},${b[4].toFixed(3)}`;
 const LOW_KEYS = new Set(LOW_THINGS.map(key));

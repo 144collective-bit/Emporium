@@ -7,6 +7,7 @@
 // small, with its name) to docs/blend-shots/<label>/, for the PR.
 //   SHOTS_ONLY=view1,view2   only these views        SHOTS_SETS=full   only one tier        SHOTS_TIMES=day   only day
 //   SHOTS_RESUME=1           keep the pictures already taken under this label (a long run cut short goes on)
+//   SHOTS_EXTRA='[{"id":"x","name":"...","pos":[x,y,z],"target":[x,y,z]}]'  one-off cameras too (a close look, not a review view)
 //   SHOTS_BENCH=1            also run ?bench on each tier (bench.ts) and keep its draws and triangles (headless and
 //                            on the CPU: its frame times mean nothing, its draws, triangles and memory do)
 //   CHROMIUM_PATH=...        the browser (default: Playwright's own, else /opt/pw-browsers/chromium)
@@ -80,13 +81,14 @@ try {
       await page.goto(`${origin}/?shots${time === 'night' ? '=night' : ''}`);
       await page.waitForFunction(() => globalThis.__shots?.ready, null, { timeout: 1800000, polling: 1000 });
       log(`${set} ${time}: the city built in ${Math.round((Date.now() - t0) / 1000)} s`);
-      const all = (await page.evaluate(() => globalThis.__shots.views)).filter((v) => !only || only.includes(v.id));
+      const extra = process.env.SHOTS_EXTRA ? JSON.parse(process.env.SHOTS_EXTRA) : [];
+      const all = [...(await page.evaluate(() => globalThis.__shots.views)), ...extra].filter((v) => !only || only.includes(v.id));
       const views = all.filter((v) => !done(v.id));
       // (the 3D view's box: the page screenshot clipped to it, with time for the software renderer's frame)
       const clip = await page.locator('[data-city3d]').boundingBox();
       const shot = all.filter((v) => done(v.id)).map((v) => ({ ...v, file: join(out, `${set}-${time}-${v.id}.png`) }));
       for (const v of views) {
-        await page.evaluate((id) => globalThis.__shots.show(id), v.id);
+        await page.evaluate((w) => globalThis.__shots.show(w.pos ? w : w.id), v);
         // A few frames drawn on the view, and what it asked for built
         await page.waitForFunction(() => globalThis.__shots.frames >= 12, null, { timeout: 600000, polling: 250 });
         await page.waitForTimeout(1500);

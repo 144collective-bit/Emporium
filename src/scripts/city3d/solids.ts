@@ -54,6 +54,8 @@ import { MALL_INSIDE_SOLIDS } from './mallinside';
 import { UPTOWN_SITE_SOLIDS } from './uptownsites';
 import { SKYDECK_SOLIDS } from './skydeck';
 import { hillsAlong } from './terrain';
+import { rollsAlong } from './rolls';
+import { VERGE_SOLIDS } from './verges';
 
 /** x0, z0, x1, z1, height */
 export type Box = [number, number, number, number, number];
@@ -290,7 +292,7 @@ export const FIGHTCLUB_SITE: Box[] = [
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
 /** ...and the kart park's fence, hut, garages and stand (kartcircuit.ts), the airport's buildings, masts and parked vehicles (airfield.ts), the Fight Club (fightsite.ts), Liberty Bridge, the metro and The Trenches' towers, rows and The Block (projects.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...HARBOUR_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...WATERFRONT_SOLIDS, ...NIGHT_MARKET_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS, ...FACILITY_SOLIDS, ...GARDEN_SOLIDS, ...PLAZA_SOLIDS, ...HIGHRISE_SOLIDS, ...KERBSIDE_SOLIDS, ...STREETLEVEL_SOLIDS, ...UPTOWN_SITE_SOLIDS, ...STREETLIFE_SOLIDS, ...WHEEL_SOLIDS, ...MALL_SOLIDS, ...MALL_INSIDE_SOLIDS, ...NORTH_SOLIDS, ...SKYDECK_SOLIDS, ...CORAL_SOLIDS, ...ESTATE_SOLIDS, ...MANSION_SOLIDS, ...SITE_SOLIDS, ...PORT_SOLIDS, ...SUN_SOLIDS, ...SUNPLACE_SOLIDS, ...RESORT_SOLIDS, ...MARK_SOLIDS, ...MONO_SOLIDS];
+export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...HARBOUR_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...WATERFRONT_SOLIDS, ...NIGHT_MARKET_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS, ...FACILITY_SOLIDS, ...GARDEN_SOLIDS, ...PLAZA_SOLIDS, ...HIGHRISE_SOLIDS, ...KERBSIDE_SOLIDS, ...STREETLEVEL_SOLIDS, ...UPTOWN_SITE_SOLIDS, ...STREETLIFE_SOLIDS, ...WHEEL_SOLIDS, ...MALL_SOLIDS, ...MALL_INSIDE_SOLIDS, ...NORTH_SOLIDS, ...SKYDECK_SOLIDS, ...CORAL_SOLIDS, ...ESTATE_SOLIDS, ...MANSION_SOLIDS, ...SITE_SOLIDS, ...PORT_SOLIDS, ...SUN_SOLIDS, ...SUNPLACE_SOLIDS, ...RESORT_SOLIDS, ...MARK_SOLIDS, ...MONO_SOLIDS, ...VERGE_SOLIDS];
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 
@@ -351,6 +353,8 @@ export function rayBoxes(from: { x: number; y: number; z: number }, dir: { x: nu
   if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
   // (and Crestmont's hills, terrain.ts: the ground there rises)
   t = hillsAlong(from, dir, t, 0, 0.5);
+  // (and the rolls outside the town, rolls.ts)
+  t = rollsAlong(from, dir, t, 0.1, 0.5);
   const o = [from.x, from.y, from.z];
   const v = [dir.x, dir.y, dir.z];
   // Only the boxes under the ray's path can stop it
