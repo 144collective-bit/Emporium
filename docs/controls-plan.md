@@ -242,6 +242,31 @@ and the installed game without the browser's bars. The owner's picks:
   held clear of each other, the safe areas and the screen's edge (the same
   check as Phase 1's, `touchlayout.ts`), with Reset; saved per family and
   per screen shape (upright, on its side) in `degen-city-walk-v1`.
+- **Built, waiting on the owner's sign-off.** `touchlayout.ts`: the
+  families (`Family`: `foot`, empty hands and a gun out sharing the slots;
+  `wheel`, the car, the bike, the boat, the aircraft and the kart race;
+  `ring`), what each can move (`itemsOf()`: its slots, the stick and, on
+  foot, Crouch), `TouchPrefs.arrange` (by `arrangeKey()`, family and shape,
+  upright and narrow sharing one; each moved item's centre as shares of the
+  screen in the right hand's frame, so left-handed mirrors it as it mirrors
+  the rest; `cleanTouch()` keeps known keys and items and shares in 0 to 1),
+  `layoutFor()` putting moved items there (an arrangement that clashes on a
+  screen, at a size, falls back to the slots), `moveItem()` (the drag's
+  check: the same `clash()`, so nothing goes on another button, the stick,
+  off the screen, under the header's room or, on foot, under the hotbar or
+  the prompt) and `arrangementOf()`. The test holds a moved button where it
+  was put in every mode of its family and mirrored left-handed, the other
+  families and shapes as they were, a refused drag refused, and every
+  screen, mode and size clear with an arrangement. The screen is
+  `arrange-ui.ts` (its own chunk, from Settings > On foot > Touch buttons >
+  **Arrange buttons**): over everything with the city dimmed under a grid,
+  tabs On foot / Vehicles / The ring (each showing its fullest mode: a gun
+  out, the car), the hotbar's and the prompt's room marked, Reset, Done and
+  ×; a button follows the finger where it fits and slides along what it
+  can't pass, rimmed in warning while it can't keep up; Done keeps only
+  what moved off its slot, for the screen held that way; a turn starts
+  again from what's kept; Esc or × leaves it. The hub waits under it
+  (`is-arranging` hides it and the real controls).
 
 ## Not in it
 

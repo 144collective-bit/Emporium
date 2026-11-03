@@ -3031,8 +3031,14 @@ it and has been retired completely. Build only on what's here.
   without its logo on every screen, only ☰ in play (above); installed (added
   to the home screen) the game opens full screen with no browser bars
   (`public/site.webmanifest`: `display` fullscreen, standalone on iPhones,
-  whose status bar stays, black; the meta tags in `Base.astro`). Phase 6 is
-  moving the buttons.
+  whose status bar stays, black; the meta tags in `Base.astro`). Phase 6
+  (moving the buttons) is built, waiting on the owner's sign-off: Settings >
+  Touch buttons > Arrange buttons opens `arrange-ui.ts` (its own chunk; tabs
+  On foot / Vehicles / The ring, drag, Reset, Done, ×); a moved item's
+  centre is kept in `TouchPrefs.arrange` per family and shape
+  (`arrangeKey()`, shares of the screen in the right hand's frame),
+  `layoutFor()` falls back to the slots where it clashes, and `moveItem()`
+  holds a drag clear through the same `clash()`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site

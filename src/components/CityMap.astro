@@ -435,7 +435,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             <span>Invert look up / down</span>
           </label>
           <button type="button" class="walk-fp" data-walk-fp aria-pressed="true">First person</button>
-          {/* Touch screens: the buttons' size, opacity and hand (touchlayout.ts, docs/controls-plan.md Phase 4) */}
+          {/* Touch screens: the buttons' size, opacity and hand (touchlayout.ts, docs/controls-plan.md Phase 4), and moving them (Phase 6, arrange-ui.ts) */}
           <div class="hub-touchset">
             <p class="walk-section">Touch buttons</p>
             <div class="walk-field" role="group" aria-labelledby="tc-size-label">
@@ -454,7 +454,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
               <input type="checkbox" data-tc-left />
               <span>Left-handed (the stick on the right)</span>
             </label>
-            <p class="walk-pad">Buttons go solid while you hold them. Large comes out a little smaller where your screen hasn't room.</p>
+            <button type="button" class="walk-fp" data-tc-arrange>Arrange buttons</button>
+            <p class="walk-pad">Buttons go solid while you hold them. Large comes out a little smaller where your screen hasn't room. Arrange buttons: drag them where you like, kept for your screen held upright or on its side.</p>
           </div>
           <p class="walk-section">Shooting</p>
           <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
