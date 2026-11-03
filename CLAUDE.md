@@ -787,8 +787,8 @@ it and has been retired completely. Build only on what's here.
   spire about 40 tiles since the redesign, the rest 14 to 32; the Sky Wheel
   about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
-  Emporium" holds everywhere else but Uptown North, below, and Southbank
-  Docks' cranes); the flying traffic and your own
+  Emporium" holds everywhere else but Uptown North, below, Southbank
+  Docks' cranes and the Neon Mile's resorts); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:
@@ -1236,6 +1236,93 @@ it and has been retired completely. Build only on what's here.
   (`PORT_TALLEST`), the cranes well under every flight (the test). Drawn by
   `docksport3d.ts` (sites in the docks' chunk, one sign atlas of fixed
   made-up copy). Made-up names only.
+- **The Neon Mile** (the owner's call: a strip like Las Vegas, lights and
+  casinos) on the open land between the Parkway's east side and the ring
+  highway's east side, north of the river (the kart park's old land),
+  planned in `docs/strip-plan.md` in six phases, each with the owner's
+  sign-off; keep it up to date. One grand boulevard in place of the two
+  small streets there, seven resorts (themed, glass and old-school neon,
+  made-up names) with towers over the Emporium (the owner's call: the
+  Strip's only, every flight clear of them), the welcome sign, a fountain
+  show, a volcano, a giant LED sphere, searchlights, a monorail to the
+  metro, crowds, limos and party buses, its own sound. Scenery first: the
+  resorts are places that say coming soon, no betting. Phase 1 (the
+  boulevard and the land) is built: `strip.ts` (DOM-free, tested in
+  `tests/strip.test.ts`): the boulevard (`strip-blvd`, layout.ts
+  `STRIP_BLVD`: two lanes each way round a 4-wide planted median) from the
+  Parkway's line (`BLVD_WEST`) to the east road (`strip-east`,
+  `STRIP_EAST_X`), `STRIP_CROSSINGS`, the north and south rows
+  (`STRIP_BLOCKS`, ref `strip`, `STRIP_WALK`), `STRIP_LAMPS`, `STRIP_RECT` /
+  `inStrip()`; downtown's two small east-west streets stop at the Parkway
+  and start again past it (layout.ts `STRIP_GAP`, `ewRuns()`, `ewStreet()`:
+  their east pieces `ew1e` / `ew2e` carry the highway's junctions and
+  Crestmont's crossings); an avenue's planted `median` pushes its lanes
+  out (routes.ts `wide()`). Drawn by `strip3d.ts` (`LAZY_DISTRICTS` id
+  `strip`: asphalt, the median's palms with neon uplights, lines, zebras;
+  the palms' shapes are `palms3d.ts`, Crestmont's too). Phase 2 (the
+  resorts, as places) is built: `resorts.ts` (DOM-free, tested in
+  `tests/resorts.test.ts`): `RESORTS`, each written in its own frame
+  (`frame()`: `u` along the boulevard, `v` back from it): **Wild Ace**
+  (classic neon, under the Emporium), **Dragonspire** (a castle),
+  **The Golden Scarab** (a pyramid), **Big City** (a cluster of towers and
+  a rollercoaster, `COASTER`, `coasterAt()`) on the north row; **The
+  Gondolier** (a palace on its canal by the fountain show's lake), **Lava
+  Lagoon** (a gold crescent behind its lagoon) and **Orbit** (the tallest,
+  a saucer deck, its mast 44) on the south row, `SPHERE_LOT` behind
+  hoardings until Phase 3; each with its `parts`, `pylon` (an LED screen and
+  its name), `porte` (the porte-cochère and a car under it), `door` (a walk
+  prompt), `spawn`, `water` (held in by a rim) and `pool`; the themes' own
+  (`WILD_ACE`, `DRAWBRIDGE`, `SCARAB`, `BIG_CITY`, `GONDOLIER`, `LAGOON`,
+  `ORBIT`); `RESORT_SOLIDS` (in `SOLIDS`), `RESORT_TALLEST`. Spots
+  `wildace`, `dragonspire`, `scarab`, `bigcity`, `gondolier`, `lagoon`,
+  `orbit` (pins, directory entries, panels with Walk in,
+  `data-strip-walkin`, `PLACES` and `LIVE_PLACES` entries, the doors in
+  walk.ts `ALL_DOORS`). A taxi may stop on the boulevard's far kerb (no
+  U-turns); the resorts' own drives come with the limos (Phase 5). Drawn by
+  `resorts3d.ts` (`registerResorts()`, from strip3d.ts): two sites a resort
+  and the coaster's, the Strip's own curtain-wall atlas (`strip-glass`),
+  one sign atlas (`strip-signs`) and the LED faces (`strip-led`, made-up
+  slides stepped on together by the tick); on the main thread the water,
+  the cars, the cowboy's waving arm, the pyramid's beam at night, the
+  coaster's train, Wild Ace's chasing bulbs (`strip-bulb-<n>`) and the
+  waterfalls. Phase 3 (the landmarks) is built:
+  `stripmarks.ts` (DOM-free, tested in `tests/stripmarks.test.ts`): the
+  welcome sign in the median by the west end (`WELCOME`), the fountain show
+  in the Gondolier's lake (`JETS`, `SHOW`: six movements every three
+  minutes, `showAt()`, `jetHeights()`), the volcano on Lava Lagoon's islet
+  (`VOLCANO`, `ERUPT`, `eruptionAt()`, `volcanoRumble()`: sound.ts's
+  `quake`), the Sphere (`SPHERE`, a place: spot `sphere`, `SPHERE_DOOR`,
+  `SPHERE_SPAWN`) and the `SEARCHLIGHTS`; `MARK_SOLIDS` (in `SOLIDS`); each
+  show a function of the clock, a still frame under reduced motion
+  (`SHOW_STILL`, `ERUPT_STILL`). Drawn by `stripmarks3d.ts`
+  (`registerMarks()`: the Sphere's LED skin a shader of made-up slides, the
+  jets, flames and beams instanced on the main thread); the Strip's chunk
+  loads from further out (`STRIP_REACH`). Phase 4 (the monorail) is built: `monorail.ts` (DOM-free,
+  tested in `tests/monorail.test.ts`): a beam over the north bank avenue's
+  median (`MONO`, `FLOOR`) from by the east ring avenue past the Sphere, its
+  pillars in the median (`MONO_PILLARS`), four stations (`MONO_STATIONS`:
+  Downtown Link, a short walk from the metro's Downtown station; Neon Mile
+  West, Central and The Sphere at the back of the walks between resorts),
+  the train on a shuttle timetable (`monoAt()`), rides (`monoRide()`,
+  `monoResume()`, `MONO_VIEW`), `MONO_SOLIDS` (in `SOLIDS`). The doors are
+  walk prompts (`mono:<id>`) opening `monorail-ui.ts` (loaded on first use,
+  the metro's card and bar), the stations places (`mono-<id>`, kind `mono`
+  on the world map), `monorail` in `LIVE_FEATURES`; drawn by `monorail3d.ts`
+  (`registerMono()`). Phase 5 (life and sound) is built: two new
+  traffic-only models, the Velvet Stretch limo and the Party Liner open-top
+  bus (`limo`, `partybus` in carspec.ts and the model tables; cars.ts
+  `EXTRAS`); the Strip's own traffic (strip.ts `STRIP_LEAD`, `STRIP_MIX`,
+  `STRIP_PAINTS`: life.ts `STRIP_HOME`, a Home naming its lead model and
+  paints, `strip` in `TIERS`); walkers round its rows with their shopping;
+  `striplife.ts` (DOM-free, tested in `tests/striplife.test.ts`: valets,
+  doormen, the crowds at the fountains, the volcano and the Sphere, added
+  from the chunk through `addPeople()`, the crowd's `reserve` now 192); its
+  sound (ambience.ts `strip`, `casino`, `show`: the crowd's babble, slot
+  chimes by the casino doors, the fountain show's music while a show is on). Phase 6 (polish and performance) is built and the plan
+  is done: `?bench` views `strip` and `strip-street`; phones draw the Sphere's
+  shader on a lighter path (`LOW`) and the coaster at half its samples; the
+  fountain's nozzle lights in the FX layer; the volcano's flames shaped as
+  flames. It draws lighter than Uptown on desktop and phones.
 - **Sunridge** (the owner's call): a middle-class suburb of about 120
   Southwest stucco tract houses on the north-east land inside the ring
   highway (curving loops and cul-de-sacs, block-walled back yards with pools,
@@ -1292,10 +1379,10 @@ it and has been retired completely. Build only on what's here.
   porches, at their grills, patio tables and pool loungers) and the
   residents' cars on about a driveway in three (`DRIVEWAY_CARS`, nosed up to
   the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
-  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 128, 64 on
-  phones; `addPeople()` fills them when the chunk loads, or queues them
+  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 192, 96 on
+  phones, with the Neon Mile's; `addPeople()` fills them when the chunk loads, or queues them
   before the crowd's built) and life.ts's home cars are per district
-  (`Home`: Crestmont's and Sunridge's, `SUN_MIX` / `SCHOOL_BUS_PAINT` in
+  (`Home`: Crestmont's, Sunridge's and the Neon Mile's, `SUN_MIX` / `SCHOOL_BUS_PAINT` in
   sunridge.ts, `opts.sun`); bus stops round the collector (transit.ts
   `SUN_STOP_GAP`, the school bus serves them); lamps at the boot round the
   park, in the club's pool yard and by the school's front (`SUN_PLACE_LAMPS`
@@ -1628,7 +1715,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -2019,7 +2106,7 @@ it and has been retired completely. Build only on what's here.
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
-  The Trenches round The Block,
+  The Trenches round The Block, the Neon Mile from over its boulevard and down it,
   where the edge was before Phase 6, the far edge (from `EXT`)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,
@@ -2838,8 +2925,11 @@ it and has been retired completely. Build only on what's here.
   `open()` puts under its name. Phase 5 is built, waiting on the owner's
   sign-off: inside the skin the business views' goods and contracts are
   cards and their steps clear buttons (`.market-row`, `.market-btns`: the
-  first step coin). Until a menu moves to the new kit it keeps today's
-  look and rules. One phase at a time with the owner's sign-off; keep it up
+  first step coin). Phase 6 is built, waiting on the owner's sign-off: the
+  fitting room, the character screen, the inventory, the world map's frame
+  and the walk HUD's prompt, hints, toasts, pops, tracker, compass and
+  hotbar wear the skin; the touch controls keep their round look. Until a
+  menu moves to the new kit it keeps today's look and rules. One phase at a time with the owner's sign-off; keep it up
   to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
@@ -4157,7 +4247,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground and the blocks' edges (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground and the blocks' edges (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

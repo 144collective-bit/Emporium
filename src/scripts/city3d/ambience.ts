@@ -17,7 +17,8 @@
  * (`CREST_HUM`) and little wind, birds by day and an owl at night as the park's, the sprinklers by day and the crickets
  * at night (`crest`), and the Drive's and the civic hall's fountains (`fountain`). In Sunridge (docs/suburb-plan.md
  * Phase 5) the same quiet hum (`SUN_HUM`), its sprinklers, crickets and birds as Crestmont's and a lawnmower now and
- * then (`suburb`).
+ * then (`suburb`). On the Neon Mile (docs/strip-plan.md Phase 5) its crowd (`strip`), the slot machines' chimes by
+ * the casinos' doors (`casino`) and, round the Gondolier's lake, the fountain show's music while a show is on (`show`).
  */
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
@@ -31,6 +32,9 @@ import { LAKE_C, WESTLAKE_RECT, inPark, lakeR } from './westlake';
 import { CIRCLE, UPTOWN_RECT, inUptown } from './uptown';
 import { CENTRE, POOL, WALL_RUNS, WATER_WALL } from './plaza';
 import { CREST_RECT } from './crestmont';
+import { STRIP_RECT, inStrip } from './strip';
+import { RESORTS, resortOf } from './resorts';
+import { SPHERE_DOOR } from './stripmarks';
 import { FOUNTAINS as DRIVE_FOUNTAINS } from './coral';
 import { CIVIC } from './crestsites';
 import { SUNRIDGE_RECT, inSunridge } from './sunridge';
@@ -60,6 +64,12 @@ export interface Ambience {
   crest: number;
   /** Sunridge: the sprinklers and a lawnmower by day, the crickets at night, 0-1 */
   suburb: number;
+  /** The Neon Mile: its crowd's hum, 0-1 */
+  strip: number;
+  /** Slot machines' chimes through a casino's doors, 0-1 */
+  casino: number;
+  /** By the Gondolier's lake: the fountain show's music (sound.ts plays it while a show is on), 0-1 */
+  show: number;
 }
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
 export const CREST_HUM = 0.4;
@@ -69,6 +79,9 @@ const CREST_FOUNTAINS: [number, number, number][] = [...DRIVE_FOUNTAINS.map((f):
 export const SUN_HUM = 0.3;
 /** How much quieter the town's hum is deep in Uptown (its offices, glass and the river) */
 export const UPTOWN_HUSH = 0.35;
+/** The Neon Mile's casino doors (the resorts' and the Sphere's), and the lake the fountain show plays on */
+const CASINO_DOORS = [...RESORTS.map((r) => r.door), SPHERE_DOOR];
+const SHOW_LAKE = resortOf('gondolier')!.water[0];
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -132,5 +145,14 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   const yards = Math.max(crest, suburb);
   // (the town's hum reaches Sunridge, inside the highway: hushed there to a suburb's)
   const town = Math.max(city * hush * (1 - (1 - SUN_HUM) * suburb), CREST_HUM * crest, SUN_HUM * suburb);
-  return { city: town, water: Math.max(water, lake) * k, road: Math.max(road, circle) * k, open: (1 - town) * (1 - 0.6 * yards) * k, beat, hood: hood * k, boombox, club, park: park * k, fountain, crest: crest * k, suburb: suburb * k };
+  // The Neon Mile: its crowd all over its land, fading over 25 past it; the casinos' chimes by their doors; the show's
+  // music round the Gondolier's lake
+  const [px0, pz0, px1, pz1] = STRIP_RECT;
+  const strip = 1 - smooth(0, 25, inStrip(x, z) ? 0 : Math.hypot(Math.max(px0 - x, x - px1, 0), Math.max(pz0 - z, z - pz1, 0)));
+  let door = Infinity;
+  for (const d of CASINO_DOORS) door = Math.min(door, Math.hypot(x - d.x, z - d.z));
+  const casino = 1 - smooth(2, 16, door + lift * 0.5);
+  const [lx0, lz0, lx1, lz1] = SHOW_LAKE;
+  const show = 1 - smooth(4, 55, Math.hypot(Math.max(lx0 - x, x - lx1, 0), Math.max(lz0 - z, z - lz1, 0)) + lift * 0.4);
+  return { city: town, water: Math.max(water, lake) * k, road: Math.max(road, circle) * k, open: (1 - town) * (1 - 0.6 * yards) * k, beat, hood: hood * k, boombox, club, park: park * k, fountain, crest: crest * k, suburb: suburb * k, strip: strip * k, casino, show: show * k };
 }

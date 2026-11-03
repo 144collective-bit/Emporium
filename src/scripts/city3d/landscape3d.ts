@@ -12,59 +12,12 @@ import { site } from './tilework';
 import { TILE } from './tiles';
 import { SWAY } from './dusk';
 import { JACARANDAS, OAKS, PALMS, SCRUB, WALLS, type Edge, type Palm, type Plant } from './landscape';
+import { crown, trunk } from './palms3d';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** How far each of a fan palm's trunk bends lean its top over (tiles, at a trunk's full size) */
 const BENDS = [0, 0.55, 1.05];
-
-/** A trunk a unit high, its foot at the origin, bending over towards +x by `lean` at its top */
-function trunk(r0: number, r1: number, lean: number, sides: number) {
-  const g = new THREE.CylinderGeometry(r1, r0, 1, sides, 6, true).translate(0, 0.5, 0);
-  const pos = g.getAttribute('position');
-  for (let i = 0; i < pos.count; i++) {
-    const t = pos.getY(i);
-    pos.setX(i, pos.getX(i) + lean * t * t);
-  }
-  g.computeVertexNormals();
-  return g;
-}
-
-/**
- * A crown of `n` fronds radiating from the origin, each `len` long and `w` wide, rising and then drooping by `droop`
- * (both faces wound, so a frond seen from under shows)
- */
-function crown(n: number, len: number, w: number, rise: number, droop: number, tilt = 0) {
-  const pos: number[] = [];
-  const SEG = 4;
-  for (let k = 0; k < n; k++) {
-    const a = (k / n) * Math.PI * 2 + (k % 2) * 0.2;
-    const [ca, sa] = [Math.cos(a), Math.sin(a)];
-    // (every other frond a little higher, so the crown isn't one flat ring)
-    const up = (k % 2 ? 0.12 : 0) + tilt * Math.sin(a * 3);
-    const at = (t: number, side: number): number[] => {
-      const r = len * t;
-      const half = w * Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.5;
-      const y = up + rise * t - droop * t * t;
-      return [ca * r - sa * half * side, y, sa * r + ca * half * side];
-    };
-    for (let s = 0; s < SEG; s++) {
-      const [t0, t1] = [s / SEG, (s + 1) / SEG];
-      const [a0, b0, a1, b1] = [at(t0, -1), at(t0, 1), at(t1, -1), at(t1, 1)];
-      for (const tri of [
-        [a0, b0, b1],
-        [a0, b1, a1],
-      ]) {
-        pos.push(...tri[0], ...tri[1], ...tri[2]);
-        pos.push(...tri[0], ...tri[2], ...tri[1]);
-      }
-    }
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.computeVertexNormals();
-  return g;
-}
 
 /**
  * A slab along a line from `a` to `b`, `t` thick across it, its bottom and top at each end's own height (a wall or

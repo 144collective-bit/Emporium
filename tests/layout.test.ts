@@ -2,7 +2,7 @@
 // lanes, the river, and the landmarks' old drawing grid with their seats today.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BLOCKS, BS, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RING_HI, RING_LO, RIVER, SEATS, SOUTH_ROAD, THIRDS, WALK_W, WORLD_BOUNDS, design, designBox, laneCentres, nsRuns, seat } from '../src/scripts/city3d/layout';
+import { BLOCKS, BS, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RING_HI, RING_LO, RIVER, SEATS, SOUTH_ROAD, THIRDS, WALK_W, WORLD_BOUNDS, design, designBox, laneCentres, ewRuns, nsRuns, seat } from '../src/scripts/city3d/layout';
 import { SLABS, bounds, inside, overlaps, polysOverlap } from './world';
 import { CREST_RECT } from '../src/scripts/city3d/crestmont';
 import { DOCKS_RECT } from '../src/scripts/city3d/docks';
@@ -28,7 +28,10 @@ test('no road runs over a slab (a block, district or lot, with its sidewalk)', (
   NS_ROADS.forEach((r, i) => {
     for (const s of SLABS) assert.ok(s.every((p) => p[0] <= r.c - r.half + 1e-6) || s.every((p) => p[0] >= r.c + r.half - 1e-6) || s.every((p) => !nsRuns(i, p[1])), `north-south road at x ${r.c} crosses a slab at ${bounds(s)}`);
   });
-  for (const r of EW_ROADS) for (const s of SLABS) assert.ok(s.every((p) => p[1] <= r.c - r.half + 1e-6) || s.every((p) => p[1] >= r.c + r.half - 1e-6), `east-west road at z ${r.c} crosses a slab at ${bounds(s)}`);
+  // (downtown's two small east-west roads don't run across the Strip: layout.ts STRIP_GAP, strip.ts)
+  EW_ROADS.forEach((r, i) => {
+    for (const s of SLABS) assert.ok(s.every((p) => p[1] <= r.c - r.half + 1e-6) || s.every((p) => p[1] >= r.c + r.half - 1e-6) || s.every((p) => !ewRuns(i, p[0])), `east-west road at z ${r.c} crosses a slab at ${bounds(s)}`);
+  });
 });
 
 test('no two slabs overlap', () => {

@@ -79,6 +79,8 @@ const SEATS: Record<CarId, { x: number; y: number; recline: number; rear?: { x: 
   police: { x: 0.04, y: 0.26, recline: 0.32, rear: { x: -0.42, recline: 0.15 } },
   truck: { x: 1.16, y: 0.94, recline: 0.14, floor: 0.66 },
   rig: { x: 0.0, y: 1.06, recline: 0.14, floor: 0.78 },
+  limo: { x: 1.0, y: 0.27, recline: 0.3, rear: { x: -1.1, recline: 0.24 } },
+  partybus: { x: 2.25, y: 0.62, recline: 0.12, floor: 0.36, door: false },
 };
 
 /** The roof's height over x: the cabin's top edge (rear glass, roof, windscreen) */

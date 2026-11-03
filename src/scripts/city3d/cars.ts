@@ -270,6 +270,54 @@ const EXTRAS: Partial<Record<CarId, (p: Parts, s: CarSpec) => void>> = {
     p.detail(box(0.02, 0.16, s.W * 0.42, half + 0.006, 0.4, 0), CHROME);
     p.detail(box(0.06, 0.06, 0.02, half - 0.08, topAt(s, half - 0.08) + 0.03, 0), CHROME);
   },
+  // The Neon Mile's (docs/strip-plan.md Phase 5): the stretch limo and the open-top party bus
+  limo(p, s) {
+    const half = s.L / 2;
+    // Chrome along the window line and the sills, the grille and the ornament, as the town car's; the windows dark
+    for (const z of [-1, 1]) {
+      p.detail(box(3.2, 0.022, 0.012, -0.2, 0.6, z * (s.W * 0.43 + 0.006)), CHROME);
+      p.detail(box(3.8, 0.03, 0.012, 0.0, s.clr + 0.12, z * (s.W / 2 + 0.006)), CHROME);
+    }
+    p.detail(box(0.02, 0.16, s.W * 0.42, half + 0.006, 0.4, 0), CHROME);
+    p.detail(box(0.06, 0.06, 0.02, half - 0.08, topAt(s, half - 0.08) + 0.03, 0), CHROME);
+    // A low roof fin of lights along the middle of the roof, a little flag mount on each front wing
+    const [, rr, fr] = s.cabin;
+    p.detail(box(fr[0] - rr[0] - 0.4, 0.025, 0.1, (rr[0] + fr[0]) / 2, rr[1] + 0.012, 0), '#d6c9ff');
+    for (const z of [-1, 1]) p.detail(box(0.03, 0.12, 0.03, half - 0.35, topAt(s, half - 0.35) + 0.06, z * (s.W / 2 - 0.08)), CHROME);
+  },
+  partybus(p, s) {
+    const [, rr, fr] = s.cabin;
+    const deck = rr[1];
+    const half = s.L / 2;
+    const hw = (s.W * s.cabinW) / 2;
+    // The top deck's floor, then railings round it: posts, a top rail in chrome, a lit band just under it
+    p.paint(box(fr[0] - rr[0] - 0.02, 0.03, hw * 2 - 0.04, (rr[0] + fr[0]) / 2, deck + 0.015, 0));
+    const rail = deck + 0.5;
+    for (let x = rr[0] + 0.1; x <= fr[0] - 0.05; x += 0.55)
+      for (const z of [-1, 1]) p.detail(box(0.035, rail - deck, 0.035, x, (deck + rail) / 2, z * (hw - 0.03)), CHROME);
+    for (const z of [-1, 1]) {
+      p.detail(box(fr[0] - rr[0], 0.035, 0.04, (rr[0] + fr[0]) / 2, rail, z * (hw - 0.03)), CHROME);
+      p.glow(box(fr[0] - rr[0], 0.05, 0.02, (rr[0] + fr[0]) / 2, rail - 0.1, z * (hw - 0.012)));
+      // Neon stripes down the body's sides, magenta over cyan
+      p.detail(box(s.L - 0.5, 0.05, 0.012, 0, 0.82, z * (s.W * 0.495 + 0.008)), '#ff3fd2');
+      p.detail(box(s.L - 0.5, 0.03, 0.012, 0, 0.75, z * (s.W * 0.495 + 0.008)), '#2ef2ff');
+    }
+    for (const x of [rr[0] + 0.02, fr[0] - 0.02]) p.detail(box(0.035, 0.035, hw * 2 - 0.06, x, rail, 0), CHROME);
+    // A canopy over the front third on four posts, its edge lit
+    const c0 = fr[0] - 1.6;
+    for (const x of [c0, fr[0] - 0.08]) for (const z of [-1, 1]) p.detail(box(0.04, 0.62, 0.04, x, deck + 0.81, z * (hw - 0.06)), TRIM);
+    p.paint(box(fr[0] - c0 + 0.1, 0.05, hw * 2, (c0 + fr[0]) / 2, deck + 1.13, 0));
+    p.glow(box(0.02, 0.06, hw * 2, fr[0] + 0.03, deck + 1.13, 0));
+    // The DJ's booth under it, speaker stacks at the back corners
+    p.detail(box(0.5, 0.36, 0.7, fr[0] - 0.5, deck + 0.2, 0), TRIM);
+    p.glow(box(0.02, 0.06, 0.6, fr[0] - 0.76, deck + 0.3, 0));
+    for (const z of [-1, 1]) {
+      p.detail(box(0.32, 0.5, 0.3, rr[0] + 0.3, deck + 0.26, z * (hw - 0.22)), '#1d1b2b');
+      p.detail(new THREE.CylinderGeometry(0.09, 0.09, 0.012, 12).rotateZ(Math.PI / 2).translate(rr[0] + 0.46, deck + 0.34, z * (hw - 0.22)), '#5a566e');
+    }
+    // The destination board says nothing: lit plain
+    p.glow(box(0.02, 0.14, s.W * 0.6, half + 0.012, 1.3, 0));
+  },
   // Vehicle plan Phase 8: the traffic's own
   police(p, s) {
     const half = s.L / 2;
@@ -604,12 +652,12 @@ export function build(id: CarId, wheels: boolean, bare = '', crew = false): CarG
   const p = new Parts(bare);
   const half = s.L / 2;
   const cw = s.W * s.cabinW;
-  const lit = s.id === 'bus';
+  const lit = s.id === 'bus' || s.id === 'partybus';
   const addGlass = (g: THREE.BufferGeometry) => (lit ? p.glow(g) : p.detail(g, GLASS));
 
   // Body and cabin, their long edges rounded off (the first two paint pieces, always: carcabin.ts cuts them out of
   // your own car by their size to hollow it)
-  const bus = s.id === 'bus';
+  const bus = s.id === 'bus' || s.id === 'partybus';
   p.paint(extrude(bodyShape(s), s.W, bus ? 0.05 : 0.04));
   const cabinRound = bus ? 0.05 : 0.055;
   p.paint(extrude(new THREE.Shape(s.cabin.map(([x, y]) => new THREE.Vector2(x, y))), cw, cabinRound));
@@ -885,7 +933,7 @@ export function farCarGeometry(id: CarId) {
     g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n * 3 }, (_, i) => (i % 3 === 0 ? c.r : i % 3 === 1 ? c.g : c.b)), 3));
     return g.index ? g.toNonIndexed() : g;
   };
-  const parts = [paint(flat(body, s.W), '#ffffff'), paint(flat(new THREE.Shape(s.cabin.map(([x, y]) => new THREE.Vector2(x, y))), s.W * s.cabinW), s.id === 'bus' ? '#ffffff' : '#46506e')];
+  const parts = [paint(flat(body, s.W), '#ffffff'), paint(flat(new THREE.Shape(s.cabin.map(([x, y]) => new THREE.Vector2(x, y))), s.W * s.cabinW), s.id === 'bus' || s.id === 'partybus' ? '#ffffff' : '#46506e')];
   if (s.box) {
     const [x0, x1, y1] = s.box;
     parts.push(paint(flat(new THREE.Shape([new THREE.Vector2(x0, topAt(s, x0) - 0.01), new THREE.Vector2(x1, topAt(s, x1) - 0.01), new THREE.Vector2(x1, y1), new THREE.Vector2(x0, y1)]), s.W), '#ffffff'));

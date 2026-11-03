@@ -205,6 +205,8 @@ Trenches along the highway (210) and the stadium (246).
 | Westlake's west verge (`westlake-verge`) | 1,316 | -209, -165, -143, -9 | Westlake Park, the stadium | nothing |
 | The north verge (`north-verge`) | 904 | -137, -165, -9, -157 | Westlake, Uptown North, the stadium | nothing |
 
+(Since this report the Neon Mile, docs/strip-plan.md, was merged in on the east strips' land: those three gaps are gone, the Strip an area of its own; `npm run seams -- --md` gives today's tables.)
+
 No place's arrival spot stands on a gap (the test holds it). The south band
 alone is about two thirds of the open land; the metro's main line crosses
 it and the south strips on its way west.
@@ -311,7 +313,9 @@ Little changes on screen but the trees' edges.
   belt lies past them. 189 in all: about 1,300 tiles of block edge (The
   Trenches along the highway, Sunridge's land, the stadium, Westlake Park,
   Crestmont, the mall, Uptown and Uptown North, Palm Court) and 280 of the
-  bends'. The page carries them packed (the blocks' a few numbers each,
+  bends' (167 since the Neon Mile came in on the east strips' land: the
+  town's and Palm Court's edges there meet its streets now, and its own
+  blocks are streets all round, so it takes none). The page carries them packed (the blocks' a few numbers each,
   the bends' one flag a kerb piece; `pack()` / `unpack()`), and the areas
   they take after are `areas.ts` (small, so the boot never takes the seam
   map).

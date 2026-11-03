@@ -23,7 +23,7 @@ import {
   type Pt,
   type Rect,
 } from '../src/scripts/city3d/outer';
-import { DISTRICTS, EW_ROADS, LANE, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, nsRuns } from '../src/scripts/city3d/layout';
+import { DISTRICTS, EW_ROADS, LANE, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, STRIP_BLVD, ewRuns, nsRuns } from '../src/scripts/city3d/layout';
 import { distToStreet, type Street } from '../src/scripts/city3d/streetplan';
 
 const street = (b: (typeof BENDS)[number]): Street => ({ id: b.id, kind: 'street', pts: b.pts, half: LANE, lanes: 1 });
@@ -145,7 +145,9 @@ test("the bends' outer sidewalks: outside the town, off every straight road", ()
   for (const k of BEND_KERBS)
     for (const [x, z] of k) {
       NS_ROADS.forEach((r, i) => assert.ok(Math.abs(x - r.c) >= r.half - 1e-6 || !nsRuns(i, z), 'a kerb on a road'));
-      for (const r of EW_ROADS) assert.ok(Math.abs(z - r.c) >= r.half - 1e-6, 'a kerb on a road');
+      EW_ROADS.forEach((r, i) => assert.ok(Math.abs(z - r.c) >= r.half - 1e-6 || !ewRuns(i, x), 'a kerb on a road'));
+      // (nor on the Strip's boulevard off the Parkway's east side: strip.ts)
+      assert.ok(Math.abs(z - STRIP_BLVD.z) >= STRIP_BLVD.half - 1e-6 || x < 0, 'a kerb on the boulevard');
     }
 });
 

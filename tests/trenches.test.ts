@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { AVENUE_Z, BANK, HIGHWAY_CLEAR, NS_X, RING_W, TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_RECT, TRENCH_STREETS, inTrenches } from '../src/scripts/city3d/trenches';
 import { PLAN, distToStreet, inPoly, outset, polyArea } from '../src/scripts/city3d/streetplan';
 import { fromHighway, insideHighway } from '../src/scripts/city3d/highway';
-import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
+import { EW_ROADS, RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PROJECT_SOLIDS } from '../src/scripts/city3d/projects';
 import { COMMONS_SOLIDS } from '../src/scripts/city3d/commons';
@@ -43,7 +43,8 @@ test('its streets: south of the river, inside the highway and clear of it, every
   const ave = TRENCH_STREETS.find((s) => s.id === 'trench-ave')!;
   assert.equal(ave.kind, 'avenue');
   assert.ok(ave.pts.every((p) => p[1] === AVENUE_Z));
-  assert.ok(TRENCH_CROSSINGS.some((c) => c.streets.includes(`ew${PLAN.streets.filter((s) => s.id.startsWith('ew')).length - 1}`)));
+  // (the south bank avenue: the last of layout.ts's east-west roads)
+  assert.ok(TRENCH_CROSSINGS.some((c) => c.streets.includes(`ew${EW_ROADS.length - 1}`)));
   assert.ok(TRENCH_CROSSINGS.some((c) => c.streets.includes('ns0s') && c.at[0] === RING_W.c));
 });
 

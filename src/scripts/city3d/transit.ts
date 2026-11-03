@@ -17,6 +17,7 @@
  *   hiss open and shut), then carries on; the traffic behind it waits
  *   (life.ts's following), and its brake lights are on while it stands.
  */
+import { inStrip } from './strip';
 import { LANE, RIVER, WALK_W } from './layout';
 import { PLAN, pointAt, streetLength, type Pt, type Street } from './streetplan';
 import { inTown } from './outer';
@@ -64,7 +65,8 @@ export function stopsOn(s: Street, crossings: Pt[], solids: readonly Box[] = SOL
       const u: Pt = way === 1 ? dir : [-dir[0], -dir[1]];
       const r = rightOf(u[0], u[1]);
       // In town only (an avenue runs on to the world's edge), never on a bridge or by a junction
-      if (!inTown(at, 2) && !inTrenches(at[0], at[1]) && !inSunridge(at[0], at[1], 0)) continue;
+      // (and the Strip's boulevard: strip.ts)
+      if (!inTown(at, 2) && !inTrenches(at[0], at[1]) && !inSunridge(at[0], at[1], 0) && !inStrip(at[0], at[1])) continue;
       if (at[1] > RIVER[0] - 6 && at[1] < RIVER[1] + 6 && Math.abs(dir[1]) > 0.5) continue;
       if (crossings.some((c) => Math.hypot(c[0] - at[0], c[1] - at[1]) < STOP_CLEAR)) continue;
       const lane: Pt = [at[0] + r[0] * (s.half - LANE / 2), at[1] + r[1] * (s.half - LANE / 2)];
