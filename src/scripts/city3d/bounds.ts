@@ -34,7 +34,7 @@ const TOWN: [number, number] = [30, 30];
 /**
  * How far off the sky dome travels round the camera (sky.ts): far enough that the
  * skyline ring's far side stands in front of it seen from town, out to the ring's
- * corners (the world is square; at -420 to 460 it's about 720), and never nearer
+ * corners (the world is square; at -680 to 720 it's about 1,090), and never nearer
  * than it always was (400)
  */
 export const SKY_RADIUS = (() => {

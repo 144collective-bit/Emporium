@@ -18,7 +18,7 @@
  * - **Lamps** (`DOCK_LAMPS`): sodium, along the sidewalks (world.ts).
  *
  * Fixed world numbers, today's (south of the river after both widenings: no `SOUTH_SHIFT` / `WIDEN` to add), and
- * well short of the world's edge (x -420 today, -680 in the wide test), so nothing reads the edge. Names are made up.
+ * well short of the world's edge (x -680 today, -940 in the wide test), so nothing reads the edge. Names are made up.
  */
 import { EW_ROADS, LANE, RIVER, SOUTH_ROAD, WALK_W } from './layout';
 
