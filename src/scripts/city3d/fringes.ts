@@ -179,7 +179,7 @@ export const PATH_W = 1.4;
 const STRIP_X = 103.9;
 const FOOT_Z = -114;
 /** Where the path squeezes between the end of Palm Court's low wall and Sunridge's corner, worn narrower there */
-export const PATH_SQUEEZE: Pt = [104.62, -151.01];
+export const PATH_SQUEEZE: Pt = [104.7, -151.0];
 const SQUEEZE_W = 0.9;
 /** The path's width at a point on it */
 export function pathWidth(x: number, z: number) {
@@ -194,12 +194,14 @@ export const FRINGE_PATH: Pt[] = [
   // (up the strip while Sunridge is alongside, then squeezed round the end of Palm Court's low wall, verges.ts,
   // past Sunridge's corner, before turning east)
   [STRIP_X, -149.2],
-  [104.62, -151.01],
-  [105.4, -152.3],
-  [106.6, -152.6],
+  PATH_SQUEEZE,
+  // (north round the closed end of Sunridge's bank, verges.ts, then east along it)
+  [105, -152.6],
+  [106.2, -153.3],
+  [108.5, -153.2],
   ...along(
     (s) => PATH_IN + 0.35 * Math.sin(s / 13),
-    ([x, z]) => x >= 108 && z <= AVENUE_KERB - 1.4
+    ([x, z]) => x >= 110 && z <= AVENUE_KERB - 1.4
   ),
 ];
 // (on to the avenue's kerb, its last stretch straight)
