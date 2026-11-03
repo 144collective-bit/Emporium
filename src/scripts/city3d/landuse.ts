@@ -38,6 +38,7 @@ import { UPTOWN_RECT } from './uptown';
 import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
+import { FRINGE_KEEPS } from './fringes';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
@@ -147,6 +148,10 @@ export const KEEPS: Keep[] = [
   // Southfield (southfield.ts, docs/blend-plan.md Phase 5a): its park, allotments and gardens, and the yards' blocks
   land('southfield', SOUTHFIELD_RECT, 1, true),
   land('southyards', YARDS_RECT, 2, true),
+  // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
+  // billboards, Sunridge's wash and the path beside it
+  ...FRINGE_KEEPS.rects.map((r, i) => land(`fringe-${i}`, r, 1.2, true)),
+  ...FRINGE_KEEPS.lines.flatMap((l) => line(l.id, l.pts, l.half + 0.8, false, true)),
   land('trenches', TRENCH_RECT, 2, true),
   land('waterfront', WATERFRONT_RECT, 2, true),
   // Uptown, Westlake Park and the stadium's block, road, car park and footbridge

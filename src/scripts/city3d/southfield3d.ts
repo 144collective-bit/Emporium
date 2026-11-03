@@ -25,6 +25,7 @@ import { EW_ROADS, MEDIAN, SOUTH_ROAD } from './layout';
 import { SLAB as S } from './world';
 import { COVER, LAMP } from './palette';
 import { drawLot } from './kits3d';
+import { registerFringes } from './fringes3d';
 import { parkedCars } from './cars';
 import { LINES } from './docksport';
 import {
@@ -120,6 +121,8 @@ const rbox = (b: Batch, r: Rect, y0: number, h: number, m: THREE.Material) => b.
 const NORMAL: Record<string, Pt> = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
 
 export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
+  // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
+  registerFringes(['south'], low);
   const asphalt = toon('#2a2838');
   const yellow = neon('#f5d76e', 0.9, 1.1);
   const zebra = toon('#e8e4f8');

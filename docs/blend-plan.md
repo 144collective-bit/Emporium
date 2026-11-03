@@ -439,12 +439,48 @@ Each gap by its neighbours, scenery only, built from the kits and recipes
     inside the highway is 11%, from 22%.
   - Measured: the boot 690.9 KB, the budget raised from 690 to 700 under the
     owner's standing call (its data in the boot, the routes round the ring).
-- **5b, the strips east of town north of the river:** small mixed blocks
-  by downtown's east side (shops under flats, a few warehouses) stepping down
-  to meadow and a pond by the highway.
-- **5c, the smaller leftovers:** the slivers between districts and the
-  highway (by Westlake and Uptown's west edge, round Uptown North, beside the
-  mall's car parks): rough grass, scrub, a path, a substation, a billboard.
+- **5b, the strips east of town north of the river:** taken by the Neon Mile
+  (docs/strip-plan.md), its boulevard and resorts on that land; nothing left
+  to fill.
+- **5c, the smaller leftovers (built): the verges.** Mapped, the four gaps the
+  seam map still lists are slivers between the districts and the highway, 2 to
+  30 tiles across, mostly inside the trees' wobbled margins, so they stay open
+  land (no block, no street, nothing that moves), dressed by their neighbours:
+  `fringes.ts` (DOM-free, tested in `tests/fringes.test.ts`), drawn by
+  `fringes3d.ts` from the neighbours' chunks (`registerFringes()` from
+  southfield3d.ts, sunridge3d.ts and westlake3d.ts: the boot gets only the
+  solids and the trees' keeps, 1.9 KB).
+  - **East of Kiln Lane** (Southfield Yards' side): the Kiln Lane substation
+    (`SUBSTATION`: a gravel yard in a palisade with its gate on a gravel drive
+    off the lane, a brick control house with its name, two transformers with
+    their fins, conservators and bushings, a gantry of two portal frames with
+    insulators and wires, busbars on posts, warning plates).
+  - **Sunridge's fringe** (the suburb's side, between its wall and the
+    highway, about 15 across all the way round): a dry wash (`WASH`, a sandy
+    bed winding 10 to 14 in from the highway, cobbles and boulders, a culvert's
+    concrete headwall at each end, `HEADWALLS`) and a dirt path beside it
+    (`FRINGE_PATH`) from Sunridge's footpath at Palm Court up the strip
+    between them (squeezed round the end of Palm Court's low wall,
+    `PATH_SQUEEZE`), round the fringe and down to the north ring avenue, two
+    benches and bins facing the wash. The wash and the path are laid as
+    offsets of the highway's own centre line, so they follow its bend.
+  - **Billboards** (`BILLBOARDS`, four, one on each side of town: east of Kiln
+    Lane, the south-east bend, Sunridge's fringe, Westlake's west verge), each
+    on two steel legs with a walkway and three lamps, turned a little off
+    square towards the traffic, fixed made-up copy for the city's own places
+    (the metro, Westlake Park, the Neon Mile, the Sky Wheel; no price, no
+    number), lit a little at night under the bloom.
+  - **Scrub** on all four (and the south band round Southfield), wherever a
+    tree could stand and a little closer to the highway (not past its lamp
+    line), in clumps from a seeded noise: Sunridge's desert plants on its
+    fringe (creosote, brittlebush, agave, ocotillo), brambles, gorse and tall
+    grass on the rest; phones half, no flowers, pales or cobbles.
+  - The trees keep off the compound, the boards, the wash and the path
+    (`FRINGE_KEEPS` in landuse.ts's `KEEPS`, `since`); `FRINGE_SOLIDS` (in
+    `SOLIDS`: the palisade, the house, the boards' legs, the headwalls).
+  - The seam map still lists the four as gaps (open land, 11% inside the
+    highway): they're verges now, not land waiting for a district.
+  - Measured: the boot 694.6 KB of 700.
 - **Sites kept for later** (`FUTURE_SITES`): a few of the new buildings
   marked as places that could be run for Dorras in a later plan, with no
   pin, panel or price now.
