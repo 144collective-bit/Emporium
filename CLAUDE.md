@@ -1521,6 +1521,13 @@ it and has been retired completely. Build only on what's here.
     median carried round downtown (`RING_MEDIAN`, `HEDGE`, `HEDGE_CLEAR`,
     `TREE_GAP`; round the el's pillars, no tree under the el; drawn with the
     medians in world.ts).
+  - Phase 6c (the second seam, Uptown and Westlake Park across the north
+    avenue) is built in `ringstreet.ts` too: `PARK_SIDE_LAMPS` (the same lamp
+    across from each of Uptown's on the park's sidewalk, flanking the gates,
+    `GATE_CLEAR`), the north side's planted median carried on west to
+    Uptown's west edge (its `median` span, broken at the axis's zebra) and
+    `PARK_EDGE_TREES` (a row just inside the park's wall, `EDGE_TREE_GAP`,
+    `EDGE_TREE_IN`), added in neighbourhoods.ts.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back

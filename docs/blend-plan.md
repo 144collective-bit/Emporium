@@ -522,6 +522,22 @@ For each seam in the seam map, the treatment it needs:
   its sidewalk, and the town's frontage is its pads with flower beds between.
   Added at the boot (the lamps with the town's in neighbourhoods.ts) and drawn
   with the medians (world.ts); no new draws.
+- **6c, the second seam (built): Uptown and Westlake Park across the north
+  avenue.** Mapped, Uptown's lamps stood on its own sidewalk every 12, the
+  park's side had none (its low wall along a bare sidewalk, four gates), the
+  median was bare. `ringstreet.ts` carries on: the same lamp across from each
+  of Uptown's on the park's sidewalk (`PARK_SIDE_LAMPS`, 8: on Uptown's
+  spacing and offset, clear of the junctions' zebras and the axis's, one in
+  front of a gate standing aside to flank it, `GATE_CLEAR`), the planted
+  median carried on west from downtown's ring to Uptown's west edge (the
+  north side's `median` span, broken at the axis's zebra; 26 more trees), and
+  a row of street trees just inside the park's wall (`PARK_EDGE_TREES`, 15:
+  about every `EDGE_TREE_GAP`, `EDGE_TREE_IN` in, clear of the ring walk, the
+  gates' ways in, the planters, benches, lamps and the park's own trees), so
+  Uptown's towers look across a tree-lined avenue. Stepping Uptown's edge
+  lots down was left: its towers there already stand on mid-rise masonry
+  bases at the sidewalk, and nothing that exists moves. Added at the boot
+  with 6b's; no new draws.
 - **Stepped heights:** where towers meet low-rise (Uptown's edge by
   Westlake and downtown, Uptown North by the mall), the edge lots step down;
   where The Trenches meets the south row, its tenements step to the row's

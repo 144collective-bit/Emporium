@@ -1034,7 +1034,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
         b.box(r.c - MEDIAN / 2, 0, a0, MEDIAN, SLAB, a1 - a0, kerbTop);
         b.box(r.c - MEDIAN / 2 + 0.06, SLAB, a0, MEDIAN - 0.12, 0.005, a1 - a0, median);
       }
-  // Downtown's ring avenue: Uptown's planting carried on along its median (ringstreet.ts, docs/blend-plan.md Phase 6b):
+  // Downtown's ring avenue, and the north one on west past Uptown and Westlake Park: Uptown's planting carried on along its
+  // median (ringstreet.ts, docs/blend-plan.md Phases 6b and 6c):
   // a clipped hedge, and slim columnar trees along it (but under the el)
   {
     const hedge = toon('#2c6a3c');

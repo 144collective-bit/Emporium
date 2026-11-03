@@ -17,6 +17,9 @@ import { SOLIDS } from './solids';
 import { BUS_STOPS } from './transit';
 import { ALLEYS } from './downtown';
 import { STATIONS, TRACKS } from './metro';
+import { AXIS_X, LANE_HALF, UPTOWN_LAMPS, E as UPTOWN_E, W as UPTOWN_W } from './uptown';
+import { BENCHES as PARK_BENCHES, GATES, PARK_LAMPS, PARK_TREES, ZS as PARK_EDGE, treeFree } from './westlake';
+import { GARDEN_SOLIDS, MALL_BEDS, PLANTERS } from './gardens';
 
 /** A ring side: its street, along x (an east-west avenue) or z, its centre line, which sides of it are dressed (+1 the larger coordinate) */
 interface Side {
@@ -26,16 +29,19 @@ interface Side {
   /** The sides that get lamps, and the one that's the town's (trees), if any */
   lamps: (1 | -1)[];
   town: 1 | -1 | null;
+  /** Where along it the planted median runs (from, to) */
+  median: [number, number];
 }
 const RING_LO = CORE_ROADS[0] - 21.5;
 const RING_HI = CORE_ROADS[1] + 21.5;
 const street = (id: string) => PLAN.streets.find((s) => s.id === id)!;
 /** The four avenues round downtown: the north, west and east have the town outside them; the south has the river's promenade */
 export const RING_SIDES: Side[] = [
-  { street: street(`ew${EW_ROADS.findIndex((r) => r.c === RING_LO)}`), alongX: true, c: RING_LO, lamps: [-1, 1], town: -1 },
-  { street: street(`ew${EW_ROADS.findIndex((r) => r.c === RING_HI)}`), alongX: true, c: RING_HI, lamps: [-1], town: null },
-  { street: street(`ns${NS_ROADS.findIndex((r) => r.c === RING_LO)}`), alongX: false, c: RING_LO, lamps: [-1, 1], town: -1 },
-  { street: street(`ns${NS_ROADS.findIndex((r) => r.c === RING_HI)}`), alongX: false, c: RING_HI, lamps: [-1, 1], town: 1 },
+  // (the north avenue's median planted on west past Uptown and Westlake Park to Uptown's west edge: Phase 6c)
+  { street: street(`ew${EW_ROADS.findIndex((r) => r.c === RING_LO)}`), alongX: true, c: RING_LO, lamps: [-1, 1], town: -1, median: [UPTOWN_W, RING_HI] },
+  { street: street(`ew${EW_ROADS.findIndex((r) => r.c === RING_HI)}`), alongX: true, c: RING_HI, lamps: [-1], town: null, median: [RING_LO, RING_HI] },
+  { street: street(`ns${NS_ROADS.findIndex((r) => r.c === RING_LO)}`), alongX: false, c: RING_LO, lamps: [-1, 1], town: -1, median: [RING_LO, RING_HI] },
+  { street: street(`ns${NS_ROADS.findIndex((r) => r.c === RING_HI)}`), alongX: false, c: RING_HI, lamps: [-1, 1], town: 1, median: [RING_LO, RING_HI] },
 ];
 
 /** Lamps about every `LAMP_GAP` along a side, spread evenly over each stretch between junctions, `KERB_IN` in from the kerb so the walkers pass inside them */
@@ -134,6 +140,8 @@ export const RING_MEDIAN: MedianRun[] = RING_SIDES.flatMap((sd) => {
       cuts.push([v - r, v + r]);
     }
   }
+  // (Uptown's axis crosses the north avenue on a zebra: the median breaks there)
+  if (sd.alongX && sd.c === RING_LO) cuts.push([AXIS_X - LANE_HALF - HEDGE_CLEAR, AXIS_X + LANE_HALF + HEDGE_CLEAR]);
   // (anything solid standing on the median: the el's pillars)
   for (const b of SOLIDS) {
     const [m0, m1, l0, l1] = sd.alongX ? [b[1], b[3], b[0], b[2]] : [b[0], b[2], b[1], b[3]];
@@ -141,7 +149,8 @@ export const RING_MEDIAN: MedianRun[] = RING_SIDES.flatMap((sd) => {
   }
   cuts.sort((p, q) => p[0] - q[0]);
   const out: MedianRun[] = [];
-  let at = RING_LO;
+  const [lo, hi] = sd.median;
+  let at = lo;
   const push = (a: number, b: number) => {
     if (b - a < 2) return;
     const trees: number[] = [];
@@ -154,9 +163,62 @@ export const RING_MEDIAN: MedianRun[] = RING_SIDES.flatMap((sd) => {
     out.push({ street: sd.street.id, alongX: sd.alongX, c: sd.c, a, b, trees });
   };
   for (const [c0, c1] of cuts) {
-    if (c0 > at) push(at, Math.min(c0, RING_HI));
+    if (c1 < lo) continue;
+    if (c0 > at) push(at, Math.min(c0, hi));
     at = Math.max(at, c1);
   }
-  if (at < RING_HI) push(at, RING_HI);
+  if (at < hi) push(at, hi);
   return out;
 });
+
+/* ---------- Uptown and Westlake Park across the north avenue (Phase 6c) ---------- */
+
+/**
+ * The park's side of the avenue had no lamps (Uptown's stand on its own sidewalk every 12) and only the park's low wall
+ * along a bare sidewalk. Now the same lamp stands across from each of Uptown's on the park's sidewalk, wherever there's
+ * room (`PARK_SIDE_LAMPS`: on Uptown's spacing, clear of the junctions' zebras, the axis's zebra and the gates), and a
+ * row of street trees stands just inside the park's wall (`PARK_EDGE_TREES`: about every `EDGE_TREE_GAP`, `EDGE_TREE_IN`
+ * in from the edge, clear of the ring walk, the gates' ways in, the planters, benches, lamps and the park's own trees),
+ * so Uptown's towers look across a tree-lined avenue.
+ */
+const NORTH = RING_SIDES[0];
+/** The lamps' offset from the avenue's centre line: Uptown's (uptown.ts `UPTOWN_LAMPS`) */
+const UPTOWN_OFF = NORTH.street.half + 0.45;
+/** How far from a gate's middle the lamps keep (its piers stand at its half and a little) */
+export const GATE_CLEAR = 2.2;
+const edgeGates = GATES.filter((g) => Math.abs(g.at[1] - PARK_EDGE) < 1);
+export const PARK_SIDE_LAMPS: [number, number, number][] = UPTOWN_LAMPS.filter(([, z]) => Math.abs(z - (NORTH.c + UPTOWN_OFF)) < 1e-6).flatMap(([x0]) => {
+  // (one in front of a gate stands aside to flank it)
+  const g = edgeGates.find((g) => Math.abs(g.at[0] - x0) < g.half + GATE_CLEAR);
+  const x = g ? g.at[0] + Math.sign(x0 - g.at[0] || 1) * (g.half + GATE_CLEAR) : x0;
+  const q: Pt = [x, NORTH.c - UPTOWN_OFF];
+  if (crossingsOn(NORTH.street).some((c) => Math.abs(c[1] - NORTH.c) < 1 && Math.abs(c[0] - x) < JUNCTION_CLEAR)) return [];
+  if (Math.abs(x - AXIS_X) < LANE_HALF + 1.5) return [];
+  if (edgeGates.some((g) => Math.abs(g.at[0] - x) < g.half + GATE_CLEAR - 1e-6)) return [];
+  if (solidAt(q, 0.3) || onOtherStreet(NORTH, q, 1.2)) return [];
+  // (the arm reaches south over the road)
+  return [[x, q[1], Math.atan2(1, 0)] as [number, number, number]];
+});
+
+/** The park's edge row: how far apart, how far in from the park's edge (the wall stands just inside it), and its size */
+export const EDGE_TREE_GAP = 8;
+export const EDGE_TREE_IN = 2.6;
+export const EDGE_TREE_S = 1.05;
+const clearOfPark = (q: Pt) =>
+  treeFree(q) &&
+  PARK_TREES.every((t) => Math.hypot(t.x - q[0], t.z - q[1]) > 2.2) &&
+  PARK_LAMPS.every(([x, z]) => Math.hypot(x - q[0], z - q[1]) > 1.5) &&
+  PARK_BENCHES.every((b) => Math.hypot(b.at[0] - q[0], b.at[1] - q[1]) > 1.6) &&
+  PLANTERS.every((p) => Math.hypot(p.at[0] - q[0], p.at[1] - q[1]) > p.r + 1.2) &&
+  !MALL_BEDS.some((r) => inBox(r, q, 1.2)) &&
+  !GARDEN_SOLIDS.some((b) => inBox(b, q, 0.6));
+export const PARK_EDGE_TREES: [number, number, number][] = (() => {
+  const out: [number, number, number][] = [];
+  const z = PARK_EDGE - EDGE_TREE_IN;
+  const n = Math.round((UPTOWN_E - UPTOWN_W - 4) / EDGE_TREE_GAP);
+  for (let k = 0; k <= n; k++) {
+    const x = UPTOWN_W + 2 + ((UPTOWN_E - UPTOWN_W - 4) * k) / n;
+    if (clearOfPark([x, z])) out.push([x, z, EDGE_TREE_S]);
+  }
+  return out;
+})();
