@@ -2904,9 +2904,11 @@ it and has been retired completely. Build only on what's here.
   Business) and the level pill (`[data-level]`, `missions-ui.ts`: level,
   XP bar, title; it opens the hub on Missions), then the hub's button
   (`[data-hub-open]`, ☰ Menu, in both modes: the hub, below). Tablets show
-  the hub's button as an icon; phones put logo, title, the pills and ☰ on
-  the first row and the switch, with names, across the second (walking:
-  one row). Its live height is
+  the hub's button as an icon; upright phones show one slim row in both
+  modes (the controls plan's Phase 3: the title and subtitle, Dorras, the
+  level, City / Walk as one toggle showing the mode you'd go to, ☰; no
+  logo, Online switch or Connect wallet: the hub has them), and no phone
+  carries ammo, score or the emotes in it. Its live height is
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
 - **The menu redesign** (the owner's call: "redesign all menus and upgrade
@@ -2983,8 +2985,12 @@ it and has been retired completely. Build only on what's here.
   `layoutFor()` for every `Mode` (on foot, `drive`, `kart`, `ring`, read
   off the root's classes), the pedals as `.tc` buttons, a touch View
   button (`[data-drive-view]`), the readouts in the kit, the prompt's tap
-  icon. A new touch button is a `.tc` with its icon and word, and its slot
-  in `LAYOUTS`.
+  icon. Phase 3 (the slim header) is built, waiting on the owner's
+  sign-off: on phones (upright to 640 wide, on their side to 500 high) the
+  ammo is on the hotbar's gun (`.hb-res`), the score in the hub, the emotes
+  in the hub's Online tab (hub.ts `PHONE`); upright the header is one row
+  (controls.css). A new touch button is a `.tc` with its icon and word, and
+  its slot in `LAYOUTS`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
@@ -3502,7 +3508,8 @@ it and has been retired completely. Build only on what's here.
   clicked.
 - While walking (`body.is-walking`, set in `index.ts`) the header drops the
   logo on tablets and phones and carries the emotes (online), ammo and score
-  and the hub's button. The touch buttons stay at the bottom (hidden while
+  and the hub's button (on phones the ammo is the hotbar's, the score the
+  hub's and the emotes the hub's Online tab's: the controls plan's Phase 3). The touch buttons stay at the bottom (hidden while
   the hub is open, `.is-hub`).
 - The gun store is the menus' kit's sample (`.mk-store`, gunshop.ts): the
   guns as cards in a grid of four with the picked

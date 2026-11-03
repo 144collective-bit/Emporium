@@ -1501,7 +1501,7 @@ export function createWalk(d: WalkDeps) {
       else keys.delete(c);
     }
     // 1-7 pick a hotbar slot (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]')) pickSlot(Number(c.slice(5)) - 1);
+    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]:not([data-hub-emotes] *)')) pickSlot(Number(c.slice(5)) - 1);
     else if (c === 'Space') {
       if (down && !e.repeat) tryJump();
       jumpHeld = down;

@@ -406,7 +406,9 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
           .map((x, i) => {
             const k = slotKey(x);
             const art = x.kind === 'gun' ? (x.weapon ? gunArt(x.weapon) : '') : x.kind === 'held' ? icon(HELD_ICONS[x.held]) : icon(ITEM_ICONS[x.item]);
-            const count = x.kind === 'gun' && x.weapon ? `<span class="hb-count">${d.combat.ammo(x.weapon)[0]}</span>` : x.kind === 'item' ? `<span class="hb-count">×${x.n}</span>` : '';
+            // (a gun's count is its magazine; its reserve under it, shown on phones where the header leaves it out)
+            const ammo = x.kind === 'gun' && x.weapon ? d.combat.ammo(x.weapon) : null;
+            const count = ammo ? `<span class="hb-count">${ammo[0]}</span><small class="hb-res">/${ammo[1]}</small>` : x.kind === 'item' ? `<span class="hb-count">×${x.n}</span>` : '';
             const name = slotName(x);
             return (
               `<button type="button" class="hb-slot hb-${x.kind}${x.kind === 'gun' && !x.weapon ? ' is-empty' : ''}" data-hb="${i}" aria-pressed="${k === now}" aria-label="${i + 1}: ${esc(name)}">` +

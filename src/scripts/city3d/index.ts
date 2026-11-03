@@ -1127,7 +1127,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Esc closes an open drop-open menu (the emotes) before it closes
   // a panel or leaves a mode
   const closePop = () => {
-    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open]');
+    // (not the emotes in the hub's Online tab on a phone: open there for good, hub.ts)
+    const open = root.querySelector<HTMLDetailsElement>('[data-pop][open]:not([data-hub-emotes] *)');
     if (!open) return false;
     open.open = false;
     open.querySelector('summary')?.focus({ preventScroll: true });
