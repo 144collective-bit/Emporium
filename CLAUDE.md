@@ -1661,6 +1661,14 @@ it and has been retired completely. Build only on what's here.
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
   scale with Degen (a hatch's roof is about 0.95 tiles up).
+- **First person, everywhere** (the owner's call, 2026-11: "more detail and
+  quality") is planned in `docs/firstperson-plan.md`: his whole body seen
+  from the eye on foot (empty hands, the moments, the feet), fists on the
+  street and a first-person view in the Fight Club, the gun hands polished,
+  the car, bike and kart from the seat on one set of subtle camera rules
+  (`fpcam.ts`), the hire boat's helm, and detailed cockpits for all three
+  aircraft; the mirrors stay painted. Nothing built yet; one phase at a
+  time with the owner's sign-off; keep it up to date.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
