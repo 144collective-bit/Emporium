@@ -2925,7 +2925,14 @@ it and has been retired completely. Build only on what's here.
   same slots in an arc round the thumb in every mode (`touchlayout.ts`),
   the header one slim row on phones, then size, opacity, left-handed and
   moving the buttons. One phase at a time with the owner's sign-off; keep
-  it up to date. Nothing is built yet.
+  it up to date. Phase 1 (the button system, on foot) is built, waiting on
+  the owner's sign-off: `touchlayout.ts` (DOM-free, tested in
+  `tests/touchlayout.test.ts`: the slots by screen shape, `LAYOUTS` per
+  mode, the hotbar and the prompt kept clear), `controls.ts` (sets
+  `--tc-*` / `--hb-*` / `--pr-*` from it), `controls.css` (last in
+  `Base.astro`'s order; `.tc`, `.tc-main`, `.tc-go`), the icons
+  `src/data/tcicons.ts` as one sprite in CityMap.astro. A new touch button
+  is a `.tc` with its icon and word, and its slot in `LAYOUTS`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site

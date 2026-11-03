@@ -51,15 +51,17 @@ the owner's sign-off. Keep this file up to date.
 
 ## The button system
 
-- **One kit for every touch button**, `controls.css` (in `Base.astro`'s
-  order after `menus.css`, so it reads the kit's tokens), class `.tc` on
+- **One kit for every touch button**, `controls.css` (last in
+  `Base.astro`'s order, so it wins over the modes' older placements; the
+  kit's tokens are on `.tc` and the stick too, in menus.css), class `.tc` on
   each button and `.tc-main` / `.tc-go` for the two coloured ones:
   - a round cap in `--m-bezel` with a 2 px `--m-edge` rim and a hard
     `--m-cab` ring outside it, so it reads over a bright street or the
     night;
   - its icon above its word: icons drawn on the kit's pixel grid (16 x 16,
     `currentColor`, crisp edges), one SVG sprite, `<use>` in each button;
-    the word in Pixelify Sans (`--font-pixel`), short (PUNCH, KICK, AIM);
+    the word short (PUNCH, KICK, AIM), in JetBrains Mono bold (the kit's
+    labels): Pixelify's small capital C reads as an O;
   - held (`:active`, `.is-held` from walk.ts where a pointer holds it):
     the cap lifts to `--m-edge`, the rim to `--m-text`; on `.tc-main` the
     coin brightens. Nothing moves, so reduced motion needs nothing more;
@@ -93,6 +95,24 @@ the owner's sign-off. Keep this file up to date.
 - The hotbar and the door prompt placed round the arc, never under it.
 - Checked at the widths above, upright and on its side, by day and at
   night, under reduced motion.
+- **Built, waiting on the owner's sign-off.** `touchlayout.ts` (`SLOTS`
+  as `main`, the inner ring `a1`-`a3` at 0, 45 and 90 degrees and the
+  outer `b1` / `b2` at 30 and 70, per shape `up` / `narrow` / `side` in
+  `RINGS`; `LAYOUTS`: fists Punch, Jump, Block, Sprint, Kick; armed Fire,
+  Jump, Reload, Sprint, Swap, Aim; Crouch over the stick; the hotbar over
+  the arc upright and left of Jump on its side; the prompt over the hotbar,
+  or in the gap between the stick and the arc on its side), held apart and
+  on screen by `tests/touchlayout.test.ts` at fourteen screens.
+  `controls.ts` (from walk.ts) sets the variables, again on a resize or a
+  gun drawn or put away. `controls.css` is last in `Base.astro`'s order;
+  the old placements in walk.css, fight.css (the fists) and inventory.css
+  went. The icons are `src/data/tcicons.ts` (`TC_ICONS`, `tcIconPath()`),
+  one sprite in CityMap.astro. Two changes from the plan: the buttons'
+  words are in the kit's label face (JetBrains Mono bold, as the menus'
+  small labels), since Pixelify's small capital C reads as an O; and the
+  ring's four buttons wear the new look already (their places are still
+  Phase 2's), Dodge in green with Jump's icon. The stick was recoloured
+  everywhere, at the wheel too.
 
 ### Phase 2: vehicles, the ring and the prompts
 

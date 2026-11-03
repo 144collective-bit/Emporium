@@ -9,7 +9,9 @@
 /* The kit's tokens: every menu in the kit, the title screen (start.css) and the skinned panels (`.mk-skin`) */
 .mk,
 .city-start,
-.mk-skin {
+.mk-skin,
+.tc,
+.walk-stick {
   /* The arcade cabinet's palette (the menu plan's; contrast on --m-cab: text 16.9, dim 7.1, coin 12.3, hot 6.3, go 11.2) */
   --m-cab: #0c0d10;
   --m-bezel: #1a1c22;
