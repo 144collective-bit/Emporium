@@ -1705,8 +1705,21 @@ it and has been retired completely. Build only on what's here.
   shoulder the first time): both fighters drawn close, the eye from your
   fighter's head looking at the opponent's, the view on the canvas when
   you're down, a field of view of 70, a jolt for a hit on you instead of
-  the flash, a snap for your parry. The boot is at 688.4 of 690 KB: put
-  later phases' code in the chunks where it can go.
+  the flash, a snap for your parry. Phase 3 (the gun hands, polished) is
+  built: a chunk fetched the first time they show (`fpgun.ts`, viewmodel.ts's
+  `fine`), its rules `fpgunkit.ts` (DOM-free, tested in `tests/fpgun.test.ts`):
+  every top's sleeve round the wrist (`sleeveParts()`: the suit's buttoned
+  cuff, the ribbed cuffs, the varsity's cream, the puffer's quilting, the
+  fatigues' gloves), the watch on his left wrist, each gun's flash (`FLASH`),
+  spent cases out of the port (`EJECT`, the shotgun's hull on the pump) and
+  smoke after a string (`smokeFor()`), both off under reduced motion, and the
+  light on the hands (`lampLight()`: the moon at night, the nearest street
+  lamp's white or sodium, world.ts `lampTone()`) through the viewmodel's
+  shared `tint`; the gun moves with crouch, slide and vault (`ViewState`).
+  From the eye his body takes no aim or recoil (walk.ts): the viewmodel does
+  both, and his head on the stock swung the cap and tie into view. The boot
+  is at 688.8 of 690 KB: put later phases' code in the chunks where it can
+  go.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,

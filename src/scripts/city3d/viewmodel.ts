@@ -13,6 +13,10 @@
  * everything about the eye doesn't change the picture, so the hands are built
  * K times bigger and K times further out, then drawn into the front sliver of
  * the depth buffer so walls never cut through them. They still get ink lines.
+ *
+ * Polished (docs/firstperson-plan.md, Phase 3) by a chunk fetched the first time they show (`fine`, fpgun.ts):
+ * every top's own sleeve and cuff, the watch, the fatigues' gloves, each gun's flash, spent cases, smoke off the
+ * barrel and the nearest lamp's light (`tint`). Until it's in, the plain sleeves and flash below.
  */
 import * as THREE from 'three';
 import { fx, liveTex } from './kit';
@@ -21,6 +25,7 @@ import { newReloadFrame, reloadAt } from './gunfit';
 import type { WeaponId } from './combat-sim';
 import { PLAYER, type Outfit } from './character';
 import { bakedHand } from './body';
+import type { FpGun } from './fpgun';
 
 const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
@@ -45,9 +50,11 @@ const adsPose = (id: WeaponId) => {
  * them as if they were metres ahead; this keeps them steady, dimmed at night.
  */
 const level = { value: 1 };
+/** The light's colour on them: the nearest lamp's and the moon's (fpgun.ts), white until it's in */
+const tint = { value: new THREE.Color(1, 1, 1) };
 function flat(color: string): Tintable {
   const m = new THREE.ShaderMaterial({
-    uniforms: { color: { value: new THREE.Color(color) }, emissive: { value: new THREE.Color(0) }, level },
+    uniforms: { color: { value: new THREE.Color(color) }, emissive: { value: new THREE.Color(0) }, level, tint },
     vertexShader: /* glsl */ `
       varying vec3 vN;
       void main() {
@@ -59,11 +66,12 @@ function flat(color: string): Tintable {
       uniform vec3 color;
       uniform vec3 emissive;
       uniform float level;
+      uniform vec3 tint;
       varying vec3 vN;
       void main() {
         float d = dot(normalize(vN), normalize(vec3(-0.4, 0.8, 0.45)));
         float band = d > 0.42 ? 1.0 : d > -0.12 ? 0.74 : 0.52;
-        gl_FragColor = vec4(color * band * level + emissive, 1.0);
+        gl_FragColor = vec4(color * band * level * tint + emissive, 1.0);
         #include <colorspace_fragment>
       }
     `,
@@ -89,8 +97,14 @@ function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vec
   return bakedHand(side, grip).applyMatrix4(new THREE.Matrix4().makeBasis(x, y, z).scale(new THREE.Vector3(size, size, size)).setPosition(at));
 }
 
-/** A forearm ending in a hand at the origin, reaching off along `dir`; `dress()` puts it in the outfit's sleeve */
-function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
+/** The polish, once its chunk is in (the module's: one viewmodel at a time) */
+let fine: FpGun | null = null;
+
+/**
+ * A forearm ending in a hand (its wrist at `at`, on `side`), reaching off along `dir`; `dress()` puts it in the
+ * outfit's sleeve
+ */
+function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry, side: -1 | 1, at: THREE.Vector3) {
   const g = new THREE.Group();
   const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
   const along = (geo: THREE.BufferGeometry, from: number) => {
@@ -99,10 +113,12 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
     return geo;
   };
   const clothes = new THREE.Group();
-  g.add(clothes, new THREE.Mesh(hand, shared(SKIN)));
+  const handMesh = new THREE.Mesh(hand, shared(SKIN));
+  g.add(clothes, handMesh);
   return {
     g,
     dress(o: Outfit) {
+      if (fine) return fine.dress(clothes, handMesh, o, side, at, dir);
       clothes.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
       clothes.clear();
       const top = o.top;
@@ -157,6 +173,10 @@ export interface ViewState {
   shells?: number;
   /** Seconds the gun takes from the hip to down the sight (gunfeel.ts ADS) */
   adsTime?: number;
+  /** 0..1 crouched, sliding, going over something (a vault or a climb) */
+  crouch?: number;
+  slide?: number;
+  over?: number;
 }
 
 export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: WeaponId = 'rifle') {
@@ -170,15 +190,18 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
   // Hands, in the gun's own frame (barrel along +z, the gun's +x is the camera's left): his
   // right closed round the pistol grip (raked back), his left under the front, fingers up its side
   const rightDir = new THREE.Vector3(-0.36, -0.72, -0.58);
-  const rightHand = fpHand(-1, 0.9, rightDir, new THREE.Vector3(0, Math.cos(0.3), Math.sin(0.3)), FP_HAND, new THREE.Vector3(-0.016, -0.045, -0.024));
-  const rightArm = arm(rightDir, rightHand);
+  const rightAt = new THREE.Vector3(-0.016, -0.045, -0.024);
+  const rightHand = fpHand(-1, 0.9, rightDir, new THREE.Vector3(0, Math.cos(0.3), Math.sin(0.3)), FP_HAND, rightAt);
+  const rightArm = arm(rightDir, rightHand, -1, rightAt);
   const right = rightArm.g;
   const leftDir = new THREE.Vector3(0.6, -0.68, -0.42);
-  const leftHand = fpHand(1, 0.55, leftDir, new THREE.Vector3(0, 0, 1), FP_HAND, new THREE.Vector3(0.014, -0.036, 0));
-  const leftArm = arm(leftDir, leftHand);
+  const leftAt = new THREE.Vector3(0.014, -0.036, 0);
+  const leftHand = fpHand(1, 0.55, leftDir, new THREE.Vector3(0, 0, 1), FP_HAND, leftAt);
+  const leftArm = arm(leftDir, leftHand, 1, leftAt);
   const left = leftArm.g;
-  rightArm.dress(PLAYER);
-  leftArm.dress(PLAYER);
+  let outfit: Outfit = PLAYER;
+  rightArm.dress(outfit);
+  leftArm.dress(outfit);
 
   // Muzzle flash: two crossed cut-outs and a soft glow
   const flashMat = new THREE.MeshBasicMaterial({ map: flashTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
@@ -208,6 +231,13 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
 
   // The gun in hand: swapped when Degen takes another from the store
   let gun: Gun = null!;
+  /** How long the flash shows (each gun's own once the polish is in) */
+  let flashLife = 0.045;
+  const shapeFlash = () => {
+    if (!fine) return;
+    flashLife = fine.flash(gun.id, flash, flashMat, flashTex);
+    upFront(flash);
+  };
   let spec = gunSpec(weapon);
   let ADS = adsPose(weapon);
   let skinNow = skin;
@@ -224,6 +254,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
     left.position.copy(spec.fore);
     flash.position.copy(spec.muzzle).add(new THREE.Vector3(0, 0, 0.07));
     gun.group.add(right, left, flash);
+    shapeFlash();
     upFront(gun.group);
     holder.add(gun.group);
   }
@@ -231,6 +262,25 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
   upFront(root);
   root.visible = false;
   scene.add(root);
+
+  // The polish's chunk, asked for the first time the hands show
+  let asked = false;
+  let night = 0;
+  let cam: THREE.Camera | null = null;
+  const polish = () => {
+    if (asked) return;
+    asked = true;
+    import('./fpgun')
+      .then((m) => {
+        fine ??= m.createFpGun({ scene, K, paint: shared, upFront, level, tint });
+        rightArm.dress(outfit);
+        leftArm.dress(outfit);
+        upFront(right);
+        upFront(left);
+        shapeFlash();
+      })
+      .catch(() => (asked = false));
+  };
 
   // Motion state
   let draw = 0;
@@ -270,6 +320,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
     root,
     /** Put the hands in the sleeves of Degen's outfit (the wardrobe) */
     setOutfit(o: Outfit) {
+      outfit = o;
       rightArm.dress(o);
       leftArm.dress(o);
       upFront(right);
@@ -287,17 +338,19 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
       draw = 0;
     },
     /** How dark it is (0 day .. 1 night), for the hands' shading */
-    setNight(night: number) {
-      level.value = 1.28 - night * 0.55;
+    setNight(n: number) {
+      night = n;
+      level.value = 1.28 - n * 0.55;
     },
     /** A shot: kick back (harder for bigger guns) and flash */
     kick(power = 1) {
       kickZ += 0.028 * power;
       kickX += 0.055 * power;
       kickRoll += (Math.random() - 0.5) * 0.05;
-      flashT = 0.045;
+      flashT = flashLife;
       flash.rotation.z = Math.random() * Math.PI;
       flash.scale.setScalar(0.8 + Math.random() * 0.5);
+      if (fine && cam && root.visible) fine.shot(gun.id, gun.group, cam);
     },
     /** Where shots leave the barrel, in world space (K times out along the line of sight) */
     muzzle(out: THREE.Vector3) {
@@ -319,8 +372,11 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
       if (!root.visible) {
         haveDir = false;
         flash.visible = false;
+        fine?.hide();
         return;
       }
+      cam = camera;
+      polish();
       root.position.copy(camera.position);
       root.quaternion.copy(camera.quaternion);
 
@@ -365,18 +421,22 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
       const tilt = rf.roll;
       const bolt = rf.bolt;
       const down = 1 - draw;
+      // Crouched a touch lower and canted, sliding tipped down and out, going over something swung down out of the way
+      const crouch = (s.crouch ?? 0) * (1 - ads * 0.7);
+      const slide = s.slide ?? 0;
+      const over = s.over ?? 0;
       holder.position.set(
-        P.x + bx - swayX * 0.05 * swayK - sprint * 0.03 + tilt * 0.02,
-        P.y + by + breathe - swayY * 0.04 * swayK - down * 0.22 - sprint * 0.035 - s.air * 0.015 + tilt * 0.04 - rf.pull * 0.3,
-        P.z + kickZ * (1 - ads * 0.4) + sprint * 0.02 + bolt * 0.012
+        P.x + bx - swayX * 0.05 * swayK - sprint * 0.03 + tilt * 0.02 - crouch * 0.006 + slide * 0.03 + over * 0.04,
+        P.y + by + breathe - swayY * 0.04 * swayK - down * 0.22 - sprint * 0.035 - s.air * 0.015 + tilt * 0.04 - rf.pull * 0.3 - crouch * 0.014 - slide * 0.05 - over * 0.16,
+        P.z + kickZ * (1 - ads * 0.4) + sprint * 0.02 + bolt * 0.012 + crouch * 0.012 + slide * 0.02 + over * 0.05
       );
       // Scaling the whole gun about the eye keeps the sight on the line of sight
       holder.position.multiplyScalar(m);
       holder.scale.setScalar(m);
       holder.rotation.set(
-        kickX * (1 - ads * 0.5) - down * 0.7 - sprint * 0.32 - swayY * 0.6 * swayK + rf.pitch + bolt * 0.05,
-        P.ry + swayX * 0.6 * swayK + sprint * 0.55 + tilt * 0.2,
-        P.rz + kickRoll + swayX * 0.3 * swayK + tilt - sprint * 0.12,
+        kickX * (1 - ads * 0.5) - down * 0.7 - sprint * 0.32 - swayY * 0.6 * swayK + rf.pitch + bolt * 0.05 - slide * 0.25 - over * 0.8,
+        P.ry + swayX * 0.6 * swayK + sprint * 0.55 + tilt * 0.2 + slide * 0.2 + over * 0.4,
+        P.rz + kickRoll + swayX * 0.3 * swayK + tilt - sprint * 0.12 - crouch * 0.07 - slide * 0.45,
         'YXZ'
       );
 
@@ -389,6 +449,11 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
       }
       // `t` keeps the flash flicker in step with the scene's clock
       if (flash.visible) flash.rotation.x = Math.sin(t * 90) * 0.1;
+      // The cases, the smoke and the light (after the hands are placed this frame)
+      if (fine) {
+        root.updateMatrixWorld();
+        fine.update(dt, camera, gun.group, gun.id, spec.muzzle, night);
+      }
     },
   };
 }

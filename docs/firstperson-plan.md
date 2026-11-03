@@ -244,14 +244,57 @@ hold.
   maybe, at the checks, Phase 7); the boot is close to its budget, so
   Phase 3 on should put what it can in the chunks.
 
-### Phase 3: the gun hands, polished
+### Phase 3: the gun hands, polished (built)
 
-- Sleeves for every top from the wardrobe's own data (varsity, puffer,
-  fatigues, the suit's buttoned cuff), the watch on the wrist when worn.
-- Lighting as above (day, night, the neon's tint).
-- Shell casings out of the port, a better flash (shaped per gun), smoke
-  off the barrel after a string; the hands moving with crouch, slide and
-  the vault.
+- **A chunk of its own** (`fpgun.ts`, fetched the first time the gun hands
+  show: viewmodel.ts's `fine`; the boot carries only its hooks, 0.4 KB),
+  its rules and shapes `fpgunkit.ts` (DOM-free, tested in
+  `tests/fpgun.test.ts`). Until it's in, the plain sleeves and flash.
+- **Every top's sleeve** (`sleeveParts()`), round the wrist's own bone and
+  up the forearm (the old sleeves ran round the arm's origin, 5 cm off the
+  wrist): the suit's tailored sleeve over a shirt cuff with its hem and
+  four horn buttons up the outside, the hoodie's and the track top's sleeve
+  gathered onto a ribbed cuff (the track top's two stripes up the outside),
+  the varsity's cream sleeve and its rib with the cream stripe, the
+  puffer's fat sleeve quilted in baffles over a knit cuff, the fatigues'
+  with gloves (`handColor()`); one mesh a colour (`byColour()`). The tests
+  hold every part outside the wrist, nothing down over the hand, the sleeve
+  outside the cuff where they meet.
+- **The watch** on his left wrist when he wears it: the gold band just off
+  the wrist and the face on the outside, the cuff moved up for it
+  (`WATCH_LIFT`).
+- **Each gun's flash** (`FLASH`): the rifle's star, the shotgun's and the
+  revolver's round burst, the SMG's small one, the marksman rifle's and the
+  belt feeder's muzzle brakes throwing side jets; how long each shows.
+- **Spent cases** (`EJECT`, `CASE`): out of the port on his right, flung
+  right and up and falling away, spinning, brass, the shotgun's red hull on
+  the pump; the revolver's stay in the cylinder. **Smoke** off the barrel
+  after a string (`smokeFor()`, `SMOKE`: five shots of an automatic, any
+  shot of the big ones), a wisp rising from the muzzle. Both are one
+  instanced mesh each, in a group at the eye with the world's turn (they
+  hang in the world as you look round), K times out in the front sliver as
+  the hands are; both left out under reduced motion. (Found on the way: a
+  shader material isn't handed three's instance colours, so each carries
+  its own attribute; smoke as pale as the sky doesn't read, so it's a
+  mid grey.)
+- **The light** (`lampLight()`): by day white; at night the moon's cool
+  cast, and the nearest street lamp or lamp pool within `LIGHT.reach`
+  (world.ts `lampTone()`: the town's white or sodium, the dead ones dark)
+  warming and brightening the hands as it nears, eased. The plan said the
+  nearest neon; the city keeps no list of its neon, and the lamps are what
+  light the street.
+- **Crouch, slide and vault**: the gun lower and canted crouched, tipped
+  down and out sliding, swung down out of the way going over something
+  (`ViewState.crouch` / `slide` / `over`, from walk.ts).
+- **Found and fixed:** firing from the eye, his body shouldered the rifle
+  and brought his head down onto the stock, so the cap's brim and the tie
+  swung across the view as giant shapes. From the eye the viewmodel aims
+  and kicks: walk.ts poses his body without the aim or the recoil there.
+- **Checked** in the city headless: the suit with the watch, the puffer,
+  the varsity and the track top at the hip, down the sight and crouched;
+  a string and its smoke; the hands under a sodium lamp at night and away
+  from one.
+- **Cost**: the boot's code is 688.8 KB of 690.
 
 ### Phase 4: the car, the bike and the kart
 

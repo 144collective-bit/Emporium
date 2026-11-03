@@ -2664,7 +2664,9 @@ export function createWalk(d: WalkDeps) {
     if (hero.held) hero.held.visible = (hotbar ? hotbar.heldOut : !combat.armed) && !carrying;
     hotbar?.update();
     // Both hands on the gun (after walking and jumping have posed the arms)
-    const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
+    // (from his eyes the viewmodel aims and kicks: his own head stays up, off the stock, so the cap's brim and the
+    // tie never swing into the view; docs/firstperson-plan.md Phase 3)
+    const gunInHand = combat.geared && combat.poseGun(P, { aim: firstPerson ? 0 : aimAmt, pitch, recoil: firstPerson ? 0 : recoil, run: runAmt, dt });
     // (from his eyes the gun hands are viewmodel.ts's: the gun in his own hands makes way)
     if (firstPerson && combat.drawn > 0.02) combat.gun.visible = false;
     if (!gunInHand && aim && !carrying) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
@@ -2878,7 +2880,7 @@ export function createWalk(d: WalkDeps) {
     hero.g.visible = firstPerson || camDist > (seated() ? 0.3 : 0.6);
     frameShowroom(dt);
     hero.ring.visible = !firstPerson;
-    combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
+    combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air, crouch: crouchAmt, slide: slideAmt, over: overAmt });
 
     // Field of view widens with speed, narrows when aiming
     const wantFov = (firstPerson ? 70 : 52) + (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt) - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);

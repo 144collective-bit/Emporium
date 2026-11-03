@@ -1437,13 +1437,17 @@ const SODIUM = LAMP.sodium;
  * that frame, a colour per point and per instance over its tone's material (the bulbs, in the Batches' shared
  * neon, come up with the night). Not under reduced motion (`reduced`: no tick runs after the first frame).
  */
+/** A street lamp's light where it stands: the town's white, or sodium (flickering or dead in The Trenches) */
+export function lampTone(x: number, z: number) {
+  // (the waterfront's are all sodium, none flickering: it's kept up)
+  const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
+  // (and the Docks' too, a working port: docks.ts)
+  return (x > wx0 && x < wx1 && z > wz0 && z < wz1) || inDocks(x, z) ? 'sodium' : lampKind(x, z) ?? 'white';
+}
 export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => void, reduced = false) {
   const toneOf = lamps.map((l, i): Tone | 'dead' => {
-    // (the waterfront's are all sodium, none flickering: it's kept up)
-    const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
-    // (and the Docks' too, a working port: docks.ts)
-    const k = (l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1) || inDocks(l.x, l.z) ? 'sodium' : lampKind(l.x, l.z);
-    return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
+    const k = lampTone(l.x, l.z);
+    return k === 'white' || k === 'sodium' || k === 'dead' ? k : i % 2 ? 'flickA' : 'flickB';
   });
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
   const poles: THREE.Matrix4[] = [];
