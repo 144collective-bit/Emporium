@@ -32,7 +32,8 @@
  * it's hidden while you're out in it (`HIRE_VIEW`).
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, moving, neon, paintMat, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, fx, lit, moving, neon, paintMat, siteMat, toon } from './kit';
+import { HELM, onDash } from './helm';
 import type { Tick } from './world';
 import { CROWD_VIEW } from './character';
 import { WATER_Y } from './river';
@@ -302,6 +303,13 @@ const BOTTOM = toon('#24304e');
 const NONSKID = toon('#c9c6d4');
 const CUSHION = toon('#c03a3a');
 const MOTOR = toon('#2c2f40');
+const DASH = toon('#1b2133');
+const RIM = toon('#3b4058');
+const GAUGE = toon('#0e1320');
+/** The gauges' ticks and needles, lit faintly at night (under the bloom's threshold) */
+const TICK = neon('#cfeeff', 0.3, 0.9);
+const NEEDLE = neon('#ff8a3d', 0.55, 1);
+const GLASS = toon('#a6e6f7', { transparent: true, opacity: 0.22, depthWrite: false, name: 'boat-glass' });
 
 /**
  * The runabout's hull (vehicle plan Phase 9): stations from the transom to the stem, each a V section (keel, chine,
@@ -400,18 +408,36 @@ export function hireBoat() {
     const lamp = st[12];
     box(b, lamp.x - 0.04, lamp.sheer - 0.06, side * (lamp.w + 0.006) - 0.012, lamp.x + 0.04, lamp.sheer - 0.02, side * (lamp.w + 0.006) + 0.012, neon(side > 0 ? '#2bff88' : '#ff2b2b', 0.4, 2.2));
   }
-  // The console: its body, the windscreen in a frame, a compass on top, the throttle lever; the bench behind it
-  // with a backrest
+  // The console (helm.ts's numbers): its body, the dash's sloping panel on top with two gauges and the compass, the
+  // throttle's side box on the aft face, the windscreen's frame (its glass below); the bench behind it with a backrest
   box(b, 0.2, 0.3, -0.3, 0.55, 0.72, 0.3, WHITE);
-  // (the screen a thin pane, seen from either side)
-  b.add(new THREE.BoxGeometry(0.012, 0.26, 0.6).rotateZ(-0.5).translate(0.6, 0.83, 0), toon('#26304a'));
-  for (const z of [-0.315, 0.315]) b.add(new THREE.BoxGeometry(0.03, 0.28, 0.025).rotateZ(-0.5).translate(0.6, 0.83, z), CHROME);
-  b.add(new THREE.SphereGeometry(0.05, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0.35, 0.72, -0.16), toon('#26304a'));
-  b.add(new THREE.CylinderGeometry(0.012, 0.012, 0.18).rotateZ(-0.4).translate(0.3, 0.8, 0.24), CHROME);
-  b.add(new THREE.SphereGeometry(0.03, 8, 6).translate(0.27, 0.88, 0.24), CUSHION);
-  box(b, -0.5, 0.3, -0.42, -0.12, 0.5, 0.42, CUSHION);
-  box(b, -0.52, 0.5, -0.42, -0.44, 0.7, 0.42, CUSHION);
-  box(b, -0.56, 0.3, -0.44, -0.5, 0.68, 0.44, WHITE);
+  const { dash, screen } = HELM;
+  const half = dash.w / 2;
+  const lo = onDash(-dash.h / 2, 0, 0);
+  const hi = onDash(dash.h / 2, 0, 0);
+  const wedge = new THREE.Shape([new THREE.Vector2(lo.x, 0.72), new THREE.Vector2(lo.x, lo.y), new THREE.Vector2(hi.x, hi.y), new THREE.Vector2(hi.x + 0.08, hi.y), new THREE.Vector2(hi.x + 0.08, 0.72)]);
+  b.add(new THREE.ExtrudeGeometry(wedge, { depth: dash.w, bevelEnabled: false }).translate(0, 0, dash.at.z - half), WHITE);
+  // (the dash's face just off the wedge's slope, the gauges just off it, each layer a few mm out: nothing flush)
+  b.add(onFace(new THREE.PlaneGeometry(dash.w - 0.02, dash.h - 0.016), 0, 0, 0.004), DASH);
+  HELM.gauges.forEach((z) => {
+    b.add(onFace(new THREE.CircleGeometry(HELM.gaugeR, 20), 0, z, 0.008), GAUGE);
+    b.add(onFace(new THREE.RingGeometry(HELM.gaugeR, HELM.gaugeR + 0.007, 20), 0, z, 0.01), CHROME);
+    // (the ticks round three quarters of the face, lit faintly at night)
+    for (let k = 0; k <= 8; k++) {
+      const a = 2.36 - (k / 8) * 4.72;
+      const t = new THREE.PlaneGeometry(0.004, k % 4 ? 0.007 : 0.011).translate(0, HELM.gaugeR - 0.01, 0).rotateZ(a);
+      b.add(onFace(t, 0, z, 0.011), TICK);
+    }
+  });
+  b.add(new THREE.SphereGeometry(0.04, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(hi.x + 0.035, hi.y, dash.at.z), toon('#26304a'));
+  box(b, ...HELM.leverBox, MOTOR);
+  box(b, ...HELM.wheelPod, WHITE);
+  for (const z of [-screen.w / 2 - 0.015, screen.w / 2 + 0.015]) b.add(new THREE.BoxGeometry(0.03, screen.h + 0.02, 0.025).rotateZ(screen.rake).translate(screen.at.x, screen.at.y, z), CHROME);
+  b.add(new THREE.BoxGeometry(0.03, 0.025, screen.w + 0.05).translate(0, screen.h / 2 + 0.005, 0).rotateZ(screen.rake).translate(screen.at.x, screen.at.y, 0), CHROME);
+  const benchY = HELM.seat.y - 0.02;
+  box(b, -0.5, 0.3, -0.42, -0.08, benchY, 0.42, CUSHION);
+  box(b, -0.52, benchY, -0.42, -0.44, benchY + 0.22, 0.42, CUSHION);
+  box(b, -0.56, 0.3, -0.44, -0.5, benchY + 0.2, 0.44, WHITE);
   // The outboard on the transom: its rounded cowl with the cyan stripe, the leg, the cavitation plate and the prop
   box(b, -h - 0.28, 0.3, -0.16, -h + 0.02, 0.62, 0.16, MOTOR);
   b.add(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2).translate(-h - 0.13, 0.62, 0), MOTOR);
@@ -425,16 +451,51 @@ export function hireBoat() {
   box(b, h - 0.3, st[14].sheer + 0.01, -0.03, h - 0.24, st[14].sheer + 0.07, 0.03, BULB);
   const boat = group(b);
   // The wheel: its rim and three spokes on the console's tilted face, turned with the rudder (boat.ts)
-  const wheelAt = new THREE.Vector3(0.14, 0.74, 0);
   const wb = new Batch();
-  wb.add(new THREE.TorusGeometry(0.11, 0.018, 6, 16).rotateY(Math.PI / 2).rotateZ(0.5), INK);
-  for (let k = 0; k < 3; k++) wb.add(new THREE.BoxGeometry(0.012, 0.11, 0.012).translate(0, 0.055, 0).rotateX((k / 3) * Math.PI * 2).rotateZ(0.5), INK);
-  wb.add(new THREE.CylinderGeometry(0.025, 0.025, 0.04, 8).rotateZ(Math.PI / 2 + 0.5), CHROME);
+  wb.add(new THREE.TorusGeometry(HELM.wheelR, 0.016, 8, 24).rotateY(Math.PI / 2).rotateZ(HELM.tilt), RIM);
+  for (let k = 0; k < 3; k++) wb.add(new THREE.BoxGeometry(0.01, HELM.wheelR, 0.01).translate(0, HELM.wheelR / 2, 0).rotateX((k / 3) * Math.PI * 2).rotateZ(HELM.tilt), CHROME);
+  wb.add(new THREE.CylinderGeometry(0.025, 0.025, 0.04, 8).rotateZ(Math.PI / 2 + HELM.tilt), CHROME);
+  // (its column down the axis into the pod)
+  wb.add(new THREE.CylinderGeometry(0.016, 0.02, 0.16, 8).translate(0, -0.08, 0).rotateZ(HELM.tilt + Math.PI / 2), MOTOR);
   const wheel = group(wb);
-  wheel.position.copy(wheelAt);
+  wheel.position.copy(HELM.wheel);
   boat.add(wheel);
-  return { group: boat, seat: new THREE.Vector3(-0.3, 0.5, 0), wheel: wheelAt, helm: wheel };
+  // The throttle's lever on its side box, about its pivot (rotation.z: forward is ahead, boat.ts)
+  const lb = new Batch();
+  lb.add(new THREE.CylinderGeometry(0.01, 0.012, HELM.lever.len, 8).translate(0, HELM.lever.len / 2, 0), CHROME);
+  lb.add(new THREE.SphereGeometry(0.026, 10, 8).scale(1, 0.85, 1).translate(0, HELM.lever.len, 0), INK);
+  lb.add(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 10).rotateX(Math.PI / 2), MOTOR);
+  const throttle = group(lb);
+  throttle.position.copy(HELM.lever.at);
+  boat.add(throttle);
+  // The gauges' needles (speed, revs), each about its gauge's middle (rotation.z; at rest down to the left)
+  const needles = HELM.gauges.map((z) => {
+    const pivot = new THREE.Group();
+    pivot.matrixAutoUpdate = false;
+    pivot.matrix.copy(faceAt(0, z, 0.013));
+    const nb = new Batch();
+    nb.add(new THREE.PlaneGeometry(0.004, HELM.gaugeR * 0.9).translate(0, HELM.gaugeR * 0.35, 0), NEEDLE);
+    nb.add(new THREE.CircleGeometry(0.006, 8).translate(0, 0, 0.001), CHROME);
+    const needle = group(nb);
+    needle.rotation.z = NEEDLE_REST;
+    pivot.add(needle);
+    boat.add(pivot);
+    return needle;
+  });
+  // The windscreen's glass: see-through (the FX layer), its own mesh so boat.ts can lay the spray on it
+  const glass = fx(new THREE.Mesh(new THREE.PlaneGeometry(screen.w, screen.h).rotateY(-Math.PI / 2).rotateZ(screen.rake).translate(screen.at.x, screen.at.y, screen.at.z), GLASS));
+  boat.add(glass);
+  return { group: boat, seat: HELM.seat, wheel: HELM.wheel, helm: wheel, throttle, needles, glass };
 }
+/** A gauge's needle at rest (down to the left, rotation.z about the face's normal); full is `-NEEDLE_REST` */
+export const NEEDLE_REST = 2.36;
+/** The dash's face as a frame: x across it (the boat's +z), y up its slope, z out of it towards him */
+function faceAt(up: number, across: number, off: number) {
+  const s = HELM.dash.slope;
+  return new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(Math.sin(s), Math.cos(s), 0), new THREE.Vector3(-Math.cos(s), Math.sin(s), 0)).setPosition(onDash(up, across, off));
+}
+/** A flat shape (drawn in x, y facing +z) laid on the dash's face */
+const onFace = (g: THREE.BufferGeometry, up: number, across: number, off: number) => g.applyMatrix4(faceAt(up, across, off));
 /** Its ladder down the quay wall and its board */
 function hireBerth(b: Batch, sign: THREE.Material) {
   const { x } = HIRE.door;

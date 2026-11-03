@@ -43,7 +43,8 @@ hold.
 - **Your bike** (`drive.ts`, `bikes.ts`): the helmet's camera from his
   eyes, tipping with the lean; nothing of the bike or his hands in view.
 - **The hire boat** (`boat.ts`): a fixed helm camera with the driver
-  hidden; no wheel, hands or throttle in view.
+  hidden; no wheel, hands or throttle in view. (Phase 5 built it from his
+  eyes.)
 - **Your aircraft** (`fly.ts`): the nose camera sits ahead of the nose
   (`NOSE`); no cockpit.
 - **Karts** (`kart.ts`): the chase camera only.
@@ -341,11 +342,51 @@ hold.
   the bike's and the kart's chunks. Phase 5 on needs the budget raised (the
   owner's go).
 
-### Phase 5: the hire boat
+### Phase 5: the hire boat (built)
 
-- At the helm from his eyes: the wheel turning under his hands, the
-  throttle lever, the console's gauges, the bow rising with speed and the
-  spray, the wake behind if you look back.
+- **The helm as numbers** (`helm.ts`, DOM-free, tested in
+  `tests/helm.test.ts`; boat space, +x the bow, +z starboard): the bench
+  (`HELM.seat`, moved back and up so his feet stand on the sole), the wheel
+  on a pod off the console's aft face (`wheel`, `wheelPod`; its top leaning
+  forward as a car's, `tilt`), the throttle's lever on a side pod by his
+  right hand (`lever`, `leverBox`; `leverAngle()`, `knobAt()`: forward for
+  ahead, back for astern), the dash's sloping panel with two gauges (speed,
+  revs; `dash`, `gauges`, `onDash()`), the compass on its top, the
+  windscreen (`screen`) and the view (`view`: how far the eyes look down,
+  the field of view). `helmPose()`: seated, his left hand on the wheel's
+  rim at ten o'clock, turned with it (`wheelHand()`), his right on the
+  throttle's knob (`throttleHand()`), through `reachArm()`; the test holds
+  both within 1.5 cm at every turn and push, his feet on the sole, his
+  knees clear of the pods, and from his eyes the horizon, the wheel's top,
+  both gauges (over the rim) and the knob in view.
+- **The console drawn** (riverlife3d.ts `hireBoat()`, the moored boat's
+  too): the dash's wedge and face, the gauges' faces, chrome rims and ticks
+  lit faintly at night, their needles (`needles`, `NEEDLE_REST`), the
+  wheel in grey and chrome on its column into the pod, the lever and its
+  knob (`throttle`), the windscreen's glass see-through in the FX layer
+  (`glass`) in a chrome frame.
+- **From his eyes** (boat.ts, V; seateye.ts `seatEye('boat')`): his head
+  folded away, the near plane in (0.08), a field of view of 68 widening a
+  little with speed; the bow's lift with speed and the boat's lean ride
+  the eye (it's in the boat), fpcam.ts's lurch, sway and lead on top, the
+  view rolling with the lean. His body stays drawn (the chase camera hid
+  him at the helm before), so looking back (the look, up to about 150
+  degrees) shows the bench, the outboard and the wake.
+- **Moving under his hands**: the wheel with the rudder, the lever with
+  the throttle as it eases (`s.power`), the speed and revs needles (the
+  revs the engine's voice's own number, a flutter on it). Other players'
+  boats (remoteveh.ts) pose him the same, the lever at rest.
+- **The spray on the screen**: drops from one seeded texture
+  (`dropsTex()`) on a pane just aft of the glass, beading while the bow
+  throws spray (`sprayOf()`) and on a knock, running down and drying off
+  as it eases (`wet`); none under reduced motion. The bow's own spray is
+  drawn smaller from the helm, so it doesn't fly past the eyes as blobs.
+- **Checked** in the city headless: chase, the helm standing, running
+  fast, turning (the drops on the glass), looking back, and back to the
+  chase.
+- **Cost**: nothing in the boot (689.6 KB): it's all the boat's and the
+  river's chunks. The boot's budget was raised to 700 KB on the owner's go
+  for the next phases.
 
 ### Phase 6: the cockpits
 

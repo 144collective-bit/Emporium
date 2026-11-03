@@ -8,7 +8,11 @@
  * boat goes home. Leaving walk mode on the water sends it home too.
  *
  * - Cameras (V): a chase camera that swings in behind (look round with the
- *   mouse, a drag or the right stick; it settles back) and one at the helm.
+ *   mouse, a drag or the right stick; it settles back) and the helm from his
+ *   own eyes (docs/firstperson-plan.md Phase 5: seateye.ts, his head folded
+ *   away, the near plane in; his left hand on the wheel, his right on the
+ *   throttle's lever, both moving under them, the gauges' needles, the bow
+ *   lifting with speed, the spray beading on the windscreen and running off).
  * - The car's readout (`data-drive-hud`): speed, and F / N / R; its pedals read
  *   Ahead and Astern.
  * - It rises at the bow with speed, leans into its turns and trails a wake.
@@ -16,12 +20,15 @@
  * - It bumps softly off everything (boat-sim.ts), with a knock.
  */
 import * as THREE from 'three';
-import { HIP_HEIGHT, createDegen, reachArm, torsoFrame, type Degen, type Outfit } from './character';
+import { createDegen, type Degen, type Outfit } from './character';
+import { DRIVER_SCALE, HELM, WHEEL_AXIS, driverRoot, helmPose as poseAtHelm, leverAngle } from './helm';
+import { seatEye } from './seateye';
+import type { FpView } from './fpcam';
 import { BOAT, HIRE_VIEW, TUNE, WATER_SOLIDS, aheadOf, leaveAt, moversAt, newBoat, speedOf, sprayOf, stepBoat, wakeShape, type BoatInput, type Circle } from './boat-sim';
 import { HIRE } from './riverbus';
 import { WATER_Y } from './river';
-import { hireBoat } from './riverlife3d';
-import { fx, glowMat, glowTex } from './kit';
+import { NEEDLE_REST, hireBoat } from './riverlife3d';
+import { canvasTex, fx, glowMat, glowTex } from './kit';
 import type { Sfx } from './combat';
 
 export interface BoatDeps {
@@ -44,56 +51,61 @@ const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 /** Tiles per second to km/h (a tile is about 1.8 m) */
 const KMH = 1.8 * 3.6;
-/** Degen's size (walk.ts's) */
-const SCALE = 0.85;
 const NAME = 'Hire boat';
+/** The near plane from the helm (the wheel and the lever are under his hands), as the car's seat has it */
+const CLOSE = 0.08;
 
 type HireModel = ReturnType<typeof hireBoat>;
 /** Sit a Degen at the hire boat's wheel (in the boat's group, on the bench, facing the bow); other players' too (remote.ts) */
 export function seatAtHelm(driver: Degen, model: HireModel) {
   const g = driver.g;
   g.rotation.set(0, Math.PI / 2, 0);
-  g.scale.setScalar(SCALE);
-  g.position.set(model.seat.x, model.seat.y - HIP_HEIGHT * SCALE + 0.02, 0);
+  g.scale.setScalar(DRIVER_SCALE);
+  g.position.copy(driverRoot());
   if (driver.held) driver.held.visible = false;
   model.group.add(g);
 }
-const M = new THREE.Matrix4();
-const INV = new THREE.Matrix4();
-const CHEST = new THREE.Matrix4();
-const GRIP = new THREE.Vector3();
-const HELM_AXIS = new THREE.Vector3(Math.cos(0.5), Math.sin(0.5), 0);
 /**
- * The driver at the helm: on the bench, knees bent, both hands on the wheel's sides turned with the rudder (`steer`
- * -1..1, the wheel too), his head with the turn and `look` (radians)
+ * The driver at the helm (helm.ts): on the bench, his left hand on the wheel (turned with the rudder, `steer` -1..1,
+ * the wheel too), his right on the throttle's lever (`power` -1 astern .. 1 ahead, the lever too), his head with the
+ * turn and `look` (radians)
  */
-export function helmPose(driver: Degen, model: HireModel, steer: number, look = 0) {
-  const p = driver.pose;
-  p.bob = 0;
-  p.lean = 0.12;
-  p.twist = 0;
-  p.side = -steer * 0.08;
-  p.headYaw = -steer * 0.25 + look;
-  p.headPitch = 0.04;
-  for (const l of p.legs) {
-    l.fwd = 1.45;
-    l.out = 0.12;
-    l.bend = 1.3;
-    l.twist = 0;
-  }
-  const g = driver.g;
-  CHEST.compose(g.position, g.quaternion, g.scale);
-  CHEST.multiply(torsoFrame(p, M));
-  INV.copy(CHEST).invert();
-  // The wheel's sides (it stands tilted on the console's face, turned with the rudder)
-  for (const i of [0, 1] as const) {
-    const a = (i === 0 ? 1 : -1) * (Math.PI / 2) - steer * 0.8;
-    GRIP.set(model.wheel.x - Math.sin(0.5) * Math.sin(a) * 0.11, model.wheel.y + Math.cos(0.5) * Math.sin(a) * 0.11, Math.cos(a) * 0.11);
-    GRIP.applyMatrix4(INV);
-    reachArm(p, i, GRIP);
-  }
+export function helmPose(driver: Degen, model: HireModel, steer: number, look = 0, power = 0) {
+  poseAtHelm(driver.pose, steer, power, look);
   driver.update();
-  model.helm.quaternion.setFromAxisAngle(HELM_AXIS, steer * 0.8);
+  model.helm.quaternion.setFromAxisAngle(WHEEL_AXIS, steer * HELM.turn);
+  model.throttle.rotation.z = leverAngle(power);
+}
+
+/** The spray's drops on the windscreen: beads and short runs, seeded (the same picture every time) */
+function dropsTex() {
+  return canvasTex(256, 128, (g, w, h) => {
+    let n = 7;
+    const rnd = () => ((n = (n * 16807) % 2147483647) - 1) / 2147483646;
+    g.clearRect(0, 0, w, h);
+    for (let i = 0; i < 90; i++) {
+      const [x, y] = [rnd() * w, rnd() * h];
+      const r = 1.2 + rnd() * rnd() * 4.5;
+      // (a run down from the bigger ones)
+      if (r > 3.4) {
+        g.strokeStyle = 'rgba(235,248,255,0.35)';
+        g.lineWidth = r * 0.7;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x + (rnd() - 0.5) * 3, y + r * (2 + rnd() * 3));
+        g.stroke();
+      }
+      const grad = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+      grad.addColorStop(0.45, 'rgba(210,236,250,0.35)');
+      grad.addColorStop(0.85, 'rgba(160,200,225,0.55)');
+      grad.addColorStop(1, 'rgba(160,200,225,0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.ellipse(x, y, r, r * (0.8 + rnd() * 0.3), 0, 0, Math.PI * 2);
+      g.fill();
+    }
+  });
 }
 
 export function createBoat(d: BoatDeps) {
@@ -133,6 +145,30 @@ export function createBoat(d: BoatDeps) {
   spray.frustumCulled = false;
   boat.add(spray);
   let sprayNext = 0;
+  // The spray on the windscreen: drops beading on the glass's aft face while the bow throws spray, running down
+  // and drying off when it eases (`wet` 0..1; still under reduced motion, which throws none)
+  const dropsMap = dropsTex();
+  dropsMap.wrapS = dropsMap.wrapT = THREE.RepeatWrapping;
+  const dropsMat = new THREE.MeshBasicMaterial({ map: dropsMap, transparent: true, opacity: 0, depthWrite: false, fog: false, name: 'boat-drops' });
+  const drops = fx(new THREE.Mesh(model.glass.geometry.clone().translate(-0.005, 0, 0), dropsMat));
+  drops.renderOrder = 2;
+  boat.add(drops);
+  let wet = 0;
+  // From the helm: his own eyes (seateye.ts), the near plane in so the wheel and the lever under his hands are in view
+  const eye = seatEye('boat');
+  const nobody = new THREE.Vector3(HELM.seat.x + 0.05, HELM.seat.y + 0.5, 0);
+  let near0 = camera.near;
+  let fov0 = camera.fov;
+  let fov = fov0;
+  /** Back to the camera as walk mode had it */
+  function eyesOff() {
+    eye.off();
+    if (camera.near !== near0 || camera.fov !== fov0) {
+      camera.near = near0;
+      camera.fov = fov = fov0;
+      camera.updateProjectionMatrix();
+    }
+  }
 
   let s = newBoat();
   let active = false;
@@ -157,9 +193,9 @@ export function createBoat(d: BoatDeps) {
     driver = createDegen(d.outfit());
     seatAtHelm(driver, model);
   }
-  const poseDriver = () => driver && helmPose(driver, model, steerNow, lookYaw * 0.3);
+  const poseDriver = () => driver && helmPose(driver, model, steerNow, lookYaw * 0.3, s.power);
   /** The wheel turned with the rudder (helmPose() turns it too, with a driver aboard) */
-  const turnHelm = () => model.helm.quaternion.setFromAxisAngle(HELM_AXIS, steerNow * 0.8);
+  const turnHelm = () => model.helm.quaternion.setFromAxisAngle(WHEEL_AXIS, steerNow * HELM.turn);
   const gas = root.querySelector<HTMLElement>('[data-drive-gas]');
   const brake = root.querySelector<HTMLElement>('[data-drive-brake]');
   /** The car's pedals read Ahead and Astern on the water */
@@ -189,6 +225,10 @@ export function createBoat(d: BoatDeps) {
     boat.visible = false;
     wakeRoot.visible = false;
     HIRE_VIEW.out = false;
+    if (helm) eyesOff();
+    helm = false;
+    wet = 0;
+    dropsMat.opacity = 0;
     if (driver) {
       driver.g.removeFromParent();
       driver.dispose();
@@ -222,6 +262,8 @@ export function createBoat(d: BoatDeps) {
   function stepSpray(dt: number) {
     const amt = d.reduced ? 0 : sprayOf(speedOf(s));
     sprayMat.opacity = 0.75 * Math.min(1, amt * 2);
+    // (smaller from the helm: the drops fly past close to his eyes)
+    sprayMat.size = helm ? 0.12 : 0.32;
     sprayNext += amt * dt * 90;
     for (let i = 0; i < SPRAY_N; i++) {
       if (sprayLife[i] <= 0 && sprayNext >= 1) {
@@ -285,6 +327,8 @@ export function createBoat(d: BoatDeps) {
       lookYaw = lookPitch = 0;
       camReady = false;
       helm = false;
+      near0 = camera.near;
+      fov0 = fov = camera.fov;
       setHud(true);
       place();
       d.sfx('door');
@@ -308,8 +352,8 @@ export function createBoat(d: BoatDeps) {
     toggleView() {
       helm = !helm;
       camReady = false;
-      // (at the helm the camera is where his head is)
-      if (driver) driver.g.visible = !helm;
+      // (at the helm the camera is at his eyes, his head folded away: seateye.ts)
+      if (!helm) eyesOff();
     },
     look(dx: number, dy: number) {
       lookYaw = THREE.MathUtils.clamp(lookYaw - dx, -2.6, 2.6);
@@ -334,13 +378,23 @@ export function createBoat(d: BoatDeps) {
       turnHelm();
       poseDriver();
       stepSpray(Math.min(dt, 0.1));
+      // The gauges: speed over the water and the engine's revs; the spray beading on the screen and drying off
+      const revs = Math.min(1, 0.12 + Math.abs(s.power) * 0.55 + (speedOf(s) / TUNE.top) * 0.3);
+      const dial = (k: number) => NEEDLE_REST - Math.min(1, Math.max(0, k)) * 2 * NEEDLE_REST;
+      model.needles[0].rotation.z = dial(speedOf(s) / TUNE.top);
+      model.needles[1].rotation.z = dial(revs + (d.reduced ? 0 : Math.sin(clock * 37) * 0.006));
+      const spray = d.reduced ? 0 : sprayOf(speedOf(s));
+      wet = Math.min(1, Math.max(0, wet + (spray * 0.9 - 0.12) * Math.min(dt, 0.1) + (knock > 0.8 && !d.reduced ? Math.min(0.3, knock * 0.06) : 0)));
+      dropsMat.opacity = 0.85 * Math.min(1, wet * 1.6);
+      // (they run down as they dry, faster in the wind of a fast run; the texture wraps)
+      if (!d.reduced) dropsMap.offset.y = (dropsMap.offset.y + dt * (0.015 + spray * 0.05)) % 1;
 
       // The readout: speed, and whether it's going ahead, astern or idling
       const kmh = String(Math.round(speedOf(s) * KMH));
       if (speedEl.textContent !== kmh) speedEl.textContent = kmh;
       const gear = s.power > 0.05 ? 'F' : s.power < -0.05 ? 'R' : 'N';
       if (gearEl.textContent !== gear) gearEl.textContent = gear;
-      d.engine(Math.min(1, 0.12 + Math.abs(s.power) * 0.55 + (speedOf(s) / TUNE.top) * 0.3));
+      d.engine(revs);
 
       // Cameras: the chase camera swings in behind (the look settles back), or at the helm
       lookIdle += dt;
@@ -351,10 +405,11 @@ export function createBoat(d: BoatDeps) {
       camYaw += wrap(s.yaw - camYaw) * damp(helm ? 20 : 2.8, dt);
       const yaw = camYaw + lookYaw;
       const [fx0, fz0] = [Math.cos(yaw), -Math.sin(yaw)];
+      let fe: FpView | null = null;
       if (helm) {
-        const [hx, hz] = [Math.cos(s.yaw), -Math.sin(s.yaw)];
-        camera.position.set(s.x + hx * (model.seat.x + 0.15), WATER_Y + 1.42, s.z + hz * (model.seat.x + 0.15));
-        at.set(camera.position.x + fx0 * 10, camera.position.y - 0.5 + lookPitch * 6, camera.position.z + fz0 * 10);
+        // His own eyes, the bow lifting with the speed and the boat leaning under them; looking round with the look
+        fe = eye.look(boat, driver, DRIVER_SCALE, nobody, camPos, at, lookYaw, lookPitch, dt, { speed: aheadOf(s), yawRate: s.r }, HELM.view.down);
+        camera.position.copy(camPos);
       } else {
         const pitch = 0.26 + lookPitch;
         pivot.set(s.x, WATER_Y + 1.0, s.z);
@@ -369,6 +424,20 @@ export function createBoat(d: BoatDeps) {
       camReady = true;
       camera.up.set(0, 1, 0);
       camera.lookAt(at);
+      if (fe) {
+        camera.rotateY(fe.yaw);
+        camera.rotateX(fe.pitch);
+        // (the view rolls with the boat's lean)
+        camera.rotateZ(-fe.roll - boat.rotation.x);
+        camera.position.y += fe.y;
+        const want = HELM.view.fov + (d.reduced ? 0 : (speedOf(s) / TUNE.top) * 6);
+        fov += (want - fov) * damp(4, dt);
+        if (Math.abs(camera.fov - fov) > 0.05 || camera.near !== CLOSE) {
+          camera.fov = fov;
+          camera.near = CLOSE;
+          camera.updateProjectionMatrix();
+        }
+      }
       if (shake > 0) {
         camera.position.x += (Math.random() - 0.5) * shake;
         camera.position.y += (Math.random() - 0.5) * shake;

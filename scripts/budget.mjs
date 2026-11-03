@@ -36,9 +36,11 @@ const BUDGETS = {
    * needed, we want quality"): its streets, blocks, wall and lamps in the street plan and the traffic's routes round its
    * loop (about 8 KB, less the 5 KB the baked data's makers gave back when they folded out of the browser's code);
    * and from 680 for the Neon Mile (docs/strip-plan.md, the owner's go: "raise the budget") meeting the menu plan's
-   * kit and the blend plan's ground on main: its resorts, landmarks and monorail as places, its solids and its traffic
+   * kit and the blend plan's ground on main: its resorts, landmarks and monorail as places, its solids and its traffic;
+   * and from 690 for the first-person plan (docs/firstperson-plan.md, the owner's go: "raise the budget when needed"):
+   * its Phases 1-4 left the boot at 689.6, and the cockpits come next
    */
-  bootJs: 690,
+  bootJs: 700,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */
