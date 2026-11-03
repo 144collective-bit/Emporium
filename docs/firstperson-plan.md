@@ -15,6 +15,10 @@ hold.
 | Mirrors | **Stay painted** (no second pass over the city). They may follow the time of day and the weather. |
 | Camera feel | **Grounded and subtle**: small bob, lurch, jolts and FOV changes, comfortable for long sessions and on phones; all off under reduced motion. |
 | Default | Over the shoulder stays the default when walking starts (unchanged); V swaps, as today. |
+| The head | **The view stays clean**: the head, hat, hood and shades are all hidden from the eye; no brim or rim at the top of the view. |
+| Under the eye | **The neck and collar are hidden** with the head (and the top of the tie): looking down shows the chest, arms, legs and feet. The eye stays where his eyes are. |
+| Empty hands | **At the edges**: walking and running, the arms are eased a little forward so the hands swing into the bottom corners; punches, doors, counters, crates and the snack bring them up. |
+| The ring's view | **Remembered**: V swaps in the Fight Club, and the next fight starts in whichever view was used last. |
 
 ## Where things stand
 
