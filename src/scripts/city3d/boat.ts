@@ -165,11 +165,11 @@ export function createBoat(d: BoatDeps) {
   /** The car's pedals read Ahead and Astern on the water */
   function setPedals(on: boolean) {
     if (gas) {
-      gas.textContent = on ? 'Ahead' : 'Gas';
+      (gas.querySelector('.tc-word') ?? gas).textContent = on ? 'Ahead' : 'Gas';
       gas.setAttribute('aria-label', on ? 'Ahead' : 'Gas');
     }
     if (brake) {
-      brake.textContent = on ? 'Astern' : 'Brake';
+      (brake.querySelector('.tc-word') ?? brake).textContent = on ? 'Astern' : 'Brake';
       brake.setAttribute('aria-label', on ? 'Astern' : 'Brake and reverse');
     }
   }

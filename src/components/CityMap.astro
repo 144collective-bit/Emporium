@@ -731,7 +731,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       </div>
     </section>
     <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
-    <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
+    <button type="button" class="kart-btn kart-drift tc" data-kart-drift aria-label="Drift"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-drift" /></svg><span class="tc-word">Drift</span></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
         data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
         its head; data-fight-tabs the Spar / Bout / Record / Styles tabs (data-fight-tab); data-fight-body (painted);
@@ -823,9 +823,10 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <span class="fly-power" title="Throttle"><i data-fly-power></i></span>
       <span class="drive-gear" data-fly-state>Taxi</span>
     </div>
-    <button type="button" class="drive-pedal drive-horn" data-drive-horn aria-label="Horn">Horn</button>
-    <button type="button" class="drive-pedal drive-brake" data-drive-brake aria-label="Brake and reverse">Brake</button>
-    <button type="button" class="drive-pedal drive-gas" data-drive-gas aria-label="Gas">Gas</button>
+    <button type="button" class="drive-pedal drive-horn tc" data-drive-horn aria-label="Horn"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-horn" /></svg><span class="tc-word">Horn</span></button>
+    <button type="button" class="drive-pedal drive-view tc" data-drive-view aria-label="Camera view"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-view" /></svg><span class="tc-word">View</span></button>
+    <button type="button" class="drive-pedal drive-brake tc" data-drive-brake aria-label="Brake and reverse"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-brake" /></svg><span class="tc-word">Brake</span></button>
+    <button type="button" class="drive-pedal drive-gas tc-main tc" data-drive-gas aria-label="Gas"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-gas" /></svg><span class="tc-word">Gas</span></button>
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
     <button type="button" class="walk-run tc" data-walk-run aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-sprint" /></svg><span class="tc-word">Sprint</span></button>
     <button type="button" class="walk-crouch tc" data-walk-crouch aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-crouch" /></svg><span class="tc-word">Crouch</span></button>
@@ -839,6 +840,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     </svg>
   </div>
   <button type="button" class="walk-prompt mk-skin" data-walk-prompt hidden>
+    <svg class="tc-icon walk-prompt-tap" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-act" /></svg>
     <kbd>F</kbd> <span data-walk-label>Enter</span>
   </button>
   {/* A taxi (taxi.ts, growth plan Phase 8): on its way, waiting (Get in), or the ride (Skip ride) */}

@@ -1,10 +1,11 @@
-// Where the touch controls stand (touchlayout.ts, docs/controls-plan.md Phase 1): every mode's buttons, the
-// stick, the hotbar and the door prompt apart from each other and on screen, under the header, on the phones
-// people hold upright and on their side, and on tablets; the same slots in every mode.
+// Where the touch controls stand (touchlayout.ts, docs/controls-plan.md Phases 1 and 2): every mode's buttons
+// (on foot, at the wheel, in a kart race, in the ring), the stick, and on foot the hotbar and the door prompt,
+// apart from each other and on screen, under the header, on the phones people hold upright and on their side,
+// and on tablets; the same slots in every mode.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TC_ICONS, tcIconPath } from '../src/data/tcicons';
-import { centreOf, footLayout, LAYOUTS, shapeOf, type FootMode, type Spot } from '../src/scripts/city3d/touchlayout';
+import { centreOf, footLayout, layoutFor, LAYOUTS, shapeOf, type FootMode, type Mode, type Spot } from '../src/scripts/city3d/touchlayout';
 
 /** Screens inside their safe areas (a notch's sides taken off on its side, the home bar's strip upright) */
 const SCREENS: [number, number][] = [
@@ -24,6 +25,7 @@ const SCREENS: [number, number][] = [
   [1024, 768],
 ];
 const MODES: FootMode[] = ['fists', 'armed'];
+const ALL: Mode[] = ['fists', 'armed', 'drive', 'kart', 'ring'];
 /** The header's height on a phone (one row: docs/controls-plan.md Phase 3 makes it so in both modes) */
 const HEAD = 64;
 const GAP = 6;
@@ -75,10 +77,29 @@ test('every mode fills the same slots: Jump and Sprint stay put, the main button
   }
 });
 
+test('every mode shares the slots: the main button, the one beside it, the arc', () => {
+  for (const [w, h] of SCREENS) {
+    const f = layoutFor(w, h, 'fists').buttons;
+    const d = layoutFor(w, h, 'drive').buttons;
+    const k = layoutFor(w, h, 'kart').buttons;
+    const r = layoutFor(w, h, 'ring').buttons;
+    // (Gas where Punch is, Brake where Jump is, Dodge where Jump is, the ring's Block and Kick as the street's)
+    assert.deepEqual(d.gas, f.punch);
+    assert.deepEqual(d.brake, f.jump);
+    assert.deepEqual(k.brake, f.jump);
+    assert.deepEqual(r.dodge, f.jump);
+    assert.deepEqual(r.block, f.block);
+    assert.deepEqual(r.kick, f.kick);
+    assert.deepEqual(k.drift, d.view);
+    assert.equal(d.crouch, undefined, 'no Crouch at the wheel');
+    assert.ok(layoutFor(w, h, 'drive').stick.d > layoutFor(w, h, 'fists').stick.d, 'a bigger stick to steer with');
+  }
+});
+
 test('the buttons and the stick stand apart, on screen and under the header', () => {
   for (const [w, h] of SCREENS)
-    for (const mode of MODES) {
-      const L = footLayout(w, h, mode);
+    for (const mode of ALL) {
+      const L = layoutFor(w, h, mode);
       const all = [...Object.entries(L.buttons), ['stick', L.stick] as const] as [string, Spot][];
       for (const [name, s] of all) {
         const b = circleBox(s, w, h);

@@ -126,6 +126,23 @@ the owner's sign-off. Keep this file up to date.
   the arc, as on the street; Snack and Quit as small kit buttons up top.
 - The door prompt ("Enter", "Get in", "Get out") as a kit button with its
   icon, over the arc.
+- **Built, waiting on the owner's sign-off.** `touchlayout.ts` grew a
+  `Mode` for each (`layoutFor()`; `footLayout()` is on foot's): `drive`
+  (Gas main, Brake `a1`, View `a2`, Horn `a3`; the car, the bike, the boat,
+  the aircraft and your own kart), `kart` (Gas, Brake, Drift in View's
+  slot) and `ring` (Punch, Dodge in Jump's slot, Block and Kick where
+  they stand on the street), with a bigger stick at the wheel (`wheel`);
+  the test holds them all apart and on screen and the shared slots shared.
+  `controls.ts` reads the mode off the root's classes. The pedals are
+  `.tc` buttons (the words are what fly.ts and boat.ts change: Faster /
+  Slower, Ahead / Astern); a new **View** button (`[data-drive-view]`, the
+  camera, V on a keyboard) at the wheel but not in a race. The readouts
+  (speed and gear, the flight's speed, height, throttle and state) are
+  dark panels with pixel digits in coin, the throttle bar coin. The
+  prompt shows a pixel tap icon in coin where a keyboard shows F. The
+  ring's Snack and Quit already wore the kit (the menu plan's skin). The
+  old placements in walk.css (the pedals, the stick), karts.css and
+  fight.css (the ring) went.
 
 ### Phase 3: the slim header
 

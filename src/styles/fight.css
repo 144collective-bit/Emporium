@@ -987,83 +987,20 @@
     display: block;
   }
 }
-/* Touch screens: the stick moves bottom-left as always; bottom-right Punch takes Fire's spot and
-   Dodge Jump's, with Block above Punch and Kick above Dodge, all clear of the phone's safe areas.
-   The door prompt goes above the cluster. */
+/* Touch screens: the stick bottom-left as always, Punch in the main slot, Dodge in Jump's, Block and Kick where
+   they stand on the street (touchlayout.ts `ring`, placed by controls.ts; the look is controls.css's) */
 @media (pointer: coarse) {
-  /* (their look is controls.css's .tc; where they stand in the ring, here until docs/controls-plan.md Phase 2) */
-  .city.is-fighting .fight-btn {
+  .city.is-fighting .fight-btn,
+  .city.is-fighting .walk-stick {
     display: grid;
-  }
-  .city.is-fighting .fight-punch {
-    right: max(100px, calc(env(safe-area-inset-right) + 94px));
-    bottom: max(34px, calc(env(safe-area-inset-bottom) + 22px));
-    width: 76px;
-    height: 76px;
-  }
-  .city.is-fighting .fight-dodge {
-    right: max(26px, calc(env(safe-area-inset-right) + 20px));
-    bottom: max(42px, calc(env(safe-area-inset-bottom) + 30px));
-    width: 60px;
-    height: 60px;
-  }
-  .city.is-fighting .fight-kick {
-    right: max(22px, calc(env(safe-area-inset-right) + 16px));
-    bottom: max(116px, calc(env(safe-area-inset-bottom) + 104px));
-    width: 68px;
-    height: 68px;
-  }
-  .city.is-fighting .fight-block {
-    right: max(108px, calc(env(safe-area-inset-right) + 102px));
-    bottom: max(124px, calc(env(safe-area-inset-bottom) + 112px));
-    width: 62px;
-    height: 62px;
   }
   .city.is-fighting .walk-prompt {
     bottom: 204px;
   }
-  .city.is-fighting .walk-stick {
-    display: grid;
-  }
 }
-/* Phones on their side: a smaller cluster lower down, the prompt just above it */
 @media (pointer: coarse) and (max-height: 500px) {
-  .city.is-fighting .fight-punch {
-    right: max(96px, calc(env(safe-area-inset-right) + 90px));
-    bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
-    width: 64px;
-    height: 64px;
-  }
-  .city.is-fighting .fight-dodge {
-    right: max(24px, calc(env(safe-area-inset-right) + 18px));
-    bottom: max(28px, calc(env(safe-area-inset-bottom) + 18px));
-    width: 52px;
-    height: 52px;
-  }
-  .city.is-fighting .fight-kick {
-    right: max(18px, calc(env(safe-area-inset-right) + 12px));
-    bottom: max(92px, calc(env(safe-area-inset-bottom) + 82px));
-    width: 58px;
-    height: 58px;
-  }
-  .city.is-fighting .fight-block {
-    right: max(102px, calc(env(safe-area-inset-right) + 96px));
-    bottom: max(98px, calc(env(safe-area-inset-bottom) + 88px));
-    width: 54px;
-    height: 54px;
-  }
-  /* The prompt sits at the bottom between the stick and the cluster, under the centre stack */
   .city.is-fighting .walk-prompt {
     bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
-  }
-}
-/* Narrow phones: the cluster a touch tighter to the edge so the stick never touches it */
-@media (pointer: coarse) and (max-width: 360px) {
-  .city.is-fighting .fight-punch {
-    right: 92px;
-  }
-  .city.is-fighting .fight-block {
-    right: 100px;
   }
 }
 

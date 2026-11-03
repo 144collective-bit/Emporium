@@ -1694,6 +1694,13 @@ export function createWalk(d: WalkDeps) {
     else drive.horn();
     d.touched();
   });
+  // The camera at the wheel on touch (V on a keyboard): the boat's, the aircraft's or the car's next view
+  onTap($('[data-drive-view]'), () => {
+    if (boat?.active) boat.toggleView();
+    else if (fly.active) fly.toggleView();
+    else if (drive.active) drive.toggleView();
+    d.touched();
+  });
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
   const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
   if (driftBtn) {
