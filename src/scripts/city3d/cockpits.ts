@@ -107,7 +107,7 @@ export const COCKPITS: Record<PlaneId, Cockpit> = {
     floor: 0.76,
     well: { y: 1.0, x0: 2.9, x1: 3.3 },
     seat: [2.75, 1.32, 0],
-    panel: { x: 3.3, y0: 1.06, y1: 1.5, shield: 0.12 },
+    panel: { x: 3.3, y0: 1.06, y1: 1.5, shield: 0.06 },
     gauges: [
       { kind: 'pfd', z: -0.16, y: 1.37, r: 0.1, w: 0.27, h: 0.2 },
       { kind: 'mfd', z: 0.16, y: 1.37, r: 0.1, w: 0.27, h: 0.2 },
@@ -115,7 +115,7 @@ export const COCKPITS: Record<PlaneId, Cockpit> = {
     stick: { kind: 'stick', at: [2.93, 1.22, 0.3], len: 0.15, travel: 0.25 },
     lever: { kind: 'quadrant', at: [2.76, 1.24, -0.31], len: 0.14, travel: 0.42, twin: true },
     pedals: { at: [3.06, 1.08, 0.1], travel: 0.04 },
-    view: { down: 0.24, fov: 72 },
+    view: { down: 0.36, fov: 74 },
   },
   // The Whirlybird: a bubble canopy, chin windows at his feet, the cyclic between his knees in his right hand, the
   // collective by his left, a small panel on its pedestal
