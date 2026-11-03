@@ -1078,6 +1078,10 @@ export function createCombat(d: CombatDeps) {
       holdGun(pose, stance, pivot, gun, { aim: s.aim, ready, draw: drawn, pitch: s.pitch, recoil: s.recoil, reload, shells: me.shells || undefined, dt: s.dt });
       return drawn > 0;
     },
+    /** How far the gun is out in his hands (0 put away, 1 drawn): in first person his own arms make way for the gun hands */
+    get drawn() {
+      return drawn;
+    },
     /** How far his head is down on the stock (0..1): the look added after it goes only the rest of the way */
     get cheek() {
       return stance.cheek;

@@ -29,8 +29,19 @@
  * material), and what's drawn this way goes on `CLOSE_LAYER` only, so the
  * outline pre-pass draws it with its own patched normal material (post.ts,
  * `post.close`). DOM-free; the depth maths is tested in tests/fpclose.test.ts.
+ *
+ * The view stays clean (Phase 1, the owner's calls): what's at the eye is cut
+ * away in these shaders only, so his shadow keeps it all. `setCloseCut()`
+ * gives the head bone, his up and his size: everything above `CUT.top` over
+ * the head bone and within `CUT.wide` of its axis goes (the head, the hood,
+ * the shades, every hat and its brim), and so does the neck and the collar's
+ * top rim within `CUT.neck` of the axis from `CUT.low` up; the collar's front
+ * and the tie's knot under the eye stay. `cutAway()` is the same test in
+ * numbers, for the tests. With the gun hands up (viewmodel.ts) his own arms
+ * go too (`arms`: every fragment mostly weighted to an arm bone, `ARM_BONES`).
  */
 import * as THREE from 'three';
+import { BONE_INDEX, type BoneName } from './skeleton';
 
 /** How far out the body is pushed (K) and the depth sliver kept for what's nearer than the near plane */
 export const CLOSE = { K: 16, eps: 1e-3 };
@@ -49,10 +60,55 @@ export function closeDepth(w: number, F: number, k = CLOSE.K, eps = CLOSE.eps) {
   return Math.min(1, Math.max(F - k * (F - w), eps * w, 0));
 }
 
+/** What's cut away at the eye, in the figure's own units (times his scale) from the head bone along his up */
+export const CUT = { low: -0.02, neck: 0.14, top: 0.11, wide: 0.32 };
+
+/** Is a point `a` along his up from the head bone, `r` off its axis (both in his units), cut away? */
+export const cutAway = (a: number, r: number) => (a > CUT.low && r < CUT.neck) || (a > CUT.top && r < CUT.wide);
+
+/** The arm bones, both sides: the upper arm down to the fingertips (not the collarbones: the shoulders stay) */
+export const ARM_BONES: BoneName[] = (['arm', 'fore', 'hand', 'idx1', 'idx2', 'fin1', 'fin2', 'thb1', 'thb2'] as const).flatMap((b) => [`${b}L`, `${b}R`] as BoneName[]);
+// (as GLSL: whether a skin index is one of them)
+const ARM_TEST = ARM_BONES.map((b) => `abs(i - ${BONE_INDEX[b].toFixed(1)}) < 0.5`).join(' || ');
+
+/** The cut's numbers in the shaders (one set: only the player's own body is drawn close) */
+const U = {
+  closeHead: { value: new THREE.Vector4() },
+  closeUp: { value: new THREE.Vector3(0, 1, 0) },
+  closeCut: { value: new THREE.Vector4() },
+  closeArms: { value: 0 },
+};
+
+/**
+ * Where the cut is: his head bone (world), his up (world) and his scale; `arms` cuts his arms away too. `null`
+ * for none (the lab's other cameras, or nothing drawn close).
+ */
+export function setCloseCut(head: THREE.Vector3 | null, up?: THREE.Vector3, scale = 1, arms = false) {
+  if (!head) {
+    U.closeHead.value.w = 0;
+    U.closeArms.value = 0;
+    return;
+  }
+  U.closeHead.value.set(head.x, head.y, head.z, 1);
+  if (up) U.closeUp.value.copy(up).normalize();
+  U.closeCut.value.set(CUT.low * scale, CUT.neck * scale, CUT.top * scale, CUT.wide * scale);
+  U.closeArms.value = arms ? 1 : 0;
+}
+
 const VERT = /* glsl */ `
 varying float vCloseF;
+varying vec3 vCloseV;
+varying float vCloseArm;
+float closeIsArm(float i) { return (${ARM_TEST}) ? 1.0 : 0.0; }
 void main() {
   closeMain();
+  // Where it truly is, in view space (before the push): from the clip position and the projection's own numbers
+  float zv = -gl_Position.w;
+  vCloseV = vec3((gl_Position.x - projectionMatrix[2][0] * zv) / projectionMatrix[0][0], (gl_Position.y - projectionMatrix[2][1] * zv) / projectionMatrix[1][1], zv);
+  vCloseArm = 0.0;
+  #ifdef USE_SKINNING
+  vCloseArm = closeIsArm(skinIndex.x) * skinWeight.x + closeIsArm(skinIndex.y) * skinWeight.y + closeIsArm(skinIndex.z) * skinWeight.z + closeIsArm(skinIndex.w) * skinWeight.w;
+  #endif
   // Pushed out K times about the eye: x, y and w scale by K; z = K (z - d) + d (d = projectionMatrix[3][2])
   float d = projectionMatrix[3][2];
   gl_Position = vec4(gl_Position.xy * CLOSE_K, CLOSE_K * (gl_Position.z - d) + d, gl_Position.w * CLOSE_K);
@@ -62,7 +118,23 @@ void main() {
 
 const FRAG = /* glsl */ `
 varying float vCloseF;
+varying vec3 vCloseV;
+varying float vCloseArm;
+uniform vec4 closeHead;
+uniform vec3 closeUp;
+uniform vec4 closeCut;
+uniform float closeArms;
 void main() {
+  // The view kept clean: the head, the hats and the collar's top at the eye (cutAway() in numbers), the arms with the gun hands up
+  if (closeHead.w > 0.5) {
+    vec3 h = (viewMatrix * vec4(closeHead.xyz, 1.0)).xyz;
+    vec3 u = normalize((viewMatrix * vec4(closeUp, 0.0)).xyz);
+    vec3 p = vCloseV - h;
+    float a = dot(p, u);
+    float r = length(p - a * u);
+    if ((a > closeCut.x && r < closeCut.y) || (a > closeCut.z && r < closeCut.w)) discard;
+  }
+  if (closeArms > 0.5 && vCloseArm > 0.5) discard;
   closeMain();
   float w = gl_FragCoord.z;
   gl_FragDepth = clamp(max(vCloseF - CLOSE_K * (vCloseF - w), CLOSE_EPS * w), 0.0, 1.0);
@@ -71,14 +143,18 @@ void main() {
 const MAIN = /void\s+main\s*\(\s*\)/;
 
 /** Patch a shader (three's `onBeforeCompile`) to draw close: its `main` renamed and wrapped */
-export function injectClose(sh: { vertexShader: string; fragmentShader: string; defines?: Record<string, unknown> }) {
+export function injectClose(sh: { vertexShader: string; fragmentShader: string; defines?: Record<string, unknown>; uniforms?: Record<string, unknown> }) {
   if (!MAIN.test(sh.vertexShader) || !MAIN.test(sh.fragmentShader)) throw new Error('injectClose: no main()');
+  if (sh.uniforms) Object.assign(sh.uniforms, U);
   sh.defines = { ...sh.defines, CLOSE_K: CLOSE.K.toFixed(1), CLOSE_EPS: CLOSE.eps.toExponential() };
   sh.vertexShader = sh.vertexShader.replace(MAIN, 'void closeMain()') + VERT;
   sh.fragmentShader = sh.fragmentShader.replace(MAIN, 'void closeMain()') + FRAG;
 }
 
 const copies = new WeakMap<THREE.Material, THREE.Material>();
+/** How many objects are drawn close now (post.ts draws the layer into the outline pre-pass while any are) */
+let drawn = 0;
+export const closeActive = () => drawn > 0;
 /**
  * The close-drawn copy of a material (one per material, so figures that share a material share its copy): its
  * own `onBeforeCompile` (a neon's day and night, a skin's) still runs first, then the patch.
@@ -115,7 +191,12 @@ export function drawClose(o: THREE.Object3D): () => void {
     // (three culls on the true bounds before the shader pushes them out: a hand inside the near plane would go)
     mesh.frustumCulled = false;
   });
+  drawn++;
+  let undone = false;
   return () => {
+    if (undone) return;
+    undone = true;
+    drawn--;
     for (const w of was) {
       w.mesh.material = w.mat;
       w.mesh.layers.mask = w.mask;

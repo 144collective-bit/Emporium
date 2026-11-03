@@ -109,6 +109,9 @@ import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol'
 import { live } from './live-client';
 import type { FeatureId } from './live';
 import { vergeY } from './verges';
+import { drawClose, setCloseCut } from './fpclose';
+import { NEAR, boxClear, eyeOf, fpArms, nearFor } from './fpbody';
+import { joltFp, newFpCam, stepFp } from './fpcam';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -159,8 +162,6 @@ const JUMP = 3.9;
 const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
-/** How much of the hips' rise and fall the first-person eye takes (the head steadies some of it) */
-const FP_BOB = 0.7;
 /**
  * A menu whose module loads the first time it's opened (the gun store, the garage's, the hangar's and the
  * trainer's: none in the boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
@@ -308,6 +309,48 @@ export function createWalk(d: WalkDeps) {
   hero.g.visible = hero.ring.visible = false;
   d.scene.add(hero.g, hero.ring);
   /**
+   * First person (docs/firstperson-plan.md Phase 1): his own body seen from his eyes, drawn close (fpclose.ts)
+   * while he's on foot in first person, and as it was otherwise (`syncBody()` after every frame)
+   */
+  let closeUndo: (() => void) | null = null;
+  let closedG: THREE.Object3D | null = null;
+  /** On foot in first person this frame */
+  let fpBody = false;
+  /** Hands at the edges (fpbody.ts `fpArms()`), eased */
+  let fpArmW = 0;
+  const fpEye = new THREE.Vector3();
+  const fpHead = new THREE.Vector3();
+  const fpUp = new THREE.Vector3();
+  /** The eye's height, steadied a little (under reduced motion, steadied a lot: no bob) */
+  let fpEyeY = NaN;
+  const fpCam = newFpCam();
+  /** The near plane first person set last (fpbody.ts `nearFor()`), so it's only put back if it's still ours */
+  let fpNear = NEAR.far;
+  const fpBoxes: Box[] = [];
+  function syncBody(on: boolean) {
+    if (on && closeUndo && closedG !== hero.g) {
+      closeUndo();
+      closeUndo = null;
+    }
+    if (on && !closeUndo) {
+      closeUndo = drawClose(hero.g);
+      closedG = hero.g;
+    }
+    if (!on && closeUndo) {
+      closeUndo();
+      closeUndo = closedG = null;
+      setCloseCut(null);
+      fpEyeY = NaN;
+    }
+    if (!on && fpNear !== NEAR.far) {
+      if (camera.near === fpNear) {
+        camera.near = NEAR.far;
+        camera.updateProjectionMatrix();
+      }
+      fpNear = NEAR.far;
+    }
+  }
+  /**
    * Carrying (moments.ts, the revamp's Phase 4 step 2): a crate of goods picked up at one of your places and
    * carried to your car's boot (or the other way), for the business card's Load / Unload; `done` moves the goods
    * once it's set down where it's going
@@ -342,8 +385,6 @@ export function createWalk(d: WalkDeps) {
   /** After a failed fetch, when it's next tried (ms, performance.now) */
   let mocapRetryAt = 0;
   let mocapW = 0;
-  /** The capture's hips' height, slowly followed: the first-person eye rides what's left (its steps and landings) */
-  let hipMean = 0;
   /** The head's follow-through in turns (follow.ts) */
   const headFollow = createFollow();
   /** How much of his upper body is his own pose over the motion capture's legs (the gun's hold, an arm out aiming) */
@@ -2239,7 +2280,14 @@ export function createWalk(d: WalkDeps) {
     }
   }
 
+  /** A frame of walk mode, then his body drawn close or not (on foot in first person, `fpBody`) */
   function update(dt: number, t: number) {
+    fpBody = false;
+    const r = frame(dt, t);
+    syncBody(fpBody && active);
+    return r;
+  }
+  function frame(dt: number, t: number) {
     if (!active) return;
     pollPad(dt);
     kartUI.update(dt);
@@ -2503,6 +2551,8 @@ export function createWalk(d: WalkDeps) {
     if (grounded && !wasGrounded) {
       if (-fall > LAND_ROLL && speed > 2) landHold = 0.75;
       else if (!animator && -fall > LAND_CROUCH) landHold = 0.5;
+      // (from his eyes, a jolt: fpcam.ts)
+      if (firstPerson) joltFp(fpCam, THREE.MathUtils.clamp((-fall - 2) / 8, 0, 1));
       if (!d.reduced && !firstPerson) {
         dipV -= 31 * 0.16 * THREE.MathUtils.clamp((-fall - 2) / 8, 0, 1);
         if (-fall > LAND_CROUCH) {
@@ -2596,6 +2646,8 @@ export function createWalk(d: WalkDeps) {
     hotbar?.update();
     // Both hands on the gun (after walking and jumping have posed the arms)
     const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
+    // (from his eyes the gun hands are viewmodel.ts's: the gun in his own hands makes way)
+    if (firstPerson && combat.drawn > 0.02) combat.gun.visible = false;
     if (!gunInHand && aim && !carrying) Object.assign(P.arms[1], { fwd: 1.45, out: 0.05, bend: 0.15, twist: 0 });
     // The head follows the camera: turns towards where you look, tilts up and down
     const lookYaw = THREE.MathUtils.clamp(wrap(lookFace - face), -0.9, 0.9);
@@ -2690,6 +2742,7 @@ export function createWalk(d: WalkDeps) {
             shakeT = LAND_SHAKE;
             shakeK = 0.018;
           }
+          if (st.stagger && !staggering && firstPerson) joltFp(fpCam, 0.6);
           staggering = !!st.stagger;
         }
         anim.applyTo(hero.rig, rot, animator.hips, w, u, face - drawFace);
@@ -2706,8 +2759,22 @@ export function createWalk(d: WalkDeps) {
     }
     // The peek: the upper body out over the hips towards where you look, the head kept level (less so with his cheek on a stock)
     if (peek && anim) anim.addLean(hero.rig, peek * PEEK.lean, wrap(lookFace - drawFace), PEEK.level * (1 - 0.6 * (gunInHand ? combat.cheek : 0)));
+    // From his eyes, with nothing else at his hands: the hands at the edges (fpbody.ts)
+    const armsFree = firstPerson && combat.drawn <= 0.02 && !moments.posing && !carrying && !emoting && guardAmt < 0.05 && !slide && !over && !dancing;
+    fpArmW += ((armsFree ? 1 : 0) - fpArmW) * damp(6, dt);
+    if (fpArmW > 1e-3) fpArms(hero.rig.bones, fpArmW, runAmt);
     lastPos.copy(pos);
     placeRoot(hero.g, pos.x, pos.y + momentDy, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
+    // First person: his eyes from his head as it's posed, and the view kept clean round them (fpclose.ts's cut;
+    // his own arms too while the gun hands are up)
+    if (firstPerson) {
+      fpBody = true;
+      hero.g.updateMatrixWorld(true);
+      eyeOf(hero.rig.bones, SCALE, fpEye, fpHead, fpUp);
+      setCloseCut(fpHead, fpUp, SCALE, combat.drawn > 0.02);
+      // (the steps are his head's own; aiming down a sight they're steadied, so the sight stays on target)
+      fpEyeY = Number.isNaN(fpEyeY) ? fpEye.y : fpEyeY + (fpEye.y - fpEyeY) * damp(d.reduced ? 3 : 40 - 36 * combat.aimed, dt);
+    }
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
     (hero.ring.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - air * 0.6);
 
@@ -2718,17 +2785,20 @@ export function createWalk(d: WalkDeps) {
     // crosshair stays off his head)
     const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 * Math.min(1, camera.aspect) + armAmt * 0.42;
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
-    let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
-    // (lower crouched, lower still sliding)
-    const eyeY = pos.y + momentDy + ((firstPerson ? 1.2 : 1.0) - crouchAmt * CROUCH.cam - slideAmt * CROUCH.slideCam) * SCALE + 0.05;
+    // (from his eyes, his head's own lean is the peek's)
+    let lateral = firstPerson ? 0 : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
+    // (lower crouched, lower still sliding; from his eyes, where his eyes are)
+    const eyeY = firstPerson ? fpEyeY : pos.y + momentDy + (1.0 - crouchAmt * CROUCH.cam - slideAmt * CROUCH.slideCam) * SCALE + 0.05;
     if (Math.abs(lateral) > 0.01) {
       const sgn = Math.sign(lateral);
       headAt.set(pos.x, eyeY, pos.z);
       sideDir.set(Math.cos(yaw) * sgn, 0, -Math.sin(yaw) * sgn);
       lateral = sgn * Math.min(Math.abs(lateral), cameraRoom(headAt, sideDir, Math.abs(lateral) + 0.15, 0));
     }
-    pivotWant.set(pos.x + Math.cos(yaw) * lateral, eyeY, pos.z - Math.sin(yaw) * lateral);
-    if (pivot.lengthSq() === 0) pivot.copy(pivotWant);
+    if (firstPerson) pivotWant.set(fpEye.x, eyeY, fpEye.z);
+    else pivotWant.set(pos.x + Math.cos(yaw) * lateral, eyeY, pos.z - Math.sin(yaw) * lateral);
+    // (from his eyes the camera is at them: eased after him it would trail into his own head)
+    if (pivot.lengthSq() === 0 || firstPerson) pivot.copy(pivotWant);
     // (a sprint pulls ahead of the camera a touch; a hard stop dips it and lets it settle)
     const follow = firstPerson ? 18 : 18 - 6 * runAmt;
     pivot.x += (pivotWant.x - pivot.x) * damp(follow, dt);
@@ -2752,24 +2822,35 @@ export function createWalk(d: WalkDeps) {
       camera.position.z -= Math.sin(shakeT * 71) * k * Math.sin(yaw);
       camera.position.y += Math.sin(shakeT * 53 + 1) * k;
     }
-    // First person, the eye rides the steps: on the motion capture its hips' rise and fall (high-passed: each
-    // step's bob and a landing's squash, not the crouch, which lowers the eye itself), else the procedural walk's
-    if (animator && mocapW > 0) {
-      hipMean += (animator.hips.y - hipMean) * damp(2.5, dt);
-      if (Math.abs(animator.hips.y - hipMean) > 0.3) hipMean = animator.hips.y;
-    }
-    if (firstPerson && !d.reduced) {
-      const steps = Math.sin(phase * 2) * 0.025 * stride * (1 - air);
-      const hips = animator ? (animator.hips.y - hipMean) * SCALE * FP_BOB : 0;
-      camera.position.y += (steps * (1 - mocapW) + hips * mocapW) * (1 - combat.aimed * 0.8);
-    }
+    // The eye's own motion from his eyes (fpcam.ts: subtle; still under reduced motion): a lurch into starts and
+    // stops, a lean against a sideways pull, a landing's jolt
+    const fv = firstPerson ? stepFp(fpCam, 'foot', { speed, top: 0, fwd: ms.ax * Math.sin(face) + ms.az * Math.cos(face), side: -ms.ax * Math.cos(face) + ms.az * Math.sin(face), turn: 0, bob: 0, reduced: d.reduced }, dt) : null;
+    if (fv) camera.position.y += fv.y;
     view.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
     lookAt.copy(camera.position).sub(view);
     camera.lookAt(lookAt);
+    if (fv) {
+      camera.rotateX(fv.pitch);
+      camera.rotateZ(-fv.roll);
+    }
     // (leaning out in first person, the view tilts with his head a little)
     if (firstPerson && peek && !d.reduced) camera.rotateZ(-peek * PEEK.roll);
-    // (seated, the bench and what's round it may keep the camera close: he still shows)
-    hero.g.visible = !firstPerson && camDist > (seated() ? 0.3 : 0.6);
+    // The near plane from his eyes: the city's, brought in short of a wall he's at (fpbody.ts)
+    if (firstPerson) {
+      let clear = Infinity;
+      fpBoxes.length = 0;
+      CAMERA_GRID.near(fpEye.x, fpEye.z, NEAR.far + NEAR.margin, fpBoxes);
+      for (const b of fpBoxes) clear = Math.min(clear, boxClear(fpEye.x, fpEye.y, fpEye.z, b));
+      for (const b of d.placedSolids()) clear = Math.min(clear, boxClear(fpEye.x, fpEye.y, fpEye.z, b));
+      const n = nearFor(clear);
+      if (Math.abs(n - camera.near) > 0.004) {
+        camera.near = fpNear = n;
+        camera.updateProjectionMatrix();
+      }
+    }
+    // (seated, the bench and what's round it may keep the camera close: he still shows; from his eyes, his own
+    // body, drawn close)
+    hero.g.visible = firstPerson || camDist > (seated() ? 0.3 : 0.6);
     frameShowroom(dt);
     hero.ring.visible = !firstPerson;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
@@ -3070,7 +3151,8 @@ export function createWalk(d: WalkDeps) {
       moments.cancel();
       dropCrate();
       momentAmt = momentDy = 0;
-      // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
+      // ?spawn=x,z[,yaw[,pitch]] in the address: start walking somewhere else, looking a given way (for checking a
+      // place on real devices; a pitch over 0 looks down)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
         pos.set(at[0], groundAt(at[0], at[1]), at[1]);
@@ -3081,7 +3163,7 @@ export function createWalk(d: WalkDeps) {
         yaw = spawn.yaw;
       }
       // Over the shoulder by default; V (or the Controls panel) swaps to first person
-      pitch = 0.35;
+      pitch = at && at.length > 3 && at.every(Number.isFinite) && !spawn ? at[3] : 0.35;
       zoom = camDist = homeZoom();
       pivot.set(0, 0, 0);
       setFirstPerson(false);
@@ -3129,6 +3211,7 @@ export function createWalk(d: WalkDeps) {
       }
       fightUI.close();
       active = false;
+      syncBody(false);
       moments.cancel();
       dropCrate();
       momentAmt = momentDy = 0;

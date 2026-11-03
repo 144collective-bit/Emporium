@@ -137,20 +137,65 @@ hold.
   Still to do when the body goes into the city: his shadow (the shadow
   cameras don't see `CLOSE_LAYER`: enable it on them, sky.ts).
 
-### Phase 1: on foot, the whole body
+### Phase 1: on foot, the whole body (built)
 
-- His body from the eye: the torso, arms and legs, the feet when you look
-  down (the planted feet, the crouch, the slide's lead leg, the vault's
-  hand on the top), his clothes and what's in his hand.
-- Empty hands in view, relaxed, swinging a little with the walk (the
-  animator's own arms, eased in front of the eye so they read).
-- The moments seen: the push on a door, both hands on a counter, the crate
-  carried in front, sitting on a bench (the view lowered onto it), the
-  lifts' turn to face out, the snack eaten, the emotes from inside (the
-  wave's hand, the cheer's arms).
-- The contact layer's hands on walls and rails in view.
-- The eye on `fpcam.ts`: the step bob from the capture, landings, a
-  stagger's jolt.
+- **His body from the eye** (walk.ts, on foot in first person): the figure
+  itself drawn close (`drawClose()` on `hero.g`, kept in step through a
+  wardrobe change and undone the frame he leaves first person, gets in a
+  vehicle, rides or fights: `syncBody()` after every frame), so the torso,
+  legs, clothes, the thing in his hand, every moment's hands (a door's
+  push, a counter, the crate, a bench, the lifts, the snack), the contact
+  layer's hands on walls and the crouch, slide and vault are seen exactly
+  as the animation poses them; his shadow casts as before (the shadow
+  cameras see `CLOSE_LAYER`, sky.ts).
+- **The eye at his eyes** (`eyeOf()` in fpbody.ts, DOM-free, tested in
+  `tests/fpbody.test.ts`): from the head bone as posed, so a crouch, a
+  slide, a peek's lean (the old sideways eye shift went: the head's own
+  lean is the peek), a bench and the capture's own steps move it (the old
+  hip bob, `FP_BOB`, went); not eased after him (that trailed the eye into
+  his own head at a run); its height steadied while aiming down a sight
+  and under reduced motion.
+- **The view kept clean** (the owner's calls), in the body's shaders only
+  (fpclose.ts `CUT`, `cutAway()`, `setCloseCut()`): everything worn on the
+  head (the head over the collar, the shades, the hood, every hat and its
+  brim) is cut away round the eye, the collar's front and the tie's knot
+  under it kept; the test holds every head piece in the wardrobe, with
+  every hat and the hood up, at both details. (Found on the way: running,
+  his neck leans forward, and a first, lower hat region took the hands
+  raised in front at face height: the hat region starts just under the
+  eyes, `CUT.top`.)
+- **The gun hands stay viewmodel.ts's**: with a gun out his own arms are
+  cut away (`ARM_BONES`, by their skin weights) and the gun in his hands
+  hidden; checked against his body hidden outright: the same picture.
+- **Hands at the edges** (`fpArms()`, `ARMS`): the arms turned about the
+  chest's own axes (the capture turns the collarbones, so the arms' own
+  frames aren't his forward: the first try turned them back), forward and
+  in, more at a run, the elbow a little straighter there (the run already
+  bends it about a radian; bending more folded the hands back to the
+  shoulders), never past straight. Measured in the lab, looking level:
+  hands in view in no frames at a walk, 18 in 48 at a run, 7 in 48 at a
+  sprint, at the front of each swing; looking down they're there.
+- **The near plane at walls** (`nearFor()`, `NEAR`): 0.5 unless something
+  solid is closer to the eye (the camera grid's boxes and what's built on
+  your lots, `boxClear()`), then just short of it, at least 0.12; put back
+  when first person ends.
+- **The eye's motion** (`stepFp()` mode `foot`): a lurch into starts and
+  stops, a lean against a sideways pull, a jolt on landing (by the fall)
+  and on a stagger; no lead (on foot the look is the heading) and no field
+  of view of its own (walk.ts widens it with speed already).
+- **The lab**: the Eye camera uses the same pieces (`eyeOf()`, the cut,
+  hands at the edges), `near=` sets its near plane to compare, and
+  `window.__animLab` carries `hero`, `arms` (tuning `ARMS` live) and
+  `camera`. `?spawn=x,z,yaw,pitch` now takes a pitch too, for checking a
+  view on a device.
+- **Cost**: the boot's code is 687.1 KB of 690 (2.3 KB more: walk.ts
+  brings fpbody.ts and fpcam.ts into it). In first person: the body's own
+  draws (as over the shoulder) plus its draws again in the outline
+  pre-pass and one more pass over the scene for that layer.
+- **Left for later phases**: the guard framed for the eye (Phase 2); the
+  gun hands' sleeves (Phase 3: they don't match every outfit, seen in the
+  city's shots); the console's one `computeBoundingBox()` NaN warning in
+  the city is older than this plan.
 
 ### Phase 2: fists, on the street and in the ring
 

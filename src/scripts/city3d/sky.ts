@@ -9,6 +9,7 @@ import { CENTER } from './world';
 import { SKY_RADIUS } from './bounds';
 import { newStorm, stormStep } from './dusk';
 import { SHADOW, markDrawn, newFixedMap, patchShadowChunks, shadowCentre, staticDue } from './shadows';
+import { CLOSE_LAYER } from './fpclose';
 
 // The near-only shadows' fade and the moving map, in every lit material (shadows.ts): before anything compiles
 patchShadowChunks(THREE.ShaderChunk as unknown as Record<string, string>);
@@ -97,6 +98,8 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
     light.castShadow = true;
     light.shadow.mapSize.set(opts.shadows, opts.shadows);
     const cam = light.shadow.camera;
+    // (his own body, drawn close in first person, still casts: fpclose.ts)
+    cam.layers.enable(CLOSE_LAYER);
     cam.left = -SHADOW.reach;
     cam.right = SHADOW.reach;
     cam.top = SHADOW.reach;

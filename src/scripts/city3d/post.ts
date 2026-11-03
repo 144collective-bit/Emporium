@@ -10,7 +10,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FX, OCC, SOLID, injectWind } from './kit';
-import { CLOSE_LAYER, injectClose } from './fpclose';
+import { CLOSE_LAYER, closeActive, injectClose } from './fpclose';
 
 const InkShader = {
   uniforms: {
@@ -225,7 +225,7 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     const autoClear = renderer.autoClear;
     renderer.autoClear = false;
     renderer.render(scene, pre);
-    if (close) {
+    if (close || closeActive()) {
       scene.overrideMaterial = closeNormal;
       pre.layers.set(CLOSE_LAYER);
       renderer.render(scene, pre);
@@ -251,7 +251,7 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     render,
     setSize,
     shadowStat,
-    /** Something is drawn close (fpclose.ts `drawClose()`): the pre-pass draws `CLOSE_LAYER` too */
+    /** Draw `CLOSE_LAYER` into the pre-pass even with nothing drawn close (fpclose.ts `drawClose()` turns it on by itself) */
     get close() {
       return close;
     },

@@ -1679,7 +1679,20 @@ it and has been retired completely. Build only on what's here.
   motion is `fpcam.ts` (DOM-free, tested: `FP_FEEL` per mode within
   `FP_MOST`, `stepFp()`, `joltFp()`); the lab's Eye camera (`?anim&fp`)
   and the `fp-street`, `fp-square` and `fp-seat` bench views (a
-  `BenchView` may carry its own `fov` and `near`).
+  `BenchView` may carry its own `fov` and `near`). Phase 1 (on foot, the
+  whole body) is built: in first person walk.ts draws his own figure
+  close (`syncBody()`), the eye from the head bone as posed (`eyeOf()` in
+  `fpbody.ts`, DOM-free, tested in `tests/fpbody.test.ts`; not eased, the
+  old `FP_BOB` gone), the view kept clean in the body's shaders only
+  (fpclose.ts `CUT` / `cutAway()` / `setCloseCut()`: everything worn on the
+  head, the collar's top; the shadow keeps it all, the shadow cameras seeing
+  `CLOSE_LAYER`), his arms cut away with the gun hands up (`ARM_BONES`) and
+  the gun in his hands hidden, hands at the edges (`fpArms()`, `ARMS`: about
+  the chest's axes, the elbow never past straight; in view at a run's front
+  swing, not at a walk), the near plane short of a wall he's at (`nearFor()`,
+  `NEAR`), `stepFp('foot')` for lurch, lean and jolts. Anything new laid on
+  his arms in first person goes after `fpArms()`'s place before
+  `placeRoot()`.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
@@ -3550,7 +3563,7 @@ it and has been retired completely. Build only on what's here.
 
 - `drive.update()` returns the tiles moved; walk mode counts them on the
   save every ten tiles (`counters.driven`, for missions and badges).
-- `?spawn=x,z[,yaw]` in the address starts walk mode at a spot, and `?fps`
+- `?spawn=x,z[,yaw[,pitch]]` in the address starts walk mode at a spot (looking a given way: a pitch over 0 looks down), and `?fps`
   shows where Degen stands: use them to check a place on a real device.
 - **The street races were retired** (the owner's call): no start line,
   gantry or board on the south bank avenue, no race menu, HUD or results,

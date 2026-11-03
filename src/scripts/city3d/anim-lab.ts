@@ -13,8 +13,9 @@
  *   jumps, Q / E peek, C crouches or slides), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
  * - Cameras: side on, front, behind, over his right shoulder (walk mode's, armed), free (drag to orbit, wheel to zoom),
- *   and his eyes (`cam=eye`, or `fp`; docs/firstperson-plan.md Phase 0): first person at the city's near plane, his
- *   head folded away and his body drawn close (fpclose.ts), the eye moved by fpcam.ts's rules; drag looks round
+ *   and his eyes (`cam=eye`, or `fp`; docs/firstperson-plan.md Phases 0 and 1): first person as walk mode has it,
+ *   at the city's near plane (`near=` to compare), his body drawn close (fpclose.ts) with the view kept clean round
+ *   the eye, his eyes and hands at the edges from fpbody.ts, the eye moved by fpcam.ts's rules; drag looks round
  *   (`look` in the address: the pitch, -0.45 by default, looking down at him).
  * - Foot traces (where each ball of the foot was held), and readouts:
  *   speed, the clip and frame playing, its rate, the match's cost, the
@@ -59,9 +60,9 @@ import { FIT } from './gunfit';
 import { POCKET, holdGun, newStance } from './stance';
 import type { WeaponId } from './combat-sim';
 import { createPost } from './post';
-import { drawClose } from './fpclose';
+import { drawClose, setCloseCut } from './fpclose';
 import { newFpCam, stepFp } from './fpcam';
-import { EYE_Y } from './body';
+import { ARMS, eyeOf, fpArms } from './fpbody';
 
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
@@ -598,6 +599,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   }
   /** His eyes (`cam = 'eye'`): the body drawn close while on (fpclose.ts), the undo while it is */
   let undoClose: (() => void) | null = null;
+  /** Hands at the edges from his eyes, eased (fpbody.ts) */
+  let eyeArmW = 0;
   mount();
 
   // Foot traces: a dot where each ball of the foot was held
@@ -933,6 +936,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     }
     hero.g.position.set(x, y, z);
     hero.g.rotation.set(0, anim.face, 0);
+    // (from his eyes, unarmed and his hands free: the hands at the edges, as walk mode lays them, fpbody.ts)
+    eyeArmW += ((cam === 'eye' && !gun && guardAmt < 0.05 && emoteAmt < 0.05 ? 1 : 0) - eyeArmW) * (1 - Math.exp(-6 * dt));
+    if (eyeArmW > 1e-3) fpArms(hero.rig.bones, eyeArmW, Math.min(1, Math.max(0, (Math.hypot(move.vx, move.vz) - GAITS.walk) / (GAITS.run - GAITS.walk))));
     hero.g.scale.setScalar(SCALE);
     // The peek: by the program, or Q / E by hand
     const peekWant = p === 'manual' ? (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0) : peekOf(p, pt);
@@ -972,11 +978,13 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     return out.set(x + dx / 2 + lookX, y + lookY, z + dz / 2 + clear + lookZ);
   };
   const want = new THREE.Vector3();
-  // His eyes: where they are in the head bone's frame (body.ts EYE_Y over the bone, a little in front of it)
-  const EYE_AT = new THREE.Vector3(0, EYE_Y, 0.06);
+  // His eyes, his head bone and his up (fpbody.ts `eyeOf()`)
   const eyeAt = new THREE.Vector3();
-  const eyeQ = new THREE.Quaternion();
+  const eyeHead = new THREE.Vector3();
+  const eyeUp = new THREE.Vector3();
   const fpCam = newFpCam();
+  // (`near=` in the address: the Eye camera's near plane, the city's 0.5 by default, to compare against)
+  const eyeNear = Number(q.get('near')) || 0.5;
   let fpLast = 0;
   const lens = (fov: number, near: number) => {
     if (Math.abs(camera.fov - fov) > 0.01 || camera.near !== near) {
@@ -988,15 +996,10 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   /** From his eyes: the city's lens (70°, near 0.5), the head folded away, the body drawn close, the eye on fpcam.ts */
   const eyeView = () => {
     if (!undoClose) undoClose = drawClose(hero.g);
-    post.close = true;
-    const head = hero.rig.bones.head;
-    head.scale.setScalar(1);
-    head.updateWorldMatrix(true, false);
-    head.getWorldPosition(eyeAt);
-    head.getWorldQuaternion(eyeQ);
-    eyeAt.add(want.copy(EYE_AT).multiplyScalar(SCALE).applyQuaternion(eyeQ));
-    // (folded to nothing at the bone: the hats, the hood and the shades with it)
-    head.scale.setScalar(1e-3);
+    hero.g.updateMatrixWorld(true);
+    eyeOf(hero.rig.bones, SCALE, eyeAt, eyeHead, eyeUp);
+    // (the view kept clean round his eyes: the head, the hats, the collar's top; fpclose.ts)
+    setCloseCut(eyeHead, eyeUp, SCALE);
     const dt = Math.min(0.1, Math.max(0, clock - fpLast));
     fpLast = clock;
     const f = move.face;
@@ -1007,7 +1010,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     look.set(eyeAt.x + Math.sin(yaw) * Math.cos(pitch), eyeAt.y + fv.y + Math.sin(pitch), eyeAt.z + Math.cos(yaw) * Math.cos(pitch));
     camera.lookAt(look);
     camera.rotateZ(-fv.roll);
-    lens(70 + fv.fov, 0.5);
+    lens(70 + fv.fov, eyeNear);
   };
   // (the camera keeps exactly with them: eased after a runner, it trails and the picture slides off the figures)
   const view = () => {
@@ -1015,8 +1018,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     if (undoClose) {
       undoClose();
       undoClose = null;
-      post.close = false;
-      hero.rig.bones.head.scale.setScalar(1);
+      setCloseCut(null);
     }
     lens(34, 0.1);
     look.copy(target(want));
@@ -1134,6 +1136,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   (window as unknown as { __animLab: unknown }).__animLab = {
     anim,
     move,
+    /** The new figure (its bones, for checks from the eye) */
+    hero,
+    /** The hands at the edges' numbers (fpbody.ts `ARMS`), for tuning from the eye */
+    arms: ARMS,
+    camera,
     /** The scorecard's rows (the rubric over the last eight seconds) */
     get rows() {
       return rubric.rows();
