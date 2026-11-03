@@ -2960,8 +2960,13 @@ it and has been retired completely. Build only on what's here.
   mode, the hotbar and the prompt kept clear), `controls.ts` (sets
   `--tc-*` / `--hb-*` / `--pr-*` from it), `controls.css` (last in
   `Base.astro`'s order; `.tc`, `.tc-main`, `.tc-go`), the icons
-  `src/data/tcicons.ts` as one sprite in CityMap.astro. A new touch button
-  is a `.tc` with its icon and word, and its slot in `LAYOUTS`.
+  `src/data/tcicons.ts` as one sprite in CityMap.astro. Phase 2 (vehicles,
+  the ring and the prompts) is built, waiting on the owner's sign-off:
+  `layoutFor()` for every `Mode` (on foot, `drive`, `kart`, `ring`, read
+  off the root's classes), the pedals as `.tc` buttons, a touch View
+  button (`[data-drive-view]`), the readouts in the kit, the prompt's tap
+  icon. A new touch button is a `.tc` with its icon and word, and its slot
+  in `LAYOUTS`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
@@ -3555,7 +3560,7 @@ it and has been retired completely. Build only on what's here.
 - Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
 - **Controls:**
   - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, F get out.
-  - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`). Layout while driving: a bigger stick bottom-left, Gas and Brake as tall pedals side by side bottom-right (Gas taller, on the outside), Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
+  - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`), Horn and View (`data-drive-view`, the camera) in the controls plan's slots (`touchlayout.ts` `drive`: a bigger stick bottom-left, Gas the big button in the corner, Brake beside it); Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
   - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.

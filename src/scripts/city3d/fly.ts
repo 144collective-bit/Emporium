@@ -145,11 +145,11 @@ export function createFly(d: FlyDeps) {
   }
   function setPedals(on: boolean) {
     if (gas) {
-      gas.textContent = on ? 'Faster' : 'Gas';
+      (gas.querySelector('.tc-word') ?? gas).textContent = on ? 'Faster' : 'Gas';
       gas.setAttribute('aria-label', on ? 'Faster' : 'Gas');
     }
     if (brake) {
-      brake.textContent = on ? 'Slower' : 'Brake';
+      (brake.querySelector('.tc-word') ?? brake).textContent = on ? 'Slower' : 'Brake';
       brake.setAttribute('aria-label', on ? 'Slower' : 'Brake and reverse');
     }
   }

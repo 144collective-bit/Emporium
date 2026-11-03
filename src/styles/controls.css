@@ -7,6 +7,10 @@
    Where they stand comes from touchlayout.ts (controls.ts sets --tc-x / --tc-y / --tc-d and data-tc on each).
    Last in Base.astro's order, so it wins over the modes' older placements. Touch screens only. */
 
+.drive-view,
+.walk-prompt-tap {
+  display: none;
+}
 .tc-sprite {
   position: absolute;
   width: 0;
@@ -114,13 +118,12 @@
     filter: none;
   }
 
-  /* On foot: every button where touchlayout.ts put it, the safe areas added (not in the ring, nor at the
-     wheel: their places are the modes' own until docs/controls-plan.md Phase 2) */
-  .city:not(.is-fighting) .tc[data-tc="r"] {
+  /* Every button where touchlayout.ts put it for the mode, the safe areas added */
+  .city .tc[data-tc="r"] {
     right: calc(env(safe-area-inset-right) + var(--tc-x) - var(--tc-d) / 2);
     bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
   }
-  .city:not(.is-fighting) .tc[data-tc="l"] {
+  .city .tc[data-tc="l"] {
     left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
     bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
   }
@@ -136,7 +139,7 @@
     box-shadow: 0 0 0 2px #0c0d1066;
     touch-action: none;
   }
-  .city:not(.is-driving):not(.is-karting) .walk-stick[data-tc] {
+  .city .walk-stick[data-tc] {
     left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
     bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
     width: var(--tc-d);
@@ -153,6 +156,21 @@
   .walk-stick:active span {
     border-color: var(--m-coin);
     background: #ffc5313d;
+  }
+
+  /* View (the camera, V on a keyboard) at the wheel: not in a kart race */
+  .city.is-driving .drive-view {
+    display: grid;
+  }
+  /* The prompt on touch: the tap icon in coin where a keyboard shows F */
+  .walk-prompt .walk-prompt-tap {
+    display: block;
+    width: 18px;
+    height: 18px;
+    color: var(--m-coin);
+  }
+  .walk-prompt kbd {
+    display: none;
   }
 
   /* The door prompt on foot: where touchlayout.ts keeps it clear of the buttons and the hotbar */
