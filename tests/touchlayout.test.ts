@@ -1,11 +1,26 @@
 // Where the touch controls stand (touchlayout.ts, docs/controls-plan.md Phases 1 and 2): every mode's buttons
 // (on foot, at the wheel, in a kart race, in the ring), the stick, and on foot the hotbar and the door prompt,
 // apart from each other and on screen, under the header, on the phones people hold upright and on their side,
-// and on tablets; the same slots in every mode.
+// and on tablets; the same slots in every mode; and (Phase 4) at every size, either hand, the size stepping down
+// only where it has to.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TC_ICONS, tcIconPath } from '../src/data/tcicons';
-import { centreOf, footLayout, layoutFor, LAYOUTS, shapeOf, type FootMode, type Mode, type Spot } from '../src/scripts/city3d/touchlayout';
+import {
+  centreOf,
+  clash,
+  cleanTouch,
+  DEFAULT_TOUCH,
+  footLayout,
+  layoutFor,
+  LAYOUTS,
+  shapeOf,
+  SIZES,
+  TOUCH_SIZES,
+  type FootMode,
+  type Mode,
+  type Spot,
+} from '../src/scripts/city3d/touchlayout';
 
 /** Screens inside their safe areas (a notch's sides taken off on its side, the home bar's strip upright) */
 const SCREENS: [number, number][] = [
@@ -124,7 +139,7 @@ test('the hotbar and the door prompt keep clear of the buttons and the stick', (
       const L = footLayout(w, h, mode);
       const s = L.hotbar.slot;
       const hw = HOT_SLOTS * s + (HOT_SLOTS - 1) * 4;
-      const hot: Box = { x0: w - L.hotbar.right - hw, x1: w - L.hotbar.right, y0: h - L.hotbar.bottom - s, y1: h - L.hotbar.bottom };
+      const hot: Box = { x0: w - L.hotbar.edge - hw, x1: w - L.hotbar.edge, y0: h - L.hotbar.bottom - s, y1: h - L.hotbar.bottom };
       const pr: Box = { x0: L.prompt.cx - PROMPT_W / 2, x1: L.prompt.cx + PROMPT_W / 2, y0: h - L.prompt.bottom - PROMPT_H, y1: h - L.prompt.bottom };
       for (const [name, b] of [['hotbar', hot], ['prompt', pr]] as const) {
         assert.ok(b.x0 >= 0 && b.x1 <= w && b.y0 >= HEAD && b.y1 <= h, `${name} on screen at ${w}x${h}`);
@@ -144,4 +159,49 @@ test('every icon is a 16 x 16 grid, and its path covers exactly its lit pixels',
     const runs = [...tcIconPath(rows).matchAll(/M\d+ \d+h(\d+)/g)].reduce((a, m) => a + +m[1], 0);
     assert.equal(runs, lit, name);
   }
+});
+
+test('the touch settings are cleaned: a size from the list, the opacity held in range, left-handed only if true', () => {
+  assert.deepEqual(cleanTouch(undefined), DEFAULT_TOUCH);
+  assert.deepEqual(cleanTouch({ size: 'huge', alpha: 7, left: 'yes' }), { size: 'medium', alpha: 1, left: false });
+  assert.deepEqual(cleanTouch({ size: 'large', alpha: 0.1, left: true }), { size: 'large', alpha: 0.4, left: true });
+  assert.equal(cleanTouch({ alpha: 0.734 }).alpha, 0.73);
+});
+
+test('every size and either hand fits every screen in every mode', () => {
+  for (const [w, h] of SCREENS)
+    for (const mode of ALL)
+      for (const size of TOUCH_SIZES)
+        for (const left of [false, true]) {
+          const L = layoutFor(w, h, mode, { size, alpha: 1, left });
+          assert.equal(clash(L, w, h), null, `${size}${left ? ', left-handed' : ''} at ${w}x${h} (${mode})`);
+          // (a size only ever steps down towards medium, never past it, and small is always small)
+          if (size === 'small') assert.equal(L.scale, SIZES.small);
+          else assert.ok(L.scale >= 1 && L.scale <= SIZES[size]);
+        }
+});
+
+test('large really is larger where there is room, and steps down where there is none', () => {
+  const roomy = layoutFor(430, 932 - 34, 'armed', { size: 'large', alpha: 1, left: false });
+  assert.equal(roomy.scale, SIZES.large);
+  assert.ok(roomy.buttons.fire!.d > footLayout(430, 932 - 34, 'armed').buttons.fire!.d);
+  const scales = SCREENS.map(([w, h]) => layoutFor(w, h, 'armed', { size: 'large', alpha: 1, left: false }).scale);
+  assert.ok(scales.every((s) => s >= 1));
+});
+
+test('left-handed mirrors every spot, the stick, the hotbar and the prompt', () => {
+  for (const [w, h] of SCREENS)
+    for (const mode of ALL) {
+      const R = layoutFor(w, h, mode);
+      const L = layoutFor(w, h, mode, { ...DEFAULT_TOUCH, left: true });
+      for (const [a, s] of Object.entries(R.buttons) as [string, Spot][]) {
+        const m = L.buttons[a as keyof typeof L.buttons]!;
+        const [rx, ry] = centreOf(s, w, h);
+        const [lx, ly] = centreOf(m, w, h);
+        assert.ok(Math.abs(rx + lx - w) < 0.01 && Math.abs(ry - ly) < 0.01, `${a} mirrored at ${w}x${h}`);
+      }
+      assert.notEqual(L.stick.side, R.stick.side);
+      assert.equal(L.hotbar.side, 'l');
+      assert.ok(Math.abs(L.prompt.cx + R.prompt.cx - w) < 0.11);
+    }
 });

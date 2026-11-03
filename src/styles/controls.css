@@ -11,6 +11,12 @@
 .walk-prompt-tap {
   display: none;
 }
+/* The Settings tab's touch buttons' row: touch screens only */
+@media (pointer: fine) {
+  .hub-touchset {
+    display: none;
+  }
+}
 .tc-sprite {
   position: absolute;
   width: 0;
@@ -49,13 +55,15 @@
     user-select: none;
   }
   .tc-icon {
-    width: 20px;
-    height: 20px;
+    width: min(20px, calc(var(--tc-d, 58px) * 0.36));
+    height: min(20px, calc(var(--tc-d, 58px) * 0.36));
     fill: currentColor;
     shape-rendering: crispEdges;
   }
+  /* (the word shrinks with a small button: Settings > Button size on a narrow phone) */
   .tc-word {
-    max-width: calc(var(--tc-d, 58px) - 12px);
+    max-width: calc(var(--tc-d, 58px) - 6px);
+    font-size: min(9px, calc(var(--tc-d, 58px) * 0.185));
     overflow: hidden;
     white-space: nowrap;
     text-align: center;
@@ -68,14 +76,26 @@
     font-size: 10px;
   }
   .tc-main .tc-icon {
-    width: 30px;
-    height: 30px;
+    width: min(30px, calc(var(--tc-d, 84px) * 0.36));
+    height: min(30px, calc(var(--tc-d, 84px) * 0.36));
+  }
+  .tc-main .tc-word {
+    font-size: min(10px, calc(var(--tc-d, 84px) * 0.15));
   }
   /* Jump (and Dodge in the ring): green */
   .city .tc-go {
     border-color: #3f8a52;
     background: var(--m-go);
     color: var(--m-cab);
+  }
+  /* See-through as the player set it (Settings > Touch buttons, --tc-alpha from controls.ts), solid while held */
+  .city .tc,
+  .city .walk-stick {
+    opacity: var(--tc-alpha, 1);
+  }
+  .city .tc:active,
+  .city .walk-stick:active {
+    opacity: 1;
   }
   /* Held: brighter, nothing moves */
   .city .tc:active {
@@ -140,10 +160,18 @@
     touch-action: none;
   }
   .city .walk-stick[data-tc] {
-    left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
     bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
     width: var(--tc-d);
     height: var(--tc-d);
+  }
+  .city .walk-stick[data-tc="l"] {
+    right: auto;
+    left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
+  }
+  /* Left-handed: the stick on the right */
+  .city .walk-stick[data-tc="r"] {
+    left: auto;
+    right: calc(env(safe-area-inset-right) + var(--tc-x) - var(--tc-d) / 2);
   }
   .walk-stick span {
     width: 44%;

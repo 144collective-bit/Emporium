@@ -2971,8 +2971,15 @@ it and has been retired completely. Build only on what's here.
   sign-off: on phones (upright to 640 wide, on their side to 500 high) the
   ammo is on the hotbar's gun (`.hb-res`), the score in the hub, the emotes
   in the hub's Online tab (hub.ts `PHONE`); upright the header is one row
-  (controls.css). A new touch button is a `.tc` with its icon and word, and
-  its slot in `LAYOUTS`.
+  (controls.css). Phase 4 (size, opacity, left-handed) is built, waiting
+  on the owner's sign-off: `TouchPrefs` (`cleanTouch()`, `touch` in
+  `degen-city-walk-v1`) from the hub's Settings (Touch buttons, touch
+  screens only); `layoutFor(w, h, mode, prefs)` scales the ring, steps a
+  size that doesn't fit back towards Medium until `clash()` finds nothing,
+  and mirrors it for the left hand (the stick on the right); `--tc-alpha`
+  is the opacity, solid while held. A new touch button is a `.tc` with its
+  icon and word, and its slot in `LAYOUTS`; anything new pinned near the
+  buttons goes in `clash()`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
