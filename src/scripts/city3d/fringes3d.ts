@@ -20,9 +20,9 @@ import { site } from './tilework';
 import { TILE } from './tiles';
 import { COVER, LAMP } from './palette';
 import { fromHighway, insideHighway } from './highway';
-import { keepsNear, noise, wobble } from './landuse';
+import { keepsNear, noise } from './landuse';
 import {
-  BILLBOARDS, BOARD, BOARD_COPY, FRINGE_BENCHES, FRINGE_PATH, HEADWALL, HEADWALLS, REGIONS, SUBSTATION, WASH, WASH_W, legsOf, onFringe, pathWidth,
+  BILLBOARDS, BOARD, BOARD_COPY, FRINGE_BENCHES, FRINGE_PATH, HEADWALL, HEADWALLS, REGIONS, SUBSTATION, WASH, WASH_W, legsOf, lineDist, onFringe, pathWidth,
   type Billboard, type FringeId, type Pt, type Rect,
 } from './fringes';
 
@@ -425,12 +425,15 @@ function drawBench(b: Batch, P: Paint, at: Pt, face: Pt) {
 
 /* ---------- The scrub ---------- */
 
-/** Whether scrub may grow at x, z: inside the highway past `SCRUB_KEEP`, where a tree could (the clearing rule's margins half as wobbled), off the slivers' own things */
+/**
+ * Whether scrub may grow at x, z: inside the highway past `SCRUB_KEEP`, closer to what the trees keep off than a
+ * tree would (the clearing rule's margins `IN` less, not wobbled out), off the slivers' own things
+ */
+const IN = 0.6;
 function wild(x: number, z: number) {
   if (!insideHighway(x, z) || fromHighway(x, z) < SCRUB_KEEP) return false;
-  const w = wobble(x, z) * 0.5;
-  for (const k of keepsNear(x, z)) if (k.id !== 'highway' && k.hit(x, z, w)) return false;
-  return !onFringe(x, z, 0.5);
+  for (const k of keepsNear(x, z)) if (k.id !== 'highway' && k.id !== 'wash' && k.id !== 'fringe-path' && k.hit(x, z, -IN)) return false;
+  return !onFringe(x, z, 0.45);
 }
 
 /** The scrub's shapes, made once a chunk */
@@ -470,7 +473,7 @@ function merge(gs: THREE.BufferGeometry[]) {
 /** The scrub in one tile of a sliver: a jittered grid, clumped by a seeded noise, each plant picked by its own number */
 function drawScrub(b: Batch, P: Paint, S: ReturnType<typeof shapes>, id: FringeId, r: Rect, low: boolean) {
   const desert = id === 'sunridge';
-  const step = 2.4;
+  const step = 2.2;
   // (the copies grouped by shape and paint: one `instances()` each)
   const groups = new Map<string, { geo: THREE.BufferGeometry; mat: THREE.Material; list: THREE.Matrix4[] }>();
   const dots: THREE.Matrix4[] = [];
@@ -479,31 +482,45 @@ function drawScrub(b: Batch, P: Paint, S: ReturnType<typeof shapes>, id: FringeI
     if (!groups.has(key)) groups.set(key, { geo, mat, list: [] });
     groups.get(key)!.list.push(m);
   };
+  /** One plant at x, z: `pick` which, `keep` its size */
+  const plant = (x: number, z: number, pick: number, keep: number, scale: number) => {
+    const yaw = pick * Math.PI * 7;
+    const s = (0.7 + keep * 0.7) * scale;
+    if (desert) {
+      if (pick < 0.5) put(S.blob, P.creosote[Math.floor(pick * 4) % 2], m4(x, 0, z, yaw, s * 1.1, s * 0.9, s * 1.1));
+      else if (pick < 0.72) {
+        put(S.blob, P.brittle, m4(x, 0, z, yaw, s * 0.7, s * 0.55, s * 0.7));
+        if (!low) for (let k = 0; k < 3; k++) dots.push(m4(x + Math.cos(yaw + k * 2.1) * 0.22 * s, 0.42 * s, z + Math.sin(yaw + k * 2.1) * 0.22 * s, 0, 1));
+      } else if (pick < 0.88) put(S.agave, P.agave, m4(x, 0, z, yaw, s * 0.9));
+      else put(S.ocotillo, P.ocotillo, m4(x, 0, z, yaw, (0.8 + keep * 0.5) * scale));
+    } else {
+      if (pick < 0.45) put(S.blob, P.bramble[Math.floor(pick * 7) % 3], m4(x, 0, z, yaw, s * 1.2, s, s * 1.2));
+      else if (pick < 0.65) {
+        put(S.blob, P.gorse, m4(x, 0, z, yaw, s, s * 0.9, s));
+        if (!low) for (let k = 0; k < 4; k++) dots.push(m4(x + Math.cos(yaw + k * 1.6) * 0.3 * s, (0.4 + (k % 2) * 0.12) * s, z + Math.sin(yaw + k * 1.6) * 0.3 * s, 0, 1));
+      } else put(S.tuft, P.grass, m4(x, 0, z, yaw, (0.8 + keep * 0.6) * scale));
+    }
+  };
   for (let gz = Math.ceil(r[1] / step) * step; gz < r[3]; gz += step)
     for (let gx = Math.ceil(r[0] / step) * step; gx < r[2]; gx += step) {
       const [j1, j2, pick, keep] = [hash01(gx, gz, 1), hash01(gx, gz, 2), hash01(gx, gz, 3), hash01(gx, gz, 4)];
       const [x, z] = [gx + (j1 - 0.5) * step * 0.9, gz + (j2 - 0.5) * step * 0.9];
       if (x < r[0] || x >= r[2] || z < r[1] || z >= r[3]) continue;
-      // (in clumps: the noise on a finer lattice than the clearing rule's, and phones every other one)
+      // (in clumps: the noise on a finer lattice than the clearing rule's; the wash's banks thick with it whatever
+      // the noise, as a desert wash's are; phones every other one)
+      const bank = desert && lineDist(WASH, x, z) < WASH_W / 2 + 2.6;
       const clump = noise(x * 1.8 + 311, z * 1.8 - 173);
-      if (clump < 0.45 || keep > 0.35 + clump) continue;
+      if (!bank && (clump < 0.42 || keep > 0.45 + clump)) continue;
       if (low && hash01(gx, gz, 5) < 0.5) continue;
       if (!wild(x, z)) continue;
-      const yaw = pick * Math.PI * 2;
-      const s = 0.7 + keep * 0.7;
-      if (desert) {
-        if (pick < 0.5) put(S.blob, P.creosote[Math.floor(pick * 4) % 2], m4(x, 0, z, yaw, s * 1.1, s * 0.9, s * 1.1));
-        else if (pick < 0.72) {
-          put(S.blob, P.brittle, m4(x, 0, z, yaw, s * 0.7, s * 0.55, s * 0.7));
-          if (!low) for (let k = 0; k < 3; k++) dots.push(m4(x + Math.cos(yaw + k * 2.1) * 0.22 * s, 0.42 * s, z + Math.sin(yaw + k * 2.1) * 0.22 * s, 0, 1));
-        } else if (pick < 0.88) put(S.agave, P.agave, m4(x, 0, z, yaw, s * 0.9));
-        else put(S.ocotillo, P.ocotillo, m4(x, 0, z, yaw, 0.8 + keep * 0.5));
-      } else {
-        if (pick < 0.45) put(S.blob, P.bramble[Math.floor(pick * 7) % 3], m4(x, 0, z, yaw, s * 1.2, s, s * 1.2));
-        else if (pick < 0.65) {
-          put(S.blob, P.gorse, m4(x, 0, z, yaw, s, s * 0.9, s));
-          if (!low) for (let k = 0; k < 4; k++) dots.push(m4(x + Math.cos(yaw + k * 1.6) * 0.3 * s, (0.4 + (k % 2) * 0.12) * s, z + Math.sin(yaw + k * 1.6) * 0.3 * s, 0, 1));
-        } else put(S.tuft, P.grass, m4(x, 0, z, yaw, 0.8 + keep * 0.6));
+      plant(x, z, pick, keep, 1);
+      // A clump: a plant or two more of the same kind beside it, smaller
+      const more = Math.floor(hash01(gx, gz, 6) * (low ? 2 : 3));
+      for (let k = 0; k < more; k++) {
+        const a = hash01(gx, gz, 7 + k) * Math.PI * 2;
+        const d = 0.55 + hash01(gx, gz, 9 + k) * 0.5;
+        const [sx, sz] = [x + Math.cos(a) * d, z + Math.sin(a) * d];
+        if (wild(sx, sz)) plant(sx, sz, Math.min(0.99, pick + (k + 1) * 0.013), hash01(gx, gz, 11 + k) * 0.6, 0.75);
       }
     }
   for (const { geo, mat, list } of groups.values()) b.instances(geo, mat, list);
