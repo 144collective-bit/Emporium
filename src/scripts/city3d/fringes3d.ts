@@ -21,6 +21,7 @@ import { TILE } from './tiles';
 import { COVER, LAMP } from './palette';
 import { fromHighway, insideHighway } from './highway';
 import { keepsNear, noise } from './landuse';
+import { vergeY } from './verges';
 import {
   BILLBOARDS, BOARD, BOARD_COPY, FRINGE_BENCHES, FRINGE_PATH, HEADWALL, HEADWALLS, REGIONS, SUBSTATION, WASH, WASH_W, legsOf, lineDist, onFringe, pathWidth,
   type Billboard, type FringeId, type Pt, type Rect,
@@ -120,8 +121,8 @@ function signPlane(w: number, h: number, px: [number, number, number, number], x
 function turnedBox(w: number, h: number, d: number, a: Pt, x: number, y: number, z: number) {
   return new THREE.BoxGeometry(w, h, d).rotateY(-Math.atan2(a[1], a[0])).translate(x, y + h / 2, z);
 }
-/** A flat band along a line, `width(x, z)` across, `y` up */
-function ribbon(pts: readonly Pt[], width: (x: number, z: number) => number, y: number) {
+/** A band along a line, `width(x, z)` across, `y` up (or its own height at each point) */
+function ribbon(pts: readonly Pt[], width: (x: number, z: number) => number, y: number | ((x: number, z: number) => number)) {
   const pos: number[] = [];
   const idx: number[] = [];
   pts.forEach((p, i) => {
@@ -130,7 +131,12 @@ function ribbon(pts: readonly Pt[], width: (x: number, z: number) => number, y: 
     const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     const [nx, nz] = [-(b[1] - a[1]) / l, (b[0] - a[0]) / l];
     const h = width(p[0], p[1]) / 2;
-    pos.push(p[0] + nx * h, y, p[1] + nz * h, p[0] - nx * h, y, p[1] - nz * h);
+    const [l0, l1]: Pt[] = [
+      [p[0] + nx * h, p[1] + nz * h],
+      [p[0] - nx * h, p[1] - nz * h],
+    ];
+    const at = (q: Pt) => (typeof y === 'number' ? y : y(q[0], q[1]));
+    pos.push(l0[0], at(l0), l0[1], l1[0], at(l1), l1[1]);
     if (i) {
       const k = i * 2;
       idx.push(k - 2, k - 1, k, k - 1, k + 1, k);
@@ -146,6 +152,16 @@ function ribbon(pts: readonly Pt[], width: (x: number, z: number) => number, y: 
     g.computeVertexNormals();
   }
   return g;
+}
+/** A line with a point at least every `step` */
+function densify(pts: readonly Pt[], step: number): Pt[] {
+  const out: Pt[] = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+    for (let k = 1; k <= n; k++) out.push([a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n]);
+  }
+  return out;
 }
 /** A line cut into pieces no longer than `PIECE` (sharing their ends) */
 function pieces(pts: readonly Pt[]): Pt[][] {
@@ -579,7 +595,8 @@ export function registerFringes(ids: FringeId[], low: boolean) {
     pieces(FRINGE_PATH).forEach((part, k) =>
       site(`fringe path ${k}`, boxAround(part, 2), (into) => {
         const b = new Batch();
-        b.add(ribbon(part, pathWidth, 0.015), P.dirt);
+        // (over the bank where it passes a block's eased edge, verges.ts)
+        b.add(ribbon(densify(part, 0.4), pathWidth, (x, z) => vergeY(x, z) + 0.015), P.dirt);
         b.build(into, { cast: false, receive: true });
       })
     );
