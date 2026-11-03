@@ -1667,8 +1667,19 @@ it and has been retired completely. Build only on what's here.
   street and a first-person view in the Fight Club, the gun hands polished,
   the car, bike and kart from the seat on one set of subtle camera rules
   (`fpcam.ts`), the hire boat's helm, and detailed cockpits for all three
-  aircraft; the mirrors stay painted. Nothing built yet; one phase at a
-  time with the owner's sign-off; keep it up to date.
+  aircraft; the mirrors stay painted. One phase at a time with the owner's
+  sign-off; keep it up to date. Phase 0 (measure and the kit) is built:
+  the near plane stays 0.5 (at 0.1 the far city's faces 5 mm apart fight
+  from about 102 tiles out, not 231); his body is **drawn close**
+  (`fpclose.ts`, tested: pushed out `CLOSE.K` times in its shaders, each
+  fragment writing its true depth, so the world and he hide each other
+  properly and what's inside the near plane stays in front, in order;
+  `drawClose()` puts a figure on `CLOSE_LAYER`, out of frustum culling,
+  and `post.close` draws that layer into the outline pre-pass); the eye's
+  motion is `fpcam.ts` (DOM-free, tested: `FP_FEEL` per mode within
+  `FP_MOST`, `stepFp()`, `joltFp()`); the lab's Eye camera (`?anim&fp`)
+  and the `fp-street`, `fp-square` and `fp-seat` bench views (a
+  `BenchView` may carry its own `fov` and `near`).
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,

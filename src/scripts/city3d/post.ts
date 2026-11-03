@@ -10,6 +10,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FX, OCC, SOLID, injectWind } from './kit';
+import { CLOSE_LAYER, injectClose } from './fpclose';
 
 const InkShader = {
   uniforms: {
@@ -113,6 +114,12 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     injectCrowdSkin(sh);
   };
   normalMat.customProgramCacheKey = () => 'normal-crowd-wind';
+  // His own body drawn from the eye (fpclose.ts): on its own layer, into the pre-pass with its own normal material,
+  // pushed out and given its true depth as its colour pass is, so its outlines line up (only while `close` is on)
+  const closeNormal = new THREE.MeshNormalMaterial();
+  closeNormal.onBeforeCompile = (sh) => injectClose(sh);
+  closeNormal.customProgramCacheKey = () => 'normal-close';
+  let close = false;
 
   const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: opts.msaa });
   const composer = new EffectComposer(renderer, target);
@@ -218,6 +225,12 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     const autoClear = renderer.autoClear;
     renderer.autoClear = false;
     renderer.render(scene, pre);
+    if (close) {
+      scene.overrideMaterial = closeNormal;
+      pre.layers.set(CLOSE_LAYER);
+      renderer.render(scene, pre);
+      scene.overrideMaterial = null;
+    }
     renderer.autoClear = autoClear;
     renderer.setClearColor(clear, alpha);
     scene.overrideMaterial = null;
@@ -225,10 +238,25 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     scene.fog = fog;
     camera.layers.set(SOLID);
     camera.layers.enable(FX);
+    camera.layers.enable(CLOSE_LAYER);
     renderer.setRenderTarget(null);
 
     composer.render();
   }
 
-  return { composer, bloom, ink, render, setSize, shadowStat };
+  return {
+    composer,
+    bloom,
+    ink,
+    render,
+    setSize,
+    shadowStat,
+    /** Something is drawn close (fpclose.ts `drawClose()`): the pre-pass draws `CLOSE_LAYER` too */
+    get close() {
+      return close;
+    },
+    set close(on: boolean) {
+      close = on;
+    },
+  };
 }

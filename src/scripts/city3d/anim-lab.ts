@@ -12,7 +12,10 @@
  *   hand (W A S D across the floor, Shift sprints, Caps Lock walks, Space
  *   jumps, Q / E peek, C crouches or slides), with walk.ts's jump and gravity.
  * - Time: full speed, a quarter, a tenth; P pauses, . steps a frame.
- * - Cameras: side on, front, behind, over his right shoulder (walk mode's, armed), free (drag to orbit, wheel to zoom).
+ * - Cameras: side on, front, behind, over his right shoulder (walk mode's, armed), free (drag to orbit, wheel to zoom),
+ *   and his eyes (`cam=eye`, or `fp`; docs/firstperson-plan.md Phase 0): first person at the city's near plane, his
+ *   head folded away and his body drawn close (fpclose.ts), the eye moved by fpcam.ts's rules; drag looks round
+ *   (`look` in the address: the pitch, -0.45 by default, looking down at him).
  * - Foot traces (where each ball of the foot was held), and readouts:
  *   speed, the clip and frame playing, its rate, the match's cost, the
  *   blend left, jumps a second, the foot slide (how far a held foot has
@@ -56,13 +59,16 @@ import { FIT } from './gunfit';
 import { POCKET, holdGun, newStance } from './stance';
 import type { WeaponId } from './combat-sim';
 import { createPost } from './post';
+import { drawClose } from './fpclose';
+import { newFpCam, stepFp } from './fpcam';
+import { EYE_Y } from './body';
 
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
 type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'emotes' | 'brawl' | 'reel';
 type Gait = 'walk' | 'run' | 'sprint';
-type Cam = 'side' | 'front' | 'back' | 'over' | 'free';
+type Cam = 'side' | 'front' | 'back' | 'over' | 'free' | 'eye';
 type Floor = 'flat' | 'kerbs' | 'stairs' | 'ledge' | 'walls' | 'contact';
 const FLOORS: Floor[] = ['flat', 'kerbs', 'stairs', 'ledge', 'walls', 'contact'];
 
@@ -359,7 +365,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
 
   let prog: Prog = (PROGS.find(([p]) => p === q.get('prog'))?.[0] as Prog) ?? 'runstop';
   let gait: Gait = (['walk', 'run', 'sprint'] as Gait[]).find((g) => g === q.get('gait')) ?? 'run';
-  let cam: Cam = (['side', 'front', 'back', 'over', 'free'] as Cam[]).find((c) => c === q.get('cam')) ?? 'side';
+  let cam: Cam = q.has('fp') ? 'eye' : ((['side', 'front', 'back', 'over', 'free', 'eye'] as Cam[]).find((c) => c === q.get('cam')) ?? 'side');
   let speed = Number(q.get('speed')) || 1;
   // (recordings: closer in, and the cheaper drawing)
   const near = Number(q.get('zoom')) || 1;
@@ -425,7 +431,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   paints.push(button('time', 'Pause', () => paused, () => (paused = !paused)));
   paints.push(button('time', 'Step', () => false, () => ((paused = true), (stepOnce = true))));
   for (const f of FLOORS) paints.push(button('floors', f[0].toUpperCase() + f.slice(1), () => floorKind === f, () => ((floorKind = f), buildFloor())));
-  for (const c of ['side', 'front', 'back', 'over', 'free'] as Cam[]) paints.push(button('cams', c === 'over' ? 'Shoulder' : c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
+  for (const c of ['side', 'front', 'back', 'over', 'free', 'eye'] as Cam[]) paints.push(button('cams', c === 'over' ? 'Shoulder' : c[0].toUpperCase() + c.slice(1), () => cam === c, () => (cam = c)));
   paints.push(button('toggles', 'Old beside', () => compare, () => (compare = !compare)));
   paints.push(button('toggles', 'Foot traces', () => traces, () => (traces = !traces)));
   paints.push(button('toggles', 'Scorecard', () => scorecard, () => (scorecard = !scorecard)));
@@ -584,7 +590,14 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       pivot.add(gun.group);
     }
     pivot.visible = pocketDot.visible = !!gun;
+    // (from his eyes the new gun is drawn close too)
+    if (undoClose) {
+      undoClose();
+      undoClose = drawClose(hero.g);
+    }
   }
+  /** His eyes (`cam = 'eye'`): the body drawn close while on (fpclose.ts), the undo while it is */
+  let undoClose: (() => void) | null = null;
   mount();
 
   // Foot traces: a dot where each ball of the foot was held
@@ -677,13 +690,20 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const [yaw0, pitch0, dist0] = o0.length === 3 && o0.every(Number.isFinite) ? o0 : [0.9, 0.25, 5];
   let orbit = { yaw: yaw0, pitch: pitch0, dist: dist0 };
   let drag: { x: number; y: number; yaw: number; pitch: number } | null = null;
+  // (from his eyes a drag looks round instead: `eyeLook`, off the way he faces)
+  const eyeLook = { yaw: 0, pitch: q.has('look') ? Number(q.get('look')) || 0 : -0.45 };
   canvas.addEventListener('pointerdown', (e) => {
-    drag = { x: e.clientX, y: e.clientY, yaw: orbit.yaw, pitch: orbit.pitch };
+    drag = cam === 'eye' ? { x: e.clientX, y: e.clientY, yaw: eyeLook.yaw, pitch: eyeLook.pitch } : { x: e.clientX, y: e.clientY, yaw: orbit.yaw, pitch: orbit.pitch };
     canvas.setPointerCapture(e.pointerId);
-    if (cam !== 'free') (cam = 'free'), paint();
+    if (cam !== 'free' && cam !== 'eye') (cam = 'free'), paint();
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!drag) return;
+    if (cam === 'eye') {
+      eyeLook.yaw = drag.yaw - (e.clientX - drag.x) * 0.006;
+      eyeLook.pitch = THREE.MathUtils.clamp(drag.pitch - (e.clientY - drag.y) * 0.006, -1.35, 1.2);
+      return;
+    }
     orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.008;
     orbit.pitch = THREE.MathUtils.clamp(drag.pitch + (e.clientY - drag.y) * 0.006, -0.1, 1.3);
   });
@@ -926,7 +946,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     copyPose(loco.pose, old.pose);
     old.update();
     placeRoot(old.g, x + dx, oy, z + dz, move.face, SCALE, loco.root);
-    old.g.visible = compare && !gun;
+    old.g.visible = compare && !gun && cam !== 'eye';
     // Traces and the slide
     anim.feet.forEach((f, i) => {
       if (f.locked && !wasLocked[i] && traces) addDot(f.lock.x, f.lock.z);
@@ -952,8 +972,53 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     return out.set(x + dx / 2 + lookX, y + lookY, z + dz / 2 + clear + lookZ);
   };
   const want = new THREE.Vector3();
+  // His eyes: where they are in the head bone's frame (body.ts EYE_Y over the bone, a little in front of it)
+  const EYE_AT = new THREE.Vector3(0, EYE_Y, 0.06);
+  const eyeAt = new THREE.Vector3();
+  const eyeQ = new THREE.Quaternion();
+  const fpCam = newFpCam();
+  let fpLast = 0;
+  const lens = (fov: number, near: number) => {
+    if (Math.abs(camera.fov - fov) > 0.01 || camera.near !== near) {
+      camera.fov = fov;
+      camera.near = near;
+      camera.updateProjectionMatrix();
+    }
+  };
+  /** From his eyes: the city's lens (70°, near 0.5), the head folded away, the body drawn close, the eye on fpcam.ts */
+  const eyeView = () => {
+    if (!undoClose) undoClose = drawClose(hero.g);
+    post.close = true;
+    const head = hero.rig.bones.head;
+    head.scale.setScalar(1);
+    head.updateWorldMatrix(true, false);
+    head.getWorldPosition(eyeAt);
+    head.getWorldQuaternion(eyeQ);
+    eyeAt.add(want.copy(EYE_AT).multiplyScalar(SCALE).applyQuaternion(eyeQ));
+    // (folded to nothing at the bone: the hats, the hood and the shades with it)
+    head.scale.setScalar(1e-3);
+    const dt = Math.min(0.1, Math.max(0, clock - fpLast));
+    fpLast = clock;
+    const f = move.face;
+    const fv = stepFp(fpCam, 'foot', { speed: Math.hypot(move.vx, move.vz), top: GAITS.sprint, fwd: move.ax * Math.sin(f) + move.az * Math.cos(f), side: -move.ax * Math.cos(f) + move.az * Math.sin(f), turn: move.w, bob: 0, reduced: d.reduced }, dt);
+    const yaw = f + eyeLook.yaw + fv.yaw;
+    const pitch = eyeLook.pitch + fv.pitch;
+    camera.position.set(eyeAt.x, eyeAt.y + fv.y, eyeAt.z);
+    look.set(eyeAt.x + Math.sin(yaw) * Math.cos(pitch), eyeAt.y + fv.y + Math.sin(pitch), eyeAt.z + Math.cos(yaw) * Math.cos(pitch));
+    camera.lookAt(look);
+    camera.rotateZ(-fv.roll);
+    lens(70 + fv.fov, 0.5);
+  };
   // (the camera keeps exactly with them: eased after a runner, it trails and the picture slides off the figures)
   const view = () => {
+    if (cam === 'eye') return eyeView();
+    if (undoClose) {
+      undoClose();
+      undoClose = null;
+      post.close = false;
+      hero.rig.bones.head.scale.setScalar(1);
+    }
+    lens(34, 0.1);
     look.copy(target(want));
     if (cam === 'free') camera.position.set(look.x + Math.sin(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist, look.y + Math.sin(orbit.pitch) * orbit.dist, look.z + Math.cos(orbit.yaw) * Math.cos(orbit.pitch) * orbit.dist);
     else if (cam === 'side') camera.position.set(look.x + (compare ? 6 : 4.5) / near, look.y + 0.3, look.z);
@@ -974,6 +1039,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ...(compare ? ([['Beside', cam === 'back' ? 'new right · old left' : cam === 'free' ? 'the old walk is the other one' : 'new left · old right']] as [string, string][]) : []),
       ...((p0) => (p0 ? ([['Emote', `${p0.id} · ${p0.t.toFixed(1)} s${emoteUpper(p0.id) ? ' · upper body over the capture' : ' · the whole body, keyed'}`]] as [string, string][]) : []))((reel ? reel.prog : prog) === 'emotes' ? emoteAt(reel ? reel.t : clock) : null),
       ...(fists.brawl.up ? ([['Fists', `${fists.brawl.clip().id} @ ${fists.brawl.clip().frame.toFixed(0)} · ${fists.brawl.rooted ? 'the whole body, keyed' : 'upper body over the capture'} · stamina ${(fists.brawl.stamina * 100).toFixed(0)}%`]] as [string, string][]) : []),
+      ...(cam === 'eye'
+        ? ([['Eye', `near ${camera.near} · body drawn close · lurch ${((fpCam.out.pitch * 180) / Math.PI).toFixed(1)}° · lead ${((fpCam.out.yaw * 180) / Math.PI).toFixed(1)}° · tilt ${((fpCam.out.roll * 180) / Math.PI).toFixed(1)}° · fov +${fpCam.out.fov.toFixed(1)}°`]] as [string, string][])
+        : []),
       ['Speed', `${v.toFixed(2)} tiles/s · ${(v * 1.8).toFixed(1)} m/s`],
       ['Clip', `${dbg.clip} @ ${dbg.frame.toFixed(1)}`],
       ['Rate', dbg.rate.toFixed(2)],

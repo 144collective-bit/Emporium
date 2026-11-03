@@ -25,6 +25,9 @@ export interface BenchView {
   name: string;
   pos: V3;
   target: V3;
+  /** A lens of its own (first person's: walk.ts's 70°, the city's near plane, or the driver's seat's 0.08), else the City view's */
+  fov?: number;
+  near?: number;
 }
 
 /** The fixed views, in world numbers (the home view is the city's own, filled in at the start) */
@@ -53,6 +56,11 @@ export const BENCH_VIEWS: BenchView[] = [
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most
   { id: 'drive', name: 'Driving, the east ring avenue', pos: [RING_HI + 1.5 * LANE, 1.9, 52], target: [RING_HI + 1.5 * LANE, 1.2, 30] },
   { id: 'traffic', name: 'Traffic at a ring junction', pos: [RING_HI - 10, 9, CORE_ROADS[1] + 10], target: [RING_HI, 0, CORE_ROADS[1]] },
+  // First person (docs/firstperson-plan.md Phase 0): at his eyes on a downtown sidewalk and the square, and from
+  // the driver's seat (its near plane, 0.08), so what first person costs is measured like for like
+  { id: 'fp-street', name: 'First person, downtown sidewalk', pos: [6, 1.22, 44.6], target: [40, 1.4, 43], fov: 70, near: 0.5 },
+  { id: 'fp-square', name: 'First person, the square', pos: [30, 1.22, 59.2], target: [30, 4, 38], fov: 70, near: 0.5 },
+  { id: 'fp-seat', name: 'First person, the driver\'s seat', pos: [RING_HI + 1.5 * LANE, 0.85, 52], target: [RING_HI + 1.5 * LANE, 0.8, 30], fov: 68, near: 0.08 },
 ];
 /** The route, through these views in order and back home */
 const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];
@@ -190,6 +198,8 @@ export function createBench(d: BenchDeps, night: boolean) {
   const results: BenchResult['views'] = [];
   let restore: (() => void) | null = null;
   let out: BenchResult | null = null;
+  /** The City view's lens, put back for the views without their own and the route */
+  let lens0: { fov: number; near: number } | null = null;
 
   function start(t: number) {
     const h = d.home();
@@ -235,8 +245,16 @@ export function createBench(d: BenchDeps, night: boolean) {
     },
     /** Put the camera where the benchmark has got to */
     place(t: number, camera: THREE.PerspectiveCamera, target: THREE.Vector3) {
-      if (phase === 'views') {
-        const v = views[index];
+      lens0 ??= { fov: camera.fov, near: camera.near };
+      const v = phase === 'views' ? views[index] : null;
+      const fov = v?.fov ?? lens0.fov;
+      const near = v?.near ?? lens0.near;
+      if (camera.fov !== fov || camera.near !== near) {
+        camera.fov = fov;
+        camera.near = near;
+        camera.updateProjectionMatrix();
+      }
+      if (v) {
         camera.position.set(...v.pos);
         target.set(...v.target);
       } else if (phase === 'route' && curves) {

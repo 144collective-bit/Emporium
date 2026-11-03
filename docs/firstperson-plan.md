@@ -51,13 +51,16 @@ hold.
   the shades) folded away, as the car seat already does (`head()` in
   carride.ts). What you see is what the animator, the moments, the brawl
   and the fight clips already pose, so nothing is animated twice.
-- **Close things and the near plane:** hands 0.3-0.5 m from the eye
-  fall inside today's 0.5 m near plane. Phase 0 measures the two ways
-  out: bringing the near plane in while in first person (as the car seat
-  does) and checking the far city's depth for z-fighting, or a second,
-  close layer for the hands and what's held (the viewmodel's way, `K`).
-  The guns keep the viewmodel either way (its sight line, ADS and reloads
-  are tuned there).
+- **Close things and the near plane** (measured in Phase 0, below): his
+  hands, collar and what he holds come 0.05-0.4 tiles from the eye,
+  inside the city camera's near plane (0.5). The body is **drawn close**
+  (`fpclose.ts`): at its true size and pose, every vertex pushed `K` (16)
+  times further along its line of sight in its shaders, each fragment
+  writing its true depth again, so the world hides him and he hides the
+  world exactly as if he stood there, and what's nearer than the near
+  plane sits in a thin sliver at the front, still in its own order. The
+  near plane stays 0.5. The guns keep the viewmodel (its sight line, ADS
+  and reloads are tuned there).
 - **The feel is one set of rules:** `fpcam.ts` (DOM-free, tested): the
   eye's bob, the lurch under acceleration and braking, the look into a
   turn, jolts (a hit, a landing, a bump), the FOV by speed, each subtle,
@@ -73,16 +76,56 @@ hold.
 
 ## Phases
 
-### Phase 0: measure and the kit
+### Phase 0: measure and the kit (built)
 
-- The near-plane check (above), on the desktop and phone tiers, by day
-  and at night, at the edge of the world; pick one.
-- `fpcam.ts` and its tests (the springs settle, nothing over its most,
-  zero under reduced motion).
-- The lab: `?anim&fp` (first person in the animation lab, every program,
-  a view of the body from the eye) and `?bench` views in first person
-  (walking downtown, the car seat, the cockpit) to measure before and
-  after.
+- **The near plane, measured** (headless Chromium, a 24-bit depth buffer
+  under a half-float target as post.ts draws, the city's far 760, from
+  the first-person eye 1.07 up, sub-pixel jitter): faces 5 mm (0.005)
+  apart start to fight **231 tiles** out at today's near 0.5, 163 at
+  0.25, **102** at 0.1; 1 cm apart, none within the 400 measured at any
+  of them. So bringing the near plane in would bring the flicker over 2x
+  closer (the car seat's 0.08 already pays it, seated).
+- **Four ways of drawing the body, measured** (a hand and a fingertip
+  inside the near plane, the fingertip drawn first; a knee under a café
+  table; a foot past its edge):
+
+  | Way | Hand | Fingertip over hand | Knee under the table | City's flicker |
+  | --- | --- | --- | --- | --- |
+  | **Drawn close (fpclose.ts), picked** | shows | in order | hidden | unchanged (231) |
+  | The gun hands' sliver (viewmodel.ts) | shows | in order | shows through | unchanged |
+  | Near 0.5 as today | clipped | clipped | hidden | 231 |
+  | Near 0.1 | shows | in order | hidden | 102 |
+
+  (Found on the way: three culls an object on its true bounds before the
+  shader pushes it out, so a close-drawn mesh is taken out of frustum
+  culling, `drawClose()`.)
+- **The kit:** `fpclose.ts` (`CLOSE`, `CLOSE_LAYER` 4, `closeDepth()`,
+  `injectClose()`, `closeMaterial()`: a patched copy per material, its
+  own `onBeforeCompile` first; `drawClose()` and its undo), tested in
+  `tests/fpclose.test.ts` (against three's projection: the true depth
+  exactly past the near plane, in front of the world and in order inside
+  it, monotonic, a millimetre told apart at a hand-span); post.ts draws
+  `CLOSE_LAYER` into the outline pre-pass with its own patched normal
+  material while `post.close` is on (off, nothing changes), so the close
+  body gets its ink lines. `fpcam.ts` (`FP_FEEL` per mode, `FP_MOST`,
+  `JOLT`, `stepFp()`, `joltFp()`), tested in `tests/fpcam.test.ts` (the
+  right way round, within `FP_MOST` whatever comes in, settling to
+  nothing, the same at 30 and 144 fps, still under reduced motion).
+- **The lab:** `?anim&fp` (or `cam=eye`; the Eye camera): his eyes from
+  the head bone, the head folded away, the city's lens (70°, near 0.5),
+  the body drawn close, the eye on `fpcam.ts` (`foot`), drag to look round
+  (`look=` the pitch), a readout row. **`?bench`** views `fp-street`,
+  `fp-square` (70°, near 0.5) and `fp-seat` (68°, near 0.08), each view
+  able to carry its own lens (`BenchView.fov` / `near`).
+- **What the lab shows for Phase 1** (its shots, for the owner's review):
+  looking down, the collar, the shirt and the tie fill the view a few
+  centimetres off (the neck and the collar want folding with the head, or
+  the eye further forward); running, nothing of him is in view at 30°
+  down (the arms swing beside the body, out of the frame); in the guard,
+  only one fist edges into the corner (a first-person guard framed for the
+  eye, Phase 2); the rifle in his hands reads well, inked, unclipped.
+  Still to do when the body goes into the city: his shadow (the shadow
+  cameras don't see `CLOSE_LAYER`: enable it on them, sky.ts).
 
 ### Phase 1: on foot, the whole body
 
