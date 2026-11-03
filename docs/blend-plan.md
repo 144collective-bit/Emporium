@@ -506,6 +506,11 @@ Once `docs/highway-plan.md` is built:
 - **Phase 7:** where the pylon line runs, and whether billboards may carry
   the city's own made-up ads (the Emporium, the kart park) or only made-up
   businesses.
+- **Phase 8:** the skyline ring's towers past the edge are drawn outside the
+  haze while the ground under them fades into it, so seen from out in the
+  open land (`docs/blend-shots/phase-4-try`, `rolls-mid`) their feet seem to
+  float over the horizon; the countryside should carry the ground to them
+  (or the haze to their feet). Found in Phase 4, there before it.
 - **Phase 8:** how farmed the countryside looks (neat fields, or more
   pasture and wild land), and whether the farmsteads get names.
 - **Later:** which of `FUTURE_SITES` become places to run, in their own plan.
