@@ -27,6 +27,9 @@ export interface HubHooks {
   tab?(id: HubTab): void;
 }
 
+/** Phones, upright or on their side: the header's one slim row (controls.css) */
+const PHONE = '(max-width: 640px), (pointer: coarse) and (max-height: 500px)';
+
 /** Inside the hub, these open screens of their own: the hub closes first */
 const OWN_SCREENS = '[data-worldmap-open], [data-inv-open], [data-dir-spot], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
 
@@ -131,6 +134,26 @@ export function createHub(root: HTMLElement) {
     },
     true
   );
+
+  // Phones: the emotes (multiplayer.ts) live in the Online tab, not the header (docs/controls-plan.md Phase 3).
+  // Open there for good; picking one (which closes it) closes the hub, so you see the emote play.
+  const emotes = root.querySelector<HTMLDetailsElement>('[data-emotes]');
+  const home = emotes?.parentElement ?? null;
+  const slot = el.querySelector<HTMLElement>('[data-hub-emotes]');
+  const phone = matchMedia(PHONE);
+  const seat = () => {
+    if (!emotes || !home || !slot) return;
+    const inHub = phone.matches;
+    (inHub ? slot : home).append(emotes);
+    emotes.open = inHub;
+  };
+  seat();
+  phone.addEventListener('change', seat);
+  emotes?.addEventListener('toggle', () => {
+    if (emotes.open || !phone.matches || !slot?.contains(emotes)) return;
+    emotes.open = true;
+    if (!emotes.hidden) close();
+  });
 
   return {
     hooks,

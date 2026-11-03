@@ -57,10 +57,6 @@
     padding: 0 9px;
     gap: 3px;
   }
-  /* Phones walking: the first row is the title and the switch; the hub's Missions tab has your level */
-  .city[data-view="3d"][data-mode="walk"] .city-head .level-pill {
-    display: none;
-  }
   .level-tag {
     font-size: 10.5px;
   }
