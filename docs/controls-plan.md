@@ -234,6 +234,11 @@ and the installed game without the browser's bars. The owner's picks:
   812 x 375, a 768 tablet and a 1440 desktop, in the City view and in play.
   Installing itself can't be checked headless: on a real phone, add it to
   the home screen and open it.
+- **Changed after (the owner's call):** walk mode carries the same header
+  as the City view (the title, Dorras, the level, City / Walk and ☰), so
+  either mode switches to the other from the header; the "only ☰ in play"
+  rule went. Still clear, still no logo; the gun's readout and the emotes
+  stay where they were.
 
 ### Phase 6: moving the buttons
 
