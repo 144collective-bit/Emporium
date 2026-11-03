@@ -455,7 +455,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
             <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight); empty hands, block (hold)</dd>
             <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
             <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
-            <dt><kbd>V</kbd></dt><dd>First / third person</dd>
+            <dt><kbd>V</kbd></dt><dd>First / third person (in the Fight Club's ring too: the next fight starts as you left it)</dd>
             <dt><kbd>Scroll</kbd></dt><dd>Next / previous slot (mouse captured), camera distance (mouse free)</dd>
             <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
             <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out); empty hands, punch (again quickly: combos)</dd>
@@ -782,7 +782,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <div class="fight-side fight-them">
         <p class="fight-name" data-fight-opponent>Opponent</p>
         <div class="fight-bar fight-health is-rev" role="img" aria-label="The opponent's health"><b class="fight-ghost" data-fight-opp-health-ghost></b><i data-fight-opp-health></i></div>
-        <p class="fight-acts"><button type="button" class="race-quit fight-snack" data-fight-snack hidden aria-label="Eat a snack: some health back">Snack <b data-fight-snack-n>0</b></button><button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button></p>
+        <p class="fight-acts"><button type="button" class="race-quit fight-snack" data-fight-snack hidden aria-label="Eat a snack: some health back">Snack <b data-fight-snack-n>0</b></button><button type="button" class="race-quit fight-view" data-fight-view aria-pressed="false" aria-label="See the fight from your eyes">Eyes</button><button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button></p>
       </div>
     </div>
     <div class="fight-pops mk-skin" data-fight-pops aria-live="polite"></div>
@@ -798,7 +798,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
         <button type="button" class="shop-take" data-fight-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>V</kbd> view · <kbd>Esc</kbd> quit</p>
     <button type="button" class="fight-btn fight-punch" data-fight-punch aria-label="Punch">Punch</button>
     <button type="button" class="fight-btn fight-kick" data-fight-kick aria-label="Kick">Kick</button>
     <button type="button" class="fight-btn fight-block" data-fight-block aria-label="Block (hold)">Block</button>

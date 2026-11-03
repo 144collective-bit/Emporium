@@ -724,6 +724,15 @@
 .fight-snack b {
   color: #fff;
 }
+/* From your eyes or over your shoulder (V; lit while it's your eyes) */
+.fight-view {
+  padding: 6px 10px;
+  pointer-events: auto;
+}
+.fight-view[aria-pressed='true'] {
+  border-color: #00eaff;
+  color: var(--p-cyan);
+}
 /* The centre stack: the bell's text over the count while someone's down. One block in the middle
    of the screen so the two never land on each other, sized to clear the HUD above and the touch
    buttons and the door prompt below on a phone. */
@@ -1284,7 +1293,8 @@
     font-size: 8px;
   }
   .fight-quit,
-  .fight-snack {
+  .fight-snack,
+  .fight-view {
     padding: 5px 8px;
     font-size: 8.5px;
   }

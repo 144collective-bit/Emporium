@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { makeSkeleton, HEAD_Y, NECK_Y, SHOULDER_X, SHOULDER_Y, BONE_INDEX, BONES } from '../src/scripts/city3d/skeleton';
 import { EYE_Y } from '../src/scripts/city3d/body';
 import { items, PLAYER, type Outfit } from '../src/scripts/city3d/wardrobe';
-import { EYE_AT, NEAR, boxClear, eyeOf, fpArms, nearFor } from '../src/scripts/city3d/fpbody';
+import { BLOCK, EYE_AT, GUARD, NEAR, boxClear, createFpGuard, eyeOf, fpArms, nearFor, reachArm } from '../src/scripts/city3d/fpbody';
 import { ARM_BONES, CUT, cutAway } from '../src/scripts/city3d/fpclose';
 
 const SCALE = 0.85;
@@ -153,4 +153,98 @@ test('with the gun hands up, his arms go from the shoulder down to the fingertip
     assert.equal(set.has(BONE_INDEX[b]), arm, b);
   }
   assert.equal(ARM_BONES.length, 18);
+});
+
+test('the arm IK: the wrist onto a target in reach, the elbow towards the pole; out of reach, the arm straight at it', () => {
+  for (const side of ['L', 'R'] as const) {
+    for (const t of [new THREE.Vector3(0.1, 0.55, 0.2), new THREE.Vector3(-0.05, 0.75, 0.25), new THREE.Vector3(0.2, 0.45, 0.1)]) {
+      const sk = rig();
+      const sh = world(sk.bones[`arm${side}`]);
+      const target = sh.clone().add(t.clone().sub(new THREE.Vector3(0, 0.6, 0)).multiplyScalar(1));
+      const pole = new THREE.Vector3(0, -1, 0);
+      reachArm(sk.bones[`arm${side}`], sk.bones[`fore${side}`], sk.bones[`hand${side}`], target, pole);
+      sk.root.updateMatrixWorld(true);
+      const hand = world(sk.bones[`hand${side}`]);
+      const reach = sh.distanceTo(world(sk.bones[`fore${side}`])) + world(sk.bones[`fore${side}`]).distanceTo(hand);
+      if (sh.distanceTo(target) < reach * 0.98) {
+        assert.ok(hand.distanceTo(target) < 0.015, `${side}: ${(hand.distanceTo(target) * 100).toFixed(2)} cm off`);
+        // (the elbow under the line from the shoulder to the hand)
+        const elbow = world(sk.bones[`fore${side}`]);
+        const mid = sh.clone().lerp(hand, 0.5);
+        assert.ok(elbow.y <= mid.y + 1e-3, `${side}: the elbow drops`);
+      }
+    }
+    const sk = rig();
+    const sh = world(sk.bones[`arm${side}`]);
+    const far = sh.clone().add(new THREE.Vector3(0, 0, 3));
+    reachArm(sk.bones[`arm${side}`], sk.bones[`fore${side}`], sk.bones[`hand${side}`], far, new THREE.Vector3(0, -1, 0));
+    sk.root.updateMatrixWorld(true);
+    const dir = world(sk.bones[`hand${side}`]).sub(sh).normalize();
+    assert.ok(dir.z > 0.99, `${side}: pointed straight at a target out of reach`);
+  }
+});
+
+test('the guard from the eye: each fist on its spot (the lead on his left, further out), and nothing at all with it off', () => {
+  const sk = rig();
+  const eye = new THREE.Vector3();
+  eyeOf(sk.bones, SCALE, eye, new THREE.Vector3(), new THREE.Vector3());
+  const fwd = new THREE.Vector3(0, 0, 1);
+  const before = world(sk.bones.handL);
+  const off = createFpGuard();
+  off.update(sk.bones, SCALE, eye, fwd, 0, true, 1 / 60);
+  sk.root.updateMatrixWorld(true);
+  assert.ok(world(sk.bones.handL).distanceTo(before) < 1e-9, 'off: the clip as it is');
+  const g = createFpGuard();
+  g.update(sk.bones, SCALE, eye, fwd, 1, true, 1 / 60);
+  sk.root.updateMatrixWorld(true);
+  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0));
+  for (const s of ['L', 'R'] as const) {
+    const h = world(sk.bones[`hand${s}`]);
+    const side = Math.sign(world(sk.bones[`arm${s}`]).sub(eye).dot(right));
+    const spot = side < 0 ? GUARD.lead : GUARD.rear;
+    const want = eye.clone().addScaledVector(fwd, spot.fwd * SCALE).addScaledVector(new THREE.Vector3(0, 1, 0), -spot.down * SCALE).addScaledVector(right, side * spot.side * SCALE);
+    assert.ok(h.distanceTo(want) < 0.015, `${s}: ${(h.distanceTo(want) * 100).toFixed(2)} cm from its spot`);
+    // (in the view: ahead, under the eye, within a 70° view's bottom half)
+    const below = Math.atan2(eye.y - h.y, h.z - eye.z);
+    assert.ok(below > 0.1 && below < THREE.MathUtils.degToRad(33), `${s}: ${THREE.MathUtils.radToDeg(below).toFixed(0)}° under the eye`);
+    const hd = world(sk.bones.head);
+    assert.ok(!cutAway((h.y - hd.y) / SCALE, Math.hypot(h.x - hd.x, h.z - hd.z) / SCALE), `${s}: the fist isn't cut away`);
+  }
+  assert.ok(GUARD.lead.fwd > GUARD.rear.fwd && GUARD.lead.down < GUARD.rear.down, 'the lead further out and higher');
+});
+
+test('the block from the eye: both fists up just under the eye, close together, either side of the view; eased in', () => {
+  const sk = rig();
+  const eye = new THREE.Vector3();
+  eyeOf(sk.bones, SCALE, eye, new THREE.Vector3(), new THREE.Vector3());
+  const fwd = new THREE.Vector3(0, 0, 1);
+  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0));
+  // (each frame the clip poses the arms afresh: the rest pose stands in for it)
+  const rest = Object.values(sk.bones).map((b) => b.quaternion.clone());
+  const frame = (g: ReturnType<typeof createFpGuard>, block: boolean) => {
+    Object.values(sk.bones).forEach((b, i) => b.quaternion.copy(rest[i]));
+    sk.root.updateMatrixWorld(true);
+    g.update(sk.bones, SCALE, eye, fwd, 1, false, 1 / 60, block);
+    sk.root.updateMatrixWorld(true);
+  };
+  const g = createFpGuard();
+  frame(g, false);
+  const guardL = world(sk.bones.handL);
+  frame(g, true);
+  const want = (side: number) => eye.clone().addScaledVector(fwd, BLOCK.fwd * SCALE).addScaledVector(new THREE.Vector3(0, 1, 0), -BLOCK.down * SCALE).addScaledVector(right, side * BLOCK.side * SCALE);
+  const sideL = Math.sign(world(sk.bones.armL).sub(eye).dot(right));
+  assert.ok(world(sk.bones.handL).distanceTo(want(sideL)) > 0.01 && world(sk.bones.handL).distanceTo(guardL) > 1e-4, 'eased in, not snapped');
+  for (let i = 0; i < 60; i++) frame(g, true);
+  for (const s of ['L', 'R'] as const) {
+    const h = world(sk.bones[`hand${s}`]);
+    const side = Math.sign(world(sk.bones[`arm${s}`]).sub(eye).dot(right));
+    assert.ok(h.distanceTo(want(side)) < 0.015, `${s}: ${(h.distanceTo(want(side)) * 100).toFixed(2)} cm from the block's spot`);
+    const below = Math.atan2(eye.y - h.y, h.z - eye.z);
+    assert.ok(below > 0.05 && below < THREE.MathUtils.degToRad(25), `${s}: ${THREE.MathUtils.radToDeg(below).toFixed(0)}° under the eye`);
+    assert.ok(Math.abs(h.clone().sub(eye).dot(right)) > 0.03 * SCALE, `${s}: off the middle, the view between them`);
+  }
+  assert.ok(BLOCK.down < GUARD.lead.down && BLOCK.fwd < GUARD.rear.fwd, 'higher and nearer than the guard');
+  // (the arms are never in the head's cut, fpclose.ts: a block's fists sit inside the hat's reach)
+  for (let i = 0; i < 60; i++) frame(g, false);
+  assert.ok(world(sk.bones.handL).distanceTo(guardL) < 0.015, 'back on the guard when the block lets go');
 });

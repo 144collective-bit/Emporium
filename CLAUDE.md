@@ -1692,7 +1692,21 @@ it and has been retired completely. Build only on what's here.
   swing, not at a walk), the near plane short of a wall he's at (`nearFor()`,
   `NEAR`), `stepFp('foot')` for lurch, lean and jolts. Anything new laid on
   his arms in first person goes after `fpArms()`'s place before
-  `placeRoot()`.
+  `placeRoot()`. Phase 2 (fists, on the street and in the ring) is built:
+  the guard framed for the eye (`createFpGuard()` in fpbody.ts, tested: the
+  clip poses the arms, then each fist moves on by an offset learned in the
+  guard to `GUARD`'s spot, through `reachArm()`, the fist turned as a
+  boxer's in the guard; a block puts both fists up at `BLOCK`), laid on
+  after the figure is placed (walk.ts with empty hands, fight.ts in the
+  ring); his arms are never in the head's cut (fpclose.ts). In the Fight
+  Club V, the right stick click or the HUD's Eyes button
+  (`[data-fight-view]`) switches to your eyes (`fight.setView()`,
+  `eyeView`; remembered as `ringFp` in `degen-city-walk-v1`, over the
+  shoulder the first time): both fighters drawn close, the eye from your
+  fighter's head looking at the opponent's, the view on the canvas when
+  you're down, a field of view of 70, a jolt for a hit on you instead of
+  the flash, a snap for your parry. The boot is at 688.4 of 690 KB: put
+  later phases' code in the chunks where it can go.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,

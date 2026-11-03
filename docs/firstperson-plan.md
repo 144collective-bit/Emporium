@@ -197,17 +197,52 @@ hold.
   city's shots); the console's one `computeBoundingBox()` NaN warning in
   the city is older than this plan.
 
-### Phase 2: fists, on the street and in the ring
+### Phase 2: fists, on the street and in the ring (built)
 
-- **On the street:** the guard, jab, cross, hook, uppercut and the kicks
-  from the eye (the brawl's clips on his body, the fists closing), the
-  block's forearms up, the dodge's slide of the eye.
-- **In the Fight Club:** V in the ring for first person (over the
-  shoulder stays the default): your guard framing the opponent, their
-  strikes coming at the lens with the telegraph readable, a hit's jolt and
-  flash (subtle), a parry's snap, the knockdown seen from the canvas and
-  the get-up, the camera inside the ropes, the fight HUD as it is.
-- Street spars with the partners the same way.
+- **The guard framed for the eye** (`createFpGuard()` in fpbody.ts,
+  DOM-free, tested in `tests/fpbody.test.ts`): the fight's clips pose his
+  arms as ever, then each fist is moved on by an offset learned while the
+  clip is the guard (from where the clip's guard puts it to `GUARD`'s spot:
+  the lead, on his left, further out and higher), through the arm's own
+  two-bone IK (`reachArm()`, the elbow down and out), so the jab, cross,
+  hook, uppercut and the kicks play from where the guard shows and their
+  reach still reads. In the guard the fist is turned as a boxer's
+  (knuckles ahead and a touch up, the palm in, the thumb up), eased; a
+  strike keeps the clip's turn.
+- **The block** (`BLOCK`): both fists up just under the eye, close
+  together, the view between them, eased in and out. The clip's own block
+  lays the forearms across the face, right against the eye: from there it
+  was two dark slabs over the corners.
+- **His arms are never in the head's cut** (fpclose.ts: whatever is mostly
+  weighted to an arm bone): found on the way, the block's fists sit inside
+  the hat's reach and vanished.
+- **On the street** (walk.ts, empty hands in first person): the guard from
+  the moment a press brings it up (`guardAmt`, and the kicks' and the
+  dodge's whole-body clips), the block on right-click; the dodge's slide is
+  the eye's own, riding the head bone.
+- **In the Fight Club** (fight.ts `setView()`, `eyeView`): V, the
+  gamepad's right stick click or the fight HUD's **Eyes** button
+  (`[data-fight-view]`, lit while it's on) switches to your eyes and back;
+  the next fight starts as you left it (`ringFp` in the walk settings,
+  `degen-city-walk-v1`; over the shoulder the first time). Both fighters
+  drawn close (yours with the cut round the eye), the eye from your
+  fighter's head bone, looking at the opponent's head (a touch under it),
+  your guard framing them; down on the canvas the guard lets go and the
+  view goes where your own head looks, through the fall and the get-up; a
+  field of view of 70 (put back after); `stepFp('ring')`'s lurch and lean.
+  A hit on you is a jolt (by how heavy; a knockdown the most), not the
+  white flash (it would show the inside of your own head); your own parry
+  a small snap; your stars aren't drawn. Street spars with the partners
+  are the same fight (`kind: 'street'`), so the same.
+- **Checked** in the city headless: the guard, punches, hits taken, the
+  view back over the shoulder with the head drawn again; the block on the
+  street. While the mouse is captured no HUD button takes a click (Quit
+  neither): V is the way then.
+- **Cost**: the boot's code is 688.4 KB of 690 (1.3 KB more: the guard is
+  walk.ts's, so it's in the boot; the ring's part is fight.ts's chunk).
+- **Left for later phases**: a hit's flash from the eye (a soft vignette,
+  maybe, at the checks, Phase 7); the boot is close to its budget, so
+  Phase 3 on should put what it can in the chunks.
 
 ### Phase 3: the gun hands, polished
 

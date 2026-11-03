@@ -36,7 +36,8 @@
  * the head bone and within `CUT.wide` of its axis goes (the head, the hood,
  * the shades, every hat and its brim), and so does the neck and the collar's
  * top rim within `CUT.neck` of the axis from `CUT.low` up; the collar's front
- * and the tie's knot under the eye stay. `cutAway()` is the same test in
+ * and the tie's knot under the eye stay. His arms are never cut there (whatever is mostly weighted to an arm bone,
+ * `ARM_BONES`): a block brings the fists up in front of his face. `cutAway()` is the same test in
  * numbers, for the tests. With the gun hands up (viewmodel.ts) his own arms
  * go too (`arms`: every fragment mostly weighted to an arm bone, `ARM_BONES`).
  */
@@ -126,7 +127,8 @@ uniform vec4 closeCut;
 uniform float closeArms;
 void main() {
   // The view kept clean: the head, the hats and the collar's top at the eye (cutAway() in numbers), the arms with the gun hands up
-  if (closeHead.w > 0.5) {
+  // (never his arms and hands: a block brings the fists up in front of his face, inside the hat's reach)
+  if (closeHead.w > 0.5 && vCloseArm < 0.5) {
     vec3 h = (viewMatrix * vec4(closeHead.xyz, 1.0)).xyz;
     vec3 u = normalize((viewMatrix * vec4(closeUp, 0.0)).xyz);
     vec3 p = vCloseV - h;

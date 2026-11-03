@@ -28,6 +28,13 @@
  *   back `SNACK_HEAL` of your health in a spar or a street spar, never in a
  *   bout.
  * - Sounds go through sfx() (silent until the visitor turns sound on).
+ * - From your eyes (docs/firstperson-plan.md Phase 2; V in the ring, walk
+ *   mode remembers it, `setView()`): both fighters drawn close (fpclose.ts:
+ *   nothing of either is clipped however near), the view kept clean round
+ *   your eye, the camera at your eyes looking at the opponent (and, down,
+ *   where your head looks), your guard framed for the eye (fpbody.ts
+ *   `createFpGuard()`), a hit on you a jolt (fpcam.ts `ring`) in place of the
+ *   white flash and the shake.
  */
 import * as THREE from 'three';
 import { crewOutfit } from './crew';
@@ -35,7 +42,10 @@ import { BOT_LEVELS, FIGHT_BOTS, SNACK_HEAL, type BotLevel } from './catalog';
 import { PARTNERS, afterOf, arenaOf, partner, startOf, type PartnerId } from './brawlsite';
 import type { StyleId } from './fight-moves';
 import { useItem } from './inventory';
-import { createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { FIGHTER_SCALE, createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { drawClose, setCloseCut } from './fpclose';
+import { createFpGuard, eyeOf } from './fpbody';
+import { joltFp, newFpCam, stepFp } from './fpcam';
 import { T, createFightSim, forward, yawTo, type FightEvent, type FightSim, type Fighter, type FighterInput } from './fight-sim';
 import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView, FightStart } from './fight-types';
 import { CORNERS, OUT, RING, RING_HALF } from './fightsite';
@@ -79,6 +89,23 @@ export function createFight(d: FightDeps): Fight {
   const camPos = new THREE.Vector3();
   const camAt = new THREE.Vector3();
   let camReady = false;
+  /** From your eyes: on, both fighters drawn close while it is (their undos), your guard, the eye's motion */
+  let eyeOn = false;
+  let undoYou: (() => void) | null = null;
+  let undoThem: (() => void) | null = null;
+  const guard = createFpGuard();
+  const fpCam = newFpCam();
+  const eye = new THREE.Vector3();
+  const head = new THREE.Vector3();
+  const up = new THREE.Vector3();
+  const toThem = new THREE.Vector3();
+  const look = new THREE.Vector3();
+  /** How far you're down (the fall, lying, the get-up): the eye looks where your head does */
+  let downW = 0;
+  let lastV = { x: 0, z: 0 };
+  /** The view's field before your eyes took it, put back after */
+  let fov0 = 0;
+  const EYE_FOV = 70;
 
   /* ---------- Sparks, stars ---------- */
 
@@ -296,7 +323,71 @@ export function createFight(d: FightDeps): Fight {
     for (const f of sim.fighters) drawFighter(f.id === YOU ? you : them, f, 0, 0);
   }
 
+  /** Your eyes on or off: both fighters drawn close or as they were, the view's field */
+  function closeOn(on: boolean) {
+    if (on && you && them && !undoYou) {
+      undoYou = drawClose(you.degen.g);
+      undoThem = drawClose(them.degen.g);
+      guard.reset();
+    }
+    if (!on && undoYou) {
+      undoYou();
+      undoThem?.();
+      undoYou = undoThem = null;
+      setCloseCut(null);
+    }
+  }
+  function lens(fov: number) {
+    if (Math.abs(camera.fov - fov) > 0.05) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
+  }
+
+  /** From your eyes: the guard framed for them, the cut round them, the camera at them */
+  function placeEye(dt: number) {
+    const a = youF();
+    const b = themF();
+    if (!a || !b || !you || !them) return;
+    closeOn(true);
+    const bones = you.degen.rig.bones;
+    you.degen.g.updateMatrixWorld(true);
+    them.degen.g.updateMatrixWorld(true);
+    eyeOf(bones, FIGHTER_SCALE, eye, head, up);
+    setCloseCut(head, up, FIGHTER_SCALE);
+    const lying = a.down > 0 || a.getup > 0 || a.ko;
+    downW += ((lying ? 1 : 0) - downW) * damp(lying ? 10 : 4, dt);
+    // The guard (not while you're down: the fall and the get-up are the clip's)
+    toThem.set(b.x - a.x, 0, b.z - a.z);
+    if (toThem.lengthSq() < 1e-6) toThem.set(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+    toThem.normalize();
+    const idle = !a.move && !a.blocking && !a.hurt && !lying;
+    guard.update(bones, FIGHTER_SCALE, eye, toThem, 1 - downW, idle, dt, !!a.blocking && !a.hurt);
+    // Looking at them (their chest and head), or down on the canvas where your own head looks
+    them.degen.rig.bones.head.getWorldPosition(look);
+    look.y -= 0.12;
+    look.sub(eye).normalize();
+    const headFwd = new THREE.Vector3(0, 0, 1).applyQuaternion(bones.head.getWorldQuaternion(new THREE.Quaternion()));
+    look.lerp(headFwd, downW).normalize();
+    // The eye's own motion (fpcam.ts ring: steadier, so their tells read; the jolts do the work)
+    const vx = (a.x - lastV.x) / Math.max(dt, 1e-3);
+    const vz = (a.z - lastV.z) / Math.max(dt, 1e-3);
+    lastV = { x: a.x, z: a.z };
+    const fv = stepFp(fpCam, 'ring', { speed: Math.hypot(vx, vz), top: 0, fwd: 0, side: 0, turn: 0, bob: 0, reduced: d.reduced }, dt);
+    camera.position.copy(eye);
+    camera.position.y += fv.y;
+    camera.lookAt(camAt.copy(eye).add(look));
+    camera.rotateX(fv.pitch);
+    camera.rotateZ(-fv.roll);
+    fov0 ||= camera.fov;
+    lens(EYE_FOV + fv.fov);
+    camReady = false;
+  }
+
   function clear() {
+    closeOn(false);
+    if (fov0) lens(fov0);
+    fov0 = 0;
     for (const f of flashes) for (const { m, mat } of f.saved) m.material = mat;
     flashes.length = 0;
     for (const dm of dmgs) dm.el.remove();
@@ -370,7 +461,9 @@ export function createFight(d: FightDeps): Fight {
           burst(e.x, e.y, e.z, heavy ? 'heavy' : 'hit');
           impact(e.x, e.y, e.z, heavy ? 'heavy' : 'hit');
           const target = e.target === YOU ? you : them;
-          if (target) flash(target);
+          // (from your eyes a hit on you is a jolt: the flash would show the inside of your own head)
+          if (eyeOn && e.target === YOU) joltFp(fpCam, heavy ? 0.9 : 0.45);
+          else if (target) flash(target);
           dmgPop(e.x, e.y, e.z, `-${e.damage}`, `${heavy ? 'is-heavy' : ''} ${e.target === YOU ? 'is-you' : ''}`);
           if (!d.reduced) {
             stop = Math.max(stop, heavy ? 0.07 : 0.03);
@@ -387,6 +480,8 @@ export function createFight(d: FightDeps): Fight {
           break;
         case 'parry':
           d.sfx('parry');
+          // (from your eyes your own parry snaps the view a touch)
+          if (eyeOn && e.who === YOU) joltFp(fpCam, 0.3);
           d.ui.pop(e.who === YOU ? 'Parry!' : 'Parried', e.who === YOU ? 'good' : 'bad');
           break;
         case 'stagger':
@@ -403,6 +498,7 @@ export function createFight(d: FightDeps): Fight {
           break;
         case 'knockdown':
           d.sfx(e.ko ? 'fightKo' : 'thud');
+          if (eyeOn && e.who === YOU) joltFp(fpCam, 1);
           if (!d.reduced) {
             stop = Math.max(stop, e.ko ? 0.14 : 0.08);
             shake = Math.max(shake, e.ko ? 0.42 : 0.28);
@@ -520,6 +616,20 @@ export function createFight(d: FightDeps): Fight {
     get sim() {
       return sim;
     },
+    /** From your eyes (true) or over your shoulder: walk mode remembers which */
+    setView(eyes: boolean) {
+      if (eyes === eyeOn) return;
+      eyeOn = eyes;
+      if (!eyes) {
+        closeOn(false);
+        if (fov0) lens(fov0);
+        fov0 = 0;
+        camReady = false;
+      }
+    },
+    get eyeView() {
+      return eyeOn;
+    },
     start,
     update(dt, inp: FightInput) {
       if (!sim || !you || !them) return;
@@ -583,8 +693,10 @@ export function createFight(d: FightDeps): Fight {
       }
       if (drawDt > 0 || done) tickFlashes();
       tickDmgs(dt);
-      placeStars(a.down > 0 ? a : b.down > 0 ? b : null, elapsed);
-      placeCamera(dt);
+      // (your own stars aren't drawn from your eyes: they'd circle the camera)
+      placeStars(a.down > 0 && !eyeOn ? a : b.down > 0 ? b : null, elapsed);
+      if (eyeOn) placeEye(dt);
+      else placeCamera(dt);
       paintHud();
     },
     exit() {

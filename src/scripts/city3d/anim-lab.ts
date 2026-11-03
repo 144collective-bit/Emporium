@@ -62,7 +62,7 @@ import type { WeaponId } from './combat-sim';
 import { createPost } from './post';
 import { drawClose, setCloseCut } from './fpclose';
 import { newFpCam, stepFp } from './fpcam';
-import { ARMS, eyeOf, fpArms } from './fpbody';
+import { ARMS, createFpGuard, eyeOf, fpArms } from './fpbody';
 
 const SCALE = 0.85;
 /** One tile in centimetres, for the readouts */
@@ -601,6 +601,12 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   let undoClose: (() => void) | null = null;
   /** Hands at the edges from his eyes, eased (fpbody.ts) */
   let eyeArmW = 0;
+  /** The guard framed for the eye (fpbody.ts) */
+  const eyeGuard = createFpGuard();
+  const guardEye = new THREE.Vector3();
+  const guardHead = new THREE.Vector3();
+  const guardUp = new THREE.Vector3();
+  const guardFwd = new THREE.Vector3();
   mount();
 
   // Foot traces: a dot where each ball of the foot was held
@@ -939,6 +945,13 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     // (from his eyes, unarmed and his hands free: the hands at the edges, as walk mode lays them, fpbody.ts)
     eyeArmW += ((cam === 'eye' && !gun && guardAmt < 0.05 && emoteAmt < 0.05 ? 1 : 0) - eyeArmW) * (1 - Math.exp(-6 * dt));
     if (eyeArmW > 1e-3) fpArms(hero.rig.bones, eyeArmW, Math.min(1, Math.max(0, (Math.hypot(move.vx, move.vz) - GAITS.walk) / (GAITS.run - GAITS.walk))));
+    // (from his eyes with the fists up: the guard framed for the eye, as walk mode and the ring have it)
+    if (cam === 'eye' && guardAmt > 1e-3) {
+      hero.g.updateMatrixWorld(true);
+      eyeOf(hero.rig.bones, SCALE, guardEye, guardHead, guardUp);
+      guardFwd.set(Math.sin(move.face + eyeLook.yaw), 0, Math.cos(move.face + eyeLook.yaw));
+      eyeGuard.update(hero.rig.bones, SCALE, guardEye, guardFwd, guardAmt, fists.brawl.clip().id === 'guard', dt);
+    } else eyeGuard.reset();
     hero.g.scale.setScalar(SCALE);
     // The peek: by the program, or Q / E by hand
     const peekWant = p === 'manual' ? (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0) : peekOf(p, pt);

@@ -110,7 +110,7 @@ import { live } from './live-client';
 import type { FeatureId } from './live';
 import { vergeY } from './verges';
 import { drawClose, setCloseCut } from './fpclose';
-import { NEAR, boxClear, eyeOf, fpArms, nearFor } from './fpbody';
+import { NEAR, boxClear, createFpGuard, eyeOf, fpArms, nearFor } from './fpbody';
 import { joltFp, newFpCam, stepFp } from './fpcam';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
@@ -229,13 +229,15 @@ interface Settings {
   sens: number;
   invert: boolean;
   autoAds: AutoAds;
+  /** The Fight Club's view from your eyes (V in the ring; the next fight starts in whichever was used last) */
+  ringFp: boolean;
 }
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off' };
+    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', ringFp: s.ringFp === true };
   } catch {
-    return { sens: 1, invert: false, autoAds: 'off' };
+    return { sens: 1, invert: false, autoAds: 'off', ringFp: false };
   }
 }
 /** How long the sight stays up after the trigger is let go (so single shots don't flicker in and out) */
@@ -324,6 +326,9 @@ export function createWalk(d: WalkDeps) {
   /** The eye's height, steadied a little (under reduced motion, steadied a lot: no bob) */
   let fpEyeY = NaN;
   const fpCam = newFpCam();
+  /** The fists' guard framed for the eye (fpbody.ts, Phase 2), and the way he looks for it */
+  const fpGuard = createFpGuard();
+  const fpLook = new THREE.Vector3();
   /** The near plane first person set last (fpbody.ts `nearFor()`), so it's only put back if it's still ours */
   let fpNear = NEAR.far;
   const fpBoxes: Box[] = [];
@@ -1174,9 +1179,18 @@ export function createWalk(d: WalkDeps) {
     prompt.hidden = true;
     fightDone = false;
     sparWith = setup.kind === 'street' ? setup.partner : null;
+    fight.setView(settings.ringFp);
+    fightViewBtn?.setAttribute('aria-pressed', String(settings.ringFp));
     fight.start(setup);
     canvas.focus({ preventScroll: true });
     d.touched();
+  }
+  /** The ring's view from your eyes or over your shoulder, remembered for the next fight */
+  function ringView(eyes: boolean) {
+    settings.ringFp = eyes;
+    saveSettings();
+    fight?.setView(eyes);
+    fightViewBtn?.setAttribute('aria-pressed', String(eyes));
   }
   /** Out of the ring: Degen stands up outside the ropes */
   function leaveFight() {
@@ -1451,6 +1465,7 @@ export function createWalk(d: WalkDeps) {
       } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
       else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
       else if (down && !e.repeat && c === 'KeyE') fight?.snack();
+      else if (down && !e.repeat && c === 'KeyV') ringView(!settings.ringFp);
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
         else keys.delete(c);
@@ -1758,6 +1773,9 @@ export function createWalk(d: WalkDeps) {
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) blockBtn.addEventListener(ev, () => (fightBtns.block = false));
   }
   root.querySelector('[data-fight-quit]')?.addEventListener('click', () => quitFight());
+  // (Eyes: the ring from your eyes or over your shoulder, as V)
+  const fightViewBtn = root.querySelector<HTMLButtonElement>('[data-fight-view]');
+  fightViewBtn?.addEventListener('click', () => ringView(!settings.ringFp));
   fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
   sensInput.addEventListener('input', () => {
     settings.sens = Number(sensInput.value);
@@ -1918,8 +1936,9 @@ export function createWalk(d: WalkDeps) {
       if (edge(2)) fightBtns.punch = true;
       if (edge(3)) fightBtns.kick = true;
       if (edge(0)) fightBtns.dodge = true;
-      // (the d-pad's up: a snack, in a spar)
+      // (the d-pad's up: a snack, in a spar; the right stick pressed: from your eyes or over your shoulder)
       if (edge(12)) fight?.snack();
+      if (edge(11)) ringView(!settings.ringFp);
       if (edge(9)) quitFight();
       if (pad.x || pad.y || b.some(Boolean)) d.touched();
       pad.prev = b;
@@ -2772,6 +2791,12 @@ export function createWalk(d: WalkDeps) {
       hero.g.updateMatrixWorld(true);
       eyeOf(hero.rig.bones, SCALE, fpEye, fpHead, fpUp);
       setCloseCut(fpHead, fpUp, SCALE, combat.drawn > 0.02);
+      // Fists up: the guard framed for the eye, its offset carried through every strike, the block and the kicks
+      const gw = Math.max(guardAmt, wholeAmt);
+      if (fists && gw > 1e-3) {
+        fpLook.set(Math.sin(lookFace), 0, Math.cos(lookFace));
+        fpGuard.update(hero.rig.bones, SCALE, fpEye, fpLook, gw, fists.brawl.clip().id === 'guard', dt, fists.brawl.blocking);
+      } else fpGuard.reset();
       // (the steps are his head's own; aiming down a sight they're steadied, so the sight stays on target)
       fpEyeY = Number.isNaN(fpEyeY) ? fpEye.y : fpEyeY + (fpEye.y - fpEyeY) * damp(d.reduced ? 3 : 40 - 36 * combat.aimed, dt);
     }
