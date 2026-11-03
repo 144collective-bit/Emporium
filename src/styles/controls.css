@@ -11,6 +11,12 @@
 .walk-prompt-tap {
   display: none;
 }
+/* The Settings tab's touch buttons' row: touch screens only */
+@media (pointer: fine) {
+  .hub-touchset {
+    display: none;
+  }
+}
 .tc-sprite {
   position: absolute;
   width: 0;
@@ -49,13 +55,15 @@
     user-select: none;
   }
   .tc-icon {
-    width: 20px;
-    height: 20px;
+    width: min(20px, calc(var(--tc-d, 58px) * 0.36));
+    height: min(20px, calc(var(--tc-d, 58px) * 0.36));
     fill: currentColor;
     shape-rendering: crispEdges;
   }
+  /* (the word shrinks with a small button: Settings > Button size on a narrow phone) */
   .tc-word {
-    max-width: calc(var(--tc-d, 58px) - 12px);
+    max-width: calc(var(--tc-d, 58px) - 6px);
+    font-size: min(9px, calc(var(--tc-d, 58px) * 0.185));
     overflow: hidden;
     white-space: nowrap;
     text-align: center;
@@ -68,14 +76,26 @@
     font-size: 10px;
   }
   .tc-main .tc-icon {
-    width: 30px;
-    height: 30px;
+    width: min(30px, calc(var(--tc-d, 84px) * 0.36));
+    height: min(30px, calc(var(--tc-d, 84px) * 0.36));
+  }
+  .tc-main .tc-word {
+    font-size: min(10px, calc(var(--tc-d, 84px) * 0.15));
   }
   /* Jump (and Dodge in the ring): green */
   .city .tc-go {
     border-color: #3f8a52;
     background: var(--m-go);
     color: var(--m-cab);
+  }
+  /* See-through as the player set it (Settings > Touch buttons, --tc-alpha from controls.ts), solid while held */
+  .city .tc,
+  .city .walk-stick {
+    opacity: var(--tc-alpha, 1);
+  }
+  .city .tc:active,
+  .city .walk-stick:active {
+    opacity: 1;
   }
   /* Held: brighter, nothing moves */
   .city .tc:active {
@@ -140,10 +160,18 @@
     touch-action: none;
   }
   .city .walk-stick[data-tc] {
-    left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
     bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
     width: var(--tc-d);
     height: var(--tc-d);
+  }
+  .city .walk-stick[data-tc="l"] {
+    right: auto;
+    left: calc(env(safe-area-inset-left) + var(--tc-x) - var(--tc-d) / 2);
+  }
+  /* Left-handed: the stick on the right */
+  .city .walk-stick[data-tc="r"] {
+    left: auto;
+    right: calc(env(safe-area-inset-right) + var(--tc-x) - var(--tc-d) / 2);
   }
   .walk-stick span {
     width: 44%;
@@ -184,7 +212,7 @@
 
 /* ---------- The header on phones (docs/controls-plan.md Phase 3; the owner's picks) ----------
    Upright, one slim row in both modes: the mode's title and its subtitle (cut short with an ellipsis), Dorras,
-   the level, City / Walk as one toggle (only the mode you'd go to, as its icon) and the hub's button; no logo.
+   the level, City / Walk as one toggle (only the mode you'd go to, as its icon) and the hub's button.
    What walking used to add goes elsewhere on every phone, upright or on its side: ammo onto the hotbar's gun
    (its reserve under the count, `.hb-res`), the score into the hub (Profile's lifetime score), the emotes into
    the hub's Online tab (hub.ts moves them); the Online switch and Connect wallet are the hub's Online and
@@ -199,9 +227,6 @@
   }
   .city-head::before {
     content: none;
-  }
-  .city-head-logo {
-    display: none;
   }
   .city-head-id {
     order: 1;
@@ -302,4 +327,181 @@
   border: 0;
   background: none;
   box-shadow: none;
+}
+
+/* ---------- The clear header (docs/controls-plan.md Phase 5; the owner's picks) ----------
+   No bar and no logo on any screen: the title floats over the game with a shadow under it, and the buttons
+   (Dorras, the level, City / Walk, the hub's) keep their own dark fills, so each reads as a chip over a bright
+   street. Touches between them go through to the game. In play (walking, driving, flying, boating, karting,
+   fighting) only the hub's button stays, with the gun's readout and the emotes where they are; the title,
+   Dorras, the level, City / Walk, the Online switch and Connect wallet are in the City view and the hub. */
+.city .city-head {
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.city .city-head::before,
+.city .city-head::after {
+  content: none;
+}
+.city .city-head > :not(.city-head-id) {
+  pointer-events: auto;
+}
+.city .city-head-text :is(b, small) {
+  text-shadow:
+    0 1px 0 #000,
+    0 0 3px #000,
+    0 0 10px #000c;
+}
+.city[data-mode="walk"] .city-head :is(.city-head-id, .city-head-modes, .dorras-pill, .level-pill, .city-online, .nav-account) {
+  display: none;
+}
+.city[data-mode="walk"] .city-head {
+  justify-content: flex-end;
+}
+
+/* ---------- Arranging the buttons (docs/controls-plan.md Phase 6, arrange-ui.ts) ----------
+   Over everything: the city dimmed under a faint grid, every button of the family where it stands (the kit's
+   own look), the hotbar's and the prompt's room marked, a bar along the top (the families, Reset, Done, ×) with
+   a line saying what's kept. A button being dragged lifts; one that can't follow the finger rims in warning. */
+.tc-arr {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background:
+    linear-gradient(#f1efe60a 1px, #0000 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, #f1efe60a 1px, #0000 1px) 0 0 / 24px 24px,
+    #0c0d10c7;
+  color: var(--m-text);
+  touch-action: none;
+}
+/* While it's open the hub it came from and the real controls wait out of sight under it */
+.city.is-arranging :is(.mk-hub, .tc, .walk-stick, .hotbar, .walk-prompt, .city-head) {
+  visibility: hidden;
+}
+.city.is-arranging .tc-arr .tc {
+  visibility: visible;
+}
+.tc-arr-field {
+  position: absolute;
+  inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  z-index: 1;
+  pointer-events: none;
+}
+.tc-arr-field > button {
+  pointer-events: auto;
+}
+.tc-arr .tc {
+  display: grid;
+  right: auto;
+  bottom: auto;
+  cursor: grab;
+}
+.tc-arr .tc.is-dragging,
+.tc-arr .tc-arr-stick.is-dragging {
+  z-index: 3;
+  border-color: var(--m-text);
+  box-shadow:
+    0 0 0 2px #0c0d10cc,
+    0 10px 22px -6px #000;
+  cursor: grabbing;
+}
+.tc-arr .is-blocked {
+  border-color: var(--m-hot) !important;
+}
+.tc-arr-stick {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--tc-d);
+  height: var(--tc-d);
+  padding: 0;
+  border: 2px dashed #3a3e48;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0c0d10cc, #0c0d1088);
+  color: var(--m-dim);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  touch-action: none;
+  cursor: grab;
+}
+.tc-arr-stick span {
+  grid-area: 1 / 1;
+  width: 44%;
+  height: 44%;
+  border: 2px solid var(--m-text);
+  border-radius: 50%;
+  background: #f1efe62e;
+}
+.tc-arr-stick b {
+  grid-area: 1 / 1;
+  align-self: end;
+  margin-bottom: 14%;
+}
+/* The room the hotbar and the door prompt keep */
+.tc-arr-keep {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 2px dashed #3a3e48;
+  color: var(--m-dim);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tc-arr-bar {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 8px);
+  right: calc(env(safe-area-inset-right) + 8px);
+  left: calc(env(safe-area-inset-left) + 8px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.tc-arr-tabs,
+.tc-arr-acts {
+  display: flex;
+  gap: 4px;
+}
+.tc-arr-bar button {
+  min-height: 34px;
+  padding: 0 9px;
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  clip-path: var(--notch-2);
+  color: var(--m-text);
+  font: 700 11px/1 var(--font-pixel);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tc-arr-bar [aria-selected="true"] {
+  border-color: var(--m-coin);
+  color: var(--m-coin);
+}
+.tc-arr-bar .is-go {
+  border-color: var(--m-coin-low);
+  background: var(--m-coin);
+  color: var(--m-cab);
+}
+.tc-arr-bar .tc-arr-x {
+  width: 34px;
+  padding: 0;
+  font-size: 16px;
+}
+.tc-arr-bar button:focus-visible {
+  outline: 2px solid var(--m-coin);
+  outline-offset: 1px;
+}
+.tc-arr-note {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--m-dim);
+  font: 400 11px/1.35 var(--font-body, Inter, sans-serif);
+  text-shadow: 0 1px 2px #000;
 }

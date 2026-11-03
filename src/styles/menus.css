@@ -11,7 +11,8 @@
 .city-start,
 .mk-skin,
 .tc,
-.walk-stick {
+.walk-stick,
+.tc-arr {
   /* The arcade cabinet's palette (the menu plan's; contrast on --m-cab: text 16.9, dim 7.1, coin 12.3, hot 6.3, go 11.2) */
   --m-cab: #0c0d10;
   --m-bezel: #1a1c22;

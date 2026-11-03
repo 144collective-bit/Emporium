@@ -54,6 +54,11 @@ const ogImage = new URL('/og-default.jpg', base);
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    {/* Installed (added to the home screen) it opens with no browser bars: the manifest's display is
+        fullscreen; iPhones and iPads take it as standalone, the status bar in black over nothing */}
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 
     {/* Open Graph & Socials */}
     <meta property="og:type" content="website" />

@@ -1,14 +1,14 @@
 /*
- * The touch controls on the page (docs/controls-plan.md Phases 1 and 2): puts touchlayout.ts's places for the
+ * The touch controls on the page (docs/controls-plan.md Phases 1, 2, 4 and 6): puts touchlayout.ts's places for the
  * screen and the mode (on foot with empty hands or a gun out, at the wheel, in a kart race, in the ring) onto
  * the buttons, the stick, the hotbar and the door prompt as CSS variables (`--tc-x`, `--tc-y`, `--tc-d` and
  * `data-tc` for the side; `--hb-*`; `--pr-*`), which controls.css reads. Run again when the screen turns or
  * resizes, or the mode changes (the root's classes). Touch screens only.
  */
-import { layoutFor, type Action, type Mode, type Spot } from './touchlayout';
+import { DEFAULT_TOUCH, layoutFor, type Action, type Mode, type Spot, type TouchPrefs } from './touchlayout';
 
 /** Each action's button (fists borrow the fight's Punch, Block and Kick) */
-const BUTTONS: Record<Action, string> = {
+export const BUTTONS: Record<Action, string> = {
   jump: '[data-walk-jump]',
   sprint: '[data-walk-run]',
   crouch: '[data-walk-crouch]',
@@ -44,8 +44,10 @@ function put(el: HTMLElement | null, s: Spot) {
   el.style.setProperty('--tc-d', `${s.d}px`);
 }
 
-export function layoutControls(root: HTMLElement) {
-  if (!matchMedia('(pointer: coarse)').matches) return;
+/** Lay the touch controls out, at the player's size, opacity and hand (`prefs`, read each time); `refresh()`
+ *  after they change. Touch screens only (elsewhere it does nothing). */
+export function layoutControls(root: HTMLElement, prefs: () => TouchPrefs = () => DEFAULT_TOUCH) {
+  if (!matchMedia('(pointer: coarse)').matches) return { refresh() {} };
   const q = (s: string) => root.querySelector<HTMLElement>(s);
   // The safe areas, read off a probe padded by them (the CSS adds them back)
   const probe = document.createElement('div');
@@ -59,15 +61,18 @@ export function layoutControls(root: HTMLElement) {
     const h = root.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     if (w <= 0 || h <= 0) return;
     const mode = modeOf(root);
-    const key = `${Math.round(w)}x${Math.round(h)}:${mode}`;
+    const p = prefs();
+    const key = `${Math.round(w)}x${Math.round(h)}:${mode}:${p.size}:${p.left}:${p.alpha}:${JSON.stringify(p.arrange)}`;
     if (key === last) return;
     last = key;
-    const L = layoutFor(w, h, mode);
+    const L = layoutFor(w, h, mode, p);
+    root.style.setProperty('--tc-alpha', String(p.alpha));
     for (const [action, s] of Object.entries(L.buttons) as [Action, Spot][]) put(q(BUTTONS[action]), s);
     put(q('[data-walk-stick]'), L.stick);
     const bar = q('[data-hotbar]');
     if (bar) {
-      bar.style.setProperty('--hb-right', `${L.hotbar.right}px`);
+      bar.dataset.tc = L.hotbar.side;
+      bar.style.setProperty('--hb-edge', `${L.hotbar.edge}px`);
       bar.style.setProperty('--hb-bottom', `${L.hotbar.bottom}px`);
       bar.style.setProperty('--hb-slot', `${L.hotbar.slot}px`);
     }
@@ -82,4 +87,5 @@ export function layoutControls(root: HTMLElement) {
   new ResizeObserver(apply).observe(root);
   // (a gun drawn or put away: combat.ts toggles is-armed on the root)
   new MutationObserver(apply).observe(root, { attributes: true, attributeFilter: ['class'] });
+  return { refresh: apply };
 }
