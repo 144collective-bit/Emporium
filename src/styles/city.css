@@ -472,29 +472,7 @@ body.is-walking .nav {
   background: var(--pulse);
   opacity: 0.75;
 }
-/* Left to right: logo, mode title, (walk tabs), (ammo and score), (Online), City / Walk / Build, settings and menu */
-.city-head-logo {
-  order: 0;
-  flex: none;
-  display: flex;
-  align-items: center;
-  height: 44px;
-  padding-right: 14px;
-  border-right: 1px solid var(--line);
-}
-.city-head-logo picture {
-  height: 100%;
-}
-.city-head-logo-img {
-  display: block;
-  width: auto;
-  height: 100%;
-  filter: drop-shadow(0 2px 4px #000000b3);
-  transition: transform 0.3s var(--ease);
-}
-.city-head-logo:hover .city-head-logo-img {
-  transform: rotate(-2deg) scale(1.04);
-}
+/* Left to right: mode title, (walk tabs), (ammo and score), (Online), City / Walk / Build, settings and menu */
 .city-head-id {
   order: 1;
   display: flex;

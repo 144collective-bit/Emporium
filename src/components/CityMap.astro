@@ -209,11 +209,9 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   {/* View settings, only while the 3D city is up */}
 
   {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk switch.
-       Its title and subtitle are painted by head.ts. */}
+       Its title and subtitle are painted by head.ts. Clear over the game, no logo (docs/controls-plan.md
+       Phase 5); in play only the hub's button and the gun's readout stay (controls.css). */}
   <header class="city-head mk-skin" data-city-head>
-    <a href="/" class="city-head-logo" aria-label="The Trenches, home">
-      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[80, 160, 240]} sizes="80px" alt="" loading="eager" class="city-head-logo-img" />
-    </a>
     <div class="city-head-id">
       <p class="city-head-text"><b data-head-title>The Trenches</b><small data-head-sub>Loading the city</small></p>
     </div>

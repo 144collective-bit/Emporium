@@ -1162,7 +1162,7 @@
   .walk-pill-text {
     display: none;
   }
-  /* Settings and Menu as icons (their names stay for screen readers), and no logo while walking */
+  /* Settings and Menu as icons (their names stay for screen readers) */
   .head-btn-text {
     position: absolute;
     width: 1px;
@@ -1173,9 +1173,6 @@
   }
   .city-head .hub-btn {
     padding: 0 11px;
-  }
-  .city[data-mode="walk"] .city-head-logo {
-    display: none;
   }
   /* Out of walk mode there's room for all three mode names */
   .city:not([data-mode="walk"]) .city-head .city-mode-btn .city-mode-label {
@@ -1769,11 +1766,3 @@
   display: none;
 }
 
-/* The narrowest phones: The Trenches' logo is wider than it is tall, so it comes down a little to leave the
-   mode's title room beside it */
-@media (max-width: 380px) {
-  .city-head-logo {
-    height: 28px;
-    padding-right: 8px;
-  }
-}

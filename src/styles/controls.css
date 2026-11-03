@@ -212,7 +212,7 @@
 
 /* ---------- The header on phones (docs/controls-plan.md Phase 3; the owner's picks) ----------
    Upright, one slim row in both modes: the mode's title and its subtitle (cut short with an ellipsis), Dorras,
-   the level, City / Walk as one toggle (only the mode you'd go to, as its icon) and the hub's button; no logo.
+   the level, City / Walk as one toggle (only the mode you'd go to, as its icon) and the hub's button.
    What walking used to add goes elsewhere on every phone, upright or on its side: ammo onto the hotbar's gun
    (its reserve under the count, `.hb-res`), the score into the hub (Profile's lifetime score), the emotes into
    the hub's Online tab (hub.ts moves them); the Online switch and Connect wallet are the hub's Online and
@@ -227,9 +227,6 @@
   }
   .city-head::before {
     content: none;
-  }
-  .city-head-logo {
-    display: none;
   }
   .city-head-id {
     order: 1;
@@ -330,4 +327,36 @@
   border: 0;
   background: none;
   box-shadow: none;
+}
+
+/* ---------- The clear header (docs/controls-plan.md Phase 5; the owner's picks) ----------
+   No bar and no logo on any screen: the title floats over the game with a shadow under it, and the buttons
+   (Dorras, the level, City / Walk, the hub's) keep their own dark fills, so each reads as a chip over a bright
+   street. Touches between them go through to the game. In play (walking, driving, flying, boating, karting,
+   fighting) only the hub's button stays, with the gun's readout and the emotes where they are; the title,
+   Dorras, the level, City / Walk, the Online switch and Connect wallet are in the City view and the hub. */
+.city .city-head {
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.city .city-head::before,
+.city .city-head::after {
+  content: none;
+}
+.city .city-head > :not(.city-head-id) {
+  pointer-events: auto;
+}
+.city .city-head-text :is(b, small) {
+  text-shadow:
+    0 1px 0 #000,
+    0 0 3px #000,
+    0 0 10px #000c;
+}
+.city[data-mode="walk"] .city-head :is(.city-head-id, .city-head-modes, .dorras-pill, .level-pill, .city-online, .nav-account) {
+  display: none;
+}
+.city[data-mode="walk"] .city-head {
+  justify-content: flex-end;
 }
