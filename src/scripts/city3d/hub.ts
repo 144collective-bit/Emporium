@@ -123,13 +123,14 @@ export function createHub(root: HTMLElement) {
     e.stopPropagation();
     close();
   });
-  // A tap outside it closes it (not on its own buttons in the header, nor on the wallet's card)
+  // A tap outside it closes it (not on its own buttons in the header, nor on the wallet's card, nor on the
+  // touch buttons' arranging screen opened from its Settings, which it waits under)
   document.addEventListener(
     'pointerdown',
     (e) => {
       if (!shown) return;
       const t = e.target as Element;
-      if (el.contains(t) || t.closest?.('[data-hub-open], [data-hub-tab], [data-hub-keep], [data-account], [data-char]')) return;
+      if (el.contains(t) || t.closest?.('[data-hub-open], [data-hub-tab], [data-hub-keep], [data-account], [data-char], [data-arrange]')) return;
       close();
     },
     true

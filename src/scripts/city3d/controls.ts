@@ -1,5 +1,5 @@
 /*
- * The touch controls on the page (docs/controls-plan.md Phases 1 and 2): puts touchlayout.ts's places for the
+ * The touch controls on the page (docs/controls-plan.md Phases 1, 2, 4 and 6): puts touchlayout.ts's places for the
  * screen and the mode (on foot with empty hands or a gun out, at the wheel, in a kart race, in the ring) onto
  * the buttons, the stick, the hotbar and the door prompt as CSS variables (`--tc-x`, `--tc-y`, `--tc-d` and
  * `data-tc` for the side; `--hb-*`; `--pr-*`), which controls.css reads. Run again when the screen turns or
@@ -8,7 +8,7 @@
 import { DEFAULT_TOUCH, layoutFor, type Action, type Mode, type Spot, type TouchPrefs } from './touchlayout';
 
 /** Each action's button (fists borrow the fight's Punch, Block and Kick) */
-const BUTTONS: Record<Action, string> = {
+export const BUTTONS: Record<Action, string> = {
   jump: '[data-walk-jump]',
   sprint: '[data-walk-run]',
   crouch: '[data-walk-crouch]',
@@ -62,7 +62,7 @@ export function layoutControls(root: HTMLElement, prefs: () => TouchPrefs = () =
     if (w <= 0 || h <= 0) return;
     const mode = modeOf(root);
     const p = prefs();
-    const key = `${Math.round(w)}x${Math.round(h)}:${mode}:${p.size}:${p.left}:${p.alpha}`;
+    const key = `${Math.round(w)}x${Math.round(h)}:${mode}:${p.size}:${p.left}:${p.alpha}:${JSON.stringify(p.arrange)}`;
     if (key === last) return;
     last = key;
     const L = layoutFor(w, h, mode, p);

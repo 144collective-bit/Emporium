@@ -360,3 +360,148 @@
 .city[data-mode="walk"] .city-head {
   justify-content: flex-end;
 }
+
+/* ---------- Arranging the buttons (docs/controls-plan.md Phase 6, arrange-ui.ts) ----------
+   Over everything: the city dimmed under a faint grid, every button of the family where it stands (the kit's
+   own look), the hotbar's and the prompt's room marked, a bar along the top (the families, Reset, Done, ×) with
+   a line saying what's kept. A button being dragged lifts; one that can't follow the finger rims in warning. */
+.tc-arr {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background:
+    linear-gradient(#f1efe60a 1px, #0000 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, #f1efe60a 1px, #0000 1px) 0 0 / 24px 24px,
+    #0c0d10c7;
+  color: var(--m-text);
+  touch-action: none;
+}
+/* While it's open the hub it came from and the real controls wait out of sight under it */
+.city.is-arranging :is(.mk-hub, .tc, .walk-stick, .hotbar, .walk-prompt, .city-head) {
+  visibility: hidden;
+}
+.city.is-arranging .tc-arr .tc {
+  visibility: visible;
+}
+.tc-arr-field {
+  position: absolute;
+  inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  z-index: 1;
+  pointer-events: none;
+}
+.tc-arr-field > button {
+  pointer-events: auto;
+}
+.tc-arr .tc {
+  display: grid;
+  right: auto;
+  bottom: auto;
+  cursor: grab;
+}
+.tc-arr .tc.is-dragging,
+.tc-arr .tc-arr-stick.is-dragging {
+  z-index: 3;
+  border-color: var(--m-text);
+  box-shadow:
+    0 0 0 2px #0c0d10cc,
+    0 10px 22px -6px #000;
+  cursor: grabbing;
+}
+.tc-arr .is-blocked {
+  border-color: var(--m-hot) !important;
+}
+.tc-arr-stick {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--tc-d);
+  height: var(--tc-d);
+  padding: 0;
+  border: 2px dashed #3a3e48;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0c0d10cc, #0c0d1088);
+  color: var(--m-dim);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  touch-action: none;
+  cursor: grab;
+}
+.tc-arr-stick span {
+  grid-area: 1 / 1;
+  width: 44%;
+  height: 44%;
+  border: 2px solid var(--m-text);
+  border-radius: 50%;
+  background: #f1efe62e;
+}
+.tc-arr-stick b {
+  grid-area: 1 / 1;
+  align-self: end;
+  margin-bottom: 14%;
+}
+/* The room the hotbar and the door prompt keep */
+.tc-arr-keep {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 2px dashed #3a3e48;
+  color: var(--m-dim);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tc-arr-bar {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 8px);
+  right: calc(env(safe-area-inset-right) + 8px);
+  left: calc(env(safe-area-inset-left) + 8px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.tc-arr-tabs,
+.tc-arr-acts {
+  display: flex;
+  gap: 4px;
+}
+.tc-arr-bar button {
+  min-height: 34px;
+  padding: 0 9px;
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  clip-path: var(--notch-2);
+  color: var(--m-text);
+  font: 700 11px/1 var(--font-pixel);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tc-arr-bar [aria-selected="true"] {
+  border-color: var(--m-coin);
+  color: var(--m-coin);
+}
+.tc-arr-bar .is-go {
+  border-color: var(--m-coin-low);
+  background: var(--m-coin);
+  color: var(--m-cab);
+}
+.tc-arr-bar .tc-arr-x {
+  width: 34px;
+  padding: 0;
+  font-size: 16px;
+}
+.tc-arr-bar button:focus-visible {
+  outline: 2px solid var(--m-coin);
+  outline-offset: 1px;
+}
+.tc-arr-note {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--m-dim);
+  font: 400 11px/1.35 var(--font-body, Inter, sans-serif);
+  text-shadow: 0 1px 2px #000;
+}

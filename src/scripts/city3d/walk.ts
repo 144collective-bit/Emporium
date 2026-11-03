@@ -444,7 +444,7 @@ export function createWalk(d: WalkDeps) {
     });
   paintAutoAds();
   // The touch controls' places: the same slots in every mode, at the player's size, opacity and hand
-  // (touchlayout.ts, docs/controls-plan.md); Settings > On foot > Touch buttons sets them
+  // (touchlayout.ts, docs/controls-plan.md); Settings > On foot > Touch buttons sets them, and Arrange buttons moves them
   const controls = layoutControls(root, () => settings.touch);
   const sizeBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-tc-size]')];
   const alphaInput = root.querySelector<HTMLInputElement>('[data-tc-alpha]');
@@ -463,6 +463,10 @@ export function createWalk(d: WalkDeps) {
   for (const b of sizeBtns) b.addEventListener('click', () => setTouch({ size: b.dataset.tcSize as TouchSize }));
   alphaInput?.addEventListener('input', () => setTouch({ alpha: Number(alphaInput.value) }));
   leftInput?.addEventListener('change', () => setTouch({ left: leftInput.checked }));
+  // Arrange buttons (Phase 6): its own chunk, loaded the first time it's opened
+  root.querySelector('[data-tc-arrange]')?.addEventListener('click', () => {
+    void import('./arrange-ui').then(({ openArrange }) => openArrange({ root, prefs: () => settings.touch, save: (arrange) => setTouch({ arrange }) }));
+  });
   paintTouch();
 
   const SPAWN = new THREE.Vector3(WALK_SPAWN.x, SLAB, WALK_SPAWN.z);
