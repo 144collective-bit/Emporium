@@ -20,6 +20,7 @@ import { BX as LIBERTY_X, DECK_HALF } from './liberty';
 import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
 import { DRESS } from './outerdress3d';
+import { RING_LAMPS } from './ringstreet';
 import { COVER } from './palette';
 
 const INK = toon('#1b1830');
@@ -266,6 +267,8 @@ function parks(b: Batch, crowd: Idle[], low: boolean) {
   }
   // Phones plant every other one (the lawn trees kept off the walks, beds and benches: outerdress.ts)
   DRESS.trees.forEach(([x, z], i) => (!low || i % 2 === 0) && addTree(x, z, 0.85 + ((i * 53) % 10) / 22, i % 3 === 0));
+  // Downtown's ring avenue lit on both sidewalks alike (ringstreet.ts, docs/blend-plan.md Phase 6b)
+  for (const [x, z, ry] of RING_LAMPS) addLamp(x, z, ry);
 }
 
 /** Lamps along the town side of each bend, every so often, clear of the roads it crosses */

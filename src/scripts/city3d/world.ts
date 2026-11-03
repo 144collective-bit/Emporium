@@ -29,6 +29,7 @@ import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { lampTone } from './lampmix';
+import { HEDGE as RING_HEDGE, RING_MEDIAN } from './ringstreet';
 import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF } from './waterfront';
@@ -1033,6 +1034,31 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
         b.box(r.c - MEDIAN / 2, 0, a0, MEDIAN, SLAB, a1 - a0, kerbTop);
         b.box(r.c - MEDIAN / 2 + 0.06, SLAB, a0, MEDIAN - 0.12, 0.005, a1 - a0, median);
       }
+  // Downtown's ring avenue: Uptown's planting carried on along its median (ringstreet.ts, docs/blend-plan.md Phase 6b):
+  // a clipped hedge, and slim columnar trees along it (but under the el)
+  {
+    const hedge = toon('#2c6a3c');
+    const hedgeTop = toon('#3a8a4e');
+    const column = toon('#24603a');
+    const trunk = toon('#5a4232');
+    const y = SLAB + 0.005;
+    const stem = new THREE.CylinderGeometry(0.05, 0.06, 0.7, 6, 1, true);
+    const crown = new THREE.SphereGeometry(0.26, 8, 6).scale(1, 4.2, 1);
+    const stems: THREE.Matrix4[] = [];
+    const crowns: THREE.Matrix4[] = [];
+    for (const r of RING_MEDIAN) {
+      const box = (from: number, to: number, y0: number, h: number, w: number, m: THREE.Material) =>
+        r.alongX ? b.box(from, y0, r.c - w / 2, to - from, h, w, m) : b.box(r.c - w / 2, y0, from, w, h, to - from, m);
+      box(r.a, r.b, y, RING_HEDGE.h, RING_HEDGE.w, hedge);
+      box(r.a + 0.02, r.b - 0.02, y + RING_HEDGE.h, 0.006, RING_HEDGE.w - 0.04, hedgeTop);
+      for (const v of r.trees) {
+        const [x, z] = r.alongX ? [v, r.c] : [r.c, v];
+        stems.push(new THREE.Matrix4().makeTranslation(x, y + RING_HEDGE.h + 0.25, z));
+        crowns.push(new THREE.Matrix4().makeTranslation(x, y + RING_HEDGE.h + 1.5, z));
+      }
+    }
+    b.instances(stem, trunk, stems).instances(crown, column, crowns);
+  }
 
   // Bridges over the river: the road and its sidewalks, with rails, on a concrete deck over piers down into the water
   // (river plan step 2: the water lies WATER_Y under the streets). The ring highway's two; Harbour Bridge, the east
