@@ -504,6 +504,24 @@ For each seam in the seam map, the treatment it needs:
   (`lampTone()`); The Trenches' dead and flickering lamps stay its own.
   world.ts's `buildLamps()` takes each lamp's tone from it. No new draws;
   the boot 694.7 KB.
+- **6b, the first seam (built): downtown and the town across the ring
+  avenue.** Mapped, the ring's north, west and east sides had no lamps and no
+  street trees at all, only four bus shelters and two alley mouths: downtown
+  built to its sidewalk on one side, the town's pads and flower beds on the
+  other, a bare kerb between. `ringstreet.ts` (DOM-free, tested in
+  `tests/ringstreet.test.ts`): the same white town lamp on both sidewalks
+  (`RING_LAMPS`, 42: by the kerb, `KERB_IN` in, so the walkers pass inside
+  them; spread evenly about every `LAMP_GAP` over each stretch between
+  junctions, `JUNCTION_CLEAR` from them; clear of the shelters, the alleys'
+  mouths, the metro's door and anything solid; the south avenue's river side
+  left to the promenade's lamps), and Uptown's planted median carried on round
+  downtown (`RING_MEDIAN`: the bank avenue's clipped hedge and slim columnar
+  trees, `HEDGE`, cut `HEDGE_CLEAR` short of every crossing street with a
+  diagonal's slant reckoned in, round the el's pillars, no tree under the el).
+  Street trees by the sidewalks were tried and left out: downtown is built to
+  its sidewalk, and the town's frontage is its pads with flower beds between.
+  Added at the boot (the lamps with the town's in neighbourhoods.ts) and drawn
+  with the medians (world.ts); no new draws.
 - **Stepped heights:** where towers meet low-rise (Uptown's edge by
   Westlake and downtown, Uptown North by the mall), the edge lots step down;
   where The Trenches meets the south row, its tenements step to the row's
