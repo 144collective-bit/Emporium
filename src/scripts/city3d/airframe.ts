@@ -59,8 +59,29 @@ export const BIZ_BODY: Station[] = [
   [-4.2, 0.13, BIZ_H + 0.4],
   [-4.32, 0.02, BIZ_H + 0.42],
 ];
-/** The prop plane's centre height */
+/** The prop plane's centre height and its fuselage (the cowl low enough to see the horizon over from the seat) */
 export const PROP_H = 1.15;
+export const PROP_BODY: Station[] = [
+  [2.55, 0.17, PROP_H - 0.04],
+  [2.4, 0.42, PROP_H - 0.05],
+  [1.7, 0.47, PROP_H - 0.04, 1.05],
+  [0.4, 0.58, PROP_H + 0.08, 1.2],
+  [-0.7, 0.5, PROP_H + 0.08, 1.15],
+  [-1.8, 0.3, PROP_H + 0.15],
+  [-2.6, 0.12, PROP_H + 0.25],
+  [-2.7, 0.02, PROP_H + 0.26],
+];
+/** The helicopter's centre height and its cabin */
+export const HELI_H = 1.25;
+export const HELI_BODY: Station[] = [
+  [1.85, 0.06, HELI_H - 0.12],
+  [1.7, 0.45, HELI_H - 0.08, 1.05],
+  [1.2, 0.78, HELI_H, 1.08],
+  [0.2, 0.86, HELI_H + 0.05, 1.1],
+  [-0.8, 0.7, HELI_H + 0.12, 1.05],
+  [-1.3, 0.38, HELI_H + 0.25],
+  [-1.45, 0.05, HELI_H + 0.3],
+];
 
 /** The belly fairing under the wing's root (an ellipsoid: centre and half sizes), where the mains fold */
 export interface Fairing {

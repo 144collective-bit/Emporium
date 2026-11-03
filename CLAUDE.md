@@ -1740,8 +1740,24 @@ it and has been retired completely. Build only on what's here.
   the near plane in, his body drawn, looking back to the wake), the wheel,
   the lever and the needles moving, and the spray beading on the
   windscreen and running off (`dropsTex()` in boat.ts, none under reduced
-  motion). The boot is at 689.6 KB; its budget was raised to 700 on the
-  owner's go ("raise the budget when needed") for the cockpits.
+  motion). Phase 6 (the cockpits) is built: the numbers are `cockpits.ts`
+  (DOM-free, tested in `tests/cockpits.test.ts`: `COCKPITS`, each
+  aircraft's lined cabin and its windows (`holes`), floor, seat, panel and
+  gauges, controls, pedals and view; `controlsOf()`, `handsOf()`,
+  `feetOf()`, `pilotPose()`: his hands within 1.5 cm of the controls, his
+  feet on the pedals, his head under the roof, the horizon over the nose),
+  the bodies' stations airframe.ts's (`PROP_BODY`, the cowl lowered for
+  the view; `HELI_BODY`; `BIZ_BODY`); drawn by `cockpit3d.ts` (a chunk
+  fetched the first time V takes the seat: the lining with its windows,
+  glass in the FX layer, the panel, working gauges (the attitude's ball,
+  the compass card, needles), the Neon Dart's two live screens, the
+  Sky Hopper's yoke, the Neon Dart's side stick, the Whirlybird's cyclic
+  and collective, the quadrants, pedals, the gear and flaps' levers, the
+  rotor's shadow, the seated pilot); the aircraft's glazing is its own
+  part (aircraft.ts role `glass`, `fleet.glass()`), hidden from the seat;
+  fly.ts lays the seat's eye (seateye.ts `seatEye('plane')`) on the camera,
+  banking with it, the near plane in. The boot is at 689.6 KB; its budget
+  was raised to 700 on the owner's go ("raise the budget when needed").
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
@@ -3268,7 +3284,8 @@ it and has been retired completely. Build only on what's here.
   colours, a made-up airline, never a real one, maker or badge; a
   high-wing prop plane; a helicopter). Each model is a few parts by role
   (body, accent livery colour, neon nav lights, blinking strobe, gear that
-  folds away, decal, spinning props and rotors with blur discs);
+  folds away, decal, the glazing (`glass`, hidden from your own cockpit),
+  spinning props and rotors with blur discs);
   `createFleet()` makes one instanced mesh per part for each kind, culled
   as a fleet. Under reduced motion every aircraft stands parked.
 - The skyline ring leaves out any tower within 80 of the runway's line
@@ -3301,7 +3318,9 @@ it and has been retired completely. Build only on what's here.
     (V), the readout (`data-fly-hud`: speed, height, throttle, state), the
     engine (`aero()` in `sound.ts`), getting out only on the ground and
     stopped (`exit()`), `abandon()` home to the hangar when walk mode ends
-    in the air. Flying sets `is-flying` on top of `is-driving` (the touch
+    in the air. V's second view is the pilot's seat (the first-person
+    plan's Phase 6: `cockpits.ts`, `cockpit3d.ts`, above under First
+    person). Flying sets `is-flying` on top of `is-driving` (the touch
     layout is the car's: the stick turns and climbs, the pedals read
     Faster / Slower) and `data-plane` (the header reads "Flying ·
     <aircraft>"); styles in `src/styles/fly.css`. Controls: W / S throttle,
@@ -4335,7 +4354,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground and the blocks' edges (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`), the karts' frames and their driver (`kartframe.ts`), the hire boat's helm (`helm.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground and the blocks' edges (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`), the karts' frames and their driver (`kartframe.ts`), the hire boat's helm (`helm.ts`), the aircraft's cockpits (`cockpits.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

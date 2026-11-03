@@ -46,7 +46,7 @@ hold.
   hidden; no wheel, hands or throttle in view. (Phase 5 built it from his
   eyes.)
 - **Your aircraft** (`fly.ts`): the nose camera sits ahead of the nose
-  (`NOSE`); no cockpit.
+  (`NOSE`); no cockpit. (Phase 6 built a cockpit for each.)
 - **Karts** (`kart.ts`): the chase camera only.
 
 ## The approach
@@ -388,20 +388,61 @@ hold.
   river's chunks. The boot's budget was raised to 700 KB on the owner's go
   for the next phases.
 
-### Phase 6: the cockpits
+### Phase 6: the cockpits (built)
 
-- **Sky Hopper** (prop): the panel's round gauges (airspeed, altimeter,
-  attitude, heading, climb, revs) working, the yoke under his hands, the
-  throttle, the rudder pedals at his feet, the prop's blur through the
-  windscreen, the frame and the struts.
-- **Neon Dart** (bizjet): screens (the attitude and the speed and height
-  tapes, the map), the stick, the throttle quadrant, the gear lever moving
-  with the gear (airframe.ts `GEAR_TIME`), the flaps' lever.
-- **Whirlybird** (heli): the cyclic, the collective and the pedals, the
-  chin bubble at his feet, the rotor's shadow flickering over the panel.
-- Seated Degen with his hands on the controls as the sim moves them
-  (`stepAirframe()`); the cockpit replaces the nose camera's spot. Night:
-  the panels lit under the bloom's threshold.
+- **The cockpits as numbers** (`cockpits.ts`, DOM-free, tested in
+  `tests/cockpits.test.ts`; model space, +x the nose, +z the right wing):
+  each aircraft's cabin (its body's stations, now `PROP_BODY` and
+  `HELI_BODY` in airframe.ts beside `BIZ_BODY`, and the stretch that's
+  lined), the windows cut in the lining (`holes`), the floor and the foot
+  well, the seat, the panel and its gauges or screens, the controls, the
+  pedals and the view (`view`: down, fov). `controlsOf()` turns the eased
+  input into where each control stands, `handsOf()` / `feetOf()` where his
+  hands and feet go, `pilotPose()` seats him with them there (`reachArm()`,
+  `reachLeg()`). The test holds his hands within 1.5 cm and his feet within
+  2.5 cm at every turn, climb and throttle, his head under the roof (the
+  Sky Hopper's under its wing), his knees clear of the stick, the column
+  and the levers, the horizon clear over the nose from his eyes and every
+  gauge in view, and each control moving the right way.
+- **The Sky Hopper**: the yoke in his left hand (back to climb, turned
+  for the turn), the throttle quadrant by his right, six round gauges and a
+  rev counter (the speed, the attitude's ball rolling and sliding with the
+  pitch, the altimeter a turn every 100 m, the turn needle, the compass
+  card, the climb), a headliner under the wing, side windows under it, the
+  prop's blur through the screen. Its cowl was lowered a little
+  (`PROP_BODY`) so the horizon shows over the nose from the seat.
+- **The Neon Dart**: two screens drawn live ten times a second (the
+  attitude with its speed and height tapes and the heading; the map,
+  heading up, with north's arrow and the gear's three lights), the side
+  stick on its console by his right hand (a centre stick couldn't be both
+  clear of his knees and in reach in that cabin), twin throttles by his
+  left, the gear lever (its three lights green with the gear down) and the
+  flaps' lever moving with the gear (`GEAR_TIME`).
+- **The Whirlybird**: the canopy all round the front and the chin windows
+  at his feet either side of the keel, the cyclic between his knees in his
+  right hand (forward to go forward, over to turn), the collective by his
+  left (up to climb), the pedals, five gauges on a pedestal, the rotor's
+  shadow flickering over the pedestal and the floor by day (not under
+  reduced motion); a blade overhead through the canopy while it spools.
+- **Drawn** by `cockpit3d.ts`, a chunk fetched the first time you take
+  the seat (V; the old nose camera stands in until it's in): the lining
+  wound to face in with the windows left open, the frames round them, the
+  glass see-through in the FX layer, the bulkhead, the floor, the seat,
+  the panel cut to the cabin's section with its glare shield, the gauges'
+  faces lit faintly by day and fully at night (under the bloom), the
+  controls as groups moved each frame, the pilot (walk mode's Degen in what
+  he wears). The aircraft's glazing is its own part now (aircraft.ts role
+  `glass`, `fleet.glass()`), hidden while you're in the seat: the shell's
+  own faces point away from you inside, so the lining's windows look out
+  through it.
+- **From his eyes** (fly.ts, seateye.ts `seatEye('plane')`): his head
+  folded away, the near plane in (0.08), the view banking with the
+  aircraft, fpcam.ts's lurch and lead on top, the field of view per
+  aircraft widening a little with speed; looking round (the look) shows
+  the cabin and out of its side windows.
+- **Not done**: the Sky Hopper's door-side window is glass, not a door
+  that opens; the controls' reach was worked out for one pilot in the
+  middle of each cabin (none of them has a second seat).
 
 ### Phase 7: checked
 

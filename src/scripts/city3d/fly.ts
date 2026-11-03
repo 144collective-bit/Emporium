@@ -12,13 +12,22 @@
  * - It's drawn as a fleet of one (aircraft.ts createFleet), so the props and
  *   rotor spin, the gear folds and the beacons blink like the airport's own.
  * - Cameras (V): a chase camera that swings in behind (look around with the
- *   mouse, a drag or the right stick; it settles back) and a nose camera
- *   that banks with it.
+ *   mouse, a drag or the right stick; it settles back) and the pilot's seat
+ *   (docs/firstperson-plan.md Phase 6: cockpit3d.ts, a chunk fetched the
+ *   first time; the nose camera stands in until it's in): his own eyes over
+ *   the panel, his hands and feet on the controls as you fly, the glazing
+ *   hidden so the cabin's windows look out, the view banking with it.
  * - It bumps softly off the airport's aircraft (their spheres, flight-sim.ts
  *   HULLS) and everything solid; nothing is ever damaged.
  */
 import * as THREE from 'three';
-import { createFleet, type Fleet, type ModelKind } from './aircraft';
+import { createFleet, poseMatrix, type Fleet, type ModelKind } from './aircraft';
+import { GEAR_TIME } from './airframe';
+import type { Outfit } from './character';
+import { COCKPITS, PILOT_SCALE, atRest } from './cockpits';
+import type { CockpitView } from './cockpit3d';
+import type { FpView } from './fpcam';
+import { seatEye } from './seateye';
 import { HANGAR_ROOF, HANGAR_SPOT, type AircraftKind, type Pose } from './airfield';
 import type { Sfx } from './combat';
 import { CEILING, TUNES, canLeave, flyReach, hullAt, newFlight, stepFly, type FlyInput, type FlyState, type FlyTune } from './flight-sim';
@@ -47,6 +56,11 @@ export interface FlyDeps {
   /** The engine's voice: revs 0..1, negative for off */
   aero(kind: 'prop' | 'jet' | 'heli', revs: number): void;
   bounds: Box;
+  /** What Degen wears (he's the pilot), how dark it is (0 day .. 1 night), the phone tier, reduced motion */
+  outfit(): Outfit;
+  night(): number;
+  low: boolean;
+  reduced: boolean;
 }
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -115,6 +129,38 @@ export function createFly(d: FlyDeps) {
   let flying = false;
   let tune: FlyTune = TUNES[craft.id];
   let noseCam = false;
+  // The pilot's seat: the cockpit (loaded the first time), his eyes' motion, the controls eased from the input
+  let cockpit: CockpitView | null = null;
+  let loading = false;
+  const eye = seatEye('plane');
+  const nobody = new THREE.Vector3();
+  const ctl = atRest();
+  let near0 = camera.near;
+  const ROOM = new THREE.Matrix4();
+  function loadCockpit() {
+    if (loading || (cockpit && cockpit.id === craft.id)) return;
+    loading = true;
+    void import('./cockpit3d')
+      .then(({ createCockpit }) => {
+        loading = false;
+        cockpit?.dispose();
+        cockpit = createCockpit(craft.id, d.outfit(), { low: d.low, reduced: d.reduced });
+        cockpit.group.visible = false;
+        cockpit.group.matrixAutoUpdate = false;
+        d.scene.add(cockpit.group);
+      })
+      .catch(() => (loading = false));
+  }
+  /** Out of the seat's view: the glazing back, the cockpit hidden, his head his own, the near plane back */
+  function seatOff() {
+    craft.fleet.glass(true);
+    if (cockpit) cockpit.group.visible = false;
+    eye.off();
+    if (camera.near !== near0) {
+      camera.near = near0;
+      camera.updateProjectionMatrix();
+    }
+  }
   let camYaw = 0;
   let lookYaw = 0;
   let lookPitch = 0;
@@ -232,6 +278,9 @@ export function createFly(d: FlyDeps) {
       lookYaw = lookPitch = 0;
       camReady = false;
       fov = camera.fov;
+      near0 = camera.near;
+      Object.assign(ctl, atRest(), { gear: s.gear ? 1 : 0 });
+      if (noseCam) loadCockpit();
       hud.hidden = false;
       root.classList.add('is-driving', 'is-flying');
       root.dataset.plane = FLY[craft.id].name;
@@ -243,6 +292,7 @@ export function createFly(d: FlyDeps) {
     exit() {
       if (!flying || !canLeave(craft.state)) return null;
       flying = false;
+      seatOff();
       const s = craft.state;
       s.speed = s.vx = s.vz = s.vy = 0;
       s.power = 0;
@@ -273,6 +323,7 @@ export function createFly(d: FlyDeps) {
     abandon(p: MyPlane) {
       if (!flying) return;
       flying = false;
+      seatOff();
       hud.hidden = true;
       root.classList.remove('is-driving', 'is-flying');
       delete root.dataset.plane;
@@ -284,6 +335,8 @@ export function createFly(d: FlyDeps) {
     toggleView() {
       noseCam = !noseCam;
       camReady = false;
+      if (noseCam) loadCockpit();
+      else seatOff();
     },
     look(dx: number, dy: number) {
       lookYaw = THREE.MathUtils.clamp(lookYaw - dx, -2.6, 2.6);
@@ -313,6 +366,13 @@ export function createFly(d: FlyDeps) {
         shake = Math.min(0.3, hit * 0.03);
       }
       pose(craft, clock, dt, { turn: inp.turn, climb: inp.climb });
+      // The controls as his hands move them: eased after the input, the throttle as the sim has it, the gear as it folds
+      const ease = Math.min(1, dt * 8);
+      ctl.turn += (inp.turn - ctl.turn) * ease;
+      ctl.climb += (inp.climb - ctl.climb) * ease;
+      ctl.fore += (inp.throttle - ctl.fore) * ease;
+      ctl.power = T.kind === 'plane' ? s.power : s.spool;
+      ctl.gear = THREE.MathUtils.clamp(ctl.gear + (s.gear ? 1 : -1) * (dt / GEAR_TIME), 0, 1);
 
       // Readout: speed, height over the ground, the lever (or the rotor), and what it's doing
       const ground = d.groundAt(s.x, s.z);
@@ -336,7 +396,26 @@ export function createFly(d: FlyDeps) {
       const yaw = camYaw + lookYaw;
       const fx = Math.cos(yaw);
       const fz = -Math.sin(yaw);
-      if (noseCam) {
+      const seat = noseCam && cockpit && cockpit.id === craft.id ? cockpit : null;
+      if (noseCam && !seat) loadCockpit();
+      let fe: FpView | null = null;
+      if (seat) {
+        // From the pilot's seat: the cockpit where the aircraft is, his hands and feet on the controls, his own eyes
+        craft.fleet.glass(false);
+        seat.group.visible = true;
+        seat.group.matrix.copy(poseMatrix({ x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: s.pitch, roll: s.roll, v: s.speed, ground: s.ground, gear: s.gear, power: s.spool }, ROOM));
+        seat.group.updateMatrixWorld(true);
+        seat.update(s, ctl, dt, clock, { alt: (s.y - ground) * METRES, kmh: Math.hypot(s.vx, s.vz) * KMH, top: T.top * KMH, climb: Math.max(T.climb, 3), sun: 1 - d.night() }, lookYaw * 0.3);
+        fe = eye.look(seat.group, seat.pilot, PILOT_SCALE, nobody, camPos, at, lookYaw, lookPitch, dt, { speed: s.speed, yawRate: s.yawRate }, COCKPITS[craft.id].view.down);
+        camera.position.copy(camPos);
+        camera.up.set(0, 1, 0);
+        camera.lookAt(at);
+        camera.rotateY(fe.yaw);
+        camera.rotateX(fe.pitch);
+        // (it banks with the aircraft)
+        camera.rotateZ(-fe.roll - s.roll);
+        camera.position.y += fe.y;
+      } else if (noseCam) {
         const [u, h] = NOSE[craft.id];
         const nx = Math.cos(s.yaw);
         const nz = -Math.sin(s.yaw);
@@ -367,10 +446,13 @@ export function createFly(d: FlyDeps) {
         camera.position.y += (Math.random() - 0.5) * shake;
         shake = Math.max(0, shake - dt * 1.2);
       }
-      const wantFov = (noseCam ? 70 : 58) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
+      const wantFov = seat ? COCKPITS[craft.id].view.fov + (d.reduced ? 0 : Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 6) : (noseCam ? 70 : 58) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
       fov += (wantFov - fov) * damp(4, dt);
-      if (Math.abs(camera.fov - fov) > 0.05) {
+      // (the panel and the controls are close: the near plane comes in, as the car's seat has it)
+      const near = seat ? 0.08 : near0;
+      if (Math.abs(camera.fov - fov) > 0.05 || camera.near !== near) {
         camera.fov = fov;
+        camera.near = near;
         camera.updateProjectionMatrix();
       }
       return Math.hypot(s.x - px, s.z - pz);

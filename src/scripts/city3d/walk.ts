@@ -1006,6 +1006,15 @@ export function createWalk(d: WalkDeps) {
     sfx: d.sfx,
     aero: d.aero,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
+    // (the pilot in the cockpit wears what Degen wears; the rotor's shadow over the panel only by day)
+    outfit: () => outfit,
+    night: () => nightNow,
+    low: d.low,
+    reduced: d.reduced,
+  });
+  let nightNow = 0;
+  d.tick(({ night }) => {
+    nightNow = night;
   });
   // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
   let fpBeforeHangar = false;

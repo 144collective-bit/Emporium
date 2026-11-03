@@ -28,11 +28,14 @@ import type { AircraftKind, Pose } from './airfield';
 import {
   BIZ_BODY,
   BIZ_H,
+  HELI_BODY,
+  HELI_H,
   FAIRINGS,
   JET_BODY,
   JET_H,
   LEGS,
   PANELS,
+  PROP_BODY,
   PROP_H,
   deflection,
   frames,
@@ -53,7 +56,7 @@ import {
 /** Every model: the airport's three kinds, the freighter (an airliner in cargo trim) and the players' small jet (Phase 2) */
 export type ModelKind = AircraftKind | 'bizjet' | 'freighter';
 
-type Role = 'body' | 'accent' | 'neon' | 'strobe' | 'gear' | 'decal';
+type Role = 'body' | 'accent' | 'neon' | 'strobe' | 'gear' | 'decal' | 'glass';
 interface Spinner {
   blades: THREE.BufferGeometry;
   blur: THREE.BufferGeometry;
@@ -398,16 +401,7 @@ function airliner(freight = false): AircraftModel {
 function propPlane(): AircraftModel {
   const P = new Parts();
   const H = PROP_H;
-  const st: [number, number, number, number?][] = [
-    [2.55, 0.18, H],
-    [2.4, 0.46, H],
-    [1.7, 0.55, H + 0.02, 1.1],
-    [0.4, 0.58, H + 0.08, 1.2],
-    [-0.7, 0.5, H + 0.08, 1.15],
-    [-1.8, 0.3, H + 0.15],
-    [-2.6, 0.12, H + 0.25],
-    [-2.7, 0.02, H + 0.26],
-  ];
+  const st = PROP_BODY;
   P.add(
     'body',
     loft(st, () => WHITE, { seg: 16 })
@@ -426,8 +420,9 @@ function propPlane(): AircraftModel {
     loft(st.slice(2, 7), () => WHITE, { seg: 30, from: 0.97, to: 1.03, out: 0.012 })
   );
   // Windscreen and side windows
-  for (const a of [0.12, 0.38]) onBody(P, 'body', GLASS, st, 1.25, a, 0.5, 0.36);
-  for (const x of [0.75, 0.05]) for (const a of [0.05, 0.45]) onBody(P, 'body', GLASS, st, x, a, 0.5, 0.34);
+  // (the glazing its own part: from your own cockpit it's hidden, the lining's windows show through, cockpits.ts)
+  for (const a of [0.12, 0.38]) onBody(P, 'glass', GLASS, st, 1.25, a, 0.5, 0.36);
+  for (const x of [0.75, 0.05]) for (const a of [0.05, 0.45]) onBody(P, 'glass', GLASS, st, x, a, 0.5, 0.34);
   // High wing on struts, tips in the accent colour
   const WY = H + 0.68;
   for (const s of [1, -1] as const) {
@@ -462,23 +457,15 @@ function propPlane(): AircraftModel {
 
 function helicopter(): AircraftModel {
   const P = new Parts();
-  const H = 1.25;
-  const st: [number, number, number, number?][] = [
-    [1.85, 0.06, H - 0.12],
-    [1.7, 0.45, H - 0.08, 1.05],
-    [1.2, 0.78, H, 1.08],
-    [0.2, 0.86, H + 0.05, 1.1],
-    [-0.8, 0.7, H + 0.12, 1.05],
-    [-1.3, 0.38, H + 0.25],
-    [-1.45, 0.05, H + 0.3],
-  ];
+  const H = HELI_H;
+  const st = HELI_BODY;
   // The cabin in the accent colour, glazing round the nose, a white band
   P.add(
     'accent',
     loft(st, () => WHITE, { seg: 18 })
   );
   P.add(
-    'body',
+    'glass',
     loft(st.slice(0, 4), (x, a) => (a > 0.62 && a < 0.88 ? C('#2a2550') : GLASS), { seg: 36, from: 0.62, to: 1.38, out: 0.015 })
   );
   P.add(
@@ -562,7 +549,7 @@ function bizjet(): AircraftModel {
     [3.72, 0.17, 0.34],
     [3.72, 0.33, 0.34],
   ] as const)
-    onBody(P, 'body', GLASS, st, x, a, w, 0.26);
+    onBody(P, 'glass', GLASS, st, x, a, w, 0.26);
   for (let x = -1.1; x <= 2.0; x += 0.52) for (const a of [0.035, 0.465]) onBody(P, 'body', INK, st, x, a, 0.26, 0.2);
   onBody(P, 'body', GREY, st, 2.65, 0.485, 0.5, 0.82);
   // Low swept wings with winglets in the accent colour
@@ -645,6 +632,7 @@ function materials() {
   const lights = sharedFor(neon('#ffffff', 0.35, 2.4))!.mat;
   mats = {
     body: paintMat(),
+    glass: paintMat(),
     accent: toon('#ffffff', { fog: true }),
     neon: lights,
     strobe: sharedFor(neon('#ff2b2b', 0.6, 2.4))!.mat,
@@ -704,7 +692,7 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
     return im;
   };
   const parts = model.parts.map((p) => {
-    const im = inst(p.geo, p.role === 'decal' && kind === 'freighter' ? m.cargo : m[p.role], p.role === 'body' || p.role === 'accent' || p.role === 'gear');
+    const im = inst(p.geo, p.role === 'decal' && kind === 'freighter' ? m.cargo : m[p.role], p.role === 'body' || p.role === 'accent' || p.role === 'gear' || p.role === 'glass');
     if (p.role === 'neon' || p.role === 'strobe' || p.role === 'decal') fx(im);
     if (p.role === 'accent') liveries.forEach((c, i) => im.setColorAt(i, new THREE.Color(c)));
     return { role: p.role, im };
@@ -736,6 +724,10 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
       group.traverse((o) => o instanceof THREE.InstancedMesh && o.dispose());
       surf?.geometry.dispose();
       shadow.geometry.dispose();
+    },
+    /** Show or hide the glazing (your own from its cockpit: the lining's windows look out through it, cockpits.ts) */
+    glass(on: boolean) {
+      for (const p of parts) if (p.role === 'glass') p.im.visible = on;
     },
     /** Repaint one aircraft's livery colour (your own, picked at the hangar) */
     paint(i: number, hex: string) {
