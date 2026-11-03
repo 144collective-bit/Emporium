@@ -48,6 +48,8 @@ the owner's sign-off. Keep this file up to date.
   desktops). Dorras stays while walking too.
 - **Settings:** button size, opacity, left-handed (the layout mirrored)
   and moving the buttons.
+- **Later, the header** (Phase 5): clear, no logo, only ☰ in play; and the
+  installed game full screen.
 
 ## The button system
 
@@ -199,7 +201,41 @@ the owner's sign-off. Keep this file up to date.
   In the hub's Settings, under On foot: **Touch buttons** (Button size,
   Button opacity, Left-handed), touch screens only (`.hub-touchset`).
 
-### Phase 5: moving the buttons
+### Phase 5: the clear header and the installed game
+
+The owner's call (2026-11): "optimize the header. It's in the way. Remove
+the logo and make the header transparent to show more of the gameplay",
+and the installed game without the browser's bars. The owner's picks:
+
+- **Fully clear**: no bar, no blur, no line under it. The title floats over
+  the game with a shadow under it; Dorras, the level, City / Walk and ☰
+  keep their own dark fills, so each reads as a chip over a bright street.
+  Touches between them go through to the game (the header takes no taps
+  itself, only its buttons do).
+- **No logo, on every screen** (phones, tablets, desktops). The title
+  screen and the maintenance cover keep it.
+- **In play only ☰**: in walk mode (walking, driving, riding, flying,
+  boating, karting, fighting) the title, Dorras, the level, City / Walk,
+  the Online switch and Connect wallet leave the header; they're in the
+  City view and the hub (Back to City view is the hub's foot). The gun's
+  readout (ammo and score on tablets and desktops, the hotbar's on phones)
+  and the emotes (online, desktops) stay where they are.
+- **Installed, full screen**: added to the home screen (or installed from
+  the browser), the game opens with no address bar or tabs:
+  `public/site.webmanifest` gains `display: fullscreen` (with standalone
+  after it in `display_override`), `start_url`, `scope` and `id`; Android
+  hides the status bar too. iPhones and iPads open it standalone (no
+  browser bars; their status bar can't be hidden, so it stays, in black,
+  `apple-mobile-web-app-status-bar-style`), from the meta tags in
+  `Base.astro`. The app's name and icon stay as they are.
+- **Built, waiting on the owner's sign-off.** The rules are the last block
+  of `controls.css`; the logo's markup and styles went from CityMap.astro,
+  city.css, walk.css and controls.css. Checked at 375 x 812, on its side at
+  812 x 375, a 768 tablet and a 1440 desktop, in the City view and in play.
+  Installing itself can't be checked headless: on a real phone, add it to
+  the home screen and open it.
+
+### Phase 6: moving the buttons
 
 - "Arrange buttons" in Settings: a screen over the city with every button
   of a mode family (on foot, vehicles, the ring), dragged where you like,

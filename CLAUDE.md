@@ -7,8 +7,9 @@ it and has been retired completely. Build only on what's here.
 
 - The game is **The Trenches** (the owner's call, 2026-11): its title logo
   (`src/assets/trenches-logo.png`, the owner's art with its white
-  background cut away) heads the title screen, the city's header (its home
-  link, "The Trenches, home") and the maintenance cover. The homepage's tab
+  background cut away) heads the title screen and the maintenance cover
+  (the city's header has no logo since the controls plan's Phase 5, the
+  owner's call). The homepage's tab
   reads "The Trenches | The Degen Emporium"; the header's title while the
   city loads, the no-3D card and the maintenance cover say The Trenches.
   The city it's set in is still Sector 7 (the welcome tip, the map, the
@@ -2914,10 +2915,15 @@ it and has been retired completely. Build only on what's here.
   settings controls (pressed when the city is up, queued until then). The
   root carries `has-start` until a choice is made; the loader and the
   welcome tip wait behind it.
-- The city page has **one header**: the city's own bar (`.city-head` in
-  `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
+- The city page has **one header**: the city's own (`.city-head` in
+  `CityMap.astro`, copy in `head.ts`), clear over the game since the
+  controls plan's Phase 5 (the owner's call: no bar, no logo, on every
+  screen; the title with a shadow under it, each button its own dark chip,
+  touches between them going through to the game). The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
-  other pages. Left to right: The Trenches' logo (home link), the mode title and
+  other pages. In play (walk mode: walking, driving, flying, boating,
+  karting, fighting) only the hub's button stays, with the gun's readout and
+  the emotes where they are (controls.css). Left to right: the mode title and
   subtitle (City view, Walk mode), then on the
   right (the emotes, online, and ammo and score while walking), the City /
   Walk switch (the current mode lit with a glow and a gradient underline,
@@ -2930,7 +2936,7 @@ it and has been retired completely. Build only on what's here.
   the hub's button as an icon; upright phones show one slim row in both
   modes (the controls plan's Phase 3: the title and subtitle, Dorras, the
   level, City / Walk as one toggle showing the mode you'd go to, ☰; no
-  logo, Online switch or Connect wallet: the hub has them), and no phone
+  Online switch or Connect wallet: the hub has them), and no phone
   carries ammo, score or the emotes in it. Its live height is
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
@@ -3020,7 +3026,13 @@ it and has been retired completely. Build only on what's here.
   and mirrors it for the left hand (the stick on the right); `--tc-alpha`
   is the opacity, solid while held. A new touch button is a `.tc` with its
   icon and word, and its slot in `LAYOUTS`; anything new pinned near the
-  buttons goes in `clash()`.
+  buttons goes in `clash()`. Phase 5 (the clear header and the installed
+  game) is built, waiting on the owner's sign-off: the header clear and
+  without its logo on every screen, only ☰ in play (above); installed (added
+  to the home screen) the game opens full screen with no browser bars
+  (`public/site.webmanifest`: `display` fullscreen, standalone on iPhones,
+  whose status bar stays, black; the meta tags in `Base.astro`). Phase 6 is
+  moving the buttons.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
@@ -3536,9 +3548,8 @@ it and has been retired completely. Build only on what's here.
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
   clicked.
-- While walking (`body.is-walking`, set in `index.ts`) the header drops the
-  logo on tablets and phones and carries the emotes (online), ammo and score
-  and the hub's button (on phones the ammo is the hotbar's, the score the
+- While walking (`body.is-walking`, set in `index.ts`) the header carries
+  only the emotes (online), ammo and score and the hub's button (on phones the ammo is the hotbar's, the score the
   hub's and the emotes the hub's Online tab's: the controls plan's Phase 3). The touch buttons stay at the bottom (hidden while
   the hub is open, `.is-hub`).
 - The gun store is the menus' kit's sample (`.mk-store`, gunshop.ts): the
