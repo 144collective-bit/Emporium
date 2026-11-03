@@ -136,9 +136,7 @@
 .walk-check input {
   accent-color: var(--p-cyan);
 }
-.walk-fp,
-.walk-run,
-.walk-crouch {
+.walk-fp {
   border: 1px solid #0000;
   background:
     linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
@@ -232,9 +230,7 @@
   padding: 8px 14px;
   border-radius: 999px;
 }
-.walk-fp[aria-pressed="true"],
-.walk-run[aria-pressed="true"],
-.walk-crouch[aria-pressed="true"] {
+.walk-fp[aria-pressed="true"] {
   background:
     var(--pulse-wash) padding-box,
     linear-gradient(#14102a, #14102a) padding-box,
@@ -628,193 +624,20 @@
   .walk-keys {
     display: none;
   }
+  /* Which touch buttons show; where they stand and how they look is controls.css's (docs/controls-plan.md) */
   .city.is-armed .walk-fire,
   .city.is-armed .walk-reload,
   .city.is-armed .walk-aim,
-  .city.is-armed .walk-swap {
-    position: absolute;
-    z-index: 4;
+  .city.is-armed .walk-swap,
+  .walk-run,
+  .walk-crouch,
+  .walk-stick,
+  .walk-jump {
     display: grid;
-    place-items: center;
-    border: 1px solid #0000;
-    border-radius: 50%;
-    background:
-      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
-      var(--pulse) border-box;
-    color: #fff;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    touch-action: none;
-  }
-  .city.is-armed .walk-fire {
-    right: 104px;
-    bottom: 34px;
-    width: 76px;
-    height: 76px;
-    font-size: 11px;
-    box-shadow: 0 0 24px -6px #ff2fb9;
-  }
-  .city.is-armed .walk-reload {
-    right: 116px;
-    bottom: 122px;
-    width: 52px;
-    height: 52px;
-    font-size: 9px;
-  }
-  .city.is-armed .walk-aim {
-    right: 30px;
-    bottom: 194px;
-    width: 56px;
-    height: 56px;
-    font-size: 10px;
-  }
-  /* Swap: above Fire, beside Aim; shows the gun in hand */
-  .city.is-armed .walk-swap {
-    right: 112px;
-    bottom: 190px;
-    align-content: center;
-    gap: 2px;
-    width: 58px;
-    height: 58px;
-    font-size: 8px;
-    letter-spacing: 0.02em;
-  }
-  .walk-swap span {
-    max-width: 52px;
-    overflow: hidden;
-    line-height: 1.1;
-    text-align: center;
-    white-space: nowrap;
-  }
-  .walk-swap svg {
-    color: var(--p-cyan);
-  }
-  .walk-swap:active,
-  .walk-reload:active,
-  .walk-jump:active {
-    transform: scale(0.92);
-  }
-  .walk-fire:active {
-    box-shadow: 0 0 30px -2px #ff2fb9;
   }
   /* The swap button carries the gun's name on touch screens */
   .combat-gun {
     display: none;
-  }
-  .city.is-armed .walk-aim[aria-pressed="true"] {
-    background:
-      var(--pulse-wash) padding-box,
-      linear-gradient(#14102a, #14102a) padding-box,
-      var(--pulse) border-box;
-    box-shadow: 0 0 20px -6px #00eaffaa;
-  }
-  .walk-run {
-    position: absolute;
-    right: 30px;
-    bottom: 122px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    font-size: 10px;
-    touch-action: manipulation;
-  }
-  /* Crouch (a slide when sprinting): over the stick, clear of the right-hand cluster armed or not */
-  .walk-crouch {
-    position: absolute;
-    left: 56px;
-    bottom: 160px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    font-size: 9px;
-    touch-action: manipulation;
-  }
-  .walk-stick {
-    position: absolute;
-    left: 22px;
-    bottom: 26px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 120px;
-    height: 120px;
-    border: 1px solid #ffffff30;
-    border-radius: 50%;
-    background: radial-gradient(circle, #0b0a1299, #0b0a1255);
-    touch-action: none;
-  }
-  .walk-stick span {
-    width: 52px;
-    height: 52px;
-    border: 2px solid var(--p-cyan);
-    border-radius: 50%;
-    background: #00eaff33;
-    box-shadow: 0 0 18px #00eaff66;
-  }
-  .walk-jump {
-    position: absolute;
-    right: 26px;
-    bottom: 42px;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 64px;
-    height: 64px;
-    border: 1px solid #0000;
-    border-radius: 50%;
-    background:
-      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
-      var(--pulse) border-box;
-    color: #fff;
-    touch-action: manipulation;
-  }
-  /* (over the Crouch button on the left and Sprint on the right) */
-  .walk-prompt {
-    bottom: 222px;
-  }
-  /* Geared up, the right-hand buttons stand taller: the door prompt goes above them */
-  .city.is-armed .walk-prompt {
-    bottom: 264px;
-  }
-}
-/* Phones on their side: the buttons sit far right, so the door prompt can stay low */
-@media (pointer: coarse) and (max-height: 500px) {
-  .walk-prompt,
-  .city.is-armed .walk-prompt {
-    bottom: 150px;
-  }
-}
-/* Narrow phones: a smaller stick and a tighter right-hand cluster, so nothing touches */
-@media (pointer: coarse) and (max-width: 360px) {
-  .walk-stick {
-    left: 14px;
-    width: 108px;
-    height: 108px;
-  }
-  .walk-crouch {
-    left: 42px;
-    bottom: 146px;
-  }
-  .walk-stick span {
-    width: 46px;
-    height: 46px;
-  }
-  .city.is-armed .walk-fire {
-    right: 96px;
-  }
-  .city.is-armed .walk-reload {
-    right: 108px;
-  }
-  .city.is-armed .walk-swap {
-    right: 102px;
   }
 }
 
@@ -1855,131 +1678,63 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 8px 16px 9px;
-  border: 1px solid #0000;
-  border-radius: 999px;
-  background:
-    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
-    var(--pulse) border-box;
-  color: #fff;
+  padding: 7px 14px 8px;
+  border: 2px solid #3a3e48;
+  background: #0c0d10e6;
+  box-shadow: 0 0 0 2px #0c0d1099;
+  color: #f1efe6;
   pointer-events: none;
 }
+/* (the readouts are the menus' arcade kit: pixel digits in the coin's yellow, docs/controls-plan.md Phase 2) */
 .drive-hud b {
   min-width: 2.2ch;
-  font-family: var(--font-display);
+  font-family: "Pixelify Sans", var(--font-mono);
   font-size: 30px;
-  font-weight: 900;
+  font-weight: 600;
   line-height: 1;
   text-align: right;
+  color: #ffc531;
 }
 .drive-hud small {
   font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: #9a9ca4;
 }
 .drive-gear {
   margin-left: 4px;
   padding: 2px 7px;
-  border: 1px solid #ffffff33;
-  border-radius: 5px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--p-cyan);
+  border: 2px solid #3a3e48;
+  font-family: "Pixelify Sans", var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: #7bd88f;
 }
-/* Touch screens: the stick (bigger) steers bottom-left; Gas and Brake are tall pedals side by
-   side bottom-right (Gas the taller, on the outside); Get out moves to the top right and the
-   speed to the top left, both out of the thumbs' way and off the road ahead. */
+/* Touch screens: the speed at the top left and Get out at the top right, out of the thumbs' way and off the
+   road ahead; the stick, Gas, Brake, Horn and View stand where touchlayout.ts puts them (controls.ts,
+   controls.css: Gas in the main slot, Brake beside it, View and Horn round them). */
 @media (pointer: coarse) {
   .city.is-driving .drive-hud {
     top: calc(var(--head-h) + 10px);
     right: auto;
     bottom: auto;
     left: max(12px, env(safe-area-inset-left));
-    padding: 6px 12px 7px;
+    padding: 5px 10px 6px;
   }
   .drive-hud b {
     font-size: 24px;
   }
-  .city.is-driving .walk-stick {
-    left: max(18px, calc(env(safe-area-inset-left) + 12px));
-    bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
-    width: 136px;
-    height: 136px;
-  }
-  .city.is-driving .walk-stick span {
-    width: 58px;
-    height: 58px;
-  }
   .city.is-driving .drive-pedal {
-    position: absolute;
-    bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
-    z-index: 4;
     display: grid;
-    place-items: center;
-    align-content: center;
-    gap: 4px;
-    width: 78px;
-    border: 1px solid #0000;
-    border-radius: 22px;
-    background:
-      linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
-      var(--pulse) border-box;
-    color: #fff;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    touch-action: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
   }
-  .city.is-driving .drive-pedal::before {
-    font-size: 16px;
-    line-height: 1;
-  }
-  .city.is-driving .drive-gas {
-    right: max(16px, calc(env(safe-area-inset-right) + 10px));
-    height: 124px;
-    font-size: 12px;
-    box-shadow: 0 0 26px -6px #2bff88;
-  }
-  .city.is-driving .drive-gas::before {
-    content: "\25B2";
-    color: #2bff88;
-  }
-  .city.is-driving .drive-brake {
-    right: max(106px, calc(env(safe-area-inset-right) + 100px));
-    height: 92px;
-    font-size: 10px;
-    box-shadow: 0 0 26px -8px #ff2fb9;
-  }
-  .city.is-driving .drive-brake::before {
-    content: "\25BC";
-    color: #ff6ad5;
-  }
-  /* The horn: a small round button over the Brake pedal, your car's only (not the kart's: .in-car) */
+  /* The horn: your car's (.in-car) and the boat's only (fly.css) */
   .city.is-driving .drive-horn {
     display: none;
-    right: max(106px, calc(env(safe-area-inset-right) + 100px));
-    bottom: calc(max(28px, env(safe-area-inset-bottom) + 16px) + 104px);
-    width: 78px;
-    height: 44px;
-    font-size: 10px;
-    box-shadow: 0 0 22px -8px #2fd9ff;
   }
   .city.is-driving.in-car .drive-horn {
     display: grid;
-  }
-  .city.is-driving .drive-horn::before {
-    content: "\266A";
-    color: #2fd9ff;
-  }
-  .drive-pedal:active {
-    transform: scale(0.95);
   }
   .city.is-driving .walk-prompt {
     top: calc(var(--head-h) + 10px);
@@ -1989,48 +1744,6 @@
     padding: 9px 14px;
     transform: none;
     animation: none;
-  }
-  .city.is-driving .walk-prompt kbd {
-    display: none;
-  }
-}
-/* Phones on their side: a little smaller and lower, so the road stays in view */
-@media (pointer: coarse) and (max-height: 500px) {
-  .city.is-driving .walk-stick {
-    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
-    width: 118px;
-    height: 118px;
-  }
-  .city.is-driving .drive-pedal {
-    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
-  }
-  .city.is-driving .drive-gas {
-    height: 104px;
-  }
-  .city.is-driving .drive-brake {
-    height: 80px;
-  }
-  .city.is-driving .drive-horn {
-    bottom: calc(max(16px, env(safe-area-inset-bottom) + 10px) + 90px);
-    height: 38px;
-  }
-}
-/* Narrow phones: slimmer pedals and stick so nothing touches */
-@media (pointer: coarse) and (max-width: 360px) {
-  .city.is-driving .walk-stick {
-    left: 12px;
-    width: 120px;
-    height: 120px;
-  }
-  .city.is-driving .drive-pedal {
-    width: 70px;
-  }
-  .city.is-driving .drive-gas {
-    right: 12px;
-  }
-  .city.is-driving .drive-brake,
-  .city.is-driving .drive-horn {
-    right: 92px;
   }
 }
 

@@ -16,6 +16,7 @@ import logo from '../assets/logo.png';
 import pulsechain from '../assets/pulsechain.png';
 import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
+import { TC_ICONS, tcIconPath } from '../data/tcicons';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -78,6 +79,8 @@ const ext = { target: '_blank', rel: 'noopener noreferrer' };
 // Connect wallet (account-ui.ts): only when the site has a game server
 const server = !!import.meta.env.PUBLIC_GAME_SERVER;
 const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
+// The touch controls' pixel icons as one sprite (docs/controls-plan.md): `<use href="#tc-<name>">` in each button
+const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`, d: tcIconPath(rows) }));
 ---
 
 <section class="city has-start" aria-labelledby="city-title" data-city-root data-view="loading" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src} data-flame={flameImg.src}>
@@ -728,7 +731,7 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
     </section>
     <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
-    <button type="button" class="kart-btn kart-drift" data-kart-drift aria-label="Drift">Drift</button>
+    <button type="button" class="kart-btn kart-drift tc" data-kart-drift aria-label="Drift"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-drift" /></svg><span class="tc-word">Drift</span></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
         data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
         its head; data-fight-tabs the Spar / Bout / Record / Styles tabs (data-fight-tab); data-fight-body (painted);
@@ -799,10 +802,10 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       </div>
     </section>
     <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>Esc</kbd> quit</p>
-    <button type="button" class="fight-btn fight-punch" data-fight-punch aria-label="Punch">Punch</button>
-    <button type="button" class="fight-btn fight-kick" data-fight-kick aria-label="Kick">Kick</button>
-    <button type="button" class="fight-btn fight-block" data-fight-block aria-label="Block (hold)">Block</button>
-    <button type="button" class="fight-btn fight-dodge" data-fight-dodge aria-label="Dodge">Dodge</button>
+    <button type="button" class="fight-btn fight-punch tc-main tc" data-fight-punch aria-label="Punch"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-punch" /></svg><span class="tc-word">Punch</span></button>
+    <button type="button" class="fight-btn fight-kick tc" data-fight-kick aria-label="Kick"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-kick" /></svg><span class="tc-word">Kick</span></button>
+    <button type="button" class="fight-btn fight-block tc" data-fight-block aria-label="Block (hold)"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-block" /></svg><span class="tc-word">Block</span></button>
+    <button type="button" class="fight-btn fight-dodge tc-go tc" data-fight-dodge aria-label="Dodge"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-jump" /></svg><span class="tc-word">Dodge</span></button>
     <p class="walk-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> menu</p>
     {/* Fists on the street (brawl.ts): empty hands, the keys instead (.city.is-fists); on touch the fight's Punch, Kick and Block above take Fire's, Aim's and Reload's places */}
     <p class="walk-hint fists-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge (guard up, standing) · <kbd>1</kbd><kbd>2</kbd> draw</p>
@@ -820,24 +823,24 @@ const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) 
       <span class="fly-power" title="Throttle"><i data-fly-power></i></span>
       <span class="drive-gear" data-fly-state>Taxi</span>
     </div>
-    <button type="button" class="drive-pedal drive-horn" data-drive-horn aria-label="Horn">Horn</button>
-    <button type="button" class="drive-pedal drive-brake" data-drive-brake aria-label="Brake and reverse">Brake</button>
-    <button type="button" class="drive-pedal drive-gas" data-drive-gas aria-label="Gas">Gas</button>
+    <button type="button" class="drive-pedal drive-horn tc" data-drive-horn aria-label="Horn"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-horn" /></svg><span class="tc-word">Horn</span></button>
+    <button type="button" class="drive-pedal drive-view tc" data-drive-view aria-label="Camera view"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-view" /></svg><span class="tc-word">View</span></button>
+    <button type="button" class="drive-pedal drive-brake tc" data-drive-brake aria-label="Brake and reverse"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-brake" /></svg><span class="tc-word">Brake</span></button>
+    <button type="button" class="drive-pedal drive-gas tc-main tc" data-drive-gas aria-label="Gas"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-gas" /></svg><span class="tc-word">Gas</span></button>
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
-    <button type="button" class="walk-run" data-walk-run aria-pressed="false">Sprint</button>
-    <button type="button" class="walk-crouch" data-walk-crouch aria-pressed="false">Crouch</button>
-    <button type="button" class="walk-fire" data-walk-fire>Fire</button>
-    <button type="button" class="walk-reload" data-walk-reload>Reload</button>
-    <button type="button" class="walk-aim" data-walk-aim aria-pressed="false">Aim</button>
-    <button type="button" class="walk-swap" data-walk-swap aria-label="Swap gun">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14l-4-4M20 16H6l4 4" /></svg>
-      <span data-swap-name>Rifle</span>
-    </button>
-    <button type="button" class="walk-jump" data-walk-jump aria-label="Jump">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
-    </button>
+    <button type="button" class="walk-run tc" data-walk-run aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-sprint" /></svg><span class="tc-word">Sprint</span></button>
+    <button type="button" class="walk-crouch tc" data-walk-crouch aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-crouch" /></svg><span class="tc-word">Crouch</span></button>
+    <button type="button" class="walk-fire tc-main tc" data-walk-fire><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-fire" /></svg><span class="tc-word">Fire</span></button>
+    <button type="button" class="walk-reload tc" data-walk-reload><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-reload" /></svg><span class="tc-word">Reload</span></button>
+    <button type="button" class="walk-aim tc" data-walk-aim aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-aim" /></svg><span class="tc-word">Aim</span></button>
+    <button type="button" class="walk-swap tc" data-walk-swap aria-label="Swap gun"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-swap" /></svg><span class="tc-word" data-swap-name>Rifle</span></button>
+    <button type="button" class="walk-jump tc tc-go" data-walk-jump aria-label="Jump"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-jump" /></svg><span class="tc-word">Jump</span></button>
+    <svg class="tc-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+      {tcSymbols.map((ic) => <symbol id={ic.id} viewBox="0 0 16 16"><path d={ic.d} /></symbol>)}
+    </svg>
   </div>
   <button type="button" class="walk-prompt mk-skin" data-walk-prompt hidden>
+    <svg class="tc-icon walk-prompt-tap" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-act" /></svg>
     <kbd>F</kbd> <span data-walk-label>Enter</span>
   </button>
   {/* A taxi (taxi.ts, growth plan Phase 8): on its way, waiting (Get in), or the ride (Skip ride) */}

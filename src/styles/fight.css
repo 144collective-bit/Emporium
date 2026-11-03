@@ -987,122 +987,20 @@
     display: block;
   }
 }
-/* Touch screens: the stick moves bottom-left as always; bottom-right Punch takes Fire's spot and
-   Dodge Jump's, with Block above Punch and Kick above Dodge, all clear of the phone's safe areas.
-   The door prompt goes above the cluster. */
+/* Touch screens: the stick bottom-left as always, Punch in the main slot, Dodge in Jump's, Block and Kick where
+   they stand on the street (touchlayout.ts `ring`, placed by controls.ts; the look is controls.css's) */
 @media (pointer: coarse) {
-  .city.is-fighting .fight-btn {
-    position: absolute;
-    z-index: 4;
+  .city.is-fighting .fight-btn,
+  .city.is-fighting .walk-stick {
     display: grid;
-    place-items: center;
-    padding: 0;
-    border: 1px solid #0000;
-    border-radius: 50%;
-    background:
-      linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
-      var(--pulse) border-box;
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    touch-action: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  .city.is-fighting .fight-punch {
-    right: max(100px, calc(env(safe-area-inset-right) + 94px));
-    bottom: max(34px, calc(env(safe-area-inset-bottom) + 22px));
-    width: 76px;
-    height: 76px;
-    font-size: 11px;
-    box-shadow: 0 0 24px -6px #ff2fb9;
-  }
-  .city.is-fighting .fight-dodge {
-    right: max(26px, calc(env(safe-area-inset-right) + 20px));
-    bottom: max(42px, calc(env(safe-area-inset-bottom) + 30px));
-    width: 60px;
-    height: 60px;
-  }
-  .city.is-fighting .fight-kick {
-    right: max(22px, calc(env(safe-area-inset-right) + 16px));
-    bottom: max(116px, calc(env(safe-area-inset-bottom) + 104px));
-    width: 68px;
-    height: 68px;
-    box-shadow: 0 0 24px -6px #00eaff;
-  }
-  .city.is-fighting .fight-block {
-    right: max(108px, calc(env(safe-area-inset-right) + 102px));
-    bottom: max(124px, calc(env(safe-area-inset-bottom) + 112px));
-    width: 62px;
-    height: 62px;
-  }
-  .fight-btn:active,
-  .fight-block[aria-pressed="true"] {
-    background:
-      var(--pulse-wash) padding-box,
-      linear-gradient(#14102a, #14102a) padding-box,
-      var(--pulse) border-box;
-  }
-  .fight-punch:active,
-  .fight-kick:active,
-  .fight-dodge:active {
-    transform: scale(0.94);
-  }
-  .fight-block[aria-pressed="true"] {
-    box-shadow: 0 0 20px -6px #00eaffaa;
   }
   .city.is-fighting .walk-prompt {
     bottom: 204px;
   }
-  .city.is-fighting .walk-stick {
-    display: grid;
-  }
 }
-/* Phones on their side: a smaller cluster lower down, the prompt just above it */
 @media (pointer: coarse) and (max-height: 500px) {
-  .city.is-fighting .fight-punch {
-    right: max(96px, calc(env(safe-area-inset-right) + 90px));
-    bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
-    width: 64px;
-    height: 64px;
-    font-size: 10px;
-  }
-  .city.is-fighting .fight-dodge {
-    right: max(24px, calc(env(safe-area-inset-right) + 18px));
-    bottom: max(28px, calc(env(safe-area-inset-bottom) + 18px));
-    width: 52px;
-    height: 52px;
-    font-size: 9px;
-  }
-  .city.is-fighting .fight-kick {
-    right: max(18px, calc(env(safe-area-inset-right) + 12px));
-    bottom: max(92px, calc(env(safe-area-inset-bottom) + 82px));
-    width: 58px;
-    height: 58px;
-  }
-  .city.is-fighting .fight-block {
-    right: max(102px, calc(env(safe-area-inset-right) + 96px));
-    bottom: max(98px, calc(env(safe-area-inset-bottom) + 88px));
-    width: 54px;
-    height: 54px;
-    font-size: 9px;
-  }
-  /* The prompt sits at the bottom between the stick and the cluster, under the centre stack */
   .city.is-fighting .walk-prompt {
     bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
-  }
-}
-/* Narrow phones: the cluster a touch tighter to the edge so the stick never touches it */
-@media (pointer: coarse) and (max-width: 360px) {
-  .city.is-fighting .fight-punch {
-    right: 92px;
-  }
-  .city.is-fighting .fight-block {
-    right: 100px;
   }
 }
 
@@ -1118,61 +1016,13 @@
     display: none;
   }
 }
-/* Touch: Punch in Fire's spot, Block in Reload's, Kick in Aim's (Jump stays: standing with the guard up, it dodges) */
+/* Touch: Punch, Block and Kick show; they take Fire's, Reload's and Aim's slots (touchlayout.ts LAYOUTS, placed by
+   controls.ts; their look is controls.css's). Jump stays: standing with the guard up, it dodges. */
 @media (pointer: coarse) {
   .city.is-fists .fight-punch,
   .city.is-fists .fight-kick,
   .city.is-fists .fight-block {
-    position: absolute;
-    z-index: 4;
     display: grid;
-    place-items: center;
-    padding: 0;
-    border: 1px solid #0000;
-    border-radius: 50%;
-    background:
-      linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
-      var(--pulse) border-box;
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    touch-action: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  .city.is-fists .fight-punch {
-    right: 104px;
-    bottom: 34px;
-    width: 76px;
-    height: 76px;
-    font-size: 11px;
-    box-shadow: 0 0 24px -6px #ff2fb9;
-  }
-  .city.is-fists .fight-block {
-    right: 116px;
-    bottom: 122px;
-    width: 52px;
-    height: 52px;
-  }
-  .city.is-fists .fight-kick {
-    right: 30px;
-    bottom: 194px;
-    width: 56px;
-    height: 56px;
-    font-size: 10px;
-    box-shadow: 0 0 24px -6px #00eaff;
-  }
-}
-@media (pointer: coarse) and (max-width: 360px) {
-  .city.is-fists .fight-punch {
-    right: 96px;
-  }
-  .city.is-fists .fight-block {
-    right: 108px;
   }
 }
 
