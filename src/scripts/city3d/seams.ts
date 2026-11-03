@@ -321,12 +321,9 @@ export function seams(map: LandMap = landMap()): Seam[] {
 
 /** The open land inside the highway's patches the plan names (a point in each), docs/blend-plan.md Phase 5 */
 export const GAP_NAMES: { id: string; name: string; at: Pt }[] = [
-  // South of the south row to the highway's south side: the airport's old land, east of the arterials
-  { id: 'south-band', name: "The south band (the airport's old land)", at: [171, 229] },
-  // ...and between the arterials south of the south row, west to east
-  { id: 'south-strip-w', name: 'South strip, west', at: [7, 243] },
-  { id: 'south-strip-m', name: 'South strip, middle', at: [29, 241] },
-  { id: 'south-strip-e', name: 'South strip, east', at: [53, 243] },
+  // South of the south row to the highway's south side, round Southfield (docs/blend-plan.md Phase 5a): the railside
+  // walk under the airport branch, the land by the highway and east of Kiln Lane (the south strips are Southfield's)
+  { id: 'south-band', name: 'The south band by the highway', at: [200, 300] },
   // (the east strip, east of town north of the river, is the Neon Mile's now: docs/strip-plan.md)
   // Round Sunridge's wall to the highway and the Parkway
   { id: 'sunridge-fringe', name: "Sunridge's fringe", at: [191, -151] },

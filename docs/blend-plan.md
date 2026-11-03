@@ -401,12 +401,44 @@ Little changes on screen but the trees' edges.
 Each gap by its neighbours, scenery only, built from the kits and recipes
 (`recipes.ts`), one gap a step with the owner's sign-off on each:
 
-- **5a, the band south of the south row** (towards the highway's south
-  side, with the airport's old land): by the south row, a linear park along
-  the metro's line with allotments and a community garden; further south
-  and by the highway, yards and light industry (depots, a builder's yard,
-  lock-ups, a bus depot) on small streets off the arterials; by The
-  Trenches, its grit carried on in a few low blocks.
+- **5a, the band south of the south row (built): Southfield.** `southfield.ts`
+  (DOM-free, tested in `tests/southfield.test.ts`), drawn by `southfield3d.ts`
+  (a district loaded as you approach, `LAZY_DISTRICTS` id `southfield`):
+  - **Southfield Yards** (ref `southyards`, industry): a ring off the south
+    bank avenue (`sy-ring`: Forge Street down at x 140, along at z 261 and
+    back up as Kiln Lane at x 240, the Docks' way; lit where it meets the
+    avenue) with Yard Street across it at z 200 (`SF_STREETS`,
+    `SF_CROSSINGS`). North of Yard Street the bus depot (its shed open to a
+    forecourt of buses, a gatehouse) and Kingpost Builders (a store, material
+    bays with heaps, pallets of blocks); south of it warehouses and a works
+    (the kits, `YARD_LOTS`), a truck depot and lock-ups along the ring's
+    south leg. Worn concrete and grey sidewalks as the Docks', sodium lamps.
+  - **Southfield Park** (ref `southfield`, a park) between the east ring
+    avenue and Forge Street: a loop of gravel paths, a pond in a stone rim
+    (solid, walked round), the community garden by the south row (raised
+    beds, a shed, a polytunnel), benches, a name board, white lamps, 40-odd
+    trees in clumps.
+  - **The strips** between the small north-south roads, south of the main
+    line: allotments down the middle one (54 plots either side of a path,
+    sheds on every third, the society's hut) and the east one's south half
+    (its north half a community garden); the west one, across the ring
+    avenue from The Trenches, lock-ups and warehouses back to back.
+  - **The walks:** the railside walk under the airport branch (gravel, shrubs,
+    benches; down the inside of its bend and along its north side, 5 off the
+    track) and the walk under the main line across the strips' tops.
+  - **Nothing moves:** the metro's pillars are worked out from the street plan
+    (metro.ts `clearFor()`), so no new street goes within reach of a track
+    (the test holds it); the ring stops short of the airport branch. The
+    snapshot gains the two new streets (`sy-ring`, `sy-yard`) and nothing
+    else.
+  - Kept for later (`FUTURE_SITES`): the bus depot, the builder's merchant,
+    the lock-ups and the allotment society, no pin, panel or price.
+  - The seam map: the south strips' three gaps are gone and the south band's
+    is what's left by the highway (the railside, the land south of the
+    branch and east of Kiln Lane, 14,252 square tiles of 33,140); open land
+    inside the highway is 11%, from 22%.
+  - Measured: the boot 690.9 KB, the budget raised from 690 to 700 under the
+    owner's standing call (its data in the boot, the routes round the ring).
 - **5b, the strips east of town north of the river:** small mixed blocks
   by downtown's east side (shops under flats, a few warehouses) stepping down
   to meadow and a pond by the highway.

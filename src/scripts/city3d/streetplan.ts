@@ -29,6 +29,7 @@ import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS, crestPoly } from './crest
 import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
 import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
 import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
+import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
 
 export type Pt = [number, number];
 
@@ -384,6 +385,9 @@ export function cityPlan(): StreetPlan {
   // The Neon Mile's boulevard and east road (strip.ts)
   for (const t of STRIP_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes, ...(t.median ? { median: t.median } : {}) });
   for (const c of STRIP_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // Southfield Yards' ring off the south bank avenue and Yard Street across it (southfield.ts, docs/blend-plan.md Phase 5a)
+  for (const t of SF_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
+  for (const c of SF_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -490,6 +494,7 @@ export function cityPlan(): StreetPlan {
     // The Docks' quays and yards round the basin (docks.ts)
     ...DOCK_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'docks', walk: b.walk })),
     ...STRIP_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'strip', walk: b.walk })),
+    ...SF_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use, ref: b.ref, walk: b.walk })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];
