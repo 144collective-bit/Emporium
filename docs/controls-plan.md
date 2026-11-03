@@ -182,6 +182,22 @@ the owner's sign-off. Keep this file up to date.
   mirrors the slots and the stick); saved in `degen-city-walk-v1` and
   cleaned like its other settings. The test holds every size, both hands,
   apart and on screen.
+- **Built, waiting on the owner's sign-off.** `touchlayout.ts`: `TouchPrefs`
+  { size, alpha, left } (`SIZES` Small 0.85, Medium 1, Large 1.15;
+  `ALPHA_MIN` 0.4; `cleanTouch()`, saved as `touch` in
+  `degen-city-walk-v1`); `layoutFor(w, h, mode, prefs)` scales the ring
+  (the buttons, their distances, the stick, Crouch and the hotbar's slots)
+  and, where a size doesn't fit the screen, steps it back towards Medium
+  until `clash()` (buttons apart, on screen, under the header's room, clear
+  of the hotbar and the prompt) finds nothing, so Large comes out a little
+  smaller on a small phone; left-handed mirrors every spot, the stick and
+  the hotbar (`mirror()`). The test holds every size, both hands, every
+  mode and every screen to `clash()`. `controls.ts` reads the prefs each
+  time and sets `--tc-alpha` on the root; controls.css draws the buttons
+  and the stick at that opacity and solid while held, the words and icons
+  shrinking with a small button, the stick on whichever side it's given.
+  In the hub's Settings, under On foot: **Touch buttons** (Button size,
+  Button opacity, Left-handed), touch screens only (`.hub-touchset`).
 
 ### Phase 5: moving the buttons
 

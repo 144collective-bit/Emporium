@@ -110,6 +110,7 @@ import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol'
 import { live } from './live-client';
 import type { FeatureId } from './live';
 import { layoutControls } from './controls';
+import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
@@ -230,13 +231,15 @@ interface Settings {
   sens: number;
   invert: boolean;
   autoAds: AutoAds;
+  /** The touch buttons' size, opacity and hand (docs/controls-plan.md Phase 4) */
+  touch: TouchPrefs;
 }
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off' };
+    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch) };
   } catch {
-    return { sens: 1, invert: false, autoAds: 'off' };
+    return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined) };
   }
 }
 /** How long the sight stays up after the trigger is let go (so single shots don't flicker in and out) */
@@ -416,8 +419,6 @@ export function createWalk(d: WalkDeps) {
   const knob = stick.querySelector<HTMLElement>('span')!;
   const runBtn = $<HTMLButtonElement>('[data-walk-run]');
   const crouchBtn = $<HTMLButtonElement>('[data-walk-crouch]');
-  // The touch controls' places: the same slots in every mode (touchlayout.ts, docs/controls-plan.md)
-  layoutControls(root);
   const sensInput = $<HTMLInputElement>('[data-walk-sens]');
   const invertInput = $<HTMLInputElement>('[data-walk-invert]');
   const fpBtn = $<HTMLButtonElement>('[data-walk-fp]');
@@ -442,6 +443,27 @@ export function createWalk(d: WalkDeps) {
       saveSettings();
     });
   paintAutoAds();
+  // The touch controls' places: the same slots in every mode, at the player's size, opacity and hand
+  // (touchlayout.ts, docs/controls-plan.md); Settings > On foot > Touch buttons sets them
+  const controls = layoutControls(root, () => settings.touch);
+  const sizeBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-tc-size]')];
+  const alphaInput = root.querySelector<HTMLInputElement>('[data-tc-alpha]');
+  const leftInput = root.querySelector<HTMLInputElement>('[data-tc-left]');
+  const paintTouch = () => {
+    sizeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tcSize === settings.touch.size)));
+    if (alphaInput) alphaInput.value = String(settings.touch.alpha);
+    if (leftInput) leftInput.checked = settings.touch.left;
+  };
+  const setTouch = (next: Partial<TouchPrefs>) => {
+    settings.touch = cleanTouch({ ...settings.touch, ...next });
+    paintTouch();
+    saveSettings();
+    controls.refresh();
+  };
+  for (const b of sizeBtns) b.addEventListener('click', () => setTouch({ size: b.dataset.tcSize as TouchSize }));
+  alphaInput?.addEventListener('input', () => setTouch({ alpha: Number(alphaInput.value) }));
+  leftInput?.addEventListener('change', () => setTouch({ left: leftInput.checked }));
+  paintTouch();
 
   const SPAWN = new THREE.Vector3(WALK_SPAWN.x, SLAB, WALK_SPAWN.z);
   let active = false;
