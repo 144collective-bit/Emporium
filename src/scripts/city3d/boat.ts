@@ -23,7 +23,7 @@ import * as THREE from 'three';
 import { createDegen, type Degen, type Outfit } from './character';
 import { DRIVER_SCALE, HELM, WHEEL_AXIS, driverRoot, helmPose as poseAtHelm, leverAngle } from './helm';
 import { seatEye } from './seateye';
-import type { FpView } from './fpcam';
+import { fpFov, type FpView } from './fpcam';
 import { BOAT, HIRE_VIEW, TUNE, WATER_SOLIDS, aheadOf, leaveAt, moversAt, newBoat, speedOf, sprayOf, stepBoat, wakeShape, type BoatInput, type Circle } from './boat-sim';
 import { HIRE } from './riverbus';
 import { WATER_Y } from './river';
@@ -430,7 +430,7 @@ export function createBoat(d: BoatDeps) {
         // (the view rolls with the boat's lean)
         camera.rotateZ(-fe.roll - boat.rotation.x);
         camera.position.y += fe.y;
-        const want = HELM.view.fov + (d.reduced ? 0 : (speedOf(s) / TUNE.top) * 6);
+        const want = fpFov(HELM.view.fov, camera.aspect) + (d.reduced ? 0 : (speedOf(s) / TUNE.top) * 6);
         fov += (want - fov) * damp(4, dt);
         if (Math.abs(camera.fov - fov) > 0.05 || camera.near !== CLOSE) {
           camera.fov = fov;

@@ -3,7 +3,7 @@
 // under reduced motion.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FP_FEEL, FP_MOST, joltFp, newFpCam, stepFp, type FpInput, type FpMode } from '../src/scripts/city3d/fpcam';
+import { FP_FEEL, FP_MOST, joltFp, newFpCam, stepFp, type FpInput, type FpMode, PORTRAIT, fpFov } from '../src/scripts/city3d/fpcam';
 
 const MODES = Object.keys(FP_FEEL) as FpMode[];
 const still: FpInput = { speed: 0, top: 10, fwd: 0, side: 0, turn: 0, bob: 0, reduced: false };
@@ -106,4 +106,13 @@ test('under reduced motion it is still, and coming back from it starts from noth
     const after = stepFp(s, m, still, 1 / 60);
     for (const [k, v] of Object.entries(after)) assert.equal(v, 0, `${m} ${k} after`);
   }
+});
+
+test('the field of view widens a little on an upright screen, never on its side, at most PORTRAIT.most', () => {
+  assert.equal(fpFov(70, 16 / 9), 70);
+  assert.equal(fpFov(70, 1), 70);
+  const phone = fpFov(70, 375 / 667);
+  assert.ok(phone > 76 && phone <= 70 + PORTRAIT.most, `an upright phone: ${phone.toFixed(1)}`);
+  assert.ok(fpFov(70, 768 / 1024) < phone, 'a tablet upright less than a phone');
+  assert.equal(fpFov(70, 0.1), 70 + PORTRAIT.most);
 });

@@ -26,7 +26,7 @@ import { GEAR_TIME } from './airframe';
 import type { Outfit } from './character';
 import type { Controls } from './cockpits';
 import type { CockpitView } from './cockpit3d';
-import type { FpView } from './fpcam';
+import { fpFov, type FpView } from './fpcam';
 import { HANGAR_ROOF, HANGAR_SPOT, type AircraftKind, type Pose } from './airfield';
 import type { Sfx } from './combat';
 import { CEILING, TUNES, canLeave, flyReach, hullAt, newFlight, stepFly, type FlyInput, type FlyState, type FlyTune } from './flight-sim';
@@ -444,7 +444,7 @@ export function createFly(d: FlyDeps) {
         camera.position.y += (Math.random() - 0.5) * shake;
         shake = Math.max(0, shake - dt * 1.2);
       }
-      const wantFov = seat ? seat.view.fov + (d.reduced ? 0 : Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 6) : (noseCam ? 70 : 58) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
+      const wantFov = seat ? fpFov(seat.view.fov, camera.aspect) + (d.reduced ? 0 : Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 6) : (noseCam ? 70 : 58) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
       fov += (wantFov - fov) * damp(4, dt);
       // (the panel and the controls are close: the near plane comes in, as the car's seat has it)
       const near = seat ? 0.08 : near0;

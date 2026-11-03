@@ -45,7 +45,7 @@ import { useItem } from './inventory';
 import { FIGHTER_SCALE, createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { drawClose, setCloseCut } from './fpclose';
 import { createFpGuard, eyeOf } from './fpbody';
-import { joltFp, newFpCam, stepFp } from './fpcam';
+import { fpFov, joltFp, newFpCam, stepFp } from './fpcam';
 import { T, createFightSim, forward, yawTo, type FightEvent, type FightSim, type Fighter, type FighterInput } from './fight-sim';
 import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView, FightStart } from './fight-types';
 import { CORNERS, OUT, RING, RING_HALF } from './fightsite';
@@ -380,7 +380,7 @@ export function createFight(d: FightDeps): Fight {
     camera.rotateX(fv.pitch);
     camera.rotateZ(-fv.roll);
     fov0 ||= camera.fov;
-    lens(EYE_FOV + fv.fov);
+    lens(fpFov(EYE_FOV, camera.aspect) + fv.fov);
     camReady = false;
   }
 

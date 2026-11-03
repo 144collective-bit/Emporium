@@ -55,10 +55,11 @@ function inside(st: Cockpit['body'], x: number, a: number, inset: number) {
   return new THREE.Vector3(x, cy + Math.sin(t) * rr * sy, Math.cos(t) * rr);
 }
 /** The lining (wound to face in), the frames round each window and the glass in them */
-function lining(k: Cockpit) {
+function lining(k: Cockpit, low: boolean) {
   const [x0, x1] = k.liner;
   const NX = Math.max(2, Math.round((x1 - x0) / 0.05));
-  const NA = 56;
+  // (phones: fewer facets round the lining)
+  const NA = low ? 40 : 56;
   const dx = (x1 - x0) / NX;
   const da = 1 / NA;
   const out = { lining: [] as number[], frame: [] as number[], glass: [] as number[] };
@@ -342,7 +343,7 @@ export function createCockpit(id: PlaneId, outfit: Outfit, opts: { low: boolean;
   moving(group);
 
   // The cabin: the lining, the frames, the glass, the bulkhead, the floor and the well, the seat
-  const lin = lining(k);
+  const lin = lining(k, opts.low);
   const b = new Batch();
   b.add(lin.lining, LINING);
   b.add(lin.frame, FRAME);

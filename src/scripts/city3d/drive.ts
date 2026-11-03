@@ -47,7 +47,7 @@ import { bodies } from './life';
 import { DRIVE, FEEL, type MyCar, type PlayerCar } from './mycar';
 import type { KartId } from './mykart';
 import type { Box } from './solids';
-import type { FpView } from './fpcam';
+import { fpFov, type FpView } from './fpcam';
 
 export interface DriveDeps {
   scene: THREE.Scene;
@@ -651,7 +651,7 @@ export function createDrive(d: DriveDeps) {
       }
       // (the helmet's view tips with the lean)
       if (view && v.bike) camera.rotateZ(-roll * 0.6);
-      const wantFov = (view ? 68 : 58) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
+      const wantFov = (view ? fpFov(68, camera.aspect) : 58) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
       fov += (wantFov - fov) * damp(4, dt);
       // (the seat's view is close to the dash and the wheel: the near plane comes in for it)
       const close = view > 1 || fe ? 0.08 : near0;

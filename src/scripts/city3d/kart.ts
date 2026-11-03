@@ -41,6 +41,7 @@ import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } fr
 import { COURSES, HUT_DOOR, type Course, type CourseId, type Cond } from './kartcircuit';
 import { F, along } from './kartpark';
 import { createKart, type Kart } from './karts';
+import { fpFov } from './fpcam';
 import { fx, glowMat, glowTex } from './kit';
 import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
@@ -348,7 +349,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     camera.rotateX(fe.pitch);
     camera.rotateZ(-fe.roll);
     seatNear(true);
-    const wantFov = 68 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 8 + (p.boostT > 0 ? 5 : 0);
+    const wantFov = fpFov(68, camera.aspect) + Math.min(1, Math.abs(p.speed) / p.tune.top) * 8 + (p.boostT > 0 ? 5 : 0);
     fov += (wantFov - fov) * damp(4, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;

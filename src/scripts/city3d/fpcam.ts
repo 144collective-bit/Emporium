@@ -52,6 +52,13 @@ export const FP_FEEL: Record<FpMode, FpFeel> = {
 };
 
 /** A jolt: how far a full one (k = 1) dips the eye and pitches it, and how quickly it's back */
+/**
+ * An eye's field of view (vertical degrees) for the screen's shape: on an upright screen (aspect under 1) it widens a
+ * little, `PORTRAIT.k` a step of aspect, at most `PORTRAIT.most`, so the sides of a cockpit's panel, a dash or the
+ * street aren't cut off; on its side as given
+ */
+export const PORTRAIT = { k: 24, most: 12 };
+export const fpFov = (fov: number, aspect: number) => fov + Math.min(PORTRAIT.most, Math.max(0, 1 - aspect) * PORTRAIT.k);
 export const JOLT = { y: 0.9, pitch: 0.8, half: 0.07 };
 
 export interface FpInput {

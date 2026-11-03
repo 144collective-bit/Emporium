@@ -111,7 +111,7 @@ import type { FeatureId } from './live';
 import { vergeY } from './verges';
 import { drawClose, setCloseCut } from './fpclose';
 import { NEAR, boxClear, createFpGuard, eyeOf, fpArms, nearFor } from './fpbody';
-import { joltFp, newFpCam, stepFp } from './fpcam';
+import { fpFov, joltFp, newFpCam, stepFp } from './fpcam';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -2894,7 +2894,7 @@ export function createWalk(d: WalkDeps) {
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air, crouch: crouchAmt, slide: slideAmt, over: overAmt });
 
     // Field of view widens with speed, narrows when aiming
-    const wantFov = (firstPerson ? 70 : 52) + (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt) - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
+    const wantFov = (firstPerson ? fpFov(70, camera.aspect) : 52) + (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt) - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
     fov += (wantFov - fov) * damp(6, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;
