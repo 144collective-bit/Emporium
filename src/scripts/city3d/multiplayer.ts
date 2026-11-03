@@ -273,7 +273,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
     if (e.code === 'KeyT') {
       emotes.open = !emotes.open;
       if (emotes.open && document.pointerLockElement) document.exitPointerLock();
-    } else if (emotes.open && /^Digit[1-4]$/.test(e.code)) emote(EMOTES[Number(e.code.slice(5)) - 1].id);
+    } else if (emotes.open && !emotes.closest('[data-hub-emotes]') && /^Digit[1-4]$/.test(e.code)) emote(EMOTES[Number(e.code.slice(5)) - 1].id);
   });
 
   /* ----- Every frame ----- */

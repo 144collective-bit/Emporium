@@ -482,9 +482,11 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         </details>
       </div>
       <div class="mk-page hub-page" data-page="online" role="tabpanel" aria-label="Online" hidden>
-        <p class="walk-skins-head"><span>Multiplayer (beta)</span><span data-mp-ping></span></p>
+        <p class="walk-skins-head"><span>Multiplayer (beta) · <span data-mp-label>Go online</span></span><span data-mp-ping></span></p>
           <p class="mp-status" data-mp-status>Walk the city with other Degens. Emotes and set phrases only, nothing typed.</p>
           <button type="button" class="walk-fp" data-mp-join>Go online</button>
+          {/* Phones: the emotes and phrases live here (hub.ts moves them out of the header, docs/controls-plan.md Phase 3) */}
+          <div class="hub-emotes" data-hub-emotes></div>
           <ul class="mp-list" data-mp-list></ul>
       </div>
     </div>

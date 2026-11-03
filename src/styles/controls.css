@@ -181,3 +181,125 @@
     white-space: nowrap;
   }
 }
+
+/* ---------- The header on phones (docs/controls-plan.md Phase 3; the owner's picks) ----------
+   Upright, one slim row in both modes: the mode's title and its subtitle (cut short with an ellipsis), Dorras,
+   the level, City / Walk as one toggle (only the mode you'd go to, as its icon) and the hub's button; no logo.
+   What walking used to add goes elsewhere on every phone, upright or on its side: ammo onto the hotbar's gun
+   (its reserve under the count, `.hb-res`), the score into the hub (Profile's lifetime score), the emotes into
+   the hub's Online tab (hub.ts moves them); the Online switch and Connect wallet are the hub's Online and
+   Profile tabs' on an upright phone. */
+@media (max-width: 640px) {
+  .city-head {
+    flex-wrap: nowrap;
+    column-gap: 6px;
+    row-gap: 0;
+    min-height: 52px;
+    padding: 6px 10px;
+  }
+  .city-head::before {
+    content: none;
+  }
+  .city-head-logo {
+    display: none;
+  }
+  .city-head-id {
+    order: 1;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .city-head-text b,
+  .city-head-text small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .city-head-text b {
+    font-size: 15px;
+  }
+  .city-head-text small {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+  .city-head-tools {
+    display: contents;
+  }
+  .city-head .dorras-pill {
+    order: 2;
+  }
+  .city-head .level-pill {
+    order: 3;
+  }
+  .city-head-modes {
+    order: 4;
+    flex: none;
+  }
+  .city-head .hub-btn {
+    order: 5;
+  }
+  .city[data-view][data-mode] .city-head :is(.walk-top, .city-online, .nav-account) {
+    display: none;
+  }
+  /* City / Walk: the one you'd go to, as a square like the hub's, its icon in coin */
+  .city .city-head .city-mode-btn[aria-pressed="true"] {
+    display: none;
+  }
+  .city[data-view] .city-head .city-mode-btn {
+    height: 34px;
+    padding: 0 10px;
+    opacity: 1;
+  }
+  .city[data-view] .city-head .city-mode-btn svg {
+    color: var(--m-coin);
+  }
+  .city[data-view] .city-head .city-mode-btn .city-mode-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 640px), (pointer: coarse) and (max-height: 500px) {
+  .city.is-armed[data-mode="walk"] .city-head-stats,
+  .city[data-view][data-mode] .city-head .walk-top {
+    display: none;
+  }
+  .hotbar .hb-res {
+    display: block;
+  }
+}
+/* The gun's reserve under its count in the hotbar (phones only: elsewhere the header shows it) */
+.hb-res {
+  display: none;
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1;
+  color: #9a9ca4;
+}
+.hb-slot[aria-pressed="true"] .hb-res {
+  color: #0c0d10;
+}
+/* The emotes in the hub's Online tab on phones: the list as it stands, no summary, no ×, no keyboard hint */
+.hub-emotes > [data-emotes] > summary,
+.hub-emotes .pop-head,
+.hub-emotes .walk-pad {
+  display: none;
+}
+.hub-emotes .walk-settings-body {
+  position: static;
+  display: grid;
+  gap: 8px;
+  width: auto;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}

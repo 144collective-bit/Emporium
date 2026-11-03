@@ -154,6 +154,25 @@ the owner's sign-off. Keep this file up to date.
   emotes into the hub's Online tab. (To be confirmed with the owner at
   this phase.)
 - `--head-h` follows, so everything pinned under it moves up.
+- **Built, waiting on the owner's sign-off.** The owner's picks for what
+  walking added: ammo **on the hotbar only** (the gun's slot keeps its
+  magazine and shows its reserve under it, `.hb-res`, on phones), the
+  score **only in the hub** (Profile's lifetime score), the emotes **in
+  the hub's Online tab** (hub.ts moves `[data-emotes]` into
+  `[data-hub-emotes]` on phones, open there for good; picking one closes
+  the hub so you see it play; Esc and the number keys leave it alone).
+  "Phones" here is upright up to 640 wide and on their side up to 500
+  high (`PHONE` in hub.ts, the same query in controls.css). Upright the
+  header is one 52 px row: the title and subtitle (ellipsis), Dorras, the
+  level (now while walking too), the mode you'd go to as a square with its
+  icon in coin, the hub's button; the logo, the Online switch and Connect
+  wallet leave it (the hub's Online and Profile tabs have them). On their
+  side the row was already one: only ammo, score and the emotes leave it.
+  Tablets and desktops keep their header. The old two-row phone rules in
+  walk.css went. Found on the way: the Online tab's label
+  (`[data-mp-label]`) had gone with the menu plan's Phase 2 and the
+  multiplayer build threw on every state change; it's back, in the Online
+  tab's head line.
 
 ### Phase 4: size, opacity and left-handed
 
