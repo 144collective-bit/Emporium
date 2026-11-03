@@ -503,16 +503,15 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
           ] as Rect[])
             rbox(b, r, S, 0.12, timber);
           b.detail(() => {
-            if (low) return;
-            // Rows of crops across it, the odd one gone over
+            // Rows of crops across it, the odd one gone over (phones every third row)
             const rows = Math.floor((pz1 - pz0 - 1) / 0.8);
             for (let k = 0; k < rows; k++) {
-              if ((p.seed + k) % 4 === 3) continue;
+              if ((p.seed + k) % 4 === 3 || (low && k % 3)) continue;
               const z = pz0 + 0.7 + k * 0.8;
               b.box(x0 + 0.5, S + 0.012, z - 0.14, x1 - x0 - 1, 0.18, 0.28, (p.seed + k) % 3 ? crop : leafy);
             }
-            // Canes for the beans on some
-            if (p.seed % 3 === 1) for (let k = 0; k < 5; k++) b.add(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 3).translate(x0 + 0.8 + k * 0.6, S + 0.7, pz1 - 0.6), timber);
+            // Canes for the beans on some (not on phones)
+            if (!low && p.seed % 3 === 1) for (let k = 0; k < 5; k++) b.add(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 3).translate(x0 + 0.8 + k * 0.6, S + 0.7, pz1 - 0.6), timber);
           });
           if (p.shed) {
             const r = shedOf(p);
