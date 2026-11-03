@@ -18,17 +18,17 @@
  * the parked buses, trucks and the van the main thread's (`parkedCars()`). Signs are one small atlas of fixed copy.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, neon, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { offsetLine, type Pt } from './streetplan';
 import { EW_ROADS, MEDIAN, SOUTH_ROAD } from './layout';
 import { SLAB as S } from './world';
-import { COVER } from './palette';
+import { COVER, LAMP } from './palette';
 import { drawLot } from './kits3d';
 import { parkedCars } from './cars';
 import { LINES } from './docksport';
 import {
-  AVENUE_KERB, BAYS, CONTAINERS, SKIPS, SKIP_H, DEPOT_GATE, DEPOT_SHED, EAST_BEDS, EAST_GARDEN, EAST_TUNNEL, GARDEN_LOT, GARDEN_TUNNEL, HALF, HUTS, LOCKUP_W, LOCKUPS,
+  AVENUE_KERB, BAYS, CONTAINERS, MAST, SF_POOLS, SKIPS, SKIP_H, DEPOT_GATE, DEPOT_SHED, EAST_BEDS, EAST_GARDEN, EAST_TUNNEL, GARDEN_LOT, GARDEN_TUNNEL, HALF, HUTS, LOCKUP_W, LOCKUPS,
   MERCHANT, PARK_BENCHES, PARK_LOT, PARK_PATHS, PATH_W, PLOTS, POND, RAIL_BENCHES, RAIL_WALK, RAISED_BEDS, SF_CARS, SF_CROSSINGS, SF_SIGNS, SF_STREETS,
   SHED_H, STACKS, STRIPS, STRIP_WALK, TABLES, TRUCK_OFFICE, WALK_PATH_W, WEST_LOCKUPS, YARD_LOTS, shedOf, type Rect, type Shed,
 } from './southfield';
@@ -74,7 +74,8 @@ const ATLAS = canvasTex(512, 512, (c) => {
     c.fillText(row.text, 256, y + 34);
   });
 });
-const SIGN = siteMat('southfield-sign', toon('#ffffff', { map: ATLAS }));
+// (lit a little at night, the Docks' way, so the names read after dark)
+const SIGN = siteMat('southfield-sign', lit(new THREE.MeshBasicMaterial({ map: ATLAS }), 0.95, 1.3));
 /** A sign from the atlas facing n (x, z), its middle at (x, y, z) */
 function sign(b: Batch, row: number, x: number, y: number, z: number, n: Pt, w: number, h: number) {
   const g = new THREE.PlaneGeometry(w, h);
@@ -377,6 +378,17 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     }
     b.build(into, { cast: true, receive: true });
   });
+
+  // The floodlight masts: a steel pole and a lamp head reaching over what it lights
+  SF_POOLS.forEach(([x, z], i) =>
+    site(`southfield mast ${i}`, [x - 2, z - 2, x + 2, z + 2], (into) => {
+      const b = new Batch();
+      b.add(new THREE.CylinderGeometry(0.1, MAST.half, MAST.h, low ? 5 : 8, 1, true).translate(x, S + MAST.h / 2, z), steel);
+      b.box(x - 0.6, S + MAST.h, z - 0.25, 1.2, 0.18, 0.5, steel);
+      b.box(x - 0.5, S + MAST.h - 0.04, z - 0.2, 1, 0.04, 0.4, neon(LAMP.sodium.bulb, 0.25, 1.6));
+      b.build(into, { cast: true, receive: true });
+    })
+  );
 
   /* ---------- The park ---------- */
   // Its paths: pale gravel a hair over the lawn, in pieces

@@ -399,7 +399,17 @@ function pondBoxes(): Box[] {
   }
   return out;
 }
+/** Floodlight masts over the depot's forecourt (between its rows of buses) and the truck depot (beside its trucks): x, z, the pool's size (sodium) */
+export const SF_POOLS: [number, number, number][] = [
+  [DEPOT_LOT[0] + 18, N + 11, 12],
+  [DEPOT_LOT[0] + 38, N + 11, 12],
+  [FX + 38, WORKS_LOT[1] + 19.5, 11],
+];
+
+/** A floodlight mast: its height, its foot's half-width */
+export const MAST = { h: 6, half: 0.15 };
 export const SOUTHFIELD_SOLIDS: Box[] = [
+  ...SF_POOLS.map(([x, z]): Box => [x - MAST.half, z - MAST.half, x + MAST.half, z + MAST.half, MAST.h]),
   ...YARD_LOTS.flatMap((l) => l.solids.map((f) => [f[0], f[1], f[2], f[3], f[4]] as Box)),
   ...[DEPOT_SHED, DEPOT_GATE, MERCHANT, TRUCK_OFFICE, ...LOCKUPS, ...WEST_LOCKUPS, ...HUTS, GARDEN_TUNNEL, EAST_TUNNEL].map((s) => boxOf(s.rect, s.h)),
   // (the bays' back and side walls; the stacks)
@@ -451,6 +461,7 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
   }
   return out;
 })();
+
 
 /** A small seeded generator (the trees' places) */
 function rng(seed: number) {
