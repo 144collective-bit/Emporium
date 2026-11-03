@@ -45,6 +45,9 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'crest-hills', name: 'Crestmont, the hills', pos: [420, 34, -50], target: [400, 16, -240] },
   // Southbank Docks' port (docs/docks-plan.md Phase 3): over the basin at the cranes, the ship and the stacks
   { id: 'docks', name: 'Southbank Docks, the port', pos: [-290, 26, 215], target: [-345, 6, 170] },
+  // The Neon Mile (docs/strip-plan.md Phase 6): over the boulevard from the west, and down it at street level
+  { id: 'strip', name: 'The Neon Mile, over the boulevard', pos: [150, 30, 95], target: [200, 5, 30] },
+  { id: 'strip-street', name: 'The Neon Mile, the boulevard', pos: [140, 2.2, 33.5], target: [190, 4, 30] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

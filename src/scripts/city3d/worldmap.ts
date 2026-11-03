@@ -18,6 +18,7 @@ import { PLAN, type Pt } from './streetplan';
 import { PLACES, placeName, type Place } from './places';
 import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
 import { TRACKS } from './metro';
+import { MONO } from './monorail';
 import { AIRPORT_AREAS, APRON, CARGO_APRON, CARGO_OFFICE, CARGO_SHED, CONCOURSES, CONNECTORS, DEPARTURES, GA_APRON, HALL, HOTEL, MSCP, RUNWAY, TAXILANE, TAXIWAY, YARD } from './airfield';
 import { ROUTE } from './riverroute';
 import { CIRCUIT } from './kartcircuit';
@@ -68,6 +69,7 @@ const C = {
   circuit: '#ff5aa5',
   metro: '#e219e5',
   riverbus: '#1fb5d6',
+  mono: '#ffb21e',
   place: '#00eaff',
   placeDim: '#4f8fa0',
   you: '#00eaff',
@@ -278,6 +280,14 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       poly(t.pts);
       ctx.stroke();
     }
+    // The Neon Mile's monorail
+    ctx.strokeStyle = C.mono;
+    ctx.lineWidth = Math.max(2, 1 * view.s);
+    poly([
+      [MONO.x0, MONO.z],
+      [MONO.x1, MONO.z],
+    ]);
+    ctx.stroke();
     // The river bus's loop, dashed
     ctx.strokeStyle = C.riverbus;
     ctx.lineWidth = Math.max(1.5, 0.6 * view.s);
@@ -298,9 +308,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       const lit = !foot || visited.includes(p.id);
       const metro = p.kind === 'metro';
       const bus = p.kind === 'riverbus';
+      const mono = p.kind === 'mono';
       ctx.beginPath();
-      ctx.arc(x, y, metro || bus ? 5 : 6, 0, Math.PI * 2);
-      ctx.fillStyle = metro ? C.metro : bus ? C.riverbus : lit ? C.place : C.placeDim;
+      ctx.arc(x, y, metro || bus || mono ? 5 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = metro ? C.metro : bus ? C.riverbus : mono ? C.mono : lit ? C.place : C.placeDim;
       ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = C.edge;

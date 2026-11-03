@@ -28,6 +28,7 @@ import { CREST_RECT } from './crestmont';
 import { WESTLAKE_RECT } from './westlake';
 import { UPTOWN_RECT } from './uptown';
 import { MALL_AREA } from './mall';
+import { STRIP_RECT } from './strip';
 import { STADIUM_RECTS } from './stadium';
 import { KART_RECTS } from './kartfacility';
 import { TILE, tileKey, type Rect } from './tiles';
@@ -104,11 +105,12 @@ export const INFLUENCES: Influence[] = [
   // Every street's verge, worn a little (the highway's, drier and wider)
   ...PLAN.streets.filter((s) => s.kind !== 'highway').map((s) => verge(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half, 'worn', 4, 0.35)),
   { id: 'highway', cover: 'dryGrass', reach: 9, strength: 0.6, box: SKY, dist: (x, z) => Math.max(0, fromHighway(x, z) - HIGHWAY_HALF) },
-  // The town, the park, Uptown, the mall, the stadium and the kart park: lawn round them
+  // The town, the park, Uptown, the mall, the Neon Mile, the stadium and the kart park: lawn round them
   around('town', TOWN_BOX, 'lawn', 12, 0.45),
   around('westlake', WESTLAKE_RECT, 'lawn', 16, 0.6),
   around('uptown', UPTOWN_RECT, 'lawn', 10, 0.45),
   around('mall', MALL_AREA, 'lawn', 10, 0.4),
+  around('strip', STRIP_RECT, 'lawn', 10, 0.4),
   ...STADIUM_RECTS.map((r, i) => around(`stadium-${i}`, r, 'lawn', 12, 0.45)),
   ...KART_RECTS.map((r, i) => around(`karts-${i}`, r, 'lawn', 14, 0.5)),
   // Sunridge's desert yards and Crestmont's dry hills: dry grass round them

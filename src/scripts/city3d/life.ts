@@ -30,6 +30,7 @@ import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { CREST_MIX, CREST_PEOPLE, TOUR_PAINT } from './crestlife';
 import { CREST_RECT } from './crestmont';
 import { SCHOOL_BUS_PAINT, SUNRIDGE_RECT, SUN_MIX } from './sunridge';
+import { STRIP_LEAD, STRIP_MIX, STRIP_PAINTS, STRIP_RECT } from './strip';
 import { DRIVE_BLOCKS } from './coral';
 import { inTrenches } from './trenches';
 import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
@@ -49,6 +50,8 @@ export interface LifeOpts {
   /** Vehicle plan Phase 8: delivery trucks (box trucks and big rigs in turn), patrol cars, bikes and scooters */
   trucks?: number;
   police?: number;
+  /** The Neon Mile's own cars (strip.ts `STRIP_MIX`) */
+  strip?: number;
   bikes?: number;
   /** Crestmont's own cars, its tour bus first (crestlife.ts) */
   crest?: number;
@@ -182,16 +185,21 @@ interface Home {
   spots: typeof SPOTS;
   bus: string;
   mix: CarId[];
+  /** Its first car's model (a bus, unless it says) and paints of its own for some models (the Strip's taxis) */
+  lead: CarId;
+  paints: Partial<Record<CarId, string>>;
 }
 const inRect = (r: readonly [number, number, number, number], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
-const homeOf = (rect: readonly [number, number, number, number], bus: string, mix: CarId[]): Home => {
+const homeOf = (rect: readonly [number, number, number, number], bus: string, mix: CarId[], lead: CarId = 'bus', paints: Partial<Record<CarId, string>> = {}): Home => {
   const share = ROUTES.map((r) => r.pts.filter(([x, z]) => inRect(rect, x, z)).length / Math.max(1, r.pts.length));
-  return { rect, spots: SPOTS.filter((s) => inRect(rect, s.x, s.z) && share[s.r] >= 0.5), bus, mix };
+  return { rect, spots: SPOTS.filter((s) => inRect(rect, s.x, s.z) && share[s.r] >= 0.5), bus, mix, lead, paints };
 };
 /** Crestmont's (crestmont.ts: its tour bus and its coupes, town cars and supercars) and Sunridge's (sunridge.ts: its
  * school bus and its family cars) */
 const CREST_HOME = homeOf(CREST_RECT, TOUR_PAINT, CREST_MIX);
 const SUN_HOME = homeOf(SUNRIDGE_RECT, SCHOOL_BUS_PAINT, SUN_MIX);
+/** The Neon Mile's (strip.ts, docs/strip-plan.md Phase 5): its party bus, limos, taxis, supercars and town cars */
+const STRIP_HOME = homeOf(STRIP_RECT, '', STRIP_MIX, STRIP_LEAD, STRIP_PAINTS);
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows, then the trucks and the patrol cars) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup', 'exec'];
 /** The delivery trucks, in turn */
@@ -296,6 +304,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const nBikes = opts.bikes ?? 0;
   const nCrest = opts.crest ?? 0;
   const nSun = opts.sun ?? 0;
+  const nStrip = opts.strip ?? 0;
   const total = opts.cars + opts.buses + nTrucks + nPolice;
   /** Where each route turns (traffic.ts), for the indicators */
   const turnsBy = new Map<Route, Turn[]>();
@@ -327,7 +336,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       p: spot.p,
       seg: 0,
       v: 0,
-      vmax: model === 'bus' ? 3.2 : truck ? 3.2 + rand() * 0.8 : model === 'van' || model === 'pickup' ? 3.8 + rand() * 1.5 : 4.2 + rand() * 2,
+      vmax: model === 'bus' || model === 'partybus' ? 3.2 : model === 'limo' ? 3.6 + rand() * 0.6 : truck ? 3.2 + rand() * 0.8 : model === 'van' || model === 'pickup' ? 3.8 + rand() * 1.5 : 4.2 + rand() * 2,
       len: bike ? BIKES[model as BikeId].L * BIKE_K : model === 'rig' ? RIG_LEN : CARS[model as CarId].L,
       w: bike ? BIKES[model as BikeId].W * BIKE_K : CARS[model as CarId].W,
       model,
@@ -374,9 +383,10 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   for (const [home, n] of [
     [CREST_HOME, nCrest],
     [SUN_HOME, nSun],
+    [STRIP_HOME, nStrip],
   ] as const)
     for (let k = 0; k < n && home.spots.length; k++) {
-      const v = newVehicle(total + extra++, k === 0 ? 'bus' : home.mix[(k - 1) % home.mix.length], false, home.spots[Math.floor((((k * 7919) % 1000) / 1000) * home.spots.length)]);
+      const v = newVehicle(total + extra++, k === 0 ? home.lead : home.mix[(k - 1) % home.mix.length], false, home.spots[Math.floor((((k * 7919) % 1000) / 1000) * home.spots.length)]);
       v.home = home;
       vehicles.push(v);
     }
@@ -499,7 +509,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     addFleet('trailer', nRigs, ['#f3f2f7', '#f3f2f7', '#9a96b8', '#ffd23f'], pair(tg.paint, tg.detail, nRigs), (v) => v.trailer!.matrix);
   }
   // (the tour bus and the school bus in their own liveries)
-  for (const v of vehicles) if (v.home && v.model === 'bus') fleets.get('bus')!.paints[v.slot].set(v.home.bus);
+  for (const v of vehicles) {
+    if (v.home && v.model === 'bus') fleets.get('bus')!.paints[v.slot].set(v.home.bus);
+    const own = v.home?.paints[v.model as CarId];
+    if (own) fleets.get(v.model)!.paints[v.slot].set(own);
+  }
   // Each car's far form, in its own paint, in the city's one mesh of far cars (one draw for all of them; the trailer its own)
   const farCars = theFarCars();
   for (const v of vehicles) {
@@ -997,6 +1011,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // ...and round Crestmont's Drive (docs/crestmont-plan.md Phase 8), its shoppers carrying their bags
   const drive = walks.length;
   walks.push(...PLAN.blocks.filter((b) => (DRIVE_BLOCKS as readonly string[]).includes(b.id)).map((b) => ({ poly: b.poly })));
+  // ...and round the Neon Mile's two rows (docs/strip-plan.md Phase 5), with their shopping too
+  walks.push(...PLAN.blocks.filter((b) => b.ref === 'strip').map((b) => ({ poly: b.poly })));
   const shopper = (p: Person) => p.kind === 'walk' && p.loop!.block >= drive && (p.phase * 7) % 3 < 2;
   const walkers = Math.round((opts.walkers * walks.length) / town);
   const blocks = walks.map((w) => w.poly);

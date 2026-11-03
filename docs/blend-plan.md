@@ -205,6 +205,8 @@ Trenches along the highway (210) and the stadium (246).
 | Westlake's west verge (`westlake-verge`) | 1,316 | -209, -165, -143, -9 | Westlake Park, the stadium | nothing |
 | The north verge (`north-verge`) | 904 | -137, -165, -9, -157 | Westlake, Uptown North, the stadium | nothing |
 
+(Since this report the Neon Mile, docs/strip-plan.md, was merged in on the east strips' land: those three gaps are gone, the Strip an area of its own; `npm run seams -- --md` gives today's tables.)
+
 No place's arrival spot stands on a gap (the test holds it). The south band
 alone is about two thirds of the open land; the metro's main line crosses
 it and the south strips on its way west.

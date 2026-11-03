@@ -22,6 +22,7 @@ import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
+import { STRIP_LAMPS } from './strip';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
 import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './boulevard';
@@ -35,6 +36,8 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
+import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
+import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
@@ -74,6 +77,8 @@ import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
 import type { RiverBusUI } from './riverbus-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
+import type { MonoUI } from './monorail-ui';
+import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
 import { PLACES } from './places';
@@ -124,9 +129,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, reserve: 128, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, reserve: 128, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, reserve: 64, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 192, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 192, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 96, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -305,6 +310,21 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (it faces the river: the fly-in comes from the north, the port behind it)
     spots.push({ ...pickSpot(scene, 'harbourmaster', SLAB, [{ rect: H.rect, h: H.h }, { rect: H.tower, h: H.towerH }], H.rect, H.mast + 1.2, [tx, tz]), faces: 'n' });
   }
+  // ...and the Neon Mile's resorts (docs/strip-plan.md Phase 2): their spots (drawn in the Strip's chunk); the pin over
+  // each one's highest part, the south row's fly-in from the north (they face the boulevard)
+  for (const r of RESORTS) {
+    const boxes = r.parts.filter((p) => p.solid !== false).map((p) => ({ rect: p.rect, h: p.y1 }));
+    const high = r.parts.reduce((a, b) => (b.y1 > a.y1 ? b : a));
+    const pin: [number, number] = [(high.rect[0] + high.rect[2]) / 2, (high.rect[1] + high.rect[3]) / 2];
+    const s = pickSpot(scene, r.id, SLAB, boxes, r.land, r.top + 1.2, pin);
+    spots.push(r.face < 0 ? { ...s, faces: 'n' } : s);
+  }
+  // ...and the Sphere (Phase 3): the ball and its pavilion, fly-in from the north (it faces the boulevard)
+  {
+    const [x, z] = SPHERE.at;
+    const ball: [number, number, number, number] = [x - SPHERE.r, z - SPHERE.r, x + SPHERE.r, z + SPHERE.r];
+    spots.push({ ...pickSpot(scene, 'sphere', SLAB, [{ rect: ball, h: SPHERE_TOP }, { rect: SPHERE.pavilion, h: SPHERE.pavilionH }], SPHERE_LOT, SPHERE_TOP + 1.2, [x, z]), faces: 'n' });
+  }
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -325,6 +345,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of SUN_PLACE_LAMPS) addLamp(x, z, ry, y);
   // The Docks' (docks.ts): sodium, along their sidewalks (world.ts)
   for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
+  // The Neon Mile's (strip.ts): along its boulevard and east road
+  for (const [x, z, ry, y] of STRIP_LAMPS) addLamp(x, z, ry, y);
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
   for (const [x, z] of PORT_MASTS) addPool(x, z, 12, SLAB, true);
   // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)
@@ -367,7 +389,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   await waited(nextFrame());
   // (the horns and the bus doors play through the sound, made with the controls below; one before then is dropped)
   let lifeSfx: ((kind: LifeSfx, gain: number) => void) | null = null;
-  buildLife(scene, { cars: Q.cars, buses: Q.buses, trucks: Q.trucks, police: Q.police, bikes: Q.bikes, crest: Q.crest, sun: Q.sun, reserve: Q.reserve, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
+  buildLife(scene, { cars: Q.cars, buses: Q.buses, trucks: Q.trucks, police: Q.police, bikes: Q.bikes, crest: Q.crest, sun: Q.sun, strip: Q.strip, reserve: Q.reserve, walkers: Q.walkers, light: tier === 'low', far: Q.far, sfx: (k, g) => lifeSfx?.(k, g) }, crowd, tick);
   // (the medium tier's smaller shadow maps a touch softer: shadows.ts)
   const sky = createSky(scene, { shadows: Q.shadows, shadowRadius: tier === 'medium' ? 1.6 : 1, rainDrops: Q.rain, clouds: Q.clouds, storms: !reduced });
   progress(0.85);
@@ -691,6 +713,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(at);
       });
     }
+    // The Sphere's panel: Walk in on the sidewalk in front of its pavilion
+    if (id === 'sphere')
+      panelBody.querySelector('[data-sphere-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(SPHERE_SPAWN);
+      });
+    // A Neon Mile resort's panel: Walk in under its porte-cochère, facing its door
+    const resort = resortOf(id);
+    if (resort)
+      panelBody.querySelector('[data-strip-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(resort.spawn);
+      });
     // The Harbour Master's panel (Southbank Docks): Walk in on the sidewalk, facing its door
     if (id === 'harbourmaster')
       panelBody.querySelector('[data-docks-walkin]')?.addEventListener('click', () => {
@@ -771,6 +806,34 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          monoUI?.close();
+        },
+      }))
+    ));
+  // The Neon Mile's monorail (monorail.ts, docs/strip-plan.md Phase 4): its card and rides loaded when a station's door first opens
+  let monoUI: MonoUI | null = null;
+  let monoLoad: Promise<MonoUI> | null = null;
+  const MONO_DOORS = MONO_STATIONS.map((s) => ({ id: `mono:${s.id}`, x: s.door.x, z: s.door.z, label: 'Monorail' }));
+  const loadMono = () =>
+    (monoLoad ??= import('./monorail-ui').then(({ createMonoUI }) =>
+      (monoUI = createMonoUI(root, {
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (s) => {
+          works.want(s.at.x, s.at.z, 70);
+          walk.placeAt(s.at);
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          riverBusUI?.close();
         },
       }))
     ));
@@ -830,7 +893,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, whine) => sound.engine(revs, whine),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -843,6 +906,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         const [, way, i] = id.split(':');
         const l = LIBERTY_LIFTS[Number(i)];
         return rideTo(way === 'up' ? l.up : l.down, 'liberty', 'Liberty Bridge', way === 'up' ? 'Liberty Bridge · High walkway' : 'Liberty Bridge · Deck');
+      }
+      if (id.startsWith('mono:')) {
+        const shut = live.closed('monorail');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadMono()
+          .then((ui) => ui.open(id.slice(5)))
+          .catch(() => game.toast('The monorail is not running: try again in a moment'));
       }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
@@ -1024,6 +1094,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     taxis.reset();
     metroUI?.close();
     riverBusUI?.close();
+    monoUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
     close();
@@ -1065,7 +1136,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1176,6 +1247,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       close();
       tycoon?.closeCard();
       riverBusUI?.close();
+      monoUI?.close();
     },
   });
 
@@ -1525,7 +1597,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
     // (the el rumbles where the train is: walking, by Degen; in the City view, where it looks, softened by height)
     const ear = walking ? walk.position : controls.target;
-    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * (walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120)));
+    const heard = walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120);
+    // (the el's rumble overhead, and Lava Lagoon's volcano erupting: stripmarks.ts; still under reduced motion)
+    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * heard, reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard);
 
     if ((!reduced || dirty || flight) && (!covered || frames === 0 || t - coveredAt >= 1)) {
       if (covered) coveredAt = t;

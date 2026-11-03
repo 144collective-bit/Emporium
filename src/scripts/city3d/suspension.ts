@@ -60,6 +60,8 @@ export const SPRINGS: Record<CarId, SpringTune> = {
   police: T(1.5, 0.5, 0.07, 0.014, 0.007),
   truck: T(1.0, 0.4, 0.09, 0.018, 0.006, 0.09),
   rig: T(0.95, 0.4, 0.09, 0.016, 0.006, 0.09),
+  limo: T(1.1, 0.55, 0.08, 0.016, 0.006),
+  partybus: T(1.05, 0.45, 0.08, 0.017, 0.006),
 };
 
 /** Where the wheels are under the body (cars.ts `wheelSpots()`'s order: each axle back to front, right then left) */

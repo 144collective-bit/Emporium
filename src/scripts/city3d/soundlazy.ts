@@ -31,7 +31,7 @@ export function createSound() {
     engine: (revs: number, whine?: boolean) => real?.engine(revs, whine),
     tyres: (level: number) => real?.tyres(level),
     aero: (kind: 'prop' | 'jet' | 'heli', revs: number) => real?.aero(kind, revs),
-    update: (rain: number, night: number, a: Ambience, rumble?: number) => real?.update(rain, night, a, rumble),
+    update: (rain: number, night: number, a: Ambience, rumble?: number, quake?: number) => real?.update(rain, night, a, rumble, quake),
     suspend: () => real?.suspend(),
     resume: () => real?.resume(),
   };

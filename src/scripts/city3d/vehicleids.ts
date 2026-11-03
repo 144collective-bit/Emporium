@@ -6,7 +6,7 @@
  * says they're in (net/protocol.ts `cleanVehicle()`).
  */
 /** Every car model (cars.ts draws them; here so the shared, DOM-free code can name them) */
-export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec' | 'classic' | 'offroad' | 'ev' | 'police' | 'truck' | 'rig';
+export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec' | 'classic' | 'offroad' | 'ev' | 'police' | 'truck' | 'rig' | 'limo' | 'partybus';
 
 /** The cars a player can pick (the bus is for the city only): the five starters, then the ones the garage sells (catalog.ts) */
 export const PLAYER_CARS = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'muscle', 'suv', 'super', 'classic', 'offroad', 'ev'] as const satisfies readonly CarId[];

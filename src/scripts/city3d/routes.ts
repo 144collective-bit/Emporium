@@ -218,6 +218,8 @@ function rng(seed: number) {
 const ST = LANE / 2;
 const IN = MEDIAN / 2 + LANE / 2;
 const OUT = MEDIAN / 2 + LANE * 1.5;
+/** How much further out an avenue's lanes run for a planted median wider than the usual (the Strip's boulevard, strip.ts) */
+const wide = (s: Street) => (s.median ? (s.median - MEDIAN) / 2 : 0);
 
 /** One leg of a route: a stretch of one street driven one way in one lane, and how it turns onto the next */
 type Leg = { pts: Pt[]; off: number; turn: Turn; slip: boolean };
@@ -303,7 +305,7 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
       ? l.states.flatMap((s, k) => between(way, way.stations[s.i].along, way.stations[next(s)!].along, s.d).slice(k ? 1 : 0))
       : between(way, way.stations[l.first.i].along, way.stations[next(l.last)!].along, l.first.d);
     // An avenue's lane: the outer one into a right turn or out of a slip lane, the inner one into a left turn
-    l.off = way.s.lanes === 2 ? (l.turn === 'right' || l.inSlip ? OUT : l.turn === 'left' ? IN : r() < 0.5 ? IN : OUT) : ST + (way.s.median ?? 0) / 2;
+    l.off = way.s.lanes === 2 ? wide(way.s) + (l.turn === 'right' || l.inSlip ? OUT : l.turn === 'left' ? IN : r() < 0.5 ? IN : OUT) : ST + (way.s.median ?? 0) / 2;
     if (way.s.oneway) l.off = 0;
   }
   return legs;
@@ -798,7 +800,7 @@ export function pathBetween(a: Pt, b: Pt): Route | null {
   legs.forEach((l, k) => {
     const way = WAYS[runs[k].w];
     const inSlip = k > 0 && legs[k - 1].slip;
-    l.off = way.s.oneway ? 0 : way.s.lanes === 2 ? (l.turn === 'right' || inSlip || k === legs.length - 1 ? OUT : l.turn === 'left' ? IN : OUT) : ST + (way.s.median ?? 0) / 2;
+    l.off = way.s.oneway ? 0 : way.s.lanes === 2 ? wide(way.s) + (l.turn === 'right' || inSlip || k === legs.length - 1 ? OUT : l.turn === 'left' ? IN : OUT) : ST + (way.s.median ?? 0) / 2;
   });
   // (a leg too short to draw is dropped: the corners round over it)
   const kept = legs.filter((l) => Math.hypot(l.pts[0][0] - l.pts[l.pts.length - 1][0], l.pts[0][1] - l.pts[l.pts.length - 1][1]) > 0.05);

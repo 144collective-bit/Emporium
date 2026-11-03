@@ -12,7 +12,7 @@
  *
  * Coordinates are world units on the ground: [x, z].
  */
-import { BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, WALK_W, nsRuns, nsStreet, type Road } from './layout';
+import { BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, ewStreet, nsRuns, nsStreet, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
@@ -28,6 +28,7 @@ import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './m
 import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS, crestPoly } from './crestmont';
 import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
 import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
+import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 
 export type Pt = [number, number];
 
@@ -274,7 +275,14 @@ export function gridStreets(): Street[] {
       const top = i in SHORT_NS ? Math.min(...crossingsOf(parkway, 0, r.c).map((p) => p[1])) : e0;
       return BRIDGED_NS.includes(i) ? [s(`ns${i}`, top, e1)] : [s(`ns${i}`, top, RING_HI), s(`ns${i}s`, SOUTH_ROAD, e1)];
     }),
-    ...EW_ROADS.map((r, i): Street => ({ id: `ew${i}`, kind: kindOf(r), pts: [[e0, r.c], [e1, r.c]], half: r.half, lanes: r.lanes })),
+    // (and downtown's two small east-west roads stop at the Parkway's east side and start again past the Strip, its
+    // boulevard between: `STRIP_GAP`, strip.ts)
+    ...EW_ROADS.flatMap((r, i): Street[] => {
+      const s = (id: string, x0: number, x1: number): Street => ({ id, kind: kindOf(r), pts: [[x0, r.c], [x1, r.c]], half: r.half, lanes: r.lanes });
+      if (!(i in STRIP_GAP)) return [s(`ew${i}`, e0, e1)];
+      const west = Math.max(...crossingsOf(parkway, 1, r.c).map((p) => p[0]));
+      return [s(`ew${i}`, e0, west), s(ewStreet(i, e1), STRIP_GAP[i][1], e1)];
+    }),
   ];
 }
 
@@ -373,6 +381,9 @@ export function cityPlan(): StreetPlan {
   // The Docks (docks.ts, docs/docks-plan.md Phase 1): the ring off the south bank avenue west of the highway, Quay Road across it
   for (const t of DOCK_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of DOCK_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // The Neon Mile's boulevard and east road (strip.ts)
+  for (const t of STRIP_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes, ...(t.median ? { median: t.median } : {}) });
+  for (const c of STRIP_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -384,7 +395,7 @@ export function cityPlan(): StreetPlan {
   NS_ROADS.forEach((r, i) =>
     crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => nsRuns(i, at[1]) && meets.push({ id: `highway-ns${i}-${k}`, at, road: r, street: nsStreet(i, at[1]), along: 1 }))
   );
-  EW_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 1, r.c).forEach((at, k) => meets.push({ id: `highway-ew${i}-${k}`, at, road: r, street: `ew${i}`, along: 0 })));
+  EW_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 1, r.c).forEach((at, k) => meets.push({ id: `highway-ew${i}-${k}`, at, road: r, street: ewStreet(i, at[0]), along: 0 })));
   for (const m of meets) {
     crossings.push({ id: m.id, at: m.at, streets: [m.street, 'highway'], lights: true });
     // The arterial runs along z (along 1) or x; the highway, square to it there, the other way
@@ -478,6 +489,7 @@ export function cityPlan(): StreetPlan {
     ...SUN_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'sunridge', walk: WALK_W })),
     // The Docks' quays and yards round the basin (docks.ts)
     ...DOCK_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'docks', walk: b.walk })),
+    ...STRIP_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'strip', walk: b.walk })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];
