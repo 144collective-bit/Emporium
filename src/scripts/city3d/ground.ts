@@ -29,6 +29,7 @@ import { WESTLAKE_RECT } from './westlake';
 import { UPTOWN_RECT } from './uptown';
 import { MALL_AREA } from './mall';
 import { STRIP_RECT } from './strip';
+import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
 import { STADIUM_RECTS } from './stadium';
 import { KART_RECTS } from './kartfacility';
 import { TILE, tileKey, type Rect } from './tiles';
@@ -111,6 +112,9 @@ export const INFLUENCES: Influence[] = [
   around('uptown', UPTOWN_RECT, 'lawn', 10, 0.45),
   around('mall', MALL_AREA, 'lawn', 10, 0.4),
   around('strip', STRIP_RECT, 'lawn', 10, 0.4),
+  // Southfield's park and gardens a lawn round them, its yards worn dry (docs/blend-plan.md Phase 5a)
+  around('southfield', SOUTHFIELD_RECT, 'lawn', 8, 0.35),
+  around('southyards', YARDS_RECT, 'dryGrass', 12, 0.45),
   ...STADIUM_RECTS.map((r, i) => around(`stadium-${i}`, r, 'lawn', 12, 0.45)),
   ...KART_RECTS.map((r, i) => around(`karts-${i}`, r, 'lawn', 14, 0.5)),
   // Sunridge's desert yards and Crestmont's dry hills: dry grass round them

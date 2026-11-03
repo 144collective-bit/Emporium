@@ -28,6 +28,7 @@ import { EXT, RIVER } from './layout';
 import { MALL_AREA } from './mall';
 import { CREST_RECT } from './crestmont';
 import { DOCKS_RECT } from './docks';
+import { SF_RECT } from './southfield';
 import { STRIP_RECT } from './strip';
 import { SUNRIDGE_RECT } from './sunridge';
 
@@ -68,6 +69,9 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'strip', rect: [STRIP_RECT[0] - STRIP_REACH, STRIP_RECT[1] - STRIP_REACH, STRIP_RECT[2] + STRIP_REACH, STRIP_RECT[3] + STRIP_REACH], load: () => import('./strip3d') },
   // Sunridge, the suburb north-east inside the highway (sunridge.ts, docs/suburb-plan.md): its streets and walls (sunridge3d.ts)
   { id: 'sunridge', rect: SUNRIDGE_RECT, load: () => import('./sunridge3d') },
+  // Southfield, the land south of the south row (southfield.ts, docs/blend-plan.md Phase 5a): its yards, park,
+  // allotments, gardens and walks (southfield3d.ts)
+  { id: 'southfield', rect: SF_RECT, load: () => import('./southfield3d') },
 ];
 
 

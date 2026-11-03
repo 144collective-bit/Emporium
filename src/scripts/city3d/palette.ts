@@ -45,6 +45,8 @@ export const COVER = {
   dirt: '#6a4a3c',
   /** Bare dirt (The Trenches' patches, the vacant lots, its edge) */
   bare: '#6b5848',
+  /** A dry wash's sandy bed (Sunridge's fringe, fringes.ts) */
+  wash: '#9a8762',
   /** Gravel (round the Docks' yards) */
   gravel: '#6d6a72',
   /** Paving's ground colour (the paved lots' tile texture) */

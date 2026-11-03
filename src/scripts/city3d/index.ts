@@ -23,6 +23,7 @@ import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
+import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
 import { BOULEVARD_PEOPLE, EDGE_LAMPS, LAND_TREES, WATER_TREES } from './boulevard';
@@ -347,6 +348,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of DOCK_LAMPS) addLamp(x, z, ry, y);
   // The Neon Mile's (strip.ts): along its boulevard and east road
   for (const [x, z, ry, y] of STRIP_LAMPS) addLamp(x, z, ry, y);
+  // Southfield's (southfield.ts, docs/blend-plan.md Phase 5a): sodium round the yards, white along the park's paths; the
+  // park's and the allotments' trees, and its people (phones: half)
+  for (const [x, z, ry, y] of SF_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z, ry] of SF_PARK_LAMPS) addLamp(x, z, ry);
+  for (const [x, z, size] of SF_POOLS) addPool(x, z, size, SLAB, true);
+  for (const [x, z, s] of [...SF_PARK_TREES, ...SF_STRIP_TREES]) addTree(x, z, s, false);
+  SF_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
   for (const [x, z] of PORT_MASTS) addPool(x, z, 12, SLAB, true);
   // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)

@@ -483,7 +483,8 @@ it and has been retired completely. Build only on what's here.
     ramps and the el's pillars. The streets are worn too (`trenches3d.ts`:
     patched asphalt inside the lanes, never across a line, cracks,
     manholes). The lamps there are sodium orange (`lampKind()` in
-    trenches.ts, `buildLamps()` in world.ts: about one in ten flickering,
+    trenches.ts, mixed with the town's white for a block at its edges by
+    `lampTone()` in lampmix.ts, `buildLamps()` in world.ts: about one in ten flickering,
     in two sets going out together through `flickerTogether()` in kit.ts,
     the odd one dead). The el over Trench Avenue is dark steel
     (`metro3d.ts`, on through Southbank Docks too, `grim()`: a grimy deck, deep plate girders braced across, flanged
@@ -1470,6 +1471,46 @@ it and has been retired completely. Build only on what's here.
     `terrain.ts`'s `heightAt()` is still the hills only. Anything new on
     open land outside the highway stands at `rollsAt()`, or its land goes
     in `KEEPS` so the rolls flatten round it.
+  - Phase 5a (the band south of the south row) is built: **Southfield**,
+    `southfield.ts` (DOM-free, tested in `tests/southfield.test.ts`; the
+    boot's: streets, blocks, solids, lamps, trees, people) and
+    `southfield3d.ts` (`LAZY_DISTRICTS` id `southfield`): Southfield Yards
+    (ref `southyards`, character industry: the ring `sy-ring` off the south
+    bank avenue, Forge Street, its south leg and Kiln Lane, with Yard Street
+    `sy-yard` across it, lit at the avenue; the bus depot and Kingpost
+    Builders north of Yard Street, warehouses and a works (`YARD_LOTS`, the
+    kits), a truck depot and lock-ups south of it; sodium lamps,
+    `inYards()`), Southfield Park (ref `southfield`, a park: paths, the pond
+    `POND` walked round, the community garden, `PARK_TREES`), the
+    allotments in the south strips (`PLOTS`, `shedOf()`, the hut), the
+    west strip's lock-ups and warehouses, the railside walk under the
+    airport branch (`RAIL_WALK`) and the walk under the main line
+    (`STRIP_WALK`); `SOUTHFIELD_SOLIDS` (in `SOLIDS`), `SF_CARS` (the buses,
+    trucks and a van, `parkedCars()`), `FUTURE_SITES` (kept for later, no
+    pin or price). No new street goes within reach of a metro track: its
+    pillars are worked out from the street plan, and must not move.
+  - Phase 5c (the smaller leftovers) is built: the slivers between the
+    districts and the highway stay open land, dressed by their neighbours:
+    `fringes.ts` (DOM-free, tested in `tests/fringes.test.ts`): the Kiln Lane
+    substation east of Kiln Lane (`SUBSTATION`), Sunridge's fringe with its
+    dry wash (`WASH`, `HEADWALLS`) and the dirt path beside it
+    (`FRINGE_PATH`, from Sunridge's footpath at Palm Court to the north ring
+    avenue, `PATH_SQUEEZE`, `FRINGE_BENCHES`), four billboards facing the
+    highway (`BILLBOARDS`, `BOARD_COPY`: fixed made-up copy, the city's own
+    places, no price or number), `FRINGE_SOLIDS` (in `SOLIDS`) and
+    `FRINGE_KEEPS` (the trees keep off); drawn by `fringes3d.ts`
+    (`registerFringes()` from southfield3d.ts, sunridge3d.ts and
+    westlake3d.ts) with the scrub wherever a tree could stand and a little
+    closer to the highway (`REGIONS`; Sunridge's desert plants, brambles,
+    gorse and grass elsewhere). Nothing of theirs comes within
+    `HIGHWAY_KEEP` (6) of the highway's centre line: its lamps stand at 4.7.
+  - Phase 6a (lamps mixed at the edges) is built: `lampmix.ts` (DOM-free,
+    tested in `tests/lampmix.test.ts`): `SODIUM_AREAS` (The Trenches, the
+    waterfront, the Docks, Southfield Yards), `sodiumDepth()`,
+    `sodiumShare()` (0 to 1 across `MIX`, 18, either side of their edge) and
+    `lampTone()` (each lamp seeded from where it stands; The Trenches' dead
+    and flickering ones its own), read by `buildLamps()` in world.ts. A new
+    sodium district goes in `SODIUM_AREAS`.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1730,7 +1771,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -4305,7 +4346,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges and the rolls (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway and the lamps' mix (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

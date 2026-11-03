@@ -28,10 +28,10 @@ import { DRIVE_BLOCKS } from './coral';
 import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
-import { lampKind } from './trenches';
-import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, inDocks, type Rect } from './docks';
+import { lampTone } from './lampmix';
+import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
-import { BRIDGE_PIERS, PIER_HALF, WATERFRONT_RECT } from './waterfront';
+import { BRIDGE_PIERS, PIER_HALF } from './waterfront';
 import { BRIDGE_RECT } from './stadium';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
@@ -378,7 +378,7 @@ function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   // (an east-west road past the Strip is its east piece, `ew<i>e`: layout.ts STRIP_GAP)
   const mine = (id: string) => id === road || id === `${road}e`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.some(mine) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('strip-') || id.startsWith('sun-'))))
+    .filter((c) => c.streets.some(mine) && (c.streets.includes('highway') || c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('sy-') || id.startsWith('strip-') || id.startsWith('sun-'))))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       if (c.streets.includes('highway')) return [[v - HIGHWAY_HALF - 0.2, v + HIGHWAY_HALF + 0.2]];
@@ -1087,7 +1087,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     }
     // (the Docks' as The Trenches': grey sidewalks, worn concrete, in pieces a tile each round the basin; their strips
     // along the basin's south quay and over its mouth all sidewalk)
-    if (blk.ref === 'docks') {
+    if (blk.ref === 'docks' || blk.ref === 'southyards') {
       const [walls, ...top] = tiledSlab(slab, SLAB);
       b.add(walls, trenchKerb);
       if (!blk.walk) for (const g of top) b.add(g, trenchKerb);
@@ -1475,8 +1475,9 @@ export function buildTrees(low = false) {
 }
 
 /**
- * The street lamps: white in town; in The Trenches (the grit step, `lampKind()` in trenches.ts) sodium orange, a few
- * flickering (two sets, each going out together: its bulbs, halos and pools) and the odd one dead (no light at all)
+ * The street lamps: white in town; sodium orange in The Trenches, along the waterfront, in the Docks and the yards,
+ * mixed for a block either side of where they meet (`lampTone()` in lampmix.ts); in The Trenches a few flickering (two
+ * sets, each going out together: its bulbs, halos and pools) and the odd one dead (no light at all)
  */
 type Tone = 'white' | 'sodium' | 'flickA' | 'flickB';
 const TONES: Tone[] = ['white', 'sodium', 'flickA', 'flickB'];
@@ -1488,11 +1489,10 @@ const SODIUM = LAMP.sodium;
  */
 export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => void, reduced = false) {
   const toneOf = lamps.map((l, i): Tone | 'dead' => {
-    // (the waterfront's are all sodium, none flickering: it's kept up)
-    const [wx0, wz0, wx1, wz1] = WATERFRONT_RECT;
-    // (and the Docks' too, a working port: docks.ts)
-    const k = (l.x > wx0 && l.x < wx1 && l.z > wz0 && l.z < wz1) || inDocks(l.x, l.z) ? 'sodium' : lampKind(l.x, l.z);
-    return k === null ? 'white' : k === 'sodium' ? 'sodium' : k === 'dead' ? 'dead' : i % 2 ? 'flickA' : 'flickB';
+    // (sodium in The Trenches, along the waterfront, in the Docks and the yards, white elsewhere, mixed for a block
+    // either side of where they meet: lampmix.ts, docs/blend-plan.md Phase 6a)
+    const k = lampTone(l.x, l.z);
+    return k === 'flicker' ? (i % 2 ? 'flickA' : 'flickB') : k;
   });
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
   const poles: THREE.Matrix4[] = [];

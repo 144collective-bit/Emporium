@@ -25,6 +25,7 @@ import { CORAL_CARS, CORAL_SOLIDS } from '../src/scripts/city3d/coral';
 import { MANSION_SOLIDS } from '../src/scripts/city3d/mansions';
 import { HOTEL, SITE_SOLIDS } from '../src/scripts/city3d/crestsites';
 import { VERGE_SOLIDS } from '../src/scripts/city3d/verges';
+import { FRINGE_SOLIDS } from '../src/scripts/city3d/fringes';
 
 /** Degen's radius in walk mode (walk.ts RADIUS) */
 const R = 0.22;
@@ -34,7 +35,7 @@ test('every solid box stands on a block, district or the garage lot (the kart pa
   const laybyCar = (b: (typeof SOLIDS)[number]) => KERBSIDE_SOLIDS.indexOf(b) >= 0 && KERBSIDE_SOLIDS.indexOf(b) < LAYBY_CARS.length;
   const bayCar = (b: (typeof SOLIDS)[number]) => CORAL_SOLIDS.indexOf(b) >= CORAL_SOLIDS.length - CORAL_CARS.length;
   const stadiumOpen = (b: (typeof SOLIDS)[number]) => STADIUM_SOLIDS.includes(b) && [CAR_PARK, BRIDGE_RECT].some((r) => (b[0] + b[2]) / 2 > r[0] && (b[0] + b[2]) / 2 < r[2] && (b[1] + b[3]) / 2 > r[1] && (b[1] + b[3]) / 2 < r[3]);
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !MONO_PILLAR_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !VERGE_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !MONO_PILLAR_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !VERGE_SOLIDS.includes(b) && !FRINGE_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
 test('no solid box sits on a road (but the metro\'s pillars in an avenue\'s median, metro.test.ts)', () => {
