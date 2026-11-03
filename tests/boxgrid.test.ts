@@ -11,6 +11,7 @@ import { HANGAR_ROOF } from '../src/scripts/city3d/airfield';
 import { DRIVE } from '../src/scripts/city3d/mycar';
 import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { hillsAlong } from '../src/scripts/city3d/terrain';
+import { rollsAlong } from '../src/scripts/city3d/rolls';
 
 /** A seeded generator, so a failure can be run again */
 function rng(seed: number) {
@@ -71,6 +72,8 @@ function rayAll(from: { x: number; y: number; z: number }, dir: { x: number; y: 
   if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
   // (the ground rises on Crestmont's hills: terrain.ts, as rayBoxes() has it)
   t = hillsAlong(from, dir, t, 0, 0.5);
+  // (and the rolls outside the town: rolls.ts)
+  t = rollsAlong(from, dir, t, 0.1, 0.5);
   const o = [from.x, from.y, from.z];
   const v = [dir.x, dir.y, dir.z];
   for (const b of [...SHOT_SOLIDS, ...CAMERA_ONLY]) {

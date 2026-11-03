@@ -7,6 +7,7 @@ import { JUNCTIONS, ROUTES, packRoutes, unpackRoutes, type PackedRoute } from '.
 import { AMENITIES } from '../src/scripts/city3d/commons';
 import { JOG_STRIDE, WALK_STRIDE, MARCH_STRIDE } from '../src/scripts/city3d/crowdclips';
 import { VERGES, packVerges } from '../src/scripts/city3d/verges';
+import { rollShares } from '../src/scripts/city3d/rolls';
 
 const made: Record<string, unknown> = await bake({ quiet: true });
 /** Into the page and back, as the browser gets it */
@@ -23,7 +24,7 @@ function assertPlain(v: unknown, path: string) {
 }
 
 test('everything baked is plain data: it comes into the page as it was made', () => {
-  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'jog-cycle', 'march-cycle', 'routes', 'verges', 'walk-cycle']);
+  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'jog-cycle', 'march-cycle', 'rolls', 'routes', 'verges', 'walk-cycle']);
   for (const [key, v] of Object.entries(made)) assertPlain(v, key);
 });
 
@@ -45,4 +46,9 @@ test('the amenities and the crowd\'s walk cycles from the page are the ones work
 test("the blocks' verges from the page are the ones worked out here", () => {
   assert.equal(typeof made.verges, 'string');
   assert.equal(viaPage(made.verges), packVerges(VERGES));
+});
+
+test("the rolls' shares from the page are the ones worked out here", () => {
+  assert.equal(typeof made.rolls, 'string');
+  assert.equal(viaPage(made.rolls), rollShares());
 });

@@ -40,6 +40,7 @@ import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from '
 import { COVER, KERB, LAMP, TREE, VERGE } from './palette';
 import { EDGE, RAMP, VERGES, edgePieces, pieceLine } from './verges';
 import { colourAt, groundStep } from './ground';
+import { ROLL, rollGrad, rollSlope, rollsAt, rollsIn } from './rolls';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one pad each (layout.ts DISTRICTS). */
@@ -704,14 +705,61 @@ function groundPlane(x0: number, z0: number, x1: number, z1: number, low: boolea
   const nz = Math.max(1, Math.ceil((z1 - z0) / step));
   return new THREE.PlaneGeometry(x1 - x0, z1 - z0, nx, nz).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
 }
+/**
+ * A piece of the ground over the rolls (rolls.ts, docs/blend-plan.md Phase 4), or null where it's flat: its grid on
+ * the rolls' lattice (as fine as `groundStep()` asks, in whole shares of a cell, never finer: phones' near grid is
+ * coarser than a cell, so they draw a cell a quad), each quad split from its low corner (x, z) to its high one, as
+ * `rollsAt()` reads it, so what's drawn is what's walked on
+ */
+function rolledPlane(x0: number, z0: number, x1: number, z1: number, low: boolean) {
+  if (!rollsIn(x0, z0, x1, z1)) return null;
+  const step = ROLL.cell / Math.max(1, Math.floor(ROLL.cell / Math.min(ROLL.cell, groundStep(x0, z0, x1, z1, low))));
+  const at = (a: number, b: number) => {
+    const out = [a];
+    for (let v = (Math.floor(a / step) + 1) * step; v < b - 1e-6; v += step) out.push(v);
+    out.push(b);
+    return out;
+  };
+  const xs = at(x0, x1);
+  const zs = at(z0, z1);
+  const pos: number[] = [];
+  for (const z of zs) for (const x of xs) pos.push(x, rollsAt(x, z), z);
+  const idx: number[] = [];
+  const n = xs.length;
+  for (let j = 0; j + 1 < zs.length; j++)
+    for (let i = 0; i + 1 < n; i++) {
+      const a = j * n + i;
+      const [b, c, d] = [a + 1, a + n + 1, a + n];
+      // (x, z) to (x', z'): the triangle with the cell's (x', z) corner, and the one with its (x, z')
+      idx.push(a, c, b, a, d, c);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((pos.length / 3) * 2).fill(0), 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
 const GROUND_TINT = new THREE.Color();
-/** Each vertex of a piece of the ground in what covers it there (ground.ts) */
+const ROLL_LOW = new THREE.Color(COVER.bank);
+const ROLL_HIGH = new THREE.Color(COVER.dryGrass);
+/** The rolls' shade: slopes facing a light from the north-west (x -, z -) a shade brighter, those facing away a shade darker, by `SHADE` a unit of slope (a map's hill shading: a metre or two of rise reads from above, by day or night) */
+const SHADE_TO = [-0.6, -0.8] as const;
+const SHADE = 3.2;
+/** Each vertex of a piece of the ground in what covers it there (ground.ts); over the rolls the lows lusher, the crests drier, the slopes shaded */
 function paintGround(g: THREE.BufferGeometry) {
   const pos = g.getAttribute('position');
   const col = g.getAttribute('color') as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
-    const [r, gr, bl] = colourAt(pos.getX(i), pos.getZ(i), RGB);
+    const [x, h, z] = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+    const [r, gr, bl] = colourAt(x, z, RGB);
     GROUND_TINT.setRGB(r, gr, bl, THREE.SRGBColorSpace);
+    if (h > 0) GROUND_TINT.lerp(ROLL_HIGH, 0.6 * Math.min(1, h / ROLL.up));
+    else if (h < 0) GROUND_TINT.lerp(ROLL_LOW, 0.6 * Math.min(1, -h / ROLL.down));
+    if (h !== 0) {
+      const [gx, gz] = rollGrad(x, z, ROLL.cell / 2);
+      GROUND_TINT.multiplyScalar(Math.max(0.7, Math.min(1.3, 1 - SHADE * (gx * SHADE_TO[0] + gz * SHADE_TO[1]))));
+    }
     col.setXYZ(i, GROUND_TINT.r, GROUND_TINT.g, GROUND_TINT.b);
   }
 }
@@ -895,7 +943,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts)
         for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
-          const flat = hill ? null : groundPlane(px0, pz0, px1, pz1, low);
+          // (the open land outside the town rolls, rolls.ts; flat everywhere anything stands)
+          const flat = hill ? null : (rolledPlane(px0, pz0, px1, pz1, low) ?? groundPlane(px0, pz0, px1, pz1, low));
           b.add(hill ?? flat!, grass);
           // (painted over the grass's colour once the Batch has given it one: the shared paint's colour is per vertex;
           // what covers the ground, ground.ts, docs/blend-plan.md Phase 2)
@@ -1269,7 +1318,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
  */
 export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
   // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
-  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : 0);
+  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
 }
 
 

@@ -54,6 +54,7 @@ import { MALL_INSIDE_SOLIDS } from './mallinside';
 import { UPTOWN_SITE_SOLIDS } from './uptownsites';
 import { SKYDECK_SOLIDS } from './skydeck';
 import { hillsAlong } from './terrain';
+import { rollsAlong } from './rolls';
 import { VERGE_SOLIDS } from './verges';
 
 /** x0, z0, x1, z1, height */
@@ -352,6 +353,8 @@ export function rayBoxes(from: { x: number; y: number; z: number }, dir: { x: nu
   if (dir.y < 0) t = Math.min(t, (from.y - 0.1) / -dir.y);
   // (and Crestmont's hills, terrain.ts: the ground there rises)
   t = hillsAlong(from, dir, t, 0, 0.5);
+  // (and the rolls outside the town, rolls.ts)
+  t = rollsAlong(from, dir, t, 0.1, 0.5);
   const o = [from.x, from.y, from.z];
   const v = [dir.x, dir.y, dir.z];
   // Only the boxes under the ray's path can stop it

@@ -345,19 +345,56 @@ Little changes on screen but the trees' edges.
   one-off camera too (`SHOTS_EXTRA`) for a close look:
   `docs/blend-shots/phase-3-close/`.
 
-### Phase 4: gentle rolls
+### Phase 4: gentle rolls (built)
 
-- **The rolls:** `terrain.ts` grows a second field beside the hills: low
-  swells and dips (a metre or two at most) on the open land outside the
-  town, eased to 0 within a margin of every street, block, place, solid,
-  bridge, the river's banks and the airport (a mask from `landuse.ts`), so
-  `heightAt()` stays 0 wherever anything stands today. Walking, driving,
-  flying, the trees and the props follow it as they follow the hills.
-- **Drawn:** the ground's grid follows the height (the hills' way,
-  `hillsPlane()`), tinted by slope, the lows a little lusher, the crests a
-  little drier.
-- **Checked:** the tests hold the mask (0 under everything existing), the
-  slopes walkable and drivable, the flight sim's floor right.
+- **Where:** the open land outside the ring highway only (the owner's
+  "outside the town"; the gaps inside it are Phase 5's and stay flat for
+  their neighbours to fill). Today that's the north-west past Westlake
+  Park and Uptown, the strip west of the highway, the land north of the
+  highway's north side and south of its south side: Crestmont, the
+  airport, the Flats, the kart park, the stadium and the Docks hold the
+  rest. A wider world gets more of it by itself.
+- **The rolls** are `rolls.ts` (DOM-free, tested in `tests/rolls.test.ts`;
+  kept beside `terrain.ts`, whose `heightAt()` still means the hills and is
+  0 everywhere else): heights on a lattice `ROLL.cell` (15) apart on the
+  world's own grid, from fixed waves (`shape()`: swells to `up`, 1 tile,
+  about 1.8 m; dips to `down`, 0.45), the same for everyone and whatever
+  the world's size. Between the lattice points the ground is each cell's
+  two triangles, split from its low corner to its high one
+  (`rollsAt()`): world.ts draws exactly those (`rolledPlane()`), and any
+  finer grid laid on the lattice (desktop's, a cell in thirds) draws the
+  very same surface, so what's walked and driven on is what's drawn, to
+  the millimetre.
+- **The mask:** a lattice point's share is 0 wherever anything the
+  outskirts' trees keep off (landuse.ts `KEEPS`: every street, block and
+  district, the airport, the river, the metro's line, the verges), the
+  land inside the highway, the hills' land or the world's edge comes
+  within `ROLL.clear` (a cell's diagonal and two raster steps) of it, so
+  every triangle touching any of them is flat; past that it rises over
+  `ROLL.ramp` (30). Working it out asks the clearing rule all over the
+  world (about 150 ms), so it's baked when the site is built (`baked()` key
+  `rolls`, a digit a point) and made only when first asked for elsewhere
+  (the tests, the game server).
+- **What follows them:** walking, driving and flying (walk.ts's
+  `groundAt()`, which drive.ts and fly.ts read; the step down a slope),
+  the walk camera (`rollsAlong()` in `cameraRoom()`), shots (`rayBoxes()`
+  in solids.ts) and the outskirts' trees and woods (set into the slope a
+  little). Nothing else stands there yet; Phase 8's countryside will.
+- **Drawn:** the ground's pieces over the rolls are grids on the lattice
+  (`rolledPlane()`: desktop near the city a cell in thirds, as before;
+  phones and far out a cell a quad, coarser than the phones' grid was, so
+  no heavier), their vertices painted as the ground's (ground.ts), the
+  crests drier (`COVER.dryGrass`), the lows lusher (`COVER.bank`), the
+  slopes a shade darker; smooth normals, so the ink draws no facets.
+- **Checked:** the tests hold the rolls to 0 everywhere the trees keep
+  off (every 1.5 tiles over the world), under every solid, door, place,
+  spawn, street, slab, the metro, the highway and the river's edges, only
+  outside the highway and off the hills, flat at the edge, the steepest
+  under 0.12 (walkable and drivable), the drawn surface equal to the
+  walked one, the camera and shots stopping on a swell, the flight sim's
+  floor on them; the boxgrid test's reference ray has them too.
+- Measured: the boot 685.9 KB of 690 (1.8 more: the module and its baked
+  digits).
 
 ### Phase 5: the gaps inside the highway
 
