@@ -155,3 +155,39 @@ test('the piers stand clear of every street that passes under, the metro, the bo
     assert.ok(gap > PIER_GAP / 2 && gap < 3 * PIER_GAP, `piers ${gap.toFixed(1)} apart at ${p.s.toFixed(1)}`);
   }
 });
+
+// Phase 1b (the owner's call: open land only moves): what each exit takes is clear. Every ramp keeps off every
+// district's land and block, every street but its own arterial, the water and everything solid (the metro's pillars
+// by exits 2 and 7 are re-placed with its rise over the deck in Phase 2)
+import { landMap, C, AREAS } from '../src/scripts/city3d/seams';
+import { SOLID_GRID } from '../src/scripts/city3d/solids';
+import { METRO_SOLIDS } from '../src/scripts/city3d/metro';
+
+test('every ramp keeps clear of the districts, the streets, the water and everything solid', () => {
+  const m = landMap();
+  const cell = (x: number, z: number) => m.get(Math.floor((x - m.x0) / 2), Math.floor((z - m.z0) / 2));
+  const metro = new Set(METRO_SOLIDS.map((b) => b.join()));
+  const under = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'slip');
+  const hits: string[] = [];
+  for (const r of RAMPS) {
+    const e = EXITS.find((x) => x.n === r.exit)!;
+    for (let i = 0; i < r.pts.length; i++) {
+      const p = r.pts[i];
+      const q = r.pts[Math.min(i + 1, r.pts.length - 1)];
+      const pp = r.pts[Math.max(i - 1, 0)];
+      const l = Math.hypot(q[0] - pp[0], q[1] - pp[1]) || 1;
+      const n = [-(q[1] - pp[1]) / l, (q[0] - pp[0]) / l];
+      for (const w of [-RAMP_HALF, 0, RAMP_HALF]) {
+        const [x, z] = [p[0] + n[0] * w, p[1] + n[1] * w];
+        const c = cell(x, z);
+        if (c >= 0) hits.push(`${r.id} on ${AREAS[c].id}`);
+        else if (c === C.water) hits.push(`${r.id} in the water`);
+        else if (r.ys[i] < DECK_Y) for (const s of under) if (s.id !== e.street && distToStreet(s, [x, z]) <= s.half) hits.push(`${r.id} on ${s.id}`);
+        for (const b of SOLID_GRID.near(x, z, 0.1))
+          if (x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3] && b[4] > r.ys[i] - 0.5 && !metro.has(b.join())) hits.push(`${r.id} into a solid at ${b.slice(0, 4).map((v) => v.toFixed(1))}`);
+      }
+    }
+  }
+  const seen = [...new Set(hits)];
+  assert.deepEqual(seen, [], seen.slice(0, 20).join('\n'));
+});

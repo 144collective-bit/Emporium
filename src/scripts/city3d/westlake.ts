@@ -23,6 +23,7 @@
  */
 import { EW_ROADS, WALK_W } from './layout';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
+import { RAMP_CLEAR, quadrantEdge } from './viaduct';
 import { BEND_REACH, PARKWAY } from './outer';
 
 export type Pt = [number, number];
@@ -49,12 +50,26 @@ export const ZS = RING_AVE.c - RING_AVE.half - WALK_W;
 /** The arc of the highway's bend between two angles, `n` points */
 const arc = (a0: number, a1: number, n: number): Pt[] => Array.from({ length: n + 1 }, (_, k) => [BEND_C[0] + Math.cos(a0 + ((a1 - a0) * k) / n) * BEND_IN, BEND_C[1] + Math.sin(a0 + ((a1 - a0) * k) / n) * BEND_IN] as Pt);
 
+/**
+ * The south-west corner the raised highway's exit 8 takes (docs/highway-plan.md Phase 1b, the owner's call: open
+ * land moves): its inside quadrant's edge, a sidewalk and a little more further in (the seam map's cells are 2
+ * across), from the west edge down to the block's south edge
+ */
+export const EXIT_NOTCH: Pt[] = (() => {
+  const edge = quadrantEdge(8, -1, RAMP_CLEAR + 2.5 + WALK_W).filter((p) => p[0] > X0 + 2.5 && p[1] < ZS - 0.5);
+  // (from the west edge southwards: the edge comes from the arterial northwards, so it's turned round), its
+  // straight run down to the south edge in one piece
+  const pts = [...edge].reverse();
+  const bend = pts.filter((p, i) => i === 0 || Math.abs(p[0] - pts.at(-1)![0]) > 0.05);
+  return [[X0, pts[0][1] - 3], ...bend, [pts.at(-1)![0], ZS]];
+})();
+
 /** The big block, inside its sidewalk, counter-clockwise seen from above (the order the street plan's blocks keep) */
 export const BIG: Pt[] = (() => {
   // Where the bend meets the west edge: from straight up (the north edge) round to there
   const aW = -Math.PI + Math.acos((BEND_C[0] - X0) / BEND_IN);
   const bend = arc(-Math.PI / 2, aW, 16);
-  return [[X0, bend.at(-1)![1]], [X0, ZS], [X1, ZS], [X1, Z0], ...bend.slice(0, -1)];
+  return [[X0, bend.at(-1)![1]], ...EXIT_NOTCH, [X1, ZS], [X1, Z0], ...bend.slice(0, -1)];
 })();
 
 export interface ParkBlock {
@@ -225,11 +240,13 @@ export interface Gate {
   out: Pt;
   half: number;
 }
+/** The south-west gate (east of the corner exit 8 takes) */
+const SW_GATE_X = EXIT_NOTCH.at(-1)![0] + 12;
 const southGate = (id: string, x: number, half = 1.3): Gate => ({ id, at: [x, ZS], out: [0, 1], half });
 const eastGate = (id: string, z: number, half = 1.3): Gate => ({ id, at: [X1, z], out: [1, 0], half });
 export const GATES: Gate[] = [
   southGate('gate-mall', MALL.x, MALL.half),
-  southGate('gate-sw', -182),
+  southGate('gate-sw', SW_GATE_X),
   southGate('gate-lake', -96),
   southGate('gate-se', -58),
   eastGate('gate-e1', -28),
@@ -302,7 +319,7 @@ export const PATHS: ParkPath[] = [
   { id: 'garden-cross', pts: [[X0 + RING_IN, GARDEN_Z], [MEADOW_X, GARDEN_Z]], half: 1.2 },
   ...GARDEN_XS.map((x, i): ParkPath => ({ id: i ? 'garden-e' : 'garden-w', pts: [[x, ringNorthZ(x)], [x, GARDEN_SITE[3] - 0.5]], half: 1.1 })),
   // The south-west gate up to the ring walk
-  { id: 'sw', pts: [[-182, ZS], [-182, ZS - RING_IN]], half: 1.1 },
+  { id: 'sw', pts: [[SW_GATE_X, ZS], [SW_GATE_X, ZS - RING_IN]], half: 1.1 },
 ];
 
 /** How far a point is from a polyline (closed if `loop`) */

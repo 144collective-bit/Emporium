@@ -164,7 +164,8 @@ const EXIT_DATA: [string, string, Pt, string, 1 | -1, Form, Form][] = [
   ['highway-ew4-0', 'ew4', [275, 137], 'Airport · Harbour', 1, 'slip', 'full'],
   ['highway-ns3-1', 'ns3', [64.5, 320], 'Southfield · General Aviation', -1, 'full', 'slip'],
   ['highway-ns0-0', 'ns0s', [-4.5, 320], 'Lot 9 · The Trenches', 1, 'slip', 'slip'],
-  ['highway-ew4-1', 'ew4', [-215, 137], 'Southbank Docks', -1, 'slip', 'full'],
+  // (outside, the Docks' ring road and everything east of it stand where a loop would go: a slip, the owner's open land only)
+  ['highway-ew4-1', 'ew4', [-215, 137], 'Southbank Docks', -1, 'slip', 'slip'],
   ['highway-ew0-1', 'ew0', [-215, -4.5], 'Uptown · Westlake Park', 1, 'full', 'full'],
 ];
 export const EXITS: Exit[] = EXIT_DATA.map(([crossing, street, at, name, side, inner, outer], i) => ({ n: i + 1, crossing, street, at, name, side, inner, outer }));
@@ -310,3 +311,46 @@ export function steepest(r: Ramp) {
 export const PIER_GAP = 14;
 /** A pier's footprint across the ring (its stem) and along it */
 export const PIER = { across: 2.2, along: 1.2, head: 2 * DECK_HALF - 1 };
+
+/* ---------- The land the exits take ---------- */
+
+/** How far past a ramp's kerb what's next to it keeps (a block's sidewalk edge, a car park, a fence) */
+export const RAMP_CLEAR = 1.5;
+
+/**
+ * The outer edge of what a quadrant's ramps take (its outermost ramp's kerb, `margin` further out), from its
+ * terminals on the arterial along the ring until it's in by the deck: world points, in order from the arterial
+ * (`[]` for a quadrant with no ramps). For a district's edge to keep behind.
+ */
+export function quadrantEdge(n: number, q: 1 | -1, margin = RAMP_CLEAR): Pt[] {
+  const e = EXITS.find((x) => x.n === n)!;
+  const form = q < 0 ? e.inner : e.outer;
+  if (form === 'none') return [];
+  const s0 = exitS(e);
+  const path = quadPath(form === 'full' ? 'straight' : 'slip', q);
+  return path.filter(([u]) => u <= QUAD.beside).map(([u, o]) => ringPoint(s0 + e.side * u, o + q * (RAMP_HALF + margin)));
+}
+
+/** The ramps' land on a grid of this (tiles): every cell a ramp's kerb, `RAMP_CLEAR` out, reaches into */
+const LAND_CELL = 1;
+const LAND = (() => {
+  const out = new Set<number>();
+  const key = (i: number, j: number) => i * 4096 + j;
+  const r = RAMP_HALF + RAMP_CLEAR;
+  for (const rp of RAMPS)
+    for (let k = 1; k < rp.pts.length; k++) {
+      const [a, b] = [rp.pts[k - 1], rp.pts[k]];
+      const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.5));
+      for (let t = 0; t <= n; t++) {
+        const [x, z] = [a[0] + ((b[0] - a[0]) * t) / n, a[1] + ((b[1] - a[1]) * t) / n];
+        for (let i = Math.floor((x - r) / LAND_CELL); i <= Math.floor((x + r) / LAND_CELL); i++)
+          for (let j = Math.floor((z - r) / LAND_CELL); j <= Math.floor((z + r) / LAND_CELL); j++) out.add(key(i + 2048, j + 2048));
+      }
+    }
+  return out;
+})();
+/**
+ * Is x, z land the exits' ramps take (a ramp's kerb `RAMP_CLEAR` out, to a tile): what a district's own land
+ * (trenches.ts `inTrenches()`) and the outskirts' trees (landuse.ts `KEEPS`) keep off
+ */
+export const rampLand = (x: number, z: number) => LAND.has((Math.floor(x / LAND_CELL) + 2048) * 4096 + Math.floor(z / LAND_CELL) + 2048);

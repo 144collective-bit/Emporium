@@ -23,6 +23,7 @@ import { AREA_IDS, areaOfBlock } from './areas';
 export { AREAS, AREA_IDS, areaOfBlock, type Area, type Character } from './areas';
 import { PLAN, slabOf, inPoly, type Pt, type StreetKind } from './streetplan';
 import { HIGHWAY_HALF, fromHighway, insideHighway } from './highway';
+import { rampLand } from './viaduct';
 import { inWater } from './river';
 import { inBasin, DOCKS_RECT } from './docks';
 import { inLake } from './westlake';
@@ -169,6 +170,8 @@ export function landMap(): LandMap {
       const [x, z] = at(i, j);
       const n = j * nx + i;
       if (fromHighway(x, z) <= HIGHWAY_HALF) cells[n] = C.highway;
+      // (the exits' ramps' open land is the highway's too, docs/highway-plan.md Phase 1b: what else is under them stays)
+      else if ((cells[n] === C.open || cells[n] === C.outside) && rampLand(x, z)) cells[n] = C.highway;
       // (Westlake's lake is the park's own: not a seam)
       if (inWater(x, z) || inBasin(x, z)) cells[n] = C.water;
       else if (inLake(x, z)) cells[n] = AREA_IX.get('westlake')!;
@@ -327,9 +330,9 @@ export const GAP_NAMES: { id: string; name: string; at: Pt }[] = [
   // (the east strip, east of town north of the river, is the Neon Mile's now: docs/strip-plan.md)
   // Round Sunridge's wall to the highway and the Parkway
   { id: 'sunridge-fringe', name: "Sunridge's fringe", at: [191, -151] },
-  // The verges between the park and the highway: the west, and the north (with the stadium's footbridge)
+  // The verge between the park and the highway on the west (the north verge went to exit 1's slip ramp,
+  // docs/highway-plan.md Phase 1b: what's left of it is too small to count)
   { id: 'westlake-verge', name: "Westlake's west verge", at: [-203, -93] },
-  { id: 'north-verge', name: 'The north verge', at: [-67, -163] },
 ];
 
 export interface Gap {

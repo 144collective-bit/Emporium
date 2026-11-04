@@ -17,6 +17,7 @@
  *
  * The list is filed by tile (`TILE`) so a spot asks only what's near it.
  */
+import { RAMPS, RAMP_CLEAR, RAMP_HALF } from './viaduct';
 import { EXT, LANE, RIVER } from './layout';
 import { PLAN, type Pt } from './streetplan';
 import { HIGHWAY_HALF, fromHighway } from './highway';
@@ -172,6 +173,8 @@ export const KEEPS: Keep[] = [
   ...VERGES.flatMap((v) => line(`verge:${v.block}`, [[v.a[0] + v.n[0] * RAMP * 0.6, v.a[1] + v.n[1] * RAMP * 0.6], [v.b[0] + v.n[0] * RAMP * 0.6, v.b[1] + v.n[1] * RAMP * 0.6]], RAMP, false, true)),
   // The metro's line: no tree under the el (metro.ts)
   ...Object.values(TRACKS).flatMap((t) => line(`metro:${t.id}`, t.pts, EL_CLEAR, false, true)),
+  // The raised highway's exits' ramps (viaduct.ts, docs/highway-plan.md Phase 1b)
+  ...RAMPS.flatMap((r) => line(`ramp:${r.id}`, r.pts, RAMP_HALF + RAMP_CLEAR, false, true)),
 ];
 
 /* ---------- Filed by tile ---------- */
