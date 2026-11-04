@@ -2061,7 +2061,7 @@ it and has been retired completely. Build only on what's here.
     it, `lazyMenu()` in walk.ts; the saved car and aircraft are read by
     `loadCar()` in mycar.ts and `loadPlane()` in myplane.ts, in the boot)
     and the kart park's game
-    (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
+    (the clubhouse's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
     when Degen comes near the park or asks at the hut; idle stand-ins until
     then; the City-view panel's records are `kart-records.ts`, at the boot,
     and the cups the boot reads are `kart-cups.ts`, so the race's rules,
@@ -4016,8 +4016,8 @@ it and has been retired completely. Build only on what's here.
   pace; `turnRate()`), a hop into a drift (`T.drift` stages,
   `T.driftBoost`), boost pads (`pads` on the course), bumps weighted by
   `weight` (a heavy kart ramming a light one spins it), air off the jump
-  (`flight()`), banking (more grip), pure racing (no items, the owner's
-  call). **No invisible walls:** kerbs are track; the run-off holds a
+  (`flight()`), banking (more grip), pure racing (no items but in a single race's items mode, Phase 7 of
+  `docs/kart-west-plan.md`, the owner's call). **No invisible walls:** kerbs are track; the run-off holds a
   kart to `RUNOFF_CAP` with `RUNOFF_GRIP`; past `RESET_AT` (or over the
   deck's edge) it fades back onto the centre line where it had got to
   (`'reset'`, `RESET_T`, no progress lost). The start (`START`, the
@@ -4086,6 +4086,16 @@ it and has been retired completely. Build only on what's here.
   drawn by karts.ts `dress()` / `glow()`; in races you wear the helmet
   (wardrobe.ts `racehelmet`, the Outfit's `helmet`) and the suit. Tested in
   `tests/kartlook.test.ts`.
+- **The items mode** (`docs/kart-west-plan.md` Phase 7, the owner's
+  picks; a single race's switch, pure racing the default, never in cups,
+  time trials or records) is `kartitems.ts` (DOM-free, tested in
+  `tests/kartitems.test.ts`): `BOXES` in three rows (`BOX_ROWS`), the
+  items `boost`, `shield` and `oil` (`ITEM`, `drawItem()` by place), the
+  rivals' sense (`AI_USE`, `clearAhead()`); the sim's `items` setup
+  (`Racer.item` / `shieldT` only then, `boxLive()`, `slicks`, events
+  `item`, `useItem`, `blocked`); drawn by kart.ts (boxes, slicks, shield
+  bubbles), the HUD's slot (`data-kart-slot`), used with E, X or the touch
+  Item button (`data-kart-item`, slot `b2`, `.has-items`).
 - **The karts** are `mykart.ts` (`PLAYER_KARTS`, `KART_SPECS`: Pocket
   Rocket, Big Wheel, Zip, Tank Kart; `cleanKart()`), priced in `catalog.ts`
   (`KART_CATALOG`, the Rocket free; `KART_MODS`: motor, soft tyres, nitro
@@ -4120,7 +4130,7 @@ it and has been retired completely. Build only on what's here.
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
   on. `kartpark3d.ts` (`buildKartPark()`, at the boot) is the place: the
-  spot's group (the garages with their numbers and the screen, the hut and
+  spot's group (the garages with their numbers and the screens, the clubhouse and
   its terrace, the timing tower with its board, both grandstands, the
   gate's arch with SECTOR 7 KART PARK both ways, the kiosk), its people,
   trees, lamps and parked cars, and `KART_VIEW` (the way round and whether
@@ -4163,7 +4173,7 @@ it and has been retired completely. Build only on what's here.
   (`createKartUI()`, markup `data-karts`, `data-kart-hud`,
   `data-kart-count`, `data-kart-pops`, `data-kart-result`, the Drift
   touch button `data-kart-drift` in `CityMap.astro`, styles in
-  `src/styles/karts.css`) is the hut's menu (Race: the cups as series
+  `src/styles/karts.css`) is the clubhouse's menu (Race: the cups as series
   (start, continue, drop); a single race (a cup's rivals at its class and
   level, forward or reverse, day, night or rain, three laps, paid like a
   cup's race, outside any series: `RaceStart.single`, kart.ts skips
@@ -4177,12 +4187,12 @@ it and has been retired completely. Build only on what's here.
   samples in world numbers, the flyover's deck over the run below, the
   start line, a dot per kart from `KartHud.dots` with yours lit and on
   top), the countdown, pops and the results card (laps, par, the series
-  table with Next race / Drop). `walk.ts` wires them: the hut door's
+  table with Next race / Drop). `walk.ts` wires them: the clubhouse door's
   prompt opens the menu, a race hides Degen and feeds the kart
   (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift;
   touch: the stick, the pedals and Drift over Brake; gamepad: stick, RT /
   LT, A drift, V / R3 the camera, Start quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
-  abandons (no prize), closing the results stands Degen up by the hut.
+  abandons (no prize), closing the results stands Degen up by the clubhouse.
   While racing `.city.is-karting` is on the root and `data-kart` makes the
   header read "Karting · <course>". Under reduced motion the race still
   runs (it's the game) with no camera shake or sparks.

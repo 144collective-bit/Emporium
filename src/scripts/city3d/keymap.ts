@@ -14,7 +14,7 @@
 export type Job =
   | 'move' | 'look' | 'sprint' | 'walk' | 'jump' | 'crouch' | 'interact' | 'camera' | 'hotbar' | 'inventory' | 'map' | 'menu'
   | 'emotes' | 'punch' | 'kick' | 'block' | 'dodge' | 'fire' | 'aim' | 'reload' | 'peek' | 'holster' | 'steer' | 'gas'
-  | 'brake' | 'handbrake' | 'horn' | 'climb' | 'drift' | 'snack' | 'quit' | 'skip';
+  | 'brake' | 'handbrake' | 'horn' | 'climb' | 'drift' | 'item' | 'snack' | 'quit' | 'skip';
 
 export interface Binding {
   job: Job;
@@ -120,7 +120,15 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
   },
   kart: {
     name: 'A kart race',
-    binds: [steer(), gas(), brake('Brake'), { job: 'drift', label: 'Hop and drift', keys: ['Space'], pad: ['A'], touch: 'Drift' }, camera('Near, far, the kart’s seat'), quit('Quit the race (no prize)')],
+    binds: [
+      steer(),
+      gas(),
+      brake('Brake'),
+      { job: 'drift', label: 'Hop and drift', keys: ['Space'], pad: ['A'], touch: 'Drift' },
+      { job: 'item', label: 'Use your item (an items race)', keys: ['E'], pad: ['X'], touch: 'Item' },
+      camera('Near, far, the kart’s seat'),
+      quit('Quit the race (no prize)'),
+    ],
   },
   ring: {
     name: 'The ring',

@@ -46,6 +46,7 @@
  * prices are Dorras only: never real money, nothing to do with the token.
  */
 import { CUPS, CUP_IDS, type CupId } from './kart-sim';
+import { ITEM_NAMES } from './kartitems';
 import { CIRCUIT, CONDS, COURSES, COURSE_IDS, type Cond, type CourseId } from './kartcircuit';
 import { F } from './kartpark';
 import { DECAL_NAMES, KART_DECALS, KART_SPECS, LOOK_COLOURS, PLAYER_KARTS, type KartId, type KartLook } from './mykart';
@@ -216,6 +217,8 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   const meter = hud.querySelector<HTMLElement>('[data-kart-meter]')!;
   const boostEl = hud.querySelector<HTMLElement>('[data-kart-boost]')!;
   const splitEl = hud.querySelector<HTMLElement>('[data-kart-split]')!;
+  const slotEl = hud.querySelector<HTMLElement>('[data-kart-slot]')!;
+  const slotName = hud.querySelector<HTMLElement>('[data-kart-slot-name]')!;
   const gapsEl = hud.querySelector<HTMLElement>('[data-kart-gaps]')!;
   const aheadEl = hud.querySelector<HTMLElement>('[data-kart-ahead]')!;
   const behindEl = hud.querySelector<HTMLElement>('[data-kart-behind]')!;
@@ -249,6 +252,8 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   let singleCup: CupId = 'rookie';
   let singleCourse: CourseId = COURSE_IDS[0];
   let singleCond: Cond = 'day';
+  /** Items on or off (docs/kart-west-plan.md Phase 7: pure racing by default) */
+  let singleItems = false;
   let sinceRepaint = 0;
   let goTimer = 0;
 
@@ -305,7 +310,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
     const sc = CUPS[singleCup];
     const single = `<section class="kart-sect kart-single" aria-label="Single race">
   <div class="kart-cup-head"><b class="race-name">Single race</b><span class="race-cps">${SINGLE_LAPS} laps · ${FIELD - 1} rivals · no series</span></div>
-  <p class="race-blurb">One race on its own: pick whose rivals you race (and so the class), which way round, and day, night or rain.</p>
+  <p class="race-blurb">One race on its own: pick whose rivals you race (and so the class), which way round, day, night or rain, and pure racing or items (boost, shield and oil slick; no lap records).</p>
   <div class="seg kart-seg" role="group" aria-label="Rivals"><span class="seg-label">Rivals</span>${CUP_IDS.map((id) => {
     const c = CUPS[id];
     const locked = lv < c.level;
@@ -317,6 +322,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   <div class="seg kart-seg" role="group" aria-label="Conditions"><span class="seg-label">When</span>${COND_IDS.map(
     (id) => `<button type="button" data-kart-single-cond="${id}" aria-pressed="${id === singleCond}">${esc(CONDS[id].name)}</button>`
   ).join('')}</div>
+  <div class="seg kart-seg" role="group" aria-label="Items"><span class="seg-label">Items</span><button type="button" data-kart-single-items="off" aria-pressed="${!singleItems}">Off</button><button type="button" data-kart-single-items="on" aria-pressed="${singleItems}">On</button></div>
   <div class="kart-cup-act"><button type="button" class="kart-go" data-kart-single><span>Start race</span></button><p class="kart-prizes"><span class="kart-prize"><em>a win</em> ${D(sc.prizes[0] ?? 0)}</span><span class="kart-prize"><em>2nd</em> ${D(sc.prizes[1] ?? 0)}</span><span class="kart-prize"><em>3rd</em> ${D(sc.prizes[2] ?? 0)}</span></p></div>
 </section>`;
 
@@ -595,7 +601,7 @@ ${countersHtml(s)}
       return;
     }
     close();
-    d.start({ course: singleCourse, cup: singleCup, cls: c.cls, laps: SINGLE_LAPS, cond: singleCond, single: true });
+    d.start({ course: singleCourse, cup: singleCup, cls: c.cls, laps: SINGLE_LAPS, cond: singleCond, single: true, items: singleItems });
   }
   function startSeries(cup: CupId) {
     const s = d.game.save();
@@ -681,6 +687,9 @@ ${countersHtml(s)}
     } else if (b.dataset.kartSingleCond) {
       singleCond = b.dataset.kartSingleCond as Cond;
       refocus(`[data-kart-single-cond="${singleCond}"]`);
+    } else if (b.dataset.kartSingleItems) {
+      singleItems = b.dataset.kartSingleItems === 'on';
+      refocus(`[data-kart-single-items="${b.dataset.kartSingleItems}"]`);
     }
     else if (b.hasAttribute('data-kart-drop')) {
       d.quitSeries();
@@ -848,6 +857,13 @@ ${countersHtml(s)}
     set(aheadEl, h.ahead ? `▲ ${h.ahead.name} ${h.ahead.gap.toFixed(1)}s` : '');
     set(behindEl, h.behind ? `▼ ${h.behind.name} ${h.behind.gap.toFixed(1)}s` : '');
     clockEl.classList.toggle('is-pb', h.pb);
+    // The items mode: what's in hand (E, X, the Item button), lit while the shield's on
+    showIf(slotEl, h.item !== undefined);
+    if (h.item !== undefined) {
+      set(slotName, h.item ? ITEM_NAMES[h.item] : h.shield ? 'Shield on' : 'Empty');
+      if (slotEl.dataset.item !== (h.item ?? '')) slotEl.dataset.item = h.item ?? '';
+      slotEl.classList.toggle('is-shield', !!h.shield);
+    }
     // Night or rain
     showIf(condEl, h.cond !== 'day');
     if (h.cond !== 'day') {

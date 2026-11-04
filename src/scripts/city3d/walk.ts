@@ -1215,7 +1215,7 @@ export function createWalk(d: WalkDeps) {
     preview: (k) => karts.preview(k),
     onOpen() {
       pedals.gas = pedals.brake = false;
-      kartBtns.drift = false;
+      kartBtns.drift = kartBtns.item = false;
       still();
     },
     onClose() {
@@ -1354,15 +1354,15 @@ export function createWalk(d: WalkDeps) {
   }
 
   /** The touch Drift button, held */
-  const kartBtns = { drift: false };
-  const padKart = { steer: 0, throttle: 0, drift: false };
+  const kartBtns = { drift: false, item: false };
+  const padKart = { steer: 0, throttle: 0, drift: false, item: false };
   function startKart(setup: RaceStart) {
     if (karts.active) return;
     kartUI.close();
     if (drive.active) getOut();
     drive.recallKart();
     if (combat.armed) combat.toggleHolster();
-    kartBtns.drift = false;
+    kartBtns.drift = kartBtns.item = false;
     still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
@@ -1389,7 +1389,7 @@ export function createWalk(d: WalkDeps) {
     hero.ring.visible = !firstPerson;
     keys.clear();
     pedals.gas = pedals.brake = false;
-    kartBtns.drift = false;
+    kartBtns.drift = kartBtns.item = false;
     near = null;
     d.touched();
   }
@@ -2006,6 +2006,19 @@ export function createWalk(d: WalkDeps) {
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
   }
+  const itemBtn = root.querySelector<HTMLButtonElement>('[data-kart-item]');
+  if (itemBtn) {
+    itemBtn.addEventListener('pointerdown', (e) => {
+      try {
+        itemBtn.setPointerCapture(e.pointerId);
+      } catch {
+        /* still pressed */
+      }
+      kartBtns.item = true;
+      d.touched();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) itemBtn.addEventListener(ev, () => (kartBtns.item = false));
+  }
   // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
   for (const k of ['punch', 'kick', 'dodge'] as const) {
     const b = root.querySelector(`[data-fight-${k}]`);
@@ -2076,7 +2089,7 @@ export function createWalk(d: WalkDeps) {
       padDrive.steer = padDrive.throttle = 0;
       padDrive.handbrake = false;
       padKart.steer = padKart.throttle = 0;
-      padKart.drift = false;
+      padKart.drift = padKart.item = false;
       padFly.turn = padFly.climb = padFly.throttle = 0;
       // Unplugged with a trigger down: let go of it
       if (pad.prev[6]) setAim(false);
@@ -2246,6 +2259,7 @@ export function createWalk(d: WalkDeps) {
       padKart.steer = pad.x;
       padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padKart.drift = !!b[0];
+      padKart.item = !!b[2];
       if (edge(9)) abandonKart();
       if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
@@ -2568,7 +2582,8 @@ export function createWalk(d: WalkDeps) {
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padKart.steer) steer = padKart.steer;
     if (padKart.throttle) throttle = padKart.throttle;
-    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift };
+    // (E, the gamepad's X or the touch Item button: an items race's item, kart-sim.ts takes the press)
+    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift, item: keys.has('KeyE') || kartBtns.item || padKart.item };
     karts.update(dt, inp);
     const p = karts.sim?.player;
     if (p) {

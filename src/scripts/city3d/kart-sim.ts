@@ -54,6 +54,7 @@ export const RESET_T = 0.9;
 
 export { CUPS, CUP_IDS, cup, type Cup, type CupId, type CupRace } from './kart-cups';
 import { CUPS, type CupId } from './kart-cups';
+import { AI_USE, BOXES, ITEM, clearAhead, drawItem, type ItemId } from './kartitems';
 
 /** How long things last (seconds) */
 export const T = {
@@ -105,6 +106,8 @@ export interface KartInput {
   steer: number;
   /** Hop and hold to drift */
   drift: boolean;
+  /** Use the item in hand (the items mode, docs/kart-west-plan.md Phase 7): pressed */
+  item?: boolean;
 }
 export const NO_INPUT: KartInput = { throttle: 0, steer: 0, drift: false };
 
@@ -163,6 +166,10 @@ export interface Racer {
   /** The surface under it (kartpark.ts F flags) and its banking (radians, right side up), for the view */
   flags: number;
   roll: number;
+  /** The items mode only (absent otherwise): the item in hand, how long it's been held, the shield's seconds left */
+  item?: ItemId | null;
+  heldT?: number;
+  shieldT?: number;
 }
 
 export type KartEvent =
@@ -185,7 +192,10 @@ export type KartEvent =
   | { kind: 'startBoost'; kart: number }
   | { kind: 'stall'; kart: number }
   | { kind: 'slip'; kart: number; on: boolean }
-  | { kind: 'split'; kart: number; sector: number; time: number };
+  | { kind: 'split'; kart: number; sector: number; time: number }
+  | { kind: 'item'; kart: number; item: ItemId }
+  | { kind: 'useItem'; kart: number; item: ItemId }
+  | { kind: 'blocked'; kart: number };
 
 export interface RaceSetup {
   course: CourseId;
@@ -196,6 +206,8 @@ export interface RaceSetup {
   laps?: number;
   /** Day (the default), night (looks only) or rain (less grip) */
   cond?: Cond;
+  /** Item boxes and items on the circuit (a single race only, kartitems.ts; pure racing otherwise) */
+  items?: boolean;
   /** The rivals' brain drives the player too (the par ghost) */
   auto?: boolean;
   player: { kart: KartId; tune: KartTune };
@@ -300,6 +312,8 @@ export function createKartSim(setup: RaceSetup) {
       slip: false,
       slipHold: 0,
       stallT: 0,
+      // (the items mode's own, only in it)
+      ...(setup.items ? { item: null, heldT: 0, shieldT: 0 } : {}),
     };
   };
   // The player starts at the back of the grid (the last slot); the rivals fill the rest from pole
@@ -432,6 +446,11 @@ export function createKartSim(setup: RaceSetup) {
   }
   function spin(k: Racer, by: number, len: number = T.spin) {
     if (k.finished || k.spinT > 0) return;
+    // (a shield shrugs it off: the items mode)
+    if ((k.shieldT ?? 0) > 0) {
+      events.push({ kind: 'blocked', kart: k.i });
+      return;
+    }
     // The Tank gets up faster
     k.spinT = k.kart === 'tank' ? len * 0.6 : len;
     k.spinLen = k.spinT;
@@ -702,6 +721,91 @@ export function createKartSim(setup: RaceSetup) {
     }
   }
 
+  /* ---------- The items mode (kartitems.ts) ---------- */
+
+  /** When each box is back (the race's seconds), the slicks lying on the track, whether your item button was down */
+  const boxUntil = BOXES.map(() => 0);
+  const slicks: { x: number; z: number; y: number; t: number }[] = [];
+  let itemWas = false;
+  /** Where another kart is from this one: along its nose and across */
+  const rel = (k: Racer, o: { x: number; z: number }) => {
+    const dx = o.x - k.x;
+    const dz = o.z - k.z;
+    return { fwd: dx * Math.cos(k.yaw) - dz * Math.sin(k.yaw), side: dx * Math.sin(k.yaw) + dz * Math.cos(k.yaw) };
+  };
+  /** The rivals' sense of when to use what's in hand (AI_USE) */
+  function aiWants(k: Racer) {
+    const it = k.item;
+    if (!it) return false;
+    const held = k.heldT ?? 0;
+    const near = (lo: number, hi: number, width = 1.6) =>
+      racers.some((o) => {
+        if (o === k || Math.abs(o.y - k.y) > 0.9) return false;
+        const { fwd, side } = rel(k, o);
+        return fwd > lo && fwd < hi && Math.abs(side) < width;
+      });
+    if (it === 'boost') return !k.off && clearAhead(c, k.s);
+    if (it === 'shield')
+      return (
+        near(-AI_USE.close, AI_USE.close, 1.2) ||
+        slicks.some((sl) => {
+          const { fwd, side } = rel(k, sl);
+          return fwd > 0 && fwd < AI_USE.slickAhead && Math.abs(side) < 1;
+        }) ||
+        held > AI_USE.hold
+      );
+    return near(-AI_USE.behind, -0.5) || held > AI_USE.hold * 1.5;
+  }
+  function useItem(k: Racer) {
+    const it = k.item;
+    if (!it) return;
+    k.item = null;
+    k.heldT = 0;
+    if (it === 'boost') {
+      k.boostT = Math.max(k.boostT, ITEM.boostT * k.tune.boost);
+      k.boostK = ITEM.boostK;
+    } else if (it === 'shield') k.shieldT = ITEM.shieldT;
+    else {
+      slicks.push({ x: k.x - Math.cos(k.yaw) * ITEM.drop, z: k.z + Math.sin(k.yaw) * ITEM.drop, y: k.y, t: time });
+      if (slicks.length > ITEM.most) slicks.shift();
+    }
+    events.push({ kind: 'useItem', kart: k.i, item: it });
+  }
+  function itemsStep(dt: number) {
+    for (const k of racers) {
+      k.shieldT = Math.max(0, (k.shieldT ?? 0) - dt);
+      if (!started || k.resetT > 0) continue;
+      // Through a box with nothing in hand: an item, by your place; the box back in a moment
+      if (k.item === null && !k.air && !k.finished)
+        for (let i = 0; i < BOXES.length; i++) {
+          const b = BOXES[i];
+          if (time < boxUntil[i] || Math.abs(b.y - k.y) > 1 || Math.hypot(b.x - k.x, b.z - k.z) > ITEM.reach) continue;
+          k.item = drawItem(k.place, racers.length, r());
+          k.heldT = 0;
+          boxUntil[i] = time + ITEM.respawn;
+          events.push({ kind: 'item', kart: k.i, item: k.item });
+          break;
+        }
+      // Using it: your button (pressed, not held), or the rivals' sense (and yours with `auto`, or after the line)
+      if (k.item) {
+        k.heldT = (k.heldT ?? 0) + dt;
+        const mine = k === player && !auto && !k.finished;
+        if (mine ? !!playerInput.item && !itemWas : aiWants(k)) useItem(k);
+      }
+      // Over a slick: a short harmless spin (a shield shrugs it off), the slick gone
+      if (!k.air && k.spinT <= 0)
+        for (let i = slicks.length - 1; i >= 0; i--) {
+          const sl = slicks[i];
+          if (Math.abs(sl.y - k.y) > 0.8 || Math.hypot(sl.x - k.x, sl.z - k.z) > ITEM.slickR) continue;
+          slicks.splice(i, 1);
+          spin(k, -1, ITEM.spin);
+          break;
+        }
+    }
+    itemWas = !!playerInput.item;
+    for (let i = slicks.length - 1; i >= 0; i--) if (time - slicks[i].t > ITEM.slickLife) slicks.splice(i, 1);
+  }
+
   /** The slipstream (SLIP): a kart right behind another, in its line, at speed, charges the tow and is pulled along */
   function slipstreams(dt: number) {
     for (const k of racers) {
@@ -783,6 +887,7 @@ export function createKartSim(setup: RaceSetup) {
     for (const k of racers) stepKart(k, k.ai ? think(k, k.ai) : auto || k.finished ? think(k, AUTO) : playerInput, dt);
     bumps();
     slipstreams(dt);
+    if (setup.items) itemsStep(dt);
     const before = racers.map((k) => k.place);
     placeAll();
     overtakes(before);
@@ -815,6 +920,12 @@ export function createKartSim(setup: RaceSetup) {
       return finishedCount >= racers.length;
     },
     standings,
+    /** The items mode: whether it's on, each box's there now (not taken), the slicks lying on the track */
+    items: !!setup.items,
+    boxLive(i: number) {
+      return time >= boxUntil[i];
+    },
+    slicks,
     /** Advance by a frame's worth of time (fixed ticks inside); returns what happened */
     step(dt: number, inp: KartInput): KartEvent[] {
       playerInput = inp;

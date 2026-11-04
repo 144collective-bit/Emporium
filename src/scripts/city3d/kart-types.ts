@@ -7,6 +7,7 @@
  */
 import type * as THREE from 'three';
 import type { Cond, CourseId } from './kartcircuit';
+import type { ItemId } from './kartitems';
 import type { CupId, KartSim } from './kart-sim';
 import type { KartResult, SeriesResult } from './tycoon';
 import type { ClassId } from './catalog';
@@ -25,6 +26,8 @@ export interface RaceStart {
   single?: boolean;
   /** The rivals' brain drives you too (the headless checks only: walk.ts `race()`) */
   auto?: boolean;
+  /** Items on (a single race only, docs/kart-west-plan.md Phase 7) */
+  items?: boolean;
 }
 
 /* ---------- The site (kartpark3d.ts) ---------- */
@@ -91,6 +94,9 @@ export interface KartHud {
   behind: { name: string; gap: number } | null;
   /** A personal best just set: the clock flashes */
   pb: boolean;
+  /** The items mode: the item in hand (null: none), the shield on; undefined in a pure race */
+  item?: ItemId | null;
+  shield?: boolean;
 }
 export interface KartStanding {
   /** A rival's fixed name (from the sim's order) or 'You' */

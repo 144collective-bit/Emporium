@@ -898,6 +898,52 @@
 .kart-gaps span:empty {
   display: none;
 }
+/* The items mode's slot (docs/kart-west-plan.md Phase 7): what's in hand, its key; lit while it holds something */
+.kart-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 3px 8px 3px 3px;
+  border: 1px solid #ffffff33;
+  border-radius: 6px;
+  background: #0b0a18cc;
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1;
+  color: #ffffff99;
+}
+.kart-slot[hidden] {
+  display: none;
+}
+.kart-slot-key {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #ffffff22;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.kart-slot[data-item='boost'] {
+  border-color: #ff8a2a;
+  color: #ff8a2a;
+}
+.kart-slot[data-item='shield'],
+.kart-slot.is-shield {
+  border-color: #00eaff;
+  color: #00eaff;
+}
+.kart-slot[data-item='oil'] {
+  border-color: #b23bff;
+  color: #d9a8ff;
+}
+@media (pointer: coarse) {
+  .kart-slot-key {
+    display: none;
+  }
+}
 /* The split just made, under the clock: green ahead of your fastest lap, pink behind */
 .kart-split {
   margin: 3px 0 0;
@@ -1548,6 +1594,10 @@
     display: grid;
   }
   .city.is-karting .drive-horn {
+    display: none;
+  }
+  /* (the item button only in an items race) */
+  .city.is-karting:not(.has-items) .kart-item {
     display: none;
   }
 }

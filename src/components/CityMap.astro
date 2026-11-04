@@ -744,7 +744,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         data-kart-pops: short lines over the HUD. data-kart-result: the results card; data-kart-result-title,
         data-kart-result-body (painted), data-kart-next (a series' next race, hidden otherwise), data-kart-result-ok and
         data-kart-result-close.
-        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal; walk.ts wires it.
+        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal, and in an items race
+        (.has-items) data-kart-item; walk.ts wires them. data-kart-slot in the HUD: the item in hand.
         .kart-hint is the key line. */}
     <section class="shop karts mk-skin" data-karts hidden aria-labelledby="karts-title">
       <header class="shop-head">
@@ -769,6 +770,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
         <p class="kart-gap" data-kart-gap hidden aria-label="Gap to the ghost">+0.00</p>
         <p class="kart-gaps" data-kart-gaps hidden><span data-kart-ahead></span><span data-kart-behind></span></p>
+        <p class="kart-slot" data-kart-slot hidden aria-live="polite"><span class="kart-slot-key">E</span><b data-kart-slot-name>Empty</b></p>
         <div class="kart-meter" data-kart-meter data-tier="0" role="img" aria-label="Drift"><i></i><i></i><i></i></div>
         <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-surface" data-kart-surface data-surface="kerb" hidden>Kerb</span><span class="kart-tag is-cond" data-kart-cond data-cond="night" hidden>Night</span></p>
       </div>
@@ -799,6 +801,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     </section>
     <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift tc" data-kart-drift aria-label="Drift"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-drift" /></svg><span class="tc-word">Drift</span></button>
+    <button type="button" class="kart-btn kart-item tc" data-kart-item aria-label="Use item"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-item" /></svg><span class="tc-word">Item</span></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
         data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
         its head; data-fight-tabs the Spar / Bout / Record / Styles tabs (data-fight-tab); data-fight-body (painted);

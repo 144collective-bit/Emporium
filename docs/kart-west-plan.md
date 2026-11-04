@@ -101,7 +101,7 @@ owner has looked**.
 6. **Kart customising** (built): number, decals, rims and tyres, helmet and suit,
    spark trail and underglow, in the hut's Karts tab; the save carries them
    (a new save version, older saves upgraded).
-7. **Items mode:** item boxes on the circuit, the three items, the HUD's
+7. **Items mode** (built): item boxes on the circuit, the three items, the HUD's
    item slot and the touch, key and gamepad button, rivals using them,
    single races only.
 8. **Polish and performance:** bench views, phones, the boot budget, the
@@ -316,3 +316,38 @@ changed by `setKartLook()` in tycoon.ts and drawn by karts.ts's `dress()`
 / `glow()`. There's no new save version: a save from before it is cleaned
 to the stock look (`tests/kartlook.test.ts`). The rivals keep their own
 looks.
+
+## What Phase 7 built
+
+- **The switch:** the clubhouse's single race has Items Off / On; pure
+  racing is the default. Cups, time trials and the daily challenge never
+  have items. An items race keeps no lap record, splits or personal best
+  (`finishKartRace()`'s `items`).
+- **The boxes** (`kartitems.ts` `BOXES`, `BOX_ROWS`): three rows of four
+  across the track, on the straight after the line, the west side past the
+  esses and the east sweeper's exit. They're on plain asphalt, clear of the
+  pads, the jump, the line, the deck and the tunnel (tested). A kart with
+  nothing in hand that drives through one takes an item (`drawItem()`:
+  the leaders mostly oil, the back markers mostly a boost, a shield either
+  way), and the box comes back three seconds later.
+- **The items** (`ITEM`):
+  - **Boost:** a turbo can, 1.3 s at 1.35.
+  - **Shield:** 5 s where bumps, rams and slicks can't spin you; the sim's
+    `spin()` shrugs them off and says `blocked`.
+  - **Oil slick:** dropped behind you. A kart that runs over it spins out
+    for 0.9 s and the slick is gone. Slicks last 25 s, at most ten at once.
+- **The rivals** use them (`aiWants()`, `AI_USE`): a boost with a clear
+  run ahead (`clearAhead()`), a shield with a kart or a slick close, oil
+  with a kart close behind, or anything held too long.
+- **On screen:** the boxes are glowing cubes turning over the track
+  (still under reduced motion) and gone while taken; slicks are dark
+  pools; a shield is a cyan bubble. The HUD's slot (`data-kart-slot`)
+  shows what's in hand, and the pops say what you got. The item is used
+  with **E**, the gamepad's **X** or the touch **Item** button
+  (`data-kart-item`: `touchlayout.ts` slot `b2`, shown only in an items
+  race through `.has-items`; keymap.ts job `item`). The wheel family's
+  arranging screen now shows the kart's layout, the one with the most
+  buttons.
+- Tests: `tests/kartitems.test.ts` covers the rows, the draw, three items
+  races (every item used, slicks spinning karts, everyone home), your
+  button (once a press) and no records.

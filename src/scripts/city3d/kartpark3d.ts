@@ -584,7 +584,7 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
       const az = -Math.sin(a.ry);
       for (const k of [-1, 1]) pb.box(a.x + ax * 1.1 * k - 0.06, 0, a.z + az * 1.1 * k - 0.06, 0.12, 2.2, 0.12, STEEL);
       pb.add(new THREE.BoxGeometry(2.8, 1.1, 0.12).rotateY(a.ry).translate(a.x, 2.6, a.z), toon('#16142a'));
-      const st = neonSign(a.arrow > 0 ? 'KART PARK  ▶' : '◀  KART PARK', PAL.cyan, { board: null, w: 1024, h: 256, size: 150, tracking: 6 });
+      const st = neonSign(a.arrow > 0 ? 'KART PARK  ▶' : a.arrow < 0 ? '◀  KART PARK' : '▲  KART PARK', PAL.cyan, { board: null, w: 1024, h: 256, size: 150, tracking: 6 });
       const fxv = Math.sin(a.ry);
       const fzv = Math.cos(a.ry);
       const sign = plane(2.6, 0.65, lit(new THREE.MeshBasicMaterial({ map: st, transparent: true, depthWrite: false }), 1, 1.6));

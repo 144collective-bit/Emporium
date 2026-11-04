@@ -341,11 +341,13 @@ export const FLAGS: { u: number; v: number; colour: number }[] = (() => {
  * traffic both ways (the way to turn), the coach park in a lay-by off Kart Road's south side with its coaches
  */
 export const TOTEM = { x: DRIVE_X + ROAD.half + 2.2, z: EW0 - 3.7 - 2.2, w: 1.2, h: 5.2 } as const;
-export const APPROACH_SIGNS: { x: number; z: number; ry: number; arrow: 1 | -1 }[] = [
+export const APPROACH_SIGNS: { x: number; z: number; ry: number; arrow: 1 | -1 | 0 }[] = [
   // (coming west from exit 8, on the north verge, its face east; turn right, north)
   { x: DRIVE_X + 46, z: EW0 - 3.7 - 1.4, ry: Math.PI / 2, arrow: 1 },
   // (coming east, its face west)
   { x: DRIVE_X - 30, z: EW0 - 3.7 - 1.4, ry: -Math.PI / 2, arrow: -1 },
+  // (by the metro's Kart Park station's door on the north bank avenue, its face south to the door: on up the land, north)
+  { x: -246 + 3, z: 64.5 - 3.7 - 2.6, ry: 0, arrow: 0 },
 ];
 export const COACH_LOT: Rect = [DRIVE_X + ROAD.half + 6, ROAD.z + ROAD.half + 0.6, DRIVE_X + ROAD.half + 30, ROAD.z + ROAD.half + 7.8];
 export const COACHES: [string, number, number, number, string][] = [0, 1, 2].map((k): [string, number, number, number, string] => [

@@ -1640,7 +1640,7 @@ export const dayKey = (now: number) => {
  * per course and class (any race) and a time trial's run on the board; `clean` (laps without a
  * wheel in the run-off) and `overtakes` are counted for missions and badges. `laps` are the lap times.
  */
-export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number }): KartResult {
+export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number; items?: boolean }): KartResult {
   const seconds = Math.round(r.seconds * 100) / 100;
   const time = r.cup === 'time';
   const c = time ? null : CUPS[r.cup as CupId];
@@ -1648,7 +1648,8 @@ export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; 
   const place = Math.max(1, Math.min(8, Math.round(r.place)));
   const prize = c ? (c.prizes[place - 1] ?? 0) : 0;
   const now = r.now ?? s.at;
-  const lapsIn = (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
+  // (an items race, docs/kart-west-plan.md Phase 7, keeps no lap records, par or challenge: they stay pure racing)
+  const lapsIn = r.items ? [] : (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
   const bestLap = lapsIn.length ? Math.round(Math.min(...lapsIn) * 100) / 100 : 0;
   const key = recordKey(r.course, cls);
   const K = s.karts;

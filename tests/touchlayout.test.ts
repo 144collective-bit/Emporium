@@ -222,7 +222,7 @@ test('an arrangement is cleaned: known keys and items, shares of the screen only
 
 test('a family holds every slot its modes use, the stick, and on foot Crouch', () => {
   assert.deepEqual(itemsOf('foot'), ['main', 'a1', 'a2', 'a3', 'b1', 'b2', 'crouch', 'stick']);
-  assert.deepEqual(itemsOf('wheel'), ['main', 'a1', 'a2', 'a3', 'stick']);
+  assert.deepEqual(itemsOf('wheel'), ['main', 'a1', 'a2', 'a3', 'b2', 'stick']);
   assert.deepEqual(itemsOf('ring'), ['main', 'a1', 'a2', 'a3', 'b2', 'stick']);
   for (const m of ALL) for (const slot of Object.keys(LAYOUTS[m])) assert.ok(itemsOf(familyOf(m)).includes(slot as never), `${m} ${slot}`);
 });

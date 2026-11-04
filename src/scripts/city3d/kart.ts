@@ -40,6 +40,7 @@ import { COUNTDOWN, CUPS, NO_INPUT, T, TICK, createKartSim, tune, type CupId, ty
 import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } from './kart-types';
 import { CAM_GAP, COURSES, HUT_DOOR, camRoom, type Course, type CourseId, type Cond } from './kartcircuit';
 import { KART_AREA, bankY } from './kartfacility';
+import { BOXES, ITEM, ITEM_NAMES } from './kartitems';
 import { CEREMONY, CONFETTI, ceremonyAt, ceremonyCam, confettiAt, confettiColour, excited, marshalFlags, podiumSpot, type Seen } from './kartcrowd';
 import { CHEER } from './life';
 import { KART_VIEW } from './kartpark3d';
@@ -479,6 +480,20 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         showSplit(e.sector, at);
         break;
       }
+      case 'item':
+        if (e.kart === me) {
+          d.ui.pop(ITEM_NAMES[e.item], 'good');
+          d.sfx('kartSpark', 0.6);
+        }
+        break;
+      case 'useItem':
+        if (e.item === 'boost') sfx('kartBoost', e.kart);
+        else if (e.item === 'oil') sfx('bump', e.kart, 0.5);
+        else sfx('kartSpark', e.kart, 0.9);
+        break;
+      case 'blocked':
+        if (e.kart === me) d.ui.pop('Shield!', 'good');
+        break;
       case 'overtake':
         // The fans round you cheer it (kartcrowd.ts WAVE)
         if (e.kart === me) wave = { t: WAVE_T, x: sim.player.x, z: sim.player.z };
@@ -520,7 +535,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     showSplit(3, lapT);
     if (lapSplits[0] > 0 && lapSplits[1] > lapSplits[0]) allSplits.push([lapSplits[0], lapSplits[1], lapT]);
     lapSplits = [0, 0, 0];
-    if (lapT < pbLap) {
+    if (lapT < pbLap && !sim.items) {
       pbLap = lapT;
       pbFlash = 2.2;
       d.ui.pop('Personal best!', 'good');
@@ -804,6 +819,59 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   const paints: string[] = [];
   let boardT = 0;
 
+  /* ---------- The items mode's boxes, slicks and shields (kartitems.ts, docs/kart-west-plan.md Phase 7) ---------- */
+
+  let t3 = 0;
+  const itemsView = (() => {
+    const mk = <T extends THREE.Object3D>(o: T) => {
+      o.visible = false;
+      group.add(o);
+      return o;
+    };
+    const boxes = mk(new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.55, 0.55), new THREE.MeshToonMaterial({ color: '#ffd23f', emissive: '#ff8a2a', emissiveIntensity: 0.35, transparent: true, opacity: 0.85 }), BOXES.length));
+    boxes.frustumCulled = false;
+    boxes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    const slicks = mk(new THREE.InstancedMesh(new THREE.CylinderGeometry(0.62, 0.62, 0.02, 18), new THREE.MeshToonMaterial({ color: '#1a1424' }), ITEM.most));
+    slicks.frustumCulled = false;
+    slicks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    const bubble = new THREE.SphereGeometry(0.95, 18, 12);
+    const bubbleMat = glowMat('#00eaff', 0.35, null);
+    const shields: THREE.Mesh[] = [];
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const v = new THREE.Vector3();
+    const one = new THREE.Vector3(1, 1, 1);
+    const none = new THREE.Vector3(0, 0, 0);
+    return {
+      show(on: boolean) {
+        boxes.visible = slicks.visible = on;
+        for (const sh of shields) sh.visible = false;
+      },
+      update(sim: KartSim, t: number) {
+        BOXES.forEach((b, i) => {
+          e.set(0.4, d.reduced ? 0.6 : t * 1.8 + i, 0.25);
+          m4.compose(v.set(b.x, b.y + 0.55 + (d.reduced ? 0 : Math.sin(t * 2.4 + i) * 0.08), b.z), q.setFromEuler(e), sim.boxLive(i) ? one : none);
+          boxes.setMatrixAt(i, m4);
+        });
+        boxes.instanceMatrix.needsUpdate = true;
+        slicks.count = sim.slicks.length;
+        sim.slicks.forEach((sl, i) => slicks.setMatrixAt(i, m4.compose(v.set(sl.x, sl.y + 0.03, sl.z), q.identity(), one)));
+        slicks.instanceMatrix.needsUpdate = true;
+        // A bubble round each shielded kart
+        sim.racers.forEach((k, i) => {
+          let sh = shields[i];
+          if (!sh) {
+            sh = shields[i] = new THREE.Mesh(bubble, bubbleMat);
+            group.add(fx(sh));
+          }
+          sh.visible = (k.shieldT ?? 0) > 0;
+          if (sh.visible) sh.position.set(k.x, k.y + 0.5, k.z);
+        });
+      },
+    };
+  })();
+
   /* ---------- The crowd, the marshals and the podium (kartcrowd.ts, docs/kart-west-plan.md Phase 4) ---------- */
 
   /** The spins and put-backs so far (for the yellow flags), the wave after you overtake, the karts as the crowd sees them */
@@ -926,11 +994,11 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     const save = d.game.save();
     const laps = lapTimes.slice();
     // Your fastest lap's splits, kept before its record is (tycoon.ts keepSplits())
-    if (allSplits.length) {
+    if (allSplits.length && !s.items) {
       const fastest = allSplits.reduce((a, b) => (b[2] < a[2] ? b : a));
       keepSplits(save, course, cls, fastest);
     }
-    const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, clean: p.cleanLaps, overtakes: p.overtakes, now: Date.now() });
+    const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, clean: p.cleanLaps, overtakes: p.overtakes, now: Date.now(), items: s.items });
     // A cup's race counts for its series: everyone's place by grid index (the rivals, then you)
     let series: KartResultView['series'] = null;
     if (cup !== 'time' && !single) {
@@ -1019,6 +1087,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         rivals: rivals.map((r) => ({ kart: r.kart, tune: tune(KART_SPECS[r.kart], cls) })),
         seed: Date.now() >>> 0,
         auto: !!setup.auto,
+        // (items only in a single race: cups, time trials and records stay pure)
+        items: single && !!setup.items,
       });
       // A time trial's ghosts: your best lap here, and par's
       if (sim.timeTrial) {
@@ -1067,6 +1137,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       d.conditions(cond);
       d.ui.showHud(true);
       root.classList.add('is-karting');
+      root.classList.toggle('has-items', sim.items);
+      itemsView.show(sim.items);
       root.dataset.kart = COURSES[course].name;
       // The sim only announces counts below its first, so the first number is ours
       shownCount = '';
@@ -1076,6 +1148,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     },
     update(dt, inp: KartInput) {
       if (!active || !sim) return;
+      t3 += dt;
       const s = sim;
       const events = s.step(dt, inp);
       for (const e of events) onEvent(e);
@@ -1173,7 +1246,10 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         ahead: gapTo(-1),
         behind: gapTo(1),
         pb: pbFlash > 0,
+        item: s.items ? (p.item ?? null) : undefined,
+        shield: (p.shieldT ?? 0) > 0,
       };
+      if (s.items) itemsView.update(s, t3);
       splitT = Math.max(0, splitT - dt);
       pbFlash = Math.max(0, pbFlash - dt);
       d.ui.paintHud(hud);
@@ -1207,7 +1283,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       d.ui.showHud(false);
       d.ui.count('');
       shownCount = '';
-      root.classList.remove('is-karting');
+      root.classList.remove('is-karting', 'has-items');
+      itemsView.show(false);
       delete root.dataset.kart;
       d.park.racing(false);
       d.park.setCourse('circuit');
