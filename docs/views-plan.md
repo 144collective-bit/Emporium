@@ -122,6 +122,37 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
 - On foot on touch: a View button (first or third person, the same as V),
   in a slot that `clash()` keeps clear of the hotbar and the prompt.
 - `touchlayout.ts` and its test take the new buttons.
+- **Built, waiting on the owner's sign-off.** views.ts grew the rest:
+  `RING_ORDER` (near, far) and `nextView(v, order)`; `RACE_FAR` (kart.ts:
+  the near distance times 1.9, looking down more) and `RING_FAR` (fight.ts:
+  twice as far back, higher, over the right shoulder; held just outside the
+  Fight Club's ropes, still under its shed's roof, or a little further out
+  of a street spar's ring); the rides' `RIDE_CAM` (the view and where you
+  look, `startRide()` from walk.ts's `setRide()`, `rideLook()` from the
+  mouse, a drag or the right stick, held within `RIDE_LOOK` and left where
+  you leave it), `RIDE_FAR`, `RIDE_FIRST` (Back seat, Window seat, Window
+  seat, Deck) and `rideView()`: each ride's own camera is near, far stands
+  its offset further out and higher, both orbit the vehicle as you look
+  round, and first person stands at the passenger's eye looking ahead
+  turned as you look, placed at once. The rides read it (taxi.ts: the back
+  seat on the passenger's side of the rear bench, `INTERIORS.sedan`;
+  metro-ui.ts and monorail-ui.ts: a window seat in the front car; riverbus-ui.ts:
+  standing at the stern's rail); `Ride.kind` names them. kart.ts and
+  fight.ts have `toggleView()` (the race's seat at his eyes over
+  `seatAt`, the near plane in close for the wheel); every race, fight and
+  ride starts near. walk.ts's `nextCam()` takes them all, and on foot
+  (over the shoulder or first person, "Camera · First person"): V in every
+  mode, R3 on rides, in the ring and the race, the View button in the
+  kart and ring layouts' `a3` (touchlayout.ts; the ring family's
+  arrangement gains the slot), a View button in each ride's bar
+  (`[data-ride-view]`, shown while riding) and on foot up top on the right
+  (`[data-walk-view]`, a small `.tc`, lit in first person; the waypoint's
+  compass steps down under it on touch). Checked in a headless browser: the
+  river bus from Downtown (near, far, the deck, looking round with a drag)
+  and the View button on an iPhone-sized screen (placed, lit, toasting).
+  The taxi, the metro, the monorail, the kart race and the ring share the
+  same code but weren't driven to in the headless run; worth a look on a
+  real device. The boot's code came to 699.8 of its 700 KB.
 
 ### Phase 3: one key for one job
 

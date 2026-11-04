@@ -113,7 +113,7 @@ import type { FeatureId } from './live';
 import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
-import { viewName, type ViewId, type ViewKind } from './views';
+import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -253,6 +253,8 @@ const AUTO_ADS_HOLD = 0.35;
 
 /** A ride (taxi.ts, the metro): each frame it moves on and says where Degen is (in it); `end` when walk mode stops mid-ride */
 export interface Ride {
+  /** Which ride (the toast names its first person: views.ts `RIDE_FIRST`) */
+  kind: RideKind;
   update(dt: number, t: number): { x: number; z: number; y?: number };
   end(): void;
 }
@@ -427,6 +429,9 @@ export function createWalk(d: WalkDeps) {
   const sensInput = $<HTMLInputElement>('[data-walk-sens]');
   const invertInput = $<HTMLInputElement>('[data-walk-invert]');
   const fpBtn = $<HTMLButtonElement>('[data-walk-fp]');
+  /** The camera's touch buttons: on foot (up top, lit in first person) and in each ride's bar (shown while riding) */
+  const viewBtn = $<HTMLButtonElement>('[data-walk-view]');
+  const rideViewBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-ride-view]')];
 
   const settings = loadSettings();
   const saveSettings = () => {
@@ -1051,7 +1056,7 @@ export function createWalk(d: WalkDeps) {
    * near the park or asks at the hut; until then they stand idle
    */
   const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, stepTab() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
-  const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {} };
+  const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {}, toggleView: () => 'near' };
   let kartUI: KartUI = NO_KART_UI;
   let karts: KartRace = NO_KARTS;
   let kartLoad: Promise<void> | null = null;
@@ -1388,6 +1393,12 @@ export function createWalk(d: WalkDeps) {
   /* ---------- Input ---------- */
 
   const look = (dx: number, dy: number, k: number) => {
+    // On a ride: look round freely (views.ts RIDE_CAM; it stays where you leave it)
+    if (ride) {
+      rideLook(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
+      d.touched();
+      return;
+    }
     if (boat?.active) {
       boat.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
       d.touched();
@@ -1438,6 +1449,8 @@ export function createWalk(d: WalkDeps) {
     root.classList.toggle('is-fp', on);
     if (!on && zoom < 1.5) zoom = homeZoom();
     fpBtn.setAttribute('aria-pressed', String(on));
+    viewBtn.setAttribute('aria-pressed', String(on));
+    viewBtn.setAttribute('aria-label', on ? 'Camera view: over the shoulder' : 'Camera view: first person');
     if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
     else pitch = Math.max(pitch, -0.55);
   }
@@ -1448,13 +1461,22 @@ export function createWalk(d: WalkDeps) {
 
   /** The camera at the wheel (V, the right stick pressed, the touch View button; views.ts): the next view, named in a toast */
   function nextCam() {
-    let kind: ViewKind | null = null;
+    let kind: ViewKind | RideKind | 'ring' | 'foot' | null = null;
     let view: ViewId | null = null;
-    if (boat?.active) [kind, view] = ['boat', boat.toggleView()];
+    // (a ride, the ring and a kart race have theirs; on foot, over the shoulder or first person)
+    if (ride) {
+      RIDE_CAM.view = nextView(RIDE_CAM.view);
+      [kind, view] = [ride.kind, RIDE_CAM.view];
+    } else if (fighting()) [kind, view] = ['ring', fight!.toggleView()];
+    else if (karts.active) [kind, view] = ['kart', karts.toggleView()];
+    else if (boat?.active) [kind, view] = ['boat', boat.toggleView()];
     else if (fly.active) [kind, view] = ['plane', fly.toggleView()];
     else if (drive.active) {
       const r = drive.toggleView();
       if (r) [kind, view] = [r.kind, r.view];
+    } else if (active) {
+      setFirstPerson(!firstPerson);
+      [kind, view] = ['foot', firstPerson ? 'first' : 'near'];
     }
     if (kind && view) d.game.toast(`Camera · ${viewName(kind, view)}`, 1200);
   }
@@ -1474,9 +1496,16 @@ export function createWalk(d: WalkDeps) {
       if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
       return false;
     }
+    // On a ride: V steps its camera (the ride has the rest)
+    if (ride && down && !e.repeat && c === 'KeyV') {
+      nextCam();
+      e.preventDefault();
+      return true;
+    }
     // Fighting: move with the move keys (W towards the opponent), Shift blocks, Space dodges; the mouse punches and kicks
     if (fighting()) {
-      if (c === 'Space') {
+      if (down && !e.repeat && c === 'KeyV') nextCam();
+      else if (c === 'Space') {
         if (down && !e.repeat) fightBtns.dodge = true;
       } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
       else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
@@ -1519,7 +1548,8 @@ export function createWalk(d: WalkDeps) {
     if (karts.active) {
       if (c === 'KeyF') {
         /* swallowed */
-      } else if (c === 'Space') jumpHeld = down;
+      } else if (down && !e.repeat && c === 'KeyV') nextCam();
+      else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
         else keys.delete(c);
@@ -1546,7 +1576,7 @@ export function createWalk(d: WalkDeps) {
     // Tab: the inventory (on foot, not in the middle of a moment)
     else if (c === 'Tab') {
       if (down && !e.repeat && !moments.active) toggleInv();
-    } else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
+    } else if (down && !e.repeat && c === 'KeyV') nextCam();
     else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
     else if (down && !e.repeat && c === 'KeyG') {
@@ -1759,6 +1789,12 @@ export function createWalk(d: WalkDeps) {
     nextCam();
     d.touched();
   });
+  // ... on foot (over the shoulder or first person), and on a ride (its bar's View)
+  onTap($('[data-walk-view]'), () => {
+    nextCam();
+    d.touched();
+  });
+  for (const b of rideViewBtns) b.addEventListener('click', () => ride && (nextCam(), d.touched()));
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
   const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
   if (driftBtn) {
@@ -1945,8 +1981,16 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits
+    // On a ride: the right stick looks round, pressed it steps the camera (the ride has the rest)
+    if (ride) {
+      if (edge(11)) nextCam();
+      if (b.some(Boolean)) d.touched();
+      pad.prev = b;
+      return;
+    }
+    // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits, the right stick pressed the camera
     if (fighting()) {
+      if (edge(11)) nextCam();
       padFight.x = pad.x;
       padFight.y = pad.y;
       padFight.block = !!b[4];
@@ -2005,8 +2049,9 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Y quits
+    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Y quits, the right stick pressed the camera
     if (karts.active) {
+      if (edge(11)) nextCam();
       padKart.steer = pad.x;
       padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padKart.drift = !!b[0];
@@ -2045,7 +2090,7 @@ export function createWalk(d: WalkDeps) {
     }
     // View opens the inventory; the right stick pressed swaps first and third person
     if (edge(8) && !moments.active) toggleInv();
-    if (edge(11)) setFirstPerson(!firstPerson);
+    if (edge(11)) nextCam();
     if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
     // (X reloads; with empty hands it punches)
     if (edge(2)) {
@@ -3002,7 +3047,10 @@ export function createWalk(d: WalkDeps) {
         // (the ride has him: the moment that got him in is over, and a crate is put away)
         moments.cancel();
         dropCrate();
+        // (every ride starts near, looking ahead: views.ts)
+        startRide();
       }
+      for (const b of rideViewBtns) b.hidden = !r;
       if (r && locked()) document.exitPointerLock();
       root.classList.toggle('is-riding', !!r);
       if (!r) hero.g.visible = hero.ring.visible = !firstPerson;

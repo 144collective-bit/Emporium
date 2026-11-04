@@ -19,6 +19,8 @@ import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import type { Place } from './places';
 import type { Ride } from './walk';
+import { INTERIORS } from './carinside';
+import { rideView } from './views';
 
 /** Its top speed in town (tiles a second), how hard it pulls away and brakes */
 const SPEED = 12;
@@ -169,10 +171,24 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     place();
     car.drive(step);
   }
+  /** The back seat: the passenger's side of the rear bench, at his eyes (carinside.ts), in the taxi's frame */
+  const SEAT = (() => {
+    const n = INTERIORS.sedan;
+    return new THREE.Vector3((n.rear?.x ?? n.hip[0] - 0.5) + 0.05, n.eye[1], -n.eye[2]);
+  })();
+  const eyeAt = new THREE.Vector3();
   function chase(dt: number, snap = false) {
-    // Behind and above, looking a little ahead of it
-    const want = new THREE.Vector3(pos.x - fwd.x * 7.5, pos.y + 3.6, pos.z - fwd.y * 7.5);
-    const at = new THREE.Vector3(pos.x + fwd.x * 3, pos.y + 0.8, pos.z + fwd.y * 3);
+    // Near: behind and above, looking a little ahead of it; far and the back seat from it (views.ts `rideView()`, V,
+    // as you look round)
+    const near = { want: { x: pos.x - fwd.x * 7.5, y: pos.y + 3.6, z: pos.z - fwd.y * 7.5 }, at: { x: pos.x + fwd.x * 3, y: pos.y + 0.8, z: pos.z + fwd.y * 3 } };
+    if (car) {
+      car.group.updateWorldMatrix(true, false);
+      eyeAt.copy(SEAT).applyMatrix4(car.group.matrixWorld);
+    } else eyeAt.set(pos.x, pos.y + 0.9, pos.z);
+    const v = rideView(near, { x: pos.x, y: pos.y + 0.8, z: pos.z }, eyeAt, [fwd.x, fwd.y]);
+    const want = new THREE.Vector3(v.want.x, v.want.y, v.want.z);
+    const at = new THREE.Vector3(v.at.x, v.at.y, v.at.z);
+    if (v.snap) snap = true;
     const k = snap ? 1 : 1 - Math.exp(-dt * 3.2);
     cam.lerp(want, k);
     look.lerp(at, k);
@@ -186,6 +202,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
 
   /** The ride, for walk mode: Degen sits in the taxi, the chase camera follows */
   const ride: Ride = {
+    kind: 'taxi',
     update(dt, t) {
       if (state === 'riding') {
         drive(dt, t);

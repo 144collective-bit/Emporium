@@ -503,3 +503,29 @@
   font: 400 11px/1.35 var(--font-body, Inter, sans-serif);
   text-shadow: 0 1px 2px #000;
 }
+
+/* ---------- The camera everywhere on touch (docs/views-plan.md Phase 2) ----------
+   On foot: View, a small button up top on the right (first person lit while it's on), the waypoint's compass
+   stepping down under it. A kart race and the ring: the View button in their layouts' free slot (touchlayout.ts).
+   Rides: View in the ride's bar (taxi.css's buttons), shown while riding (walk.ts). */
+.walk-view {
+  display: none;
+}
+@media (pointer: coarse) {
+  .city .walk-view {
+    --tc-d: 44px;
+    display: grid;
+    top: calc(var(--head-h) + 8px);
+    right: max(12px, env(safe-area-inset-right));
+  }
+  .city:is(.is-driving, .is-fighting, .is-karting, .is-inv, .is-hub, .is-shopping, .has-panel) .walk-view {
+    display: none;
+  }
+  .city[data-mode="walk"]:not(:is(.is-driving, .is-fighting, .is-karting, .is-riding)) .wm-compass {
+    top: calc(var(--head-h) + 62px);
+  }
+  .city.is-karting .drive-view,
+  .city.is-fighting .drive-view {
+    display: grid;
+  }
+}

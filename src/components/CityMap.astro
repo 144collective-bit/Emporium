@@ -853,6 +853,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
     <button type="button" class="walk-run tc" data-walk-run aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-sprint" /></svg><span class="tc-word">Sprint</span></button>
     <button type="button" class="walk-crouch tc" data-walk-crouch aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-crouch" /></svg><span class="tc-word">Crouch</span></button>
+    {/* The camera on foot on touch (V on a keyboard: over the shoulder or first person; docs/views-plan.md Phase 2): a small button up top */}
+    <button type="button" class="walk-view tc" data-walk-view aria-pressed="false" aria-label="Camera view: first person"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-view" /></svg><span class="tc-word">View</span></button>
     <button type="button" class="walk-fire tc-main tc" data-walk-fire><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-fire" /></svg><span class="tc-word">Fire</span></button>
     <button type="button" class="walk-reload tc" data-walk-reload><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-reload" /></svg><span class="tc-word">Reload</span></button>
     <button type="button" class="walk-aim tc" data-walk-aim aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-aim" /></svg><span class="tc-word">Aim</span></button>
@@ -871,6 +873,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <span class="taxi-mark" aria-hidden="true">TAXI</span>
     <p class="taxi-text" data-taxi-text></p>
     <button type="button" class="taxi-btn" data-taxi-in hidden>Get in</button>
+    <button type="button" class="taxi-btn" data-ride-view hidden aria-label="Camera view">View</button>
     <button type="button" class="taxi-btn" data-taxi-skip hidden>Skip ride</button>
     <button type="button" class="taxi-btn taxi-cancel" data-taxi-cancel hidden>Cancel</button>
   </div>
@@ -888,6 +891,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="taxi-bar metro-bar mk-skin" data-metro-bar hidden aria-live="polite">
     <span class="taxi-mark metro-mark" aria-hidden="true">M</span>
     <p class="taxi-text" data-metro-text></p>
+    <button type="button" class="taxi-btn" data-ride-view hidden aria-label="Camera view">View</button>
     <button type="button" class="taxi-btn" data-metro-skip>Skip ride</button>
   </div>
   {/* The river bus (riverbus-ui.ts, river plan step 4b): a pier's card with the other stops, and the bar while you ride */}
@@ -904,6 +908,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="taxi-bar metro-bar riverbus-bar mk-skin" data-riverbus-bar hidden aria-live="polite">
     <span class="taxi-mark metro-mark riverbus-roundel" aria-hidden="true"></span>
     <p class="taxi-text" data-riverbus-text></p>
+    <button type="button" class="taxi-btn" data-ride-view hidden aria-label="Camera view">View</button>
     <button type="button" class="taxi-btn" data-riverbus-skip>Skip ride</button>
   </div>
   {/* The world map (worldmap.ts, growth plan Phase 8): the whole city drawn from the street plan, places,

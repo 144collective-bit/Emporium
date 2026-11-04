@@ -3142,7 +3142,16 @@ it and has been retired completely. Build only on what's here.
   world map (`travel.toggle()`, the vehicle coasting while it's open).
   `cameraRoom()` skips the hills' and rolls' checks from down in the
   river's channel (they read under street level as underground: the
-  boat's chase camera had sat at its minimum).
+  boat's chase camera had sat at its minimum). Phase 2 (races, rides, the
+  ring, on foot) is built, waiting on the owner's sign-off: views.ts's
+  `RING_ORDER`, `RACE_FAR`, `RING_FAR` (kart.ts and fight.ts
+  `toggleView()`), and the rides' `RIDE_CAM` / `startRide()` /
+  `rideLook()` / `rideView()` (each ride's own camera near, far further
+  out, first person at the passenger's eye: `RIDE_FIRST`; free looking),
+  read by taxi.ts, metro-ui.ts, monorail-ui.ts and riverbus-ui.ts
+  (`Ride.kind`); `nextCam()` in walk.ts for every mode and on foot; the
+  View button in the kart and ring layouts' `a3`, in each ride's bar
+  (`[data-ride-view]`) and on foot up top (`[data-walk-view]`).
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
