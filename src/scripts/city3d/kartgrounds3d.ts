@@ -36,7 +36,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, lit, neon, place, toon } from './kit';
 import { site } from './tilework';
-import { F, GATE, KART_PARK, LOOP, ROAD, frame, toLocal, toWorld, type Frame, type Line, type Pt } from './kartpark';
+import { DRIVE_X, EW0, F, GATE, KART_PARK, LOOP, ROAD, frame, toLocal, toWorld, type Frame, type Line, type Pt } from './kartpark';
 import { BAYS, CIRCUIT, CLEAR, COURSES, COURSE_IDS, GANTRY, KERB, PIT_HALF, PIT_LANE, SITE, SUPPORTS, TRACK_HALF, enclosed, gridSlots, groundAt, type Course, type CourseId } from './kartcircuit';
 import {
   ARMCO_H,
@@ -1058,8 +1058,18 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     plaza(b);
     b.build(into);
   });
-  // Kart Road in stretches, the loop's sides and the car park inside it in pieces
-  for (let x = ROAD.x0 + 3.7; x < ROAD.x1; x += 28) {
+  // Kart Road: the drive up from ew0 (its north kerb, ew0 a 3.7-half avenue) to the corner, then east in stretches;
+  // the loop's sides and the car park inside it in pieces
+  site('kart drive', [DRIVE_X - ROAD.half, ROAD.z - ROAD.half, DRIVE_X + ROAD.half, EW0 - 3.7], (into) => {
+    const b = new Batch();
+    flatRect(b, DRIVE_X - ROAD.half, ROAD.z + ROAD.half, DRIVE_X + ROAD.half, EW0 - 3.7, ROAD_Y, ASPHALT);
+    b.detail(() => {
+      for (let z = ROAD.z + ROAD.half + 0.8; z < EW0 - 4.1; z += 1.1)
+        b.add(new THREE.PlaneGeometry(0.07, 0.55).rotateX(-Math.PI / 2).translate(DRIVE_X, PAINT_Y, z), neon('#f5d76e', 0.9, 1.1));
+    });
+    b.build(into, { cast: false, receive: true });
+  });
+  for (let x = ROAD.x0 - ROAD.half; x < ROAD.x1; x += 28) {
     const x1 = Math.min(ROAD.x1, x + 28);
     site(`kart road ${Math.round(x)}`, [x, SIDEWALK.z0, x1, ROAD.z + ROAD.half], (into) => {
       const b = new Batch();

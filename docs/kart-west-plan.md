@@ -71,7 +71,7 @@ owner has looked**.
 
 ## Phases
 
-1. **The move** (the site, its roads, the metro, the old land): the
+1. **The move** (built) (the site, its roads, the metro, the old land): the
    park's frame moved (`X0`, `Z0` in kartpark.ts) onto the new land; the
    car park's loop and the drive in off ew0 in the street plan (traffic
    comes off exit 8 onto ew0 and in); Kart Road and the north-east land
@@ -106,3 +106,34 @@ owner has looked**.
    single races only.
 8. **Polish and performance:** bench views, phones, the boot budget, the
    docs.
+
+## What Phase 1 built
+
+- `kartpark.ts`: the frame's corner moved to `X0` -360, `Z0` -130, so the
+  fence runs x -374 to -262, z -146 to -26, clear of exit 8's ramps' land
+  (`rampLand()`, tested). Kart Road comes north off ew0 at `DRIVE_X`
+  (-422.5, crossing `kart-in`) and runs east along the fence past the gate;
+  the car park's loop is west of the fence. Traffic drives them off exit 8
+  and out along ew0 (`tests/routes.test.ts`).
+- The old land: its keeps went (`KART_RECTS` are the new land's), and the
+  outskirts' trees fill it in. So the open land's trees stay as thick, the
+  old rects are `KARTS_GONE` in `landuse.ts` with the new flag `gone`
+  (counted when the densities are measured, never kept off), and the new
+  land's keeps carry `since`. The woods' box (`WOODS_OFF` in outskirts.ts)
+  is frozen where it was, so the woods stand where they stood. About two
+  hundred pines gave way to the park on its new land.
+- The metro: the old station is `starlight` (Starlight Mall). A new `kart`
+  station (Kart Park, `KART_STATION_X` -246) is on the north bank avenue's
+  median west of the highway, raised with the line's climb over the deck.
+  The train stops there both ways (`STOPS`, 16 legs, a round trip of about
+  424 s). The walk from its door up to the gate is about 140 tiles; Phase 3
+  signs that walk.
+- Exits: 2 is "Starlight Mall · Sunridge", 8 is "Uptown · Kart Park".
+- The bench view `karts` moved with the park. The taxi test allows the far
+  west for it (to Crestmont's grand hotel about 75 s, to the overlook about
+  98 s).
+- The route test now reads an avenue's lanes pushed out by a wide planted
+  median (`wide()` in routes.ts). It had passed on the Strip's boulevard by
+  luck: the routes' seeded drives came out differently with the new streets.
+- The layout snapshot was rewritten on purpose. Only the kart park's spawn,
+  roads, loop, bays, fence, hut door, circuit and gate moved.

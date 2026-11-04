@@ -58,7 +58,9 @@ each with the owner's sign-off; keep this file up to date.
     Mall (ns3 north, east), 3 Crestmont · Sunridge (ew0 east, north),
     4 Airport · Harbour (ew4 east, south), 5 Southfield · General Aviation
     (ns3 south, east), 6 Lot 9 · The Trenches (ns0 south, west), 7 Southbank
-    Docks (ew4 west, south), 8 Uptown · Westlake Park (ew0 west, north);
+    Docks (ew4 west, south), 8 Uptown · Westlake Park (ew0 west, north)
+    (since the kart park moved west, docs/kart-west-plan.md: 2 Starlight
+    Mall · Sunridge, 8 Uptown · Kart Park);
   - `RAMPS`, four an exit (`QUAD`: a loop of radius 9 by the junction and a
     straight ramp round it, each side of the ring; an off and an on each
     side, so every direction gets off and on), their heights eased in and out
@@ -79,13 +81,13 @@ each with the owner's sign-off; keep this file up to date.
   | Exit | Inside | Outside | What moved for it (Phase 1b, built) |
   | :-- | :-- | :-- | :-- |
   | 1 Stadium · Westlake Park | slip | full | Stadium Road's way in came off the north road 23 further north, the car park loop up with it, a bend down to the stretch past the stadium's front, the block's east edge in for the bend |
-  | 2 Kart Park · Starlight Mall | slip | slip | nothing (outside, the kart park's plaza, kiosk and gate arch stand where the straight ramp would run) |
+  | 2 Kart Park · Starlight Mall (Starlight Mall · Sunridge since the kart park moved west) | slip | slip | nothing (outside, the kart park's plaza, kiosk and gate arch stood where the straight ramp would run) |
   | 3 Crestmont · Sunridge | slip | slip | nothing |
   | 4 Airport · Harbour | slip | slip | nothing (outside, Airport Drive could only move east through the Runway Hotel) |
   | 5 Southfield · General Aviation | full | slip | nothing |
   | 6 Lot 9 · The Trenches | slip | slip | The Trenches' land (`inTrenches()`) keeps off the ramps' strip by the highway |
   | 7 Southbank Docks | slip | slip | the same (outside, the Docks' ring road and everything east of it stay) |
-  | 8 Uptown · Westlake Park | full | full | Westlake Park's south-west corner cut back (`EXIT_NOTCH`), its south-west gate east of it |
+  | 8 Uptown · Westlake Park (Uptown · Kart Park since the park moved west) | full | full | Westlake Park's south-west corner cut back (`EXIT_NOTCH`), its south-west gate east of it |
 
   Exits 2 and 3, and 6 and 7, pair up round their corners: between them each
   pair takes traffic off and on both ways. `rampLand()` (viaduct.ts) is the

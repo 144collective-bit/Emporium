@@ -232,7 +232,7 @@ it and has been retired completely. Build only on what's here.
   - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - **River life** (river plan step 4, the owner's picks: more boats, the river bus, boating yourself; all three built). Everything on the water keeps to a line of its own, a function of the clock, and the tests hold each clear of everything else there (`tests/water.ts`: the piers, decks, moored boats and landings). 4a, more boats: two traffic boats to a lane and the police launch in the middle one (life.ts), and `riverlife.ts` (DOM-free, tested in `tests/riverlife.test.ts`): the cruise boat (`CRUISE`, round the town's reach), the rowing eight (`CREW`) and the dinghies out west (`DINGHIES`), drawn by `riverlife3d.ts`, a district loaded as you approach the river (`LAZY_DISTRICTS` id `river`). The highway's bridges' piers stand between the lanes (`BRIDGE_PIERS` in waterfront.ts). 4b, the river bus (below, under Getting about). 4c, boating yourself (below, after Driving your car).
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway and its ramps, every plan street, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway and its ramps, every plan street, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing; land a district left goes in with `gone` (counted when the densities are measured, never kept off: the kart park's old land, docs/kart-west-plan.md), so the open land's trees stay as thick. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 1,090 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: since Phase 10 the world reaches past it on every side).
@@ -282,7 +282,8 @@ it and has been retired completely. Build only on what's here.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
     an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
     Park station north of the ring highway (the north side's stage 2: it
-    crosses the raised highway high, metro.ts `trackY()`) down the east ring avenue's
+    crosses the raised highway high, metro.ts `trackY()`; Starlight Mall
+    station since the kart park moved west, `docs/kart-west-plan.md`) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches, and on (via the
@@ -303,29 +304,31 @@ it and has been retired completely. Build only on what's here.
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
     the highway to Airport Station by Airport Drive, `AIRPORT_END`; and
-    `crest` (Crestmont's Phase 9): off the main line just south of Kart Park
-    station (`CREST_S`), east between Kart Road and the highway, round
+    `crest` (Crestmont's Phase 9): off the main line just south of Starlight Mall
+    station (`CREST_S`), east between the old Kart Road's line and the highway, round
     outside the highway's north-east corner and south to Crestmont station
     past Alder Way (`CREST`, `CREST_END`; nothing grows under it,
-    `SPUR_CLEAR`), facing north, so its runs but Kart Park's turn round
+    `SPUR_CLEAR`), facing north, so its runs but Starlight Mall's turn round
     there; runs on the branch, the spur and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
     only on Harbour Bridge's median, where they're steel posts from its
     deck, river plan step 2);
-    eight stations (`STATIONS`: Kart Park, Downtown, South Bank, The
-    Trenches, Southbank Docks, Airport, Uptown, Crestmont; each a track and distance, a platform on the
+    nine stations (`STATIONS`: Starlight Mall, Downtown, South Bank, The
+    Trenches, Southbank Docks, Kart Park (on the north bank avenue's median
+    west of the highway, `KART_STATION_X`, a walk up to the park's gate),
+    Airport, Uptown, Crestmont; each a track and distance, a platform on the
     track's left (`PLATFORM_SIDE`; Uptown's on its right, `side`,
     `sideAt()`), a stair tower with its door at street level and the way
     out of it, `face`; Uptown's on the plaza's café terrace), `METRO_SOLIDS`
     (in `SOLIDS`: pillars, portal legs, towers), the train
     (`TRAIN`, two cars) on a timetable from the clock (`trainAt()`, `LEGS`:
-    from Crestmont to Kart Park, down to South Bank, out through The Trenches and the Docks to Uptown and
+    from Crestmont to Starlight Mall, down to South Bank, out through The Trenches, the Docks and Kart Park to Uptown and
     back, out to the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
-    South Bank between the west and the Airport, at Kart Park from
+    South Bank between the west and the Airport, at Starlight Mall from
     Crestmont; at most about 61 s, Uptown to the Airport, but Crestmont's,
     up to about 75 s from Uptown)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
@@ -1475,7 +1478,7 @@ it and has been retired completely. Build only on what's here.
   in the median barrier (viapiers.ts `DECK_LAMPS`, at the boot), the piers
   solid (`PIER_SOLIDS`), the deck the walk camera's (`DECK_CAMERA`, in
   `CAMERA_GRID` only, with a bottom); the metro rises over it and its ramps
-  (metro.ts `trackY()`, `PLATEAUS`, `HIGH_Y` 7.4 over `RISE`; Kart Park,
+  (metro.ts `trackY()`, `PLATEAUS`, `HIGH_Y` 7.4 over `RISE`; Starlight Mall (Kart Park's until the park moved west), the new Kart Park station,
   Southbank Docks and the Airport raised with it, its pillars clear of the
   ramps; metro3d.ts draws every piece at its height, the train pitched on
   the climbs); the stadium's footbridge retired (above). Phase 3 (the
@@ -3902,13 +3905,17 @@ it and has been retired completely. Build only on what's here.
 
 ## The kart park (3D walk mode)
 
-- **The place** (the owner's call): a Mario-Kart-style go-kart park north
-  of the ring highway in the north-east (the north side's stage 2,
-  `docs/north-plan.md`, the owner's call: moved from outside the Parkway,
-  the same circuit to the last sample, "a more realistic track with more
-  than just a fence around it"; its old land is open again, kept clear for
-  a district later), fenced round its facility, its gate on Kart Road off
-  the east ring avenue, the metro's Kart Park station at the corner;
+- **The place** (the owner's call): a Mario-Kart-style go-kart park on
+  the open land outside the ring highway's west side, north of ew0, west
+  of exit 8's ramps (`docs/kart-west-plan.md`, the owner's call: moved
+  there from north of the highway's north-east corner, where the north
+  side's stage 2, `docs/north-plan.md`, had put it, the same circuit to the
+  last sample, so lap records, ghosts and boards stay valid; both its old
+  lands are open again, kept clear for a district later, and Kart Road off
+  the east ring avenue went with it), fenced round its facility, its gate
+  on Kart Road, which comes up off ew0 (`DRIVE_X`) from exit 8 ("Uptown ·
+  Kart Park"), the metro's Kart Park station on the north bank avenue a
+  walk to the south;
   one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
   hut (door prompt "Kart hut") with a viewing terrace on its roof, a
   grandstand in the infield facing the start straight and a big covered
@@ -3925,14 +3932,14 @@ it and has been retired completely. Build only on what's here.
   `circuitSurfaceAt()`, and goes back to the pits when a race starts).
   Walking follows the same ground inside the park, and up the banks
   (`groundAt()` in `walk.ts`, `bankY()`; your kart climbs them too).
-- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 113-225,
-  z -311.5 to -191.5, its fence), local numbers via `toWorld()` /
+- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x -374 to
+  -262, z -146 to -26, its fence: the frame's corner `X0`, `Z0`), local numbers via `toWorld()` /
   `toLocal()` (u east, v south from the circuit frame's corner; the
   circuit's frame is kartcircuit.ts's, the site reaches past it on every
-  side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
-  one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
-  `KART_CROSSINGS` (traffic drives them, up the east ring avenue under the
-  raised highway), the fence's `GATE` and
+  side), Kart Road (`ROAD`: north off ew0 at `DRIVE_X`, then east along
+  the fence past the gate) and the car park's one-way loop (`LOOP`, west
+  of the fence), in the street plan as `KART_STREETS` / `KART_CROSSINGS`
+  (traffic drives them, off exit 8 and out along ew0), the fence's `GATE` and
   `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
   (centripetal Catmull-Rom through control points `CPt`, heights
   cosine-eased from point to point, or through a `glide` point in one

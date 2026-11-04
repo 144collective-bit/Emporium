@@ -4,13 +4,15 @@
  * buildings) is kartcircuit.ts; kart-sim.ts races on it, kartpark3d.ts draws
  * it, kart.ts is the race's view.
  *
- * - The site is a 112 x 120 rectangle of open land north of the ring
- *   highway, east of the east ring avenue (ns3) past it (the north side's
- *   stage 2, docs/north-plan.md: it was north of the Parkway's top before,
- *   that land is open again), fenced, with its gate on its south side on
- *   Kart Road (`ROAD`), which runs east off ns3 past the car park's one-way
+ * - The site is a 112 x 120 rectangle of open land west of the ring
+ *   highway, north of the riverside avenue (ew0) past exit 8, clear of the
+ *   exit's ramps (docs/kart-west-plan.md Phase 1, the owner's call: it was
+ *   north of the highway in the north-east before, north of the Parkway's
+ *   top before that; that land is open again), fenced, with its gate on its
+ *   south side on Kart Road (`ROAD`), which comes north off ew0 (`DRIVE_X`)
+ *   and runs east along the site's south side past the car park's one-way
  *   loop (`LOOP`). The circuit is drawn in local numbers: u east, v south
- *   from the same corner of it as before the move (world x = X0 + u,
+ *   from the same corner of it as before the moves (world x = X0 + u,
  *   z = Z0 + v), so it's the same circuit to the last sample; the site
  *   reaches past it on every side for the stands, banks and paddock.
  * - A `Line` is a centre line sampled every half tile from control points
@@ -24,9 +26,9 @@
 
 export type Pt = [number, number];
 
-/** The local frame's corner (world x, z): the circuit's numbers start here */
-const X0 = 127;
-const Z0 = -295.5;
+/** The local frame's corner (world x, z): the circuit's numbers start here (west of exit 8; it was 127, -295.5) */
+const X0 = -360;
+const Z0 = -130;
 /** The site, in world units: x0, z0, x1, z1 (its fence) */
 export const KART_PARK = { x0: X0 - 14, z0: Z0 - 16, x1: X0 + 98, z1: Z0 + 104 } as const;
 /** Local numbers: u east, v south */
@@ -312,20 +314,21 @@ export function locate(c: Line, x: number, z: number, hint: number | null = null
 
 /* ---------- The site: Kart Road, the car park's loop, the gate, where you walk in ---------- */
 
-/** The east ring avenue past the highway (ns3), where Kart Road comes off */
-const NS3 = 64.5;
-/** Kart Road: east off ns3 along the site's south side, past the gate (a street, a lane each way) */
-export const ROAD = { z: -188, x0: NS3, x1: KART_PARK.x0 + 26, half: 1.7 } as const;
-/** The car park's one-way loop off it, between ns3 and the site (its west and east sides, its north side's z) */
-export const LOOP = { x0: 76, x1: 108, z1: -234, half: 1.7 } as const;
+/** The riverside avenue past exit 8 (ew0, z), where Kart Road comes off, and how far in from its line it comes (the old ns3's place in the frame) */
+export const EW0 = -4.5;
+export const DRIVE_X = X0 - 62.5;
+/** Kart Road: north off ew0 at `DRIVE_X`, then east along the site's south side past the gate (a street, a lane each way) */
+export const ROAD = { z: Z0 + 107.5, x0: DRIVE_X, x1: KART_PARK.x0 + 26, half: 1.7 } as const;
+/** The car park's one-way loop off it, between the drive and the site (its west and east sides, its north side's z) */
+export const LOOP = { x0: X0 - 51, x1: X0 - 19, z1: Z0 + 61.5, half: 1.7 } as const;
 /** Kart Road and the loop in the street plan (the loop driven against its points: north up its east side, west, south down its west side) */
 export const KART_STREETS: { id: string; pts: Pt[]; half: number; oneway?: -1 }[] = [
-  { id: 'kart-road', pts: [[ROAD.x0, ROAD.z], [ROAD.x1, ROAD.z]], half: ROAD.half },
+  { id: 'kart-road', pts: [[DRIVE_X, EW0], [DRIVE_X, ROAD.z], [ROAD.x1, ROAD.z]], half: ROAD.half },
   { id: 'kart-loop', pts: [[LOOP.x0, ROAD.z], [LOOP.x0, LOOP.z1], [LOOP.x1, LOOP.z1], [LOOP.x1, ROAD.z]], half: LOOP.half, oneway: -1 },
 ];
-/** Where they meet ns3 and each other (no lights) */
+/** Where they meet ew0 and each other (no lights) */
 export const KART_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
-  { id: 'kart-in', at: [ROAD.x0, ROAD.z], streets: ['ns3', 'kart-road'] },
+  { id: 'kart-in', at: [DRIVE_X, EW0], streets: ['ew0', 'kart-road'] },
   { id: 'kart-loop-w', at: [LOOP.x0, ROAD.z], streets: ['kart-road', 'kart-loop'] },
   { id: 'kart-loop-e', at: [LOOP.x1, ROAD.z], streets: ['kart-road', 'kart-loop'] },
 ];

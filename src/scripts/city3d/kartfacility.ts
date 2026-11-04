@@ -22,7 +22,7 @@
  *   garages (`PADDOCK`, `TENTS`: team tents with karts on stands).
  * - **Lights**: floodlight towers round the circuit (`FLOODLIGHTS`).
  * - **The car park** (`CAR_PARK`, `BAYS`, `PARKED`) inside the one-way loop
- *   off Kart Road (kartpark.ts `ROAD`, `LOOP`), lamps along the road and
+ *   off Kart Road (kartpark.ts `ROAD`, `LOOP`; the road up from ew0), lamps along the road and
  *   round the loop (`KART_LAMPS`), trees on the lawns (`KART_TREES`).
  *
  * `FACILITY_SOLIDS` (in solids.ts `SOLIDS`) are the kiosk, the tower, the
@@ -30,7 +30,7 @@
  * and the parked cars; `KART_RECTS` keep the outskirts' trees off it all.
  */
 import { CIRCUIT, CLEAR, GANTRY, PIT_HALF, PIT_LANE, SITE, SUPPORTS, enclosed } from './kartcircuit';
-import { GATE, KART_PARK, LOOP, ROAD, frame, toLocal, toWorld, type Line, type Pt } from './kartpark';
+import { EW0, GATE, KART_PARK, LOOP, ROAD, frame, toLocal, toWorld, type Line, type Pt } from './kartpark';
 import type { Box } from './solids';
 import type { Rect } from './tiles';
 
@@ -433,10 +433,11 @@ export const FACILITY_SOLIDS: Box[] = [
     return [x - hx, z - hz, x + hx, z + hz, 1.3];
   }),
 ];
-/** What the outskirts' trees keep off: the site, Kart Road, the loop and its car park */
+/** What the outskirts' trees keep off: the site, Kart Road (its drive up from ew0 and along the site), the loop and its car park */
 export const KART_RECTS: Rect[] = [
   [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1],
-  [ROAD.x0, ROAD.z - ROAD.half - 1, ROAD.x1 + 1, ROAD.z + ROAD.half + 1],
+  [ROAD.x0 - ROAD.half - 1, ROAD.z - ROAD.half - 1, ROAD.x1 + 1, ROAD.z + ROAD.half + 1],
+  [ROAD.x0 - ROAD.half - 1, ROAD.z, ROAD.x0 + ROAD.half + 1, EW0],
   [LOOP.x0 - LOOP.half - 1, LOOP.z1 - LOOP.half - 1, LOOP.x1 + LOOP.half + 1, ROAD.z],
 ];
 /** All of it, for loading its drawing as you approach (districts.ts) */

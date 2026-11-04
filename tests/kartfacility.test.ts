@@ -3,6 +3,7 @@
 // car park in its loop off Kart Road, and the park reached by road and by the metro.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { rampLand } from '../src/scripts/city3d/viaduct';
 import {
   ARCH,
   BANKS,
@@ -181,11 +182,11 @@ test('the gate, the plaza and the hut: in from Kart Road, clear to the hut\'s do
   assert.ok(kx0 > gx0 && kx1 < gx1 && kz0 > gz0 && kz1 < gz1);
 });
 
-test('Kart Road and the car park: in the street plan off the east ring avenue, clear of the highway and the site', () => {
+test('Kart Road and the car park: in the street plan off the north avenue (ew0) west of the highway, clear of the highway and the site', () => {
   const road = PLAN.streets.find((s) => s.id === 'kart-road')!;
   const loop = PLAN.streets.find((s) => s.id === 'kart-loop')!;
   assert.ok(road && loop && loop.oneway);
-  assert.ok(PLAN.crossings.some((c) => c.id === 'kart-in' && c.streets.includes('ns3')));
+  assert.ok(PLAN.crossings.some((c) => c.id === 'kart-in' && c.streets.includes('ew0')));
   for (const s of [road, loop])
     for (let i = 1; i < s.pts.length; i++)
       for (let k = 0; k <= 20; k++) {
@@ -202,12 +203,13 @@ test('Kart Road and the car park: in the street plan off the east ring avenue, c
   for (const [x, z] of KART_LAMPS) for (const s of PLAN.streets) if (s.kind !== 'alley') assert.ok(distToStreet(s, [x, z]) > s.half + 0.2, `a lamp on ${s.id}`);
 });
 
-test('the metro\'s Kart Park station at the corner of Kart Road, a short walk from the gate', () => {
+test('the metro\'s Kart Park station on the north bank avenue west of the highway, a walk up to the gate', () => {
   const st = STATIONS.find((s) => s.id === 'kart')!;
-  assert.ok(st.door.z < ROAD.z - ROAD.half - 1 && st.door.z > ROAD.z - 12, 'just north of Kart Road');
-  assert.ok(Math.hypot(st.door.x - (GATE.x0 + GATE.x1) / 2, st.door.z - GATE.z) < 70);
+  assert.ok(st.door.x < -215 - 20 && st.door.z > 43 && st.door.z < 64.5, 'by the north bank avenue, west of the highway');
+  assert.ok(Math.hypot(st.door.x - (GATE.x0 + GATE.x1) / 2, st.door.z - GATE.z) < 160, 'a walk up to the gate');
   for (const b of FACILITY_SOLIDS) assert.ok(!(st.tower[0] < b[2] && st.tower[2] > b[0] && st.tower[1] < b[3] && st.tower[3] > b[1]), 'the station tower in something');
   for (const s of PLAN.streets) if (s.kind !== 'alley') assert.ok(distToStreet(s, [(st.tower[0] + st.tower[2]) / 2, (st.tower[1] + st.tower[3]) / 2]) > s.half + 1, `the tower on ${s.id}`);
+  for (let x = st.tower[0]; x <= st.tower[2]; x += 0.5) for (let z = st.tower[1]; z <= st.tower[3]; z += 0.5) assert.ok(!rampLand(x, z), 'the tower on the ramps\' land');
 });
 
 test('solids in the city\'s; the outskirts\' trees keep off it all, the park\'s own trees on its lawns', () => {

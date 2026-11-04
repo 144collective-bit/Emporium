@@ -3,10 +3,10 @@
 // drive every lane of every street that goes anywhere, and the raised highway all the way round on its deck;
 // the diagonals' routes turn in and out at both ends; and the lights never show two ways green at once.
 import { test } from 'node:test';
-import { NS_ROADS } from '../src/scripts/city3d/layout';
+import { MEDIAN, NS_ROADS } from '../src/scripts/city3d/layout';
 import { LOT9_STREETS, inLot9 } from '../src/scripts/city3d/lot9';
 import { LOOP, IN } from '../src/scripts/city3d/stadium';
-import { LOOP as K_LOOP, ROAD as K_ROAD } from '../src/scripts/city3d/kartpark';
+import { DRIVE_X, EW0, LOOP as K_LOOP } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
 import { EXITS } from '../src/scripts/city3d/viaduct';
 import { JUNCTIONS, RING_ROUTES, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, type Route } from '../src/scripts/city3d/routes';
@@ -41,14 +41,14 @@ test('every route is a closed loop: round and round', () => {
   }
 });
 
-/** The stadium's and the kart park's streets north of the highway, the north roads up to them and their slip lanes there: driven too */
+/** The stadium's streets north of the highway and the kart park's west of it, the roads out to them: driven too */
 const stadiumWay = (q: Pt) =>
   (q[0] > LOOP.x0 - 3 && q[0] < LOOP.x1 + 3 && q[1] > LOOP.z1 - 3 && q[1] < -165) ||
   // (its way in from the north road, docs/highway-plan.md Phase 1b)
   (q[0] >= LOOP.x1 + 3 && q[0] < IN.x0 + 12 && q[1] > IN.z - 3 && q[1] < -165) ||
-  // ...and the kart park's (kartpark.ts): Kart Road off the east ring avenue, the car park's loop
-  (q[0] > K_LOOP.x0 - 3 && q[0] < K_LOOP.x1 + 3 && q[1] > K_LOOP.z1 - 3 && q[1] < -165) ||
-  (q[0] > K_ROAD.x0 - 12 && q[0] <= K_LOOP.x0 - 3 && q[1] > K_ROAD.z - 3 && q[1] < -165);
+  // ...and the kart park's west of the highway (kartpark.ts, docs/kart-west-plan.md): ew0 out from exit 8 to its drive,
+  // the drive north, Kart Road and the car park's loop
+  (q[0] > DRIVE_X - 3 && q[0] < HIGHWAY_BOX[0] && q[1] > K_LOOP.z1 - 3 && q[1] < EW0 + 4.5);
 
 /** The airport's drive off the south bank avenue east of the highway (and the slip lanes on that junction's outer corners), and its streets round the car park (airfield.ts) */
 /** Crestmont's streets east of the highway (crestmont.ts): the Flats, Foothill Road and the hill roads */
@@ -157,8 +157,11 @@ test('between them the routes drive every street that goes anywhere, each way (a
         // (and on Cargo Road west along the truck yard's loop: its cars leave the loop at its west end)
         if (s.id === 'airport-cargo' && lane.dir === -1 && at[0] > CARGO_ROAD.loopX) continue;
         checked++;
-        // (an avenue's either lane that way: the lane a car keeps to depends on its next turn)
-        assert.ok(driven(at, u) || (s.lanes === 2 && drivenSide(at, u)), `nobody drives ${s.id} (${lane.dir === 1 ? 'with' : 'against'} its points) at ${at.map((v) => v.toFixed(1))}`);
+        // (an avenue's either lane that way: the lane a car keeps to depends on its next turn; a planted median wider than
+        // the usual pushes both out, routes.ts wide())
+        const w = s.median ? (s.median - MEDIAN) / 2 : 0;
+        const q: Pt = [at[0] - u[1] * w, at[1] + u[0] * w];
+        assert.ok(driven(q, u) || (s.lanes === 2 && drivenSide(q, u)), `nobody drives ${s.id} (${lane.dir === 1 ? 'with' : 'against'} its points) at ${at.map((v) => v.toFixed(1))}`);
       }
     }
   assert.ok(checked > 500);
