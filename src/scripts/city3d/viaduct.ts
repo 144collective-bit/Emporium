@@ -145,20 +145,29 @@ export interface Exit {
   name: string;
   /** The way along the ring (+1 clockwise) its ramps lie: the corner side, with room */
   side: 1 | -1;
+  /** What each quadrant holds, inside the ring and outside it (`Form`) */
+  inner: Form;
+  outer: Form;
 }
+/**
+ * A quadrant's ramps: `full`, a loop by the junction and a straight ramp round it (an off and an on); `slip`, only the
+ * straight ramp, its terminal by the deck and alongside it the whole way (where the land by the deck is narrow and
+ * what's there stays, the owner's call: open land only moves); `none`, no ramp
+ */
+export type Form = 'full' | 'slip' | 'none';
 
-/** Each exit's arterial crossing today, its names and the way its ramps lie */
-const EXIT_DATA: [string, string, Pt, string, 1 | -1][] = [
-  ['highway-ns0-1', 'ns0', [-4.5, -170], 'Stadium · Westlake Park', -1],
-  ['highway-ns3-0', 'ns3', [64.5, -170], 'Kart Park · Starlight Mall', 1],
-  ['highway-ew0-0', 'ew0', [275, -4.5], 'Crestmont · Sunridge', -1],
-  ['highway-ew4-0', 'ew4', [275, 137], 'Airport · Harbour', 1],
-  ['highway-ns3-1', 'ns3', [64.5, 320], 'Southfield · General Aviation', -1],
-  ['highway-ns0-0', 'ns0s', [-4.5, 320], 'Lot 9 · The Trenches', 1],
-  ['highway-ew4-1', 'ew4', [-215, 137], 'Southbank Docks', -1],
-  ['highway-ew0-1', 'ew0', [-215, -4.5], 'Uptown · Westlake Park', 1],
+/** Each exit's arterial crossing today, its names, the way its ramps lie and its quadrants' forms (inside, outside) */
+const EXIT_DATA: [string, string, Pt, string, 1 | -1, Form, Form][] = [
+  ['highway-ns0-1', 'ns0', [-4.5, -170], 'Stadium · Westlake Park', -1, 'slip', 'full'],
+  ['highway-ns3-0', 'ns3', [64.5, -170], 'Kart Park · Starlight Mall', 1, 'slip', 'full'],
+  ['highway-ew0-0', 'ew0', [275, -4.5], 'Crestmont · Sunridge', -1, 'slip', 'slip'],
+  ['highway-ew4-0', 'ew4', [275, 137], 'Airport · Harbour', 1, 'slip', 'full'],
+  ['highway-ns3-1', 'ns3', [64.5, 320], 'Southfield · General Aviation', -1, 'full', 'slip'],
+  ['highway-ns0-0', 'ns0s', [-4.5, 320], 'Lot 9 · The Trenches', 1, 'slip', 'slip'],
+  ['highway-ew4-1', 'ew4', [-215, 137], 'Southbank Docks', -1, 'slip', 'full'],
+  ['highway-ew0-1', 'ew0', [-215, -4.5], 'Uptown · Westlake Park', 1, 'full', 'full'],
 ];
-export const EXITS: Exit[] = EXIT_DATA.map(([crossing, street, at, name, side], i) => ({ n: i + 1, crossing, street, at, name, side }));
+export const EXITS: Exit[] = EXIT_DATA.map(([crossing, street, at, name, side, inner, outer], i) => ({ n: i + 1, crossing, street, at, name, side, inner, outer }));
 /** Each exit's place along the ring */
 export const exitS = (e: Exit) => ringS(e.at[0], e.at[1]).s;
 
@@ -177,6 +186,8 @@ export const BESIDE = DECK_HALF + RAMP_HALF;
  * it's alongside the deck (`beside`) and where it joins (`join2`); `flat` at grade by the terminal; `taper` to merge
  */
 export const QUAD = { r: 9, c: 38, join: 26, loopAt: BESIDE + 18, straightAt: BESIDE + 18 + 9.5, out: 50, beside: 74, join2: 80, flat: 5, taper: 12 };
+/** A slip ramp's terminal offset (just off the deck's edge) and where it's in alongside the deck */
+export const SLIP = { at: BESIDE + 2.5, in: 16 };
 /** How far along the ring from the junction a cloverleaf reaches */
 export const REACH = QUAD.join2 + QUAD.taper;
 
@@ -186,8 +197,8 @@ export interface Ramp {
   /** Its exit's number */
   exit: number;
   kind: RampKind;
-  /** The loop by the junction or the straight ramp round it */
-  shape: 'loop' | 'straight';
+  /** The loop by the junction, the straight ramp round it, or a slip ramp alongside the deck */
+  shape: Shape;
   /** Inside (-1) or outside (+1) the ring */
   q: 1 | -1;
   /** Its centre line the way traffic drives it: an off-ramp from the deck to its terminal, an on-ramp the other way */
@@ -204,8 +215,9 @@ const ease = (a: number, b: number, v: number) => {
   return t * t * (3 - 2 * t);
 };
 
+export type Shape = 'loop' | 'straight' | 'slip';
 /** A path in (s, o) round the quadrant, from the terminal out to where it joins the deck, every tile or so */
-function quadPath(shape: 'loop' | 'straight', q: 1 | -1): [number, number][] {
+function quadPath(shape: Shape, q: 1 | -1): [number, number][] {
   const Q = QUAD;
   const out: [number, number][] = [];
   if (shape === 'loop') {
@@ -220,9 +232,11 @@ function quadPath(shape: 'loop' | 'straight', q: 1 | -1): [number, number][] {
     }
     for (let u = Q.c - 1; u >= Q.join - Q.taper; u -= 1) out.push([u, u > Q.join ? BESIDE : BESIDE - (BESIDE - OUTER_LANE) * ease(Q.join, Q.join - Q.taper, u)]);
   } else {
-    // Out at `straightAt` past the loop, in to alongside the deck, and on to join
+    // Out at `straightAt` past the loop (a slip ramp: in from its terminal just off the deck), in to alongside the
+    // deck, and on to join
+    const [at, from, to] = shape === 'slip' ? [SLIP.at, QUAD.flat, SLIP.in] : [Q.straightAt, Q.out, Q.beside];
     for (let u = 0; u <= Q.join2 + Q.taper; u += 1) {
-      const o = Q.straightAt - (Q.straightAt - BESIDE) * ease(Q.out, Q.beside, u);
+      const o = at - (at - BESIDE) * ease(from, to, u);
       out.push([u, u <= Q.join2 ? o : BESIDE - (BESIDE - OUTER_LANE) * ease(Q.join2, Q.join2 + Q.taper, u)]);
     }
   }
@@ -261,7 +275,9 @@ function rampsOf(e: Exit): Ramp[] {
     // Away from the junction towards the corner, traffic there leaves past the junction (the loop is its off-ramp)
     // and joins from the straight ramp; coming in from the corner it leaves by the straight ramp and joins by the loop
     const away = dir === e.side;
-    for (const shape of ['loop', 'straight'] as const) {
+    const form = q < 0 ? e.inner : e.outer;
+    const shapes: Shape[] = form === 'full' ? ['loop', 'straight'] : form === 'slip' ? ['slip'] : [];
+    for (const shape of shapes) {
       const path = quadPath(shape, q);
       const world = path.map(([u, o]) => ringPoint(s0 + e.side * u, o));
       // Where it's alongside the deck and climbing no more: the loop from its turn back, the straight from `beside`

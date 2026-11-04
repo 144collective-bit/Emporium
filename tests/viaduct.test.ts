@@ -83,15 +83,16 @@ test("each exit's ramps keep to its corner side, clear of the next arterial alon
   }
 });
 
-test('four ramps an exit: an off and an on each side of the ring, a loop by the junction and a straight ramp round it', () => {
+test("each quadrant's ramps by its form: a loop and a straight ramp round it, a slip ramp, or none; every exit gets off and on", () => {
   for (const e of EXITS) {
     const mine = RAMPS.filter((r) => r.exit === e.n);
-    assert.equal(mine.length, 4);
-    for (const q of [-1, 1]) {
+    for (const q of [-1, 1] as const) {
       const side = mine.filter((r) => r.q === q);
-      assert.deepEqual(side.map((r) => r.shape).sort(), ['loop', 'straight']);
-      assert.deepEqual(side.map((r) => r.kind).sort(), ['off', 'on']);
+      const form = q < 0 ? e.inner : e.outer;
+      assert.deepEqual(side.map((r) => r.shape).sort(), form === 'full' ? ['loop', 'straight'] : form === 'slip' ? ['slip'] : [], `exit ${e.n} ${q}`);
+      if (form === 'full') assert.deepEqual(side.map((r) => r.kind).sort(), ['off', 'on']);
     }
+    assert.ok(mine.some((r) => r.kind === 'off') && mine.some((r) => r.kind === 'on'), `exit ${e.n} gets off and on`);
   }
 });
 

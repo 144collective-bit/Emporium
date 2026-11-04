@@ -69,26 +69,28 @@ each with the owner's sign-off; keep this file up to date.
   keep clear of every street that passes under, the metro and Lot 9's tunnel;
   over the river only on the highway bridges' pier lines today (between the
   boats' lanes). Spans up to about 40 where the arterials cluster.
-- **What the ramps run into** (`docs/highway-exits-fit.png`, every exit
-  from above: the ramps orange at the ground to magenta at the deck, the
-  piers black, the districts' land in their colours, solids magenta):
-  1. Stadium: inside, Uptown North's west towers' corner and Westlake
-     Park's north-east lawn; outside, the stadium's car park, its loop and
-     Stadium Road's end.
-  2. Kart Park: inside, Palm Court's north end and Sunridge's north-west
-     corner; outside, the kart park's car park, Kart Road and its loop.
-  3. Crestmont: inside, Sunridge's east edge; outside, the Flats' west
-     blocks and the street along them (crest-ns0).
-  4. Airport: inside, the east side of Southfield Yards' ring and what's on
-     it; outside, Airport Drive and the landside beside it.
-  5. Southfield · General Aviation: inside, clear; outside, the general
-     aviation road, its loop and the airport's land beside it.
-  6. Lot 9 · The Trenches: inside, row C and Bottom Street's west end in The
-     Trenches; outside, Lot 9's north lane.
-  7. Southbank Docks: inside, The Trenches' row W (West Street's low
-     commercial) and Trench Avenue's west end; outside, the Docks' ring road.
-  8. Uptown · Westlake Park: inside, Westlake Park's west lawn; outside,
-     clear.
+- **Open land only** (the owner's call, once the fit was shown): nothing
+  built moves; parks, lawns, car parks, roads at the airport and the Docks,
+  and Lot 9's lane can. Each quadrant (inside or outside the ring) takes a
+  form (`Form` on each exit): `full` (the loop and the straight ramp), `slip`
+  (only the straight ramp, its terminal just off the deck and alongside it
+  all the way: where what stands near the deck stays), or `none`. Every exit
+  still gets off and on (the test holds it):
+
+  | Exit | Inside | Outside | What moves for it (Phase 1b) |
+  | :-- | :-- | :-- | :-- |
+  | 1 Stadium · Westlake Park | slip | full | the stadium's car park, its loop and Stadium Road's east end |
+  | 2 Kart Park · Starlight Mall | slip | full | the kart park's car park, its loop, Kart Road's west end |
+  | 3 Crestmont · Sunridge | slip | slip | nothing |
+  | 4 Airport · Harbour | slip | full | Airport Drive's north end and the landside beside it |
+  | 5 Southfield · General Aviation | full | slip | nothing |
+  | 6 Lot 9 · The Trenches | slip | slip | a strip of The Trenches' car park and trees along the highway |
+  | 7 Southbank Docks | slip | full | the Docks' ring road (Dock Road) by the highway; the same Trenches strip |
+  | 8 Uptown · Westlake Park | full | full | Westlake Park's west edge (lawn, wall, ring walk) |
+
+  The metro's pillars by exits 2 and 7 go with the metro's rise over the
+  deck in Phase 2 (its pillars are placed clear of every road, the ramps
+  among them). `docs/highway-exits-fit.png` shows each exit as it is now.
 - **The metro** crosses the ring four times (the main line at Kart Park,
   where it comes over from the Trenches to the Docks, where it comes back
   over the north bank avenue into Uptown, and the airport branch), each
@@ -98,11 +100,10 @@ each with the owner's sign-off; keep this file up to date.
 
 ## Phases
 
-1. **The shape as data** (above, built). Then, with the owner's sign-off on
-   the moves: **1b, making room**: each exit's land cleared by moving the
-   district edges listed above (their data, the snapshot rewritten on
-   purpose), and a test that every ramp keeps clear of every block, street,
-   solid and the water.
+1. **The shape as data** (above, built). Then **1b, making room** (signed
+   off: open land only): the moves in the table above, exit by exit (their
+   data, the snapshot rewritten on purpose), and a test that every ramp
+   keeps clear of every block, street, solid and the water.
 2. **The viaduct drawn and the ring raised:** the deck, piers, parapets,
    median barrier, lamps and joints; the street-level asphalt, median,
    lamps, junctions and slip lanes taken out (every arterial now passes
