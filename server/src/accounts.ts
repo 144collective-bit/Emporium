@@ -12,7 +12,15 @@
  *
  * Logging out everywhere (/auth/logout-all) ends every session the wallet
  * had until then, whichever browser holds it; deleting the account
- * (/auth/delete) does that and wipes the save and the profile.
+ * (/auth/delete) does that, frees its name and wipes the save and the
+ * profile.
+ *
+ * Names (docs/account-plan.md Phase 4, net/names.ts): every wallet's player
+ * name is its own. `name:<key>` holds which wallet has a name (`nameKey()`:
+ * the same name whatever its case, spaces, - and _), `owner:<address>`
+ * which name a wallet has. A wallet without one (its first login, or one
+ * from before names) is given its profile's word-list name, or another free
+ * one (`ensureName()`); /auth/name takes one typed, if it's free.
  *
  * Only a hash of each session token is stored.
  */
@@ -21,6 +29,8 @@ import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { isAddress, signInMessage, type AccountMe } from '../../src/scripts/net/auth';
+import { NAME_WHY, cleanName, nameKey } from '../../src/scripts/net/names';
+import { guestName } from '../../src/scripts/net/profile-data';
 import type { OwnProfile } from '../../src/scripts/net/protocol';
 import type { Env } from './index';
 import { sha256, walletKey } from './keys';
@@ -113,6 +123,7 @@ export class Accounts extends DurableObject<Env> {
       if (path === '/auth/nonce') return this.limited(req, 'nonce', 20) ? fail(429, 'Slow down') : this.nonce(body, req.headers.get('Origin') ?? '');
       if (path === '/auth/session') return this.limited(req, 'session', 20) ? fail(429, 'Slow down') : this.session(body);
       if (path === '/auth/rename') return this.limited(req, 'rename', 20) ? fail(429, 'Slow down') : this.rename(bearer(req.headers.get('Authorization')));
+      if (path === '/auth/name') return this.limited(req, 'name', 20) ? fail(429, 'Slow down') : this.setName(bearer(req.headers.get('Authorization')), body);
       if (path === '/auth/logout') return this.logout(bearer(req.headers.get('Authorization')));
       if (path === '/auth/logout-all') return this.limited(req, 'all', 10) ? fail(429, 'Slow down') : this.logoutAll(bearer(req.headers.get('Authorization')));
       if (path === '/auth/delete') return this.limited(req, 'delete', 5) ? fail(429, 'Slow down') : this.remove(bearer(req.headers.get('Authorization')), body);
@@ -161,11 +172,48 @@ export class Accounts extends DurableObject<Env> {
     return walletKey(address).then((k) => this.env.PROFILES.get(this.env.PROFILES.idFromName(k)));
   }
 
+  /** The wallet's player profile, opened (made on its first login), with a name of its own */
+  private async opened(address: string): Promise<OwnProfile> {
+    const profile = (await this.profile(address).then((p) => p.open(undefined, address))) as OwnProfile;
+    return (await this.ensureName(address, profile.name)) ?? profile;
+  }
+
+  /** Give `address` the name `name` if no other wallet has it ('taken' if one does); `picked` when the player typed it */
+  private async claim(address: string, name: string, picked: boolean): Promise<OwnProfile | 'taken'> {
+    const key = nameKey(name);
+    const holder = await this.ctx.storage.get<string>(`name:${key}`);
+    if (holder && holder !== address) return 'taken';
+    const old = await this.ctx.storage.get<{ name: string }>(`owner:${address}`);
+    if (old && nameKey(old.name) !== key) await this.ctx.storage.delete(`name:${nameKey(old.name)}`);
+    await this.ctx.storage.put({ [`name:${key}`]: address, [`owner:${address}`]: { name } });
+    return (await this.profile(address).then((p) => p.setName(name, picked))) as OwnProfile;
+  }
+
+  /** A wallet with no name of its own yet gets its word-list name, or another free one; null if it has one */
+  private async ensureName(address: string, current: string): Promise<OwnProfile | null> {
+    if (await this.ctx.storage.get(`owner:${address}`)) return null;
+    for (let i = 0; i < 20; i++) {
+      const name = i === 0 && cleanName(current).ok ? current : guestName(Math.random);
+      const got = await this.claim(address, name, false);
+      if (got !== 'taken') return got;
+    }
+    return null;
+  }
+
+  /** A new free name from the word lists (the room's New name, and /auth/rename): also used by the rooms */
+  async reroll(address: string): Promise<OwnProfile> {
+    for (let i = 0; i < 20; i++) {
+      const got = await this.claim(address, guestName(Math.random), false);
+      if (got !== 'taken') return got;
+    }
+    return this.opened(address);
+  }
+
   /** The logged-in wallet's basic profile: its player profile */
   private async me(token: string | null) {
     const address = await this.check(token);
     if (!address) return fail(401, 'Log in with your wallet');
-    const profile = (await this.profile(address).then((p) => p.open(undefined, address))) as OwnProfile;
+    const profile = await this.opened(address);
     const chain = Number(this.env.AUTH_CHAIN_ID) || 943;
     return json({ address, chain, profile } satisfies AccountMe);
   }
@@ -173,10 +221,20 @@ export class Accounts extends DurableObject<Env> {
   private async rename(token: string | null) {
     const address = await this.check(token);
     if (!address) return fail(401, 'Log in with your wallet');
-    const p = await this.profile(address);
-    await p.open(undefined, address);
-    const profile = (await p.rename()) as OwnProfile;
-    return json({ profile });
+    await this.opened(address);
+    return json({ profile: await this.reroll(address) });
+  }
+
+  /** A name the player typed: theirs if it's a name and no other wallet has it */
+  private async setName(token: string | null, body: Record<string, unknown>) {
+    const address = await this.check(token);
+    if (!address) return fail(401, 'Log in with your wallet');
+    const c = cleanName(body.name);
+    if (!c.ok) return json({ error: NAME_WHY[c.why], why: c.why }, 400);
+    await this.opened(address);
+    const got = await this.claim(address, c.name, true);
+    if (got === 'taken') return json({ error: NAME_WHY.taken, why: 'taken' }, 409);
+    return json({ profile: got });
   }
 
   private async logout(token: string | null) {
@@ -201,6 +259,9 @@ export class Accounts extends DurableObject<Env> {
     const address = await this.check(token);
     if (!address) return fail(401, 'Log in with your wallet');
     await this.revoke(address);
+    // Its name is free for anyone again
+    const owned = await this.ctx.storage.get<{ name: string }>(`owner:${address}`);
+    if (owned) await this.ctx.storage.delete([`owner:${address}`, `name:${nameKey(owned.name)}`]);
     const key = await walletKey(address);
     await this.env.SAVES.get(this.env.SAVES.idFromName(key)).wipe();
     await this.env.PROFILES.get(this.env.PROFILES.idFromName(key)).wipe();

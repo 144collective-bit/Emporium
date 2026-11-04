@@ -175,6 +175,22 @@ export function createAccount(server: string) {
       beforeFns.add(f);
     },
     refresh,
+    /**
+     * The player name typed on the card (docs/account-plan.md Phase 4): the
+     * account's if it's a name no other wallet has. Throws with the reason
+     * (`why`: net/names.ts's, or 'taken') when it isn't.
+     */
+    async setName(name: string) {
+      if (!saved) return;
+      try {
+        const { profile } = await api<{ profile: OwnProfile }>('/auth/name', { method: 'POST', body: JSON.stringify({ name }), headers: authed() });
+        if (me) me = { ...me, profile };
+        changed();
+      } catch (e) {
+        if (expired(e)) keep(null);
+        throw e;
+      }
+    },
     /** A new player name from the word lists */
     async rename() {
       if (!saved) return;

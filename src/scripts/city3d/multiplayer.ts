@@ -293,6 +293,10 @@ export function createMultiplayer(d: MultiplayerDeps) {
       net.send({ t: 'rename' });
       return true;
     },
+    /** The account's name changed on the profile card: the room loads the profile again, so everyone sees it */
+    reload() {
+      if (online()) net.send({ t: 'profile' });
+    },
     /** The Online / Offline switch moved */
     setEnabled(on: boolean) {
       enabled = on;

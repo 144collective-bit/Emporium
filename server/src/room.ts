@@ -72,6 +72,8 @@ interface Player {
   /** Hash of the guest token */
   key: string;
   profile: DurableObjectStub<Profile>;
+  /** The wallet logged in (its name goes through its account), or null for a guest */
+  wallet: string | null;
   me: OwnProfile;
   pos: THREE.Vector3;
   face: number;
@@ -181,6 +183,7 @@ export class Room extends DurableObject<Env> {
       ws,
       key,
       profile,
+      wallet,
       me,
       pos: new THREE.Vector3(),
       face: 0,
@@ -362,7 +365,13 @@ export class Room extends DurableObject<Env> {
         this.soon(p, 'skin', 400, () => this.changed(p, p.profile.setSkin(m.skin) as Promise<OwnProfile>));
         break;
       case 'rename':
-        if (this.allow(p, 'rename', 2500)) this.changed(p, p.profile.rename() as Promise<OwnProfile>);
+        if (!this.allow(p, 'rename', 2500)) break;
+        // A wallet's names are its account's (each its own: accounts.ts)
+        if (p.wallet) this.changed(p, this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName('main')).reroll(p.wallet) as Promise<OwnProfile>);
+        else this.changed(p, p.profile.rename() as Promise<OwnProfile>);
+        break;
+      case 'profile':
+        if (p.wallet && this.allow(p, 'profile', 1500)) this.changed(p, p.profile.open(undefined, p.wallet) as Promise<OwnProfile>);
         break;
       case 'ping':
         send(p.ws, { t: 'pong', c: Number(m.c) || 0 });

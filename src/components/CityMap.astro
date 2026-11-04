@@ -1555,7 +1555,9 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           if (!w.account.address) return who.replaceChildren('Your login ran out · ', link('Log in', () => w.ui.open()));
           const name = document.createElement('b');
           name.textContent = w.account.me?.profile.name ?? `${playing.slice(0, 6)}…${playing.slice(-4)}`;
-          who.replaceChildren('Playing as ', name, ' · ', link('Log out', () => void w.account.logout()));
+          // A new account's name came from the word lists: a nudge to pick its own
+          const pick = w.account.me && !w.account.me.profile.named ? [' · ', link('Pick your name', () => w.ui.open('name'))] : [];
+          who.replaceChildren('Playing as ', name, ...pick, ' · ', link('Log out', () => void w.account.logout()));
         };
         w.account.subscribe(paint);
         paint();

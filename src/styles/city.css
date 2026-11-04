@@ -885,6 +885,12 @@ body.is-walking .nav {
   font-family: var(--font-mono);
   font-size: 13px;
 }
+.account-name-note {
+  min-height: 1.45em;
+}
+.account-name-note.is-bad {
+  color: var(--m-hot);
+}
 .account-error {
   margin: 0;
   font-size: 13px;

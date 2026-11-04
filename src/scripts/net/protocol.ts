@@ -156,8 +156,10 @@ export type ClientMsg =
   /** What you're in now (null: on foot): your car, bike, kart, aircraft or the hire boat */
   | { t: 'veh'; v: Vehicle | null }
   | { t: 'skin'; skin: SkinId }
-  /** Pick a new guest name */
+  /** Pick a new name from the word lists (a wallet's goes through its account, so it stays its own) */
   | { t: 'rename' }
+  /** A wallet's profile changed outside the room (its name typed on the profile card): load it again */
+  | { t: 'profile' }
   | { t: 'ping'; c: number };
 
 /* ---------- Server to browser ---------- */
@@ -174,7 +176,13 @@ export interface PlayerInfo {
   veh?: Vehicle | null;
 }
 /** `wallet`: logged in with this wallet (wallet profiles only); `since`: when the profile was made (ms) */
-export type OwnProfile = PublicProfile & { rank: string; wallet?: string; since?: number };
+export type OwnProfile = PublicProfile & {
+  rank: string;
+  wallet?: string;
+  since?: number;
+  /** A wallet's name picked by the player (not the word-list name it started with): docs/account-plan.md Phase 4 */
+  named?: boolean;
+};
 
 /** id, x, y, z, facing, camera pitch, speed, flags */
 export type SnapRow = [number, number, number, number, number, number, number, number];

@@ -4390,6 +4390,19 @@ it and has been retired completely. Build only on what's here.
   history at the Vault (tycoon-ui.ts `historyView()`: each day kept, its
   level and Dorras, Restore with a confirm; it reaches the cloud chunk
   through `cloudlink.ts`, no import).
+- Phase 4 (names) is built, waiting on the owner's sign-off: a wallet's
+  player name is typed on the profile card (Save name, Suggest one for a
+  word-list name), checked as typed and on the server by `net/names.ts`
+  (`cleanName()`: 3 to 24 plain letters, digits, spaces, - and _, starting
+  and ending with a letter or digit; `nameKey()`: the same name whatever its
+  case, spaces, - and _; tested in `tests/names.test.ts`) and unique across
+  accounts (`accounts.ts`: `name:<key>` and `owner:<address>`, `claim()`,
+  `ensureName()` gives a wallet with none its word-list name or another free
+  one, `reroll()` is the room's New name; a delete frees it). A new account's
+  title screen asks it to pick one (`named` on its profile). The room loads
+  the profile again on `{ t: 'profile' }` after a change on the card
+  (multiplayer.ts `reload()`), so other players see it at once; `'reload'`
+  is the gun's message, never reuse it.
 
 ## Multiplayer (beta, testing)
 
@@ -4436,11 +4449,16 @@ it and has been retired completely. Build only on what's here.
   `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`.
   `src/scripts/net/protocol.ts` is the wire format; bump `PROTOCOL` when it
   changes incompatibly.
-- Nothing typed by players ever shows: guest names come from the word lists
-  and emotes / phrases from the fixed lists in `profile-data.ts`. Review any
-  new words or phrases for the content rules below (no token details, no
-  financial talk). The server re-checks every value players send.
-- Player profiles: player name (from the word lists, reroll), wardrobe look,
+- Nothing typed by players ever shows but a wallet account's player name
+  (the owner's call, docs/account-plan.md Phase 4: typed, unique, no word
+  filter; plain letters, digits, spaces, - and _ only, `net/names.ts`):
+  guest names come from the word lists and emotes / phrases from the fixed
+  lists in `profile-data.ts`. Review any new words or phrases for the
+  content rules below (no token details, no financial talk). The server
+  re-checks every value players send. A player's name is only ever put on
+  the page as text (`textContent`, or escaped).
+- Player profiles: player name (a guest's from the word lists, reroll; a
+  wallet's typed on the profile card, below), wardrobe look,
   rifle finish, lifetime score and rank, stored on the server against a hash
   of the browser's guest token (`degen-city-player-v1`), or of the wallet
   address once logged in (`server/src/keys.ts`). Offline, the Profile panel
@@ -4461,8 +4479,9 @@ it and has been retired completely. Build only on what's here.
   before 3D has loaded; `bootCity()` gets them and fills
   in their `hooks` (Online switch, rename). The card (in the menus' kit,
   `.mk-modal`, over the start menu) shows: player name, rank, lifetime
-  score, the wallet (short) and network, with New name, Log out, Log out
-  everywhere and Delete my account (the word "delete" typed to confirm).
+  score, the wallet (short) and network, the name field (Save name, Suggest
+  one), Log out, Log out everywhere and Delete my account (the word
+  "delete" typed to confirm).
   Only the visitor sees their own address; other players only see the
   player name. Logging in doesn't need the city Online (that's the shared
   rooms): it's the account and the cloud save (docs/account-plan.md).

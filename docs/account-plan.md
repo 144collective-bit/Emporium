@@ -4,8 +4,8 @@ The owner's call (2026-11): a player login, a profile, and a save that
 remembers achievements, purchases, gear and everything else the city's game
 keeps, following the player to any device. Built one phase at a time, each
 with the owner's sign-off; keep this up to date. Phases 1 (the save on the
-server), 2 (the browser's saves per profile) and 3 (the title screen and the
-account) are built, waiting on the owner's sign-off.
+server), 2 (the browser's saves per profile), 3 (the title screen and the
+account) and 4 (names) are built, waiting on the owner's sign-off.
 
 Everything saved is the city's game: Dorras and XP are earned by playing,
 never bought, never cashed out, never tied to the token or the store. An
@@ -109,11 +109,17 @@ account changes where the save lives, not what's in it.
   purse, the badges with them), from the game's own tables. A refused save
   keeps the server's copy and says why; the refusals are counted and logged
   (`save refused` in the Worker's logs) for the owner.
-- **Names** live with `Accounts` (one place, so unique is easy): claimed
-  case-insensitively, freed on a rename or a delete. Rules that aren't a word
-  filter but stop broken text: 3-16 characters, letters, digits, spaces,
-  `-` and `_`, no leading or trailing space, no invisible characters, no
-  look-alike letters from other alphabets.
+- **Names** (built in Phase 4) live with `Accounts` (one place, so unique
+  is easy): `name:<key>` (which wallet has a name) and `owner:<address>`
+  (which name a wallet has), claimed by `nameKey()` (case, spaces, `-` and
+  `_` ignored, so "Big Duke" and "big-duke" are one name), freed on a
+  rename or a delete. Rules that aren't a word filter but stop broken text
+  (`net/names.ts` `cleanName()`): 3-24 characters (the word-list names run
+  to 21), plain letters, digits, spaces, `-` and `_` (so no look-alike
+  letters from other alphabets, nothing invisible), starting and ending
+  with a letter or digit, spaces run together. A wallet with no name yet
+  (its first login, or one from before names) gets its profile's word-list
+  name, or another free one (`ensureName()`).
 - **Rarity**: a small `Stats` DO counting how many saves hold each badge
   (adjusted when an accepted save gains or loses one) and how many saves
   there are.
@@ -210,9 +216,20 @@ account changes where the save lives, not what's in it.
    the title screen, history after a day's second save, a restore taking
    back a change, log out everywhere, logging in again, and a delete leaving
    a fresh account.
-4. **Names**: claim a name when the account's made (the word-list name
-   offered as a start), unique on the server, rename from the profile.
-   Nametags online and the player card show it.
+4. **Names** (built, waiting on the owner's sign-off): a new account gets a
+   free word-list name and its title screen asks it to pick its own
+   ("Pick your name", `named` on the profile); the profile card's name field
+   (Save name, Suggest one for a word-list name, checked as typed, Enter
+   saves); `POST /auth/name` (400 with the reason, 409 when taken); the
+   room's New name gives a wallet a free word-list name through its account
+   (`reroll()`), and `{ t: 'profile' }` has the room load the profile again
+   after a change on the card, so nametags change at once (`'reload'` was
+   already the gun's message: the first try reused it and would have
+   reloaded the gun). Checked in a browser and against the room with two
+   test wallets: the nudge, the card's checks, the same name another way
+   round and in capitals refused, the server's own check, the room's
+   nametag changing without rejoining, the room's New name freeing the old
+   name, and a delete freeing the name.
 5. **The profile**: your profile screen in the hub's Profile tab (name,
    level and title, badges, records: karts, fights, target score; what you
    own; play time, which the save starts counting), pinned badges (three),

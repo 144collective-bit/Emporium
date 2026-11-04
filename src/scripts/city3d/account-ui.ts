@@ -6,10 +6,12 @@
  * city, so it works before the 3D city has loaded;
  * the 3D city plugs its parts in through `hooks` once it's up (index.ts).
  *
- * The card shows the player name (from the word lists, never typed), rank
+ * The card shows the player name (a guest's from the word lists), rank
  * badge, lifetime score and the wallet (short, with its network). Only the
  * visitor sees their own wallet address; other players only ever see the
- * player name. It's in the menus' kit (`.mk-modal`), over the start menu,
+ * player name, which a wallet's player types here (Phase 4: unique, checked
+ * as typed by net/names.ts, claimed by the server; Suggest one fills in a
+ * word-list name). It's in the menus' kit (`.mk-modal`), over the start menu,
  * whose Connect wallet opens it (docs/account-plan.md Phase 3). Logging in
  * needs no Online switch: that's for the shared rooms. Logged in, it has Log
  * out, Log out everywhere and Delete my account (the word typed to confirm).
@@ -19,6 +21,8 @@ import { CHAINS, shortAddr } from '../net/auth';
 import type { Account } from './account';
 import { walletError } from './wallet';
 import { slot } from './saveslot';
+import { NAME_MAX, NAME_WHY, cleanName } from '../net/names';
+import { guestName } from '../net/profile-data';
 
 /** Typed to confirm deleting the account (the server's accounts.ts DELETE_CONFIRM) */
 const DELETE_WORD = 'delete';
@@ -35,6 +39,8 @@ export interface AccountHooks {
   rename(): Promise<void> | void;
   /** The card opened (walk mode frees the mouse) */
   opened(): void;
+  /** The account's name changed (the room loads the profile again, so everyone sees it) */
+  named?(): void;
 }
 
 export function createAccountUI(root: HTMLElement, account: Account, d: AccountHooks) {
@@ -66,6 +72,11 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
   let view: 'main' | 'delete' = 'main';
   /** What's been typed into the delete confirm (kept over a repaint) */
   let typed = '';
+  /** What's been typed into the name field (null: nothing yet, it shows the account's name) */
+  let typedName: string | null = null;
+  /** A word under the name field: why a name won't do, or that it was saved */
+  let nameNote = '';
+  let nameSaved = false;
   /** Whose game this page plays (saveslot.ts): a login that ran out still plays the wallet's */
   const playing = slot().address;
 
@@ -124,22 +135,50 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     const p = me.profile;
     const rank = RANKS.find((k) => k.id === p.rank) ?? RANKS[0];
     const chain = CHAINS[me.chain];
+    // (a repaint while typing a name keeps the field, its caret and what's typed)
+    const field = body.querySelector<HTMLInputElement>('[data-account-name]');
+    const had = field && document.activeElement === field ? { start: field.selectionStart, end: field.selectionEnd } : null;
     body.innerHTML = `${head('Logged in', `<span class="account-name">${esc(p.name)}</span>`)}
       <span class="mp-rank" data-rank="${esc(rank.id)}">${esc(rank.name)}</span>
       <dl class="city-facts account-facts">
         <div><dt>Lifetime score</dt><dd>${fmt.format(p.total)}</dd></div>
         <div><dt>Wallet</dt><dd><span class="account-addr">${esc(shortAddr(me.address))}</span>${chain ? `<small>${esc(chain.name)}</small>` : ''}</dd></div>
       </dl>
+      <label class="modal-field"><span class="modal-fine">${p.named ? 'Your player name' : 'Pick your player name: this one came with your account'}</span>
+        <input type="text" maxlength="${NAME_MAX + 4}" autocomplete="off" autocapitalize="off" spellcheck="false" data-account-name /></label>
+      <p class="modal-fine account-name-note" data-account-name-note aria-live="polite"></p>
+      <div class="modal-acts"><button type="button" class="mk-btn is-main" data-account-name-save>Save name</button><button type="button" class="mk-btn" data-account-suggest>Suggest one</button></div>
       <p class="modal-fine">Your game is saved with this wallet and follows you to any device you log in on. Its save history is at the Vault.</p>
       ${err}
       <div class="modal-acts">
-        <button type="button" class="mk-btn" data-account-rename>New name</button>
-        <button type="button" class="mk-btn is-main" data-account-logout>Log out</button>
+        <button type="button" class="mk-btn" data-account-logout>Log out</button>
       </div>
       <div class="modal-more">
         <p class="modal-fine">Lost a device, or logged in somewhere you shouldn't have? Log out everywhere ends every login this wallet has.</p>
         <div class="modal-acts"><button type="button" class="mk-btn is-small" data-account-logout-all>Log out everywhere</button><button type="button" class="mk-btn is-small" data-account-delete>Delete my account</button></div>
       </div>`;
+    const input = body.querySelector<HTMLInputElement>('[data-account-name]')!;
+    input.value = typedName ?? p.name;
+    paintName();
+    if (had || focusName) {
+      input.focus({ preventScroll: true });
+      if (had) input.setSelectionRange(had.start, had.end);
+      focusName = false;
+    }
+  }
+  /** Asked to open on the name field (the title screen's Pick your name) */
+  let focusName = false;
+  /** The word under the name field and whether Save is live: as typed, checked as the server will */
+  function paintName() {
+    const input = body.querySelector<HTMLInputElement>('[data-account-name]');
+    const note = body.querySelector<HTMLElement>('[data-account-name-note]');
+    const save = body.querySelector<HTMLButtonElement>('[data-account-name-save]');
+    if (!input || !note || !save) return;
+    const c = cleanName(input.value);
+    const same = c.ok && c.name === account.me?.profile.name;
+    note.textContent = nameNote || (nameSaved ? 'Saved.' : c.ok ? (same ? '' : 'Letters, numbers, spaces, - and _. It must be one nobody else has.') : input.value.trim() ? NAME_WHY[c.why] : '');
+    note.classList.toggle('is-bad', !!nameNote || (!c.ok && !!input.value.trim()));
+    save.disabled = busy || !c.ok || same;
   }
   /** The delete button is live only once the word is typed */
   function paintDelete() {
@@ -148,16 +187,22 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     if (input && yes) yes.disabled = busy || input.value.trim().toLowerCase() !== DELETE_WORD;
   }
 
-  function open() {
+  function open(at?: 'name') {
     if (!card.hidden) return;
     lastFocus = document.activeElement as HTMLElement;
     error = '';
     view = 'main';
     typed = '';
+    typedName = null;
+    nameNote = '';
+    nameSaved = false;
+    focusName = at === 'name';
     card.hidden = false;
     d.opened();
     if (account.address) account.refresh();
-    render().then(() => card.querySelector<HTMLButtonElement>('[data-account-close]')?.focus({ preventScroll: true }));
+    render().then(() => {
+      if (!body.querySelector<HTMLInputElement>('[data-account-name]:focus')) card.querySelector<HTMLButtonElement>('[data-account-close]')?.focus({ preventScroll: true });
+    });
   }
   function close() {
     if (card.hidden) return false;
@@ -177,7 +222,7 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     render();
   }
 
-  for (const b of openers) b.addEventListener('click', open);
+  for (const b of openers) b.addEventListener('click', () => open());
   // Esc closes the card first (before it can leave walk or build mode: nothing after this sees it)
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && close()) e.stopImmediatePropagation();
@@ -211,21 +256,50 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
       paintDelete();
       act(() => account.deleteAccount(typed.trim().toLowerCase()));
     }
-    else if ('accountRename' in ds) {
-      btn.disabled = true;
-      act(async () => d.rename());
-    }
+    else if ('accountSuggest' in ds) {
+      typedName = guestName(Math.random);
+      nameNote = '';
+      nameSaved = false;
+      const input = body.querySelector<HTMLInputElement>('[data-account-name]');
+      if (input) input.value = typedName;
+      paintName();
+    } else if ('accountNameSave' in ds) void saveName();
   });
   card.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
+    if (t.matches('[data-account-name]')) {
+      typedName = t.value;
+      nameNote = '';
+      nameSaved = false;
+      return paintName();
+    }
     if (!t.matches('[data-account-confirm]')) return;
     typed = t.value;
     paintDelete();
   });
+  /** Save the typed name: the server says whether it's free */
+  async function saveName() {
+    const c = cleanName(typedName ?? '');
+    if (!c.ok || busy) return paintName();
+    busy = true;
+    paintName();
+    try {
+      await account.setName(c.name);
+      typedName = null;
+      nameSaved = true;
+      d.named?.();
+    } catch (e) {
+      nameNote = (e as Error).message || NAME_WHY.taken;
+    }
+    busy = false;
+    render();
+  }
   // (Enter in the field is the delete button, once it's live)
   card.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' || !(e.target as HTMLElement).matches('[data-account-confirm]')) return;
-    body.querySelector<HTMLButtonElement>('[data-account-delete-yes]:not(:disabled)')?.click();
+    if (e.key !== 'Enter') return;
+    const t = e.target as HTMLElement;
+    if (t.matches('[data-account-confirm]')) body.querySelector<HTMLButtonElement>('[data-account-delete-yes]:not(:disabled)')?.click();
+    else if (t.matches('[data-account-name]')) void saveName();
   });
   account.subscribe(() => render());
   paintButtons();

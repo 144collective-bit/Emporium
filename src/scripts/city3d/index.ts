@@ -1077,6 +1077,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       online: () => onlineSwitch.on,
       goOnline: () => onlineSwitch.set(true),
       rename: () => (mp?.rename() ? undefined : account.rename()),
+      named: () => mp?.reload(),
       opened: () => walking && walk.releaseMouse(),
     } satisfies AccountHooks);
   onlineSwitch?.onChange((on) => {

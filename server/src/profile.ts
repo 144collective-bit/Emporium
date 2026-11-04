@@ -21,6 +21,8 @@ interface Stored {
   weapon?: WeaponId;
   /** The wallet this profile belongs to (wallet profiles only) */
   wallet?: string;
+  /** A wallet's name was picked by the player (accounts.ts holds which names are taken) */
+  named?: boolean;
   created: number;
   seen: number;
 }
@@ -39,7 +41,7 @@ export class Profile extends DurableObject<Env> {
   private view(p: Stored): OwnProfile {
     const weapon = weaponUnlocked(p.weapon, p.total) ? p.weapon! : 'rifle';
     // Cleaned on the way out too: looks saved by an older version get today's fields
-    return { name: p.name, look: cleanLook(p.look), skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon, wallet: p.wallet, since: p.created };
+    return { name: p.name, look: cleanLook(p.look), skin: p.skin, total: Math.floor(p.total), rank: rankFor(p.total).id, weapon, wallet: p.wallet, since: p.created, named: p.wallet ? !!p.named : undefined };
   }
 
   /**
@@ -82,9 +84,20 @@ export class Profile extends DurableObject<Env> {
     return this.view(p);
   }
 
+  /** A new word-list name (a guest's: a wallet's comes from its account, `setName()`) */
   async rename() {
     const p = (await this.load())!;
+    if (p.wallet) return this.view(p);
     p.name = guestName(Math.random);
+    await this.save(p);
+    return this.view(p);
+  }
+
+  /** A wallet's name, already checked and claimed by accounts.ts; `picked` when the player typed it */
+  async setName(name: string, picked: boolean) {
+    const p = (await this.load())!;
+    p.name = name;
+    p.named = picked;
     await this.save(p);
     return this.view(p);
   }
