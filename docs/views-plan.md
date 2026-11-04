@@ -35,10 +35,11 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
 
 ## The owner's picks
 
-- **Every vehicle the same three views**, stepped through in this order
-  by the one camera control: **far** (a chase camera further back),
-  **near** (a close chase camera) and **first person** (the driver's seat,
-  the helmet, the kart's seat, the helm, the cockpit).
+- **Every vehicle the same three views**, stepped through by the one
+  camera control: **near** (a close chase camera, the one you get in
+  with: third person), **far** (a chase camera further back) and **first
+  person** (the driver's seat, the helmet, the kart's seat, the helm, the
+  cockpit), then back to near.
 - **Views everywhere**: in kart races, on rides (the taxi, the metro, the
   river bus, the monorail), in the Fight Club's ring, and a touch View
   button on foot (first or third person).
@@ -57,6 +58,13 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
   each mode, then on request (a key, and the hub's Settings).
 - **Comfort: hold or toggle** for sprint, aim, crouch and block, each its
   own setting.
+- **Then (the owner's answers to the follow-up questions):** every
+  vehicle starts in third person (near); on foot keeps over the shoulder
+  (near) and first person; the ring near and far only; on rides you look
+  round freely; the gamepad's View at the wheel opens the world map; the
+  control card's key is `/` (or `?`) and the d-pad's down; on foot on
+  touch, View is a small button up top (as the ring's Snack and Quit);
+  hold or toggle changes the touch buttons too.
 
 ## Phases
 
@@ -68,13 +76,38 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
   what its first person is called (Seat, Helmet, Helm, Cockpit), so the
   vehicles read one table instead of their own.
 - The car, the bike, your own kart, the boat and the aircraft step
-  through far, near and first person with V, R3 and the touch View
+  through near, far and first person with V, R3 and the touch View
   button. The car's roof camera goes: until the fine-detail chunk has
-  fitted your car out, its first person is a stand-in at the driver's eye
-  height (the roof camera's numbers, brought down to the seat).
+  fitted your car out, its first person is a stand-in.
 - A small toast names the view as it changes ("Near", "Helmet").
-- The gamepad's View button does nothing in a vehicle (it was the camera).
+- The gamepad's View button opens the world map at the wheel (it was the
+  camera).
 - Checked on a keyboard, a gamepad and touch, upright and on its side.
+- **Built, waiting on the owner's sign-off.** `views.ts` (DOM-free, tested
+  in `tests/views.test.ts`): `ViewId`, `VIEW_ORDER` (near, far, first),
+  `START_VIEW` (near), `nextView()`, `CHASE` (each kind's near chase, the
+  one it had before to the number, the test holds it; far about twice as
+  far back and looking down more), `chaseDistance()`, `FIRST_NAME` /
+  `viewName()`. drive.ts (the car, the bike, your kart), boat.ts and
+  fly.ts read it, start near on every way in and return the view from
+  `toggleView()`; walk.ts's `nextCam()` (V, the touch View button, the
+  right stick pressed at the wheel) toasts "Camera · <view>". The gamepad's
+  View at the wheel toggles the world map (`travel.toggle()`, walk deps
+  `worldMap` / `mapOpen`); while it's open the vehicle coasts and the pad
+  hears only View. The car's first person until it's fitted out is the
+  roof camera as before (a camera at his eyes inside the plain body would
+  look through its unlit insides); the kart's is the seat (the old roof
+  numbers, at his head). **Found on the way:** the boat's chase camera
+  always sat at its 0.35 minimum, right behind the console: its pivot is
+  under street level over the lowered water, and the rolls' check
+  (`rollsAlong()`) reads anything under street level as under the ground.
+  `cameraRoom()` in walk.ts now skips the hills' and rolls' checks from
+  down in the river's channel (`inChannel()`), as it does in Lot 9's
+  tunnel; the boat's near and far now stand back as meant. Checked in a
+  headless browser on the car (near on the forecourt, Far, the driver's
+  seat) and the boat out on the water (near, far, helm); the gamepad and
+  touch paths share `nextCam()` with V. The boot's code came to 698.9 of
+  its 700 KB.
 
 ### Phase 2: views in races, rides and the ring, and on foot
 

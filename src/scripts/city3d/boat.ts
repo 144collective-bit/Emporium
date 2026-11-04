@@ -7,8 +7,10 @@
  * it lies stopped alongside a river bus landing, or back at its mooring: the
  * boat goes home. Leaving walk mode on the water sends it home too.
  *
- * - Cameras (V): a chase camera that swings in behind (look round with the
- *   mouse, a drag or the right stick; it settles back) and one at the helm.
+ * - Cameras (V, the gamepad's right stick pressed, the touch View button;
+ *   views.ts): near and far chase cameras that swing in behind (look round
+ *   with the mouse, a drag or the right stick; they settle back) and one at
+ *   the helm. Every time you take it out it starts near.
  * - The car's readout (`data-drive-hud`): speed, and F / N / R; its pedals read
  *   Ahead and Astern.
  * - It rises at the bow with speed, leans into its turns and trails a wake.
@@ -23,6 +25,7 @@ import { WATER_Y } from './river';
 import { hireBoat } from './riverlife3d';
 import { fx, glowMat, glowTex } from './kit';
 import type { Sfx } from './combat';
+import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 
 export interface BoatDeps {
   scene: THREE.Scene;
@@ -137,7 +140,8 @@ export function createBoat(d: BoatDeps) {
   let s = newBoat();
   let active = false;
   let driver: Degen | null = null;
-  let helm = false;
+  /** The camera (V; views.ts): near, far, at the helm */
+  let view: ViewId = START_VIEW;
   let camYaw = 0;
   let lookYaw = 0;
   let lookPitch = 0;
@@ -284,7 +288,8 @@ export function createBoat(d: BoatDeps) {
       camYaw = s.yaw;
       lookYaw = lookPitch = 0;
       camReady = false;
-      helm = false;
+      view = START_VIEW;
+      if (driver) driver.g.visible = true;
       setHud(true);
       place();
       d.sfx('door');
@@ -305,11 +310,13 @@ export function createBoat(d: BoatDeps) {
     abandon() {
       if (active) home();
     },
-    toggleView() {
-      helm = !helm;
+    /** The next view (V): near, far, at the helm; returns it, for the toast */
+    toggleView(): ViewId {
+      view = nextView(view);
       camReady = false;
       // (at the helm the camera is where his head is)
-      if (driver) driver.g.visible = !helm;
+      if (driver) driver.g.visible = view !== 'first';
+      return view;
     },
     look(dx: number, dy: number) {
       lookYaw = THREE.MathUtils.clamp(lookYaw - dx, -2.6, 2.6);
@@ -348,6 +355,8 @@ export function createBoat(d: BoatDeps) {
         lookYaw += (0 - lookYaw) * damp(2.5, dt);
         lookPitch += (0 - lookPitch) * damp(2.5, dt);
       }
+      const helm = view === 'first';
+      const chase = CHASE.boat[view === 'far' ? 'far' : 'near'];
       camYaw += wrap(s.yaw - camYaw) * damp(helm ? 20 : 2.8, dt);
       const yaw = camYaw + lookYaw;
       const [fx0, fz0] = [Math.cos(yaw), -Math.sin(yaw)];
@@ -356,10 +365,10 @@ export function createBoat(d: BoatDeps) {
         camera.position.set(s.x + hx * (model.seat.x + 0.15), WATER_Y + 1.42, s.z + hz * (model.seat.x + 0.15));
         at.set(camera.position.x + fx0 * 10, camera.position.y - 0.5 + lookPitch * 6, camera.position.z + fz0 * 10);
       } else {
-        const pitch = 0.26 + lookPitch;
+        const pitch = chase.pitch + lookPitch;
         pivot.set(s.x, WATER_Y + 1.0, s.z);
         dir.set(-fx0 * Math.cos(pitch), Math.sin(pitch), -fz0 * Math.cos(pitch));
-        const want = 5 + Math.min(4, speedOf(s) * 0.45);
+        const want = chaseDistance(chase, 0, speedOf(s));
         goal.copy(pivot).addScaledVector(dir, d.cameraRoom(pivot, dir, want));
         if (!camReady) camPos.copy(goal);
         camPos.lerp(goal, damp(9, dt));

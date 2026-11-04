@@ -113,6 +113,7 @@ import type { FeatureId } from './live';
 import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
+import { viewName, type ViewId, type ViewKind } from './views';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -295,6 +296,9 @@ export interface WalkDeps {
   aero(kind: 'prop' | 'jet' | 'heli', revs: number): void;
   /** The Fight Club on the south bank (the trainer's counter opens its menu; fights run in its ring) */
   fightClub: FightClub;
+  /** The world map: open or close it (the gamepad's View at the wheel), and whether it's open (the pad's driving waits) */
+  worldMap?(): void;
+  mapOpen?(): boolean;
   reduced: boolean;
   low: boolean;
 }
@@ -765,8 +769,11 @@ export function createWalk(d: WalkDeps) {
       t = Math.min(t, (from.y - floor) / -dir.y);
     }
     // (and Crestmont's hills along the way, terrain.ts: a slope rising behind him; and the rolls outside the town,
-    // rolls.ts: neither down in the tunnel, whose own room is the ground's there)
-    if (!under) {
+    // rolls.ts: neither down in the tunnel, whose own room is the ground's there, nor from down in the river's channel
+    // (the boat's chase camera, below street level over the water, river.ts WATER_Y): both read anything under street
+    // level as under the ground, and neither reaches the river)
+    const wet = from.y < 0.3 && inChannel(from.x, from.z);
+    if (!under && !wet) {
       t = hillsAlong(from, dir, t);
       t = rollsAlong(from, dir, t);
     }
@@ -1439,6 +1446,19 @@ export function createWalk(d: WalkDeps) {
     runBtn.setAttribute('aria-pressed', String(on));
   }
 
+  /** The camera at the wheel (V, the right stick pressed, the touch View button; views.ts): the next view, named in a toast */
+  function nextCam() {
+    let kind: ViewKind | null = null;
+    let view: ViewId | null = null;
+    if (boat?.active) [kind, view] = ['boat', boat.toggleView()];
+    else if (fly.active) [kind, view] = ['plane', fly.toggleView()];
+    else if (drive.active) {
+      const r = drive.toggleView();
+      if (r) [kind, view] = [r.kind, r.view];
+    }
+    if (kind && view) d.game.toast(`Camera · ${viewName(kind, view)}`, 1200);
+  }
+
   const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
@@ -1472,7 +1492,7 @@ export function createWalk(d: WalkDeps) {
     // Boating: W / S ahead and astern, A / D steer, V swaps camera, H the horn, F gets out (alongside a landing)
     if (boat?.active) {
       if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') boat.toggleView();
+      else if (down && !e.repeat && c === 'KeyV') nextCam();
       else if (down && !e.repeat && c === 'KeyH') boat.horn();
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
@@ -1485,7 +1505,7 @@ export function createWalk(d: WalkDeps) {
     // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, F gets out
     if (fly.active) {
       if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') fly.toggleView();
+      else if (down && !e.repeat && c === 'KeyV') nextCam();
       else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c) || c === 'KeyC') {
         if (down) keys.add(c);
@@ -1511,7 +1531,7 @@ export function createWalk(d: WalkDeps) {
     // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
     if (drive.active) {
       if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') drive.toggleView();
+      else if (down && !e.repeat && c === 'KeyV') nextCam();
       else if (down && !e.repeat && c === 'KeyH') drive.horn();
       else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
@@ -1736,9 +1756,7 @@ export function createWalk(d: WalkDeps) {
   });
   // The camera at the wheel on touch (V on a keyboard): the boat's, the aircraft's or the car's next view
   onTap($('[data-drive-view]'), () => {
-    if (boat?.active) boat.toggleView();
-    else if (fly.active) fly.toggleView();
-    else if (drive.active) drive.toggleView();
+    nextCam();
     d.touched();
   });
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
@@ -1942,24 +1960,35 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Boating: left stick steers, RT ahead, LT astern, Y gets out, View swaps camera, the left stick pressed is the horn
+    // At the wheel (the boat, your aircraft, your car, bike or kart): the right stick pressed steps the camera, View opens
+    // the world map; while it's open the vehicle coasts and only View (closing it) is heard
+    if (boat?.active || fly.active || drive.active) {
+      if (edge(11)) nextCam();
+      if (edge(8)) d.worldMap?.();
+      if (d.mapOpen?.()) {
+        padDrive.steer = padDrive.throttle = 0;
+        padDrive.handbrake = false;
+        padFly.turn = padFly.climb = padFly.throttle = 0;
+        pad.prev = b;
+        return;
+      }
+    }
+    // Boating: left stick steers, RT ahead, LT astern, Y gets out, the left stick pressed is the horn
     if (boat?.active) {
       padDrive.steer = pad.x;
       padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       if (edge(3)) act();
-      if (edge(8)) boat.toggleView();
       if (edge(10)) boat.horn();
       if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
-    // Flying: left stick turns and climbs (up climbs), RT faster, LT slower, Y gets out, View swaps camera
+    // Flying: left stick turns and climbs (up climbs), RT faster, LT slower, Y gets out
     if (fly.active) {
       padFly.turn = pad.x;
       padFly.climb = -pad.y;
       padFly.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       if (edge(3)) act();
-      if (edge(8)) fly.toggleView();
       if (pad.x || pad.y || padFly.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
@@ -1986,13 +2015,12 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera, the left stick pressed is the horn
+    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, the left stick pressed is the horn
     if (drive.active) {
       padDrive.steer = pad.x;
       padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padDrive.handbrake = !!b[0];
       if (edge(3)) act();
-      if (edge(8)) drive.toggleView();
       if (edge(10)) drive.horn();
       if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;

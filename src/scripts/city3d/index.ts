@@ -969,6 +969,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     airTraffic: airport.traffic,
     aero: (kind, revs) => sound.aero(kind, revs),
     fightClub,
+    // The world map at the wheel (the gamepad's View; travel is made below, before anything can ask)
+    worldMap: () => travel.toggle(),
+    mapOpen: () => travel.isOpen,
     reduced,
     low: tier === 'low',
   });

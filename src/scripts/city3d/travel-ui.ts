@@ -184,6 +184,14 @@ export function createTravelUI(d: TravelDeps) {
   return {
     update,
     setWaypoint,
+    /** Open or close the map (the gamepad's View at the wheel, docs/views-plan.md) */
+    toggle() {
+      if (map?.isOpen) map.close();
+      else show();
+    },
+    get isOpen() {
+      return !!map?.isOpen;
+    },
     /** Keys: M opens and closes the map (walking with no panel open, or the City view), Esc closes it; true if handled */
     key(e: KeyboardEvent, free: boolean) {
       if ((e.target as HTMLElement).matches?.('input, select, textarea')) return false;
