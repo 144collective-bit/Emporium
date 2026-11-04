@@ -1,6 +1,6 @@
 # Degen City game server
 
-The multiplayer server for Degen City: a Cloudflare Worker with four kinds
+The multiplayer server for Degen City: a Cloudflare Worker with five kinds
 of Durable Object. (Plot sales for PLS were retired: district plots are
 bought with Dorras in the city's own game, in the browser.) The same Worker also serves the website
 (a static build) at https://emporium.144collective.workers.dev.
@@ -11,11 +11,13 @@ bought with Dorras in the city's own game, in the browser.) The same Worker also
 | `src/lobby.ts` | One for the whole game: picks a city with a free spot (16 players each; "City 2" opens when "City 1" is full). |
 | `src/room.ts` | One per city: runs the shared combat rules (`src/scripts/city3d/combat-sim.ts`) at 60 Hz, checks movement and shots, sends positions 15 times a second, relays emotes and fixed phrases, banks points in profiles. |
 | `src/profile.ts` | One per player: player name, wardrobe look, rifle finish, lifetime score (rank comes from the score). Addressed by a hash of the browser's secret guest token, or of the wallet address once logged in (`src/keys.ts`). |
-| `src/accounts.ts` | One for the game: logging in with a wallet (`/auth/nonce`, `/auth/session`, `/auth/me`, `/auth/rename`, `/auth/logout`). The wallet signs a one-time message (no gas); the session token (30 days, only its hash stored) opens the wallet's profile in the rooms. |
+| `src/accounts.ts` | One for the game: logging in with a wallet (`/auth/nonce`, `/auth/session`, `/auth/me`, `/auth/rename`, `/auth/logout`), logging out everywhere (`/auth/logout-all`: every session the wallet had until then ends) and deleting the account (`/auth/delete` with `{ "confirm": "delete" }`: the sessions, the cloud save and the profile). The wallet signs a one-time message (no gas); the session token (30 days, only its hash stored) opens the wallet's profile in the rooms and its cloud save. |
+| `src/saves.ts` | One per wallet (the same key as its profile): the cloud save (docs/account-plan.md). `GET /save` the whole save; `POST /save/lease` this device takes it (one device at a time); `PUT /save` `{ lease, base, saves }` the keys that changed, from revision `base`, checked by `src/scripts/net/savecheck.ts` (cleaned, and turned away with 422 if anything grew faster than the game allows; 409 for another device's lease or an old `base`); `GET /save/history` and `POST /save/restore` `{ lease, day }` the daily snapshots (the last 10, without the kart ghosts or settings). |
 
 Shared with the site (bundled in): `src/scripts/net/` (protocol, names, ranks,
-wardrobe, emotes, phrases, the sign-in message), `src/scripts/city3d/combat-sim.ts`
-and `src/scripts/city3d/solids.ts`. Keep those free of DOM and scene code.
+wardrobe, emotes, phrases, the sign-in message, the cloud save's checks), `src/scripts/city3d/combat-sim.ts`,
+`src/scripts/city3d/solids.ts` and, for the cloud save, `src/scripts/city3d/tycoon.ts` and the
+other saves' cleaners. Keep those free of DOM and scene code.
 
 ## Deploying from GitHub through Cloudflare (Workers Builds)
 
@@ -93,4 +95,10 @@ Then build the site against it from the repo root:
 PUBLIC_GAME_SERVER=http://localhost:8787 npm run build && npx astro preview
 ```
 
-`npm run check` type-checks the server.
+`npm run check` type-checks the server. (It reports errors in some of the city's
+drawing code that the shared files' imports reach, `kit.ts` and its neighbours: those were
+there before the cloud save, and the Worker builds and runs regardless.)
+
+To try the save API without building the site, run `wrangler dev` on a copy of
+`wrangler.jsonc` without its `assets` and `build` sections, with
+`--var ALLOWED_ORIGINS:http://localhost:4321`, and send `Origin: http://localhost:4321`.

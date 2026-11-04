@@ -6,7 +6,13 @@
  * address, and they get a session token (30 days). That one login covers
  * everything a wallet does in the city:
  * - their player profile (name, rank, score, look), kept per wallet so it
- *   follows them to any browser (a wallet's first login starts a fresh one).
+ *   follows them to any browser (a wallet's first login starts a fresh one);
+ * - their cloud save (saves.ts, docs/account-plan.md), which the Worker opens
+ *   with `check()`.
+ *
+ * Logging out everywhere (/auth/logout-all) ends every session the wallet
+ * had until then, whichever browser holds it; deleting the account
+ * (/auth/delete) does that and wipes the save and the profile.
  *
  * Only a hash of each session token is stored.
  */
@@ -55,7 +61,11 @@ export function recoverSigner(message: string, signature: string): string | null
 interface Session {
   address: string;
   exp: number;
+  /** When it was made (sessions from before this field: `exp` less SESSION_TTL) */
+  at?: number;
 }
+/** Typed into the confirm to delete an account */
+export const DELETE_CONFIRM = 'delete';
 
 export class Accounts extends DurableObject<Env> {
   private hits = new Map<string, { n: number; t: number }>();
@@ -84,6 +94,12 @@ export class Accounts extends DurableObject<Env> {
       await this.ctx.storage.delete(key);
       return null;
     }
+    // Logged out everywhere since it was made
+    const revoked = await this.ctx.storage.get<number>(`revoked:${s.address}`);
+    if (revoked !== undefined && (s.at ?? s.exp - SESSION_TTL) <= revoked) {
+      await this.ctx.storage.delete(key);
+      return null;
+    }
     return s.address;
   }
 
@@ -98,6 +114,8 @@ export class Accounts extends DurableObject<Env> {
       if (path === '/auth/session') return this.limited(req, 'session', 20) ? fail(429, 'Slow down') : this.session(body);
       if (path === '/auth/rename') return this.limited(req, 'rename', 20) ? fail(429, 'Slow down') : this.rename(bearer(req.headers.get('Authorization')));
       if (path === '/auth/logout') return this.logout(bearer(req.headers.get('Authorization')));
+      if (path === '/auth/logout-all') return this.limited(req, 'all', 10) ? fail(429, 'Slow down') : this.logoutAll(bearer(req.headers.get('Authorization')));
+      if (path === '/auth/delete') return this.limited(req, 'delete', 5) ? fail(429, 'Slow down') : this.remove(bearer(req.headers.get('Authorization')), body);
       return fail(404, 'Not found');
     } catch (e) {
       console.error('accounts', e);
@@ -131,7 +149,11 @@ export class Accounts extends DurableObject<Env> {
     const signer = recoverSigner(n.message, String(body.signature ?? ''));
     if (signer !== n.address) return fail(401, "That signature isn't from this wallet");
     const token = randomHex(32);
-    await this.ctx.storage.put(`session:${await sha256(token)}`, { address: n.address, exp: Date.now() + SESSION_TTL } satisfies Session);
+    const now = Date.now();
+    // (A step past a log-out-everywhere in the same millisecond)
+    const revoked = (await this.ctx.storage.get<number>(`revoked:${n.address}`)) ?? 0;
+    const at = Math.max(now, revoked + 1);
+    await this.ctx.storage.put(`session:${await sha256(token)}`, { address: n.address, exp: at + SESSION_TTL, at } satisfies Session);
     return json({ token, address: n.address });
   }
 
@@ -159,6 +181,30 @@ export class Accounts extends DurableObject<Env> {
 
   private async logout(token: string | null) {
     if (token) await this.ctx.storage.delete(`session:${await sha256(token)}`);
+    return json({ ok: true });
+  }
+
+  /** End every session this wallet has, this one too (they're looked up by token, so each is turned away as it's next used) */
+  private async logoutAll(token: string | null) {
+    const address = await this.check(token);
+    if (!address) return fail(401, 'Log in with your wallet');
+    await this.revoke(address);
+    return json({ ok: true });
+  }
+  private async revoke(address: string) {
+    await this.ctx.storage.put(`revoked:${address}`, Date.now());
+  }
+
+  /** Delete the account: every session ended, the cloud save and its snapshots and the player profile wiped */
+  private async remove(token: string | null, body: Record<string, unknown>) {
+    if (body.confirm !== DELETE_CONFIRM) return fail(400, `Type ${DELETE_CONFIRM} to confirm`);
+    const address = await this.check(token);
+    if (!address) return fail(401, 'Log in with your wallet');
+    await this.revoke(address);
+    const key = await walletKey(address);
+    await this.env.SAVES.get(this.env.SAVES.idFromName(key)).wipe();
+    await this.env.PROFILES.get(this.env.PROFILES.idFromName(key)).wipe();
+    console.log('account deleted');
     return json({ ok: true });
   }
 }

@@ -3,7 +3,8 @@
 The owner's call (2026-11): a player login, a profile, and a save that
 remembers achievements, purchases, gear and everything else the city's game
 keeps, following the player to any device. Built one phase at a time, each
-with the owner's sign-off; keep this up to date. Nothing here is built yet.
+with the owner's sign-off; keep this up to date. Phase 1 (the save on the
+server) is built, waiting on the owner's sign-off; nothing is on screen yet.
 
 Everything saved is the city's game: Dorras and XP are earned by playing,
 never bought, never cashed out, never tied to the token or the store. An
@@ -59,25 +60,54 @@ account changes where the save lives, not what's in it.
 
 ### The server
 
-- **`Saves`, a Durable Object per wallet** (SQLite-backed, keyed like the
-  profile, `walletKey()`): the current save as one row per key in
-  `BACKUP_KEYS` (the ghosts in chunks under the row-size limit), a
-  `revision` that goes up with every write, `lease` (which device holds it),
-  and up to 10 daily snapshots for restore.
-- **The API** (`/save/*`, the session token as `Bearer`, CORS for both
-  sites' origins): `GET` the save and its revision; `POST /save/lease` takes
-  the save for this device (a new lease ends the old one); `PUT` sends the
-  keys that changed with the revision it was based on and the lease, and is
-  refused if either is stale; `GET /save/history` and `POST /save/restore`;
-  `DELETE /account` (the save, the profile, the name, every session).
-- **The checks** (DOM-free, `server/src/savecheck.ts`, shared rules from
-  `tycoon.ts`, tested): each key cleaned by its own cleaner; the tycoon save
-  must come out of `cleanSave()` unchanged; between the last accepted save
-  and this one, Dorras, XP and each counter may grow at most by a generous
-  rate times the real time that passed (worked out from the game's own best
-  earning rates, with headroom); owned lists hold only real ids. A refused
-  save keeps the server's copy and tells the browser why; repeated refusals
-  are logged for the owner.
+- **`Saves`, a Durable Object per wallet** (`server/src/saves.ts`,
+  SQLite-backed, keyed like the profile, `walletKey()`; built in Phase 1):
+  the current save, each key in `CLOUD_KEYS` (the backup's `BACKUP_KEYS`,
+  the settings as two keys, `degen-city-walk-v1:phone` and `:desktop`)
+  stored in pieces of `CHUNK` characters (`split()` / `join()`: one value in
+  a Durable Object is limited in size), a `rev` that goes up with every
+  write, the `lease` (which device holds it), and the daily snapshots: before
+  the first write of each day (UTC) the save as it stood is kept, the last
+  `SNAPSHOTS` (10) of them, only the progress (`SNAPSHOT_KEYS`: not the kart
+  ghosts, the bulk and only replays, nor the settings, so a restore never
+  rolls back the controls).
+- **The API** (the session token as `Bearer`; CORS for the allowed pages,
+  `ALLOWED_ORIGINS`; `server/src/index.ts`): `GET /save` the save and its
+  `rev`; `POST /save/lease` takes the save for this device (a new lease ends
+  the old one); `PUT /save` `{ lease, base, saves }` the keys that changed (a
+  value, or `null` to clear one; never the city's game) from revision `base`:
+  409 for another device's lease (`lease`) or an old `base` (`stale`), 422
+  when the checks turn it away (`checks`, the reasons), 429 past 30 a minute;
+  `GET /save/history` (each snapshot's day, level, Dorras and XP) and `POST
+  /save/restore` `{ lease, day }` (the progress put back, the ghosts and
+  settings as they are; the checks measure from it after). On `Accounts`:
+  `POST /auth/logout-all` (every session the wallet had until then ends,
+  this one too: `revoked:<address>` against each session's `at`) and `POST
+  /auth/delete` `{ confirm: "delete" }` (that, and the save, its snapshots
+  and the profile wiped; the name too once names are built). The shapes are
+  `CloudSave`, `CloudLease`, `CloudPut`, `CloudPutResult` in savecheck.ts.
+- **The checks** (DOM-free, `src/scripts/net/savecheck.ts`, shared with the
+  server like the rest of `net/`, tested in `tests/savecheck.test.ts`;
+  `checkSaves()`): each key cleaned by the browser's own cleaner on the way
+  in (`cleanSave()` with the server's clock, `cleanCar()`, `cleanBike()`,
+  `cleanPlane()`, the look's `cleanLook()`, `cleanScore()` and
+  `cleanSettings()` for the two loaders that live in DOM files; the ghosts
+  kept as they are), the cleaned copy is what's kept; each key's size
+  (`KEY_MAX`) and the whole save's (`SAVE_MAX`, the backup's 4 MB). Between
+  the last game the server accepted and this one (its own clock, `gameAt`;
+  the target score's `scoreAt`), the business's worth (`worth()`: Dorras,
+  till, goods, property and gear less a loan, both valued at the same
+  moment's prices, so the market's swings and buying things don't count, and
+  owning what wasn't paid for does), XP, each lifetime counter and the target
+  score may grow at most a burst plus a rate per real minute (`GROW`); a
+  badge new in the save must be earned by it (`badgeMet()`). The rates are
+  generous: the test measures a fully built business with every shelf full
+  (about 350 worth and 95 XP a minute) against them, and checks the bursts
+  cover the most one sitting can bring in (the three richest missions, a
+  Neon series' last race and trophy, the daily challenge, the hardest bout's
+  purse, the badges with them), from the game's own tables. A refused save
+  keeps the server's copy and says why; the refusals are counted and logged
+  (`save refused` in the Worker's logs) for the owner.
 - **Names** live with `Accounts` (one place, so unique is easy): claimed
   case-insensitively, freed on a rename or a delete. Rules that aren't a word
   filter but stop broken text: 3-16 characters, letters, digits, spaces,
@@ -110,9 +140,16 @@ account changes where the save lives, not what's in it.
 
 ## The phases
 
-1. **The save on the server** (workers.dev): the `Saves` DO, the API, the
-   lease, the checks and their tests, snapshots. Nothing on screen yet;
-   checked with a test page or the tests.
+1. **The save on the server** (workers.dev; built, waiting on the owner's
+   sign-off): the `Saves` DO, the API, the lease, the checks and their
+   tests, snapshots, and on `Accounts` log out everywhere and delete the
+   account (their buttons come in Phase 3). Nothing on screen yet; checked
+   with the tests and, end to end against `wrangler dev`, a script logging
+   in with a test wallet: a fresh game taken, an edited one turned away, a
+   stale base and another device's lease refused, a 3 MB ghost file stored
+   in pieces and read back, a snapshot restored with the settings left
+   alone, log out everywhere ending every session, and a delete leaving a
+   fresh account.
 2. **The browser's saves per profile**: `saveslot.ts`, every writer moved
    onto it (tested: a guest's keys don't change), `cloudsave.ts`, the
    takeover card, offline and back. Logging in with the existing wallet

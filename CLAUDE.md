@@ -4341,7 +4341,7 @@ it and has been retired completely. Build only on what's here.
   wallet. It never sends a transaction. No explorer or wallet-brand links;
   only the confirmed links in `src/data/site.ts` are linked.
 
-## Player accounts and cloud saves (planned, nothing built yet)
+## Player accounts and cloud saves (`docs/account-plan.md`)
 
 - The owner's call (2026-11): a wallet login, a profile and the whole save
   (progress, look, vehicles, settings, kart ghosts) on the Cloudflare Worker,
@@ -4351,6 +4351,22 @@ it and has been retired completely. Build only on what's here.
   login and cloud saves (still no multiplayer), account names are typed by
   the player (unique, unfiltered, the owner's call), and a wallet carries the
   whole save. An account always starts fresh; the guest save stays as it is.
+- Phase 1 (the save on the server) is built, waiting on the owner's
+  sign-off; nothing on screen uses it yet. The rules are
+  `src/scripts/net/savecheck.ts` (DOM-free, shared with the server, tested
+  in `tests/savecheck.test.ts`): `CLOUD_KEYS` (the backup's keys, the walk
+  settings as one per kind of device, `settingsKey()`), `checkSaves()`
+  (every value cleaned by its own cleaner; worth, XP, each counter and the
+  target score may grow at most `GROW`'s burst plus its rate per real minute
+  since the last one accepted; a new badge must be earned), `split()` /
+  `join()` (values stored in pieces), `SNAPSHOT_KEYS` (a snapshot is the
+  progress: never the ghosts or the settings) and the API's shapes. The
+  server is `server/src/saves.ts` (the `Saves` Durable Object, one per
+  wallet: `/save`, the lease, the snapshots) and `/auth/logout-all` and
+  `/auth/delete` in `accounts.ts`. A new save in localStorage needs its key
+  in `BACKUP_KEYS` (so in `CLOUD_KEYS`) and a cleaner in savecheck.ts's
+  `CLEAN`; anything new a player can earn fast enough to trip `GROW` needs
+  the test's one-sitting sum to take it in.
 
 ## Multiplayer (beta, testing)
 
@@ -4458,7 +4474,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), how the guns feel (`gunfeel.ts`) and their shapes (`gunshapes.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the cloud save's checks (`savecheck.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
   getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix and the ring avenue (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,

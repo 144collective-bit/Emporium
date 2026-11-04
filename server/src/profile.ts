@@ -89,6 +89,12 @@ export class Profile extends DurableObject<Env> {
     return this.view(p);
   }
 
+  /** Delete the profile (deleting the account) */
+  async wipe() {
+    await this.ctx.storage.deleteAll();
+    this.p = null;
+  }
+
   /** Points earned in a room (sent in batches) */
   async addScore(n: number) {
     const p = (await this.load())!;
