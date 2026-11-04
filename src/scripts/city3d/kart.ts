@@ -45,6 +45,7 @@ import { fx, glowMat, glowTex } from './kit';
 import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { finishKartRace, kartStatsOf, parLap, recordKey, seriesRace, startSeries } from './tycoon';
+import { slot } from './saveslot';
 
 /* ---------- The rivals ---------- */
 
@@ -121,8 +122,9 @@ function cleanGhost(v: unknown): Ghost | null {
 }
 function loadGhosts(): Record<string, unknown> {
   try {
+    // (the old circuit's ghosts were only ever a guest's)
     if (localStorage.getItem(OLD_GHOST_KEY) !== null) localStorage.removeItem(OLD_GHOST_KEY);
-    const raw = localStorage.getItem(GHOST_KEY);
+    const raw = slot().get(GHOST_KEY);
     const o = raw ? JSON.parse(raw) : null;
     return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
   } catch {
@@ -146,7 +148,7 @@ function writeGhost(key: string, g: Ghost) {
   try {
     const all = loadGhosts();
     all[key] = out;
-    localStorage.setItem(GHOST_KEY, JSON.stringify(all));
+    slot().set(GHOST_KEY, JSON.stringify(all));
   } catch {
     /* no storage: no ghost kept */
   }

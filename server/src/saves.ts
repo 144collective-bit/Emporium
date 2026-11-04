@@ -122,8 +122,8 @@ export class Saves extends DurableObject<Env> {
     for (let i = 0; i < dels.length; i += BATCH) await st.delete(dels.slice(i, i + BATCH));
   }
 
-  /** The whole save */
-  async get(): Promise<CloudSave> {
+  /** The whole save, and whether `lease` is still the current one */
+  async get(lease?: unknown): Promise<CloudSave> {
     const m = await this.load();
     const raw = await this.read(this.ctx.storage, 'v:', m.pieces, CLOUD_KEYS);
     const saves: CloudSave['saves'] = {};
@@ -134,7 +134,7 @@ export class Saves extends DurableObject<Env> {
         /* never written that way: left out */
       }
     }
-    return { rev: m.rev, at: m.at, saves };
+    return { rev: m.rev, at: m.at, saves, held: typeof lease === 'string' && !!m.lease && lease === m.lease };
   }
 
   /** This device takes the save; any other device's lease ends */

@@ -4,7 +4,8 @@ The owner's call (2026-11): a player login, a profile, and a save that
 remembers achievements, purchases, gear and everything else the city's game
 keeps, following the player to any device. Built one phase at a time, each
 with the owner's sign-off; keep this up to date. Phase 1 (the save on the
-server) is built, waiting on the owner's sign-off; nothing is on screen yet.
+server) and Phase 2 (the browser's saves per profile) are built, waiting on
+the owner's sign-off.
 
 Everything saved is the city's game: Dorras and XP are earned by playing,
 never bought, never cashed out, never tied to the token or the store. An
@@ -119,21 +120,52 @@ account changes where the save lives, not what's in it.
 
 ### The browser
 
-- **One door to storage**: `saveslot.ts` (DOM-free apart from storage, which
-  it's given) owns every save key. Guests read and write the keys as they are
-  today (nothing moves for anyone who never logs in); a wallet's saves sit
-  under their own prefix (`degen-city-w-<hash>-...`), so the two games never
-  touch. Every file that writes a save goes through it. Switching profile
-  (log in, log out) reloads the page, as loading a backup does.
-- **Syncing**: `cloudsave.ts` uploads what changed a few seconds after a
-  `commit()`, when the tab is hidden, and before the page unloads (a
-  `keepalive` request); offline it marks the save as waiting and tries again
-  when the connection's back. The settings go up as two copies, one for
-  phones and one for desktops (the touch layout means nothing on a laptop).
-- **Taking over**: on start the browser takes the lease. If another device
-  takes it, the next `PUT` is refused and a card says the game is being
-  played elsewhere, with Play here (take it back, loading the server's copy)
-  and Play as guest.
+- **One door to storage** (built in Phase 2): `saveslot.ts` (DOM-free, no
+  imports; `slot()`, the page's) owns every save key: the tycoon save,
+  the car, bike and aircraft (`readSaved()` in vehicleids.ts), the look
+  (profile-ui.ts), the target score (combat.ts), the walk settings
+  (walk.ts), the kart ghosts (kart.ts) and the Vault's backup. Guests read
+  and write the keys as they've always been (nothing moves for anyone who
+  never logs in); a wallet's sit beside them with its address added
+  (`degen-city-tycoon-v1@0xab12...`, `slotKey()`), so the two games never
+  touch. Whose slot it is is decided once, as the page starts, from the
+  login kept in the browser (`loggedIn()`); logging in or out reloads the
+  page (account.ts `onSwitch()`, CityMap.astro), after what's waiting has
+  gone up (`beforeLogout()`). A wallet's game takes no backup file (the
+  Vault offers "Download a copy" only, and no reminder to back up); files
+  load into the guest's game.
+- **Syncing** (built in Phase 2): the rules are `cloudsync.ts` (DOM-free,
+  tested in `tests/cloudsync.test.ts`: the note kept with the slot,
+  `CloudMeta` { rev, lease, dirty }; `pullPlan()`, `uploadBody()`,
+  `settle()`, `retryIn()`), the talking `cloudsave.ts` (its own chunk, loaded
+  by the page only when it plays a wallet's slot). As the page starts it
+  asks for the server's copy (the city's boot waits up to 6 s for it): in
+  step, nothing comes down; a new account's first contact sends up
+  everything kept here; otherwise the server's copy wins (another device
+  played, or the account was deleted and started again; anything changed
+  here that never went up is lost, and a card says so once the start menu's
+  gone). Then the device takes the lease. Every write to the slot is noted
+  and goes up `QUIET` (8 s) after the last change, `MAX_WAIT` (25 s) at most,
+  when the tab is hidden, and as the page closes if it's small enough
+  (`keepalive`, under 60 KB; anything bigger goes up at the next start).
+  The settings go up as this kind of device's (`deviceOf()`: a coarse
+  pointer is a phone), and only this kind's come down. Offline (or the
+  server down) the game plays on from this copy and tries again (5 s,
+  doubling, a minute at most, and when the browser's back online); if
+  another device played meanwhile, its copy wins and the card says so (the
+  city starts again on it). Two tabs on one device share the slot, the note
+  and the lease: a `stale` answer means another tab moved it on, so this
+  copy (the newest) goes up again.
+- **The card** (built in Phase 2; `[data-cloud]` in CityMap.astro, in the
+  menus' kit, styles in city.css; never over the start menu: it waits for it
+  to go): another device took the save ("Playing on another device": Play
+  here takes it back, the server's copy comes down and the page starts
+  again on it; Play as guest logs out), the server turned a save away ("This
+  save wasn't kept": Load my saved game), the login ran out ("Your login ran
+  out": Log in opens the profile card, and logging in again as the same
+  wallet carries on without a reload; Play as guest), or a newer copy came
+  in while offline ("Your save moved on": Carry on). Its × closes it; while
+  it stands nothing more goes up.
 - **A build flag of its own**: `PUBLIC_ACCOUNT_SERVER` (the Worker's
   address), separate from `PUBLIC_GAME_SERVER`, so degenemporium.com can
   have accounts without multiplayer.
@@ -150,10 +182,16 @@ account changes where the save lives, not what's in it.
    in pieces and read back, a snapshot restored with the settings left
    alone, log out everywhere ending every session, and a delete leaving a
    fresh account.
-2. **The browser's saves per profile**: `saveslot.ts`, every writer moved
-   onto it (tested: a guest's keys don't change), `cloudsave.ts`, the
-   takeover card, offline and back. Logging in with the existing wallet
-   button now loads and saves the wallet's own game.
+2. **The browser's saves per profile** (built, waiting on the owner's
+   sign-off): `saveslot.ts`, every writer moved onto it (tested: a guest's
+   keys don't change), `cloudsync.ts` and `cloudsave.ts`, the card, offline
+   and back. Logging in with the existing wallet button (workers.dev only
+   for now) loads and saves the wallet's own game. Checked in a browser
+   against `wrangler dev` with two devices on one wallet: the fresh game
+   and each change going up, the second device loading it and taking over,
+   the first told and taking it back, an edited save turned away and the
+   saved one loaded back, offline play going up when back, a login that ran
+   out, and the guest's game untouched throughout.
 3. **The title screen and the account**: Connect wallet and Play as guest
    (the fields go), going straight on with a good session; the account card
    in the menus' kit (`.mk-skin`) with Log out, Log out everywhere and

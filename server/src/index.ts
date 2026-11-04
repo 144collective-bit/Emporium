@@ -84,7 +84,7 @@ async function save(req: Request, env: Env, path: string): Promise<Response> {
         return null;
       }
     };
-    if (req.method === 'GET' && path === '/save') return json(await saves.get());
+    if (req.method === 'GET' && path === '/save') return json(await saves.get(new URL(req.url).searchParams.get('lease') ?? undefined));
     if (req.method === 'GET' && path === '/save/history') return json(await saves.history());
     if (req.method === 'POST' && path === '/save/lease') return json(await saves.lease());
     if ((req.method === 'PUT' && path === '/save') || (req.method === 'POST' && path === '/save/restore')) {

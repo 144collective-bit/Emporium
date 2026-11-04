@@ -900,6 +900,60 @@ body.is-walking .nav {
 .city-modal-card .city-panel-close[hidden] {
   display: none;
 }
+/* A wallet's cloud save (cloudsave.ts): over the city's own cards and the profile card (it waits for the start
+   menu to go), under the maintenance cover (live.css, 13); in the menus' kit (docs/menu-plan.md) */
+.cloud-modal {
+  z-index: 12;
+}
+.cloud-modal .cloud-card {
+  gap: 12px;
+  border: 2px solid #0000;
+  background:
+    repeating-linear-gradient(to bottom, #ffffff05 0 1px, #0000 1px 3px) padding-box,
+    linear-gradient(#0c0d10f2, #0c0d10f2) padding-box,
+    linear-gradient(var(--m-edge), var(--m-edge)) border-box;
+  box-shadow: 0 18px 40px -16px #000c;
+  clip-path: var(--notch-4);
+  color: var(--m-text);
+}
+.cloud-kicker {
+  margin: 0;
+  color: var(--m-coin);
+  font: 700 12px/1 var(--font-pixel);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.cloud-title {
+  margin: 0;
+  padding-right: 36px;
+  font: 700 24px/1.1 var(--font-pixel);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.cloud-text {
+  margin: 0;
+  color: #cfcdc5;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.cloud-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.cloud-modal .cloud-close {
+  border: 2px solid var(--m-edge);
+  background: var(--m-bezel);
+  clip-path: var(--notch-2);
+  color: var(--m-text);
+}
+.cloud-modal .cloud-close:hover,
+.cloud-modal .cloud-close:focus-visible {
+  outline: none;
+  border-color: var(--m-coin);
+  color: var(--m-coin);
+}
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

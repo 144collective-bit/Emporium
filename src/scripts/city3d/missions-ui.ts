@@ -30,6 +30,7 @@ import { MAX_LEVEL, levelProgress, titleFor } from './catalog';
 import { GUIDE_STEPS, level, type ActiveMission, type TycoonSave } from './tycoon';
 import { GUIDE, advanceGuide, guideDone, guideStep, hideGuide, type GuideStep } from './guide';
 import { D, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
+import { slot } from './saveslot';
 
 /** A pop stays this long */
 const POP_MS = 2500;
@@ -304,7 +305,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       const newTitle = title !== titleFor(lastLevel);
       pop(`Level ${lv}`, newTitle ? `New title · ${title}` : title, 'is-level');
       // Past the guide's level, now and then: the save lives in this browser only
-      const remind = booted && lv >= 3 && guideDone(s) && Date.now() - s.backup > BACKUP_STALE ? ' Back up your save at the Vault: it lives in this browser only.' : '';
+      const remind = booted && !slot().address && lv >= 3 && guideDone(s) && Date.now() - s.backup > BACKUP_STALE ? ' Back up your save at the Vault: it lives in this browser only.' : '';
       game.toast(`${newTitle ? `Level ${lv}! You're now a ${title}.` : `Level ${lv}!`}${remind}`, remind ? 6000 : 4000);
       if (booted) game.sfx('levelup');
     }

@@ -14,6 +14,7 @@
 import { DEFAULT_LOOK, RANKS, cleanLook, rankFor, type Look } from '../net/profile-data';
 import type { OwnProfile } from '../net/protocol';
 import { lookOutfit, type Outfit } from './character';
+import { slot } from './saveslot';
 
 const LOOK_KEY = 'degen-city-look-v1';
 
@@ -28,7 +29,7 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
 
   let look: Look = (() => {
     try {
-      return cleanLook(JSON.parse(localStorage.getItem(LOOK_KEY) || 'null'));
+      return cleanLook(JSON.parse(slot().get(LOOK_KEY) || 'null'));
     } catch {
       return { ...DEFAULT_LOOK };
     }
@@ -61,15 +62,9 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
   function apply(next: Look, share = true) {
     const before = look;
     look = cleanLook(next);
-    // A wallet profile's look lives on the server; this browser keeps its own for guest play
-    if (!online?.wallet) {
-      localLook = look;
-      try {
-        localStorage.setItem(LOOK_KEY, JSON.stringify(look));
-      } catch {
-        /* fine */
-      }
-    }
+    // Kept in this profile's slot (saveslot.ts): a wallet's look in the wallet's, beside the guest's own
+    localLook = look;
+    slot().set(LOOK_KEY, JSON.stringify(look));
     const changed = !same(before, look);
     if (changed || !share) d.setLook(lookOutfit(look));
     if (changed) for (const f of changeFns) f(look);

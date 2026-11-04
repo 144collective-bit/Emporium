@@ -942,6 +942,20 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="city-modal-body" data-account-body></div>
     </div>
   </div>
+  {/* A wallet's save kept with the account (cloudsave.ts): another device took it, the server turned one away, the login ran out */}
+  {server && (
+    <div class="city-modal cloud-modal mk-skin" data-cloud hidden>
+      <div class="city-modal-card cloud-card" role="alertdialog" aria-modal="true" aria-labelledby="cloud-title" aria-describedby="cloud-text">
+        <button type="button" class="city-panel-close cloud-close" data-cloud-close aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" /></svg>
+        </button>
+        <p class="cloud-kicker">Your account</p>
+        <h2 class="cloud-title" id="cloud-title" data-cloud-title></h2>
+        <p class="cloud-text" id="cloud-text" data-cloud-text></p>
+        <div class="cloud-acts" data-cloud-acts></div>
+      </div>
+    </div>
+  )}
   <p class="city-toast mk-skin" data-toast role="status" aria-live="polite"></p>
 
   <p class="city-toast econ-toast mk-skin" data-econ-toast role="status" aria-live="polite"></p>
@@ -1295,6 +1309,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
 <script>
   import { live } from '../scripts/city3d/live-client';
   import { bannersAt, type Live } from '../scripts/city3d/live';
+  import { slot } from '../scripts/city3d/saveslot';
 
   const root = document.querySelector<HTMLElement>('[data-city-root]');
 
@@ -1397,6 +1412,31 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         })
       : Promise.resolve(null);
 
+    /* ---------- Whose save this page plays (saveslot.ts): the guest's, or the logged-in wallet's, kept with the account ---------- */
+    // Decided now, once: logging in or out starts the page again on the other one
+    const playing = slot().address;
+    const cloud = server && playing
+      ? import('../scripts/city3d/cloudsave').then(({ createCloud }) =>
+          createCloud(root, {
+            server,
+            login: () => void wallet.then((w) => w?.ui.open()),
+            logout: async () => {
+              await (await wallet)?.account.logout();
+            },
+          }),
+        )
+      : Promise.resolve(null);
+    void wallet.then((w) => {
+      if (!w) return;
+      w.account.beforeLogout(async () => {
+        await (await cloud)?.flush();
+      });
+      w.account.onSwitch(() => {
+        if (w.account.address !== playing) location.reload();
+        else void cloud.then((c) => c?.retry());
+      });
+    });
+
     /* ---------- The 3D city ---------- */
     let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
     let booting = false;
@@ -1420,6 +1460,12 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       await liveFirst;
       if (live.now.maintenance) return;
       booting = true;
+      // A wallet's save: the server's copy first, if it comes quickly (else this device's, sent up once it's back)
+      const c = await cloud.catch(() => null);
+      if (c) {
+        await Promise.race([c.ready, new Promise((r) => setTimeout(r, 6000))]);
+        c.started();
+      }
       try {
         const { bootCity } = await import('../scripts/city3d/index');
         city = await bootCity(root!, await wallet, await hubReady);

@@ -6,7 +6,12 @@
  * - going online opens the wallet's own player profile instead of this
  *   browser's guest one (net/client.ts sends the token),
  * - the profile card (account-ui.ts) shows the basic profile: name, rank,
- *   score and wallet.
+ *   score and wallet;
+ * - the city plays the wallet's own save (saveslot.ts), kept with the account
+ *   (cloudsave.ts): logging in or out switches whose save the page plays, so
+ *   the page starts again (`onSwitch()`, CityMap.astro), after what's waiting
+ *   has gone up (`beforeLogout()`). A session that runs out logs out here
+ *   without a switch: the page plays on and says so.
  */
 import type { AccountMe } from '../net/auth';
 import type { OwnProfile } from '../net/protocol';
@@ -34,6 +39,10 @@ export function createAccount(server: string) {
   let me: AccountMe | null = null;
   const listeners = new Set<() => void>();
   const changed = () => listeners.forEach((f) => f());
+  /** Told when a login or a log-out changes who's logged in */
+  const switchFns = new Set<() => void>();
+  /** Run (and waited for, briefly) before a log-out */
+  const beforeFns = new Set<() => Promise<void>>();
 
   function keep(s: Saved | null) {
     const who = saved?.address;
@@ -69,6 +78,7 @@ export function createAccount(server: string) {
     const s = await api<Saved>('/auth/session', { method: 'POST', body: JSON.stringify({ nonce, signature }) });
     keep({ address: s.address, token: s.token });
     refresh();
+    switchFns.forEach((f) => f());
     return s.token;
   }
 
@@ -117,9 +127,19 @@ export function createAccount(server: string) {
       keep(null);
     },
     async logout() {
+      await Promise.all([...beforeFns].map((f) => f().catch(() => {})));
       const token = saved?.token;
       keep(null);
       if (token) await api('/auth/logout', { method: 'POST', body: '{}', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+      switchFns.forEach((f) => f());
+    },
+    /** A login or log-out changed who's logged in (not a session running out) */
+    onSwitch(f: () => void) {
+      switchFns.add(f);
+    },
+    /** Something to finish before logging out (the cloud save's last upload) */
+    beforeLogout(f: () => Promise<void>) {
+      beforeFns.add(f);
     },
     refresh,
     /** A new player name from the word lists */

@@ -5,6 +5,7 @@
  * saves. Typed without the DOM, so the game server can check what a player
  * says they're in (net/protocol.ts `cleanVehicle()`).
  */
+import { readJson } from './saveslot';
 /** Every car model (cars.ts draws them; here so the shared, DOM-free code can name them) */
 export type CarId = 'hatch' | 'sedan' | 'coupe' | 'pickup' | 'van' | 'bus' | 'muscle' | 'suv' | 'super' | 'exec' | 'classic' | 'offroad' | 'ev' | 'police' | 'truck' | 'rig' | 'limo' | 'partybus';
 
@@ -39,6 +40,5 @@ export type KartId = (typeof PLAYER_KARTS)[number];
 export const PLAYER_AIRCRAFT = ['prop', 'bizjet', 'heli'] as const;
 export type PlaneId = (typeof PLAYER_AIRCRAFT)[number];
 
-/** A vehicle's save in the browser, parsed (null if there's none); the game server never calls it */
-export const readSaved = (key: string): unknown =>
-  JSON.parse((globalThis as unknown as { localStorage: { getItem(k: string): string | null } }).localStorage.getItem(key) ?? 'null');
+/** A vehicle's save in the browser (this profile's: saveslot.ts), parsed (null if there's none); the game server never calls it */
+export const readSaved = (key: string): unknown => readJson(key);

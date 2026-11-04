@@ -82,21 +82,15 @@ import {
 } from './carlook';
 import { buyCar, carModCost, carMods, carStatsOf, level, modCar, ownsCar } from './tycoon';
 import { COIN, D, LV, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
+import { slot } from './saveslot';
 
 function saveCar(c: MyCar) {
-  try {
-    localStorage.setItem(CAR_KEY, JSON.stringify(c));
-  } catch {
-    /* fine: the car just won't stick */
-  }
+  // (fine if the browser won't keep it: the car just won't stick)
+  slot().set(CAR_KEY, JSON.stringify(c));
 }
 
 function saveBike(b: MyBike) {
-  try {
-    localStorage.setItem(BIKE_KEY, JSON.stringify(b));
-  } catch {
-    /* fine: the bike just won't stick */
-  }
+  slot().set(BIKE_KEY, JSON.stringify(b));
 }
 
 /** A bike side-on at the cars' scale: its wheels, and its line from the tail over the seat to the bars */

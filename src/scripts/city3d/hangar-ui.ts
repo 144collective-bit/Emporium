@@ -18,13 +18,11 @@ import { TUNES } from './flight-sim';
 import { FLY, PLANE_KEY, PLANE_PAINTS, PLAYER_AIRCRAFT, loadPlane, type MyPlane, type PlaneId } from './myplane';
 import type { PaintId } from './mycar';
 import { repaint } from './ui';
+import { slot } from './saveslot';
 
 function savePlane(p: MyPlane) {
-  try {
-    localStorage.setItem(PLANE_KEY, JSON.stringify(p));
-  } catch {
-    /* fine: the pick just won't stick */
-  }
+  // (fine if the browser won't keep it: the pick just won't stick)
+  slot().set(PLANE_KEY, JSON.stringify(p));
 }
 
 /** Side-on silhouettes, all at one scale (110 x 46) */

@@ -161,6 +161,7 @@ import type { SpotId } from '../../lib/city';
 import { createMissionsUI } from './missions-ui';
 import { guideAt, type GuideStep } from './guide';
 import { BACKUP_KEYS, TYCOON_KEY as KEY, backupName, packBackup, readBackup, type ReadBackup } from './backup';
+import { slot } from './saveslot';
 
 const fmt = new Intl.NumberFormat('en-US');
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
@@ -287,7 +288,7 @@ function repaint(el: HTMLElement, html: string) {
 
 function loadSave(now: number): { save: TycoonSave; fresh: boolean; refund: number } {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = slot().get(KEY);
     if (raw) {
       const o = JSON.parse(raw);
       return { save: cleanSave(o, now), fresh: false, refund: plotRefund(o) };
@@ -324,11 +325,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
 
   const store = () => {
     if (frozen) return;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(save));
-    } catch {
-      /* fine: progress just won't stick */
-    }
+    // (fine if the browser won't keep it: progress just won't stick)
+    slot().set(KEY, JSON.stringify(save));
   };
   function toast(text: string, ms = 5200) {
     toastEl.textContent = text;
@@ -808,6 +806,10 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       ? `<div class="stall-slot backup-ask"><p class="biz-ask">Load this backup? Level ${restoreAsk.level}, ${fmt.format(restoreAsk.dorras)} Dorras${restoreAsk.at ? `, saved ${day(restoreAsk.at)}` : ''}. It replaces everything in this browser, and the city starts again.</p>
           <span class="market-btns"><button type="button" data-restore-yes>Load it</button><button type="button" data-restore-no>Cancel</button></span></div>`
       : '';
+    // A wallet's save is kept with the wallet (cloudsave.ts): a file can be downloaded, but only the guest's game takes one back
+    if (slot().address)
+      return `<p class="stall-empty">You're playing your wallet's game: it's saved with your account and follows you to any device you log in on. You can still download a copy as a file. Last download: <b>${save.backup ? ago(save.backup, now) : 'never'}</b>. Backup files load into the game you play as a guest.</p>
+      <span class="market-btns backup-btns"><button type="button" data-backup-save>Download a copy</button></span>`;
     return `<p class="stall-empty">Everything you do in Sector 7 is kept in this browser only: clearing its data or changing device starts you over. Download a backup file to keep it safe, and load it here on any device. Last backup: <b>${save.backup ? ago(save.backup, now) : 'never'}</b>.</p>
       ${ask}
       <span class="market-btns backup-btns"><button type="button" data-backup-save>Download backup</button><label class="backup-load"><input type="file" accept=".json,application/json" data-backup-file /><span>Load a backup</span></label></span>`;
@@ -816,14 +818,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     // The file carries the time it was made, and the guide's last step already done (so loading it doesn't pay that step again)
     save.backup = now;
     changed();
-    const ls = (k: string) => {
-      try {
-        return localStorage.getItem(k);
-      } catch {
-        return null;
-      }
-    };
-    const b = packBackup((k) => (k === KEY ? JSON.stringify(save) : ls(k)), now);
+    const b = packBackup((k) => (k === KEY ? JSON.stringify(save) : slot().get(k)), now);
     const url = URL.createObjectURL(new Blob([JSON.stringify(b)], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url;
@@ -854,12 +849,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function restore() {
     const r = restoreAsk;
     restoreAsk = null;
-    if (!r) return;
+    // (only the guest's game takes a file: backupView offers none to a wallet's)
+    if (!r || slot().address) return;
     frozen = true;
     try {
       const keep = new Set(r.writes.map(([k]) => k));
-      for (const k of BACKUP_KEYS) if (!keep.has(k)) localStorage.removeItem(k);
-      for (const [k, v] of r.writes) localStorage.setItem(k, v);
+      for (const k of BACKUP_KEYS) if (!keep.has(k)) slot().remove(k);
+      for (const [k, v] of r.writes) if (!slot().set(k, v)) throw new Error('not kept');
     } catch {
       frozen = false;
       store();

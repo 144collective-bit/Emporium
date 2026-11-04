@@ -113,6 +113,7 @@ import type { FeatureId } from './live';
 import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
+import { slot } from './saveslot';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -237,7 +238,7 @@ interface Settings {
 }
 function loadSettings(): Settings {
   try {
-    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
+    const s = JSON.parse(slot().get(SETTINGS_KEY) ?? '{}');
     return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch) };
   } catch {
     return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined) };
@@ -426,11 +427,8 @@ export function createWalk(d: WalkDeps) {
 
   const settings = loadSettings();
   const saveSettings = () => {
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    } catch {
-      /* fine: settings just won't stick */
-    }
+    // (fine if the browser won't keep them: settings just won't stick)
+    slot().set(SETTINGS_KEY, JSON.stringify(settings));
   };
   sensInput.value = String(settings.sens);
   invertInput.checked = settings.invert;

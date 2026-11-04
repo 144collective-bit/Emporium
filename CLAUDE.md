@@ -4367,6 +4367,17 @@ it and has been retired completely. Build only on what's here.
   in `BACKUP_KEYS` (so in `CLOUD_KEYS`) and a cleaner in savecheck.ts's
   `CLEAN`; anything new a player can earn fast enough to trip `GROW` needs
   the test's one-sitting sum to take it in.
+- Phase 2 (the browser's saves per profile) is built, waiting on the
+  owner's sign-off: **every file that reads or writes a save goes through
+  `slot()`** (`saveslot.ts`, DOM-free, no imports), never `localStorage`
+  itself: a guest's keys are what they always were, a wallet's have its
+  address added (`slotKey()`), decided once as the page starts (logging in
+  or out reloads it: account.ts `onSwitch()` / `beforeLogout()`). A wallet's
+  slot is kept in step by `cloudsave.ts` (its own chunk, only for a wallet's
+  page; the city's boot waits up to 6 s for the server's copy) on the rules
+  in `cloudsync.ts` (DOM-free, tested in `tests/cloudsync.test.ts`), and its
+  card is `[data-cloud]` (the menus' kit, never over the start menu). A
+  wallet's game takes no backup file (the Vault downloads a copy only).
 
 ## Multiplayer (beta, testing)
 

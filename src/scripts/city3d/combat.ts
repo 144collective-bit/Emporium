@@ -45,6 +45,7 @@ import { createViewmodel, type ViewState } from './viewmodel';
 import { gunMods, ownsGun } from './tycoon';
 import { applyGunMods } from './catalog';
 import type { GameDeps } from './ui';
+import { slot } from './saveslot';
 
 export { DUMMIES };
 
@@ -228,7 +229,7 @@ interface Profile {
 }
 function loadProfile(): Profile {
   try {
-    const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+    const p = JSON.parse(slot().get(PROFILE_KEY) || '{}');
     const total = Number.isFinite(p.total) ? Math.max(0, p.total) : 0;
     const skin = SKINS.some((s) => s.id === p.skin && total >= s.need) ? p.skin : 'olive';
     const weapon = weaponUnlocked(p.weapon, total) ? p.weapon : 'rifle';
@@ -283,11 +284,8 @@ export function createCombat(d: CombatDeps) {
 
   const profile = loadProfile();
   const saveProfile = () => {
-    try {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-    } catch {
-      /* fine: progress just won't stick */
-    }
+    // (fine if the browser won't keep it: progress just won't stick)
+    slot().set(PROFILE_KEY, JSON.stringify(profile));
   };
 
   me.weapon = profile.weapon;

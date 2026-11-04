@@ -261,12 +261,18 @@ export const summaryOf = (day: string, at: number, game: TycoonSave): SnapSummar
 
 /* ---------- The API (server/src/index.ts, /save) ---------- */
 
-/** GET /save */
+/** GET /save (?lease=: the device's lease, to be told whether it still holds the save) */
 export interface CloudSave {
   rev: number;
   /** When the server last accepted a save (0: never) */
   at: number;
   saves: Partial<Record<CloudKey, unknown>>;
+  /**
+   * The lease asked about is still the current one: no other device has
+   * taken the save since, so any revision the device hasn't seen is its own
+   * (an upload as the page closed, or another tab's).
+   */
+  held?: boolean;
 }
 /** POST /save/lease: this device takes the save (any other device's lease ends) */
 export interface CloudLease {
