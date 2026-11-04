@@ -100,6 +100,8 @@ export function crossingLinks(blocks: Pt[][], streets: Street[], junctions: Junc
 
 /** How long the cars' light stays red for `phase` from t (0 if it isn't red), to the half second */
 export function redLeft(j: Junction, phase: Phase, t: number): number {
+  // (where an avenue has an arrow, its left turners cross the street beside it: wait while it's lit, routes.ts `arrows`)
+  if (j.arrows.some((p) => p !== phase && lightState(j, p, t, true) !== 'r')) return 0;
   let k = 0;
   while (k < 60 && lightState(j, phase, t + k) === 'r') k += 0.5;
   return k;

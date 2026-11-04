@@ -236,7 +236,7 @@ exits' own names, `EXIT_SIGNS`), no number but an exit's.
 - **The world map:** the ramps in the highway's colour and each exit's
   number on a green badge by its ramps (`exitBadge()`).
 
-## Phase 5: the swing bridge (built, waiting on the owner's sign-off)
+## Phase 5: the swing bridge (built, signed off, merged to main)
 
 `swingbridge.ts` (DOM-free, tested in `tests/swingbridge.test.ts`), drawn by
 `swingbridge3d.ts` (`LAZY_DISTRICTS` id `swing`). Its name is made up
@@ -285,6 +285,30 @@ it).
 - Not yet: a pin and panel (it isn't a place), the bell as the barriers come
   down.
 
+## Phase 6: turn lanes and signals (built, waiting on the owner's sign-off)
+
+- **Which junctions:** the busiest, measured by the routes passing: lit
+  four-way crossroads where an avenue (two lanes each way) meets a street
+  going on both sides, not where a diagonal comes in or a ramp lands
+  (routes.ts `arrowsAt()`, `Junction.arrows`: the avenue's ways). Ten
+  today: both ends of Kestrel Bridge, Trench Avenue's three cross streets
+  and Crestmont's five on the east road.
+- **Turn lanes:** the avenue's inner lane coming up to them is for turning
+  left, the outer for ahead and right (the routes already keep to them):
+  arrows painted in both lanes, two sets on each way in, and a stop bar
+  across both (`turnlanes.ts` `TURN_ARROWS`, `STOP_BARS`; drawn by
+  `turnlanes3d.ts`, `LAZY_DISTRICTS` id `turnlanes`; Uptown's junctions
+  keep the arrows its own chunk paints, kerbside3d.ts, the shapes now shared
+  in roads3d.ts `arrowShape()`).
+- **Signals:** a protected left: the avenue's left turns get a green arrow
+  first (`ARROW.left`, an amber arrow after), then the avenue's traffic
+  ahead and right, then the street across (`lightState(j, phase, t,
+  left)`, `arrowCycle()`); a route's stop knows its left turns (`left`,
+  baked with the routes). The heads carry a fourth lamp, an arrow, on the
+  avenue's ways in (life.ts). Traffic and taxis wait for it. People
+  crossing the street the left turners turn into wait while the arrow's
+  lit (pedestrians.ts `redLeft()`).
+
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
@@ -304,10 +328,10 @@ it).
 4. **Signs and the look** (above, built, signed off):
    gantries and exit numbers (one sign atlas, fixed made-up copy), sound
    walls past homes, what's under it, night lighting, the world map.
-5. **The swing bridge** (Uptown to The Trenches; above, built, waiting on
-   the owner's sign-off): its streets, the river pier, the swing on Liberty's
+5. **The swing bridge** (Uptown to The Trenches; above, built, signed off): its streets, the river pier, the swing on Liberty's
    timetable, the barriers, the boats and the tall ship.
-6. **Turn lanes and signals** at the busiest avenue junctions.
+6. **Turn lanes and signals** at the busiest avenue junctions (above,
+   built, waiting on the owner's sign-off).
 7. **Rural roads** past the highway.
 8. **The concrete-era look** on the town's streets.
 9. **Polish and performance:** bench views (a junction, a straight, a

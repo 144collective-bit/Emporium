@@ -156,7 +156,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     for (const s of route.stops) {
       const dd = s.enter - 1.0 - (p + 1.2);
       if (dd < -0.05 || dd > 14) continue;
-      const light = s.j.lit ? lightState(s.j, s.phase, t) : 'g';
+      const light = s.j.lit ? lightState(s.j, s.phase, t, s.left) : 'g';
       if (light === 'r' || (light === 'y' && dd > 2)) target = Math.min(target, Math.max(0, dd * 1.4));
     }
     // The swing bridge's barriers while it swings for the tall ship (swingbridge.ts)
