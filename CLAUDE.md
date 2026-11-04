@@ -3162,7 +3162,13 @@ it and has been retired completely. Build only on what's here.
   (right-click held block, Shift nothing), the gamepad's sprint L3 only,
   Start quits a kart race, B skips a ride, M opens the world map at the
   wheel too. When a handler in walk.ts changes, change its line in
-  keymap.ts.
+  keymap.ts. Phase 4 (the control card) is built, waiting on the
+  owner's sign-off: `[data-ctrlcard]`, painted by `ctrlcard.ts` (its own
+  chunk) from `cardBinds()` for walk.ts's `modeNow()` and the input in use,
+  shown for `CARD_AUTO` the first time in each mode (`seen` in
+  `degen-city-walk-v1`) and on request (`/` or `?`, the d-pad's down, the
+  hub's Settings > Keys > Show the controls card; Esc, × or the key again
+  closes it); in `chrome`. The boot's budget went to 710 with it.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site

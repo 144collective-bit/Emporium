@@ -114,6 +114,8 @@ import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
 import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
+import type { ModeId } from './keymap';
+import type { CardInput } from './ctrlcard';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -235,13 +237,16 @@ interface Settings {
   autoAds: AutoAds;
   /** The touch buttons' size, opacity and hand (docs/controls-plan.md Phase 4) */
   touch: TouchPrefs;
+  /** The modes whose control card has been shown (docs/views-plan.md Phase 4: once each, then on request) */
+  seen: string[];
 }
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch) };
+    const seen = Array.isArray(s.seen) ? s.seen.filter((m: unknown) => typeof m === 'string').slice(0, 16) : [];
+    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch), seen };
   } catch {
-    return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined) };
+    return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined), seen: [] };
   }
 }
 /** How long the sight stays up after the trigger is let go (so single shots don't flicker in and out) */
@@ -920,6 +925,77 @@ export function createWalk(d: WalkDeps) {
   let fistsShown = false;
   /** His hands are empty and he's on his feet with nothing else on: the fists are his */
   const fistsReady = () => !!fists && !!hotbar?.handsEmpty && !hotbar.open && !carrying && !drive.active && !fly.active && !karts.active && !boat?.active && !fighting() && !ride && !shop.open && !garageUI.open && !hangarUI.open && !kartUI.open && !fightUI.open;
+
+  /* ---------- The control card (docs/views-plan.md Phase 4): the mode's keys for the input in use ---------- */
+  const cardEl = root.querySelector<HTMLElement>('[data-ctrlcard]');
+  let cardMod: Promise<typeof import('./ctrlcard')> | null = null;
+  /** The mode it shows (null: hidden), the seconds left when it came up by itself (0: it stays), the mode last seen */
+  let cardMode: ModeId | null = null;
+  let cardLeft = 0;
+  let lastMode: ModeId | null = null;
+  let inputKind: CardInput = matchMedia('(hover: none) and (pointer: coarse)').matches ? 'touch' : 'keys';
+  /** How long it stays up the first time in a mode */
+  const CARD_AUTO = 9;
+  function modeNow(): ModeId {
+    if (ride) return 'ride';
+    if (fighting()) return 'ring';
+    if (karts.active) return 'kart';
+    if (boating()) return 'boat';
+    if (fly.active) return 'plane';
+    if (drive.active) return drive.vehicle?.kind === 'bike' ? 'bike' : 'car';
+    if (combat.armed) return 'armed';
+    // (by what's in his hands, not whether the fists' chunk is in yet: empty hands are the fists)
+    return carrying || (hotbar && !hotbar.handsEmpty) ? 'foot' : 'fists';
+  }
+  function paintCard() {
+    const m = cardMode;
+    if (!cardEl || !m) return;
+    void (cardMod ??= import('./ctrlcard')).then((c) => {
+      if (cardMode !== m) return;
+      c.paint(cardEl, m, inputKind);
+      cardEl.hidden = false;
+    });
+  }
+  function showCard(m: ModeId, auto: boolean) {
+    cardMode = m;
+    cardLeft = auto ? CARD_AUTO : 0;
+    paintCard();
+  }
+  function hideCard() {
+    const was = !!cardMode;
+    cardMode = null;
+    cardLeft = 0;
+    if (cardEl) cardEl.hidden = true;
+    return was;
+  }
+  /** `/`, the d-pad's down: show it for where you are, or close it */
+  const askCard = () => void (cardMode ? hideCard() : showCard(modeNow(), false));
+  function setInput(k: CardInput) {
+    if (k === inputKind) return;
+    inputKind = k;
+    if (cardMode) paintCard();
+  }
+  /** Each frame: a mode met for the first time brings its card up for a while; asked for, it follows the mode */
+  function cardFrame(dt: number) {
+    if (d.hub?.open || hotbar?.open || shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open || moments.active) return;
+    const m = modeNow();
+    if (m !== lastMode) {
+      lastMode = m;
+      if (cardMode && !cardLeft) showCard(m, false);
+      else if (!settings.seen.includes(m)) {
+        settings.seen.push(m);
+        saveSettings();
+        showCard(m, true);
+      } else hideCard();
+    }
+    if (cardLeft > 0 && (cardLeft -= dt) <= 0) hideCard();
+  }
+  cardEl?.querySelector('[data-ctrlcard-close]')?.addEventListener('click', hideCard);
+  root.querySelector('[data-ctrlcard-open]')?.addEventListener('click', () => {
+    d.hub?.close();
+    if (active) showCard(modeNow(), false);
+  });
+  window.addEventListener('pointerdown', (e) => active && setInput(e.pointerType === 'touch' ? 'touch' : 'keys'), true);
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
@@ -1487,6 +1563,7 @@ export function createWalk(d: WalkDeps) {
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
+    if (down) setInput('keys');
     // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
     if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
     // The hub open: its own keys (menukit.ts), and walking keys wait
@@ -1497,6 +1574,12 @@ export function createWalk(d: WalkDeps) {
     if (shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open) {
       if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
       return false;
+    }
+    // / or ?: the control card for where you are (again: closes it)
+    if (down && !e.repeat && (c === 'Slash' || e.key === '?' || e.key === '/')) {
+      askCard();
+      e.preventDefault();
+      return true;
     }
     // On a ride: V steps its camera (the ride has the rest)
     if (ride && down && !e.repeat && c === 'KeyV') {
@@ -1909,6 +1992,7 @@ export function createWalk(d: WalkDeps) {
     if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
     const b = gp.buttons.map((x) => x.pressed);
     const edge = (i: number) => b[i] && !pad.prev[i];
+    if (pad.x || pad.y || rx || ry || b.some(Boolean)) setInput('pad');
     // The hub: the D-pad moves round it, LB / RB the tabs, A presses, B or Start closes
     if (d.hub?.open) {
       d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]));
@@ -1983,6 +2067,8 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
+    // The d-pad's down: the control card (the kart hut's menu has it for its list)
+    if (edge(13) && !kartUI.open) askCard();
     // On a ride: the right stick looks round, pressed it steps the camera, B skips the ride (the ride has the rest)
     if (ride) {
       if (edge(11)) nextCam();
@@ -2376,6 +2462,7 @@ export function createWalk(d: WalkDeps) {
   function update(dt: number, t: number) {
     if (!active) return;
     pollPad(dt);
+    cardFrame(dt);
     kartUI.update(dt);
     fightUI.update(dt);
     if (ride) return rideFrame(dt, t);
@@ -3237,6 +3324,8 @@ export function createWalk(d: WalkDeps) {
       root.dataset.mode = 'walk';
     },
     exit() {
+      hideCard();
+      lastMode = null;
       // Leaving walk mode on a ride: it ends where it is
       if (ride) {
         const r = ride;
@@ -3294,6 +3383,8 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
     },
+    /** Esc: the control card first (true if it was up) */
+    closeCard: () => hideCard(),
     /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
       return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();

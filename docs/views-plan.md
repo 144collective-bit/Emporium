@@ -199,6 +199,30 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
   seen kept in `degen-city-walk-v1`), clear of the HUD; again on request
   (a key, and the hub's Settings); Esc or × closes it.
 - In `chrome`, so the pins fold under it.
+- **Built, waiting on the owner's sign-off.** The card is `[data-ctrlcard]`
+  (CityMap.astro, styles in controls.css), filled by `ctrlcard.ts` (its own
+  chunk: the key table never comes with the boot) from keymap.ts's
+  `cardBinds()` (a mode's own jobs; for empty hands and a gun out, then on
+  foot's main ones; the walk toggle and the emotes left out; held to 14
+  rows by the test). walk.ts knows the mode (`modeNow()`: a ride, the
+  ring, a kart race, the boat, the aircraft, the car or the bike, a gun
+  out, empty hands, or on foot with something in hand) and the input in
+  use (the last key, gamepad button or stick, or touch), and the first
+  time it meets a mode, with no menu open, it shows that mode's card for
+  `CARD_AUTO` (9 s), keeping the modes seen in `degen-city-walk-v1`
+  (`seen`). Asked for (`/` or `?`, the d-pad's down, the hub's Settings >
+  Keys > Show the controls card) it stays, follows you into the next mode
+  and repaints for the input you switch to, until `/`, the d-pad's down
+  again, Esc (first in walk mode's Esc chain) or its × closes it. Its last
+  line says how to bring it back on that input. On a desktop it sits top
+  right under the header, below the waypoint's compass; on phones centred
+  under the header, below the toasts and clear of the View button, short
+  enough to stay off the door prompt (it scrolls). Hidden while the hub,
+  the inventory, a shop or a panel is open; in `chrome`. Checked in a
+  headless browser: the first walk-in (Empty hands) at 1024 wide and on an
+  iPhone-sized screen, the car's card on getting in, `/` and Esc. The boot's
+  code came to 700.5 KB, over its 700: the budget went up to 710 under the
+  owner's standing call to raise it when needed.
 
 ### Phase 5: hold or toggle
 

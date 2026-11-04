@@ -473,6 +473,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             <summary>Keys, gamepad and touch</summary>
             {/* Made from keymap.ts when the site is built (docs/views-plan.md Phase 3: one key for one job); each row shows
                 the input in use (the hub's data-input: keys, pad or touch) */}
+            <button type="button" class="mk-btn is-small km-card" data-ctrlcard-open data-hub-walk>Show the controls card</button>
             <p class="walk-pad km-note">The same key does the same job everywhere. Shown for what you're using now: press a key, move a stick or tap to switch.</p>
             {MODE_IDS.map((id) => (
               <details class="hub-more km" open={id === 'foot'}>
@@ -540,6 +541,17 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
       </button>
     </div>
+    {/* The control card (walk.ts, ctrlcard.ts; docs/views-plan.md Phase 4): the mode's keys for the input in use, the first time in each mode and on request */}
+    <aside class="ctrl-card mk-skin" data-ctrlcard hidden aria-live="polite" aria-label="Controls">
+      <div class="ctrl-card-head">
+        <b data-ctrlcard-title></b>
+        <button type="button" class="ctrl-card-x" data-ctrlcard-close aria-label="Close the controls">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        </button>
+      </div>
+      <dl class="ctrl-card-list" data-ctrlcard-list></dl>
+      <p class="ctrl-card-foot" data-ctrlcard-foot></p>
+    </aside>
     {/* Your missions on the go (missions-ui.ts): a line and a bar each; on phones a pill that opens on a tap */}
     <div class="mission-tracker mk-skin" data-missions-tracker hidden>
       <button type="button" class="mission-tracker-pill" data-tracker-toggle aria-expanded="false" aria-controls="mission-tracker-list">

@@ -5,6 +5,7 @@
  * it to the rule: a job's key and button are the same in every mode it's in (getting in and out, the camera, the
  * horn, the map, the menu, quitting...), and no two jobs share a key or a button in a mode unless one says it takes
  * it over by context (`shares`: with empty hands Y kicks when there's nothing to do, Space dodges with the guard up).
+ * The control card (Phase 4, ctrlcard.ts, walk mode's own chunk) shows a mode's rows from `cardBinds()`.
  * walk.ts keeps its own handlers; when one changes, change its line here too (and the other way round).
  * DOM-free and kept out of the boot: only the hub's page and the tests read it.
  */
@@ -146,4 +147,18 @@ export const MODE_IDS = Object.keys(KEYMAP) as ModeId[];
 export function bindsOf(id: ModeId): Binding[] {
   const m = KEYMAP[id];
   return m.base ? [...KEYMAP[m.base].binds, ...m.binds] : m.binds;
+}
+
+/** What the control card leaves out (known from the menu, or rarely wanted) */
+const CARD_SKIP: Job[] = ['walk', 'emotes'];
+/** For a mode laid on another, the base's jobs the card adds after the mode's own */
+const CARD_BASE: Job[] = ['move', 'sprint', 'jump', 'crouch', 'interact', 'camera', 'inventory'];
+
+/** The control card's rows (docs/views-plan.md Phase 4): the mode's own jobs, then for one laid on on foot the main ones of that */
+export function cardBinds(id: ModeId): Binding[] {
+  const m = KEYMAP[id];
+  const own = m.binds.filter((b) => !CARD_SKIP.includes(b.job));
+  if (!m.base) return own;
+  const jobs = new Set(own.map((b) => b.job));
+  return [...own, ...KEYMAP[m.base].binds.filter((b) => CARD_BASE.includes(b.job) && !jobs.has(b.job))];
 }

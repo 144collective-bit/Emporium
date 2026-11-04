@@ -1164,7 +1164,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1411,7 +1411,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // City / Walk switch never sits on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .ctrl-card, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();

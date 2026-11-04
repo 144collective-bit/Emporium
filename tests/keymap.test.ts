@@ -3,7 +3,7 @@
 // way out.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { KEYMAP, MODE_IDS, bindsOf, type Binding, type Job } from '../src/scripts/city3d/keymap';
+import { KEYMAP, MODE_IDS, bindsOf, cardBinds, type Binding, type Job } from '../src/scripts/city3d/keymap';
 
 test('a job is the same key and the same button in every mode it is in', () => {
   const first = new Map<Job, { mode: string; b: Binding }>();
@@ -74,4 +74,23 @@ test('every binding says what it does and how', () => {
       assert.ok(b.keys.length || b.pad.length || b.touch, `${id} ${b.job} has no way to do it`);
     }
   }
+});
+
+test('the control card (Phase 4) is short, has its mode\'s own jobs and a way to move or steer, and shows on every input', () => {
+  for (const id of MODE_IDS) {
+    const rows = cardBinds(id);
+    assert.ok(rows.length >= 3 && rows.length <= 14, `${id}: ${rows.length} rows`);
+    // nothing twice
+    assert.equal(new Set(rows.map((b) => b.job)).size, rows.length, id);
+    for (const b of KEYMAP[id].binds) if (b.job !== 'walk' && b.job !== 'emotes') assert.ok(rows.includes(b), `${id} ${b.job}`);
+    if (id !== 'ride') assert.ok(rows.some((b) => b.job === 'move' || b.job === 'steer'), id);
+    // every input has rows to show
+    assert.ok(rows.filter((b) => b.keys.length).length >= 3, id);
+    assert.ok(rows.filter((b) => b.pad.length).length >= 3, id);
+    assert.ok(rows.filter((b) => b.touch).length >= 2, id);
+  }
+  // laid on on foot: the mode's own jobs first, then on foot's main ones
+  const fists = cardBinds('fists');
+  assert.equal(fists[0].job, 'punch');
+  assert.ok(fists.some((b) => b.job === 'interact') && !fists.some((b) => b.job === 'emotes'));
 });

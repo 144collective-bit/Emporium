@@ -529,3 +529,93 @@
     display: grid;
   }
 }
+
+/* The control card (walk.ts, ctrlcard.ts; docs/views-plan.md Phase 4): top right under the header, below the waypoint's compass */
+.ctrl-card {
+  position: absolute;
+  top: calc(var(--head-h) + 72px);
+  right: 16px;
+  z-index: 6;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - var(--head-h) - 180px);
+  overflow: auto;
+  padding: 10px 12px 8px;
+  border: 2px solid var(--m-edge);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--m-cab) 92%, transparent);
+  color: var(--m-text);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 6px 24px #0008;
+}
+.ctrl-card[hidden],
+.city:is(.is-hub, .is-inv, .is-shopping, .has-panel) .ctrl-card {
+  display: none;
+}
+.ctrl-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--m-coin);
+  font: 700 12px/1.2 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ctrl-card-x {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff1;
+  color: inherit;
+  cursor: pointer;
+}
+.ctrl-card-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+}
+.ctrl-card-list dt {
+  white-space: nowrap;
+}
+.ctrl-card-list dd {
+  margin: 0;
+}
+.ctrl-card-list kbd + kbd {
+  margin-left: 3px;
+}
+.ctrl-card-list span {
+  color: var(--m-coin);
+}
+.ctrl-card-foot {
+  margin: 8px 0 0;
+  color: var(--m-dim);
+  font-size: 11px;
+}
+.mk-hub .km-card {
+  justify-self: start;
+}
+@media (pointer: coarse), (max-width: 640px) {
+  /* phones: centred under the header, clear of the View button and the compass on the right */
+  /* (below the toasts, short enough to stay clear of the door prompt; it scrolls) */
+  .ctrl-card {
+    top: calc(var(--head-h) + 56px);
+    left: 50%;
+    right: auto;
+    width: min(320px, calc(100% - 136px));
+    max-width: none;
+    max-height: 28vh;
+    transform: translateX(-50%);
+    font-size: 11px;
+  }
+  .ctrl-card-list {
+    grid-template-columns: auto 1fr;
+    gap: 3px 8px;
+  }
+}
