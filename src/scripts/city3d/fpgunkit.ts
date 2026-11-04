@@ -117,8 +117,8 @@ function ribCuff(y0: number, y1: number, r: number, amp = 0.032, n = 18) {
   return tube(heights(y0, y1, 0.008), (_, a) => r * (1 + amp * Math.max(0, Math.cos(a * n))), n * 3);
 }
 
-/** The colour of his hands (the fatigues' gloves) */
-export const handColor = (o: Outfit) => (o.kind === 'soldier' ? GLOVE : SKIN);
+/** The colour of his hands: his skin tone (the fatigues' gloves) */
+export const handColor = (o: Outfit) => (o.kind === 'soldier' ? GLOVE : (o.skin ?? SKIN));
 
 /**
  * The sleeve, the cuff and what's on the wrist for the top `o` on the hand `side` (-1 his right, 1 his left), round

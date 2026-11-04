@@ -488,3 +488,23 @@ hold.
 - Live mirrors (the owner's call: painted).
 - Seat views on the taxi, the metro and the river bus.
 - Damage, a car radio.
+
+## After the plan: the hands smoothed (the owner's call)
+
+"Smooth the hands design of the character. In first person mode they look very basic." The owner's picks:
+stylised smooth, a softer toon, first person and single figures (phones lighter, the crowd as it was), no nails,
+gloves to pick and skin tones, all in one go.
+
+- **Why they looked basic:** each hand was a box, a ball, a tube and five lathed fingers stuck together, and its
+  normals were worked out after the parts were split into loose triangles, so every face was shaded flat: facets,
+  and the ink drew stripes across the fingers and a line at every join.
+- **The smooth hand** is `handmesh.ts` (tested in `tests/hands.test.ts`): the palm and wrist one loft with the
+  heel and the ball of the thumb padded and the knuckles on the back, tapered fingers with joint swells and round
+  tips, the thumb; built indexed (smooth normals), the fingers' normals eased onto the palm's where they come out.
+  2,376 triangles a hand on desktops, 1,168 on phones (the old ones 1,684 and 1,104).
+- **Shading:** the viewmodel's hands and gloves in a softer toon (`softPaint()`: the bands' edges blended, a faint
+  rim). His body's hands seen from the eye keep the figure's toon, smooth now.
+- **Gloves** (fingerless, full, driving; six colours) and **skin tones** (six) are look fields (`gloves`,
+  `gloveColor`, `tone`), cleaned by `cleanLook()` (older looks: the art's tone, bare hands), picked in the fitting
+  room's Hands tab, shown to other players online. All free.
+- The boot went from 690.4 to 693.7 KB (of 700).

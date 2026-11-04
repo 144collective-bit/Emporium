@@ -30,6 +30,7 @@ const LIGHTS: { id: StageLight; name: string }[] = [
 const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Suit', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket' };
 const HATS: Record<NonNullable<Look['hat']>, string> = { cap: 'Diamond Cap', backcap: 'Backwards Cap', beanie: 'Street Beanie', bucket: 'Bucket Hat', crown: 'Gold Crown', cowboy: 'Cowboy Hat', tophat: 'Top Hat', halo: 'Neon Halo' };
 const BAGS: Record<NonNullable<Look['bag']>, string> = { backpack: 'Backpack', crossbody: 'Crossbody', board: 'Skate Deck', duffel: 'Duffel Bag', wings: 'Neon Wings' };
+const GLOVES: Record<NonNullable<Look['gloves']>, string> = { fingerless: 'Fingerless Gloves', full: 'Full Gloves', driving: 'Driving Gloves' };
 const HELD: Record<NonNullable<Look['held']>, string> = { coffee: 'Iced Coffee', boombox: 'Boombox', phone: 'Phone', briefcase: 'Briefcase' };
 const markName = (id: MarkId) => MARKS.find((m) => m.id === id)?.name ?? id;
 
@@ -44,6 +45,7 @@ export function describe(l: Look): [string, string, string[]][] {
     ['Shades', 'Lenses', [l.lens]],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],
     ['Hand', l.held ? HELD[l.held] : 'Empty', []],
+    ['Hands', l.gloves ? GLOVES[l.gloves] : 'Bare', l.gloves && l.gloves !== 'fingerless' ? [l.gloveColor] : l.gloves ? [l.gloveColor, l.tone] : [l.tone]],
     ['Extras', extras.length ? extras.join(', ') : 'None', l.headphones ? [l.headphones] : []],
     ['Kicks', l.kind === 'suit' ? 'Dress shoes' : `Sneakers${l.shoeMark ? ` · ${markName(l.shoeMark)}` : ''}`, [l.shoes]],
   ];

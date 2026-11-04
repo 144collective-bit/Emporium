@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HAND, THUMB_REST, fingerWeigh, makeSkeleton, newPose, poseSkeleton, step, type BoneName, type Influence } from './skeleton';
+import { gloveParts, smoothHand, type GloveKind, type HandLevel } from './handmesh';
 
 /* ---------- The head ---------- */
 
@@ -231,9 +232,15 @@ export function handParts(side: -1 | 1, seg: number): SkinnedPart[] {
 /**
  * Hand `side` closed to `grip` (0 open, 1 a fist) and set solid: one
  * geometry in the posed hand's space, positions and normals (the
- * first-person hands, which aren't skinned).
+ * first-person hands, which aren't skinned): the smooth hand (handmesh.ts)
+ * at detail `q`, or a glove of `glove` over it.
  */
-export function bakedHand(side: -1 | 1, grip: number, seg = 9) {
+export function bakedHand(side: -1 | 1, grip: number, q: HandLevel = 3, glove?: GloveKind) {
+  return bakeParts(side, grip, glove ? gloveParts(side, q, glove) : smoothHand(side, q));
+}
+
+/** Skinned parts on a hand posed closed to `grip`, set solid in the posed hand's space */
+function bakeParts(side: -1 | 1, grip: number, parts: SkinnedPart[]) {
   const S = side < 0 ? 'L' : 'R';
   const sk = makeSkeleton();
   sk.root.updateMatrixWorld(true);
@@ -249,9 +256,9 @@ export function bakedHand(side: -1 | 1, grip: number, seg = 9) {
   const n = new THREE.Vector3();
   const sumP = new THREE.Vector3();
   const sumN = new THREE.Vector3();
-  const geos = handParts(side, seg).map(({ geo, skin }) => {
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    const nor = geo.attributes.normal as THREE.BufferAttribute;
+  const geos = parts.map(({ geo, skin }) => {
+    const pos = (geo.attributes.position as THREE.BufferAttribute).clone();
+    const nor = (geo.attributes.normal as THREE.BufferAttribute).clone();
     for (let i = 0; i < pos.count; i++) {
       sumP.set(0, 0, 0);
       sumN.set(0, 0, 0);

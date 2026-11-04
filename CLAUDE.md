@@ -1763,7 +1763,12 @@ it and has been retired completely. Build only on what's here.
   widens a little on an upright screen (`fpFov()` in fpcam.ts, `PORTRAIT`;
   a new first-person view goes through it). The boot is at 690.4 KB; its
   budget was raised to 700 on the owner's go ("raise the budget when
-  needed").
+  needed"). After the plan the hands were smoothed (under the head and
+  hands, below): the first-person hands are the smooth hand at the
+  figure's level (`figureLevel()` in character.ts) in the viewmodel's
+  softer toon (`softPaint()` in viewmodel.ts: the three bands' edges
+  blended and a faint rim), in his skin tone, with his gloves (`hands()` in
+  its `arm()`); the boot 693.7 KB.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
@@ -2784,7 +2789,24 @@ it and has been retired completely. Build only on what's here.
     curl a little, `RELAXED`; `bakedHand()` sets one solid at a grip, for
     the first-person hands in `viewmodel.ts`). His hands are empty by
     default (the gummy bag was retired, the owner's call; saved looks that
-    held it come back empty).
+    held it come back empty). **Single figures' hands are smooth** (the
+    owner's call: "in first person they look very basic"): `handmesh.ts`
+    (DOM-free, tested in `tests/hands.test.ts`): `smoothHand(side, q)` (q 3
+    desktops, 2 phones, `RES`) is the palm and wrist one loft (`PALM`: the
+    wrist narrower, the heel and the ball of the thumb padded, a hollow in
+    the middle, the knuckles standing on the back), tapered fingers with a
+    swell at each joint and a rounded tip (`FINGER`) and the thumb, each
+    built indexed so it shades smooth (the old parts were flat-shaded: their
+    normals were worked out after they were split), a finger's normals eased
+    onto the palm's where it comes out (`BLEND`) so the ink draws no seam;
+    `gloveParts(side, q, kind)` the gloves over it (`GLOVE`: fingerless,
+    cut past the first joint with a hem; full, its cuff flared; driving, a
+    strap over the back of the hand). The crowd keeps `handParts()` (and the
+    far crowd its block). Skin is the colour key `skin` (the look's `tone`,
+    six in `PALETTE.skin`, his hands and round his eyes) and gloves `glove`
+    (`gloves` and `gloveColor` on the look, `PALETTE.glove`): single
+    figures' keys, not in the crowd's `COLOR_KEYS`; under gloves with
+    fingers the bare hand is left off.
   - **Walking and running** are `locomotion.ts` (DOM-free, tested in
     `tests/locomotion.test.ts`), for your Degen in walk mode
     (`createLocomotion()`; walk.ts feeds it his position, velocity,
@@ -2833,7 +2855,7 @@ it and has been retired completely. Build only on what's here.
     darkens or lightens it: lapels, ribbing). New clothes are new items.
   - Four detail levels (`Detail`): 3 for single figures on desktops and 2
     on phones (`createDegen()`: the player, other players, the fitting
-    room, the hologram; about 23-26k triangles at 3, 14-17k at 2;
+    room, the hologram; about 24-27k triangles at 3, 14-17k at 2;
     `figureDetail()` sets which), 1 for crowd people near the camera (the new head, fingers
     and shoes at a crowd's detail, about 7-9k; the phones' `light` crowd
     leaves out the `detail` pieces), 0 for crowd people further away (`far`:
@@ -3339,7 +3361,8 @@ it and has been retired completely. Build only on what's here.
 
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
   fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
-  Hand, Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
+  Hand, Extras, Hands (bare, fingerless, full or driving gloves and their
+  colour, and the skin tone row; all free), Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
   open (still under reduced motion; drag turns him). The **Merch** tab
   (`merchItems()`, `[data-fit-merch]`) dresses the top, the hat or the
@@ -3429,7 +3452,7 @@ it and has been retired completely. Build only on what's here.
   level each thing needs, the XP curve and what each mod does are
   `catalog.ts`; the board and badges `missions.ts`. All DOM-free, tested in `tests/game.test.ts`. The starter
   tier (the five original cars, the four original guns, the original
-  wardrobe) stays free; everything new costs Dorras and needs a level.
+  wardrobe, the gloves and skin tones) stays free; everything new costs Dorras and needs a level.
   Screens reach the save through `GameDeps` in `ui.ts` (`save()`, then
   `commit()` once the rules have changed it; `toast()`, `sfx()`), never
   by writing the save themselves.
@@ -4366,7 +4389,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`), the head's follow-through (`follow.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`; the smooth hands and gloves, `handmesh.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`), the head's follow-through (`follow.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and

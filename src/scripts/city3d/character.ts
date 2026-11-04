@@ -32,7 +32,7 @@ import { lit, liveTex, moving, neon, toon } from './kit';
 import { crowdFrame, type CrowdClip } from './crowdclips';
 import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
-import { COLOR_KEYS, PLAYER, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
+import { COLOR_KEYS, GLOVE_COLOR, PLAYER, SKIN, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
 
 export { PLAYER, SOLDIER, lookOutfit, type Detail, type Outfit, type OutfitKind } from './wardrobe';
 export { ARM_REACH, HIP_HEIGHT, newPose, reachArm, shoulderTo, torsoFrame, type Limb, type Pose, type Wrist } from './skeleton';
@@ -50,7 +50,8 @@ function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
   return p.shade ? out.multiplyScalar(p.shade) : out;
 }
 /** An outfit's colour for a key (the lenses are green as in the art when an outfit doesn't say) */
-const outfitColor = (o: Outfit, k: ColorKey) => (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : '#ff00ff');
+const outfitColor = (o: Outfit, k: ColorKey) =>
+  (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : k === 'skin' ? SKIN : k === 'glove' ? GLOVE_COLOR : '#ff00ff');
 
 /* ---------- The wardrobe, with the soldiers' rifle (guns.ts draws it, so it's added here) ---------- */
 
@@ -329,6 +330,8 @@ function atlasUV(geo: THREE.BufferGeometry, id: MarkId) {
 /** A single figure's detail where its caller doesn't say: 2 on phones, 3 on desktops (the city sets it by its tier) */
 let figure: Detail = 2;
 export const figureDetail = (q: Detail) => void (figure = q);
+/** The single figures' detail the city set (the first-person hands follow it) */
+export const figureLevel = () => figure;
 
 export function createDegen(o: Outfit = PLAYER, q: Detail = figure): Degen {
   const sk = makeSkeleton();

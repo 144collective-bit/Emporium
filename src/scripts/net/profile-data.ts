@@ -80,6 +80,9 @@ export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer'
 export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'crown', 'cowboy', 'tophat', 'halo'];
 export const BAGS: Bag[] = ['backpack', 'crossbody', 'board', 'duffel', 'wings'];
 export const HELD: Held[] = ['coffee', 'boombox', 'phone', 'briefcase'];
+/** Gloves (free): fingerless, full or driving gloves, in a colour (handmesh.ts draws them) */
+export type Gloves = 'fingerless' | 'full' | 'driving';
+export const GLOVES: Gloves[] = ['fingerless', 'full', 'driving'];
 
 /*
  * Merch (character rebuild Phase 4): made-up marks for the clothes, drawn in
@@ -155,6 +158,11 @@ export interface Look {
   shoeMark: MarkId | null;
   /** An all-over print on the top */
   pattern: PatternId;
+  /** His skin tone (his hands and round his eyes; free; `skin` on a profile is the gun's finish) */
+  tone: string;
+  /** Gloves (or none), and their colour */
+  gloves: Gloves | null;
+  gloveColor: string;
 }
 
 export const PALETTE = {
@@ -171,6 +179,10 @@ export const PALETTE = {
   holo: ['#b9f3ff', '#ffc6f2', '#d9c6ff', '#c6ffe4', '#fff3b0', '#ffd3c2'],
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
+  /** Skin tones, light to deep (the second is the art's, every look's before tones came in) */
+  skin: ['#f2d4b8', '#e8c39e', '#d4a47c', '#b88058', '#8e5c3c', '#5e3c28'],
+  /** Gloves: black, brown and tan leather, grey, white, red */
+  glove: ['#1b1a22', '#4a2e1e', '#a8743f', '#5a5866', '#dedce8', '#b8292a'],
 };
 /** The colour packs sold at Drop 001 (ids are the catalog's), each a list of top and bottom colours */
 export const PACKS = { gold: PALETTE.gold, holo: PALETTE.holo } as const;
@@ -209,6 +221,9 @@ export const DEFAULT_LOOK: Look = {
   hatMark: 'diamond',
   shoeMark: null,
   pattern: 'plain',
+  tone: '#e8c39e',
+  gloves: null,
+  gloveColor: '#1b1a22',
 };
 
 /** Anything from a player, made safe: unknown values fall back to Degen's own look */
@@ -250,6 +265,10 @@ export function cleanLook(raw: unknown): Look {
     hatMark: from(o.hatMark, MARK_IDS, DEFAULT_LOOK.hatMark),
     shoeMark: orNull(o.shoeMark, MARK_IDS, null),
     pattern: from(o.pattern, PATTERN_IDS, DEFAULT_LOOK.pattern),
+    // (looks saved before skin tones and gloves: the art's tone, bare hands)
+    tone: from(o.tone, PALETTE.skin, DEFAULT_LOOK.tone),
+    gloves: orNull(o.gloves, GLOVES, null),
+    gloveColor: from(o.gloveColor, PALETTE.glove, DEFAULT_LOOK.gloveColor),
   };
 }
 

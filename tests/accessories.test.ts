@@ -111,7 +111,7 @@ function through(geo: THREE.BufferGeometry, hand: THREE.BufferGeometry) {
 
 for (const q of [3, 2] as Detail[]) {
   test(`accessories: the things in the hand are held, no finger through them (detail ${q})`, () => {
-    const hand = bakedHand(1, 0.62, 9);
+    const hand = bakedHand(1, 0.62, q === 3 ? 3 : 2);
     const H = hand.attributes.position;
     const all = items(q, true);
     const cup = all.find((i) => i.id === 'coffee')!;

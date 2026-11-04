@@ -23,7 +23,9 @@ import { fx, liveTex } from './kit';
 import { buildGun, gunSpec, type Gun, type SkinId, type Tintable } from './guns';
 import { newReloadFrame, reloadAt } from './gunfit';
 import type { WeaponId } from './combat-sim';
-import { PLAYER, type Outfit } from './character';
+import { PLAYER, figureLevel, type Outfit } from './character';
+import { GLOVE_COLOR } from './wardrobe';
+import type { GloveKind } from './handmesh';
 import { bakedHand } from './body';
 import type { FpGun } from './fpgun';
 
@@ -31,6 +33,8 @@ const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
 const S = 0.78;
 const SKIN = '#e8c39e';
+/** The fatigues' gloves (wardrobe.ts's soldier fingers) */
+const GLOVE = '#2b2a33';
 /** The hands' size against the body's (they're held up close, so a touch bigger reads better) */
 const FP_HAND = 1.15;
 /** The shirt cuff and the track top's stripes (a shade under white, like the body's) */
@@ -52,9 +56,9 @@ const adsPose = (id: WeaponId) => {
 const level = { value: 1 };
 /** The light's colour on them: the nearest lamp's and the moon's (fpgun.ts), white until it's in */
 const tint = { value: new THREE.Color(1, 1, 1) };
-function flat(color: string): Tintable {
+function flat(color: string, soft = false): Tintable {
   const m = new THREE.ShaderMaterial({
-    uniforms: { color: { value: new THREE.Color(color) }, emissive: { value: new THREE.Color(0) }, level, tint },
+    uniforms: { color: { value: new THREE.Color(color) }, emissive: { value: new THREE.Color(0) }, level, tint, soft: { value: soft ? 1 : 0 } },
     vertexShader: /* glsl */ `
       varying vec3 vN;
       void main() {
@@ -67,10 +71,18 @@ function flat(color: string): Tintable {
       uniform vec3 emissive;
       uniform float level;
       uniform vec3 tint;
+      uniform float soft;
       varying vec3 vN;
       void main() {
-        float d = dot(normalize(vN), normalize(vec3(-0.4, 0.8, 0.45)));
+        vec3 n = normalize(vN);
+        float d = dot(n, normalize(vec3(-0.4, 0.8, 0.45)));
         float band = d > 0.42 ? 1.0 : d > -0.12 ? 0.74 : 0.52;
+        // The hands' softer toon: the same three bands with their edges blended (thin fingers don't stripe) and a
+        // faint rim of light round the edge
+        float eased = mix(0.52, 0.74, smoothstep(-0.24, 0.0, d));
+        eased = mix(eased, 1.0, smoothstep(0.3, 0.54, d));
+        float rim = smoothstep(0.62, 1.0, 1.0 - abs(n.z)) * 0.09;
+        band = mix(band, eased + rim, soft);
         gl_FragColor = vec4(color * band * level * tint + emissive, 1.0);
         #include <colorspace_fragment>
       }
@@ -80,6 +92,9 @@ function flat(color: string): Tintable {
 }
 const flats = new Map<string, Tintable>();
 const shared = (c: string) => flats.get(c) ?? flats.set(c, flat(c)).get(c)!;
+/** The hands' and gloves' paint: the softer toon */
+const softs = new Map<string, Tintable>();
+const softPaint = (c: string) => softs.get(c) ?? softs.set(c, flat(c, true)).get(c)!;
 const UP = new THREE.Vector3(0, 1, 0);
 
 const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
@@ -94,7 +109,10 @@ function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vec
   const z = along.clone().normalize();
   const y = dir.clone().addScaledVector(z, -dir.dot(z)).normalize();
   const x = new THREE.Vector3().crossVectors(y, z);
-  return bakedHand(side, grip).applyMatrix4(new THREE.Matrix4().makeBasis(x, y, z).scale(new THREE.Vector3(size, size, size)).setPosition(at));
+  const m = new THREE.Matrix4().makeBasis(x, y, z).scale(new THREE.Vector3(size, size, size)).setPosition(at);
+  // (the smooth hand at the figure's level: desktops' finer)
+  const q = figureLevel() === 3 ? 3 : 2;
+  return (glove?: GloveKind) => bakedHand(side, grip, q, glove).applyMatrix4(m);
 }
 
 /** The polish, once its chunk is in (the module's: one viewmodel at a time) */
@@ -104,7 +122,7 @@ let fine: FpGun | null = null;
  * A forearm ending in a hand (its wrist at `at`, on `side`), reaching off along `dir`; `dress()` puts it in the
  * outfit's sleeve
  */
-function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry, side: -1 | 1, at: THREE.Vector3) {
+function arm(dir: THREE.Vector3, make: (glove?: GloveKind) => THREE.BufferGeometry, side: -1 | 1, at: THREE.Vector3) {
   const g = new THREE.Group();
   const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
   const along = (geo: THREE.BufferGeometry, from: number) => {
@@ -113,12 +131,36 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry, side: -1 | 1, at: T
     return geo;
   };
   const clothes = new THREE.Group();
-  const handMesh = new THREE.Mesh(hand, shared(SKIN));
+  const handMesh = new THREE.Mesh(make(), softPaint(SKIN));
+  // Gloves over the hand, each kind made the first time it's worn
+  const gloves = new Map<GloveKind, THREE.Mesh>();
   g.add(clothes, handMesh);
+  /** The hand in his skin tone (the fatigues' gloves), and any gloves he wears over it */
+  const hands = (o: Outfit) => {
+    handMesh.material = softPaint(o.kind === 'soldier' ? GLOVE : (o.skin ?? SKIN));
+    const kind = o.kind === 'soldier' ? undefined : o.gloves;
+    for (const [k, m] of gloves) m.visible = k === kind;
+    if (kind) {
+      let m = gloves.get(kind);
+      if (!m) {
+        m = new THREE.Mesh(make(kind), softPaint(GLOVE_COLOR));
+        gloves.set(kind, m);
+        g.add(m);
+      }
+      m.material = softPaint(o.glove ?? GLOVE_COLOR);
+      m.visible = true;
+    }
+    // (under gloves with fingers, nothing of the hand shows)
+    handMesh.visible = !kind || kind === 'fingerless';
+  };
   return {
     g,
     dress(o: Outfit) {
-      if (fine) return fine.dress(clothes, handMesh, o, side, at, dir);
+      if (fine) {
+        fine.dress(clothes, handMesh, o, side, at, dir);
+        return hands(o);
+      }
+      hands(o);
       clothes.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
       clothes.clear();
       const top = o.top;

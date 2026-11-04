@@ -15,14 +15,14 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
+import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Gloves, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
 import { markItem, patternItem, wardrobeEntry, type WardrobeEntry } from './catalog';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
 import { buyWardrobe, level, ownsWardrobe } from './tycoon';
 import { D, LV, fmt, whyNot, type GameDeps } from './ui';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink' | 'tone' | 'gloveColor';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -65,6 +65,16 @@ const NONE = 'M12 3a9 9 0 1 0 0.01 0z M6 6l12 12';
 const LOCK = 'M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v10H5z';
 const hatColors: Colors[] = [{ key: 'hatColor', label: 'Colour', list: PALETTE.cap }];
 const bagColors: Colors[] = [{ key: 'bagColor', label: 'Colour', list: PALETTE.extra }];
+const gloveColors: Colors[] = [{ key: 'gloveColor', label: 'Gloves', list: PALETTE.glove }];
+/** Gloves (free): one pair at a time, or bare hands */
+const glove = (id: Gloves | null, name: string, icon: string): Item => ({
+  id: id ? `gloves-${id}` : 'bare',
+  name,
+  icon,
+  on: (l) => l.gloves === id,
+  wear: (l) => ({ ...l, gloves: id }),
+  colors: id ? gloveColors : undefined,
+});
 const hood = (l: Look) => l.kind === 'hoodie' && l.hood;
 /** The premium pieces' names come from the catalog, so the card and the confirm say the same thing */
 const named = (id: string, fallback: string) => wardrobeEntry(id)?.name ?? fallback;
@@ -318,6 +328,18 @@ const TABS: Tab[] = [
     ],
   },
   {
+    id: 'hands',
+    label: 'Hands',
+    items: [
+      glove(null, 'Bare Hands', 'M8 13V6a1.5 1.5 0 0 1 3 0v5 M11 11V4.5a1.5 1.5 0 0 1 3 0V11 M14 11V5.5a1.5 1.5 0 0 1 3 0V13 M8 12.5 6.6 11a1.6 1.6 0 0 0-2.4 2.1L8 18c1.2 1.9 3 3 5.2 3 3 0 4.8-2.2 4.8-5v-3'),
+      glove('fingerless', 'Fingerless Gloves', 'M8 13V9h9v4 M8 12.5 6.6 11a1.6 1.6 0 0 0-2.4 2.1L8 18c1.2 1.9 3 3 5.2 3 3 0 4.8-2.2 4.8-5v-3 M8 9V6.5 M11 9V5 M14 9V6 M17 9V7.5'),
+      glove('full', 'Full Gloves', 'M8 13V6a1.5 1.5 0 0 1 3 0v5 M11 11V4.5a1.5 1.5 0 0 1 3 0V11 M14 11V5.5a1.5 1.5 0 0 1 3 0V13 M8 12.5 6.6 11a1.6 1.6 0 0 0-2.4 2.1L8 18c1.2 1.9 3 3 5.2 3 3 0 4.8-2.2 4.8-5v-3 M9 21.5h8'),
+      glove('driving', 'Driving Gloves', 'M8 13V6a1.5 1.5 0 0 1 3 0v5 M11 11V4.5a1.5 1.5 0 0 1 3 0V11 M14 11V5.5a1.5 1.5 0 0 1 3 0V13 M8 12.5 6.6 11a1.6 1.6 0 0 0-2.4 2.1L8 18c1.2 1.9 3 3 5.2 3 3 0 4.8-2.2 4.8-5v-3 M10.5 15.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0'),
+    ],
+    // His skin tone: his hands and round his eyes
+    colors: [{ key: 'tone', label: 'Skin tone', list: PALETTE.skin }],
+  },
+  {
     id: 'kicks',
     label: 'Kicks',
     items: [],
@@ -511,7 +533,7 @@ export function createFitting(d: FittingDeps) {
         b.setAttribute('aria-label', label);
         sw.append(b);
       };
-      c.list.forEach((col, i) => swatch(col, `${c.label} colour ${i + 1}`));
+      c.list.forEach((col, i) => swatch(col, c.key === 'tone' ? `Skin tone ${i + 1}` : `${c.label} colour ${i + 1}`));
       // Tops and bottoms also come in the colour packs, locked until the pack is bought
       if (c.key === 'top' || c.key === 'bottom')
         for (const pack of PACK_IDS) {

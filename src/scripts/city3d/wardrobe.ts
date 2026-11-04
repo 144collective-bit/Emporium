@@ -11,6 +11,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Look, MarkId, MarkSlot, PatternId } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
+import { GLOVE_KINDS, gloveParts, smoothHand, type GloveKind, type HandLevel } from './handmesh';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
 /* ---------- Outfits ---------- */
@@ -70,6 +71,10 @@ export interface Outfit {
   hatMark?: MarkId;
   shoeMark?: MarkId;
   pattern?: PatternId;
+  /** Single figures only (detail 2 and 3): his skin tone (the crowd's is SKIN), his gloves and their colour */
+  skin?: string;
+  gloves?: GloveKind;
+  glove?: string;
   /** Width and height multipliers, for a bit of variety in build */
   build?: number;
   height?: number;
@@ -129,6 +134,9 @@ export function lookOutfit(l: Look): Outfit {
     hatMark: l.hatMark,
     shoeMark: l.shoeMark ?? undefined,
     pattern: l.pattern,
+    skin: l.tone,
+    gloves: l.gloves ?? undefined,
+    glove: l.gloveColor,
   };
 }
 
@@ -669,8 +677,8 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'ink';
-/** Every outfit colour a piece can take (the crowd works each figure's out once) */
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'ink' | 'skin' | 'glove';
+/** Every outfit colour a crowd's piece can take (the crowd works each figure's out once; `skin` and `glove` are single figures') */
 export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'ink'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
@@ -716,7 +724,9 @@ export interface Item {
   held?: boolean;
 }
 
-const SKIN = '#e8c39e';
+export const SKIN = '#e8c39e';
+/** A glove's colour when an outfit doesn't say */
+export const GLOVE_COLOR = '#1b1a22';
 const BLACK = '#16141f';
 const WHITE = '#f3f2f7';
 /** The cream of a patch a mark is printed on */
@@ -1091,9 +1101,18 @@ export function items(q: Detail, hero = false): Item[] {
   const hatPatch = (patch: THREE.BufferGeometry, logo: THREE.BufferGeometry): Piece[] =>
     hero ? [P('head', patch, PATCH), P('head', logo, 'ink', { mat: 'logo', logo: 'hat' })] : [P('head', patch, '#ffffff', { mat: 'patch', detail: true })];
   /** The skinned body's hands, fingers and all, each vertex weighted to its bones */
-  // (far off, a crowd person's hands are the simple block: fingers are wasted at a few pixels)
-  const fingers = (color: string): Piece[] =>
-    far ? both('wrist', one(hand), color) : ([-1, 1] as const).flatMap((s) => handParts(s, R(9)).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, color, { skin })));
+  // (far off, a crowd person's hands are the simple block: fingers are wasted at a few pixels; single figures'
+  // are the smooth hand, handmesh.ts, in their own skin tone)
+  const single = q >= 2;
+  const fingers = (color: string | ColorKey): Piece[] =>
+    far
+      ? both('wrist', one(hand), color)
+      : ([-1, 1] as const).flatMap((s) => (single ? smoothHand(s, q as HandLevel) : handParts(s, R(9))).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, color, { skin })));
+  /** Single figures' gloves over the smooth hand */
+  const gloves = (kind: GloveKind): Piece[] =>
+    ([-1, 1] as const).flatMap((s) => gloveParts(s, q as HandLevel, kind).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, 'glove', { skin })));
+  /** Skin: single figures' in their own tone */
+  const skinTone = single ? 'skin' : SKIN;
 
   const suit = (o: Outfit) => o.kind === 'suit';
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
@@ -2524,7 +2543,7 @@ export function items(q: Detail, hero = false): Item[] {
       pieces: [
         P('head', far ? skull : one(hero ? [skull, ...ears] : [skull, nose, ...ears]), BLACK),
         ...(hero ? [P('head', one([neckFold, eyeRim]), BLACK, { detail: true })] : q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
-        P('head', eyesSkin, SKIN),
+        P('head', eyesSkin, skinTone),
         P('head', far ? new THREE.BoxGeometry(0.17, 0.05, 0.008).translate(0, EYE_Y, lensZ - 0.002) : one(frames), '#0d0c14'),
         P('head', one(lenses), '#ffffff', { mat: 'lens' }),
       ],
@@ -2651,8 +2670,10 @@ export function items(q: Detail, hero = false): Item[] {
     // Hands (open, or fists while fighting), trousers and shoes for everyone but soldiers
     ...(hero
       ? [
-          // The skinned body's hands have fingers: a fist is the same hand, closed (`grip`)
-          { id: 'fingers', when: (o: Outfit) => !soldier(o), pieces: fingers(SKIN) },
+          // The skinned body's hands have fingers: a fist is the same hand, closed (`grip`); under a glove
+          // with fingers they're left off (nothing of them shows)
+          { id: 'fingers', when: (o: Outfit) => !soldier(o) && !(single && o.gloves && o.gloves !== 'fingerless'), pieces: fingers(skinTone) },
+          ...(single ? GLOVE_KINDS.map((k): Item => ({ id: `gloves-${k}`, when: (o) => !soldier(o) && o.gloves === k, pieces: gloves(k) })) : []),
         ]
       : [
           {
