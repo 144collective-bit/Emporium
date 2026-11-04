@@ -3123,6 +3123,14 @@ it and has been retired completely. Build only on what's here.
   (`arrangeKey()`, shares of the screen in the right hand's frame),
   `layoutFor()` falls back to the slots where it clashes, and `moveItem()`
   holds a drag clear through the same `clash()`.
+- **The views and controls plan** (the owner's call: "switch views in all
+  walk modes in the vehicles", the controls simpler and more accessible)
+  is planned in `docs/views-plan.md`, nothing built yet: far, near and
+  first person in every vehicle, ride, race and the ring (not remembered),
+  a touch View button on foot, one key for one job (`keymap.ts`; the
+  gamepad's camera R3 everywhere, the ring on the street's keys), a
+  control card per mode, hold or toggle for sprint, aim, crouch and block.
+  One phase at a time with the owner's sign-off; keep it up to date.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
