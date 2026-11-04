@@ -3905,6 +3905,12 @@ it and has been retired completely. Build only on what's here.
 
 ## The kart park (3D walk mode)
 
+- **The move west and the upgrade** (the owner's call, 2026-11) are
+  planned in `docs/kart-west-plan.md` in eight phases: the move, nothing
+  clipping, the facility, the live crowd and the podium, driving, your
+  kart's look, the items mode, polish. All are built on the work branch,
+  waiting on the owner's review before main; keep it up to date.
+
 - **The place** (the owner's call): a Mario-Kart-style go-kart park on
   the open land outside the ring highway's west side, north of ew0, west
   of exit 8's ramps (`docs/kart-west-plan.md`, the owner's call: moved

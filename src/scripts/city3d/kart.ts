@@ -1214,7 +1214,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       dots.length = s.racers.length;
       // The LED screens round the park: the order, a few times a second
       if ((boardT -= dt) <= 0) {
-        boardT = 0.25;
+        // (twice a second on phones: each repaint uploads the picture again)
+        boardT = d.low ? 0.5 : 0.25;
         const names = s.timeTrial ? [] : lineup(cup as CupId).map((r) => r.name);
         d.park.board({
           title: COURSES[course].name.toUpperCase(),

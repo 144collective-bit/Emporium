@@ -104,7 +104,7 @@ owner has looked**.
 7. **Items mode** (built): item boxes on the circuit, the three items, the HUD's
    item slot and the touch, key and gamepad button, rivals using them,
    single races only.
-8. **Polish and performance:** bench views, phones, the boot budget, the
+8. **Polish and performance** (built): bench views, phones, the boot budget, the
    docs.
 
 ## What Phase 1 built
@@ -351,3 +351,43 @@ looks.
 - Tests: `tests/kartitems.test.ts` covers the rows, the draw, three items
   races (every item used, slicks spinning karts, everyone home), your
   button (once a press) and no records.
+
+## What Phase 8 built, and what to look at
+
+- **Checked:** `npm test` and `npm run test:wide` (1169 each), the type
+  check, the build, the budgets (the boot 716.3 of 730 KB gz, from 711.1
+  before this plan) and a boot in a headless browser.
+- **Races in a real browser:** two runs to the results through
+  `__city.walk.race()` (`?fps`), each with no script errors (only the
+  blocked outside fetches and the NaN warning that was there before):
+  - a single race to the podium ceremony;
+  - an items race at night, showing the HUD's gaps, slot and split.
+- **Phones:** the LED screens repaint twice a second instead of four
+  times. The new people (the café, the terrace) are half left out like the
+  rest, the marshals' flags and the item boxes are instanced, and the
+  confetti is a few hundred points.
+- **Shots:** before and after each visual phase are in
+  `docs/blend-shots/kart-*`. The crowd, the flags, the ceremony and the
+  items only show in a race, so they're not in the sheets; the headless
+  runs' frames show them.
+
+To look at in the morning (nothing's on main):
+
+- the park from over exit 8 (`kart-new`) and the plaza from the gate
+  (`kart-plaza`);
+- a single race, forward, to see the podium ceremony;
+- the Look section on the clubhouse's Karts tab;
+- an items race;
+- the rocket start (gas just before the GO).
+
+Known limits, left for you to decide:
+
+- The walk from the metro's new Kart Park station to the gate is about
+  140 tiles across open land (there's a sign at the station door). A
+  paved path, or a station nearer the gate, would be a later step.
+- In the city, your own kart's driver (drive.ts) wears your everyday look,
+  not the helmet and suit; those are the races' only.
+- The ceremony's karts appear on the podium straight from the track (a
+  cut, not a drive there).
+- The fans cheer with both hands; there are no hand-held flags in the
+  crowd (that needs a new held item in the wardrobe).
