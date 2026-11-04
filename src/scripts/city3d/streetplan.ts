@@ -18,6 +18,7 @@ import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } fro
 import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
+import { EXITS, RAMPS, RAMP_HALF } from './viaduct';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
@@ -38,10 +39,13 @@ export type Pt = [number, number];
  * - street: one lane each way
  * - avenue: two lanes each way with a median
  * - highway: the ring highway (highway.ts), an avenue with a hard shoulder and no sidewalks
- * - slip: a one-way slip lane across a corner where the highway meets an arterial
+ * - ramp: a one-way exit ramp of the raised highway (viaduct.ts `RAMPS`), from its deck down to an arterial or up
+ *   from one, its heights in `ys` (docs/highway-plan.md Phase 3)
  * - alley: walk-only, no cars (cars never route along it)
  */
-export type StreetKind = 'street' | 'avenue' | 'highway' | 'slip' | 'alley';
+export type StreetKind = 'street' | 'avenue' | 'highway' | 'ramp' | 'alley';
+/** Up off the ground: the raised highway and its ramps (what's drawn, walked and measured at street level leaves them out) */
+export const raised = (s: { kind: StreetKind }) => s.kind === 'highway' || s.kind === 'ramp';
 
 export interface Street {
   id: string;
@@ -58,6 +62,8 @@ export interface Street {
   oneway?: 1 | -1;
   /** A street's planted median (its width): its one lane each way runs either side of it */
   median?: number;
+  /** A ramp's road height at each of its points */
+  ys?: number[];
 }
 
 export interface Crossing {
@@ -397,6 +403,14 @@ export function cityPlan(): StreetPlan {
   // with anything at street level, every arterial passing under it (`RING_MEETS`); its traffic drives round it on the
   // deck (routes.ts, the first `RING_ROUTES`)
   streets.push({ id: 'highway', kind: 'highway', pts: HIGHWAY, half: HIGHWAY_HALF, lanes: 2, loop: true });
+  // Its exits (docs/highway-plan.md Phase 3): each ramp a one-way street the way it's driven, meeting the deck's outer
+  // lane where it leaves or joins it (a merge: no lights) and its arterial at its foot (lit)
+  for (const r of RAMPS) {
+    const id = `ramp-${r.id}`;
+    streets.push({ id, kind: 'ramp', pts: r.pts, half: RAMP_HALF, lanes: 1, oneway: 1, ys: r.ys });
+    crossings.push({ id: `${id}-deck`, at: r.pts[r.kind === 'off' ? 0 : r.pts.length - 1], streets: ['highway', id], lights: false });
+    crossings.push({ id: `${id}-foot`, at: r.terminal, streets: [EXITS.find((e) => e.n === r.exit)!.street, id], lights: true });
+  }
   // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
   for (const t of TRENCH_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes });
   for (const c of TRENCH_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: c.streets, lights: c.lights });

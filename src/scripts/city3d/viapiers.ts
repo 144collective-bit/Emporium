@@ -5,7 +5,7 @@
  * ring highway's bridges have theirs today (between the boats' lanes, waterfront.ts `BRIDGE_PIERS`). Kept out of
  * viaduct.ts so the street plan can read the ramps without the metro and the river.
  */
-import { PLAN, distToStreet } from './streetplan';
+import { PLAN, distToStreet, raised } from './streetplan';
 import { TRACKS, type Track } from './metro';
 import { TUNNEL } from './lot9';
 import { WALK as STADIUM_WALK } from './stadium';
@@ -34,7 +34,7 @@ const trackDist = (t: Track, p: Pt) => {
   return d;
 };
 /** What passes under the deck: every street but the highway (and slip lanes, none since Phase 2: the ramps come in Phase 3) */
-const UNDER = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'slip');
+const UNDER = PLAN.streets.filter((s) => !raised(s));
 
 /** A pier's corners and middle, with its reach across the deck (its head) as the stem's footprint is small */
 function footprint(s: number): Pt[] {

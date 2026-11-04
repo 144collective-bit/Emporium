@@ -8,6 +8,7 @@ import { LOT9_STREETS, inLot9 } from '../src/scripts/city3d/lot9';
 import { LOOP, IN } from '../src/scripts/city3d/stadium';
 import { LOOP as K_LOOP, ROAD as K_ROAD } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
+import { EXITS } from '../src/scripts/city3d/viaduct';
 import { JUNCTIONS, RING_ROUTES, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, type Route } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet, lanePaths, onSlab, streetLength } from '../src/scripts/city3d/streetplan';
 import { DIAGONALS } from '../src/scripts/city3d/downtown';
@@ -66,6 +67,11 @@ const airportWay = (q: Pt) =>
   (q[0] > GA_ROAD.x0 - 14 && q[0] < GA_ROAD.x1 + 3 && q[1] > HIGHWAY_BOX[3] && q[1] < GA_ROAD.z + 3) ||
   (q[0] > GA_ROAD.x0 + 4 && q[0] < GA_ROAD.x1 + 3 && q[1] > GA_ROAD.z && q[1] < GA_ROAD.loopZ + 3);
 
+/** The raised highway's exits (docs/highway-plan.md Phase 3): on a ramp, or on an arterial between the deck and a ramp's foot outside it */
+const exitWay = (q: Pt) =>
+  PLAN.streets.some((s) => s.kind === 'ramp' && distToStreet(s, q) <= s.half + 0.5) ||
+  (fromHighway(q[0], q[1]) < 36 && EXITS.some((e) => distToStreet(PLAN.streets.find((s) => s.id === e.street)!, q) <= 5));
+
 /** How far along a line a point lies (its nearest point's) */
 function alongPts(pts: Pt[], p: Pt) {
   let best = Infinity;
@@ -91,7 +97,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q) || exitWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 
@@ -115,7 +121,7 @@ test('between them the routes drive every street that goes anywhere, each way (a
   const drivenSide = (q: Pt, u: Pt) => [-1, 1].some((k) => driven([q[0] - u[1] * 1.7 * k, q[1] + u[0] * 1.7 * k], u));
   let checked = 0;
   // (Sunridge's cul-de-sacs go nowhere: no traffic down them, as Crestmont's spurs)
-  for (const s of roads.filter((s) => s.kind !== 'slip' && !s.id.startsWith('sun-court')))
+  for (const s of roads.filter((s) => !s.id.startsWith('sun-court')))
     for (const lane of lanePaths(s)) {
       const pts = lane.dir === 1 ? lane.pts : [...lane.pts].reverse();
       const street = { ...s, pts };
@@ -158,14 +164,16 @@ test('between them the routes drive every street that goes anywhere, each way (a
   assert.ok(checked > 500);
 });
 
-test('the highway all the way round, both ways, in both lanes, up on its deck: no stop on the way round (docs/highway-plan.md Phase 2)', () => {
+test('the highway all the way round, both ways, in both lanes, up on its deck: no lights on the way round (docs/highway-plan.md Phases 2 and 3)', () => {
   const hw = PLAN.streets.find((s) => s.kind === 'highway')!;
   // (all along it: its points every half tile, not only its corners, which a straight run across town would hide)
   const round = ROUTES.filter((r) => points(r, 2).every(({ at: p }) => Math.abs(fromHighway(p[0], p[1])) < HIGHWAY_HALF));
   assert.equal(round.length, RING_ROUTES);
   assert.deepEqual(round, ROUTES.slice(0, RING_ROUTES));
   for (const r of round) assert.ok(r.deck && Math.abs(r.len - streetLength(hw)) < 40, `${r.len} round the highway`);
-  for (const r of round) assert.equal(r.stops.length, 0);
+  // (their only stops are where the exits' ramps leave or join the deck: unlit merges, docs/highway-plan.md Phase 3)
+  for (const r of round) assert.ok(r.stops.every((s) => s.j.merge && !s.j.lit));
+  assert.ok(round.some((r) => r.stops.length > 0), 'the outer lanes pass the merges');
   // ...and nothing else on the deck
   assert.ok(ROUTES.slice(RING_ROUTES).every((r) => !r.deck));
 });

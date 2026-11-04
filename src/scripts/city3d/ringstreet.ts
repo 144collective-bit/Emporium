@@ -12,7 +12,7 @@
  * mouths, the metro's door and pillars, and anything solid.
  */
 import { CORE_ROADS, EW_ROADS, MEDIAN, NS_ROADS } from './layout';
-import { PLAN, distToStreet, onSlab, type Pt, type Street } from './streetplan';
+import { PLAN, distToStreet, onSlab, type Pt, type Street, raised } from './streetplan';
 import { SOLIDS } from './solids';
 import { BUS_STOPS } from './transit';
 import { ALLEYS } from './downtown';
@@ -56,7 +56,7 @@ export const JUNCTION_CLEAR = 5.5;
 const crossingsOn = (s: Street) => PLAN.crossings.filter((c) => c.streets.includes(s.id)).map((c) => c.at);
 const point = (sd: Side, p: number, off: number): Pt => (sd.alongX ? [p, sd.c + off] : [sd.c + off, p]);
 /** Within `m` of any street but this one (a diagonal's mouth, a cross street) */
-const onOtherStreet = (sd: Side, q: Pt, m: number) => PLAN.streets.some((s) => s !== sd.street && s.kind !== 'highway' && distToStreet(s, q) < s.half + m);
+const onOtherStreet = (sd: Side, q: Pt, m: number) => PLAN.streets.some((s) => s !== sd.street && !raised(s) && distToStreet(s, q) < s.half + m);
 const inBox = (r: readonly number[], q: Pt, m: number) => q[0] > r[0] - m && q[0] < r[2] + m && q[1] > r[1] - m && q[1] < r[3] + m;
 const solidAt = (q: Pt, m: number) => SOLIDS.some((b) => inBox(b, q, m));
 const metroDoors: Pt[] = STATIONS.map((s) => [s.door.x, s.door.z] as Pt);
@@ -280,7 +280,7 @@ export const STRIP_TREES: [number, number, number][] = (() => {
   for (let k = 0; k <= n; k++) {
     const q: Pt = [STRIP_X, z0 + ((z1 - z0) * k) / n];
     if (onSlab(PLAN, q) || [-1.5, 0, 1.5].some((d) => vergeY(q[0], q[1] + d) > 0.005)) continue;
-    if (solidAt(q, 1) || PLAN.streets.some((s) => s.kind !== 'highway' && distToStreet(s, q) < s.half + 0.8)) continue;
+    if (solidAt(q, 1) || PLAN.streets.some((s) => !raised(s) && distToStreet(s, q) < s.half + 0.8)) continue;
     // (a lamp beside it moves it along a little rather than losing it)
     const near = lamps.find((l) => Math.hypot(l[0] - q[0], l[1] - q[1]) < 2.2);
     if (near) q[1] = near[1] + Math.sign(q[1] - near[1] || 1) * 2.4;

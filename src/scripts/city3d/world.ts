@@ -366,7 +366,7 @@ export const puddleMat = new THREE.MeshBasicMaterial({
 });
 
 /**
- * Where a street of The Trenches (trenches.ts), Uptown (uptown.ts) or the Docks (docks.ts), meets road `i` (an east-west
+ * Where a street of The Trenches (trenches.ts), a ramp of the raised highway (viaduct.ts), Uptown (uptown.ts) or the Docks (docks.ts), meets road `i` (an east-west
  * road's x, a north-south road's z), each widened to the asphalt of the road that meets it: gaps in that road's median
  * and lines (and where Uptown's axis crosses it on foot, for its zebra)
  */
@@ -378,7 +378,7 @@ function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   // (an east-west road past the Strip is its east piece, `ew<i>e`: layout.ts STRIP_GAP)
   const mine = (id: string) => id === road || id === `${road}e`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.some(mine) && c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('sy-') || id.startsWith('strip-') || id.startsWith('sun-')))
+    .filter((c) => c.streets.some(mine) && c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('sy-') || id.startsWith('strip-') || id.startsWith('sun-') || id.startsWith('ramp-')))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       const across = (axis === 'ew' ? EW_ROADS : NS_ROADS)[i].half;

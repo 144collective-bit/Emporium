@@ -16,7 +16,7 @@
  * `strength`, so the open land between districts carries a little of both.
  */
 import { COVER, type Cover } from './palette';
-import { PLAN, type Pt } from './streetplan';
+import { PLAN, type Pt, raised } from './streetplan';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { RIVER } from './layout';
 import { TOWN_BOX, noise } from './landuse';
@@ -105,7 +105,7 @@ const SKY: Rect = [-1e5, -1e5, 1e5, 1e5];
 /** Round what, in which cover, how far and how much; later ones over earlier ones */
 export const INFLUENCES: Influence[] = [
   // Every street's verge, worn a little (the highway's, drier and wider)
-  ...PLAN.streets.filter((s) => s.kind !== 'highway').map((s) => verge(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half, 'worn', 4, 0.35)),
+  ...PLAN.streets.filter((s) => !raised(s)).map((s) => verge(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half, 'worn', 4, 0.35)),
   { id: 'highway', cover: 'dryGrass', reach: 9, strength: 0.6, box: SKY, dist: (x, z) => Math.max(0, fromHighway(x, z) - HIGHWAY_HALF) },
   // The town, the park, Uptown, the mall, the Neon Mile, the stadium and the kart park: lawn round them
   around('town', TOWN_BOX, 'lawn', 12, 0.45),

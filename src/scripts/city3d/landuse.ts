@@ -19,7 +19,7 @@
  */
 import { RAMPS, RAMP_CLEAR, RAMP_HALF } from './viaduct';
 import { EXT, LANE, RIVER } from './layout';
-import { PLAN, type Pt } from './streetplan';
+import { PLAN, type Pt, raised } from './streetplan';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { MALL_AREA } from './mall';
 import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
@@ -131,7 +131,7 @@ export const KEEPS: Keep[] = [
   { id: 'highway', highway: true, box: WORLD, hit: (x, z, w) => fromHighway(x, z) < HIGHWAY_HALF + HIGHWAY_VERGE + w },
   // ...and every street of the plan, its slip lanes too (the arterials out to the world's edge among them)
   // (the arterials, `ns`/`ew`, were the only streets out of town when the densities were measured)
-  ...PLAN.streets.filter((s) => s.kind !== 'highway').flatMap((s) => line(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half + STREET_VERGE, s.kind === 'slip', !/^(ns|ew)\d/.test(s.id))),
+  ...PLAN.streets.filter((s) => !raised(s)).flatMap((s) => line(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half + STREET_VERGE, false, !/^(ns|ew)\d/.test(s.id))),
   // The town (inside the bends, the river and its banks) and the bends themselves (outer.ts)
   shaped('town', grow(TOWN_BOX, BEND_REACH), 1.2, (x, z, m) => inTown([x, z], m)),
   // The shopping plaza, the mall, its loop and car parks, and Uptown North (mall.ts)

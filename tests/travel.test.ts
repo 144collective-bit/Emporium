@@ -9,7 +9,7 @@ import { PLACES, PLACE_IDS, SEEN_R, seen } from '../src/scripts/city3d/places';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { RIVER, STRIP_BLVD, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { cleanSave, newSave, visit } from '../src/scripts/city3d/tycoon';
-import { pathBetween, pointOn } from '../src/scripts/city3d/routes';
+import { pathBetween, pointOn, rideTime } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
@@ -59,8 +59,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       }
       // It ends at the road nearest the place (a lane's width or so from it)
       const end = r!.pts[r!.pts.length - 1];
-      // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street)
-      const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
+      // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street, nor the raised highway and its ramps)
+      const nearest = Math.min(...roads.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
       // (to a Neon Mile resort or the Sphere a taxi may stop on the boulevard's far kerb, the planted median between, by the way it
       // comes: no U-turns; the resorts' own drives come with the limos, docs/strip-plan.md Phase 5)
       const across = RESORTS.some((r) => r.id === b.id) || b.id === 'sphere' ? STRIP_BLVD.half : 0;
@@ -84,6 +84,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // Phase 1b: from the stadium to Crestmont's civic hall about 63 s, to its overlook about 85 s)
       // (and since its Phase 2 the ring highway is up on its viaduct, its exits to come in Phase 3: a taxi goes the
       // long way round through town, from the stadium to the airport's metro station about 77 s)
-      assert.ok(r!.len / TAXI_SPEED < Math.min(most, 66 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (since Phase 3 by its exits, quicker up there: routes.ts rideTime, HIGHWAY_PACE)
+      const time = rideTime(r!, 0, TAXI_SPEED);
+      assert.ok(time < Math.min(most, 66 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${time.toFixed(0)} s`);
     }
 });

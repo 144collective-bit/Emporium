@@ -38,6 +38,7 @@ import { INTERIORS } from './carinside';
 import { carLights, circles, gearOf, motorOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
 import { blinkOn } from './traffic';
 import { DECK_WALLS, departuresSurface } from './airfield';
+import { viaWallsNear } from './viaground';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import type { Bike } from './bikes';
@@ -292,11 +293,11 @@ export function createDrive(d: DriveDeps) {
 
   /** Things to bump softly: nearby traffic (two circles each) and people */
   const soft: { x: number; z: number; r: number }[] = [];
-  function gatherSoft(s: CarState) {
+  function gatherSoft(s: CarState, y: number) {
     soft.length = 0;
     for (const v of bodies.cars) {
-      // (not the ring highway's traffic up on its deck overhead)
-      if (Math.abs(v.x - s.x) > 8 || Math.abs(v.z - s.z) > 8 || v.y > 2) continue;
+      // (only what's at your height: the raised highway's traffic and what's under it never meet)
+      if (Math.abs(v.x - s.x) > 8 || Math.abs(v.z - s.z) > 8 || Math.abs(v.y - y) > 1.5) continue;
       const w = v.w * 0.5;
       const reach = v.len / 2 - w;
       const fx = Math.cos(v.yaw);
@@ -304,7 +305,7 @@ export function createDrive(d: DriveDeps) {
       for (const o of [-reach, reach]) soft.push({ x: v.x + fx * o, z: v.z + fz * o, r: w });
     }
     for (const p of bodies.people) {
-      if (Math.abs(p.x - s.x) > 5 || Math.abs(p.z - s.z) > 5) continue;
+      if (y > 1 || Math.abs(p.x - s.x) > 5 || Math.abs(p.z - s.z) > 5) continue;
       soft.push({ x: p.x, z: p.z, r: 0.28 });
     }
     return soft;
@@ -321,6 +322,10 @@ export function createDrive(d: DriveDeps) {
     /** Your car's own state, out of the garage (driving or parked); null while it's on the turntable */
     get carState() {
       return car?.state ?? null;
+    },
+    /** How high what you're in is (up on the raised highway's deck or a ramp, viaground.ts; 0 when nothing's out) */
+    get height() {
+      return out?.y ?? 0;
     },
     /** Driving the car (not the kart)? */
     get inCar() {
@@ -544,10 +549,12 @@ export function createDrive(d: DriveDeps) {
       const boxes = v.y > 0.5 ? near.filter((b) => b[4] > v.y + 0.2) : near;
       // Up on the airport's departures deck or its ramps, its parapets (down below they'd be walls in the open)
       if (v.y > 0.5 && departuresSurface(s.x, s.z) !== null) boxes.push(...DECK_WALLS);
+      // ...and the raised highway's: its ramps' sides, and its parapets when it's up there (viaground.ts)
+      viaWallsNear(s.x, s.z, reachOf(s), v.y, boxes);
       if (frozen) inp = { throttle: 0, steer: 0, handbrake: true };
       const px = s.x;
       const pz = s.z;
-      const hit = stepCar(s, inp, T, Math.min(dt, 1 / 20), { boxes, soft: gatherSoft(s) }, d.bounds);
+      const hit = stepCar(s, inp, T, Math.min(dt, 1 / 20), { boxes, soft: gatherSoft(s, v.y), up: v.y > 1 }, d.bounds);
       const moved = Math.hypot(s.x - px, s.z - pz);
       clock += dt;
       if (hit > 1.2) {

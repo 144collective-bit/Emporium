@@ -41,9 +41,9 @@ test('well outside the town, and clear of the kart park north of it and the airp
       for (let z = r[1]; z <= r[3]; z += 2) assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 4, `the airport at ${x}, ${z}`);
 });
 
-test('raised: nothing meets it at street level, and every arterial passes under it where it crossed it', () => {
-  assert.equal(PLAN.crossings.filter((c) => c.streets.includes('highway')).length, 0);
-  assert.equal(PLAN.streets.filter((s) => s.kind === 'slip').length, 0);
+test('raised: nothing meets it at street level but its ramps, and every arterial passes under it where it crossed it', () => {
+  // (but its ramps, onto its deck: docs/highway-plan.md Phase 3)
+  assert.ok(PLAN.crossings.filter((c) => c.streets.includes('highway')).every((c) => c.streets.some((id) => id.startsWith('ramp-'))));
   // (but the short north-south streets stop at the Parkway: they never reach it, docs/mall-plan.md)
   assert.equal(RING_MEETS.length, (NS_ROADS.length + EW_ROADS.length) * 2 - Object.keys(SHORT_NS).length);
   for (const m of RING_MEETS) {

@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { CARS, createCar } from './cars';
 import { PAL, fx, glowMat } from './kit';
-import { SPOTS, lightState, pathBetween, pointOn, type Route } from './routes';
+import { HIGHWAY_PACE, SPOTS, climbOn, heightOn, lightState, rideTime, pathBetween, pointOn, type Route } from './routes';
 import { bodies, stoppers } from './life';
 import { deckSlope, deckY, onHarbour } from './harbour';
 import { departuresRoadY, departuresSlope } from './airfield';
@@ -104,7 +104,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
   let dest: Place | null = null;
   let leaveT = 0;
   const pos = new THREE.Vector3();
-  const stop_ = { x: 0, z: 0, r: 1.2, on: false };
+  const stop_ = { x: 0, z: 0, y: 0, r: 1.2, on: false };
   stoppers.push(stop_);
   const fwd = new THREE.Vector2(1, 0);
   // The chase camera's spot and what it looks at, eased
@@ -131,17 +131,22 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     // (and up and down Crestmont's hill roads: terrain.ts)
     const harbour = onHarbour(o.at[0], o.at[1]);
     const hill = onHills(o.at[0], o.at[1]);
-    const hb = hill ? heightAt(o.at[0], o.at[1]) : harbour ? deckY(o.at[1]) : departuresRoadY(o.at[0], o.at[1]);
+    // (and up the raised highway's ramps and along its deck: the route's own height, routes.ts heightOn)
+    const up = heightOn(route, Math.min(p, route.len), seg);
+    const hb = up > 0.02 ? up : hill ? heightAt(o.at[0], o.at[1]) : harbour ? deckY(o.at[1]) : departuresRoadY(o.at[0], o.at[1]);
     pos.set(o.at[0], ROAD_Y + hb, o.at[1]);
+    stop_.y = pos.y;
     fwd.set(o.dir[0], o.dir[1]);
     car.group.position.copy(pos);
-    const pitch = hill ? Math.atan(riseAlong(o.at[0], o.at[1], o.dir[0], o.dir[1])) : harbour ? Math.atan(o.dir[1] * deckSlope(o.at[1])) : Math.atan(o.dir[0] * departuresSlope(o.at[0], o.at[1]));
+    const pitch =
+      up > 0.02 ? Math.atan(climbOn(route, Math.min(p, route.len), seg)) : hill ? Math.atan(riseAlong(o.at[0], o.at[1], o.dir[0], o.dir[1])) : harbour ? Math.atan(o.dir[1] * deckSlope(o.at[1])) : Math.atan(o.dir[0] * departuresSlope(o.at[0], o.at[1]));
     car.group.rotation.set(0, Math.atan2(-o.dir[1], o.dir[0]), pitch, 'YXZ');
   }
   /** Drive on along the route, for the lights and the traffic ahead, easing to a stop at its end */
   function drive(dt: number, t: number) {
     if (!route || !car) return;
-    let target = SPEED;
+    // (quicker up on the raised highway and its ramps: no lights, a faster road, routes.ts HIGHWAY_PACE)
+    let target = heightOn(route, Math.min(p, route.len), seg) > 0.05 ? SPEED / HIGHWAY_PACE : SPEED;
     // Stop at its end
     target = Math.min(target, Math.sqrt(Math.max(0, 2 * BRAKE * 0.8 * (route.len - p))));
     // Red lights (and late yellows) at the stop line
@@ -153,8 +158,8 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     }
     // Whoever's ahead going the same way
     for (const o of bodies.cars) {
-      // (not the ring highway's traffic up on its deck overhead)
-      if (o.y > 2) continue;
+      // (only what's at its height: up on the raised highway, or down under it)
+      if (Math.abs(o.y - pos.y) > 1.5) continue;
       const ox = Math.cos(o.yaw);
       const oz = -Math.sin(o.yaw);
       if (ox * fwd.x + oz * fwd.y < 0.5) continue;
@@ -192,7 +197,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
       if (state === 'riding') {
         drive(dt, t);
         chase(dt);
-        const left = route ? Math.max(0, (route.len - p) / SPEED) : 0;
+        const left = route ? rideTime(route, Math.min(p, route.len), SPEED) : 0;
         text.textContent = `Taxi to ${dest ? d.name(dest) : ''} · ${Math.ceil(left)} s`;
         if (route && p >= route.len - 0.05 && v < 0.2) finish();
       }
@@ -216,7 +221,8 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     const pick = there.pts[0];
     const from = SPOTS.filter((s) => {
       const dd = Math.hypot(s.x - pick[0], s.z - pick[1]);
-      return dd > FROM[0] && dd < FROM[1];
+      // (at street level: it sets off from a kerb)
+      return dd > FROM[0] && dd < FROM[1] && s.y < 0.05;
     }).sort((a, b) => Math.hypot(a.x - pick[0], a.z - pick[1]) - Math.hypot(b.x - pick[0], b.z - pick[1]));
     let coming: Route | null = null;
     for (const s of from.slice(0, 6)) {

@@ -1495,6 +1495,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       taxis.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
+      walker.y = walk.position.y;
       // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
       walker.r = walk.driving || walk.riding ? 0.8 : walk.flying ? 1.6 : 0;
       if (walk.airborne) walker.x = walker.z = 1e6;

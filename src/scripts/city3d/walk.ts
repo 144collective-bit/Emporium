@@ -85,6 +85,7 @@ import { SLAB, type Tick } from './world';
 import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE } from './stadium';
+import { WALK_UNDER, viaductSurface, viaductY, walkOff } from './viaground';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
@@ -698,6 +699,9 @@ export function createWalk(d: WalkDeps) {
     // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
     const hb = harbourY(x, z);
     if (hb !== null) return Math.max(slab, hb + 0.035);
+    // (the raised highway's deck and its ramps, when `yNow` is up there: a car's, a bike's; viaground.ts)
+    const via = viaductY(x, z, yNow);
+    if (via !== null) return Math.max(slab, via + 0.035);
     // (the airport's departures deck and its ramps, when `yNow` is up there: the arrivals level is under it; airfield.ts)
     const dep = departuresY(x, z, yNow);
     if (dep !== null) return Math.max(slab, dep + 0.035);
@@ -733,6 +737,8 @@ export function createWalk(d: WalkDeps) {
     // The airport's departures deck (airfield.ts): up there only its parapets, the hall's face and your car stop you
     if (departuresY(x, z, y, RADIUS) !== null) return drive.blocks(x, z, RADIUS);
     if (departuresWall(x, z, y, RADIUS)) return true;
+    // The raised highway's ramps (viaground.ts): walked onto no further than their foot, walked under where they're high
+    if (y < WALK_UNDER && walkOff(x, z, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
@@ -1284,6 +1290,8 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   }
   function getOut() {
+    // (not up on the raised highway or its ramps: nowhere to stand there, viaground.ts)
+    if (drive.height > 1 && viaductSurface(pos.x, pos.z, -1) !== null) return d.game.toast('Not up here: off the highway first.', 2500);
     const out = drive.exit();
     if (!out) return;
     standAt(out);
@@ -2139,7 +2147,7 @@ export function createWalk(d: WalkDeps) {
       d.game.commit();
     }
     const s = drive.state!;
-    pos.set(s.x, groundAt(s.x, s.z), s.z);
+    pos.set(s.x, groundAt(s.x, s.z, drive.height), s.z);
     speedNow = Math.hypot(s.vx, s.vz);
     hero.g.visible = hero.ring.visible = false;
     // The rest of the city carries on (drones, dummies)
@@ -2987,7 +2995,8 @@ export function createWalk(d: WalkDeps) {
       let best: { x: number; z: number; yaw: number; d: number } | null = null;
       for (const sp of SPOTS) {
         const d = Math.hypot(sp.x - pos.x, sp.z - pos.z);
-        if (d > 45 || d < 3 || (best && d >= best.d)) continue;
+        // (at street level: never up on the raised highway or a ramp)
+        if (d > 45 || d < 3 || sp.y > 0.05 || (best && d >= best.d)) continue;
         if (bodies.cars.some((c) => Math.hypot(c.x - sp.x, c.z - sp.z) < 7)) continue;
         const dir = pointOn(ROUTES[sp.r], sp.p, 0).dir;
         best = { x: sp.x, z: sp.z, yaw: Math.atan2(-dir[1], dir[0]), d };

@@ -103,7 +103,7 @@ each with the owner's sign-off; keep this file up to date.
   7.4 over the crossing, so Kart Park's station (26 from it) and the Docks'
   (43, across exit 7's ramps) are raised with it.
 
-## Phase 2: the viaduct drawn and the ring raised (built, waiting on the owner's sign-off)
+## Phase 2: the viaduct drawn and the ring raised (built, signed off)
 
 - **Nothing meets it at street level:** the street plan keeps the highway as
   a street (kind `highway`, a loop) with no crossing and no slip lane
@@ -154,6 +154,51 @@ each with the owner's sign-off; keep this file up to date.
 - The snapshot was rewritten on purpose: the slip lanes gone, the park's
   north gate added, the footbridge gone.
 
+## Phase 3: the exits (built, waiting on the owner's sign-off)
+
+- **In the street plan:** every ramp of `RAMPS` is a one-way street of kind
+  `ramp` (`ramp-exit<n>-<in|out>-<shape>`, its heights in `ys`), the old
+  `slip` kind gone; where it leaves or joins the deck's outer lane a
+  crossing with the highway (`-deck`, unlit), at its foot on its arterial a
+  lit one (`-foot`). `raised()` (streetplan.ts) is the highway and its ramps:
+  what's measured at street level (the verges, the ground's worn edges, the
+  outskirts' trees' streets, the ring avenue's lamps, the crossings people
+  walk, the piers' clearances) leaves them out. The arterials' medians and
+  lines break at the feet (world.ts `highwayGaps()`).
+- **The traffic** (routes.ts): a ramp meeting the deck is a `merge` junction,
+  and a car onto or off a ramp there turns `merge` (straight on, no corner,
+  in the outer lane either side: `turnOf()`, `joinLegs()`); the generator
+  gives up on a stretch it can't drive a loop from after a few tries (the
+  arterials past an off-ramp's foot out to the world's edge). Every route
+  point carries its height (`heightsOf()`: on a ramp and running along it
+  its height there, on the deck and running along the ring the deck's, else
+  0; `Route.ys`, packed and baked with the route, `heightOn()`,
+  `climbOn()`), thinned in three dimensions. life.ts draws each car at its
+  route's height and pitched on the climb, and cars only follow, stop for
+  or bump what's at their height (`walker.y`, `stoppers`' `y`, `bodies.cars`'
+  `y`). `SPOTS` carry their height: Bring my car and a taxi's start keep to
+  the street.
+- **Taxis** (`pathBetween()`): the quickest drive, the raised roads costing
+  `HIGHWAY_PACE` (0.55) a tile, so a taxi takes the highway where it's
+  quicker (out past Uptown round to the stadium); never to a stop on it
+  (`project()` leaves the raised roads out). The taxi rides its route's
+  height.
+- **Your car and bike** (`viaground.ts`, DOM-free, tested in
+  `tests/viaduct.test.ts`): `viaductSurface()` / `viaductY()` (the deck and
+  the ramps as ground when you're up there or within `VIA_STEP` of it,
+  walk.ts `groundAt()`), `VIA_WALLS` (`viaWallsNear()`: the ramps' sides
+  always, the deck's parapets only for a car up there, open where a ramp
+  tapers in, `DECK_GAPS` / `deckGap()`), drive-sim.ts's `up` (the river's,
+  lake's and basin's walls are below); no getting out up there.
+- **Walking kept off:** `walkOff()` stops a walker at a ramp's foot (where it's
+  over `WALK_OFF` and under `WALK_UNDER`: higher, you walk under it).
+- **Drawn** by viaduct3d.ts: each ramp in pieces (`rampSegs()` says where its
+  parapets stand): its asphalt (a hair over the deck's where it tapers in),
+  edge lines, the concrete body down to its underside on piers
+  (`RAMP_PIERS`, `RAMP_PIER_SOLIDS` in `SOLIDS`) where it's high and a
+  filled bank where it's low, the deck's parapet broken over each taper.
+- Signs, gantries and exit numbers come in Phase 4.
+
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
@@ -161,14 +206,13 @@ each with the owner's sign-off; keep this file up to date.
    in the table above (the snapshot rewritten on purpose: Westlake Park's
    block and south-west gate, the stadium's road, loop and block), and the
    test that every ramp keeps clear.
-2. **The viaduct drawn and the ring raised** (above, built, waiting on the
-   owner's sign-off): the deck, piers, parapets,
+2. **The viaduct drawn and the ring raised** (above, built, signed off): the deck, piers, parapets,
    median barrier, lamps and joints; the street-level asphalt, median,
    lamps, junctions and slip lanes taken out (every arterial now passes
    under); the ring's own traffic up on the deck; the metro's rises (its
    height profile, the raised stations); the stadium's footbridge retired
    (a zebra on Stadium Road); Lot 9's tunnel kept, its ends under the deck.
-3. **The exits:** the ramps and their terminals in the street plan, routes
+3. **The exits** (above, built, waiting on the owner's sign-off): the ramps and their terminals in the street plan, routes
    with heights, merging and the lights at the ramps' feet; taxis; your car
    and bike up the ramps; walking kept off.
 4. **Signs and the look:** gantries and exit numbers (one sign atlas, fixed

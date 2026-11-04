@@ -86,7 +86,8 @@ export interface Billboard {
 const turn = (n: Pt, a: number): Pt => [n[0] * Math.cos(a) - n[1] * Math.sin(a), n[0] * Math.sin(a) + n[1] * Math.cos(a)];
 export const BILLBOARDS: Billboard[] = [
   // East of Kiln Lane, facing the highway's east side
-  { id: 'kiln', at: [266.6, 214], face: turn([1, 0], 0.42), copy: 0 },
+  // (in from exit 4's slip ramp beside the deck, docs/highway-plan.md Phase 3)
+  { id: 'kiln', at: [261.2, 214], face: turn([1, 0], 0.42), copy: 0 },
   // The south band, on the inside of the highway's south-east bend
   { id: 'bend', at: [205 + 61.4 * Math.SQRT1_2, 250 + 61.4 * Math.SQRT1_2], face: turn([Math.SQRT1_2, Math.SQRT1_2], 0.42), copy: 1 },
   // Sunridge's fringe, facing the highway's north side (squarer: the wash is close behind it)

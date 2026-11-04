@@ -203,8 +203,9 @@ it and has been retired completely. Build only on what's here.
   (`HIGHWAY_HALF`); `fromHighway()` / `insideHighway()` measure it
   exactly. In the street plan it's a street of kind `highway` (`loop`).
   Since docs/highway-plan.md Phase 2 it's raised on a viaduct all the way
-  round (below, The raised highway): no junction or slip lane at street
-  level, every arterial passing under it (`RING_MEETS`); its two river
+  round (below, The raised highway): no junction at street level, every
+  arterial passing under it (`RING_MEETS`), onto it and off it only by its
+  exits' ramps (Phase 3); its two river
   spans are overhead (`riverBridges()` lists them, `riverCrossings()`
   doesn't: the river walls close under them). The outskirts' trees keep
   off it (`treeSpot()`).
@@ -231,7 +232,7 @@ it and has been retired completely. Build only on what's here.
   - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - **River life** (river plan step 4, the owner's picks: more boats, the river bus, boating yourself; all three built). Everything on the water keeps to a line of its own, a function of the clock, and the tests hold each clear of everything else there (`tests/water.ts`: the piers, decks, moored boats and landings). 4a, more boats: two traffic boats to a lane and the police launch in the middle one (life.ts), and `riverlife.ts` (DOM-free, tested in `tests/riverlife.test.ts`): the cruise boat (`CRUISE`, round the town's reach), the rowing eight (`CREW`) and the dinghies out west (`DINGHIES`), drawn by `riverlife3d.ts`, a district loaded as you approach the river (`LAZY_DISTRICTS` id `river`). The highway's bridges' piers stand between the lanes (`BRIDGE_PIERS` in waterfront.ts). 4b, the river bus (below, under Getting about). 4c, boating yourself (below, after Driving your car).
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway, every plan street and slip lane, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway and its ramps, every plan street, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 1,090 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: since Phase 10 the world reaches past it on every side).
@@ -1477,8 +1478,23 @@ it and has been retired completely. Build only on what's here.
   (metro.ts `trackY()`, `PLATEAUS`, `HIGH_Y` 7.4 over `RISE`; Kart Park,
   Southbank Docks and the Airport raised with it, its pillars clear of the
   ramps; metro3d.ts draws every piece at its height, the train pitched on
-  the climbs); the stadium's footbridge retired (above). Until Phase 3's
-  exits the ring is out of reach from the ground.
+  the climbs); the stadium's footbridge retired (above). Phase 3 (the
+  exits) is built: every ramp a one-way street of kind `ramp` in the plan
+  (`ys` its heights; a `-deck` merge crossing with the highway, unlit, and a
+  lit `-foot` on its arterial; `raised()` in streetplan.ts is what's off the
+  ground, left out of what's measured at street level); routes.ts's `merge`
+  turn (straight on in the outer lane, `turnOf()`), every route point's
+  height (`heightsOf()`, `Route.ys` baked, `heightOn()` / `climbOn()`: life.ts
+  and taxi.ts draw cars there, and cars only meet what's at their height),
+  taxis the quickest way (`HIGHWAY_PACE`), never stopping up there;
+  `viaground.ts` (DOM-free): the deck and ramps as ground by height
+  (`viaductY()` in walk.ts's `groundAt()`), their walls (`viaWallsNear()`:
+  the ramps' sides always, the parapets only for a car up there, open at each
+  ramp's taper, `deckGap()`), walking stopped at a ramp's foot (`walkOff()`),
+  the ramps' piers (`RAMP_PIER_SOLIDS`); drive-sim.ts's `up` skips the
+  river's walls under the deck; no getting out up there; viaduct3d.ts draws
+  the ramps (`rampSegs()`: asphalt, edge lines, parapets, on piers where high,
+  a filled bank where low).
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
@@ -4343,7 +4359,7 @@ it and has been retired completely. Build only on what's here.
   their walks in outerdress.ts), in the street plan as blocks of use
   `district`. The south bank has its own east-west road (`SOUTH_ROAD`, so
   roads are split into `NS_ROADS` / `EW_ROADS`), a lamp-lit riverside walk,
-  traffic over the east avenue's bridge and the highway's, and pedestrians
+  traffic over the east avenue's bridge and the raised highway's, and pedestrians
   round the south row.
 - A save that owned plots (v11 and older) gets back everything they cost
   and what was built on them when it loads (`plotRefund()` in tycoon.ts,

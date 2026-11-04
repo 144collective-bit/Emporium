@@ -139,7 +139,7 @@ test("an exit's ramps never run into each other", () => {
 
 test('the piers stand clear of every street that passes under, the metro, the boats and each other', () => {
   assert.ok(PIERS.length > 100);
-  const under = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'slip');
+  const under = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
   for (let i = 0; i < PIERS.length; i++) {
     const p = PIERS[i];
     assert.ok(fromHighway(p.at[0], p.at[1]) < 1e-6);
@@ -162,11 +162,14 @@ test('the piers stand clear of every street that passes under, the metro, the bo
 // among it since Phase 2: placed clear of the ramps)
 import { landMap, C, AREAS } from '../src/scripts/city3d/seams';
 import { SOLID_GRID } from '../src/scripts/city3d/solids';
+import { RAMP_PIER_SOLIDS } from '../src/scripts/city3d/viaground';
 
 test('every ramp keeps clear of the districts, the streets, the water and everything solid', () => {
   const m = landMap();
   const cell = (x: number, z: number) => m.get(Math.floor((x - m.x0) / 2), Math.floor((z - m.z0) / 2));
-  const under = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'slip');
+  // (the ramps are streets of their own since Phase 3, their piers solid)
+  const under = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
+  const piers = new Set(RAMP_PIER_SOLIDS.map((b) => b.join()));
   const hits: string[] = [];
   for (const r of RAMPS) {
     const e = EXITS.find((x) => x.n === r.exit)!;
@@ -183,7 +186,7 @@ test('every ramp keeps clear of the districts, the streets, the water and everyt
         else if (c === C.water) hits.push(`${r.id} in the water`);
         else if (r.ys[i] < DECK_Y) for (const s of under) if (s.id !== e.street && distToStreet(s, [x, z]) <= s.half) hits.push(`${r.id} on ${s.id}`);
         for (const b of SOLID_GRID.near(x, z, 0.1))
-          if (x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3] && b[4] > r.ys[i] - 0.5) hits.push(`${r.id} into a solid at ${b.slice(0, 4).map((v) => v.toFixed(1))}`);
+          if (x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3] && b[4] > r.ys[i] - 0.5 && !piers.has(b.join())) hits.push(`${r.id} into a solid at ${b.slice(0, 4).map((v) => v.toFixed(1))}`);
       }
     }
   }
@@ -229,14 +232,16 @@ test("the metro rises over the deck and the ramps with room for the tallest vehi
   }
 });
 
-test("the ring's traffic is up on the deck all the way round, and nothing at street level meets it", () => {
+test("the ring's traffic is up on the deck all the way round, and nothing at street level meets it but by the ramps", () => {
   for (let i = 0; i < ROUTES.length; i++) assert.equal(!!ROUTES[i].deck, i < RING_ROUTES);
   for (const r of ROUTES.slice(0, RING_ROUTES)) {
-    assert.equal(r.stops.length, 0);
+    // (its only stops are the ramps' merges, unlit)
+    assert.ok(r.stops.every((s) => s.j.merge && !s.j.lit));
     for (const p of r.pts) assert.ok(fromHighway(p[0], p[1]) < HIGHWAY_HALF);
+    assert.ok(r.ys!.every((y) => Math.abs(y - DECK_Y) < 1e-6));
   }
-  assert.equal(PLAN.crossings.filter((c) => c.streets.includes('highway')).length, 0);
-  assert.equal(PLAN.streets.filter((s) => s.kind === 'slip').length, 0);
+  // The highway meets only its ramps, each at its deck end
+  for (const c of PLAN.crossings.filter((c) => c.streets.includes('highway'))) assert.ok(c.id.startsWith('ramp-') && c.id.endsWith('-deck'), c.id);
 });
 
 test('the piers are solid, the deck is the camera\'s, its lamps on the median clear of the metro', () => {
@@ -253,4 +258,82 @@ test('the piers are solid, the deck is the camera\'s, its lamps on the median cl
     assert.ok(fromHighway(x, z) < 0.01 && Math.abs(y - DECK_Y) < 0.01);
     for (const t of Object.values(EL_TRACKS)) for (const q of t.pts) assert.ok(Math.hypot(q[0] - x, q[1] - z) > 5, 'a lamp under the metro');
   }
+});
+
+// Phase 3: the exits in the network. Every ramp a one-way street meeting the deck at a merge and its arterial at a lit
+// foot; driven by the traffic up and down it at its own height; the deck and the ramps the ground for a car up there,
+// their walls round it, and walked onto no further than a ramp's foot
+import { heightOn, pathBetween, pointOn as routeAt, JUNCTIONS } from '../src/scripts/city3d/routes';
+import { DECK_GAPS, RAMP_PIERS, VIA_STEP, WALK_OFF, deckGap, rampAt, viaWallsNear, viaductSurface, viaductY, walkOff } from '../src/scripts/city3d/viaground';
+
+test('every ramp is a one-way street in the plan, merging with the deck and meeting its arterial at a lit junction', () => {
+  for (const r of RAMPS) {
+    const s = PLAN.streets.find((t) => t.id === `ramp-${r.id}`)!;
+    assert.ok(s && s.kind === 'ramp' && s.oneway === 1 && s.lanes === 1 && s.ys!.length === s.pts.length);
+    const deck = JUNCTIONS.find((j) => j.streets.includes(s) && j.streets.some((t) => t.kind === 'highway'))!;
+    assert.ok(deck && deck.merge && !deck.lit, `${r.id} merges`);
+    const foot = JUNCTIONS.find((j) => j.streets.includes(s) && !j.merge)!;
+    assert.ok(foot && foot.lit && Math.hypot(foot.at[0] - r.terminal[0], foot.at[1] - r.terminal[1]) < 1e-6, `${r.id}'s foot`);
+  }
+});
+
+test('the traffic drives every ramp, each car at the ramp\'s height, and nothing off the ramps and the deck is raised', () => {
+  for (const r of RAMPS) {
+    const mid = r.pts[Math.floor(r.pts.length / 2)];
+    const want = r.ys[Math.floor(r.pts.length / 2)];
+    let found = false;
+    for (const route of ROUTES)
+      for (let p = 0; p < route.len && !found; p += 0.25) {
+        const q = routeAt(route, p, 0).at;
+        if (Math.hypot(q[0] - mid[0], q[1] - mid[1]) < 0.3) {
+          found = true;
+          assert.ok(Math.abs(heightOn(route, p) - want) < 0.15, `${r.id}: ${heightOn(route, p).toFixed(2)} for ${want.toFixed(2)}`);
+        }
+      }
+    assert.ok(found, `nobody drives ${r.id}`);
+  }
+  // Up off the ground only on a ramp or the deck (not on an arterial passing under it)
+  for (const route of ROUTES)
+    for (let p = 0; p < route.len; p += 2) {
+      const y = heightOn(route, p);
+      if (y < 0.05) continue;
+      const q = routeAt(route, p, 0).at;
+      const rp = rampAt(q[0], q[1]);
+      assert.ok(fromHighway(q[0], q[1]) < HIGHWAY_HALF + 0.2 || (rp && rp.d < RAMP_HALF + 0.6), `raised off the viaduct at ${q.map((v) => v.toFixed(1))}`);
+    }
+  // A taxi takes the highway where it's quicker: from out past Uptown round to the stadium
+  const r = pathBetween([-230, 0], [-4.5, -230]);
+  assert.ok(r && r.ys && r.ys.some((y) => y > DECK_Y - 0.01), 'a long taxi ride takes the highway');
+});
+
+test('up on the deck and the ramps a car drives on them; under them it stays on the ground; walking stops at a ramp\'s foot', () => {
+  // On the deck: its surface only from up there
+  const [dx, dz] = ringPoint(300, 2);
+  assert.equal(viaductY(dx, dz, DECK_Y), DECK_Y);
+  assert.equal(viaductY(dx, dz, 0.04), null);
+  assert.equal(viaductSurface(dx, dz), DECK_Y);
+  for (const r of RAMPS) {
+    // Up a ramp from its foot, step by step, never more than a step at a time
+    let y = 0.04;
+    for (let i = 0; i < r.pts.length; i++) {
+      const k = r.kind === 'on' ? i : r.pts.length - 1 - i;
+      const [x, z] = r.pts[k];
+      const g = viaductY(x, z, y);
+      if (g === null) {
+        assert.ok(r.ys[k] < VIA_STEP + 0.05, `${r.id}: off it at ${k}`);
+        continue;
+      }
+      assert.ok(g - y < VIA_STEP + 1e-6, `${r.id}: a step up of ${(g - y).toFixed(2)}`);
+      y = g;
+    }
+    assert.ok(Math.abs(y - DECK_Y) < 0.01, `${r.id} reaches the deck`);
+    // Walked onto no further than its foot
+    for (let k = 0; k < r.pts.length; k++) if (r.ys[k] > WALK_OFF + 0.05 && r.ys[k] < 2) assert.ok(walkOff(r.pts[k][0], r.pts[k][1]), `${r.id}: walked up at ${k}`);
+  }
+  // Walls: the ramps' sides for anyone, the deck's parapets only for a car up there, open where a ramp tapers in
+  const [px, pz] = ringPoint(300, HIGHWAY_HALF + 0.05);
+  assert.ok(viaWallsNear(px, pz, 1, DECK_Y).length > 0 && viaWallsNear(px, pz, 1, 0.04).length === 0);
+  assert.equal(DECK_GAPS.length, RAMPS.length);
+  for (const g of DECK_GAPS) assert.ok(g.s1 - g.s0 > 3 && g.s1 - g.s0 < 20 && deckGap(g.q, (g.s0 + g.s1) / 2));
+  assert.ok(RAMP_PIERS.length > 10);
 });
