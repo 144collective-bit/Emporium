@@ -508,3 +508,17 @@ gloves to pick and skin tones, all in one go.
   `gloveColor`, `tone`), cleaned by `cleanLook()` (older looks: the art's tone, bare hands), picked in the fitting
   room's Hands tab, shown to other players online. All free.
 - The boot went from 690.4 to 693.7 KB (of 700).
+
+### Each gun's grip (the owner's call: "add the per-gun grips too")
+
+- `fpgrip.ts` (tested in `tests/fpgrip.test.ts`, baked when the site is built) fits the first-person hands to each
+  gun's real shape: the gun as voxels round each hand (inside by ray parity, part by part), the hand pushed out
+  along its palm until the palm lies on the gun (the old placement had the right palm 1.5 cm inside the grip), his
+  right slid along the grip until the index reaches the trigger, then each finger and the thumb curled at its own
+  two joints (`posedHand()` in handmesh.ts) to touch the most of the gun with the least inside it. The index rests
+  just off the trigger and goes onto it for a moment with each shot. The SMG's left hand holds its vertical
+  foregrip (the right hand's hold, mirrored); on the Hand Cannon the left wraps over the right.
+- What didn't work first: closing fingers from open until they touched (they started inside the grip) and the
+  index "straight along the frame" (with the hand's angle a straight finger points out of the side of the gun).
+- The solve takes about 13 s at build time; the browser reads the result (the boot grew 1.4 KB, to 695.1).
+- Third person keeps the skeleton's one grip a hand (its three outer fingers share their bones).

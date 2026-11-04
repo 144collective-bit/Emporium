@@ -26,7 +26,10 @@ import type { WeaponId } from './combat-sim';
 import { PLAYER, figureLevel, type Outfit } from './character';
 import { GLOVE_COLOR } from './wardrobe';
 import type { GloveKind } from './handmesh';
-import { bakedHand } from './body';
+/** How long his index stays on the trigger after a shot (s) */
+const TRIGGER_HOLD = 0.16;
+import { gripCurl, posedHand, type Curl } from './handmesh';
+import { FP_HANDS, gripsOf, handMatrix, placeFor, type HandPlace } from './fpgrip';
 import type { FpGun } from './fpgun';
 
 const K = 8;
@@ -35,8 +38,6 @@ const S = 0.78;
 const SKIN = '#e8c39e';
 /** The fatigues' gloves (wardrobe.ts's soldier fingers) */
 const GLOVE = '#2b2a33';
-/** The hands' size against the body's (they're held up close, so a touch bigger reads better) */
-const FP_HAND = 1.15;
 /** The shirt cuff and the track top's stripes (a shade under white, like the body's) */
 const SHIRT = '#d4d1de';
 
@@ -100,29 +101,27 @@ const UP = new THREE.Vector3(0, 1, 0);
 const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
 
 /**
- * One of Degen's own hands (body.ts: palm, fingers and thumb), closed to
- * `grip` and turned so its wrist runs back up the forearm `dir` into the
- * sleeve and its knuckles lie along `along` (the pistol grip, the
- * handguard). `side` is the rig's: -1 his right hand, 1 his left.
+ * One of Degen's own hands (handmesh.ts), each finger curled its own way (`curl`: fpgrip.ts fits them to each gun),
+ * turned so its wrist runs back up the forearm into the sleeve and its knuckles lie along the grip or the
+ * handguard (`FP_HANDS`), with a glove of `glove` over it or none
  */
-function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vector3, size: number, at: THREE.Vector3) {
-  const z = along.clone().normalize();
-  const y = dir.clone().addScaledVector(z, -dir.dot(z)).normalize();
-  const x = new THREE.Vector3().crossVectors(y, z);
-  const m = new THREE.Matrix4().makeBasis(x, y, z).scale(new THREE.Vector3(size, size, size)).setPosition(at);
+function fpHand(place: HandPlace, curl: Curl, glove?: GloveKind) {
   // (the smooth hand at the figure's level: desktops' finer)
   const q = figureLevel() === 3 ? 3 : 2;
-  return (glove?: GloveKind) => bakedHand(side, grip, q, glove).applyMatrix4(m);
+  return posedHand(place.side, q, curl, glove).applyMatrix4(handMatrix(place));
 }
 
 /** The polish, once its chunk is in (the module's: one viewmodel at a time) */
 let fine: FpGun | null = null;
 
 /**
- * A forearm ending in a hand (its wrist at `at`, on `side`), reaching off along `dir`; `dress()` puts it in the
- * outfit's sleeve
+ * A forearm ending in a hand (placed by `place`: its wrist at `at`, on `side`, reaching off along `dir`); `dress()`
+ * puts it in the outfit's sleeve, `fit()` closes its fingers on a gun (and his right index on the trigger, `fire()`)
  */
-function arm(dir: THREE.Vector3, make: (glove?: GloveKind) => THREE.BufferGeometry, side: -1 | 1, at: THREE.Vector3) {
+function arm(home: HandPlace) {
+  let place = home;
+  let { dir, side, at } = place;
+  let worn0: Outfit = PLAYER;
   const g = new THREE.Group();
   const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
   const along = (geo: THREE.BufferGeometry, from: number) => {
@@ -131,31 +130,58 @@ function arm(dir: THREE.Vector3, make: (glove?: GloveKind) => THREE.BufferGeomet
     return geo;
   };
   const clothes = new THREE.Group();
-  const handMesh = new THREE.Mesh(make(), softPaint(SKIN));
-  // Gloves over the hand, each kind made the first time it's worn
-  const gloves = new Map<GloveKind, THREE.Mesh>();
-  g.add(clothes, handMesh);
+  // The grip it holds (and with the trigger pulled), and the hand and each glove for each, made as they're wanted
+  let grips: [Curl, Curl] = [gripCurl(0.7), gripCurl(0.7)];
+  let pulled = 0;
+  const made = new Map<string, THREE.BufferGeometry>();
+  const shape = (glove?: GloveKind) => {
+    const k = `${pulled}|${glove ?? ''}`;
+    let geo = made.get(k);
+    if (!geo) made.set(k, (geo = fpHand(place, grips[pulled], glove)));
+    return geo;
+  };
+  const handMesh = new THREE.Mesh(shape(), softPaint(SKIN));
+  const gloveMesh = new THREE.Mesh(new THREE.BufferGeometry(), softPaint(GLOVE_COLOR));
+  g.add(clothes, handMesh, gloveMesh);
+  let worn: GloveKind | undefined;
   /** The hand in his skin tone (the fatigues' gloves), and any gloves he wears over it */
   const hands = (o: Outfit) => {
     handMesh.material = softPaint(o.kind === 'soldier' ? GLOVE : (o.skin ?? SKIN));
-    const kind = o.kind === 'soldier' ? undefined : o.gloves;
-    for (const [k, m] of gloves) m.visible = k === kind;
-    if (kind) {
-      let m = gloves.get(kind);
-      if (!m) {
-        m = new THREE.Mesh(make(kind), softPaint(GLOVE_COLOR));
-        gloves.set(kind, m);
-        g.add(m);
-      }
-      m.material = softPaint(o.glove ?? GLOVE_COLOR);
-      m.visible = true;
-    }
+    worn = o.kind === 'soldier' ? undefined : o.gloves;
+    gloveMesh.material = softPaint(o.glove ?? GLOVE_COLOR);
+    shapes();
+  };
+  const shapes = () => {
+    handMesh.geometry = shape();
+    gloveMesh.visible = !!worn;
+    if (worn) gloveMesh.geometry = shape(worn);
     // (under gloves with fingers, nothing of the hand shows)
-    handMesh.visible = !kind || kind === 'fingerless';
+    handMesh.visible = !worn || worn === 'fingerless';
   };
   return {
     g,
+    /** Close the fingers on a gun: its grip, and the grip with the trigger pulled (the same for the left hand) */
+    fit(grip: Curl, trigger: Curl = grip, on: HandPlace = home) {
+      for (const geo of made.values()) geo.dispose();
+      made.clear();
+      grips = [grip, trigger];
+      if (on !== place) {
+        // (another way of holding: the sleeve up the new forearm)
+        place = on;
+        ({ dir, side, at } = place);
+        q.setFromUnitVectors(UP, dir.clone().normalize());
+        this.dress(worn0);
+      } else shapes();
+    },
+    /** His index onto the trigger, or back along the frame */
+    fire(on: boolean) {
+      const k = on ? 1 : 0;
+      if (k === pulled) return;
+      pulled = k;
+      shapes();
+    },
     dress(o: Outfit) {
+      worn0 = o;
       if (fine) {
         fine.dress(clothes, handMesh, o, side, at, dir);
         return hands(o);
@@ -231,16 +257,15 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
 
   // Hands, in the gun's own frame (barrel along +z, the gun's +x is the camera's left): his
   // right closed round the pistol grip (raked back), his left under the front, fingers up its side
-  const rightDir = new THREE.Vector3(-0.36, -0.72, -0.58);
-  const rightAt = new THREE.Vector3(-0.016, -0.045, -0.024);
-  const rightHand = fpHand(-1, 0.9, rightDir, new THREE.Vector3(0, Math.cos(0.3), Math.sin(0.3)), FP_HAND, rightAt);
-  const rightArm = arm(rightDir, rightHand, -1, rightAt);
+  // (fpgrip.ts's FP_HANDS: where they sit; each gun's grip closes the fingers on it and stands each hand off it)
+  const rightArm = arm(FP_HANDS.right);
   const right = rightArm.g;
-  const leftDir = new THREE.Vector3(0.6, -0.68, -0.42);
-  const leftAt = new THREE.Vector3(0.014, -0.036, 0);
-  const leftHand = fpHand(1, 0.55, leftDir, new THREE.Vector3(0, 0, 1), FP_HAND, leftAt);
-  const leftArm = arm(leftDir, leftHand, 1, leftAt);
+  const leftArm = arm(FP_HANDS.left);
   const left = leftArm.g;
+  /** Where the left hand sits on the gun in hand: its `fore`, stood off it as its grip says */
+  const leftHome = new THREE.Vector3();
+  /** How long his index stays on the trigger after a shot */
+  let triggerT = 0;
   let outfit: Outfit = PLAYER;
   rightArm.dress(outfit);
   leftArm.dress(outfit);
@@ -293,7 +318,12 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
     gun = buildGun(id, skinNow, { sight: true, mat: flat, detail: 2 });
     gun.group.rotation.y = Math.PI;
     gun.group.scale.setScalar(S);
-    left.position.copy(spec.fore);
+    const grip = gripsOf(id);
+    rightArm.fit(grip.right, { ...grip.right, fingers: [grip.trigger, ...grip.right.fingers.slice(1)] });
+    leftArm.fit(grip.left, grip.left, placeFor(id, 'left'));
+    right.position.set(...grip.rightOff);
+    leftHome.copy(spec.fore).add(new THREE.Vector3(...grip.leftOff));
+    left.position.copy(leftHome);
     flash.position.copy(spec.muzzle).add(new THREE.Vector3(0, 0, 0.07));
     gun.group.add(right, left, flash);
     shapeFlash();
@@ -348,11 +378,11 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
   const tmp = new THREE.Vector3();
   function reloadPose(r: number, shells?: number) {
     reloadAt(gun.id, r, rf, shells);
-    tmp.copy(spec.fore);
+    tmp.copy(leftHome);
     tmp.z += rf.slide;
     left.position.lerpVectors(tmp, tmp.copy(rf.at).add(rf.mag), rf.hand);
     left.position.addScaledVector(POUCH, rf.away);
-    if (rf.carried) gun.mag.position.copy(left.position).sub(spec.fore).sub(spec.magAt);
+    if (rf.carried) gun.mag.position.copy(left.position).sub(leftHome).sub(spec.magAt);
     else gun.mag.position.copy(rf.mag);
     gun.mag.rotation.z = rf.magRoll;
     gun.mag.visible = rf.magShown;
@@ -390,6 +420,8 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
       kickX += 0.055 * power;
       kickRoll += (Math.random() - 0.5) * 0.05;
       flashT = flashLife;
+      triggerT = TRIGGER_HOLD;
+      rightArm.fire(true);
       flash.rotation.z = Math.random() * Math.PI;
       flash.scale.setScalar(0.8 + Math.random() * 0.5);
       if (fine && cam && root.visible) fine.shot(gun.id, gun.group, cam);
@@ -485,6 +517,7 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
 
       flashT -= dt;
       flash.visible = flashT > 0;
+      if (triggerT > 0 && (triggerT -= dt) <= 0) rightArm.fire(false);
       if (flash.visible !== glowing) {
         gun.setGlow(flash.visible ? 0.6 : 0);
         glowing = flash.visible;

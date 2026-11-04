@@ -393,3 +393,121 @@ function pick(g: THREE.BufferGeometry, tris: number[]) {
   }
   return out;
 }
+
+/* ---------- Each finger its own curl (the first-person hands on each gun: fpgrip.ts) ---------- */
+
+/**
+ * How far each digit curls: the four fingers' [knuckle, middle joint] (radians, towards the palm) and the thumb's
+ * [fold across the palm, bend at its joint]
+ */
+export interface Curl {
+  fingers: [number, number][];
+  thumb: [number, number];
+}
+/** The skeleton's own curl for a hand closed to `grip` (skeleton.ts `poseSkeleton()`), as a Curl */
+export const gripCurl = (g: number): Curl => ({
+  fingers: HAND.fingers.map((_, i): [number, number] => (i === 0 ? [0.1 + 1.45 * g, 0.16 + 1.6 * g] : [0.18 + 1.45 * g, 0.24 + 1.6 * g])),
+  thumb: [g, 0.15 + 0.9 * g],
+});
+
+const SPREAD = [-0.07, -0.02, 0.04, 0.11];
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+/** About a line through `p` along `axis` by `a` */
+const turnAbout = (p: THREE.Vector3, q: THREE.Quaternion) =>
+  new THREE.Matrix4().makeTranslation(p.x, p.y, p.z).multiply(new THREE.Matrix4().makeRotationFromQuaternion(q)).multiply(new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z));
+
+/** Each of a hand's digits' two moves for a curl (part 1-4 the fingers, 5 the thumb), in the side's frame */
+export function digitMoves(side: -1 | 1, curl: Curl): [THREE.Matrix4, THREE.Matrix4][] {
+  const s = side;
+  const { knuckleY, fingers, mid, thumb } = HAND;
+  const q = new THREE.Quaternion();
+  const out = fingers.map((f, i): [THREE.Matrix4, THREE.Matrix4] => {
+    const [a1, a2] = curl.fingers[i];
+    const k = new THREE.Vector3(0, knuckleY, f.z);
+    const m1 = turnAbout(k, q.setFromAxisAngle(Z_AXIS, -s * a1));
+    // (its joint where this finger's is, along its spread)
+    const j = new THREE.Vector3(0, -f.len * mid, 0).applyAxisAngle(new THREE.Vector3(1, 0, 0), SPREAD[i]).add(k);
+    const m2 = m1.clone().multiply(turnAbout(j, q.setFromAxisAngle(Z_AXIS, -s * a2)));
+    return [m1, m2];
+  });
+  const [fold, bend] = curl.thumb;
+  const p = new THREE.Vector3(-s * thumb.x, thumb.y, thumb.z);
+  const rest = new THREE.Quaternion().setFromEuler(new THREE.Euler(THUMB_REST.x, 0, -s * THUMB_REST.z));
+  const inv = rest.clone().invert();
+  const t1 = rest.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(1.15 * fold, 0, -s * 0.5 * fold))).multiply(inv);
+  const m1 = turnAbout(p, t1);
+  const j = new THREE.Vector3(0, -thumb.len * thumb.mid, 0).applyQuaternion(rest).add(p);
+  const t2 = rest.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(bend, 0, -s * 0.2 * fold))).multiply(inv);
+  out.push([m1, m1.clone().multiply(turnAbout(j, t2))]);
+  return out;
+}
+
+/** Which of a digit's two moves a bone is (0 the hand and forearm: none) */
+const MOVE: Record<string, 0 | 1 | 2> = { idx1: 1, fin1: 1, thb1: 1, idx2: 2, fin2: 2, thb2: 2 };
+
+/** One part of a hand posed by its digit's moves (`j` 0 the palm, 1-4 the fingers, 5 the thumb): positions and normals */
+export function posePart(part: HandPart, moves: [THREE.Matrix4, THREE.Matrix4] | null, out = part.geo.clone()) {
+  const pos = out.attributes.position as THREE.BufferAttribute;
+  const nor = out.attributes.normal as THREE.BufferAttribute;
+  if (!moves) return out;
+  const src = part.geo.attributes.position as THREE.BufferAttribute;
+  const srcN = part.geo.attributes.normal as THREE.BufferAttribute;
+  const v = new THREE.Vector3();
+  const n = new THREE.Vector3();
+  const p = new THREE.Vector3();
+  const pn = new THREE.Vector3();
+  const sp = new THREE.Vector3();
+  const sn = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    sp.set(0, 0, 0);
+    sn.set(0, 0, 0);
+    v.fromBufferAttribute(src, i);
+    n.fromBufferAttribute(srcN, i);
+    for (const [b, w] of part.skin[i]) {
+      const k = MOVE[b.slice(0, -1)] ?? 0;
+      if (!k) {
+        sp.addScaledVector(v, w);
+        sn.addScaledVector(n, w);
+        continue;
+      }
+      const m = moves[k - 1];
+      sp.addScaledVector(p.copy(v).applyMatrix4(m), w);
+      sn.addScaledVector(pn.copy(n).transformDirection(m), w);
+    }
+    pos.setXYZ(i, sp.x, sp.y, sp.z);
+    sn.normalize();
+    nor.setXYZ(i, sn.x, sn.y, sn.z);
+  }
+  return out;
+}
+
+/** Hand `side` (or a glove of `glove` on it) with each digit curled its own way, set solid in the hand's space */
+export function posedHand(side: -1 | 1, q: HandLevel, curl: Curl, glove?: GloveKind) {
+  const parts = glove ? gloveParts(side, q, glove) : smoothHand(side, q);
+  const moves = digitMoves(side, curl);
+  const geos = parts.map((p, j) => {
+    const g = posePart(p, j ? moves[j - 1] : null);
+    const o = new THREE.BufferGeometry();
+    o.setAttribute('position', g.attributes.position);
+    o.setAttribute('normal', g.attributes.normal);
+    return o;
+  });
+  return merge(geos);
+}
+
+/** Non-indexed geometries of positions and normals as one */
+function merge(geos: THREE.BufferGeometry[]) {
+  const n = geos.reduce((k, g) => k + g.attributes.position.count, 0);
+  const pos = new Float32Array(n * 3);
+  const nor = new Float32Array(n * 3);
+  let at = 0;
+  for (const g of geos) {
+    pos.set(g.attributes.position.array as Float32Array, at * 3);
+    nor.set(g.attributes.normal.array as Float32Array, at * 3);
+    at += g.attributes.position.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  return out;
+}

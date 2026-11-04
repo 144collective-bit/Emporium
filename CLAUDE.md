@@ -1768,7 +1768,25 @@ it and has been retired completely. Build only on what's here.
   figure's level (`figureLevel()` in character.ts) in the viewmodel's
   softer toon (`softPaint()` in viewmodel.ts: the three bands' edges
   blended and a faint rim), in his skin tone, with his gloves (`hands()` in
-  its `arm()`); the boot 693.7 KB.
+  its `arm()`); the boot 693.7 KB. **Each gun's grip** (the owner's call)
+  is `fpgrip.ts` (DOM-free, tested in `tests/fpgrip.test.ts`, baked at
+  build time, key `fpgrips`): each finger of the first-person hands curled
+  its own way (`Curl`, `posedHand()` / `digitMoves()` in handmesh.ts: each
+  finger at its own joints, no bones), fitted to the gun's real shape at the
+  first-person level, as voxels inside or out by ray parity (`insideOf()`):
+  each hand pushed out along its palm until the palm lies on the gun (and,
+  for the left, a little further where its fingers wrap better), his right
+  slid along the grip until the index reaches the trigger, then each digit
+  the knuckle and middle joint touching the most of the gun with the least
+  inside (`fit()`); his index's pad rests just off the trigger and goes onto
+  it while he fires (`TRIGGER`, `triggerOf()`: the SMG's further back for
+  its magazine; `fire()` on the arm, `TRIGGER_HOLD`); the SMG's left holds
+  its vertical foregrip as the right holds a pistol grip, mirrored, and the
+  Hand Cannon's holds round the right hand (`HAND_ON`, `MIRRORED`,
+  `OVER_RIGHT`). The hands stand off where `FP_HANDS` puts them by
+  `rightOff` / `leftOff` (the reload carries it). A new gun gets its grip by
+  itself; one held another way needs its line in `HAND_ON`. The boot 695.1
+  KB.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
@@ -1938,8 +1956,8 @@ it and has been retired completely. Build only on what's here.
     modules in Node and records what each `make()` made), or works it out
     with `make()` where there's none (the tests, the game server). Today:
     the traffic's routes (`routes.ts`, packed with `packRoutes()`: each route's points as millimetre steps in one string), the
-    crowd's walk, jog and march cycles (`crowdclips.ts`, rounded to a ten-thousandth as they're recorded, `rounded()`) and The Trenches'
-    amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
+    crowd's walk, jog and march cycles (`crowdclips.ts`, rounded to a ten-thousandth as they're recorded, `rounded()`), The Trenches'
+    amenities (`commons.ts`) and the first-person hands' grip on each gun (`fpgrip.ts`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
@@ -4389,7 +4407,7 @@ it and has been retired completely. Build only on what's here.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`; the smooth hands and gloves, `handmesh.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`), the head's follow-through (`follow.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`; the smooth hands and gloves, `handmesh.ts`; their grip on each gun, `fpgrip.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`), the head's follow-through (`follow.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
