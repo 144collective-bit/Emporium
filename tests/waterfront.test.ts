@@ -49,7 +49,8 @@ test('the boardwalk: from the kerb out over the water, from the slip lanes to th
   assert.ok(Math.abs(BZ0 - (RIVER[1] - OUT)) < 1e-6 && OUT >= 2, 'out over the water');
   assert.ok(Math.abs(BX1 - PROMENADE.x[0]) < 1e-6, 'meeting the promenade');
   assert.ok(BX1 - BX0 > 140);
-  for (const s of roads)
+  // (the swing bridge's ramp crosses it at grade by the kerb: docs/highway-plan.md Phase 5)
+  for (const s of roads.filter((r) => r.id !== 'swing'))
     for (let x = BX0; x <= BX1; x += 2) for (const z of [BZ0, BZ1 - 0.01]) assert.ok(distToStreet(s, [x, z]) > s.half - 1e-6, `the boardwalk on ${s.id} at ${x}`);
   for (const r of LIBERTY_RECTS) assert.ok(r[0] > BX1, 'clear of Liberty Bridge');
 });

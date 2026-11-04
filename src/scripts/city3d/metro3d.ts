@@ -44,12 +44,16 @@ import {
   CREST_S,
   TRACKS,
   TRAIN,
+  along,
   archY,
   carAt,
   pointOn,
   sideAt,
   sideOf,
   stationAt,
+  stationY,
+  trackSlope,
+  trackY,
   trainAt,
   type Pt,
   type Run,
@@ -59,10 +63,10 @@ import {
 import { deckY, onHarbour } from './harbour';
 import { LAMP } from './palette';
 
-/** The platform's top and the train's floor */
+/** The platform's top and the train's floor, over the deck (where the deck's at `DECK_Y`: a station's frame is raised with its deck, `stationY()`) */
 export const PLATFORM_Y = DECK_Y + 0.4;
-/** The rails' top, where the wheels run */
-const RAIL_Y = DECK_Y + 0.08;
+/** The rails' top over the deck, where the wheels run */
+const RAIL_UP = 0.08;
 const CANOPY_Y = PLATFORM_Y + 2.4;
 
 /** The station signs in one atlas, a row each: the line's name, then each station's */
@@ -139,8 +143,12 @@ const roundel = (() => {
  * A frame on the ground: its x along `dir`, its z along `nrm`, y up, its
  * origin at `o`. `box()` and `add()` put things into a Batch in it
  */
-function frame(b: Batch, o: Pt, dir: Pt, nrm: Pt) {
-  const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(dir[0], 0, dir[1]), new THREE.Vector3(0, 1, 0), new THREE.Vector3(nrm[0], 0, nrm[1])).setPosition(o[0], 0, o[1]);
+function frame(b: Batch, o: Pt, dir: Pt, nrm: Pt, y = 0, climb = 0) {
+  // (raised by y, and pitched up `climb` along x: the deck's climbs over the ring highway)
+  const k = Math.hypot(1, climb);
+  const m = new THREE.Matrix4()
+    .makeBasis(new THREE.Vector3(dir[0] / k, climb / k, dir[1] / k), new THREE.Vector3((-dir[0] * climb) / k, 1 / k, (-dir[1] * climb) / k), new THREE.Vector3(nrm[0], 0, nrm[1]))
+    .setPosition(o[0], y, o[1]);
   return {
     box(x: number, y: number, z: number, w: number, h: number, d: number, mat: THREE.Material) {
       b.add(boxAt(x, y, z, w, h, d).applyMatrix4(m), mat);
@@ -150,10 +158,14 @@ function frame(b: Batch, o: Pt, dir: Pt, nrm: Pt) {
     },
   };
 }
-/** A track's frame at a distance along it: x along the way it runs, z out to its right */
-const trackFrame = (b: Batch, id: TrackId, s: number) => {
+/**
+ * A track's frame at a distance along it: x along the way it runs, z out to its right, raised with its deck (so what's
+ * drawn at `DECK_Y` in it is on the deck, `trackY()`) and pitched up `climb` (a piece of deck from there on); `flat`:
+ * on the ground, level (what stands on it: pillars, portals)
+ */
+const trackFrame = (b: Batch, id: TrackId, s: number, climb = 0, flat = false) => {
   const p = pointOn(id, s);
-  return frame(b, p.at, p.dir, sideOf(p.dir, 1));
+  return frame(b, p.at, p.dir, sideOf(p.dir, 1), flat ? 0 : trackY(id, s) - DECK_Y, climb);
 };
 
 /** The straight pieces of a track between two distances along it (each a point and the next) */
@@ -202,15 +214,19 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     // The deck in spans between its pillars, portals and hangers (each a tile's worth or less), with the rails on it
     const ps = [...PILLARS, ...PORTALS].filter((p) => p.track === t.id).map((p) => p.s).concat(t.id === 'main' ? HANGERS : []).sort((x, y) => x - y);
     const cuts = [0, ...ps.slice(t.id === 'main' ? 1 : 0, -1), t.len].flatMap((c, i, all) => {
-      // (a long span with nothing under it is cut in pieces no longer than a tile's worth)
+      // (a long span with nothing under it is cut in pieces no longer than a tile's worth, and short ones on a climb)
       if (!i) return [c];
-      const n = Math.ceil((c - all[i - 1]) / 12);
+      const a0 = all[i - 1];
+      const climbs = [a0, (a0 + c) / 2, c].some((x) => Math.abs(trackSlope(t.id, x)) > 1e-4) || Math.abs(trackY(t.id, a0) - trackY(t.id, c)) > 1e-4;
+      const n = Math.ceil((c - a0) / (climbs ? 3 : 12));
       return Array.from({ length: n }, (_, k) => all[i - 1] + ((c - all[i - 1]) * (k + 1)) / n);
     });
     for (let i = 0; i < cuts.length - 1; i++)
       for (const [a, c] of piecesOf(t.id, cuts[i], cuts[i + 1])) {
-        const f = trackFrame(b, t.id, a);
-        const l = c - a + 0.02;
+        // (straight from its height at a to its height at c, its length along the slope)
+        const k = (trackY(t.id, c) - trackY(t.id, a)) / (c - a);
+        const f = trackFrame(b, t.id, a, k);
+        const l = (c - a) * Math.hypot(1, k) + 0.02;
         const arch = onArch(t.id, (a + c) / 2);
         // (dark steel over The Trenches and on through Southbank Docks: docs/docks-plan.md Phase 2)
         const el = !arch && grim(...pointOn(t.id, (a + c) / 2).at);
@@ -247,19 +263,21 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   }
   // The pillars, each with a hammerhead under the deck across the track
   for (const p of PILLARS) {
-    const f = trackFrame(b, p.track, p.s);
+    // (on the ground, up to its deck's height: trackY)
+    const f = trackFrame(b, p.track, p.s, 0, true);
+    const DECK = trackY(p.track, p.s);
     if (grim(...p.at)) {
       // A flanged steel column on a concrete plinth, a steel hammerhead
       const H = PLINTH.half;
       const y0 = SLAB + PLINTH.h;
-      const h = DECK_Y - DECK_T - 0.3 - y0;
+      const h = DECK - DECK_T - 0.3 - y0;
       f.box(-H, SLAB, -H, H * 2, PLINTH.h, H * 2, plinth);
       f.box(-PILLAR_HALF + 0.03, y0, -PILLAR_HALF + 0.03, (PILLAR_HALF - 0.03) * 2, h, (PILLAR_HALF - 0.03) * 2, steel);
       for (const s of [-1, 1]) f.box(s > 0 ? PILLAR_HALF - 0.03 : -PILLAR_HALF, y0, -PILLAR_HALF, 0.03, h, PILLAR_HALF * 2, steel);
-      f.box(-0.45, DECK_Y - DECK_T - 0.3, -DECK_HALF + 0.1, 0.9, 0.3, DECK_HALF * 2 - 0.2, steel);
+      f.box(-0.45, DECK - DECK_T - 0.3, -DECK_HALF + 0.1, 0.9, 0.3, DECK_HALF * 2 - 0.2, steel);
       b.detail(() => {
         // Gusset plates where the column meets the hammerhead, a base plate on the plinth
-        for (const s of [-1, 1]) f.box(-0.04, DECK_Y - DECK_T - 0.75, s > 0 ? PILLAR_HALF - 0.03 : -0.6, 0.08, 0.45, 0.6 - PILLAR_HALF + 0.03, steel);
+        for (const s of [-1, 1]) f.box(-0.04, DECK - DECK_T - 0.75, s > 0 ? PILLAR_HALF - 0.03 : -0.6, 0.08, 0.45, 0.6 - PILLAR_HALF + 0.03, steel);
         f.box(-PILLAR_HALF - 0.01, y0, -PILLAR_HALF - 0.01, (PILLAR_HALF + 0.01) * 2, 0.04, (PILLAR_HALF + 0.01) * 2, steel);
       });
       continue;
@@ -267,18 +285,18 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     if (onHarbour(...p.at)) {
       // On Harbour Bridge: a riveted steel post from the median's kerb on the deck, braced up into its hammerhead
       const y0 = deckY(p.at[1]) + SLAB;
-      const h = DECK_Y - DECK_T - 0.3 - y0;
+      const h = DECK - DECK_T - 0.3 - y0;
       f.box(-PILLAR_HALF + 0.04, y0, -PILLAR_HALF + 0.04, (PILLAR_HALF - 0.04) * 2, h, (PILLAR_HALF - 0.04) * 2, steel);
       f.box(-PILLAR_HALF - 0.02, y0, -PILLAR_HALF - 0.02, (PILLAR_HALF + 0.02) * 2, 0.06, (PILLAR_HALF + 0.02) * 2, steel);
       for (const s of [-1, 1]) {
         const g = new THREE.BoxGeometry(0.06, 0.06, Math.hypot(0.6, 0.55)).rotateX(s * Math.atan2(0.55, 0.6));
-        f.add(g, steel, 0, DECK_Y - DECK_T - 0.3 - 0.28, s * 0.3);
+        f.add(g, steel, 0, DECK - DECK_T - 0.3 - 0.28, s * 0.3);
       }
-      f.box(-0.45, DECK_Y - DECK_T - 0.3, -DECK_HALF + 0.15, 0.9, 0.3, DECK_HALF * 2 - 0.3, steel);
+      f.box(-0.45, DECK - DECK_T - 0.3, -DECK_HALF + 0.15, 0.9, 0.3, DECK_HALF * 2 - 0.3, steel);
       continue;
     }
-    f.box(-PILLAR_HALF, SLAB, -PILLAR_HALF, PILLAR_HALF * 2, DECK_Y - DECK_T - SLAB - 0.3, PILLAR_HALF * 2, pier);
-    f.box(-0.45, DECK_Y - DECK_T - 0.3, -DECK_HALF + 0.15, 0.9, 0.3, DECK_HALF * 2 - 0.3, pier);
+    f.box(-PILLAR_HALF, SLAB, -PILLAR_HALF, PILLAR_HALF * 2, DECK - DECK_T - SLAB - 0.3, PILLAR_HALF * 2, pier);
+    f.box(-0.45, DECK - DECK_T - 0.3, -DECK_HALF + 0.15, 0.9, 0.3, DECK_HALF * 2 - 0.3, pier);
   }
   // A sodium lamp under each span over The Trenches, its pool on the avenue below
   for (const sp of EL_SPANS) {
@@ -291,9 +309,9 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   /* ---------- Uptown's extension: portal frames and the arch ---------- */
   // Portal frames: a leg each side of the street on the blocks' edges, a crossbeam under the deck (the arch's feet red)
   PORTALS.forEach((p, i) => {
-    const f = trackFrame(b, p.track, p.s);
+    const f = trackFrame(b, p.track, p.s, 0, true);
     const mat = i < 2 ? archRed : steel;
-    const y1 = DECK_Y - DECK_T - 0.45;
+    const y1 = trackY(p.track, p.s) - DECK_T - 0.45;
     for (const k of [-1, 1]) {
       f.box(-PORTAL.leg, SLAB, k * PORTAL.half - PORTAL.leg, PORTAL.leg * 2, y1 - SLAB, PORTAL.leg * 2, mat);
       f.box(-PORTAL.leg - 0.1, SLAB, k * PORTAL.half - PORTAL.leg - 0.1, PORTAL.leg * 2 + 0.2, 0.3, PORTAL.leg * 2 + 0.2, plinth);
@@ -325,7 +343,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     for (let i = 2; i < N - 1; i += 3) {
       const z = zAt(i);
       const y = SLAB + archY(z) + D / 2;
-      if (y < DECK_Y + 3.6) continue;
+      if (y < trackY('main', along('main', [x, z])) + 3.6) continue;
       b.box(x - half, y - 0.15, z - 0.15, half * 2, 0.3, 0.3, archRed);
     }
     // The deck hung from it: a floor beam across under the deck at each hanger, a hanger up to each rib (or a post down
@@ -334,7 +352,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
       const p = pointOn('main', s);
       const z = p.at[1];
       const y = SLAB + archY(z);
-      const yb = DECK_Y - DECK_T - 0.35;
+      const yb = trackY('main', s) - DECK_T - 0.35;
       b.box(x - half - rib / 2, yb - 0.25, z - 0.12, half * 2 + rib, 0.25, 0.24, archRed);
       for (const k of [-1, 1]) {
         const rx = x + k * half;
@@ -350,7 +368,9 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     const mid = stationAt(s);
     // The station's frame: x along the track, z out to the platform's side (so the platform is at +z)
     const out = sideOf(mid.dir, sideAt(s));
-    const f = frame(b, mid.at, mid.dir, out);
+    // (raised with its deck where it's beside a climb over the ring highway: stationY)
+    const dy = stationY(s) - DECK_Y;
+    const f = frame(b, mid.at, mid.dir, out, dy);
     const h = PLATFORM.half;
     const w = PLATFORM.to - PLATFORM.from;
     // The platform on brackets off the deck, its yellow edge, a parapet on the outside (with a gap for the skybridge)
@@ -402,7 +422,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     }
 
     // The stair tower: its walls, a lit window strip up the face the door is in, the door at street level, the M over it
-    const top = DECK_Y + 2.6;
+    const top = stationY(s) + 2.6;
     b.box(tx0, SLAB, tz0, tx1 - tx0, top - SLAB, tz1 - tz0, dark);
     b.box(tx0 - 0.15, top, tz0 - 0.15, tx1 - tx0 + 0.3, 0.2, tz1 - tz0 + 0.3, roof);
     for (const [x, z, w2, d2] of [
@@ -417,7 +437,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     const fo: Pt = [s.door.x - fx * 0.4, s.door.z - fz * 0.4];
     const d = frame(b, fo, [fz, -fx], [fx, fz]);
     // (the window strip stops short of the skybridge's floor and starts above the door)
-    d.box(-0.25, SLAB + 2.6, 0, 0.5, PLATFORM_Y - 0.4 - (SLAB + 2.6), 0.006, strip);
+    d.box(-0.25, SLAB + 2.6, 0, 0.5, PLATFORM_Y + dy - 0.4 - (SLAB + 2.6), 0.006, strip);
     d.box(-0.55, SLAB, 0, 1.1, 1.7, 0.02, roof);
     d.box(-0.62, SLAB + 1.7, 0, 1.24, 0.06, 0.05, trim);
     for (const sx of [-1, 1]) d.box(sx * 0.6 - 0.03, SLAB, 0, 0.06, 1.7, 0.05, trim);
@@ -449,8 +469,8 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   const now = () => Date.now() / 1000 + offset;
   const place = (car: THREE.Object3D, tr: { run: Run; d: number }, off: number) => {
     const c = carAt(tr, off);
-    car.position.set(c.at[0], RAIL_Y, c.at[1]);
-    car.rotation.y = Math.atan2(c.dir[0], c.dir[1]);
+    car.position.set(c.at[0], c.y + RAIL_UP, c.at[1]);
+    car.rotation.set(-Math.atan(c.climb), Math.atan2(c.dir[0], c.dir[1]), 0, 'YXZ');
   };
   const set = (tr: { run: Run; d: number }) => {
     place(front, tr, GAP);
@@ -493,7 +513,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
         for (let k = 0, i = 0; k < 8 && i < N; i++) {
           if (sparkLife[i] > 0) continue;
           sparkLife[i] = 0.35 + Math.random() * 0.4;
-          sparkPos.set([ox, RAIL_Y + 0.05, oz], i * 3);
+          sparkPos.set([ox, car.position.y + 0.05, oz], i * 3);
           sparkVel.set([-fwd.x * speed * 0.3 + (Math.random() - 0.5) * 2.5, Math.random() * 1.5, -fwd.z * speed * 0.3 + (Math.random() - 0.5) * 2.5], i * 3);
           k++;
         }

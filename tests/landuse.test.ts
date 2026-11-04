@@ -8,6 +8,7 @@ import { outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
 import { TRACKS } from '../src/scripts/city3d/metro';
+import { RAMPS } from '../src/scripts/city3d/viaduct';
 import { EXT, NS_ROADS } from '../src/scripts/city3d/layout';
 import { TRENCH_RECT } from '../src/scripts/city3d/trenches';
 import { UPTOWN_RECT } from '../src/scripts/city3d/uptown';
@@ -74,17 +75,7 @@ test('a tree line along a street is ragged, not ruled', () => {
   assert.ok(spread > WOBBLE / 2, `the verge's width varies by ${spread.toFixed(2)}`);
 });
 
-test('the junctions keep their slip lanes clear, not a box round them', () => {
-  // Round every lit junction on the highway: some land within the old box (17 each way) is free now, none on a slip lane
-  let freed = 0;
-  for (const c of PLAN.crossings.filter((k) => k.streets.includes('highway')))
-    for (let dx = -16; dx <= 16; dx += 2)
-      for (let dz = -16; dz <= 16; dz += 2) {
-        const [x, z] = [c.at[0] + dx, c.at[1] + dz];
-        if (x < EXT[0] + 4 || x > EXT[1] - 4 || z < EXT[0] + 4 || z > EXT[1] - 4 || !treeSpot(x, z)) continue;
-        freed++;
-        for (const s of PLAN.streets.filter((k) => k.kind === 'slip')) assert.ok(distToStreet(s, [x, z]) >= s.half + STREET_VERGE);
-      }
-  assert.ok(freed > 0);
+test("the raised highway's ramps keep their land clear (docs/highway-plan.md Phase 1b), and nothing grows downtown", () => {
+  for (const r of RAMPS) for (const p of r.pts) assert.ok(!treeSpot(p[0], p[1]), `a tree could stand on ${r.id} at ${p.map((v) => v.toFixed(1))}`);
   assert.notEqual(keptOff(30, 30), null, 'nothing grows in downtown');
 });

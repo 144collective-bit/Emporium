@@ -24,7 +24,7 @@ import { loopOf, pointAlong, yawOf, type Loop, type Pt } from './riverlife';
 /** Its lines along the banks (z): north, south */
 export const LINES: [number, number] = [84.6, 117.6];
 /** Where it crosses the river (x): east of the cruise boat's turn, west of the tall ship's west anchorage */
-export const CROSS: [number, number] = [47, -125];
+export const CROSS: [number, number] = [47, -136];
 const S = (id: StopId) => STOPS.find((s) => s.id === id)!;
 
 /** The loop's corners, in the order it runs (the stops lie on its straights: Uptown, Downtown, South Row, Pier 7) */

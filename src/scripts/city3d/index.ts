@@ -23,6 +23,9 @@ import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
+import { DECK_LAMPS } from './viapiers';
+import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
+import { SWING_LAMPS } from './swingbridge';
 import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
@@ -361,6 +364,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   SF_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Lot 9's (lot9.ts): sodium along its lanes, by the gate and at the tunnel's mouth; its people about (phones: half)
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
+  // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
+  for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
+  // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
+  for (const [x, z, ry, y] of RAMP_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z] of UNDER_LIGHTS) addPool(x, z, 4.2, 0.03);
+  // The swing bridge's lamps on its fixed approaches (swingbridge.ts, Phase 5; the span's swing with it)
+  for (const [x, z, ry, y] of SWING_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z, s] of LOT9_TREES) addTree(x, z, s, false, LOT9_Y);
   LOT9_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
@@ -1497,6 +1507,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       taxis.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
+      walker.y = walk.position.y;
       // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
       walker.r = walk.driving || walk.riding ? 0.8 : walk.flying ? 1.6 : 0;
       if (walk.airborne) walker.x = walker.z = 1e6;

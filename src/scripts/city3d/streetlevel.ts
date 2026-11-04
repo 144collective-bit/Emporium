@@ -38,7 +38,7 @@ export type ShopCharacter = Exclude<Character, 'service'>;
 /** Each street's character, by its id in the street plan (an alley, the axis's lanes, is dining) */
 export function characterOf(id: string, kind: string): Character {
   if (kind === 'alley') return 'dining';
-  if (kind === 'highway' || kind === 'slip') return 'service';
+  if (kind === 'highway' || kind === 'ramp') return 'service';
   // (and the north avenue past Uptown North, across from the mall)
   if (id === 'ew0' || id === 'ew3' || id === 'ns0') return 'luxe';
   if (id === 'ew1' || id === 'ew2' || id === 'uptown-circle-e' || id === 'uptown-diag') return 'dining';

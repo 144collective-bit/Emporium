@@ -9,7 +9,7 @@ import { PLACES, PLACE_IDS, SEEN_R, seen } from '../src/scripts/city3d/places';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { RIVER, STRIP_BLVD, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { cleanSave, newSave, visit } from '../src/scripts/city3d/tycoon';
-import { pathBetween, pointOn } from '../src/scripts/city3d/routes';
+import { pathBetween, pointOn, rideTime } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
@@ -59,8 +59,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       }
       // It ends at the road nearest the place (a lane's width or so from it)
       const end = r!.pts[r!.pts.length - 1];
-      // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street)
-      const nearest = Math.min(...roads.filter((s) => s.kind !== 'slip' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
+      // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street, nor the raised highway and its ramps)
+      const nearest = Math.min(...roads.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
       // (to a Neon Mile resort or the Sphere a taxi may stop on the boulevard's far kerb, the planted median between, by the way it
       // comes: no U-turns; the resorts' own drives come with the limos, docs/strip-plan.md Phase 5)
       const across = RESORTS.some((r) => r.id === b.id) || b.id === 'sphere' ? STRIP_BLVD.half : 0;
@@ -75,9 +75,17 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // Phase 2: from Crestmont's grand hotel across the whole city about 67 s)
       // (and Lot 9 past the highway's south-west corner, docs/trailer-plan.md: from the stadium about 68 s)
       const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster' || id === 'lot9';
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'overlook' || id === 'reservoir' ? 22 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
-      const most = docks(a.id) || docks(b.id) ? 96 : 84;
-      assert.ok(r!.len / TAXI_SPEED < Math.min(most, 62 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
+      // round through town: the overlook to the airport's metro station about 94 s)
+      const most = 96;
+      // (Stadium Road's way in from the north road went up past the raised highway's exit 1, docs/highway-plan.md
+      // Phase 1b: from the stadium to Crestmont's civic hall about 63 s, to its overlook about 85 s)
+      // (and since its Phase 2 the ring highway is up on its viaduct, its exits to come in Phase 3: a taxi goes the
+      // long way round through town, from the stadium to the airport's metro station about 77 s)
+      // (since Phase 3 by its exits, quicker up there: routes.ts rideTime, HIGHWAY_PACE)
+      const time = rideTime(r!, 0, TAXI_SPEED);
+      assert.ok(time < Math.min(most, 66 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${time.toFixed(0)} s`);
     }
 });

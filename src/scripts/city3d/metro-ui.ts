@@ -77,11 +77,11 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
     const c = carAt(tr, 0);
     const n = sideOf(pointOn(tr.track, tr.s).dir, 1);
     const near = {
-      want: { x: c.at[0] + n[0] * 9 - c.dir[0] * 6, y: DECK_Y + 2.6, z: c.at[1] + n[1] * 9 - c.dir[1] * 6 },
-      at: { x: c.at[0] + c.dir[0] * 3, y: DECK_Y + 1.1, z: c.at[1] + c.dir[1] * 3 },
+      want: { x: c.at[0] + n[0] * 9 - c.dir[0] * 6, y: c.y + 2.6, z: c.at[1] + n[1] * 9 - c.dir[1] * 6 },
+      at: { x: c.at[0] + c.dir[0] * 3, y: c.y + 1.1, z: c.at[1] + c.dir[1] * 3 },
     };
-    const eye = { x: c.at[0] + n[0] * 0.5 + c.dir[0] * 1.5, y: PLATFORM_Y + 0.95, z: c.at[1] + n[1] * 0.5 + c.dir[1] * 1.5 };
-    const v = rideView(near, { x: c.at[0], y: DECK_Y + 1.1, z: c.at[1] }, eye, [c.dir[0], c.dir[1]]);
+    const eye = { x: c.at[0] + n[0] * 0.5 + c.dir[0] * 1.5, y: c.y + PLATFORM_Y - DECK_Y + 0.95, z: c.at[1] + n[1] * 0.5 + c.dir[1] * 1.5 };
+    const v = rideView(near, { x: c.at[0], y: c.y + 1.1, z: c.at[1] }, eye, [c.dir[0], c.dir[1]]);
     const want = new THREE.Vector3(v.want.x, v.want.y, v.want.z);
     const at = new THREE.Vector3(v.at.x, v.at.y, v.at.z);
     if (v.snap) snap = true;
@@ -107,7 +107,8 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
       text.textContent = `Metro to ${to.name} · ${Math.max(0, Math.ceil(total - t))} s`;
       const p = pointOn(r.track, r.s).at;
       if (t >= total + 0.8) finish();
-      return { x: p[0], z: p[1], y: PLATFORM_Y };
+      // (the train's floor over its deck there: metro.ts trackY)
+      return { x: p[0], z: p[1], y: carAt(r, 0).y + 0.4 };
     },
     end() {
       // Walk mode stopped mid-ride: the train goes back on its timetable

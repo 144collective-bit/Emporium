@@ -11,6 +11,7 @@ import { BOAT_LANES, BX, DECK_DEPTH, DECK_HALF, SHIP, lowY, shipAt } from '../sr
 import { DEPTH, HALF, HX, deckY } from '../src/scripts/city3d/harbour';
 import { BRIDGE_PIERS, PIER_HALF, boatZ } from '../src/scripts/city3d/waterfront';
 import { riverBridges } from '../src/scripts/city3d/streetplan';
+import { HALF as SWING_HALF, SX, undersideY } from '../src/scripts/city3d/swingbridge';
 
 test('loops: closed, smooth, and a point along them wraps', () => {
   const l = loopOf(stadium(0, 10, 0, 4));
@@ -50,7 +51,7 @@ test('they keep off the boats lanes (the cruise boat crosses the middle one only
   for (let t = 0; t < 720; t += 0.5)
     for (const m of riverMovers(t)) {
       // (on its straights only: round its ends it crosses the middle lane, wide of everything else)
-      if (m.id === 'cruise' && (m.x < -105 || m.x > 26)) continue;
+      if (m.id === 'cruise' && (m.x < -84 || m.x > 26)) continue;
       clear(m);
     }
 });
@@ -62,6 +63,7 @@ test('under the bridges with room to spare', () => {
         const top = WATER_Y + m.hull.top;
         if (Math.abs(x - BX) < DECK_HALF + 0.2) assert.ok(top < lowY(z) - DECK_DEPTH - 0.25, `${m.id} hits Liberty Bridge's deck`);
         if (Math.abs(x - HX) < HALF + 0.2) assert.ok(top < deckY(z) - DEPTH - 0.25, `${m.id} hits Harbour Bridge's deck`);
+        if (Math.abs(x - SX) < SWING_HALF + 0.2) assert.ok(top < undersideY(z) - 0.25, `${m.id} hits the swing bridge's deck`);
         for (const b of riverBridges().filter((r) => r.street === 'highway')) assert.ok(x < b.x0 - 1 || x > b.x1 + 1, `${m.id} under the highway`);
       }
 });

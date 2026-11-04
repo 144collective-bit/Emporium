@@ -133,16 +133,25 @@ test('the river stops it except over the bridges', () => {
     if (BRIDGED_NS.includes(i)) assert.ok(c.z > RIVER[1] + 1, `blocked on the bridge at x ${r.c}`);
     else assert.ok(c.z < RIVER[0], `drove into the river at x ${r.c}`);
   });
-  // The ring highway's two bridges (growth plan Phase 7), down each of its lanes
+  // Under the ring highway's two river spans (raised on its viaduct, docs/highway-plan.md Phase 2) the river stops it
   for (const b of riverBridges().filter((b) => b.street === 'highway'))
     for (const off of [-2.85, -1.15, 1.15, 2.85]) {
       const c = newCar(b.c + off, off > 0 ? RIVER[0] - 6 : RIVER[1] + 6, off > 0 ? -Math.PI / 2 : Math.PI / 2);
       run(c, GAS, 9);
-      assert.ok(off > 0 ? c.z > RIVER[1] + 1 : c.z < RIVER[0] - 1, `blocked on the highway's bridge at x ${b.c}`);
+      assert.ok(off > 0 ? c.z < RIVER[0] : c.z > RIVER[1], `drove into the river under the highway at x ${b.c}`);
     }
-  // The gaps in the river walls are the bridges' width (river plan step 1: the east avenue's and the highway's two)
-  const gaps = riverBridges().map((b) => [b.x0 + 0.1, b.x1 - 0.1]);
-  assert.equal(gaps.length, BRIDGED_NS.length + 2);
+  // The gaps in the river walls are the street-level bridges' width (river plan step 1: the east avenue's)
+  const gaps = riverBridges()
+    .filter((b) => b.street !== 'highway')
+    .map((b) => [b.x0 + 0.1, b.x1 - 0.1]);
+  // (and the swing bridge's, Uptown to The Trenches: docs/highway-plan.md Phase 5)
+  assert.equal(gaps.length, BRIDGED_NS.length + 1);
+  const sw = riverBridges().find((b) => b.street === 'swing')!;
+  for (const [off, z0, yaw] of [[-0.85, RIVER[0] - 6, -Math.PI / 2], [0.85, RIVER[1] + 6, Math.PI / 2]] as const) {
+    const c = newCar(sw.c + off, z0, yaw);
+    run(c, GAS, 12);
+    assert.ok(yaw < 0 ? c.z > RIVER[1] + 1 : c.z < RIVER[0] - 1, `blocked on the swing bridge (${off})`);
+  }
   NS_ROADS.forEach((r, i) => {
     const open = !RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half);
     assert.equal(open, BRIDGED_NS.includes(i), `x ${r.c}`);
