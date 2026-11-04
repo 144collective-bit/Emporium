@@ -83,6 +83,7 @@ import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
 import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
+import { BARRIERS as SWING_BARRIERS, BARRIER_WALLS, SX as SWING_X, betweenBarriers, onSwingDeck, swingAt, swingY } from './swingbridge';
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
 import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, viaductY, walkOff } from './viaground';
@@ -679,6 +680,8 @@ export function createWalk(d: WalkDeps) {
    */
   /** Liberty Bridge's leaves are down and its gates open (liberty.ts: they lift for the tall ship; never under reduced motion) */
   const leavesOpen = () => d.reduced || !leavesAt(Date.now() / 1000).shut;
+  /** The swing bridge's barriers down (swingbridge.ts): it's swinging, or about to, for the tall ship */
+  const swingShut = () => !d.reduced && swingAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
     // (Lot 9's tunnel under the highway, lot9.ts: its ramps and open cuttings, and its floor under the roof when `yNow` is down there)
     const tn = tunnelY(x, z, yNow);
@@ -699,6 +702,9 @@ export function createWalk(d: WalkDeps) {
     // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
     const hb = harbourY(x, z);
     if (hb !== null) return Math.max(slab, hb + 0.035);
+    // (the swing bridge's deck, low over the river on a ramp from each bank: swingbridge.ts)
+    const sw = swingY(x, z);
+    if (sw !== null) return Math.max(slab, sw + 0.035);
     // (the raised highway's deck and its ramps, when `yNow` is up there: a car's, a bike's; viaground.ts)
     const via = viaductY(x, z, yNow);
     if (via !== null) return Math.max(slab, via + 0.035);
@@ -722,7 +728,7 @@ export function createWalk(d: WalkDeps) {
   };
   /** Scratch for the collision grid's answers */
   const nearBoxes: Box[] = [];
-  const onBridge = (x: number, z: number) => onHarbour(x, z, 0.15);
+  const onBridge = (x: number, z: number) => onHarbour(x, z, 0.15) || onSwingDeck(x, z, 0.15);
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
@@ -745,6 +751,8 @@ export function createWalk(d: WalkDeps) {
     if (mallWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
+    // ...and the swing bridge's barriers while they're down (swingbridge.ts)
+    if (swingShut() && BARRIER_WALLS.some((b) => inBox(b, x, z, RADIUS))) return true;
     // ...and the Docks' basin at its quays' edge (docks.ts; the avenue crosses its mouth on a bridge)
     if (inBasin(x, z, -0.3)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
@@ -2127,7 +2135,17 @@ export function createWalk(d: WalkDeps) {
     viewShifted = true;
   }
 
+  /** A car (or bike, or kart) between the swing bridge's barriers as they come down: put back behind the nearer one, facing off */
+  function offSwing(st: { x: number; z: number; yaw: number }) {
+    const north = st.z < (SWING_BARRIERS.n + SWING_BARRIERS.s) / 2;
+    return { x: SWING_X + (north ? 0.85 : -0.85), z: north ? SWING_BARRIERS.n - 3 : SWING_BARRIERS.s + 3, yaw: north ? Math.PI / 2 : -Math.PI / 2 };
+  }
   function driveFrame(dt: number, t: number) {
+    const st = drive.state as { x: number; z: number; yaw: number; speed: number; vx: number; vz: number; steer: number } | null;
+    if (st && betweenBarriers(st.x, st.z) && swingShut()) {
+      Object.assign(st, offSwing(st), { speed: 0, vx: 0, vz: 0, steer: 0 });
+      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+    }
     const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
     let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
@@ -2317,6 +2335,20 @@ export function createWalk(d: WalkDeps) {
     if (fly.active) return flyFrame(dt, t);
     fly.idle(dt);
     if (drive.active) return driveFrame(dt, t);
+    // ...and your car if it's parked between them
+    const pc = drive.carState;
+    if (pc && betweenBarriers(pc.x, pc.z) && swingShut()) {
+      const o = offSwing(pc);
+      drive.bring(o.x, o.z, o.yaw);
+    }
+    // The swing bridge's barriers coming down while he's between them: he's put back behind the nearer one
+    if (betweenBarriers(pos.x, pos.z) && swingShut()) {
+      const north = pos.z < (SWING_BARRIERS.n + SWING_BARRIERS.s) / 2;
+      const z = north ? SWING_BARRIERS.n - 0.9 : SWING_BARRIERS.s + 0.9;
+      pos.set(SWING_X + THREE.MathUtils.clamp(pos.x - SWING_X, -2.4, 2.4), groundAt(SWING_X, z, pos.y) , z);
+      vel.set(0, 0);
+      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+    }
     // Liberty Bridge's gates shutting while he's out on its leaves: he's walked back through to the nearer tower
     if (pos.y > LOW_Y - 0.4 && pos.y < LOW_Y + 1.5 && onLeaves(pos.x, pos.z) && !leavesOpen()) {
       const i = pos.z < (FACES[0] + FACES[1]) / 2 ? 0 : 1;

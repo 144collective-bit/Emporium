@@ -1506,7 +1506,9 @@ it and has been retired completely. Build only on what's here.
   the piers there, `MURALS`, made-up words; `UNDER_SOLIDS` in `SOLIDS`), the
   soffit's lights over every street under it (`UNDER_LIGHTS`, pools at the
   boot) and lamps up the ramps (`RAMP_LAMPS`, at the boot), and each exit's
-  number on the world map (`exitBadge()`); drawn by viaduct3d.ts.
+  number on the world map (`exitBadge()`); drawn by viaduct3d.ts. Phase 5
+  (the swing bridge, Uptown to The Trenches) is built: see Kestrel Bridge
+  below.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
@@ -3220,8 +3222,9 @@ it and has been retired completely. Build only on what's here.
     clock the same for everyone (`leavesAt()`: the gates shut, the leaves
     rise to `LEAF.max`, hold while it passes, come down, `LIFT_TIMES`,
     `SHUT_WINDOWS`); the ship (`SHIP`, `shipAt()`, `SHIP_TIMES`) lies at
-    anchor west of the bridge and east of it in turn (`ANCHOR_X`: between
-    the highway's west bridge and Harbour Bridge, which it can't pass) on
+    anchor west of the bridge and east of it in turn (`ANCHOR_X`: west of
+    Kestrel Bridge, which swings open for it, below, and east of the river
+    bus's west crossing; west of Harbour Bridge, which it can't pass) on
     its own line through the middle span, off the boats' lanes; the tests
     hold the leaves fully up whenever any of it is over the bridge's line,
     and clear of its sails and of the high level;
@@ -3268,6 +3271,40 @@ it and has been retired completely. Build only on what's here.
 - **The place:** spot `liberty` (after the Emporium in `spots`), its pin
   over the north tower's flame, directory entry and an info-only panel
   (`data-panel-tpl="liberty"`) with **Walk in**. No outside links.
+
+## Kestrel Bridge, the swing bridge (docs/highway-plan.md Phase 5, the owner's call)
+
+- A road bridge from Uptown to The Trenches at x -112 (`SX`), in line with
+  Uptown's southbound street and The Trenches' cross street, that swings open
+  for the tall ship on Liberty Bridge's timetable; its name is made up
+  (`SWING_NAME`). Not a place yet (no pin or panel).
+- **The numbers** are `swingbridge.ts` (DOM-free, tested in
+  `tests/swingbridge.test.ts`): street `swing` in the plan (`swingPts()`,
+  points every 1.5 so the routes carry its heights; both ends lit
+  crossroads; `riverBridges()` lists it), the deck low over the water up a
+  ramp from each kerb (`deckY()`, `H`, `RAMP`; the boats pass under), the
+  swing span on its round pivot pier between the north and middle boat lanes
+  (`SPAN`, `PIVOT`, `REST`, `SOUTH_PIER`, `SWING_PIERS`), the timetable
+  (`swingAt()`, `SWING_TIMES`, `SWING_WINDOWS`; open while the ship's within
+  `SWING_REACH`, liberty.ts `shipNear()`), the barriers (`BARRIERS`,
+  `barrierHold()` for the traffic and taxis, `BARRIER_WALLS` for walking and
+  driving, `betweenBarriers()`: whoever's between them as they come down is
+  put back behind the nearer one, your car too), the surface (`swingY()`,
+  `onSwingDeck()` in walk.ts; `swingRoadY()` in routes.ts `heightsOf()`), the
+  parapets (`SWING_SOLIDS` in `SOLIDS`, over the water only: the esplanade
+  and the boardwalk cross it at grade by the kerbs), `SWING_LAMPS` (at the
+  boot) and `SWING_RECT` (the promenades' railings, lamps, benches and trees
+  keep off: outer.ts `offBridges()`, boulevard.ts `clearOfMouths()`,
+  waterfront.ts `clearAt()` and `RAIL_GAPS`).
+- To let the ship by, it anchors west at x -129 and weighs anchor 50 s into
+  each half; the river bus crosses at x -136 (riverroute.ts `CROSS`), the
+  rowing eight keeps west of it, and the cruise boat's west turn is east of
+  the bridge, once round each half of the ship's round, timed to miss it.
+- **Drawn by** `swingbridge3d.ts` (`LAZY_DISTRICTS` id `swing`): the fixed
+  approaches and the piers as sites; on the main thread the span (steel
+  camelback trusses, bracing, the operator's cabin with the name on its
+  ends, red and green lights), turning with the clock, and the barriers'
+  booms and flashing lights. Under reduced motion it stays shut.
 
 ## Harbour Bridge (river plan step 2, the owner's design)
 
@@ -4494,7 +4531,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix and the ring avenue (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix and the ring avenue (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`), the swing bridge (`swingbridge.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

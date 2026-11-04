@@ -10,6 +10,7 @@ import { MOORED } from '../src/scripts/city3d/boats';
 import { riverBridges } from '../src/scripts/city3d/streetplan';
 import { BRIDGE_PIERS, PIER_HALF } from '../src/scripts/city3d/waterfront';
 import { STOPS } from '../src/scripts/city3d/riverbus';
+import { SWING_PIERS } from '../src/scripts/city3d/swingbridge';
 
 export type Rect = [number, number, number, number];
 /** Everything standing on (or in) the water a boat must keep off (but the river bus's own landings: `LANDINGS`) */
@@ -19,6 +20,7 @@ export const OBSTACLES: [string, Rect][] = [
   ...riverBridges()
     .filter((b) => b.street === 'highway')
     .flatMap((b) => BRIDGE_PIERS.map((z): [string, Rect] => ['a highway pier', [b.x0, z - PIER_HALF, b.x1, z + PIER_HALF]])),
+  ...SWING_PIERS.map((r): [string, Rect] => ['a swing bridge pier', [...r] as Rect]),
   ...DECKS.map((r): [string, Rect] => ['a deck', r]),
   ...ESPLANADE_DECKS.map((r): [string, Rect] => ['the esplanade', r]),
   ...OVERLOOKS.map((o): [string, Rect] => ['an overlook', o.rect as Rect]),

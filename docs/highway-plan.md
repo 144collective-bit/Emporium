@@ -199,7 +199,7 @@ each with the owner's sign-off; keep this file up to date.
   filled bank where it's low, the deck's parapet broken over each taper.
 - Signs, gantries and exit numbers come in Phase 4.
 
-## Phase 4: signs and the look (built, waiting on the owner's sign-off)
+## Phase 4: signs and the look (built, signed off)
 
 All the data is `viadress.ts` (DOM-free, tested in `tests/viaduct.test.ts`),
 drawn by viaduct3d.ts in the viaduct's chunk (sites); made-up copy only (the
@@ -236,6 +236,55 @@ exits' own names, `EXIT_SIGNS`), no number but an exit's.
 - **The world map:** the ramps in the highway's colour and each exit's
   number on a green badge by its ramps (`exitBadge()`).
 
+## Phase 5: the swing bridge (built, waiting on the owner's sign-off)
+
+`swingbridge.ts` (DOM-free, tested in `tests/swingbridge.test.ts`), drawn by
+`swingbridge3d.ts` (`LAZY_DISTRICTS` id `swing`). Its name is made up
+(`SWING_NAME`, **Kestrel Bridge**, on the operator's cabin; the owner may rename
+it).
+
+- **Where:** x -112 (`SX`), in line with Uptown's southbound street and The
+  Trenches' cross street, from the north bank avenue's kerb to the south
+  bank's (`Z0`, `Z1`): street `swing` in the plan (one lane each way, its
+  points every 1.5 so the routes carry its heights), its two ends lit
+  crossroads (`uptown-ns2-ew3`, `trench-ns2-bank`); `riverBridges()` lists it,
+  so the river walls open for it.
+- **The deck:** low over the water (the boats pass under), up a ramp `RAMP`
+  long from each kerb to `H` (1 over the streets, 2.5 over the water), level
+  between (`deckY()`); the roadway, footways a step up, steel railings on a
+  concrete plinth over the water (`PARAPET_Z`: the esplanade and the
+  boardwalk cross it at grade by the kerbs, their railings, lamps, benches
+  and trees kept off it, `SWING_RECT`); lamps on the fixed approaches
+  (`SWING_LAMPS`).
+- **The swing span** (`SPAN`, 23 long): centred on its round pivot pier
+  (`PIVOT`, between the north and middle boat lanes), its south end on the
+  rest pier (`REST`), the south approach on `SOUTH_PIER` (between the middle
+  and south lanes); two steel camelback trusses between the roadway and the
+  footways, bracing over the road, the operator's cabin on top, red and
+  green lights for the boats. Open, it lies along the river between the
+  north lane and the tall ship's line.
+- **On Liberty's timetable** (`swingAt()`, `SWING_TIMES`, `SWING_WINDOWS`):
+  the barriers come down 20 s before it turns, it swings a quarter round in
+  24 s, stays open while the tall ship is near enough to touch what it
+  sweeps (`SWEEP`, `SWING_REACH`, from liberty.ts `shipNear()`), swings back
+  and the barriers go up; still and shut under reduced motion.
+- **The tall ship's moves** to pass it: its west anchor out to x -129
+  (`ANCHOR_X`), weighing anchor at 50 s into each half (`SHIP_TIMES.depart`);
+  the river bus's west crossing out to x -136 (riverroute.ts `CROSS`), the
+  rowing eight's loop a little west, the cruise boat's west turn east of the
+  bridge, going round once each half of the ship's round, timed to cross its
+  line while it's away (riverlife.ts `CRUISE`).
+- **The barriers** (`BARRIERS`, a pair at each end before the span): booms
+  over both lanes and the footways, red lights flashing. While they're down
+  the traffic and taxis coming wait at them (`barrierHold()`), walking and
+  driving stop at them (`BARRIER_WALLS`), and anyone (or your car) between
+  them is put back behind the nearer one with a toast.
+- **Walking and driving** ride its deck (`swingY()` in walk.ts's
+  `groundAt()`), its parapets solid (`SWING_SOLIDS`); the boats keep off its
+  piers (`SWING_PIERS` in boat-sim.ts and the water tests).
+- Not yet: a pin and panel (it isn't a place), the bell as the barriers come
+  down.
+
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
@@ -252,12 +301,12 @@ exits' own names, `EXIT_SIGNS`), no number but an exit's.
 3. **The exits** (above, built, signed off): the ramps and their terminals in the street plan, routes
    with heights, merging and the lights at the ramps' feet; taxis; your car
    and bike up the ramps; walking kept off.
-4. **Signs and the look** (above, built, waiting on the owner's sign-off):
+4. **Signs and the look** (above, built, signed off):
    gantries and exit numbers (one sign atlas, fixed made-up copy), sound
    walls past homes, what's under it, night lighting, the world map.
-5. **The swing bridge** (Uptown to The Trenches): its streets, the river
-   pier, the swing on Liberty's timetable, the barriers, the boats and the
-   tall ship.
+5. **The swing bridge** (Uptown to The Trenches; above, built, waiting on
+   the owner's sign-off): its streets, the river pier, the swing on Liberty's
+   timetable, the barriers, the boats and the tall ship.
 6. **Turn lanes and signals** at the busiest avenue junctions.
 7. **Rural roads** past the highway.
 8. **The concrete-era look** on the town's streets.

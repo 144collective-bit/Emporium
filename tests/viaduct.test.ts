@@ -31,6 +31,7 @@ import {
   steepest,
 } from '../src/scripts/city3d/viaduct';
 import { PIERS, PIER_CLEAR } from '../src/scripts/city3d/viapiers';
+import { swingRoadY } from '../src/scripts/city3d/swingbridge';
 
 test('the ring is the highway centre line exactly, and ringS finds any point on it again', () => {
   assert.ok(Math.abs(RING_LEN - (2 * 350 + 2 * 350 + 2 * Math.PI * 70)) < 1e-6);
@@ -299,6 +300,12 @@ test('the traffic drives every ramp, each car at the ramp\'s height, and nothing
       if (y < 0.05) continue;
       const q = routeAt(route, p, 0).at;
       const rp = rampAt(q[0], q[1]);
+      // (or over the swing bridge's hump, swingbridge.ts: Phase 5)
+      const sw = swingRoadY(q[0], q[1]);
+      if (sw !== null) {
+        assert.ok(Math.abs(y - sw) < 0.08, `off the swing bridge's deck at ${q[1].toFixed(1)}`);
+        continue;
+      }
       assert.ok(fromHighway(q[0], q[1]) < HIGHWAY_HALF + 0.2 || (rp && rp.d < RAMP_HALF + 0.6), `raised off the viaduct at ${q.map((v) => v.toFixed(1))}`);
     }
   // A taxi takes the highway where it's quicker: from out past Uptown round to the stadium

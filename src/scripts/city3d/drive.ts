@@ -39,6 +39,7 @@ import { carLights, circles, gearOf, motorOf, newCar, newSignal, reachOf, skiddi
 import { blinkOn } from './traffic';
 import { DECK_WALLS, departuresSurface } from './airfield';
 import { viaWallsNear } from './viaground';
+import { BARRIER_WALLS, swingAt } from './swingbridge';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import type { Bike } from './bikes';
@@ -95,6 +96,9 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const DOOR_HOLD = 0.9;
 /** Tiles per second to km/h (a tile is about 1.8 m) */
 const KMH = 1.8 * 3.6;
+
+/** Under reduced motion the swing bridge never swings (swingbridge.ts) */
+const STILL = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function createDrive(d: DriveDeps) {
   const { camera, root } = d;
@@ -551,6 +555,8 @@ export function createDrive(d: DriveDeps) {
       if (v.y > 0.5 && departuresSurface(s.x, s.z) !== null) boxes.push(...DECK_WALLS);
       // ...and the raised highway's: its ramps' sides, and its parapets when it's up there (viaground.ts)
       viaWallsNear(s.x, s.z, reachOf(s), v.y, boxes);
+      // ...and the swing bridge's barriers while they're down (swingbridge.ts; never under reduced motion: it stays shut)
+      if (!STILL && swingAt(Date.now() / 1000).shut) boxes.push(...BARRIER_WALLS);
       if (frozen) inp = { throttle: 0, steer: 0, handbrake: true };
       const px = s.x;
       const pz = s.z;

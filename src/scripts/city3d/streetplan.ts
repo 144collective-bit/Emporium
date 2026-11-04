@@ -22,6 +22,7 @@ import { EXITS, RAMPS, RAMP_HALF } from './viaduct';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
+import { HALF as SWING_HALF, ROAD as SWING_ROAD, SWING_STREET, SX as SWING_X, swingPts } from './swingbridge';
 import { NORTH_BLOCK } from './uptownnorth';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
@@ -420,6 +421,14 @@ export function cityPlan(): StreetPlan {
   for (const t of UPTOWN_STREETS)
     streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes, ...(t.oneway ? { oneway: t.oneway } : {}), ...(t.loop ? { loop: true } : {}), ...(t.median ? { median: t.median } : {}) });
   for (const c of UPTOWN_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // The swing bridge (swingbridge.ts, docs/highway-plan.md Phase 5): from Uptown's southbound street's junction on the
+  // north bank avenue over the river to The Trenches' cross street's on the south bank's, lit now it's a crossroads
+  streets.push({ id: SWING_STREET, kind: 'street', pts: swingPts(), half: SWING_ROAD, lanes: 1 });
+  for (const at of [swingPts()[0], swingPts().at(-1)!]) {
+    const c = crossings.find((k) => k.at[0] === at[0] && k.at[1] === at[1])!;
+    c.streets = [...c.streets, SWING_STREET];
+    c.lights = true;
+  }
   UPTOWN_LANES.forEach(([x0, z0, x1, z1], i) =>
     streets.push({
       id: `uptown-lane${i}`,
@@ -529,6 +538,9 @@ export function riverBridges(plan: StreetPlan = PLAN) {
       out.push({ street: s.id, c: a[0], half: s.half, x0: a[0] - w, x1: a[0] + w });
     }
   }
+  // (the swing bridge's street is in short pieces, so its heights reach the routes: swingbridge.ts)
+  const sw = plan.streets.find((s) => s.id === SWING_STREET);
+  if (sw) out.push({ street: sw.id, c: SWING_X, half: sw.half, x0: SWING_X - SWING_HALF, x1: SWING_X + SWING_HALF });
   return out.sort((p, q) => p.x0 - q.x0);
 }
 

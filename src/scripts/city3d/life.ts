@@ -13,6 +13,7 @@ import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan'
 import { DOWNTOWN, EXT, MARKET } from './layout';
 import { DECK_STROLLS, HIGH_Y as LIBERTY_HIGH } from './liberty';
 import { deckSlope, deckY, onHarbour } from './harbour';
+import { barrierHold, swingAt } from './swingbridge';
 import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import { WATER_Y } from './river';
@@ -693,8 +694,13 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     for (const o of occupied) o.clear();
     for (const v of vehicles) for (const s of v.route.stops) if (v.p + v.len / 2 > s.enter && v.p - v.len / 2 < s.exit) occupied[s.j.ix].add(s.phase);
 
+    // The swing bridge's barriers (swingbridge.ts): down while it swings for the tall ship
+    const swingShut = swingAt(Date.now() / 1000).shut;
     for (const v of vehicles) {
       let target = v.vmax;
+      // (the traffic coming onto it waits at them)
+      const hold = barrierHold(v.x, v.z, v.fx, v.fz, v.len / 2, swingShut);
+      if (hold < 12) target = Math.min(target, Math.max(0, (hold - 0.6) * 1.3));
       // Follow whoever is ahead going the same way (any route: routes share lanes)
       for (const o of vehicles) {
         // (up on the raised highway or its ramps and down under them never meet)

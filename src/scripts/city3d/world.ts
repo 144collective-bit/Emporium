@@ -37,6 +37,7 @@ import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
 import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './river';
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
+import { SWING_RECT, SWING_STREET } from './swingbridge';
 import { COVER, KERB, LAMP, TREE, VERGE } from './palette';
 import { EDGE, RAMP, VERGES, edgePieces, pieceLine } from './verges';
 import { colourAt, groundStep } from './ground';
@@ -883,13 +884,14 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const northBank = EW_ROADS.filter((r) => r.c < RIVER[0]).at(-1)!;
   const southBank = EW_ROADS.find((r) => r.c === SOUTH_ROAD)!;
   const promenade = toon('#4a4388');
-  // (broken under Harbour Bridge's deck and its anchorages, harbour.ts)
+  // (broken under Harbour Bridge's deck and its anchorages, harbour.ts, and the swing bridge's, swingbridge.ts)
   for (const [z0, z1] of [
     [northBank.c + northBank.half, RIVER[0] - 0.25],
     [RIVER[1] + 0.25, southBank.c - southBank.half],
   ])
     for (const [x0, x1] of [
-      [e0, HX - HARBOUR_HALF],
+      [e0, SWING_RECT[0]],
+      [SWING_RECT[2], HX - HARBOUR_HALF],
       [HX + HARBOUR_HALF, e1],
     ])
       b.box(x0, 0, z0, x1 - x0, 0.05, z1 - z0, promenade);
@@ -988,7 +990,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const STRETCH = 10;
   for (const r of riverBridges()) {
     // (the ring highway's are its viaduct's river spans, viaduct3d.ts)
-    if (r.street === HARBOUR_STREET || r.street === 'highway') continue;
+    if (r.street === HARBOUR_STREET || r.street === SWING_STREET || r.street === 'highway') continue;
     const w = r.half + WALK_W;
     for (let z0 = bz0; z0 < bz1 - 1e-6; z0 += STRETCH) {
       const z1 = Math.min(bz1, z0 + STRETCH);

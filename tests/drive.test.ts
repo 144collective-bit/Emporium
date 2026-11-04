@@ -144,7 +144,14 @@ test('the river stops it except over the bridges', () => {
   const gaps = riverBridges()
     .filter((b) => b.street !== 'highway')
     .map((b) => [b.x0 + 0.1, b.x1 - 0.1]);
-  assert.equal(gaps.length, BRIDGED_NS.length);
+  // (and the swing bridge's, Uptown to The Trenches: docs/highway-plan.md Phase 5)
+  assert.equal(gaps.length, BRIDGED_NS.length + 1);
+  const sw = riverBridges().find((b) => b.street === 'swing')!;
+  for (const [off, z0, yaw] of [[-0.85, RIVER[0] - 6, -Math.PI / 2], [0.85, RIVER[1] + 6, Math.PI / 2]] as const) {
+    const c = newCar(sw.c + off, z0, yaw);
+    run(c, GAS, 12);
+    assert.ok(yaw < 0 ? c.z > RIVER[1] + 1 : c.z < RIVER[0] - 1, `blocked on the swing bridge (${off})`);
+  }
   NS_ROADS.forEach((r, i) => {
     const open = !RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half);
     assert.equal(open, BRIDGED_NS.includes(i), `x ${r.c}`);

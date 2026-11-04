@@ -15,6 +15,7 @@ import { PAL, fx, glowMat } from './kit';
 import { HIGHWAY_PACE, SPOTS, climbOn, heightOn, lightState, rideTime, pathBetween, pointOn, type Route } from './routes';
 import { bodies, stoppers } from './life';
 import { deckSlope, deckY, onHarbour } from './harbour';
+import { barrierHold, swingAt } from './swingbridge';
 import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import type { Place } from './places';
@@ -156,6 +157,9 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
       const light = s.j.lit ? lightState(s.j, s.phase, t) : 'g';
       if (light === 'r' || (light === 'y' && dd > 2)) target = Math.min(target, Math.max(0, dd * 1.4));
     }
+    // The swing bridge's barriers while it swings for the tall ship (swingbridge.ts)
+    const hold = barrierHold(pos.x, pos.z, fwd.x, fwd.y, 1.2, swingAt(Date.now() / 1000).shut);
+    if (hold < 14) target = Math.min(target, Math.max(0, (hold - 0.6) * 1.4));
     // Whoever's ahead going the same way
     for (const o of bodies.cars) {
       // (only what's at its height: up on the raised highway, or down under it)

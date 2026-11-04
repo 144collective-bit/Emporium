@@ -16,6 +16,7 @@
  * lights' timing (two phases, or three where a diagonal comes in). life.ts
  * drives the cars along them, round and round.
  */
+import { swingRoadY } from './swingbridge';
 import { LANE, MEDIAN } from './layout';
 import { PLAN, distToStreet, offsetLine, raised, type Street } from './streetplan';
 import { cornerCurve, fromHighway } from './highway';
@@ -427,6 +428,9 @@ export function heightsOf(pts: Pt[]): number[] {
     const b = pts[Math.min(pts.length - 1, i + 1)];
     const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     const u: Pt = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+    // (over the swing bridge's ramps and deck, heading along it: swingbridge.ts)
+    const sw = swingRoadY(p[0], p[1]);
+    if (sw !== null && Math.abs(u[1]) > 0.7) return sw;
     const off = fromHighway(p[0], p[1]);
     if (off > 60) return 0;
     let best = Infinity;

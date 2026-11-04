@@ -14,6 +14,7 @@
  * Once built, it's held like the rest of the city: its tiles' near pieces go
  * when far away and the near forms held pass the budget (tilework.ts).
  */
+import { SWING_RECT } from './swingbridge';
 import type * as THREE from 'three';
 import type { DistrictModule, SiteWorker } from './sitework';
 import { rectDistance } from './tileplan';
@@ -79,6 +80,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the
   // town, so it comes in as soon as the city's up
   { id: 'viaduct', rect: [HIGHWAY_BOX[0] - 10, HIGHWAY_BOX[1] - 10, HIGHWAY_BOX[2] + 10, HIGHWAY_BOX[3] + 10], load: () => import('./viaduct3d') },
+  // The swing bridge, Uptown to The Trenches (swingbridge.ts, docs/highway-plan.md Phase 5; swingbridge3d.ts)
+  { id: 'swing', rect: [SWING_RECT[0] - 20, SWING_RECT[1] - 20, SWING_RECT[2] + 20, SWING_RECT[3] + 20], load: () => import('./swingbridge3d') },
 ];
 
 
