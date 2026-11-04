@@ -31,6 +31,7 @@ import { DOCKS_RECT } from './docks';
 import { SF_RECT } from './southfield';
 import { STRIP_RECT } from './strip';
 import { SUNRIDGE_RECT } from './sunridge';
+import { LOT9_RECT } from './lot9';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -72,6 +73,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Southfield, the land south of the south row (southfield.ts, docs/blend-plan.md Phase 5a): its yards, park,
   // allotments, gardens and walks (southfield3d.ts)
   { id: 'southfield', rect: SF_RECT, load: () => import('./southfield3d') },
+  // Lot 9, the trailer park south of the highway's south-west corner, and its tunnel (lot9.ts, docs/trailer-plan.md; lot9-3d.ts)
+  { id: 'lot9', rect: [LOT9_RECT[0], 300, LOT9_RECT[2], LOT9_RECT[3]], load: () => import('./lot9-3d') },
 ];
 
 

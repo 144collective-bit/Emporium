@@ -10,6 +10,7 @@ import { inTrenches, lampKind } from './trenches';
 import { inDocks } from './docks';
 import { inYards } from './southfield';
 import { WATERFRONT_RECT } from './waterfront';
+import { inLot9, inLot9Lamps } from './lot9';
 
 /** How far either side of a sodium district's edge its lamps mix with the white (tiles: about a block) */
 export const MIX = 18;
@@ -21,6 +22,7 @@ export const SODIUM_AREAS: ((x: number, z: number, m: number) => boolean)[] = [
   inDocks,
   inYards,
   (x, z, m) => inRect(WATERFRONT_RECT, x, z, m),
+  inLot9,
 ];
 
 /**
@@ -56,10 +58,18 @@ function own(x: number, z: number) {
   return h - Math.floor(h);
 }
 
+/** A lamp in Lot 9: as The Trenches' `lampKind()`, its own number from where it stands */
+function lot9Kind(x: number, z: number) {
+  const h = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+  const u = h - Math.floor(h);
+  return u < 0.08 ? 'dead' : u < 0.22 ? 'flicker' : 'sodium';
+}
+
 export type LampTone = 'white' | 'sodium' | 'flicker' | 'dead';
 /** What a street lamp at x, z is: white or sodium by `sodiumShare()`, and in The Trenches the odd one dead and a few sodium ones flickering */
 export function lampTone(x: number, z: number): LampTone {
-  const k = lampKind(x, z);
+  // (Lot 9's as worn as The Trenches': the odd one dead, a few flickering; lot9.ts)
+  const k = lampKind(x, z) ?? (inLot9Lamps(x, z) ? lot9Kind(x, z) : null);
   if (k === 'dead') return 'dead';
   if (own(x, z) >= sodiumShare(x, z)) return 'white';
   return k === 'flicker' ? 'flicker' : 'sodium';

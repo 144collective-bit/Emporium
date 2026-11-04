@@ -30,6 +30,7 @@ import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
 import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
 import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
+import { LOT9_CROSSINGS, LOT9_STREETS } from './lot9';
 
 export type Pt = [number, number];
 
@@ -338,12 +339,12 @@ const DOCKS_SLIP = 'highway-ew4-1-0';
  * The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north
  * roads to the stadium and the kart park, and to the airport since docs/airport-plan.md Phase 3: the south bank avenue
  * east to Airport Drive, the east ring avenue south to the GA road; and Crestmont's Flats since its Phase 2:
- * downtown's east-west roads east past the highway, crestmont.ts; but never one over the river's promenade, as the bank
+ * downtown's east-west roads east past the highway, crestmont.ts; and the west ring avenue south to Lot 9, lot9.ts; but never one over the river's promenade, as the bank
  * avenue's corner on the water would be). An entry with a turn's number after it (`<junction>-<k>`) is that one
  * turn alone: the south bank avenue west to the Docks has only its south-west corner (docks.ts; its north-west one
  * is the river)
  */
-export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0', 'highway-ew0-0', 'highway-ew1-0', 'highway-ew2-0', 'highway-ew3-0', DOCKS_SLIP];
+export const OUTER_SLIPS = ['highway-ns0-0', 'highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0', 'highway-ew0-0', 'highway-ew1-0', 'highway-ew2-0', 'highway-ew3-0', DOCKS_SLIP];
 
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
@@ -388,6 +389,9 @@ export function cityPlan(): StreetPlan {
   // Southfield Yards' ring off the south bank avenue and Yard Street across it (southfield.ts, docs/blend-plan.md Phase 5a)
   for (const t of SF_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of SF_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // Lot 9's lane in off the south avenue past the highway and its two one-way loops (lot9.ts, docs/trailer-plan.md)
+  for (const t of LOT9_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
+  for (const c of LOT9_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });

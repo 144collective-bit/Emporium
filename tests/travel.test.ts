@@ -73,7 +73,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // about 80 s)
       // (and Southbank Docks' metro station out on the docks' east quay past the highway's west side, docs/docks-plan.md
       // Phase 2: from Crestmont's grand hotel across the whole city about 67 s)
-      const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster';
+      // (and Lot 9 past the highway's south-west corner, docs/trailer-plan.md: from the stadium about 68 s)
+      const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster' || id === 'lot9';
       const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
       const most = docks(a.id) || docks(b.id) ? 96 : 84;
