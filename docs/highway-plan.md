@@ -309,7 +309,7 @@ it).
   crossing the street the left turners turn into wait while the arrow's
   lit (pedestrians.ts `redLeft()`).
 
-## Phase 7: country roads (built, waiting on the owner's sign-off)
+## Phase 7: country roads (built, signed off)
 
 `rural.ts` (DOM-free, tested in `tests/rural.test.ts`), `ruraldress.ts`, drawn
 by `rural3d.ts` (`LAZY_DISTRICTS` id `rural`).
@@ -342,6 +342,27 @@ by `rural3d.ts` (`LAZY_DISTRICTS` id `rural`).
 - The layout snapshot writes a country road's far end, its loop and stub as
   'edge', so they move with the world's edge.
 
+## Phase 8: the concrete-era look on the town's streets (built, waiting on the owner's sign-off)
+
+`streetwear.ts` (DOM-free, tested in `tests/streetwear.test.ts`; the drawing's
+chunk only), drawn by `streetwear3d.ts` (`LAZY_DISTRICTS` id `streetwear`, a
+site a tile). On the grid's avenues and streets inside the highway and
+downtown's diagonals (`WORN_STREETS`), between their junctions, wherever the
+look goes (`wornAt()`: inside the highway, clear of its deck and the river,
+not Uptown (kept clean), The Trenches (worn its own way, streets3d.ts),
+Harbour Bridge or Kestrel Bridge):
+
+- **Kerbs:** a concrete gutter along every kerb where a block's sidewalk
+  meets the street (`GUTTERS`), with a drain grate in it every
+  `WEAR.drainGap` and just before each junction (`DRAINS`; their bars near
+  only).
+- **Wear:** patches of newer and older asphalt, each inside its lane, never
+  across a line (`PATCHES`), cracks (`CRACKS`, near only), manhole covers
+  down the lanes (`MANHOLES`); seeded from the street and where along it.
+- **Sharper markings:** a white stop line across the lanes coming into every
+  lit junction, give-way dashes into the unlit ones (`STOP_LINES`; the turn
+  lanes keep their own stop bars, turnlanes.ts), over the lane dashes.
+
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
@@ -365,9 +386,9 @@ by `rural3d.ts` (`LAZY_DISTRICTS` id `rural`).
    timetable, the barriers, the boats and the tall ship.
 6. **Turn lanes and signals** at the busiest avenue junctions (above,
    built, signed off).
-7. **Rural roads** past the highway (above, built, waiting on the owner's
-   sign-off).
-8. **The concrete-era look** on the town's streets.
+7. **Rural roads** past the highway (above, built, signed off).
+8. **The concrete-era look** on the town's streets (above, built, waiting
+   on the owner's sign-off).
 9. **Polish and performance:** bench views (a junction, a straight, a
    river span, an exit), phones, the boot budget (697.9 of 700 KB before
    this plan: the drawing goes in a chunk where it can, the budget raised
