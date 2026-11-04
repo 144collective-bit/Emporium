@@ -746,14 +746,14 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         .kart-hint is the key line. */}
     <section class="shop karts mk-skin" data-karts hidden aria-labelledby="karts-title">
       <header class="shop-head">
-        <h2 id="karts-title" class="shop-title">Kart hut</h2>
+        <h2 id="karts-title" class="shop-title">Clubhouse</h2>
         <p class="shop-score karts-dorras"><span class="shop-score-label">Dorras</span> <span data-karts-dorras></span></p>
         <p class="shop-score" data-karts-level>Level <b>1</b></p>
-        <button type="button" class="shop-close" data-karts-close aria-label="Close the kart hut">
+        <button type="button" class="shop-close" data-karts-close aria-label="Close the clubhouse">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
-      <div class="seg karts-tabs" data-karts-tabs role="group" aria-label="Kart hut">
+      <div class="seg karts-tabs" data-karts-tabs role="group" aria-label="Clubhouse">
         <button type="button" data-karts-tab="race" aria-pressed="true">Race</button>
         <button type="button" data-karts-tab="karts" aria-pressed="false">Karts</button>
         <button type="button" data-karts-tab="boards" aria-pressed="false">Boards</button>
@@ -1072,7 +1072,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <template data-panel-tpl="karts" data-marquee="Green light soon · Two ways round">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
-    <p class="city-panel-text">The Sector 7 Circuit north of the ring highway in the north-east, off Kart Road with its own metro stop: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Watch from the covered grandstand, the grass banks or the hut's roof terrace. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
+    <p class="city-panel-text">The Sector 7 Circuit west of the ring highway past exit 8, off Kart Road, a walk up from its own metro stop: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Watch from the covered grandstand, the grass banks or the clubhouse's roof terrace, with the race on the big screens, and see the top three on the podium. Karts are bought and tuned at the clubhouse for Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-records.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>

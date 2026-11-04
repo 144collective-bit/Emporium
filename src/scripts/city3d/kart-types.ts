@@ -38,6 +38,18 @@ export interface KartPark {
   racing(on: boolean): void;
   /** Where the picked kart stands on show between races (its bay in front of the garages), and which way it faces */
   showSpot: { x: number; y: number; z: number; yaw: number };
+  /** The LED screens: the race's order (null between races: the park's name) */
+  board(b: KartBoard | null): void;
+  /** The trophy cabinet: the cups you've won and your best overall place in each (tycoon.ts `karts.trophies`) */
+  trophies(won: Partial<Record<CupId, number>>): void;
+}
+/** What the LED screens show in a race: its name, the lap, the order (each kart's name and colour, yours marked) */
+export interface KartBoard {
+  title: string;
+  lap: number;
+  laps: number;
+  done: boolean;
+  rows: { name: string; colour: string; you: boolean }[];
 }
 
 /* ---------- The menu, the HUD and the results (kart-ui.ts) ---------- */

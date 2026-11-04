@@ -86,7 +86,7 @@ owner has looked**.
    deck and tunnel in the sim; Degen's pose inside each kart; the chase
    camera's room in the tunnel, under the deck and by the stands) and the
    fixes for whatever they find.
-3. **The facility:** the clubhouse (reception, café, trophy cabinet, roof
+3. **The facility** (built): the clubhouse (reception, café, trophy cabinet, roof
    terrace) in place of the hut; team garages and the paddock; bigger
    grandstands and banks shaped into the slopes; the podium; the gate plaza
    and arch, the signed approach, the car and coach park; LED screens,
@@ -171,3 +171,54 @@ The test is `tests/kartclip.test.ts`. What it found, and the fixes:
 - **The driver:** his knees sit behind the wheel's rim and above the
   floor, and his elbows and knees stay inside the kart. Already true;
   now tested.
+
+## What Phase 3 built
+
+- **The clubhouse** (`SITE.hut` in kartcircuit.ts, `CLUBHOUSE` in
+  kartfacility.ts) replaces the hut on the same door: twice as long, two
+  storeys. Downstairs is the reception and café behind a glass front on
+  the plaza, with a canopy over the door. Upstairs, the lounge's long
+  window looks over the pits. On the roof, a terrace behind a glass
+  balustrade with umbrellas and people, reached by stairs up the west
+  side. CLUBHOUSE is lit in neon over the door and on the pits' side.
+  The trophy cabinet beside the door shows the cups you've won, gold,
+  silver or bronze by your best overall place (`KartPark.trophies()`,
+  painted from the save at the boot and after every race). The café's
+  tables are out on the plaza (`CAFE`), with people eating at them. The
+  door's prompt and the menu now say "Clubhouse".
+- **The garages:** each bay is a team's, its colour on the header and
+  the back wall (`TEAM_COLOURS`), a roller door's drum over the front.
+  The teams' box trucks are parked down the paddock's walk
+  (`TRANSPORTERS`).
+- **The grandstand** is bigger (`GRANDSTAND`: 42 long, 12 tiers, the roof
+  at 7.4), its people with it.
+- **The banks** are taller (2.6) and reach back to the fence, and their
+  back slopes carry on outside it as berms down to the lawn (`out`,
+  `bankLand()`, `bankAt()`), so the park looks dug into the land round
+  it. The fence rides over their tops. Walking follows them outside the
+  fence too (`BANKS_AREA`, walk.ts), and the outskirts' trees keep off
+  them. The west bank is shorter, to keep clear of the car park's loop.
+- **The podium** (`PODIUM`, `PODIUM_RECT`) stands on the plaza west of
+  the gate's path: three steps (first in the middle and highest, second
+  on its west, third on its east), each with its number and a band of
+  gold, silver or bronze. Behind it is a backdrop with PODIUM in gold
+  neon, with a flag either side. Phase 4 puts the top three's karts on it.
+- **The entrance:** flags on poles up both sides of the gate's path with
+  bunting across (`FLAGS`). Two plaza benches moved off the podium's
+  spot.
+- **The approach:** a KART PARK totem on the corner where the drive
+  leaves ew0 (`TOTEM`), signs on ew0's verge facing the traffic both
+  ways (`APPROACH_SIGNS`), and a coach park in a lay-by off Kart Road's
+  south side with three coaches (`COACH_LOT`, `COACHES`).
+- **The LED screens** (`SCREENS`): the garages' old one, one on the north
+  bank's top behind its crowd, and one on the east bank's top. All three
+  show one live picture (kartpark3d.ts `board()`): in a race, its name,
+  the lap and the order with each kart's colour and yours lit, a few
+  times a second; between races, the park's name.
+- **Floodlights:** two more (`FLOODLIGHTS`), and the two by the
+  grandstand moved to its new ends. The clubhouse's eaves, the canopy,
+  the screens and the podium carry neon for night races.
+- Tests: `tests/kartfacility.test.ts` (the clubhouse, the podium, the
+  café, the flags, the screens, the approach, the berms) and
+  `tests/kartclip.test.ts`, which still holds every piece of trackside
+  furniture clear of the new pieces.

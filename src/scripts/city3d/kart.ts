@@ -726,6 +726,10 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     sparks.visible = false;
   }
 
+  /** Each racer's paint (for the LED screens), and when they're next painted */
+  const paints: string[] = [];
+  let boardT = 0;
+
   /** Who stands where, for the results: the sim's order, rivals by their lineup names */
   function standings(): KartStanding[] {
     if (!sim) return [];
@@ -755,6 +759,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       if (sr) series = { ...sr, names: [...lineup(cup).map((r) => ({ name: r.name, kart: r.kart, you: false })), { name: 'You', kart: save.karts.model, you: true }] };
     }
     d.game.commit();
+    d.park.trophies(save.karts.trophies);
     d.sfx('finish');
     if (result.levels > 0 || (series?.levels ?? 0) > 0) levelAt = 0.7;
     if (series?.done) d.ui.pop(`Series: ${placeText(series.overall)}`, series.overall <= 3 ? 'good' : 'plain');
@@ -844,6 +849,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         const you = k.i === sim.player.i;
         const r = you ? null : rivals[k.i];
         const paint = you ? paintHex(save.karts.paint) : paintHex(r!.paint);
+        paints[k.i] = paint;
         views[k.i] = buildView(k, paint, you ? d.outfit() : r!.outfit, you ? 2 : d.low ? 0 : 1);
       }
       for (let i = 0; i < views.length; i++) placeKart(views[i], sim.racers[i], 1 / 60);
@@ -914,6 +920,18 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         dot.you = i === p.i;
       }
       dots.length = s.racers.length;
+      // The LED screens round the park: the order, a few times a second
+      if ((boardT -= dt) <= 0) {
+        boardT = 0.25;
+        const names = s.timeTrial ? [] : lineup(cup as CupId).map((r) => r.name);
+        d.park.board({
+          title: COURSES[course].name.toUpperCase(),
+          lap: p.finished ? s.laps : Math.min(s.laps, p.lap + 1),
+          laps: s.laps,
+          done: p.finished,
+          rows: s.standings().map((i) => ({ name: i === p.i ? 'You' : (names[i] ?? `Racer ${i + 1}`), colour: paints[i] ?? '#ffffff', you: i === p.i })),
+        });
+      }
       const hud: KartHud = {
         place: p.place,
         of: s.racers.length,
@@ -968,6 +986,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       delete root.dataset.kart;
       d.park.racing(false);
       d.park.setCourse('circuit');
+      d.park.board(null);
       d.conditions(null);
       // Out of the hut's door onto the gate path, facing along it to the gate (walk.ts looks along -z at yaw 0, -x at π/2)
       return { x: HUT_DOOR.x, z: HUT_DOOR.z + 1, yaw: Math.PI / 2 };

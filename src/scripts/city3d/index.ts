@@ -1053,6 +1053,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
   syncHeld(profileUI.look);
   profileUI.onChange(syncHeld);
+  // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
+  kartPark.trophies(game.save().karts.trophies);
   const charScreen = createCharScreen({
     root,
     look: () => profileUI.look,

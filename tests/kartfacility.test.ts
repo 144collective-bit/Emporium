@@ -29,6 +29,18 @@ import {
   TOWER,
   TYRE_WALLS,
   bankAt,
+  APPROACH_SIGNS,
+  CAFE,
+  CLUBHOUSE,
+  COACHES,
+  COACH_LOT,
+  FLAGS,
+  PODIUM,
+  PODIUM_RECT,
+  TOTEM,
+  bankLand,
+  screenLegs,
+  SCREENS,
   bankY,
   tierAt,
   worldRect,
@@ -82,7 +94,7 @@ test('the stands, banks, paddock, plaza and buildings: on the site, clear of the
   const rects = { grandstand: GRANDSTAND, tower: TOWER, kiosk: KIOSK, stairs: TERRACE.stairs, plaza: PLAZA, paddock: PADDOCK, ...Object.fromEntries(BANKS.map((b) => [b.id, b])) };
   for (const [id, r] of Object.entries(rects)) {
     const [x0, z0, x1, z1] = worldRect(r);
-    assert.ok(inSite(x0, z0) && inSite(x1, z1), `${id} off the site`);
+    assert.ok(inSite(x0 + 1e-6, z0 + 1e-6) && inSite(x1 - 1e-6, z1 - 1e-6), `${id} off the site`);
     for (let u = r.u0; u <= r.u1; u += 1)
       for (let v = r.v0; v <= r.v1; v += 1) {
         const [x, z] = toWorld([u, v]);
@@ -106,18 +118,23 @@ test('the stands, banks, paddock, plaza and buildings: on the site, clear of the
   for (const t of TENTS) assert.ok(t.u > PADDOCK.u0 && t.u < PADDOCK.u1 && t.v > PADDOCK.v0 && t.v < PADDOCK.v1);
 });
 
-test('the banks: up from the front, a flat top, down at the back; nothing under them; walkable', () => {
+test('the banks: up from the front, a flat top to the fence, the berm down outside it; nothing under them; walkable', () => {
   for (const b of BANKS) {
     const mid = (b.u0 + b.u1) / 2;
     const midV = (b.v0 + b.v1) / 2;
-    // Their edges at the lawn
-    for (const [u, v] of [
-      [b.u0, midV],
-      [b.u1, midV],
-      [mid, b.v0],
-      [mid, b.v1],
-    ])
-      assert.ok(bankAt(b, u, v) < 1e-6, `${b.id} stands up at its edge`);
+    const land = bankLand(b);
+    // Their front, their ends and the berm's far edge at the lawn
+    const edges: [number, number][] =
+      b.front === 's'
+        ? [[land.u0, midV], [land.u1, midV], [mid, land.v0], [mid, b.v1]]
+        : b.front === 'e'
+          ? [[land.u0, midV], [b.u1, midV], [mid, land.v0], [mid, land.v1]]
+          : [[b.u0, midV], [land.u1, midV], [mid, land.v0], [mid, land.v1]];
+    for (const [u, v] of edges) assert.ok(bankAt(b, u, v) < 1e-6, `${b.id} stands up at its edge`);
+    // Its back at the fence, at its full height, the fence's line its own
+    const fence = b.front === 's' ? toWorld([mid, b.v0]) : b.front === 'e' ? toWorld([b.u0, midV]) : toWorld([b.u1, midV]);
+    assert.ok(Math.abs(bankY(...fence) - b.h) < 1e-6, `${b.id}'s top reaches the fence`);
+    assert.ok(Math.abs(fence[0] - KART_PARK.x0) < 1e-6 || Math.abs(fence[0] - KART_PARK.x1) < 1e-6 || Math.abs(fence[1] - KART_PARK.z0) < 1e-6, `${b.id}'s back on the fence`);
     // Rising from the front
     const front = b.front === 's' ? [mid, b.v1 - 0.5] : b.front === 'e' ? [b.u1 - 0.5, midV] : [b.u0 + 0.5, midV];
     const back = b.front === 's' ? [mid, b.v0 + (b.v1 - b.v0) * 0.2] : b.front === 'e' ? [b.u0 + (b.u1 - b.u0) * 0.2, midV] : [b.u1 - (b.u1 - b.u0) * 0.2, midV];
@@ -131,7 +148,9 @@ test('the banks: up from the front, a flat top, down at the back; nothing under 
       assert.ok(Math.abs(bankY(x1, z1) - bankY(x0, z0)) < 0.25 * Math.max(1, Math.hypot(x1 - x0, z1 - z0) / 0.1));
     }
   }
-  for (const s of FACILITY_SOLIDS)
+  // (the screens' legs stand on them, on purpose)
+  const legs = new Set(SCREENS.flatMap((sc) => screenLegs(sc).map(([u, v]) => worldRect({ u0: u - 0.25, v0: v - 0.25, u1: u + 0.25, v1: v + 0.25 }).join())));
+  for (const s of FACILITY_SOLIDS.filter((b) => !legs.has(b.slice(0, 4).join())))
     for (const b of BANKS) {
       const [x, z] = [(s[0] + s[2]) / 2, (s[1] + s[3]) / 2];
       const [u, v] = toLocal([x, z]);
@@ -223,5 +242,76 @@ test('solids in the city\'s; the outskirts\' trees keep off it all, the park\'s 
     assert.ok(!SOLID_GRID.near(x, z, 0.4).some((b) => inBox(b, x, z, 0.4)), 'a tree in something solid');
     const [u, v] = toLocal([x, z]);
     assert.ok(!BANKS.some((b) => bankAt(b, u, v) > 0), 'a tree on a bank');
+  }
+});
+
+test('the clubhouse, the podium and the café: on the plaza and the pits, clear of the path, the kiosk, the lamps and each other', () => {
+  const H = SITE.hut;
+  assert.ok(H.h > 5.5 && H.h + 1.4 < TALL && CLUBHOUSE.floor < H.h - 2.5, 'two storeys and a roof terrace, under the Emporium');
+  assert.ok(CLUBHOUSE.cabinet.u0 > H.u0 && CLUBHOUSE.cabinet.u1 < SITE.hut.door[0] - 1, 'the cabinet beside the door');
+  // The podium: first in the middle and highest, second on its west, third on its east, behind its backdrop
+  const [first, second, third] = PODIUM.steps;
+  assert.ok(first.h > second.h && second.h > third.h && second.u1 === first.u0 && first.u1 === third.u0);
+  assert.ok(PODIUM.back.v1 <= PODIUM.v0 && PODIUM.back.h + 1 < TALL);
+  const inL = (r: { u0: number; v0: number; u1: number; v1: number }, u: number, v: number, m = 0) => u > r.u0 - m && u < r.u1 + m && v > r.v0 - m && v < r.v1 + m;
+  for (const [u, v] of [
+    [PODIUM_RECT.u0, PODIUM_RECT.v0],
+    [PODIUM_RECT.u1, PODIUM_RECT.v1],
+  ])
+    assert.ok(inL(PLAZA, u, v), 'the podium on the plaza');
+  const path = SITE.path;
+  const onPath = (u: number, v: number, m: number) => (Math.abs(v - path.v) < path.half + m && u > path.u0 - path.half - m && u < path.u1 + m) || (Math.abs(u - path.u0) < path.half + m && v > path.v - m);
+  for (let u = PODIUM_RECT.u0; u <= PODIUM_RECT.u1; u += 0.3) for (let v = PODIUM_RECT.v0; v <= PODIUM_RECT.v1; v += 0.3) assert.ok(!onPath(u, v, 0.4), 'the podium on the path');
+  const lamps = KART_LAMPS.map(([x, z]) => toLocal([x, z]));
+  for (const [u, v] of lamps) assert.ok(!inL(PODIUM_RECT, u, v, 0.4), 'a lamp in the podium');
+  // The café's tables in front of the clubhouse, off the path, the podium, the kiosk and the lamps
+  for (const [u, v] of CAFE) {
+    assert.ok(inL(PLAZA, u, v, -1) && v > H.v1 + 2 && u > H.u0 && u < H.u1, 'a table in front of the clubhouse');
+    assert.ok(!onPath(u, v, 1.3) && !inL(PODIUM_RECT, u, v, 1.4) && !inL(KIOSK, u, v, 1.5), 'a table in the way');
+    for (const [lu, lv] of lamps) assert.ok(Math.hypot(lu - u, lv - v) > 1.4, 'a table by a lamp');
+  }
+  // The flags beside the path, not on it
+  for (const f of FLAGS) assert.ok(inL(PLAZA, f.u, f.v) && !onPath(f.u, f.v, 0.6), 'a flag on the path');
+});
+
+test('the LED screens face the track: the garages\', and one on each of two banks\' tops, standing on them; under the Emporium', () => {
+  assert.equal(SCREENS.length, 3);
+  for (const sc of SCREENS) {
+    assert.ok(sc.base + sc.h + 2.6 < TALL);
+    const [x, z] = toWorld([sc.u, sc.v]);
+    // Facing (sin ry, cos ry) in u, v: towards the circuit's nearest point
+    let best = Infinity;
+    let near: [number, number] = [0, 0];
+    for (let i = 0; i < CIRCUIT.x.length; i++) {
+      const d = Math.hypot(CIRCUIT.x[i] - x, CIRCUIT.z[i] - z);
+      if (d < best) [best, near] = [d, [CIRCUIT.x[i] - x, CIRCUIT.z[i] - z]];
+    }
+    assert.ok(Math.sin(sc.ry) * near[0] + Math.cos(sc.ry) * near[1] > 0.6 * best, 'a screen facing away from the track');
+    for (const [u, v] of screenLegs(sc)) {
+      const top = Math.max(...BANKS.map((b) => bankAt(b, u, v)));
+      assert.ok(top > 2.4, `a screen's leg off a bank's top (${top.toFixed(2)})`);
+    }
+  }
+});
+
+test('the approach: the totem, the signs and the coach park off every street and the ramps, the coaches in their bays; the berms clear too', () => {
+  const streets = PLAN.streets.filter((s) => s.kind !== 'alley');
+  for (const [x, z, m] of [[TOTEM.x, TOTEM.z, 1], ...APPROACH_SIGNS.map((a) => [a.x, a.z, 0.6])] as [number, number, number][]) {
+    for (const s of streets) assert.ok(distToStreet(s, [x, z]) > s.half + m, `${x}, ${z} on ${s.id}`);
+    assert.ok(!rampLand(x, z), 'on the ramps\' land');
+  }
+  const [x0, z0, x1, z1] = COACH_LOT;
+  for (let x = x0; x <= x1; x += 0.5)
+    for (let z = z0; z <= z1; z += 0.5) for (const s of streets) if (s.id !== 'kart-road') assert.ok(distToStreet(s, [x, z]) > s.half + 0.3, `the coach park on ${s.id}`);
+  for (const [, x, z, yaw] of COACHES) assert.ok(x - 2.85 > x0 && x + 2.85 < x1 && z > z0 + 0.8 && z < z1 - 0.8 && Math.abs(Math.sin(yaw)) < 1e-9, 'a coach out of its bay');
+  // The banks' berms: off the streets and the ramps' land, kept clear of the trees
+  for (const b of BANKS) {
+    const [bx0, bz0, bx1, bz1] = worldRect(bankLand(b));
+    for (let x = bx0; x <= bx1; x += 1)
+      for (let z = bz0; z <= bz1; z += 1) {
+        assert.ok(!rampLand(x, z), 'a berm on the ramps\' land');
+        for (const s of streets) assert.ok(distToStreet(s, [x, z]) > s.half + 1, `a berm on ${s.id}`);
+        assert.ok(KART_RECTS.some((r) => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3]), 'a berm the trees may grow on');
+      }
   }
 });

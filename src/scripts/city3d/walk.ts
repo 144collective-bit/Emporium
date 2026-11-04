@@ -64,7 +64,7 @@ import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
-import { bankY } from './kartfacility';
+import { BANKS_AREA, bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
@@ -760,7 +760,11 @@ export function createWalk(d: WalkDeps) {
     // (the garage's turntable: its disc's top, where your car stands and you step on to get in)
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
     const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
-    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
+    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) {
+      // (the banks' berms carry on outside the fence, kartfacility.ts)
+      const [bx0, bz0, bx1, bz1] = BANKS_AREA;
+      return x > bx0 && x < bx1 && z > bz0 && z < bz1 ? Math.max(base, bankY(x, z) + 0.035) : base;
+    }
     const t = trackSurfaceAt(x, z, yNow);
     // (and the spectators' grass banks round it, kartfacility.ts)
     return Math.max(base, t ? t.y + 0.035 : 0, bankY(x, z) + 0.035);
@@ -3165,7 +3169,7 @@ export function createWalk(d: WalkDeps) {
     }
     // The kart hut's door, at the kart park
     if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {
-      best = { id: 'karts', label: 'Kart hut' };
+      best = { id: 'karts', label: 'Clubhouse' };
       bestD = 0;
     }
     // The trainer's counter, at the Fight Club

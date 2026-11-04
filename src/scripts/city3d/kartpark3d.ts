@@ -1,22 +1,26 @@
 /*
- * The kart park in 3D, the place (the north side's stage 2, docs/north-plan.md:
- * north of the ring highway now, off Kart Road): what's built at the boot,
- * in the spot's group (what City view lifts on hover, and its far form):
+ * The kart park in 3D, the place (west of the ring highway since
+ * docs/kart-west-plan.md, off Kart Road): what's built at the boot, in the
+ * spot's group (what City view lifts on hover, and its far form):
  *
- * - The garages along the pit lane with their numbers and the big screen on
- *   their roof; the kart hut at the pit lane's west end with its viewing
- *   terrace on the roof (a parapet, tables under umbrellas, the stairs up
- *   its west side); the timing tower at the pit lane's east end, its lap
+ * - The team garages along the pit lane with their numbers, and three LED
+ *   screens (on the garages' roof and the north and east banks' tops)
+ *   showing one live picture, the race's order (`board()`); the clubhouse
+ *   at the pit lane's west end (two storeys, the café and the trophy
+ *   cabinet behind its glass front, `trophies()`; the lounge over the pits;
+ *   the roof terrace and the stairs up its west side), the café's tables
+ *   on the plaza; the timing tower at the pit lane's east end, its lap
  *   board facing the straight.
  * - The small grandstand in the infield over the straight (canopy, flags,
  *   fans bobbing) and the big covered one north of the hill and the jump
  *   (tiers of seats in the park's colours, the roof on columns at the back
  *   reaching out over the front rows with a neon edge, its people sitting).
- * - The gate's arch on Kart Road with SECTOR 7 KART PARK both ways, and the
- *   ticket kiosk on the plaza inside it.
+ * - The podium on the plaza, the flags up the gate's path, the gate's arch
+ *   on Kart Road with SECTOR 7 KART PARK both ways, the ticket kiosk; the
+ *   totem and the signs on ew0, the coaches and the teams' trucks.
  * - Its people (kartfacility.ts `KART_PEOPLE`: the banks, the stand, the
- *   terrace, the plaza, the paddock; half on phones), its trees and lamps,
- *   the car park's cars.
+ *   terrace, the café, the plaza, the paddock; half on phones), its trees
+ *   and lamps, the car park's cars.
  *
  * Everything else round the circuit (the circuit itself, trackside, the
  * paddock, the road and the car park) is kartgrounds3d.ts, loaded as you
@@ -25,13 +29,14 @@
  */
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, neon, neonSign, occlude, place, plane, rng, toon } from './kit';
+import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, liveTex, neon, neonSign, occlude, place, plane, rng, toon } from './kit';
 import { GATE, toWorld } from './kartpark';
 import { BAYS, CIRCUIT, HUT_DOOR, SITE, type CourseId } from './kartcircuit';
-import { ARCH, GRANDSTAND, KART_LAMPS, KART_PEOPLE, KART_TREES, KIOSK, PARKED, TERRACE, TOWER, tierAt } from './kartfacility';
+import { CUP_IDS, type CupId } from './kart-cups';
+import { APPROACH_SIGNS, ARCH, CAFE, CLUBHOUSE, COACHES, FLAGS, GRANDSTAND, KART_LAMPS, KART_PEOPLE, KART_TREES, KIOSK, PARKED, PODIUM, PODIUM_RECT, SCREENS, TEAM_COLOURS, TERRACE, TOTEM, TOWER, TRANSPORTERS, bankY, tierAt } from './kartfacility';
 import { atlasTex, cellNumber, chequerBands, glowText, quad, spacing } from './kartsigns';
 import { parkedCars, type CarId } from './cars';
-import type { KartPark } from './kart-types';
+import type { KartBoard, KartPark } from './kart-types';
 import type { Idle, Spot } from './landmarks';
 import { addLamp, addTree, type Tick } from './world';
 
@@ -49,14 +54,13 @@ const PIT_Y = 0.04;
 const INK = toon('#1b1830');
 const STEEL = toon('#2b2a40');
 const RED = toon('#e23b3b');
-const YELLOW = toon('#ffd23f');
 const GARAGE_C = toon('#3d4a6b');
 const GARAGE_IN = toon('#16142a');
 const CONC = toon('#6f6a8f');
 const RAIL = toon('#c9c4e6');
 const soft = (c: string) => neon(c, 0.5, 1.3);
 
-const HUT_SIGN = 'KART HUT';
+const HUT_SIGN = 'CLUBHOUSE';
 const ARCH_SIGN = 'SECTOR 7 KART PARK';
 const KIOSK_SIGN = 'TICKETS';
 const SCREEN_TITLE = 'KART PARK';
@@ -69,27 +73,58 @@ const _s = new THREE.Vector3(1, 1, 1);
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const W = (u: number, v: number) => toWorld([u, v]);
 
-/** The big screen's face */
-const screenTex = () =>
-  canvasTex(1024, 512, (c, w, h) => {
-    c.fillStyle = '#0b0a18';
-    c.fillRect(0, 0, w, h);
-    c.fillStyle = '#ffffff08';
-    for (let y = 0; y < h; y += 8) c.fillRect(0, y, w, 3);
-    chequerBands(c, w, h, 36);
-    c.strokeStyle = PAL.cyan;
-    c.lineWidth = 6;
-    c.strokeRect(14, 34, w - 28, h - 68);
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.font = `900 210px ${FONT_DISPLAY}`;
-    spacing(c, 12);
-    glowText(c, SCREEN_TITLE, w / 2, 220, PAL.pink, 36);
-    c.font = `700 60px ${FONT_MONO}`;
-    spacing(c, 10);
-    c.fillStyle = PAL.cyan;
-    c.fillText(SCREEN_SUB, w / 2, 390);
+/** The LED screens between races: the park's name over the circuit's */
+function idleScreen(c: CanvasRenderingContext2D, w: number, h: number) {
+  c.fillStyle = '#0b0a18';
+  c.fillRect(0, 0, w, h);
+  c.fillStyle = '#ffffff08';
+  for (let y = 0; y < h; y += 4) c.fillRect(0, y, w, 1.5);
+  chequerBands(c, w, h, 18);
+  c.strokeStyle = PAL.cyan;
+  c.lineWidth = 3;
+  c.strokeRect(7, 17, w - 14, h - 34);
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.font = `900 105px ${FONT_DISPLAY}`;
+  spacing(c, 6);
+  glowText(c, SCREEN_TITLE, w / 2, 110, PAL.pink, 18);
+  c.font = `700 30px ${FONT_MONO}`;
+  spacing(c, 5);
+  c.fillStyle = PAL.cyan;
+  c.fillText(SCREEN_SUB, w / 2, 195);
+}
+/** The LED screens in a race: the lap and the order, each kart in its colour, yours lit */
+function raceScreen(c: CanvasRenderingContext2D, w: number, h: number, b: KartBoard) {
+  c.fillStyle = '#0b0a18';
+  c.fillRect(0, 0, w, h);
+  c.fillStyle = '#ffffff08';
+  for (let y = 0; y < h; y += 4) c.fillRect(0, y, w, 1.5);
+  chequerBands(c, w, h, 14);
+  c.textBaseline = 'middle';
+  c.textAlign = 'left';
+  c.font = `900 34px ${FONT_DISPLAY}`;
+  spacing(c, 2);
+  glowText(c, b.title, 16, 36, PAL.cyan, 10);
+  c.textAlign = 'right';
+  glowText(c, b.done ? 'FINISH' : `LAP ${Math.min(b.lap, b.laps)}/${b.laps}`, w - 16, 36, b.done ? PAL.gold : PAL.pink, 10);
+  c.font = `700 22px ${FONT_MONO}`;
+  spacing(c, 1);
+  const rows = b.rows.slice(0, 8);
+  rows.forEach((r, k) => {
+    const col = k < 4 ? 0 : 1;
+    const x = 16 + col * (w / 2);
+    const y = 82 + (k % 4) * 40;
+    c.fillStyle = r.you ? '#ffffff' : '#ffffff22';
+    c.fillRect(x - 6, y - 16, w / 2 - 22, 32);
+    c.fillStyle = r.you ? '#0b0a18' : '#ffffff';
+    c.textAlign = 'left';
+    c.fillText(`P${k + 1}`, x, y);
+    c.fillStyle = r.colour;
+    c.fillRect(x + 46, y - 9, 14, 18);
+    c.fillStyle = r.you ? '#0b0a18' : '#ffffff';
+    c.fillText(r.name.slice(0, 10).toUpperCase(), x + 68, y);
   });
+}
 
 /** The timing tower's board: the lap and the order, fixed copy (P1 to P8 and their gaps never change) */
 const towerTex = () =>
@@ -132,6 +167,21 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
   const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
     batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
 
+  /* ----- The LED screens' face: one live picture for all three (the race's order, or the park's name) ----- */
+
+  const SCREEN_W = 512;
+  const SCREEN_H = 256;
+  const screenTexture = liveTex(SCREEN_W, SCREEN_H, (c, w, h) => idleScreen(c, w, h));
+  const screenMat = lit(new THREE.MeshBasicMaterial({ map: screenTexture }), 0.9, 1.25);
+  const repaint = (draw: (c: CanvasRenderingContext2D, w: number, h: number) => void) => {
+    const cv = screenTexture.image as HTMLCanvasElement | undefined;
+    const ctx = typeof HTMLCanvasElement !== 'undefined' && cv instanceof HTMLCanvasElement ? cv.getContext('2d') : null;
+    if (!ctx) return;
+    ctx.setTransform(cv!.width / SCREEN_W, 0, 0, cv!.height / SCREEN_H, 0, 0);
+    draw(ctx, SCREEN_W, SCREEN_H);
+    screenTexture.needsUpdate = true;
+  };
+
   /* ----- The garages, the big screen on their roof (in the spot's group) ----- */
 
   const [gx0, gz0] = W(SITE.garages.u0, SITE.garages.v0);
@@ -147,6 +197,11 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
     const bw = (gx1 - gx0) / bays;
     for (let k = 0; k <= bays; k++) pb.box(gx0 + k * bw - 0.12, 0, gz0, 0.24, GH, depth * 0.55, GARAGE_C);
     for (let k = 0; k < bays; k++) {
+      // Each bay its team's: a header in its colour over the front, a roller door's drum under it, boards on the back wall
+      const team = toon(TEAM_COLOURS[k % TEAM_COLOURS.length]);
+      pb.box(gx0 + k * bw + 0.12, GH - 0.85, gz0 - 0.08, bw - 0.24, 0.3, 0.08, team);
+      pb.add(new THREE.CylinderGeometry(0.16, 0.16, bw - 0.3, 10).rotateZ(Math.PI / 2).translate(gx0 + (k + 0.5) * bw, GH - 0.25, gz0 + 0.18), toon('#8a86a8'));
+      pb.box(gx0 + k * bw + 0.6, 1.2, gz0 + depth * 0.55 - 0.05, bw - 1.2, 0.9, 0.04, team);
       flat(pb, gx0 + k * bw + 0.12, gz0, gx0 + (k + 1) * bw - 0.12, gz0 + depth * 0.55, PAVING + 0.004, GARAGE_IN);
       // A strip light at the back of each bay, a tool chest
       pb.box(gx0 + k * bw + 0.5, GH - 0.5, gz0 + depth * 0.55 - 0.06, bw - 1, 0.08, 0.05, soft(PAL.warm));
@@ -167,72 +222,102 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
     pb.box(cx - SW / 2, base, cz - 0.3, SW, SH, 0.6, toon('#1b1830'));
     pb.box(cx - SW / 2 - 0.05, base - 0.05, cz - 0.35, SW + 0.1, 0.1, 0.7, STEEL);
     pb.box(cx - SW / 2 - 0.05, base + SH - 0.05, cz - 0.35, SW + 0.1, 0.1, 0.7, STEEL);
-    const face = plane(SW - 0.2, SH - 0.2, lit(new THREE.MeshBasicMaterial({ map: screenTex() }), 0.9, 1.25));
+    const face = plane(SW - 0.2, SH - 0.2, screenMat);
     face.position.set(cx, base + SH / 2, cz - 0.31);
     face.rotation.y = Math.PI;
     places.add(fx(face));
   }
 
-  /* ----- The hut, its terrace on the roof and the stairs up to it ----- */
+  /* ----- The clubhouse (two storeys, docs/kart-west-plan.md Phase 3), its roof terrace and the stairs up to it ----- */
 
   const [hx0, hz0] = W(SITE.hut.u0, SITE.hut.v0);
   const [hx1, hz1] = W(SITE.hut.u1, SITE.hut.v1);
   const HUT_H = SITE.hut.h;
+  const F1 = CLUBHOUSE.floor;
+  const glass = toon('#1d2a4a');
+  const frame = toon('#e8e6f0');
+  const [cab0] = W(CLUBHOUSE.cabinet.u0, 0);
+  const [cab1] = W(CLUBHOUSE.cabinet.u1, 0);
   {
-    pb.box(hx0, -0.3, hz0, hx1 - hx0, HUT_H + 0.3, hz1 - hz0, toon('#3d4a6b'));
-    pb.box(hx0 - 0.12, HUT_H, hz0 - 0.12, hx1 - hx0 + 0.24, 0.16, hz1 - hz0 + 0.24, toon('#25223a'));
-    for (const z of [hz0 - 0.13, hz1 + 0.08]) pb.box(hx0 - 0.13, HUT_H + 0.16, z, hx1 - hx0 + 0.26, 0.05, 0.05, soft(PAL.pink));
-    pb.box(hx0 - 0.02, 2.08, hz0 - 0.02, hx1 - hx0 + 0.04, 0.2, hz1 - hz0 + 0.04, toon('#e219e5'));
-    // The door on the south side (HUT_DOOR is where you stand, just outside it), a lit window beside it, a shutter on the north side to the pits
-    const dx = HUT_DOOR.x;
-    pb.box(dx - 0.42, 0, hz1 - 0.03, 0.84, 1.6, 0.06, toon('#14102a'));
-    pb.box(dx - 0.34, 0.7, hz1 + 0.02, 0.68, 0.5, 0.02, soft(PAL.warm));
-    pb.box(dx - 0.5, 1.6, hz1 - 0.05, 1.0, 0.08, 0.3, INK);
-    pb.box(dx + 1.4, 1.0, hz1 - 0.02, 1.6, 0.8, 0.05, soft(PAL.warm));
-    for (let k = 0; k < 9; k++) pb.box(hx0 + 2, 0.75 + k * 0.13, hz0 - 0.03, 3, 0.12, 0.05, k % 2 ? toon('#8a86a8') : toon('#6f6a8f'));
-    pb.box(hx0 + 1.95, 0.68, hz0 - 0.04, 3.1, 0.08, 0.07, YELLOW);
-    // The signs: over the door, and over the shutter facing the pits
-    const tex = neonSign(HUT_SIGN, PAL.pink, { board: null, w: 1024, h: 256, size: 180, tracking: 14 });
-    for (const [x, z, ry] of [
-      [dx, hz1 + 0.04, 0],
-      [hx0 + 3.5, hz0 - 0.04, Math.PI],
+    const wallC = toon('#3d4a6b');
+    // The ground floor: solid at the ends and the back, glass on the plaza (south) and the pits (north)
+    pb.box(hx0, -0.3, hz0, 0.5, F1 + 0.3, hz1 - hz0, wallC);
+    pb.box(hx1 - 0.5, -0.3, hz0, 0.5, F1 + 0.3, hz1 - hz0, wallC);
+    pb.box(hx0 + 0.5, -0.3, hz0 + 0.4, hx1 - hx0 - 1, F1 + 0.3, hz1 - hz0 - 0.8, toon('#2a2645'));
+    // The glass fronts, the mullions every 1.4, lit from within at night
+    for (const [z, out] of [
+      [hz1 - 0.42, 1],
+      [hz0 + 0.38, -1],
     ] as const) {
-      const sign = plane(2.6, 0.65, lit(new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }), 1, 1.7));
-      sign.position.set(x, 2.74, z);
+      pb.box(hx0 + 0.5, 0.1, z, hx1 - hx0 - 1, F1 - 0.2, 0.04, soft(PAL.warm));
+      pb.box(hx0 + 0.5, 0.1, z + out * 0.03, hx1 - hx0 - 1, F1 - 0.2, 0.03, glass);
+      for (let x = hx0 + 0.5; x <= hx1 - 0.45; x += 1.4) pb.box(x - 0.05, 0, z + out * 0.05 - 0.03, 0.1, F1, 0.1, frame);
+    }
+    // The upper floor: a band of white panels, the lounge's long window over the pits, a narrower one over the plaza
+    pb.box(hx0 - 0.1, F1, hz0 - 0.1, hx1 - hx0 + 0.2, 0.35, hz1 - hz0 + 0.2, frame);
+    pb.box(hx0, F1 + 0.35, hz0, hx1 - hx0, HUT_H - F1 - 0.35, hz1 - hz0, wallC);
+    pb.box(hx0 + 1, F1 + 0.8, hz0 - 0.04, hx1 - hx0 - 2, 1.6, 0.05, soft(PAL.warm));
+    pb.box(hx0 + 1, F1 + 0.78, hz0 - 0.07, hx1 - hx0 - 2, 1.64, 0.03, glass);
+    for (let x = hx0 + 1; x <= hx1 - 0.95; x += 1.7) pb.box(x - 0.04, F1 + 0.7, hz0 - 0.1, 0.08, 1.8, 0.08, frame);
+    pb.box(hx0 + 5.6, F1 + 1.0, hz1 - 0.01, hx1 - hx0 - 6.6, 1.1, 0.05, soft(PAL.warm));
+    // The eaves round the roof with a neon edge under them, the canopy over the door
+    pb.box(hx0 - 0.4, HUT_H, hz0 - 0.4, hx1 - hx0 + 0.8, 0.2, hz1 - hz0 + 0.8, toon('#25223a'));
+    for (const z of [hz0 - 0.42, hz1 + 0.37]) pb.box(hx0 - 0.42, HUT_H - 0.06, z, hx1 - hx0 + 0.84, 0.05, 0.05, soft(PAL.pink));
+    for (const x of [hx0 - 0.42, hx1 + 0.37]) pb.box(x, HUT_H - 0.06, hz0 - 0.42, 0.05, 0.05, hz1 - hz0 + 0.84, soft(PAL.pink));
+    const dx = HUT_DOOR.x;
+    pb.box(dx - 1.6, F1 - 0.4, hz1, 3.2, 0.14, 1.5, frame);
+    pb.box(dx - 1.62, F1 - 0.42, hz1 + 1.48, 3.24, 0.05, 0.05, soft(PAL.cyan));
+    for (const x of [dx - 1.5, dx + 1.5]) pb.box(x - 0.05, 0, hz1 + 1.35, 0.1, F1 - 0.4, 0.1, STEEL);
+    // The door: two glass leaves in a dark frame
+    pb.box(dx - 0.9, 0, hz1 - 0.36, 1.8, 2.3, 0.08, INK);
+    pb.box(dx - 0.8, 0.05, hz1 - 0.31, 1.6, 2.15, 0.03, soft(PAL.warm));
+    // The trophy cabinet behind the glass west of the door: its shelves lit, the trophies on them painted from the save
+    pb.box(cab0, 0.4, hz1 - 0.9, cab1 - cab0, 2.2, 0.36, toon('#16142a'));
+    for (const y of [0.9, 1.6]) pb.box(cab0 + 0.08, y, hz1 - 0.88, cab1 - cab0 - 0.16, 0.05, 0.32, soft(PAL.warm));
+    // The pits' side: the shutter where the karts come and go, under the lounge
+    for (let k = 0; k < 9; k++) pb.box(hx1 - 5.2, 0.15 + k * 0.28, hz0 + 0.33, 3.6, 0.26, 0.05, k % 2 ? toon('#8a86a8') : toon('#6f6a8f'));
+    // The signs: CLUBHOUSE over the canopy, and on the north face over the pits
+    const tex = neonSign(HUT_SIGN, PAL.pink, { board: null, w: 1024, h: 256, size: 170, tracking: 16 });
+    for (const [x, y, z, ry, w] of [
+      [dx, F1 + 0.35, hz1 + 1.52, 0, 3.4],
+      [(hx0 + hx1) / 2, HUT_H - 0.55, hz0 - 0.06, Math.PI, 4.4],
+    ] as const) {
+      const sign = plane(w, w / 4, lit(new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }), 1, 1.7));
+      sign.position.set(x, y + w / 8, z);
       sign.rotation.y = ry;
       occlude(sign, tex);
       places.add(fx(sign));
     }
-    // Tyres stacked and two drums against the hut's west wall
-    for (let k = 0; k < 4; k++) pb.add(new THREE.CylinderGeometry(0.28, 0.28, 0.17, 12).translate(hx0 - 0.4, 0.09 + k * 0.18, hz1 - 1.0), toon('#17151f'));
-    pb.add(new THREE.CylinderGeometry(0.2, 0.2, 0.55, 12).translate(hx0 - 0.4, 0.28, hz1 - 1.8), toon('#2aabee'));
-    pb.add(new THREE.CylinderGeometry(0.2, 0.2, 0.55, 12).translate(hx0 - 0.4, 0.28, hz1 - 2.3), RED);
+    // Tyres stacked and two drums against the east wall, by the garages
+    for (let k = 0; k < 4; k++) pb.add(new THREE.CylinderGeometry(0.28, 0.28, 0.17, 12).translate(hx1 + 0.5, 0.09 + k * 0.18, hz0 + 1.0), toon('#17151f'));
+    pb.add(new THREE.CylinderGeometry(0.2, 0.2, 0.55, 12).translate(hx1 + 0.5, 0.28, hz0 + 1.8), toon('#2aabee'));
+    pb.add(new THREE.CylinderGeometry(0.2, 0.2, 0.55, 12).translate(hx1 + 0.5, 0.28, hz0 + 2.3), RED);
   }
   {
-    // The terrace: a parapet round the roof's edge with a rail on posts, tables under umbrellas
-    const T = TERRACE.y + 0.16;
+    // The terrace: a glass balustrade round the roof's edge on posts, tables under umbrellas
+    const T = TERRACE.y + 0.2;
     for (const [x0, z0, x1, z1] of [
       [hx0, hz0, hx1, hz0 + 0.12],
       [hx0, hz1 - 0.12, hx1, hz1],
       [hx1 - 0.12, hz0, hx1, hz1],
       [hx0, hz0, hx0 + 0.12, hz1 - 1.6],
     ] as const) {
-      pb.box(x0, T, z0, x1 - x0, 0.4, z1 - z0, CONC);
+      pb.box(x0, T, z0, x1 - x0, 0.25, z1 - z0, CONC);
+      pb.box(x0, T + 0.25, z0, x1 - x0, 0.75, z1 - z0, toon('#9fb4d8'));
       pb.box(x0, T + 1.0, z0, x1 - x0, 0.05, z1 - z0, RAIL);
     }
-    for (let x = hx0 + 0.06; x < hx1; x += 1.2) for (const z of [hz0 + 0.06, hz1 - 0.06]) pb.box(x - 0.025, T + 0.4, z - 0.025, 0.05, 0.6, 0.05, RAIL);
-    const umbrellas = [PAL.cyan, PAL.pink, PAL.violet].map((k) => toon(k));
-    for (let k = 0; k < 3; k++) {
-      const x = hx0 + 1.8 + k * 2.4;
+    const umbrellas = [PAL.cyan, PAL.pink, PAL.violet, PAL.cyan, PAL.pink].map((k) => toon(k));
+    for (let k = 0; k < 5; k++) {
+      const x = hx0 + 2 + k * ((hx1 - hx0 - 4) / 4);
       const z = (hz0 + hz1) / 2 + 0.6;
-      pb.add(new THREE.CylinderGeometry(0.4, 0.4, 0.05, 10).translate(x, T + 0.72, z), toon('#e8e6f0'));
+      pb.add(new THREE.CylinderGeometry(0.4, 0.4, 0.05, 10).translate(x, T + 0.72, z), frame);
       pb.box(x - 0.03, T, z - 0.03, 0.06, 2.0, 0.06, INK);
       pb.add(new THREE.ConeGeometry(1.0, 0.4, 8).translate(x, T + 2.1, z), umbrellas[k]);
     }
-    // The stairs up the west side, from the south (the plaza) to the roof's open corner
+    // The stairs up the west side, from the south (the plaza) to the roof's open corner, with a landing half way
     const [sx0, sz0] = W(TERRACE.stairs.u0, TERRACE.stairs.v0);
     const [sx1, sz1] = W(TERRACE.stairs.u1, TERRACE.stairs.v1);
-    const steps = 12;
+    const steps = 16;
     const tread = (sz1 - sz0) / steps;
     for (let k = 0; k < steps; k++) pb.box(sx0, 0, sz1 - (k + 1) * tread, sx1 - sx0, (T * (k + 1)) / steps, tread, CONC);
     for (const x of [sx0 - 0.04, sx1 - 0.02]) {
@@ -243,6 +328,18 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
       g.applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b2).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir.normalize()), _s));
       pb.add(g, RAIL);
     }
+  }
+  /* ----- The café's tables on the plaza in front ----- */
+  {
+    const cols = [PAL.pink, PAL.cyan, PAL.violet].map((k) => toon(k));
+    CAFE.forEach(([u, v], k) => {
+      const [x, z] = W(u, v);
+      pb.add(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 12).translate(x, 0.74, z), frame);
+      pb.box(x - 0.04, 0, z - 0.04, 0.08, 0.74, 0.08, INK);
+      for (const side of [-1, 1]) pb.box(x + side * 0.62 - 0.18, 0, z - 0.18, 0.36, 0.45, 0.36, INK);
+      pb.box(x - 0.03, 0.74, z - 0.03, 0.06, 1.5, 0.06, INK);
+      pb.add(new THREE.ConeGeometry(1.1, 0.4, 8).translate(x, 2.4, z), cols[k % 3]);
+    });
   }
 
   /* ----- The timing tower at the pit lane's east end ----- */
@@ -375,6 +472,127 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
     places.add(fx(sign));
   }
 
+  /* ----- The LED screens on the banks' tops (the garages' is above), on two legs, their faces the live picture ----- */
+
+  for (const sc of SCREENS.slice(1)) {
+    const [x, z] = W(sc.u, sc.v);
+    const y0 = bankY(x, z) + sc.base;
+    const ax = Math.cos(sc.ry);
+    const az = -Math.sin(sc.ry);
+    const fxv = Math.sin(sc.ry);
+    const fzv = Math.cos(sc.ry);
+    for (const k of [-1, 1]) {
+      const lx = x + ax * (sc.w / 2 - 0.6) * k;
+      const lz = z + az * (sc.w / 2 - 0.6) * k;
+      const g = bankY(lx, lz);
+      pb.box(lx - 0.2, g - 0.2, lz - 0.2, 0.4, y0 - g + sc.h * 0.6, 0.4, STEEL);
+      pb.box(lx - 0.35, g - 0.1, lz - 0.35, 0.7, 0.3, 0.7, CONC);
+    }
+    // The cabinet, its frame, a neon rim, the face on its front
+    pb.add(new THREE.BoxGeometry(sc.w, sc.h, 0.5).rotateY(sc.ry).translate(x - fxv * 0.05, y0 + sc.h / 2, z - fzv * 0.05), toon('#1b1830'));
+    pb.add(new THREE.BoxGeometry(sc.w + 0.16, 0.08, 0.56).rotateY(sc.ry).translate(x, y0 + sc.h + 0.04, z), soft(PAL.pink));
+    pb.add(new THREE.BoxGeometry(sc.w + 0.16, 0.08, 0.56).rotateY(sc.ry).translate(x, y0 - 0.04, z), soft(PAL.cyan));
+    const face = plane(sc.w - 0.24, sc.h - 0.24, screenMat);
+    face.position.set(x + fxv * 0.21, y0 + sc.h / 2, z + fzv * 0.21);
+    face.rotation.y = sc.ry;
+    places.add(fx(face));
+  }
+
+  /* ----- The podium on the plaza: three steps, the backdrop with its name, lit at night ----- */
+
+  {
+    const P = PODIUM;
+    const stepC = [toon('#e8e6f0'), toon('#cfd3e6'), toon('#b9bccb')];
+    const bands = [toon(PAL.gold), toon('#c9cbd8'), toon('#cd7f32')];
+    const [, pz0] = W(0, P.v0);
+    const [, pz1] = W(0, P.v1);
+    for (const st of P.steps) {
+      const [x0] = W(st.u0, 0);
+      const [x1] = W(st.u1, 0);
+      const k = st.place - 1;
+      pb.box(x0, 0, pz0, x1 - x0, st.h, pz1 - pz0, stepC[k]);
+      // The band of its colour round the top, its number on the front
+      pb.box(x0 - 0.02, st.h - 0.14, pz0 - 0.02, x1 - x0 + 0.04, 0.1, pz1 - pz0 + 0.04, bands[k]);
+    }
+    const nb = new Batch();
+    const nm = lit(new THREE.MeshBasicMaterial({ map: atlasTex(), alphaTest: 0.5 }), 0.95, 1.2);
+    for (const st of P.steps) {
+      const [x0] = W(st.u0, 0);
+      const [x1] = W(st.u1, 0);
+      nb.add(quad((x0 + x1) / 2, Math.max(0.2, st.h / 2 - 0.05), pz1 + 0.02, 1, 0, Math.min(0.6, st.h * 0.8), Math.min(0.6, st.h * 0.8), cellNumber(st.place), false), nm);
+    }
+    nb.build(places, { cast: false, receive: false });
+    // The backdrop: a dark wall with a neon frame and the park's name, two flagpoles
+    const [bx0] = W(PODIUM_RECT.u0, 0);
+    const [bx1] = W(PODIUM_RECT.u1, 0);
+    const [, bz0] = W(0, P.back.v0);
+    const [, bz1] = W(0, P.back.v1);
+    pb.box(bx0, 0, bz0, bx1 - bx0, P.back.h, bz1 - bz0, toon('#16142a'));
+    for (const y of [0.12, P.back.h - 0.12]) pb.box(bx0 - 0.03, y - 0.03, bz1 + 0.01, bx1 - bx0 + 0.06, 0.06, 0.03, soft(PAL.cyan));
+    for (const x of [bx0, bx1]) pb.box(x - 0.03, 0.12, bz1 + 0.01, 0.06, P.back.h - 0.24, 0.03, soft(PAL.cyan));
+    const tex = neonSign('PODIUM', PAL.gold, { board: null, w: 1024, h: 256, size: 170, tracking: 22 });
+    const sign = plane(bx1 - bx0 - 1, (bx1 - bx0 - 1) / 4, lit(new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }), 1, 1.7));
+    sign.position.set((bx0 + bx1) / 2, P.back.h - 0.75, bz1 + 0.05);
+    occlude(sign, tex);
+    places.add(fx(sign));
+    for (const x of [bx0 - 0.6, bx1 + 0.6]) {
+      pb.add(new THREE.CylinderGeometry(0.04, 0.05, 5, 6).translate(x, 2.5, (bz0 + bz1) / 2), INK);
+      pb.box(x + 0.04, 3.8, (bz0 + bz1) / 2 - 0.01, 1.1, 0.7, 0.02, toon(x < bx0 ? PAL.cyan : PAL.pink));
+    }
+  }
+
+  /* ----- The flags along the gate's path ----- */
+
+  {
+    const cols = [PAL.cyan, PAL.pink, PAL.violet, PAL.gold].map((k) => toon(k));
+    for (const f of FLAGS) {
+      const [x, z] = W(f.u, f.v);
+      pb.add(new THREE.CylinderGeometry(0.04, 0.05, 4.2, 6).translate(x, 2.1, z), INK);
+      pb.add(new THREE.SphereGeometry(0.07, 6, 5).translate(x, 4.24, z), toon(PAL.gold));
+      // (a tall banner hanging from an arm towards the path)
+      const toward = f.u < SITE.path.u0 ? 1 : -1;
+      pb.box(x + (toward > 0 ? 0.05 : -0.65), 2.2, z - 0.01, 0.6, 1.7, 0.02, cols[f.colour]);
+      pb.box(x + (toward > 0 ? 0 : -0.7), 3.95, z - 0.02, 0.7, 0.04, 0.04, INK);
+    }
+  }
+
+  /* ----- The approach: the totem by the drive, the signs on ew0's verge, the coaches in their lay-by ----- */
+
+  {
+    const T = TOTEM;
+    pb.box(T.x - T.w / 2, 0, T.z - 0.3, T.w, T.h, 0.6, toon('#16142a'));
+    pb.box(T.x - T.w / 2 - 0.1, 0, T.z - 0.4, T.w + 0.2, 0.3, 0.8, CONC);
+    pb.box(T.x - T.w / 2 - 0.03, 0.4, T.z - 0.33, 0.04, T.h - 0.6, 0.66, soft(PAL.cyan));
+    pb.box(T.x + T.w / 2 - 0.01, 0.4, T.z - 0.33, 0.04, T.h - 0.6, 0.66, soft(PAL.cyan));
+    for (let k = 0; k < 2; k++) for (let j = 0; j < 3; j++) pb.box(T.x - T.w / 2 + j * (T.w / 3), T.h, T.z - 0.3 + k * 0.3, T.w / 3, 0.18, 0.3, (k + j) % 2 ? INK : toon('#e8e6f0'));
+    const vt = neonSign('KART PARK', PAL.pink, { board: null, w: 1024, h: 256, size: 190, tracking: 10 });
+    for (const [dz, ry] of [
+      [0.31, 0],
+      [-0.31, Math.PI],
+    ] as const) {
+      const sign = plane(T.h - 1.2, (T.h - 1.2) / 4, lit(new THREE.MeshBasicMaterial({ map: vt, transparent: true, depthWrite: false }), 1, 1.7));
+      sign.position.set(T.x, T.h / 2 + 0.2, T.z + dz + Math.sign(dz) * 0.01);
+      sign.rotation.set(0, ry, Math.PI / 2);
+      occlude(sign, vt);
+      places.add(fx(sign));
+    }
+    // The signs on ew0: a board on two posts, KART PARK and the way to turn
+    for (const a of APPROACH_SIGNS) {
+      const ax = Math.cos(a.ry);
+      const az = -Math.sin(a.ry);
+      for (const k of [-1, 1]) pb.box(a.x + ax * 1.1 * k - 0.06, 0, a.z + az * 1.1 * k - 0.06, 0.12, 2.2, 0.12, STEEL);
+      pb.add(new THREE.BoxGeometry(2.8, 1.1, 0.12).rotateY(a.ry).translate(a.x, 2.6, a.z), toon('#16142a'));
+      const st = neonSign(a.arrow > 0 ? 'KART PARK  ▶' : '◀  KART PARK', PAL.cyan, { board: null, w: 1024, h: 256, size: 150, tracking: 6 });
+      const fxv = Math.sin(a.ry);
+      const fzv = Math.cos(a.ry);
+      const sign = plane(2.6, 0.65, lit(new THREE.MeshBasicMaterial({ map: st, transparent: true, depthWrite: false }), 1, 1.6));
+      sign.position.set(a.x + fxv * 0.07, 2.6, a.z + fzv * 0.07);
+      sign.rotation.y = a.ry;
+      occlude(sign, st);
+      places.add(fx(sign));
+    }
+  }
+
   /* ----- The gate's arch on Kart Road, the ticket kiosk on the plaza ----- */
 
   {
@@ -428,6 +646,41 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
   for (const [x, z, s, pine] of KART_TREES) if (!low || r() < 0.6) addTree(x, z, s, pine, 0);
   for (const [x, z, ry, y] of KART_LAMPS) addLamp(x, z, ry, y);
   parkedCars(scene, 0.04, PARKED as [CarId, number, number, number, string][]);
+  parkedCars(scene, 0.05, [...COACHES, ...TRANSPORTERS] as [CarId, number, number, number, string][]);
+
+  /* ----- The trophy cabinet's trophies: the cups you've won, painted from the save (trophies()) ----- */
+
+  const cabinet = new THREE.Group();
+  cabinet.name = 'kart-trophies';
+  cabinet.userData.keep = true;
+  places.add(cabinet);
+  const trophyGeo = (() => {
+    const pts = [
+      [0, 0],
+      [0.09, 0],
+      [0.09, 0.03],
+      [0.03, 0.05],
+      [0.025, 0.14],
+      [0.08, 0.2],
+      [0.1, 0.3],
+      [0.0, 0.3],
+    ].map(([x, y]) => new THREE.Vector2(x, y));
+    return new THREE.LatheGeometry(pts, 12);
+  })();
+  const metals = [toon(PAL.gold), toon('#c9cbd8'), toon('#cd7f32')];
+  const showTrophies = (won: Partial<Record<CupId, number>>) => {
+    cabinet.clear();
+    const [, cz] = W(0, SITE.hut.v1);
+    CUP_IDS.forEach((id, k) => {
+      const place = won[id];
+      if (!place || place > 3) return;
+      const x = cab0 + ((cab1 - cab0) * (k + 0.5)) / CUP_IDS.length;
+      const m = new THREE.Mesh(trophyGeo, metals[place - 1]);
+      m.position.set(x, 1.65 + 0.05, cz - 0.72);
+      m.scale.setScalar(1.6);
+      cabinet.add(m);
+    });
+  };
 
   /* ----- The spot ----- */
 
@@ -469,5 +722,11 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
       KART_VIEW.apply?.();
     },
     showSpot,
+    board(b) {
+      repaint((c, w, h) => (b ? raceScreen(c, w, h, b) : idleScreen(c, w, h)));
+    },
+    trophies(won) {
+      showTrophies(won);
+    },
   };
 }

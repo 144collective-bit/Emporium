@@ -265,8 +265,12 @@ export const PIT_STRAIGHT = { u0: 27, u1: 54, v: 74.5 } as const;
 export const SITE = {
   /** The garages along the pit lane's south side, a bay for each kart; the big screen stands on their roof */
   garages: { u0: 27.5, v0: 76.4, u1: 54, v1: 81, h: 3 },
-  /** The kart hut at the pit lane's west end, its door on the south side towards the gate path */
-  hut: { u0: 17, v0: 76.4, u1: 25.5, v1: 81.5, h: 3, door: [21.2, 82.2] as Pt },
+  /**
+   * The clubhouse at the pit lane's west end (docs/kart-west-plan.md Phase 3: it was the kart hut, one storey, 8.5
+   * long): two storeys, the reception and café downstairs behind a glass front on the plaza, the lounge upstairs over
+   * the pits, the roof terrace; its door on the south side towards the gate path, where the hut's was
+   */
+  hut: { u0: 9.5, v0: 76.4, u1: 26.4, v1: 81.5, h: 6.2, door: [21.2, 82.2] as Pt },
   /** The grandstand in the infield, facing south over the straight */
   stand: { u0: 30.5, v0: 58.1, u1: 53.5, v1: 61, h: 3 },
   /** The big screen on the garages' roof, facing north over the straight */

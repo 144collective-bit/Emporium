@@ -3916,13 +3916,18 @@ it and has been retired completely. Build only on what's here.
   on Kart Road, which comes up off ew0 (`DRIVE_X`) from exit 8 ("Uptown ·
   Kart Park"), the metro's Kart Park station on the north bank avenue a
   walk to the south;
-  one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
-  hut (door prompt "Kart hut") with a viewing terrace on its roof, a
-  grandstand in the infield facing the start straight and a big covered
-  one over the hill and the jump, grass banks with people, the pit lane
-  with eight garages, the big screen on their roof and the timing tower,
-  the paddock and the plaza inside the gate, armco, tyre walls, catch
-  fencing, marshal posts and floodlights (`kartfacility.ts`, below). It's a place like the landmarks (spot
+  one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the
+  clubhouse (door prompt "Clubhouse"; the kart hut until the kart-west
+  plan's Phase 3: two storeys, the café and the trophy cabinet behind its
+  glass front, the lounge over the pits, the roof terrace), a grandstand
+  in the infield facing the start straight and a big covered one over the
+  hill and the jump, tall grass banks reaching the fence with berms
+  outside it, the pit lane with eight team garages, the timing tower, the
+  paddock with its tents and trucks, the plaza inside the gate with its
+  flags, the podium and the café, three LED screens showing the race,
+  armco, tyre walls, catch fencing, marshal posts and floodlights
+  (`kartfacility.ts`, below); its totem, signs and coach park on the
+  approach. It's a place like the landmarks (spot
   `karts`, pin, directory entry, a City-view panel with your records and
   **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
   stay on the track, but your own kart can be taken out of the pits and
@@ -3957,10 +3962,17 @@ it and has been retired completely. Build only on what's here.
   the bends (`TYRE_WALLS`), catch fencing in front of the spectators
   (`CATCH`), none of it solid (a kart that wide is put back); the covered
   `GRANDSTAND` north of the hill and the jump (`tierAt()`), three grass
-  `BANKS` (`bankAt()`, `bankY()`: walkable), the hut's roof `TERRACE` and
-  its stairs; the `PLAZA` inside the gate with the ticket `KIOSK` and the
-  gate's `ARCH`, the `TOWER` (timing) at the pit lane's east end, the
-  `PADDOCK` behind the garages with its team `TENTS`; `FLOODLIGHTS`
+  `BANKS` (`bankAt()`, `bankY()`: walkable; their berms past the fence,
+  `out`, `bankLand()`, `BANKS_AREA`), the clubhouse's roof `TERRACE` and
+  its stairs, `CLUBHOUSE` (its floor, the trophy cabinet), the café's
+  `CAFE` tables, the `PODIUM` (`PODIUM_RECT`); the `PLAZA` inside the gate
+  with the ticket `KIOSK`, the gate's `ARCH` and the path's `FLAGS`, the
+  `TOWER` (timing) at the pit lane's east end, the `PADDOCK` behind the
+  garages with its team `TENTS` and `TRANSPORTERS` (`TEAM_COLOURS`); the
+  LED `SCREENS` (`screenLegs()`; kartpark3d.ts paints one live picture on
+  them all, `KartPark.board()`, and the cabinet's trophies from the save,
+  `trophies()`); the approach's `TOTEM`, `APPROACH_SIGNS`, `COACH_LOT` and
+  `COACHES`; `FLOODLIGHTS`
   (`FLOOD`, under the Emporium); the car park in the loop (`CAR_PARK`,
   `BAY_COLS`, `BAYS`, `PARKED`), `KART_LAMPS`, `KART_TREES` and the
   people (`KART_PEOPLE`: on the banks, sitting in the grandstand, on the
