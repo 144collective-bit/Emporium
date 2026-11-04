@@ -232,6 +232,26 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
   toggle that's on shows lit (the touch buttons' `aria-pressed`).
 - Today's behaviours are the defaults, so nothing changes for anyone who
   doesn't pick.
+- **Built, waiting on the owner's sign-off; with it the plan is done.**
+  `comfort.ts` (DOM-free, tested in `tests/comfort.test.ts`): `HoldJob`
+  (sprint, aim, crouch, block), `Holds` (what was picked; a job left out
+  works as before, `DEFAULTS`: Sprint and Aim lock on touch and are held on
+  the keyboard and gamepad, Crouch toggles, Block is held), `holdMode()`,
+  `press()` and `cleanHolds()`. The hub's Settings > Hold or toggle has a
+  Hold / Toggle pair for each (`[data-hold]`), lit as it works on this
+  device; a pick is kept in `degen-city-walk-v1` (`holds`) and works the
+  same on every input, and changing one lets go of whatever was held or on.
+  walk.ts asks at every press: Shift and L3 (sprint), right-click and LT
+  (aim; aiming on a toggle, LB / RB peek while the sight is up), C and B
+  (crouch: on hold he crouches while it's held and stands when it's let
+  go, a slide ending in a crouch too), right-click and LB (block, on the
+  street and in the ring), and the touch Sprint, Aim, Crouch and Block
+  buttons (`holdButton()`: pressed and let go, lit while on). The control
+  card's and Settings > Keys' words lost their "(hold)" and "(toggle)".
+  Checked in a headless browser: the settings (picked, saved, lit), C held
+  and let go with Crouch on Hold, Shift twice with Sprint on Toggle, and on
+  an iPhone-sized screen the touch Sprint as it was (locks) and on Hold,
+  Block on Toggle, Crouch as it was. The boot's code came to 701.1 KB.
 
 ## Not in it
 

@@ -459,6 +459,37 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             <button type="button" class="walk-fp" data-tc-arrange>Arrange buttons</button>
             <p class="walk-pad">Buttons go solid while you hold them. Large comes out a little smaller where your screen hasn't room. Arrange buttons: drag them where you like, kept for your screen held upright or on its side.</p>
           </div>
+          {/* Hold or toggle (comfort.ts, docs/views-plan.md Phase 5): on the keyboard, the gamepad and touch alike; unpicked, each works as it always has */}
+          <p class="walk-section">Hold or toggle</p>
+          <div class="walk-field" role="group" aria-labelledby="hold-sprint-label">
+            <span id="hold-sprint-label">Sprint</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="sprint:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="sprint:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <div class="walk-field" role="group" aria-labelledby="hold-aim-label">
+            <span id="hold-aim-label">Aim</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="aim:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="aim:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <div class="walk-field" role="group" aria-labelledby="hold-crouch-label">
+            <span id="hold-crouch-label">Crouch</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="crouch:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="crouch:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <div class="walk-field" role="group" aria-labelledby="hold-block-label">
+            <span id="hold-block-label">Block</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="block:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="block:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <p class="walk-pad">Hold: on while you hold its key or button. Toggle: press once to turn it on, again to turn it off. On the keyboard, the gamepad and the touch buttons alike. Until you pick, Sprint and Aim lock on a touch screen and are held elsewhere, Crouch toggles and Block is held.</p>
           <p class="walk-section">Shooting</p>
           <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
             <span id="auto-ads-label">Aim when firing</span>

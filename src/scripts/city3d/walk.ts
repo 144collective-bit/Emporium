@@ -115,6 +115,7 @@ import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
 import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
+import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
 import type { CardInput } from './ctrlcard';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
@@ -239,14 +240,16 @@ interface Settings {
   touch: TouchPrefs;
   /** The modes whose control card has been shown (docs/views-plan.md Phase 4: once each, then on request) */
   seen: string[];
+  /** Sprint, aim, crouch and block: hold or toggle (docs/views-plan.md Phase 5; comfort.ts) */
+  holds: Holds;
 }
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
     const seen = Array.isArray(s.seen) ? s.seen.filter((m: unknown) => typeof m === 'string').slice(0, 16) : [];
-    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch), seen };
+    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch), seen, holds: cleanHolds(s.holds) };
   } catch {
-    return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined), seen: [] };
+    return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined), seen: [], holds: {} };
   }
 }
 /** How long the sight stays up after the trigger is let go (so single shots don't flicker in and out) */
@@ -453,6 +456,26 @@ export function createWalk(d: WalkDeps) {
   // Controls > Shooting: aim when firing
   const autoAdsBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-auto-ads]')];
   const paintAutoAds = () => autoAdsBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.autoAds === settings.autoAds)));
+  // Hold or toggle (comfort.ts): each job's two buttons, lit as it works on this device until one is picked
+  const holdBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-hold]')];
+  const DEVICE: HoldInput = matchMedia('(hover: none) and (pointer: coarse)').matches ? 'touch' : 'keys';
+  const hm = (job: HoldJob, input: HoldInput) => holdMode(settings.holds, job, input);
+  const paintHolds = () =>
+    holdBtns.forEach((b) => {
+      const [job, mode] = (b.dataset.hold ?? '').split(':') as [HoldJob, HoldMode];
+      b.setAttribute('aria-pressed', String(hm(job, DEVICE) === mode));
+    });
+  for (const b of holdBtns)
+    b.addEventListener('click', () => {
+      const [job, mode] = (b.dataset.hold ?? '').split(':') as [HoldJob, HoldMode];
+      if (!HOLD_JOBS.includes(job)) return;
+      settings.holds[job] = mode;
+      saveSettings();
+      paintHolds();
+      // (a change lets go of whatever was held or toggled on)
+      letGoHolds();
+    });
+  paintHolds();
   for (const b of autoAdsBtns)
     b.addEventListener('click', () => {
       settings.autoAds = b.dataset.autoAds as AutoAds;
@@ -921,6 +944,9 @@ export function createWalk(d: WalkDeps) {
   let wholeAmt = 0;
   let mouseBlock = false;
   let padBlock = false;
+  /** Block on toggle on a gamepad: LB turned it on */
+  let padBlockOn = false;
+  const blockBtnEl = root.querySelector<HTMLButtonElement>('[data-fight-block]');
   let tiredAt = -1e9;
   let fistsShown = false;
   /** His hands are empty and he's on his feet with nothing else on: the fists are his */
@@ -1536,6 +1562,60 @@ export function createWalk(d: WalkDeps) {
     sprintLock = on;
     runBtn.setAttribute('aria-pressed', String(on));
   }
+  /** What's held or toggled on, let go (a hold or toggle setting changed) */
+  function letGoHolds() {
+    setSprintLock(false);
+    if (aim) setAim(false);
+    mouseR = false;
+    setBlock(false);
+    mouseBlock = padBlock = padBlockOn = false;
+  }
+  /** The touch Block button's state (lit while it's on, as a toggle) */
+  function setBlock(on: boolean) {
+    fightBtns.block = on;
+    blockBtnEl?.setAttribute('aria-pressed', String(on));
+  }
+  /** Crouch held (comfort.ts: crouch on hold): his key, button or touch button down */
+  let crouchKey = false;
+  let crouchPad = false;
+  let crouchTouch = false;
+  /** A press or let-go of crouch on `input`: on hold it crouches while held (a slide when sprinting, as ever) */
+  function crouchInput(input: HoldInput, down: boolean) {
+    if (hm('crouch', input) === 'toggle') {
+      if (down) crouchPress();
+      return;
+    }
+    if (input === 'keys') crouchKey = down;
+    else if (input === 'pad') crouchPad = down;
+    else crouchTouch = down;
+    if (down && !crouched && !slide) crouchPress();
+  }
+  /** Keep a finger's let-go on the button it pressed (a pointer that isn't live, as a synthetic one, can't be) */
+  const capture = (el: HTMLElement, id: number) => {
+    try {
+      el.setPointerCapture?.(id);
+    } catch {
+      /* fine */
+    }
+  };
+  /** A touch button that's held or toggled by the setting for `job`: `set` turns it on or off, `get` says whether it's on */
+  function holdButton(btn: HTMLElement | null, job: HoldJob, set: (on: boolean) => void, get: () => boolean) {
+    if (!btn) return;
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      capture(btn, e.pointerId);
+      set(press(hm(job, 'touch'), get(), true));
+      d.touched();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
+      btn.addEventListener(ev, () => {
+        if (hm(job, 'touch') === 'hold' && get()) set(false);
+      });
+    // (Enter or Space on it, focused: a toggle either way; a pointer's own click already pressed it)
+    btn.addEventListener('click', (e) => {
+      if (e.detail === 0) set(!get());
+    });
+  }
 
   /** The camera at the wheel (V, the right stick pressed, the touch View button; views.ts): the next view, named in a toast */
   function nextCam() {
@@ -1669,7 +1749,13 @@ export function createWalk(d: WalkDeps) {
       if (fistsReady()) fightBtns.kick = true;
       else combat.toggleHolster();
     } else if (down && !e.repeat && c === 'KeyX') stepSlot(1);
-    else if (down && !e.repeat && c === 'KeyC') crouchPress();
+    else if (c === 'KeyC') {
+      if (!e.repeat) crouchInput('keys', down);
+    }
+    // Shift on toggle: a press locks the sprint, the next lets it go
+    else if ((c === 'ShiftLeft' || c === 'ShiftRight') && hm('sprint', 'keys') === 'toggle') {
+      if (down && !e.repeat) setSprintLock(!sprintLock);
+    }
     // Q / E held: peek left and right
     else if (c === 'KeyQ' || c === 'KeyE') {
       if (down) keys.add(c);
@@ -1692,7 +1778,7 @@ export function createWalk(d: WalkDeps) {
   canvas.addEventListener('mousedown', (e) => {
     if (active && fighting()) {
       if (e.button === 0) fightBtns.punch = true;
-      else if (e.button === 2) mouseBlock = true;
+      else if (e.button === 2) mouseBlock = press(hm('block', 'keys'), mouseBlock, true);
     }
   });
   // Switching away lets go of everything (keys, buttons, sticks, a look drag)
@@ -1701,6 +1787,7 @@ export function createWalk(d: WalkDeps) {
     padLean = 0;
     jumpHeld = false;
     mouseL = mouseR = mouseBlock = padBlock = false;
+    crouchKey = crouchPad = crouchTouch = false;
     setAim(false);
     combat.trigger(false);
     combat.trigger(false, true);
@@ -1743,18 +1830,22 @@ export function createWalk(d: WalkDeps) {
     // Empty hands: a click punches (once the mouse is captured), the right button held blocks
     if (fistsReady()) {
       if (e.button === 0 && (locked() || noLock)) fightBtns.punch = true;
-      if (e.button === 2) mouseBlock = true;
+      if (e.button === 2) mouseBlock = press(hm('block', 'keys'), mouseBlock, true);
       d.touched();
       return;
     }
-    if (e.button === 2) aim = mouseR = true;
+    // (aim on toggle: a right-click puts the sight up, the next takes it down)
+    if (e.button === 2) {
+      if (hm('aim', 'keys') === 'toggle') setAim(!aim);
+      else aim = mouseR = true;
+    }
     if (e.button === 0 && (locked() || noLock)) {
       mouseL = true;
       combat.trigger(true);
     }
   });
   window.addEventListener('mouseup', (e) => {
-    if (e.button === 2) mouseBlock = false;
+    if (e.button === 2 && hm('block', 'keys') === 'hold') mouseBlock = false;
     if (e.button === 2 && mouseR) aim = mouseR = false;
     if (e.button === 0 && mouseL) {
       mouseL = false;
@@ -1840,12 +1931,16 @@ export function createWalk(d: WalkDeps) {
   jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
   jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
   // (the touch buttons answer a finger at once, with the thumb still on the stick: onTap() in ui.ts)
-  onTap(runBtn, () => setSprintLock(!sprintLock));
-  onTap(crouchBtn, () => {
-    crouchPress();
+  holdButton(runBtn, 'sprint', setSprintLock, () => sprintLock);
+  crouchBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    capture(crouchBtn, e.pointerId);
+    crouchInput('touch', true);
     // (a crouch lets go of the locked sprint, which would stand him straight back up)
     if (crouched) setSprintLock(false);
   });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) crouchBtn.addEventListener(ev, () => crouchInput('touch', false));
+  crouchBtn.addEventListener('click', (e) => e.detail === 0 && crouchPress());
   // Touch pedals while driving (the stick steers)
   for (const [sel, key] of [
     ['[data-drive-gas]', 'gas'],
@@ -1903,16 +1998,7 @@ export function createWalk(d: WalkDeps) {
         d.touched();
       });
   }
-  const blockBtn = root.querySelector<HTMLButtonElement>('[data-fight-block]');
-  if (blockBtn) {
-    blockBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      blockBtn.setPointerCapture?.(e.pointerId);
-      fightBtns.block = true;
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) blockBtn.addEventListener(ev, () => (fightBtns.block = false));
-  }
+  holdButton(blockBtnEl, 'block', setBlock, () => fightBtns.block);
   root.querySelector('[data-fight-quit]')?.addEventListener('click', () => quitFight());
   fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
   sensInput.addEventListener('input', () => {
@@ -1960,10 +2046,7 @@ export function createWalk(d: WalkDeps) {
     aim = on;
     aimBtn.setAttribute('aria-pressed', String(on));
   };
-  onTap(aimBtn, () => {
-    setAim(!aim);
-    d.touched();
-  });
+  holdButton(aimBtn, 'aim', setAim, () => aim);
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
   // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands);
@@ -2082,7 +2165,9 @@ export function createWalk(d: WalkDeps) {
       if (edge(11)) nextCam();
       padFight.x = pad.x;
       padFight.y = pad.y;
-      padFight.block = !!b[4];
+      if (hm('block', 'pad') === 'toggle') {
+        if (edge(4)) padFight.block = !padFight.block;
+      } else padFight.block = !!b[4];
       if (edge(2)) fightBtns.punch = true;
       if (edge(3)) fightBtns.kick = true;
       if (edge(0)) fightBtns.dodge = true;
@@ -2161,17 +2246,31 @@ export function createWalk(d: WalkDeps) {
       return;
     }
     if (edge(0)) tryJump();
-    if (edge(1)) crouchPress();
+    if (b[1] !== !!pad.prev[1]) crouchInput('pad', !!b[1]);
     jumpHeld = jumpHeld || b[0] || false;
     if (!b[0] && pad.prev[0]) jumpHeld = false;
     // (aiming, LB and RB lean out instead: peeking)
-    padLean = b[6] ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
+    // (aim on toggle: LT puts the sight up and the next takes it down; peeking then while it's up)
+    const aimToggle = hm('aim', 'pad') === 'toggle';
+    if (aimToggle && edge(6)) setAim(!aim);
+    const aiming = aimToggle ? aim : !!b[6];
+    padLean = aiming ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
     // (the run is the left stick pressed, a gun out or not (keymap.ts); empty hands: LB held blocks)
     const fb = fistsReady();
-    padBlock = fb && !!b[4];
-    pad.run = !!b[10];
-    aim = aim || !!b[6];
-    if (!b[6] && pad.prev[6]) setAim(false);
+    if (hm('block', 'pad') === 'toggle') {
+      if (edge(4)) padBlockOn = !padBlockOn;
+      if (!fb) padBlockOn = false;
+      padBlock = fb && padBlockOn;
+    } else padBlock = fb && !!b[4];
+    // (sprint on toggle: L3 locks it, again lets it go)
+    if (hm('sprint', 'pad') === 'toggle') {
+      if (edge(10)) setSprintLock(!sprintLock);
+      pad.run = false;
+    } else pad.run = !!b[10];
+    if (!aimToggle) {
+      aim = aim || !!b[6];
+      if (!b[6] && pad.prev[6]) setAim(false);
+    }
     // (Y does what the prompt says; with empty hands and nothing to do, it kicks)
     if (edge(3)) {
       if (fistsReady() && !near) fightBtns.kick = true;
@@ -2188,7 +2287,7 @@ export function createWalk(d: WalkDeps) {
     }
     if (edge(12)) combat.toggleHolster();
     // RB or D-pad right: the hotbar's next slot of the fists and the guns; D-pad left: the one before
-    if ((edge(5) && !b[6]) || edge(15)) stepSlot(1);
+    if ((edge(5) && !aiming) || edge(15)) stepSlot(1);
     if (edge(14)) stepSlot(-1);
     if (pad.x || pad.y || b.some(Boolean)) d.touched();
     pad.prev = b;
@@ -2760,6 +2859,8 @@ export function createWalk(d: WalkDeps) {
     if (fists) fists.lay(P, guardAmt, wholeAmt);
     // The slide's pose, blended in quickly and out a little slower (the motion capture steps aside for it)
     slideAmt += ((slide ? 1 : 0) - slideAmt) * damp(slide ? 18 : 9, dt);
+    // (crouch on hold: let go, he stands, a slide ending in a crouch too)
+    if (crouched && !slide && settings.holds.crouch === 'hold' && !crouchKey && !crouchPad && !crouchTouch) crouched = false;
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * damp(10, dt);
     if (crouchBtn.ariaPressed !== String(crouched)) crouchBtn.setAttribute('aria-pressed', String(crouched));
     slidePose(P, slideAmt);

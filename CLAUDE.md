@@ -3168,7 +3168,15 @@ it and has been retired completely. Build only on what's here.
   shown for `CARD_AUTO` the first time in each mode (`seen` in
   `degen-city-walk-v1`) and on request (`/` or `?`, the d-pad's down, the
   hub's Settings > Keys > Show the controls card; Esc, × or the key again
-  closes it); in `chrome`. The boot's budget went to 710 with it.
+  closes it); in `chrome`. The boot's budget went to 710 with it. Phase 5
+  (hold or toggle) is built, waiting on the owner's sign-off, and the plan
+  is done: `comfort.ts` (DOM-free, tested in `tests/comfort.test.ts`:
+  `Holds`, `DEFAULTS` (as it always was: Sprint and Aim lock on touch,
+  held elsewhere; Crouch toggles; Block held), `holdMode()`, `press()`,
+  `cleanHolds()`), the hub's Settings > Hold or toggle (`[data-hold]`,
+  `holds` in `degen-city-walk-v1`), asked by walk.ts at every press of
+  sprint, aim, crouch and block on every input (touch: `holdButton()`).
+  A new held or toggled job goes in `HOLD_JOBS`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
@@ -3672,8 +3680,9 @@ it and has been retired completely. Build only on what's here.
   first-person camera, mouse (pointer lock), keyboard, touch and gamepad
   controls, collisions and door prompts. The walk controls' settings (the
   hub's Settings tab)
-  (Look: speed, invert, first person; Shooting: "Aim when firing"
-  `settings.autoAds` = off / touch / always) are saved under
+  (Look: speed, invert, first person; Hold or toggle for sprint, aim,
+  crouch and block, `settings.holds`, comfort.ts; Shooting: "Aim when
+  firing" `settings.autoAds` = off / touch / always) are saved under
   `degen-city-walk-v1` in localStorage. The HUD markup (the controls, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
