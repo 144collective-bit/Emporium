@@ -162,6 +162,8 @@ export interface KartRace {
   readonly sim: KartSim | null;
   /** Build the race from the save (the picked kart with its mods, seven rivals for a cup at the class's pace), seat Degen, start the countdown */
   start(setup: RaceStart): void;
+  /** The next camera (V, R3, the touch View button; views.ts): near, far, the kart's seat; returns it */
+  toggleView(): import('./views').ViewId;
   /** A time trial's ghosts: your best lap on this course and class, and the par ghost; each shown or hidden */
   setGhosts(on: { yours: boolean; par: boolean }): void;
   /** One frame in the kart: step the sim with the player's input, draw everything, paint the HUD, play the sounds */

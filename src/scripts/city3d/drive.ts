@@ -14,12 +14,15 @@
  * - Your motorbike (vehicle plan Phase 7) waits on its stand at the garage;
  *   it rides on the cars' rules tuned as a bike (bike-sim.ts), leaning into
  *   the turns (the whole bike, you with it) and resting on your left foot as
- *   it stops. Its cameras: the chase camera and your helmet's (V).
+ *   it stops. Its cameras (V): near, far and your helmet's.
  * - All three can be out at once; you're in one at a time.
- * - Cameras (V): a chase camera that swings in behind the car (look around
- *   with the mouse, a drag or the right stick; it settles back behind), a
- *   roof camera and, in your car once it's fitted out, the driver's seat
- *   (carride.ts `eye()`; look round from it the same way).
+ * - Cameras (V, the gamepad's right stick pressed, the touch View button;
+ *   views.ts, docs/views-plan.md): near and far chase cameras that swing in
+ *   behind (look around with the mouse, a drag or the right stick; they
+ *   settle back behind), and first person: the driver's seat in your car
+ *   once it's fitted out (carride.ts `eye()`; the roof camera stands in
+ *   until then), the helmet on your bike, the seat in your kart. Every time
+ *   you get in it starts near.
  * - Your car fitted out (carride.ts, the cars' fine-detail chunk) rides its
  *   own springs, turns its steering wheel and needles, swings its door, lays
  *   its skid marks and its lamps' pools (`ride()`); the kart, and your car
@@ -48,6 +51,7 @@ import { REST, footDown, stepLean, tuneBike } from './bike-sim';
 import { bodies } from './life';
 import { DRIVE, FEEL, type MyCar, type PlayerCar } from './mycar';
 import type { KartId } from './mykart';
+import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 import type { Box } from './solids';
 
 export interface DriveDeps {
@@ -143,8 +147,8 @@ export function createDrive(d: DriveDeps) {
   let driver: Degen | null = null;
   /** Locked (a countdown): no throttle or steering, handbrake on */
   let frozen = false;
-  /** The camera (V): 0 the chase camera, 1 the roof's, 2 the driver's seat (your car fitted out) */
-  let view = 0;
+  /** The camera (V; views.ts): near, far, first person (the seat, the helmet; the roof's until your car's fitted out) */
+  let view: ViewId = START_VIEW;
   const near0 = camera.near;
   let camYaw = 0;
   let lookYaw = 0;
@@ -413,6 +417,7 @@ export function createDrive(d: DriveDeps) {
       camYaw = v.state.yaw;
       lookYaw = lookPitch = 0;
       roll = pitch = 0;
+      view = START_VIEW;
       camReady = false;
       fov = camera.fov;
       place(v);
@@ -518,9 +523,12 @@ export function createDrive(d: DriveDeps) {
       kart = null;
       d.kart.bringBack();
     },
+    /** The next view (V): near, far, first person; returns what's being driven and the view now, for the toast */
     toggleView() {
-      view = (view + 1) % (out?.car?.eye ? 3 : 2);
+      if (!out) return null;
+      view = nextView(view);
       camReady = false;
+      return { kind: out.kind, view };
     },
     /** Look around from the chase camera (it settles back behind the car) */
     look(dx: number, dy: number) {
@@ -610,28 +618,31 @@ export function createDrive(d: DriveDeps) {
         lookPitch += (0 - lookPitch) * damp(2.5, dt);
       }
       // The chase camera follows the way the car is going (in reverse it stays behind the nose)
-      camYaw += wrap(s.yaw - camYaw) * damp(view ? 20 : 3.2, dt);
+      const first = view === 'first';
+      camYaw += wrap(s.yaw - camYaw) * damp(first ? 20 : 3.2, dt);
       const yaw = camYaw + lookYaw;
       const fx = Math.cos(yaw);
       const fz = -Math.sin(yaw);
-      if (view > 1 && v.car?.eye) {
+      const chase = first ? null : CHASE[v.kind][view as 'near' | 'far'];
+      if (first && v.car?.eye) {
         v.car.eye(camPos, at, lookYaw, lookPitch);
         camera.position.copy(camPos);
-      } else if (view && v.bike) {
+      } else if (first && v.bike) {
         // Your helmet: his eyes, leaning with the bike, looking up the road
         camPos.copy(v.bike.eye);
         v.group.localToWorld(camPos);
         at.set(camPos.x + fx * 6, camPos.y - 0.3 + lookPitch * 4, camPos.z + fz * 6);
         camera.position.copy(camPos);
-      } else if (view) {
+      } else if (!chase) {
+        // (the kart's seat, or the roof until your car's fitted out)
         camPos.set(s.x + fx * v.roofFwd, y + v.roof, s.z + fz * v.roofFwd);
         at.set(camPos.x + fx * 6, camPos.y - 0.35 + lookPitch * 4, camPos.z + fz * 6);
         camera.position.copy(camPos);
       } else {
-        const pitchC = 0.26 + lookPitch;
+        const pitchC = chase.pitch + lookPitch;
         pivot.set(s.x, y + 0.9, s.z);
         dir.set(-fx * Math.cos(pitchC), Math.sin(pitchC), -fz * Math.cos(pitchC));
-        const want = 3.6 + T.L * 0.95 + Math.abs(s.speed) * 0.1;
+        const want = chaseDistance(chase, T.L, s.speed);
         const room = d.cameraRoom(pivot, dir, want);
         const goal = pivot.clone().addScaledVector(dir, room);
         if (!camReady) camPos.copy(goal);
@@ -647,11 +658,11 @@ export function createDrive(d: DriveDeps) {
       }
       camera.lookAt(at);
       // (the helmet's view tips with the lean)
-      if (view && v.bike) camera.rotateZ(-roll * 0.6);
-      const wantFov = (view ? 68 : 58) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
+      if (first && v.bike) camera.rotateZ(-roll * 0.6);
+      const wantFov = (chase ? (chase.fov ?? 58) : 68) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
       fov += (wantFov - fov) * damp(4, dt);
       // (the seat's view is close to the dash and the wheel: the near plane comes in for it)
-      const close = view > 1 ? 0.08 : near0;
+      const close = first && v.car?.eye ? 0.08 : near0;
       if (Math.abs(camera.fov - fov) > 0.05 || camera.near !== close) {
         camera.fov = fov;
         camera.near = close;

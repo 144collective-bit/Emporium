@@ -151,6 +151,8 @@ export interface Fight {
   readonly active: boolean;
   /** The sim while a fight is on */
   readonly sim: import('./fight-sim').FightSim | null;
+  /** The next camera (V, R3, the touch View button; views.ts): near or far; returns it */
+  toggleView(): import('./views').ViewId;
   /** Build the fight from the save (your fighter in your style with fists, the bot in its), put both in their corners (or the partner's spot), ring the bell */
   start(setup: FightStart): void;
   /** Eat a snack: some health back in a spar or a street spar (false, with a reason shown, when there's none or it's a bout) */
