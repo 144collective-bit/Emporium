@@ -77,17 +77,24 @@ each with the owner's sign-off; keep this file up to date.
   all the way: where what stands near the deck stays), or `none`. Every exit
   still gets off and on (the test holds it):
 
-  | Exit | Inside | Outside | What moves for it (Phase 1b) |
+  | Exit | Inside | Outside | What moved for it (Phase 1b, built) |
   | :-- | :-- | :-- | :-- |
-  | 1 Stadium · Westlake Park | slip | full | the stadium's car park, its loop and Stadium Road's east end |
-  | 2 Kart Park · Starlight Mall | slip | full | the kart park's car park, its loop, Kart Road's west end |
+  | 1 Stadium · Westlake Park | slip | full | Stadium Road's way in came off the north road 23 further north, the car park loop up with it, a bend down to the stretch past the stadium's front, the block's east edge in for the bend |
+  | 2 Kart Park · Starlight Mall | slip | slip | nothing (outside, the kart park's plaza, kiosk and gate arch stand where the straight ramp would run) |
   | 3 Crestmont · Sunridge | slip | slip | nothing |
-  | 4 Airport · Harbour | slip | full | Airport Drive's north end and the landside beside it |
+  | 4 Airport · Harbour | slip | slip | nothing (outside, Airport Drive could only move east through the Runway Hotel) |
   | 5 Southfield · General Aviation | full | slip | nothing |
-  | 6 Lot 9 · The Trenches | slip | slip | a strip of The Trenches' car park and trees along the highway |
-  | 7 Southbank Docks | slip | full | the Docks' ring road (Dock Road) by the highway; the same Trenches strip |
-  | 8 Uptown · Westlake Park | full | full | Westlake Park's west edge (lawn, wall, ring walk) |
+  | 6 Lot 9 · The Trenches | slip | slip | The Trenches' land (`inTrenches()`) keeps off the ramps' strip by the highway |
+  | 7 Southbank Docks | slip | slip | the same (outside, the Docks' ring road and everything east of it stay) |
+  | 8 Uptown · Westlake Park | full | full | Westlake Park's south-west corner cut back (`EXIT_NOTCH`), its south-west gate east of it |
 
+  Exits 2 and 3, and 6 and 7, pair up round their corners: between them each
+  pair takes traffic off and on both ways. `rampLand()` (viaduct.ts) is the
+  ramps' land: the outskirts' trees keep off it (`KEEPS`), the seam map
+  counts it the highway's, and `quadrantEdge()` gives a district the edge to
+  keep behind. `tests/viaduct.test.ts` holds every ramp clear of every
+  district's land and block, every street but its own arterial, the water
+  and everything solid.
   The metro's pillars by exits 2 and 7 go with the metro's rise over the
   deck in Phase 2 (its pillars are placed clear of every road, the ramps
   among them). `docs/highway-exits-fit.png` shows each exit as it is now.
@@ -101,9 +108,10 @@ each with the owner's sign-off; keep this file up to date.
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
-   off: open land only): the moves in the table above, exit by exit (their
-   data, the snapshot rewritten on purpose), and a test that every ramp
-   keeps clear of every block, street, solid and the water.
+   off: open land only; built, waiting on the owner's sign-off): the moves
+   in the table above (the snapshot rewritten on purpose: Westlake Park's
+   block and south-west gate, the stadium's road, loop and block), and the
+   test that every ramp keeps clear.
 2. **The viaduct drawn and the ring raised:** the deck, piers, parapets,
    median barrier, lamps and joints; the street-level asphalt, median,
    lamps, junctions and slip lanes taken out (every arterial now passes

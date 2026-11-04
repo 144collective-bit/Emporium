@@ -159,9 +159,11 @@ export type Form = 'full' | 'slip' | 'none';
 /** Each exit's arterial crossing today, its names, the way its ramps lie and its quadrants' forms (inside, outside) */
 const EXIT_DATA: [string, string, Pt, string, 1 | -1, Form, Form][] = [
   ['highway-ns0-1', 'ns0', [-4.5, -170], 'Stadium · Westlake Park', -1, 'slip', 'full'],
-  ['highway-ns3-0', 'ns3', [64.5, -170], 'Kart Park · Starlight Mall', 1, 'slip', 'full'],
+  // (outside, the kart park's plaza, kiosk and gate arch stand where the straight ramp would run: a slip)
+  ['highway-ns3-0', 'ns3', [64.5, -170], 'Kart Park · Starlight Mall', 1, 'slip', 'slip'],
   ['highway-ew0-0', 'ew0', [275, -4.5], 'Crestmont · Sunridge', -1, 'slip', 'slip'],
-  ['highway-ew4-0', 'ew4', [275, 137], 'Airport · Harbour', 1, 'slip', 'full'],
+  // (outside, Airport Drive runs where the loop would; it could only move east through the Runway Hotel: a slip)
+  ['highway-ew4-0', 'ew4', [275, 137], 'Airport · Harbour', 1, 'slip', 'slip'],
   ['highway-ns3-1', 'ns3', [64.5, 320], 'Southfield · General Aviation', -1, 'full', 'slip'],
   ['highway-ns0-0', 'ns0s', [-4.5, 320], 'Lot 9 · The Trenches', 1, 'slip', 'slip'],
   // (outside, the Docks' ring road and everything east of it stand where a loop would go: a slip, the owner's open land only)

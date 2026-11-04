@@ -1465,8 +1465,14 @@ it and has been retired completely. Build only on what's here.
   up to date. Phase 1 (the shape as data) is built: `viaduct.ts` (DOM-free,
   tested in `tests/viaduct.test.ts`: the ring exactly, `ringAt()` /
   `ringPoint()` / `ringS()`; `DECK_Y`, `CLEARANCE`; `EXITS`; `RAMPS`, `QUAD`,
-  `REACH`) and `viapiers.ts` (`PIERS`); nothing reads them yet, and what the
-  ramps run into is `docs/highway-exits-fit.png`.
+  `REACH`, each quadrant's `Form`: full, slip or none, the owner's call: open
+  land only moves) and `viapiers.ts` (`PIERS`); Phase 1b (making room) is
+  built: the ramps' land is `rampLand()` (the outskirts' trees, the seam map
+  and `inTrenches()` keep off it; `quadrantEdge()` for a district's edge),
+  Westlake Park's south-west corner is cut back for exit 8 (`EXIT_NOTCH`),
+  Stadium Road comes in further north for exit 1 (stadium.ts `IN`,
+  `ROAD_LINE`), and the test holds every ramp clear; the fit is
+  `docs/highway-exits-fit.png`.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
