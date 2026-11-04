@@ -12,7 +12,7 @@
  * mouths, the metro's door and pillars, and anything solid.
  */
 import { CORE_ROADS, EW_ROADS, MEDIAN, NS_ROADS } from './layout';
-import { PLAN, distToStreet, type Pt, type Street } from './streetplan';
+import { PLAN, distToStreet, onSlab, type Pt, type Street } from './streetplan';
 import { SOLIDS } from './solids';
 import { BUS_STOPS } from './transit';
 import { ALLEYS } from './downtown';
@@ -20,6 +20,8 @@ import { STATIONS, TRACKS } from './metro';
 import { AXIS_X, LANE_HALF, UPTOWN_LAMPS, E as UPTOWN_E, W as UPTOWN_W } from './uptown';
 import { BENCHES as PARK_BENCHES, GATES, PARK_LAMPS, PARK_TREES, ZS as PARK_EDGE, treeFree } from './westlake';
 import { GARDEN_SOLIDS, MALL_BEDS, PLANTERS } from './gardens';
+import { LOOP, MALL_LAMPS, NORTH_Z as MALL_NORTH, ZEBRA as COURT_ZEBRA } from './mall';
+import { vergeY } from './verges';
 
 /** A ring side: its street, along x (an east-west avenue) or z, its centre line, which sides of it are dressed (+1 the larger coordinate) */
 interface Side {
@@ -41,7 +43,8 @@ export const RING_SIDES: Side[] = [
   { street: street(`ew${EW_ROADS.findIndex((r) => r.c === RING_LO)}`), alongX: true, c: RING_LO, lamps: [-1, 1], town: -1, median: [UPTOWN_W, RING_HI] },
   { street: street(`ew${EW_ROADS.findIndex((r) => r.c === RING_HI)}`), alongX: true, c: RING_HI, lamps: [-1], town: null, median: [RING_LO, RING_HI] },
   { street: street(`ns${NS_ROADS.findIndex((r) => r.c === RING_LO)}`), alongX: false, c: RING_LO, lamps: [-1, 1], town: -1, median: [RING_LO, RING_HI] },
-  { street: street(`ns${NS_ROADS.findIndex((r) => r.c === RING_HI)}`), alongX: false, c: RING_HI, lamps: [-1, 1], town: 1, median: [RING_LO, RING_HI] },
+  // (the east avenue's median planted on north past Starlight Mall and Palm Court: Phase 6d)
+  { street: street(`ns${NS_ROADS.findIndex((r) => r.c === RING_HI)}`), alongX: false, c: RING_HI, lamps: [-1, 1], town: 1, median: [MALL_NORTH, RING_HI] },
 ];
 
 /** Lamps about every `LAMP_GAP` along a side, spread evenly over each stretch between junctions, `KERB_IN` in from the kerb so the walkers pass inside them */
@@ -142,6 +145,8 @@ export const RING_MEDIAN: MedianRun[] = RING_SIDES.flatMap((sd) => {
   }
   // (Uptown's axis crosses the north avenue on a zebra: the median breaks there)
   if (sd.alongX && sd.c === RING_LO) cuts.push([AXIS_X - LANE_HALF - HEDGE_CLEAR, AXIS_X + LANE_HALF + HEDGE_CLEAR]);
+  // (and Palm Court's zebra over the east avenue to the mall)
+  if (!sd.alongX && sd.c === RING_HI) cuts.push([COURT_ZEBRA.z - COURT_ZEBRA.half - HEDGE_CLEAR, COURT_ZEBRA.z + COURT_ZEBRA.half + HEDGE_CLEAR]);
   // (anything solid standing on the median: the el's pillars)
   for (const b of SOLIDS) {
     const [m0, m1, l0, l1] = sd.alongX ? [b[1], b[3], b[0], b[2]] : [b[0], b[2], b[1], b[3]];
@@ -219,6 +224,68 @@ export const PARK_EDGE_TREES: [number, number, number][] = (() => {
   for (let k = 0; k <= n; k++) {
     const x = UPTOWN_W + 2 + ((UPTOWN_E - UPTOWN_W - 4) * k) / n;
     if (clearOfPark([x, z])) out.push([x, z, EDGE_TREE_S]);
+  }
+  return out;
+})();
+
+/* ---------- Starlight Mall and Palm Court across the east avenue (Phase 6d) ---------- */
+
+/**
+ * Between the mall and Palm Court the east avenue had no lamps at all: the mall's anchor and then a bare strip of
+ * grass between the mall's loop road and the avenue on one side, Palm Court's backs on the other, the el overhead.
+ * Now the same lamp stands on both sides about every `LAMP_GAP` from the mall's north edge to the Parkway's
+ * crossing, broken at Palm Court's zebra (`MALL_SIDE_LAMPS`: on the sidewalks, or on the strip's grass where there's
+ * no sidewalk, never on a verge's bank), the median's hedge runs on under the el (the east side's `median` span, cut
+ * at the zebra and round the pillars, no trees under the el), and the strip carries a row of street trees
+ * (`STRIP_TREES`, about every `STRIP_TREE_GAP` down its middle, clear of the lamps and the verges).
+ */
+const EAST_SIDE = RING_SIDES[3];
+/** The Parkway's crossing of the east avenue, north of the ring */
+const PARKWAY_Z = PLAN.crossings.find((c) => c.streets.includes(EAST_SIDE.street.id) && c.streets.includes('parkway') && c.at[1] < RING_LO)!.at[1];
+/** The stretch the lamps run along, north to south, and the zebra they keep off */
+export const MALL_STRETCH: [number, number] = [MALL_NORTH + 2, PARKWAY_Z - JUNCTION_CLEAR];
+const ZEBRA_CLEAR = COURT_ZEBRA.half + 2;
+const mallLamps: Pt[] = MALL_LAMPS.map(([x, z]) => [x, z] as Pt);
+/** A lamp: x, z, the arm's facing, and whether it stands on a slab (else on the ground) */
+export const MALL_SIDE_LAMPS: [number, number, number, boolean][] = (() => {
+  const out: [number, number, number, boolean][] = [];
+  const spans: [number, number][] = [
+    [MALL_STRETCH[0], COURT_ZEBRA.z - ZEBRA_CLEAR],
+    [COURT_ZEBRA.z + ZEBRA_CLEAR, MALL_STRETCH[1]],
+  ];
+  for (const side of [-1, 1] as const)
+    for (const [v0, v1] of spans) {
+      const n = Math.max(1, Math.round((v1 - v0) / LAMP_GAP));
+      for (let k = 0; k <= n; k++) {
+        const q: Pt = [EAST_SIDE.c + side * (EAST_SIDE.street.half + KERB_IN), v0 + ((v1 - v0) * k) / n];
+        const slab = onSlab(PLAN, q);
+        // (never on a verge's bank: the slab eases down to the grass there)
+        if (!slab && [-1.2, 0, 1.2].some((d) => vergeY(q[0], q[1] + d) > 0.005)) continue;
+        if (solidAt(q, 0.3) || onOtherStreet(EAST_SIDE, q, 1.2) || mallLamps.some((m) => Math.hypot(m[0] - q[0], m[1] - q[1]) < 2.5)) continue;
+        out.push([q[0], q[1], Math.atan2(0, -side), slab]);
+      }
+    }
+  return out;
+})();
+
+/** The strip of grass between the mall's loop and the avenue: its middle line, and its trees' spacing and size */
+export const STRIP_X = (LOOP.xE + LOOP.half + EAST_SIDE.c - EAST_SIDE.street.half) / 2;
+export const STRIP_TREE_GAP = 8;
+export const STRIP_TREE_S = 1;
+export const STRIP_TREES: [number, number, number][] = (() => {
+  const out: [number, number, number][] = [];
+  const [z0, z1] = [LOOP.zN - LOOP.half, LOOP.zS + LOOP.half];
+  const n = Math.round((z1 - z0) / STRIP_TREE_GAP);
+  const lamps: Pt[] = [...mallLamps, ...MALL_SIDE_LAMPS.map(([x, z]) => [x, z] as Pt)];
+  for (let k = 0; k <= n; k++) {
+    const q: Pt = [STRIP_X, z0 + ((z1 - z0) * k) / n];
+    if (onSlab(PLAN, q) || [-1.5, 0, 1.5].some((d) => vergeY(q[0], q[1] + d) > 0.005)) continue;
+    if (solidAt(q, 1) || PLAN.streets.some((s) => s.kind !== 'highway' && distToStreet(s, q) < s.half + 0.8)) continue;
+    // (a lamp beside it moves it along a little rather than losing it)
+    const near = lamps.find((l) => Math.hypot(l[0] - q[0], l[1] - q[1]) < 2.2);
+    if (near) q[1] = near[1] + Math.sign(q[1] - near[1] || 1) * 2.4;
+    if (lamps.some((l) => Math.hypot(l[0] - q[0], l[1] - q[1]) < 2.2) || out.some((t) => Math.abs(t[1] - q[1]) < STRIP_TREE_GAP / 2)) continue;
+    out.push([q[0], q[1], STRIP_TREE_S]);
   }
   return out;
 })();

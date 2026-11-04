@@ -538,6 +538,21 @@ For each seam in the seam map, the treatment it needs:
   lots down was left: its towers there already stand on mid-rise masonry
   bases at the sidewalk, and nothing that exists moves. Added at the boot
   with 6b's; no new draws.
+- **6d, the third seam (built): Starlight Mall and Palm Court across the
+  east avenue.** Mapped, the avenue there had no lamps at all: the mall's
+  anchor and then a bare strip of grass between the mall's loop road and the
+  avenue on one side (the loop's own lamps facing the loop), Palm Court's
+  backs on the other, the el down the median. `ringstreet.ts` carries on: the
+  same lamp on both sides about every `LAMP_GAP` from the mall's north edge to
+  the Parkway's crossing (`MALL_SIDE_LAMPS`, 24: on the sidewalks, on the
+  strip's grass where there's none, never on a verge's bank, clear of Palm
+  Court's zebra and the mall's own lamps), the median's hedge carried north
+  under the el to the mall (the east side's `median` span, cut at the zebra
+  and round the pillars, no trees under the el), and a row of street trees down
+  the middle of the grass strip (`STRIP_TREES`, 7, about every
+  `STRIP_TREE_GAP`, nudged clear of the lamps). A sidewalk on the strip was
+  left out: the mall block's verge hedge runs across it to the kerb, and
+  nothing that exists moves. Added at the boot with 6b's; no new draws.
 - **Stepped heights:** where towers meet low-rise (Uptown's edge by
   Westlake and downtown, Uptown North by the mall), the edge lots step down;
   where The Trenches meets the south row, its tenements step to the row's
