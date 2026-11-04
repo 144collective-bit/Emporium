@@ -153,6 +153,8 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     }
     // Whoever's ahead going the same way
     for (const o of bodies.cars) {
+      // (not the ring highway's traffic up on its deck overhead)
+      if (o.y > 2) continue;
       const ox = Math.cos(o.yaw);
       const oz = -Math.sin(o.yaw);
       if (ox * fwd.x + oz * fwd.y < 0.5) continue;

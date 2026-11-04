@@ -333,6 +333,9 @@ export const GAP_NAMES: { id: string; name: string; at: Pt }[] = [
   // The verge between the park and the highway on the west (the north verge went to exit 1's slip ramp,
   // docs/highway-plan.md Phase 1b: what's left of it is too small to count)
   { id: 'westlake-verge', name: "Westlake's west verge", at: [-203, -93] },
+  // Behind Starlight Mall to the highway's north side, between the north avenue and the east ring avenue (open since
+  // the street-level highway's slip lanes there went with its rise, docs/highway-plan.md Phase 2)
+  { id: 'mall-verge', name: "The verge behind the mall", at: [29, -161] },
 ];
 
 export interface Gap {

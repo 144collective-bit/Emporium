@@ -4,8 +4,10 @@
  * docs/north-plan.md, the owner's call; DOM-free, tested in
  * tests/stadium.test.ts), drawn by stadium3d.ts. An oval bowl on its own
  * block north of the highway (`BLOCK`), in line with Westlake Park's Mall,
- * its front to the south, where a footbridge (`BRIDGE`) carries the Mall up
- * and over the highway and Stadium Road down onto its forecourt.
+ * its front to the south, where the Mall comes out of the park's north gate,
+ * under the raised ring highway and over Stadium Road on a zebra onto its
+ * forecourt (`WALK`, `ZEBRA`; its footbridge was retired with the highway's
+ * rise, docs/highway-plan.md Phase 2, the owner's call).
  *
  * - **The bowl** is a soft-cornered oval (a superellipse, `ovalAt()`): the
  *   facade round the outside (`FACADE`, to `FACADE.h`), the stands stepping
@@ -24,18 +26,15 @@
  *   in most of its bays, `PARKED`) is inside the one-way loop off it east of
  *   the stadium (`LOOP`), as the airport's is. The street plan's
  *   `STADIUM_STREETS` and `STADIUM_CROSSINGS`; traffic drives them.
- * - **The footbridge** (`BRIDGE`): stairs up from the Mall in the park, a
- *   deck over the ring walk, the park's edge, the highway and Stadium Road,
- *   stairs down to the forecourt; you can walk it (`bridgeY()`,
- *   `bridgeWall()`), and only its piers and stair flanks are solid.
+ * - **The walk** (`WALK`): the Mall carried on from the park's north gate
+ *   under the highway's deck to Stadium Road, a zebra over it (`ZEBRA`).
  *
  * Everything stays under the Emporium (`TALLEST`). What's solid is
  * `STADIUM_SOLIDS`: the facade all the way round (the gates are shut until
- * there's an event), the masts, the parked cars and the footbridge's piers
- * and stairs.
+ * there's an event), the masts and the parked cars.
  */
 import { WALK_W } from './layout';
-import { MALL } from './westlake';
+import { MALL, Z0 as PARK_EDGE } from './westlake';
 
 export type Pt = [number, number];
 export type Box = [number, number, number, number, number];
@@ -58,7 +57,7 @@ export const LOOP = { x0: -92, x1: -24, z1: IN.z - 40, half: 1.7 };
 export const ROAD_LINE: Pt[] = [[IN.x0, IN.z], [LOOP.x0 - 5, IN.z], [ROAD.x0, ROAD.z], [ROAD.x1, ROAD.z]];
 /** The stadium's block (lawn on a slab, a sidewalk round it): north of Stadium Road, west of its bend */
 export const BLOCK: Rect = [-184, -262, -106, ROAD.z - ROAD.half - WALK_W];
-/** The bowl's middle: in line with the Mall, its south facade 3.5 north of the footbridge's foot */
+/** The bowl's middle: in line with the Mall */
 export const CENTRE: Pt = [MALL.x, -228];
 /** How square the oval's corners are (2 an ellipse; higher, squarer) */
 export const ROUNDNESS = 3;
@@ -190,55 +189,17 @@ export const STADIUM_LAMPS: [number, number, number, number][] = (() => {
   return out;
 })();
 
-/* ---------- The footbridge ---------- */
+/* ---------- The way over from the park ---------- */
 
 /**
- * The Mall carried over the highway: a deck `y` over the ground from `deck[0]` (north of the stairs up from the Mall)
- * to `deck[1]` (south of the stairs down to the forecourt), `half` either side of x; its stairs in line with it
- * (`steps` of `tread` each end); the piers under it (z)
+ * The Mall carried on north from the park's north gate (westlake.ts `GATES`, `gate-n`) under the raised highway's
+ * deck to Stadium Road's south kerb (x, its half width, from z0 to z1), and the zebra over the road from it to the
+ * forecourt (docs/highway-plan.md Phase 2: in place of the footbridge)
  */
-export const BRIDGE = (() => {
-  const steps = 18;
-  const tread = 0.42;
-  const deck: Pt = [-148.1, -191.5];
-  return {
-    x: MALL.x,
-    half: 1.3,
-    /** The deck's top, over the lawns' slab (SLAB is 0.15) */
-    y: 3.65,
-    deck,
-    steps,
-    tread,
-    /** Each stair's foot and top (z) */
-    south: [deck[0] + steps * tread, deck[0]] as Pt,
-    north: [deck[1] - steps * tread, deck[1]] as Pt,
-    piers: [-150.6, -157.8, -170, -180, -190.8],
-  };
-})();
-/** The lawns' height either side (world.ts's SLAB), and the most a walker steps up at once */
-const GROUND = 0.15;
-const STEP = 0.32;
-/** The walking surface's height at z on the bridge's line (its stairs, its deck), or null off it */
-function surface(z: number) {
-  const { south, north, deck, y, steps } = BRIDGE;
-  const rise = (y - GROUND) / steps;
-  if (z <= south[0] && z >= south[1]) return GROUND + rise * Math.min(steps, Math.floor((south[0] - z) / BRIDGE.tread) + 1);
-  if (z < deck[0] && z > deck[1]) return y;
-  if (z <= north[1] && z >= north[0]) return GROUND + rise * Math.min(steps, Math.floor((z - north[0]) / BRIDGE.tread) + 1);
-  return null;
-}
-/** The footbridge as ground for a walker at height y (`m` in from its edges): its stairs and deck when you're up there, null under it or off it */
-export function bridgeY(x: number, z: number, y: number, m = 0): number | null {
-  if (Math.abs(x - BRIDGE.x) > BRIDGE.half - m) return null;
-  const h = surface(z);
-  if (h === null) return null;
-  return y >= h - STEP ? h : null;
-}
-/** What the bridge covers from above */
-export const BRIDGE_RECT: Rect = [BRIDGE.x - BRIDGE.half - 0.2, BRIDGE.north[0], BRIDGE.x + BRIDGE.half + 0.2, BRIDGE.south[0]];
-/** Up on the bridge, off its walking surface: its parapets (you can't step or fall off) */
-export const bridgeWall = (x: number, z: number, y: number, m = 0) =>
-  y > GROUND + 0.9 && x > BRIDGE_RECT[0] - m - 0.05 && x < BRIDGE_RECT[2] + m + 0.05 && z > BRIDGE_RECT[1] - m && z < BRIDGE_RECT[3] + m && bridgeY(x, z, y, m) === null;
+export const WALK = { x: MALL.x, half: MALL.half, z0: PARK_EDGE, z1: ROAD.z + ROAD.half };
+export const ZEBRA = { x: MALL.x, half: 1.4, z0: ROAD.z - ROAD.half, z1: ROAD.z + ROAD.half };
+/** What the walk covers (the outskirts' trees and the deck's piers keep off) */
+export const WALK_RECT: Rect = [WALK.x - WALK.half - 0.5, WALK.z1, WALK.x + WALK.half + 0.5, WALK.z0];
 
 /* ---------- What's solid ---------- */
 
@@ -258,19 +219,15 @@ export const STADIUM_SOLIDS: Box[] = [
     const [hx, hz] = along ? [CAR_HALF.l, CAR_HALF.w] : [CAR_HALF.w, CAR_HALF.l];
     return [x - hx, z - hz, x + hx, z + hz, 1.3];
   }),
-  // The footbridge: its piers (slim, the middle one on the highway's median), and its stairs past their first steps
-  ...BRIDGE.piers.map((z): Box => [BRIDGE.x - 0.9, z - 0.2, BRIDGE.x + 0.9, z + 0.2, BRIDGE.y - 0.3]),
-  [BRIDGE.x - BRIDGE.half - 0.15, BRIDGE.deck[0], BRIDGE.x + BRIDGE.half + 0.15, BRIDGE.south[0] - BRIDGE.tread * 3, BRIDGE.y],
-  [BRIDGE.x - BRIDGE.half - 0.15, BRIDGE.north[0] + BRIDGE.tread * 3, BRIDGE.x + BRIDGE.half + 0.15, BRIDGE.deck[1], BRIDGE.y],
 ];
-/** What the outskirts' trees keep off: the block, the road and the loop with its car park, and the bridge */
+/** What the outskirts' trees keep off: the block, the road and the loop with its car park, and the walk from the park */
 export const STADIUM_RECTS: Rect[] = [
   BLOCK,
   [ROAD.x1 - 1, ROAD.z - ROAD.half - 1, ROAD.x0, ROAD.z + ROAD.half + 1],
   [LOOP.x1, IN.z - ROAD.half - 1, IN.x0, IN.z + ROAD.half + 1],
   [ROAD.x0 - ROAD.half - 1, IN.z - ROAD.half - 1, LOOP.x0 + ROAD.half + 1, ROAD.z + ROAD.half + 1],
   [LOOP.x0 - LOOP.half - 1, LOOP.z1 - LOOP.half - 1, LOOP.x1 + LOOP.half + 1, IN.z],
-  BRIDGE_RECT,
+  WALK_RECT,
 ];
 /** All of it, for loading its grounds as you approach (districts.ts) */
 export const STADIUM_AREA: Rect = [Math.min(...STADIUM_RECTS.map((r) => r[0])), Math.min(...STADIUM_RECTS.map((r) => r[1])), Math.max(...STADIUM_RECTS.map((r) => r[2])), Math.max(...STADIUM_RECTS.map((r) => r[3]))];

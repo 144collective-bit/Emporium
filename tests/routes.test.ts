@@ -1,6 +1,6 @@
 // Where the traffic drives (routes.ts, generated from the street plan since growth plan Phase 7): every route
 // is a closed loop that stays on the asphalt and off the sidewalks, inside the ring highway; between them they
-// drive every lane of every street that goes anywhere, the highway all the way round, and every slip lane;
+// drive every lane of every street that goes anywhere, and the raised highway all the way round on its deck;
 // the diagonals' routes turn in and out at both ends; and the lights never show two ways green at once.
 import { test } from 'node:test';
 import { NS_ROADS } from '../src/scripts/city3d/layout';
@@ -8,7 +8,7 @@ import { LOT9_STREETS, inLot9 } from '../src/scripts/city3d/lot9';
 import { LOOP, IN } from '../src/scripts/city3d/stadium';
 import { LOOP as K_LOOP, ROAD as K_ROAD } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
-import { JUNCTIONS, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, type Route } from '../src/scripts/city3d/routes';
+import { JUNCTIONS, RING_ROUTES, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, type Route } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet, lanePaths, onSlab, streetLength } from '../src/scripts/city3d/streetplan';
 import { DIAGONALS } from '../src/scripts/city3d/downtown';
 import { HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
@@ -66,6 +66,23 @@ const airportWay = (q: Pt) =>
   (q[0] > GA_ROAD.x0 - 14 && q[0] < GA_ROAD.x1 + 3 && q[1] > HIGHWAY_BOX[3] && q[1] < GA_ROAD.z + 3) ||
   (q[0] > GA_ROAD.x0 + 4 && q[0] < GA_ROAD.x1 + 3 && q[1] > GA_ROAD.z && q[1] < GA_ROAD.loopZ + 3);
 
+/** How far along a line a point lies (its nearest point's) */
+function alongPts(pts: Pt[], p: Pt) {
+  let best = Infinity;
+  let at = 0;
+  let run = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+    const l = Math.hypot(vx, vz);
+    const t = l ? Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vz) / (l * l))) : 0;
+    const d = Math.hypot(p[0] - a[0] - vx * t, p[1] - a[1] - vz * t);
+    if (d < best) [best, at] = [d, run + t * l];
+    run += l;
+  }
+  return at;
+}
+
 test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks' and Lot 9's streets)", () => {
   for (const [i, r] of ROUTES.entries())
     for (const { at: q } of points(r)) {
@@ -120,6 +137,12 @@ test('between them the routes drive every street that goes anywhere, each way (a
         }
         // Only where it goes anywhere (inside the highway, or out to the stadium) and away from the junctions, where cars turn
         if (!insideHighway(at[0], at[1]) && fromHighway(at[0], at[1]) > 1 && !stadiumWay(at) && !airportWay(at)) continue;
+        // (and between two of its junctions: past its last it runs on under the raised highway to the world's edge, a
+        // dead end with no traffic, docs/highway-plan.md Phase 2)
+        if (!s.loop) {
+          const alongs = JUNCTIONS.filter((j) => j.streets.some((x) => x.id === s.id)).map((j) => alongPts(pts, j.at));
+          if (!alongs.length || d < Math.min(...alongs) - 1 || d > Math.max(...alongs) + 1) continue;
+        }
         if (JUNCTIONS.some((j) => Math.hypot(at[0] - j.at[0], at[1] - j.at[1]) < 14)) continue;
         // (the same on Stadium Road east along the stadium's loop: its cars leave the loop at its east end)
         if (s.id === 'stadium-road' && lane.dir === -1 && at[0] < LOOP.x1) continue;
@@ -135,17 +158,16 @@ test('between them the routes drive every street that goes anywhere, each way (a
   assert.ok(checked > 500);
 });
 
-test('the highway all the way round, both ways, in both lanes; and every slip lane is driven', () => {
+test('the highway all the way round, both ways, in both lanes, up on its deck: no stop on the way round (docs/highway-plan.md Phase 2)', () => {
   const hw = PLAN.streets.find((s) => s.kind === 'highway')!;
   // (all along it: its points every half tile, not only its corners, which a straight run across town would hide)
   const round = ROUTES.filter((r) => points(r, 2).every(({ at: p }) => Math.abs(fromHighway(p[0], p[1])) < HIGHWAY_HALF));
-  assert.equal(round.length, 4);
-  for (const r of round) assert.ok(Math.abs(r.len - streetLength(hw)) < 40, `${r.len} round the highway`);
-  // A stop at every junction on the way round
-  for (const r of round) assert.equal(r.stops.length, JUNCTIONS.filter((j) => j.highway).length);
-  const all = ROUTES.flatMap((r) => points(r, 0.25).map((p) => p.at));
-  for (const s of PLAN.streets.filter((s) => s.kind === 'slip'))
-    for (const p of s.pts.slice(1, -1)) assert.ok(all.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.2), `nobody takes ${s.id}`);
+  assert.equal(round.length, RING_ROUTES);
+  assert.deepEqual(round, ROUTES.slice(0, RING_ROUTES));
+  for (const r of round) assert.ok(r.deck && Math.abs(r.len - streetLength(hw)) < 40, `${r.len} round the highway`);
+  for (const r of round) assert.equal(r.stops.length, 0);
+  // ...and nothing else on the deck
+  assert.ok(ROUTES.slice(RING_ROUTES).every((r) => !r.deck));
 });
 
 test("the diagonals' routes stop at both ends: the ring corner and the lit junction, which runs three phases", () => {

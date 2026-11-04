@@ -77,9 +77,13 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster' || id === 'lot9';
       const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'overlook' || id === 'reservoir' ? 22 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
-      const most = docks(a.id) || docks(b.id) ? 96 : 86;
+      // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
+      // round through town: the overlook to the airport's metro station about 94 s)
+      const most = 96;
       // (Stadium Road's way in from the north road went up past the raised highway's exit 1, docs/highway-plan.md
       // Phase 1b: from the stadium to Crestmont's civic hall about 63 s, to its overlook about 85 s)
-      assert.ok(r!.len / TAXI_SPEED < Math.min(most, 64 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      // (and since its Phase 2 the ring highway is up on its viaduct, its exits to come in Phase 3: a taxi goes the
+      // long way round through town, from the stadium to the airport's metro station about 77 s)
+      assert.ok(r!.len / TAXI_SPEED < Math.min(most, 66 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

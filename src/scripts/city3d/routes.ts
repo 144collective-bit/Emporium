@@ -45,6 +45,8 @@ export interface Route {
   cum: number[];
   len: number;
   stops: { j: Junction; enter: number; exit: number; phase: Phase }[];
+  /** Up on the raised ring highway's deck (viaduct.ts `DECK_Y`), not at street level: the first `RING_ROUTES` */
+  deck?: boolean;
 }
 
 /** Lights cycle each phase in turn: green, then yellow, then red while the others go */
@@ -521,6 +523,10 @@ const DRIVE_MOVES = 9;
  * numbers as they are), and decoded to exactly the same numbers
  */
 export type PackedRoute = { d: string; stops: [number, number, number, Phase][] };
+/** The ring highway's own routes, first: all the way round on its deck, both ways, in both lanes (docs/highway-plan.md Phase 2) */
+export const RING_ROUTES = 4;
+/** A route as made, up on the ring highway's deck if it's one of the first `RING_ROUTES` */
+const onDeck = (r: Route, i: number): Route => (i < RING_ROUTES ? { ...r, deck: true } : r);
 const packPts = (pts: Pt[]) => {
   let [px, pz] = [0, 0];
   const out: number[] = [];
@@ -544,10 +550,10 @@ const unpackPts = (d: string): Pt[] => {
 };
 export const packRoutes = (routes: Route[]): PackedRoute[] => routes.map((r) => ({ d: packPts(r.pts), stops: r.stops.map((s): [number, number, number, Phase] => [s.j.ix, s.enter, s.exit, s.phase]) }));
 export const unpackRoutes = (packed: PackedRoute[]): Route[] =>
-  packed.map(({ d, stops }) => {
+  packed.map(({ d, stops }, i) => {
     const pts = unpackPts(d);
     const cum = cumOf(pts);
-    return { pts, cum, len: cum.at(-1)!, stops: stops.map(([ix, enter, exit, phase]) => ({ j: JUNCTIONS[ix], enter, exit, phase })) };
+    return onDeck({ pts, cum, len: cum.at(-1)!, stops: stops.map(([ix, enter, exit, phase]) => ({ j: JUNCTIONS[ix], enter, exit, phase })) }, i);
   });
 
 /** How far a route's line may stray from the lanes it was drawn along when its points are thinned (`simplify()`) */
@@ -635,7 +641,7 @@ function allRoutes(): Route[] {
     routes.push(loopOf(legsOf(cycle, r)));
   }
   // (to the millimetre: the baked copy in the page is a third the size, and still exactly what's worked out here)
-  return routes.map((pts) => makeRoute(simplify(pts, SIMPLIFY).map(([x, z]): Pt => [mm(x), mm(z)])));
+  return routes.map((pts, i) => onDeck(makeRoute(simplify(pts, SIMPLIFY).map(([x, z]): Pt => [mm(x), mm(z)])), i));
 }
 
 /**

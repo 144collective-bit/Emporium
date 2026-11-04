@@ -175,10 +175,10 @@ it and has been retired completely. Build only on what's here.
   allows; stretches out towards the world's edge go nowhere and carry no
   traffic), and every route is a closed loop through it: a seeded drive of
   a few stretches, then the shortest way back, until every stretch is
-  driven and every slip lane taken; plus the ring highway all the way
-  round, both ways, in both lanes. Turns are rounded off (`cornerCurve()`
-  in `highway.ts`: tighter for right turns, through the slip lanes where
-  the highway meets an arterial; `joinLegs()` joins the curve onto the next
+  driven; plus the ring highway all the way round, both ways, in both
+  lanes, up on its deck (the first `RING_ROUTES`, `deck`: docs/highway-plan.md
+  Phase 2; their cars meet nothing at street level). Turns are rounded off
+  (`cornerCurve()` in `highway.ts`: tighter for right turns; `joinLegs()` joins the curve onto the next
   street from where it ends, so no car runs back to the junction after it),
   an avenue's lane picked for the next turn (a street with a planted
   `median` keeps its lanes either side of it; a one-way street's one lane
@@ -201,19 +201,13 @@ it and has been retired completely. Build only on what's here.
   `HIGHWAY_R` 70) round the town and The
   Trenches; two lanes each way with a median and a hard shoulder
   (`HIGHWAY_HALF`); `fromHighway()` / `insideHighway()` measure it
-  exactly. In the street plan it's a street of kind `highway` (`loop`),
-  with a lit junction wherever it meets a straight arterial (18), and on
-  the town side of each, two `slip` streets (one-way slip lanes across
-  the corners for the right turns on and off it, `slipCurve()`); it
-  crosses the river on two bridges (`riverBridges()` in `streetplan.ts`,
-  every road crossing the river: they're drawn, and they're the gaps in
-  `RIVER_WALLS`; plain concrete decks on piers down into the lowered
-  water, river plan step 2). It's all at street level: nothing to climb,
-  nothing solid. Drawn in `world.ts` (the asphalt, the median broken at the
-  junctions and over the river, lane dashes and edge lines, lamps along
-  both verges, the slips); the arterials' medians and lines break where it
-  crosses them (`highwayGaps()`), and the outskirts' trees keep off it and
-  its slips (`treeSpot()`).
+  exactly. In the street plan it's a street of kind `highway` (`loop`).
+  Since docs/highway-plan.md Phase 2 it's raised on a viaduct all the way
+  round (below, The raised highway): no junction or slip lane at street
+  level, every arterial passing under it (`RING_MEETS`); its two river
+  spans are overhead (`riverBridges()` lists them, `riverCrossings()`
+  doesn't: the river walls close under them). The outskirts' trees keep
+  off it (`treeSpot()`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city and the server read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
@@ -287,7 +281,7 @@ it and has been retired completely. Build only on what's here.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
     an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
     Park station north of the ring highway (the north side's stage 2: it
-    crosses the highway's junction on a span) down the east ring avenue's
+    crosses the raised highway high, metro.ts `trackY()`) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches, and on (via the
@@ -725,22 +719,19 @@ it and has been retired completely. Build only on what's here.
     its front, and the car park (`CAR_PARK`, `BAY_ROWS`, `BAYS`, `PARKED`) is
     inside a one-way loop off it east of the stadium (`LOOP`), as the
     airport's is: `STADIUM_STREETS` / `STADIUM_CROSSINGS` in the street
-    plan, so traffic drives them, coming off the highway at ns0, whose outer
-    corners get slip lanes too (`OUTER_SLIPS` in streetplan.ts). The
-    footbridge (`BRIDGE`) carries the Mall from the park up over the ring
-    walk, the park's edge, the highway and Stadium Road and down to the
-    forecourt: walkable (`bridgeY()`, `bridgeWall()` in walk.ts, as Liberty
-    Bridge's), its piers (the middle one on the highway's median) and its
-    stairs past their first steps solid. `STADIUM_SOLIDS` (in `SOLIDS`):
-    the facade all round, the gates shut until there are events, the masts,
-    the parked cars, the footbridge's piers and stairs; `STADIUM_LAMPS`,
-    `STADIUM_RECTS` (the outskirts' trees keep off; no highway lamp under
-    the bridge). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
+    plan, so traffic drives them, up the north road (ns0) under the raised
+    highway. Its footbridge was retired with the highway's rise (the
+    owner's call, docs/highway-plan.md Phase 2): the Mall runs on out of
+    the park's north gate (westlake.ts `gate-n`) on a paved walk under the
+    deck (`WALK`, the deck's piers keep off it) to a zebra over Stadium
+    Road (`ZEBRA`). `STADIUM_SOLIDS` (in `SOLIDS`): the facade all round,
+    the gates shut until there are events, the masts, the parked cars;
+    `STADIUM_LAMPS`, `STADIUM_RECTS` (the outskirts' trees keep off). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
     place built at the boot: seats in sections of magenta, purple and cyan,
     the roof's neon edge, lamp heads on the masts and their pools of light
     on the pitch at night, the screen and the name board from one small
     atlas, the parked cars); its grounds (the road, the car park with its
-    bays, one-way arrows and P sign, the footbridge) by
+    bays, one-way arrows and P sign, the walk and the zebra) by
     `stadiumgrounds3d.ts`, loaded as you approach with the park's chunk
     (`LAZY_DISTRICTS`: `westlake`, whose land covers it too).
     It's a place: spot `stadium` (pin, directory entry, panel
@@ -748,7 +739,7 @@ it and has been retired completely. Build only on what's here.
     door prompt opens it, `PLACES` entry. Its sound waits for events. Its
     old site in the park (`GARDEN_SITE` in westlake.ts) is kept clear for
     the formal garden (stage 3), the Mall running through it to the
-    footbridge's foot (`BRIDGE_FOOT`); the old car park on the first strip
+    north gate; the old car park on the first strip
     went back to park.
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
@@ -1195,9 +1186,7 @@ it and has been retired completely. Build only on what's here.
   it up to date. Phase 1 (the land, the streets and the quays) is built:
   `docks.ts` (DOM-free, tested in `tests/docks.test.ts`; today's world
   numbers, `DOCKS_RECT` / `inDocks()`, well short of the west edge): the
-  south bank avenue carrying traffic on west of the highway (a slip lane on
-  that junction's south-west corner only: `OUTER_SLIPS` takes one turn,
-  `highway-ew4-1-0`), the docks' ring off it (`docks-ring`: Dock Road,
+  south bank avenue carrying traffic on west under the raised highway, the docks' ring off it (`docks-ring`: Dock Road,
   Yard Road, West Road; lit where it meets the avenue) and Quay Road across
   it (`DOCK_STREETS`, `DOCK_CROSSINGS` in the street plan); the basin
   (`BASIN`) and its mouth (`CHANNEL`) open to the river under the avenue's
@@ -1406,8 +1395,8 @@ it and has been retired completely. Build only on what's here.
     chain-link `FENCE`, `LOT9_RECT` / `inLot9()`, the gate on the east side
     (`GATE`), the lane in off the south avenue (ns0s, `ROAD_Z`, `ROAD_HALF`)
     and two one-way loops off it (`LOT9_STREETS` / `LOT9_CROSSINGS` in the
-    street plan: traffic drives in, off the highway at ns0, whose outer
-    corners got slip lanes, `OUTER_SLIPS`), the lots' grid (`COL0`, `LOT_W`,
+    street plan: traffic drives in down the south avenue under the raised
+    highway), the lots' grid (`COL0`, `LOT_W`,
     `COLS`), the fire pit (`FIRE_LOT`, `FIRE`, `FIRE_SEATS`, `FIRE_POLES`,
     the zapper and the radio), the office and the coin laundry by the gate
     (`OFFICE`, `LAUNDRY`), the junk corner along the west fence (`JUNK`:
@@ -1472,7 +1461,24 @@ it and has been retired completely. Build only on what's here.
   Westlake Park's south-west corner is cut back for exit 8 (`EXIT_NOTCH`),
   Stadium Road comes in further north for exit 1 (stadium.ts `IN`,
   `ROAD_LINE`), and the test holds every ramp clear; the fit is
-  `docs/highway-exits-fit.png`.
+  `docs/highway-exits-fit.png`. Phase 2 (the viaduct drawn and the ring
+  raised) is built: no junction or slip lane with it at street level
+  (`OUTER_SLIPS` went; `RING_MEETS` in streetplan.ts, where each arterial
+  passes under), its traffic on the deck (routes.ts `RING_ROUTES`, `deck`;
+  life.ts draws them at `DECK_Y` and keeps them from following, stopping
+  for or bumping anything at street level, `bodies.cars`' `y`), world.ts's
+  street-level asphalt, lines, lamps, slips and river bridges gone;
+  `viaduct3d.ts` draws it (`LAZY_DISTRICTS` id `viaduct`, a site every 12:
+  the box girder, asphalt and lines, parapets with a steel rail, the median
+  barrier, joints every `JOINT_EVERY` piers, hammerhead piers), its lamps
+  in the median barrier (viapiers.ts `DECK_LAMPS`, at the boot), the piers
+  solid (`PIER_SOLIDS`), the deck the walk camera's (`DECK_CAMERA`, in
+  `CAMERA_GRID` only, with a bottom); the metro rises over it and its ramps
+  (metro.ts `trackY()`, `PLATEAUS`, `HIGH_Y` 7.4 over `RISE`; Kart Park,
+  Southbank Docks and the Airport raised with it, its pillars clear of the
+  ramps; metro3d.ts draws every piece at its height, the train pitched on
+  the climbs); the stadium's footbridge retired (above). Until Phase 3's
+  exits the ring is out of reach from the ground.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
@@ -3311,8 +3317,7 @@ it and has been retired completely. Build only on what's here.
   avenue, the front road and the one-way loop past the kerb round the
   short-stay car park are `AIRPORT_STREETS`; general aviation's road off
   the east ring avenue and its loop are `GA_STREETS` (`GA_ROAD`), both in
-  the street plan with traffic; the highway's junctions there have slip
-  lanes on their outer corners too (`OUTER_SLIPS`). You arrive (taxi, fast
+  the street plan with traffic, reached under the raised highway. You arrive (taxi, fast
   travel, `PLACES`) at the GA car park by the gate (`AIR_ARRIVE`).
 - **Landside** (Phase 3 step 2): the forecourt's one-way loop
   (`LOOP`, street `airport-forecourt`) up over **the departures deck**
@@ -3797,8 +3802,8 @@ it and has been retired completely. Build only on what's here.
   circuit's frame is kartcircuit.ts's, the site reaches past it on every
   side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
   one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
-  `KART_CROSSINGS` (traffic drives them, off the highway at ns3, whose
-  outer corners get slip lanes: `OUTER_SLIPS`), the fence's `GATE` and
+  `KART_CROSSINGS` (traffic drives them, up the east ring avenue under the
+  raised highway), the fence's `GATE` and
   `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
   (centripetal Catmull-Rom through control points `CPt`, heights
   cosine-eased from point to point, or through a `glide` point in one

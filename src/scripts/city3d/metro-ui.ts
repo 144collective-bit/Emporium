@@ -9,8 +9,8 @@
  * reduced motion the ride is a cut.
  */
 import * as THREE from 'three';
-import { DECK_Y, STATIONS, carAt, pointOn, rideAt, sideOf, stationAt, timetableAt, type Run, type Station, type TrackId } from './metro';
-import { PLATFORM_Y, type buildMetro } from './metro3d';
+import { STATIONS, carAt, pointOn, rideAt, sideOf, stationAt, timetableAt, type Run, type Station, type TrackId } from './metro';
+import type { buildMetro } from './metro3d';
 import type { Ride } from './walk';
 
 type Metro = ReturnType<typeof buildMetro>;
@@ -72,8 +72,8 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
   function view(tr: { run: Run; d: number; track: TrackId; s: number }, dt: number, snap = false) {
     const c = carAt(tr, 0);
     const n = sideOf(pointOn(tr.track, tr.s).dir, 1);
-    const want = new THREE.Vector3(c.at[0] + n[0] * 9 - c.dir[0] * 6, DECK_Y + 2.6, c.at[1] + n[1] * 9 - c.dir[1] * 6);
-    const at = new THREE.Vector3(c.at[0] + c.dir[0] * 3, DECK_Y + 1.1, c.at[1] + c.dir[1] * 3);
+    const want = new THREE.Vector3(c.at[0] + n[0] * 9 - c.dir[0] * 6, c.y + 2.6, c.at[1] + n[1] * 9 - c.dir[1] * 6);
+    const at = new THREE.Vector3(c.at[0] + c.dir[0] * 3, c.y + 1.1, c.at[1] + c.dir[1] * 3);
     const k = snap ? 1 : 1 - Math.exp(-dt * 4);
     cam.lerp(want, k);
     look.lerp(at, k);
@@ -95,7 +95,8 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
       text.textContent = `Metro to ${to.name} · ${Math.max(0, Math.ceil(total - t))} s`;
       const p = pointOn(r.track, r.s).at;
       if (t >= total + 0.8) finish();
-      return { x: p[0], z: p[1], y: PLATFORM_Y };
+      // (the train's floor over its deck there: metro.ts trackY)
+      return { x: p[0], z: p[1], y: carAt(r, 0).y + 0.4 };
     },
     end() {
       // Walk mode stopped mid-ride: the train goes back on its timetable

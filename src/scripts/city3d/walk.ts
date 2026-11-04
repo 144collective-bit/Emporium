@@ -84,7 +84,7 @@ import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
 import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
-import { GATE, bridgeWall, bridgeY } from './stadium';
+import { GATE } from './stadium';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
@@ -710,7 +710,7 @@ export function createWalk(d: WalkDeps) {
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     // (the garage's turntable: its disc's top, where your car stands and you step on to get in)
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
-    const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
+    const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
     const t = trackSurfaceAt(x, z, yNow);
     // (and the spectators' grass banks round it, kartfacility.ts)
@@ -733,9 +733,6 @@ export function createWalk(d: WalkDeps) {
     // The airport's departures deck (airfield.ts): up there only its parapets, the hall's face and your car stop you
     if (departuresY(x, z, y, RADIUS) !== null) return drive.blocks(x, z, RADIUS);
     if (departuresWall(x, z, y, RADIUS)) return true;
-    // The stadium's footbridge over the highway (stadium.ts): up there only its parapets stop you
-    if (bridgeY(x, z, y, RADIUS) !== null) return false;
-    if (bridgeWall(x, z, y, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
@@ -2665,7 +2662,8 @@ export function createWalk(d: WalkDeps) {
     lastYaw = yaw;
     interests.length = 0;
     for (const p of bodies.people) if (Math.abs(p.x - pos.x) < 8 && Math.abs(p.z - pos.z) < 8) interests.push({ x: p.x, z: p.z, y: pos.y + 1.1 * SCALE, kind: 'person', moving: p.act === undefined, id: `p${p.x.toFixed(1)},${p.z.toFixed(1)}` });
-    for (const c of bodies.cars) if (Math.abs(c.x - pos.x) < 8 && Math.abs(c.z - pos.z) < 8) interests.push({ x: c.x, z: c.z, y: pos.y + 0.6, kind: 'car', weight: 0.7, moving: true, id: `c${c.model}${Math.round(c.x)},${Math.round(c.z)}` });
+    // (not the ring highway's traffic up on its deck)
+    for (const c of bodies.cars) if (Math.abs(c.x - pos.x) < 8 && Math.abs(c.z - pos.z) < 8 && c.y < 2) interests.push({ x: c.x, z: c.z, y: pos.y + 0.6, kind: 'car', weight: 0.7, moving: true, id: `c${c.model}${Math.round(c.x)},${Math.round(c.z)}` });
     const gaz = gaze ? gaze.update({ dt, x: pos.x, y: pos.y + 1.1 * SCALE, z: pos.z, face: animator ? animator.face : face, ahead: face, speed, interests }) : STILL_GAZE;
     const gazeW = combat.armed || aim ? 0 : speed < 0.25 ? 1 - Math.min(1, Math.abs(lookYaw) / 0.35) : 1;
     lookAround += (gaz.yaw * gazeW - lookAround) * damp(10, dt);

@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
-import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
+import { PLAN, RING_MEETS, distToStreet } from '../src/scripts/city3d/streetplan';
 import { CARS, TRAILER } from '../src/scripts/city3d/carspec';
 import { TRACKS } from '../src/scripts/city3d/metro';
 import { inWater } from '../src/scripts/city3d/river';
@@ -60,8 +60,9 @@ test('eight exits, numbered clockwise from the stadium, each at an arterial junc
   let last = -Infinity;
   const start = exitS(EXITS[0]);
   for (const e of EXITS) {
-    const c = PLAN.crossings.find((k) => k.id === e.crossing)!;
-    assert.ok(c && c.streets.includes('highway') && c.streets.includes(e.street), e.crossing);
+    // (where its arterial passes under the deck: the street-level junction it was, streetplan.ts RING_MEETS)
+    const c = RING_MEETS.find((k) => k.id === e.crossing)!;
+    assert.ok(c && c.street === e.street, e.crossing);
     assert.ok(Math.hypot(c.at[0] - e.at[0], c.at[1] - e.at[1]) < 0.5);
     const s = (exitS(e) - start + RING_LEN) % RING_LEN;
     assert.ok(s > last, `exit ${e.n} after the one before`);
@@ -70,7 +71,7 @@ test('eight exits, numbered clockwise from the stadium, each at an arterial junc
 });
 
 test("each exit's ramps keep to its corner side, clear of the next arterial along the ring", () => {
-  const meets = PLAN.crossings.filter((c) => c.streets.includes('highway'));
+  const meets = RING_MEETS;
   for (const e of EXITS) {
     const s0 = exitS(e);
     for (const c of meets) {
@@ -158,15 +159,13 @@ test('the piers stand clear of every street that passes under, the metro, the bo
 
 // Phase 1b (the owner's call: open land only moves): what each exit takes is clear. Every ramp keeps off every
 // district's land and block, every street but its own arterial, the water and everything solid (the metro's pillars
-// by exits 2 and 7 are re-placed with its rise over the deck in Phase 2)
+// among it since Phase 2: placed clear of the ramps)
 import { landMap, C, AREAS } from '../src/scripts/city3d/seams';
 import { SOLID_GRID } from '../src/scripts/city3d/solids';
-import { METRO_SOLIDS } from '../src/scripts/city3d/metro';
 
 test('every ramp keeps clear of the districts, the streets, the water and everything solid', () => {
   const m = landMap();
   const cell = (x: number, z: number) => m.get(Math.floor((x - m.x0) / 2), Math.floor((z - m.z0) / 2));
-  const metro = new Set(METRO_SOLIDS.map((b) => b.join()));
   const under = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'slip');
   const hits: string[] = [];
   for (const r of RAMPS) {
@@ -184,10 +183,74 @@ test('every ramp keeps clear of the districts, the streets, the water and everyt
         else if (c === C.water) hits.push(`${r.id} in the water`);
         else if (r.ys[i] < DECK_Y) for (const s of under) if (s.id !== e.street && distToStreet(s, [x, z]) <= s.half) hits.push(`${r.id} on ${s.id}`);
         for (const b of SOLID_GRID.near(x, z, 0.1))
-          if (x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3] && b[4] > r.ys[i] - 0.5 && !metro.has(b.join())) hits.push(`${r.id} into a solid at ${b.slice(0, 4).map((v) => v.toFixed(1))}`);
+          if (x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3] && b[4] > r.ys[i] - 0.5) hits.push(`${r.id} into a solid at ${b.slice(0, 4).map((v) => v.toFixed(1))}`);
       }
     }
   }
   const seen = [...new Set(hits)];
   assert.deepEqual(seen, [], seen.slice(0, 20).join('\n'));
+});
+
+// Phase 2: the viaduct drawn and the ring raised. Its traffic up on the deck, nothing at street level meeting it, the
+// metro rising over it and its ramps, the piers solid and the deck the camera's, its lamps on the median
+import { DECK_CAMERA, DECK_LAMPS, PIER_SOLIDS } from '../src/scripts/city3d/viapiers';
+import { HIGH_Y, DECK_Y as EL_Y, PLATEAUS, RISE, STATIONS, TRACKS as EL_TRACKS, pointOn, stationY, trackSlope, trackY, PILLARS, PILLAR_HALF } from '../src/scripts/city3d/metro';
+import { SOLIDS } from '../src/scripts/city3d/solids';
+import { ROUTES, RING_ROUTES } from '../src/scripts/city3d/routes';
+
+test("the metro rises over the deck and the ramps with room for the tallest vehicle under it, its climbs gentle and its stations level", () => {
+  const tallest = Math.max(...Object.values(CARS).flatMap((c) => [...c.cabin.map((p) => p[1]), ...c.top.map((p) => p[1]), c.box?.[2] ?? 0]), TRAILER.h);
+  let over = 0;
+  for (const t of Object.values(EL_TRACKS))
+    for (let s = 0; s <= t.len; s += 0.5) {
+      const p = pointOn(t.id, s).at;
+      const y = trackY(t.id, s);
+      assert.ok(y >= EL_Y - 1e-9 && y <= HIGH_Y + 1e-9);
+      assert.ok(Math.abs(trackSlope(t.id, s)) < 0.065, `${t.id} at ${s}: too steep`);
+      const { o } = ringS(p[0], p[1]);
+      // Over the deck: its parapets and the tallest truck under the el's girder (half a tile deep) with room
+      if (Math.abs(o) < DECK_HALF + 0.5) {
+        over++;
+        assert.ok(y - 0.5 > DECK_Y + tallest + 0.4, `${t.id} at ${s} over the deck at ${y.toFixed(2)}`);
+      }
+      for (const r of RAMPS)
+        for (let i = 0; i < r.pts.length; i++)
+          if (Math.hypot(r.pts[i][0] - p[0], r.pts[i][1] - p[1]) < RAMP_HALF + 0.5) assert.ok(y - 0.5 > r.ys[i] + tallest + 0.4, `${t.id} at ${s} over ${r.id}`);
+    }
+  assert.ok(over > 30, 'it crosses the ring');
+  // Kart Park, Southbank Docks and the Airport are raised with it; every platform is level
+  for (const st of STATIONS) for (let d = -5; d <= 5; d += 1) assert.ok(Math.abs(trackSlope(st.track, st.s + d)) < 1e-6, `${st.id} on a slope`);
+  assert.deepEqual(STATIONS.filter((st) => stationY(st) > EL_Y + 1).map((st) => st.id).sort(), ['airport', 'docks', 'kart']);
+  assert.ok(RISE > 40 && Object.values(PLATEAUS).flat().length >= 4);
+  // Its pillars stand clear of the ramps and off the deck
+  for (const p of PILLARS) {
+    assert.ok(Math.abs(ringS(p.at[0], p.at[1]).o) > DECK_HALF + PILLAR_HALF, `a pillar under the deck at ${p.at}`);
+    for (const r of RAMPS) for (const q of r.pts) assert.ok(Math.hypot(q[0] - p.at[0], q[1] - p.at[1]) > RAMP_HALF + PILLAR_HALF, `a pillar on ${r.id}`);
+  }
+});
+
+test("the ring's traffic is up on the deck all the way round, and nothing at street level meets it", () => {
+  for (let i = 0; i < ROUTES.length; i++) assert.equal(!!ROUTES[i].deck, i < RING_ROUTES);
+  for (const r of ROUTES.slice(0, RING_ROUTES)) {
+    assert.equal(r.stops.length, 0);
+    for (const p of r.pts) assert.ok(fromHighway(p[0], p[1]) < HIGHWAY_HALF);
+  }
+  assert.equal(PLAN.crossings.filter((c) => c.streets.includes('highway')).length, 0);
+  assert.equal(PLAN.streets.filter((s) => s.kind === 'slip').length, 0);
+});
+
+test('the piers are solid, the deck is the camera\'s, its lamps on the median clear of the metro', () => {
+  assert.equal(PIER_SOLIDS.length, PIERS.length);
+  for (const b of PIER_SOLIDS) assert.ok(SOLIDS.includes(b) && b[4] === DECK_Y);
+  // The camera's boxes cover the deck all the way round, from its soffit to its parapets
+  for (let s = 0; s < RING_LEN; s += 3)
+    for (const o of [-DECK_HALF + 0.2, 0, DECK_HALF - 0.2]) {
+      const [x, z] = ringPoint(s, o);
+      assert.ok(DECK_CAMERA.some((b) => x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3] && b[5] === DECK_Y - 1 && b[4] > DECK_Y), `no camera box at ${s}`);
+    }
+  assert.ok(DECK_LAMPS.length > 50);
+  for (const [x, z, , y] of DECK_LAMPS) {
+    assert.ok(fromHighway(x, z) < 0.01 && Math.abs(y - DECK_Y) < 0.01);
+    for (const t of Object.values(EL_TRACKS)) for (const q of t.pts) assert.ok(Math.hypot(q[0] - x, q[1] - z) > 5, 'a lamp under the metro');
+  }
 });

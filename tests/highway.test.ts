@@ -1,10 +1,11 @@
 // The ring highway (highway.ts, growth plan Phase 7): a closed loop well outside the town (the kart park and, since
-// docs/airport-plan.md Phase 3, the airport are past it), inside the world; a lit junction wherever it meets an arterial, two slip lanes
-// on the town side of each; a bridge each side over the river; and the trees keep off it.
+// docs/airport-plan.md Phase 3, the airport are past it), inside the world; raised on its viaduct since
+// docs/highway-plan.md Phase 2, every arterial passing under it (`RING_MEETS`), nothing meeting it at street level; a
+// span each side over the river; and the trees keep off it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HIGHWAY, HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
-import { OUTER_SLIPS, PLAN, distToStreet, riverBridges, streetLength } from '../src/scripts/city3d/streetplan';
+import { PLAN, RING_MEETS, riverBridges, riverCrossings, streetLength } from '../src/scripts/city3d/streetplan';
 import { EW_ROADS, NS_ROADS, SHORT_NS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
@@ -40,43 +41,33 @@ test('well outside the town, and clear of the kart park north of it and the airp
       for (let z = r[1]; z <= r[3]; z += 2) assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 4, `the airport at ${x}, ${z}`);
 });
 
-test('a lit junction wherever it meets an arterial, two slip lanes on the town side of each (four where the road past it carries traffic)', () => {
-  const meets = PLAN.crossings.filter((c) => c.streets.includes('highway'));
-  // (but the short north-south streets stop at the Parkway: no junction on the highway's north side, docs/mall-plan.md)
-  assert.equal(meets.length, (NS_ROADS.length + EW_ROADS.length) * 2 - Object.keys(SHORT_NS).length);
-  for (const c of meets) {
-    assert.ok(c.lights);
-    assert.ok(fromHighway(c.at[0], c.at[1]) < 1e-6);
-    const slips = PLAN.streets.filter((s) => s.id.startsWith(`slip-${c.id}-`));
-    const outer = OUTER_SLIPS.includes(c.id);
-    // (one turn alone past it: the south bank avenue west to the Docks has its south-west corner, docks.ts)
-    const one = OUTER_SLIPS.filter((id) => id.startsWith(`${c.id}-`)).length;
-    // (the north bank avenue's past the highway has none over the river's promenade: three)
-    assert.equal(slips.length, c.id === 'highway-ew3-0' ? 3 : outer ? 4 : 2 + one, c.id);
-    for (const s of slips) {
-      assert.equal(s.oneway, 1);
-      // From the one road's outer lane to the other's, out across the corner, on the town side (or either side)
-      if (!outer && !OUTER_SLIPS.includes(s.id.slice('slip-'.length))) for (const p of s.pts) assert.ok(insideHighway(p[0], p[1]) || fromHighway(p[0], p[1]) < HIGHWAY_HALF);
-      const mid = s.pts[3];
-      assert.ok(fromHighway(mid[0], mid[1]) > HIGHWAY_HALF, `${s.id} cuts across the corner, off the highway`);
-      const art = PLAN.streets.find((t) => t.id === c.streets[0])!;
-      assert.ok(distToStreet(art, mid) > art.half, `${s.id} cuts across the corner, off the arterial`);
+test('raised: nothing meets it at street level, and every arterial passes under it where it crossed it', () => {
+  assert.equal(PLAN.crossings.filter((c) => c.streets.includes('highway')).length, 0);
+  assert.equal(PLAN.streets.filter((s) => s.kind === 'slip').length, 0);
+  // (but the short north-south streets stop at the Parkway: they never reach it, docs/mall-plan.md)
+  assert.equal(RING_MEETS.length, (NS_ROADS.length + EW_ROADS.length) * 2 - Object.keys(SHORT_NS).length);
+  for (const m of RING_MEETS) {
+    assert.ok(fromHighway(m.at[0], m.at[1]) < 1e-6);
+    const art = PLAN.streets.find((t) => t.id === m.street)!;
+    // The arterial runs on under it, on both sides
+    for (const d of [-8, 8]) {
+      const p: [number, number] = m.along === 1 ? [m.at[0], m.at[1] + d] : [m.at[0] + d, m.at[1]];
+      assert.ok(art.pts.some((_, i) => i > 0 && Math.min(art.pts[i - 1][m.along], art.pts[i][m.along]) <= p[m.along] && Math.max(art.pts[i - 1][m.along], art.pts[i][m.along]) >= p[m.along]), `${m.street} under ${m.id}`);
     }
   }
 });
 
-test('a bridge each side over the river', () => {
+test('a span each side over the river, overhead: no way over there at street level', () => {
   const hb = riverBridges().filter((b) => b.street === 'highway');
   assert.equal(hb.length, 2);
   assert.deepEqual(
     hb.map((b) => b.c),
     [HIGHWAY_BOX[0], HIGHWAY_BOX[2]]
   );
+  for (const b of hb) assert.ok(!riverCrossings().bridges.some(([x0, x1]) => x0 < b.c && x1 > b.c));
 });
 
-test('the trees keep off it and its slip lanes', () => {
+test('the trees keep off it', () => {
   const trees = outskirtsTrees(150);
   for (const t of trees) assert.ok(fromHighway(t.x, t.z) > HIGHWAY_HALF + 1.4, `a tree on the highway at ${t.x}, ${t.z}`);
-  const slips = PLAN.streets.filter((s) => s.kind === 'slip');
-  for (const t of trees) for (const s of slips) assert.ok(distToStreet(s, [t.x, t.z]) > s.half + 0.5, `a tree on ${s.id}`);
 });

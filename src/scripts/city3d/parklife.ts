@@ -33,7 +33,7 @@ import {
   PARK_TREES,
   RING_IN,
   GARDEN_SITE,
-  BRIDGE_FOOT,
+  Z0,
   ZS,
   inLake,
   inPark,
@@ -129,7 +129,7 @@ export const LANES: Lane[] = (() => {
   lane('ring-jog-in', inset(BIG, RING_IN + 0.85), -1, JOG_PACE, 3);
   lane('ring-jog-out', inset(BIG, RING_IN - 0.85), 1, JOG_PACE, 2);
   // The Mall, up one side and down the other
-  lane('mall', thin([[MALL.x, ZS - 0.6], [MALL.x, BRIDGE_FOOT + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
+  lane('mall', thin([[MALL.x, ZS - 0.6], [MALL.x, Z0 + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
   return out;
 })();
 

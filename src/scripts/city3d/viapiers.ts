@@ -8,10 +8,14 @@
 import { PLAN, distToStreet } from './streetplan';
 import { TRACKS, type Track } from './metro';
 import { TUNNEL } from './lot9';
+import { WALK as STADIUM_WALK } from './stadium';
 import { inWater } from './river';
 import { BRIDGE_PIERS } from './waterfront';
 import { HIGHWAY_BOX } from './highway';
-import { PIER, PIER_GAP, RAMPS, RING_LEN, ringAt, ringPoint, ringS, sGap, type Pt } from './viaduct';
+import { DECK_HALF, DECK_Y, GIRDER, PARAPET, PIER, PIER_GAP, RAMPS, RING_LEN, ringAt, ringPoint, ringS, sGap, type Pt } from './viaduct';
+
+/** The median barrier's top over the deck (viaduct3d.ts draws it) */
+export const BARRIER_TOP = 0.5;
 
 /** How far a pier keeps from a street's paved edge, the metro's line and the tunnel's walls */
 export const PIER_CLEAR = 1.2;
@@ -29,7 +33,7 @@ const trackDist = (t: Track, p: Pt) => {
   for (let i = 1; i < t.pts.length; i++) d = Math.min(d, segDist(p, t.pts[i - 1], t.pts[i]));
   return d;
 };
-/** What passes under the deck: every street but the highway and its slip lanes (they go in Phase 3) */
+/** What passes under the deck: every street but the highway (and slip lanes, none since Phase 2: the ramps come in Phase 3) */
 const UNDER = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'slip');
 
 /** A pier's corners and middle, with its reach across the deck (its head) as the stem's footprint is small */
@@ -47,6 +51,8 @@ export function pierClear(s: number) {
   for (const st of UNDER) if (distToStreet(st, [x, z]) < st.half + r + PIER_CLEAR) return false;
   for (const t of Object.values(TRACKS)) if (trackDist(t, [x, z]) < r + 2 + PIER_CLEAR) return false;
   if (Math.abs(x - TUNNEL.x) < TUNNEL.half + TUNNEL.wall + r + PIER_CLEAR && z > TUNNEL.z0 && z < TUNNEL.z1) return false;
+  // (and the walk from Westlake Park to the stadium under the deck, stadium.ts)
+  if (Math.abs(x - STADIUM_WALK.x) < STADIUM_WALK.half + r + PIER_CLEAR && z < STADIUM_WALK.z0 && z > STADIUM_WALK.z1) return false;
   // In the river only on the bridges' pier lines (between the boats' lanes)
   if (pts.some(([px, pz]) => inWater(px, pz))) return BRIDGE_PIERS.some((bz) => Math.abs(z - bz) < 0.5);
   // Clear of the ramps' own lanes (they keep beside the deck, but their tapers come in over the shoulder)
@@ -77,4 +83,56 @@ export const PIERS: { s: number; at: Pt; yaw: number }[] = (() => {
       out.push({ s, at: [r.x, r.z], yaw: Math.atan2(r.nx, r.nz) });
     }
   return out.sort((a, b) => a.s - b.s);
+})();
+
+/** An expansion joint across the deck over every this many piers (viaduct3d.ts) */
+export const JOINT_EVERY = 3;
+
+/** What's solid of the viaduct: each pier's stem, its bounding box (the deck overhead is out of reach) */
+export const PIER_SOLIDS: [number, number, number, number, number][] = PIERS.map((p) => {
+  const pts = footprint(p.s);
+  const xs = pts.map((q) => q[0]);
+  const zs = pts.map((q) => q[1]);
+  return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs), DECK_Y];
+});
+
+/**
+ * What the walk camera can't pass: the deck from its soffit to its parapets' top, in boxes along the ring (a bottom,
+ * `[5]`: you walk under it). Only the camera's: bullets and walking pass under it
+ */
+export const DECK_CAMERA: number[][] = (() => {
+  const out: number[][] = [];
+  const step = 4;
+  const n = Math.ceil(RING_LEN / step);
+  for (let k = 0; k < n; k++) {
+    const [a, b] = [(k * RING_LEN) / n, ((k + 1) * RING_LEN) / n];
+    const pts = [ringPoint(a, -DECK_HALF), ringPoint(a, DECK_HALF), ringPoint(b, -DECK_HALF), ringPoint(b, DECK_HALF)];
+    const xs = pts.map((q) => q[0]);
+    const zs = pts.map((q) => q[1]);
+    out.push([Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs), DECK_Y + PARAPET, DECK_Y - GIRDER]);
+  }
+  return out;
+})();
+
+/** Between the deck's lamps along the ring */
+export const LAMP_GAP = 28;
+/** How far a lamp keeps from the metro where it rides over the deck */
+const LAMP_METRO = 9;
+/**
+ * The deck's lamps (x, z, the way the arm faces, its foot's height): in the median barrier every `LAMP_GAP`, the arm
+ * reaching over each carriageway in turn, none under the metro where it rides over
+ */
+export const DECK_LAMPS: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  const n = Math.round(RING_LEN / LAMP_GAP);
+  for (let k = 0; k < n; k++) {
+    const s = (k + 0.5) * (RING_LEN / n);
+    const r = ringAt(s);
+    if (Object.values(TRACKS).some((t) => trackDist(t, [r.x, r.z]) < LAMP_METRO)) continue;
+    // (the arm over the outer carriageway, then the inner)
+    const d = k % 2 ? 1 : -1;
+    // (its foot on the deck's asphalt, the pole up through the barrier: its pool lies on the deck)
+    out.push([r.x, r.z, Math.atan2(-r.nz * d, r.nx * d), DECK_Y + 0.006]);
+  }
+  return out;
 })();

@@ -16,6 +16,7 @@ import { deckSlope, deckY, onHarbour } from './harbour';
 import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import { WATER_Y } from './river';
+import { DECK_Y as RING_Y } from './viaduct';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { BAR, CARS, PAINTS, carGeometry, carMaterials, theFarCars, trailerGeometry, type CarId } from './cars';
@@ -92,6 +93,8 @@ interface Vehicle {
   /** Where it is this frame (for following, for your own car to bump into), and which way it faces */
   x: number;
   z: number;
+  /** Its height this frame (the ground under it, or the ring highway's deck) */
+  y: number;
   yaw: number;
   fx: number;
   fz: number;
@@ -137,7 +140,8 @@ export const swing = { x: 0, z: 0, r: 0, t: 0 };
 export const stoppers: { x: number; z: number; r: number; on: boolean }[] = [];
 /** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
 export const bodies = {
-  cars: [] as { x: number; z: number; yaw: number; len: number; w: number; model: string }[],
+  /** (`y`: the ground under it, or up on the raised ring highway's deck: nothing at street level meets those) */
+  cars: [] as { x: number; z: number; y: number; yaw: number; len: number; w: number; model: string }[],
   /** (`act`: what an idle person is doing, 'sit' on a bench: walk.ts leaves their bench alone) */
   people: [] as { x: number; z: number; act?: string }[],
   /** The traffic's boats in the lanes (your hire boat bumps softly off them, boat.ts) */
@@ -345,6 +349,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       slot,
       x: 0,
       z: 0,
+      y: 0,
       yaw: 0,
       fx: 1,
       fz: 0,
@@ -693,7 +698,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       let target = v.vmax;
       // Follow whoever is ahead going the same way (any route: routes share lanes)
       for (const o of vehicles) {
-        if (o === v || o.fx * v.fx + o.fz * v.fz < 0.5) continue;
+        // (up on the ring highway's deck and down under it never meet)
+        if (o === v || o.fx * v.fx + o.fz * v.fz < 0.5 || !o.route.deck !== !v.route.deck) continue;
         const rx = o.x - v.x;
         const rz = o.z - v.z;
         const along = rx * v.fx + rz * v.fz;
@@ -712,9 +718,10 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         if (light === 'r' || (light === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
       }
       // Someone walking in the road ahead (or anything else in it): stop short of them
-      const byYou = walker.on ? shortOf(v, walker) : Infinity;
+      // (none of it up on the ring highway's deck)
+      const byYou = walker.on && !v.route.deck ? shortOf(v, walker) : Infinity;
       target = Math.min(target, byYou);
-      for (const w of stoppers) if (w.on) target = Math.min(target, shortOf(v, w));
+      if (!v.route.deck) for (const w of stoppers) if (w.on) target = Math.min(target, shortOf(v, w));
       // Held up by you: a toot after a while (quieter the further off)
       // (never a patrol car: they never bother you)
       if (v.model !== 'police' && hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
@@ -782,8 +789,10 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       const rise = (x: number, z: number, yaw: number) =>
         onHills(x, z) ? Math.atan(riseAlong(x, z, Math.cos(yaw), -Math.sin(yaw))) : onHarbour(x, z) ? Math.atan(-Math.sin(yaw) * deckSlope(z)) : Math.atan(Math.cos(yaw) * departuresSlope(x, z));
       const groundY = (x: number, z: number) => (onHills(x, z) ? heightAt(x, z) : onHarbour(x, z) ? deckY(z) : departuresRoadY(x, z));
-      const hb = groundY(v.dx, v.dz);
-      const climb = rise(v.dx, v.dz, v.dyaw);
+      // (the ring highway's traffic up on its deck: viaduct.ts)
+      const hb = v.route.deck ? RING_Y : groundY(v.dx, v.dz);
+      v.y = hb;
+      const climb = v.route.deck ? 0 : rise(v.dx, v.dz, v.dyaw);
       if (v.bike) {
         // A bike leans into its turns, a little (fleet.ts), and is drawn at its rider's size
         const rate = Number.isNaN(v.last) ? 0 : Math.atan2(Math.sin(v.dyaw - v.last), Math.cos(v.dyaw - v.last)) / Math.max(dt, 1e-3);
@@ -799,8 +808,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       // The rig's trailer behind it, along its own heading (no nod or lean: it follows the tractor)
       const tr = v.trailer;
       if (tr) {
-        const th = groundY(tr.x, tr.z);
-        q.setFromAxisAngle(up, tr.yaw).multiply(q2.setFromEuler(lean.set(0, 0, rise(tr.x, tr.z, tr.yaw))));
+        const th = v.route.deck ? RING_Y : groundY(tr.x, tr.z);
+        q.setFromAxisAngle(up, tr.yaw).multiply(q2.setFromEuler(lean.set(0, 0, v.route.deck ? 0 : rise(tr.x, tr.z, tr.yaw))));
         tr.matrix.makeRotationFromQuaternion(q).setPosition(tr.x, ROAD_Y + th, tr.z);
       }
       v.near = !CROWD_VIEW.on || isNear(Math.hypot(v.x - CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, v.z - CROWD_VIEW.eye.z), farDist, v.near);
