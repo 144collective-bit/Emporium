@@ -33,6 +33,7 @@ import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, liveT
 import { GATE, toWorld } from './kartpark';
 import { BAYS, CIRCUIT, HUT_DOOR, SITE, type CourseId } from './kartcircuit';
 import { CUP_IDS, type CupId } from './kart-cups';
+import type { Flag } from './kartcrowd';
 import { APPROACH_SIGNS, ARCH, CAFE, CLUBHOUSE, COACHES, FLAGS, GRANDSTAND, KART_LAMPS, KART_PEOPLE, KART_TREES, KIOSK, PARKED, PODIUM, PODIUM_RECT, SCREENS, TEAM_COLOURS, TERRACE, TOTEM, TOWER, TRANSPORTERS, bankY, tierAt } from './kartfacility';
 import { atlasTex, cellNumber, chequerBands, glowText, quad, spacing } from './kartsigns';
 import { parkedCars, type CarId } from './cars';
@@ -44,10 +45,11 @@ import { addLamp, addTree, type Tick } from './world';
 const ID = 'karts' as unknown as SpotId;
 
 /**
- * Which way round the guidance points and whether a race has the pits closed: the race sets it
+ * Which way round the guidance points, whether a race has the pits closed and the flag at each marshal post
+ * (kartcrowd.ts `marshalFlags()`, null between races): the race sets it
  * (`setCourse()`, `racing()`), the grounds (kartgrounds3d.ts) show it once they've loaded (`apply`)
  */
-export const KART_VIEW: { course: CourseId; racing: boolean; apply: (() => void) | null } = { course: 'circuit', racing: false, apply: null };
+export const KART_VIEW: { course: CourseId; racing: boolean; apply: (() => void) | null; flags: Flag[] | null } = { course: 'circuit', racing: false, apply: null, flags: null };
 
 const PAVING = 0.025;
 const PIT_Y = 0.04;

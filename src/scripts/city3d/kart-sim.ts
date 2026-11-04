@@ -65,6 +65,22 @@ export const T = {
   driftBoost: [0.6, 1.1, 1.6],
 } as const;
 
+/**
+ * The start (docs/kart-west-plan.md Phase 5): gas pressed with between `early` and `late` seconds of the countdown
+ * left, and held through the GO, launches you with a boost (`boost` seconds at `k`); pressed and held from before
+ * `stall` seconds left, the engine bogs down and you're slow away for `stallT`. Only the player's: the rivals start
+ * as they always have.
+ */
+export const START = { late: 0.12, early: 0.85, stall: 1.7, boost: 1.0, k: 1.28, stallT: 0.6 } as const;
+/**
+ * The slipstream: right behind another kart (within `reach` tiles, `width` either side of its line, at over `min` of
+ * your top speed), the tow charges over `build` seconds and then lifts your top speed by `top` and your pick-up by
+ * `accel`, until you pull out of it (for `hold` seconds after). Everyone's, the rivals' too.
+ */
+/** A lap's sectors for the splits: its thirds from the line */
+export const SECTORS = 3;
+export const SLIP = { reach: 7, near: 1.1, width: 0.9, min: 0.6, build: 0.8, top: 0.07, accel: 1.3, hold: 0.4 } as const;
+
 /* ---------- Karts ---------- */
 
 export interface KartTune {
@@ -139,6 +155,11 @@ export interface Racer {
   overtakes: number;
   /** The grip of the surface under it (1 = dry), for the slide */
   gripNow: number;
+  /** The slipstream: how long it's charged (0..SLIP.build), whether it's towing, how long it holds after; slow away after a stalled start */
+  slipT: number;
+  slip: boolean;
+  slipHold: number;
+  stallT: number;
   /** The surface under it (kartpark.ts F flags) and its banking (radians, right side up), for the view */
   flags: number;
   roll: number;
@@ -160,7 +181,11 @@ export type KartEvent =
   | { kind: 'offtrack'; kart: number; on: boolean }
   | { kind: 'reset'; kart: number }
   | { kind: 'clean'; kart: number; lap: number }
-  | { kind: 'overtake'; kart: number; place: number };
+  | { kind: 'overtake'; kart: number; place: number }
+  | { kind: 'startBoost'; kart: number }
+  | { kind: 'stall'; kart: number }
+  | { kind: 'slip'; kart: number; on: boolean }
+  | { kind: 'split'; kart: number; sector: number; time: number };
 
 export interface RaceSetup {
   course: CourseId;
@@ -271,6 +296,10 @@ export function createKartSim(setup: RaceSetup) {
       gripNow: weather,
       flags: 0,
       roll: 0,
+      slipT: 0,
+      slip: false,
+      slipHold: 0,
+      stallT: 0,
     };
   };
   // The player starts at the back of the grid (the last slot); the rivals fill the rest from pole
@@ -288,6 +317,9 @@ export function createKartSim(setup: RaceSetup) {
   let finishedCount = 0;
   let playerInput: KartInput = { ...NO_INPUT };
   const auto = !!setup.auto;
+  /** When you put the gas down in the countdown (seconds of it left, -1: not down), and whether the GO's been dealt with */
+  let gasAt = -1;
+  let launched = false;
   /** The brain that drives the player when `auto` is on: steady, on the middle of the track */
   const AUTO = { skill: 0.85, offset: 0 };
 
@@ -436,6 +468,7 @@ export function createKartSim(setup: RaceSetup) {
     const spinning = k.spinT > 0;
     k.resetT = Math.max(0, k.resetT - dt);
     // Finished karts roll on round the track at an easy pace (the cool-down lap)
+    k.stallT = Math.max(0, k.stallT - dt);
     const live = started && !spinning && k.resetT === 0;
     if (k.finished) inp = { ...inp, throttle: Math.min(inp.throttle, 0.35), drift: false };
     if (!live) inp = { ...inp, throttle: 0, steer: 0, drift: false };
@@ -446,14 +479,16 @@ export function createKartSim(setup: RaceSetup) {
 
     // Speed: gas, brake, the boost's extra top end, held down in the run-off, scrubbed by a spin
     const boost = k.boostT > 0 ? k.boostK : 1;
-    let top = tn.top * boost;
+    // (the slipstream's tow lifts the top end and the pick-up)
+    const tow = k.slip && k.boostT <= 0 ? 1 + SLIP.top : 1;
+    let top = tn.top * boost * tow;
     if (k.off) top = Math.min(top, tn.top * (k.boostT > 0 ? RUNOFF_BOOST_CAP : RUNOFF_CAP));
     if (spinning || k.resetT > 0) top = 0;
     const th = clamp(inp.throttle, -1, 1);
     if (k.air) {
       /* no gas in the air */
     } else if (k.boostT > 0 && th > 0.02) k.speed = approach(k.speed, top, tn.accel * 2.5 * dt);
-    else if (th > 0.02) k.speed += tn.accel * th * Math.max(0, 1 - (k.speed / Math.max(top, 0.1)) ** 2) * dt;
+    else if (th > 0.02) k.speed += tn.accel * (k.slip ? SLIP.accel : 1) * (k.stallT > 0 ? 0.2 : 1) * th * Math.max(0, 1 - (k.speed / Math.max(top, 0.1)) ** 2) * dt;
     else if (th < -0.02) {
       if (k.speed > 0.3) k.speed = approach(k.speed, 0, 14 * -th * dt);
       else k.speed = approach(k.speed, -3 * -th, tn.accel * 0.6 * dt);
@@ -542,6 +577,13 @@ export function createKartSim(setup: RaceSetup) {
     if (started && !k.finished) {
       const before = k.progress;
       k.progress += ds;
+      // Your splits (docs/kart-west-plan.md Phase 5): the end of each lap's first and second thirds (the line ends the third)
+      if (k === player && k.progress > 0) {
+        const third = c.L / SECTORS;
+        const was = Math.floor(before / third);
+        const now = Math.floor(k.progress / third);
+        if (now > was && now % SECTORS !== 0) events.push({ kind: 'split', kart: k.i, sector: now % SECTORS, time });
+      }
       const lapBefore = Math.floor(before / c.L);
       const lapNow = Math.floor(k.progress / c.L);
       if (lapNow > lapBefore && lapNow >= 1) {
@@ -660,6 +702,39 @@ export function createKartSim(setup: RaceSetup) {
     }
   }
 
+  /** The slipstream (SLIP): a kart right behind another, in its line, at speed, charges the tow and is pulled along */
+  function slipstreams(dt: number) {
+    for (const k of racers) {
+      let behind = false;
+      if (started && !k.air && k.speed > k.tune.top * SLIP.min && k.spinT <= 0 && k.resetT <= 0)
+        for (const o of racers) {
+          if (o === k || o.resetT > 0 || Math.abs(o.y - k.y) > 0.9) continue;
+          // Where the other is from this one, along its nose and across
+          const dx = o.x - k.x;
+          const dz = o.z - k.z;
+          const fwd = dx * Math.cos(k.yaw) - dz * Math.sin(k.yaw);
+          const side = dx * Math.sin(k.yaw) + dz * Math.cos(k.yaw);
+          // (and the other going the same way)
+          if (fwd > SLIP.near && fwd < SLIP.reach && Math.abs(side) < SLIP.width && Math.cos(o.yaw - k.yaw) > 0.8) {
+            behind = true;
+            break;
+          }
+        }
+      if (behind) {
+        k.slipT = Math.min(SLIP.build, k.slipT + dt);
+        k.slipHold = SLIP.hold;
+      } else {
+        k.slipHold = Math.max(0, k.slipHold - dt);
+        if (k.slipHold === 0) k.slipT = Math.max(0, k.slipT - dt * 2);
+      }
+      const on = k.slipT >= SLIP.build && k.slipHold > 0;
+      if (on !== k.slip) {
+        k.slip = on;
+        events.push({ kind: 'slip', kart: k.i, on });
+      }
+    }
+  }
+
   /** Places gained by passing count as overtakes (while both are still racing) */
   function overtakes(before: number[]) {
     if (!started) return;
@@ -684,10 +759,30 @@ export function createKartSim(setup: RaceSetup) {
         events.push({ kind: 'count', n });
       }
     } else time += dt;
+    // The start: when you put the gas down (START), boosted or bogged down at the GO
+    if (!auto && !player.ai) {
+      if (countdown > 0) {
+        if (playerInput.throttle > 0.5) {
+          if (gasAt < 0) gasAt = countdown;
+        } else gasAt = -1;
+      }
+      if (started && !launched) {
+        launched = true;
+        if (gasAt >= START.late && gasAt <= START.early) {
+          player.boostT = START.boost * player.tune.boost;
+          player.boostK = START.k;
+          events.push({ kind: 'startBoost', kart: player.i });
+        } else if (gasAt > START.stall) {
+          player.stallT = START.stallT;
+          events.push({ kind: 'stall', kart: player.i });
+        }
+      }
+    }
     rubber();
     // The player's own input until the line; after it (or with `auto`) the rivals' brain drives
     for (const k of racers) stepKart(k, k.ai ? think(k, k.ai) : auto || k.finished ? think(k, AUTO) : playerInput, dt);
     bumps();
+    slipstreams(dt);
     const before = racers.map((k) => k.place);
     placeAll();
     overtakes(before);

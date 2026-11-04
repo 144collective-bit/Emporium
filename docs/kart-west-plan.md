@@ -91,14 +91,14 @@ owner has looked**.
    grandstands and banks shaped into the slopes; the podium; the gate plaza
    and arch, the signed approach, the car and coach park; LED screens,
    floodlights and neon.
-4. **The live crowd and the podium ceremony:** fans cheering and waving
+4. **The live crowd and the podium ceremony** (built): fans cheering and waving
    flags as karts pass and when you overtake, marshals' flags (yellow after
    a spin, blue, the chequered at the line); after a race the top three on
    the podium with trophies, confetti and a camera move, then the results.
-5. **Driving:** the start boost, slipstream, drift stages; sector splits,
+5. **Driving** (built): the start boost, slipstream, drift stages; sector splits,
    the ghost delta per sector, live gaps ahead and behind, the
    personal-best flash.
-6. **Kart customising:** number, decals, rims and tyres, helmet and suit,
+6. **Kart customising** (built): number, decals, rims and tyres, helmet and suit,
    spark trail and underglow, in the hut's Karts tab; the save carries them
    (a new save version, older saves upgraded).
 7. **Items mode:** item boxes on the circuit, the three items, the HUD's
@@ -222,3 +222,97 @@ The test is `tests/kartclip.test.ts`. What it found, and the fixes:
   café, the flags, the screens, the approach, the berms) and
   `tests/kartclip.test.ts`, which still holds every piece of trackside
   furniture clear of the new pieces.
+
+## What Phase 4 built
+
+The rules are `kartcrowd.ts` (DOM-free, tested in
+`tests/kartcrowd.test.ts`); kart.ts plays them.
+
+- **The fans cheer:** two new crowd rows, `cheer` (standing, over a
+  captured idle) and `sitcheer` (seated), with both hands up and pumping
+  twice a second and the head tipped up after them (acts.ts
+  `cheerOver()`). A fan looking, chatting or sitting cheers while a kart
+  goes by within `FAN_REACH`. Everyone near you cheers for a moment when
+  you overtake (`WAVE`), and the whole park cheers through the ceremony.
+  The crowd asks `CHEER.fn` in life.ts, which the race sets while it's on;
+  its first check is a box round the park, so it costs nothing elsewhere.
+- **The marshals' flags** (`marshalFlags()`, shown through
+  `KART_VIEW.flags`, waved on kartgrounds3d.ts's tick from each post's
+  track side):
+  - green round the circuit for the first seconds after the start;
+  - yellow at the posts just up the track from a spin or a put-back, for
+    a few seconds;
+  - blue at a post where a kart a lap down has a faster one closing on
+    it;
+  - the chequered flag at the post nearest the line once the leader's on
+    the last lap.
+  Nothing between races.
+- **The podium ceremony:** after a race (not a time trial), once the top
+  three are home or ten seconds after you finish:
+  - their karts stand on the podium's steps facing the plaza
+    (`podiumSpot()`);
+  - a gold trophy rises over the winner and turns;
+  - confetti flies from the backdrop's corners and flutters down over
+    the plaza (`confettiAt()`);
+  - the camera moves from the plaza in on the winner, then up and back
+    (`ceremonyCam()`);
+  - after eight seconds the results card comes up.
+  Under reduced motion the camera holds its first frame and there's no
+  confetti. The test holds the camera clear of everything solid and the
+  confetti landing on the plaza.
+
+## What Phase 5 built
+
+- **The start** (`START` in kart-sim.ts, the player's only):
+  - gas down between 0.85 and 0.12 seconds before the GO, and held
+    through it, launches you with a boost ("Rocket start!");
+  - gas held from more than 1.7 seconds before bogs you down for a
+    moment ("Bogged down");
+  - anything else is a plain start.
+  The rivals start as they always have.
+- **The slipstream** (`SLIP`, everyone's): a kart right behind another
+  (1.1 to 7 tiles back, in its line, going its way, at over 60% of its top
+  speed) charges the tow over 0.8 s. It then runs 7% faster at the top and
+  picks up 1.3 times as quick, until it pulls out of it. The HUD says
+  "Slipstream" when yours is on.
+- **The drift's stages** keep their timings; the sparks are now blue,
+  orange, then purple (kart.ts `SPARK`), and the HUD's drift meter matches.
+- **Splits:** the sim announces the end of each lap's first and second
+  thirds for the player (`split` events, `SECTORS`); the line is the third.
+  The HUD shows each split under the clock for three seconds with its
+  delta to your fastest lap's splits here, green ahead and pink behind.
+  Before you have one, the delta is to par's lap in thirds. The save keeps
+  your fastest lap's splits per course and class (`karts.splits`,
+  `keepSplits()` in tycoon.ts, cleaned in `cleanSave()`).
+- **Live gaps:** the gap in seconds to the kart ahead and the one behind
+  in the order, with their names, under your place.
+- **Personal best:** a lap faster than your record coming in (and every
+  lap since) flashes the clock gold and pops "Personal best!".
+- Tests: `tests/kartdrive.test.ts` (the start both ways, the slipstream in
+  line and out of it, the splits' order). The existing race tests still
+  pass with the tow on everyone.
+
+## What Phase 6 built
+
+Your kart's look is all free, in the clubhouse's Karts tab under the
+paints (a "Look" section, a row a part):
+
+- **Racing number:** 1 to 99, on the nose's roundel (two digits fit now).
+- **Decals:** none, racing stripes, flames, checks, or the diamond (the
+  city's own mark), in a colour of their own, on the side pods' outer
+  faces a hand off them.
+- **Rims:** a cap on each wheel's face in their colour. **Tyre stripe:**
+  a ring on each sidewall, or none.
+- **Helmet** and **race suit:** in races you wear a helmet in its colour
+  (wardrobe.ts `racehelmet`, the soldier's shell; the Outfit's `helmet`)
+  and a track suit in the suit's colour, with no hat, hood, bag or wings.
+- **Spark trail:** your boost flames' colour.
+- **Underglow:** a soft pool of its colour under the kart in night races
+  (and on the show kart in the pits), or off.
+
+The look is `KartLook` in mykart.ts (`DEFAULT_LOOK`, `cleanKartLook()`,
+`LOOK_COLOURS`, `KART_DECALS`). It's kept in the save's `karts.look`,
+changed by `setKartLook()` in tycoon.ts and drawn by karts.ts's `dress()`
+/ `glow()`. There's no new save version: a save from before it is cleaned
+to the stock look (`tests/kartlook.test.ts`). The rivals keep their own
+looks.

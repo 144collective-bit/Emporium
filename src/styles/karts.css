@@ -880,7 +880,62 @@
   color: var(--p-cyan);
   text-shadow: 0 0 10px #00eaff66;
 }
-/* The drift meter: three segments, white, cyan then pink */
+/* The live gaps to the karts ahead and behind (docs/kart-west-plan.md Phase 5), small under the place */
+.kart-gaps {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.2;
+  color: #e8e6f0;
+  white-space: nowrap;
+}
+.kart-gaps[hidden] {
+  display: none;
+}
+.kart-gaps span:empty {
+  display: none;
+}
+/* The split just made, under the clock: green ahead of your fastest lap, pink behind */
+.kart-split {
+  margin: 3px 0 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: #0b0a18cc;
+}
+.kart-split[hidden] {
+  display: none;
+}
+.kart-split.is-down {
+  color: #1fbf6b;
+}
+.kart-split.is-up {
+  color: #ff6ad5;
+}
+/* A personal best: the clock flashes gold (still under reduced motion) */
+.kart-clock.is-pb {
+  color: #ffd23f;
+  animation: kart-pb 0.4s steps(2) infinite;
+}
+@keyframes kart-pb {
+  50% {
+    color: #fff;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kart-clock.is-pb {
+    animation: none;
+  }
+}
+/* The drift meter: three segments, blue, orange then purple (the sparks' colours, kart.ts SPARK) */
 .kart-meter {
   display: flex;
   gap: 3px;
@@ -894,19 +949,19 @@
   background: #ffffff14;
 }
 .kart-meter i:nth-child(1).on {
-  border-color: #fff;
-  background: #fff;
-  box-shadow: 0 0 8px #fffc;
+  border-color: #2a8bff;
+  background: #2a8bff;
+  box-shadow: 0 0 8px #2a8bff;
 }
 .kart-meter i:nth-child(2).on {
-  border-color: var(--p-cyan);
-  background: var(--p-cyan);
-  box-shadow: 0 0 8px var(--p-cyan);
+  border-color: #ff8a2a;
+  background: #ff8a2a;
+  box-shadow: 0 0 8px #ff8a2a;
 }
 .kart-meter i:nth-child(3).on {
-  border-color: #ff6ad5;
-  background: #ff6ad5;
-  box-shadow: 0 0 8px #ff6ad5;
+  border-color: #b23bff;
+  background: #b23bff;
+  box-shadow: 0 0 8px #b23bff;
 }
 .kart-tags {
   display: flex;
@@ -1723,5 +1778,70 @@
   }
   .kart-pop {
     opacity: 1;
+  }
+}
+
+/* The Karts tab's Look (docs/kart-west-plan.md Phase 6): a row a part, a label then its chips or swatches */
+.kart-look {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.kart-look-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.kart-look-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.kart-look-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.kart-look-chip {
+  min-height: 28px;
+  padding: 2px 8px;
+  border: 1px solid #ffffff33;
+  border-radius: 4px;
+  background: #ffffff10;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.kart-look-chip[aria-pressed='true'] {
+  border-color: var(--p-cyan);
+  background: #00eaff22;
+}
+.kart-look-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.kart-look-sw {
+  width: 22px;
+  height: 22px;
+  aspect-ratio: auto;
+  flex: 0 0 22px;
+}
+.kart-look-num {
+  min-width: 2.2em;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+@media (max-width: 420px) {
+  .kart-look-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
 }

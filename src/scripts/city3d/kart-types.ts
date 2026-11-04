@@ -23,6 +23,8 @@ export interface RaceStart {
   laps?: number;
   cond?: Cond;
   single?: boolean;
+  /** The rivals' brain drives you too (the headless checks only: walk.ts `race()`) */
+  auto?: boolean;
 }
 
 /* ---------- The site (kartpark3d.ts) ---------- */
@@ -82,6 +84,13 @@ export interface KartHud {
   dots: { x: number; z: number; you: boolean }[];
   /** A series: which race this is (1-based) of how many; null for a single race */
   series: { race: number; of: number } | null;
+  /** The split just made (docs/kart-west-plan.md Phase 5): its sector, the time into the lap, the delta to your fastest lap's (or par's); null between them */
+  split: { sector: number; delta: number | null; time: number } | null;
+  /** The live gaps: to the kart ahead in the order and behind, in seconds; null at the front, the back, or alone */
+  ahead: { name: string; gap: number } | null;
+  behind: { name: string; gap: number } | null;
+  /** A personal best just set: the clock flashes */
+  pb: boolean;
 }
 export interface KartStanding {
   /** A rival's fixed name (from the sim's order) or 'You' */

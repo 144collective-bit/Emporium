@@ -39,13 +39,16 @@ import type { ClassId } from './catalog';
 import { COUNTDOWN, CUPS, NO_INPUT, T, TICK, createKartSim, tune, type CupId, type KartEvent, type KartInput, type KartSim, type Racer } from './kart-sim';
 import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } from './kart-types';
 import { CAM_GAP, COURSES, HUT_DOOR, camRoom, type Course, type CourseId, type Cond } from './kartcircuit';
-import { bankY } from './kartfacility';
+import { KART_AREA, bankY } from './kartfacility';
+import { CEREMONY, CONFETTI, ceremonyAt, ceremonyCam, confettiAt, confettiColour, excited, marshalFlags, podiumSpot, type Seen } from './kartcrowd';
+import { CHEER } from './life';
+import { KART_VIEW } from './kartpark3d';
 import { F, along } from './kartpark';
 import { createKart, type Kart } from './karts';
 import { fx, glowMat, glowTex } from './kit';
-import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
+import { KART_SPECS, PLAYER_KARTS, type KartId, type KartLook, type MyKart } from './mykart';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
-import { finishKartRace, kartStatsOf, parLap, recordKey, seriesRace, startSeries } from './tycoon';
+import { finishKartRace, kartStatsOf, keepSplits, parLap, recordKey, seriesRace, startSeries } from './tycoon';
 import { RACE_FAR, START_VIEW, nextView, type ViewId } from './views';
 
 /* ---------- The rivals ---------- */
@@ -71,8 +74,8 @@ const MAX_SPARKS = 192;
 /** How far a rival's sounds carry (tiles), and how loud they are then */
 const HEAR = 12;
 const HEAR_GAIN = 0.35;
-/** The sparks' colours by drift stage */
-const SPARK = ['#f3f2f7', '#f3f2f7', '#00eaff', '#ff2fb9'];
+/** The sparks' colours by drift stage (docs/kart-west-plan.md Phase 5: blue, orange, then purple, so each stage reads) */
+const SPARK = ['#f3f2f7', '#2a8bff', '#ff8a2a', '#b23bff'];
 
 /** The dust off the run-off and the spray in the rain (the spark pool, small and dim) */
 const DUST = '#6b4f2e';
@@ -422,7 +425,9 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         if (e.kart === me) {
           lapDone(e.time);
           d.ui.pop(placeText(e.place), e.place <= 3 ? 'good' : 'plain');
-          finishAt = 1.5;
+          // A time trial's results after a breath; a race's after the podium (kartcrowd.ts), once the top three are home
+          if (sim.timeTrial) finishAt = 1.5;
+          else podiumWait = 0;
         }
         break;
       case 'boost':
@@ -433,6 +438,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         sfx('kartBoost', e.kart, 0.5);
         break;
       case 'spin':
+        spins.push({ s: sim.racers[e.kart].s, at: sim.time });
         if (e.kart === me) {
           d.sfx('kartHit');
           d.ui.pop('Spun out', 'bad');
@@ -445,12 +451,37 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         if (e.on && e.kart === me) d.sfx('bump', 0.25);
         break;
       case 'reset':
+        spins.push({ s: sim.racers[e.kart].s, at: sim.time });
         if (e.kart === me) d.ui.pop('Back on track', 'bad');
         break;
       case 'clean':
         if (e.kart === me) d.ui.pop('Clean lap', 'good');
         break;
+      case 'startBoost':
+        if (e.kart === me) {
+          d.ui.pop('Rocket start!', 'good');
+          d.sfx('kartBoost');
+        }
+        break;
+      case 'stall':
+        if (e.kart === me) d.ui.pop('Bogged down', 'bad');
+        break;
+      case 'slip':
+        if (e.kart === me && e.on) {
+          d.ui.pop('Slipstream', 'plain');
+          d.sfx('kartBoost', 0.35);
+        }
+        break;
+      case 'split': {
+        if (e.kart !== me) break;
+        const at = e.time - lapStart;
+        lapSplits[e.sector - 1] = at;
+        showSplit(e.sector, at);
+        break;
+      }
       case 'overtake':
+        // The fans round you cheer it (kartcrowd.ts WAVE)
+        if (e.kart === me) wave = { t: WAVE_T, x: sim.player.x, z: sim.player.z };
         break;
       case 'drift':
         if (e.on) sfx('kartDrift', e.kart);
@@ -484,6 +515,16 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     const p = sim.player;
     const lapT = at - lapStart;
     lapTimes.push(lapT);
+    // The third split (the line), and a personal best: faster than your record here coming in, and than every lap since
+    lapSplits[2] = lapT;
+    showSplit(3, lapT);
+    if (lapSplits[0] > 0 && lapSplits[1] > lapSplits[0]) allSplits.push([lapSplits[0], lapSplits[1], lapT]);
+    lapSplits = [0, 0, 0];
+    if (lapT < pbLap) {
+      pbLap = lapT;
+      pbFlash = 2.2;
+      d.ui.pop('Personal best!', 'good');
+    }
     if (sim.timeTrial) {
       rec.at(lapT, p);
       lapSamples.push(rec.take());
@@ -605,8 +646,22 @@ export function createKartRace(d: KartRaceDeps): KartRace {
 
   /* ---------- Building and clearing a race ---------- */
 
-  /** A kart on the grid with its driver (a Degen in `outfit` at `detail`) and its flames */
-  function buildView(k: Racer, paint: string, outfit: Outfit | null, detail: 0 | 1 | 2): View {
+  /**
+   * You as a driver (docs/kart-west-plan.md Phase 6): your helmet and your race suit (a track suit in its colour) over
+   * your own look, no hat, hood, bag or wings under the helmet
+   */
+  function driverOutfit(o: Outfit, look: KartLook): Outfit {
+    return { ...o, kind: 'track', top: look.suit, bottom: look.suit, helmet: look.helmet, cap: undefined, beanie: undefined, bucket: undefined, cowboy: undefined, tophat: undefined, halo: false, hood: false, headphones: undefined, backpack: undefined, crossbody: undefined, board: undefined, duffel: undefined, wings: undefined };
+  }
+  /** The boost flames in your trail's colour (the rivals' are the plain ones) */
+  const trailMats = new Map<string, THREE.Material>();
+  const trailMat = (c: string) => {
+    let m = trailMats.get(c);
+    if (!m) trailMats.set(c, (m = glowMat(c, 0.9)));
+    return m;
+  };
+  /** A kart on the grid with its driver (a Degen in `outfit` at `detail`) and its flames; yours dressed in your look */
+  function buildView(k: Racer, paint: string, outfit: Outfit | null, detail: 0 | 1 | 2, look: KartLook | null = null): View {
     const kart = createKart(k.kart, paint, { detail: d.low ? 1 : 2 });
     const holder = new THREE.Group();
     holder.add(kart.group);
@@ -614,13 +669,17 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     holder.rotation.y = k.yaw;
     group.add(holder);
     kart.setNumber(k.i + 1);
+    if (look) {
+      kart.dress(look);
+      kart.glow(cond === 'night');
+    }
     let degen: Degen | null = null;
     if (outfit) {
       degen = createDegen(outfit, detail);
       kart.seat(degen);
     }
     const flames = kart.exhausts.map(([x, y, z]) => {
-      const f = fx(new THREE.Mesh(flameGeo, flameMat));
+      const f = fx(new THREE.Mesh(flameGeo, look ? trailMat(look.trail) : flameMat));
       f.position.set(x - 0.17, y, z);
       f.visible = false;
       kart.group.add(f);
@@ -726,9 +785,126 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     sparks.visible = false;
   }
 
+  /** Your splits this lap (seconds into it at the end of each sector), each lap's, the reference (your fastest lap's
+   * here, or par's thirds), the delta shown and for how long; your best lap coming in (for the personal-best flash) */
+  let lapSplits: [number, number, number] = [0, 0, 0];
+  let allSplits: [number, number, number][] = [];
+  let refSplits: [number, number, number] | null = null;
+  let split: { sector: number; delta: number | null; time: number } | null = null;
+  let splitT = 0;
+  let pbLap = Infinity;
+  let pbFlash = 0;
+  function showSplit(sector: number, at: number) {
+    const ref = refSplits ? refSplits[sector - 1] : null;
+    split = { sector, delta: ref ? at - ref : null, time: at };
+    splitT = 3;
+  }
+
   /** Each racer's paint (for the LED screens), and when they're next painted */
   const paints: string[] = [];
   let boardT = 0;
+
+  /* ---------- The crowd, the marshals and the podium (kartcrowd.ts, docs/kart-west-plan.md Phase 4) ---------- */
+
+  /** The spins and put-backs so far (for the yellow flags), the wave after you overtake, the karts as the crowd sees them */
+  let spins: { s: number; at: number }[] = [];
+  let wave: { t: number; x: number; z: number } | null = null;
+  const WAVE_T = 1.6;
+  const seen: Seen[] = [];
+  let flagT = 0;
+  /** Seconds since you finished, waiting for the top three (-1: not finished); the ceremony's clock (-1: not on) */
+  let podiumWait = -1;
+  let ceremonyT = -1;
+  const inPark = (x: number, z: number) => x > KART_AREA[0] && x < KART_AREA[2] && z > KART_AREA[1] && z < KART_AREA[3];
+  const cheerTest = (x: number, z: number) => inPark(x, z) && excited(x, z, seen, wave, ceremonyT >= 0);
+  /** The winner's trophy, rising over their kart on the podium */
+  const trophy = (() => {
+    const pts = [
+      [0, 0],
+      [0.09, 0],
+      [0.09, 0.03],
+      [0.03, 0.05],
+      [0.025, 0.14],
+      [0.08, 0.2],
+      [0.1, 0.3],
+      [0, 0.3],
+    ].map(([x, y]) => new THREE.Vector2(x, y));
+    // (solid gold, never additive: it's a cup, not a light)
+    const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 14), new THREE.MeshBasicMaterial({ color: '#f2c94c', fog: false }));
+    m.scale.setScalar(2.2);
+    m.visible = false;
+    group.add(fx(m));
+    return m;
+  })();
+  /** The confetti over the podium */
+  const confettiGeo = new THREE.BufferGeometry();
+  const confettiPos = new Float32Array(CONFETTI * 3).fill(-999);
+  confettiGeo.setAttribute('position', new THREE.BufferAttribute(confettiPos, 3));
+  confettiGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(Array.from({ length: CONFETTI }, (_, i) => new THREE.Color(confettiColour(i)).toArray()).flat()), 3));
+  const confetti = fx(new THREE.Points(confettiGeo, new THREE.PointsMaterial({ size: 0.11, vertexColors: true, fog: false })));
+  confetti.frustumCulled = false;
+  confetti.visible = false;
+  group.add(confetti);
+  /** The top three, as they stand when the ceremony starts */
+  let top3: number[] = [];
+  function startCeremony() {
+    if (!sim) return;
+    ceremonyT = 0;
+    top3 = sim.standings().slice(0, 3);
+    d.ui.showHud(false);
+    d.ui.pop('Podium', 'good');
+    d.sfx('finish');
+    if (camera.near !== near0) {
+      camera.near = near0;
+      camera.updateProjectionMatrix();
+    }
+  }
+  /** The ceremony's frame: the three on their steps, the trophy, the confetti, the camera */
+  function stepCeremony(dt: number) {
+    if (!sim) return;
+    ceremonyT += dt;
+    const beat = ceremonyAt(ceremonyT);
+    top3.forEach((i, k) => {
+      const v = views[i];
+      const at = podiumSpot((k + 1) as 1 | 2 | 3);
+      v.holder.position.set(at.x, at.y, at.z);
+      v.holder.rotation.set(0, at.yaw, 0);
+    });
+    const w = podiumSpot(1);
+    trophy.visible = beat.trophy > 0;
+    trophy.position.set(w.x, w.y + 1.3 + beat.trophy * 0.5, w.z);
+    trophy.rotation.y = d.reduced ? 0 : ceremonyT * 1.4;
+    confetti.visible = beat.confetti && !d.reduced;
+    if (confetti.visible) {
+      for (let i = 0; i < CONFETTI; i++) {
+        const q = confettiAt(i, ceremonyT - CEREMONY.confetti - (i % 3) * 0.35);
+        confettiPos.set(q ?? [0, -999, 0], i * 3);
+      }
+      confettiGeo.attributes.position.needsUpdate = true;
+    }
+    const cam = ceremonyCam(ceremonyT, d.reduced);
+    camera.position.set(...cam.eye);
+    camera.lookAt(...cam.at);
+    if (beat.done) {
+      ceremonyT = -1;
+      trophy.visible = false;
+      confetti.visible = false;
+      payOut();
+    }
+  }
+
+  /** The gap to the kart ahead (-1) or behind (1) in the order, in seconds at your pace now; null at the front or the back */
+  function gapTo(way: -1 | 1): { name: string; gap: number } | null {
+    if (!sim || sim.timeTrial || !sim.started || sim.player.finished) return null;
+    const s = sim;
+    const order = s.standings();
+    const at = order.indexOf(s.player.i);
+    const other = order[at + way];
+    if (other === undefined) return null;
+    const names = lineup(cup as CupId).map((r) => r.name);
+    const d = Math.abs(s.racers[other].progress - s.player.progress);
+    return { name: names[other] ?? `Racer ${other + 1}`, gap: d / Math.max(5, Math.abs(s.player.speed)) };
+  }
 
   /** Who stands where, for the results: the sim's order, rivals by their lineup names */
   function standings(): KartStanding[] {
@@ -749,6 +925,11 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     const p = s.player;
     const save = d.game.save();
     const laps = lapTimes.slice();
+    // Your fastest lap's splits, kept before its record is (tycoon.ts keepSplits())
+    if (allSplits.length) {
+      const fastest = allSplits.reduce((a, b) => (b[2] < a[2] ? b : a));
+      keepSplits(save, course, cls, fastest);
+    }
     const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, clean: p.cleanLaps, overtakes: p.overtakes, now: Date.now() });
     // A cup's race counts for its series: everyone's place by grid index (the rivals, then you)
     let series: KartResultView['series'] = null;
@@ -775,10 +956,10 @@ export function createKartRace(d: KartRaceDeps): KartRace {
 
   /* ---------- The kart on show in the pits ---------- */
 
-  let show: { kart: Kart; holder: THREE.Group; model: KartId; paint: PaintId; yaw: number } | null = null;
+  let show: { kart: Kart; holder: THREE.Group; model: KartId; paint: PaintId; yaw: number; look: string } | null = null;
   let picked: MyKart | null = null;
   function ensureShow(want: MyKart) {
-    if (show && show.model === want.model && show.paint === want.paint) return;
+    if (show && show.model === want.model && show.paint === want.paint && show.look === JSON.stringify(d.game.save().karts.look)) return;
     if (show) {
       show.kart.dispose();
       show.holder.removeFromParent();
@@ -791,8 +972,10 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     holder.rotation.y = show?.yaw ?? spot.yaw;
     holder.visible = !away;
     group.add(holder);
-    kart.setNumber(1);
-    show = { kart, holder, model: want.model, paint: want.paint, yaw: holder.rotation.y };
+    const look = d.game.save().karts.look;
+    kart.dress(look);
+    kart.glow(true);
+    show = { kart, holder, model: want.model, paint: want.paint, yaw: holder.rotation.y, look: JSON.stringify(look) };
   }
   /** The kart's out of the pits, being driven round the map (drive.ts); the show kart waits hidden */
   let away = false;
@@ -835,6 +1018,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         player: { kart: model, tune: tune(kartStatsOf(save, model), cls) },
         rivals: rivals.map((r) => ({ kart: r.kart, tune: tune(KART_SPECS[r.kart], cls) })),
         seed: Date.now() >>> 0,
+        auto: !!setup.auto,
       });
       // A time trial's ghosts: your best lap here, and par's
       if (sim.timeTrial) {
@@ -850,12 +1034,25 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         const r = you ? null : rivals[k.i];
         const paint = you ? paintHex(save.karts.paint) : paintHex(r!.paint);
         paints[k.i] = paint;
-        views[k.i] = buildView(k, paint, you ? d.outfit() : r!.outfit, you ? 2 : d.low ? 0 : 1);
+        views[k.i] = buildView(k, paint, you ? driverOutfit(d.outfit(), save.karts.look) : r!.outfit, you ? 2 : d.low ? 0 : 1, you ? save.karts.look : null);
       }
       for (let i = 0; i < views.length; i++) placeKart(views[i], sim.racers[i], 1 / 60);
+      // The splits' reference: your fastest lap's here, or par's lap in thirds; your record lap for the personal best
+      const key = recordKey(course, cls);
+      const par3 = parLap(course, cls) / 3;
+      refSplits = save.karts.splits[key] ?? [par3, par3 * 2, par3 * 3];
+      pbLap = save.karts.records[key]?.lap ?? Infinity;
+      lapSplits = [0, 0, 0];
+      allSplits = [];
+      split = null;
+      pbFlash = 0;
       active = true;
       paid = false;
       finishAt = -1;
+      podiumWait = -1;
+      ceremonyT = -1;
+      spins = [];
+      wave = null;
       levelAt = -1;
       goClear = 0;
       lapStart = 0;
@@ -908,9 +1105,31 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       // Timers: the GO clears, the results come after a breath, the fanfare after the finish
       if (goClear > 0 && (goClear -= dt) <= 0) showCount('');
       if (finishAt >= 0 && (finishAt -= dt) < 0) payOut();
+      // The podium: once the top three are home (or ten seconds after you), the ceremony, then the results
+      if (podiumWait >= 0 && ceremonyT < 0 && !paid) {
+        podiumWait += dt;
+        if (s.standings().slice(0, 3).every((i) => s.racers[i].finished) || podiumWait > 10) {
+          podiumWait = -1;
+          startCeremony();
+        }
+      }
+      // What the crowd sees and the marshals show
+      seen.length = 0;
+      for (const k of s.racers) seen.push({ x: k.x, z: k.z, s: k.s, progress: k.progress, lap: k.lap, speed: k.speed });
+      if (wave) wave.t -= dt;
+      CHEER.fn = cheerTest;
+      if ((flagT -= dt) <= 0) {
+        flagT = 0.25;
+        const lead = s.standings()[0];
+        KART_VIEW.flags = marshalFlags(s.course, s.started ? s.time : -1, seen, spins, s.laps, s.racers[lead].lap);
+      }
       if (levelAt >= 0 && (levelAt -= dt) < 0) d.sfx('levelup');
       // The engine, the camera, the HUD
       d.engine(0.15 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.7 + (p.boostT > 0 ? 0.15 : 0));
+      if (ceremonyT >= 0) {
+        stepCeremony(dt);
+        return;
+      }
       placeCamera(p, dt);
       for (let i = 0; i < s.racers.length; i++) {
         const k = s.racers[i];
@@ -950,7 +1169,13 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         cond,
         series: seriesInfo,
         dots,
+        split: splitT > 0 ? split : null,
+        ahead: gapTo(-1),
+        behind: gapTo(1),
+        pb: pbFlash > 0,
       };
+      splitT = Math.max(0, splitT - dt);
+      pbFlash = Math.max(0, pbFlash - dt);
       d.ui.paintHud(hud);
     },
     setGhosts(on) {
@@ -988,6 +1213,12 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       d.park.setCourse('circuit');
       d.park.board(null);
       d.conditions(null);
+      CHEER.fn = null;
+      KART_VIEW.flags = null;
+      ceremonyT = -1;
+      podiumWait = -1;
+      trophy.visible = false;
+      confetti.visible = false;
       // Out of the hut's door onto the gate path, facing along it to the gate (walk.ts looks along -z at yaw 0, -x at π/2)
       return { x: HUT_DOOR.x, z: HUT_DOOR.z + 1, yaw: Math.PI / 2 };
     },

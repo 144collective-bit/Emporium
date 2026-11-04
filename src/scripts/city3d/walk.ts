@@ -3227,6 +3227,8 @@ export function createWalk(d: WalkDeps) {
   }
 
   return {
+    /** For the headless checks (index.ts `__city`, `?fps`): a race at the kart park, the kart game fetched first */
+    race: (setup: RaceStart) => loadKarts().then(() => startKart(setup)),
     get active() {
       return active;
     },

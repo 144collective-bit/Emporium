@@ -473,6 +473,8 @@ function track(b: Batch, low: boolean) {
     const skirt = (pts: XPt[], radius: number, out: boolean): XPt[] => (out ? [[-radius, foot], ...pts, [radius, foot]] : [[radius, foot], ...pts, [-radius, foot]]);
     b.add(sweep(c, run, skirt(arc(TUBE_R, true), TUBE_R, true)), TUBE_C);
     b.add(sweep(c, run, arc(TUBE_IN, false)), TUBE_IN_C);
+    // (its floor paved out to the walls past the kerbs: no grass in the tube)
+    for (const sd of [1, -1]) b.add(sweep(c, run, strip(sd * EDGE, sd * (TUBE_IN + 0.02), onPlane(c, RIBBON - 0.006))), PAVE);
     for (let k = 2; k < run.length - 2; k += 5) b.add(sweep(c, run.slice(k, k + 2), skirt(arc(TUBE_R + 0.1, true), TUBE_R + 0.1, true)), INK);
     b.add(sweep(c, run.slice(0, 3), skirt(arc(TUBE_R + 0.22, true), TUBE_R + 0.22, true)), PORTAL);
     b.add(sweep(c, run.slice(-3), skirt(arc(TUBE_R + 0.22, true), TUBE_R + 0.22, true)), PORTAL);
@@ -844,11 +846,60 @@ const bannerTex = () =>
     glowText(c, BANNER, w / 2, h / 2 + 4, PAL.cyan, 24);
   });
 
-function mainThread(scene: THREE.Scene) {
+function mainThread(scene: THREE.Scene, tick: ((f: Tick) => void) | null) {
   const group = new THREE.Group();
   group.name = 'kartgrounds';
   scene.add(group);
   const c = CIRCUIT;
+  // The marshals' flags (kartcrowd.ts `marshalFlags()`, set by the race in KART_VIEW.flags): each post's marshal
+  // waving the flag it shows, from its track side, green, yellow, blue or the chequered one; none between races
+  {
+    const n = MARSHALS.length;
+    const cloth = new THREE.PlaneGeometry(0.75, 0.5).translate(0.4, 0, 0);
+    const solid = new THREE.InstancedMesh(cloth, new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide, fog: false }), n);
+    const chq = new THREE.InstancedMesh(cloth, new THREE.MeshBasicMaterial({ map: chequerTex(), side: THREE.DoubleSide, fog: false }), n);
+    const poles = new THREE.InstancedMesh(new THREE.BoxGeometry(0.04, 1.1, 0.04).translate(0, -0.3, 0), toon('#1b1830', { name: 'marshal poles' }), n);
+    for (const m of [solid, chq, poles]) {
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.frustumCulled = false;
+      m.count = 0;
+      group.add(m);
+    }
+    const COLOURS: Record<string, THREE.Color> = { green: new THREE.Color('#1fbf6b'), yellow: new THREE.Color('#ffd23f'), blue: new THREE.Color('#2a6bff') };
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const one = new THREE.Vector3(1, 1, 1);
+    const p = new THREE.Vector3();
+    tick?.(({ t }) => {
+      const flags = KART_VIEW.flags;
+      let ns = 0;
+      let nc = 0;
+      let np = 0;
+      if (flags)
+        MARSHALS.forEach((mp, i) => {
+          const f = flags[i];
+          if (!f || f === 'none') return;
+          // Held up from the booth's track side, waved in an arc
+          const h = BOOTH / 2 + 0.35;
+          p.set(mp.x - Math.sin(mp.ry) * mp.side * h, 2.55, mp.z - Math.cos(mp.ry) * mp.side * h);
+          const swing = Math.sin(t * 5.5 + i) * 0.7;
+          e.set(0, mp.ry + Math.PI / 2 + swing, Math.sin(t * 11 + i) * 0.12);
+          m4.compose(p, q.setFromEuler(e), one);
+          if (f === 'chequered') chq.setMatrixAt(nc++, m4);
+          else {
+            solid.setMatrixAt(ns, m4);
+            solid.setColorAt(ns++, COLOURS[f]);
+          }
+          poles.setMatrixAt(np++, m4);
+        });
+      solid.count = ns;
+      chq.count = nc;
+      poles.count = np;
+      for (const m of [solid, chq, poles]) m.instanceMatrix.needsUpdate = true;
+      if (solid.instanceColor) solid.instanceColor.needsUpdate = true;
+    });
+  }
   // The start line
   {
     const f = frame(c, c.start);
@@ -988,7 +1039,7 @@ function guidance(cc: Course, gb: Batch, signs: Batch, pads: Batch, atlas: THREE
 /** The site's tiles: pieces 30 on a side over the whole park, each drawing what's in it of the trackside, the fence and the lights */
 const SITE_TILE = 30;
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const P = KART_PARK;
   site('kart park grounds', KART_AREA, (into) => {
     const b = new Batch();
@@ -1108,5 +1159,5 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     b.box(x - 0.3, 2.36, z + 0.05, 0.42, 0.14, 0.06, Wn);
     b.build(into, { cast: true, receive: true });
   });
-  if (scene) mainThread(scene);
+  if (scene) mainThread(scene, tick ?? null);
 }

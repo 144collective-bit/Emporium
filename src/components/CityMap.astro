@@ -737,7 +737,9 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         data-kart-of; a time trial shows the gap to the ghost, data-kart-gap, instead), the drift meter (data-kart-meter)
         with the tags (data-kart-boost, the surface when it's not plain asphalt data-kart-surface, the conditions
         data-kart-cond), the lap (data-kart-lap) with the class (data-kart-cls) and the series' race (data-kart-series),
-        the clock (data-kart-clock) with the last and best lap under it (data-kart-laps), the minimap (data-kart-map: the
+        the clock (data-kart-clock, .is-pb flashing on a personal best) with the last and best lap under it (data-kart-laps)
+        and the split just made with its delta (data-kart-split), the live gaps to the karts ahead and behind
+        (data-kart-gaps: data-kart-ahead, data-kart-behind), the minimap (data-kart-map: the
         circuit's outline with every kart's dot, yours lit; kart-ui.ts draws it) and Quit (data-kart-quit).
         data-kart-pops: short lines over the HUD. data-kart-result: the results card; data-kart-result-title,
         data-kart-result-body (painted), data-kart-next (a series' next race, hidden otherwise), data-kart-result-ok and
@@ -766,6 +768,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="kart-hud-left">
         <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
         <p class="kart-gap" data-kart-gap hidden aria-label="Gap to the ghost">+0.00</p>
+        <p class="kart-gaps" data-kart-gaps hidden><span data-kart-ahead></span><span data-kart-behind></span></p>
         <div class="kart-meter" data-kart-meter data-tier="0" role="img" aria-label="Drift"><i></i><i></i><i></i></div>
         <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-surface" data-kart-surface data-surface="kerb" hidden>Kerb</span><span class="kart-tag is-cond" data-kart-cond data-cond="night" hidden>Night</span></p>
       </div>
@@ -773,6 +776,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <p class="kart-lap-row"><b class="kart-lap" data-kart-lap>Lap 1/3</b><span class="kart-cls" data-kart-cls data-cls="sport">Sport</span><span class="kart-series-tag" data-kart-series hidden>Race 1/4</span></p>
         <b class="kart-clock" data-kart-clock>0:00.00</b>
         <small class="kart-laps" data-kart-laps hidden><span data-kart-last>Last —</span><span data-kart-best>Best —</span></small>
+        <p class="kart-split" data-kart-split hidden aria-live="polite"></p>
       </div>
       <div class="kart-hud-right">
         <div class="kart-map" data-kart-map role="img" aria-label="Map of the circuit"></div>

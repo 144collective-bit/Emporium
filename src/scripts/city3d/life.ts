@@ -980,6 +980,13 @@ const early: { idle: Idle[]; movers: ParkPerson[] }[] = [];
  * People who come with a district's chunk (Sunridge's, sunlife.ts): each takes a spare slot in the crowd, with
  * whatever outfit the boot gave it; past the spare slots the rest are left out. The chunk trims its own lists for phones.
  */
+/**
+ * Who in the crowd's standing about is cheering (docs/kart-west-plan.md Phase 4): set by the kart park's race to a
+ * test of where a person stands (kartcrowd.ts `excited()`), null otherwise; checked only for those looking, chatting
+ * or sitting, and keep it cheap (a box first)
+ */
+export const CHEER: { fn: ((x: number, z: number) => boolean) | null } = { fn: null };
+
 export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) {
   if (!bodies.people.length) {
     early.push({ idle: [...idle], movers: [...movers] });
@@ -1297,7 +1304,9 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       }
       else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
       else {
-        const clip = clipOf(p.act ?? 'look', idleClip);
+        let clip = clipOf(p.act ?? 'look', idleClip);
+        // (cheering, while something asks for it: the kart park's fans as the karts go by, kart.ts)
+        if (CHEER.fn && (p.act === 'look' || p.act === 'chat' || p.act === 'sit' || !p.act) && CHEER.fn(p.x, p.z)) clip = seated(clip) ? 'sitcheer' : 'cheer';
         people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, clip, playAt(clip));
       }
     });

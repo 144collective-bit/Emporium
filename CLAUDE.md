@@ -3997,6 +3997,18 @@ it and has been retired completely. Build only on what's here.
   the columns and each other (`FIXED`); the two ways' boards are shown one
   at a time, so they keep off their own way's only. Anything new
   trackside goes through them and the test.
+- **The live crowd and the podium** (`docs/kart-west-plan.md` Phase 4)
+  are `kartcrowd.ts` (DOM-free, tested in `tests/kartcrowd.test.ts`): fans
+  cheer (crowdclips.ts `cheer` / `sitcheer`, acts.ts `cheerOver()`) while a
+  kart goes by (`excited()`, `FAN_REACH`), when you overtake (`WAVE`) and
+  through the ceremony, asked through life.ts's `CHEER.fn` (set by the race,
+  null otherwise); the marshals' flags (`marshalFlags()`: green after the
+  start, yellow up the track from a spin, blue for a kart being lapped, the
+  chequered at the line on the last lap; `KART_VIEW.flags`, waved by
+  kartgrounds3d.ts); and the ceremony after a race (`CEREMONY`,
+  `podiumSpot()`, `ceremonyAt()`, `ceremonyCam()`, `confettiAt()`: the top
+  three on the podium, the trophy, the confetti, the camera move, then the
+  results; still under reduced motion).
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
   tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
   Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
@@ -4008,7 +4020,14 @@ it and has been retired completely. Build only on what's here.
   call). **No invisible walls:** kerbs are track; the run-off holds a
   kart to `RUNOFF_CAP` with `RUNOFF_GRIP`; past `RESET_AT` (or over the
   deck's edge) it fades back onto the centre line where it had got to
-  (`'reset'`, `RESET_T`, no progress lost). The tunnel's walls are real:
+  (`'reset'`, `RESET_T`, no progress lost). The start (`START`, the
+  player's only: gas down just before the GO is a boost, held from early it
+  bogs down), the slipstream (`SLIP`: a tow right behind another kart, in
+  its line, at speed; everyone's) and your splits (`split` events at each
+  lap's thirds, `SECTORS`; the HUD's delta to your fastest lap's,
+  `karts.splits` / `keepSplits()` in tycoon.ts; live gaps ahead and behind;
+  the personal-best flash) are `docs/kart-west-plan.md` Phase 5, tested in
+  `tests/kartdrive.test.ts`. The tunnel's walls are real:
   a kart scrapes along them, slower, never put back. Conditions (`cond`): day,
   night (looks only), rain (`RAIN_GRIP` everywhere). Clean laps (no
   wheel in the run-off) and overtakes are counted per racer. Seven
@@ -4058,6 +4077,15 @@ it and has been retired completely. Build only on what's here.
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
   boards are per course per class (`recordKey()`).
+- **Your kart's look** (`docs/kart-west-plan.md` Phase 6, all free, the
+  clubhouse's Karts tab): `KartLook` in mykart.ts (`DEFAULT_LOOK`,
+  `cleanKartLook()`, `LOOK_COLOURS`, `KART_DECALS`: the number 1-99,
+  decals on the side pods, rims, tyre stripes, helmet and race suit, the
+  spark trail, the underglow at night), the save's `karts.look`
+  (`setKartLook()` in tycoon.ts; older saves cleaned to the stock look),
+  drawn by karts.ts `dress()` / `glow()`; in races you wear the helmet
+  (wardrobe.ts `racehelmet`, the Outfit's `helmet`) and the suit. Tested in
+  `tests/kartlook.test.ts`.
 - **The karts** are `mykart.ts` (`PLAYER_KARTS`, `KART_SPECS`: Pocket
   Rocket, Big Wheel, Zip, Tank Kart; `cleanKart()`), priced in `catalog.ts`
   (`KART_CATALOG`, the Rocket free; `KART_MODS`: motor, soft tyres, nitro
@@ -4634,7 +4662,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`) and its clipping (`kartside.ts`, `camRoom()`, `tests/kartclip.test.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix, the ring avenue and the park's east walk (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`, `parkedge.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`), the swing bridge (`swingbridge.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), its clipping (`kartside.ts`, `camRoom()`, `tests/kartclip.test.ts`) and its crowd, marshals and podium (`kartcrowd.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix, the ring avenue and the park's east walk (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`, `parkedge.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`), the swing bridge (`swingbridge.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
