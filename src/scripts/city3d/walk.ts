@@ -298,6 +298,8 @@ export interface WalkDeps {
   aero(kind: 'prop' | 'jet' | 'heli', revs: number): void;
   /** The Fight Club on the south bank (the trainer's counter opens its menu; fights run in its ring) */
   fightClub: FightClub;
+  /** A ride's Skip (the gamepad's B on a ride: the taxi's, the metro's, the monorail's or the river bus's) */
+  skipRide?(): void;
   /** The world map: open or close it (the gamepad's View at the wheel), and whether it's open (the pad's driving waits) */
   worldMap?(): void;
   mapOpen?(): boolean;
@@ -1502,13 +1504,13 @@ export function createWalk(d: WalkDeps) {
       e.preventDefault();
       return true;
     }
-    // Fighting: move with the move keys (W towards the opponent), Shift blocks, Space dodges; the mouse punches and kicks
+    // Fighting, on the street's keys (keymap.ts): move with the move keys (W towards the opponent), G kicks, Space
+    // dodges, E a snack, V the camera; the mouse punches and blocks (right button held)
     if (fighting()) {
       if (down && !e.repeat && c === 'KeyV') nextCam();
       else if (c === 'Space') {
         if (down && !e.repeat) fightBtns.dodge = true;
-      } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
-      else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
+      } else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
       else if (down && !e.repeat && c === 'KeyE') fight?.snack();
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
@@ -1603,11 +1605,11 @@ export function createWalk(d: WalkDeps) {
     e.preventDefault();
     return true;
   }
-  // A click punches and a right-click kicks while fighting (the mouse isn't captured in the ring)
+  // A click punches and the right button held blocks while fighting, as on the street (the mouse isn't captured in the ring)
   canvas.addEventListener('mousedown', (e) => {
     if (active && fighting()) {
       if (e.button === 0) fightBtns.punch = true;
-      else if (e.button === 2) fightBtns.kick = true;
+      else if (e.button === 2) mouseBlock = true;
     }
   });
   // Switching away lets go of everything (keys, buttons, sticks, a look drag)
@@ -1974,16 +1976,17 @@ export function createWalk(d: WalkDeps) {
       padFight.x = padFight.y = 0;
       return;
     }
-    // Start opens the hub (the pause screen), but in a fight, where it quits
-    if (edge(9) && d.hub && !fighting()) {
+    // Start opens the hub (the pause screen), but in a fight or a kart race, where it quits (keymap.ts `quit`)
+    if (edge(9) && d.hub && !fighting() && !karts.active) {
       still(false);
       d.hub.show();
       pad.prev = b;
       return;
     }
-    // On a ride: the right stick looks round, pressed it steps the camera (the ride has the rest)
+    // On a ride: the right stick looks round, pressed it steps the camera, B skips the ride (the ride has the rest)
     if (ride) {
       if (edge(11)) nextCam();
+      if (edge(1)) d.skipRide?.();
       if (b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
@@ -2049,13 +2052,13 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Y quits, the right stick pressed the camera
+    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Start quits (as in the ring), the right stick pressed the camera
     if (karts.active) {
       if (edge(11)) nextCam();
       padKart.steer = pad.x;
       padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padKart.drift = !!b[0];
-      if (edge(3)) abandonKart();
+      if (edge(9)) abandonKart();
       if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
@@ -2077,10 +2080,10 @@ export function createWalk(d: WalkDeps) {
     if (!b[0] && pad.prev[0]) jumpHeld = false;
     // (aiming, LB and RB lean out instead: peeking)
     padLean = b[6] ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
-    // (empty hands: LB held blocks, the run is the left stick pressed)
+    // (the run is the left stick pressed, a gun out or not (keymap.ts); empty hands: LB held blocks)
     const fb = fistsReady();
     padBlock = fb && !!b[4];
-    pad.run = !!((b[4] && !b[6] && !fb) || b[10]);
+    pad.run = !!b[10];
     aim = aim || !!b[6];
     if (!b[6] && pad.prev[6]) setAim(false);
     // (Y does what the prompt says; with empty hands and nothing to do, it kicks)
@@ -2323,7 +2326,7 @@ export function createWalk(d: WalkDeps) {
       right = padFight.x;
       fwd = -padFight.y;
     }
-    const inp: FightInput = { fwd, right, punch: fightBtns.punch, kick: fightBtns.kick, block: fightBtns.block || padFight.block, dodge: fightBtns.dodge };
+    const inp: FightInput = { fwd, right, punch: fightBtns.punch, kick: fightBtns.kick, block: fightBtns.block || padFight.block || mouseBlock, dodge: fightBtns.dodge };
     fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
     fight!.update(dt, inp);
     const you = fight!.sim?.fighter('you');
@@ -3031,6 +3034,10 @@ export function createWalk(d: WalkDeps) {
     /** On foot (not driving, flying, karting, fighting or riding): free to take a taxi or travel */
     get onFoot() {
       return active && !drive.active && !fly.active && !boating() && !karts.active && !fighting() && !ride;
+    },
+    /** At the wheel of your car, bike or kart, your aircraft or the hire boat (M opens the world map there too) */
+    get atWheel() {
+      return active && (drive.active || fly.active || boating());
     },
     /** In a taxi or on the metro */
     get riding() {

@@ -157,7 +157,7 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
 ### Phase 3: one key for one job
 
 - `keymap.ts` (DOM-free, tested in `tests/keymap.test.ts`): every mode's
-  actions (`Action`) with their key, gamepad button and touch button, the
+  jobs (`Job`) with their key, gamepad button and touch button, the
   one table walk.ts, the hub's Settings > Keys and the control card read.
   The test holds each job on the same key and button in every mode it's
   in (get in and out, the camera, the horn, the main and second actions,
@@ -165,6 +165,29 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
 - The ring takes the street's keys (above).
 - The gamepad's camera is R3 in every mode.
 - The hub's Settings > Keys made from `keymap.ts`, a section for each mode.
+- **Built, waiting on the owner's sign-off.** `keymap.ts` (DOM-free, tested
+  in `tests/keymap.test.ts`): `KEYMAP`, ten modes (on foot, empty hands and
+  a gun out on top of it, the car, the bike, the boat, the aircraft, a
+  kart race, the ring, a ride), each job (`Job`) with its keys, gamepad
+  buttons and touch button; `bindsOf()`. The test holds a job's main key
+  and button the same in every mode it's in, the camera V / R3 / View
+  everywhere, F / Y for getting in and out and doors, H / L3 the horn,
+  a way out of every mode, the ring's fists the street's, and no two jobs
+  on one key or button in a mode unless one `shares` it by context (with
+  empty hands Y kicks when there's no prompt, Space dodges with the guard
+  up; aiming, LB / RB peek over the hotbar's RB). It stays out of the
+  boot: the hub's Settings > Keys is made from it when the site is built
+  (CityMap.astro: a section a mode, the on-foot one open; each row shows
+  only the input in use, the hub's `data-input`, and a row with nothing on
+  it is left out). walk.ts's handlers keep their own code; the changes to
+  make them match: the ring blocks with right-click held (it kicked) and
+  Shift does nothing there; the gamepad's sprint is L3 only (LB is the
+  block and the peek); Start quits a kart race (Y did, which is getting
+  in and out everywhere else); B skips a ride; M opens the world map at
+  the wheel as on foot. The ring's and the race's hints name V for the
+  camera. Checked in a headless browser: Settings > Keys on a keyboard,
+  a gamepad and touch, at 1024 and 375 wide. The boot's code stayed at
+  699.8 of its 700 KB.
 
 ### Phase 4: the control card
 

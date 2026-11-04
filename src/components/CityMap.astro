@@ -17,6 +17,7 @@ import pulsechain from '../assets/pulsechain.png';
 import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
+import { KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -470,31 +471,27 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </div>
           <details class="hub-more">
             <summary>Keys, gamepad and touch</summary>
-            <dl class="walk-keys">
-            <dt><kbd>WASD</kbd></dt><dd>Move</dd>
-            <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
-            <dt><kbd>Shift</kbd></dt><dd>Sprint (hold)</dd>
-            <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Walk (toggle)</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher); going at a low wall or barrier, over it; fists up and standing, dodge</dd>
-            <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight); empty hands, block (hold)</dd>
-            <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
-            <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
-            <dt><kbd>V</kbd></dt><dd>First / third person</dd>
-            <dt><kbd>Scroll</kbd></dt><dd>Next / previous slot (mouse captured), camera distance (mouse free)</dd>
-            <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
-            <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out); empty hands, punch (again quickly: combos)</dd>
-            <dt><kbd>R</kbd></dt><dd>Reload</dd>
-            <dt><kbd>Tab</kbd></dt><dd>Inventory: drag guns into weapon slots 1 and 2</dd>
-            <dt><kbd>M</kbd></dt><dd>World map</dd>
-            <dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Draw weapon 1 or 2 (again: put it away, fists)</dd>
-            <dt><kbd>3</kbd>–<kbd>7</kbd></dt><dd>What's in your hand, snacks</dd>
-            <dt><kbd>X</kbd></dt><dd>Next of your weapons and empty hands</dd>
-            <dt><kbd>G</kbd></dt><dd>Holster (with a gun out); empty hands, kick</dd>
-            <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
-            <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then this menu (Back to City view is at its foot)</dd>
-          </dl>
-            <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
-          <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory (Tab), refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB and the D-pad step through the hotbar; with empty hands X punches, Y kicks, LB blocks, A dodges and the left stick pressed sprints; View opens the inventory, Start this menu, the right stick pressed swaps first and third person. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons (Jump dodges with your fists up, standing), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
+            {/* Made from keymap.ts when the site is built (docs/views-plan.md Phase 3: one key for one job); each row shows
+                the input in use (the hub's data-input: keys, pad or touch) */}
+            <p class="walk-pad km-note">The same key does the same job everywhere. Shown for what you're using now: press a key, move a stick or tap to switch.</p>
+            {MODE_IDS.map((id) => (
+              <details class="hub-more km" open={id === 'foot'}>
+                <summary>{KEYMAP[id].name}</summary>
+                <dl class="walk-keys km-list">
+                  {KEYMAP[id].binds.map((b) => (
+                    <>
+                      <dt class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>
+                        <span data-for="keys">{b.keys.length ? b.keys.map((k) => <kbd>{k}</kbd>) : '–'}</span>
+                        <span data-for="pad">{b.pad.length ? b.pad.map((k) => <kbd>{k}</kbd>) : '–'}</span>
+                        <span data-for="touch">{b.touch ?? '–'}</span>
+                      </dt>
+                      <dd class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>{b.label}</dd>
+                    </>
+                  ))}
+                </dl>
+              </details>
+            ))}
+            <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory, refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Your car waits on the turntable at the garage on the south bank. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons, drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
           </details>
         </div>
         <details class="hub-more">
@@ -753,7 +750,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-kart-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift tc" data-kart-drift aria-label="Drift"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-drift" /></svg><span class="tc-word">Drift</span></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
         data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
@@ -824,7 +821,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-fight-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
     <button type="button" class="fight-btn fight-punch tc-main tc" data-fight-punch aria-label="Punch"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-punch" /></svg><span class="tc-word">Punch</span></button>
     <button type="button" class="fight-btn fight-kick tc" data-fight-kick aria-label="Kick"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-kick" /></svg><span class="tc-word">Kick</span></button>
     <button type="button" class="fight-btn fight-block tc" data-fight-block aria-label="Block (hold)"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-block" /></svg><span class="tc-word">Block</span></button>

@@ -3151,7 +3151,18 @@ it and has been retired completely. Build only on what's here.
   read by taxi.ts, metro-ui.ts, monorail-ui.ts and riverbus-ui.ts
   (`Ride.kind`); `nextCam()` in walk.ts for every mode and on foot; the
   View button in the kart and ring layouts' `a3`, in each ride's bar
-  (`[data-ride-view]`) and on foot up top (`[data-walk-view]`).
+  (`[data-ride-view]`) and on foot up top (`[data-walk-view]`). Phase 3
+  (one key for one job) is built, waiting on the owner's sign-off:
+  `keymap.ts` (DOM-free, tested in `tests/keymap.test.ts`, out of the
+  boot: `KEYMAP`, every mode's jobs with their keys, gamepad buttons and
+  touch buttons; a job on the same key and button in every mode it's in,
+  no two jobs on one in a mode unless `shares` says so); the hub's
+  Settings > Keys is made from it at build time (a section a mode, only
+  the input in use shown, `data-input`); the ring on the street's keys
+  (right-click held block, Shift nothing), the gamepad's sprint L3 only,
+  Start quits a kart race, B skips a ride, M opens the world map at the
+  wheel too. When a handler in walk.ts changes, change its line in
+  keymap.ts.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
@@ -3998,7 +4009,7 @@ it and has been retired completely. Build only on what's here.
   prompt opens the menu, a race hides Degen and feeds the kart
   (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift;
   touch: the stick, the pedals and Drift over Brake; gamepad: stick, RT /
-  LT, A drift, Y quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
+  LT, A drift, V / R3 the camera, Start quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
   abandons (no prize), closing the results stands Degen up by the hut.
   While racing `.city.is-karting` is on the root and `data-kart` makes the
   header read "Karting · <course>". Under reduced motion the race still
@@ -4326,9 +4337,10 @@ it and has been retired completely. Build only on what's here.
   the purse on a win, XP either way, a quit is a loss; knock-outs and
   chains of three add XP). `walk.ts` wires it: the counter's prompt opens
   the menu, a fight hides Degen and feeds `fightFrame()` (W/A/S/D move
-  relative to the opponent, click punch, right-click or G kick, Shift
-  block, Space dodge; touch: the stick and the four buttons; gamepad:
-  stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
+  relative to the opponent, click punch, right-click held block, G kick,
+  Space dodge, the street's keys (the views plan's Phase 3); touch: the
+  stick and the four buttons; gamepad: stick, X / Y, LB held, A, R3 the
+  camera, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
   read "Fighting · <opponent>". The save (`tycoon.ts`, v12) keeps `fight`
