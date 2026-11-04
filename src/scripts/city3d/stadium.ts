@@ -44,12 +44,20 @@ export type Rect = [number, number, number, number];
 
 /* ---------- Where: north of the ring highway, in line with the Mall ---------- */
 
-/** Stadium Road: its centre line (z), from the north road (ns0, at x = -4.5, past the highway) west to `x1`; a street's half width */
-export const ROAD = { z: -188, x0: -4.5, x1: -182, half: 1.7 };
-/** The car park's one-way loop off Stadium Road (its south side is the road): x0..x1, north to z1 */
-export const LOOP = { x0: -92, x1: -24, z1: -228, half: 1.7 };
-/** The stadium's block (lawn on a slab, a sidewalk round it): north of Stadium Road, west of the loop */
-export const BLOCK: Rect = [-184, -262, LOOP.x0 - LOOP.half - WALK_W, ROAD.z - ROAD.half - WALK_W];
+/**
+ * Stadium Road's way in (docs/highway-plan.md Phase 1b: the raised highway's exit 1 took its old line by the highway):
+ * west along `z` from the north road (ns0, at x = -4.5, past the highway) to the car park loop's west side, then a
+ * bend down to the stretch past the stadium's front (`ROAD`)
+ */
+export const IN = { z: -211, x0: -4.5 };
+/** Stadium Road past the stadium's front: its centre line (z), from the bend's foot (`x0`) west to `x1`; a street's half width */
+export const ROAD = { z: -188, x0: -100, x1: -182, half: 1.7 };
+/** The car park's one-way loop off Stadium Road's way in (its south side is the road): x0..x1, north to z1 */
+export const LOOP = { x0: -92, x1: -24, z1: IN.z - 40, half: 1.7 };
+/** Stadium Road's centre line, from the north road to its end past the stadium */
+export const ROAD_LINE: Pt[] = [[IN.x0, IN.z], [LOOP.x0 - 5, IN.z], [ROAD.x0, ROAD.z], [ROAD.x1, ROAD.z]];
+/** The stadium's block (lawn on a slab, a sidewalk round it): north of Stadium Road, west of its bend */
+export const BLOCK: Rect = [-184, -262, -106, ROAD.z - ROAD.half - WALK_W];
 /** The bowl's middle: in line with the Mall, its south facade 3.5 north of the footbridge's foot */
 export const CENTRE: Pt = [MALL.x, -228];
 /** How square the oval's corners are (2 an ellipse; higher, squarer) */
@@ -118,7 +126,7 @@ export const TALLEST = MAST.h + MAST.head.h / 2;
 /* ---------- The car park ---------- */
 
 /** Inside the loop, clear of its asphalt (x0, z0, x1, z1) */
-export const CAR_PARK: Rect = [LOOP.x0 + LOOP.half + 0.3, LOOP.z1 + LOOP.half + 0.3, LOOP.x1 - LOOP.half - 0.3, ROAD.z - ROAD.half - 0.3];
+export const CAR_PARK: Rect = [LOOP.x0 + LOOP.half + 0.3, LOOP.z1 + LOOP.half + 0.3, LOOP.x1 - LOOP.half - 0.3, IN.z - ROAD.half - 0.3];
 /** A bay's width along the row, and how deep it is */
 export const BAY = { w: 2.6, d: 4.4 };
 /** Four rows of bays: one along the north edge, two back to back in the middle, one by the road; each row's bays' z and facing */
@@ -159,14 +167,14 @@ const CAR_HALF = { l: 1.5, w: 0.62 };
 
 /** Stadium Road and the car park's loop (one-way, driven against its points: north up its west side, east, south down its east side) */
 export const STADIUM_STREETS: { id: string; pts: Pt[]; half: number; oneway?: -1 }[] = [
-  { id: 'stadium-road', pts: [[ROAD.x0, ROAD.z], [ROAD.x1, ROAD.z]], half: ROAD.half },
-  { id: 'stadium-loop', pts: [[LOOP.x1, ROAD.z], [LOOP.x1, LOOP.z1], [LOOP.x0, LOOP.z1], [LOOP.x0, ROAD.z]], half: LOOP.half, oneway: -1 },
+  { id: 'stadium-road', pts: ROAD_LINE, half: ROAD.half },
+  { id: 'stadium-loop', pts: [[LOOP.x1, IN.z], [LOOP.x1, LOOP.z1], [LOOP.x0, LOOP.z1], [LOOP.x0, IN.z]], half: LOOP.half, oneway: -1 },
 ];
 /** Where they meet the north road and each other (no lights) */
 export const STADIUM_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
-  { id: 'stadium-in', at: [ROAD.x0, ROAD.z], streets: ['ns0', 'stadium-road'] },
-  { id: 'stadium-loop-e', at: [LOOP.x1, ROAD.z], streets: ['stadium-road', 'stadium-loop'] },
-  { id: 'stadium-loop-w', at: [LOOP.x0, ROAD.z], streets: ['stadium-road', 'stadium-loop'] },
+  { id: 'stadium-in', at: [IN.x0, IN.z], streets: ['ns0', 'stadium-road'] },
+  { id: 'stadium-loop-e', at: [LOOP.x1, IN.z], streets: ['stadium-road', 'stadium-loop'] },
+  { id: 'stadium-loop-w', at: [LOOP.x0, IN.z], streets: ['stadium-road', 'stadium-loop'] },
 ];
 /**
  * Lamps along Stadium Road's north side and round the loop's outside: x, z, which way the arm reaches (ry turns +x
@@ -175,9 +183,9 @@ export const STADIUM_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
 export const STADIUM_LAMPS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const north = ROAD.z - ROAD.half - 0.45;
-  for (let x = ROAD.x1 + 4; x < LOOP.x0 - 3; x += 14) if (Math.abs(x - MALL.x) > 4) out.push([x, north, -Math.PI / 2, 0.15]);
-  for (let x = LOOP.x1 + 6; x < ROAD.x0 - 5; x += 12) out.push([x, north, -Math.PI / 2, 0.02]);
-  for (let z = ROAD.z - 10; z > LOOP.z1 + 3; z -= 14) out.push([LOOP.x1 + LOOP.half + 0.45, z, Math.PI, 0.02]);
+  for (let x = ROAD.x1 + 4; x < ROAD.x0 - 3; x += 14) if (Math.abs(x - MALL.x) > 4) out.push([x, north, -Math.PI / 2, 0.15]);
+  for (let x = LOOP.x1 + 6; x < IN.x0 - 5; x += 12) out.push([x, IN.z - ROAD.half - 0.45, -Math.PI / 2, 0.02]);
+  for (let z = IN.z - 10; z > LOOP.z1 + 3; z -= 14) out.push([LOOP.x1 + LOOP.half + 0.45, z, Math.PI, 0.02]);
   for (let x = LOOP.x1 - 6; x > LOOP.x0 + 3; x -= 14) out.push([x, LOOP.z1 - LOOP.half - 0.45, Math.PI / 2, 0.02]);
   return out;
 })();
@@ -259,7 +267,9 @@ export const STADIUM_SOLIDS: Box[] = [
 export const STADIUM_RECTS: Rect[] = [
   BLOCK,
   [ROAD.x1 - 1, ROAD.z - ROAD.half - 1, ROAD.x0, ROAD.z + ROAD.half + 1],
-  [LOOP.x0 - LOOP.half - 1, LOOP.z1 - LOOP.half - 1, LOOP.x1 + LOOP.half + 1, ROAD.z],
+  [LOOP.x1, IN.z - ROAD.half - 1, IN.x0, IN.z + ROAD.half + 1],
+  [ROAD.x0 - ROAD.half - 1, IN.z - ROAD.half - 1, LOOP.x0 + ROAD.half + 1, ROAD.z + ROAD.half + 1],
+  [LOOP.x0 - LOOP.half - 1, LOOP.z1 - LOOP.half - 1, LOOP.x1 + LOOP.half + 1, IN.z],
   BRIDGE_RECT,
 ];
 /** All of it, for loading its grounds as you approach (districts.ts) */

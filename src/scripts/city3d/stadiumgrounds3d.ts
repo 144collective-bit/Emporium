@@ -13,7 +13,8 @@ import * as THREE from 'three';
 import { Batch, PAL, neon, toon } from './kit';
 import { SLAB } from './world';
 import { site } from './tilework';
-import { BAY, BAYS, BRIDGE, CAR_PARK, LOOP, ROAD } from './stadium';
+import { BAY, BAYS, BRIDGE, CAR_PARK, IN, LOOP, ROAD, ROAD_LINE } from './stadium';
+import { along, pieces as runs, ribbon } from './roads3d';
 
 const IRON = toon('#1b1830');
 
@@ -39,16 +40,34 @@ function flatRect(b: Batch, x0: number, z0: number, x1: number, z1: number, y: n
 }
 
 export function register() {
-  // Stadium Road, in stretches, from the north road's west edge to its end past the stadium; a dashed centre line
-  const xEast = ROAD.x0 - 3.7;
+  // Stadium Road's way in, from the north road's west edge west and round the bend (in pieces), and a dashed centre
+  // line but across the loop's ways in
+  const [, bendTop] = ROAD_LINE;
+  const inLine = [...along([IN.x0 - 3.7, IN.z], bendTop, 4), ...along(bendTop, [ROAD.x0, ROAD.z], 3).slice(1)];
+  runs(inLine, ROAD.half + 0.5).forEach((pc, k) =>
+    site(`stadium road in ${k}`, pc.rect, (into) => {
+      const b = new Batch();
+      b.add(ribbon(pc.pts, -ROAD.half, ROAD.half, () => ROAD_Y), ASPHALT);
+      for (let i = 1; i < pc.pts.length; i++) {
+        const [a, c] = [pc.pts[i - 1], pc.pts[i]];
+        const n = Math.floor(Math.hypot(c[0] - a[0], c[1] - a[1]) / 1.1);
+        for (let k2 = 0; k2 < n; k2++) {
+          const [x, z] = [a[0] + ((c[0] - a[0]) * (k2 + 0.5)) / n, a[1] + ((c[1] - a[1]) * (k2 + 0.5)) / n];
+          if (Math.abs(z - IN.z) < 0.1 && (Math.abs(x - LOOP.x0) < LOOP.half + 0.6 || Math.abs(x - LOOP.x1) < LOOP.half + 0.6)) continue;
+          b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).rotateY(-Math.atan2(c[1] - a[1], c[0] - a[0])).translate(x, PAINT_Y, z), neon('#f5d76e', 0.9, 1.1));
+        }
+      }
+      b.build(into, { cast: false, receive: true });
+    })
+  );
+  // Stadium Road past the stadium's front, in stretches, from the bend's foot to its end; a dashed centre line
+  const xEast = ROAD.x0;
   for (let x = xEast; x > ROAD.x1; x -= 30) {
     const x0 = Math.max(ROAD.x1, x - 30);
     site(`stadium road ${Math.round(x)}`, [x0, ROAD.z - ROAD.half, x, ROAD.z + ROAD.half], (into) => {
       const b = new Batch();
       flatRect(b, x0, ROAD.z - ROAD.half, x, ROAD.z + ROAD.half, ROAD_Y, ASPHALT);
       for (let p = x - 0.8; p > x0 + 0.4; p -= 1.1) {
-        // (no dashes across the loop's ways in)
-        if (Math.abs(p - LOOP.x0) < LOOP.half + 0.6 || Math.abs(p - LOOP.x1) < LOOP.half + 0.6) continue;
         b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).translate(p, PAINT_Y, ROAD.z), neon('#f5d76e', 0.9, 1.1));
       }
       b.build(into, { cast: false, receive: true });
@@ -57,9 +76,9 @@ export function register() {
   // The loop's three sides and the car park inside it, in pieces; bays and one-way arrows near only
   const [cx0, cz0, cx1, cz1] = CAR_PARK;
   const pieces: [number, number, number, number][] = [
-    [LOOP.x0 - LOOP.half, LOOP.z1 - LOOP.half, LOOP.x0 + LOOP.half, ROAD.z - ROAD.half],
+    [LOOP.x0 - LOOP.half, LOOP.z1 - LOOP.half, LOOP.x0 + LOOP.half, IN.z - ROAD.half],
     [LOOP.x0 - LOOP.half, LOOP.z1 - LOOP.half, LOOP.x1 + LOOP.half, LOOP.z1 + LOOP.half],
-    [LOOP.x1 - LOOP.half, LOOP.z1 - LOOP.half, LOOP.x1 + LOOP.half, ROAD.z - ROAD.half],
+    [LOOP.x1 - LOOP.half, LOOP.z1 - LOOP.half, LOOP.x1 + LOOP.half, IN.z - ROAD.half],
   ];
   for (let x = cx0; x < cx1 - 0.01; x += 22) pieces.push([x, cz0, Math.min(cx1, x + 22), cz1]);
   pieces.forEach((r, i) =>
@@ -82,17 +101,17 @@ export function register() {
             b.add(new THREE.PlaneGeometry(1.4, 0.18).rotateX(-Math.PI / 2).rotateY(ry).translate(x, PAINT_Y, z), PAINT);
             for (const s of [-1, 1]) b.add(new THREE.PlaneGeometry(0.7, 0.18).rotateX(-Math.PI / 2).rotateY(ry + s * 0.7).translate(x + Math.cos(ry) * 0.5 - Math.cos(ry + s * 0.7) * 0.3, PAINT_Y, z - Math.sin(ry) * 0.5 + Math.sin(ry + s * 0.7) * 0.3), PAINT);
           };
-          if (i === 0) for (let z = ROAD.z - 8; z > LOOP.z1 + 4; z -= 12) arrow(LOOP.x0, z, Math.PI / 2);
+          if (i === 0) for (let z = IN.z - 8; z > LOOP.z1 + 4; z -= 12) arrow(LOOP.x0, z, Math.PI / 2);
           if (i === 1) for (let x = LOOP.x0 + 8; x < LOOP.x1 - 4; x += 14) arrow(x, LOOP.z1, 0);
-          if (i === 2) for (let z = LOOP.z1 + 8; z < ROAD.z - 4; z += 12) arrow(LOOP.x1, z, -Math.PI / 2);
+          if (i === 2) for (let z = LOOP.z1 + 8; z < IN.z - 4; z += 12) arrow(LOOP.x1, z, -Math.PI / 2);
         });
       b.build(into, { cast: false, receive: true });
     })
   );
   // A P sign at the loop's way in
-  site('stadium car park sign', [LOOP.x1 + 1, ROAD.z - 4, LOOP.x1 + 4, ROAD.z - 1], (into) => {
+  site('stadium car park sign', [LOOP.x1 + 1, IN.z - 4, LOOP.x1 + 4, IN.z - 1], (into) => {
     const b = new Batch();
-    const [x, z] = [LOOP.x1 + LOOP.half + 0.9, ROAD.z - ROAD.half - 1.2];
+    const [x, z] = [LOOP.x1 + LOOP.half + 0.9, IN.z - ROAD.half - 1.2];
     b.box(x - 0.06, 0, z - 0.06, 0.12, 2.6, 0.12, IRON);
     b.box(x - 0.5, 2.0, z - 0.05, 1.0, 1.0, 0.1, toon('#1d4fd6'));
     const W = neon('#ffffff', 0.8, 1.4);

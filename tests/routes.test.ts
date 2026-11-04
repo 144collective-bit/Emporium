@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import { NS_ROADS } from '../src/scripts/city3d/layout';
 import { LOT9_STREETS, inLot9 } from '../src/scripts/city3d/lot9';
-import { LOOP, ROAD } from '../src/scripts/city3d/stadium';
+import { LOOP, IN } from '../src/scripts/city3d/stadium';
 import { LOOP as K_LOOP, ROAD as K_ROAD } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
 import { JUNCTIONS, ROUTES, SPOTS, lightState, pointOn, type Phase, type Pt, type Route } from '../src/scripts/city3d/routes';
@@ -43,7 +43,8 @@ test('every route is a closed loop: round and round', () => {
 /** The stadium's and the kart park's streets north of the highway, the north roads up to them and their slip lanes there: driven too */
 const stadiumWay = (q: Pt) =>
   (q[0] > LOOP.x0 - 3 && q[0] < LOOP.x1 + 3 && q[1] > LOOP.z1 - 3 && q[1] < -165) ||
-  (q[0] >= LOOP.x1 + 3 && q[0] < ROAD.x0 + 12 && q[1] > ROAD.z - 3 && q[1] < -165) ||
+  // (its way in from the north road, docs/highway-plan.md Phase 1b)
+  (q[0] >= LOOP.x1 + 3 && q[0] < IN.x0 + 12 && q[1] > IN.z - 3 && q[1] < -165) ||
   // ...and the kart park's (kartpark.ts): Kart Road off the east ring avenue, the car park's loop
   (q[0] > K_LOOP.x0 - 3 && q[0] < K_LOOP.x1 + 3 && q[1] > K_LOOP.z1 - 3 && q[1] < -165) ||
   (q[0] > K_ROAD.x0 - 12 && q[0] <= K_LOOP.x0 - 3 && q[1] > K_ROAD.z - 3 && q[1] < -165);

@@ -75,9 +75,11 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // Phase 2: from Crestmont's grand hotel across the whole city about 67 s)
       // (and Lot 9 past the highway's south-west corner, docs/trailer-plan.md: from the stadium about 68 s)
       const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster' || id === 'lot9';
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'overlook' || id === 'reservoir' ? 20 : 0);
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'overlook' || id === 'reservoir' ? 22 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
-      const most = docks(a.id) || docks(b.id) ? 96 : 84;
-      assert.ok(r!.len / TAXI_SPEED < Math.min(most, 62 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
+      const most = docks(a.id) || docks(b.id) ? 96 : 86;
+      // (Stadium Road's way in from the north road went up past the raised highway's exit 1, docs/highway-plan.md
+      // Phase 1b: from the stadium to Crestmont's civic hall about 63 s, to its overlook about 85 s)
+      assert.ok(r!.len / TAXI_SPEED < Math.min(most, 64 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${r!.len.toFixed(0)}`);
     }
 });

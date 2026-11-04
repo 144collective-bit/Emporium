@@ -27,7 +27,6 @@ import {
 } from '../src/scripts/city3d/gardens';
 import {
   BENCHES,
-  BIG,
   GARDEN_SITE,
   GARDEN_XS,
   GARDEN_Z,
