@@ -57,7 +57,13 @@ test('a crossing wherever two roads meet, lights only on the core streets', () =
 test('the city as built: the grid\'s roads, three diagonals from the ring\'s corners, and walk-only alleys', () => {
   const p = cityPlan();
   const g = gridPlan();
-  for (const s of g.streets) assert.deepEqual(p.streets.find((t) => t.id === s.id), s, `${s.id} is kept`);
+  for (const s of g.streets) {
+    const t = p.streets.find((q) => q.id === s.id)!;
+    // (past the highway the grid's roads carry on as country roads, rural.ts, docs/highway-plan.md Phase 7: the town
+    // piece is the grid's own, shortened to where the country starts)
+    assert.deepEqual({ ...t, pts: [] }, { ...s, pts: [] }, `${s.id} is kept`);
+    for (const q of t.pts) assert.ok(distToStreet(s, q) < 1e-6, `${s.id} moved`);
+  }
   const diags = p.streets.filter((s) => s.id.startsWith('diag'));
   assert.equal(diags.length, DIAGONALS.length);
   const corners = [RING_LO, RING_HI];

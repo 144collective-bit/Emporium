@@ -1,6 +1,7 @@
 // The one clearing rule (landuse.ts, docs/blend-plan.md Phase 1): everything the outskirts' trees keep off in one
 // list, filed by tile, every margin wobbled further out (never in), so tree lines come out ragged. Runs at both world
 // sizes (npm run test:wide).
+import { RURAL } from '../src/scripts/city3d/rural';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EL_CLEAR, HIGHWAY_VERGE, KEEPS, STREET_VERGE, WOBBLE, keepsNear, keptOff, noise, wobble } from '../src/scripts/city3d/landuse';
@@ -61,17 +62,18 @@ test('the districts that used to clear their own land by hand are still clear', 
 });
 
 test('a tree line along a street is ragged, not ruled', () => {
-  // The east ring avenue north past the highway, through open land: how far from its asphalt the first free spot is,
-  // all along it, varies by more than half the wobble
+  // The east ring avenue north past the highway, a country road through open land (rural.ts, docs/highway-plan.md
+  // Phase 7): how far past its fences the first free spot is, all along it, varies by more than half the wobble
   const road = NS_ROADS[NS_ROADS.length - 1];
+  const reach = RURAL.fence + 1;
   const gaps: number[] = [];
   for (let z = -400; z < -320; z += 2) {
-    let d = road.half;
-    while (d < road.half + STREET_VERGE + WOBBLE + 2 && !treeSpot(road.c + d, z)) d += 0.1;
-    gaps.push(d - road.half);
+    let d = reach;
+    while (d < reach + WOBBLE + 2 && !treeSpot(road.c + d, z)) d += 0.1;
+    gaps.push(d - reach);
   }
   const spread = Math.max(...gaps) - Math.min(...gaps);
-  assert.ok(Math.min(...gaps) >= STREET_VERGE - 1e-6);
+  assert.ok(Math.min(...gaps) >= -1e-6);
   assert.ok(spread > WOBBLE / 2, `the verge's width varies by ${spread.toFixed(2)}`);
 });
 

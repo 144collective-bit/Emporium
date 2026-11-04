@@ -373,6 +373,23 @@ export const puddleMat = new THREE.MeshBasicMaterial({
  */
 /** Where east-west road `i` doesn't run across the Strip (layout.ts STRIP_GAP): its lines stop short of the Parkway and the east road */
 const stripGap = (i: number): [number, number][] => (i in STRIP_GAP ? [[STRIP_GAP[i][0] - 2, STRIP_GAP[i][1] + 2]] : []);
+/**
+ * Where a grid road's town piece runs (along it): past it, out to the world's edge, it's a country road of its own
+ * (rural.ts, docs/highway-plan.md Phase 7; rural3d.ts draws it)
+ */
+function townRun(axis: 'ew' | 'ns', i: number): [number, number] {
+  const ids = axis === 'ew' ? [`ew${i}`, `ew${i}e`] : [`ns${i}`, `ns${i}s`];
+  const vs = PLAN.streets.filter((s) => ids.includes(s.id)).flatMap((s) => s.pts.map((p) => (axis === 'ew' ? p[0] : p[1])));
+  return [Math.min(...vs), Math.max(...vs)];
+}
+/** ...as gaps (the stretches out to the edges), for the medians and lines */
+const ruralGaps = (axis: 'ew' | 'ns', i: number): [number, number][] => {
+  const [lo, hi] = townRun(axis, i);
+  return [
+    [EXT[0] - 1, lo],
+    [hi, EXT[1] + 1],
+  ];
+};
 
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
@@ -909,21 +926,25 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const asphalt = toon('#26243f');
   // (downtown's two small east-west roads not across the Strip: layout.ts STRIP_GAP, strip.ts; its streets are strip3d.ts's)
   EW_ROADS.forEach((r, i) => {
-    for (const [a0, a1] of i in STRIP_GAP ? [[e0, STRIP_GAP[i][0]], [STRIP_GAP[i][1], e1]] : [[e0, e1]]) b.box(a0, 0, r.c - r.half, a1 - a0, 0.03, r.half * 2, asphalt);
+    const [lo, hi] = townRun('ew', i);
+    for (const [a0, a1] of i in STRIP_GAP ? [[lo, STRIP_GAP[i][0]], [STRIP_GAP[i][1], hi]] : [[lo, hi]]) b.box(a0, 0, r.c - r.half, a1 - a0, 0.03, r.half * 2, asphalt);
   });
   // (the north-south roads with no bridge end at the bank avenues: river plan step 1)
   const bridged = (r: Road) => BRIDGED_NS.includes(NS_ROADS.indexOf(r));
-  for (const r of NS_ROADS)
+  for (const r of NS_ROADS) {
+    // (the town piece only: past it a country road, rural3d.ts)
+    const [lo, hi] = townRun('ns', NS_ROADS.indexOf(r));
     if (bridged(r)) {
       // (but over Harbour Bridge, whose deck is its own: harbour3d.ts)
-      b.box(r.c - r.half, 0.002, e0, r.half * 2, 0.03, HZ0 - e0, asphalt);
-      b.box(r.c - r.half, 0.002, HZ1, r.half * 2, 0.03, e1 - HZ1, asphalt);
+      b.box(r.c - r.half, 0.002, lo, r.half * 2, 0.03, HZ0 - lo, asphalt);
+      b.box(r.c - r.half, 0.002, HZ1, r.half * 2, 0.03, hi - HZ1, asphalt);
     } else {
       // (the short ones from the Parkway: docs/mall-plan.md)
-      const top = SHORT_NS[NS_ROADS.indexOf(r)] ?? e0;
+      const top = SHORT_NS[NS_ROADS.indexOf(r)] ?? lo;
       b.box(r.c - r.half, 0.002, top, r.half * 2, 0.03, RING_HI - top, asphalt);
-      b.box(r.c - r.half, 0.002, SOUTH_ROAD, r.half * 2, 0.03, e1 - SOUTH_ROAD, asphalt);
+      b.box(r.c - r.half, 0.002, SOUTH_ROAD, r.half * 2, 0.03, hi - SOUTH_ROAD, asphalt);
     }
+  }
   const median = toon(COVER.median);
   const kerbTop = toon(KERB.town);
   /** Stretches of a road between the roads crossing it (and any other gaps, like the river) */
@@ -943,13 +964,13 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const river = (r: Road): [number, number][] => [...(bridged(r) ? [[HZ0, HZ1] as [number, number]] : [[RING_HI, SOUTH_ROAD] as [number, number]]), ...(NS_ROADS.indexOf(r) in SHORT_NS ? [[e0, SHORT_NS[NS_ROADS.indexOf(r)] + 2] as [number, number]] : [])];
   for (const r of EW_ROADS)
     if (r.lanes === 2)
-      for (const [a0, a1] of runsBetween(NS_ROADS, highwayGaps('ew', EW_ROADS.indexOf(r)))) {
+      for (const [a0, a1] of runsBetween(NS_ROADS, [...highwayGaps('ew', EW_ROADS.indexOf(r)), ...ruralGaps('ew', EW_ROADS.indexOf(r))])) {
         b.box(a0, 0, r.c - MEDIAN / 2, a1 - a0, SLAB, MEDIAN, kerbTop);
         b.box(a0, SLAB, r.c - MEDIAN / 2 + 0.06, a1 - a0, 0.005, MEDIAN - 0.12, median);
       }
   for (const r of NS_ROADS)
     if (r.lanes === 2)
-      for (const [a0, a1] of runsBetween(EW_ROADS, [...river(r), ...highwayGaps('ns', NS_ROADS.indexOf(r))])) {
+      for (const [a0, a1] of runsBetween(EW_ROADS, [...river(r), ...highwayGaps('ns', NS_ROADS.indexOf(r)), ...ruralGaps('ns', NS_ROADS.indexOf(r))])) {
         b.box(r.c - MEDIAN / 2, 0, a0, MEDIAN, SLAB, a1 - a0, kerbTop);
         b.box(r.c - MEDIAN / 2 + 0.06, SLAB, a0, MEDIAN - 0.12, 0.005, a1 - a0, median);
       }
@@ -1151,11 +1172,11 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const lines = (r: Road) => (r.lanes === 1 ? [{ off: 0, yellow: true }] : [-1, 1].map((sd) => ({ off: sd * (MEDIAN / 2 + LANE), yellow: false })));
   for (const r of EW_ROADS)
     for (const { off, yellow } of lines(r))
-      for (const [a0, a1] of runsBetween(NS_ROADS, [...highwayGaps('ew', EW_ROADS.indexOf(r)), ...stripGap(EW_ROADS.indexOf(r))]))
+      for (const [a0, a1] of runsBetween(NS_ROADS, [...highwayGaps('ew', EW_ROADS.indexOf(r)), ...stripGap(EW_ROADS.indexOf(r)), ...ruralGaps('ew', EW_ROADS.indexOf(r))]))
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(p, 0.036, r.c + off), q0, new THREE.Vector3(0.55, 0.01, 0.07)));
   for (const r of NS_ROADS)
     for (const { off, yellow } of lines(r))
-      for (const [a0, a1] of runsBetween(EW_ROADS, [...river(r), ...highwayGaps('ns', NS_ROADS.indexOf(r))]))
+      for (const [a0, a1] of runsBetween(EW_ROADS, [...river(r), ...highwayGaps('ns', NS_ROADS.indexOf(r)), ...ruralGaps('ns', NS_ROADS.indexOf(r))]))
         for (let p = a0 + 0.4; p < a1 - 0.3; p += 1.1) (yellow ? dashes : whites).push(m.clone().compose(new THREE.Vector3(r.c + off, 0.038, p), q0, new THREE.Vector3(0.07, 0.01, 0.55)));
   for (const nr of NS_ROADS)
     for (const er of EW_ROADS) {

@@ -285,7 +285,7 @@ it).
 - Not yet: a pin and panel (it isn't a place), the bell as the barriers come
   down.
 
-## Phase 6: turn lanes and signals (built, waiting on the owner's sign-off)
+## Phase 6: turn lanes and signals (built, signed off)
 
 - **Which junctions:** the busiest, measured by the routes passing: lit
   four-way crossroads where an avenue (two lanes each way) meets a street
@@ -309,6 +309,39 @@ it).
   crossing the street the left turners turn into wait while the arrow's
   lit (pedestrians.ts `redLeft()`).
 
+## Phase 7: country roads (built, waiting on the owner's sign-off)
+
+`rural.ts` (DOM-free, tested in `tests/rural.test.ts`), `ruraldress.ts`, drawn
+by `rural3d.ts` (`LAZY_DISTRICTS` id `rural`).
+
+- **Where:** every grid road that ran out past the highway to the world's
+  edge (`GRID`: the arterials and the downtown cross streets' far pieces),
+  from `RURAL.lead` past the last thing beside it (a crossing on it, a block,
+  the airport, the kart park, Lot 9, the stadium, the el's line by the Docks,
+  the highway): 16 country roads, from 215 to 441 long. `ruralSplit()` does
+  it as the plan is made: the town piece keeps its id and ends there, the
+  country road is a street of kind `rural` (`<id>-w`, `-e`, `-n`, `-s`) with
+  an unlit join (`<id>-join`; routes.ts's `join`: straight on only, the
+  lanes easing across).
+- **Two lanes:** one each way (`RURAL.half`), white edge lines and a dashed
+  centre line, a grass verge and a ditch each side, a post-and-rail fence
+  along the fields (`FENCES`, `RURAL.fence`) with a field gate now and then
+  and a dirt track over the verge to it (`GATES`); none on a bank avenue's
+  river side (`riverSide()`). The old avenue asphalt stops at the join
+  (world.ts `townRun()`).
+- **Turning loops:** each road ends in a one-way loop near the edge
+  (`<id>-turn`, round a grass island inside its fence); a bank avenue's,
+  with the river beside it, is up a short stub inland (`<id>-stub`).
+- **The odd lamp** (`RURAL_LAMPS`, at the boot): where each leaves town, by
+  its loop and every `RURAL.lampGap` between, on alternate verges.
+- **A little traffic:** the routes drive every country road out and back
+  round its loop; a car turns up on one at one spot in `RURAL_SPOTS` (6) of
+  those it could (routes.ts `SPOTS`).
+- The outskirts' trees keep off the road, its verges, ditches and fences
+  (`RURAL_KEEPS` in landuse.ts); the rolls stay flat under them.
+- The layout snapshot writes a country road's far end, its loop and stub as
+  'edge', so they move with the world's edge.
+
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
@@ -331,8 +364,9 @@ it).
 5. **The swing bridge** (Uptown to The Trenches; above, built, signed off): its streets, the river pier, the swing on Liberty's
    timetable, the barriers, the boats and the tall ship.
 6. **Turn lanes and signals** at the busiest avenue junctions (above,
-   built, waiting on the owner's sign-off).
-7. **Rural roads** past the highway.
+   built, signed off).
+7. **Rural roads** past the highway (above, built, waiting on the owner's
+   sign-off).
 8. **The concrete-era look** on the town's streets.
 9. **Polish and performance:** bench views (a junction, a straight, a
    river span, an exit), phones, the boot budget (697.9 of 700 KB before

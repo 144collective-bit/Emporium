@@ -17,6 +17,7 @@
  * drives the cars along them, round and round.
  */
 import { swingRoadY } from './swingbridge';
+import { onRural } from './rural';
 import { LANE, MEDIAN } from './layout';
 import { PLAN, distToStreet, offsetLine, raised, type Street } from './streetplan';
 import { cornerCurve, fromHighway } from './highway';
@@ -43,6 +44,8 @@ export interface Junction {
    * avenue (docs/highway-plan.md Phase 6), the avenue's ways
    */
   arrows: Phase[];
+  /** A road carries on here as another street (a grid road's town piece into its country road, rural.ts): straight on only */
+  join: boolean;
 }
 /**
  * A route a car drives, round and round: a closed centre line in its lane
@@ -128,6 +131,7 @@ export const JUNCTIONS: Junction[] = PLAN.crossings.map((c, ix) => ({
   three: c.streets.some((id) => id.startsWith('diag') || id === 'uptown-diag'),
   merge: c.streets.includes('highway') && c.streets.some((id) => id.startsWith('ramp-')),
   arrows: arrowsAt(c),
+  join: c.id.endsWith('-join') && c.streets.some((id) => PLAN.streets.find((s) => s.id === id)?.kind === 'rural'),
 }));
 
 /** The right-hand side of travel along (dx, dz) */
@@ -232,6 +236,7 @@ function turnOf(j: Junction, uIn: Pt, uOut: Pt): Turn | null {
   const cross = uOut[0] * rightOf(...uIn)[0] + uOut[1] * rightOf(...uIn)[1];
   const dot = uOut[0] * uIn[0] + uOut[1] * uIn[1];
   if (j.merge) return dot > 0.7 ? 'merge' : null;
+  if (j.join) return dot > 0.7 ? 'straight' : null;
   if (dot < -0.7 || Math.abs(cross) < 0.4) return null;
   return cross > 0 ? 'right' : 'left';
 }
@@ -308,6 +313,14 @@ function joinLegs(list: Leg[]): Pt[] {
       out = [...A, ...B.slice(k)];
       continue;
     }
+    // Straight on onto the next street (a join, rural.ts): ease across from one's lane to the other's over a few tiles
+    if (list[i - 1].turn === 'straight') {
+      const [e, s0] = [A[A.length - 1], B[0]];
+      const [uA, uB] = [dir(A[A.length - 2], e), dir(s0, B[1])];
+      A.pop();
+      out = [...A, [e[0] - uA[0] * 3, e[1] - uA[1] * 3], [s0[0] + uB[0] * 3, s0[1] + uB[1] * 3], ...B.slice(1)];
+      continue;
+    }
     const a0 = A[A.length - 2];
     const uA = dir(a0, A[A.length - 1]);
     const uB = dir(B[0], B[1]);
@@ -342,7 +355,8 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
   const legs: (Leg & { first: State; last: State; lastIx: number; inMerge: boolean; states: State[] })[] = [];
   moves.forEach((m, k) => {
     const prev = legs.at(-1);
-    if (prev && moves[k - 1].turn === 'straight') {
+    // (straight on along the same way; at a join, rural.ts, straight on onto the next street is a leg of its own)
+    if (prev && moves[k - 1].turn === 'straight' && m.from.w === prev.first.w) {
       [prev.last, prev.lastIx] = [m.from, k];
       prev.states.push(m.from);
     }
@@ -799,12 +813,16 @@ function allRoutes(): Route[] {
  * road (life.ts keeps the traffic round the camera: a car that's drifted far
  * off is put back at one of these near you, out of sight)
  */
+/** On the country roads, one spot in this many (rural.ts: a little traffic out there) */
+export const RURAL_SPOTS = 6;
 export const SPOTS: { r: number; p: number; x: number; z: number; y: number }[] = ROUTES.flatMap((route, ri) => {
   const out: { r: number; p: number; x: number; z: number; y: number }[] = [];
   for (let p = 0; p < route.len; p += 7) {
     // Not inside a junction
     if (route.stops.some((s) => p > s.enter - 3 && p < s.exit + 2)) continue;
     const q = pointOn(route, p, 0).at;
+    // (a little traffic on the country roads: one spot in six, rural.ts)
+    if (onRural(q[0], q[1], 1) && Math.round(p / 7) % RURAL_SPOTS) continue;
     // (`y`: the road's height there, up on the raised highway or a ramp)
     out.push({ r: ri, p, x: q[0], z: q[1], y: heightOn(route, p) });
   }
