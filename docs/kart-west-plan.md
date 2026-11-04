@@ -80,7 +80,7 @@ owner has looked**.
    the old one renamed Starlight Mall; the exits' names; places, the world
    map, the bounds the City view pans in, the seam map, the ground, the
    clearing rule and the rolls; the layout snapshot rewritten on purpose.
-2. **Clipping:** a test for every kind of overlap (the track's surfaces
+2. **Clipping** (built): a test for every kind of overlap (the track's surfaces
    against the supports, the deck's headroom, the tunnel's walls, every
    barrier, fence, stand, bank, tree and lamp; karts' boxes against the
    deck and tunnel in the sim; Degen's pose inside each kart; the chase
@@ -137,3 +137,37 @@ owner has looked**.
   luck: the routes' seeded drives came out differently with the new streets.
 - The layout snapshot was rewritten on purpose. Only the kart park's spawn,
   roads, loop, bays, fence, hut door, circuit and gate moved.
+
+## What Phase 2 built
+
+The test is `tests/kartclip.test.ts`. What it found, and the fixes:
+
+- **The tunnel:** the tube's inside wall stood 0.3 past the kerb, and the
+  sim lets a kart's middle reach the kerb's edge, so its side went 0.18
+  into the wall. The tube is now `TUBE_R` (kerb's edge plus 1.15, the
+  inside 0.85 past it), its feet carried down to the run-off's slope.
+- **The flyover:** the deck reached 0.35 past the kerb, so a kart at the
+  kerb's edge stuck 0.13 out through the railing. The deck is now
+  `DECK_OUT` (kerb's edge plus 0.8), its columns out with it
+  (`SUPPORT_OUT`).
+- **The barriers:** a kart was put back only half a tile past the
+  run-off, after its side had gone a tile into the tyres and the armco.
+  `RESET_AT` is now inside the run-off's edge, and the tyre walls and the
+  armco stand just past where a kart can reach, from every stretch of
+  track (one tyre wall had stood 5.1 from another stretch).
+- **Karts into karts:** karts bumped as one circle of 0.5, but they're
+  1.3 long, so a nose went 0.3 into the kart ahead. They now bump as two
+  circles each, nose and tail (`KART_BODY`).
+- **The camera:** behind a kart in the tunnel it swung out through the
+  tube in the turns, and under the flyover it went up into the slab at
+  speed. `camRoom()` keeps it inside the tube, under the deck and over
+  the ground.
+- **The furniture:** the marshal posts and the boards were placed in the
+  drawing. Nothing kept the boards off the armco, the banks' slopes or
+  each other, and some turns' numbers were missing or doubled. They're
+  now `kartside.ts`: every turn numbered once each way, everything clear
+  of everything, and the chevrons on the right of the track turned round
+  to face it (they had faced away).
+- **The driver:** his knees sit behind the wheel's rim and above the
+  floor, and his elbows and knees stay inside the kart. Already true;
+  now tested.

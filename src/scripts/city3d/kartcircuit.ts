@@ -38,8 +38,32 @@ export const KERB = 0.5;
 export const RUNOFF = 3;
 /** From the centre line to the run-off's outer edge: nothing solid stands closer */
 export const CLEAR = TRACK_HALF + KERB + RUNOFF;
+/**
+ * Beyond this far from the centre line a kart is put back on the track (kart-sim.ts): far enough out that its side
+ * has crossed most of the run-off, short of the tyre walls by a hand, so a kart never drives into a barrier it can't
+ * touch (docs/kart-west-plan.md Phase 2: it was half a tile past the run-off, and a kart's side went a tile into the
+ * tyres and the armco before it was put back)
+ */
+export const RESET_AT = CLEAR - KART_W / 2 - 0.15;
 /** The flyover's deck over the diagonal it crosses */
 export const FLY_H = 2.6;
+/**
+ * The flyover's deck: how deep its slab is under the asphalt, how far out it reaches from the centre line and its
+ * railing's height. It reaches well past where a kart's side can get before the sim puts it back (the kerb's edge plus
+ * half a kart), so no kart ever pokes through the railing (docs/kart-west-plan.md Phase 2: it was 0.35 past the kerb,
+ * and a kart at the kerb's edge stuck 0.13 out through it)
+ */
+export const DECK_DEPTH = 0.35;
+export const DECK_OUT = TRACK_HALF + KERB + 0.8;
+export const RAIL_H = 0.9;
+/**
+ * The tunnel's tube: its radius round the centre line at the asphalt and its wall's thickness. The inside wall stands
+ * clear of a kart scraping along the sim's wall (the kerb's edge, a kart's half width more) with room for the driver's
+ * head and the chase camera (it was 0.3 past the kerb, and a kart's side went 0.18 into it)
+ */
+export const TUBE_R = TRACK_HALF + KERB + 1.15;
+export const TUBE_T = 0.3;
+export const TUBE_IN = TUBE_R - TUBE_T;
 /** The sweepers' banking (the surface's slope across the track) and the centre line's lift so the low edge rests on the ground */
 export const BANK = 0.28;
 export const BANK_H = BANK * TRACK_HALF;
@@ -299,6 +323,9 @@ export const GANTRY = (() => {
  * The flyover's supports: every six tiles along the deck where it's up, a column either side just past
  * the deck's edge, and never in the run-off of the track below (so the span over it is open).
  */
+/** How far past the deck's edge its columns stand (their middles), and their half width */
+export const SUPPORT_OUT = 0.35;
+export const SUPPORT_HALF = 0.22;
 export const SUPPORTS: { x: number; z: number; h: number }[] = (() => {
   const c = CIRCUIT;
   const out: { x: number; z: number; h: number }[] = [];
@@ -310,8 +337,8 @@ export const SUPPORTS: { x: number; z: number; h: number }[] = (() => {
     const f = frame(c, s);
     if (!(f.flags & F.deck) || f.y < 0.8) continue;
     for (const side of [1, -1]) {
-      const x = f.x + f.nx * (TRACK_HALF + KERB + 0.7) * side;
-      const z = f.z + f.nz * (TRACK_HALF + KERB + 0.7) * side;
+      const x = f.x + f.nx * (DECK_OUT + SUPPORT_OUT) * side;
+      const z = f.z + f.nz * (DECK_OUT + SUPPORT_OUT) * side;
       if (!nearGround(x, z)) out.push({ x, z, h: f.y });
     }
   }
@@ -365,4 +392,62 @@ export function circuitSurfaceAt(x: number, z: number, yNow: number): { y: numbe
     best = { y, roll: Math.abs(lat) <= TRACK_HALF + KERB ? f.roll : 0 };
   }
   return best;
+}
+
+/** How far the race camera keeps from the tunnel's wall, the deck's underside and the ground */
+export const CAM_GAP = 0.3;
+/**
+ * The race camera's room (docs/kart-west-plan.md Phase 2): a chase camera wanted at x, y, z behind a kart at kx, ky,
+ * kz, moved where it can be. With the kart in the tunnel the camera's pulled inside the tube (it swung out through
+ * its wall in the turns, and from outside the tube the kart's hidden); under the flyover, with the kart on the run
+ * below, it's kept under the deck's slab (it went up into it at speed); everywhere it stays over the circuit's ground.
+ */
+export function camRoom(x: number, y: number, z: number, kx: number, ky: number, kz: number): [number, number, number] {
+  const c = CIRCUIT;
+  const n = c.x.length;
+  let [cx, cy, cz] = [x, y, z];
+  // (the tube's drawn over its samples and the one after the last, kartgrounds3d.ts runs())
+  const tube = (i: number) => !!(c.flags[i] & F.tunnel) || !!(c.flags[(i - 1 + n) % n] & F.tunnel);
+  /** The sample a point's beside (its stretch of track, not the next one's), within `reach` across, near height `y` */
+  const beside = (px: number, pz: number, py: number, reach: number, keep: (i: number) => boolean) => {
+    for (let i = 0; i < n; i++) {
+      if (!keep(i) || (c.x[i] - px) ** 2 + (c.z[i] - pz) ** 2 > (reach + 1) ** 2 || Math.abs(c.y[i] - py) > TUBE_R + 2) continue;
+      const f = frame(c, i * c.step);
+      const lat = (px - f.x) * f.nx + (pz - f.z) * f.nz;
+      const ahead = (px - f.x) * f.tx + (pz - f.z) * f.tz;
+      if (Math.abs(ahead) <= c.step * 0.6 && Math.abs(lat) <= reach) return { f, lat, ahead };
+    }
+    return null;
+  };
+  const kartIn = !!beside(kx, kz, ky, TUBE_IN, tube);
+  const inTube = beside(cx, cz, cy, kartIn ? TUBE_R + 4 : TUBE_R + 0.2, tube);
+  if (inTube && (kartIn || Math.hypot(inTube.lat, cy - inTube.f.y) < TUBE_R + 0.2)) {
+    // In the tube: as far from its axis (the centre line at the asphalt) as the wall less the gap, at most
+    const { f, lat, ahead } = inTube;
+    const up = Math.max(0, cy - f.y);
+    const r = Math.hypot(lat, up);
+    const most = TUBE_IN - CAM_GAP;
+    if (r > most) {
+      const k = most / r;
+      cx = f.x + f.nx * lat * k + f.tx * ahead;
+      cz = f.z + f.nz * lat * k + f.tz * ahead;
+      cy = f.y + up * k;
+    }
+  }
+  // Under the deck with the kart below: under its slab
+  if (ky < 1)
+    for (let i = 0; i < n; i++) {
+      if (!(c.flags[i] & F.deck) || c.y[i] < 0.6 || (c.x[i] - cx) ** 2 + (c.z[i] - cz) ** 2 > (DECK_OUT + 1) ** 2) continue;
+      const f = frame(c, i * c.step);
+      const lat = (cx - f.x) * f.nx + (cz - f.z) * f.nz;
+      const ahead = (cx - f.x) * f.tx + (cz - f.z) * f.tz;
+      if (Math.abs(lat) < DECK_OUT + 0.2 && Math.abs(ahead) <= c.step * 0.6 && ky < f.y - 1) cy = Math.min(cy, f.y - DECK_DEPTH - CAM_GAP);
+    }
+  // Over the ground: the circuit's where it's on it, the lawn's elsewhere
+  // (the stretch nearest the kart's height: the deck with the kart up on it, the run below with the kart under it)
+  for (const yNow of [ky, ky + 0.5]) {
+    const surf = circuitSurfaceAt(cx, cz, yNow);
+    cy = Math.max(cy, (surf ? surf.y : 0) + CAM_GAP);
+  }
+  return [cx, cy, cz];
 }

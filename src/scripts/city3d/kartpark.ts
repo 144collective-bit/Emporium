@@ -39,6 +39,12 @@ export const toLocal = ([x, z]: Pt): Pt => [x - X0, z - Z0];
 export const KART_R = 0.5;
 export const KART_L = 1.25;
 export const KART_W = 0.95;
+/**
+ * A kart's body for bumping: two circles along it (offsets from its middle along its nose, and their radius) that
+ * cover it nose to tail and side to side, so a kart coming up behind another stops at its tail, not 0.3 inside it
+ * (docs/kart-west-plan.md Phase 2: one circle of KART_R let the noses go into the karts ahead)
+ */
+export const KART_BODY = { r: 0.48, front: 0.27, rear: -0.14 } as const;
 /** The least headroom a deck leaves over the lane it crosses */
 export const BRIDGE_H = 2.4;
 /** Samples every half tile along a centre line */

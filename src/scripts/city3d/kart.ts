@@ -38,7 +38,8 @@ import type { Sfx } from './combat';
 import type { ClassId } from './catalog';
 import { COUNTDOWN, CUPS, NO_INPUT, T, TICK, createKartSim, tune, type CupId, type KartEvent, type KartInput, type KartSim, type Racer } from './kart-sim';
 import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } from './kart-types';
-import { COURSES, HUT_DOOR, type Course, type CourseId, type Cond } from './kartcircuit';
+import { CAM_GAP, COURSES, HUT_DOOR, camRoom, type Course, type CourseId, type Cond } from './kartcircuit';
+import { bankY } from './kartfacility';
 import { F, along } from './kartpark';
 import { createKart, type Kart } from './karts';
 import { fx, glowMat, glowTex } from './kit';
@@ -349,6 +350,11 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       camPos.copy(side).lerp(goal, u);
     } else if (!camReady) camPos.copy(goal);
     else camPos.lerp(goal, damp(10, dt));
+    // (never through the tunnel's wall, up into the flyover's deck or under the ground and the banks: kartcircuit.ts)
+    if (!seat) {
+      const [rx, ry, rz] = camRoom(camPos.x, camPos.y, camPos.z, p.x, p.y, p.z);
+      camPos.set(rx, Math.max(ry, bankY(rx, rz) + CAM_GAP), rz);
+    }
     camReady = true;
     camera.position.copy(camPos);
     if (shake > 0 && !d.reduced) {

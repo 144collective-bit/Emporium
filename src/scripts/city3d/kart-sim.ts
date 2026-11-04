@@ -30,8 +30,8 @@
  *   placed by where they are. Prizes and records are paid by tycoon.ts
  *   (`finishKartRace`), not here.
  */
-import { COURSES, CLEAR, GRID, KERB, LAPS, TRACK_HALF, enclosed, gridSlots, groundAt, type Cond, type CourseId } from './kartcircuit';
-import { F, KART_R, along, at, frame, locate, wrapS } from './kartpark';
+import { COURSES, GRID, RESET_AT, KERB, LAPS, TRACK_HALF, enclosed, gridSlots, groundAt, type Cond, type CourseId } from './kartcircuit';
+import { F, KART_BODY, KART_R, along, at, frame, locate, wrapS } from './kartpark';
 import { KART_CLASSES, type ClassId } from './catalog';
 import { KART_SPECS, type KartId } from './mykart';
 
@@ -45,8 +45,8 @@ export const RUNOFF_BOOST_CAP = 0.7;
 export const RUNOFF_GRIP = 0.5;
 /** Rain takes this share of the grip away everywhere */
 export const RAIN_GRIP = 0.7;
-/** Beyond this far from the centre line (or off the deck), a kart is put back on the track */
-export const RESET_AT = CLEAR + 0.5;
+/** Beyond this far from the centre line (or off the deck), a kart is put back on the track (kartcircuit.ts) */
+export { RESET_AT };
 /** How long a kart put back stays stopped (the view fades it out and in) */
 export const RESET_T = 0.9;
 
@@ -602,10 +602,19 @@ export function createKartSim(setup: RaceSetup) {
         const p = racers[a];
         const q = racers[b];
         if (Math.abs(p.y - q.y) > 0.9 || p.resetT > 0 || q.resetT > 0) continue;
-        const dx = q.x - p.x;
-        const dz = q.z - p.z;
-        const d = Math.hypot(dx, dz);
-        const min = KART_R * 2;
+        // (the nearest pair of their body circles, nose and tail)
+        if (Math.hypot(q.x - p.x, q.z - p.z) > (KART_BODY.r + KART_BODY.front) * 2 + 0.1) continue;
+        let dx = 0;
+        let dz = 0;
+        let d = Infinity;
+        for (const a of [KART_BODY.front, KART_BODY.rear])
+          for (const b of [KART_BODY.front, KART_BODY.rear]) {
+            const ex = q.x + Math.cos(q.yaw) * b - (p.x + Math.cos(p.yaw) * a);
+            const ez = q.z - Math.sin(q.yaw) * b - (p.z - Math.sin(p.yaw) * a);
+            const e = Math.hypot(ex, ez);
+            if (e < d) [dx, dz, d] = [ex, ez, e];
+          }
+        const min = KART_BODY.r * 2;
         if (d >= min || d < 1e-4) continue;
         const nx = dx / d;
         const nz = dz / d;

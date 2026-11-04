@@ -29,8 +29,8 @@
  * grandstand, the terrace's stairs, the floodlight masts, the arch's posts
  * and the parked cars; `KART_RECTS` keep the outskirts' trees off it all.
  */
-import { CIRCUIT, CLEAR, GANTRY, PIT_HALF, PIT_LANE, SITE, SUPPORTS, enclosed } from './kartcircuit';
-import { EW0, GATE, KART_PARK, LOOP, ROAD, frame, toLocal, toWorld, type Line, type Pt } from './kartpark';
+import { CIRCUIT, CLEAR, GANTRY, PIT_HALF, PIT_LANE, RESET_AT, SITE, SUPPORTS, enclosed } from './kartcircuit';
+import { EW0, GATE, KART_PARK, KART_W, LOOP, ROAD, frame, toLocal, toWorld, type Line, type Pt } from './kartpark';
 import type { Box } from './solids';
 import type { Rect } from './tiles';
 
@@ -142,21 +142,27 @@ export function clearAt(u: number, v: number, margin: number, keepOff: LRect[] =
 
 /* ---------- Trackside: armco, tyre walls, catch fencing ---------- */
 
-/** How far out from the centre line the armco and the tyre walls stand (past the run-off's edge) */
-export const ARMCO_OUT = CLEAR + 0.45;
-export const TYRE_OUT = CLEAR + 0.05;
-/** The armco's height, and a tyre stack's (three tyres) */
+/** The armco's height, and a tyre stack's (three tyres) radius */
 export const ARMCO_H = 0.75;
 export const TYRE_R = 0.3;
+/**
+ * How far out from the centre line the tyre walls and the armco stand: the tyres' inside a hand past the furthest a
+ * kart's side gets before it's put back (`RESET_AT`), the armco behind them (docs/kart-west-plan.md Phase 2)
+ */
+export const TYRE_OUT = RESET_AT + KART_W / 2 + 0.1 + TYRE_R;
+export const ARMCO_OUT = TYRE_OUT + TYRE_R + 0.25;
 
-/** One side of the circuit at a sample: where a barrier at `out` stands, if it can */
-function sidePoint(i: number, side: number, out: number): Pt | null {
+/**
+ * One side of the circuit at a sample: where a barrier at `out` stands, if it can; `least` is the nearest any stretch
+ * of track may come to it (so a kart on another stretch is put back before its side reaches it)
+ */
+function sidePoint(i: number, side: number, out: number, least: number): Pt | null {
   const c = CIRCUIT;
   const f = frame(c, i * c.step);
   if (enclosed(f)) return null;
   const p: Pt = [f.x + f.nx * out * side, f.z + f.nz * out * side];
   // Clear of every other stretch's run-off (the infield's tight spots, the inside of a bend folding over itself)
-  if (lineDistance(c, p[0], p[1]) < out - 0.2) return null;
+  if (lineDistance(c, p[0], p[1]) < Math.max(out - 0.2, least)) return null;
   // ...the pit lane where it crosses the run-off, the gantry's posts, the flyover's columns
   if (lineDistance(PIT_LANE, p[0], p[1]) < PIT_HALF + 0.8) return null;
   if (GANTRY.posts.some((g) => Math.hypot(g.x - p[0], g.z - p[1]) < 0.9)) return null;
@@ -167,22 +173,22 @@ function sidePoint(i: number, side: number, out: number): Pt | null {
   return p;
 }
 /** Runs of points (world) along one side where `keep` holds, about `gap` apart, at least `min` points long */
-function sideRuns(side: number, out: number, gap: number, min: number, keep: (i: number) => boolean = () => true): Pt[][] {
+function sideRuns(side: number, out: number, least: number, gap: number, min: number, keep: (i: number) => boolean = () => true): Pt[][] {
   const c = CIRCUIT;
   const n = c.x.length;
   const runs: Pt[][] = [];
   let cur: Pt[] = [];
   // Start where a run breaks, so none wraps round the start
   let start = 0;
-  while (start < n && sidePoint(start, side, out) && keep(start)) start++;
+  while (start < n && sidePoint(start, side, out, least) && keep(start)) start++;
   for (let k = 0; k <= n; k++) {
     const i = (start + k) % n;
-    const p = keep(i) ? sidePoint(i, side, out) : null;
+    const p = keep(i) ? sidePoint(i, side, out, least) : null;
     const last = cur[cur.length - 1];
     // (a point at least `gap` on from the last; the run's last point always, so it ends where it ends)
     if (p && (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= gap)) cur.push(p);
     else if (!p && cur.length) {
-      const prev = keep((i - 1 + n) % n) ? sidePoint((i - 1 + n) % n, side, out) : null;
+      const prev = keep((i - 1 + n) % n) ? sidePoint((i - 1 + n) % n, side, out, least) : null;
       if (prev && prev !== cur[cur.length - 1] && Math.hypot(prev[0] - cur[cur.length - 1][0], prev[1] - cur[cur.length - 1][1]) > 0.3) cur.push(prev);
     }
     if ((!p || k === n) && cur.length) {
@@ -195,9 +201,9 @@ function sideRuns(side: number, out: number, gap: number, min: number, keep: (i:
 /** Which side a bend's outside is on (left positive) at a sample, 0 on the straights and gentle bends */
 const outsideAt = (i: number) => (Math.abs(CIRCUIT.k[i]) > 0.06 ? -Math.sign(CIRCUIT.k[i]) : 0);
 /** The armco: runs of posts two tiles apart (world), both sides */
-export const BARRIERS: Pt[][] = [1, -1].flatMap((side) => sideRuns(side, ARMCO_OUT, 2, 3));
+export const BARRIERS: Pt[][] = [1, -1].flatMap((side) => sideRuns(side, ARMCO_OUT, RESET_AT + KART_W / 2 + 0.15, 2, 3));
 /** The tyre walls: stacks a tyre apart round the outside of the bends, in front of the armco (world) */
-export const TYRE_WALLS: Pt[][] = [1, -1].flatMap((side) => sideRuns(side, TYRE_OUT, 0.62, 6, (i) => outsideAt(i) === side));
+export const TYRE_WALLS: Pt[][] = [1, -1].flatMap((side) => sideRuns(side, TYRE_OUT, RESET_AT + KART_W / 2 + 0.05 + TYRE_R, 0.62, 6, (i) => outsideAt(i) === side));
 /** The catch fencing: straight runs (local, from and to) in front of the grandstand and along each bank's front, and its height */
 export const CATCH_H = 3.2;
 export const CATCH: [Pt, Pt][] = [
