@@ -4341,6 +4341,17 @@ it and has been retired completely. Build only on what's here.
   wallet. It never sends a transaction. No explorer or wallet-brand links;
   only the confirmed links in `src/data/site.ts` are linked.
 
+## Player accounts and cloud saves (planned, nothing built yet)
+
+- The owner's call (2026-11): a wallet login, a profile and the whole save
+  (progress, look, vehicles, settings, kart ghosts) on the Cloudflare Worker,
+  following the player to any device; planned in `docs/account-plan.md` in
+  phases, each with the owner's sign-off; keep it up to date. It changes
+  three rules here once built (not before): degenemporium.com gets wallet
+  login and cloud saves (still no multiplayer), account names are typed by
+  the player (unique, unfiltered, the owner's call), and a wallet carries the
+  whole save. An account always starts fresh; the guest save stays as it is.
+
 ## Multiplayer (beta, testing)
 
 - **Being tested on workers.dev only** (the owner's call): multiplayer runs
