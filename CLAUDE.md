@@ -1494,7 +1494,19 @@ it and has been retired completely. Build only on what's here.
   the ramps' piers (`RAMP_PIER_SOLIDS`); drive-sim.ts's `up` skips the
   river's walls under the deck; no getting out up there; viaduct3d.ts draws
   the ramps (`rampSegs()`: asphalt, edge lines, parapets, on piers where high,
-  a filled bank where low).
+  a filled bank where low). Phase 4 (signs and the look) is built:
+  `viadress.ts` (DOM-free): green gantries before every off-ramp
+  (`GANTRIES`: an advance one and one where it leaves, kept off the metro
+  overhead, `METRO_S`, and the deck's lamps; one sign atlas
+  `viaduct-signs`, the exits' own made-up names, `EXIT_SIGNS`), a sign by
+  every on-ramp's foot (`RAMP_SIGNS`), sound walls on the parapet past homes
+  (`SOUND_WALLS`, `soundWall()`), under the deck between its piers
+  (`UNDER`: car parks in town with their cars, `UNDER_CARS`; lock-ups by
+  the yards and the Docks; half courts by The Trenches and Lot 9, murals on
+  the piers there, `MURALS`, made-up words; `UNDER_SOLIDS` in `SOLIDS`), the
+  soffit's lights over every street under it (`UNDER_LIGHTS`, pools at the
+  boot) and lamps up the ramps (`RAMP_LAMPS`, at the boot), and each exit's
+  number on the world map (`exitBadge()`); drawn by viaduct3d.ts.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
@@ -1890,7 +1902,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk; 700.4 with the raised highway's Phase 1b, the viaduct's shape read at the boot, the budget raised to 720 under the owner's standing call). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk; 700.4 with the raised highway's Phase 1b, the viaduct's shape read at the boot, the budget raised to 720 under the owner's standing call; 706.8 with its Phases 2-4, the ramps' routes and the signs' data). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,

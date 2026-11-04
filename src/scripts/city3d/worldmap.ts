@@ -31,6 +31,8 @@ import { HIGHWAY_BOX } from './highway';
 import { STADIUM_AREA } from './stadium';
 import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, SHOPS as MALL_SHOPS } from './mall';
 import { TERRAIN_RECT, heightAt } from './terrain';
+import { EXITS } from './viaduct';
+import { exitBadge } from './viadress';
 
 export interface WorldMapDeps {
   /** Where you are and which way you face (walking), else where the camera looks */
@@ -64,6 +66,7 @@ const C = {
   path: '#3f6f5a',
   road: '#3a3866',
   highway: '#4d4a86',
+  exit: '#1f7a46',
   airport: '#202c40',
   runway: '#57537f',
   circuit: '#ff5aa5',
@@ -255,7 +258,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     ctx.lineJoin = 'round';
     for (const s of PLAN.streets) {
       if (s.kind === 'alley') continue;
-      ctx.strokeStyle = s.kind === 'highway' ? C.highway : C.road;
+      ctx.strokeStyle = s.kind === 'highway' || s.kind === 'ramp' ? C.highway : C.road;
       ctx.lineWidth = Math.max(s.kind === 'highway' ? 2.5 : 1, s.half * 2 * view.s);
       poly(s.pts);
       ctx.stroke();
@@ -288,6 +291,24 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       [MONO.x1, MONO.z],
     ]);
     ctx.stroke();
+    // The raised highway's exits: a green badge with its number by each (docs/highway-plan.md Phase 4)
+    ctx.font = '700 10px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const e of EXITS) {
+      const [x, y] = toScreen(...exitBadge(e));
+      if (x < -20 || y < -20 || x > w + 20 || y > h + 20) continue;
+      ctx.fillStyle = C.exit;
+      ctx.strokeStyle = C.edge;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(x - 8, y - 7, 16, 14, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(String(e.n), x, y + 0.5);
+    }
+    ctx.textAlign = 'start';
     // The river bus's loop, dashed
     ctx.strokeStyle = C.riverbus;
     ctx.lineWidth = Math.max(1.5, 0.6 * view.s);

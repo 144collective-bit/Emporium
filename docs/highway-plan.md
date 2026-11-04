@@ -154,7 +154,7 @@ each with the owner's sign-off; keep this file up to date.
 - The snapshot was rewritten on purpose: the slip lanes gone, the park's
   north gate added, the footbridge gone.
 
-## Phase 3: the exits (built, waiting on the owner's sign-off)
+## Phase 3: the exits (built, signed off)
 
 - **In the street plan:** every ramp of `RAMPS` is a one-way street of kind
   `ramp` (`ramp-exit<n>-<in|out>-<shape>`, its heights in `ys`), the old
@@ -199,6 +199,43 @@ each with the owner's sign-off; keep this file up to date.
   filled bank where it's low, the deck's parapet broken over each taper.
 - Signs, gantries and exit numbers come in Phase 4.
 
+## Phase 4: signs and the look (built, waiting on the owner's sign-off)
+
+All the data is `viadress.ts` (DOM-free, tested in `tests/viaduct.test.ts`),
+drawn by viaduct3d.ts in the viaduct's chunk (sites); made-up copy only (the
+exits' own names, `EXIT_SIGNS`), no number but an exit's.
+
+- **Gantries** (`GANTRIES`, `GANTRY`): two over the carriageway before every
+  off-ramp, one 60 back (`advance`: EXIT n on a yellow tab and the exit's
+  name) and one where it leaves (`exit`: EXIT n and an arrow up and off),
+  steel posts on the median barrier and the parapet, a beam across, the
+  green panel over that side's lanes facing the traffic coming; each nudged
+  up or down the road off the metro where it rides over (`METRO_S`,
+  `GANTRY.metro`) and the deck's lamps. A RING HIGHWAY sign by every
+  on-ramp's foot (`RAMP_SIGNS`). One sign atlas (`viaduct-signs`), lit at
+  night.
+- **Sound walls** (`SOUND_WALLS`, `SOUND_WALL`, `soundWall()`): pale panels
+  on the parapet between steel posts, 2.6 over the deck, on the side facing
+  homes (Sunridge, The Trenches, Lot 9; Uptown North's towers stand back
+  past the slip ramps, so none there), broken where a ramp runs alongside
+  or tapers in and under the metro; the steel rail is left off where
+  they stand. Elsewhere the parapets stay open.
+- **Under the deck** (`UNDER`, in the stretches between piers clear of every
+  street, the water, the tunnel, the stadium's walk, the metro and the
+  hills): car parks by the arterials in town (`park`: bays either side of
+  the piers' line, cars in about seven in ten, `UNDER_CARS`), lock-ups by
+  Southfield Yards and the Docks (`store`, `LOCKUP`, roll-up doors), and
+  half courts by The Trenches and Lot 9 (`court`, every third stretch:
+  green asphalt, lines, a hoop); murals with made-up words on both faces of
+  every pier there (`MURALS`, `MURAL_ART`, one atlas `viaduct-murals`).
+  `UNDER_SOLIDS` (in `SOLIDS`: the lock-ups, the cars, the hoops' posts).
+- **Night lighting:** lights on the soffit over every street passing under
+  (`UNDER_LIGHTS`, two each, their pools at the boot), street lamps up the
+  ramps on their outer sides at their height (`RAMP_LAMPS`, every
+  `RAMP_LAMP_GAP`, at the boot with the deck's).
+- **The world map:** the ramps in the highway's colour and each exit's
+  number on a green badge by its ramps (`exitBadge()`).
+
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
@@ -212,12 +249,12 @@ each with the owner's sign-off; keep this file up to date.
    under); the ring's own traffic up on the deck; the metro's rises (its
    height profile, the raised stations); the stadium's footbridge retired
    (a zebra on Stadium Road); Lot 9's tunnel kept, its ends under the deck.
-3. **The exits** (above, built, waiting on the owner's sign-off): the ramps and their terminals in the street plan, routes
+3. **The exits** (above, built, signed off): the ramps and their terminals in the street plan, routes
    with heights, merging and the lights at the ramps' feet; taxis; your car
    and bike up the ramps; walking kept off.
-4. **Signs and the look:** gantries and exit numbers (one sign atlas, fixed
-   made-up copy), sound walls past homes, what's under it, night lighting,
-   the world map.
+4. **Signs and the look** (above, built, waiting on the owner's sign-off):
+   gantries and exit numbers (one sign atlas, fixed made-up copy), sound
+   walls past homes, what's under it, night lighting, the world map.
 5. **The swing bridge** (Uptown to The Trenches): its streets, the river
    pier, the swing on Liberty's timetable, the barriers, the boats and the
    tall ship.

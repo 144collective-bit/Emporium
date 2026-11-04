@@ -337,3 +337,69 @@ test('up on the deck and the ramps a car drives on them; under them it stays on 
   for (const g of DECK_GAPS) assert.ok(g.s1 - g.s0 > 3 && g.s1 - g.s0 < 20 && deckGap(g.q, (g.s0 + g.s1) / 2));
   assert.ok(RAMP_PIERS.length > 10);
 });
+
+// Phase 4 (viadress.ts): the signs, the sound walls, what's under the deck and its lights
+import { GANTRIES, GANTRY, METRO_S, MURALS, RAMP_LAMPS, RAMP_SIGNS, SOUND_WALLS, UNDER, UNDER_CARS, UNDER_LIGHTS, UNDER_SOLIDS, exitBadge, gantryPanel } from '../src/scripts/city3d/viadress';
+
+test('two gantries before every off-ramp, over its own carriageway, clear of the metro overhead and the deck lamps', () => {
+  const offs = RAMPS.filter((r) => r.kind === 'off');
+  for (const r of offs) assert.equal(GANTRIES.filter((g) => g.id.startsWith(r.id + '-')).length, 2, r.id);
+  for (const g of GANTRIES) {
+    const p = gantryPanel(g);
+    // (over its lanes, under the metro wherever it's near)
+    assert.ok(Math.abs(fromHighway(p.x, p.z) - (OUTER_LANE - 0.8)) < 0.3 && p.y - 0.6 > DECK_Y + 2.9);
+    for (const m of METRO_S) assert.ok(Math.abs(sGap(m, g.s)) >= GANTRY.metro - 1e-6, `${g.id} under the metro`);
+    for (const t of Object.values(TRACKS)) for (const q of t.pts) assert.ok(Math.hypot(q[0] - p.x, q[1] - p.z) > 6, `${g.id} under the el`);
+    for (const [x, z] of DECK_LAMPS) assert.ok(Math.abs(sGap(ringS(x, z).s, g.s)) >= GANTRY.lamp - 1e-6, `${g.id} on a lamp`);
+  }
+  assert.equal(RAMP_SIGNS.length, RAMPS.filter((r) => r.kind === 'on').length);
+});
+
+test('sound walls only where homes are beside the deck, on their side, never where a ramp joins', async () => {
+  const { SUNRIDGE_RECT } = await import('../src/scripts/city3d/sunridge');
+  const { TRENCH_RECT } = await import('../src/scripts/city3d/trenches');
+  const { LOT9_RECT } = await import('../src/scripts/city3d/lot9');
+  const { NORTH_RECT } = await import('../src/scripts/city3d/uptownnorth');
+  const { deckGap } = await import('../src/scripts/city3d/viaground');
+  const homes = [SUNRIDGE_RECT, TRENCH_RECT, LOT9_RECT, NORTH_RECT];
+  const inR = (r: number[], x: number, z: number) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
+  assert.ok(SOUND_WALLS.length >= 2);
+  for (const w of SOUND_WALLS)
+    for (let s = w.s0; s < w.s1; s += 2) {
+      assert.ok([10, 20, 32].some((d) => homes.some((r) => inR(r as number[], ...ringPoint(s, w.q * (DECK_HALF + d))))), `wall at ${s} by no home`);
+      assert.ok(!deckGap(w.q, s), `wall over a ramp's gap at ${s}`);
+    }
+});
+
+test("what's under the deck stays clear of the streets under it, the water and the metro; its solids are off every street", () => {
+  const kinds = new Set(UNDER.map((u) => u.kind));
+  for (const k of ['park', 'store', 'court']) assert.ok(kinds.has(k as never), `no ${k}`);
+  const streets = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp' && s.kind !== 'alley');
+  for (const u of UNDER)
+    for (let s = u.s0; s <= u.s1; s += 1)
+      for (const o of [-4, 0, 4]) {
+        const [x, z] = ringPoint(s, o);
+        assert.ok(!inWater(x, z), `${u.kind} in the river`);
+        for (const st of streets) assert.ok(distToStreet(st, [x, z]) > st.half + 1, `${u.kind} on ${st.id}`);
+      }
+  assert.ok(UNDER_CARS.length > 0 && MURALS.length > 0);
+  for (const b of UNDER_SOLIDS) {
+    assert.ok(b[4] < DECK_Y - 1, 'under the girder');
+    for (const st of streets) assert.ok(distToStreet(st, [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]) > st.half, `solid on ${st.id}`);
+    assert.ok(SOLIDS.includes(b));
+  }
+});
+
+test('lights under the deck over every street passing under, lamps up the ramps at their height, a badge by each exit', () => {
+  assert.equal(UNDER_LIGHTS.length, RING_MEETS.length * 2);
+  for (const [x, z] of UNDER_LIGHTS) assert.ok(fromHighway(x, z) < DECK_HALF - 2);
+  assert.ok(RAMP_LAMPS.length > RAMPS.length);
+  for (const [x, z, , y] of RAMP_LAMPS) {
+    assert.ok(fromHighway(x, z) > DECK_HALF);
+    assert.ok(y > 0 && y <= DECK_Y + 0.05);
+  }
+  for (const e of EXITS) {
+    const [x, z] = exitBadge(e);
+    assert.ok(fromHighway(x, z) > DECK_HALF + 5);
+  }
+});

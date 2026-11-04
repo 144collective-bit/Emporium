@@ -9,20 +9,24 @@
  * soffit, bearings on it; down into the water over the river), and its exits' ramps (docs/highway-plan.md Phase 3:
  * each a concrete deck following its climb, its asphalt and edge lines, parapets where `rampSegs()` puts them, on
  * piers where it's high and a filled bank between walls where it's low; the deck's parapet open where one tapers in
- * or out, `deckGap()`). Its lamps stand on the median barrier (viapiers.ts
+ * or out, `deckGap()`); Phase 4 (viadress.ts): the green gantries over the carriageways before each off-ramp and the
+ * signs by the on-ramps' feet (one sign atlas, the exits' own made-up names), the sound walls past homes, and under the
+ * deck its car parks, lock-ups, courts, the murals on its piers and the lights where streets pass under. Its lamps stand on the median barrier (viapiers.ts
  * `DECK_LAMPS`, placed at the boot with the town's). Nothing on it is solid but the piers (solids.ts); the camera
  * keeps under or over the deck (`DECK_CAMERA`).
  */
 import * as THREE from 'three';
-import { Batch, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
+import { parkedCars } from './cars';
 import { site } from './tilework';
 import { LANE, MEDIAN } from './layout';
 import { HIGHWAY_HALF } from './highway';
 import { WATER_Y, inChannel, shoreY } from './river';
 import { fromHighway } from './highway';
-import { DECK_HALF, DECK_Y, GIRDER, PARAPET, PIER, RAMPS, RAMP_HALF, RING_LEN, ringAt, ringPoint, type Pt, type Ramp } from './viaduct';
+import { DECK_HALF, DECK_Y, GIRDER, OUTER_LANE, PARAPET, PIER, RAMPS, RAMP_HALF, RING_LEN, ringAt, ringPoint, type Pt, type Ramp } from './viaduct';
 import { BARRIER_TOP, JOINT_EVERY, PIERS } from './viapiers';
 import { RAMP_PARAPET, RAMP_PIER, RAMP_PIERS, deckGap, rampSegs } from './viaground';
+import { BAY, EXIT_SIGNS, GANTRIES, GANTRY, LOCKUP, MURALS, MURAL_ART, RAMP_SIGNS, SOFFIT_Y, SOUND_WALL, UNDER, UNDER_CARS, UNDER_LIGHTS, gantryPanel, soundWall, type Gantry, type Under } from './viadress';
 
 export const SELF = import.meta.url;
 
@@ -147,6 +151,182 @@ function openRuns(q: 1 | -1, s0: number, s1: number): [number, number][] {
   return out;
 }
 
+/** Within [s0, s1], the stretches with a sound wall on side q (viadress.ts) */
+function wallRuns(q: 1 | -1, s0: number, s1: number): [number, number][] {
+  return splitBy(s0, s1, (s) => soundWall(q, s));
+}
+/** ...and without one (where the rail runs along the parapet's top) */
+function railRuns(q: 1 | -1, s0: number, s1: number): [number, number][] {
+  return splitBy(s0, s1, (s) => !soundWall(q, s));
+}
+function splitBy(s0: number, s1: number, keep: (s: number) => boolean): [number, number][] {
+  const out: [number, number][] = [];
+  const n = Math.max(1, Math.ceil((s1 - s0) / 0.5));
+  let from: number | null = null;
+  for (let k = 0; k <= n; k++) {
+    const s = s0 + ((s1 - s0) * k) / n;
+    const on = keep(s);
+    if (on && from === null) from = s;
+    if ((!on || k === n) && from !== null) {
+      if (s - from > 0.05) out.push([from, s]);
+      from = null;
+    }
+  }
+  return out;
+}
+
+/* ---------- Phase 4: the signs, under the deck ---------- */
+
+/** The sign atlas: each exit's advance panel and its exit panel (a row each), then the on-ramps' sign */
+const SIGN_ROWS = EXIT_SIGNS.length * 2 + 1;
+const ROW_H = 96;
+const SIGN_TEX = canvasTex(1024, SIGN_ROWS * ROW_H, (c) => {
+  const green = '#1d6b40';
+  const row = (i: number, draw: (y: number) => void) => {
+    const y = i * ROW_H;
+    c.fillStyle = green;
+    c.fillRect(0, y, 1024, ROW_H);
+    c.strokeStyle = '#f2f0ea';
+    c.lineWidth = 5;
+    c.strokeRect(8, y + 8, 1008, ROW_H - 16);
+    draw(y);
+  };
+  const fit = (text: string, max: number, size: number) => {
+    c.font = `800 ${size}px ${FONT_DISPLAY}`;
+    const w = c.measureText(text).width;
+    if (w > max) c.font = `800 ${Math.floor((size * max) / w)}px ${FONT_DISPLAY}`;
+  };
+  EXIT_SIGNS.forEach((e, k) => {
+    // Advance: the exit's number on a yellow tab, its names
+    row(k * 2, (y) => {
+      c.fillStyle = '#f2c230';
+      c.fillRect(24, y + 20, 150, ROW_H - 40);
+      c.fillStyle = '#17161c';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      fit(`EXIT ${e.n}`, 130, 40);
+      c.fillText(`EXIT ${e.n}`, 99, y + ROW_H / 2 + 2);
+      c.fillStyle = '#f2f0ea';
+      c.textAlign = 'left';
+      fit(e.name.toUpperCase(), 800, 50);
+      c.fillText(e.name.toUpperCase(), 200, y + ROW_H / 2 + 3);
+    });
+    // Where it leaves: EXIT n and an arrow up and to the side
+    row(k * 2 + 1, (y) => {
+      c.fillStyle = '#f2f0ea';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      fit(`EXIT ${e.n}`, 600, 60);
+      c.fillText(`EXIT ${e.n}`, 420, y + ROW_H / 2 + 3);
+      c.lineWidth = 10;
+      c.strokeStyle = '#f2f0ea';
+      c.beginPath();
+      c.moveTo(800, y + 74);
+      c.lineTo(870, y + 22);
+      c.moveTo(830, y + 22);
+      c.lineTo(870, y + 22);
+      c.lineTo(870, y + 60);
+      c.stroke();
+    });
+  });
+  row(SIGN_ROWS - 1, (y) => {
+    c.fillStyle = '#f2f0ea';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    fit('RING HIGHWAY', 900, 58);
+    c.fillText('RING HIGHWAY', 512, y + ROW_H / 2 + 3);
+  });
+});
+const SIGN_MAT = siteMat('viaduct-signs', lit(new THREE.MeshBasicMaterial({ map: SIGN_TEX, toneMapped: true }), 0.95, 1.15));
+/** A sign facing n (x, z) from the atlas's row, its middle at (x, y, z), w by h */
+function sign(b: Batch, row: number, x: number, y: number, z: number, n: Pt, w: number, h: number) {
+  const g = new THREE.PlaneGeometry(w, h);
+  const [v0, v1] = [1 - (row + 1) / SIGN_ROWS + 0.002, 1 - row / SIGN_ROWS - 0.002];
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v1, 1, v1, 0, v0, 1, v0], 2));
+  b.add(g.rotateY(Math.atan2(n[0], n[1])).translate(x, y, z), SIGN_MAT);
+}
+/** The murals' atlas: a row each of made-up words in spray colours on a pale ground */
+const MURAL_TEX = canvasTex(512, MURAL_ART.length * 64, (c) => {
+  const cols = ['#e2463b', '#2f8fd6', '#f2c230', '#36b37e', '#c04fd6', '#ff7a2f', '#3fc9c9', '#e8e4f8'];
+  MURAL_ART.forEach((text, i) => {
+    const y = i * 64;
+    c.fillStyle = ['#2a2838', '#3a3156', '#2c3b4a', '#41302e'][i % 4];
+    c.fillRect(0, y, 512, 64);
+    for (let k = 0; k < 6; k++) {
+      c.fillStyle = cols[(i + k) % cols.length] + '88';
+      c.beginPath();
+      c.arc(40 + k * 90, y + 32 + ((k * 13) % 20) - 10, 26 + ((k * 7) % 12), 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = cols[i % cols.length];
+    c.strokeStyle = '#111';
+    c.lineWidth = 4;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.font = `900 ${text.length > 12 ? 34 : 42}px ${FONT_DISPLAY}`;
+    c.strokeText(text, 256, y + 34);
+    c.fillText(text, 256, y + 34);
+  });
+});
+const MURAL_MAT = siteMat('viaduct-murals', lit(new THREE.MeshBasicMaterial({ map: MURAL_TEX, toneMapped: true }), 0.85, 0.7));
+
+/** A gantry over its carriageway: posts on the median barrier and the parapet, a truss beam, the panel facing its traffic */
+function gantry(b: Batch, g: Gantry, m: { steel: THREE.Material; back: THREE.Material }) {
+  const r = ringAt(g.s);
+  const [p0, p1] = [ringPoint(g.s, g.q * 0.15), ringPoint(g.s, g.q * (DECK_HALF - 0.15))];
+  for (const [x, z] of [p0, p1]) b.box(x - 0.11, DECK_Y + 0.4, z - 0.11, 0.22, GANTRY.top - 0.4, 0.22, m.steel);
+  // The beam: two chords and the ties between, across the carriageway
+  for (const dy of [GANTRY.under + GANTRY.panel.h + 0.05, GANTRY.top - 0.15]) b.add(ringBox(g.s - g.dir * 0.2, g.q * (DECK_HALF / 2), DECK_Y + dy, 0.12, DECK_HALF - 0.1, 0.12), m.steel);
+  const pan = gantryPanel(g);
+  // (facing the traffic coming: against the way it runs)
+  const face: Pt = [-r.tx * g.dir, -r.tz * g.dir];
+  const row = EXIT_SIGNS.findIndex((e) => e.n === g.exit) * 2 + (g.kind === 'exit' ? 1 : 0);
+  const [fx, fz] = [pan.x + face[0] * 0.03, pan.z + face[1] * 0.03];
+  b.add(ringBox(g.s, g.q * (OUTER_LANE - 0.8), pan.y - GANTRY.panel.h / 2, 0.05, GANTRY.panel.w, GANTRY.panel.h), m.back);
+  sign(b, row, fx, pan.y, fz, face, GANTRY.panel.w, GANTRY.panel.h);
+}
+
+/** Under the deck between two piers: a car park's bays, lock-ups, or a court (its hoop at the far end) */
+function under(b: Batch, u: Under, m: Record<'asphalt' | 'white' | 'yellow' | 'steel' | 'lockup' | 'door' | 'court' | 'board', THREE.Material>) {
+  const Y = 0.03;
+  if (u.kind === 'park') {
+    b.add(band(-(DECK_HALF - 0.3), DECK_HALF - 0.3, u.s0, u.s1, Y), m.asphalt);
+    const n = Math.floor((u.s1 - u.s0) / BAY.len);
+    for (const q of [-1, 1]) {
+      for (let k = 0; k <= n; k++) {
+        const s = u.s0 + (k * (u.s1 - u.s0)) / n;
+        b.add(band(q > 0 ? 1.5 : -4.2, q > 0 ? 4.2 : -1.5, s - 0.05, s + 0.05, Y + 0.006), m.white);
+      }
+      b.add(band(q * 1.5 - 0.05, q * 1.5 + 0.05, u.s0, u.s1, Y + 0.006), m.white);
+    }
+  } else if (u.kind === 'store') {
+    b.add(band(-(DECK_HALF - 0.3), DECK_HALF - 0.3, u.s0, u.s1, Y), m.asphalt);
+    const n = Math.floor((u.s1 - u.s0) / (LOCKUP.w + 0.2));
+    for (let k = 0; k < n; k++)
+      for (const q of [-1, 1]) {
+        const s = u.s0 + (k + 0.5) * ((u.s1 - u.s0) / n);
+        const o = q * (LOCKUP.from + LOCKUP.d / 2);
+        b.add(ringBox(s, o, Y, LOCKUP.w, LOCKUP.d, LOCKUP.h), m.lockup);
+        // (its roll-up door on the face away from the piers, a hair proud of it)
+        b.add(ringBox(s, q * (LOCKUP.from + LOCKUP.d + 0.01), Y + 0.05, LOCKUP.w - 0.5, 0.02, LOCKUP.h - 0.45), m.door);
+      }
+  } else {
+    // A half court: its asphalt in court green, the lines, a hoop on a post at the far end
+    b.add(band(-4, 4, u.s0, u.s1, Y), m.court);
+    const line = (a0: number, a1: number, s0: number, s1: number) => b.add(band(a0, a1, s0, s1, Y + 0.006), m.white);
+    line(-4, -3.9, u.s0, u.s1);
+    line(3.9, 4, u.s0, u.s1);
+    line(-4, 4, u.s0, u.s0 + 0.1);
+    line(-4, 4, u.s1 - 0.1, u.s1);
+    line(-1.5, 1.5, u.s1 - 4.8, u.s1 - 4.7);
+    line(-1.55, -1.45, u.s1 - 4.8, u.s1);
+    line(1.45, 1.55, u.s1 - 4.8, u.s1);
+    b.add(ringBox(u.s1 - 0.6, 0, Y, 0.16, 0.16, 2.3), m.steel);
+    b.add(ringBox(u.s1 - 0.85, 0, Y + 1.85, 0.05, 1.4, 0.85), m.board);
+    b.add(ringBox(u.s1 - 1.15, 0, Y + 2.0, 0.45, 0.45, 0.03), m.yellow);
+  }
+}
+
 /** Triangles for a quad (corners in order round it), wound to face `want` */
 function quad(pos: number[], v: THREE.Vector3[], want: THREE.Vector3) {
   const n = new THREE.Vector3().subVectors(v[1], v[0]).cross(new THREE.Vector3().subVectors(v[3], v[0]));
@@ -233,7 +413,7 @@ function rampPiece(b: Batch, r: Ramp, i0: number, i1: number, m: { concrete: THR
   }
 }
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
   const concrete = toon('#c9c5d6');
   const pier = toon('#bdb9cb');
   const asphalt = toon('#2c2a3a');
@@ -242,6 +422,8 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
   const steel = toon('#7e7b90');
   const joint = toon('#55526a');
   const bearing = toon('#3b3950');
+  const wallPanel = toon('#a9a6b8');
+  const wallCap = toon('#8c889e');
 
   const n = Math.ceil(RING_LEN / STRETCH);
   const len = RING_LEN / n;
@@ -275,12 +457,24 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
         // The rail along each parapet's top on posts
         for (const side of [1, -1] as const) {
           const o = side * (DECK_HALF - 0.09);
-          for (const [a0, a1] of openRuns(side, s0, s1)) {
+          for (const [a0, a1] of openRuns(side, s0, s1).flatMap(([x0, x1]) => railRuns(side, x0, x1))) {
             b.add(sweep([[o - 0.04, DECK_Y + PARAPET + 0.3], [o + 0.04, DECK_Y + PARAPET + 0.3], [o + 0.04, DECK_Y + PARAPET + 0.36], [o - 0.04, DECK_Y + PARAPET + 0.36]], a0, a1, [o, DECK_Y + PARAPET + 0.33], true), steel);
             for (let d = Math.ceil(a0 / 2.5) * 2.5; d < a1; d += 2.5) b.add(ringBox(d, o, DECK_Y + PARAPET, 0.06, 0.06, 0.32), steel);
           }
         }
       });
+      // The sound walls past homes (viadress.ts): panels on the parapet between steel posts
+      for (const side of [1, -1] as const)
+        for (const [a0, a1] of openRuns(side, s0, s1)) {
+          const runs = wallRuns(side, a0, a1);
+          for (const [w0, w1] of runs) {
+            const o = side * (DECK_HALF - 0.14);
+            const [y0, y1] = [DECK_Y + PARAPET, DECK_Y + SOUND_WALL.top];
+            b.add(sweep([[o - 0.06, y0], [o + 0.06, y0], [o + 0.06, y1], [o - 0.06, y1]], w0, w1, [o, (y0 + y1) / 2], true), wallPanel);
+            b.add(sweep([[o - 0.08, y1 - 0.25], [o + 0.08, y1 - 0.25], [o + 0.08, y1], [o - 0.08, y1]], w0, w1, [o, y1 - 0.12], true), wallCap);
+            for (let d = Math.ceil(w0 / 3) * 3; d < w1; d += 3) b.add(ringBox(d, o, DECK_Y + PARAPET - 0.02, 0.18, 0.2, SOUND_WALL.top - PARAPET + 0.1), steel);
+          }
+        }
       // The piers: a stem with its corners cut, the hammerhead flaring out under the soffit, bearings on it, and an
       // expansion joint across the deck over every few
       for (const p of piers) {
@@ -333,6 +527,57 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null }) {
       b.build(into, { cast: true, receive: true });
     });
   }
+  // Phase 4: the gantries, the on-ramps' signs, under the deck (car parks, lock-ups, courts), the murals, the lights
+  const sm = { steel: toon('#4a5563'), back: toon('#3b4a52') };
+  for (const g of GANTRIES) {
+    const [x, z] = ringPoint(g.s, 0);
+    site(`viaduct gantry ${g.id}`, [x - DECK_HALF - 1, z - DECK_HALF - 1, x + DECK_HALF + 1, z + DECK_HALF + 1], (into) => {
+      const b = new Batch();
+      gantry(b, g, sm);
+      b.build(into, { cast: true, receive: true });
+    });
+  }
+  RAMP_SIGNS.forEach((rs, i) =>
+    site(`viaduct ramp sign ${i}`, [rs.at[0] - 2, rs.at[1] - 2, rs.at[0] + 2, rs.at[1] + 2], (into) => {
+      const b = new Batch();
+      for (const k of [-1, 1]) b.box(rs.at[0] + rs.face[1] * k * 1.1 - 0.05, 0, rs.at[1] - rs.face[0] * k * 1.1 - 0.05, 0.1, 2.2, 0.1, sm.steel);
+      sign(b, SIGN_ROWS - 1, rs.at[0] + rs.face[0] * 0.07, 1.8, rs.at[1] + rs.face[1] * 0.07, rs.face, 2.4, 0.6);
+      b.build(into, { cast: true, receive: true });
+    })
+  );
+  const um = { asphalt, white, yellow, steel: sm.steel, lockup: toon('#8a7f6a'), door: toon('#c9c5b8'), court: toon('#3f6b56'), board: toon('#e8e4f8') };
+  UNDER.forEach((u, i) => {
+    const pts = [ringPoint(u.s0, -DECK_HALF), ringPoint(u.s0, DECK_HALF), ringPoint(u.s1, -DECK_HALF), ringPoint(u.s1, DECK_HALF)];
+    site(`viaduct under ${i}`, [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))], (into) => {
+      const b = new Batch();
+      under(b, u, um);
+      b.build(into, { cast: false, receive: true });
+    });
+  });
+  MURALS.forEach((mu, i) =>
+    site(`viaduct mural ${i}`, [mu.at[0] - 2, mu.at[1] - 2, mu.at[0] + 2, mu.at[1] + 2], (into) => {
+      const b = new Batch();
+      const r = ringAt(mu.s);
+      const n: Pt = [r.tx * mu.face, r.tz * mu.face];
+      const g = new THREE.PlaneGeometry(1.6, 1.4);
+      const row = mu.art;
+      const [v0, v1] = [1 - (row + 1) / MURAL_ART.length + 0.004, 1 - row / MURAL_ART.length - 0.004];
+      g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v1, 1, v1, 0, v0, 1, v0], 2));
+      b.add(g.rotateY(Math.atan2(n[0], n[1])).translate(mu.at[0] + n[0] * (PIER.along / 2 + 0.012), 0.95, mu.at[1] + n[1] * (PIER.along / 2 + 0.012)), MURAL_MAT);
+      b.build(into, { cast: false, receive: true });
+    })
+  );
+  const glow = neon('#fff1c9', 0.25, 1.3);
+  UNDER_LIGHTS.forEach(([x, z], i) =>
+    site(`viaduct under light ${i}`, [x - 1, z - 1, x + 1, z + 1], (into) => {
+      const b = new Batch();
+      b.box(x - 0.35, SOFFIT_Y - 0.1, z - 0.15, 0.7, 0.08, 0.3, sm.steel);
+      b.box(x - 0.3, SOFFIT_Y - 0.115, z - 0.1, 0.6, 0.015, 0.2, glow);
+      b.build(into, { cast: false, receive: true });
+    })
+  );
+  // (the car parks' cars on the main thread, with the city's other parked cars)
+  if (scene) parkedCars(scene, 0.03, UNDER_CARS);
   // The exits' ramps: a site every so many of their points
   const PIECE = 14;
   for (const r of RAMPS)
