@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { DECK_Y, STATIONS, carAt, pointOn, rideAt, sideOf, stationAt, timetableAt, type Run, type Station, type TrackId } from './metro';
 import { PLATFORM_Y, type buildMetro } from './metro3d';
 import type { Ride } from './walk';
+import { rideView } from './views';
 
 type Metro = ReturnType<typeof buildMetro>;
 
@@ -68,12 +69,22 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
   let total = 0;
   const cam = new THREE.Vector3();
   const look = new THREE.Vector3();
-  /** Alongside the train at its height, on the side away from the platforms, a little behind it, looking ahead */
+  /**
+   * Near: alongside the train at its height, on the side away from the platforms, a little behind it, looking ahead;
+   * far and the window seat (on that side of the front car) from it (views.ts `rideView()`, V, as you look round)
+   */
   function view(tr: { run: Run; d: number; track: TrackId; s: number }, dt: number, snap = false) {
     const c = carAt(tr, 0);
     const n = sideOf(pointOn(tr.track, tr.s).dir, 1);
-    const want = new THREE.Vector3(c.at[0] + n[0] * 9 - c.dir[0] * 6, DECK_Y + 2.6, c.at[1] + n[1] * 9 - c.dir[1] * 6);
-    const at = new THREE.Vector3(c.at[0] + c.dir[0] * 3, DECK_Y + 1.1, c.at[1] + c.dir[1] * 3);
+    const near = {
+      want: { x: c.at[0] + n[0] * 9 - c.dir[0] * 6, y: DECK_Y + 2.6, z: c.at[1] + n[1] * 9 - c.dir[1] * 6 },
+      at: { x: c.at[0] + c.dir[0] * 3, y: DECK_Y + 1.1, z: c.at[1] + c.dir[1] * 3 },
+    };
+    const eye = { x: c.at[0] + n[0] * 0.5 + c.dir[0] * 1.5, y: PLATFORM_Y + 0.95, z: c.at[1] + n[1] * 0.5 + c.dir[1] * 1.5 };
+    const v = rideView(near, { x: c.at[0], y: DECK_Y + 1.1, z: c.at[1] }, eye, [c.dir[0], c.dir[1]]);
+    const want = new THREE.Vector3(v.want.x, v.want.y, v.want.z);
+    const at = new THREE.Vector3(v.at.x, v.at.y, v.at.z);
+    if (v.snap) snap = true;
     const k = snap ? 1 : 1 - Math.exp(-dt * 4);
     cam.lerp(want, k);
     look.lerp(at, k);
@@ -86,6 +97,7 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
   }
   let last: ReturnType<typeof rideAt> | null = null;
   const ride: Ride = {
+    kind: 'metro',
     update(dt) {
       if (!from || !to) return { x: 0, z: 0 };
       t += dt;

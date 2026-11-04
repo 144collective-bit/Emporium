@@ -38,9 +38,12 @@ const BUDGETS = {
    * and from 680 for the Neon Mile (docs/strip-plan.md, the owner's go: "raise the budget") meeting the menu plan's
    * kit and the blend plan's ground on main: its resorts, landmarks and monorail as places, its solids and its traffic;
    * and from 690 for Southfield (docs/blend-plan.md Phase 5a, under the owner's standing call to raise it when needed):
-   * its streets, blocks, solids, lamps, trees and people in the boot and the traffic's routes round its yards' ring
+   * its streets, blocks, solids, lamps, trees and people in the boot and the traffic's routes round its yards' ring;
+   * and from 700 for the views plan (docs/views-plan.md Phases 1-4, under the same standing call): one camera system
+   * for every vehicle, ride, race and the ring, and the control card's hooks in walk mode (the key table itself is
+   * its own chunk)
    */
-  bootJs: 700,
+  bootJs: 710,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */

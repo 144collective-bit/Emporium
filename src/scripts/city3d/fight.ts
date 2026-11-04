@@ -41,6 +41,7 @@ import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView
 import { CORNERS, OUT, RING, RING_HALF } from './fightsite';
 import { fx, glowTex } from './kit';
 import { finishFight } from './fightsave';
+import { RING_FAR, RING_ORDER, START_VIEW, nextView, type ViewId } from './views';
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const BOUT = { rounds: 3, seconds: 90 };
@@ -79,6 +80,8 @@ export function createFight(d: FightDeps): Fight {
   const camPos = new THREE.Vector3();
   const camAt = new THREE.Vector3();
   let camReady = false;
+  /** The camera (V, R3, the touch View button; views.ts): near or far (the ring has no first person); near every fight */
+  let view: ViewId = START_VIEW;
 
   /* ---------- Sparks, stars ---------- */
 
@@ -285,6 +288,7 @@ export function createFight(d: FightDeps): Fight {
     elapsed = 0;
     endAt = -1;
     camReady = false;
+    view = START_VIEW;
     intro = kind === 'bout' ? 0 : 1.2;
     root.classList.add('is-fighting');
     root.dataset.fight = oppName;
@@ -474,11 +478,14 @@ export function createFight(d: FightDeps): Fight {
     const [fx_, fz] = forward(a.yaw);
     const rx = fz;
     const rz = -fx_;
-    const back = 2.3 + Math.min(0.9, Math.hypot(b.x - a.x, b.z - a.z) * 0.2);
-    const want = new THREE.Vector3(a.x - fx_ * back + rx * 0.6, 1.5, a.z - fz * back + rz * 0.6);
+    // (far: further back and higher, over the ropes; views.ts RING_FAR)
+    const far = view === 'far';
+    const back = (2.3 + Math.min(0.9, Math.hypot(b.x - a.x, b.z - a.z) * 0.2)) * (far ? RING_FAR.back : 1);
+    const over = far ? RING_FAR.side : 0.6;
+    const want = new THREE.Vector3(a.x - fx_ * back + rx * over, far ? RING_FAR.up : 1.5, a.z - fz * back + rz * over);
     if (kind === 'street') {
       // A little past the street spar's ring, which is clear of everything round it
-      const lim = arena.r + 0.6;
+      const lim = arena.r + (far ? RING_FAR.past : 0.6);
       const ox = want.x - arena.x;
       const oz = want.z - arena.z;
       const o = Math.hypot(ox, oz);
@@ -488,8 +495,8 @@ export function createFight(d: FightDeps): Fight {
       }
       want.y += you?.y ?? 0;
     } else {
-      // Inside the ropes, so they never cross the picture
-      const lim = RING_HALF - 0.3;
+      // Inside the ropes, so they never cross the picture (far: out past them, looking down over them)
+      const lim = far ? RING_HALF + RING_FAR.ropes : RING_HALF - 0.3;
       want.x = THREE.MathUtils.clamp(want.x, RING.x - lim, RING.x + lim);
       want.z = THREE.MathUtils.clamp(want.z, RING.z - lim, RING.z + lim);
     }
@@ -521,6 +528,12 @@ export function createFight(d: FightDeps): Fight {
       return sim;
     },
     start,
+    /** The next camera (V, R3, the touch View button): near or far; returns it, for the toast */
+    toggleView(): ViewId {
+      view = nextView(view, RING_ORDER);
+      camReady = false;
+      return view;
+    },
     update(dt, inp: FightInput) {
       if (!sim || !you || !them) return;
       const a = youF()!;

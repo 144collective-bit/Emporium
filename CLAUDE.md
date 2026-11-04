@@ -3123,6 +3123,60 @@ it and has been retired completely. Build only on what's here.
   (`arrangeKey()`, shares of the screen in the right hand's frame),
   `layoutFor()` falls back to the slots where it clashes, and `moveItem()`
   holds a drag clear through the same `clash()`.
+- **The views and controls plan** (the owner's call: "switch views in all
+  walk modes in the vehicles", the controls simpler and more accessible)
+  is planned in `docs/views-plan.md`: near, far and first person in every
+  vehicle, ride, race and the ring (not remembered: near, third person,
+  every time; the ring near and far only; rides look round freely), a
+  touch View button up top on foot, one key for one job (`keymap.ts`; the
+  gamepad's camera R3 everywhere, the ring on the street's keys), a
+  control card per mode (`/`, the d-pad's down), hold or toggle for
+  sprint, aim, crouch and block (touch too). One phase at a time with the
+  owner's sign-off; keep it up to date. Phase 1 (your vehicles) is built,
+  waiting on the owner's sign-off: `views.ts` (DOM-free, tested in
+  `tests/views.test.ts`: `VIEW_ORDER` near, far, first; `START_VIEW`;
+  `CHASE`, each kind's near the chase camera it had, far further back;
+  `chaseDistance()`, `viewName()`), read by drive.ts, boat.ts and fly.ts;
+  walk.ts's `nextCam()` (V, the touch View button, R3 at the wheel) with a
+  "Camera · <view>" toast; the gamepad's View at the wheel toggles the
+  world map (`travel.toggle()`, the vehicle coasting while it's open).
+  `cameraRoom()` skips the hills' and rolls' checks from down in the
+  river's channel (they read under street level as underground: the
+  boat's chase camera had sat at its minimum). Phase 2 (races, rides, the
+  ring, on foot) is built, waiting on the owner's sign-off: views.ts's
+  `RING_ORDER`, `RACE_FAR`, `RING_FAR` (kart.ts and fight.ts
+  `toggleView()`), and the rides' `RIDE_CAM` / `startRide()` /
+  `rideLook()` / `rideView()` (each ride's own camera near, far further
+  out, first person at the passenger's eye: `RIDE_FIRST`; free looking),
+  read by taxi.ts, metro-ui.ts, monorail-ui.ts and riverbus-ui.ts
+  (`Ride.kind`); `nextCam()` in walk.ts for every mode and on foot; the
+  View button in the kart and ring layouts' `a3`, in each ride's bar
+  (`[data-ride-view]`) and on foot up top (`[data-walk-view]`). Phase 3
+  (one key for one job) is built, waiting on the owner's sign-off:
+  `keymap.ts` (DOM-free, tested in `tests/keymap.test.ts`, out of the
+  boot: `KEYMAP`, every mode's jobs with their keys, gamepad buttons and
+  touch buttons; a job on the same key and button in every mode it's in,
+  no two jobs on one in a mode unless `shares` says so); the hub's
+  Settings > Keys is made from it at build time (a section a mode, only
+  the input in use shown, `data-input`); the ring on the street's keys
+  (right-click held block, Shift nothing), the gamepad's sprint L3 only,
+  Start quits a kart race, B skips a ride, M opens the world map at the
+  wheel too. When a handler in walk.ts changes, change its line in
+  keymap.ts. Phase 4 (the control card) is built, waiting on the
+  owner's sign-off: `[data-ctrlcard]`, painted by `ctrlcard.ts` (its own
+  chunk) from `cardBinds()` for walk.ts's `modeNow()` and the input in use,
+  shown for `CARD_AUTO` the first time in each mode (`seen` in
+  `degen-city-walk-v1`) and on request (`/` or `?`, the d-pad's down, the
+  hub's Settings > Keys > Show the controls card; Esc, × or the key again
+  closes it); in `chrome`. The boot's budget went to 710 with it. Phase 5
+  (hold or toggle) is built, waiting on the owner's sign-off, and the plan
+  is done: `comfort.ts` (DOM-free, tested in `tests/comfort.test.ts`:
+  `Holds`, `DEFAULTS` (as it always was: Sprint and Aim lock on touch,
+  held elsewhere; Crouch toggles; Block held), `holdMode()`, `press()`,
+  `cleanHolds()`), the hub's Settings > Hold or toggle (`[data-hold]`,
+  `holds` in `degen-city-walk-v1`), asked by walk.ts at every press of
+  sprint, aim, crouch and block on every input (touch: `holdButton()`).
+  A new held or toggled job goes in `HOLD_JOBS`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
@@ -3417,8 +3471,9 @@ it and has been retired completely. Build only on what's here.
     layout is the car's: the stick turns and climbs, the pedals read
     Faster / Slower) and `data-plane` (the header reads "Flying ·
     <aircraft>"); styles in `src/styles/fly.css`. Controls: W / S throttle,
-    A / D turn, arrows or Space / Shift climb and dive, V camera, F get out;
-    gamepad left stick, RT / LT, Y, View. Check the readout, stick, pedals
+    A / D turn, arrows or Space / Shift climb and dive, V camera (near, far,
+    the cockpit; views.ts), F get out; gamepad left stick, RT / LT, Y, the
+    right stick pressed the camera, View the world map. Check the readout, stick, pedals
     and prompt at phone widths, upright and on their side.
 
 ## Drop 001's fitting room
@@ -3625,8 +3680,9 @@ it and has been retired completely. Build only on what's here.
   first-person camera, mouse (pointer lock), keyboard, touch and gamepad
   controls, collisions and door prompts. The walk controls' settings (the
   hub's Settings tab)
-  (Look: speed, invert, first person; Shooting: "Aim when firing"
-  `settings.autoAds` = off / touch / always) are saved under
+  (Look: speed, invert, first person; Hold or toggle for sprint, aim,
+  crouch and block, `settings.holds`, comfort.ts; Shooting: "Aim when
+  firing" `settings.autoAds` = off / touch / always) are saved under
   `degen-city-walk-v1` in localStorage. The HUD markup (the controls, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
@@ -3710,7 +3766,7 @@ it and has been retired completely. Build only on what's here.
 - `drive.ts` is the view:
   - **Getting in:** "Get in" at your car, on the turntable (it drives off facing the avenue) or wherever it was left.
   - **The car on screen:** it climbs kerbs smoothly, leans into turns and squats under gas or brakes (your car fitted out on its springs, `suspension.ts` and `carride.ts`; the kart and an unfitted car on the drawn-on lean). The wheels roll and steer.
-  - **Cameras:** a chase camera that swings in behind, where you can look around and it settles back; it's pulled in by buildings like the walk camera. V steps to the roof camera and, in your car fitted out, the driver's seat (`car.eye()`; the near plane comes in for it and goes back on getting out).
+  - **Cameras** (views.ts, docs/views-plan.md): near and far chase cameras that swing in behind, where you can look around and they settle back; pulled in by buildings like the walk camera. V (R3, the touch View button) steps near, far, first person: in your car fitted out the driver's seat (`car.eye()`; the near plane comes in for it and goes back on getting out; the roof camera until it's fitted out), on your bike the helmet, in your kart the seat. Every time you get in it starts near.
   - **Readout:** speed in km/h and the gear (`data-drive-hud`).
   - **Sound:** a synthesised engine (`engine()` in `sound.ts`) plus bump and door sounds, all through the sound switch.
   - **Getting out:** "Get out" anywhere. Degen steps out of the left door, or wherever there's room, and the car stays parked and solid to walk round. Leaving walk mode parks it too.
@@ -3719,7 +3775,7 @@ it and has been retired completely. Build only on what's here.
 - **Controls:**
   - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, F get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`), Horn and View (`data-drive-view`, the camera) in the controls plan's slots (`touchlayout.ts` `drive`: a bigger stick bottom-left, Gas the big button in the corner, Brake beside it); Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
-  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
+  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, the right stick pressed the camera, View the world map; the right stick or the mouse looks.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
@@ -3751,7 +3807,7 @@ it and has been retired completely. Build only on what's here.
 
 - The hire boat (river plan step 4c, the owner's pick): moored along the quay east of Downtown's landing (`HIRE` in `riverbus.ts`, its ladder a gap in the railing through `atGangway()`, a BOAT HIRE board); "Take a boat" at the top of the ladder (`boat` in walk.ts's prompts, closed by the live settings' `boat`).
 - The rules are `boat-sim.ts` (DOM-free, tested in `tests/boat.test.ts`): `TUNE` (arcade: thrust to `top`, a gentle `astern`, the rudder biting harder with speed, the slide dying away), `stepBoat()` (cut into steps a 30th of a second at most; the hull three circles, `circles()`, pushed out of the banks, the world's ends, `WATER_SOLIDS` and every other boat, losing the speed it had into them; nothing is damaged), `WATER_SOLIDS` (everything standing in the water, the landings, and the bridges' spans too low for its top, `lowSpans()`: the ring highway's all the way across, so it keeps between them), `moversAt()` (the river's own boats, the river bus, the tall ship), `leaveAt()` (stopped alongside a landing, or at its mooring). New handling goes in the sim first.
-- `boat.ts` is the view, its own chunk loaded the first time you take it (`loadBoat()` in walk.ts): the model (`hireBoat()` in riverlife3d.ts, which draws the moored one while `HIRE_VIEW.out` is false) with Degen at the wheel (seated, his hands on the wheel through `reachArm()`, as the kart's driver), the bow lifting with speed, a lean in the turns, a wake; the chase camera (look round, it settles back) and the helm camera (V); the car's readout (`data-drive-hud`: km/h and F / N / R) and engine, the boats' horn (H, the touch Horn button, the left stick pressed); the lane boats come from life.ts's `bodies.boats`. It sets `is-boating` on top of `is-driving` (the car's touch layout; its own key hint `.boat-hint`) and `data-boat` (the header reads "Boating · Hire boat"). Get out shows when it lies stopped alongside a landing (Degen at the top of its gangway, facing the river) or at the mooring; the boat goes home, as it does when walk mode ends on the water.
+- `boat.ts` is the view, its own chunk loaded the first time you take it (`loadBoat()` in walk.ts): the model (`hireBoat()` in riverlife3d.ts, which draws the moored one while `HIRE_VIEW.out` is false) with Degen at the wheel (seated, his hands on the wheel through `reachArm()`, as the kart's driver), the bow lifting with speed, a lean in the turns, a wake; near and far chase cameras (look round, they settle back) and the helm camera (V, R3; views.ts); the car's readout (`data-drive-hud`: km/h and F / N / R) and engine, the boats' horn (H, the touch Horn button, the left stick pressed); the lane boats come from life.ts's `bodies.boats`. It sets `is-boating` on top of `is-driving` (the car's touch layout; its own key hint `.boat-hint`) and `data-boat` (the header reads "Boating · Hire boat"). Get out shows when it lies stopped alongside a landing (Degen at the top of its gangway, facing the river) or at the mooring; the boat goes home, as it does when walk mode ends on the water.
 
 ## The kart park (3D walk mode)
 
@@ -3968,7 +4024,7 @@ it and has been retired completely. Build only on what's here.
   prompt opens the menu, a race hides Degen and feeds the kart
   (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift;
   touch: the stick, the pedals and Drift over Brake; gamepad: stick, RT /
-  LT, A drift, Y quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
+  LT, A drift, V / R3 the camera, Start quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
   abandons (no prize), closing the results stands Degen up by the hut.
   While racing `.city.is-karting` is on the root and `data-kart` makes the
   header read "Karting · <course>". Under reduced motion the race still
@@ -4296,9 +4352,10 @@ it and has been retired completely. Build only on what's here.
   the purse on a win, XP either way, a quit is a loss; knock-outs and
   chains of three add XP). `walk.ts` wires it: the counter's prompt opens
   the menu, a fight hides Degen and feeds `fightFrame()` (W/A/S/D move
-  relative to the opponent, click punch, right-click or G kick, Shift
-  block, Space dodge; touch: the stick and the four buttons; gamepad:
-  stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
+  relative to the opponent, click punch, right-click held block, G kick,
+  Space dodge, the street's keys (the views plan's Phase 3); touch: the
+  stick and the four buttons; gamepad: stick, X / Y, LB held, A, R3 the
+  camera, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
   read "Fighting · <opponent>". The save (`tycoon.ts`, v12) keeps `fight`

@@ -45,6 +45,7 @@ import { fx, glowMat, glowTex } from './kit';
 import { KART_SPECS, PLAYER_KARTS, type KartId, type MyKart } from './mykart';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { finishKartRace, kartStatsOf, parLap, recordKey, seriesRace, startSeries } from './tycoon';
+import { RACE_FAR, START_VIEW, nextView, type ViewId } from './views';
 
 /* ---------- The rivals ---------- */
 
@@ -311,6 +312,11 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   let shake = 0;
   let fov = 60;
   let fov0 = 60;
+  /** The camera (V, R3, the touch View button; views.ts): near, far, the kart's seat; near every race */
+  let view: ViewId = START_VIEW;
+  const near0 = camera.near;
+  /** His eyes over the seat (kart space): seated at the driver's scale, a touch forward */
+  const EYE = new THREE.Vector3(0.06, 0.47, 0);
   const camPos = new THREE.Vector3();
   const goal = new THREE.Vector3();
   const side = new THREE.Vector3();
@@ -321,13 +327,20 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     camYaw = camReady ? camYaw + wrap(p.yaw - camYaw) * damp(4, dt) : p.yaw;
     const fxx = Math.cos(camYaw);
     const fzz = -Math.sin(camYaw);
-    const pitch = 0.3;
+    const far = view === 'far';
+    const pitch = far ? RACE_FAR.pitch : 0.3;
     const boost = p.boostT > 0 ? 1 : 0;
-    const dist = 3.3 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.6 + boost * 0.4;
+    const dist = (3.3 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.6 + boost * 0.4) * (far ? RACE_FAR.scale : 1);
     goal.set(p.x - fxx * Math.cos(pitch) * dist, p.y + 0.6 + Math.sin(pitch) * dist, p.z - fzz * Math.cos(pitch) * dist);
     // The countdown: in close from the side, settling in behind as the lights go
-    const intro = !d.reduced && sim.countdown > 0;
-    if (intro) {
+    const intro = !d.reduced && sim.countdown > 0 && view !== 'first';
+    // The kart's seat: his eyes, tipped with the kart, looking down the track (the near plane in close for the wheel)
+    const seat = view === 'first' ? views[p.i] : null;
+    if (seat) {
+      seat.kart.group.updateWorldMatrix(true, false);
+      camPos.copy(seat.kart.seatAt).add(EYE);
+      seat.kart.group.localToWorld(camPos);
+    } else if (intro) {
       const yaw = p.yaw;
       const rx = Math.sin(yaw);
       const rz = Math.cos(yaw);
@@ -344,8 +357,14 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       shake = Math.max(0, shake - dt * 1.4);
     }
     const look = intro ? 0.4 : 1.8;
-    at.set(p.x + Math.cos(p.yaw) * look, p.y + 0.45, p.z - Math.sin(p.yaw) * look);
+    if (seat) at.set(camera.position.x + Math.cos(p.yaw) * 6, camera.position.y - 0.25, camera.position.z - Math.sin(p.yaw) * 6);
+    else at.set(p.x + Math.cos(p.yaw) * look, p.y + 0.45, p.z - Math.sin(p.yaw) * look);
     camera.lookAt(at);
+    const close = seat ? 0.1 : near0;
+    if (camera.near !== close) {
+      camera.near = close;
+      camera.updateProjectionMatrix();
+    }
     const wantFov = 60 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 10 + boost * 6;
     fov += (wantFov - fov) * damp(4, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
@@ -831,6 +850,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       lapTimes = [];
       shake = 0;
       camReady = false;
+      view = START_VIEW;
       fov0 = camera.fov;
       fov = camera.fov;
       d.park.setCourse(course);
@@ -913,7 +933,17 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       ghostsOn = { yours: !!on.yours, par: !!on.par };
       showGhosts();
     },
+    /** The next view (V): near, far, the kart's seat; returns it, for the toast */
+    toggleView(): ViewId {
+      view = nextView(view);
+      camReady = false;
+      return view;
+    },
     exit() {
+      if (camera.near !== near0) {
+        camera.near = near0;
+        camera.updateProjectionMatrix();
+      }
       if (active) {
         clearRace();
         active = false;
