@@ -1,0 +1,13 @@
+# Security headers for the workers.dev copy (Cloudflare's static assets read this file; on Hostinger it's only a
+# copy of the headers anyone can see). The same set is in .htaccess for degenemporium.com; tests/headers.test.ts holds the two to the same
+# values. docs/security-plan.md Phase 1: the full policy is report-only until Phase 5.
+/*
+  Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.reown.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' data: blob: https://jqdoyzpblaavkvenvria.supabase.co https://emporium.144collective.workers.dev wss://emporium.144collective.workers.dev wss://relay.walletconnect.org wss://relay.walletconnect.com https://*.walletconnect.org https://*.walletconnect.com https://api.web3modal.org https://rpc.pulsechain.com https://rpc.v4.testnet.pulsechain.com; frame-src https://verify.walletconnect.org https://verify.walletconnect.com https://secure.walletconnect.org https://secure-mobile.walletconnect.org; worker-src 'self' blob:; manifest-src 'self'; form-action 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; report-uri https://emporium.144collective.workers.dev/csp-report; report-to csp
+  Reporting-Endpoints: csp="https://emporium.144collective.workers.dev/csp-report"
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()

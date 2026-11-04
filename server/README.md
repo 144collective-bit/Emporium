@@ -11,6 +11,7 @@ bought with Dorras in the city's own game, in the browser.) The same Worker also
 | `src/lobby.ts` | One for the whole game: picks a city with a free spot (16 players each; "City 2" opens when "City 1" is full). |
 | `src/room.ts` | One per city: runs the shared combat rules (`src/scripts/city3d/combat-sim.ts`) at 60 Hz, checks movement and shots, sends positions 15 times a second, relays emotes and fixed phrases, banks points in profiles. |
 | `src/profile.ts` | One per player: player name, wardrobe look, rifle finish, lifetime score (rank comes from the score). Addressed by a hash of the browser's secret guest token, or of the wallet address once logged in (`src/keys.ts`). |
+| `src/csp.ts` | `POST /csp-report`: both hosts' Content Security Policy reports (report-only until docs/security-plan.md Phase 5), cut down and logged, nothing stored. |
 | `src/accounts.ts` | One for the game: logging in with a wallet (`/auth/nonce`, `/auth/session`, `/auth/me`, `/auth/rename`, `/auth/logout`). The wallet signs a one-time message (no gas); the session token (30 days, only its hash stored) opens the wallet's profile in the rooms. |
 
 Shared with the site (bundled in): `src/scripts/net/` (protocol, names, ranks,
@@ -92,5 +93,14 @@ Then build the site against it from the repo root:
 ```sh
 PUBLIC_GAME_SERVER=http://localhost:8787 npm run build && npx astro preview
 ```
+
+The live server only lets its own page connect (`ALLOWED_ORIGINS` in `wrangler.jsonc`), so for the
+preview at http://localhost:4321 make `server/.dev.vars` (kept out of git) with:
+
+```sh
+ALLOWED_ORIGINS="https://emporium.144collective.workers.dev,http://localhost:4321"
+```
+
+`wrangler dev` reads it over the config's own value; never put `localhost` back in `wrangler.jsonc`.
 
 `npm run check` type-checks the server.

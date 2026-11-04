@@ -7,11 +7,13 @@
  *   Room, which runs the game and talks to each player's Profile.
  *
  * - /auth (HTTP, JSON): logging in with a wallet and its basic profile, see accounts.ts.
+ * - POST /csp-report: both hosts' Content Security Policy reports, logged (csp.ts).
  * - Everything else: the website itself (static files built into ../dist).
  *
  * Only pages listed in ALLOWED_ORIGINS can connect.
  */
 import { Accounts } from './accounts';
+import { cspReport } from './csp';
 import { Lobby } from './lobby';
 import { Profile } from './profile';
 import { Room } from './room';
@@ -36,6 +38,7 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === '/health') return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } });
+    if (url.pathname === '/csp-report') return cspReport(req);
     if (url.pathname === '/play') {
       if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 });
       if (!allowed(req.headers.get('Origin'), env)) return new Response('Forbidden', { status: 403 });
@@ -64,6 +67,7 @@ export default {
       const out = new Response(res.body, res);
       for (const [k, v] of Object.entries(cors)) out.headers.set(k, v);
       out.headers.set('Cache-Control', 'no-store');
+      out.headers.set('X-Content-Type-Options', 'nosniff');
       return out;
     }
     return env.ASSETS ? env.ASSETS.fetch(req) : new Response('Sector 7 game server', { status: 404 });

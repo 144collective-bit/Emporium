@@ -4465,6 +4465,40 @@ it and has been retired completely. Build only on what's here.
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.
 
+## Security (the owner's call, 2026-11)
+
+- Making the site and the game secure from attacks and scams is planned in
+  `docs/security-plan.md` (the audit's findings, the owner's decisions, six
+  phases), one phase at a time with the owner's sign-off; keep it up to date.
+  Phase 1 (quick hardening) is built, waiting on the owner's sign-off. Fair
+  play online (Phase 4) waits for its own plan: the economy moved onto the
+  server (the owner's call).
+- **Headers:** both hosts send the same security headers: `public/.htaccess`
+  for Hostinger, `public/_headers` for the workers.dev copy (Cloudflare's
+  static assets read it; on Hostinger it's a plain file, harmless).
+  `tests/headers.test.ts` holds the two to the same values, so change both
+  together.
+  - Enforced: framing blocked (`frame-ancestors 'none'`, `X-Frame-Options`),
+    `object-src 'none'`, `base-uri 'self'`, `nosniff`, HSTS, the referrer
+    policy, COOP (pop-ups allowed, for wallets) and a Permissions-Policy.
+  - The full Content Security Policy is **report-only** until Phase 5. Its
+    reports go to the Worker's `/csp-report` (`server/src/csp.ts`: cut down
+    and logged, nothing stored).
+  - Anything new the page loads from another host (a script, a font, a
+    connection, a frame, a worker) goes in both policies, or Phase 5 blocks
+    it.
+- `ALLOWED_ORIGINS` in `server/wrangler.jsonc` lists the live page only;
+  local dev adds `localhost` in `server/.dev.vars` (not in git). Never put
+  it back in the config.
+- The GitHub Actions are pinned to commit SHAs (the version in a comment).
+  `.github/dependabot.yml` sends a weekly grouped update. Check the build
+  and the tests before merging it; never merge it unseen.
+- Anything shown in the page that comes from a save, the server, the live
+  config or a wallet is text (`textContent`) or escaped (`esc()`), or it's
+  checked against a fixed list first. `repaint()` parses HTML (Phase 5
+  makes it escape by default), so never put a string into it that isn't on
+  a list or escaped.
+
 ## Hosting
 
 - degenemporium.com is a static build hosted on Hostinger, deployed from

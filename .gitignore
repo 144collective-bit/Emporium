@@ -9,8 +9,9 @@ dist/
 # Dev scratch
 scratch/
 
-# Cloudflare dev state
+# Cloudflare dev state and local-only settings (server/README.md)
 .wrangler/
+.dev.vars
 
 # Built site zips (download from the "Build site" Action instead)
 *.zip
