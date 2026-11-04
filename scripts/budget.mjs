@@ -38,9 +38,11 @@ const BUDGETS = {
    * and from 680 for the Neon Mile (docs/strip-plan.md, the owner's go: "raise the budget") meeting the menu plan's
    * kit and the blend plan's ground on main: its resorts, landmarks and monorail as places, its solids and its traffic;
    * and from 690 for Southfield (docs/blend-plan.md Phase 5a, under the owner's standing call to raise it when needed):
-   * its streets, blocks, solids, lamps, trees and people in the boot and the traffic's routes round its yards' ring
+   * its streets, blocks, solids, lamps, trees and people in the boot and the traffic's routes round its yards' ring;
+   * and from 700 for the raised highway (docs/highway-plan.md Phase 1b, under the owner's standing call): the
+   * viaduct's shape and its exits' ramps, which the land use, The Trenches and Westlake Park read at the boot
    */
-  bootJs: 700,
+  bootJs: 720,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */
