@@ -3,9 +3,9 @@
 The owner's call (2026-11): a player login, a profile, and a save that
 remembers achievements, purchases, gear and everything else the city's game
 keeps, following the player to any device. Built one phase at a time, each
-with the owner's sign-off; keep this up to date. Phase 1 (the save on the
-server) and Phase 2 (the browser's saves per profile) are built, waiting on
-the owner's sign-off.
+with the owner's sign-off; keep this up to date. Phases 1 (the save on the
+server), 2 (the browser's saves per profile) and 3 (the title screen and the
+account) are built, waiting on the owner's sign-off.
 
 Everything saved is the city's game: Dorras and XP are earned by playing,
 never bought, never cashed out, never tied to the token or the store. An
@@ -192,11 +192,24 @@ account changes where the save lives, not what's in it.
    the first told and taking it back, an edited save turned away and the
    saved one loaded back, offline play going up when back, a login that ran
    out, and the guest's game untouched throughout.
-3. **The title screen and the account**: Connect wallet and Play as guest
-   (the fields go), going straight on with a good session; the account card
-   in the menus' kit (`.mk-skin`) with Log out, Log out everywhere and
-   Delete my account (typed confirm); save history and Restore in the
-   Vault's panel for account saves.
+3. **The title screen and the account** (built, waiting on the owner's
+   sign-off): Connect wallet and Play as guest (the fields went), only with
+   a game server and when the page isn't already a wallet's game (then
+   straight to the menu, "Playing as <name> · Log out", or that the login
+   ran out); without a game server straight to the menu too. Connect wallet
+   opens the profile card over the title screen (`.mk-modal`, z-index 12),
+   and logging in no longer needs the Online switch (that's the shared
+   rooms). The card in the menus' kit with New name, Log out, Log out
+   everywhere and Delete my account (the word "delete" typed; this browser's
+   copy of the wallet's game goes too, the guest's stays). Save history and
+   Restore in the Vault's panel for a wallet's game (`historyView()`: each
+   day kept, when it was saved, its level and Dorras; a confirm; the page
+   starts again on it), reached through `cloudlink.ts`. Anything that puts a
+   copy in the slot and reloads seals it first (`seal()`). Checked in a
+   browser with a stand-in wallet signing with a test key: logging in from
+   the title screen, history after a day's second save, a restore taking
+   back a change, log out everywhere, logging in again, and a delete leaving
+   a fresh account.
 4. **Names**: claim a name when the account's made (the word-list name
    offered as a start), unique on the server, rename from the profile.
    Nametags online and the player card show it.

@@ -75,6 +75,16 @@ test('the slot tells its listeners of every write but the quiet ones, and never 
   assert.equal(createSlot(null, null).set('x', '1'), false);
 });
 
+test('a sealed slot writes nothing more', () => {
+  const { m, store } = memory();
+  const s = createSlot(store, A);
+  s.set('x', '1');
+  s.seal();
+  assert.equal(s.set('x', '2'), false);
+  s.remove('x');
+  assert.equal(m.get(`x@${A}`), '1');
+});
+
 test('whose save it is comes from the login kept in the browser', () => {
   const { store } = memory();
   assert.equal(loggedIn(store), null);

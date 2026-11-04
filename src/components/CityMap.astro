@@ -130,29 +130,21 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     </div>
   </div>
 
-  {/* The title screen (start.css, in the menus' arcade kit): the game's logo, the log-in screen, then the start
-       menu. Logging in isn't built yet: the form sends nothing anywhere and says so; Play as guest goes on to the
-       menu with the save in this browser, as before. */}
+  {/* The title screen (start.css, in the menus' arcade kit): the game's logo, the log-in screen (Connect wallet or
+       Play as guest, docs/account-plan.md Phase 3), then the start menu. With a game server only: without one, and
+       with a login still good, it goes straight to the menu. Connect wallet opens the profile card over it
+       (account-ui.ts); logging in starts the page again on the wallet's own game (saveslot.ts). */}
   <div class="city-start" data-start role="dialog" aria-modal="true" aria-label="The Trenches">
     <div class="city-start-card">
       <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[320, 480, 640, 960, 1280]} sizes="(max-width: 600px) 92vw, 560px" alt="The Trenches" loading="eager" fetchpriority="high" class="city-start-brand" />
       <div class="city-start-box">
-      <form class="city-start-login" data-start-login novalidate>
+      <div class="city-start-login" data-start-login hidden>
         <p class="city-start-head">Log in</p>
-        <label class="city-start-field">
-          <span class="city-start-label">Player name or email</span>
-          <input type="text" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="64" />
-        </label>
-        <label class="city-start-field">
-          <span class="city-start-label">Password</span>
-          <input type="password" name="password" autocomplete="current-password" maxlength="128" />
-        </label>
-        <p class="city-start-msg" data-start-msg aria-live="polite" hidden></p>
-        <button type="submit" class="mk-btn is-main city-start-go">Log in</button>
+        <button type="button" class="mk-btn is-main city-start-go" data-start-connect>Connect wallet</button>
         <p class="city-start-or"><span>or</span></p>
         <button type="button" class="mk-btn city-start-go" data-start-guest>Play as guest</button>
-        <p class="city-start-new">New here? <button type="button" class="city-start-link" data-start-signup>Create an account</button></p>
-      </form>
+        <p class="city-start-new">Your wallet signs a short message: no transaction, no gas. Your game is saved with it and follows you to any device. As a guest it stays in this browser.</p>
+      </div>
       <div class="city-start-main" data-start-main hidden>
         <button type="button" class="city-start-btn" data-start-single>
           <span class="city-start-btn-name">Single player</span>
@@ -166,7 +158,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           <span class="city-start-btn-name">Options</span>
           <span class="city-start-btn-sub">Time, weather, sound, credits</span>
         </button>
-        <p class="city-start-who">Playing as guest · <button type="button" class="city-start-link" data-start-relog>Log in</button></p>
+        <p class="city-start-who" data-start-who>Playing as guest{server && <> · <button type="button" class="city-start-link" data-start-relog>Log in</button></>}</p>
       </div>
       <div class="city-start-options" data-start-pane hidden>
         <div class="city-start-row">
@@ -934,7 +926,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="wm-card" data-wm-card hidden></div>
   </section>
   {/* Log in with a wallet and the basic profile (account-ui.ts) */}
-  <div class="city-modal account-modal" data-account hidden>
+  <div class="city-modal account-modal mk-modal mk-skin" data-account hidden>
     <div class="city-modal-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
       <button type="button" class="city-panel-close" data-account-close aria-label="Close">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" /></svg>
@@ -944,15 +936,15 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   </div>
   {/* A wallet's save kept with the account (cloudsave.ts): another device took it, the server turned one away, the login ran out */}
   {server && (
-    <div class="city-modal cloud-modal mk-skin" data-cloud hidden>
-      <div class="city-modal-card cloud-card" role="alertdialog" aria-modal="true" aria-labelledby="cloud-title" aria-describedby="cloud-text">
-        <button type="button" class="city-panel-close cloud-close" data-cloud-close aria-label="Close">
+    <div class="city-modal cloud-modal mk-modal mk-skin" data-cloud hidden>
+      <div class="city-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="cloud-title" aria-describedby="cloud-text">
+        <button type="button" class="city-panel-close" data-cloud-close aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" /></svg>
         </button>
-        <p class="cloud-kicker">Your account</p>
-        <h2 class="cloud-title" id="cloud-title" data-cloud-title></h2>
-        <p class="cloud-text" id="cloud-text" data-cloud-text></p>
-        <div class="cloud-acts" data-cloud-acts></div>
+        <p class="modal-kicker">Your account</p>
+        <h2 class="modal-title" id="cloud-title" data-cloud-title></h2>
+        <p class="modal-text" id="cloud-text" data-cloud-text></p>
+        <div class="modal-acts" data-cloud-acts></div>
       </div>
     </div>
   )}
@@ -1407,7 +1399,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             rename: () => account.rename(),
             opened() {},
           };
-          if (account.address && online()) account.refresh();
+          // (a login that ran out is found now, so the title screen and the cloud save can say so)
+          if (account.address) account.refresh();
           return { account, hooks, ui: createAccountUI(root, account, hooks) };
         })
       : Promise.resolve(null);
@@ -1531,36 +1524,42 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     const headSound = root.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
     if (headSound) new MutationObserver(() => paintOpt('sound', headSound.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')).observe(headSound, { attributes: true, attributeFilter: ['aria-pressed'] });
 
-    // The log-in screen comes first (no accounts yet: nothing is sent or kept), then the menu
-    const login = start.querySelector<HTMLFormElement>('[data-start-login]')!;
-    const loginMsg = login.querySelector<HTMLElement>('[data-start-msg]')!;
-    const pass = login.querySelector<HTMLInputElement>('input[type="password"]')!;
-    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
-    function say(text: string) {
-      loginMsg.textContent = text;
-      loginMsg.hidden = false;
-    }
+    // The log-in screen (Connect wallet or Play as guest), then the menu. Straight to the menu without a game server
+    // (nothing to log in to) and when this page plays a wallet's game: its login is kept (saveslot.ts)
+    const login = start.querySelector<HTMLElement>('[data-start-login]')!;
+    const who = start.querySelector<HTMLElement>('[data-start-who]')!;
     function showLogin(on: boolean) {
       login.hidden = !on;
       startMain.hidden = on;
       startPane.hidden = true;
       optionsBtn.setAttribute('aria-expanded', 'false');
-      // (a phone's keyboard stays down until the field is tapped)
-      if (on) (fine ? login.querySelector<HTMLInputElement>('input') : null)?.focus({ preventScroll: true });
-      else start.querySelector<HTMLButtonElement>('[data-start-single]')!.focus({ preventScroll: true });
+      start.querySelector<HTMLButtonElement>(on ? '[data-start-connect]' : '[data-start-single]')!.focus({ preventScroll: true });
     }
-    login.addEventListener('submit', (e) => {
-      e.preventDefault();
-      pass.value = '';
-      say('Accounts are coming soon. Play as guest for now: your progress is saved in this browser.');
-    });
-    start.querySelector('[data-start-guest]')!.addEventListener('click', () => {
-      pass.value = '';
-      loginMsg.hidden = true;
-      showLogin(false);
-    });
-    start.querySelector('[data-start-signup]')!.addEventListener('click', () => say('Creating an account is coming soon. Play as guest for now.'));
-    start.querySelector('[data-start-relog]')!.addEventListener('click', () => showLogin(true));
+    start.querySelector('[data-start-guest]')!.addEventListener('click', () => showLogin(false));
+    // (the profile card opens over the title screen; a login starts the page again on the wallet's game)
+    start.querySelector('[data-start-connect]')!.addEventListener('click', () => void wallet.then((w) => w?.ui.open()));
+    start.querySelector('[data-start-relog]')?.addEventListener('click', () => showLogin(true));
+    // A wallet's game says whose it is (the player name once the profile's in), or that its login ran out
+    if (playing)
+      void wallet.then((w) => {
+        if (!w) return;
+        const link = (text: string, act: () => void) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'city-start-link';
+          b.textContent = text;
+          b.addEventListener('click', act);
+          return b;
+        };
+        const paint = () => {
+          if (!w.account.address) return who.replaceChildren('Your login ran out · ', link('Log in', () => w.ui.open()));
+          const name = document.createElement('b');
+          name.textContent = w.account.me?.profile.name ?? `${playing.slice(0, 6)}…${playing.slice(-4)}`;
+          who.replaceChildren('Playing as ', name, ' · ', link('Log out', () => void w.account.logout()));
+        };
+        w.account.subscribe(paint);
+        paint();
+      });
 
     function showPane(on: boolean) {
       startPane.hidden = !on;
@@ -1605,7 +1604,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       }
       enter(true);
     });
-    showLogin(true);
+    showLogin(!!server && !playing);
 
     /* ---------- Live settings: maintenance and the owner's notice ---------- */
     const maint = root.querySelector<HTMLElement>('[data-maint]')!;

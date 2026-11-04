@@ -162,6 +162,8 @@ import { createMissionsUI } from './missions-ui';
 import { guideAt, type GuideStep } from './guide';
 import { BACKUP_KEYS, TYCOON_KEY as KEY, backupName, packBackup, readBackup, type ReadBackup } from './backup';
 import { slot } from './saveslot';
+import { cloudLink } from './cloudlink';
+import type { SnapSummary } from '../net/savecheck';
 
 const fmt = new Intl.NumberFormat('en-US');
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
@@ -809,10 +811,55 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     // A wallet's save is kept with the wallet (cloudsave.ts): a file can be downloaded, but only the guest's game takes one back
     if (slot().address)
       return `<p class="stall-empty">You're playing your wallet's game: it's saved with your account and follows you to any device you log in on. You can still download a copy as a file. Last download: <b>${save.backup ? ago(save.backup, now) : 'never'}</b>. Backup files load into the game you play as a guest.</p>
-      <span class="market-btns backup-btns"><button type="button" data-backup-save>Download a copy</button></span>`;
+      <span class="market-btns backup-btns"><button type="button" data-backup-save>Download a copy</button></span>
+      <p class="biz-label">Save history</p>${historyView()}`;
     return `<p class="stall-empty">Everything you do in Sector 7 is kept in this browser only: clearing its data or changing device starts you over. Download a backup file to keep it safe, and load it here on any device. Last backup: <b>${save.backup ? ago(save.backup, now) : 'never'}</b>.</p>
       ${ask}
       <span class="market-btns backup-btns"><button type="button" data-backup-save>Download backup</button><label class="backup-load"><input type="file" accept=".json,application/json" data-backup-file /><span>Load a backup</span></label></span>`;
+  }
+  /** A wallet's save history (the server's daily snapshots, through cloudlink.ts): fetched when the Vault shows it */
+  let hist: SnapSummary[] | 'loading' | 'error' | null = null;
+  /** A snapshot picked and waiting on a yes */
+  let histAsk: SnapSummary | null = null;
+  const when = (t: number) => new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  function historyView() {
+    const link = cloudLink();
+    if (!link) return `<p class="stall-empty">Your save history shows once the city has reached the game server.</p>`;
+    if (hist === null) {
+      hist = 'loading';
+      link.history().then(
+        (l) => (hist = l),
+        () => (hist = 'error'),
+      ).finally(paintPanel);
+    }
+    if (hist === 'loading') return `<p class="stall-empty">Loading your save history…</p>`;
+    if (hist === 'error') return `<p class="stall-empty">The game server can't be reached right now, so your save history can't be shown. <button type="button" class="city-start-link" data-hist-again>Try again</button></p>`;
+    const intro = `<p class="stall-empty">The game server keeps your save as it stood at the start of each day you play, the last 10 days. If something went wrong, put one back: everything since is replaced, and the city starts again on it.</p>`;
+    if (!hist.length) return `${intro}<p class="stall-empty">Nothing kept yet: the first one is kept tomorrow, the first time you play.</p>`;
+    const rows = hist
+      .map((h) =>
+        histAsk?.day === h.day
+          ? `<div class="stall-slot backup-ask"><p class="biz-ask">Put back your save from ${esc(when(h.at))}? Level ${h.level}, ${fmt.format(h.dorras)} Dorras. Everything since is replaced, and the city starts again.</p>
+          <span class="market-btns"><button type="button" data-hist-yes>Put it back</button><button type="button" data-hist-no>Cancel</button></span></div>`
+          : `<li><span>${esc(when(h.at))}</span><b>Level ${h.level} · ${D(h.dorras)}</b><button type="button" data-hist-pick="${esc(h.day)}">Restore</button></li>`,
+      )
+      .join('');
+    return `${intro}<ul class="biz-history">${rows}</ul>`;
+  }
+  async function restoreDay() {
+    const pick = histAsk;
+    histAsk = null;
+    const link = cloudLink();
+    if (!pick || !link) return;
+    note = 'Putting your save back…';
+    paintPanel();
+    const r = await link.restore(pick.day);
+    // ('ok': the page is starting again)
+    if (r === 'ok') return;
+    note = r === 'gone' ? 'That day is no longer kept.' : r === 'elsewhere' ? 'Your account is being played on another device, so this one can’t change its save.' : "The game server can't be reached right now. Try again in a moment.";
+    hist = null;
+    h.sfx('denied');
+    paintPanel();
   }
   function downloadBackup(now: number) {
     // The file carries the time it was made, and the guide's last step already done (so loading it doesn't pay that step again)
@@ -863,6 +910,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       h.sfx('denied');
       return;
     }
+    slot().seal();
     location.reload();
   }
 
@@ -965,6 +1013,10 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       h.sfx('buy', 0.6);
     } else if ('restoreNo' in ds) restoreAsk = null;
     else if ('restoreYes' in ds) return void restore();
+    else if (ds.histPick) histAsk = Array.isArray(hist) ? (hist.find((x) => x.day === ds.histPick) ?? null) : null;
+    else if ('histNo' in ds) histAsk = null;
+    else if ('histYes' in ds) return void restoreDay();
+    else if ('histAgain' in ds) hist = null;
     else if (ds.upgradePlace) {
       const p = ds.upgradePlace as PlaceId;
       const r = upgradePlace(save, p);
@@ -1257,6 +1309,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       panel = { id: id as PanelId, el };
       note = '';
       restoreAsk = null;
+      // (the save history is asked for afresh each time the Vault opens)
+      hist = null;
+      histAsk = null;
       paintPanel();
     },
     unmountPanel() {

@@ -21,7 +21,8 @@
  */
 import { CLOUD_META_KEY, browserStore, readJson, slot, tokenOf } from './saveslot';
 import { KEEPALIVE_MAX, LOCAL_KEYS, MAX_WAIT, QUIET, cleanMeta, deviceOf, pullPlan, retryIn, settle, uploadBody, type CloudMeta, type Pull } from './cloudsync';
-import type { CloudLease, CloudPutResult, CloudSave } from '../net/savecheck';
+import type { CloudLease, CloudPutResult, CloudSave, SnapSummary } from '../net/savecheck';
+import { setCloudLink } from './cloudlink';
 
 export interface CloudDeps {
   /** The game server's address (as PUBLIC_GAME_SERVER) */
@@ -141,7 +142,8 @@ export function createCloud(root: HTMLElement, d: CloudDeps) {
   async function upload(closing = false) {
     clearTimeout(quietTimer);
     firstWaiting = 0;
-    if (stopped || busy || (leaving && !closing)) return;
+    // (on its way out to a copy just put in, nothing of this one goes up over it)
+    if (stopped || busy || leaving) return;
     if (!connected) return closing ? undefined : void connect();
     const m = meta();
     if (!m.dirty.length || !m.lease) return;
@@ -287,6 +289,7 @@ export function createCloud(root: HTMLElement, d: CloudDeps) {
   function reloadWith(p: Extract<Pull, { kind: 'load' }> | null) {
     leaving = true;
     if (p) apply(p);
+    s.seal();
     location.reload();
   }
   /** Take the save back for this device: the server's copy comes down and the city starts again on it */
@@ -326,6 +329,51 @@ export function createCloud(root: HTMLElement, d: CloudDeps) {
     hide();
   });
 
+  /** The Vault's save history (tycoon-ui.ts, through cloudlink.ts) */
+  setCloudLink({
+    async history() {
+      const r = await call<SnapSummary[]>('GET', '/save/history');
+      if (r.status === 401) stop('expired');
+      if (r.status !== 200 || !Array.isArray(r.body)) throw new Error(String(r.status));
+      return r.body;
+    },
+    async restore(day) {
+      const lease = meta().lease;
+      if (!lease || stopped) return stopped === 'elsewhere' ? 'elsewhere' : 'offline';
+      let r: Reply<CloudPutResult | { ok: false; why: 'day' }>;
+      try {
+        r = await call('POST', '/save/restore', { lease, day });
+      } catch {
+        return 'offline';
+      }
+      if (r.status === 401) {
+        stop('expired');
+        return 'offline';
+      }
+      const res = r.body;
+      if (!res) return 'offline';
+      if (!res.ok) {
+        if (res.why === 'lease') {
+          stop('elsewhere');
+          return 'elsewhere';
+        }
+        return res.why === 'day' ? 'gone' : 'offline';
+      }
+      // The restored save comes down and the city starts again on it
+      try {
+        const got = await call<CloudSave>('GET', '/save');
+        if (got.status !== 200 || !got.body) throw new Error(String(got.status));
+        const plan = pullPlan({ rev: -1, lease, dirty: [] }, got.body, device, (k) => s.get(k) !== null);
+        if (plan.kind === 'load') reloadWith(plan);
+      } catch {
+        // (the server has it: the next start brings it down)
+        leaving = true;
+        s.seal();
+        location.reload();
+      }
+      return 'ok';
+    },
+  });
   const ready = connect();
   return {
     /** Settled once the first contact has (or gave up waiting): the page boots the city after it */

@@ -2984,11 +2984,12 @@ it and has been retired completely. Build only on what's here.
   while the 3D city boots behind it. It's the game's title screen (the
   owner's call: The Trenches' logo over a dark brick wall, the box in the
   menus' arcade kit, its tokens shared from menus.css): first **the log-in
-  screen** (`[data-start-login]`: player name or email, password, Log in,
-  Play as guest, Create an account). Logging in isn't built yet: the form
-  sends and keeps nothing (the password is cleared) and says accounts are
-  coming soon; Play as guest goes on to the menu, whose "Playing as guest ·
-  Log in" goes back. A phone's keyboard stays down until a field is tapped.
+  screen** (`[data-start-login]`, docs/account-plan.md Phase 3: Connect
+  wallet, which opens the profile card over it, and Play as guest), only
+  with a game server and when the page isn't already a wallet's game;
+  otherwise straight to the menu. Play as guest goes on to the menu, whose
+  "Playing as guest · Log in" goes back; a wallet's game reads "Playing as
+  <name> · Log out" (`[data-start-who]`), or that its login ran out.
   Single player enters the city (the fly-in runs again, `city.intro()` in
   `index.ts`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
@@ -4378,6 +4379,17 @@ it and has been retired completely. Build only on what's here.
   in `cloudsync.ts` (DOM-free, tested in `tests/cloudsync.test.ts`), and its
   card is `[data-cloud]` (the menus' kit, never over the start menu). A
   wallet's game takes no backup file (the Vault downloads a copy only).
+  Anything that puts a new copy in the slot and starts the page again seals
+  the slot first (`slot().seal()`), so the game can't store its old copy
+  over it on the way out.
+- Phase 3 (the title screen and the account) is built, waiting on the
+  owner's sign-off: the title screen's Connect wallet / Play as guest (above,
+  under the start menu), the profile card in the kit with Log out everywhere
+  and Delete my account (account.ts `logoutAll()` / `deleteAccount()`, which
+  also clears this browser's copy of the wallet's game), and the save
+  history at the Vault (tycoon-ui.ts `historyView()`: each day kept, its
+  level and Dorras, Restore with a confirm; it reaches the cloud chunk
+  through `cloudlink.ts`, no import).
 
 ## Multiplayer (beta, testing)
 
@@ -4447,10 +4459,13 @@ it and has been retired completely. Build only on what's here.
   both open the profile card (`[data-account]`). The account and card are
   made with the page (`CityMap.astro`), not with the 3D city, so they work
   before 3D has loaded; `bootCity()` gets them and fills
-  in their `hooks` (Online switch, rename). The card shows:
-  player name, rank, lifetime score, the wallet (short) and network, and the
-  with New name and Log out. Only the visitor sees their own address; other
-  players only see the player name. Logging in needs the city Online.
+  in their `hooks` (Online switch, rename). The card (in the menus' kit,
+  `.mk-modal`, over the start menu) shows: player name, rank, lifetime
+  score, the wallet (short) and network, with New name, Log out, Log out
+  everywhere and Delete my account (the word "delete" typed to confirm).
+  Only the visitor sees their own address; other players only see the
+  player name. Logging in doesn't need the city Online (that's the shared
+  rooms): it's the account and the cloud save (docs/account-plan.md).
 - The site only shows the Online pill and the Online / Offline switch when
   built with `PUBLIC_GAME_SERVER` (set by the Worker's build). Only pages in
   `ALLOWED_ORIGINS`

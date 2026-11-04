@@ -9,12 +9,19 @@
  * The card shows the player name (from the word lists, never typed), rank
  * badge, lifetime score and the wallet (short, with its network). Only the
  * visitor sees their own wallet address; other players only ever see the
- * player name.
+ * player name. It's in the menus' kit (`.mk-modal`), over the start menu,
+ * whose Connect wallet opens it (docs/account-plan.md Phase 3). Logging in
+ * needs no Online switch: that's for the shared rooms. Logged in, it has Log
+ * out, Log out everywhere and Delete my account (the word typed to confirm).
  */
 import { RANKS } from '../net/profile-data';
 import { CHAINS, shortAddr } from '../net/auth';
 import type { Account } from './account';
 import { walletError } from './wallet';
+import { slot } from './saveslot';
+
+/** Typed to confirm deleting the account (the server's accounts.ts DELETE_CONFIRM) */
+const DELETE_WORD = 'delete';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const fmt = new Intl.NumberFormat('en-US');
@@ -55,43 +62,63 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     }
   }
 
+  /** The profile card's view: the profile, or the delete confirm */
+  let view: 'main' | 'delete' = 'main';
+  /** What's been typed into the delete confirm (kept over a repaint) */
+  let typed = '';
+  /** Whose game this page plays (saveslot.ts): a login that ran out still plays the wallet's */
+  const playing = slot().address;
+
   async function render() {
     paintButtons();
     if (card.hidden) return;
-    const head = (kicker: string, title: string) => `<p class="kicker"><span class="kicker-num">Profile</span> ${kicker}</p><h2 class="city-panel-title" id="account-title">${title}</h2>`;
+    const head = (kicker: string, title: string) => `<p class="modal-kicker">${kicker}</p><h2 class="modal-title" id="account-title">${title}</h2>`;
     const err = error ? `<p class="account-error" role="alert">${esc(error)}</p>` : '';
-
-    if (!d.online()) {
-      body.innerHTML = `${head('Offline', 'Connect wallet')}
-        <p class="city-panel-text">Connecting your wallet and your profile need the city online. Switch to Online at the top of the city, or here.</p>
-        <div class="city-panel-actions"><button type="button" class="btn-pulse" data-account-online>Go online</button>${account.address ? '<button type="button" class="chip-link" data-account-logout>Log out</button>' : ''}</div>`;
-      return;
-    }
 
     if (!account.address) {
       if (busy) {
         body.innerHTML = `${head('Wallet', 'Check your wallet')}
-          <p class="city-panel-text">Your wallet is showing a short message to sign. It only proves you hold the wallet: no transaction, no gas.</p>`;
+          <p class="modal-text">Your wallet is showing a short message to sign. It only proves you hold the wallet: no transaction, no gas.</p>`;
         return;
       }
       const list = await account.wallets();
       if (card.hidden || account.address || busy) return;
+      const ranOut = playing
+        ? `<p class="modal-text">Your login ran out. Log in again with the same wallet to keep saving your game to it; until then, what you do here stays on this device and goes up when you're back.</p>`
+        : `<p class="modal-text">Log in with your PulseChain wallet: your game is saved with it and follows you to any device. A wallet's first login starts a fresh game; your guest game stays in this browser.</p>`;
       body.innerHTML = list.length
-        ? `${head('Wallet', 'Connect wallet')}
-           <p class="city-panel-text">Connect your PulseChain wallet to log in: keep a player profile that follows you to any browser.</p>
+        ? `${head('Your account', playing ? 'Log in again' : 'Connect wallet')}
+           ${ranOut}
            <div class="wallet-picks">${list.map((w) => `<button type="button" class="wallet-pick" data-account-wallet="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<span><b>${esc(w.name)}</b>${w.note ? `<small>${esc(w.note)}</small>` : ''}</span></button>`).join('')}</div>
            ${err}
-           <p class="city-panel-fine">Your wallet asks you to sign a short message: no transaction, no gas. A wallet's first login starts a fresh profile.</p>`
-        : `${head('Wallet', 'No wallet found')}
-           <p class="city-panel-text">Connecting needs a crypto wallet that works with PulseChain.</p>
-           <p class="city-panel-fine">On a phone, open this page in your wallet app's own browser. On a computer, add a wallet extension to your browser, then reload this page.</p>`;
+           <p class="modal-fine">Your wallet asks you to sign a short message: no transaction, no gas.</p>`
+        : `${head('Your account', 'No wallet found')}
+           <p class="modal-text">Logging in needs a crypto wallet that works with PulseChain.</p>
+           <p class="modal-fine">On a phone, open this page in your wallet app's own browser. On a computer, add a wallet extension to your browser, then reload this page.</p>`;
       return;
     }
 
     const me = account.me;
     if (!me) {
-      body.innerHTML = `${head('Wallet', 'Your profile')}<p class="city-panel-text">Loading your profile…</p>${err}
-        <div class="city-panel-actions"><button type="button" class="chip-link" data-account-logout>Log out</button></div>`;
+      body.innerHTML = `${head('Your account', 'Your profile')}<p class="modal-text">Loading your profile…</p>${err}
+        <div class="modal-acts"><button type="button" class="mk-btn" data-account-logout>Log out</button></div>`;
+      return;
+    }
+    if (view === 'delete') {
+      // (a repaint while typing keeps the field as it is)
+      if (body.querySelector('[data-account-confirm]')) {
+        body.querySelector('[data-account-err]')!.innerHTML = err;
+        return void paintDelete();
+      }
+      body.innerHTML = `${head('Your account', 'Delete your account')}
+        <p class="modal-text">This deletes your account for good: your game saved with this wallet, its save history and your player profile. Every login ends, here and on other devices. Your guest game in this browser stays.</p>
+        <label class="modal-field"><span class="modal-fine">Type <b>${DELETE_WORD}</b> to confirm</span><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="16" data-account-confirm /></label>
+        <div data-account-err>${err}</div>
+        <div class="modal-acts"><button type="button" class="mk-btn is-hot" data-account-delete-yes disabled>Delete for good</button><button type="button" class="mk-btn" data-account-delete-no>Cancel</button></div>`;
+      const input = body.querySelector<HTMLInputElement>('[data-account-confirm]')!;
+      input.value = typed;
+      paintDelete();
+      input.focus({ preventScroll: true });
       return;
     }
     const p = me.profile;
@@ -103,20 +130,33 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
         <div><dt>Lifetime score</dt><dd>${fmt.format(p.total)}</dd></div>
         <div><dt>Wallet</dt><dd><span class="account-addr">${esc(shortAddr(me.address))}</span>${chain ? `<small>${esc(chain.name)}</small>` : ''}</dd></div>
       </dl>
+      <p class="modal-fine">Your game is saved with this wallet and follows you to any device you log in on. Its save history is at the Vault.</p>
       ${err}
-      <div class="city-panel-actions">
-        <button type="button" class="chip-link" data-account-rename>New name</button>
-        <button type="button" class="chip-link" data-account-logout>Log out</button>
+      <div class="modal-acts">
+        <button type="button" class="mk-btn" data-account-rename>New name</button>
+        <button type="button" class="mk-btn is-main" data-account-logout>Log out</button>
+      </div>
+      <div class="modal-more">
+        <p class="modal-fine">Lost a device, or logged in somewhere you shouldn't have? Log out everywhere ends every login this wallet has.</p>
+        <div class="modal-acts"><button type="button" class="mk-btn is-small" data-account-logout-all>Log out everywhere</button><button type="button" class="mk-btn is-small" data-account-delete>Delete my account</button></div>
       </div>`;
+  }
+  /** The delete button is live only once the word is typed */
+  function paintDelete() {
+    const input = body.querySelector<HTMLInputElement>('[data-account-confirm]');
+    const yes = body.querySelector<HTMLButtonElement>('[data-account-delete-yes]');
+    if (input && yes) yes.disabled = busy || input.value.trim().toLowerCase() !== DELETE_WORD;
   }
 
   function open() {
     if (!card.hidden) return;
     lastFocus = document.activeElement as HTMLElement;
     error = '';
+    view = 'main';
+    typed = '';
     card.hidden = false;
     d.opened();
-    if (account.address && d.online()) account.refresh();
+    if (account.address) account.refresh();
     render().then(() => card.querySelector<HTMLButtonElement>('[data-account-close]')?.focus({ preventScroll: true }));
   }
   function close() {
@@ -149,18 +189,43 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     if (!btn) return;
     const ds = btn.dataset;
     if ('accountClose' in ds) close();
-    else if ('accountOnline' in ds) {
-      d.goOnline();
-      render();
-    } else if (ds.accountWallet) {
+    else if (ds.accountWallet) {
       busy = true;
       render();
       act(() => account.login(ds.accountWallet));
     } else if ('accountLogout' in ds) act(() => account.logout());
+    else if ('accountLogoutAll' in ds) {
+      btn.disabled = true;
+      act(() => account.logoutAll());
+    } else if ('accountDelete' in ds) {
+      view = 'delete';
+      error = '';
+      render();
+    } else if ('accountDeleteNo' in ds) {
+      view = 'main';
+      typed = '';
+      error = '';
+      render();
+    } else if ('accountDeleteYes' in ds) {
+      busy = true;
+      paintDelete();
+      act(() => account.deleteAccount(typed.trim().toLowerCase()));
+    }
     else if ('accountRename' in ds) {
       btn.disabled = true;
       act(async () => d.rename());
     }
+  });
+  card.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (!t.matches('[data-account-confirm]')) return;
+    typed = t.value;
+    paintDelete();
+  });
+  // (Enter in the field is the delete button, once it's live)
+  card.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !(e.target as HTMLElement).matches('[data-account-confirm]')) return;
+    body.querySelector<HTMLButtonElement>('[data-account-delete-yes]:not(:disabled)')?.click();
   });
   account.subscribe(() => render());
   paintButtons();
@@ -178,7 +243,6 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     close,
     /** The Online / Offline switch moved */
     refresh() {
-      if (account.address && d.online()) account.refresh();
       render();
     },
   };

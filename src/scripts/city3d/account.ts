@@ -16,6 +16,7 @@
 import type { AccountMe } from '../net/auth';
 import type { OwnProfile } from '../net/protocol';
 import { findWallets, requestAccount, signMessage, walletError, type WalletInfo } from './wallet';
+import { slot } from './saveslot';
 
 const KEY = 'degen-city-account-v1';
 
@@ -131,6 +132,38 @@ export function createAccount(server: string) {
       const token = saved?.token;
       keep(null);
       if (token) await api('/auth/logout', { method: 'POST', body: '{}', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+      switchFns.forEach((f) => f());
+    },
+    /** End every session this wallet has, in every browser (this one too) */
+    async logoutAll() {
+      if (!saved) return;
+      await Promise.all([...beforeFns].map((f) => f().catch(() => {})));
+      try {
+        await api('/auth/logout-all', { method: 'POST', body: '{}', headers: authed() });
+      } catch (e) {
+        if (!expired(e)) throw e;
+      }
+      keep(null);
+      switchFns.forEach((f) => f());
+    },
+    /**
+     * Delete the account for good: the server wipes its save, snapshots and
+     * profile and ends every session; this browser forgets its copy of the
+     * wallet's game (the guest's stays). `confirm` is what was typed.
+     */
+    async deleteAccount(confirm: string) {
+      if (!saved) return;
+      const address = saved.address;
+      await api('/auth/delete', { method: 'POST', body: JSON.stringify({ confirm }), headers: authed() });
+      // (this page's game is the wallet's: it mustn't store itself back before the page starts again)
+      if (slot().address === address) slot().seal();
+      try {
+        const mine = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).filter((k): k is string => !!k && k.endsWith(`@${address}`));
+        for (const k of mine) localStorage.removeItem(k);
+      } catch {
+        /* the server's copy is gone either way */
+      }
+      keep(null);
       switchFns.forEach((f) => f());
     },
     /** A login or log-out changed who's logged in (not a session running out) */

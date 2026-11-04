@@ -618,6 +618,41 @@
   padding: 0;
   list-style: none;
 }
+/* A wallet's save history at the Vault (tycoon-ui.ts historyView): a row a day kept, each with its Restore */
+.biz-history {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.biz-history li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.biz-history b {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+@media (max-width: 380px) {
+  .biz-history li {
+    grid-template-columns: 1fr auto;
+  }
+  .biz-history li span {
+    grid-column: 1 / -1;
+  }
+}
 .biz-worth {
   padding: 10px 12px;
   border: 1px solid #ffffff14;

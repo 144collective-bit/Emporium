@@ -65,10 +65,16 @@ export interface Slot {
   remove(key: string, quiet?: boolean): void;
   /** Told the key of every write that isn't quiet */
   subscribe(fn: (key: string) => void): () => void;
+  /**
+   * Nothing more is written (the page is about to start again on what was
+   * just put in, and the game mustn't store its old copy over it first)
+   */
+  seal(): void;
 }
 
 export function createSlot(store: KeyStore | null, address: string | null): Slot {
   const fns = new Set<(key: string) => void>();
+  let sealed = false;
   const tell = (key: string, quiet?: boolean) => {
     if (!quiet) for (const f of fns) f(key);
   };
@@ -83,7 +89,7 @@ export function createSlot(store: KeyStore | null, address: string | null): Slot
     },
     set(key, value, quiet) {
       try {
-        if (!store) return false;
+        if (!store || sealed) return false;
         store.setItem(slotKey(key, address), value);
       } catch {
         return false;
@@ -92,6 +98,7 @@ export function createSlot(store: KeyStore | null, address: string | null): Slot
       return true;
     },
     remove(key, quiet) {
+      if (sealed) return;
       try {
         store?.removeItem(slotKey(key, address));
       } catch {
@@ -102,6 +109,9 @@ export function createSlot(store: KeyStore | null, address: string | null): Slot
     subscribe(fn) {
       fns.add(fn);
       return () => fns.delete(fn);
+    },
+    seal() {
+      sealed = true;
     },
   };
 }
