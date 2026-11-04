@@ -25,6 +25,7 @@ import { COURT_SPAWN, MALL_SPAWN } from './mall';
 import { SITE_SPAWNS } from './crestsites';
 import { HM_SPAWN } from './docksport';
 import { SUN_SPAWNS } from './sunplaces';
+import { LOT9_SPAWN } from './lot9';
 import { RESORTS } from './resorts';
 import { SPHERE_SPAWN } from './stripmarks';
 import { MONO_STATIONS } from './monorail';
@@ -90,6 +91,8 @@ export const PLACES: Place[] = [
   // The Neon Mile's resorts (resorts.ts): on the lot in front of each door
   ...RESORTS.map((r): Place => ({ id: r.id, kind: 'spot', spot: r.id, at: r.spawn })),
   { id: 'sphere', kind: 'spot', spot: 'sphere', at: SPHERE_SPAWN },
+  // Lot 9, the trailer park south of the highway (lot9.ts): on the lane outside its gate, facing in
+  { id: 'lot9', kind: 'spot', spot: 'lot9', at: LOT9_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

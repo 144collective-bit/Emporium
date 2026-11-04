@@ -1485,15 +1485,14 @@
   }
 }
 /* Touch screens: the stick, Gas, Brake and Drift stand where touchlayout.ts puts them (controls.ts,
-   controls.css: Gas in the main slot, Brake beside it, Drift up-left of Gas); no horn or camera in a race */
+   controls.css: Gas in the main slot, Brake beside it, Drift up-left of Gas, View beside it); no horn in a race */
 @media (pointer: coarse) {
   .city.is-karting .walk-stick,
   .city.is-karting .drive-pedal,
   .city.is-karting .kart-btn {
     display: grid;
   }
-  .city.is-karting .drive-horn,
-  .city.is-karting .drive-view {
+  .city.is-karting .drive-horn {
     display: none;
   }
 }

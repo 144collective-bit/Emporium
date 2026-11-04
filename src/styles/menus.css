@@ -1116,6 +1116,34 @@
   color: var(--m-text);
   font-size: 12.5px;
 }
+/* Settings > Keys (made from keymap.ts): a section a mode, each row in the input in use (the hub's data-input) */
+.mk-hub .km {
+  margin-top: 8px;
+}
+.mk-hub .km > summary {
+  color: var(--m-coin);
+  font-size: 11px;
+}
+.mk-hub .km-list [data-for] {
+  display: none;
+}
+.mk-hub[data-input="keys"] .km-list [data-for="keys"],
+.mk-hub[data-input="pad"] .km-list [data-for="pad"],
+.mk-hub[data-input="touch"] .km-list [data-for="touch"] {
+  display: inline;
+}
+/* a job with nothing on the input in use is left out (the keyboard's walk toggle on a gamepad) */
+.mk-hub[data-input="keys"] .km-list .km-nokeys,
+.mk-hub[data-input="pad"] .km-list .km-nopad,
+.mk-hub[data-input="touch"] .km-list .km-notouch {
+  display: none;
+}
+.mk-hub .km-list kbd + kbd {
+  margin-left: 3px;
+}
+.mk-hub .km-list dt {
+  white-space: nowrap;
+}
 .mk-hub kbd {
   display: inline-block;
   padding: 2px 5px;

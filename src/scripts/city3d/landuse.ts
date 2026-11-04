@@ -17,8 +17,9 @@
  *
  * The list is filed by tile (`TILE`) so a spot asks only what's near it.
  */
+import { RAMPS, RAMP_CLEAR, RAMP_HALF } from './viaduct';
 import { EXT, LANE, RIVER } from './layout';
-import { PLAN, type Pt } from './streetplan';
+import { PLAN, type Pt, raised } from './streetplan';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { MALL_AREA } from './mall';
 import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
@@ -39,6 +40,7 @@ import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
+import { LOT9_RECT } from './lot9';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
@@ -129,7 +131,7 @@ export const KEEPS: Keep[] = [
   { id: 'highway', highway: true, box: WORLD, hit: (x, z, w) => fromHighway(x, z) < HIGHWAY_HALF + HIGHWAY_VERGE + w },
   // ...and every street of the plan, its slip lanes too (the arterials out to the world's edge among them)
   // (the arterials, `ns`/`ew`, were the only streets out of town when the densities were measured)
-  ...PLAN.streets.filter((s) => s.kind !== 'highway').flatMap((s) => line(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half + STREET_VERGE, s.kind === 'slip', !/^(ns|ew)\d/.test(s.id))),
+  ...PLAN.streets.filter((s) => !raised(s)).flatMap((s) => line(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half + STREET_VERGE, false, !/^(ns|ew)\d/.test(s.id))),
   // The town (inside the bends, the river and its banks) and the bends themselves (outer.ts)
   shaped('town', grow(TOWN_BOX, BEND_REACH), 1.2, (x, z, m) => inTown([x, z], m)),
   // The shopping plaza, the mall, its loop and car parks, and Uptown North (mall.ts)
@@ -148,6 +150,8 @@ export const KEEPS: Keep[] = [
   // Southfield (southfield.ts, docs/blend-plan.md Phase 5a): its park, allotments and gardens, and the yards' blocks
   land('southfield', SOUTHFIELD_RECT, 1, true),
   land('southyards', YARDS_RECT, 2, true),
+  // Lot 9, the trailer park south of the highway's south-west corner, with its tunnel's ramp and path (lot9.ts)
+  land('lot9', LOT9_RECT, 2, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it
   ...FRINGE_KEEPS.rects.map((r, i) => land(`fringe-${i}`, r, 1.2, true)),
@@ -169,6 +173,8 @@ export const KEEPS: Keep[] = [
   ...VERGES.flatMap((v) => line(`verge:${v.block}`, [[v.a[0] + v.n[0] * RAMP * 0.6, v.a[1] + v.n[1] * RAMP * 0.6], [v.b[0] + v.n[0] * RAMP * 0.6, v.b[1] + v.n[1] * RAMP * 0.6]], RAMP, false, true)),
   // The metro's line: no tree under the el (metro.ts)
   ...Object.values(TRACKS).flatMap((t) => line(`metro:${t.id}`, t.pts, EL_CLEAR, false, true)),
+  // The raised highway's exits' ramps (viaduct.ts, docs/highway-plan.md Phase 1b)
+  ...RAMPS.flatMap((r) => line(`ramp:${r.id}`, r.pts, RAMP_HALF + RAMP_CLEAR, false, true)),
 ];
 
 /* ---------- Filed by tile ---------- */

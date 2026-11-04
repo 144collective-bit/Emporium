@@ -50,8 +50,8 @@ export const LAYOUTS: Record<Mode, Partial<Record<Slot, Action>>> = {
   fists: { main: 'punch', a1: 'jump', a2: 'block', a3: 'sprint', b2: 'kick' },
   armed: { main: 'fire', a1: 'jump', a2: 'reload', a3: 'sprint', b1: 'swap', b2: 'aim' },
   drive: { main: 'gas', a1: 'brake', a2: 'view', a3: 'horn' },
-  kart: { main: 'gas', a1: 'brake', a2: 'drift' },
-  ring: { main: 'punch', a1: 'dodge', a2: 'block', b2: 'kick' },
+  kart: { main: 'gas', a1: 'brake', a2: 'drift', a3: 'view' },
+  ring: { main: 'punch', a1: 'dodge', a2: 'block', a3: 'view', b2: 'kick' },
 };
 const ON_FOOT = (m: Mode): m is FootMode => m === 'fists' || m === 'armed';
 

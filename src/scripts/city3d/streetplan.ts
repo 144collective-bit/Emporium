@@ -17,10 +17,12 @@ import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
 import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
-import { HIGHWAY, HIGHWAY_HALF, insideHighway, outerLane, slipCurve } from './highway';
+import { HIGHWAY, HIGHWAY_HALF } from './highway';
+import { EXITS, RAMPS, RAMP_HALF } from './viaduct';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
+import { HALF as SWING_HALF, ROAD as SWING_ROAD, SWING_STREET, SX as SWING_X, swingPts } from './swingbridge';
 import { NORTH_BLOCK } from './uptownnorth';
 import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
 import { KART_CROSSINGS, KART_STREETS } from './kartpark';
@@ -30,6 +32,7 @@ import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
 import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
 import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
+import { LOT9_CROSSINGS, LOT9_STREETS } from './lot9';
 
 export type Pt = [number, number];
 
@@ -37,10 +40,13 @@ export type Pt = [number, number];
  * - street: one lane each way
  * - avenue: two lanes each way with a median
  * - highway: the ring highway (highway.ts), an avenue with a hard shoulder and no sidewalks
- * - slip: a one-way slip lane across a corner where the highway meets an arterial
+ * - ramp: a one-way exit ramp of the raised highway (viaduct.ts `RAMPS`), from its deck down to an arterial or up
+ *   from one, its heights in `ys` (docs/highway-plan.md Phase 3)
  * - alley: walk-only, no cars (cars never route along it)
  */
-export type StreetKind = 'street' | 'avenue' | 'highway' | 'slip' | 'alley';
+export type StreetKind = 'street' | 'avenue' | 'highway' | 'ramp' | 'alley';
+/** Up off the ground: the raised highway and its ramps (what's drawn, walked and measured at street level leaves them out) */
+export const raised = (s: { kind: StreetKind }) => s.kind === 'highway' || s.kind === 'ramp';
 
 export interface Street {
   id: string;
@@ -57,6 +63,8 @@ export interface Street {
   oneway?: 1 | -1;
   /** A street's planted median (its width): its one lane each way runs either side of it */
   median?: number;
+  /** A ramp's road height at each of its points */
+  ys?: number[];
 }
 
 export interface Crossing {
@@ -332,18 +340,16 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
  * the Southside Loop, the landscaped blocks round the plots and lots, their
  * squares and pocket parks.
  */
-/** The highway's junction with the south bank avenue on its west side, its south-west corner's turn (docks.ts) */
-const DOCKS_SLIP = 'highway-ew4-1-0';
 /**
- * The highway's junctions whose outer corners get slip lanes too: where an arterial past it carries traffic (the north
- * roads to the stadium and the kart park, and to the airport since docs/airport-plan.md Phase 3: the south bank avenue
- * east to Airport Drive, the east ring avenue south to the GA road; and Crestmont's Flats since its Phase 2:
- * downtown's east-west roads east past the highway, crestmont.ts; but never one over the river's promenade, as the bank
- * avenue's corner on the water would be). An entry with a turn's number after it (`<junction>-<k>`) is that one
- * turn alone: the south bank avenue west to the Docks has only its south-west corner (docks.ts; its north-west one
- * is the river)
+ * Where an arterial passes under the raised ring highway (docs/highway-plan.md Phase 2): the junctions of the
+ * street-level highway that was, by their old ids (`highway-ns<i>-<k>`, `highway-ew<i>-<k>`), each with the street that
+ * runs on under the deck there and which way it runs (along z, 1, or x, 0). No crossing in the plan: the ring's traffic
+ * is up on the deck, the arterial's under it; the exits (Phase 3) join them
  */
-export const OUTER_SLIPS = ['highway-ns0-1', 'highway-ns3-0', 'highway-ns3-1', 'highway-ew4-0', 'highway-ew0-0', 'highway-ew1-0', 'highway-ew2-0', 'highway-ew3-0', DOCKS_SLIP];
+export const RING_MEETS: { id: string; at: Pt; street: string; along: 0 | 1 }[] = [
+  ...NS_ROADS.flatMap((r, i) => crossingsOf(HIGHWAY, 0, r.c).flatMap((at, k) => (nsRuns(i, at[1]) ? [{ id: `highway-ns${i}-${k}`, at, street: nsStreet(i, at[1]), along: 1 as const }] : []))),
+  ...EW_ROADS.flatMap((r, i) => crossingsOf(HIGHWAY, 1, r.c).map((at, k) => ({ id: `highway-ew${i}-${k}`, at, street: ewStreet(i, at[0]), along: 0 as const }))),
+];
 
 export function cityPlan(): StreetPlan {
   const streets = gridStreets();
@@ -388,36 +394,23 @@ export function cityPlan(): StreetPlan {
   // Southfield Yards' ring off the south bank avenue and Yard Street across it (southfield.ts, docs/blend-plan.md Phase 5a)
   for (const t of SF_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of SF_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // Lot 9's lane in off the south avenue past the highway and its two one-way loops (lot9.ts, docs/trailer-plan.md)
+  for (const t of LOT9_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
+  for (const c of LOT9_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
-  // The ring highway (highway.ts): a lit junction wherever it meets a straight arterial, and on the town
-  // side of each, slip lanes for the right turns on and off it (and on the outside too where an arterial past
-  // it carries traffic: the north road to the stadium, `OUTER_SLIPS`)
+  // The ring highway (highway.ts), raised on its viaduct all the way round (docs/highway-plan.md Phase 2): no junction
+  // with anything at street level, every arterial passing under it (`RING_MEETS`); its traffic drives round it on the
+  // deck (routes.ts, the first `RING_ROUTES`)
   streets.push({ id: 'highway', kind: 'highway', pts: HIGHWAY, half: HIGHWAY_HALF, lanes: 2, loop: true });
-  const meets: { id: string; at: Pt; road: Road; street: string; along: 0 | 1 }[] = [];
-  NS_ROADS.forEach((r, i) =>
-    crossingsOf(HIGHWAY, 0, r.c).forEach((at, k) => nsRuns(i, at[1]) && meets.push({ id: `highway-ns${i}-${k}`, at, road: r, street: nsStreet(i, at[1]), along: 1 }))
-  );
-  EW_ROADS.forEach((r, i) => crossingsOf(HIGHWAY, 1, r.c).forEach((at, k) => meets.push({ id: `highway-ew${i}-${k}`, at, road: r, street: ewStreet(i, at[0]), along: 0 })));
-  for (const m of meets) {
-    crossings.push({ id: m.id, at: m.at, streets: [m.street, 'highway'], lights: true });
-    // The arterial runs along z (along 1) or x; the highway, square to it there, the other way
-    const ta: Pt = m.along === 1 ? [0, 1] : [1, 0];
-    const th: Pt = m.along === 1 ? [1, 0] : [0, 1];
-    const turns: [Pt, number, number][] = [
-      [ta, outerLane(m.road.lanes), outerLane(2)],
-      [[-ta[0], -ta[1]], outerLane(m.road.lanes), outerLane(2)],
-      [th, outerLane(2), outerLane(m.road.lanes)],
-      [[-th[0], -th[1]], outerLane(2), outerLane(m.road.lanes)],
-    ];
-    turns.forEach(([uA, offA, offB], k) => {
-      const pts = slipCurve(m.at, uA, offA, [-uA[1], uA[0]], offB);
-      // Only on the town side: the arterials past the highway carry no traffic yet
-      // (none from the north bank avenue towards the river: its corner there is the promenade's)
-      const overWater = m.along === 0 && m.road.c < RIVER[0] && m.road.c + m.road.half + 3 > RIVER[0] && pts.some((p) => p[1] > m.at[1] + 0.5);
-      if (insideHighway(...pts[3]) || (OUTER_SLIPS.includes(m.id) && !overWater) || OUTER_SLIPS.includes(`${m.id}-${k}`)) streets.push({ id: `slip-${m.id}-${k}`, kind: 'slip', pts, half: 1.2, lanes: 1, oneway: 1 });
-    });
+  // Its exits (docs/highway-plan.md Phase 3): each ramp a one-way street the way it's driven, meeting the deck's outer
+  // lane where it leaves or joins it (a merge: no lights) and its arterial at its foot (lit)
+  for (const r of RAMPS) {
+    const id = `ramp-${r.id}`;
+    streets.push({ id, kind: 'ramp', pts: r.pts, half: RAMP_HALF, lanes: 1, oneway: 1, ys: r.ys });
+    crossings.push({ id: `${id}-deck`, at: r.pts[r.kind === 'off' ? 0 : r.pts.length - 1], streets: ['highway', id], lights: false });
+    crossings.push({ id: `${id}-foot`, at: r.terminal, streets: [EXITS.find((e) => e.n === r.exit)!.street, id], lights: true });
   }
   // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
   for (const t of TRENCH_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes });
@@ -428,6 +421,14 @@ export function cityPlan(): StreetPlan {
   for (const t of UPTOWN_STREETS)
     streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes, ...(t.oneway ? { oneway: t.oneway } : {}), ...(t.loop ? { loop: true } : {}), ...(t.median ? { median: t.median } : {}) });
   for (const c of UPTOWN_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // The swing bridge (swingbridge.ts, docs/highway-plan.md Phase 5): from Uptown's southbound street's junction on the
+  // north bank avenue over the river to The Trenches' cross street's on the south bank's, lit now it's a crossroads
+  streets.push({ id: SWING_STREET, kind: 'street', pts: swingPts(), half: SWING_ROAD, lanes: 1 });
+  for (const at of [swingPts()[0], swingPts().at(-1)!]) {
+    const c = crossings.find((k) => k.at[0] === at[0] && k.at[1] === at[1])!;
+    c.streets = [...c.streets, SWING_STREET];
+    c.lights = true;
+  }
   UPTOWN_LANES.forEach(([x0, z0, x1, z1], i) =>
     streets.push({
       id: `uptown-lane${i}`,
@@ -511,18 +512,19 @@ export const PLAN: StreetPlan = cityPlan();
 
 /**
  * The river and its bridges, from the plan (growth plan Phase 5): where it
- * runs (x, edge to edge) and, for each street that crosses it, the span its
+ * runs (x, edge to edge) and, for each street that crosses it at street level, the span its
  * bridge takes (x0, x1, the sidewalks included), west to east
  */
 export function riverCrossings(plan: StreetPlan = PLAN) {
-  return { run: [...EXT] as [number, number], bridges: riverBridges(plan).map((b): [number, number] => [b.x0, b.x1]) };
+  // (at street level: the ring highway crosses on its viaduct, overhead, docs/highway-plan.md Phase 2)
+  return { run: [...EXT] as [number, number], bridges: riverBridges(plan).filter((b) => b.street !== 'highway').map((b): [number, number] => [b.x0, b.x1]) };
 }
 
 /**
  * Every bridge over the river, west to east: each street that crosses it on
  * a north-south stretch, its centre and half width, and the span it takes
- * (x0, x1, its sidewalks included; the highway's bridge carries a footway
- * each side too)
+ * (x0, x1, its sidewalks included; the ring highway's are its viaduct's river
+ * spans, overhead, docs/highway-plan.md Phase 2)
  */
 export function riverBridges(plan: StreetPlan = PLAN) {
   const out: { street: string; c: number; half: number; x0: number; x1: number }[] = [];
@@ -536,6 +538,9 @@ export function riverBridges(plan: StreetPlan = PLAN) {
       out.push({ street: s.id, c: a[0], half: s.half, x0: a[0] - w, x1: a[0] + w });
     }
   }
+  // (the swing bridge's street is in short pieces, so its heights reach the routes: swingbridge.ts)
+  const sw = plan.streets.find((s) => s.id === SWING_STREET);
+  if (sw) out.push({ street: sw.id, c: SWING_X, half: sw.half, x0: SWING_X - SWING_HALF, x1: SWING_X + SWING_HALF });
   return out.sort((p, q) => p.x0 - q.x0);
 }
 

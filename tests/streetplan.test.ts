@@ -77,7 +77,7 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
   // Lights where downtown's cross streets meet, where the highway meets an arterial, along Trench Avenue (trenches.ts) and
   // at every junction in Uptown (uptown.ts) but round its circle (its traffic gives way), Crestmont's and the Docks' at
   // the avenues (Southfield Yards' too), and nowhere else
-  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || c.streets.includes('highway') || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')) || CREST_CROSSINGS.some((k) => k.id === c.id && k.lights) || DOCK_CROSSINGS.some((k) => k.id === c.id && k.lights) || SUN_CROSSINGS.some((k) => k.id === c.id && k.lights) || STRIP_CROSSINGS.some((k) => k.id === c.id && k.lights) || SF_CROSSINGS.some((k) => k.id === c.id && k.lights));
+  for (const c of p.crossings) assert.equal(c.lights, (CORE_ROADS.includes(c.at[0]) && CORE_ROADS.includes(c.at[1])) || (c.id.startsWith('ramp-') && c.id.endsWith('-foot')) || c.streets.includes('trench-ave') || (c.streets.some((id) => id.startsWith('uptown-')) && !c.streets.includes('uptown-circle')) || CREST_CROSSINGS.some((k) => k.id === c.id && k.lights) || DOCK_CROSSINGS.some((k) => k.id === c.id && k.lights) || SUN_CROSSINGS.some((k) => k.id === c.id && k.lights) || STRIP_CROSSINGS.some((k) => k.id === c.id && k.lights) || SF_CROSSINGS.some((k) => k.id === c.id && k.lights) || c.streets.includes('swing'));
 });
 
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {

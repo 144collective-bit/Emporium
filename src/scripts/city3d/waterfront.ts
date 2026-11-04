@@ -33,6 +33,7 @@ import { EW_ROADS, RIVER } from './layout';
 import { BOAT_LANES } from './liberty';
 import { laneAt } from './river';
 import { PIER_HOUSE, REFINERY, STORES } from './riverside';
+import { SWING_RECT } from './swingbridge';
 
 /** The south bank avenue: the boardwalk runs from its kerb to the water */
 const BANK = EW_ROADS[EW_ROADS.length - 1];
@@ -65,6 +66,8 @@ export const DECKS: Rect[] = [
 export const RAIL_GAPS: [number, number][] = [
   [PIER.neck[0], PIER.neck[2]],
   [MARKET_DECK[0], MARKET_DECK[2]],
+  // (and where the swing bridge leaves the bank: swingbridge.ts)
+  [SWING_RECT[0], SWING_RECT[2]],
 ];
 /** The ring highway's bridges' piers across the river (z): half way between the boats' lanes; and their half depth (world.ts draws them) */
 export const BRIDGE_PIERS = [0, 1].map((k) => (BOAT_LANES[k] + BOAT_LANES[k + 1]) / 2);
@@ -104,9 +107,12 @@ export const CRANE = (() => {
 /** The barge tied up alongside, under the crane's jib */
 export const BARGE: Rect = [CRANE.cx - 5.5, BZ0 - 3.6, CRANE.cx + 5.5, BZ0 - 0.55];
 
-/** Where things stand along the boardwalk: never in the pier's mouth, under the crane or along the market (it has its own) */
+/** Where things stand along the boardwalk: never in the pier's mouth, under the crane, along the market (it has its own) or on the swing bridge */
 const clearAt = (x: number, m: number) =>
-  Math.abs(x - PX) > ARCH.x1 - PX + m && (x < CRANE.portal[0] - m || x > CRANE.portal[2] + m) && (x < MARKET_DECK[0] - m || x > MARKET_DECK[2] + m);
+  Math.abs(x - PX) > ARCH.x1 - PX + m &&
+  (x < CRANE.portal[0] - m || x > CRANE.portal[2] + m) &&
+  (x < MARKET_DECK[0] - m || x > MARKET_DECK[2] + m) &&
+  (x < SWING_RECT[0] - m || x > SWING_RECT[2] + m);
 /** Lamps at the water's edge, their arms reaching in over the walk */
 export const LAMPS: Pt[] = [];
 for (let x = BX0 + 3; x < BX1 - 1; x += 9) if (clearAt(x, 0.8)) LAMPS.push([x, BZ0 + 0.4]);

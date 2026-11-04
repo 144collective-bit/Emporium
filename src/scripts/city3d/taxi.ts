@@ -12,13 +12,16 @@
 import * as THREE from 'three';
 import { CARS, createCar } from './cars';
 import { PAL, fx, glowMat } from './kit';
-import { SPOTS, lightState, pathBetween, pointOn, type Route } from './routes';
+import { HIGHWAY_PACE, SPOTS, climbOn, heightOn, lightState, rideTime, pathBetween, pointOn, type Route } from './routes';
 import { bodies, stoppers } from './life';
 import { deckSlope, deckY, onHarbour } from './harbour';
+import { barrierHold, swingAt } from './swingbridge';
 import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import type { Place } from './places';
 import type { Ride } from './walk';
+import { INTERIORS } from './carinside';
+import { rideView } from './views';
 
 /** Its top speed in town (tiles a second), how hard it pulls away and brakes */
 const SPEED = 12;
@@ -104,7 +107,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
   let dest: Place | null = null;
   let leaveT = 0;
   const pos = new THREE.Vector3();
-  const stop_ = { x: 0, z: 0, r: 1.2, on: false };
+  const stop_ = { x: 0, z: 0, y: 0, r: 1.2, on: false };
   stoppers.push(stop_);
   const fwd = new THREE.Vector2(1, 0);
   // The chase camera's spot and what it looks at, eased
@@ -131,17 +134,22 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     // (and up and down Crestmont's hill roads: terrain.ts)
     const harbour = onHarbour(o.at[0], o.at[1]);
     const hill = onHills(o.at[0], o.at[1]);
-    const hb = hill ? heightAt(o.at[0], o.at[1]) : harbour ? deckY(o.at[1]) : departuresRoadY(o.at[0], o.at[1]);
+    // (and up the raised highway's ramps and along its deck: the route's own height, routes.ts heightOn)
+    const up = heightOn(route, Math.min(p, route.len), seg);
+    const hb = up > 0.02 ? up : hill ? heightAt(o.at[0], o.at[1]) : harbour ? deckY(o.at[1]) : departuresRoadY(o.at[0], o.at[1]);
     pos.set(o.at[0], ROAD_Y + hb, o.at[1]);
+    stop_.y = pos.y;
     fwd.set(o.dir[0], o.dir[1]);
     car.group.position.copy(pos);
-    const pitch = hill ? Math.atan(riseAlong(o.at[0], o.at[1], o.dir[0], o.dir[1])) : harbour ? Math.atan(o.dir[1] * deckSlope(o.at[1])) : Math.atan(o.dir[0] * departuresSlope(o.at[0], o.at[1]));
+    const pitch =
+      up > 0.02 ? Math.atan(climbOn(route, Math.min(p, route.len), seg)) : hill ? Math.atan(riseAlong(o.at[0], o.at[1], o.dir[0], o.dir[1])) : harbour ? Math.atan(o.dir[1] * deckSlope(o.at[1])) : Math.atan(o.dir[0] * departuresSlope(o.at[0], o.at[1]));
     car.group.rotation.set(0, Math.atan2(-o.dir[1], o.dir[0]), pitch, 'YXZ');
   }
   /** Drive on along the route, for the lights and the traffic ahead, easing to a stop at its end */
   function drive(dt: number, t: number) {
     if (!route || !car) return;
-    let target = SPEED;
+    // (quicker up on the raised highway and its ramps: no lights, a faster road, routes.ts HIGHWAY_PACE)
+    let target = heightOn(route, Math.min(p, route.len), seg) > 0.05 ? SPEED / HIGHWAY_PACE : SPEED;
     // Stop at its end
     target = Math.min(target, Math.sqrt(Math.max(0, 2 * BRAKE * 0.8 * (route.len - p))));
     // Red lights (and late yellows) at the stop line
@@ -151,8 +159,13 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
       const light = s.j.lit ? lightState(s.j, s.phase, t) : 'g';
       if (light === 'r' || (light === 'y' && dd > 2)) target = Math.min(target, Math.max(0, dd * 1.4));
     }
+    // The swing bridge's barriers while it swings for the tall ship (swingbridge.ts)
+    const hold = barrierHold(pos.x, pos.z, fwd.x, fwd.y, 1.2, swingAt(Date.now() / 1000).shut);
+    if (hold < 14) target = Math.min(target, Math.max(0, (hold - 0.6) * 1.4));
     // Whoever's ahead going the same way
     for (const o of bodies.cars) {
+      // (only what's at its height: up on the raised highway, or down under it)
+      if (Math.abs(o.y - pos.y) > 1.5) continue;
       const ox = Math.cos(o.yaw);
       const oz = -Math.sin(o.yaw);
       if (ox * fwd.x + oz * fwd.y < 0.5) continue;
@@ -169,10 +182,24 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     place();
     car.drive(step);
   }
+  /** The back seat: the passenger's side of the rear bench, at his eyes (carinside.ts), in the taxi's frame */
+  const SEAT = (() => {
+    const n = INTERIORS.sedan;
+    return new THREE.Vector3((n.rear?.x ?? n.hip[0] - 0.5) + 0.05, n.eye[1], -n.eye[2]);
+  })();
+  const eyeAt = new THREE.Vector3();
   function chase(dt: number, snap = false) {
-    // Behind and above, looking a little ahead of it
-    const want = new THREE.Vector3(pos.x - fwd.x * 7.5, pos.y + 3.6, pos.z - fwd.y * 7.5);
-    const at = new THREE.Vector3(pos.x + fwd.x * 3, pos.y + 0.8, pos.z + fwd.y * 3);
+    // Near: behind and above, looking a little ahead of it; far and the back seat from it (views.ts `rideView()`, V,
+    // as you look round)
+    const near = { want: { x: pos.x - fwd.x * 7.5, y: pos.y + 3.6, z: pos.z - fwd.y * 7.5 }, at: { x: pos.x + fwd.x * 3, y: pos.y + 0.8, z: pos.z + fwd.y * 3 } };
+    if (car) {
+      car.group.updateWorldMatrix(true, false);
+      eyeAt.copy(SEAT).applyMatrix4(car.group.matrixWorld);
+    } else eyeAt.set(pos.x, pos.y + 0.9, pos.z);
+    const v = rideView(near, { x: pos.x, y: pos.y + 0.8, z: pos.z }, eyeAt, [fwd.x, fwd.y]);
+    const want = new THREE.Vector3(v.want.x, v.want.y, v.want.z);
+    const at = new THREE.Vector3(v.at.x, v.at.y, v.at.z);
+    if (v.snap) snap = true;
     const k = snap ? 1 : 1 - Math.exp(-dt * 3.2);
     cam.lerp(want, k);
     look.lerp(at, k);
@@ -186,11 +213,12 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
 
   /** The ride, for walk mode: Degen sits in the taxi, the chase camera follows */
   const ride: Ride = {
+    kind: 'taxi',
     update(dt, t) {
       if (state === 'riding') {
         drive(dt, t);
         chase(dt);
-        const left = route ? Math.max(0, (route.len - p) / SPEED) : 0;
+        const left = route ? rideTime(route, Math.min(p, route.len), SPEED) : 0;
         text.textContent = `Taxi to ${dest ? d.name(dest) : ''} · ${Math.ceil(left)} s`;
         if (route && p >= route.len - 0.05 && v < 0.2) finish();
       }
@@ -214,7 +242,8 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     const pick = there.pts[0];
     const from = SPOTS.filter((s) => {
       const dd = Math.hypot(s.x - pick[0], s.z - pick[1]);
-      return dd > FROM[0] && dd < FROM[1];
+      // (at street level: it sets off from a kerb)
+      return dd > FROM[0] && dd < FROM[1] && s.y < 0.05;
     }).sort((a, b) => Math.hypot(a.x - pick[0], a.z - pick[1]) - Math.hypot(b.x - pick[0], b.z - pick[1]));
     let coming: Route | null = null;
     for (const s of from.slice(0, 6)) {

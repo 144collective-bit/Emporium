@@ -21,6 +21,7 @@
 import { BIG_LOTS, BS, DISTRICTS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, RIVER, RING_HI, SOUTH_ROAD, SOUTH_SHIFT as D, STRIP_BLVD, STRIP_EAST_X, UNITS, WALK_W, ewRuns, nsRuns, type Road } from './layout';
 import { LIBERTY_RECTS } from './liberty';
 import { HARBOUR_RECT } from './harbour';
+import { SWING_RECT } from './swingbridge';
 import { FIGHT_CLUB } from './fightsite';
 
 export type Pt = [number, number];
@@ -348,7 +349,7 @@ export const JETTIES: { x: number; bank: 'north' | 'south' }[] = [
   { x: 55, bank: 'south' },
 ];
 /** Off the bridges: a promenade feature at x is clear of every road crossing the river (layout.ts `BRIDGED_NS`: Harbour Bridge, its anchorages and its towers' piers, harbour.ts) */
-export const offBridges = (x: number, m = 0.8) => x < HARBOUR_RECT[0] - m || x > HARBOUR_RECT[2] + m;
+export const offBridges = (x: number, m = 0.8) => (x < HARBOUR_RECT[0] - m || x > HARBOUR_RECT[2] + m) && (x < SWING_RECT[0] - m || x > SWING_RECT[2] + m);
 /** Clear of Liberty Bridge's supports on the promenades (liberty.ts): benches, trees in planters and lamps keep off */
 export const offFootbridge = (x: number, m = 0.8) => LIBERTY_RECTS.every((r) => x < r[0] - m || x > r[2] + m);
 

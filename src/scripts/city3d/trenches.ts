@@ -23,6 +23,7 @@
  *   highway's bend is a block cut by it. Row W (the grit's step 2) is the
  *   strip between West Street and the highway.
  */
+import { rampLand } from './viaduct';
 import { EW_ROADS, LANE, NS_ROADS, WALK_W, WIDEN, nsStreet } from './layout';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
 
@@ -186,10 +187,12 @@ export const TRENCH_BLOCKS: TrenchBlock[] = (() => {
 
 /** Its land, for the outskirts' trees to keep off (x0, z0, x1, z1) */
 export const TRENCH_RECT: [number, number, number, number] = [HX0 + HIGHWAY_HALF + 1, BANK.c + BANK.half, RING_W.c - RING_W.half, HZ1 - HIGHWAY_HALF - 1];
-/** Is a point on The Trenches' land (its rectangle, short of the highway's bend) */
+/** Is a point on The Trenches' land (its rectangle, short of the highway's bend and the exits' ramps) */
 export const inTrenches = (x: number, z: number, m = 0) => {
   const [x0, z0, x1, z1] = TRENCH_RECT;
   if (x < x0 - m || x > x1 + m || z < z0 - m || z > z1 + m) return false;
+  // (but the raised highway's exits' ramps along its edge, docs/highway-plan.md Phase 1b)
+  if (rampLand(x, z)) return false;
   return Math.hypot(Math.min(0, x - BEND_C[0]), Math.max(0, z - BEND_C[1])) <= HIGHWAY_R - HIGHWAY_HALF - 1 + m;
 };
 

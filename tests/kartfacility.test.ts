@@ -35,7 +35,7 @@ import {
 import { CIRCUIT, CLEAR, HUT_DOOR, PIT_LANE, SITE } from '../src/scripts/city3d/kartcircuit';
 import { GATE, KART_PARK, KART_SPAWN, LOOP, ROAD, toLocal, toWorld } from '../src/scripts/city3d/kartpark';
 import { SOLIDS, SOLID_GRID } from '../src/scripts/city3d/solids';
-import { OUTER_SLIPS, PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
+import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
 import { STATIONS } from '../src/scripts/city3d/metro';
 import { treeSpot } from '../src/scripts/city3d/outskirts';
@@ -186,8 +186,6 @@ test('Kart Road and the car park: in the street plan off the east ring avenue, c
   const loop = PLAN.streets.find((s) => s.id === 'kart-loop')!;
   assert.ok(road && loop && loop.oneway);
   assert.ok(PLAN.crossings.some((c) => c.id === 'kart-in' && c.streets.includes('ns3')));
-  assert.ok(OUTER_SLIPS.includes('highway-ns3-0'));
-  assert.equal(PLAN.streets.filter((s) => s.kind === 'slip' && s.id.startsWith('slip-highway-ns3-0-')).length, 4);
   for (const s of [road, loop])
     for (let i = 1; i < s.pts.length; i++)
       for (let k = 0; k <= 20; k++) {

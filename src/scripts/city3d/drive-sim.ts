@@ -122,6 +122,8 @@ export interface DriveWorld {
   boxes: Box[];
   /** Things to bump softly: other cars, people (circles) */
   soft: { x: number; z: number; r: number }[];
+  /** Up on the raised highway (viaground.ts): the river's, the lake's and the basin's walls are below */
+  up?: boolean;
 }
 
 /**
@@ -251,7 +253,7 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
   let hit = 0;
   // (Westlake Park's lake only when the car's anywhere near it)
   // (and the Docks' basin when it's in the docks: docks.ts)
-  const walls = world.boxes.concat(
+  const walls = world.up ? world.boxes : world.boxes.concat(
     c.z > RIVER[0] - 8 && c.z < RIVER[1] + 8 ? riverWallsNear(c.x, 6) : [],
     Math.hypot(c.x - LAKE_C[0], c.z - LAKE_C[1]) < 50 ? LAKE_WALLS : [],
     inDocks(c.x, c.z, 8) ? BASIN_WALLS : []
