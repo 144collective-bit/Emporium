@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, moving, neon, rand, toon } from './kit';
 import type { BikeGeometry } from './bikes';
-import { CENTER, SLAB, type Tick } from './world';
+import { CENTER, SLAB, type Env, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
@@ -1001,6 +1001,8 @@ interface Person {
 /** Slots kept in the crowd for people who come with a district's chunk (`LifeOpts.reserve`), and those who came before it was built */
 const spare: Person[] = [];
 const early: { idle: Idle[]; movers: ParkPerson[] }[] = [];
+/** Places everyone again for the last frame (buildPeople's), after a chunk's people have taken their spare slots */
+let repaint: (() => void) | null = null;
 /**
  * People who come with a district's chunk (Sunridge's, sunlife.ts): each takes a spare slot in the crowd, with
  * whatever outfit the boot gave it; past the spare slots the rest are left out. The chunk trims its own lists for phones.
@@ -1019,14 +1021,15 @@ export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) 
   }
   for (const c of idle) {
     const p = spare.pop();
-    if (!p) return;
+    if (!p) break;
     Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry });
   }
   for (const pp of movers) {
     const p = spare.pop();
-    if (!p) return;
+    if (!p) break;
     Object.assign(p, { kind: 'park', park: pp, m: moment(), face: NaN });
   }
+  repaint?.();
 }
 /** The row an idle person's act plays (a queue stands in their own idle) */
 const clipOf = (act: IdleAct, idle: CrowdClip): CrowdClip => (act === 'queue' ? idle : act);
@@ -1191,7 +1194,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   let walkerX = 0;
   let walkerZ = 0;
   let walkerV = 0;
-  tick(({ t, dt, rain, hour }) => {
+  /** Every person placed for the frame (`env`); a chunk's people added since are placed again by `repaint()` */
+  const place = ({ t, dt, rain, hour }: Env) => {
     const pace = hurry(rain);
     {
       const dj = Math.hypot(walker.x - walkerX, walker.z - walkerZ);
@@ -1336,7 +1340,14 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       }
     });
     people3d.commit();
+  };
+  let last: Env | null = null;
+  tick((env) => {
+    last = env;
+    place(env);
   });
+  // (under reduced motion the ticks run on the first frame only: a chunk's people, added after it, are placed here)
+  repaint = () => last && place({ ...last, dt: 0 });
 }
 
 /* ======================================================================

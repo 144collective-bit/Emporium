@@ -1379,7 +1379,8 @@ it and has been retired completely. Build only on what's here.
   the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
   crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 240, 120 on
   phones, with the Neon Mile's and Lot 9's; `addPeople()` fills them when the chunk loads, or queues them
-  before the crowd's built) and life.ts's home cars are per district
+  before the crowd's built, and places them at once through `repaint()`: under reduced motion the ticks run on the
+  first frame only) and life.ts's home cars are per district
   (`Home`: Crestmont's, Sunridge's and the Neon Mile's, `SUN_MIX` / `SCHOOL_BUS_PAINT` in
   sunridge.ts, `opts.sun`); bus stops round the collector (transit.ts
   `SUN_STOP_GAP`, the school bus serves them); lamps at the boot round the
