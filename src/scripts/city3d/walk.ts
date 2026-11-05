@@ -64,7 +64,7 @@ import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
-import { bankY } from './kartfacility';
+import { BANKS_AREA, bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
@@ -83,13 +83,16 @@ import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
 import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
+import { BARRIERS as SWING_BARRIERS, BARRIER_WALLS, SX as SWING_X, betweenBarriers, onSwingDeck, swingAt, swingY } from './swingbridge';
 import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
-import { GATE, bridgeWall, bridgeY } from './stadium';
+import { GATE } from './stadium';
+import { WALK_UNDER, viaductSurface, viaductY, walkOff } from './viaground';
 import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { inBasin } from './docks';
+import { DOWN as TUNNEL_DOWN, inTunnelZone, tunnelRoom, tunnelWall, tunnelY } from './lot9';
 import { HARBOUR_MASTER } from './docksport';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
@@ -110,7 +113,13 @@ import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol'
 import { live } from './live-client';
 import type { FeatureId } from './live';
 import { layoutControls } from './controls';
+import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
+import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
+import type { ModeId } from './keymap';
+import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
+import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
+import type { CardInput } from './ctrlcard';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -230,13 +239,20 @@ interface Settings {
   sens: number;
   invert: boolean;
   autoAds: AutoAds;
+  /** The touch buttons' size, opacity and hand (docs/controls-plan.md Phase 4) */
+  touch: TouchPrefs;
+  /** The modes whose control card has been shown (docs/views-plan.md Phase 4: once each, then on request) */
+  seen: string[];
+  /** Sprint, aim, crouch and block: hold or toggle (docs/views-plan.md Phase 5; comfort.ts) */
+  holds: Holds;
 }
 function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off' };
+    const seen = Array.isArray(s.seen) ? s.seen.filter((m: unknown) => typeof m === 'string').slice(0, 16) : [];
+    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch), seen, holds: cleanHolds(s.holds) };
   } catch {
-    return { sens: 1, invert: false, autoAds: 'off' };
+    return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined), seen: [], holds: {} };
   }
 }
 /** How long the sight stays up after the trigger is let go (so single shots don't flicker in and out) */
@@ -248,6 +264,8 @@ const AUTO_ADS_HOLD = 0.35;
 
 /** A ride (taxi.ts, the metro): each frame it moves on and says where Degen is (in it); `end` when walk mode stops mid-ride */
 export interface Ride {
+  /** Which ride (the toast names its first person: views.ts `RIDE_FIRST`) */
+  kind: RideKind;
   update(dt: number, t: number): { x: number; z: number; y?: number };
   end(): void;
 }
@@ -291,6 +309,11 @@ export interface WalkDeps {
   aero(kind: 'prop' | 'jet' | 'heli', revs: number): void;
   /** The Fight Club on the south bank (the trainer's counter opens its menu; fights run in its ring) */
   fightClub: FightClub;
+  /** A ride's Skip (the gamepad's B on a ride: the taxi's, the metro's, the monorail's or the river bus's) */
+  skipRide?(): void;
+  /** The world map: open or close it (the gamepad's View at the wheel), and whether it's open (the pad's driving waits) */
+  worldMap?(): void;
+  mapOpen?(): boolean;
   reduced: boolean;
   low: boolean;
 }
@@ -416,11 +439,12 @@ export function createWalk(d: WalkDeps) {
   const knob = stick.querySelector<HTMLElement>('span')!;
   const runBtn = $<HTMLButtonElement>('[data-walk-run]');
   const crouchBtn = $<HTMLButtonElement>('[data-walk-crouch]');
-  // The touch controls' places: the same slots in every mode (touchlayout.ts, docs/controls-plan.md)
-  layoutControls(root);
   const sensInput = $<HTMLInputElement>('[data-walk-sens]');
   const invertInput = $<HTMLInputElement>('[data-walk-invert]');
   const fpBtn = $<HTMLButtonElement>('[data-walk-fp]');
+  /** The camera's touch buttons: on foot (up top, lit in first person) and in each ride's bar (shown while riding) */
+  const viewBtn = $<HTMLButtonElement>('[data-walk-view]');
+  const rideViewBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-ride-view]')];
 
   const settings = loadSettings();
   const saveSettings = () => {
@@ -435,6 +459,26 @@ export function createWalk(d: WalkDeps) {
   // Controls > Shooting: aim when firing
   const autoAdsBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-auto-ads]')];
   const paintAutoAds = () => autoAdsBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.autoAds === settings.autoAds)));
+  // Hold or toggle (comfort.ts): each job's two buttons, lit as it works on this device until one is picked
+  const holdBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-hold]')];
+  const DEVICE: HoldInput = matchMedia('(hover: none) and (pointer: coarse)').matches ? 'touch' : 'keys';
+  const hm = (job: HoldJob, input: HoldInput) => holdMode(settings.holds, job, input);
+  const paintHolds = () =>
+    holdBtns.forEach((b) => {
+      const [job, mode] = (b.dataset.hold ?? '').split(':') as [HoldJob, HoldMode];
+      b.setAttribute('aria-pressed', String(hm(job, DEVICE) === mode));
+    });
+  for (const b of holdBtns)
+    b.addEventListener('click', () => {
+      const [job, mode] = (b.dataset.hold ?? '').split(':') as [HoldJob, HoldMode];
+      if (!HOLD_JOBS.includes(job)) return;
+      settings.holds[job] = mode;
+      saveSettings();
+      paintHolds();
+      // (a change lets go of whatever was held or toggled on)
+      letGoHolds();
+    });
+  paintHolds();
   for (const b of autoAdsBtns)
     b.addEventListener('click', () => {
       settings.autoAds = b.dataset.autoAds as AutoAds;
@@ -442,6 +486,31 @@ export function createWalk(d: WalkDeps) {
       saveSettings();
     });
   paintAutoAds();
+  // The touch controls' places: the same slots in every mode, at the player's size, opacity and hand
+  // (touchlayout.ts, docs/controls-plan.md); Settings > On foot > Touch buttons sets them, and Arrange buttons moves them
+  const controls = layoutControls(root, () => settings.touch);
+  const sizeBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-tc-size]')];
+  const alphaInput = root.querySelector<HTMLInputElement>('[data-tc-alpha]');
+  const leftInput = root.querySelector<HTMLInputElement>('[data-tc-left]');
+  const paintTouch = () => {
+    sizeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tcSize === settings.touch.size)));
+    if (alphaInput) alphaInput.value = String(settings.touch.alpha);
+    if (leftInput) leftInput.checked = settings.touch.left;
+  };
+  const setTouch = (next: Partial<TouchPrefs>) => {
+    settings.touch = cleanTouch({ ...settings.touch, ...next });
+    paintTouch();
+    saveSettings();
+    controls.refresh();
+  };
+  for (const b of sizeBtns) b.addEventListener('click', () => setTouch({ size: b.dataset.tcSize as TouchSize }));
+  alphaInput?.addEventListener('input', () => setTouch({ alpha: Number(alphaInput.value) }));
+  leftInput?.addEventListener('change', () => setTouch({ left: leftInput.checked }));
+  // Arrange buttons (Phase 6): its own chunk, loaded the first time it's opened
+  root.querySelector('[data-tc-arrange]')?.addEventListener('click', () => {
+    void import('./arrange-ui').then(({ openArrange }) => openArrange({ root, prefs: () => settings.touch, save: (arrange) => setTouch({ arrange }) }));
+  });
+  paintTouch();
 
   const SPAWN = new THREE.Vector3(WALK_SPAWN.x, SLAB, WALK_SPAWN.z);
   let active = false;
@@ -480,7 +549,9 @@ export function createWalk(d: WalkDeps) {
   let fov = 52;
   const pivot = new THREE.Vector3();
   const keys = new Set<string>();
-  const joy = { x: 0, y: 0, id: -1 };
+  /** The touch stick: x / y as the finger sits in the ring, sx / sy shaped for the wheel (touchdrive.ts `stickRead()`),
+   *  the finger following it (-1: none), the middle it reads from, and whether it floated there (at the wheel) */
+  const joy = { x: 0, y: 0, sx: 0, sy: 0, id: -1, ox: 0, oy: 0, float: false };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: Near; label: string } | null = null;
   /** The getting-in moment whose door has been swung open (once each) */
@@ -651,7 +722,12 @@ export function createWalk(d: WalkDeps) {
    */
   /** Liberty Bridge's leaves are down and its gates open (liberty.ts: they lift for the tall ship; never under reduced motion) */
   const leavesOpen = () => d.reduced || !leavesAt(Date.now() / 1000).shut;
+  /** The swing bridge's barriers down (swingbridge.ts): it's swinging, or about to, for the tall ship */
+  const swingShut = () => !d.reduced && swingAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
+    // (Lot 9's tunnel under the highway, lot9.ts: its ramps and open cuttings, and its floor under the roof when `yNow` is down there)
+    const tn = tunnelY(x, z, yNow);
+    if (tn !== null) return tn;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
     // (a block's edge onto open land eases down to the ground, verges.ts: the bank's slope)
     if (slab === 0.035) {
@@ -668,6 +744,12 @@ export function createWalk(d: WalkDeps) {
     // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
     const hb = harbourY(x, z);
     if (hb !== null) return Math.max(slab, hb + 0.035);
+    // (the swing bridge's deck, low over the river on a ramp from each bank: swingbridge.ts)
+    const sw = swingY(x, z);
+    if (sw !== null) return Math.max(slab, sw + 0.035);
+    // (the raised highway's deck and its ramps, when `yNow` is up there: a car's, a bike's; viaground.ts)
+    const via = viaductY(x, z, yNow);
+    if (via !== null) return Math.max(slab, via + 0.035);
     // (the airport's departures deck and its ramps, when `yNow` is up there: the arrivals level is under it; airfield.ts)
     const dep = departuresY(x, z, yNow);
     if (dep !== null) return Math.max(slab, dep + 0.035);
@@ -680,33 +762,43 @@ export function createWalk(d: WalkDeps) {
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     // (the garage's turntable: its disc's top, where your car stands and you step on to get in)
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
-    const base = Math.max(slab, bridgeY(x, z, yNow) ?? 0, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
-    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
+    const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
+    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) {
+      // (the banks' berms carry on outside the fence, kartfacility.ts)
+      const [bx0, bz0, bx1, bz1] = BANKS_AREA;
+      return x > bx0 && x < bx1 && z > bz0 && z < bz1 ? Math.max(base, bankY(x, z) + 0.035) : base;
+    }
     const t = trackSurfaceAt(x, z, yNow);
     // (and the spectators' grass banks round it, kartfacility.ts)
     return Math.max(base, t ? t.y + 0.035 : 0, bankY(x, z) + 0.035);
   };
   /** Scratch for the collision grid's answers */
   const nearBoxes: Box[] = [];
-  const onBridge = (x: number, z: number) => onHarbour(x, z, 0.15);
+  const onBridge = (x: number, z: number) => onHarbour(x, z, 0.15) || onSwingDeck(x, z, 0.15);
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
+    // Lot 9's tunnel (lot9.ts): down in it only its walls stop you (the highway's over the roof); at street level its open cuttings' edges do
+    if (inTunnelZone(x, z)) {
+      if (y < TUNNEL_DOWN) return tunnelWall(x, z, y, RADIUS);
+      if (tunnelWall(x, z, y, RADIUS)) return true;
+    }
     const open = leavesOpen();
     if (footbridgeY(x, z, y, RADIUS, open) !== null) return false;
     if (footbridgeWall(x, z, y, RADIUS, open)) return true;
     // The airport's departures deck (airfield.ts): up there only its parapets, the hall's face and your car stop you
     if (departuresY(x, z, y, RADIUS) !== null) return drive.blocks(x, z, RADIUS);
     if (departuresWall(x, z, y, RADIUS)) return true;
-    // The stadium's footbridge over the highway (stadium.ts): up there only its parapets stop you
-    if (bridgeY(x, z, y, RADIUS) !== null) return false;
-    if (bridgeWall(x, z, y, RADIUS)) return true;
+    // The raised highway's ramps (viaground.ts): walked onto no further than their foot, walked under where they're high
+    if (y < WALK_UNDER && walkOff(x, z, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
     if (mallWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
+    // ...and the swing bridge's barriers while they're down (swingbridge.ts)
+    if (swingShut() && BARRIER_WALLS.some((b) => inBox(b, x, z, RADIUS))) return true;
     // ...and the Docks' basin at its quays' edge (docks.ts; the avenue crosses its mouth on a bridge)
     if (inBasin(x, z, -0.3)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
@@ -721,15 +813,23 @@ export function createWalk(d: WalkDeps) {
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
+    // (down in Lot 9's tunnel, lot9.ts: its walls, floor and roof, under the ground)
+    const under = from.y < 0.6 && inTunnelZone(from.x, from.z);
+    if (under) t = tunnelRoom(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
     // Ground (and kerb) below
-    if (dir.y < 0) {
+    if (dir.y < 0 && !under) {
       const floor = Math.max(groundAt(from.x, from.z, from.y), 0.035) + 0.22;
       t = Math.min(t, (from.y - floor) / -dir.y);
     }
-    // (and Crestmont's hills along the way, terrain.ts: a slope rising behind him)
-    t = hillsAlong(from, dir, t);
-    // (and the rolls outside the town, rolls.ts)
-    t = rollsAlong(from, dir, t);
+    // (and Crestmont's hills along the way, terrain.ts: a slope rising behind him; and the rolls outside the town,
+    // rolls.ts: neither down in the tunnel, whose own room is the ground's there, nor from down in the river's channel
+    // (the boat's chase camera, below street level over the water, river.ts WATER_Y): both read anything under street
+    // level as under the ground, and neither reaches the river)
+    const wet = from.y < 0.3 && inChannel(from.x, from.z);
+    if (!under && !wet) {
+      t = hillsAlong(from, dir, t);
+      t = rollsAlong(from, dir, t);
+    }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
     for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
@@ -862,10 +962,84 @@ export function createWalk(d: WalkDeps) {
   let wholeAmt = 0;
   let mouseBlock = false;
   let padBlock = false;
+  /** Block on toggle on a gamepad: LB turned it on */
+  let padBlockOn = false;
+  const blockBtnEl = root.querySelector<HTMLButtonElement>('[data-fight-block]');
   let tiredAt = -1e9;
   let fistsShown = false;
   /** His hands are empty and he's on his feet with nothing else on: the fists are his */
   const fistsReady = () => !!fists && !!hotbar?.handsEmpty && !hotbar.open && !carrying && !drive.active && !fly.active && !karts.active && !boat?.active && !fighting() && !ride && !shop.open && !garageUI.open && !hangarUI.open && !kartUI.open && !fightUI.open;
+
+  /* ---------- The control card (docs/views-plan.md Phase 4): the mode's keys for the input in use ---------- */
+  const cardEl = root.querySelector<HTMLElement>('[data-ctrlcard]');
+  let cardMod: Promise<typeof import('./ctrlcard')> | null = null;
+  /** The mode it shows (null: hidden), the seconds left when it came up by itself (0: it stays), the mode last seen */
+  let cardMode: ModeId | null = null;
+  let cardLeft = 0;
+  let lastMode: ModeId | null = null;
+  let inputKind: CardInput = matchMedia('(hover: none) and (pointer: coarse)').matches ? 'touch' : 'keys';
+  /** How long it stays up the first time in a mode */
+  const CARD_AUTO = 9;
+  function modeNow(): ModeId {
+    if (ride) return 'ride';
+    if (fighting()) return 'ring';
+    if (karts.active) return 'kart';
+    if (boating()) return 'boat';
+    if (fly.active) return 'plane';
+    if (drive.active) return drive.vehicle?.kind === 'bike' ? 'bike' : 'car';
+    if (combat.armed) return 'armed';
+    // (by what's in his hands, not whether the fists' chunk is in yet: empty hands are the fists)
+    return carrying || (hotbar && !hotbar.handsEmpty) ? 'foot' : 'fists';
+  }
+  function paintCard() {
+    const m = cardMode;
+    if (!cardEl || !m) return;
+    void (cardMod ??= import('./ctrlcard')).then((c) => {
+      if (cardMode !== m) return;
+      c.paint(cardEl, m, inputKind);
+      cardEl.hidden = false;
+    });
+  }
+  function showCard(m: ModeId, auto: boolean) {
+    cardMode = m;
+    cardLeft = auto ? CARD_AUTO : 0;
+    paintCard();
+  }
+  function hideCard() {
+    const was = !!cardMode;
+    cardMode = null;
+    cardLeft = 0;
+    if (cardEl) cardEl.hidden = true;
+    return was;
+  }
+  /** `/`, the d-pad's down: show it for where you are, or close it */
+  const askCard = () => void (cardMode ? hideCard() : showCard(modeNow(), false));
+  function setInput(k: CardInput) {
+    if (k === inputKind) return;
+    inputKind = k;
+    if (cardMode) paintCard();
+  }
+  /** Each frame: a mode met for the first time brings its card up for a while; asked for, it follows the mode */
+  function cardFrame(dt: number) {
+    if (d.hub?.open || hotbar?.open || shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open || moments.active) return;
+    const m = modeNow();
+    if (m !== lastMode) {
+      lastMode = m;
+      if (cardMode && !cardLeft) showCard(m, false);
+      else if (!settings.seen.includes(m)) {
+        settings.seen.push(m);
+        saveSettings();
+        showCard(m, true);
+      } else hideCard();
+    }
+    if (cardLeft > 0 && (cardLeft -= dt) <= 0) hideCard();
+  }
+  cardEl?.querySelector('[data-ctrlcard-close]')?.addEventListener('click', hideCard);
+  root.querySelector('[data-ctrlcard-open]')?.addEventListener('click', () => {
+    d.hub?.close();
+    if (active) showCard(modeNow(), false);
+  });
+  window.addEventListener('pointerdown', (e) => active && setInput(e.pointerType === 'touch' ? 'touch' : 'keys'), true);
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
@@ -995,6 +1169,39 @@ export function createWalk(d: WalkDeps) {
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
   const pedals = { gas: false, brake: false };
+  /** The fingers on the pedals (touchdrive.ts): each pointer and the pedal it presses */
+  const pedalFingers = new Map<number, Pedal>();
+  const pedalBtns = [$('[data-drive-gas]'), $('[data-drive-brake]')];
+  const rectOf = (el: Element): Rect | null => {
+    const r = el.getBoundingClientRect();
+    return r.width ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null;
+  };
+  function syncPedals() {
+    const on = [...pedalFingers.values()];
+    pedals.gas = on.includes('gas');
+    pedals.brake = on.includes('brake');
+    pedalBtns[0].classList.toggle('is-held', pedals.gas);
+    pedalBtns[1].classList.toggle('is-held', pedals.brake);
+  }
+  function clearPedals() {
+    pedalFingers.clear();
+    syncPedals();
+  }
+  function pressPedal(e: PointerEvent, el: HTMLElement) {
+    capture(el, e.pointerId);
+    pedalFingers.set(e.pointerId, pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), 'gas'));
+    syncPedals();
+    d.touched();
+  }
+  /** The screen for the floating stick's and the pedals' zones */
+  function screen(): Screen {
+    // (in the screen's own numbers, as the fingers' are: the city fills it)
+    const r = root.getBoundingClientRect();
+    const head = r.top + (parseFloat(root.style.getPropertyValue('--head-h')) || 56);
+    return { w: r.right, h: r.bottom, head, stickLeft: !settings.touch.left };
+  }
+  /** At the wheel (your car, bike or kart, the boat, your aircraft, a kart race): the stick floats, the pedals reach */
+  const atWheelNow = () => drive.active || fly.active || boating() || karts.active;
   /* ---------- The kart park: the hut's menu, the race on its track (kart-ui.ts, kart.ts) ---------- */
 
   /** What Degen wears (the kart's driver wears the same) */
@@ -1004,7 +1211,7 @@ export function createWalk(d: WalkDeps) {
    * near the park or asks at the hut; until then they stand idle
    */
   const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, stepTab() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
-  const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {} };
+  const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {}, toggleView: () => 'near' };
   let kartUI: KartUI = NO_KART_UI;
   let karts: KartRace = NO_KARTS;
   let kartLoad: Promise<void> | null = null;
@@ -1043,8 +1250,8 @@ export function createWalk(d: WalkDeps) {
     },
     preview: (k) => karts.preview(k),
     onOpen() {
-      pedals.gas = pedals.brake = false;
-      kartBtns.drift = false;
+      clearPedals();
+      kartBtns.drift = kartBtns.item = false;
       still();
     },
     onClose() {
@@ -1076,7 +1283,7 @@ export function createWalk(d: WalkDeps) {
     start: (setup) => startFight(setup),
     snack: () => void fight?.snack(),
     onOpen() {
-      pedals.gas = pedals.brake = false;
+      clearPedals();
       fightBtns.block = false;
       still();
       void loadFight();
@@ -1167,7 +1374,7 @@ export function createWalk(d: WalkDeps) {
     hero.g.visible = !firstPerson;
     hero.ring.visible = !firstPerson;
     keys.clear();
-    pedals.gas = pedals.brake = false;
+    clearPedals();
     fightBtns.punch = fightBtns.kick = fightBtns.block = fightBtns.dodge = false;
     near = null;
     d.touched();
@@ -1183,15 +1390,15 @@ export function createWalk(d: WalkDeps) {
   }
 
   /** The touch Drift button, held */
-  const kartBtns = { drift: false };
-  const padKart = { steer: 0, throttle: 0, drift: false };
+  const kartBtns = { drift: false, item: false };
+  const padKart = { steer: 0, throttle: 0, drift: false, item: false };
   function startKart(setup: RaceStart) {
     if (karts.active) return;
     kartUI.close();
     if (drive.active) getOut();
     drive.recallKart();
     if (combat.armed) combat.toggleHolster();
-    kartBtns.drift = false;
+    kartBtns.drift = kartBtns.item = false;
     still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
@@ -1217,8 +1424,8 @@ export function createWalk(d: WalkDeps) {
     hero.g.visible = !firstPerson;
     hero.ring.visible = !firstPerson;
     keys.clear();
-    pedals.gas = pedals.brake = false;
-    kartBtns.drift = false;
+    clearPedals();
+    kartBtns.drift = kartBtns.item = false;
     near = null;
     d.touched();
   }
@@ -1247,6 +1454,8 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   }
   function getOut() {
+    // (not up on the raised highway or its ramps: nowhere to stand there, viaground.ts)
+    if (drive.height > 1 && viaductSurface(pos.x, pos.z, -1) !== null) return d.game.toast('Not up here: off the highway first.', 2500);
     const out = drive.exit();
     if (!out) return;
     standAt(out);
@@ -1316,7 +1525,7 @@ export function createWalk(d: WalkDeps) {
     pivot.set(0, 0, 0);
     camDist = zoom;
     keys.clear();
-    pedals.gas = pedals.brake = false;
+    clearPedals();
     near = null;
     d.touched();
   }
@@ -1341,6 +1550,12 @@ export function createWalk(d: WalkDeps) {
   /* ---------- Input ---------- */
 
   const look = (dx: number, dy: number, k: number) => {
+    // On a ride: look round freely (views.ts RIDE_CAM; it stays where you leave it)
+    if (ride) {
+      rideLook(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
+      d.touched();
+      return;
+    }
     if (boat?.active) {
       boat.look(dx * k * settings.sens, dy * k * settings.sens * (settings.invert ? -1 : 1));
       d.touched();
@@ -1391,6 +1606,8 @@ export function createWalk(d: WalkDeps) {
     root.classList.toggle('is-fp', on);
     if (!on && zoom < 1.5) zoom = homeZoom();
     fpBtn.setAttribute('aria-pressed', String(on));
+    viewBtn.setAttribute('aria-pressed', String(on));
+    viewBtn.setAttribute('aria-label', on ? 'Camera view: over the shoulder' : 'Camera view: first person');
     if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
     else pitch = Math.max(pitch, -0.55);
   }
@@ -1398,11 +1615,88 @@ export function createWalk(d: WalkDeps) {
     sprintLock = on;
     runBtn.setAttribute('aria-pressed', String(on));
   }
+  /** What's held or toggled on, let go (a hold or toggle setting changed) */
+  function letGoHolds() {
+    setSprintLock(false);
+    if (aim) setAim(false);
+    mouseR = false;
+    setBlock(false);
+    mouseBlock = padBlock = padBlockOn = false;
+  }
+  /** The touch Block button's state (lit while it's on, as a toggle) */
+  function setBlock(on: boolean) {
+    fightBtns.block = on;
+    blockBtnEl?.setAttribute('aria-pressed', String(on));
+  }
+  /** Crouch held (comfort.ts: crouch on hold): his key, button or touch button down */
+  let crouchKey = false;
+  let crouchPad = false;
+  let crouchTouch = false;
+  /** A press or let-go of crouch on `input`: on hold it crouches while held (a slide when sprinting, as ever) */
+  function crouchInput(input: HoldInput, down: boolean) {
+    if (hm('crouch', input) === 'toggle') {
+      if (down) crouchPress();
+      return;
+    }
+    if (input === 'keys') crouchKey = down;
+    else if (input === 'pad') crouchPad = down;
+    else crouchTouch = down;
+    if (down && !crouched && !slide) crouchPress();
+  }
+  /** Keep a finger's let-go on the button it pressed (a pointer that isn't live, as a synthetic one, can't be) */
+  const capture = (el: HTMLElement, id: number) => {
+    try {
+      el.setPointerCapture?.(id);
+    } catch {
+      /* fine */
+    }
+  };
+  /** A touch button that's held or toggled by the setting for `job`: `set` turns it on or off, `get` says whether it's on */
+  function holdButton(btn: HTMLElement | null, job: HoldJob, set: (on: boolean) => void, get: () => boolean) {
+    if (!btn) return;
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      capture(btn, e.pointerId);
+      set(press(hm(job, 'touch'), get(), true));
+      d.touched();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
+      btn.addEventListener(ev, () => {
+        if (hm(job, 'touch') === 'hold' && get()) set(false);
+      });
+    // (Enter or Space on it, focused: a toggle either way; a pointer's own click already pressed it)
+    btn.addEventListener('click', (e) => {
+      if (e.detail === 0) set(!get());
+    });
+  }
+
+  /** The camera at the wheel (V, the right stick pressed, the touch View button; views.ts): the next view, named in a toast */
+  function nextCam() {
+    let kind: ViewKind | RideKind | 'ring' | 'foot' | null = null;
+    let view: ViewId | null = null;
+    // (a ride, the ring and a kart race have theirs; on foot, over the shoulder or first person)
+    if (ride) {
+      RIDE_CAM.view = nextView(RIDE_CAM.view);
+      [kind, view] = [ride.kind, RIDE_CAM.view];
+    } else if (fighting()) [kind, view] = ['ring', fight!.toggleView()];
+    else if (karts.active) [kind, view] = ['kart', karts.toggleView()];
+    else if (boat?.active) [kind, view] = ['boat', boat.toggleView()];
+    else if (fly.active) [kind, view] = ['plane', fly.toggleView()];
+    else if (drive.active) {
+      const r = drive.toggleView();
+      if (r) [kind, view] = [r.kind, r.view];
+    } else if (active) {
+      setFirstPerson(!firstPerson);
+      [kind, view] = ['foot', firstPerson ? 'first' : 'near'];
+    }
+    if (kind && view) d.game.toast(`Camera · ${viewName(kind, view)}`, 1200);
+  }
 
   const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
   function onKey(e: KeyboardEvent, down: boolean) {
     if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
     const c = e.code;
+    if (down) setInput('keys');
     // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
     if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
     // The hub open: its own keys (menukit.ts), and walking keys wait
@@ -1414,12 +1708,25 @@ export function createWalk(d: WalkDeps) {
       if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
       return false;
     }
-    // Fighting: move with the move keys (W towards the opponent), Shift blocks, Space dodges; the mouse punches and kicks
+    // / or ?: the control card for where you are (again: closes it)
+    if (down && !e.repeat && (c === 'Slash' || e.key === '?' || e.key === '/')) {
+      askCard();
+      e.preventDefault();
+      return true;
+    }
+    // On a ride: V steps its camera (the ride has the rest)
+    if (ride && down && !e.repeat && c === 'KeyV') {
+      nextCam();
+      e.preventDefault();
+      return true;
+    }
+    // Fighting, on the street's keys (keymap.ts): move with the move keys (W towards the opponent), G kicks, Space
+    // dodges, E a snack, V the camera; the mouse punches and blocks (right button held)
     if (fighting()) {
-      if (c === 'Space') {
+      if (down && !e.repeat && c === 'KeyV') nextCam();
+      else if (c === 'Space') {
         if (down && !e.repeat) fightBtns.dodge = true;
-      } else if (c === 'ShiftLeft' || c === 'ShiftRight') fightBtns.block = down;
-      else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
+      } else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
       else if (down && !e.repeat && c === 'KeyE') fight?.snack();
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
@@ -1432,7 +1739,7 @@ export function createWalk(d: WalkDeps) {
     // Boating: W / S ahead and astern, A / D steer, V swaps camera, H the horn, F gets out (alongside a landing)
     if (boat?.active) {
       if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') boat.toggleView();
+      else if (down && !e.repeat && c === 'KeyV') nextCam();
       else if (down && !e.repeat && c === 'KeyH') boat.horn();
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
@@ -1445,7 +1752,7 @@ export function createWalk(d: WalkDeps) {
     // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, F gets out
     if (fly.active) {
       if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') fly.toggleView();
+      else if (down && !e.repeat && c === 'KeyV') nextCam();
       else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c) || c === 'KeyC') {
         if (down) keys.add(c);
@@ -1459,7 +1766,8 @@ export function createWalk(d: WalkDeps) {
     if (karts.active) {
       if (c === 'KeyF') {
         /* swallowed */
-      } else if (c === 'Space') jumpHeld = down;
+      } else if (down && !e.repeat && c === 'KeyV') nextCam();
+      else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
         if (down) keys.add(c);
         else keys.delete(c);
@@ -1471,7 +1779,7 @@ export function createWalk(d: WalkDeps) {
     // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
     if (drive.active) {
       if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') drive.toggleView();
+      else if (down && !e.repeat && c === 'KeyV') nextCam();
       else if (down && !e.repeat && c === 'KeyH') drive.horn();
       else if (c === 'Space') jumpHeld = down;
       else if (MOVE.includes(c)) {
@@ -1486,7 +1794,7 @@ export function createWalk(d: WalkDeps) {
     // Tab: the inventory (on foot, not in the middle of a moment)
     else if (c === 'Tab') {
       if (down && !e.repeat && !moments.active) toggleInv();
-    } else if (down && !e.repeat && c === 'KeyV') setFirstPerson(!firstPerson);
+    } else if (down && !e.repeat && c === 'KeyV') nextCam();
     else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
     else if (down && !e.repeat && c === 'KeyR') combat.reload();
     else if (down && !e.repeat && c === 'KeyG') {
@@ -1494,7 +1802,13 @@ export function createWalk(d: WalkDeps) {
       if (fistsReady()) fightBtns.kick = true;
       else combat.toggleHolster();
     } else if (down && !e.repeat && c === 'KeyX') stepSlot(1);
-    else if (down && !e.repeat && c === 'KeyC') crouchPress();
+    else if (c === 'KeyC') {
+      if (!e.repeat) crouchInput('keys', down);
+    }
+    // Shift on toggle: a press locks the sprint, the next lets it go
+    else if ((c === 'ShiftLeft' || c === 'ShiftRight') && hm('sprint', 'keys') === 'toggle') {
+      if (down && !e.repeat) setSprintLock(!sprintLock);
+    }
     // Q / E held: peek left and right
     else if (c === 'KeyQ' || c === 'KeyE') {
       if (down) keys.add(c);
@@ -1513,11 +1827,11 @@ export function createWalk(d: WalkDeps) {
     e.preventDefault();
     return true;
   }
-  // A click punches and a right-click kicks while fighting (the mouse isn't captured in the ring)
+  // A click punches and the right button held blocks while fighting, as on the street (the mouse isn't captured in the ring)
   canvas.addEventListener('mousedown', (e) => {
     if (active && fighting()) {
       if (e.button === 0) fightBtns.punch = true;
-      else if (e.button === 2) fightBtns.kick = true;
+      else if (e.button === 2) mouseBlock = press(hm('block', 'keys'), mouseBlock, true);
     }
   });
   // Switching away lets go of everything (keys, buttons, sticks, a look drag)
@@ -1526,10 +1840,12 @@ export function createWalk(d: WalkDeps) {
     padLean = 0;
     jumpHeld = false;
     mouseL = mouseR = mouseBlock = padBlock = false;
+    crouchKey = crouchPad = crouchTouch = false;
     setAim(false);
     combat.trigger(false);
     combat.trigger(false, true);
     endJoy();
+    clearPedals();
     drag = null;
   });
 
@@ -1568,18 +1884,22 @@ export function createWalk(d: WalkDeps) {
     // Empty hands: a click punches (once the mouse is captured), the right button held blocks
     if (fistsReady()) {
       if (e.button === 0 && (locked() || noLock)) fightBtns.punch = true;
-      if (e.button === 2) mouseBlock = true;
+      if (e.button === 2) mouseBlock = press(hm('block', 'keys'), mouseBlock, true);
       d.touched();
       return;
     }
-    if (e.button === 2) aim = mouseR = true;
+    // (aim on toggle: a right-click puts the sight up, the next takes it down)
+    if (e.button === 2) {
+      if (hm('aim', 'keys') === 'toggle') setAim(!aim);
+      else aim = mouseR = true;
+    }
     if (e.button === 0 && (locked() || noLock)) {
       mouseL = true;
       combat.trigger(true);
     }
   });
   window.addEventListener('mouseup', (e) => {
-    if (e.button === 2) mouseBlock = false;
+    if (e.button === 2 && hm('block', 'keys') === 'hold') mouseBlock = false;
     if (e.button === 2 && mouseR) aim = mouseR = false;
     if (e.button === 0 && mouseL) {
       mouseL = false;
@@ -1591,6 +1911,12 @@ export function createWalk(d: WalkDeps) {
   let drag: { id: number; x: number; y: number; touch: boolean } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     if (!active) return;
+    // At the wheel, a touch on the city low on the stick's side is the stick, and one round the pedals a pedal
+    if (e.pointerType !== 'mouse' && atWheelNow()) {
+      const sc = screen();
+      if (inSteerZone(e.clientX, e.clientY, sc) && startJoy(e, canvas, true)) return;
+      if (inPedalZone(e.clientX, e.clientY, sc, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]))) return pressPedal(e, canvas);
+    }
     if (e.pointerType === 'mouse') {
       if (!locked() && !noLock) {
         const req = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
@@ -1630,33 +1956,54 @@ export function createWalk(d: WalkDeps) {
     { passive: false }
   );
 
-  // Touch joystick
+  // Touch joystick: one finger, followed wherever it goes (on the window, the finger captured) and never another's.
+  // At the wheel it floats (touchdrive.ts): a thumb landing on the city on the stick's side of the lower screen is the
+  // stick, its ring moved under the thumb, so the steering thumb never misses it
   const setJoy = (e: PointerEvent) => {
-    const r = stick.getBoundingClientRect();
-    let x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-    let y = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    const R = stick.getBoundingClientRect().width / 2 || 1;
+    let x = (e.clientX - joy.ox) / R;
+    let y = (e.clientY - joy.oy) / R;
     const m = Math.hypot(x, y);
     if (m > 1) ((x /= m), (y /= m));
     joy.x = x;
     joy.y = y;
-    knob.style.transform = `translate(${x * r.width * 0.27}px, ${y * r.width * 0.27}px)`;
+    const sh = stickRead(e.clientX - joy.ox, e.clientY - joy.oy, R);
+    joy.sx = sh.x;
+    joy.sy = sh.y;
+    knob.style.transform = `translate(${x * R * 0.54}px, ${y * R * 0.54}px)`;
     d.touched();
   };
-  stick.addEventListener('pointerdown', (e) => {
+  /** A finger takes the stick (on the stick itself, or floating at the wheel); false if another already has it */
+  function startJoy(e: PointerEvent, el: HTMLElement, float: boolean) {
+    if (joy.id >= 0) return false;
+    const r = stick.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
     joy.id = e.pointerId;
-    stick.setPointerCapture(e.pointerId);
+    joy.float = float;
+    joy.ox = float ? e.clientX : cx;
+    joy.oy = float ? e.clientY : cy;
+    stick.style.translate = float ? `${e.clientX - cx}px ${e.clientY - cy}px` : '';
+    stick.classList.toggle('is-held', true);
+    capture(el, e.pointerId);
     setJoy(e);
-    e.stopPropagation();
+    return true;
+  }
+  stick.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (startJoy(e, stick, false)) e.stopPropagation();
   });
-  stick.addEventListener('pointermove', (e) => e.pointerId === joy.id && setJoy(e));
+  window.addEventListener('pointermove', (e) => e.pointerId === joy.id && setJoy(e));
   const endJoy = (e?: PointerEvent) => {
     if (e && e.pointerId !== joy.id) return;
     joy.id = -1;
-    joy.x = joy.y = 0;
+    joy.x = joy.y = joy.sx = joy.sy = 0;
+    joy.float = false;
     knob.style.transform = '';
+    stick.style.translate = '';
+    stick.classList.remove('is-held');
   };
-  stick.addEventListener('pointerup', (e) => endJoy(e));
-  stick.addEventListener('pointercancel', (e) => endJoy(e));
+  for (const ev of ['pointerup', 'pointercancel'] as const) window.addEventListener(ev, (e) => endJoy(e));
   const jumpBtn = $('[data-walk-jump]');
   jumpBtn.addEventListener('pointerdown', () => {
     tryJump();
@@ -1665,29 +2012,51 @@ export function createWalk(d: WalkDeps) {
   jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
   jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
   // (the touch buttons answer a finger at once, with the thumb still on the stick: onTap() in ui.ts)
-  onTap(runBtn, () => setSprintLock(!sprintLock));
-  onTap(crouchBtn, () => {
-    crouchPress();
+  holdButton(runBtn, 'sprint', setSprintLock, () => sprintLock);
+  crouchBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    capture(crouchBtn, e.pointerId);
+    crouchInput('touch', true);
     // (a crouch lets go of the locked sprint, which would stand him straight back up)
     if (crouched) setSprintLock(false);
   });
-  // Touch pedals while driving (the stick steers)
-  for (const [sel, key] of [
-    ['[data-drive-gas]', 'gas'],
-    ['[data-drive-brake]', 'brake'],
-  ] as const) {
-    const b = $(sel);
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) crouchBtn.addEventListener(ev, () => crouchInput('touch', false));
+  crouchBtn.addEventListener('click', (e) => e.detail === 0 && crouchPress());
+  // Touch pedals at the wheel (touchdrive.ts): each pedal finger followed on its own, pressing the pedal it's on or
+  // the nearer one, so a thumb rolled from Gas onto Brake switches without lifting; a finger landing on the city just
+  // round them presses one too. Only its own lift (or the browser's cancel) lets a pedal go, never another finger.
+  pedalBtns.forEach((b) =>
     b.addEventListener('pointerdown', (e) => {
-      try {
-        b.setPointerCapture(e.pointerId);
-      } catch {
-        /* still pressed, just not captured */
-      }
-      pedals[key] = true;
-      d.touched();
+      e.preventDefault();
+      pressPedal(e, b);
+    })
+  );
+  window.addEventListener('pointermove', (e) => {
+    const was = pedalFingers.get(e.pointerId);
+    if (!was) return;
+    const now = pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), was);
+    if (now === was) return;
+    pedalFingers.set(e.pointerId, now);
+    syncPedals();
+  });
+  for (const ev of ['pointerup', 'pointercancel'] as const)
+    window.addEventListener(ev, (e) => {
+      if (pedalFingers.delete(e.pointerId)) syncPedals();
     });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => (pedals[key] = false));
-  }
+  // The phone's own gestures never take a finger off the controls (Safari's pinch, its long-press magnifier and
+  // callout, Android's long-press menu): a touch landing on a control or the city while walking keeps its default from
+  // happening (the pointer events go on as they were)
+  const onControls = (t: EventTarget | null) => t instanceof Element && !!t.closest('.tc, .walk-stick, canvas');
+  for (const ev of ['touchstart', 'touchmove'] as const)
+    root.addEventListener(
+      ev,
+      (e) => {
+        if (active && e.cancelable && onControls(e.target)) e.preventDefault();
+      },
+      { passive: false }
+    );
+  for (const ev of ['gesturestart', 'gesturechange'] as const) document.addEventListener(ev, (e) => active && e.preventDefault());
+  root.addEventListener('contextmenu', (e) => active && onControls(e.target) && e.preventDefault());
   // The horn while driving your car (city life plan, Phase 2)
   $('[data-drive-horn]').addEventListener('pointerdown', () => {
     if (boat?.active) boat.horn();
@@ -1696,11 +2065,15 @@ export function createWalk(d: WalkDeps) {
   });
   // The camera at the wheel on touch (V on a keyboard): the boat's, the aircraft's or the car's next view
   onTap($('[data-drive-view]'), () => {
-    if (boat?.active) boat.toggleView();
-    else if (fly.active) fly.toggleView();
-    else if (drive.active) drive.toggleView();
+    nextCam();
     d.touched();
   });
+  // ... on foot (over the shoulder or first person), and on a ride (its bar's View)
+  onTap($('[data-walk-view]'), () => {
+    nextCam();
+    d.touched();
+  });
+  for (const b of rideViewBtns) b.addEventListener('click', () => ride && (nextCam(), d.touched()));
   // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
   const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
   if (driftBtn) {
@@ -1715,6 +2088,19 @@ export function createWalk(d: WalkDeps) {
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
   }
+  const itemBtn = root.querySelector<HTMLButtonElement>('[data-kart-item]');
+  if (itemBtn) {
+    itemBtn.addEventListener('pointerdown', (e) => {
+      try {
+        itemBtn.setPointerCapture(e.pointerId);
+      } catch {
+        /* still pressed */
+      }
+      kartBtns.item = true;
+      d.touched();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) itemBtn.addEventListener(ev, () => (kartBtns.item = false));
+  }
   // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
   for (const k of ['punch', 'kick', 'dodge'] as const) {
     const b = root.querySelector(`[data-fight-${k}]`);
@@ -1724,16 +2110,7 @@ export function createWalk(d: WalkDeps) {
         d.touched();
       });
   }
-  const blockBtn = root.querySelector<HTMLButtonElement>('[data-fight-block]');
-  if (blockBtn) {
-    blockBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      blockBtn.setPointerCapture?.(e.pointerId);
-      fightBtns.block = true;
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) blockBtn.addEventListener(ev, () => (fightBtns.block = false));
-  }
+  holdButton(blockBtnEl, 'block', setBlock, () => fightBtns.block);
   root.querySelector('[data-fight-quit]')?.addEventListener('click', () => quitFight());
   fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
   sensInput.addEventListener('input', () => {
@@ -1781,10 +2158,7 @@ export function createWalk(d: WalkDeps) {
     aim = on;
     aimBtn.setAttribute('aria-pressed', String(on));
   };
-  onTap(aimBtn, () => {
-    setAim(!aim);
-    d.touched();
-  });
+  holdButton(aimBtn, 'aim', setAim, () => aim);
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
   // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands);
@@ -1797,7 +2171,7 @@ export function createWalk(d: WalkDeps) {
       padDrive.steer = padDrive.throttle = 0;
       padDrive.handbrake = false;
       padKart.steer = padKart.throttle = 0;
-      padKart.drift = false;
+      padKart.drift = padKart.item = false;
       padFly.turn = padFly.climb = padFly.throttle = 0;
       // Unplugged with a trigger down: let go of it
       if (pad.prev[6]) setAim(false);
@@ -1813,6 +2187,7 @@ export function createWalk(d: WalkDeps) {
     if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
     const b = gp.buttons.map((x) => x.pressed);
     const edge = (i: number) => b[i] && !pad.prev[i];
+    if (pad.x || pad.y || rx || ry || b.some(Boolean)) setInput('pad');
     // The hub: the D-pad moves round it, LB / RB the tabs, A presses, B or Start closes
     if (d.hub?.open) {
       d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]));
@@ -1880,18 +2255,31 @@ export function createWalk(d: WalkDeps) {
       padFight.x = padFight.y = 0;
       return;
     }
-    // Start opens the hub (the pause screen), but in a fight, where it quits
-    if (edge(9) && d.hub && !fighting()) {
+    // Start opens the hub (the pause screen), but in a fight or a kart race, where it quits (keymap.ts `quit`)
+    if (edge(9) && d.hub && !fighting() && !karts.active) {
       still(false);
       d.hub.show();
       pad.prev = b;
       return;
     }
-    // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits
+    // The d-pad's down: the control card (the kart hut's menu has it for its list)
+    if (edge(13) && !kartUI.open) askCard();
+    // On a ride: the right stick looks round, pressed it steps the camera, B skips the ride (the ride has the rest)
+    if (ride) {
+      if (edge(11)) nextCam();
+      if (edge(1)) d.skipRide?.();
+      if (b.some(Boolean)) d.touched();
+      pad.prev = b;
+      return;
+    }
+    // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits, the right stick pressed the camera
     if (fighting()) {
+      if (edge(11)) nextCam();
       padFight.x = pad.x;
       padFight.y = pad.y;
-      padFight.block = !!b[4];
+      if (hm('block', 'pad') === 'toggle') {
+        if (edge(4)) padFight.block = !padFight.block;
+      } else padFight.block = !!b[4];
       if (edge(2)) fightBtns.punch = true;
       if (edge(3)) fightBtns.kick = true;
       if (edge(0)) fightBtns.dodge = true;
@@ -1902,24 +2290,35 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Boating: left stick steers, RT ahead, LT astern, Y gets out, View swaps camera, the left stick pressed is the horn
+    // At the wheel (the boat, your aircraft, your car, bike or kart): the right stick pressed steps the camera, View opens
+    // the world map; while it's open the vehicle coasts and only View (closing it) is heard
+    if (boat?.active || fly.active || drive.active) {
+      if (edge(11)) nextCam();
+      if (edge(8)) d.worldMap?.();
+      if (d.mapOpen?.()) {
+        padDrive.steer = padDrive.throttle = 0;
+        padDrive.handbrake = false;
+        padFly.turn = padFly.climb = padFly.throttle = 0;
+        pad.prev = b;
+        return;
+      }
+    }
+    // Boating: left stick steers, RT ahead, LT astern, Y gets out, the left stick pressed is the horn
     if (boat?.active) {
       padDrive.steer = pad.x;
       padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       if (edge(3)) act();
-      if (edge(8)) boat.toggleView();
       if (edge(10)) boat.horn();
       if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
-    // Flying: left stick turns and climbs (up climbs), RT faster, LT slower, Y gets out, View swaps camera
+    // Flying: left stick turns and climbs (up climbs), RT faster, LT slower, Y gets out
     if (fly.active) {
       padFly.turn = pad.x;
       padFly.climb = -pad.y;
       padFly.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       if (edge(3)) act();
-      if (edge(8)) fly.toggleView();
       if (pad.x || pad.y || padFly.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
@@ -1936,40 +2335,55 @@ export function createWalk(d: WalkDeps) {
       pad.prev = b;
       return;
     }
-    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Y quits
+    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Start quits (as in the ring), the right stick pressed the camera
     if (karts.active) {
+      if (edge(11)) nextCam();
       padKart.steer = pad.x;
       padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padKart.drift = !!b[0];
-      if (edge(3)) abandonKart();
+      padKart.item = !!b[2];
+      if (edge(9)) abandonKart();
       if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
-    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, View swaps camera, the left stick pressed is the horn
+    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, the left stick pressed is the horn
     if (drive.active) {
       padDrive.steer = pad.x;
       padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padDrive.handbrake = !!b[0];
       if (edge(3)) act();
-      if (edge(8)) drive.toggleView();
       if (edge(10)) drive.horn();
       if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
       return;
     }
     if (edge(0)) tryJump();
-    if (edge(1)) crouchPress();
+    if (b[1] !== !!pad.prev[1]) crouchInput('pad', !!b[1]);
     jumpHeld = jumpHeld || b[0] || false;
     if (!b[0] && pad.prev[0]) jumpHeld = false;
     // (aiming, LB and RB lean out instead: peeking)
-    padLean = b[6] ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
-    // (empty hands: LB held blocks, the run is the left stick pressed)
+    // (aim on toggle: LT puts the sight up and the next takes it down; peeking then while it's up)
+    const aimToggle = hm('aim', 'pad') === 'toggle';
+    if (aimToggle && edge(6)) setAim(!aim);
+    const aiming = aimToggle ? aim : !!b[6];
+    padLean = aiming ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
+    // (the run is the left stick pressed, a gun out or not (keymap.ts); empty hands: LB held blocks)
     const fb = fistsReady();
-    padBlock = fb && !!b[4];
-    pad.run = !!((b[4] && !b[6] && !fb) || b[10]);
-    aim = aim || !!b[6];
-    if (!b[6] && pad.prev[6]) setAim(false);
+    if (hm('block', 'pad') === 'toggle') {
+      if (edge(4)) padBlockOn = !padBlockOn;
+      if (!fb) padBlockOn = false;
+      padBlock = fb && padBlockOn;
+    } else padBlock = fb && !!b[4];
+    // (sprint on toggle: L3 locks it, again lets it go)
+    if (hm('sprint', 'pad') === 'toggle') {
+      if (edge(10)) setSprintLock(!sprintLock);
+      pad.run = false;
+    } else pad.run = !!b[10];
+    if (!aimToggle) {
+      aim = aim || !!b[6];
+      if (!b[6] && pad.prev[6]) setAim(false);
+    }
     // (Y does what the prompt says; with empty hands and nothing to do, it kicks)
     if (edge(3)) {
       if (fistsReady() && !near) fightBtns.kick = true;
@@ -1977,7 +2391,7 @@ export function createWalk(d: WalkDeps) {
     }
     // View opens the inventory; the right stick pressed swaps first and third person
     if (edge(8) && !moments.active) toggleInv();
-    if (edge(11)) setFirstPerson(!firstPerson);
+    if (edge(11)) nextCam();
     if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
     // (X reloads; with empty hands it punches)
     if (edge(2)) {
@@ -1986,7 +2400,7 @@ export function createWalk(d: WalkDeps) {
     }
     if (edge(12)) combat.toggleHolster();
     // RB or D-pad right: the hotbar's next slot of the fists and the guns; D-pad left: the one before
-    if ((edge(5) && !b[6]) || edge(15)) stepSlot(1);
+    if ((edge(5) && !aiming) || edge(15)) stepSlot(1);
     if (edge(14)) stepSlot(-1);
     if (pad.x || pad.y || b.some(Boolean)) d.touched();
     pad.prev = b;
@@ -2082,14 +2496,24 @@ export function createWalk(d: WalkDeps) {
     viewShifted = true;
   }
 
+  /** A car (or bike, or kart) between the swing bridge's barriers as they come down: put back behind the nearer one, facing off */
+  function offSwing(st: { x: number; z: number; yaw: number }) {
+    const north = st.z < (SWING_BARRIERS.n + SWING_BARRIERS.s) / 2;
+    return { x: SWING_X + (north ? 0.85 : -0.85), z: north ? SWING_BARRIERS.n - 3 : SWING_BARRIERS.s + 3, yaw: north ? Math.PI / 2 : -Math.PI / 2 };
+  }
   function driveFrame(dt: number, t: number) {
+    const st = drive.state as { x: number; z: number; yaw: number; speed: number; vx: number; vz: number; steer: number } | null;
+    if (st && betweenBarriers(st.x, st.z) && swingShut()) {
+      Object.assign(st, offSwing(st), { speed: 0, vx: 0, vz: 0, steer: 0 });
+      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+    }
     const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
     let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
     if (joy.id >= 0) {
-      steer = joy.x;
-      // The stick pedals too, unless a pedal button is held
-      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+      steer = joy.sx;
+      // The stick pedals too, unless a pedal is held
+      if (!pedals.gas && !pedals.brake) throttle = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padDrive.steer) steer = padDrive.steer;
@@ -2102,7 +2526,7 @@ export function createWalk(d: WalkDeps) {
       d.game.commit();
     }
     const s = drive.state!;
-    pos.set(s.x, groundAt(s.x, s.z), s.z);
+    pos.set(s.x, groundAt(s.x, s.z, drive.height), s.z);
     speedNow = Math.hypot(s.vx, s.vz);
     hero.g.visible = hero.ring.visible = false;
     // The rest of the city carries on (drones, dummies)
@@ -2123,8 +2547,8 @@ export function createWalk(d: WalkDeps) {
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
     let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
     if (joy.id >= 0) {
-      steer = joy.x;
-      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+      steer = joy.sx;
+      if (!pedals.gas && !pedals.brake) throttle = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padDrive.steer) steer = padDrive.steer;
@@ -2174,8 +2598,8 @@ export function createWalk(d: WalkDeps) {
     let throttle = k('KeyW', 'KeyW') - k('KeyS', 'KeyS');
     let climb = (keys.has('ArrowUp') || jumpHeld ? 1 : 0) - (keys.has('ArrowDown') || keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyC') ? 1 : 0);
     if (joy.id >= 0) {
-      turn = joy.x;
-      climb = -joy.y;
+      turn = joy.sx;
+      climb = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padFly.turn) turn = padFly.turn;
@@ -2210,7 +2634,7 @@ export function createWalk(d: WalkDeps) {
       right = padFight.x;
       fwd = -padFight.y;
     }
-    const inp: FightInput = { fwd, right, punch: fightBtns.punch, kick: fightBtns.kick, block: fightBtns.block || padFight.block, dodge: fightBtns.dodge };
+    const inp: FightInput = { fwd, right, punch: fightBtns.punch, kick: fightBtns.kick, block: fightBtns.block || padFight.block || mouseBlock, dodge: fightBtns.dodge };
     fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
     fight!.update(dt, inp);
     const you = fight!.sim?.fighter('you');
@@ -2234,13 +2658,14 @@ export function createWalk(d: WalkDeps) {
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
     let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
     if (joy.id >= 0) {
-      steer = joy.x;
-      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+      steer = joy.sx;
+      if (!pedals.gas && !pedals.brake) throttle = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padKart.steer) steer = padKart.steer;
     if (padKart.throttle) throttle = padKart.throttle;
-    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift };
+    // (E, the gamepad's X or the touch Item button: an items race's item, kart-sim.ts takes the press)
+    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift, item: keys.has('KeyE') || kartBtns.item || padKart.item };
     karts.update(dt, inp);
     const p = karts.sim?.player;
     if (p) {
@@ -2260,6 +2685,7 @@ export function createWalk(d: WalkDeps) {
   function update(dt: number, t: number) {
     if (!active) return;
     pollPad(dt);
+    cardFrame(dt);
     kartUI.update(dt);
     fightUI.update(dt);
     if (ride) return rideFrame(dt, t);
@@ -2272,6 +2698,20 @@ export function createWalk(d: WalkDeps) {
     if (fly.active) return flyFrame(dt, t);
     fly.idle(dt);
     if (drive.active) return driveFrame(dt, t);
+    // ...and your car if it's parked between them
+    const pc = drive.carState;
+    if (pc && betweenBarriers(pc.x, pc.z) && swingShut()) {
+      const o = offSwing(pc);
+      drive.bring(o.x, o.z, o.yaw);
+    }
+    // The swing bridge's barriers coming down while he's between them: he's put back behind the nearer one
+    if (betweenBarriers(pos.x, pos.z) && swingShut()) {
+      const north = pos.z < (SWING_BARRIERS.n + SWING_BARRIERS.s) / 2;
+      const z = north ? SWING_BARRIERS.n - 0.9 : SWING_BARRIERS.s + 0.9;
+      pos.set(SWING_X + THREE.MathUtils.clamp(pos.x - SWING_X, -2.4, 2.4), groundAt(SWING_X, z, pos.y) , z);
+      vel.set(0, 0);
+      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+    }
     // Liberty Bridge's gates shutting while he's out on its leaves: he's walked back through to the nearer tower
     if (pos.y > LOW_Y - 0.4 && pos.y < LOW_Y + 1.5 && onLeaves(pos.x, pos.z) && !leavesOpen()) {
       const i = pos.z < (FACES[0] + FACES[1]) / 2 ? 0 : 1;
@@ -2557,6 +2997,8 @@ export function createWalk(d: WalkDeps) {
     if (fists) fists.lay(P, guardAmt, wholeAmt);
     // The slide's pose, blended in quickly and out a little slower (the motion capture steps aside for it)
     slideAmt += ((slide ? 1 : 0) - slideAmt) * damp(slide ? 18 : 9, dt);
+    // (crouch on hold: let go, he stands, a slide ending in a crouch too)
+    if (crouched && !slide && settings.holds.crouch === 'hold' && !crouchKey && !crouchPad && !crouchTouch) crouched = false;
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * damp(10, dt);
     if (crouchBtn.ariaPressed !== String(crouched)) crouchBtn.setAttribute('aria-pressed', String(crouched));
     slidePose(P, slideAmt);
@@ -2625,7 +3067,8 @@ export function createWalk(d: WalkDeps) {
     lastYaw = yaw;
     interests.length = 0;
     for (const p of bodies.people) if (Math.abs(p.x - pos.x) < 8 && Math.abs(p.z - pos.z) < 8) interests.push({ x: p.x, z: p.z, y: pos.y + 1.1 * SCALE, kind: 'person', moving: p.act === undefined, id: `p${p.x.toFixed(1)},${p.z.toFixed(1)}` });
-    for (const c of bodies.cars) if (Math.abs(c.x - pos.x) < 8 && Math.abs(c.z - pos.z) < 8) interests.push({ x: c.x, z: c.z, y: pos.y + 0.6, kind: 'car', weight: 0.7, moving: true, id: `c${c.model}${Math.round(c.x)},${Math.round(c.z)}` });
+    // (not the ring highway's traffic up on its deck)
+    for (const c of bodies.cars) if (Math.abs(c.x - pos.x) < 8 && Math.abs(c.z - pos.z) < 8 && c.y < 2) interests.push({ x: c.x, z: c.z, y: pos.y + 0.6, kind: 'car', weight: 0.7, moving: true, id: `c${c.model}${Math.round(c.x)},${Math.round(c.z)}` });
     const gaz = gaze ? gaze.update({ dt, x: pos.x, y: pos.y + 1.1 * SCALE, z: pos.z, face: animator ? animator.face : face, ahead: face, speed, interests }) : STILL_GAZE;
     const gazeW = combat.armed || aim ? 0 : speed < 0.25 ? 1 - Math.min(1, Math.abs(lookYaw) / 0.35) : 1;
     lookAround += (gaz.yaw * gazeW - lookAround) * damp(10, dt);
@@ -2756,7 +3199,9 @@ export function createWalk(d: WalkDeps) {
     pivot.y += (pivotWant.y + dip - pivot.y) * damp(firstPerson ? 25 : 10, dt);
     // Looking up tilts the view but keeps the camera behind him (not down at his feet),
     // so he drops to the bottom of the frame and the sky opens up
-    const camPitch = firstPerson ? pitch : Math.max(pitch, -0.12);
+    // (down in Lot 9's tunnel the camera keeps low behind him, under its roof, instead of pinned to his head: lot9.ts)
+    const lowRoof = !firstPerson && pos.y < TUNNEL_DOWN && inTunnelZone(pos.x, pos.z);
+    const camPitch = firstPerson ? pitch : lowRoof ? THREE.MathUtils.clamp(pitch, -0.12, 0.1) : Math.max(pitch, -0.12);
     offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
     const want = firstPerson ? 0 : zoom * (aimNow ? 0.62 : 1);
     // (seated, a bench's back or anything else that low doesn't pull the camera in onto him)
@@ -2821,7 +3266,7 @@ export function createWalk(d: WalkDeps) {
     }
     // The kart hut's door, at the kart park
     if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {
-      best = { id: 'karts', label: 'Kart hut' };
+      best = { id: 'karts', label: 'Clubhouse' };
       bestD = 0;
     }
     // The trainer's counter, at the Fight Club
@@ -2879,6 +3324,8 @@ export function createWalk(d: WalkDeps) {
   }
 
   return {
+    /** For the headless checks (index.ts `__city`, `?fps`): a race at the kart park, the kart game fetched first */
+    race: (setup: RaceStart) => loadKarts().then(() => startKart(setup)),
     get active() {
       return active;
     },
@@ -2917,6 +3364,10 @@ export function createWalk(d: WalkDeps) {
     get onFoot() {
       return active && !drive.active && !fly.active && !boating() && !karts.active && !fighting() && !ride;
     },
+    /** At the wheel of your car, bike or kart, your aircraft or the hire boat (M opens the world map there too) */
+    get atWheel() {
+      return active && (drive.active || fly.active || boating());
+    },
     /** In a taxi or on the metro */
     get riding() {
       return !!ride;
@@ -2932,7 +3383,10 @@ export function createWalk(d: WalkDeps) {
         // (the ride has him: the moment that got him in is over, and a crate is put away)
         moments.cancel();
         dropCrate();
+        // (every ride starts near, looking ahead: views.ts)
+        startRide();
       }
+      for (const b of rideViewBtns) b.hidden = !r;
       if (r && locked()) document.exitPointerLock();
       root.classList.toggle('is-riding', !!r);
       if (!r) hero.g.visible = hero.ring.visible = !firstPerson;
@@ -2947,7 +3401,8 @@ export function createWalk(d: WalkDeps) {
       let best: { x: number; z: number; yaw: number; d: number } | null = null;
       for (const sp of SPOTS) {
         const d = Math.hypot(sp.x - pos.x, sp.z - pos.z);
-        if (d > 45 || d < 3 || (best && d >= best.d)) continue;
+        // (at street level: never up on the raised highway or a ramp)
+        if (d > 45 || d < 3 || sp.y > 0.05 || (best && d >= best.d)) continue;
         if (bodies.cars.some((c) => Math.hypot(c.x - sp.x, c.z - sp.z) < 7)) continue;
         const dir = pointOn(ROUTES[sp.r], sp.p, 0).dir;
         best = { x: sp.x, z: sp.z, yaw: Math.atan2(-dir[1], dir[0]), d };
@@ -3112,6 +3567,8 @@ export function createWalk(d: WalkDeps) {
       root.dataset.mode = 'walk';
     },
     exit() {
+      hideCard();
+      lastMode = null;
       // Leaving walk mode on a ride: it ends where it is
       if (ride) {
         const r = ride;
@@ -3158,9 +3615,8 @@ export function createWalk(d: WalkDeps) {
       garageUI.close();
       hotbar?.close();
       combat.exit();
-      joy.id = -1;
-      joy.x = joy.y = 0;
-      knob.style.transform = '';
+      endJoy();
+      clearPedals();
       near = null;
       prompt.hidden = true;
       hero.g.visible = hero.ring.visible = false;
@@ -3169,6 +3625,8 @@ export function createWalk(d: WalkDeps) {
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
     },
+    /** Esc: the control card first (true if it was up) */
+    closeCard: () => hideCard(),
     /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
       return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();

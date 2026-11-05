@@ -111,9 +111,14 @@
    touchlayout.ts (controls.ts sets --hb-*): over the arc upright, low left of it on their side */
 @media (pointer: coarse) {
   .hotbar {
-    right: calc(env(safe-area-inset-right) + var(--hb-right, 12px));
+    right: calc(env(safe-area-inset-right) + var(--hb-edge, 12px));
     bottom: calc(env(safe-area-inset-bottom) + var(--hb-bottom, 262px));
     gap: 4px;
+  }
+  /* (left-handed: along the left edge, touchlayout.ts) */
+  .hotbar[data-tc="l"] {
+    right: auto;
+    left: calc(env(safe-area-inset-left) + var(--hb-edge, 12px));
   }
   .hb-slot {
     grid-template-rows: 22px;

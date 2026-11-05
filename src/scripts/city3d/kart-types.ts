@@ -7,6 +7,7 @@
  */
 import type * as THREE from 'three';
 import type { Cond, CourseId } from './kartcircuit';
+import type { ItemId } from './kartitems';
 import type { CupId, KartSim } from './kart-sim';
 import type { KartResult, SeriesResult } from './tycoon';
 import type { ClassId } from './catalog';
@@ -23,6 +24,10 @@ export interface RaceStart {
   laps?: number;
   cond?: Cond;
   single?: boolean;
+  /** The rivals' brain drives you too (the headless checks only: walk.ts `race()`) */
+  auto?: boolean;
+  /** Items on (a single race only, docs/kart-west-plan.md Phase 7) */
+  items?: boolean;
 }
 
 /* ---------- The site (kartpark3d.ts) ---------- */
@@ -38,6 +43,18 @@ export interface KartPark {
   racing(on: boolean): void;
   /** Where the picked kart stands on show between races (its bay in front of the garages), and which way it faces */
   showSpot: { x: number; y: number; z: number; yaw: number };
+  /** The LED screens: the race's order (null between races: the park's name) */
+  board(b: KartBoard | null): void;
+  /** The trophy cabinet: the cups you've won and your best overall place in each (tycoon.ts `karts.trophies`) */
+  trophies(won: Partial<Record<CupId, number>>): void;
+}
+/** What the LED screens show in a race: its name, the lap, the order (each kart's name and colour, yours marked) */
+export interface KartBoard {
+  title: string;
+  lap: number;
+  laps: number;
+  done: boolean;
+  rows: { name: string; colour: string; you: boolean }[];
 }
 
 /* ---------- The menu, the HUD and the results (kart-ui.ts) ---------- */
@@ -70,6 +87,16 @@ export interface KartHud {
   dots: { x: number; z: number; you: boolean }[];
   /** A series: which race this is (1-based) of how many; null for a single race */
   series: { race: number; of: number } | null;
+  /** The split just made (docs/kart-west-plan.md Phase 5): its sector, the time into the lap, the delta to your fastest lap's (or par's); null between them */
+  split: { sector: number; delta: number | null; time: number } | null;
+  /** The live gaps: to the kart ahead in the order and behind, in seconds; null at the front, the back, or alone */
+  ahead: { name: string; gap: number } | null;
+  behind: { name: string; gap: number } | null;
+  /** A personal best just set: the clock flashes */
+  pb: boolean;
+  /** The items mode: the item in hand (null: none), the shield on; undefined in a pure race */
+  item?: ItemId | null;
+  shield?: boolean;
 }
 export interface KartStanding {
   /** A rival's fixed name (from the sim's order) or 'You' */
@@ -162,6 +189,8 @@ export interface KartRace {
   readonly sim: KartSim | null;
   /** Build the race from the save (the picked kart with its mods, seven rivals for a cup at the class's pace), seat Degen, start the countdown */
   start(setup: RaceStart): void;
+  /** The next camera (V, R3, the touch View button; views.ts): near, far, the kart's seat; returns it */
+  toggleView(): import('./views').ViewId;
   /** A time trial's ghosts: your best lap on this course and class, and the par ghost; each shown or hidden */
   setGhosts(on: { yours: boolean; par: boolean }): void;
   /** One frame in the kart: step the sim with the player's input, draw everything, paint the HUD, play the sounds */

@@ -17,8 +17,9 @@
  *
  * The list is filed by tile (`TILE`) so a spot asks only what's near it.
  */
+import { RAMPS, RAMP_CLEAR, RAMP_HALF } from './viaduct';
 import { EXT, LANE, RIVER } from './layout';
-import { PLAN, type Pt } from './streetplan';
+import { PLAN, type Pt, raised } from './streetplan';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { MALL_AREA } from './mall';
 import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
@@ -39,6 +40,7 @@ import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
+import { LOT9_RECT } from './lot9';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
@@ -61,6 +63,9 @@ export interface Keep {
   /** Land kept clear since the densities were measured (the districts built since, their streets, the metro): left
    * out with the highway when measuring the land as it was (`freeLand()` in outskirts.ts) */
   since?: boolean;
+  /** Land that was kept clear when the densities were measured but isn't any more (the kart park's site north of the
+   * highway before it moved west): counted when measuring, never kept off */
+  gone?: boolean;
   hit(x: number, z: number, w: number): boolean;
 }
 
@@ -91,6 +96,12 @@ export const wobble = (x: number, z: number) => WOBBLE * noise(x, z);
 
 const grow = (r: Rect, m: number): Rect => [r[0] - m, r[1] - m, r[2] + m, r[3] + m];
 const inRect = (r: Rect, x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+/** The kart park's land north of the highway in the north-east, where it stood when the densities were measured (kartfacility.ts `KART_RECTS` then) */
+const KARTS_GONE: Rect[] = [
+  [113, -311.5, 225, -191.5],
+  [64.5, -190.7, 140, -185.3],
+  [72.3, -236.7, 109.7, -188],
+];
 /** A district's land as a rectangle, kept off by `m` (and the wobble) */
 const land = (id: string, r: Rect, m: number, since = false): Keep => ({ id, since, box: grow(r, m + WOBBLE), hit: (x, z, w) => inRect(r, x, z, m + w) });
 /** Land with a test of its own (`m` its margin), inside a box */
@@ -129,7 +140,7 @@ export const KEEPS: Keep[] = [
   { id: 'highway', highway: true, box: WORLD, hit: (x, z, w) => fromHighway(x, z) < HIGHWAY_HALF + HIGHWAY_VERGE + w },
   // ...and every street of the plan, its slip lanes too (the arterials out to the world's edge among them)
   // (the arterials, `ns`/`ew`, were the only streets out of town when the densities were measured)
-  ...PLAN.streets.filter((s) => s.kind !== 'highway').flatMap((s) => line(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half + STREET_VERGE, s.kind === 'slip', !/^(ns|ew)\d/.test(s.id))),
+  ...PLAN.streets.filter((s) => !raised(s)).flatMap((s) => line(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half + STREET_VERGE, false, !/^(ns|ew)\d/.test(s.id))),
   // The town (inside the bends, the river and its banks) and the bends themselves (outer.ts)
   shaped('town', grow(TOWN_BOX, BEND_REACH), 1.2, (x, z, m) => inTown([x, z], m)),
   // The shopping plaza, the mall, its loop and car parks, and Uptown North (mall.ts)
@@ -138,8 +149,10 @@ export const KEEPS: Keep[] = [
   land('crest-flats', [CREST_RECT[0], FOOTHILL_Z - LANE - 2, CREST_RECT[2], CREST_RECT[3]], 0),
   shaped('crest-roads', CREST_RECT, BED.shoulder + 1.5, (x, z, m) => nearHillRoad(x, z, m)),
   { id: 'hills', box: TERRAIN_RECT, hit: (x, z) => naturalAt(x, z) > 0.4 },
-  // The kart park, Kart Road and the car park (kartfacility.ts)
-  ...KART_RECTS.map((r, i) => land(`karts-${i}`, r, 3)),
+  // The kart park, Kart Road and the car park (kartfacility.ts), west of exit 8 since docs/kart-west-plan.md Phase 1;
+  // its land north of the highway in the north-east as it was, for measuring only (open land again)
+  ...KART_RECTS.map((r, i) => land(`karts-${i}`, r, 3, true)),
+  ...KARTS_GONE.map((r, i): Keep => ({ ...land(`karts-gone-${i}`, r, 3), gone: true })),
   // The Docks (their own quays and yards, the basin), Sunridge (its own planting), The Trenches and its waterfront
   shaped('docks', DOCKS_RECT, 3, (x, z, m) => inDocks(x, z, m)),
   shaped('sunridge', SUNRIDGE_RECT, 2, (x, z, m) => inSunridge(x, z, m)),
@@ -148,6 +161,8 @@ export const KEEPS: Keep[] = [
   // Southfield (southfield.ts, docs/blend-plan.md Phase 5a): its park, allotments and gardens, and the yards' blocks
   land('southfield', SOUTHFIELD_RECT, 1, true),
   land('southyards', YARDS_RECT, 2, true),
+  // Lot 9, the trailer park south of the highway's south-west corner, with its tunnel's ramp and path (lot9.ts)
+  land('lot9', LOT9_RECT, 2, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it
   ...FRINGE_KEEPS.rects.map((r, i) => land(`fringe-${i}`, r, 1.2, true)),
@@ -169,6 +184,8 @@ export const KEEPS: Keep[] = [
   ...VERGES.flatMap((v) => line(`verge:${v.block}`, [[v.a[0] + v.n[0] * RAMP * 0.6, v.a[1] + v.n[1] * RAMP * 0.6], [v.b[0] + v.n[0] * RAMP * 0.6, v.b[1] + v.n[1] * RAMP * 0.6]], RAMP, false, true)),
   // The metro's line: no tree under the el (metro.ts)
   ...Object.values(TRACKS).flatMap((t) => line(`metro:${t.id}`, t.pts, EL_CLEAR, false, true)),
+  // The raised highway's exits' ramps (viaduct.ts, docs/highway-plan.md Phase 1b)
+  ...RAMPS.flatMap((r) => line(`ramp:${r.id}`, r.pts, RAMP_HALF + RAMP_CLEAR, false, true)),
 ];
 
 /* ---------- Filed by tile ---------- */
@@ -192,6 +209,6 @@ export const keepsNear = (x: number, z: number) => BY_TILE.get(tileKey(Math.floo
  */
 export function keptOff(x: number, z: number, all = true): string | null {
   const w = all ? wobble(x, z) : 0;
-  for (const k of keepsNear(x, z)) if ((all || !(k.highway || k.since)) && k.hit(x, z, w)) return k.id;
+  for (const k of keepsNear(x, z)) if ((all ? !k.gone : !(k.highway || k.since)) && k.hit(x, z, w)) return k.id;
   return null;
 }

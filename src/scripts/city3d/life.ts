@@ -13,11 +13,12 @@ import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan'
 import { DOWNTOWN, EXT, MARKET } from './layout';
 import { DECK_STROLLS, HIGH_Y as LIBERTY_HIGH } from './liberty';
 import { deckSlope, deckY, onHarbour } from './harbour';
+import { barrierHold, swingAt } from './swingbridge';
 import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
-import { JUNCTIONS, ROUTES, SPOTS, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
+import { JUNCTIONS, ROUTES, SPOTS, climbOn, heightOn, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { BAR, CARS, PAINTS, carGeometry, carMaterials, theFarCars, trailerGeometry, type CarId } from './cars';
 import { BIKES, type BikeId } from './mybike';
 import { DRIVER_SCALE } from './carinside';
@@ -28,6 +29,7 @@ import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { CREST_MIX, CREST_PEOPLE, TOUR_PAINT } from './crestlife';
+import { LOT9_PEOPLE } from './lot9';
 import { CREST_RECT } from './crestmont';
 import { SCHOOL_BUS_PAINT, SUNRIDGE_RECT, SUN_MIX } from './sunridge';
 import { STRIP_LEAD, STRIP_MIX, STRIP_PAINTS, STRIP_RECT } from './strip';
@@ -91,6 +93,8 @@ interface Vehicle {
   /** Where it is this frame (for following, for your own car to bump into), and which way it faces */
   x: number;
   z: number;
+  /** Its height this frame (the ground under it, or the ring highway's deck) */
+  y: number;
   yaw: number;
   fx: number;
   fz: number;
@@ -129,14 +133,15 @@ interface Vehicle {
 const ROAD_Y = 0.035;
 
 /** The player in walk mode: cars stop rather than drive through them. `r` is how far they reach (more in a car). */
-export const walker = { x: 0, z: 0, on: false, r: 0 };
+export const walker = { x: 0, z: 0, y: 0, on: false, r: 0 };
 /** A swing of his fists on the street (brawl.ts): anyone within `r` of (x, z) steps aside, for `t` seconds more */
 export const swing = { x: 0, z: 0, r: 0, t: 0 };
 /** Anything else in the road the traffic stops short of (a taxi pulled up or on its way: taxi.ts) */
-export const stoppers: { x: number; z: number; r: number; on: boolean }[] = [];
+export const stoppers: { x: number; z: number; y?: number; r: number; on: boolean }[] = [];
 /** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
 export const bodies = {
-  cars: [] as { x: number; z: number; yaw: number; len: number; w: number; model: string }[],
+  /** (`y`: the ground under it, or up on the raised ring highway's deck: nothing at street level meets those) */
+  cars: [] as { x: number; z: number; y: number; yaw: number; len: number; w: number; model: string }[],
   /** (`act`: what an idle person is doing, 'sit' on a bench: walk.ts leaves their bench alone) */
   people: [] as { x: number; z: number; act?: string }[],
   /** The traffic's boats in the lanes (your hire boat bumps softly off them, boat.ts) */
@@ -344,6 +349,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       slot,
       x: 0,
       z: 0,
+      y: 0,
       yaw: 0,
       fx: 1,
       fz: 0,
@@ -688,11 +694,17 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     for (const o of occupied) o.clear();
     for (const v of vehicles) for (const s of v.route.stops) if (v.p + v.len / 2 > s.enter && v.p - v.len / 2 < s.exit) occupied[s.j.ix].add(s.phase);
 
+    // The swing bridge's barriers (swingbridge.ts): down while it swings for the tall ship
+    const swingShut = swingAt(Date.now() / 1000).shut;
     for (const v of vehicles) {
       let target = v.vmax;
+      // (the traffic coming onto it waits at them)
+      const hold = barrierHold(v.x, v.z, v.fx, v.fz, v.len / 2, swingShut);
+      if (hold < 12) target = Math.min(target, Math.max(0, (hold - 0.6) * 1.3));
       // Follow whoever is ahead going the same way (any route: routes share lanes)
       for (const o of vehicles) {
-        if (o === v || o.fx * v.fx + o.fz * v.fz < 0.5) continue;
+        // (up on the raised highway or its ramps and down under them never meet)
+        if (o === v || o.fx * v.fx + o.fz * v.fz < 0.5 || Math.abs(o.y - v.y) > 1.5) continue;
         const rx = o.x - v.x;
         const rz = o.z - v.z;
         const along = rx * v.fx + rz * v.fz;
@@ -711,9 +723,10 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         if (light === 'r' || (light === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
       }
       // Someone walking in the road ahead (or anything else in it): stop short of them
-      const byYou = walker.on ? shortOf(v, walker) : Infinity;
+      // (at its own height: up on the raised highway, only what's up there)
+      const byYou = walker.on && Math.abs(walker.y - v.y) < 1.5 ? shortOf(v, walker) : Infinity;
       target = Math.min(target, byYou);
-      for (const w of stoppers) if (w.on) target = Math.min(target, shortOf(v, w));
+      for (const w of stoppers) if (w.on && Math.abs((w.y ?? 0) - v.y) < 1.5) target = Math.min(target, shortOf(v, w));
       // Held up by you: a toot after a while (quieter the further off)
       // (never a patrol car: they never bother you)
       if (v.model !== 'police' && hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
@@ -781,8 +794,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       const rise = (x: number, z: number, yaw: number) =>
         onHills(x, z) ? Math.atan(riseAlong(x, z, Math.cos(yaw), -Math.sin(yaw))) : onHarbour(x, z) ? Math.atan(-Math.sin(yaw) * deckSlope(z)) : Math.atan(Math.cos(yaw) * departuresSlope(x, z));
       const groundY = (x: number, z: number) => (onHills(x, z) ? heightAt(x, z) : onHarbour(x, z) ? deckY(z) : departuresRoadY(x, z));
-      const hb = groundY(v.dx, v.dz);
-      const climb = rise(v.dx, v.dz, v.dyaw);
+      // (up on the raised highway's deck and its ramps: the route's own height, routes.ts heightOn)
+      const ry = heightOn(v.route, v.p, v.seg);
+      const hb = ry > 0.02 ? ry : groundY(v.dx, v.dz);
+      v.y = hb;
+      const climb = ry > 0.02 ? Math.atan(climbOn(v.route, v.p, v.seg)) : rise(v.dx, v.dz, v.dyaw);
       if (v.bike) {
         // A bike leans into its turns, a little (fleet.ts), and is drawn at its rider's size
         const rate = Number.isNaN(v.last) ? 0 : Math.atan2(Math.sin(v.dyaw - v.last), Math.cos(v.dyaw - v.last)) / Math.max(dt, 1e-3);
@@ -798,8 +814,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       // The rig's trailer behind it, along its own heading (no nod or lean: it follows the tractor)
       const tr = v.trailer;
       if (tr) {
-        const th = groundY(tr.x, tr.z);
-        q.setFromAxisAngle(up, tr.yaw).multiply(q2.setFromEuler(lean.set(0, 0, rise(tr.x, tr.z, tr.yaw))));
+        const ta = rigAlong(v.p).axles;
+        const tq = ((ta % v.route.len) + v.route.len) % v.route.len;
+        const ty = heightOn(v.route, tq, tr.seg[2]);
+        const th = ty > 0.02 ? ty : groundY(tr.x, tr.z);
+        q.setFromAxisAngle(up, tr.yaw).multiply(q2.setFromEuler(lean.set(0, 0, ty > 0.02 ? Math.atan(climbOn(v.route, tq, tr.seg[2])) : rise(tr.x, tr.z, tr.yaw))));
         tr.matrix.makeRotationFromQuaternion(q).setPosition(tr.x, ROAD_Y + th, tr.z);
       }
       v.near = !CROWD_VIEW.on || isNear(Math.hypot(v.x - CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, v.z - CROWD_VIEW.eye.z), farDist, v.near);
@@ -961,6 +980,13 @@ const early: { idle: Idle[]; movers: ParkPerson[] }[] = [];
  * People who come with a district's chunk (Sunridge's, sunlife.ts): each takes a spare slot in the crowd, with
  * whatever outfit the boot gave it; past the spare slots the rest are left out. The chunk trims its own lists for phones.
  */
+/**
+ * Who in the crowd's standing about is cheering (docs/kart-west-plan.md Phase 4): set by the kart park's race to a
+ * test of where a person stands (kartcrowd.ts `excited()`), null otherwise; checked only for those looking, chatting
+ * or sitting, and keep it cheap (a box first)
+ */
+export const CHEER: { fn: ((x: number, z: number) => boolean) | null } = { fn: null };
+
 export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) {
   if (!bodies.people.length) {
     early.push({ idle: [...idle], movers: [...movers] });
@@ -1099,7 +1125,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // Westlake Park's walkers, joggers, dog walkers, picnics, players and boaters (phones: half of them, the trim)
   // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), and the kids at play
   // on The Trenches' courts and swings (play.ts, at their own size), the same way
-  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE, ...CREST_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  // (and Lot 9's kids on their bikes and running round its lanes: lot9.ts)
+  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE, ...CREST_PEOPLE, ...LOT9_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // The traffic's riders (vehicle plan Phase 8): sat on their bikes wherever the traffic puts them (buildTraffic)
   riders.forEach((_, k) => people.push({ kind: 'ride', ride: k, seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: 0, x: -1e5, z: -1e5, ry: 0, face: 0, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } }));
   // The spare slots (`addPeople()`): idle, far out of the world until a district's chunk fills them
@@ -1277,7 +1304,9 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       }
       else if (p.kind === 'walk') people3d.set(i, bx, y, bz, p.face, PERSON_SCALE, walkClip, p.walked / (strideOf(walkClip) * PERSON_SCALE) + seed);
       else {
-        const clip = clipOf(p.act ?? 'look', idleClip);
+        let clip = clipOf(p.act ?? 'look', idleClip);
+        // (cheering, while something asks for it: the kart park's fans as the karts go by, kart.ts)
+        if (CHEER.fn && (p.act === 'look' || p.act === 'chat' || p.act === 'sit' || !p.act) && CHEER.fn(p.x, p.z)) clip = seated(clip) ? 'sitcheer' : 'cheer';
         people3d.set(i, bx, y, bz, p.face, p.scale ?? PERSON_SCALE, clip, playAt(clip));
       }
     });

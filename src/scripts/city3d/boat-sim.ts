@@ -26,6 +26,7 @@ import { WATER_Y, edgesAt } from './river';
 import { BX, DECK_DEPTH, DECK_HALF, LIBERTY_RECTS, SHIP, lowY, shipAt } from './liberty';
 import { DEPTH as HARBOUR_DEPTH, HALF as HARBOUR_HALF, HX, TOWER, TOWERS, deckY } from './harbour';
 import { BARGE, BRIDGE_PIERS, DECKS, PIER_HALF } from './waterfront';
+import { HALF as SWING_HALF, SWING_PIERS, SX as SWING_X, undersideY as swingUnder } from './swingbridge';
 import { ESPLANADE_DECKS, OVERLOOKS, PONTOON } from './boulevard';
 import { YACHTS } from './boulevarddress';
 import { JETTIES } from './outer';
@@ -109,6 +110,9 @@ export const WATER_SOLIDS: Rect[] = [
   // Harbour Bridge's towers' piers (with their cutwaters), and its deck near the banks
   ...TOWERS.map((z): Rect => [HX - TOWER.base.hu - TOWER.base.cut, z - TOWER.base.hz, HX + TOWER.base.hu + TOWER.base.cut, z + TOWER.base.hz]),
   ...lowSpans(HX - HARBOUR_HALF, HX + HARBOUR_HALF, (z) => deckY(z) - HARBOUR_DEPTH),
+  // The swing bridge's piers (its pivot, the span's rest, the approach's), and its deck near the banks (swingbridge.ts)
+  ...SWING_PIERS.map((r) => [...r] as Rect),
+  ...lowSpans(SWING_X - SWING_HALF, SWING_X + SWING_HALF, swingUnder),
   // The ring highway's bridges: their decks are too low all the way across (and their piers)
   ...riverBridges()
     .filter((b) => b.street === 'highway')

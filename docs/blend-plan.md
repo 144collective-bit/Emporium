@@ -504,6 +504,70 @@ For each seam in the seam map, the treatment it needs:
   (`lampTone()`); The Trenches' dead and flickering lamps stay its own.
   world.ts's `buildLamps()` takes each lamp's tone from it. No new draws;
   the boot 694.7 KB.
+- **6b, the first seam (built): downtown and the town across the ring
+  avenue.** Mapped, the ring's north, west and east sides had no lamps and no
+  street trees at all, only four bus shelters and two alley mouths: downtown
+  built to its sidewalk on one side, the town's pads and flower beds on the
+  other, a bare kerb between. `ringstreet.ts` (DOM-free, tested in
+  `tests/ringstreet.test.ts`): the same white town lamp on both sidewalks
+  (`RING_LAMPS`, 42: by the kerb, `KERB_IN` in, so the walkers pass inside
+  them; spread evenly about every `LAMP_GAP` over each stretch between
+  junctions, `JUNCTION_CLEAR` from them; clear of the shelters, the alleys'
+  mouths, the metro's door and anything solid; the south avenue's river side
+  left to the promenade's lamps), and Uptown's planted median carried on round
+  downtown (`RING_MEDIAN`: the bank avenue's clipped hedge and slim columnar
+  trees, `HEDGE`, cut `HEDGE_CLEAR` short of every crossing street with a
+  diagonal's slant reckoned in, round the el's pillars, no tree under the el).
+  Street trees by the sidewalks were tried and left out: downtown is built to
+  its sidewalk, and the town's frontage is its pads with flower beds between.
+  Added at the boot (the lamps with the town's in neighbourhoods.ts) and drawn
+  with the medians (world.ts); no new draws.
+- **6c, the second seam (built): Uptown and Westlake Park across the north
+  avenue.** Mapped, Uptown's lamps stood on its own sidewalk every 12, the
+  park's side had none (its low wall along a bare sidewalk, four gates), the
+  median was bare. `ringstreet.ts` carries on: the same lamp across from each
+  of Uptown's on the park's sidewalk (`PARK_SIDE_LAMPS`, 8: on Uptown's
+  spacing and offset, clear of the junctions' zebras and the axis's, one in
+  front of a gate standing aside to flank it, `GATE_CLEAR`), the planted
+  median carried on west from downtown's ring to Uptown's west edge (the
+  north side's `median` span, broken at the axis's zebra; 26 more trees), and
+  a row of street trees just inside the park's wall (`PARK_EDGE_TREES`, 15:
+  about every `EDGE_TREE_GAP`, `EDGE_TREE_IN` in, clear of the ring walk, the
+  gates' ways in, the planters, benches, lamps and the park's own trees), so
+  Uptown's towers look across a tree-lined avenue. Stepping Uptown's edge
+  lots down was left: its towers there already stand on mid-rise masonry
+  bases at the sidewalk, and nothing that exists moves. Added at the boot
+  with 6b's; no new draws.
+- **6d, the third seam (built): Starlight Mall and Palm Court across the
+  east avenue.** Mapped, the avenue there had no lamps at all: the mall's
+  anchor and then a bare strip of grass between the mall's loop road and the
+  avenue on one side (the loop's own lamps facing the loop), Palm Court's
+  backs on the other, the el down the median. `ringstreet.ts` carries on: the
+  same lamp on both sides about every `LAMP_GAP` from the mall's north edge to
+  the Parkway's crossing (`MALL_SIDE_LAMPS`, 24: on the sidewalks, on the
+  strip's grass where there's none, never on a verge's bank, clear of Palm
+  Court's zebra and the mall's own lamps), the median's hedge carried north
+  under the el to the mall (the east side's `median` span, cut at the zebra
+  and round the pillars, no trees under the el), and a row of street trees down
+  the middle of the grass strip (`STRIP_TREES`, 7, about every
+  `STRIP_TREE_GAP`, nudged clear of the lamps). A sidewalk on the strip was
+  left out: the mall block's verge hedge runs across it to the kerb, and
+  nothing that exists moves. Added at the boot with 6b's; no new draws.
+- **6e, the fourth seam (built): Uptown North and Westlake Park, with no
+  street between.** Mapped, the park's east sidewalk and Uptown North's west
+  one ran side by side along the park's low wall, the west column's towers
+  opening their lobbies onto them: two strips of plain sidewalk, no lamps and
+  no trees, between the park's trees and the towers. `parkedge.ts`
+  (DOM-free, tested in `tests/parkedge.test.ts`) makes them one walk: the
+  plaza's granite over both (`PROMENADE`, a hair inside the park's lot edge so
+  it never meets the gates' paths; the gates' piers stand on it), lamps down
+  its middle about every other tree (`EDGE_LAMPS`, 9, the arm over the walk
+  towards the towers, a taken spot nudged along) and trees in grates between
+  them (`EDGE_TREES`, 10, `TREE_GAP`, `GRATE`), all clear of the gates
+  (`GATE_CLEAR`) and their walks through the block, the lobbies' doors
+  (`DOOR_CLEAR`), the square's trees and every lamp. The lamps and trees at
+  the boot (index.ts), the granite and grates as sites in Uptown's chunk
+  (uptownnorth3d.ts); no new draws.
 - **Stepped heights:** where towers meet low-rise (Uptown's edge by
   Westlake and downtown, Uptown North by the mall), the edge lots step down;
   where The Trenches meets the south row, its tenements step to the row's

@@ -16,7 +16,7 @@
  * `strength`, so the open land between districts carries a little of both.
  */
 import { COVER, type Cover } from './palette';
-import { PLAN, type Pt } from './streetplan';
+import { PLAN, type Pt, raised } from './streetplan';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { RIVER } from './layout';
 import { TOWN_BOX, noise } from './landuse';
@@ -30,6 +30,7 @@ import { UPTOWN_RECT } from './uptown';
 import { MALL_AREA } from './mall';
 import { STRIP_RECT } from './strip';
 import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
+import { FENCE as LOT9_FENCE } from './lot9';
 import { STADIUM_RECTS } from './stadium';
 import { KART_RECTS } from './kartfacility';
 import { TILE, tileKey, type Rect } from './tiles';
@@ -104,7 +105,7 @@ const SKY: Rect = [-1e5, -1e5, 1e5, 1e5];
 /** Round what, in which cover, how far and how much; later ones over earlier ones */
 export const INFLUENCES: Influence[] = [
   // Every street's verge, worn a little (the highway's, drier and wider)
-  ...PLAN.streets.filter((s) => s.kind !== 'highway').map((s) => verge(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half, 'worn', 4, 0.35)),
+  ...PLAN.streets.filter((s) => !raised(s)).map((s) => verge(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half, 'worn', 4, 0.35)),
   { id: 'highway', cover: 'dryGrass', reach: 9, strength: 0.6, box: SKY, dist: (x, z) => Math.max(0, fromHighway(x, z) - HIGHWAY_HALF) },
   // The town, the park, Uptown, the mall, the Neon Mile, the stadium and the kart park: lawn round them
   around('town', TOWN_BOX, 'lawn', 12, 0.45),
@@ -127,6 +128,9 @@ export const INFLUENCES: Influence[] = [
   // The Trenches: worn grass, bare dirt at its edge
   around('trenches', TRENCH_RECT, 'worn', 20, 0.5),
   around('trenches-edge', TRENCH_RECT, 'bare', 6, 0.4),
+  // Lot 9 (lot9.ts): worn grass round it, bare dirt inside the fence and just past it
+  around('lot9', LOT9_FENCE, 'worn', 14, 0.8),
+  around('lot9-dirt', LOT9_FENCE, 'bare', 2, 0.55),
   // Lusher by the river (its banks are the river's own, river.ts; this is the grass running down to them)
   { id: 'river', cover: 'bank', reach: 10, strength: 0.6, box: [SKY[0], RIVER[0] - 10, SKY[2], RIVER[1] + 10], dist: (_x, z) => Math.max(0, RIVER[0] - z, z - RIVER[1]) },
 ];

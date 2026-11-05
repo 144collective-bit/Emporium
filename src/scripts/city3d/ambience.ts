@@ -38,6 +38,7 @@ import { SPHERE_DOOR } from './stripmarks';
 import { FOUNTAINS as DRIVE_FOUNTAINS } from './coral';
 import { CIVIC } from './crestsites';
 import { SUNRIDGE_RECT, inSunridge } from './sunridge';
+import { LOT9_RADIO, LOT9_RECT, inLot9 } from './lot9';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -114,9 +115,13 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   // The Trenches: all of it inside, fading out over 30 past its edge
   const [tx0, tz0, tx1, tz1] = TRENCH_RECT;
   const past = inTrenches(x, z) ? 0 : Math.hypot(Math.max(tx0 - x, x - tx1, 0), Math.max(tz0 - z, z - tz1, 0)) + 4;
-  const hood = 1 - smooth(0, 30, past);
+  // (and Lot 9, south of the highway: its dogs, sirens far off; lot9.ts)
+  const fromLot9 = inLot9(x, z) ? 0 : Math.hypot(Math.max(LOT9_RECT[0] - x, x - LOT9_RECT[2], 0), Math.max(LOT9_RECT[1] - z, z - LOT9_RECT[3], 0)) + 4;
+  const hood = 1 - smooth(0, 30, Math.min(past, fromLot9));
   let box = Infinity;
   for (const b of BOOMBOXES) box = Math.min(box, Math.hypot(x - b.x, z - b.z));
+  // (Lot 9's radio by the fire pit, as a boombox's)
+  box = Math.min(box, Math.hypot(x - LOT9_RADIO.x, z - LOT9_RADIO.z));
   const boombox = 1 - smooth(2, 20, box + lift * 0.5);
   const club = 1 - smooth(3, 32, Math.hypot(x - CLUB.door.x, z - CLUB.door.z) + lift * 0.5);
   // Westlake Park: all of it on its land, fading out over 30 past it; the lake lapping close by

@@ -48,6 +48,8 @@ the owner's sign-off. Keep this file up to date.
   desktops). Dorras stays while walking too.
 - **Settings:** button size, opacity, left-handed (the layout mirrored)
   and moving the buttons.
+- **Later, the header** (Phase 5): clear, no logo, only ☰ in play; and the
+  installed game full screen.
 
 ## The button system
 
@@ -182,14 +184,124 @@ the owner's sign-off. Keep this file up to date.
   mirrors the slots and the stick); saved in `degen-city-walk-v1` and
   cleaned like its other settings. The test holds every size, both hands,
   apart and on screen.
+- **Built, waiting on the owner's sign-off.** `touchlayout.ts`: `TouchPrefs`
+  { size, alpha, left } (`SIZES` Small 0.85, Medium 1, Large 1.15;
+  `ALPHA_MIN` 0.4; `cleanTouch()`, saved as `touch` in
+  `degen-city-walk-v1`); `layoutFor(w, h, mode, prefs)` scales the ring
+  (the buttons, their distances, the stick, Crouch and the hotbar's slots)
+  and, where a size doesn't fit the screen, steps it back towards Medium
+  until `clash()` (buttons apart, on screen, under the header's room, clear
+  of the hotbar and the prompt) finds nothing, so Large comes out a little
+  smaller on a small phone; left-handed mirrors every spot, the stick and
+  the hotbar (`mirror()`). The test holds every size, both hands, every
+  mode and every screen to `clash()`. `controls.ts` reads the prefs each
+  time and sets `--tc-alpha` on the root; controls.css draws the buttons
+  and the stick at that opacity and solid while held, the words and icons
+  shrinking with a small button, the stick on whichever side it's given.
+  In the hub's Settings, under On foot: **Touch buttons** (Button size,
+  Button opacity, Left-handed), touch screens only (`.hub-touchset`).
 
-### Phase 5: moving the buttons
+### Phase 5: the clear header and the installed game
+
+The owner's call (2026-11): "optimize the header. It's in the way. Remove
+the logo and make the header transparent to show more of the gameplay",
+and the installed game without the browser's bars. The owner's picks:
+
+- **Fully clear**: no bar, no blur, no line under it. The title floats over
+  the game with a shadow under it; Dorras, the level, City / Walk and ☰
+  keep their own dark fills, so each reads as a chip over a bright street.
+  Touches between them go through to the game (the header takes no taps
+  itself, only its buttons do).
+- **No logo, on every screen** (phones, tablets, desktops). The title
+  screen and the maintenance cover keep it.
+- **In play only ☰**: in walk mode (walking, driving, riding, flying,
+  boating, karting, fighting) the title, Dorras, the level, City / Walk,
+  the Online switch and Connect wallet leave the header; they're in the
+  City view and the hub (Back to City view is the hub's foot). The gun's
+  readout (ammo and score on tablets and desktops, the hotbar's on phones)
+  and the emotes (online, desktops) stay where they are.
+- **Installed, full screen**: added to the home screen (or installed from
+  the browser), the game opens with no address bar or tabs:
+  `public/site.webmanifest` gains `display: fullscreen` (with standalone
+  after it in `display_override`), `start_url`, `scope` and `id`; Android
+  hides the status bar too. iPhones and iPads open it standalone (no
+  browser bars; their status bar can't be hidden, so it stays, in black,
+  `apple-mobile-web-app-status-bar-style`), from the meta tags in
+  `Base.astro`. The app's name and icon stay as they are.
+- **Built, waiting on the owner's sign-off.** The rules are the last block
+  of `controls.css`; the logo's markup and styles went from CityMap.astro,
+  city.css, walk.css and controls.css. Checked at 375 x 812, on its side at
+  812 x 375, a 768 tablet and a 1440 desktop, in the City view and in play.
+  Installing itself can't be checked headless: on a real phone, add it to
+  the home screen and open it.
+- **Changed after (the owner's call):** walk mode carries the same header
+  as the City view (the title, Dorras, the level, City / Walk and ☰), so
+  either mode switches to the other from the header; the "only ☰ in play"
+  rule went. Still clear, still no logo; the gun's readout and the emotes
+  stay where they were.
+
+### Phase 6: moving the buttons
 
 - "Arrange buttons" in Settings: a screen over the city with every button
   of a mode family (on foot, vehicles, the ring), dragged where you like,
   held clear of each other, the safe areas and the screen's edge (the same
   check as Phase 1's, `touchlayout.ts`), with Reset; saved per family and
   per screen shape (upright, on its side) in `degen-city-walk-v1`.
+- **Built, waiting on the owner's sign-off.** `touchlayout.ts`: the
+  families (`Family`: `foot`, empty hands and a gun out sharing the slots;
+  `wheel`, the car, the bike, the boat, the aircraft and the kart race;
+  `ring`), what each can move (`itemsOf()`: its slots, the stick and, on
+  foot, Crouch), `TouchPrefs.arrange` (by `arrangeKey()`, family and shape,
+  upright and narrow sharing one; each moved item's centre as shares of the
+  screen in the right hand's frame, so left-handed mirrors it as it mirrors
+  the rest; `cleanTouch()` keeps known keys and items and shares in 0 to 1),
+  `layoutFor()` putting moved items there (an arrangement that clashes on a
+  screen, at a size, falls back to the slots), `moveItem()` (the drag's
+  check: the same `clash()`, so nothing goes on another button, the stick,
+  off the screen, under the header's room or, on foot, under the hotbar or
+  the prompt) and `arrangementOf()`. The test holds a moved button where it
+  was put in every mode of its family and mirrored left-handed, the other
+  families and shapes as they were, a refused drag refused, and every
+  screen, mode and size clear with an arrangement. The screen is
+  `arrange-ui.ts` (its own chunk, from Settings > On foot > Touch buttons >
+  **Arrange buttons**): over everything with the city dimmed under a grid,
+  tabs On foot / Vehicles / The ring (each showing its fullest mode: a gun
+  out, the car), the hotbar's and the prompt's room marked, Reset, Done and
+  ×; a button follows the finger where it fits and slides along what it
+  can't pass, rimmed in warning while it can't keep up; Done keeps only
+  what moved off its slot, for the screen held that way; a turn starts
+  again from what's kept; Esc or × leaves it. The hub waits under it
+  (`is-arranging` hides it and the real controls).
+
+## Two thumbs at the wheel (the owner's call, after the views plan)
+
+"The driving controls are glitch. I can't steer while driving if I hold the
+gas... make them simple and ensure two finger touch points are always
+available and don't interrupt each other for full control."
+
+- **Found:** steering with Gas held worked in Chromium's own two-finger
+  input (both orders), and the car turns tightly at speed (7-11 tiles at
+  top speed on full lock, every model), so the faults were the phone's:
+  a second finger can start Safari's pinch or its long-press gestures,
+  which cancel the touches already down; a thumb landing beside the stick
+  turned the camera instead; a thumb rolling from Gas to Brake did
+  nothing until lifted; and on a phone on its side the control card sat
+  over the middle of the screen and took the steering thumb's touch.
+- **Built:** `touchdrive.ts` (DOM-free, tested in
+  `tests/touchdrive.test.ts`): the floating stick at the wheel
+  (`inSteerZone()`: a thumb anywhere low on the stick's side; the ring
+  moves under it), its reading (`stickRead()`: a little dead middle, full
+  lock at 72% of the ring), the pedals that follow the finger
+  (`pedalAt()`, `inPedalZone()`). walk.ts follows each finger on its own
+  (stick and pedals on the window, captured; only its own lift or the
+  browser's cancel lets one go), keeps the phone's gestures off the
+  controls and the city while walking, and the control card lets touches
+  through (controls.css). Checked in a headless browser with real
+  two-finger input on an iPhone-sized screen upright and on its side: gas
+  then stick and stick then gas, either finger lifted while the other
+  holds, a thumb rolled onto Brake, the floating stick, a thumb just off
+  Gas, a third finger on the horn, a touch up top still looking round;
+  and the on-foot buttons, the prompts, View and the menu by touch.
 
 ## Not in it
 
