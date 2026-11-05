@@ -27,7 +27,6 @@ import {
 } from '../src/scripts/city3d/gardens';
 import {
   BENCHES,
-  BIG,
   GARDEN_SITE,
   GARDEN_XS,
   GARDEN_Z,
@@ -73,7 +72,8 @@ test('the main walks are kerbed both sides, the rest edged; neither ever runs ac
 });
 
 test('the park\'s wall: round the edge of every block, open at each gate and where every walk goes out, never on a path', () => {
-  assert.ok(WALLS.length >= BIG.length / 4 && WALLS.flat().length > 1000);
+  // (broken at every gate: a piece a gate at least)
+  assert.ok(WALLS.length >= GATES.length && WALLS.flat().length > 1000);
   for (const run of WALLS)
     for (const p of run) {
       assert.ok(inPark(p, 0.3) && !inPark(p, 0.6), `the wall off the park's edge at ${p}`);

@@ -534,3 +534,14 @@ against 6.5-6.9); the boot's download 659.9 KB gzipped (17.6 KB off, 20 KB under
 its budget). Not done: target practice as a chunk of its own (walk mode calls it in
 67 places, synchronously: a bigger change), and letting far districts go on
 phones and far districts as simple blocks (items 5 and 6 of the survey, next).
+
+## The world at 2.5 km (growth plan Phase 10)
+
+The edge moved out to -680 to 720 (`docs/growth-plan.md`, Phase 10). Measured on
+the headless phone tier, before and after: the home view 276 draws and 0.43M
+triangles against 283 and 0.46M, geometry 213 MB against 210, textures 93 MB both,
+the boot 8.4 s against 9.4 s (headless), 2,934 sites against 2,338 (the new land's
+trees and woods, built after the boot). What the edge added is small; what it
+showed is that phones' geometry, about 210 MB, is already past the 150 MB target
+from the districts built since Phase 6. Letting far districts go on phones and far
+districts as simple blocks (items 5 and 6 above) are the way back under it.

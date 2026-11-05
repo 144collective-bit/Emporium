@@ -17,7 +17,7 @@
 
 export type Action =
   | 'jump' | 'sprint' | 'crouch' | 'punch' | 'block' | 'kick' | 'fire' | 'aim' | 'reload' | 'swap'
-  | 'gas' | 'brake' | 'horn' | 'view' | 'drift' | 'dodge';
+  | 'gas' | 'brake' | 'horn' | 'view' | 'drift' | 'dodge' | 'item';
 /** On foot with empty hands (the fists) or a gun out */
 export type FootMode = 'fists' | 'armed';
 /** Every mode: on foot, at the wheel of anything drive.ts / fly.ts / boat.ts runs, a kart race, the ring */
@@ -50,8 +50,9 @@ export const LAYOUTS: Record<Mode, Partial<Record<Slot, Action>>> = {
   fists: { main: 'punch', a1: 'jump', a2: 'block', a3: 'sprint', b2: 'kick' },
   armed: { main: 'fire', a1: 'jump', a2: 'reload', a3: 'sprint', b1: 'swap', b2: 'aim' },
   drive: { main: 'gas', a1: 'brake', a2: 'view', a3: 'horn' },
-  kart: { main: 'gas', a1: 'brake', a2: 'drift' },
-  ring: { main: 'punch', a1: 'dodge', a2: 'block', b2: 'kick' },
+  // (the item button only shows in an items race, kart.ts `has-items`)
+  kart: { main: 'gas', a1: 'brake', a2: 'drift', a3: 'view', b2: 'item' },
+  ring: { main: 'punch', a1: 'dodge', a2: 'block', a3: 'view', b2: 'kick' },
 };
 const ON_FOOT = (m: Mode): m is FootMode => m === 'fists' || m === 'armed';
 
@@ -126,7 +127,7 @@ export const familyOf = (m: Mode): Family => (ON_FOOT(m) ? 'foot' : m === 'ring'
 export type Item = Slot | 'stick' | 'crouch';
 const SLOTS: Slot[] = ['main', 'a1', 'a2', 'a3', 'b1', 'b2'];
 /** The mode the arranging screen shows for a family: the one using the most of its slots */
-export const SHOWN: Record<Family, Mode> = { foot: 'armed', wheel: 'drive', ring: 'ring' };
+export const SHOWN: Record<Family, Mode> = { foot: 'armed', wheel: 'kart', ring: 'ring' };
 /** A family's items, in the order the arranging screen lists them */
 export function itemsOf(f: Family): Item[] {
   const slots = SLOTS.filter((s) => LAYOUTS[SHOWN[f]][s]);

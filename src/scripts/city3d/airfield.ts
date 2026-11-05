@@ -518,7 +518,8 @@ export const ROAD_SIGNS: RoadSign[] = [
   { x: GA_ROAD.loopX + 8, z: GA_ROAD.z - GA_ROAD.half - 2.6, y: 2.0, yaw: -Math.PI / 2, w: 3.2, text: 'ga', posts: [] },
 ];
 /** At the drive's way in off the avenue: a low stone wall with SECTOR 7 AIRPORT on it in a planted bed, flags across the drive */
-export const GATEWAY = { x0: ROAD.x - ROAD.half - 15, x1: ROAD.x - ROAD.half - 3.2, z: ROAD.z0 + 13, h: 2, bed: 1.6 };
+// (its west end short of the raised highway's exit 4 slip ramp beside the deck: docs/highway-plan.md Phase 3)
+export const GATEWAY = { x0: ROAD.x - ROAD.half - 12, x1: ROAD.x - ROAD.half - 3.2, z: ROAD.z0 + 13, h: 2, bed: 1.6 };
 export const FLAGS: Pt[] = [0, 1, 2, 3, 4].map((k): Pt => [ROAD.x + ROAD.half + 3.4 + k * 2.4, ROAD.z0 + 13]);
 export const FLAG_H = 5.2;
 /**

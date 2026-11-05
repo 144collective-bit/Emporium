@@ -33,20 +33,24 @@ import { BADGES, MISSIONS } from '../src/scripts/city3d/missions';
 import { HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
+import { rampLand } from '../src/scripts/city3d/viaduct';
 
 const inSite = (x: number, z: number, m = 0) => x >= KART_PARK.x0 + m && x <= KART_PARK.x1 - m && z >= KART_PARK.z0 + m && z <= KART_PARK.z1 - m;
 
 /* ---------- The site ---------- */
 
-test('the kart park sits north of the ring highway in the north-east, fenced round its facility, its gate on Kart Road, inside the world', () => {
+test('the kart park sits west of the ring highway, north of the north avenue, fenced round its facility, its gate on Kart Road, inside the world', () => {
   for (const [x, z] of [
     [KART_PARK.x0, KART_PARK.z0],
     [KART_PARK.x1, KART_PARK.z1],
     [KART_PARK.x0, KART_PARK.z1],
     [KART_PARK.x1, KART_PARK.z0],
   ])
-    assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 8, 'north of the highway, clear of it');
-  assert.ok(KART_PARK.x0 > 64.5, 'east of the east ring avenue');
+    assert.ok(!insideHighway(x, z) && fromHighway(x, z) > HIGHWAY_HALF + 8, 'outside the highway, clear of it');
+  assert.ok(KART_PARK.x1 < -215 && KART_PARK.z1 < -4.5 - 3.7 - 10, "west of the highway's west side, north of ew0");
+  // Clear of exit 8's ramps and their land all round the fence
+  for (let x = KART_PARK.x0 - 2; x <= KART_PARK.x1 + 2; x += 1)
+    for (let z = KART_PARK.z0 - 2; z <= KART_PARK.z1 + 2; z += 1) assert.ok(!rampLand(x, z), `the ramps' land at ${x}, ${z}`);
   assert.ok(KART_PARK.x1 <= WORLD_BOUNDS[2] && KART_PARK.x0 >= WORLD_BOUNDS[0] && KART_PARK.z0 >= WORLD_BOUNDS[1]);
   assert.ok(KART_PARK.x1 - KART_PARK.x0 < 120 && KART_PARK.z1 - KART_PARK.z0 < 125, 'a compact park');
   assert.ok(KART_PARK.x1 < WORLD_BOUNDS[2] - 30 && KART_PARK.z0 > WORLD_BOUNDS[1] + 30, 'open land beyond it');

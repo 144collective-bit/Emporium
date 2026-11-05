@@ -1112,54 +1112,38 @@
   outline: 2px solid var(--m-coin);
   outline-offset: 2px;
 }
-/* The controls' tabs: three radios, a list each (CSS only) */
-.keys-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.keys-tabs input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.keys-tabs label {
-  flex: 1 1 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 34px;
-  padding: 6px 8px;
-  border: 2px solid var(--m-edge);
-  background: var(--m-bezel);
-  clip-path: var(--notch-2);
-  color: var(--m-text);
-  font: 700 11px/1 var(--font-pixel);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.keys-tabs input:checked + label {
-  border-color: var(--m-coin);
-  background: var(--m-coin);
-  color: #0c0d10;
-}
-.keys-tabs input:focus-visible + label {
-  border-color: var(--m-text);
-}
-.keys-tabs .walk-keys {
-  flex: 1 1 100%;
-  display: none;
-}
-#keys-foot:checked ~ [data-keys="foot"],
-#keys-drive:checked ~ [data-keys="drive"],
-#keys-pad:checked ~ [data-keys="pad"] {
-  display: grid;
-}
 .mk-hub .walk-keys {
   margin-top: 6px;
   color: var(--m-text);
   font-size: 12.5px;
+}
+/* Settings > Keys (made from keymap.ts): a section a mode, each row in the input in use (the hub's data-input) */
+.mk-hub .km {
+  margin-top: 8px;
+}
+.mk-hub .km > summary {
+  color: var(--m-coin);
+  font-size: 11px;
+}
+.mk-hub .km-list [data-for] {
+  display: none;
+}
+.mk-hub[data-input="keys"] .km-list [data-for="keys"],
+.mk-hub[data-input="pad"] .km-list [data-for="pad"],
+.mk-hub[data-input="touch"] .km-list [data-for="touch"] {
+  display: inline;
+}
+/* a job with nothing on the input in use is left out (the keyboard's walk toggle on a gamepad) */
+.mk-hub[data-input="keys"] .km-list .km-nokeys,
+.mk-hub[data-input="pad"] .km-list .km-nopad,
+.mk-hub[data-input="touch"] .km-list .km-notouch {
+  display: none;
+}
+.mk-hub .km-list kbd + kbd {
+  margin-left: 3px;
+}
+.mk-hub .km-list dt {
+  white-space: nowrap;
 }
 .mk-hub kbd {
   display: inline-block;

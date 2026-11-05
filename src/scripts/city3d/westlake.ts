@@ -18,11 +18,12 @@
  *   south gate to the stadium) and the ways in from the gates (`GATES`).
  * - **The stadium's old site** (`GARDEN_SITE`), kept clear for the formal
  *   garden (the north side's stage 3, docs/north-plan.md): the stadium moved
- *   north of the ring highway (stadium.ts), the Mall carried on to it over
- *   a footbridge (`BRIDGE_FOOT`).
+ *   north of the ring highway (stadium.ts), the Mall carried on to it out of
+ *   the north gate (`gate-n`), under the raised highway (stadium.ts `WALK`).
  */
 import { EW_ROADS, WALK_W } from './layout';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
+import { RAMP_CLEAR, quadrantEdge } from './viaduct';
 import { BEND_REACH, PARKWAY } from './outer';
 
 export type Pt = [number, number];
@@ -49,12 +50,26 @@ export const ZS = RING_AVE.c - RING_AVE.half - WALK_W;
 /** The arc of the highway's bend between two angles, `n` points */
 const arc = (a0: number, a1: number, n: number): Pt[] => Array.from({ length: n + 1 }, (_, k) => [BEND_C[0] + Math.cos(a0 + ((a1 - a0) * k) / n) * BEND_IN, BEND_C[1] + Math.sin(a0 + ((a1 - a0) * k) / n) * BEND_IN] as Pt);
 
+/**
+ * The south-west corner the raised highway's exit 8 takes (docs/highway-plan.md Phase 1b, the owner's call: open
+ * land moves): its inside quadrant's edge, a sidewalk and a little more further in (the seam map's cells are 2
+ * across), from the west edge down to the block's south edge
+ */
+export const EXIT_NOTCH: Pt[] = (() => {
+  const edge = quadrantEdge(8, -1, RAMP_CLEAR + 2.5 + WALK_W).filter((p) => p[0] > X0 + 2.5 && p[1] < ZS - 0.5);
+  // (from the west edge southwards: the edge comes from the arterial northwards, so it's turned round), its
+  // straight run down to the south edge in one piece
+  const pts = [...edge].reverse();
+  const bend = pts.filter((p, i) => i === 0 || Math.abs(p[0] - pts.at(-1)![0]) > 0.05);
+  return [[X0, pts[0][1] - 3], ...bend, [pts.at(-1)![0], ZS]];
+})();
+
 /** The big block, inside its sidewalk, counter-clockwise seen from above (the order the street plan's blocks keep) */
 export const BIG: Pt[] = (() => {
   // Where the bend meets the west edge: from straight up (the north edge) round to there
   const aW = -Math.PI + Math.acos((BEND_C[0] - X0) / BEND_IN);
   const bend = arc(-Math.PI / 2, aW, 16);
-  return [[X0, bend.at(-1)![1]], [X0, ZS], [X1, ZS], [X1, Z0], ...bend.slice(0, -1)];
+  return [[X0, bend.at(-1)![1]], ...EXIT_NOTCH, [X1, ZS], [X1, Z0], ...bend.slice(0, -1)];
 })();
 
 export interface ParkBlock {
@@ -207,11 +222,8 @@ export function inset(poly: Pt[], d: number): Pt[] {
   });
 }
 
-/** The Mall: a wide walk from the south gate north through the garden's site to the footbridge (x, and its half width) */
+/** The Mall: a wide walk from the south gate north through the garden's site to the north gate (x, and its half width) */
 export const MALL = { x: -140, half: 2.4 };
-/** Where the Mall meets the footbridge's stairs up over the highway to the stadium (stadium.ts `BRIDGE`), and what the bridge covers in the park */
-export const BRIDGE_FOOT = -140.5;
-export const BRIDGE_PARK: Rect = [MALL.x - 2.2, Z0 - 1, MALL.x + 2.2, BRIDGE_FOOT + 0.6];
 /** The walk round the big block: this far in from its edge */
 export const RING_IN = 6;
 /** The lake loop: this far out from the water's edge */
@@ -225,11 +237,15 @@ export interface Gate {
   out: Pt;
   half: number;
 }
+/** The south-west gate (east of the corner exit 8 takes) */
+const SW_GATE_X = EXIT_NOTCH.at(-1)![0] + 12;
 const southGate = (id: string, x: number, half = 1.3): Gate => ({ id, at: [x, ZS], out: [0, 1], half });
 const eastGate = (id: string, z: number, half = 1.3): Gate => ({ id, at: [X1, z], out: [1, 0], half });
 export const GATES: Gate[] = [
   southGate('gate-mall', MALL.x, MALL.half),
-  southGate('gate-sw', -182),
+  // (the Mall's north end, out under the raised highway to the stadium: stadium.ts WALK, docs/highway-plan.md Phase 2)
+  { id: 'gate-n', at: [MALL.x, Z0], out: [0, -1], half: MALL.half },
+  southGate('gate-sw', SW_GATE_X),
   southGate('gate-lake', -96),
   southGate('gate-se', -58),
   eastGate('gate-e1', -28),
@@ -288,8 +304,8 @@ const ringNorthZ = (x: number) => {
 export const PATHS: ParkPath[] = [
   { id: 'ring', pts: RING_WALK, half: 1.2, loop: true },
   { id: 'loop', pts: lakeLine(LOOP_OUT, 120), half: 1.1, loop: true },
-  // The Mall, from the south gate through the garden's site to the footbridge
-  { id: 'mall', pts: [[MALL.x, ZS], [MALL.x, BRIDGE_FOOT]], half: MALL.half },
+  // The Mall, from the south gate through the garden's site to the north gate
+  { id: 'mall', pts: [[MALL.x, ZS], [MALL.x, Z0]], half: MALL.half },
   // From the Mall across to the lake, and the lake's south and east gates in to the loop
   { id: 'mall-lake', pts: [[MALL.x, -50], toLoop([MALL.x, -50])], half: 1.1 },
   { id: 'lake-s', pts: smooth([[-96, ZS], [-96, -16], [-92, -24], toLoop([-92, -26])]), half: 1.1 },
@@ -302,7 +318,7 @@ export const PATHS: ParkPath[] = [
   { id: 'garden-cross', pts: [[X0 + RING_IN, GARDEN_Z], [MEADOW_X, GARDEN_Z]], half: 1.2 },
   ...GARDEN_XS.map((x, i): ParkPath => ({ id: i ? 'garden-e' : 'garden-w', pts: [[x, ringNorthZ(x)], [x, GARDEN_SITE[3] - 0.5]], half: 1.1 })),
   // The south-west gate up to the ring walk
-  { id: 'sw', pts: [[-182, ZS], [-182, ZS - RING_IN]], half: 1.1 },
+  { id: 'sw', pts: [[SW_GATE_X, ZS], [SW_GATE_X, ZS - RING_IN]], half: 1.1 },
 ];
 
 /** How far a point is from a polyline (closed if `loop`) */
@@ -379,7 +395,7 @@ export interface ParkTree {
 
 /** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site and the gates */
 export const treeFree = (p: Pt) =>
-  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BRIDGE_PARK, p, 1.8) && !inRect(BOATHOUSE.rect, p, 2.2) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
+  inPark(p, 1.6) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BOATHOUSE.rect, p, 2.2) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
 export const PARK_TREES: ParkTree[] = (() => {
   const r = rng(808);
@@ -422,7 +438,7 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
         const off = q.half + 0.5;
         const [x, z] = [a[0] + ux * d + nx * off, a[1] + uz * d + nz * off];
         // (the arm points back across the path: from the lamp towards -n)
-        if (!inLake(x, z, 1.2) && !inRect(BRIDGE_PARK, [x, z], 0.8) && inPark([x, z], 0.3)) out.push([x, z, Math.atan2(nz, -nx)]);
+        if (!inLake(x, z, 1.2) && inPark([x, z], 0.3)) out.push([x, z, Math.atan2(nz, -nx)]);
       }
       carry = (((carry - len) % every) + every) % every;
     }

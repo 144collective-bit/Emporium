@@ -100,7 +100,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'race',
     name: 'Race at the kart park',
-    hint: 'Finish a race from the kart hut',
+    hint: 'Finish a race from the clubhouse',
     at: HUT_DOOR,
     go: { walk: facing({ x: HUT_DOOR.x, z: HUT_DOOR.z + 1.5 }, HUT_DOOR) },
     met: (s) => s.counters.kartRaces >= 1,

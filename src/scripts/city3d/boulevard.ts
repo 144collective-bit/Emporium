@@ -33,6 +33,7 @@ import { HIGHRISES, PODIUM } from './highrise';
 import { DECK_Y } from './waterfront';
 import { atGangway } from './riverbus';
 import { WHEEL_RECT } from './wheel';
+import { SWING_RECT } from './swingbridge';
 
 /** The bank avenue the esplanade runs along */
 const BANK = ROWS_Z[ROWS_Z.length - 1];
@@ -61,9 +62,15 @@ export const ESPLANADE_DECKS: Rect[] = [
 /** Is a point on the esplanade's decks, `m` (a walker's radius) inside their edges */
 export const onEsplanade = (x: number, z: number, m = 0) => ESPLANADE_DECKS.some((r) => x > r[0] + m && x < r[2] - m && z > r[1] + m && z < r[3] - m);
 
-/** Where things stand along the water's edge: never in an overlook's or a gangway's mouth (the marina's, or the river bus's: riverbus.ts) */
+/**
+ * Where things stand along the water's edge: never in an overlook's or a gangway's mouth (the marina's, or the river
+ * bus's: riverbus.ts), nor where the swing bridge leaves the bank (swingbridge.ts)
+ */
 export const clearOfMouths = (x: number, m: number) =>
-  OVERLOOKS.every((o) => Math.abs(x - o.x) > o.w / 2 + m) && GANGWAYS.every((g) => Math.abs(x - g) > GANGWAY_HALF + m) && !atGangway('north', x, m);
+  OVERLOOKS.every((o) => Math.abs(x - o.x) > o.w / 2 + m) &&
+  GANGWAYS.every((g) => Math.abs(x - g) > GANGWAY_HALF + m) &&
+  !atGangway('north', x, m) &&
+  (x < SWING_RECT[0] - m || x > SWING_RECT[2] + m);
 /** ...and by the avenue, never where people come over from the junctions and the axis's zebra */
 const clearOfCrossings = (x: number, m: number) => [...crossingsOn(BANK), AXIS_X].every((c) => Math.abs(x - c) > STREET_HALF + m);
 /** ...and the observation wheel's along the water's edge (wheel.ts): the walk passes it on the avenue's side */

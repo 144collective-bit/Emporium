@@ -395,8 +395,8 @@ keys list as short rows by mode; the money note on the start screen only):
 - Any other line in a menu about eight words at most: no semicolons, no
   asides, nothing the screen already shows.
 - Each place's panel is one line under its name.
-- Settings' controls are three tabs (On foot, Driving, Gamepad), a key and
-  a word or two a row (`.keys-tabs`, CSS only).
+- Settings' controls are keymap.ts's lists by mode (views plan Phase 3),
+  a key and a word or two a row; the long notes under them went.
 - "Dorras are game money only" is said once, on the start screen. The
   credits stay whole (the motion capture's licence asks for them).
 

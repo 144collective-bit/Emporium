@@ -20,7 +20,7 @@
  *   seat `SEAT_H` above the ground there.
  */
 import { JUNCTIONS, lightState, phaseOf, type Junction, type Phase, type Pt } from './routes';
-import { distToStreet, pointAt, streetLength, type Street } from './streetplan';
+import { distToStreet, pointAt, streetLength, type Street, raised } from './streetplan';
 import { PARKS, SQUARE } from './downtown';
 import { OUTER_PARKS, SQUARE_LAYOUTS } from './outer';
 import { THE_BLOCK } from './projects';
@@ -65,7 +65,7 @@ function nearestOn(s: Street, p: Pt): { dir: Pt; d: number } {
  */
 export function crossingLinks(blocks: Pt[][], streets: Street[], junctions: Junction[] = JUNCTIONS): Link[] {
   const out: Link[] = [];
-  const roads = streets.filter((s) => s.lanes > 0 && s.kind !== 'highway' && s.kind !== 'slip');
+  const roads = streets.filter((s) => s.lanes > 0 && !raised(s));
   const lit = junctions.filter((j) => j.lit);
   for (let a = 0; a < blocks.length; a++)
     for (let b = a + 1; b < blocks.length; b++)

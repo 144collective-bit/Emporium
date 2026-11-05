@@ -10,7 +10,6 @@
  * lists (landuse.ts) and any land kept clear.
  */
 import { CITY_EXT, EXT } from './layout';
-import { KART_PARK } from './kartpark';
 import { AIRPORT_AREAS } from './airfield';
 import { TILE, tileKey, tilesIn } from './tiles';
 import { rng } from './recipes';
@@ -75,7 +74,9 @@ export const WOODS = { clear: 120, cell: 90, over: 0.66, density: 2.5, pine: 0.8
  * whole east side)
  */
 export const WOODS_OFF: Rect[] = [
-  [Math.min(CITY_EXT[0], KART_PARK.x0), Math.min(CITY_EXT[0], KART_PARK.z0), Math.max(CITY_EXT[1], KART_PARK.x1, 234), Math.max(CITY_EXT[1], KART_PARK.z1, 279)],
+  // (with the kart park's land north of the highway as it was before it moved west, docs/kart-west-plan.md Phase 1:
+  // the woods stand where they stood)
+  [CITY_EXT[0], -311.5, Math.max(CITY_EXT[1], 234), Math.max(CITY_EXT[1], 279)],
   ...AIRPORT_AREAS,
 ];
 /** How far a point is from the built-up area (0 inside it) */

@@ -46,9 +46,10 @@
  * prices are Dorras only: never real money, nothing to do with the token.
  */
 import { CUPS, CUP_IDS, type CupId } from './kart-sim';
+import { ITEM_NAMES } from './kartitems';
 import { CIRCUIT, CONDS, COURSES, COURSE_IDS, type Cond, type CourseId } from './kartcircuit';
 import { F } from './kartpark';
-import { KART_SPECS, PLAYER_KARTS, type KartId } from './mykart';
+import { DECAL_NAMES, KART_DECALS, KART_SPECS, LOOK_COLOURS, PLAYER_KARTS, type KartId, type KartLook } from './mykart';
 import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MODS, KART_MOD_IDS, MOD_LEVELS, SERIES_PRIZES, type ClassId, type KartModId } from './catalog';
 import {
   buyKart,
@@ -64,6 +65,7 @@ import {
   pickKart,
   recordKey,
   seriesNext,
+  setKartLook,
   type KartTime,
   type TycoonSave,
 } from './tycoon';
@@ -214,6 +216,12 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   const bestEl = lapsEl.querySelector<HTMLElement>('[data-kart-best]')!;
   const meter = hud.querySelector<HTMLElement>('[data-kart-meter]')!;
   const boostEl = hud.querySelector<HTMLElement>('[data-kart-boost]')!;
+  const splitEl = hud.querySelector<HTMLElement>('[data-kart-split]')!;
+  const slotEl = hud.querySelector<HTMLElement>('[data-kart-slot]')!;
+  const slotName = hud.querySelector<HTMLElement>('[data-kart-slot-name]')!;
+  const gapsEl = hud.querySelector<HTMLElement>('[data-kart-gaps]')!;
+  const aheadEl = hud.querySelector<HTMLElement>('[data-kart-ahead]')!;
+  const behindEl = hud.querySelector<HTMLElement>('[data-kart-behind]')!;
   const surfaceEl = hud.querySelector<HTMLElement>('[data-kart-surface]')!;
   const condEl = hud.querySelector<HTMLElement>('[data-kart-cond]')!;
   const mapEl = hud.querySelector<HTMLElement>('[data-kart-map]')!;
@@ -244,6 +252,8 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   let singleCup: CupId = 'rookie';
   let singleCourse: CourseId = COURSE_IDS[0];
   let singleCond: Cond = 'day';
+  /** Items on or off (docs/kart-west-plan.md Phase 7: pure racing by default) */
+  let singleItems = false;
   let sinceRepaint = 0;
   let goTimer = 0;
 
@@ -311,6 +321,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   <div class="seg kart-seg" role="group" aria-label="Conditions"><span class="seg-label">When</span>${COND_IDS.map(
     (id) => `<button type="button" data-kart-single-cond="${id}" aria-pressed="${id === singleCond}">${esc(CONDS[id].name)}</button>`
   ).join('')}</div>
+  <div class="seg kart-seg" role="group" aria-label="Items"><span class="seg-label">Items</span><button type="button" data-kart-single-items="off" aria-pressed="${!singleItems}">Off</button><button type="button" data-kart-single-items="on" aria-pressed="${singleItems}">On</button></div>
   <div class="kart-cup-act"><button type="button" class="kart-go" data-kart-single><span>Start race</span></button><p class="kart-prizes"><span class="kart-prize"><em>a win</em> ${D(sc.prizes[0] ?? 0)}</span><span class="kart-prize"><em>2nd</em> ${D(sc.prizes[1] ?? 0)}</span><span class="kart-prize"><em>3rd</em> ${D(sc.prizes[2] ?? 0)}</span></p></div>
 </section>`;
 
@@ -363,6 +374,28 @@ ${challenge}
 <p class="race-note">Your kart: <b>${esc(KART_SPECS[mine.model].name)}</b>, ${esc(paintName(mine.paint))}</p>`;
   }
 
+  /** Your kart's look (docs/kart-west-plan.md Phase 6, all free): the number, the decals, rims and tyres, helmet and suit, trail, glow */
+  function lookHtml(look: KartLook) {
+    const swatches = (field: keyof KartLook, now: string | null, none: string | null) =>
+      `${none ? `<button type="button" class="kart-look-chip" data-kart-look="${field}" data-v="" aria-pressed="${now === null}">${esc(none)}</button>` : ''}${LOOK_COLOURS.map(
+        (c) => `<button type="button" class="garage-paint kart-look-sw" data-kart-look="${field}" data-v="${c}" role="radio" aria-checked="${c === now}" aria-label="${c}" style="--paint:${c}"></button>`
+      ).join('')}`;
+    const row = (label: string, inner: string) => `<div class="kart-look-row"><span class="kart-look-label">${esc(label)}</span><div class="kart-look-opts">${inner}</div></div>`;
+    const decals = KART_DECALS.map((dc) => `<button type="button" class="kart-look-chip" data-kart-look="decal" data-v="${dc}" aria-pressed="${dc === look.decal}">${esc(DECAL_NAMES[dc])}</button>`).join('');
+    const num = `<button type="button" class="kart-look-chip" data-kart-look="number" data-v="${look.number - 1}" aria-label="Number down"${look.number <= 1 ? ' disabled' : ''}>−</button><b class="kart-look-num">${look.number}</b><button type="button" class="kart-look-chip" data-kart-look="number" data-v="${look.number + 1}" aria-label="Number up"${look.number >= 99 ? ' disabled' : ''}>+</button>`;
+    return `<section class="kart-look" aria-label="Look">
+  <p class="garage-paint-head">Look <span>all free</span></p>
+  ${row('Number', num)}
+  ${row('Decals', decals)}
+  ${look.decal === 'none' ? '' : row('Decal colour', swatches('decalColour', look.decalColour, null))}
+  ${row('Rims', swatches('rim', look.rim, null))}
+  ${row('Tyre stripe', swatches('tyreStripe', look.tyreStripe, 'None'))}
+  ${row('Helmet', swatches('helmet', look.helmet, null))}
+  ${row('Race suit', swatches('suit', look.suit, null))}
+  ${row('Spark trail', swatches('trail', look.trail, null))}
+  ${row('Underglow', swatches('glow', look.glow, 'Off'))}
+</section>`;
+  }
   function kartsTab(s: TycoonSave) {
     const lv = level(s);
     const mine = kartOf(s);
@@ -422,6 +455,7 @@ ${challenge}
   <div class="garage-deal">${deal}</div>
   <p class="garage-paint-head">Paint <span>${esc(paintName(mine.paint))}</span></p>
   <div class="garage-paints kart-paints" role="radiogroup" aria-label="Paint">${paints}</div>
+  ${lookHtml(s.karts.look)}
 </div>`;
   }
 
@@ -566,7 +600,7 @@ ${countersHtml(s)}
       return;
     }
     close();
-    d.start({ course: singleCourse, cup: singleCup, cls: c.cls, laps: SINGLE_LAPS, cond: singleCond, single: true });
+    d.start({ course: singleCourse, cup: singleCup, cls: c.cls, laps: SINGLE_LAPS, cond: singleCond, single: true, items: singleItems });
   }
   function startSeries(cup: CupId) {
     const s = d.game.save();
@@ -652,6 +686,9 @@ ${countersHtml(s)}
     } else if (b.dataset.kartSingleCond) {
       singleCond = b.dataset.kartSingleCond as Cond;
       refocus(`[data-kart-single-cond="${singleCond}"]`);
+    } else if (b.dataset.kartSingleItems) {
+      singleItems = b.dataset.kartSingleItems === 'on';
+      refocus(`[data-kart-single-items="${b.dataset.kartSingleItems}"]`);
     }
     else if (b.hasAttribute('data-kart-drop')) {
       d.quitSeries();
@@ -685,7 +722,21 @@ ${countersHtml(s)}
       refocus('[data-kart-buy]');
     } else if (b.dataset.kartUp) upgrade(b.dataset.kartUp as KartModId);
     else if (b.dataset.kartPick) pick(b.dataset.kartPick as KartId);
-    else if (b.dataset.kartPaint) {
+    else if (b.dataset.kartLook) {
+      // The look: whatever's picked, cleaned and saved, the kart in the pits dressed in it
+      const s = d.game.save();
+      const field = b.dataset.kartLook as keyof KartLook;
+      const raw = b.dataset.v ?? '';
+      const v = field === 'number' ? Number(raw) : raw === '' ? null : raw;
+      const was = s.karts.look.number;
+      setKartLook(s, { [field]: v } as Partial<KartLook>);
+      d.game.commit();
+      preview(sel, s.karts.paint);
+      paint();
+      // (the number's buttons: back on the one pressed, its value one on)
+      const now = s.karts.look.number;
+      refocus(`[data-kart-look="${field}"][data-v="${field === 'number' ? now + (now >= was ? 1 : -1) : raw}"]`);
+    } else if (b.dataset.kartPaint) {
       const s = d.game.save();
       const p = b.dataset.kartPaint as PaintId;
       // Paint is one choice for all your karts: it goes on your pick, and shows on the kart you're looking at
@@ -793,6 +844,25 @@ ${countersHtml(s)}
       meter.querySelectorAll('i').forEach((seg, i) => seg.classList.toggle('on', i < tier));
     }
     showIf(boostEl, h.boost);
+    // The split just made, its delta to your fastest lap's (green ahead, pink behind); the gaps ahead and behind; the personal best
+    showIf(splitEl, !!h.split);
+    if (h.split) {
+      const d = h.split.delta;
+      set(splitEl, d === null ? `S${h.split.sector} ${clockOf(h.split.time)}` : `S${h.split.sector} ${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(2)}`);
+      splitEl.classList.toggle('is-up', d !== null && d > 0);
+      splitEl.classList.toggle('is-down', d !== null && d <= 0);
+    }
+    showIf(gapsEl, !!(h.ahead || h.behind));
+    set(aheadEl, h.ahead ? `▲ ${h.ahead.name} ${h.ahead.gap.toFixed(1)}s` : '');
+    set(behindEl, h.behind ? `▼ ${h.behind.name} ${h.behind.gap.toFixed(1)}s` : '');
+    clockEl.classList.toggle('is-pb', h.pb);
+    // The items mode: what's in hand (E, X, the Item button), lit while the shield's on
+    showIf(slotEl, h.item !== undefined);
+    if (h.item !== undefined) {
+      set(slotName, h.item ? ITEM_NAMES[h.item] : h.shield ? 'Shield on' : 'Empty');
+      if (slotEl.dataset.item !== (h.item ?? '')) slotEl.dataset.item = h.item ?? '';
+      slotEl.classList.toggle('is-shield', !!h.shield);
+    }
     // Night or rain
     showIf(condEl, h.cond !== 'day');
     if (h.cond !== 'day') {

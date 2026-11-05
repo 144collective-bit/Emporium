@@ -2,6 +2,7 @@
 // sodium districts, all sodium well inside, a share easing between across the edge, each lamp the same every time,
 // The Trenches' dead and flickering lamps its own.
 import { test } from 'node:test';
+import { inLot9Lamps as inFence } from '../src/scripts/city3d/lot9';
 import assert from 'node:assert/strict';
 import { MIX, SODIUM_AREAS, lampTone, sodiumDepth, sodiumShare } from '../src/scripts/city3d/lampmix';
 import { BLOCK_SPAWN } from '../src/scripts/city3d/projects';
@@ -57,12 +58,12 @@ test('the lamps where the yards meet the park are mixed, and the lamps away from
   assert.ok(inSodium / (inSodium + inWhite) > outSodium / (outSodium + outWhite));
 });
 
-test("The Trenches' dead and flickering lamps are only its own", () => {
+test("The Trenches' (and Lot 9's) dead and flickering lamps are only their own", () => {
   let [dead, flicker] = [0, 0];
   for (let x = -260; x < 160; x += 1.7)
     for (let z = 120; z < 330; z += 1.9) {
       const t = lampTone(x, z);
-      if (t === 'dead' || t === 'flicker') assert.ok(inTrenches(x, z), `${t} at ${x}, ${z}`);
+      if (t === 'dead' || t === 'flicker') assert.ok(inTrenches(x, z) || inFence(x, z), `${t} at ${x}, ${z}`);
       if (t === 'dead') dead++;
       if (t === 'flicker') flicker++;
     }

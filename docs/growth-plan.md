@@ -1,7 +1,8 @@
 # Growing Sector 7: the plan
 
 How the city gets many more buildings, and then a bigger world, without
-getting slower. Phases 0-7 are built. Like the other plans, it waits
+getting slower. Phases 0-8 and 10 are built, and Phase 9's districts
+come one at a time. Like the other plans, it waits
 for the owner's sign-off one phase at a time. Keep it up to date.
 
 ## What the owner asked
@@ -184,7 +185,7 @@ what's in view, not the size of the world.
 | --- | --- | --- | --- | --- |
 | Today | -200 to 240 | 440 tiles, ~790 m | ~1.4 min | ~40 s |
 | Phase 6 | about -420 to 460 | ~880 tiles, ~1.6 km | ~2.7 min | ~75 s |
-| Phase 10 (optional) | about -680 to 720 | ~1,400 tiles, ~2.5 km | ~4.3 min | ~2 min |
+| Phase 10 (built) | -680 to 720 | ~1,400 tiles, ~2.5 km | ~4.3 min | ~2 min |
 
 Degen runs 5.4 tiles a second. The cars' top speeds are 7-16 tiles a
 second. All three steps keep downtown in the middle.
@@ -727,7 +728,7 @@ with it, before the edge moves.
 
 - **`EXT` is -420 to 460** (880 tiles, about 1.6 km across), set in
   `layout.ts` as before; `npm run test:wide` now runs every test at Phase
-  10's -680 to 720, and both runs pass.
+  10's -680 to 720 (since Phase 10, -940 to 980), and both runs pass.
   - `WORLD_BOUNDS` follows it: you can walk, drive and fly out to 6 in
     from the new edge.
   - `CITY_EXT` stays (traffic and boats loop round the town) until Phase
@@ -1331,18 +1332,57 @@ Every district comes with the same set of things:
 - **Done when** the district is inside the targets on its own stretch of
   the benchmark route.
 
-## Phase 10: bigger still (optional)
+## Phase 10: bigger still (built)
 
-- `EXT` grows again, to about 1,400 tiles across (2.5 km), only if Phases
-  6-9 hold the targets and the owner wants more room. The same rules
-  apply: the edge moves, then roads, then districts.
-- **Precision isn't a limit:**
-  - three.js stays accurate to well under a millimetre this far from the
-    centre;
-  - shaking only starts at about 10 km;
-  - the shadow box and the sky dome already follow the camera.
-- **Memory is the limit on phones.** That's why Phase 3's budget frees near
-  forms, and why far forms are kept small.
+- **`EXT` is -680 to 720** (1,400 tiles, about 2.5 km across), set in
+  `layout.ts` as before; `npm run test:wide` runs every test at -940 to
+  980, past the site's own, and both runs pass (1,041 tests each).
+  - `WORLD_BOUNDS` follows it: you can walk, drive and fly out to 6 in
+    from the new edge.
+  - The river, its banks, the bank avenues and every road run on to the
+    new edge as plain continuations with no traffic, as in Phase 6.
+  - Nothing else needed changing: every edge-reader already read `EXT`
+    (Phase 5), the trees are seeded per tile at a density per area (more
+    woods, never thinner ones), and the skyline ring keeps as many towers
+    for its length as before. Crestmont's hills fall away to nothing well
+    inside the old corner, so the new land is flat open ground, woods and
+    the rolls (`rolls.ts`, outside the highway only).
+- **The camera:** the sky dome's radius (`SKY_RADIUS`) is about 1,090
+  (from about 720), the far plane (`CAMERA_FAR`) 1,130; the depth buffer's
+  precision rides on the near plane, so nothing in town flickers more.
+  City view's pan (`PAN_BOUNDS`, from `BUILT_UP`) is unchanged, and the
+  world now reaches past it on every side.
+- **Nothing in town moves:** the snapshot test passes at both sizes. The
+  airport's `SITE` is fixed numbers; it's no longer at the world's south
+  edge, it's simply on the south side.
+- **Measured** (headless, phone tier, the same build before and after; the
+  full `?bench` route didn't finish under the software renderer in two
+  hours, so its per-view table waits for a real device):
+
+  | | Before (-420 to 460) | After (-680 to 720) |
+  | --- | --- | --- |
+  | Home view, everything built | 276 draws · 0.43M | 283 · 0.46M |
+  | Geometry | 213 MB | 210 MB |
+  | Textures | 93 MB | 93 MB |
+  | Near forms held | 32 MB | 32 MB |
+  | Sites | 2,338 | 2,934 |
+  | Built after the boot | 13.3 s headless | 14.2 s |
+  | Boot (headless) | 8.4 s | 9.4 s |
+
+  What's in view costs the same: the new land is drawn only from out
+  there, and its far tiles are crossed cards. The extra sites are the new
+  land's trees and woods, built after the boot a few milliseconds at a
+  time, nearest first, and let go past the near budget like the rest.
+  Geometry is the same within the noise of what was built when it was
+  read. Baked data grew by 0.2 KB gzipped (the rolls).
+- **Already over before this phase:** phones' geometry (about 210 MB)
+  passed the 150 MB target with the districts built since Phase 6, not
+  with the edge. That's for `docs/performance-plan.md`, not this plan.
+- **To check on real devices:** `?bench` on a phone and a laptop (the
+  route goes out to the far edge), the skyline from town at night, and a
+  drive out to the corner.
+- **Precision isn't a limit:** three.js stays accurate to well under a
+  millimetre this far out; shaking only starts at about 10 km.
 
 ---
 
@@ -1371,7 +1411,7 @@ Every district comes with the same set of things:
 
 - **How big:** fill the current map first (Part A, then Phase 9 inside
   today's edge), or grow the world too (Phases 5-8)? And how far: Phase 6's
-  1.6 km, or on to Phase 10's 2.5 km?
+  1.6 km, or on to Phase 10's 2.5 km? Answered: Phase 10's, built.
 - **Which districts, in what order?** Docklands, the industrial east,
   suburbs, a park district, or something else?
 - **How dense:** downtown-tight everywhere, or looser further out (as the

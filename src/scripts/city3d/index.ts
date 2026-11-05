@@ -23,6 +23,10 @@ import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
+import { DECK_LAMPS } from './viapiers';
+import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
+import { SWING_LAMPS } from './swingbridge';
+import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
 import { LAMPS as PLAZA_LAMPS, PLAZA_PEOPLE, TERRACE_LAMPS, TERRACE_TREES, TREES as PLAZA_TREES } from './plaza';
@@ -42,6 +46,7 @@ import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
+import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
 import { LIFT, TOWER_SPAWN } from './skydeck';
@@ -326,6 +331,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const ball: [number, number, number, number] = [x - SPHERE.r, z - SPHERE.r, x + SPHERE.r, z + SPHERE.r];
     spots.push({ ...pickSpot(scene, 'sphere', SLAB, [{ rect: ball, h: SPHERE_TOP }, { rect: SPHERE.pavilion, h: SPHERE.pavilionH }], SPHERE_LOT, SPHERE_TOP + 1.2, [x, z]), faces: 'n' });
   }
+  // ...and Lot 9, the trailer park south of the highway (lot9.ts, docs/trailer-plan.md): its spot over the whole fenced
+  // land (drawn in its chunk), the pin over the fire pit, the fly-in from the north (from over the highway)
+  spots.push({ ...pickSpot(scene, 'lot9', LOT9_Y, [{ rect: LOT9_FENCE, h: 1.9 }, { rect: LOT9_OFFICE.rect, h: LOT9_OFFICE.h + 0.4 }], LOT9_FENCE, 5.2, LOT9_PIN), faces: 'n' });
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -355,6 +363,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, size] of SF_POOLS) addPool(x, z, size, SLAB, true);
   for (const [x, z, s] of [...SF_PARK_TREES, ...SF_STRIP_TREES]) addTree(x, z, s, false);
   SF_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  // Lot 9's (lot9.ts): sodium along its lanes, by the gate and at the tunnel's mouth; its people about (phones: half)
+  for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
+  // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
+  for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
+  // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
+  for (const [x, z, ry, y] of RAMP_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z] of UNDER_LIGHTS) addPool(x, z, 4.2, 0.03);
+  // The swing bridge's lamps on its fixed approaches (swingbridge.ts, Phase 5; the span's swing with it)
+  for (const [x, z, ry, y] of SWING_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z, s] of LOT9_TREES) addTree(x, z, s, false, LOT9_Y);
+  LOT9_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
   for (const [x, z] of PORT_MASTS) addPool(x, z, 12, SLAB, true);
   // ...and its people standing about (crestlife.ts, Phase 8: valets, doormen, diners, sunbathers, gardeners; phones: half)
@@ -383,6 +402,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
   for (const [x, z, y] of [...MALL_TREES, ...NORTH_TREES]) addTree(x, z, undefined, false, SLAB + y);
+  // ...and the walk between Westlake Park and Uptown North's towers (parkedge.ts, docs/blend-plan.md Phase 6e)
+  for (const [x, z, ry] of PARK_EDGE_LAMPS) addLamp(x, z, ry);
+  for (const [x, z, s] of PARK_EDGE_TREES) addTree(x, z, s, false, SLAB + 0.02);
   [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   progress(0.55);
   await waited(nextFrame());
@@ -740,6 +762,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(HM_SPAWN);
       });
+    // Lot 9's panel: Walk in on the lane outside its gate, facing in
+    if (id === 'lot9')
+      panelBody.querySelector('[data-lot9-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(LOT9_SPAWN);
+      });
     // The Block's panel: Walk in starts walk mode on its plaza by the metro's stairs
     if (id === 'trenches')
       panelBody.querySelector('[data-block-walkin]')?.addEventListener('click', () => {
@@ -955,6 +983,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     airTraffic: airport.traffic,
     aero: (kind, revs) => sound.aero(kind, revs),
     fightClub,
+    // The world map at the wheel (the gamepad's View; travel is made below, before anything can ask)
+    worldMap: () => travel.toggle(),
+    skipRide: () => void (taxis.skip() || metroUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
+    mapOpen: () => travel.isOpen,
     reduced,
     low: tier === 'low',
   });
@@ -1021,6 +1053,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
   syncHeld(profileUI.look);
   profileUI.onChange(syncHeld);
+  // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
+  kartPark.trophies(game.save().karts.trophies);
   const charScreen = createCharScreen({
     root,
     look: () => profileUI.look,
@@ -1142,10 +1176,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // The hub (hub.ts): Esc closes it (from outside it too: its own keys take Esc inside it)
     if (e.key === 'Escape' && hub?.close()) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
-    if (travel.key(e, walking ? !active && walk.onFoot && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
+    // (and at the wheel: keymap.ts's M is the map in every mode that has it)
+    if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1392,7 +1427,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // City / Walk switch never sits on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .ctrl-card, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
@@ -1478,6 +1513,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       taxis.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
+      walker.y = walk.position.y;
       // A car reaches further than someone on foot, an aircraft on the ground further still; in the air it's no one's business
       walker.r = walk.driving || walk.riding ? 0.8 : walk.flying ? 1.6 : 0;
       if (walk.airborne) walker.x = walker.z = 1e6;

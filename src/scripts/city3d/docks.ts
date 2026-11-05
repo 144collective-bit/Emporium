@@ -6,7 +6,7 @@
  * the basin's water and its walls, the blocks; docks3d.ts as you approach: the streets and the quays' dressing) read it.
  *
  * - **The streets** (`DOCK_STREETS`): the south bank avenue carried on from the highway's west side as the docks'
- *   main road, with traffic now (a slip lane on the junction's south-west corner, streetplan.ts `OUTER_SLIPS`); the
+ *   main road, with traffic now (under the raised ring highway since docs/highway-plan.md Phase 2); the
  *   docks' ring off it (`docks-ring`: Dock Road south at `DOCK_X`, Yard Road west at `YARD_Z`, West Road north at
  *   `WEST_X` back to the avenue) and Quay Road across it (`QUAY_Z`) along the basin's south side. One lane each way.
  * - **The basin** (`BASIN`): a dock cut into the south bank, its mouth (`CHANNEL`) open to the river under the

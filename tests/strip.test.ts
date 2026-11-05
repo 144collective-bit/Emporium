@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BLVD_WEST, STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_LAMPS, STRIP_RECT, STRIP_STREETS, STRIP_WALK, inStrip, parkwayX } from '../src/scripts/city3d/strip';
-import { PLAN, distToStreet, onSlab } from '../src/scripts/city3d/streetplan';
+import { PLAN, distToStreet, onSlab, RING_MEETS } from '../src/scripts/city3d/streetplan';
 import { EW_ROADS, LANE, STRIP_BLVD, STRIP_EAST_X, STRIP_GAP, WORLD_BOUNDS, ewRuns, ewStreet } from '../src/scripts/city3d/layout';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
 import { ROUTES, pointOn } from '../src/scripts/city3d/routes';
@@ -31,8 +31,8 @@ test('the small streets stop at the Parkway and start again at the east road; th
     assert.equal(east.pts[0][0], STRIP_EAST_X);
     assert.ok(PLAN.crossings.some((c) => c.streets.includes(`ew${i}`) && c.streets.includes('parkway') && Math.abs(c.at[0] - west.pts[1][0]) < 1e-6));
     assert.ok(PLAN.crossings.some((c) => c.streets.includes(`ew${i}e`) && c.streets.includes('strip-east')));
-    // The highway's junction and its slip lanes, and Crestmont's crossings, are the east piece's
-    assert.ok(PLAN.crossings.some((c) => c.id === `highway-ew${i}-0` && c.streets.includes(`ew${i}e`)));
+    // The east piece passes under the raised highway (streetplan.ts RING_MEETS), and Crestmont's crossings are its
+    assert.ok(RING_MEETS.some((m) => m.id === `highway-ew${i}-0` && m.street === `ew${i}e`));
     for (const c of CREST_CROSSINGS) if (c.at[1] === r.c) assert.ok(c.streets.includes(`ew${i}e`), c.id);
     // Not across the Strip
     for (let x = 130; x < STRIP_EAST_X - 1; x += 5) assert.ok(!ewRuns(i, x) && distToStreet(west, [x, r.c]) > 5 && distToStreet(east, [x, r.c]) > 0.5);
