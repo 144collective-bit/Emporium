@@ -1394,10 +1394,12 @@ it and has been retired completely. Build only on what's here.
 - **Lot 9** (the owner's call: a trailer park, "a little run down, rough
   community", the grittier edge: a burnt-out shell, boarded and condemned
   units, chained dogs, KEEP OUT signs, moody but nothing threatening; tied to
-  the storyline, coming soon) on the open land just south of the ring
-  highway's south-west corner, under The Trenches, planned in
-  `docs/trailer-plan.md` (the owner's answers; built in one go); keep it up
-  to date. Made-up names only, under the Emporium.
+  the storyline, coming soon) on the open land south of the ring highway's
+  south-west corner, planned in `docs/trailer-plan.md` (the owner's
+  answers; built in one go); keep it up to date. Made-up names only, under
+  the Emporium. It moved south (`MOVED`, 130: Endswood Estate's Phase 1,
+  `docs/estate-plan.md`), so Endswood stands between it and the highway;
+  its tunnel stayed, the footpath running on south to it.
   - `lot9.ts` (DOM-free, the boot's, tested in `tests/lot9.test.ts`): the
     chain-link `FENCE`, `LOT9_RECT` / `inLot9()`, the gate on the east side
     (`GATE`), the lane in off the south avenue (ns0s, `ROAD_Z`, `ROAD_HALF`)
@@ -1451,6 +1453,17 @@ it and has been retired completely. Build only on what's here.
   - A place: spot `lot9` (pin over the fire pit, directory entry, panel
     `data-panel-tpl="lot9"` with Walk in, `data-lot9-walkin`, marquee "Lot 9
     keeps its secrets"), `PLACES` and `LIVE_PLACES` entries.
+- **Endswood Estate**, "the Ends" (the owner's call, 2026-11: a rough London
+  council estate, a brutalist concrete jungle with subways, underpasses and
+  abandoned buildings, corner shops, an old but large church and a DIY
+  recording studio) is planned in `docs/estate-plan.md`, on Lot 9's land
+  south of the highway, Lot 9 moving further south so The Trenches,
+  Endswood and Lot 9 blend north to south. Phase 1 (Lot 9 moved south) is
+  built: `endswood.ts` (DOM-free) holds the estate's land, for now exactly
+  Lot 9's old land (`ENDSWOOD_RECT`: the highway's sound walls, the courts
+  and murals under its deck, the trees kept off, sodium lamps and the hood's
+  sound stay there). One phase at a time with the owner's sign-off; keep it
+  up to date.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make
@@ -3905,6 +3918,7 @@ it and has been retired completely. Build only on what's here.
 - **Controls:**
   - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, F get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`), Horn and View (`data-drive-view`, the camera) in the controls plan's slots (`touchlayout.ts` `drive`: a bigger stick bottom-left, Gas the big button in the corner, Brake beside it); Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
+  - **Two thumbs at the wheel** (the owner's call: "two finger touch points always available, never interrupting each other"; `touchdrive.ts`, DOM-free, tested in `tests/touchdrive.test.ts`): every finger is followed on its own (on the window, captured), so one landing or lifting never lets another go. The stick floats at the wheel (car, bike, kart, boat, aircraft, a kart race: walk.ts `atWheelNow()`): a thumb landing on the city low on the stick's side (`inSteerZone()`, `ZONE`) is the stick, its ring moved under the thumb; a little dead middle and full lock at `STICK.full` of the ring (`stickRead()`, the vehicles' `joy.sx` / `sy`; on foot and in the ring the stick reads as before, `joy.x` / `y`). A pedal finger presses the pedal it's on or the nearer (`pedalAt()`, `pedalFingers`), so a thumb rolled from Gas onto Brake switches without lifting, and one landing on the city just round the pedals (`inPedalZone()`, `PEDAL_REACH`) presses one; the pedals light by what's pressed (`.is-held`). Walk mode keeps the phone's own gestures (Safari's pinch, its long-press magnifier and callout, Android's long-press menu) off the controls and the city (`touchstart` / `touchmove` prevented on `.tc`, the stick and the canvas, `gesturestart` too), and the control card lets every touch through to the game but its × (controls.css).
   - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, the right stick pressed the camera, View the world map; the right stick or the mouse looks.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.

@@ -1,6 +1,7 @@
-// Lot 9 (lot9.ts, docs/trailer-plan.md): the trailer park south of the ring highway's south-west corner. Its lanes join
-// the plan, everything stands on its land off the lanes and clear of each other, outside the highway and under the
-// Emporium; the tunnel under the highway is walkable from The Trenches to Lot 9 and stops you everywhere else.
+// Lot 9 (lot9.ts, docs/trailer-plan.md): the trailer park south of the ring highway's south-west corner, south of
+// Endswood Estate since it moved (docs/estate-plan.md Phase 1). Its lanes join the plan, everything stands on its land
+// off the lanes and clear of each other, outside the highway and under the Emporium; the tunnel under the highway is
+// walkable from The Trenches into Endswood's land and stops you everywhere else, its footpath on south to Lot 9.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -63,8 +64,9 @@ test('its lanes and crossings join the street plan, off the avenue past the high
 test('it stands outside the highway, clear of the airport and well inside the world', () => {
   for (const p of corners(LOT9_RECT)) assert.ok(!insideHighway(p[0], p[1]));
   assert.ok(FENCE[1] - (320 + HIGHWAY_HALF) > 15, 'its fence a way off the highway');
-  // (the airliners come in low along the runway's line from the west: well south of the fence)
-  assert.ok(RUNWAY.z - FENCE[3] > 25);
+  // (the airliners come in low along the runway's line from the west: well north of the fence since it moved south of
+  // Endswood, docs/estate-plan.md Phase 1)
+  assert.ok(FENCE[1] - RUNWAY.z > 25);
   assert.ok(LOT9_RECT[2] < -4.5 - 3.6, 'west of the avenue');
 });
 
@@ -142,7 +144,7 @@ test('the office, the laundry and the fire pit are by the lane, the gate open on
   assert.ok(GATE.half > LANE_HALF + 0.5);
 });
 
-test('the tunnel: its ramps and floor, under the highway, between row C and into Lot 9', () => {
+test('the tunnel: its ramps and floor, under the highway, between row C and into Endswood, the path on to Lot 9', () => {
   const T = TUNNEL;
   // (the roof covers the highway's asphalt with room either side; the open cuttings stop short of it and its lamps)
   assert.ok(T.roof0 < 320 - HIGHWAY_HALF - 0.8 && T.roof1 > 320 + HIGHWAY_HALF + 0.8);
@@ -154,7 +156,19 @@ test('the tunnel: its ramps and floor, under the highway, between row C and into
   const walls: number[] = [T.x - T.half - T.wall, T.z0, T.x + T.half + T.wall, T.z1];
   for (const o of others) assert.ok(!overlap(walls, o, 0.02), `${o} in the tunnel's way`);
   assert.deepEqual(FOOTPATH[0], [T.x, T.z1]);
-  assert.ok(Math.abs(FOOTPATH[2][0] - HOLE.x) < 1e-6 && FOOTPATH[2][1] === FENCE[1]);
+  const hole = FOOTPATH[FOOTPATH.length - 2];
+  assert.ok(Math.abs(hole[0] - HOLE.x) < 1e-6 && hole[1] === FENCE[1]);
+  // (south all the way, in short stretches (nothing drawn much longer than a tile), a little either side of the
+  // tunnel's line, clear of every solid and of every street but Lot 9's own lanes at its end)
+  for (let i = 1; i < FOOTPATH.length; i++) {
+    const [a, b] = [FOOTPATH[i - 1], FOOTPATH[i]];
+    assert.ok(b[1] > a[1] && Math.hypot(b[0] - a[0], b[1] - a[1]) < 12, `stretch ${i}`);
+    assert.ok(Math.abs(b[0] - T.x) < 3.5);
+    if (b[1] < FENCE[1]) {
+      assert.ok(!SOLIDS.some((o) => inRect(o, b[0], b[1], -0.8)), `path in a solid at ${b}`);
+      assert.ok(!PLAN.streets.some((st) => st.kind !== 'highway' && distToStreet(st, b) < st.half + 1), `path on a street at ${b}`);
+    }
+  }
   // The holes in the ground are over the open cuttings only
   for (const h of TUNNEL_HOLES) assert.ok(h[3] <= T.roof0 + 1e-6 || h[1] >= T.roof1 - 1e-6);
   // ...and no street of the plan crosses the open cuttings but the highway over the roof
@@ -257,5 +271,5 @@ test('a place: its spawn on the lane outside the gate, a map entry, a live switc
   assert.ok(LIVE_PLACES.some((q) => q.id === 'lot9'));
   const stops = BUS_STOPS.filter((s) => s.street === 'ns0s' && s.at[1] > 320);
   assert.ok(stops.some((s) => s.dir[1] > 0) && stops.some((s) => s.dir[1] < 0), 'a stop each way');
-  assert.ok(KEEPS.some((k) => k.id === 'lot9'));
+  for (const id of ['lot9', 'lot9-path', 'endswood']) assert.ok(KEEPS.some((k) => k.id === id), id);
 });

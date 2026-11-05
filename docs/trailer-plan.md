@@ -6,6 +6,11 @@ community: the grittier edge (a burnt-out shell, boarded and condemned units,
 chained dogs behind fences, KEEP OUT signs), moody but nothing threatening, no
 violence or crime shown. Made-up names only, under the Emporium.
 
+**Moved (2026-11, docs/estate-plan.md Phase 1):** Lot 9 moved 130 south
+(`MOVED` in lot9.ts) so Endswood Estate can take its old land by the highway;
+the tunnel stayed, its footpath now running south over the open land to the
+hole in the north fence.
+
 ## The owner's answers
 
 - **Where:** hugging the highway, south of its south side, west of the south

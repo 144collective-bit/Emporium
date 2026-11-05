@@ -94,7 +94,8 @@
     opacity: var(--tc-alpha, 1);
   }
   .city .tc:active,
-  .city .walk-stick:active {
+  .city .walk-stick:active,
+  .city .walk-stick.is-held {
     opacity: 1;
   }
   /* Held: brighter, nothing moves */
@@ -158,6 +159,10 @@
     background: radial-gradient(circle, #0c0d1099, #0c0d1055);
     box-shadow: 0 0 0 2px #0c0d1066;
     touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   .city .walk-stick[data-tc] {
     bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
@@ -181,6 +186,7 @@
     background: #f1efe62e;
     box-shadow: 0 0 0 2px #0c0d1099;
   }
+  .walk-stick.is-held span,
   .walk-stick:active span {
     border-color: var(--m-coin);
     background: #ffc5313d;
@@ -549,6 +555,16 @@
   line-height: 1.35;
   box-shadow: 0 6px 24px #0008;
 }
+/* (it never takes a finger meant for the game: touches go through it to the city, the stick and the pedals; only
+   its × takes a tap) */
+@media (pointer: coarse) {
+  .ctrl-card {
+    pointer-events: none;
+  }
+  .ctrl-card-x {
+    pointer-events: auto;
+  }
+}
 .ctrl-card[hidden],
 .city:is(.is-hub, .is-inv, .is-shopping, .has-panel) .ctrl-card {
   display: none;
@@ -617,5 +633,34 @@
   .ctrl-card-list {
     grid-template-columns: auto 1fr;
     gap: 3px 8px;
+  }
+}
+
+/* The pedals follow the finger (walk.ts, touchdrive.ts): lit by the pedal pressed, so a thumb rolled from Gas onto
+   Brake lights Brake and leaves Gas dark, whatever the browser's :active says */
+@media (pointer: coarse) {
+  .city .drive-gas.is-held,
+  .city .drive-brake.is-held {
+    opacity: 1;
+    border-color: var(--m-text);
+  }
+  .city .drive-brake.is-held {
+    background: #3a3e48f0;
+  }
+  .city .drive-gas.is-held {
+    background: var(--m-coin);
+    filter: brightness(1.18);
+  }
+  .city .drive-brake:active:not(.is-held),
+  .city .drive-gas:active:not(.is-held) {
+    opacity: var(--tc-alpha, 1);
+    filter: none;
+  }
+  .city .drive-brake:active:not(.is-held) {
+    border-color: var(--m-edge);
+    background: #1a1c22e0;
+  }
+  .city .drive-gas:active:not(.is-held) {
+    border-color: var(--m-coin-low);
   }
 }

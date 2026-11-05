@@ -16,7 +16,8 @@ import { fromHighway } from './highway';
 import { PLAN, RING_MEETS, distToStreet, raised } from './streetplan';
 import { TRACKS } from './metro';
 import { inChannel } from './river';
-import { TUNNEL, LOT9_RECT } from './lot9';
+import { TUNNEL } from './lot9';
+import { ENDSWOOD_RECT } from './endswood';
 import { WALK as STADIUM_WALK } from './stadium';
 
 import { TRENCH_RECT } from './trenches';
@@ -72,7 +73,7 @@ export const UNDER: Under[] = (() => {
     const mid = (s0 + s1) / 2;
     if (!clearUnder(s0, s1)) continue;
     // Courts under the deck by The Trenches and Lot 9 (every third stretch there)
-    if (besideIn(mid, [TRENCH_RECT, LOT9_RECT])) {
+    if (besideIn(mid, [TRENCH_RECT, ENDSWOOD_RECT])) {
       if (courts++ % 3 === 0 && s1 - s0 >= 10) out.push({ kind: 'court', s0, s1 });
       continue;
     }

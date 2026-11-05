@@ -38,6 +38,8 @@ export const SELF = import.meta.url;
 /** The gravel's height over the ground, the pads' a hair over it */
 const Y = 0.03;
 const PAD_Y = 0.034;
+/** How many of the footpath's stretches go in one site (lot9.ts `FOOTPATH`: a point every `PATH_STEP`) */
+const PATH_RUN = 5;
 const GRAVEL = toon('#6f6b66');
 const GRAVEL_DARK = toon('#5d5955');
 const PAD = toon('#77736a');
@@ -617,12 +619,18 @@ function registerTunnel(low: boolean) {
       buildFx(fx0, into);
     })
   );
-  // The footpath on Lot 9's side: worn dirt from the top of the ramp through the hole to the north lane
-  site('lot9 footpath', [FOOTPATH[0][0] - 3, FOOTPATH[0][1] - 1, FOOTPATH[0][0] + 3, FOOTPATH[FOOTPATH.length - 1][1] + 1], (into) => {
-    const b = new Batch();
-    for (let i = 1; i < FOOTPATH.length; i++) strip(b, FOOTPATH[i - 1], FOOTPATH[i], 0.6, Y + 0.002, toon(COVER.bare));
-    b.build(into, { cast: false, receive: true });
-  });
+  // The footpath south of the tunnel: worn dirt from the top of the ramp over the open land, through the hole to the
+  // north lane, in stretches of a few points a site (it's long since Lot 9 moved south: docs/estate-plan.md Phase 1)
+  for (let i0 = 0, k = 0; i0 < FOOTPATH.length - 1; i0 += PATH_RUN, k++) {
+    const pts = FOOTPATH.slice(i0, Math.min(FOOTPATH.length, i0 + PATH_RUN + 1));
+    const xs = pts.map((p) => p[0]);
+    const zs = pts.map((p) => p[1]);
+    site(`lot9 footpath ${k}`, [Math.min(...xs) - 1, Math.min(...zs) - 1, Math.max(...xs) + 1, Math.max(...zs) + 1], (into) => {
+      const b = new Batch();
+      for (let i = 1; i < pts.length; i++) strip(b, pts[i - 1], pts[i], 0.6, Y + 0.002, toon(COVER.bare));
+      b.build(into, { cast: false, receive: true });
+    });
+  }
   // On Bottom Street's side: a worn path between the blocks from the sidewalk to the top of the ramp
   site('lot9 tunnel path', [T.x - 2, 296, T.x + 2, T.z0 + 1], (into) => {
     const b = new Batch();
