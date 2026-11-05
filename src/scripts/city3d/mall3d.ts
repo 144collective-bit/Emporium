@@ -318,12 +318,13 @@ function shop(b: Batch, s: Shop, i: number) {
   b.detail(() => out(0.03, 0.08, Y + 0.9, Y + 1.6, zm + 0.45, zm + 0.5, GREY));
 }
 
-function court(b: Batch, z0: number, z1: number, f: Batch) {
+function court(b: Batch, z0: number, z1: number, f: Batch, low: boolean) {
   // Stone paving across the court, the shops in this stretch, the trees' planters, festoon lights over the promenade
   flat(b, COURT[0], Math.max(z0, CINEMA.rect[3]), COURT[2], Math.min(z1, COURT[3] - 0.2), Y + 0.006, PAVING, 12);
   SHOPS.forEach((s, i) => s.rect[1] >= z0 && s.rect[1] < z1 && shop(b, s, i));
   for (const [x, z] of COURT_TREES) if (z >= z0 && z < z1) planter(b, x, z, Y, 1.4, 0.5);
-  // (the festoons in the FX layer: a thin cable and its bulbs drawn with ink outlines read as thick black ropes)
+  // (the festoons in the FX layer: a thin cable and its bulbs drawn with ink outlines read as thick black ropes; none on phones)
+  if (low) return;
   f.detail(() => {
     for (let z = CINEMA.rect[3] + 8; z < ARCH.z - 4; z += 12) {
       if (z < z0 || z >= z1 || Math.abs(z - FOUNTAIN.z) < 6) continue;
@@ -646,7 +647,7 @@ function loopRoad(b: Batch) {
  * round the trees (the city's, mall.ts `islandTrees()`); every other island has EV chargers at its ends with
  * their bays painted green, the rest a trolley shelter.
  */
-function island(b: Batch, [ix0, iz0, ix1, iz1]: Rect, i: number) {
+function island(b: Batch, [ix0, iz0, ix1, iz1]: Rect, i: number, low: boolean) {
   const xm = (ix0 + ix1) / 2;
   const zm = (iz0 + iz1) / 2;
   const top = Y + 0.22;
@@ -664,8 +665,8 @@ function island(b: Batch, [ix0, iz0, ix1, iz1]: Rect, i: number) {
     b.add(new THREE.PlaneGeometry(bedW, iz1 - iz0 - 1.6).rotateX(-Math.PI / 2).translate(bx, top + 0.01, zm), SOIL);
   }
   b.detail(() => {
-    // Light bollards at the walk's ends
-    for (const z of [iz0 + 0.35, iz1 - 0.35])
+    // Light bollards at the walk's ends (not on phones)
+    if (!low) for (const z of [iz0 + 0.35, iz1 - 0.35])
       for (const s of [-1, 1]) {
         cyl(b, 0.09, 0.75, xm + s * (hw + 0.2), top, z, STEEL, 8);
         cyl(b, 0.095, 0.08, xm + s * (hw + 0.2), top + 0.6, z, LED, 8);
@@ -718,7 +719,7 @@ function island(b: Batch, [ix0, iz0, ix1, iz1]: Rect, i: number) {
   });
 }
 
-function carPark(b: Batch, x0: number, x1: number) {
+function carPark(b: Batch, x0: number, x1: number, low: boolean) {
   // Asphalt over the car park in this stretch, the bays' lines, the islands (a kerb, planting, a trolley shelter on some)
   const [, cz0, , cz1] = [0, BAYS[0].z - BAY.d / 2 - 0.4, 0, BAYS[BAYS.length - 1].z + BAY.d / 2 + 0.4];
   flat(b, x0, cz0, x1, cz1, Y + 0.006, ASPHALT, 12);
@@ -731,7 +732,7 @@ function carPark(b: Batch, x0: number, x1: number) {
   ISLANDS.forEach((r, i) => {
     const xm = (r[0] + r[2]) / 2;
     if (xm < x0 || xm >= x1) return;
-    island(b, r, i);
+    island(b, r, i, low);
   });
   // The rank's board by its bays
   const cab = RANK_CABS.find((c) => c.x >= x0 && c.x < x1);
@@ -781,7 +782,7 @@ function multiStorey(b: Batch) {
 
 /* ---------- Registering ---------- */
 
-export function register({ scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const build = (draw: (b: Batch, f: Batch) => void, cast = true) => (into: THREE.Object3D) => {
     const b = new Batch();
     const f = new Batch();
@@ -797,7 +798,7 @@ export function register({ scene, tick }: { low: boolean; scene: THREE.Scene | n
   site('mall cinema', [CINEMA.rect[0] - 1, CINEMA.rect[1] - 1, CINEMA.rect[2] + 1, CINEMA.rect[3] + 3], build(cinema));
   for (let z = CINEMA.rect[3]; z < COURT[3]; z += 24) {
     const z1 = Math.min(COURT[3], z + 24);
-    site(`mall court ${Math.round(z)}`, [COURT[0], z, COURT[2], z1], build((b, f) => court(b, z, z1, f)));
+    site(`mall court ${Math.round(z)}`, [COURT[0], z, COURT[2], z1], build((b, f) => court(b, z, z1, f, low)));
   }
   site('mall fountain', [FOUNTAIN.x - 4, FOUNTAIN.z - 5, FOUNTAIN.x + 4, FOUNTAIN.z + 5], build(centre));
   site('mall arch', [PROM[0], ARCH.z - 1, PROM[1], ARCH.z + 1], build(arch));
@@ -813,11 +814,11 @@ export function register({ scene, tick }: { low: boolean; scene: THREE.Scene | n
   site('mall loop', [NS0.c, LOOP.zN - LOOP.half, LOOP.xE + LOOP.half, LOOP.zS + LOOP.half], build(loopRoad, false));
   for (let x = MALL_BLOCK[0]; x < MSCP.rect[0]; x += 18) {
     const x1 = Math.min(MSCP.rect[0], x + 18);
-    site(`mall car park ${Math.round(x)}`, [x, LOOP.zN, x1, LOOP.zS], build((b) => carPark(b, x, x1), false));
+    site(`mall car park ${Math.round(x)}`, [x, LOOP.zN, x1, LOOP.zS], build((b) => carPark(b, x, x1, low), false));
   }
   site('mall multi-storey', MSCP.rect, build(multiStorey));
   // Inside the hall (step 2: near only)
-  registerInside({ tick });
+  registerInside({ low, tick });
   if (!scene) return;
   // The cabs at the rank, the cars in the car park and on the multi-storey's decks
   type Car = [CarId, number, number, number, string];

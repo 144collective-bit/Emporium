@@ -26,6 +26,8 @@ const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
 const S = 0.78;
 const SKIN = '#e8c39e';
+/** The varsity's sleeves: the same fixed cream as wardrobe.ts's CREAM, a shade under white */
+const VARSITY_SLEEVE = '#e4dcc4';
 /** The hands' size against the body's (they're held up close, so a touch bigger reads better) */
 const FP_HAND = 1.15;
 /** The shirt cuff and the track top's stripes (a shade under white, like the body's) */
@@ -110,8 +112,12 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
         // A tailored sleeve and a shirt cuff showing past it
         clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.036, 0.42, 3, 12), 0.27), shared(top)));
         clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.035, 0.037, 0.03, 14), 0.045), shared(SHIRT)));
+      } else if (o.kind === 'varsity') {
+        // The varsity's cream sleeve (wardrobe.ts CREAM) into its ribbed cuff in the top's colour
+        clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.042, 0.4, 3, 12), 0.29), shared(VARSITY_SLEEVE)));
+        clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.038, 0.04, 0.05, 14), 0.06), shared(shade(top, 0.72))));
       } else {
-        // A looser sleeve gathered into a ribbed cuff
+        // A looser sleeve gathered into a ribbed cuff (the hoodie, the track top and the puffer wear their top's colour)
         clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.042, 0.4, 3, 12), 0.29), shared(top)));
         clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.038, 0.04, 0.05, 14), 0.06), shared(shade(top, 0.8))));
         if (o.kind === 'track')

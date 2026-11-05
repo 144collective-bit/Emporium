@@ -1125,6 +1125,7 @@ export function createWalk(d: WalkDeps) {
     engine: d.engine,
     tyres: d.tyres,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
+    reduced: d.reduced,
   });
 
 
