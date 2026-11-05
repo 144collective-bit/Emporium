@@ -23,7 +23,7 @@ import {
   inDocks,
   onDockBridge,
 } from '../src/scripts/city3d/docks';
-import { PLAN, distToStreet, inPoly, onSlab } from '../src/scripts/city3d/streetplan';
+import { PLAN, distToStreet, inPoly, onSlab, RING_MEETS } from '../src/scripts/city3d/streetplan';
 import { EXT, RIVER, SOUTH_ROAD, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
 import { ROUTES, pointOn } from '../src/scripts/city3d/routes';
@@ -52,13 +52,8 @@ test('the streets join the plan, the ring off the avenue, lit where it meets it'
     for (const id of p.streets) assert.ok(distToStreet(PLAN.streets.find((s) => s.id === id)!, p.at) < 1e-6, `${c.id} off ${id}`);
   }
   assert.ok(DOCK_CROSSINGS.filter((c) => c.streets.includes('ew4')).every((c) => c.lights && c.at[1] === SOUTH_ROAD));
-  // The highway's junction with the avenue on its west side: a slip lane on its south-west corner only (the
-  // north-west one would be on the river)
-  const slips = PLAN.streets.filter((s) => s.id.startsWith('slip-highway-ew4-1-')).map((s) => s.id);
-  assert.ok(slips.includes('slip-highway-ew4-1-0'));
-  assert.ok(!slips.includes('slip-highway-ew4-1-2'));
-  const sw = PLAN.streets.find((s) => s.id === 'slip-highway-ew4-1-0')!;
-  assert.ok(sw.pts.every((p) => p[0] < -215 && p[1] > SOUTH_ROAD));
+  // The avenue passes under the raised highway on its way west to the Docks (streetplan.ts RING_MEETS)
+  assert.ok(RING_MEETS.some((m) => m.id === 'highway-ew4-1' && m.street === 'ew4'));
 });
 
 test('traffic drives every docks street', () => {

@@ -17,6 +17,7 @@ import pulsechain from '../assets/pulsechain.png';
 import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
+import { KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -452,6 +453,37 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             <button type="button" class="walk-fp" data-tc-arrange>Arrange buttons</button>
             <p class="walk-pad">Buttons go solid while you hold them. Large comes out a little smaller where your screen hasn't room. Arrange buttons: drag them where you like, kept for your screen held upright or on its side.</p>
           </div>
+          {/* Hold or toggle (comfort.ts, docs/views-plan.md Phase 5): on the keyboard, the gamepad and touch alike; unpicked, each works as it always has */}
+          <p class="walk-section">Hold or toggle</p>
+          <div class="walk-field" role="group" aria-labelledby="hold-sprint-label">
+            <span id="hold-sprint-label">Sprint</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="sprint:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="sprint:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <div class="walk-field" role="group" aria-labelledby="hold-aim-label">
+            <span id="hold-aim-label">Aim</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="aim:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="aim:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <div class="walk-field" role="group" aria-labelledby="hold-crouch-label">
+            <span id="hold-crouch-label">Crouch</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="crouch:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="crouch:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <div class="walk-field" role="group" aria-labelledby="hold-block-label">
+            <span id="hold-block-label">Block</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="block:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="block:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <p class="walk-pad">Hold: on while you hold its key or button. Toggle: press once to turn it on, again to turn it off. On the keyboard, the gamepad and the touch buttons alike. Until you pick, Sprint and Aim lock on a touch screen and are held elsewhere, Crouch toggles and Block is held.</p>
           <p class="walk-section">Shooting</p>
           <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
             <span id="auto-ads-label">Aim when firing</span>
@@ -464,31 +496,28 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </div>
           <details class="hub-more">
             <summary>Keys, gamepad and touch</summary>
-            <dl class="walk-keys">
-            <dt><kbd>WASD</kbd></dt><dd>Move</dd>
-            <dt><kbd>Mouse</kbd></dt><dd>Look around</dd>
-            <dt><kbd>Shift</kbd></dt><dd>Sprint (hold)</dd>
-            <dt><kbd>Caps&nbsp;Lock</kbd></dt><dd>Walk (toggle)</dd>
-            <dt><kbd>Space</kbd></dt><dd>Jump (hold for higher); going at a low wall or barrier, over it; fists up and standing, dodge</dd>
-            <dt><kbd>Right&nbsp;click</kbd></dt><dd>Aim (red dot sight); empty hands, block (hold)</dd>
-            <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Peek left / right round a corner (hold)</dd>
-            <dt><kbd>C</kbd></dt><dd>Crouch (toggle); while sprinting, slide</dd>
-            <dt><kbd>V</kbd></dt><dd>First / third person</dd>
-            <dt><kbd>Scroll</kbd></dt><dd>Next / previous slot (mouse captured), camera distance (mouse free)</dd>
-            <dt><kbd>F</kbd></dt><dd>Enter a door, open the gun store, the garage, the kart hut or the trainer, get in / out of your car</dd>
-            <dt><kbd>Click</kbd></dt><dd>Fire (with a gun out); empty hands, punch (again quickly: combos)</dd>
-            <dt><kbd>R</kbd></dt><dd>Reload</dd>
-            <dt><kbd>Tab</kbd></dt><dd>Inventory: drag guns into weapon slots 1 and 2</dd>
-            <dt><kbd>M</kbd></dt><dd>World map</dd>
-            <dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Draw weapon 1 or 2 (again: put it away, fists)</dd>
-            <dt><kbd>3</kbd>–<kbd>7</kbd></dt><dd>What's in your hand, snacks</dd>
-            <dt><kbd>X</kbd></dt><dd>Next of your weapons and empty hands</dd>
-            <dt><kbd>G</kbd></dt><dd>Holster (with a gun out); empty hands, kick</dd>
-            <dt><kbd>T</kbd></dt><dd>Emotes and phrases (online)</dd>
-            <dt><kbd>Esc</kbd></dt><dd>Free the mouse, then this menu (Back to City view is at its foot)</dd>
-          </dl>
-            <p class="walk-pad">Driving: <kbd>W</kbd> / <kbd>S</kbd> gas and brake (hold to reverse), <kbd>A</kbd> / <kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>V</kbd> chase or roof camera. Your car waits on the turntable at the garage on the south bank. Gamepad: RT gas, LT brake, A handbrake, Y get out. Touch: the stick steers, with Gas and Brake buttons.</p>
-          <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory (Tab), refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Gamepads work too: left stick moves, right stick looks, A jumps, B crouches (slides when sprinting), LB sprints, LT aims (holding it, LB and RB peek left and right), RT fires, X reloads, RB and the D-pad step through the hotbar; with empty hands X punches, Y kicks, LB blocks, A dodges and the left stick pressed sprints; View opens the inventory, Start this menu, the right stick pressed swaps first and third person. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons (Jump dodges with your fists up, standing), drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
+            {/* Made from keymap.ts when the site is built (docs/views-plan.md Phase 3: one key for one job); each row shows
+                the input in use (the hub's data-input: keys, pad or touch) */}
+            <button type="button" class="mk-btn is-small km-card" data-ctrlcard-open data-hub-walk>Show the controls card</button>
+            <p class="walk-pad km-note">The same key does the same job everywhere. Shown for what you're using now: press a key, move a stick or tap to switch.</p>
+            {MODE_IDS.map((id) => (
+              <details class="hub-more km" open={id === 'foot'}>
+                <summary>{KEYMAP[id].name}</summary>
+                <dl class="walk-keys km-list">
+                  {KEYMAP[id].binds.map((b) => (
+                    <>
+                      <dt class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>
+                        <span data-for="keys">{b.keys.length ? b.keys.map((k) => <kbd>{k}</kbd>) : '–'}</span>
+                        <span data-for="pad">{b.pad.length ? b.pad.map((k) => <kbd>{k}</kbd>) : '–'}</span>
+                        <span data-for="touch">{b.touch ?? '–'}</span>
+                      </dt>
+                      <dd class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>{b.label}</dd>
+                    </>
+                  ))}
+                </dl>
+              </details>
+            ))}
+            <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory, refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Your car waits on the turntable at the garage on the south bank. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons, drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
           </details>
         </div>
         <details class="hub-more">
@@ -537,6 +566,17 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
       </button>
     </div>
+    {/* The control card (walk.ts, ctrlcard.ts; docs/views-plan.md Phase 4): the mode's keys for the input in use, the first time in each mode and on request */}
+    <aside class="ctrl-card mk-skin" data-ctrlcard hidden aria-live="polite" aria-label="Controls">
+      <div class="ctrl-card-head">
+        <b data-ctrlcard-title></b>
+        <button type="button" class="ctrl-card-x" data-ctrlcard-close aria-label="Close the controls">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        </button>
+      </div>
+      <dl class="ctrl-card-list" data-ctrlcard-list></dl>
+      <p class="ctrl-card-foot" data-ctrlcard-foot></p>
+    </aside>
     {/* Your missions on the go (missions-ui.ts): a line and a bar each; on phones a pill that opens on a tap */}
     <div class="mission-tracker mk-skin" data-missions-tracker hidden>
       <button type="button" class="mission-tracker-pill" data-tracker-toggle aria-expanded="false" aria-controls="mission-tracker-list">
@@ -691,23 +731,26 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         data-kart-of; a time trial shows the gap to the ghost, data-kart-gap, instead), the drift meter (data-kart-meter)
         with the tags (data-kart-boost, the surface when it's not plain asphalt data-kart-surface, the conditions
         data-kart-cond), the lap (data-kart-lap) with the class (data-kart-cls) and the series' race (data-kart-series),
-        the clock (data-kart-clock) with the last and best lap under it (data-kart-laps), the minimap (data-kart-map: the
+        the clock (data-kart-clock, .is-pb flashing on a personal best) with the last and best lap under it (data-kart-laps)
+        and the split just made with its delta (data-kart-split), the live gaps to the karts ahead and behind
+        (data-kart-gaps: data-kart-ahead, data-kart-behind), the minimap (data-kart-map: the
         circuit's outline with every kart's dot, yours lit; kart-ui.ts draws it) and Quit (data-kart-quit).
         data-kart-pops: short lines over the HUD. data-kart-result: the results card; data-kart-result-title,
         data-kart-result-body (painted), data-kart-next (a series' next race, hidden otherwise), data-kart-result-ok and
         data-kart-result-close.
-        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal; walk.ts wires it.
+        Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal, and in an items race
+        (.has-items) data-kart-item; walk.ts wires them. data-kart-slot in the HUD: the item in hand.
         .kart-hint is the key line. */}
     <section class="shop karts mk-skin" data-karts hidden aria-labelledby="karts-title">
       <header class="shop-head">
-        <h2 id="karts-title" class="shop-title">Kart hut</h2>
+        <h2 id="karts-title" class="shop-title">Clubhouse</h2>
         <p class="shop-score karts-dorras"><span class="shop-score-label">Dorras</span> <span data-karts-dorras></span></p>
         <p class="shop-score" data-karts-level>Level <b>1</b></p>
-        <button type="button" class="shop-close" data-karts-close aria-label="Close the kart hut">
+        <button type="button" class="shop-close" data-karts-close aria-label="Close the clubhouse">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
-      <div class="seg karts-tabs" data-karts-tabs role="group" aria-label="Kart hut">
+      <div class="seg karts-tabs" data-karts-tabs role="group" aria-label="Clubhouse">
         <button type="button" data-karts-tab="race" aria-pressed="true">Race</button>
         <button type="button" data-karts-tab="karts" aria-pressed="false">Karts</button>
         <button type="button" data-karts-tab="boards" aria-pressed="false">Boards</button>
@@ -720,6 +763,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="kart-hud-left">
         <p class="kart-place"><b data-kart-place>1</b><small data-kart-ord>st</small><span class="kart-of" data-kart-of>of 8</span></p>
         <p class="kart-gap" data-kart-gap hidden aria-label="Gap to the ghost">+0.00</p>
+        <p class="kart-gaps" data-kart-gaps hidden><span data-kart-ahead></span><span data-kart-behind></span></p>
+        <p class="kart-slot" data-kart-slot hidden aria-live="polite"><span class="kart-slot-key">E</span><b data-kart-slot-name>Empty</b></p>
         <div class="kart-meter" data-kart-meter data-tier="0" role="img" aria-label="Drift"><i></i><i></i><i></i></div>
         <p class="kart-tags"><span class="kart-tag is-boost" data-kart-boost hidden>Boost</span><span class="kart-tag is-surface" data-kart-surface data-surface="kerb" hidden>Kerb</span><span class="kart-tag is-cond" data-kart-cond data-cond="night" hidden>Night</span></p>
       </div>
@@ -727,6 +772,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <p class="kart-lap-row"><b class="kart-lap" data-kart-lap>Lap 1/3</b><span class="kart-cls" data-kart-cls data-cls="sport">Sport</span><span class="kart-series-tag" data-kart-series hidden>Race 1/4</span></p>
         <b class="kart-clock" data-kart-clock>0:00.00</b>
         <small class="kart-laps" data-kart-laps hidden><span data-kart-last>Last —</span><span data-kart-best>Best —</span></small>
+        <p class="kart-split" data-kart-split hidden aria-live="polite"></p>
       </div>
       <div class="kart-hud-right">
         <div class="kart-map" data-kart-map role="img" aria-label="Map of the circuit"></div>
@@ -747,8 +793,9 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-kart-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift tc" data-kart-drift aria-label="Drift"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-drift" /></svg><span class="tc-word">Drift</span></button>
+    <button type="button" class="kart-btn kart-item tc" data-kart-item aria-label="Use item"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-item" /></svg><span class="tc-word">Item</span></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
         data-fight: the trainer's menu (built on the gun store's .shop panel); data-fight-dorras and data-fight-level in
         its head; data-fight-tabs the Spar / Bout / Record / Styles tabs (data-fight-tab); data-fight-body (painted);
@@ -818,7 +865,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-fight-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> kick · <kbd>Shift</kbd> block · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
     <button type="button" class="fight-btn fight-punch tc-main tc" data-fight-punch aria-label="Punch"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-punch" /></svg><span class="tc-word">Punch</span></button>
     <button type="button" class="fight-btn fight-kick tc" data-fight-kick aria-label="Kick"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-kick" /></svg><span class="tc-word">Kick</span></button>
     <button type="button" class="fight-btn fight-block tc" data-fight-block aria-label="Block (hold)"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-block" /></svg><span class="tc-word">Block</span></button>
@@ -847,6 +894,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="walk-stick" data-walk-stick aria-hidden="true"><span></span></div>
     <button type="button" class="walk-run tc" data-walk-run aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-sprint" /></svg><span class="tc-word">Sprint</span></button>
     <button type="button" class="walk-crouch tc" data-walk-crouch aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-crouch" /></svg><span class="tc-word">Crouch</span></button>
+    {/* The camera on foot on touch (V on a keyboard: over the shoulder or first person; docs/views-plan.md Phase 2): a small button up top */}
+    <button type="button" class="walk-view tc" data-walk-view aria-pressed="false" aria-label="Camera view: first person"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-view" /></svg><span class="tc-word">View</span></button>
     <button type="button" class="walk-fire tc-main tc" data-walk-fire><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-fire" /></svg><span class="tc-word">Fire</span></button>
     <button type="button" class="walk-reload tc" data-walk-reload><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-reload" /></svg><span class="tc-word">Reload</span></button>
     <button type="button" class="walk-aim tc" data-walk-aim aria-pressed="false"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-aim" /></svg><span class="tc-word">Aim</span></button>
@@ -865,6 +914,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <span class="taxi-mark" aria-hidden="true">TAXI</span>
     <p class="taxi-text" data-taxi-text></p>
     <button type="button" class="taxi-btn" data-taxi-in hidden>Get in</button>
+    <button type="button" class="taxi-btn" data-ride-view hidden aria-label="Camera view">View</button>
     <button type="button" class="taxi-btn" data-taxi-skip hidden>Skip ride</button>
     <button type="button" class="taxi-btn taxi-cancel" data-taxi-cancel hidden>Cancel</button>
   </div>
@@ -882,6 +932,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="taxi-bar metro-bar mk-skin" data-metro-bar hidden aria-live="polite">
     <span class="taxi-mark metro-mark" aria-hidden="true">M</span>
     <p class="taxi-text" data-metro-text></p>
+    <button type="button" class="taxi-btn" data-ride-view hidden aria-label="Camera view">View</button>
     <button type="button" class="taxi-btn" data-metro-skip>Skip ride</button>
   </div>
   {/* The river bus (riverbus-ui.ts, river plan step 4b): a pier's card with the other stops, and the bar while you ride */}
@@ -898,6 +949,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="taxi-bar metro-bar riverbus-bar mk-skin" data-riverbus-bar hidden aria-live="polite">
     <span class="taxi-mark metro-mark riverbus-roundel" aria-hidden="true"></span>
     <p class="taxi-text" data-riverbus-text></p>
+    <button type="button" class="taxi-btn" data-ride-view hidden aria-label="Camera view">View</button>
     <button type="button" class="taxi-btn" data-riverbus-skip>Skip ride</button>
   </div>
   {/* The world map (worldmap.ts, growth plan Phase 8): the whole city drawn from the street plan, places,
@@ -1044,7 +1096,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <template data-panel-tpl="karts" data-marquee="Green light soon · Two ways round">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
-    <p class="city-panel-text">The Sector 7 Circuit north of the ring highway in the north-east, off Kart Road with its own metro stop: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Watch from the covered grandstand, the grass banks or the hut's roof terrace. Karts are bought and tuned at the hut for Dorras earned in the city.</p>
+    <p class="city-panel-text">The Sector 7 Circuit west of the ring highway past exit 8, off Kart Road, a walk up from its own metro stop: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Watch from the covered grandstand, the grass banks or the clubhouse's roof terrace, with the race on the big screens, and see the top three on the podium. Karts are bought and tuned at the clubhouse for Dorras earned in the city.</p>
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-records.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>

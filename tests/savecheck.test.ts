@@ -183,7 +183,7 @@ test('the other saves are cleaned, the ghosts kept as they are, any but the game
     {
       'degen-city-car-v1': { model: 'tank', paint: 'red' },
       'degen-city-look-v1': { hat: 'crown-of-gold' },
-      [settingsKey('phone')]: { sens: 99, invert: 1, autoAds: 'nope' },
+      [settingsKey('phone')]: { sens: 99, invert: 1, autoAds: 'nope', seen: ['drive', 'drive', 7, 'x'.repeat(40)], holds: { sprint: 'toggle', aim: 'sideways', nope: 'hold' } },
       [GHOSTS_KEY]: { 'circuit:sport': { t: 31.2, s: [1, 2, 3] } },
       [SCORE_KEY]: { total: 3000, skin: 'neon', weapon: 'dmr' },
     },
@@ -195,6 +195,8 @@ test('the other saves are cleaned, the ghosts kept as they are, any but the game
   assert.equal(set.sens, 2.5);
   assert.equal(set.invert, true);
   assert.equal(set.autoAds, 'off');
+  assert.deepEqual(set.seen, ['drive'], "the controls card's modes seen are kept, cleaned");
+  assert.deepEqual(set.holds, { sprint: 'toggle' }, 'and the comfort holds');
   assert.deepEqual(JSON.parse(v.writes[GHOSTS_KEY]!), { 'circuit:sport': { t: 31.2, s: [1, 2, 3] } });
   const score = JSON.parse(v.writes[SCORE_KEY]!);
   assert.deepEqual(score, { total: 3000, skin: 'olive', weapon: 'rifle' }, 'neon and the Long Shot need more score');

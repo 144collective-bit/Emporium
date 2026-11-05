@@ -94,7 +94,8 @@
     opacity: var(--tc-alpha, 1);
   }
   .city .tc:active,
-  .city .walk-stick:active {
+  .city .walk-stick:active,
+  .city .walk-stick.is-held {
     opacity: 1;
   }
   /* Held: brighter, nothing moves */
@@ -158,6 +159,10 @@
     background: radial-gradient(circle, #0c0d1099, #0c0d1055);
     box-shadow: 0 0 0 2px #0c0d1066;
     touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   .city .walk-stick[data-tc] {
     bottom: calc(env(safe-area-inset-bottom) + var(--tc-y) - var(--tc-d) / 2);
@@ -181,6 +186,7 @@
     background: #f1efe62e;
     box-shadow: 0 0 0 2px #0c0d1099;
   }
+  .walk-stick.is-held span,
   .walk-stick:active span {
     border-color: var(--m-coin);
     background: #ffc5313d;
@@ -502,4 +508,159 @@
   color: var(--m-dim);
   font: 400 11px/1.35 var(--font-body, Inter, sans-serif);
   text-shadow: 0 1px 2px #000;
+}
+
+/* ---------- The camera everywhere on touch (docs/views-plan.md Phase 2) ----------
+   On foot: View, a small button up top on the right (first person lit while it's on), the waypoint's compass
+   stepping down under it. A kart race and the ring: the View button in their layouts' free slot (touchlayout.ts).
+   Rides: View in the ride's bar (taxi.css's buttons), shown while riding (walk.ts). */
+.walk-view {
+  display: none;
+}
+@media (pointer: coarse) {
+  .city .walk-view {
+    --tc-d: 44px;
+    display: grid;
+    top: calc(var(--head-h) + 8px);
+    right: max(12px, env(safe-area-inset-right));
+  }
+  .city:is(.is-driving, .is-fighting, .is-karting, .is-inv, .is-hub, .is-shopping, .has-panel) .walk-view {
+    display: none;
+  }
+  .city[data-mode="walk"]:not(:is(.is-driving, .is-fighting, .is-karting, .is-riding)) .wm-compass {
+    top: calc(var(--head-h) + 62px);
+  }
+  .city.is-karting .drive-view,
+  .city.is-fighting .drive-view {
+    display: grid;
+  }
+}
+
+/* The control card (walk.ts, ctrlcard.ts; docs/views-plan.md Phase 4): top right under the header, below the waypoint's compass */
+.ctrl-card {
+  position: absolute;
+  top: calc(var(--head-h) + 72px);
+  right: 16px;
+  z-index: 6;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - var(--head-h) - 180px);
+  overflow: auto;
+  padding: 10px 12px 8px;
+  border: 2px solid var(--m-edge);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--m-cab) 92%, transparent);
+  color: var(--m-text);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 6px 24px #0008;
+}
+/* (it never takes a finger meant for the game: touches go through it to the city, the stick and the pedals; only
+   its × takes a tap) */
+@media (pointer: coarse) {
+  .ctrl-card {
+    pointer-events: none;
+  }
+  .ctrl-card-x {
+    pointer-events: auto;
+  }
+}
+.ctrl-card[hidden],
+.city:is(.is-hub, .is-inv, .is-shopping, .has-panel) .ctrl-card {
+  display: none;
+}
+.ctrl-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--m-coin);
+  font: 700 12px/1.2 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ctrl-card-x {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff1;
+  color: inherit;
+  cursor: pointer;
+}
+.ctrl-card-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+}
+.ctrl-card-list dt {
+  white-space: nowrap;
+}
+.ctrl-card-list dd {
+  margin: 0;
+}
+.ctrl-card-list kbd + kbd {
+  margin-left: 3px;
+}
+.ctrl-card-list span {
+  color: var(--m-coin);
+}
+.ctrl-card-foot {
+  margin: 8px 0 0;
+  color: var(--m-dim);
+  font-size: 11px;
+}
+.mk-hub .km-card {
+  justify-self: start;
+}
+@media (pointer: coarse), (max-width: 640px) {
+  /* phones: centred under the header, clear of the View button and the compass on the right */
+  /* (below the toasts, short enough to stay clear of the door prompt; it scrolls) */
+  .ctrl-card {
+    top: calc(var(--head-h) + 56px);
+    left: 50%;
+    right: auto;
+    width: min(320px, calc(100% - 136px));
+    max-width: none;
+    max-height: 28vh;
+    transform: translateX(-50%);
+    font-size: 11px;
+  }
+  .ctrl-card-list {
+    grid-template-columns: auto 1fr;
+    gap: 3px 8px;
+  }
+}
+
+/* The pedals follow the finger (walk.ts, touchdrive.ts): lit by the pedal pressed, so a thumb rolled from Gas onto
+   Brake lights Brake and leaves Gas dark, whatever the browser's :active says */
+@media (pointer: coarse) {
+  .city .drive-gas.is-held,
+  .city .drive-brake.is-held {
+    opacity: 1;
+    border-color: var(--m-text);
+  }
+  .city .drive-brake.is-held {
+    background: #3a3e48f0;
+  }
+  .city .drive-gas.is-held {
+    background: var(--m-coin);
+    filter: brightness(1.18);
+  }
+  .city .drive-brake:active:not(.is-held),
+  .city .drive-gas:active:not(.is-held) {
+    opacity: var(--tc-alpha, 1);
+    filter: none;
+  }
+  .city .drive-brake:active:not(.is-held) {
+    border-color: var(--m-edge);
+    background: #1a1c22e0;
+  }
+  .city .drive-gas:active:not(.is-held) {
+    border-color: var(--m-coin-low);
+  }
 }

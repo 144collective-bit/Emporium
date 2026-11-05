@@ -33,3 +33,46 @@ export function cleanKart(v: unknown): MyKart {
   const paint = CAR_PAINTS.find((p) => p.id === o.paint)?.id ?? DEFAULT_KART.paint;
   return { model, paint };
 }
+
+/* ---------- The kart's look (docs/kart-west-plan.md Phase 6: all free, at the clubhouse's Karts tab) ---------- */
+
+/** The decal sets laid on the nose and the pods; the city's own made-up marks among them, never a brand */
+export const KART_DECALS = ['none', 'stripes', 'flames', 'checks', 'diamond'] as const;
+export type KartDecal = (typeof KART_DECALS)[number];
+export const DECAL_NAMES: Record<KartDecal, string> = { none: 'None', stripes: 'Racing stripes', flames: 'Flames', checks: 'Checks', diamond: 'Diamond' };
+/** The colours the look picks from (decals, rims, tyre stripes, the helmet, the race suit, the spark trail, the underglow) */
+export const LOOK_COLOURS = ['#f3f2f7', '#16141f', '#e23b3b', '#ff8a2a', '#ffd23f', '#1fbf6b', '#00c2ff', '#2a6bff', '#8000ff', '#e219e5', '#c9a227', '#9a9aae'] as const;
+export interface KartLook {
+  /** Its racing number (1-99) */
+  number: number;
+  decal: KartDecal;
+  decalColour: string;
+  rim: string;
+  /** The tyres' sidewall stripe, or none */
+  tyreStripe: string | null;
+  helmet: string;
+  suit: string;
+  /** The boost flames' and the spark trail's colour */
+  trail: string;
+  /** The neon under it at night, or none */
+  glow: string | null;
+}
+export const DEFAULT_LOOK: KartLook = { number: 7, decal: 'stripes', decalColour: '#f3f2f7', rim: '#9a9aae', tyreStripe: null, helmet: '#f3f2f7', suit: '#16141f', trail: '#ff8a2a', glow: null };
+const colourOr = (v: unknown, d: string) => (typeof v === 'string' && (LOOK_COLOURS as readonly string[]).includes(v) ? v : d);
+const colourOrNone = (v: unknown, d: string | null) => (v === null ? null : typeof v === 'string' && (LOOK_COLOURS as readonly string[]).includes(v) ? v : d);
+/** A saved or sent kart look, made safe (anything unknown is the stock look's) */
+export function cleanKartLook(v: unknown): KartLook {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  const n = typeof o.number === 'number' && Number.isFinite(o.number) ? Math.round(o.number) : DEFAULT_LOOK.number;
+  return {
+    number: Math.max(1, Math.min(99, n)),
+    decal: KART_DECALS.find((d) => d === o.decal) ?? DEFAULT_LOOK.decal,
+    decalColour: colourOr(o.decalColour, DEFAULT_LOOK.decalColour),
+    rim: colourOr(o.rim, DEFAULT_LOOK.rim),
+    tyreStripe: colourOrNone(o.tyreStripe, DEFAULT_LOOK.tyreStripe),
+    helmet: colourOr(o.helmet, DEFAULT_LOOK.helmet),
+    suit: colourOr(o.suit, DEFAULT_LOOK.suit),
+    trail: colourOr(o.trail, DEFAULT_LOOK.trail),
+    glow: colourOrNone(o.glow, DEFAULT_LOOK.glow),
+  };
+}

@@ -1,14 +1,15 @@
 // Sector 7 Stadium (stadium.ts, Westlake Park's step 2; moved north of the ring highway in the north side's stage 1):
 // the bowl on its own block north of the highway, under the Emporium, its stands stepping up inside the facade, its
-// gate on the forecourt at the foot of the footbridge from the Mall; Stadium Road and the car park's loop in the
-// street plan, clear of the highway; the footbridge walkable over the highway, solid only at its piers and stairs.
+// gate on the forecourt in line with the Mall; Stadium Road and the car park's loop in the street plan, clear of the
+// highway; the Mall carried on from the park's north gate under the raised highway to a zebra over Stadium Road (its
+// footbridge retired, docs/highway-plan.md Phase 2).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BAYS,
+  WALK,
+  ZEBRA,
   BLOCK,
-  BRIDGE,
-  BRIDGE_RECT,
   CAR_PARK,
   CENTRE,
   CONCOURSE,
@@ -27,14 +28,12 @@ import {
   TALLEST,
   TIERS,
   TRACK,
-  bridgeWall,
-  bridgeY,
   inOval,
   oval,
 } from '../src/scripts/city3d/stadium';
-import { BRIDGE_FOOT, MALL, PATHS, Z0, onPath } from '../src/scripts/city3d/westlake';
+import { GATES, MALL, PATHS, Z0 } from '../src/scripts/city3d/westlake';
 import { SOLIDS, SOLID_GRID } from '../src/scripts/city3d/solids';
-import { OUTER_SLIPS, PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
+import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { WALK_W } from '../src/scripts/city3d/layout';
 
@@ -57,17 +56,16 @@ test('the bowl: on its block north of the highway, under the Emporium, the stand
   assert.equal(CENTRE[0], MALL.x);
 });
 
-test('solid all round, the gate on the forecourt at the footbridge\'s foot, the masts and screen in place', () => {
+test('solid all round, the gate on the forecourt in line with the Mall, the masts and screen in place', () => {
   for (const [x, z] of oval(FACADE.a, FACADE.b, 360)) assert.ok(STADIUM_SOLIDS.some((b) => inBox(b, x, z)), `a gap in the facade at ${x}, ${z}`);
   for (const b of STADIUM_SOLIDS) assert.ok(SOLIDS.includes(b));
   for (let x = CENTRE[0] - 20; x < CENTRE[0] + 20; x += 1) for (let z = CENTRE[1] - 14; z < CENTRE[1] + 14; z += 1) assert.ok(!SOLID_GRID.near(x, z, 0).some((b) => inBox(b, x, z)), `something solid on the pitch at ${x}, ${z}`);
-  // The gate faces south, the footbridge's stairs come down just in front of it; its spot and the spawn are clear
-  assert.equal(GATE.x, BRIDGE.x);
-  assert.ok(GATE.z < BRIDGE.north[0] && BRIDGE.north[0] - GATE.z < 6, 'the stairs come down in front of the gate');
+  // The gate faces south, the walk from the park comes over the road to it; its spot and the spawn are clear
+  assert.equal(GATE.x, WALK.x);
+  assert.ok(GATE.z < ZEBRA.z0 && ZEBRA.z0 - GATE.z < 14, 'the zebra comes over across the forecourt in front of the gate');
   for (const p of [GATE.spot, STADIUM_SPAWN]) {
     assert.ok(!SOLID_GRID.near(p.x, p.z, 0.4).some((b) => inBox(b, p.x, p.z, 0.35)), `something solid at ${p.x}, ${p.z}`);
     assert.ok(inBox(BLOCK, p.x, p.z), 'on the block');
-    assert.equal(bridgeY(p.x, p.z, 0.15), null, 'off the stairs');
   }
   assert.ok(GATE.spot.z > GATE.z && STADIUM_SPAWN.z > GATE.z);
   assert.equal(MASTS.length, 4);
@@ -90,13 +88,6 @@ test('Stadium Road and the car park loop: in the street plan off the north road,
       }
   // The block's sidewalk meets the road's edge
   assert.ok(Math.abs(BZ1 + WALK_W - (ROAD.z - ROAD.half)) < 1e-9);
-  // The north road's outer corners get slip lanes at the highway (the stadium's traffic)
-  // (the north bank avenue's past the highway, Crestmont's, has none over the river's promenade: three)
-  // (an entry naming one turn alone, the Docks', is that one slip: docks.ts)
-  for (const id of OUTER_SLIPS) {
-    const n = PLAN.streets.filter((s) => s.kind === 'slip' && (s.id === `slip-${id}` || s.id.startsWith(`slip-${id}-`))).length;
-    assert.ok(n === (PLAN.streets.some((s) => s.id === `slip-${id}`) ? 1 : id === 'highway-ew3-0' ? 3 : 4), id);
-  }
   // The car park: inside the loop, its bays inside it, most taken
   const [x0, z0, x1, z1] = CAR_PARK;
   assert.ok(x0 > LOOP.x0 + LOOP.half && x1 < LOOP.x1 - LOOP.half && z0 > LOOP.z1 + LOOP.half && z1 < ROAD.z - ROAD.half);
@@ -106,34 +97,15 @@ test('Stadium Road and the car park loop: in the street plan off the north road,
   for (const [x, z] of STADIUM_LAMPS) for (const s of PLAN.streets) if (s.kind !== 'alley') assert.ok(distToStreet(s, [x, z]) > s.half + 0.2, `a lamp on ${s.id}`);
 });
 
-test('the footbridge: from the Mall up over the ring walk, the park\'s edge, the highway and Stadium Road, down to the forecourt', () => {
-  const { x, half, y, deck, south, north } = BRIDGE;
-  assert.equal(x, MALL.x);
-  assert.ok(Math.abs(south[0] - BRIDGE_FOOT) < 0.1, 'its south stairs start where the Mall ends');
+test('the way over from the park: the Mall out of its north gate, under the raised highway to a zebra over Stadium Road', () => {
+  assert.equal(WALK.x, MALL.x);
   const mall = PATHS.find((p) => p.id === 'mall')!;
-  assert.ok(Math.abs(mall.pts.at(-1)![1] - BRIDGE_FOOT) < 1e-9);
-  // The deck reaches over the park's edge, the highway and the road
-  assert.ok(deck[0] > Z0 && deck[1] < ROAD.z - ROAD.half && deck[1] > BZ0, 'deck from the park to the block');
-  // Walking up: the stairs climb a step at a time, the deck is flat, the stairs on the far side come down
-  let last = 0.15;
-  for (let z = south[0] - 0.01; z > north[0]; z -= 0.1) {
-    const h = bridgeY(x, z, last);
-    assert.ok(h !== null, `off the bridge at ${z.toFixed(2)}`);
-    assert.ok(h! - last < 0.32 && h! <= y + 1e-9);
-    last = h!;
-  }
-  assert.ok(Math.abs(bridgeY(x, -170, y)! - y) < 1e-9);
-  // Under it (on the highway) it's not ground; up on it, its parapets stop you
-  assert.equal(bridgeY(x, -170, 0.04), null);
-  assert.ok(bridgeWall(x + half + 0.1, -170, y, 0.35) && !bridgeWall(x, -170, y, 0.35));
-  assert.ok(!bridgeWall(x + half + 0.4, -170, 0.04, 0.35), 'nothing stops you under it');
-  // Clear for the traffic: nothing solid on the highway's lanes or the road under it (the middle pier on the median)
-  for (const b of STADIUM_SOLIDS.filter((b) => inBox(BRIDGE_RECT, (b[0] + b[2]) / 2, (b[1] + b[3]) / 2))) {
-    const [cx, cz] = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
-    const hw = fromHighway(cx, cz);
-    assert.ok(hw < 0.31 || hw > HIGHWAY_HALF + 0.3, `a pier on the highway at ${cz}`);
-    assert.ok(Math.abs(cz - ROAD.z) > ROAD.half + 0.2, 'a pier on Stadium Road');
-    // ...and off the ring walk in the park
-    assert.ok(!onPath([cx, cz], 0.2), 'a pier on a path');
-  }
+  assert.ok(Math.abs(mall.pts.at(-1)![1] - Z0) < 1e-9, 'the Mall runs to the park\'s edge');
+  const gate = GATES.find((g) => g.id === 'gate-n')!;
+  assert.deepEqual(gate.at, [MALL.x, Z0]);
+  assert.ok(WALK.z0 === Z0 && Math.abs(WALK.z1 - (ROAD.z + ROAD.half)) < 1e-9 && ZEBRA.x === WALK.x);
+  // Under the deck all the way: nothing solid on it (the deck's piers keep off it), and it crosses under the highway
+  for (let z = WALK.z1 + 0.2; z < WALK.z0 - 0.2; z += 0.4)
+    for (const x of [WALK.x - WALK.half + 0.3, WALK.x, WALK.x + WALK.half - 0.3]) assert.ok(!SOLID_GRID.near(x, z, 0).some((b) => inBox(b, x, z)), `something solid on the walk at ${x}, ${z.toFixed(1)}`);
+  assert.ok(fromHighway(WALK.x, -170) < HIGHWAY_HALF);
 });

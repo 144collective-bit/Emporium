@@ -27,15 +27,21 @@
  *   (`PORTALS`: a leg each side, on the blocks' edges), and over the river to
  *   Uptown the arch (`ARCH`), its deck hung from it (`HANGERS`).
  * - **Crestmont's spur** (`crest`, docs/crestmont-plan.md Phase 9): from just
- *   south of Kart Park east round the highway's north-east corner and south
+ *   south of Starlight Mall station east round the highway's north-east corner and south
  *   to Crestmont station by the Flats (`CREST`).
  * - **The train** shuttles on a timetable from the clock (`trainAt()`, the
- *   same for everyone): Kart Park, Downtown, South Bank, The Trenches,
- *   Southbank Docks, Uptown, back through the Docks and The Trenches to South Bank, out to the Airport,
- *   back, and up to the Kart Park. A ride (`rideAt()`) goes straight to the
+ *   same for everyone): Starlight Mall, Downtown, South Bank, The Trenches,
+ *   Southbank Docks, Kart Park, Uptown, back through Kart Park, the Docks and The Trenches to South Bank, out to the
+ *   Airport, back, and up to Starlight Mall. A ride (`rideAt()`) goes straight to the
  *   station you pick (from the west to the Airport it turns round at South
  *   Bank), and the train carries on its timetable from there
  *   (`timetableAt()`).
+ *
+ * - **Its height** (`trackY()`, docs/highway-plan.md Phase 2): the deck at
+ *   `DECK_Y` but where it crosses the raised ring highway and its ramps,
+ *   where it rises to `HIGH_Y` over them on eased climbs (`RISE`) and stays
+ *   up between two near each other (`PLATEAUS`); a station beside a climb is
+ *   raised with it (Starlight Mall, Southbank Docks, Kart Park, the Airport).
  *
  * Built over the avenues' medians and on open land clear of the pads and
  * the blocks, so nothing that exists moves.
@@ -45,6 +51,7 @@ import { DOCKS_NAME, EL_STATION, EL_X } from './docks';
 import { PLAN, distToStreet, type Street } from './streetplan';
 import { AVENUE_Z, NS_X } from './trenches';
 import type { Box } from './solids';
+import { DECK_HALF as RING_HALF, DECK_Y as RING_DECK, RAMPS, RAMP_HALF, ringS } from './viaduct';
 
 export type Pt = [number, number];
 export type TrackId = 'main' | 'branch' | 'crest';
@@ -66,7 +73,7 @@ export const PLATFORM_SIDE = -1;
 export const SWITCH_Z = 116 + WIDEN;
 /** The bend's radius: it comes out of it running west along Trench Avenue */
 export const BEND_R = AVENUE_Z - SWITCH_Z;
-/** The north end of the main line (past the Kart Park's station) */
+/** The north end of the main line (past Starlight Mall's station, Kart Park's until the park moved west) */
 export const NORTH_END = -204;
 /**
  * West of The Trenches (docs/docks-plan.md Phase 2, the owner's pick: "metro via the docks"; Uptown's extension of
@@ -92,12 +99,12 @@ export const NORTH_R = 5.5;
 export const BRANCH = { south: 256, r: 20, z: 276 };
 export const AIRPORT_END = 324;
 /**
- * Crestmont's spur (docs/crestmont-plan.md Phase 9, the owner's call): off the main line just south of Kart Park
- * station (`CREST.z`), a tight bend east (`CREST.r`) into the corridor between Kart Road and the ring highway's north
- * side (`CREST.corridor`), east past the kart park, round outside the highway's north-east corner on a bend about its
+ * Crestmont's spur (docs/crestmont-plan.md Phase 9, the owner's call): off the main line just south of Starlight Mall
+ * station (Kart Park's until the park moved west) (`CREST.z`), a tight bend east (`CREST.r`) into the corridor between Kart Road and the ring highway's north
+ * side (`CREST.corridor`), east past the kart park's old land, round outside the highway's north-east corner on a bend about its
  * own centre (`CREST.cx`, `CREST.cz`), south down the strip between the highway and Alder Way (`CREST.x`), and a tight
  * bend east over Alder Way into the block kept for it (crest-0-0) to Crestmont station, the line's end at `CREST_END`
- * (x). It leaves the main line facing north: a run from it to anywhere but Kart Park turns round there.
+ * (x). It leaves the main line facing north: a run from it to anywhere but Starlight Mall turns round there.
  */
 export const CREST = { z: -189.5, r: 10, corridor: -179.5, cx: 205, cz: -100, x: 284.5, south: -46.5, station: -36.5 };
 export const CREST_END = 320;
@@ -216,14 +223,23 @@ const UPTOWN_Z = 52.5;
 const docksTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [EL_STATION - 1.2, AVENUE_Z + 5.3, EL_STATION + 1.2, AVENUE_Z + 7.8], door: { x: EL_STATION, z: AVENUE_Z + 4.9 }, face: [0, -1] };
 /** The Trenches' station on Trench Avenue: its platform south of the track, the tower on the block's sidewalk edge, its door facing north */
 const TRENCH_X = -93;
+/** Kart Park's station on the north bank avenue's median west of the highway (docs/kart-west-plan.md Phase 1) */
+const KART_STATION_X = -246;
+const NORTH_AVENUE_Z = 64.5;
+const kartTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [KART_STATION_X - 1.2, NORTH_AVENUE_Z - 7.8, KART_STATION_X + 1.2, NORTH_AVENUE_Z - 5.3], door: { x: KART_STATION_X, z: NORTH_AVENUE_Z - 4.9 }, face: [0, 1] };
 const trenchTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [TRENCH_X - 1.2, AVENUE_Z + 5.3, TRENCH_X + 1.2, AVENUE_Z + 7.8], door: { x: TRENCH_X, z: AVENUE_Z + 4.9 }, face: [0, -1] };
 
 export const STATIONS: Station[] = [
-  { id: 'kart', name: 'Kart Park', track: 'main', s: -196 - NORTH_END, ...eastTower(-196) },
+  // (the main line's north end, past the ring highway: Kart Park's until the park moved west, docs/kart-west-plan.md
+  // Phase 1; renamed for the mall over the highway)
+  { id: 'starlight', name: 'Starlight Mall', track: 'main', s: -196 - NORTH_END, ...eastTower(-196) },
   { id: 'downtown', name: 'Downtown', track: 'main', s: 33 - NORTH_END, ...eastTower(37.5) },
   { id: 'southbank', name: 'South Bank', track: 'main', s: 109 + WIDEN - NORTH_END, ...eastTower(109.5 + WIDEN) },
   { id: 'trenches', name: 'The Trenches', track: 'main', s: along('main', [TRENCH_X, AVENUE_Z]), ...trenchTower },
   { id: 'docks', name: DOCKS_NAME, track: 'main', s: along('main', [EL_STATION, AVENUE_Z]), ...docksTower },
+  // (on the north bank avenue's median west of the ring highway, a walk up to the kart park's gate: its platform north
+  // of the track (running east), its tower north of that on the open land, the door facing the avenue)
+  { id: 'kart', name: 'Kart Park', track: 'main', s: along('main', [KART_STATION_X, NORTH_AVENUE_Z]), ...kartTower },
   // (by Airport Drive just north of the terminal's forecourt: its platform north of the track (running east), its tower
   // north of that, the door facing the track and the forecourt; taxis stop for it on the drive)
   { id: 'airport', name: 'Airport', track: 'branch', s: along('branch', [AIRPORT_STATION_X, BRANCH.z]), tower: [AIRPORT_STATION_X - 1.25, BRANCH.z - 7.5, AIRPORT_STATION_X + 1.25, BRANCH.z - 5.1], door: { x: AIRPORT_STATION_X, z: BRANCH.z - 4.7 }, face: [0, 1] },
@@ -239,6 +255,86 @@ const station = (id: string) => STATIONS.find((s) => s.id === id)!;
 export const stationAt = (st: Station) => pointOn(st.track, st.s);
 /** Which side of its track a station's platform is on */
 export const sideAt = (st: Station) => st.side ?? PLATFORM_SIDE;
+
+/* ---------- Its height: up over the raised ring highway (docs/highway-plan.md Phase 2) ---------- */
+
+/** The deck's height where it crosses the raised ring highway and its ramps: the tallest in its traffic under it with room */
+export const HIGH_Y = 7.4;
+/** What the el keeps over the highway's surface (its deck's and its ramps'): the tallest vehicle, its own depth, room */
+const OVER = HIGH_Y - RING_DECK;
+/** Its climb up to `HIGH_Y` and down again, eased in and out (about 6% at its steepest) */
+export const RISE = 55;
+/** Two climbs closer than this along a track are one: it stays up between them (over the docks and the arch) */
+const MERGE = 180;
+/** How near the highway a point must be for its ramps to be looked at */
+const RAMP_LOOK = 130;
+
+/** How high the el's deck must be over a point on the ground (0: anything goes) */
+function needAt(p: Pt) {
+  const { o } = ringS(p[0], p[1]);
+  if (Math.abs(o) > RAMP_LOOK) return 0;
+  let need = Math.abs(o) < RING_HALF + 1.5 ? HIGH_Y : 0;
+  for (const r of RAMPS)
+    for (let i = 0; i < r.pts.length; i++) if (Math.hypot(r.pts[i][0] - p[0], r.pts[i][1] - p[1]) < RAMP_HALF + 1.5) need = Math.max(need, r.ys[i] + OVER);
+  return need;
+}
+/** The track's raised stretches (from, to along it; past an end where it's up there): flat at `HIGH_Y`, eased down over `RISE` either side */
+export const PLATEAUS: Record<TrackId, [number, number][]> = (() => {
+  const out = {} as Record<TrackId, [number, number][]>;
+  // The main line first: the spurs start where they leave it
+  for (const id of ['main', 'branch', 'crest'] as TrackId[]) {
+    const t = TRACKS[id];
+    let runs: [number, number][] = [];
+    let start: number | null = null;
+    for (let s = 0; s <= t.len + 1e-9; s += 0.5) {
+      const up = needAt(pointOn(id, s).at) > DECK_Y + 1e-6;
+      if (up && start === null) start = s;
+      if (!up && start !== null) {
+        runs.push([start - 1, s]);
+        start = null;
+      }
+    }
+    if (start !== null) runs.push([start - 1, Infinity]);
+    // A spur leaving the main line up there starts up there
+    if (id !== 'main' && trackY('main', JUNCTION[id], out) > DECK_Y + 1e-6) runs.push([-Infinity, 0]);
+    for (let pass = 0; pass < 3; pass++) {
+      // A station beside a climb is raised with it (its platform level, a little either side)
+      for (const st of STATIONS) {
+        if (st.track !== id) continue;
+        const [a, b] = [st.s - PLATFORM.half - 2, st.s + PLATFORM.half + 2];
+        for (const r of runs) if (b > r[0] - RISE && a < r[1] + RISE) [r[0], r[1]] = [Math.min(r[0], a), Math.max(r[1], b)];
+      }
+      // Near an end: up to it
+      for (const r of runs) {
+        if (r[0] - RISE < 0) r[0] = -Infinity;
+        if (r[1] + RISE > t.len) r[1] = Infinity;
+      }
+      runs.sort((p, q) => p[0] - q[0]);
+      runs = runs.reduce<[number, number][]>((m, r) => {
+        const last = m.at(-1);
+        if (last && r[0] - last[1] < MERGE) last[1] = Math.max(last[1], r[1]);
+        else m.push([r[0], r[1]]);
+        return m;
+      }, []);
+    }
+    out[id] = runs;
+  }
+  return out;
+})();
+/** The el's deck's height `s` along a track (a spur before its start is the main line) */
+export function trackY(id: TrackId, s: number, plateaus: Record<TrackId, [number, number][]> = PLATEAUS): number {
+  if (id !== 'main' && s < 0) return trackY('main', JUNCTION[id] + s, plateaus);
+  let u = 0;
+  for (const [a, b] of plateaus[id] ?? []) {
+    const d = s < a ? a - s : s > b ? s - b : 0;
+    if (d < RISE) u = Math.max(u, 0.5 + 0.5 * Math.cos((Math.PI * d) / RISE));
+  }
+  return DECK_Y + (HIGH_Y - DECK_Y) * u;
+}
+/** How steeply the deck climbs `s` along a track, going the way the track runs */
+export const trackSlope = (id: TrackId, s: number) => (trackY(id, s + 0.25) - trackY(id, s - 0.25)) / 0.5;
+/** A station's platform deck's height (level along it) */
+export const stationY = (st: Station) => trackY(st.track, st.s);
 
 /* ---------- West of The Trenches: portal frames and the arch ---------- */
 
@@ -293,6 +389,15 @@ function clearFor(p: Pt) {
   // (between the arch's feet its deck hangs from it: nothing stands under it)
   if (Math.abs(p[0] - ARCH.x) < 0.5 && p[1] > ARCH.z1 - 1 && p[1] < ARCH.z0 + 1) return false;
   const wet = p[1] > RIVER[0] - 0.5 && p[1] < RIVER[1] + 0.5;
+  // (clear of the raised highway's ramps too: viaduct.ts)
+  if (Math.abs(ringS(p[0], p[1]).o) < RAMP_LOOK)
+    for (const r of RAMPS)
+      for (let i = 1; i < r.pts.length; i++) {
+        const [a, b] = [r.pts[i - 1], r.pts[i]];
+        const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
+        const f = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+        if (Math.hypot(p[0] - a[0] - f * dx, p[1] - a[1] - f * dz) < RAMP_HALF + PILLAR_HALF + 0.4) return false;
+      }
   let median: Street | null = null;
   for (const { s, box } of ROADS) {
     if (p[0] < box[0] || p[0] > box[2] || p[1] < box[1] || p[1] > box[3]) continue;
@@ -342,9 +447,9 @@ export const underSpur = (x: number, z: number) => SPUR_CLEAR.some((r) => x > r[
 
 /** What's solid: the pillars, the portals' legs (the arch's feet among them) and the stair towers (the deck is overhead) */
 export const METRO_SOLIDS: Box[] = [
-  ...PILLARS.map(({ at: [x, z] }): Box => [x - PILLAR_HALF, z - PILLAR_HALF, x + PILLAR_HALF, z + PILLAR_HALF, DECK_Y]),
-  ...PORTALS.flatMap(({ at: [x, z] }) => [-1, 1].map((k): Box => [x + k * PORTAL.half - PORTAL.leg, z - PORTAL.leg, x + k * PORTAL.half + PORTAL.leg, z + PORTAL.leg, DECK_Y])),
-  ...STATIONS.map((s): Box => [...s.tower, DECK_Y + 2.2]),
+  ...PILLARS.map(({ track, s, at: [x, z] }): Box => [x - PILLAR_HALF, z - PILLAR_HALF, x + PILLAR_HALF, z + PILLAR_HALF, trackY(track, s)]),
+  ...PORTALS.flatMap(({ track, s, at: [x, z] }) => [-1, 1].map((k): Box => [x + k * PORTAL.half - PORTAL.leg, z - PORTAL.leg, x + k * PORTAL.half + PORTAL.leg, z + PORTAL.leg, trackY(track, s)])),
+  ...STATIONS.map((s): Box => [...s.tower, stationY(s) + 2.2]),
 ];
 
 /* ---------- The train and its timetable ---------- */
@@ -413,11 +518,11 @@ export function runsBetween(a: string, b: string): Run[] {
   const A = station(a);
   const B = station(b);
   if (A.track === B.track) return [runOf(a, b, [{ track: A.track, s0: A.s, s1: B.s }])];
-  // Crestmont's spur leaves the main line facing north, past Kart Park: straight to and from there, turning round there for the rest
+  // Crestmont's spur leaves the main line facing north, past Starlight Mall: straight to and from there, turning round there for the rest
   if (A.track === 'crest' || B.track === 'crest') {
-    if (a === 'kart') return [runOf(a, b, [{ track: 'main', s0: A.s, s1: CREST_S }, { track: 'crest', s0: 0, s1: B.s }])];
-    if (b === 'kart') return [runOf(a, b, [{ track: 'crest', s0: A.s, s1: 0 }, { track: 'main', s0: CREST_S, s1: B.s }])];
-    return [...runsBetween(a, 'kart'), ...runsBetween('kart', b)];
+    if (a === 'starlight') return [runOf(a, b, [{ track: 'main', s0: A.s, s1: CREST_S }, { track: 'crest', s0: 0, s1: B.s }])];
+    if (b === 'starlight') return [runOf(a, b, [{ track: 'crest', s0: A.s, s1: 0 }, { track: 'main', s0: CREST_S, s1: B.s }])];
+    return [...runsBetween(a, 'starlight'), ...runsBetween('starlight', b)];
   }
   if (A.track === 'main' && northOfSwitch(A)) return [runOf(a, b, [{ track: 'main', s0: A.s, s1: SWITCH_S }, { track: 'branch', s0: 0, s1: B.s }])];
   if (B.track === 'main' && northOfSwitch(B)) return [runOf(a, b, [{ track: 'branch', s0: A.s, s1: 0 }, { track: 'main', s0: SWITCH_S, s1: B.s }])];
@@ -438,8 +543,8 @@ export function placeOn(run: Run, d: number): { track: TrackId; s: number; dir: 
   return { track: p.track, s: p.s0, dir: p.s1 >= p.s0 ? 1 : -1 };
 }
 
-/** The timetable's stops: from Crestmont to Kart Park, down to South Bank, out through The Trenches and the Docks to Uptown and back, out to the Airport and back, and up again */
-const STOPS = ['crestmont', 'kart', 'downtown', 'southbank', 'trenches', 'docks', 'uptown', 'docks', 'trenches', 'southbank', 'airport', 'southbank', 'downtown', 'kart'];
+/** The timetable's stops: from Crestmont to Starlight Mall, down to South Bank, out through The Trenches, the Docks and Kart Park to Uptown and back, out to the Airport and back, and up again */
+const STOPS = ['crestmont', 'starlight', 'downtown', 'southbank', 'trenches', 'docks', 'kart', 'uptown', 'kart', 'docks', 'trenches', 'southbank', 'airport', 'southbank', 'downtown', 'starlight'];
 export const LEGS = STOPS.map((from, i) => {
   const run = runsBetween(from, STOPS[(i + 1) % STOPS.length])[0];
   return { run, time: runAt(run.len, 0, speedOf(run)).total };
@@ -475,11 +580,11 @@ export function trainAt(t: number): TrainAt {
   return { run: l.run, d: 0, ...placeOn(l.run, 0), speed: 0, at: l.run.from };
 }
 
-/** A car of the train (0 the front, 1 the back) `off` along the train from its middle: its point and heading on the ground */
+/** A car of the train (0 the front, 1 the back) `off` along the train from its middle: its point and heading on the ground, its deck's height and how steeply it climbs the way it faces */
 export function carAt(tr: { run: Run; d: number }, off: number) {
   const pl = placeOn(tr.run, tr.d + off);
   const p = pointOn(pl.track, pl.s);
-  return { at: p.at, dir: [p.dir[0] * pl.dir, p.dir[1] * pl.dir] as Pt };
+  return { at: p.at, dir: [p.dir[0] * pl.dir, p.dir[1] * pl.dir] as Pt, y: trackY(pl.track, pl.s), climb: trackSlope(pl.track, pl.s) * pl.dir };
 }
 
 /**

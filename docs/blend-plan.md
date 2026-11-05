@@ -553,6 +553,21 @@ For each seam in the seam map, the treatment it needs:
   `STRIP_TREE_GAP`, nudged clear of the lamps). A sidewalk on the strip was
   left out: the mall block's verge hedge runs across it to the kerb, and
   nothing that exists moves. Added at the boot with 6b's; no new draws.
+- **6e, the fourth seam (built): Uptown North and Westlake Park, with no
+  street between.** Mapped, the park's east sidewalk and Uptown North's west
+  one ran side by side along the park's low wall, the west column's towers
+  opening their lobbies onto them: two strips of plain sidewalk, no lamps and
+  no trees, between the park's trees and the towers. `parkedge.ts`
+  (DOM-free, tested in `tests/parkedge.test.ts`) makes them one walk: the
+  plaza's granite over both (`PROMENADE`, a hair inside the park's lot edge so
+  it never meets the gates' paths; the gates' piers stand on it), lamps down
+  its middle about every other tree (`EDGE_LAMPS`, 9, the arm over the walk
+  towards the towers, a taken spot nudged along) and trees in grates between
+  them (`EDGE_TREES`, 10, `TREE_GAP`, `GRATE`), all clear of the gates
+  (`GATE_CLEAR`) and their walks through the block, the lobbies' doors
+  (`DOOR_CLEAR`), the square's trees and every lamp. The lamps and trees at
+  the boot (index.ts), the granite and grates as sites in Uptown's chunk
+  (uptownnorth3d.ts); no new draws.
 - **Stepped heights:** where towers meet low-rise (Uptown's edge by
   Westlake and downtown, Uptown North by the mall), the edge lots step down;
   where The Trenches meets the south row, its tenements step to the row's

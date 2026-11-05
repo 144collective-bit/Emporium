@@ -21,7 +21,9 @@ gardens. Built in stages, each a PR for the owner's sign-off.
   viewing terrace), a paddock and entrance (a gate arch with its name, a
   ticket kiosk, team tents, karts on stands, a car park) and night lighting
   (floodlight towers, lit signs). The metro's line is extended north over
-  the highway to a new Kart Park station.
+  the highway to a new Kart Park station. (Since moved again, west of the
+  highway, the owner's call: `docs/kart-west-plan.md`. That station is
+  Starlight Mall now, and the land here is open again.)
 - **The stadium's car park:** beside the stadium; the old one on the first
   strip goes back to park.
 - **The park:** the main walks (the Mall, the lake loop, the ring walk)

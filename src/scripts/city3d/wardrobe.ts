@@ -35,6 +35,8 @@ export interface Outfit {
   /** Cowboy hat or top hat colour (premium, instead of a cap) */
   cowboy?: string;
   tophat?: string;
+  /** A kart driver's helmet colour (docs/kart-west-plan.md Phase 6: the kart park's races; no hat with it) */
+  helmet?: string;
   /** A neon halo floating over the head (premium, instead of a hat; glows in the lens colour) */
   halo?: boolean;
   /** Colour of the shades' lenses (green as in the art), and of any neon he wears */
@@ -669,9 +671,9 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'ink';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'ink' | 'helmet';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'ink'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'ink', 'helmet'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
  * the raised hood (both sides drawn), neon (unlit, coloured per
@@ -2572,6 +2574,12 @@ export function items(q: Detail, hero = false): Item[] {
       id: 'helmet',
       when: soldier,
       pieces: [P('head', one(helmet), '#3e4a26'), P('head', strap, '#2b2a33', { detail: true })],
+    },
+    // A kart driver's helmet: the soldier's shell in the driver's colour, its strap dark (docs/kart-west-plan.md Phase 6)
+    {
+      id: 'racehelmet',
+      when: (o) => !soldier(o) && !!o.helmet,
+      pieces: [P('head', one(helmet), 'helmet'), P('head', strap, '#16141f', { detail: true })],
     },
     {
       id: 'suit',

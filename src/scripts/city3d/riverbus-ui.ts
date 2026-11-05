@@ -10,10 +10,11 @@
  * Free, like the metro. Under reduced motion the ride is a cut.
  */
 import * as THREE from 'three';
-import { STOPS, type Stop, type StopId } from './riverbus';
+import { BUS, STOPS, type Stop, type StopId } from './riverbus';
 import { BUS_VIEW, offsetFor, ride, rideAt } from './riverroute';
 import { WATER_Y } from './river';
 import type { Ride } from './walk';
+import { rideView } from './views';
 
 export interface RiverBusDeps {
   camera: THREE.PerspectiveCamera;
@@ -71,11 +72,22 @@ export function createRiverBusUI(root: HTMLElement, d: RiverBusDeps) {
   const look = new THREE.Vector3();
   const want = new THREE.Vector3();
   const at = new THREE.Vector3();
-  /** Alongside the boat out over the river (the loop's inside), a little behind it, looking ahead */
+  /**
+   * Near: alongside the boat out over the river (the loop's inside), a little behind it, looking ahead; far and the
+   * deck (standing at the stern's rail) from it (views.ts `rideView()`, V, as you look round)
+   */
   function view(p: ReturnType<typeof rideAt>, dt: number, snap = false) {
     const [fx, fz] = [Math.cos(p.yaw), -Math.sin(p.yaw)];
-    want.set(p.x + p.inside[0] * 8 - fx * 6, WATER_Y + 3.4, p.z + p.inside[1] * 8 - fz * 6);
-    at.set(p.x + fx * 2, WATER_Y + 0.9, p.z + fz * 2);
+    const near = {
+      want: { x: p.x + p.inside[0] * 8 - fx * 6, y: WATER_Y + 3.4, z: p.z + p.inside[1] * 8 - fz * 6 },
+      at: { x: p.x + fx * 2, y: WATER_Y + 0.9, z: p.z + fz * 2 },
+    };
+    const back = -BUS.hull.len / 2 + 0.6;
+    const eye = { x: p.x + fx * back, y: WATER_Y + 0.44 + 1.2, z: p.z + fz * back };
+    const v = rideView(near, { x: p.x, y: WATER_Y + 0.9, z: p.z }, eye, [fx, fz]);
+    want.set(v.want.x, v.want.y, v.want.z);
+    at.set(v.at.x, v.at.y, v.at.z);
+    if (v.snap) snap = true;
     const k = snap ? 1 : 1 - Math.exp(-dt * 4);
     cam.lerp(want, k);
     look.lerp(at, k);
@@ -88,6 +100,7 @@ export function createRiverBusUI(root: HTMLElement, d: RiverBusDeps) {
   }
   const hold = (p: { x: number; z: number; yaw: number } | null) => (BUS_VIEW.ride = p && { x: p.x, z: p.z, yaw: p.yaw });
   const rideState: Ride = {
+    kind: 'riverbus',
     update(dt) {
       if (!from || !to) return { x: 0, z: 0 };
       t += dt;

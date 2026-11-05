@@ -38,7 +38,7 @@ import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
 import { CARGO as BASE_CARGO, DRIVE, PLAYER_CARS, type PaintId, type PlayerCar } from './mycar';
 import { BIKE_CARGO, BIKE_DRIVE } from './mybike';
-import { DEFAULT_KART, KART_SPECS, PLAYER_KARTS, cleanKart, type KartId } from './mykart';
+import { DEFAULT_KART, DEFAULT_LOOK, KART_SPECS, PLAYER_KARTS, cleanKart, cleanKartLook, type KartId, type KartLook } from './mykart';
 import { CUPS, type CupId } from './kart-cups';
 import { PARTNER_IDS, STYLES, type PartnerId, type StyleId } from './fight-moves';
 import { COURSE_IDS } from './kartcircuit';
@@ -382,6 +382,25 @@ export interface KartSave {
   /** Your lap records from the tracks before this one, kept aside: the old network (before the rebuild, save v8) by their old
    * keys, and the circuit at full size (before it was scaled down, save v9) as `full-circuit` / `full-circuit-reverse` */
   old: Record<string, KartTime>;
+  /**
+   * Your fastest lap's splits per course and class (`recordKey`): the time at the end of each of its three sectors
+   * (docs/kart-west-plan.md Phase 5: the HUD's delta at each sector), kept by `keepSplits()`
+   */
+  splits: Record<string, [number, number, number]>;
+  /** Your kart's look (docs/kart-west-plan.md Phase 6, all free): number, decals, rims and tyres, helmet and suit, trail, glow */
+  look: KartLook;
+}
+/**
+ * A lap's splits (the time at the end of each of its three sectors) kept as your fastest lap's for its course and
+ * class, if it's faster than the one kept (or none is): call before finishKartRace(), which keeps the lap's record
+ */
+export function keepSplits(s: TycoonSave, course: string, cls: ClassId, splits: [number, number, number]) {
+  const key = recordKey(course, cls);
+  const was = s.karts.splits[key];
+  if (!(splits[0] > 0 && splits[1] > splits[0] && splits[2] > splits[1])) return false;
+  if (was && was[2] <= splits[2]) return false;
+  s.karts.splits[key] = [...splits] as [number, number, number];
+  return true;
 }
 /** The old network's courses and the full-size circuit's (records kept aside from them) */
 const OLD_COURSES = ['neon-loop', 'neon-reverse', 'summit', 'summit-reverse', 'grand', 'grand-reverse', 'full-circuit', 'full-circuit-reverse'];
@@ -403,7 +422,7 @@ export interface FightSave {
 }
 export const emptyFight = (): FightSave => ({ style: 'brawler', styles: ['brawler'], wins: 0, losses: 0, kos: 0, bestChain: 0, bouts: 0, spars: 0, bots: {}, partners: {} });
 export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
-export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {} });
+export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {}, splits: {}, look: { ...DEFAULT_LOOK } });
 
 export interface TycoonSave {
   v: 12;
@@ -1582,6 +1601,11 @@ export function modKart(s: TycoonSave, id: KartId, mod: KartModId): BuyResult {
 /** A kart's handling with its mods on (0..1 numbers; kart-sim.ts tune() turns them into speeds) */
 export const kartStatsOf = (s: TycoonSave, id: KartId) => kartStats(KART_SPECS[id], kartMods(s, id));
 /** Pick the kart (and paint) you race in; only one you own */
+/** Change your kart's look (all free): whatever's given, cleaned (mykart.ts `cleanKartLook()`) */
+export function setKartLook(s: TycoonSave, change: Partial<KartLook>) {
+  s.karts.look = cleanKartLook({ ...s.karts.look, ...change });
+  return s.karts.look;
+}
 export function pickKart(s: TycoonSave, model: KartId, paint: PaintId) {
   const k = cleanKart({ model, paint });
   if (!ownsKart(s, k.model)) return false;
@@ -1626,7 +1650,7 @@ export const dayKey = (now: number) => {
  * per course and class (any race) and a time trial's run on the board; `clean` (laps without a
  * wheel in the run-off) and `overtakes` are counted for missions and badges. `laps` are the lap times.
  */
-export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number }): KartResult {
+export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number; items?: boolean }): KartResult {
   const seconds = Math.round(r.seconds * 100) / 100;
   const time = r.cup === 'time';
   const c = time ? null : CUPS[r.cup as CupId];
@@ -1634,7 +1658,8 @@ export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; 
   const place = Math.max(1, Math.min(8, Math.round(r.place)));
   const prize = c ? (c.prizes[place - 1] ?? 0) : 0;
   const now = r.now ?? s.at;
-  const lapsIn = (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
+  // (an items race, docs/kart-west-plan.md Phase 7, keeps no lap records, par or challenge: they stay pure racing)
+  const lapsIn = r.items ? [] : (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
   const bestLap = lapsIn.length ? Math.round(Math.min(...lapsIn) * 100) / 100 : 0;
   const key = recordKey(r.course, cls);
   const K = s.karts;
@@ -1922,6 +1947,14 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   const ch = obj(kt.challenge);
   if (typeof ch.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ch.day)) s.karts.challenge = { day: ch.day, lap: Math.round(num(ch.lap, 0, 36000, 0) * 100) / 100 };
   s.karts.parBeaten = [...new Set((Array.isArray(kt.parBeaten) ? kt.parBeaten : []).filter((k): k is string => typeof k === 'string' && keyOk(k)))];
+  // (the kart's look, docs/kart-west-plan.md Phase 6: a save from before it gets the stock look)
+  s.karts.look = cleanKartLook(kt.look);
+  // (the fastest lap's splits, docs/kart-west-plan.md Phase 5: three times rising, the last no more than the lap record)
+  for (const [k, v] of Object.entries(obj(kt.splits))) {
+    if (!keyOk(k) || !Array.isArray(v) || v.length !== 3) continue;
+    const t = v.map((x) => Math.round(num(x, 0, 36000, 0) * 1000) / 1000) as [number, number, number];
+    if (t[0] > 0 && t[1] > t[0] && t[2] > t[1]) s.karts.splits[k] = t;
+  }
   // The Fight Club (v8)
   const ft = obj(o.fight);
   const styleIds = Object.keys(STYLES) as StyleId[];

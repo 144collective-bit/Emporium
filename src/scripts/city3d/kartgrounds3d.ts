@@ -36,8 +36,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, lit, neon, place, toon } from './kit';
 import { site } from './tilework';
-import { F, GATE, KART_PARK, LOOP, ROAD, frame, toLocal, toWorld, type Frame, type Line, type Pt } from './kartpark';
-import { BAYS, CIRCUIT, CLEAR, COURSES, COURSE_IDS, GANTRY, KERB, PIT_HALF, PIT_LANE, SITE, SUPPORTS, TRACK_HALF, enclosed, gridSlots, groundAt, type Course, type CourseId } from './kartcircuit';
+import { DRIVE_X, EW0, F, GATE, KART_PARK, LOOP, ROAD, frame, toWorld, type Frame, type Line, type Pt } from './kartpark';
+import { BAYS, CIRCUIT, CLEAR, COURSES, COURSE_IDS, DECK_DEPTH, DECK_OUT, GANTRY, KERB, PIT_HALF, PIT_LANE, RAIL_H, SITE, SUPPORTS, SUPPORT_HALF, TRACK_HALF, TUBE_IN, TUBE_R, enclosed, gridSlots, groundAt, type Course, type CourseId } from './kartcircuit';
 import {
   ARMCO_H,
   BANKS,
@@ -59,10 +59,14 @@ import {
   TYRE_R,
   TYRE_WALLS,
   bankAt,
+  bankLand,
+  bankY,
   circuitDistance,
   type LRect,
 } from './kartfacility';
+import { COACH_LOT, FLAGS, KART_AREA } from './kartfacility';
 import { CELL_ARROW, CELL_CHEVRON, atlasTex, cellMarker, cellNumber, chequerBands, glowText, quad, spacing } from './kartsigns';
+import { BOARDS, BOOTH, MARSHALS, cornersOf } from './kartside';
 import { KART_VIEW } from './kartpark3d';
 import { buildFx, chainMesh } from './grime';
 import type { Tick } from './world';
@@ -85,10 +89,7 @@ const ROAD_Y = 0.036;
 const LOT_Y = 0.04;
 const PAINT_Y = 0.046;
 const EDGE = TRACK_HALF + KERB;
-const DECK = 0.35;
-const RAIL_H = 0.9;
-const TUBE_R = EDGE + 0.6;
-const TUBE_T = 0.3;
+const DECK = DECK_DEPTH;
 /** Where the pits' paving starts (local v) */
 const PAVED_V = SITE.garages.v0 - 0.6;
 
@@ -108,11 +109,12 @@ const DECK_C = toon('#3f3b5e');
 const RAIL = toon('#c9c4e6');
 const WHITE = toon('#e8e6f0');
 const LINE_C = toon('#d9d4ef');
+const PAINT = toon('#e8e4f8');
 const RED = toon('#e23b3b');
 const YELLOW = toon('#ffd23f');
 const GREEN = toon('#1fbf6b');
 const TUBE_C = toon('#2b2550');
-const TUBE_IN = toon('#141226');
+const TUBE_IN_C = toon('#141226');
 const PORTAL = toon('#4a3f7a');
 const TYRE = toon('#17151f');
 const TYRE_W = toon('#e8e6f0');
@@ -367,8 +369,9 @@ function grounds(b: Batch) {
     for (const side of [1, -1]) for (const part of splitRun(run, (i) => outside(i) === side)) b.add(sweep(c, part, strip(side * (EDGE + 0.5), side * (CLEAR - 0.8), onGround(c, GRAVEL_Y))), GRAVEL);
   }
 
-  // The banks: a grid laid on bankAt(), a tile a cell
-  for (const bank of BANKS) {
+  // The banks: a grid laid on bankAt(), a tile a cell, their berms outside the fence included
+  for (const bank0 of BANKS) {
+    const bank = { ...bankLand(bank0), b: bank0 };
     const nu = Math.ceil(bank.u1 - bank.u0);
     const nv = Math.ceil(bank.v1 - bank.v0);
     for (let j0 = 0; j0 < nv; j0 += 12)
@@ -382,7 +385,7 @@ function grounds(b: Batch) {
             const u = bank.u0 + ((bank.u1 - bank.u0) * (i0 + i)) / nu;
             const v = bank.v0 + ((bank.v1 - bank.v0) * (j0 + j)) / nv;
             const [x, z] = W(u, v);
-            pos.push(x, bankAt(bank, u, v) + LAWN + 0.004, z);
+            pos.push(x, bankAt(bank.b, u, v) + LAWN + 0.004, z);
           }
         for (let j = 0; j < nj; j++)
           for (let i = 0; i < ni; i++) {
@@ -418,7 +421,7 @@ function track(b: Batch, low: boolean) {
   }
   // The flyover: a deck under the asphalt (to the kerbs' edge and a little past), railed, on columns past its edges
   for (const run of runs(c, (i) => !!(fl(i) & F.deck) && c.y[i] > 0.6)) {
-    const o = EDGE + 0.35;
+    const o = DECK_OUT;
     b.add(sweep(c, run, [[-o, onPlane(c, -DECK)], [-o, onPlane(c, 0)], [o, onPlane(c, 0)], [o, onPlane(c, -DECK)], [-o, onPlane(c, -DECK)]]), DECK_C);
     for (const s of [1, -1]) {
       const l = s * (o - 0.05);
@@ -450,7 +453,7 @@ function track(b: Batch, low: boolean) {
     }
   }
   for (const { x, z, h } of SUPPORTS) {
-    b.box(x - 0.22, 0, z - 0.22, 0.44, h - DECK + 0.05, 0.44, STEEL);
+    b.box(x - SUPPORT_HALF, 0, z - SUPPORT_HALF, SUPPORT_HALF * 2, h - DECK + 0.05, SUPPORT_HALF * 2, STEEL);
     b.box(x - 0.3, 0, z - 0.3, 0.6, 0.16, 0.6, INK);
     b.box(x - 0.3, h - DECK - 0.12, z - 0.3, 0.6, 0.14, 0.6, INK);
   }
@@ -465,13 +468,18 @@ function track(b: Batch, low: boolean) {
       }
       return out ? pts : pts.reverse();
     };
-    b.add(sweep(c, run, arc(TUBE_R, true)), TUBE_C);
-    b.add(sweep(c, run, arc(TUBE_R - TUBE_T, false)), TUBE_IN);
-    for (let k = 2; k < run.length - 2; k += 5) b.add(sweep(c, run.slice(k, k + 2), arc(TUBE_R + 0.1, true)), INK);
-    b.add(sweep(c, run.slice(0, 3), arc(TUBE_R + 0.22, true)), PORTAL);
-    b.add(sweep(c, run.slice(-3), arc(TUBE_R + 0.22, true)), PORTAL);
+    // (its feet carried down to the run-off's slope either side, so no gap shows under the tube's sides)
+    const foot = (i: number, lat: number) => Math.min(groundAt(fr(c, i), lat), c.y[i] - 0.05) - 0.03;
+    const skirt = (pts: XPt[], radius: number, out: boolean): XPt[] => (out ? [[-radius, foot], ...pts, [radius, foot]] : [[radius, foot], ...pts, [-radius, foot]]);
+    b.add(sweep(c, run, skirt(arc(TUBE_R, true), TUBE_R, true)), TUBE_C);
+    b.add(sweep(c, run, arc(TUBE_IN, false)), TUBE_IN_C);
+    // (its floor paved out to the walls past the kerbs: no grass in the tube)
+    for (const sd of [1, -1]) b.add(sweep(c, run, strip(sd * EDGE, sd * (TUBE_IN + 0.02), onPlane(c, RIBBON - 0.006))), PAVE);
+    for (let k = 2; k < run.length - 2; k += 5) b.add(sweep(c, run.slice(k, k + 2), skirt(arc(TUBE_R + 0.1, true), TUBE_R + 0.1, true)), INK);
+    b.add(sweep(c, run.slice(0, 3), skirt(arc(TUBE_R + 0.22, true), TUBE_R + 0.22, true)), PORTAL);
+    b.add(sweep(c, run.slice(-3), skirt(arc(TUBE_R + 0.22, true), TUBE_R + 0.22, true)), PORTAL);
     for (const s of [1, -1]) {
-      const l = s * (TUBE_R - TUBE_T - 0.3);
+      const l = s * (TUBE_IN - 0.3);
       b.add(sweep(c, run, s > 0 ? [[l, onPlane(c, 1.5)], [l, onPlane(c, 1.7)]] : [[l, onPlane(c, 1.7)], [l, onPlane(c, 1.5)]]), soft(s > 0 ? PAL.cyan : PAL.pink));
     }
   }
@@ -620,41 +628,29 @@ function trackside(b: Batch, fxb: Batch, low: boolean, near: (p: Pt) => boolean)
   }
 }
 
-/** Marshal posts every ~27 tiles round the outside, past the barriers: a booth with a roof, a yellow and a green flag */
+/** The marshal posts (kartside.ts, every other on phones): a booth with a roof, a yellow and a green flag */
 function marshals(b: Batch, low: boolean, near: (p: Pt) => boolean) {
-  const c = CIRCUIT;
-  const taken: Pt[] = [];
-  for (let s = 9; s < c.L; s += low ? 54 : 27) {
-    const f = frame(c, s);
-    if (enclosed(f)) continue;
-    const side = f.k ? -Math.sign(f.k) : 1;
-    const x = f.x + f.nx * (CLEAR + 1.6) * side;
-    const z = f.z + f.nz * (CLEAR + 1.6) * side;
-    const [u, v] = toLocal([x, z]);
-    if (circuitDistance(x, z) < CLEAR + 1.2 || taken.some(([a, bb]) => Math.hypot(a - u, bb - v) < 4) || !near([x, z])) continue;
-    if (BANKS.some((bk) => u > bk.u0 - 0.5 && u < bk.u1 + 0.5 && v > bk.v0 - 0.5 && v < bk.v1 + 0.5)) continue;
-    const P = KART_PARK;
-    if (x < P.x0 + 1 || x > P.x1 - 1 || z < P.z0 + 1 || z > P.z1 - 1) continue;
-    taken.push([u, v]);
-    const ry = Math.atan2(-f.tz, f.tx);
+  for (const { x, z, ry, side, trim } of MARSHALS) {
+    if ((low && trim) || !near([x, z])) continue;
+    const h = BOOTH / 2 - 0.15;
     // The booth: four posts, a roof, a low front
     for (const [a, d] of [
-      [-0.5, -0.5],
-      [0.5, -0.5],
-      [-0.5, 0.5],
-      [0.5, 0.5],
+      [-h, -h],
+      [h, -h],
+      [-h, h],
+      [h, h],
     ])
       b.add(place(unitBox, x + Math.cos(ry) * a + Math.sin(ry) * d, 1.05, z - Math.sin(ry) * a + Math.cos(ry) * d, 0.07, 2.1, 0.07), INK);
-    b.add(place(unitBox, x, 2.15, z, 1.3, 0.1, 1.3, 0, ry), toon('#e8e6f0'));
-    b.add(place(unitBox, x - Math.sin(ry) * side * 0.5, 0.45, z - Math.cos(ry) * side * 0.5, 1.1, 0.9, 0.05, 0, ry), toon('#f28c28'));
+    b.add(place(unitBox, x, 2.15, z, BOOTH, 0.1, BOOTH, 0, ry), toon('#e8e6f0'));
+    b.add(place(unitBox, x - Math.sin(ry) * side * h, 0.45, z - Math.cos(ry) * side * h, BOOTH - 0.2, 0.9, 0.05, 0, ry), toon('#f28c28'));
     // The flags, furled on short poles at the booth's track side
     b.detail(() => {
       for (const [k, mat] of [
         [-0.35, YELLOW],
         [0.35, GREEN],
       ] as const) {
-        const px = x + Math.cos(ry) * k - Math.sin(ry) * side * 0.62;
-        const pz = z - Math.sin(ry) * k - Math.cos(ry) * side * 0.62;
+        const px = x + Math.cos(ry) * k - Math.sin(ry) * side * (h + 0.12);
+        const pz = z - Math.sin(ry) * k - Math.cos(ry) * side * (h + 0.12);
         b.box(px - 0.02, 0.9, pz - 0.02, 0.04, 1.4, 0.04, INK);
         b.add(place(unitBox, px + Math.cos(ry) * 0.22, 2.05, pz - Math.sin(ry) * 0.22, 0.42, 0.3, 0.02, 0, ry), mat);
       }
@@ -690,8 +686,9 @@ function fence(b: Batch, low: boolean, near: (p: Pt) => boolean) {
   const P = KART_PARK;
   const every = low ? 4 : 2;
   const posts: THREE.Matrix4[] = [];
+  // (over the banks, which reach it, it rides on their tops: bankY())
   const add = (x: number, z: number) => {
-    if (near([x, z])) posts.push(new THREE.Matrix4().makeTranslation(x, 0.6, z));
+    if (near([x, z])) posts.push(new THREE.Matrix4().makeTranslation(x, bankY(x, z) + 0.6, z));
   };
   for (let x = P.x0; x < P.x1; x += every) add(x, P.z0);
   for (let z = P.z0; z < P.z1; z += every) add(P.x1, z);
@@ -706,7 +703,14 @@ function fence(b: Batch, low: boolean, near: (p: Pt) => boolean) {
       const a: Pt = [x0 + ((x1 - x0) * k) / n, z0 + ((z1 - z0) * k) / n];
       const c: Pt = [x0 + ((x1 - x0) * (k + 1)) / n, z0 + ((z1 - z0) * (k + 1)) / n];
       if (!near([(a[0] + c[0]) / 2, (a[1] + c[1]) / 2])) continue;
-      for (const y of [0.42, 0.78, 1.14]) beam(b, V(a[0], y, a[1]), V(c[0], y, c[1]), 0.05, INK);
+      // (in pieces of about a tile, each end at the ground under it, so the rails ride over the banks)
+      const m = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1])));
+      for (let q = 0; q < m; q++) {
+        const p0: Pt = [a[0] + ((c[0] - a[0]) * q) / m, a[1] + ((c[1] - a[1]) * q) / m];
+        const p1: Pt = [a[0] + ((c[0] - a[0]) * (q + 1)) / m, a[1] + ((c[1] - a[1]) * (q + 1)) / m];
+        const [y0, y1] = [bankY(...p0), bankY(...p1)];
+        for (const y of [0.42, 0.78, 1.14]) beam(b, V(p0[0], y0 + y, p0[1]), V(p1[0], y1 + y, p1[1]), 0.05, INK);
+      }
     }
   };
   rail(P.x0, P.z0, P.x1, P.z0);
@@ -773,9 +777,10 @@ function plaza(b: Batch) {
     b.detail(() => b.box(x + 0.05, 3.6, z - 0.02, 0.9, 1.3, 0.03, flagCols[k % flagCols.length]));
   }
   b.detail(() => {
+    // (two west of the podium, facing it; one by the kiosk)
     for (const [u, v, ry] of [
-      [-8, 90, 0],
-      [-8, 96, 0],
+      [-10.6, 92, 0],
+      [-10.6, 97, 0],
       [20, 92, Math.PI],
     ] as const) {
       const [x, z] = W(u, v);
@@ -783,6 +788,13 @@ function plaza(b: Batch) {
       b.add(g(1.4, 0.06, 0.4, 0, 0.4, 0), toon('#6b4a2f'));
       b.add(g(1.4, 0.36, 0.06, 0, 0.46, -0.2), toon('#6b4a2f'));
       for (const sx of [-0.6, 0.6]) b.add(g(0.06, 0.4, 0.36, sx, 0, 0), INK);
+    }
+    // Bunting across the gate's path between each pair of its flags (kartfacility.ts FLAGS)
+    for (let k = 0; k + 1 < FLAGS.length; k += 2) {
+      const [a, c] = [FLAGS[k], FLAGS[k + 1]];
+      const [ax, az] = W(a.u, a.v);
+      const [cx, cz] = W(c.u, c.v);
+      bunting(b, V(ax, 4.0, az), V(cx, 4.0, cz), 0.45);
     }
     // Bollards either side of the gate, a pair of planters
     for (const x of [GATE.x0 - 1.4, GATE.x0 - 2.6, GATE.x1 + 1.4, GATE.x1 + 2.6]) b.add(new THREE.CylinderGeometry(0.1, 0.12, 0.8, 8).translate(x, 0.4, KART_PARK.z1 - 0.8), YELLOW);
@@ -834,11 +846,60 @@ const bannerTex = () =>
     glowText(c, BANNER, w / 2, h / 2 + 4, PAL.cyan, 24);
   });
 
-function mainThread(scene: THREE.Scene) {
+function mainThread(scene: THREE.Scene, tick: ((f: Tick) => void) | null) {
   const group = new THREE.Group();
   group.name = 'kartgrounds';
   scene.add(group);
   const c = CIRCUIT;
+  // The marshals' flags (kartcrowd.ts `marshalFlags()`, set by the race in KART_VIEW.flags): each post's marshal
+  // waving the flag it shows, from its track side, green, yellow, blue or the chequered one; none between races
+  {
+    const n = MARSHALS.length;
+    const cloth = new THREE.PlaneGeometry(0.75, 0.5).translate(0.4, 0, 0);
+    const solid = new THREE.InstancedMesh(cloth, new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide, fog: false }), n);
+    const chq = new THREE.InstancedMesh(cloth, new THREE.MeshBasicMaterial({ map: chequerTex(), side: THREE.DoubleSide, fog: false }), n);
+    const poles = new THREE.InstancedMesh(new THREE.BoxGeometry(0.04, 1.1, 0.04).translate(0, -0.3, 0), toon('#1b1830', { name: 'marshal poles' }), n);
+    for (const m of [solid, chq, poles]) {
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.frustumCulled = false;
+      m.count = 0;
+      group.add(m);
+    }
+    const COLOURS: Record<string, THREE.Color> = { green: new THREE.Color('#1fbf6b'), yellow: new THREE.Color('#ffd23f'), blue: new THREE.Color('#2a6bff') };
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const one = new THREE.Vector3(1, 1, 1);
+    const p = new THREE.Vector3();
+    tick?.(({ t }) => {
+      const flags = KART_VIEW.flags;
+      let ns = 0;
+      let nc = 0;
+      let np = 0;
+      if (flags)
+        MARSHALS.forEach((mp, i) => {
+          const f = flags[i];
+          if (!f || f === 'none') return;
+          // Held up from the booth's track side, waved in an arc
+          const h = BOOTH / 2 + 0.35;
+          p.set(mp.x - Math.sin(mp.ry) * mp.side * h, 2.55, mp.z - Math.cos(mp.ry) * mp.side * h);
+          const swing = Math.sin(t * 5.5 + i) * 0.7;
+          e.set(0, mp.ry + Math.PI / 2 + swing, Math.sin(t * 11 + i) * 0.12);
+          m4.compose(p, q.setFromEuler(e), one);
+          if (f === 'chequered') chq.setMatrixAt(nc++, m4);
+          else {
+            solid.setMatrixAt(ns, m4);
+            solid.setColorAt(ns++, COLOURS[f]);
+          }
+          poles.setMatrixAt(np++, m4);
+        });
+      solid.count = ns;
+      chq.count = nc;
+      poles.count = np;
+      for (const m of [solid, chq, poles]) m.instanceMatrix.needsUpdate = true;
+      if (solid.instanceColor) solid.instanceColor.needsUpdate = true;
+    });
+  }
   // The start line
   {
     const f = frame(c, c.start);
@@ -903,8 +964,6 @@ function mainThread(scene: THREE.Scene) {
 
 /** One way round's guidance: posts in `gb`, boards and arrows (the atlas) in `signs`, the pads' chevrons in `pads` */
 function guidance(cc: Course, gb: Batch, signs: Batch, pads: Batch, atlas: THREE.Material) {
-  const N = cc.x.length;
-  const kAt = (s: number) => frame(cc, s).k;
   // Boost pads: chevrons on the asphalt pointing this way, tilted with the banking and the slope
   const chevron = soft(PAL.cyan);
   for (const pad of cc.pads)
@@ -931,85 +990,47 @@ function guidance(cc: Course, gb: Batch, signs: Batch, pads: Batch, atlas: THREE
         pads.add(g, chevron);
       }
     }
-  // The corners: where each bend runs (|k| over a threshold), its turn direction, its apex
-  const corners: { s0: number; s1: number; apex: number; dir: number; hard: boolean }[] = [];
-  {
-    let cur: { s0: number; s1: number; apex: number; dir: number; peak: number } | null = null;
-    for (let k = 0; k <= N; k++) {
-      const s = (k % N) * cc.step;
-      const kk = cc.k[k % N];
-      const dir = Math.abs(kk) > 0.045 ? Math.sign(kk) : 0;
-      if (cur && (dir !== cur.dir || k === N)) {
-        if (cur.s1 - cur.s0 > 3) corners.push({ s0: cur.s0, s1: cur.s1, apex: cur.apex, dir: cur.dir, hard: cur.peak > 0.1 });
-        cur = null;
-      }
-      if (dir && !cur) cur = { s0: s, s1: s, apex: s, dir, peak: Math.abs(kk) };
-      if (cur) {
-        cur.s1 = s;
-        if (Math.abs(kk) > cur.peak) {
-          cur.peak = Math.abs(kk);
-          cur.apex = s;
+  // The boards (kartside.ts: placed clear of everything trackside)
+  const post = (x: number, z: number, h: number) => gb.box(x - 0.05, 0, z - 0.05, 0.1, h, 0.1, INK);
+  for (const bd of BOARDS[cc.id]) {
+    const { x, z, tx, tz, nx, nz } = bd;
+    if (bd.kind === 'chevron') {
+      post(x - tx * 0.5, z - tz * 0.5, 1.2);
+      post(x + tx * 0.5, z + tz * 0.5, 1.2);
+      // Facing the track, its arrows pointing this way round: on the right of the track it's turned round to face it,
+      // its picture mirrored so the arrows still point the way the karts go (it used to face away there)
+      const g = quad(x, 1.45, z, tx * bd.side, tz * bd.side, 1.3, 0.65, CELL_CHEVRON, false);
+      if (bd.side < 0) {
+        const uv = g.getAttribute('uv') as THREE.BufferAttribute;
+        for (const [a, b] of [
+          [0, 1],
+          [3, 2],
+        ]) {
+          const ua = uv.getX(a);
+          uv.setX(a, uv.getX(b));
+          uv.setX(b, ua);
         }
       }
+      signs.add(g, atlas);
+    } else if (bd.kind === 'number') {
+      post(x, z, 2.2);
+      signs.add(quad(x, 2.45, z, -nx, -nz, 0.9, 0.9, cellNumber(bd.n), false), atlas);
+    } else {
+      post(x, z, 1.2);
+      signs.add(quad(x, 1.5, z, -nx, -nz, 0.7, 0.7, cellMarker(bd.n), false), atlas);
     }
   }
-  /** Somewhere a board can stand: past the run-off, off everything else, in front of the barriers */
-  const standAt = (x: number, z: number) => {
-    const [u, v] = toLocal([x, z]);
-    return u > -12 && u < 96 && v > -14 && v < PAVED_V - 0.5 && circuitDistance(x, z) > CLEAR + 0.2;
-  };
-  const post = (x: number, z: number, h: number) => gb.box(x - 0.05, 0, z - 0.05, 0.1, h, 0.1, INK);
-  for (const corner of corners) {
-    const side = -corner.dir;
-    // Chevron boards along the outside of the bend, facing the track, the arrows pointing this way round
-    for (let s = corner.s0 + 1; s <= corner.s1; s += 4.5) {
-      const f = frame(cc, s);
-      if (enclosed(f)) continue;
-      const lat = side * (CLEAR + 0.8);
-      const x = f.x + f.nx * lat;
-      const z = f.z + f.nz * lat;
-      if (!standAt(x, z)) continue;
-      post(x - f.tx * 0.5, z - f.tz * 0.5, 1.2);
-      post(x + f.tx * 0.5, z + f.tz * 0.5, 1.2);
-      signs.add(quad(x, 1.45, z, f.tx, f.tz, 1.3, 0.65, CELL_CHEVRON, false), atlas);
+  // An arrow painted on the asphalt before each turn, curving its way
+  const kAt = (s: number) => frame(cc, s).k;
+  for (const corner of cornersOf(cc)) {
+    const f = frame(cc, corner.s0 - 7);
+    if (Math.abs(kAt(corner.s0 - 7)) < 0.03 && !enclosed(f)) {
+      const right = corner.dir < 0;
+      // Lying flat: v along the track, u to the turn's side
+      const ux = right ? -f.nx : f.nx;
+      const uz = right ? -f.nz : f.nz;
+      signs.add(quad(f.x, f.y + DECAL, f.z, ux, uz, 2.2, 3.2, CELL_ARROW, { vx: f.tx, vz: f.tz }), atlas);
     }
-    // The corner's number on the outside at its apex, facing the karts coming into it
-    {
-      const f = frame(cc, corner.apex);
-      for (const extra of [1, 2.5, 5]) {
-        const lat = side * (CLEAR + extra);
-        const x = f.x + f.nx * lat;
-        const z = f.z + f.nz * lat;
-        if (!standAt(x, z)) continue;
-        post(x, z, 2.2);
-        signs.add(quad(x, 2.45, z, -f.nx, -f.nz, 0.9, 0.9, cellNumber(cc.turns.find((t) => Math.abs(t.s - corner.apex) < 25)?.n ?? corners.indexOf(corner) + 1), false), atlas);
-        break;
-      }
-    }
-    // An arrow painted on the asphalt before the turn, curving its way
-    {
-      const f = frame(cc, corner.s0 - 7);
-      if (Math.abs(kAt(corner.s0 - 7)) < 0.03 && !enclosed(f)) {
-        const right = corner.dir < 0;
-        // Lying flat: v along the track, u to the turn's side
-        const ux = right ? -f.nx : f.nx;
-        const uz = right ? -f.nz : f.nz;
-        signs.add(quad(f.x, f.y + DECAL, f.z, ux, uz, 2.2, 3.2, CELL_ARROW, { vx: f.tx, vz: f.tz }), atlas);
-      }
-    }
-    // Braking markers 3, 2 and 1 before the hard corners, on the outside, facing the karts coming
-    if (corner.hard)
-      for (const m of [3, 2, 1]) {
-        const s = corner.s0 - m * 8;
-        const f = frame(cc, s);
-        if (enclosed(f)) continue;
-        const lat = side * (CLEAR + 0.9);
-        const x = f.x + f.nx * lat;
-        const z = f.z + f.nz * lat;
-        if (!standAt(x, z)) continue;
-        post(x, z, 1.2);
-        signs.add(quad(x, 1.5, z, -f.nx, -f.nz, 0.7, 0.7, cellMarker(m), false), atlas);
-      }
   }
 }
 
@@ -1018,9 +1039,9 @@ function guidance(cc: Course, gb: Batch, signs: Batch, pads: Batch, atlas: THREE
 /** The site's tiles: pieces 30 on a side over the whole park, each drawing what's in it of the trackside, the fence and the lights */
 const SITE_TILE = 30;
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const P = KART_PARK;
-  site('kart park grounds', [P.x0, P.z0, P.x1, P.z1], (into) => {
+  site('kart park grounds', KART_AREA, (into) => {
     const b = new Batch();
     grounds(b);
     b.build(into, { cast: false, receive: true });
@@ -1058,8 +1079,29 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     plaza(b);
     b.build(into);
   });
-  // Kart Road in stretches, the loop's sides and the car park inside it in pieces
-  for (let x = ROAD.x0 + 3.7; x < ROAD.x1; x += 28) {
+  // Kart Road: the drive up from ew0 (its north kerb, ew0 a 3.7-half avenue) to the corner, then east in stretches;
+  // the loop's sides and the car park inside it in pieces
+  // The coach park in its lay-by south of Kart Road: asphalt, a bay line between each coach's place
+  site('kart coaches', COACH_LOT, (into) => {
+    const b = new Batch();
+    const [x0, z0, x1, z1] = COACH_LOT;
+    flatRect(b, x0, z0, x1, z1, ROAD_Y, ASPHALT);
+    b.detail(() => {
+      for (let k = 0; k <= 3; k++) b.add(new THREE.PlaneGeometry(0.1, z1 - z0 - 1).rotateX(-Math.PI / 2).translate(x0 + 0.2 + k * 7.6, PAINT_Y, (z0 + z1) / 2 + 0.3), PAINT);
+      b.add(new THREE.PlaneGeometry(x1 - x0 - 0.4, 0.1).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, PAINT_Y, z1 - 0.3), PAINT);
+    });
+    b.build(into, { cast: false, receive: true });
+  });
+  site('kart drive', [DRIVE_X - ROAD.half, ROAD.z - ROAD.half, DRIVE_X + ROAD.half, EW0 - 3.7], (into) => {
+    const b = new Batch();
+    flatRect(b, DRIVE_X - ROAD.half, ROAD.z + ROAD.half, DRIVE_X + ROAD.half, EW0 - 3.7, ROAD_Y, ASPHALT);
+    b.detail(() => {
+      for (let z = ROAD.z + ROAD.half + 0.8; z < EW0 - 4.1; z += 1.1)
+        b.add(new THREE.PlaneGeometry(0.07, 0.55).rotateX(-Math.PI / 2).translate(DRIVE_X, PAINT_Y, z), neon('#f5d76e', 0.9, 1.1));
+    });
+    b.build(into, { cast: false, receive: true });
+  });
+  for (let x = ROAD.x0 - ROAD.half; x < ROAD.x1; x += 28) {
     const x1 = Math.min(ROAD.x1, x + 28);
     site(`kart road ${Math.round(x)}`, [x, SIDEWALK.z0, x1, ROAD.z + ROAD.half], (into) => {
       const b = new Batch();
@@ -1074,7 +1116,6 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     [LOOP.x1 - LOOP.half, LOOP.z1 - LOOP.half, LOOP.x1 + LOOP.half, ROAD.z - ROAD.half],
   ];
   for (let z = cz0; z < cz1 - 0.01; z += 21) parts.push([cx0, z, cx1, Math.min(cz1, z + 21)]);
-  const PAINT = toon('#e8e4f8');
   parts.forEach((r, i) =>
     site(`kart car park ${i}`, r, (into) => {
       const b = new Batch();
@@ -1118,5 +1159,5 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     b.box(x - 0.3, 2.36, z + 0.05, 0.42, 0.14, 0.06, Wn);
     b.build(into, { cast: true, receive: true });
   });
-  if (scene) mainThread(scene);
+  if (scene) mainThread(scene, tick ?? null);
 }

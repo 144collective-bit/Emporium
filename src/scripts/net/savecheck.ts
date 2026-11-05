@@ -26,6 +26,7 @@ import { cleanCar } from '../city3d/mycar';
 import { cleanBike } from '../city3d/mybike';
 import { cleanPlane } from '../city3d/myplane';
 import { cleanTouch } from '../city3d/touchlayout';
+import { cleanHolds } from '../city3d/comfort';
 import { weaponUnlocked } from '../city3d/combat-sim';
 import { cleanLook, skinUnlocked, type SkinId } from './profile-data';
 
@@ -115,7 +116,9 @@ export function cleanSettings(v: unknown) {
   const o = obj(v) ?? {};
   const sens = typeof o.sens === 'number' && Number.isFinite(o.sens) ? Math.min(2.5, Math.max(0.3, o.sens)) : 1;
   const autoAds = ['off', 'touch', 'always'].includes(o.autoAds as string) ? (o.autoAds as string) : 'off';
-  return { sens, invert: !!o.invert, autoAds, touch: cleanTouch(o.touch) };
+  // The controls card's modes already shown (`seen`) and the comfort holds (comfort.ts), as walk.ts keeps them
+  const seen = Array.isArray(o.seen) ? [...new Set(o.seen.filter((m): m is string => typeof m === 'string' && m.length <= 24))].slice(0, 16) : [];
+  return { sens, invert: !!o.invert, autoAds, touch: cleanTouch(o.touch), seen, holds: cleanHolds(o.holds) };
 }
 /** The kart ghosts: kept as they are (only the size is checked), as long as they're a set of ghosts */
 const cleanGhosts = (v: unknown) => obj(v);
