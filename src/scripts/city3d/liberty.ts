@@ -127,10 +127,13 @@ export const LIFT_TIMES = { warn: 6, raise: 12, lower: 12 };
 
 /** The tall ship: its length, beam, how tall its masts stand over the water, its line through the middle span (z) */
 export const SHIP = { len: 7, beam: 1.8, mast: 7.2, z: ZC - 2 };
-/** Where it anchors west and east of the bridge (x) */
-export const ANCHOR_X: [number, number] = [BX - 86, BX + 46];
+/**
+ * Where it anchors west and east of the bridge (x): west of the swing bridge since docs/highway-plan.md Phase 5
+ * (swingbridge.ts swings it open for the ship) and east of the river bus's west crossing (riverroute.ts CROSS)
+ */
+export const ANCHOR_X: [number, number] = [BX - 105.5, BX + 46];
 /** Its timetable: a whole round (west to east, then back), when it weighs anchor in each half, its speed and pick-up */
-export const SHIP_TIMES = { period: 360, depart: 20, v: 3.2, a: 0.4, turn: 22 };
+export const SHIP_TIMES = { period: 360, depart: 50, v: 3.2, a: 0.4, turn: 22 };
 /** How far clear of the bridge's leaves the ship's bow and stern stay while they're up */
 export const SHIP_CLEAR = 4;
 
@@ -156,14 +159,19 @@ function when(d: number) {
   if (d >= D - D_ACC) return PASSAGE - Math.sqrt((2 * (D - d)) / a);
   return T_ACC + (d - D_ACC) / v;
 }
-/** Through the bridge in each half (seconds into the half): the leaves fully up by `up`, starting down at `down` */
-const leafWin = (() => {
-  // (the same both ways: the passage is symmetric about the bridge only if the anchors are, so each way its own)
-  const reach = SHIP_CLEAR + SHIP.len / 2;
-  const east = { up: SHIP_TIMES.depart + when(BX - reach - ANCHOR_X[0]), down: SHIP_TIMES.depart + when(BX + reach - ANCHOR_X[0]) };
-  const west = { up: SHIP_TIMES.depart + when(ANCHOR_X[1] - (BX + reach)), down: SHIP_TIMES.depart + when(ANCHOR_X[1] - (BX - reach)) };
+/**
+ * When the ship is within `reach` of x (its middle, along the river) in each half (seconds into the half: the first
+ * half eastward, the second westward): from `up` to `down` (the swing bridge's too, swingbridge.ts)
+ */
+export function shipNear(x: number, reach: number): { up: number; down: number }[] {
+  // (the same both ways: the passage is symmetric about a bridge only if the anchors are, so each way its own)
+  const at = (d: number) => SHIP_TIMES.depart + when(Math.max(0, Math.min(D, d)));
+  const east = { up: at(x - reach - ANCHOR_X[0]), down: at(x + reach - ANCHOR_X[0]) };
+  const west = { up: at(ANCHOR_X[1] - (x + reach)), down: at(ANCHOR_X[1] - (x - reach)) };
   return [east, west];
-})();
+}
+/** Through the bridge in each half (seconds into the half): the leaves fully up by `up`, starting down at `down` */
+const leafWin = shipNear(BX, SHIP_CLEAR + SHIP.len / 2);
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 
 /** The tall ship at time t (seconds): where it is, its heading (yaw: 0 is its bow to +x), whether it's under way */

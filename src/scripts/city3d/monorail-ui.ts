@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { FLOOR, MONO, MONO_STATIONS, MONO_VIEW, monoResume, monoRide, type MonoStation } from './monorail';
 import type { Ride } from './walk';
+import { rideView } from './views';
 
 export interface MonoDeps {
   camera: THREE.PerspectiveCamera;
@@ -66,10 +67,17 @@ export function createMonoUI(root: HTMLElement, d: MonoDeps) {
   let dir: 1 | -1 = 1;
   const cam = new THREE.Vector3();
   const look = new THREE.Vector3();
-  /** Alongside the train on the river's side, a little behind it, looking ahead along the beam */
+  /**
+   * Near: alongside the train on the river's side, a little behind it, looking ahead along the beam; far and the
+   * window seat (the front car, the river's side) from it (views.ts `rideView()`, V, as you look round)
+   */
   function view(x: number, dt: number, snap = false) {
-    const want = new THREE.Vector3(x - dir * 7, FLOOR + 3, MONO.z + 9);
-    const at = new THREE.Vector3(x + dir * 4, FLOOR + 1, MONO.z);
+    const near = { want: { x: x - dir * 7, y: FLOOR + 3, z: MONO.z + 9 }, at: { x: x + dir * 4, y: FLOOR + 1, z: MONO.z } };
+    const eye = { x: x + dir * 1.2, y: FLOOR + 1.05, z: MONO.z + 0.4 };
+    const v = rideView(near, { x, y: FLOOR + 1, z: MONO.z }, eye, [dir, 0]);
+    const want = new THREE.Vector3(v.want.x, v.want.y, v.want.z);
+    const at = new THREE.Vector3(v.at.x, v.at.y, v.at.z);
+    if (v.snap) snap = true;
     const k = snap ? 1 : 1 - Math.exp(-dt * 4);
     cam.lerp(want, k);
     look.lerp(at, k);
@@ -81,6 +89,7 @@ export function createMonoUI(root: HTMLElement, d: MonoDeps) {
     d.camera.lookAt(look);
   }
   const ride: Ride = {
+    kind: 'monorail',
     update(dt) {
       if (!from || !to) return { x: 0, z: 0 };
       t += dt;

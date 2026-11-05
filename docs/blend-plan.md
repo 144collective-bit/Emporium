@@ -401,18 +401,86 @@ Little changes on screen but the trees' edges.
 Each gap by its neighbours, scenery only, built from the kits and recipes
 (`recipes.ts`), one gap a step with the owner's sign-off on each:
 
-- **5a, the band south of the south row** (towards the highway's south
-  side, with the airport's old land): by the south row, a linear park along
-  the metro's line with allotments and a community garden; further south
-  and by the highway, yards and light industry (depots, a builder's yard,
-  lock-ups, a bus depot) on small streets off the arterials; by The
-  Trenches, its grit carried on in a few low blocks.
-- **5b, the strips east of town north of the river:** small mixed blocks
-  by downtown's east side (shops under flats, a few warehouses) stepping down
-  to meadow and a pond by the highway.
-- **5c, the smaller leftovers:** the slivers between districts and the
-  highway (by Westlake and Uptown's west edge, round Uptown North, beside the
-  mall's car parks): rough grass, scrub, a path, a substation, a billboard.
+- **5a, the band south of the south row (built): Southfield.** `southfield.ts`
+  (DOM-free, tested in `tests/southfield.test.ts`), drawn by `southfield3d.ts`
+  (a district loaded as you approach, `LAZY_DISTRICTS` id `southfield`):
+  - **Southfield Yards** (ref `southyards`, industry): a ring off the south
+    bank avenue (`sy-ring`: Forge Street down at x 140, along at z 261 and
+    back up as Kiln Lane at x 240, the Docks' way; lit where it meets the
+    avenue) with Yard Street across it at z 200 (`SF_STREETS`,
+    `SF_CROSSINGS`). North of Yard Street the bus depot (its shed open to a
+    forecourt of buses, a gatehouse) and Kingpost Builders (a store, material
+    bays with heaps, pallets of blocks); south of it warehouses and a works
+    (the kits, `YARD_LOTS`), a truck depot and lock-ups along the ring's
+    south leg. Worn concrete and grey sidewalks as the Docks', sodium lamps.
+  - **Southfield Park** (ref `southfield`, a park) between the east ring
+    avenue and Forge Street: a loop of gravel paths, a pond in a stone rim
+    (solid, walked round), the community garden by the south row (raised
+    beds, a shed, a polytunnel), benches, a name board, white lamps, 40-odd
+    trees in clumps.
+  - **The strips** between the small north-south roads, south of the main
+    line: allotments down the middle one (54 plots either side of a path,
+    sheds on every third, the society's hut) and the east one's south half
+    (its north half a community garden); the west one, across the ring
+    avenue from The Trenches, lock-ups and warehouses back to back.
+  - **The walks:** the railside walk under the airport branch (gravel, shrubs,
+    benches; down the inside of its bend and along its north side, 5 off the
+    track) and the walk under the main line across the strips' tops.
+  - **Nothing moves:** the metro's pillars are worked out from the street plan
+    (metro.ts `clearFor()`), so no new street goes within reach of a track
+    (the test holds it); the ring stops short of the airport branch. The
+    snapshot gains the two new streets (`sy-ring`, `sy-yard`) and nothing
+    else.
+  - Kept for later (`FUTURE_SITES`): the bus depot, the builder's merchant,
+    the lock-ups and the allotment society, no pin, panel or price.
+  - The seam map: the south strips' three gaps are gone and the south band's
+    is what's left by the highway (the railside, the land south of the
+    branch and east of Kiln Lane, 14,252 square tiles of 33,140); open land
+    inside the highway is 11%, from 22%.
+  - Measured: the boot 690.9 KB, the budget raised from 690 to 700 under the
+    owner's standing call (its data in the boot, the routes round the ring).
+- **5b, the strips east of town north of the river:** taken by the Neon Mile
+  (docs/strip-plan.md), its boulevard and resorts on that land; nothing left
+  to fill.
+- **5c, the smaller leftovers (built): the verges.** Mapped, the four gaps the
+  seam map still lists are slivers between the districts and the highway, 2 to
+  30 tiles across, mostly inside the trees' wobbled margins, so they stay open
+  land (no block, no street, nothing that moves), dressed by their neighbours:
+  `fringes.ts` (DOM-free, tested in `tests/fringes.test.ts`), drawn by
+  `fringes3d.ts` from the neighbours' chunks (`registerFringes()` from
+  southfield3d.ts, sunridge3d.ts and westlake3d.ts: the boot gets only the
+  solids and the trees' keeps, 1.9 KB).
+  - **East of Kiln Lane** (Southfield Yards' side): the Kiln Lane substation
+    (`SUBSTATION`: a gravel yard in a palisade with its gate on a gravel drive
+    off the lane, a brick control house with its name, two transformers with
+    their fins, conservators and bushings, a gantry of two portal frames with
+    insulators and wires, busbars on posts, warning plates).
+  - **Sunridge's fringe** (the suburb's side, between its wall and the
+    highway, about 15 across all the way round): a dry wash (`WASH`, a sandy
+    bed winding 10 to 14 in from the highway, cobbles and boulders, a culvert's
+    concrete headwall at each end, `HEADWALLS`) and a dirt path beside it
+    (`FRINGE_PATH`) from Sunridge's footpath at Palm Court up the strip
+    between them (squeezed round the end of Palm Court's low wall,
+    `PATH_SQUEEZE`), round the fringe and down to the north ring avenue, two
+    benches and bins facing the wash. The wash and the path are laid as
+    offsets of the highway's own centre line, so they follow its bend.
+  - **Billboards** (`BILLBOARDS`, four, one on each side of town: east of Kiln
+    Lane, the south-east bend, Sunridge's fringe, Westlake's west verge), each
+    on two steel legs with a walkway and three lamps, turned a little off
+    square towards the traffic, fixed made-up copy for the city's own places
+    (the metro, Westlake Park, the Neon Mile, the Sky Wheel; no price, no
+    number), lit a little at night under the bloom.
+  - **Scrub** on all four (and the south band round Southfield), wherever a
+    tree could stand and a little closer to the highway (not past its lamp
+    line), in clumps from a seeded noise: Sunridge's desert plants on its
+    fringe (creosote, brittlebush, agave, ocotillo), brambles, gorse and tall
+    grass on the rest; phones half, no flowers, pales or cobbles.
+  - The trees keep off the compound, the boards, the wash and the path
+    (`FRINGE_KEEPS` in landuse.ts's `KEEPS`, `since`); `FRINGE_SOLIDS` (in
+    `SOLIDS`: the palisade, the house, the boards' legs, the headwalls).
+  - The seam map still lists the four as gaps (open land, 11% inside the
+    highway): they're verges now, not land waiting for a district.
+  - Measured: the boot 694.6 KB of 700.
 - **Sites kept for later** (`FUTURE_SITES`): a few of the new buildings
   marked as places that could be run for Dorras in a later plan, with no
   pin, panel or price now.
@@ -426,9 +494,80 @@ For each seam in the seam map, the treatment it needs:
 - **Shared streets:** the streets and arterials between districts get one
   look both sides: sidewalks where people would walk, street trees, the
   same lamps, a shared kerb.
-- **Lamps mixed at the edges:** `lampKind()` grows a blend zone a block or
-  two wide at each district's edge, each lamp seeded white or sodium in
-  proportion to how far in it stands.
+- **6a, lamps mixed at the edges (built):** `lampmix.ts` (DOM-free, tested
+  in `tests/lampmix.test.ts`): the sodium districts (`SODIUM_AREAS`: The
+  Trenches, the waterfront, the Docks, Southfield Yards) and how far a point
+  stands inside them (`sodiumDepth()`, each district's own test with its
+  margin halved down to the edge); within `MIX` (18, about a block) either
+  side of the edge a lamp is sodium with a share easing from 0 outside to 1
+  inside (`sodiumShare()`), picked by its own number from where it stands
+  (`lampTone()`); The Trenches' dead and flickering lamps stay its own.
+  world.ts's `buildLamps()` takes each lamp's tone from it. No new draws;
+  the boot 694.7 KB.
+- **6b, the first seam (built): downtown and the town across the ring
+  avenue.** Mapped, the ring's north, west and east sides had no lamps and no
+  street trees at all, only four bus shelters and two alley mouths: downtown
+  built to its sidewalk on one side, the town's pads and flower beds on the
+  other, a bare kerb between. `ringstreet.ts` (DOM-free, tested in
+  `tests/ringstreet.test.ts`): the same white town lamp on both sidewalks
+  (`RING_LAMPS`, 42: by the kerb, `KERB_IN` in, so the walkers pass inside
+  them; spread evenly about every `LAMP_GAP` over each stretch between
+  junctions, `JUNCTION_CLEAR` from them; clear of the shelters, the alleys'
+  mouths, the metro's door and anything solid; the south avenue's river side
+  left to the promenade's lamps), and Uptown's planted median carried on round
+  downtown (`RING_MEDIAN`: the bank avenue's clipped hedge and slim columnar
+  trees, `HEDGE`, cut `HEDGE_CLEAR` short of every crossing street with a
+  diagonal's slant reckoned in, round the el's pillars, no tree under the el).
+  Street trees by the sidewalks were tried and left out: downtown is built to
+  its sidewalk, and the town's frontage is its pads with flower beds between.
+  Added at the boot (the lamps with the town's in neighbourhoods.ts) and drawn
+  with the medians (world.ts); no new draws.
+- **6c, the second seam (built): Uptown and Westlake Park across the north
+  avenue.** Mapped, Uptown's lamps stood on its own sidewalk every 12, the
+  park's side had none (its low wall along a bare sidewalk, four gates), the
+  median was bare. `ringstreet.ts` carries on: the same lamp across from each
+  of Uptown's on the park's sidewalk (`PARK_SIDE_LAMPS`, 8: on Uptown's
+  spacing and offset, clear of the junctions' zebras and the axis's, one in
+  front of a gate standing aside to flank it, `GATE_CLEAR`), the planted
+  median carried on west from downtown's ring to Uptown's west edge (the
+  north side's `median` span, broken at the axis's zebra; 26 more trees), and
+  a row of street trees just inside the park's wall (`PARK_EDGE_TREES`, 15:
+  about every `EDGE_TREE_GAP`, `EDGE_TREE_IN` in, clear of the ring walk, the
+  gates' ways in, the planters, benches, lamps and the park's own trees), so
+  Uptown's towers look across a tree-lined avenue. Stepping Uptown's edge
+  lots down was left: its towers there already stand on mid-rise masonry
+  bases at the sidewalk, and nothing that exists moves. Added at the boot
+  with 6b's; no new draws.
+- **6d, the third seam (built): Starlight Mall and Palm Court across the
+  east avenue.** Mapped, the avenue there had no lamps at all: the mall's
+  anchor and then a bare strip of grass between the mall's loop road and the
+  avenue on one side (the loop's own lamps facing the loop), Palm Court's
+  backs on the other, the el down the median. `ringstreet.ts` carries on: the
+  same lamp on both sides about every `LAMP_GAP` from the mall's north edge to
+  the Parkway's crossing (`MALL_SIDE_LAMPS`, 24: on the sidewalks, on the
+  strip's grass where there's none, never on a verge's bank, clear of Palm
+  Court's zebra and the mall's own lamps), the median's hedge carried north
+  under the el to the mall (the east side's `median` span, cut at the zebra
+  and round the pillars, no trees under the el), and a row of street trees down
+  the middle of the grass strip (`STRIP_TREES`, 7, about every
+  `STRIP_TREE_GAP`, nudged clear of the lamps). A sidewalk on the strip was
+  left out: the mall block's verge hedge runs across it to the kerb, and
+  nothing that exists moves. Added at the boot with 6b's; no new draws.
+- **6e, the fourth seam (built): Uptown North and Westlake Park, with no
+  street between.** Mapped, the park's east sidewalk and Uptown North's west
+  one ran side by side along the park's low wall, the west column's towers
+  opening their lobbies onto them: two strips of plain sidewalk, no lamps and
+  no trees, between the park's trees and the towers. `parkedge.ts`
+  (DOM-free, tested in `tests/parkedge.test.ts`) makes them one walk: the
+  plaza's granite over both (`PROMENADE`, a hair inside the park's lot edge so
+  it never meets the gates' paths; the gates' piers stand on it), lamps down
+  its middle about every other tree (`EDGE_LAMPS`, 9, the arm over the walk
+  towards the towers, a taken spot nudged along) and trees in grates between
+  them (`EDGE_TREES`, 10, `TREE_GAP`, `GRATE`), all clear of the gates
+  (`GATE_CLEAR`) and their walks through the block, the lobbies' doors
+  (`DOOR_CLEAR`), the square's trees and every lamp. The lamps and trees at
+  the boot (index.ts), the granite and grates as sites in Uptown's chunk
+  (uptownnorth3d.ts); no new draws.
 - **Stepped heights:** where towers meet low-rise (Uptown's edge by
   Westlake and downtown, Uptown North by the mall), the edge lots step down;
   where The Trenches meets the south row, its tenements step to the row's
@@ -440,7 +579,10 @@ For each seam in the seam map, the treatment it needs:
   a bit of each style (brick shopfronts with a cleaner face towards Uptown,
   stucco and brick where Sunridge meets Palm Court).
 - One seam a step, in the order the seam map ranks them (what's seen most
-  first).
+  first). Ranked today (district against district): Downtown and the town
+  across the ring avenue, Uptown and Westlake Park, the mall and Palm Court,
+  Uptown North and Westlake Park, Sunridge and the Neon Mile, Uptown North
+  and the mall, Southfield and its yards, The Trenches and the yards.
 
 ### Phase 7: the in-between details
 

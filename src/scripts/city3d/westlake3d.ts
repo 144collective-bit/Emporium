@@ -23,6 +23,7 @@ import { PATH_Y, PAVE_Y, bench, registerGardens } from './gardens3d';
 import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
 import { BENCHES, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, lakeLine, type ParkPath, type Pt } from './westlake';
+import { registerFringes } from './fringes3d';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -127,6 +128,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   if (scene && tick) registerParkLife(scene, tick, low);
   // The walks' kerbs and edges, the park's wall, the formal garden, the planters and the terraces (stage 3)
   registerGardens(low);
+  // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
+  registerFringes(['west', 'north'], low);
   // The paths: a site a stretch
   for (const q of PATHS)
     stretches(q).forEach((s, k) =>

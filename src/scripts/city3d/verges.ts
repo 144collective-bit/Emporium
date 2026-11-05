@@ -19,7 +19,7 @@
  * broken every `GAP_EVERY` (a way through, `GAP`) and solid between
  * (`VERGE_SOLIDS`, in `SOLIDS`), low enough to vault (vault.ts).
  */
-import { PLAN, inPoly, type Pt } from './streetplan';
+import { PLAN, inPoly, type Pt, raised } from './streetplan';
 import { HIGHWAY_HALF, fromHighway } from './highway';
 import { inWater } from './river';
 import { inBasin } from './docks';
@@ -109,7 +109,7 @@ function indexes() {
   if (idx) return idx;
   const streets = new Map<string, Seg[]>();
   for (const s of PLAN.streets) {
-    if (s.kind === 'highway') continue;
+    if (raised(s)) continue;
     const pts = s.loop ? [...s.pts, s.pts[0]] : s.pts;
     for (let i = 1; i < pts.length; i++) {
       const seg = { a: pts[i - 1], b: pts[i], r: s.half };

@@ -12,6 +12,7 @@ import { SLAB } from './world';
 import { site } from './tilework';
 import { GATE_WALKS, NORTH_SQUARE, POOL, SQUARE_BENCHES, SQUARE_TREES, type Rect } from './uptownnorth';
 import { GRANITE_TILE, bench, granite, quad } from './plaza3d';
+import { EDGE_TREES, GRATE, PROMENADE } from './parkedge';
 
 const PAVE = SLAB + 0.012;
 const STONE = toon('#d8d2c4');
@@ -63,7 +64,36 @@ function square(b: Batch) {
   }
 }
 
+/**
+ * The walk between Westlake Park and the towers (parkedge.ts, docs/blend-plan.md Phase 6e): the plaza's granite
+ * over both sidewalks, in pieces no longer than a tile, and grates round its trees
+ */
+function edgeWalk(b: Batch, [z0, z1]: [number, number]) {
+  const [x0, , x1] = PROMENADE;
+  b.add(quad([x0, z0, x1, z1], PAVE, GRANITE_TILE), granite);
+  for (const [tx, tz] of EDGE_TREES) {
+    if (tz < z0 || tz >= z1) continue;
+    const g = GRATE / 2;
+    b.box(tx - g, PAVE, tz - g, GRATE, 0.006, GRATE, IRON);
+    b.detail(() => {
+      for (let k = -2; k <= 2; k++) b.box(tx - g + 0.05, PAVE + 0.006, tz + k * 0.22 - 0.03, GRATE - 0.1, 0.004, 0.06, STONE_DARK);
+    });
+  }
+}
+
 export function registerNorth() {
+  {
+    const [x0, z0, x1, z1] = PROMENADE;
+    const n = Math.ceil((z1 - z0) / 16);
+    for (let k = 0; k < n; k++) {
+      const span: [number, number] = [z0 + ((z1 - z0) * k) / n, z0 + ((z1 - z0) * (k + 1)) / n];
+      site(`uptown north park walk ${k}`, [x0, span[0], x1, span[1]], (into) => {
+        const b = new Batch();
+        edgeWalk(b, span);
+        b.build(into, { cast: false, receive: true });
+      });
+    }
+  }
   const [x0, z0, x1, z1] = NORTH_SQUARE;
   site('uptown north square', [x0, z0, x1, z1], (into) => {
     const b = new Batch();

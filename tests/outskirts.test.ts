@@ -84,15 +84,16 @@ test('as many trees as the densities give the land free today, each where a tree
   // (the world before Phase 6 is mostly districts now: its trees are counted against the land a tree may stand on
   // today, at the belt's density by the town easing to the open land's, docs/blend-plan.md Phase 1)
   const land: [number, number, number, number] = [TODAY[0] + 4, TODAY[0] + 4, TODAY[1] - 4, TODAY[1] - 4];
-  // (2,500 for the count: enough trees that the random tries' noise is a few per cent; the tiers' 250, 150 and 90 for
-  // where they stand)
-  for (const count of [2500, 250, 150, 90]) {
+  // (5,000 for the count: enough trees that the random tries' noise is a few per cent on the little free land left
+  // there now (2,500 was, until Southfield took the south band: docs/blend-plan.md Phase 5a); the tiers' 250, 150 and
+  // 90 for where they stand)
+  for (const count of [5000, 250, 150, 90]) {
     const trees = outskirtsTrees(count, 0.6, [], TODAY);
     const [belt, open] = [count / BELT_FREE, (count * 0.6) / OPEN_FREE];
     let want = 0;
     for (let x = land[0] + 1; x < land[2]; x += 2)
       for (let z = land[1] + 1; z < land[3]; z += 2) if (treeSpot(x, z)) want += 4 * (open + (belt - open) * beltShare(x, z));
-    if (count === 2500) assert.ok(Math.abs(trees.length - want) / want < 0.08, `${trees.length} for ${count}, the land gives ${want.toFixed(0)}`);
+    if (count === 5000) assert.ok(Math.abs(trees.length - want) / want < 0.08, `${trees.length} for ${count}, the land gives ${want.toFixed(0)}`);
     for (const t of trees) {
       assert.ok(treeSpot(t.x, t.z));
       assert.ok(t.x > land[0] && t.x < land[2] && t.z > land[1] && t.z < land[3]);
@@ -138,8 +139,10 @@ test('woods stand only well away from the city, never on the land the world had 
   const trees = outskirtsTrees(150, 0.6, [], P6);
   const woods = trees.filter((t) => inWoods(t.x, t.z));
   // About the woods' density on their land, a few thousand trees on the medium tier, a share of them pines (fewer
-  // since Crestmont's hills took the north-east corner's: they carry their own oaks and scrub, landscape.ts)
-  assert.ok(woods.length > 1000 && woods.length < 5000, `${woods.length} trees in the woods`);
+  // since Crestmont's hills took the north-east corner's: they carry their own oaks and scrub, landscape.ts; and a few
+  // dozen more since Lot 9 cleared its land south of the highway's south-west corner, lot9.ts; and about two hundred more
+  // since the kart park moved west onto a patch of them, docs/kart-west-plan.md: 765)
+  assert.ok(woods.length > 700 && woods.length < 5000, `${woods.length} trees in the woods`);
   const pines = woods.filter((t) => t.pine).length / woods.length;
   assert.ok(Math.abs(pines - WOODS.pine) < 0.05, `pines ${pines}`);
   for (const t of woods) {

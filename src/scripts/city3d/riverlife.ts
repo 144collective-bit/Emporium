@@ -87,9 +87,15 @@ export function stadium(x0: number, x1: number, zn: number, zs: number, step = 0
 
 
 /** The cruise boat: round the town's reach (eastward on the north line), its hull, its pace */
-export const CRUISE = { loop: loopOf(stadium(-105, 26, 87.7, 114.3)), hull: { len: 5.6, beam: 1.7, top: 1.65 } as Hull, v: 2.0, offset: 40 };
+const CRUISE_LOOP = loopOf(stadium(-84, 26, 87.7, 114.3));
+/**
+ * (since the swing bridge, docs/highway-plan.md Phase 5, its west turn crosses the tall ship's line inside the ship's
+ * passage: it goes round once every half of the ship's round, `SHIP_TIMES.period` / 2, timed to cross it while the
+ * ship's away, `offset`)
+ */
+export const CRUISE = { loop: CRUISE_LOOP, hull: { len: 5.6, beam: 1.7, top: 1.65 } as Hull, v: CRUISE_LOOP.len / 180, offset: 0 };
 /** The rowing eight: out and back west of the river bus's crossing */
-export const CREW = { loop: loopOf(stadium(-184, -140, 106.8, 109.2)), hull: { len: 5.2, beam: 0.5, top: 0.75 } as Hull, v: 1.7, offset: 0 };
+export const CREW = { loop: loopOf(stadium(-184, -146, 106.8, 109.2)), hull: { len: 5.2, beam: 0.5, top: 0.75 } as Hull, v: 1.7, offset: 0 };
 /** The dinghies: each round its own circle in the wide reach out west, its pace and way round, its sail's colour */
 export const DINGHIES: { c: Pt; r: number; v: number; way: 1 | -1; sail: string }[] = (
   [

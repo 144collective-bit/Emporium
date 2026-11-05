@@ -137,6 +137,33 @@ export function guardOver(sec: number, p: Pose) {
   p.lean += GUARD.lean;
 }
 
+/**
+ * Cheering (docs/kart-west-plan.md Phase 4: the kart park's fans as the karts go by): both hands up over the head,
+ * pumping twice a second, the head tipped up after them; standing over a captured idle, or seated (`sitCheerPose`)
+ */
+export const CHEER = { low: [V(-0.21, 0.46, 0.12), V(0.21, 0.46, 0.12)], high: [V(-0.15, 0.66, 0.07), V(0.15, 0.66, 0.07)], headPitch: 0.2, lean: -0.04, grip: 0.9 };
+export const CHEER_SECONDS = 1;
+export const CHEER_PUMP: [number, number][] = [
+  [0, 0],
+  [0.25, 1],
+  [0.5, 0],
+  [0.75, 1],
+  [1, 0],
+];
+export function cheerOver(sec: number, p: Pose) {
+  const k = keyed(CHEER_PUMP, sec % CHEER_SECONDS);
+  // (the hands a beat apart, so it reads as a cheer, not a jumping jack)
+  const k2 = keyed(CHEER_PUMP, (sec + 0.12) % CHEER_SECONDS);
+  hand(p, 0, CHEER.low[0], CHEER.high[0], k);
+  hand(p, 1, CHEER.low[1], CHEER.high[1], k2);
+  p.headPitch = CHEER.headPitch;
+  p.lean += CHEER.lean;
+}
+export function sitCheerPose(p: Pose, t: number) {
+  sitPose(p, t);
+  cheerOver(t, p);
+}
+
 /* ---------- Seated, formulas over the sit pose ---------- */
 
 export const EAT_SECONDS = 12;

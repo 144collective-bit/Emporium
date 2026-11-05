@@ -1,6 +1,11 @@
 {
+  "id": "/",
   "name": "The Degen Emporium",
   "short_name": "Degen Emporium",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
   "icons": [
     {
       "src": "/icon-512.png",

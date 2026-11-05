@@ -38,7 +38,7 @@ export const MISSIONS: Mission[] = [
   { id: 'sparring-partner', name: 'Sparring partner', blurb: 'Spar with a partner on the street: Big Duke waits on the lawn behind the Fight Club.', level: 1, goal: counter('streetSpars', 1), reward: 400, xp: 80 },
   { id: 'one-two-three', name: 'One, two, three', blurb: 'Land a chain of three on a training dummy by hand.', level: 1, goal: counter('streetChains', 1), reward: 300, xp: 60 },
   { id: 'bare-hands', name: 'Bare hands', blurb: 'Knock down 3 training dummies with your fists (empty hands, then click).', level: 1, goal: counter('fistDowns', 3), reward: 400, xp: 80 },
-  { id: 'first-lap', name: 'First lap', blurb: 'Finish a race at the kart park, north-east past the Parkway.', level: 1, goal: counter('kartRaces', 1), reward: 500, xp: 100 },
+  { id: 'first-lap', name: 'First lap', blurb: 'Finish a race at the kart park, west past the ring highway.', level: 1, goal: counter('kartRaces', 1), reward: 500, xp: 100 },
   // Tier 2
   { id: 'shopkeeper', name: 'Shopkeeper', blurb: 'Sell 150 things.', level: 3, goal: counter('sold', 150), reward: 900, xp: 150 },
   { id: 'courier-king', name: 'Courier king', blurb: 'Deliver 5 contracts.', level: 3, goal: counter('contracts', 5), reward: 1200, xp: 180 },

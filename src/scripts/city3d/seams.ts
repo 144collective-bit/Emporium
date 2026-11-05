@@ -23,6 +23,7 @@ import { AREA_IDS, areaOfBlock } from './areas';
 export { AREAS, AREA_IDS, areaOfBlock, type Area, type Character } from './areas';
 import { PLAN, slabOf, inPoly, type Pt, type StreetKind } from './streetplan';
 import { HIGHWAY_HALF, fromHighway, insideHighway } from './highway';
+import { rampLand } from './viaduct';
 import { inWater } from './river';
 import { inBasin, DOCKS_RECT } from './docks';
 import { inLake } from './westlake';
@@ -79,7 +80,7 @@ export const C = {
   slip: -12,
   alley: -13,
 } as const;
-const STREET_CODE: Record<StreetKind, number> = { street: C.street, avenue: C.avenue, slip: C.slip, alley: C.alley, highway: C.highway };
+const STREET_CODE: Record<StreetKind, number> = { street: C.street, avenue: C.avenue, ramp: C.highway, alley: C.alley, highway: C.highway };
 const isWay = (c: number) => c <= C.walk || c === C.highway;
 const isOpen = (c: number) => c === C.open || c === C.outside;
 
@@ -169,6 +170,8 @@ export function landMap(): LandMap {
       const [x, z] = at(i, j);
       const n = j * nx + i;
       if (fromHighway(x, z) <= HIGHWAY_HALF) cells[n] = C.highway;
+      // (the exits' ramps' open land is the highway's too, docs/highway-plan.md Phase 1b: what else is under them stays)
+      else if ((cells[n] === C.open || cells[n] === C.outside) && rampLand(x, z)) cells[n] = C.highway;
       // (Westlake's lake is the park's own: not a seam)
       if (inWater(x, z) || inBasin(x, z)) cells[n] = C.water;
       else if (inLake(x, z)) cells[n] = AREA_IX.get('westlake')!;
@@ -321,18 +324,18 @@ export function seams(map: LandMap = landMap()): Seam[] {
 
 /** The open land inside the highway's patches the plan names (a point in each), docs/blend-plan.md Phase 5 */
 export const GAP_NAMES: { id: string; name: string; at: Pt }[] = [
-  // South of the south row to the highway's south side: the airport's old land, east of the arterials
-  { id: 'south-band', name: "The south band (the airport's old land)", at: [171, 229] },
-  // ...and between the arterials south of the south row, west to east
-  { id: 'south-strip-w', name: 'South strip, west', at: [7, 243] },
-  { id: 'south-strip-m', name: 'South strip, middle', at: [29, 241] },
-  { id: 'south-strip-e', name: 'South strip, east', at: [53, 243] },
+  // South of the south row to the highway's south side, round Southfield (docs/blend-plan.md Phase 5a): the railside
+  // walk under the airport branch, the land by the highway and east of Kiln Lane (the south strips are Southfield's)
+  { id: 'south-band', name: 'The south band by the highway', at: [200, 300] },
   // (the east strip, east of town north of the river, is the Neon Mile's now: docs/strip-plan.md)
   // Round Sunridge's wall to the highway and the Parkway
   { id: 'sunridge-fringe', name: "Sunridge's fringe", at: [191, -151] },
-  // The verges between the park and the highway: the west, and the north (with the stadium's footbridge)
+  // The verge between the park and the highway on the west (the north verge went to exit 1's slip ramp,
+  // docs/highway-plan.md Phase 1b: what's left of it is too small to count)
   { id: 'westlake-verge', name: "Westlake's west verge", at: [-203, -93] },
-  { id: 'north-verge', name: 'The north verge', at: [-67, -163] },
+  // Behind Starlight Mall to the highway's north side, between the north avenue and the east ring avenue (open since
+  // the street-level highway's slip lanes there went with its rise, docs/highway-plan.md Phase 2)
+  { id: 'mall-verge', name: "The verge behind the mall", at: [29, -161] },
 ];
 
 export interface Gap {

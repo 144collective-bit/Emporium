@@ -6,13 +6,18 @@
  * bike, the boat, the aircraft, your own kart), in a kart race and in the Fight Club's ring. DOM-free (tested in tests/touchlayout.test.ts); controls.ts puts it on the
  * page as CSS variables.
  *
+ * Phase 6 (moving the buttons): the player can drag a family's buttons (on foot, at the wheel, in the ring) where
+ * they like, per screen shape; `TouchPrefs.arrange` holds where each slot's centre went, as a share of the screen,
+ * in the right hand's frame (left-handed mirrors it as it mirrors the rest), and a layout that would clash on
+ * this screen falls back to the slots.
+ *
  * Every number is CSS pixels. A button is its centre and its diameter: `x` from the right edge for the right
  * cluster (from the left edge for the left one), `y` from the bottom edge; the page adds the safe areas.
  */
 
 export type Action =
   | 'jump' | 'sprint' | 'crouch' | 'punch' | 'block' | 'kick' | 'fire' | 'aim' | 'reload' | 'swap'
-  | 'gas' | 'brake' | 'horn' | 'view' | 'drift' | 'dodge';
+  | 'gas' | 'brake' | 'horn' | 'view' | 'drift' | 'dodge' | 'item';
 /** On foot with empty hands (the fists) or a gun out */
 export type FootMode = 'fists' | 'armed';
 /** Every mode: on foot, at the wheel of anything drive.ts / fly.ts / boat.ts runs, a kart race, the ring */
@@ -31,8 +36,11 @@ export interface Layout {
   shape: Shape;
   buttons: Partial<Record<Action, Spot>>;
   stick: Spot;
-  /** The hotbar: a right-anchored row (`right` from the right edge, `bottom`), its slots `slot` square */
-  hotbar: { right: number; bottom: number; slot: number };
+  /** The hotbar: a row anchored to the right edge (the left, left-handed: `side`), `edge` in from it,
+   *  `bottom` up, its slots `slot` square */
+  hotbar: { side: 'r' | 'l'; edge: number; bottom: number; slot: number };
+  /** The size the buttons came out at (the player's, or smaller where theirs wouldn't fit) */
+  scale: number;
   /** The door prompt: its centre from the left edge, its bottom */
   prompt: { cx: number; bottom: number };
 }
@@ -42,8 +50,9 @@ export const LAYOUTS: Record<Mode, Partial<Record<Slot, Action>>> = {
   fists: { main: 'punch', a1: 'jump', a2: 'block', a3: 'sprint', b2: 'kick' },
   armed: { main: 'fire', a1: 'jump', a2: 'reload', a3: 'sprint', b1: 'swap', b2: 'aim' },
   drive: { main: 'gas', a1: 'brake', a2: 'view', a3: 'horn' },
-  kart: { main: 'gas', a1: 'brake', a2: 'drift' },
-  ring: { main: 'punch', a1: 'dodge', a2: 'block', b2: 'kick' },
+  // (the item button only shows in an items race, kart.ts `has-items`)
+  kart: { main: 'gas', a1: 'brake', a2: 'drift', a3: 'view', b2: 'item' },
+  ring: { main: 'punch', a1: 'dodge', a2: 'block', a3: 'view', b2: 'kick' },
 };
 const ON_FOOT = (m: Mode): m is FootMode => m === 'fists' || m === 'armed';
 
@@ -90,36 +99,247 @@ function slotSpot(r: Ring, slot: Slot): Spot {
 }
 const round = (v: number) => Math.round(v * 10) / 10;
 
-/** The controls on foot for a screen `w` x `h` (CSS pixels, inside the safe areas) in mode `mode` */
-export function footLayout(w: number, h: number, mode: FootMode): Layout {
-  return layoutFor(w, h, mode);
+/* ---------- The player's choices (docs/controls-plan.md Phase 4): saved with walk mode's settings ---------- */
+export type TouchSize = 'small' | 'medium' | 'large';
+export const SIZES: Record<TouchSize, number> = { small: 0.85, medium: 1, large: 1.15 };
+export const TOUCH_SIZES = Object.keys(SIZES) as TouchSize[];
+/** How see-through the buttons are while not held: 1 solid, down to `ALPHA_MIN` */
+export const ALPHA_MIN = 0.4;
+export interface TouchPrefs {
+  size: TouchSize;
+  alpha: number;
+  /** Left-handed: the stick on the right, the buttons on the left */
+  left: boolean;
+  /** Buttons moved by hand (Phase 6): by `arrangeKey()`, each item's centre as [share of the width from the
+   *  left, share of the height from the top], in the right hand's frame */
+  arrange: Arrangement;
+}
+export type Arrangement = Partial<Record<string, Partial<Record<Item, [number, number]>>>>;
+export const DEFAULT_TOUCH: TouchPrefs = { size: 'medium', alpha: 1, left: false, arrange: {} };
+
+/* ---------- Moving the buttons (Phase 6) ---------- */
+/** The families of modes arranged together: on foot (empty hands and a gun out share the slots), at the wheel
+ *  (driving, riding, boating, flying and a kart race), the Fight Club's ring */
+export type Family = 'foot' | 'wheel' | 'ring';
+export const FAMILIES: Family[] = ['foot', 'wheel', 'ring'];
+export const familyOf = (m: Mode): Family => (ON_FOOT(m) ? 'foot' : m === 'ring' ? 'ring' : 'wheel');
+/** What can be moved: the slots, the stick and (on foot) Crouch */
+export type Item = Slot | 'stick' | 'crouch';
+const SLOTS: Slot[] = ['main', 'a1', 'a2', 'a3', 'b1', 'b2'];
+/** The mode the arranging screen shows for a family: the one using the most of its slots */
+export const SHOWN: Record<Family, Mode> = { foot: 'armed', wheel: 'kart', ring: 'ring' };
+/** A family's items, in the order the arranging screen lists them */
+export function itemsOf(f: Family): Item[] {
+  const slots = SLOTS.filter((s) => LAYOUTS[SHOWN[f]][s]);
+  return f === 'foot' ? [...slots, 'crouch', 'stick'] : [...slots, 'stick'];
+}
+/** Where an arrangement is kept: per family and per screen shape (upright and narrow share one) */
+export const arrangeKey = (f: Family, shape: Shape) => `${f}:${shape === 'side' ? 'side' : 'up'}`;
+const ARRANGE_KEYS = FAMILIES.flatMap((f) => [arrangeKey(f, 'up'), arrangeKey(f, 'side')]);
+
+/** Anything saved, made sound (an older save has none: the defaults) */
+export function cleanTouch(v: unknown): TouchPrefs {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  const size = TOUCH_SIZES.includes(o.size as TouchSize) ? (o.size as TouchSize) : DEFAULT_TOUCH.size;
+  const a = typeof o.alpha === 'number' && Number.isFinite(o.alpha) ? o.alpha : DEFAULT_TOUCH.alpha;
+  const arrange: Arrangement = {};
+  const ar = (o.arrange && typeof o.arrange === 'object' ? o.arrange : {}) as Record<string, unknown>;
+  for (const key of ARRANGE_KEYS) {
+    const got = ar[key];
+    if (!got || typeof got !== 'object') continue;
+    const fam = key.split(':')[0] as Family;
+    const out: Partial<Record<Item, [number, number]>> = {};
+    for (const item of itemsOf(fam)) {
+      const p = (got as Record<string, unknown>)[item];
+      if (Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1))
+        out[item] = [Math.round(p[0] * 1e4) / 1e4, Math.round(p[1] * 1e4) / 1e4];
+    }
+    if (Object.keys(out).length) arrange[key] = out;
+  }
+  return { size, alpha: Math.round(Math.min(1, Math.max(ALPHA_MIN, a)) * 100) / 100, left: o.left === true, arrange };
 }
 
-/** The controls in any mode (on foot it's footLayout's: Crouch, the hotbar and the prompt with them) */
-export function layoutFor(w: number, h: number, mode: Mode): Layout {
+/** The controls on foot for a screen `w` x `h` (CSS pixels, inside the safe areas) in mode `mode` */
+export function footLayout(w: number, h: number, mode: FootMode, prefs: TouchPrefs = DEFAULT_TOUCH): Layout {
+  return layoutFor(w, h, mode, prefs);
+}
+
+/** The controls in any mode, at the player's size and hand: a size that won't fit the screen steps down
+ *  until it does (never under medium; small always fits), and left-handed mirrors everything */
+export function layoutFor(w: number, h: number, mode: Mode, prefs: TouchPrefs = DEFAULT_TOUCH): Layout {
+  // (buttons the player moved, if they still fit this screen at this size; the slots otherwise)
+  const moved = prefs.arrange?.[arrangeKey(familyOf(mode), shapeOf(w, h))];
+  let L = moved ? sized(w, h, mode, prefs.size, moved) : null;
+  if (!L || clash(L, w, h)) L = sized(w, h, mode, prefs.size);
+  return prefs.left ? mirror(L, w) : L;
+}
+
+function sized(w: number, h: number, mode: Mode, size: TouchSize, moved?: Partial<Record<Item, [number, number]>>): Layout {
+  let s = SIZES[size];
+  let L = build(w, h, mode, s, moved);
+  while (s > 1 && clash(L, w, h)) {
+    s = Math.max(1, Math.round((s - 0.05) * 100) / 100);
+    L = build(w, h, mode, s, moved);
+  }
+  return L;
+}
+
+/** A spot of diameter `d` with its centre at (`cx`, `cy`) from the screen's top-left, anchored to the nearer side */
+export function spotAt(cx: number, cy: number, d: number, w: number, h: number): Spot {
+  const side = cx > w / 2 ? 'r' : 'l';
+  return { side, x: round(side === 'r' ? w - cx : cx), y: round(h - cy), d };
+}
+
+/** The layout with one item moved to (`cx`, `cy`) on the screen, or null where it wouldn't fit there (off screen,
+ *  under the header, touching another button, the stick, the hotbar or the prompt): the arranging screen's
+ *  check as a button is dragged. `mode` is the family's shown mode (`SHOWN`). */
+export function moveItem(L: Layout, mode: Mode, item: Item, cx: number, cy: number, w: number, h: number): Layout | null {
+  const next: Layout = { ...L, buttons: { ...L.buttons } };
+  if (item === 'stick') next.stick = spotAt(cx, cy, L.stick.d, w, h);
+  else {
+    const action = item === 'crouch' ? 'crouch' : LAYOUTS[mode][item];
+    const was = action && L.buttons[action];
+    if (!action || !was) return null;
+    next.buttons[action] = spotAt(cx, cy, was.d, w, h);
+  }
+  return clash(next, w, h) ? null : next;
+}
+
+/** Where each of a family's items stands on a layout, as shares of the screen in the right hand's frame (what
+ *  `TouchPrefs.arrange` keeps; `left` un-mirrors a left-handed screen's) */
+export function arrangementOf(L: Layout, f: Family, w: number, h: number, left: boolean): Partial<Record<Item, [number, number]>> {
+  const out: Partial<Record<Item, [number, number]>> = {};
+  for (const item of itemsOf(f)) {
+    const s = item === 'stick' ? L.stick : L.buttons[item === 'crouch' ? 'crouch' : LAYOUTS[SHOWN[f]][item]!];
+    if (!s) continue;
+    const [cx, cy] = centreOf(s, w, h);
+    out[item] = [Math.round(((left ? w - cx : cx) / w) * 1e4) / 1e4, Math.round((cy / h) * 1e4) / 1e4];
+  }
+  return out;
+}
+
+const scaled = (r: Ring, s: number): Ring => ({
+  mx: r.mx * s,
+  my: r.my * s,
+  main: r.main * s,
+  small: r.small * s,
+  inner: r.inner * s,
+  outer: r.outer * s,
+  stick: r.stick * s,
+  stickAt: [r.stickAt[0] * s, r.stickAt[1] * s],
+  crouch: r.crouch * s,
+  crouchAt: [r.crouchAt[0] * s, r.crouchAt[1] * s],
+  hotSlot: r.hotSlot,
+  wheel: r.wheel * s,
+  wheelAt: [r.wheelAt[0] * s, r.wheelAt[1] * s],
+});
+
+function build(w: number, h: number, mode: Mode, scale: number, moved?: Partial<Record<Item, [number, number]>>): Layout {
   const shape = shapeOf(w, h);
-  const r = RINGS[shape];
+  const r = scaled(RINGS[shape], scale);
   const buttons: Partial<Record<Action, Spot>> = {};
   for (const [slot, action] of Object.entries(LAYOUTS[mode]) as [Slot, Action][]) buttons[action] = slotSpot(r, slot);
   const wheel = mode === 'drive' || mode === 'kart';
-  if (ON_FOOT(mode)) buttons.crouch = { side: 'l', x: r.crouchAt[0], y: r.crouchAt[1], d: r.crouch };
-  const stick: Spot = wheel ? { side: 'l', x: r.wheelAt[0], y: r.wheelAt[1], d: r.wheel } : { side: 'l', x: r.stickAt[0], y: r.stickAt[1], d: r.stick };
+  if (ON_FOOT(mode)) buttons.crouch = { side: 'l', x: round(r.crouchAt[0]), y: round(r.crouchAt[1]), d: round(r.crouch) };
+  const stick: Spot = wheel
+    ? { side: 'l', x: round(r.wheelAt[0]), y: round(r.wheelAt[1]), d: round(r.wheel) }
+    : { side: 'l', x: round(r.stickAt[0]), y: round(r.stickAt[1]), d: round(r.stick) };
+  if (moved) {
+    // (the player's places: the centres they chose, at this size)
+    const at = (p: [number, number], d: number) => spotAt(p[0] * w, p[1] * h, d, w, h);
+    for (const [slot, action] of Object.entries(LAYOUTS[mode]) as [Slot, Action][]) {
+      const p = moved[slot];
+      if (p) buttons[action] = at(p, buttons[action]!.d);
+    }
+    if (moved.crouch && buttons.crouch) buttons.crouch = at(moved.crouch, buttons.crouch.d);
+    if (moved.stick) Object.assign(stick, at(moved.stick, stick.d));
+  }
   const top = clusterTop(r);
   let hotbar: Layout['hotbar'];
   let prompt: Layout['prompt'];
   if (shape === 'side') {
     // On its side: low, left of Jump; the prompt over the middle of the gap between the stick and the arc
     const a1 = slotSpot(r, 'a1');
-    const right = a1.x + a1.d / 2 + 12;
-    hotbar = { right, bottom: 10, slot: r.hotSlot };
+    const edge = round(a1.x + a1.d / 2 + 12);
+    hotbar = { side: 'r', edge, bottom: 10, slot: r.hotSlot };
     const leftEdge = Math.max(r.stickAt[0] + r.stick / 2, r.crouchAt[0] + r.crouch / 2);
     prompt = { cx: round((leftEdge + (w - clusterLeft(r))) / 2), bottom: 10 + r.hotSlot + 12 };
   } else {
     // Upright: the hotbar over the arc, the prompt over the hotbar
-    hotbar = { right: 12, bottom: round(top + 12), slot: r.hotSlot };
+    hotbar = { side: 'r', edge: 12, bottom: round(top + 12), slot: r.hotSlot };
     prompt = { cx: round(w / 2), bottom: round(top + 12 + r.hotSlot + 14) };
   }
-  return { shape, buttons, stick, hotbar, prompt };
+  return { shape, buttons, stick, hotbar, prompt, scale };
+}
+
+/** Left-handed: every spot to the other side, the hotbar to the left edge, the prompt's centre mirrored */
+function mirror(L: Layout, w: number): Layout {
+  const flip = (s: Spot): Spot => ({ ...s, side: s.side === 'r' ? 'l' : 'r' });
+  const buttons: Partial<Record<Action, Spot>> = {};
+  for (const [a, s] of Object.entries(L.buttons) as [Action, Spot][]) buttons[a] = flip(s);
+  return { ...L, buttons, stick: flip(L.stick), hotbar: { ...L.hotbar, side: L.hotbar.side === 'r' ? 'l' : 'r' }, prompt: { ...L.prompt, cx: round(w - L.prompt.cx) } };
+}
+
+/* ---------- Checking a layout fits (the size's step-down, and the tests) ---------- */
+/** The header's height on a phone (one row: docs/controls-plan.md Phase 3) */
+export const HEAD_ROOM = 64;
+/** At least this between any two buttons, the stick and the rest */
+export const GAP = 6;
+/** The hotbar at its fullest in practice: two weapons, the thing in his hand and a snack */
+export const HOT_SLOTS = 4;
+/** The door prompt's box at its usual widest */
+export const PROMPT_BOX = { w: 210, h: 42 };
+
+export interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+export function hotbarBox(L: Layout, w: number, h: number): Box {
+  const s = L.hotbar.slot;
+  const hw = HOT_SLOTS * s + (HOT_SLOTS - 1) * 4;
+  const x0 = L.hotbar.side === 'r' ? w - L.hotbar.edge - hw : L.hotbar.edge;
+  return { x0, x1: x0 + hw, y0: h - L.hotbar.bottom - s, y1: h - L.hotbar.bottom };
+}
+export function promptBox(L: Layout, h: number): Box {
+  return { x0: L.prompt.cx - PROMPT_BOX.w / 2, x1: L.prompt.cx + PROMPT_BOX.w / 2, y0: h - L.prompt.bottom - PROMPT_BOX.h, y1: h - L.prompt.bottom };
+}
+/** A circle and a box at least `gap` apart */
+function circleClear(s: Spot, b: Box, w: number, h: number, gap: number) {
+  const [cx, cy] = centreOf(s, w, h);
+  const nx = Math.max(b.x0, Math.min(cx, b.x1));
+  const ny = Math.max(b.y0, Math.min(cy, b.y1));
+  return Math.hypot(cx - nx, cy - ny) >= s.d / 2 + gap;
+}
+const inside = (b: Box, w: number, h: number) => b.x0 >= 0 && b.x1 <= w && b.y0 >= HEAD_ROOM && b.y1 <= h;
+const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
+/** What's wrong with a layout on a `w` x `h` screen, or null when it fits: every button and the stick on screen
+ *  under the header and `GAP` apart; on foot the hotbar and the prompt on screen, clear of them and each other */
+export function clash(L: Layout, w: number, h: number): string | null {
+  const all = [...Object.entries(L.buttons), ['stick', L.stick] as const] as [string, Spot][];
+  for (const [name, s] of all) {
+    const [cx, cy] = centreOf(s, w, h);
+    if (!inside({ x0: cx - s.d / 2, x1: cx + s.d / 2, y0: cy - s.d / 2, y1: cy + s.d / 2 }, w, h)) return `${name} off screen`;
+  }
+  for (let i = 0; i < all.length; i++)
+    for (let j = i + 1; j < all.length; j++) {
+      const [n1, s1] = all[i];
+      const [n2, s2] = all[j];
+      const [x1, y1] = centreOf(s1, w, h);
+      const [x2, y2] = centreOf(s2, w, h);
+      if (Math.hypot(x1 - x2, y1 - y2) - (s1.d + s2.d) / 2 < GAP) return `${n1} and ${n2} touch`;
+    }
+  if (!L.buttons.crouch) return null;
+  // (on foot: the hotbar and the prompt)
+  const hot = hotbarBox(L, w, h);
+  const pr = promptBox(L, h);
+  for (const [name, b] of [['hotbar', hot], ['prompt', pr]] as const) {
+    if (!inside(b, w, h)) return `${name} off screen`;
+    for (const [n, s] of all) if (!circleClear(s, b, w, h, 4)) return `${name} over ${n}`;
+  }
+  return overlaps(hot, pr) ? 'hotbar under the prompt' : null;
 }
 
 /** How high the arc reaches (any slot's top) */

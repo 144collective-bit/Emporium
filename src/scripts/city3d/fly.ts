@@ -11,9 +11,10 @@
  *   page reloads.
  * - It's drawn as a fleet of one (aircraft.ts createFleet), so the props and
  *   rotor spin, the gear folds and the beacons blink like the airport's own.
- * - Cameras (V): a chase camera that swings in behind (look around with the
- *   mouse, a drag or the right stick; it settles back) and a nose camera
- *   that banks with it.
+ * - Cameras (V, the gamepad's right stick pressed, the touch View button;
+ *   views.ts): near and far chase cameras that swing in behind (look around
+ *   with the mouse, a drag or the right stick; they settle back) and the
+ *   cockpit, which banks with it. Every time you climb in it starts near.
  * - It bumps softly off the airport's aircraft (their spheres, flight-sim.ts
  *   HULLS) and everything solid; nothing is ever damaged.
  */
@@ -25,6 +26,7 @@ import { CEILING, TUNES, canLeave, flyReach, hullAt, newFlight, stepFly, type Fl
 import { paintHex } from './mycar';
 import { FLY, type MyPlane, type PlaneId } from './myplane';
 import type { Box } from './solids';
+import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 
 export interface FlyDeps {
   scene: THREE.Scene;
@@ -114,7 +116,8 @@ export function createFly(d: FlyDeps) {
   let show: Craft | null = null;
   let flying = false;
   let tune: FlyTune = TUNES[craft.id];
-  let noseCam = false;
+  /** The camera (V; views.ts): near, far, the cockpit */
+  let view: ViewId = START_VIEW;
   let camYaw = 0;
   let lookYaw = 0;
   let lookPitch = 0;
@@ -230,6 +233,7 @@ export function createFly(d: FlyDeps) {
       s.power = 0;
       camYaw = s.yaw;
       lookYaw = lookPitch = 0;
+      view = START_VIEW;
       camReady = false;
       fov = camera.fov;
       hud.hidden = false;
@@ -281,9 +285,11 @@ export function createFly(d: FlyDeps) {
       craft = dress('own', p, home());
       tune = TUNES[craft.id];
     },
-    toggleView() {
-      noseCam = !noseCam;
+    /** The next view (V): near, far, the cockpit; returns it, for the toast */
+    toggleView(): ViewId {
+      view = nextView(view);
       camReady = false;
+      return view;
     },
     look(dx: number, dy: number) {
       lookYaw = THREE.MathUtils.clamp(lookYaw - dx, -2.6, 2.6);
@@ -332,6 +338,8 @@ export function createFly(d: FlyDeps) {
         lookYaw += (0 - lookYaw) * damp(2.5, dt);
         lookPitch += (0 - lookPitch) * damp(2.5, dt);
       }
+      const noseCam = view === 'first';
+      const chase = CHASE.plane[view === 'far' ? 'far' : 'near'];
       camYaw += wrap(s.yaw - camYaw) * damp(noseCam ? 20 : 2.6, dt);
       const yaw = camYaw + lookYaw;
       const fx = Math.cos(yaw);
@@ -348,10 +356,10 @@ export function createFly(d: FlyDeps) {
         // It banks with the aircraft
         camera.rotateZ(-s.roll * 0.85);
       } else {
-        const pitchC = 0.2 + lookPitch + (s.ground ? 0.06 : 0);
+        const pitchC = chase.pitch + lookPitch + (s.ground ? 0.06 : 0);
         pivot.set(s.x, s.y + T.tall * 0.55, s.z);
         dir.set(-fx * Math.cos(pitchC), Math.sin(pitchC), -fz * Math.cos(pitchC));
-        const want = 4.5 + T.L * 1.15 + Math.min(14, Math.hypot(s.vx, s.vz) * 0.18);
+        const want = chaseDistance(chase, T.L, Math.hypot(s.vx, s.vz));
         const room = d.cameraRoom(pivot, dir, want);
         goal.copy(pivot).addScaledVector(dir, room);
         if (!camReady) camPos.copy(goal);
@@ -367,7 +375,7 @@ export function createFly(d: FlyDeps) {
         camera.position.y += (Math.random() - 0.5) * shake;
         shake = Math.max(0, shake - dt * 1.2);
       }
-      const wantFov = (noseCam ? 70 : 58) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
+      const wantFov = (noseCam ? 70 : (chase.fov ?? 58)) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
       fov += (wantFov - fov) * damp(4, dt);
       if (Math.abs(camera.fov - fov) > 0.05) {
         camera.fov = fov;

@@ -62,6 +62,7 @@ export const LIVE_PLACES = [
   { id: 'lagoon', name: 'Lava Lagoon' },
   { id: 'orbit', name: 'Orbit' },
   { id: 'sphere', name: 'The Sphere' },
+  { id: 'lot9', name: 'Lot 9' },
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 
@@ -71,7 +72,7 @@ export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'walk', name: 'Walk mode', stops: 'Walking into the city (the Walk switch and every Walk in)' },
   { id: 'drive', name: 'Driving', stops: 'Getting into your car or kart, and the garage' },
   { id: 'fly', name: 'Flying', stops: 'The hangar and getting into your aircraft' },
-  { id: 'karts', name: 'Karting', stops: 'The kart hut (races, karts, boards)' },
+  { id: 'karts', name: 'Karting', stops: 'The kart park\'s clubhouse (races, karts, boards)' },
   { id: 'fight', name: 'Fighting', stops: "The Fight Club's trainer" },
   { id: 'guns', name: 'Target practice', stops: 'The gun store counters' },
   { id: 'taxi', name: 'Taxis', stops: "The world map's Taxi here" },

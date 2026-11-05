@@ -23,9 +23,9 @@ import { carMaterials, merge } from './cars';
 import type { Degen } from './character';
 import { paintAll } from './carparts';
 import { DRIVER_SCALE, KART_SHAPES, SEAT_X, WHEEL_R, WHEEL_TILT, driverRoot, kartPose, pedalsOf, wheelOf } from './kartframe';
-import { FONT_DISPLAY, liveTex, mergeMeshes, moving, neon, PAL, toon } from './kit';
+import { FONT_DISPLAY, fx, glowTex, liveTex, mergeMeshes, moving, neon, PAL, toon } from './kit';
 import { KART_L } from './kartpark';
-import type { KartId } from './mykart';
+import type { KartId, KartLook } from './mykart';
 
 /* ---------- Colours ---------- */
 
@@ -45,6 +45,15 @@ const HALF = KART_L / 2;
 type V2 = [number, number];
 type V3 = [number, number, number];
 
+/* ---------- The flames decal's paint (both sides drawn, one a colour) ---------- */
+
+const flameDecals = new Map<string, THREE.Material>();
+const flameDecal = (c: string) => {
+  let m = flameDecals.get(c);
+  if (!m) flameDecals.set(c, (m = toon(c, { side: THREE.DoubleSide })));
+  return m;
+};
+
 /* ---------- The number roundel ---------- */
 
 const plateMats = new Map<number, THREE.MeshBasicMaterial>();
@@ -61,7 +70,7 @@ function plateMat(n: number) {
     c.fill();
     c.stroke();
     c.fillStyle = PAL.ink;
-    c.font = `700 40px ${FONT_DISPLAY}`;
+    c.font = `700 ${n > 9 ? 32 : 40}px ${FONT_DISPLAY}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.fillText(String(n), 32, 35);
@@ -140,8 +149,15 @@ export interface Kart {
   seatAt: THREE.Vector3;
   /** Roll the wheels by a distance travelled and steer the front ones (radians, left positive) */
   drive(dist: number, steer?: number): void;
-  /** The number on the nose (1-8) */
+  /** The number on the nose (1-99) */
   setNumber(n: number): void;
+  /**
+   * Its look (docs/kart-west-plan.md Phase 6, mykart.ts `KartLook`): the number, the decals on the side pods, the rims'
+   * caps and the tyres' sidewall stripes, the underglow (shown with `glow(true)`, at night)
+   */
+  dress(look: KartLook): void;
+  /** The underglow on or off (a night race) */
+  glow(on: boolean): void;
   /** Sit a Degen in it (hands on the wheel); null takes the driver out */
   seat(degen: Degen | null): void;
   /** Tip the driver sideways into a drift (-1 left .. 1 right) */
@@ -424,6 +440,17 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
     })
   );
 
+  /* ---------- The look (dress()) ---------- */
+
+  const dressGroup = new THREE.Group();
+  group.add(dressGroup);
+  const underglow = new THREE.Mesh(new THREE.PlaneGeometry(KART_L * 1.1, 0.95).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#00c2ff', map: glowTex, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  underglow.position.y = 0.03;
+  underglow.visible = false;
+  group.add(fx(underglow));
+  let glowOn = false;
+  let glowWanted = false;
+
   /* ---------- The driver ---------- */
 
   const seatAt = new THREE.Vector3(seatX, seatTop, 0);
@@ -460,7 +487,69 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
       }
     },
     setNumber(n: number) {
-      plate.material = plateMat(Math.max(1, Math.min(8, Math.round(n))));
+      plate.material = plateMat(Math.max(1, Math.min(99, Math.round(n))));
+    },
+    dress(look: KartLook) {
+      this.setNumber(look.number);
+      dressGroup.clear();
+      for (const w of wheels) for (const c of [...w.mesh.children]) w.mesh.remove(c);
+      // The decals on the side pods' outer faces, a hand off them (nothing flush)
+      const dc = toon(look.decalColour);
+      const { x0, x1, h } = s.pod;
+      for (const side of [-1, 1]) {
+        const z = side * (s.pod.z + 0.006);
+        const on = (g: THREE.BufferGeometry, x: number, y: number) => {
+          const m = new THREE.Mesh(g, dc);
+          m.position.set(x, floorY + y, z);
+          dressGroup.add(m);
+        };
+        const len = x1 - x0 - 0.12;
+        const mid = (x0 + x1) / 2 - 0.02;
+        if (look.decal === 'stripes') for (const y of [h * 0.42, h * 0.62]) on(new THREE.BoxGeometry(len, 0.022, 0.004), mid, y);
+        else if (look.decal === 'checks') {
+          for (let k = 0; k < 6; k++) for (let j = 0; j < 2; j++) if ((k + j) % 2 === 0) on(new THREE.BoxGeometry(len / 6, 0.04, 0.004), x0 + 0.06 + (len / 6) * (k + 0.5), h * 0.36 + j * 0.04);
+        } else if (look.decal === 'diamond') {
+          const g = new THREE.BoxGeometry(0.07, 0.07, 0.004);
+          g.rotateZ(Math.PI / 4);
+          on(g, mid, h * 0.52);
+        } else if (look.decal === 'flames') {
+          // Three tongues licking back from the front of the pod
+          const shape = new THREE.Shape();
+          shape.moveTo(0, 0);
+          shape.quadraticCurveTo(-0.08, 0.02, -0.14, 0.05);
+          shape.quadraticCurveTo(-0.09, 0.035, -0.08, 0.06);
+          shape.quadraticCurveTo(-0.16, 0.06, -0.24, 0.09);
+          shape.quadraticCurveTo(-0.14, 0.075, -0.1, 0.095);
+          shape.quadraticCurveTo(-0.05, 0.08, 0, 0.1);
+          shape.closePath();
+          // (flat, both sides drawn: the same shape faces out on either pod, the tongues licking back)
+          const m = new THREE.Mesh(new THREE.ShapeGeometry(shape, 4), flameDecal(look.decalColour));
+          m.position.set(x1 - 0.04, floorY + h * 0.22, z);
+          dressGroup.add(m);
+        }
+      }
+      // The rims' caps (their face, the rim's colour) and the tyres' sidewall stripes
+      const rim = toon(look.rim);
+      const stripe = look.tyreStripe ? toon(look.tyreStripe) : null;
+      for (const w of wheels) {
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(s.r * 0.42, s.r * 0.42, 0.006, 14).rotateX(Math.PI / 2), rim);
+        cap.position.z = s.tw / 2 + 0.008;
+        w.mesh.add(cap);
+        if (stripe) {
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(s.r * 0.78, 0.008, 4, 22), stripe);
+          ring.position.z = s.tw / 2 + 0.002;
+          w.mesh.add(ring);
+        }
+      }
+      // The underglow: a soft pool of the colour under it, shown at night (glow())
+      underglow.visible = false;
+      glowOn = !!look.glow;
+      if (look.glow) (underglow.material as THREE.MeshBasicMaterial).color.set(look.glow);
+      underglow.visible = glowOn && glowWanted;
+    },
+    glow(on: boolean) {
+      glowWanted = on;
+      underglow.visible = glowOn && on;
     },
     seat(degen: Degen | null) {
       if (driver) {

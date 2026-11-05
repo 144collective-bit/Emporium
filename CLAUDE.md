@@ -7,8 +7,9 @@ it and has been retired completely. Build only on what's here.
 
 - The game is **The Trenches** (the owner's call, 2026-11): its title logo
   (`src/assets/trenches-logo.png`, the owner's art with its white
-  background cut away) heads the title screen, the city's header (its home
-  link, "The Trenches, home") and the maintenance cover. The homepage's tab
+  background cut away) heads the title screen and the maintenance cover
+  (the city's header has no logo since the controls plan's Phase 5, the
+  owner's call). The homepage's tab
   reads "The Trenches | The Degen Emporium"; the header's title while the
   city loads, the no-3D card and the maintenance cover say The Trenches.
   The city it's set in is still Sector 7 (the welcome tip, the map, the
@@ -174,10 +175,10 @@ it and has been retired completely. Build only on what's here.
   allows; stretches out towards the world's edge go nowhere and carry no
   traffic), and every route is a closed loop through it: a seeded drive of
   a few stretches, then the shortest way back, until every stretch is
-  driven and every slip lane taken; plus the ring highway all the way
-  round, both ways, in both lanes. Turns are rounded off (`cornerCurve()`
-  in `highway.ts`: tighter for right turns, through the slip lanes where
-  the highway meets an arterial; `joinLegs()` joins the curve onto the next
+  driven; plus the ring highway all the way round, both ways, in both
+  lanes, up on its deck (the first `RING_ROUTES`, `deck`: docs/highway-plan.md
+  Phase 2; their cars meet nothing at street level). Turns are rounded off
+  (`cornerCurve()` in `highway.ts`: tighter for right turns; `joinLegs()` joins the curve onto the next
   street from where it ends, so no car runs back to the junction after it),
   an avenue's lane picked for the next turn (a street with a planted
   `median` keeps its lanes either side of it; a one-way street's one lane
@@ -200,19 +201,14 @@ it and has been retired completely. Build only on what's here.
   `HIGHWAY_R` 70) round the town and The
   Trenches; two lanes each way with a median and a hard shoulder
   (`HIGHWAY_HALF`); `fromHighway()` / `insideHighway()` measure it
-  exactly. In the street plan it's a street of kind `highway` (`loop`),
-  with a lit junction wherever it meets a straight arterial (18), and on
-  the town side of each, two `slip` streets (one-way slip lanes across
-  the corners for the right turns on and off it, `slipCurve()`); it
-  crosses the river on two bridges (`riverBridges()` in `streetplan.ts`,
-  every road crossing the river: they're drawn, and they're the gaps in
-  `RIVER_WALLS`; plain concrete decks on piers down into the lowered
-  water, river plan step 2). It's all at street level: nothing to climb,
-  nothing solid. Drawn in `world.ts` (the asphalt, the median broken at the
-  junctions and over the river, lane dashes and edge lines, lamps along
-  both verges, the slips); the arterials' medians and lines break where it
-  crosses them (`highwayGaps()`), and the outskirts' trees keep off it and
-  its slips (`treeSpot()`).
+  exactly. In the street plan it's a street of kind `highway` (`loop`).
+  Since docs/highway-plan.md Phase 2 it's raised on a viaduct all the way
+  round (below, The raised highway): no junction at street level, every
+  arterial passing under it (`RING_MEETS`), onto it and off it only by its
+  exits' ramps (Phase 3); its two river
+  spans are overhead (`riverBridges()` lists them, `riverCrossings()`
+  doesn't: the river walls close under them). The outskirts' trees keep
+  off it (`treeSpot()`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city and the server read it). 1 tile is about
   1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
@@ -236,7 +232,7 @@ it and has been retired completely. Build only on what's here.
   - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - **River life** (river plan step 4, the owner's picks: more boats, the river bus, boating yourself; all three built). Everything on the water keeps to a line of its own, a function of the clock, and the tests hold each clear of everything else there (`tests/water.ts`: the piers, decks, moored boats and landings). 4a, more boats: two traffic boats to a lane and the police launch in the middle one (life.ts), and `riverlife.ts` (DOM-free, tested in `tests/riverlife.test.ts`): the cruise boat (`CRUISE`, round the town's reach), the rowing eight (`CREW`) and the dinghies out west (`DINGHIES`), drawn by `riverlife3d.ts`, a district loaded as you approach the river (`LAZY_DISTRICTS` id `river`). The highway's bridges' piers stand between the lanes (`BRIDGE_PIERS` in waterfront.ts). 4b, the river bus (below, under Getting about). 4c, boating yourself (below, after Driving your car).
   - `WORLD_BOUNDS` is how far you can walk or drive.
-  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway, every plan street and slip lane, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
+  - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway and its ramps, every plan street, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing; land a district left goes in with `gone` (counted when the densities are measured, never kept off: the kart park's old land, docs/kart-west-plan.md), so the open land's trees stay as thick. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
   - The skyline ring stands just past `EXT` (`SKYLINE` in `bounds.ts`: `gap` to `gap` + `depth` past it), kept out of the haze (`fog = false`) so it reads as a far metropolis; as many towers as the ring had for its length before Phase 6 (`SKYLINE_REACH`), each from its own seeded numbers, on grass that carries on `SKIRT` (80) past the edge (the grass is a plane per tile).
   - The sky dome and stars travel with the camera at `SKY_RADIUS` (`bounds.ts`: far enough that the skyline's far side stands in front of it seen from downtown, about 1,090 today, never under 400), inside its far plane (`CAMERA_FAR`, 40 further), so everything in the world stays in front of the sky and the skyline stays on the horizon however far out the edge is.
   - City view pans round the built-up area (`bounds.ts`: `BUILT_UP` is the town, the airport and the kart park; `PAN_BOUNDS` reaches `PAN_MARGIN` (160) past it, never closer than 10 to where you can walk: since Phase 10 the world reaches past it on every side).
@@ -286,7 +282,8 @@ it and has been retired completely. Build only on what's here.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
     an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
     Park station north of the ring highway (the north side's stage 2: it
-    crosses the highway's junction on a span) down the east ring avenue's
+    crosses the raised highway high, metro.ts `trackY()`; Starlight Mall
+    station since the kart park moved west, `docs/kart-west-plan.md`) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches, and on (via the
@@ -307,29 +304,31 @@ it and has been retired completely. Build only on what's here.
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
     the highway to Airport Station by Airport Drive, `AIRPORT_END`; and
-    `crest` (Crestmont's Phase 9): off the main line just south of Kart Park
-    station (`CREST_S`), east between Kart Road and the highway, round
+    `crest` (Crestmont's Phase 9): off the main line just south of Starlight Mall
+    station (`CREST_S`), east between the old Kart Road's line and the highway, round
     outside the highway's north-east corner and south to Crestmont station
     past Alder Way (`CREST`, `CREST_END`; nothing grows under it,
-    `SPUR_CLEAR`), facing north, so its runs but Kart Park's turn round
+    `SPUR_CLEAR`), facing north, so its runs but Starlight Mall's turn round
     there; runs on the branch, the spur and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
     only on Harbour Bridge's median, where they're steel posts from its
     deck, river plan step 2);
-    eight stations (`STATIONS`: Kart Park, Downtown, South Bank, The
-    Trenches, Southbank Docks, Airport, Uptown, Crestmont; each a track and distance, a platform on the
+    nine stations (`STATIONS`: Starlight Mall, Downtown, South Bank, The
+    Trenches, Southbank Docks, Kart Park (on the north bank avenue's median
+    west of the highway, `KART_STATION_X`, a walk up to the park's gate),
+    Airport, Uptown, Crestmont; each a track and distance, a platform on the
     track's left (`PLATFORM_SIDE`; Uptown's on its right, `side`,
     `sideAt()`), a stair tower with its door at street level and the way
     out of it, `face`; Uptown's on the plaza's café terrace), `METRO_SOLIDS`
     (in `SOLIDS`: pillars, portal legs, towers), the train
     (`TRAIN`, two cars) on a timetable from the clock (`trainAt()`, `LEGS`:
-    from Crestmont to Kart Park, down to South Bank, out through The Trenches and the Docks to Uptown and
+    from Crestmont to Starlight Mall, down to South Bank, out through The Trenches, the Docks and Kart Park to Uptown and
     back, out to the Airport and back, up again; `ROUND_TRIP`), runs as pieces of track (`runsBetween()`,
     `placeOn()`, `carAt()`: each car on the track where it is, round the
     bend), rides straight between stations (`rideAt()`, turning round at
-    South Bank between the west and the Airport, at Kart Park from
+    South Bank between the west and the Airport, at Starlight Mall from
     Crestmont; at most about 61 s, Uptown to the Airport, but Crestmont's,
     up to about 75 s from Uptown)
     and back on the timetable after (`timetableAt()`). Drawn by `metro3d.ts`
@@ -483,7 +482,8 @@ it and has been retired completely. Build only on what's here.
     ramps and the el's pillars. The streets are worn too (`trenches3d.ts`:
     patched asphalt inside the lanes, never across a line, cracks,
     manholes). The lamps there are sodium orange (`lampKind()` in
-    trenches.ts, `buildLamps()` in world.ts: about one in ten flickering,
+    trenches.ts, mixed with the town's white for a block at its edges by
+    `lampTone()` in lampmix.ts, `buildLamps()` in world.ts: about one in ten flickering,
     in two sets going out together through `flickerTogether()` in kit.ts,
     the odd one dead). The el over Trench Avenue is dark steel
     (`metro3d.ts`, on through Southbank Docks too, `grim()`: a grimy deck, deep plate girders braced across, flanged
@@ -723,22 +723,19 @@ it and has been retired completely. Build only on what's here.
     its front, and the car park (`CAR_PARK`, `BAY_ROWS`, `BAYS`, `PARKED`) is
     inside a one-way loop off it east of the stadium (`LOOP`), as the
     airport's is: `STADIUM_STREETS` / `STADIUM_CROSSINGS` in the street
-    plan, so traffic drives them, coming off the highway at ns0, whose outer
-    corners get slip lanes too (`OUTER_SLIPS` in streetplan.ts). The
-    footbridge (`BRIDGE`) carries the Mall from the park up over the ring
-    walk, the park's edge, the highway and Stadium Road and down to the
-    forecourt: walkable (`bridgeY()`, `bridgeWall()` in walk.ts, as Liberty
-    Bridge's), its piers (the middle one on the highway's median) and its
-    stairs past their first steps solid. `STADIUM_SOLIDS` (in `SOLIDS`):
-    the facade all round, the gates shut until there are events, the masts,
-    the parked cars, the footbridge's piers and stairs; `STADIUM_LAMPS`,
-    `STADIUM_RECTS` (the outskirts' trees keep off; no highway lamp under
-    the bridge). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
+    plan, so traffic drives them, up the north road (ns0) under the raised
+    highway. Its footbridge was retired with the highway's rise (the
+    owner's call, docs/highway-plan.md Phase 2): the Mall runs on out of
+    the park's north gate (westlake.ts `gate-n`) on a paved walk under the
+    deck (`WALK`, the deck's piers keep off it) to a zebra over Stadium
+    Road (`ZEBRA`). `STADIUM_SOLIDS` (in `SOLIDS`): the facade all round,
+    the gates shut until there are events, the masts, the parked cars;
+    `STADIUM_LAMPS`, `STADIUM_RECTS` (the outskirts' trees keep off). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
     place built at the boot: seats in sections of magenta, purple and cyan,
     the roof's neon edge, lamp heads on the masts and their pools of light
     on the pitch at night, the screen and the name board from one small
     atlas, the parked cars); its grounds (the road, the car park with its
-    bays, one-way arrows and P sign, the footbridge) by
+    bays, one-way arrows and P sign, the walk and the zebra) by
     `stadiumgrounds3d.ts`, loaded as you approach with the park's chunk
     (`LAZY_DISTRICTS`: `westlake`, whose land covers it too).
     It's a place: spot `stadium` (pin, directory entry, panel
@@ -746,7 +743,7 @@ it and has been retired completely. Build only on what's here.
     door prompt opens it, `PLACES` entry. Its sound waits for events. Its
     old site in the park (`GARDEN_SITE` in westlake.ts) is kept clear for
     the formal garden (stage 3), the Mall running through it to the
-    footbridge's foot (`BRIDGE_FOOT`); the old car park on the first strip
+    north gate; the old car park on the first strip
     went back to park.
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
@@ -1193,9 +1190,7 @@ it and has been retired completely. Build only on what's here.
   it up to date. Phase 1 (the land, the streets and the quays) is built:
   `docks.ts` (DOM-free, tested in `tests/docks.test.ts`; today's world
   numbers, `DOCKS_RECT` / `inDocks()`, well short of the west edge): the
-  south bank avenue carrying traffic on west of the highway (a slip lane on
-  that junction's south-west corner only: `OUTER_SLIPS` takes one turn,
-  `highway-ew4-1-0`), the docks' ring off it (`docks-ring`: Dock Road,
+  south bank avenue carrying traffic on west under the raised highway, the docks' ring off it (`docks-ring`: Dock Road,
   Yard Road, West Road; lit where it meets the avenue) and Quay Road across
   it (`DOCK_STREETS`, `DOCK_CROSSINGS` in the street plan); the basin
   (`BASIN`) and its mouth (`CHANNEL`) open to the river under the avenue's
@@ -1393,11 +1388,130 @@ it and has been retired completely. Build only on what's here.
   `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
   people into the crowd, the dogs and leads on the main thread, the cars
   through `parkedCars()`).
-- **The raised highway** (the owner's call, planned, nothing built yet): the
-  ring highway rebuilt on a concrete viaduct with real exits (diamond
-  interchanges, numbered, made-up names on the gantries) and traffic that
-  uses its ramps, planned in `docs/highway-plan.md` in phases, each with the
-  owner's sign-off; keep it up to date.
+- **Lot 9** (the owner's call: a trailer park, "a little run down, rough
+  community", the grittier edge: a burnt-out shell, boarded and condemned
+  units, chained dogs, KEEP OUT signs, moody but nothing threatening; tied to
+  the storyline, coming soon) on the open land just south of the ring
+  highway's south-west corner, under The Trenches, planned in
+  `docs/trailer-plan.md` (the owner's answers; built in one go); keep it up
+  to date. Made-up names only, under the Emporium.
+  - `lot9.ts` (DOM-free, the boot's, tested in `tests/lot9.test.ts`): the
+    chain-link `FENCE`, `LOT9_RECT` / `inLot9()`, the gate on the east side
+    (`GATE`), the lane in off the south avenue (ns0s, `ROAD_Z`, `ROAD_HALF`)
+    and two one-way loops off it (`LOT9_STREETS` / `LOT9_CROSSINGS` in the
+    street plan: traffic drives in down the south avenue under the raised
+    highway), the lots' grid (`COL0`, `LOT_W`,
+    `COLS`), the fire pit (`FIRE_LOT`, `FIRE`, `FIRE_SEATS`, `FIRE_POLES`,
+    the zapper and the radio), the office and the coin laundry by the gate
+    (`OFFICE`, `LAUNDRY`), the junk corner along the west fence (`JUNK`:
+    the boat, the mechanic's `BAY`, `TYRES`, `SCRAP`, dead cars),
+    `LOT9_SOLIDS` (in `SOLIDS`), sodium lamps (`LOT9_LAMPS`, lampmix.ts's
+    `SODIUM_AREAS`; the odd one dead and a few flickering, `inLot9Lamps()`),
+    people (`LOT9_IDLE`: the fire pit's crowd, the mechanic, the manager;
+    `LOT9_PEOPLE`: kids on BMXs and running round the loops, life.ts),
+    `LOT9_SPAWN`, `LOT9_PIN`, a bus stop each way on the avenue by the lane
+    (`STOP_ZONE`, transit.ts), its sound (ambience.ts `hood`, the radio as a
+    `boombox`), the trees and rolls kept off (`KEEPS`), worn and bare ground
+    round it (ground.ts).
+  - **The tunnel** (`TUNNEL`, the owner's pick): a pedestrian underpass
+    straight under the highway in line with The Trenches' x -112 street,
+    between row C's blocks: a ramp down from Bottom Street's side, the
+    passage under the roof (the highway over it), a ramp up on Lot 9's side,
+    the footpath to the hole cut in the fence (`HOLE`, `FOOTPATH`). It's
+    the city's first ground below street level for walking: `tunnelY()`
+    (walk.ts `groundAt()`: the ramps and open cuttings always, the floor
+    under the roof only when Degen is down there, `DOWN`), `tunnelWall()`
+    (walk.ts `blocked()`: down there only its walls stop him; at street
+    level the open cuttings' edges), `tunnelRoom()` (the walk camera's room
+    down there, `cameraRoom()`), `TUNNEL_HOLES` (world.ts cuts the ground
+    over the open cuttings), `TUNNEL_SOLIDS` (parapets, headwalls and the
+    bollards at each ramp's top: cars stop, a walker gets through). Down
+    there the walk camera keeps low (its pitch held under the roof) and
+    skips the hills' and rolls' checks, which read anything under street
+    level as under the ground.
+    Anything new below ground goes through the same three.
+  - `lot9homes.ts` (DOM-free, the chunk's, tested): the lots in six rows
+    and a home on each, seeded (`Home`: kind single, double, caravan, rv or
+    bus; condition kept, worn, rough, condemned or burnt; deck, car,
+    carport, shed, lean-to, dog run, junk, KEEP OUT, dish, AC, tarp, boarded
+    windows, flowers, skirting, porch bulb, TV glow), `HOME_SOLIDS` (joined
+    through `addSolids()` when the chunk loads), `HOME_CARS`,
+    `PORCH_SITTERS` (the crowd's spare slots, `addPeople()`),
+    `CHAINED_DOGS`. The boot never carries it.
+  - Drawn by `lot9-3d.ts` (`LAZY_DISTRICTS` id `lot9`): the gravel lanes,
+    a site a home, the fence (its mesh in the FX layer), the gate and its
+    LOT 9 board, the office, the laundry, the fire pit, the junk corner,
+    the tunnel (walls, floor, ceiling with fluorescent tubes, some
+    flickering, tags), one sign atlas of fixed made-up copy (`LOT9_SIGNS`);
+    on the main thread the parked cars, the kids' BMXs, the dogs (loose
+    after the kids, chained in their runs) and the fire's glow.
+  - A place: spot `lot9` (pin over the fire pit, directory entry, panel
+    `data-panel-tpl="lot9"` with Walk in, `data-lot9-walkin`, marquee "Lot 9
+    keeps its secrets"), `PLACES` and `LIVE_PLACES` entries.
+- **The raised highway and the roads** (the owner's call): the ring highway
+  rebuilt on a modern concrete box-girder viaduct all the way round, eight
+  numbered exits laid as partial cloverleafs (district edges moved to make
+  room, the owner's call), the metro rising over it, then the road upgrades
+  (a swing bridge from Uptown to The Trenches, turn lanes and signals, rural
+  roads past the highway, the concrete-era look), planned in
+  `docs/highway-plan.md` in phases, each with the owner's sign-off; keep it
+  up to date. Phase 1 (the shape as data) is built: `viaduct.ts` (DOM-free,
+  tested in `tests/viaduct.test.ts`: the ring exactly, `ringAt()` /
+  `ringPoint()` / `ringS()`; `DECK_Y`, `CLEARANCE`; `EXITS`; `RAMPS`, `QUAD`,
+  `REACH`, each quadrant's `Form`: full, slip or none, the owner's call: open
+  land only moves) and `viapiers.ts` (`PIERS`); Phase 1b (making room) is
+  built: the ramps' land is `rampLand()` (the outskirts' trees, the seam map
+  and `inTrenches()` keep off it; `quadrantEdge()` for a district's edge),
+  Westlake Park's south-west corner is cut back for exit 8 (`EXIT_NOTCH`),
+  Stadium Road comes in further north for exit 1 (stadium.ts `IN`,
+  `ROAD_LINE`), and the test holds every ramp clear; the fit is
+  `docs/highway-exits-fit.png`. Phase 2 (the viaduct drawn and the ring
+  raised) is built: no junction or slip lane with it at street level
+  (`OUTER_SLIPS` went; `RING_MEETS` in streetplan.ts, where each arterial
+  passes under), its traffic on the deck (routes.ts `RING_ROUTES`, `deck`;
+  life.ts draws them at `DECK_Y` and keeps them from following, stopping
+  for or bumping anything at street level, `bodies.cars`' `y`), world.ts's
+  street-level asphalt, lines, lamps, slips and river bridges gone;
+  `viaduct3d.ts` draws it (`LAZY_DISTRICTS` id `viaduct`, a site every 12:
+  the box girder, asphalt and lines, parapets with a steel rail, the median
+  barrier, joints every `JOINT_EVERY` piers, hammerhead piers), its lamps
+  in the median barrier (viapiers.ts `DECK_LAMPS`, at the boot), the piers
+  solid (`PIER_SOLIDS`), the deck the walk camera's (`DECK_CAMERA`, in
+  `CAMERA_GRID` only, with a bottom); the metro rises over it and its ramps
+  (metro.ts `trackY()`, `PLATEAUS`, `HIGH_Y` 7.4 over `RISE`; Starlight Mall (Kart Park's until the park moved west), the new Kart Park station,
+  Southbank Docks and the Airport raised with it, its pillars clear of the
+  ramps; metro3d.ts draws every piece at its height, the train pitched on
+  the climbs); the stadium's footbridge retired (above). Phase 3 (the
+  exits) is built: every ramp a one-way street of kind `ramp` in the plan
+  (`ys` its heights; a `-deck` merge crossing with the highway, unlit, and a
+  lit `-foot` on its arterial; `raised()` in streetplan.ts is what's off the
+  ground, left out of what's measured at street level); routes.ts's `merge`
+  turn (straight on in the outer lane, `turnOf()`), every route point's
+  height (`heightsOf()`, `Route.ys` baked, `heightOn()` / `climbOn()`: life.ts
+  and taxi.ts draw cars there, and cars only meet what's at their height),
+  taxis the quickest way (`HIGHWAY_PACE`), never stopping up there;
+  `viaground.ts` (DOM-free): the deck and ramps as ground by height
+  (`viaductY()` in walk.ts's `groundAt()`), their walls (`viaWallsNear()`:
+  the ramps' sides always, the parapets only for a car up there, open at each
+  ramp's taper, `deckGap()`), walking stopped at a ramp's foot (`walkOff()`),
+  the ramps' piers (`RAMP_PIER_SOLIDS`); drive-sim.ts's `up` skips the
+  river's walls under the deck; no getting out up there; viaduct3d.ts draws
+  the ramps (`rampSegs()`: asphalt, edge lines, parapets, on piers where high,
+  a filled bank where low). Phase 4 (signs and the look) is built:
+  `viadress.ts` (DOM-free): green gantries before every off-ramp
+  (`GANTRIES`: an advance one and one where it leaves, kept off the metro
+  overhead, `METRO_S`, and the deck's lamps; one sign atlas
+  `viaduct-signs`, the exits' own made-up names, `EXIT_SIGNS`), a sign by
+  every on-ramp's foot (`RAMP_SIGNS`), sound walls on the parapet past homes
+  (`SOUND_WALLS`, `soundWall()`), under the deck between its piers
+  (`UNDER`: car parks in town with their cars, `UNDER_CARS`; lock-ups by
+  the yards and the Docks; half courts by The Trenches and Lot 9, murals on
+  the piers there, `MURALS`, made-up words; `UNDER_SOLIDS` in `SOLIDS`), the
+  soffit's lights over every street under it (`UNDER_LIGHTS`, pools at the
+  boot) and lamps up the ramps (`RAMP_LAMPS`, at the boot), and each exit's
+  number on the world map (`exitBadge()`); drawn by viaduct3d.ts. Phase 5
+  (the swing bridge, Uptown to The Trenches) is built: see Kestrel Bridge
+  below.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
@@ -1470,6 +1584,77 @@ it and has been retired completely. Build only on what's here.
     `terrain.ts`'s `heightAt()` is still the hills only. Anything new on
     open land outside the highway stands at `rollsAt()`, or its land goes
     in `KEEPS` so the rolls flatten round it.
+  - Phase 5a (the band south of the south row) is built: **Southfield**,
+    `southfield.ts` (DOM-free, tested in `tests/southfield.test.ts`; the
+    boot's: streets, blocks, solids, lamps, trees, people) and
+    `southfield3d.ts` (`LAZY_DISTRICTS` id `southfield`): Southfield Yards
+    (ref `southyards`, character industry: the ring `sy-ring` off the south
+    bank avenue, Forge Street, its south leg and Kiln Lane, with Yard Street
+    `sy-yard` across it, lit at the avenue; the bus depot and Kingpost
+    Builders north of Yard Street, warehouses and a works (`YARD_LOTS`, the
+    kits), a truck depot and lock-ups south of it; sodium lamps,
+    `inYards()`), Southfield Park (ref `southfield`, a park: paths, the pond
+    `POND` walked round, the community garden, `PARK_TREES`), the
+    allotments in the south strips (`PLOTS`, `shedOf()`, the hut), the
+    west strip's lock-ups and warehouses, the railside walk under the
+    airport branch (`RAIL_WALK`) and the walk under the main line
+    (`STRIP_WALK`); `SOUTHFIELD_SOLIDS` (in `SOLIDS`), `SF_CARS` (the buses,
+    trucks and a van, `parkedCars()`), `FUTURE_SITES` (kept for later, no
+    pin or price). No new street goes within reach of a metro track: its
+    pillars are worked out from the street plan, and must not move.
+  - Phase 5c (the smaller leftovers) is built: the slivers between the
+    districts and the highway stay open land, dressed by their neighbours:
+    `fringes.ts` (DOM-free, tested in `tests/fringes.test.ts`): the Kiln Lane
+    substation east of Kiln Lane (`SUBSTATION`), Sunridge's fringe with its
+    dry wash (`WASH`, `HEADWALLS`) and the dirt path beside it
+    (`FRINGE_PATH`, from Sunridge's footpath at Palm Court to the north ring
+    avenue, `PATH_SQUEEZE`, `FRINGE_BENCHES`), four billboards facing the
+    highway (`BILLBOARDS`, `BOARD_COPY`: fixed made-up copy, the city's own
+    places, no price or number), `FRINGE_SOLIDS` (in `SOLIDS`) and
+    `FRINGE_KEEPS` (the trees keep off); drawn by `fringes3d.ts`
+    (`registerFringes()` from southfield3d.ts, sunridge3d.ts and
+    westlake3d.ts) with the scrub wherever a tree could stand and a little
+    closer to the highway (`REGIONS`; Sunridge's desert plants, brambles,
+    gorse and grass elsewhere). Nothing of theirs comes within
+    `HIGHWAY_KEEP` (6) of the highway's centre line: its lamps stand at 4.7.
+  - Phase 6a (lamps mixed at the edges) is built: `lampmix.ts` (DOM-free,
+    tested in `tests/lampmix.test.ts`): `SODIUM_AREAS` (The Trenches, the
+    waterfront, the Docks, Southfield Yards), `sodiumDepth()`,
+    `sodiumShare()` (0 to 1 across `MIX`, 18, either side of their edge) and
+    `lampTone()` (each lamp seeded from where it stands; The Trenches' dead
+    and flickering ones its own), read by `buildLamps()` in world.ts. A new
+    sodium district goes in `SODIUM_AREAS`.
+  - Phase 6b (the first seam, downtown and the town across the ring avenue)
+    is built: `ringstreet.ts` (DOM-free, tested in `tests/ringstreet.test.ts`):
+    `RING_SIDES`, the same town lamp on both sidewalks (`RING_LAMPS`, by the
+    kerb, `KERB_IN`; about every `LAMP_GAP` between junctions,
+    `JUNCTION_CLEAR` from them; clear of the shelters, alley mouths, the
+    metro's door and solids; added in neighbourhoods.ts) and Uptown's planted
+    median carried round downtown (`RING_MEDIAN`, `HEDGE`, `HEDGE_CLEAR`,
+    `TREE_GAP`; round the el's pillars, no tree under the el; drawn with the
+    medians in world.ts).
+  - Phase 6c (the second seam, Uptown and Westlake Park across the north
+    avenue) is built in `ringstreet.ts` too: `PARK_SIDE_LAMPS` (the same lamp
+    across from each of Uptown's on the park's sidewalk, flanking the gates,
+    `GATE_CLEAR`), the north side's planted median carried on west to
+    Uptown's west edge (its `median` span, broken at the axis's zebra) and
+    `PARK_EDGE_TREES` (a row just inside the park's wall, `EDGE_TREE_GAP`,
+    `EDGE_TREE_IN`), added in neighbourhoods.ts.
+  - Phase 6d (the third seam, Starlight Mall and Palm Court across the east
+    avenue) is built in `ringstreet.ts` too: `MALL_SIDE_LAMPS` (both sides
+    from the mall's north edge to the Parkway, `MALL_STRETCH`, on the
+    sidewalks or the grass strip, off the verges' banks, clear of Palm Court's
+    zebra), the east side's median carried north under the el (cut at the
+    zebra) and `STRIP_TREES` (down the grass strip by the mall's loop,
+    `STRIP_X`, `STRIP_TREE_GAP`), added in neighbourhoods.ts.
+  - Phase 6e (the fourth seam, Uptown North and Westlake Park with no street
+    between) is built: `parkedge.ts` (DOM-free, tested in
+    `tests/parkedge.test.ts`): the two sidewalks along the park's east wall as
+    one granite walk (`PROMENADE`, `EDGE_X`), lamps down its middle
+    (`EDGE_LAMPS`) and trees in grates between them (`EDGE_TREES`, `GRATE`),
+    clear of the gates (`GATE_CLEAR`), their walks and the lobbies' doors
+    (`DOOR_CLEAR`); the lamps and trees at the boot (index.ts), the granite and
+    grates drawn by uptownnorth3d.ts.
 - **Sector 7 Central, the grand station, was retired** (the owner's call:
   the metro is the city's rail): no mainline station, trains or tracks west
   of the ring highway; the land there is open again. Don't bring it back
@@ -1730,7 +1915,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk; 700.4 with the raised highway's Phase 1b, the viaduct's shape read at the boot, the budget raised to 720 under the owner's standing call; 706.8 with its Phases 2-4, the ramps' routes and the signs' data). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -1876,7 +2061,7 @@ it and has been retired completely. Build only on what's here.
     it, `lazyMenu()` in walk.ts; the saved car and aircraft are read by
     `loadCar()` in mycar.ts and `loadPlane()` in myplane.ts, in the boot)
     and the kart park's game
-    (the hut's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
+    (the clubhouse's menu and the race, `kartgame.ts`: `loadKarts()` in walk.ts,
     when Degen comes near the park or asks at the hut; idle stand-ins until
     then; the City-view panel's records are `kart-records.ts`, at the boot,
     and the cups the boot reads are `kart-cups.ts`, so the race's rules,
@@ -2873,10 +3058,15 @@ it and has been retired completely. Build only on what's here.
   settings controls (pressed when the city is up, queued until then). The
   root carries `has-start` until a choice is made; the loader and the
   welcome tip wait behind it.
-- The city page has **one header**: the city's own bar (`.city-head` in
-  `CityMap.astro`, copy in `head.ts`), slim dark glass. The site bar
+- The city page has **one header**: the city's own (`.city-head` in
+  `CityMap.astro`, copy in `head.ts`), clear over the game since the
+  controls plan's Phase 5 (the owner's call: no bar, no logo, on every
+  screen; the title with a shadow under it, each button its own dark chip,
+  touches between them going through to the game). The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
-  other pages. Left to right: The Trenches' logo (home link), the mode title and
+  other pages. Walk mode carries the same header as the City view (the
+  owner's call, after Phase 5 had it down to ☰ in play), so City / Walk
+  switches between the two from either. Left to right: the mode title and
   subtitle (City view, Walk mode), then on the
   right (the emotes, online, and ammo and score while walking), the City /
   Walk switch (the current mode lit with a glow and a gradient underline,
@@ -2886,9 +3076,11 @@ it and has been retired completely. Build only on what's here.
   Business) and the level pill (`[data-level]`, `missions-ui.ts`: level,
   XP bar, title; it opens the hub on Missions), then the hub's button
   (`[data-hub-open]`, ☰ Menu, in both modes: the hub, below). Tablets show
-  the hub's button as an icon; phones put logo, title, the pills and ☰ on
-  the first row and the switch, with names, across the second (walking:
-  one row). Its live height is
+  the hub's button as an icon; upright phones show one slim row in both
+  modes (the controls plan's Phase 3: the title and subtitle, Dorras, the
+  level, City / Walk as one toggle showing the mode you'd go to, ☰; no
+  Online switch or Connect wallet: the hub has them), and no phone
+  carries ammo, score or the emotes in it. Its live height is
   `--head-h`; anything pinned to the top of the city sits below it
   (`top: calc(var(--head-h) + 12px)`).
 - **The menu redesign** (the owner's call: "redesign all menus and upgrade
@@ -2965,8 +3157,86 @@ it and has been retired completely. Build only on what's here.
   `layoutFor()` for every `Mode` (on foot, `drive`, `kart`, `ring`, read
   off the root's classes), the pedals as `.tc` buttons, a touch View
   button (`[data-drive-view]`), the readouts in the kit, the prompt's tap
-  icon. A new touch button is a `.tc` with its icon and word, and its slot
-  in `LAYOUTS`.
+  icon. Phase 3 (the slim header) is built, waiting on the owner's
+  sign-off: on phones (upright to 640 wide, on their side to 500 high) the
+  ammo is on the hotbar's gun (`.hb-res`), the score in the hub, the emotes
+  in the hub's Online tab (hub.ts `PHONE`); upright the header is one row
+  (controls.css). Phase 4 (size, opacity, left-handed) is built, waiting
+  on the owner's sign-off: `TouchPrefs` (`cleanTouch()`, `touch` in
+  `degen-city-walk-v1`) from the hub's Settings (Touch buttons, touch
+  screens only); `layoutFor(w, h, mode, prefs)` scales the ring, steps a
+  size that doesn't fit back towards Medium until `clash()` finds nothing,
+  and mirrors it for the left hand (the stick on the right); `--tc-alpha`
+  is the opacity, solid while held. A new touch button is a `.tc` with its
+  icon and word, and its slot in `LAYOUTS`; anything new pinned near the
+  buttons goes in `clash()`. Phase 5 (the clear header and the installed
+  game) is built, waiting on the owner's sign-off: the header clear and
+  without its logo on every screen (walk mode's the City view's, above, the
+  owner's later call); installed (added
+  to the home screen) the game opens full screen with no browser bars
+  (`public/site.webmanifest`: `display` fullscreen, standalone on iPhones,
+  whose status bar stays, black; the meta tags in `Base.astro`). Phase 6
+  (moving the buttons) is built, waiting on the owner's sign-off: Settings >
+  Touch buttons > Arrange buttons opens `arrange-ui.ts` (its own chunk; tabs
+  On foot / Vehicles / The ring, drag, Reset, Done, ×); a moved item's
+  centre is kept in `TouchPrefs.arrange` per family and shape
+  (`arrangeKey()`, shares of the screen in the right hand's frame),
+  `layoutFor()` falls back to the slots where it clashes, and `moveItem()`
+  holds a drag clear through the same `clash()`.
+- **The views and controls plan** (the owner's call: "switch views in all
+  walk modes in the vehicles", the controls simpler and more accessible)
+  is planned in `docs/views-plan.md`: near, far and first person in every
+  vehicle, ride, race and the ring (not remembered: near, third person,
+  every time; the ring near and far only; rides look round freely), a
+  touch View button up top on foot, one key for one job (`keymap.ts`; the
+  gamepad's camera R3 everywhere, the ring on the street's keys), a
+  control card per mode (`/`, the d-pad's down), hold or toggle for
+  sprint, aim, crouch and block (touch too). One phase at a time with the
+  owner's sign-off; keep it up to date. Phase 1 (your vehicles) is built,
+  waiting on the owner's sign-off: `views.ts` (DOM-free, tested in
+  `tests/views.test.ts`: `VIEW_ORDER` near, far, first; `START_VIEW`;
+  `CHASE`, each kind's near the chase camera it had, far further back;
+  `chaseDistance()`, `viewName()`), read by drive.ts, boat.ts and fly.ts;
+  walk.ts's `nextCam()` (V, the touch View button, R3 at the wheel) with a
+  "Camera · <view>" toast; the gamepad's View at the wheel toggles the
+  world map (`travel.toggle()`, the vehicle coasting while it's open).
+  `cameraRoom()` skips the hills' and rolls' checks from down in the
+  river's channel (they read under street level as underground: the
+  boat's chase camera had sat at its minimum). Phase 2 (races, rides, the
+  ring, on foot) is built, waiting on the owner's sign-off: views.ts's
+  `RING_ORDER`, `RACE_FAR`, `RING_FAR` (kart.ts and fight.ts
+  `toggleView()`), and the rides' `RIDE_CAM` / `startRide()` /
+  `rideLook()` / `rideView()` (each ride's own camera near, far further
+  out, first person at the passenger's eye: `RIDE_FIRST`; free looking),
+  read by taxi.ts, metro-ui.ts, monorail-ui.ts and riverbus-ui.ts
+  (`Ride.kind`); `nextCam()` in walk.ts for every mode and on foot; the
+  View button in the kart and ring layouts' `a3`, in each ride's bar
+  (`[data-ride-view]`) and on foot up top (`[data-walk-view]`). Phase 3
+  (one key for one job) is built, waiting on the owner's sign-off:
+  `keymap.ts` (DOM-free, tested in `tests/keymap.test.ts`, out of the
+  boot: `KEYMAP`, every mode's jobs with their keys, gamepad buttons and
+  touch buttons; a job on the same key and button in every mode it's in,
+  no two jobs on one in a mode unless `shares` says so); the hub's
+  Settings > Keys is made from it at build time (a section a mode, only
+  the input in use shown, `data-input`); the ring on the street's keys
+  (right-click held block, Shift nothing), the gamepad's sprint L3 only,
+  Start quits a kart race, B skips a ride, M opens the world map at the
+  wheel too. When a handler in walk.ts changes, change its line in
+  keymap.ts. Phase 4 (the control card) is built, waiting on the
+  owner's sign-off: `[data-ctrlcard]`, painted by `ctrlcard.ts` (its own
+  chunk) from `cardBinds()` for walk.ts's `modeNow()` and the input in use,
+  shown for `CARD_AUTO` the first time in each mode (`seen` in
+  `degen-city-walk-v1`) and on request (`/` or `?`, the d-pad's down, the
+  hub's Settings > Keys > Show the controls card; Esc, × or the key again
+  closes it); in `chrome`. The boot's budget went to 710 with it. Phase 5
+  (hold or toggle) is built, waiting on the owner's sign-off, and the plan
+  is done: `comfort.ts` (DOM-free, tested in `tests/comfort.test.ts`:
+  `Holds`, `DEFAULTS` (as it always was: Sprint and Aim lock on touch,
+  held elsewhere; Crouch toggles; Block held), `holdMode()`, `press()`,
+  `cleanHolds()`), the hub's Settings > Hold or toggle (`[data-hold]`,
+  `holds` in `degen-city-walk-v1`), asked by walk.ts at every press of
+  sprint, aim, crouch and block on every input (touch: `holdButton()`).
+  A new held or toggled job goes in `HOLD_JOBS`.
 - The comic-window layout in `src/components/ComicPage.astro` is the design.
   Each window is defined by its ink outline; keep content inside the slants.
 - Palette is the PulseChain gradient for the comic page and the site
@@ -3017,8 +3287,9 @@ it and has been retired completely. Build only on what's here.
     clock the same for everyone (`leavesAt()`: the gates shut, the leaves
     rise to `LEAF.max`, hold while it passes, come down, `LIFT_TIMES`,
     `SHUT_WINDOWS`); the ship (`SHIP`, `shipAt()`, `SHIP_TIMES`) lies at
-    anchor west of the bridge and east of it in turn (`ANCHOR_X`: between
-    the highway's west bridge and Harbour Bridge, which it can't pass) on
+    anchor west of the bridge and east of it in turn (`ANCHOR_X`: west of
+    Kestrel Bridge, which swings open for it, below, and east of the river
+    bus's west crossing; west of Harbour Bridge, which it can't pass) on
     its own line through the middle span, off the boats' lanes; the tests
     hold the leaves fully up whenever any of it is over the bridge's line,
     and clear of its sails and of the high level;
@@ -3065,6 +3336,40 @@ it and has been retired completely. Build only on what's here.
 - **The place:** spot `liberty` (after the Emporium in `spots`), its pin
   over the north tower's flame, directory entry and an info-only panel
   (`data-panel-tpl="liberty"`) with **Walk in**. No outside links.
+
+## Kestrel Bridge, the swing bridge (docs/highway-plan.md Phase 5, the owner's call)
+
+- A road bridge from Uptown to The Trenches at x -112 (`SX`), in line with
+  Uptown's southbound street and The Trenches' cross street, that swings open
+  for the tall ship on Liberty Bridge's timetable; its name is made up
+  (`SWING_NAME`). Not a place yet (no pin or panel).
+- **The numbers** are `swingbridge.ts` (DOM-free, tested in
+  `tests/swingbridge.test.ts`): street `swing` in the plan (`swingPts()`,
+  points every 1.5 so the routes carry its heights; both ends lit
+  crossroads; `riverBridges()` lists it), the deck low over the water up a
+  ramp from each kerb (`deckY()`, `H`, `RAMP`; the boats pass under), the
+  swing span on its round pivot pier between the north and middle boat lanes
+  (`SPAN`, `PIVOT`, `REST`, `SOUTH_PIER`, `SWING_PIERS`), the timetable
+  (`swingAt()`, `SWING_TIMES`, `SWING_WINDOWS`; open while the ship's within
+  `SWING_REACH`, liberty.ts `shipNear()`), the barriers (`BARRIERS`,
+  `barrierHold()` for the traffic and taxis, `BARRIER_WALLS` for walking and
+  driving, `betweenBarriers()`: whoever's between them as they come down is
+  put back behind the nearer one, your car too), the surface (`swingY()`,
+  `onSwingDeck()` in walk.ts; `swingRoadY()` in routes.ts `heightsOf()`), the
+  parapets (`SWING_SOLIDS` in `SOLIDS`, over the water only: the esplanade
+  and the boardwalk cross it at grade by the kerbs), `SWING_LAMPS` (at the
+  boot) and `SWING_RECT` (the promenades' railings, lamps, benches and trees
+  keep off: outer.ts `offBridges()`, boulevard.ts `clearOfMouths()`,
+  waterfront.ts `clearAt()` and `RAIL_GAPS`).
+- To let the ship by, it anchors west at x -129 and weighs anchor 50 s into
+  each half; the river bus crosses at x -136 (riverroute.ts `CROSS`), the
+  rowing eight keeps west of it, and the cruise boat's west turn is east of
+  the bridge, once round each half of the ship's round, timed to miss it.
+- **Drawn by** `swingbridge3d.ts` (`LAZY_DISTRICTS` id `swing`): the fixed
+  approaches and the piers as sites; on the main thread the span (steel
+  camelback trusses, bracing, the operator's cabin with the name on its
+  ends, red and green lights), turning with the clock, and the barriers'
+  booms and flashing lights. Under reduced motion it stays shut.
 
 ## Harbour Bridge (river plan step 2, the owner's design)
 
@@ -3142,8 +3447,7 @@ it and has been retired completely. Build only on what's here.
   avenue, the front road and the one-way loop past the kerb round the
   short-stay car park are `AIRPORT_STREETS`; general aviation's road off
   the east ring avenue and its loop are `GA_STREETS` (`GA_ROAD`), both in
-  the street plan with traffic; the highway's junctions there have slip
-  lanes on their outer corners too (`OUTER_SLIPS`). You arrive (taxi, fast
+  the street plan with traffic, reached under the raised highway. You arrive (taxi, fast
   travel, `PLACES`) at the GA car park by the gate (`AIR_ARRIVE`).
 - **Landside** (Phase 3 step 2): the forecourt's one-way loop
   (`LOOP`, street `airport-forecourt`) up over **the departures deck**
@@ -3261,8 +3565,9 @@ it and has been retired completely. Build only on what's here.
     layout is the car's: the stick turns and climbs, the pedals read
     Faster / Slower) and `data-plane` (the header reads "Flying ·
     <aircraft>"); styles in `src/styles/fly.css`. Controls: W / S throttle,
-    A / D turn, arrows or Space / Shift climb and dive, V camera, F get out;
-    gamepad left stick, RT / LT, Y, View. Check the readout, stick, pedals
+    A / D turn, arrows or Space / Shift climb and dive, V camera (near, far,
+    the cockpit; views.ts), F get out; gamepad left stick, RT / LT, Y, the
+    right stick pressed the camera, View the world map. Check the readout, stick, pedals
     and prompt at phone widths, upright and on their side.
 
 ## Drop 001's fitting room
@@ -3469,8 +3774,9 @@ it and has been retired completely. Build only on what's here.
   first-person camera, mouse (pointer lock), keyboard, touch and gamepad
   controls, collisions and door prompts. The walk controls' settings (the
   hub's Settings tab)
-  (Look: speed, invert, first person; Shooting: "Aim when firing"
-  `settings.autoAds` = off / touch / always) are saved under
+  (Look: speed, invert, first person; Hold or toggle for sprint, aim,
+  crouch and block, `settings.holds`, comfort.ts; Shooting: "Aim when
+  firing" `settings.autoAds` = off / touch / always) are saved under
   `degen-city-walk-v1` in localStorage. The HUD markup (the controls, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
@@ -3482,9 +3788,10 @@ it and has been retired completely. Build only on what's here.
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
   clicked.
-- While walking (`body.is-walking`, set in `index.ts`) the header drops the
-  logo on tablets and phones and carries the emotes (online), ammo and score
-  and the hub's button. The touch buttons stay at the bottom (hidden while
+- While walking (`body.is-walking`, set in `index.ts`) the header is the
+  City view's (the title, Dorras, the level, City / Walk, ☰) and carries
+  the emotes (online), ammo and score too (on phones the ammo is the hotbar's, the score the
+  hub's and the emotes the hub's Online tab's: the controls plan's Phase 3). The touch buttons stay at the bottom (hidden while
   the hub is open, `.is-hub`).
 - The gun store is the menus' kit's sample (`.mk-store`, gunshop.ts): the
   guns as cards in a grid of four with the picked
@@ -3553,7 +3860,7 @@ it and has been retired completely. Build only on what's here.
 - `drive.ts` is the view:
   - **Getting in:** "Get in" at your car, on the turntable (it drives off facing the avenue) or wherever it was left.
   - **The car on screen:** it climbs kerbs smoothly, leans into turns and squats under gas or brakes (your car fitted out on its springs, `suspension.ts` and `carride.ts`; the kart and an unfitted car on the drawn-on lean). The wheels roll and steer.
-  - **Cameras:** a chase camera that swings in behind, where you can look around and it settles back; it's pulled in by buildings like the walk camera. V steps to the roof camera and, in your car fitted out, the driver's seat (`car.eye()`; the near plane comes in for it and goes back on getting out).
+  - **Cameras** (views.ts, docs/views-plan.md): near and far chase cameras that swing in behind, where you can look around and they settle back; pulled in by buildings like the walk camera. V (R3, the touch View button) steps near, far, first person: in your car fitted out the driver's seat (`car.eye()`; the near plane comes in for it and goes back on getting out; the roof camera until it's fitted out), on your bike the helmet, in your kart the seat. Every time you get in it starts near.
   - **Readout:** speed in km/h and the gear (`data-drive-hud`).
   - **Sound:** a synthesised engine (`engine()` in `sound.ts`) plus bump and door sounds, all through the sound switch.
   - **Getting out:** "Get out" anywhere. Degen steps out of the left door, or wherever there's room, and the car stays parked and solid to walk round. Leaving walk mode parks it too.
@@ -3562,7 +3869,8 @@ it and has been retired completely. Build only on what's here.
 - **Controls:**
   - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, F get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`), Horn and View (`data-drive-view`, the camera) in the controls plan's slots (`touchlayout.ts` `drive`: a bigger stick bottom-left, Gas the big button in the corner, Brake beside it); Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
-  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, View camera; the right stick or the mouse looks.
+  - **Two thumbs at the wheel** (the owner's call: "two finger touch points always available, never interrupting each other"; `touchdrive.ts`, DOM-free, tested in `tests/touchdrive.test.ts`): every finger is followed on its own (on the window, captured), so one landing or lifting never lets another go. The stick floats at the wheel (car, bike, kart, boat, aircraft, a kart race: walk.ts `atWheelNow()`): a thumb landing on the city low on the stick's side (`inSteerZone()`, `ZONE`) is the stick, its ring moved under the thumb; a little dead middle and full lock at `STICK.full` of the ring (`stickRead()`, the vehicles' `joy.sx` / `sy`; on foot and in the ring the stick reads as before, `joy.x` / `y`). A pedal finger presses the pedal it's on or the nearer (`pedalAt()`, `pedalFingers`), so a thumb rolled from Gas onto Brake switches without lifting, and one landing on the city just round the pedals (`inPedalZone()`, `PEDAL_REACH`) presses one; the pedals light by what's pressed (`.is-held`). Walk mode keeps the phone's own gestures (Safari's pinch, its long-press magnifier and callout, Android's long-press menu) off the controls and the city (`touchstart` / `touchmove` prevented on `.tc`, the stick and the canvas, `gesturestart` too), and the control card lets every touch through to the game but its × (controls.css).
+  - Gamepad: left stick steers (pressed: the horn), RT gas, LT brake, A handbrake, Y get out, the right stick pressed the camera, View the world map; the right stick or the mouse looks.
 - While driving, `.city.is-driving` hides the walk and combat HUD, and the header says "Driving · <car>" (`head.ts`). A gun is holstered on getting in. Your car's lights, horn, skid marks and gears are the city life plan's Phase 2 (above; `docs/life-plan.md`).
 - Check the pedals, stick, prompt and readout at phone widths, upright and on their side: nothing may overlap.
 
@@ -3594,24 +3902,39 @@ it and has been retired completely. Build only on what's here.
 
 - The hire boat (river plan step 4c, the owner's pick): moored along the quay east of Downtown's landing (`HIRE` in `riverbus.ts`, its ladder a gap in the railing through `atGangway()`, a BOAT HIRE board); "Take a boat" at the top of the ladder (`boat` in walk.ts's prompts, closed by the live settings' `boat`).
 - The rules are `boat-sim.ts` (DOM-free, tested in `tests/boat.test.ts`): `TUNE` (arcade: thrust to `top`, a gentle `astern`, the rudder biting harder with speed, the slide dying away), `stepBoat()` (cut into steps a 30th of a second at most; the hull three circles, `circles()`, pushed out of the banks, the world's ends, `WATER_SOLIDS` and every other boat, losing the speed it had into them; nothing is damaged), `WATER_SOLIDS` (everything standing in the water, the landings, and the bridges' spans too low for its top, `lowSpans()`: the ring highway's all the way across, so it keeps between them), `moversAt()` (the river's own boats, the river bus, the tall ship), `leaveAt()` (stopped alongside a landing, or at its mooring). New handling goes in the sim first.
-- `boat.ts` is the view, its own chunk loaded the first time you take it (`loadBoat()` in walk.ts): the model (`hireBoat()` in riverlife3d.ts, which draws the moored one while `HIRE_VIEW.out` is false) with Degen at the wheel (seated, his hands on the wheel through `reachArm()`, as the kart's driver), the bow lifting with speed, a lean in the turns, a wake; the chase camera (look round, it settles back) and the helm camera (V); the car's readout (`data-drive-hud`: km/h and F / N / R) and engine, the boats' horn (H, the touch Horn button, the left stick pressed); the lane boats come from life.ts's `bodies.boats`. It sets `is-boating` on top of `is-driving` (the car's touch layout; its own key hint `.boat-hint`) and `data-boat` (the header reads "Boating · Hire boat"). Get out shows when it lies stopped alongside a landing (Degen at the top of its gangway, facing the river) or at the mooring; the boat goes home, as it does when walk mode ends on the water.
+- `boat.ts` is the view, its own chunk loaded the first time you take it (`loadBoat()` in walk.ts): the model (`hireBoat()` in riverlife3d.ts, which draws the moored one while `HIRE_VIEW.out` is false) with Degen at the wheel (seated, his hands on the wheel through `reachArm()`, as the kart's driver), the bow lifting with speed, a lean in the turns, a wake; near and far chase cameras (look round, they settle back) and the helm camera (V, R3; views.ts); the car's readout (`data-drive-hud`: km/h and F / N / R) and engine, the boats' horn (H, the touch Horn button, the left stick pressed); the lane boats come from life.ts's `bodies.boats`. It sets `is-boating` on top of `is-driving` (the car's touch layout; its own key hint `.boat-hint`) and `data-boat` (the header reads "Boating · Hire boat"). Get out shows when it lies stopped alongside a landing (Degen at the top of its gangway, facing the river) or at the mooring; the boat goes home, as it does when walk mode ends on the water.
 
 ## The kart park (3D walk mode)
 
-- **The place** (the owner's call): a Mario-Kart-style go-kart park north
-  of the ring highway in the north-east (the north side's stage 2,
-  `docs/north-plan.md`, the owner's call: moved from outside the Parkway,
-  the same circuit to the last sample, "a more realistic track with more
-  than just a fence around it"; its old land is open again, kept clear for
-  a district later), fenced round its facility, its gate on Kart Road off
-  the east ring avenue, the metro's Kart Park station at the corner;
-  one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the kart
-  hut (door prompt "Kart hut") with a viewing terrace on its roof, a
-  grandstand in the infield facing the start straight and a big covered
-  one over the hill and the jump, grass banks with people, the pit lane
-  with eight garages, the big screen on their roof and the timing tower,
-  the paddock and the plaza inside the gate, armco, tyre walls, catch
-  fencing, marshal posts and floodlights (`kartfacility.ts`, below). It's a place like the landmarks (spot
+- **The move west and the upgrade** (the owner's call, 2026-11) are
+  planned in `docs/kart-west-plan.md` in eight phases: the move, nothing
+  clipping, the facility, the live crowd and the podium, driving, your
+  kart's look, the items mode, polish. All are built and merged to main
+  (the owner's go, 2026-11-05); keep it up to date.
+
+- **The place** (the owner's call): a Mario-Kart-style go-kart park on
+  the open land outside the ring highway's west side, north of ew0, west
+  of exit 8's ramps (`docs/kart-west-plan.md`, the owner's call: moved
+  there from north of the highway's north-east corner, where the north
+  side's stage 2, `docs/north-plan.md`, had put it, the same circuit to the
+  last sample, so lap records, ghosts and boards stay valid; both its old
+  lands are open again, kept clear for a district later, and Kart Road off
+  the east ring avenue went with it), fenced round its facility, its gate
+  on Kart Road, which comes up off ew0 (`DRIVE_X`) from exit 8 ("Uptown ·
+  Kart Park"), the metro's Kart Park station on the north bank avenue a
+  walk to the south;
+  one circuit raced both ways (the rebuild, `docs/kart-plan.md`), the
+  clubhouse (door prompt "Clubhouse"; the kart hut until the kart-west
+  plan's Phase 3: two storeys, the café and the trophy cabinet behind its
+  glass front, the lounge over the pits, the roof terrace), a grandstand
+  in the infield facing the start straight and a big covered one over the
+  hill and the jump, tall grass banks reaching the fence with berms
+  outside it, the pit lane with eight team garages, the timing tower, the
+  paddock with its tents and trucks, the plaza inside the gate with its
+  flags, the podium and the café, three LED screens showing the race,
+  armco, tyre walls, catch fencing, marshal posts and floodlights
+  (`kartfacility.ts`, below); its totem, signs and coach park on the
+  approach. It's a place like the landmarks (spot
   `karts`, pin, directory entry, a City-view panel with your records and
   **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
   stay on the track, but your own kart can be taken out of the pits and
@@ -3621,14 +3944,14 @@ it and has been retired completely. Build only on what's here.
   `circuitSurfaceAt()`, and goes back to the pits when a race starts).
   Walking follows the same ground inside the park, and up the banks
   (`groundAt()` in `walk.ts`, `bankY()`; your kart climbs them too).
-- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x 113-225,
-  z -311.5 to -191.5, its fence), local numbers via `toWorld()` /
+- **The site** is `kartpark.ts` (DOM-free): `KART_PARK` (world x -374 to
+  -262, z -146 to -26, its fence: the frame's corner `X0`, `Z0`), local numbers via `toWorld()` /
   `toLocal()` (u east, v south from the circuit frame's corner; the
   circuit's frame is kartcircuit.ts's, the site reaches past it on every
-  side), Kart Road (`ROAD`, east off ns3 past the gate) and the car park's
-  one-way loop (`LOOP`), in the street plan as `KART_STREETS` /
-  `KART_CROSSINGS` (traffic drives them, off the highway at ns3, whose
-  outer corners get slip lanes: `OUTER_SLIPS`), the fence's `GATE` and
+  side), Kart Road (`ROAD`: north off ew0 at `DRIVE_X`, then east along
+  the fence past the gate) and the car park's one-way loop (`LOOP`, west
+  of the fence), in the street plan as `KART_STREETS` / `KART_CROSSINGS`
+  (traffic drives them, off exit 8 and out along ew0), the fence's `GATE` and
   `KART_SPAWN`, and the line maths every track part uses: `sampleLine()`
   (centripetal Catmull-Rom through control points `CPt`, heights
   cosine-eased from point to point, or through a `glide` point in one
@@ -3646,15 +3969,53 @@ it and has been retired completely. Build only on what's here.
   the bends (`TYRE_WALLS`), catch fencing in front of the spectators
   (`CATCH`), none of it solid (a kart that wide is put back); the covered
   `GRANDSTAND` north of the hill and the jump (`tierAt()`), three grass
-  `BANKS` (`bankAt()`, `bankY()`: walkable), the hut's roof `TERRACE` and
-  its stairs; the `PLAZA` inside the gate with the ticket `KIOSK` and the
-  gate's `ARCH`, the `TOWER` (timing) at the pit lane's east end, the
-  `PADDOCK` behind the garages with its team `TENTS`; `FLOODLIGHTS`
+  `BANKS` (`bankAt()`, `bankY()`: walkable; their berms past the fence,
+  `out`, `bankLand()`, `BANKS_AREA`), the clubhouse's roof `TERRACE` and
+  its stairs, `CLUBHOUSE` (its floor, the trophy cabinet), the café's
+  `CAFE` tables, the `PODIUM` (`PODIUM_RECT`); the `PLAZA` inside the gate
+  with the ticket `KIOSK`, the gate's `ARCH` and the path's `FLAGS`, the
+  `TOWER` (timing) at the pit lane's east end, the `PADDOCK` behind the
+  garages with its team `TENTS` and `TRANSPORTERS` (`TEAM_COLOURS`); the
+  LED `SCREENS` (`screenLegs()`; kartpark3d.ts paints one live picture on
+  them all, `KartPark.board()`, and the cabinet's trophies from the save,
+  `trophies()`); the approach's `TOTEM`, `APPROACH_SIGNS`, `COACH_LOT` and
+  `COACHES`; `FLOODLIGHTS`
   (`FLOOD`, under the Emporium); the car park in the loop (`CAR_PARK`,
   `BAY_COLS`, `BAYS`, `PARKED`), `KART_LAMPS`, `KART_TREES` and the
   people (`KART_PEOPLE`: on the banks, sitting in the grandstand, on the
   terrace, the plaza and in the paddock; `trim` ones left out on phones);
   `FACILITY_SOLIDS` (in `SOLIDS`), `KART_RECTS` / `KART_AREA`.
+- **Nothing clips** (`docs/kart-west-plan.md` Phase 2, tested in
+  `tests/kartclip.test.ts`): the tunnel's tube (`TUBE_R`, `TUBE_IN` in
+  kartcircuit.ts) and the flyover's deck (`DECK_OUT`, `DECK_DEPTH`,
+  `RAIL_H`) are wide enough that a kart's side never reaches the tube's
+  wall or the railing, with headroom over the driver; the deck's columns
+  (`SUPPORTS`, `SUPPORT_OUT`) stand off every stretch below; a kart is put
+  back (`RESET_AT`, kartcircuit.ts) before its side reaches the tyre walls
+  (`TYRE_OUT`) or the armco (`ARMCO_OUT`), which keep that far from every
+  stretch; karts bump as two circles each (`KART_BODY` in kartpark.ts,
+  nose and tail); the race camera goes through `camRoom()` (inside the
+  tube with the kart in it, under the deck with the kart below it, over
+  the ground; kart.ts adds the banks). The trackside furniture is
+  `kartside.ts` (DOM-free): `MARSHALS` and each way round's `BOARDS`
+  (every turn's number, braking markers, chevrons, facing the track,
+  `cornersOf()`), each placed clear of the run-off, the barriers, the
+  catch fencing, the banks, everything built, the floodlights, the trees,
+  the columns and each other (`FIXED`); the two ways' boards are shown one
+  at a time, so they keep off their own way's only. Anything new
+  trackside goes through them and the test.
+- **The live crowd and the podium** (`docs/kart-west-plan.md` Phase 4)
+  are `kartcrowd.ts` (DOM-free, tested in `tests/kartcrowd.test.ts`): fans
+  cheer (crowdclips.ts `cheer` / `sitcheer`, acts.ts `cheerOver()`) while a
+  kart goes by (`excited()`, `FAN_REACH`), when you overtake (`WAVE`) and
+  through the ceremony, asked through life.ts's `CHEER.fn` (set by the race,
+  null otherwise); the marshals' flags (`marshalFlags()`: green after the
+  start, yellow up the track from a spin, blue for a kart being lapped, the
+  chequered at the line on the last lap; `KART_VIEW.flags`, waved by
+  kartgrounds3d.ts); and the ceremony after a race (`CEREMONY`,
+  `podiumSpot()`, `ceremonyAt()`, `ceremonyCam()`, `confettiAt()`: the top
+  three on the podium, the trophy, the confetti, the camera move, then the
+  results; still under reduced motion).
 - **The rules** are `kart-sim.ts` (DOM-free, seeded, a fixed 60 Hz tick,
   tested), racing on the rebuild's circuit (`kartcircuit.ts`) since
   Phase 2: `createKartSim(setup)` → `step(dt, input)` returning events.
@@ -3662,11 +4023,18 @@ it and has been retired completely. Build only on what's here.
   pace; `turnRate()`), a hop into a drift (`T.drift` stages,
   `T.driftBoost`), boost pads (`pads` on the course), bumps weighted by
   `weight` (a heavy kart ramming a light one spins it), air off the jump
-  (`flight()`), banking (more grip), pure racing (no items, the owner's
-  call). **No invisible walls:** kerbs are track; the run-off holds a
+  (`flight()`), banking (more grip), pure racing (no items but in a single race's items mode, Phase 7 of
+  `docs/kart-west-plan.md`, the owner's call). **No invisible walls:** kerbs are track; the run-off holds a
   kart to `RUNOFF_CAP` with `RUNOFF_GRIP`; past `RESET_AT` (or over the
   deck's edge) it fades back onto the centre line where it had got to
-  (`'reset'`, `RESET_T`, no progress lost). The tunnel's walls are real:
+  (`'reset'`, `RESET_T`, no progress lost). The start (`START`, the
+  player's only: gas down just before the GO is a boost, held from early it
+  bogs down), the slipstream (`SLIP`: a tow right behind another kart, in
+  its line, at speed; everyone's) and your splits (`split` events at each
+  lap's thirds, `SECTORS`; the HUD's delta to your fastest lap's,
+  `karts.splits` / `keepSplits()` in tycoon.ts; live gaps ahead and behind;
+  the personal-best flash) are `docs/kart-west-plan.md` Phase 5, tested in
+  `tests/kartdrive.test.ts`. The tunnel's walls are real:
   a kart scrapes along them, slower, never put back. Conditions (`cond`): day,
   night (looks only), rain (`RAIN_GRIP` everywhere). Clean laps (no
   wheel in the run-off) and overtakes are counted per racer. Seven
@@ -3716,6 +4084,25 @@ it and has been retired completely. Build only on what's here.
   (Lv 1, 0.82), Sport (Lv 3, 1) and Neon (Lv 8, 1.18) set everyone's pace
   in a race; a cup fixes its class, a time trial picks one. Records and
   boards are per course per class (`recordKey()`).
+- **Your kart's look** (`docs/kart-west-plan.md` Phase 6, all free, the
+  clubhouse's Karts tab): `KartLook` in mykart.ts (`DEFAULT_LOOK`,
+  `cleanKartLook()`, `LOOK_COLOURS`, `KART_DECALS`: the number 1-99,
+  decals on the side pods, rims, tyre stripes, helmet and race suit, the
+  spark trail, the underglow at night), the save's `karts.look`
+  (`setKartLook()` in tycoon.ts; older saves cleaned to the stock look),
+  drawn by karts.ts `dress()` / `glow()`; in races you wear the helmet
+  (wardrobe.ts `racehelmet`, the Outfit's `helmet`) and the suit. Tested in
+  `tests/kartlook.test.ts`.
+- **The items mode** (`docs/kart-west-plan.md` Phase 7, the owner's
+  picks; a single race's switch, pure racing the default, never in cups,
+  time trials or records) is `kartitems.ts` (DOM-free, tested in
+  `tests/kartitems.test.ts`): `BOXES` in three rows (`BOX_ROWS`), the
+  items `boost`, `shield` and `oil` (`ITEM`, `drawItem()` by place), the
+  rivals' sense (`AI_USE`, `clearAhead()`); the sim's `items` setup
+  (`Racer.item` / `shieldT` only then, `boxLive()`, `slicks`, events
+  `item`, `useItem`, `blocked`); drawn by kart.ts (boxes, slicks, shield
+  bubbles), the HUD's slot (`data-kart-slot`), used with E, X or the touch
+  Item button (`data-kart-item`, slot `b2`, `.has-items`).
 - **The karts** are `mykart.ts` (`PLAYER_KARTS`, `KART_SPECS`: Pocket
   Rocket, Big Wheel, Zip, Tank Kart; `cleanKart()`), priced in `catalog.ts`
   (`KART_CATALOG`, the Rocket free; `KART_MODS`: motor, soft tyres, nitro
@@ -3750,7 +4137,7 @@ it and has been retired completely. Build only on what's here.
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
   on. `kartpark3d.ts` (`buildKartPark()`, at the boot) is the place: the
-  spot's group (the garages with their numbers and the screen, the hut and
+  spot's group (the garages with their numbers and the screens, the clubhouse and
   its terrace, the timing tower with its board, both grandstands, the
   gate's arch with SECTOR 7 KART PARK both ways, the kiosk), its people,
   trees, lamps and parked cars, and `KART_VIEW` (the way round and whether
@@ -3793,7 +4180,7 @@ it and has been retired completely. Build only on what's here.
   (`createKartUI()`, markup `data-karts`, `data-kart-hud`,
   `data-kart-count`, `data-kart-pops`, `data-kart-result`, the Drift
   touch button `data-kart-drift` in `CityMap.astro`, styles in
-  `src/styles/karts.css`) is the hut's menu (Race: the cups as series
+  `src/styles/karts.css`) is the clubhouse's menu (Race: the cups as series
   (start, continue, drop); a single race (a cup's rivals at its class and
   level, forward or reverse, day, night or rain, three laps, paid like a
   cup's race, outside any series: `RaceStart.single`, kart.ts skips
@@ -3807,12 +4194,12 @@ it and has been retired completely. Build only on what's here.
   samples in world numbers, the flyover's deck over the run below, the
   start line, a dot per kart from `KartHud.dots` with yours lit and on
   top), the countdown, pops and the results card (laps, par, the series
-  table with Next race / Drop). `walk.ts` wires them: the hut door's
+  table with Next race / Drop). `walk.ts` wires them: the clubhouse door's
   prompt opens the menu, a race hides Degen and feeds the kart
   (`kartFrame()`: W/S gas and brake, A/D steer, Space hop and drift;
   touch: the stick, the pedals and Drift over Brake; gamepad: stick, RT /
-  LT, A drift, Y quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
-  abandons (no prize), closing the results stands Degen up by the hut.
+  LT, A drift, V / R3 the camera, Start quits), `nextRace()` / `quitSeries()` carry a series on, Esc or Quit
+  abandons (no prize), closing the results stands Degen up by the clubhouse.
   While racing `.city.is-karting` is on the root and `data-kart` makes the
   header read "Karting · <course>". Under reduced motion the race still
   runs (it's the game) with no camera shake or sparks.
@@ -4139,9 +4526,10 @@ it and has been retired completely. Build only on what's here.
   the purse on a win, XP either way, a quit is a loss; knock-outs and
   chains of three add XP). `walk.ts` wires it: the counter's prompt opens
   the menu, a fight hides Degen and feeds `fightFrame()` (W/A/S/D move
-  relative to the opponent, click punch, right-click or G kick, Shift
-  block, Space dodge; touch: the stick and the four buttons; gamepad:
-  stick, X / Y, LB held, A, Start quits), Esc or Quit ends it with the
+  relative to the opponent, click punch, right-click held block, G kick,
+  Space dodge, the street's keys (the views plan's Phase 3); touch: the
+  stick and the four buttons; gamepad: stick, X / Y, LB held, A, R3 the
+  camera, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
   read "Fighting · <opponent>". The save (`tycoon.ts`, v12) keeps `fight`
@@ -4168,7 +4556,7 @@ it and has been retired completely. Build only on what's here.
   their walks in outerdress.ts), in the street plan as blocks of use
   `district`. The south bank has its own east-west road (`SOUTH_ROAD`, so
   roads are split into `NS_ROADS` / `EW_ROADS`), a lamp-lit riverside walk,
-  traffic over the east avenue's bridge and the highway's, and pedestrians
+  traffic over the east avenue's bridge and the raised highway's, and pedestrians
   round the south row.
 - A save that owned plots (v11 and older) gets back everything they cost
   and what was built on them when it loads (`plotRefund()` in tycoon.ts,
@@ -4291,7 +4679,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges and the rolls (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), its clipping (`kartside.ts`, `camRoom()`, `tests/kartclip.test.ts`) and its crowd, marshals and podium (`kartcrowd.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix, the ring avenue and the park's east walk (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`, `parkedge.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`), the swing bridge (`swingbridge.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

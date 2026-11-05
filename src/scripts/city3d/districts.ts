@@ -14,6 +14,7 @@
  * Once built, it's held like the rest of the city: its tiles' near pieces go
  * when far away and the near forms held pass the budget (tilework.ts).
  */
+import { SWING_RECT } from './swingbridge';
 import type * as THREE from 'three';
 import type { DistrictModule, SiteWorker } from './sitework';
 import { rectDistance } from './tileplan';
@@ -28,8 +29,11 @@ import { EXT, RIVER } from './layout';
 import { MALL_AREA } from './mall';
 import { CREST_RECT } from './crestmont';
 import { DOCKS_RECT } from './docks';
+import { SF_RECT } from './southfield';
 import { STRIP_RECT } from './strip';
 import { SUNRIDGE_RECT } from './sunridge';
+import { LOT9_RECT } from './lot9';
+import { HIGHWAY_BOX } from './highway';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -68,6 +72,16 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'strip', rect: [STRIP_RECT[0] - STRIP_REACH, STRIP_RECT[1] - STRIP_REACH, STRIP_RECT[2] + STRIP_REACH, STRIP_RECT[3] + STRIP_REACH], load: () => import('./strip3d') },
   // Sunridge, the suburb north-east inside the highway (sunridge.ts, docs/suburb-plan.md): its streets and walls (sunridge3d.ts)
   { id: 'sunridge', rect: SUNRIDGE_RECT, load: () => import('./sunridge3d') },
+  // Southfield, the land south of the south row (southfield.ts, docs/blend-plan.md Phase 5a): its yards, park,
+  // allotments, gardens and walks (southfield3d.ts)
+  { id: 'southfield', rect: SF_RECT, load: () => import('./southfield3d') },
+  // Lot 9, the trailer park south of the highway's south-west corner, and its tunnel (lot9.ts, docs/trailer-plan.md; lot9-3d.ts)
+  { id: 'lot9', rect: [LOT9_RECT[0], 300, LOT9_RECT[2], LOT9_RECT[3]], load: () => import('./lot9-3d') },
+  // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the
+  // town, so it comes in as soon as the city's up
+  { id: 'viaduct', rect: [HIGHWAY_BOX[0] - 10, HIGHWAY_BOX[1] - 10, HIGHWAY_BOX[2] + 10, HIGHWAY_BOX[3] + 10], load: () => import('./viaduct3d') },
+  // The swing bridge, Uptown to The Trenches (swingbridge.ts, docs/highway-plan.md Phase 5; swingbridge3d.ts)
+  { id: 'swing', rect: [SWING_RECT[0] - 20, SWING_RECT[1] - 20, SWING_RECT[2] + 20, SWING_RECT[3] + 20], load: () => import('./swingbridge3d') },
 ];
 
 

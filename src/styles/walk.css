@@ -732,89 +732,7 @@
   .city-pin-title {
     font-size: 14px;
   }
-  /* Phones: the mode header is two rows while walking (mode and switch; tabs, ammo and score) */
-  .city {
-    --head-h: 48px;
-  }
-  /* Two rows. City and Build: logo, title, settings and menu, then City / Walk / Build
-     across the width with their names. Walking: the title and the switch, then the walk tabs,
-     ammo and score. */
-  .city-head {
-    flex-wrap: wrap;
-    column-gap: 8px;
-    row-gap: 6px;
-    min-height: 48px;
-    padding: 6px 12px 8px;
-  }
-  .city-head::before {
-    content: "";
-    order: 3;
-    flex-basis: 100%;
-  }
-  .city-head-logo {
-    height: 36px;
-    padding-right: 10px;
-  }
-  .city-head-id {
-    flex: 1 1 0;
-  }
-  .city-head-tools {
-    order: 2;
-  }
-  .city-online {
-    order: 4;
-  }
-  .city-head-modes {
-    flex: 1 1 auto;
-  }
-  .city:not([data-mode="walk"]) .city-head-modes .city-mode-btn {
-    flex: 1;
-    justify-content: center;
-  }
-  .city:not([data-mode="walk"]) .city-head .city-mode-btn .city-mode-label {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
-  }
-  .city-head .walk-top {
-    order: 6;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .city-head-stats {
-    order: 7;
-    margin-left: auto;
-  }
-  .city[data-mode="walk"] .city-head-modes {
-    order: 2;
-    flex: none;
-  }
-  /* The hub's button last in the tools */
-  .city-head .hub-btn {
-    order: 1;
-  }
-  .city-head-text b {
-    font-size: 16px;
-  }
-  .city-head-text small {
-    font-size: 9px;
-    letter-spacing: 0.08em;
-  }
-  .city-head .city-mode-btn {
-    padding: 8px 10px;
-  }
-  .walk-top {
-    gap: 6px;
-  }
-  /* Phones: Profile, Online and Emote as icons */
-  .walk-pill-text {
-    display: none;
-  }
-  .walk-pop summary {
-    padding: 9px 12px;
-  }
+  /* (the header on phones is one slim row: controls.css, docs/controls-plan.md Phase 3) */
   .city-pin-sub {
     font-size: 8.5px;
   }
@@ -1244,7 +1162,7 @@
   .walk-pill-text {
     display: none;
   }
-  /* Settings and Menu as icons (their names stay for screen readers), and no logo while walking */
+  /* Settings and Menu as icons (their names stay for screen readers) */
   .head-btn-text {
     position: absolute;
     width: 1px;
@@ -1255,9 +1173,6 @@
   }
   .city-head .hub-btn {
     padding: 0 11px;
-  }
-  .city[data-mode="walk"] .city-head-logo {
-    display: none;
   }
   /* Out of walk mode there's room for all three mode names */
   .city:not([data-mode="walk"]) .city-head .city-mode-btn .city-mode-label {
@@ -1851,11 +1766,3 @@
   display: none;
 }
 
-/* The narrowest phones: The Trenches' logo is wider than it is tall, so it comes down a little to leave the
-   mode's title room beside it */
-@media (max-width: 380px) {
-  .city-head-logo {
-    height: 28px;
-    padding-right: 8px;
-  }
-}
