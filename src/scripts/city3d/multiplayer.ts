@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { createNetClient, type NetState } from '../net/client';
 import { EMOTES, PHRASES, RANKS } from '../net/profile-data';
 import { FLAG, INPUT_HZ, modeBits, moveOk, sameVehicle, v3, type Mode, type OwnProfile, type ServerMsg, type Vehicle } from '../net/protocol';
+import { cleanCard, type PlayerCard } from '../net/card';
 import type { Combat } from './combat';
 import type { ProfileUI } from './profile-ui';
 import { createRemotes, type Motion } from './remote';
@@ -53,6 +54,8 @@ export interface MultiplayerDeps {
   changed(s: { state: NetState; room: string; players: number }): void;
   /** Logged in with a wallet (account.ts): its session token, sent when joining so the wallet's profile opens */
   account: { readonly token: string | null; subscribe(f: () => void): void; profileChanged(p: OwnProfile): void };
+  /** A player's card came back from the room (profilecard.ts shows it) */
+  showCard(card: PlayerCard): void;
 }
 
 export function createMultiplayer(d: MultiplayerDeps) {
@@ -99,8 +102,12 @@ export function createMultiplayer(d: MultiplayerDeps) {
       ...people.map((p) => {
         const li = document.createElement('li');
         const rank = RANKS.find((k) => k.id === p.rank) ?? RANKS[0];
-        li.innerHTML = '<span class="mp-who"><b></b><span class="mp-rank"></span></span><button type="button" class="mp-mute"></button>';
+        li.innerHTML = '<button type="button" class="mp-who"><b></b><span class="mp-rank"></span></button><button type="button" class="mp-mute"></button>';
         li.querySelector('b')!.textContent = p.name;
+        // Their player card (docs/account-plan.md Phase 5): the room answers with it
+        const who = li.querySelector<HTMLButtonElement>('.mp-who')!;
+        who.setAttribute('aria-label', `${p.name}'s player card`);
+        who.addEventListener('click', () => online() && net.send({ t: 'card', id: p.id }));
         const badge = li.querySelector<HTMLElement>('.mp-rank')!;
         badge.textContent = rank.name;
         badge.dataset.rank = rank.id;
@@ -185,6 +192,11 @@ export function createMultiplayer(d: MultiplayerDeps) {
         remotes.setInfo(m.p);
         paintList();
         break;
+      case 'card': {
+        const c = cleanCard(m.card);
+        if (c && remotes.list().some((p) => p.id === m.id)) d.showCard(c);
+        break;
+      }
       case 'you':
         combat.setNetProfile(m.profile);
         profile.setOnline(m.profile);

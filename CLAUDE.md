@@ -4403,6 +4403,24 @@ it and has been retired completely. Build only on what's here.
   the profile again on `{ t: 'profile' }` after a change on the card
   (multiplayer.ts `reload()`), so other players see it at once; `'reload'`
   is the gun's message, never reuse it.
+- Phase 5 (the profile) is built, waiting on the owner's sign-off: a
+  player's card is `net/card.ts` (DOM-free, shared with the server, tested
+  in `tests/card.test.ts`): `gameCard()` from the city's game save (level
+  and title, pinned badges, badge count, play time, the kart park's and the
+  Fight Club's records; never Dorras, worth or an address), `ownsOf()` (what
+  you own: your own profile only), `cleanCard()` (a card off the wire made
+  safe). The save carries `played` (seconds with the city on screen, counted
+  by tycoon-ui.ts's tick, not behind the title screen; the server's checks
+  hold it to the clock, `GROW.played`) and `pinned` (up to `PIN_MAX` earned
+  badges, missions.ts `togglePin()`). The screens are `profilecard.ts`, a
+  chunk loaded the first time the hub's Profile tab opens or a card is asked
+  for (index.ts `loadCard()`): your card at the top of the Profile tab
+  (`[data-pcard-own]`, pinning, what you own, See my player card) and the
+  card modal (`[data-pcard]`, the kit's `.mk-modal`, which the hub waits
+  under). Online, each name in the hub's Online list is a button: the room
+  answers `{ t: 'card', id }` with a wallet's card from the save the server
+  checked (saves.ts `card()`) or a guest's name, rank and score, the latest
+  of a burst a few times a second.
 
 ## Multiplayer (beta, testing)
 
@@ -4519,7 +4537,7 @@ it and has been retired completely. Build only on what's here.
   (`combat-sim.ts`), how the guns feel (`gunfeel.ts`) and their shapes (`gunshapes.ts`), the multiplayer protocol's checks (`protocol.ts`), the economy (`tycoon.ts`, the market square in
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
-  the save backup (`guide.ts`, `backup.ts`), the cloud save's checks (`savecheck.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
+  the save backup (`guide.ts`, `backup.ts`), the cloud save's checks (`savecheck.ts`), account names and player cards (`names.ts`, `card.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
   getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix and the ring avenue (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,

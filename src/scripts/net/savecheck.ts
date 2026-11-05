@@ -71,8 +71,10 @@ export interface Limit {
  * trophy, the daily challenge, a bout's purse, the badges that come with
  * them: the test works it out from the game's own tables).
  */
-export const GROW: { worth: Limit; xp: Limit; score: Limit; counters: Partial<Record<CounterId, Limit>>; counter: Limit } = {
+export const GROW: { worth: Limit; xp: Limit; score: Limit; played: Limit; counters: Partial<Record<CounterId, Limit>>; counter: Limit } = {
   worth: { burst: 200_000, perMin: 8_000 },
+  /** Seconds played (Phase 5): no faster than the clock, with room for two windows open side by side and a clock that's off */
+  played: { burst: 900, perMin: 120 },
   xp: { burst: 30_000, perMin: 1_000 },
   /** Target practice's lifetime score (dummies 100, drones 150) */
   score: { burst: 5_000, perMin: 3_000 },
@@ -155,7 +157,7 @@ export function baselineOf(stored: Partial<Record<CloudKey, string>>, gameAt: nu
 }
 
 /** Why an upload was turned away */
-export type Why = 'empty' | 'key' | 'size' | 'shape' | 'game' | 'worth' | 'xp' | 'score' | 'badge' | `counter:${CounterId}`;
+export type Why = 'empty' | 'key' | 'size' | 'shape' | 'game' | 'worth' | 'xp' | 'score' | 'played' | 'badge' | `counter:${CounterId}`;
 export type Verdict = { ok: true; writes: Partial<Record<CloudKey, string | null>> } | { ok: false; why: Why[] };
 
 /**
@@ -221,6 +223,7 @@ function grew(base: Baseline, game: TycoonSave, now: number, minutes: number): W
   const prev = base.game;
   if (worth(game, now) - worth(prev, now) > allowance(GROW.worth, minutes)) out.push('worth');
   if (game.xp - prev.xp > allowance(GROW.xp, minutes)) out.push('xp');
+  if (game.played - prev.played > allowance(GROW.played, minutes)) out.push('played');
   for (const c of COUNTER_IDS) if (game.counters[c] - prev.counters[c] > allowance(GROW.counters[c] ?? GROW.counter, minutes)) out.push(`counter:${c}`);
   for (const id of game.badges) {
     if (prev.badges.includes(id)) continue;

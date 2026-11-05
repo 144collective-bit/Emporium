@@ -5,7 +5,8 @@ remembers achievements, purchases, gear and everything else the city's game
 keeps, following the player to any device. Built one phase at a time, each
 with the owner's sign-off; keep this up to date. Phases 1 (the save on the
 server), 2 (the browser's saves per profile), 3 (the title screen and the
-account) and 4 (names) are built, waiting on the owner's sign-off.
+account), 4 (names) and 5 (the profile) are built, waiting on the owner's
+sign-off.
 
 Everything saved is the city's game: Dorras and XP are earned by playing,
 never bought, never cashed out, never tied to the token or the store. An
@@ -230,11 +231,25 @@ account changes where the save lives, not what's in it.
    round and in capitals refused, the server's own check, the room's
    nametag changing without rejoining, the room's New name freeing the old
    name, and a delete freeing the name.
-5. **The profile**: your profile screen in the hub's Profile tab (name,
-   level and title, badges, records: karts, fights, target score; what you
-   own; play time, which the save starts counting), pinned badges (three),
-   the player card for other players online. Never the wallet address to
-   anyone else, never Dorras on the card.
+5. **The profile** (built, waiting on the owner's sign-off): your card at
+   the top of the hub's Profile tab (name, rank, level and title, three
+   pinned badges, badges earned, play time, target score, when you started,
+   the kart park's and the Fight Club's records), pinning (Pin badges: earned
+   ones only, `togglePin()`), what you own (yours only), and See my player
+   card. The card is `net/card.ts` (`gameCard()`), worked out from the city's
+   game save in the browser for your own and on the server for anyone
+   else's (saves.ts `card()`, from the save the checks let through), so what
+   others see is what was checked. The save counts `played` (seconds with
+   the city on screen; the checks hold it to the clock, with room for two
+   windows) and keeps `pinned`. Online, tapping a name in the hub's Online
+   list asks the room (`{ t: 'card', id }`): a wallet's card with its game,
+   a guest's name, rank and score (a guest has no save on the server). Never
+   a wallet address, never Dorras or anything with a price. On the way, a
+   phone bug in the beta multiplayer: while online in walk mode, any tap on
+   a phone closed the hub (the page closed every open drop-down on a tap
+   outside it, including the emotes the hub keeps open on phones, and
+   closing those closes the hub); they're left alone now, and the hub waits
+   under a player's card as it does under the wallet's.
 6. **The public page**: `/player/<name>` (on a static site: one page,
    `src/pages/player.astro`, and a rewrite in `.htaccess` and on the Worker
    so `/player/<name>` serves it; the page reads the public profile from the

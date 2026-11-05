@@ -455,7 +455,13 @@ export interface TycoonSave {
   visited: string[];
   /** What Degen carries (inventory.ts, save v11): his loadout of two guns, the thing in his hand, his consumables */
   inventory: Inventory;
+  /** Seconds played with the city on screen (docs/account-plan.md Phase 5; counted from then, so older saves start at 0) */
+  played: number;
+  /** The badges shown first on your profile and your player card (at most `PIN_MAX`, earned ones only) */
+  pinned: string[];
 }
+/** How many badges a profile shows off */
+export const PIN_MAX = 3;
 /** How many steps Getting started has (guide.ts's GUIDE) */
 export const GUIDE_STEPS = 7;
 
@@ -492,6 +498,8 @@ export function newSave(now: number): TycoonSave {
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
+    played: 0,
+    pinned: [],
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -607,6 +615,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
+    played: 0,
+    pinned: [],
   };
   cleanGame(s, o, now);
   // (v11: a save from before the inventory carries the rifle and the first gun it bought)
@@ -1948,6 +1958,8 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   s.backup = num(o.backup, 0, now, 0);
   // Getting about (growth plan Phase 8): the places you've walked to, only ones that are on the map
   s.visited = [...new Set((Array.isArray(o.visited) ? o.visited : []).filter((id): id is string => typeof id === 'string' && MAP_PLACES.includes(id)))];
+  s.played = Math.floor(num(o.played, 0, 1e10, 0));
+  s.pinned = [...new Set((Array.isArray(o.pinned) ? o.pinned : []).filter((id): id is string => typeof id === 'string' && s.badges.includes(id)))].slice(0, PIN_MAX);
 }
 
 /** You've walked to these places (places.ts `seen()`): fast travel can take you there now. The ones that are new */

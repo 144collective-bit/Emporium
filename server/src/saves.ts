@@ -41,6 +41,7 @@ import {
   type SnapSummary,
 } from '../../src/scripts/net/savecheck';
 import { cleanSave } from '../../src/scripts/city3d/tycoon';
+import { gameCard, type GameCard } from '../../src/scripts/net/card';
 import type { Env } from './index';
 
 interface Meta {
@@ -135,6 +136,18 @@ export class Saves extends DurableObject<Env> {
       }
     }
     return { rev: m.rev, at: m.at, saves, held: typeof lease === 'string' && !!m.lease && lease === m.lease };
+  }
+
+  /** What the save shows others (net/card.ts), or null before there's a game here */
+  async card(): Promise<GameCard | null> {
+    const m = await this.load();
+    const raw = (await this.read(this.ctx.storage, 'v:', m.pieces, [TYCOON_KEY]))[TYCOON_KEY];
+    if (!raw) return null;
+    try {
+      return gameCard(cleanSave(JSON.parse(raw), Date.now()));
+    } catch {
+      return null;
+    }
   }
 
   /** This device takes the save; any other device's lease ends */

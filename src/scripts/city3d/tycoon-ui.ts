@@ -1252,7 +1252,12 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       .join(' ');
     return `${parts.length ? `While you were away your business ${parts.join(', ')}.` : ''} ${extra}`.trim();
   }
+  /** Play time (the profile's, docs/account-plan.md Phase 5): counted while the city's on screen, never behind the title screen, a few seconds at most a tick */
+  let playedAt = Date.now();
   function tick() {
+    const now = Date.now();
+    if (!document.hidden && !root.classList.contains('has-start')) save.played += Math.min(5, Math.max(0, (now - playedAt) / 1000));
+    playedAt = now;
     const sales = advance(save, Date.now(), serving() ?? false);
     // Back after a while: say what happened
     if (sales.away > 0) {

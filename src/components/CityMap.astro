@@ -377,6 +377,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             <button type="button" class="walk-fp" data-account-open hidden>Log in with wallet</button>
             <p class="walk-pad" data-profile-note>Go online to get your player name. Your look and rifle finish are saved in this browser.</p>
           </div>
+          {/* Your player card, pinned badges and what you own (profilecard.ts, loaded the first time this tab opens) */}
+          <div class="pcard-own" data-pcard-own></div>
           <div class="walk-skins" data-skins>
             <p class="walk-skins-head"><span>Rifle finish</span><span>Lifetime score <b data-lifetime>0</b></span></p>
             <div class="walk-skins-row">
@@ -934,6 +936,15 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="city-modal-body" data-account-body></div>
     </div>
   </div>
+  {/* A player's card (profilecard.ts): another player's, tapped in the hub's Online list, or your own */}
+  <div class="city-modal pcard-modal mk-modal mk-skin" data-pcard hidden>
+    <div class="city-modal-card" role="dialog" aria-modal="true" aria-labelledby="pcard-title">
+      <button type="button" class="city-panel-close" data-pcard-close aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" /></svg>
+      </button>
+      <div class="city-modal-body" data-pcard-body></div>
+    </div>
+  </div>
   {/* A wallet's save kept with the account (cloudsave.ts): another device took it, the server turned one away, the login ran out */}
   {server && (
     <div class="city-modal cloud-modal mk-modal mk-skin" data-cloud hidden>
@@ -1348,8 +1359,9 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     const hubReady = import('../scripts/city3d/hub').then(({ createHub }) => createHub(root));
 
     // Drop-open menus (the emotes) close with their ×, a tap outside or Esc (in 3D, index.ts handles Esc so it
-    // can come before leaving a mode)
-    const openMenus = () => root.querySelectorAll<HTMLDetailsElement>('[data-pop][open]');
+    // can come before leaving a mode). Not the emotes in the hub's Online tab on a phone: they're open there for
+    // good, and closing them closes the hub (hub.ts), so every tap on a phone while online shut it
+    const openMenus = () => root.querySelectorAll<HTMLDetailsElement>('[data-pop][open]:not([data-hub-emotes] *)');
     // One drop-down at a time
     const pops = root.querySelectorAll<HTMLDetailsElement>('[data-pop]');
     pops.forEach((d) =>

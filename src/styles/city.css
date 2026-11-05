@@ -896,9 +896,95 @@ body.is-walking .nav {
   font-size: 13px;
   color: #ff8a8a;
 }
-.account-modal .city-modal-card {
+.account-modal .city-modal-card,
+.pcard-modal .city-modal-card {
   max-height: calc(100% - 32px);
   overflow-y: auto;
+}
+/* Player cards (profilecard.ts, docs/account-plan.md Phase 5): another player's in its modal, yours on the Profile tab */
+.pcard-name {
+  padding-right: 36px;
+}
+.pcard-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+}
+.pcard-level {
+  color: var(--m-coin);
+  font: 700 12px/1 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pcard-pins {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pcard-pins li {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 4px 7px;
+  border: 2px solid var(--m-edge);
+  background: #ffffff06;
+  clip-path: var(--notch-2);
+  font: 700 11px/1.15 var(--font-pixel);
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.pcard-pins li.is-empty {
+  border-style: dashed;
+  color: var(--m-dim);
+}
+.pcard-pins li.is-empty .badge-mark {
+  opacity: 0.3;
+  box-shadow: none;
+}
+.pcard-pins .badge-mark {
+  display: block;
+}
+.pcard-facts dd {
+  overflow-wrap: anywhere;
+}
+.pcard-label {
+  margin: 4px 0 -2px;
+}
+.pcard-own {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--m-edge);
+}
+.pcard-own-card {
+  display: grid;
+  gap: 10px;
+}
+.pcard-own-card .modal-title {
+  font-size: 20px;
+}
+.pcard-own .modal-acts {
+  margin-top: 0;
+}
+.pcard-pick {
+  display: grid;
+  gap: 8px;
+}
+.pcard-pick-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pcard-pick-list .walk-fp {
+  margin: 0;
 }
 .city-modal-card .city-panel-close[hidden] {
   display: none;

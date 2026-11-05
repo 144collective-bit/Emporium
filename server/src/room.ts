@@ -52,6 +52,7 @@ import {
 } from '../../src/scripts/net/protocol';
 import type { Env } from './index';
 import type { Profile } from './profile';
+import type { GameCard, PlayerCard } from '../../src/scripts/net/card';
 import { guestKey, walletKey } from './keys';
 
 const LOOP_HZ = 30;
@@ -373,6 +374,20 @@ export class Room extends DurableObject<Env> {
       case 'profile':
         if (p.wallet && this.allow(p, 'profile', 1500)) this.changed(p, p.profile.open(undefined, p.wallet) as Promise<OwnProfile>);
         break;
+      case 'card': {
+        // Another player's card: what their profile and (a wallet's) checked save show, never Dorras or an address.
+        // A few a second at most: taps closer together get the latest one's answer when the window ends
+        const id = Number(m.id);
+        this.soon(p, 'card', 300, () => {
+          const who = this.players.get(id);
+          if (!who) return;
+          const base: PlayerCard = { name: who.me.name, rank: who.me.rank, score: who.me.total, account: !!who.wallet, since: who.me.since };
+          const game = who.wallet ? (this.env.SAVES.get(this.env.SAVES.idFromName(who.key)).card() as Promise<GameCard | null>).catch(() => null) : Promise.resolve(null);
+          const ws = p.ws;
+          game.then((g) => send(ws, { t: 'card', id: who.id, card: g ? { ...base, game: g } : base }));
+        });
+        break;
+      }
       case 'ping':
         send(p.ws, { t: 'pong', c: Number(m.c) || 0 });
         break;

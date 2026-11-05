@@ -12,7 +12,7 @@
  */
 import { levelFor } from './catalog';
 import { PARTNER_IDS } from './fight-moves';
-import { addXp, book, count, level, newCounters, type ActiveMission, type CounterId, type Counters, type TycoonSave } from './tycoon';
+import { PIN_MAX, addXp, book, count, level, newCounters, type ActiveMission, type CounterId, type Counters, type TycoonSave } from './tycoon';
 
 /** A target on a counter (from when it's taken), or sparring partners sparred with (each once, ever) */
 export type Goal = { counter: CounterId; n: number } | { partners: number };
@@ -183,6 +183,20 @@ export function checkBadges(s: TycoonSave) {
     fresh.push(x);
   }
   return fresh;
+}
+/**
+ * Pin a badge to your profile and card, or take it off (docs/account-plan.md
+ * Phase 5): only earned ones, at most PIN_MAX; false if it can't go on
+ */
+export function togglePin(s: TycoonSave, id: string) {
+  const at = s.pinned.indexOf(id);
+  if (at >= 0) {
+    s.pinned.splice(at, 1);
+    return true;
+  }
+  if (!hasBadge(s, id) || s.pinned.length >= PIN_MAX) return false;
+  s.pinned.push(id);
+  return true;
 }
 /** The counters a mission or badge watches, for the board's copy */
 export const COUNTER_NAMES: Record<CounterId, string> = {

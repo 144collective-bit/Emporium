@@ -9,6 +9,7 @@ import { WORLD_BOUNDS } from '../city3d/layout';
 import { CAR_PAINTS, PLAYER_AIRCRAFT, PLAYER_BIKES, PLAYER_CARS, PLAYER_KARTS, type PaintId } from '../city3d/vehicleids';
 import { CEILING } from '../city3d/flight-sim';
 import type { EmoteId, Look, PublicProfile, SkinId } from './profile-data';
+import type { PlayerCard } from './card';
 
 export const PROTOCOL = 5;
 export const ROOM_SIZE = 16;
@@ -160,6 +161,8 @@ export type ClientMsg =
   | { t: 'rename' }
   /** A wallet's profile changed outside the room (its name typed on the profile card): load it again */
   | { t: 'profile' }
+  /** Another player's card (docs/account-plan.md Phase 5): tapped in the list */
+  | { t: 'card'; id: number }
   | { t: 'ping'; c: number };
 
 /* ---------- Server to browser ---------- */
@@ -218,6 +221,8 @@ export type ServerMsg =
   | { t: 'info'; p: PlayerInfo }
   /** Your own profile changed (score, rank, unlocks) */
   | { t: 'you'; profile: OwnProfile }
+  /** The card asked for (net/card.ts): a wallet's with its game, a guest's name, rank and score */
+  | { t: 'card'; id: number; card: PlayerCard }
   /** Positions ~15 a second; `me` is your own state: mag, reserve, reloading (0/1), score, streak, armed, weapon (WEAPON_IDS index) */
   | { t: 'snap'; pt: number; p: SnapRow[]; tg: TargetRow[]; me: MeRow }
   | { t: 'ev'; e: NetEvent[] }

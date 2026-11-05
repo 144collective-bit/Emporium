@@ -43,6 +43,8 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
   /** Told about looks this browser picked (multiplayer sends them to the server) */
   const lookFns: ((l: Look) => void)[] = [];
   const renameFns: (() => void)[] = [];
+  /** Told when the name, rank or score shown changes (the player card repaints: profilecard.ts) */
+  const whoFns: (() => void)[] = [];
 
   function paintName() {
     const total = online ? online.total : localTotal;
@@ -56,6 +58,7 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
       : online
         ? 'Your guest profile is saved online and follows you on this browser. Log in with a wallet to take a profile to any browser.'
         : 'Go online to get your player name. Your look and rifle finish are saved in this browser.';
+    for (const f of whoFns) f();
   }
 
   /** Apply a look: dress Degen, save it here, and tell the server when online */
@@ -122,6 +125,14 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
     },
     onRename(fn: () => void) {
       renameFns.push(fn);
+    },
+    /** Who you are online (null fields offline): the player card fills in the rest */
+    who() {
+      const total = online ? online.total : localTotal;
+      return { name: online?.name ?? null, rank: online?.rank ?? rankFor(total).id, score: total, wallet: !!online?.wallet, since: online?.since };
+    },
+    onWho(fn: () => void) {
+      whoFns.push(fn);
     },
   };
 }

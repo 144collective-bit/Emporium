@@ -65,6 +65,8 @@ import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
 import type { Hub } from './hub';
 import type { Fitting } from './fitting';
+import type { ProfileCard } from './profilecard';
+import { slot } from './saveslot';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-ui';
@@ -1017,6 +1019,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     hub.hooks.tab = (id) => {
       root.classList.toggle('is-stall', id === 'business');
       if (id === 'business') tycoon!.paint();
+      if (id === 'profile') loadCard().then((c) => c.paint());
     };
     root.querySelector('[data-hub-leave]')?.addEventListener('click', () => stopWalking());
     root.querySelector('[data-hub-bag]')?.addEventListener('click', () => tycoon!.openCard('bag'));
@@ -1035,6 +1038,21 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
   syncHeld(profileUI.look);
   profileUI.onChange(syncHeld);
+  // Your player card and other players' (profilecard.ts, docs/account-plan.md Phase 5): a chunk loaded when first wanted
+  let card: ProfileCard | null = null;
+  let cardLoad: Promise<ProfileCard> | null = null;
+  const loadCard = () =>
+    (cardLoad ??= import('./profilecard').then(({ createProfileCard }) =>
+      (card = createProfileCard(root, {
+        game,
+        who: () => {
+          const w = profileUI.who();
+          const me = account?.me?.profile;
+          return { name: w.name ?? me?.name ?? 'Degen', rank: w.rank, score: w.score, account: w.wallet || !!slot().address, since: w.since ?? me?.since };
+        },
+      }))
+    ));
+  profileUI.onWho(() => card?.paint());
   const charScreen = createCharScreen({
     root,
     look: () => profileUI.look,
@@ -1069,6 +1087,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           setSwitch: (on) => onlineSwitch.set(on),
           changed: (s) => onlineSwitch.status(s),
           account: account!,
+          showCard: (c) => void loadCard().then((x) => x.show(c)),
         })
       : null;
   const accountUI = wallet && onlineSwitch ? wallet.ui : null;
