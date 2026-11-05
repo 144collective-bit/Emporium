@@ -26,7 +26,8 @@ import { fromHighway } from './highway';
 import { DECK_HALF, DECK_Y, GIRDER, OUTER_LANE, PARAPET, PIER, RAMPS, RAMP_HALF, RING_LEN, ringAt, ringPoint, type Pt, type Ramp } from './viaduct';
 import { BARRIER_TOP, JOINT_EVERY, PIERS } from './viapiers';
 import { RAMP_PARAPET, RAMP_PIER, RAMP_PIERS, deckGap, rampSegs } from './viaground';
-import { BAY, EXIT_SIGNS, GANTRIES, GANTRY, LOCKUP, MURALS, MURAL_ART, RAMP_SIGNS, SOFFIT_Y, SOUND_WALL, UNDER, UNDER_CARS, UNDER_LIGHTS, gantryPanel, soundWall, type Gantry, type Under } from './viadress';
+import { BAY, LOCKUP, SOFFIT_Y, UNDER, UNDER_CARS, UNDER_LIGHTS, type Under } from './viadress';
+import { EXIT_SIGNS, GANTRIES, GANTRY, MURALS, MURAL_ART, RAMP_SIGNS, SOUND_WALL, gantryPanel, soundWall, type Gantry } from './viasigns';
 
 export const SELF = import.meta.url;
 

@@ -342,7 +342,7 @@ by `rural3d.ts` (`LAZY_DISTRICTS` id `rural`).
 - The layout snapshot writes a country road's far end, its loop and stub as
   'edge', so they move with the world's edge.
 
-## Phase 8: the concrete-era look on the town's streets (built, waiting on the owner's sign-off)
+## Phase 8: the concrete-era look on the town's streets (built, signed off)
 
 `streetwear.ts` (DOM-free, tested in `tests/streetwear.test.ts`; the drawing's
 chunk only), drawn by `streetwear3d.ts` (`LAZY_DISTRICTS` id `streetwear`, a
@@ -362,6 +362,26 @@ Harbour Bridge or Kestrel Bridge):
 - **Sharper markings:** a white stop line across the lanes coming into every
   lit junction, give-way dashes into the unlit ones (`STOP_LINES`; the turn
   lanes keep their own stop bars, turnlanes.ts), over the lane dashes.
+
+## Phase 9: polish and performance (built, waiting on the owner's sign-off)
+
+- **Bench views** (`BENCH_VIEWS` in bench.ts): `hw-straight` (along the
+  deck's north side), `hw-exit` (over exit 3's cloverleaf), `hw-river` (a
+  river span out west), `swing` (Kestrel Bridge) and `rural` (a country
+  road out north); the junction view was there already (`traffic`, a ring
+  junction with its turn lanes). They're measured, not on the route.
+- **The boot trimmed** (718.6 of 730 KB, from 720.2): what only the drawing
+  reads left the boot. The gantries, their names, the ramp signs, the sound
+  walls and the murals are `viasigns.ts` (viaduct3d.ts's chunk only);
+  viadress.ts keeps what the boot needs (what's under the deck and its
+  solids, the soffit's and the ramps' lamps, the exits' badges). The rural
+  fences and field gates are `ruralfence.ts` (rural3d.ts's chunk only);
+  ruraldress.ts keeps the lamps, what the trees keep off and the helpers.
+  The turn lanes' district covers the world (`EXT`), so the boot no longer
+  works out their junctions to find its land.
+- **Phones:** the country roads' fences and gates are near only, the
+  drains' bars and the cracks are left out on phones (which draw no
+  shadows); the rest is flat paint a site a tile.
 
 ## Phases
 
@@ -387,9 +407,7 @@ Harbour Bridge or Kestrel Bridge):
 6. **Turn lanes and signals** at the busiest avenue junctions (above,
    built, signed off).
 7. **Rural roads** past the highway (above, built, signed off).
-8. **The concrete-era look** on the town's streets (above, built, waiting
-   on the owner's sign-off).
-9. **Polish and performance:** bench views (a junction, a straight, a
-   river span, an exit), phones, the boot budget (697.9 of 700 KB before
-   this plan: the drawing goes in a chunk where it can, the budget raised
-   on purpose where it can't, the owner's standing go).
+8. **The concrete-era look** on the town's streets (above, built, signed
+   off).
+9. **Polish and performance** (above, built, waiting on the owner's
+   sign-off; the plan is done).

@@ -60,11 +60,3 @@ for (const j of TURN_JUNCTIONS)
       const mid = (inner + outer) / 2;
       STOP_BARS.push({ x: j.at[0] - u[0] * (reach + 0.4) + r[0] * mid, z: j.at[1] - u[1] * (reach + 0.4) + r[1] * mid, ux: u[0], uz: u[1], w: LANE * 2 });
     }
-
-/** The land they're on (the drawing's chunk loads as you come near it) */
-export const TURN_RECT: [number, number, number, number] = [
-  Math.min(...TURN_ARROWS.map((a) => a.x)) - 20,
-  Math.min(...TURN_ARROWS.map((a) => a.z)) - 20,
-  Math.max(...TURN_ARROWS.map((a) => a.x)) + 20,
-  Math.max(...TURN_ARROWS.map((a) => a.z)) + 20,
-];

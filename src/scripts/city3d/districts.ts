@@ -15,7 +15,6 @@
  * when far away and the near forms held pass the budget (tilework.ts).
  */
 import { SWING_RECT } from './swingbridge';
-import { TURN_RECT } from './turnlanes';
 import type * as THREE from 'three';
 import type { DistrictModule, SiteWorker } from './sitework';
 import { rectDistance } from './tileplan';
@@ -84,7 +83,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // The swing bridge, Uptown to The Trenches (swingbridge.ts, docs/highway-plan.md Phase 5; swingbridge3d.ts)
   { id: 'swing', rect: [SWING_RECT[0] - 20, SWING_RECT[1] - 20, SWING_RECT[2] + 20, SWING_RECT[3] + 20], load: () => import('./swingbridge3d') },
   // The turn lanes painted at the busiest avenue junctions (turnlanes.ts, docs/highway-plan.md Phase 6; turnlanes3d.ts)
-  { id: 'turnlanes', rect: TURN_RECT, load: () => import('./turnlanes3d') },
+  // (all over the town and Crestmont: its junctions' data is the chunk's own, so the boot doesn't work it out)
+  { id: 'turnlanes', rect: [EXT[0], EXT[0], EXT[1], EXT[1]], load: () => import('./turnlanes3d') },
   // The concrete-era look on the town's streets (streetwear.ts, docs/highway-plan.md Phase 8; streetwear3d.ts): gutters,
   // drains, patches, manholes, stop lines, inside the highway
   { id: 'streetwear', rect: [HIGHWAY_BOX[0], HIGHWAY_BOX[1], HIGHWAY_BOX[2], HIGHWAY_BOX[3]], load: () => import('./streetwear3d') },

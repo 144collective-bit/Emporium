@@ -10,7 +10,8 @@ import { Batch, toon } from './kit';
 import { site } from './tilework';
 import { COVER } from './palette';
 import { RURAL, RURAL_RUNS, type RuralRun } from './rural';
-import { FENCES, GATES, GATE_W, atRun, loopCentre, riverSide } from './ruraldress';
+import { atRun, loopCentre, riverSide } from './ruraldress';
+import { FENCES, GATES, GATE_W } from './ruralfence';
 
 /** This module's address, for the site worker (districts.ts) */
 export const SELF = import.meta.url;
