@@ -1002,7 +1002,8 @@
 
 /* Settings: the city's time, sky and sound, the walk controls, the keys and the credits */
 .hub-sets,
-.hub-walkset {
+.hub-walkset,
+.hub-touchset {
   display: grid;
   gap: 10px;
 }
