@@ -1102,10 +1102,10 @@
 .hub-more summary::-webkit-details-marker {
   display: none;
 }
-.hub-more summary::after {
+.hub-more > summary::after {
   content: "+";
 }
-.hub-more[open] summary::after {
+.hub-more[open] > summary::after {
   content: "−";
 }
 .hub-more summary:focus-visible {
