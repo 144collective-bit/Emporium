@@ -24,6 +24,7 @@ import { inTown } from './outer';
 import { inTrenches } from './trenches';
 import { inSunridge } from './sunridge';
 import { STOP_ZONE } from './lot9';
+import { inEndswood } from './endswood';
 import { SOLIDS, type Box } from './solids';
 import { pointOn, rightOf, type Route } from './routes';
 
@@ -68,8 +69,10 @@ export function stopsOn(s: Street, crossings: Pt[], solids: readonly Box[] = SOL
       // In town only (an avenue runs on to the world's edge), never on a bridge or by a junction
       // (and the Strip's boulevard: strip.ts)
       // (and the south avenue by Lot 9's lane, past the highway: lot9.ts)
+      // (and Endswood's stretch of it, docs/estate-plan.md Phase 2: endswood.ts)
       const lot9 = s.id === 'ns0s' && at[1] > STOP_ZONE[0] && at[1] < STOP_ZONE[1];
-      if (!inTown(at, 2) && !inTrenches(at[0], at[1]) && !inSunridge(at[0], at[1], 0) && !inStrip(at[0], at[1]) && !lot9) continue;
+      const ends = s.id === 'ns0s' && inEndswood(at[0], at[1]);
+      if (!inTown(at, 2) && !inTrenches(at[0], at[1]) && !inSunridge(at[0], at[1], 0) && !inStrip(at[0], at[1]) && !lot9 && !ends) continue;
       if (at[1] > RIVER[0] - 6 && at[1] < RIVER[1] + 6 && Math.abs(dir[1]) > 0.5) continue;
       if (crossings.some((c) => Math.hypot(c[0] - at[0], c[1] - at[1]) < STOP_CLEAR)) continue;
       const lane: Pt = [at[0] + r[0] * (s.half - LANE / 2), at[1] + r[1] * (s.half - LANE / 2)];

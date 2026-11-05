@@ -92,7 +92,11 @@ import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { inBasin } from './docks';
-import { DOWN as TUNNEL_DOWN, inTunnelZone, tunnelRoom, tunnelWall, tunnelY } from './lot9';
+import { LOT9_PASSAGE } from './lot9';
+import { SUBWAYS, WELL } from './endswood';
+import { DOWN as UNDER_DOWN, underworld } from './underground';
+/** What's below street level for walking: Lot 9's tunnel under the highway, Endswood's subways and its well (underground.ts) */
+const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS], [WELL]);
 import { HARBOUR_MASTER } from './docksport';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
@@ -725,8 +729,9 @@ export function createWalk(d: WalkDeps) {
   /** The swing bridge's barriers down (swingbridge.ts): it's swinging, or about to, for the tall ship */
   const swingShut = () => !d.reduced && swingAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
-    // (Lot 9's tunnel under the highway, lot9.ts: its ramps and open cuttings, and its floor under the roof when `yNow` is down there)
-    const tn = tunnelY(x, z, yNow);
+    // (below ground, underground.ts: Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
+    // open floors, and a floor under a roof when `yNow` is down there)
+    const tn = UNDER.y(x, z, yNow);
     if (tn !== null) return tn;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
     // (a block's edge onto open land eases down to the ground, verges.ts: the bank's slope)
@@ -778,10 +783,11 @@ export function createWalk(d: WalkDeps) {
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
-    // Lot 9's tunnel (lot9.ts): down in it only its walls stop you (the highway's over the roof); at street level its open cuttings' edges do
-    if (inTunnelZone(x, z)) {
-      if (y < TUNNEL_DOWN) return tunnelWall(x, z, y, RADIUS);
-      if (tunnelWall(x, z, y, RADIUS)) return true;
+    // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
+    // at street level the open cuttings' and the well's edges do
+    if (UNDER.inZone(x, z)) {
+      if (y < UNDER_DOWN) return UNDER.wall(x, z, y, RADIUS);
+      if (UNDER.wall(x, z, y, RADIUS)) return true;
     }
     const open = leavesOpen();
     if (footbridgeY(x, z, y, RADIUS, open) !== null) return false;
@@ -813,9 +819,9 @@ export function createWalk(d: WalkDeps) {
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
-    // (down in Lot 9's tunnel, lot9.ts: its walls, floor and roof, under the ground)
-    const under = from.y < 0.6 && inTunnelZone(from.x, from.z);
-    if (under) t = tunnelRoom(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
+    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, Endswood's subways and its well)
+    const under = from.y < 0.6 && UNDER.inZone(from.x, from.z);
+    if (under) t = UNDER.room(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
     // Ground (and kerb) below
     if (dir.y < 0 && !under) {
       const floor = Math.max(groundAt(from.x, from.z, from.y), 0.035) + 0.22;
@@ -3199,8 +3205,8 @@ export function createWalk(d: WalkDeps) {
     pivot.y += (pivotWant.y + dip - pivot.y) * damp(firstPerson ? 25 : 10, dt);
     // Looking up tilts the view but keeps the camera behind him (not down at his feet),
     // so he drops to the bottom of the frame and the sky opens up
-    // (down in Lot 9's tunnel the camera keeps low behind him, under its roof, instead of pinned to his head: lot9.ts)
-    const lowRoof = !firstPerson && pos.y < TUNNEL_DOWN && inTunnelZone(pos.x, pos.z);
+    // (down below ground the camera keeps low behind him, under the roof, instead of pinned to his head: underground.ts)
+    const lowRoof = !firstPerson && pos.y < UNDER_DOWN && UNDER.inZone(pos.x, pos.z) && UNDER.roofed(pos.x, pos.z);
     const camPitch = firstPerson ? pitch : lowRoof ? THREE.MathUtils.clamp(pitch, -0.12, 0.1) : Math.max(pitch, -0.12);
     offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
     const want = firstPerson ? 0 : zoom * (aimNow ? 0.62 : 1);

@@ -26,6 +26,7 @@ import { STRIP_LAMPS } from './strip';
 import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
+import { ENDS_LAMPS } from './endswood';
 import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
@@ -365,6 +366,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   SF_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Lot 9's (lot9.ts): sodium along its lanes, by the gate and at the tunnel's mouth; its people about (phones: half)
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
+  // Endswood's (endswood.ts, docs/estate-plan.md): sodium along Endswood Road and the Close, round the Circus, the well and the spine
+  for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)

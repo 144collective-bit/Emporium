@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import { MEDIAN, NS_ROADS } from '../src/scripts/city3d/layout';
 import { LOT9_STREETS, inLot9 } from '../src/scripts/city3d/lot9';
+import { inEndswood } from '../src/scripts/city3d/endswood';
 import { LOOP, IN } from '../src/scripts/city3d/stadium';
 import { DRIVE_X, EW0, LOOP as K_LOOP } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
@@ -57,6 +58,8 @@ const crestWay = (q: Pt) => q[0] > HIGHWAY_BOX[2] && q[0] < CREST_RECT[2] && q[1
 const docksWay = (q: Pt) => q[0] < HIGHWAY_BOX[0] && inDocks(q[0], q[1], 30);
 /** Lot 9's lane and loops south of the highway, and the south avenue down to them (lot9.ts) */
 const lot9Way = (q: Pt) => inLot9(q[0], q[1], 6) || (Math.abs(q[0] - NS_ROADS[0].c) < NS_ROADS[0].half + 6 && q[1] > HIGHWAY_BOX[3] && q[1] < LOT9_STREETS[0].pts[0][1] + 6);
+/** Endswood's streets south of the highway (endswood.ts, docs/estate-plan.md Phase 2): Endswood Road, the Circus and the avenues down to them */
+const endsWay = (q: Pt) => inEndswood(q[0], q[1], 9);
 const airportWay = (q: Pt) =>
   (q[0] > HIGHWAY_BOX[2] && q[0] < AIR_ROAD.x + 3 && q[1] > AIR_ROAD.z0 - 14 && q[1] < AIR_LOOP.out) ||
   // (Cargo Road off it and the truck yard's loop: step 3)
@@ -89,7 +92,7 @@ function alongPts(pts: Pt[], p: Pt) {
   return at;
 }
 
-test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks' and Lot 9's streets)", () => {
+test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks', Lot 9's and Endswood's streets)", () => {
   for (const [i, r] of ROUTES.entries())
     for (const { at: q } of points(r)) {
       assert.ok(
@@ -97,7 +100,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q) || exitWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q) || endsWay(q) || exitWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 

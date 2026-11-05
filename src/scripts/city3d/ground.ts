@@ -31,6 +31,7 @@ import { MALL_AREA } from './mall';
 import { STRIP_RECT } from './strip';
 import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
 import { FENCE as LOT9_FENCE } from './lot9';
+import { ENDSWOOD_RECT, NORTH_Z, SOUTH_Z, WEST_X } from './endswood';
 import { STADIUM_RECTS } from './stadium';
 import { KART_RECTS } from './kartfacility';
 import { TILE, tileKey, type Rect } from './tiles';
@@ -128,6 +129,9 @@ export const INFLUENCES: Influence[] = [
   // The Trenches: worn grass, bare dirt at its edge
   around('trenches', TRENCH_RECT, 'worn', 20, 0.5),
   around('trenches-edge', TRENCH_RECT, 'bare', 6, 0.4),
+  // Endswood (endswood.ts, docs/estate-plan.md): worn grass round its blocks, the estate's land bare in places
+  around('endswood', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'worn', 16, 0.6),
+  around('endswood-edge', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'bare', 4, 0.35),
   // Lot 9 (lot9.ts): worn grass round it, bare dirt inside the fence and just past it
   around('lot9', LOT9_FENCE, 'worn', 14, 0.8),
   around('lot9-dirt', LOT9_FENCE, 'bare', 2, 0.55),

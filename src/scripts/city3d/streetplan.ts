@@ -33,6 +33,7 @@ import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
 import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
 import { LOT9_CROSSINGS, LOT9_STREETS } from './lot9';
+import { ENDS_BLOCKS, ENDS_CROSSINGS, ENDS_STREETS } from './endswood';
 
 export type Pt = [number, number];
 
@@ -397,6 +398,10 @@ export function cityPlan(): StreetPlan {
   // Lot 9's lane in off the south avenue past the highway and its two one-way loops (lot9.ts, docs/trailer-plan.md)
   for (const t of LOT9_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of LOT9_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  // Endswood Estate between them (endswood.ts, docs/estate-plan.md Phase 2): Endswood Road from the south avenue to the
+  // east one, the Circus (one way round, as Uptown's) and the Close off it
+  for (const t of ENDS_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.loop ? { loop: true } : {}), ...(t.oneway ? { oneway: t.oneway } : {}) });
+  for (const c of ENDS_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -496,6 +501,8 @@ export function cityPlan(): StreetPlan {
     ...DOCK_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'docks', walk: b.walk })),
     ...STRIP_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'strip', walk: b.walk })),
     ...SF_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use, ref: b.ref, walk: b.walk })),
+    // Endswood's round the Circus and either side of Endswood Road east of the avenue (endswood.ts)
+    ...ENDS_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

@@ -26,6 +26,7 @@
  *   residents' and the junk corner's cars (`LOT9_CARS`), `LOT9_SOLIDS`, `LOT9_SPAWN`.
  */
 import { HIGHWAY_BOX, HIGHWAY_HALF } from './highway';
+import { DOWN as UNDER_DOWN, floorOf, inPassage, passageZone, roofedAt, underworld, type Passage } from './underground';
 import { NS_ROADS, nsStreet } from './layout';
 import { CARS } from './carspec';
 import type { CarId } from './carspec';
@@ -134,69 +135,49 @@ export const STOP_ZONE: [number, number] = [ROAD_Z - 40, ROAD_Z];
  */
 export const TUNNEL = { x: -112, half: 1.1, wall: 0.2, floor: -1.9, ceil: -0.25, z0: 302, ramp0: 309.6, roof0: 312.5, roof1: 327.5, ramp1: 329, z1: 336.6, rail: 0.9 };
 /** Under this, Degen is down in the tunnel (walk.ts: only its walls stop him there) */
-export const DOWN = -0.5;
-/** How far down a step can be before it's a drop (the open cuttings' edges, at street level) */
-const STEP = 0.35;
+export const DOWN = UNDER_DOWN;
+/** The tunnel as a passage of the underground kit (underground.ts, docs/estate-plan.md Phase 2: walking, the walk
+ * camera and the ground's holes ask about it with the estate's subways; Endswood's since Lot 9 moved south) */
+export const LOT9_PASSAGE: Passage = {
+  id: 'lot9-tunnel',
+  axis: 'z',
+  c: TUNNEL.x,
+  half: TUNNEL.half,
+  wall: TUNNEL.wall,
+  floor: TUNNEL.floor,
+  ceil: TUNNEL.ceil,
+  a0: TUNNEL.z0,
+  ramp0: TUNNEL.ramp0,
+  ramp1: TUNNEL.ramp1,
+  a1: TUNNEL.z1,
+  roofs: [[TUNNEL.roof0, TUNNEL.roof1]],
+  rail: TUNNEL.rail,
+};
+const UNDER = underworld([LOT9_PASSAGE]);
 
 /** The tunnel's floor along it: the ramps, the flat between */
-export function tunnelFloor(z: number) {
-  const T = TUNNEL;
-  if (z <= T.z0 || z >= T.z1) return GROUND_Y;
-  if (z < T.ramp0) return GROUND_Y + (T.floor - GROUND_Y) * ((z - T.z0) / (T.ramp0 - T.z0));
-  if (z <= T.ramp1) return T.floor;
-  return T.floor + (GROUND_Y - T.floor) * ((z - T.ramp1) / (T.z1 - T.ramp1));
-}
+export const tunnelFloor = (z: number) => floorOf(LOT9_PASSAGE, z);
 /** Is x, z on the tunnel's floor (its walkable width, `m` in from its walls), ramps and all */
-export const inTunnel = (x: number, z: number, m = 0) => Math.abs(x - TUNNEL.x) < TUNNEL.half - m && z > TUNNEL.z0 && z < TUNNEL.z1;
+export const inTunnel = (x: number, z: number, m = 0) => inPassage(LOT9_PASSAGE, x, z, m);
 /** Is z under the roof (the highway over it) */
-export const roofed = (z: number) => z > TUNNEL.roof0 && z < TUNNEL.roof1;
+export const roofed = (z: number) => roofedAt(LOT9_PASSAGE, z);
 /** The box round the tunnel, its walls and a margin: what walking and the camera ask about it first */
-export const TUNNEL_ZONE: Rect = [TUNNEL.x - TUNNEL.half - TUNNEL.wall - 0.6, TUNNEL.z0 - 0.6, TUNNEL.x + TUNNEL.half + TUNNEL.wall + 0.6, TUNNEL.z1 + 0.6];
+export const TUNNEL_ZONE: Rect = passageZone(LOT9_PASSAGE);
 export const inTunnelZone = (x: number, z: number) => x > TUNNEL_ZONE[0] && x < TUNNEL_ZONE[2] && z > TUNNEL_ZONE[1] && z < TUNNEL_ZONE[3];
 
 /** The ground under x, z in the tunnel: its ramps and open floor wherever; under the roof only when `yNow` is down there (null: not the tunnel's) */
-export function tunnelY(x: number, z: number, yNow: number): number | null {
-  if (!inTunnel(x, z)) return null;
-  if (roofed(z)) return yNow < DOWN ? TUNNEL.floor : null;
-  return tunnelFloor(z);
-}
-
+export const tunnelY = (x: number, z: number, yNow: number): number | null => UNDER.y(x, z, yNow);
 /**
  * Whether a walker `r` round at x, z (his feet at `y`) is stopped by the tunnel: down in it, by its walls and ends (he
  * keeps to its floor); at street level, by the open cuttings' edges where the floor is more than a step under him (the
  * parapets and headwalls are solid too: cars stop at them)
  */
-export function tunnelWall(x: number, z: number, y: number, r: number) {
-  if (!inTunnelZone(x, z)) return false;
-  if (y < DOWN) return !(Math.abs(x - TUNNEL.x) <= TUNNEL.half - r && z >= TUNNEL.z0 && z <= TUNNEL.z1);
-  for (const [px, pz] of [
-    [x, z],
-    [x - r, z],
-    [x + r, z],
-    [x, z - r],
-    [x, z + r],
-  ])
-    if (inTunnel(px, pz) && !roofed(pz) && tunnelFloor(pz) < y - STEP) return true;
-  return false;
-}
-
-/** Is (x, y, z) open air in the tunnel (its passage under the roof, its open cuttings up to the sky), `m` in from its faces */
-function tunnelAir(x: number, y: number, z: number, m: number) {
-  if (y > GROUND_Y + 0.05) return true;
-  if (Math.abs(x - TUNNEL.x) > TUNNEL.half - m || z < TUNNEL.z0 || z > TUNNEL.z1) return false;
-  if (y < tunnelFloor(z) + m) return false;
-  return !roofed(z) || y < TUNNEL.ceil - m;
-}
+export const tunnelWall = (x: number, z: number, y: number, r: number) => UNDER.wall(x, z, y, r);
 /**
  * The walk camera down in the tunnel: how far it can go from (ox, oy, oz) along (dx, dy, dz), at most `t`, before it
  * leaves the tunnel's air (through a wall, the floor or the roof). `t` as it is when the pivot isn't down there.
  */
-export function tunnelRoom(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t: number) {
-  if (oy > GROUND_Y + 0.6 || !inTunnelZone(ox, oz)) return t;
-  const STEP_T = 0.05;
-  for (let s = STEP_T; s <= t; s += STEP_T) if (!tunnelAir(ox + dx * s, oy + dy * s, oz + dz * s, 0.12)) return Math.max(0, s - STEP_T);
-  return t;
-}
+export const tunnelRoom = (ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t: number) => UNDER.room(ox, oy, oz, dx, dy, dz, t);
 
 /** The ground cut away over the tunnel's open cuttings (world.ts: their walls go down to the floor) */
 export const TUNNEL_HOLES: Rect[] = (() => {

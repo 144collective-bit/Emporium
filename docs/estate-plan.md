@@ -174,3 +174,59 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
   (viadress.ts), the trees and the rolls kept off (`KEEPS`: `endswood`,
   `lot9`, `lot9-path`), sodium lamps (`SODIUM_AREAS`) and the hood's sound
   (ambience.ts). Exit 6 still reads "Lot 9 · The Trenches" until Phase 2.
+- **Phase 2 (the land, streets and subways):** `endswood.ts` (DOM-free, the
+  boot's, tested in `tests/endswood.test.ts`):
+  - **The land** (`ENDSWOOD_RECT`) widened from Lot 9's old land east across
+    the south avenue to the east avenue's west kerb; the blocks from `WEST_X`
+    (the path down to Lot 9 runs west of them) between `NORTH_Z` (clear of
+    exit 6's ramp and its piers) and `SOUTH_Z` (the common south of it).
+  - **The streets** (`ENDS_STREETS` / `ENDS_CROSSINGS`): Endswood Road from
+    the Circus east over the south avenue (lit), ns1s and ns2s to the east
+    avenue (lit); **Endswood Circus** (`CIRCUS`: one way round, anticlockwise
+    as Uptown Circle, its traffic giving way where the road joins); and the
+    Close west off it, a dead end with concrete bollards across its end
+    (`CLOSE_BOLLARDS`: a walker gets through, no car does). The traffic drives
+    the road both ways and round the Circus. **A change from the plan:** the
+    Circus is on the estate's own road a block in from the south avenue, not
+    on the avenue itself (cutting the avenue would have meant re-laying its
+    asphalt, median and lines through the junction); the well and its
+    subways are as planned.
+  - **The blocks** (`ENDS_BLOCKS`, ref `endswood`, grit: grey sidewalks over
+    worn concrete as the Docks', world.ts): four round the Circus, cut round
+    it (`cutCorner()`), either side of **the spine** (`SPINE`: the walk north
+    and south of the Circus, narrower than a verge needs so the blocks' edges
+    stay square), and two in each strip east of the avenue.
+  - **The subways and the well** (`SUBWAYS`, `WELL`): the Circus's middle sunk
+    to a round place open to the sky, a subway north and south from it under
+    the island and the carriageway, each up a ramp into the spine; the only
+    way into the middle on foot. Solid (`ENDS_SOLIDS`, in `SOLIDS`): the
+    parapets along the cuttings, the headwalls over the portals, the bollards
+    at the ramps' tops, the well's railing round its rim.
+  - **The underground kit** (`underground.ts`, DOM-free): passages (along x or
+    z, ramps, roofed stretches) and wells, and `underworld()`: `y()`,
+    `wall()`, `room()`, `roofed()`, `inZone()` for any set of them; Lot 9's
+    tunnel is one passage of it (`LOT9_PASSAGE`, its own functions now
+    wrappers, tested the same), and walk.ts asks one underworld of the tunnel,
+    the subways and the well (the camera held low only under a roof).
+    `holesOf()` / `wellHole()` are the ground cut away (world.ts).
+  - Sodium lamps (`ENDS_LAMPS`) along the road and the Close, round the Circus,
+    round the well and at the spine's ramps; the trees and the rolls kept off
+    (`KEEPS` `endswood`), its ground worn round it (ground.ts); its area in
+    the seam map (areas.ts, grit); a bus stop each way on the south avenue
+    (transit.ts); exit 6's signs read "Endswood · The Trenches".
+  - Drawn by `endswood3d.ts` (`LAZY_DISTRICTS` id `endswood`): the roads
+    (worn asphalt, a dashed centre line, patches, give-way lines into the
+    Circus, the Close's bollards), the Circus's carriageway, the island's kerb
+    and paving, the well (its floor, drain and puddle, its wall tiled at the
+    foot, THE ENDS painted big round the east and west walls, tags and bills,
+    the coping and the council-green railing), the subways (the cuttings with
+    their parapets, headwalls, SUBWAY plates, caged lamps and bollards; under
+    the roofs tiled walls, fluorescent strips, some tired and one dead, tags, a
+    puddle) and the spine's paving. One sign atlas (`ends-sign`).
+  - **Fixed in passing:** a crossing on an avenue's south piece past the river
+    (`ns0s`) never broke the avenue's median and lines (world.ts
+    `highwayGaps()` matched `ns0` only), so The Trenches' junctions on the west
+    ring avenue and exit 6's ramp feet had an unbroken median through them;
+    they break now, Lot 9's lane's and Endswood's too.
+  - The boot's code is 723.1 of 730 KB with it (mostly the traffic's routes
+    along the new streets): the next phases will need the budget raised.

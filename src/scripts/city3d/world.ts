@@ -31,6 +31,7 @@ import { lampTone } from './lampmix';
 import { HEDGE as RING_HEDGE, RING_MEDIAN } from './ringstreet';
 import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import { TUNNEL_HOLES } from './lot9';
+import { SUBWAY_HOLES } from './endswood';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF } from './waterfront';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
@@ -377,9 +378,10 @@ const stripGap = (i: number): [number, number][] => (i in STRIP_GAP ? [[STRIP_GA
 function highwayGaps(axis: 'ew' | 'ns', i: number): [number, number][] {
   const road = `${axis}${i}`;
   // (an east-west road past the Strip is its east piece, `ew<i>e`: layout.ts STRIP_GAP)
-  const mine = (id: string) => id === road || id === `${road}e`;
+  // (and a north-south road's south piece past the river, `ns<i>s`: its crossings broke nothing until docs/estate-plan.md Phase 2)
+  const mine = (id: string) => id === road || id === `${road}e` || id === `${road}s`;
   const gaps = PLAN.crossings
-    .filter((c) => c.streets.some(mine) && c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('sy-') || id.startsWith('strip-') || id.startsWith('sun-') || id.startsWith('ramp-')))
+    .filter((c) => c.streets.some(mine) && c.streets.some((id) => id.startsWith('trench-') || id.startsWith('uptown-') || id.startsWith('mall-') || id.startsWith('crest-') || id.startsWith('docks-') || id.startsWith('sy-') || id.startsWith('strip-') || id.startsWith('sun-') || id.startsWith('ramp-') || id.startsWith('lot9-') || id.startsWith('ends-')))
     .flatMap((c): [number, number][] => {
       const v = axis === 'ew' ? c.at[0] : c.at[1];
       const across = (axis === 'ew' ? EW_ROADS : NS_ROADS)[i].half;
@@ -859,8 +861,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     ])
       if (c > a)
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts; nor over Lot 9's
-        // tunnel's open cuttings, lot9.ts: its walls go down to its floor, lot9-3d.ts)
-        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES])) {
+        // tunnel's open cuttings, lot9.ts: its walls go down to its floor, lot9-3d.ts; nor over Endswood's subways and
+        // its well, endswood.ts, endswood3d.ts)
+        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES, ...SUBWAY_HOLES])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
           // (the open land outside the town rolls, rolls.ts; flat everywhere anything stands)
           const flat = hill ? null : (rolledPlane(px0, pz0, px1, pz1, low) ?? groundPlane(px0, pz0, px1, pz1, low));
@@ -1033,8 +1036,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
       return;
     }
     // (the Docks' as The Trenches': grey sidewalks, worn concrete, in pieces a tile each round the basin; their strips
-    // along the basin's south quay and over its mouth all sidewalk)
-    if (blk.ref === 'docks' || blk.ref === 'southyards') {
+    // along the basin's south quay and over its mouth all sidewalk; Endswood's the same, docs/estate-plan.md)
+    if (blk.ref === 'docks' || blk.ref === 'southyards' || blk.ref === 'endswood') {
       const [walls, ...top] = tiledSlab(slab, SLAB);
       b.add(walls, trenchKerb);
       if (!blk.walk) for (const g of top) b.add(g, trenchKerb);
