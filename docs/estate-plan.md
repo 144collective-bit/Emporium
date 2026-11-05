@@ -137,25 +137,40 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
 7. **Life, night and sound.**
 8. **Places and polish.** Pins and panels, bench views, phones.
 
-## Open questions for the owner
+## The owner's answers (2026-11-05: "go with your suggestions")
 
-1. **The land:** Lot 9's land plus the three strips east to ns3, as above?
-2. **Height:** everything under the Emporium, or the point tower (and/or
-   the church's spire) allowed over it, as Uptown's towers are?
-3. **The church:** its name (made up: e.g. St Aldwyn's, Christ Church
-   Endswood), scenery only or one you can walk into later?
-4. **The recording studio:** its name (made up: e.g. Bunker Sound, Concrete
-   Tapes, Basement 7, Ends FM), and is it scenery or a place that does
-   something later (music, the storyline)?
-5. **The corner shops:** scenery, or run for Dorras like The Trenches' four
-   (a later phase)?
-6. **The abandoned buildings:** shut and boarded only, or one you can get
-   into (a way in round the back)?
-7. **Places:** which get a pin and panel: the estate (the tenants' hall), the
-   church, the studio? Tied to Lot 9's storyline?
-8. **The roundabout's sunken subway hub:** in, as the centrepiece?
-9. **Walkable decks:** in (Phase 5), or scenery?
-10. **Blocks' names:** made up, "___ House", "___ Court", "___ Point" (e.g.
-    Fennel House, Linnet Court, Harrier Point), or the owner's own?
-11. **"The Ends" on signs:** the estate board reads ENDSWOOD ESTATE; tags and
-    murals say THE ENDS?
+1. **The land:** Lot 9's old land plus the three strips east of the south
+   avenue to ns3.
+2. **Height:** the blocks under the Emporium; the church's spire may rise
+   over it (the owner's exception, as Uptown's towers).
+3. **The church:** a made-up name (St Aldwyn's, unless the owner names it);
+   scenery first, walking in later.
+4. **The recording studio:** a made-up name (Bunker Sound, unless the owner
+   names it); a place with a pin and panel, "coming soon".
+5. **The corner shops:** scenery now; run for Dorras like The Trenches' four
+   in a later phase.
+6. **The abandoned buildings:** boarded, with one way in round the back for
+   the storyline.
+7. **Places:** the estate (its spot on the tenants' hall), the church and the
+   studio, tied to Lot 9's storyline.
+8. **The roundabout's sunken subway hub:** in, the centrepiece.
+9. **Walkable decks:** in (Phase 5).
+10. **Blocks' names:** made up, "___ House", "___ Court", "___ Point" (Fennel
+    House, Linnet Court, Harrier Point, ...).
+11. **Signs:** the estate board reads ENDSWOOD ESTATE; tags and murals say
+    THE ENDS.
+
+## Built
+
+- **Phase 1 (Lot 9 moved south):** `MOVED` (130) in lot9.ts: its fence, lanes,
+  lots, homes, office, laundry, fire pit, junk corner, lamps, trees, people,
+  dogs, cars, bus stops and spawn all moved with it; `LOT9_RECT` is its own
+  land now (the fence and the lane to the avenue). The tunnel stays where it
+  was; its footpath runs south from the ramp's top over the open land to the
+  hole in Lot 9's north fence (`FOOTPATH`, a point every `PATH_STEP`, drawn a
+  few stretches a site; `PATH_RECT`). `endswood.ts` holds the estate's land,
+  for now exactly Lot 9's old land (`ENDSWOOD_RECT`), so what stood by it
+  stays: the highway's sound walls and the courts and murals under its deck
+  (viadress.ts), the trees and the rolls kept off (`KEEPS`: `endswood`,
+  `lot9`, `lot9-path`), sodium lamps (`SODIUM_AREAS`) and the hood's sound
+  (ambience.ts). Exit 6 still reads "Lot 9 · The Trenches" until Phase 2.

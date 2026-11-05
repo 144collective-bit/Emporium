@@ -366,10 +366,10 @@ test('two gantries before every off-ramp, over its own carriageway, clear of the
 test('sound walls only where homes are beside the deck, on their side, never where a ramp joins', async () => {
   const { SUNRIDGE_RECT } = await import('../src/scripts/city3d/sunridge');
   const { TRENCH_RECT } = await import('../src/scripts/city3d/trenches');
-  const { LOT9_RECT } = await import('../src/scripts/city3d/lot9');
+  const { ENDSWOOD_RECT } = await import('../src/scripts/city3d/endswood');
   const { NORTH_RECT } = await import('../src/scripts/city3d/uptownnorth');
   const { deckGap } = await import('../src/scripts/city3d/viaground');
-  const homes = [SUNRIDGE_RECT, TRENCH_RECT, LOT9_RECT, NORTH_RECT];
+  const homes = [SUNRIDGE_RECT, TRENCH_RECT, ENDSWOOD_RECT, NORTH_RECT];
   const inR = (r: number[], x: number, z: number) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
   assert.ok(SOUND_WALLS.length >= 2);
   for (const w of SOUND_WALLS)

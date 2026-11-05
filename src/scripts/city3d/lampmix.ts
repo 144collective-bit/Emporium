@@ -11,6 +11,7 @@ import { inDocks } from './docks';
 import { inYards } from './southfield';
 import { WATERFRONT_RECT } from './waterfront';
 import { inLot9, inLot9Lamps } from './lot9';
+import { inEndswood } from './endswood';
 
 /** How far either side of a sodium district's edge its lamps mix with the white (tiles: about a block) */
 export const MIX = 18;
@@ -23,6 +24,7 @@ export const SODIUM_AREAS: ((x: number, z: number, m: number) => boolean)[] = [
   inYards,
   (x, z, m) => inRect(WATERFRONT_RECT, x, z, m),
   inLot9,
+  inEndswood,
 ];
 
 /**

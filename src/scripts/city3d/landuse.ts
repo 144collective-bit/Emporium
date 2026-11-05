@@ -40,7 +40,8 @@ import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
-import { LOT9_RECT } from './lot9';
+import { FOOTPATH as LOT9_PATH, LOT9_RECT } from './lot9';
+import { ENDSWOOD_RECT } from './endswood';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
@@ -161,8 +162,11 @@ export const KEEPS: Keep[] = [
   // Southfield (southfield.ts, docs/blend-plan.md Phase 5a): its park, allotments and gardens, and the yards' blocks
   land('southfield', SOUTHFIELD_RECT, 1, true),
   land('southyards', YARDS_RECT, 2, true),
-  // Lot 9, the trailer park south of the highway's south-west corner, with its tunnel's ramp and path (lot9.ts)
+  // Endswood Estate, south of the highway's south-west corner, on Lot 9's old land with the tunnel's ramp (endswood.ts,
+  // docs/estate-plan.md); Lot 9, the trailer park, moved south of it (lot9.ts), and the path from the tunnel down to it
+  land('endswood', ENDSWOOD_RECT, 2, true),
   land('lot9', LOT9_RECT, 2, true),
+  ...line('lot9-path', LOT9_PATH, 1.5, false, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it
   ...FRINGE_KEEPS.rects.map((r, i) => land(`fringe-${i}`, r, 1.2, true)),

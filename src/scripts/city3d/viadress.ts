@@ -20,7 +20,8 @@ import { fromHighway } from './highway';
 import { PLAN, RING_MEETS, distToStreet, raised } from './streetplan';
 import { TRACKS } from './metro';
 import { inChannel } from './river';
-import { TUNNEL, LOT9_RECT } from './lot9';
+import { TUNNEL } from './lot9';
+import { ENDSWOOD_RECT } from './endswood';
 import { WALK as STADIUM_WALK } from './stadium';
 import { SUNRIDGE_RECT } from './sunridge';
 import { TRENCH_RECT } from './trenches';
@@ -116,7 +117,7 @@ export const RAMP_SIGNS: { exit: number; at: Pt; face: Pt }[] = RAMPS.filter((r)
 /** The panels over the parapet (their top over the deck) and the shortest run worth one */
 export const SOUND_WALL = { top: 2.6, min: 16 };
 /** The homes the walls face: Sunridge, The Trenches, Lot 9, Uptown North */
-const HOMES: Rect[] = [SUNRIDGE_RECT, TRENCH_RECT, LOT9_RECT, NORTH_RECT];
+const HOMES: Rect[] = [SUNRIDGE_RECT, TRENCH_RECT, ENDSWOOD_RECT, NORTH_RECT];
 export const SOUND_WALLS: { q: 1 | -1; s0: number; s1: number }[] = (() => {
   const out: { q: 1 | -1; s0: number; s1: number }[] = [];
   for (const q of [-1, 1] as const) {
@@ -179,7 +180,7 @@ export const UNDER: Under[] = (() => {
     const mid = (s0 + s1) / 2;
     if (!clearUnder(s0, s1)) continue;
     // Courts under the deck by The Trenches and Lot 9 (every third stretch there)
-    if (besideIn(mid, [TRENCH_RECT, LOT9_RECT])) {
+    if (besideIn(mid, [TRENCH_RECT, ENDSWOOD_RECT])) {
       if (courts++ % 3 === 0 && s1 - s0 >= 10) out.push({ kind: 'court', s0, s1 });
       continue;
     }
@@ -250,7 +251,7 @@ export const UNDER_SOLIDS: Box[] = [
 export const MURAL_ART = ['UNDER THE DECK', 'TRENCH LIFE', 'LOT 9 FOREVER', 'BLOCK LOVE', 'RISE UP', 'SECTOR 7 SOUL', 'GOOD DAYS', 'NIGHT SHIFT'];
 /** The murals: on both faces along the ring of every pier by The Trenches and Lot 9 (the pier, which face, which picture) */
 export const MURALS: { s: number; at: Pt; face: 1 | -1; art: number }[] = PIERS.flatMap((p, i) => {
-  if (!besideIn(p.s, [TRENCH_RECT, LOT9_RECT]) || inChannel(p.at[0], p.at[1], 2)) return [];
+  if (!besideIn(p.s, [TRENCH_RECT, ENDSWOOD_RECT]) || inChannel(p.at[0], p.at[1], 2)) return [];
   return ([-1, 1] as const).map((face, k) => ({ s: p.s, at: p.at, face, art: (i * 2 + k) % MURAL_ART.length }));
 });
 

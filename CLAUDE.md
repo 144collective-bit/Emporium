@@ -1391,10 +1391,12 @@ it and has been retired completely. Build only on what's here.
 - **Lot 9** (the owner's call: a trailer park, "a little run down, rough
   community", the grittier edge: a burnt-out shell, boarded and condemned
   units, chained dogs, KEEP OUT signs, moody but nothing threatening; tied to
-  the storyline, coming soon) on the open land just south of the ring
-  highway's south-west corner, under The Trenches, planned in
-  `docs/trailer-plan.md` (the owner's answers; built in one go); keep it up
-  to date. Made-up names only, under the Emporium.
+  the storyline, coming soon) on the open land south of the ring highway's
+  south-west corner, planned in `docs/trailer-plan.md` (the owner's
+  answers; built in one go); keep it up to date. Made-up names only, under
+  the Emporium. It moved south (`MOVED`, 130: Endswood Estate's Phase 1,
+  `docs/estate-plan.md`), so Endswood stands between it and the highway;
+  its tunnel stayed, the footpath running on south to it.
   - `lot9.ts` (DOM-free, the boot's, tested in `tests/lot9.test.ts`): the
     chain-link `FENCE`, `LOT9_RECT` / `inLot9()`, the gate on the east side
     (`GATE`), the lane in off the south avenue (ns0s, `ROAD_Z`, `ROAD_HALF`)
@@ -1453,8 +1455,12 @@ it and has been retired completely. Build only on what's here.
   abandoned buildings, corner shops, an old but large church and a DIY
   recording studio) is planned in `docs/estate-plan.md`, on Lot 9's land
   south of the highway, Lot 9 moving further south so The Trenches,
-  Endswood and Lot 9 blend north to south. Nothing built yet; one phase at a
-  time with the owner's sign-off; keep it up to date.
+  Endswood and Lot 9 blend north to south. Phase 1 (Lot 9 moved south) is
+  built: `endswood.ts` (DOM-free) holds the estate's land, for now exactly
+  Lot 9's old land (`ENDSWOOD_RECT`: the highway's sound walls, the courts
+  and murals under its deck, the trees kept off, sodium lamps and the hood's
+  sound stay there). One phase at a time with the owner's sign-off; keep it
+  up to date.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make
