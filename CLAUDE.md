@@ -1448,6 +1448,13 @@ it and has been retired completely. Build only on what's here.
   - A place: spot `lot9` (pin over the fire pit, directory entry, panel
     `data-panel-tpl="lot9"` with Walk in, `data-lot9-walkin`, marquee "Lot 9
     keeps its secrets"), `PLACES` and `LIVE_PLACES` entries.
+- **Endswood Estate**, "the Ends" (the owner's call, 2026-11: a rough London
+  council estate, a brutalist concrete jungle with subways, underpasses and
+  abandoned buildings, corner shops, an old but large church and a DIY
+  recording studio) is planned in `docs/estate-plan.md`, on Lot 9's land
+  south of the highway, Lot 9 moving further south so The Trenches,
+  Endswood and Lot 9 blend north to south. Nothing built yet; one phase at a
+  time with the owner's sign-off; keep it up to date.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make
