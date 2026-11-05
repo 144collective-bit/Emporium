@@ -117,6 +117,7 @@ import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { vergeY } from './verges';
 import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
+import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
 import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
 import type { CardInput } from './ctrlcard';
 
@@ -548,7 +549,9 @@ export function createWalk(d: WalkDeps) {
   let fov = 52;
   const pivot = new THREE.Vector3();
   const keys = new Set<string>();
-  const joy = { x: 0, y: 0, id: -1 };
+  /** The touch stick: x / y as the finger sits in the ring, sx / sy shaped for the wheel (touchdrive.ts `stickRead()`),
+   *  the finger following it (-1: none), the middle it reads from, and whether it floated there (at the wheel) */
+  const joy = { x: 0, y: 0, sx: 0, sy: 0, id: -1, ox: 0, oy: 0, float: false };
   const pad = { x: 0, y: 0, run: false, prev: [] as boolean[] };
   let near: { id: Near; label: string } | null = null;
   /** The getting-in moment whose door has been swung open (once each) */
@@ -1166,6 +1169,39 @@ export function createWalk(d: WalkDeps) {
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
   const pedals = { gas: false, brake: false };
+  /** The fingers on the pedals (touchdrive.ts): each pointer and the pedal it presses */
+  const pedalFingers = new Map<number, Pedal>();
+  const pedalBtns = [$('[data-drive-gas]'), $('[data-drive-brake]')];
+  const rectOf = (el: Element): Rect | null => {
+    const r = el.getBoundingClientRect();
+    return r.width ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null;
+  };
+  function syncPedals() {
+    const on = [...pedalFingers.values()];
+    pedals.gas = on.includes('gas');
+    pedals.brake = on.includes('brake');
+    pedalBtns[0].classList.toggle('is-held', pedals.gas);
+    pedalBtns[1].classList.toggle('is-held', pedals.brake);
+  }
+  function clearPedals() {
+    pedalFingers.clear();
+    syncPedals();
+  }
+  function pressPedal(e: PointerEvent, el: HTMLElement) {
+    capture(el, e.pointerId);
+    pedalFingers.set(e.pointerId, pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), 'gas'));
+    syncPedals();
+    d.touched();
+  }
+  /** The screen for the floating stick's and the pedals' zones */
+  function screen(): Screen {
+    // (in the screen's own numbers, as the fingers' are: the city fills it)
+    const r = root.getBoundingClientRect();
+    const head = r.top + (parseFloat(root.style.getPropertyValue('--head-h')) || 56);
+    return { w: r.right, h: r.bottom, head, stickLeft: !settings.touch.left };
+  }
+  /** At the wheel (your car, bike or kart, the boat, your aircraft, a kart race): the stick floats, the pedals reach */
+  const atWheelNow = () => drive.active || fly.active || boating() || karts.active;
   /* ---------- The kart park: the hut's menu, the race on its track (kart-ui.ts, kart.ts) ---------- */
 
   /** What Degen wears (the kart's driver wears the same) */
@@ -1214,7 +1250,7 @@ export function createWalk(d: WalkDeps) {
     },
     preview: (k) => karts.preview(k),
     onOpen() {
-      pedals.gas = pedals.brake = false;
+      clearPedals();
       kartBtns.drift = kartBtns.item = false;
       still();
     },
@@ -1247,7 +1283,7 @@ export function createWalk(d: WalkDeps) {
     start: (setup) => startFight(setup),
     snack: () => void fight?.snack(),
     onOpen() {
-      pedals.gas = pedals.brake = false;
+      clearPedals();
       fightBtns.block = false;
       still();
       void loadFight();
@@ -1338,7 +1374,7 @@ export function createWalk(d: WalkDeps) {
     hero.g.visible = !firstPerson;
     hero.ring.visible = !firstPerson;
     keys.clear();
-    pedals.gas = pedals.brake = false;
+    clearPedals();
     fightBtns.punch = fightBtns.kick = fightBtns.block = fightBtns.dodge = false;
     near = null;
     d.touched();
@@ -1388,7 +1424,7 @@ export function createWalk(d: WalkDeps) {
     hero.g.visible = !firstPerson;
     hero.ring.visible = !firstPerson;
     keys.clear();
-    pedals.gas = pedals.brake = false;
+    clearPedals();
     kartBtns.drift = kartBtns.item = false;
     near = null;
     d.touched();
@@ -1489,7 +1525,7 @@ export function createWalk(d: WalkDeps) {
     pivot.set(0, 0, 0);
     camDist = zoom;
     keys.clear();
-    pedals.gas = pedals.brake = false;
+    clearPedals();
     near = null;
     d.touched();
   }
@@ -1809,6 +1845,7 @@ export function createWalk(d: WalkDeps) {
     combat.trigger(false);
     combat.trigger(false, true);
     endJoy();
+    clearPedals();
     drag = null;
   });
 
@@ -1874,6 +1911,12 @@ export function createWalk(d: WalkDeps) {
   let drag: { id: number; x: number; y: number; touch: boolean } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     if (!active) return;
+    // At the wheel, a touch on the city low on the stick's side is the stick, and one round the pedals a pedal
+    if (e.pointerType !== 'mouse' && atWheelNow()) {
+      const sc = screen();
+      if (inSteerZone(e.clientX, e.clientY, sc) && startJoy(e, canvas, true)) return;
+      if (inPedalZone(e.clientX, e.clientY, sc, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]))) return pressPedal(e, canvas);
+    }
     if (e.pointerType === 'mouse') {
       if (!locked() && !noLock) {
         const req = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
@@ -1913,33 +1956,54 @@ export function createWalk(d: WalkDeps) {
     { passive: false }
   );
 
-  // Touch joystick
+  // Touch joystick: one finger, followed wherever it goes (on the window, the finger captured) and never another's.
+  // At the wheel it floats (touchdrive.ts): a thumb landing on the city on the stick's side of the lower screen is the
+  // stick, its ring moved under the thumb, so the steering thumb never misses it
   const setJoy = (e: PointerEvent) => {
-    const r = stick.getBoundingClientRect();
-    let x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-    let y = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    const R = stick.getBoundingClientRect().width / 2 || 1;
+    let x = (e.clientX - joy.ox) / R;
+    let y = (e.clientY - joy.oy) / R;
     const m = Math.hypot(x, y);
     if (m > 1) ((x /= m), (y /= m));
     joy.x = x;
     joy.y = y;
-    knob.style.transform = `translate(${x * r.width * 0.27}px, ${y * r.width * 0.27}px)`;
+    const sh = stickRead(e.clientX - joy.ox, e.clientY - joy.oy, R);
+    joy.sx = sh.x;
+    joy.sy = sh.y;
+    knob.style.transform = `translate(${x * R * 0.54}px, ${y * R * 0.54}px)`;
     d.touched();
   };
-  stick.addEventListener('pointerdown', (e) => {
+  /** A finger takes the stick (on the stick itself, or floating at the wheel); false if another already has it */
+  function startJoy(e: PointerEvent, el: HTMLElement, float: boolean) {
+    if (joy.id >= 0) return false;
+    const r = stick.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
     joy.id = e.pointerId;
-    stick.setPointerCapture(e.pointerId);
+    joy.float = float;
+    joy.ox = float ? e.clientX : cx;
+    joy.oy = float ? e.clientY : cy;
+    stick.style.translate = float ? `${e.clientX - cx}px ${e.clientY - cy}px` : '';
+    stick.classList.toggle('is-held', true);
+    capture(el, e.pointerId);
     setJoy(e);
-    e.stopPropagation();
+    return true;
+  }
+  stick.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (startJoy(e, stick, false)) e.stopPropagation();
   });
-  stick.addEventListener('pointermove', (e) => e.pointerId === joy.id && setJoy(e));
+  window.addEventListener('pointermove', (e) => e.pointerId === joy.id && setJoy(e));
   const endJoy = (e?: PointerEvent) => {
     if (e && e.pointerId !== joy.id) return;
     joy.id = -1;
-    joy.x = joy.y = 0;
+    joy.x = joy.y = joy.sx = joy.sy = 0;
+    joy.float = false;
     knob.style.transform = '';
+    stick.style.translate = '';
+    stick.classList.remove('is-held');
   };
-  stick.addEventListener('pointerup', (e) => endJoy(e));
-  stick.addEventListener('pointercancel', (e) => endJoy(e));
+  for (const ev of ['pointerup', 'pointercancel'] as const) window.addEventListener(ev, (e) => endJoy(e));
   const jumpBtn = $('[data-walk-jump]');
   jumpBtn.addEventListener('pointerdown', () => {
     tryJump();
@@ -1958,23 +2022,41 @@ export function createWalk(d: WalkDeps) {
   });
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) crouchBtn.addEventListener(ev, () => crouchInput('touch', false));
   crouchBtn.addEventListener('click', (e) => e.detail === 0 && crouchPress());
-  // Touch pedals while driving (the stick steers)
-  for (const [sel, key] of [
-    ['[data-drive-gas]', 'gas'],
-    ['[data-drive-brake]', 'brake'],
-  ] as const) {
-    const b = $(sel);
+  // Touch pedals at the wheel (touchdrive.ts): each pedal finger followed on its own, pressing the pedal it's on or
+  // the nearer one, so a thumb rolled from Gas onto Brake switches without lifting; a finger landing on the city just
+  // round them presses one too. Only its own lift (or the browser's cancel) lets a pedal go, never another finger.
+  pedalBtns.forEach((b) =>
     b.addEventListener('pointerdown', (e) => {
-      try {
-        b.setPointerCapture(e.pointerId);
-      } catch {
-        /* still pressed, just not captured */
-      }
-      pedals[key] = true;
-      d.touched();
+      e.preventDefault();
+      pressPedal(e, b);
+    })
+  );
+  window.addEventListener('pointermove', (e) => {
+    const was = pedalFingers.get(e.pointerId);
+    if (!was) return;
+    const now = pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), was);
+    if (now === was) return;
+    pedalFingers.set(e.pointerId, now);
+    syncPedals();
+  });
+  for (const ev of ['pointerup', 'pointercancel'] as const)
+    window.addEventListener(ev, (e) => {
+      if (pedalFingers.delete(e.pointerId)) syncPedals();
     });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) b.addEventListener(ev, () => (pedals[key] = false));
-  }
+  // The phone's own gestures never take a finger off the controls (Safari's pinch, its long-press magnifier and
+  // callout, Android's long-press menu): a touch landing on a control or the city while walking keeps its default from
+  // happening (the pointer events go on as they were)
+  const onControls = (t: EventTarget | null) => t instanceof Element && !!t.closest('.tc, .walk-stick, canvas');
+  for (const ev of ['touchstart', 'touchmove'] as const)
+    root.addEventListener(
+      ev,
+      (e) => {
+        if (active && e.cancelable && onControls(e.target)) e.preventDefault();
+      },
+      { passive: false }
+    );
+  for (const ev of ['gesturestart', 'gesturechange'] as const) document.addEventListener(ev, (e) => active && e.preventDefault());
+  root.addEventListener('contextmenu', (e) => active && onControls(e.target) && e.preventDefault());
   // The horn while driving your car (city life plan, Phase 2)
   $('[data-drive-horn]').addEventListener('pointerdown', () => {
     if (boat?.active) boat.horn();
@@ -2429,9 +2511,9 @@ export function createWalk(d: WalkDeps) {
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
     let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
     if (joy.id >= 0) {
-      steer = joy.x;
-      // The stick pedals too, unless a pedal button is held
-      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+      steer = joy.sx;
+      // The stick pedals too, unless a pedal is held
+      if (!pedals.gas && !pedals.brake) throttle = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padDrive.steer) steer = padDrive.steer;
@@ -2465,8 +2547,8 @@ export function createWalk(d: WalkDeps) {
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
     let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
     if (joy.id >= 0) {
-      steer = joy.x;
-      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+      steer = joy.sx;
+      if (!pedals.gas && !pedals.brake) throttle = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padDrive.steer) steer = padDrive.steer;
@@ -2516,8 +2598,8 @@ export function createWalk(d: WalkDeps) {
     let throttle = k('KeyW', 'KeyW') - k('KeyS', 'KeyS');
     let climb = (keys.has('ArrowUp') || jumpHeld ? 1 : 0) - (keys.has('ArrowDown') || keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyC') ? 1 : 0);
     if (joy.id >= 0) {
-      turn = joy.x;
-      climb = -joy.y;
+      turn = joy.sx;
+      climb = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padFly.turn) turn = padFly.turn;
@@ -2576,8 +2658,8 @@ export function createWalk(d: WalkDeps) {
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
     let throttle = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
     if (joy.id >= 0) {
-      steer = joy.x;
-      if (!pedals.gas && !pedals.brake) throttle = -joy.y;
+      steer = joy.sx;
+      if (!pedals.gas && !pedals.brake) throttle = -joy.sy;
     }
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padKart.steer) steer = padKart.steer;
@@ -3533,9 +3615,8 @@ export function createWalk(d: WalkDeps) {
       garageUI.close();
       hotbar?.close();
       combat.exit();
-      joy.id = -1;
-      joy.x = joy.y = 0;
-      knob.style.transform = '';
+      endJoy();
+      clearPedals();
       near = null;
       prompt.hidden = true;
       hero.g.visible = hero.ring.visible = false;

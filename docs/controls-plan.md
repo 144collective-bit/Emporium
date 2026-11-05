@@ -273,6 +273,36 @@ and the installed game without the browser's bars. The owner's picks:
   again from what's kept; Esc or × leaves it. The hub waits under it
   (`is-arranging` hides it and the real controls).
 
+## Two thumbs at the wheel (the owner's call, after the views plan)
+
+"The driving controls are glitch. I can't steer while driving if I hold the
+gas... make them simple and ensure two finger touch points are always
+available and don't interrupt each other for full control."
+
+- **Found:** steering with Gas held worked in Chromium's own two-finger
+  input (both orders), and the car turns tightly at speed (7-11 tiles at
+  top speed on full lock, every model), so the faults were the phone's:
+  a second finger can start Safari's pinch or its long-press gestures,
+  which cancel the touches already down; a thumb landing beside the stick
+  turned the camera instead; a thumb rolling from Gas to Brake did
+  nothing until lifted; and on a phone on its side the control card sat
+  over the middle of the screen and took the steering thumb's touch.
+- **Built:** `touchdrive.ts` (DOM-free, tested in
+  `tests/touchdrive.test.ts`): the floating stick at the wheel
+  (`inSteerZone()`: a thumb anywhere low on the stick's side; the ring
+  moves under it), its reading (`stickRead()`: a little dead middle, full
+  lock at 72% of the ring), the pedals that follow the finger
+  (`pedalAt()`, `inPedalZone()`). walk.ts follows each finger on its own
+  (stick and pedals on the window, captured; only its own lift or the
+  browser's cancel lets one go), keeps the phone's gestures off the
+  controls and the city while walking, and the control card lets touches
+  through (controls.css). Checked in a headless browser with real
+  two-finger input on an iPhone-sized screen upright and on its side: gas
+  then stick and stick then gas, either finger lifted while the other
+  holds, a thumb rolled onto Brake, the floating stick, a thumb just off
+  Gas, a third finger on the horn, a touch up top still looking round;
+  and the on-foot buttons, the prompts, View and the menu by touch.
+
 ## Not in it
 
 - Desktops: no touch controls there; the header's desktop layout stays.
