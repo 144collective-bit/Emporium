@@ -58,7 +58,17 @@ export const AVE_EDGE = AVE.c - AVE.half;
  */
 export const MOVED = 130;
 /** The chain-link fence round the land: x0, z0, x1, z1 */
-export const FENCE: Rect = [-128, 342 + MOVED, -22, 412 + MOVED];
+export const FENCE: Rect = [-205, 342 + MOVED, -22, 412 + MOVED];
+/** The old park's west fence line (the polish round, the owner's call): the park east of it, the Field west of it (the
+ * camp's ground, lot9camp.ts); the old fence there is open where the ways through are (`INNER_GAPS`: z from, to) */
+export const PARK_X0 = -128;
+export const INNER_GAPS: [number, number][] = [
+  [351 + MOVED, 358.5 + MOVED],
+  [373.4 + MOVED, 380.2 + MOVED],
+];
+/** The Field: the camp's ground inside the fence west of the old line */
+export const FIELD: Rect = [FENCE[0] + 0.5, FENCE[1] + 0.5, PARK_X0 - 0.5, FENCE[3] - 0.5];
+export const inField = (x: number, z: number, m = 0) => x > FIELD[0] + m && x < FIELD[2] - m && z > FIELD[1] + m && z < FIELD[3] - m;
 /** The land inside the fence (and the scrub just outside its north side) and the lane out to the avenue: the district's
  * land (the tunnel's path north is `PATH_RECT`) */
 export const LOT9_RECT: Rect = [FENCE[0] - 2, FENCE[1] - 6, AVE.c - AVE.half, FENCE[3] + 2];
@@ -249,6 +259,61 @@ export const FOOTPATH: Pt[] = (() => {
 /** The footpath's land, from the top of the ramp to the fence (the trees keep off it) */
 export const PATH_RECT: Rect = [Math.min(...FOOTPATH.map((p) => p[0])) - 1, TUNNEL.z1 - 1, Math.max(...FOOTPATH.map((p) => p[0])) + 1, FENCE[1]];
 
+/* ---------- The Field's track (what's on the Field is lot9camp.ts's, the chunk's) ---------- */
+
+/** The Field's dirt track: its half width, the loop's middle and radii */
+export const TRACK_HALF = 1.3;
+export const CAMP_C: Pt = [-166, 377 + MOVED];
+const CAMP_R: Pt = [23, 21];
+/** The loop's wobble (a share of its radius) at angle a: worn in by use, never drawn with a compass */
+const wobble = (a: number) => 0.06 * Math.sin(2 * a + 1) + 0.04 * Math.sin(3 * a + 2);
+/** The loop, closed (its first point again at the end), from its east end round by the south */
+export const TRACK_LOOP: Pt[] = Array.from({ length: 49 }, (_, k): Pt => {
+  const a = ((k % 48) / 48) * Math.PI * 2;
+  const w = 1 + wobble(a);
+  return [CAMP_C[0] + Math.cos(a) * CAMP_R[0] * w, CAMP_C[1] + Math.sin(a) * CAMP_R[1] * w];
+});
+/** The way in: off the west lane, across the junk corner, through the old line's gap to the loop's east end */
+export const TRACK_SPUR: Pt[] = [
+  [LOOP_W - LANE_HALF + 0.2, ROAD_Z],
+  [PARK_X0, ROAD_Z - 0.1],
+  [-135, 376.4 + MOVED],
+  TRACK_LOOP[0],
+];
+/** How far x, z is from the track's middle */
+export function fromTrack(x: number, z: number) {
+  let d = Infinity;
+  for (const line of [TRACK_SPUR, TRACK_LOOP])
+    for (let i = 1; i < line.length; i++) {
+      const [a, b] = [line[i - 1], line[i]];
+      const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+      const l2 = vx * vx + vz * vz;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / l2)) : 0;
+      d = Math.min(d, Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t));
+    }
+  return d;
+}
+/** Is x, z inside the loop (the commons' ground: angle and radius from its middle against the wobbled radius) */
+export function inLoop(x: number, z: number, m = 0) {
+  const [dx, dz] = [x - CAMP_C[0], z - CAMP_C[1]];
+  const a = Math.atan2(dz / CAMP_R[1], dx / CAMP_R[0]);
+  const w = 1 + wobble(a);
+  return Math.hypot(dx / (CAMP_R[0] * w), dz / (CAMP_R[1] * w)) < 1 && fromTrack(x, z) > m;
+}
+/** The Field's shade trees (x, z, size) */
+export const FIELD_TREES: [number, number, number][] = [
+  [-198, 350.5 + MOVED, 1.3],
+  [-200, 373 + MOVED, 1.15],
+  [-197.5, 401 + MOVED, 1.4],
+  [-181, 406.5 + MOVED, 1.1],
+  [-152, 406 + MOVED, 1.25],
+  [-138, 404 + MOVED, 0.95],
+  [-160, 347.5 + MOVED, 1.15],
+  [-184, 346.5 + MOVED, 1.0],
+  [-160.5, 375 + MOVED, 1.35],
+  [-174.5, 379.5 + MOVED, 1.2],
+];
+
 /* ---------- The lots' grid (the homes on them are lot9homes.ts's, the chunk's) ---------- */
 
 /** A small seeded generator */
@@ -311,7 +376,7 @@ export const LAUNDRY: Hut = { rect: [EX0, ROAD_Z + ROAD_HALF + 0.9, EX1, ROAD_Z 
 export const MAILBOXES: Pt = [EX0 + 0.6, ROAD_Z - ROAD_HALF - 0.35];
 
 /** The junk corner: the strip between the west fence and the west lane */
-const JX0 = FENCE[0] + 0.5;
+const JX0 = PARK_X0 + 0.5;
 const JX1 = LOOP_W - LANE_HALF - 0.4;
 export const JUNK: Rect = [JX0, FENCE[1] + 0.5, JX1, FENCE[3] - 0.5];
 /** A boat on its trailer, gone green */
@@ -357,9 +422,16 @@ export function carBox(id: CarId, x: number, z: number, ry: number): Box {
 }
 export const boxOf = (r: Rect, h: number): Box => [r[0], r[1], r[2], r[3], h];
 
-/** The fence's runs (a gap at the gate and at the hole) as thin boxes */
+/** The fence's runs (a gap at the gate and at the hole) as thin boxes, and the old line's between its gaps */
 export const FENCE_RUNS: [Pt, Pt][] = (() => {
   const [x0, z0, x1, z1] = FENCE;
+  const inner: [Pt, Pt][] = [];
+  let from = z0;
+  for (const [a, b] of INNER_GAPS) {
+    inner.push([[PARK_X0, from], [PARK_X0, a]]);
+    from = b;
+  }
+  inner.push([[PARK_X0, from], [PARK_X0, z1]]);
   return [
     [[x0, z0], [HOLE.x - HOLE.half, z0]],
     [[HOLE.x + HOLE.half, z0], [x1, z0]],
@@ -367,8 +439,11 @@ export const FENCE_RUNS: [Pt, Pt][] = (() => {
     [[x1, GATE.z + GATE.half], [x1, z1]],
     [[x1, z1], [x0, z1]],
     [[x0, z1], [x0, z0]],
+    ...inner,
   ];
 })();
+/** The old line's runs (lot9-3d.ts draws them half down) */
+export const INNER_RUNS = FENCE_RUNS.slice(6);
 
 /** What's solid in Lot 9 from the boot: the fence, the office, the laundry, the fire pit's barrel, the junk corner and
  * its cars, the tunnel's parapets (the homes and the residents' cars are lot9homes.ts's, joined when the chunk loads) */
@@ -400,6 +475,10 @@ export const LOT9_LAMPS: [number, number, number, number][] = (() => {
   // By the gate, outside it, and at the top of each ramp
   out.push([GATE.x + 1.2, GATE.z - GATE.half - 0.6, Math.PI / 2, GROUND_Y]);
   out.push([TUNNEL.x + TUNNEL.half + TUNNEL.wall + 0.9, TUNNEL.z1 + 0.8, Math.PI, GROUND_Y]);
+  // The Field's three: by the way in, by the shower block and by the camp kitchen (lot9camp.ts)
+  out.push([-131, 380.4 + MOVED, -Math.PI / 2, GROUND_Y]);
+  out.push([-166, 359.9 + MOVED, -Math.PI / 2, GROUND_Y]);
+  out.push([-149.6, 380.4 + MOVED, 0, GROUND_Y]);
   return out;
 })();
 
@@ -511,12 +590,16 @@ export const LOT9_TREES: [number, number, number][] = [
   [FENCE[2] - 3.4, FENCE[1] + 12, 0.95],
   [FENCE[2] - 2.4, FENCE[3] - 5, 0.8],
   [FENCE[2] - 3.2, FENCE[3] - 14, 0.7],
-  [FENCE[0] + 3.4, 375.6 + MOVED, 0.9],
-  [FENCE[0] + 2.4, 356.4 + MOVED, 0.65],
   [-92, FENCE[1] - 3.2, 0.9],
   [-71, FENCE[1] - 4, 0.75],
   [-46, FENCE[1] - 3, 1.0],
   [-30, FENCE[1] - 4.4, 0.7],
+  // (and outside the Field's north fence)
+  [-150, FENCE[1] - 3.6, 0.95],
+  [-171, FENCE[1] - 4.6, 0.8],
+  [-192, FENCE[1] - 3.4, 1.05],
+  // The Field's shade trees: the camp grew round them (lot9camp.ts keeps its pitches off them)
+  ...FIELD_TREES,
 ];
 
 /* ---------- The place ---------- */

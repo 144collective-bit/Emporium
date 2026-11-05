@@ -8,7 +8,8 @@ import {
   FENCE, FIRE, FIRE_SEATS, FOOTPATH, GATE, HOLE, KIDS_ON_BIKES, KIDS_RUNNING, LANE_HALF, LOT9_CARS, LOT9_CROSSINGS, LOT9_IDLE, LOT9_LAMPS, LOT9_PEOPLE, LOT9_RECT,
   LOT9_SOLIDS, LOT9_SPAWN, LOT9_TREES, inTunnelZone, LOT9_STREETS, FIRE_LOT, OFFICE, LAUNDRY, TUNNEL, TUNNEL_HOLES, TUNNEL_SOLIDS, DOWN, inTunnel, riderAt, runnerAt, tunnelFloor, tunnelRoom, tunnelWall, tunnelY,
 } from '../src/scripts/city3d/lot9';
-import { CHAINED_DOGS, HOME_CARS, HOME_SOLIDS, HOMES, LOTS, PORCH_SITTERS } from '../src/scripts/city3d/lot9homes';
+import { CHAINED_DOGS, DROPS, HOME_CARS, HOME_SOLIDS, HOMES, LOTS, POLES, POLE_SOLIDS, PORCH_SITTERS, YARD_SOLID } from '../src/scripts/city3d/lot9homes';
+import { CAMP_SOLIDS } from '../src/scripts/city3d/lot9camp';
 import { PLAN, distToStreet, inPoly, type Pt } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PLACES } from '../src/scripts/city3d/places';
@@ -25,7 +26,7 @@ import type { Moment } from '../src/scripts/city3d/parklife';
 const mine = new Set(LOT9_SOLIDS);
 const others = SOLIDS.filter((b) => !mine.has(b));
 /** Everything solid in Lot 9 once its chunk has loaded */
-const ALL = [...LOT9_SOLIDS, ...HOME_SOLIDS];
+const ALL = [...LOT9_SOLIDS, ...HOME_SOLIDS, ...POLE_SOLIDS];
 const overlap = (a: readonly number[], b: readonly number[], m = 0) => a[0] < b[2] - m && a[2] > b[0] + m && a[1] < b[3] - m && a[3] > b[1] + m;
 const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] + m && x < r[2] - m && z > r[1] + m && z < r[3] - m;
 const lanes = PLAN.streets.filter((s) => s.id.startsWith('lot9-'));
@@ -100,9 +101,10 @@ test("each home's parts stay on its lot and clear of each other", () => {
       ['dogRun', h.dogRun],
       ['junk', h.junk],
       ['car', h.car ? carRect(h.car) : undefined],
+      ...h.yard.map((y): [string, readonly number[]] => [`yard ${y.kind}`, y.rect]),
     ];
     for (const [k, b] of parts) if (b) for (const p of corners(b)) assert.ok(inRect(r, p[0], p[1], -0.01), `${h.lot.id} ${k}`);
-    const solid = parts.filter(([k, b]) => b && k !== 'leanTo');
+    const solid = parts.filter(([k, b]) => b && k !== 'leanTo' && (!k.startsWith('yard') || YARD_SOLID[k.slice(5) as keyof typeof YARD_SOLID]));
     for (let i = 0; i < solid.length; i++) for (let j = i + 1; j < solid.length; j++) assert.ok(!overlap(solid[i][1]!, solid[j][1]!, 0.01), `${h.lot.id}: ${solid[i][0]} / ${solid[j][0]}`);
     // (the door's foot is on the deck or just off the home, on its lot)
     assert.ok(inRect(r, h.door[0], h.door[1]), h.lot.id);
@@ -227,7 +229,7 @@ test("the walk camera down in the tunnel keeps inside its air", () => {
 });
 
 test('its lamps, people and dogs stand clear of everything solid, its kids ride and run on the lanes', () => {
-  const near = (x: number, z: number, m: number) => [...SOLIDS, ...HOME_SOLIDS].some((b) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m);
+  const near = (x: number, z: number, m: number) => [...SOLIDS, ...HOME_SOLIDS, ...POLE_SOLIDS, ...CAMP_SOLIDS].some((b) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m);
   for (const [x, z] of LOT9_LAMPS) assert.ok(!near(x, z, 0.12), `lamp ${x}, ${z}`);
   for (const [x, z] of LOT9_LAMPS) assert.ok(fromLanes([x, z]) > 0.2, `lamp ${x}, ${z} on a lane`);
   // (sodium, a few flickering or dead, as The Trenches')
@@ -272,4 +274,19 @@ test('a place: its spawn on the lane outside the gate, a map entry, a live switc
   const stops = BUS_STOPS.filter((s) => s.street === 'ns0s' && s.at[1] > 320);
   assert.ok(stops.some((s) => s.dir[1] > 0) && stops.some((s) => s.dir[1] < 0), 'a stop each way');
   for (const id of ['lot9', 'lot9-path', 'endswood']) assert.ok(KEEPS.some((k) => k.id === id), id);
+});
+
+test("the park's yards are lived in, its homes on the power, its poles off the lanes and the lamps", () => {
+  const kinds = new Set(HOMES.flatMap((h) => h.yard.map((y) => y.kind)));
+  for (const k of ['bins', 'propane', 'line', 'pool', 'grill', 'table', 'flamingos', 'toys'] as const) assert.ok(kinds.has(k), k);
+  assert.ok(HOMES.filter((h) => h.yard.some((y) => y.kind === 'propane')).length > HOMES.length * 0.5, 'propane at most homes');
+  // Every home but the burnt one has its drop from a pole along its lane, not far
+  assert.equal(DROPS.length, HOMES.filter((h) => h.cond !== 'burnt').length);
+  for (const d of DROPS) assert.ok(Math.hypot(d.from[0] - d.to[0], d.from[1] - d.to[2]) < 16, `a drop of ${Math.hypot(d.from[0] - d.to[0], d.from[1] - d.to[2])}`);
+  for (const [x, z] of POLES) {
+    assert.ok(fromLanes([x, z]) > 0 && fromLanes([x, z]) < 0.3, `pole ${x}, ${z}`);
+    assert.ok(LOT9_LAMPS.every(([lx, lz]) => Math.hypot(lx - x, lz - z) > 1.2), `pole ${x}, ${z} by a lamp`);
+  }
+  // (each home's hookup on its lot, in front of it)
+  for (const h of HOMES) assert.ok(inRect(h.lot.rect, h.hookup[0], h.hookup[1]), h.lot.id);
 });
