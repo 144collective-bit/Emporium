@@ -49,7 +49,6 @@ import { FREE_PLAY } from './freeplay';
 import {
   BOT_LEVELS,
   type BotLevel,
-  CAR_CATALOG,
   CAR_MOD_IDS,
   GUN_CATALOG,
   GUN_MOD_IDS,
@@ -1486,6 +1485,8 @@ export function addXp(s: TycoonSave, n: number) {
   s.xp += Math.round(n);
   return level(s) - before;
 }
+/** Mission ids renamed since they were saved (old → new; `cleanSave()` maps them) */
+export const MISSION_RENAMES: Record<string, string> = { 'street-fighter': 'heavy-hands' };
 /** Count something you did (missions and badges watch these) */
 export function count(s: TycoonSave, k: CounterId, n = 1) {
   if (!(n > 0)) return;
@@ -1624,14 +1625,16 @@ export const dayKey = (now: number) => {
  * A finished kart race or time trial: pay the place (a cup's prizes), count it, keep the fastest lap
  * per course and class (any race) and a time trial's run on the board; `clean` (laps without a
  * wheel in the run-off) and `overtakes` are counted for missions and badges. `laps` are the lap times.
+ * `prizes` false (the owner's live `prizes` switch closed): the race counts and pays its XP, but no Dorras.
  */
-export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number; items?: boolean }): KartResult {
+export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number; items?: boolean; prizes?: boolean }): KartResult {
   const seconds = Math.round(r.seconds * 100) / 100;
   const time = r.cup === 'time';
   const c = time ? null : CUPS[r.cup as CupId];
   const cls: ClassId = KART_CLASSES[r.cls] ? r.cls : 'sport';
   const place = Math.max(1, Math.min(8, Math.round(r.place)));
-  const prize = c ? (c.prizes[place - 1] ?? 0) : 0;
+  const paying = r.prizes !== false;
+  const prize = c && paying ? (c.prizes[place - 1] ?? 0) : 0;
   const now = r.now ?? s.at;
   // (an items race, docs/kart-west-plan.md Phase 7, keeps no lap records, par or challenge: they stay pure racing)
   const lapsIn = r.items ? [] : (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
@@ -1665,9 +1668,11 @@ export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; 
   if (bestLap > 0 && ch.course === r.course && ch.cls === cls && bestLap <= ch.target && K.challenge?.day !== today) {
     K.challenge = { day: today, lap: bestLap };
     challenge = true;
-    s.dorras += CHALLENGE_PRIZE;
-    book(s, 'karting', CHALLENGE_PRIZE);
-    count(s, 'earned', CHALLENGE_PRIZE);
+    if (paying) {
+      s.dorras += CHALLENGE_PRIZE;
+      book(s, 'karting', CHALLENGE_PRIZE);
+      count(s, 'earned', CHALLENGE_PRIZE);
+    }
   }
   if (prize > 0) {
     s.dorras += prize;
@@ -1727,9 +1732,10 @@ export const seriesPlaces = (points: number[]) => {
 };
 /**
  * A race of the series finished: `placesByKart` is each grid index's place in it (you last).
- * Points go on; after the last race the overall standings pay a prize and a trophy.
+ * Points go on; after the last race the overall standings pay a prize and a trophy (`prizes` false: the
+ * trophy and the XP, no Dorras).
  */
-export function seriesRace(s: TycoonSave, placesByKart: number[]): SeriesResult | null {
+export function seriesRace(s: TycoonSave, placesByKart: number[], prizes = true): SeriesResult | null {
   const sr = s.karts.series;
   if (!sr) return null;
   const cup = CUPS[sr.cup];
@@ -1743,7 +1749,7 @@ export function seriesRace(s: TycoonSave, placesByKart: number[]): SeriesResult 
   let xp = 0;
   let levels = 0;
   if (done) {
-    prize = SERIES_PRIZES[sr.cup][overall - 1] ?? 0;
+    prize = prizes ? (SERIES_PRIZES[sr.cup][overall - 1] ?? 0) : 0;
     if (prize > 0) {
       s.dorras += prize;
       book(s, 'karting', prize);
@@ -1950,13 +1956,17 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   }
   const m = obj(o.missions);
   const slug = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,40}$/.test(v);
-  s.missions.done = [...new Set((Array.isArray(m.done) ? m.done : []).filter(slug))];
+  // The mission Heavy hands was saved as `street-fighter` until the polish pass (the badge is the Street Fighter)
+  const missionId = (id: string) => MISSION_RENAMES[id] ?? id;
+  s.missions.done = [...new Set((Array.isArray(m.done) ? m.done : []).filter(slug).map(missionId))];
   for (const raw of (Array.isArray(m.active) ? m.active : []).slice(0, 5)) {
     const r = obj(raw);
-    if (!slug(r.id) || s.missions.done.includes(r.id) || s.missions.active.some((x) => x.id === r.id)) continue;
+    if (!slug(r.id)) continue;
+    const id = missionId(r.id);
+    if (s.missions.done.includes(id) || s.missions.active.some((x) => x.id === id)) continue;
     const from = newCounters();
     for (const k of COUNTER_IDS) from[k] = Math.floor(num(obj(r.from)[k], 0, 1e15, 0));
-    s.missions.active.push({ id: r.id, from, at: num(r.at, 0, now, now) });
+    s.missions.active.push({ id, from, at: num(r.at, 0, now, now) });
   }
   s.badges = [...new Set((Array.isArray(o.badges) ? o.badges : []).filter(slug))];
   for (const k of COUNTER_IDS) s.counters[k] = Math.floor(num(obj(o.counters)[k], 0, 1e15, 0));

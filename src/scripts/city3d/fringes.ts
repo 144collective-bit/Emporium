@@ -68,7 +68,7 @@ export const SUBSTATION = {
 
 /** Fixed made-up copy, the city's own places (the atlas's cells, fringes3d.ts) */
 export const BOARD_COPY = [
-  { head: 'TAKE THE METRO', sub: 'EIGHT STATIONS · ONE CITY', bg: '#2a1440', fg: '#ff4fb4', ink: '#f6ecff' },
+  { head: 'TAKE THE METRO', sub: 'EVERY DISTRICT · ONE CITY', bg: '#2a1440', fg: '#ff4fb4', ink: '#f6ecff' },
   { head: 'WESTLAKE PARK', sub: 'ROW ON THE LAKE', bg: '#173a2c', fg: '#ffd54a', ink: '#effae8' },
   { head: 'THE NEON MILE', sub: 'LIGHTS ALL NIGHT', bg: '#120d2e', fg: '#47e6ff', ink: '#ffe3fb' },
   { head: 'SKY WHEEL', sub: 'UPTOWN · SEE THE WHOLE CITY', bg: '#123158', fg: '#ffc94a', ink: '#f2f6ff' },

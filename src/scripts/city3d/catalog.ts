@@ -333,7 +333,7 @@ export const WARDROBE_CATALOG: WardrobeEntry[] = [
   { id: 'halo', name: 'Neon Halo', price: 9000, level: 6, tab: 'head', pitch: 'A floating ring of neon over your head.' },
   { id: 'duffel', name: 'Duffel Bag', price: 3000, level: 2, tab: 'bag', pitch: 'Big enough for all the Dorras.' },
   { id: 'wings', name: 'Neon Wings', price: 25000, level: 12, tab: 'bag', pitch: 'Glowing wings on your back. Purely decorative. Mostly.' },
-  { id: 'phone', name: 'Phone', price: 1000, level: 1, tab: 'hand', pitch: 'Always checking the charts.' },
+  { id: 'phone', name: 'Phone', price: 1000, level: 1, tab: 'hand', pitch: 'Never off it.' },
   { id: 'briefcase', name: 'Briefcase', price: 5000, level: 4, tab: 'hand', pitch: 'Serious business.' },
   { id: 'watch', name: 'Gold Watch', price: 8000, level: 5, tab: 'extras', pitch: 'A fat gold watch on the wrist.' },
   { id: 'gold', name: 'Gold Pack', price: 10000, level: 7, tab: 'colours', pitch: 'Metallic gold and bronze for every fit.' },

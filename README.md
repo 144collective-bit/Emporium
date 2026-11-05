@@ -10,7 +10,7 @@ homepage, whose buildings lead into the comic-book Emporium page.
 npm install
 npm run dev      # http://localhost:4321
 npm run build    # static site in dist/
-npm test         # the city's rules and data (tests/), in a second or so
+npm test         # the city's rules and data (tests/), about three minutes
 ```
 
 `npm test -- drive` runs only the test files whose name contains "drive".
@@ -19,20 +19,16 @@ zip is made.
 
 ## Put it live (Hostinger)
 
-degenemporium.com is hosted on Hostinger as a static site.
+degenemporium.com is hosted on Hostinger as a static site, deployed from
+GitHub: a push to `main` goes live by itself. The "Build site" Action
+still builds every push into a zip (**Actions -> Build site**, the latest
+green run, **degenemporium-site** under Artifacts) and runs the checks, so
+a failing test or type error shows there. Check https://degenemporium.com
+after a push (hard refresh if the old version shows).
 
-1. **Get the zip.** Every push to `main` builds the site: on GitHub open
-   **Actions -> Build site**, pick the latest green run and download
-   **degenemporium-site** under Artifacts. (Or run `npm run build` locally
-   and use everything inside `dist/`.)
-2. **Upload.** In hPanel open **File Manager -> public_html**, back up or
-   remove the old files, upload the zip and **Extract** it right there, so
-   `index.html` sits directly in `public_html`. Delete the zip afterwards.
-3. **Check** https://degenemporium.com (hard refresh if the old version
-   shows).
-
-Multiplayer is paused: this build runs without the game server (solo play,
-the builder as a play-money demo). See `server/README.md` to bring it back.
+This build runs without the game server: the whole city game lives in the
+browser's save (Dorras are game money only). Multiplayer is tested on
+workers.dev; see `server/README.md`.
 
 `public/.htaccess` ships with every build: it serves the site's 404 page,
 compresses text files and caches the fingerprinted files in `/_astro/` for a

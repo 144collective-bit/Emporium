@@ -143,6 +143,12 @@ test('the missions and the badge: a street spar, a street chain, every partner s
   street(s, 'duke', true);
   street(s, 'sal', true);
   assert.ok(checkBadges(s).some((x) => x.id === 'partners-all'));
-  // (the old mission kept its id, under a name of its own now the badge is the Street Fighter)
-  assert.notEqual(MISSIONS.find((m) => m.id === 'street-fighter')!.name, 'Street fighter');
+  // (the old `street-fighter` mission is Heavy hands now the badge is the Street Fighter; a save that held it is mapped)
+  assert.ok(!MISSIONS.some((m) => m.id === 'street-fighter'));
+  assert.equal(MISSIONS.find((m) => m.id === 'heavy-hands')!.name, 'Heavy hands');
+  const old = cleanSave({ ...s, missions: { done: ['street-fighter'], active: [{ id: 'street-fighter', from: {}, at: T0 }, { id: 'podium', from: {}, at: T0 }] } }, T0);
+  assert.deepEqual(old.missions.done, ['heavy-hands']);
+  assert.deepEqual(old.missions.active.map((a) => a.id), ['podium'], 'done wins over active');
+  const act2 = cleanSave({ ...s, missions: { done: [], active: [{ id: 'street-fighter', from: {}, at: T0 }] } }, T0);
+  assert.deepEqual(act2.missions.active.map((a) => a.id), ['heavy-hands']);
 });
