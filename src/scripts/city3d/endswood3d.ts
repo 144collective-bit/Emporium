@@ -20,6 +20,7 @@ import { COVER, KERB } from './palette';
 import { BOLLARD, CIRCUS, CLOSE_BOLLARDS, CLOSE_END, ENDS_NICK, ISLAND_R, NORTH_Z, ROAD_HALF, ROAD_Z, SOUTH_Z, SPINE, SUBWAYS, SUBWAY_BOLLARDS, WELL, subwayEnds, type Pt, type Rect } from './endswood';
 import { floorOf, type Passage } from './underground';
 import { NS_ROADS, WALK_W } from './layout';
+import { registerBlocks } from './endsblocks3d';
 
 export const SELF = import.meta.url;
 
@@ -490,4 +491,6 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   registerWell(low);
   for (const p of SUBWAYS) registerSubway(p, low);
   registerSpine();
+  // The blocks (endsblocks.ts, docs/estate-plan.md Phase 3)
+  registerBlocks(low);
 }

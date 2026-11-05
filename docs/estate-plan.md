@@ -230,3 +230,35 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
     they break now, Lot 9's lane's and Endswood's too.
   - The boot's code is 723.1 of 730 KB with it (mostly the traffic's routes
     along the new streets): the next phases will need the budget raised.
+- **Phase 3 (the blocks):** `endsblocks.ts` (DOM-free, the boot's for what's
+  solid, tested in `tests/endsblocks.test.ts`): `BLOCKS`, eleven buildings in
+  shells (`Shell`: a footprint, its storeys and each side's face, `Face`:
+  flats, stair slits, deck, blank or void; the ground floor `Ground`: garages,
+  brick or the entrance), every top under the Emporium (`TALLEST`):
+  - **Fennel House**, the barrier block along the north edge in two halves
+    either side of the spine, a deck (`Deck`) on every other floor along its
+    south face (`DECK`: a slab out over the yard, a solid parapet, concrete
+    cross walls, `finsOf()`), its stair cores standing proud, the halves joined
+    over the spine by a bridge (`Bridge`) on floors 2 and 3, the "street in
+    the sky" (walked on in Phase 5); the first gallery over a walker's head
+    (`GROUND` 1.5).
+  - **Harrier Point**, the nine-storey tower by the Circus, its lift and stair
+    tower beside it joined to it by bridges every third floor.
+  - **Linnet Court** (maisonettes with a deck), **Hawthorn Terrace** (low
+    brick terraces stepping down the slope), the **Endswood Close garages**
+    (lock-ups), **Sorrel**, **Teasel** and **Wren Court** and **Marten House**
+    (walk-ups and a slab east of the avenue).
+  - **Kite House**, the condemned block: every face void or blank, shut behind
+    plywood hoardings (`HOARD`, `hoardingRuns()`), the way in for later.
+  - `BLOCK_SOLIDS` (in `SOLIDS`): the shells, the decks' cross walls and the
+    hoardings; every entrance (`door`) clear of them on the slab. All made-up
+    names.
+  - Drawn by `endsblocks3d.ts` (`registerBlocks()`, from endswood3d.ts's
+    `register()`, a site a shell): its own concrete atlas (`ends-concrete`:
+    board-marked bands of flats with their windows lit at night, stair slits,
+    deck fronts, blank and boarded-out walls; the ground floor's garages,
+    brick and entrances), walls in pieces no longer than a tile, roofs with
+    coping, lift houses with louvres, the decks' slabs, soffits and parapets,
+    the bridges, the hoardings; near only dishes, plants and bikes on the
+    decks.
+  - The boot's code is 722.9 of 730 KB with it (only the solids are in it).
