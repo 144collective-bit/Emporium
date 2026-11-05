@@ -18,6 +18,7 @@ import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
 import { KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
+import { FREE_PLAY } from '../scripts/city3d/freeplay';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -204,6 +205,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
       <div class="city-start-bar" data-start-bar><span></span></div>
       </div>
+      {FREE_PLAY && <p class="city-start-free">Everything is free for a limited time</p>}
       <p class="city-start-note">Draft · v0{build && ` · ${build}`} · Dorras are game money only.</p>
     </div>
   </div>

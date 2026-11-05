@@ -4319,10 +4319,15 @@ it and has been retired completely. Build only on what's here.
   from `PUBLIC_FREE_PLAY=1` in `astro.config.mjs`) makes every price in
   `catalog.ts` and `tycoon.ts` 0, every level 1, the guns' and finishes'
   scores 0, the kart cups and the trainer's opponents open from level 1,
-  and `pay()` always pay. It's set only on the Vercel preview
-  project (emporium-preview); never set it in the "Build site" Action or
-  the Worker's build, and take it off the preview before anything goes
-  live from there. Unset, its branches fold away.
+  and `pay()` always pay. **Today it's on everywhere** (the owner's test
+  phase, 2026-11: "everything is free for a limited time"): `FREE_FOR_NOW`
+  in `astro.config.mjs` turns it on in every build of the site (degenemporium.com
+  and the Worker's copy), `define` in `server/wrangler.jsonc` in the game server,
+  and the start screen says "Everything is free for a limited time"
+  (`.city-start-free`). Ending it is the owner's call: `FREE_FOR_NOW = false`
+  and the server's `define` removed, together. Otherwise it's set by
+  PUBLIC_FREE_PLAY=1 on a test build (the emporium-preview Vercel project).
+  The tests never set it. Unset, its branches fold away.
 
 ## Target practice (3D walk mode)
 

@@ -5,6 +5,9 @@ import { bake } from './scripts/bake.mjs';
 // The city's data worked out once here, not in every visitor's browser (src/scripts/city3d/baked.ts)
 const BAKED = await bake();
 
+// The owner's test phase: everything in the city's game free for a limited time. false ends it.
+const FREE_FOR_NOW = true;
+
 export default defineConfig({
   site: 'https://degenemporium.com',
   integrations: [sitemap()],
@@ -13,11 +16,10 @@ export default defineConfig({
       __CITY_BAKED__: JSON.stringify(JSON.stringify(BAKED)),
       // (the page carries its baked data: what only works it out leaves the browser's code, baked.ts `BUILT`)
       __CITY_BUILT__: 'true',
-      // Free play (src/scripts/city3d/freeplay.ts): everything in the city's game costs nothing; a test build only
-      __FREE_PLAY__: JSON.stringify(process.env.PUBLIC_FREE_PLAY === '1'),
-      // Free cars and clothes (freeplay.ts `FREE_GEAR`): the owner's test phase, on every build of the site.
-      // To end it, set this to 'false' (the game server and the tests never see it: they keep the real prices).
-      __FREE_GEAR__: 'true',
+      // Free play (src/scripts/city3d/freeplay.ts): everything in the city's game costs nothing. The owner's test
+      // phase (2026-11, "everything is free for a limited time"): on in every build of the site, the live one too.
+      // To end it, set FREE_FOR_NOW to false at the top of this file (PUBLIC_FREE_PLAY=1 still turns it on for a test build).
+      __FREE_PLAY__: JSON.stringify(FREE_FOR_NOW || process.env.PUBLIC_FREE_PLAY === '1'),
     },
     build: {
       rollupOptions: {
