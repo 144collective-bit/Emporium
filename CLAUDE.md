@@ -1399,6 +1399,15 @@ it and has been retired completely. Build only on what's here.
   interchanges, numbered, made-up names on the gantries) and traffic that
   uses its ramps, planned in `docs/highway-plan.md` in phases, each with the
   owner's sign-off; keep it up to date.
+- **A 50 km² world** (the owner's question, planned, nothing built yet):
+  the world out to about 7 km across (`EXT` about -1,945 to 1,985), better
+  graphics through three.js's WebGPU renderer (WebGL 2 kept as the
+  fallback) and the game as an app (Capacitor, Tauri) as well as the web
+  page, planned in `docs/bigworld-plan.md`: the world's data loaded by
+  region, the far view (district stand-ins, a reversed depth buffer),
+  getting about at that size, the renderer, the apps, then the edge out in
+  steps filled by recipes; each phase with the owner's sign-off; keep it
+  up to date.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
