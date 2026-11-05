@@ -51,10 +51,10 @@ export function createProfileUI(root: HTMLElement, d: { setLook(o: Outfit): void
     rankEl.dataset.rank = rank.id;
     renameBtn.hidden = !online;
     note.textContent = online?.wallet
-      ? 'Logged in with your wallet: this profile follows it to any browser.'
+      ? 'Wallet profile · works in any browser'
       : online
-        ? 'Your guest profile is saved online and follows you on this browser. Log in with a wallet to take a profile to any browser.'
-        : 'Go online to get your player name. Your look and rifle finish are saved in this browser.';
+        ? 'Guest profile · this browser only'
+        : 'Go online for a player name';
   }
 
   /** Apply a look: dress Degen, save it here, and tell the server when online */

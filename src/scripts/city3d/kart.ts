@@ -433,7 +433,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         break;
       case 'boost':
         sfx('kartBoost', e.kart);
-        if (e.kart === me && e.tier >= 3) d.ui.pop('Boost!', 'good');
+        if (e.kart === me && e.tier >= 3) d.ui.pop('Boost', 'good');
         break;
       case 'pad':
         sfx('kartBoost', e.kart, 0.5);
@@ -460,7 +460,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         break;
       case 'startBoost':
         if (e.kart === me) {
-          d.ui.pop('Rocket start!', 'good');
+          d.ui.pop('Rocket start', 'good');
           d.sfx('kartBoost');
         }
         break;
@@ -492,7 +492,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         else sfx('kartSpark', e.kart, 0.9);
         break;
       case 'blocked':
-        if (e.kart === me) d.ui.pop('Shield!', 'good');
+        if (e.kart === me) d.ui.pop('Shield', 'good');
         break;
       case 'overtake':
         // The fans round you cheer it (kartcrowd.ts WAVE)
@@ -538,7 +538,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     if (lapT < pbLap && !sim.items) {
       pbLap = lapT;
       pbFlash = 2.2;
-      d.ui.pop('Personal best!', 'good');
+      d.ui.pop('Personal best', 'good');
     }
     if (sim.timeTrial) {
       rec.at(lapT, p);

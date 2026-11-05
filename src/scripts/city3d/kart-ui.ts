@@ -531,7 +531,7 @@ ${countersHtml(s)}
     const p = paintId ?? s.karts.paint;
     if (!pickKart(s, id, p)) {
       d.game.sfx('denied');
-      d.game.toast(`Buy the ${KART_SPECS[id].name} first.`);
+      d.game.toast(`Buy the ${KART_SPECS[id].name} first`);
       return false;
     }
     d.game.commit();
@@ -555,7 +555,7 @@ ${countersHtml(s)}
     if (r.ok) {
       d.game.commit();
       d.game.sfx('buy');
-      d.game.toast(`The ${KART_SPECS[id].name} is yours.`);
+      d.game.toast(`${KART_SPECS[id].name} bought`);
       pick(id);
     } else {
       d.game.sfx('denied');
@@ -569,7 +569,7 @@ ${countersHtml(s)}
     if (r.ok) {
       d.game.commit();
       d.game.sfx('upgrade');
-      d.game.toast(`${KART_MODS[mod].name} level ${kartMods(d.game.save(), id)[mod]} fitted to the ${KART_SPECS[id].name}.`);
+      d.game.toast(`${KART_MODS[mod].name} level ${kartMods(d.game.save(), id)[mod]} fitted`);
     } else {
       d.game.sfx('denied');
       d.game.toast(whyNot(r.why));
@@ -583,7 +583,7 @@ ${countersHtml(s)}
   function classOk(cls: ClassId) {
     const need = KART_CLASSES[cls].level;
     if (level(d.game.save()) >= need) return true;
-    d.game.toast(`The ${KART_CLASSES[cls].name} class needs level ${need}.`);
+    d.game.toast(`${KART_CLASSES[cls].name} needs level ${need}`);
     d.game.sfx('denied');
     return false;
   }
@@ -595,7 +595,7 @@ ${countersHtml(s)}
   function startSingle() {
     const c = CUPS[singleCup];
     if (level(d.game.save()) < c.level) {
-      d.game.toast(`${c.name}'s rivals need level ${c.level}.`);
+      d.game.toast(`${c.name} rivals need level ${c.level}`);
       d.game.sfx('denied');
       return;
     }
@@ -606,7 +606,7 @@ ${countersHtml(s)}
     const s = d.game.save();
     const c = CUPS[cup];
     if (level(s) < c.level) {
-      d.game.toast(`${c.name} needs level ${c.level}.`);
+      d.game.toast(`${c.name} needs level ${c.level}`);
       d.game.sfx('denied');
       return;
     }

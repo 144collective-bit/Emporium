@@ -35,7 +35,7 @@ export const CUPS: Record<CupId, Cup> = {
   rookie: {
     id: 'rookie',
     name: 'Rookie Cup',
-    blurb: 'Seven easy-going rivals at Street pace. Learn the circuit both ways, and once by night.',
+    blurb: 'Easy rivals at Street pace',
     level: 1,
     cls: 'street',
     races: [R('circuit', 2), R('circuit-reverse', 2), R('circuit', 2, 'night'), R('circuit-reverse', 3)],
@@ -46,7 +46,7 @@ export const CUPS: Record<CupId, Cup> = {
   pro: {
     id: 'pro',
     name: 'Pro Cup',
-    blurb: 'Sport pace. The rivals brake later and drift more. A wet race and a night race. Bring a tuned kart.',
+    blurb: 'Sport pace, a wet and a night race',
     level: 4,
     cls: 'sport',
     races: [R('circuit-reverse', 3), R('circuit', 3, 'rain'), R('circuit-reverse', 3, 'night'), R('circuit', 3)],
@@ -57,7 +57,7 @@ export const CUPS: Record<CupId, Cup> = {
   neon: {
     id: 'neon',
     name: 'Neon Cup',
-    blurb: 'Neon pace, flat out. The rivals drift every corner, rain or shine, and the last race is four laps.',
+    blurb: 'Neon pace, flat out, four-lap finale',
     level: 9,
     cls: 'neon',
     races: [R('circuit', 3, 'night'), R('circuit-reverse', 3, 'rain'), R('circuit', 3, 'rain'), R('circuit-reverse', 4, 'night')],

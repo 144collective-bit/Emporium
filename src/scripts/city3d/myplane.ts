@@ -11,9 +11,9 @@ export { PLAYER_AIRCRAFT, type PlaneId };
 
 /** What the hangar says about each one (made-up names, never a real maker) */
 export const FLY: Record<PlaneId, { name: string; kind: string; blurb: string }> = {
-  prop: { name: 'Sky Hopper', kind: 'Prop plane', blurb: 'Slow, steady and easy to land. Takes off in a short hop and turns on a coin.' },
-  bizjet: { name: 'Neon Dart', kind: 'Small jet', blurb: 'Twin engines at the back and swept wings. Needs a long run, then it flies fast and far.' },
-  heli: { name: 'Whirlybird', kind: 'Helicopter', blurb: 'Lifts straight up, hovers, turns on the spot and lands on any flat roof.' },
+  prop: { name: 'Sky Hopper', kind: 'Prop plane', blurb: 'Slow, steady, easy to land' },
+  bizjet: { name: 'Neon Dart', kind: 'Small jet', blurb: 'Fast and far, needs a long run' },
+  heli: { name: 'Whirlybird', kind: 'Helicopter', blurb: 'Hovers, lands on any flat roof' },
 };
 
 /** The same twelve paints as the garage */

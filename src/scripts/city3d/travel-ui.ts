@@ -144,7 +144,7 @@ export function createTravelUI(d: TravelDeps) {
     if (!d.walking()) return;
     const p = walk.position;
     if (reached.length && !sheetOpen()) {
-      game.toast(`${reached.join(', ')}: on the map for fast travel`);
+      game.toast(`Fast travel open · ${reached.join(', ')}`);
       reached = [];
     }
     // The places you've reached (on foot or at the wheel; not from the air, nor driving past in a taxi or on the metro)
@@ -165,7 +165,7 @@ export function createTravelUI(d: TravelDeps) {
     const dz = waypoint.z - p.z;
     const far = Math.hypot(dx, dz);
     if (far < ARRIVE) {
-      game.toast(`You're at ${waypoint.name === 'Waypoint' ? 'your waypoint' : waypoint.name}`);
+      game.toast(`Arrived · ${waypoint.name}`);
       setWaypoint(null);
       return;
     }

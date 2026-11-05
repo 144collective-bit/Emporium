@@ -479,7 +479,7 @@ export function createCombat(d: CombatDeps) {
     const out = me.mag === 0 && me.reserve === 0;
     // Out: another gun with rounds left is a swap away
     const spare = out && guns().some((id) => id !== me.weapon && (me.stash[id]?.some((n) => n > 0) ?? true));
-    const hint = out ? (spare ? `Out of ammo: ${touchUi.matches ? 'tap Swap' : 'X to swap'}` : 'Out of ammo: refill at the Armoury') : reloading ? 'Reloading' : low && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
+    const hint = out ? (spare ? `Out of ammo · ${touchUi.matches ? 'tap Swap' : 'X to swap'}` : 'Out of ammo · refill at the Armoury') : reloading ? 'Reloading' : low && me.reserve > 0 ? (touchUi.matches ? 'Tap reload' : 'R to reload') : '';
     if (hint !== shown.hint) {
       hud.hint.textContent = hint;
       hud.hint.hidden = !hint;
@@ -941,7 +941,7 @@ export function createCombat(d: CombatDeps) {
       else if (list.length > 1) id = list[(list.indexOf(me.weapon) + to + list.length) % list.length];
       if (!id || id === me.weapon) {
         // Only one gun carried: say where the second one is picked
-        if (typeof to !== 'string') popup(WEAPONS[me.weapon].short, 'Carry a second gun: pick it at the Armoury or Trench Arms');
+        if (typeof to !== 'string') popup(WEAPONS[me.weapon].short, 'Second gun · Armoury or Trench Arms');
         return false;
       }
       applyMods();

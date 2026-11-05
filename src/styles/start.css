@@ -416,6 +416,15 @@
   transform-origin: left;
   transition: transform 0.4s var(--m-ease);
 }
+/* The owner's test phase (free play, freeplay.ts): one line over the draft note */
+.city-start-free {
+  margin: 14px 0 0;
+  color: var(--m-coin, #ffc93c);
+  font: 700 13px/1.3 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
 .city-start-note {
   margin: 0;
   font: 500 10px/1.4 var(--font-mono);

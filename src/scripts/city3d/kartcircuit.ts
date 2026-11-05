@@ -187,8 +187,8 @@ export const PAD_LEN = 4;
 /** The usual lap count */
 export const LAPS = 3;
 const NAMES: Record<CourseId, { name: string; blurb: string }> = {
-  circuit: { name: 'Sector 7 Circuit', blurb: 'Twelve corners: the west esses, the banked sweepers, the hill and its jump, the hairpin, the loop and the flyover.' },
-  'circuit-reverse': { name: 'Sector 7 Circuit · reverse', blurb: 'The same circuit the other way round: every corner flipped, the flyover before the loop, the jump off the hill the other side.' },
+  circuit: { name: 'Sector 7 Circuit', blurb: 'Twelve corners, a jump and a flyover' },
+  'circuit-reverse': { name: 'Sector 7 Circuit · reverse', blurb: 'The same circuit, run backwards' },
 };
 /** The conditions a race runs in: night is the looks only; rain takes grip away everywhere (kart-sim.ts) */
 export type Cond = 'day' | 'night' | 'rain';

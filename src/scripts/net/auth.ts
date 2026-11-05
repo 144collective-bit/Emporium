@@ -41,7 +41,7 @@ export function signInMessage(o: { origin: string; address: string; chain: numbe
     'Sector 7 wants you to log in with your PulseChain wallet:',
     o.address,
     '',
-    'This only proves you hold this wallet: it logs you in to your player profile. It does not send a transaction or cost gas.',
+    'Logs you in to your player profile. No transaction, no gas.',
     '',
     `URI: ${o.origin}`,
     `Chain ID: ${o.chain}`,

@@ -948,14 +948,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         if (shut) return tycoon?.toast(shut, 3500);
         return void loadMono()
           .then((ui) => ui.open(id.slice(5)))
-          .catch(() => game.toast('The monorail is not running: try again in a moment'));
+          .catch(() => game.toast('Monorail not running · try again'));
       }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
         if (shut) return tycoon?.toast(shut, 3500);
         return void loadRiverBus()
           .then((ui) => ui.open(id.slice(9)))
-          .catch(() => game.toast('The river bus is not running: try again in a moment'));
+          .catch(() => game.toast('River bus not running · try again'));
       }
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');
