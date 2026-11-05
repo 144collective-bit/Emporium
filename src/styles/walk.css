@@ -621,7 +621,8 @@
   .walk-look {
     display: none;
   }
-  .walk-keys {
+  /* the old keys lists; Settings' controls (keymap.ts's) show the touch column */
+  .walk-keys:not(.km-list) {
     display: none;
   }
   /* Which touch buttons show; where they stand and how they look is controls.css's (docs/controls-plan.md) */

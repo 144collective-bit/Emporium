@@ -31,9 +31,9 @@ import {
 
 const NAMES: Record<Family, string> = { foot: 'On foot', wheel: 'Vehicles', ring: 'The ring' };
 const NOTES: Record<Family, string> = {
-  foot: 'With empty hands, Punch, Block and Kick take Fire’s, Reload’s and Aim’s places.',
-  wheel: 'Driving, riding, boating and flying. In a kart race Drift takes View’s place.',
-  ring: 'The Fight Club’s ring.',
+  foot: 'Fists share Fire, Reload and Aim',
+  wheel: 'Cars, bikes, karts, boats and aircraft',
+  ring: 'The Fight Club',
 };
 
 export interface ArrangeDeps {
@@ -112,7 +112,7 @@ export function openArrange(d: ArrangeDeps) {
     field.textContent = '';
     tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.arrTab === fam)));
     const mode = SHOWN[fam];
-    note.textContent = `${NOTES[fam]} Kept for your screen held ${shapeOf(W, H) === 'side' ? 'on its side' : 'upright'}.`;
+    note.textContent = `${NOTES[fam]} · Saved for ${shapeOf(W, H) === 'side' ? 'sideways' : 'upright'}`;
     const L = shown(fam);
     if (fam === 'foot') {
       box('is-hotbar', hotbarBox(L, W, H), 'Hotbar');

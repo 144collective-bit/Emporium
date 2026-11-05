@@ -3166,7 +3166,7 @@ it and has been retired completely. Build only on what's here.
   and the walk HUD's prompt, hints, toasts, pops, tracker, compass and
   hotbar wear the skin; the touch controls keep their round look. Phase 7
   (checked at every width, sideways, at night and under reduced motion; the
-  old menus' styles gone) is built, and the plan is done. One phase at a time with the owner's sign-off; keep it up
+  old menus' styles gone) is built, and the plan is done. Menu copy is short (the owner's call: "imagine the user has ADHD"): labels 1-3 words, a hint only where a label is unclear (about six words), any other line about eight words, a place's panel one line, the money note ("Dorras are game money only") on the start screen only; a new menu keeps to it (docs/menu-plan.md, "After the plan"). One phase at a time with the owner's sign-off; keep it up
   to date.
 - **The controls plan** (the owner's call: "upgrade the header and
   controls buttons on phone", in the menus' design) is planned in

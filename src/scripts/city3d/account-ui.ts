@@ -63,7 +63,7 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
 
     if (!d.online()) {
       body.innerHTML = `${head('Offline', 'Connect wallet')}
-        <p class="city-panel-text">Connecting your wallet and your profile need the city online. Switch to Online at the top of the city, or here.</p>
+        <p class="city-panel-text">Go online to connect your wallet</p>
         <div class="city-panel-actions"><button type="button" class="btn-pulse" data-account-online>Go online</button>${account.address ? '<button type="button" class="chip-link" data-account-logout>Log out</button>' : ''}</div>`;
       return;
     }
@@ -71,26 +71,29 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     if (!account.address) {
       if (busy) {
         body.innerHTML = `${head('Wallet', 'Check your wallet')}
-          <p class="city-panel-text">Your wallet is showing a short message to sign. It only proves you hold the wallet: no transaction, no gas.</p>`;
+          <p class="city-panel-text">Sign the message in your wallet</p>
+          <p class="city-panel-fine">No transaction, no gas</p>`;
         return;
       }
       const list = await account.wallets();
       if (card.hidden || account.address || busy) return;
       body.innerHTML = list.length
         ? `${head('Wallet', 'Connect wallet')}
-           <p class="city-panel-text">Connect your PulseChain wallet to log in: keep a player profile that follows you to any browser.</p>
+           <p class="city-panel-text">Log in with your PulseChain wallet</p>
            <div class="wallet-picks">${list.map((w) => `<button type="button" class="wallet-pick" data-account-wallet="${esc(w.id)}">${w.icon ? `<img src="${esc(w.icon)}" alt="" width="24" height="24">` : ''}<span><b>${esc(w.name)}</b>${w.note ? `<small>${esc(w.note)}</small>` : ''}</span></button>`).join('')}</div>
            ${err}
-           <p class="city-panel-fine">Your wallet asks you to sign a short message: no transaction, no gas. A wallet's first login starts a fresh profile.</p>`
+           <p class="city-panel-fine">No transaction, no gas</p>
+           <p class="city-panel-fine">First login starts a new profile</p>`
         : `${head('Wallet', 'No wallet found')}
-           <p class="city-panel-text">Connecting needs a crypto wallet that works with PulseChain.</p>
-           <p class="city-panel-fine">On a phone, open this page in your wallet app's own browser. On a computer, add a wallet extension to your browser, then reload this page.</p>`;
+           <p class="city-panel-text">Needs a PulseChain wallet</p>
+           <p class="city-panel-fine">Phone: open this page in your wallet app</p>
+           <p class="city-panel-fine">Computer: add a wallet extension, then reload</p>`;
       return;
     }
 
     const me = account.me;
     if (!me) {
-      body.innerHTML = `${head('Wallet', 'Your profile')}<p class="city-panel-text">Loading your profile…</p>${err}
+      body.innerHTML = `${head('Wallet', 'Your profile')}<p class="city-panel-text">Loading…</p>${err}
         <div class="city-panel-actions"><button type="button" class="chip-link" data-account-logout>Log out</button></div>`;
       return;
     }

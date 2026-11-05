@@ -454,12 +454,12 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       const been = d.visited().includes(p.id);
       if (st === 'city') {
         if (p.spot) acts += btn('open', 'Open');
-        acts += btn('walkhere', 'Walk here', !been, been ? '' : 'Walk there once to start walking from it');
+        acts += btn('walkhere', 'Walk here', !been, been ? '' : 'Visit it first');
         acts += btn('waypoint', 'Set waypoint');
       } else {
         acts += btn('waypoint', 'Set waypoint');
         acts += btn('taxi', 'Taxi here', st !== 'foot');
-        acts += btn('travel', 'Fast travel', st !== 'foot' || !been, st === 'foot' && !been ? 'Walk there once to fast travel' : st === 'busy' ? 'Get out first' : '');
+        acts += btn('travel', 'Fast travel', st !== 'foot' || !been, st === 'foot' && !been ? 'Visit it first' : st === 'busy' ? 'Get out first' : '');
       }
     } else if (pick.kind === 'car') {
       title = 'Your car';
@@ -509,9 +509,9 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       d.travel(p);
     } else if (act === 'bring') {
       if (d.bringCar()) {
-        d.toast('Your car is on its way: it’s on the road near you');
+        d.toast('Your car is on the road near you');
         close();
-      } else d.toast('No road near enough here: try nearer a street');
+      } else d.toast('No road near here');
     }
     redraw();
   });
