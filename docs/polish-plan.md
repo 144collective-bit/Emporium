@@ -514,7 +514,9 @@ the typecheck and the budgets green; none moves anything that exists.
    badge names, the Phone's pitch, the README, `stats` removed, the
    bike's and kart's door sound, the bump shakes under reduced motion,
    the mall's `low` branches, the tier picker's refinement. A day; tests
-   extended where a rule changed.
+   extended where a rule changed. Built (the mission Heavy hands is
+   `heavy-hands`, its old id mapped; a Combo artist mission on `chains`;
+   `stats` removed), waiting on the owner's sign-off and the shots.
 2. **Names** (theme 4's signs): hotel and diner names downtown, the
    tenements' names and a seeded pick, Uptown's 24 names a character; the
    sign atlases rebake. A day.
