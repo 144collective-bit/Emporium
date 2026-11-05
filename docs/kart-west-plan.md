@@ -5,8 +5,8 @@ raised highway, its facility made much grander, every clipping problem
 found and fixed, and the karts better all round. Asked and answered on
 2026-11-04, built in one long run overnight: every phase below is built in
 a row on the work branch, each with its tests, before and after shots and
-docs, committed and pushed as it goes; **nothing goes to main until the
-owner has looked**.
+docs, committed and pushed as it goes; nothing went to main until the
+owner had looked. **Merged to main on 2026-11-05** (the owner's go).
 
 ## The owner's answers
 
@@ -67,7 +67,7 @@ owner has looked**.
   other; Degen through his kart; the chase camera through walls, the
   tunnel or the ground.
 - **Process:** phases, built in a row overnight, held off main for the
-  owner's review.
+  owner's review (merged on 2026-11-05, the owner's go).
 
 ## Phases
 
