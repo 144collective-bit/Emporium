@@ -68,9 +68,9 @@ const PIPS = 5;
 const STYLE_IDS = Object.keys(STYLES) as StyleId[];
 /** One line on each style's card */
 const PITCH: Record<StyleId, string> = {
-  brawler: "Everyone's from day one: the jab, the cross, the hook and the front kick.",
-  kickboxer: 'The roundhouse, and every kick hits harder.',
-  street: 'The uppercut, the parry, and a dodge that steps further.',
+  brawler: 'The basics everyone starts with',
+  kickboxer: 'Roundhouse and harder kicks',
+  street: 'Uppercut, parry and a longer dodge',
 };
 /** Each sparring partner's line on the Record tab: sparred and beaten */
 const partnersHtml = (f: FightSave) =>
@@ -144,11 +144,11 @@ export function createFightUI(root: HTMLElement, d: FightUIDeps): FightUI {
 </div>`;
     }).join('');
     return `<section class="fight-sect" aria-label="Spar">
-  <div class="fight-sect-head"><b class="race-name">Spar</b><span class="race-cps">a partner · no clock · no prize</span></div>
+  <div class="fight-sect-head"><b class="race-name">Spar</b><span class="race-cps">No clock · no prize</span></div>
   <div class="fight-cards" role="list">${cards}</div>
 </section>
-<p class="race-note">A spar never ends: fight until you've had enough. Quit from the ring.${f.spars > 0 ? ` You've sparred ${times(f.spars)}.` : ''}</p>
-<p class="race-note">Out on the street, sparring partners wait for a round with health: ${PARTNERS.map((p) => `${esc(p.name)} on ${esc(p.where)}`).join(', ')}. Walk up and spar; a knock-out ends it.</p>`;
+<p class="race-note">Spar until you quit.${f.spars > 0 ? ` Sparred ${times(f.spars)}.` : ''}</p>
+<p class="race-note">Street partners: ${PARTNERS.map((p) => `${esc(p.name)} on ${esc(p.where)}`).join(' · ')}</p>`;
   }
 
   function boutTab(s: TycoonSave) {
@@ -166,11 +166,10 @@ export function createFightUI(root: HTMLElement, d: FightUIDeps): FightUI {
 </div>`;
     }).join('');
     return `<section class="fight-sect" aria-label="Bout">
-  <div class="fight-sect-head"><b class="race-name">Bout</b><span class="race-cps">${BOUT.rounds} rounds · first to two · ${BOUT.seconds} seconds a round</span></div>
-  <p class="race-blurb">A bout of three rounds, first to two, ${BOUT.seconds} seconds a round; a knock-out ends it early. Win and the prize is yours, in Dorras.</p>
+  <div class="fight-sect-head"><b class="race-name">Bout</b><span class="race-cps">${BOUT.rounds} rounds · first to two · ${BOUT.seconds}s each</span></div>
   <div class="fight-cards" role="list">${cards}</div>
 </section>
-<p class="race-note">A bout quit from the ring counts as a loss.</p>`;
+<p class="race-note">Quitting counts as a loss</p>`;
   }
 
   function recordTab(s: TycoonSave) {
@@ -215,10 +214,10 @@ ${partnersHtml(f)}
 </div>`;
     }).join('');
     return `<section class="fight-sect" aria-label="Styles">
-  <div class="fight-sect-head"><b class="race-name">Styles</b><span class="race-cps">a complete fighter each</span></div>
+  <div class="fight-sect-head"><b class="race-name">Styles</b><span class="race-cps">Moves of their own</span></div>
   <div class="fight-cards" role="list">${cards}</div>
 </section>
-<p class="race-note">The style you fight in goes into the ring and onto the street. Styles are Dorras earned in the city: nothing here is real money.</p>`;
+<p class="race-note">Used in the ring and on the street</p>`;
   }
   function onStyleBuy(id: StyleId, confirmed: boolean) {
     const s = d.game.save();
@@ -518,7 +517,7 @@ ${partnersHtml(f)}
   <div><dt>Prize</dt><dd>${D(res.prize)}</dd></div>` : ''}
   <div><dt>XP</dt><dd>+${fmt.format(res.xp)}</dd></div>
 </dl>`
-        : '<p class="shop-note">Nothing paid: a spar is practice, and a quit pays nothing.</p>';
+        : '<p class="shop-note">Nothing paid</p>';
     resultBody.innerHTML = `<p class="race-result-name">${label} · ${esc(r.opponent)} · ${esc(STYLES[r.style].name)}</p>
 ${bout ? `<p class="fight-result-rounds" aria-label="Rounds won, you and ${esc(r.opponent)}"><b>${r.rounds[0]}</b><span>–</span><b>${r.rounds[1]}</b></p>` : `<p class="fight-result-time">${clock(r.seconds)}</p>`}
 <p class="race-result-tags">${tags}</p>
@@ -530,7 +529,7 @@ ${bout ? `<p class="fight-result-rounds" aria-label="Rounds won, you and ${esc(r
   <div><dt>Knockdowns</dt><dd>${r.knockdowns}</dd></div>
   <div><dt>Time</dt><dd>${clock(r.seconds)}</dd></div>
 </dl>
-${paid}${res.levels > 0 ? `<p class="race-levelup">Level up! You're now ${LV(level(d.game.save()))}</p>` : ''}`;
+${paid}${res.levels > 0 ? `<p class="race-levelup">Level up · now ${LV(level(d.game.save()))}</p>` : ''}`;
     menuOpen = false;
     el.hidden = true;
     resultOpen = true;

@@ -115,14 +115,14 @@ export function createHangarUI(root: HTMLElement, d: HangarDeps) {
     }
     const t = TUNES[id];
     el.querySelector('[data-hangar-name]')!.textContent = FLY[id].name;
-    el.querySelector('[data-hangar-kind]')!.textContent = `${FLY[id].kind} · ${t.kind === 'heli' ? 'takes off straight up' : `lifts off at ${Math.round(t.rotate * 6.48)} km/h`}`;
+    el.querySelector('[data-hangar-kind]')!.textContent = `${FLY[id].kind} · ${t.kind === 'heli' ? 'vertical take-off' : `lift-off ${Math.round(t.rotate * 6.48)} km/h`}`;
     el.querySelector('[data-hangar-blurb]')!.textContent = FLY[id].blurb;
     el.querySelector('[data-hangar-paint-name]')!.textContent = PLANE_PAINTS.find((p) => p.id === pick.paint)!.name;
     repaint(
       statsEl,
       STATS.map((s, i) => `<div><dt>${s.label}</dt><dd><i style="--v:${(s.of(id) / best[i]).toFixed(3)}"></i></dd></div>`).join('')
     );
-    keepBtn.textContent = !same(pick, saved) ? 'Keep this one' : d.away() ? 'Bring it home' : 'Yours · done';
+    keepBtn.textContent = !same(pick, saved) ? 'Keep' : d.away() ? 'Bring it home' : 'Yours · done';
   }
 
   function select(p: MyPlane) {
