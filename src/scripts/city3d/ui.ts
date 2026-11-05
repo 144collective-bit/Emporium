@@ -104,18 +104,18 @@ export function repaint(el: HTMLElement, html: string) {
 export function whyNot(why: 'money' | 'level' | 'owned' | 'max' | 'place' | 'stock' | 'progress', need?: number) {
   switch (why) {
     case 'money':
-      return 'Not enough Dorras.';
+      return 'Not enough Dorras';
     case 'level':
-      return need ? `Needs level ${need}.` : 'Your level is too low.';
+      return need ? `Needs level ${need}` : 'Level too low';
     case 'owned':
-      return 'Already yours.';
+      return 'Already yours';
     case 'max':
-      return 'Already at the top level.';
+      return 'Already maxed';
     case 'stock':
-      return 'Empty it first.';
+      return 'Empty it first';
     case 'progress':
-      return 'Not done yet.';
+      return 'Not done yet';
     default:
-      return "That can't be done here.";
+      return 'Not here';
   }
 }

@@ -224,7 +224,7 @@ ${partnersHtml(f)}
     const c = STYLE_CATALOG[id];
     if (level(s) < c.level) {
       d.game.sfx('denied');
-      d.game.toast(`The ${STYLES[id].name} style needs level ${c.level}.`);
+      d.game.toast(`${STYLES[id].name} needs level ${c.level}`);
       return;
     }
     if (!confirmed) {
@@ -243,13 +243,13 @@ ${partnersHtml(f)}
     }
     d.game.commit();
     d.game.sfx('buy');
-    d.game.toast(`The ${STYLES[id].name} style is yours. You fight in it now.`);
+    d.game.toast(`${STYLES[id].name} bought · now in use`);
     paint();
   }
   function onStylePick(id: StyleId) {
     if (!pickStyle(d.game.save(), id)) return;
     d.game.commit();
-    d.game.toast(`You fight ${STYLES[id].name} now.`);
+    d.game.toast(`Style · ${STYLES[id].name}`);
     paint();
   }
 
@@ -284,7 +284,7 @@ ${partnersHtml(f)}
     const need = FIGHT_BOTS[bot].level;
     if (level(d.game.save()) < need) {
       d.game.sfx('denied');
-      d.game.toast(`${FIGHT_BOTS[bot].name} needs level ${need}.`);
+      d.game.toast(`${FIGHT_BOTS[bot].name} needs level ${need}`);
       return;
     }
     close();

@@ -1190,17 +1190,16 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function awayNote(s: Sales) {
     const n = (m: Partial<Record<GoodId, number>>) => Object.values(m).reduce<number>((a, b) => a + (b ?? 0), 0);
     const parts = [
-      s.earned > 0 ? `sold ${n(s.sold)} item${n(s.sold) === 1 ? '' : 's'} (${fmt.format(s.earned)} Dorras in the till)` : '',
-      n(s.grown) ? `grew ${n(s.grown)} raw goods` : '',
-      n(s.made) ? `made ${n(s.made)} at the Workshop` : '',
-      s.arrived.length ? `took in ${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''}` : '',
-      s.wages ? `paid ${fmt.format(s.wages)} Dorras to staff` : '',
-      s.repaid ? `paid ${fmt.format(s.repaid)} off your loan` : '',
+      s.earned > 0 ? `${fmt.format(s.earned)} Dorras in the till` : '',
+      n(s.grown) ? `${n(s.grown)} grown` : '',
+      n(s.made) ? `${n(s.made)} made` : '',
+      s.arrived.length ? `${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''} in` : '',
+      s.wages ? `${fmt.format(s.wages)} Dorras wages` : '',
+      s.repaid ? `${fmt.format(s.repaid)} Dorras repaid` : '',
+      s.quit.length ? 'staff left unpaid' : '',
+      s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} expired` : '',
     ].filter(Boolean);
-    const extra = [s.quit.length ? `${s.quit.length > 1 ? 'Some staff' : 'A member of staff'} left: there wasn't enough to pay them.` : '', s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} ran out.` : '']
-      .filter(Boolean)
-      .join(' ');
-    return `${parts.length ? `While you were away your business ${parts.join(', ')}.` : ''} ${extra}`.trim();
+    return parts.length ? `While away · ${parts.join(' · ')}` : '';
   }
   function tick() {
     const sales = advance(save, Date.now(), serving() ?? false);
@@ -1208,15 +1207,15 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (sales.away > 0) {
       const msg = awayNote(sales);
       if (msg) toast(msg, 7000);
-    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left: there wasn't enough to pay them.`);
-    else if (sales.expired.length) toast(`A contract ran out: ${sales.expired[0].qty} ${good(sales.expired[0].good).name} for ${DESTS[sales.expired[0].to]}.`);
-    else if (sales.arrived.length) toast(`A courier delivered ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}.`, 4000);
+    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left · unpaid`);
+    else if (sales.expired.length) toast(`Contract expired · ${sales.expired[0].qty} ${good(sales.expired[0].good).name}`);
+    else if (sales.arrived.length) toast(`Delivered · ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}`, 4000);
     changed();
   }
   tick();
-  if (fresh) toast(`You have ${fmt.format(START_DORRAS)} Dorras and a market stall. Stock it at the Emporium's market hall.`, 7000);
+  if (fresh) toast(`${fmt.format(START_DORRAS)} Dorras to start · stock your stall`, 7000);
   // (once: Build mode was retired, and what the save's district plots cost came back)
-  else if (refund) toast(`Build mode has closed: the ${fmt.format(refund)} Dorras your district plots cost are back in your balance.`, 9000);
+  else if (refund) toast(`Build mode closed · ${fmt.format(refund)} Dorras refunded`, 9000);
   window.setInterval(tick, 1000);
   document.addEventListener('visibilitychange', () => !document.hidden && tick());
 
