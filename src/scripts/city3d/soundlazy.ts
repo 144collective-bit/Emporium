@@ -5,6 +5,7 @@
  */
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
+import type { Voice } from './vehicleids';
 import type { createSound as Real } from './sound';
 
 type Sound = ReturnType<typeof Real>;
@@ -28,7 +29,7 @@ export function createSound() {
       return real!.toggle();
     },
     sfx: (kind: Sfx, gain?: number) => real?.sfx(kind, gain),
-    engine: (revs: number, whine?: boolean) => real?.engine(revs, whine),
+    engine: (revs: number, voice?: Voice) => real?.engine(revs, voice),
     tyres: (level: number) => real?.tyres(level),
     aero: (kind: 'prop' | 'jet' | 'heli', revs: number) => real?.aero(kind, revs),
     update: (rain: number, night: number, a: Ambience, rumble?: number, quake?: number) => real?.update(rain, night, a, rumble, quake),

@@ -381,13 +381,14 @@ export function gearOf(speed: number, top: number, throttle = 0): { gear: 'R' | 
 }
 
 /**
- * An electric car's one gear (vehicle plan Phase 6, the Glow Pod): 'R', 'N' as gearOf, else 'D'; its motor's revs
- * climb smoothly with the speed, no shifts
+ * A single-speed's one gear: an electric car's (vehicle plan Phase 6, the Glow Pod) or your kart's (the polish
+ * pass's sound phase: a kart has no gearbox). 'R', 'N' as gearOf, else `drive` ('D' for the motor, 1 for the
+ * kart); the revs climb smoothly with the speed, no shifts
  */
-export function motorOf(speed: number, top: number, throttle = 0): { gear: 'R' | 'N' | 'D'; revs: number } {
+export function motorOf<D extends 'D' | 1 = 'D'>(speed: number, top: number, throttle = 0, drive: D = 'D' as D): { gear: 'R' | 'N' | D; revs: number } {
   if (speed < -0.2) return { gear: 'R', revs: Math.min(1, -speed / 3.5) };
   if (Math.abs(speed) < 0.2 && Math.abs(throttle) < 0.05) return { gear: 'N', revs: 0 };
-  return { gear: 'D', revs: Math.min(1, Math.max(0, speed / top)) };
+  return { gear: drive, revs: Math.min(1, Math.max(0, speed / top)) };
 }
 
 /** A tyre leaves a mark past this much sideways speed (tiles/s) */

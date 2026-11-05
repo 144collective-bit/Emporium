@@ -14,7 +14,7 @@
  * - The car's readout (`data-drive-hud`): speed, and F / N / R; its pedals read
  *   Ahead and Astern.
  * - It rises at the bow with speed, leans into its turns and trails a wake.
- * - Its engine is the car's voice (sound.ts), its horn the boats' (H).
+ * - Its engine is an outboard's voice (sound.ts), its horn the boats' (H).
  * - It bumps softly off everything (boat-sim.ts), with a knock.
  */
 import * as THREE from 'three';
@@ -26,6 +26,7 @@ import { hireBoat } from './riverlife3d';
 import { fx, glowMat, glowTex } from './kit';
 import type { Sfx } from './combat';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
+import type { Voice } from './vehicleids';
 
 export interface BoatDeps {
   scene: THREE.Scene;
@@ -38,8 +39,8 @@ export interface BoatDeps {
   /** The traffic's boats in the lanes about (life.ts `bodies.boats`) */
   lanes(): { x: number; z: number; yaw: number; len: number; beam: number }[];
   sfx(kind: Sfx, gain?: number): void;
-  /** The engine's voice: revs 0..1, negative for off */
-  engine(revs: number): void;
+  /** The engine (sound.ts engine(), its 'boat' voice: an outboard): revs 0..1, negative for off */
+  engine(revs: number, voice?: Voice): void;
   reduced: boolean;
 }
 
@@ -347,7 +348,7 @@ export function createBoat(d: BoatDeps) {
       if (speedEl.textContent !== kmh) speedEl.textContent = kmh;
       const gear = s.power > 0.05 ? 'F' : s.power < -0.05 ? 'R' : 'N';
       if (gearEl.textContent !== gear) gearEl.textContent = gear;
-      d.engine(Math.min(1, 0.12 + Math.abs(s.power) * 0.55 + (speedOf(s) / TUNE.top) * 0.3));
+      d.engine(Math.min(1, 0.12 + Math.abs(s.power) * 0.55 + (speedOf(s) / TUNE.top) * 0.3), 'boat');
 
       // Cameras: the chase camera swings in behind (the look settles back), or at the helm
       lookIdle += dt;

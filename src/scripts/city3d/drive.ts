@@ -46,10 +46,10 @@ import { BARRIER_WALLS, swingAt } from './swingbridge';
 import type { Garage } from './garage';
 import type { Kart } from './karts';
 import type { Bike } from './bikes';
-import { BIKES, type BikeId, type MyBike } from './mybike';
+import { BIKES, BIKE_VOICE, type BikeId, type MyBike } from './mybike';
 import { REST, footDown, stepLean, tuneBike } from './bike-sim';
 import { bodies } from './life';
-import { DRIVE, FEEL, type MyCar, type PlayerCar } from './mycar';
+import { DRIVE, FEEL, VOICE, type MyCar, type PlayerCar, type Voice } from './mycar';
 import type { KartId } from './mykart';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 import type { Box } from './solids';
@@ -87,8 +87,8 @@ export interface DriveDeps {
   /** Is a spot free for Degen to stand on (getting out)? */
   free(x: number, z: number): boolean;
   sfx(kind: Sfx, gain?: number): void;
-  /** The engine's note: revs 0..1 (negative: off), `whine` an electric motor's voice */
-  engine(revs: number, whine?: boolean): void;
+  /** The engine's note: revs 0..1 (negative: off), its voice by what you're in (sound.ts) */
+  engine(revs: number, voice?: Voice): void;
   /** The tyres' screech while sliding, 0..1 (0 is silent) */
   tyres(level: number): void;
   bounds: Box;
@@ -594,12 +594,13 @@ export function createDrive(d: DriveDeps) {
       // Readout and engine: four gears up the speed range (drive-sim.ts gearOf), the revs dropping at each shift
       const kmh = Math.round(Math.abs(s.speed) * KMH);
       if (speedEl.textContent !== String(kmh)) speedEl.textContent = String(kmh);
-      // (an electric car: one gear and a motor's whine, vehicle plan Phase 6)
-      const ev = !!DRIVE[v.model as PlayerCar]?.electric;
-      const box = ev ? motorOf(s.speed, T.top, inp.throttle) : gearOf(s.speed, T.top, inp.throttle);
+      // (an electric car: one gear, 'D', and a motor's whine, vehicle plan Phase 6; your kart a single speed, 1, with no gearbox to shift)
+      const box = v.kind === 'car' && DRIVE[v.model as PlayerCar]?.electric ? motorOf(s.speed, T.top, inp.throttle) : v.kind === 'kart' ? motorOf(s.speed, T.top, inp.throttle, 1) : gearOf(s.speed, T.top, inp.throttle);
       const gear = String(box.gear);
       if (gearEl.textContent !== gear) gearEl.textContent = gear;
-      d.engine(0.12 + box.revs * 0.72 + Math.max(0, inp.throttle) * 0.13, ev);
+      // The engine's voice by what you're in (sound.ts; the polish pass, the owner's call)
+      const voice: Voice = v.kind === 'car' ? VOICE[v.model as PlayerCar] : v.kind === 'bike' ? BIKE_VOICE[v.model as BikeId] : 'kart';
+      d.engine(0.12 + box.revs * 0.72 + Math.max(0, inp.throttle) * 0.13, voice);
       // Your bike leans into its turns, onto your left foot as it stops (bike-sim.ts), you with it;
       // your car fitted out rides its springs (and turns its wheel, its needles, lays its marks); else the body's drawn-on lean
       if (v.bike) {

@@ -53,7 +53,7 @@ import { DECK_Y, onDeck } from './waterfront';
 import { onEsplanade } from './boulevard';
 import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
 import type { GarageUI } from './garage-ui';
-import { loadCar } from './mycar';
+import { loadCar, type Voice } from './mycar';
 import { DEFAULT_CAR } from './mycar';
 import { BIKES, DEFAULT_BIKE, loadBike } from './mybike';
 import type { Garage } from './garage';
@@ -287,8 +287,8 @@ export interface WalkDeps {
   sfx(kind: Sfx, gain?: number): void;
   /** The garage on the south bank (its turntable shows the car being picked) */
   garage: Garage;
-  /** Your car's engine sound: revs 0..1, or negative for off */
-  engine(revs: number, whine?: boolean): void;
+  /** Your engine's sound: revs 0..1, or negative for off, its voice by what you're in (sound.ts) */
+  engine(revs: number, voice?: Voice): void;
   /** Your car's tyres sliding, 0..1 (sound.ts) */
   tyres(level: number): void;
   /** Your business's places on foot (your stall, your units): where to stand, and the prompt's label */
@@ -1227,7 +1227,7 @@ export function createWalk(d: WalkDeps) {
   const boating = () => !!boat?.active;
   const loadBoat = () =>
     (boatLoad ??= import('./boat').then(({ createBoat }) =>
-      (boat = createBoat({ scene: d.scene, camera, root, outfit: () => outfit, cameraRoom, lanes: () => bodies.boats, sfx: (k, g) => d.sfx(k, g), engine: (r) => d.engine(r), reduced: d.reduced }))
+      (boat = createBoat({ scene: d.scene, camera, root, outfit: () => outfit, cameraRoom, lanes: () => bodies.boats, sfx: (k, g) => d.sfx(k, g), engine: (r, v) => d.engine(r, v), reduced: d.reduced }))
     ));
   /** Near enough the park to fetch them (its land and a margin) */
   const nearKarts = (x: number, z: number) => x > KART_PARK.x0 - 80 && x < KART_PARK.x1 + 80 && z > KART_PARK.z0 - 80 && z < KART_PARK.z1 + 80;

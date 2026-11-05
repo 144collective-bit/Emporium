@@ -237,3 +237,12 @@ test('the rider sits astride: hands on the grips, feet on the pegs (the left on 
     assert.ok(f.y - (0.04 + ANKLE_H * DRIVER_SCALE) < 0.07 && f.z < -s.pegs[2], `${id}: the left foot down (${f.y.toFixed(3)}, ${f.z.toFixed(3)})`);
   }
 });
+
+test("every bike has an engine voice: the scooter a two-stroke's buzz, the street and sport bikes a four-stroke's", async () => {
+  const { BIKE_VOICE } = await import('../src/scripts/city3d/mybike');
+  const { VOICES } = await import('../src/scripts/city3d/vehicleids');
+  for (const id of PLAYER_BIKES) assert.ok(VOICES.includes(BIKE_VOICE[id]), `${id}: ${BIKE_VOICE[id]}`);
+  assert.equal(BIKE_VOICE.scooter, 'twostroke');
+  assert.equal(BIKE_VOICE.streetbike, 'bike');
+  assert.equal(BIKE_VOICE.sportbike, 'bike');
+});

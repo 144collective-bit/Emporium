@@ -29,6 +29,15 @@ export const CAR_PAINTS = [
 ] as const;
 export type PaintId = (typeof CAR_PAINTS)[number]['id'];
 
+/**
+ * Your engine's voice (sound.ts `engine()`; the polish pass, the owner's call: a voice per kind): the saloons'
+ * hum, a small car's thinner one, the supercar's, a V8's lump, a scooter's two-stroke buzz, a four-stroke bike,
+ * a kart's single cylinder, an outboard, an electric motor's whine. mycar.ts `VOICE` and mybike.ts `BIKE_VOICE`
+ * say which each model has
+ */
+export type Voice = 'car' | 'small' | 'race' | 'v8' | 'twostroke' | 'bike' | 'kart' | 'boat' | 'whine';
+export const VOICES = ['car', 'small', 'race', 'v8', 'twostroke', 'bike', 'kart', 'boat', 'whine'] as const satisfies readonly Voice[];
+
 export const PLAYER_BIKES = ['scooter', 'streetbike', 'sportbike'] as const;
 export type BikeId = (typeof PLAYER_BIKES)[number];
 

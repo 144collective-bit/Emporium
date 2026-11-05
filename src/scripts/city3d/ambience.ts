@@ -19,6 +19,18 @@
  * Phase 5) the same quiet hum (`SUN_HUM`), its sprinklers, crickets and birds as Crestmont's and a lawnmower now and
  * then (`suburb`). On the Neon Mile (docs/strip-plan.md Phase 5) its crowd (`strip`), the slot machines' chimes by
  * the casinos' doors (`casino`) and, round the Gondolier's lake, the fountain show's music while a show is on (`show`).
+ *
+ * The polish pass's sound phase (docs/polish-plan.md theme 3): the town's hum is the loudest of every built-up
+ * part's (`HUMS`: the town itself, The Trenches, Uptown and Uptown North hushed, the mall, the Neon Mile, the
+ * Docks, the airport, the kart park, the stadium and Southfield Yards, each eased out past its land), so no
+ * district reads as open country; and the places with a sound of their own have a layer: the waterfront
+ * (`waterfront`: gulls by day, a foghorn now and then, along The Trenches' boardwalk, Pier 7 and the Night
+ * Market's deck and the town's promenades; the market's murmur after dusk is `market`), Southbank Docks (`docks`:
+ * gulls, a crane's hoist whine, a ship's horn now and then), the airport (`jets`: an airliner's roar rising and
+ * fading as one takes off or lands, from the timetable, so it's the same for everyone), inside Starlight Mall
+ * (`indoor`: a soft indoor hum and murmur; sound.ts damps the outdoor layers by it), Southfield Yards (`yards`: a
+ * compressor running, a reversing beep now and then) and the kart park (`karts`: engines idling and a tannoy's
+ * murmur, low; a race's own karts are kart.ts's).
  */
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
@@ -30,6 +42,7 @@ import { BOOMBOXES } from './grit';
 import { CLUB } from './avenue';
 import { LAKE_C, WESTLAKE_RECT, inPark, lakeR } from './westlake';
 import { CIRCLE, UPTOWN_RECT, inUptown } from './uptown';
+import { NORTH_RECT } from './uptownnorth';
 import { CENTRE, POOL, WALL_RUNS, WATER_WALL } from './plaza';
 import { CREST_RECT } from './crestmont';
 import { STRIP_RECT, inStrip } from './strip';
@@ -39,6 +52,14 @@ import { FOUNTAINS as DRIVE_FOUNTAINS } from './coral';
 import { CIVIC } from './crestsites';
 import { SUNRIDGE_RECT, inSunridge } from './sunridge';
 import { LOT9_RADIO, LOT9_RECT, inLot9 } from './lot9';
+import { HALL, MALL_AREA } from './mall';
+import { DOCKS_RECT } from './docks';
+import { FLIGHTS, SITE, poseAt } from './airfield';
+import { KART_PARK } from './kartpark';
+import { BLOCK as STADIUM_BLOCK } from './stadium';
+import { DECKS, MARKET_DECK } from './waterfront';
+import { PROMENADE } from './outer';
+import { YARDS_RECT, inYards } from './southfield';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -71,6 +92,20 @@ export interface Ambience {
   casino: number;
   /** By the Gondolier's lake: the fountain show's music (sound.ts plays it while a show is on), 0-1 */
   show: number;
+  /** The waterfront (the boardwalk, Pier 7, the market's deck, the town's promenades): gulls by day, a foghorn now and then, 0-1 */
+  waterfront: number;
+  /** The Night Market's deck: its murmur after dusk, 0-1 */
+  market: number;
+  /** Southbank Docks: gulls, a crane's hoist whine, a ship's horn now and then, 0-1 */
+  docks: number;
+  /** The airport: an airliner's roar as one takes off or lands nearby, rising and fading, 0-1 */
+  jets: number;
+  /** Inside Starlight Mall: a soft indoor hum and murmur (the outdoor layers damped by it), 0-1 */
+  indoor: number;
+  /** Southfield Yards: a compressor running, a reversing beep now and then, 0-1 */
+  yards: number;
+  /** The kart park: engines idling, a tannoy's murmur, 0-1 */
+  karts: number;
 }
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
 export const CREST_HUM = 0.4;
@@ -83,20 +118,66 @@ export const UPTOWN_HUSH = 0.35;
 /** The Neon Mile's casino doors (the resorts' and the Sphere's), and the lake the fountain show plays on */
 const CASINO_DOORS = [...RESORTS.map((r) => r.door), SPHERE_DOOR];
 const SHOW_LAKE = resortOf('gondolier')!.water[0];
+/**
+ * How much of the town's hum each built-up part has on its land (the town's own is 1 inside `CITY_EXT`), and how
+ * far past its edge it fades out: The Trenches (its own `hood` layer over it), Uptown and Uptown North hushed
+ * (`UPTOWN_HUSH`), the mall's car parks and forecourt, the Neon Mile (its crowd's `strip` over it), the Docks'
+ * yards, the airport's landside, the kart park, the stadium's grounds and Southfield Yards
+ */
+export const HUMS = {
+  trenches: { level: 0.8, fade: 40 },
+  uptown: { level: 1 - UPTOWN_HUSH, fade: 30 },
+  mall: { level: 0.7, fade: 40 },
+  strip: { level: 0.8, fade: 30 },
+  docks: { level: 0.5, fade: 40 },
+  airport: { level: 0.45, fade: 50 },
+  karts: { level: 0.4, fade: 40 },
+  stadium: { level: 0.5, fade: 40 },
+  yards: { level: 0.5, fade: 40 },
+} as const;
+/** How far past the airport's land the jets are listened for (their roar carries) */
+export const JETS_REACH = 200;
 
+type Rect = [number, number, number, number];
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
+/** How far x, z is outside a rect (0 inside) */
+const past = (r: Rect, x: number, z: number) => Math.hypot(Math.max(r[0] - x, x - r[2], 0), Math.max(r[1] - z, z - r[3], 0));
+/** 1 inside a rect, easing to 0 from `a` to `b` past its edge */
+const near = (r: Rect, x: number, z: number, a: number, b: number) => 1 - smooth(a, b, past(r, x, z));
 const AVENUES = PLAN.streets.filter((s) => s.kind === 'avenue');
 const EMPORIUM = DOORS.find((d) => d.id === 'emporium')!;
+/** The waterfront's decks (The Trenches' boardwalk, Pier 7's neck and head, the market's deck) and the town's promenades along both banks */
+const WATERFRONT: Rect[] = [...DECKS, [PROMENADE.x[0], PROMENADE.north[0], PROMENADE.x[1], PROMENADE.north[1]], [PROMENADE.x[0], PROMENADE.south[0], PROMENADE.x[1], PROMENADE.south[1]]];
+const JETS = FLIGHTS.filter((f) => f.kind === 'jet');
+const KART_RECT: Rect = [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1];
+
+/**
+ * An airliner's roar at x, z at time `t` (seconds, the timetable's clock): the loudest of the jets rolling fast
+ * (taking off or landing) or flying low nearby, by how far off it is; 0 past `JETS_REACH` of the airport's land
+ */
+export function jetsAt(x: number, z: number, t: number): number {
+  if (past(SITE, x, z) > JETS_REACH) return 0;
+  let roar = 0;
+  for (const f of JETS) {
+    const p = poseAt(f, t);
+    if (p.power <= 0) continue;
+    // Rolling: only at speed (taxiing is quiet); flying: only low
+    const state = p.ground ? smooth(8, 20, p.v) : 1 - smooth(6, 40, p.y);
+    if (state <= 0) continue;
+    roar = Math.max(roar, state * (1 - smooth(20, JETS_REACH, Math.hypot(x - p.x, z - p.z))));
+  }
+  return roar;
+}
 
 /**
  * The layers at x, z; `lift` is how far above it the listener is (the City
  * view's camera): the beat fades with it as before, and the ground's layers
- * soften to a wash of the town
+ * soften to a wash of the town; `t` is the clock (seconds) for the jets' timetable
  */
-export function ambienceAt(x: number, z: number, lift = 0): Ambience {
+export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000): Ambience {
   // Out of town: how far past the town's edge
   const ox = Math.max(CITY_EXT[0] - x, x - CITY_EXT[1], 0);
   const oz = Math.max(CITY_EXT[0] - z, z - CITY_EXT[1], 0);
@@ -113,11 +194,10 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   const beat = 1 - smooth(8, 36, Math.hypot(x - EMPORIUM.x, z - EMPORIUM.z) + lift * 0.4);
   const k = 1 - 0.6 * smooth(20, 160, lift);
   // The Trenches: all of it inside, fading out over 30 past its edge
-  const [tx0, tz0, tx1, tz1] = TRENCH_RECT;
-  const past = inTrenches(x, z) ? 0 : Math.hypot(Math.max(tx0 - x, x - tx1, 0), Math.max(tz0 - z, z - tz1, 0)) + 4;
+  const fromHood = inTrenches(x, z) ? 0 : past(TRENCH_RECT, x, z) + 4;
   // (and Lot 9, south of the highway: its dogs, sirens far off; lot9.ts)
-  const fromLot9 = inLot9(x, z) ? 0 : Math.hypot(Math.max(LOT9_RECT[0] - x, x - LOT9_RECT[2], 0), Math.max(LOT9_RECT[1] - z, z - LOT9_RECT[3], 0)) + 4;
-  const hood = 1 - smooth(0, 30, Math.min(past, fromLot9));
+  const fromLot9 = inLot9(x, z) ? 0 : past(LOT9_RECT, x, z) + 4;
+  const hood = 1 - smooth(0, 30, Math.min(fromHood, fromLot9));
   let box = Infinity;
   for (const b of BOOMBOXES) box = Math.min(box, Math.hypot(x - b.x, z - b.z));
   // (Lot 9's radio by the fire pit, as a boombox's)
@@ -125,39 +205,84 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   const boombox = 1 - smooth(2, 20, box + lift * 0.5);
   const club = 1 - smooth(3, 32, Math.hypot(x - CLUB.door.x, z - CLUB.door.z) + lift * 0.5);
   // Westlake Park: all of it on its land, fading out over 30 past it; the lake lapping close by
-  const [wx0, wz0, wx1, wz1] = WESTLAKE_RECT;
-  const fromPark = inPark([x, z]) ? 0 : Math.hypot(Math.max(wx0 - x, x - wx1, 0), Math.max(wz0 - z, z - wz1, 0)) + 4;
+  const fromPark = inPark([x, z]) ? 0 : past(WESTLAKE_RECT, x, z) + 4;
   const park = 1 - smooth(0, 30, fromPark);
   const fromLake = Math.max(0, Math.hypot(x - LAKE_C[0], z - LAKE_C[1]) - lakeR(Math.atan2(z - LAKE_C[1], x - LAKE_C[0])));
   const lake = 0.8 * (1 - smooth(2, 22, fromLake + lift * 0.4));
   // Uptown: a quieter hum on its land (fading in over 20 from its edge), the circle's traffic round it, the plaza's water
-  const [ux0, uz0, ux1, uz1] = UPTOWN_RECT;
-  const fromUptown = inUptown(x, z) ? 0 : Math.hypot(Math.max(ux0 - x, x - ux1, 0), Math.max(uz0 - z, z - uz1, 0));
+  const fromUptown = inUptown(x, z) ? 0 : past(UPTOWN_RECT, x, z);
   const hush = 1 - UPTOWN_HUSH * (1 - smooth(0, 20, fromUptown));
   const circle = 0.55 * (1 - smooth(2, 18, Math.abs(Math.hypot(x - CIRCLE.x, z - CIRCLE.z) - CIRCLE.r)));
   let wall = Infinity;
   for (const [a, c] of WALL_RUNS) wall = Math.min(wall, Math.hypot(x - WATER_WALL.x, z - Math.min(c, Math.max(a, z))));
   const pool = Math.max(0, Math.hypot(x - CENTRE[0], z - CENTRE[1]) - POOL.r);
   // Crestmont: all of it on its land, fading out over 30 past it; its fountains close by
-  const [cx0, cz0, cx1, cz1] = CREST_RECT;
-  const crest = 1 - smooth(0, 30, Math.hypot(Math.max(cx0 - x, x - cx1, 0), Math.max(cz0 - z, z - cz1, 0)));
+  const crest = near(CREST_RECT, x, z, 0, 30);
   let spring = Infinity;
   for (const [fx, fz, r] of CREST_FOUNTAINS) spring = Math.min(spring, Math.max(0, Math.hypot(x - fx, z - fz) - r));
   const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, spring + lift * 0.5)));
   // Sunridge: all of it on its land, fading out over 30 past its wall
-  const [sx0, sz0, sx1, sz1] = SUNRIDGE_RECT;
-  const suburb = 1 - smooth(0, 30, inSunridge(x, z, 0) ? 0 : Math.hypot(Math.max(sx0 - x, x - sx1, 0), Math.max(sz0 - z, z - sz1, 0)) + 2);
-  const yards = Math.max(crest, suburb);
-  // (the town's hum reaches Sunridge, inside the highway: hushed there to a suburb's)
-  const town = Math.max(city * hush * (1 - (1 - SUN_HUM) * suburb), CREST_HUM * crest, SUN_HUM * suburb);
+  const suburb = 1 - smooth(0, 30, inSunridge(x, z, 0) ? 0 : past(SUNRIDGE_RECT, x, z) + 2);
+  // (the gardened districts: their lawns and walls take the wind)
+  const lawns = Math.max(crest, suburb);
   // The Neon Mile: its crowd all over its land, fading over 25 past it; the casinos' chimes by their doors; the show's
   // music round the Gondolier's lake
-  const [px0, pz0, px1, pz1] = STRIP_RECT;
-  const strip = 1 - smooth(0, 25, inStrip(x, z) ? 0 : Math.hypot(Math.max(px0 - x, x - px1, 0), Math.max(pz0 - z, z - pz1, 0)));
+  const strip = 1 - smooth(0, 25, inStrip(x, z) ? 0 : past(STRIP_RECT, x, z));
   let door = Infinity;
   for (const d of CASINO_DOORS) door = Math.min(door, Math.hypot(x - d.x, z - d.z));
   const casino = 1 - smooth(2, 16, door + lift * 0.5);
-  const [lx0, lz0, lx1, lz1] = SHOW_LAKE;
-  const show = 1 - smooth(4, 55, Math.hypot(Math.max(lx0 - x, x - lx1, 0), Math.max(lz0 - z, z - lz1, 0)) + lift * 0.4);
-  return { city: town, water: Math.max(water, lake) * k, road: Math.max(road, circle) * k, open: (1 - town) * (1 - 0.6 * yards) * k, beat, hood: hood * k, boombox, club, park: park * k, fountain, crest: crest * k, suburb: suburb * k, strip: strip * k, casino, show: show * k };
+  const show = 1 - smooth(4, 55, past(SHOW_LAKE, x, z) + lift * 0.4);
+  // Southfield Yards: on its land, fading out over 30 past it
+  const yards = 1 - smooth(0, 30, inYards(x, z) ? 0 : past(YARDS_RECT, x, z));
+  // The hum is the loudest of every built-up part's: the town's (hushed in Uptown and Sunridge, which it reaches),
+  // Crestmont's and Sunridge's own, The Trenches', Uptown's and Uptown North's hushed, the mall's, the Neon Mile's,
+  // the Docks', the airport's, the kart park's, the stadium's and Southfield Yards'
+  const H = HUMS;
+  const town = Math.max(
+    city * hush * (1 - (1 - SUN_HUM) * suburb),
+    CREST_HUM * crest,
+    SUN_HUM * suburb,
+    H.trenches.level * (inTrenches(x, z) ? 1 : near(TRENCH_RECT, x, z, 0, H.trenches.fade)),
+    H.uptown.level * Math.max(near(UPTOWN_RECT, x, z, 0, H.uptown.fade), near(NORTH_RECT, x, z, 0, H.uptown.fade)),
+    H.mall.level * near(MALL_AREA, x, z, 0, H.mall.fade),
+    H.strip.level * (inStrip(x, z) ? 1 : near(STRIP_RECT, x, z, 0, H.strip.fade)),
+    H.docks.level * near(DOCKS_RECT, x, z, 0, H.docks.fade),
+    H.airport.level * near(SITE, x, z, 0, H.airport.fade),
+    H.karts.level * near(KART_RECT, x, z, 0, H.karts.fade),
+    H.stadium.level * near(STADIUM_BLOCK, x, z, 0, H.stadium.fade),
+    H.yards.level * (inYards(x, z) ? 1 : near(YARDS_RECT, x, z, 0, H.yards.fade))
+  );
+  // The waterfront's decks and the promenades (the gulls, the foghorn), the market's deck after dusk
+  let waterfront = 0;
+  for (const r of WATERFRONT) waterfront = Math.max(waterfront, near(r, x, z, 2, 24));
+  const market = near(MARKET_DECK, x, z, 1, 20);
+  const docks = near(DOCKS_RECT, x, z, 0, 30);
+  const jets = jetsAt(x, z, t);
+  // Inside the mall's hall (a little way out of its doors too); the City view's camera over its roof hears none of it
+  const indoor = near(HALL.rect, x, z, 0, 5) * (1 - smooth(HALL.h, HALL.h + 10, lift));
+  const karts = near(KART_RECT, x, z, 0, 40);
+  return {
+    city: town,
+    water: Math.max(water, lake) * k,
+    road: Math.max(road, circle) * k,
+    open: (1 - town) * (1 - 0.6 * lawns) * k,
+    beat,
+    hood: hood * k,
+    boombox,
+    club,
+    park: park * k,
+    fountain,
+    crest: crest * k,
+    suburb: suburb * k,
+    strip: strip * k,
+    casino,
+    show: show * k,
+    waterfront: waterfront * k,
+    market: market * k,
+    docks: docks * k,
+    jets,
+    indoor,
+    yards: yards * k,
+    karts: karts * k,
+  };
 }

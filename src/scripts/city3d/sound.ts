@@ -9,13 +9,19 @@
  * boombox plays by a walk-up's stoop (its own slow beat, through a small
  * speaker); by Club PULSE's door its four-on-the-floor thumps through the
  * walls (the grit's step 3). In Westlake Park birds sing by day and an owl
- * hoots at night and the lake laps at its rim (step 3).
+ * hoots at night and the lake laps at its rim (step 3). The polish pass's
+ * sound phase (docs/polish-plan.md theme 3): gulls and a foghorn along the
+ * waterfront, the Docks' crane and a ship's horn, the airport's jets as they
+ * take off and land, the mall's indoor hum (the outdoors damped inside), the
+ * kart park's idling engines and tannoy, each graph made the first time its
+ * layer is heard; and your engine's voice by what you're in (`Voice`).
  * Nothing plays until the visitor turns it on.
  */
 
 import { showAt } from './stripmarks';
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
+import type { Voice } from './vehicleids';
 
 /** `given`: the context made in the visitor's tap (soundlazy.ts: this module loads after it, and iOS starts audio only in the tap) */
 export function createSound(given?: AudioContext) {
@@ -66,10 +72,36 @@ export function createSound(given?: AudioContext) {
   let noteK = 0;
   let nextMower = 0;
   let nextCricket = 0;
+  /** The polish pass's layers (docs/polish-plan.md theme 3), each made the first time it's heard (null until then) */
+  /** The waterfront and the Docks: the gulls' chirps and the horns through one gain (the waterfront's foghorn, the Docks' ship) */
+  let shoreGain: GainNode | null = null;
+  let nextGull = 0;
+  let nextFog = 0;
+  let nextShip = 0;
+  /** The Docks' crane: a hoist's whine, a slow filtered saw wavering as it winds */
+  let crane: { g: GainNode; o: OscillatorNode; lfo: OscillatorNode } | null = null;
+  /** The airport: a jet's roar, a swell of noise */
+  let jetGain: GainNode | null = null;
+  /** Inside the mall: a low hum and a murmur of people */
+  let indoorGain: GainNode | null = null;
+  let murmurGain: GainNode | null = null;
+  /** The Night Market after dusk: its crowd's murmur */
+  let marketGain: GainNode | null = null;
+  /** The kart park: engines idling in the pits, a tannoy's murmur */
+  let kartIdle: { g: GainNode; tannoy: GainNode } | null = null;
+  /** Southfield Yards: a compressor running behind the sheds (a low chug through a low-pass) and a reversing beep now and then */
+  let yardGain: GainNode | null = null;
+  let compressor: GainNode | null = null;
+  let nextBeep = 0;
   const BOOM_BPM = 88;
   const CLUB_BPM = 124;
   let on = false;
-  let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode; whine: boolean } | null = null;
+  /**
+   * Your engine (one graph for every voice): two oscillators and a third (a sub or a detuned second) through a
+   * low-pass, a slow LFO lumping or chopping its level (a V8's firing, an outboard's chop), its voice setting
+   * the waves, the pitches and the filter
+   */
+  let engine: { g: GainNode; am: GainNode; depth: GainNode; lfo: OscillatorNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode; c: OscillatorNode; gC: GainNode; voice: Voice } | null = null;
   /** Your car's tyres sliding (city life plan, Phase 2): a squeal and a hiss, by how hard they slide */
   let tyres: { g: GainNode; bp: BiquadFilterNode; sq: OscillatorNode; gSq: GainNode } | null = null;
   /** Your aircraft's engine: a buzz, a hiss and a whine, beaten by a throb (the prop's blades, the rotor's thump) */
@@ -95,6 +127,28 @@ export function createSound(given?: AudioContext) {
     src.buffer = buf;
     src.loop = true;
     return src;
+  }
+
+  /** A layer of noise through a filter, its level swayed slowly by an LFO (waves, gusts, passing cars); its gain, 0 to start */
+  function layer(type: BiquadFilterType, f: number, q: number, sway: number, rate: number, brown = false) {
+    const src = noise(4, brown);
+    const filt = ctx!.createBiquadFilter();
+    filt.type = type;
+    filt.frequency.value = f;
+    filt.Q.value = q;
+    const g = ctx!.createGain();
+    g.gain.value = 0;
+    const swayG = ctx!.createGain();
+    swayG.gain.value = 1;
+    const lfo = ctx!.createOscillator();
+    lfo.frequency.value = rate;
+    const depth = ctx!.createGain();
+    depth.gain.value = sway;
+    lfo.connect(depth).connect(swayG.gain);
+    src.connect(filt).connect(swayG).connect(g).connect(master);
+    src.start();
+    lfo.start();
+    return g;
   }
 
   function init() {
@@ -131,27 +185,6 @@ export function createSound(given?: AudioContext) {
     hum.connect(lp).connect(humGain).connect(master);
     hum.start();
 
-    // A layer of noise through a filter, its level swayed slowly by an LFO (waves, gusts, passing cars)
-    const layer = (type: BiquadFilterType, f: number, q: number, sway: number, rate: number, brown = false) => {
-      const src = noise(4, brown);
-      const filt = ctx!.createBiquadFilter();
-      filt.type = type;
-      filt.frequency.value = f;
-      filt.Q.value = q;
-      const g = ctx!.createGain();
-      g.gain.value = 0;
-      const swayG = ctx!.createGain();
-      swayG.gain.value = 1;
-      const lfo = ctx!.createOscillator();
-      lfo.frequency.value = rate;
-      const depth = ctx!.createGain();
-      depth.gain.value = sway;
-      lfo.connect(depth).connect(swayG.gain);
-      src.connect(filt).connect(swayG).connect(g).connect(master);
-      src.start();
-      lfo.start();
-      return g;
-    };
     waterGain = layer('lowpass', 520, 0.7, 0.45, 0.17, true);
     // Uptown's plaza: the pool's jets and the water wall, a bright splash swaying quickly
     fountainGain = layer('bandpass', 2300, 0.7, 0.25, 0.8);
@@ -329,6 +362,104 @@ export function createSound(given?: AudioContext) {
       o.connect(g).connect(parkGain);
       o.start(t + d);
       o.stop(t + d + len + 0.05);
+    }
+  }
+  /** A gull over the water: two or three short cries, each a bright tone falling off through a band, a touch of noise in it */
+  function gull(t: number) {
+    const n = 1 + Math.floor(Math.random() * 3);
+    const base = 1100 + Math.random() * 500;
+    let at = t;
+    for (let i = 0; i < n; i++) {
+      const len = 0.16 + Math.random() * 0.14;
+      const o = ctx!.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(base * 1.15, at);
+      o.frequency.exponentialRampToValueAtTime(base * 0.8, at + len);
+      const bp = ctx!.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = base * 1.6;
+      bp.Q.value = 1.6;
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.03, at + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+      o.connect(bp).connect(g).connect(shoreGain!);
+      o.start(at);
+      o.stop(at + len + 0.02);
+      at += len + 0.12 + Math.random() * 0.2;
+    }
+  }
+  /** A foghorn far down the river: one low swell, a sine and its fifth under a low-pass, three seconds long */
+  function foghorn(t: number) {
+    const len = 2.6 + Math.random() * 0.8;
+    const lp = ctx!.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 260;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.06, t + 0.6);
+    g.gain.setValueAtTime(0.06, t + len - 0.8);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    lp.connect(g).connect(shoreGain!);
+    for (const [f, level] of [
+      [66, 1],
+      [99, 0.35],
+    ]) {
+      const o = ctx!.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f;
+      const og = ctx!.createGain();
+      og.gain.value = level;
+      o.connect(og).connect(lp);
+      o.start(t);
+      o.stop(t + len + 0.05);
+    }
+  }
+  /** A ship's horn in the basin: two blasts, a brassy saw pair a tone apart through a band, shorter and higher than the foghorn */
+  function shipHorn(t: number) {
+    for (const [d, len] of [
+      [0, 1.1],
+      [1.5, 1.6],
+    ]) {
+      const bp = ctx!.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 220;
+      bp.Q.value = 0.9;
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.05, t + d + 0.15);
+      g.gain.setValueAtTime(0.05, t + d + len - 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + len);
+      bp.connect(g).connect(shoreGain!);
+      for (const f of [110, 123.5]) {
+        const o = ctx!.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = f;
+        o.connect(bp);
+        o.start(t + d);
+        o.stop(t + d + len + 0.05);
+      }
+    }
+  }
+  /** A truck reversing somewhere in the yards: a string of short square beeps, a few streets off */
+  function reverseBeep(t: number) {
+    const n = 5 + Math.floor(Math.random() * 6);
+    for (let i = 0; i < n; i++) {
+      const at = t + i * 0.9;
+      const o = ctx!.createOscillator();
+      o.type = 'square';
+      o.frequency.value = 1050;
+      const lp = ctx!.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 2400;
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.014, at + 0.015);
+      g.gain.setValueAtTime(0.014, at + 0.32);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
+      o.connect(lp).connect(g).connect(yardGain!);
+      o.start(at);
+      o.stop(at + 0.45);
     }
   }
   /** A siren far off: a wail rising and falling, muffled by the blocks between */
@@ -881,11 +1012,16 @@ export function createSound(given?: AudioContext) {
       }
     },
     /**
-     * Your car's engine, a soft cartoon hum: `revs` 0..1 sets its pitch, a negative value
-     * switches it off; `whine` is an electric motor's voice instead (the Glow Pod: two soft tones an
-     * octave apart climbing high with the speed). Made the first time it's needed; silent unless sound is on.
+     * Your engine, a soft cartoon voice: `revs` 0..1 sets its pitch, a negative value switches it off;
+     * `voice` is what you're in (the polish pass, the owner's call: a voice per kind; `VOICE` in mycar.ts,
+     * `BIKE_VOICE` in mybike.ts): `car` the saloons' hum, `small` a hatch's thinner one, `race` the
+     * supercar's, higher, `v8` the muscle car's and the classic's (two saws a hair apart over a sub, lumping
+     * at its firing rate, slow to rev), `twostroke` the scooter's buzz (a fast idle), `bike` a four-stroke's
+     * fuller note, `kart` a single cylinder's bark (a high idle), `boat` an outboard's low thrum chopped by the
+     * water, `whine` an electric motor (the Glow Pod: two soft tones an octave apart climbing high with the
+     * speed). One graph for them all, made the first time it's needed; silent unless sound is on.
      */
-    engine(revs: number, whine = false) {
+    engine(revs: number, voice: Voice = 'car') {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
       if (!engine) {
@@ -897,27 +1033,87 @@ export function createSound(given?: AudioContext) {
         lp.Q.value = 2;
         const a = ctx.createOscillator();
         const b = ctx.createOscillator();
+        const c = ctx.createOscillator();
         a.type = 'sawtooth';
         b.type = 'square';
+        c.type = 'sine';
+        const gC = ctx.createGain();
+        gC.gain.value = 0;
         a.connect(lp);
         b.connect(lp);
-        lp.connect(g).connect(sfxBus);
+        c.connect(gC).connect(lp);
+        // The lump or chop: the level swung by a slow oscillator (depth 0 is steady)
+        const am = ctx.createGain();
+        am.gain.value = 1;
+        const lfo = ctx.createOscillator();
+        const depth = ctx.createGain();
+        depth.gain.value = 0;
+        lfo.connect(depth).connect(am.gain);
+        lp.connect(am).connect(g).connect(sfxBus);
         a.start();
         b.start();
-        engine = { g, lp, a, b, whine: false };
+        c.start();
+        lfo.start();
+        engine = { g, am, depth, lfo, lp, a, b, c, gC, voice: 'car' };
       }
-      if (revs >= 0 && engine.whine !== whine) {
-        engine.whine = whine;
-        engine.a.type = whine ? 'sine' : 'sawtooth';
-        engine.b.type = whine ? 'triangle' : 'square';
+      const e = engine;
+      if (revs >= 0 && e.voice !== voice) {
+        e.voice = voice;
+        const waves: Record<Voice, [OscillatorType, OscillatorType, OscillatorType]> = {
+          car: ['sawtooth', 'square', 'sine'],
+          small: ['sawtooth', 'square', 'sine'],
+          race: ['sawtooth', 'square', 'sawtooth'],
+          v8: ['sawtooth', 'sawtooth', 'sine'],
+          twostroke: ['square', 'sawtooth', 'sine'],
+          bike: ['sawtooth', 'square', 'sine'],
+          kart: ['sawtooth', 'square', 'sine'],
+          boat: ['sawtooth', 'square', 'sine'],
+          whine: ['sine', 'triangle', 'sine'],
+        };
+        [e.a.type, e.b.type, e.c.type] = waves[voice];
       }
       const on2 = revs >= 0;
       const r = Math.max(0, Math.min(1, revs));
-      const w = engine.whine;
-      engine.a.frequency.setTargetAtTime(w ? 180 + r * 760 : 42 + r * 120, t, 0.08);
-      engine.b.frequency.setTargetAtTime(w ? 360 + r * 1520 : 21 + r * 60, t, 0.08);
-      engine.lp.frequency.setTargetAtTime(w ? 1800 + r * 2400 : 380 + r * 1300, t, 0.1);
-      engine.g.gain.setTargetAtTime(on2 ? (w ? 0.022 + r * 0.03 : 0.05 + r * 0.06) : 0, t, on2 ? 0.15 : 0.25);
+      const v = e.voice;
+      // Each voice: the two main pitches, the third's pitch and share, the filter, the level, the lump's rate and depth, how fast it revs
+      let fa: number, fb: number, fc: number, gc: number, lp: number, gain: number, rate = 0, lump = 0, rise = 0.08;
+      switch (v) {
+        case 'small':
+          [fa, fb, fc, gc, lp, gain] = [70 + r * 190, 35 + r * 95, 140 + r * 380, 0.15, 600 + r * 1900, 0.038 + r * 0.05];
+          break;
+        case 'race':
+          [fa, fb, fc, gc, lp, gain] = [60 + r * 230, 30 + r * 115, 61 + r * 233, 0.5, 700 + r * 2600, 0.045 + r * 0.06];
+          break;
+        case 'v8':
+          [fa, fb, fc, gc, lp, gain, rate, lump, rise] = [30 + r * 72, 30.7 + r * 73.5, 15 + r * 36, 0.9, 260 + r * 820, 0.06 + r * 0.06, 7 + r * 32, 0.3, 0.18];
+          break;
+        case 'twostroke':
+          [fa, fb, fc, gc, lp, gain, rise] = [95 + r * 240, 190 + r * 480, 48 + r * 120, 0.2, 1200 + r * 2500, 0.03 + r * 0.04, 0.05];
+          break;
+        case 'bike':
+          [fa, fb, fc, gc, lp, gain] = [55 + r * 175, 110 + r * 350, 27.5 + r * 87.5, 0.5, 500 + r * 2200, 0.042 + r * 0.05];
+          break;
+        case 'kart':
+          [fa, fb, fc, gc, lp, gain, rate, lump, rise] = [80 + r * 210, 81 + r * 212, 40 + r * 105, 0.3, 900 + r * 2200, 0.042 + r * 0.05, 14 + r * 36, 0.22, 0.06];
+          break;
+        case 'boat':
+          [fa, fb, fc, gc, lp, gain, rate, lump, rise] = [36 + r * 92, 18 + r * 46, 36.5 + r * 93, 0.6, 300 + r * 900, 0.05 + r * 0.05, 1.4 + r * 1.8, 0.35, 0.14];
+          break;
+        case 'whine':
+          [fa, fb, fc, gc, lp, gain] = [180 + r * 760, 360 + r * 1520, 90 + r * 380, 0, 1800 + r * 2400, 0.022 + r * 0.03];
+          break;
+        default:
+          [fa, fb, fc, gc, lp, gain] = [42 + r * 120, 21 + r * 60, 21 + r * 60, 0.3, 380 + r * 1300, 0.05 + r * 0.06];
+      }
+      e.a.frequency.setTargetAtTime(fa, t, rise);
+      e.b.frequency.setTargetAtTime(fb, t, rise);
+      e.c.frequency.setTargetAtTime(fc, t, rise);
+      e.gC.gain.setTargetAtTime(gc, t, 0.1);
+      e.lp.frequency.setTargetAtTime(lp, t, rise + 0.02);
+      e.lfo.frequency.setTargetAtTime(Math.max(0.1, rate), t, rise);
+      e.depth.gain.setTargetAtTime(lump, t, 0.1);
+      e.am.gain.setTargetAtTime(1 - lump, t, 0.1);
+      e.g.gain.setTargetAtTime(on2 ? gain : 0, t, on2 ? 0.15 : 0.25);
     },
     /**
      * Your car's tyres sliding: `level` 0..1 how hard (0 or a negative value is silent). A hiss of
@@ -1034,9 +1230,15 @@ export function createSound(given?: AudioContext) {
       set(a.out.gain, revs >= 0 ? 0.04 + r * 0.07 : 0, revs >= 0 ? 0.2 : 0.3);
     },
     /** Called every frame with the scene's state and the district's layers where you are (ambience.ts) */
-    update(rain: number, night: number, a: Ambience, rumble = 0, quake = 0) {
+    update(rain: number, night: number, a0: Ambience, rumble = 0, quake = 0) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
+      // Indoors (the mall's hall) the outdoor layers come through the walls damped, the rain too
+      const outdoors = 1 - a0.indoor * 0.7;
+      const a: Ambience = { ...a0 };
+      for (const key of Object.keys(a) as (keyof Ambience)[]) if (key !== 'indoor') a[key] = a0[key] * outdoors;
+      rain *= outdoors;
+      rumble *= outdoors;
       // The Trenches: the el as the train goes over, the boombox, sirens and dogs now and then
       elGain.gain.setTargetAtTime(rumble * 0.5, t, 0.3);
       screechGain.gain.setTargetAtTime(rumble * rumble * 0.035, t, 0.3);
@@ -1065,10 +1267,10 @@ export function createSound(given?: AudioContext) {
         nextOwl = t + 12 + Math.random() * 20;
       }
       // Crestmont and Sunridge: the lawns' sprinklers by day (off in the rain), the crickets at night
-      const yards = Math.max(a.crest, a.suburb);
-      sprinklerGain.gain.setTargetAtTime(yards * (1 - night) * (1 - rain) * 0.025, t, 1.5);
-      cricketGain.gain.setTargetAtTime(yards * night * (1 - rain), t, 1.5);
-      if (yards > 0.15 && night > 0.5 && rain < 0.5 && t > nextCricket) {
+      const lawns = Math.max(a.crest, a.suburb);
+      sprinklerGain.gain.setTargetAtTime(lawns * (1 - night) * (1 - rain) * 0.025, t, 1.5);
+      cricketGain.gain.setTargetAtTime(lawns * night * (1 - rain), t, 1.5);
+      if (lawns > 0.15 && night > 0.5 && rain < 0.5 && t > nextCricket) {
         cricket(t);
         nextCricket = t + 0.15 + Math.random() * 0.5;
       }
@@ -1096,13 +1298,127 @@ export function createSound(given?: AudioContext) {
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium
       buzzGain.gain.setTargetAtTime(night * 0.012 * a.city, t, 0.5);
       // (Crestmont's and Sunridge's hum is their own: none of the arcade's beat out there)
-      beatGain.gain.setTargetAtTime(0.06 * a.city * (1 - yards) + a.beat * 0.5, t, 0.3);
+      beatGain.gain.setTargetAtTime(0.06 * a.city * (1 - lawns) + a.beat * 0.5, t, 0.3);
       humGain.gain.setTargetAtTime(0.15 + 0.35 * a.city, t, 1);
       waterGain.gain.setTargetAtTime(a.water * 0.22, t, 1);
       // (and the Gondolier's jets while the show's on)
       fountainGain.gain.setTargetAtTime(Math.max(a.fountain, showAt(Date.now() / 1000) >= 0 ? a.show * 0.8 : 0) * 0.07, t, 0.6);
       roadGain.gain.setTargetAtTime(a.road * 0.09, t, 1);
       windGain.gain.setTargetAtTime(a.open * 0.16 * (1 + rain * 0.5), t, 1.5);
+
+      // The polish pass's layers, each graph made the first time it's heard
+      // The waterfront and the Docks: gulls by day (fewer in the rain); the foghorn now and then along the river, oftener at night; the ship's horn in the basin
+      const shore = Math.max(a.waterfront, a.docks);
+      if (shore > 0.02 || shoreGain) {
+        if (!shoreGain) {
+          shoreGain = ctx.createGain();
+          shoreGain.gain.value = 0;
+          shoreGain.connect(master);
+          nextGull = t + 1 + Math.random() * 3;
+          nextFog = t + 20 + Math.random() * 40;
+          nextShip = t + 15 + Math.random() * 30;
+        }
+        shoreGain.gain.setTargetAtTime(shore, t, 1);
+        if (shore > 0.15 && night < 0.6 && t > nextGull) {
+          gull(t);
+          nextGull = t + (2 + Math.random() * 6) * (1 + rain * 2);
+        }
+        if (a.waterfront > 0.15 && t > nextFog) {
+          foghorn(t);
+          nextFog = t + (50 + Math.random() * 70) * (night > 0.5 || rain > 0.5 ? 0.6 : 1);
+        }
+        if (a.docks > 0.15 && t > nextShip) {
+          shipHorn(t);
+          nextShip = t + 45 + Math.random() * 75;
+        }
+      }
+      // The Docks' crane: a hoist's whine, a slow saw through a low-pass, its pitch wavering as it winds
+      if (a.docks > 0.02 || crane) {
+        if (!crane) {
+          const o = ctx.createOscillator();
+          o.type = 'sawtooth';
+          o.frequency.value = 95;
+          const lfo = ctx.createOscillator();
+          lfo.frequency.value = 0.11;
+          const depth = ctx.createGain();
+          depth.gain.value = 22;
+          lfo.connect(depth).connect(o.frequency);
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = 700;
+          lp.Q.value = 3;
+          const g = ctx.createGain();
+          g.gain.value = 0;
+          o.connect(lp).connect(g).connect(master);
+          o.start();
+          lfo.start();
+          crane = { g, o, lfo };
+        }
+        crane.g.gain.setTargetAtTime(a.docks * 0.012, t, 1.5);
+      }
+      // The airport: a jet's roar, a swell of noise (the ambience's level rises and fades with each take-off and landing)
+      if (a.jets > 0.01 || jetGain) {
+        jetGain ??= layer('bandpass', 700, 0.45, 0.12, 0.35);
+        jetGain.gain.setTargetAtTime(a.jets * 0.2, t, 0.6);
+      }
+      // Inside the mall: a low hum (the air handling) and a murmur of people under the vault
+      if (a0.indoor > 0.01 || indoorGain) {
+        indoorGain ??= layer('lowpass', 210, 0.9, 0.12, 0.08, true);
+        murmurGain ??= layer('bandpass', 620, 1.4, 0.5, 1.7);
+        indoorGain.gain.setTargetAtTime(a0.indoor * 0.14, t, 1);
+        murmurGain!.gain.setTargetAtTime(a0.indoor * 0.045, t, 1);
+      }
+      // The Night Market after dusk: its diners' murmur over the water
+      if (a.market * night > 0.01 || marketGain) {
+        marketGain ??= layer('bandpass', 540, 1.2, 0.5, 2.1);
+        marketGain.gain.setTargetAtTime(a.market * night * 0.04, t, 1.5);
+      }
+      // The kart park: engines idling in the pits (two saws a hair apart, low), a tannoy's murmur now and then (a race's own karts are kart.ts's)
+      if (a.karts > 0.02 || kartIdle) {
+        if (!kartIdle) {
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = 520;
+          lp.Q.value = 1.2;
+          const g = ctx.createGain();
+          g.gain.value = 0;
+          lp.connect(g).connect(master);
+          const lfo = ctx.createOscillator();
+          lfo.frequency.value = 0.37;
+          const depth = ctx.createGain();
+          depth.gain.value = 6;
+          lfo.connect(depth);
+          for (const f of [108, 113.5]) {
+            const o = ctx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.value = f;
+            depth.connect(o.frequency);
+            o.connect(lp);
+            o.start();
+          }
+          lfo.start();
+          const tannoy = layer('bandpass', 1500, 3, 0.9, 0.9);
+          kartIdle = { g, tannoy };
+        }
+        kartIdle.g.gain.setTargetAtTime(a.karts * 0.016, t, 1.5);
+        kartIdle.tannoy.gain.setTargetAtTime(a.karts * 0.012, t, 1.5);
+      }
+      // Southfield Yards: a compressor chugging behind the sheds (brown noise through a low-pass, chopped by a fast LFO), a truck reversing now and then
+      if (a.yards > 0.02 || yardGain) {
+        if (!yardGain) {
+          yardGain = ctx.createGain();
+          yardGain.gain.value = 0;
+          yardGain.connect(master);
+          compressor = layer('lowpass', 240, 1.1, 0.7, 6.5, true);
+          nextBeep = t + 8 + Math.random() * 20;
+        }
+        yardGain.gain.setTargetAtTime(a.yards, t, 1);
+        compressor!.gain.setTargetAtTime(a.yards * 0.09, t, 1.5);
+        if (a.yards > 0.15 && t > nextBeep) {
+          reverseBeep(t);
+          nextBeep = t + 30 + Math.random() * 50;
+        }
+      }
     },
     suspend() {
       if (ctx && on) ctx.suspend();

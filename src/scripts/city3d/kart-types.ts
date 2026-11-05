@@ -175,8 +175,8 @@ export interface KartRaceDeps {
   /** The player's look (walk.ts setLook keeps it fresh): what Degen wears in the kart */
   outfit(): import('./character').Outfit;
   sfx(kind: import('./combat').Sfx, gain?: number): void;
-  /** The kart's engine (sound.ts engine()): revs 0..1, negative for off */
-  engine(revs: number): void;
+  /** The kart's engine (sound.ts engine(), its 'kart' voice): revs 0..1, negative for off */
+  engine(revs: number, voice?: import('./vehicleids').Voice): void;
   /** A race's conditions on the sky (night, rain; a day race is day and dry); null puts the visitor's own time and weather back */
   conditions(cond: Cond | null): void;
   reduced: boolean;

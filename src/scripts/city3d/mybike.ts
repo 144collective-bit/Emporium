@@ -13,8 +13,11 @@
  * Bike space as the cars': +x the front, y up, +z the bike's right; the
  * origin on the ground under its middle.
  */
-import { CAR_PAINTS, PLAYER_BIKES, readSaved, type BikeId, type PaintId } from './vehicleids';
+import { CAR_PAINTS, PLAYER_BIKES, readSaved, type BikeId, type PaintId, type Voice } from './vehicleids';
 export { PLAYER_BIKES, type BikeId };
+
+/** Each bike's engine voice (sound.ts `engine()`): the scooter a two-stroke's buzz, the Alley Cat and the Neon Blade a fuller four-stroke */
+export const BIKE_VOICE: Record<BikeId, Voice> = { scooter: 'twostroke', streetbike: 'bike', sportbike: 'bike' };
 
 export interface BikeSpec {
   id: BikeId;

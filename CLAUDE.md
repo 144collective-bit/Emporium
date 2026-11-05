@@ -365,9 +365,25 @@ it and has been retired completely. Build only on what's here.
     Trenches' own (`hood`, `boombox`: the grit step), Westlake Park's
     (`park`: birds by day, an owl at night), Uptown's (a quieter hum, the
     plaza's `fountain`, the circle's traffic), Crestmont's (`crest`) and
-    Sunridge's (`suburb`: sprinklers, crickets, a lawnmower); `sound.update()` mixes its layers
+    Sunridge's (`suburb`: sprinklers, crickets, a lawnmower); since the
+    polish pass's sound phase the hum is the loudest of every built-up
+    part's (`HUMS`: the town, The Trenches, Uptown and Uptown North hushed,
+    the mall, the Docks, the airport, the kart park, the stadium, each eased
+    out past its land, so none reads as open country) and the places with a
+    sound of their own have a layer: `waterfront` (the boardwalk, Pier 7,
+    the market's deck and the town's promenades: gulls by day, a foghorn
+    now and then; the Night Market's murmur after dusk is `market`), `docks`
+    (gulls, a crane's hoist whine, a ship's horn), `jets` (`jetsAt()`: an
+    airliner's roar as one takes off or lands, from the airport's timetable
+    and the clock, `ambienceAt(x, z, lift, t)`), `indoor` (inside the mall's
+    hall; sound.ts damps the outdoor layers by it) and `karts` (the kart
+    park: engines idling, a tannoy); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
-    or where the City view looks.
+    or where the City view looks, each new layer's graph made the first
+    time it's heard. Your engine's voice is by what you're in
+    (`engine(revs, voice)`; `Voice` in vehicleids.ts, `VOICE` in mycar.ts
+    per car model, `BIKE_VOICE` in mybike.ts, the kart `kart`, the hire
+    boat `boat`; the kart is a single speed, `motorOf(..., 1)`).
 - **The Trenches** (growth plan Phase 9, the owner's call): a
   neighbourhood of projects in the style of Brooklyn on the south-west
   quadrant inside the ring highway, where the storyline will start later.

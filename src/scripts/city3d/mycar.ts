@@ -10,8 +10,35 @@
  * game server can check a car the same way later.
  */
 import type { Feel } from './drive-sim';
-import { CAR_PAINTS, PLAYER_CARS, readSaved, type CarId, type PaintId, type PlayerCar } from './vehicleids';
-export { CAR_PAINTS, PLAYER_CARS, type CarId, type PaintId, type PlayerCar };
+import { CAR_PAINTS, PLAYER_CARS, readSaved, type CarId, type PaintId, type PlayerCar, type Voice } from './vehicleids';
+export { CAR_PAINTS, PLAYER_CARS, type CarId, type PaintId, type PlayerCar, type Voice };
+
+/**
+ * Each model's engine voice (sound.ts `engine()`; the polish pass, the owner's call): the hatch small and thin, the
+ * saloons and the vans the plain hum, the supercar higher, the muscle car and the classic a V8's lump, the Glow Pod
+ * an electric whine; the traffic's own models too (the bus, the trucks and the rig big and lumpy), for anything
+ * that voices one later; the Neon Mile's limo a saloon's, its party bus big and lumpy
+ */
+export const VOICE: Record<CarId, Voice> = {
+  hatch: 'small',
+  sedan: 'car',
+  coupe: 'car',
+  pickup: 'car',
+  van: 'car',
+  bus: 'v8',
+  muscle: 'v8',
+  suv: 'car',
+  super: 'race',
+  exec: 'car',
+  classic: 'v8',
+  offroad: 'car',
+  ev: 'whine',
+  police: 'car',
+  truck: 'v8',
+  rig: 'v8',
+  limo: 'car',
+  partybus: 'v8',
+};
 
 
 /** What the garage says about each one, and how it drives (0..1, for the stat bars and the handling) */

@@ -99,3 +99,111 @@ test("Sunridge: its quiet hum, its sprinklers and crickets (the suburb layer); n
   assert.equal(ambienceAt(e.x, e.z).suburb, 0);
   assert.equal(ambienceAt((CREST_RECT[0] + CREST_RECT[2]) / 2, (CREST_RECT[1] + CREST_RECT[3]) / 2).suburb, 0);
 });
+
+// The polish pass's sound phase (docs/polish-plan.md theme 3): no built-up part reads as open country, and the
+// places with a sound of their own have a layer
+test("the hum reaches every built-up part: Uptown hushed, the mall, the Docks, the airport, the kart park and the stadium; open land is open", async () => {
+  const { HUMS, UPTOWN_HUSH } = await import('../src/scripts/city3d/ambience');
+  const { TOWER_SPAWN } = await import('../src/scripts/city3d/skydeck');
+  const { INSIDE_SPAWN } = await import('../src/scripts/city3d/mallinside');
+  const { HM_SPAWN } = await import('../src/scripts/city3d/docksport');
+  const { AIR_SPAWN } = await import('../src/scripts/city3d/airfield');
+  const { KART_SPAWN } = await import('../src/scripts/city3d/kartpark');
+  const { STADIUM_SPAWN } = await import('../src/scripts/city3d/stadium');
+  const band = (name: string, x: number, z: number, lo: number, hi: number) => {
+    const a = ambienceAt(x, z, 0, 0);
+    assert.ok(a.city >= lo - 1e-9 && a.city <= hi + 1e-9, `${name}'s hum ${a.city} (${lo}-${hi})`);
+    assert.ok(a.open <= 1 - lo + 1e-9, `${name}'s wind ${a.open}`);
+  };
+  // Uptown Circle and the spire's spawn: Uptown's hushed hum, not zero and not the town's full one
+  band('Uptown Circle', -176, 30, 1 - UPTOWN_HUSH - 0.05, 1 - UPTOWN_HUSH);
+  band("the spire's spawn", TOWER_SPAWN.x, TOWER_SPAWN.z, 1 - UPTOWN_HUSH - 0.05, 1 - UPTOWN_HUSH);
+  band("the mall's hall", INSIDE_SPAWN.x, INSIDE_SPAWN.z, HUMS.mall.level - 0.05, 1);
+  band('the Docks', HM_SPAWN.x, HM_SPAWN.z, HUMS.docks.level - 0.05, 1);
+  band('the airport', AIR_SPAWN.x, AIR_SPAWN.z, HUMS.airport.level - 0.05, 1);
+  band("the kart park's gate", KART_SPAWN.x, KART_SPAWN.z, HUMS.karts.level - 0.05, 1);
+  band("the stadium's forecourt", STADIUM_SPAWN.x, STADIUM_SPAWN.z, HUMS.stadium.level - 0.05, 1);
+  const { STRIP_RECT } = await import('../src/scripts/city3d/strip');
+  const { YARDS_RECT } = await import('../src/scripts/city3d/southfield');
+  band('the Neon Mile', (STRIP_RECT[0] + STRIP_RECT[2]) / 2, (STRIP_RECT[1] + STRIP_RECT[3]) / 2, HUMS.strip.level - 0.05, 1);
+  band('Southfield Yards', (YARDS_RECT[0] + YARDS_RECT[2]) / 2, (YARDS_RECT[1] + YARDS_RECT[3]) / 2, HUMS.yards.level - 0.05, 1);
+  // Open land, far from them all: no hum, all wind, none of the new layers
+  for (const [x, z] of [
+    [EXT[0] + 20, EXT[0] + 20],
+    [600, 600],
+  ]) {
+    const far = ambienceAt(x, z, 0, 0);
+    assert.ok(far.city < 0.02 && far.open > 0.98, `open land at ${x}, ${z}: ${far.city} ${far.open}`);
+    for (const k of ['waterfront', 'market', 'docks', 'jets', 'indoor', 'yards', 'karts'] as const) assert.equal(far[k], 0, `${k} at ${x}, ${z}`);
+  }
+});
+
+test('the waterfront: gulls along the boardwalk, Pier 7, the market deck (its murmur) and the promenades; none in the plaza', async () => {
+  const { BOARDWALK, PIER, MARKET_DECK } = await import('../src/scripts/city3d/waterfront');
+  const { PROMENADE } = await import('../src/scripts/city3d/outer');
+  const { CENTRE } = await import('../src/scripts/city3d/plaza');
+  const mid = (r: readonly number[]) => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2] as const;
+  for (const [name, [x, z]] of [
+    ['the boardwalk', mid(BOARDWALK)],
+    ["Pier 7's head", mid(PIER.head)],
+    ["the market's deck", mid(MARKET_DECK)],
+    ['the north promenade', [30, (PROMENADE.north[0] + PROMENADE.north[1]) / 2]],
+  ] as const) {
+    assert.ok(ambienceAt(x, z, 0, 0).waterfront > 0.95, `${name}: ${ambienceAt(x, z, 0, 0).waterfront}`);
+  }
+  const market = ambienceAt(...mid(MARKET_DECK), 0, 0);
+  assert.ok(market.market > 0.95 && market.city > 0.5, `the market's murmur ${market.market}, its hum ${market.city}`);
+  assert.equal(ambienceAt(MARKET_DECK[2] + 40, mid(BOARDWALK)[1], 0, 0).market, 0, 'no market murmur well along the boardwalk');
+  const plaza = ambienceAt(CENTRE[0], CENTRE[1], 0, 0);
+  assert.equal(plaza.waterfront, 0);
+  assert.equal(plaza.market, 0);
+  assert.ok(ambienceAt(...mid(BOARDWALK), 150, 0).waterfront < 0.5, 'high over it, a wash');
+});
+
+test("the Docks: its layer on its land and none across the river; the airport's jets rise and fade with the timetable", async () => {
+  const { DOCKS_RECT } = await import('../src/scripts/city3d/docks');
+  const { HM_SPAWN } = await import('../src/scripts/city3d/docksport');
+  const { AIR_SPAWN, PERIOD } = await import('../src/scripts/city3d/airfield');
+  const { TOWER_SPAWN } = await import('../src/scripts/city3d/skydeck');
+  const { jetsAt } = await import('../src/scripts/city3d/ambience');
+  assert.equal(ambienceAt(HM_SPAWN.x, HM_SPAWN.z, 0, 0).docks, 1);
+  assert.equal(ambienceAt((DOCKS_RECT[0] + DOCKS_RECT[2]) / 2, DOCKS_RECT[1] - 80, 0, 0).docks, 0, 'across the river');
+  assert.equal(ambienceAt(TOWER_SPAWN.x, TOWER_SPAWN.z, 0, 0).docks, 0);
+  // The jets: over a period at the airport's spawn an airliner's roar comes and goes
+  let lo = 1;
+  let hi = 0;
+  for (let t = 0; t < PERIOD; t += 0.5) {
+    const j = jetsAt(AIR_SPAWN.x, AIR_SPAWN.z, t);
+    assert.ok(j >= 0 && j <= 1);
+    lo = Math.min(lo, j);
+    hi = Math.max(hi, j);
+  }
+  assert.ok(hi > 0.4, `a take-off roars: ${hi}`);
+  assert.ok(lo < 0.05, `and fades: ${lo}`);
+  assert.equal(ambienceAt(AIR_SPAWN.x, AIR_SPAWN.z, 0, 7).jets, jetsAt(AIR_SPAWN.x, AIR_SPAWN.z, 7));
+  for (let t = 0; t < PERIOD; t += 7) assert.equal(jetsAt(TOWER_SPAWN.x, TOWER_SPAWN.z, t), 0, 'none in Uptown');
+});
+
+test("Southfield Yards: its compressor on its land, none in the park beside it or in town", async () => {
+  const { YARDS_RECT, SOUTHFIELD_RECT } = await import('../src/scripts/city3d/southfield');
+  assert.equal(ambienceAt((YARDS_RECT[0] + YARDS_RECT[2]) / 2, (YARDS_RECT[1] + YARDS_RECT[3]) / 2, 0, 0).yards, 1);
+  assert.ok(ambienceAt(SOUTHFIELD_RECT[2] - 2, SOUTHFIELD_RECT[3] - 2, 0, 0).yards < 0.5, "the park's far corner");
+  const e = DOORS.find((d) => d.id === 'emporium')!;
+  assert.equal(ambienceAt(e.x, e.z + 2, 0, 0).yards, 0);
+});
+
+test("indoors in the mall's hall (not from over its roof); the kart park's idling engines on its land", async () => {
+  const { INSIDE_SPAWN } = await import('../src/scripts/city3d/mallinside');
+  const { HALL } = await import('../src/scripts/city3d/mall');
+  const { KART_SPAWN, KART_PARK } = await import('../src/scripts/city3d/kartpark');
+  const inside = ambienceAt(INSIDE_SPAWN.x, INSIDE_SPAWN.z, 0, 0);
+  assert.equal(inside.indoor, 1);
+  assert.equal(ambienceAt(INSIDE_SPAWN.x, INSIDE_SPAWN.z, HALL.h + 20, 0).indoor, 0, 'the City view over the roof');
+  assert.equal(ambienceAt(HALL.rect[0] - 30, HALL.rect[1], 0, 0).indoor, 0, 'outside, well off the doors');
+  assert.equal(ambienceAt(KART_SPAWN.x, KART_SPAWN.z, 0, 0).karts, 1);
+  assert.equal(ambienceAt(KART_PARK.x0 - 80, KART_PARK.z0, 0, 0).karts, 0);
+  const e = DOORS.find((d) => d.id === 'emporium')!;
+  const town = ambienceAt(e.x, e.z + 2, 0, 0);
+  assert.equal(town.indoor, 0);
+  assert.equal(town.karts, 0);
+});

@@ -267,6 +267,11 @@ test('an electric car has one gear: N, R and D, its motor\'s revs climbing with 
     last = m.revs;
   }
   assert.ok(Math.abs(motorOf(10, 10).revs - 1) < 1e-9);
+  // Your kart is a single speed too (the polish pass's sound phase): its one gear reads 1, N and R as the motor's
+  assert.equal(motorOf(0, 10, 0, 1).gear, 'N');
+  assert.equal(motorOf(-1, 10, 0, 1).gear, 'R');
+  assert.equal(motorOf(5, 10, 1, 1).gear, 1);
+  assert.deepEqual(motorOf(5, 10, 1, 1).revs, motorOf(5, 10, 1).revs);
 });
 
 test('skidding: a handbrake slide or a real sideways slip, never a clean drive', () => {

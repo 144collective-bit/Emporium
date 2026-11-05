@@ -1148,7 +1148,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       shownCount = '';
       showCount(String(Math.ceil(COUNTDOWN)));
       d.sfx('countdown');
-      d.engine(0.15);
+      d.engine(0.15, 'kart');
     },
     update(dt, inp: KartInput) {
       if (!active || !sim) return;
@@ -1202,7 +1202,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       }
       if (levelAt >= 0 && (levelAt -= dt) < 0) d.sfx('levelup');
       // The engine, the camera, the HUD
-      d.engine(0.15 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.7 + (p.boostT > 0 ? 0.15 : 0));
+      d.engine(0.15 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.7 + (p.boostT > 0 ? 0.15 : 0), 'kart');
       if (ceremonyT >= 0) {
         stepCeremony(dt);
         return;

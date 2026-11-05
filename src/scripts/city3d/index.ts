@@ -928,7 +928,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     sfx: (kind, gain) => sound.sfx(kind, gain),
     garage,
     // Made further down too, like sfx
-    engine: (revs, whine) => sound.engine(revs, whine),
+    engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
     places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],

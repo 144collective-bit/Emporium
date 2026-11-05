@@ -63,3 +63,20 @@ test('cleanCar keeps good cars and falls back for anything else', () => {
   // Only the three fields come back (the look: tests/carlook.test.ts)
   assert.deepEqual(Object.keys(cleanCar({ model: 'van', paint: 'red', price: 5 })).sort(), ['look', 'model', 'paint']);
 });
+
+test("every car model has an engine voice (the polish pass's sound phase): the hatch small, the muscle car and the classic a V8, the Glow Pod a whine", async () => {
+  const { VOICE } = await import('../src/scripts/city3d/mycar');
+  const { VOICES } = await import('../src/scripts/city3d/vehicleids');
+  for (const id of Object.keys(CARS) as (keyof typeof CARS)[]) assert.ok(VOICES.includes(VOICE[id]), `${id}: ${VOICE[id]}`);
+  for (const id of PLAYER_CARS) assert.ok(VOICE[id], id);
+  assert.equal(VOICE.hatch, 'small');
+  assert.equal(VOICE.muscle, 'v8');
+  assert.equal(VOICE.classic, 'v8');
+  assert.equal(VOICE.super, 'race');
+  assert.equal(VOICE.ev, 'whine');
+  // Only the electric car whines
+  assert.deepEqual(
+    PLAYER_CARS.filter((id) => VOICE[id] === 'whine'),
+    PLAYER_CARS.filter((id) => DRIVE[id].electric)
+  );
+});
