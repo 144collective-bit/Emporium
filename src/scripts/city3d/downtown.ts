@@ -163,14 +163,29 @@ export const SIGNS = {
   books: { name: 'PIXEL BOOKS', blade: 'BOOKS', color: '#ffd36b' },
   barber: { name: 'FRESH CUTS', blade: 'CUTS', color: '#e219e5' },
   tacos: { name: 'TACO RIOT', blade: 'TACOS', color: '#ff6a2f' },
+  // The diners and hotels take turns with these (the polish plan's Phase 2: no two alike side by side)
   diner: { name: 'STARLITE DINER', blade: 'EAT', color: '#ff3b8a' },
+  blueplate: { name: 'BLUE PLATE', blade: 'EAT', color: '#4fe3ff' },
+  rocket: { name: 'ROCKET DINER', blade: 'DINER', color: '#ffd36b' },
   hotel: { name: 'HOTEL NOVA', blade: 'HOTEL', color: '#ff6ad5' },
+  grandview: { name: 'GRANDVIEW HOTEL', blade: 'HOTEL', color: '#ffd36b' },
+  moonlight: { name: 'MOONLIGHT INN', blade: 'INN', color: '#7cf4ff' },
+  palace: { name: 'PALACE ROYALE', blade: 'ROOMS', color: '#2bff88' },
   gm: { name: 'GM DEGENS', blade: 'GM', color: '#00eaff' },
   // The Trenches' tenement shops (the grit's step 2, streetwall.ts): made-up names
   chicken: { name: 'CLUCK HOUSE', blade: 'WINGS', color: '#ffd23f' },
   nails: { name: 'GLOSS NAILS', blade: 'NAILS', color: '#ff6ad5' },
   deli: { name: 'HERO DELI', blade: 'DELI', color: '#2bff88' },
   phones: { name: 'CELL FIX', blade: 'PHONES', color: '#00eaff' },
+  kings: { name: "KING'S CUTS", blade: 'BARBER', color: '#ffd36b' },
+  lucky7: { name: 'LUCKY 7 PHARMACY', blade: 'RX', color: '#2bff88' },
+  bodega: { name: 'SUNRISE BODEGA', blade: 'BODEGA', color: '#ff8a3d' },
+  spincycle: { name: 'SPIN CYCLE', blade: 'LAUNDRY', color: '#7cf4ff' },
+  goldtop: { name: 'GOLD TOP BAKERY', blade: 'BAKERY', color: '#f2c94c' },
+  blockbeats: { name: 'BLOCK BEATS', blade: 'RECORDS', color: '#8f7bff' },
+  onestop: { name: 'ONE STOP WIRELESS', blade: 'MOBILE', color: '#00eaff' },
+  fryking: { name: 'FRY KING FISH', blade: 'FISH', color: '#ff6a2f' },
+  braids: { name: 'BRAIDS BY BEA', blade: 'HAIR', color: '#e219e5' },
   // The building kits' (kits.ts): a school, a mall and a stadium in a district
   school: { name: 'SECTOR 7 HIGH', blade: 'SCHOOL', color: '#ffd23f' },
   mall: { name: 'NEON MALL', blade: 'MALL', color: '#e219e5' },
@@ -181,6 +196,9 @@ export type SignId = keyof typeof SIGNS;
 export const NAMED_SHOPS: SignId[] = ['coffee', 'validator', 'crumpet'];
 /** Signs the other shops take turns with */
 const SHOP_SIGNS: SignId[] = ['noodles', 'records', 'laundry', 'pizza', 'mart', 'books', 'barber', 'tacos'];
+/** The hotels' and the diners' names, taken in turn as they're laid (so neighbours never share one; the test holds it) */
+export const HOTEL_SIGNS: SignId[] = ['hotel', 'grandview', 'moonlight', 'palace'];
+export const DINER_SIGNS: SignId[] = ['diner', 'blueplate', 'rocket'];
 
 /** x0, z0, x1, z1, height (solids.ts `Box`) */
 export type Footprint = [number, number, number, number, number];
@@ -353,7 +371,8 @@ function fill(z: Zone, out: { infill: Infill[]; alleys: Alley[] }) {
               ? Math.min(most, 2 + Math.floor(r() * 3))
               : 1 + Math.floor(r() * most);
     const h = Math.round((SHOP_H + floors * FLOOR + PARAPET + (type === 'diner' ? 0.3 : 0)) * 100) / 100;
-    const sign: SignId | undefined = type === 'diner' ? 'diner' : type === 'hotel' ? 'hotel' : type === 'shop' ? SHOP_SIGNS[mix.signs++ % SHOP_SIGNS.length] : undefined;
+    const sign: SignId | undefined =
+      type === 'diner' ? DINER_SIGNS[mix.dinerSigns++ % DINER_SIGNS.length] : type === 'hotel' ? HOTEL_SIGNS[mix.hotelSigns++ % HOTEL_SIGNS.length] : type === 'shop' ? SHOP_SIGNS[mix.signs++ % SHOP_SIGNS.length] : undefined;
     out.infill.push(withSolids({ box, h, face: z.face, seed: z.seed * 100 + k++, type, floors, sign, front, solids: [] }));
     a += w;
     since++;
@@ -393,8 +412,8 @@ function withSolids(f: Infill): Infill {
 /** How far each type stands back from its plot's front: a stoop, café tables, planters and bikes, an entrance canopy (lofts load straight off the street) */
 const FRONTS: Record<InfillType, number> = { brownstone: 0.8, shop: 0.5, diner: 0.9, loft: 0, office: 0.6, hotel: 0.7 };
 
-/** Running counts while downtown is filled: a few towers and diners, and the shop signs taking turns */
-const mix = { towers: 0, diners: 0, signs: 0 };
+/** Running counts while downtown is filled: a few towers and diners, and the shop, hotel and diner signs taking turns */
+const mix = { towers: 0, diners: 0, signs: 0, hotelSigns: 0, dinerSigns: 0 };
 const built = { infill: [] as Infill[], alleys: [] as Alley[] };
 for (const z of ZONES) fill(z, built);
 

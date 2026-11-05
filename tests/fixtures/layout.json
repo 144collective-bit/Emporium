@@ -765,7 +765,7 @@
     "face": "n",
     "type": "hotel",
     "floors": 7,
-    "sign": "hotel"
+    "sign": "grandview"
    },
    {
     "box": [
@@ -921,7 +921,7 @@
     "face": "n",
     "type": "hotel",
     "floors": 5,
-    "sign": "hotel"
+    "sign": "moonlight"
    },
    {
     "box": [
@@ -934,7 +934,7 @@
     "face": "n",
     "type": "hotel",
     "floors": 7,
-    "sign": "hotel"
+    "sign": "palace"
    },
    {
     "box": [
@@ -947,7 +947,7 @@
     "face": "n",
     "type": "diner",
     "floors": 0,
-    "sign": "diner"
+    "sign": "blueplate"
    },
    {
     "box": [

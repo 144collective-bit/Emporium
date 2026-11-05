@@ -3,7 +3,7 @@
 // the sidewalk, a street, a lay-by or a lane), the grand lobbies' sculptures and doormen, the galleria over the lanes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DRESSING, DRESS_SIZE, FRONTAGES, GALLERIAS, GALLERY, SCULPTURES, SHOP_NAMES, STREET_PEOPLE, STREETLEVEL_SOLIDS, UNIT, characterOf } from '../src/scripts/city3d/streetlevel';
+import { DRESSING, DRESS_SIZE, FRONTAGES, GALLERIAS, GALLERY, SCULPTURES, SHOP_NAMES, STREET_PEOPLE, STREETLEVEL_SOLIDS, UNIT, characterOf, nameAlong } from '../src/scripts/city3d/streetlevel';
 import { HIGHRISES, TOWER_BLOCKS } from '../src/scripts/city3d/highrise';
 import { LAYBYS, UPTOWN_LANES, laybyRect } from '../src/scripts/city3d/uptown';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
@@ -37,9 +37,13 @@ test('each street its character: luxe on the avenues, dining on the cross street
 
 test("the shops: a unit's width apart along their walls, named from their character's list, none at a lobby's door", () => {
   for (const ch of ['luxe', 'dining', 'local'] as const) {
+    // 24 a character (the polish plan's Phase 2), every one its own
+    assert.equal(SHOP_NAMES[ch].length, 24, `${ch}: 24 names`);
     assert.equal(new Set(SHOP_NAMES[ch]).size, SHOP_NAMES[ch].length, `${ch}'s names unique`);
     for (const n of SHOP_NAMES[ch]) assert.ok(n.length <= 16 && !/[0-9$%]/.test(n), `${n}: short, no numbers or prices`);
   }
+  const all = Object.values(SHOP_NAMES).flat();
+  assert.equal(new Set(all).size, all.length, 'a name on two lists');
   for (const f of FRONTAGES) {
     const t = HIGHRISES.find((h) => h.id === f.tower)!;
     for (const u of f.units) {
@@ -47,7 +51,16 @@ test("the shops: a unit's width apart along their walls, named from their charac
       if (f.side === t.front) assert.ok(Math.hypot(u.at[0] - t.door[0], u.at[1] - t.door[1]) >= 1.9, `${t.id}'s shop over its door`);
     }
     for (let i = 1; i < f.units.length; i++) assert.ok(f.units[i].u - f.units[i - 1].u >= UNIT - 1e-9);
+    // No two units on one side read the same
+    assert.equal(new Set(f.units.map((u) => u.name)).size, f.units.length, `${t.id} ${f.side}: a name twice on one wall`);
   }
+  // The pick along a wall is a permutation of the list, its own for each wall
+  for (const n of [12, 24])
+    for (const side of ['a-n', 'a-s', 'b-e']) assert.equal(new Set(Array.from({ length: n }, (_, k) => nameAlong(side, k, n))).size, n);
+  assert.notDeepEqual(
+    Array.from({ length: 6 }, (_, k) => nameAlong('a-n', k, 24)),
+    Array.from({ length: 6 }, (_, k) => nameAlong('a-s', k, 24))
+  );
 });
 
 test("the sidewalk's dressing stands in the margins: on its block, off every street and its sidewalk, the lay-bys and the lanes", () => {

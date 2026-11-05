@@ -47,11 +47,20 @@ export function characterOf(id: string, kind: string): Character {
 
 /** A shop unit's width: the ground floor band's two shops to a 4.8 repeat */
 export const UNIT = 2.4;
-/** The shops' names (fixed made-up copy), a list a character */
+/** The shops' names (fixed made-up copy), a list a character: 24 each (the polish plan's Phase 2), all distinct */
 export const SHOP_NAMES: Record<ShopCharacter, string[]> = {
-  luxe: ['MAISON LUNE', 'AURUM', 'VELOUR', 'ATELIER NOIR', 'CASHMERE CO', 'GILT', 'OPTIKA', 'SILK & STONE', 'HARLOW', 'NORTH & PINE', 'THE TAILOR', 'IVORY'],
-  dining: ['TRATTORIA SOLE', 'BLUE NOODLE', 'OYSTER BAR', 'SMOKE & OAK', 'BREW BAR', 'SAKURA', 'THE GILDED FORK', 'TACO NORTE', 'NIGHTJAR', 'LE PETIT ZINC', 'SALT BAKERY', 'TIDE WINES'],
-  local: ['CORNER DELI', 'QUICK CLEAN', 'PHARMACY', 'PETAL & STEM', 'NEWS & CO', 'KEY & HEEL', 'FRESH MARKET', 'PAPER & INK', 'BAGEL BROS', 'IRON GYM', 'SNAP PHOTO', 'COPY SHOP'],
+  luxe: [
+    'MAISON LUNE', 'AURUM', 'VELOUR', 'ATELIER NOIR', 'CASHMERE CO', 'GILT', 'OPTIKA', 'SILK & STONE', 'HARLOW', 'NORTH & PINE', 'THE TAILOR', 'IVORY',
+    'ORO JEWELLERS', 'ATELIER VESPER', 'BLANC', 'MARGAUX', 'SABLE', 'CASA LINDEN', 'VERDANT', 'HALCYON', 'PERLE', 'MERIDIAN WATCHES', 'ONYX ATELIER', 'THE PARFUMERIE',
+  ],
+  dining: [
+    'TRATTORIA SOLE', 'BLUE NOODLE', 'OYSTER BAR', 'SMOKE & OAK', 'BREW BAR', 'SAKURA', 'THE GILDED FORK', 'TACO NORTE', 'NIGHTJAR', 'LE PETIT ZINC', 'SALT BAKERY', 'TIDE WINES',
+    'RAMEN KOYO', 'BISTRO MARGOT', 'EMBER GRILL', 'DUMPLING HOUSE', 'CAFE VERDE', 'PHO LANTERN', 'THE COPPER PAN', 'MEZZE MOON', 'SUSHI KAIYO', 'BRASSERIE LUX', 'THE CHOP HOUSE', 'GELATO BIANCO',
+  ],
+  local: [
+    'CORNER DELI', 'QUICK CLEAN', 'PHARMACY', 'PETAL & STEM', 'NEWS & CO', 'KEY & HEEL', 'FRESH MARKET', 'PAPER & INK', 'BAGEL BROS', 'IRON GYM', 'SNAP PHOTO', 'COPY SHOP',
+    'RIVER BOOKS', 'STITCH TAILORS', 'MINT DRY CLEAN', 'CORNER CHEMIST', 'HARDWARE CO', 'PET PANTRY', 'CITY OPTICIANS', 'BLOOM FLORIST', 'VINYL VAULT', 'CYCLE WORKS', 'SHOE REPAIR', 'DAILY GRIND',
+  ],
 };
 
 export interface Unit {
@@ -139,6 +148,18 @@ export function frontage(t: Highrise, a: Pt, c: Pt, n: Pt): { street: string | n
 
 /** A small, steady hash of a tower's name and a number (the names along its walls) */
 const hash = (id: string, k: number) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 9973, 7 + k * 13);
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+/**
+ * The name of the k-th unit along a wall, from a list of n: the wall's own start and a stride coprime with n, both
+ * from where it is (`side`: the tower and its face), so no two units on one side share a name and no two walls run
+ * the same sequence (the polish plan's Phase 2; the test holds it)
+ */
+export function nameAlong(side: string, k: number, n: number): number {
+  const strides: number[] = [];
+  for (let s = 1; s < n; s++) if (gcd(s, n) === 1) strides.push(s);
+  const stride = strides[hash(side, 1) % strides.length] ?? 1;
+  return (hash(side, 0) + k * stride) % n;
+}
 
 /** Every tower's base sides facing a street (its back is its service wall; a colonnade's front is its bronze doors) */
 export const FRONTAGES: Frontage[] = HIGHRISES.flatMap((t) => {
@@ -161,7 +182,7 @@ export const FRONTAGES: Frontage[] = HIGHRISES.flatMap((t) => {
         const at: Pt = [a[0] + u[0] * d, a[1] + u[1] * d];
         // (the lobby's door between them: wider for a grand portal)
         if (front && Math.hypot(at[0] - t.door[0], at[1] - t.door[1]) < (t.lobby === 'grand' ? 2.6 : 1.9)) continue;
-        units.push({ at, u: d, name: hash(t.id + f, k) % SHOP_NAMES[char].length });
+        units.push({ at, u: d, name: nameAlong(t.id + f, k, SHOP_NAMES[char].length) });
       }
     return [{ tower: t.id, side: f, a, c, n, char, street, depth, units }];
   });

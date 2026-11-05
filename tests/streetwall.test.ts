@@ -9,6 +9,7 @@ import {
   LOCKUP_DEPTH,
   LOWRISE,
   LOW_CARS,
+  NAME_CLEAR,
   STREETWALL_SOLIDS,
   TENEMENTS,
   TRENCH_SIGNS,
@@ -25,7 +26,7 @@ import { TRENCH_BLOCKS } from '../src/scripts/city3d/trenches';
 import { METRO_SOLIDS } from '../src/scripts/city3d/metro';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
-import type { Rect } from '../src/scripts/city3d/downtown';
+import { SIGNS, type Rect } from '../src/scripts/city3d/downtown';
 
 const blockRect = (id: string): Rect => {
   const p = TRENCH_BLOCKS.find((b) => b.id === id)!.poly;
@@ -68,6 +69,30 @@ test('the street walls: tenements round the yards, shops below, fire escapes, 4 
   for (const a of TENEMENTS) for (const c of TENEMENTS) if (a !== c) assert.ok(!overlaps(a.box, c.box), 'shoulder to shoulder, never on top');
   // Their storeys vary
   assert.equal(new Set(TENEMENTS.map((t) => t.floors)).size, 3);
+});
+
+test('the tenements\' names: a long list, each from the list once, none twice within a few doors (the polish plan, Phase 2)', () => {
+  assert.ok(TRENCH_SIGNS.length >= 16, `${TRENCH_SIGNS.length} names`);
+  assert.equal(new Set(TRENCH_SIGNS).size, TRENCH_SIGNS.length, 'a name twice on the list');
+  for (const id of TRENCH_SIGNS) assert.ok(id in SIGNS, `${id} isn't a sign`);
+  const centre = ([x0, z0, x1, z1]: Rect) => [(x0 + x1) / 2, (z0 + z1) / 2];
+  let pairs = 0;
+  for (const a of TENEMENTS)
+    for (const c of TENEMENTS) {
+      if (a === c) continue;
+      const [ax, az] = centre(a.box);
+      const [cx, cz] = centre(c.box);
+      if (Math.hypot(ax - cx, az - cz) >= NAME_CLEAR) continue;
+      pairs++;
+      assert.notEqual(a.sign, c.sign, `${SIGNS[a.sign!].name} twice within ${NAME_CLEAR} at ${a.box} and ${c.box}`);
+    }
+  assert.ok(pairs > TENEMENTS.length, `${pairs} neighbouring pairs checked`);
+  // Most of the list is in use, and no block runs the same sequence as another
+  assert.ok(new Set(TENEMENTS.map((t) => t.sign)).size >= 16, 'most names used');
+  const runs = new Map<string, string>();
+  for (const t of TENEMENTS) runs.set(`${t.block}:${t.face}`, `${runs.get(`${t.block}:${t.face}`) ?? ''}${t.sign},`);
+  const seqs = [...runs.values()].filter((s) => s.split(',').length > 3);
+  assert.equal(new Set(seqs).size, seqs.length, 'two walls run the same names in the same order');
 });
 
 test('two vacant lots in the walls, a building either side', () => {

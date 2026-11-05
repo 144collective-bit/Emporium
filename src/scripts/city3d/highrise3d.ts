@@ -31,7 +31,7 @@ import { CORE, CORE_RECT, DECK, RIBS, SPIRE, VIEWERS } from './skydeck';
 import { OFFICE, OFFICE_GLSL, beaconOn, officeShare } from './skyline';
 import type { Pt, Rect } from './uptown';
 import { ROOF_TERRACES } from './boulevard';
-import { FRONTAGES, SHOP_NAMES, UNIT, type ShopCharacter } from './streetlevel';
+import { FRONTAGES, SHOP_NAMES, UNIT, nameAlong, type ShopCharacter } from './streetlevel';
 
 /* ---------- The atlas ---------- */
 
@@ -1044,7 +1044,7 @@ function entrance(b: Batch, t: Highrise, low: boolean) {
         for (let k = 0; (k + 1) * UNIT <= len + 0.01; k++) {
           const p = along(a, c, k * UNIT + UNIT / 2);
           if (Math.hypot(p[0] - t.door[0], p[1] - t.door[1]) < 1.9) continue;
-          shopfront(b, 'luxe', (i * 5 + k * 7 + 3) % SHOP_NAMES.luxe.length, p, n, k);
+          shopfront(b, 'luxe', nameAlong(`${t.id}:${i}`, k, SHOP_NAMES.luxe.length), p, n, k);
         }
       });
     }

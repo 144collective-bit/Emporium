@@ -11,6 +11,8 @@ import {
   BLOCKS_DT,
   BOLLARD_R,
   DIAGONAL_LAMPS,
+  DINER_SIGNS,
+  HOTEL_SIGNS,
   INFILL,
   LANDMARK_LOTS,
   LANES,
@@ -83,6 +85,35 @@ test("your three shops: Crypto Coffee, Dave's Validator and the Golden Crumpet, 
   const used = new Set(INFILL.map((f) => f.sign).filter(Boolean));
   assert.ok(used.size >= 10, `only ${used.size} different signs`);
   for (const sg of Object.values(SIGNS)) assert.match(sg.name, /^[A-Z0-9 '/]+$/);
+  // Every name on the list once (the lists are what keeps two signs from reading alike)
+  const names = Object.values(SIGNS).map((sg) => sg.name);
+  assert.equal(new Set(names).size, names.length, 'a sign name twice');
+  for (const list of [HOTEL_SIGNS, DINER_SIGNS]) {
+    assert.ok(list.length >= 3 && new Set(list).size === list.length);
+    for (const id of list) assert.ok(id in SIGNS);
+  }
+});
+
+test('the hotels and diners take turns with their names: no two neighbours on a block face read the same (the polish plan, Phase 2)', () => {
+  const hotels = INFILL.filter((f) => f.type === 'hotel');
+  const diners = INFILL.filter((f) => f.type === 'diner');
+  assert.ok(hotels.length >= 2 && diners.length >= 2);
+  for (const f of hotels) assert.ok(HOTEL_SIGNS.includes(f.sign!), `${f.sign} on a hotel`);
+  for (const f of diners) assert.ok(DINER_SIGNS.includes(f.sign!), `${f.sign} on a diner`);
+  // No two hotels downtown share a name while the list has room for them all; the diners the same
+  if (hotels.length <= HOTEL_SIGNS.length) assert.equal(new Set(hotels.map((f) => f.sign)).size, hotels.length, 'two hotels of one name');
+  if (diners.length <= DINER_SIGNS.length) assert.equal(new Set(diners.map((f) => f.sign)).size, diners.length, 'two diners of one name');
+  // Neighbours: on the same face, at most one building (or an alley) between them
+  const signed = INFILL.filter((f) => f.sign);
+  const near = (a: Rect, c: Rect, m: number) => overlaps([a[0] - m, a[1] - m, a[2] + m, a[3] + m], c);
+  let pairs = 0;
+  for (const a of signed)
+    for (const c of signed) {
+      if (a === c || a.face !== c.face || !near(a.box, c.box, 5.5)) continue;
+      pairs++;
+      assert.notEqual(a.sign, c.sign, `${SIGNS[a.sign!].name} twice side by side at ${a.box} and ${c.box}`);
+    }
+  assert.ok(pairs >= 20, `${pairs} neighbouring pairs checked`);
 });
 
 test('alleys run between buildings, walkable, with bollards that stop a car', () => {

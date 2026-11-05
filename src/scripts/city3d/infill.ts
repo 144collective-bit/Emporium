@@ -359,7 +359,13 @@ const SIGN_IDS = Object.keys(SIGNS) as SignId[];
 const SIGN_W = 1024;
 const CELL = { w: 512, h: 128 };
 const BLADE = { w: 72, h: 256 };
-const SIGN_H = Math.ceil(SIGN_IDS.length / 2) * CELL.h + BLADE.h;
+/** The boards two to a row, then the blades in rows of as many as fit (14), so the atlas grows with the list */
+const CELL_ROWS = Math.ceil(SIGN_IDS.length / 2);
+const BLADE_COLS = Math.floor(SIGN_W / BLADE.w);
+const BLADE_ROWS = Math.ceil(SIGN_IDS.length / BLADE_COLS);
+const SIGN_H = CELL_ROWS * CELL.h + BLADE_ROWS * BLADE.h;
+/** Where a sign's blade is in the atlas (x, y of its cell) */
+const bladeAt = (i: number): [number, number] => [(i % BLADE_COLS) * BLADE.w, CELL_ROWS * CELL.h + Math.floor(i / BLADE_COLS) * BLADE.h];
 
 /** Neon icons for your three shops: a coffee cup, a chip, a crumpet */
 function icon(c: CanvasRenderingContext2D, kind: string, x: number, y: number, s: number, color: string) {
@@ -449,10 +455,8 @@ const SIGN_ATLAS = (() => {
       c.shadowBlur = 0;
       c.fillStyle = shadeHex(sg.color, 0.55);
       c.fillText(sg.name, x + left + room / 2, y + CELL.h / 2 + 3);
-      // Its blade sign: the short word, letters stacked (one row of them: the building kits' signs, last, have none)
-      const bx = i * BLADE.w;
-      if (bx + BLADE.w > SIGN_W) return;
-      const by = SIGN_H - BLADE.h;
+      // Its blade sign: the short word, letters stacked
+      const [bx, by] = bladeAt(i);
       c.fillStyle = '#0d0b1c';
       c.fillRect(bx + 3, by + 3, BLADE.w - 6, BLADE.h - 6);
       c.strokeStyle = sg.color;
@@ -482,7 +486,10 @@ const SIGN_ATLAS = (() => {
       const i = SIGN_IDS.indexOf(id);
       return uv((i % 2) * CELL.w + 4, Math.floor(i / 2) * CELL.h + 4, CELL.w - 8, CELL.h - 8);
     },
-    blade: (id: SignId) => uv(SIGN_IDS.indexOf(id) * BLADE.w + 3, SIGN_H - BLADE.h + 3, BLADE.w - 6, BLADE.h - 6),
+    blade: (id: SignId) => {
+      const [bx, by] = bladeAt(SIGN_IDS.indexOf(id));
+      return uv(bx + 3, by + 3, BLADE.w - 6, BLADE.h - 6);
+    },
   };
 })();
 
@@ -965,14 +972,15 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     // The door: a chrome frame on the front
     k.lbox(w * 0.5 - 0.35, w * 0.5 + 0.35, S, S + 1.15, 0, 0.04, chrome);
     k.lbox(w * 0.5 - 0.27, w * 0.5 + 0.27, S + 0.05, S + 1.08, 0.02, 0.05, toon('#3e5a8f'));
-    // The big sign on the roof, both ways
+    // The big sign on the roof, both ways (its own name: the diners take turns, downtown.ts DINER_SIGNS)
+    const dinerSign = f.sign ?? 'diner';
     const sw = Math.min(w - 0.2, 2.6);
     const sy = top + 0.95;
     for (const u of [w / 2 - sw * 0.35, w / 2 + sw * 0.35]) k.lbox(u - 0.04, u + 0.04, top, sy - 0.3, -0.6, -0.52, METAL);
     k.all(() => {
       k.lbox(w / 2 - sw / 2 - 0.04, w / 2 + sw / 2 + 0.04, sy - sw / 8.4 - 0.04, sy + sw / 8.4 + 0.04, -0.6, -0.5, INK);
-      k.sign(SIGN_ATLAS.board('diner'), w / 2, sy, -0.498, sw, sw / 4.2);
-      k.sign(SIGN_ATLAS.board('diner'), w / 2, sy, -0.602, sw, sw / 4.2, Math.PI);
+      k.sign(SIGN_ATLAS.board(dinerSign), w / 2, sy, -0.498, sw, sw / 4.2);
+      k.sign(SIGN_ATLAS.board(dinerSign), w / 2, sy, -0.602, sw, sw / 4.2, Math.PI);
     });
     acUnit(k, w * 0.25, -d * 0.6, top + 0.06);
     // Tables out front, someone at one
@@ -1099,7 +1107,8 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
   }
   k.lbox(w * 0.2, w * 0.62, S + SHOP_H - 0.1, S + SHOP_H, 0, 0.66, toon('#3a1f45'));
   k.lbox(w * 0.2, w * 0.62, S + SHOP_H - 0.13, S + SHOP_H - 0.1, 0.62, 0.66, glow(PAL.pink));
-  k.all(() => blade(k, 'hotel', w - 0.22, S + SHOP_H + 0.6, top - 0.4, 0.85, 0.6));
+  // (its own name on the tall sign: the hotels take turns, downtown.ts HOTEL_SIGNS)
+  k.all(() => blade(k, f.sign ?? 'hotel', w - 0.22, S + SHOP_H + 0.6, top - 0.4, 0.85, 0.6));
   planter(k, w * 0.15, 0.4);
   planter(k, w * 0.68, 0.4);
   roofTop(() => {

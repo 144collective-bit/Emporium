@@ -517,7 +517,16 @@ the typecheck and the budgets green; none moves anything that exists.
    extended where a rule changed.
 2. **Names** (theme 4's signs): hotel and diner names downtown, the
    tenements' names and a seeded pick, Uptown's 24 names a character; the
-   sign atlases rebake. A day.
+   sign atlases rebake. A day. **Built** (2026-11-05): `HOTEL_SIGNS` (four)
+   and `DINER_SIGNS` (three) taken in turn as downtown is laid, each
+   building's own sign drawn (infill.ts, the atlas's blades in rows of 14
+   so the list can grow); nine more tenement names in `TRENCH_SIGNS` and
+   `signAt()` (a hash of the plot, stepped past any name within
+   `NAME_CLEAR`, 8 tiles); Uptown's `SHOP_NAMES` 24 a character and
+   `nameAlong()` (a wall's own start and stride, so no two units on a
+   side match; the flatiron's too). The tests hold every list distinct and
+   no two neighbours alike; the snapshot's four changed sign fields are
+   the only change to it. Shots wait for a build.
 3. **The menus' habits** (theme 7, as answered): Play as guest the main
    button and the log-in quiet; one confirm helper and Give up, Drop and
    the HUD Quits behind it; one × glyph; Q / E in the garage and the

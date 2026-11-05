@@ -45,8 +45,29 @@ export const WALL_DEPTH = 4.4;
 export const LOCKUP_DEPTH = 4.6;
 /** How far a tenement keeps from a tower behind it */
 export const BACK_CLEAR = 1.8;
-/** The shops in the walls take these names in turn (made-up, SIGNS in downtown.ts) */
-export const TRENCH_SIGNS: SignId[] = ['chicken', 'barber', 'nails', 'deli', 'laundry', 'phones', 'pizza', 'mart', 'tacos', 'noodles'];
+/** The shops in the walls take these names (made-up, SIGNS in downtown.ts), each picked from where it stands (`signAt()`) */
+export const TRENCH_SIGNS: SignId[] = ['chicken', 'barber', 'nails', 'deli', 'laundry', 'phones', 'pizza', 'mart', 'tacos', 'noodles', 'kings', 'lucky7', 'bodega', 'spincycle', 'goldtop', 'blockbeats', 'onestop', 'fryking', 'braids'];
+/** How close (tiles, centre to centre) two tenements may stand and still share a name: never */
+export const NAME_CLEAR = 8;
+/** A small, steady hash of a spot (a tenth of a tile) */
+const hashAt = (x: number, z: number) => {
+  let h = Math.imul(Math.round(x * 10), 73856093) ^ Math.imul(Math.round(z * 10), 19349663);
+  h = Math.imul(h ^ (h >>> 13), 0x5bd1e995);
+  return (h ^ (h >>> 15)) >>> 0;
+};
+const centre = ([x0, z0, x1, z1]: Rect): Pt => [(x0 + x1) / 2, (z0 + z1) / 2];
+/**
+ * A tenement's sign: the one its spot hashes to, stepped on past any a neighbour within `NAME_CLEAR` carries, so no
+ * two near each other match and every block's run is its own (the polish plan's Phase 2; it was a counter, every block
+ * repeating the last block's sequence)
+ */
+export function signAt(box: Rect, near: SignId[]): SignId {
+  const n = TRENCH_SIGNS.length;
+  const [x, z] = centre(box);
+  let i = hashAt(x, z) % n;
+  for (let k = 0; k < n && near.includes(TRENCH_SIGNS[i]); k++) i = (i + 1) % n;
+  return TRENCH_SIGNS[i];
+}
 
 /** The projects' yards (row B but The Block) */
 const YARD_BLOCKS = TRENCH_BLOCKS.filter((b) => b.row === 'B' && b.id !== THE_BLOCK.block);
@@ -153,15 +174,18 @@ const LAID = (() => {
     let a = run.a0;
     for (const w of widths(run.a1 - run.a0, r)) {
       const floors = 3 + Math.floor(r() * 3);
+      const box = plotOf(run.block, run.face, a, a + w, WALL_DEPTH);
+      const [cx, cz] = centre(box);
+      const near = lots.filter((o) => Math.hypot(centre(o.box)[0] - cx, centre(o.box)[1] - cz) < NAME_CLEAR).map((o) => o.sign!);
       const lot: Lot & { block: string } = {
         block: run.block,
-        box: plotOf(run.block, run.face, a, a + w, WALL_DEPTH),
+        box,
         h: heightOf('shop', floors),
         face: run.face,
         seed: 61000 + k,
         type: 'shop',
         floors,
-        sign: TRENCH_SIGNS[k % TRENCH_SIGNS.length],
+        sign: signAt(box, near),
         front: 0.5,
         solids: [],
         escape: true,

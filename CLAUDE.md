@@ -98,7 +98,12 @@ it and has been retired completely. Build only on what's here.
     (`front`; the building itself is `bodyOf()`, its footprints `solids`).
     A few offices and hotels (`TOWER_FLOORS`, up to about 10.6) break the
     skyline, all well under the Emporium.
-  - Shop signs are fixed copy from `SIGNS` (made-up names, never the token).
+  - Shop signs are fixed copy from `SIGNS` (made-up names, never the token);
+    the shops, the hotels (`HOTEL_SIGNS`) and the diners (`DINER_SIGNS`)
+    each take their names in turn as downtown is laid, so no two
+    neighbours read the same (the polish plan's Phase 2; the test holds
+    it). The sign atlas (`SIGN_ATLAS` in infill.ts) lays the boards two
+    to a row and the blades in rows of 14, growing with the list.
     The owner's three shops, `NAMED_SHOPS`, are spread out: Crypto Coffee
     (west of the Emporium, café tables), Dave's Validator (north-east
     triangle, a tech store with a dish) and the Golden Crumpet (south-west
@@ -508,7 +513,10 @@ it and has been retired completely. Build only on what's here.
     street walls (`TENEMENTS`: 4-6 storey tenements, the kits' shops with
     `escape` (a fire escape up the front for certain) and `wall` (their
     brick), Infill fields infill.ts honours; made-up names `TRENCH_SIGNS`
-    (CLUCK HOUSE, GLOSS NAILS, HERO DELI, CELL FIX added to `SIGNS`)) laid
+    (CLUCK HOUSE, GLOSS NAILS, HERO DELI, CELL FIX, KING'S CUTS, LUCKY 7
+    PHARMACY and the rest added to `SIGNS`; each tenement's picked from
+    where it stands by `signAt()`, never one a neighbour within
+    `NAME_CLEAR` carries: the polish plan's Phase 2)) laid
     shoulder to shoulder along the yards' street fronts wherever there's
     room (`WALL_DEPTH`): broken at every way in, `BACK_CLEAR` from the
     towers, never in front of a mural, drawn two to a site through
@@ -947,7 +955,9 @@ it and has been retired completely. Build only on what's here.
     `dining` the cross streets, Circle Street, the diagonal and the lanes,
     `local` the one-way pair, the east street, the crescent and the
     circle's street, `service` the rest), shop units `UNIT` wide with
-    made-up names (`SHOP_NAMES`, one sign atlas a character, drawn by
+    made-up names (`SHOP_NAMES`, 24 a character, `nameAlong()` picking a
+    wall's own run so no two units on a side match; one sign atlas a
+    character, drawn by
     highrise3d.ts's `shopfront()`), the margins' dressing by character
     (`DRESSING`: café tables and umbrellas, menu boards, planters, a
     florist's buckets, crates, newspaper boxes, bike racks), a sculpture by
