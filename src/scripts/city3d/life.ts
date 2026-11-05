@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, moving, neon, rand, toon } from './kit';
 import type { BikeGeometry } from './bikes';
-import { CENTER, SLAB, type Tick } from './world';
+import { CENTER, SLAB, type Env, type Tick } from './world';
 
 import { PLAN, distToStreet, outset, pointAt, streetLength } from './streetplan';
 import { DOWNTOWN, EXT, MARKET } from './layout';
@@ -597,6 +597,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   const poleMats: THREE.Matrix4[] = [];
   const boxMats: THREE.Matrix4[] = [];
   const lamps: { m: THREE.Matrix4; j: Junction; phase: Phase; c: 'r' | 'y' | 'g' }[] = [];
+  /** The left-turn arrows under the lamps where an avenue has a turn lane (docs/highway-plan.md Phase 6, routes.ts `arrows`) */
+  const arrowLamps: { m: THREE.Matrix4; j: Junction; phase: Phase }[] = [];
   const tq = new THREE.Quaternion();
   const yAxis = new THREE.Vector3(0, 1, 0);
   for (const j of JUNCTIONS) {
@@ -633,7 +635,12 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         const phase = phaseOf(u[0], u[1]);
         tq.setFromAxisAngle(yAxis, ry);
         poleMats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, SLAB + 0.95, z), tq, new THREE.Vector3(0.07, 1.9, 0.07)));
-        boxMats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, SLAB + 1.75, z), tq, new THREE.Vector3(0.2, 0.55, 0.16)));
+        const arrow = j.arrows.includes(phase);
+        boxMats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, SLAB + (arrow ? 1.665 : 1.75), z), tq, new THREE.Vector3(0.2, arrow ? 0.72 : 0.55, 0.16)));
+        if (arrow) {
+          const off = new THREE.Vector3(0, 0, 0.085).applyAxisAngle(yAxis, ry);
+          arrowLamps.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x + off.x, SLAB + 1.92 - 3 * 0.17, z + off.z), tq, new THREE.Vector3(1, 1, 1)), j, phase });
+        }
         (['r', 'y', 'g'] as const).forEach((c, k) => {
           const off = new THREE.Vector3(0, 0, 0.085).applyAxisAngle(yAxis, ry);
           lamps.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x + off.x, SLAB + 1.92 - k * 0.17, z + off.z), tq, new THREE.Vector3(1, 1, 1)), j, phase, c });
@@ -656,6 +663,19 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   );
   lamps.forEach((_, i) => lampMesh.setColorAt(i, new THREE.Color(1, 1, 1)));
   scene.add(poles, boxes, fx(lampMesh));
+  // (an arrow pointing to the driver's left: the lamp's own -x)
+  const arrowShape = new THREE.Shape([
+    new THREE.Vector2(-0.065, 0),
+    new THREE.Vector2(-0.01, 0.05),
+    new THREE.Vector2(-0.01, 0.018),
+    new THREE.Vector2(0.055, 0.018),
+    new THREE.Vector2(0.055, -0.018),
+    new THREE.Vector2(-0.01, -0.018),
+    new THREE.Vector2(-0.01, -0.05),
+  ]);
+  const arrowMesh = instanced(new THREE.ShapeGeometry(arrowShape), new THREE.MeshBasicMaterial({ color: '#ffffff' }), arrowLamps.map((l) => l.m));
+  arrowLamps.forEach((_, i) => arrowMesh.setColorAt(i, new THREE.Color(1, 1, 1)));
+  if (arrowLamps.length) scene.add(fx(arrowMesh));
   const lampCol = new THREE.Color();
   const base = { r: new THREE.Color(colors.r), y: new THREE.Color(colors.y), g: new THREE.Color(colors.g) };
   /** The phases with a car inside each junction */
@@ -689,6 +709,11 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       lampMesh.setColorAt(i, lampCol.copy(base[l.c]).multiplyScalar(s === l.c ? 1.6 + night * 1.6 : 0.12));
     });
     lampMesh.instanceColor!.needsUpdate = true;
+    arrowLamps.forEach((l, i) => {
+      const s = lightState(l.j, l.phase, t, true);
+      arrowMesh.setColorAt(i, lampCol.copy(s === 'r' ? base.r : s === 'y' ? base.y : base.g).multiplyScalar(s === 'r' ? 0.1 : 1.6 + night * 1.6));
+    });
+    if (arrowLamps.length) arrowMesh.instanceColor!.needsUpdate = true;
 
     // Junctions with a vehicle still inside them, by the phase it came in on
     for (const o of occupied) o.clear();
@@ -717,7 +742,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       for (const s of v.route.stops) {
         const d = s.enter - 1.0 - (v.p + v.len / 2);
         if (d < -0.05 || d > 10) continue;
-        const light = s.j.lit ? lightState(s.j, s.phase, t) : 'g';
+        const light = s.j.lit ? lightState(s.j, s.phase, t, s.left) : 'g';
         let blocked = false;
         for (const ph of occupied[s.j.ix]) if (ph !== s.phase) blocked = true;
         if (light === 'r' || (light === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
@@ -976,6 +1001,8 @@ interface Person {
 /** Slots kept in the crowd for people who come with a district's chunk (`LifeOpts.reserve`), and those who came before it was built */
 const spare: Person[] = [];
 const early: { idle: Idle[]; movers: ParkPerson[] }[] = [];
+/** Places everyone again for the last frame (buildPeople's), after a chunk's people have taken their spare slots */
+let repaint: (() => void) | null = null;
 /**
  * People who come with a district's chunk (Sunridge's, sunlife.ts): each takes a spare slot in the crowd, with
  * whatever outfit the boot gave it; past the spare slots the rest are left out. The chunk trims its own lists for phones.
@@ -994,14 +1021,15 @@ export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) 
   }
   for (const c of idle) {
     const p = spare.pop();
-    if (!p) return;
+    if (!p) break;
     Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry });
   }
   for (const pp of movers) {
     const p = spare.pop();
-    if (!p) return;
+    if (!p) break;
     Object.assign(p, { kind: 'park', park: pp, m: moment(), face: NaN });
   }
+  repaint?.();
 }
 /** The row an idle person's act plays (a queue stands in their own idle) */
 const clipOf = (act: IdleAct, idle: CrowdClip): CrowdClip => (act === 'queue' ? idle : act);
@@ -1166,7 +1194,8 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   let walkerX = 0;
   let walkerZ = 0;
   let walkerV = 0;
-  tick(({ t, dt, rain, hour }) => {
+  /** Every person placed for the frame (`env`); a chunk's people added since are placed again by `repaint()` */
+  const place = ({ t, dt, rain, hour }: Env) => {
     const pace = hurry(rain);
     {
       const dj = Math.hypot(walker.x - walkerX, walker.z - walkerZ);
@@ -1311,7 +1340,14 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       }
     });
     people3d.commit();
+  };
+  let last: Env | null = null;
+  tick((env) => {
+    last = env;
+    place(env);
   });
+  // (under reduced motion the ticks run on the first frame only: a chunk's people, added after it, are placed here)
+  repaint = () => last && place({ ...last, dt: 0 });
 }
 
 /* ======================================================================

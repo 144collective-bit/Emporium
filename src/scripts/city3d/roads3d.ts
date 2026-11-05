@@ -80,3 +80,32 @@ export function dashes(list: THREE.Matrix4[], pts: Pt[], off: number, gap: numbe
   }
 }
 
+/** An arrow lying flat, pointing +x, `len` long: straight, turning left (seen from above, north up) or straight-and-right */
+export function arrowShape(kind: 'straight' | 'left' | 'right', len: number): THREE.Shape {
+  const s = new THREE.Shape();
+  const w = 0.09;
+  const head = 0.42;
+  if (kind === 'straight') {
+    s.moveTo(-len / 2, -w);
+    s.lineTo(len / 2 - head, -w);
+    s.lineTo(len / 2 - head, -0.26);
+    s.lineTo(len / 2, 0);
+    s.lineTo(len / 2 - head, 0.26);
+    s.lineTo(len / 2 - head, w);
+    s.lineTo(-len / 2, w);
+    return s;
+  }
+  // A shaft, then a head turned off to one side (left: towards -z seen from above with north up, as +x is east)
+  const side = kind === 'left' ? -1 : 1;
+  const k = len * 0.2;
+  s.moveTo(-len / 2, -w);
+  s.lineTo(k + w, -w);
+  s.lineTo(k + w, side * 0.5);
+  s.lineTo(k + 0.26, side * 0.5);
+  s.lineTo(k, side * (0.5 + head));
+  s.lineTo(k - 0.26, side * 0.5);
+  s.lineTo(k - w, side * 0.5);
+  s.lineTo(k - w, w);
+  s.lineTo(-len / 2, w);
+  return s;
+}

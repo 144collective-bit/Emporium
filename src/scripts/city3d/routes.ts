@@ -17,6 +17,7 @@
  * drives the cars along them, round and round.
  */
 import { swingRoadY } from './swingbridge';
+import { onRural } from './rural';
 import { LANE, MEDIAN } from './layout';
 import { PLAN, distToStreet, offsetLine, raised, type Street } from './streetplan';
 import { cornerCurve, fromHighway } from './highway';
@@ -38,6 +39,13 @@ export interface Junction {
   three: boolean;
   /** A ramp leaves or joins the raised highway's deck here (its outer lane): a merge, no corner */
   merge: boolean;
+  /**
+   * The ways (x, z) whose left turns have a turn lane and an arrow of their own here: a four-way crossroads on an
+   * avenue (docs/highway-plan.md Phase 6), the avenue's ways
+   */
+  arrows: Phase[];
+  /** A road carries on here as another street (a grid road's town piece into its country road, rural.ts): straight on only */
+  join: boolean;
 }
 /**
  * A route a car drives, round and round: a closed centre line in its lane
@@ -48,7 +56,7 @@ export interface Route {
   pts: Pt[];
   cum: number[];
   len: number;
-  stops: { j: Junction; enter: number; exit: number; phase: Phase }[];
+  stops: { j: Junction; enter: number; exit: number; phase: Phase; left?: boolean }[];
   /** Up on the raised ring highway's deck all the way round (viaduct.ts `DECK_Y`): the first `RING_ROUTES` */
   deck?: boolean;
   /** The road's height at each point, where any of it is off the ground (the deck, its ramps); none: all at street level */
@@ -58,7 +66,34 @@ export interface Route {
 /** Lights cycle each phase in turn: green, then yellow, then red while the others go */
 const CYCLE2 = 22;
 const CYCLE3 = 30;
-export function lightState(j: Junction, phase: Phase, t: number): 'g' | 'y' | 'r' {
+/** Where a way has an arrow (`Junction.arrows`): its left turns first (green, yellow), then its traffic ahead and right */
+export const ARROW = { left: 6, ahead: 8, side: 9, amber: 1, yellow: 2 };
+/** An arrow junction's slots in turn: [phase, left (its arrow) or not, green, yellow] */
+function slotsOf(j: Junction): [Phase, boolean, number, number][] {
+  const out: [Phase, boolean, number, number][] = [];
+  for (const p of ['x', 'z'] as Phase[])
+    if (j.arrows.includes(p)) out.push([p, true, ARROW.left, ARROW.amber], [p, false, ARROW.ahead, ARROW.yellow]);
+    else out.push([p, false, ARROW.side, ARROW.yellow]);
+  return out;
+}
+/** How long an arrow junction's lights take to go round */
+export const arrowCycle = (j: Junction) => slotsOf(j).reduce((n, [, , g, y]) => n + g + y, 0);
+/**
+ * The light for traffic coming in on `phase` at t (`left`: turning left, which at an arrow junction waits for its
+ * arrow; elsewhere it goes with the rest)
+ */
+export function lightState(j: Junction, phase: Phase, t: number, left = false): 'g' | 'y' | 'r' {
+  if (j.arrows.length) {
+    const slots = slotsOf(j);
+    let k = (t + j.ix * 5.5) % arrowCycle(j);
+    const mine = left && j.arrows.includes(phase);
+    for (const [p, l, g, y] of slots) {
+      if (p === phase && l === mine) return k < g ? 'g' : k < g + y ? 'y' : 'r';
+      k -= g + y;
+      if (k < 0) return 'r';
+    }
+    return 'r';
+  }
   if (j.three) {
     const k = (t + j.ix * 4.5) % CYCLE3;
     const start = phase === 'x' ? 0 : phase === 'z' ? 10 : 20;
@@ -70,6 +105,23 @@ export function lightState(j: Junction, phase: Phase, t: number): 'g' | 'y' | 'r
   return k < 11 ? 'r' : k < 20 ? 'g' : 'y';
 }
 
+/**
+ * The avenues' ways with a turn lane and an arrow at a crossing (docs/highway-plan.md Phase 6): the busiest junctions,
+ * lit four-way crossroads where an avenue (two lanes each way) meets a street going on both sides, not where a
+ * diagonal comes in or a ramp lands
+ */
+function arrowsAt(c: { at: Pt; streets: string[]; lights: boolean }): Phase[] {
+  if (!c.lights || c.streets.some((id) => id.startsWith('diag') || id === 'uptown-diag' || id === 'highway' || id.startsWith('ramp-'))) return [];
+  const streets = c.streets.map((id) => PLAN.streets.find((s) => s.id === id)!);
+  // (each way in: a street's asphalt 6 out along each axis)
+  const arm = (dx: number, dz: number) => streets.find((s) => distToStreet(s, [c.at[0] + dx, c.at[1] + dz]) < 0.5);
+  const ways = [arm(6, 0), arm(-6, 0), arm(0, 6), arm(0, -6)];
+  if (ways.some((w) => !w)) return [];
+  const out: Phase[] = [];
+  if (ways[0]!.lanes === 2 && ways[1]!.lanes === 2) out.push('x');
+  if (ways[2]!.lanes === 2 && ways[3]!.lanes === 2) out.push('z');
+  return out;
+}
 export const JUNCTIONS: Junction[] = PLAN.crossings.map((c, ix) => ({
   ix,
   at: c.at,
@@ -78,6 +130,8 @@ export const JUNCTIONS: Junction[] = PLAN.crossings.map((c, ix) => ({
   // (downtown's diagonals and Uptown's: uptown.ts)
   three: c.streets.some((id) => id.startsWith('diag') || id === 'uptown-diag'),
   merge: c.streets.includes('highway') && c.streets.some((id) => id.startsWith('ramp-')),
+  arrows: arrowsAt(c),
+  join: c.id.endsWith('-join') && c.streets.some((id) => PLAN.streets.find((s) => s.id === id)?.kind === 'rural'),
 }));
 
 /** The right-hand side of travel along (dx, dz) */
@@ -182,6 +236,7 @@ function turnOf(j: Junction, uIn: Pt, uOut: Pt): Turn | null {
   const cross = uOut[0] * rightOf(...uIn)[0] + uOut[1] * rightOf(...uIn)[1];
   const dot = uOut[0] * uIn[0] + uOut[1] * uIn[1];
   if (j.merge) return dot > 0.7 ? 'merge' : null;
+  if (j.join) return dot > 0.7 ? 'straight' : null;
   if (dot < -0.7 || Math.abs(cross) < 0.4) return null;
   return cross > 0 ? 'right' : 'left';
 }
@@ -258,6 +313,14 @@ function joinLegs(list: Leg[]): Pt[] {
       out = [...A, ...B.slice(k)];
       continue;
     }
+    // Straight on onto the next street (a join, rural.ts): ease across from one's lane to the other's over a few tiles
+    if (list[i - 1].turn === 'straight') {
+      const [e, s0] = [A[A.length - 1], B[0]];
+      const [uA, uB] = [dir(A[A.length - 2], e), dir(s0, B[1])];
+      A.pop();
+      out = [...A, [e[0] - uA[0] * 3, e[1] - uA[1] * 3], [s0[0] + uB[0] * 3, s0[1] + uB[1] * 3], ...B.slice(1)];
+      continue;
+    }
     const a0 = A[A.length - 2];
     const uA = dir(a0, A[A.length - 1]);
     const uB = dir(B[0], B[1]);
@@ -292,7 +355,8 @@ function legsOf(cycle: { from: State; turn: Turn }[], r: () => number): Leg[] {
   const legs: (Leg & { first: State; last: State; lastIx: number; inMerge: boolean; states: State[] })[] = [];
   moves.forEach((m, k) => {
     const prev = legs.at(-1);
-    if (prev && moves[k - 1].turn === 'straight') {
+    // (straight on along the same way; at a join, rural.ts, straight on onto the next street is a leg of its own)
+    if (prev && moves[k - 1].turn === 'straight' && m.from.w === prev.first.w) {
       [prev.last, prev.lastIx] = [m.from, k];
       prev.states.push(m.from);
     }
@@ -528,7 +592,10 @@ function makeRoute(pts: Pt[]): Route {
       }
       if (enter >= 0) {
         const a = pointOn(route, enter, 0).dir;
-        route.stops.push({ j, enter: mm(enter), exit: mm(exit), phase: phaseOf(a[0], a[1]) });
+        const b = pointOn(route, exit, 0).dir;
+        // (a left turn: it comes out heading to its left, across the way coming the other way)
+        const left = a[0] * b[1] - a[1] * b[0] < -0.5;
+        route.stops.push({ j, enter: mm(enter), exit: mm(exit), phase: phaseOf(a[0], a[1]), ...(left ? { left } : {}) });
       }
     }
   }
@@ -597,7 +664,7 @@ const DRIVE_MOVES = 9;
  * millimetre) as whole millimetres, each the step from the one before, in one string (half the size gzipped of the
  * numbers as they are), and decoded to exactly the same numbers
  */
-export type PackedRoute = { d: string; stops: [number, number, number, Phase][]; y?: string };
+export type PackedRoute = { d: string; stops: ([number, number, number, Phase] | [number, number, number, Phase, 1])[]; y?: string };
 /** The ring highway's own routes, first: all the way round on its deck, both ways, in both lanes (docs/highway-plan.md Phase 2) */
 export const RING_ROUTES = 4;
 /** A route as made, up on the ring highway's deck if it's one of the first `RING_ROUTES` */
@@ -638,12 +705,12 @@ const unpackYs = (d: string) => {
   return d.split(',').map((x) => (v += Number(x)) / 1000 + 0);
 };
 export const packRoutes = (routes: Route[]): PackedRoute[] =>
-  routes.map((r) => ({ d: packPts(r.pts), stops: r.stops.map((s): [number, number, number, Phase] => [s.j.ix, s.enter, s.exit, s.phase]), ...(r.ys ? { y: packYs(r.ys) } : {}) }));
+  routes.map((r) => ({ d: packPts(r.pts), stops: r.stops.map((s): [number, number, number, Phase] | [number, number, number, Phase, 1] => (s.left ? [s.j.ix, s.enter, s.exit, s.phase, 1] : [s.j.ix, s.enter, s.exit, s.phase])), ...(r.ys ? { y: packYs(r.ys) } : {}) }));
 export const unpackRoutes = (packed: PackedRoute[]): Route[] =>
   packed.map(({ d, stops, y }, i) => {
     const pts = unpackPts(d);
     const cum = cumOf(pts);
-    return onDeck({ pts, cum, len: cum.at(-1)!, stops: stops.map(([ix, enter, exit, phase]) => ({ j: JUNCTIONS[ix], enter, exit, phase })), ...(y ? { ys: unpackYs(y) } : {}) }, i);
+    return onDeck({ pts, cum, len: cum.at(-1)!, stops: stops.map(([ix, enter, exit, phase, left]) => ({ j: JUNCTIONS[ix], enter, exit, phase, ...(left ? { left: true } : {}) })), ...(y ? { ys: unpackYs(y) } : {}) }, i);
   });
 
 /** How far a route's line may stray from the lanes it was drawn along when its points are thinned (`simplify()`) */
@@ -746,12 +813,16 @@ function allRoutes(): Route[] {
  * road (life.ts keeps the traffic round the camera: a car that's drifted far
  * off is put back at one of these near you, out of sight)
  */
+/** On the country roads, one spot in this many (rural.ts: a little traffic out there) */
+export const RURAL_SPOTS = 6;
 export const SPOTS: { r: number; p: number; x: number; z: number; y: number }[] = ROUTES.flatMap((route, ri) => {
   const out: { r: number; p: number; x: number; z: number; y: number }[] = [];
   for (let p = 0; p < route.len; p += 7) {
     // Not inside a junction
     if (route.stops.some((s) => p > s.enter - 3 && p < s.exit + 2)) continue;
     const q = pointOn(route, p, 0).at;
+    // (a little traffic on the country roads: one spot in six, rural.ts)
+    if (onRural(q[0], q[1], 1) && Math.round(p / 7) % RURAL_SPOTS) continue;
     // (`y`: the road's height there, up on the raised highway or a ramp)
     out.push({ r: ri, p, x: q[0], z: q[1], y: heightOn(route, p) });
   }

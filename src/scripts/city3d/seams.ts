@@ -80,7 +80,7 @@ export const C = {
   slip: -12,
   alley: -13,
 } as const;
-const STREET_CODE: Record<StreetKind, number> = { street: C.street, avenue: C.avenue, ramp: C.highway, alley: C.alley, highway: C.highway };
+const STREET_CODE: Record<StreetKind, number> = { street: C.street, avenue: C.avenue, ramp: C.highway, alley: C.alley, highway: C.highway, rural: C.street };
 const isWay = (c: number) => c <= C.walk || c === C.highway;
 const isOpen = (c: number) => c === C.open || c === C.outside;
 

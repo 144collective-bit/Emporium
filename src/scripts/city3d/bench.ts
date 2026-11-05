@@ -53,6 +53,13 @@ export const BENCH_VIEWS: BenchView[] = [
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most
   { id: 'drive', name: 'Driving, the east ring avenue', pos: [RING_HI + 1.5 * LANE, 1.9, 52], target: [RING_HI + 1.5 * LANE, 1.2, 30] },
   { id: 'traffic', name: 'Traffic at a ring junction', pos: [RING_HI - 10, 9, CORE_ROADS[1] + 10], target: [RING_HI, 0, CORE_ROADS[1]] },
+  // The raised highway and the roads (docs/highway-plan.md Phase 9): along the deck, an exit's cloverleaf, a river
+  // span, Kestrel Bridge and a country road
+  { id: 'hw-straight', name: 'The raised highway, on the deck', pos: [110, 5.3, -168.5], target: [160, 4.6, -168.5] },
+  { id: 'hw-exit', name: 'The raised highway, exit 3', pos: [312, 32, 32], target: [280, 2, -4.5] },
+  { id: 'hw-river', name: 'The raised highway, a river span', pos: [-170, 10, 125], target: [-215, 2, 95] },
+  { id: 'swing', name: 'Kestrel Bridge', pos: [-78, 9, 100], target: [-112, 1.5, 96] },
+  { id: 'rural', name: 'A country road', pos: [72, 6, -380], target: [64.5, 0.5, -420] },
 ];
 /** The route, through these views in order and back home */
 const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];

@@ -347,7 +347,8 @@ test('up on the deck and the ramps a car drives on them; under them it stays on 
 });
 
 // Phase 4 (viadress.ts): the signs, the sound walls, what's under the deck and its lights
-import { GANTRIES, GANTRY, METRO_S, MURALS, RAMP_LAMPS, RAMP_SIGNS, SOUND_WALLS, UNDER, UNDER_CARS, UNDER_LIGHTS, UNDER_SOLIDS, exitBadge, gantryPanel } from '../src/scripts/city3d/viadress';
+import { RAMP_LAMPS, UNDER, UNDER_CARS, UNDER_LIGHTS, UNDER_SOLIDS, exitBadge } from '../src/scripts/city3d/viadress';
+import { GANTRIES, GANTRY, METRO_S, MURALS, RAMP_SIGNS, SOUND_WALLS, gantryPanel } from '../src/scripts/city3d/viasigns';
 
 test('two gantries before every off-ramp, over its own carriageway, clear of the metro overhead and the deck lamps', () => {
   const offs = RAMPS.filter((r) => r.kind === 'off');
@@ -366,10 +367,10 @@ test('two gantries before every off-ramp, over its own carriageway, clear of the
 test('sound walls only where homes are beside the deck, on their side, never where a ramp joins', async () => {
   const { SUNRIDGE_RECT } = await import('../src/scripts/city3d/sunridge');
   const { TRENCH_RECT } = await import('../src/scripts/city3d/trenches');
-  const { LOT9_RECT } = await import('../src/scripts/city3d/lot9');
+  const { ENDSWOOD_RECT } = await import('../src/scripts/city3d/endswood');
   const { NORTH_RECT } = await import('../src/scripts/city3d/uptownnorth');
   const { deckGap } = await import('../src/scripts/city3d/viaground');
-  const homes = [SUNRIDGE_RECT, TRENCH_RECT, LOT9_RECT, NORTH_RECT];
+  const homes = [SUNRIDGE_RECT, TRENCH_RECT, ENDSWOOD_RECT, NORTH_RECT];
   const inR = (r: number[], x: number, z: number) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
   assert.ok(SOUND_WALLS.length >= 2);
   for (const w of SOUND_WALLS)

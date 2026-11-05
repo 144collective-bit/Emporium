@@ -82,6 +82,14 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'viaduct', rect: [HIGHWAY_BOX[0] - 10, HIGHWAY_BOX[1] - 10, HIGHWAY_BOX[2] + 10, HIGHWAY_BOX[3] + 10], load: () => import('./viaduct3d') },
   // The swing bridge, Uptown to The Trenches (swingbridge.ts, docs/highway-plan.md Phase 5; swingbridge3d.ts)
   { id: 'swing', rect: [SWING_RECT[0] - 20, SWING_RECT[1] - 20, SWING_RECT[2] + 20, SWING_RECT[3] + 20], load: () => import('./swingbridge3d') },
+  // The turn lanes painted at the busiest avenue junctions (turnlanes.ts, docs/highway-plan.md Phase 6; turnlanes3d.ts)
+  // (all over the town and Crestmont: its junctions' data is the chunk's own, so the boot doesn't work it out)
+  { id: 'turnlanes', rect: [EXT[0], EXT[0], EXT[1], EXT[1]], load: () => import('./turnlanes3d') },
+  // The concrete-era look on the town's streets (streetwear.ts, docs/highway-plan.md Phase 8; streetwear3d.ts): gutters,
+  // drains, patches, manholes, stop lines, inside the highway
+  { id: 'streetwear', rect: [HIGHWAY_BOX[0], HIGHWAY_BOX[1], HIGHWAY_BOX[2], HIGHWAY_BOX[3]], load: () => import('./streetwear3d') },
+  // The country roads past the highway (rural.ts, docs/highway-plan.md Phase 7; rural3d.ts): all four ways out of town
+  { id: 'rural', rect: [EXT[0], EXT[0], EXT[1], EXT[1]], load: () => import('./rural3d') },
 ];
 
 

@@ -39,6 +39,7 @@ import { FOUNTAINS as DRIVE_FOUNTAINS } from './coral';
 import { CIVIC } from './crestsites';
 import { SUNRIDGE_RECT, inSunridge } from './sunridge';
 import { LOT9_RADIO, LOT9_RECT, inLot9 } from './lot9';
+import { ENDSWOOD_RECT, inEndswood } from './endswood';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -115,8 +116,9 @@ export function ambienceAt(x: number, z: number, lift = 0): Ambience {
   // The Trenches: all of it inside, fading out over 30 past its edge
   const [tx0, tz0, tx1, tz1] = TRENCH_RECT;
   const past = inTrenches(x, z) ? 0 : Math.hypot(Math.max(tx0 - x, x - tx1, 0), Math.max(tz0 - z, z - tz1, 0)) + 4;
-  // (and Lot 9, south of the highway: its dogs, sirens far off; lot9.ts)
-  const fromLot9 = inLot9(x, z) ? 0 : Math.hypot(Math.max(LOT9_RECT[0] - x, x - LOT9_RECT[2], 0), Math.max(LOT9_RECT[1] - z, z - LOT9_RECT[3], 0)) + 4;
+  // (and Endswood south of the highway, and Lot 9 south of it: their dogs, sirens far off; endswood.ts, lot9.ts)
+  const fromRect = (r: readonly number[], inside: boolean) => (inside ? 0 : Math.hypot(Math.max(r[0] - x, x - r[2], 0), Math.max(r[1] - z, z - r[3], 0)) + 4);
+  const fromLot9 = Math.min(fromRect(LOT9_RECT, inLot9(x, z)), fromRect(ENDSWOOD_RECT, inEndswood(x, z)));
   const hood = 1 - smooth(0, 30, Math.min(past, fromLot9));
   let box = Infinity;
   for (const b of BOOMBOXES) box = Math.min(box, Math.hypot(x - b.x, z - b.z));

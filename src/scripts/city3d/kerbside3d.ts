@@ -24,6 +24,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { SLAB } from './world';
 import { site } from './tilework';
+import { arrowShape } from './roads3d';
 import { LANE, MEDIAN } from './layout';
 import { parkedCars, type CarId } from './cars';
 import { HIGHRISES } from './highrise';
@@ -132,35 +133,6 @@ function sign(b: Batch, row: number, w: number, h: number, x: number, z: number,
 
 /* ---------- Painted arrows ---------- */
 
-/** An arrow lying flat, pointing +x, `len` long: straight, turning left (seen from above, north up) or straight-and-right */
-function arrowShape(kind: 'straight' | 'left' | 'right', len: number): THREE.Shape {
-  const s = new THREE.Shape();
-  const w = 0.09;
-  const head = 0.42;
-  if (kind === 'straight') {
-    s.moveTo(-len / 2, -w);
-    s.lineTo(len / 2 - head, -w);
-    s.lineTo(len / 2 - head, -0.26);
-    s.lineTo(len / 2, 0);
-    s.lineTo(len / 2 - head, 0.26);
-    s.lineTo(len / 2 - head, w);
-    s.lineTo(-len / 2, w);
-    return s;
-  }
-  // A shaft, then a head turned off to one side (left: towards -z seen from above with north up, as +x is east)
-  const side = kind === 'left' ? -1 : 1;
-  const k = len * 0.2;
-  s.moveTo(-len / 2, -w);
-  s.lineTo(k + w, -w);
-  s.lineTo(k + w, side * 0.5);
-  s.lineTo(k + 0.26, side * 0.5);
-  s.lineTo(k, side * (0.5 + head));
-  s.lineTo(k - 0.26, side * 0.5);
-  s.lineTo(k - w, side * 0.5);
-  s.lineTo(k - w, w);
-  s.lineTo(-len / 2, w);
-  return s;
-}
 /** Lay an arrow at (x, z) pointing along (ux, uz) */
 function arrow(b: Batch, kind: 'straight' | 'left' | 'right', len: number, x: number, z: number, ux: number, uz: number) {
   // (a shape lies in x and y: turned flat, its +y becomes -z)
