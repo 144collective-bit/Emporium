@@ -1,0 +1,498 @@
+# The polish plan: the whole city, one pass
+
+The owner's brief (2026-11): "polish the entire city... the world and its
+menus, items, clothes, cars, everything." This is the audit and the plan
+that came out of it. Read the code, not the game: every finding below was
+checked against the source (file and line), the tests (1,173 pass in about
+164 s), the typecheck (clean) and the budgets (`npm run budget`: the boot
+715.5 of 730 KB gzipped, the clips file 558 of 660 KB). Nothing here was
+seen on a screen; the shots pass (`npm run shots`) before and after each
+phase is where the eyes come in.
+
+As every plan in `docs/`: one phase at a time, each with the owner's
+sign-off; keep it up to date. Nothing in it brings back a retired thing,
+moves anything that exists (the snapshot holds), or spends real money.
+
+## The state of the city, in one paragraph
+
+Sector 7 is big (about 128,000 lines in `src/scripts/city3d`, 354
+modules, 41 places with pins, 15 districts, every rules file DOM-free and
+tested) and structurally sound: the palette test holds one ground
+palette, the seam map ranks every edge, the lamps mix at the sodium
+seams, every mission's counter is incremented somewhere, every catalog
+entry has a card, dead CSS is near zero, and the car, the character and
+the animation are the deepest work in the repo. What a player meets is
+not bugs but **unevenness**: the newest half of the city has no sound of
+its own, 20 of the 41 places open a panel that says "coming soon", the
+same hotel sign stands twice on one block, every crowd in every district
+wears the same two outfits, the traffic drives through your parked car,
+and a kart race pays thirty times what the shops do. The polish is in
+making the whole city feel as finished as its best parts.
+
+## What's rough, by theme
+
+Ranked by what a player notices first. Each item says where it is, why it
+matters, the fix, its size (S a few hours, M a day or two, L more) and
+whether it needs the owner's call.
+
+### 1. Balance: the business half of the game is irrelevant within an hour
+
+Computed from the constants (catalog.ts, tycoon.ts, kart-cups.ts,
+fightsave.ts), not guessed:
+
+| Loop (from level 1) | Dorras an hour | XP an hour |
+|---|---|---|
+| Your stall, standing at it, best goods | about 3,300 (1,100 with the starting 600) | 100-200 |
+| Contracts, three at once, driving | about 1,400-2,800 | up to 480 |
+| Kart park, Rookie single race, winning | about 35,000 (10,000 mid-pack) | about 7,500 |
+| Fight Club, Knuckles (level 1), Mayor (level 3) | 25,000-45,000; about 90,000 at level 3 | 200 a win |
+| Neon Cup (level 9) | about 300,000 | |
+
+The XP curve is level 5 at 1,358, level 10 at 5,612, level 20 at 20,749.
+Five won kart races reach level 5 in about twelve minutes; sales alone
+take seven to fourteen hours. A first corner shop (20,000) is forty
+minutes of karting or ten hours of stall-keeping. The guide, the Signal
+tower, the Post office, the Apartments and the Vault's loans are the
+game's teaching spine, and none of it matters once the player finds the
+kart park or the ring. Neither race nor bout has a cooldown; the daily
+challenge (2,500 once a day) is the only repeatable reward with the right
+shape. · **Fix** (the owner's call on which way): cut the repeatable
+prizes (Rookie 500/300/200, a single race at half a cup race's, bouts a
+third), or a daily soft cap (the first N races and bouts a day pay in
+full, then a fraction), and raise the business side (XP a sale 1 to 2-3,
+a contract's 40 to 80, a sold-out bonus a shelf). Existing saves keep
+their Dorras. · M · needs the owner.
+
+### 2. Dead ends: twenty places say "coming soon"
+
+`CityMap.astro:1108-1295`: The Block and Lot 9 ("Story coming soon"),
+Club PULSE, the Rusty Nail, the stadium, Crestmont's hotel, civic hall and
+golf club, the Harbour Master, Sunridge's club and school, the seven
+resorts and the Sphere. Two of them have doors that prompt "Enter ..." and
+open the empty panel (walk.ts:130, :3322). The stadium's big screen reads
+EVENTS COMING SOON in 3D (stadium3d.ts:120) and its masts light an empty
+pitch every night (:260-261). Meanwhile the shows that do run on the
+clock (the fountain show every three minutes, the volcano, the Sphere's
+slides, the tall ship and the bridges) are announced nowhere: no panel,
+the hub or the map reads `showAt()` or `eruptionAt()`. · **Fix, cheap
+and no new game**: a live line in each panel from the clock ("Next show
+in 1:40", "Ships in: ORCA STAR at berth 1", "Doors at ten · guest list
+only", "Next event: ..." on a fixture board painted on the stadium's
+screen, the masts dimmed except on a fixed "match night"), the club's
+door swelling its beat (ambience `club` exists) with a bouncer's toast
+instead of a panel, the bar selling the snack (`SNACK_BARS`,
+inventory.ts:250: diners and market stalls today), a door prompt for
+Crestmont's hotel, civic hall and golf club (their doors are in the data,
+crestsites.ts:50, but not in `ALL_DOORS`, walk.ts:130). · S each ·
+copy is the owner's.
+
+The bigger next steps the plans already list, for the owner's queue: the
+Night Market's stalls run like the corner shops (the corner-shop rules
+carry it whole: `Corner` places, couriers, clerks, levels), the Sky Wheel
+ridden (the rides framework and `capsuleAt()` exist; wheel.ts:4 "nobody
+rides it"), the Docks' Phase 4 (nothing in the port moves: docksport3d.ts
+draws sites only, the clock tower stopped at ten past ten, :153), the
+Circle Theatre, the Exchange and The Aurelian as places (pins and a
+one-line panel each), Kestrel Bridge as a place (a named swinging bridge
+with no pin or map entry), the Wharf, the Refinery and Harbor Stores with
+a lobby prompt. · M each · the owner's picks.
+
+### 3. Sound stops at the old town's edge
+
+`ambienceAt()` derives the town's hum from `CITY_EXT` (ambience.ts:100-104)
+and the avenues' rush only inside the highway (:109-112). Sampled: Uptown
+Circle gives road 0.5 and open 1.0 with no hum at all; the spire's spawn
+city 0.09; Starlight Mall's hall open 0.84; the Docks, the airport, the
+kart park's gate and the stadium's forecourt open 1.0 and nothing else. So
+a player stands in a glass atrium under a skyscraper hearing wind over
+grass. The test only caps Uptown's hum (tests/ambience.test.ts:67-68), so
+zero passes. There is no layer for the waterfront and the Night Market
+(gulls, a foghorn, the market's hum and sizzle: waterfront plan item 4),
+the Docks (gulls, a crane's hoist, a horn: docks plan Phase 4), the
+airport (the jets on the timetable; `aero()` voices only your own
+aircraft, sound.ts:964), the mall (an indoor hum) or Southfield Yards (a
+compressor, a reversing beep). · **Fix**: the hum from the built-up
+rects, not `CITY_EXT`; new layers `waterfront`, `docks`, `jets`, `indoor`,
+`yards` in the DOM-free file with a test row each (a band, not a
+ceiling), mixed in sound.ts. · M · low risk (sound is opt-in).
+
+### 4. Sameness: the same thing twice, side by side
+
+- **Two HOTEL NOVAs next door** on the Emporium's own block, four
+  downtown, both diners STARLITE DINER: `downtown.ts:356` gives every
+  hotel and diner the one sign (`SIGNS` has one hotel name, :167).
+  **Fix**: `HOTEL_SIGNS` / `DINER_SIGNS` rotations as `SHOP_SIGNS` (:183),
+  two or three made-up names each. · S.
+- **The Trenches' tenements**: 65 shopfronts share 10 names assigned in a
+  fixed order (`streetwall.ts:49, 164`), so every block repeats the last
+  block's sequence. **Fix**: six to eight more names, a seeded pick. · S.
+- **Uptown's shops**: 12 names a character for about 90 dining, 69 local
+  and 32 luxe units; each dining and local name stands six to eight times,
+  the luxe pick a fixed stride (highrise3d.ts:1047). **Fix**: 24 names a
+  character (the sign atlas has 32 cells). · S.
+- **One crowd everywhere**: `cityOutfit()` (character.ts:691-724) gives
+  everyone a suit (55%, three of its seven top colours black) or a hoodie,
+  caps only, the default green lenses (wardrobe.ts:53); life.ts:1152 uses
+  it for every district: suited joggers in Westlake, suited kids on The
+  Block, suited cooks at the Night Market. The wardrobe's track, varsity,
+  puffer, beanies, buckets and headphones are never on a crowd person
+  (only the kart rivals wear track). **Fix**: an outfit picker by role and
+  district (track for joggers and kids, hoodies and beanies in The
+  Trenches, lighter suits in Uptown and Crestmont, a lens palette), seeded
+  from the person so no two neighbours match; each new kind is one more
+  instanced-mesh set a detail level, so phones take at most one. · M ·
+  medium risk (draws: measure with `?fps`).
+- **One engine voice** for the car, the bike, the kart and the boat
+  (sound.ts:888; only the Glow Pod's `whine` differs); `gearOf()`'s four
+  gears make a scooter shift like a saloon. **Fix**: a `voice` per vehicle
+  kind and car class (a few oscillator and filter presets). · S-M.
+- **One lamp post** in every district (two tones, white and sodium): the
+  Strip's sidewalks under its neon resorts and Beverly-Hills Crestmont
+  carry downtown's municipal post. **Fix** (judgment): a `LampStyle` per
+  district. · M · the owner's call.
+- **Top speeds cluster**: 72 to 104 km/h across eleven cars, three at
+  77-80, the supercar 3 km/h over the coupe (`tune()`, drive-sim.ts:85);
+  the feel numbers are distinct, the straights aren't. **Fix**: widen the
+  range, split the pickup and the off-roader (both `speed: 0.6`); re-check
+  protocol.ts's `SPEEDS`. · S.
+
+### 5. Traffic holes, close to the camera
+
+- **Traffic drives through your parked car, bike or kart.** life.ts
+  slows only for `walker` (your own position: index.ts:1514-1518) and
+  `stoppers`, which only the taxi pushes to (taxi.ts:111); drive.ts's
+  `parkedCircles()` (:184) serves walking only. Park at the kerb, get
+  out, and the next car passes through the bonnet. **Fix**: drive.ts
+  pushes a `stoppers` entry per parked vehicle; cap the wait so a car
+  left mid-junction is respawned by the pool rather than stalling a lane.
+  · S · low.
+- **Left turns aren't checked against oncoming cars**: a junction is
+  `occupied` by phase (life.ts:695) and a car waits only for another
+  phase (:722), so a left-turner and the oncoming straight car on the
+  same phase pass through each other in the box. **Fix**: record the arm
+  (or `turnOf()`'s kind) with the phase and hold the left-turner. · M ·
+  medium (queueing at busy junctions: the routes test and the bench's
+  traffic view guard it).
+- **Buses are empty**: carfine.ts:83 skips side-window passengers for
+  buses; nobody waits at the shelters. **Fix**: flat heads behind the
+  glass (the `through()` trick), an idle at a shelter now and then. · S.
+- **The taxi says "Here you are" at a cul-de-sac's nearest street**
+  (`project()`, routes.ts:764-781; taxi.ts:313) when the place is a walk
+  away (Crestmont's Overlook). **Fix**: past about 15 tiles, "as close as
+  the road goes" and a waypoint. · S.
+
+### 6. The other vehicles haven't caught up with the car
+
+- **No brake lights or indicators on the bike and the kart**: drive.ts
+  computes `carLights()` every frame (:579) but only `takeCar()` wires a
+  `lights` hook (:272). · S-M.
+- **A "door" sound on getting on a bike or into a kart** (drive.ts:430,
+  :452). · S.
+- **The street kart drives on the saloon's `NEUTRAL` feel**
+  (drive.ts:180). **Fix**: a `KART_FEEL` (light, quick rack, loose tail).
+  · S.
+- **The cockpit view has no cockpit**: fly.ts:62 puts the camera ahead
+  of the nose; the aircraft draw glazing only, no seat, panel or Degen.
+  Against the car's full interior it's the weakest first person. **Fix**:
+  a small in-canopy interior for your own three aircraft in the vehicle
+  chunk, the camera at the pilot's eye. · M · the owner's call on chunk
+  size.
+- **Bump shakes ignore reduced motion**: drive.ts:576, :654-657 and the
+  speed FOV (:663); kart.ts:364 gates its own. · S.
+- The painted mirrors, other players' getting in not shown, and the
+  rides' empty seat (you vanish on the taxi, the metro, the river bus and
+  the monorail; the "rides seen" seated figure is the animation revamp's
+  held-back Phase 4) are documented and the owner's to schedule.
+
+### 7. Menus: one kit, several habits
+
+- **The first screen is a log-in that can't log in**: the form's submit
+  is the coin-yellow main button (`CityMap.astro:121-133`) and only
+  prints "Accounts are coming soon..." (:706, :712); Play as guest is the
+  plain button. Play is two screens and two taps away. **Fix**: Play as
+  guest the main button and the form a quiet "Log in · coming soon", or
+  the form hidden until accounts exist. · S · the owner's call.
+- **Destructive actions with no confirm**: Give up a mission
+  (missions-ui.ts:86), Give up a contract (tycoon-ui.ts:700), Drop a
+  series (kart-ui.ts:693), Quit in the race HUD (:992) and the fight HUD
+  (fight-ui.ts:545; "counts as a loss" is said only on the menu tab).
+  Every purchase confirms; these don't. **Fix**: the shops' second-tap
+  confirm; the HUD Quits a two-press ("Press again to quit"). · S-M.
+- **Five confirm patterns, seven close-button classes, four tab
+  patterns** across the menus that keep their own markup under
+  `.mk-skin`; the garage's tabs and the business card's take no Q / E.
+  **Fix**: one `confirm()` in menukit.ts, one `.mk-x` glyph, `stepTab()`
+  in the garage and the business card. · M · CSS only.
+- **Copy over the agreed lengths** (labels 1-3 words, hints about six,
+  lines about eight): the start-menu messages, the fresh-save and
+  step-done toasts (tycoon-ui.ts:1211-1219, missions-ui.ts:279-299),
+  `awayNote()` (tycoon-ui.ts:1190-1204: three clauses and two sentences
+  in one 7 s toast), the profile note (profile-ui.ts:56); "Lv 1" / "Level
+  1" / "LV 3" drift between the header, the karts and the fight heads. ·
+  S · toasts are a judgment call (Q4).
+- **The bottom-left key hints are hand-written** (CityMap.astro:869-884)
+  and drift from keymap.ts (the drive hint omits H and V, the fly hint V);
+  on desktop they show with the control card. **Fix**: paint them from
+  `cardBinds()`, or drop them for the card. · S.
+- **The hub's Missions tab is a dead end** (the badges and a line
+  pointing at the Signal tower, no button) and its Bag tab a note and a
+  button to Business; `data-hub-go` in hub.ts:115-119 is handled and
+  used nowhere. · S.
+- **Phones**: seven hub tabs in a `nowrap` strip that scrolls with no
+  fade (menus.css:886-901); small targets (`.mt-hide` 20 px, `.ctrl-card-x`
+  26, `.city-card-close` 30; the kit's × is 38); "Tab" key badges shown on
+  touch (`.hub-key` has no `data-input` rule); the map's subtitle says
+  "Tap" on every device. · S.
+- **First-run pile-up**: after the fly-in a desktop shows the welcome
+  card, the guide card, the fresh-save toast and the draft tag at once;
+  the first walk adds the control card, the key hint and the tracker.
+  Three draft notes can be on screen together (:1004, :1328, :177).
+  **Fix**: stagger them; one draft note. · S-M.
+- **Kit leftovers**: the wallet card wears PulseChain colours
+  (city.css:858-870, account-ui.ts:65; workers.dev only), inventory.css
+  hardcodes a colour (:41, :314); `role="dialog"` without `aria-modal` on
+  the hub, the panel and the inventory; city.css's keyframes (`spin`,
+  :903) have no reduced-motion rule. · S.
+
+### 8. Small bugs, each an hour
+
+- **Corner shops don't redraw on their own**: tycoon-ui.ts:1184's `shown`
+  string omits `save.corners`, so buying, stocking or selling out a corner
+  shop changes nothing on screen until the stall ticks. · S.
+- **"Dorras taken" misses fight purses** (fightsave.ts:77-80 books
+  `fighting` without `count(s, 'earned', ...)`), delivery bonuses
+  (tycoon.ts:1017-1020) and mission rewards: a fighter banks 250,000 and
+  never sees Magnate. · S.
+- **The Vault's worth misses the bikes' mods** (`gearValue()`,
+  tycoon.ts:1423-1440, loops the karts and `PLAYER_CARS`, never the bikes' ids) and the
+  fight styles. · S.
+- **A billboard says EIGHT STATIONS** (fringes.ts:71); the metro has nine
+  since Crestmont. The plan's own rule for boards is no number: drop it. ·
+  S.
+- **The varsity's first-person sleeves are the top's colour**
+  (viewmodel.ts:111, :115 `shared(top)`) where the real sleeves are cream
+  (wardrobe.ts:2738). · S.
+- **The motion capture credits drift**: CREDITS.md lists subjects 143,
+  127, 9, 69, 136 and 141 and says standing is 143's; the file now uses
+  137's idles, 132's fast walk and 122's climb (takes.json). It's the one
+  licence note the site relies on. · S.
+- **A `guns` live switch that doesn't stop guns**: it gates the counters
+  only; a carried gun fires anywhere (`combat.draw()`). Rename it "Gun
+  stores" or gate the draw. And nothing can pause the prizes or the
+  economy from outside if a balance exploit is found live. · S-M.
+- **Mission "Heavy hands" has id `street-fighter`** while the badge
+  "Street Fighter" is `partners-all` (missions.ts:43, :158); `chains` and
+  `built` are counted and watched by nothing; "Landlord: buy 2 units or
+  lots" counts corner shops too. · S.
+- **The Phone's pitch "Always checking the charts"** (catalog.ts:336) reads
+  as trading talk against the no-financial-talk rule. · S.
+- **The README** says the tests run "in a second or so" (164 s), gives
+  the hand-upload steps Hostinger no longer needs, and calls the game "the
+  builder as a play-money demo" (Build mode is retired). · S.
+- `TycoonSave.stats` (tycoon.ts:452) is kept and cleaned but read by
+  nothing. · S.
+
+### 9. The character: the previews aren't him, the props don't move
+
+- **The fitting room, the character screen and the hologram idle on the
+  old formula poses** (stage.ts:14, :155-158; emporium.ts:598-610) while
+  the city's Degen idles on subject 137's captured weight shifts. The
+  first long look a player gets at their Degen is the stiff idle the plan
+  retired. **Fix**: the captured idle and walk rows into the stage (the
+  crowd pack holds them resampled; `captureRow()` can fill a `Pose`
+  sampler), the formula until the pack is in. · M.
+- **Held things are props**: coffee, phone, boombox and briefcase hang on
+  the hand bone (wardrobe.ts:2713-2790); the crowd reads its phone
+  (`PHONE` in pedestrians.ts) but the player holding the 1,000-Dorra
+  Phone never does, nobody sips, the boombox hangs at the hip. **Fix**:
+  the `PHONE` reach as the player's idle overlay, a sip as a moment every
+  twenty seconds or so, the boombox on the shoulder. · S-M.
+- **First person with fists shows nothing** (viewmodel.ts:318 draws the
+  hands only with a gun out). **Fix**: a fists view model from
+  `bakedHand()` for the guard and the punches. · M.
+- **Four emotes** (wave, dance, salute, cheer) is thin for a hangout
+  game; each new keyed upper-body emote (point, shrug, clap, thumbs up)
+  is a day on the `Pose` rig with the machinery in place. · M · the owner
+  picks.
+- **The mocap budget is nearly spent**: 558 of 660 KB, 41 takes; every
+  data step the plans want (a dance, a brisk walk, a stroll, sitting
+  down, stairs down) costs 10-25 KB. **Fix first**: move the rarely
+  searched takes (jumps-only, crouch, strafe, the climb) into packs
+  fetched on first use (`loadMocap(pack)` supports it); drop `run-long-2`
+  (09_01), the one run the rubric holds back, for about 20 KB. · S-M.
+- The inventory grid is 2 of 16 full for a new player and 10 at most; the
+  one consumable works only in a spar (fight.ts:464, inventory-ui.ts:164).
+  Two or three consumables with uses outside the ring (a drink from the
+  bar, a kart boost, a free taxi), or a 2 x 4 grid until then. · M · the
+  owner's call.
+
+### 10. Things the world could use that aren't bugs
+
+- **Sixteen empty district pads round the ring**, the first thing seen
+  across the avenue from downtown: a framed green square with a paved
+  walk to it, sixteen times (outer.ts:172-175, world.ts:1078-1082). Build
+  mode is retired; they could be dressed as what they now are, open land
+  (a lawn with the rim gone, a small garden, a court, a playground, a
+  kiosk square from outerdress's own beds and benches), the pads' numbers
+  untouched so prices hold if they return. · M · the owner's call.
+- **The riverside's service yards are bare** (riverside.ts:52-53 reserves
+  them; nothing draws into them): dumpsters, a van, a loading dock, a
+  rear lamp from the grit's and the street walls' props. · S-M.
+- **The Kart Park station is a 138-tile walk over open land** to the gate
+  (metro.ts `STATIONS` vs kartpark.ts `GATE`; the kart-west plan knows).
+  A paved walk with lamps, its land in `KEEPS`. · S-M.
+- **The world map draws Uptown's towers but not the Strip's resorts,
+  Sunridge's houses, Crestmont's estates, the stadium's bowl or Lot 9's
+  fence** (worldmap.ts): those districts read as blank slabs. The
+  footprints are DOM-free data already. · S.
+- **Starlight Mall ignores the phone tier**: `register()` takes no `low`
+  (mall3d.ts:784, mallinside3d.ts:526) where every other district has
+  4-56 `low` branches; no `?bench` view covers the mall or Sunridge. · S-M.
+- **The kerb switches colour on a line at The Trenches' edge**
+  (world.ts:1023-1032): the town's purple faces the grit's grey across
+  one street; the blend plan names it. Whether the hard line is part of
+  the grit is the owner's. · M.
+- The plans' own open phases, for the queue: blend Phases 6-10 (the seam
+  report's top three today are the airport, Crestmont and the kart park
+  against open land), highway Phases 6-9, Docks Phase 4, mall step 3,
+  Crestmont Phase 10, Sunridge's bench views, waterfront items 1-7, Lot
+  9's office and laundry interiors, Southfield's `FUTURE_SITES`.
+
+### 11. Engineering health
+
+(Filled in from the engineering audit below.)
+
+## The plan
+
+Ten phases, smallest and surest first, each shot before and after
+(`npm run shots -- polish-<n>`) and checked at 320, 375, 768, 1024 and
+1440 wide, on the phone tier, by day and at night. Every phase keeps the
+tests, the typecheck and the budgets green; none moves anything that
+exists. Phases 1-3 need no decision from the owner beyond a yes.
+
+1. **The hour-long fixes** (theme 8, and the stale copy): the corner
+   shops' redraw, "Dorras taken" counting purses and bonuses, the Vault's
+   worth with the bikes and styles, the billboard's number, the varsity
+   sleeves, the credits regenerated from takes.json, the `guns` switch
+   renamed, the mission and badge names, the Phone's pitch, the README,
+   `stats` removed, the bike's and kart's door sound, the bump shakes
+   under reduced motion, the mall's `low`. A day. Tests extended where a
+   rule changed (the counters, the worth).
+2. **Sameness, the cheap half** (theme 4's signs): hotel and diner
+   names downtown, the tenements' names and seeded pick, Uptown's 24
+   names a character; the sign atlases rebake. A day.
+3. **The menus' habits** (theme 7, less the owner's questions): one
+   confirm helper and the destructive actions behind it, one × glyph,
+   Q / E in the garage and the business card, the key hints from
+   keymap.ts, the hub's Missions button and Bag grid, the small targets
+   and touch badges, `aria-modal`, city.css's reduced-motion rule, the
+   wallet card and the inventory's colour into the kit, the first-run
+   messages staggered. Two or three days.
+4. **Sound across the city** (theme 3): the hum from the built-up land,
+   the `waterfront`, `docks`, `jets`, `indoor` and `yards` layers, the
+   test turned into bands, the engine voices per vehicle kind. Two days.
+5. **Traffic and the other vehicles** (themes 5 and 6): the traffic
+   respecting parked vehicles, left turns held, passengers on the buses,
+   the taxi's "as close as the road goes", brake lights and indicators on
+   the bike and the kart, the kart's own feel, the speed range widened.
+   Two or three days; the routes and drive tests extended.
+6. **The dead ends made live** (theme 2, the cheap half): the live
+   lines in the panels from the clock, the stadium's screen and masts,
+   the club's door, the bar's snack, Crestmont's door prompts, Kestrel
+   Bridge and Uptown's three landmarks as places (the snapshot rewritten
+   on purpose), the world map's missing footprints, the Kart Park
+   station's walk, the riverside's yards. Three days, after the owner's
+   copy.
+7. **The crowd and the character** (themes 4 and 9): the crowd's outfits
+   by role and district (phones one extra kind, measured), the captured
+   idle and walk on the stage and the hologram, the held things with
+   behaviour, the fists' first-person hands, the mocap packs split so
+   the budget breathes. A week; the clothing, crowd and rubric tests hold
+   it.
+8. **Balance** (theme 1): the owner's pick of prize cuts, a daily soft
+   cap, or the business side raised; the live `prizes` switch so it can
+   be tuned from outside; the game tests re-pinned. Two days once decided.
+9. **The world's bigger polish** (theme 10 and theme 2's second half, the
+   owner's picks): the district pads dressed, the Night Market's stalls
+   to run, the Sky Wheel ridden, the Docks' Phase 4, the lamp styles, the
+   kerb blended, the aircraft cockpits, more emotes and consumables. Each
+   its own step with its own sign-off, as the plans before.
+10. **Engineering** (theme 11): the items the engineering audit ranks,
+    the budget's headroom made before Phase 9 needs it, walk.ts split
+    along its seams, the test gaps closed, a review pass at every width.
+
+After every phase: the shots compared, `?bench` on a phone and a laptop,
+this plan's phase marked built, CLAUDE.md's line for anything that
+changed how a thing works.
+
+## Questions for the owner
+
+Grouped; each phase above says which it waits on.
+
+**Balance (Phase 8):** Are the kart park and the Fight Club meant to be
+the main money, with the shops as flavour? If not: cut prizes, cap them
+daily, or raise the business side? Should "Dorras taken" count purses,
+bonuses and mission rewards? Should the live settings be able to pause
+prizes? Anything planned for levels 13 to 40 (nothing gates past 12)?
+
+**Dead ends (Phases 6 and 9):** Carry live lines in the "coming soon"
+panels until their game arrives? The club's door: a toast and the beat,
+or wait for the interior? The bar selling the snack? A stadium "match
+night" on the clock with no gameplay? The Sky Wheel a free ride? The
+Docks' Phase 4 now, small (one crane, the pilot boat, sound)? Kestrel
+Bridge, the Circle Theatre, the Exchange, The Aurelian, the Wharf, the
+Refinery and Harbor Stores as places? Which scenery place takes a loop
+first: the Night Market's stalls, or a bar with a drink?
+
+**Menus (Phase 3):** Keep the log-in screen in front of the game before
+accounts exist? Should Give up, Drop and Quit ask once? One draft note
+instead of three? Do toasts fall under the short-copy rule? Fold the Bag
+tab into Business, or make it the grid? Keep both the key hint and the
+control card on desktop? Hub tabs on phones: scroll with a fade, or
+icons?
+
+**Sameness (Phases 2, 4, 7, 9):** More made-up hotel and diner names
+(HOTEL NOVA is the only hotel downtown)? Distinct engine voices, or one
+hum as the cartoon register? The supercar and coupe noticeably faster?
+Crowd variety by district, and may phones take one extra crowd kind?
+Lamp styles per district, or one post for the city's unity?
+
+**Character (Phase 7):** Rides seen (him seated on the taxi, metro, river
+bus and monorail), or keep the cameras? Stairs down keyed now, or wait
+for a take? Which data step first (a dance, a brisk walk, a stroll,
+sitting down, boxing under the strikes), and may `zenodo.org` be allowed
+for 100STYLE? How many emotes, and which? Should the Phone and the Coffee
+come with behaviour? The river: stay a wall, or a splash and a climb out?
+Which merch marks get real art first?
+
+**Vehicles (Phases 5 and 9):** Should the traffic queue behind your
+parked car even if a car left mid-junction stalls a lane until the pool
+respawns it? Cockpit interiors for your aircraft, worth the chunk? Live
+mirrors still "later"?
+
+**World (Phase 9):** The sixteen pads: framed land kept, or open green
+now? Blend the kerb at The Trenches' edge, or keep the hard line? Which
+of Southfield's `FUTURE_SITES` first, and when do Lot 9's office and
+laundry get insides? Westlake's boathouse: rowing yourself, or scenery?
+
+## What's good: leave alone
+
+The palette test and `ground.ts`'s influences (no hex outside
+palette.ts); lampmix at the sodium seams; the grit, street wall and
+commons "keep clear of everything taken" chain; the snapshot; the
+DOM-free and 3d split with a test for essentially every rules file; the
+lazy districts; the sign atlases of fixed made-up copy (every list
+counted in the newer districts is 100% distinct); the clock-driven shows
+the same for everyone; drive-sim's handling and drifting and the fitted
+car (springs, wheel in hand, gauges, wipers, doors, the driver's eye);
+the boarding moments for every vehicle; the pooled traffic with reaction
+times, indicators, horns and bus dwells; views.ts; the taxi's edge cases
+and the go-home rules; the two-thumb touch driving; the trunk weight
+field and the clothing test's real clipping guarantee; the rubric with
+`HELD_BACK`; motion matching with the foot lock and `WARP`; the moments
+and the GPU crowd with its overlay rows; the gun holds; the arcade kit's
+palette with its contrast written down, its focus ring, `whyNot()`
+reasons and disabled-with-reason everywhere, the purchase confirms,
+`repaint()`, the Esc chain and near-zero dead CSS; `pay()` and `book()`
+as the one gate for every Dorra, the seeded contract board, the daily
+challenge's shape, the structural `cleanSave()`.
