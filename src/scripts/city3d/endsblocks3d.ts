@@ -375,7 +375,8 @@ function drawShell(b: Batch, s: Shell, seed: number, low: boolean) {
     const top = s.y0 + GROUND;
     // (each face starts somewhere of its own along its band, so neighbours don't repeat in step)
     const uFrom = Math.floor(r() * 8) * BAY * 2;
-    wall(b, ATLAS.bands[ground], a, c, s.y0, Math.min(top, s.y1), n, uFrom);
+    // (shopfronts are endsstreet3d.ts's, the wall's own plane)
+    if (ground !== 'shops') wall(b, ATLAS.bands[ground], a, c, s.y0, Math.min(top, s.y1), n, uFrom);
     if (s.y1 > top + 0.01) wall(b, ATLAS.bands[s.plain ? 'blank' : faceBand(s.faces[side], s.tint)], a, c, top, s.y1, n, uFrom);
   }
   // The roof inside its parapet, the parapet's coping round the rim

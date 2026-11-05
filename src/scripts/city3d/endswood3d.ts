@@ -21,6 +21,7 @@ import { BOLLARD, CIRCUS, CLOSE_BOLLARDS, CLOSE_END, ENDS_NICK, ISLAND_R, NORTH_
 import { floorOf, type Passage } from './underground';
 import { NS_ROADS, WALK_W } from './layout';
 import { registerBlocks } from './endsblocks3d';
+import { registerStreet } from './endsstreet3d';
 
 export const SELF = import.meta.url;
 
@@ -485,7 +486,7 @@ function registerSpine() {
   }
 }
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerRoads(low);
   registerCircus(low);
   registerWell(low);
@@ -493,4 +494,6 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   registerSpine();
   // The blocks (endsblocks.ts, docs/estate-plan.md Phase 3)
   registerBlocks(low);
+  // Street level: the church, the parade, the shops, the studio, the green, the pitch, the road's paint (Phase 4)
+  registerStreet({ low, scene, tick });
 }

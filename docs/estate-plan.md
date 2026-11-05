@@ -262,3 +262,48 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
     the bridges, the hoardings; near only dishes, plants and bikes on the
     decks.
   - The boot's code is 722.9 of 730 KB with it (only the solids are in it).
+- **Phase 4 (street level):** `endsstreet.ts` (DOM-free, the boot's for what's
+  solid and the trees, tested in `tests/endsstreet.test.ts`), drawn by
+  `endsstreet3d.ts` and `endschurch3d.ts` in the estate's chunk:
+  - **St Aldwyn's** (`CHURCH`, `CHURCH_PARTS`) on the block east of ns1s: the
+    nave with its big window over the west door facing Endswood Road, the
+    aisles under lean-tos, the chancel, buttresses and lancets, the tower at
+    the south-east corner (clock, belfry, battlements, pinnacles) and its
+    spire (`SPIRE_TOP` 22.5, the owner's exception over the Emporium; the test
+    holds every flight well over it). Soot-dark stone, slate; the windows'
+    stained glass dark by day and lit at night (`ends-church`). The
+    churchyard (`CHURCHYARD`): iron railings on a dwarf wall with stone gate
+    piers, the lychgate on the road in line with the zebra, a side gate on
+    ns1s, yews, 45 old headstones leaning every way, two chest
+    tombs, the cross and the noticeboard.
+  - **Endswood Parade** (endsblocks.ts `parade`: maisonettes over shops, a
+    `shops` ground floor) on the road opposite Harrier Point: the off-licence,
+    WINGZ PALACE, the launderette, the barber, the fish bar, the newsagent,
+    PHONE DOC shuttered and the tenants' hall (`PARADE_UNITS`), under a
+    concrete canopy, bollards along the forecourt.
+  - **The corner shops** (`CORNER_SHOPS`: LUCKY STAR on ns1s, NIGHT & DAY on
+    ns2s; scenery now, run for Dorras later): a flat over each, fascias round
+    the corner, crates of fruit out front.
+  - **The abandoned buildings**: the Duke of Endswood (`PUB`), a corner pub
+    on the avenue in green tiles, boarded, its hanging sign faded; the
+    community centre (`CENTRE`), derelict, its sign missing letters, its
+    shuttered front on the avenue's side. Each has its way in round the back
+    (`back`), shut until the storyline.
+  - **Bunker Sound** (`STUDIO`) in two of Linnet Court's garages on its north
+    face: the roller door half up on foam, the steel door with ON AIR over
+    it, a sofa, an amp, a crate; the pirate aerial on Harrier Point's roof
+    (`AERIAL`).
+  - **The green** (`GREEN`: worn grass behind low green railings, desire
+    lines through its gaps, trees, benches, NO BALL GAMES), **the pitch**
+    (`PITCH`: red, lines, goals and hoops, a tall green fence with its mesh
+    in the FX layer), **the playground** (`PLAYGROUND`: swings, a slide,
+    springers, a roundabout) south of the pub, the garage court behind
+    Hawthorn Terrace (endsblocks.ts `court-n`, `court-s`).
+  - **Street furniture**: bin stores, CCTV on poles, the estate boards
+    (ENDSWOOD ESTATE and the blocks' names), intercoms by the blocks' doors;
+    on Endswood Road two zebras with their beacons (the globes flash on the
+    main thread, steady under reduced motion) and zigzags, double yellow
+    lines, speed humps. `STREET_SOLIDS` (in `SOLIDS`), `ENDS_TREES` at the
+    boot.
+  - The boot's code is 725.8 of 730 KB with it (the solids and the trees);
+    Phase 5 will likely need the budget raised.

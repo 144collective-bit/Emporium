@@ -11,20 +11,24 @@
  * - **Marten House**, a smaller slab east of the avenue; **Hawthorn Terrace**, stepping down towards the common, each
  *   step's roof the terrace of the flats over it; **Kite House**, emptied for demolition: every window behind grey
  *   steel screens, hoardings round its foot.
- * - The lock-up garages along the Close.
+ * - The lock-up garages along the Close, and the garage court behind Hawthorn Terrace (docs/estate-plan.md Phase 4).
+ * - **Endswood Parade** (Phase 4): maisonettes over a row of shops facing Endswood Road behind a forecourt (its units,
+ *   canopy and shopfronts are endsstreet.ts's).
  *
  * A building is shells (boxes standing on the block's slab: a face on each side, the ground floor's own front), galleries
  * (`Deck`: hung off a face every floor or every second), bridges and rooftop plant rooms. Heights: a ground floor
  * `GROUND` tall, the storeys over it `STOREY` each.
  */
 import { SLAB_Y, type Pt, type Rect, type Box } from './endswood';
+import { PARADE } from './endsstreet';
 
 export type Side = 'n' | 's' | 'e' | 'w';
 /** What a face shows above the ground floor (endsblocks3d.ts's atlas bands): flats' windows with coloured panels under
  * them, the barrier's slit windows, the doors behind a gallery, plain concrete, steel-screened windows */
 export type Face = 'flats' | 'slits' | 'deck' | 'blank' | 'void';
-/** What a ground floor shows: garage doors, engineering brick, a glazed entrance */
-export type Ground = 'garage' | 'brick' | 'entry';
+/** What a ground floor shows: garage doors, engineering brick, a glazed entrance, or shopfronts (endsstreet3d.ts draws
+ * those: the parade's) */
+export type Ground = 'garage' | 'brick' | 'entry' | 'shops';
 /** The flats' panels' colour: faded orange, teal, mustard */
 export type Tint = 0 | 1 | 2;
 
@@ -63,7 +67,7 @@ export interface Bridge {
 export interface EstateBlock {
   id: string;
   name: string;
-  kind: 'slab' | 'tower' | 'maisonette' | 'terrace' | 'condemned' | 'garages';
+  kind: 'slab' | 'tower' | 'maisonette' | 'terrace' | 'condemned' | 'garages' | 'parade';
   shells: Shell[];
   decks: Deck[];
   bridges: Bridge[];
@@ -162,6 +166,34 @@ export const BLOCKS: EstateBlock[] = [
     bridges: [],
     hoarding: [-45.6, 396.4, -12.4, 406.6],
     door: [-29, 395.8],
+  },
+  {
+    id: 'parade',
+    name: 'Endswood Parade',
+    kind: 'parade',
+    shells: [shell([PARADE.x0, PARADE.z, PARADE.x1, PARADE.back], PARADE.storeys, faces('blank', { n: 'flats', s: 'flats' }), { n: 'shops', s: 'brick', e: 'brick', w: 'brick' }, 2)],
+    decks: [],
+    bridges: [],
+    // (the tenants' hall's door at its east end)
+    door: [-12.9, 385.3],
+  },
+  {
+    id: 'court-n',
+    name: 'Hawthorn garages',
+    kind: 'garages',
+    shells: [{ rect: [-100, 410.5, -84, 414.2], y0: SLAB_Y, y1: SLAB_Y + GROUND, faces: faces('blank'), ground: { s: 'garage', n: 'brick', e: 'brick', w: 'brick' }, tint: 0 }],
+    decks: [],
+    bridges: [],
+    door: [-92, 414.8],
+  },
+  {
+    id: 'court-s',
+    name: 'Hawthorn garages',
+    kind: 'garages',
+    shells: [{ rect: [-102, 423.6, -78, 427.3], y0: SLAB_Y, y1: SLAB_Y + GROUND, faces: faces('blank'), ground: { n: 'garage', s: 'brick', e: 'brick', w: 'brick' }, tint: 0 }],
+    decks: [],
+    bridges: [],
+    door: [-90, 423],
   },
   {
     id: 'sorrel',
