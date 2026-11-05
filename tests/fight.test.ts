@@ -373,10 +373,17 @@ test('the save (v9): the fight record cleans, a spar pays XP capped per hit, a b
   assert.equal(s.counters.chains, 1);
   assert.equal(s.ledger.totals.fighting, FIGHT_BOTS.medium.prize);
   assert.equal(s.counters.earned, FIGHT_BOTS.medium.prize, 'a purse is Dorras taken');
+  // The owner's prizes switch closed: the win counts and pays its XP, no purse
+  const d1 = s.dorras;
+  r = finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 10, kos: 0, bestChain: 1, seconds: 80, prizes: false });
+  assert.equal(r.prize, 0);
+  assert.equal(r.xp, XP.boutWin);
+  assert.equal(s.dorras, d1);
+  assert.equal(s.fight.wins, 2);
   // A faster win keeps the best time; a slower one doesn't
   finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 5, kos: 0, bestChain: 1, seconds: 60 });
   finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 5, kos: 0, bestChain: 1, seconds: 99 });
-  assert.deepEqual(s.fight.bots.medium, { beaten: 3, bestSeconds: 60 });
+  assert.deepEqual(s.fight.bots.medium, { beaten: 4, bestSeconds: 60 });
   // A loss pays a little XP; a quit pays none
   const x1 = s.xp;
   r = finishFight(s, { kind: 'bout', bot: 'hard', won: false, hits: 3, kos: 0, bestChain: 1, seconds: 30 });

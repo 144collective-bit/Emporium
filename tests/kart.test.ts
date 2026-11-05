@@ -260,6 +260,25 @@ test('a cup is a series of four races with points; the overall winner takes the 
   assert.equal(s.karts.series, null);
 });
 
+test("the owner's prizes switch closed: a race and a series count and pay their XP, but no Dorras", () => {
+  const s = newSave(0);
+  const d0 = s.dorras;
+  const win = finishKartRace(s, { course: 'circuit', cup: 'pro', cls: 'sport', place: 1, seconds: 115.5, laps: [39.1, 38.2, 38.2], prizes: false });
+  assert.equal(win.prize, 0);
+  assert.equal(win.xp, XP.kartFinish + XP.kartPodium + XP.kartWin + XP.kartRecord);
+  assert.deepEqual([s.counters.kartRaces, s.counters.kartWins, s.counters.earned], [1, 1, 0]);
+  assert.equal(s.dorras, d0);
+  assert.ok(startSeries(s, 'rookie'));
+  let r = null;
+  for (let i = 0; i < 4; i++) r = seriesRace(s, [2, 3, 4, 5, 6, 7, 8, 1], false);
+  assert.ok(r!.done && r!.overall === 1 && r!.prize === 0 && r!.xp === XP.seriesWin);
+  assert.equal(s.karts.trophies.rookie, 1, 'the trophy still');
+  assert.equal(s.dorras, d0);
+  // Open again (the default), the next win pays
+  finishKartRace(s, { course: 'circuit', cup: 'pro', cls: 'sport', place: 1, seconds: 120, laps: [40] });
+  assert.equal(s.dorras, d0 + CUPS.pro.prizes[0]);
+});
+
 test('a single race pays like a cup\'s race and leaves a series on the go alone', () => {
   const s = newSave(0);
   startSeries(s, 'rookie');

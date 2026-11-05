@@ -50,6 +50,7 @@ import { fx, glowMat, glowTex } from './kit';
 import { KART_SPECS, PLAYER_KARTS, type KartId, type KartLook, type MyKart } from './mykart';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { finishKartRace, kartStatsOf, keepSplits, parLap, recordKey, seriesRace, startSeries } from './tycoon';
+import { live } from './live-client';
 import { RACE_FAR, START_VIEW, nextView, type ViewId } from './views';
 
 /* ---------- The rivals ---------- */
@@ -998,16 +999,19 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       const fastest = allSplits.reduce((a, b) => (b[2] < a[2] ? b : a));
       keepSplits(save, course, cls, fastest);
     }
-    const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, clean: p.cleanLaps, overtakes: p.overtakes, now: Date.now(), items: s.items });
+    // (the owner's live `prizes` switch: closed, the race counts and pays its XP but no Dorras)
+    const shut = live.closed('prizes');
+    const result = finishKartRace(save, { course, cup, cls, place: p.place, seconds: p.finishT, laps, clean: p.cleanLaps, overtakes: p.overtakes, now: Date.now(), items: s.items, prizes: !shut });
     // A cup's race counts for its series: everyone's place by grid index (the rivals, then you)
     let series: KartResultView['series'] = null;
     if (cup !== 'time' && !single) {
       const byKart = s.racers.map(() => s.racers.length);
       s.standings().forEach((i, idx) => (byKart[i] = idx + 1));
-      const sr = seriesRace(save, byKart);
+      const sr = seriesRace(save, byKart, !shut);
       if (sr) series = { ...sr, names: [...lineup(cup).map((r) => ({ name: r.name, kart: r.kart, you: false })), { name: 'You', kart: save.karts.model, you: true }] };
     }
     d.game.commit();
+    if (shut && cup !== 'time') d.game.toast(shut);
     d.park.trophies(save.karts.trophies);
     d.sfx('finish');
     if (result.levels > 0 || (series?.levels ?? 0) > 0) levelAt = 0.7;

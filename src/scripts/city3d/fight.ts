@@ -41,6 +41,7 @@ import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView
 import { CORNERS, OUT, RING, RING_HALF } from './fightsite';
 import { fx, glowTex } from './kit';
 import { finishFight } from './fightsave';
+import { live } from './live-client';
 import { RING_FAR, RING_ORDER, START_VIEW, nextView, type ViewId } from './views';
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -335,8 +336,11 @@ export function createFight(d: FightDeps): Fight {
     const b = themF()!;
     const won: boolean | null = kind === 'bout' ? (quit ? false : sim.winner === YOU) : kind === 'street' ? !quit && endWon : null;
     const save = d.game.save();
-    const result = finishFight(save, { kind, bot, partner: partnerId ?? undefined, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit });
+    // (the owner's live `prizes` switch: closed, a bout counts and pays its XP but no purse)
+    const shut = live.closed('prizes');
+    const result = finishFight(save, { kind, bot, partner: partnerId ?? undefined, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit, prizes: !shut });
     d.game.commit();
+    if (shut && kind === 'bout' && won) d.game.toast(shut);
     if (result.levels > 0) d.sfx('levelup');
     const view: FightResultView = {
       kind,
