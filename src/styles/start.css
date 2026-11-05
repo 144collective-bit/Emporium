@@ -1,9 +1,9 @@
 /*
  * The title screen (CityMap.astro `[data-start]`): over the whole city on every open, while the 3D city loads
  * behind it, so nothing of the map shows until you're in. The game's logo, The Trenches, over a dark brick wall;
- * under it a box in the menus' arcade kit (menus.css: its tokens, `.mk-btn`), first the log-in screen (not built
- * yet: it sends nothing and says so), then Play as guest's menu (Single player, Multiplayer, Options). The
- * maintenance cover (`[data-maint]`) is the same box. Nothing moves under reduced motion.
+ * under it a box in the menus' arcade kit (menus.css: its tokens, `.mk-btn`), first Play as guest over a quiet
+ * "Log in · coming soon" line (the log-in's fields wait hidden until accounts exist), then the menu (Single player,
+ * Multiplayer, Options). The maintenance cover (`[data-maint]`) is the same box. Nothing moves under reduced motion.
  */
 .city-start {
   position: absolute;
@@ -111,16 +111,22 @@
   width: 100%;
   text-align: left;
 }
-.city-start-login[hidden] {
+.city-start-login[hidden],
+.city-start-fields[hidden] {
   display: none;
 }
-.city-start-head {
-  margin: 0 0 2px;
-  font: 700 22px/1 var(--font-pixel);
-  letter-spacing: 0.04em;
+/* Logging in isn't built: a dimmed line where the form will be */
+.city-start-soon {
+  margin: 0;
+  color: var(--m-dim);
+  font: 700 11px/1.4 var(--font-pixel);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--m-coin);
   text-align: center;
+}
+.city-start-fields {
+  display: grid;
+  gap: 10px;
 }
 .city-start-field {
   display: grid;
@@ -161,47 +167,11 @@
   min-height: 46px;
   font-size: 15px;
 }
-.city-start-or {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  color: var(--m-dim);
-  font: 700 11px/1 var(--font-pixel);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-.city-start-or::before,
-.city-start-or::after {
-  content: "";
-  flex: 1;
-  height: 2px;
-  background: var(--m-edge);
-}
-.city-start-new,
 .city-start-who {
   margin: 2px 0 0;
   color: var(--m-dim);
   font-size: 13px;
   text-align: center;
-}
-.city-start-link {
-  padding: 2px 0;
-  border: 0;
-  background: none;
-  color: var(--m-coin);
-  font: inherit;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.city-start-link:hover {
-  color: #ffd25a;
-}
-.city-start-link:focus-visible {
-  outline: 2px solid var(--m-coin);
-  outline-offset: 2px;
 }
 
 /* ----- The menu: Single player, Multiplayer, Options ----- */
@@ -463,17 +433,8 @@
     gap: 8px;
     padding: 14px 16px 12px;
   }
-  /* the heading and the "or" go; Log in and Play as guest side by side under the fields */
   .city-start-login {
-    grid-template-columns: 1fr 1fr;
     gap: 8px;
-  }
-  .city-start-login > :not(.city-start-go) {
-    grid-column: 1 / -1;
-  }
-  .city-start-head,
-  .city-start-or {
-    display: none;
   }
   .city-start-field input {
     min-height: 38px;
