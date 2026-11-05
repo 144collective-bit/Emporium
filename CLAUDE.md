@@ -4352,8 +4352,7 @@ it and has been retired completely. Build only on what's here.
   login and cloud saves (still no multiplayer), account names are typed by
   the player (unique, unfiltered, the owner's call), and a wallet carries the
   whole save. An account always starts fresh; the guest save stays as it is.
-- Phase 1 (the save on the server) is built, waiting on the owner's
-  sign-off; nothing on screen uses it yet. The rules are
+- Phase 1 (the save on the server) is built and signed off. The rules are
   `src/scripts/net/savecheck.ts` (DOM-free, shared with the server, tested
   in `tests/savecheck.test.ts`): `CLOUD_KEYS` (the backup's keys, the walk
   settings as one per kind of device, `settingsKey()`), `checkSaves()`
@@ -4368,8 +4367,7 @@ it and has been retired completely. Build only on what's here.
   in `BACKUP_KEYS` (so in `CLOUD_KEYS`) and a cleaner in savecheck.ts's
   `CLEAN`; anything new a player can earn fast enough to trip `GROW` needs
   the test's one-sitting sum to take it in.
-- Phase 2 (the browser's saves per profile) is built, waiting on the
-  owner's sign-off: **every file that reads or writes a save goes through
+- Phase 2 (the browser's saves per profile) is built and signed off: **every file that reads or writes a save goes through
   `slot()`** (`saveslot.ts`, DOM-free, no imports), never `localStorage`
   itself: a guest's keys are what they always were, a wallet's have its
   address added (`slotKey()`), decided once as the page starts (logging in
@@ -4382,15 +4380,14 @@ it and has been retired completely. Build only on what's here.
   Anything that puts a new copy in the slot and starts the page again seals
   the slot first (`slot().seal()`), so the game can't store its old copy
   over it on the way out.
-- Phase 3 (the title screen and the account) is built, waiting on the
-  owner's sign-off: the title screen's Connect wallet / Play as guest (above,
+- Phase 3 (the title screen and the account) is built and signed off: the title screen's Connect wallet / Play as guest (above,
   under the start menu), the profile card in the kit with Log out everywhere
   and Delete my account (account.ts `logoutAll()` / `deleteAccount()`, which
   also clears this browser's copy of the wallet's game), and the save
   history at the Vault (tycoon-ui.ts `historyView()`: each day kept, its
   level and Dorras, Restore with a confirm; it reaches the cloud chunk
   through `cloudlink.ts`, no import).
-- Phase 4 (names) is built, waiting on the owner's sign-off: a wallet's
+- Phase 4 (names) is built and signed off: a wallet's
   player name is typed on the profile card (Save name, Suggest one for a
   word-list name), checked as typed and on the server by `net/names.ts`
   (`cleanName()`: 3 to 24 plain letters, digits, spaces, - and _, starting
@@ -4403,7 +4400,7 @@ it and has been retired completely. Build only on what's here.
   the profile again on `{ t: 'profile' }` after a change on the card
   (multiplayer.ts `reload()`), so other players see it at once; `'reload'`
   is the gun's message, never reuse it.
-- Phase 5 (the profile) is built, waiting on the owner's sign-off: a
+- Phase 5 (the profile) is built and signed off: a
   player's card is `net/card.ts` (DOM-free, shared with the server, tested
   in `tests/card.test.ts`): `gameCard()` from the city's game save (level
   and title, pinned badges, badge count, play time, the kart park's and the
@@ -4421,6 +4418,8 @@ it and has been retired completely. Build only on what's here.
   answers `{ t: 'card', id }` with a wallet's card from the save the server
   checked (saves.ts `card()`) or a guest's name, rank and score, the latest
   of a burst a few times a second.
+- Phases 1 to 5 were signed off by the owner (2026-11-05). Phase 6 (the
+  public page, `/player/<name>`) is next, in a session of its own.
 
 ## Multiplayer (beta, testing)
 

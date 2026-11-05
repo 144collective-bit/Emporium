@@ -5,8 +5,9 @@ remembers achievements, purchases, gear and everything else the city's game
 keeps, following the player to any device. Built one phase at a time, each
 with the owner's sign-off; keep this up to date. Phases 1 (the save on the
 server), 2 (the browser's saves per profile), 3 (the title screen and the
-account), 4 (names) and 5 (the profile) are built, waiting on the owner's
-sign-off.
+account), 4 (names) and 5 (the profile) are built and signed off by the
+owner (2026-11-05). Phase 6 (the public page) is next, in a session of its
+own.
 
 Everything saved is the city's game: Dorras and XP are earned by playing,
 never bought, never cashed out, never tied to the token or the store. An
@@ -179,8 +180,7 @@ account changes where the save lives, not what's in it.
 
 ## The phases
 
-1. **The save on the server** (workers.dev; built, waiting on the owner's
-   sign-off): the `Saves` DO, the API, the lease, the checks and their
+1. **The save on the server** (workers.dev; built, signed off): the `Saves` DO, the API, the lease, the checks and their
    tests, snapshots, and on `Accounts` log out everywhere and delete the
    account (their buttons come in Phase 3). Nothing on screen yet; checked
    with the tests and, end to end against `wrangler dev`, a script logging
@@ -189,8 +189,7 @@ account changes where the save lives, not what's in it.
    in pieces and read back, a snapshot restored with the settings left
    alone, log out everywhere ending every session, and a delete leaving a
    fresh account.
-2. **The browser's saves per profile** (built, waiting on the owner's
-   sign-off): `saveslot.ts`, every writer moved onto it (tested: a guest's
+2. **The browser's saves per profile** (built, signed off): `saveslot.ts`, every writer moved onto it (tested: a guest's
    keys don't change), `cloudsync.ts` and `cloudsave.ts`, the card, offline
    and back. Logging in with the existing wallet button (workers.dev only
    for now) loads and saves the wallet's own game. Checked in a browser
@@ -199,8 +198,7 @@ account changes where the save lives, not what's in it.
    the first told and taking it back, an edited save turned away and the
    saved one loaded back, offline play going up when back, a login that ran
    out, and the guest's game untouched throughout.
-3. **The title screen and the account** (built, waiting on the owner's
-   sign-off): Connect wallet and Play as guest (the fields went), only with
+3. **The title screen and the account** (built, signed off): Connect wallet and Play as guest (the fields went), only with
    a game server and when the page isn't already a wallet's game (then
    straight to the menu, "Playing as <name> · Log out", or that the login
    ran out); without a game server straight to the menu too. Connect wallet
@@ -217,7 +215,7 @@ account changes where the save lives, not what's in it.
    the title screen, history after a day's second save, a restore taking
    back a change, log out everywhere, logging in again, and a delete leaving
    a fresh account.
-4. **Names** (built, waiting on the owner's sign-off): a new account gets a
+4. **Names** (built, signed off): a new account gets a
    free word-list name and its title screen asks it to pick its own
    ("Pick your name", `named` on the profile); the profile card's name field
    (Save name, Suggest one for a word-list name, checked as typed, Enter
@@ -231,7 +229,7 @@ account changes where the save lives, not what's in it.
    round and in capitals refused, the server's own check, the room's
    nametag changing without rejoining, the room's New name freeing the old
    name, and a delete freeing the name.
-5. **The profile** (built, waiting on the owner's sign-off): your card at
+5. **The profile** (built, signed off): your card at
    the top of the hub's Profile tab (name, rank, level and title, three
    pinned badges, badges earned, play time, target score, when you started,
    the kart park's and the Fight Club's records), pinning (Pin badges: earned
@@ -250,7 +248,7 @@ account changes where the save lives, not what's in it.
    outside it, including the emotes the hub keeps open on phones, and
    closing those closes the hub); they're left alone now, and the hub waits
    under a player's card as it does under the wallet's.
-6. **The public page**: `/player/<name>` (on a static site: one page,
+6. **The public page** (next, in a new session): `/player/<name>` (on a static site: one page,
    `src/pages/player.astro`, and a rewrite in `.htaccess` and on the Worker
    so `/player/<name>` serves it; the page reads the public profile from the
    Worker). A picture of their Degen: a small snapshot the browser renders
