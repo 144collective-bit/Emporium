@@ -93,13 +93,13 @@ test('the line runs down the east ring avenue, bends west onto Trench Avenue and
   // West of The Trenches: along Trench Avenue's line into the docks, north on their line over the river, east along the
   // north bank avenue's median
   assert.ok(main.pts.some((p) => near(p, [EL_X, RING_HI + NORTH_R])) && main.pts.some((p) => near(p, [UP_X - UP_R, RING_HI])));
-  // Crestmont's spur: off the main line south of Kart Park station, round outside the highway's north-east corner, to its
+  // Crestmont's spur: off the main line south of Starlight Mall station, round outside the highway's north-east corner, to its
   // station past Alder Way; smooth all the way, nothing under it on the highway or the kart park
   const { crest } = TRACKS;
   assert.ok(near(crest.pts[0], pointOn('main', CREST_S).at));
   assert.ok(near(crest.pts[crest.pts.length - 1], [CREST_END, CREST.station]));
-  const kart = STATIONS.find((s) => s.id === 'kart')!;
-  assert.ok(CREST_S > kart.s + PLATFORM.half, "the spur leaves after Kart Park's platform");
+  const starlight = STATIONS.find((s) => s.id === 'starlight')!;
+  assert.ok(CREST_S > starlight.s + PLATFORM.half, "the spur leaves after Starlight Mall's platform");
   for (let i = 2; i < crest.pts.length; i++) {
     const [a, b, c] = [crest.pts[i - 2], crest.pts[i - 1], crest.pts[i]];
     const t = Math.atan2(c[1] - b[1], c[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]);
@@ -216,10 +216,11 @@ test('the train keeps to its tracks, stops at every station, and never jumps', (
     prev = p;
   }
   assert.deepEqual([...seen].sort(), STATIONS.map((s) => s.id).sort());
-  // (since Crestmont's spur, docs/crestmont-plan.md Phase 9: out to Crestmont and back from Kart Park too; and since the
-  // line runs round by the Docks, docs/docks-plan.md Phase 2, through them both ways)
-  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 420);
-  assert.equal(LEGS.length, 14);
+  // (since Crestmont's spur, docs/crestmont-plan.md Phase 9: out to Crestmont and back from Starlight Mall too; and since the
+  // line runs round by the Docks, docs/docks-plan.md Phase 2, through them both ways; and since the kart park moved west,
+  // docs/kart-west-plan.md, through its station both ways: about 424 s)
+  assert.ok(ROUND_TRIP > 60 && ROUND_TRIP < 450);
+  assert.equal(LEGS.length, 16);
 });
 
 test('a ride goes there in about a minute at most, and the timetable carries on from where it stops', () => {
@@ -227,7 +228,7 @@ test('a ride goes there in about a minute at most, and the timetable carries on 
     for (const b of STATIONS) {
       if (a === b) continue;
       const r = rideAt(a.id, b.id, 0);
-      // (the longest: to Crestmont, the whole main line and the spur, turning round at Kart Park; Uptown's since the line
+      // (the longest: to Crestmont, the whole main line and the spur, turning round at Starlight Mall; Uptown's since the line
       // runs round by the Docks, docs/docks-plan.md Phase 2: about 75.4 s, Skip ride is there for it. Without
       // Crestmont, Uptown to the Airport is the longest, about 60.7 s)
       const limit = a.id === 'crestmont' || b.id === 'crestmont' ? 77 : 62;

@@ -47,6 +47,7 @@ import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
+import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
 import { LIFT, TOWER_SPAWN } from './skydeck';
@@ -404,6 +405,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
   for (const [x, z, y] of [...MALL_TREES, ...NORTH_TREES]) addTree(x, z, undefined, false, SLAB + y);
+  // ...and the walk between Westlake Park and Uptown North's towers (parkedge.ts, docs/blend-plan.md Phase 6e)
+  for (const [x, z, ry] of PARK_EDGE_LAMPS) addLamp(x, z, ry);
+  for (const [x, z, s] of PARK_EDGE_TREES) addTree(x, z, s, false, SLAB + 0.02);
   [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   progress(0.55);
   await waited(nextFrame());
@@ -1052,6 +1056,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
   syncHeld(profileUI.look);
   profileUI.onChange(syncHeld);
+  // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
+  kartPark.trophies(game.save().karts.trophies);
   const charScreen = createCharScreen({
     root,
     look: () => profileUI.look,

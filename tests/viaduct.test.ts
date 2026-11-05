@@ -222,9 +222,10 @@ test("the metro rises over the deck and the ramps with room for the tallest vehi
           if (Math.hypot(r.pts[i][0] - p[0], r.pts[i][1] - p[1]) < RAMP_HALF + 0.5) assert.ok(y - 0.5 > r.ys[i] + tallest + 0.4, `${t.id} at ${s} over ${r.id}`);
     }
   assert.ok(over > 30, 'it crosses the ring');
-  // Kart Park, Southbank Docks and the Airport are raised with it; every platform is level
+  // Starlight Mall (Kart Park's until the park moved west), Southbank Docks, Kart Park (west of the highway) and the
+  // Airport are raised with it; every platform is level
   for (const st of STATIONS) for (let d = -5; d <= 5; d += 1) assert.ok(Math.abs(trackSlope(st.track, st.s + d)) < 1e-6, `${st.id} on a slope`);
-  assert.deepEqual(STATIONS.filter((st) => stationY(st) > EL_Y + 1).map((st) => st.id).sort(), ['airport', 'docks', 'kart']);
+  assert.deepEqual(STATIONS.filter((st) => stationY(st) > EL_Y + 1).map((st) => st.id).sort(), ['airport', 'docks', 'kart', 'starlight']);
   assert.ok(RISE > 40 && Object.values(PLATEAUS).flat().length >= 4);
   // Its pillars stand clear of the ramps and off the deck
   for (const p of PILLARS) {

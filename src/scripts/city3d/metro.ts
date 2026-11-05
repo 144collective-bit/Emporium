@@ -27,12 +27,12 @@
  *   (`PORTALS`: a leg each side, on the blocks' edges), and over the river to
  *   Uptown the arch (`ARCH`), its deck hung from it (`HANGERS`).
  * - **Crestmont's spur** (`crest`, docs/crestmont-plan.md Phase 9): from just
- *   south of Kart Park east round the highway's north-east corner and south
+ *   south of Starlight Mall station east round the highway's north-east corner and south
  *   to Crestmont station by the Flats (`CREST`).
  * - **The train** shuttles on a timetable from the clock (`trainAt()`, the
- *   same for everyone): Kart Park, Downtown, South Bank, The Trenches,
- *   Southbank Docks, Uptown, back through the Docks and The Trenches to South Bank, out to the Airport,
- *   back, and up to the Kart Park. A ride (`rideAt()`) goes straight to the
+ *   same for everyone): Starlight Mall, Downtown, South Bank, The Trenches,
+ *   Southbank Docks, Kart Park, Uptown, back through Kart Park, the Docks and The Trenches to South Bank, out to the
+ *   Airport, back, and up to Starlight Mall. A ride (`rideAt()`) goes straight to the
  *   station you pick (from the west to the Airport it turns round at South
  *   Bank), and the train carries on its timetable from there
  *   (`timetableAt()`).
@@ -41,7 +41,7 @@
  *   `DECK_Y` but where it crosses the raised ring highway and its ramps,
  *   where it rises to `HIGH_Y` over them on eased climbs (`RISE`) and stays
  *   up between two near each other (`PLATEAUS`); a station beside a climb is
- *   raised with it (Kart Park, Southbank Docks, the Airport).
+ *   raised with it (Starlight Mall, Southbank Docks, Kart Park, the Airport).
  *
  * Built over the avenues' medians and on open land clear of the pads and
  * the blocks, so nothing that exists moves.
@@ -73,7 +73,7 @@ export const PLATFORM_SIDE = -1;
 export const SWITCH_Z = 116 + WIDEN;
 /** The bend's radius: it comes out of it running west along Trench Avenue */
 export const BEND_R = AVENUE_Z - SWITCH_Z;
-/** The north end of the main line (past the Kart Park's station) */
+/** The north end of the main line (past Starlight Mall's station, Kart Park's until the park moved west) */
 export const NORTH_END = -204;
 /**
  * West of The Trenches (docs/docks-plan.md Phase 2, the owner's pick: "metro via the docks"; Uptown's extension of
@@ -99,12 +99,12 @@ export const NORTH_R = 5.5;
 export const BRANCH = { south: 256, r: 20, z: 276 };
 export const AIRPORT_END = 324;
 /**
- * Crestmont's spur (docs/crestmont-plan.md Phase 9, the owner's call): off the main line just south of Kart Park
- * station (`CREST.z`), a tight bend east (`CREST.r`) into the corridor between Kart Road and the ring highway's north
- * side (`CREST.corridor`), east past the kart park, round outside the highway's north-east corner on a bend about its
+ * Crestmont's spur (docs/crestmont-plan.md Phase 9, the owner's call): off the main line just south of Starlight Mall
+ * station (Kart Park's until the park moved west) (`CREST.z`), a tight bend east (`CREST.r`) into the corridor between Kart Road and the ring highway's north
+ * side (`CREST.corridor`), east past the kart park's old land, round outside the highway's north-east corner on a bend about its
  * own centre (`CREST.cx`, `CREST.cz`), south down the strip between the highway and Alder Way (`CREST.x`), and a tight
  * bend east over Alder Way into the block kept for it (crest-0-0) to Crestmont station, the line's end at `CREST_END`
- * (x). It leaves the main line facing north: a run from it to anywhere but Kart Park turns round there.
+ * (x). It leaves the main line facing north: a run from it to anywhere but Starlight Mall turns round there.
  */
 export const CREST = { z: -189.5, r: 10, corridor: -179.5, cx: 205, cz: -100, x: 284.5, south: -46.5, station: -36.5 };
 export const CREST_END = 320;
@@ -223,14 +223,23 @@ const UPTOWN_Z = 52.5;
 const docksTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [EL_STATION - 1.2, AVENUE_Z + 5.3, EL_STATION + 1.2, AVENUE_Z + 7.8], door: { x: EL_STATION, z: AVENUE_Z + 4.9 }, face: [0, -1] };
 /** The Trenches' station on Trench Avenue: its platform south of the track, the tower on the block's sidewalk edge, its door facing north */
 const TRENCH_X = -93;
+/** Kart Park's station on the north bank avenue's median west of the highway (docs/kart-west-plan.md Phase 1) */
+const KART_STATION_X = -246;
+const NORTH_AVENUE_Z = 64.5;
+const kartTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [KART_STATION_X - 1.2, NORTH_AVENUE_Z - 7.8, KART_STATION_X + 1.2, NORTH_AVENUE_Z - 5.3], door: { x: KART_STATION_X, z: NORTH_AVENUE_Z - 4.9 }, face: [0, 1] };
 const trenchTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [TRENCH_X - 1.2, AVENUE_Z + 5.3, TRENCH_X + 1.2, AVENUE_Z + 7.8], door: { x: TRENCH_X, z: AVENUE_Z + 4.9 }, face: [0, -1] };
 
 export const STATIONS: Station[] = [
-  { id: 'kart', name: 'Kart Park', track: 'main', s: -196 - NORTH_END, ...eastTower(-196) },
+  // (the main line's north end, past the ring highway: Kart Park's until the park moved west, docs/kart-west-plan.md
+  // Phase 1; renamed for the mall over the highway)
+  { id: 'starlight', name: 'Starlight Mall', track: 'main', s: -196 - NORTH_END, ...eastTower(-196) },
   { id: 'downtown', name: 'Downtown', track: 'main', s: 33 - NORTH_END, ...eastTower(37.5) },
   { id: 'southbank', name: 'South Bank', track: 'main', s: 109 + WIDEN - NORTH_END, ...eastTower(109.5 + WIDEN) },
   { id: 'trenches', name: 'The Trenches', track: 'main', s: along('main', [TRENCH_X, AVENUE_Z]), ...trenchTower },
   { id: 'docks', name: DOCKS_NAME, track: 'main', s: along('main', [EL_STATION, AVENUE_Z]), ...docksTower },
+  // (on the north bank avenue's median west of the ring highway, a walk up to the kart park's gate: its platform north
+  // of the track (running east), its tower north of that on the open land, the door facing the avenue)
+  { id: 'kart', name: 'Kart Park', track: 'main', s: along('main', [KART_STATION_X, NORTH_AVENUE_Z]), ...kartTower },
   // (by Airport Drive just north of the terminal's forecourt: its platform north of the track (running east), its tower
   // north of that, the door facing the track and the forecourt; taxis stop for it on the drive)
   { id: 'airport', name: 'Airport', track: 'branch', s: along('branch', [AIRPORT_STATION_X, BRANCH.z]), tower: [AIRPORT_STATION_X - 1.25, BRANCH.z - 7.5, AIRPORT_STATION_X + 1.25, BRANCH.z - 5.1], door: { x: AIRPORT_STATION_X, z: BRANCH.z - 4.7 }, face: [0, 1] },
@@ -509,11 +518,11 @@ export function runsBetween(a: string, b: string): Run[] {
   const A = station(a);
   const B = station(b);
   if (A.track === B.track) return [runOf(a, b, [{ track: A.track, s0: A.s, s1: B.s }])];
-  // Crestmont's spur leaves the main line facing north, past Kart Park: straight to and from there, turning round there for the rest
+  // Crestmont's spur leaves the main line facing north, past Starlight Mall: straight to and from there, turning round there for the rest
   if (A.track === 'crest' || B.track === 'crest') {
-    if (a === 'kart') return [runOf(a, b, [{ track: 'main', s0: A.s, s1: CREST_S }, { track: 'crest', s0: 0, s1: B.s }])];
-    if (b === 'kart') return [runOf(a, b, [{ track: 'crest', s0: A.s, s1: 0 }, { track: 'main', s0: CREST_S, s1: B.s }])];
-    return [...runsBetween(a, 'kart'), ...runsBetween('kart', b)];
+    if (a === 'starlight') return [runOf(a, b, [{ track: 'main', s0: A.s, s1: CREST_S }, { track: 'crest', s0: 0, s1: B.s }])];
+    if (b === 'starlight') return [runOf(a, b, [{ track: 'crest', s0: A.s, s1: 0 }, { track: 'main', s0: CREST_S, s1: B.s }])];
+    return [...runsBetween(a, 'starlight'), ...runsBetween('starlight', b)];
   }
   if (A.track === 'main' && northOfSwitch(A)) return [runOf(a, b, [{ track: 'main', s0: A.s, s1: SWITCH_S }, { track: 'branch', s0: 0, s1: B.s }])];
   if (B.track === 'main' && northOfSwitch(B)) return [runOf(a, b, [{ track: 'branch', s0: A.s, s1: 0 }, { track: 'main', s0: SWITCH_S, s1: B.s }])];
@@ -534,8 +543,8 @@ export function placeOn(run: Run, d: number): { track: TrackId; s: number; dir: 
   return { track: p.track, s: p.s0, dir: p.s1 >= p.s0 ? 1 : -1 };
 }
 
-/** The timetable's stops: from Crestmont to Kart Park, down to South Bank, out through The Trenches and the Docks to Uptown and back, out to the Airport and back, and up again */
-const STOPS = ['crestmont', 'kart', 'downtown', 'southbank', 'trenches', 'docks', 'uptown', 'docks', 'trenches', 'southbank', 'airport', 'southbank', 'downtown', 'kart'];
+/** The timetable's stops: from Crestmont to Starlight Mall, down to South Bank, out through The Trenches, the Docks and Kart Park to Uptown and back, out to the Airport and back, and up again */
+const STOPS = ['crestmont', 'starlight', 'downtown', 'southbank', 'trenches', 'docks', 'kart', 'uptown', 'kart', 'docks', 'trenches', 'southbank', 'airport', 'southbank', 'downtown', 'starlight'];
 export const LEGS = STOPS.map((from, i) => {
   const run = runsBetween(from, STOPS[(i + 1) % STOPS.length])[0];
   return { run, time: runAt(run.len, 0, speedOf(run)).total };

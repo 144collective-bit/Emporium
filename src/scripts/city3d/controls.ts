@@ -24,6 +24,7 @@ export const BUTTONS: Record<Action, string> = {
   horn: '[data-drive-horn]',
   view: '[data-drive-view]',
   drift: '[data-kart-drift]',
+  item: '[data-kart-item]',
   dodge: '[data-fight-dodge]',
 };
 

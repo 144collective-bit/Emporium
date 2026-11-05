@@ -64,7 +64,7 @@ import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
-import { bankY } from './kartfacility';
+import { BANKS_AREA, bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
@@ -760,7 +760,11 @@ export function createWalk(d: WalkDeps) {
     // (the garage's turntable: its disc's top, where your car stands and you step on to get in)
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
     const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
-    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) return base;
+    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) {
+      // (the banks' berms carry on outside the fence, kartfacility.ts)
+      const [bx0, bz0, bx1, bz1] = BANKS_AREA;
+      return x > bx0 && x < bx1 && z > bz0 && z < bz1 ? Math.max(base, bankY(x, z) + 0.035) : base;
+    }
     const t = trackSurfaceAt(x, z, yNow);
     // (and the spectators' grass banks round it, kartfacility.ts)
     return Math.max(base, t ? t.y + 0.035 : 0, bankY(x, z) + 0.035);
@@ -1211,7 +1215,7 @@ export function createWalk(d: WalkDeps) {
     preview: (k) => karts.preview(k),
     onOpen() {
       pedals.gas = pedals.brake = false;
-      kartBtns.drift = false;
+      kartBtns.drift = kartBtns.item = false;
       still();
     },
     onClose() {
@@ -1350,15 +1354,15 @@ export function createWalk(d: WalkDeps) {
   }
 
   /** The touch Drift button, held */
-  const kartBtns = { drift: false };
-  const padKart = { steer: 0, throttle: 0, drift: false };
+  const kartBtns = { drift: false, item: false };
+  const padKart = { steer: 0, throttle: 0, drift: false, item: false };
   function startKart(setup: RaceStart) {
     if (karts.active) return;
     kartUI.close();
     if (drive.active) getOut();
     drive.recallKart();
     if (combat.armed) combat.toggleHolster();
-    kartBtns.drift = false;
+    kartBtns.drift = kartBtns.item = false;
     still();
     hero.g.visible = hero.ring.visible = false;
     near = null;
@@ -1385,7 +1389,7 @@ export function createWalk(d: WalkDeps) {
     hero.ring.visible = !firstPerson;
     keys.clear();
     pedals.gas = pedals.brake = false;
-    kartBtns.drift = false;
+    kartBtns.drift = kartBtns.item = false;
     near = null;
     d.touched();
   }
@@ -2002,6 +2006,19 @@ export function createWalk(d: WalkDeps) {
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
   }
+  const itemBtn = root.querySelector<HTMLButtonElement>('[data-kart-item]');
+  if (itemBtn) {
+    itemBtn.addEventListener('pointerdown', (e) => {
+      try {
+        itemBtn.setPointerCapture(e.pointerId);
+      } catch {
+        /* still pressed */
+      }
+      kartBtns.item = true;
+      d.touched();
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) itemBtn.addEventListener(ev, () => (kartBtns.item = false));
+  }
   // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
   for (const k of ['punch', 'kick', 'dodge'] as const) {
     const b = root.querySelector(`[data-fight-${k}]`);
@@ -2072,7 +2089,7 @@ export function createWalk(d: WalkDeps) {
       padDrive.steer = padDrive.throttle = 0;
       padDrive.handbrake = false;
       padKart.steer = padKart.throttle = 0;
-      padKart.drift = false;
+      padKart.drift = padKart.item = false;
       padFly.turn = padFly.climb = padFly.throttle = 0;
       // Unplugged with a trigger down: let go of it
       if (pad.prev[6]) setAim(false);
@@ -2242,6 +2259,7 @@ export function createWalk(d: WalkDeps) {
       padKart.steer = pad.x;
       padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
       padKart.drift = !!b[0];
+      padKart.item = !!b[2];
       if (edge(9)) abandonKart();
       if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
       pad.prev = b;
@@ -2564,7 +2582,8 @@ export function createWalk(d: WalkDeps) {
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padKart.steer) steer = padKart.steer;
     if (padKart.throttle) throttle = padKart.throttle;
-    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift };
+    // (E, the gamepad's X or the touch Item button: an items race's item, kart-sim.ts takes the press)
+    const inp: KartInput = { throttle, steer, drift: jumpHeld || kartBtns.drift || padKart.drift, item: keys.has('KeyE') || kartBtns.item || padKart.item };
     karts.update(dt, inp);
     const p = karts.sim?.player;
     if (p) {
@@ -3165,7 +3184,7 @@ export function createWalk(d: WalkDeps) {
     }
     // The kart hut's door, at the kart park
     if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {
-      best = { id: 'karts', label: 'Kart hut' };
+      best = { id: 'karts', label: 'Clubhouse' };
       bestD = 0;
     }
     // The trainer's counter, at the Fight Club
@@ -3223,6 +3242,8 @@ export function createWalk(d: WalkDeps) {
   }
 
   return {
+    /** For the headless checks (index.ts `__city`, `?fps`): a race at the kart park, the kart game fetched first */
+    race: (setup: RaceStart) => loadKarts().then(() => startKart(setup)),
     get active() {
       return active;
     },
