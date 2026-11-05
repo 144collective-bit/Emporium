@@ -372,6 +372,7 @@ test('the save (v9): the fight record cleans, a spar pays XP capped per hit, a b
   assert.equal(s.counters.kos, 1);
   assert.equal(s.counters.chains, 1);
   assert.equal(s.ledger.totals.fighting, FIGHT_BOTS.medium.prize);
+  assert.equal(s.counters.earned, FIGHT_BOTS.medium.prize, 'a purse is Dorras taken');
   // A faster win keeps the best time; a slower one doesn't
   finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 5, kos: 0, bestChain: 1, seconds: 60 });
   finishFight(s, { kind: 'bout', bot: 'medium', won: true, hits: 5, kos: 0, bestChain: 1, seconds: 99 });

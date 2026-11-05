@@ -78,6 +78,7 @@ import {
   isBike,
   type GarageId,
   STARTER_GUNS,
+  STYLE_CATALOG,
   STARTER_KARTS,
   UNIT_LEVEL_COSTS,
   WARDROBE_CATALOG,
@@ -449,7 +450,6 @@ export interface TycoonSave {
   corners: (Corner | null)[];
   ledger: Ledger;
   loan: Loan | null;
-  stats: { earned: number; sold: number; made: number; grown: number; bonus: number; wages: number; contracts: number };
   /* Phase 5: the city's game */
   xp: number;
   /** The cars and (vehicle plan Phase 7) the motorbikes you've bought, and their mods */
@@ -496,7 +496,6 @@ export function newSave(now: number): TycoonSave {
     corners: Array.from({ length: CORNER_COUNT }, () => null),
     ledger: { totals: {}, recent: [] },
     loan: null,
-    stats: { earned: 0, sold: 0, made: 0, grown: 0, bonus: 0, wages: 0, contracts: 0 },
     xp: 0,
     garage: { owned: [], mods: {} },
     armoury: { owned: [], mods: {} },
@@ -572,7 +571,6 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   const st = obj(o.stall);
   const level = Math.round(num(st.level, 1, STALL_LEVELS.length, 1));
   const L = stallLevel(level);
-  const stats = obj(o.stats);
   const units = Array.isArray(o.units) ? o.units : [];
   const ws = obj(o.workshop);
   // Phase 5: the places' levels first (they set how much each holds)
@@ -603,15 +601,6 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     corners: Array.from({ length: CORNER_COUNT }, (_, i) => cleanCorner((Array.isArray(o.corners) ? o.corners : [])[i], mul(`c${i}` as PlaceId))),
     ledger: cleanLedger(o.ledger, now),
     loan: null,
-    stats: {
-      earned: Math.floor(num(stats.earned, 0, 1e15, 0)),
-      sold: Math.floor(num(stats.sold, 0, 1e15, 0)),
-      made: Math.floor(num(stats.made, 0, 1e15, 0)),
-      grown: Math.floor(num(stats.grown, 0, 1e15, 0)),
-      bonus: Math.floor(num(stats.bonus, 0, 1e15, 0)),
-      wages: Math.floor(num(stats.wages, 0, 1e15, 0)),
-      contracts: Math.floor(num(stats.contracts, 0, 1e9, 0)),
-    },
     xp: Math.floor(num(o.xp, 0, 1e9, 0)),
     garage: { owned: [], mods: {} },
     armoury: { owned: [], mods: {} },
@@ -989,8 +978,10 @@ export function unload(s: TycoonSave, to: PlaceId, id: GoodId, qty: number, now:
   if (!s.cargo[id]) delete s.cargo[id];
   const bonus = sells(s, to) ? Math.floor(n * marketPrice(id, now) * DELIVERY_BONUS) : 0;
   s.dorras += bonus;
-  s.stats.bonus += bonus;
-  if (bonus) book(s, 'bonus', bonus);
+  if (bonus) {
+    book(s, 'bonus', bonus);
+    count(s, 'earned', bonus);
+  }
   return { ok: true, qty: n, dorras: bonus };
 }
 
@@ -1070,15 +1061,12 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
       const repay = s.loan ? Math.min(s.loan.owed, Math.floor((pay - cut) * LOAN_SHARE)) : 0;
       if (repay) payLoan(s, repay);
       s.till += pay - cut - repay;
-      s.stats.wages += cut;
       if (cut) book(s, 'staff', cut);
       book(s, 'sales', pay - cut);
       out.wages += cut;
       out.repaid += repay;
       out.earned += pay - cut - repay;
       add(out.sold, slot.good, n);
-      s.stats.sold += n;
-      s.stats.earned += pay;
       count(s, 'sold', n);
       count(s, 'earned', pay - cut - repay);
       addXp(s, n * XP.sale);
@@ -1097,7 +1085,6 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     if (n <= 0) return;
     u.stock[u.crop] = have + n;
     add(out.grown, u.crop, n);
-    s.stats.grown += n;
     if (hand) payStaff(s, p, n * marketPrice(u.crop, now) * STAFF_CUT, out);
   });
   // The Workshop and your factories work through their jobs
@@ -1112,7 +1099,6 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     if (n > 0) {
       put(s, p, j.make, n);
       add(out.made, j.make, n);
-      s.stats.made += n;
       if (hand) payStaff(s, p, n * marketPrice(j.make, now) * STAFF_CUT, out);
     }
     j.left -= n;
@@ -1161,7 +1147,6 @@ function payStaff(s: TycoonSave, p: PlaceId, amount: number, out: Sales) {
   const fromBalance = Math.min(s.dorras, due - fromTill);
   s.till -= fromTill;
   s.dorras -= fromBalance;
-  s.stats.wages += fromTill + fromBalance;
   if (fromTill + fromBalance) book(s, 'staff', fromTill + fromBalance);
   out.wages += fromTill + fromBalance;
   if (fromTill + fromBalance < due) {
@@ -1307,7 +1292,6 @@ export function deliver(s: TycoonSave, id: number, at: DestId, now: number): Res
   if (!s.cargo[c.good]) delete s.cargo[c.good];
   s.dorras += c.reward;
   book(s, 'contracts', c.reward);
-  s.stats.contracts += 1;
   count(s, 'contracts', 1);
   count(s, 'earned', c.reward);
   addXp(s, XP.contract);
@@ -1419,7 +1403,7 @@ export function propertyValue(s: TycoonSave) {
   for (const p of PLACE_IDS) v += levelCosts(p).slice(1, placeLevel(s, p)).reduce((a, b) => a + b, 0);
   return v;
 }
-/** What you've paid for cars, guns, clothes and their mods */
+/** What you've paid for cars, bikes, karts, guns, clothes, fight styles and their mods */
 export function gearValue(s: TycoonSave) {
   let v = 0;
   for (const id of s.garage.owned) v += garageEntry(id)?.price ?? 0;
@@ -1428,9 +1412,9 @@ export function gearValue(s: TycoonSave) {
     const m = s.karts.mods[id];
     if (m) for (const k of KART_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += kartModCost(id, k, { ...m, [k]: l - 1 }) ?? 0;
   }
-  for (const id of PLAYER_CARS) {
+  for (const id of [...PLAYER_CARS, ...BIKE_IDS] as GarageId[]) {
     const m = carMods(s, id);
-    for (const k of CAR_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(CAR_CATALOG[id].price, l) ?? 0;
+    for (const k of CAR_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(garageEntry(id).price, l) ?? 0;
   }
   for (const id of s.armoury.owned) v += GUN_CATALOG[id]?.price ?? 0;
   for (const id of Object.keys(GUN_CATALOG) as WeaponId[]) {
@@ -1438,6 +1422,7 @@ export function gearValue(s: TycoonSave) {
     for (const k of GUN_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(GUN_CATALOG[id].price, l) ?? 0;
   }
   for (const id of s.wardrobe) v += wardrobeEntry(id)?.price ?? 0;
+  for (const id of s.fight.styles) v += STYLE_CATALOG[id as keyof typeof STYLE_CATALOG]?.price ?? 0;
   return v;
 }
 /** All your goods (every place, your car and the couriers' loads) at today's market price */

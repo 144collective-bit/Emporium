@@ -17,7 +17,7 @@
 import { DOORS, GARAGE_SITE, RACK, STALL_SPOT } from './solids';
 import { design } from './layout';
 import { HUT_DOOR } from './kartcircuit';
-import { GUIDE_STEPS, addXp, book, type TycoonSave } from './tycoon';
+import { GUIDE_STEPS, addXp, book, count, type TycoonSave } from './tycoon';
 
 type At = { x: number; z: number };
 /** Where walking starts for a step taken from the City view: a spot to stand on, facing what it's about */
@@ -134,6 +134,7 @@ export function advanceGuide(s: TycoonSave): GuideStep[] {
     s.guide.step++;
     s.dorras += g.reward;
     book(s, 'missions', g.reward);
+    count(s, 'earned', g.reward);
     addXp(s, g.xp);
     done.push(g);
   }

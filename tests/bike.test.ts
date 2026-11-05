@@ -8,7 +8,7 @@ import { circles, newCar, stepCar, tune, type CarState } from '../src/scripts/ci
 import { BIKE_CATALOG, STARTER_BIKES } from '../src/scripts/city3d/catalog';
 import { CARS } from '../src/scripts/city3d/carspec';
 import { CARGO, DRIVE, FEEL, PLAYER_CARS } from '../src/scripts/city3d/mycar';
-import { buyCar, carMods, carStatsOf, cleanSave, modCar, ownsCar } from '../src/scripts/city3d/tycoon';
+import { buyCar, carMods, carStatsOf, cleanSave, gearValue, modCar, ownsCar } from '../src/scripts/city3d/tycoon';
 import { MOMENT, bikeMark } from '../src/scripts/city3d/moments';
 import { SITTER } from '../src/scripts/city3d/carinside';
 
@@ -161,6 +161,7 @@ test('bikes are bought and tuned in the garage as the cars are: the top box carr
   assert.ok(modCar(s, 'streetbike', 'rack').ok);
   assert.ok(carStatsOf(s, 'streetbike').cargo > before);
   assert.equal(carMods(s, 'streetbike').rack, 1);
+  assert.equal(gearValue(s), 100000 - s.dorras, 'the Vault counts the bike and its mod');
   // Saved and read back, bikes and their mods are kept; unknown ids dropped
   const again = cleanSave(JSON.parse(JSON.stringify({ ...s, garage: { owned: [...s.garage.owned, 'unicycle'], mods: s.garage.mods } })), 0);
   assert.deepEqual(again.garage.owned, ['streetbike']);

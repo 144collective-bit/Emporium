@@ -120,6 +120,7 @@ export function claimMission(s: TycoonSave, id: string): MissionResult {
   s.missions.done.push(id);
   s.dorras += m.reward;
   book(s, 'missions', m.reward);
+  count(s, 'earned', m.reward);
   count(s, 'missions', 1);
   const levels = addXp(s, m.xp);
   return { ok: true, reward: m.reward, xp: m.xp, levels };

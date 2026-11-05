@@ -8,7 +8,7 @@ import { T, createFightSim } from '../src/scripts/city3d/fight-sim';
 import { BRAWL, NO_BRAWL, createBrawl } from '../src/scripts/city3d/brawl-sim';
 import { PARTNERS } from '../src/scripts/city3d/brawlsite';
 import { BADGES, MISSIONS, acceptMission, checkBadges, missionProgress } from '../src/scripts/city3d/missions';
-import { cleanSave, type TycoonSave } from '../src/scripts/city3d/tycoon';
+import { cleanSave, gearValue, type TycoonSave } from '../src/scripts/city3d/tycoon';
 import { buyStyle, finishFight, pickStyle } from '../src/scripts/city3d/fightsave';
 
 const T0 = Date.UTC(2026, 9, 28, 12);
@@ -38,6 +38,7 @@ test('the styles: the Brawler is everyone’s, the others cost Dorras and a leve
   assert.equal(s.fight.style, 'kickboxer');
   assert.ok(s.fight.styles.includes('kickboxer'));
   assert.equal(s.ledger.totals.fightclub, STYLE_CATALOG.kickboxer.price);
+  assert.equal(gearValue(s), STYLE_CATALOG.kickboxer.price, 'the Vault counts the style');
   assert.equal(pickStyle(s, 'street'), false, 'not owned');
   assert.equal(pickStyle(s, 'brawler'), true);
   assert.equal(s.fight.style, 'brawler');

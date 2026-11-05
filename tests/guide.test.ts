@@ -44,6 +44,7 @@ test('steps finish in order, pay once, and the beam follows the step', () => {
   );
   assert.equal(s.dorras, start + done.reduce((a, g) => a + g.reward, 0));
   assert.equal(s.ledger.totals.missions, done.reduce((a, g) => a + g.reward, 0));
+  assert.equal(s.counters.earned, done.reduce((a, g) => a + g.reward, 0), 'the rewards are Dorras taken');
   assert.equal(guideStep(s)?.id, 'contract');
   assert.deepEqual(guideAt(s), { x: GUIDE[3].at.x, z: GUIDE[3].at.z });
   assert.deepEqual(advanceGuide(s), [], 'nothing pays twice');

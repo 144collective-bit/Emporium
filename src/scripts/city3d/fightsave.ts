@@ -77,6 +77,7 @@ export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'
   if (prize > 0) {
     s.dorras += prize;
     book(s, 'fighting', prize);
+    count(s, 'earned', prize);
   }
   const levels = addXp(s, xp);
   return { prize, xp, levels, won: r.kind === 'spar' ? null : !!r.won };
