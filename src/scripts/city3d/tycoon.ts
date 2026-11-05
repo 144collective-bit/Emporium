@@ -49,7 +49,6 @@ import { FREE_PLAY } from './freeplay';
 import {
   BOT_LEVELS,
   type BotLevel,
-  CAR_CATALOG,
   CAR_MOD_IDS,
   GUN_CATALOG,
   GUN_MOD_IDS,
@@ -78,6 +77,7 @@ import {
   isBike,
   type GarageId,
   STARTER_GUNS,
+  STYLE_CATALOG,
   STARTER_KARTS,
   UNIT_LEVEL_COSTS,
   WARDROBE_CATALOG,
@@ -449,7 +449,6 @@ export interface TycoonSave {
   corners: (Corner | null)[];
   ledger: Ledger;
   loan: Loan | null;
-  stats: { earned: number; sold: number; made: number; grown: number; bonus: number; wages: number; contracts: number };
   /* Phase 5: the city's game */
   xp: number;
   /** The cars and (vehicle plan Phase 7) the motorbikes you've bought, and their mods */
@@ -496,7 +495,6 @@ export function newSave(now: number): TycoonSave {
     corners: Array.from({ length: CORNER_COUNT }, () => null),
     ledger: { totals: {}, recent: [] },
     loan: null,
-    stats: { earned: 0, sold: 0, made: 0, grown: 0, bonus: 0, wages: 0, contracts: 0 },
     xp: 0,
     garage: { owned: [], mods: {} },
     armoury: { owned: [], mods: {} },
@@ -572,7 +570,6 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   const st = obj(o.stall);
   const level = Math.round(num(st.level, 1, STALL_LEVELS.length, 1));
   const L = stallLevel(level);
-  const stats = obj(o.stats);
   const units = Array.isArray(o.units) ? o.units : [];
   const ws = obj(o.workshop);
   // Phase 5: the places' levels first (they set how much each holds)
@@ -603,15 +600,6 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     corners: Array.from({ length: CORNER_COUNT }, (_, i) => cleanCorner((Array.isArray(o.corners) ? o.corners : [])[i], mul(`c${i}` as PlaceId))),
     ledger: cleanLedger(o.ledger, now),
     loan: null,
-    stats: {
-      earned: Math.floor(num(stats.earned, 0, 1e15, 0)),
-      sold: Math.floor(num(stats.sold, 0, 1e15, 0)),
-      made: Math.floor(num(stats.made, 0, 1e15, 0)),
-      grown: Math.floor(num(stats.grown, 0, 1e15, 0)),
-      bonus: Math.floor(num(stats.bonus, 0, 1e15, 0)),
-      wages: Math.floor(num(stats.wages, 0, 1e15, 0)),
-      contracts: Math.floor(num(stats.contracts, 0, 1e9, 0)),
-    },
     xp: Math.floor(num(o.xp, 0, 1e9, 0)),
     garage: { owned: [], mods: {} },
     armoury: { owned: [], mods: {} },
@@ -989,8 +977,10 @@ export function unload(s: TycoonSave, to: PlaceId, id: GoodId, qty: number, now:
   if (!s.cargo[id]) delete s.cargo[id];
   const bonus = sells(s, to) ? Math.floor(n * marketPrice(id, now) * DELIVERY_BONUS) : 0;
   s.dorras += bonus;
-  s.stats.bonus += bonus;
-  if (bonus) book(s, 'bonus', bonus);
+  if (bonus) {
+    book(s, 'bonus', bonus);
+    count(s, 'earned', bonus);
+  }
   return { ok: true, qty: n, dorras: bonus };
 }
 
@@ -1070,15 +1060,12 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
       const repay = s.loan ? Math.min(s.loan.owed, Math.floor((pay - cut) * LOAN_SHARE)) : 0;
       if (repay) payLoan(s, repay);
       s.till += pay - cut - repay;
-      s.stats.wages += cut;
       if (cut) book(s, 'staff', cut);
       book(s, 'sales', pay - cut);
       out.wages += cut;
       out.repaid += repay;
       out.earned += pay - cut - repay;
       add(out.sold, slot.good, n);
-      s.stats.sold += n;
-      s.stats.earned += pay;
       count(s, 'sold', n);
       count(s, 'earned', pay - cut - repay);
       addXp(s, n * XP.sale);
@@ -1097,7 +1084,6 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     if (n <= 0) return;
     u.stock[u.crop] = have + n;
     add(out.grown, u.crop, n);
-    s.stats.grown += n;
     if (hand) payStaff(s, p, n * marketPrice(u.crop, now) * STAFF_CUT, out);
   });
   // The Workshop and your factories work through their jobs
@@ -1112,7 +1098,6 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     if (n > 0) {
       put(s, p, j.make, n);
       add(out.made, j.make, n);
-      s.stats.made += n;
       if (hand) payStaff(s, p, n * marketPrice(j.make, now) * STAFF_CUT, out);
     }
     j.left -= n;
@@ -1161,7 +1146,6 @@ function payStaff(s: TycoonSave, p: PlaceId, amount: number, out: Sales) {
   const fromBalance = Math.min(s.dorras, due - fromTill);
   s.till -= fromTill;
   s.dorras -= fromBalance;
-  s.stats.wages += fromTill + fromBalance;
   if (fromTill + fromBalance) book(s, 'staff', fromTill + fromBalance);
   out.wages += fromTill + fromBalance;
   if (fromTill + fromBalance < due) {
@@ -1307,7 +1291,6 @@ export function deliver(s: TycoonSave, id: number, at: DestId, now: number): Res
   if (!s.cargo[c.good]) delete s.cargo[c.good];
   s.dorras += c.reward;
   book(s, 'contracts', c.reward);
-  s.stats.contracts += 1;
   count(s, 'contracts', 1);
   count(s, 'earned', c.reward);
   addXp(s, XP.contract);
@@ -1419,7 +1402,7 @@ export function propertyValue(s: TycoonSave) {
   for (const p of PLACE_IDS) v += levelCosts(p).slice(1, placeLevel(s, p)).reduce((a, b) => a + b, 0);
   return v;
 }
-/** What you've paid for cars, guns, clothes and their mods */
+/** What you've paid for cars, bikes, karts, guns, clothes, fight styles and their mods */
 export function gearValue(s: TycoonSave) {
   let v = 0;
   for (const id of s.garage.owned) v += garageEntry(id)?.price ?? 0;
@@ -1428,9 +1411,9 @@ export function gearValue(s: TycoonSave) {
     const m = s.karts.mods[id];
     if (m) for (const k of KART_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += kartModCost(id, k, { ...m, [k]: l - 1 }) ?? 0;
   }
-  for (const id of PLAYER_CARS) {
+  for (const id of [...PLAYER_CARS, ...BIKE_IDS] as GarageId[]) {
     const m = carMods(s, id);
-    for (const k of CAR_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(CAR_CATALOG[id].price, l) ?? 0;
+    for (const k of CAR_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(garageEntry(id).price, l) ?? 0;
   }
   for (const id of s.armoury.owned) v += GUN_CATALOG[id]?.price ?? 0;
   for (const id of Object.keys(GUN_CATALOG) as WeaponId[]) {
@@ -1438,6 +1421,7 @@ export function gearValue(s: TycoonSave) {
     for (const k of GUN_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(GUN_CATALOG[id].price, l) ?? 0;
   }
   for (const id of s.wardrobe) v += wardrobeEntry(id)?.price ?? 0;
+  for (const id of s.fight.styles) v += STYLE_CATALOG[id as keyof typeof STYLE_CATALOG]?.price ?? 0;
   return v;
 }
 /** All your goods (every place, your car and the couriers' loads) at today's market price */
@@ -1501,6 +1485,8 @@ export function addXp(s: TycoonSave, n: number) {
   s.xp += Math.round(n);
   return level(s) - before;
 }
+/** Mission ids renamed since they were saved (old → new; `cleanSave()` maps them) */
+export const MISSION_RENAMES: Record<string, string> = { 'street-fighter': 'heavy-hands' };
 /** Count something you did (missions and badges watch these) */
 export function count(s: TycoonSave, k: CounterId, n = 1) {
   if (!(n > 0)) return;
@@ -1639,14 +1625,16 @@ export const dayKey = (now: number) => {
  * A finished kart race or time trial: pay the place (a cup's prizes), count it, keep the fastest lap
  * per course and class (any race) and a time trial's run on the board; `clean` (laps without a
  * wheel in the run-off) and `overtakes` are counted for missions and badges. `laps` are the lap times.
+ * `prizes` false (the owner's live `prizes` switch closed): the race counts and pays its XP, but no Dorras.
  */
-export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number; items?: boolean }): KartResult {
+export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number; items?: boolean; prizes?: boolean }): KartResult {
   const seconds = Math.round(r.seconds * 100) / 100;
   const time = r.cup === 'time';
   const c = time ? null : CUPS[r.cup as CupId];
   const cls: ClassId = KART_CLASSES[r.cls] ? r.cls : 'sport';
   const place = Math.max(1, Math.min(8, Math.round(r.place)));
-  const prize = c ? (c.prizes[place - 1] ?? 0) : 0;
+  const paying = r.prizes !== false;
+  const prize = c && paying ? (c.prizes[place - 1] ?? 0) : 0;
   const now = r.now ?? s.at;
   // (an items race, docs/kart-west-plan.md Phase 7, keeps no lap records, par or challenge: they stay pure racing)
   const lapsIn = r.items ? [] : (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
@@ -1680,9 +1668,11 @@ export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; 
   if (bestLap > 0 && ch.course === r.course && ch.cls === cls && bestLap <= ch.target && K.challenge?.day !== today) {
     K.challenge = { day: today, lap: bestLap };
     challenge = true;
-    s.dorras += CHALLENGE_PRIZE;
-    book(s, 'karting', CHALLENGE_PRIZE);
-    count(s, 'earned', CHALLENGE_PRIZE);
+    if (paying) {
+      s.dorras += CHALLENGE_PRIZE;
+      book(s, 'karting', CHALLENGE_PRIZE);
+      count(s, 'earned', CHALLENGE_PRIZE);
+    }
   }
   if (prize > 0) {
     s.dorras += prize;
@@ -1742,9 +1732,10 @@ export const seriesPlaces = (points: number[]) => {
 };
 /**
  * A race of the series finished: `placesByKart` is each grid index's place in it (you last).
- * Points go on; after the last race the overall standings pay a prize and a trophy.
+ * Points go on; after the last race the overall standings pay a prize and a trophy (`prizes` false: the
+ * trophy and the XP, no Dorras).
  */
-export function seriesRace(s: TycoonSave, placesByKart: number[]): SeriesResult | null {
+export function seriesRace(s: TycoonSave, placesByKart: number[], prizes = true): SeriesResult | null {
   const sr = s.karts.series;
   if (!sr) return null;
   const cup = CUPS[sr.cup];
@@ -1758,7 +1749,7 @@ export function seriesRace(s: TycoonSave, placesByKart: number[]): SeriesResult 
   let xp = 0;
   let levels = 0;
   if (done) {
-    prize = SERIES_PRIZES[sr.cup][overall - 1] ?? 0;
+    prize = prizes ? (SERIES_PRIZES[sr.cup][overall - 1] ?? 0) : 0;
     if (prize > 0) {
       s.dorras += prize;
       book(s, 'karting', prize);
@@ -1965,13 +1956,17 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   }
   const m = obj(o.missions);
   const slug = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,40}$/.test(v);
-  s.missions.done = [...new Set((Array.isArray(m.done) ? m.done : []).filter(slug))];
+  // The mission Heavy hands was saved as `street-fighter` until the polish pass (the badge is the Street Fighter)
+  const missionId = (id: string) => MISSION_RENAMES[id] ?? id;
+  s.missions.done = [...new Set((Array.isArray(m.done) ? m.done : []).filter(slug).map(missionId))];
   for (const raw of (Array.isArray(m.active) ? m.active : []).slice(0, 5)) {
     const r = obj(raw);
-    if (!slug(r.id) || s.missions.done.includes(r.id) || s.missions.active.some((x) => x.id === r.id)) continue;
+    if (!slug(r.id)) continue;
+    const id = missionId(r.id);
+    if (s.missions.done.includes(id) || s.missions.active.some((x) => x.id === id)) continue;
     const from = newCounters();
     for (const k of COUNTER_IDS) from[k] = Math.floor(num(obj(r.from)[k], 0, 1e15, 0));
-    s.missions.active.push({ id: r.id, from, at: num(r.at, 0, now, now) });
+    s.missions.active.push({ id, from, at: num(r.at, 0, now, now) });
   }
   s.badges = [...new Set((Array.isArray(o.badges) ? o.badges : []).filter(slug))];
   for (const k of COUNTER_IDS) s.counters[k] = Math.floor(num(obj(o.counters)[k], 0, 1e15, 0));

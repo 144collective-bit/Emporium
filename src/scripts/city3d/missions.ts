@@ -43,10 +43,10 @@ export const MISSIONS: Mission[] = [
   { id: 'shopkeeper', name: 'Shopkeeper', blurb: 'Sell 150 things.', level: 3, goal: counter('sold', 150), reward: 900, xp: 150 },
   { id: 'courier-king', name: 'Courier king', blurb: 'Deliver 5 contracts.', level: 3, goal: counter('contracts', 5), reward: 1200, xp: 180 },
   { id: 'drone-hunter', name: 'Drone hunter', blurb: 'Knock down 15 drones.', level: 3, goal: counter('drones', 15), reward: 1000, xp: 150 },
-  { id: 'street-fighter', name: 'Heavy hands', blurb: 'Knock down 20 dummies by hand.', level: 3, goal: counter('fistDowns', 20), reward: 1100, xp: 160 },
+  { id: 'heavy-hands', name: 'Heavy hands', blurb: 'Knock down 20 dummies by hand.', level: 3, goal: counter('fistDowns', 20), reward: 1100, xp: 160 },
   { id: 'round-the-city', name: 'Round the city', blurb: 'Spar with every sparring partner.', level: 3, goal: { partners: PARTNER_IDS.length }, reward: 1500, xp: 200 },
   { id: 'dummy-run', name: 'Dummy run', blurb: 'Knock down 25 dummies.', level: 3, goal: counter('dummies', 25), reward: 800, xp: 120 },
-  { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units or lots.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
+  { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units, lots or shops.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
   { id: 'clean-sheet', name: 'Clean sheet', blurb: 'Drive 5 clean laps at the kart park.', level: 3, goal: counter('cleanLaps', 5), reward: 900, xp: 140 },
   // Tier 3
@@ -55,6 +55,7 @@ export const MISSIONS: Mission[] = [
   { id: 'retail-chain', name: 'Retail chain', blurb: 'Sell 600 things.', level: 5, goal: counter('sold', 600), reward: 2500, xp: 300 },
   { id: 'kart-winner', name: 'Chequered flag', blurb: 'Win a kart race.', level: 5, goal: counter('kartWins', 1), reward: 2500, xp: 300 },
   { id: 'first-bout', name: 'First bout', blurb: 'Fight a bout at the Fight Club.', level: 5, goal: counter('bouts', 1), reward: 1500, xp: 200 },
+  { id: 'combo-artist', name: 'Combo artist', blurb: 'Land 3 chains of three in the ring.', level: 5, goal: counter('chains', 3), reward: 1500, xp: 200 },
   // Tier 4
   { id: 'fleet', name: 'Fleet', blurb: 'Buy 3 things at the shops.', level: 8, goal: counter('bought', 3), reward: 3000, xp: 300 },
   { id: 'haulage', name: 'Haulage', blurb: 'Deliver 20 contracts.', level: 8, goal: counter('contracts', 20), reward: 6000, xp: 600 },
@@ -120,6 +121,7 @@ export function claimMission(s: TycoonSave, id: string): MissionResult {
   s.missions.done.push(id);
   s.dorras += m.reward;
   book(s, 'missions', m.reward);
+  count(s, 'earned', m.reward);
   count(s, 'missions', 1);
   const levels = addXp(s, m.xp);
   return { ok: true, reward: m.reward, xp: m.xp, levels };
@@ -159,8 +161,8 @@ export const BADGES: Badge[] = [
   b('overtakes-50', 'Overtaker', 'Passed 50 karts at the kart park.', 'overtakes', 50, 400),
   b('driven-1k', 'Round the block', 'Drove 1,000 tiles.', 'driven', 1000, 100),
   b('driven-10k', 'High mileage', 'Drove 10,000 tiles.', 'driven', 10000, 800),
-  b('land-3', 'Landowner', 'Bought 3 units or lots.', 'land', 3, 200),
-  b('land-10', 'Developer', 'Bought 10 units or lots.', 'land', 10, 1200),
+  b('land-3', 'Landowner', 'Bought 3 units, lots or shops.', 'land', 3, 200),
+  b('land-10', 'Developer', 'Bought 10 units, lots or shops.', 'land', 10, 1200),
   b('upgrades-10', 'Modder', 'Bought 10 upgrades.', 'upgrades', 10, 300),
   b('missions-10', 'Go-getter', 'Finished 10 missions.', 'missions', 10, 400),
   b('bouts-10', 'Prize fighter', 'Fought 10 bouts.', 'bouts', 10, 300),

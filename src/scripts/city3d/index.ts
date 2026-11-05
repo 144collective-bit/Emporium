@@ -144,8 +144,10 @@ function pickTier(): Tier {
   const coarse = matchMedia('(pointer: coarse)').matches;
   const small = Math.min(innerWidth, innerHeight) < 700;
   const nav = navigator as Navigator & { deviceMemory?: number };
-  if (coarse || small) return 'low';
-  if ((nav.deviceMemory ?? 8) <= 4 || (navigator.hardwareConcurrency ?? 8) <= 4) return 'medium';
+  // Phones (a short side under 700) take the low tier; a big touch screen (a tablet) the medium one (the owner's call,
+  // docs/polish-plan.md), and little memory or few cores hold a desktop to medium too
+  if (small) return 'low';
+  if (coarse || (nav.deviceMemory ?? 8) <= 4 || (navigator.hardwareConcurrency ?? 8) <= 4) return 'medium';
   return 'high';
 }
 

@@ -92,6 +92,8 @@ export interface DriveDeps {
   /** The tyres' screech while sliding, 0..1 (0 is silent) */
   tyres(level: number): void;
   bounds: Box;
+  /** prefers-reduced-motion: no camera shake on bumps, no speed widening of the view */
+  reduced?: boolean;
 }
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
@@ -427,7 +429,8 @@ export function createDrive(d: DriveDeps) {
       root.classList.toggle('on-bike', v.kind === 'bike');
       root.dataset.car = v.name;
       signal.side = null;
-      d.sfx('door');
+      // (a bike and a kart have no door)
+      if (v.kind === 'car') d.sfx('door');
       return true;
     },
     /** Get out: the vehicle stays parked; returns where Degen steps out and which way he faces */
@@ -449,7 +452,7 @@ export function createDrive(d: DriveDeps) {
       v.lights?.(false, false, null);
       camera.near = near0;
       camera.updateProjectionMatrix();
-      d.sfx('door');
+      if (v.kind === 'car') d.sfx('door');
       // Out of the left door if there's room, else the right, the back or the front
       const fx = Math.cos(s.yaw);
       const fz = -Math.sin(s.yaw);
@@ -573,7 +576,7 @@ export function createDrive(d: DriveDeps) {
       clock += dt;
       if (hit > 1.2) {
         d.sfx('bump', Math.min(1, hit / 7));
-        shake = Math.min(0.25, hit * 0.03);
+        if (!d.reduced) shake = Math.min(0.25, hit * 0.03);
       }
       // The lights (drive-sim.ts carLights): brake lights, reversing lights, the indicators flashing
       const lights = carLights(s, frozen ? { throttle: 0, steer: 0, handbrake: false } : inp, signal, dt);
@@ -659,7 +662,7 @@ export function createDrive(d: DriveDeps) {
       camera.lookAt(at);
       // (the helmet's view tips with the lean)
       if (first && v.bike) camera.rotateZ(-roll * 0.6);
-      const wantFov = (chase ? (chase.fov ?? 58) : 68) + Math.min(1, Math.abs(s.speed) / T.top) * 10;
+      const wantFov = (chase ? (chase.fov ?? 58) : 68) + (d.reduced ? 0 : Math.min(1, Math.abs(s.speed) / T.top) * 10);
       fov += (wantFov - fov) * damp(4, dt);
       // (the seat's view is close to the dash and the wheel: the near plane comes in for it)
       const close = first && v.car?.eye ? 0.08 : near0;

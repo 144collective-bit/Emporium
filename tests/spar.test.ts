@@ -8,7 +8,7 @@ import { T, createFightSim } from '../src/scripts/city3d/fight-sim';
 import { BRAWL, NO_BRAWL, createBrawl } from '../src/scripts/city3d/brawl-sim';
 import { PARTNERS } from '../src/scripts/city3d/brawlsite';
 import { BADGES, MISSIONS, acceptMission, checkBadges, missionProgress } from '../src/scripts/city3d/missions';
-import { cleanSave, type TycoonSave } from '../src/scripts/city3d/tycoon';
+import { cleanSave, gearValue, type TycoonSave } from '../src/scripts/city3d/tycoon';
 import { buyStyle, finishFight, pickStyle } from '../src/scripts/city3d/fightsave';
 
 const T0 = Date.UTC(2026, 9, 28, 12);
@@ -38,6 +38,7 @@ test('the styles: the Brawler is everyone’s, the others cost Dorras and a leve
   assert.equal(s.fight.style, 'kickboxer');
   assert.ok(s.fight.styles.includes('kickboxer'));
   assert.equal(s.ledger.totals.fightclub, STYLE_CATALOG.kickboxer.price);
+  assert.equal(gearValue(s), STYLE_CATALOG.kickboxer.price, 'the Vault counts the style');
   assert.equal(pickStyle(s, 'street'), false, 'not owned');
   assert.equal(pickStyle(s, 'brawler'), true);
   assert.equal(s.fight.style, 'brawler');
@@ -142,6 +143,12 @@ test('the missions and the badge: a street spar, a street chain, every partner s
   street(s, 'duke', true);
   street(s, 'sal', true);
   assert.ok(checkBadges(s).some((x) => x.id === 'partners-all'));
-  // (the old mission kept its id, under a name of its own now the badge is the Street Fighter)
-  assert.notEqual(MISSIONS.find((m) => m.id === 'street-fighter')!.name, 'Street fighter');
+  // (the old `street-fighter` mission is Heavy hands now the badge is the Street Fighter; a save that held it is mapped)
+  assert.ok(!MISSIONS.some((m) => m.id === 'street-fighter'));
+  assert.equal(MISSIONS.find((m) => m.id === 'heavy-hands')!.name, 'Heavy hands');
+  const old = cleanSave({ ...s, missions: { done: ['street-fighter'], active: [{ id: 'street-fighter', from: {}, at: T0 }, { id: 'podium', from: {}, at: T0 }] } }, T0);
+  assert.deepEqual(old.missions.done, ['heavy-hands']);
+  assert.deepEqual(old.missions.active.map((a) => a.id), ['podium'], 'done wins over active');
+  const act2 = cleanSave({ ...s, missions: { done: [], active: [{ id: 'street-fighter', from: {}, at: T0 }] } }, T0);
+  assert.deepEqual(act2.missions.active.map((a) => a.id), ['heavy-hands']);
 });

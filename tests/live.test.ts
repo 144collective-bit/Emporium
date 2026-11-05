@@ -11,6 +11,9 @@ test('every place with a pin can be switched, and nothing else', () => {
   const spots = PLACES.filter((p) => p.kind === 'spot').map((p) => p.spot).sort();
   assert.deepEqual(LIVE_PLACES.map((p) => p.id).sort(), spots);
   assert.equal(new Set(LIVE_FEATURES.map((f) => f.id)).size, LIVE_FEATURES.length);
+  // (the `guns` switch gates the counters only, so it's named for them; `prizes` pauses the Dorras from races and bouts)
+  assert.equal(LIVE_FEATURES.find((f) => f.id === 'guns')!.name, 'Gun stores');
+  assert.ok(LIVE_FEATURES.some((f) => f.id === 'prizes'));
 });
 
 test('no config, an empty one or a broken one is the city as it is: everything open, no banners, no cover', () => {

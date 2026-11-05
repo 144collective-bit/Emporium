@@ -66,7 +66,7 @@ export const LIVE_PLACES = [
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 
-export type FeatureId = 'walk' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'taxi' | 'metro' | 'riverbus' | 'monorail' | 'boat' | 'travel';
+export type FeatureId = 'walk' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'prizes' | 'taxi' | 'metro' | 'riverbus' | 'monorail' | 'boat' | 'travel';
 /** The features that can be closed, and what closing each one stops */
 export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'walk', name: 'Walk mode', stops: 'Walking into the city (the Walk switch and every Walk in)' },
@@ -74,7 +74,8 @@ export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'fly', name: 'Flying', stops: 'The hangar and getting into your aircraft' },
   { id: 'karts', name: 'Karting', stops: 'The kart park\'s clubhouse (races, karts, boards)' },
   { id: 'fight', name: 'Fighting', stops: "The Fight Club's trainer" },
-  { id: 'guns', name: 'Target practice', stops: 'The gun store counters' },
+  { id: 'guns', name: 'Gun stores', stops: 'The gun store counters (a gun already carried still fires)' },
+  { id: 'prizes', name: 'Prizes', stops: 'The Dorras from kart races, series and bouts: they run and pay 0 (XP as before)' },
   { id: 'taxi', name: 'Taxis', stops: "The world map's Taxi here" },
   { id: 'metro', name: 'The metro', stops: 'The stations\' doors' },
   { id: 'riverbus', name: 'The river bus', stops: 'Its piers\' gangways' },

@@ -388,8 +388,9 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   (every partner sparred, level 3: a goal of its own, `{ partners }`,
   counted from the record, so spars before it was taken count); badge
   **Street Fighter** (every partner beaten). The old mission
-  `street-fighter` (twenty dummies by hand) kept its id under the name
-  Heavy hands.
+  `street-fighter` (twenty dummies by hand) is Heavy hands, id
+  `heavy-hands` since the polish pass (`MISSION_RENAMES` in tycoon.ts maps
+  a save that held the old id).
 - **The record**: the trainer's Spar tab names the partners and where they
   wait; the Record tab has an "On the street" list. The City-view panel's
   record stays the gym's.

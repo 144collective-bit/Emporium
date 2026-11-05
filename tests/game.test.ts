@@ -293,6 +293,7 @@ test('missions: level-gated, three at once, progress from when you took them, cl
   assert.equal(s.xp - x0, 80);
   assert.equal(missionState(s, 'drone-patrol'), 'done');
   assert.equal(s.counters.missions, 1);
+  assert.equal(s.counters.earned, 400, 'a reward is Dorras taken');
   assert.deepEqual(acceptMission(s, 'drone-patrol', T0), { ok: false, why: 'owned' });
   // Three at once
   for (const id of ['first-sales', 'paper-run', 'joyride']) assert.ok(acceptMission(s, id, T0).ok, id);

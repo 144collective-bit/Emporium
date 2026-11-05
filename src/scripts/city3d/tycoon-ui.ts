@@ -1181,7 +1181,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     paintCard();
     paintPanel();
     // The city only redraws what changed (crate stacks, units, the contracts' beams)
-    const shown = JSON.stringify([save.stall, save.units, save.lots, save.contracts.map((c) => c.to), save.levels, guideAt(save)]);
+    const shown = JSON.stringify([save.stall, save.units, save.lots, save.corners, save.contracts.map((c) => c.to), save.levels, guideAt(save)]);
     if (shown !== lastShown) {
       lastShown = shown;
       h.stock(save);

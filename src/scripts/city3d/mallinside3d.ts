@@ -293,8 +293,8 @@ function atrium(b: Batch) {
     box(b, x0 - 0.1, Y + 2.1, z0 - 0.1, x1 + 0.1, Y + 2.4, z1 + 0.1, WHITE);
     for (const s of [1, -1]) signIn(b, k.name, xm, Y + 2.25, s === 1 ? z1 + 0.11 : z0 - 0.11, x1 - x0 - 0.1, 0.26, s === 1 ? 0 : Math.PI);
     box(b, x0 - 0.1, Y + 2.08, z1 + 0.08, x1 + 0.1, Y + 2.1, z1 + 0.1, LED);
-    // (what's on the counter: a coffee machine or a rack of shades)
-    box(b, xm - 0.35, Y + 1.06, zm - 0.2, xm + 0.15, Y + 1.5, zm + 0.15, k.rect[0] < XM ? STEEL : MID);
+    // (what's on the counter: a coffee machine or a rack of shades; not on phones)
+    if (!LOW) box(b, xm - 0.35, Y + 1.06, zm - 0.2, xm + 0.15, Y + 1.5, zm + 0.15, k.rect[0] < XM ? STEEL : MID);
   }
   // The glass lift: a steel frame at its corners and floors, glass all round, its car waiting downstairs
   const [lx0, lz0, lx1, lz1] = LIFT_SHAFT;
@@ -429,11 +429,12 @@ function foodCourt(b: Batch) {
     signIn(b, s.name, xm, y0 + 2.65, STALL_Z + 0.23, Math.min(3.6, x1 - x0 - 0.6), 0.42, 0);
     box(b, x0 + 0.2, y0 + 2.37, STALL_Z + 0.18, x1 - 0.2, y0 + 2.4, STALL_Z + 0.21, LED);
   });
-  // Tables: a round white top on a steel pedestal, a timber stool each side
+  // Tables: a round white top on a steel pedestal, a timber stool each side (no stools on phones)
   for (const [x, z] of TABLES) {
     cyl(b, TABLE_R, 0.04, x, y0 + 0.72, z, WHITE, 16);
     cyl(b, 0.05, 0.72, x, y0, z, STEEL, 8);
     cyl(b, 0.25, 0.03, x, y0, z, STEEL, 12);
+    if (LOW) continue;
     for (const sx of [-1, 1]) {
       cyl(b, 0.2, 0.06, x + sx * (TABLE_R + 0.3), y0 + 0.42, z, WOOD, 12);
       cyl(b, 0.035, 0.42, x + sx * (TABLE_R + 0.3), y0, z, STEEL, 6);
@@ -523,7 +524,11 @@ function downstairs(b: Batch) {
 /* ---------- Registering ---------- */
 
 /** The inside's sites (near only) and, on the main thread, the escalators' steps running */
-export function registerInside({ tick }: { tick?: (f: Tick) => void }) {
+/** Phones leave out the finest props (the kiosks' counter things, the food court's stools); set by `registerInside()` */
+let LOW = false;
+
+export function registerInside({ low, tick }: { low: boolean; tick?: (f: Tick) => void }) {
+  LOW = low;
   const build = (draw: (b: Batch) => void) => (into: THREE.Object3D) => {
     const b = new Batch();
     b.detail(() => draw(b));

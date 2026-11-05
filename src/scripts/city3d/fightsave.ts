@@ -20,7 +20,8 @@ export interface FightResult {
  * (a purse by opponent for a win, XP either way), knock-outs and chains counted, the record kept.
  * A quit bout is a loss; a quit spar still counts its hits.
  */
-export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'; bot: BotLevel; partner?: PartnerId; won: boolean | null; hits: number; kos: number; bestChain: number; seconds: number; quit?: boolean }): FightResult {
+/** `prizes` false (the owner's live `prizes` switch closed): the bout counts and pays its XP, but no purse */
+export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'; bot: BotLevel; partner?: PartnerId; won: boolean | null; hits: number; kos: number; bestChain: number; seconds: number; quit?: boolean; prizes?: boolean }): FightResult {
   const bot = FIGHT_BOTS[r.bot] ?? FIGHT_BOTS.easy;
   const hits = Math.max(0, Math.round(r.hits));
   const kos = Math.max(0, Math.round(r.kos));
@@ -53,7 +54,7 @@ export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'
       F.wins++;
       count(s, 'fightWins', 1);
       xp += XP.boutWin;
-      prize = bot.prize;
+      prize = r.prizes === false ? 0 : bot.prize;
       const b = F.bots[r.bot] ?? { beaten: 0, bestSeconds: null };
       b.beaten++;
       const secs = Math.round(r.seconds * 100) / 100;
@@ -77,6 +78,7 @@ export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'
   if (prize > 0) {
     s.dorras += prize;
     book(s, 'fighting', prize);
+    count(s, 'earned', prize);
   }
   const levels = addXp(s, xp);
   return { prize, xp, levels, won: r.kind === 'spar' ? null : !!r.won };

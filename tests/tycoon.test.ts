@@ -418,6 +418,7 @@ test('unloading puts goods where they fit, with a bonus at a stall or shop', () 
   assert.ok(r.ok && r.qty === 20);
   assert.equal(r.dorras, Math.floor(20 * marketPrice('tees', T0) * DELIVERY_BONUS));
   assert.equal(s.dorras, before + r.dorras);
+  assert.equal(s.counters.earned, r.dorras, 'the bonus is Dorras taken');
   assert.equal(holds(s, 'u1', 'tees'), 20);
   assert.deepEqual(s.cargo, {});
   // Raw goods only unload where they're used or kept
@@ -597,7 +598,7 @@ test('take a contract, deliver it from your car at the drop-off, get paid', () =
   assert.ok(r.ok && r.dorras === c.reward);
   assert.equal(s.dorras, d0 + c.reward);
   assert.deepEqual(s.cargo, {});
-  assert.equal(s.stats.contracts, 1);
+  assert.equal(s.counters.contracts, 1);
   assert.deepEqual(accept(s, c.id, T0), { ok: false, why: 'owned' }, 'a delivered contract can\'t be taken again');
 });
 
