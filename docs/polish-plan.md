@@ -360,7 +360,85 @@ ceiling), mixed in sound.ts. · M · low risk (sound is opt-in).
 
 ### 11. Engineering health
 
-(Filled in from the engineering audit below.)
+Measured on this branch: the boot 715.5 of 730 KB gzipped (2% of
+headroom; CLAUDE.md and budget.mjs's notes still narrate 720 and 706.8),
+three.js 152.5 KB of it, the city's entry 242.0, the baked data inlined
+as a JS string 40.6 KB gzipped (the routes 31.1 of that), the gun code
+about 51 KB minified reachable only once a gun is drawn, and eighteen
+`*3d.ts` drawing modules built at the boot about 147 KB minified (The
+Trenches' and the waterfront's: kartpark3d, avenue3d, waterfront3d,
+commons3d, metro3d, projects3d, kits3d, riverside3d, nightmarket3d,
+streets3d, streetwall3d, harbour3d, stadium3d, grit3d...). The tests
+take 164 s, routes.test 15.9 s and docks.test 7.9 s of it, with no
+per-file timings in the output. 354 modules, 14 small DOM-free ones
+without a test; 840 non-null assertions, no linter; `box()` is declared
+in 26 files, `V()` in 17, `smooth()` in 16, `STONE` with 15 different
+hexes in 22 files; 29 exports used nowhere (wallet.ts's `forgetWallet`,
+`knownAccount`, `balanceOf`, `onWalletChange`, the `*_NAME` constants).
+
+- **The boot's headroom** (14.5 KB; each district adds 2-8 KB). Three
+  moves that change no behaviour: the routes fetched as a JSON asset
+  instead of a string in the JS (S); tycoon-ui mounted on the first card
+  or panel, the Dorras readout kept (M); target practice as a chunk
+  behind a thin facade (walk.ts calls it synchronously in 67 places; M).
+  Bigger: The Trenches' drawing as a `LAZY_DISTRICTS` entry (its land is
+  far from the home view; the fly-in to its places wants `wantView()`
+  first; M, medium risk of pop-in). · the owner's call on timing (Q4).
+- **Ticks that never check distance**: the Armoury's flags rewrite and
+  upload their vertices every frame (armoury.ts:551), a landmark's
+  particles too (landmarks.ts:350), the Emporium redraws its LED wall
+  canvas and re-uploads 8 times a second (emporium.ts:512) and poses the
+  hologram every frame (:603); airport.ts:205/:422, resorts3d.ts:1349,
+  stripmarks3d.ts:519, libertybridge.ts:732 and metro3d.ts:496 run
+  wherever you stand, where the park's, Crestmont's, Sunridge's and Lot
+  9's gate on the eye within 200. **Fix**: a shared `near(rect, reach)`
+  on `Tick`, the clock-driven ones left running. · S.
+- **No WebGL context-loss handling** (`webglcontextlost` appears nowhere
+  in src): a phone out of GPU memory goes black with no message. **Fix**:
+  a listener that stops the loop and the sound and shows the no-3D card's
+  text with Reload. · S.
+- **Lazy chunks that fail to fetch are unhandled**: walk.ts has 20
+  dynamic imports and 5 catches; offline or across a deploy (hashed
+  names, the service worker holds only what it cached) a door prompt does
+  nothing. The mocap, textures and the site worker degrade well. **Fix**:
+  one helper round `lazyMenu()` and the rest that toasts and retries. · S.
+- **What gates the live site**: the Action runs typecheck, tests, build,
+  the texture bake (continue-on-error) and the budget, but produces a
+  zip; degenemporium.com deploys from Hostinger's GitHub link, whose
+  steps aren't in the repo; the Worker's build runs `npm run build` only,
+  so workers.dev always paints its textures in the browser; a failed bake
+  warns and passes. **Fix**: a red budget row when a CI build has no
+  texture sets, the bake and the budget in the Worker's build, and the
+  owner confirms what Hostinger runs (Q1). · S.
+- **walk.ts is six modules in one** (3,647 lines, `update()` 640 of
+  them, no test covers it). Seams by line range: settings and touch prefs
+  450-536; moments and marks 572-723; ground and collisions (`groundAt`,
+  `blocked`, `cameraRoom`, `rayWorld`) 724-880; the control card
+  973-1023; touch 1024-1204; the kart park and Fight Club wiring
+  1205-1394; vehicles in and out 1395-1549; input (keys, pointer lock,
+  the joystick, the pad) 1550-2408; the per-mode frames 2409-2684.
+  **Fix**, lowest coupling first: `walk-ground.ts` (pure functions over
+  the grids, testable), `walk-input.ts` (an `Input` struct),
+  `walk-vehicles.ts`, then the wiring. · L · medium.
+- **The tests**: per-file timings in the reporter, `cityPlan()` and the
+  routes cached across routes.test's cases, motionmatch.test's 2 ms
+  wall-clock assertion (:64-70) made a ratio or skipped in CI. · S.
+- **A linter and the drift**: a minimal eslint (unused exports,
+  non-null assertions as warnings), one `shapes3d.ts` for `box`, `cyl`
+  and `V`, the materials' hexes into palette.ts as the ground's already
+  are. · M.
+- **Bench and shots gaps**: no `?bench` view for the mall, Sunridge,
+  Southfield, Lot 9's tunnel, the river's life, the swing bridge or the
+  two bridges. · S.
+- **The tier picker sends touch laptops and tablets to the phone tier**
+  (index.ts:144-147: coarse pointer or a short side under 700). A big
+  tablet gets 16 cars and no shadows. `coarse && small` low, `coarse &&
+  big` medium is the cheap refinement. · S · the owner's call (Q3).
+- Small and known: 41 pins get style writes every frame even hidden
+  (index.ts:1601-1615); every traffic light `setColorAt` every frame
+  (life.ts:687-691). The performance plan's own 150 MB phone target
+  (210 MB measured) with "far districts let go on phones" and impostors
+  as the way back is scheduled nowhere.
 
 ## The plan
 
@@ -417,9 +495,15 @@ exists. Phases 1-3 need no decision from the owner beyond a yes.
    to run, the Sky Wheel ridden, the Docks' Phase 4, the lamp styles, the
    kerb blended, the aircraft cockpits, more emotes and consumables. Each
    its own step with its own sign-off, as the plans before.
-10. **Engineering** (theme 11): the items the engineering audit ranks,
-    the budget's headroom made before Phase 9 needs it, walk.ts split
-    along its seams, the test gaps closed, a review pass at every width.
+10. **Engineering** (theme 11): the context-loss and failed-chunk
+    handlers, the landmark ticks gated on distance, the routes as a JSON
+    asset and tycoon-ui on first open (the headroom Phase 9 needs), the
+    test timings and the routes fixture cached, the missing bench views,
+    the budget and bake in the Worker's build with the red row, the
+    tier picker's refinement, then walk.ts split along its seams (ground
+    first, with tests), a linter and the shapes helper. A week spread
+    out; the engineering items that make room (the headroom, the ticks)
+    can run before Phase 7 if it needs them.
 
 After every phase: the shots compared, `?bench` on a phone and a laptop,
 this plan's phase marked built, CLAUDE.md's line for anything that
@@ -469,6 +553,14 @@ Which merch marks get real art first?
 parked car even if a car left mid-junction stalls a lane until the pool
 respawns it? Cockpit interiors for your aircraft, worth the chunk? Live
 mirrors still "later"?
+
+**Engineering (Phase 10):** What does Hostinger run on push: a plain
+build, or the whole chain, so CI gates the live site and not only the
+zip? Should workers.dev carry the baked textures? Touch laptops and
+tablets: the phone tier as today, or medium? Is the boot budget still
+"raise when needed", or does the headroom get a phase before the next
+district? Do "far districts let go on phones" and impostors get a slot,
+or is the 150 MB target retired?
 
 **World (Phase 9):** The sixteen pads: framed land kept, or open green
 now? Blend the kerb at The Trenches' edge, or keep the hard line? Which
