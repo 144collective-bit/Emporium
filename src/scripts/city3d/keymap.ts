@@ -41,16 +41,16 @@ export interface KeyMode {
 
 /* ---------- The jobs every mode words the same ---------- */
 
-const look = (label = 'Look around'): Binding => ({ job: 'look', label, keys: ['Mouse'], pad: ['Right stick'], touch: 'Drag' });
+const look = (label = 'Look'): Binding => ({ job: 'look', label, keys: ['Mouse'], pad: ['Right stick'], touch: 'Drag' });
 const camera = (label: string): Binding => ({ job: 'camera', label, keys: ['V'], pad: ['R3'], touch: 'View' });
 const interact = (label: string): Binding => ({ job: 'interact', label, keys: ['F'], pad: ['Y'], touch: 'Tap the prompt' });
 const map = (pad = true): Binding => ({ job: 'map', label: 'World map', keys: ['M'], pad: pad ? ['View'] : [], touch: '☰ › Map' });
-const menu = (keys = true): Binding => ({ job: 'menu', label: 'The menu (pause)', keys: keys ? ['Esc'] : [], pad: ['Start'], touch: '☰' });
+const menu = (keys = true): Binding => ({ job: 'menu', label: 'Menu', keys: keys ? ['Esc'] : [], pad: ['Start'], touch: '☰' });
 const quit = (label: string): Binding => ({ job: 'quit', label, keys: ['Esc'], pad: ['Start'], touch: 'Quit' });
 const horn: Binding = { job: 'horn', label: 'Horn', keys: ['H'], pad: ['L3'], touch: 'Horn' };
 const steer = (label = 'Steer'): Binding => ({ job: 'steer', label, keys: ['A', 'D', '←', '→'], pad: ['Left stick'], touch: 'Stick' });
 const gas = (label = 'Gas'): Binding => ({ job: 'gas', label, keys: ['W', '↑'], pad: ['RT'], touch: label });
-const brake = (label = 'Brake; hold to reverse', touch = 'Brake'): Binding => ({ job: 'brake', label, keys: ['S', '↓'], pad: ['LT'], touch });
+const brake = (label = 'Brake · reverse', touch = 'Brake'): Binding => ({ job: 'brake', label, keys: ['S', '↓'], pad: ['LT'], touch });
 
 export const KEYMAP: Record<ModeId, KeyMode> = {
   foot: {
@@ -60,25 +60,25 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
       look(),
       { job: 'sprint', label: 'Sprint', keys: ['Shift'], pad: ['L3'], touch: 'Sprint' },
       { job: 'walk', label: 'Walk (toggle)', keys: ['Caps Lock'], pad: [] },
-      { job: 'jump', label: 'Jump (hold for higher); at a low wall or barrier, over it', keys: ['Space'], pad: ['A'], touch: 'Jump' },
-      { job: 'crouch', label: 'Crouch; sprinting, slide', keys: ['C'], pad: ['B'], touch: 'Crouch' },
-      interact('Doors, counters, benches, getting in'),
-      camera('Over the shoulder or first person'),
-      { job: 'hotbar', label: 'Weapons and what’s in your hand (again: put it away)', keys: ['1–7', 'X', 'Wheel'], pad: ['RB', 'D-pad ← →'], touch: 'Hotbar' },
+      { job: 'jump', label: 'Jump · vault', keys: ['Space'], pad: ['A'], touch: 'Jump' },
+      { job: 'crouch', label: 'Crouch · slide', keys: ['C'], pad: ['B'], touch: 'Crouch' },
+      interact('Use'),
+      camera('Camera'),
+      { job: 'hotbar', label: 'Weapons', keys: ['1–7', 'X', 'Wheel'], pad: ['RB', 'D-pad ← →'], touch: 'Hotbar' },
       { job: 'inventory', label: 'Inventory', keys: ['Tab'], pad: ['View'], touch: '☰ › Bag' },
       map(false),
       menu(),
-      { job: 'emotes', label: 'Emotes and phrases (online)', keys: ['T'], pad: [], touch: '☰ › Online' },
+      { job: 'emotes', label: 'Emotes', keys: ['T'], pad: [], touch: '☰ › Online' },
     ],
   },
   fists: {
     name: 'Empty hands',
     base: 'foot',
     binds: [
-      { job: 'punch', label: 'Punch (again quickly: combos)', keys: ['Click'], pad: ['X'], touch: 'Punch' },
+      { job: 'punch', label: 'Punch', keys: ['Click'], pad: ['X'], touch: 'Punch' },
       { job: 'kick', label: 'Kick', keys: ['G'], pad: ['Y'], touch: 'Kick', shares: ['interact'] },
       { job: 'block', label: 'Block', keys: ['Right-click'], pad: ['LB'], touch: 'Block' },
-      { job: 'dodge', label: 'Dodge (guard up and standing)', keys: ['Space'], pad: ['A'], touch: 'Jump', shares: ['jump'] },
+      { job: 'dodge', label: 'Dodge', keys: ['Space'], pad: ['A'], touch: 'Jump', shares: ['jump'] },
     ],
   },
   armed: {
@@ -86,23 +86,23 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
     base: 'foot',
     binds: [
       { job: 'fire', label: 'Fire', keys: ['Click'], pad: ['RT'], touch: 'Fire' },
-      { job: 'aim', label: 'Aim down the sight', keys: ['Right-click'], pad: ['LT'], touch: 'Aim' },
+      { job: 'aim', label: 'Aim', keys: ['Right-click'], pad: ['LT'], touch: 'Aim' },
       { job: 'reload', label: 'Reload', keys: ['R'], pad: ['X'], touch: 'Reload' },
-      { job: 'peek', label: 'Peek round a corner (hold; aiming on a gamepad)', keys: ['Q', 'E'], pad: ['LB', 'RB'], touch: 'Aim by a corner', shares: ['hotbar'] },
-      { job: 'holster', label: 'Put the gun away', keys: ['G'], pad: ['D-pad ↑'] },
+      { job: 'peek', label: 'Peek', keys: ['Q', 'E'], pad: ['LB', 'RB'], touch: 'Aim by a corner', shares: ['hotbar'] },
+      { job: 'holster', label: 'Holster', keys: ['G'], pad: ['D-pad ↑'] },
     ],
   },
   car: {
     name: 'Your car',
-    binds: [steer(), gas(), brake(), { job: 'handbrake', label: 'Handbrake (drift)', keys: ['Space'], pad: ['A'] }, horn, camera('Near, far, the driver’s seat'), look(), interact('Get out'), map(), menu()],
+    binds: [steer(), gas(), brake(), { job: 'handbrake', label: 'Handbrake', keys: ['Space'], pad: ['A'] }, horn, camera('Camera'), look(), interact('Get out'), map(), menu()],
   },
   bike: {
     name: 'Your motorbike',
-    binds: [steer(), gas(), brake(), horn, camera('Near, far, your helmet'), look(), interact('Get off'), map(), menu()],
+    binds: [steer(), gas(), brake(), horn, camera('Camera'), look(), interact('Get off'), map(), menu()],
   },
   boat: {
     name: 'The hire boat',
-    binds: [steer(), gas('Ahead'), brake('Astern', 'Astern'), horn, camera('Near, far, the helm'), look(), interact('Get out at a landing'), map(), menu()],
+    binds: [steer(), gas('Ahead'), brake('Astern', 'Astern'), horn, camera('Camera'), look(), interact('Get out'), map(), menu()],
   },
   plane: {
     name: 'Your aircraft',
@@ -111,9 +111,9 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
       { job: 'climb', label: 'Climb and dive', keys: ['Space', 'Shift', '↑', '↓'], pad: ['Left stick ↑ ↓'], touch: 'Stick' },
       { job: 'gas', label: 'Faster', keys: ['W'], pad: ['RT'], touch: 'Faster' },
       { job: 'brake', label: 'Slower', keys: ['S'], pad: ['LT'], touch: 'Slower' },
-      camera('Near, far, the cockpit'),
+      camera('Camera'),
       look(),
-      interact('Get out (landed and stopped)'),
+      interact('Get out'),
       map(),
       menu(),
     ],
@@ -125,27 +125,27 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
       gas(),
       brake('Brake'),
       { job: 'drift', label: 'Hop and drift', keys: ['Space'], pad: ['A'], touch: 'Drift' },
-      { job: 'item', label: 'Use your item (an items race)', keys: ['E'], pad: ['X'], touch: 'Item' },
-      camera('Near, far, the kart’s seat'),
+      { job: 'item', label: 'Use item', keys: ['E'], pad: ['X'], touch: 'Item' },
+      camera('Camera'),
       quit('Quit the race (no prize)'),
     ],
   },
   ring: {
     name: 'The ring',
     binds: [
-      { job: 'move', label: 'Move (W towards your opponent)', keys: ['WASD'], pad: ['Left stick'], touch: 'Stick' },
-      { job: 'punch', label: 'Punch (again quickly: combos)', keys: ['Click'], pad: ['X'], touch: 'Punch' },
+      { job: 'move', label: 'Move', keys: ['WASD'], pad: ['Left stick'], touch: 'Stick' },
+      { job: 'punch', label: 'Punch', keys: ['Click'], pad: ['X'], touch: 'Punch' },
       { job: 'kick', label: 'Kick', keys: ['G'], pad: ['Y'], touch: 'Kick' },
       { job: 'block', label: 'Block', keys: ['Right-click'], pad: ['LB'], touch: 'Block' },
       { job: 'dodge', label: 'Dodge', keys: ['Space'], pad: ['A'], touch: 'Dodge' },
-      { job: 'snack', label: 'Eat a snack (a spar)', keys: ['E'], pad: ['D-pad ↑'], touch: 'Snack' },
+      { job: 'snack', label: 'Snack', keys: ['E'], pad: ['D-pad ↑'], touch: 'Snack' },
       camera('Near or far'),
       quit('Quit the fight (a loss)'),
     ],
   },
   ride: {
     name: 'A ride (taxi, metro, monorail, river bus)',
-    binds: [look('Look round'), camera('Near, far, your seat'), { job: 'skip', label: 'Skip the ride', keys: ['Esc'], pad: ['B'], touch: 'Skip ride' }, menu(false)],
+    binds: [look('Look round'), camera('Camera'), { job: 'skip', label: 'Skip the ride', keys: ['Esc'], pad: ['B'], touch: 'Skip ride' }, menu(false)],
   },
 };
 

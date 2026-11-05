@@ -88,7 +88,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   }
   function boardRow(m: Mission, lv: number, full: boolean) {
     const locked = lv < m.level;
-    const why = locked ? `Needs level ${m.level}.` : full ? `${MISSIONS_MAX} on the go already: finish or give up one first.` : '';
+    const why = locked ? `Needs level ${m.level}` : full ? `${MISSIONS_MAX} on the go already` : '';
     return `<li class="market-row mission-row${locked ? ' is-locked' : ''}">
       <div class="market-top"><b>${esc(m.name)}</b>${reward(m)}</div>
       <div class="market-acts"><small>${esc(m.blurb)}${why ? ` <span class="mission-why">${esc(why)}</span>` : ''}</small>
@@ -104,7 +104,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     const full = active.length >= MISSIONS_MAX;
     const mine = active.length
       ? `<p class="biz-label">Your missions · ${active.length} / ${MISSIONS_MAX}</p><ul class="market-list">${active.map((a) => activeRow(s, a)).join('')}</ul>`
-      : `<p class="biz-label">Your missions</p><p class="stall-empty">None on the go. Take one from the board: up to ${MISSIONS_MAX} at once, Dorras and XP when it's done.</p>`;
+      : `<p class="biz-label">Your missions</p><p class="stall-empty">None yet. Take one below.</p>`;
     const tiers = TIERS.map((t) => {
       const list = MISSIONS.filter((m) => m.level === t && missionState(s, m.id) !== 'done' && missionState(s, m.id) !== 'active');
       if (!list.length) return '';
@@ -112,16 +112,16 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       // Tiers above your level fold up, so the board stays short
       return lv >= t
         ? `<p class="biz-label mission-tier">Level ${t}</p>${rows}`
-        : `<details class="mission-fold"><summary>Level ${t} · ${list.length} mission${list.length > 1 ? 's' : ''} · needs level ${t}</summary>${rows}</details>`;
+        : `<details class="mission-fold"><summary>Level ${t} · ${list.length} mission${list.length > 1 ? 's' : ''} · locked</summary>${rows}</details>`;
     }).join('');
     const done = s.missions.done.map((id) => mission(id)).filter((m): m is Mission => !!m);
     const doneHtml = done.length
       ? `<details class="mission-fold mission-done"><summary>Done · ${done.length}</summary><ul class="mission-done-list">${done.map((m) => `<li><span>${esc(m.name)}</span>${reward(m)}</li>`).join('')}</ul></details>`
       : '';
     return `<div class="mission-board">${guideBoardHtml(s)}${mine}
-      <p class="biz-label">On the board</p>${tiers || '<p class="stall-empty">Every mission on the board is done. More come with the city.</p>'}
+      <p class="biz-label">On the board</p>${tiers || '<p class="stall-empty">All done for now</p>'}
       ${doneHtml}
-      <p class="city-panel-fine">Only what you do after taking a mission counts towards it. Giving one up costs nothing. Rewards are Dorras and XP for the city's game, nothing more.</p></div>`;
+      <p class="city-panel-fine">Only progress after you take one counts.</p></div>`;
   }
 
   /** Getting started on the board: every step, done or to do, and Show / Hide */
@@ -133,7 +133,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     }).join('');
     return `<p class="biz-label">Getting started · ${s.guide.step} / ${GUIDE_STEPS}</p>
       <ol class="guide-list">${rows}</ol>
-      <div class="market-btns guide-toggle"><small>${s.guide.hidden ? 'The guide is hidden.' : 'A beam of light marks where to go.'}</small><button type="button" ${s.guide.hidden ? 'data-guide-show' : 'data-guide-hide'}>${s.guide.hidden ? 'Show the guide' : 'Hide the guide'}</button></div>`;
+      <div class="market-btns guide-toggle"><small>${s.guide.hidden ? 'Guide hidden' : 'Follow the beam of light'}</small><button type="button" ${s.guide.hidden ? 'data-guide-show' : 'data-guide-hide'}>${s.guide.hidden ? 'Show guide' : 'Hide guide'}</button></div>`;
   }
 
   /** A Take, Claim or Give up button on the board (or the guide's Show / Hide): true when it was one */

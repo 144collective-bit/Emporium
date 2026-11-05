@@ -95,10 +95,10 @@ function thing(save: TycoonSave, key: string, ammo?: (id: WeaponId) => [number, 
     const [mag, res] = ammo?.(it.weapon) ?? [w.mag, w.reserve];
     return { art: gunArt(it.weapon), name: WEAPONS[it.weapon].name, short: WEAPONS[it.weapon].short, count: String(mag), about: `${modLine(save, it.weapon)} · ${mag} / ${res}`, stats: statBars(w), it };
   }
-  if (it.kind === 'held') return { art: icon(HELD_ICONS[it.held]), name: HELD_NAMES[it.held], short: HELD_NAMES[it.held], count: '', about: 'For your hand: hold it out walking about.', it };
+  if (it.kind === 'held') return { art: icon(HELD_ICONS[it.held]), name: HELD_NAMES[it.held], short: HELD_NAMES[it.held], count: '', about: 'Held in your hand', it };
   const n = save.inventory.items[it.item] ?? 0;
   const c = ITEM_CATALOG[it.item];
-  return { art: icon(ITEM_ICONS[it.item]), name: c.name, short: c.name, count: `×${n}`, about: `${c.blurb} ${n} of ${ITEM_MAX}; ${fmt.format(c.price)} Dorras each at ${c.where}.`, it };
+  return { art: icon(ITEM_ICONS[it.item]), name: c.name, short: c.name, count: `×${n}`, about: `${c.blurb} ${n} of ${ITEM_MAX} · ${fmt.format(c.price)} each`, it };
 }
 
 /* ---------- The weapons and the grid (the inventory, the business card's Bag) ---------- */
@@ -157,7 +157,7 @@ export function bagHtml(save: TycoonSave, o: { may(id: WeaponId): boolean; ways?
   return (
     `<p class="bag-head">Weapons</p><div class="inv-weapons is-card">${weapons}</div>` +
     `<p class="bag-head">Your bag</p><div class="inv-grid is-card">${cells}</div>` +
-    `<p class="walk-pad">Walking, press Tab (or the Bag button) to move things round, put guns in the weapon slots and use what you carry. Ammo is free: every gun comes full.</p>${ways}`
+    `<p class="walk-pad">Tab opens the bag while walking. Ammo is free.</p>${ways}`
   );
 }
 
@@ -165,7 +165,7 @@ export function bagHtml(save: TycoonSave, o: { may(id: WeaponId): boolean; ways?
 function useOne(game: GameDeps, id: ItemId) {
   const r = useItem(game.save(), id, false);
   if (r.ok) game.commit();
-  else game.toast(r.why === 'stock' ? `No ${ITEM_CATALOG[id].name.toLowerCase()}s left. ${ITEM_CATALOG[id].where}.` : `Save it for a spar: a ${ITEM_CATALOG[id].name.toLowerCase()} restores health in a fight (the Snack button, or E). Spar at the Fight Club, or with a partner on the street.`, 4200);
+  else game.toast(r.why === 'stock' ? `No ${ITEM_CATALOG[id].name.toLowerCase()}s left` : 'Use it in a spar', 4200);
 }
 
 /** A snack at a diner's door or a Night Market stall: one into the bag, if there's room and the Dorras */
@@ -278,7 +278,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
       case 'empty':
         // (empty hands are his fists: the gun out goes away)
         hands();
-        d.game.toast(`Weapon slot ${x.kind === 'gun' ? x.i + 1 : ''} is empty, so your hands are free. Press Tab (or Bag) and drag a gun into it.`);
+        d.game.toast(`Weapon slot ${x.kind === 'gun' ? x.i + 1 : ''} is empty. Fill it in the bag.`);
         break;
       case 'use':
         useOne(d.game, a.item);
@@ -305,7 +305,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   /** A rule changed the save: keep it, let the rules read the weapons again, repaint */
   function done(r: InvResult, sfx = true) {
     if (!r.ok) {
-      d.game.toast(r.why === 'room' ? 'No room there: drop it on an empty space or on another gun.' : r.why === 'place' ? 'Only guns go in the weapon slots.' : whyNot(r.why === 'stock' ? 'stock' : 'place'));
+      d.game.toast(r.why === 'room' ? 'No room there' : r.why === 'place' ? 'Only guns go in the weapon slots.' : whyNot(r.why === 'stock' ? 'stock' : 'place'));
       d.game.sfx('denied');
       paint();
       return false;
@@ -433,8 +433,8 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
             .join('')}</div>`
         : `<div class="inv-about"><b>Your bag</b><small>${
             fine.matches
-              ? 'Drag a gun onto weapon slot 1 or 2, and back. Click anything to see what it does; double click or right-click to use it.'
-              : 'Drag a gun onto weapon slot 1 or 2, and back. Tap anything to see what it does; double tap to use it.'
+              ? 'Drag guns to slot 1 or 2. Double click to use.'
+              : 'Drag guns to slot 1 or 2. Double tap to use.'
           }</small></div>`
     );
     // (the tip follows what it shows: ammo after a reload, a space emptied under it)

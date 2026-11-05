@@ -134,10 +134,10 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     let note = '';
     if (s.ready && s.slot >= 0) {
       action = `<button type="button" class="mk-btn is-main" data-act="take">${s.carrying ? 'Refill ammo' : 'Refill &amp; draw'}</button>`;
-      note = !guns()[s.slot === 0 ? 1 : 0] ? 'Carry a second gun: tap the empty slot above, then a gun you own (or press Tab anywhere).' : '';
+      note = !guns()[s.slot === 0 ? 1 : 0] ? 'Tap the empty slot to carry a second gun' : '';
     } else if (s.ready) {
       action = `<button type="button" class="mk-btn is-main" data-act="carry0">Weapon slot 1</button><button type="button" class="mk-btn is-main" data-act="carry1">Weapon slot 2</button>`;
-      note = 'In your bag. Put it in a weapon slot here or with Tab anywhere.';
+      note = 'In your bag. Pick a weapon slot.';
     } else if (s.premium) {
       if (confirming) {
         action = `<div class="mk-confirm"><p>Buy the ${esc(w.name)} for ${D(s.c.price)}?</p><button type="button" class="mk-btn is-main" data-act="confirm">Buy it</button><button type="button" class="mk-btn" data-act="cancel">Not now</button></div>`;
@@ -145,11 +145,11 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
         action = `<button type="button" class="mk-btn is-main" data-act="buy">Buy · ${D(s.c.price)}</button>`;
       }
       const save = d.game.save();
-      if (s.lowLevel) note = `Needs level ${s.c.level} (you're level ${s.lv}). Earn XP by trading, delivering and shooting.`;
-      else if (save.dorras < s.c.price) note = `You're ${D(s.c.price - save.dorras)} short. Dorras are earned in the city.`;
+      if (s.lowLevel) note = `Needs level ${s.c.level}. You're level ${s.lv}.`;
+      else if (save.dorras < s.c.price) note = `${D(s.c.price - save.dorras)} short`;
     } else {
       action = `<button type="button" class="mk-btn" disabled>Unlocks at ${pts(w.need)} pts</button>`;
-      note = `${pts(w.need - d.lifetime())} more points to unlock. Score by knocking down dummies and drones.`;
+      note = `${pts(w.need - d.lifetime())} more points to unlock`;
     }
     repaint(
       detail,
@@ -164,7 +164,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     if (!s.ready) {
       repaint(
         bench,
-        `<div class="mk-empty"><b>${esc(WEAPONS[pick].name)}</b><p>${s.premium ? 'Buy this gun to upgrade it here: a better barrel, an extended mag, a grip and stock.' : 'Unlock this gun with your score to upgrade it here.'}</p><button type="button" class="mk-btn" data-act="toguns">Back to the guns</button></div>`
+        `<div class="mk-empty"><b>${esc(WEAPONS[pick].name)}</b><p>${s.premium ? 'Buy this gun to upgrade it.' : 'Unlock this gun to upgrade it.'}</p><button type="button" class="mk-btn" data-act="toguns">Back to the guns</button></div>`
       );
       return;
     }
@@ -189,7 +189,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
       `<small>Slot ${i + 1}</small>${id ? `<svg viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg><b>${esc(WEAPONS[id].short)}</b>` : '<b>Empty</b>'}</button>`;
     const hint =
       choosing === null
-        ? '<p class="mk-hint">Pick a slot, then a gun you own. 1 and 2 draw them; Tab changes them anywhere.</p>'
+        ? '<p class="mk-hint">Pick a slot, then a gun. Keys 1 and 2 draw.</p>'
         : `<p class="mk-hint is-on">Pick a gun for slot ${choosing + 1}.${(choosing === 0 ? a : b) ? ' <button type="button" class="mk-link" data-act="empty">Leave it empty</button>' : ''} <button type="button" class="mk-link" data-act="unchoose">Cancel</button></p>`;
     repaint(loadout, `<span class="mk-label">Weapons</span><div class="mk-slots">${slot(0, a)}${slot(1, b)}</div>${hint}`);
   }
@@ -218,7 +218,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     d.loadoutChanged();
     const first = guns()[0] ?? guns()[1];
     if (first) d.equip(first);
-    d.game.toast(id ? `The ${WEAPONS[id].name} is in weapon slot ${i + 1}: press ${i + 1} to draw it.` : `Weapon slot ${i + 1} is empty: the gun went back in your bag (Tab).`);
+    d.game.toast(id ? `${WEAPONS[id].name} in slot ${i + 1}. Press ${i + 1} to draw.` : `Slot ${i + 1} emptied. The gun is in your bag.`);
     paint();
   }
   function select(id: WeaponId) {
@@ -239,7 +239,7 @@ export function createGunShop(root: HTMLElement, d: ShopDeps) {
     } else {
       d.game.commit();
       d.game.sfx('buy');
-      d.game.toast(`The ${WEAPONS[pick].name} is yours. Put it in a weapon slot: Tab, or tap a slot above.`);
+      d.game.toast(`The ${WEAPONS[pick].name} is yours. Pick a weapon slot.`);
     }
     paint();
   }
