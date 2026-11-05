@@ -13,3 +13,14 @@
  */
 declare const __FREE_PLAY__: boolean | undefined;
 export const FREE_PLAY: boolean = typeof __FREE_PLAY__ !== 'undefined' && __FREE_PLAY__ === true;
+
+/*
+ * Free cars and clothes: the owner's test phase (2026-11, "until I change it
+ * back"). Every car at the garage and every piece of the premium wardrobe at
+ * Drop 001 costs nothing and needs no level; everything else keeps its price.
+ * Unlike free play it's on in every build of the site, the live one too
+ * (`__FREE_GEAR__` in astro.config.mjs: set it to 'false' to end it); the
+ * tests and the game server don't define it, so they keep the real prices.
+ */
+declare const __FREE_GEAR__: boolean | undefined;
+export const FREE_GEAR: boolean = typeof __FREE_GEAR__ !== 'undefined' && __FREE_GEAR__ === true;

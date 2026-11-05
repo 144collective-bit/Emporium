@@ -15,6 +15,9 @@ export default defineConfig({
       __CITY_BUILT__: 'true',
       // Free play (src/scripts/city3d/freeplay.ts): everything in the city's game costs nothing; a test build only
       __FREE_PLAY__: JSON.stringify(process.env.PUBLIC_FREE_PLAY === '1'),
+      // Free cars and clothes (freeplay.ts `FREE_GEAR`): the owner's test phase, on every build of the site.
+      // To end it, set this to 'false' (the game server and the tests never see it: they keep the real prices).
+      __FREE_GEAR__: 'true',
     },
     build: {
       rollupOptions: {
