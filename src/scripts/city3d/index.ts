@@ -164,6 +164,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // ?anim: the animation lab on its own, over the page (no city behind it)
+  // ?gpu: the GPU lab on its own (gpulab.ts, docs/bigworld-plan.md Phase 4): WebGL and WebGPU on one test city
+  if (new URLSearchParams(location.search).has('gpu')) {
+    await (await import('./gpulab')).openGpuLab(root, { reduced, low: tier === 'low' });
+    return null;
+  }
   if (new URLSearchParams(location.search).has('anim')) {
     await (await import('./anim-lab')).openLab(root, { reduced, low: tier === 'low' });
     return null;

@@ -2,8 +2,9 @@
 
 How the world could grow from about 2.5 km across to about 7 km across,
 some 50 km², with better graphics, and the game as an app as well as a web
-page. This is a plan only: nothing in it is built yet. Like the other plans,
-it waits for the owner's sign-off one phase at a time. Keep it up to date.
+page. Phase 4's first step, the GPU lab, is built (below); nothing else is
+yet. Like the other plans, it waits for the owner's sign-off one phase at a
+time. Keep it up to date.
 
 ## What the owner asked
 
@@ -195,7 +196,7 @@ Part A's phases help today's world too, so they come first.
   - Every region's places come from the index, so "Find a place" knows them
     before they're loaded.
 - **Roads:**
-  - An outer route (a second ring, or the raised highway's plan carried
+  - An outer route (a second ring out past the raised highway, carried
     out) so the far regions are a drive, not a crawl.
   - Its traffic spent near you as today.
 - **The metro and fast travel:**
@@ -209,8 +210,48 @@ isn't there, the game keeps WebGL 2, so nobody is left out.
 
 ### Phase 4: the WebGPU renderer, looking the same
 
-- Behind a switch at first (`?gpu=webgpu`), WebGL the default until it's
-  proven.
+- **Step 1, the GPU lab (built, the owner's go):** `?gpu` in the address
+  (`gpulab.ts`, tested in `tests/gpulab.test.ts`) opens over the page with
+  no city behind it, like the animation lab.
+  - **The device:** whether the browser has WebGPU and its adapter, and
+    WebGL 2's GPU.
+  - **The test city** (`labCity()`): buildings on a grid in eight toon
+    colours, instanced trees, cars moving, the sun's shadows but on phones.
+    It's drawn two ways: `batched` (merged per colour, a few draws, as the
+    city's tiles are) and `many` (a draw a building, where WebGPU's lighter
+    draw calls should show).
+  - **Three renderers:** today's WebGL renderer, WebGPURenderer on WebGPU,
+    and WebGPURenderer on its own WebGL 2 backend (the fallback a port to
+    node materials would run on where WebGPU isn't there).
+  - **Each run** settles, then measures with the GPU caught up before and
+    after (`sync()`), so frames a renderer queued without drawing count. A
+    lost GPU device fails the run with its reason.
+  - **Results:** a card with Copy results (with the device), the console
+    and `window.__gpulab`. `?gpu=quick` runs shorter; `only=` picks
+    renderers.
+  - **three's WebGPU build** is a chunk of its own (`three-webgpu` in
+    `astro.config.mjs`, 160 KB zipped), fetched only by the lab. It has its
+    own budget row (`webgpu`, 200 KB), and the budget fails if the boot
+    ever takes it. It shares three's core with the boot, so the core's parts
+    only the WebGPU renderer uses stay in the boot's `three` chunk: about
+    4 KB more there (717.2 to 721.7 of 730), which the city on WebGPU will
+    need anyway.
+  - **First numbers** (the test machine's software GPU, so only good for
+    comparing):
+    - The lab runs, at desktop and phone sizes.
+    - Today's renderer: about 21 draws batched against 1,890 many, the
+      frame's CPU time 1.1 ms against 8.7.
+    - The new renderer on its WebGL backend draws the same city but costs
+      about three times the CPU on the many-draws load (27 ms). The WebGL
+      fallback would be the slow path: keep today's renderer for devices
+      without WebGPU until that's measured on real phones.
+    - Headless Chromium's software WebGPU loses its device as soon as
+      anything is drawn to a screen, three's smallest example too, so
+      WebGPU's numbers have to come from real devices.
+  - **Next:** run `?gpu` on the owner's phones and computers and paste the
+    results here before step 2.
+- **Step 2, behind a switch** (`?gpu=webgpu` for the city itself), WebGL the
+  default until it's proven.
 - Check support on the devices that matter first: recent iPhones and iPads,
   mid-range Android phones, Chrome, Edge, Safari and Firefox on desktop.
 - Port what's tied to WebGL's shaders today into three's node materials

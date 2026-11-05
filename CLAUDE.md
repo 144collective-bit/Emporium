@@ -1520,7 +1520,17 @@ it and has been retired completely. Build only on what's here.
   region, the far view (district stand-ins, a reversed depth buffer),
   getting about at that size, the renderer, the apps, then the edge out in
   steps filled by recipes; each phase with the owner's sign-off; keep it
-  up to date.
+  up to date. Phase 4's step 1 is built: **the GPU lab** (`?gpu`,
+  `gpulab.ts`, tested in `tests/gpulab.test.ts`): over the page like the
+  animation lab, the device's WebGPU and WebGL 2, then one test city
+  (`labCity()`, `batched` and `many` draws) on today's WebGL renderer, on
+  WebGPURenderer on WebGPU and on its WebGL backend, measured with the GPU
+  caught up (`sync()`), a lost device failing the run; Copy results and
+  `window.__gpulab`, `?gpu=quick`, `only=`. three's WebGPU build is its own
+  chunk (`three-webgpu` in astro.config.mjs's `manualChunks`), fetched only
+  by the lab, with its own budget row (`webgpu`); never let the boot take
+  it. Headless Chromium's software WebGPU loses its device when it draws to
+  a screen: WebGPU's numbers come from real devices.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a

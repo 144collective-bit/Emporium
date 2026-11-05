@@ -43,11 +43,18 @@ const BUDGETS = {
    * viaduct's shape and its exits' ramps, which the land use, The Trenches and Westlake Park read at the boot;
    * and for the views plan on main (docs/views-plan.md Phases 1-4, under the same standing call): one camera system
    * for every vehicle, ride, race and the ring, and the control card's hooks in walk mode (the key table itself is
-   * its own chunk); the two together from 720
+   * its own chunk); the two together from 720. The GPU lab (docs/bigworld-plan.md Phase 4) adds about 4 KB here
+   * though its own code is lazy: its WebGPU chunk shares three's core with the boot, so the parts of the core only
+   * the WebGPU renderer uses stay in the shared `three` chunk (the city on WebGPU will need them there anyway)
    */
   bootJs: 730,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
+  /**
+   * three's own WebGPU renderer and its node materials (the `three-webgpu` chunk, astro.config.mjs), fetched only
+   * by the GPU lab (`?gpu`, docs/bigworld-plan.md Phase 4): never the boot's, so held on its own, not as a feature
+   */
+  webgpu: 200,
   /** All the CSS */
   css: 60,
   /** The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed) */
@@ -92,7 +99,9 @@ const city = files.find((f) => /^city3d\.[\w-]+\.js$/.test(f));
 if (!city) throw new Error('no city3d chunk in ' + astro);
 const boot = closure([city]);
 for (const n of page) boot.delete(n);
-const lazy = files.filter((f) => f.endsWith('.js') && !boot.has(f) && !page.has(f));
+const webgpu = files.filter((f) => /^three-webgpu\.[\w-]+\.js$/.test(f));
+if (webgpu.some((f) => boot.has(f) || page.has(f))) throw new Error("three's WebGPU build is in the boot: " + webgpu.join(' '));
+const lazy = files.filter((f) => f.endsWith('.js') && !boot.has(f) && !page.has(f) && !webgpu.includes(f));
 const biggestLazy = lazy.map((f) => [f, gz(join(astro, f))]).sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
 const css = files.filter((f) => f.endsWith('.css'));
 
@@ -103,6 +112,7 @@ const rows = [
   ['lazyJs', biggestLazy[1], `${biggestLazy[0]} (the biggest of ${lazy.length})`],
   ['css', sum(css), `${css.length} files`],
 ];
+if (webgpu.length) rows.push(['webgpu', sum(webgpu), webgpu.join(' ')]);
 // The textures made at build time, if they were (without them the city paints its own, as before)
 const tex = html.match(/<script type="application\/json" id="city-tex">(.*?)<\/script>/s);
 if (tex) {

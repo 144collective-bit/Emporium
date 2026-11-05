@@ -125,3 +125,23 @@
 .anim-lab-score[hidden] {
   display: none;
 }
+
+/* The GPU lab (?gpu, gpulab.ts): the test city behind the animation lab's panel, a results table in it */
+.gpu-lab-stage {
+  position: absolute;
+  inset: 0;
+}
+.gpu-lab-view {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gpu-lab-panel {
+  width: min(540px, calc(100vw - 24px));
+}
+.gpu-lab-text {
+  margin: 4px 0 8px;
+  overflow-x: auto;
+  white-space: pre;
+  font: 11px/1.45 'JetBrains Mono', monospace;
+}
