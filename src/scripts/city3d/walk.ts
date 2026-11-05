@@ -649,7 +649,7 @@ export function createWalk(d: WalkDeps) {
     const c = carrying;
     const here = Math.hypot(c.to.x - pos.x, c.to.z - pos.z) < PUT_R;
     const at = here ? c.to : { x: pos.x + Math.sin(face) * 0.6, z: pos.z + Math.cos(face) * 0.6 };
-    if (!here) c.done = () => d.game.toast('Put down. Nothing moved.', 2500);
+    if (!here) c.done = () => d.game.toast('Put down · nothing moved', 2500);
     c.stage = 'put';
     contact?.reset();
     moments.start(crateMark('put', at, pos.x, pos.z, groundAt(at.x, at.z, pos.y), (bx, bz) => blocked(bx, bz, pos.y)), () => (crateUp = false), pos.x, pos.z);
@@ -1435,7 +1435,7 @@ export function createWalk(d: WalkDeps) {
     const done = !!karts.sim?.done;
     kartUI.close();
     leaveKart();
-    if (!done) d.game.toast('Race abandoned. No prize this time.', 3500);
+    if (!done) d.game.toast('Race abandoned · no prize', 3500);
     return true;
   }
 
@@ -1455,7 +1455,7 @@ export function createWalk(d: WalkDeps) {
   }
   function getOut() {
     // (not up on the raised highway or its ramps: nowhere to stand there, viaground.ts)
-    if (drive.height > 1 && viaductSurface(pos.x, pos.z, -1) !== null) return d.game.toast('Not up here: off the highway first.', 2500);
+    if (drive.height > 1 && viaductSurface(pos.x, pos.z, -1) !== null) return d.game.toast('Leave the highway first', 2500);
     const out = drive.exit();
     if (!out) return;
     standAt(out);
@@ -1479,7 +1479,7 @@ export function createWalk(d: WalkDeps) {
   function leavePlane() {
     const out = fly.exit();
     if (!out) {
-      d.game.toast('Land and stop first, then get out.', 2500);
+      d.game.toast('Land and stop first', 2500);
       return;
     }
     standAt(out);
@@ -1500,13 +1500,13 @@ export function createWalk(d: WalkDeps) {
         dropCrate();
         d.touched();
       })
-      .catch(() => d.game.toast('The boat hire is closed for a moment: try again', 2500));
+      .catch(() => d.game.toast('Boat hire closed · try again', 2500));
   }
   /** Out of it: only alongside a landing (or at its mooring), stopped */
   function leaveBoat() {
     const out = boat?.exit();
     if (!out) {
-      d.game.toast('Bring it alongside a landing and stop, then get out.', 2500);
+      d.game.toast('Stop at a landing first', 2500);
       return;
     }
     standAt(out);
@@ -2505,7 +2505,7 @@ export function createWalk(d: WalkDeps) {
     const st = drive.state as { x: number; z: number; yaw: number; speed: number; vx: number; vz: number; steer: number } | null;
     if (st && betweenBarriers(st.x, st.z) && swingShut()) {
       Object.assign(st, offSwing(st), { speed: 0, vx: 0, vz: 0, steer: 0 });
-      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+      d.game.toast('Kestrel Bridge · Opening for a ship', 3500);
     }
     const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
@@ -2710,14 +2710,14 @@ export function createWalk(d: WalkDeps) {
       const z = north ? SWING_BARRIERS.n - 0.9 : SWING_BARRIERS.s + 0.9;
       pos.set(SWING_X + THREE.MathUtils.clamp(pos.x - SWING_X, -2.4, 2.4), groundAt(SWING_X, z, pos.y) , z);
       vel.set(0, 0);
-      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+      d.game.toast('Kestrel Bridge · Opening for a ship', 3500);
     }
     // Liberty Bridge's gates shutting while he's out on its leaves: he's walked back through to the nearer tower
     if (pos.y > LOW_Y - 0.4 && pos.y < LOW_Y + 1.5 && onLeaves(pos.x, pos.z) && !leavesOpen()) {
       const i = pos.z < (FACES[0] + FACES[1]) / 2 ? 0 : 1;
       pos.set(LIBERTY_X + THREE.MathUtils.clamp(pos.x - LIBERTY_X, -1.1, 1.1), LOW_Y + 0.035, FACES[i] - TO_MIDDLE[i] * 0.8);
       vel.set(0, 0);
-      d.game.toast('Liberty Bridge · The leaves are lifting for the tall ship', 3500);
+      d.game.toast('Liberty Bridge · Lifting for a ship', 3500);
     }
 
     // What the player wants, in camera space
@@ -2894,12 +2894,12 @@ export function createWalk(d: WalkDeps) {
           if (fists!.brawl.landed(combat.melee(e.move, pos.x, pos.y, pos.z, face))) {
             count(d.game.save(), 'streetChains', 1);
             d.game.commit();
-            d.game.toast('Chain of three!', 1500);
+            d.game.toast('Chain of three', 1500);
           }
         }
         else if (e.kind === 'tired' && performance.now() - tiredAt > 4000) {
           tiredAt = performance.now();
-          d.game.toast('Out of breath: let him get it back for a moment.', 2200);
+          d.game.toast('Out of breath', 2200);
         }
       }
     const speed = vel.length();
@@ -3108,7 +3108,7 @@ export function createWalk(d: WalkDeps) {
           console.warn('Sector 7: the motion capture did not load, the simpler walk stands in', err);
           if (!mocapWarned) {
             mocapWarned = true;
-            d.game.toast("The motion capture didn't load: the simpler walk for now. Reload to try again.", 5000);
+            d.game.toast('Simple walk for now · reload to retry', 5000);
           }
         },
       );

@@ -152,8 +152,8 @@ function merchItems(of: MerchFor): Item[] {
 }
 /** Can what the Merch tab is dressing be seen? (Else a note says what shows it) */
 function merchNote(of: MerchFor, l: Look): string | null {
-  if (of === 'hat' && !((l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie') && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or a beanie (the Head tab).';
-  if (of === 'kicks' && l.kind === 'suit') return 'Shows on sneakers: they come with every fit but the suit.';
+  if (of === 'hat' && !((l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie') && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
+  if (of === 'kicks' && l.kind === 'suit') return 'Shows on sneakers, not the suit';
   return null;
 }
 
@@ -393,7 +393,6 @@ export function createFitting(d: FittingDeps) {
     box.innerHTML = `<p class="fit-confirm-text"></p><div class="fit-confirm-row"><button type="button" class="chip-link fit-confirm-yes" data-fit-buy>Confirm</button><button type="button" class="chip-link fit-confirm-no" data-fit-cancel>Cancel</button></div>`;
     const p = box.querySelector('p')!;
     p.append(`Buy the ${entry.name} for `, Object.assign(document.createElement('b'), { textContent: fmt.format(entry.price) }), ' Dorras?');
-    p.append(Object.assign(document.createElement('small'), { textContent: ` ${entry.pitch}` }));
   }
 
   /** The Merch tab's own rows over its cards: what it's dressing, where the top's mark goes, and a note if it won't show */
@@ -441,7 +440,7 @@ export function createFitting(d: FittingDeps) {
         premium = true;
         const h = document.createElement('p');
         h.className = 'fit-section';
-        h.innerHTML = '<span>Premium</span> <small>Dorras earned in the city</small>';
+        h.innerHTML = '<span>Premium</span>';
         items.append(h);
       }
       const on = it.on(l);

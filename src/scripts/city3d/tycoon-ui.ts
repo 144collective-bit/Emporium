@@ -88,7 +88,6 @@ import {
   type Stock,
   type TycoonSave,
   type UnitKind,
-  BOARD_SIZE,
   CONTRACTS_MAX,
   DESTS,
   DEST_IDS,
@@ -196,13 +195,13 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'bag', label: 'Bag' },
 ];
 const KIND_BLURB: Record<UnitKind | LotKind, string> = {
-  garden: 'Grows sugar, coffee beans or cotton for the Workshop.',
-  shop: `Sells like a bigger stall: ${SHOP.slots} shelves of ${SHOP.capacity}, more customers.`,
-  warehouse: `Holds ${WAREHOUSE_CAP} of anything, ready to load into your car.`,
-  superstore: `${SUPERSTORE.slots} aisles of ${SUPERSTORE.capacity}, and crowds of customers.`,
-  factory: `Its own production line: ${FACTORY.speed}x the Workshop's speed, jobs of up to ${FACTORY.jobMax}.`,
-  depot: `Holds ${DEPOT_CAP} of anything; couriers from it cost half.`,
-  offices: `Your HQ: every stall, shop and superstore sells ${Math.round((HQ_BOOST - 1) * 100)}% faster.`,
+  garden: 'Grows raw goods for the Workshop',
+  shop: `A bigger stall: ${SHOP.slots} shelves of ${SHOP.capacity}`,
+  warehouse: `Holds ${WAREHOUSE_CAP} of anything`,
+  superstore: `${SUPERSTORE.slots} aisles of ${SUPERSTORE.capacity}, big crowds`,
+  factory: `${FACTORY.speed}x Workshop speed, jobs up to ${FACTORY.jobMax}`,
+  depot: `Holds ${DEPOT_CAP}, half-price couriers`,
+  offices: `HQ: your shops sell ${Math.round((HQ_BOOST - 1) * 100)}% faster`,
 };
 
 /** The building panels the economy fills in, by spot (the Emporium's market hall, the Workshop, the Signal tower's contracts, the Post office's couriers, the Apartments' staff) */
@@ -392,15 +391,15 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (r.ok) return '';
     if (r.why === 'money') return 'Not enough Dorras.';
     if (r.why === 'room') {
-      if (id && isRaw(id) && sells(save, p)) return `${good(id).name} is a raw good: it goes to the Workshop or a warehouse, not on shelves.`;
-      if (id && sells(save, p) && !holds(save, p, id)) return `${placeName(p)} has no free shelf. Sell one out first.`;
+      if (id && isRaw(id) && sells(save, p)) return `${good(id).name} is raw. It can't go on shelves.`;
+      if (id && sells(save, p) && !holds(save, p, id)) return `${placeName(p)} has no free shelf.`;
       return 'No room for that there.';
     }
     if (r.why === 'stock') return 'None there.';
     if (r.why === 'busy') return p && makes(save, p) && p !== 'workshop' ? 'That factory is already on a job.' : 'The Workshop is already on a job.';
     if (r.why === 'place') return "That can't be done there.";
     if (r.why === 'owned') return 'Already done.';
-    if (r.why === 'time') return 'Too late: that contract has gone.';
+    if (r.why === 'time') return 'That contract has gone.';
     return 'Your stall is as big as it gets.';
   };
 
@@ -441,7 +440,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const capacity = p === 'stall' ? stallLevel(save.stall.level).capacity : Math.round(spec.capacity * capacityMul(save, p));
     const free = max - slots.length;
     return `${slots.length ? `<ul class="stall-slots">${slots.map((s) => slotRow(s, p, now, capacity)).join('')}</ul>` : ''}
-      ${free > 0 ? `<p class="stall-empty">${free === max ? 'The shelves are empty.' : `${free} empty shel${free > 1 ? 'ves' : 'f'}.`} Buy stock at the Emporium's market hall, or bring it from the Workshop or a warehouse in your car. Low sells fast, High earns more each.</p>` : ''}`;
+      ${free > 0 ? `<p class="stall-empty">${free === max ? 'The shelves are empty.' : `${free} empty shel${free > 1 ? 'ves' : 'f'}.`} Stock up at the market hall.</p>` : ''}`;
   }
   /** A plain stock list (a warehouse, the Workshop's bay, your car) */
   const stockList = (st: Stock, empty: string) => {
@@ -453,7 +452,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         : '';
   };
   /** "Your car is here": a way to the Car tab, on a place's view */
-  const carHere = (p: PlaceId) => (carAt() === p ? `<p class="biz-carhere"><span>Your car is parked here.</span><button type="button" class="chip-link" data-tab="car">Load / unload</button></p>` : '');
+  const carHere = (p: PlaceId) => (carAt() === p ? `<p class="biz-carhere"><span>Your car is here.</span><button type="button" class="chip-link" data-tab="car">Load / unload</button></p>` : '');
   /** "Level 2" on a place's status line, and the Upgrade button for the next level */
   const levelNote = (p: PlaceId) => (placeLevel(save, p) > 1 ? ` · <b class="stall-serving">Level ${placeLevel(save, p)}</b>` : '');
   const upgradeRow = (p: PlaceId) => {
@@ -463,11 +462,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     return `<div class="stall-actions biz-level">${
       cost === null
         ? `<span class="stall-max">Top level (${PLACE_LEVELS})</span>`
-        : `<button type="button" class="chip-link" data-upgrade-place="${p}" ${save.dorras >= cost ? '' : 'disabled'}>Upgrade to level ${l + 1} · ${fmt.format(cost)} Dorras</button><small class="biz-level-note">Level ${l + 1}: ${p === 'workshop' || makes(save, p) ? 'a bigger bay and faster jobs' : sells(save, p) ? 'more of each kind on the shelves, more customers' : unitAt(save, p)?.kind === 'garden' ? 'bigger bins and faster growth' : 'more room'}.</small>`
+        : `<button type="button" class="chip-link" data-upgrade-place="${p}" ${save.dorras >= cost ? '' : 'disabled'}>Upgrade · ${fmt.format(cost)}</button><small class="biz-level-note">Level ${l + 1}: ${p === 'workshop' || makes(save, p) ? 'a bigger bay and faster jobs' : sells(save, p) ? 'fuller shelves, more customers' : unitAt(save, p)?.kind === 'garden' ? 'bigger bins and faster growth' : 'more room'}.</small>`
     }</div>`;
   };
   const serveNote = (p: PlaceId) =>
-    (serving() === p ? ' · <b class="stall-serving">You\'re serving: customers come twice as fast</b>' : '') +
+    (serving() === p ? ' · <b class="stall-serving">Serving: 2x customers</b>' : '') +
     (save.staff.includes(p) ? ` · <b class="stall-serving">${ROLES[roleAt(save, p)!].name} at work</b>` : '');
 
   function stallView(now: number) {
@@ -478,7 +477,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       ${carHere('stall')}
       <div class="stall-actions">
         <button type="button" class="shop-take" data-to-market>Market hall</button>
-        ${cost !== null ? `<button type="button" class="chip-link" data-upgrade ${save.dorras >= cost ? '' : 'disabled'}>Upgrade to level ${L.level + 1} · ${fmt.format(cost)} Dorras</button>` : '<span class="stall-max">Top level stall</span>'}
+        ${cost !== null ? `<button type="button" class="chip-link" data-upgrade ${save.dorras >= cost ? '' : 'disabled'}>Upgrade · ${fmt.format(cost)}</button>` : '<span class="stall-max">Top level stall</span>'}
       </div>`;
   }
 
@@ -506,19 +505,19 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     let body = '';
     if (!l) {
       const price = lotPrice(save);
-      body = `<p class="stall-empty">Lot ${LETTER[i]}, a big lot east of Makers' Row: room for a superstore, a factory, a depot or your offices. Bought with Dorras.</p>
-        <div class="stall-actions"><button type="button" class="shop-take" data-buy-lot="${i}" ${price !== null && save.dorras >= price ? '' : 'disabled'}>Buy lot ${LETTER[i]} · ${fmt.format(price ?? 0)} Dorras</button></div>`;
-    } else if (!l.kind) body = `<p class="stall-empty">Your lot is ready. What should it be?</p>${lotOptions(i)}`;
+      body = `<p class="stall-empty">Lot ${LETTER[i]}, a big lot east of Makers' Row.</p>
+        <div class="stall-actions"><button type="button" class="shop-take" data-buy-lot="${i}" ${price !== null && save.dorras >= price ? '' : 'disabled'}>Buy lot ${LETTER[i]} · ${fmt.format(price ?? 0)}</button></div>`;
+    } else if (!l.kind) body = `<p class="stall-empty">Pick what to build.</p>${lotOptions(i)}`;
     else if (l.kind === 'superstore')
       body = `<p class="stall-status">Superstore · ${SUPERSTORE.slots} kinds of goods, ${Math.round(SUPERSTORE.capacity * capacityMul(save, p))} of each${levelNote(p)}${serveNote(p)}</p>
         ${shelvesView(p, now)}${carHere(p)}
         <div class="stall-actions"><button type="button" class="shop-take" data-to-market data-at="${p}">Market hall</button></div>`;
     else if (l.kind === 'factory') body = lineView(p);
     else if (l.kind === 'depot')
-      body = `<p class="stall-status">Depot · ${total(l.stock)} / ${capOf(save, p)} · couriers from here cost half${levelNote(p)}</p>
+      body = `<p class="stall-status">Depot · ${total(l.stock)} / ${capOf(save, p)} · half-price couriers${levelNote(p)}</p>
         <i class="stall-bar" style="--v:${total(l.stock) / capOf(save, p)}"></i>
-        ${stockList(l.stock, 'Empty. Buy stock into it at the market hall, or unload your car here.')}${carHere(p)}`;
-    else body = `<p class="stall-status">Offices · your HQ${levelNote(p)}</p><p class="stall-empty">Every stall, shop and superstore you own sells ${Math.round((HQ_BOOST - 1) * 100)}% faster while you have offices.</p>`;
+        ${stockList(l.stock, 'Empty. Fill it from the market hall.')}${carHere(p)}`;
+    else body = `<p class="stall-status">Offices · your HQ${levelNote(p)}</p><p class="stall-empty">Your shops sell ${Math.round((HQ_BOOST - 1) * 100)}% faster.</p>`;
     const rebuild = l?.kind && total(stockAt(save, p)) === 0 && !l.job ? `<details class="biz-rebuild"><summary>Rebuild lot ${LETTER[i]}</summary>${lotOptions(i)}</details>` : '';
     return `${body}${l?.kind ? upgradeRow(p) : ''}${rebuild}`;
   }
@@ -529,8 +528,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (!save.corners[i]) {
       const price = cornerPrice(save);
       const lv = level(save);
-      return `<p class="stall-empty">${esc(cornerName(i))}, a corner shop in The Trenches across the river: a shop from the day you buy it, ${CORNER.slots} shelves and The Trenches' foot traffic. Bought with Dorras, ${LV(CORNER_LEVEL)}.</p>
-        <div class="stall-actions"><button type="button" class="shop-take" data-buy-corner="${i}" ${price !== null && save.dorras >= price && lv >= CORNER_LEVEL ? '' : 'disabled'}>Buy ${esc(cornerName(i))} · ${fmt.format(price ?? 0)} Dorras</button>${lv < CORNER_LEVEL ? `<small class="biz-level-note">Needs level ${CORNER_LEVEL} (you're ${lv})</small>` : ''}</div>`;
+      return `<p class="stall-empty">${esc(cornerName(i))}, a corner shop in The Trenches. ${CORNER.slots} shelves, ${LV(CORNER_LEVEL)}.</p>
+        <div class="stall-actions"><button type="button" class="shop-take" data-buy-corner="${i}" ${price !== null && save.dorras >= price && lv >= CORNER_LEVEL ? '' : 'disabled'}>Buy · ${fmt.format(price ?? 0)}</button>${lv < CORNER_LEVEL ? `<small class="biz-level-note">Needs level ${CORNER_LEVEL} (you're ${lv})</small>` : ''}</div>`;
     }
     return `<p class="stall-status">Corner shop · ${CORNER.slots} kinds of goods, ${Math.round(CORNER.capacity * capacityMul(save, p))} of each${levelNote(p)}${serveNote(p)}</p>
       ${shelvesView(p, now)}${carHere(p)}
@@ -559,18 +558,18 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     let body = '';
     if (!u) {
       const price = unitPrice(save);
-      body = `<p class="stall-empty">Unit ${i + 1} on Makers' Row, across the street north of the market square. Buy it, then build a garden, a shop or a warehouse on it.</p>
-        <div class="stall-actions"><button type="button" class="shop-take" data-buy-unit="${i}" ${price !== null && save.dorras >= price ? '' : 'disabled'}>Buy unit ${i + 1} · ${fmt.format(price ?? 0)} Dorras</button></div>`;
+      body = `<p class="stall-empty">Unit ${i + 1} on Makers' Row, north of the market square.</p>
+        <div class="stall-actions"><button type="button" class="shop-take" data-buy-unit="${i}" ${price !== null && save.dorras >= price ? '' : 'disabled'}>Buy unit ${i + 1} · ${fmt.format(price ?? 0)}</button></div>`;
     } else if (!u.kind) {
-      body = `<p class="stall-empty">Your unit is ready. What should it be?</p>${buildOptions(i)}`;
+      body = `<p class="stall-empty">Pick what to build.</p>${buildOptions(i)}`;
     } else if (u.kind === 'garden') {
       const have = u.stock[u.crop] ?? 0;
       const crops = RAW_IDS.map((c) => `<button type="button" data-crop="${c}" aria-pressed="${u.crop === c}" ${have > 0 && u.crop !== c ? 'disabled' : ''}>${esc(good(c).name)}</button>`).join('');
       const cap = capOf(save, p);
-      body = `<p class="stall-status">Garden · ${perMin(CROPS[u.crop] * [1, 1.3, 1.6][placeLevel(save, p) - 1])} ${esc(good(u.crop).name.toLowerCase())} a minute, also while you're away${levelNote(p)}${serveNote(p)}</p>
+      body = `<p class="stall-status">Garden · ${perMin(CROPS[u.crop] * [1, 1.3, 1.6][placeLevel(save, p) - 1])} ${esc(good(u.crop).name.toLowerCase())} a minute${levelNote(p)}${serveNote(p)}</p>
         <div class="seg stall-seg" role="group" aria-label="Crop">${crops}</div>
         <div class="stall-slot"><div class="stall-slot-top">${dot(u.crop)}<b>${esc(good(u.crop).name)} in the bins</b><span class="stall-qty">${have} / ${cap}</span></div><i class="stall-bar" style="--v:${have / cap}"></i>
-        <small class="stall-pace">${have >= cap ? 'Full: it stops growing until you load it into your car or sell it.' : have > 0 ? 'Load it into your car for the Workshop, or sell it at the market hall.' : 'Growing. Pick another crop while the bins are empty.'}</small></div>
+        <small class="stall-pace">${have >= cap ? 'Full. Load or sell it to keep growing' : have > 0 ? 'Load it for the Workshop, or sell it' : 'Growing'}</small></div>
         ${carHere(p)}`;
     } else if (u.kind === 'shop') {
       body = `<p class="stall-status">Shop · ${SHOP.slots} kinds of goods, ${Math.round(SHOP.capacity * capacityMul(save, p))} of each${levelNote(p)}${serveNote(p)}</p>
@@ -580,7 +579,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       const cap = capOf(save, p);
       body = `<p class="stall-status">Warehouse · ${total(u.stock)} / ${cap}${levelNote(p)}</p>
         <i class="stall-bar" style="--v:${total(u.stock) / cap}"></i>
-        ${stockList(u.stock, 'Empty. Buy stock into it at the market hall, or unload your car here.')}${carHere(p)}`;
+        ${stockList(u.stock, 'Empty. Fill it from the market hall.')}${carHere(p)}`;
     }
     // Rebuilding: only once it's empty of goods
     const rebuild = u?.kind && total(stockAt(save, p)) === 0 ? `<details class="biz-rebuild"><summary>Rebuild unit ${i + 1}</summary>${buildOptions(i)}</details>` : '';
@@ -613,18 +612,18 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       </li>`;
     }).join('');
     return `<p class="stall-status">${p === 'workshop' ? "The Workshop's bay" : 'Factory bay'} · ${bay} / ${cap}${levelNote(p)}${serveNote(p)}</p>
-      ${stockList(ln.stock, `Empty. Bring raw goods from your gardens in your car, or buy them into ${p === 'workshop' ? 'the Workshop' : 'the factory'} at the market hall.`)}
+      ${stockList(ln.stock, 'Empty. Bring or buy raw goods.')}
       ${job}
       <ul class="market-list">${recipes}</ul>
       ${carHere(p)}
       ${upgradeRow(p)}
-      <p class="city-panel-fine">Raw goods leave the bay when a job starts; products land in it as they're made, also while you're away. Load them into your car for your stall and shops, or sell them at the market hall.</p>`;
+      <p class="city-panel-fine">Jobs keep going while you're away.</p>`;
   }
 
   function carView(now: number) {
     const c = h.car();
     const at = carAt();
-    if (!c) return `<p class="stall-empty">Your car is at the garage on the south bank. Walk there, get in, and drive it to your places to load and unload goods.</p>${stockList(save.cargo, '')}${contractsDue(now)}`;
+    if (!c) return `<p class="stall-empty">Your car is at the garage on the south bank.</p>${stockList(save.cargo, '')}${contractsDue(now)}`;
     const cap = cargoCap(c.model, save);
     const used = total(save.cargo);
     const ids = GOODS.map((g) => g.id);
@@ -647,14 +646,14 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       .filter((id) => (here[id] ?? 0) > 0)
       .map((id) => row(id, `${here[id]} here`, `Worth about ${fmt.format(marketPrice(id, now))} each`, 'load', here[id]!, used < cap))
       .join('');
-    const loadNote = !at ? '' : inn ? '' : loadsFrom(save, at) ? '<p class="stall-empty">Nothing here to load.</p>' : '<p class="stall-empty">Goods on sale stay on the shelves: load at a garden, a warehouse or the Workshop.</p>';
+    const loadNote = !at ? '' : inn ? '' : loadsFrom(save, at) ? '<p class="stall-empty">Nothing here to load.</p>' : '<p class="stall-empty">Goods on sale can\'t be loaded.</p>';
     return `<p class="stall-status">${esc(c.name)} · ${used} / ${cap} in the car${at ? ` · parked at ${esc(placeName(at))}` : ''}</p>
       <i class="stall-bar" style="--v:${used / cap}"></i>
-      ${at ? '' : `${stockList(save.cargo, 'Empty.')}<p class="stall-empty">Park within a few steps of your stall, a unit or the Workshop to load and unload. Bigger cars carry more: the Box Van most, the Hyper Comet least; a roof rack from the garage adds a quarter a level.</p>`}
+      ${at ? '' : `${stockList(save.cargo, 'Empty.')}<p class="stall-empty">Park by one of your places to load.</p>`}
       ${out ? `<p class="biz-label">Unload here</p><ul class="market-list">${out}</ul>` : ''}
       ${inn ? `<p class="biz-label">Load from ${esc(placeName(at!))}</p><ul class="market-list">${inn}</ul>` : loadNote}
       ${contractsDue(now)}
-      <p class="city-panel-fine">Delivering to your stall or a shop yourself pays a bonus of ${Math.round(DELIVERY_BONUS * 100)}% of the goods' price.</p>`;
+      <p class="city-panel-fine">Delivering to your shelves pays a ${Math.round(DELIVERY_BONUS * 100)}% bonus.</p>`;
   }
 
   /** Your contracts, with Deliver where the car is parked at the drop-off */
@@ -682,7 +681,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const offers = board(now);
     const news = [
       up.d > 0.02 ? `${good(up.id).name}: prices climbing at the market hall.` : `Market hall prices are holding steady.`,
-      down.d < -0.02 ? `${good(down.id).name}: prices falling, a good time to stock up.` : '',
+      down.d < -0.02 ? `${good(down.id).name}: prices falling.` : '',
       `${DESTS[offers[0].to]} is after ${good(offers[0].good).name.toLowerCase()}.`,
     ].filter(Boolean);
     const taken = (id: number) => save.taken.includes(id);
@@ -690,7 +689,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const offerRows = offers
       .map(
         (k) => `<li class="market-row"><div class="market-top">${dot(k.good)}<b>${k.qty} ${esc(good(k.good).name)} → ${esc(DESTS[k.to])}</b><span class="market-price">${D(k.reward)}</span></div>
-        <div class="market-acts"><small>Goods worth about ${fmt.format(k.qty * marketPrice(k.good, now))} · 30 minutes to deliver</small>
+        <div class="market-acts"><small>Worth about ${fmt.format(k.qty * marketPrice(k.good, now))} · 30 min to deliver</small>
         <span class="market-btns"><button type="button" data-take="${k.id}" ${taken(k.id) || full ? 'disabled' : ''}>${taken(k.id) ? 'Taken' : 'Take it'}</button></span></div></li>`
       )
       .join('');
@@ -705,7 +704,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       ${mine ? `<p class="biz-label">Your contracts · ${save.contracts.length} / ${CONTRACTS_MAX}</p><ul class="market-list">${mine}</ul>` : ''}
       <p class="biz-label">On the board · new in ${clock(boardEnds(now) - now)}</p>
       <ul class="market-list">${offerRows}</ul>
-      <p class="city-panel-fine">Get the goods into your car (a warehouse, the Workshop, or buy them into it at the market hall with your car parked outside), drive to the building and park by its door: Deliver is on your business card's Car tab. A beam of light marks each drop-off. Up to ${CONTRACTS_MAX} at once; giving one up costs nothing. ${BOARD_SIZE} new contracts every 20 minutes.</p>`;
+      <p class="city-panel-fine">Load the goods, then park by the drop-off.</p>`;
   }
 
   /* ---------- The Post office: couriers ---------- */
@@ -722,7 +721,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       .join('');
     const busy = save.shipments.length >= SHIP_MAX;
     let form = '';
-    if (!sendFrom) form = '<p class="stall-empty">Couriers pick up from a garden, a warehouse or the Workshop. Nothing to send yet.</p>';
+    if (!sendFrom) form = '<p class="stall-empty">Nothing to send yet.</p>';
     else {
       const here = stockAt(save, sendFrom);
       const rows = GOODS.map((g) => g.id)
@@ -740,7 +739,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     }
     return `${transit ? `<p class="biz-label">On the way · ${save.shipments.length} / ${SHIP_MAX}</p><ul class="market-list">${transit}</ul>` : ''}
       <p class="biz-label">Send goods</p>${form}
-      <p class="city-panel-fine">Couriers carry up to ${SHIP_QTY} at a time, ${SHIP_MAX} out at once, and arrive while you're away too. No delivery bonus: that's for driving it yourself. Contracts need your own car.</p>`;
+      <p class="city-panel-fine">Up to ${SHIP_QTY} a trip, ${SHIP_MAX} out at once. No delivery bonus.</p>`;
   }
 
   /* ---------- The Apartments: staff ---------- */
@@ -755,7 +754,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       })
       .join('');
     return `<ul class="market-list">${rows}</ul>
-      <p class="city-panel-fine">Hiring costs ${fmt.format(STAFF_HIRE)} Dorras. Then each keeps ${Math.round(STAFF_CUT * 100)}% of the value of what they sell, grow or make, paid from the till (or your balance), so they only cost anything while there's work. If they can't be paid, they leave. Build a garden or shop on a unit to hire for it.</p>`;
+      <p class="city-panel-fine">Staff keep ${Math.round(STAFF_CUT * 100)}% of what they handle. Unpaid staff leave.</p>`;
   }
 
   /* ---------- The Vault: what your business is worth, the ledger, loans ---------- */
@@ -776,25 +775,24 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const loan = save.loan
       ? `<div class="stall-slot"><div class="stall-slot-top"><b>Your loan</b><span class="stall-qty">${fmt.format(save.loan.owed)} owed</span></div>
           <i class="stall-bar" style="--v:${1 - save.loan.owed / Math.max(1, Math.ceil(save.loan.borrowed * (1 + LOAN_FEE)))}"></i>
-          <small class="stall-pace">${Math.round(LOAN_SHARE * 100)}% of your takings go to it until it's paid off.</small>
+          <small class="stall-pace">${Math.round(LOAN_SHARE * 100)}% of takings pay it off</small>
           <span class="market-btns"><button type="button" data-repay="${Math.min(save.loan.owed, 1000)}" ${save.dorras >= 1 ? '' : 'disabled'}>Pay ${fmt.format(Math.min(save.loan.owed, 1000))}</button><button type="button" data-repay="${save.loan.owed}" ${save.dorras >= save.loan.owed ? '' : 'disabled'}>Pay it all</button></span></div>`
-      : `<p class="stall-empty">Borrow to grow faster: a flat ${Math.round(LOAN_FEE * 100)}% fee on top, and ${Math.round(LOAN_SHARE * 100)}% of your takings go to it until it's paid off (or pay it off any time). The more property you own, the more the Vault lends: up to ${fmt.format(limit)} now.</p>
+      : `<p class="stall-empty">Flat ${Math.round(LOAN_FEE * 100)}% fee, ${Math.round(LOAN_SHARE * 100)}% of takings repay it. Up to ${fmt.format(limit)}.</p>
         <span class="market-btns biz-loans">${amounts.map((n) => `<button type="button" data-borrow="${n}">Borrow ${fmt.format(n)}</button>`).join('')}</span>`;
     return `<ul class="biz-worth">
         <li><span>Balance</span><b>${D(save.dorras)}</b></li>
         <li><span>In the till</span><b>${D(save.till)}</b></li>
         <li><span>Goods</span><b>${D(goods)}</b></li>
         <li><span>Property</span><b>${D(prop)}</b></li>
-        <li><span>Cars, guns and clothes</span><b>${D(gearValue(save))}</b></li>
+        <li><span>Gear</span><b>${D(gearValue(save))}</b></li>
         ${save.loan ? `<li><span>Owed</span><b>-${fmt.format(save.loan.owed)}</b></li>` : ''}
         <li class="is-total"><span>You're worth</span><b>${D(worth(save, now))}</b></li>
       </ul>
-      <p class="biz-label">Estate agent · The Trenches' corner shops</p>${cornersView()}
+      <p class="biz-label">Estate agent · corner shops</p>${cornersView()}
       <p class="biz-label">Loans</p>${loan}
       <div class="biz-ledger"><div><p class="biz-label">In, all time</p><ul>${rows(true)}</ul></div><div><p class="biz-label">Out, all time</p><ul>${rows(false)}</ul></div></div>
       ${recent ? `<p class="biz-label">Latest</p><ul class="biz-recent">${recent}</ul>` : ''}
-      <p class="biz-label">Your save</p>${backupView(now)}
-      <p class="city-panel-fine">Dorras are the city's own money, earned by playing. They can't be bought or cashed out.</p>`;
+      <p class="biz-label">Your save</p>${backupView(now)}`;
   }
 
   /* ---------- Your save (in the Vault): a backup file to download, and one to load ---------- */
@@ -805,10 +803,10 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   }
   function backupView(now: number) {
     const ask = restoreAsk
-      ? `<div class="stall-slot backup-ask"><p class="biz-ask">Load this backup? Level ${restoreAsk.level}, ${fmt.format(restoreAsk.dorras)} Dorras${restoreAsk.at ? `, saved ${day(restoreAsk.at)}` : ''}. It replaces everything in this browser, and the city starts again.</p>
+      ? `<div class="stall-slot backup-ask"><p class="biz-ask">Load this backup? Level ${restoreAsk.level}, ${fmt.format(restoreAsk.dorras)} Dorras${restoreAsk.at ? `, saved ${day(restoreAsk.at)}` : ''}. It replaces this browser's save.</p>
           <span class="market-btns"><button type="button" data-restore-yes>Load it</button><button type="button" data-restore-no>Cancel</button></span></div>`
       : '';
-    return `<p class="stall-empty">Everything you do in Sector 7 is kept in this browser only: clearing its data or changing device starts you over. Download a backup file to keep it safe, and load it here on any device. Last backup: <b>${save.backup ? ago(save.backup, now) : 'never'}</b>.</p>
+    return `<p class="stall-empty">Saved in this browser only. Last backup: <b>${save.backup ? ago(save.backup, now) : 'never'}</b></p>
       ${ask}
       <span class="market-btns backup-btns"><button type="button" data-backup-save>Download backup</button><label class="backup-load"><input type="file" accept=".json,application/json" data-backup-file /><span>Load a backup</span></label></span>`;
   }
@@ -843,9 +841,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     note = r.ok
       ? ''
       : r.why === 'newer'
-        ? 'That backup comes from a newer version of the city. Reload the page and try again.'
+        ? 'That backup is newer. Reload and try again.'
         : r.why === 'size'
-          ? "That file is too big to be a Sector 7 backup."
+          ? 'That file is too big.'
           : "That file isn't a Sector 7 backup.";
     if (!r.ok) h.sfx('denied');
     paintPanel();
@@ -863,7 +861,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } catch {
       frozen = false;
       store();
-      note = "This browser won't keep saves (private browsing, or storage turned off), so the backup can't be loaded here.";
+      note = "Can't load: this browser won't keep saves.";
       h.sfx('denied');
       return;
     }
@@ -880,9 +878,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         ? `<span class="market-btns"><button type="button" data-open-corner="${i}">Run it</button></span>`
         : `<span class="market-btns"><button type="button" data-buy-corner="${i}" ${price !== null && lv >= CORNER_LEVEL && save.dorras >= price ? '' : 'disabled'}>Buy</button></span>`;
       return `<li class="market-row"><div class="market-top"><b>${esc(cornerName(i))}</b><span class="market-price">${mine ? '<span class="tag tag-mine">Yours</span>' : D(price ?? 0)}</span></div>
-        <div class="market-acts"><small>${mine ? `Corner shop · level ${placeLevel(save, CORNER_IDS[i])}` : lv < CORNER_LEVEL ? `Needs level ${CORNER_LEVEL} (you're ${lv})` : `A shop from day one: ${CORNER.slots} shelves, busy sidewalks`}</small>${acts}</div></li>`;
+        <div class="market-acts"><small>${mine ? `Corner shop · level ${placeLevel(save, CORNER_IDS[i])}` : lv < CORNER_LEVEL ? `Needs level ${CORNER_LEVEL} (you're ${lv})` : `${CORNER.slots} shelves, busy sidewalks`}</small>${acts}</div></li>`;
     }).join('');
-    return `<p class="stall-empty">Four corner shops in The Trenches, south-west across the river. Each one you own makes the next dearer. ${LV(CORNER_LEVEL)} to buy.</p>
+    return `<p class="stall-empty">Each one you own makes the next dearer.</p>
       <ul class="market-list biz-estate">${rows}</ul>`;
   }
 
@@ -965,7 +963,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     }
     if ('backupSave' in ds) {
       const name = downloadBackup(now);
-      note = `Backup downloaded: ${name}. Keep it somewhere safe; load it here, on any device, to carry on.`;
+      note = `Backup downloaded: ${name}`;
       h.sfx('buy', 0.6);
     } else if ('restoreNo' in ds) restoreAsk = null;
     else if ('restoreYes' in ds) return void restore();
@@ -994,7 +992,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (ds.buildLot) {
       const i = Number(ds.lotI);
       const r = buildLot(save, i, ds.buildLot as LotKind);
-      note = r.ok ? `Lot ${LETTER[i]} is now your ${LOT_KINDS[ds.buildLot as LotKind].name.toLowerCase()}.` : r.why === 'stock' ? 'Empty it of goods (and stop its job) first.' : why(r);
+      note = r.ok ? `Lot ${LETTER[i]} is now your ${LOT_KINDS[ds.buildLot as LotKind].name.toLowerCase()}.` : r.why === 'stock' ? 'Empty it and stop its job first.' : why(r);
     } else if (ds.borrow) {
       const r = borrow(save, Number(ds.borrow));
       note = r.ok ? `Borrowed ${fmt.format(r.dorras)} Dorras.` : r.why === 'busy' ? 'Pay off your loan first.' : 'More than the Vault will lend you.';
@@ -1004,7 +1002,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (ds.buyCorner) {
       const i = Number(ds.buyCorner);
       const r = buyCorner(save, i);
-      note = r.ok ? `${cornerName(i)} is yours: stock its shelves at the market hall, or bring goods in your car.` : whyNot(r.why, CORNER_LEVEL);
+      note = r.ok ? `${cornerName(i)} is yours.` : whyNot(r.why, CORNER_LEVEL);
       h.sfx(r.ok ? 'buy' : 'denied');
     } else if (ds.buyUnit) {
       const r = buyUnit(save, Number(ds.buyUnit));
@@ -1021,7 +1019,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       note = r.ok ? `Making ${r.qty} ${good(ds.make as GoodId).name}.` : why(r, undefined, (ds.at as PlaceId) ?? 'workshop');
     } else if ('stop' in ds) {
       cancelJob(save, (ds.at as PlaceId) ?? 'workshop');
-      note = 'Job stopped. Its raw goods are back in the bay.';
+      note = 'Job stopped. Raw goods returned.';
     } else if (ds.load) {
       const c = h.car();
       const p = carAt();
@@ -1057,19 +1055,19 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (ds.marketAt) marketAt = ds.marketAt as PlaceId | 'car';
     else if (ds.take) {
       const r = accept(save, Number(ds.take), now);
-      note = r.ok ? 'Contract taken: a beam of light marks the drop-off.' : r.why === 'max' ? `You have ${CONTRACTS_MAX} contracts on the go already.` : why(r);
+      note = r.ok ? 'Contract taken. Follow the beam.' : r.why === 'max' ? `You have ${CONTRACTS_MAX} contracts on the go already.` : why(r);
     } else if (ds.drop) {
       dropContract(save, Number(ds.drop));
       note = 'Contract given up.';
     } else if (ds.deliver) {
       const d = carAtDest();
       const r = d ? deliver(save, Number(ds.deliver), d, now) : ({ ok: false, why: 'place' } as Result);
-      note = r.ok ? `Delivered! ${fmt.format(r.dorras)} Dorras paid.` : r.why === 'stock' ? "The goods aren't all in your car." : r.why === 'place' ? 'Park by the drop-off first.' : why(r);
+      note = r.ok ? `Delivered. ${fmt.format(r.dorras)} Dorras paid.` : r.why === 'stock' ? "The goods aren't all in your car." : r.why === 'place' ? 'Park by the drop-off first.' : why(r);
     } else if (ds.sendFrom) sendFrom = ds.sendFrom as PlaceId;
     else if (ds.sendTo) sendTo = ds.sendTo as PlaceId;
     else if (ds.send && sendFrom && sendTo) {
       const r = ship(save, sendFrom, sendTo, ds.send as GoodId, Number(ds.n), now);
-      note = r.ok ? `A courier is on the way with ${r.qty} ${good(ds.send as GoodId).name} (${fmt.format(r.dorras)} Dorras).` : r.why === 'busy' ? `All ${SHIP_MAX} couriers are out.` : why(r, ds.send as GoodId, sendTo);
+      note = r.ok ? `Courier sent: ${r.qty} ${good(ds.send as GoodId).name}, ${fmt.format(r.dorras)} Dorras.` : r.why === 'busy' ? `All ${SHIP_MAX} couriers are out.` : why(r, ds.send as GoodId, sendTo);
     } else if (ds.hire) {
       const r = hire(save, ds.hire as PlaceId);
       note = r.ok ? `Hired a ${ROLES[roleAt(save, ds.hire as PlaceId)!].name.toLowerCase()} for ${placeName(ds.hire as PlaceId).replace('Your', 'your').replace('The', 'the')}.` : why(r);
@@ -1150,7 +1148,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       <ul class="market-list">${RAW_IDS.map(row).join('')}</ul>
       ${note ? `<p class="shop-note" role="status">${esc(note)}</p>` : ''}
       <div class="city-panel-actions"><button type="button" class="chip-link" data-open-stall>Your business</button></div>
-      <p class="city-panel-fine">Prices move through the day, the same for everyone. Raw goods only go to the Workshop, a warehouse or your car; customers buy products from your stall and shops. Park your car outside to buy straight into it.</p>`;
+      <p class="city-panel-fine">Park your car outside to buy into it.</p>`;
   }
   /** Fill the building panel that's open */
   function paintPanel() {
@@ -1192,17 +1190,16 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function awayNote(s: Sales) {
     const n = (m: Partial<Record<GoodId, number>>) => Object.values(m).reduce<number>((a, b) => a + (b ?? 0), 0);
     const parts = [
-      s.earned > 0 ? `sold ${n(s.sold)} item${n(s.sold) === 1 ? '' : 's'} (${fmt.format(s.earned)} Dorras in the till)` : '',
-      n(s.grown) ? `grew ${n(s.grown)} raw goods` : '',
-      n(s.made) ? `made ${n(s.made)} at the Workshop` : '',
-      s.arrived.length ? `took in ${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''}` : '',
-      s.wages ? `paid ${fmt.format(s.wages)} Dorras to staff` : '',
-      s.repaid ? `paid ${fmt.format(s.repaid)} off your loan` : '',
+      s.earned > 0 ? `${fmt.format(s.earned)} Dorras in the till` : '',
+      n(s.grown) ? `${n(s.grown)} grown` : '',
+      n(s.made) ? `${n(s.made)} made` : '',
+      s.arrived.length ? `${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''} in` : '',
+      s.wages ? `${fmt.format(s.wages)} Dorras wages` : '',
+      s.repaid ? `${fmt.format(s.repaid)} Dorras repaid` : '',
+      s.quit.length ? 'staff left unpaid' : '',
+      s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} expired` : '',
     ].filter(Boolean);
-    const extra = [s.quit.length ? `${s.quit.length > 1 ? 'Some staff' : 'A member of staff'} left: there wasn't enough to pay them.` : '', s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} ran out.` : '']
-      .filter(Boolean)
-      .join(' ');
-    return `${parts.length ? `While you were away your business ${parts.join(', ')}.` : ''} ${extra}`.trim();
+    return parts.length ? `While away · ${parts.join(' · ')}` : '';
   }
   function tick() {
     const sales = advance(save, Date.now(), serving() ?? false);
@@ -1210,15 +1207,15 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (sales.away > 0) {
       const msg = awayNote(sales);
       if (msg) toast(msg, 7000);
-    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left: there wasn't enough to pay them.`);
-    else if (sales.expired.length) toast(`A contract ran out: ${sales.expired[0].qty} ${good(sales.expired[0].good).name} for ${DESTS[sales.expired[0].to]}.`);
-    else if (sales.arrived.length) toast(`A courier delivered ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}.`, 4000);
+    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left · unpaid`);
+    else if (sales.expired.length) toast(`Contract expired · ${sales.expired[0].qty} ${good(sales.expired[0].good).name}`);
+    else if (sales.arrived.length) toast(`Delivered · ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}`, 4000);
     changed();
   }
   tick();
-  if (fresh) toast(`You have ${fmt.format(START_DORRAS)} Dorras and a market stall. Stock it at the Emporium's market hall.`, 7000);
+  if (fresh) toast(`${fmt.format(START_DORRAS)} Dorras to start · stock your stall`, 7000);
   // (once: Build mode was retired, and what the save's district plots cost came back)
-  else if (refund) toast(`Build mode has closed: the ${fmt.format(refund)} Dorras your district plots cost are back in your balance.`, 9000);
+  else if (refund) toast(`Build mode closed · ${fmt.format(refund)} Dorras refunded`, 9000);
   window.setInterval(tick, 1000);
   document.addEventListener('visibilitychange', () => !document.hidden && tick());
 

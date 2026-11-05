@@ -121,7 +121,7 @@ function art(id: PlayerCar) {
 }
 
 /** A bike's fourth mod: the roof rack's place, a top box */
-const TOP_BOX = { name: 'Top box', blurb: 'Carries a quarter more goods each level.' };
+const TOP_BOX = { name: 'Top box', blurb: 'More cargo each level' };
 
 /** The three stat bars, and the mod that raises each */
 const STATS: { key: 'speed' | 'accel' | 'grip'; label: string; mod: CarModId }[] = [
@@ -359,7 +359,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
         return `<p class="garage-paint-head">${esc(r.label)} <span>${esc(name(now))}</span></p><div class="${kind}" role="radiogroup" aria-label="${esc(r.label)}">${opts}</div>`;
       })
       .join('')
-      .concat(t === 'glow' ? '<p class="shop-note">It lights up after dark.</p>' : '');
+      .concat(t === 'glow' ? '<p class="shop-note">Lights up after dark</p>' : '');
   }
   const fill = (n: number) => Math.max(0, Math.min(1, n)).toFixed(3);
 
@@ -413,7 +413,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     const dr = bike ? BIKE_DRIVE[id as BikeId] : DRIVE[id as PlayerCar];
     const cargo = bike ? BIKE_CARGO[id as BikeId] : CARGO[id as PlayerCar];
     el.querySelector('[data-garage-name]')!.textContent = name;
-    el.querySelector('[data-garage-kind]')!.textContent = `${dr.kind} · carries ${st.cargo} goods${mods.rack ? ` (${cargo} + ${st.cargo - cargo} ${bike ? 'in the top box' : 'on the rack'})` : ''}`;
+    el.querySelector('[data-garage-kind]')!.textContent = `${dr.kind} · carries ${st.cargo} goods${mods.rack ? ` · +${st.cargo - cargo} ${bike ? 'top box' : 'rack'}` : ''}`;
     el.querySelector('[data-garage-blurb]')!.textContent = dr.blurb;
     el.querySelector('[data-garage-pitch]')!.textContent = entry.pitch;
     el.querySelector('[data-garage-paint-name]')!.textContent = CAR_PAINTS.find((p) => p.id === paintId)!.name;
@@ -433,7 +433,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     if (!owned && asking) {
       deal = `<div class="garage-sale is-asking"><p class="garage-ask">Buy the ${esc(name)} for ${fmt.format(entry.price)} Dorras?</p><div class="garage-confirm"><button type="button" class="shop-take" data-garage-confirm>Confirm</button><button type="button" class="garage-cancel" data-garage-cancel>Cancel</button></div></div>`;
     } else if (!owned) {
-      const note = lv < entry.level ? `Needs level ${entry.level} (you're level ${lv}).` : save.dorras < entry.price ? `You're ${fmt.format(entry.price - save.dorras)} Dorras short.` : '';
+      const note = lv < entry.level ? `Needs level ${entry.level}. You're level ${lv}.` : save.dorras < entry.price ? `You're ${fmt.format(entry.price - save.dorras)} Dorras short.` : '';
       deal = `<div class="garage-sale"><button type="button" class="shop-take garage-buy" data-garage-buy>Buy · ${D(entry.price)} Dorras</button>${note ? `<p class="shop-note">${note}</p>` : ''}</div>`;
     } else {
       const rows = CAR_MOD_IDS.map((m) => {
@@ -460,13 +460,13 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     }
     const pane = tab === 'model' || tab === 'paint' ? tab : 'style';
     for (const [k, els] of Object.entries(PANES)) for (const e of els) e.hidden = k !== pane;
-    if (pane === 'style') repaint(styleEl, bike ? '<p class="shop-note">Wheels, kits, liveries and glow are for the cars.</p>' : styleRows(tab as Exclude<Tab, 'model' | 'paint'>));
+    if (pane === 'style') repaint(styleEl, bike ? '<p class="shop-note">For cars only</p>' : styleRows(tab as Exclude<Tab, 'model' | 'paint'>));
 
     keepBtn.disabled = !owned;
     const changed = bike ? !sameBike(bpick, bsaved) : !same(pick, saved);
     const away = bike ? d.bikeAway() : d.away();
     const what = bike ? 'bike' : 'car';
-    keepBtn.textContent = !owned ? 'Buy it first' : changed ? 'Keep this one' : away ? `Bring my ${what} home` : `Your ${what} · done`;
+    keepBtn.textContent = !owned ? 'Buy it first' : changed ? 'Keep' : away ? `Bring my ${what} home` : `Your ${what} · done`;
   }
 
   function select(c: MyCar) {
@@ -500,7 +500,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     if (r.ok) {
       d.game.commit();
       d.game.sfx('buy');
-      d.game.toast(`The ${nameOf(id)} is yours. Keep it to take it out.`);
+      d.game.toast(`${nameOf(id)} bought · Keep to drive`);
     } else {
       d.game.sfx('denied');
       d.game.toast(whyNot(r.why, garageEntry(id).level));
@@ -514,7 +514,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     if (r.ok) {
       d.game.commit();
       d.game.sfx('upgrade');
-      d.game.toast(`${(kind === 'bike' && mod === 'rack' ? TOP_BOX : CAR_MODS[mod]).name} level ${carMods(d.game.save(), id)[mod]} fitted to the ${nameOf(id)}.`);
+      d.game.toast(`${(kind === 'bike' && mod === 'rack' ? TOP_BOX : CAR_MODS[mod]).name} level ${carMods(d.game.save(), id)[mod]} fitted`);
     } else {
       d.game.sfx('denied');
       d.game.toast(whyNot(r.why));
@@ -527,7 +527,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     const save = d.game.save();
     if (!ownsCar(save, cur())) {
       d.game.sfx('denied');
-      d.game.toast(`Buy the ${nameOf(cur())} first.`);
+      d.game.toast(`Buy the ${nameOf(cur())} first`);
       return;
     }
     // The car and the bike picked, each if it's yours (the one showing calls yours home if it's out)

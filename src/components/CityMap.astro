@@ -18,6 +18,7 @@ import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
 import { KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
+import { FREE_PLAY } from '../scripts/city3d/freeplay';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -91,8 +92,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="city-no3d" data-no3d hidden>
     <div class="city-no3d-card" role="status">
       <p class="kicker"><span class="kicker-num">3D</span> The Trenches</p>
-      <p class="city-no3d-text">The Trenches needs a device with 3D graphics (WebGL&nbsp;2).</p>
-      <p class="city-no3d-note">Try another browser or device. The comic and the links are in the Menu.</p>
+      <p class="city-no3d-text">The Trenches needs 3D graphics (WebGL&nbsp;2).</p>
+      <p class="city-no3d-note">Try another browser or device.</p>
     </div>
   </div>
 
@@ -127,7 +128,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="city-start-title" id="city-maint-title">Back <span class="hl">soon</span></p>
       <p class="city-maint-text" data-maint-text></p>
       <p class="city-maint-eta" data-maint-eta hidden></p>
-      <p class="city-maint-note">Your save is safe in this browser. This page opens the city by itself when it's back.</p>
+      <p class="city-maint-note">Your save is safe. The city reopens by itself.</p>
     </div>
   </div>
 
@@ -157,15 +158,15 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="city-start-main" data-start-main hidden>
         <button type="button" class="city-start-btn" data-start-single>
           <span class="city-start-btn-name">Single player</span>
-          <span class="city-start-btn-sub">The whole city, in this browser</span>
+          <span class="city-start-btn-sub">Play solo</span>
         </button>
         <button type="button" class="city-start-btn" data-start-multi aria-disabled={server ? 'false' : 'true'}>
           <span class="city-start-btn-name">Multiplayer</span>
-          <span class="city-start-btn-sub">{server ? 'Walk the city with other Degens' : 'Coming soon'}</span>
+          <span class="city-start-btn-sub">{server ? 'Play with others' : 'Coming soon'}</span>
         </button>
         <button type="button" class="city-start-btn" data-start-options aria-expanded="false">
           <span class="city-start-btn-name">Options</span>
-          <span class="city-start-btn-sub">Time, weather, sound, credits</span>
+          <span class="city-start-btn-sub">Time, weather, sound</span>
         </button>
         <p class="city-start-who">Playing as guest · <button type="button" class="city-start-link" data-start-relog>Log in</button></p>
       </div>
@@ -204,7 +205,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
       <div class="city-start-bar" data-start-bar><span></span></div>
       </div>
-      <p class="city-start-note">Draft · v0{build && ` · ${build}`} · Everything in the city is its own game: Dorras, never real money.</p>
+      {FREE_PLAY && <p class="city-start-free">Everything is free for a limited time</p>}
+      <p class="city-start-note">Draft · v0{build && ` · ${build}`} · Dorras are game money only.</p>
     </div>
   </div>
 
@@ -233,7 +235,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </div>
           <div class="emote-grid" data-emote-grid></div>
           <div class="phrase-grid" data-phrase-grid></div>
-          <p class="walk-pad">Press T to open this. Others see a bubble over your head.</p>
+          <p class="walk-pad">Shortcut: T</p>
         </div>
       </details>
     </div>
@@ -354,9 +356,9 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </div>
       </div>
       <div class="mk-page hub-page" data-page="bag" role="tabpanel" aria-label="Bag" hidden>
-        <p class="hub-text">Two weapon slots and sixteen spaces: your guns, the thing in your hand and your snacks. Drag a gun into a slot to carry it; 1 and 2 draw them.</p>
+        <p class="hub-text">Guns, gear and snacks.</p>
         <button type="button" class="mk-btn is-main hub-wide" data-inv-open data-hub-walk>Open your bag<span class="hub-key" aria-hidden="true">Tab</span></button>
-        <p class="mk-note" data-hub-city>Your bag opens on foot: walk into the city and press Tab, or tap Bag.</p>
+        <p class="mk-note" data-hub-city>Open it on foot.</p>
         <button type="button" class="mk-btn hub-wide" data-hub-bag>See what you carry</button>
       </div>
       <div class="mk-page hub-page" data-page="business" role="tabpanel" aria-label="Business" hidden>
@@ -371,20 +373,19 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     </header>
     <div class="seg biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
     <div class="stall-body" data-biz-body></div>
-    <p class="shop-foot">Dorras are earned in the city. They can't be cashed out.</p>
-  </section>
+      </section>
       </div>
       <div class="mk-page hub-page" data-page="missions" role="tabpanel" aria-label="Missions" hidden>
         {/* Level, XP and badges (missions-ui.ts); the mission board is at the Signal tower */}
         <div class="walk-badges" data-badges></div>
-        <p class="hub-text">XP comes from selling, delivering, racing, target practice and the mission board at the Signal tower.</p>
+        <p class="hub-text">Earn XP by playing. Missions: Signal tower.</p>
       </div>
       <div class="mk-page hub-page hub-profile" data-page="profile" role="tabpanel" aria-label="Profile" hidden>
         <div class="profile-head">
             <p class="profile-name"><b data-profile-name>Degen</b> <span class="mp-rank" data-profile-rank data-rank="rookie">Rookie</span></p>
             <button type="button" class="walk-fp" data-profile-rename hidden>New name</button>
             <button type="button" class="walk-fp" data-account-open hidden>Log in with wallet</button>
-            <p class="walk-pad" data-profile-note>Go online to get your player name. Your look and rifle finish are saved in this browser.</p>
+            <p class="walk-pad" data-profile-note>Go online for a player name.</p>
           </div>
           <div class="walk-skins" data-skins>
             <p class="walk-skins-head"><span>Rifle finish</span><span>Lifetime score <b data-lifetime>0</b></span></p>
@@ -396,7 +397,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </div>
           <div class="wardrobe" data-wardrobe>
             <p class="walk-skins-head"><span>Wardrobe</span></p>
-            <p class="walk-pad">Pick your fit, headwear, bag, kicks and merch in the fitting room at Drop 001.</p>
+            <p class="walk-pad">Change your look at Drop 001.</p>
             <button type="button" class="walk-fp" data-open-char>See your Degen</button>
             <button type="button" class="walk-fp" data-open-fitting>Open the fitting room</button>
           </div>
@@ -434,14 +435,14 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </label>
           <label class="walk-check">
             <input type="checkbox" data-walk-invert />
-            <span>Invert look up / down</span>
+            <span>Invert look</span>
           </label>
           <button type="button" class="walk-fp" data-walk-fp aria-pressed="true">First person</button>
           {/* Touch screens: the buttons' size, opacity and hand (touchlayout.ts, docs/controls-plan.md Phase 4), and moving them (Phase 6, arrange-ui.ts) */}
           <div class="hub-touchset">
             <p class="walk-section">Touch buttons</p>
             <div class="walk-field" role="group" aria-labelledby="tc-size-label">
-              <span id="tc-size-label">Button size</span>
+              <span id="tc-size-label">Size</span>
               <div class="walk-seg">
                 <button type="button" data-tc-size="small" aria-pressed="false">Small</button>
                 <button type="button" data-tc-size="medium" aria-pressed="true">Medium</button>
@@ -449,15 +450,15 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
               </div>
             </div>
             <label class="walk-field">
-              <span>Button opacity</span>
+              <span>Opacity</span>
               <input type="range" data-tc-alpha min="0.4" max="1" step="0.05" value="1" />
             </label>
             <label class="walk-check">
               <input type="checkbox" data-tc-left />
-              <span>Left-handed (the stick on the right)</span>
+              <span>Left-handed</span>
             </label>
             <button type="button" class="walk-fp" data-tc-arrange>Arrange buttons</button>
-            <p class="walk-pad">Buttons go solid while you hold them. Large comes out a little smaller where your screen hasn't room. Arrange buttons: drag them where you like, kept for your screen held upright or on its side.</p>
+
           </div>
           {/* Hold or toggle (comfort.ts, docs/views-plan.md Phase 5): on the keyboard, the gamepad and touch alike; unpicked, each works as it always has */}
           <p class="walk-section">Hold or toggle</p>
@@ -489,23 +490,22 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
               <button type="button" data-hold="block:toggle" aria-pressed="false">Toggle</button>
             </div>
           </div>
-          <p class="walk-pad">Hold: on while you hold its key or button. Toggle: press once to turn it on, again to turn it off. On the keyboard, the gamepad and the touch buttons alike. Until you pick, Sprint and Aim lock on a touch screen and are held elsewhere, Crouch toggles and Block is held.</p>
+          <p class="walk-pad">Toggle: press once for on, again for off</p>
           <p class="walk-section">Shooting</p>
           <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
             <span id="auto-ads-label">Aim when firing</span>
             <div class="walk-seg">
               <button type="button" data-auto-ads="off" aria-pressed="true">Off</button>
-              <button type="button" data-auto-ads="touch" aria-pressed="false">Touch only</button>
+              <button type="button" data-auto-ads="touch" aria-pressed="false">Touch</button>
               <button type="button" data-auto-ads="always" aria-pressed="false">Always</button>
             </div>
-            <p class="walk-pad">Firing brings the gun up to the sight (steadier shots), and it drops again when you stop. Touch only: the on-screen Fire button.</p>
+            <p class="walk-pad">Steadier shots</p>
           </div>
           <details class="hub-more">
-            <summary>Keys, gamepad and touch</summary>
+            <summary>Controls</summary>
             {/* Made from keymap.ts when the site is built (docs/views-plan.md Phase 3: one key for one job); each row shows
                 the input in use (the hub's data-input: keys, pad or touch) */}
-            <button type="button" class="mk-btn is-small km-card" data-ctrlcard-open data-hub-walk>Show the controls card</button>
-            <p class="walk-pad km-note">The same key does the same job everywhere. Shown for what you're using now: press a key, move a stick or tap to switch.</p>
+            <button type="button" class="mk-btn is-small km-card" data-ctrlcard-open data-hub-walk>Controls card</button>
             {MODE_IDS.map((id) => (
               <details class="hub-more km" open={id === 'foot'}>
                 <summary>{KEYMAP[id].name}</summary>
@@ -523,7 +523,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
                 </dl>
               </details>
             ))}
-            <p class="walk-pad">You carry two weapons, drawn anywhere with 1 and 2; change them anywhere in the inventory, refill them at the gun store counter inside the Armoury or Trench Arms' hatch. Your car waits on the turntable at the garage on the south bank. On a touch screen, Crouch is over the stick (it slides you when sprinting), with empty hands Punch, Kick and Block take the gun's buttons, drag the Fire button to aim while you shoot; aiming by a corner leans you out round it. Your look and rifle finish are in Profile.</p>
           </details>
         </div>
         <details class="hub-more">
@@ -533,7 +532,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       </div>
       <div class="mk-page hub-page" data-page="online" role="tabpanel" aria-label="Online" hidden>
         <p class="walk-skins-head"><span>Multiplayer (beta) · <span data-mp-label>Go online</span></span><span data-mp-ping></span></p>
-          <p class="mp-status" data-mp-status>Walk the city with other Degens. Emotes and set phrases only, nothing typed.</p>
+          <p class="mp-status" data-mp-status>Play with others. Emotes only, no chat.</p>
           <button type="button" class="walk-fp" data-mp-join>Go online</button>
           {/* Phones: the emotes and phrases live here (hub.ts moves them out of the header, docs/controls-plan.md Phase 3) */}
           <div class="hub-emotes" data-hub-emotes></div>
@@ -650,7 +649,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
-      <p class="mk-marquee">Free ammo at the counter · Starters unlock with your score</p>
+      <p class="mk-marquee">Free ammo · Starters unlock with score</p>
       <nav class="mk-tabs" data-mk-tabs role="tablist" aria-label="Armoury">
         <button type="button" role="tab" data-tab="guns" aria-selected="true">Guns</button>
         <button type="button" role="tab" data-tab="bench" aria-selected="false">Workbench</button>
@@ -671,7 +670,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           <span data-for="keys"><kbd>&uarr;&darr;&larr;&rarr;</kbd> Move <kbd>Enter</kbd> Select <kbd>Q</kbd><kbd>E</kbd> Tabs <kbd>F</kbd> Close</span>
           <span data-for="pad"><kbd>D-pad</kbd> Move <kbd>A</kbd> Select <kbd>LB</kbd><kbd>RB</kbd> Tabs <kbd>B</kbd> Close</span>
         </p>
-        <p class="mk-small">The starters are free; the rest cost Dorras you earn in the city. Nothing here is real money.</p>
+        <p class="mk-small">Starters are free.</p>
       </footer>
     </section>
     {/* The garage on the south bank (garage-ui.ts): the dealership and tuning shop. The five starters are free, the rest
@@ -702,7 +701,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <div class="garage-style" data-garage-style hidden></div>
         <button type="button" class="shop-take" data-garage-keep>Keep this one</button>
       </div>
-      <p class="shop-foot">The five starters are free; the rest cost Dorras you earn in the city. Wheels, kits, liveries and glow are free. Nothing here is real money.</p>
+      <p class="shop-foot">Starters and customising are free.</p>
     </section>
     {/* The hangar menu (hangar-ui.ts), opened at the hangar office's door at the airport: your aircraft and its paint,
         on the garage's .shop panel and styles. data-hangar-list the three cards (painted), data-hangar-stats the bars,
@@ -727,7 +726,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <div class="garage-paints" data-hangar-paints role="radiogroup" aria-label="Paint"></div>
         <button type="button" class="shop-take" data-hangar-keep>Keep this one</button>
       </div>
-      <p class="shop-foot">All three are free to fly and only for the city. Nothing here is real money.</p>
+      <p class="shop-foot">All free to fly.</p>
     </section>
     {/* The kart park (kart-ui.ts), opened at the hut's door or the City-view panel's Walk in.
         data-karts: the hut menu (built on the gun store's .shop panel); data-karts-dorras and data-karts-level in its
@@ -762,7 +761,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" data-karts-tab="boards" aria-pressed="false">Boards</button>
       </div>
       <div class="karts-body" data-karts-body></div>
-      <p class="shop-foot">Prizes and prices are Dorras, earned in the city. Nothing here is real money.</p>
     </section>
     <div class="race-count kart-count mk-skin" data-kart-count hidden aria-live="assertive"></div>
     <div class="kart-hud mk-skin" data-kart-hud hidden>
@@ -799,7 +797,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-kart-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> hop and drift (let go for the boost) · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> drift · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift tc" data-kart-drift aria-label="Drift"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-drift" /></svg><span class="tc-word">Drift</span></button>
     <button type="button" class="kart-btn kart-item tc" data-kart-item aria-label="Use item"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-item" /></svg><span class="tc-word">Item</span></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
@@ -834,7 +832,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" data-fight-tab="styles" aria-pressed="false">Styles</button>
       </div>
       <div class="fight-body" data-fight-body></div>
-      <p class="shop-foot">Prizes are Dorras and XP, earned in the ring. Nothing here is real money.</p>
     </section>
     <div class="fight-centre">
       <div class="race-count fight-count mk-skin" data-fight-count hidden aria-live="assertive"></div>
@@ -871,22 +868,22 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-fight-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge · <kbd>E</kbd> snack (a spar) · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
+    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge · <kbd>Esc</kbd> quit</p>
     <button type="button" class="fight-btn fight-punch tc-main tc" data-fight-punch aria-label="Punch"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-punch" /></svg><span class="tc-word">Punch</span></button>
     <button type="button" class="fight-btn fight-kick tc" data-fight-kick aria-label="Kick"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-kick" /></svg><span class="tc-word">Kick</span></button>
     <button type="button" class="fight-btn fight-block tc" data-fight-block aria-label="Block (hold)"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-block" /></svg><span class="tc-word">Block</span></button>
     <button type="button" class="fight-btn fight-dodge tc-go tc" data-fight-dodge aria-label="Dodge"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-jump" /></svg><span class="tc-word">Dodge</span></button>
     <p class="walk-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> menu</p>
     {/* Fists on the street (brawl.ts): empty hands, the keys instead (.city.is-fists); on touch the fight's Punch, Kick and Block above take Fire's, Aim's and Reload's places */}
-    <p class="walk-hint fists-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge (guard up, standing) · <kbd>1</kbd><kbd>2</kbd> draw</p>
+    <p class="walk-hint fists-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge</p>
     {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
-    <p class="walk-hint drive-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
+    <p class="walk-hint drive-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>F</kbd> get out</p>
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
     </div>
     {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
-    <p class="walk-hint boat-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> ahead / astern · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>H</kbd> horn · <kbd>V</kbd> camera · <kbd>F</kbd> get out at a landing</p>
-    <p class="walk-hint fly-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> or <kbd>Space</kbd><kbd>Shift</kbd> climb / dive · <kbd>V</kbd> camera · <kbd>F</kbd> get out</p>
+    <p class="walk-hint boat-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> ahead / astern · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>F</kbd> get out</p>
+    <p class="walk-hint fly-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> climb / dive · <kbd>F</kbd> get out</p>
     <div class="fly-hud" data-fly-hud hidden aria-hidden="true">
       <span class="fly-read"><b data-fly-speed>0</b><small>km/h</small></span>
       <span class="fly-read"><b data-fly-alt>0</b><small>m up</small></span>
@@ -932,7 +929,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
       </button>
     </div>
-    <p class="metro-note">Sector 7 Metro: pick a station and ride. Free.</p>
+    <p class="metro-note">Pick a station. Free.</p>
     <ul class="metro-list" data-metro-list></ul>
   </section>
   <div class="taxi-bar metro-bar mk-skin" data-metro-bar hidden aria-live="polite">
@@ -949,7 +946,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
       </button>
     </div>
-    <p class="metro-note">Sector 7 River Bus: pick a stop and ride. Free.</p>
+    <p class="metro-note">Pick a stop. Free.</p>
     <ul class="metro-list" data-riverbus-list></ul>
   </section>
   <div class="taxi-bar metro-bar riverbus-bar mk-skin" data-riverbus-bar hidden aria-live="polite">
@@ -963,7 +960,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <section class="worldmap mk-skin" data-worldmap hidden role="dialog" aria-modal="true" aria-labelledby="wm-title">
     <div class="wm-head">
       <p class="wm-title" id="wm-title">World map</p>
-      <p class="wm-sub">Tap a place: set a waypoint, take a taxi, or fast travel where you've been</p>
+      <p class="wm-sub">Tap a place to go there</p>
       <label class="wm-find"><select data-wm-find aria-label="Find a place"><option value="">Find a place</option></select></label>
       <button type="button" class="city-panel-close wm-close" data-wm-close aria-label="Close the world map">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
@@ -1011,16 +1008,16 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
 
   {/* The buildings' panels: each is a place in the city's game. Draft copy. `data-marquee` is its line on the
       marquee strip under its name (the menu plan's Phase 4: made-up, fixed copy). */}
-  <template data-panel-tpl="emporium" data-marquee="Fresh stock daily · Prices move with the clock">
+  <template data-panel-tpl="emporium" data-marquee="Fresh stock daily">
     <p class="kicker"><span class="kicker-num">01</span> The Emporium</p>
     <h2 id="city-panel-title" class="city-panel-title">Market hall</h2>
-    <p class="city-panel-text">Stock up your stall, shops, warehouse or the Workshop at today's prices, or sell back a little under. Prices move through the day.</p>
+    <p class="city-panel-text">Buy stock for your places. Sell some back.</p>
     <div class="market" data-market></div>
   </template>
-  <template data-panel-tpl="shop" data-marquee="New fits on the rail · Try before you buy">
+  <template data-panel-tpl="shop" data-marquee="New fits on the rail">
     <p class="kicker"><span class="kicker-num">02</span> Clothes</p>
     <h2 id="city-panel-title" class="city-panel-title">Drop 001</h2>
-    <p class="city-panel-text">The city's clothes shop. Try fits on your Degen in the fitting room, and spend your Dorras on the premium rail.</p>
+    <p class="city-panel-text">Try on fits. Buy premium pieces.</p>
     {/* Dress your Degen (fitting.ts): the originals are free, the premium wardrobe costs Dorras earned in the city (never real money, nothing to do with the merch store). */}
     <section class="fit" data-fit aria-labelledby="fit-title">
       <div class="fit-head">
@@ -1036,268 +1033,268 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="fit-items" data-fit-items></div>
       <div class="fit-confirm" data-fit-confirm role="group" aria-label="Confirm the purchase" hidden></div>
       <div class="fit-colors" data-fit-colors></div>
-      <p class="fit-note">The originals are free. The premium pieces cost Dorras you earn in the city: never real money, and nothing to do with the merch store. He wears it when you walk the city, and online.</p>
+      <p class="fit-note">Originals are free.</p>
       <button type="button" class="chip-link fit-reset" data-fit-reset>Back to the classic look</button>
     </section>
   </template>
-  <template data-panel-tpl="workshop" data-marquee="Raw in, goods out · The line never sleeps">
+  <template data-panel-tpl="workshop" data-marquee="Raw in, goods out">
     <p class="kicker"><span class="kicker-num">03</span> The Workshop</p>
     <h2 id="city-panel-title" class="city-panel-title">The Factory</h2>
-    <p class="city-panel-text">Turn raw goods from your gardens into products worth more, for your stall and shops.</p>
+    <p class="city-panel-text">Turn raw goods into products.</p>
     <div class="market" data-workshop></div>
   </template>
-  <template data-panel-tpl="vault" data-marquee="Your worth, your ledger, your backup">
+  <template data-panel-tpl="vault" data-marquee="Your worth, your ledger">
     <p class="kicker"><span class="kicker-num">04</span> The Vault</p>
     <h2 id="city-panel-title" class="city-panel-title">The Bank</h2>
-    <p class="city-panel-text">What your business is worth, where your Dorras come from and where they go, and loans to grow faster.</p>
+    <p class="city-panel-text">Your worth, ledger, loans and save.</p>
     <div class="market" data-bank></div>
   </template>
-  <template data-panel-tpl="plan" data-marquee="Gear up at the counter · Ammo on the house">
+  <template data-panel-tpl="plan" data-marquee="Ammo on the house">
     <p class="kicker"><span class="kicker-num">05</span> The Armoury</p>
     <h2 id="city-panel-title" class="city-panel-title">Guns &amp; gear</h2>
-    <p class="city-panel-text">Walk in to pick the two guns you carry (and refill them) at the gun store counter, then draw them anywhere from the hotbar. Better guns unlock with your score.</p>
+    <p class="city-panel-text">Pick your two guns at the counter.</p>
   </template>
-  <template data-panel-tpl="signal" data-marquee="News on the hour · Contracts on the board">
+  <template data-panel-tpl="signal" data-marquee="Contracts on the board">
     <p class="kicker"><span class="kicker-num">06</span> Signal tower</p>
     <h2 id="city-panel-title" class="city-panel-title">News &amp; contracts</h2>
-    <p class="city-panel-text">The city's news, orders from around town, and the mission board. Take a contract on, load the goods into your car and drive them to the door; take a mission on and do it anywhere in the city.</p>
+    <p class="city-panel-text">News, contracts and missions.</p>
     {/* Contracts, then the mission board (tycoon-ui.ts appends missions-ui.ts's board here) */}
     <div class="market" data-contracts></div>
   </template>
-  <template data-panel-tpl="telegram" data-marquee="Couriers ready · Anywhere in Sector 7">
+  <template data-panel-tpl="telegram" data-marquee="Couriers ready">
     <p class="kicker"><span class="kicker-num">07</span> Post office</p>
     <h2 id="city-panel-title" class="city-panel-title">Couriers</h2>
-    <p class="city-panel-text">Send goods between your places when you'd rather not drive them yourself. Couriers charge a fee and take a few minutes.</p>
+    <p class="city-panel-text">Send goods between your places.</p>
     <div class="market" data-couriers></div>
   </template>
-  <template data-panel-tpl="apartments" data-marquee="Hands for hire · Clerks and couriers">
+  <template data-panel-tpl="apartments" data-marquee="Hands for hire">
     <p class="kicker"><span class="kicker-num">08</span> The Apartments</p>
     <h2 id="city-panel-title" class="city-panel-title">Staff</h2>
-    <p class="city-panel-text">Degens looking for work. Hire one for your stall, a shop, a garden or the Workshop: they work while you're away too, and keep a share of what they handle.</p>
+    <p class="city-panel-text">Hire staff for your places.</p>
     <div class="market" data-staff></div>
   </template>
-  <template data-panel-tpl="karts" data-marquee="Green light soon · Two ways round">
+  <template data-panel-tpl="karts" data-marquee="Two ways round">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
-    <p class="city-panel-text">The Sector 7 Circuit west of the ring highway past exit 8, off Kart Road, a walk up from its own metro stop: twelve corners, two banked sweepers, a hill with a tunnel and a jump, a hairpin and a flyover, raced both ways round. Pure racing against seven rivals in three classes from Street to Neon: drift for boosts, keep it off the grass, and some races run at night or in the rain. Three cups run as a series of four races with points by place and a trophy for the podium; single races and time trials (against the par ghost) any time, and a new challenge every day. Watch from the covered grandstand, the grass banks or the clubhouse's roof terrace, with the race on the big screens, and see the top three on the podium. Karts are bought and tuned at the clubhouse for Dorras earned in the city.</p>
+    <p class="city-panel-text">Race seven rivals. Both ways round.</p>
     <button type="button" class="chip-link kart-walkin" data-kart-walkin>Walk in</button>
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-records.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
   </template>
-  <template data-panel-tpl="airport" data-marquee="Clear skies · Your hangar is waiting">
+  <template data-panel-tpl="airport" data-marquee="Your hangar is waiting">
     <p class="kicker"><span class="kicker-num">10</span> Sector 7 Airport</p>
     <h2 id="city-panel-title" class="city-panel-title">Fly it yourself</h2>
-    <p class="city-panel-text">Out past the ring highway on the city's south edge: a long runway, the terminal with its eight gates and its departures deck, the tower, the maintenance hangar and the fire station, the cargo shed with its freighters and truck yard, and the DEGEN AIR jets on their timetable. Your own aircraft waits in Hangar 1, by the general aviation gate: pick a prop plane, a small jet or a helicopter at the office and paint it, then take off from the apron or the runway and fly anywhere over the city. It levels itself, can't stall and bumps softly off everything; touch down anywhere and climb out. Free to fly, and only for the city.</p>
+    <p class="city-panel-text">Fly your own aircraft from Hangar 1.</p>
     <button type="button" class="chip-link kart-walkin" data-air-walkin>Walk in</button>
   </template>
   <template data-panel-tpl="fightclub" data-marquee="Gloves on · Ring open late">
     <p class="kicker"><span class="kicker-num">11</span> The south bank</p>
     <h2 id="city-panel-title" class="city-panel-title">Fight Club</h2>
-    <p class="city-panel-text">A boxing gym on the south bank: a ring under a shed roof, bags, bleachers and the trainer's counter. Fight hand to hand in the ring: spar with the gym's own fighters for as long as you like, or take one on in a bout of three rounds, first to two. Bouts pay a prize and XP, in Dorras earned in the city, never real money. New fighting styles come to the trainer later.</p>
+    <p class="city-panel-text">Spar or fight a bout in the ring.</p>
     <button type="button" class="chip-link fight-walkin" data-fight-walkin>Walk in</button>
     {/* Your record: wins, losses, knock-outs, best chain and each opponent (index.ts fills it with fightRecordHtml() from fight-ui.ts) */}
     <div class="fight-panel-record" data-fight-panel-record></div>
   </template>
-  <template data-panel-tpl="liberty" data-marquee="Walk the high level · Mind the leaves">
+  <template data-panel-tpl="liberty" data-marquee="Mind the leaves">
     <p class="kicker"><span class="kicker-num">12</span> The river</p>
     <h2 id="city-panel-title" class="city-panel-title">Liberty Bridge</h2>
-    <p class="city-panel-text">Sector 7's footbridge, one of a kind. Two sandstone gate towers stand in the river with the Liberty flame spiralling up from their roofs, and the approaches climb from the promenades, hung from pale blue chains. Across the middle the deck lifts in two halves when the tall ship sails through. Take the lift in either tower up to the high walkways and walk all the way round, with the river far below. It's for people only.</p>
+    <p class="city-panel-text">Walk the towers. The deck lifts for ships.</p>
     <button type="button" class="chip-link kart-walkin" data-liberty-walkin>Walk in</button>
   </template>
   <template data-panel-tpl="harbour" data-marquee="The east avenue over the water">
     <p class="kicker"><span class="kicker-num">12</span> The river</p>
     <h2 id="city-panel-title" class="city-panel-title">Harbour Bridge</h2>
-    <p class="city-panel-text">Sector 7's suspension bridge, where the east avenue and the metro cross the river. Two stone towers stand in the water with great pointed arches, the cables swing over their tops from anchorages on the promenades, and a web of stays fans out from each. The deck rises over the middle so the boats pass under: two lanes each way, the metro on its raised level down the middle, and a footway along each edge through the towers' smaller arches, lanterns and a necklace of lights along the cables at night.</p>
+    <p class="city-panel-text">The suspension bridge over the river.</p>
     <button type="button" class="chip-link kart-walkin" data-harbour-walkin>Walk in</button>
   </template>
-  <template data-panel-tpl="trenches" data-marquee="Next game on the court · Everyone plays">
+  <template data-panel-tpl="trenches" data-marquee="Next game on the court">
     <p class="kicker"><span class="kicker-num">13</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">The Block</h2>
-    <p class="city-panel-text">The courtyard at the heart of the Trench Houses, south of the river. Brick towers all round, a fenced court with a game always on, a playground, the handball wall, the community garden and string lights over it all at night. The metro stops right outside, and four corner shops round about are for sale at the Vault (from level 5). The story starts here: coming soon.</p>
+    <p class="city-panel-text">The heart of the Trench Houses. Story coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-block-walkin>Walk in</button>
   </template>
-  <template data-panel-tpl="club" data-marquee="Doors soon · Feel the bass from the street">
+  <template data-panel-tpl="club" data-marquee="Feel the bass">
     <p class="kicker"><span class="kicker-num">14</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">Club PULSE</h2>
-    <p class="city-panel-text">The riverside's landmark: a black hall behind neon fins that throb with the beat, PULSE across them, the tall sign on its corner pylon and a heartbeat traced in neon over the roof. Up top, the sky deck looks out over the river, and searchlights sweep the sky at night. Down at the door, a queue waits along the velvet rope by the red carpet. The doors open later: coming soon.</p>
+    <p class="city-panel-text">The riverside nightclub. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="club">Walk in</button>
   </template>
   <template data-panel-tpl="bar" data-marquee="Pull up a stool · Coming soon">
     <p class="kicker"><span class="kicker-num">15</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">The Rusty Nail</h2>
-    <p class="city-panel-text">A dive bar in an old brick walk-up on the corner, facing the boardwalk and the river: a dark wood front, warm windows and its name in neon. Pull up a stool later: coming soon.</p>
+    <p class="city-panel-text">A corner dive bar. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="bar">Walk in</button>
   </template>
-  <template data-panel-tpl="arms" data-marquee="Ring the hatch · Same guns as the Armoury">
+  <template data-panel-tpl="arms" data-marquee="Ring the hatch">
     <p class="kicker"><span class="kicker-num">16</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">Guns &amp; gear</h2>
-    <p class="city-panel-text">Trench Arms, on the corner by Harbor Stores, facing the boardwalk and the river. Step up to the hatch on the street: it's the Armoury's counter and workbench, the same guns and mods. The ones your score unlocks are free; the rest cost Dorras earned in the city.</p>
+    <p class="city-panel-text">The Armoury's guns, at a street hatch.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="arms">Walk in</button>
   </template>
-  <template data-panel-tpl="pier" data-marquee="Bait, coffee and a view · Clock keeps your time">
+  <template data-panel-tpl="pier" data-marquee="Bait, coffee and a view">
     <p class="kicker"><span class="kicker-num">17</span> The waterfront</p>
     <h2 id="city-panel-title" class="city-panel-title">Pier 7</h2>
-    <p class="city-panel-text">The Trenches' waterfront: a timber boardwalk out over the river from the highway to the town's promenade, with sodium lamps, benches facing the water and the old dock crane by the Refinery. Pier 7 runs out under its lit arch to a head with the bait and coffee kiosk, binoculars and people fishing off the rail. At its head stands the Pier House, its clock tower keeping your time. Behind the boardwalk is the riverside: The Wharf, the Refinery, Harbor Stores and Club PULSE.</p>
+    <p class="city-panel-text">The boardwalk, the pier and the clock tower.</p>
     <button type="button" class="chip-link kart-walkin" data-pier-walkin>Walk in</button>
   </template>
-  <template data-panel-tpl="nightmarket" data-marquee="Hot food on the water · Lanterns at dusk">
+  <template data-panel-tpl="nightmarket" data-marquee="Hot food on the water">
     <p class="kicker"><span class="kicker-num">17</span> The waterfront</p>
     <h2 id="city-panel-title" class="city-panel-title">Night Market</h2>
-    <p class="city-panel-text">Street food on a deck out over the river in front of Harbor Stores: shipping containers turned kitchens, two food trucks and a cart, picnic tables, patio heaters and string lights with paper lanterns, under NIGHT MARKET lit on its gantry over the boardwalk. Best after dark. Stalls of your own to run come later: coming soon.</p>
+    <p class="city-panel-text">Street food over the river. Best after dark.</p>
     <button type="button" class="chip-link kart-walkin" data-market-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="stadium" data-marquee="Gates shut till the first event">
+  <template data-panel-tpl="stadium" data-marquee="Gates shut for now">
     <p class="kicker"><span class="kicker-num">17</span> Westlake Park</p>
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Stadium</h2>
-    <p class="city-panel-text">The bowl at the top of the Mall in Westlake Park, west of town: two tiers of stands round the pitch and the track, floodlights on four masts and the big screen over the north stand. The car park is across the avenue from the park's south gate. The gates open for events later: coming soon.</p>
+    <p class="city-panel-text">Two tiers round the pitch. Events coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-stadium-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="tower" data-marquee="Lift to the sky deck · Highest view in town">
+  <template data-panel-tpl="tower" data-marquee="Highest view in town">
     <p class="kicker"><span class="kicker-num">18</span> Uptown</p>
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Tower</h2>
-    <p class="city-panel-text">The spire over Uptown's plaza, the tallest tower in the city. Take the lift in the glass pavilion at its foot up to the sky deck: an open roof behind a glass rail, with viewers looking out over the city, Westlake Park and the river. More up there coming soon.</p>
+    <p class="city-panel-text">Ride the lift to the sky deck.</p>
     <button type="button" class="chip-link kart-walkin" data-tower-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="palmcourt" data-marquee="Shops, a fountain, a late film">
     <p class="kicker"><span class="kicker-num">19</span> North of downtown</p>
     <h2 id="city-panel-title" class="city-panel-title">Palm Court</h2>
-    <p class="city-panel-text">An open-air shopping street by Westlake Park. Two rows of shops in glass, white render, cladding and timber face each other down a stone-paved promenade lined with trees: coffee, fashion, books, homeware, a bakery, sneakers, a grill and more, with festoon lights strung overhead. Paradise Cinema closes the north end, a water feature sits in the middle, and the park's east gates open straight onto it. Across the avenue is Starlight Mall. The shops open later: coming soon.</p>
+    <p class="city-panel-text">Shops, a cinema and festoon lights.</p>
     <button type="button" class="chip-link kart-walkin" data-palmcourt-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="mall" data-marquee="Two floors · Food court on the terrace">
+  <template data-panel-tpl="mall" data-marquee="Two floors of shops">
     <p class="kicker"><span class="kicker-num">20</span> North of downtown</p>
     <h2 id="city-panel-title" class="city-panel-title">Starlight Mall</h2>
-    <p class="city-panel-text">The city's shopping mall, between the north and east avenues past the Parkway. A glass and white-clad hall under a glass vault, with two department stores at its ends, Maxwell's and Bright & Co., and its totem by the road. Inside, two floors of shops round an atrium with a fountain under a ring of light, escalators and a glass lift up to the food court, kiosks, kiddie rides and a photo booth. Out front there's the loop road, the car park with its taxi rank and bus stop, and a multi-storey car park. The shops open later: coming soon.</p>
+    <p class="city-panel-text">Two floors of shops and a food court.</p>
     <button type="button" class="chip-link kart-walkin" data-mall-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="hotel" data-marquee="Valets at the door · Palms by the pool">
+  <template data-panel-tpl="hotel" data-marquee="Palms by the pool">
     <p class="kicker"><span class="kicker-num">21</span> Crestmont</p>
     <h2 id="city-panel-title" class="city-panel-title">The Coralline</h2>
-    <p class="city-panel-text">Crestmont's grand hotel, off the boulevard on the Flats: four pink storeys round a tower with its name in script on the roof, a porte-cochère over the door, a drive round a fountain under date palms, and a pool garden behind with striped cabanas. Rooms and the pool open later: coming soon.</p>
+    <p class="city-panel-text">Crestmont's grand hotel. Rooms coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="civichall" data-marquee="At the head of the boulevard">
     <p class="kicker"><span class="kicker-num">22</span> Crestmont</p>
     <h2 id="city-panel-title" class="city-panel-title">Civic Hall</h2>
-    <p class="city-panel-text">At the head of Crestmont Boulevard, where the hills begin: a white hall behind a colonnade, its tower under a blue tiled dome, and a park in front with two fountains and a walk up the boulevard's line. Inside: coming soon.</p>
+    <p class="city-panel-text">Crestmont's civic hall. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="golfclub" data-marquee="Six holes on the slopes · Tee off anytime">
+  <template data-panel-tpl="golfclub" data-marquee="Six holes on the slopes">
     <p class="kicker"><span class="kicker-num">23</span> Crestmont</p>
     <h2 id="city-panel-title" class="city-panel-title">Crestmont Hills Club</h2>
-    <p class="city-panel-text">The country club on the lower slopes west of Canyon Drive. A clubhouse under red tiles with a terrace and the carts by its shed, and six holes up the hillside and back: tees, fairways, bunkers and greens with their flags. Golf comes later: coming soon.</p>
+    <p class="city-panel-text">Six holes up the hill. Golf coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="overlook" data-marquee="The whole city from the ridge">
     <p class="kicker"><span class="kicker-num">24</span> Crestmont</p>
     <h2 id="city-panel-title" class="city-panel-title">The Overlook</h2>
-    <p class="city-panel-text">A little paved park high on the ridge off Vista Lane, about 50 m up, behind a stone balustrade, with benches and coin viewers looking out over the hills, the river and the city.</p>
+    <p class="city-panel-text">A viewpoint over the hills and the city.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="reservoir" data-marquee="Still water above the hills">
     <p class="kicker"><span class="kicker-num">25</span> Crestmont</p>
     <h2 id="city-panel-title" class="city-panel-title">The Reservoir</h2>
-    <p class="city-panel-text">Still water in a bowl of the hills east of the ridge, held in by its banks and a concrete dam, with a valve tower out in it and a fence all round. Look, don't swim.</p>
+    <p class="city-panel-text">Still water in the hills. Look, don't swim.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="harbourmaster" data-marquee="Ships in, boxes out · Mind the cranes">
+  <template data-panel-tpl="harbourmaster" data-marquee="Ships in, boxes out">
     <p class="kicker"><span class="kicker-num">26</span> Southbank Docks</p>
     <h2 id="city-panel-title" class="city-panel-title">Harbour Master</h2>
-    <p class="city-panel-text">The office on the quay by the basin's mouth, its clock tower over the river and the lighthouse across from it. Behind it the port: the container ship under three tall cranes, the stacks, SHED 3, the dry dock and the tugs, and the warehouses down Quay Road. Inside: coming soon.</p>
+    <p class="city-panel-text">The port's office. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-docks-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sunclub" data-marquee="Pool open · Courts booked till sundown">
+  <template data-panel-tpl="sunclub" data-marquee="Pool open">
     <p class="kicker"><span class="kicker-num">27</span> Sunridge</p>
     <h2 id="city-panel-title" class="city-panel-title">Sunridge Club</h2>
-    <p class="city-panel-text">The neighbourhood's clubhouse by the main entrance, its lap pool and splash pool behind a black iron fence, umbrellas and loungers on the deck, and two pickleball courts beside. Memberships: coming soon.</p>
+    <p class="city-panel-text">Pools and pickleball. Memberships coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sunpark" data-marquee="Swings, a ramada and a long walk round">
+  <template data-panel-tpl="sunpark" data-marquee="Swings and a long walk">
     <p class="kicker"><span class="kicker-num">28</span> Sunridge</p>
     <h2 id="city-panel-title" class="city-panel-title">Sunridge Park</h2>
-    <p class="city-panel-text">A green in the middle of the suburb: a playground under shade sails, a ramada with picnic tables, a field for a kickabout and a walk all the way round.</p>
+    <p class="city-panel-text">A playground, a field and a loop walk.</p>
     <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sunschool" data-marquee="Bus at the bay · Playground after the bell">
+  <template data-panel-tpl="sunschool" data-marquee="Playground after the bell">
     <p class="kicker"><span class="kicker-num">29</span> Sunridge</p>
     <h2 id="city-panel-title" class="city-panel-title">Sunridge Elementary</h2>
-    <p class="city-panel-text">The suburb's school: low stucco classroom wings round a covered walk, the multipurpose room, a field with its goals, the playground, and the yellow bus out front. Classes: coming soon.</p>
+    <p class="city-panel-text">Sunridge's school. Classes coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="wildace" data-marquee="Bulbs, starbursts and a cowboy waving">
+  <template data-panel-tpl="wildace" data-marquee="Bulbs and a cowboy">
     <p class="kicker"><span class="kicker-num">30</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Wild Ace</h2>
-    <p class="city-panel-text">An old-school casino covered in bulbs and starbursts, its neon star on the roof and the neon cowboy waving over the door. The tables, the lounge and the show: coming soon.</p>
+    <p class="city-panel-text">Classic neon casino. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="dragonspire" data-marquee="Over the drawbridge, into the castle">
+  <template data-panel-tpl="dragonspire" data-marquee="Over the drawbridge">
     <p class="kicker"><span class="kicker-num">31</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Dragonspire</h2>
-    <p class="city-panel-text">A castle on the boulevard: turrets and spires in bright colours, a drawbridge over the moat into the gatehouse, the hotel tower behind. The great hall, the tables and the tower rooms: coming soon.</p>
+    <p class="city-panel-text">A castle resort. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="scarab" data-marquee="A beam of light from the tip at night">
+  <template data-panel-tpl="scarab" data-marquee="A beam of light at night">
     <p class="kicker"><span class="kicker-num">32</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">The Golden Scarab</h2>
-    <p class="city-panel-text">A pyramid of dark glass with a beam of light from its tip at night, two stepped towers beside it and a sphinx at the gate. The tomb-dark casino floor and the rooms up the slopes: coming soon.</p>
+    <p class="city-panel-text">A glass pyramid resort. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="bigcity" data-marquee="A whole skyline and a coaster round it">
+  <template data-panel-tpl="bigcity" data-marquee="A skyline and a coaster">
     <p class="kicker"><span class="kicker-num">33</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Big City</h2>
-    <p class="city-panel-text">A whole skyline in one resort: little skyscrapers of a city that never was, a rollercoaster looping round them and a bridge over the pool out front. The rides, the tables and the rooms: coming soon.</p>
+    <p class="city-panel-text">A skyline and a rollercoaster. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="gondolier" data-marquee="Gondolas at the steps, fountains on the lake">
+  <template data-panel-tpl="gondolier" data-marquee="Gondolas at the steps">
     <p class="kicker"><span class="kicker-num">34</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">The Gondolier</h2>
-    <p class="city-panel-text">An old-world palace of arcades on its own canal, gondolas at the steps, the bell tower over the lake where the fountains will dance. The gondola rides, the galleries and the rooms: coming soon.</p>
+    <p class="city-panel-text">A canal palace. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="lagoon" data-marquee="Palms, waterfalls and a volcano">
+  <template data-panel-tpl="lagoon" data-marquee="Palms and a volcano">
     <p class="kicker"><span class="kicker-num">35</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Lava Lagoon</h2>
-    <p class="city-panel-text">A curved tower of gold glass behind the palms, a lagoon out front with rocks and waterfalls, and room in it for a volcano. The tables, the lagoon bar and the rooms: coming soon.</p>
+    <p class="city-panel-text">Gold glass and a lagoon. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="orbit" data-marquee="The saucer deck over the Strip">
     <p class="kicker"><span class="kicker-num">36</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Orbit</h2>
-    <p class="city-panel-text">The space-age tower, the tallest on the Strip: a flying saucer of a sky deck ringed in neon, fins sweeping up the shaft. The sky deck, the tables and the rooms: coming soon.</p>
+    <p class="city-panel-text">The Strip's tallest tower. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sphere" data-marquee="A ball of light at the Strip's east end">
+  <template data-panel-tpl="sphere" data-marquee="A ball of light">
     <p class="kicker"><span class="kicker-num">37</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">The Sphere</h2>
-    <p class="city-panel-text">A ball of light twenty tiles across at the Strip's east end, its whole skin a screen playing an eye, the moon, a planet, a wave and the Emporium's diamond in turn, seen from across the city. Shows inside: coming soon.</p>
+    <p class="city-panel-text">A ball of light. Shows coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-sphere-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="lot9" data-marquee="Lot 9 keeps its secrets">
     <p class="kicker"><span class="kicker-num">38</span> South of the highway</p>
     <h2 id="city-panel-title" class="city-panel-title">Lot 9</h2>
-    <p class="city-panel-text">A trailer park behind chain-link on the far side of the highway from The Trenches. Single-wides and double-wides gone to rust, old caravans and campers, tarps and lean-tos, dogs on their chains and KEEP OUT on half the gates. The fire pit's lit most nights. You get in by the gravel lane off the south avenue, or on foot through the tunnel under the highway from Bottom Street. Somebody here knows something: the story comes through here, coming soon.</p>
+    <p class="city-panel-text">A trailer park past the highway. Story coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-lot9-walkin>Walk in</button>
   </template>
 
@@ -1316,7 +1313,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="city-card" id="city-card">
       <p class="kicker"><span class="kicker-num">GM</span></p>
       <h1 id="city-title" class="city-title">Welcome to <span class="hl">Sector&nbsp;7</span></h1>
-      <p class="city-hint">Drag to move, right-drag to turn, scroll to zoom. Click a building to go in.</p>
+      <p class="city-hint">Click a building to go in</p>
       <p class="city-draft">Draft · v0</p>
       <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome tip">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
@@ -1452,7 +1449,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     /* ---------- The 3D city ---------- */
     let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
     let booting = false;
-    const NO_3D = 'The Trenches needs a device with 3D graphics (WebGL 2).';
+    const NO_3D = 'The Trenches needs 3D graphics (WebGL 2).';
     /** No 3D here: the page says so, and so does the start menu (the header's Menu keeps the comic page and the links) */
     function no3d() {
       root!.dataset.view = 'none';
@@ -1558,14 +1555,14 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     login.addEventListener('submit', (e) => {
       e.preventDefault();
       pass.value = '';
-      say('Accounts are coming soon. Play as guest for now: your progress is saved in this browser.');
+      say('Accounts coming soon. Play as guest.');
     });
     start.querySelector('[data-start-guest]')!.addEventListener('click', () => {
       pass.value = '';
       loginMsg.hidden = true;
       showLogin(false);
     });
-    start.querySelector('[data-start-signup]')!.addEventListener('click', () => say('Creating an account is coming soon. Play as guest for now.'));
+    start.querySelector('[data-start-signup]')!.addEventListener('click', () => say('Accounts coming soon. Play as guest.'));
     start.querySelector('[data-start-relog]')!.addEventListener('click', () => showLogin(true));
 
     function showPane(on: boolean) {
@@ -1605,7 +1602,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));
     start.querySelector<HTMLButtonElement>('[data-start-multi]')!.addEventListener('click', (e) => {
       if (!server) {
-        status.textContent = 'Multiplayer is coming soon. Single player has the whole city for now.';
+        status.textContent = 'Multiplayer coming soon';
         (e.currentTarget as HTMLElement).classList.add('is-nudged');
         return;
       }

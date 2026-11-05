@@ -88,7 +88,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   }
   function boardRow(m: Mission, lv: number, full: boolean) {
     const locked = lv < m.level;
-    const why = locked ? `Needs level ${m.level}.` : full ? `${MISSIONS_MAX} on the go already: finish or give up one first.` : '';
+    const why = locked ? `Needs level ${m.level}` : full ? `${MISSIONS_MAX} on the go already` : '';
     return `<li class="market-row mission-row${locked ? ' is-locked' : ''}">
       <div class="market-top"><b>${esc(m.name)}</b>${reward(m)}</div>
       <div class="market-acts"><small>${esc(m.blurb)}${why ? ` <span class="mission-why">${esc(why)}</span>` : ''}</small>
@@ -104,7 +104,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     const full = active.length >= MISSIONS_MAX;
     const mine = active.length
       ? `<p class="biz-label">Your missions · ${active.length} / ${MISSIONS_MAX}</p><ul class="market-list">${active.map((a) => activeRow(s, a)).join('')}</ul>`
-      : `<p class="biz-label">Your missions</p><p class="stall-empty">None on the go. Take one from the board: up to ${MISSIONS_MAX} at once, Dorras and XP when it's done.</p>`;
+      : `<p class="biz-label">Your missions</p><p class="stall-empty">None yet. Take one below.</p>`;
     const tiers = TIERS.map((t) => {
       const list = MISSIONS.filter((m) => m.level === t && missionState(s, m.id) !== 'done' && missionState(s, m.id) !== 'active');
       if (!list.length) return '';
@@ -112,16 +112,16 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       // Tiers above your level fold up, so the board stays short
       return lv >= t
         ? `<p class="biz-label mission-tier">Level ${t}</p>${rows}`
-        : `<details class="mission-fold"><summary>Level ${t} · ${list.length} mission${list.length > 1 ? 's' : ''} · needs level ${t}</summary>${rows}</details>`;
+        : `<details class="mission-fold"><summary>Level ${t} · ${list.length} mission${list.length > 1 ? 's' : ''} · locked</summary>${rows}</details>`;
     }).join('');
     const done = s.missions.done.map((id) => mission(id)).filter((m): m is Mission => !!m);
     const doneHtml = done.length
       ? `<details class="mission-fold mission-done"><summary>Done · ${done.length}</summary><ul class="mission-done-list">${done.map((m) => `<li><span>${esc(m.name)}</span>${reward(m)}</li>`).join('')}</ul></details>`
       : '';
     return `<div class="mission-board">${guideBoardHtml(s)}${mine}
-      <p class="biz-label">On the board</p>${tiers || '<p class="stall-empty">Every mission on the board is done. More come with the city.</p>'}
+      <p class="biz-label">On the board</p>${tiers || '<p class="stall-empty">All done for now</p>'}
       ${doneHtml}
-      <p class="city-panel-fine">Only what you do after taking a mission counts towards it. Giving one up costs nothing. Rewards are Dorras and XP for the city's game, nothing more.</p></div>`;
+      <p class="city-panel-fine">Only progress after you take one counts.</p></div>`;
   }
 
   /** Getting started on the board: every step, done or to do, and Show / Hide */
@@ -133,7 +133,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     }).join('');
     return `<p class="biz-label">Getting started · ${s.guide.step} / ${GUIDE_STEPS}</p>
       <ol class="guide-list">${rows}</ol>
-      <div class="market-btns guide-toggle"><small>${s.guide.hidden ? 'The guide is hidden.' : 'A beam of light marks where to go.'}</small><button type="button" ${s.guide.hidden ? 'data-guide-show' : 'data-guide-hide'}>${s.guide.hidden ? 'Show the guide' : 'Hide the guide'}</button></div>`;
+      <div class="market-btns guide-toggle"><small>${s.guide.hidden ? 'Guide hidden' : 'Follow the beam of light'}</small><button type="button" ${s.guide.hidden ? 'data-guide-show' : 'data-guide-hide'}>${s.guide.hidden ? 'Show guide' : 'Hide guide'}</button></div>`;
   }
 
   /** A Take, Claim or Give up button on the board (or the guide's Show / Hide): true when it was one */
@@ -145,24 +145,24 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       const m = mission(ds.claim);
       const r = claimMission(s, ds.claim);
       if (r.ok && m) {
-        game.toast(`Mission done: ${m.name}. ${fmt.format(r.reward)} Dorras and ${fmt.format(r.xp)} XP.`);
+        game.toast(`Mission done · +${fmt.format(r.reward)} Dorras, +${fmt.format(r.xp)} XP`);
         game.sfx('mission');
       } else {
-        game.toast(r.ok ? 'Claimed.' : whyNot(r.why));
+        game.toast(r.ok ? 'Claimed' : whyNot(r.why));
         game.sfx('denied');
       }
     } else if (ds.abandon !== undefined) {
       const m = mission(ds.abandon);
-      if (abandonMission(s, ds.abandon)) game.toast(`${m?.name ?? 'Mission'} given up.`, 3500);
+      if (abandonMission(s, ds.abandon)) game.toast(`${m?.name ?? 'Mission'} given up`, 3500);
       else return false;
     } else if (ds.take !== undefined && mission(ds.take)) {
       const m = mission(ds.take)!;
       const r = acceptMission(s, ds.take, Date.now());
       if (r.ok) {
-        game.toast(`Mission taken: ${m.name}. ${m.blurb}`);
+        game.toast(`Mission taken · ${m.name}`);
         game.sfx('mission', 0.6);
       } else {
-        game.toast(r.why === 'max' ? `You have ${MISSIONS_MAX} missions on the go already.` : r.why === 'level' ? whyNot('level', m.level) : whyNot(r.why));
+        game.toast(r.why === 'max' ? `Already ${MISSIONS_MAX} missions on the go` : r.why === 'level' ? whyNot('level', m.level) : whyNot(r.why));
         game.sfx('denied');
       }
     } else return false;
@@ -238,7 +238,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   trackerList?.addEventListener('click', (e) => {
     if (!(e.target as HTMLElement).closest('[data-guide-hide]')) return;
     hideGuide(game.save(), true);
-    game.toast('Guide hidden. Show it again from the board at the Signal tower.', 4000);
+    game.toast('Guide hidden · show it at the Signal tower', 4000);
     game.commit();
   });
 
@@ -266,7 +266,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       if (g) hooks.go(g);
     } else if (t.closest('[data-guide-close]')) {
       hideGuide(s, true);
-      game.toast('Guide hidden. Show it again from the board at the Signal tower.', 4000);
+      game.toast('Guide hidden · show it at the Signal tower', 4000);
       game.commit();
     }
   });
@@ -290,12 +290,12 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     const s = game.save();
     for (const g of advanceGuide(s)) {
       const next = guideStep(s);
-      game.toast(`Step done: ${g.name}. ${fmt.format(g.reward)} Dorras and ${fmt.format(g.xp)} XP.${next ? ` Next: ${next.name}.` : " That's the city's basics: more missions wait at the Signal tower."}`, 5000);
+      game.toast(`${next ? 'Step done' : 'Basics done'} · +${fmt.format(g.reward)} Dorras, +${fmt.format(g.xp)} XP`, 5000);
       pop(g.name, next ? `Getting started · ${s.guide.step} / ${GUIDE_STEPS}` : 'Getting started · done', 'is-badge');
       if (booted) game.sfx('mission');
     }
     for (const b of checkBadges(s)) {
-      game.toast(`Badge earned: ${b.name}. ${b.blurb}${b.xp ? ` +${fmt.format(b.xp)} XP.` : ''}`, 4000);
+      game.toast(`Badge · ${b.name}${b.xp ? ` · +${fmt.format(b.xp)} XP` : ''}`, 4000);
       pop(b.name, `Badge · ${b.blurb}`, 'is-badge');
     }
     const lv = level(s);
@@ -304,8 +304,8 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       const newTitle = title !== titleFor(lastLevel);
       pop(`Level ${lv}`, newTitle ? `New title · ${title}` : title, 'is-level');
       // Past the guide's level, now and then: the save lives in this browser only
-      const remind = booted && lv >= 3 && guideDone(s) && Date.now() - s.backup > BACKUP_STALE ? ' Back up your save at the Vault: it lives in this browser only.' : '';
-      game.toast(`${newTitle ? `Level ${lv}! You're now a ${title}.` : `Level ${lv}!`}${remind}`, remind ? 6000 : 4000);
+      const remind = booted && lv >= 3 && guideDone(s) && Date.now() - s.backup > BACKUP_STALE ? ' · back up at the Vault' : '';
+      game.toast(`${newTitle ? `Level ${lv} · ${title}` : `Level ${lv}`}${remind}`, remind ? 6000 : 4000);
       if (booted) game.sfx('levelup');
     }
     lastLevel = lv;

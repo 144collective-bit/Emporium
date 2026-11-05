@@ -382,3 +382,22 @@ marked done.
 - Budgets: the CSS is 38.6 KB gzipped of its 60 (34.1 before the plan),
   the boot's script 666.0 of 680, the page's own script 5.9 of 8.
 
+
+## After the plan: short copy (the owner's call, 2026-11)
+
+"The settings and menus are too wordy... imagine the user has ADHD and make
+it as simple as possible while looking professional." Every menu's copy was
+cut (the owner's picks: every menu; explanations down to a few words; the
+keys list as short rows by mode; the money note on the start screen only):
+
+- Labels 1-3 words, buttons a verb and at most two more, a hint under a
+  control only where the label alone is unclear (at most about six words).
+- Any other line in a menu about eight words at most: no semicolons, no
+  asides, nothing the screen already shows.
+- Each place's panel is one line under its name.
+- Settings' controls are keymap.ts's lists by mode (views plan Phase 3),
+  a key and a word or two a row; the long notes under them went.
+- "Dorras are game money only" is said once, on the start screen. The
+  credits stay whole (the motion capture's licence asks for them).
+
+A new menu follows the same lengths.

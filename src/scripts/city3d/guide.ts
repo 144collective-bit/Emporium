@@ -50,7 +50,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'stock',
     name: 'Stock your stall',
-    hint: "Open the Emporium's market hall and buy goods for your stall.",
+    hint: "Buy goods at the Emporium's market hall",
     at: door('emporium'),
     go: { open: 'emporium' },
     met: (s) => (s.ledger.totals.bought ?? 0) > 0 || s.counters.sold > 0,
@@ -60,7 +60,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'sell',
     name: 'Make some sales',
-    hint: 'Sell 5 things. Your stall sells by itself; stand at it in the market square and it sells faster.',
+    hint: 'Sell 5 things at your stall',
     at: STALL_SPOT,
     go: { walk: facing(STALL_SPOT, { x: STALL_SPOT.x, z: STALL_SPOT.z - 1 }) },
     met: (s) => s.counters.sold >= 5,
@@ -70,7 +70,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'drive',
     name: 'Take your car out',
-    hint: 'Your car waits on the turntable at the garage, south of the river. Get in and drive 100 tiles.',
+    hint: 'Drive 100 tiles. Your car is at the garage',
     at: GARAGE_SITE.turntable,
     go: { walk: facing(GARAGE_SITE.door, GARAGE_SITE.turntable) },
     met: (s) => s.counters.driven >= 100,
@@ -80,7 +80,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'contract',
     name: 'Deliver a contract',
-    hint: 'Take a contract at the Signal tower, load the goods into your car and drive them to the beam.',
+    hint: 'Take a contract at the Signal tower',
     at: door('signal'),
     go: { open: 'signal' },
     met: (s) => s.counters.contracts >= 1,
@@ -90,7 +90,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'practice',
     name: 'Target practice',
-    hint: "Draw your rifle from the hotbar (2, or G; your loadout is picked at the Armoury's counter), then knock down 3 dummies in the north-west park or patrol drones.",
+    hint: 'Knock down 3 dummies or drones',
     at: RACK,
     go: { walk: facing(RACK, COUNTER) },
     met: (s) => s.counters.dummies + s.counters.drones >= 3,
@@ -100,7 +100,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'race',
     name: 'Race at the kart park',
-    hint: "Walk in at the kart park's gate, west past the ring highway, and finish a race from the clubhouse.",
+    hint: 'Finish a race from the clubhouse',
     at: HUT_DOOR,
     go: { walk: facing({ x: HUT_DOOR.x, z: HUT_DOOR.z + 1.5 }, HUT_DOOR) },
     met: (s) => s.counters.kartRaces >= 1,
@@ -110,7 +110,7 @@ export const GUIDE: GuideStep[] = [
   {
     id: 'backup',
     name: 'Back up your save',
-    hint: 'Your progress lives in this browser only. Download a backup at the Vault to keep it safe.',
+    hint: 'Download a backup at the Vault',
     at: door('vault'),
     go: { open: 'vault' },
     met: (s) => s.backup > 0,
