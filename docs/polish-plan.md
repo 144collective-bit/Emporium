@@ -440,132 +440,155 @@ hexes in 22 files; 29 exports used nowhere (wallet.ts's `forgetWallet`,
   (210 MB measured) with "far districts let go on phones" and impostors
   as the way back is scheduled nowhere.
 
+## The owner's answers (2026-11-05)
+
+Asked after the audit, each with a recommendation; the picks:
+
+- **Balance:** both, a daily soft cap on the race prizes and purses
+  (the first few a day pay in full, then a fraction) and the business
+  side raised (Dorras and XP). Existing saves keep their Dorras.
+- **Dead ends:** all the cheap live lines: every "coming soon" panel
+  carries a true line from the clock, the stadium's screen a fixture
+  board and its masts dimmed but for a fixed "match night", the club's
+  beat swelling at its door with a bouncer's toast, the bar selling the
+  snack, Crestmont's hotel, civic hall and golf club with door prompts.
+- **The first screen:** Play as guest the main button, the log-in a quiet
+  dimmed "Log in · coming soon" line until accounts exist.
+- **The crowd:** varied by district and role (track for joggers and kids,
+  hoodies and beanies in The Trenches, lighter suits in Uptown and
+  Crestmont, a lens palette), seeded so neighbours never match; phones
+  at most one extra crowd kind, measured.
+- **Confirms:** Give up, Drop and the HUD Quits ask once (the shops'
+  second tap; the HUDs a two-press).
+- **Vehicles:** engine voices per kind. The speed range and the aircraft
+  cockpits stay as they are (not picked).
+- **Traffic:** parked vehicles are stoppers; the traffic queues and
+  toots, a car left mid-junction respawned after a capped wait.
+- **The bigger scenery-to-life steps** (the Night Market's stalls, the
+  Sky Wheel ride, the Docks' Phase 4, a stadium match night): no
+  preference; each is proposed one at a time for its own sign-off,
+  the Night Market's stalls first (the corner-shop rules carry it).
+- **The sixteen pads:** reserved for buildings later. They stay framed
+  as they are; nothing in this plan touches them.
+- **Menus:** one draft note (the corner tag), toasts under the
+  short-copy rule, a Mission board button on the hub's Missions tab and
+  the grid on its Bag tab, the bottom-left key hints dropped (the
+  control card is enough).
+- **Engineering's room-making** (the routes as a fetched JSON asset, the
+  business screens mounted on first open, target practice as a chunk,
+  the landmark ticks gated): early, before the crowd and character work.
+- **Hosting:** not sure what Hostinger runs on a push; the plan adds a
+  check (below), not a change to the build.
+- **Character:** the captured idle and walk on the stage and the
+  hologram, held things with behaviour, fists in first person. More
+  emotes not picked. The rides' empty seat stays as it is (the revamp's
+  own Phase 4).
+- **Motion capture data:** the rarely used takes to on-demand packs
+  first, then sitting down and standing up as the first new take.
+- **The tier picker:** big touch screens get the medium tier; phones
+  unchanged.
+- **New places:** none; Kestrel Bridge, Uptown's three landmarks and the
+  riverside's three stay backdrop.
+- **Variety:** more hotel, diner, tenement and Uptown shop names, a lamp
+  post per district, the kerb blended at The Trenches' edge.
+- **The smaller economy bits:** no preference; the two recommended go in
+  ("Dorras taken" counting purses, bonuses and rewards; a live `prizes`
+  switch and the `guns` switch renamed "Gun stores"); more consumables
+  and missions past level 12 wait.
+- **The Phone's pitch:** reworded.
+
 ## The plan
 
-Ten phases, smallest and surest first, each shot before and after
-(`npm run shots -- polish-<n>`) and checked at 320, 375, 768, 1024 and
-1440 wide, on the phone tier, by day and at night. Every phase keeps the
-tests, the typecheck and the budgets green; none moves anything that
-exists. Phases 1-3 need no decision from the owner beyond a yes.
+Ten phases, smallest and surest first, in the order the owner's
+answers set: the room-making before the heavy work, the pads untouched,
+no new places. Each phase is shot before and after
+(`npm run shots -- polish-<n>`), checked at 320, 375, 768, 1024 and
+1440 wide, on the phone tier, by day and at night, and keeps the tests,
+the typecheck and the budgets green; none moves anything that exists.
 
-1. **The hour-long fixes** (theme 8, and the stale copy): the corner
-   shops' redraw, "Dorras taken" counting purses and bonuses, the Vault's
-   worth with the bikes and styles, the billboard's number, the varsity
-   sleeves, the credits regenerated from takes.json, the `guns` switch
-   renamed, the mission and badge names, the Phone's pitch, the README,
-   `stats` removed, the bike's and kart's door sound, the bump shakes
-   under reduced motion, the mall's `low`. A day. Tests extended where a
-   rule changed (the counters, the worth).
-2. **Sameness, the cheap half** (theme 4's signs): hotel and diner
-   names downtown, the tenements' names and seeded pick, Uptown's 24
-   names a character; the sign atlases rebake. A day.
-3. **The menus' habits** (theme 7, less the owner's questions): one
-   confirm helper and the destructive actions behind it, one × glyph,
-   Q / E in the garage and the business card, the key hints from
-   keymap.ts, the hub's Missions button and Bag grid, the small targets
-   and touch badges, `aria-modal`, city.css's reduced-motion rule, the
-   wallet card and the inventory's colour into the kit, the first-run
-   messages staggered. Two or three days.
-4. **Sound across the city** (theme 3): the hum from the built-up land,
+1. **The hour-long fixes** (theme 8 and the stale copy): the corner
+   shops' redraw, "Dorras taken" counting purses, bonuses and rewards,
+   the Vault's worth with the bikes and styles, the billboard's number,
+   the varsity sleeves, the credits regenerated from takes.json, the
+   `guns` switch renamed and a `prizes` switch added, the mission and
+   badge names, the Phone's pitch, the README, `stats` removed, the
+   bike's and kart's door sound, the bump shakes under reduced motion,
+   the mall's `low` branches, the tier picker's refinement. A day; tests
+   extended where a rule changed.
+2. **Names** (theme 4's signs): hotel and diner names downtown, the
+   tenements' names and a seeded pick, Uptown's 24 names a character; the
+   sign atlases rebake. A day.
+3. **The menus' habits** (theme 7, as answered): Play as guest the main
+   button and the log-in quiet; one confirm helper and Give up, Drop and
+   the HUD Quits behind it; one × glyph; Q / E in the garage and the
+   business card; the key hints dropped; the hub's Mission board button
+   and Bag grid; the toasts cut to length; one draft note; the small
+   targets and touch badges; `aria-modal`; city.css's reduced-motion
+   rule; the wallet card and the inventory's colour into the kit; the
+   first-run messages staggered. Two or three days.
+4. **Room and resilience** (theme 11's early half, the owner's call): the
+   routes as a fetched JSON asset, tycoon-ui mounted on first open with
+   the Dorras readout kept, target practice behind a thin facade as a
+   chunk, the landmark ticks gated on distance, the context-loss and
+   failed-chunk handlers, the test reporter's per-file timings and the
+   routes fixture cached, the budget and the bake in the Worker's build
+   with a red row when a CI build has no texture sets, and the Hostinger
+   check: the owner opens Hostinger's GitHub deploy settings and notes
+   the build command there; if it is a plain build, the Action's checks
+   are added to it. Three or four days.
+5. **Sound across the city** (theme 3): the hum from the built-up land,
    the `waterfront`, `docks`, `jets`, `indoor` and `yards` layers, the
-   test turned into bands, the engine voices per vehicle kind. Two days.
-5. **Traffic and the other vehicles** (themes 5 and 6): the traffic
-   respecting parked vehicles, left turns held, passengers on the buses,
-   the taxi's "as close as the road goes", brake lights and indicators on
-   the bike and the kart, the kart's own feel, the speed range widened.
-   Two or three days; the routes and drive tests extended.
-6. **The dead ends made live** (theme 2, the cheap half): the live
-   lines in the panels from the clock, the stadium's screen and masts,
-   the club's door, the bar's snack, Crestmont's door prompts, Kestrel
-   Bridge and Uptown's three landmarks as places (the snapshot rewritten
-   on purpose), the world map's missing footprints, the Kart Park
-   station's walk, the riverside's yards. Three days, after the owner's
-   copy.
-7. **The crowd and the character** (themes 4 and 9): the crowd's outfits
-   by role and district (phones one extra kind, measured), the captured
-   idle and walk on the stage and the hologram, the held things with
-   behaviour, the fists' first-person hands, the mocap packs split so
-   the budget breathes. A week; the clothing, crowd and rubric tests hold
-   it.
-8. **Balance** (theme 1): the owner's pick of prize cuts, a daily soft
-   cap, or the business side raised; the live `prizes` switch so it can
-   be tuned from outside; the game tests re-pinned. Two days once decided.
-9. **The world's bigger polish** (theme 10 and theme 2's second half, the
-   owner's picks): the district pads dressed, the Night Market's stalls
-   to run, the Sky Wheel ridden, the Docks' Phase 4, the lamp styles, the
-   kerb blended, the aircraft cockpits, more emotes and consumables. Each
-   its own step with its own sign-off, as the plans before.
-10. **Engineering** (theme 11): the context-loss and failed-chunk
-    handlers, the landmark ticks gated on distance, the routes as a JSON
-    asset and tycoon-ui on first open (the headroom Phase 9 needs), the
-    test timings and the routes fixture cached, the missing bench views,
-    the budget and bake in the Worker's build with the red row, the
-    tier picker's refinement, then walk.ts split along its seams (ground
-    first, with tests), a linter and the shapes helper. A week spread
-    out; the engineering items that make room (the headroom, the ticks)
-    can run before Phase 7 if it needs them.
+   ambience test turned into bands, the engine voices per vehicle kind.
+   Two days.
+6. **Traffic and the other vehicles** (themes 5 and 6, as answered): the
+   traffic queueing behind parked vehicles with a capped wait, left turns
+   held, passengers on the buses, the taxi's "as close as the road
+   goes", brake lights and indicators on the bike and the kart, the
+   kart's own feel. Two or three days; the routes and drive tests
+   extended.
+7. **The dead ends made live** (theme 2, as answered): the live lines in
+   every "coming soon" panel from the clock, the stadium's fixture board
+   and match night, the club's door, the bar's snack, Crestmont's door
+   prompts, the world map's missing footprints, the Kart Park station's
+   walk, the riverside's yards. Three days, the copy the owner's to
+   change.
+8. **The crowd and the character** (themes 4 and 9, as answered): the
+   crowd's outfits by role and district (phones one extra kind,
+   measured with `?fps` and `?bench`), the captured idle and walk on the
+   stage and the hologram, the held things with behaviour, the fists'
+   first-person hands, the rarely used takes into on-demand packs, then
+   the sitting-down take (a data step: the owner fetches or approves the
+   CMU take). A week; the clothing, crowd and rubric tests hold it.
+9. **Balance** (theme 1, as answered): the daily soft cap on race
+   prizes and purses, the business side raised (XP a sale, a contract's
+   XP, a sold-out bonus), the `prizes` switch wired to it, the game
+   tests re-pinned, the numbers written in docs/tycoon-plan.md. Two
+   days.
+10. **The world's bigger polish** (themes 4 and 10, as answered, and the
+    rest of theme 11): a lamp post per district, the kerb blended at The
+    Trenches' edge, then the scenery-to-life steps one at a time with
+    their own sign-off (the Night Market's stalls first, then the Sky
+    Wheel ride, the Docks' Phase 4, a stadium match night as the owner
+    picks), and the engineering that's left: walk.ts split along its
+    seams (ground first, with tests), a linter and the shapes helper, the
+    materials' hexes into the palette, the missing bench views.
 
 After every phase: the shots compared, `?bench` on a phone and a laptop,
 this plan's phase marked built, CLAUDE.md's line for anything that
 changed how a thing works.
 
-## Questions for the owner
+## Still open
 
-Grouped; each phase above says which it waits on.
-
-**Balance (Phase 8):** Are the kart park and the Fight Club meant to be
-the main money, with the shops as flavour? If not: cut prizes, cap them
-daily, or raise the business side? Should "Dorras taken" count purses,
-bonuses and mission rewards? Should the live settings be able to pause
-prizes? Anything planned for levels 13 to 40 (nothing gates past 12)?
-
-**Dead ends (Phases 6 and 9):** Carry live lines in the "coming soon"
-panels until their game arrives? The club's door: a toast and the beat,
-or wait for the interior? The bar selling the snack? A stadium "match
-night" on the clock with no gameplay? The Sky Wheel a free ride? The
-Docks' Phase 4 now, small (one crane, the pilot boat, sound)? Kestrel
-Bridge, the Circle Theatre, the Exchange, The Aurelian, the Wharf, the
-Refinery and Harbor Stores as places? Which scenery place takes a loop
-first: the Night Market's stalls, or a bar with a drink?
-
-**Menus (Phase 3):** Keep the log-in screen in front of the game before
-accounts exist? Should Give up, Drop and Quit ask once? One draft note
-instead of three? Do toasts fall under the short-copy rule? Fold the Bag
-tab into Business, or make it the grid? Keep both the key hint and the
-control card on desktop? Hub tabs on phones: scroll with a fade, or
-icons?
-
-**Sameness (Phases 2, 4, 7, 9):** More made-up hotel and diner names
-(HOTEL NOVA is the only hotel downtown)? Distinct engine voices, or one
-hum as the cartoon register? The supercar and coupe noticeably faster?
-Crowd variety by district, and may phones take one extra crowd kind?
-Lamp styles per district, or one post for the city's unity?
-
-**Character (Phase 7):** Rides seen (him seated on the taxi, metro, river
-bus and monorail), or keep the cameras? Stairs down keyed now, or wait
-for a take? Which data step first (a dance, a brisk walk, a stroll,
-sitting down, boxing under the strikes), and may `zenodo.org` be allowed
-for 100STYLE? How many emotes, and which? Should the Phone and the Coffee
-come with behaviour? The river: stay a wall, or a splash and a climb out?
-Which merch marks get real art first?
-
-**Vehicles (Phases 5 and 9):** Should the traffic queue behind your
-parked car even if a car left mid-junction stalls a lane until the pool
-respawns it? Cockpit interiors for your aircraft, worth the chunk? Live
-mirrors still "later"?
-
-**Engineering (Phase 10):** What does Hostinger run on push: a plain
-build, or the whole chain, so CI gates the live site and not only the
-zip? Should workers.dev carry the baked textures? Touch laptops and
-tablets: the phone tier as today, or medium? Is the boot budget still
-"raise when needed", or does the headroom get a phase before the next
-district? Do "far districts let go on phones" and impostors get a slot,
-or is the 150 MB target retired?
-
-**World (Phase 9):** The sixteen pads: framed land kept, or open green
-now? Blend the kerb at The Trenches' edge, or keep the hard line? Which
-of Southfield's `FUTURE_SITES` first, and when do Lot 9's office and
-laundry get insides? Westlake's boathouse: rowing yourself, or scenery?
+- **Hosting:** what Hostinger runs on a push to main (Phase 4's check).
+- **Workers.dev:** whether it should carry the baked textures (the bake
+  in its build, minutes of Chromium) or stay browser-painted.
+- **Phones' GPU memory:** the performance plan's 150 MB target against
+  210 MB measured; "far districts let go on phones" and impostors are
+  scheduled nowhere.
+- **Which bigger step after the Night Market's stalls** (Phase 10).
+- **More consumables and missions past level 12:** later, if wanted.
+- **The sitting-down take:** which CMU take, and whether `zenodo.org`
+  may be allowed for 100STYLE's walks.
 
 ## What's good: leave alone
 

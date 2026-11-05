@@ -242,8 +242,10 @@ it and has been retired completely. Build only on what's here.
     city"): the audit of the whole city (world, menus, items, clothes,
     cars, sound, the game loop, engineering) and its plan are
     `docs/polish-plan.md`, ten phases smallest and surest first, each with
-    the owner's sign-off; keep it up to date, and shoot before and after
-    each phase.
+    the owner's sign-off (the owner's answers to its questions are in it:
+    the sixteen pads stay reserved for buildings later, no new places, the
+    room-making before the heavy work); keep it up to date, and shoot
+    before and after each phase.
   - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) and performance phase 4, the foundations (sites built off the main thread, textures made at build time, and districts loaded as you approach, built with Westlake Park) are built. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):
