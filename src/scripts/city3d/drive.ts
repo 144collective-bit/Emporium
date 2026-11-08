@@ -28,7 +28,10 @@
  *   its skid marks and its lamps' pools (`ride()`); the kart, and your car
  *   until then, lean on the drawn-on roll and pitch here.
  * - Traffic stops for you (`walker` in life.ts reaches further in a car);
- *   you bump softly off other cars and people, never through them.
+ *   you bump softly off other cars and people, never through them. A vehicle
+ *   you leave parked in the road is a `stopper` (life.ts, the polish plan's
+ *   Phase 6): the traffic queues behind it and toots once; a car held out of
+ *   sight too long is put back on the road elsewhere.
  * - The handling comes from the model's numbers with the garage's mods on
  *   (`stats()`, carStatsOf in tycoon.ts), tuned again every time you get
  *   in, so an upgrade bought while the car was parked counts at once.
@@ -48,7 +51,7 @@ import type { Kart } from './karts';
 import type { Bike } from './bikes';
 import { BIKES, BIKE_VOICE, type BikeId, type MyBike } from './mybike';
 import { REST, footDown, stepLean, tuneBike } from './bike-sim';
-import { bodies } from './life';
+import { bodies, stoppers } from './life';
 import { DRIVE, FEEL, VOICE, type MyCar, type PlayerCar, type Voice } from './mycar';
 import type { KartId } from './mykart';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
@@ -138,6 +141,8 @@ export function createDrive(d: DriveDeps) {
     /** The roof camera's height and how far forward it sits */
     roof: number;
     roofFwd: number;
+    /** Its entry in the traffic's `stoppers` (life.ts): on while it's parked, moved with it */
+    stop: (typeof stoppers)[number];
   }
   let car: Out | null = null;
   let kart: Out | null = null;
@@ -182,6 +187,21 @@ export function createDrive(d: DriveDeps) {
     return tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.grip }, { L: 1.2, W: 0.95, wheelbase: 0.82 });
   }
 
+  /** A fresh stopper for a vehicle taken out: about half its length round its middle, once it's tuned (`take()`) */
+  const newStop = (): Out['stop'] => ({ x: 0, z: 0, y: 0, r: 0, on: false, parked: true });
+  /** A vehicle taken out: tuned, its stopper sized and joined to the traffic's, placed */
+  function take(v: Out) {
+    v.tune = tuneOf(v);
+    v.stop.r = Math.min(1, v.tune.L / 2);
+    stoppers.push(v.stop);
+    place(v);
+    return v;
+  }
+  /** A vehicle sent home: out of the traffic's way */
+  function unstop(v: Out) {
+    const k = stoppers.indexOf(v.stop);
+    if (k >= 0) stoppers.splice(k, 1);
+  }
   /** The parked vehicles' footprints as circles (for walking round them) */
   const parkedCircles = () => [car, kart, bike].flatMap((v) => (v && v !== out ? circles(v.state, v.tune) : []));
   const outs = () => [car, kart, bike].filter((v): v is Out => !!v);
@@ -190,6 +210,11 @@ export function createDrive(d: DriveDeps) {
     const s = v.state;
     v.holder.position.set(s.x, v.y, s.z);
     v.holder.rotation.y = s.yaw;
+    // The traffic stops short of it while it's parked (life.ts stoppers), at its height
+    v.stop.x = s.x;
+    v.stop.z = s.z;
+    v.stop.y = v.y;
+    v.stop.on = v !== out;
     // (a parked bike rests on its side stand, a touch over to its left)
     v.group.rotation.set((v === out ? roll : v.kind === 'bike' ? REST.lean : 0) + v.bank, 0, v === out ? pitch : 0);
   }
@@ -221,10 +246,9 @@ export function createDrive(d: DriveDeps) {
       bank: 0,
       roof: taken.bike.eye.y,
       roofFwd: taken.bike.eye.x,
+      stop: newStop(),
     };
-    v.tune = tuneOf(v);
-    place(v);
-    return v;
+    return take(v);
   }
 
   /** The kart out of the pits, standing where it was shown */
@@ -250,10 +274,9 @@ export function createDrive(d: DriveDeps) {
       bank: 0,
       roof: 0.95,
       roofFwd: -0.1,
+      stop: newStop(),
     };
-    v.tune = tuneOf(v);
-    place(v);
-    return v;
+    return take(v);
   }
   function takeCar(): Out | null {
     const taken = d.garage.takeOut();
@@ -282,10 +305,9 @@ export function createDrive(d: DriveDeps) {
       bank: 0,
       roof: spec.cabin[1][1] + 0.28,
       roofFwd: spec.cabin[2][0] * 0.6,
+      stop: newStop(),
     };
-    v.tune = tuneOf(v);
-    place(v);
-    return v;
+    return take(v);
   }
   /** How far a point is from a vehicle you could get into: parked ones, the turntable's car, the pits' kart */
   function nearest(x: number, z: number): { d: number; kind: 'car' | 'kart' | 'bike' } | null {
@@ -505,6 +527,7 @@ export function createDrive(d: DriveDeps) {
     /** Send the car home (the garage brought it back): it leaves the streets */
     recall() {
       if (!car || out === car) return;
+      unstop(car);
       car.dispose();
       car.holder.removeFromParent();
       car = null;
@@ -512,6 +535,7 @@ export function createDrive(d: DriveDeps) {
     /** Send your bike home to its stand (the garage kept another): it leaves the streets */
     recallBike() {
       if (!bike || out === bike) return;
+      unstop(bike);
       bike.seat?.(null);
       bike.dispose();
       bike.holder.removeFromParent();
@@ -520,6 +544,7 @@ export function createDrive(d: DriveDeps) {
     /** The kart goes back to the pits (a race is starting, or the hut sends it home) */
     recallKart() {
       if (!kart || out === kart) return;
+      unstop(kart);
       kart.seat?.(null);
       kart.dispose();
       kart.holder.removeFromParent();

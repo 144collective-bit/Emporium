@@ -1,10 +1,11 @@
 // How the traffic behaves (traffic.ts, city life plan Phase 1): the turns a route indicates for, pulling away
-// from a stop in turn, the brake lights, the body's nod and lean, and the horn.
+// from a stop in turn, the brake lights, the body's nod and lean, the horn, the capped wait behind a parked vehicle
+// and left turns held against the oncoming traffic (the polish plan's Phase 6).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ROUTES, type Pt } from '../src/scripts/city3d/routes';
 import { HIGHWAY_R } from '../src/scripts/city3d/highway';
-import { PITCH_MAX, ROLL_MAX, TURN_LEAD, TURN_LEN, blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Mover } from '../src/scripts/city3d/traffic';
+import { AT_LINE, HELD_MAX, LEFT_NEAR, LEFT_PATIENCE, PITCH_MAX, ROLL_MAX, TURN_LEAD, TURN_LEN, blinkOn, bodyMotion, braking, crossOf, heldTooLong, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, yieldsLeft, type Comer, type Mover } from '../src/scripts/city3d/traffic';
 
 /** A polyline's cumulative distances, as a Route carries them */
 function cumOf(pts: Pt[]) {
@@ -150,9 +151,12 @@ test('the horn: a toot after a couple of seconds held up, again later, nothing o
   assert.equal(toots.length, 2, `two toots in twelve seconds (${toots.map((t) => t.toFixed(1))})`);
   assert.ok(toots[0] >= 2.2 - dt && toots[0] <= 2.2 + dt);
   assert.ok(toots[1] - toots[0] >= 5 - dt);
+  // The toots are counted (behind a parked vehicle only the first is played)
+  assert.equal(h.n, 2);
   // Moving again: forgotten, and the next hold-up waits the full time again
   assert.equal(hornDue(h, false, dt, 0), false);
   assert.equal(h.held, 0);
+  assert.equal(h.n, 0);
   toots = [];
   for (let t = 0; t < 2; t += dt) if (hornDue(h, true, dt, 0)) toots.push(t);
   assert.equal(toots.length, 0);
@@ -161,4 +165,63 @@ test('the horn: a toot after a couple of seconds held up, again later, nothing o
   let first = -1;
   for (let t = 0; t < 5 && first < 0; t += dt) if (hornDue(h2, true, dt, 1)) first = t;
   assert.ok(first > 3.3);
+});
+
+test('a car held behind a parked vehicle is put back only once it has waited its fill and nobody is looking', () => {
+  assert.equal(heldTooLong(0, false), false);
+  assert.equal(heldTooLong(HELD_MAX - 0.1, false), false);
+  assert.equal(heldTooLong(HELD_MAX + 0.1, false), true);
+  // In sight it keeps queueing, however long
+  assert.equal(heldTooLong(HELD_MAX * 10, true), false);
+});
+
+test('how a route crosses a junction: straight on, right or left, from the way in and out', () => {
+  // Heading +x: +z is to the right (rightOf in routes.ts), -z to the left
+  assert.equal(crossOf([1, 0], [0, 1]), 'R');
+  assert.equal(crossOf([1, 0], [0, -1]), 'L');
+  assert.equal(crossOf([1, 0], [1, 0]), 'S');
+  // A diagonal's 45° is a turn; a wobble of a few degrees isn't
+  assert.equal(crossOf([1, 0], [Math.SQRT1_2, -Math.SQRT1_2]), 'L');
+  assert.equal(crossOf([1, 0], [Math.cos(0.2), Math.sin(0.2)]), 'S');
+  // Heading -z (north on the map): rightOf is [1, 0], so +x is a right turn and -x a left
+  assert.equal(crossOf([0, -1], [1, 0]), 'R');
+  assert.equal(crossOf([0, -1], [-1, 0]), 'L');
+});
+
+test('a left-turner waits for oncoming traffic in the box or about to be, never for cars going its way or stopped a while', () => {
+  const comer = (o: Partial<Comer>): Comer => ({ turn: 'S', fx: 1, fz: 0, d: 20, v: 4, inBox: false, stood: 0, i: 0, ...o });
+  const me = comer({ turn: 'L', fx: 1, fz: 0, d: 0.2, v: 0, i: 1 });
+  const oncoming = (o: Partial<Comer>) => comer({ fx: -1, fz: 0, ...o });
+  // In the box: wait
+  assert.equal(yieldsLeft(me, oncoming({ inBox: true, d: -2, v: 3 })), true);
+  // Coming at its line, moving: wait; far off: go
+  assert.equal(yieldsLeft(me, oncoming({ d: LEFT_NEAR - 1, v: 3 })), true);
+  assert.equal(yieldsLeft(me, oncoming({ d: LEFT_NEAR + 1, v: 3 })), false);
+  // Just stopped at its line (its reaction time): it's about to go, wait; stood there a while (held by something else): go
+  assert.equal(yieldsLeft(me, oncoming({ d: 0.3, v: 0, stood: 0.5 })), true);
+  assert.equal(yieldsLeft(me, oncoming({ d: 0.3, v: 0, stood: LEFT_PATIENCE + 1 })), false);
+  // Stopped short of its line (a queue behind someone): go
+  assert.equal(yieldsLeft(me, oncoming({ d: AT_LINE + 1, v: 0, stood: 0 })), false);
+  // The same way, or across (another phase: the lights hold those), or behind me: never
+  assert.equal(yieldsLeft(me, comer({ fx: 1, fz: 0, inBox: true })), false);
+  assert.equal(yieldsLeft(me, comer({ fx: 0, fz: 1, inBox: true })), false);
+  // Going straight or right: never waits
+  assert.equal(yieldsLeft({ ...me, turn: 'S' }, oncoming({ inBox: true })), false);
+  assert.equal(yieldsLeft({ ...me, turn: 'R' }, oncoming({ inBox: true })), false);
+});
+
+test('two left-turners facing each other: the one that arrived first goes, the other waits, and a tie breaks one way', () => {
+  const comer = (o: Partial<Comer>): Comer => ({ turn: 'L', fx: 1, fz: 0, d: 0.2, v: 0, inBox: false, stood: 0, i: 0, ...o });
+  const a = comer({ fx: 1, stood: 1.2, i: 3 });
+  const b = comer({ fx: -1, stood: 0.4, i: 7 });
+  assert.equal(yieldsLeft(a, b), false, 'the first to arrive goes');
+  assert.equal(yieldsLeft(b, a), true, 'the other waits');
+  // Arrived together: by their numbers, exactly one waits
+  const c = comer({ fx: 1, stood: 1, i: 3 });
+  const e = comer({ fx: -1, stood: 1, i: 7 });
+  assert.notEqual(yieldsLeft(c, e), yieldsLeft(e, c));
+  // Once the first is in the box, the other waits for it as for anyone
+  assert.equal(yieldsLeft(b, { ...a, inBox: true, d: -1, v: 2 }), true);
+  // ...and once it's through, goes
+  assert.equal(yieldsLeft(b, { ...a, d: 30, v: 4 }), false);
 });
