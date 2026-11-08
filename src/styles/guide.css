@@ -125,9 +125,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin: -3px -5px -3px 0;
+  width: 32px;
+  height: 32px;
+  margin: -10px -10px -10px 0;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -135,6 +135,10 @@
   color: var(--muted);
   cursor: pointer;
   pointer-events: auto;
+}
+.mt-hide .mk-xi {
+  width: 11px;
+  height: 11px;
 }
 .mt-hide:hover {
   color: #fff;

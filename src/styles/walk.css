@@ -171,8 +171,8 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: none;
@@ -651,8 +651,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: none;
@@ -1286,8 +1286,8 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border: 1px solid #0000;
   border-radius: 50%;
   background:

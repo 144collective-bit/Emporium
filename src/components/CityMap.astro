@@ -86,6 +86,12 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
 ---
 
 <section class="city has-start" aria-labelledby="city-title" data-city-root data-view="loading" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src} data-flame={flameImg.src}>
+  {/* The one × glyph (the menus' kit, docs/polish-plan.md Phase 3): every close button draws it with <use href="#mk-x">
+      inside an .mk-xi svg (menus.css); its stroke comes from the svg that uses it. Kept out of the walk HUD, which is
+      display: none in the City view. */}
+  <svg class="mk-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+    <symbol id="mk-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+  </svg>
   {/* No 3D here (data-view="none": no WebGL 2, or the city couldn't start): the page says so.
       The ☰ Menu still has the comic page and the links. */}
   <div class="city-no3d" data-no3d hidden>
@@ -230,7 +236,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           <div class="pop-head">
             <p class="pop-title">Emotes</p>
             <button type="button" class="pop-close" data-pop-close aria-label="Close emotes">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+              <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
             </button>
           </div>
           <div class="emote-grid" data-emote-grid></div>
@@ -297,7 +303,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <p class="mk-kind"><span data-hub-walk>Paused</span><span data-hub-city>Menu</span></p>
         <h2 id="hub-title" class="mk-title">The Trenches</h2>
       </div>
-      <button type="button" class="mk-x" data-hub-close aria-label="Close the menu"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg></button>
+      <button type="button" class="mk-x" data-hub-close aria-label="Close the menu"><svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg></button>
     </header>
     <nav class="mk-tabs hub-tabs" data-mk-tabs role="tablist" aria-label="Menu">
       <button type="button" role="tab" data-tab="map" aria-selected="true">Map</button>
@@ -368,7 +374,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <h2 id="biz-title" class="shop-title">Your business</h2>
       <p class="shop-score stall-balance" data-biz-balance></p>
       <button type="button" class="shop-close" data-biz-close aria-label="Close your business">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </header>
     <div class="seg biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
@@ -568,7 +574,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <span class="wm-compass-arrow" data-compass-arrow aria-hidden="true"></span>
       <span class="wm-compass-text"><b data-compass-dist></b><small data-compass-name></small></span>
       <button type="button" class="wm-compass-clear" data-compass-clear aria-label="Clear the waypoint">
-        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
     {/* The control card (walk.ts, ctrlcard.ts; docs/views-plan.md Phase 4): the mode's keys for the input in use, the first time in each mode and on request */}
@@ -576,7 +582,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="ctrl-card-head">
         <b data-ctrlcard-title></b>
         <button type="button" class="ctrl-card-x" data-ctrlcard-close aria-label="Close the controls">
-          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </div>
       <dl class="ctrl-card-list" data-ctrlcard-list></dl>
@@ -595,7 +601,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <header class="char-head">
         <h2 id="char-title" class="char-title">Your Degen</h2>
         <button type="button" class="city-panel-close" data-char-close aria-label="Close the character screen">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <div class="char-stage">
@@ -622,7 +628,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <h2 id="inv-title" class="shop-title">Inventory</h2>
         <p class="inv-keys"><kbd>Tab</kbd> close</p>
         <button type="button" class="shop-close" data-inv-close aria-label="Close the inventory">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <p class="inv-label">Weapons</p>
@@ -646,7 +652,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           <span class="mk-score">Score <b data-shop-score>0</b></span>
         </p>
         <button type="button" class="mk-x" data-shop-close aria-label="Close the Armoury">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <p class="mk-marquee">Free ammo at the counter · Starters unlock with your score</p>
@@ -682,7 +688,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <h2 id="garage-title" class="shop-title">Garage</h2>
         <p class="shop-score">Dorras <span data-garage-dorras></span></p>
         <button type="button" class="shop-close" data-garage-close aria-label="Close the garage">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <div class="garage-tabs" data-garage-tabs role="tablist" aria-label="Garage"></div>
@@ -711,7 +717,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <h2 id="hangar-title" class="shop-title">Hangar</h2>
         <p class="shop-score">Free to fly</p>
         <button type="button" class="shop-close" data-hangar-close aria-label="Close the hangar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <div class="shop-list garage-list hangar-list" data-hangar-list role="listbox" aria-label="Aircraft"></div>
@@ -752,7 +758,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <p class="shop-score karts-dorras"><span class="shop-score-label">Dorras</span> <span data-karts-dorras></span></p>
         <p class="shop-score" data-karts-level>Level <b>1</b></p>
         <button type="button" class="shop-close" data-karts-close aria-label="Close the clubhouse">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <div class="seg karts-tabs" data-karts-tabs role="group" aria-label="Clubhouse">
@@ -788,7 +794,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <header class="shop-head">
         <h2 id="kart-result-title" class="shop-title" data-kart-result-title>Finished</h2>
         <button type="button" class="shop-close" data-kart-result-close aria-label="Close the results">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <div class="race-result-body" data-kart-result-body></div>
@@ -822,7 +828,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <p class="shop-score fight-dorras"><span class="shop-score-label">Dorras</span> <span data-fight-dorras></span></p>
         <p class="shop-score" data-fight-level>Level <b>1</b></p>
         <button type="button" class="shop-close" data-fight-close aria-label="Close the Fight Club">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <div class="seg fight-tabs" data-fight-tabs role="group" aria-label="Fight Club">
@@ -860,7 +866,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <header class="shop-head">
         <h2 id="fight-result-title" class="shop-title" data-fight-result-title>You win</h2>
         <button type="button" class="shop-close" data-fight-result-close aria-label="Close the bout card">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
       <div class="race-result-body" data-fight-result-body></div>
@@ -926,7 +932,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="pop-head">
       <p class="pop-title"><span class="metro-roundel" aria-hidden="true">M</span> <span id="metro-title" data-metro-title>Station</span></p>
       <button type="button" class="pop-close" data-metro-close aria-label="Close the station card">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
     <p class="metro-note">Pick a station. Free.</p>
@@ -943,7 +949,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="pop-head">
       <p class="pop-title"><span class="metro-roundel riverbus-roundel" aria-hidden="true"></span> <span id="riverbus-title" data-riverbus-title>Pier</span></p>
       <button type="button" class="pop-close" data-riverbus-close aria-label="Close the river bus card">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
     <p class="metro-note">Pick a stop. Free.</p>
@@ -963,7 +969,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="wm-sub">Tap a place to go there</p>
       <label class="wm-find"><select data-wm-find aria-label="Find a place"><option value="">Find a place</option></select></label>
       <button type="button" class="city-panel-close wm-close" data-wm-close aria-label="Close the world map">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
     <canvas class="wm-canvas" data-wm-canvas aria-label="Map of Sector 7"></canvas>
@@ -986,7 +992,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="city-modal account-modal" data-account hidden>
     <div class="city-modal-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
       <button type="button" class="city-panel-close" data-account-close aria-label="Close">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
       <div class="city-modal-body" data-account-body></div>
     </div>
@@ -1000,7 +1006,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   {/* One glass panel; its content comes from the templates below */}
   <aside class="city-panel mk-skin" data-panel hidden role="dialog" aria-labelledby="city-panel-title">
     <button type="button" class="city-panel-close" data-panel-close aria-label="Close and fly back">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+      <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
     </button>
     <div class="city-panel-body" data-panel-body></div>
     <p class="city-draft">Draft copy · v0 · nothing here is final</p>
@@ -1305,7 +1311,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="city-banner-text" data-live-banner-text></p>
       <button type="button" class="chip-link city-banner-go" data-live-banner-go hidden>Go</button>
       <button type="button" class="city-card-close" data-live-banner-close aria-label="Hide this notice">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
 
@@ -1316,7 +1322,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="city-hint">Click a building to go in</p>
       <p class="city-draft">Draft · v0</p>
       <button type="button" class="city-card-close" data-card-close aria-controls="city-card" aria-label="Hide the welcome tip">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
 
@@ -1324,7 +1330,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="city-guide" data-guide hidden>
       <div class="city-guide-body" data-guide-body></div>
       <button type="button" class="city-card-close" data-guide-close aria-label="Hide the getting started guide">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg>
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
 

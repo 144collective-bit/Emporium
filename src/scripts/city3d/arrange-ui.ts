@@ -60,7 +60,7 @@ export function openArrange(d: ArrangeDeps) {
       <div class="tc-arr-acts">
         <button type="button" data-arr-reset>Reset</button>
         <button type="button" class="is-go" data-arr-done>Done</button>
-        <button type="button" class="tc-arr-x" data-arr-cancel aria-label="Cancel">×</button>
+        <button type="button" class="tc-arr-x" data-arr-cancel aria-label="Cancel"><svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg></button>
       </div>
       <p class="tc-arr-note" data-arr-note></p>
     </div>`;

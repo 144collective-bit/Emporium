@@ -217,7 +217,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     if (trackerCount && trackerCount.textContent !== String(n)) trackerCount.textContent = String(n);
     trackerPill?.setAttribute('aria-label', `${g ? 'Getting started and ' : ''}${active.length} mission${active.length === 1 ? '' : 's'} on the go`);
     const guideRow = g
-      ? `<li class="is-guide"><span class="mt-top"><b>${esc(g.name)}</b><small>Guide · ${s.guide.step + 1} / ${GUIDE_STEPS}</small><button type="button" class="mt-hide" data-guide-hide aria-label="Hide the getting started guide"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" /></svg></button></span><small class="mt-hint">${esc(g.hint)}</small></li>`
+      ? `<li class="is-guide"><span class="mt-top"><b>${esc(g.name)}</b><small>Guide · ${s.guide.step + 1} / ${GUIDE_STEPS}</small><button type="button" class="mt-hide" data-guide-hide aria-label="Hide the getting started guide"><svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg></button></span><small class="mt-hint">${esc(g.hint)}</small></li>`
       : '';
     repaint(
       trackerList,

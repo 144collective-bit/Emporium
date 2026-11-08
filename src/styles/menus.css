@@ -168,6 +168,16 @@
   background: var(--m-coin);
   color: var(--m-coin);
 }
+/* The one × glyph: `<symbol id="mk-x">` in CityMap.astro, drawn by every close button through an .mk-xi svg
+   (docs/polish-plan.md Phase 3); every × is at least 38px to the finger */
+.mk-sprite {
+  position: absolute;
+}
+.mk-xi {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
 .mk-marquee {
   margin: 0 14px 10px 18px;
   padding: 6px 10px;

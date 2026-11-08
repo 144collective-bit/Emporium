@@ -216,7 +216,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 6px 5px 10px;
+  padding: 3px 4px 3px 10px;
   border: 1px solid #0000;
   border-radius: 999px;
   background:
@@ -256,13 +256,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: none;
   color: var(--text-2);
   cursor: pointer;
+}
+.wm-compass-clear .mk-xi {
+  width: 11px;
+  height: 11px;
 }
 /* Racing or fighting: their own HUD has the top */
 .city.is-karting .wm-compass,
