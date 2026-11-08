@@ -578,7 +578,26 @@ the typecheck and the budgets green; none moves anything that exists.
    held, passengers on the buses, the taxi's "as close as the road
    goes", brake lights and indicators on the bike and the kart, the
    kart's own feel. Two or three days; the routes and drive tests
-   extended.
+   extended. **Built** (2026-11-08): drive.ts keeps a `stoppers` entry
+   per vehicle it owns (`parked`, on while it's parked, moved with it,
+   gone when it's recalled or brought home), the traffic queues behind
+   it and toots once (`Horn.n`), and a car held past `HELD_MAX` (12 s)
+   out of the camera's sight is put back by the pool's respawn
+   (`heldTooLong()` in traffic.ts); left turns through `crossOf()` /
+   `yieldsLeft()` on each vehicle's `Comer` (its junction, its way
+   through, how long it has stood at its line; two left-turners let the
+   first to arrive go); the City Bus's passengers over its sills and the
+   Party Liner's standing crowd in the fleet's detail (carfine.ts
+   `crew()`), someone waiting at every third shelter (`SHELTER_IDLES`,
+   the `wait` act); the taxi's `FAR_DROP` (15): out onto the kerb, a
+   waypoint to the place, "As close as the road goes"; the bike's tail
+   lamp swapped for the brakes and reverse with amber indicators under
+   the mirrors and by the tail (cars.ts `lampMaterials()`, shared), the
+   street kart's rear light the same (`lights` on the show kart only, so
+   the race karts keep their one mesh); `KART_FEEL` in mykart.ts. The
+   traffic, transit and drive tests hold the rules; the snapshot is
+   unchanged. Not done: the kart's indicators (it has none), and the
+   traffic's own bikes stay as they were. Shots wait for a build.
 7. **The dead ends made live** (theme 2, as answered): the live lines in
    every "coming soon" panel from the clock, the stadium's fixture board
    and match night, the club's door, the bar's snack, Crestmont's door

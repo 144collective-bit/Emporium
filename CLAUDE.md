@@ -285,7 +285,11 @@ it and has been retired completely. Build only on what's here.
     the streets, in the right lanes, ending at the kerb nearest the place),
     stopping at red lights and behind traffic; the traffic stops behind it
     (`stoppers` in `life.ts`). Walk up to it (or Get in) and it drives you
-    there under a chase camera; Skip ride or Esc cuts to the end. Its bar is
+    there under a chase camera; Skip ride or Esc cuts to the end. Where the
+    road stops short of the place (a kerb past `FAR_DROP`, 15, from its
+    spot: a cul-de-sac's end) you step out onto the kerb beside the taxi
+    facing it, a waypoint set to the place, and it says "As close as the
+    road goes" (the polish plan's Phase 6). Its bar is
     `[data-taxi]` (under the header while it comes, at the bottom while you
     ride). Free: no fare.
   - **The river bus** (river plan step 4b) is `riverbus.ts` (DOM-free, the boot's: its stops, `STOPS`, each a landing off the quay with a gangway, `LANDING`, `GANGWAY`; `atGangway()`, which opens the railings and keeps the promenades' and decks' lamps, benches and trees out of the way) and `riverroute.ts` (DOM-free: two boats, `BUSES`, on one loop, `ROUTE`, between the banks and the outer lanes, crossing only at `CROSS`; the timetable `busAt()`; rides straight along the loop the shorter way, `ride()` / `rideAt()`, at most about `RIDE_MAX`; `offsetFor()` lays the boat you came on at your stop after; `BUS_VIEW` is what the drawing reads), both tested in `tests/riverbus.test.ts`. The landings (sites) and the boats are `riverlife3d.ts`; the card (`[data-riverbus]`) and the ride (`[data-riverbus-bar]`, Skip ride / Esc) are `riverbus-ui.ts`, loaded when a gangway's "River bus" prompt (walk `places` `riverbus:<id>`) first opens one; the stops are places (`riverbus-<id>`, kind `riverbus`) and the world map draws the loop; `riverbus` in `LIVE_FEATURES` closes it.
@@ -1815,7 +1819,21 @@ it and has been retired completely. Build only on what's here.
   `CarGeometry.turn`, on the flat of the body: a lit lens laid over one of
   the model's own small details is swallowed by its ink outline) and a
   horn when a car is held up by you (`hornDue()`, `LifeOpts.horn`, the
-  `horn` sound). No new draws, no new geometry. Phase 2 (your car's feel)
+  `horn` sound). No new draws, no new geometry. The polish plan's Phase 6
+  (the owner's call) added to it: your car, bike or kart left parked in the
+  road is a `stopper` (drive.ts keeps one per vehicle it owns, `parked`,
+  on while it's parked; `r` about half its length), so the traffic queues
+  behind it and toots once (`Horn.n`), and a car held that way past
+  `HELD_MAX` (12 s) with nobody looking is put back on the road elsewhere
+  (`heldTooLong()`, the pool's respawn), so a vehicle left mid-junction
+  never stalls a lane for good; and left turns are held against the
+  oncoming traffic: each route's way through each junction is a `Cross`
+  (`crossOf()`, left crossing the oncoming lane), life.ts keeps each
+  vehicle's `Comer` (its junction, how it crosses, how long it has stood at
+  its line), and `yieldsLeft()` holds a left-turner at its line while an
+  oncoming car on the same green is in the box or about to be
+  (`LEFT_NEAR`, `AT_LINE`, `LEFT_PATIENCE`); two left-turners facing each
+  other let the first to arrive go, so nothing locks. Phase 2 (your car's feel)
   is built: the rules in `drive-sim.ts` (`carLights()`: brake lights,
   reversing lights, indicators with the wheel below `SIGNAL_SPEED` and
   held `SIGNAL_HOLD`; `gearOf()`: four gears, the revs dropping at each
@@ -1850,7 +1868,12 @@ it and has been retired completely. Build only on what's here.
   kerb and back), `busStep()` (slowing in, a `DWELL` with the brake
   lights on and the doors' hiss, then on); the shelters are
   `transit3d.ts`, a site each, near only, not solid, built in the worker
-  too), `boats.ts` (DOM-free, tested in `tests/boats.test.ts`: a horn
+  too; since the polish plan's Phase 6 the buses carry people: a row of
+  heads and shoulders over the City Bus's sills and revellers standing on
+  the Party Liner's open top, flat shapes in the fleet's detail as the
+  driver is (carfine.ts `crew()`, no draw of their own), and someone of the
+  crowd waits at every third shelter (`SHELTER_IDLES`, the idle act `wait`:
+  the kerb's look both ways; placed with the crowd in index.ts)), `boats.ts` (DOM-free, tested in `tests/boats.test.ts`: a horn
   before every bridge (`hornDue()`), the speed easing (`cruise()`), the
   wake by the speed (`wakeOf()`), two boats `MOORED` at jetties clear of
   the lanes) and `dusk.ts` (DOM-free, tested in `tests/dusk.test.ts`: the
@@ -3901,7 +3924,7 @@ it and has been retired completely. Build only on what's here.
   - **Sound:** a synthesised engine (`engine()` in `sound.ts`) plus bump and door sounds, all through the sound switch.
   - **Getting out:** "Get out" anywhere. Degen steps out of the left door, or wherever there's room, and the car stays parked and solid to walk round. Leaving walk mode parks it too.
   - **Sending it home:** the garage menu's Keep calls it back to the turntable ("Bring my car home"). A reload puts it back there too.
-- Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
+- Traffic stops for your car (`walker.r` in `life.ts` reaches further while driving), and queues behind it, your bike or your kart wherever you leave them parked (drive.ts's `stoppers` entries; life.ts toots once and puts a car held out of sight too long back on the road elsewhere: the polish plan's Phase 6). `bodies` in `life.ts` shares where the traffic and the pedestrians are, for the soft bumps.
 - **Controls:**
   - Keyboard: W / S (or arrows) gas and brake / reverse, A / D steer, Space handbrake, H horn, V camera, F get out.
   - Touch: the stick steers (and pedals when no pedal is held), with Gas and Brake buttons (`data-drive-gas`, `data-drive-brake`), Horn and View (`data-drive-view`, the camera) in the controls plan's slots (`touchlayout.ts` `drive`: a bigger stick bottom-left, Gas the big button in the corner, Brake beside it); Get out at the top right and the speed at the top left, all clear of the phone's safe areas. Getting out brings the walk layout back.
@@ -3930,7 +3953,10 @@ it and has been retired completely. Build only on what's here.
   anywhere leaves it on its stand, solid to walk round.
 - drive.ts rides it as a third vehicle (`kind: 'bike'`, the car's HUD, touch layout and keys; `on-bike` on the
   root, the header "Riding · <bike>"): bike-sim.ts's lean tips the whole bike and you with it, your left foot comes
-  down as it stops, V swaps the chase camera for your helmet's (tipping with the lean), H sounds the horn.
+  down as it stops, V swaps the chase camera for your helmet's (tipping with the lean), H sounds the horn. Its
+  lights are the car's (`carLights()` in drive-sim.ts, `bike.lights()` in bikes.ts): the tail lamp swaps to the brake
+  or reversing lens and small amber indicators under the mirrors and beside the tail lamp flash a side, the lenses'
+  materials shared from cars.ts `lampMaterials()` (the polish plan's Phase 6).
 - Bought, tuned (engine, turbo, tyres, a top box) and painted at the garage on the Cars / Bikes switch; the kit,
   livery and glow tabs are the cars'. Only for the city: never real money, never tied to the store or the token.
 
@@ -3975,7 +4001,11 @@ it and has been retired completely. Build only on what's here.
   **Walk in**, which starts walk mode at the gate, `KART_SPAWN`). Race karts
   stay on the track, but your own kart can be taken out of the pits and
   driven anywhere on the map (the owner's call: "Get in" at the show kart,
-  `drive.ts` drives it like the car, with Degen seated; it rides the
+  `drive.ts` drives it like the car, with Degen seated, on a feel of its
+  own (`KART_FEEL` in mykart.ts: light, a quick rack, rear-driven and a
+  little loose; the drive test holds it turning quicker than the saloon)
+  and with its rear light swapped for the brakes and reverse (`lights` on
+  the street kart only, karts.ts; the polish plan's Phase 6); it rides the
   circuit's ground (the deck, the banking, the grass banks) through
   `circuitSurfaceAt()`, and goes back to the pits when a race starts).
   Walking follows the same ground inside the park, and up the banks
