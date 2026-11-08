@@ -1267,10 +1267,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     you: () => walk.position,
     free: () => walking && walk.onFoot,
     setRide: (r) => walk.setRide(r),
-    arrive: (p) => {
+    arrive: (p, at) => {
       works.want(p.at.x, p.at.z, 70);
-      walk.placeAt(p.at);
+      walk.placeAt(at ?? p.at);
     },
+    waypoint: (p) => travel.setWaypoint(p.at, placeName(root, p).name),
     approach: (at, go) => walk.boardAt(at, go),
     want: (x, z, r) => works.want(x, z, r),
     name: (p) => placeName(root, p).name,

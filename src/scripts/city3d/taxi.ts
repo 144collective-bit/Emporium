@@ -6,8 +6,10 @@
  * and it drives you along the streets to the kerb nearest the place, stopping
  * at red lights and behind the traffic like any other car, under a chase
  * camera. Skip ride (or Esc) cuts to the end; you step out at the place's
- * spot (places.ts). Free: there's no fare. Under reduced motion it's there
- * at once and the ride is a cut.
+ * spot (places.ts), or, where the road stops short of it (`FAR_DROP`: a
+ * cul-de-sac's end, Crestmont's overlook), on the kerb beside the taxi with
+ * a waypoint set to the place (the polish plan's Phase 6). Free: there's no
+ * fare. Under reduced motion it's there at once and the ride is a cut.
  */
 import * as THREE from 'three';
 import { CARS, createCar } from './cars';
@@ -31,6 +33,8 @@ const BRAKE = 7;
 const FROM = [35, 70] as const;
 /** Getting in: this close to it (tiles) */
 const BOARD = 3.2;
+/** A drop kerb further than this from the place's spot is as close as the road goes: you walk the rest, a waypoint set */
+export const FAR_DROP = 15;
 const ROAD_Y = 0.035;
 
 export interface TaxiDeps {
@@ -43,8 +47,10 @@ export interface TaxiDeps {
   free(): boolean;
   /** Ride: start (Degen into the taxi) or end */
   setRide(r: Ride | null): boolean;
-  /** Stand Degen at the place's spot */
-  arrive(p: Place): void;
+  /** Stand Degen at the place's spot, or at `at` (the kerb beside the taxi, where the road stops short of the place) */
+  arrive(p: Place, at?: { x: number; z: number; yaw: number }): void;
+  /** Set the waypoint to a place (travel-ui.ts), for the walk from a far drop kerb */
+  waypoint?(p: Place): void;
   /** Walk him up to the taxi's door and in (moments.ts), then `go`; false if he can't right now (it's taken at once) */
   approach?(at: { x: number; z: number; yaw: number; W: number }, go: () => void): boolean;
   /** Build what's waiting round a spot first */
@@ -307,10 +313,20 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     state = 'leaving';
     leaveT = 4;
     d.setRide(null);
-    d.arrive(to);
     d.sfx('door');
     hide();
-    d.toast(`Here you are: ${d.name(to)}`);
+    // The road stops short of the place: out onto the kerb beside the taxi, facing the place, and a waypoint to it
+    const dx = to.at.x - pos.x;
+    const dz = to.at.z - pos.z;
+    if (Math.hypot(dx, dz) > FAR_DROP) {
+      const side = CARS.sedan.W / 2 + 0.7;
+      d.arrive(to, { x: pos.x - fwd.y * side, z: pos.z + fwd.x * side, yaw: Math.atan2(-dx, -dz) });
+      d.waypoint?.(to);
+      d.toast(`As close as the road goes · ${d.name(to)} ahead`);
+    } else {
+      d.arrive(to);
+      d.toast(`Here you are: ${d.name(to)}`);
+    }
   }
   function stop() {
     state = 'idle';
