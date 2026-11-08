@@ -699,7 +699,6 @@
 }
 
 /* ---------- In the ring (the Fight Club): the walk and combat HUD step aside; fight.css has the fight's own ---------- */
-.city.is-fighting .walk-hint,
 .city.is-fighting .walk-look,
 .city.is-fighting .walk-run,
 .city.is-fighting .walk-crouch,
@@ -711,7 +710,6 @@
 .city.is-fighting .walk-crosshair,
 .city.is-fighting .combat-hud,
 .city.is-fighting .combat-cross,
-.city.is-fighting .drive-hint,
 .city.is-fighting .drive-hud,
 .city.is-fighting .city-pins,
 .city.is-fighting .mission-tracker {

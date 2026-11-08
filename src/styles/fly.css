@@ -1,37 +1,21 @@
 /* ---------- Flying your aircraft (walk mode, fly.ts; Airport Phase 2) ----------
    Flying sets is-flying on top of is-driving, so the walk HUD steps aside and the touch layout
    is the car's (the stick, now turning and climbing; the pedals, now Faster and Slower; Get out
-   at the top right). The car's readout and key hint give way to the flight readout: speed,
+   at the top right). The car's readout gives way to the flight readout: speed,
    height over the ground, the throttle (or the rotor) and what it's doing. The hangar menu is
    the garage's panel with three cards in a row. */
-.fly-hint,
-.fly-hud,
-.boat-hint {
+.fly-hud {
   display: none;
 }
 /* Boating (boat.ts, river plan step 4c) sets is-boating on top of is-driving: the car's layout, its readout, its
-   horn; its own key hint */
-.city.is-boating .drive-hint {
-  display: none;
-}
-@media (pointer: fine) {
-  .city.is-driving.is-boating .walk-hint.boat-hint {
-    display: block;
-  }
-}
+   horn */
 @media (pointer: coarse) {
   .city.is-driving.is-boating .drive-horn {
     display: grid;
   }
 }
-.city.is-flying .drive-hint,
 .city.is-flying .drive-hud {
   display: none;
-}
-@media (pointer: fine) {
-  .city.is-driving.is-flying .walk-hint.fly-hint {
-    display: block;
-  }
 }
 .city.is-flying .fly-hud {
   position: absolute;

@@ -8,21 +8,6 @@
 .city[data-mode="walk"] .walk-hud {
   display: block;
 }
-.walk-hint {
-  position: absolute;
-  left: 16px;
-  bottom: 16px;
-  z-index: 4;
-  max-width: calc(100% - 32px);
-  padding: 10px 14px;
-  border: 1px solid #0000;
-  border-radius: 8px;
-  background:
-    linear-gradient(#0b0a12e0, #0b0a12e0) padding-box,
-    var(--pulse) border-box;
-  font-size: 13px;
-  color: var(--text-2);
-}
 .walk-hud kbd,
 .walk-prompt kbd {
   display: inline-block;
@@ -271,7 +256,7 @@
   transform: translateX(-50%);
   transition: opacity 0.3s;
 }
-.city:has(.walk-top details[open]) :is(.walk-hint, .walk-look) {
+.city:has(.walk-top details[open]) .walk-look {
   display: none;
 }
 .city.is-looking .walk-look {
@@ -617,7 +602,6 @@
   color: #ffd36b;
 }
 @media (pointer: coarse) {
-  .walk-hint,
   .walk-look {
     display: none;
   }
@@ -1562,13 +1546,11 @@
 
 /* ---------- Driving your car (walk mode, drive.ts) ----------
    The walk HUD steps aside for a speed readout (bottom right; top left on touch screens),
-   a key hint, and on touch screens Gas and Brake pedals (the stick steers). */
-.drive-hint,
+   and on touch screens Gas and Brake pedals (the stick steers). */
 .drive-hud,
 .drive-pedal {
   display: none;
 }
-.city.is-driving .walk-hint:not(.drive-hint),
 .city.is-driving .walk-look,
 .city.is-driving .walk-run,
 .city.is-driving .walk-crouch,
@@ -1580,11 +1562,6 @@
 .city.is-driving .walk-crosshair,
 .city.is-driving .combat-hud {
   display: none;
-}
-@media (pointer: fine) {
-  .city.is-driving .drive-hint {
-    display: block;
-  }
 }
 .city.is-driving .drive-hud {
   position: absolute;

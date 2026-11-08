@@ -35,7 +35,6 @@
     animation-name: garage-in;
   }
 }
-.city.is-karts .walk-hint,
 .city.is-karts .walk-stick,
 .city.is-karts .walk-run,
 .city.is-karts .walk-crouch,
@@ -1557,11 +1556,9 @@
 }
 
 /* ---------- In the kart: the walk and combat HUD step aside ---------- */
-.kart-hint,
 .kart-btn {
   display: none;
 }
-.city.is-karting .walk-hint:not(.kart-hint),
 .city.is-karting .walk-look,
 .city.is-karting .walk-prompt,
 .city.is-karting .walk-run,
@@ -1574,16 +1571,10 @@
 .city.is-karting .walk-crosshair,
 .city.is-karting .combat-hud,
 .city.is-karting .combat-cross,
-.city.is-karting .drive-hint,
 .city.is-karting .drive-hud,
 .city.is-karting .city-pins,
 .city.is-karting .mission-tracker {
   display: none;
-}
-@media (pointer: fine) {
-  .city.is-karting .kart-hint {
-    display: block;
-  }
 }
 /* Touch screens: the stick, Gas, Brake and Drift stand where touchlayout.ts puts them (controls.ts,
    controls.css: Gas in the main slot, Brake beside it, Drift up-left of Gas, View beside it); no horn in a race */

@@ -750,8 +750,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         data-kart-result-body (painted), data-kart-next (a series' next race, hidden otherwise), data-kart-result-ok and
         data-kart-result-close.
         Touch, while .city.is-karting (set by kart.ts): data-kart-drift above the Brake pedal, and in an items race
-        (.has-items) data-kart-item; walk.ts wires them. data-kart-slot in the HUD: the item in hand.
-        .kart-hint is the key line. */}
+        (.has-items) data-kart-item; walk.ts wires them. data-kart-slot in the HUD: the item in hand. */}
     <section class="shop karts mk-skin" data-karts hidden aria-labelledby="karts-title">
       <header class="shop-head">
         <h2 id="karts-title" class="shop-title">Clubhouse</h2>
@@ -786,7 +785,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       </div>
       <div class="kart-hud-right">
         <div class="kart-map" data-kart-map role="img" aria-label="Map of the circuit"></div>
-        <button type="button" class="race-quit kart-quit" data-kart-quit>Quit</button>
+        <button type="button" class="race-quit kart-quit" data-kart-quit aria-live="polite">Quit</button>
       </div>
     </div>
     <div class="kart-pops mk-skin" data-kart-pops aria-live="polite"></div>
@@ -803,7 +802,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-kart-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint kart-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> drift · <kbd>V</kbd> camera · <kbd>Esc</kbd> quit</p>
     <button type="button" class="kart-btn kart-drift tc" data-kart-drift aria-label="Drift"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-drift" /></svg><span class="tc-word">Drift</span></button>
     <button type="button" class="kart-btn kart-item tc" data-kart-item aria-label="Use item"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-item" /></svg><span class="tc-word">Item</span></button>
     {/* The Fight Club (fight-ui.ts), opened at the trainer's counter or the City-view panel's Walk in.
@@ -820,8 +818,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         data-fight-pops: short lines under the HUD. data-fight-result: the bout card; data-fight-result-title,
         data-fight-result-body (painted), data-fight-result-ok (Done) and data-fight-result-close.
         Touch, while .city.is-fighting (fight-ui.ts sets it with the HUD): data-fight-punch and data-fight-kick where
-        Fire and Aim sit, data-fight-block (held) above them and data-fight-dodge in Jump's spot; walk.ts wires them.
-        .fight-hint is the key line. */}
+        Fire and Aim sit, data-fight-block (held) above them and data-fight-dodge in Jump's spot; walk.ts wires them. */}
     <section class="shop fight-menu mk-skin" data-fight hidden aria-labelledby="fight-title">
       <header class="shop-head">
         <h2 id="fight-title" class="shop-title">Fight Club</h2>
@@ -858,7 +855,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="fight-side fight-them">
         <p class="fight-name" data-fight-opponent>Opponent</p>
         <div class="fight-bar fight-health is-rev" role="img" aria-label="The opponent's health"><b class="fight-ghost" data-fight-opp-health-ghost></b><i data-fight-opp-health></i></div>
-        <p class="fight-acts"><button type="button" class="race-quit fight-snack" data-fight-snack hidden aria-label="Eat a snack: some health back">Snack <b data-fight-snack-n>0</b></button><button type="button" class="race-quit fight-quit" data-fight-quit>Quit</button></p>
+        <p class="fight-acts"><button type="button" class="race-quit fight-snack" data-fight-snack hidden aria-label="Eat a snack: some health back">Snack <b data-fight-snack-n>0</b></button><button type="button" class="race-quit fight-quit" data-fight-quit aria-live="polite">Quit</button></p>
       </div>
     </div>
     <div class="fight-pops mk-skin" data-fight-pops aria-live="polite"></div>
@@ -874,22 +871,16 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <button type="button" class="shop-take" data-fight-result-ok>Done</button>
       </div>
     </section>
-    <p class="walk-hint fight-hint mk-skin"><kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge · <kbd>Esc</kbd> quit</p>
     <button type="button" class="fight-btn fight-punch tc-main tc" data-fight-punch aria-label="Punch"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-punch" /></svg><span class="tc-word">Punch</span></button>
     <button type="button" class="fight-btn fight-kick tc" data-fight-kick aria-label="Kick"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-kick" /></svg><span class="tc-word">Kick</span></button>
     <button type="button" class="fight-btn fight-block tc" data-fight-block aria-label="Block (hold)"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-block" /></svg><span class="tc-word">Block</span></button>
     <button type="button" class="fight-btn fight-dodge tc-go tc" data-fight-dodge aria-label="Dodge"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-jump" /></svg><span class="tc-word">Dodge</span></button>
-    <p class="walk-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump · <kbd>V</kbd> camera · <kbd>Esc</kbd> menu</p>
     {/* Fists on the street (brawl.ts): empty hands, the keys instead (.city.is-fists); on touch the fight's Punch, Kick and Block above take Fire's, Aim's and Reload's places */}
-    <p class="walk-hint fists-hint mk-skin"><kbd>WASD</kbd> move · <kbd>Click</kbd> punch · <kbd>Right-click</kbd> block · <kbd>G</kbd> kick · <kbd>Space</kbd> dodge</p>
-    {/* Driving your car (drive.ts): speed readout, key hint, touch pedals (the stick steers) */}
-    <p class="walk-hint drive-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> gas / brake · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>Space</kbd> handbrake · <kbd>F</kbd> get out</p>
+    {/* Driving your car (drive.ts): speed readout, touch pedals (the stick steers) */}
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
     </div>
     {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
-    <p class="walk-hint boat-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> ahead / astern · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>F</kbd> get out</p>
-    <p class="walk-hint fly-hint mk-skin"><kbd>W</kbd><kbd>S</kbd> faster / slower · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>↑</kbd><kbd>↓</kbd> climb / dive · <kbd>F</kbd> get out</p>
     <div class="fly-hud" data-fly-hud hidden aria-hidden="true">
       <span class="fly-read"><b data-fly-speed>0</b><small>km/h</small></span>
       <span class="fly-read"><b data-fly-alt>0</b><small>m up</small></span>

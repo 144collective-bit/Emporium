@@ -167,7 +167,6 @@
     animation-name: garage-in;
   }
 }
-.city.is-fightclub .walk-hint,
 .city.is-fightclub .walk-stick,
 .city.is-fightclub .walk-run,
 .city.is-fightclub .walk-crouch,
@@ -960,11 +959,9 @@
 }
 
 /* ---------- In the ring: the walk and combat HUD step aside ---------- */
-.fight-hint,
 .fight-btn {
   display: none;
 }
-.city.is-fighting .walk-hint:not(.fight-hint),
 .city.is-fighting .walk-look,
 .city.is-fighting .walk-run,
 .city.is-fighting .walk-crouch,
@@ -976,16 +973,10 @@
 .city.is-fighting .walk-crosshair,
 .city.is-fighting .combat-hud,
 .city.is-fighting .combat-cross,
-.city.is-fighting .drive-hint,
 .city.is-fighting .drive-hud,
 .city.is-fighting .city-pins,
 .city.is-fighting .mission-tracker {
   display: none;
-}
-@media (pointer: fine) {
-  .city.is-fighting .fight-hint {
-    display: block;
-  }
 }
 /* Touch screens: the stick bottom-left as always, Punch in the main slot, Dodge in Jump's, Block and Kick where
    they stand on the street (touchlayout.ts `ring`, placed by controls.ts; the look is controls.css's) */
@@ -1005,17 +996,6 @@
 }
 
 /* ---------- Fists on the street (brawl.ts, docs/inventory-plan.md Phase 2): empty hands ---------- */
-.fists-hint {
-  display: none;
-}
-@media (pointer: fine) {
-  .city.is-fists .walk-hint.fists-hint {
-    display: block;
-  }
-  .city.is-fists .walk-hint:not(.fists-hint):not(.fight-hint):not(.drive-hint):not(.kart-hint):not(.boat-hint):not(.fly-hint) {
-    display: none;
-  }
-}
 /* Touch: Punch, Block and Kick show; they take Fire's, Reload's and Aim's slots (touchlayout.ts LAYOUTS, placed by
    controls.ts; their look is controls.css's). Jump stays: standing with the guard up, it dodges. */
 @media (pointer: coarse) {
