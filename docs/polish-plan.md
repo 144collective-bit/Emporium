@@ -550,7 +550,29 @@ the typecheck and the budgets green; none moves anything that exists.
 5. **Sound across the city** (theme 3): the hum from the built-up land,
    the `waterfront`, `docks`, `jets`, `indoor` and `yards` layers, the
    ambience test turned into bands, the engine voices per vehicle kind.
-   Two days.
+   Two days. **Built** (2026-11-08): the hum is the loudest of every
+   built-up part's (`HUMS` in ambience.ts: the town, The Trenches, Uptown
+   and Uptown North hushed, the mall, the Neon Mile, the Docks, the
+   airport, the kart park, the stadium, Southfield Yards, each eased out
+   past its land), so Uptown Circle, the spire, the mall's hall, the
+   Docks, the airport, the kart gate and the stadium no longer read as
+   open country; new layers `waterfront` (the boardwalk, Pier 7, the
+   market's deck and the town's promenades: gulls by day, a foghorn now
+   and then; the market's murmur after dusk `market`), `docks` (gulls, a
+   crane's hoist whine, a ship's horn), `jets` (`jetsAt()`: an airliner's
+   roar as one takes off or lands, from the airport's timetable and the
+   clock, `ambienceAt(x, z, lift, t)`), `indoor` (inside the mall's hall,
+   the outdoor layers damped by it in sound.ts), `yards` (a compressor, a
+   reversing beep) and `karts` (engines idling, a tannoy); each graph in
+   sound.ts made the first time it's heard. The ambience test samples the
+   audit's spots in bands. Engine voices (`Voice` in vehicleids.ts,
+   `engine(revs, voice)`): `VOICE` in mycar.ts for every car model (the
+   hatch small, the saloons plain, the supercar higher, the muscle car and
+   the classic a V8's lump, the Glow Pod its whine), `BIKE_VOICE` in
+   mybike.ts (the scooter a two-stroke, the others a four-stroke), the
+   kart a single cylinder on a single speed (`motorOf(..., 1)`), the hire
+   boat an outboard chopped by the water; the tests hold every model to a
+   voice. Shots wait for a build.
 6. **Traffic and the other vehicles** (themes 5 and 6, as answered): the
    traffic queueing behind parked vehicles with a capped wait, left turns
    held, passengers on the buses, the taxi's "as close as the road
