@@ -1290,3 +1290,14 @@
     0 0 8px #00eaff,
     0 2px 0 #000;
 }
+
+/* A phone on its side is short: the HUD ends clear of the buttons' arc, whichever hand holds it (touchlayout.ts HUD.band) */
+@media (pointer: coarse) and (max-height: 500px) {
+  .city.is-fighting .fight-hud {
+    right: 136px;
+  }
+  .city.is-fighting[data-tc-hand="l"] .fight-hud {
+    right: 16px;
+    left: 136px;
+  }
+}

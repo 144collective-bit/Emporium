@@ -169,17 +169,23 @@ export function footLayout(w: number, h: number, mode: FootMode, prefs: TouchPre
 export function layoutFor(w: number, h: number, mode: Mode, prefs: TouchPrefs = DEFAULT_TOUCH): Layout {
   // (buttons the player moved, if they still fit this screen at this size; the slots otherwise)
   const moved = prefs.arrange?.[arrangeKey(familyOf(mode), shapeOf(w, h))];
-  let L = moved ? sized(w, h, mode, prefs.size, moved) : null;
-  if (!L || clash(L, w, h)) L = sized(w, h, mode, prefs.size);
-  return prefs.left ? mirror(L, w) : L;
+  let L = moved ? sized(w, h, mode, prefs.size, prefs.left, moved) : null;
+  if (!L || clash(L, w, h)) L = sized(w, h, mode, prefs.size, prefs.left);
+  return L;
 }
 
-function sized(w: number, h: number, mode: Mode, size: TouchSize, moved?: Partial<Record<Item, [number, number]>>): Layout {
+/** The layout at `size`, stepped down towards medium until it fits; in the hand it's for (the readouts it must
+ *  clear stay put while the buttons change sides) */
+function sized(w: number, h: number, mode: Mode, size: TouchSize, left: boolean, moved?: Partial<Record<Item, [number, number]>>): Layout {
+  const make = (s: number) => {
+    const L = build(w, h, mode, s, moved);
+    return left ? mirror(L, w) : L;
+  };
   let s = SIZES[size];
-  let L = build(w, h, mode, s, moved);
+  let L = make(s);
   while (s > 1 && clash(L, w, h)) {
     s = Math.max(1, Math.round((s - 0.05) * 100) / 100);
-    L = build(w, h, mode, s, moved);
+    L = make(s);
   }
   return L;
 }
@@ -315,8 +321,45 @@ function circleClear(s: Spot, b: Box, w: number, h: number, gap: number) {
 const inside = (b: Box, w: number, h: number) => b.x0 >= 0 && b.x1 <= w && b.y0 >= HEAD_ROOM && b.y1 <= h;
 const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
+/**
+ * The readouts pinned under the header on touch screens, as their CSS places them (docs/polish-plan.md Phase 3):
+ * on foot the mission tracker's pill (missions.css, top left) and the waypoint's compass (worldmap.css: top right,
+ * and on a short screen top centre, clear of the arc); at the wheel the speed or flight readout (walk.css, fly.css,
+ * top left); in a kart race and in the ring their HUDs across the top (karts.css, fight.css).
+ */
+export const HUD = {
+  tracker: { left: 12, top: 8, w: 120, h: 32 },
+  compass: { right: 16, top: 12, w: 216, h: 40 },
+  readout: { left: 12, top: 10, w: 250, h: 44 },
+  /** The race's and the ring's HUDs: across the top, and on a short screen ending `arc` in from the buttons' side */
+  band: { side: 16, top: 12, h: 60, arc: 136 },
+};
+/** The readouts a layout's mode shows, as boxes on a `w` x `h` screen, by name */
+export function hudBoxes(L: Layout, w: number, h: number): [string, Box][] {
+  const top = (b: { top: number; h: number }) => ({ y0: HEAD_ROOM + b.top, y1: HEAD_ROOM + b.top + b.h });
+  if (L.buttons.crouch) {
+    const c = HUD.compass;
+    const x0 = L.shape === 'side' ? Math.round(w / 2 - c.w / 2) : w - c.right - c.w;
+    return [
+      ['tracker', { x0: HUD.tracker.left, x1: HUD.tracker.left + HUD.tracker.w, ...top(HUD.tracker) }],
+      ['compass', { x0, x1: x0 + c.w, ...top(c) }],
+    ];
+  }
+  if (L.buttons.drift || L.buttons.dodge) {
+    const b = HUD.band;
+    const main = L.buttons.punch ?? L.buttons.gas;
+    // (on a short screen the band stops short of the arc, whichever hand it's in: karts.css, fight.css)
+    const left = L.shape === 'side' && main?.side === 'l' ? b.arc : b.side;
+    const right = L.shape === 'side' && main?.side !== 'l' ? b.arc : b.side;
+    return [[L.buttons.drift ? 'kart HUD' : 'fight HUD', { x0: left, x1: w - right, ...top(b) }]];
+  }
+  if (L.buttons.gas) return [['readout', { x0: HUD.readout.left, x1: HUD.readout.left + HUD.readout.w, ...top(HUD.readout) }]];
+  return [];
+}
+
 /** What's wrong with a layout on a `w` x `h` screen, or null when it fits: every button and the stick on screen
- *  under the header and `GAP` apart; on foot the hotbar and the prompt on screen, clear of them and each other */
+ *  under the header and `GAP` apart, clear of the mode's readouts (`hudBoxes()`); on foot the hotbar and the
+ *  prompt on screen, clear of them and each other */
 export function clash(L: Layout, w: number, h: number): string | null {
   const all = [...Object.entries(L.buttons), ['stick', L.stick] as const] as [string, Spot][];
   for (const [name, s] of all) {
@@ -331,6 +374,8 @@ export function clash(L: Layout, w: number, h: number): string | null {
       const [x2, y2] = centreOf(s2, w, h);
       if (Math.hypot(x1 - x2, y1 - y2) - (s1.d + s2.d) / 2 < GAP) return `${n1} and ${n2} touch`;
     }
+  // (the readouts under the header: a button never comes up under one)
+  for (const [name, b] of hudBoxes(L, w, h)) for (const [n, s] of all) if (!circleClear(s, b, w, h, GAP)) return `${n} under the ${name}`;
   if (!L.buttons.crouch) return null;
   // (on foot: the hotbar and the prompt)
   const hot = hotbarBox(L, w, h);

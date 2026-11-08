@@ -21,6 +21,7 @@ import {
   arrangementOf,
   familyOf,
   FAMILIES,
+  hudBoxes,
   itemsOf,
   moveItem,
   SHOWN,
@@ -155,6 +156,28 @@ test('the hotbar and the door prompt keep clear of the buttons and the stick', (
       }
       assert.ok(!overlaps(hot, pr), `the hotbar and the prompt apart at ${w}x${h}`);
     }
+});
+
+test('the readouts under the header keep clear of every button: the tracker and the compass on foot, the speed at the wheel, the HUD bands in a race and the ring', () => {
+  for (const [w, h] of SCREENS)
+    for (const mode of ALL) {
+      const L = layoutFor(w, h, mode);
+      const boxes = hudBoxes(L, w, h);
+      // (each mode shows its own: on foot two, at the wheel one, a race or the ring its band)
+      assert.equal(boxes.length, mode === 'fists' || mode === 'armed' ? 2 : 1, `${mode} has its readouts`);
+      for (const [name, b] of boxes) {
+        assert.ok(b.x0 >= 0 && b.x1 <= w && b.y0 >= HEAD, `${name} on screen at ${w}x${h}`);
+        for (const [n, s] of [...Object.entries(L.buttons), ['stick', L.stick]] as [string, Spot][])
+          assert.ok(clearOf(s, b, w, h, GAP), `${name} clear of ${n} at ${w}x${h} (${mode})`);
+      }
+    }
+  // A button dragged up under the compass is refused
+  const w = 390;
+  const h = 844 - 34;
+  const L = layoutFor(w, h, 'armed');
+  const [, compass] = hudBoxes(L, w, h).find(([n]) => n === 'compass')!;
+  assert.ok(moveItem(L, 'armed', 'a2', (compass.x0 + compass.x1) / 2, compass.y1 + 10, w, h) === null);
+  assert.ok(clash({ ...L, buttons: { ...L.buttons, reload: { side: 'r', x: 40, y: h - (compass.y1 + 10), d: 52 } } }, w, h)?.includes('compass'));
 });
 
 test('every icon is a 16 x 16 grid, and its path covers exactly its lit pixels', () => {

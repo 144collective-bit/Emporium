@@ -273,6 +273,14 @@
 .city.is-fighting .wm-compass {
   display: none;
 }
+/* A phone on its side is short: the compass sits top centre, clear of the right-hand arc (touchlayout.ts HUD.compass) */
+@media (pointer: coarse) and (max-height: 500px) {
+  .wm-compass {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
 
 @media (max-width: 640px) {
   .worldmap {

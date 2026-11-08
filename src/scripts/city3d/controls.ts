@@ -82,6 +82,8 @@ export function layoutControls(root: HTMLElement, prefs: () => TouchPrefs = () =
     prompt?.style.setProperty('--pr-bottom', `${L.prompt.bottom}px`);
     root.dataset.tcShape = L.shape;
     root.dataset.tcMode = mode;
+    // (which side the buttons' arc is on: the race's and the ring's HUDs keep clear of it on a short screen)
+    root.dataset.tcHand = L.stick.side === 'l' ? 'r' : 'l';
   };
   apply();
   addEventListener('resize', apply);
