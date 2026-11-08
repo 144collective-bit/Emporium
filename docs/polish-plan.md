@@ -536,7 +536,30 @@ the typecheck and the budgets green; none moves anything that exists.
    and Bag grid; the toasts cut to length; one draft note; the small
    targets and touch badges; `aria-modal`; city.css's reduced-motion
    rule; the wallet card and the inventory's colour into the kit; the
-   first-run messages staggered. Two or three days.
+   first-run messages staggered. Two or three days. **Built** (2026-11-08):
+   the start screen is Play as guest (coin yellow) over "Log in · coming
+   soon", the form's fields waiting behind `hidden`; menukit.ts gets
+   `confirmHtml()` (for the boards, which tick and repaint from state),
+   `confirm()` (for menus that keep their markup), Esc as its No and the
+   arrows between its buttons, and Give up (a mission, a contract) and Drop
+   (a series) ask once through it; the race's and the fight's Quit are a
+   two-press (walk.ts `twoPress()`: the button, Esc and Start arm it, it
+   reads "Press again" for 2.5 s); one `<symbol id="mk-x">` drawn by every
+   close button (`.mk-xi`), each at least 38px (the compass's and the
+   tracker's 32); Q / E step the garage's tabs and the business card's (LB /
+   RB stay the hub's inside it); the six key hints and their styles went;
+   the hub's Missions tab has Mission board (`data-dir-spot="signal"`), its
+   Bag tab the read-only grid (inventory-ui.ts's chunk on first show), its
+   strip fades on phones; toasts and notes on one line; the panels' draft
+   line went; `aria-modal` on the hub, panel and inventory with Tab kept
+   inside (menukit.ts); the wallet card in the skin; reduced-motion rules in
+   city.css, economy.css and guide.css; the fresh save's toast waits for the
+   welcome card (or 20 s) and the control card for a toast to go; the
+   toasts and the draft tag in `chrome`; `hudBoxes()` in touchlayout.ts puts
+   the tracker, the compass (top centre on a short screen), the readouts
+   and the race's and ring's HUD bands (ending clear of the arc on a short
+   screen, either hand) in `clash()`, tested. Waiting on the owner's
+   sign-off and the shots.
 4. **Room and resilience** (theme 11's early half, the owner's call): the
    routes as a fetched JSON asset, tycoon-ui mounted on first open with
    the Dorras readout kept, target practice behind a thin facade as a
