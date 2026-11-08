@@ -347,7 +347,8 @@ test('up on the deck and the ramps a car drives on them; under them it stays on 
 });
 
 // Phase 4 (viadress.ts): the signs, the sound walls, what's under the deck and its lights
-import { GANTRIES, GANTRY, METRO_S, MURALS, RAMP_LAMPS, RAMP_SIGNS, SOUND_WALLS, UNDER, UNDER_CARS, UNDER_LIGHTS, UNDER_SOLIDS, exitBadge, gantryPanel } from '../src/scripts/city3d/viadress';
+import { RAMP_LAMPS, UNDER, UNDER_CARS, UNDER_LIGHTS, UNDER_SOLIDS, exitBadge } from '../src/scripts/city3d/viadress';
+import { GANTRIES, GANTRY, METRO_S, MURALS, RAMP_SIGNS, SOUND_WALLS, gantryPanel } from '../src/scripts/city3d/viasigns';
 
 test('two gantries before every off-ramp, over its own carriageway, clear of the metro overhead and the deck lamps', () => {
   const offs = RAMPS.filter((r) => r.kind === 'off');

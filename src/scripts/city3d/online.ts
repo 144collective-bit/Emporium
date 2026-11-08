@@ -56,10 +56,10 @@ export function createOnlineSwitch(root: HTMLElement) {
         : s === 'connecting' || s === 'retrying'
           ? 'Online: joining a city…'
           : s === 'full'
-            ? 'Online: every city is full right now'
+            ? 'Online: every city is full'
             : s === 'error'
-              ? 'Online: the game server can\'t be reached'
-              : 'Online: walking joins other players';
+              ? 'Online: server unreachable'
+              : 'Online: walk to join others';
   }
 
   function set(next: boolean) {
@@ -72,7 +72,7 @@ export function createOnlineSwitch(root: HTMLElement) {
     }
     paint();
     listeners.forEach((f) => f(on));
-    toast(on ? 'Online: walk to join other players.' : 'Offline: solo walking.');
+    toast(on ? 'Online · walk to join others' : 'Offline · solo walking');
   }
 
   for (const b of btns)

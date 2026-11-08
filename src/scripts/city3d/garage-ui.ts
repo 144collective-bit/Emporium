@@ -500,7 +500,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     if (r.ok) {
       d.game.commit();
       d.game.sfx('buy');
-      d.game.toast(`The ${nameOf(id)} is yours. Keep it to drive.`);
+      d.game.toast(`${nameOf(id)} bought · Keep to drive`);
     } else {
       d.game.sfx('denied');
       d.game.toast(whyNot(r.why, garageEntry(id).level));
@@ -514,7 +514,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     if (r.ok) {
       d.game.commit();
       d.game.sfx('upgrade');
-      d.game.toast(`${(kind === 'bike' && mod === 'rack' ? TOP_BOX : CAR_MODS[mod]).name} level ${carMods(d.game.save(), id)[mod]} fitted to the ${nameOf(id)}.`);
+      d.game.toast(`${(kind === 'bike' && mod === 'rack' ? TOP_BOX : CAR_MODS[mod]).name} level ${carMods(d.game.save(), id)[mod]} fitted`);
     } else {
       d.game.sfx('denied');
       d.game.toast(whyNot(r.why));
@@ -527,7 +527,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     const save = d.game.save();
     if (!ownsCar(save, cur())) {
       d.game.sfx('denied');
-      d.game.toast(`Buy the ${nameOf(cur())} first.`);
+      d.game.toast(`Buy the ${nameOf(cur())} first`);
       return;
     }
     // The car and the bike picked, each if it's yours (the one showing calls yours home if it's out)

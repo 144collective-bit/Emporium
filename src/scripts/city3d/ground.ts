@@ -30,7 +30,7 @@ import { UPTOWN_RECT } from './uptown';
 import { MALL_AREA } from './mall';
 import { STRIP_RECT } from './strip';
 import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
-import { FENCE as LOT9_FENCE } from './lot9';
+import { FENCE as LOT9_FENCE, FIELD as LOT9_FIELD, PARK_X0 as LOT9_PARK_X0 } from './lot9';
 import { ENDSWOOD_RECT, NORTH_Z, SOUTH_Z, WEST_X } from './endswood';
 import { STADIUM_RECTS } from './stadium';
 import { KART_RECTS } from './kartfacility';
@@ -132,9 +132,10 @@ export const INFLUENCES: Influence[] = [
   // Endswood (endswood.ts, docs/estate-plan.md): worn grass round its blocks, the estate's land bare in places
   around('endswood', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'worn', 16, 0.6),
   around('endswood-edge', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'bare', 4, 0.35),
-  // Lot 9 (lot9.ts): worn grass round it, bare dirt inside the fence and just past it
+  // Lot 9 (lot9.ts): worn grass round it, bare dirt inside the old park's fence and just past it, the Field trampled
   around('lot9', LOT9_FENCE, 'worn', 14, 0.8),
-  around('lot9-dirt', LOT9_FENCE, 'bare', 2, 0.55),
+  around('lot9-dirt', [LOT9_PARK_X0, LOT9_FENCE[1], LOT9_FENCE[2], LOT9_FENCE[3]], 'bare', 2, 0.55),
+  around('lot9-field', LOT9_FIELD, 'bare', 1, 0.28),
   // Lusher by the river (its banks are the river's own, river.ts; this is the grass running down to them)
   { id: 'river', cover: 'bank', reach: 10, strength: 0.6, box: [SKY[0], RIVER[0] - 10, SKY[2], RIVER[1] + 10], dist: (_x, z) => Math.max(0, RIVER[0] - z, z - RIVER[1]) },
 ];

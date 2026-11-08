@@ -59,7 +59,7 @@ const wcWallet: WalletInfo = {
   id: WALLETCONNECT,
   name: 'WalletConnect',
   icon: QR_ICON,
-  note: 'Use a wallet app on your phone: scan a QR code, or pick the app',
+  note: 'Scan the QR code with a wallet app',
   provider: {
     async request({ method, params }) {
       const p = await walletConnect();
@@ -107,8 +107,8 @@ export async function findWallets(): Promise<WalletInfo[]> {
 /** A readable message for a wallet error */
 export function walletError(e: unknown) {
   const err = e as { code?: number; message?: string } | undefined;
-  if (err?.code === 4001) return 'You cancelled in your wallet.';
-  if (err?.code === -32002) return 'Your wallet is already asking you something: open it to answer.';
+  if (err?.code === 4001) return 'Cancelled in your wallet';
+  if (err?.code === -32002) return 'Your wallet is waiting · open it';
   const m = err?.message || String(e);
   return m.length > 160 ? `${m.slice(0, 157)}…` : m;
 }
@@ -135,13 +135,13 @@ export async function ensureChain(w: WalletInfo, chain: Chain) {
     });
   }
   const now = await chainOf(w);
-  if (now !== chain.id) throw new Error(`Switch your wallet to ${chain.name} to continue.`);
+  if (now !== chain.id) throw new Error(`Switch your wallet to ${chain.name}`);
 }
 
 /** Ask the wallet for an account (it shows its own connect prompt) */
 export async function requestAccount(w: WalletInfo) {
   const accounts = (await w.provider.request({ method: 'eth_requestAccounts' })) as string[];
-  if (!accounts?.[0]) throw new Error('Your wallet didn\'t share an account.');
+  if (!accounts?.[0]) throw new Error('No account from your wallet');
   return accounts[0].toLowerCase();
 }
 

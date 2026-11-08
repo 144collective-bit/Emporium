@@ -172,15 +172,18 @@ it and has been retired completely. Build only on what's here.
   plan (growth plan Phase 7): its drivable streets and crossings make a
   graph (each street cut into stretches between crossings, either way, or
   the one way a one-way street (`oneway`, the airport's car park loop)
-  allows; stretches out towards the world's edge go nowhere and carry no
-  traffic), and every route is a closed loop through it: a seeded drive of
+  allows; a stretch that goes nowhere carries no traffic: the country
+  roads out to the world's edge end in turning loops so they do, rural.ts),
+  and every route is a closed loop through it: a seeded drive of
   a few stretches, then the shortest way back, until every stretch is
   driven; plus the ring highway all the way round, both ways, in both
   lanes, up on its deck (the first `RING_ROUTES`, `deck`: docs/highway-plan.md
   Phase 2; their cars meet nothing at street level). Turns are rounded off
   (`cornerCurve()` in `highway.ts`: tighter for right turns; `joinLegs()` joins the curve onto the next
   street from where it ends, so no car runs back to the junction after it),
-  an avenue's lane picked for the next turn (a street with a planted
+  an avenue's lane picked for the next turn (left from the inner lane,
+  which at the busiest junctions is a turn lane with its own green arrow:
+  docs/highway-plan.md Phase 6; a street with a planted
   `median` keeps its lanes either side of it; a one-way street's one lane
   down its middle; a loop, Uptown's circle, round one way). Junctions where
   a diagonal comes in (downtown's, Uptown's) run three light phases (x, z,
@@ -225,7 +228,7 @@ it and has been retired completely. Build only on what's here.
   `armoury.ts`, their shared helpers `landmark-kit.ts`). Keep writing landmark numbers on that
   grid, and change street sizes only in `layout.ts`.
 - **The world's size** is in `layout.ts` too:
-  - `EXT` (-680 to 720, about 2.5 km across; growth plan Phase 6 moved it out from -200 to 240 to -420 to 460, Phase 10 to here) is the ground, the river and every road, edge to edge (the far-off roads are plain continuations of today's, with no traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
+  - `EXT` (-680 to 720, about 2.5 km across; growth plan Phase 6 moved it out from -200 to 240 to -420 to 460, Phase 10 to here) is the ground, the river and every road, edge to edge (the far-off roads are two-lane country roads since docs/highway-plan.md Phase 7, `rural.ts`, each with its turning loop near the edge and a little traffic). It's mostly open land, room to grow the city into. Build there only when the owner asks.
   - The river is `RIVER_W` (60) wide: five times what it was, then four times again (the owner's calls; the second is `docs/river-plan.md`, built in steps with the owner's sign-off: all four are built, the river, Harbour Bridge, Liberty Bridge and the river's life). It widened southwards both times, so everything south of it moved: what's derived from `SOUTH_ROAD` / `SOUTH_ROW` moved by itself; the south bank's places written in fixed numbers before the first widening (the Fight Club in `fightsite.ts`, South Square and the south pocket parks in `outer.ts`, the airport before it moved out to the world's edge) add `SOUTH_SHIFT` (57, both moves) to their z, and those written after it (The Trenches' streets in `trenches.ts`, the metro's south end in `metro.ts`, the executive helicopter's path, the benchmark's views) add `WIDEN` (45, the second); the airport is written in today's world numbers since its Phase 3. Keep doing that for anything new written in fixed numbers south of the river.
   - **The river's shape** is `river.ts` (DOM-free, tested in `tests/river.test.ts`; river plan step 1, the owner's call: natural, not a straight line): `RIVER` is the band between the quay lines, the bank avenues straight along it edge to edge; the water's edge keeps to the band where anything stands on the water (Uptown's esplanade and marina, the town's promenades and their jetties, The Trenches' boardwalk, Pier 7 and the Night Market, Liberty Bridge, every bridge) and pulls back from it on the stretches in `BANKS` (`pullAt()`, eased in and out, a smooth seeded wander between `min` and `max`): a sandy cove on the south bank below the south row (`beach`), grass banks east of the town's promenades, and past the ring highway, each bank on its own. `edgesAt()` / `inWater()` / `edgeSamples()` are what everything reads: the water's mesh (world.ts `riverWater()`: shallows by the natural banks, a `shore` attribute on the city's water shader) and its banks (`riverBanks()`: stone quay walls, a ribbon of sand or pebbles where it pulls back, the cove's beach back to the promenade, reeds in chunky clumps and rocks near only), walking (walk.ts), driving (`RIVER_WALLS` in drive-sim.ts, a piece every `WALL_STEP` over the water, `riverWallsNear()`), the boats (`laneAt()`, waterfront.ts `boatZ()`), the outskirts' trees (they grow on the banks it leaves: `treeSpot()`), the promenade's railing (open to the cove), the world map and the sound.
   - **The water lies under the streets** (river plan step 2, the owner's pick): `WATER_Y` (-1.5) in `river.ts`. Where it keeps to the quay line a stone quay wall drops to it; where it pulls back the bank slopes down to it (`SLOPE` wide at most, flat land left above it; the cove's beach all the way: `slopeAt()`, `topsAt()` the slopes' tops, `shoreY()` the ground's height, `inChannel()` the slopes and the water). The grass stops at the band (world.ts); `riverBanks()` draws the walls, the slopes, the sand or pebbles and the reeds down at the water, and walls the channel's ends at the world's edge. Walking follows `shoreY()` down a slope (walk.ts `groundAt()`), the cars stop at the slopes' tops (`RIVER_WALLS`), the trees keep off the channel. Everything afloat is at `WATER_Y` (the traffic's boats and the moored ones in life.ts, Uptown's yachts and tenders, the barge), and everything standing in the water reaches down to it (the decks' piles, the jetties' posts, Uptown's marina pontoon on piles, Liberty Bridge's piers, the highway's bridges' piers). Anything new on the water goes there too.
@@ -1311,7 +1314,7 @@ it and has been retired completely. Build only on what's here.
   paints, `strip` in `TIERS`); walkers round its rows with their shopping;
   `striplife.ts` (DOM-free, tested in `tests/striplife.test.ts`: valets,
   doormen, the crowds at the fountains, the volcano and the Sphere, added
-  from the chunk through `addPeople()`, the crowd's `reserve` now 192); its
+  from the chunk through `addPeople()`, the crowd's `reserve` now 240 since Lot 9's Field); its
   sound (ambience.ts `strip`, `casino`, `show`: the crowd's babble, slot
   chimes by the casino doors, the fountain show's music while a show is on). Phase 6 (polish and performance) is built and the plan
   is done: `?bench` views `strip` and `strip-street`; phones draw the Sphere's
@@ -1374,9 +1377,10 @@ it and has been retired completely. Build only on what's here.
   porches, at their grills, patio tables and pool loungers) and the
   residents' cars on about a driveway in three (`DRIVEWAY_CARS`, nosed up to
   the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
-  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 192, 96 on
-  phones, with the Neon Mile's; `addPeople()` fills them when the chunk loads, or queues them
-  before the crowd's built) and life.ts's home cars are per district
+  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 240, 120 on
+  phones, with the Neon Mile's and Lot 9's; `addPeople()` fills them when the chunk loads, or queues them
+  before the crowd's built, and places them at once through `repaint()`: under reduced motion the ticks run on the
+  first frame only) and life.ts's home cars are per district
   (`Home`: Crestmont's, Sunridge's and the Neon Mile's, `SUN_MIX` / `SCHOOL_BUS_PAINT` in
   sunridge.ts, `opts.sun`); bus stops round the collector (transit.ts
   `SUN_STOP_GAP`, the school bus serves them); lamps at the boot round the
@@ -1441,7 +1445,44 @@ it and has been retired completely. Build only on what's here.
     windows, flowers, skirting, porch bulb, TV glow), `HOME_SOLIDS` (joined
     through `addSolids()` when the chunk loads), `HOME_CARS`,
     `PORCH_SITTERS` (the crowd's spare slots, `addPeople()`),
-    `CHAINED_DOGS`. The boot never carries it.
+    `CHAINED_DOGS`. The boot never carries it. Since the polish round (the
+    owner's call: "a lived in feel... almost a rough camp on a large
+    scale") each home sits a little in or back, a single-wide a little
+    shorter or longer, and has its yard (`yard`, `YardThing`, `yardOf()`:
+    bins, propane, washing lines, above-ground pools, a trampoline, kiddie
+    pools, grills, picnic tables, garden beds, firewood, flamingos, gnomes,
+    toys, flags, each where it fits on its lot; the bigger ones solid,
+    `YARD_SOLID`), its hookup pedestal (`hookup`) and, some, Christmas
+    lights left up (`xmas`); power poles along the lanes on the side the
+    lamps aren't (`POLE_LINES`, `POLES`, `POLE_SOLIDS`) with a drop to every
+    home but the burnt one (`DROPS`).
+  - **The Field** (the polish round): the fence carried west to x -205
+    round a camp on the land west of the old park's fence line (`PARK_X0`,
+    the old line now half down, open at `INNER_GAPS`; `FIELD`, `inField()`),
+    its dirt track in from the west lane through the gap and round a
+    wobbled loop (`TRACK_SPUR`, `TRACK_LOOP`, `TRACK_HALF`, `fromTrack()`,
+    `inLoop()`), its shade trees (`FIELD_TREES`, in `LOT9_TREES`) and three
+    lamps (in `LOT9_LAMPS`): that much is the boot's, in lot9.ts. The rest
+    is `lot9camp.ts` (DOM-free, the chunk's, tested in
+    `tests/lot9camp.test.ts`): the commons (the shower and toilet block,
+    porta-potties, the standpipe and trough, the big fire circle and its
+    logs, the camp kitchen, the firewood pile, a washing line, the dumpster
+    corral, the notice board, THE FIELD over the gap, the vegetable patch
+    and the chicken coop) and by the park's gate the dumpsters, the ice
+    chest, the drinks machine and the propane cage (`GATE_SOLIDS`); the
+    pitches (`PITCHES`, a seeded planner: along both sides of the track and
+    in the back corners, each facing the track, nothing on one crossing
+    the track, a tree, a lamp, the commons or another pitch, `crosses()`
+    for turned footprints): domes, ridge and cabin tents, travel trailers,
+    teardrops, vans with awnings, pallet-and-tarp shacks and bus
+    conversions, each with its fire ring and chairs, a canopy over a
+    table, its car, and what a long stay gathers; `CAMP_SOLIDS` (solid
+    only inside each thing, `inner()`), `CAMP_CARS`, `CAMP_PEOPLE` (the
+    crowd's spare slots: the reserve is 240, 120 on phones),
+    `CAMP_DOGS`. Drawn by `lot9camp3d.ts` (`registerCamp()`,
+    `registerPower()`, `yardThing()`, `hookupOf()`, `xmasLights()`,
+    `campGlow()`: the fires' glow one mesh; one sign atlas of fixed made-up
+    copy). Fixed numbers there add `MOVED` too.
   - Drawn by `lot9-3d.ts` (`LAZY_DISTRICTS` id `lot9`): the gravel lanes,
     a site a home, the fence (its mesh in the FX layer), the gate and its
     LOT 9 board, the office, the laundry, the fire pit, the junk corner,
@@ -1547,7 +1588,8 @@ it and has been retired completely. Build only on what's here.
   river's walls under the deck; no getting out up there; viaduct3d.ts draws
   the ramps (`rampSegs()`: asphalt, edge lines, parapets, on piers where high,
   a filled bank where low). Phase 4 (signs and the look) is built:
-  `viadress.ts` (DOM-free): green gantries before every off-ramp
+  `viadress.ts` and `viasigns.ts` (DOM-free; the signs' file the chunk's
+  only): green gantries before every off-ramp
   (`GANTRIES`: an advance one and one where it leaves, kept off the metro
   overhead, `METRO_S`, and the deck's lamps; one sign atlas
   `viaduct-signs`, the exits' own made-up names, `EXIT_SIGNS`), a sign by
@@ -1560,7 +1602,39 @@ it and has been retired completely. Build only on what's here.
   boot) and lamps up the ramps (`RAMP_LAMPS`, at the boot), and each exit's
   number on the world map (`exitBadge()`); drawn by viaduct3d.ts. Phase 5
   (the swing bridge, Uptown to The Trenches) is built: see Kestrel Bridge
-  below.
+  below. Phase 6 (turn lanes and signals) is built: at the busiest avenue
+  junctions (routes.ts `arrowsAt()`, `Junction.arrows`: lit four-way
+  crossroads on an avenue) the inner lane is for left turns and the outer
+  for ahead and right, painted with arrows and a stop bar (`turnlanes.ts`,
+  drawn by `turnlanes3d.ts`, `LAZY_DISTRICTS` id `turnlanes`; Uptown paints
+  its own, the arrows' shape `arrowShape()` in roads3d.ts), and the lights
+  give the avenue's left turns a green arrow first (`lightState(j, phase, t,
+  left)`, a route stop's `left`, `ARROW`, `arrowCycle()`; a fourth head, an
+  arrow, in life.ts; people wait while it's lit, pedestrians.ts `redLeft()`).
+  Phase 7 (country roads) is built: past the highway and whatever stands
+  along them, the grid's roads run on to the edge as two-lane country roads
+  (`rural.ts`: `ruralSplit()` in `cityPlan()`, streets of kind `rural`
+  `<id>-w/e/n/s` from an unlit join, routes.ts's `join`, to a one-way turning
+  loop near the edge, a bank avenue's up a stub inland; `RURAL`,
+  `RURAL_RUNS`, `onRural()`), with verges, ditches, post-and-rail fences and
+  field gates (`ruralfence.ts`: `FENCES`, `GATES`; `ruraldress.ts`: `riverSide()`;
+  `RURAL_KEEPS` in landuse.ts), the odd lamp (`RURAL_LAMPS`, at the boot) and
+  a little traffic (routes.ts `RURAL_SPOTS`); drawn by `rural3d.ts`
+  (`LAZY_DISTRICTS` id `rural`); the town pieces' asphalt, medians and lines
+  stop at the join (world.ts `townRun()`). A grid road's id (`ew0`, `ns3`...)
+  is its town piece now; a new thing out past where it ends is on its
+  country road. Phase 8 (the concrete-era look) is built: `streetwear.ts`
+  (DOM-free, the chunk's only): on the grid's town streets and the
+  diagonals inside the highway (not Uptown, kept clean, nor The Trenches,
+  worn their own way, nor the bridges), concrete gutters along the kerbs
+  with drains, patches inside the lanes, cracks, manholes, stop lines into
+  the lit junctions and give-way dashes into the rest; drawn by
+  `streetwear3d.ts` (`LAZY_DISTRICTS` id `streetwear`). Phase 9 (polish and
+  performance) is built and the plan is done: `?bench` views `hw-straight`,
+  `hw-exit`, `hw-river`, `swing` and `rural`; what only the drawing reads is
+  out of the boot (the gantries, ramp signs, sound walls and murals are
+  `viasigns.ts`, the rural fences and gates `ruralfence.ts`, each its chunk's
+  only); keep new drawing-only data in files of that kind.
 - **Blending the city** (the owner's call): a
   polish and clean-up so the districts read as one city that grew (lived-in
   realism in the toon style): one ground palette blended at every seam, a
@@ -1964,7 +2038,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk; 700.4 with the raised highway's Phase 1b, the viaduct's shape read at the boot, the budget raised to 720 under the owner's standing call; 706.8 with its Phases 2-4, the ramps' routes and the signs' data; 723.1 of 730 with Endswood's Phase 2, mostly the traffic's routes along its streets; 722.9 with its Phase 3's blocks, only their solids in the boot; 725.8 with its Phase 4's street level). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk; 700.4 with the raised highway's Phase 1b, the viaduct's shape read at the boot, the budget raised to 720 under the owner's standing call; 706.8 with its Phases 2-4, the ramps' routes and the signs' data; 718.6 of 730 with its Phases 5-9, its Phase 9 having moved the signs' and fences' data out; 723.5 with main's kart park west merged in; 725.0 with Endswood's move of Lot 9 and Lot 9's Field; BOOTKB with Endswood's Phases 2-5 merged on top (its streets' routes, its blocks' and street level's solids)). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -4368,10 +4442,15 @@ it and has been retired completely. Build only on what's here.
   from `PUBLIC_FREE_PLAY=1` in `astro.config.mjs`) makes every price in
   `catalog.ts` and `tycoon.ts` 0, every level 1, the guns' and finishes'
   scores 0, the kart cups and the trainer's opponents open from level 1,
-  and `pay()` always pay. It's set only on the Vercel preview
-  project (emporium-preview); never set it in the "Build site" Action or
-  the Worker's build, and take it off the preview before anything goes
-  live from there. Unset, its branches fold away.
+  and `pay()` always pay. **Today it's on everywhere** (the owner's test
+  phase, 2026-11: "everything is free for a limited time"): `FREE_FOR_NOW`
+  in `astro.config.mjs` turns it on in every build of the site (degenemporium.com
+  and the Worker's copy), `define` in `server/wrangler.jsonc` in the game server,
+  and the start screen says "Everything is free for a limited time"
+  (`.city-start-free`). Ending it is the owner's call: `FREE_FOR_NOW = false`
+  and the server's `define` removed, together. Otherwise it's set by
+  PUBLIC_FREE_PLAY=1 on a test build (the emporium-preview Vercel project).
+  The tests never set it. Unset, its branches fold away.
 
 ## Target practice (3D walk mode)
 
@@ -4728,7 +4807,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), its clipping (`kartside.ts`, `camRoom()`, `tests/kartclip.test.ts`) and its crowd, marshals and podium (`kartcrowd.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix, the ring avenue and the park's east walk (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`, `parkedge.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), Endswood Estate and what's below ground (`endswood.ts`, `underground.ts`, `endsblocks.ts`, `endsstreet.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`), the swing bridge (`swingbridge.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), its clipping (`kartside.ts`, `camRoom()`, `tests/kartclip.test.ts`) and its crowd, marshals and podium (`kartcrowd.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix, the ring avenue and the park's east walk (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`, `parkedge.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), Endswood Estate and what's below ground (`endswood.ts`, `underground.ts`, `endsblocks.ts`, `endsstreet.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`, `viasigns.ts`), the swing bridge (`swingbridge.ts`), the turn lanes and their arrows (`turnlanes.ts`), the country roads (`rural.ts`, `ruraldress.ts`, `ruralfence.ts`), the town streets' wear (`streetwear.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

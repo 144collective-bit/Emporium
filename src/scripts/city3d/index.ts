@@ -28,6 +28,7 @@ import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS } from './endswood';
 import { ENDS_TREES } from './endsstreet';
+import { RURAL_LAMPS } from './ruraldress';
 import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
@@ -137,9 +138,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 192, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 192, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 96, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 240, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 240, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 120, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -378,6 +379,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z] of UNDER_LIGHTS) addPool(x, z, 4.2, 0.03);
   // The swing bridge's lamps on its fixed approaches (swingbridge.ts, Phase 5; the span's swing with it)
   for (const [x, z, ry, y] of SWING_LAMPS) addLamp(x, z, ry, y);
+  // ...and the odd lamp along the country roads past the highway (ruraldress.ts, Phase 7)
+  for (const [x, z, ry, y] of RURAL_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z, s] of LOT9_TREES) addTree(x, z, s, false, LOT9_Y);
   LOT9_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
@@ -954,14 +957,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         if (shut) return tycoon?.toast(shut, 3500);
         return void loadMono()
           .then((ui) => ui.open(id.slice(5)))
-          .catch(() => game.toast('The monorail is not running: try again in a moment'));
+          .catch(() => game.toast('Monorail not running · try again'));
       }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
         if (shut) return tycoon?.toast(shut, 3500);
         return void loadRiverBus()
           .then((ui) => ui.open(id.slice(9)))
-          .catch(() => game.toast('The river bus is not running: try again in a moment'));
+          .catch(() => game.toast('River bus not running · try again'));
       }
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');

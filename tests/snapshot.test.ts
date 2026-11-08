@@ -104,7 +104,17 @@ const layout = () =>
   }) as Record<string, unknown>;
 
 // The streets, with the world's edge left open
-const streets = () => plain(PLAN.streets.map((s) => ({ id: s.id, kind: s.kind, half: s.half, lanes: s.lanes, pts: s.pts })), true);
+// (a country road runs from where it leaves town to its turning loop near the edge: its far end, its loop and a bank
+// avenue's stub to it are written as 'edge', rural.ts)
+const streets = () =>
+  plain(
+    PLAN.streets.map((s) =>
+      s.kind !== 'rural'
+        ? { id: s.id, kind: s.kind, half: s.half, lanes: s.lanes, pts: s.pts }
+        : { id: s.id, kind: s.kind, half: s.half, lanes: s.lanes, pts: /-(turn|stub)$/.test(s.id) ? 'edge' : [s.pts[0], 'edge'] }
+    ),
+    true
+  );
 
 test('nothing that exists has moved', () => {
   const now = { ...layout(), streets: streets() };

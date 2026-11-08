@@ -1126,9 +1126,9 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
 
 /** Who works where: a clerk at a stall, shop or superstore, a gardener in a garden, a hand at the Workshop or a factory */
 export const ROLES = {
-  clerk: { name: 'Clerk', blurb: 'Serves customers: half as many sales again, and full pace while you\'re away.' },
-  gardener: { name: 'Gardener', blurb: 'The garden grows half as fast again.' },
-  hand: { name: 'Hand', blurb: 'Jobs run half as fast again.' },
+  clerk: { name: 'Clerk', blurb: 'More sales, full pace while away' },
+  gardener: { name: 'Gardener', blurb: 'Garden grows faster' },
+  hand: { name: 'Hand', blurb: 'Jobs run faster' },
 } as const;
 export type Role = keyof typeof ROLES;
 /** What hiring costs up front; then staff keep this share of the value of what they sell, grow or make */

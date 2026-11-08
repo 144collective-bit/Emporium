@@ -238,7 +238,7 @@ exits' own names, `EXIT_SIGNS`), no number but an exit's.
 - **The world map:** the ramps in the highway's colour and each exit's
   number on a green badge by its ramps (`exitBadge()`).
 
-## Phase 5: the swing bridge (built, waiting on the owner's sign-off)
+## Phase 5: the swing bridge (built, signed off, merged to main)
 
 `swingbridge.ts` (DOM-free, tested in `tests/swingbridge.test.ts`), drawn by
 `swingbridge3d.ts` (`LAZY_DISTRICTS` id `swing`). Its name is made up
@@ -287,6 +287,105 @@ it).
 - Not yet: a pin and panel (it isn't a place), the bell as the barriers come
   down.
 
+## Phase 6: turn lanes and signals (built, signed off)
+
+- **Which junctions:** the busiest, measured by the routes passing: lit
+  four-way crossroads where an avenue (two lanes each way) meets a street
+  going on both sides, not where a diagonal comes in or a ramp lands
+  (routes.ts `arrowsAt()`, `Junction.arrows`: the avenue's ways). Ten
+  today: both ends of Kestrel Bridge, Trench Avenue's three cross streets
+  and Crestmont's five on the east road.
+- **Turn lanes:** the avenue's inner lane coming up to them is for turning
+  left, the outer for ahead and right (the routes already keep to them):
+  arrows painted in both lanes, two sets on each way in, and a stop bar
+  across both (`turnlanes.ts` `TURN_ARROWS`, `STOP_BARS`; drawn by
+  `turnlanes3d.ts`, `LAZY_DISTRICTS` id `turnlanes`; Uptown's junctions
+  keep the arrows its own chunk paints, kerbside3d.ts, the shapes now shared
+  in roads3d.ts `arrowShape()`).
+- **Signals:** a protected left: the avenue's left turns get a green arrow
+  first (`ARROW.left`, an amber arrow after), then the avenue's traffic
+  ahead and right, then the street across (`lightState(j, phase, t,
+  left)`, `arrowCycle()`); a route's stop knows its left turns (`left`,
+  baked with the routes). The heads carry a fourth lamp, an arrow, on the
+  avenue's ways in (life.ts). Traffic and taxis wait for it. People
+  crossing the street the left turners turn into wait while the arrow's
+  lit (pedestrians.ts `redLeft()`).
+
+## Phase 7: country roads (built, signed off)
+
+`rural.ts` (DOM-free, tested in `tests/rural.test.ts`), `ruraldress.ts`, drawn
+by `rural3d.ts` (`LAZY_DISTRICTS` id `rural`).
+
+- **Where:** every grid road that ran out past the highway to the world's
+  edge (`GRID`: the arterials and the downtown cross streets' far pieces),
+  from `RURAL.lead` past the last thing beside it (a crossing on it, a block,
+  the airport, the kart park, Lot 9, the stadium, the el's line by the Docks,
+  the highway): 16 country roads, from 215 to 441 long. `ruralSplit()` does
+  it as the plan is made: the town piece keeps its id and ends there, the
+  country road is a street of kind `rural` (`<id>-w`, `-e`, `-n`, `-s`) with
+  an unlit join (`<id>-join`; routes.ts's `join`: straight on only, the
+  lanes easing across).
+- **Two lanes:** one each way (`RURAL.half`), white edge lines and a dashed
+  centre line, a grass verge and a ditch each side, a post-and-rail fence
+  along the fields (`FENCES`, `RURAL.fence`) with a field gate now and then
+  and a dirt track over the verge to it (`GATES`); none on a bank avenue's
+  river side (`riverSide()`). The old avenue asphalt stops at the join
+  (world.ts `townRun()`).
+- **Turning loops:** each road ends in a one-way loop near the edge
+  (`<id>-turn`, round a grass island inside its fence); a bank avenue's,
+  with the river beside it, is up a short stub inland (`<id>-stub`).
+- **The odd lamp** (`RURAL_LAMPS`, at the boot): where each leaves town, by
+  its loop and every `RURAL.lampGap` between, on alternate verges.
+- **A little traffic:** the routes drive every country road out and back
+  round its loop; a car turns up on one at one spot in `RURAL_SPOTS` (6) of
+  those it could (routes.ts `SPOTS`).
+- The outskirts' trees keep off the road, its verges, ditches and fences
+  (`RURAL_KEEPS` in landuse.ts); the rolls stay flat under them.
+- The layout snapshot writes a country road's far end, its loop and stub as
+  'edge', so they move with the world's edge.
+
+## Phase 8: the concrete-era look on the town's streets (built, signed off)
+
+`streetwear.ts` (DOM-free, tested in `tests/streetwear.test.ts`; the drawing's
+chunk only), drawn by `streetwear3d.ts` (`LAZY_DISTRICTS` id `streetwear`, a
+site a tile). On the grid's avenues and streets inside the highway and
+downtown's diagonals (`WORN_STREETS`), between their junctions, wherever the
+look goes (`wornAt()`: inside the highway, clear of its deck and the river,
+not Uptown (kept clean), The Trenches (worn its own way, streets3d.ts),
+Harbour Bridge or Kestrel Bridge):
+
+- **Kerbs:** a concrete gutter along every kerb where a block's sidewalk
+  meets the street (`GUTTERS`), with a drain grate in it every
+  `WEAR.drainGap` and just before each junction (`DRAINS`; their bars near
+  only).
+- **Wear:** patches of newer and older asphalt, each inside its lane, never
+  across a line (`PATCHES`), cracks (`CRACKS`, near only), manhole covers
+  down the lanes (`MANHOLES`); seeded from the street and where along it.
+- **Sharper markings:** a white stop line across the lanes coming into every
+  lit junction, give-way dashes into the unlit ones (`STOP_LINES`; the turn
+  lanes keep their own stop bars, turnlanes.ts), over the lane dashes.
+
+## Phase 9: polish and performance (built, waiting on the owner's sign-off)
+
+- **Bench views** (`BENCH_VIEWS` in bench.ts): `hw-straight` (along the
+  deck's north side), `hw-exit` (over exit 3's cloverleaf), `hw-river` (a
+  river span out west), `swing` (Kestrel Bridge) and `rural` (a country
+  road out north); the junction view was there already (`traffic`, a ring
+  junction with its turn lanes). They're measured, not on the route.
+- **The boot trimmed** (718.6 of 730 KB, from 720.2; 723.5 with main's kart
+  park move west merged in): what only the drawing
+  reads left the boot. The gantries, their names, the ramp signs, the sound
+  walls and the murals are `viasigns.ts` (viaduct3d.ts's chunk only);
+  viadress.ts keeps what the boot needs (what's under the deck and its
+  solids, the soffit's and the ramps' lamps, the exits' badges). The rural
+  fences and field gates are `ruralfence.ts` (rural3d.ts's chunk only);
+  ruraldress.ts keeps the lamps, what the trees keep off and the helpers.
+  The turn lanes' district covers the world (`EXT`), so the boot no longer
+  works out their junctions to find its land.
+- **Phones:** the country roads' fences and gates are near only, the
+  drains' bars and the cracks are left out on phones (which draw no
+  shadows); the rest is flat paint a site a tile.
+
 ## Phases
 
 1. **The shape as data** (above, built). Then **1b, making room** (signed
@@ -306,13 +405,12 @@ it).
 4. **Signs and the look** (above, built, signed off):
    gantries and exit numbers (one sign atlas, fixed made-up copy), sound
    walls past homes, what's under it, night lighting, the world map.
-5. **The swing bridge** (Uptown to The Trenches; above, built, waiting on
-   the owner's sign-off): its streets, the river pier, the swing on Liberty's
+5. **The swing bridge** (Uptown to The Trenches; above, built, signed off): its streets, the river pier, the swing on Liberty's
    timetable, the barriers, the boats and the tall ship.
-6. **Turn lanes and signals** at the busiest avenue junctions.
-7. **Rural roads** past the highway.
-8. **The concrete-era look** on the town's streets.
-9. **Polish and performance:** bench views (a junction, a straight, a
-   river span, an exit), phones, the boot budget (697.9 of 700 KB before
-   this plan: the drawing goes in a chunk where it can, the budget raised
-   on purpose where it can't, the owner's standing go).
+6. **Turn lanes and signals** at the busiest avenue junctions (above,
+   built, signed off).
+7. **Rural roads** past the highway (above, built, signed off).
+8. **The concrete-era look** on the town's streets (above, built, signed
+   off).
+9. **Polish and performance** (above, built, waiting on the owner's
+   sign-off; the plan is done).

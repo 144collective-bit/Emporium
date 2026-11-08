@@ -23,11 +23,13 @@ import { CROWD_VIEW } from './character';
 import { dogGeometry } from './dogs3d';
 import { COVER } from './palette';
 import {
-  AVE_EDGE, BAY, BOAT, BOLLARD, FENCE, FENCE_H, FENCE_RUNS, FIRE, FIRE_LOT, FIRE_POLES, FIRE_SEATS, FOOTPATH, GATE, GROUND_Y, HOIST, HOLE, KIDS_ON_BIKES, LAUNDRY, LOT9_CARS,
+  AVE_EDGE, BAY, BOAT, INNER_RUNS, PARK_X0, BOLLARD, FENCE, FENCE_H, FENCE_RUNS, FIRE, FIRE_LOT, FIRE_POLES, FIRE_SEATS, FOOTPATH, GATE, GROUND_Y, HOIST, HOLE, KIDS_ON_BIKES, LAUNDRY, LOT9_CARS,
   LOT9_DOGS, LOT9_RECT, LOT9_SIGNS, LOT9_STREETS, MAILBOXES, OFFICE, RADIO, RIDER, ROAD_Z, SCRAP, TOOLS, TUNNEL, TUNNEL_BOLLARDS, TYRES, ZAPPER, riderAt, rng, runnerAt, tunnelFloor,
   type Pt, type Rect,
 } from './lot9';
-import { CHAINED_DOGS, HOME_CARS, HOME_SOLIDS, LOTS, PORCH_SITTERS, type Home, type Lot } from './lot9homes';
+import { CHAINED_DOGS, HOME_CARS, HOME_SOLIDS, LOTS, POLE_SOLIDS, PORCH_SITTERS, type Home, type Lot } from './lot9homes';
+import { CAMP_CARS, CAMP_DOGS, CAMP_PEOPLE, CAMP_SOLIDS } from './lot9camp';
+import { campGlow, hookupOf, registerCamp, registerPower, xmasLights, yardThing } from './lot9camp3d';
 import { addSolids } from './solids';
 import { addPeople } from './life';
 
@@ -643,6 +645,9 @@ function registerTunnel(low: boolean) {
 
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerTunnel(low);
+  // The Field (the camp west of the old fence line) and the park's power lines (lot9camp3d.ts)
+  registerCamp(low);
+  registerPower(low);
 
   // The lanes: gravel, a darker rut down each wheel track, potholes with puddles near only
   for (const s of LOT9_STREETS)
@@ -701,6 +706,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       if (lot.home) {
         const top = shell(b, lot.home, low, r);
         dress(b, lot.home, top, low, r);
+        // The yard's life, the hookup, the Christmas lights left up
+        const h = lot.home;
+        for (const t of h.yard) yardThing(b, t, low, h.seed);
+        hookupOf(b, h, low);
+        if (h.xmas && !low) b.detail(() => xmasLights(b, h.body[0] - 0.02, h.body[2] + 0.02, h.body[1] + 0.1, h.body[3] - 0.1, top, h.seed));
         if (lot.home.dogRun) {
           const [rx0, rz0, rx1, rz1] = lot.home.dogRun;
           for (const [a, c] of [
@@ -726,6 +736,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // The fence: posts every three tiles, a top rail, the mesh in the FX layer; the hole's cut flap bent back
   FENCE_RUNS.forEach(([a, c], i) => {
     const runs = along(a, c, 18);
+    // (the old line between the park and the Field is half down: posts leaning, panels missing, the rail gone in places)
+    const old = INNER_RUNS.includes(FENCE_RUNS[i]);
     for (let k = 1; k < runs.length; k++) {
       const [p, q] = [runs[k - 1], runs[k]];
       site(`lot9 fence ${i} ${k}`, [Math.min(p[0], q[0]) - 1, Math.min(p[1], q[1]) - 1, Math.max(p[0], q[0]) + 1, Math.max(p[1], q[1]) + 1], (into) => {
@@ -733,6 +745,23 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
         const fx0 = new Batch();
         const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
         const n = Math.max(1, Math.round(l / 3));
+        const r = rng(i * 101 + k * 7);
+        if (old) {
+          for (let j = 0; j <= n; j++) {
+            const [x, z] = [p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n];
+            const lean = (r() - 0.5) * 0.5;
+            rod(b, new THREE.Vector3(x, 0, z), new THREE.Vector3(x + Math.sin(lean) * FENCE_H, Math.cos(lean) * FENCE_H, z), 0.035, POST, low ? 4 : 6);
+          }
+          for (let j = 0; j < n; j++) {
+            if (r() < 0.4) continue;
+            const [s0, s1] = [p[1] + ((q[1] - p[1]) * j) / n, p[1] + ((q[1] - p[1]) * (j + 1)) / n];
+            const sag = 0.1 + r() * 0.35;
+            chainMesh(fx0, [p[0], s0], [p[0], s1], 0.02 + sag * 0.2, FENCE_H - 0.08 - sag);
+          }
+          b.build(into, { cast: true, receive: true });
+          buildFx(fx0, into);
+          return;
+        }
         for (let j = 0; j <= n; j++) post(b, p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n, 0, FENCE_H, 0.035, POST, low ? 4 : 6);
         bar(b, p, q, 0.05, FENCE_H - 0.05, FENCE_H, POST);
         chainMesh(fx0, p, q, 0.02, FENCE_H - 0.08);
@@ -913,7 +942,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     flat(b, BAY, PAD_Y, CONCRETE_DARK);
     b.build(into, { cast: true, receive: true });
   });
-  site('lot9 junk south', [FENCE[0], TYRES[0][1] - 2, BAY[2] + 2, FENCE[3]], (into) => {
+  site('lot9 junk south', [PARK_X0, TYRES[0][1] - 2, BAY[2] + 2, FENCE[3]], (into) => {
     const b = new Batch();
     for (const [x, z, n] of TYRES) for (let j = 0; j < n; j++) tyre(b, x + (j % 2) * 0.04, j * 0.22, z, low);
     // The scrap pile: heaps of rusty sheet, pipes, a washing machine, a bike frame
@@ -934,9 +963,10 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   /* ---------- The main thread: cars, bikes, dogs, the fire's glow ---------- */
   if (!scene) return;
   // The homes and the residents' cars join the collision grids, the porch sitters the crowd's spare slots (phones: half)
-  addSolids(HOME_SOLIDS);
-  addPeople(PORCH_SITTERS.filter((_, i) => !low || i % 2 === 0), []);
-  parkedCars(scene, GROUND_Y, [...LOT9_CARS, ...HOME_CARS]);
+  addSolids([...HOME_SOLIDS, ...POLE_SOLIDS, ...CAMP_SOLIDS]);
+  addPeople([...PORCH_SITTERS, ...CAMP_PEOPLE].filter((_, i) => !low || i % 2 === 0), []);
+  parkedCars(scene, GROUND_Y, [...LOT9_CARS, ...HOME_CARS, ...CAMP_CARS]);
+  campGlow(scene);
   const group = new THREE.Group();
   group.name = 'lot9-life';
   scene.add(group);
@@ -946,14 +976,15 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   glow.position.set(FIRE.x, 0.05, FIRE.z);
   scene.add(fx(glow));
   // The dogs: the loose ones after the kids, the chained ones in their runs
-  const dogN = LOT9_DOGS.length + CHAINED_DOGS.length;
+  const TIED = [...CHAINED_DOGS, ...CAMP_DOGS];
+  const dogN = LOT9_DOGS.length + TIED.length;
   const dogs = new THREE.InstancedMesh(dogGeometry(), paintMat(), dogN);
   dogs.castShadow = true;
   dogs.frustumCulled = false;
   dogs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   const col = new THREE.Color();
   LOT9_DOGS.forEach((d, i) => dogs.setColorAt(i, col.set(d.coat)));
-  CHAINED_DOGS.forEach((d, i) => dogs.setColorAt(LOT9_DOGS.length + i, col.set(d.coat)));
+  TIED.forEach((d, i) => dogs.setColorAt(LOT9_DOGS.length + i, col.set(d.coat)));
   group.add(dogs);
   // The kids' bikes (BMX: small wheels, a low frame), under their riders
   const bikes = new THREE.InstancedMesh(bmx(), paintMat(), KIDS_ON_BIKES);
@@ -974,7 +1005,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       e.set(0, p.ry - Math.PI / 2, Math.sin(ph) * 0.06, 'YXZ');
       dogs.setMatrixAt(k, m4.compose(v.set(p.x, GROUND_Y + Math.abs(Math.sin(ph)) * 0.03, p.z), q.setFromEuler(e), sv.setScalar(d.size)));
     });
-    CHAINED_DOGS.forEach((d, k) => {
+    TIED.forEach((d, k) => {
       // (pacing a little in its run, now and then)
       const sway = Math.sin(t * 0.7 + k * 2) * 0.25;
       e.set(0, d.ry + sway - Math.PI / 2, 0, 'YXZ');

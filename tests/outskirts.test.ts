@@ -141,8 +141,9 @@ test('woods stand only well away from the city, never on the land the world had 
   // About the woods' density on their land, a few thousand trees on the medium tier, a share of them pines (fewer
   // since Crestmont's hills took the north-east corner's: they carry their own oaks and scrub, landscape.ts; and a few
   // dozen more since Lot 9 cleared its land south of the highway's south-west corner, lot9.ts; and about two hundred more
-  // since the kart park moved west onto a patch of them, docs/kart-west-plan.md: 765)
-  assert.ok(woods.length > 700 && woods.length < 5000, `${woods.length} trees in the woods`);
+  // since the kart park moved west onto a patch of them, docs/kart-west-plan.md: 765; a few dozen fewer with Lot 9's Field and the
+  // Endswood streets' country roads starting further south: 699)
+  assert.ok(woods.length > 650 && woods.length < 5000, `${woods.length} trees in the woods`);
   const pines = woods.filter((t) => t.pine).length / woods.length;
   assert.ok(Math.abs(pines - WOODS.pine) < 0.05, `pines ${pines}`);
   for (const t of woods) {

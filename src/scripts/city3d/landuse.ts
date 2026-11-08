@@ -17,6 +17,7 @@
  *
  * The list is filed by tile (`TILE`) so a spot asks only what's near it.
  */
+import { RURAL_KEEPS } from './ruraldress';
 import { RAMPS, RAMP_CLEAR, RAMP_HALF } from './viaduct';
 import { EXT, LANE, RIVER } from './layout';
 import { PLAN, type Pt, raised } from './streetplan';
@@ -172,6 +173,8 @@ export const KEEPS: Keep[] = [
   ...FRINGE_KEEPS.rects.map((r, i) => land(`fringe-${i}`, r, 1.2, true)),
   ...FRINGE_KEEPS.lines.flatMap((l) => line(l.id, l.pts, l.half + 0.8, false, true)),
   land('trenches', TRENCH_RECT, 2, true),
+  // The country roads past the highway, with their verges, ditches, fences and turning loops (ruraldress.ts, docs/highway-plan.md Phase 7)
+  ...RURAL_KEEPS.flatMap((k) => line(k.id, k.pts, k.half, false, true)),
   land('waterfront', WATERFRONT_RECT, 2, true),
   // Uptown, Westlake Park and the stadium's block, road, car park and footbridge
   land('uptown', UPTOWN_RECT, 2, true),
