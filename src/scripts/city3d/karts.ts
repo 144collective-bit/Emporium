@@ -19,7 +19,7 @@
  * his head. kartSilhouette() draws the side view for the hut's cards.
  */
 import * as THREE from 'three';
-import { carMaterials, merge } from './cars';
+import { lampMaterials, carMaterials, merge } from './cars';
 import type { Degen } from './character';
 import { paintAll } from './carparts';
 import { DRIVER_SCALE, KART_SHAPES, SEAT_X, WHEEL_R, WHEEL_TILT, driverRoot, kartPose, pedalsOf, wheelOf } from './kartframe';
@@ -160,6 +160,8 @@ export interface Kart {
   glow(on: boolean): void;
   /** Sit a Degen in it (hands on the wheel); null takes the driver out */
   seat(degen: Degen | null): void;
+  /** What the lights show (your own kart on the street, built with `lights`: the rear light swaps to the brake or reversing lens; no indicators) */
+  lights?(brake: boolean, reverse: boolean, turn: 'L' | 'R' | null): void;
   /** Tip the driver sideways into a drift (-1 left .. 1 right) */
   lean(amount: number): void;
   /** Turn the driver's head (radians, left positive) */
@@ -167,7 +169,7 @@ export interface Kart {
   dispose(): void;
 }
 
-export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2 } = {}): Kart {
+export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2; lights?: boolean } = {}): Kart {
   const s = SHAPES[id];
   const detail = opts.detail ?? 2;
   const group = moving(new THREE.Group());
@@ -384,15 +386,20 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
   }
   // Mudguards over the rear wheels (the paint)
   if (detail > 0) for (const side of [-1, 1]) add(box(s.r * 1.6, 0.025, s.tw + 0.04), paint, ra, s.r * 2 + 0.04, side * s.track, side * 0.1);
-  // The rear light
-  const light = new THREE.Mesh(box(0.02, 0.05, 0.18), neon(TAIL, 1.2, 2));
+  // The rear light (your own kart on the street: its own mesh, swapped for the brake and reversing lenses, `lights()`;
+  // a race kart's goes into the body with the rest)
+  const lamps = opts.lights ? lampMaterials() : null;
+  const light = new THREE.Mesh(box(0.02, 0.05, 0.18), lamps ? lamps.tail : neon(TAIL, 1.2, 2));
   light.position.set(-HALF + 0.01, floorY + 0.2, -0.12);
-  parts.push(light);
-  temp.push(light.geometry);
+  if (!lamps) {
+    parts.push(light);
+    temp.push(light.geometry);
+  }
 
   const body = mergeMeshes(parts);
   for (const g of temp) g.dispose();
   group.add(body);
+  if (lamps) group.add(fx(light));
 
   // The steering wheel, on an axle tilted back towards the driver: its rim, three spokes and the hub
   const axis = new THREE.Vector3(Math.cos(WHEEL_TILT), -Math.sin(WHEEL_TILT), 0).normalize();
@@ -567,6 +574,11 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
       group.add(g);
       poseDriver();
     },
+    lights: lamps
+      ? (brake: boolean, reverse: boolean) => {
+          light.material = reverse ? lamps.reverse : brake ? lamps.brake : lamps.tail;
+        }
+      : undefined,
     lean(amount: number) {
       const a = THREE.MathUtils.clamp(amount, -1, 1);
       if (Math.abs(a - leanAmt) < 1e-3) return;
@@ -589,6 +601,7 @@ export function createKart(id: KartId, paint: string, opts: { detail?: 0 | 1 | 2
       body.traverse((c) => {
         if (c instanceof THREE.Mesh) c.geometry.dispose();
       });
+      if (lamps) light.geometry.dispose();
       wheelGeo.dispose();
       spokeGeo.dispose();
       plateGeo.dispose();

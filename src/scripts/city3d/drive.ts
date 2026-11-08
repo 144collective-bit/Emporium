@@ -53,7 +53,7 @@ import { BIKES, BIKE_VOICE, type BikeId, type MyBike } from './mybike';
 import { REST, footDown, stepLean, tuneBike } from './bike-sim';
 import { bodies, stoppers } from './life';
 import { DRIVE, FEEL, VOICE, type MyCar, type PlayerCar, type Voice } from './mycar';
-import type { KartId } from './mykart';
+import { KART_FEEL, type KartId } from './mykart';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 import type { Box } from './solids';
 
@@ -130,7 +130,7 @@ export function createDrive(d: DriveDeps) {
     seat?(degen: Degen | null, from?: number): void;
     /** Your car, for its hooks once it's fitted out (carride.ts: `ride` says it leaned the body itself, `eye` is the seat's view) */
     car?: Car;
-    /** The car's lights (not the kart's) */
+    /** Its lights: the car's, the bike's (its indicators too) and the kart's rear light (the brakes and reverse only) */
     lights?(brake: boolean, reverse: boolean, turn: 'L' | 'R' | null): void;
     state: CarState;
     tune: DriveTune;
@@ -182,9 +182,9 @@ export function createDrive(d: DriveDeps) {
       return tune(d.stats(v.model as PlayerCar), { L: s.L, W: s.W, wheelbase: s.axles[1] - s.axles[0] }, FEEL[v.model as PlayerCar]);
     }
     if (v.kind === 'bike') return tuneBike(d.stats(v.model as BikeId), v.model as BikeId);
-    // A kart: small, quick off the line, a little slower than a race pace on the open road
+    // A kart: small, quick off the line, a little slower than a race pace on the open road, with a feel of its own (mykart.ts)
     const k = d.kart.stats(v.model as KartId);
-    return tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.grip }, { L: 1.2, W: 0.95, wheelbase: 0.82 });
+    return tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.grip }, { L: 1.2, W: 0.95, wheelbase: 0.82 }, KART_FEEL);
   }
 
   /** A fresh stopper for a vehicle taken out: about half its length round its middle, once it's tuned (`take()`) */
@@ -238,6 +238,7 @@ export function createDrive(d: DriveDeps) {
       group: taken.bike.group,
       drive: (dist, steer) => taken.bike.drive(dist, steer),
       dispose: () => taken.bike.dispose(),
+      lights: (brake, reverse, turn) => taken.bike.lights(brake, reverse, turn),
       seat: (deg) => taken.bike.seat(deg),
       state: newCar(taken.x, taken.z, taken.yaw),
       tune: {} as DriveTune,
@@ -266,6 +267,7 @@ export function createDrive(d: DriveDeps) {
       group: taken.kart.group,
       drive: (dist, steer) => taken.kart.drive(dist, steer),
       dispose: () => taken.kart.dispose(),
+      lights: (brake, reverse, turn) => taken.kart.lights?.(brake, reverse, turn),
       seat: (deg) => taken.kart.seat(deg),
       state: newCar(taken.x, taken.z, taken.yaw),
       tune: {} as DriveTune,

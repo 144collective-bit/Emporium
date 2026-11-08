@@ -1327,7 +1327,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       away = true;
       show.holder.visible = false;
       const spot = d.park.showSpot;
-      const kart = createKart(show.model, paintHex(show.paint), { detail: d.low ? 1 : 2 });
+      // (with its own rear light, for the brakes on the street: drive.ts)
+      const kart = createKart(show.model, paintHex(show.paint), { detail: d.low ? 1 : 2, lights: true });
       kart.setNumber(1);
       return { kart, model: show.model, name: KART_SPECS[show.model].name, x: spot.x, z: spot.z, yaw: show.yaw };
     },
