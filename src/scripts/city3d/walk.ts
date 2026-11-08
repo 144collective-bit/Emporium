@@ -1351,6 +1351,7 @@ export function createWalk(d: WalkDeps) {
     near = null;
     prompt.hidden = true;
     fightDone = false;
+    fightQuit.reset();
     sparWith = setup.kind === 'street' ? setup.partner : null;
     fight.start(setup);
     canvas.focus({ preventScroll: true });
@@ -1381,9 +1382,43 @@ export function createWalk(d: WalkDeps) {
     d.touched();
   }
   /** Quit a fight (a bout is forfeited): the card comes up; true if there was one */
+  /**
+   * The race's and the fight's Quit ask once (docs/polish-plan.md Phase 3, the owner's call): the first press, from
+   * the HUD's button, Esc or Start, arms it and the button reads "Press again" for a moment; the second quits.
+   */
+  const QUIT_ARM = 2.5;
+  function twoPress(sel: string) {
+    const btn = root.querySelector<HTMLButtonElement>(sel);
+    const label = btn?.textContent ?? 'Quit';
+    let until = 0;
+    let timer = 0;
+    const reset = () => {
+      until = 0;
+      clearTimeout(timer);
+      if (btn) btn.textContent = label;
+    };
+    return {
+      /** True on the second press within the moment; the first arms it */
+      ask() {
+        if (performance.now() < until) {
+          reset();
+          return true;
+        }
+        reset();
+        until = performance.now() + QUIT_ARM * 1000;
+        if (btn) btn.textContent = 'Press again';
+        timer = window.setTimeout(reset, QUIT_ARM * 1000);
+        return false;
+      },
+      reset,
+    };
+  }
+  const kartQuit = twoPress('[data-kart-quit]');
+  const fightQuit = twoPress('[data-fight-quit]');
   function quitFight() {
     if (!fight?.active) return false;
     if (!fightDone) {
+      if (!fightQuit.ask()) return true;
       fightDone = true;
       fight.quit();
     }
@@ -1395,6 +1430,7 @@ export function createWalk(d: WalkDeps) {
   const padKart = { steer: 0, throttle: 0, drift: false, item: false };
   function startKart(setup: RaceStart) {
     if (karts.active) return;
+    kartQuit.reset();
     kartUI.close();
     if (drive.active) getOut();
     drive.recallKart();
@@ -1434,6 +1470,9 @@ export function createWalk(d: WalkDeps) {
   function abandonKart() {
     if (!karts.active) return false;
     const done = !!karts.sim?.done;
+    // (a race still on asks once: the HUD's Quit reads "Press again")
+    if (!done && !kartUI.open && !kartQuit.ask()) return true;
+    kartQuit.reset();
     kartUI.close();
     leaveKart();
     if (!done) d.game.toast('Race abandoned. No prize this time.', 3500);

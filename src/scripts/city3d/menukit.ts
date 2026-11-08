@@ -197,3 +197,75 @@ export function menuKit(el: HTMLElement, o: KitOpts) {
 }
 
 export type MenuKit = ReturnType<typeof menuKit>;
+
+/* ---------- One confirm (docs/polish-plan.md Phase 3): the gun store's second tap, for every destructive action ---------- */
+
+const escText = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/**
+ * The kit's inline confirm as markup, for a view that paints from its own state (a view that ticks would wipe a
+ * node put in by hand): the question, Yes carrying `yesAttr` and No carrying `noAttr` (the view's own data
+ * attributes, read by its click handler). Esc on either button presses No; the arrows step between them; a
+ * view puts the keyboard on Yes with `focusConfirm()` after it has painted.
+ */
+export function confirmHtml(text: string, yes: string, no: string, yesAttr: string, noAttr: string) {
+  return (
+    `<div class="mk-confirm" data-mk-confirm><p>${escText(text)}</p>` +
+    `<button type="button" class="mk-btn is-main" data-mk-yes ${yesAttr}>${escText(yes)}</button>` +
+    `<button type="button" class="mk-btn" data-mk-no ${noAttr}>${escText(no)}</button></div>`
+  );
+}
+/** The keyboard onto a painted confirm's Yes */
+export function focusConfirm(root: ParentNode) {
+  root.querySelector<HTMLElement>('[data-mk-confirm] [data-mk-yes]')?.focus({ preventScroll: true });
+}
+/**
+ * An inline confirm put under `el` (the acting button, hidden meanwhile) for a menu that keeps its markup: a second
+ * tap. Yes runs `onYes`; Esc, No or `close()` put the button back with the keyboard on it.
+ */
+export function confirm(el: HTMLElement, o: { text: string; yes: string; no: string; onYes(): void; onNo?(): void }) {
+  const box = document.createElement('div');
+  box.innerHTML = confirmHtml(o.text, o.yes, o.no, '', '');
+  const node = box.firstElementChild as HTMLElement;
+  el.hidden = true;
+  el.after(node);
+  const close = () => {
+    if (!node.isConnected) return;
+    node.remove();
+    el.hidden = false;
+    el.focus({ preventScroll: true });
+  };
+  node.querySelector('[data-mk-yes]')!.addEventListener('click', () => {
+    close();
+    o.onYes();
+  });
+  node.querySelector('[data-mk-no]')!.addEventListener('click', () => {
+    close();
+    o.onNo?.();
+  });
+  node.querySelector<HTMLElement>('[data-mk-yes]')!.focus({ preventScroll: true });
+  return close;
+}
+// Esc inside any confirm is its No (ahead of whatever else Esc closes); the arrows and the d-pad's left and right step
+// between its two buttons
+if (typeof document !== 'undefined')
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      const a = document.activeElement as HTMLElement | null;
+      const c = a?.closest<HTMLElement>('[data-mk-confirm]');
+      if (!c) return;
+      if (e.key === 'Escape') c.querySelector<HTMLElement>('[data-mk-no]')?.click();
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const btns = Array.from(c.querySelectorAll<HTMLElement>('button'));
+        const rects: Rect[] = btns.map((b) => {
+          const r = b.getBoundingClientRect();
+          return { x: r.left, y: r.top, w: r.width, h: r.height };
+        });
+        btns[nextFocus(rects, btns.indexOf(a!), e.key === 'ArrowLeft' ? 'left' : 'right')]?.focus({ preventScroll: true });
+      } else return;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    true
+  );

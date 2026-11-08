@@ -71,6 +71,7 @@ import {
 } from './tycoon';
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { D, LV, clockOf, esc, fmt, repaint, whyNot } from './ui';
+import { confirmHtml } from './menukit';
 import type { KartHud, KartResultView, KartUI, KartUIDeps } from './kart-types';
 import { NONE, TROPHY, countersHtml, courseLabel, ord, placeOf, trophyLine } from './kart-records';
 
@@ -244,6 +245,8 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   let sel: KartId = 'rocket';
   /** Buy was pressed: Confirm / Cancel are showing */
   let asking = false;
+  /** Drop was pressed on the series on the go: its confirm is showing (menukit.ts; the tab repaints, so the state paints it) */
+  let askDrop = false;
   /** The time trial's class, and the board being looked at */
   let trialCls: ClassId = 'street';
   let boardCourse: CourseId = COURSE_IDS[0];
@@ -294,7 +297,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
       const prizes = SERIES_PRIZES[id];
       const trophy = s.karts.trophies[id];
       const act = going
-        ? `<button type="button" class="kart-go" data-kart-series="${id}"><span>Continue · race ${sr.race + 1}/${c.races.length}</span></button><button type="button" class="kart-drop" data-kart-drop>Drop</button>`
+        ? `<button type="button" class="kart-go" data-kart-series="${id}"><span>Continue · race ${sr.race + 1}/${c.races.length}</span></button>${askDrop ? confirmHtml('Drop the series?', 'Drop', 'Keep', 'data-kart-drop', 'data-kart-drop-keep') : '<button type="button" class="kart-drop" data-kart-drop-ask>Drop</button>'}`
         : `<button type="button" class="kart-go" data-kart-series="${id}"${locked ? ' disabled' : ''}><span>${locked ? `LV ${c.level}` : 'Start series'}</span></button>`;
       return `<div class="kart-cup${locked ? ' is-locked' : ''}${going ? ' is-going' : ''}" role="listitem">
   <div class="kart-cup-head"><b class="race-name">${esc(c.name)}</b>${LV(c.level)}${classTag(c.cls)}<span class="race-cps">${c.races.length} races · ${FIELD - 1} rivals</span></div>
@@ -504,6 +507,7 @@ ${countersHtml(s)}
     if (tab === t) return;
     tab = t;
     asking = false;
+    askDrop = false;
     paint();
     body.scrollTop = 0;
     focusFirst();
@@ -690,7 +694,15 @@ ${countersHtml(s)}
       singleItems = b.dataset.kartSingleItems === 'on';
       refocus(`[data-kart-single-items="${b.dataset.kartSingleItems}"]`);
     }
-    else if (b.hasAttribute('data-kart-drop')) {
+    else if (b.hasAttribute('data-kart-drop-ask')) {
+      // Drop asks once (docs/polish-plan.md Phase 3): the confirm in the button's place, the keyboard on its Drop
+      askDrop = true;
+      refocus('[data-mk-yes]');
+    } else if (b.hasAttribute('data-kart-drop-keep')) {
+      askDrop = false;
+      refocus('[data-kart-drop-ask]');
+    } else if (b.hasAttribute('data-kart-drop')) {
+      askDrop = false;
       d.quitSeries();
       d.game.sfx('holster');
       d.game.toast('Series dropped');

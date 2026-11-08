@@ -154,6 +154,7 @@ import { CORNER_SHOPS } from './projects';
 import { DOORS, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import { PLACE_LEVELS } from './catalog';
 import { LV, whyNot } from './ui';
+import { confirmHtml, focusConfirm } from './menukit';
 import type { Sfx } from './combat';
 import type { WeaponId } from './combat-sim';
 import type { SpotId } from '../../lib/city';
@@ -318,6 +319,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   let sendTo: PlaceId | null = null;
   /** A backup file read and waiting on a yes (the Vault) */
   let restoreAsk: Extract<ReadBackup, { ok: true }> | null = null;
+  /** Give up was pressed on this contract: its row shows the confirm (menukit.ts; the board ticks, so the state paints it) */
+  let askDrop: number | null = null;
   /** Set while a backup is being put back: nothing more is stored before the city starts again */
   let frozen = false;
 
@@ -697,7 +700,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       .map(
         (k) => `<li class="market-row"><div class="market-top">${dot(k.good)}<b>${k.qty} ${esc(good(k.good).name)} → ${esc(DESTS[k.to])}</b><span class="market-price">${D(k.reward)}</span></div>
         <div class="market-acts"><small>${Math.min(save.cargo[k.good] ?? 0, k.qty)} / ${k.qty} in your car · ${clock(k.expires - now)} left</small>
-        <span class="market-btns"><button type="button" data-drop="${k.id}">Give up</button></span></div></li>`
+        ${askDrop === k.id ? confirmHtml('Give up?', 'Yes', 'Keep it', `data-drop="${k.id}"`, 'data-drop-keep') : `<span class="market-btns"><button type="button" data-drop-ask="${k.id}">Give up</button></span>`}</div></li>`
       )
       .join('');
     return `<ul class="biz-news">${news.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
@@ -1056,9 +1059,18 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     else if (ds.take) {
       const r = accept(save, Number(ds.take), now);
       note = r.ok ? 'Contract taken. Follow the beam.' : r.why === 'max' ? `You have ${CONTRACTS_MAX} contracts on the go already.` : why(r);
+    } else if (ds.dropAsk) {
+      // Give up asks once (docs/polish-plan.md Phase 3): the row shows the confirm, the keyboard on its Yes
+      askDrop = Number(ds.dropAsk);
+      queueMicrotask(() => panel && focusConfirm(panel.el));
+    } else if ('dropKeep' in ds) {
+      const was = askDrop;
+      askDrop = null;
+      queueMicrotask(() => panel?.el.querySelector<HTMLElement>(`[data-drop-ask="${was}"]`)?.focus({ preventScroll: true }));
     } else if (ds.drop) {
+      askDrop = null;
       dropContract(save, Number(ds.drop));
-      note = 'Contract given up.';
+      note = 'Contract given up';
     } else if (ds.deliver) {
       const d = carAtDest();
       const r = d ? deliver(save, Number(ds.deliver), d, now) : ({ ok: false, why: 'place' } as Result);
@@ -1109,6 +1121,17 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     true
   );
   tabsEl.innerHTML = TABS.map((t) => `<button type="button" data-tab="${t.id}" aria-pressed="false">${t.label}</button>`).join('');
+  // Q / E step the card's tabs while the keyboard is in the card (the kit's way, docs/polish-plan.md Phase 3); the hub's
+  // own strip keeps its Q / E for its tabs
+  card.addEventListener('keydown', (e) => {
+    const back = e.key === 'q' || e.key === 'Q';
+    if (!(back || e.key === 'e' || e.key === 'E') || e.target instanceof HTMLInputElement) return;
+    const i = TABS.findIndex((t) => t.id === tab);
+    openCard(TABS[(i + (back ? -1 : 1) + TABS.length) % TABS.length].id);
+    tabsEl.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)?.focus({ preventScroll: true });
+    e.preventDefault();
+    e.stopPropagation();
+  });
 
   /* ---------- The market hall ---------- */
   function marketView(now: number) {

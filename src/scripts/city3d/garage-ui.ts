@@ -612,6 +612,12 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     const t = e.target as HTMLElement;
     // The deal's buttons (Buy, Confirm, Upgrade) and the style tabs' choices keep their own keys
     if (t.closest('[data-garage-deal]') || t.closest('[data-garage-style]')) return;
+    // Q / E round the tabs from anywhere in the menu (the kit's way; LB / RB do the same from walk.ts)
+    if (e.key === 'q' || e.key === 'Q' || e.key === 'e' || e.key === 'E') {
+      stepTab(e.key === 'q' || e.key === 'Q' ? -1 : 1);
+      e.preventDefault();
+      return;
+    }
     if (t.closest('[data-tab]')) {
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') stepTab(e.key === 'ArrowRight' ? 1 : -1);
       return;

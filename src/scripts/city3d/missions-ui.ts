@@ -30,6 +30,7 @@ import { MAX_LEVEL, levelProgress, titleFor } from './catalog';
 import { GUIDE_STEPS, level, type ActiveMission, type TycoonSave } from './tycoon';
 import { GUIDE, advanceGuide, guideDone, guideStep, hideGuide, type GuideStep } from './guide';
 import { D, esc, fmt, repaint, whyNot, type GameDeps } from './ui';
+import { confirmHtml, focusConfirm } from './menukit';
 
 /** A pop stays this long */
 const POP_MS = 2500;
@@ -63,6 +64,8 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   let lastLevel = level(game.save());
   /** The first pass catches an older save up (badges it already earned): pops and toasts, no sounds (the sound engine comes after the economy) */
   let booted = false;
+  /** Give up was pressed on this mission: its row shows the confirm (menukit.ts; the board ticks, so the state paints it) */
+  let askGiveUp: string | null = null;
 
   /* ---------- Copy ---------- */
 
@@ -79,11 +82,15 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   function activeRow(s: TycoonSave, a: ActiveMission) {
     const m = mission(a.id)!;
     const p = missionProgress(s, a);
+    const acts =
+      askGiveUp === m.id
+        ? confirmHtml('Give up?', 'Yes', 'Keep it', `data-abandon="${m.id}"`, `data-abandon-keep="${m.id}"`)
+        : `<span class="market-btns"><button type="button" data-claim="${m.id}" ${p.complete ? '' : 'disabled'}>Claim</button><button type="button" data-abandon-ask="${m.id}">Give up</button></span>`;
     return `<li class="market-row mission-row${p.complete ? ' is-done' : ''}">
       <div class="market-top"><b>${esc(m.name)}</b>${reward(m)}</div>
       <i class="stall-bar" style="--v:${p.need ? p.done / p.need : 0}"></i>
       <div class="market-acts"><small>${p.complete ? '<b class="stall-serving">Done</b> · claim your reward' : esc(goalText(m, p))}</small>
-        <span class="market-btns"><button type="button" data-claim="${m.id}" ${p.complete ? '' : 'disabled'}>Claim</button><button type="button" data-abandon="${m.id}">Give up</button></span></div>
+        ${acts}</div>
     </li>`;
   }
   function boardRow(m: Mission, lv: number, full: boolean) {
@@ -151,9 +158,17 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
         game.toast(r.ok ? 'Claimed.' : whyNot(r.why));
         game.sfx('denied');
       }
+    } else if (ds.abandonAsk !== undefined) {
+      // Give up asks once (docs/polish-plan.md Phase 3): the row shows the confirm, the keyboard on its Yes
+      askGiveUp = ds.abandonAsk;
+      queueMicrotask(() => focusConfirm(root));
+    } else if (ds.abandonKeep !== undefined) {
+      askGiveUp = null;
+      queueMicrotask(() => root.querySelector<HTMLElement>(`[data-abandon-ask="${ds.abandonKeep}"]`)?.focus({ preventScroll: true }));
     } else if (ds.abandon !== undefined) {
       const m = mission(ds.abandon);
-      if (abandonMission(s, ds.abandon)) game.toast(`${m?.name ?? 'Mission'} given up.`, 3500);
+      askGiveUp = null;
+      if (abandonMission(s, ds.abandon)) game.toast(`${m?.name ?? 'Mission'} given up`, 3500);
       else return false;
     } else if (ds.take !== undefined && mission(ds.take)) {
       const m = mission(ds.take)!;
