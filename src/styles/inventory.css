@@ -38,7 +38,7 @@
   border-color: #0000;
   background:
     var(--pulse-wash) padding-box,
-    linear-gradient(#14102a, #14102a) padding-box,
+    linear-gradient(var(--m-bezel), var(--m-bezel)) padding-box,
     var(--pulse) border-box;
   box-shadow: 0 0 18px -6px #00eaffaa;
 }
@@ -311,7 +311,7 @@ button.inv-cell {
   border-color: #0000;
   background:
     var(--pulse-wash) padding-box,
-    linear-gradient(#14102a, #14102a) padding-box,
+    linear-gradient(var(--m-bezel), var(--m-bezel)) padding-box,
     var(--pulse) border-box;
   box-shadow: 0 0 18px -6px #00eaffaa;
 }
@@ -513,7 +513,7 @@ button.inv-cell {
 .city.is-inv [data-inv-open] {
   background:
     var(--pulse-wash) padding-box,
-    linear-gradient(#14102a, #14102a) padding-box,
+    linear-gradient(var(--m-bezel), var(--m-bezel)) padding-box,
     var(--pulse) border-box;
 }
 /* Phones upright: a bottom sheet over the touch buttons */

@@ -1019,9 +1019,13 @@ export function createWalk(d: WalkDeps) {
     inputKind = k;
     if (cardMode) paintCard();
   }
+  /** A toast is up (the first-run pile-up, docs/polish-plan.md Phase 3: the card waits for it) */
+  const toasts = Array.from(root.querySelectorAll<HTMLElement>('.city-toast'));
+  const toastUp = () => toasts.some((t) => t.classList.contains('is-on'));
   /** Each frame: a mode met for the first time brings its card up for a while; asked for, it follows the mode */
   function cardFrame(dt: number) {
     if (d.hub?.open || hotbar?.open || shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open || moments.active) return;
+    if (!cardMode && toastUp()) return;
     const m = modeNow();
     if (m !== lastMode) {
       lastMode = m;

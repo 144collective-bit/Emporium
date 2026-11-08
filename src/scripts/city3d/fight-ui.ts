@@ -256,7 +256,7 @@ ${partnersHtml(f)}
   function paint() {
     const s = d.game.save();
     repaint(dorrasEl, D(s.dorras));
-    lvEl.innerHTML = `Level <b>${level(s)}</b>`;
+    lvEl.innerHTML = `Lv <b>${level(s)}</b>`;
     for (const b of tabsEl.querySelectorAll<HTMLButtonElement>('[data-fight-tab]')) b.setAttribute('aria-pressed', String(b.dataset.fightTab === tab));
     el.dataset.tab = tab;
     repaint(body, tab === 'spar' ? sparTab(s) : tab === 'bout' ? boutTab(s) : tab === 'record' ? recordTab(s) : stylesTab(s));

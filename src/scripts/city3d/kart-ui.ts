@@ -277,7 +277,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   const classPicker = (attr: string, picked: ClassId, lv: number, label: string) =>
     `<div class="seg kart-seg" role="group" aria-label="${label}"><span class="seg-label">Class</span>${CLASS_IDS.map((c) => {
       const locked = lv < KART_CLASSES[c].level;
-      return `<button type="button" ${attr}="${c}" aria-pressed="${c === picked}"${locked ? ' disabled' : ''} title="${esc(KART_CLASSES[c].blurb)}">${esc(KART_CLASSES[c].name)}${locked ? `<small>LV ${KART_CLASSES[c].level}</small>` : ''}</button>`;
+      return `<button type="button" ${attr}="${c}" aria-pressed="${c === picked}"${locked ? ' disabled' : ''} title="${esc(KART_CLASSES[c].blurb)}">${esc(KART_CLASSES[c].name)}${locked ? `<small>Lv ${KART_CLASSES[c].level}</small>` : ''}</button>`;
     }).join('')}</div>`;
 
   function raceTab(s: TycoonSave) {
@@ -298,7 +298,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
       const trophy = s.karts.trophies[id];
       const act = going
         ? `<button type="button" class="kart-go" data-kart-series="${id}"><span>Continue · race ${sr.race + 1}/${c.races.length}</span></button>${askDrop ? confirmHtml('Drop the series?', 'Drop', 'Keep', 'data-kart-drop', 'data-kart-drop-keep') : '<button type="button" class="kart-drop" data-kart-drop-ask>Drop</button>'}`
-        : `<button type="button" class="kart-go" data-kart-series="${id}"${locked ? ' disabled' : ''}><span>${locked ? `LV ${c.level}` : 'Start series'}</span></button>`;
+        : `<button type="button" class="kart-go" data-kart-series="${id}"${locked ? ' disabled' : ''}><span>${locked ? `Lv ${c.level}` : 'Start series'}</span></button>`;
       return `<div class="kart-cup${locked ? ' is-locked' : ''}${going ? ' is-going' : ''}" role="listitem">
   <div class="kart-cup-head"><b class="race-name">${esc(c.name)}</b>${LV(c.level)}${classTag(c.cls)}<span class="race-cps">${c.races.length} races · ${FIELD - 1} rivals</span></div>
   <p class="race-blurb">${esc(c.blurb)}</p>
@@ -316,7 +316,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   <div class="seg kart-seg" role="group" aria-label="Rivals"><span class="seg-label">Rivals</span>${CUP_IDS.map((id) => {
     const c = CUPS[id];
     const locked = lv < c.level;
-    return `<button type="button" data-kart-single-cup="${id}" aria-pressed="${id === singleCup}"${locked ? ' disabled' : ''}>${esc(c.name.replace(' Cup', ''))}${locked ? `<small>LV ${c.level}</small>` : `<small class="is-cls">${esc(KART_CLASSES[c.cls].name)}</small>`}</button>`;
+    return `<button type="button" data-kart-single-cup="${id}" aria-pressed="${id === singleCup}"${locked ? ' disabled' : ''}>${esc(c.name.replace(' Cup', ''))}${locked ? `<small>Lv ${c.level}</small>` : `<small class="is-cls">${esc(KART_CLASSES[c.cls].name)}</small>`}</button>`;
   }).join('')}</div>
   <div class="seg kart-seg" role="group" aria-label="Way round"><span class="seg-label">Way</span>${COURSE_IDS.map(
     (id) => `<button type="button" data-kart-single-course="${id}" aria-pressed="${id === singleCourse}">${COURSES[id].reverse ? 'Reverse' : 'Forward'}</button>`
@@ -354,7 +354,7 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
     const chLocked = lv < KART_CLASSES[ch.cls].level;
     const chAct = done
       ? `<span class="kart-done">Done · ${clockOf(s.karts.challenge!.lap)}</span>`
-      : `<button type="button" class="kart-go kart-go-sm" data-kart-challenge${chLocked ? ' disabled' : ''}><span>${chLocked ? `LV ${KART_CLASSES[ch.cls].level}` : 'Start'}</span></button>`;
+      : `<button type="button" class="kart-go kart-go-sm" data-kart-challenge${chLocked ? ' disabled' : ''}><span>${chLocked ? `Lv ${KART_CLASSES[ch.cls].level}` : 'Start'}</span></button>`;
     const challenge = `<section class="kart-sect kart-challenge${done ? ' is-done' : ''}" aria-label="Today's challenge">
   <div class="kart-cup-head"><b class="race-name">Today's challenge</b><span class="race-cps">New every day</span></div>
   <div class="kart-course">
@@ -497,7 +497,7 @@ ${countersHtml(s)}
   function paint() {
     const s = d.game.save();
     repaint(dorrasEl, D(s.dorras));
-    lvEl.innerHTML = `Level <b>${level(s)}</b>`;
+    lvEl.innerHTML = `Lv <b>${level(s)}</b>`;
     for (const b of tabsEl.querySelectorAll<HTMLButtonElement>('[data-karts-tab]')) b.setAttribute('aria-pressed', String(b.dataset.kartsTab === tab));
     el.dataset.tab = tab;
     repaint(body, tab === 'race' ? raceTab(s) : tab === 'karts' ? kartsTab(s) : boardsTab(s));

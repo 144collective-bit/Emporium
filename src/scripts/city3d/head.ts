@@ -48,6 +48,10 @@ export function createCityHead(root: HTMLElement) {
     city.setAttribute('aria-pressed', String(mode === 'explore'));
   }
 
+  // The world map's subtitle says tap or click by the device, as the City view's line does
+  const wmSub = root.querySelector<HTMLElement>('.wm-sub');
+  if (wmSub) wmSub.textContent = `${touch() ? 'Tap' : 'Click'} a place to go there`;
+
   new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-view', 'data-mode', 'data-kart', 'data-plane', 'data-boat', 'data-fight', 'class'] });
   // Its real height (two rows on phones while walking) for everything pinned under it (--head-h in city.css)
   new ResizeObserver(() => {

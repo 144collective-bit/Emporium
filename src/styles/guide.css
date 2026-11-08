@@ -264,3 +264,12 @@
   margin: 0;
   line-height: 1.4;
 }
+
+/* Under reduced motion nothing in the guide card or the tracker eases */
+@media (prefers-reduced-motion: reduce) {
+  .city-guide *,
+  .mission-tracker *,
+  .mission-tracker-list * {
+    transition: none;
+  }
+}

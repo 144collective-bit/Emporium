@@ -64,7 +64,7 @@ export function createAccountUI(root: HTMLElement, account: Account, d: AccountH
     if (!d.online()) {
       body.innerHTML = `${head('Offline', 'Connect wallet')}
         <p class="city-panel-text">Go online to connect your wallet</p>
-        <div class="city-panel-actions"><button type="button" class="btn-pulse" data-account-online>Go online</button>${account.address ? '<button type="button" class="chip-link" data-account-logout>Log out</button>' : ''}</div>`;
+        <div class="city-panel-actions"><button type="button" class="mk-btn is-main" data-account-online>Go online</button>${account.address ? '<button type="button" class="chip-link" data-account-logout>Log out</button>' : ''}</div>`;
       return;
     }
 

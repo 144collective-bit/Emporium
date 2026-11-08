@@ -296,7 +296,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   {/* The hub (hub.ts, docs/menu-plan.md Phase 2): the pause screen in the menus' arcade kit (menus.css), its
       tabs Map, Bag, Business, Missions, Profile, Settings (and Online with a game server). `data-hub-walk`
       shows only while walking, `data-hub-city` only in the City view. Without the 3D city only Map is there. */}
-  <section class="mk mk-hub" id="hub" data-hub data-input="keys" hidden role="dialog" aria-labelledby="hub-title">
+  <section class="mk mk-hub" id="hub" data-hub data-input="keys" hidden role="dialog" aria-modal="true" aria-labelledby="hub-title">
     <div class="mk-grab" data-mk-grab aria-hidden="true"><span></span></div>
     <header class="mk-bar">
       <div class="mk-heading">
@@ -362,10 +362,11 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </div>
       </div>
       <div class="mk-page hub-page" data-page="bag" role="tabpanel" aria-label="Bag" hidden>
-        <p class="hub-text">Guns, gear and snacks.</p>
+        <p class="hub-text">Guns, gear and snacks</p>
+        {/* What you carry, read-only (inventory-ui.ts's bagHtml(), painted by index.ts when the tab shows) */}
+        <div class="hub-bag" data-hub-bag-grid></div>
         <button type="button" class="mk-btn is-main hub-wide" data-inv-open data-hub-walk>Open your bag<span class="hub-key" aria-hidden="true">Tab</span></button>
-        <p class="mk-note" data-hub-city>Open it on foot.</p>
-        <button type="button" class="mk-btn hub-wide" data-hub-bag>See what you carry</button>
+        <p class="mk-note" data-hub-city>Open it on foot</p>
       </div>
       <div class="mk-page hub-page" data-page="business" role="tabpanel" aria-label="Business" hidden>
         {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop, Car and Bag. Opens on this tab from the Dorras readout, or at your stall or a unit. */}
@@ -382,9 +383,10 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       </section>
       </div>
       <div class="mk-page hub-page" data-page="missions" role="tabpanel" aria-label="Missions" hidden>
-        {/* Level, XP and badges (missions-ui.ts); the mission board is at the Signal tower */}
+        {/* Level, XP and badges (missions-ui.ts); the mission board is at the Signal tower: its button flies there as the Map tab's rows do */}
         <div class="walk-badges" data-badges></div>
-        <p class="hub-text">Earn XP by playing. Missions: Signal tower.</p>
+        <button type="button" class="mk-btn is-main hub-wide hub-3d" data-dir-spot="signal">Mission board</button>
+        <p class="hub-text">Earn XP by playing</p>
       </div>
       <div class="mk-page hub-page hub-profile" data-page="profile" role="tabpanel" aria-label="Profile" hidden>
         <div class="profile-head">
@@ -623,7 +625,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     {/* The Armoury's store and workbench at its counter (gunshop.ts). The starters unlock with lifetime score; the rest cost Dorras earned in the city, never real money. */}
     {/* The inventory (inventory-ui.ts, Tab): the two weapon slots over a 4 x 4 grid of everything else he carries;
         drag between them, tap to see what a thing does, double tap to use it */}
-    <section class="inv mk-skin" data-inv hidden role="dialog" aria-labelledby="inv-title">
+    <section class="inv mk-skin" data-inv hidden role="dialog" aria-modal="true" aria-labelledby="inv-title">
       <header class="inv-head">
         <h2 id="inv-title" class="shop-title">Inventory</h2>
         <p class="inv-keys"><kbd>Tab</kbd> close</p>
@@ -755,7 +757,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <header class="shop-head">
         <h2 id="karts-title" class="shop-title">Clubhouse</h2>
         <p class="shop-score karts-dorras"><span class="shop-score-label">Dorras</span> <span data-karts-dorras></span></p>
-        <p class="shop-score" data-karts-level>Level <b>1</b></p>
+        <p class="shop-score" data-karts-level>Lv <b>1</b></p>
         <button type="button" class="shop-close" data-karts-close aria-label="Close the clubhouse">
           <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
@@ -823,7 +825,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <header class="shop-head">
         <h2 id="fight-title" class="shop-title">Fight Club</h2>
         <p class="shop-score fight-dorras"><span class="shop-score-label">Dorras</span> <span data-fight-dorras></span></p>
-        <p class="shop-score" data-fight-level>Level <b>1</b></p>
+        <p class="shop-score" data-fight-level>Lv <b>1</b></p>
         <button type="button" class="shop-close" data-fight-close aria-label="Close the Fight Club">
           <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
@@ -981,7 +983,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   </section>
   {/* Log in with a wallet and the basic profile (account-ui.ts) */}
   <div class="city-modal account-modal" data-account hidden>
-    <div class="city-modal-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
+    <div class="city-modal-card mk-skin" role="dialog" aria-modal="true" aria-labelledby="account-title">
       <button type="button" class="city-panel-close" data-account-close aria-label="Close">
         <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
@@ -995,12 +997,11 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="mission-pops mk-skin" data-mission-pops aria-live="polite"></div>
 
   {/* One glass panel; its content comes from the templates below */}
-  <aside class="city-panel mk-skin" data-panel hidden role="dialog" aria-labelledby="city-panel-title">
+  <aside class="city-panel mk-skin" data-panel hidden role="dialog" aria-modal="true" aria-labelledby="city-panel-title">
     <button type="button" class="city-panel-close" data-panel-close aria-label="Close and fly back">
       <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
     </button>
     <div class="city-panel-body" data-panel-body></div>
-    <p class="city-draft">Draft copy · v0 · nothing here is final</p>
   </aside>
 
   {/* The buildings' panels: each is a place in the city's game. Draft copy. `data-marquee` is its line on the

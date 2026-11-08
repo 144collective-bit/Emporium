@@ -135,22 +135,6 @@ body.is-walking .nav {
   line-height: 1.35;
   color: var(--text-2);
 }
-.city-draft {
-  flex: none;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-/* (the narrowest phones: the panel's draft line wraps rather than running past its edge) */
-@media (max-width: 360px) {
-  .city-draft {
-    white-space: normal;
-  }
-}
-
 /* 3D city: canvas, pins, loader, settings, panel */
 .city3d {
   position: absolute;
@@ -863,12 +847,13 @@ body.is-walking .nav {
   gap: 14px;
   width: min(420px, 100%);
   padding: 26px 24px 22px;
-  border: 1px solid #0000;
+  border: 2px solid #0000;
   border-radius: 10px;
+  /* (in the menus' kit, .mk-skin: --pulse is the cabinet's edge, the corners square, no glow) */
   background:
-    linear-gradient(#0b0a12f2, #0b0a12f2) padding-box,
+    linear-gradient(#0c0d10f2, #0c0d10f2) padding-box,
     var(--pulse) border-box;
-  box-shadow: 0 0 60px -20px #8000ffb3;
+  box-shadow: 0 0 0 2px #0c0d1099;
 }
 /* The body is re-rendered at each step; its children lay out in the card */
 .city-modal-body {
@@ -900,8 +885,19 @@ body.is-walking .nav {
 .city-modal-card .city-panel-close[hidden] {
   display: none;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* Under reduced motion the toasts, the panel and the pins stand where they are (the city stands still too: index.ts) */
+@media (prefers-reduced-motion: reduce) {
+  .city-toast,
+  .city-panel,
+  .city-pin,
+  .city-pin-card,
+  .city-loader,
+  .city-no3d,
+  .city-modal-card,
+  .city-head button {
+    transition: none;
+    animation: none;
+  }
 }
 .city-toast {
   position: absolute;

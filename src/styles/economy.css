@@ -715,3 +715,13 @@
 .city.is-fighting .mission-tracker {
   display: none;
 }
+
+/* Under reduced motion the card stands where it opens and nothing eases */
+@media (prefers-reduced-motion: reduce) {
+  .stall-card {
+    animation: none;
+  }
+  .stall-card * {
+    transition: none;
+  }
+}

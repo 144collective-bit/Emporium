@@ -120,6 +120,17 @@ export function menuKit(el: HTMLElement, o: KitOpts) {
   // Keys: Q / E round the tabs, the arrows round the buttons (the walk's keys never hear them)
   el.addEventListener('keydown', (e) => {
     input('keys');
+    // Tab stays inside an open dialog: from its last button round to its first, and back
+    if (e.key === 'Tab' && el.getAttribute('role') === 'dialog') {
+      const items = focusables();
+      const at = items.indexOf(document.activeElement as HTMLElement);
+      const wrap = e.shiftKey ? (at <= 0 ? items[items.length - 1] : null) : at === items.length - 1 || at < 0 ? items[0] : null;
+      if (wrap) {
+        wrap.focus({ preventScroll: true });
+        e.preventDefault();
+      }
+      return;
+    }
     if (e.target instanceof HTMLInputElement && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
     const k = e.key;
     if (k === 'q' || k === 'Q') tab(-1);

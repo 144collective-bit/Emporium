@@ -117,7 +117,7 @@ import { destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW, figureDetail } from './character';
-import type { GameDeps } from './ui';
+import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
 import { mb, sceneMemory } from './perf';
@@ -1034,12 +1034,21 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (walking) canvas.focus({ preventScroll: true });
       dirty = true;
     };
+    // The Bag tab's grid: what he carries, read-only (inventory-ui.ts's chunk, fetched the first time the tab shows)
+    const bagGrid = root.querySelector<HTMLElement>('[data-hub-bag-grid]');
+    let bagMod: Promise<typeof import('./inventory-ui')> | null = null;
+    const paintBag = () => {
+      if (!bagGrid) return;
+      void (bagMod ??= import('./inventory-ui')).then((m) => {
+        if (hub.tab === 'bag') repaint(bagGrid, m.bagHtml(game.save(), { may: (id) => walk.combat.canTake(id) }));
+      });
+    };
     hub.hooks.tab = (id) => {
       root.classList.toggle('is-stall', id === 'business');
       if (id === 'business') tycoon!.paint();
+      if (id === 'bag') paintBag();
     };
     root.querySelector('[data-hub-leave]')?.addEventListener('click', () => stopWalking());
-    root.querySelector('[data-hub-bag]')?.addEventListener('click', () => tycoon!.openCard('bag'));
   }
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
@@ -1428,13 +1437,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The city's own buttons and cards: a label under one folds to a dot, so the
   // City / Walk switch never sits on top of a building's name. Re-read a few
   // times a second (they open, close and move with the layout)
-  // The header, its open drop-downs (settings, menu), the welcome card, the guide and the kart, flight, drive and fight HUDs
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .ctrl-card, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar')];
+  // The header, its open drop-downs (settings, menu), the welcome card, the guide, the kart, flight, drive and fight HUDs,
+  // the toasts while they're up and the draft tag
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .ctrl-card, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar, .city-toast, .city-draft-tag')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
     chromeRects.length = 0;
     for (const el of chrome) {
+      // (a toast keeps its place while it's faded out: only one showing counts)
+      if (el.classList.contains('city-toast') && !el.classList.contains('is-on')) continue;
       const r = el.getBoundingClientRect();
       if (r.width && r.height && el.offsetParent) chromeRects.push({ x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height });
     }

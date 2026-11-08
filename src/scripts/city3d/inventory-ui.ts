@@ -179,7 +179,7 @@ export function buySnack(game: GameDeps, where: string) {
   }
   game.commit();
   game.sfx('buy');
-  game.toast(`${where}: a snack for ${fmt.format(ITEM_CATALOG.snack.price)} Dorras (${s.inventory.items.snack} of ${ITEM_MAX} in your bag).`, 3600);
+  game.toast(`${where} · snack bought · ${s.inventory.items.snack} of ${ITEM_MAX} in your bag`, 3600);
   return true;
 }
 

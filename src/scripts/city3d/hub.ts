@@ -112,11 +112,6 @@ export function createHub(root: HTMLElement) {
     },
     true
   );
-  // A tab within it (`data-hub-go`): Bag's "what you carry" goes to Business
-  el.addEventListener('click', (e) => {
-    const go = (e.target as HTMLElement).closest<HTMLElement>('[data-hub-go]');
-    if (go) show(go.dataset.hubGo as HubTab);
-  });
   el.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     e.preventDefault();
