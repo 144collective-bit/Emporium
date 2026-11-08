@@ -75,7 +75,7 @@ export type CrowdClip =
   | 'cheer'
   | 'sitcheer';
 /** What an idle person in the city is doing (life.ts picks their row from it; 'queue' is their own idle) */
-export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge';
+export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'wait' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge';
 /** The rows played sitting down (life.ts drops their root by the seat) */
 export const SEATED: ReadonlySet<CrowdClip> = new Set<CrowdClip>(['sit', 'picnic', 'eat', 'chess', 'lounge', 'row', 'pedal', 'swing', 'sitcheer']);
 export const seated = (c: CrowdClip) => SEATED.has(c);

@@ -16,11 +16,15 @@
  *   halt with its front at the stop, dwells `DWELL` seconds (the doors
  *   hiss open and shut), then carries on; the traffic behind it waits
  *   (life.ts's following), and its brake lights are on while it stands.
+ * - Someone waits at every third shelter (`SHELTER_IDLES`, the polish
+ *   plan's Phase 6): one of the crowd standing at its kerb end, looking
+ *   both ways up the road (the `wait` row), placed with the crowd at the
+ *   boot (index.ts).
  */
 import { inStrip } from './strip';
 import { LANE, RIVER, WALK_W } from './layout';
 import { PLAN, pointAt, streetLength, type Pt, type Street } from './streetplan';
-import { inTown } from './outer';
+import { PROMENADE, inTown } from './outer';
 import { inTrenches } from './trenches';
 import { inSunridge } from './sunridge';
 import { STOP_ZONE } from './lot9';
@@ -101,6 +105,27 @@ export interface RouteStop {
   off: number;
   stop: BusStop;
 }
+
+/** Someone waiting at a bus shelter: where they stand, their facing (life.ts `Idle`: 0 is +z, PI / 2 is +x), and whether
+ * the shelter stands on the river's promenade (its lower paving) rather than a block's slab */
+export interface ShelterIdle {
+  x: number;
+  z: number;
+  ry: number;
+  promenade: boolean;
+}
+/** One shelter in this many has someone waiting */
+export const SHELTER_EVERY = 3;
+/** Where they stand in the shelter's frame: along the kerb towards the sign's far end, under the roof's front edge */
+export const WAIT_ALONG = 0.9;
+export const WAIT_OUT = 0.2;
+/** The people waiting at the shelters: every SHELTER_EVERY-th stop, standing at the shelter's kerb end facing the road */
+export const SHELTER_IDLES: ShelterIdle[] = BUS_STOPS.filter((_, k) => k % SHELTER_EVERY === 0).map((b) => {
+  const x = b.kerb[0] + b.dir[0] * WAIT_ALONG + b.face[0] * WAIT_OUT;
+  const z = b.kerb[1] + b.dir[1] * WAIT_ALONG + b.face[1] * WAIT_OUT;
+  const promenade = (z > PROMENADE.north[0] && z < PROMENADE.north[1]) || (z > PROMENADE.south[0] && z < PROMENADE.south[1]);
+  return { x, z, ry: Math.atan2(b.face[0], b.face[1]), promenade };
+});
 
 /** A bus pulls in to the kerb over this long before a stop, and back out over this long after it */
 export const PULL_IN = APPROACH;

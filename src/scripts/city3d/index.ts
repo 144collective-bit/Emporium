@@ -13,6 +13,7 @@ import { setCrowdCapture } from './crowdclips';
 import { refreshCrowdTexture } from './crowdskin';
 import { SWAY, windStrength } from './dusk';
 import { buildBusStops } from './transit3d';
+import { SHELTER_IDLES } from './transit';
 import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
@@ -408,6 +409,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry] of PARK_EDGE_LAMPS) addLamp(x, z, ry);
   for (const [x, z, s] of PARK_EDGE_TREES) addTree(x, z, s, false, SLAB + 0.02);
   [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  // Someone waiting at every third bus shelter (transit.ts, the polish plan's Phase 6; phones: half of them)
+  SHELTER_IDLES.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.promenade ? 0.05 : SLAB, ry: p.ry, act: 'wait' }));
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
