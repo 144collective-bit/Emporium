@@ -1148,6 +1148,21 @@ export function createCar(id: CarId, paint: string, mine = false, look?: object)
   return car;
 }
 /**
+ * The lit lens materials a vehicle's lamps swap between (the polish plan's Phase 6: your bike's and your kart's
+ * tail lamp for the brakes and reverse, the bike's amber indicators; bikes.ts, karts.ts), made once and shared;
+ * your car's are its own (createCar, above), so they go when it does
+ */
+let lampMats: { tail: THREE.Material; brake: THREE.Material; reverse: THREE.Material; turn: THREE.Material } | null = null;
+export function lampMaterials() {
+  lampMats ??= {
+    tail: lit(new THREE.MeshBasicMaterial({ color: '#ff2b2b' }), 0.7, 1.6),
+    brake: lit(new THREE.MeshBasicMaterial({ color: '#ff2b2b' }), 1.5, 3.2),
+    reverse: lit(new THREE.MeshBasicMaterial({ color: '#fff1d6' }), 1.1, 2.2),
+    turn: lit(new THREE.MeshBasicMaterial({ color: '#ffb020' }), 1.3, 2.6),
+  };
+  return lampMats;
+}
+/**
  * One car of your own; carfine.ts gives it its hooks when it fits it out (carcabin.ts, carride.ts): `seat` (sit a
  * Degen at the wheel, or null to take him out; `from` 1: in by the passenger's door), `door` (open a front door, 0 the
  * driver's, 1 the passenger's, and shut it after `hold` seconds), `ride` (a frame of driving: the springs, the wheel, the needles, the

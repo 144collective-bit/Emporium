@@ -39,7 +39,7 @@ import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
 import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor, seated, type IdleAct } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { PLAY_PEOPLE } from './play';
-import { blinkOn, bodyMotion, braking, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, type Body, type Horn, type Mover, type Turn } from './traffic';
+import { blinkOn, bodyMotion, braking, crossOf, heldTooLong, hornDue, indicating, newBody, newHorn, pullAway, reactionOf, resetBody, turnsOf, yieldsLeft, type Body, type Comer, type Cross, type Horn, type Mover, type Turn } from './traffic';
 import { CROSS_PACE, crossingLinks, hurry, hurrying, noticing, onPhone, outAtNight, takesCrossing, walkLight, type Link } from './pedestrians';
 import { busStep, newBus, pullIn, routeStops, type Bus, type RouteStop } from './transit';
 import { MOORED, cruise, hornDue as boatHornDue, newBoatHorn, wakeOf } from './boats';
@@ -128,6 +128,10 @@ interface Vehicle {
   lean: number;
   last: number;
   rider: number;
+  /** The junction it's coming up to or inside this frame (traffic.ts `yieldsLeft()`): `j` its number (-1 none), `phase` its way through */
+  comer: Comer & { j: number; phase: Phase | null };
+  /** How long it has stood behind a parked vehicle (traffic.ts `heldTooLong()`) */
+  held: number;
 }
 
 const ROAD_Y = 0.035;
@@ -136,8 +140,12 @@ const ROAD_Y = 0.035;
 export const walker = { x: 0, z: 0, y: 0, on: false, r: 0 };
 /** A swing of his fists on the street (brawl.ts): anyone within `r` of (x, z) steps aside, for `t` seconds more */
 export const swing = { x: 0, z: 0, r: 0, t: 0 };
-/** Anything else in the road the traffic stops short of (a taxi pulled up or on its way: taxi.ts) */
-export const stoppers: { x: number; z: number; y?: number; r: number; on: boolean }[] = [];
+/**
+ * Anything else in the road the traffic stops short of: a taxi pulled up or on its way (taxi.ts), and your own
+ * vehicles left parked (drive.ts, `parked`: the traffic queues behind them, toots once, and a car held out of sight
+ * too long is put back on the road elsewhere, traffic.ts `heldTooLong()`)
+ */
+export const stoppers: { x: number; z: number; y?: number; r: number; on: boolean; parked?: boolean }[] = [];
 /** Where the traffic and the people on the sidewalks are, so your car can bump them softly (drive.ts) */
 export const bodies = {
   /** (`y`: the ground under it, or up on the raised ring highway's deck: nothing at street level meets those) */
@@ -318,6 +326,17 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     if (!t) turnsBy.set(r, (t = turnsOf(r.pts, r.cum)));
     return t;
   };
+  /** How each route crosses each of its junctions (traffic.ts `crossOf()`: a left turn crosses the oncoming lane), worked out once */
+  const crossBy = new Map<Route, Cross[]>();
+  const crossesFor = (r: Route) => {
+    let t = crossBy.get(r);
+    if (!t) {
+      // (the way in a little before the box, the way out a little after it: the corners are rounded through the box)
+      const dirAt = (p: number) => pointOn(r, ((p % r.len) + r.len) % r.len, 0).dir;
+      crossBy.set(r, (t = r.stops.map((s) => crossOf(dirAt(s.enter - 1), dirAt(s.exit + 4)))));
+    }
+    return t;
+  };
   /** The bus stops along each route (transit.ts), and the loading bays (fleet.ts), worked out the first time a bus or a truck takes it */
   const stopsBy = new Map<Route, RouteStop[]>();
   const baysBy = new Map<Route, RouteStop[]>();
@@ -373,6 +392,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       lean: 0,
       last: NaN,
       rider: -1,
+      comer: { turn: 'S', fx: 1, fz: 0, d: Infinity, v: 0, inBox: false, stood: 0, i, j: -1, phase: null },
+      held: 0,
     };
   };
   // Every car starts somewhere round the home view, a little apart
@@ -414,6 +435,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       place(v);
       resetBody(v.body, v.v, v.yaw);
       v.last = NaN;
+      v.held = 0;
       return true;
     }
     return false;
@@ -690,9 +712,37 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     });
     lampMesh.instanceColor!.needsUpdate = true;
 
-    // Junctions with a vehicle still inside them, by the phase it came in on
+    // Junctions with a vehicle still inside them, by the phase it came in on; and each vehicle's own junction this
+    // frame (the one it's inside, else the one it's coming up to), how it crosses it and how long it has stood at its
+    // line, for the left turns (traffic.ts `yieldsLeft()`)
     for (const o of occupied) o.clear();
-    for (const v of vehicles) for (const s of v.route.stops) if (v.p + v.len / 2 > s.enter && v.p - v.len / 2 < s.exit) occupied[s.j.ix].add(s.phase);
+    for (const v of vehicles) {
+      const c = v.comer;
+      c.j = -1;
+      c.phase = null;
+      c.d = Infinity;
+      c.inBox = false;
+      c.fx = v.fx;
+      c.fz = v.fz;
+      c.v = v.v;
+      const crosses = crossesFor(v.route);
+      const front = v.p + v.len / 2;
+      for (let k = 0; k < v.route.stops.length; k++) {
+        const s = v.route.stops[k];
+        const d = s.enter - 1.0 - front;
+        if (front > s.enter && v.p - v.len / 2 < s.exit) {
+          occupied[s.j.ix].add(s.phase);
+          if (c.inBox) continue;
+          c.inBox = true;
+        } else if (c.inBox || d < -0.05 || d > 10 || d >= c.d) continue;
+        c.j = s.j.ix;
+        c.phase = s.phase;
+        c.turn = crosses[k];
+        c.d = d;
+      }
+      // Standing at its line (not short of it in a queue, not in the box)
+      c.stood = !c.inBox && c.d < 1.5 && v.v < 0.3 ? c.stood + dt : 0;
+    }
 
     // The swing bridge's barriers (swingbridge.ts): down while it swings for the tall ship
     const swingShut = swingAt(Date.now() / 1000).shut;
@@ -720,16 +770,37 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         const light = s.j.lit ? lightState(s.j, s.phase, t) : 'g';
         let blocked = false;
         for (const ph of occupied[s.j.ix]) if (ph !== s.phase) blocked = true;
+        // Turning left across the oncoming lane: wait at the line for whoever's coming the other way on the same
+        // green, in the box or about to be (traffic.ts yieldsLeft; two left-turners let the first to arrive go)
+        const me = v.comer;
+        if (!blocked && me.j === s.j.ix && me.turn === 'L')
+          for (const o of vehicles) {
+            if (o === v || o.comer.j !== s.j.ix || o.comer.phase !== s.phase || Math.abs(o.y - v.y) > 1.5) continue;
+            if (yieldsLeft(me, o.comer)) {
+              blocked = true;
+              break;
+            }
+          }
         if (light === 'r' || (light === 'y' && d > 1.2) || blocked) target = Math.min(target, Math.max(0, d * 1.3));
       }
       // Someone walking in the road ahead (or anything else in it): stop short of them
       // (at its own height: up on the raised highway, only what's up there)
       const byYou = walker.on && Math.abs(walker.y - v.y) < 1.5 ? shortOf(v, walker) : Infinity;
       target = Math.min(target, byYou);
-      for (const w of stoppers) if (w.on && Math.abs((w.y ?? 0) - v.y) < 1.5) target = Math.min(target, shortOf(v, w));
-      // Held up by you: a toot after a while (quieter the further off)
+      // (and your vehicles left parked in the road, drive.ts: the traffic queues behind them)
+      let byParked = Infinity;
+      for (const w of stoppers) {
+        if (!w.on || Math.abs((w.y ?? 0) - v.y) >= 1.5) continue;
+        const short = shortOf(v, w);
+        if (w.parked) byParked = Math.min(byParked, short);
+        target = Math.min(target, short);
+      }
+      // Standing behind a parked vehicle: how long for (a car held too long, out of sight, is put back elsewhere below)
+      v.held = byParked < 0.1 && v.v < 0.1 ? v.held + dt : 0;
+      // Held up by you: a toot after a while, again now and then; behind a parked vehicle once (quieter the further off)
       // (never a patrol car: they never bother you)
-      if (v.model !== 'police' && hornDue(v.horn, byYou < 0.1 && v.v < 0.1, dt, v.seed) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
+      const heldUp = v.v < 0.1 && (byYou < 0.1 || byParked < 0.1);
+      if (v.model !== 'police' && hornDue(v.horn, heldUp, dt, v.seed) && (byYou < 0.1 || v.horn.n === 1) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
       // A bus stops at its stops (transit.ts): slowing in, standing with its doors open (the traffic behind waits), pulling away;
       // a delivery truck at its loading bays (fleet.ts), standing longer with its hazards on
       if (v.bus) {
@@ -757,20 +828,24 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     if (CROWD_VIEW.on) {
       const f = CROWD_VIEW.focus;
       for (const v of vehicles) {
+        carBall.center.set(v.x, (onHills(v.x, v.z) ? heightAt(v.x, v.z) : 0) + 0.6, v.z);
+        carBall.radius = v.len / 2 + 1;
+        const inView = CROWD_VIEW.frustum.intersectsSphere(carBall);
+        const seen = inView && Math.hypot(v.x - CROWD_VIEW.eye.x, v.z - CROWD_VIEW.eye.z) < POOL_FAR;
+        // Stood behind a parked vehicle too long with nobody looking (traffic.ts): back on the road elsewhere, so a
+        // vehicle left in a junction never stalls a lane for good
+        if (heldTooLong(v.held, seen)) {
+          respawn(v, f.x, f.z, v.home?.spots);
+          continue;
+        }
         // (a district's own: back on its streets once it's wandered off them, out of sight)
         if (v.home) {
-          if (inRect(v.home.rect, v.x, v.z, 20)) continue;
-          carBall.center.set(v.x, 0.6, v.z);
-          carBall.radius = v.len / 2 + 1;
-          if (Math.hypot(v.x - CROWD_VIEW.eye.x, v.z - CROWD_VIEW.eye.z) < POOL_FAR && CROWD_VIEW.frustum.intersectsSphere(carBall)) continue;
+          if (inRect(v.home.rect, v.x, v.z, 20) || seen) continue;
           respawn(v, f.x, f.z, v.home.spots);
           continue;
         }
         const d = Math.hypot(v.x - f.x, v.z - f.z);
-        if (d < POOL_R) continue;
-        carBall.center.set(v.x, (onHills(v.x, v.z) ? heightAt(v.x, v.z) : 0) + 0.6, v.z);
-        carBall.radius = v.len / 2 + 1;
-        if (d < POOL_FAR && CROWD_VIEW.frustum.intersectsSphere(carBall)) continue;
+        if (d < POOL_R || (d < POOL_FAR && inView)) continue;
         respawn(v, f.x, f.z);
       }
     }

@@ -13,7 +13,17 @@
  * - The body (`bodyMotion()`): a nod under braking and a lean in turns, from
  *   the car's own speed and heading.
  * - The horn (`hornDue()`): a car held up by you toots after a couple of
- *   seconds, then again now and then.
+ *   seconds, then again now and then (`Horn.n` counts the toots: behind a
+ *   parked vehicle life.ts plays only the first).
+ * - Parked vehicles (the polish plan's Phase 6, the owner's call): your car,
+ *   bike or kart left in the road is a stopper the traffic queues behind; a
+ *   car held that way too long, out of sight, is put back on the road
+ *   elsewhere (`heldTooLong()`), so one left mid-junction never stalls a
+ *   lane for good.
+ * - Left turns (`yieldsLeft()`): a car turning left across the oncoming
+ *   lane waits at its line while an oncoming car on the same green is in
+ *   the box or about to be; two left-turners facing each other let the one
+ *   that arrived first go.
  *
  * Units are tiles and seconds. Yaw is three.js's rotation about y: a car
  * faces +x at 0, its left side at -z; turning left raises the yaw.
@@ -160,21 +170,94 @@ export interface Horn {
   held: number;
   /** When it next toots (seconds held up) */
   next: number;
+  /** How many toots this hold-up has had (1 on the frame of the first) */
+  n: number;
 }
 
 export const HORN_FIRST = 2.2;
-export const newHorn = (seed = 0): Horn => ({ held: 0, next: HORN_FIRST + seed * 1.2 });
+export const newHorn = (seed = 0): Horn => ({ held: 0, next: HORN_FIRST + seed * 1.2, n: 0 });
 
 /** Does the car toot this frame? `heldUp`: stopped behind someone in the road. */
 export function hornDue(h: Horn, heldUp: boolean, dt: number, seed = 0): boolean {
   if (!heldUp) {
     h.held = 0;
     h.next = HORN_FIRST + seed * 1.2;
+    h.n = 0;
     return false;
   }
   h.held += dt;
   if (h.held < h.next) return false;
   // Again in a while (a little longer each time)
   h.next += 5 + seed * 4;
+  h.n++;
   return true;
+}
+
+/* ---------- Parked vehicles in the road (the polish plan's Phase 6) ---------- */
+
+/** A car held behind a parked vehicle this long (seconds) has waited enough */
+export const HELD_MAX = 12;
+/**
+ * Is a car that has stood `heldFor` seconds behind a parked vehicle to be put back on the road somewhere else?
+ * Only once it has waited its fill and nobody's looking (`seen`: in the camera's sight): in sight it keeps
+ * queueing, as it would behind anyone.
+ */
+export const heldTooLong = (heldFor: number, seen: boolean) => heldFor > HELD_MAX && !seen;
+
+/* ---------- Left turns against the oncoming traffic ---------- */
+
+/** How a route crosses a junction: straight on, or turning right or left (left crosses the oncoming lane) */
+export type Cross = 'L' | 'R' | 'S';
+/** The way in and the way out of a junction (unit vectors) as a crossing: a swing of under about 25° is straight on */
+export function crossOf(inDir: Pt, outDir: Pt): Cross {
+  // (rightOf(in) is [-dz, dx], as routes.ts has it: a positive cross is a right turn)
+  const cross = outDir[0] * -inDir[1] + outDir[1] * inDir[0];
+  if (Math.abs(cross) < 0.4) return 'S';
+  return cross > 0 ? 'R' : 'L';
+}
+
+/** A car coming up to (or inside) a junction this frame, as `yieldsLeft()` sees it */
+export interface Comer {
+  /** How it crosses the junction */
+  turn: Cross;
+  /** The way it's heading in (unit) */
+  fx: number;
+  fz: number;
+  /** How far its nose is from its stop line (negative: past it) */
+  d: number;
+  /** Its speed */
+  v: number;
+  /** Inside the box (between the junction's entry and exit) */
+  inBox: boolean;
+  /** How long it has stood at its line (0 while moving or still coming) */
+  stood: number;
+  /** Its number in the traffic (a tie-break) */
+  i: number;
+}
+
+/** An oncoming car this close to its own stop line and moving is about to cross the box */
+export const LEFT_NEAR = 8;
+/** An oncoming car stopped at its line is about to go for this long (longer, it's held by something else) */
+export const LEFT_PATIENCE = 2;
+/** At its line: this close to it */
+export const AT_LINE = 1.5;
+
+/**
+ * Does a left-turner `me` wait at its stop line for `other`, coming through the same junction on the same green?
+ * Yes while the other is oncoming and in the box, or coming at it within LEFT_NEAR and moving, or just stopped at
+ * its own line (about to pull away). Two left-turners facing each other both at their lines: the one that
+ * arrived first goes (its number breaks a tie), so nothing locks up. A car going straight or right never waits.
+ */
+export function yieldsLeft(me: Comer, other: Comer): boolean {
+  if (me.turn !== 'L') return false;
+  // Not oncoming: it doesn't cross my way
+  if (me.fx * other.fx + me.fz * other.fz > -0.5) return false;
+  if (other.inBox) return true;
+  if (other.d > LEFT_NEAR) return false;
+  if (other.v > 0.3) return true;
+  if (other.d > AT_LINE) return false;
+  // Stopped at its line
+  if (other.turn !== 'L') return other.stood < LEFT_PATIENCE;
+  // Both turning left, both stopped: the first to arrive goes
+  return other.stood > me.stood || (other.stood === me.stood && other.i < me.i);
 }

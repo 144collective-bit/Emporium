@@ -6,6 +6,7 @@ import { DRIFT, GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, c
 import { BRIDGED_NS, EXT, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { topsAt } from '../src/scripts/city3d/river';
 import { CARGO, DRIVE, FEEL, PLAYER_CARS, type PlayerCar } from '../src/scripts/city3d/mycar';
+import { KART_FEEL, KART_SPECS } from '../src/scripts/city3d/mykart';
 import { CARS } from '../src/scripts/city3d/carspec';
 import { NO_CAR_MODS, carStats } from '../src/scripts/city3d/catalog';
 import { carStatsOf, cleanSave, modCar } from '../src/scripts/city3d/tycoon';
@@ -403,4 +404,22 @@ test('nothing spins for ever: the slide never passes its most, and with the whee
     drive(c, t, { throttle: 0.3, steer: 0, handbrake: false }, 4);
     assert.ok(Math.abs(slipOf(c)) < 0.05 && Math.abs(c.yawRate) < 0.05 && c.drift < 0.01, `${id}: settled (${slipOf(c).toFixed(3)}, ${c.yawRate.toFixed(3)})`);
   }
+});
+
+test('the street kart has a feel of its own: light, quick to steer, rear-driven; it turns quicker than the saloon at the same speed', () => {
+  assert.ok(KART_FEEL.mass < FEEL.sedan.mass && KART_FEEL.steerRate > FEEL.sedan.steerRate && KART_FEEL.lock > FEEL.sedan.lock);
+  assert.ok(KART_FEEL.rwd && KART_FEEL.loose > FEEL.sedan.loose);
+  // As drive.ts tunes them (the kart a little under its race pace, the saloon stock), from the same speed, the wheel hard over
+  const k = KART_SPECS.rocket;
+  const kart = tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.handling }, { L: 1.2, W: 0.95, wheelbase: 0.82 }, KART_FEEL);
+  const sedan = tune(DRIVE.sedan, { L: CARS.sedan.L, W: CARS.sedan.W, wheelbase: CARS.sedan.axles[1] - CARS.sedan.axles[0] }, FEEL.sedan);
+  const turned = (T: DriveTune) => {
+    const c = newCar(0, 0, 0);
+    c.speed = c.vx = 5;
+    for (let i = 0; i < 1 / DT; i++) stepCar(c, { throttle: 0.4, steer: 1, handbrake: false }, T, DT, OPEN, HUGE);
+    return Math.abs(c.yaw);
+  };
+  assert.ok(turned(kart) > turned(sedan) * 1.3, `the kart turns ${turned(kart).toFixed(2)} to the saloon's ${turned(sedan).toFixed(2)}`);
+  // ...and the same kart on the saloon's neutral feel turns less: the feel is what does it
+  assert.ok(turned(kart) > turned(tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.handling }, { L: 1.2, W: 0.95, wheelbase: 0.82 })) * 1.1);
 });

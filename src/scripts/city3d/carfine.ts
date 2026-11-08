@@ -58,10 +58,20 @@ function within(poly: V2[], conv: V2[]) {
   return out.length >= 3 ? out : [];
 }
 
+/** The buses' passengers (the polish plan's Phase 6): which side panes carry one (a row with a gap now and then) */
+const BUS_SEATS = [true, true, false, true, true, false];
+/** The passengers' seat on the bus: their hips over the floor, sat upright */
+const BUS_HIP_Y = 0.62;
+const BUS_RECLINE = 0.12;
+/** The Party Liner's revellers on its open top deck: where each stands (x along, z across as a share of the deck's half width) */
+const DECK_CROWD: [number, number][] = [[-1.7, 0.45], [-1.0, -0.4], [-0.3, 0.5], [0.4, -0.35], [0.9, 0.3]];
+
 /**
  * The traffic's crew: the driver behind every window you'd see him through (each side pane, the windscreen, the rear
  * glass), the seats' headrests behind him and in the back. Flat shapes laid just over the glass in the car's detail
- * (no draw of their own), the traffic's only: your cars and the parked ones are built without
+ * (no draw of their own), the traffic's only: your cars and the parked ones are built without. The buses carry
+ * passengers too: a row of heads and shoulders over the sills of their side panes, and on the Party Liner's open
+ * top a crowd standing behind the railings.
  */
 function crew(p: Parts, s: CarSpec) {
   const n = INTERIORS[s.id];
@@ -83,22 +93,55 @@ function crew(p: Parts, s: CarSpec) {
   const fwd = (q: V2): V2 => [q[0] + dx, q[1]];
   const torso: V2[] = [alongBack(n.hip, n.recline, 0.12, -0.09), alongBack(n.hip, n.recline, 0.12, 0.08), alongBack(n.hip, n.recline, 0.33, 0.07), alongBack(n.hip, n.recline, 0.36, 0.0), alongBack(n.hip, n.recline, 0.33, -0.09)].map(fwd);
   const sideShapes: [V2[], string][] = [[oval(fwd(rest), 0.05, 0.065), REST], ...(rearRest ? [[oval(rearRest, 0.05, 0.065), REST] as [V2[], string]] : []), [torso, FIGURE], [oval(fwd(head), 0.07, 0.085), FIGURE]];
+  /** A shape laid over a side pane, both sides, a hair further out for each `k` so none is flush with the one under it */
+  const onPane = (shape: V2[], pane0: V2[], k: number, col: string) => {
+    const cut = within(shape, pane0);
+    if (!cut.length) return;
+    for (const side of [-1, 1]) {
+      const g = new THREE.ShapeGeometry(new THREE.Shape(cut.map(([x, y]) => new THREE.Vector2(side * x, y))));
+      if (side < 0) g.rotateY(Math.PI);
+      p.detail(g.translate(0, 0, side * (cw / 2 + 0.026 + k * 0.006)), col);
+    }
+  };
+  const inner = inset(s.cabin, round + 0.035);
+  const paneOf = ([x0, x1]: [number, number]) => {
+    let pane0 = clip(clip(inner, ([x]) => x - x0), ([x]) => x1 - x);
+    if (s.sill !== undefined) pane0 = clip(pane0, ([, y]) => y - s.sill!);
+    return pane0;
+  };
   if (!bus) {
-    const inner = inset(s.cabin, round + 0.035);
-    for (const [x0, x1] of s.panes) {
-      let pane0 = clip(clip(inner, ([x]) => x - x0), ([x]) => x1 - x);
-      if (s.sill !== undefined) pane0 = clip(pane0, ([, y]) => y - s.sill!);
+    for (const pn of s.panes) {
+      const pane0 = paneOf(pn);
       if (pane0.length < 3) continue;
-      // (each later shape a hair further out, so none is flush with the one under it)
-      sideShapes.forEach(([shape, col], k) => {
-        const cut = within(shape, pane0);
-        if (!cut.length) return;
-        for (const side of [-1, 1]) {
-          const g = new THREE.ShapeGeometry(new THREE.Shape(cut.map(([x, y]) => new THREE.Vector2(side * x, y))));
+      sideShapes.forEach(([shape, col], k) => onPane(shape, pane0, k, col));
+    }
+  } else {
+    // The passengers: one seated in the middle of most panes, the head and shoulders showing over the sill
+    s.panes.forEach((pn, k) => {
+      if (!BUS_SEATS[k % BUS_SEATS.length]) return;
+      const pane0 = paneOf(pn);
+      if (pane0.length < 3) return;
+      const hip: V3 = [(pn[0] + pn[1]) / 2 - 0.04, BUS_HIP_Y, 0];
+      const body: V2[] = [alongBack(hip, BUS_RECLINE, 0.12, -0.09), alongBack(hip, BUS_RECLINE, 0.12, 0.08), alongBack(hip, BUS_RECLINE, 0.33, 0.07), alongBack(hip, BUS_RECLINE, 0.36, 0.0), alongBack(hip, BUS_RECLINE, 0.33, -0.09)];
+      onPane(body, pane0, 0, FIGURE);
+      onPane(oval(alongBack(hip, BUS_RECLINE, 0.47), 0.07, 0.085), pane0, 1, FIGURE);
+    });
+  }
+  // The Party Liner's open top: revellers standing on the deck behind its railings (cars.ts EXTRAS partybus), each a
+  // flat figure seen from both sides, between the speaker stacks at the back and the canopy's posts at the front
+  if (s.id === 'partybus') {
+    const deck = s.cabin[1][1];
+    const hw = (s.W * s.cabinW) / 2;
+    for (const [x, zk] of DECK_CROWD) {
+      const legs: V2[] = [[x - 0.05, deck + 0.03], [x + 0.05, deck + 0.03], [x + 0.05, deck + 0.42], [x - 0.05, deck + 0.42]];
+      const body: V2[] = [[x - 0.09, deck + 0.42], [x + 0.09, deck + 0.42], [x + 0.11, deck + 0.72], [x + 0.07, deck + 0.78], [x - 0.07, deck + 0.78], [x - 0.11, deck + 0.72]];
+      const head = oval([x, deck + 0.88], 0.07, 0.085);
+      for (const side of [-1, 1])
+        for (const shape of [legs, body, head]) {
+          const g = new THREE.ShapeGeometry(new THREE.Shape(shape.map(([px, py]) => new THREE.Vector2(side * px, py))));
           if (side < 0) g.rotateY(Math.PI);
-          p.detail(g.translate(0, 0, side * (cw / 2 + 0.026 + k * 0.006)), col);
+          p.detail(g.translate(0, 0, zk * hw + side * 0.012), FIGURE);
         }
-      });
     }
   }
   // Through the windscreen and the rear glass: the parts of him and the seats between the glass's foot and its top

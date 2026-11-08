@@ -18,6 +18,11 @@
  * - **Neon Blade** (sport bike): a full fairing with a screen, twin slim
  *   lamps, a tail hump, clip-ons low, rear-set pegs.
  *
+ * Its lights (the polish plan's Phase 6, as the car's: `lights()`): the
+ * tail lamp swaps to the brake or reversing lens, and small amber indicators
+ * under the mirrors and beside the tail lamp flash a side (cars.ts
+ * `lampMaterials()`, shared). The traffic's bikes are life.ts's.
+ *
  * The rider is any Degen (createDegen) at the drivers' size, sat with
  * `seat()`: his hips on the seat, leant forward by the bike's `tuck`, his
  * hands on the grips through reachArm() (turned with the bars), his feet on
@@ -27,9 +32,9 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { carMaterials, extrude, merge, wheelGeometry, type CarSpec } from './cars';
+import { carMaterials, extrude, lampMaterials, merge, wheelGeometry, type CarSpec } from './cars';
 import type { Degen } from './character';
-import { mergeMeshes, moving, neon, toon } from './kit';
+import { fx, mergeMeshes, moving, neon, toon } from './kit';
 import { paintAll } from './carparts';
 import { BIKES, steeringHead, type BikeId } from './mybike';
 import { ridePose, riderRoot } from './acts';
@@ -80,8 +85,13 @@ export interface Bike {
   seat(degen: Degen | null): void;
   /** His eyes, in bike space (the helmet camera) */
   eye: THREE.Vector3;
+  /** What the lights show: the brakes, reversing, and which indicator is lit this frame (if any) */
+  lights(brake: boolean, reverse: boolean, turn: 'L' | 'R' | null): void;
   dispose(): void;
 }
+
+/** The indicator lenses: how far out from the middle the rear pair sit beside the tail lamp, by model */
+const REAR_LENS_Z: Record<BikeId, number> = { scooter: 0.09, streetbike: 0.09, sportbike: 0.1 };
 
 /** A colour, or a material (your own bike's lamps are neon), or the paint */
 type Col = string | THREE.Material;
@@ -177,10 +187,14 @@ export function createBike(id: BikeId, paint: string): Bike {
   };
   const [ra, fa] = s.axles;
   const [sx, sy] = s.seat;
-  const head = shapeBike(id, add, paint, neon(TAIL, 0.9, 2), neon(HEAD, 0.35, 1.4));
-
-  const body = mergeMeshes(parts);
+  const [bx, by, bh] = s.bars;
+  // (the tail lamp keeps its own mesh, swapped for the brake and reversing lenses: `lights()`)
+  const lamps = lampMaterials();
+  const head = shapeBike(id, add, paint, lamps.tail, neon(HEAD, 0.35, 1.4));
+  const tails = parts.filter((m) => m.material === lamps.tail);
+  const body = mergeMeshes(parts.filter((m) => m.material !== lamps.tail));
   group.add(body);
+  for (const t of tails) group.add(fx(t));
   // The fork turns about the steering head: its parts merged in its own frame
   const forkPivot = new THREE.Group();
   forkPivot.position.copy(head);
@@ -188,7 +202,22 @@ export function createBike(id: BikeId, paint: string): Bike {
   const forkMesh = mergeMeshes(fork);
   forkPivot.add(forkMesh);
   group.add(forkPivot);
-  for (const g of temp) g.dispose();
+  // The indicators: a lens under each mirror (on the fork) and one beside the tail lamp each side, shown while that side flashes
+  const lensGeo = new THREE.BoxGeometry(0.03, 0.03, 0.03);
+  const turn: Record<'L' | 'R', THREE.Mesh[]> = { L: [], R: [] };
+  const tailAt = tails[0]?.position ?? new THREE.Vector3(ra - s.r, s.r * 2, 0);
+  for (const side of [-1, 1] as const) {
+    const key = side < 0 ? 'L' : 'R';
+    const front = new THREE.Mesh(lensGeo, lamps.turn);
+    front.position.set(bx + 0.03 - head.x, by + 0.085 - head.y, side * (bh - 0.02));
+    forkPivot.add(fx(front));
+    const rear = new THREE.Mesh(lensGeo, lamps.turn);
+    rear.position.set(tailAt.x, tailAt.y, side * REAR_LENS_Z[id]);
+    group.add(fx(rear));
+    turn[key].push(front, rear);
+    front.visible = rear.visible = false;
+  }
+  for (const g of temp) if (!tails.some((t) => t.geometry === g)) g.dispose();
   body.traverse((o) => void ((o as THREE.Mesh).isMesh && (o.castShadow = o.receiveShadow = true)));
   forkMesh.traverse((o) => void ((o as THREE.Mesh).isMesh && (o.castShadow = true)));
 
@@ -234,6 +263,12 @@ export function createBike(id: BikeId, paint: string): Bike {
       footNow = foot;
       poseRider();
     },
+    lights(brake: boolean, reverse: boolean, side: 'L' | 'R' | null) {
+      const mat = reverse ? lamps.reverse : brake ? lamps.brake : lamps.tail;
+      for (const t of tails) t.material = mat;
+      for (const m of turn.L) m.visible = side === 'L';
+      for (const m of turn.R) m.visible = side === 'R';
+    },
     seat(degen: Degen | null) {
       if (rider) {
         rider.g.removeFromParent();
@@ -258,6 +293,8 @@ export function createBike(id: BikeId, paint: string): Bike {
       group.removeFromParent();
       body.traverse((o) => void (o as THREE.Mesh).geometry?.dispose());
       forkMesh.traverse((o) => void (o as THREE.Mesh).geometry?.dispose());
+      for (const t of tails) t.geometry.dispose();
+      lensGeo.dispose();
     },
   };
 }

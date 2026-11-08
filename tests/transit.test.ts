@@ -1,8 +1,8 @@
 // Buses that stop (transit.ts, city life plan Phase 4): the bus stops along the avenues, where the routes
-// pass them, and a bus slowing to a halt, dwelling and moving off.
+// pass them, a bus slowing to a halt, dwelling and moving off, and the people waiting at the shelters.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { APPROACH, BUS_STOPS, DWELL, PULL_IN, PULL_OUT, SHELTER_HALF, STOP_CLEAR, STOP_GAP, busStep, newBus, pullIn, routeStops, type RouteStop } from '../src/scripts/city3d/transit';
+import { APPROACH, BUS_STOPS, DWELL, PULL_IN, PULL_OUT, SHELTER_EVERY, SHELTER_HALF, SHELTER_IDLES, STOP_CLEAR, STOP_GAP, WAIT_ALONG, busStep, newBus, pullIn, routeStops, type RouteStop } from '../src/scripts/city3d/transit';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { LANE, RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { ROUTES } from '../src/scripts/city3d/routes';
@@ -112,4 +112,23 @@ test('a bus in the inner lane pulls in to the kerb over the approach and back ou
   // Round the loop's seam too
   const seam: RouteStop[] = [{ p: 2, off: 1.7, stop: BUS_STOPS[0] }];
   assert.ok(pullIn(len - 4, len, seam) > 0.5);
+});
+
+test('someone waits at every third shelter: on the sidewalk by its kerb end, facing the road, in nothing solid', () => {
+  assert.equal(SHELTER_IDLES.length, Math.ceil(BUS_STOPS.length / SHELTER_EVERY));
+  SHELTER_IDLES.forEach((w, i) => {
+    const b = BUS_STOPS[i * SHELTER_EVERY];
+    const s = streetOf(b.street);
+    // On the sidewalk, off the asphalt
+    const k = distToStreet(s, [w.x, w.z]);
+    assert.ok(k > s.half && k < s.half + WALK_W, `${b.id}'s waiter at ${k} from the street`);
+    // At the shelter's end (within its reach of the stop's kerb spot)
+    assert.ok(Math.hypot(w.x - b.kerb[0], w.z - b.kerb[1]) < WAIT_ALONG + 0.3, `${b.id}'s waiter off the shelter`);
+    // Facing the road
+    const face = [Math.sin(w.ry), Math.cos(w.ry)];
+    assert.ok(face[0] * b.face[0] + face[1] * b.face[1] > 0.99, `${b.id}'s waiter looks away`);
+    for (const box of SOLIDS) assert.ok(w.x <= box[0] || w.x >= box[2] || w.z <= box[1] || w.z >= box[3], `${b.id}'s waiter inside something solid`);
+    // On the promenade only where the shelter is (by the river)
+    assert.equal(typeof w.promenade, 'boolean');
+  });
 });

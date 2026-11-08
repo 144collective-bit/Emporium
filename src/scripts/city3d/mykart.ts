@@ -10,7 +10,15 @@
  * other shared data.
  */
 import { CAR_PAINTS, PLAYER_KARTS, type KartId, type PaintId } from './vehicleids';
+import type { Feel } from './drive-sim';
 export { PLAYER_KARTS, type KartId };
+
+/**
+ * How your kart feels out on the street (drive.ts, the polish plan's Phase 6; the cars' is mycar.ts `FEEL`): light,
+ * so it answers the wheel at once, a quick rack with plenty of lock, the back wheels driving it and a tail a little
+ * loose, so power through a bend steps it out. The races keep kart-sim.ts's own handling.
+ */
+export const KART_FEEL: Feel = { mass: 0.6, loose: 0.45, rwd: true, steerRate: 5.2, lock: 0.72 };
 
 /** What the hut says about each one, and how it drives (0..1: the stat bars and the handling) */
 export const KART_SPECS: Record<KartId, { name: string; kind: string; blurb: string; speed: number; accel: number; handling: number; weight: number }> = {
