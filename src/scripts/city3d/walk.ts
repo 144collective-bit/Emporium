@@ -44,7 +44,9 @@ import { slidePose } from './poses';
 import type { Over } from './vault';
 import { springVel } from './inertia';
 import type { MoData } from './mocap';
-import { createCombat, type Sfx } from './combat';
+import type { Sfx } from './combat';
+import { createCombatLazy } from './combat-lazy';
+import { lazy } from './lazy';
 import type { Hotbar } from './inventory-ui';
 import type { Held } from '../net/profile-data';
 import type { GunShop } from './gunshop';
@@ -177,18 +179,11 @@ const FP_BOB = 0.7;
  * trainer's: none in the boot): until then it's shut (`open` false, its other calls do nothing) and a call in `opens` loads it and then
  * opens it. The menus are closures over object literals, so a method called on the stand-in is the real one's.
  */
-function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>): T & { loaded(): Promise<T> } {
+function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Promise<T>, what: string): T & { loaded(): Promise<T> } {
   let real: T | null = null;
-  let loading: Promise<T> | null = null;
-  // (a load that failed is forgotten, so the next try asks again; the page's own `vite:preloadError` handler,
-  // CityMap.astro, reloads a page whose files a new version replaced)
-  const get = () =>
-    (loading ??= load()
-      .then((m) => (real = m))
-      .catch((err) => {
-        loading = null;
-        throw err;
-      }));
+  // (a load that failed is forgotten, so the next try asks again, and said once: lazy.ts; the page's own
+  // `vite:preloadError` handler, CityMap.astro, reloads a page whose files a new version replaced)
+  const get = lazy(() => load().then((m) => (real = m)), what);
   return new Proxy({} as T & { loaded(): Promise<T> }, {
     get(_, k) {
       // (fetch it without opening it: a street spar wants the fight's HUD with no menu first)
@@ -508,7 +503,7 @@ export function createWalk(d: WalkDeps) {
   leftInput?.addEventListener('change', () => setTouch({ left: leftInput.checked }));
   // Arrange buttons (Phase 6): its own chunk, loaded the first time it's opened
   root.querySelector('[data-tc-arrange]')?.addEventListener('click', () => {
-    void import('./arrange-ui').then(({ openArrange }) => openArrange({ root, prefs: () => settings.touch, save: (arrange) => setTouch({ arrange }) }));
+    void lazy(() => import('./arrange-ui'), 'the button layout')().then(({ openArrange }) => openArrange({ root, prefs: () => settings.touch, save: (arrange) => setTouch({ arrange }) }));
   });
   paintTouch();
 
@@ -861,21 +856,25 @@ export function createWalk(d: WalkDeps) {
   /** Distance along a ray to the first building or the ground (for shots). */
   const rayWorld = (from: THREE.Vector3, dir: THREE.Vector3, max: number) => rayBoxes(from, dir, max, d.placedSolids());
 
-  const combat = createCombat({
-    scene: d.scene,
-    camera,
-    root,
-    tick: d.tick,
-    ground: SLAB,
-    rayWorld,
-    sfx: d.sfx,
-    game: d.game,
-    // Each takedown counts for the city's game (XP, missions)
-    onTakedown(kind, hand) {
-      takedown(d.game.save(), kind, hand);
-      d.game.commit();
+  // Target practice (combat.ts) is a chunk of its own, fetched once the first frame is drawn (combat-lazy.ts stands in)
+  const combat = createCombatLazy(
+    {
+      scene: d.scene,
+      camera,
+      root,
+      tick: d.tick,
+      ground: SLAB,
+      rayWorld,
+      sfx: d.sfx,
+      game: d.game,
+      // Each takedown counts for the city's game (XP, missions)
+      onTakedown(kind, hand) {
+        takedown(d.game.save(), kind, hand);
+        d.game.commit();
+      },
     },
-  });
+    (go) => requestAnimationFrame(() => setTimeout(go, 0))
+  );
   /**
    * A menu opened, a race or a fight begun, a vehicle taken: walking's keys let go, Degen stood still,
    * the trigger and the sight down, and (`free`) the mouse freed
@@ -906,14 +905,14 @@ export function createWalk(d: WalkDeps) {
       moments.release();
       canvas.focus({ preventScroll: true });
     },
-  }));
+  }), 'the gun store');
   combat.onLifetime(() => shop.refresh());
   // The inventory's hotbar and the Bag tab (inventory-ui.ts, a chunk of its own fetched when walking starts): fists,
   // his loadout, the thing in his hand, his snacks. A key pressed before it's in waits for it.
   let hotbar: Hotbar | null = null;
-  let hotbarLoad: Promise<void> | null = null;
-  const loadHotbar = () =>
-    (hotbarLoad ??= import('./inventory-ui')
+  const loadHotbar = lazy(
+    () =>
+    import('./inventory-ui')
       .then(({ createHotbar }) => {
         hotbar = createHotbar(root, {
           game: d.game,
@@ -926,10 +925,9 @@ export function createWalk(d: WalkDeps) {
           },
           closed: () => canvas.focus({ preventScroll: true }),
         });
-      })
-      .catch(() => {
-        hotbarLoad = null;
-      }));
+      }),
+    'your bag'
+  );
   /** Pick a hotbar slot (0-6), or step through the fists and the guns */
   const pickSlot = (n: number) => (hotbar ? hotbar.pick(n) : void loadHotbar().then(() => hotbar?.pick(n)));
   /** Open or close the inventory (Tab, the Bag button, View on a gamepad) */
@@ -943,9 +941,9 @@ export function createWalk(d: WalkDeps) {
   /** The partner a street spar is with (they're hidden while the fight draws its own) */
   let sparWith: PartnerId | null = null;
   let fistsMod: typeof import('./brawl') | null = null;
-  let fistsLoad: Promise<void> | null = null;
-  const loadFists = () =>
-    (fistsLoad ??= import('./brawl')
+  const loadFists = lazy(
+    () =>
+    import('./brawl')
       .then((m) => {
         fistsMod = m;
         fists = m.createStreetFists(d.game.save().fight.style);
@@ -953,10 +951,9 @@ export function createWalk(d: WalkDeps) {
         partners = m.createPartners(d.scene, d.low, (x, z) => groundAt(x, z));
         // (solid where they stand: into the grids now, not the city's SOLIDS, whose lawn walks were routed at the load)
         addSolids(m.PARTNER_SOLIDS);
-      })
-      .catch(() => {
-        fistsLoad = null;
-      }));
+      }),
+    'the fists'
+  );
   /** The guard's and the whole-body moves' share of his pose, the right mouse button and LB held (the block), the last "out of breath" */
   let guardAmt = 0;
   let wholeAmt = 0;
@@ -972,7 +969,7 @@ export function createWalk(d: WalkDeps) {
 
   /* ---------- The control card (docs/views-plan.md Phase 4): the mode's keys for the input in use ---------- */
   const cardEl = root.querySelector<HTMLElement>('[data-ctrlcard]');
-  let cardMod: Promise<typeof import('./ctrlcard')> | null = null;
+  const cardMod = lazy(() => import('./ctrlcard'), 'the controls card');
   /** The mode it shows (null: hidden), the seconds left when it came up by itself (0: it stays), the mode last seen */
   let cardMode: ModeId | null = null;
   let cardLeft = 0;
@@ -994,7 +991,7 @@ export function createWalk(d: WalkDeps) {
   function paintCard() {
     const m = cardMode;
     if (!cardEl || !m) return;
-    void (cardMod ??= import('./ctrlcard')).then((c) => {
+    void cardMod().then((c) => {
       if (cardMode !== m) return;
       c.paint(cardEl, m, inputKind);
       cardEl.hidden = false;
@@ -1082,7 +1079,7 @@ export function createWalk(d: WalkDeps) {
       if (fpBeforeGarage) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
-  }));
+  }), 'the garage');
   // Your car: get in where it is, drive, get out anywhere
   const drive = createDrive({
     scene: d.scene,
@@ -1167,7 +1164,7 @@ export function createWalk(d: WalkDeps) {
       if (fpBeforeHangar) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
-  }));
+  }), 'the hangar');
   /** Flying input from the gamepad */
   const padFly = { turn: 0, climb: 0, throttle: 0 };
 
@@ -1219,20 +1216,26 @@ export function createWalk(d: WalkDeps) {
   const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {}, toggleView: () => 'near' };
   let kartUI: KartUI = NO_KART_UI;
   let karts: KartRace = NO_KARTS;
-  let kartLoad: Promise<void> | null = null;
-  const loadKarts = () =>
-    (kartLoad ??= import('./kartgame').then(({ createKartUI, createKartRace }) => {
-      kartUI = makeKartUI(createKartUI);
-      karts = makeKartRace(createKartRace);
-    }));
+  /** The kart park's chunk was asked for (coming near it; a failed fetch is asked again at the hut) */
+  let kartsAsked = false;
+  const loadKarts = lazy(
+    () =>
+      import('./kartgame').then(({ createKartUI, createKartRace }) => {
+        kartUI = makeKartUI(createKartUI);
+        karts = makeKartRace(createKartRace);
+      }),
+    'the kart park'
+  );
   /** Your hire boat (boat.ts, river plan step 4c): its own chunk, loaded the first time you take it */
   let boat: Boat | null = null;
-  let boatLoad: Promise<Boat> | null = null;
   const boating = () => !!boat?.active;
-  const loadBoat = () =>
-    (boatLoad ??= import('./boat').then(({ createBoat }) =>
-      (boat = createBoat({ scene: d.scene, camera, root, outfit: () => outfit, cameraRoom, lanes: () => bodies.boats, sfx: (k, g) => d.sfx(k, g), engine: (r, v) => d.engine(r, v), reduced: d.reduced }))
-    ));
+  const loadBoat = lazy(
+    () =>
+      import('./boat').then(({ createBoat }) =>
+        (boat = createBoat({ scene: d.scene, camera, root, outfit: () => outfit, cameraRoom, lanes: () => bodies.boats, sfx: (k, g) => d.sfx(k, g), engine: (r, v) => d.engine(r, v), reduced: d.reduced }))
+      ),
+    'the boat'
+  );
   /** Near enough the park to fetch them (its land and a margin) */
   const nearKarts = (x: number, z: number) => x > KART_PARK.x0 - 80 && x < KART_PARK.x1 + 80 && z > KART_PARK.z0 - 80 && z < KART_PARK.z1 + 80;
   const makeKartUI = (createKartUI: typeof import('./kart-ui').createKartUI) => createKartUI(root, {
@@ -1300,12 +1303,12 @@ export function createWalk(d: WalkDeps) {
       canvas.focus({ preventScroll: true });
     },
     quit: () => quitFight(),
-  }));
+  }), 'the trainer');
   /** The fight itself (fight.ts and the figures' clips) comes in its own chunk, when the trainer's menu first opens */
   let fight: Fight | null = null;
-  let fightLoad: Promise<Fight> | null = null;
-  const loadFight = () =>
-    (fightLoad ??= import('./fight').then(({ createFight }) => {
+  const loadFight = lazy(
+    () =>
+    import('./fight').then(({ createFight }) => {
       fight = createFight({
         scene: d.scene,
         camera,
@@ -1321,7 +1324,9 @@ export function createWalk(d: WalkDeps) {
         motion: () => (anim && mocapData && onFoot ? { anim, data: mocapData, onFoot } : null),
       });
       return fight;
-    }));
+    }),
+    'the fight'
+  );
   const fighting = () => !!fight?.active;
   /** The card is up (the fight's over): closing it leaves the ring */
   let fightDone = false;
@@ -2736,7 +2741,10 @@ export function createWalk(d: WalkDeps) {
     partners?.update(dt, pos.x, pos.z, sparWith);
     if (fighting()) return fightFrame(dt, t);
     if (karts.active) return kartFrame(dt, t);
-    if (!kartLoad && nearKarts(pos.x, pos.z)) void loadKarts();
+    if (!kartsAsked && nearKarts(pos.x, pos.z)) {
+      kartsAsked = true;
+      void loadKarts().catch(() => {});
+    }
     karts.idle(dt);
     if (boat?.active) return boatFrame(dt, t);
     if (fly.active) return flyFrame(dt, t);

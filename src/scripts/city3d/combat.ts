@@ -75,6 +75,8 @@ export interface CombatDeps {
   game: GameDeps;
   /** One of your takedowns (XP and counters for the city's game); `hand`, with his fists (brawl.ts) */
   onTakedown(kind: TargetKind, hand: boolean): void;
+  /** The third-person gun's pivot, where the stand-in made it already (combat-lazy.ts: it's parented to Degen's chest before this chunk is in) */
+  pivot?: THREE.Group;
 }
 
 const ME = 'me';
@@ -320,7 +322,7 @@ export function createCombat(d: CombatDeps) {
 
   // Third person: the gun in Degen's hands, in a pivot the walk code parents to his chest
   // (slung on his back or holstered on his hip while geared up and not drawn)
-  const pivot = new THREE.Group();
+  const pivot = d.pivot ?? new THREE.Group();
   const stance = newStance();
   /** 0 put away .. 1 in his hands (third person), and how ready he holds it (0 relaxed) */
   let drawn = 0;
