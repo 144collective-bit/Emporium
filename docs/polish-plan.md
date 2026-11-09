@@ -579,8 +579,8 @@ the typecheck and the budgets green; none moves anything that exists.
    the missions and the card's shell), → 666.3 with target practice behind
    `combat-lazy.ts` (fetched after the first frame, since the targets stand
    in the city from the start; guns.ts, gunshapes.ts and gunfit.ts stay in
-   the boot for the soldiers' and the Armoury's rifle), → 666.8 of 730
-   with the landmark ticks gated through `nearGate()` (`nearby.ts`: the
+   the boot for the soldiers' and the Armoury's rifle), → 666.8 (668.2 of 730
+   once rebased on Phases 6 and 9) with the landmark ticks gated through `nearGate()` (`nearby.ts`: the
    Armoury's flags, the Workshop's sparks, the Emporium's LED wall and
    hologram, the airport's beacon and rabbit, the Strip's shows, Liberty
    Bridge, the metro's cars twice a second when far) and the pins' style
