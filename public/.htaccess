@@ -21,10 +21,10 @@ ErrorDocument 404 /404.html
 </IfModule>
 
 # Files in /_astro/ have a fingerprint in their name (the textures their hash, the transcoder three's
-# version in its folder's), so they can be cached for a year.
+# version in its folder's, the city's baked data its hash), so they can be cached for a year.
 # Pages are re-checked on every visit, so a new upload shows up straight away.
 <IfModule mod_headers.c>
-  <FilesMatch "\.(js|css|avif|webp|png|jpg|ico|woff2|ktx2|wasm|bin)$">
+  <FilesMatch "\.(js|css|json|avif|webp|png|jpg|ico|woff2|ktx2|wasm|bin)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
   <FilesMatch "\.(html|xml|webmanifest)$">

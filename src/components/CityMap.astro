@@ -1343,24 +1343,41 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   import { live } from '../scripts/city3d/live-client';
   import { bannersAt, type Live } from '../scripts/city3d/live';
 
+  declare const __CITY_BAKED_URL__: string | undefined;
+
   const root = document.querySelector<HTMLElement>('[data-city-root]');
+
+  // The city's baked data (baked.ts: one JSON file under /_astro/) starts downloading now, beside the city's own
+  // code; baked.ts takes this promise instead of fetching it again (polish plan Phase 4)
+  if (typeof __CITY_BAKED_URL__ !== 'undefined') {
+    const url = __CITY_BAKED_URL__;
+    const once = () => fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`baked: ${url} answered ${r.status}`))));
+    const data = once().catch(once);
+    // (a failure is handled where it's awaited, baked.ts; this keeps a page with no 3D from reporting it)
+    data.catch(() => {});
+    (globalThis as { __cityBakedP?: Promise<unknown> }).__cityBakedP = data;
+  }
 
   // A part of the city loaded when it's first used (the gun store, the garage's menu, the 3D city's own code...)
   // that won't load is almost always a page opened before a new version went live, asking for a file the new
   // version replaced: reload once to pick the new version up (the city's game is in this browser's save, so
   // nothing is lost but where you stood). Not twice within a minute, so a file that's really missing can't loop it.
-  addEventListener('vite:preloadError', (e) => {
+  /** Reloads the page once a minute at most; true when it did */
+  function reloadOnce(): boolean {
     const KEY = 'degen-city-reloaded-at';
     let last = 0;
     try {
       last = Number(sessionStorage.getItem(KEY)) || 0;
     } catch {}
-    if (Date.now() - last < 60_000) return;
+    if (Date.now() - last < 60_000) return false;
     try {
       sessionStorage.setItem(KEY, String(Date.now()));
     } catch {}
-    e.preventDefault();
     location.reload();
+    return true;
+  }
+  addEventListener('vite:preloadError', (e) => {
+    if (reloadOnce()) e.preventDefault();
   });
 
   if (root) {
@@ -1472,6 +1489,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         city = await bootCity(root!, await wallet, await hubReady);
       } catch (err) {
         console.error(err);
+        // (the baked data's file replaced by a new version: the same reload the code's own chunks get)
+        if (err instanceof Error && err.message.startsWith('baked:') && reloadOnce()) return;
       }
       booting = false;
       if (!city) return lab ? undefined : no3d();

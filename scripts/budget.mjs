@@ -95,6 +95,8 @@ for (const n of page) boot.delete(n);
 const lazy = files.filter((f) => f.endsWith('.js') && !boot.has(f) && !page.has(f));
 const biggestLazy = lazy.map((f) => [f, gz(join(astro, f))]).sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
 const css = files.filter((f) => f.endsWith('.css'));
+// The city's baked data (baked.ts: the routes and the rest, one hashed JSON file fetched beside the boot's code)
+const bakedFile = files.find((f) => /^baked\.[\w-]+\.json$/.test(f));
 
 const rows = [
   ['page', gz(join(dist, 'index.html')), 'index.html'],
@@ -102,6 +104,7 @@ const rows = [
   ['bootJs', sum(boot), [...boot].join(' ')],
   ['lazyJs', biggestLazy[1], `${biggestLazy[0]} (the biggest of ${lazy.length})`],
   ['css', sum(css), `${css.length} files`],
+  ['baked', bakedFile ? gz(join(astro, bakedFile)) : 0, bakedFile ?? '(none: the city would work its data out itself)'],
 ];
 // The textures made at build time, if they were (without them the city paints its own, as before)
 const tex = html.match(/<script type="application\/json" id="city-tex">(.*?)<\/script>/s);
@@ -120,9 +123,12 @@ const crowdPack = files.filter((f) => /^clips-crowd\.[\w-]+\.bin$/.test(f));
 if (crowdPack.length) rows.push(['mocapCrowd', crowdPack.reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024, `${crowdPack.join(' ')} (${crowdPack.map((f) => gz(join(astro, f)).toFixed(0)).join(' ')} KB gz)`]);
 let failed = false;
 for (const [key, kb, what] of rows) {
-  const over = kb > BUDGETS[key];
+  // (a row with no budget is for information: it never fails the build)
+  const info = !(key in BUDGETS);
+  const over = !info && kb > BUDGETS[key];
   failed ||= over;
-  console.log(`${over ? 'OVER' : 'ok  '} ${key.padEnd(10)} ${kb.toFixed(1).padStart(7)} KB of ${String(BUDGETS[key]).padStart(4)} KB${key.startsWith('tex') || key.startsWith('mocap') ? '   ' : ' gz'}  ${what}`);
+  const of = info ? '        ' : ` of ${String(BUDGETS[key]).padStart(4)}`;
+  console.log(`${over ? 'OVER' : info ? 'info' : 'ok  '} ${key.padEnd(10)} ${kb.toFixed(1).padStart(7)} KB${of} KB${key.startsWith('tex') || key.startsWith('mocap') ? '   ' : ' gz'}  ${what}`);
 }
 if (failed) {
   console.error('A budget is blown (scripts/budget.mjs): make the start lighter, or load the new part when it is used.');

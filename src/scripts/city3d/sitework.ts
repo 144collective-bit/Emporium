@@ -20,6 +20,7 @@
  * again). The worker closes once every site is built.
  */
 import * as THREE from 'three';
+import { FROM_BUILD } from './baked';
 import { initFarCars } from './cars';
 import { siteMatOf } from './kit';
 import { takeSites } from './tilework';
@@ -184,7 +185,8 @@ export interface SiteWorker {
  */
 export function startSiteWorker(chunk: string, init: SiteInit): SiteWorker | null {
   if (typeof Worker === 'undefined') return null;
-  const src = `self.onmessage = (e) => { self.onmessage = null; import(e.data.chunk).then(() => self.serveCitySites(self, e.data.init)).catch((err) => postMessage({ failed: String(err) })); };`;
+  // (the build's baked data goes with the chunk's address, so the worker's copy of baked.ts waits on no fetch of its own)
+  const src = `self.onmessage = (e) => { self.onmessage = null; self.__cityBakedP = Promise.resolve(e.data.baked); import(e.data.chunk).then(() => self.serveCitySites(self, e.data.init)).catch((err) => postMessage({ failed: String(err) })); };`;
   let w: Worker;
   try {
     w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' });
@@ -215,7 +217,7 @@ export function startSiteWorker(chunk: string, init: SiteInit): SiteWorker | nul
     else done.push(d);
   };
   w.onerror = () => close();
-  w.postMessage({ chunk, init });
+  w.postMessage({ chunk, init, baked: FROM_BUILD });
   return {
     ready: () => !!ids,
     can: (id) => !!ids?.has(id),
