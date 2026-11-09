@@ -4,9 +4,9 @@
  * their own, out of tycoon.ts, so they load with the fight and the trainer's menu, not in the city's boot. The save
  * itself (its `fight`, the counters, the ledger, XP) is tycoon.ts's.
  */
-import { FIGHT_BOTS, SPAR_HIT_CAP, STYLE_CATALOG, XP, type BotLevel } from './catalog';
+import { FIGHT_BOTS, PRIZE_CAP, SPAR_HIT_CAP, STYLE_CATALOG, XP, type BotLevel } from './catalog';
 import { PARTNER_IDS, type PartnerId, type StyleId } from './fight-moves';
-import { addXp, book, count, pay, type BuyResult, type TycoonSave } from './tycoon';
+import { addXp, book, cappedPrize, count, pay, prizesToday, type BuyResult, type TycoonSave } from './tycoon';
 
 /** What a fight paid (the bout card shows it) */
 export interface FightResult {
@@ -14,20 +14,27 @@ export interface FightResult {
   xp: number;
   levels: number;
   won: boolean | null;
+  /** The purse paid at the daily cap's share (past the day's first PRIZE_CAP.bouts purses) */
+  capped: boolean;
 }
 /**
  * A fight is over (fight.ts): a spar (XP for taking part and a little per hit, capped) or a bout
  * (a purse by opponent for a win, XP either way), knock-outs and chains counted, the record kept.
  * A quit bout is a loss; a quit spar still counts its hits.
  */
-/** `prizes` false (the owner's live `prizes` switch closed): the bout counts and pays its XP, but no purse */
-export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'; bot: BotLevel; partner?: PartnerId; won: boolean | null; hits: number; kos: number; bestChain: number; seconds: number; quit?: boolean; prizes?: boolean }): FightResult {
+/**
+ * `prizes` false (the owner's live `prizes` switch closed): the bout counts and pays its XP, but no purse.
+ * A won bout counts towards the day's prize cap: past the first PRIZE_CAP.bouts purses of the day (`now`, the
+ * visitor's clock; the save's own time when not given) a win pays PRIZE_CAP.share of its purse (`capped`).
+ */
+export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'; bot: BotLevel; partner?: PartnerId; won: boolean | null; hits: number; kos: number; bestChain: number; seconds: number; quit?: boolean; prizes?: boolean; now?: number }): FightResult {
   const bot = FIGHT_BOTS[r.bot] ?? FIGHT_BOTS.easy;
   const hits = Math.max(0, Math.round(r.hits));
   const kos = Math.max(0, Math.round(r.kos));
   const chain = Math.max(0, Math.round(r.bestChain));
   let xp = 0;
   let prize = 0;
+  let capped = false;
   const F = s.fight;
   if (r.kind === 'spar') {
     F.spars++;
@@ -54,7 +61,10 @@ export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'
       F.wins++;
       count(s, 'fightWins', 1);
       xp += XP.boutWin;
-      prize = r.prizes === false ? 0 : bot.prize;
+      const today = prizesToday(s, r.now ?? s.at);
+      prize = r.prizes === false ? 0 : cappedPrize(bot.prize, today.bouts, PRIZE_CAP.bouts);
+      capped = r.prizes !== false && bot.prize > 0 && today.bouts >= PRIZE_CAP.bouts;
+      today.bouts += 1;
       const b = F.bots[r.bot] ?? { beaten: 0, bestSeconds: null };
       b.beaten++;
       const secs = Math.round(r.seconds * 100) / 100;
@@ -81,7 +91,7 @@ export function finishFight(s: TycoonSave, r: { kind: 'spar' | 'bout' | 'street'
     count(s, 'earned', prize);
   }
   const levels = addXp(s, xp);
-  return { prize, xp, levels, won: r.kind === 'spar' ? null : !!r.won };
+  return { prize, xp, levels, won: r.kind === 'spar' ? null : !!r.won, capped };
 }
 
 

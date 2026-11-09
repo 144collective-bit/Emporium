@@ -50,7 +50,7 @@ import { ITEM_NAMES } from './kartitems';
 import { CIRCUIT, CONDS, COURSES, COURSE_IDS, type Cond, type CourseId } from './kartcircuit';
 import { F } from './kartpark';
 import { DECAL_NAMES, KART_DECALS, KART_SPECS, LOOK_COLOURS, PLAYER_KARTS, type KartId, type KartLook } from './mykart';
-import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MODS, KART_MOD_IDS, MOD_LEVELS, SERIES_PRIZES, type ClassId, type KartModId } from './catalog';
+import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MODS, KART_MOD_IDS, MOD_LEVELS, PRIZE_CAP, SERIES_PRIZES, type ClassId, type KartModId } from './catalog';
 import {
   buyKart,
   dailyChallenge,
@@ -941,6 +941,8 @@ ${countersHtml(s)}
       trial && res.record ? '<span class="race-tag is-best">New best run</span>' : '',
       res.parBeaten ? '<span class="race-tag is-par">Par ghost beaten</span>' : '',
       res.challenge ? `<span class="race-tag is-par">Daily challenge done · +${D(CHALLENGE_PRIZE)}</span>` : '',
+      // (the daily prize cap, docs/polish-plan.md Phase 9: one short line)
+      res.capped ? `<span class="race-tag is-over">Daily prize cap · ${Math.round(PRIZE_CAP.share * 100)}%</span>` : '',
     ].join('');
     // Your laps, the best lit, and the par ghost's lap beside them
     const bestLap = r.laps.length ? Math.min(...r.laps) : 0;

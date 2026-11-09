@@ -50,7 +50,7 @@ test('a new save carries the rifle in weapon slot 1 and nothing else', () => {
 
 test('a v10 save carries on into v11 with the rifle and the first gun it bought, catalog order', () => {
   const old = cleanSave({ v: 10, dorras: 5, armoury: { owned: ['lmg', 'revolver'] } }, NOW);
-  assert.equal(old.v, 12);
+  assert.equal(old.v, 13);
   assert.deepEqual(old.inventory.guns, ['rifle', 'revolver']);
   assert.equal(old.inventory.held, null);
   // Nothing bought: the rifle alone

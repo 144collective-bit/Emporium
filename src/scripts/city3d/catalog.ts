@@ -59,12 +59,17 @@ export function titleFor(level: number) {
   for (const k of TITLES) if (level >= k.level) t = k;
   return t.name;
 }
-/** XP for the things you do */
+/** XP for the things you do (the business side raised in the polish plan's Phase 9: a sale 1 → 3, a contract 40 → 80, couriers and jobs 20) */
 export const XP = {
   /** Per item sold at your stall and shops */
-  sale: 1,
+  sale: 3,
+  /** A shelf sold out (its run of at least SOLD_OUT.min items; the Dorras are SOLD_OUT.share of the run) */
+  soldOut: 15,
   /** Per contract delivered */
-  contract: 40,
+  contract: 80,
+  /** Per courier sent, and per Workshop or factory job finished */
+  ship: 20,
+  job: 20,
   /** Per unit or lot bought, and per building built */
   property: 60,
   /** Per upgrade bought (a mod, a building level) */
@@ -92,6 +97,19 @@ export const XP = {
   /** A street spar won (beating a sparring partner) */
   streetWin: 80,
 } as const;
+
+/**
+ * A shelf that sells out (the polish plan's Phase 9): once it has sold `min` items since it was last empty, the
+ * last one pays `share` of the run's takings as a bonus (straight to your balance, the ledger's "Sold out") and
+ * XP.soldOut. Smaller runs pay nothing, so stocking a shelf one item at a time earns no more than selling them.
+ */
+export const SOLD_OUT = { min: 10, share: 0.1 } as const;
+/**
+ * The daily soft cap on prize money (the polish plan's Phase 9, the owner's call): the first `races` cup races
+ * (a cup's and single races, by place) and the first `bouts` purses won each day pay in full, then `share` of the
+ * prize. A series' prize and the daily challenge aren't capped. The day is the visitor's (tycoon.ts `dayKey()`).
+ */
+export const PRIZE_CAP = { races: 6, bouts: 4, share: 0.35 } as const;
 
 /* ---------- The Fight Club's opponents (docs/fight-plan.md) ---------- */
 

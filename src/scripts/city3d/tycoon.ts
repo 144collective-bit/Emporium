@@ -33,6 +33,11 @@
  *   rules in inventory.ts.
  * - Build mode retired (save v12, the owner's call): the district plots
  *   left the game; a save that owned any gets back all it paid for them.
+ * - Balance (save v13, docs/polish-plan.md Phase 9, the owner's call): a
+ *   daily soft cap on prize money (`prizes` on the save: the first few cup
+ *   races and purses a day pay in full, then a share, catalog.ts
+ *   PRIZE_CAP), the business side raised (XP a sale, a contract, couriers
+ *   and jobs) and a bonus when a shelf sells out (SOLD_OUT).
  */
 import { DOORS, GARAGE_SITE, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { WeaponId } from './combat-sim';
@@ -54,6 +59,8 @@ import {
   GUN_MOD_IDS,
   CHALLENGE_PRIZE,
   CLASS_IDS,
+  PRIZE_CAP,
+  SOLD_OUT,
   KART_CATALOG,
   KART_CLASSES,
   KART_MOD_IDS,
@@ -238,6 +245,8 @@ export interface Slot {
   price: PriceLevel;
   /** Part-sold customers, carried to the next tick */
   carry: number;
+  /** Items sold since the shelf was last empty (the sold-out bonus pays on a run of SOLD_OUT.min or more) */
+  run: number;
 }
 export interface Unit {
   /** null: bought, nothing built yet */
@@ -272,6 +281,7 @@ export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1'
 export const ENTRIES = {
   sales: { name: 'Sales', in: true },
   bonus: { name: 'Delivery bonuses', in: true },
+  soldOut: { name: 'Sold out', in: true },
   contracts: { name: 'Contracts', in: true },
   soldBack: { name: 'Sold to the market', in: true },
   borrowed: { name: 'Loans', in: true },
@@ -425,7 +435,7 @@ export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {}, splits: {}, look: { ...DEFAULT_LOOK } });
 
 export interface TycoonSave {
-  v: 12;
+  v: 13;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -473,13 +483,21 @@ export interface TycoonSave {
   visited: string[];
   /** What Degen carries (inventory.ts, save v11): his loadout of two guns, the thing in his hand, his consumables */
   inventory: Inventory;
+  /** The daily prize cap (save v13, catalog.ts PRIZE_CAP): the day (`dayKey()`), and the cup races and purses paid on it */
+  prizes: Prizes;
 }
+export interface Prizes {
+  day: string;
+  races: number;
+  bouts: number;
+}
+export const emptyPrizes = (): Prizes => ({ day: '', races: 0, bouts: 0 });
 /** How many steps Getting started has (guide.ts's GUIDE) */
 export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 12,
+    v: 13,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -509,6 +527,7 @@ export function newSave(now: number): TycoonSave {
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
+    prizes: emptyPrizes(),
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -531,6 +550,7 @@ function cleanSlots(raw: unknown, max: number, capacity: number): Slot[] {
       qty: Math.floor(num(r.qty, 0, capacity, 0)),
       price: PRICE_LEVEL_IDS.find((p) => p === r.price) ?? 'fair',
       carry: num(r.carry, 0, 0.999, 0),
+      run: Math.floor(num(r.run, 0, 1e9, 0)),
     });
   }
   return slots;
@@ -580,7 +600,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 12,
+    v: 13,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -614,6 +634,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
+    prizes: emptyPrizes(),
   };
   cleanGame(s, o, now);
   // (v11: a save from before the inventory carries the rifle and the first gun it bought)
@@ -781,7 +802,7 @@ function put(s: TycoonSave, p: PlaceId, id: GoodId, n: number) {
   if (sh) {
     let slot = sh.slots.find((x) => x.good === id);
     if (!slot) {
-      slot = { good: id as ProductId, qty: 0, price: 'fair', carry: 0 };
+      slot = { good: id as ProductId, qty: 0, price: 'fair', carry: 0, run: 0 };
       sh.slots.push(slot);
     }
     slot.qty += n;
@@ -1002,6 +1023,9 @@ export interface Sales {
   /** Grown in gardens, made at the Workshop */
   grown: Partial<Record<GoodId, number>>;
   made: Partial<Record<GoodId, number>>;
+  /** Shelves that sold out (their goods) and what their bonuses paid, straight to your balance */
+  soldOut: GoodId[];
+  bonus: number;
   /** Paid to staff; staff who left because they couldn't be paid */
   wages: number;
   quit: PlaceId[];
@@ -1019,7 +1043,7 @@ const add = (m: Partial<Record<GoodId, number>>, id: GoodId, n: number) => (m[id
  * `serving`: the place you're standing at (true: the stall).
  */
 export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean = false): Sales {
-  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, wages: 0, quit: [], repaid: 0, arrived: [], expired: [] };
+  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, soldOut: [], bonus: 0, wages: 0, quit: [], repaid: 0, arrived: [], expired: [] };
   const gap = (now - s.at) / 60000;
   s.at = Math.max(s.at, now);
   if (!(gap > 0)) return out;
@@ -1069,6 +1093,22 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
       count(s, 'sold', n);
       count(s, 'earned', pay - cut - repay);
       addXp(s, n * XP.sale);
+      // The shelf sold out: a run long enough pays its bonus (straight to your balance) and XP
+      slot.run += n;
+      if (slot.qty <= 0) {
+        if (slot.run >= SOLD_OUT.min) {
+          const bonus = Math.floor(slot.run * retailPrice(slot.good, slot.price, now) * SOLD_OUT.share);
+          if (bonus > 0) {
+            s.dorras += bonus;
+            book(s, 'soldOut', bonus);
+            count(s, 'earned', bonus);
+            out.bonus += bonus;
+          }
+          out.soldOut.push(slot.good);
+          addXp(s, XP.soldOut);
+        }
+        slot.run = 0;
+      }
     }
   }
   // Gardens grow until their bins are full (as fast while you're away; bigger bins and faster growth at higher levels)
@@ -1102,7 +1142,10 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     }
     j.left -= n;
     j.t = j.left > 0 ? t - n * each : 0;
-    if (j.left <= 0) ln.set(null);
+    if (j.left <= 0) {
+      ln.set(null);
+      addXp(s, XP.job);
+    }
   }
   return out;
 }
@@ -1200,6 +1243,7 @@ export function ship(s: TycoonSave, from: PlaceId, to: PlaceId, id: GoodId, qty:
   book(s, 'couriers', fee);
   take(s, from, id, n);
   s.shipments.push({ from, to, good: id, qty: n, arrives: now + shipMinutes(from, to) * 60000 });
+  addXp(s, XP.ship);
   return { ok: true, qty: n, dorras: fee };
 }
 
@@ -1603,6 +1647,8 @@ export interface KartResult {
   parBeaten: boolean;
   /** The daily challenge met (today, for the first time) */
   challenge: boolean;
+  /** The prize paid at the daily cap's share (past the day's first PRIZE_CAP.races cup races) */
+  capped: boolean;
   /** Levels gained */
   levels: number;
 }
@@ -1621,11 +1667,26 @@ export const dayKey = (now: number) => {
   const d = new Date(now);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+/** The day's prize count, brought to today (a new day starts at zero) */
+export function prizesToday(s: TycoonSave, now: number): Prizes {
+  const day = dayKey(now);
+  if (s.prizes.day !== day) s.prizes = { day, races: 0, bouts: 0 };
+  return s.prizes;
+}
+/** What a prize pays as the day's n-th (from 0) of its kind: in full under the cap, PRIZE_CAP.share past it */
+export const cappedPrize = (prize: number, n: number, cap: number) => (n < cap ? prize : Math.floor(prize * PRIZE_CAP.share));
+/** How many of today's cup races and purses still pay in full */
+export const prizesLeft = (s: TycoonSave, now: number) => {
+  const p = s.prizes.day === dayKey(now) ? s.prizes : emptyPrizes();
+  return { races: Math.max(0, PRIZE_CAP.races - p.races), bouts: Math.max(0, PRIZE_CAP.bouts - p.bouts) };
+};
 /**
  * A finished kart race or time trial: pay the place (a cup's prizes), count it, keep the fastest lap
  * per course and class (any race) and a time trial's run on the board; `clean` (laps without a
  * wheel in the run-off) and `overtakes` are counted for missions and badges. `laps` are the lap times.
  * `prizes` false (the owner's live `prizes` switch closed): the race counts and pays its XP, but no Dorras.
+ * A cup race (a cup's or a single one) counts towards the day's prize cap: past the first PRIZE_CAP.races of the
+ * day the place pays PRIZE_CAP.share of its prize (`capped`); the daily challenge pays in full whatever the day.
  */
 export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; cls: ClassId; place: number; seconds: number; laps?: number[]; clean?: number; overtakes?: number; now?: number; items?: boolean; prizes?: boolean }): KartResult {
   const seconds = Math.round(r.seconds * 100) / 100;
@@ -1634,8 +1695,16 @@ export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; 
   const cls: ClassId = KART_CLASSES[r.cls] ? r.cls : 'sport';
   const place = Math.max(1, Math.min(8, Math.round(r.place)));
   const paying = r.prizes !== false;
-  const prize = c && paying ? (c.prizes[place - 1] ?? 0) : 0;
   const now = r.now ?? s.at;
+  const full = c ? (c.prizes[place - 1] ?? 0) : 0;
+  let capped = false;
+  let prize = 0;
+  if (c) {
+    const today = prizesToday(s, now);
+    prize = paying ? cappedPrize(full, today.races, PRIZE_CAP.races) : 0;
+    capped = paying && full > 0 && today.races >= PRIZE_CAP.races;
+    today.races += 1;
+  }
   // (an items race, docs/kart-west-plan.md Phase 7, keeps no lap records, par or challenge: they stay pure racing)
   const lapsIn = r.items ? [] : (r.laps ?? []).filter((t) => Number.isFinite(t) && t > 0);
   const bestLap = lapsIn.length ? Math.round(Math.min(...lapsIn) * 100) / 100 : 0;
@@ -1692,7 +1761,7 @@ export function finishKartRace(s: TycoonSave, r: { course: string; cup: string; 
     (parBeaten ? XP.parBeaten : 0) +
     (challenge ? XP.challenge : 0);
   const levels = addXp(s, xp);
-  return { place, prize, xp, seconds, bestLap, lapRecord, record, parBeaten, challenge, levels };
+  return { place, prize, xp, seconds, bestLap, lapRecord, record, parBeaten, challenge, capped, levels };
 }
 
 /* ---------- Cups as series: four races, points by place ---------- */
@@ -1974,6 +2043,9 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   const gd = obj(o.guide);
   s.guide = 'guide' in o ? { step: Math.round(num(gd.step, 0, GUIDE_STEPS, 0)), hidden: gd.hidden === true } : { step: level(s) > 1 ? GUIDE_STEPS : 0, hidden: false };
   s.backup = num(o.backup, 0, now, 0);
+  // (the daily prize cap, v13: today's count kept, any other day's starts over; a save from before it starts at zero)
+  const pz = obj(o.prizes);
+  if (typeof pz.day === 'string' && pz.day === dayKey(now)) s.prizes = { day: pz.day, races: Math.round(num(pz.races, 0, 1e6, 0)), bouts: Math.round(num(pz.bouts, 0, 1e6, 0)) };
   // Getting about (growth plan Phase 8): the places you've walked to, only ones that are on the map
   s.visited = [...new Set((Array.isArray(o.visited) ? o.visited : []).filter((id): id is string => typeof id === 'string' && MAP_PLACES.includes(id)))];
 }

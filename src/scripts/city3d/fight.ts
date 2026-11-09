@@ -338,7 +338,7 @@ export function createFight(d: FightDeps): Fight {
     const save = d.game.save();
     // (the owner's live `prizes` switch: closed, a bout counts and pays its XP but no purse)
     const shut = live.closed('prizes');
-    const result = finishFight(save, { kind, bot, partner: partnerId ?? undefined, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit, prizes: !shut });
+    const result = finishFight(save, { kind, bot, partner: partnerId ?? undefined, won, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit, prizes: !shut, now: Date.now() });
     d.game.commit();
     if (shut && kind === 'bout' && won) d.game.toast(shut);
     if (result.levels > 0) d.sfx('levelup');
@@ -609,7 +609,7 @@ export function createFight(d: FightDeps): Fight {
       if (sim && !done) {
         const a = youF()!;
         const save = d.game.save();
-        finishFight(save, { kind, bot, partner: partnerId ?? undefined, won: kind === 'spar' ? null : false, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit: true });
+        finishFight(save, { kind, bot, partner: partnerId ?? undefined, won: kind === 'spar' ? null : false, hits: a.hits, kos: a.kos, bestChain: a.bestChain, seconds: elapsed, quit: true, now: Date.now() });
         d.game.commit();
       }
       const P = kind === 'street' && partnerId ? partner(partnerId) : null;

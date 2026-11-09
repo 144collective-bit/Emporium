@@ -44,7 +44,7 @@
  * the one picked, Esc / B / F closes (walk.ts calls close()). Prizes are
  * Dorras and XP only: never real money, nothing to do with the token.
  */
-import { BOT_LEVELS, FIGHT_BOTS, SPAR_HIT_CAP, STYLE_CATALOG, XP, type BotLevel } from './catalog';
+import { BOT_LEVELS, FIGHT_BOTS, PRIZE_CAP, SPAR_HIT_CAP, STYLE_CATALOG, XP, type BotLevel } from './catalog';
 import { PARTNERS } from './brawlsite';
 import { MOVES, STYLES, type StyleId } from './fight-moves';
 import { level, type TycoonSave } from './tycoon';
@@ -510,6 +510,8 @@ ${partnersHtml(f)}
       r.kos > 0 ? '<span class="race-tag is-best">Knock-out</span>' : '',
       r.quit && r.kind !== 'spar' ? '<span class="race-tag is-over">Quit · counts as a loss</span>' : r.quit ? '<span class="race-tag is-over">Quit</span>' : '',
       r.bestChain >= 3 ? `<span class="race-tag">${r.bestChain} hit chain</span>` : '',
+      // (the daily prize cap, docs/polish-plan.md Phase 9: one short line)
+      res.capped ? `<span class="race-tag is-over">Daily prize cap · ${Math.round(PRIZE_CAP.share * 100)}%</span>` : '',
     ].join('');
     const paid =
       res.prize > 0 || res.xp > 0

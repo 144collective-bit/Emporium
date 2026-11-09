@@ -1232,6 +1232,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left unpaid`);
     else if (sales.expired.length) toast(`Contract ran out · ${sales.expired[0].qty} ${good(sales.expired[0].good).name} for ${DESTS[sales.expired[0].to]}`);
     else if (sales.arrived.length) toast(`Courier delivered · ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}`, 4000);
+    // (the sold-out bonus, docs/polish-plan.md Phase 9: paid straight to your balance)
+    else if (sales.bonus > 0) toast(`${good(sales.soldOut[0]).name} sold out · +${fmt.format(sales.bonus)} Dorras`, 4000);
     changed();
   }
   tick();

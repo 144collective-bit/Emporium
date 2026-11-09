@@ -3708,12 +3708,31 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v12:
-  Build mode retired, the district plots a save owned refunded in full,
-  `plotRefund()`, with a toast once; v11 brought the inventory, `inventory`;
-  v10 The Trenches' corner shops, `corners`);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v13:
+  the daily prize cap's count, `prizes`, below; v12 Build mode retired, the
+  district plots a save owned refunded in full, `plotRefund()`, with a
+  toast once; v11 brought the inventory, `inventory`; v10 The Trenches'
+  corner shops, `corners`);
   keep that migration when the save changes. New economy rules go here
   first.
+- **Balance** (the polish plan's Phase 9, the owner's call; the numbers
+  before and after are in `docs/tycoon-plan.md`, "Balance"): **the daily
+  prize cap** (`PRIZE_CAP` in catalog.ts: the day's first 6 cup races (a
+  cup's and single races) and first 4 purses won pay in full, then 35%;
+  the save's `prizes` { day (`dayKey()`), races, bouts }, brought to today
+  by `prizesToday()`, `cappedPrize()`, `prizesLeft()`; older saves start at
+  zero; `KartResult.capped` / `FightResult.capped` put "Daily prize cap ·
+  35%" on the result cards (kart-ui.ts, fight-ui.ts); a series' prize, the
+  daily challenge, time trials and the XP are never capped; the owner's
+  live `prizes` switch still pays 0). **The business side raised**: XP a
+  sale 3 (was 1), a contract 80 (was 40), a courier sent and a Workshop
+  or factory job finished 20 each (`XP.ship`, `XP.job`, new), and **the
+  sold-out bonus** (`SOLD_OUT`: a shelf whose run since it was last empty,
+  `Slot.run`, is 10 or more pays a tenth of the run's takings straight to
+  your balance when its last item sells, the ledger's `soldOut` ("Sold
+  out"), and `XP.soldOut` 15; shorter runs pay nothing, so stocking one
+  at a time earns no more than its sales; `Sales.soldOut` / `bonus` tell
+  the screens). Existing saves keep their Dorras.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
   (`xp`, `level()`, `addXp()`), owned cars, guns and clothes with their mods
   (`buyCar()` / `modCar()` / `carStatsOf()`, `buyGun()` / `modGun()`,
@@ -4176,7 +4195,7 @@ it and has been retired completely. Build only on what's here.
   Degen's style, origin on the ground under the middle, +x forward, wheels
   that steer and roll, a seated Degen driver via `seat()`). Only for the
   kart park: never real money, never tied to the store or the token.
-- **The save** (`tycoon.ts`, v12): `karts` { model, paint, owned, mods,
+- **The save** (`tycoon.ts`, v13): `karts` { model, paint, owned, mods,
   `records` (fastest lap and best run per course and class, `KartTime`),
   `boards` (the local leaderboards, `LEADERBOARD_SIZE` runs per key: your
   own runs for now, built so a server can hold everyone's later),
@@ -4189,7 +4208,10 @@ it and has been retired completely. Build only on what's here.
   the scaled-down one (its boards and par ghosts beaten dropped, a series
   kept)) }
   with `buyKart()` / `modKart()` / `kartStatsOf()` / `pickKart()`,
-  `finishKartRace()` → `KartResult` (prizes by place, lap records in any
+  `finishKartRace()` → `KartResult` (prizes by place, under the daily
+  prize cap (`capped`, the economy's Balance bullet above: a cup's and
+  single races count, the day's first 6 pay in full, then 35%; a series'
+  prize and the challenge don't), lap records in any
   race, run records and boards in time trials, par beaten (`PAR_LAPS`,
   `parLap()`), the daily challenge (`dailyChallenge()`, `dayKey()`,
   `CHALLENGE_PRIZE`), counters `kartRaces` / `podiums` / `kartWins` /
@@ -4598,9 +4620,11 @@ it and has been retired completely. Build only on what's here.
   camera, Start quits), Esc or Quit ends it with the
   card, closing the card stands Degen up outside the ropes (`OUT`);
   `.city.is-fighting` hides the walk HUD and `data-fight` makes the header
-  read "Fighting · <opponent>". The save (`tycoon.ts`, v12) keeps `fight`
+  read "Fighting · <opponent>". The save (`tycoon.ts`, v13) keeps `fight`
   (style, owned styles, wins, losses, knock-outs, best chain, bouts, spars,
-  each opponent's record, each sparring partner's), the ledger entries
+  each opponent's record, each sparring partner's), a win's purse under the
+  daily prize cap (`FightResult.capped`, the economy's Balance bullet: the
+  day's first 4 purses in full, then 35%; the bout card says so), the ledger entries
   `fighting` (in) and `fightclub` (styles, out) and the counters
   `bouts` / `fightWins` / `kos` / `chains`. New gameplay goes in the sim
   first; looks in the clips and the view.

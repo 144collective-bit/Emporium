@@ -638,7 +638,40 @@ the typecheck and the budgets green; none moves anything that exists.
    prizes and purses, the business side raised (XP a sale, a contract's
    XP, a sold-out bonus), the `prizes` switch wired to it, the game
    tests re-pinned, the numbers written in docs/tycoon-plan.md. Two
-   days.
+   days. **Built** (2026-11-09): `PRIZE_CAP` in catalog.ts (the day's
+   first 6 cup races, a cup's and single ones, and the first 4 purses won
+   pay in full, then 35%; a series' prize, the daily challenge, time
+   trials and every XP uncapped; the owner's `prizes` switch still pays
+   0), the save's `prizes` { day, races, bouts } (v13, `prizesToday()`,
+   `cappedPrize()`, `prizesLeft()`; older saves start at zero and keep
+   their Dorras), `capped` on `KartResult` and `FightResult` and one line
+   on each result card ("Daily prize cap · 35%"); the business side: XP a
+   sale 3 (was 1), a contract 80 (was 40), a courier sent and a job
+   finished 20 each (new), and the sold-out bonus (`SOLD_OUT`: a shelf's
+   run of 10 or more since it was last empty pays a tenth of its takings
+   to your balance and 15 XP when the last one sells; the ledger's "Sold
+   out"). The numbers, before and after, computed from the constants as
+   the audit's were: **XP** at a rough business pace (150 items sold and
+   six contracts an hour, two couriers, two jobs, five shelves sold out):
+   about 390 XP an hour before, about 1,100 after, so level 5 (1,358 XP)
+   in about an hour and a quarter instead of three and a half, level 10
+   (5,612) in about five hours instead of fourteen; five won kart races
+   still reach level 5 in about twelve minutes (the cap is on Dorras
+   only). **Dorras an hour** from the repeatable prizes (the audit's pace,
+   about 23 races or 15 bouts an hour): Rookie single-race wins 35,000
+   before, about 18,000 the first hour and about 12,000 every hour after;
+   mid-pack 10,000 before, about 4,800 then 3,200; Rookie Ray's purse
+   22,500 before, about 11,800 then 7,900; Knuckles 45,000 before, about
+   23,600 then 15,800; the Mayor 90,000 before, about 47,000 then 31,500;
+   the Neon Cup's 300,000 (five cups) about 210,000 the first hour and
+   170,000 after, most of it the uncapped series prize (the owner's call;
+   a cap on it is the next lever if wanted). The stall's 3,300 an hour
+   gains about a tenth from the sold-out bonus. A first corner shop
+   (20,000) is now about an hour and ten minutes of Rookie wins (was
+   forty minutes) or about six hours of stall-keeping (was ten).
+   `tests/balance.test.ts` holds the cap, its day, the migration, the XP
+   and the bonus; the save-version pins in the game, tycoon, fight, kart
+   and inventory tests moved to 13. Shots wait for a build.
 10. **The world's bigger polish** (themes 4 and 10, as answered, and the
     rest of theme 11): a lamp post per district, the kerb blended at The
     Trenches' edge, then the scenery-to-life steps one at a time with
@@ -662,6 +695,10 @@ changed how a thing works.
   scheduled nowhere.
 - **Which bigger step after the Night Market's stalls** (Phase 10).
 - **More consumables and missions past level 12:** later, if wanted.
+- **The series prizes and the daily cap:** Phase 9 left a series' prize
+  uncapped (the owner's call), so the Neon Cup still pays about 170,000
+  an hour from the second hour; capping it (or the Neon Cup's class
+  prizes) is the next balance lever if the owner wants one.
 - **The sitting-down take:** which CMU take, and whether `zenodo.org`
   may be allowed for 100STYLE's walks.
 

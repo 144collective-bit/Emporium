@@ -328,3 +328,57 @@ and the Property mogul mission. The districts stay as open land
 back everything they cost and what was built on them when it loads
 (`plotRefund()`, booked as "Plots refunded"), with a toast once. The boot
 came down about 14 KB (647.6 of 670 KB; 649.0 with main's three new cars).
+
+## Balance (the polish plan's Phase 9, the owner's call; save v13)
+
+The audit (docs/polish-plan.md, theme 1) found the business half of the
+game irrelevant within an hour: kart races and bouts paid ten to thirty
+times the stall and had no cooldown, and sales XP made levels a slog. The
+owner picked both fixes: a daily soft cap on the repeatable prizes and the
+business side raised. Existing saves keep their Dorras.
+
+- **The daily prize cap** (`PRIZE_CAP` in catalog.ts): the day's first 6
+  cup races (a cup's races and single races, paid by place) and the first
+  4 purses won at the Fight Club pay in full; the rest of the day they pay
+  35%. A series' prize, the daily challenge, time trials and every XP are
+  not capped, and the owner's live `prizes` switch still pays 0. The save
+  keeps `prizes` { day (`dayKey()`, the visitor's clock), races, bouts }
+  (v13; `prizesToday()` brings it to today, `cappedPrize()` pays,
+  `prizesLeft()` counts down; `cleanSave()` keeps today's count, zeroes
+  any other day's, and a save from before starts at zero).
+  `KartResult.capped` and `FightResult.capped` put one line on the result
+  cards: "Daily prize cap · 35%".
+- **The business side raised:** XP a sale 3 (was 1), a contract 80 (was
+  40), a courier sent 20 and a Workshop or factory job finished 20 (both
+  new: `XP.ship`, `XP.job`). **The sold-out bonus** (`SOLD_OUT`): each
+  shelf counts its run since it was last empty (`Slot.run`); when the last
+  item of a run of 10 or more sells, a tenth of the run's takings goes
+  straight to your balance (the ledger's "Sold out", `soldOut`) with 15
+  XP (`XP.soldOut`). Shorter runs pay nothing, so stocking a shelf one
+  item at a time earns no more than selling them. `Sales.soldOut` and
+  `Sales.bonus` tell the screens what happened.
+
+The numbers, computed from the constants as the audit's were (the XP
+curve is unchanged: level 5 at 1,358, level 10 at 5,612, level 20 at
+20,749):
+
+| | Before | After |
+|---|---|---|
+| XP an hour, a business pace (150 items sold, 6 contracts, 2 couriers, 2 jobs, 5 shelves sold out) | about 390 | about 1,100 |
+| Time to level 5 that way | about 3.5 h | about 1.25 h |
+| Time to level 10 that way | about 14 h | about 5 h |
+| Time to level 5 winning kart races | about 12 min | about 12 min (XP uncapped) |
+| Rookie single-race wins (about 23 an hour) | 35,000 an hour | about 18,000 the first hour, 12,000 after |
+| Rookie mid-pack (4th) | 10,000 an hour | about 4,800, then 3,200 |
+| Rookie Ray's purse (about 15 wins an hour) | 22,500 an hour | about 11,800, then 7,900 |
+| Knuckles | 45,000 an hour | about 23,600, then 15,800 |
+| The Mayor (level 3) | 90,000 an hour | about 47,000, then 31,500 |
+| Neon Cup (level 9, five cups an hour) | about 300,000 an hour | about 210,000, then 170,000 (the series prize uncapped) |
+| The stall, standing at it | about 3,300 an hour | about 3,600 (the sold-out tenth) |
+| A first corner shop (20,000) | 40 min of karting, 10 h of the stall | about 1 h 10 min of karting, 6 h of the stall |
+
+The business loop still earns less than the ring or the kart park, by
+design: it's the game's teaching spine and its XP now carries a player to
+level 5 in a sitting. If the owner wants a further lever, the series
+prizes (the Neon Cup's 20,000) are the biggest uncapped sum left.
+Tested in `tests/balance.test.ts`.

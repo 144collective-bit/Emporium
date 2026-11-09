@@ -102,7 +102,7 @@ test('the catalog: starters are free and level 1, everything else costs Dorras a
 
 test('a fresh save starts at level 1 with the starters and nothing bought', () => {
   const s = fresh();
-  assert.equal(s.v, 12);
+  assert.equal(s.v, 13);
   assert.equal(level(s), 1);
   for (const id of STARTER_CARS) assert.ok(ownsCar(s, id));
   assert.ok(!ownsCar(s, 'super'));
@@ -185,7 +185,7 @@ test('Build mode retired (save v12): a save with district plots gets back what t
   const old = { ...cleanSave(null, T0), v: 11, dorras: 500, plots: { N3: { design: { type: 'tower' }, paid: 156_000 }, S1: { design: null, paid: 150_000 }, ZZ: { paid: 9 } } };
   assert.equal(plotRefund(old), 306_000, 'only real plot ids');
   const s = cleanSave(JSON.parse(JSON.stringify(old)), T0);
-  assert.equal(s.v, 12);
+  assert.equal(s.v, 13);
   assert.equal(s.dorras, 500 + 306_000);
   assert.ok(!('plots' in s));
   assert.equal(s.ledger.totals.soldLand, 306_000);
@@ -225,7 +225,7 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
   delete old.xp;
   delete old.garage;
   const s = cleanSave(old, T0);
-  assert.equal(s.v, 12);
+  assert.equal(s.v, 13);
   assert.equal(s.xp, 0);
   assert.deepEqual(s.garage, { owned: [], mods: {} });
   const dirty = cleanSave(
