@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ENDS_CAMERA, ENDS_FLOORS, ENDS_LIFTS, endsDeckWall, endsDeckY, endsLiftDoors, endsLiftRide, floorY, upOnEnds } from '../src/scripts/city3d/endsdecks';
-import { BLOCKS, BLOCK_SOLIDS, DECK, OPENING, STAIR, STAIRS, TALLEST, WALK_H, deckRect, finSpans, stairSolids, topOf } from '../src/scripts/city3d/endsblocks';
+import { BLOCKS, BLOCK_SOLIDS, DECK, OPENING, SHAFT, STAIR, STAIRS, TALLEST, WALK_H, deckRect, finSpans, stairSolids, topOf } from '../src/scripts/city3d/endsblocks';
 import { ENDS_BLOCKS, ENDS_LAMPS, SLAB_Y } from '../src/scripts/city3d/endswood';
 import { ENDS_TREES } from '../src/scripts/city3d/endsstreet';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -79,7 +79,8 @@ test('the ground under them stays the ground: not from it, not jumping, not unde
 });
 
 test("the lifts: a door at every stop, where they let you out on its floor, every ride there and back", () => {
-  assert.equal(ENDS_LIFTS.length, 4 + 1);
+  // (Fennel House's two, in its stair towers since the polish round, and Harrier Point's)
+  assert.equal(ENDS_LIFTS.length, 2 + 1);
   for (const l of ENDS_LIFTS) {
     assert.ok(l.stops.length >= 4, l.id);
     l.stops.forEach((s, si) => {
@@ -126,7 +127,8 @@ test("the lifts: a door at every stop, where they let you out on its floor, ever
 const laneU = (STAIR.half + STAIR.spine) / 2;
 /** Up a tower from the street: the porch, each flight out and back with the half landing between, onto each gallery */
 function climb(g: (typeof STAIRS)[number]) {
-  const { near, run, far } = STAIR;
+  const { run, far } = STAIR;
+  const near = g.near;
   const pts: { u: number; v: number }[] = [];
   const line = (u0: number, v0: number, u1: number, v1: number) => {
     const n = Math.ceil(Math.hypot(u1 - u0, v1 - v0) / 0.05);
@@ -169,7 +171,7 @@ test('a stair tower up to every block with galleries: from the street to the top
     const [gx, gz] = g.at(0, -0.6);
     for (const l of g.levels.slice(1)) assert.equal(endsDeckY(gx, gz, l), l);
     // Its walls stop him: past the lanes' outer sides, through the wall between the flights
-    const mid = STAIR.near + STAIR.run / 2;
+    const mid = g.near + STAIR.run / 2;
     const yA = (g.levels[1] + (g.levels[2] ?? g.levels[1])) / 2;
     for (const [u, v] of [
       [-STAIR.half + 0.05, mid],
@@ -195,7 +197,7 @@ test('room over his head on every stair (over the porch, the flights and the lan
   }
   // (and nobody walks in under the first flight back from the street)
   for (const g of STAIRS) {
-    const [x, z] = g.at(laneU, STAIR.near + STAIR.run / 2);
+    const [x, z] = g.at(laneU, g.near + STAIR.run / 2);
     assert.ok(SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]), `${g.tower.block}: under its stair`);
     assert.equal(endsDeckY(x, z, SLAB_Y), null);
   }
@@ -204,7 +206,7 @@ test('room over his head on every stair (over the porch, the flights and the lan
 test('the towers stand on their blocks, clear of the streets, everything solid, the lamps, the trees and the cross walls, under the Emporium', () => {
   const own = new Set(STAIRS.flatMap(stairSolids));
   for (const g of STAIRS) {
-    const r = g.rect(-STAIR.half - STAIR.wall, 0, STAIR.half + STAIR.wall, STAIR.near + STAIR.run + STAIR.far + STAIR.wall);
+    const r = g.rect(-STAIR.half - STAIR.wall, 0, STAIR.half + STAIR.wall + (g.tower.lift ? SHAFT : 0), g.depth);
     assert.ok(g.top < TALLEST);
     const corners: [number, number][] = [
       [r[0], r[1]],

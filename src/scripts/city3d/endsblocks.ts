@@ -4,8 +4,10 @@
  * blocks in board-marked concrete, every name made up, every top under the Emporium (`TALLEST`).
  *
  * - **Fennel House**, the barrier block along the highway: a long deck-access slab in two halves either side of the
- *   spine, small windows on the highway's side, its galleries facing into the estate, stair and lift cores on its
- *   north face, a bridge over the spine between the halves (a street in the sky).
+ *   spine, small windows on the highway's side, its galleries facing into the estate, escape stairs on its north
+ *   face, a bridge over the spine between the halves (a street in the sky); its lifts in its stair towers.
+ * - **Stair towers** (the polish round, `STAIRS`): a concrete dog-leg stair standing off every block's galleries,
+ *   walked from the street up (endsdecks.ts), Fennel House's with a lift beside it.
  * - **Harrier Point**, the point tower, its lift and stair tower standing apart, bridges across every third floor.
  * - **Linnet, Sorrel, Teasel and Wren Courts**, maisonettes: a gallery every second floor, garages under some.
  * - **Marten House**, a smaller slab east of the avenue; **Hawthorn Terrace**, stepping down towards the common, each
@@ -265,15 +267,20 @@ export interface StairTower {
   /** Its middle along the edge it stands on (world x for a north or south one, z for an east or west one); off a
    * gallery's end, in line with its middle */
   at?: number;
+  /** A lift in a shaft beside it (on its +u side), its doors on the landing where it meets each gallery: the near
+   * landing deeper (`LIFT_NEAR`) for an up door and a down door side by side */
+  lift?: true;
 }
 /** Its measurements: half its inside width, its walls, half the wall between the flights, the near landing (where it
  * meets the gallery), the flights' run, the half landing, the porch's height at the foot (under the first landing) */
 export const STAIR = { half: 1, wall: 0.2, spine: 0.1, near: 0.9, run: 1.6, far: 0.8, porch: 1.4, slab: 0.15, rail: 0.95 };
-/** The tower's whole depth out from the gallery's edge */
-export const STAIR_DEPTH = STAIR.near + STAIR.run + STAIR.far + STAIR.wall;
+/** A lift tower's near landing, and its shaft's width across (beside the tower's +u wall) */
+export const LIFT_NEAR = 1.6;
+export const SHAFT = 1.3;
 export const STAIR_TOWERS: StairTower[] = [
-  { block: 'fennel-w', deck: 0, side: 's', at: -66 },
-  { block: 'fennel-e', deck: 0, side: 's', at: -35.6 },
+  // (Fennel House's lifts are in its towers, by its galleries: the cores on its highway side are escape stairs)
+  { block: 'fennel-w', deck: 0, side: 's', at: -66, lift: true },
+  { block: 'fennel-e', deck: 0, side: 's', at: -35.6, lift: true },
   { block: 'linnet', deck: 0, side: 's', at: -87 },
   // (Marten House's west galleries run the block's length: its tower stands off their north end)
   { block: 'marten', deck: 0, side: 'n' },
@@ -288,6 +295,9 @@ export interface StairGeom {
   levels: number[];
   /** Its roof's top */
   top: number;
+  /** Its near landing's depth out from the gallery (`STAIR.near`, or `LIFT_NEAR` with a lift) and its whole depth */
+  near: number;
+  depth: number;
   /** The middle of its edge on the gallery, out (v) and across (u, a quarter turn from v) */
   origin: [number, number];
   out: [number, number];
@@ -321,7 +331,8 @@ export function stairGeom(t: StairTower): StairGeom {
     return [Math.min(ax, cx), Math.min(az, cz), Math.max(ax, cx), Math.max(az, cz)];
   };
   const levels = [SLAB_Y, ...d.ys];
-  return { tower: t, levels, top: levels[levels.length - 1] + 2, origin, out, across, vAlongX, rect, at, alongV: (v) => (vAlongX ? at(0, v)[0] : at(0, v)[1]) };
+  const near = t.lift ? LIFT_NEAR : STAIR.near;
+  return { tower: t, levels, top: levels[levels.length - 1] + 2, near, depth: near + STAIR.run + STAIR.far + STAIR.wall, origin, out, across, vAlongX, rect, at, alongV: (v) => (vAlongX ? at(0, v)[0] : at(0, v)[1]) };
 }
 export const STAIRS: StairGeom[] = STAIR_TOWERS.map(stairGeom);
 /** Where along a gallery's edge (its parapet, or its end wall) each tower opens onto it: the world span and the tower */
@@ -329,9 +340,12 @@ export const stairGapsOf = (b: EstateBlock, k: number) => STAIRS.filter((g) => g
 /** What's solid of each at street level: its two sides and its back past the porch, the wall between the flights, and
  * the space under the first flight back (no walking under a stair) */
 export function stairSolids(g: StairGeom): Box[] {
-  const { half, wall, spine, near, run, far } = STAIR;
+  const { half, wall, spine, run, far } = STAIR;
+  const near = g.near;
   const back = near + run + far;
   return [
+    // (the lift's shaft beside its landings, the porch to the street open in front of it)
+    ...(g.tower.lift ? [[...g.rect(half + wall, 0, half + wall + SHAFT, near), g.top] as Box] : []),
     [...g.rect(-half - wall, near, -half, back + wall), g.top],
     [...g.rect(half, near, half + wall, back + wall), g.top],
     [...g.rect(-half - wall, back, half + wall, back + wall), g.top],

@@ -442,3 +442,40 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
     lightest measured. Phones already leave out the finest details (the
     chunk's `low`: rails, tiles, bollards' segments, every other idle
     person, the trimmed movers, a BMX and a moped).
+
+## The polish round (the owner's call, 2026-11-09: "use a stairwell to get to the balcony on the flats", "some buildings don't make sense")
+
+- **What didn't make sense** (found in an audit from the air and the galleries):
+  - Most of the estate's galleries couldn't be reached: Linnet, Sorrel, Teasel
+    and Wren Courts' and Marten House's had no stair or lift to them, and
+    Marten House's cores stand on the side away from its galleries.
+  - Fennel House's lift doors were in the middle of its galleries' walls,
+    between the front doors, while their shafts were cores on the highway
+    side: a lift through the flats.
+- **Stair towers** (`STAIRS`, `STAIR_TOWERS`, `stairGeom()` in endsblocks.ts):
+  a concrete dog-leg stair standing off every block with galleries: Fennel
+  House's two halves, Linnet Court, Sorrel, Teasel and Wren Courts off their
+  galleries' outer edge through a gap in the parapet, Marten House off its
+  galleries' north end (the end wall open at each gallery, `stairedAt()` in
+  `finSpans()`; the cores on its east side, as Fennel House's on its north,
+  are its escape stairs). Each in a frame of its own (`u` across, `v` out): a porch at
+  the street under the first landing, a flight out on one side to a half
+  landing and a flight back on the other to each gallery, the wall between
+  them (`STAIR`); its walls solid at street level and the space under the
+  first flight back (`stairSolids()`).
+- **Walked** (endsdecks.ts): every block's galleries are walked now
+  (`walk: true`); a stair's flights are floors that rise (`Floor.slope`,
+  `floorY()`), its landings floors, its porch a foot (`ground`) he may step
+  off the first flight onto; `endsDeckY()` reads them from the street up,
+  `upOnEnds()` holds him to a stair only inside it, and `endsDeckWall()`
+  checks each point round him against a floor at his height there. The
+  camera keeps under the flight above (`stairCamera()`, short steps).
+- **Fennel House's lifts** moved into its two stair towers (`lift`, `SHAFT`,
+  `LIFT_NEAR`: a shaft beside the near landing, an up and a down door on it
+  at the street and each gallery, `towerLift()`); the cores on its highway
+  side are its escape stairs.
+- **Drawn** by endsblocks3d.ts's `drawStair()` (a site a tower): walls, a
+  glazed slit up each side lit at night, stepped flights on a stepped slab
+  with a steel handrail on the middle wall, landings with a strip light
+  under each, the roof, the lift's shaft and motor room; casting no shadows
+  (as the mall's hall) so the day reaches the stairwell.

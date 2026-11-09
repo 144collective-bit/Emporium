@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { Batch, PAL, canvasTex, lit, neon, rng, shadeHex, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { BLOCKS, DECK, GROUND, HOARD, PARAPET, STAIR as STAIR_SIZE, STAIRS, STOREY, deckRect, finSpans, hoardingRuns, stairGapsOf, type EstateBlock, type Face, type Ground, type Shell, type Side, type StairGeom } from './endsblocks';
+import { BLOCKS, DECK, GROUND, HOARD, PARAPET, SHAFT, STAIR as STAIR_SIZE, STAIRS, STOREY, deckRect, finSpans, hoardingRuns, stairGapsOf, type EstateBlock, type Face, type Ground, type Shell, type Side, type StairGeom } from './endsblocks';
 import type { Pt, Rect } from './endswood';
 import { ENDS_LIFTS } from './endsdecks';
 
@@ -610,7 +610,8 @@ function drawPlanters(b: Batch, block: EstateBlock, low: boolean) {
  * at the foot under the first landing, a glazed slit up each side lit at night, the wall between the flights, each
  * flight's steps with a steel handrail along that wall, the landings with a strip light under each, the roof */
 function drawStair(b: Batch, g: StairGeom, low: boolean) {
-  const { half, wall: t, spine, near, run, far, slab } = STAIR_SIZE;
+  const { half, wall: t, spine, run, far, slab } = STAIR_SIZE;
+  const near = g.near;
   const back = near + run + far;
   const L = g.levels;
   const y0 = L[0];
@@ -632,6 +633,13 @@ function drawStair(b: Batch, g: StairGeom, low: boolean) {
     }
   }
   box(b, r(-half - t, back, half + t, back + t), y0, g.top, SLAB);
+  // The lift's shaft beside the landings (Fennel House's): plain concrete to the roof, its motor room over it, the
+  // doors on the landings' side (drawLiftDoors)
+  if (g.tower.lift) {
+    box(b, r(half + t, 0, half + t + SHAFT, near), y0, g.top + 0.6, SLAB);
+    box(b, r(half + t - 0.03, -0.03, half + t + SHAFT + 0.03, near + 0.03), g.top + 0.6, g.top + 0.75, COPING);
+    drawLiftDoors(b, `${g.tower.block}-lift`);
+  }
   // The wall between the flights, the roof and its coping
   box(b, r(-spine, near, spine, near + run), y0, g.top - 0.2, SLAB);
   box(b, r(-half - t - 0.05, -0.05, half + t + 0.05, back + t + 0.05), g.top - 0.2, g.top, COPING);
@@ -681,11 +689,12 @@ function drawStair(b: Batch, g: StairGeom, low: boolean) {
 
 export function registerBlocks(low: boolean) {
   STAIRS.forEach((g) => {
-    const w = g.rect(-STAIR_SIZE.half - STAIR_SIZE.wall, 0, STAIR_SIZE.half + STAIR_SIZE.wall, STAIR_SIZE.near + STAIR_SIZE.run + STAIR_SIZE.far + STAIR_SIZE.wall);
+    const w = g.rect(-STAIR_SIZE.half - STAIR_SIZE.wall, 0, STAIR_SIZE.half + STAIR_SIZE.wall + (g.tower.lift ? SHAFT : 0), g.depth);
     site(`ends stair ${g.tower.block}`, [w[0] - 2, w[1] - 2, w[2] + 2, w[3] + 2], (into) => {
       const b = new Batch();
       drawStair(b, g, low);
-      b.build(into, { cast: true, receive: true });
+      // (casting no shadows, as the mall's hall: the day comes into the stairwell as through its slits)
+      b.build(into, { cast: false, receive: true });
     });
   });
   BLOCKS.forEach((block, bi) => {
@@ -696,7 +705,8 @@ export function registerBlocks(low: boolean) {
         if (si === 0) {
           block.decks.forEach((_, k) => drawDeck(b, block, k, 2000 + bi * 7 + k, low));
           block.bridges.forEach((br) => drawBridge(b, br));
-          if (block.id.startsWith('fennel') || block.kind === 'tower') drawLiftDoors(b, block.id === 'harrier' ? 'harrier' : block.id);
+          // (Fennel House's lifts are in its stair towers: their doors are drawn with them)
+          if (block.kind === 'tower') drawLiftDoors(b, 'harrier');
           if (block.hoarding) drawHoarding(b, block.hoarding, 3000 + bi);
           if (block.kind === 'terrace') drawPlanters(b, block, low);
         }

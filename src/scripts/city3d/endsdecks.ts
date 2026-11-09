@@ -3,9 +3,10 @@
  * in tests/endsdecks.test.ts), as Liberty Bridge's high level: Fennel House's galleries, the street in the sky over the
  * spine between its halves and Harrier Point's bridges to its lift tower are ground by Degen's height
  * (`endsDeckY()`), their parapets and the faces they run along his walls up there (`endsDeckWall()`), their slabs, the
- * galleries' lintels and the bridges' roofs the walk camera's (`ENDS_CAMERA`), and lifts in Fennel House's cores and
- * Harrier Point's lift tower take him up and down (`ENDS_LIFTS`, `endsLiftDoors()`): walk prompts and a fade, as
- * Sector 7 Tower's.
+ * galleries' lintels and the bridges' roofs the walk camera's (`ENDS_CAMERA`), and lifts in Fennel House's stair
+ * towers and Harrier Point's lift tower take him up and down (`ENDS_LIFTS`, `endsLiftDoors()`): walk prompts and a
+ * fade, as Sector 7 Tower's. Since the polish round every block's galleries are walked, and the stair towers
+ * (endsblocks.ts `STAIRS`) climb to them from the street: their flights are floors that rise (`slope`, `floorY()`).
  */
 import { BLOCKS, DECK, STAIR, STAIRS, deckRect, finSpans, type EstateBlock, type Side, type StairGeom } from './endsblocks';
 import { SLAB_Y, type Rect } from './endswood';
@@ -76,7 +77,8 @@ function bridgeFloors(b: EstateBlock): Floor[] {
  * at the foot, the porch under the first landing (street level, `ground`)
  */
 function stairFloors(g: StairGeom): Floor[] {
-  const { half, spine, near, run, far } = STAIR;
+  const { half, spine, run, far } = STAIR;
+  const near = g.near;
   const m = 0.03;
   const L = g.levels;
   const id = `stair:${g.tower.block}`;
@@ -168,7 +170,8 @@ export const ENDS_CAMERA: CamBox[] = BLOCKS.flatMap((b) => [
  * under its slab), its roof */
 function stairCamera(g: StairGeom): CamBox[] {
   const out: CamBox[] = [];
-  const { half, wall, near, run, far, slab } = STAIR;
+  const { half, wall, run, far, slab } = STAIR;
+  const near = g.near;
   for (const f of stairFloors(g)) {
     if (f.ground) continue;
     if (!f.slope) {
@@ -217,26 +220,30 @@ export interface EstateLift {
 /** Floors over the ground floor named the British way: the first gallery's the first floor */
 const floorName = (y: number) => `Floor ${Math.round(y - SLAB_Y - 1.5) + 1}`;
 
-const fennelLifts = (b: EstateBlock): EstateLift[] => {
-  const d = b.decks[0];
-  const [, , , face] = b.shells[0].rect;
-  // (along the gallery towards the street in the sky)
-  const yaw = b.id === 'fennel-w' ? -Math.PI / 2 : Math.PI / 2;
-  return b.shells.slice(1).map((core, i) => {
-    const [x0, z0, x1] = core.rect;
-    const cx = (x0 + x1) / 2;
-    const stops: LiftStop[] = [{ y: SLAB_Y, name: 'Ground', up: { x: cx, z: z0 - 0.6 }, out: { x: cx, z: z0 - 1, y: SLAB_Y, yaw: 0 } }];
-    d.ys.forEach((y, k) =>
-      stops.push({
-        y,
-        name: floorName(y),
-        up: k < d.ys.length - 1 ? { x: cx - 0.7, z: face + 0.35, wall: { x: cx - 0.7, z: face, nx: 0, nz: 1 } } : undefined,
-        down: { x: cx + 0.7, z: face + 0.35, wall: { x: cx + 0.7, z: face, nx: 0, nz: 1 } },
-        out: { x: cx, z: face + 0.95, y, yaw },
-      })
-    );
-    return { id: `${b.id}-${i}`, name: b.name, stops };
-  });
+/** A stair tower's lift (Fennel House's, endsblocks.ts `lift`): its shaft beside the near landing, an up door and a
+ * down door side by side in the wall between them, at the street in the porch and at each gallery; it lets you out on
+ * the landing, facing the gallery */
+const towerLift = (g: StairGeom): EstateLift => {
+  const b = BLOCKS.find((q) => q.id === g.tower.block)!;
+  const { half } = STAIR;
+  const [up, down] = [0.4, g.near - 0.4];
+  // (the doors on the tower's +u wall, facing in; you stand a little off it)
+  const door = (v: number): LiftDoor => {
+    const [x, z] = g.at(half - 0.32, v);
+    const [wx, wz] = g.at(half, v);
+    return { x, z, wall: { x: wx, z: wz, nx: -g.across[0], nz: -g.across[1] } };
+  };
+  const [ox, oz] = g.at(0, g.near / 2);
+  // (facing the gallery: yaw 0 looks north, walk.ts)
+  const yaw = Math.atan2(g.out[0], g.out[1]);
+  const stops: LiftStop[] = g.levels.map((y, k) => ({
+    y,
+    name: k === 0 ? 'Ground' : floorName(y),
+    up: k < g.levels.length - 1 ? door(up) : undefined,
+    down: k > 0 ? door(down) : undefined,
+    out: { x: ox, z: oz, y, yaw },
+  }));
+  return { id: `${b.id}-lift`, name: b.name, stops };
 };
 const harrierLift = (b: EstateBlock): EstateLift => {
   const [x0, , x1, z1] = b.shells[1].rect;
@@ -256,7 +263,7 @@ const harrierLift = (b: EstateBlock): EstateLift => {
   });
   return { id: 'harrier', name: b.name, stops };
 };
-export const ENDS_LIFTS: EstateLift[] = [...BLOCKS.filter((b) => b.id === 'fennel-w' || b.id === 'fennel-e').flatMap(fennelLifts), ...BLOCKS.filter((b) => b.kind === 'tower').map(harrierLift)];
+export const ENDS_LIFTS: EstateLift[] = [...STAIRS.filter((g) => g.tower.lift).map(towerLift), ...BLOCKS.filter((b) => b.kind === 'tower').map(harrierLift)];
 
 /** The lift doors at his height: walk prompts (`lift:ends:<lift>:<stop>:<up|down>`) */
 export function endsLiftDoors(y: number) {
