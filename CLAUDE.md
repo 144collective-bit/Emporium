@@ -51,7 +51,10 @@ it and has been retired completely. Build only on what's here.
     loading poster, no 2D view, no fallback. Where 3D can't run (no WebGL
     2, or `bootCity()` returns null) the page shows a card saying The
     Trenches needs a device with 3D graphics (`[data-no3d]`, `no3d()` in
-    `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`).
+    `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`). A
+    running city whose GPU context is lost (`webglcontextlost` on the
+    renderer's canvas, index.ts) stops its loop and sound and shows the
+    same card saying its 3D graphics stopped, with a Reload button.
     `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
     Don't bring the 2D map back without the owner.
   Pin copy and panel copy live in `src/components/CityMap.astro`.
@@ -1972,7 +1975,7 @@ it and has been retired completely. Build only on what's here.
   side is the quick swap with a fade (`QUICK_FADE`), reduced motion the
   quick swap without; at home the turntable is stood on to get in
   (`isTurntable()`, `DISC`). Keep new car detail in that chunk: the
-  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk; 700.4 with the raised highway's Phase 1b, the viaduct's shape read at the boot, the budget raised to 720 under the owner's standing call; 706.8 with its Phases 2-4, the ramps' routes and the signs' data; 715.5 of 730 at the polish plan's audit, docs/polish-plan.md, which lists the moves that make room). Phase 4 (handling with
+  boot is under its budget (660.4 of 670 KB with Build mode gone and the inventory plan's Phase 3 merged, and the multiplayer's vehicle ids: Phase 3 brought carinside.ts into it, Phase 5 the look's ids, Phase 6 three specs, Phase 7 the bikes' numbers and rules, Phase 8 the traffic's models, rules and riders, Phase 9 the aircraft's moving parts; Crestmont's Phases 2-6 came in at about the same size, its Phase 2 having packed the routes tighter; 663.3 with its Phase 7's landmarks, 666.0 with its Phase 8's life, 666.3 with its Phase 9's metro spur; 668.5 with Southbank Docks' Phases 1 and 2; 672.0 with its Phase 3's port, the budget raised to 680 on purpose, the owner's go; with Sunridge's Phase 1 (the owner's call: "raise the limit when needed, we want quality") about 676; 659.9 after the start-up pass, docs/performance-plan.md: the synth loaded on use and the crowd's cycles rounded; 669.2 with the weapons plan's first phases and the Neon Mile's Phase 1, mostly the traffic's routes down its boulevard; 673.4 with its Phase 2's resorts, 674.8 with its Phase 3's landmarks, 677.3 with its Phase 4's monorail, 678.2 with its Phase 5's life; 680.4 with main's menu kit and blended ground merged in, the budget raised to 690 on purpose, the owner's go; the owner has said to raise it when needed; 690.9 with the blend plan's Southfield, the budget raised to 700; 694.6 with main's world out to -680 to 720 and the blend plan's verges; 698.7 with Lot 9, its homes kept in its chunk; 700.4 with the raised highway's Phase 1b, the viaduct's shape read at the boot, the budget raised to 720 under the owner's standing call; 706.8 with its Phases 2-4, the ramps' routes and the signs' data; 715.5 of 730 at the polish plan's audit, docs/polish-plan.md, which lists the moves that make room; 666.8 after its Phase 4: the baked data a fetched file, the economy's screens and target practice chunks of their own). Phase 4 (handling with
   depth: each model's feel and drifting) is built, in the sim (drive-sim.ts, mycar.ts `FEEL`; see Driving your
   car below). Phase 5 (the garage's customisation, all free) is built: `CarLook` in mycar.ts (the ids,
   `cleanLook()`, carried by `cleanCar()`), carlook.ts (DOM-free, tested in `tests/carlook.test.ts`: names,
@@ -2084,10 +2087,17 @@ it and has been retired completely. Build only on what's here.
   `docs/performance-plan.md`):
   - Data that's the same for everyone is worked out when the site is
     built, not in the browser: `baked(key, make, pack?, unpack?)` in
-    `baked.ts` returns what the build put in the page (`__CITY_BAKED__`, a
-    JSON string; `scripts/bake.mjs`, run from `astro.config.mjs`, loads the
-    modules in Node and records what each `make()` made), or works it out
-    with `make()` where there's none (the tests, the game server). Today:
+    `baked.ts` returns what the build made (`scripts/bake.mjs`, run from
+    `astro.config.mjs`, loads the modules in Node and records what each
+    `make()` made; since the polish plan's Phase 4 the build writes it all
+    to one hashed JSON file under `/_astro/`, `baked.<hash>.json`, and the
+    page carries only its address, `__CITY_BAKED_URL__`: baked.ts awaits
+    the fetch at its top level, so `ROUTES` and the rest read it as they
+    load, the page starts the fetch beside the city's code (`__cityBakedP`,
+    CityMap.astro), the site worker is handed the data with the chunk's
+    address, and a stale file after a deploy reloads the page once, as a
+    stale chunk does), or works it out with `make()` where there's none
+    (the tests, the game server). Today:
     the traffic's routes (`routes.ts`, packed with `packRoutes()`: each route's points as millimetre steps in one string), the
     crowd's walk, jog and march cycles (`crowdclips.ts`, rounded to a ten-thousandth as they're recorded, `rounded()`) and The Trenches'
     amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
@@ -2124,8 +2134,19 @@ it and has been retired completely. Build only on what's here.
     when Degen comes near the park or asks at the hut; idle stand-ins until
     then; the City-view panel's records are `kart-records.ts`, at the boot,
     and the cups the boot reads are `kart-cups.ts`, so the race's rules,
-    `kart-sim.ts`, come with the race). New features that aren't needed until they're used come the same
-    way. three.js is a chunk of its own (`manualChunks` in
+    `kart-sim.ts`, come with the race), the economy's screens
+    (`tycoon-ui.ts`: the business card's views, the market hall and the
+    building panels' parts, the first time one opens; `tycoon-boot.ts`
+    keeps the save, its tick, the Dorras readout, the missions and the
+    card's shell in the boot, and `TycoonCore` is what they share) and
+    target practice (`combat.ts` with `viewmodel.ts` and `stance.ts`, behind
+    `combat-lazy.ts`, which walk.ts holds as `combat`: the same shape,
+    fetched once the first frame is drawn since the targets stand in the
+    city from the start; until then it answers from the save and replays
+    what was set). A dynamic import goes through `lazy(load, what)` in
+    `lazy.ts` (walk.ts's `lazyMenu()` too): a failed fetch toasts
+    "Couldn't load <what> · reload" once and the next call tries again. New
+    features that aren't needed until they're used come the same way. three.js is a chunk of its own (`manualChunks` in
     `astro.config.mjs`), so a deploy that doesn't change it leaves it
     cached.
   - A service worker (`public/sw.js`, registered in `Base.astro` in the
@@ -2177,7 +2198,9 @@ it and has been retired completely. Build only on what's here.
     script, the 3D city's boot code (its chunk and what it imports
     straight away), the biggest lazy chunk and the CSS, gzipped, each
     under a fixed size. Raise one only on purpose, never to get a build
-    through.
+    through. The baked data's file is an information row (`baked`); on CI
+    (`process.env.CI`) a build without the texture sets made at build time
+    is red (`texLow`, `texFull`: the bake didn't run or failed).
 - One render loop only: always (re)start it with `loop()` in `index.ts`,
   which cancels any frame already queued. A hidden tab holds its queued frame
   back, so a bare `requestAnimationFrame(frame)` on return stacks a second
@@ -2226,7 +2249,12 @@ it and has been retired completely. Build only on what's here.
   depth pre-pass only reaches as far as the outlines do (its own camera's
   far plane at the ink's `fadeFar`), so the far city is drawn once, not
   twice. A place's hover ring isn't drawn while it's faded out. Measure
-  with `?fps` and `?bench` before and after.
+  with `?fps` and `?bench` before and after. A tick that moves a
+  landmark's parts every frame asks `nearGate()` (`nearby.ts`) first: it
+  draws only while the camera is within about 200 of it (a margin's
+  hysteresis), the clock-driven state behind it running on so it's right
+  the moment it comes back; the metro's cars are placed twice a second
+  when the train is far.
 - **Shadows are near only** (the owner's call; `shadows.ts`, DOM-free,
   tested in `tests/shadows.test.ts`): drawn only while walking or driving
   (`sky.setShadows()`: not in the City view, not up in an aircraft), easing
@@ -3749,7 +3777,10 @@ it and has been retired completely. Build only on what's here.
 - Goods only move between your places in your car (or by buying them
   straight there at the market hall). Stock on sale (stall, shops) can't be
   loaded back; that keeps the delivery bonus from being farmed.
-- **Screens:** `tycoon-ui.ts` (save `degen-city-tycoon-v1`): the Dorras
+- **Screens:** `tycoon-boot.ts` (the save `degen-city-tycoon-v1`, its
+  tick, the Dorras readout, the missions and the card's shell, in the
+  boot) and `tycoon-ui.ts` (the screens, a chunk fetched the first time
+  the card or a panel's part opens): the Dorras
   readout, your business card (`[data-biz]`, the hub's Business tab:
   `openCard()` shows the hub on it, `h.hub`; the till on top, then the Stall / Units / Workshop / Car / Bag tabs; the Bag is the inventory's, read-only), the
   market hall, filled into the Emporium's panel (`[data-market]`, with its
@@ -4424,7 +4455,9 @@ it and has been retired completely. Build only on what's here.
   on a fixed 60 Hz tick, takes per-player inputs and emits events. It must
   stay free of DOM, scene objects and `Math.random` (seeded generator only)
   so a server can run it. `combat.ts` is the local view: it feeds the local
-  player's input in and draws / plays the events. New gameplay goes in the
+  player's input in and draws / plays the events; walk.ts holds it through
+  `combat-lazy.ts` (the same shape, the real one a chunk fetched after the
+  first frame, the gun's pivot handed to it through `CombatDeps.pivot`). New gameplay goes in the
   sim first; looks and sounds in the view.
 - **The gun store** (`gunshop.ts`, markup `data-shop` in `CityMap.astro`)
   opens at the Armoury counter. Four guns, each defined once in
@@ -4757,7 +4790,9 @@ it and has been retired completely. Build only on what's here.
   site" Action runs it first, so a type error stops the build too.
 - `npm test` runs `tests/*.test.ts` with Node's own test runner
   (`scripts/test.mjs` bundles each with esbuild first; `npm test -- drive`
-  runs only matching files). `npm run test:wide` runs them all in Phase
+  runs only matching files; a line per file with its time and the slowest
+  five at the end, `scripts/test-reporter.mjs`; motionmatch.test's
+  wall-clock check is skipped under `CI`). `npm run test:wide` runs them all in Phase
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
 - They cover the code that's free of the DOM and scene code: the street plan
@@ -4806,7 +4841,9 @@ it and has been retired completely. Build only on what's here.
 - **Multiplayer lives on workers.dev only**: the `server/` Worker (emporium
   on https://emporium.144collective.workers.dev, deployed by Cloudflare's
   Workers Builds from `main`) serves the game server and its own copy of
-  the site, built against itself (`build` in `wrangler.jsonc`).
+  the site, built against itself (`build` in `wrangler.jsonc`, which also
+  makes the textures and runs the budget, as the Action does: the polish
+  plan's Phase 4).
 
 ## Content guardrails
 

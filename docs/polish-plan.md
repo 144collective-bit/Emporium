@@ -569,7 +569,29 @@ the typecheck and the budgets green; none moves anything that exists.
    with a red row when a CI build has no texture sets, and the Hostinger
    check: the owner opens Hostinger's GitHub deploy settings and notes
    the build command there; if it is a plain build, the Action's checks
-   are added to it. Three or four days.
+   are added to it. Three or four days. **Built** (2026-11-09), all but the
+   Hostinger check, which is the owner's: the boot went 720.3 → 685.6 KB
+   gzipped with the baked data as one hashed JSON file under `/_astro/`
+   fetched beside the code (baked.ts's top-level await, the page's early
+   fetch, the site worker handed the data; the file on an information row
+   of the budget), → 676.7 with the economy's screens as a chunk fetched
+   on first open (`tycoon-boot.ts` keeps the save, the tick, the readout,
+   the missions and the card's shell), → 666.3 with target practice behind
+   `combat-lazy.ts` (fetched after the first frame, since the targets stand
+   in the city from the start; guns.ts, gunshapes.ts and gunfit.ts stay in
+   the boot for the soldiers' and the Armoury's rifle), → 666.8 of 730
+   with the landmark ticks gated through `nearGate()` (`nearby.ts`: the
+   Armoury's flags, the Workshop's sparks, the Emporium's LED wall and
+   hologram, the airport's beacon and rabbit, the Strip's shows, Liberty
+   Bridge, the metro's cars twice a second when far) and the pins' style
+   writes only on screen; `webglcontextlost` stops the loop and the sound
+   and shows the no-3D card with Reload; `lazy()` round every dynamic
+   import toasts a failed fetch once and retries on the next call; the
+   test reporter prints a line per file and the slowest five, the routes
+   test caches each route's points, motionmatch's wall-clock check is
+   skipped under CI; the budget is red on CI without the texture sets and
+   the Worker's build makes them and runs it (Playwright's Chromium fetched
+   there at build time: the owner watches the first deploy).
 5. **Sound across the city** (theme 3): the hum from the built-up land,
    the `waterfront`, `docks`, `jets`, `indoor` and `yards` layers, the
    ambience test turned into bands, the engine voices per vehicle kind.
@@ -688,8 +710,14 @@ changed how a thing works.
 ## Still open
 
 - **Hosting:** what Hostinger runs on a push to main (Phase 4's check).
-- **Workers.dev:** whether it should carry the baked textures (the bake
-  in its build, minutes of Chromium) or stay browser-painted.
+  And Workers.dev's first build after Phase 4: it now fetches Playwright's
+  Chromium, makes the textures and runs the budget, which is red without
+  them; if Chromium can't run on Cloudflare's builder the deploy stops
+  there (then the texture steps come out of `wrangler.jsonc`'s build, or
+  the budget's CI rule is loosened for it).
+- **Workers.dev:** it carries the baked textures since Phase 4 (the bake
+  in its build, minutes of Chromium); whether that's wanted for a test
+  site is the owner's call.
 - **Phones' GPU memory:** the performance plan's 150 MB target against
   210 MB measured; "far districts let go on phones" and impostors are
   scheduled nowhere.
