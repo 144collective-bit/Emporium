@@ -32,6 +32,7 @@ import { STRIP_RECT } from './strip';
 import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
 import { FENCE as LOT9_FENCE, FIELD as LOT9_FIELD, PARK_X0 as LOT9_PARK_X0 } from './lot9';
 import { ENDSWOOD_RECT, NORTH_Z, SOUTH_Z, WEST_X } from './endswood';
+import { COMMON as ENDS_COMMON, DESIRE as ENDS_DESIRE, DESIRE_HALF } from './endsblend';
 import { STADIUM_RECTS } from './stadium';
 import { KART_RECTS } from './kartfacility';
 import { TILE, tileKey, type Rect } from './tiles';
@@ -132,6 +133,9 @@ export const INFLUENCES: Influence[] = [
   // Endswood (endswood.ts, docs/estate-plan.md): worn grass round its blocks, the estate's land bare in places
   around('endswood', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'worn', 16, 0.6),
   around('endswood-edge', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'bare', 4, 0.35),
+  // ...the common down to Lot 9 (endsblend.ts, Phase 6): rough, trodden, the desire line worn bare either side
+  around('ends-common', ENDS_COMMON, 'worn', 3, 0.45),
+  verge('ends-desire', ENDS_DESIRE, DESIRE_HALF, 'bare', 1.2, 0.5),
   // Lot 9 (lot9.ts): worn grass round it, bare dirt inside the old park's fence and just past it, the Field trampled
   around('lot9', LOT9_FENCE, 'worn', 14, 0.8),
   around('lot9-dirt', [LOT9_PARK_X0, LOT9_FENCE[1], LOT9_FENCE[2], LOT9_FENCE[3]], 'bare', 2, 0.55),

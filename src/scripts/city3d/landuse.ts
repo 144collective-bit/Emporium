@@ -43,6 +43,7 @@ import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
 import { FOOTPATH as LOT9_PATH, LOT9_RECT } from './lot9';
 import { ENDSWOOD_RECT } from './endswood';
+import { COMMON as ENDS_COMMON } from './endsblend';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
@@ -166,6 +167,8 @@ export const KEEPS: Keep[] = [
   // Endswood Estate, south of the highway's south-west corner, on Lot 9's old land with the tunnel's ramp (endswood.ts,
   // docs/estate-plan.md); Lot 9, the trailer park, moved south of it (lot9.ts), and the path from the tunnel down to it
   land('endswood', ENDSWOOD_RECT, 2, true),
+  // ...and the common down to Lot 9, its own brambles and hawthorns (endsblend.ts, docs/estate-plan.md Phase 6)
+  land('ends-common', ENDS_COMMON, 1, true),
   land('lot9', LOT9_RECT, 2, true),
   ...line('lot9-path', LOT9_PATH, 1.5, false, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the

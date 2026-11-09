@@ -22,6 +22,8 @@ import { floorOf, type Passage } from './underground';
 import { NS_ROADS, WALK_W } from './layout';
 import { registerBlocks } from './endsblocks3d';
 import { registerStreet } from './endsstreet3d';
+import { registerBlend } from './endsblend3d';
+import { BOLLARD as LOT9_BOLLARD, TUNNEL, TUNNEL_BOLLARDS, tunnelFloor } from './lot9';
 
 export const SELF = import.meta.url;
 
@@ -459,6 +461,113 @@ function registerSubway(p: Passage, low: boolean) {
     });
 }
 
+/* ---------- Lot 9's tunnel, dressed as Endswood's subway (docs/estate-plan.md Phase 6) ---------- */
+
+/**
+ * The pedestrian tunnel under the highway from The Trenches (lot9.ts `TUNNEL`), drawn as the estate's subways are:
+ * the open cuttings between parapets, a headwall over each portal with its SUBWAY plate and a caged lamp, the
+ * concrete bollards at each ramp's top; under the roof tiled walls dirtier low down, THE ENDS painted on the west
+ * wall over the tiles, fluorescent strips (some tired, one dead), tags and a bill, a puddle
+ */
+function registerTunnel(low: boolean) {
+  const T = TUNNEL;
+  const [wx, ex] = [T.x - T.half, T.x + T.half];
+  const breaks = [T.z0, T.ramp0, T.roof0, T.roof1, T.ramp1, T.z1];
+  const pieces: [number, number][] = [
+    [T.z0, T.roof0],
+    [T.roof0, T.roof1],
+    [T.roof1, T.z1],
+  ];
+  pieces.forEach(([za, zc], i) =>
+    site(`ends tunnel ${i}`, [wx - 1, za - 1, ex + 1, zc + 1], (into) => {
+      const b = new Batch();
+      const fx0 = new Batch();
+      const roofed = i === 1;
+      const zs = breaks.filter((z) => z >= za && z <= zc);
+      for (let k = 1; k < zs.length; k++) {
+        const [a, c] = [zs[k - 1], zs[k]];
+        const [ya, yc] = [tunnelFloor(a), tunnelFloor(c)];
+        upQuad(
+          b,
+          [
+            [wx, ya, a],
+            [ex, ya, a],
+            [ex, yc, c],
+            [wx, yc, c],
+          ],
+          SUB_FLOOR
+        );
+        const top = roofed ? T.ceil : 0.02;
+        wallQuad(b, [wx, a], [wx, c], ya, top, yc, top, [1, 0], SUB_WALL);
+        wallQuad(b, [ex, a], [ex, c], ya, top, yc, top, [-1, 0], SUB_WALL);
+        if (!low)
+          upQuad(
+            b,
+            [
+              [wx, ya + 0.004, a],
+              [wx + 0.16, ya + 0.004, a],
+              [wx + 0.16, yc + 0.004, c],
+              [wx, yc + 0.004, c],
+            ],
+            BLACK
+          );
+      }
+      if (roofed) {
+        const f = T.floor;
+        for (const [x, n] of [
+          [wx + 0.006, 1],
+          [ex - 0.006, -1],
+        ] as const) {
+          wallQuad(b, [x, za], [x, zc], f + 0.05, f + 1.05, f + 0.05, f + 1.05, [n, 0], TILES);
+          wallQuad(b, [x + n * 0.004, za], [x + n * 0.004, zc], f + 0.05, f + 0.32, f + 0.05, f + 0.32, [n, 0], TILES_DIRTY);
+          wallQuad(b, [x + n * 0.006, za], [x + n * 0.006, zc], f + 1.04, f + 1.08, f + 1.04, f + 1.08, [n, 0], GROUT);
+        }
+        b.add(new THREE.PlaneGeometry(ex - wx, zc - za).rotateX(Math.PI / 2).translate(T.x, T.ceil, (za + zc) / 2), SUB_CEIL);
+        let n = 0;
+        for (let z = za + 1.2; z < zc - 0.8; z += 2.4, n++) {
+          const m = n === 3 ? TUBE_DEAD : n % 3 === 1 ? TUBE_TIRED : TUBE;
+          b.box(T.x - 0.06, T.ceil - 0.05, z - 0.6, 0.12, 0.04, 1.2, m);
+          b.box(T.x - 0.09, T.ceil - 0.02, z - 0.65, 0.18, 0.02, 1.3, CONCRETE_DARK);
+        }
+        b.add(new THREE.PlaneGeometry(0.9, 1.6).rotateX(-Math.PI / 2).translate(T.x - 0.3, f + 0.006, (za + zc) / 2 - 1.2), PUDDLE);
+        b.detail(() => {
+          if (low) return;
+          b.add(new THREE.CylinderGeometry(0.05, 0.05, 0.16, 6).rotateZ(Math.PI / 2).translate(ex - 0.3, f + 0.05, (za + zc) / 2 + 2.2), toon('#9a3a32'));
+        });
+        // THE ENDS on the west wall over the tiles (the FX layer), tags down the east wall, a bill
+        sign(fx0, ROW.nick, wx + 0.016, f + 0.85, (za + zc) / 2, [1, 0], 5.2, 1.3);
+        for (let z = za + 1.6, j = 0; z < zc - 1; z += 3.1, j++) tag(fx0, j * 3 + 4, 1.0, [-1, 0], ex - 0.014, f + 0.6 + (j % 2) * 0.35, z);
+        tag(fx0, 8, 1.1, [1, 0], wx + 0.014, f + 0.7, za + 1.8);
+        tag(fx0, 2, 1.0, [1, 0], wx + 0.014, f + 0.65, zc - 1.8);
+        poster(fx0, 6, 1, [-1, 0], ex - 0.016, f + 1.3, (za + zc) / 2 - 3);
+      } else {
+        for (const x of [wx - T.wall, ex]) b.box(x, 0, za, T.wall, T.rail, zc - za, CONCRETE);
+        for (const x of [wx - T.wall - 0.03, ex - 0.03]) b.box(x, T.rail, za, T.wall + 0.06, 0.05, zc - za, COPING);
+        const north = i === 0;
+        const portal = north ? T.roof0 : T.roof1;
+        const [hz0, hz1] = north ? [portal, portal + 0.3] : [portal - 0.3, portal];
+        b.box(wx - T.wall, T.ceil, hz0, ex - wx + 2 * T.wall, T.rail - T.ceil, hz1 - hz0, CONCRETE);
+        b.box(wx - T.wall - 0.03, T.rail, hz0 - 0.02, ex - wx + 2 * T.wall + 0.06, 0.05, hz1 - hz0 + 0.04, COPING);
+        // The SUBWAY plate over the portal facing out, a caged lamp under it
+        const out = north ? -1 : 1;
+        const face = north ? hz0 - 0.012 : hz1 + 0.012;
+        sign(b, ROW.subway, T.x, (T.ceil + T.rail) / 2 + 0.05, face, [0, out], 1.6, 0.4);
+        b.box(T.x - 0.15, T.ceil - 0.18, north ? hz0 - 0.12 : hz1, 0.3, 0.12, 0.12, BLACK);
+        b.box(T.x - 0.1, T.ceil - 0.24, north ? hz0 - 0.1 : hz1 + 0.02, 0.2, 0.06, 0.08, BULB);
+        tag(fx0, north ? 6 : 9, 1.3, [1, 0], wx + 0.012, tunnelFloor((za + zc) / 2) / 2 - 0.1, (za + zc) / 2);
+        tag(fx0, north ? 11 : 3, 1.1, [-1, 0], ex - 0.012, tunnelFloor((za + zc) / 2 + 1.5) / 2 - 0.1, (za + zc) / 2 + 1.5);
+        // The concrete bollards across the top of the ramp (where lot9.ts has them: their solids)
+        for (const [x, z] of TUNNEL_BOLLARDS.filter(([, z]) => z > za - 0.5 && z < zc + 0.5)) {
+          post(b, x, z, 0, LOT9_BOLLARD.h, LOT9_BOLLARD.r, CONCRETE, low ? 6 : 10);
+          b.add(new THREE.SphereGeometry(LOT9_BOLLARD.r, low ? 6 : 10, 4, 0, Math.PI * 2, 0, Math.PI / 2).translate(x, LOT9_BOLLARD.h, z), CONCRETE);
+        }
+      }
+      b.build(into, { cast: true, receive: true });
+      buildFx(fx0, into);
+    })
+  );
+}
+
 /* ---------- The spine ---------- */
 
 /** The spine's paving north and south of the Circus between the blocks' slabs, round the subways' cuttings */
@@ -496,4 +605,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerBlocks(low);
   // Street level: the church, the parade, the shops, the studio, the green, the pitch, the road's paint (Phase 4)
   registerStreet({ low, scene, tick });
+  // The blend (Phase 6): Lot 9's tunnel as the estate's subway; the common down to Lot 9
+  registerTunnel(low);
+  registerBlend(low);
 }

@@ -35,12 +35,14 @@ const inRect = (r: Rect, x: number, z: number, m = 0) => x > r[0] - m && x < r[2
 /* ---------- Under the deck ---------- */
 
 /** What's under the deck between two piers (s0 to s1 along the ring) */
-export type UnderKind = 'park' | 'store' | 'court';
+export type UnderKind = 'park' | 'store' | 'court' | 'skate';
 export interface Under {
   kind: UnderKind;
   s0: number;
   s1: number;
 }
+/** The shortest stretch a skate spot takes (docs/estate-plan.md Phase 6) */
+export const SKATE_MIN = 11;
 /** The ground under the deck kept clear across it (`m` in from its edges) */
 const ACROSS = DECK_HALF - 0.4;
 const UNDER_STREETS = PLAN.streets.filter((s) => !raised(s) && s.kind !== 'alley');
@@ -69,12 +71,15 @@ export const UNDER: Under[] = (() => {
   const out: Under[] = [];
   const parks = new Set<string>();
   let courts = 0;
+  let ends = 0;
   for (const [s0, s1] of WINDOWS) {
     const mid = (s0 + s1) / 2;
     if (!clearUnder(s0, s1)) continue;
     // Courts under the deck by The Trenches and Lot 9 (every third stretch there)
     if (besideIn(mid, [TRENCH_RECT, ENDSWOOD_RECT])) {
       if (courts++ % 3 === 0 && s1 - s0 >= 10) out.push({ kind: 'court', s0, s1 });
+      // (and between them by Endswood, a skate spot and lock-ups in turn: docs/estate-plan.md Phase 6)
+      else if (besideIn(mid, [ENDSWOOD_RECT]) && s1 - s0 >= SKATE_MIN) out.push({ kind: ends++ % 2 === 0 ? 'skate' : 'store', s0, s1 });
       continue;
     }
     // Lock-ups by the industrial land: Southfield Yards, the Docks
@@ -95,6 +100,24 @@ export const UNDER: Under[] = (() => {
   }
   return out;
 })();
+/** A skate spot's pieces (ring coordinates: `s` along, `o` across from the piers' line): a ledge with a steel edge, a
+ * manual pad, a flat rail and a quarter pipe at the far end */
+export type SkatePart = { kind: 'ledge' | 'pad' | 'rail' | 'quarter'; s0: number; s1: number; o0: number; o1: number; h: number };
+export function skateParts(u: Under): SkatePart[] {
+  const { s0, s1 } = u;
+  const mid = (s0 + s1) / 2;
+  return [
+    { kind: 'ledge', s0: s0 + 1, s1: s0 + 5, o0: 1.6, o1: 2.15, h: 0.45 },
+    { kind: 'rail', s0: s0 + 1, s1: s0 + 4.5, o0: -2.6, o1: -2.5, h: 0.4 },
+    { kind: 'pad', s0: mid - 0.2, s1: mid + 2.6, o0: -2.8, o1: -0.9, h: 0.25 },
+    { kind: 'quarter', s0: s1 - 1.9, s1: s1 - 0.1, o0: -3.2, o1: 3.2, h: 1.1 },
+  ];
+}
+/** A rect in ring coordinates as an axis-aligned box */
+function ringRect(sa: number, sb: number, oa: number, ob: number, h: number): Box {
+  const pts = [ringPoint(sa, oa), ringPoint(sb, oa), ringPoint(sa, ob), ringPoint(sb, ob)];
+  return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1])), h];
+}
 /** A car park's bays along each side of the piers' line (o across, each `BAY` along) */
 export const BAY = { len: 5.4, at: 2.85 };
 /** The parked cars under the deck: [model, x, z, yaw, paint] (most bays taken, seeded) */
@@ -135,6 +158,7 @@ export const UNDER_SOLIDS: Box[] = [
     const [hx, hz] = [Math.abs(Math.cos(yaw)) * 2 + Math.abs(Math.sin(yaw)) * 0.9, Math.abs(Math.sin(yaw)) * 2 + Math.abs(Math.cos(yaw)) * 0.9];
     return [x - hx, z - hz, x + hx, z + hz, 1.3];
   }),
+  ...UNDER.filter((u) => u.kind === 'skate').flatMap((u) => skateParts(u).map((p) => ringRect(p.s0, p.s1, p.o0, p.o1, p.h))),
   ...UNDER.filter((u) => u.kind === 'court').map((u): Box => {
     const [x, z] = ringPoint(u.s1 - 0.6, 0);
     return [x - 0.15, z - 0.15, x + 0.15, z + 0.15, 2.4];

@@ -6,6 +6,7 @@
  * all sodium inside (`sodiumShare()`), each lamp picked by its own number from where it stands (`lampTone()`), so a
  * visit finds them the same every time. The Trenches' dead and flickering lamps stay its own (`lampKind()`).
  */
+import { inSodiumBand } from './endsblend';
 import { inTrenches, lampKind } from './trenches';
 import { inDocks } from './docks';
 import { inYards } from './southfield';
@@ -25,6 +26,7 @@ export const SODIUM_AREAS: ((x: number, z: number, m: number) => boolean)[] = [
   (x, z, m) => inRect(WATERFRONT_RECT, x, z, m),
   inLot9,
   inEndswood,
+  inSodiumBand,
 ];
 
 /**
