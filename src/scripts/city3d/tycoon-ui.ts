@@ -1,10 +1,11 @@
 /*
- * The economy on screen (tycoon.ts holds the rules):
+ * The economy's screens (tycoon.ts holds the rules; the save, the tick, the
+ * Dorras readout and the card's shell are tycoon-boot.ts's, in the boot;
+ * this is a chunk fetched the first time the card or one of these panels
+ * opens: the polish plan's Phase 4):
  *
- * - The Dorras readout in the mode header (`[data-dorras]`): your balance,
- *   with a dot when the till has takings to collect. It opens your business.
- * - Your business card (`[data-biz]`, on the gun store's `.shop` panel): the
- *   till and Collect on top, then five tabs:
+ * - Your business card (`[data-biz]`, the hub's Business tab): the till and
+ *   Collect on top, then five tabs:
  *   - Stall: its shelves, prices (Low / Fair / High), pace and upgrade;
  *   - Units: Makers' Row's four units: buy one, build it as a garden, shop or
  *     warehouse, then run it (a garden's crop and bins, a shop's shelves, a
@@ -17,15 +18,17 @@
  *     with the Armoury and the Night Market as ways in from the City view.
  *   It opens from the readout anywhere, and at your stall or a unit in walk
  *   mode (on that place).
- * - The market hall, inside the Emporium's panel (`[data-market]`): every
+ * - The market hall, inside the Emporium's state.panel (`[data-market]`): every
  *   good's price and trend; Buy delivers to, and Sell takes from, the place
  *   picked at the top.
- * - The Workshop's panel (`[data-workshop]`) shows the Workshop tab's view.
+ * - The Workshop's state.panel (`[data-workshop]`) shows the Workshop tab's view;
+ *   the Signal tower's, the Post office's, the Apartments' and the Vault's
+ *   panels take their parts here too (`PANELS` in tycoon-boot.ts). The
+ *   Vault's downloads every city save as one backup file and loads one back
+ *   (backup.ts checks it; a yes writes it and starts the city again).
  *
- * The save lives in the browser (`degen-city-tycoon-v1`) and is brought up to
- * date every second (and on return, counting the time away). The Vault's
- * panel downloads every city save as one backup file and loads one back
- * (backup.ts checks it; a yes writes it and starts the city again).
+ * The views tick every second and are patched in place (`repaint()`), so a
+ * button never changes under a finger.
  */
 import {
   CROPS,
@@ -37,11 +40,9 @@ import {
   RECIPES,
   RECIPE_IDS,
   SHOP,
-  START_DORRAS,
   UNIT_KINDS,
   UNIT_KIND_IDS,
   WAREHOUSE_CAP,
-  advance,
   askPrice,
   bidPrice,
   buildUnit,
@@ -50,8 +51,6 @@ import {
   cancelJob,
   canMake,
   cargoCap,
-  cleanSave,
-  plotRefund,
   clearSlot,
   collect,
   good,
@@ -83,10 +82,8 @@ import {
   type ProductId,
   type RawId,
   type Result,
-  type Sales,
   type Slot,
   type Stock,
-  type TycoonSave,
   type UnitKind,
   CONTRACTS_MAX,
   DESTS,
@@ -131,7 +128,6 @@ import {
   lotAt,
   lotPrice,
   makes,
-  placeAt,
   propertyValue,
   repay,
   shipFeeFrom,
@@ -151,19 +147,17 @@ import {
   cornerPrice,
 } from './tycoon';
 import { CORNER_SHOPS } from './projects';
-import { DOORS, LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
+import { DOORS } from './solids';
 import { PLACE_LEVELS } from './catalog';
 import { LV, whyNot } from './ui';
 import { confirmHtml, focusConfirm } from './menukit';
-import type { Sfx } from './combat';
-import type { WeaponId } from './combat-sim';
 import type { SpotId } from '../../lib/city';
-import { createMissionsUI } from './missions-ui';
-import { guideAt, type GuideStep } from './guide';
 import { BACKUP_KEYS, TYCOON_KEY as KEY, backupName, packBackup, readBackup, type ReadBackup } from './backup';
+import { CORNER_IDS, LETTER, LOT_IDS, PLACE_LIST, ROW_IDS, STAND, TABS, UNIT_IDS, cornerName, fmt, type Tab, type TycoonCore, type TycoonScreens } from './tycoon-boot';
 
-const fmt = new Intl.NumberFormat('en-US');
-const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+/** A car this close to a place is parked there */
+const CAR_R = 9;
+
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 /** The Dorras mark: a little coin */
 const COIN = '<svg class="dorra" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".18"/><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 7h3.5a5 5 0 0 1 0 10H9zM7 12h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -172,29 +166,7 @@ const dot = (id: GoodId) => `<span class="good-dot" style="--c:${good(id).color}
 const perMin = (n: number) => (n >= 1 ? fmt.format(Math.round(n)) : n.toFixed(1));
 const secs = (min: number) => (min >= 1 ? `${+min.toFixed(1)} min` : `${Math.max(1, Math.round(min * 60))} s`);
 
-/** Where you stand to run a place, and where your car parks to load and unload */
-const PLACE_LIST: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'c0', 'c1', 'c2', 'c3', 'workshop'];
-const STAND = Object.fromEntries(PLACE_LIST.map((p) => [p, placeAt(p)])) as Record<PlaceId, { x: number; z: number }>;
-/** Standing this close serves a stall's or shop's customers; a car this close is parked there */
-const SERVE_R = 2.2;
-const CAR_R = 9;
-const UNIT_IDS = ['u0', 'u1', 'u2', 'u3'] as const;
-const LOT_IDS = ['l0', 'l1', 'l2'] as const;
-/** The Units tab's places: Makers' Row's four units, then the three big lots */
-const ROW_IDS: PlaceId[] = [...UNIT_IDS, ...LOT_IDS];
-/** The Trenches' corner shops (on the Units tab after them), and their names as you'd say them ("Block Bodega") */
-const CORNER_IDS = ['c0', 'c1', 'c2', 'c3'] as const;
-const cornerName = (i: number) => CORNER_SHOPS[i].name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
-const LETTER = 'ABC';
 const PRODUCT_LIST = GOODS.filter((g) => !g.raw).map((g) => g.id);
-type Tab = 'stall' | 'units' | 'workshop' | 'car' | 'bag';
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'stall', label: 'Stall' },
-  { id: 'units', label: 'Units' },
-  { id: 'workshop', label: 'Workshop' },
-  { id: 'car', label: 'Car' },
-  { id: 'bag', label: 'Bag' },
-];
 const KIND_BLURB: Record<UnitKind | LotKind, string> = {
   garden: 'Grows raw goods for the Workshop',
   shop: `A bigger stall: ${SHOP.slots} shelves of ${SHOP.capacity}`,
@@ -205,45 +177,11 @@ const KIND_BLURB: Record<UnitKind | LotKind, string> = {
   offices: `HQ: your shops sell ${Math.round((HQ_BOOST - 1) * 100)}% faster`,
 };
 
-/** The building panels the economy fills in, by spot (the Emporium's market hall, the Workshop, the Signal tower's contracts, the Post office's couriers, the Apartments' staff) */
-const PANELS = {
-  emporium: '[data-market]',
-  workshop: '[data-workshop]',
-  signal: '[data-contracts]',
-  telegram: '[data-couriers]',
-  apartments: '[data-staff]',
-  vault: '[data-bank]',
-} as const;
-type PanelId = keyof typeof PANELS;
 const clock = (ms: number) => {
   const t = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
 
-export interface TycoonHooks {
-  /** The hub (hub.ts): the business card is its Business tab */
-  hub?: { show(tab: 'business'): void; close(): boolean; readonly open: boolean; readonly tab: string };
-  /** Where Degen is standing in walk mode, on foot (null otherwise) */
-  walker(): { x: number; z: number } | null;
-  /** Your car, if it's out of the garage */
-  car(): { x: number; z: number; model: string; name: string; speed: number } | null;
-  /** Open the Emporium's market hall */
-  openMarket(): void;
-  /** Walking: carry a crate between the place (`at`) and your car's boot (moments.ts), then `done` moves the goods; false if he can't now (they move at once) */
-  carry?(dir: 'load' | 'unload', at: { x: number; z: number }, done: () => void): boolean;
-  /** Something the city shows changed (the stall's crates, the units, where contracts go) */
-  stock(s: TycoonSave): void;
-  /** The card opened (walk mode frees the mouse) */
-  opened(): void;
-  /** The sound switch (purchases, upgrades, missions claimed, level-ups) */
-  sfx(kind: Sfx, gain?: number): void;
-  /** Getting started's way in from the City view: open a building's panel or start walking there */
-  guideGo(g: GuideStep): void;
-  /** The Bag's ways in from the City view: a building's panel (the Armoury, the Night Market) */
-  openSpot(id: SpotId): void;
-  /** May he carry this gun (a starter his score unlocked, or one he bought): the Bag's locker */
-  mayCarry(id: WeaponId): boolean;
-}
 
 /** Make `to` match `from` in place: same elements kept, only what differs is changed */
 function morph(to: Node, from: Node) {
@@ -285,33 +223,8 @@ function repaint(el: HTMLElement, html: string) {
   morphChildren(el, tmp);
 }
 
-function loadSave(now: number): { save: TycoonSave; fresh: boolean; refund: number } {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const o = JSON.parse(raw);
-      return { save: cleanSave(o, now), fresh: false, refund: plotRefund(o) };
-    }
-  } catch {
-    /* a broken save starts over */
-  }
-  return { save: cleanSave(null, now), fresh: true, refund: 0 };
-}
-
-export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
-  const pill = root.querySelector<HTMLButtonElement>('[data-dorras]')!;
-  const pillAmount = pill.querySelector<HTMLElement>('[data-dorras-amount]')!;
-  const card = root.querySelector<HTMLElement>('[data-biz]')!;
-  const cardBody = card.querySelector<HTMLElement>('[data-biz-body]')!;
-  const tabsEl = card.querySelector<HTMLElement>('[data-biz-tabs]')!;
-  const toastEl = root.querySelector<HTMLElement>('[data-econ-toast]')!;
-  const { save, fresh, refund } = loadSave(Date.now());
-  /** The building panel the economy is showing in, if any */
-  let panel: { id: PanelId; el: HTMLElement } | null = null;
-  let note = '';
-  let toastTimer = 0;
-  let tab: Tab = 'stall';
-  let unitSel = 0;
+export function createTycoonScreens(core: TycoonCore): TycoonScreens {
+  const { save, h, card, cardBody, tabsEl, state, missions, changed, placeName, shortName, serving, cardOpen, openCard, closeCard } = core;
   /** The market hall's place: where Buy delivers and Sell takes from (or your car, parked at the Emporium) */
   let marketAt: PlaceId | 'car' = 'stall';
   /** The Post office's form: from where, to where */
@@ -321,60 +234,14 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   let restoreAsk: Extract<ReadBackup, { ok: true }> | null = null;
   /** Give up was pressed on this contract: its row shows the confirm (menukit.ts; the board ticks, so the state paints it) */
   let askDrop: number | null = null;
-  /** Set while a backup is being put back: nothing more is stored before the city starts again */
-  let frozen = false;
+  const stands = () => Object.entries(STAND) as [PlaceId, { x: number; z: number }][];
 
-  const store = () => {
-    if (frozen) return;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(save));
-    } catch {
-      /* fine: progress just won't stick */
-    }
-  };
-  function toast(text: string, ms = 5200) {
-    toastEl.textContent = text;
-    toastEl.classList.add('is-on');
-    clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => toastEl.classList.remove('is-on'), ms);
-  }
-  // Missions, the level pill and badges (missions-ui.ts) run on the same save; `changed()` is hoisted
-  const missions = createMissionsUI(root, { save: () => save, commit: () => changed(), toast, sfx: (kind, gain) => h.sfx(kind, gain) }, { go: (g) => h.guideGo(g) });
-
-  /* ---------- Places ---------- */
-  function placeName(p: PlaceId) {
-    if (p === 'stall') return 'Your stall';
-    if (p === 'workshop') return 'The Workshop';
-    const i = Number(p.slice(1));
-    if (p.startsWith('c')) return cornerName(i);
-    if (p.startsWith('l')) {
-      const l = save.lots[i];
-      return `Lot ${LETTER[i]}${l?.kind ? ` · ${LOT_KINDS[l.kind].name}` : ''}`;
-    }
-    const u = save.units[i];
-    return `Unit ${i + 1}${u?.kind ? ` · ${UNIT_KINDS[u.kind].name}` : ''}`;
-  }
-  const shortName = (p: PlaceId) => (p === 'stall' ? 'Stall' : p === 'workshop' ? 'Workshop' : placeName(p));
-  const places = () => Object.entries(STAND) as [PlaceId, { x: number; z: number }][];
-  /** The place you're standing at, on foot */
-  function standingAt(): PlaceId | null {
-    const w = h.walker();
-    if (!w) return null;
-    for (const [p, s] of places()) if (Math.hypot(s.x - w.x, s.z - w.z) < SERVE_R) return p;
-    return null;
-  }
-  /** Standing at a stall or shop serves its customers */
-  const serving = () => {
-    const p = standingAt();
-    return p && sells(save, p) ? p : null;
-  };
-  /** The place your car is parked (or stopped) at, if any */
   function carAt(): PlaceId | null {
     const c = h.car();
     if (!c || Math.abs(c.speed) > 0.5) return null;
     let best: PlaceId | null = null;
     let bestD = CAR_R;
-    for (const [p, s] of places()) {
+    for (const [p, s] of stands()) {
       const d = Math.hypot(s.x - c.x, s.z - c.z);
       if (d < bestD && (p === 'stall' || p === 'workshop' || kindAt(save, p))) {
         bestD = d;
@@ -406,15 +273,6 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     return 'Your stall is as big as it gets.';
   };
 
-  /* ---------- The readout ---------- */
-  function paintPill() {
-    const v = fmt.format(save.dorras);
-    // Short in the header (12.5K), in full on the card and to screen readers
-    const short = save.dorras < 10000 ? v : compact.format(save.dorras);
-    if (pillAmount.textContent !== short) pillAmount.textContent = short;
-    pill.classList.toggle('has-till', save.till > 0);
-    pill.setAttribute('aria-label', `${v} Dorras${save.till > 0 ? `, ${fmt.format(save.till)} in the till` : ''}. Open your business`);
-  }
 
   /* ---------- Views ---------- */
   function slotRow(s: Slot, p: PlaceId, now: number, capacity: number) {
@@ -545,17 +403,17 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       const k = kindAt(save, p);
       const owned = i < 4 ? save.units[i] : save.lots[i - 4];
       const name = k ? (i < 4 ? UNIT_KINDS[k as UnitKind].name : LOT_KINDS[k as LotKind].name) : owned ? 'Empty' : i < 4 ? 'To let' : 'For sale';
-      return `<button type="button" data-unit="${i}" aria-pressed="${i === unitSel}">${i < 4 ? i + 1 : LETTER[i - 4]}<small>${name}</small></button>`;
+      return `<button type="button" data-unit="${i}" aria-pressed="${i === state.unitSel}">${i < 4 ? i + 1 : LETTER[i - 4]}<small>${name}</small></button>`;
     }).join('');
     const corners = CORNER_IDS.map((p, i) => {
       const k = ROW_IDS.length + i;
-      return `<button type="button" data-unit="${k}" aria-pressed="${k === unitSel}">${esc(cornerName(i).split(' ')[0])}<small>${save.corners[i] ? 'Yours' : 'For sale'}</small></button>`;
+      return `<button type="button" data-unit="${k}" aria-pressed="${k === state.unitSel}">${esc(cornerName(i).split(' ')[0])}<small>${save.corners[i] ? 'Yours' : 'For sale'}</small></button>`;
     }).join('');
     const tabs = `<p class="biz-label">Makers' Row · big lots</p><div class="seg biz-units" role="group" aria-label="Your units and lots">${chips}</div>
       <p class="biz-label">The Trenches · corner shops</p><div class="seg biz-units" role="group" aria-label="The Trenches' corner shops">${corners}</div>`;
-    if (unitSel >= ROW_IDS.length) return tabs + cornerView(unitSel - ROW_IDS.length, now);
-    if (unitSel >= 4) return tabs + lotView(unitSel - 4, now);
-    const i = unitSel;
+    if (state.unitSel >= ROW_IDS.length) return tabs + cornerView(state.unitSel - ROW_IDS.length, now);
+    if (state.unitSel >= 4) return tabs + lotView(state.unitSel - 4, now);
+    const i = state.unitSel;
     const p = UNIT_IDS[i];
     const u = save.units[i];
     let body = '';
@@ -841,7 +699,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (!file) return;
     const r = readBackup(await file.text(), Date.now());
     restoreAsk = r.ok ? r : null;
-    note = r.ok
+    state.note = r.ok
       ? ''
       : r.why === 'newer'
         ? 'That backup is newer. Reload and try again.'
@@ -856,15 +714,15 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const r = restoreAsk;
     restoreAsk = null;
     if (!r) return;
-    frozen = true;
+    core.freeze(true);
     try {
       const keep = new Set(r.writes.map(([k]) => k));
       for (const k of BACKUP_KEYS) if (!keep.has(k)) localStorage.removeItem(k);
       for (const [k, v] of r.writes) localStorage.setItem(k, v);
     } catch {
-      frozen = false;
-      store();
-      note = "Can't load: this browser won't keep saves.";
+      core.freeze(false);
+      changed();
+      state.note = "Can't load: this browser won't keep saves.";
       h.sfx('denied');
       return;
     }
@@ -887,13 +745,11 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       <ul class="market-list biz-estate">${rows}</ul>`;
   }
 
-  /** The card is showing: the hub open on Business (or, without a hub, the card's own panel) */
-  const cardOpen = () => (h.hub ? h.hub.open && h.hub.tab === 'business' : !card.hidden);
   function paintCard() {
     if (!cardOpen()) return;
     const now = Date.now();
-    tabsEl.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
-    const view = tab === 'stall' ? stallView(now) : tab === 'units' ? unitView(now) : tab === 'workshop' ? workshopView() : tab === 'car' ? carView(now) : bagView();
+    tabsEl.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === state.tab)));
+    const view = state.tab === 'stall' ? stallView(now) : state.tab === 'units' ? unitView(now) : state.tab === 'workshop' ? workshopView() : state.tab === 'car' ? carView(now) : bagView();
     repaint(
       cardBody,
       `<div class="stall-till">
@@ -901,7 +757,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         <button type="button" class="shop-take stall-collect" data-collect ${save.till > 0 ? '' : 'disabled'}>Collect</button>
       </div>
       ${view}
-      ${note ? `<p class="shop-note" role="status">${esc(note)}</p>` : ''}`
+      ${state.note ? `<p class="shop-note" role="status">${esc(state.note)}</p>` : ''}`
     );
     card.querySelector<HTMLElement>('[data-biz-balance]')!.innerHTML = D(save.dorras);
   }
@@ -915,41 +771,12 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     });
     return '<p class="stall-empty">Opening your bag…</p>';
   }
-  /** Open the card on a tab, or on a place (a unit opens the Units tab on it) */
-  function openCard(at?: PlaceId | Tab) {
-    if (at === 'stall' || at === 'units' || at === 'workshop' || at === 'car' || at === 'bag') tab = at;
-    else if (at?.startsWith('u') || at?.startsWith('l')) {
-      tab = 'units';
-      unitSel = ROW_IDS.indexOf(at);
-    } else if (at?.startsWith('c')) {
-      tab = 'units';
-      unitSel = ROW_IDS.length + Number(at.slice(1));
-    }
-    note = '';
-    if (!cardOpen()) {
-      if (h.hub) h.hub.show('business');
-      else {
-        card.hidden = false;
-        root.classList.add('is-shopping', 'is-stall');
-        card.querySelector<HTMLButtonElement>('[data-biz-close]')?.focus({ preventScroll: true });
-      }
-      h.opened();
-    }
-    paintCard();
-  }
-  function closeCard() {
-    if (!cardOpen()) return false;
-    if (h.hub) return h.hub.close();
-    card.hidden = true;
-    root.classList.remove('is-shopping', 'is-stall');
-    return true;
-  }
 
-  /** Every button on the card, the market hall and the Workshop's panel */
+  /** Every button on the card, the market hall and the Workshop's state.panel */
   function act(btn: HTMLButtonElement, now: number) {
     const ds = btn.dataset;
     const at = (ds.at as PlaceId | undefined) ?? 'stall';
-    note = '';
+    state.note = '';
     if ('bizClose' in ds) return void closeCard();
     if (ds.tab) return void openCard(ds.tab as Tab);
     if (ds.bagGo) {
@@ -966,67 +793,67 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     }
     if ('backupSave' in ds) {
       const name = downloadBackup(now);
-      note = `Backup downloaded: ${name}`;
+      state.note = `Backup downloaded: ${name}`;
       h.sfx('buy', 0.6);
     } else if ('restoreNo' in ds) restoreAsk = null;
     else if ('restoreYes' in ds) return void restore();
     else if (ds.upgradePlace) {
       const p = ds.upgradePlace as PlaceId;
       const r = upgradePlace(save, p);
-      note = r.ok ? `${placeName(p)} is now level ${placeLevel(save, p)}.` : whyNot(r.why);
+      state.note = r.ok ? `${placeName(p)} is now level ${placeLevel(save, p)}.` : whyNot(r.why);
       h.sfx(r.ok ? 'upgrade' : 'denied');
-    } else if (ds.unit) unitSel = Number(ds.unit);
+    } else if (ds.unit) state.unitSel = Number(ds.unit);
     else if (ds.openCorner) {
       openCard(CORNER_IDS[Number(ds.openCorner)]);
       return;
     }
     else if ('collect' in ds) {
       const n = collect(save);
-      if (n) note = `Collected ${fmt.format(n)} Dorras.`;
+      if (n) state.note = `Collected ${fmt.format(n)} Dorras.`;
     } else if (ds.price && ds.good) setPrice(save, ds.good as GoodId, ds.price as PriceLevel, at);
     else if (ds.clear) clearSlot(save, ds.clear as GoodId, at);
     else if ('upgrade' in ds) {
       const r = upgrade(save);
-      note = r.ok ? `Your stall is now level ${save.stall.level}.` : why(r);
+      state.note = r.ok ? `Your stall is now level ${save.stall.level}.` : why(r);
     } else if (ds.buyLot) {
       const i = Number(ds.buyLot);
       const r = buyLot(save, i);
-      note = r.ok ? `Lot ${LETTER[i]} is yours. Build something big on it.` : why(r);
+      state.note = r.ok ? `Lot ${LETTER[i]} is yours. Build something big on it.` : why(r);
     } else if (ds.buildLot) {
       const i = Number(ds.lotI);
       const r = buildLot(save, i, ds.buildLot as LotKind);
-      note = r.ok ? `Lot ${LETTER[i]} is now your ${LOT_KINDS[ds.buildLot as LotKind].name.toLowerCase()}.` : r.why === 'stock' ? 'Empty it and stop its job first.' : why(r);
+      state.note = r.ok ? `Lot ${LETTER[i]} is now your ${LOT_KINDS[ds.buildLot as LotKind].name.toLowerCase()}.` : r.why === 'stock' ? 'Empty it and stop its job first.' : why(r);
     } else if (ds.borrow) {
       const r = borrow(save, Number(ds.borrow));
-      note = r.ok ? `Borrowed ${fmt.format(r.dorras)} Dorras.` : r.why === 'busy' ? 'Pay off your loan first.' : 'More than the Vault will lend you.';
+      state.note = r.ok ? `Borrowed ${fmt.format(r.dorras)} Dorras.` : r.why === 'busy' ? 'Pay off your loan first.' : 'More than the Vault will lend you.';
     } else if (ds.repay) {
       const r = repay(save, Number(ds.repay));
-      note = r.ok ? (save.loan ? `Paid ${fmt.format(r.dorras)} Dorras off your loan.` : 'Your loan is paid off.') : why(r);
+      state.note = r.ok ? (save.loan ? `Paid ${fmt.format(r.dorras)} Dorras off your loan.` : 'Your loan is paid off.') : why(r);
     } else if (ds.buyCorner) {
       const i = Number(ds.buyCorner);
       const r = buyCorner(save, i);
-      note = r.ok ? `${cornerName(i)} is yours.` : whyNot(r.why, CORNER_LEVEL);
+      state.note = r.ok ? `${cornerName(i)} is yours.` : whyNot(r.why, CORNER_LEVEL);
       h.sfx(r.ok ? 'buy' : 'denied');
     } else if (ds.buyUnit) {
       const r = buyUnit(save, Number(ds.buyUnit));
-      note = r.ok ? `Unit ${Number(ds.buyUnit) + 1} is yours. Build something on it.` : why(r);
+      state.note = r.ok ? `Unit ${Number(ds.buyUnit) + 1} is yours. Build something on it.` : why(r);
     } else if (ds.build) {
       const i = Number(ds.unitI);
       const r = buildUnit(save, i, ds.build as UnitKind);
-      note = r.ok ? `Unit ${i + 1} is now a ${UNIT_KINDS[ds.build as UnitKind].name.toLowerCase()}.` : r.why === 'stock' ? 'Empty it of goods first.' : why(r);
+      state.note = r.ok ? `Unit ${i + 1} is now a ${UNIT_KINDS[ds.build as UnitKind].name.toLowerCase()}.` : r.why === 'stock' ? 'Empty it of goods first.' : why(r);
     } else if (ds.crop) {
-      const r = setCrop(save, unitSel, ds.crop as RawId);
-      if (!r.ok) note = 'Empty the bins first.';
+      const r = setCrop(save, state.unitSel, ds.crop as RawId);
+      if (!r.ok) state.note = 'Empty the bins first.';
     } else if (ds.make) {
       const r = startJob(save, ds.make as ProductId, Number(ds.n), (ds.at as PlaceId) ?? 'workshop');
-      note = r.ok ? `Making ${r.qty} ${good(ds.make as GoodId).name}.` : why(r, undefined, (ds.at as PlaceId) ?? 'workshop');
+      state.note = r.ok ? `Making ${r.qty} ${good(ds.make as GoodId).name}.` : why(r, undefined, (ds.at as PlaceId) ?? 'workshop');
     } else if ('stop' in ds) {
       cancelJob(save, (ds.at as PlaceId) ?? 'workshop');
-      note = 'Job stopped. Raw goods returned.';
+      state.note = 'Job stopped. Raw goods returned.';
     } else if (ds.load) {
       const c = h.car();
       const p = carAt();
-      if (!c || !p) note = 'Park your car here first.';
+      if (!c || !p) state.note = 'Park your car here first.';
       else {
         const run = () => {
           const r = load(save, p, ds.load as GoodId, Number(ds.n), cargoCap(c.model));
@@ -1034,58 +861,58 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         };
         // (on foot, the crate is carried to the car first: moments.ts)
         if (carried('load', p, run)) return;
-        note = run();
+        state.note = run();
       }
     } else if (ds.unload) {
       const p = carAt();
-      if (!p) note = 'Park your car at one of your places first.';
+      if (!p) state.note = 'Park your car at one of your places first.';
       else {
         const run = () => {
           const r = unload(save, p, ds.unload as GoodId, Number(ds.n), now);
           return r.ok ? `Unloaded ${r.qty} ${good(ds.unload as GoodId).name}${r.dorras ? `: ${fmt.format(r.dorras)} Dorras delivery bonus` : ''}.` : why(r, ds.unload as GoodId, p);
         };
         if (carried('unload', p, run)) return;
-        note = run();
+        state.note = run();
       }
     } else if (ds.buy) {
       const c = h.car();
       const r = marketAt === 'car' ? (c ? buyToCar(save, ds.buy as GoodId, Number(ds.n), now, cargoCap(c.model)) : ({ ok: false, why: 'place' } as Result)) : buy(save, ds.buy as GoodId, Number(ds.n), now, marketAt);
       const to = marketAt === 'car' ? 'your car' : placeName(marketAt);
-      note = r.ok ? `Bought ${r.qty} ${good(ds.buy as GoodId).name} for ${fmt.format(r.dorras)} Dorras, delivered to ${to}.` : r.why === 'room' && marketAt === 'car' ? 'Your car is full.' : why(r, ds.buy as GoodId, marketAt === 'car' ? 'stall' : marketAt);
+      state.note = r.ok ? `Bought ${r.qty} ${good(ds.buy as GoodId).name} for ${fmt.format(r.dorras)} Dorras, delivered to ${to}.` : r.why === 'room' && marketAt === 'car' ? 'Your car is full.' : why(r, ds.buy as GoodId, marketAt === 'car' ? 'stall' : marketAt);
     } else if (ds.sell) {
       const r = marketAt === 'car' ? sellFromCar(save, ds.sell as GoodId, Number(ds.n), now) : sellBack(save, ds.sell as GoodId, Number(ds.n), now, marketAt);
-      note = r.ok ? `Sold ${r.qty} ${good(ds.sell as GoodId).name} for ${fmt.format(r.dorras)} Dorras.` : why(r);
+      state.note = r.ok ? `Sold ${r.qty} ${good(ds.sell as GoodId).name} for ${fmt.format(r.dorras)} Dorras.` : why(r);
     } else if (ds.marketAt) marketAt = ds.marketAt as PlaceId | 'car';
     else if (ds.take) {
       const r = accept(save, Number(ds.take), now);
-      note = r.ok ? 'Contract taken. Follow the beam.' : r.why === 'max' ? `You have ${CONTRACTS_MAX} contracts on the go already.` : why(r);
+      state.note = r.ok ? 'Contract taken. Follow the beam.' : r.why === 'max' ? `You have ${CONTRACTS_MAX} contracts on the go already.` : why(r);
     } else if (ds.dropAsk) {
       // Give up asks once (docs/polish-plan.md Phase 3): the row shows the confirm, the keyboard on its Yes
       askDrop = Number(ds.dropAsk);
-      queueMicrotask(() => panel && focusConfirm(panel.el));
+      queueMicrotask(() => state.panel && focusConfirm(state.panel.el));
     } else if ('dropKeep' in ds) {
       const was = askDrop;
       askDrop = null;
-      queueMicrotask(() => panel?.el.querySelector<HTMLElement>(`[data-drop-ask="${was}"]`)?.focus({ preventScroll: true }));
+      queueMicrotask(() => state.panel?.el.querySelector<HTMLElement>(`[data-drop-ask="${was}"]`)?.focus({ preventScroll: true }));
     } else if (ds.drop) {
       askDrop = null;
       dropContract(save, Number(ds.drop));
-      note = 'Contract given up';
+      state.note = 'Contract given up';
     } else if (ds.deliver) {
       const d = carAtDest();
       const r = d ? deliver(save, Number(ds.deliver), d, now) : ({ ok: false, why: 'place' } as Result);
-      note = r.ok ? `Delivered. ${fmt.format(r.dorras)} Dorras paid.` : r.why === 'stock' ? "The goods aren't all in your car." : r.why === 'place' ? 'Park by the drop-off first.' : why(r);
+      state.note = r.ok ? `Delivered. ${fmt.format(r.dorras)} Dorras paid.` : r.why === 'stock' ? "The goods aren't all in your car." : r.why === 'place' ? 'Park by the drop-off first.' : why(r);
     } else if (ds.sendFrom) sendFrom = ds.sendFrom as PlaceId;
     else if (ds.sendTo) sendTo = ds.sendTo as PlaceId;
     else if (ds.send && sendFrom && sendTo) {
       const r = ship(save, sendFrom, sendTo, ds.send as GoodId, Number(ds.n), now);
-      note = r.ok ? `Courier sent: ${r.qty} ${good(ds.send as GoodId).name}, ${fmt.format(r.dorras)} Dorras.` : r.why === 'busy' ? `All ${SHIP_MAX} couriers are out.` : why(r, ds.send as GoodId, sendTo);
+      state.note = r.ok ? `Courier sent: ${r.qty} ${good(ds.send as GoodId).name}, ${fmt.format(r.dorras)} Dorras.` : r.why === 'busy' ? `All ${SHIP_MAX} couriers are out.` : why(r, ds.send as GoodId, sendTo);
     } else if (ds.hire) {
       const r = hire(save, ds.hire as PlaceId);
-      note = r.ok ? `Hired a ${ROLES[roleAt(save, ds.hire as PlaceId)!].name.toLowerCase()} for ${placeName(ds.hire as PlaceId).replace('Your', 'your').replace('The', 'the')}.` : why(r);
+      state.note = r.ok ? `Hired a ${ROLES[roleAt(save, ds.hire as PlaceId)!].name.toLowerCase()} for ${placeName(ds.hire as PlaceId).replace('Your', 'your').replace('The', 'the')}.` : why(r);
     } else if (ds.letGo) {
       letGo(save, ds.letGo as PlaceId);
-      note = 'Let go.';
+      state.note = 'Let go.';
     } else return;
     changed();
   }
@@ -1093,7 +920,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function carried(dir: 'load' | 'unload', p: PlaceId, run: () => string) {
     const at = STAND[p];
     if (!at || !h.walker() || !h.carry?.(dir, at, () => {
-      note = run();
+      state.note = run();
       changed();
     }))
       return false;
@@ -1102,7 +929,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   }
   const onClick = (e: Event) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-    // The mission board's buttons first (on the Signal tower's panel), then the economy's
+    // The mission board's buttons first (on the Signal tower's state.panel), then the economy's
     if (btn && !btn.disabled && !missions.act(btn)) act(btn, Date.now());
   };
   card.addEventListener('click', onClick);
@@ -1111,24 +938,14 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const input = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-backup-file]');
     if (input) void readFile(input);
   };
-  pill.addEventListener('click', () => (cardOpen() ? closeCard() : openCard()));
-  // Esc closes the card first (before it can close a panel or leave walk mode)
-  document.addEventListener(
-    'keydown',
-    (e) => {
-      if (e.key === 'Escape' && closeCard()) e.stopImmediatePropagation();
-    },
-    true
-  );
-  tabsEl.innerHTML = TABS.map((t) => `<button type="button" data-tab="${t.id}" aria-pressed="false">${t.label}</button>`).join('');
   // Q / E step the card's tabs while the keyboard is in the card (the kit's way, docs/polish-plan.md Phase 3); the hub's
   // own strip keeps its Q / E for its tabs
   card.addEventListener('keydown', (e) => {
     const back = e.key === 'q' || e.key === 'Q';
     if (!(back || e.key === 'e' || e.key === 'E') || e.target instanceof HTMLInputElement) return;
-    const i = TABS.findIndex((t) => t.id === tab);
+    const i = TABS.findIndex((t) => t.id === state.tab);
     openCard(TABS[(i + (back ? -1 : 1) + TABS.length) % TABS.length].id);
-    tabsEl.querySelector<HTMLButtonElement>(`[data-tab="${tab}"]`)?.focus({ preventScroll: true });
+    tabsEl.querySelector<HTMLButtonElement>(`[data-tab="${state.tab}"]`)?.focus({ preventScroll: true });
     e.preventDefault();
     e.stopPropagation();
   });
@@ -1169,146 +986,44 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         .join('')}</ul>
       <p class="biz-label">Raw goods · for the Workshop</p>
       <ul class="market-list">${RAW_IDS.map(row).join('')}</ul>
-      ${note ? `<p class="shop-note" role="status">${esc(note)}</p>` : ''}
+      ${state.note ? `<p class="shop-note" role="status">${esc(state.note)}</p>` : ''}
       <div class="city-panel-actions"><button type="button" class="chip-link" data-open-stall>Your business</button></div>
       <p class="city-panel-fine">Park your car outside to buy into it.</p>`;
   }
-  /** Fill the building panel that's open */
+  /** Fill the building state.panel that's open */
   function paintPanel() {
-    if (!panel) return;
+    if (!state.panel) return;
     const now = Date.now();
-    const noteHtml = note ? `<p class="shop-note" role="status">${esc(note)}</p>` : '';
+    const noteHtml = state.note ? `<p class="shop-note" role="status">${esc(state.note)}</p>` : '';
     const toCard = (tabId: Tab) => `<div class="city-panel-actions"><button type="button" class="chip-link" data-tab="${tabId}">Your business</button></div>`;
     const html =
-      panel.id === 'emporium'
+      state.panel.id === 'emporium'
         ? marketView(now)
-        : panel.id === 'workshop'
+        : state.panel.id === 'workshop'
           ? `${workshopView()}${noteHtml}${toCard('workshop')}`
-          : panel.id === 'signal'
+          : state.panel.id === 'signal'
             ? `${contractsView(now)}${noteHtml}${missions.boardHtml(now)}${toCard('car')}`
-            : panel.id === 'telegram'
+            : state.panel.id === 'telegram'
               ? `${couriersView(now)}${noteHtml}${toCard('units')}`
-              : panel.id === 'vault'
+              : state.panel.id === 'vault'
                 ? `${bankView(now)}${noteHtml}${toCard('units')}`
                 : `${staffView()}${noteHtml}${toCard('units')}`;
-    repaint(panel.el, html);
+    repaint(state.panel.el, html);
   }
 
-  /* ---------- Ticking ---------- */
-  let lastShown = '';
-  function changed() {
-    // Badges and level-ups first, so their XP is in the save that's stored
-    missions.onCommit();
-    store();
-    paintPill();
-    paintCard();
-    paintPanel();
-    // The city only redraws what changed (crate stacks, units, the contracts' beams)
-    const shown = JSON.stringify([save.stall, save.units, save.lots, save.corners, save.contracts.map((c) => c.to), save.levels, guideAt(save)]);
-    if (shown !== lastShown) {
-      lastShown = shown;
-      h.stock(save);
-    }
-  }
-  /** Back after a while: one line, the two things that matter most (the short-copy rule, docs/polish-plan.md Phase 3) */
-  function awayNote(s: Sales) {
-    const n = (m: Partial<Record<GoodId, number>>) => Object.values(m).reduce<number>((a, b) => a + (b ?? 0), 0);
-    const parts = [
-      s.quit.length ? 'staff left unpaid' : '',
-      s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} ran out` : '',
-      s.earned > 0 ? `sold ${n(s.sold)} · ${fmt.format(s.earned)} Dorras in the till` : '',
-      n(s.grown) ? `grew ${n(s.grown)} raw goods` : '',
-      n(s.made) ? `made ${n(s.made)} at the Workshop` : '',
-      s.arrived.length ? `${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''} came in` : '',
-    ].filter(Boolean);
-    return parts.length ? `While you were away · ${parts.slice(0, 2).join(' · ')}` : '';
-  }
-  function tick() {
-    const sales = advance(save, Date.now(), serving() ?? false);
-    // Back after a while: say what happened
-    if (sales.away > 0) {
-      const msg = awayNote(sales);
-      if (msg) toast(msg, 7000);
-    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left unpaid`);
-    else if (sales.expired.length) toast(`Contract ran out · ${sales.expired[0].qty} ${good(sales.expired[0].good).name} for ${DESTS[sales.expired[0].to]}`);
-    else if (sales.arrived.length) toast(`Courier delivered · ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}`, 4000);
-    // (the sold-out bonus, docs/polish-plan.md Phase 9: paid straight to your balance)
-    else if (sales.bonus > 0) toast(`${good(sales.soldOut[0]).name} sold out · +${fmt.format(sales.bonus)} Dorras`, 4000);
-    changed();
-  }
-  tick();
-  if (fresh) {
-    // A fresh save's first line waits until the welcome card is closed, or 20 s (the first-run pile-up,
-    // docs/polish-plan.md Phase 3); phones never show the card
-    const hud = root.querySelector<HTMLElement>('[data-city-hud]');
-    const cardUp = () => !!hud && hud.dataset.card !== 'hidden' && !matchMedia('(max-width: 640px)').matches;
-    let said = false;
-    const say = () => {
-      if (said) return;
-      said = true;
-      watch?.disconnect();
-      toast(`${fmt.format(START_DORRAS)} Dorras to start · stock your stall at the market hall`, 7000);
-    };
-    const watch = hud && cardUp() ? new MutationObserver(() => !cardUp() && say()) : null;
-    if (!watch) say();
-    else {
-      watch.observe(hud!, { attributes: true, attributeFilter: ['data-card'] });
-      window.setTimeout(say, 20_000);
-    }
-  }
-  // (once: Build mode was retired, and what the save's district plots cost came back)
-  else if (refund) toast(`Build mode closed · ${fmt.format(refund)} Dorras refunded`, 9000);
-  window.setInterval(tick, 1000);
-  document.addEventListener('visibilitychange', () => !document.hidden && tick());
 
   return {
-    openCard,
-    closeCard,
-    get cardOpen() {
-      return cardOpen();
-    },
-    /** Paint the card (the hub showed its Business tab) */
-    paint: () => paintCard(),
-    get save() {
-      return save;
-    },
-    /** A game screen changed the save with the rules: keep it, repaint everything */
-    commit() {
-      changed();
-    },
-    toast,
-    /** The mission board, level pill and badges (missions-ui.ts) */
-    missions,
-    /** Your places on foot (walk-mode prompts): your stall, the four units, and your contracts' drop-offs */
-    places() {
-      return [
-        { id: 'stall', ...STALL_SPOT, label: 'Your stall' },
-        ...UNIT_IDS.map((p, i) => ({ id: p as string, ...UNIT_SITE[i].door, label: save.units[i] ? placeName(p) : `Unit ${i + 1} · To let` })),
-        ...LOT_IDS.map((p, i) => ({ id: p as string, ...LOT_SITE[i].door, label: save.lots[i] ? placeName(p) : `Lot ${LETTER[i]} · For sale` })),
-        ...CORNER_IDS.map((p, i) => ({ id: p as string, ...CORNER_SHOPS[i].door, label: save.corners[i] ? placeName(p) : `${cornerName(i)} · For sale` })),
-        ...save.contracts.map((c) => ({ id: 'car', ...destAt(c.to), label: `Deliver · ${DESTS[c.to]}` })),
-      ];
-    },
-    /** A building's panel opened: fill in its part of the economy, if it has one */
-    mountPanel(id: string, panelBody: HTMLElement) {
-      this.unmountPanel();
-      if (!(id in PANELS)) return;
-      const el = panelBody.querySelector<HTMLElement>(PANELS[id as PanelId]);
-      if (!el) return;
+    paintCard,
+    paintPanel,
+    mounted(el) {
       el.addEventListener('click', onClick);
       el.addEventListener('change', onChange);
-      panel = { id: id as PanelId, el };
-      note = '';
       restoreAsk = null;
       paintPanel();
     },
-    unmountPanel() {
-      panel?.el.removeEventListener('click', onClick);
-      panel?.el.removeEventListener('change', onChange);
-      panel = null;
+    unmounted(el) {
+      el.removeEventListener('click', onClick);
+      el.removeEventListener('change', onChange);
     },
-
   };
 }
-
-export type TycoonUI = ReturnType<typeof createTycoonUI>;

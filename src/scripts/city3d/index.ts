@@ -72,7 +72,8 @@ import type { Hub } from './hub';
 import type { Fitting } from './fitting';
 import { createCityHead } from './head';
 import { buildMarket } from './market';
-import { createTycoonUI, type TycoonUI } from './tycoon-ui';
+import { createTycoonUI, type TycoonUI } from './tycoon-boot';
+import { lazy, setLazyToast } from './lazy';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildCornerShops } from './cornershops';
@@ -826,10 +827,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let metroUI: MetroUI | null = null;
   // The river bus's card and rides (river plan step 4b, riverbus-ui.ts): loaded when a pier's card first opens
   let riverBusUI: RiverBusUI | null = null;
-  let riverBusLoad: Promise<RiverBusUI> | null = null;
   const RIVER_BUS_DOORS = BUS_STOPS_RIVER.map((s) => ({ id: `riverbus:${s.id}`, x: s.door.x, z: s.door.z, label: 'River bus' }));
-  const loadRiverBus = () =>
-    (riverBusLoad ??= import('./riverbus-ui').then(({ createRiverBusUI }) =>
+  const loadRiverBus = lazy(
+    () =>
+      import('./riverbus-ui').then(({ createRiverBusUI }) =>
       (riverBusUI = createRiverBusUI(root, {
         camera,
         reduced,
@@ -850,13 +851,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           monoUI?.close();
         },
       }))
-    ));
+    ),
+    'the river bus'
+  );
   // The Neon Mile's monorail (monorail.ts, docs/strip-plan.md Phase 4): its card and rides loaded when a station's door first opens
   let monoUI: MonoUI | null = null;
-  let monoLoad: Promise<MonoUI> | null = null;
   const MONO_DOORS = MONO_STATIONS.map((s) => ({ id: `mono:${s.id}`, x: s.door.x, z: s.door.z, label: 'Monorail' }));
-  const loadMono = () =>
-    (monoLoad ??= import('./monorail-ui').then(({ createMonoUI }) =>
+  const loadMono = lazy(
+    () =>
+      import('./monorail-ui').then(({ createMonoUI }) =>
       (monoUI = createMonoUI(root, {
         camera,
         reduced,
@@ -877,7 +880,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           riverBusUI?.close();
         },
       }))
-    ));
+    ),
+    'the monorail'
+  );
   // Sector 7 Tower's lift (skydeck.ts): a door in the pavilion at its foot and one at the lift house on the sky deck
   const LIFT_DOORS = [
     { id: 'lift:up', ...LIFT.lobby, label: 'Lift · Sky deck' },
@@ -1024,6 +1029,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     openSpot: (id) => open(id),
     mayCarry: (id) => walk.combat.canTake(id),
   });
+  // A chunk that fails to fetch says so here (lazy.ts)
+  setLazyToast((text, ms) => tycoon?.toast(text, ms));
 
   /* ---------- The hub (hub.ts, the menu plan's Phase 2): the pause screen ---------- */
   if (hub) {
@@ -1039,10 +1046,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     };
     // The Bag tab's grid: what he carries, read-only (inventory-ui.ts's chunk, fetched the first time the tab shows)
     const bagGrid = root.querySelector<HTMLElement>('[data-hub-bag-grid]');
-    let bagMod: Promise<typeof import('./inventory-ui')> | null = null;
+    const bagMod = lazy(() => import('./inventory-ui'), 'your bag');
     const paintBag = () => {
       if (!bagGrid) return;
-      void (bagMod ??= import('./inventory-ui')).then((m) => {
+      void bagMod().then((m) => {
         if (hub.tab === 'bag') repaint(bagGrid, m.bagHtml(game.save(), { may: (id) => walk.combat.canTake(id) }));
       });
     };
@@ -1077,9 +1084,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     reduced,
     low: tier === 'low',
   });
-  let fittingLoad: Promise<Fitting> | null = null;
-  loadFitting = () =>
-    (fittingLoad ??= import('./fitting').then(({ createFitting }) =>
+  loadFitting = lazy(
+    () =>
+      import('./fitting').then(({ createFitting }) =>
       (fitting = createFitting({
         look: () => profileUI.look,
         apply: (l) => profileUI.wear(l),
@@ -1088,7 +1095,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         reduced,
         low: tier === 'low',
       }))
-    ));
+    ),
+    'the fitting room'
+  );
   const mp =
     server && onlineSwitch && net
       ? net[0].createMultiplayer({
@@ -1798,10 +1807,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   camera.lookAt(controls.target);
   flyTo(start.pos, start.target, 2.8);
   // The cars' fine detail and your car's inside (vehicle plan Phase 1): its own chunk, once the city is up
-  idle(() => void import('./carfine').then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
+  idle(() => void lazy(() => import('./carfine'), "the cars' detail")().then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
   // Your motorbikes' drawing (vehicle plan Phase 7): the garage's stand shows yours once it's come
   idle(() =>
-    void import('./bikes').then((m) => {
+    void lazy(() => import('./bikes'), 'the bikes')().then((m) => {
       garage.setBikeMaker(m.createBike);
       // (and the traffic's bikes and scooters join the road: vehicle plan Phase 8)
       addTrafficBikes(m.bikeGeometry);
