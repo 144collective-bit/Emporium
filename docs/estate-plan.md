@@ -375,3 +375,34 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
     steel edge, a rail, a manual pad and a quarter pipe with its coping on
     smooth concrete, tagged; solid in `UNDER_SOLIDS`).
   - `COMMON_SOLIDS` (in `SOLIDS`). The boot's code is 730.3 of 740 KB.
+- **Phase 7 (life, night and sound):** `endslife.ts` (DOM-free, the chunk's,
+  tested in `tests/endslife.test.ts`), drawn by `endslife3d.ts`.
+  - **On the move** (`ENDS_PEOPLE`, each a function of the time): walkers along
+    Endswood Road's sidewalks between the kerb and the lamps, crossing at the
+    zebras; down the spine either side of the subways' cuttings; along Fennel
+    House's third-floor gallery over the street in the sky; dog walkers, their
+    dogs on leads (`ENDS_DOGS`); the old lady pulling her tartan shopping
+    trolley along the parade's side of the road (`trolleyAt()`); kids on BMXs
+    round the garage court behind Hawthorn Terrace, up on the back wheel now
+    and then (`bmxAt()`, `WHEELIE`); two mopeds up and down the Close
+    (`mopedAt()`, a delivery box on the back); a kickabout on the ball court
+    with a keeper at each end; kids on the swings.
+  - **Standing about** (`ENDS_IDLE`): neighbours on the deck railings (Fennel
+    House's, Marten House's, Linnet Court's; none on Fennel's third floor,
+    where people walk), a queue at the chicken shop and people at the parade's
+    other shops, someone round the corner of each corner shop, two on Bunker
+    Sound's sofa and two at its door, someone at the lychgate and someone by a
+    grave, the bus stops, two in the well, the benches, two watching the game.
+  - All of it comes with the chunk into the crowd's spare slots (life.ts
+    `addPeople()`): the reserve raised to 320, 160 on phones (the test holds
+    every chunk's people to it).
+  - **Night:** a strip of glazing lit up the face of every stair core and the
+    lift tower (a dark transom at each landing); fluorescent tubes under every
+    gallery's slab near its doors (one in five tired and flickering, one in
+    thirteen dead); a TV's blue among the windows' lights. Close up on a
+    gallery the tubes are bright boxes overhead; they cast no pools.
+  - **Sound** (ambience.ts `ends`, `studio`, `bell`; sound.ts): pigeons cooing
+    by day, a moped buzzing by a street or two off, the two-tone siren far off,
+    the ice-cream van's jingle (a made-up tune) on a dry day; Bunker Sound's
+    half-time grime beat out of its garage door; St Aldwyn's bell tolling the
+    hour by the visitor's clock, heard across the estate.

@@ -140,9 +140,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 240, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 240, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 120, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 320, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 320, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 160, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {

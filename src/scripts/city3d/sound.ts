@@ -66,8 +66,22 @@ export function createSound(given?: AudioContext) {
   let noteK = 0;
   let nextMower = 0;
   let nextCricket = 0;
+  /** Endswood (docs/estate-plan.md Phase 7): the estate's own (pigeons, mopeds, the two-tone siren far off, the
+   * ice-cream van), Bunker Sound's beat out of its garage door, St Aldwyn's bell on the hour */
+  let endsGain: GainNode;
+  let studioGain: GainNode;
+  let bellGain: GainNode;
+  let nextPigeon = 0;
+  let nextMoped = 0;
+  let nextTwoTone = 0;
+  let nextVan = 0;
+  let nextStudio = 0;
+  let studioStep = 0;
+  /** The hour the bell last tolled (the visitor's clock), so it tolls once */
+  let tolled = -1;
   const BOOM_BPM = 88;
   const CLUB_BPM = 124;
+  const STUDIO_BPM = 140;
   let on = false;
   let engine: { g: GainNode; lp: BiquadFilterNode; a: OscillatorNode; b: OscillatorNode; whine: boolean } | null = null;
   /** Your car's tyres sliding (city life plan, Phase 2): a squeal and a hiss, by how hard they slide */
@@ -233,6 +247,143 @@ export function createSound(given?: AudioContext) {
     showGain.gain.value = 0;
     showGain.connect(master);
     nextMower = ctx.currentTime + 20 + Math.random() * 40;
+    // Endswood: the estate's sounds through one gain, the studio's beat out of a garage door (the top end dulled), the bell
+    endsGain = ctx.createGain();
+    endsGain.gain.value = 0;
+    endsGain.connect(master);
+    studioGain = ctx.createGain();
+    studioGain.gain.value = 0;
+    const door = ctx.createBiquadFilter();
+    door.type = 'lowpass';
+    door.frequency.value = 1400;
+    door.Q.value = 0.6;
+    studioGain.connect(door).connect(master);
+    nextStudio = ctx.currentTime + 0.1;
+    bellGain = ctx.createGain();
+    bellGain.gain.value = 0;
+    bellGain.connect(master);
+    nextPigeon = ctx.currentTime + 3 + Math.random() * 6;
+    nextMoped = ctx.currentTime + 15 + Math.random() * 25;
+    nextTwoTone = ctx.currentTime + 25 + Math.random() * 40;
+    nextVan = ctx.currentTime + 60 + Math.random() * 90;
+  }
+
+  /** A pigeon on a ledge: two or three soft coos, each a falling hum with a flutter in it */
+  function pigeon(t: number) {
+    const n = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < n; i++) {
+      const at = t + i * (0.55 + Math.random() * 0.2);
+      const o = ctx!.createOscillator();
+      o.type = 'sine';
+      const f = 360 + Math.random() * 40;
+      o.frequency.setValueAtTime(f, at);
+      o.frequency.linearRampToValueAtTime(f * 1.08, at + 0.12);
+      o.frequency.exponentialRampToValueAtTime(f * 0.82, at + 0.42);
+      const lfo = ctx!.createOscillator();
+      lfo.frequency.value = 26;
+      const depth = ctx!.createGain();
+      depth.gain.value = 14;
+      lfo.connect(depth).connect(o.frequency);
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.035, at + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.45);
+      o.connect(g).connect(endsGain);
+      for (const x of [o, lfo]) {
+        x.start(at);
+        x.stop(at + 0.5);
+      }
+    }
+  }
+  /** A moped going by a street or two away: a buzzing two-stroke rising as it comes and dropping as it goes */
+  function mopedBy(t: number) {
+    const len = 5 + Math.random() * 3;
+    const f = 120 + Math.random() * 40;
+    const bp = ctx!.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 900;
+    bp.Q.value = 0.8;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.03, t + len * 0.5);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    bp.connect(g).connect(endsGain);
+    for (const [mul, level] of [
+      [1, 1],
+      [2, 0.5],
+    ]) {
+      const o = ctx!.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f * mul * 1.06, t);
+      o.frequency.linearRampToValueAtTime(f * mul * 1.1, t + len * 0.45);
+      o.frequency.linearRampToValueAtTime(f * mul * 0.9, t + len * 0.6);
+      o.frequency.linearRampToValueAtTime(f * mul * 0.86, t + len);
+      const og = ctx!.createGain();
+      og.gain.value = level;
+      o.connect(og).connect(bp);
+      o.start(t);
+      o.stop(t + len + 0.1);
+    }
+  }
+  /** The two-tone siren far off: a high note and a low one in turn, muffled by the blocks between */
+  function twoTone(t: number) {
+    const o = ctx!.createOscillator();
+    o.type = 'square';
+    const len = 6 + Math.random() * 3;
+    for (let k = 0; k * 0.62 < len; k++) o.frequency.setValueAtTime(k % 2 ? 460 : 610, t + k * 0.62);
+    const lp = ctx!.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1100;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.018, t + len * 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(lp).connect(g).connect(endsGain);
+    o.start(t);
+    o.stop(t + len + 0.1);
+  }
+  /** The ice-cream van's jingle a few streets over (a made-up tune), a little out of tune */
+  const VAN = [0, 4, 7, 12, 11, 7, 9, 7, 4, 5, 4, 2, 0];
+  function van(t: number) {
+    VAN.forEach((semi, k) => {
+      const at = t + k * 0.28;
+      const o = ctx!.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = 784 * Math.pow(2, semi / 12) * (1 + (Math.random() - 0.5) * 0.012);
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.022, at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.26);
+      o.connect(g).connect(endsGain);
+      o.start(at);
+      o.stop(at + 0.3);
+    });
+  }
+  /** St Aldwyn's bell: `n` strikes, each a deep hum and its partials ringing a long time */
+  function toll(t: number, n: number) {
+    const PARTIALS: [number, number, number][] = [
+      [0.5, 0.5, 5],
+      [1, 1, 3.6],
+      [1.19, 0.6, 2.4],
+      [1.5, 0.35, 2],
+      [2, 0.3, 1.6],
+      [2.74, 0.18, 1],
+    ];
+    for (let i = 0; i < n; i++) {
+      const at = t + i * 2.6;
+      for (const [mul, level, dec] of PARTIALS) {
+        const o = ctx!.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = 196 * mul;
+        const g = ctx!.createGain();
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(0.05 * level, at + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + dec);
+        o.connect(g).connect(bellGain);
+        o.start(at);
+        o.stop(at + dec + 0.05);
+      }
+    }
   }
 
   /** A lawnmower a few gardens off: a low two-stroke drone through a low-pass, wavering as it's pushed, up and back down over a quarter minute */
@@ -502,6 +653,17 @@ export function createSound(given?: AudioContext) {
       nextBoom += boomSixteenth;
       boomStep++;
     }
+    // Bunker Sound: a half-time grime beat (the kick, the snare on the third beat, quick hats with a roll, a sub sliding)
+    const studioSixteenth = 60 / STUDIO_BPM / 4;
+    while (nextStudio < ctx.currentTime + 0.2) {
+      const k = studioStep % 16;
+      if (k === 0 || k === 3 || k === 10) kick(nextStudio, studioGain);
+      if (k === 8) snare(nextStudio, studioGain);
+      if (k % 2 === 0 || k >= 13) hat(nextStudio, false, studioGain);
+      if (k === 0 || k === 10) bass(nextStudio, [41.2, 41.2, 36.7, 43.7][Math.floor(studioStep / 16) % 4], studioGain);
+      nextStudio += studioSixteenth;
+      studioStep++;
+    }
     // The club: a kick on every beat, the bass on the off-beats
     const clubSixteenth = 60 / CLUB_BPM / 4;
     while (nextClub < ctx.currentTime + 0.2) {
@@ -528,6 +690,7 @@ export function createSound(given?: AudioContext) {
         nextBeat = ctx!.currentTime + 0.1;
         nextBoom = ctx!.currentTime + 0.1;
         nextClub = ctx!.currentTime + 0.1;
+        nextStudio = ctx!.currentTime + 0.1;
         timer = window.setInterval(schedule, 50);
         master.gain.setTargetAtTime(0.55, ctx!.currentTime, 0.4);
       } else {
@@ -1091,6 +1254,32 @@ export function createSound(given?: AudioContext) {
       if (showOn && a.show > 0.05 && t > nextNote) {
         showNote(t, noteK++);
         nextNote = t + 0.5;
+      }
+      // Endswood: pigeons by day, a moped now and then, the two-tone siren far off, the ice-cream van on a dry day; the
+      // studio's beat by its door; the bell on the hour by the visitor's clock (as the Pier House's clock keeps it)
+      endsGain.gain.setTargetAtTime(a.ends, t, 1);
+      studioGain.gain.setTargetAtTime(a.studio * 0.4, t, 0.4);
+      bellGain.gain.setTargetAtTime(a.bell, t, 0.5);
+      if (a.ends > 0.15 && night < 0.5 && t > nextPigeon) {
+        pigeon(t);
+        nextPigeon = t + (4 + Math.random() * 9) * (1 + rain * 2);
+      }
+      if (a.ends > 0.15 && t > nextMoped) {
+        mopedBy(t);
+        nextMoped = t + 30 + Math.random() * 50;
+      }
+      if (a.ends > 0.15 && t > nextTwoTone) {
+        twoTone(t);
+        nextTwoTone = t + 60 + Math.random() * 80;
+      }
+      if (a.ends > 0.15 && night < 0.3 && rain < 0.2 && t > nextVan) {
+        van(t);
+        nextVan = t + 150 + Math.random() * 150;
+      }
+      const now = new Date();
+      if (now.getMinutes() === 0 && now.getHours() !== tolled) {
+        tolled = now.getHours();
+        if (a.bell > 0.05) toll(t, now.getHours() % 12 || 12);
       }
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium

@@ -23,6 +23,7 @@ import { NS_ROADS, WALK_W } from './layout';
 import { registerBlocks } from './endsblocks3d';
 import { registerStreet } from './endsstreet3d';
 import { registerBlend } from './endsblend3d';
+import { registerLife } from './endslife3d';
 import { BOLLARD as LOT9_BOLLARD, TUNNEL, TUNNEL_BOLLARDS, tunnelFloor } from './lot9';
 
 export const SELF = import.meta.url;
@@ -608,4 +609,6 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // The blend (Phase 6): Lot 9's tunnel as the estate's subway; the common down to Lot 9
   registerTunnel(low);
   registerBlend(low);
+  // Its life (Phase 7): the people into the crowd's spare slots, the dogs, bikes, mopeds and the trolley
+  registerLife(scene, tick, low);
 }

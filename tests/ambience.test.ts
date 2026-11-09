@@ -99,3 +99,14 @@ test("Sunridge: its quiet hum, its sprinklers and crickets (the suburb layer); n
   assert.equal(ambienceAt(e.x, e.z).suburb, 0);
   assert.equal(ambienceAt((CREST_RECT[0] + CREST_RECT[2]) / 2, (CREST_RECT[1] + CREST_RECT[3]) / 2).suburb, 0);
 });
+
+test("Endswood's own: the estate's sounds on its land and the common, Bunker Sound's beat by its door, the bell across the estate", () => {
+  const on = ambienceAt(-40, 400);
+  assert.ok(on.ends > 0.95 && on.studio < 0.05 && on.bell > 0.5);
+  assert.ok(ambienceAt(-80, 450).ends > 0.9, 'on the common');
+  assert.ok(ambienceAt(-79.4, 350).studio > 0.9 && ambienceAt(-79.4, 380).studio < 0.1);
+  assert.ok(ambienceAt(35, 369).bell > 0.99 && ambienceAt(35, 600).bell < 0.05);
+  // (and none of it downtown)
+  const town = ambienceAt(30, 30);
+  assert.ok(town.ends === 0 && town.studio === 0 && town.bell === 0);
+});

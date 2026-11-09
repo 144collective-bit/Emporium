@@ -1314,7 +1314,7 @@ it and has been retired completely. Build only on what's here.
   paints, `strip` in `TIERS`); walkers round its rows with their shopping;
   `striplife.ts` (DOM-free, tested in `tests/striplife.test.ts`: valets,
   doormen, the crowds at the fountains, the volcano and the Sphere, added
-  from the chunk through `addPeople()`, the crowd's `reserve` now 240 since Lot 9's Field); its
+  from the chunk through `addPeople()`, the crowd's `reserve` now 320 since Endswood's life); its
   sound (ambience.ts `strip`, `casino`, `show`: the crowd's babble, slot
   chimes by the casino doors, the fountain show's music while a show is on). Phase 6 (polish and performance) is built and the plan
   is done: `?bench` views `strip` and `strip-street`; phones draw the Sphere's
@@ -1377,7 +1377,7 @@ it and has been retired completely. Build only on what's here.
   porches, at their grills, patio tables and pool loungers) and the
   residents' cars on about a driveway in three (`DRIVEWAY_CARS`, nosed up to
   the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
-  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 240, 120 on
+  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 320, 160 on
   phones, with the Neon Mile's and Lot 9's; `addPeople()` fills them when the chunk loads, or queues them
   before the crowd's built, and places them at once through `repaint()`: under reduced motion the ticks run on the
   first frame only) and life.ts's home cars are per district
@@ -1478,7 +1478,7 @@ it and has been retired completely. Build only on what's here.
     conversions, each with its fire ring and chairs, a canopy over a
     table, its car, and what a long stay gathers; `CAMP_SOLIDS` (solid
     only inside each thing, `inner()`), `CAMP_CARS`, `CAMP_PEOPLE` (the
-    crowd's spare slots: the reserve is 240, 120 on phones),
+    crowd's spare slots: the reserve is 320, 160 on phones),
     `CAMP_DOGS`. Drawn by `lot9camp3d.ts` (`registerCamp()`,
     `registerPower()`, `yardThing()`, `hookupOf()`, `xmasLights()`,
     `campGlow()`: the fires' glow one mesh; one sign atlas of fixed made-up
@@ -1559,7 +1559,24 @@ it and has been retired completely. Build only on what's here.
   `SOLIDS`); drawn by `endsblend3d.ts`; Lot 9's tunnel drawn as the
   estate's subway (tiles, THE ENDS, SUBWAY plates, concrete bollards) by
   endswood3d.ts's `registerTunnel()`; a skate spot and lock-ups under the
-  viaduct by the estate (viadress.ts `skate`). One phase at a time with the owner's sign-off; keep it
+  viaduct by the estate (viadress.ts `skate`). Phase 7 (life, night and
+  sound) is built: `endslife.ts` (DOM-free, the chunk's, tested in
+  `tests/endslife.test.ts`): walkers on Endswood Road's sidewalks (crossing
+  at the zebras), down the spine and along Fennel House's third-floor
+  gallery, dog walkers (`ENDS_DOGS`), the old lady and her shopping trolley
+  (`trolleyAt()`), kids on BMXs in the garage court doing wheelies
+  (`bmxAt()`, `WHEELIE`), mopeds up and down the Close (`mopedAt()`), a
+  kickabout on the ball court, kids on the swings (`ENDS_PEOPLE`), and
+  people standing about (`ENDS_IDLE`: on the deck railings, at the parade,
+  the corner shops, Bunker Sound's sofa, the church, the bus stops, the
+  well, the benches), into the crowd's spare slots (the reserve 320, 160 on
+  phones); drawn by `endslife3d.ts`; at night the stairwells' glazing lit
+  up each core and lift tower, fluorescent tubes under every gallery (some
+  tired, the odd one dead) and TVs' blue among the windows
+  (endsblocks3d.ts); its sound (ambience.ts `ends`, `studio`, `bell`:
+  pigeons, mopeds, the two-tone siren, the ice-cream van's made-up jingle,
+  Bunker Sound's beat, St Aldwyn's bell on the hour by the visitor's
+  clock). One phase at a time with the owner's sign-off; keep it
   up to date.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
@@ -4832,7 +4849,7 @@ it and has been retired completely. Build only on what's here.
   `solids.ts`), the city's game (`catalog.ts`, `missions.ts` and the
   clock format in `ui.ts`, in `tests/game.test.ts`), Getting started and
   the save backup (`guide.ts`, `backup.ts`), the layout snapshot (nothing that exists moves, `tests/snapshot.test.ts`), the tile grid and the collision grid (`tiles.ts`, `boxgrid.ts`), building as you go (`tileplan.ts`, `tilebatch.ts`, `tilework.ts`), the outskirts' trees and the camera's bounds (`outskirts.ts`, `bounds.ts`), the building kits and recipes (`kits.ts`, `recipes.ts`), Liberty Bridge (`liberty.ts`), Harbour Bridge (`harbour.ts`),
-  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), its clipping (`kartside.ts`, `camRoom()`, `tests/kartclip.test.ts`) and its crowd, marshals and podium (`kartcrowd.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix, the ring avenue and the park's east walk (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`, `parkedge.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), Endswood Estate, what's below ground and its decks and its blend (`endswood.ts`, `underground.ts`, `endsblocks.ts`, `endsstreet.ts`, `endsdecks.ts`, `endsblend.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`, `viasigns.ts`), the swing bridge (`swingbridge.ts`), the turn lanes and their arrows (`turnlanes.ts`), the country roads (`rural.ts`, `ruraldress.ts`, `ruralfence.ts`), the town streets' wear (`streetwear.ts`),
+  getting about (`places.ts`, `metro.ts`, taxis' drives in `routes.ts`, `ambience.ts`), the river's shape (`river.ts`), the river's life, the river bus and boating (`riverlife.ts`, `riverbus.ts`, `riverroute.ts`, `boat-sim.ts`), how the traffic behaves (`traffic.ts`), the people on the sidewalks (`pedestrians.ts`), the live settings (`live.ts`), the buses' stops, the boats and the dusk (`transit.ts`, `boats.ts`, `dusk.ts`), The Trenches (`trenches.ts`, `projects.ts`, `commons.ts`, `grit.ts`, `streetwall.ts`, `avenue.ts`, `riverside.ts`, `waterfront.ts`, `nightmarket.ts`), Westlake Park (`westlake.ts`, `stadium.ts`, `parklife.ts`, `gardens.ts`), Uptown (`uptown.ts`, `highrise.ts`, `plaza.ts`, `plazadress.ts`, `boulevard.ts`, `boulevarddress.ts`, `kerbside.ts`, `skydeck.ts`, `skyline.ts`, `uptownlife.ts`, `streetlevel.ts`, `uptownsites.ts`, `streetlife.ts`, `wheel.ts`, Uptown North in `uptownnorth.ts`, the town car in `cars.ts`), the kart park's facility (`kartfacility.ts`), its clipping (`kartside.ts`, `camRoom()`, `tests/kartclip.test.ts`) and its crowd, marshals and podium (`kartcrowd.ts`), the seam map, the clearing rule, the ground, the blocks' edges, the rolls, Southfield, the slivers by the highway, the lamps' mix, the ring avenue and the park's east walk (`seams.ts`, `landuse.ts`, `palette.ts`, `ground.ts`, `verges.ts`, `rolls.ts`, `southfield.ts`, `fringes.ts`, `lampmix.ts`, `ringstreet.ts`, `parkedge.ts`), the karts' frames and their driver (`kartframe.ts`), the aircraft's control surfaces and gear (`airframe.ts`), Palm Court and the mall (`mall.ts`, `mallinside.ts`), Crestmont (`terrain.ts`, `crestmont.ts`, `landscape.ts`, `coral.ts`, `estates.ts`, `mansions.ts`, `crestsites.ts`, `crestlife.ts`), the Docks (`docks.ts`, `docksport.ts`), the Neon Mile (`strip.ts`, `resorts.ts`, `stripmarks.ts`, `monorail.ts`, `striplife.ts`), Lot 9 and its tunnel (`lot9.ts`, `lot9homes.ts`), Endswood Estate, what's below ground and its decks, its blend and its life (`endswood.ts`, `underground.ts`, `endsblocks.ts`, `endsstreet.ts`, `endsdecks.ts`, `endsblend.ts`, `endslife.ts`), the raised highway's shape (`viaduct.ts`, `viapiers.ts`), its signs and what's under it (`viadress.ts`, `viasigns.ts`), the swing bridge (`swingbridge.ts`), the turn lanes and their arrows (`turnlanes.ts`), the country roads (`rural.ts`, `ruraldress.ts`, `ruralfence.ts`), the town streets' wear (`streetwear.ts`),
   the airport and its timetable
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,

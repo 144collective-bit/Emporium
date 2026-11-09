@@ -112,7 +112,8 @@ function window_(c: CanvasRenderingContext2D, x: number, y: number, w: number, h
   c.fillRect(x + w / 2 - 1, y, 2, h);
   c.fillRect(x, y + h * 0.3, w, 2);
 }
-const LIGHTS = [PAL.warm, PAL.warm, PAL.warm, '#bcd4ff'];
+// (a cool fluorescent kitchen and a TV's blue among the warm: docs/estate-plan.md Phase 7)
+const LIGHTS = [PAL.warm, PAL.warm, PAL.warm, '#bcd4ff', '#6f86ff'];
 
 function wallBand(c: CanvasRenderingContext2D, id: BandId, y0: number, glow: boolean, seed: number) {
   const r = rng(seed);
@@ -327,6 +328,11 @@ const BIKE = toon('#2a2a33');
 /** The walkways' strip lights (endsblocks.ts bridges): soft, never a roof lit whole */
 const TUBE = neon('#e8f0ff', 0.4, 1.3);
 const LIFT_FRAME = toon('#2c2a33');
+/** The stairwells' glazing, lit at night; the galleries' tubes, steady, tired and dead */
+const STAIR = neon('#ffeec4', 0.05, 1.1);
+const STAIR_FRAME = toon('#3a3843');
+const TUBE_TIRED = neon('#e8f0ff', 0.3, 1.25, 0.9);
+const TUBE_DEAD = toon('#8a8f9a');
 const LIFT_STEEL = toon('#9aa0aa');
 const LIFT_UP = neon('#7cff9a', 0.4, 1.3);
 const LIFT_DOWN = neon('#ffb04a', 0.4, 1.3);
@@ -396,6 +402,23 @@ function drawShell(b: Batch, s: Shell, seed: number, low: boolean) {
   box(b, [x0, z0 + t, x0 + t, z1 - t], s.y1, s.y1 + PARAPET, COPING);
   box(b, [x1 - t, z0 + t, x1, z1 - t], s.y1, s.y1 + PARAPET, COPING);
   if (s.plain) {
+    // The stair's glazing up the face its entrance is on: a slot lit at night (a strip of light up each stairwell),
+    // a dark transom at every landing
+    const entry = (['n', 's', 'e', 'w'] as Side[]).find((side) => s.ground[side] === 'entry');
+    if (entry) {
+      const [a, c] = sideLine(s.rect, entry);
+      const n = NORMAL[entry];
+      const along = Math.abs(c[0] - a[0]) > Math.abs(c[1] - a[1]);
+      const mid: Pt = [(a[0] + c[0]) / 2 + n[0] * 0.012, (a[1] + c[1]) / 2 + n[1] * 0.012];
+      const [y0, y1] = [s.y0 + GROUND + 0.25, s.y1 - 1.15];
+      const slot = (w: number, ya: number, yb: number, d: number, m: THREE.Material) =>
+        b.box(mid[0] - (along ? w / 2 : d / 2) + n[0] * d, ya, mid[1] - (along ? d / 2 : w / 2) + n[1] * d, along ? w : d, yb - ya, along ? d : w, m);
+      if (y1 > y0 + 0.5) {
+        slot(0.5, y0 - 0.06, y1 + 0.06, 0.004, STAIR_FRAME);
+        slot(0.42, y0, y1, 0.012, STAIR);
+        for (let y = s.y0 + GROUND + STOREY; y < y1; y += STOREY) slot(0.44, y - 0.03, y + 0.03, 0.02, STAIR_FRAME);
+      }
+    }
     // A lift house: louvres high on each face (plant rooms are the cores' tops)
     for (const side of ['n', 's', 'e', 'w'] as Side[]) {
       const [a, c] = sideLine(s.rect, side);
@@ -443,6 +466,18 @@ function drawDeck(b: Batch, block: EstateBlock, k: number, seed: number, low: bo
     const t = 0.12;
     const edge: Rect = alongX ? (n[1] < 0 ? [x0, z0, x1, z0 + t] : [x0, z1 - t, x1, z1]) : n[0] < 0 ? [x0, z0, x0 + t, z1] : [x1 - t, z0, x1, z1];
     box(b, edge, y, y + DECK.parapet, SLAB);
+    // The fluorescent tubes under its slab, lighting the gallery (or the ground) under it: a few tired and flickering,
+    // the odd one dead (docs/estate-plan.md Phase 7)
+    const len = alongX ? x1 - x0 : z1 - z0;
+    const ty = y - DECK.slab - 0.045;
+    for (let u = 2.2, k = 0; u < len - 1.5; u += 4.6, k++) {
+      const m = (k + seed) % 13 === 5 ? TUBE_DEAD : (k + seed) % 5 === 2 ? TUBE_TIRED : TUBE;
+      // (near the face, where the doors are)
+      const [face0, out] = alongX ? (n[1] < 0 ? [z1, -1] : [z0, 1]) : n[0] < 0 ? [x1, -1] : [x0, 1];
+      const at = face0 + out * 0.35;
+      if (alongX) b.box(x0 + u - 0.5, ty, at - 0.05, 1, 0.04, 0.1, m);
+      else b.box(at - 0.05, ty, z0 + u - 0.5, 0.1, 0.04, 1, m);
+    }
     // Near only: pot plants, a bike chained to the parapet, by some doors
     b.detail(() => {
       if (low) return;
