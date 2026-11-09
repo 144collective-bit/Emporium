@@ -253,7 +253,10 @@ it and has been retired completely. Build only on what's here.
     the owner's sign-off (the owner's answers to its questions are in it:
     the sixteen pads stay reserved for buildings later, no new places, the
     room-making before the heavy work); keep it up to date, and shoot
-    before and after each phase.
+    before and after each phase. All ten phases are built (2026-11-09,
+    the overnight pass: the plan's morning report lists them; the shots
+    are `docs/blend-shots/polish-before/` and `polish-after/`), waiting
+    on the owner's sign-off; what's left is the plan's "Still open".
   - **Solid and fast first** (the owner's call): fixes and performance are planned in `docs/performance-plan.md` (where the time goes, what each phase measured, what's next); keep it up to date. Fix phase 1 (phones: the city builds behind the start menu and in spare frames, the outline pre-pass only as far as outlines reach, big textures at half size on phones), fix phase 2 (bugs and broken flows at every width), the trim, fix phase 3 (the code clean-up, the type check in the build) performance phase 2 (data baked at build time, the 2D map held back, features loaded when used, a service worker, the phones' lighter glow, budgets in the build) performance phase 3 (the crowd in a few meshes, shaders compiled once for the right target; far-district impostors measured and left until the districts grow) and performance phase 4, the foundations (sites built off the main thread, textures made at build time, and districts loaded as you approach, built with Westlake Park) are built. On phones only, a softer neon glow and simpler far districts are allowed; desktop stays as it is.
 - **Getting about** (growth plan Phase 8; the owner picked taxis, fast
   travel and the metro):

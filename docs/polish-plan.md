@@ -820,6 +820,80 @@ After every phase: the shots compared, `?bench` on a phone and a laptop,
 this plan's phase marked built, CLAUDE.md's line for anything that
 changed how a thing works.
 
+## The morning report (2026-11-09)
+
+All ten phases are built on `ccr-23cd1235-ifwu39`, one commit or merge a
+phase, each with the typecheck, every test, the build and the budgets
+green when it landed. The pass is 36 commits over 205 files (about 9,700
+lines in, 1,700 out) since the audit. The before shots are
+`docs/blend-shots/polish-before/`, the after shots
+`docs/blend-shots/polish-after/` (both tiers, day and night).
+
+What changed, in the order it landed:
+
+1. **The hour-long fixes** (Phase 1): the corner shops redraw, "Dorras
+   taken" counts purses and bonuses, the Vault's worth has the bikes and
+   styles, the `prizes` live switch, Heavy hands and Combo artist, the
+   bike's and kart's door sound gone, the shakes off under reduced motion.
+2. **Names** (Phase 2): hotels and diners downtown, the tenements and
+   Uptown's shops each take their names in turn, so no two neighbours read
+   the same; the sign atlas grows with the lists.
+3. **The menus' habits** (Phase 3): one × glyph and hit size, Play as
+   guest first, a confirm in the kit, two presses to quit a race or fight,
+   Q / E through every tabbed menu, the copy cut to length, one draft note,
+   the first-run messages staggered.
+4. **Room and resilience** (Phase 4): the baked data as a fetched file,
+   the economy's screens and target practice loaded on first use, the
+   landmarks' ticks gated by distance, a lost GPU context says so with a
+   Reload button, per-file test timings, the Worker's build bakes textures
+   and runs the budget. The boot went 720.3 → 668.2 KB before Phases 7-10
+   added their data.
+5. **Sound everywhere** (Phase 5): a hum for every built-up part, the
+   waterfront, the Docks, the jets, the mall's inside and the kart park
+   each with a layer, an engine voice per vehicle.
+6. **Traffic and the other vehicles** (Phase 6): a parked vehicle queues
+   the traffic and is tooted once, a car held too long out of sight moves
+   on, left turns yield to oncoming cars, bus passengers, someone waiting
+   at every third shelter, the taxi's "As close as the road goes", lights
+   on the bike and kart, the kart's own feel.
+7. **The dead ends made live** (Phase 7): a live line from the clock in
+   every coming-soon panel, the stadium's fixtures and match nights, the
+   club's bouncer, the Rusty Nail sells the snack, Crestmont's doors, the
+   world map's footprints, the Kart Park station's walk, the riverside's
+   yards dressed.
+8. **The crowd and the character** (Phase 8): the crowd dressed by
+   district and role (one extra kind on phones, two on desktop), the
+   captured idle on the stage and the hologram, held things that move, the
+   fists in first person, three mocap packs loaded on demand (the core
+   pack 558 → 464 KB).
+9. **Balance** (Phase 9): the daily prize cap (six races and four bouts
+   in full, then 35%), the business side's XP raised (level 5 in about an
+   hour and a quarter of trading instead of three and a half), the
+   sold-out bonus; the save is v13 (v14 with Phase 10's stall).
+10. **The finishing pass** (Phase 10): a lamp post per district, the kerb
+    blended at The Trenches' edge, the Night Market's stall to run,
+    `groundheight.ts` with walk.ts's ground as ordered layers under a
+    20,000-point test, six more bench and review views, the ground hexes
+    into the palette, `npm run lint` in the Action.
+
+The numbers at the end: 1,231 tests (1,189 at the audit), typecheck and
+lint clean, the boot 679.5 of 730 KB gzipped (715.5 at the audit, with
+every phase's data in), the core mocap pack 464 of 600 KB.
+
+For the owner, in the morning:
+
+- **Look first** at the contact sheets side by side, the first-person
+  fists (tuned without a browser), the stadium's board and a match night
+  (the fixtures run from the clock), the crowd's new colours by district,
+  the lamp posts, and the Night Market's stall at the Vault's estate agent.
+- **Two things only you can do:** the Hostinger check (what a push to
+  main deploys) and the Workers.dev build's first run after Phase 4 (it
+  now bakes textures in Chromium on Cloudflare's builder); and the
+  sitting-down take is a data step (which CMU take; no fetch was made).
+- **Copy is yours to change:** the live lines (`livelines.ts`), the
+  stadium's team names, the bouncer's lines, the stall names.
+- Everything else left is in Still open below, each its own sign-off.
+
 ## Still open
 
 - **Hosting:** what Hostinger runs on a push to main (Phase 4's check).
@@ -839,7 +913,8 @@ changed how a thing works.
   `Ride` through `walk.setRide()` for one turn in a capsule, Skip ride /
   Esc, `wheel` in `LIVE_FEATURES`; it needs its own card and bar markup, a
   `RideKind` in views.ts and a chunk, so it waits for its own sign-off),
-  the Docks' Phase 4, a stadium match night.
+  the Docks' Phase 4, a real match at the stadium (the gates open, a game
+  on the pitch; Phase 7 built the fixtures and the match-night mood).
 - **The shapes helper** (`box`, `cyl`, `V` declared in dozens of files;
   Phase 10 left it): one `shapes3d.ts`, a mechanical move.
 - **More consumables and missions past level 12:** later, if wanted.
