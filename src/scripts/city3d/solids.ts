@@ -23,6 +23,7 @@ import type { LotKind, UnitKind } from './tycoon';
 import { BoxGrid } from './boxgrid';
 import { METRO_SOLIDS } from './metro';
 import { DECK_CAMERA, PIER_SOLIDS } from './viapiers';
+import { ENDS_CAMERA } from './endsdecks';
 import { RAMP_PIER_SOLIDS } from './viaground';
 import { UNDER_SOLIDS } from './viadress';
 import { SWING_SOLIDS } from './swingbridge';
@@ -336,7 +337,9 @@ export const CAMERA_ONLY: Box[] = [
 /** The same boxes sorted into the collision grid (boxgrid.ts): a check looks only at those near it */
 export const SOLID_GRID = new BoxGrid(SOLIDS);
 /** What the walk camera bumps into (and the raised ring highway's deck, which you walk under: its boxes have a bottom, [5]) */
-export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY, ...(DECK_CAMERA as Box[])]);
+// (and Endswood's galleries' slabs, their lintels and the bridges' floors and roofs, which he walks under and along:
+// boxes with a bottom, endsdecks.ts)
+export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY, ...(DECK_CAMERA as Box[]), ...(ENDS_CAMERA as unknown as Box[])]);
 /** What bullets stop on */
 const SHOT_GRID = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY]);
 /** Every grid that holds the solids (walk.ts adds the car's, which leaves out the turntable) */

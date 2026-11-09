@@ -95,6 +95,7 @@ import { inBasin } from './docks';
 import { LOT9_PASSAGE } from './lot9';
 import { SUBWAYS, WELL } from './endswood';
 import { DOWN as UNDER_DOWN, underworld } from './underground';
+import { endsDeckWall, endsDeckY, upOnEnds } from './endsdecks';
 /** What's below street level for walking: Lot 9's tunnel under the highway, Endswood's subways and its well (underground.ts) */
 const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS], [WELL]);
 import { HARBOUR_MASTER } from './docksport';
@@ -729,6 +730,9 @@ export function createWalk(d: WalkDeps) {
   /** The swing bridge's barriers down (swingbridge.ts): it's swinging, or about to, for the tall ship */
   const swingShut = () => !d.reduced && swingAt(Date.now() / 1000).shut;
   const groundAt = (x: number, z: number, yNow = 0) => {
+    // (Endswood's galleries and bridges, when `yNow` is up there: endsdecks.ts; over the subways' ramps too)
+    const ends = endsDeckY(x, z, yNow);
+    if (ends !== null) return ends;
     // (below ground, underground.ts: Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
     // open floors, and a floor under a roof when `yNow` is down there)
     const tn = UNDER.y(x, z, yNow);
@@ -783,6 +787,8 @@ export function createWalk(d: WalkDeps) {
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
+    // Up on Endswood's galleries and bridges (endsdecks.ts): only their parapets, end walls and faces stop you
+    if (upOnEnds(x, z, y)) return endsDeckWall(x, z, y, RADIUS);
     // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
     // at street level the open cuttings' and the well's edges do
     if (UNDER.inZone(x, z)) {
@@ -3286,13 +3292,18 @@ export function createWalk(d: WalkDeps) {
       best = { id: `spar:${sp.id}`, label: `Spar · ${sp.name}` };
       bestD = 0;
     }
-    if (!drive.active)
-      // (and the snack bars, the inventory chunk's)
-      for (const p of hotbar ? [...d.places(), ...hotbar.doors] : d.places())
-        if (Math.hypot(p.x - pos.x, p.z - pos.z) < 1) {
+    if (!drive.active) {
+      // (and the snack bars, the inventory chunk's; the nearest, where two are close: a lift's Up and Down doors)
+      let near = 1;
+      for (const p of hotbar ? [...d.places(), ...hotbar.doors] : d.places()) {
+        const pd = Math.hypot(p.x - pos.x, p.z - pos.z);
+        if (pd < near) {
+          near = pd;
           best = { id: `place:${p.id}`, label: p.label };
           bestD = 0;
         }
+      }
+    }
     // The hire boat's ladder by Downtown's landing (river plan step 4c)
     if (!drive.active && Math.hypot(HIRE.door.x - pos.x, HIRE.door.z - pos.z) < 1) {
       best = { id: 'boat', label: 'Take a boat' };

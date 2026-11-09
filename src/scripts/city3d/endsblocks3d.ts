@@ -10,10 +10,11 @@
  * galleries, the terraces' planters. Phones leave out the finest.
  */
 import * as THREE from 'three';
-import { Batch, PAL, canvasTex, lit, rng, shadeHex, siteMat, toon } from './kit';
+import { Batch, PAL, canvasTex, lit, neon, rng, shadeHex, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { BLOCKS, DECK, GROUND, HOARD, PARAPET, STOREY, deckRect, finTop, finsOf, hoardingRuns, type EstateBlock, type Face, type Ground, type Shell, type Side } from './endsblocks';
+import { BLOCKS, DECK, GROUND, HOARD, PARAPET, STOREY, deckRect, finSpans, hoardingRuns, type EstateBlock, type Face, type Ground, type Shell, type Side } from './endsblocks';
 import type { Pt, Rect } from './endswood';
+import { ENDS_LIFTS } from './endsdecks';
 
 /* ---------- The atlas ---------- */
 
@@ -148,8 +149,10 @@ function wallBand(c: CanvasRenderingContext2D, id: BandId, y0: number, glow: boo
       }
       if (id === 'deck') {
         // Behind a gallery: a front door every second bay (its own colour, a letterbox, a light over it), a kitchen
-        // window between; the floor's edge dark where the gallery's slab meets it
-        if (col % 2 === 0) {
+        // window between; the floor's edge dark where the gallery's slab meets it. The galleries are every second
+        // storey from the first (maisonettes): the storeys between are their upstairs, windows only (the band's
+        // bottom row is the first storey over the ground floor)
+        if (col % 2 === 0 && (ROWS - 1 - row) % 2 === 0) {
           const door = DOORS[Math.floor(r() * DOORS.length)];
           const over = lit_(0.55);
           if (glow) {
@@ -316,12 +319,17 @@ const COPING = toon('#b4b0bc');
 const ROOF = toon('#3d3b46');
 const PLANT = toon('#8c8896');
 const LOUVRE = toon('#4c4a56');
-const GLAZE = toon('#1e2444');
 const HOARDS = ['#2f5a3e', '#3d4a6a', '#6a6a72'].map((c) => toon(c));
 const DISH = toon('#d8d8de');
 const LEAF = toon('#3d7a48');
 const POT = toon('#9a5a3a');
 const BIKE = toon('#2a2a33');
+/** The walkways' strip lights (endsblocks.ts bridges): soft, never a roof lit whole */
+const TUBE = neon('#e8f0ff', 0.4, 1.3);
+const LIFT_FRAME = toon('#2c2a33');
+const LIFT_STEEL = toon('#9aa0aa');
+const LIFT_UP = neon('#7cff9a', 0.4, 1.3);
+const LIFT_DOWN = neon('#ffb04a', 0.4, 1.3);
 
 /* ---------- Drawing ---------- */
 
@@ -424,7 +432,6 @@ function drawShell(b: Batch, s: Shell, seed: number, low: boolean) {
 /** A gallery off a face: its slab, its solid parapet, the cross walls it hangs off at its ends and every so often */
 function drawDeck(b: Batch, block: EstateBlock, k: number, seed: number, low: boolean) {
   const d = block.decks[k];
-  const s = block.shells[d.shell];
   const [x0, z0, x1, z1] = deckRect(block, d);
   const alongX = d.side === 'n' || d.side === 's';
   const n = NORMAL[d.side];
@@ -458,20 +465,63 @@ function drawDeck(b: Batch, block: EstateBlock, k: number, seed: number, low: bo
       }
     });
   }
-  // The cross walls it hangs off (endsblocks.ts `finsOf()`), from the slab to the top gallery's parapet
-  for (const f of finsOf(block, d)) box(b, f, s.y0, finTop(d), SLAB);
+  // The cross walls it hangs off (endsblocks.ts `finsOf()`), from the slab to the top gallery's parapet; a walked
+  // gallery's open at each gallery (`finSpans()`: a frame you walk through)
+  for (const f of finSpans(block, d)) for (const [y0, y1] of f.spans) box(b, f.rect, y0, y1, SLAB);
 }
 
+/** A bridge, walked on (docs/estate-plan.md Phase 5): its floor's deep beam, a solid parapet along both sides, posts
+ * at its ends and every few tiles, its roof slab on them; open between parapet and roof */
 function drawBridge(b: Batch, br: { rect: Rect; y0: number; y1: number }) {
   const [x0, z0, x1, z1] = br.rect;
   const alongX = x1 - x0 >= z1 - z0;
-  box(b, br.rect, br.y0, br.y1, SLAB);
-  // A dark glazed strip along both sides, a coping on top
-  const g = 0.012;
-  const [y0, y1] = [br.y0 + 0.3, br.y1 - 0.15];
-  if (alongX) for (const z of [z0 - g, z1 + g - 0.004]) box(b, [x0 + 0.1, z, x1 - 0.1, z + 0.004], y0, y1, GLAZE);
-  else for (const x of [x0 - g, x1 + g - 0.004]) box(b, [x, z0 + 0.1, x + 0.004, z1 - 0.1], y0, y1, GLAZE);
-  box(b, [x0 - 0.05, z0 - 0.05, x1 + 0.05, z1 + 0.05], br.y1, br.y1 + 0.08, COPING);
+  const beam = 0.32;
+  box(b, br.rect, br.y0 - beam, br.y0, SLAB);
+  flat(b, br.rect, br.y0 - beam - 0.004, SOFFIT);
+  const t = 0.12;
+  const sides: Rect[] = alongX ? [[x0, z0, x1, z0 + t], [x0, z1 - t, x1, z1]] : [[x0, z0, x0 + t, z1], [x1 - t, z0, x1, z1]];
+  for (const e of sides) box(b, e, br.y0, br.y0 + DECK.parapet, SLAB);
+  const [a, c] = alongX ? [x0, x1] : [z0, z1];
+  const n = Math.max(1, Math.round((c - a) / 3));
+  const p = 0.18;
+  for (let k = 0; k <= n; k++) {
+    const at = Math.min(c - p, Math.max(a, a + ((c - a) * k) / n - p / 2));
+    for (const e of sides) box(b, alongX ? [at, e[1], at + p, e[3]] : [e[0], at, e[2], at + p], br.y0 + DECK.parapet, br.y1, SLAB);
+  }
+  // The roof: its slab, a coping over it, its underside dark, a light along it
+  box(b, [x0 - 0.05, z0 - 0.05, x1 + 0.05, z1 + 0.05], br.y1, br.y1 + 0.14, COPING);
+  flat(b, br.rect, br.y1 - 0.004, SOFFIT);
+  b.detail(() => {
+    const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+    for (let k = 0; k < n; k++) {
+      const at = a + ((c - a) * (k + 0.5)) / n;
+      b.box(alongX ? at - 0.2 : cx - 0.05, br.y1 - 0.05, alongX ? cz - 0.05 : at - 0.2, alongX ? 0.4 : 0.1, 0.04, alongX ? 0.1 : 0.4, TUBE);
+    }
+  });
+}
+
+/** The lifts' doors up on the galleries and bridges (endsdecks.ts): brushed steel in a dark frame, an arrow lit over
+ * each (up or down) */
+function drawLiftDoors(b: Batch, lift: string) {
+  for (const l of ENDS_LIFTS) {
+    if (!l.id.startsWith(lift)) continue;
+    for (const s of l.stops)
+      for (const [door, up] of [
+        [s.up, true],
+        [s.down, false],
+      ] as const) {
+        const w = door?.wall;
+        if (!w) continue;
+        const along = w.nz !== 0;
+        const frame = (o: number, hw: number, y0: number, y1: number, m: THREE.Material) =>
+          along ? b.box(w.x - hw, y0, w.z + w.nz * o - 0.006, hw * 2, y1 - y0, 0.012, m) : b.box(w.x + w.nx * o - 0.006, y0, w.z - hw, 0.012, y1 - y0, hw * 2, m);
+        frame(0.012, 0.36, s.y, s.y + 1.32, LIFT_FRAME);
+        frame(0.03, 0.29, s.y, s.y + 1.22, LIFT_STEEL);
+        // (the doors' meeting line)
+        frame(0.042, 0.008, s.y, s.y + 1.22, LIFT_FRAME);
+        frame(0.04, 0.07, s.y + 1.25, s.y + 1.3, up ? LIFT_UP : LIFT_DOWN);
+      }
+  }
 }
 
 function drawHoarding(b: Batch, r: Rect, seed: number) {
@@ -513,6 +563,7 @@ export function registerBlocks(low: boolean) {
         if (si === 0) {
           block.decks.forEach((_, k) => drawDeck(b, block, k, 2000 + bi * 7 + k, low));
           block.bridges.forEach((br) => drawBridge(b, br));
+          if (block.id.startsWith('fennel') || block.kind === 'tower') drawLiftDoors(b, block.id === 'harrier' ? 'harrier' : block.id);
           if (block.hoarding) drawHoarding(b, block.hoarding, 3000 + bi);
           if (block.kind === 'terrace') drawPlanters(b, block, low);
         }

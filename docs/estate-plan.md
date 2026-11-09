@@ -307,3 +307,38 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
     boot.
   - The boot's code is 725.8 of 730 KB with it (the solids and the trees);
     Phase 5 will likely need the budget raised.
+- **Phase 5 (the decks and bridges walked on):** `endsdecks.ts` (DOM-free, the
+  boot's: walk.ts and index.ts read it; tested in `tests/endsdecks.test.ts`),
+  as Liberty Bridge's high level.
+  - **Room overhead.** The city's storeys are a tile and Degen about 1.1, so a
+    gallery every storey left no room to walk under the next one. Fennel
+    House's galleries are now every second storey (floors 1, 3, 5 and 7:
+    maisonettes, their front doors on the gallery and their upstairs windows
+    between, as the great deck-access slabs had them) and wider (`out` 1.5);
+    Marten House's every second storey too. The 'deck' band draws doors on
+    the gallery rows only.
+  - **The galleries' cross walls** are open from each gallery's floor
+    (`OPENING` 1.55, `finSpans()`): a concrete frame walked through, shut at
+    the galleries' far ends; their solids stop at the first gallery's floor
+    and their lintels are the walk camera's.
+  - **The street in the sky** moved onto the galleries' line on the third
+    floor, joining the two halves over the spine; it and Harrier Point's
+    bridges (now floors 2, 5 and 8, its lift tower nudged west to give them
+    length) are walkways `WALK_H` (1.6) tall: a beam under the floor, a solid
+    parapet each side, posts, a roof with strip lights, open between.
+  - **Walking up there:** `ENDS_FLOORS` (each floor's slab and where his body
+    may be inside its parapets), `endsDeckY()` (the floor under him by his
+    height, never from the ground or a jump), `upOnEnds()` and
+    `endsDeckWall()` (only the parapets, end walls and faces stop him), first
+    in walk.ts's `groundAt()` and `blocked()` (over the subways' ramps too);
+    `ENDS_CAMERA` (every gallery's slab, the lintels, the bridges' floors and
+    roofs: boxes with a bottom, in `CAMERA_GRID`).
+  - **The lifts** (`ENDS_LIFTS`): one in each of Fennel House's four cores
+    (ground, floors 1, 3, 5, 7) and Harrier Point's lift tower (ground, floors
+    2, 5, 8). Up and Down doors side by side at each floor (steel, an arrow lit
+    over each, drawn by endsblocks3d.ts), walk prompts "Lift up · Floor 3"
+    (`endsLiftDoors()` by his height; the nearest door's prompt when two are in
+    reach), the walk-in and the fade (`endsLiftRide()`, index.ts `rideTo()`:
+    not a place, so never closed), "Fennel House · Floor 3" on arrival.
+  - The boot's code is 728.8 KB; the budget raised to 740 under the owner's
+    standing call, for Phases 6-8.

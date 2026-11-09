@@ -58,12 +58,21 @@ export interface Deck {
   side: Side;
   /** Each gallery's floor */
   ys: number[];
+  /** How far it stands out, where it isn't `DECK.out` (Fennel House's, walked on: wider) */
+  out?: number;
+  /** Walked on (docs/estate-plan.md Phase 5, endsdecks.ts): its cross walls open at each gallery */
+  walk?: true;
 }
 export interface Bridge {
   rect: Rect;
+  /** Its floor and its roof's underside: a walkway `WALK_H` tall, open at the sides over a parapet (Phase 5) */
   y0: number;
   y1: number;
 }
+/** A walkway's height inside, floor to roof (Liberty Bridge's high walkways are 1.7): over Degen's head */
+export const WALK_H = 1.6;
+/** A walked gallery's cross walls are open from its floor this high (the lintel over it up to the next gallery) */
+export const OPENING = 1.55;
 export interface EstateBlock {
   id: string;
   name: string;
@@ -88,7 +97,7 @@ const plain = (rect: Rect, top: number, ground: Partial<Record<Side, Ground>> = 
 const decks = (n: number, step = 1) => Array.from({ length: Math.ceil(n / step) }, (_, k) => SLAB_Y + GROUND + k * step * STOREY);
 
 /** Fennel House's line: its galleries face south into the estate */
-const FENNEL = { z0: 337.6, z1: 345, n: 8 };
+const FENNEL = { z0: 337.6, z1: 345, n: 8, out: 1.5 };
 const CORE = 2.6;
 const fennel = (x0: number, x1: number, cores: number[]): Shell[] => [
   shell([x0, FENNEL.z0, x1, FENNEL.z1], FENNEL.n, faces('blank', { n: 'slits', s: 'deck' }), { n: 'brick', s: 'garage', e: 'brick', w: 'brick' }, 0),
@@ -102,9 +111,11 @@ export const BLOCKS: EstateBlock[] = [
     name: 'Fennel House',
     kind: 'slab',
     shells: fennel(-103, -62, [-99, -70]),
-    decks: [{ shell: 0, side: 's', ys: decks(FENNEL.n) }],
-    // (the street in the sky over the spine to the east half, at the third floor)
-    bridges: [{ rect: [-62, 340.3, -50, 342.3], y0: topOf(2), y1: topOf(3) }],
+    // (galleries every second storey, maisonettes' doors on them, as the great deck-access slabs had: room overhead to
+    // walk them, docs/estate-plan.md Phase 5)
+    decks: [{ shell: 0, side: 's', ys: decks(FENNEL.n, 2), out: FENNEL.out, walk: true }],
+    // (the street in the sky over the spine to the east half, on the second gallery's line)
+    bridges: [{ rect: [-62, FENNEL.z1 - 0.2, -50, FENNEL.z1 + FENNEL.out], y0: topOf(2), y1: topOf(2) + WALK_H }],
     door: [-97.7, 334.9],
   },
   {
@@ -112,7 +123,7 @@ export const BLOCKS: EstateBlock[] = [
     name: 'Fennel House',
     kind: 'slab',
     shells: fennel(-50, -12, [-46, -19]),
-    decks: [{ shell: 0, side: 's', ys: decks(FENNEL.n) }],
+    decks: [{ shell: 0, side: 's', ys: decks(FENNEL.n, 2), out: FENNEL.out, walk: true }],
     bridges: [],
     door: [-17.7, 334.9],
   },
@@ -123,10 +134,11 @@ export const BLOCKS: EstateBlock[] = [
     shells: [
       shell([-31, 354, -22, 363], 9, faces('flats'), { n: 'brick', s: 'entry', e: 'brick', w: 'brick' }, 0),
       // (the lift and stair tower standing apart west of it, its lift house over the tower's roof)
-      plain([-35.6, 357, -32.6, 360], topOf(9) + 1.1, { s: 'entry' }),
+      plain([-35.9, 357, -32.9, 360], topOf(9) + 1.1, { s: 'entry' }),
     ],
     decks: [],
-    bridges: [2, 5, 8].map((k) => ({ rect: [-32.6, 357.9, -31, 359.1] as Rect, y0: topOf(k), y1: topOf(k) + 0.9 })),
+    // (every third floor, its roof under the next: walked on, docs/estate-plan.md Phase 5)
+    bridges: [1, 4, 7].map((k) => ({ rect: [-32.9, 357.7, -31, 359.3] as Rect, y0: topOf(k), y1: topOf(k) + WALK_H })),
     door: [-26.5, 363.6],
   },
   {
@@ -222,7 +234,7 @@ export const BLOCKS: EstateBlock[] = [
       plain([31.5, 390, 34, 392.5], topOf(7) + 1.2, { e: 'entry' }),
       plain([31.5, 417.5, 34, 420], topOf(7) + 1.2, { e: 'entry' }),
     ],
-    decks: [{ shell: 0, side: 'w', ys: decks(7) }],
+    decks: [{ shell: 0, side: 'w', ys: decks(7, 2) }],
     bridges: [],
     door: [34.6, 391.2],
   },
@@ -237,10 +249,12 @@ export const BLOCKS: EstateBlock[] = [
   },
 ];
 
+/** Every block's bridges (the street in the sky is the west half's, and meets the east half's gallery too) */
+const BLOCKS_BRIDGES = () => BLOCKS.flatMap((b) => b.bridges);
 /** The rect a gallery covers (its floor, out from its face) */
 export function deckRect(b: EstateBlock, d: Deck): Rect {
   const [x0, z0, x1, z1] = b.shells[d.shell].rect;
-  const o = DECK.out;
+  const o = d.out ?? DECK.out;
   return d.side === 'n' ? [x0, z0 - o, x1, z0] : d.side === 's' ? [x0, z1, x1, z1 + o] : d.side === 'w' ? [x0 - o, z0, x0, z1] : [x1, z0, x1 + o, z1];
 }
 /** A gallery's cross walls (it hangs off them): at each end and every 9 or so, from the slab to its top parapet */
@@ -258,6 +272,29 @@ export function finsOf(b: EstateBlock, d: Deck): Rect[] {
 }
 /** The top of a gallery's cross walls */
 export const finTop = (d: Deck) => d.ys[d.ys.length - 1] + DECK.parapet;
+/** Is a gallery's cross wall at `x` or `z` along it one of its two ends, and does a bridge meet that end at `y` */
+const bridgedAt = (b: EstateBlock, f: Rect, y: number) => BLOCKS_BRIDGES().some((br) => Math.abs(br.y0 - y) < 0.01 && f[0] <= br.rect[2] + 0.01 && f[2] >= br.rect[0] - 0.01 && f[1] < br.rect[3] && f[3] > br.rect[1]);
+/**
+ * A cross wall's solid spans, bottom up: whole, or for a walked gallery open `OPENING` from each gallery's floor (but
+ * at its two ends, unless a bridge meets it there)
+ */
+export function finSpans(b: EstateBlock, d: Deck): { rect: Rect; spans: [number, number][] }[] {
+  const s = b.shells[d.shell];
+  const fins = finsOf(b, d);
+  return fins.map((f, k) => {
+    const end = k === 0 || k === fins.length - 1;
+    const open = d.walk ? d.ys.filter((y) => !end || bridgedAt(b, f, y)) : [];
+    const spans: [number, number][] = [];
+    let at = s.y0;
+    for (const y of open) {
+      spans.push([at, y]);
+      at = y + OPENING;
+    }
+    // (the top gallery's opening runs up past the stub over its parapet)
+    if (at < finTop(d) - 1e-9) spans.push([at, finTop(d)]);
+    return { rect: f, spans };
+  });
+}
 /** The hoardings' panels as thin runs round a rect, `gap` left open nowhere (a condemned block is shut) */
 export const HOARD = { h: 1.7, t: 0.12 };
 export function hoardingRuns(r: Rect): Rect[] {
@@ -275,6 +312,8 @@ export function hoardingRuns(r: Rect): Rect[] {
  * (the galleries and bridges are over a walker's head) */
 export const BLOCK_SOLIDS: Box[] = BLOCKS.flatMap((b) => [
   ...b.shells.map((s): Box => [s.rect[0], s.rect[1], s.rect[2], s.rect[3], s.y1 + PARAPET]),
-  ...b.decks.flatMap((d) => finsOf(b, d).map((r): Box => [...r, finTop(d)])),
+  // (a walked gallery's cross walls to its first gallery's floor: over that they're open at each gallery, and their
+  // lintels are the walk camera's, endsdecks.ts; nothing on the ground reaches higher)
+  ...b.decks.flatMap((d) => finsOf(b, d).map((r): Box => [...r, d.walk ? d.ys[0] : finTop(d)])),
   ...(b.hoarding ? hoardingRuns(b.hoarding).map((r): Box => [...r, HOARD.h]) : []),
 ]);

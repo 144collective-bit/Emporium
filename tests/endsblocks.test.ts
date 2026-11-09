@@ -3,7 +3,7 @@
 // the Emporium; galleries and bridges over a walker's head; what's solid in SOLIDS; every entrance reachable.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BLOCKS, BLOCK_SOLIDS, DECK, GROUND, TALLEST, deckRect, finsOf, hoardingRuns, type EstateBlock } from '../src/scripts/city3d/endsblocks';
+import { BLOCKS, BLOCK_SOLIDS, DECK, TALLEST, deckRect, finsOf, hoardingRuns, type EstateBlock } from '../src/scripts/city3d/endsblocks';
 import { CIRCUS, CIRCUS_OUT, ENDS_LAMPS, SLAB_Y, SPINE, SUBWAYS, SUBWAY_HOLES, type Rect } from '../src/scripts/city3d/endswood';
 import { PLAN, distToStreet, inPoly, type Pt } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -50,7 +50,8 @@ test('under the Emporium; the galleries, bridges and the street in the sky over 
   for (const b of BLOCKS) {
     for (const s of b.shells) assert.ok(s.y1 + 0.25 <= TALLEST + 1e-9, `${b.id} too tall: ${s.y1}`);
     for (const d of b.decks) assert.ok(d.ys[0] - DECK.slab >= SLAB_Y + DEGEN, `${b.id}'s first gallery too low`);
-    for (const br of b.bridges) assert.ok(br.y0 >= SLAB_Y + GROUND + DEGEN, `${b.id}'s bridge too low`);
+    // (a bridge's underside, its floor's beam, over a walker's head; walked on since Phase 5, endsdecks.ts)
+    for (const br of b.bridges) assert.ok(br.y0 - 0.32 >= SLAB_Y + DEGEN, `${b.id}'s bridge too low`);
   }
   // Fennel House's two halves bridged over the spine, the tower's lift tower bridged to it every third floor
   const fw = BLOCKS.find((b) => b.id === 'fennel-w')!;
