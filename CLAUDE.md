@@ -3210,9 +3210,18 @@ it and has been retired completely. Build only on what's here.
   closed for good with its × (remembered as `city-card` in localStorage) and
   isn't shown on phones; when it's hidden the "Draft · v0" tag in the
   bottom-right corner keeps the draft note.
-- 3D pin labels stay on screen and fold to dots where they'd sit under the
-  city's own buttons and cards (`chrome` in `index.ts`); add any new
-  always-visible city overlay to that list.
+- **The pins are off by default** (the owner's call, 2026-11): no place
+  names or dots float over the 3D city in the City view or walk mode;
+  places are found on the world map and the hub's Map tab, and a building
+  is still clicked in the City view (no hover lift or glow ring any more:
+  each spot's `ring` is taken out of the scene at the boot). The hub's
+  Settings > Labels turns them back on (`[data-labels]`, `has-pins` on the
+  root, `degen-city-labels-v1`: a screen preference, never in the backup);
+  off, nothing is placed each frame. On, 3D pin labels stay on screen and
+  fold to dots where they'd sit under the city's own buttons and cards
+  (`chrome` in `index.ts`); add any new always-visible city overlay to
+  that list. The pins' markup stays (walk mode's door prompts read a
+  place's name from it).
 - **The start menu** (the owner's call): on every open, `[data-start]` in
   `CityMap.astro` (styles `src/styles/start.css`) covers the whole page
   while the 3D city boots behind it. It's the game's title screen (the
@@ -3954,8 +3963,9 @@ it and has been retired completely. Build only on what's here.
   `degen-city-walk-v1` in localStorage. The HUD markup (the controls, Run
   and Jump buttons, joystick) is in `CityMap.astro`; `walk.ts` expects every
   `data-walk-*` element to exist.
-- Buildings only lift and glow on hover in City view; while walking nothing
-  is hovered and nothing lifts (Degen stands on the same ground).
+- Nothing lifts or glows on hover (the owner's call, with the pins off by
+  default); the cursor shows a building is clickable in City view, and
+  while walking nothing is hovered (Degen stands on the same ground).
 - The over-the-shoulder camera starts 3.3 tiles behind him, 3.2 on an upright screen (`homeZoom()` in
   walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
