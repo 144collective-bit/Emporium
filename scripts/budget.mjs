@@ -95,6 +95,8 @@ for (const n of page) boot.delete(n);
 const lazy = files.filter((f) => f.endsWith('.js') && !boot.has(f) && !page.has(f));
 const biggestLazy = lazy.map((f) => [f, gz(join(astro, f))]).sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
 const css = files.filter((f) => f.endsWith('.css'));
+/** On CI the texture sets must be there (scripts/bake-textures.mjs ran): a row goes red without them */
+let missingTex = false;
 // The city's baked data (baked.ts: the routes and the rest, one hashed JSON file fetched beside the boot's code)
 const bakedFile = files.find((f) => /^baked\.[\w-]+\.json$/.test(f));
 
@@ -115,6 +117,11 @@ if (tex) {
   rows.push(['texLow', bytes('low'), `${Object.keys(sets.low).length} textures`]);
   rows.push(['texFull', bytes('full'), `${Object.keys(sets.full).length} textures`]);
   rows.push(['transcoder', readdirSync(tdir).reduce((s, f) => s + gz(join(tdir, f)), 0), transcoder]);
+} else if (process.env.CI) {
+  // A build on CI without them is a bake that failed (the Action's and the Worker's builds run it): red, not silent
+  rows.push(['texLow', 0, '(no textures made at build time: the bake did not run or failed)']);
+  rows.push(['texFull', 0, '(no textures made at build time)']);
+  missingTex = true;
 } else console.log('(no textures made at build time: the city paints them)');
 // The motion capture's core pack (named by its contents), raw: any other pack is fetched on first use
 const mocap = files.filter((f) => /^clips\.[\w-]+\.bin$/.test(f));
@@ -125,7 +132,7 @@ let failed = false;
 for (const [key, kb, what] of rows) {
   // (a row with no budget is for information: it never fails the build)
   const info = !(key in BUDGETS);
-  const over = !info && kb > BUDGETS[key];
+  const over = (!info && kb > BUDGETS[key]) || (missingTex && key.startsWith('tex'));
   failed ||= over;
   const of = info ? '        ' : ` of ${String(BUDGETS[key]).padStart(4)}`;
   console.log(`${over ? 'OVER' : info ? 'info' : 'ok  '} ${key.padEnd(10)} ${kb.toFixed(1).padStart(7)} KB${of} KB${key.startsWith('tex') || key.startsWith('mocap') ? '   ' : ' gz'}  ${what}`);

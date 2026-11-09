@@ -7,6 +7,7 @@ import { build } from 'esbuild';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const only = process.argv[2] ?? '';
 const files = readdirSync('tests').filter((f) => f.endsWith('.test.ts') && f.includes(only));
@@ -29,5 +30,17 @@ await build({
   // WORLD_EXT=x0,x1: the world's edge somewhere else (layout.ts `EXT`)
   define: process.env.WORLD_EXT ? { __WORLD_EXT__: JSON.stringify(process.env.WORLD_EXT.split(',').map(Number)) } : {},
 });
-const run = spawnSync(process.execPath, ['--test', ...files.map((f) => join(out, f.replace(/\.ts$/, '.mjs')))], { stdio: 'inherit' });
+// Node's own report, and a line per file with how long it took (scripts/test-reporter.mjs: the slowest five at the end)
+const run = spawnSync(
+  process.execPath,
+  [
+    '--test',
+    '--test-reporter=spec',
+    '--test-reporter-destination=stdout',
+    `--test-reporter=${pathToFileURL(join(import.meta.dirname, 'test-reporter.mjs')).href}`,
+    '--test-reporter-destination=stdout',
+    ...files.map((f) => join(out, f.replace(/\.ts$/, '.mjs'))),
+  ],
+  { stdio: 'inherit' }
+);
 process.exit(run.status ?? 1);

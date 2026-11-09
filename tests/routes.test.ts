@@ -18,14 +18,19 @@ import { CREST_RECT } from '../src/scripts/city3d/crestmont';
 import { inDocks } from '../src/scripts/city3d/docks';
 
 const roads = PLAN.streets.filter((s) => s.lanes > 0);
-/** Every point of a route, about every half tile */
+/** Every point of a route, about every half tile (worked out once a route and step: several tests walk them all) */
+const POINTS = new Map<string, { at: Pt; dir: Pt }[]>();
 function points(r: Route, step = 0.5) {
+  const key = `${ROUTES.indexOf(r)}:${r.len}:${step}`;
+  const had = POINTS.get(key);
+  if (had) return had;
   const out: { at: Pt; dir: Pt }[] = [];
   for (let p = 0, seg = 0; p <= r.len; p += step) {
     const o = pointOn(r, p, seg);
     seg = o.seg;
     out.push(o);
   }
+  POINTS.set(key, out);
   return out;
 }
 
