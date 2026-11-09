@@ -27,6 +27,8 @@ jobs:
       - run: npm ci
       # The types, and nothing declared that's never used: a type error stops the build too.
       - run: npm run typecheck
+      # The linter (eslint.config.js): prefer-const, eqeqeq, no DOM in the DOM-free rules files.
+      - run: npm run lint
       # The street plan, collisions, plots, driving and target practice rules (tests/).
       # A failing test stops the build, so a broken city never reaches the zip.
       - run: npm test

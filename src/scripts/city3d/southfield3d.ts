@@ -23,7 +23,7 @@ import { site } from './tilework';
 import { offsetLine, type Pt } from './streetplan';
 import { EW_ROADS, MEDIAN, SOUTH_ROAD } from './layout';
 import { SLAB as S } from './world';
-import { COVER, LAMP } from './palette';
+import { COVER, LAMP, ROAD } from './palette';
 import { drawLot } from './kits3d';
 import { registerFringes } from './fringes3d';
 import { parkedCars } from './cars';
@@ -124,8 +124,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
   registerFringes(['south'], low);
   const asphalt = toon('#2a2838');
-  const yellow = neon('#f5d76e', 0.9, 1.1);
-  const zebra = toon('#e8e4f8');
+  const yellow = neon(ROAD.yellow, 0.9, 1.1);
+  const zebra = toon(ROAD.zebra);
   const gravel = toon(COVER.gravel);
   const dirt = toon(COVER.dirt);
   const bare = toon(COVER.bare);

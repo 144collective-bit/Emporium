@@ -4,12 +4,12 @@
 import { test } from 'node:test';
 import { inLot9Lamps as inFence } from '../src/scripts/city3d/lot9';
 import assert from 'node:assert/strict';
-import { MIX, SODIUM_AREAS, lampTone, sodiumDepth, sodiumShare } from '../src/scripts/city3d/lampmix';
+import { KERB_SEAM, MIX, SODIUM_AREAS, kerbShare, lampTone, sodiumDepth, sodiumShare } from '../src/scripts/city3d/lampmix';
 import { BLOCK_SPAWN } from '../src/scripts/city3d/projects';
 import { DOCKS_RECT, DOCK_LAMPS } from '../src/scripts/city3d/docks';
 import { PARK_LAMPS, SF_LAMPS, YARDS_RECT } from '../src/scripts/city3d/southfield';
 import { LAMPS as WATER_LAMPS } from '../src/scripts/city3d/waterfront';
-import { inTrenches } from '../src/scripts/city3d/trenches';
+import { RING_W, inTrenches } from '../src/scripts/city3d/trenches';
 
 type Pt = [number, number];
 const mid = (r: readonly number[]): Pt => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -68,4 +68,24 @@ test("The Trenches' (and Lot 9's) dead and flickering lamps are only their own",
       if (t === 'flicker') flicker++;
     }
   assert.ok(dead > 0 && flicker > 0);
+});
+
+test("the kerb blends across the west ring avenue at The Trenches' edge: grey well inside, the town's stone well out, half on the avenue's line", () => {
+  const z = (KERB_SEAM.z0 + KERB_SEAM.z1) / 2;
+  assert.equal(kerbShare(KERB_SEAM.x - MIX, z), 1);
+  assert.equal(kerbShare(KERB_SEAM.x + MIX, z), 0);
+  assert.ok(Math.abs(kerbShare(KERB_SEAM.x, z) - 0.5) < 1e-9);
+  let last = 2;
+  for (let x = KERB_SEAM.x - MIX - 2; x < KERB_SEAM.x + MIX + 2; x += 0.25) {
+    const s = kerbShare(x, z);
+    assert.ok(s <= last + 1e-9 && s >= 0 && s <= 1, `the share rises again at x ${x}`);
+    last = s;
+  }
+  // The seam runs along The Trenches' blocks only: north of the bank avenue and south of the highway each side keeps its own
+  assert.equal(kerbShare(KERB_SEAM.x - 1, KERB_SEAM.z0 - MIX - 1), 1);
+  assert.equal(kerbShare(KERB_SEAM.x + 1, KERB_SEAM.z1 + MIX + 1), 0);
+  // The avenue's kerbs either side meet in the middle: each a step from its own colour, the two together the old jump
+  const half = RING_W.half;
+  assert.ok(kerbShare(KERB_SEAM.x - half, z) > 0.6 && kerbShare(KERB_SEAM.x + half, z) < 0.4);
+  assert.ok(Math.abs(kerbShare(KERB_SEAM.x - half, z) + kerbShare(KERB_SEAM.x + half, z) - 1) < 1e-9, 'symmetric');
 });

@@ -282,7 +282,7 @@ export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, 
         const pz = Math.max(b[1], Math.min(cc.z, b[3]));
         let dx = cc.x - px;
         let dz = cc.z - pz;
-        let d = Math.hypot(dx, dz);
+        const d = Math.hypot(dx, dz);
         if (d >= cc.r) continue;
         if (d < 1e-4) {
           // Centre inside the box: out the nearest side

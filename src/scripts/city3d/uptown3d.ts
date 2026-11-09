@@ -23,11 +23,12 @@ import { registerSites } from './uptownsites3d';
 import { registerStreetLife } from './streetlife3d';
 import { registerWheel } from './wheel3d';
 import { registerNorth } from './uptownnorth3d';
+import { STONE } from './palette';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
 
-const PAVING = toon('#b7b0cf');
+const PAVING = toon(STONE.paving);
 
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // The towers (Phase 2): a site each; their offices' lights and warning lights by the hour on the main thread's tick (Phase 6)

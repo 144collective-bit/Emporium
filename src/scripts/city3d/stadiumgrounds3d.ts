@@ -15,11 +15,12 @@ import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { BAY, BAYS, CAR_PARK, IN, LOOP, ROAD, ROAD_LINE, WALK, ZEBRA } from './stadium';
 import { along, pieces as runs, ribbon } from './roads3d';
+import { ROAD as PAL_ROAD } from './palette';
 
 const IRON = toon('#1b1830');
 
 const ASPHALT = toon('#2c2a44');
-const PAINT = toon('#e8e4f8');
+const PAINT = toon(PAL_ROAD.zebra);
 const CONC = toon('#9893b4');
 /** The open ground's asphalt (as the slip lanes', world.ts), the car park's a hair over it, their paint over that */
 const ROAD_Y = 0.036;
@@ -53,7 +54,7 @@ export function register() {
         for (let k2 = 0; k2 < n; k2++) {
           const [x, z] = [a[0] + ((c[0] - a[0]) * (k2 + 0.5)) / n, a[1] + ((c[1] - a[1]) * (k2 + 0.5)) / n];
           if (Math.abs(z - IN.z) < 0.1 && (Math.abs(x - LOOP.x0) < LOOP.half + 0.6 || Math.abs(x - LOOP.x1) < LOOP.half + 0.6)) continue;
-          b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).rotateY(-Math.atan2(c[1] - a[1], c[0] - a[0])).translate(x, PAINT_Y, z), neon('#f5d76e', 0.9, 1.1));
+          b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).rotateY(-Math.atan2(c[1] - a[1], c[0] - a[0])).translate(x, PAINT_Y, z), neon(PAL_ROAD.yellow, 0.9, 1.1));
         }
       }
       b.build(into, { cast: false, receive: true });
@@ -69,7 +70,7 @@ export function register() {
       for (let p = x - 0.8; p > x0 + 0.4; p -= 1.1) {
         // (none across the zebra)
         if (Math.abs(p - ZEBRA.x) < ZEBRA.half + 0.5) continue;
-        b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).translate(p, PAINT_Y, ROAD.z), neon('#f5d76e', 0.9, 1.1));
+        b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).translate(p, PAINT_Y, ROAD.z), neon(PAL_ROAD.yellow, 0.9, 1.1));
       }
       b.build(into, { cast: false, receive: true });
     });

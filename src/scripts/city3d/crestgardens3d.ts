@@ -26,6 +26,7 @@ import { DRIVE_PIER, DRIVE_PIERS, DRIVE_TREES, GROVES, MEADOWS, VINEYARDS, type 
 import { MANSIONS as HILL_HOUSES } from './mansions';
 import { heightAt } from './terrain';
 import { BULB, SPRAY, WATER } from './mallkit';
+import { PLANT } from './palette';
 
 type Tone = EstateStyle | MansionKind;
 
@@ -51,7 +52,7 @@ const SOIL = toon('#4e3d2f');
 const GRAVEL = toon('#d8cfbd');
 const PAVER = toon('#cdc4b1');
 const BLUE_TILE = toon('#2f6f9e');
-const BOX_GREEN = toon('#2c6a3c');
+const BOX_GREEN = toon(PLANT.hedge);
 const LEAF = toon('#3f7a40');
 const LEAF_DARK = toon('#25563a');
 const OLIVE_LEAF = toon('#8aa073');
@@ -352,7 +353,7 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
       }
       case 'hedge': {
         box(u0, 0, v0, u1, 0.5, v1, BOX_GREEN);
-        if (u1 - u0 > 0.1 && v1 - v0 > 0.1) box(u0 + 0.03, 0.49, v0 + 0.03, u1 - 0.03, 0.56, v1 - 0.03, toon('#3a8a4e'));
+        if (u1 - u0 > 0.1 && v1 - v0 > 0.1) box(u0 + 0.03, 0.49, v0 + 0.03, u1 - 0.03, 0.56, v1 - 0.03, toon(PLANT.hedgeTop));
         break;
       }
       case 'flag': {

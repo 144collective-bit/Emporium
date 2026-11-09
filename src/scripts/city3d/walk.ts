@@ -51,7 +51,7 @@ import type { Hotbar } from './inventory-ui';
 import type { Held } from '../net/profile-data';
 import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
-import { DECK_Y, onDeck } from './waterfront';
+import { onDeck } from './waterfront';
 import { onEsplanade } from './boulevard';
 import { carStatsOf, kartStatsOf, ownsCar, takedown } from './tycoon';
 import type { GarageUI } from './garage-ui';
@@ -66,7 +66,7 @@ import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { KART_PARK } from './kartpark';
-import { BANKS_AREA, bankY } from './kartfacility';
+import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
@@ -85,26 +85,25 @@ import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
 import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
-import { BARRIERS as SWING_BARRIERS, BARRIER_WALLS, SX as SWING_X, betweenBarriers, onSwingDeck, swingAt, swingY } from './swingbridge';
-import { JETTY, RIM, inLake, onJetty, onTerrace, terraceY } from './westlake';
+import { BARRIERS as SWING_BARRIERS, BARRIER_WALLS, SX as SWING_X, betweenBarriers, onSwingDeck, swingAt } from './swingbridge';
+import { RIM, inLake, onJetty, onTerrace } from './westlake';
 import { GATE } from './stadium';
-import { WALK_UNDER, viaductSurface, viaductY, walkOff } from './viaground';
-import { skyDeckWall, skyDeckY, upOnDeck } from './skydeck';
-import { MALL_CAMERA, mallFloor, mallWall } from './mallinside';
+import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
+import { skyDeckWall, upOnDeck } from './skydeck';
+import { MALL_CAMERA, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
-import { WATER_Y, inChannel, inWater, shoreY } from './river';
+import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
-import { DOWN as TUNNEL_DOWN, inTunnelZone, tunnelRoom, tunnelWall, tunnelY } from './lot9';
+import { DOWN as TUNNEL_DOWN, inTunnelZone, tunnelRoom, tunnelWall } from './lot9';
 import { HARBOUR_MASTER } from './docksport';
 import { SITE_DOORS } from './crestsites';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
-import { heightAt, hillsAlong, onHills } from './terrain';
-import { onRolls, rollsAlong, rollsAt } from './rolls';
+import { hillsAlong, onHills } from './terrain';
+import { onRolls, rollsAlong } from './rolls';
 import { HIRE } from './riverbus';
 import type { Boat } from './boat';
-import { harbourY, onHarbour } from './harbour';
-import { PLAN, inPoly, type Pt } from './streetplan';
+import { onHarbour } from './harbour';
 import { SPOTS, pointOn, ROUTES } from './routes';
 import { bodies, swing } from './life';
 import type { Partners, StreetFists } from './brawl';
@@ -117,7 +116,7 @@ import { live } from './live-client';
 import type { FeatureId } from './live';
 import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
-import { vergeY } from './verges';
+import { createGroundHeight } from './groundheight';
 import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
 import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
@@ -212,13 +211,8 @@ const HAND_ON = 0.35;
 const QUICK_FADE = 260;
 /** How far you can go: the world's edge */
 const BOUNDS = WORLD_BOUNDS;
-/** Downtown's blocks, the districts and the extra lots (garage, market...) with their sidewalks: the raised ground (with bounding boxes for a quick test first) */
-const slabOf = (poly: Pt[]) => ({ poly, box: [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1])), 0] as Box });
-const slabs = PLAN.slabs.map(slabOf);
 /** The garage's turntable in a grid's copy (the grids hold their own copies of the boxes: matched by numbers) */
 const isTurntable = (b: Box) => b[0] === TURNTABLE_BOX[0] && b[1] === TURNTABLE_BOX[1] && b[2] === TURNTABLE_BOX[2] && b[3] === TURNTABLE_BOX[3];
-/** The turntable's disc: stood on while getting into your car at home, its top over the forecourt */
-const DISC = { ...GARAGE_SITE.turntable, top: 0.07 };
 /** What your own car bumps into: everything solid but the turntable it starts on */
 const CAR_SOLIDS = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
 /** What a car or an aircraft bumps into, in the collision grid (boxgrid.ts) */
@@ -718,61 +712,15 @@ export function createWalk(d: WalkDeps) {
   };
 
   /**
-   * The ground under a point: a slab, or the street; Liberty Bridge's stairs, landings and walkway when
-   * `yNow` is up there; at the kart park the circuit's own (its banks, the hill, the flyover's deck when `yNow` is up there)
+   * The ground under a point (groundheight.ts): a slab, or the street; the decks, bridges and floors when `yNow` is
+   * up (or down) there; at the kart park the circuit's own
    */
   /** Liberty Bridge's leaves are down and its gates open (liberty.ts: they lift for the tall ship; never under reduced motion) */
   const leavesOpen = () => d.reduced || !leavesAt(Date.now() / 1000).shut;
   /** The swing bridge's barriers down (swingbridge.ts): it's swinging, or about to, for the tall ship */
   const swingShut = () => !d.reduced && swingAt(Date.now() / 1000).shut;
-  const groundAt = (x: number, z: number, yNow = 0) => {
-    // (Lot 9's tunnel under the highway, lot9.ts: its ramps and open cuttings, and its floor under the roof when `yNow` is down there)
-    const tn = tunnelY(x, z, yNow);
-    if (tn !== null) return tn;
-    const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
-    // (a block's edge onto open land eases down to the ground, verges.ts: the bank's slope)
-    if (slab === 0.035) {
-      const v = vergeY(x, z);
-      if (v > 0) return v + 0.035;
-    }
-    // (Crestmont's hills, terrain.ts: open ground that rises; nothing else stands there yet)
-    if (slab === 0.035 && onHills(x, z)) return heightAt(x, z) + 0.035;
-    // (the open land outside the town's gentle rolls, rolls.ts: exactly 0 wherever anything stands)
-    if (slab === 0.035) {
-      const r = rollsAt(x, z);
-      if (r !== 0) return r + 0.035;
-    }
-    // (Harbour Bridge's deck, humped over the river; the river's banks sloping down to the water, river plan step 2)
-    const hb = harbourY(x, z);
-    if (hb !== null) return Math.max(slab, hb + 0.035);
-    // (the swing bridge's deck, low over the river on a ramp from each bank: swingbridge.ts)
-    const sw = swingY(x, z);
-    if (sw !== null) return Math.max(slab, sw + 0.035);
-    // (the raised highway's deck and its ramps, when `yNow` is up there: a car's, a bike's; viaground.ts)
-    const via = viaductY(x, z, yNow);
-    if (via !== null) return Math.max(slab, via + 0.035);
-    // (the airport's departures deck and its ramps, when `yNow` is up there: the arrivals level is under it; airfield.ts)
-    const dep = departuresY(x, z, yNow);
-    if (dep !== null) return Math.max(slab, dep + 0.035);
-    // (Liberty Bridge's decks, when `yNow` is up there)
-    const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
-    if (fb !== null) return Math.max(slab, fb);
-    // (inside Starlight Mall: its two floors and the escalators between them, by `yNow`; mallinside.ts)
-    const mall = mallFloor(x, z, yNow);
-    if (mall !== null) return mall;
-    if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
-    // (the garage's turntable: its disc's top, where your car stands and you step on to get in)
-    if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
-    const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
-    if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) {
-      // (the banks' berms carry on outside the fence, kartfacility.ts)
-      const [bx0, bz0, bx1, bz1] = BANKS_AREA;
-      return x > bx0 && x < bx1 && z > bz0 && z < bz1 ? Math.max(base, bankY(x, z) + 0.035) : base;
-    }
-    const t = trackSurfaceAt(x, z, yNow);
-    // (and the spectators' grass banks round it, kartfacility.ts)
-    return Math.max(base, t ? t.y + 0.035 : 0, bankY(x, z) + 0.035);
-  };
+  // (the layers of ground, in the order that resolves their overlaps: groundheight.ts, tested)
+  const groundAt = createGroundHeight({ leavesOpen });
   /** Scratch for the collision grid's answers */
   const nearBoxes: Box[] = [];
   const onBridge = (x: number, z: number) => onHarbour(x, z, 0.15) || onSwingDeck(x, z, 0.15);

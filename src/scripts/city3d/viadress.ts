@@ -31,6 +31,7 @@ import { onHills } from './terrain';
 import { BESIDE, DECK_HALF, DECK_Y, EXITS, GIRDER, OUTER_LANE, RAMPS, RAMP_HALF, RING_LEN, exitS, ringAt, ringPoint, ringS, sGap, wrapS, type Exit, type Pt } from './viaduct';
 import { DECK_LAMPS, PIERS } from './viapiers';
 import { RAMP_PARAPET, deckGap, rampAt, rampSegs } from './viaground';
+import { ROAD } from './palette';
 
 type Rect = [number, number, number, number];
 const inRect = (r: Rect, x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
@@ -205,7 +206,7 @@ export const UNDER: Under[] = (() => {
 export const BAY = { len: 5.4, at: 2.85 };
 /** The parked cars under the deck: [model, x, z, yaw, paint] (most bays taken, seeded) */
 const MODELS: CarId[] = ['hatch', 'sedan', 'coupe', 'pickup', 'van', 'suv'];
-const PAINTS = ['#c8c4d4', '#2a2838', '#7a2d3a', '#24507a', '#e8e4f8', '#3c6b4a', '#b8862e'];
+const PAINTS = ['#c8c4d4', '#2a2838', '#7a2d3a', '#24507a', ROAD.zebra, '#3c6b4a', '#b8862e'];
 export const UNDER_CARS: [CarId, number, number, number, string][] = UNDER.filter((u) => u.kind === 'park').flatMap((u, ui) => {
   const out: [CarId, number, number, number, string][] = [];
   const n = Math.floor((u.s1 - u.s0) / BAY.len);

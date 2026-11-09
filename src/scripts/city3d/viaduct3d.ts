@@ -27,6 +27,7 @@ import { DECK_HALF, DECK_Y, GIRDER, OUTER_LANE, PARAPET, PIER, RAMPS, RAMP_HALF,
 import { BARRIER_TOP, JOINT_EVERY, PIERS } from './viapiers';
 import { RAMP_PARAPET, RAMP_PIER, RAMP_PIERS, deckGap, rampSegs } from './viaground';
 import { BAY, EXIT_SIGNS, GANTRIES, GANTRY, LOCKUP, MURALS, MURAL_ART, RAMP_SIGNS, SOFFIT_Y, SOUND_WALL, UNDER, UNDER_CARS, UNDER_LIGHTS, gantryPanel, soundWall, type Gantry, type Under } from './viadress';
+import { ROAD } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -247,7 +248,7 @@ function sign(b: Batch, row: number, x: number, y: number, z: number, n: Pt, w: 
 }
 /** The murals' atlas: a row each of made-up words in spray colours on a pale ground */
 const MURAL_TEX = canvasTex(512, MURAL_ART.length * 64, (c) => {
-  const cols = ['#e2463b', '#2f8fd6', '#f2c230', '#36b37e', '#c04fd6', '#ff7a2f', '#3fc9c9', '#e8e4f8'];
+  const cols = ['#e2463b', '#2f8fd6', '#f2c230', '#36b37e', '#c04fd6', '#ff7a2f', '#3fc9c9', ROAD.zebra];
   MURAL_ART.forEach((text, i) => {
     const y = i * 64;
     c.fillStyle = ['#2a2838', '#3a3156', '#2c3b4a', '#41302e'][i % 4];
@@ -417,7 +418,7 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   const concrete = toon('#c9c5d6');
   const pier = toon('#bdb9cb');
   const asphalt = toon('#2c2a3a');
-  const white = toon('#d9d5ee');
+  const white = toon(ROAD.line);
   const yellow = toon('#e8c65a');
   const steel = toon('#7e7b90');
   const joint = toon('#55526a');
@@ -545,7 +546,7 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       b.build(into, { cast: true, receive: true });
     })
   );
-  const um = { asphalt, white, yellow, steel: sm.steel, lockup: toon('#8a7f6a'), door: toon('#c9c5b8'), court: toon('#3f6b56'), board: toon('#e8e4f8') };
+  const um = { asphalt, white, yellow, steel: sm.steel, lockup: toon('#8a7f6a'), door: toon('#c9c5b8'), court: toon('#3f6b56'), board: toon(ROAD.zebra) };
   UNDER.forEach((u, i) => {
     const pts = [ringPoint(u.s0, -DECK_HALF), ringPoint(u.s0, DECK_HALF), ringPoint(u.s1, -DECK_HALF), ringPoint(u.s1, DECK_HALF)];
     site(`viaduct under ${i}`, [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))], (into) => {

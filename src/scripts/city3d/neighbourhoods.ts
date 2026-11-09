@@ -21,16 +21,16 @@ import { SLAB as S, addLamp, addTree, lotMat, waterMat, type Tick } from './worl
 import type { Idle } from './landmarks';
 import { DRESS } from './outerdress3d';
 import { MALL_SIDE_LAMPS, PARK_EDGE_TREES, PARK_SIDE_LAMPS, RING_LAMPS, STRIP_TREES } from './ringstreet';
-import { COVER } from './palette';
+import { COVER, PLANT, STONE as PAL_STONE } from './palette';
 
 const INK = toon('#1b1830');
-const STONE = toon('#8f8ab0');
+const STONE = toon(PAL_STONE.kerb);
 const WOOD = toon('#8a5a3c');
 const METAL = toon('#2a2b38');
-const HEDGE = toon('#2a8a55');
+const HEDGE = toon(PLANT.clipped);
 const glow = (c: string) => neon(c, 0.6, 2.4);
-const INLAY = toon('#b9b3d6');
-const COPING = toon('#a9a3bf');
+const INLAY = toon(PAL_STONE.inlay);
+const COPING = toon(PAL_STONE.path);
 const BIN = toon('#2f4b3c');
 const RING_ORANGE = toon('#ff7a2e');
 const BULB = neon('#ffe2a8', 0.3, 2.4);
@@ -156,8 +156,8 @@ function square(b: Batch, scene: THREE.Scene, l: SquareLayout, crowd: Idle[], ti
   centrepiece(b, scene, l, tick, reduced);
   // Flower troughs along the sides
   l.troughs.forEach(([tx0, tz0, tx1, tz1], k) => {
-    box(b, tx0, S, tz0, tx1, S + 0.4, tz1, toon('#6e6a8c'));
-    box(b, tx0 - 0.03, S + 0.4, tz0 - 0.03, tx1 + 0.03, S + 0.45, tz1 + 0.03, toon('#8f8ab0'));
+    box(b, tx0, S, tz0, tx1, S + 0.4, tz1, toon(PAL_STONE.edge));
+    box(b, tx0 - 0.03, S + 0.4, tz0 - 0.03, tx1 + 0.03, S + 0.45, tz1 + 0.03, toon(PAL_STONE.kerb));
     box(b, tx0 + 0.06, S + 0.4, tz0 + 0.06, tx1 - 0.06, S + 0.43, tz1 - 0.06, toon('#3b2a22'));
     b.detail(() => {
       for (let z = tz0 + 0.18; z < tz1 - 0.1; z += 0.26)
@@ -203,7 +203,7 @@ function square(b: Batch, scene: THREE.Scene, l: SquareLayout, crowd: Idle[], ti
     scene.add(g);
   }
   for (const [x, z] of l.planters) {
-    box(b, x - 0.45, S, z - 0.45, x + 0.45, S + 0.5, z + 0.45, toon('#6e6a8c'));
+    box(b, x - 0.45, S, z - 0.45, x + 0.45, S + 0.5, z + 0.45, toon(PAL_STONE.edge));
     box(b, x - 0.38, S + 0.5, z - 0.38, x + 0.38, S + 0.52, z + 0.38, toon('#3b2a22'));
     addTree(x, z, 0.9, false, S + 0.52);
   }
@@ -339,7 +339,7 @@ function promenade(b: Batch, low: boolean) {
     for (let x = x0 + 3; x < x1; x += 12) {
       if (!offBridges(x, 1.2) || !offFootbridge(x, 1.2) || deckAt(x) || atGangway(bank, x, 1.4)) continue;
       const z = (inner + edge) / 2 - toWater * 0.15;
-      cyl(b, 0.42, 0.4, x, 0, z, toon('#6e6a8c'), 10);
+      cyl(b, 0.42, 0.4, x, 0, z, toon(PAL_STONE.edge), 10);
       addTree(x, z, 0.8, false, 0.4);
       // (flowers round the trunk, near only)
       b.detail(() => {

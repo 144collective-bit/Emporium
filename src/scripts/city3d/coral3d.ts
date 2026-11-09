@@ -15,6 +15,7 @@ import { BAY_DEPTH, CORAL_BAYS, bayRect } from './crestmont';
 import { ARCH, CAFES, COBBLES, CORAL_CARS, FOUNTAINS, FRONT, NAMES, PLANTER, PLANTERS, SHOPS, SLAB_Y, SPACE, STAND, STOREY, TABLES, TABLE_R, VALET, VALET_STANDS, VIA, VIA_NAME, doorOf, heightOf, outOf, type Boutique } from './coral';
 import { BULB, GOLD, LED, SPRAY, WATER, cyl, flat, planter, signAtlas } from './mallkit';
 import { FRONT as WINDOW, CURTAIN } from './mallkit';
+import { ROAD } from './palette';
 
 type Rect = [number, number, number, number];
 
@@ -27,8 +28,8 @@ const BLACK = toon('#18171c');
 const CREAM = toon('#f4ead2');
 const DOOR_GLASS = toon('#2b3440');
 const ROOF = toon('#b9b2a5');
-const ASPHALT = toon('#26243f');
-const LINE = toon('#e8e4f8');
+const ASPHALT = toon(ROAD.asphalt);
+const LINE = toon(ROAD.zebra);
 const KERB = toon('#cfc6b4');
 const BALL = toon('#3f7434');
 const FLAG_COLOURS = [toon('#1e2a55'), toon('#6e1f2e'), toon('#f1ece0')];

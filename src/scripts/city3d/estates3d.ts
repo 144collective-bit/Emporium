@@ -24,6 +24,7 @@ import { parkedCars, type CarId } from './cars';
 import { COURT_HALF, ESTATES, ESTATE_CARS, FOUNTAIN, GATE, HEDGE, ROOF_H, SLAB_Y, STOREY, fountainOf, hedgesOf, motorCourt, outOf, originOf, piersOf, rectToWorld, wallTop, type Estate, type EstateStyle, type Part } from './estates';
 import { CURTAIN, PAVING, TIMBER as SLATS, WATER, SPRAY, BULB, flat } from './mallkit';
 import { PIER, extrasOf, loggiaPiers } from './crestgardens';
+import { PLANT, SOIL } from './palette';
 
 const RENDER_WHITE = toon('#f4efe4');
 const OCHRE = toon('#e6c493');
@@ -54,9 +55,9 @@ const FRAME: Record<EstateStyle, THREE.Material> = { spanish: WOOD, villa: STONE
 const BARS: Record<EstateStyle, [number, number]> = { spanish: [1, 1], villa: [1, 1], tudor: [2, 2], georgian: [2, 2], modern: [0, 0] };
 const BAR: Record<EstateStyle, THREE.Material> = { spanish: WOOD, villa: WOOD, tudor: IRON, georgian: TRIM, modern: IRON };
 /** The garage's doors and the front door, by style (a Georgian's in navy, a villa's in green) */
-const GARAGE: Record<EstateStyle, THREE.Material> = { spanish: toon('#6b4630'), villa: toon('#5a3a26'), tudor: toon('#4a3326'), georgian: toon('#f3f1ea'), modern: toon('#3a3d44') };
+const GARAGE: Record<EstateStyle, THREE.Material> = { spanish: toon('#6b4630'), villa: toon('#5a3a26'), tudor: toon(SOIL.bed), georgian: toon('#f3f1ea'), modern: toon('#3a3d44') };
 const DOOR: Record<EstateStyle, THREE.Material> = { spanish: toon('#5a3a26'), villa: toon('#4b6a4e'), tudor: toon('#3d2b22'), georgian: toon('#1d2a4a'), modern: toon('#6b4630') };
-const HEDGE_TOP = toon('#3a8a4e');
+const HEDGE_TOP = toon(PLANT.hedgeTop);
 /** Windows: dark glass by day, warm light at night */
 export const WINDOW = siteMat('estate-window', lit(toon('#3b4c60', { emissive: '#ffd59a' }), 0, 0.85));
 /** A pool's water: lit from under at night, a soft glowing turquoise (Phase 8; under the bloom's threshold) */

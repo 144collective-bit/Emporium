@@ -153,7 +153,7 @@ test("the daily cap on purses: the day's first bouts won pay in full, the rest t
 
 test("save v13: today's prize count is kept, another day's or an older save's starts at zero, junk is cleaned", () => {
   const s = rich();
-  assert.equal(s.v, 13);
+  assert.equal(s.v, 14);
   assert.deepEqual(s.prizes, emptyPrizes());
   const today = cleanSave({ ...s, prizes: { day: dayKey(T0), races: 3.7, bouts: -1 } }, T0);
   assert.deepEqual(today.prizes, { day: dayKey(T0), races: 4, bouts: 0 });
@@ -162,7 +162,7 @@ test("save v13: today's prize count is kept, another day's or an older save's st
   const junk = cleanSave({ ...s, prizes: 'lots' }, T0);
   assert.deepEqual(junk.prizes, emptyPrizes());
   const old = cleanSave({ v: 12, dorras: 500 }, T0);
-  assert.equal(old.v, 13);
+  assert.equal(old.v, 14);
   assert.deepEqual(old.prizes, emptyPrizes());
   assert.equal(old.dorras, 500, 'existing saves keep their Dorras');
   // The shelves' runs come through, never negative

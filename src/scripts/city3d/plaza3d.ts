@@ -46,6 +46,7 @@ import {
   WATER_WALL,
 } from './plaza';
 import { CANOPIES, CANOPY_H, KIOSK_NAMES, POSTS, RIBBON, RIBBON_TOWER, RIBBON_WORDS } from './plazadress';
+import { SOIL as PAL_SOIL } from './palette';
 
 /** The paving's top, the inlays' over it, the grates' over them (nothing flush) */
 const PAVE = SLAB + 0.012;
@@ -61,7 +62,7 @@ const STEEL = toon('#2a2740');
 const GLASS = toon('#a7d8ec');
 const WOOD = toon('#8a5a3c');
 const IRON = toon('#1b1830');
-const SOIL = toon('#5a4436');
+const SOIL = toon(PAL_SOIL.garden);
 const SHRUB = toon('#2f7a45');
 const TABLE = toon('#f2efe8');
 const KIOSK = toon('#24223a');

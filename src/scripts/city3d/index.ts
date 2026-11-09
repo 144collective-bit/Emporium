@@ -305,7 +305,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   buildWaterfront(tier === 'low');
   spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
   // The Night Market on its deck in front of Harbor Stores, a place
-  spots.push(buildNightMarket(scene, crowd, { tick, low: tier === 'low' }).spot);
+  const nightMarket = buildNightMarket(scene, crowd, { tick, low: tier === 'low' });
+  spots.push(nightMarket.spot);
   // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
   spots.push(buildStadium(scene, crowd, { low: tier === 'low', tick }).spot);
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
@@ -1046,6 +1047,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       units.show(s);
       bigLots.show(s);
       corners.show(s);
+      nightMarket.show(s);
       beacons.show(s.contracts.map((c) => destAt(c.to)));
       beacons.guide(guideAt(s));
       dirty = true;

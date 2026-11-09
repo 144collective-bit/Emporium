@@ -694,7 +694,8 @@ it and has been retired completely. Build only on what's here.
     the clock's hands keep the visitor's time). On the world map the decks
     are drawn in wood.
   - **The Night Market** (the owner's call, the waterfront plan's first
-    next step; scenery for now, stalls to run later) is `nightmarket.ts`
+    next step; scenery but for the cart, yours to run since the polish
+    plan's Phase 10, below) is `nightmarket.ts`
     (DOM-free, tested in `tests/nightmarket.test.ts`) on its deck out over
     the water in front of Harbor Stores (`MARKET_DECK` in waterfront.ts, one
     of `DECKS`, open to the boardwalk along its length (`RAIL_GAPS`), the
@@ -710,6 +711,28 @@ it and has been retired completely. Build only on what's here.
     spot `nightmarket`, its pin over the gantry, directory entry, panel
     `data-panel-tpl="nightmarket"` with Walk in to `MARKET_SPAWN`, a `PLACES`
     entry; one sign atlas of fixed made-up copy).
+  - **The Night Market's stall** (the polish plan's Phase 10, the owner's
+    call: "stalls to run"): the cart at the end of the row (`MY_STALL`,
+    `MY_STALL_NAME`, `MY_STALL_DOOR` in nightmarket.ts) is a place in the
+    economy like a corner shop: tycoon.ts's place `m0` (`NIGHT_PLACE`,
+    `NightId` in `PlaceId`), `night` in the save (v14; older saves don't own
+    it), `buyNightStall()` / `nightPrice()` (`NIGHT_PRICE` 25,000 from
+    `NIGHT_LEVEL` 4, ledger `property`), always a food stall (`NIGHT_STALL`:
+    3 shelves of 40, a quicker pace than a corner shop's; `kindAt()` reads
+    `'night'`), levels 1-3 (`NIGHT_LEVEL_COSTS` in catalog.ts), a clerk,
+    couriers, the car's deliveries with the bonus; it trades **after dusk
+    only**, 18:00 to 02:00 by the visitor's clock (`NIGHT_HOURS`,
+    `nightOpen()`; `advance()` scales its sales by `nightShare()`, the share
+    of the time since the last tick it was open). On screen: the business
+    card's Units tab has its chip after the corner shops (`nightView()`), the
+    Vault's estate agent lists it, the market hall and the Post office take
+    it, walk mode prompts at the cart's counter ("Sweets cart · For sale").
+    Drawn from the save by nightmarket3d.ts (`buildNightMarket().show()`,
+    rebuilt only when what it shows changes; index.ts's `stock` hook calls
+    it): for sale with a FOR SALE board on its front and the umbrella furled;
+    yours with its name, the umbrella up, your goods in tubs on the lid,
+    stars by the sign for its level, a neon trim at level 2. Its cook and
+    queue are the crowd's as before.
   - **The Block** is a place (`theblock.ts`, built at the boot): spot
     `trenches` (pin over the court, directory entry, panel
     `data-panel-tpl="trenches"`: the storyline starts here, coming soon,
@@ -1627,9 +1650,15 @@ it and has been retired completely. Build only on what's here.
     only between phases.
   - Phase 1 (foundations) is built: the ground palette, `palette.ts`
     (DOM-free, tested in `tests/palette.test.ts`: `COVER`, `KERB`, `TREE`,
-    `LAMP`): the ground's covers, the kerbs, the trees and the street lamps'
-    light; every file that draws ground takes its colours from it, never a
-    hex of its own (the test holds it); the one clearing rule for the
+    `LAMP`, and since the polish plan's Phase 10 `LAMP_POST` (the posts'
+    paint), `ROAD` (asphalt, lines, zebras, the yellow line), `STONE` (the
+    squares' and parks' kerbs, paths, edges, caps, gravel, paving, inlays),
+    `PLANT` (hedges, clipped box, shrubs), `SOIL` and `BANK` (the river's
+    quays, sand, pebbles, rocks)): the ground's covers, the kerbs, the trees
+    and the street lamps' light; every file that draws ground, kerbs,
+    trees or lamps takes its colours from it, never a hex of its own (the
+    test holds it: a new colour there goes in the palette, and in its
+    `shared` set only where it's also plain paint on something else); the one clearing rule for the
     outskirts' trees (`landuse.ts`, above under the world's size) and the
     belt eased out.
   - Phase 2 (the ground) is built: `ground.ts` (DOM-free, tested in
@@ -1711,6 +1740,29 @@ it and has been retired completely. Build only on what's here.
     `lampTone()` (each lamp seeded from where it stands; The Trenches' dead
     and flickering ones its own), read by `buildLamps()` in world.ts. A new
     sodium district goes in `SODIUM_AREAS`.
+  - **A lamp post per district** (the polish plan's Phase 10, the owner's
+    call) is `lampposts.ts` (DOM-free, tested in `tests/lampposts.test.ts`):
+    `lampStyle(x, z)` says which post a lamp is from where it stands
+    (`LampKind`: `town` everywhere not named, `uptown` in Uptown, Uptown
+    North and the mall (slim steel, a flat head), `lantern` in Crestmont,
+    `suburb` in Sunridge (a short globe), `cobra` in The Trenches and Lot 9,
+    `park` in Westlake Park, `strip` on the Neon Mile (a double arm, a neon
+    line down the pole), `airport` on the airport's roads (a tall mast)), and
+    `LAMP_POSTS` what each looks like (pole, arm or cap, head; `headOf()`
+    where its light is). `buildLamps()` draws each kind as three instanced
+    shapes (a draw a kind, the phones' trim as before); the light's colour
+    is still lampmix.ts's, the halos and pools unchanged; the posts' paint is
+    the palette's `LAMP_POST`. A new district picks its kind in
+    `lampStyle()`.
+  - **The kerb blended at The Trenches' edge** (the polish plan's Phase 10,
+    the owner's call) is lampmix.ts's `kerbShare(x, z)`: over `MIX` either
+    side of the west ring avenue's centre line (`KERB_SEAM`, along The
+    Trenches' blocks) the share of the grit's grey eases from 1 inside to 0
+    in the town, a half on the line. world.ts paints a slab the band crosses
+    vertex by vertex (`Batch.shade()` in kit.ts: a shape in the shared paint
+    coloured per vertex from where each one stands, one draw with the rest)
+    from `KERB.town` to `KERB.grit`, so the two meet in the middle of the
+    avenue instead of switching on a line. Nothing moves.
   - Phase 6b (the first seam, downtown and the town across the ring avenue)
     is built: `ringstreet.ts` (DOM-free, tested in `tests/ringstreet.test.ts`):
     `RING_SIDES`, the same town lamp on both sidewalks (`RING_LAMPS`, by the
@@ -2440,7 +2492,9 @@ it and has been retired completely. Build only on what's here.
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
   The Trenches round The Block, the Neon Mile from over its boulevard and down it,
-  where the edge was before Phase 6, the far edge (from `EXT`)) measured for a few
+  where the edge was before Phase 6, the far edge (from `EXT`), and since the
+  polish plan's Phase 10 Uptown North, the mall, Harbour Bridge, Sunridge,
+  Southfield and Lot 9 (`BLEND_VIEWS` has the same six for the shots)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
@@ -3839,11 +3893,11 @@ it and has been retired completely. Build only on what's here.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v13:
-  the daily prize cap's count, `prizes`, below; v12 Build mode retired, the
-  district plots a save owned refunded in full, `plotRefund()`, with a
-  toast once; v11 brought the inventory, `inventory`; v10 The Trenches'
-  corner shops, `corners`);
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v14:
+  the Night Market's stall, `night`, below; v13 the daily prize cap's count,
+  `prizes`, below; v12 Build mode retired, the district plots a save owned
+  refunded in full, `plotRefund()`, with a toast once; v11 brought the
+  inventory, `inventory`; v10 The Trenches' corner shops, `corners`);
   keep that migration when the save changes. New economy rules go here
   first.
 - **Balance** (the polish plan's Phase 9, the owner's call; the numbers
@@ -4015,6 +4069,20 @@ it and has been retired completely. Build only on what's here.
   `landmarks.ts`. When a landmark moves or changes size, update both.
   What's built on your units and big lots blocks via `placedSolids()`;
   parks stay walkable.
+- **The ground under a point** is `groundheight.ts` (the polish plan's
+  Phase 10; DOM-free, tested in `tests/groundheight.test.ts`):
+  `createGroundHeight({ leavesOpen })` gives walk.ts its `groundAt(x, z,
+  yNow)`, asking `GROUND_LAYERS` in order, each a `GroundLayer` that
+  `take`s (its height is the answer: the tunnel, a verge, the hills, the
+  rolls, the mall's floors, the river's banks, the turntable), goes `over`
+  (its height or the base, and stop: the bridges, the raised highway, the
+  departures deck, Liberty Bridge) or `lift`s the base and goes on (the
+  jetty, the terraces, the sky deck, the circuit, the banks); the order
+  resolves the overlaps (the tunnel first, the decks before the river's
+  banks, the mall by `yNow`, the kart park's flyover last). The test holds
+  the old `groundAt()` word for word against it at over 20,000 points and
+  heights. A new thing stood on goes in as a layer, in its place in the
+  order.
 - Checks go through the collision grid (`boxgrid.ts`, `BoxGrid`: boxes in
   cells of `CELL`, a query gives every box touching an area in the list's
   order): `SOLID_GRID` for walking, `CAMERA_GRID` for the walk camera,
@@ -4897,6 +4965,12 @@ it and has been retired completely. Build only on what's here.
 - `npm run typecheck` (`astro sync`, then `tsc` with `--noUnusedLocals`)
   checks the types and that nothing declared is left unused; the "Build
   site" Action runs it first, so a type error stops the build too.
+- `npm run lint` (eslint with typescript-eslint, `eslint.config.js`; the
+  polish plan's Phase 10) holds what tsc doesn't: `prefer-const`, `eqeqeq`,
+  the recommended catches for plain mistakes, and no `document`, `window`
+  or `localStorage` in the DOM-free rules files listed in `DOM_FREE` there
+  (a new rules file goes on that list). The Action runs it after the
+  typecheck. Keep it fast and minimal: unused declarations are tsc's.
 - `npm test` runs `tests/*.test.ts` with Node's own test runner
   (`scripts/test.mjs` bundles each with esbuild first; `npm test -- drive`
   runs only matching files; a line per file with its time and the slowest

@@ -27,7 +27,9 @@ import { DRIVE_BLOCKS } from './coral';
 import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
-import { lampTone } from './lampmix';
+import { kerbShare, lampTone } from './lampmix';
+import { LAMP_KINDS, LAMP_POSTS, headOf, lampStyle, type LampKind } from './lampposts';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEDGE as RING_HEDGE, RING_MEDIAN } from './ringstreet';
 import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import { TUNNEL_HOLES } from './lot9';
@@ -38,7 +40,7 @@ import { WATER_Y, edgeSamples, edgesAt, pullAt, stretchAt, topsAt } from './rive
 import { atGangway } from './riverbus';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET, HX, Z0 as HZ0, Z1 as HZ1 } from './harbour';
 import { SWING_RECT, SWING_STREET } from './swingbridge';
-import { COVER, KERB, LAMP, TREE, VERGE } from './palette';
+import { BANK, COVER, KERB, LAMP, LAMP_POST, PLANT, ROAD, TREE, VERGE } from './palette';
 import { EDGE, RAMP, VERGES, edgePieces, pieceLine } from './verges';
 import { colourAt, groundStep } from './ground';
 import { ROLL, rollGrad, rollSlope, rollsAt, rollsIn } from './rolls';
@@ -477,14 +479,14 @@ function quad3(p: [number, number, number][], toward: [number, number, number]) 
  * of the channel at the world's edge are walled.
  */
 function riverBanks(b: Batch, e0: number, e1: number) {
-  const stone = toon('#6b6790');
-  const wall = toon('#57537a');
+  const stone = toon(BANK.quay);
+  const wall = toon(BANK.wall);
   const grass = toon(COVER.rough);
   const bankGrass = toon(COVER.bank);
-  const sand = toon('#cdbb8e');
-  const pebbles = toon('#8f8a80');
+  const sand = toon(BANK.sand);
+  const pebbles = toon(BANK.pebbles);
   const reedMats = [toon('#6f9a45'), toon('#88a854'), toon('#5c8a3e')];
-  const rock = toon('#77738a');
+  const rock = toon(BANK.rock);
   const pts = edgeSamples(e0, e1, 2);
   const W = WATER_Y;
   const UNDER = W - 0.25;
@@ -790,7 +792,7 @@ function basinWater() {
  * dock off the basin's east wall (Phase 3): its walls down to its floor, the floor, and its caisson in the wall's line
  */
 function basinWalls(b: Batch) {
-  const wall = toon('#57537a');
+  const wall = toon(BANK.wall);
   const deck = toon('#8a879c');
   const UNDER = WATER_Y - 0.25;
   const PIECE = 10;
@@ -906,7 +908,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     }
 
   // Roads: asphalt, and down each avenue a raised median (broken at crossings and over the river)
-  const asphalt = toon('#26243f');
+  const asphalt = toon(ROAD.asphalt);
   // (downtown's two small east-west roads not across the Strip: layout.ts STRIP_GAP, strip.ts; its streets are strip3d.ts's)
   EW_ROADS.forEach((r, i) => {
     for (const [a0, a1] of i in STRIP_GAP ? [[e0, STRIP_GAP[i][0]], [STRIP_GAP[i][1], e1]] : [[e0, e1]]) b.box(a0, 0, r.c - r.half, a1 - a0, 0.03, r.half * 2, asphalt);
@@ -957,10 +959,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   // median (ringstreet.ts, docs/blend-plan.md Phases 6b and 6c):
   // a clipped hedge, and slim columnar trees along it (but under the el)
   {
-    const hedge = toon('#2c6a3c');
-    const hedgeTop = toon('#3a8a4e');
-    const column = toon('#24603a');
-    const trunk = toon('#5a4232');
+    const hedge = toon(PLANT.hedge);
+    const hedgeTop = toon(PLANT.hedgeTop);
+    const column = toon(TREE.column);
+    const trunk = toon(TREE.columnTrunk);
     const y = SLAB + 0.005;
     const stem = new THREE.CylinderGeometry(0.05, 0.06, 0.7, 6, 1, true);
     const crown = new THREE.SphereGeometry(0.26, 8, 6).scale(1, 4.2, 1);
@@ -1023,12 +1025,19 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const kerb = toon(KERB.town);
   // (The Trenches' sidewalks are plain grey concrete, their yards worn concrete: the grit step)
   const trenchKerb = toon(KERB.grit);
+  // The kerb blended at The Trenches' edge (lampmix.ts `kerbShare()`, the polish plan's Phase 10): a slab with the
+  // seam's band across it is painted vertex by vertex from the town's stone to the grit's grey, so the two colours
+  // meet in the middle of the west ring avenue instead of switching on a line
+  const [town, grit] = [new THREE.Color(KERB.town), new THREE.Color(KERB.grit)];
+  const blended = (poly: Pt[]) => poly.some(([x, z]) => kerbShare(x, z) > 0.001) && poly.some(([x, z]) => kerbShare(x, z) < 0.999);
+  const kerbAt = (x: number, _y: number, z: number, c: THREE.Color) => c.copy(town).lerp(grit, kerbShare(x, z));
+  const slabKerb = (slab: Pt[], g: THREE.BufferGeometry, plain: THREE.Material) => (blended(slab) ? b.shade(g, kerbAt) : b.add(g, plain));
   PLAN.blocks.forEach((blk, i) => {
     // (The bends' outer sidewalks are drawn as one kerb each, below)
     if (blk.id.startsWith('kerb-')) return;
     const slab = PLAN.slabs[i];
     if (blk.id.startsWith('trench-')) {
-      b.add(slabPoly(slab, SLAB), trenchKerb);
+      slabKerb(slab, slabPoly(slab, SLAB), trenchKerb);
       b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.005, YARD_REPEAT), LOTS.yard);
       return;
     }
@@ -1051,17 +1060,17 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];
-      b.box(x0, 0, z0, x1 - x0, SLAB, z1 - z0, kerb);
+      slabKerb(slab, new THREE.BoxGeometry(x1 - x0, SLAB, z1 - z0).translate((x0 + x1) / 2, SLAB / 2, (z0 + z1) / 2), kerb);
       b.box(x0 + WALK_W + 0.4, SLAB, z0 + WALK_W + 0.4, x1 - x0 - (WALK_W + 0.4) * 2, 0.005, z1 - z0 - (WALK_W + 0.4) * 2, LOTS[kind]);
     } else if (bigPoly(slab)) {
       // (a big one, a park's: in pieces a tile each. Its top is the lot itself, the sidewalk a ring laid on it: a lot
       // a few millimetres over a slab that size would flicker through it far off)
       const [walls, ...top] = tiledSlab(slab, SLAB);
-      b.add(walls, kerb);
+      slabKerb(slab, walls, kerb);
       for (const g of top) b.add(g, LOTS[kind]);
-      b.add(ring(slab, blk.walk + 0.4, SLAB + 0.004), kerb);
+      slabKerb(slab, ring(slab, blk.walk + 0.4, SLAB + 0.004), kerb);
     } else {
-      b.add(slabPoly(slab, SLAB), kerb);
+      slabKerb(slab, slabPoly(slab, SLAB), kerb);
       // (A bend's outer sidewalk is all sidewalk: no lot)
       if (blk.walk) b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.003), LOTS[kind]);
     }
@@ -1203,7 +1212,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   // fixed geometry, so they're split by tile and only the ones in view are drawn (tileBatch() in kit.ts)
   const unit = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   const marks = new Batch();
-  marks.instances(unit, neon('#f5d76e', 0.9, 1.1), dashes).instances(unit, toon('#d9d5ee'), whites).instances(unit, toon('#e8e4f8'), zebra);
+  marks.instances(unit, neon(ROAD.yellow, 0.9, 1.1), dashes).instances(unit, toon(ROAD.line), whites).instances(unit, toon(ROAD.zebra), zebra);
   marks.build(scene, { cast: false, receive: true });
 
   // Neon streaks on wet asphalt (only visible in the rain, at dusk and night): one mesh,
@@ -1412,6 +1421,8 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
     const k = lampTone(l.x, l.z);
     return k === 'flicker' ? (i % 2 ? 'flickA' : 'flickB') : k;
   });
+  // A post per district (lampposts.ts, the polish plan's Phase 10): which post each lamp is, from where it stands
+  const kinds = lamps.map((l) => lampStyle(l.x, l.z));
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
   const poles: THREE.Matrix4[] = [];
   const arms: THREE.Matrix4[] = [];
@@ -1421,18 +1432,24 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
   const poolsOf: Record<Tone, THREE.Matrix4[]> = { white: [], sodium: [], flickA: [], flickB: [] };
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
+  const one = new THREE.Vector3(1, 1, 1);
   const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  const at = (x: number, y: number, z: number) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q, one);
   lamps.forEach((l, i) => {
+    const P = LAMP_POSTS[kinds[i]];
+    const { out, up: hy } = headOf(kinds[i]);
     q.setFromAxisAngle(up, l.ry);
-    const dir = new THREE.Vector3(0.2, 0, 0).applyQuaternion(q);
-    poles.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x, l.y + 0.8, l.z), q, new THREE.Vector3(1, 1, 1)));
-    arms.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x, l.y + 1.58, l.z + dir.z), q, new THREE.Vector3(1, 1, 1)));
-    bulbs.push(new THREE.Matrix4().compose(new THREE.Vector3(l.x + dir.x * 2, l.y + 1.53, l.z + dir.z * 2), q, new THREE.Vector3(1, 1, 1)));
+    const dir = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    poles.push(at(l.x, l.y + P.h / 2, l.z));
+    // (the arm from the pole out to the head, its middle half-way; a double arm centred on the pole; a cap on top of a lantern or globe)
+    const reach = P.double ? 0 : P.arm / 2;
+    arms.push(P.arm ? at(l.x + dir.x * reach, l.y + P.h - 0.02, l.z + dir.z * reach) : at(l.x, l.y + P.headY + P.head[1] / 2 + 0.04, l.z));
+    bulbs.push(at(l.x + dir.x * out, l.y + hy, l.z + dir.z * out));
     const tone = toneOf[i];
     if (tone === 'dead') return;
-    halos[tone].push(l.x + dir.x * 2, l.y + 1.5, l.z + dir.z * 2);
+    halos[tone].push(l.x + dir.x * out, l.y + hy - 0.03, l.z + dir.z * out);
     // (on Crestmont's hill roads the ground under the bulb: a pool flat on a slope sits a little up, terrain.ts)
-    const [px, pz] = [l.x + dir.x * 2, l.z + dir.z * 2];
+    const [px, pz] = [l.x + dir.x * out, l.z + dir.z * out];
     const py = onHills(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + 0.02;
     poolsOf[tone].push(new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
@@ -1450,28 +1467,47 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
       return [t, { bulb, halo, pool }];
     })
   ) as unknown as Record<Tone, { bulb: THREE.Material; halo: THREE.PointsMaterial; pool: THREE.Material }>;
-  const dead = toon('#3a3644');
+  const dead = toon(LAMP_POST.dead);
+  const posts = { ink: toon(LAMP_POST.ink), steel: toon(LAMP_POST.steel), black: toon(LAMP_POST.black), green: toon(LAMP_POST.green) };
+  const trim = neon(PAL.pink, 0.5, 2.2);
   // Near only (growth plan Phase 2): far off, a lamp is a hairline; its halo (below) still shows at night.
-  // Each tile's lamps a site (built as you go: tilework.ts)
+  // Each tile's lamps a site (built as you go: tilework.ts), each kind of post its own three shapes (lampposts.ts)
   // Phones (the trim): four-sided and open-ended (the ends are too small to see), half the triangles
   const bar = (r: number, len: number) => new THREE.CylinderGeometry(r, r, len, 4, 1, true).rotateY(Math.PI / 4).rotateZ(Math.PI / 2);
-  const poleGeo = low ? new THREE.CylinderGeometry(0.035, 0.05, 1.6, 4, 1, true).rotateY(Math.PI / 4) : new THREE.CylinderGeometry(0.035, 0.05, 1.6, 6);
-  const armGeo = low ? bar(0.035, 0.4) : new THREE.BoxGeometry(0.4, 0.05, 0.05);
-  const bulbGeo = low ? bar(0.075, 0.2) : new THREE.BoxGeometry(0.2, 0.07, 0.12);
+  const shapes = Object.fromEntries(
+    LAMP_KINDS.map((k) => {
+      const P = LAMP_POSTS[k];
+      const [hw, hh, hd] = P.head;
+      const pole = low ? new THREE.CylinderGeometry(P.r[0], P.r[1], P.h, 4, 1, true).rotateY(Math.PI / 4) : new THREE.CylinderGeometry(P.r[0], P.r[1], P.h, 6);
+      const t = Math.min(0.05, P.r[0] * 1.4);
+      // (an arm's length out from the pole; a double arm spans both sides; a cap over a lantern or globe)
+      const arm = P.arm ? (low ? bar(t, P.arm * (P.double ? 2 : 1)) : new THREE.BoxGeometry(P.arm * (P.double ? 2 : 1), t, t)) : new THREE.ConeGeometry((hw + 0.05) * 0.72, 0.1, 4).rotateY(Math.PI / 4);
+      const one = () => (P.cap ? (low ? new THREE.CylinderGeometry(hw / 2, hw / 2, hh, 4, 1, true).rotateY(Math.PI / 4) : new THREE.BoxGeometry(hw, hh, hd)) : low ? bar(Math.min(hh, hd) / 2 + 0.02, hw) : new THREE.BoxGeometry(hw, hh, hd));
+      const head = P.double ? mergeGeometries([one().translate(-P.arm, 0, 0), one().translate(P.arm, 0, 0)], false) : one();
+      // (the Neon Mile's: a line of neon down the pole's street side)
+      const line = P.neon ? new THREE.BoxGeometry(0.03, P.h * 0.55, 0.03).translate(P.r[1] + 0.01, -P.h * 0.08, 0) : null;
+      return [k, { pole, arm, head, line, post: posts[P.post] }];
+    })
+  ) as unknown as Record<LampKind, { pole: THREE.BufferGeometry; arm: THREE.BufferGeometry; head: THREE.BufferGeometry; line: THREE.BufferGeometry | null; post: THREE.Material }>;
   for (const [key, list] of byTile(lamps.map((l, i) => ({ x: l.x, z: l.z, i }))))
     site(`lamps ${key}`, keyRect(key), (into) => {
-      const pick = (all: THREE.Matrix4[]) => list.map((l) => all[l.i]);
       const lampB = new Batch();
       lampB.lod = 'near';
-      lampB.instances(poleGeo, toon('#1b1830'), pick(poles)).instances(armGeo, toon('#1b1830'), pick(arms));
-      lampB.build(into, { cast: true, receive: true, details: true });
-      // (the bulbs cast no shadow)
       const bulbB = new Batch();
       bulbB.lod = 'near';
-      for (const t of [...TONES, 'dead' as const]) {
-        const mine = list.filter((l) => toneOf[l.i] === t).map((l) => bulbs[l.i]);
-        if (mine.length) bulbB.instances(bulbGeo, t === 'dead' ? dead : mats[t].bulb, mine);
+      for (const k of LAMP_KINDS) {
+        const mine = list.filter((l) => kinds[l.i] === k);
+        if (!mine.length) continue;
+        const S = shapes[k];
+        lampB.instances(S.pole, S.post, mine.map((l) => poles[l.i])).instances(S.arm, S.post, mine.map((l) => arms[l.i]));
+        if (S.line) lampB.instances(S.line, trim, mine.map((l) => poles[l.i]));
+        for (const t of [...TONES, 'dead' as const]) {
+          const lit = mine.filter((l) => toneOf[l.i] === t).map((l) => bulbs[l.i]);
+          if (lit.length) bulbB.instances(S.head, t === 'dead' ? dead : mats[t].bulb, lit);
+        }
       }
+      lampB.build(into, { cast: true, receive: true, details: true });
+      // (the bulbs cast no shadow)
       bulbB.build(into, { cast: false, receive: true });
     });
   /** Each tone's halos and pools, and every lamp's switch: the pools' first `nHalo` are the lamps with halos, the rest the wall lamps' pools */

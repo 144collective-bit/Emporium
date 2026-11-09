@@ -29,13 +29,14 @@ import { parkedCars, type CarId } from './cars';
 import { HIGHRISES } from './highrise';
 import { AXIS_X, BIKE, CIRCLE, COUPLET, ISLAND_R, LANE_HALF, LAYBYS, ROWS_Z, UPTOWN_CROSSINGS, UPTOWN_STREETS, crossingsOn, laybyRect, type Layby, type Pt, type Rect } from './uptown';
 import { ALLEY_BOLLARDS, ALLEY_DUMPSTERS, BOLLARD_R, DOCK_H, DUMPSTER, LAYBY_CARS, MONUMENT, SERVICE_ALLEYS, SPACE } from './kerbside';
+import { PLANT, ROAD } from './palette';
 
 const [RING, , , BANK] = ROWS_Z;
 /** Paint over the asphalt (Uptown's streets at 0.031, the avenues' at 0.03, their dashes at 0.036) */
 const PAINT_Y = 0.034;
 const MARK_Y = 0.0395;
 
-const WHITE = toon('#e8e4f8');
+const WHITE = toon(ROAD.zebra);
 const GREEN = toon('#2f8a52');
 const RED = toon('#9c2e2e');
 const YELLOW = toon('#f2c94c');
@@ -45,7 +46,7 @@ const GLASS = toon('#a9dcef');
 const GRANITE = toon('#8f8aa3');
 const GRANITE_DARK = toon('#6f6a86');
 const FLOWERS = [toon('#ff5fa2'), toon('#ffd23f'), toon('#b18cff')];
-const LEAF = toon('#2f6a3c');
+const LEAF = toon(PLANT.box);
 const BIN = toon('#2f6b4a');
 const LID = toon('#22252e');
 const DOOR = toon('#7d7a90');
@@ -101,7 +102,7 @@ const PAINT = (() => {
   const tex = canvasTex(256, 64 * PAINT_ROWS.length, (c) => {
     PAINT_ROWS.forEach((t, i) => {
       const y = i * 64;
-      c.fillStyle = t === 'BUS' ? '#9c2e2e' : '#26243f';
+      c.fillStyle = t === 'BUS' ? '#9c2e2e' : ROAD.asphalt;
       c.fillRect(0, y, 256, 64);
       c.fillStyle = t === 'BUS' ? '#f3f2f7' : '#f2c94c';
       c.font = `800 46px ${FONT_DISPLAY}`;

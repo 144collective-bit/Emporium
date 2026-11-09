@@ -13,21 +13,22 @@ import { SOLID_GRID } from './solids';
 import { OUTER_BLOCKS, inside, type Pt } from './outer';
 import { PATH_W, dressing } from './outerdress';
 import type { Rect } from './tiles';
+import { PLANT, SOIL as PAL_SOIL, STONE } from './palette';
 
 /** Is a point on (or within m of) anything solid */
 const solidAt = ([x, z]: Pt, m: number) => SOLID_GRID.near(x, z, m + 0.5).some((b) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m);
 /** The dressing, worked out once (the boot's trees and the sites both read it) */
 export const DRESS = dressing(solidAt);
 
-const PATH = toon('#a9a3bf');
-const EDGE = toon('#6e6a8c');
-const KERB = toon('#8f8ab0');
-const SOIL = toon('#4a3326');
+const PATH = toon(STONE.path);
+const EDGE = toon(STONE.edge);
+const KERB = toon(STONE.kerb);
+const SOIL = toon(PAL_SOIL.bed);
 const WOOD = toon('#8a5a3c');
 const INK = toon('#1b1830');
 const BIN = toon('#2f4b3c');
-const SHRUB = toon('#2a7048');
-const SHRUB_DARK = toon('#1f5a3a');
+const SHRUB = toon(PLANT.shrub);
+const SHRUB_DARK = toon(PLANT.shrubDark);
 /** The beds' flowers, a scheme each: pinks, sunshine, violets, whites and reds */
 const SCHEMES = [
   [toon('#ff6fa8'), toon('#ffc2dc'), toon('#c43d7a')],

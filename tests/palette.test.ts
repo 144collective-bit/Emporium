@@ -5,10 +5,25 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { COVER, KERB, LAMP, TREE } from '../src/scripts/city3d/palette';
+import { BANK, COVER, KERB, LAMP, LAMP_POST, PLANT, ROAD, SOIL, STONE, TREE } from '../src/scripts/city3d/palette';
 
 const HEX = /^#[0-9a-f]{6}$/;
-const all = [...Object.values(COVER), ...Object.values(KERB), ...TREE.crowns, TREE.trunk, TREE.pine, ...Object.values(LAMP).flatMap((l) => Object.values(l))];
+const all = [
+  ...Object.values(COVER),
+  ...Object.values(KERB),
+  ...TREE.crowns,
+  TREE.trunk,
+  TREE.pine,
+  TREE.column,
+  TREE.columnTrunk,
+  ...Object.values(LAMP).flatMap((l) => Object.values(l)),
+  ...Object.values(LAMP_POST),
+  ...Object.values(ROAD),
+  ...Object.values(STONE),
+  ...Object.values(PLANT),
+  ...Object.values(SOIL),
+  ...Object.values(BANK),
+];
 
 test('every colour in the palette is a colour', () => {
   for (const c of all) assert.match(c, HEX);
@@ -17,8 +32,10 @@ test('every colour in the palette is a colour', () => {
 test("the ground's colours are written only in the palette", () => {
   // (the concrete grey, the trees' trunk brown and the first crown green are also plain paint elsewhere: steel, wood,
   // a playing field; the white lamps' warm light is the city's warm light everywhere, lanterns and lit windows; the
-  // rest belong to the ground, the kerbs, the trees and the sodium lamps alone)
-  const shared = new Set<string>([COVER.concrete, TREE.trunk, TREE.crowns[0], ...Object.values(LAMP.white)]);
+  // lamp posts' ink is the city's ink; a zebra's white, the stone kerb and edge, the clipped green and the box hedge
+  // are also plain paint on buildings, benches and bins; the rest belong to the ground, the kerbs, the trees and the
+  // sodium lamps alone)
+  const shared = new Set<string>([COVER.concrete, TREE.trunk, TREE.crowns[0], ...Object.values(LAMP.white), LAMP_POST.ink, ROAD.zebra, STONE.kerb, STONE.edge, PLANT.clipped, PLANT.box]);
   const own = all.filter((c) => !shared.has(c));
   const dir = 'src/scripts/city3d';
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.ts') && n !== 'palette.ts')) {

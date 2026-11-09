@@ -23,20 +23,21 @@ import { site } from './tilework';
 import { inPoly, offsetLine } from './streetplan';
 import { EDGES, EDGE_W, FOUNTAIN, GARDEN_BENCHES, GARDEN_WALLS, HEDGE, KERB, KERBS, MALL_BEDS, PARTERRES, PLANTER, PLANTERS, ROUNDS, URN, URNS, WALL, WALLS } from './gardens';
 import { GARDEN_SITE, TERRACES, TERRACE_STEPS, type Pt } from './westlake';
+import { PLANT, SOIL as PAL_SOIL, STONE as PAL_STONE } from './palette';
 
 /** The gravel paths lie this far over the lawn (westlake3d.ts), the paving of the main walks over that, the edges between */
 export const PATH_Y = SLAB + 0.012;
 export const PAVE_Y = PATH_Y + 0.01;
 const EDGE_Y = PATH_Y + 0.005;
 
-const STONE = toon('#8f8ab0');
-const CAP = toon('#b3aed2');
+const STONE = toon(PAL_STONE.kerb);
+const CAP = toon(PAL_STONE.cap);
 const KERB_C = toon('#cfc9e6');
 const EDGE_C = toon('#bdb7d6');
-const HEDGE_C = toon('#2c6a3c');
-const HEDGE_TOP = toon('#3a8a4e');
-const SOIL = toon('#5a4436');
-const GRAVEL = toon('#9a91b8');
+const HEDGE_C = toon(PLANT.hedge);
+const HEDGE_TOP = toon(PLANT.hedgeTop);
+const SOIL = toon(PAL_SOIL.garden);
+const GRAVEL = toon(PAL_STONE.gravel);
 const WATER = toon('#4fb0dc');
 const SPRAY = toon('#cdeeff');
 const IRON = toon('#1b1830');

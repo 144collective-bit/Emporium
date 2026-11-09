@@ -70,7 +70,7 @@ import { BOARDS, BOOTH, MARSHALS, cornersOf } from './kartside';
 import { KART_VIEW } from './kartpark3d';
 import { buildFx, chainMesh } from './grime';
 import type { Tick } from './world';
-import { COVER } from './palette';
+import { COVER, ROAD as PAL_ROAD } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -93,7 +93,7 @@ const DECK = DECK_DEPTH;
 /** Where the pits' paving starts (local v) */
 const PAVED_V = SITE.garages.v0 - 0.6;
 
-const ASPHALT = toon('#26243f');
+const ASPHALT = toon(PAL_ROAD.asphalt);
 const LAWN_C = toon(COVER.lawn);
 const GRASS = toon('#3a8a5b');
 const BANK_C = toon('#357f55');
@@ -109,7 +109,7 @@ const DECK_C = toon('#3f3b5e');
 const RAIL = toon('#c9c4e6');
 const WHITE = toon('#e8e6f0');
 const LINE_C = toon('#d9d4ef');
-const PAINT = toon('#e8e4f8');
+const PAINT = toon(PAL_ROAD.zebra);
 const RED = toon('#e23b3b');
 const YELLOW = toon('#ffd23f');
 const GREEN = toon('#1fbf6b');
@@ -817,7 +817,7 @@ function road(b: Batch, x0: number, x1: number) {
   b.detail(() => {
     for (let p = x0 + 0.8; p < x1 - 0.4; p += 1.1) {
       if (mouths.some((mx) => Math.abs(p - mx) < LOOP.half + 0.6)) continue;
-      b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).translate(p, PAINT_Y, ROAD.z), neon('#f5d76e', 0.9, 1.1));
+      b.add(new THREE.PlaneGeometry(0.55, 0.07).rotateX(-Math.PI / 2).translate(p, PAINT_Y, ROAD.z), neon(PAL_ROAD.yellow, 0.9, 1.1));
     }
   });
 }
@@ -1097,7 +1097,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     flatRect(b, DRIVE_X - ROAD.half, ROAD.z + ROAD.half, DRIVE_X + ROAD.half, EW0 - 3.7, ROAD_Y, ASPHALT);
     b.detail(() => {
       for (let z = ROAD.z + ROAD.half + 0.8; z < EW0 - 4.1; z += 1.1)
-        b.add(new THREE.PlaneGeometry(0.07, 0.55).rotateX(-Math.PI / 2).translate(DRIVE_X, PAINT_Y, z), neon('#f5d76e', 0.9, 1.1));
+        b.add(new THREE.PlaneGeometry(0.07, 0.55).rotateX(-Math.PI / 2).translate(DRIVE_X, PAINT_Y, z), neon(PAL_ROAD.yellow, 0.9, 1.1));
     });
     b.build(into, { cast: false, receive: true });
   });

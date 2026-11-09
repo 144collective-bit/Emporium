@@ -72,6 +72,14 @@ export const STALLS: Stall[] = (() => {
 
 /** Where the queue stands, the line in front of the counters (z) */
 const QUEUE_Z = Math.max(...STALLS.map((s) => s.front)) + 0.45;
+/**
+ * The stall you can run (the polish plan's Phase 10, the owner's call: "stalls to run"): the cart at the end of the
+ * row, bought at the Vault's estate agent and run like a corner shop (tycoon.ts `buyNightStall()`, place `m0`), open
+ * after dusk only. `MY_STALL_DOOR` is where you stand to serve it (and where a courier drops off): at its counter
+ */
+export const MY_STALL = STALLS.length - 1;
+export const MY_STALL_NAME = 'Sweets cart';
+export const MY_STALL_DOOR = { x: (STALLS[MY_STALL].rect[0] + STALLS[MY_STALL].rect[2]) / 2, z: QUEUE_Z + 0.15 };
 /** A picnic table and its two benches: the table's middle, its length along x; the footprint is the lot */
 export const TABLE = { l: 1.8, d: 0.7, bench: 0.3, gap: 0.08, h: 0.48 };
 const tableRect = (x: number, z: number): Rect => [x - TABLE.l / 2, z - TABLE.d / 2 - TABLE.gap - TABLE.bench, x + TABLE.l / 2, z + TABLE.d / 2 + TABLE.gap + TABLE.bench];

@@ -33,4 +33,11 @@ export const BLEND_VIEWS: ReviewView[] = [
   { id: 'highway-ne', name: "The highway's north-east bend", pos: [228, 40, -108], target: [268, 0, -172] },
   { id: 'docks-highway', name: 'The Docks across the highway from The Trenches', pos: [-188, 36, 232], target: [-240, 0, 200] },
   { id: 'countryside', name: 'The open land outside the highway, looking in', pos: [-330, 46, -330], target: [-180, 0, -180] },
+  // The districts that had no view (the polish plan's Phase 10)
+  { id: 'uptown-north', name: 'Uptown North, from the park', pos: [-62, 20, -20], target: [-25, 10, -100] },
+  { id: 'mall', name: 'Starlight Mall and Palm Court', pos: [30, 26, -40], target: [60, 2, -120] },
+  { id: 'harbour', name: 'Harbour Bridge, from the south bank', pos: [40, 12, 160], target: [64.5, 4, 100] },
+  { id: 'sunridge-loop', name: 'Sunridge, over the loop', pos: [120, 28, 10], target: [180, 0, -80] },
+  { id: 'southfield', name: 'Southfield, the yards and the park', pos: [60, 30, 300], target: [150, 0, 210] },
+  { id: 'lot9', name: 'Lot 9, from the south avenue', pos: [-20, 24, 440], target: [-70, 0, 370] },
 ];

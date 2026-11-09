@@ -5,8 +5,13 @@
  * by street: within `MIX` of the edge either way a lamp is sodium with a share that eases from all white outside to
  * all sodium inside (`sodiumShare()`), each lamp picked by its own number from where it stands (`lampTone()`), so a
  * visit finds them the same every time. The Trenches' dead and flickering lamps stay its own (`lampKind()`).
+ *
+ * The kerb at The Trenches' edge is blended the same way (the polish plan's Phase 10, the owner's call): where its grey
+ * sidewalks face the town's purple across the west ring avenue, each slab's colour runs from the one to the other over
+ * `MIX` either side of the avenue (`kerbShare()`, read by world.ts's slab paint vertex by vertex), so the two meet in
+ * the middle of the street instead of switching on a line. Nothing moves.
  */
-import { inTrenches, lampKind } from './trenches';
+import { RING_W, TRENCH_RECT, inTrenches, lampKind } from './trenches';
 import { inDocks } from './docks';
 import { inYards } from './southfield';
 import { WATERFRONT_RECT } from './waterfront';
@@ -63,6 +68,20 @@ function lot9Kind(x: number, z: number) {
   const h = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
   const u = h - Math.floor(h);
   return u < 0.08 ? 'dead' : u < 0.22 ? 'flicker' : 'sodium';
+}
+
+/** The seam the kerb blends across: the west ring avenue's centre line (x) along The Trenches' blocks (z) */
+export const KERB_SEAM = { x: RING_W.c, z0: TRENCH_RECT[1], z1: TRENCH_RECT[3] };
+/**
+ * The share of The Trenches' grey in the kerb at x, z: 1 a block or more inside The Trenches, 0 a block or more into
+ * the town east of the west ring avenue, a half on the avenue's line; off the seam's span (north of the bank avenue,
+ * south of the highway) each side keeps its own
+ */
+export function kerbShare(x: number, z: number) {
+  const d = Math.max(-MIX, Math.min(MIX, KERB_SEAM.x - x));
+  if (z < KERB_SEAM.z0 - MIX || z > KERB_SEAM.z1 + MIX) return d > 0 ? 1 : 0;
+  const t = (d + MIX) / (2 * MIX);
+  return t * t * (3 - 2 * t);
 }
 
 export type LampTone = 'white' | 'sodium' | 'flicker' | 'dead';

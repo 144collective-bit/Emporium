@@ -50,7 +50,7 @@ import {
 import { LANE } from './layout';
 import { WATER_Y } from './river';
 import type { Spot } from './landmarks';
-import { KERB as KERB_C } from './palette';
+import { KERB as KERB_C, ROAD } from './palette';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
@@ -60,7 +60,7 @@ const DARK = toon('#5d5444');
 const STEEL = toon('#46536b');
 const STEEL_DARK = toon('#2f3849');
 const CABLE_C = toon('#d6d0bd');
-const ASPHALT = toon('#26243f');
+const ASPHALT = toon(ROAD.asphalt);
 const KERB = toon(KERB_C.town);
 const TIMBER = toon('#8a6a48');
 const LINE = toon('#e8e4f4');

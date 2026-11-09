@@ -116,7 +116,7 @@ test('the hands: the wave above his head on his right, the cheer both high, the 
 test('the dance: planted feet stay put on the ground, flat, nothing under it, and a foot lifts off the beat', () => {
   const p = newPose();
   const plant: [THREE.Vector3 | null, THREE.Vector3 | null] = [null, null];
-  let lifted = [0, 0];
+  const lifted = [0, 0];
   for (let f = 0; f <= EMOTE_CLIPS.dance.seconds * FPS; f++) {
     const t = f / FPS;
     emotePose(p, 'dance', t);

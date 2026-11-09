@@ -10,6 +10,8 @@ import {
   HEATERS,
   MARKET_RAILS,
   MARKET_SPAWN,
+  MY_STALL,
+  MY_STALL_DOOR,
   NIGHT_MARKET_SOLIDS,
   POLES,
   QUEUE,
@@ -112,4 +114,11 @@ test("what's solid is in SOLIDS, on the deck; Walk in on the boardwalk, clear, a
   const pl = PLACES.find((p) => p.id === 'nightmarket')!;
   assert.equal(pl.spot, 'nightmarket');
   assert.deepEqual(pl.at, MARKET_SPAWN);
+});
+
+test('the cart at the end of the row is yours to run: its door at its counter, on the deck, clear of everything solid', () => {
+  const s = STALLS[MY_STALL];
+  assert.equal(s.kind, 'cart');
+  assert.ok(MY_STALL_DOOR.x > s.rect[0] && MY_STALL_DOOR.x < s.rect[2] && MY_STALL_DOOR.z > s.front && MY_STALL_DOOR.z < s.front + 1);
+  assert.ok(onDeck(MY_STALL_DOOR.x, MY_STALL_DOOR.z, R) && !solidAt(MY_STALL_DOOR.x, MY_STALL_DOOR.z, R));
 });

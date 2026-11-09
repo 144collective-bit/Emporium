@@ -780,6 +780,41 @@ the typecheck and the budgets green; none moves anything that exists.
     picks), and the engineering that's left: walk.ts split along its
     seams (ground first, with tests), a linter and the shapes helper, the
     materials' hexes into the palette, the missing bench views.
+    **Built** (2026-11-09; the shots `polish-after` and the morning report
+    wait for the owner): a lamp post per district, `lampposts.ts`
+    (`LampKind`, `LAMP_POSTS`, `lampStyle(x, z)`: the town's post, Uptown's
+    and the mall's slim steel with a flat head, Crestmont's black lantern,
+    Sunridge's short globe, The Trenches' and Lot 9's cobra heads, Westlake
+    Park's lanterns, the Neon Mile's double arm with a neon line, the
+    airport's tall mast; `buildLamps()` draws each kind as three instanced
+    shapes, the halos and pools as they were, the posts' paint in the
+    palette's `LAMP_POST`); the kerb blended at The Trenches' edge
+    (lampmix.ts `kerbShare()` over `MIX` either side of the west ring
+    avenue's centre line, `KERB_SEAM`; world.ts paints a slab the band
+    crosses vertex by vertex through `Batch.shade()`, so the grey and the
+    purple meet in the middle of the avenue; nothing moves); the Night
+    Market's stall to run (tycoon.ts: place `m0`, `NIGHT_STALL`,
+    `buyNightStall()` at the Vault's estate agent, 25,000 from level 4, save
+    v14's `night`; it trades 18:00 to 02:00 by the visitor's clock,
+    `nightOpen()` / `nightShare()` scaling its sales, a clerk, levels 1-3,
+    the market hall, couriers and the car; the Units tab's chip and view,
+    the walk prompt at the cart's counter, `MY_STALL_DOOR`; nightmarket3d.ts
+    draws the cart from the save: for sale with a FOR SALE board and the
+    umbrella furled, yours with its name, the umbrella up, your goods in
+    tubs and stars by level); walk.ts's ground split out as
+    `groundheight.ts` (`GROUND_LAYERS`, each a `GroundLayer` that takes,
+    goes over or lifts the base, in the order that resolves the overlaps;
+    `createGroundHeight()`; `tests/groundheight.test.ts` holds the old
+    `groundAt()` word for word against it at over 20,000 points and
+    heights, every layer answering alone, the overlaps resolved); six more
+    `?bench` and review views (Uptown North, the mall, Harbour Bridge,
+    Sunridge, Southfield, Lot 9); the ground-drawing files' hexes into the
+    palette (`ROAD`, `STONE`, `PLANT`, `SOIL`, `BANK`, the medians' trees
+    in `TREE`; the test widened to them); `npm run lint` (eslint with
+    typescript-eslint: prefer-const, eqeqeq, no DOM globals in the rules
+    files, the recommended catches; in the Action after the typecheck).
+    Left in Still open: the Sky Wheel ride and the Docks' Phase 4 and a
+    stadium match night (each its own sign-off), the shapes helper.
 
 After every phase: the shots compared, `?bench` on a phone and a laptop,
 this plan's phase marked built, CLAUDE.md's line for anything that
@@ -799,7 +834,14 @@ changed how a thing works.
 - **Phones' GPU memory:** the performance plan's 150 MB target against
   210 MB measured; "far districts let go on phones" and impostors are
   scheduled nowhere.
-- **Which bigger step after the Night Market's stalls** (Phase 10).
+- **Which bigger step after the Night Market's stall** (Phase 10 built
+  the stall): the Sky Wheel ride (a "Ride" prompt at the ticket booth, a
+  `Ride` through `walk.setRide()` for one turn in a capsule, Skip ride /
+  Esc, `wheel` in `LIVE_FEATURES`; it needs its own card and bar markup, a
+  `RideKind` in views.ts and a chunk, so it waits for its own sign-off),
+  the Docks' Phase 4, a stadium match night.
+- **The shapes helper** (`box`, `cyl`, `V` declared in dozens of files;
+  Phase 10 left it): one `shapes3d.ts`, a mechanical move.
 - **More consumables and missions past level 12:** later, if wanted.
 - **The series prizes and the daily cap:** Phase 9 left a series' prize
   uncapped (the owner's call), so the Neon Cup still pays about 170,000

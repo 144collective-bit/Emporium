@@ -21,7 +21,7 @@ import { COURT } from './mall';
 import { EW_ROADS, MEDIAN, WALK_W } from './layout';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
 import { BULB, COURTS, ENTRIES, ENTRY_MEDIAN, MONUMENTS, PATH, SUN_CROSSINGS, SUN_NAME, SUN_STREETS, WALL, WALL_RUNS, WEST_EDGE, type Pt, type Rect } from './sunridge';
-import { COVER, KERB as KERB_C } from './palette';
+import { COVER, KERB as KERB_C, ROAD } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -29,12 +29,12 @@ export const SELF = import.meta.url;
 const Y = 0.031;
 const AVENUE = EW_ROADS[0];
 
-const ASPHALT = toon('#26243f');
+const ASPHALT = toon(ROAD.asphalt);
 const KERB = toon(KERB_C.town);
 const GRASS = toon(COVER.planted);
-const YELLOW = neon('#f5d76e', 0.9, 1.1);
-const WHITE = toon('#d9d5ee');
-const ZEBRA = toon('#e8e4f8');
+const YELLOW = neon(ROAD.yellow, 0.9, 1.1);
+const WHITE = toon(ROAD.line);
+const ZEBRA = toon(ROAD.zebra);
 const STUCCO = toon('#d9c29a');
 const STUCCO_DARK = toon('#c4a77a');
 const CAP = toon('#b39468');

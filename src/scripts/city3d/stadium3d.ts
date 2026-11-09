@@ -344,7 +344,7 @@ export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
   for (let k = 0; k < (opts.low ? 3 : 5); k++) crowd.push({ x: GATE.x - 1.7 - k * 0.78 - (k % 2) * 0.12, z: GATE.z + 1.45 + (k % 2) * 0.38, ry: Math.PI / 2 + ((k % 3) - 1) * 0.3, act: 'wait', when: () => matchOn(Date.now()) });
 
   // The match night and the fixture board, from the clock (stadium.ts), looked at once a second
-  let was = { on: null as boolean | null, board: '', slide: -1, at: -Infinity };
+  const was = { on: null as boolean | null, board: '', slide: -1, at: -Infinity };
   opts.tick((env) => {
     if (was.on !== null && env.t - was.at < 1) return;
     was.at = env.t;

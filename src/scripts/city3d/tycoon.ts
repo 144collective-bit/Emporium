@@ -49,6 +49,7 @@ import { PARTNER_IDS, STYLES, type PartnerId, type StyleId } from './fight-moves
 import { COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
+import { MY_STALL_DOOR } from './nightmarket';
 import { cleanInventory, emptyInventory, type Inventory } from './inventory-save';
 import { FREE_PLAY } from './freeplay';
 import {
@@ -72,6 +73,7 @@ import {
   LEVEL_SPEED,
   LOT_LEVEL_COSTS,
   CORNER_LEVEL_COSTS,
+  NIGHT_LEVEL_COSTS,
   MOD_LEVELS,
   NO_CAR_MODS,
   NO_GUN_MODS,
@@ -238,6 +240,27 @@ export const CORNER_LEVEL = FREE_PLAY ? 1 : 5;
 /** A corner shop: always a shop (nothing to build), its shelves busier than Makers' Row's with The Trenches' foot traffic */
 export const CORNER = { slots: 4, capacity: 60, pace: 2 } as const;
 
+/* The polish plan's Phase 10 (save v14): the Night Market's stall, Dorras only, from level NIGHT_LEVEL; it trades after dusk only */
+export const NIGHT_PRICE = FREE_PLAY ? 0 : 25000;
+export const NIGHT_LEVEL = FREE_PLAY ? 1 : 4;
+/** The stall: a food counter, always a shop, a few kinds at a time, its queue quicker than a corner shop's while the market's open */
+export const NIGHT_STALL = { slots: 3, capacity: 40, pace: 3 } as const;
+/** When it trades, by the visitor's clock: from 18:00 to 02:00 the next morning */
+export const NIGHT_HOURS = { open: 18, close: 2 } as const;
+/** Is the market trading at `now` (ms since 1970, the visitor's clock) */
+export const nightOpen = (now: number) => {
+  const h = new Date(now).getHours();
+  return h >= NIGHT_HOURS.open || h < NIGHT_HOURS.close;
+};
+/** The share of the time from `from` to `to` the market was trading (sampled, a minute at a time at most) */
+export function nightShare(from: number, to: number) {
+  if (!(to > from)) return nightOpen(to) ? 1 : 0;
+  const n = Math.min(600, Math.max(1, Math.ceil((to - from) / 60000)));
+  let open = 0;
+  for (let i = 0; i < n; i++) if (nightOpen(from + ((i + 0.5) / n) * (to - from))) open++;
+  return open / n;
+}
+
 export type Stock = Partial<Record<GoodId, number>>;
 export interface Slot {
   good: ProductId;
@@ -268,15 +291,17 @@ export interface Lot {
   slots: Slot[];
   job: Job | null;
 }
-/** A corner shop in The Trenches: its shelves */
+/** A corner shop in The Trenches: its shelves (and the Night Market's stall: the same shape) */
 export interface Corner {
   slots: Slot[];
 }
-export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3' | 'l0' | 'l1' | 'l2' | CornerId;
+export type NightId = 'm0';
+export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3' | 'l0' | 'l1' | 'l2' | CornerId | NightId;
 export const UNIT_PLACES = ['u0', 'u1', 'u2', 'u3'] as const;
 export const LOT_PLACES = ['l0', 'l1', 'l2'] as const;
 export const CORNER_PLACES = ['c0', 'c1', 'c2', 'c3'] as const;
-export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', ...CORNER_PLACES, 'workshop'];
+export const NIGHT_PLACE: NightId = 'm0';
+export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', ...CORNER_PLACES, NIGHT_PLACE, 'workshop'];
 /** The Vault's ledger: where Dorras came from and went */
 export const ENTRIES = {
   sales: { name: 'Sales', in: true },
@@ -435,7 +460,7 @@ export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {}, splits: {}, look: { ...DEFAULT_LOOK } });
 
 export interface TycoonSave {
-  v: 13;
+  v: 14;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -457,6 +482,8 @@ export interface TycoonSave {
   lots: (Lot | null)[];
   /** The Trenches' corner shops (save v10): null where you don't own the shop */
   corners: (Corner | null)[];
+  /** The Night Market's stall (save v14): null until you buy it */
+  night: Corner | null;
   ledger: Ledger;
   loan: Loan | null;
   /* Phase 5: the city's game */
@@ -497,7 +524,7 @@ export const GUIDE_STEPS = 7;
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 13,
+    v: 14,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -511,6 +538,7 @@ export function newSave(now: number): TycoonSave {
     taken: [],
     lots: Array.from({ length: LOT_COUNT }, () => null),
     corners: Array.from({ length: CORNER_COUNT }, () => null),
+    night: null,
     ledger: { totals: {}, recent: [] },
     loan: null,
     xp: 0,
@@ -600,7 +628,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 13,
+    v: 14,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -618,6 +646,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     lots: Array.from({ length: LOT_COUNT }, (_, i) => cleanLot((Array.isArray(o.lots) ? o.lots : [])[i], mul(`l${i}` as PlaceId))),
     // (v10: a save from before them owns none)
     corners: Array.from({ length: CORNER_COUNT }, (_, i) => cleanCorner((Array.isArray(o.corners) ? o.corners : [])[i], mul(`c${i}` as PlaceId))),
+    // (v14: a save from before the Night Market's stall doesn't own it)
+    night: cleanNight(o.night, mul(NIGHT_PLACE)),
     ledger: cleanLedger(o.ledger, now),
     loan: null,
     xp: Math.floor(num(o.xp, 0, 1e9, 0)),
@@ -688,6 +718,10 @@ function cleanCorner(raw: unknown, mul = 1): Corner | null {
   if (!raw || typeof raw !== 'object') return null;
   return { slots: cleanSlots(obj(raw).slots, CORNER.slots, Math.round(CORNER.capacity * mul)) };
 }
+function cleanNight(raw: unknown, mul = 1): Corner | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return { slots: cleanSlots(obj(raw).slots, NIGHT_STALL.slots, Math.round(NIGHT_STALL.capacity * mul)) };
+}
 function cleanLedger(raw: unknown, now: number): Ledger {
   const l = obj(raw);
   const totals: Partial<Record<Entry, number>> = {};
@@ -738,10 +772,12 @@ export const lotIndex = (p: PlaceId) => (p.startsWith('l') ? Number(p.slice(1)) 
 export const lotAt = (s: TycoonSave, p: PlaceId) => s.lots[lotIndex(p)] ?? null;
 export const cornerIndex = (p: PlaceId) => (p.startsWith('c') ? Number(p.slice(1)) : -1);
 export const cornerAt = (s: TycoonSave, p: PlaceId) => s.corners[cornerIndex(p)] ?? null;
-/** What's built at a place you own (a unit's or a big lot's kind; a corner shop is always one), if anything */
-export const kindAt = (s: TycoonSave, p: PlaceId): UnitKind | LotKind | 'corner' | null => unitAt(s, p)?.kind ?? lotAt(s, p)?.kind ?? (cornerAt(s, p) ? 'corner' : null);
-/** Places that sell to the public: the stall, your shops, superstores and corner shops */
-export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || kindAt(s, p) === 'shop' || kindAt(s, p) === 'superstore' || kindAt(s, p) === 'corner';
+/** The Night Market's stall, if you own it */
+export const nightAt = (s: TycoonSave, p: PlaceId) => (p === NIGHT_PLACE ? s.night : null);
+/** What's built at a place you own (a unit's or a big lot's kind; a corner shop is always one, the Night Market's stall too), if anything */
+export const kindAt = (s: TycoonSave, p: PlaceId): UnitKind | LotKind | 'corner' | 'night' | null => unitAt(s, p)?.kind ?? lotAt(s, p)?.kind ?? (cornerAt(s, p) ? 'corner' : nightAt(s, p) ? 'night' : null);
+/** Places that sell to the public: the stall, your shops, superstores, corner shops and the Night Market's stall */
+export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || ['shop', 'superstore', 'corner', 'night'].includes(kindAt(s, p) ?? '');
 /** Places you can load your car from (stock on sale stays on the shelves) */
 export const loadsFrom = (s: TycoonSave, p: PlaceId) => p === 'workshop' || ['garden', 'warehouse', 'depot', 'factory'].includes(kindAt(s, p) ?? '');
 /** Places that make things: the Workshop and your factories */
@@ -754,6 +790,8 @@ function shelves(s: TycoonSave, p: PlaceId) {
   }
   const c = cornerAt(s, p);
   if (c) return { slots: c.slots, max: CORNER.slots, capacity: Math.round(CORNER.capacity * capacityMul(s, p)), pace: CORNER.pace * paceMul(s, p), set: (v: Slot[]) => (c.slots = v) };
+  const m = nightAt(s, p);
+  if (m) return { slots: m.slots, max: NIGHT_STALL.slots, capacity: Math.round(NIGHT_STALL.capacity * capacityMul(s, p)), pace: NIGHT_STALL.pace * paceMul(s, p), set: (v: Slot[]) => (m.slots = v) };
   const u = unitAt(s, p) ?? lotAt(s, p);
   const spec = u?.kind === 'shop' ? SHOP : u?.kind === 'superstore' ? SUPERSTORE : null;
   if (!u || !spec) return null;
@@ -1045,6 +1083,7 @@ const add = (m: Partial<Record<GoodId, number>>, id: GoodId, n: number) => (m[id
 export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean = false): Sales {
   const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, soldOut: [], bonus: 0, wages: 0, quit: [], repaid: 0, arrived: [], expired: [] };
   const gap = (now - s.at) / 60000;
+  const from = s.at;
   s.at = Math.max(s.at, now);
   if (!(gap > 0)) return out;
   // Couriers arrive (as much as there's room for; the rest waits), contracts run out
@@ -1070,7 +1109,8 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     if (!sh) continue;
     // A clerk sells half as fast again, and at full pace while you're away
     const clerk = s.staff.includes(p);
-    const rate = (away ? (clerk ? 1 : OFFLINE_PACE) : at === p ? SERVING : 1) * (clerk ? STAFF_BOOST : 1);
+    // (the Night Market's stall trades after dusk only: the share of the time since the last tick it was open)
+    const rate = (away ? (clerk ? 1 : OFFLINE_PACE) : at === p ? SERVING : 1) * (clerk ? STAFF_BOOST : 1) * (p === NIGHT_PLACE ? nightShare(from, now) : 1);
     for (const slot of sh.slots) {
       if (slot.qty <= 0) continue;
       const want = pace(s, slot, p) * rate * minutes + slot.carry;
@@ -1219,7 +1259,9 @@ export const placeAt = (p: PlaceId) =>
         ? LOT_SITE[lotIndex(p)].door
         : p.startsWith('c')
           ? CORNER_SHOPS[cornerIndex(p)].door
-          : UNIT_SITE[unitIndex(p)].door;
+          : p === NIGHT_PLACE
+            ? MY_STALL_DOOR
+            : UNIT_SITE[unitIndex(p)].door;
 /** A courier's journey in minutes: a minute to load, then about 40 tiles a minute */
 export const shipMinutes = (from: PlaceId, to: PlaceId) => {
   const a = placeAt(from);
@@ -1421,6 +1463,21 @@ export function buyCorner(s: TycoonSave, i: number): BuyResult {
   return r;
 }
 
+/* The Night Market's stall (the polish plan's Phase 10) */
+
+/** What the stall costs (null once it's yours) */
+export const nightPrice = (s: TycoonSave) => (s.night ? null : NIGHT_PRICE);
+/** Buy the Night Market's stall: it opens as a food stall straight away, its shelves empty, trading after dusk */
+export function buyNightStall(s: TycoonSave): BuyResult {
+  if (s.night) return { ok: false, why: 'owned' };
+  const r = pay(s, NIGHT_PRICE, NIGHT_LEVEL, 'property');
+  if (!r.ok) return r;
+  s.night = { slots: [] };
+  count(s, 'land', 1);
+  addXp(s, XP.property);
+  return r;
+}
+
 /* The ledger */
 export const LEDGER_LINES = 30;
 /** Write a movement of Dorras in the Vault's ledger (a run of the same kind within a minute is one line) */
@@ -1442,6 +1499,7 @@ export function propertyValue(s: TycoonSave) {
   const lots = s.lots.filter(Boolean) as Lot[];
   v += LOT_PRICES.slice(0, lots.length).reduce((a, b) => a + b, 0) + lots.reduce((a, l) => a + (l.kind ? LOT_KINDS[l.kind].cost : 0), 0);
   v += CORNER_PRICES.slice(0, s.corners.filter(Boolean).length).reduce((a, b) => a + b, 0);
+  if (s.night) v += NIGHT_PRICE;
   // Phase 5: the places' levels
   for (const p of PLACE_IDS) v += levelCosts(p).slice(1, placeLevel(s, p)).reduce((a, b) => a + b, 0);
   return v;
@@ -1888,7 +1946,7 @@ export function plotRefund(raw: unknown) {
 
 /* ---------- Levels for the places you run ---------- */
 
-export const levelCosts = (p: PlaceId) => (p === 'workshop' ? WORKSHOP_LEVEL_COSTS : p.startsWith('l') ? LOT_LEVEL_COSTS : p.startsWith('c') ? CORNER_LEVEL_COSTS : p === 'stall' ? [] : UNIT_LEVEL_COSTS);
+export const levelCosts = (p: PlaceId) => (p === 'workshop' ? WORKSHOP_LEVEL_COSTS : p.startsWith('l') ? LOT_LEVEL_COSTS : p.startsWith('c') ? CORNER_LEVEL_COSTS : p === NIGHT_PLACE ? NIGHT_LEVEL_COSTS : p === 'stall' ? [] : UNIT_LEVEL_COSTS);
 /** What the next level costs (null at the top, or where there's nothing to level yet) */
 export function placeLevelCost(s: TycoonSave, p: PlaceId) {
   if (p === 'stall') return null;

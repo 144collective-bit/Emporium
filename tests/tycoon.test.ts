@@ -93,13 +93,23 @@ import {
   CORNER_COUNT,
   CORNER_LEVEL,
   CORNER_PRICES,
+  NIGHT_HOURS,
+  NIGHT_LEVEL,
+  NIGHT_PRICE,
+  NIGHT_STALL,
+  buyNightStall,
+  nightOpen,
+  nightPrice,
+  nightShare,
   buyCorner,
   sells,
   cornerPrice,
   placeLevel,
   placeLevelCost,
+  placeAt,
 } from '../src/scripts/city3d/tycoon';
-import { CORNER_LEVEL_COSTS, xpForLevel } from '../src/scripts/city3d/catalog';
+import { CORNER_LEVEL_COSTS, NIGHT_LEVEL_COSTS, xpForLevel } from '../src/scripts/city3d/catalog';
+import { MY_STALL_DOOR } from '../src/scripts/city3d/nightmarket';
 
 const T0 = Date.UTC(2026, 9, 20, 12, 0, 0);
 const MIN = 60000;
@@ -279,7 +289,7 @@ function rich() {
 
 test('a Phase 1 save carries on: stall kept, no units, an empty Workshop and car', () => {
   const s = cleanSave({ v: 1, dorras: 900, till: 12, at: T0, stall: { level: 2, slots: [{ good: 'tees', qty: 7, price: 'high', carry: 0 }] } }, T0);
-  assert.equal(s.v, 13);
+  assert.equal(s.v, 14);
   assert.equal(s.dorras, 900);
   assert.equal(s.stall.slots[0].qty, 7);
   assert.equal(s.units.length, UNIT_COUNT);
@@ -460,7 +470,7 @@ test('cleanSave keeps units, the Workshop and the car within their limits', () =
 
 test('a Phase 2 save carries on into Phase 3: no staff, couriers or contracts yet', () => {
   const s = cleanSave({ v: 2, dorras: 100, units: [{ kind: 'shop', slots: [] }], workshop: { stock: { sugar: 4 }, job: null }, cargo: { tees: 2 } }, T0);
-  assert.equal(s.v, 13);
+  assert.equal(s.v, 14);
   assert.equal(s.units[0]!.kind, 'shop');
   assert.deepEqual(s.cargo, { tees: 2 });
   assert.deepEqual([s.staff, s.shipments, s.contracts, s.taken], [[], [], [], []]);
@@ -654,7 +664,7 @@ function tycoon() {
 
 test('a Phase 3 save carries on into Phase 4: no big lots, an empty ledger, no loan', () => {
   const s = cleanSave({ v: 3, dorras: 100, staff: ['stall'] }, T0);
-  assert.equal(s.v, 13);
+  assert.equal(s.v, 14);
   assert.deepEqual(s.lots, [null, null, null]);
   assert.deepEqual(s.ledger, { totals: {}, recent: [] });
   assert.equal(s.loan, null);
@@ -828,9 +838,78 @@ test('corner shops: from level 5, dearer each time, a shop straight away that se
   assert.equal(load(s, 'c2', 'tees', 5, 80).ok, false, 'stock on sale stays on the shelves');
 });
 
+/* ---------- The Night Market's stall (save v14, the polish plan's Phase 10) ---------- */
+
+/** A local clock time today (the market trades by the visitor's clock) */
+const at = (hour: number, minute = 0) => new Date(2026, 5, 10, hour, minute).getTime();
+
+test('the Night Market stall trades after dusk only: open from 18:00 to 02:00 by the clock, and the share of a stretch it was open', () => {
+  assert.deepEqual([at(17, 59), at(18), at(23), at(1, 59), at(2), at(12)].map(nightOpen), [false, true, true, true, false, false]);
+  assert.equal(nightShare(at(19), at(21)), 1);
+  assert.equal(nightShare(at(9), at(11)), 0);
+  assert.ok(Math.abs(nightShare(at(17), at(19)) - 0.5) < 0.02, 'half of 17:00 to 19:00');
+  assert.ok(Math.abs(nightShare(at(1), at(3)) - 0.5) < 0.02, 'half of 01:00 to 03:00');
+  // A whole day: eight hours of twenty-four
+  assert.ok(Math.abs(nightShare(at(0), at(24)) - 8 / 24) < 0.02);
+  assert.equal(nightShare(at(20), at(20)), 1, 'no time passed: as it stands');
+});
+
+test('the Night Market stall: from level 4, a food stall straight away that sells only while the market is open, run like a corner shop', () => {
+  const s = newSave(T0);
+  s.dorras = 1e6;
+  assert.deepEqual(buyNightStall(s), { ok: false, why: 'level' }, "a new player can't buy it");
+  assert.equal(nightPrice(s), NIGHT_PRICE);
+  s.xp = xpForLevel(NIGHT_LEVEL);
+  assert.ok(buyNightStall(s).ok);
+  assert.equal(s.dorras, 1e6 - NIGHT_PRICE);
+  assert.equal(nightPrice(s), null);
+  assert.deepEqual(buyNightStall(s), { ok: false, why: 'owned' });
+  assert.equal(s.ledger.totals.property, NIGHT_PRICE);
+  assert.equal(propertyValue(s), NIGHT_PRICE);
+  // A shop: products on its shelves, never raw goods; a clerk can work it; it levels up; its door is at the cart's counter
+  assert.ok(sells(s, 'm0'));
+  assert.equal(room(s, 'sugar', 'm0'), 0);
+  assert.equal(room(s, 'tees', 'm0'), NIGHT_STALL.capacity);
+  assert.equal(roleAt(s, 'm0'), 'clerk');
+  assert.equal(placeLevelCost(s, 'm0'), NIGHT_LEVEL_COSTS[1]);
+  assert.deepEqual(placeAt('m0'), MY_STALL_DOOR);
+  // It sells only after dusk: nothing through the afternoon, then faster than a corner shop through the evening
+  s.xp = xpForLevel(CORNER_LEVEL);
+  assert.ok(buyCorner(s, 0).ok);
+  const noon = at(12);
+  s.at = noon;
+  buy(s, 'glow', 30, noon, 'm0');
+  buy(s, 'glow', 30, noon, 'c0');
+  advance(s, noon + 2 * MIN);
+  assert.equal(holds(s, 'm0', 'glow'), 30, 'nothing sold by day');
+  assert.ok(holds(s, 'c0', 'glow') < 30, 'the corner shop sold');
+  const evening = at(NIGHT_HOURS.open, 30);
+  s.at = evening;
+  s.corners[0]!.slots = [];
+  buy(s, 'glow', 30, evening, 'c0');
+  advance(s, evening + 2 * MIN);
+  assert.ok(holds(s, 'm0', 'glow') < 30, 'sold after dusk');
+  assert.ok(30 - holds(s, 'm0', 'glow') > 30 - holds(s, 'c0', 'glow'), 'quicker than the corner shop while open');
+  // Your car unloads into it, with the delivery bonus; couriers bring stock to it
+  s.cargo = { tees: 10 };
+  const r = unload(s, 'm0', 'tees', 10, evening + 2 * MIN);
+  assert.ok(r.ok && r.dorras > 0);
+  assert.equal(load(s, 'm0', 'tees', 5, 80).ok, false, 'stock on sale stays on the shelves');
+});
+
+test("a v13 save carries on into v14 owning no Night Market stall; a v14 save keeps the stall's shelves, clamped", () => {
+  const old = cleanSave({ v: 13, dorras: 500 }, T0);
+  assert.equal(old.v, 14);
+  assert.equal(old.night, null);
+  const s = cleanSave({ v: 14, levels: { m0: 2 }, night: { slots: [{ good: 'tees', qty: 9999, price: 'high' }, { good: 'sugar', qty: 5 }] } }, T0);
+  assert.deepEqual(s.night!.slots.map((x) => [x.good, x.qty, x.price]), [['tees', Math.round(NIGHT_STALL.capacity * 1.5), 'high']]);
+  assert.equal(placeLevel(s, 'm0'), 2);
+  assert.equal(cleanSave({ v: 14, night: 'junk' }, T0).night, null);
+});
+
 test('a v9 save carries on into v10 owning no corner shops; a v10 save keeps its shelves, clamped', () => {
   const old = cleanSave({ v: 9, dorras: 500, lots: [null, null, null] }, T0);
-  assert.equal(old.v, 13);
+  assert.equal(old.v, 14);
   assert.deepEqual(old.corners, [null, null, null, null]);
   const s = cleanSave(
     { v: 10, levels: { c1: 2 }, corners: [null, { slots: [{ good: 'tees', qty: 9999, price: 'high' }, { good: 'sugar', qty: 5 }] }, 'junk', null, { slots: [] }] },

@@ -48,6 +48,7 @@ import {
 import { HEDGE, MEDIAN_RUNS, MEDIAN_TREES, MEDIAN_Z, TENDERS, TERRACE_NAMES, YACHTS, type Yacht } from './boulevarddress';
 import { GRANITE_TILE, bench, box, granite, quad, rod, table } from './plaza3d';
 import type { Rect } from './uptown';
+import { PLANT, SOIL as PAL_SOIL, TREE } from './palette';
 
 const [X0, Z0, X1, Z1] = ESPLANADE;
 /** The deck's top, the granite laid on it, a band over that */
@@ -62,16 +63,16 @@ const FASCIA = toon('#9a92a8');
 const BAND_C = toon('#8c8499');
 const PILE = toon('#4a4560');
 const CAP = toon('#ece6da');
-const SOIL = toon('#5a4436');
+const SOIL = toon(PAL_SOIL.garden);
 const GLASS = toon('#a9dcef');
 const STEEL = toon('#2a2740');
 const TIMBER = toon('#8a6a4c');
 const TIMBER_DARK = toon('#6a4f38');
 const FLOAT = toon('#e9e6f2');
-const HEDGE_C = toon('#2c6a3c');
-const HEDGE_TOP = toon('#3a8a4e');
-const COLUMN = toon('#24603a');
-const TRUNK = toon('#5a4232');
+const HEDGE_C = toon(PLANT.hedge);
+const HEDGE_TOP = toon(PLANT.hedgeTop);
+const COLUMN = toon(TREE.column);
+const TRUNK = toon(TREE.columnTrunk);
 const TEAK = toon('#b5865a');
 const WINDOW = toon('#1b2238');
 const PENNANTS = [toon('#ff2bd6'), toon('#00c2ff')];

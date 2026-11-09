@@ -70,15 +70,74 @@ export const VERGE = {
   coping: '#a7a2bf',
 } as const;
 
-/** The trees: the round ones' crowns (a few greens, picked per tree), their trunks, the pines */
+/** The trees: the round ones' crowns (a few greens, picked per tree), their trunks, the pines, the medians' columnar trees */
 export const TREE = {
   crowns: ['#2fae6e', '#33b878', '#24995f', '#3fc485', '#2a9d63'],
   trunk: '#6b4630',
   pine: '#1d7a55',
+  /** A planted median's columnar tree (Uptown's, the ring's) and its slimmer trunk */
+  column: '#24603a',
+  columnTrunk: '#5a4232',
+} as const;
+
+/** The roads' paint (the polish plan's Phase 10): asphalt, the lane lines, zebras, the yellow centre line */
+export const ROAD = {
+  asphalt: '#26243f',
+  line: '#d9d5ee',
+  zebra: '#e8e4f8',
+  yellow: '#f5d76e',
+} as const;
+
+/** Stone underfoot: the squares' and parks' kerbs, paths, edges, caps, gravel, paving and inlays */
+export const STONE = {
+  kerb: '#8f8ab0',
+  path: '#a9a3bf',
+  edge: '#6e6a8c',
+  cap: '#b3aed2',
+  gravel: '#9a91b8',
+  paving: '#b7b0cf',
+  inlay: '#b9b3d6',
+} as const;
+
+/** Planting on the ground: hedges (and their lighter tops), clipped box, shrubs, the medians' low shrubs */
+export const PLANT = {
+  hedge: '#2c6a3c',
+  hedgeTop: '#3a8a4e',
+  clipped: '#2a8a55',
+  shrub: '#2a7048',
+  shrubDark: '#1f5a3a',
+  box: '#2f6a3c',
+} as const;
+
+/** Soil in a bed */
+export const SOIL = {
+  bed: '#4a3326',
+  garden: '#5a4436',
+} as const;
+
+/** The river's banks (world.ts `riverBanks()`): the quay walls, the sand and pebbles where the water pulls back, the rocks */
+export const BANK = {
+  quay: '#6b6790',
+  wall: '#57537a',
+  sand: '#cdbb8e',
+  pebbles: '#8f8a80',
+  rock: '#77738a',
 } as const;
 
 /** The street lamps' light: white in town, sodium orange in The Trenches, along the waterfront and in the Docks */
 export const LAMP = {
   white: { bulb: '#fff1c2', halo: '#ffe2a0', pool: '#ffd98a' },
   sodium: { bulb: '#ffb35c', halo: '#ffab55', pool: '#ff9a45' },
+} as const;
+
+/**
+ * The lamp posts' paint (lampposts.ts, the polish plan's Phase 10: a post per district): the town's ink, Uptown's
+ * and the airport's steel, Crestmont's and the park's black iron, Sunridge's dark green; and a dead lamp's unlit head
+ */
+export const LAMP_POST = {
+  ink: '#1b1830',
+  steel: '#8c8aa0',
+  black: '#1a1724',
+  green: '#2e4b3b',
+  dead: '#3a3644',
 } as const;

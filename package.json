@@ -8,6 +8,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "typecheck": "astro sync && tsc --noEmit -p . --noUnusedLocals",
+    "lint": "eslint .",
     "test": "node scripts/test.mjs",
     "test:wide": "WORLD_EXT=-940,980 node scripts/test.mjs",
     "budget": "node scripts/budget.mjs",
@@ -24,10 +25,13 @@
     "three": "^0.186.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/three": "^0.186.0",
     "esbuild": "^0.28.2",
+    "eslint": "^10.14.0",
     "ktx2-encoder": "^0.6.0",
     "playwright-core": "^1.56.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.72.2"
   }
 }

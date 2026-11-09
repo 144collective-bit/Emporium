@@ -23,13 +23,14 @@ import { dogGeometry, leadEnds } from './dogs3d';
 import { CROWD_VIEW } from './character';
 import { BOATHOUSE, JETTY, WESTLAKE_RECT } from './westlake';
 import { BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
+import { TREE } from './palette';
 
 const CREAM = toon('#ece4d0');
 const TRIM = toon('#2f6152');
 const ROOF = toon('#9b3c3c');
 const DARK = toon('#2a2438');
 const PLANK = toon('#8a6a4c');
-const POST = toon('#5a4232');
+const POST = toon(TREE.columnTrunk);
 const IRON = toon('#1b1830');
 const WHITE = toon('#f2f0f8');
 const LAMP = neon('#ffe2a0', 0.6, 2.4);

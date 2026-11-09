@@ -15,7 +15,7 @@ import { site } from './tilework';
 import { PLAN, offsetLine, type Pt, type Street } from './streetplan';
 import type { Rect } from './downtown';
 import { AXIS_X, AXIS_ZEBRAS, CIRCLE, LANE_HALF, LAYBYS, UPTOWN_CROSSINGS, UPTOWN_LAMPS, UPTOWN_STREETS, laybyRect } from './uptown';
-import { COVER, KERB } from './palette';
+import { COVER, KERB, PLANT, ROAD } from './palette';
 
 /** A street a district adds to the plan: straight, along x or z */
 export interface DistrictStreet {
@@ -65,12 +65,12 @@ function stretches(s: DistrictStreet, crossings: DistrictCrossing[]) {
  * zebras on every arm of its junctions; and the lamps along them (before the city's lamps are built)
  */
 export function drawStreets(streets: DistrictStreet[], crossings: DistrictCrossing[], key: string, wear: boolean) {
-  const asphalt = toon('#26243f');
+  const asphalt = toon(ROAD.asphalt);
   const kerbTop = toon(KERB.town);
   const median = toon(COVER.median);
-  const yellow = neon('#f5d76e', 0.9, 1.1);
-  const white = toon('#d9d5ee');
-  const zebra = toon('#e8e4f8');
+  const yellow = neon(ROAD.yellow, 0.9, 1.1);
+  const white = toon(ROAD.line);
+  const zebra = toon(ROAD.zebra);
   // (a manhole cover: a disc a unit across)
   const disc = new THREE.CircleGeometry(0.5, 14).rotateX(-Math.PI / 2);
 
@@ -274,12 +274,12 @@ function clearRuns(s: Street, m: ReturnType<typeof measure>, pad: number): [numb
 
 /** Uptown's streets (uptown.ts, Phase 5), clean: asphalt along any line, the circle's ring, planted medians, centre lines, zebras on every arm, the lay-bys, lamps */
 function drawUptown() {
-  const asphalt = toon('#26243f');
+  const asphalt = toon(ROAD.asphalt);
   const kerbTop = toon(KERB.town);
   const grass = toon(COVER.planted);
-  const shrub = toon('#2f6a3c');
-  const yellow = neon('#f5d76e', 0.9, 1.1);
-  const zebra = toon('#e8e4f8');
+  const shrub = toon(PLANT.box);
+  const yellow = neon(ROAD.yellow, 0.9, 1.1);
+  const zebra = toon(ROAD.zebra);
   const Y = 0.031;
   const streets = UPTOWN_STREETS.map((u) => PLAN.streets.find((s) => s.id === u.id)!);
   for (const s of streets) {
@@ -409,7 +409,7 @@ export function buildUptownStreets() {
     for (let k = r.z - r.half + 0.16; k < r.z + r.half - 0.1; k += 0.32) if (r.half < 2 || Math.abs(k - r.z) > MEDIAN / 2 + 0.1) mark(zs, AXIS_X, k, LANE_HALF * 2, 0.17, 0.04);
   site('uptown axis zebras', [AXIS_X - 3, AXIS_ZEBRAS[0].z - 5, AXIS_X + 3, AXIS_ZEBRAS.at(-1)!.z + 5], (into) => {
     const b = new Batch();
-    b.instances(unit, toon('#e8e4f8'), zs);
+    b.instances(unit, toon(ROAD.zebra), zs);
     b.build(into, { cast: false, receive: true });
   });
 }

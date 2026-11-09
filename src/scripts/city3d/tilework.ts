@@ -118,7 +118,7 @@ export function createTileWork(
   }
 
   /** What the worker built, waiting to join (in up to `ms` a frame) */
-  let arrived: BuiltSite[] = [];
+  const arrived: BuiltSite[] = [];
   function joinBuilt(t0: number, ms: number) {
     arrived.push(...worker!.take());
     while (arrived.length && performance.now() - t0 < ms) {

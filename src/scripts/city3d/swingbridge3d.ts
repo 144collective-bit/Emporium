@@ -18,6 +18,7 @@ import type { Tick } from './world';
 import { CROWD_VIEW } from './character';
 import { site } from './tilework';
 import { WATER_Y } from './river';
+import { ROAD as PAL_ROAD } from './palette';
 import {
   BARRIERS,
   DEPTH,
@@ -99,7 +100,7 @@ const paint = (): Paint => ({
   asphalt: toon('#2f2c3f'),
   foot: toon('#8d8aa0'),
   kerb: toon('#aeabbf'),
-  white: toon('#d9d5ee'),
+  white: toon(PAL_ROAD.line),
   yellow: toon('#e8c65a'),
   steel: toon(steelCol),
   concrete: toon('#a19eb2'),
@@ -183,7 +184,7 @@ function barrierPosts(b: Batch, m: Paint) {
 const NAME_TEX = canvasTex(512, 96, (c) => {
   c.fillStyle = '#1d3b3d';
   c.fillRect(0, 0, 512, 96);
-  c.strokeStyle = '#e8e4f8';
+  c.strokeStyle = PAL_ROAD.zebra;
   c.lineWidth = 5;
   c.strokeRect(6, 6, 500, 84);
   c.fillStyle = '#f2f0ea';
@@ -300,7 +301,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   s.userData.keep = true;
   root.add(s);
   // The barriers' booms (one over each lane, a short one over each footway) and their flashing lights
-  const boomMat = toon('#e8e4f8');
+  const boomMat = toon(PAL_ROAD.zebra);
   const stripeMat = toon('#e2463b');
   const flash = [0, 1].map(() => new THREE.MeshBasicMaterial({ color: '#2a0a0e' }));
   const booms: { g: THREE.Group; down: number }[] = [];

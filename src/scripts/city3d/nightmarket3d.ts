@@ -19,6 +19,13 @@
  *
  * Signs are one small atlas of fixed made-up copy. The people (cooks,
  * queues, diners, a few standing about) are the city's crowd.
+ *
+ * The cart at the end of the row is yours to run (the polish plan's Phase 10,
+ * tycoon.ts `buyNightStall()`): drawn from your save in a group of its own
+ * (`show()`, rebuilt only when what it shows changes): for sale, its lid
+ * shut and its umbrella down with a FOR SALE board on its front; yours, its
+ * name lit, the umbrella up, your goods in tubs on the lid, a neon trim at
+ * level 2 and stars by level.
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, lit, toon } from './kit';
@@ -26,7 +33,8 @@ import { INK, METAL, WOOD, glow, soft } from './infill';
 import { addPool, type Tick } from './world';
 import type { Pt } from './downtown';
 import type { Idle, Spot } from './landmarks';
-import { DINERS, FLOOR_Y as T, GANTRY, HEATERS, MARKET_RAILS, MX, POLES, QUEUE, STALLS, STALL_NAMES, STRINGS, TABLE, TABLES, TRUCK, VENDORS, type Stall } from './nightmarket';
+import { DINERS, FLOOR_Y as T, GANTRY, HEATERS, MARKET_RAILS, MX, MY_STALL, POLES, QUEUE, STALLS, STALL_NAMES, STRINGS, TABLE, TABLES, TRUCK, VENDORS, type Stall } from './nightmarket';
+import { NIGHT_PLACE, NIGHT_STALL, capacityMul, good, placeLevel, type Corner, type TycoonSave } from './tycoon';
 import { BOARDWALK, MARKET_DECK } from './waterfront';
 import { box } from './riverside3d';
 import { deck, railX, railZ } from './waterfront3d';
@@ -39,8 +47,10 @@ const ROWS = [
   { text: 'NIGHT MARKET', color: '#ffffff', glow: '#ff3bd4', board: '#0d0b22' },
   ...STALL_NAMES.map((text, i) => ({ text, color: ['#ffd23f', '#ff8a3d', '#ffffff', '#7ff6ff', '#ff5a5a', '#9dff7a', '#ffb3e6'][i], glow: '', board: ['#1d2a3a', '#3a1d14', '#2a1d3a', '#14302a', '#2a1414', '#1d3a1d', '#3a1d33'][i] })),
   { text: 'OPEN LATE', color: '#ff3bd4', glow: '#ff3bd4', board: '#0b0910' },
+  { text: 'FOR SALE', color: '#ff3b5c', glow: '', board: '#f3f2f7' },
 ];
-const OPEN_LATE = ROWS.length - 1;
+const OPEN_LATE = ROWS.length - 2;
+const FOR_SALE = ROWS.length - 1;
 const SIGNS = (() => {
   const W = 512;
   const H = 96;
@@ -201,25 +211,40 @@ function truck(b: Batch, s: Stall, i: number, low: boolean) {
   for (const z of [z0 + 0.25, z1 - 0.25]) b.add(new THREE.SphereGeometry(0.06, 8, 6).translate(x1 + 0.01, fl + 0.3, z), glow('#fff1c2'));
 }
 
-function cart(b: Batch, s: Stall, low: boolean) {
+/** The cart: yours (`mine`: its shelves and level) or for sale */
+function cart(b: Batch, s: Stall, low: boolean, mine: { c: Corner; lvl: number; cap: number } | null) {
   const [x0, z0, x1, z1] = s.rect;
   const body = T + 0.85;
-  box(b, x0, T + 0.2, z0, x1, body, z1, toon('#f3f2f7'));
-  // Pink stripes, the name on its front, the lid's freezer windows
-  for (let x = x0 + 0.1; x < x1 - 0.05; x += 0.3) box(b, x, T + 0.25, z1 - 0.005, x + 0.14, body - 0.05, z1 + 0.005, toon('#ff7ad9'));
-  b.add(sign(7, x1 - x0 - 0.2, 0.26, (x0 + x1) / 2, body + 0.17, z1 + 0.012), SIGNS);
-  box(b, x0 + 0.05, body + 0.03, z1 - 0.005, x1 - 0.05, body + 0.31, z1 + 0.006, INK);
-  box(b, x0 + 0.1, body, z0 + 0.1, x1 - 0.1, body + 0.04, z1 - 0.1, toon('#8fd8e8'));
-  for (const x of [x0 + 0.2, x1 - 0.2]) b.add(new THREE.CylinderGeometry(0.18, 0.18, 0.08, low ? 8 : 12).rotateX(Math.PI / 2).translate(x, T + 0.18, z1 + 0.02), TYRE);
-  // Its umbrella
   const cx = (x0 + x1) / 2;
+  box(b, x0, T + 0.2, z0, x1, body, z1, toon('#f3f2f7'));
+  // Pink stripes, the name on its front (a FOR SALE board until it's yours), the lid's freezer windows
+  for (let x = x0 + 0.1; x < x1 - 0.05; x += 0.3) box(b, x, T + 0.25, z1 - 0.005, x + 0.14, body - 0.05, z1 + 0.005, toon('#ff7ad9'));
+  b.add(sign(mine ? 1 + MY_STALL : FOR_SALE, x1 - x0 - 0.2, 0.26, cx, body + 0.17, z1 + 0.012), SIGNS);
+  box(b, x0 + 0.05, body + 0.03, z1 - 0.005, x1 - 0.05, body + 0.31, z1 + 0.006, INK);
+  box(b, x0 + 0.1, body, z0 + 0.1, x1 - 0.1, body + 0.04, z1 - 0.1, mine ? toon('#8fd8e8') : toon('#d8d4ea'));
+  for (const x of [x0 + 0.2, x1 - 0.2]) b.add(new THREE.CylinderGeometry(0.18, 0.18, 0.08, low ? 8 : 12).rotateX(Math.PI / 2).translate(x, T + 0.18, z1 + 0.02), TYRE);
+  // Its umbrella: up when it's yours, furled on its pole until then
   b.add(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 5).translate(cx, body + 0.7, (z0 + z1) / 2), METAL);
+  if (!mine) {
+    b.add(new THREE.CylinderGeometry(0.05, 0.11, 0.9, 6).translate(cx, body + 1.0, (z0 + z1) / 2), toon('#ff7ad9'));
+    return;
+  }
   const segs = 8;
   for (let k = 0; k < segs; k++) {
     const g = new THREE.ConeGeometry(1.0, 0.35, segs, 1, true, (k / segs) * Math.PI * 2, (Math.PI * 2) / segs);
     b.add(g.translate(cx, body + 1.45, (z0 + z1) / 2), k % 2 ? toon('#ff7ad9') : toon('#f3f2f7'));
   }
+  // Your goods in tubs on the lid (fuller shelves, more tubs), stars by the sign for its level, a neon trim at level 2
+  const colours = mine.c.slots.filter((x) => x.qty > 0).map((x) => toon(good(x.good).color));
+  const full = mine.c.slots.reduce((n, x) => n + x.qty, 0) / (mine.cap * NIGHT_STALL.slots);
+  const tubs = Math.min(5, Math.ceil(full * 5 + (colours.length ? 1 : 0)));
+  for (let n = 0; n < tubs; n++) box(b, x0 + 0.18 + n * 0.26, body + 0.04, z0 + 0.18, x0 + 0.38 + n * 0.26, body + 0.16, z0 + 0.38, colours[n % Math.max(1, colours.length)] ?? CHROME);
+  for (let i = 0; i < mine.lvl; i++) b.add(new THREE.SphereGeometry(0.025, 6, 4).translate(x0 + 0.12 + i * 0.1, body + 0.4, z1 + 0.01), glow('#ffd23f'));
+  if (mine.lvl >= 2) box(b, x0 + 0.04, body + 0.32, z1 - 0.004, x1 - 0.04, body + 0.35, z1 + 0.01, glow('#ff7ad9'));
 }
+
+/** What the cart shows, as a key: rebuilt only when it changes */
+const look = (c: Corner | null, lvl: number, cap: number) => (c ? `own:${lvl}:${c.slots.map((x) => `${x.good}${Math.ceil((x.qty / cap) * 3)}`).join(',')}` : 'sale');
 
 /* ---------- The tables, the gantry, the strings, the heaters ---------- */
 
@@ -316,8 +341,8 @@ function heaters(b: Batch) {
   }
 }
 
-/** The Night Market: a place (its pin over the gantry), its deck and railing, the stalls, tables and lights, its people */
-export function buildNightMarket(scene: THREE.Scene, crowd: Idle[], opts: { tick: (f: Tick) => void; low: boolean }): { spot: Spot } {
+/** The Night Market: a place (its pin over the gantry), its deck and railing, the stalls, tables and lights, its people; `show()` draws your cart as the save has it */
+export function buildNightMarket(scene: THREE.Scene, crowd: Idle[], opts: { tick: (f: Tick) => void; low: boolean }): { spot: Spot; show(s: TycoonSave): boolean } {
   const { low } = opts;
   const group = new THREE.Group();
   group.name = 'nightmarket';
@@ -334,12 +359,17 @@ export function buildNightMarket(scene: THREE.Scene, crowd: Idle[], opts: { tick
   }
   let c = 0;
   let k = 0;
-  for (const s of STALLS) {
+  STALLS.forEach((s, i) => {
+    // (the cart at the end is yours to run: drawn from the save below)
+    if (i === MY_STALL) return void addPool((s.rect[0] + s.rect[2]) / 2, s.front + 0.7, 2.6, T + 0.02, true);
     if (s.kind === 'container') container(b, s, c++, low);
     else if (s.kind === 'truck') truck(b, s, k++, low);
-    else cart(b, s, low);
     addPool((s.rect[0] + s.rect[2]) / 2, s.front + 0.7, 2.6, T + 0.02, true);
-  }
+  });
+  const mine = new THREE.Group();
+  mine.name = 'nightmarket stall';
+  group.add(mine);
+  let shown = '';
   tables(b, low);
   gantry(b, low);
   strings(b, low);
@@ -369,5 +399,20 @@ export function buildNightMarket(scene: THREE.Scene, crowd: Idle[], opts: { tick
   group.add(fx(ring));
   return {
     spot: { id: 'nightmarket', group, focus: V(MX, 1.4, (mz0 + BOARDWALK[3]) / 2), size: 22, pin: V(GANTRY.x, T + GANTRY.h + 1.1, GANTRY.z), ring },
+    show(s) {
+      const lvl = placeLevel(s, NIGHT_PLACE);
+      const cap = Math.round(NIGHT_STALL.capacity * capacityMul(s, NIGHT_PLACE));
+      const key = look(s.night, lvl, cap);
+      if (key === shown) return false;
+      shown = key;
+      for (const child of [...mine.children]) {
+        mine.remove(child);
+        child.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+      }
+      const mb = new Batch();
+      cart(mb, STALLS[MY_STALL], low, s.night ? { c: s.night, lvl, cap } : null);
+      mb.build(mine);
+      return true;
+    },
   };
 }

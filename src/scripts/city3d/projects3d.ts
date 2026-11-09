@@ -29,6 +29,7 @@ import { SCAFFOLD_OUT, STOOP, TOWERS, ROW_BLOCKS, isCorner, rows, towerShell, ty
 import { RECIPES, rng } from './recipes';
 import { TRENCH_BLOCKS } from './trenches';
 import type { Pt, Rect } from './downtown';
+import { BANK, ROAD } from './palette';
 
 /** Drawing in world numbers (a kit in the identity frame: u is x, v is z) */
 const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0], n: [0, 1] };
@@ -43,7 +44,7 @@ const NUMBERS = (() => {
       const y = i * H;
       c.fillStyle = '#1f5a46';
       c.fillRect(0, y, W, H);
-      c.strokeStyle = '#e8e4f8';
+      c.strokeStyle = ROAD.zebra;
       c.lineWidth = 4;
       roundRect(c, 6, y + 6, W - 12, H - 12, 8);
       c.stroke();
@@ -377,7 +378,7 @@ function dish(k: ReturnType<typeof kit>, x: number, y: number, z: number, ry: nu
 /** The lawn round a block's towers: a path from each door to the sidewalk, benches by it (the trees and lamps are the city's) */
 function lawn(b: Batch, towers: Tower[], blk: Rect) {
   // (the yards are concrete now: the paths a lighter, newer concrete)
-  const path = toon('#77738a');
+  const path = toon(BANK.rock);
   const k = kit(b, WORLD);
   const [x0, z0, x1, z1] = blk;
   for (const t of towers) {

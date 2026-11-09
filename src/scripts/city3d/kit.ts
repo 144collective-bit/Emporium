@@ -765,6 +765,31 @@ export class Batch {
     return this;
   }
 
+  /**
+   * A shape in the shared paint coloured vertex by vertex from where each one stands (`colourAt` writes the colour
+   * for x, y, z into `c`): a kerb blended across a seam (world.ts, the polish plan's Phase 10). One draw with the
+   * rest of the paint, as `add()`'s plain colours are.
+   */
+  shade(geo: THREE.BufferGeometry, colourAt: (x: number, y: number, z: number, c: THREE.Color) => void) {
+    const g = ensureIndexed(ensureUv(geo));
+    g.clearGroups();
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    const a = new Float32Array(pos.count * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      colourAt(pos.getX(i), pos.getY(i), pos.getZ(i), c);
+      a[i * 3] = c.r;
+      a[i * 3 + 1] = c.g;
+      a[i * 3 + 2] = c.b;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+    (g.attributes.uv as THREE.BufferAttribute).array.fill(0);
+    this.file(paintMat()).push(g);
+    this.lastAdded = { geo: g, mat: paintMat() };
+    return this;
+  }
+
   /** A mesh as it stands (its own transform), split by its material groups */
   mesh(m: THREE.Mesh) {
     m.updateMatrix();

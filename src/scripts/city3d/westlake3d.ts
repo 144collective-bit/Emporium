@@ -24,16 +24,17 @@ import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
 import { BENCHES, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, lakeLine, type ParkPath, type Pt } from './westlake';
 import { registerFringes } from './fringes3d';
+import { STONE as PAL_STONE } from './palette';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
 
-const GRAVEL = toon('#9a91b8');
-const STONE = toon('#8f8ab0');
-const CAP = toon('#b3aed2');
+const GRAVEL = toon(PAL_STONE.gravel);
+const STONE = toon(PAL_STONE.kerb);
+const CAP = toon(PAL_STONE.cap);
 const IRON = toon('#1b1830');
 /** The main walks' paving (the gravel paths' is GRAVEL) */
-const PAVING = toon('#b7b0cf');
+const PAVING = toon(PAL_STONE.paving);
 
 /** A flat ribbon along a polyline (closed if `loop`), `half` either side, at y, facing up */
 function ribbon(pts: Pt[], half: number, y: number, loop = false) {

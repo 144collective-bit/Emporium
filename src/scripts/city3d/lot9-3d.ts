@@ -21,7 +21,7 @@ import { buildFx, chainMesh, tag, poster } from './grime';
 import { parkedCars } from './cars';
 import { CROWD_VIEW } from './character';
 import { dogGeometry } from './dogs3d';
-import { COVER } from './palette';
+import { COVER, ROAD } from './palette';
 import {
   AVE_EDGE, BAY, BOAT, BOLLARD, FENCE, FENCE_H, FENCE_RUNS, FIRE, FIRE_LOT, FIRE_POLES, FIRE_SEATS, FOOTPATH, GATE, GROUND_Y, HOIST, HOLE, KIDS_ON_BIKES, LAUNDRY, LOT9_CARS,
   LOT9_DOGS, LOT9_RECT, LOT9_SIGNS, LOT9_STREETS, MAILBOXES, OFFICE, RADIO, RIDER, ROAD_Z, SCRAP, TOOLS, TUNNEL, TUNNEL_BOLLARDS, TYRES, ZAPPER, riderAt, rng, runnerAt, tunnelFloor,
@@ -81,7 +81,7 @@ const STRING = neon('#ffd9a0', 0.15, 2.0);
 const TUBE = neon('#e8f0ff', 0.6, 1.25);
 const TUBE_TIRED = neon('#e8f0ff', 0.6, 1.25, 0.9);
 const TUBE_DEAD = toon('#8a8f9a');
-const FLOWERS = [neon('#e23b6b', 0.6, 0.6), neon('#f5d76e', 0.6, 0.6), neon('#b06ae0', 0.6, 0.6)];
+const FLOWERS = [neon('#e23b6b', 0.6, 0.6), neon(ROAD.yellow, 0.6, 0.6), neon('#b06ae0', 0.6, 0.6)];
 
 /* ---------- Signs: one small atlas, a row each ---------- */
 

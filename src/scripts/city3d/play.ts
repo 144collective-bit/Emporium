@@ -72,7 +72,7 @@ export function loopOf(rect: Rect, inset: number): Loop {
   return {
     len,
     at(s) {
-      let d = ((s % len) + len) % len;
+      const d = ((s % len) + len) % len;
       let i = 1;
       while (i < cum.length - 1 && cum[i] < d) i++;
       const seg = cum[i] - cum[i - 1] || 1e-6;

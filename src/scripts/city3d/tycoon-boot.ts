@@ -31,6 +31,7 @@ import {
   type TycoonSave,
 } from './tycoon';
 import { CORNER_SHOPS } from './projects';
+import { MY_STALL_DOOR, MY_STALL_NAME } from './nightmarket';
 import { LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { Sfx } from './combat';
 import type { WeaponId } from './combat-sim';
@@ -44,7 +45,7 @@ export const fmt = new Intl.NumberFormat('en-US');
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 
 /** Where you stand to run a place, and where your car parks to load and unload */
-export const PLACE_LIST: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'c0', 'c1', 'c2', 'c3', 'workshop'];
+export const PLACE_LIST: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'c0', 'c1', 'c2', 'c3', 'm0', 'workshop'];
 export const STAND = Object.fromEntries(PLACE_LIST.map((p) => [p, placeAt(p)])) as Record<PlaceId, { x: number; z: number }>;
 /** Standing this close serves a stall's or shop's customers */
 const SERVE_R = 2.2;
@@ -55,6 +56,9 @@ export const ROW_IDS: PlaceId[] = [...UNIT_IDS, ...LOT_IDS];
 /** The Trenches' corner shops (on the Units tab after them), and their names as you'd say them ("Block Bodega") */
 export const CORNER_IDS = ['c0', 'c1', 'c2', 'c3'] as const;
 export const cornerName = (i: number) => CORNER_SHOPS[i].name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+/** The Night Market's stall (the polish plan's Phase 10): on the Units tab after the corner shops */
+export const NIGHT_ID = 'm0' as const;
+export const nightName = () => MY_STALL_NAME;
 export const LETTER = 'ABC';
 export type Tab = 'stall' | 'units' | 'workshop' | 'car' | 'bag';
 export const TABS: { id: Tab; label: string }[] = [
@@ -185,6 +189,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   function placeName(p: PlaceId) {
     if (p === 'stall') return 'Your stall';
     if (p === 'workshop') return 'The Workshop';
+    if (p === NIGHT_ID) return nightName();
     const i = Number(p.slice(1));
     if (p.startsWith('c')) return cornerName(i);
     if (p.startsWith('l')) {
@@ -238,6 +243,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (at?.startsWith('c')) {
       state.tab = 'units';
       state.unitSel = ROW_IDS.length + Number(at.slice(1));
+    } else if (at === NIGHT_ID) {
+      state.tab = 'units';
+      state.unitSel = ROW_IDS.length + CORNER_IDS.length;
     }
     state.note = '';
     if (!cardOpen()) {
@@ -391,6 +399,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         ...UNIT_IDS.map((p, i) => ({ id: p as string, ...UNIT_SITE[i].door, label: save.units[i] ? placeName(p) : `Unit ${i + 1} · To let` })),
         ...LOT_IDS.map((p, i) => ({ id: p as string, ...LOT_SITE[i].door, label: save.lots[i] ? placeName(p) : `Lot ${LETTER[i]} · For sale` })),
         ...CORNER_IDS.map((p, i) => ({ id: p as string, ...CORNER_SHOPS[i].door, label: save.corners[i] ? placeName(p) : `${cornerName(i)} · For sale` })),
+        { id: NIGHT_ID as string, ...MY_STALL_DOOR, label: save.night ? nightName() : `${nightName()} · For sale` },
         ...save.contracts.map((c) => ({ id: 'car', ...destAt(c.to), label: `Deliver · ${DESTS[c.to]}` })),
       ];
     },

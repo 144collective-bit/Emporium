@@ -15,6 +15,7 @@ import { SLAB } from './world';
 import { WATER_Y } from './river';
 import { AVENUE_KERB, BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_CROSSINGS, DOCK_STREETS, DRY_DOCK, HALF, type Rect } from './docks';
 import { register as registerPort } from './docksport3d';
+import { ROAD } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -56,8 +57,8 @@ const boxOf = ([a, b]: [Pt, Pt], pad: number): Rect => [Math.min(a[0], b[0]) - p
 
 export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
   const asphalt = toon('#2a2838');
-  const yellow = neon('#f5d76e', 0.9, 1.1);
-  const zebra = toon('#e8e4f8');
+  const yellow = neon(ROAD.yellow, 0.9, 1.1);
+  const zebra = toon(ROAD.zebra);
   const coping = toon('#9a96a8');
   const iron = toon('#2b2a33');
   const rust = toon('#7a4a34');

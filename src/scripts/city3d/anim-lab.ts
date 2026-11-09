@@ -675,7 +675,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   // (`orbit=yaw,pitch,dist` in the address: the free camera's start)
   const o0 = (q.get('orbit') ?? '').split(',').map(Number);
   const [yaw0, pitch0, dist0] = o0.length === 3 && o0.every(Number.isFinite) ? o0 : [0.9, 0.25, 5];
-  let orbit = { yaw: yaw0, pitch: pitch0, dist: dist0 };
+  const orbit = { yaw: yaw0, pitch: pitch0, dist: dist0 };
   let drag: { x: number; y: number; yaw: number; pitch: number } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     drag = { x: e.clientX, y: e.clientY, yaw: orbit.yaw, pitch: orbit.pitch };

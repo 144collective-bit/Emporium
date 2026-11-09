@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { Batch, neon, toon } from './kit';
-import { KERB } from './palette';
+import { KERB, ROAD } from './palette';
 import { site } from './tilework';
 import { SLAB } from './world';
 import { SWAY } from './dusk';
@@ -54,8 +54,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   if (scene) addPeople(STRIP_IDLE.filter((_, i) => !low || i % 2 === 0), []);
   const asphalt = toon('#2a2838');
   const white = toon('#eceaf6');
-  const yellow = neon('#f5d76e', 0.9, 1.1);
-  const zebra = toon('#e8e4f8');
+  const yellow = neon(ROAD.yellow, 0.9, 1.1);
+  const zebra = toon(ROAD.zebra);
   const kerbTop = toon(KERB.town);
   const grass = toon('#3f7a4a');
   const trunkMat = toon('#8f7458');
