@@ -34,6 +34,7 @@ import { cleanKit } from '../src/scripts/net/protocol';
 import { SOLID_GRID } from '../src/scripts/city3d/solids';
 import { INFILL, bodyOf } from '../src/scripts/city3d/downtown';
 import { STALLS } from '../src/scripts/city3d/nightmarket';
+import { BAR } from '../src/scripts/city3d/avenue';
 const NOW = 1_700_000_000_000;
 const rich = () => {
   const s = newSave(NOW);
@@ -226,8 +227,13 @@ test('snacks: bought for Dorras at a level, ITEM_MAX at most, booked in the ledg
 test('snacks are sold at every diner downtown and every Night Market stall, each spot standing clear', () => {
   const diners = INFILL.filter((f) => f.type === 'diner');
   assert.ok(diners.length >= 1);
-  assert.equal(SNACK_BARS.length, diners.length + STALLS.length);
+  // (and The Rusty Nail's door, the polish plan's Phase 7, first)
+  assert.equal(SNACK_BARS.length, 1 + diners.length + STALLS.length);
   assert.equal(new Set(SNACK_BARS.map((b) => b.id)).size, SNACK_BARS.length);
+  const bar = SNACK_BARS[0];
+  assert.equal(bar.id, 'bar');
+  assert.equal(bar.name, 'Rusty Nail');
+  assert.ok(Math.hypot(bar.x - BAR.spot.x, bar.z - BAR.spot.z) < 1e-9, "at the bar's door");
   for (const b of SNACK_BARS) {
     // Nobody stands inside anything solid to buy one
     const hit = SOLID_GRID.near(b.x, b.z, 0.2).some(([x0, z0, x1, z1]) => b.x > x0 - 0.2 && b.x < x1 + 0.2 && b.z > z0 - 0.2 && b.z < z1 + 0.2);
@@ -236,7 +242,7 @@ test('snacks are sold at every diner downtown and every Night Market stall, each
   }
   // A diner's spot is just ahead of its front
   for (const [i, f] of diners.entries()) {
-    const b = SNACK_BARS[i];
+    const b = SNACK_BARS[i + 1];
     const [x0, z0, x1, z1] = bodyOf(f);
     const outside = b.x < x0 || b.x > x1 || b.z < z0 || b.z > z1;
     assert.ok(outside, `diner ${i} spot outside its building`);

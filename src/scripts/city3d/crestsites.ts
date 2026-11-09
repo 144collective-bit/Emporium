@@ -228,6 +228,23 @@ export const SITE_SPAWNS = {
   reservoir: { x: FENCE[0] - 1.4, z: (FENCE[1] + FENCE[3]) / 2, yaw: facing(1, 0) },
 };
 
+/**
+ * Their doors and viewpoints (the polish plan's Phase 7): a walk prompt at each opens the place's panel. The hotel's
+ * door under its porte-cochère on the west front, the civic hall's in its colonnade, the clubhouse's off its terrace;
+ * the overlook's at its rail, the reservoir's by its fence on the west bank ("Look out")
+ */
+export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir'; x: number; z: number }[] = (() => {
+  const oc: Pt = [(OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2, (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2];
+  const half = (OVERLOOK.rect[2] - OVERLOOK.rect[0]) / 2;
+  return [
+    { id: 'hotel', x: HOTEL.body[0] - 0.7, z: (HOTEL.porte[1] + HOTEL.porte[3]) / 2 },
+    { id: 'civichall', x: (CIVIC.hall[0] + CIVIC.hall[2]) / 2, z: CIVIC.hall[3] + 0.7 },
+    { id: 'golfclub', x: (CLUB.house[0] + CLUB.house[2]) / 2, z: CLUB.house[3] + 0.7 },
+    { id: 'overlook', x: oc[0] + OVERLOOK.look[0] * (half - 2.3), z: oc[1] + OVERLOOK.look[1] * (half - 2.3) },
+    { id: 'reservoir', x: FENCE[0] - 0.9, z: (FENCE[1] + FENCE[3]) / 2 },
+  ];
+})();
+
 /* ---------- The ground held level, what's solid, where the planting keeps off ---------- */
 
 export const SITE_LEVELS = [

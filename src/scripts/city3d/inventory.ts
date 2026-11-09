@@ -31,6 +31,7 @@ import { HELD, type Held } from '../net/profile-data';
 import { ownsGun, pay, type BuyResult, type TycoonSave } from './tycoon';
 import { INFILL, SIGNS, bodyOf } from './downtown';
 import { STALLS } from './nightmarket';
+import { BAR } from './avenue';
 
 // The save's side (the boot's): its shape and cleaning, the hand kept in step with the look, where snacks are sold
 import { GRID_SIZE, heldOk } from './inventory-save';
@@ -246,8 +247,12 @@ const title = (s: string) => s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpp
 const DOOR_OUT = 0.45;
 /** Ahead of a stall's counter, in the queue's lane */
 const COUNTER_OUT = 0.5;
-/** Downtown's diners (at their doors) and the Night Market's stalls (at their counters) */
+/**
+ * Downtown's diners (at their doors), the Night Market's stalls (at their counters) and The Rusty Nail (at its door,
+ * the polish plan's Phase 7: the bar sells the snack; its panel is the pin's)
+ */
 export const SNACK_BARS: SnackBar[] = [
+  { id: 'bar', x: BAR.spot.x, z: BAR.spot.z, name: 'Rusty Nail' },
   ...INFILL.filter((f) => f.type === 'diner').map((f, i): SnackBar => {
     const [x0, z0, x1, z1] = bodyOf(f);
     const cx = (x0 + x1) / 2;

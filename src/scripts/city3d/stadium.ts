@@ -32,6 +32,14 @@
  * Everything stays under the Emporium (`TALLEST`). What's solid is
  * `STADIUM_SOLIDS`: the facade all the way round (the gates are shut until
  * there's an event), the masts and the parked cars.
+ *
+ * **Fixtures and match night** (the polish plan's Phase 7): the fixture
+ * board reads the next match from the visitor's clock (`fixtureAt()`: the
+ * home side `HOME` against `VISITORS` in turn, Wednesdays and Saturdays at
+ * half past seven, `FIXTURE`; the same for everyone in a time zone), and
+ * on a match evening (`matchOn()`, `MATCH`) the floodlights are on, the
+ * screen plays, the crowd is heard round the ground and a few people queue
+ * at the gate. Nothing moves and the gates stay shut: no match is played.
  */
 import { WALK_W } from './layout';
 import { MALL, Z0 as PARK_EDGE } from './westlake';
@@ -231,3 +239,78 @@ export const STADIUM_RECTS: Rect[] = [
 ];
 /** All of it, for loading its grounds as you approach (districts.ts) */
 export const STADIUM_AREA: Rect = [Math.min(...STADIUM_RECTS.map((r) => r[0])), Math.min(...STADIUM_RECTS.map((r) => r[1])), Math.max(...STADIUM_RECTS.map((r) => r[2])), Math.max(...STADIUM_RECTS.map((r) => r[3]))];
+
+/* ---------- Fixtures and match night (the polish plan's Phase 7, docs/polish-plan.md) ---------- */
+
+/** The home side and the visitors, in turn by the day (made-up names, never a real club) */
+export const HOME = 'SECTOR 7 FC';
+export const VISITORS = ['WESTLAKE ROVERS', 'UPTOWN ATHLETIC', 'TRENCH TOWN', 'CRESTMONT ROYALS', 'HARBOUR CITY', 'NEON MILE STARS', 'SUNRIDGE UNITED', 'SOUTHFIELD WANDERERS'];
+/** Match days (the visitor's local weekday, 0 Sunday: Wednesdays and Saturdays), the kick-off and how long a match runs (local hours) */
+export const FIXTURE = { days: [3, 6], kickoff: 19.5, length: 2 };
+/**
+ * Match night: from `from` to `until` (local hours) on a match day the floodlights are on, the screen plays, the
+ * crowd's roar is heard round the ground (ambience.ts `stadium`) and a few people queue at the gate; the gates stay
+ * shut and nothing moves (no match is played yet)
+ */
+export const MATCH = { from: 17.5, until: 22.5 };
+export const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+/** The visitor's clock at t (ms): the local day's count (days since the epoch, local), its weekday and the hour (fractional) */
+export interface Clock {
+  day: number;
+  dow: number;
+  hour: number;
+}
+export function clockAt(t: number): Clock {
+  const d = new Date(t);
+  return { day: Math.floor((t - d.getTimezoneOffset() * 60000) / 86400000), dow: d.getDay(), hour: d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600 };
+}
+
+export interface Fixture {
+  home: string;
+  away: string;
+  /** The match day's count and weekday, the kick-off (local hours) */
+  day: number;
+  dow: number;
+  kickoff: number;
+  /** How many days off it is (0 today), and whether it's being played now */
+  daysAway: number;
+  on: boolean;
+}
+/**
+ * The next fixture at t (ms), or the one on now: the next match day whose match hasn't ended, the visitors picked by
+ * the day's count, so everyone in a time zone sees the same board
+ */
+export function fixtureAt(t: number): Fixture {
+  const c = clockAt(t);
+  for (let k = 0; k < 8; k++) {
+    const dow = (c.dow + k) % 7;
+    if (!FIXTURE.days.includes(dow)) continue;
+    if (k === 0 && c.hour >= FIXTURE.kickoff + FIXTURE.length) continue;
+    const day = c.day + k;
+    return { home: HOME, away: VISITORS[((day % VISITORS.length) + VISITORS.length) % VISITORS.length], day, dow, kickoff: FIXTURE.kickoff, daysAway: k, on: k === 0 && c.hour >= FIXTURE.kickoff };
+  }
+  throw new Error('no match day in the week');
+}
+/** Is it match night at t (ms): a match day between `MATCH.from` and `MATCH.until` */
+export function matchOn(t: number): boolean {
+  const c = clockAt(t);
+  return FIXTURE.days.includes(c.dow) && c.hour >= MATCH.from && c.hour < MATCH.until;
+}
+/** The fixture board's two lines: the sides, and when ("WED 7:30 PM"; "TONIGHT", or "KICKED OFF" while it's on) */
+export function fixtureLines(f: Fixture): [string, string] {
+  return [`${f.home} v ${f.away}`, `${f.daysAway === 0 ? (f.on ? 'KICKED OFF' : 'TONIGHT') : DAY_NAMES[f.dow]} ${clockText(f.kickoff).toUpperCase()}`];
+}
+/** An hour (fractional, local) as a clock reads it: 7:30 pm, 9 am */
+export function clockText(hour: number): string {
+  const whole = Math.floor(hour);
+  let m = Math.round((hour - whole) * 60);
+  let h = whole;
+  if (m === 60) {
+    m = 0;
+    h++;
+  }
+  h = ((h % 24) + 24) % 24;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`;
+}

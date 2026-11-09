@@ -96,6 +96,7 @@ import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { inBasin } from './docks';
 import { DOWN as TUNNEL_DOWN, inTunnelZone, tunnelRoom, tunnelWall, tunnelY } from './lot9';
 import { HARBOUR_MASTER } from './docksport';
+import { SITE_DOORS } from './crestsites';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
 import { heightAt, hillsAlong, onHills } from './terrain';
@@ -127,10 +128,12 @@ import type { CardInput } from './ctrlcard';
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
+/** The landmarks' doors, Trench Avenue's, the stadium's gate, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...SITE_DOORS];
+/** Doors with a word of their own (the viewpoints: nothing to enter) */
+const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out' };
 /** Prompts that say their own label (the rest say "Enter ...") */
-/** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }];
-const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put']);
+const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put', ...Object.keys(DOOR_LABEL)]);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
 const RACK_TOP_H = 0.6;
@@ -3415,7 +3418,7 @@ export function createWalk(d: WalkDeps) {
       const dd = Math.hypot(door.x - pos.x, door.z - pos.z);
       if (dd < bestD) {
         bestD = dd;
-        best = { id: door.id, label: root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
+        best = { id: door.id, label: DOOR_LABEL[door.id] ?? root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
       }
     }
     // A free bench to sit on (moments.ts); seated, standing up

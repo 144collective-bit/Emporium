@@ -1495,6 +1495,17 @@
   align-self: stretch;
   margin: -4px 0 0;
 }
+/* The live line under the marquee (the polish plan's Phase 7): one short line from the clock, in the mono face */
+.city-panel.mk-skin .city-panel-live {
+  margin: 2px 0 0;
+  font: 700 11px/1.4 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--m-go);
+}
+.city-panel.mk-skin .city-panel-live::before {
+  content: '▸ ';
+}
 .city-panel.mk-skin .city-panel-text {
   color: #cfcdc5;
 }

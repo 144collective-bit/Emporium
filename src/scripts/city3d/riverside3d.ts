@@ -24,10 +24,12 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { ATLAS, INK, METAL, ROOF, kit, glow, soft, type Band, type Frame, type Kit } from './infill';
-import { SLAB as S } from './world';
+import { SLAB as S, addPool } from './world';
 import { site } from './tilework';
 import type { Pt, Rect } from './downtown';
 import { REFINERY, STORES, WHARF } from './riverside';
+import { YARDS, type YardProp } from './serviceyards';
+import { parkedCars, type CarId } from './cars';
 
 /** Drawing in world numbers with the infill's kit: u is x, v is z */
 export const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0], n: [0, 1] };
@@ -407,8 +409,34 @@ function drawStores(b: Batch, low: boolean) {
 
 /* ---------- The riverside ---------- */
 
-/** The riverside's three landmarks as sites (the outskirts' trees keep off its blocks: landuse.ts) */
-export function buildRiverside(low: boolean) {
+/* ---------- The service yards (serviceyards.ts, the polish plan's Phase 7) ---------- */
+
+const BIN_PAINT = ['#2f6b4f', '#2b4f7a', '#3d3a4a'].map((c) => toon(c));
+const CRATE = toon('#8a6a3c');
+const CRATE_DK = toon('#6b4f2c');
+const LAMP_GLOW = neon('#ffd36b', 0.5, 2.3);
+
+/** A yard's bins, pallets and crates (the alleys' way, infill.ts): near only; phones leave the lids and the pallets' blocks out */
+function yardProp(b: Batch, p: YardProp, k: number, low: boolean) {
+  const [x0, z0, x1, z1] = p.box;
+  if (p.kind === 'bin') {
+    box(b, x0 + 0.03, S, z0 + 0.03, x1 - 0.03, S + p.h - 0.08, z1 - 0.03, BIN_PAINT[k % BIN_PAINT.length]);
+    if (!low) box(b, x0, S + p.h - 0.08, z0, x1, S + p.h, z1, INK);
+  } else if (p.kind === 'crates') {
+    box(b, x0, S, z0, x1, S + 0.45, z1, CRATE);
+    box(b, x0 - 0.01, S + 0.2, z0 - 0.01, x1 + 0.01, S + 0.24, z1 + 0.01, CRATE_DK);
+    box(b, x0 + 0.08, S + 0.45, z0 + 0.1, x1 - 0.12, S + p.h, z1 - 0.06, CRATE_DK);
+  } else {
+    // Pallets stacked flat: boards, blocks between them
+    for (let y = 0; y + 0.14 <= p.h; y += 0.155) {
+      box(b, x0, S + y + 0.09, z0, x1, S + y + 0.14, z1, CRATE);
+      if (!low) for (const t of [0.05, 0.5, 0.95]) box(b, x0 + 0.03, S + y, z0 + (z1 - z0) * t - 0.05, x1 - 0.03, S + y + 0.09, z0 + (z1 - z0) * t + 0.05, CRATE_DK);
+    }
+  }
+}
+
+/** The riverside's three landmarks as sites (the outskirts' trees keep off its blocks: landuse.ts), and its service yards' dressing; the vans on the main thread (`scene`) */
+export function buildRiverside(low: boolean, scene?: THREE.Scene) {
   const builds: [string, Rect, (b: Batch) => void][] = [
     ['riverside wharf', WHARF.lot, (b) => drawWharf(b, low)],
     ['riverside refinery', REFINERY.lot, (b) => drawRefinery(b, low)],
@@ -420,4 +448,21 @@ export function buildRiverside(low: boolean) {
       draw(b);
       b.build(into);
     });
+  // The service yards (serviceyards.ts): a site a yard, its bins, pallets and crates near only, a caged lamp on the
+  // strip's back wall over the bins with its pool of light (placed at the boot, with the lamps'); the vans are parked cars
+  for (const y of YARDS) {
+    site(`riverside yard ${y.block}`, y.rect, (into) => {
+      const b = new Batch();
+      b.lod = 'near';
+      y.props.forEach((p, k) => yardProp(b, p, k, low));
+      for (const l of y.lamps) {
+        box(b, l.x - 0.1, S + l.y - 0.12, l.z - 0.04, l.x + 0.1, S + l.y + 0.12, l.z, INK);
+        box(b, l.x - 0.08, S + l.y + 0.02, l.z - 0.2, l.x + 0.08, S + l.y + 0.07, l.z, INK);
+        box(b, l.x - 0.06, S + l.y - 0.07, l.z - 0.18, l.x + 0.06, S + l.y + 0.02, l.z - 0.06, LAMP_GLOW);
+      }
+      b.build(into);
+    });
+    for (const l of y.lamps) addPool(l.x, l.z - 0.7, 1.7, S + 0.03);
+  }
+  if (scene) parkedCars(scene, S, YARDS.flatMap((y) => y.vans.map((v): [CarId, number, number, number, string] => [v.id, v.x, v.z, v.ry, v.paint])));
 }

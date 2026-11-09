@@ -1027,6 +1027,9 @@ interface Person {
   act?: Idle['act'];
   /** How big (PERSON_SCALE unless set: kids) */
   scale?: number;
+  /** An idle only sometimes there (`Idle.when`): stood out of the world while it says no, back at `home` when it does */
+  when?: () => boolean;
+  home?: { x: number; z: number };
   /** How far they've walked in all (their walk is played at its stride from it) */
   walked: number;
   u: number;
@@ -1201,7 +1204,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
     inTrenches(c.x, c.z) || (c.x > -6 && c.x < DOWNTOWN + 6 && c.z > -6 && c.z < DOWNTOWN + 6) || (c.x > MARKET.ox - 2 && c.x < MARKET.ox + 11 && c.z > MARKET.oz - 2 && c.z < MARKET.oz + 11);
   let every = 0;
   const idlers = opts.light ? crowd.filter((c) => !busy(c) || every++ % 2 === 0) : crowd;
-  for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  for (const c of idlers) people.push({ kind: 'idle', seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, when: c.when, home: c.when ? { x: c.x, z: c.z } : undefined, ry: c.ry, face: c.ry, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // Westlake Park's walkers, joggers, dog walkers, picnics, players and boaters (phones: half of them, the trim)
   // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), and the kids at play
   // on The Trenches' courts and swings (play.ts, at their own size), the same way
@@ -1386,6 +1389,12 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
       const y = p.act && seated(clipOf(p.act, 'idle')) ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
+      // (an idle only sometimes there, the stadium's queue on match night: out of the world the rest of the time)
+      if (p.when && p.home) {
+        const here = p.when();
+        p.x = here ? p.home.x : -1e5;
+        p.z = here ? p.home.z : -1e5;
+      }
       const bk = p.bump ? BUMP.out * Math.sin(Math.PI * (1 - p.bump.t / BUMP.t)) : 0;
       const bx = p.x + (p.bump?.x ?? 0) * bk;
       const bz = p.z + (p.bump?.z ?? 0) * bk;

@@ -648,7 +648,44 @@ the typecheck and the budgets green; none moves anything that exists.
    and match night, the club's door, the bar's snack, Crestmont's door
    prompts, the world map's missing footprints, the Kart Park station's
    walk, the riverside's yards. Three days, the copy the owner's to
-   change.
+   change. **Built** (2026-11-09): **the live lines** are `livelines.ts`
+   (DOM-free, tested; a chunk of its own, fetched the first time a panel
+   opens): `liveLine(id, t)` for every coming-soon place (`LIVE_IDS`,
+   28 of them) from the visitor's clock and the place's own timetable (the
+   stadium's next fixture, the club's set tonight, the bar's happy hour,
+   the mall's hours, Palm Court's film, the fountain show's and the
+   volcano's countdowns from stripmarks.ts, the Pier House's next river
+   bus from riverroute.ts, Liberty Bridge's next lift from the tall ship's
+   round, the Night Market after dusk, the Harbour Master's tide,
+   Crestmont's, Sunridge's, Lot 9's and The Block's hours, the viewpoints'
+   sunset by the month), put under the marquee by `open()`
+   (`[data-live-line]`, `.city-panel-live`) and repainted every half
+   minute while the panel is open; made-up copy, never a price, every
+   line checked short. **The stadium**: `fixtureAt()` / `matchOn()` in
+   stadium.ts (`HOME` Sector 7 FC against `VISITORS` in turn by the day,
+   Wednesdays and Saturdays at half past seven, `FIXTURE`, `MATCH`), the
+   fixture board painted live on the screen and on a board beside the
+   gate, and on a match night the floodlights full on with their pools
+   (dim otherwise), the screen's slides, the crowd's roar (ambience.ts
+   `stadium`, sound.ts) and five people queueing at the shut gate
+   (`Idle.when`: an idle only sometimes there, a general hook in life.ts).
+   **Club PULSE's door** is the bouncer's toast (`bouncerLine()`, in turn
+   by the minute, the set after dark; the panel stays the pin's), the
+   queue on the `wait` act. **The Rusty Nail** sells the snack
+   (`SNACK_BARS`: "Rusty Nail · Snack"). **Crestmont's doors**:
+   `SITE_DOORS` in crestsites.ts (the hotel, the civic hall, the
+   clubhouse; "Look out" at the overlook's rail and the reservoir's fence)
+   in walk.ts's `ALL_DOORS`. **The world map** draws the stadium's bowl,
+   the resorts, the Docks' sheds, warehouses and stacks, Crestmont's
+   landmarks, Sunridge's club and school and Lot 9's fence and huts. **The
+   station walk**: `STATION_WALK` in kartfacility.ts, a paved path from the
+   Kart Park station's door over the open land to Kart Road's sidewalk's
+   east end, zebras over ew2, ew1 and ew0, its land in `KEEPS` (flat, no
+   trees), drawn by kartgrounds3d.ts. **The yards**: `serviceyards.ts`
+   (bins, a wall lamp, pallets, crates, two box vans; `YARD_SOLIDS`),
+   drawn by riverside3d.ts. The snapshot is unchanged: nothing that
+   exists moved. The copy is the owner's to change (livelines.ts,
+   stadium.ts `VISITORS`, stadium3d.ts `SLIDES`).
 8. **The crowd and the character** (themes 4 and 9, as answered): the
    crowd's outfits by role and district (phones one extra kind,
    measured with `?fps` and `?bench`), the captured idle and walk on the

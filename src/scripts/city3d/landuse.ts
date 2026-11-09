@@ -24,7 +24,7 @@ import { HIGHWAY_HALF, fromHighway } from './highway';
 import { MALL_AREA } from './mall';
 import { BED, CREST_RECT, FOOTHILL_Z, nearHillRoad } from './crestmont';
 import { naturalAt } from './terrain';
-import { KART_RECTS } from './kartfacility';
+import { KART_RECTS, STATION_WALK } from './kartfacility';
 import { DOCKS_RECT, inDocks } from './docks';
 import { SUNRIDGE_RECT, inSunridge } from './sunridge';
 import { STRIP_RECT } from './strip';
@@ -153,6 +153,8 @@ export const KEEPS: Keep[] = [
   // its land north of the highway in the north-east as it was, for measuring only (open land again)
   ...KART_RECTS.map((r, i) => land(`karts-${i}`, r, 3, true)),
   ...KARTS_GONE.map((r, i): Keep => ({ ...land(`karts-gone-${i}`, r, 3), gone: true })),
+  // ...and the walk from the metro's Kart Park station to its gate (kartfacility.ts, the polish plan's Phase 7)
+  ...line('kart-walk', STATION_WALK.pts, STATION_WALK.half + 0.8, false, true),
   // The Docks (their own quays and yards, the basin), Sunridge (its own planting), The Trenches and its waterfront
   shaped('docks', DOCKS_RECT, 3, (x, z, m) => inDocks(x, z, m)),
   shaped('sunridge', SUNRIDGE_RECT, 2, (x, z, m) => inSunridge(x, z, m)),

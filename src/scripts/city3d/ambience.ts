@@ -30,7 +30,8 @@
  * fading as one takes off or lands, from the timetable, so it's the same for everyone), inside Starlight Mall
  * (`indoor`: a soft indoor hum and murmur; sound.ts damps the outdoor layers by it), Southfield Yards (`yards`: a
  * compressor running, a reversing beep now and then) and the kart park (`karts`: engines idling and a tannoy's
- * murmur, low; a race's own karts are kart.ts's).
+ * murmur, low; a race's own karts are kart.ts's). The polish plan's Phase 7 added the stadium on a match night
+ * (`stadium`: the crowd's roar swelling now and then round the ground, from stadium.ts's `matchOn()` and the clock).
  */
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
@@ -56,7 +57,7 @@ import { HALL, MALL_AREA } from './mall';
 import { DOCKS_RECT } from './docks';
 import { FLIGHTS, SITE, poseAt } from './airfield';
 import { KART_PARK } from './kartpark';
-import { BLOCK as STADIUM_BLOCK } from './stadium';
+import { BLOCK as STADIUM_BLOCK, matchOn } from './stadium';
 import { DECKS, MARKET_DECK } from './waterfront';
 import { PROMENADE } from './outer';
 import { YARDS_RECT, inYards } from './southfield';
@@ -106,6 +107,8 @@ export interface Ambience {
   yards: number;
   /** The kart park: engines idling, a tannoy's murmur, 0-1 */
   karts: number;
+  /** The stadium on a match night (stadium.ts `matchOn()`): the crowd's roar swelling now and then, 0-1; 0 any other time */
+  stadium: number;
 }
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
 export const CREST_HUM = 0.4;
@@ -261,6 +264,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   // Inside the mall's hall (a little way out of its doors too); the City view's camera over its roof hears none of it
   const indoor = near(HALL.rect, x, z, 0, 5) * (1 - smooth(HALL.h, HALL.h + 10, lift));
   const karts = near(KART_RECT, x, z, 0, 40);
+  // The stadium's crowd on a match night (the polish plan's Phase 7): round the ground, carrying well past its block
+  const stadium = matchOn(t * 1000) ? near(STADIUM_BLOCK, x, z, 0, 90) : 0;
   return {
     city: town,
     water: Math.max(water, lake) * k,
@@ -284,5 +289,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     indoor,
     yards: yards * k,
     karts: karts * k,
+    stadium: stadium * k,
   };
 }

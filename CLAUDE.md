@@ -268,7 +268,10 @@ it and has been retired completely. Build only on what's here.
     `CityMap.astro`, styles `src/styles/worldmap.css`): a canvas drawn
     from the street plan (slabs, plazas, roads by width, the highway, the
     river, the airport and runway, the kart park's circuit, Liberty
-    Bridge, the metro line), the places with their pins' names
+    Bridge, the metro line; since the polish plan's Phase 7 every place's
+    footprint in the same muted tone: the stadium's bowl, the resorts, the
+    Docks' sheds, warehouses and stacks, Crestmont's landmarks, Sunridge's
+    club and school, Lot 9's fence and huts), the places with their pins' names
     (`placeName()`), you, your car, your aircraft when it's away, your
     waypoint. Drag or two fingers pan, scroll or pinch zoom, + / − / Fit /
     You, "Find a place" (the keyboard's way in). From the hub's Map tab
@@ -337,7 +340,13 @@ it and has been retired completely. Build only on what's here.
     deck, river plan step 2);
     nine stations (`STATIONS`: Starlight Mall, Downtown, South Bank, The
     Trenches, Southbank Docks, Kart Park (on the north bank avenue's median
-    west of the highway, `KART_STATION_X`, a walk up to the park's gate),
+    west of the highway, `KART_STATION_X`, a walk up to the park's gate:
+    since the polish plan's Phase 7 a paved path, kartfacility.ts
+    `STATION_WALK`, from the station's door west past its tower and
+    north-west over the open land, straight over the two small streets and
+    ew0 on zebras, to Kart Road's sidewalk's east end; its land in
+    `KEEPS` (landuse.ts), so the trees and the rolls keep off it; drawn by
+    kartgrounds3d.ts in the karts' chunk, which reaches the station),
     Airport, Uptown, Crestmont; each a track and distance, a platform on the
     track's left (`PLATFORM_SIDE`; Uptown's on its right, `side`,
     `sideAt()`), a stair tower with its door at street level and the way
@@ -383,8 +392,10 @@ it and has been retired completely. Build only on what's here.
     (gulls, a crane's hoist whine, a ship's horn), `jets` (`jetsAt()`: an
     airliner's roar as one takes off or lands, from the airport's timetable
     and the clock, `ambienceAt(x, z, lift, t)`), `indoor` (inside the mall's
-    hall; sound.ts damps the outdoor layers by it) and `karts` (the kart
-    park: engines idling, a tannoy); `sound.update()` mixes its layers
+    hall; sound.ts damps the outdoor layers by it), `karts` (the kart
+    park: engines idling, a tannoy) and `stadium` (a match night's crowd
+    round the ground, stadium.ts `matchOn()`: a murmur, a roar swelling now
+    and then); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks, each new layer's graph made the first
     time it's heard. Your engine's voice is by what you're in
@@ -595,7 +606,13 @@ it and has been retired completely. Build only on what's here.
     another. Each is a place: spots `club`, `bar`, `arms` (pins, directory
     entries, panels `data-panel-tpl` with Walk in to `AVENUE_SPAWNS`,
     `PLACES` entries). The club's and the bar's doors (`AVENUE_DOORS`) prompt
-    "Enter ..." and open their panels (coming soon); Trench Arms' hatch
+    "Enter ..."; since the polish plan's Phase 7 the club's door turns you
+    away with the bouncer's word as a toast (livelines.ts `bouncerLine()`,
+    in turn by the minute, the set after dark; its panel is the pin's, with
+    the set tonight as its live line) and the bar's door sells the snack
+    ("Rusty Nail · Snack": `SNACK_BARS` in inventory.ts, its panel the
+    pin's; the queue behind the velvet rope shuffles on the crowd's `wait`
+    act); Trench Arms' hatch
     prompts "Trench Arms" and opens the Armoury's gun store and workbench
     under its own name (`shop.show(name)` in gunshop.ts). The club's beat
     thumps through its walls by the door (ambience.ts `club`, sound.ts:
@@ -627,7 +644,16 @@ it and has been retired completely. Build only on what's here.
     `riverside.ts` (DOM-free, tested in `tests/riverside.test.ts`): their
     river side a row of landmarks fronting the bank avenue (`FRONT_Z`), each
     its own architecture, their Trench Avenue side a strip of brownstones
-    and the corner shops (`STRIPS`), service yards between (`YARD_Z`):
+    and the corner shops (`STRIPS`), service yards between (`YARD_Z`;
+    dressed since the polish plan's Phase 7: `serviceyards.ts`, DOM-free,
+    tested in `tests/serviceyards.test.ts`: `YARDS`, a yard a block with
+    wheelie bins, a caged wall lamp over them and a stack of pallets
+    against the brownstones' backs, crates by the landmark's lot line and a
+    white box van across the two deeper yards (the Pier House's and the
+    club's, through `parkedCars()`), everything clear of the rows' alleys'
+    way through, solid in `YARD_SOLIDS` (in `SOLIDS`); drawn near only by
+    riverside3d.ts's `buildRiverside(low, scene)`, the lamps' pools placed
+    at the boot):
     **The Wharf** (`WHARF`: a glass lobby with a roof terrace, four stacks
     of glass floors each shifted off the one under it, white floor plates,
     a lit crown), **The Refinery** (`REFINERY`: an old red-brick sugar works
@@ -779,7 +805,22 @@ it and has been retired completely. Build only on what's here.
     (`LAZY_DISTRICTS`: `westlake`, whose land covers it too).
     It's a place: spot `stadium` (pin, directory entry, panel
     `data-panel-tpl="stadium"`: events coming soon, Walk in), the gate's
-    door prompt opens it, `PLACES` entry. Its sound waits for events. Its
+    door prompt opens it, `PLACES` entry. **Fixtures and match night** (the
+    polish plan's Phase 7): `fixtureAt(t)` in stadium.ts is the next match
+    from the visitor's clock (`HOME`, Sector 7 FC, against `VISITORS` in
+    turn by the day, Wednesdays and Saturdays at half past seven,
+    `FIXTURE`; `clockAt()`, `clockText()`, `fixtureLines()`; the same for
+    everyone in a time zone), on a fixture board beside the gate and on the
+    screen (stadium3d.ts: painted live, `liveTex()`, repainted when it
+    changes; the panel's live line too), and `matchOn(t)` (`MATCH`, the
+    match day's evening) is match night: the floodlights full on with their
+    pools on the pitch (a material of their own on the tick; dim otherwise),
+    the screen playing its slides (fixed made-up copy), the crowd's roar
+    round the ground (ambience.ts `stadium`, sound.ts: a murmur and a roar
+    swelling now and then) and a few people queueing at the shut gate (the
+    crowd's `wait` act; `Idle.when` in landmarks.ts: an idle only sometimes
+    there, life.ts stands them out of the world the rest of the time).
+    Nothing moves and the gates stay shut. Its
     old site in the park (`GARDEN_SITE` in westlake.ts) is kept clear for
     the formal garden (stage 3), the Mall running through it to the
     north gate; the old car park on the first strip
@@ -1187,7 +1228,12 @@ it and has been retired completely. Build only on what's here.
   (`crestspots.ts`: pick boxes and rings at the boot, the drawing in the
   chunk), pins, directory entries, panels with Walk in (`data-crest-walkin`
   to `SITE_SPAWNS`), `PLACES` and `LIVE_PLACES` entries; a taxi aims only
-  for streets that join the network (`project()` in routes.ts). Phase 8
+  for streets that join the network (`project()` in routes.ts); since the
+  polish plan's Phase 7 each has a walk prompt (`SITE_DOORS` in
+  crestsites.ts, in walk.ts's `ALL_DOORS`: the hotel's door under its
+  porte-cochère, the civic hall's in its colonnade, the clubhouse's off its
+  terrace, and "Look out" at the overlook's rail and by the reservoir's
+  fence, `DOOR_LABEL`), each opening its panel. Phase 8
   (its life, night and sound) is built: `crestlife.ts` (DOM-free, tested in
   `tests/crestlife.test.ts`): joggers and dog walkers on the hill roads'
   shoulders (`LANES`, `CREST_PEOPLE`, `CREST_DOGS`, the park's kind of
@@ -3258,7 +3304,18 @@ it and has been retired completely. Build only on what's here.
   waiting on the owner's sign-off: the place panel, the header and the City
   view's cards wear the skin too; each place's template carries its marquee
   line (`data-marquee`: made-up, fixed copy; a new place needs one), which
-  `open()` puts under its name. Phase 5 is built, waiting on the owner's
+  `open()` puts under its name; under that, since the polish plan's Phase 7,
+  the **live line** (`livelines.ts`, DOM-free, tested in
+  `tests/livelines.test.ts`, a chunk of its own fetched the first time a
+  panel opens: `liveLine(id, t)`, one short line from the visitor's clock
+  and the place's own timetable for every coming-soon place, `LIVE_IDS`:
+  the stadium's next fixture, the club's set, the bar's happy hour, the
+  mall's hours, the fountain show's and the volcano's countdowns, the
+  Pier House's next river bus, Liberty's next lift, the Night Market after
+  dusk, the Harbour Master's tide, Crestmont's and Sunridge's hours;
+  made-up, never a price; `open()` puts it in `[data-live-line]` and
+  repaints it every half minute while the panel is open). A new coming-soon
+  place gets its line there. Phase 5 is built, waiting on the owner's
   sign-off: inside the skin the business views' goods and contracts are
   cards and their steps clear buttons (`.market-row`, `.market-btns`: the
   first step coin). Phase 6 is built, waiting on the owner's sign-off: the
@@ -4394,8 +4451,9 @@ it and has been retired completely. Build only on what's here.
   `ITEM_MAX` five; `buyItem()`, ledger `items`, not counted as a thing
   bought; `useItem()` only in a spar, which comes with the fight plan's
   street spars) and where it's sold (`SNACK_BARS`: the downtown diners'
-  doors and the Night Market's stalls, walk prompts `snack:<id>` that buy
-  one there and then).
+  doors, the Night Market's stalls and, since the polish plan's Phase 7,
+  The Rusty Nail's door, walk prompts `snack:<id>` that buy one there and
+  then).
 - On screen (`inventory-ui.ts`, a chunk of its own fetched when walking
   starts, with the inventory's keys, the pad, the wheel and the snack
   doors; styles `src/styles/inventory.css`): the hotbar (`[data-hotbar]`,

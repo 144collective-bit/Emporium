@@ -301,13 +301,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   spots.push(...buildAvenue(scene, crowd, { tick, reduced, low: tier === 'low' }).spots);
   // ...and the riverside (the owner's call): the Wharf, the Refinery and Harbor Stores (sites), the boardwalk out over
   // the water and the old docks (sites), and Pier 7 with the Pier House at its head, a place (its pin and panel)
-  buildRiverside(tier === 'low');
+  buildRiverside(tier === 'low', scene);
   buildWaterfront(tier === 'low');
   spots.push(buildPier(scene, crowd, { tick, low: tier === 'low' }).spot);
   // The Night Market on its deck in front of Harbor Stores, a place
   spots.push(buildNightMarket(scene, crowd, { tick, low: tier === 'low' }).spot);
   // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
-  spots.push(buildStadium(scene, { low: tier === 'low' }).spot);
+  spots.push(buildStadium(scene, crowd, { low: tier === 'low', tick }).spot);
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
@@ -617,6 +617,29 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let tycoon: TycoonUI | null = null;
 
   let walking = false;
+  // The live lines (the polish plan's Phase 7, livelines.ts, a chunk of its own): one short line from the clock under a
+  // coming-soon place's marquee, kept fresh while its panel is open; the first panel fetches the chunk
+  let lines: typeof import('./livelines') | null = null;
+  const loadLines = () => (lines ? Promise.resolve(lines) : import('./livelines').then((m) => (lines = m)));
+  let lineTimer = 0;
+  function showLine(id: string) {
+    clearInterval(lineTimer);
+    const paint = () => {
+      if (!lines || active?.id !== id) return;
+      const text = lines.liveLine(id);
+      let el = panelBody.querySelector<HTMLElement>('[data-live-line]');
+      if (!text) return el?.remove();
+      if (!el) {
+        el = document.createElement('p');
+        el.className = 'city-panel-live';
+        el.dataset.liveLine = '';
+        (panelBody.querySelector('.city-panel-marquee') ?? panelBody.querySelector('.city-panel-title'))?.after(el);
+      }
+      el.textContent = text;
+    };
+    void loadLines().then(paint, () => {});
+    lineTimer = window.setInterval(paint, 30000);
+  }
   /** `toFitting`: scroll Drop 001's panel to its fitting room (from the Profile panel) */
   function open(id: string, toFitting = false) {
     const s = spots.find((sp) => sp.id === id);
@@ -648,6 +671,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       line.textContent = closedLine(title?.textContent?.trim() || 'This place', gate);
       panelBody.append(line);
     }
+    // The live line under the marquee (a place with one), while it's open
+    if (gate.open) showLine(id);
     // (the fitting room is a chunk of its own, loaded the first time Drop 001's panel opens)
     if (id === 'shop' && gate.open)
       void loadFitting().then((f) => {
@@ -793,6 +818,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   function close() {
     if (!active) return;
     active = null;
+    clearInterval(lineTimer);
     fitting?.unmount();
     tycoon?.unmountPanel();
     panel.classList.remove('is-open');
@@ -929,7 +955,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       const l = bigLots.solids();
       return l.length ? (u.length ? [...u, ...l] : l) : u;
     },
-    openSpot: (id) => open(id),
+    openSpot: (id) => {
+      // Club PULSE's door (the polish plan's Phase 7): the bouncer turns you away with a word, and the set after dark
+      // (livelines.ts); the panel is the pin's, from the City view
+      if (id === 'club' && walking) return void loadLines().then((m) => game.toast(m.bouncerLine(), 3500), () => game.toast('Members tonight · Coming soon', 3500));
+      open(id);
+    },
     touched: () => touched(),
     tick,
     // The sound engine is made further down; shots only happen once it exists

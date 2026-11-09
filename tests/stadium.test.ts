@@ -14,7 +14,16 @@ import {
   CENTRE,
   CONCOURSE,
   FACADE,
+  FIXTURE,
   GATE,
+  HOME,
+  MATCH,
+  VISITORS,
+  clockAt,
+  clockText,
+  fixtureAt,
+  fixtureLines,
+  matchOn,
   LOOP,
   MASTS,
   PARKED,
@@ -108,4 +117,49 @@ test('the way over from the park: the Mall out of its north gate, under the rais
   for (let z = WALK.z1 + 0.2; z < WALK.z0 - 0.2; z += 0.4)
     for (const x of [WALK.x - WALK.half + 0.3, WALK.x, WALK.x + WALK.half - 0.3]) assert.ok(!SOLID_GRID.near(x, z, 0).some((b) => inBox(b, x, z)), `something solid on the walk at ${x}, ${z.toFixed(1)}`);
   assert.ok(fromHighway(WALK.x, -170) < HIGHWAY_HALF);
+});
+
+test('fixtures from the clock: the next match on a match day at its kick-off, the visitors in turn, match night round it', () => {
+  // (local times, so the test reads the same in every time zone: 2026-11-09 is a Monday)
+  const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m).getTime();
+  const mon = fixtureAt(at(9, 12));
+  assert.equal(mon.home, HOME);
+  assert.equal(mon.dow, 3, 'Wednesday next');
+  assert.equal(mon.daysAway, 2);
+  assert.equal(mon.kickoff, FIXTURE.kickoff);
+  assert.ok(VISITORS.includes(mon.away) && !mon.on);
+  assert.deepEqual(fixtureLines(mon), [`${HOME} v ${mon.away}`, 'WED 7:30 PM']);
+  // On the day: tonight, then kicked off, then the next one (Saturday) once it's over
+  const wed = fixtureAt(at(11, 12));
+  assert.equal(wed.daysAway, 0);
+  assert.equal(fixtureLines(wed)[1], 'TONIGHT 7:30 PM');
+  assert.equal(wed.away, mon.away, 'the same board all the way to the match');
+  const on = fixtureAt(at(11, 20, 15));
+  assert.ok(on.on && on.daysAway === 0 && fixtureLines(on)[1] === 'KICKED OFF 7:30 PM');
+  const after = fixtureAt(at(11, 22));
+  assert.equal(after.dow, 6);
+  assert.equal(after.daysAway, 3);
+  assert.notEqual(after.away, wed.away, 'different visitors on consecutive match days');
+  // Every weekday finds a fixture within the week, and the visitors come round in turn
+  const seen = new Set<string>();
+  for (let d = 1; d <= 28; d++) {
+    const f = fixtureAt(at(d, 9));
+    assert.ok(f.daysAway >= 0 && f.daysAway <= 6 && FIXTURE.days.includes(f.dow));
+    seen.add(f.away);
+  }
+  assert.ok(seen.size >= 4, 'the visitors vary');
+  // Match night: a match day's evening only
+  assert.ok(!matchOn(at(11, 12)) && matchOn(at(11, 18)) && matchOn(at(11, 21, 30)) && !matchOn(at(11, 23)) && !matchOn(at(12, 19)));
+  assert.ok(matchOn(at(14, 19)), 'Saturday');
+  assert.ok(MATCH.from < FIXTURE.kickoff && MATCH.until > FIXTURE.kickoff + FIXTURE.length);
+  // The clock's words: no money, a time of day as a clock reads it
+  assert.equal(clockText(19.5), '7:30 pm');
+  assert.equal(clockText(9), '9 am');
+  assert.equal(clockText(0), '12 am');
+  assert.equal(clockText(12.25), '12:15 pm');
+  for (const away of VISITORS) assert.match(away, /^[A-Z ]+$/);
+  const c = clockAt(at(11, 19, 30));
+  assert.equal(c.dow, 3);
+  assert.ok(Math.abs(c.hour - 19.5) < 1e-9);
+  assert.equal(clockAt(at(12, 1)).day, c.day + 1);
 });

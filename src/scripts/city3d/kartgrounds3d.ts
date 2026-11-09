@@ -64,7 +64,7 @@ import {
   circuitDistance,
   type LRect,
 } from './kartfacility';
-import { COACH_LOT, FLAGS, KART_AREA } from './kartfacility';
+import { COACH_LOT, FLAGS, KART_AREA, STATION_WALK } from './kartfacility';
 import { CELL_ARROW, CELL_CHEVRON, atlasTex, cellMarker, cellNumber, chequerBands, glowText, quad, spacing } from './kartsigns';
 import { BOARDS, BOOTH, MARSHALS, cornersOf } from './kartside';
 import { KART_VIEW } from './kartpark3d';
@@ -1109,6 +1109,39 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       b.build(into, { cast: false, receive: true });
     });
   }
+  // The walk from the metro's Kart Park station to the gate (kartfacility.ts STATION_WALK, the polish plan's Phase 7):
+  // paved in stretches over the open land (flat: its land is kept clear of the rolls), a zebra over each street it crosses
+  const WALK_Y = 0.045;
+  STATION_WALK.pts.forEach((to, i) => {
+    if (!i) return;
+    const from = STATION_WALK.pts[i - 1];
+    const len = Math.hypot(to[0] - from[0], to[1] - from[1]);
+    const n = Math.max(1, Math.ceil(len / 14));
+    const h = STATION_WALK.half;
+    for (let k = 0; k < n; k++) {
+      const a: Pt = [from[0] + ((to[0] - from[0]) * k) / n, from[1] + ((to[1] - from[1]) * k) / n];
+      const c: Pt = [from[0] + ((to[0] - from[0]) * (k + 1)) / n, from[1] + ((to[1] - from[1]) * (k + 1)) / n];
+      const rect: [number, number, number, number] = [Math.min(a[0], c[0]) - h - 0.3, Math.min(a[1], c[1]) - h - 0.3, Math.max(a[0], c[0]) + h + 0.3, Math.max(a[1], c[1]) + h + 0.3];
+      site(`kart walk ${i} ${k}`, rect, (into) => {
+        const b = new Batch();
+        // (a hair longer than its piece, so the pieces meet, and rounded at the corners where the stretches turn)
+        const g = new THREE.PlaneGeometry(len / n + 0.04, h * 2)
+          .rotateX(-Math.PI / 2)
+          .rotateY(Math.atan2(-(c[1] - a[1]), c[0] - a[0]))
+          .translate((a[0] + c[0]) / 2, WALK_Y, (a[1] + c[1]) / 2);
+        b.add(g, PAVE);
+        // (a round at each corner where the stretches turn)
+        if (k === n - 1 && i < STATION_WALK.pts.length - 1) b.add(new THREE.CircleGeometry(h, 12).rotateX(-Math.PI / 2).translate(c[0], WALK_Y - 0.001, c[1]), PAVE);
+        b.build(into, { cast: false, receive: true });
+      });
+    }
+  });
+  for (const zb of STATION_WALK.zebras)
+    site(`kart walk zebra ${zb.street}`, [zb.x - STATION_WALK.half - 0.2, zb.z0, zb.x + STATION_WALK.half + 0.2, zb.z1], (into) => {
+      const b = new Batch();
+      for (let z = zb.z0 + 0.2; z < zb.z1 - 0.1; z += 0.36) b.add(new THREE.PlaneGeometry(STATION_WALK.half * 2, 0.18).rotateX(-Math.PI / 2).translate(zb.x, PAINT_Y, z), PAINT);
+      b.build(into, { cast: false, receive: true });
+    });
   const [cx0, cz0, cx1, cz1] = CAR_PARK;
   const parts: [number, number, number, number][] = [
     [LOOP.x0 - LOOP.half, LOOP.z1 - LOOP.half, LOOP.x0 + LOOP.half, ROAD.z - ROAD.half],

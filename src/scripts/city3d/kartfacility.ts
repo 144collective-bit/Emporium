@@ -349,6 +349,34 @@ export const APPROACH_SIGNS: { x: number; z: number; ry: number; arrow: 1 | -1 |
   // (by the metro's Kart Park station's door on the north bank avenue, its face south to the door: on up the land, north)
   { x: -246 + 3, z: 64.5 - 3.7 - 2.6, ry: 0, arrow: 0 },
 ];
+/**
+ * The walk from the metro's Kart Park station to the park (the polish plan's Phase 7): a paved path from the station's
+ * door (metro.ts: on the north bank avenue's north side, facing the avenue) west past its tower, then north-west over
+ * the open land, straight over each street on a zebra (`zebras`: the two small streets and the avenue, ew0), to the
+ * east end of Kart Road's sidewalk, which carries on to the gate. Its land is kept clear of the outskirts' trees and
+ * the rolls (landuse.ts `KEEPS`), so it lies flat on open ground; nothing on it is solid. Drawn by kartgrounds3d.ts.
+ */
+export const STATION_WALK = {
+  half: 1,
+  pts: [
+    [-246, 59.85],
+    [-249.6, 59.85],
+    [-262, 46],
+    [-262, 40],
+    [-290, 20],
+    [-290, 14],
+    [-318, 0.3],
+    [-318, -9.3],
+    [-328, -14.6],
+    [-346.5, -24.6],
+  ] as Pt[],
+  /** Where it crosses a street: the street, the zebra's x and the asphalt's z range */
+  zebras: [
+    { street: 'ew2', x: -262, z0: 41.3, z1: 44.7 },
+    { street: 'ew1', x: -290, z0: 15.3, z1: 18.7 },
+    { street: 'ew0', x: -318, z0: -8.2, z1: -0.8 },
+  ],
+} as const;
 export const COACH_LOT: Rect = [DRIVE_X + ROAD.half + 6, ROAD.z + ROAD.half + 0.6, DRIVE_X + ROAD.half + 30, ROAD.z + ROAD.half + 7.8];
 export const COACHES: [string, number, number, number, string][] = [0, 1, 2].map((k): [string, number, number, number, string] => [
   'bus',

@@ -450,7 +450,8 @@ function drawClub(b: Batch, parts: Map<THREE.Material, THREE.BufferGeometry[]>, 
       b.add(g.translate((pa + q) / 2, S + r.h - 0.14 - dip / 2, r.z), VELVET);
     }
   }
-  for (const q of CLUB.queue.slice(0, low ? 6 : CLUB.queue.length)) crowd.push({ x: q.x, z: q.z, ry: q.yaw, act: 'queue' });
+  // (the queue shuffles and looks about: the crowd's `wait` act, the polish plan's Phase 7)
+  for (const q of CLUB.queue.slice(0, low ? 6 : CLUB.queue.length)) crowd.push({ x: q.x, z: q.z, ry: q.yaw, act: 'wait' });
   for (const q of CLUB.bouncers) crowd.push({ x: q.x, z: q.z, ry: q.yaw, act: 'guard', scale: 1.1 });
 }
 

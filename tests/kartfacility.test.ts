@@ -41,10 +41,13 @@ import {
   bankLand,
   screenLegs,
   SCREENS,
+  STATION_WALK,
   bankY,
   tierAt,
   worldRect,
 } from '../src/scripts/city3d/kartfacility';
+import { rollsAt } from '../src/scripts/city3d/rolls';
+import { keptOff } from '../src/scripts/city3d/landuse';
 import { CIRCUIT, CLEAR, HUT_DOOR, PIT_LANE, SITE } from '../src/scripts/city3d/kartcircuit';
 import { GATE, KART_PARK, KART_SPAWN, LOOP, ROAD, toLocal, toWorld } from '../src/scripts/city3d/kartpark';
 import { SOLIDS, SOLID_GRID } from '../src/scripts/city3d/solids';
@@ -229,6 +232,45 @@ test('the metro\'s Kart Park station on the north bank avenue west of the highwa
   for (const b of FACILITY_SOLIDS) assert.ok(!(st.tower[0] < b[2] && st.tower[2] > b[0] && st.tower[1] < b[3] && st.tower[3] > b[1]), 'the station tower in something');
   for (const s of PLAN.streets) if (s.kind !== 'alley') assert.ok(distToStreet(s, [(st.tower[0] + st.tower[2]) / 2, (st.tower[1] + st.tower[3]) / 2]) > s.half + 1, `the tower on ${s.id}`);
   for (let x = st.tower[0]; x <= st.tower[2]; x += 0.5) for (let z = st.tower[1]; z <= st.tower[3]; z += 0.5) assert.ok(!rampLand(x, z), 'the tower on the ramps\' land');
+});
+
+test("the station walk (the polish plan's Phase 7): from the door past the tower to Kart Road's east end, flat, clear, over the streets on zebras", () => {
+  const st = STATIONS.find((s) => s.id === 'kart')!;
+  const W = STATION_WALK;
+  const [first, ...rest] = W.pts;
+  const last = rest[rest.length - 1];
+  assert.ok(Math.abs(first[0] - st.door.x) < 1e-9 && first[1] > st.door.z && first[1] < st.door.z + 0.5, 'starts at the station door');
+  assert.ok(Math.abs(last[0] - ROAD.x1) < 2 && Math.abs(last[1] - (ROAD.z - ROAD.half - 0.4)) < 0.5, "ends at Kart Road's sidewalk's east end");
+  // Every street it meets, it crosses straight on a zebra of its own; the rest of the way is open land it has to itself
+  const crossed = new Set<string>();
+  for (let i = 1; i < W.pts.length; i++) {
+    const [a, b] = [W.pts[i - 1], W.pts[i]];
+    const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.5);
+    for (let k = 0; k <= n; k++) {
+      const x = a[0] + ((b[0] - a[0]) * k) / n;
+      const z = a[1] + ((b[1] - a[1]) * k) / n;
+      for (const s of PLAN.streets) {
+        if (s.kind === 'alley' || distToStreet(s, [x, z]) >= s.half + W.half) continue;
+        const zb = W.zebras.find((q) => q.street === s.id);
+        if (s.id === 'kart-road' || s.id === 'ew3') continue; // (it starts beside the avenue and ends at Kart Road's end)
+        assert.ok(zb, `${s.id} crossed with no zebra at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+        assert.ok(Math.abs(x - zb!.x) < 1e-6 && Math.abs(a[0] - b[0]) < 1e-9, `${s.id} crossed askew`);
+        crossed.add(s.id);
+      }
+      // Nothing solid on it (the station tower's own wall along the door's stretch excepted: the pad runs under it)
+      const near = SOLID_GRID.near(x, z, W.half).filter((bx) => inBox(bx, x, z, W.half - 0.05));
+      for (const bx of near) assert.ok(i === 1 && bx.slice(0, 4).every((v, q) => Math.abs(v - st.tower[q]) < 1e-9), `something solid on the walk at ${x.toFixed(1)}, ${z.toFixed(1)}: ${bx.join()}`);
+      // Flat open ground: the rolls keep off its land (landuse.ts KEEPS)
+      assert.equal(rollsAt(x, z), 0, `the walk rolls at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+      assert.ok(keptOff(x, z), `the trees may stand on the walk at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+      assert.ok(!rampLand(x, z), "on the ramps' land");
+    }
+  }
+  assert.deepEqual([...crossed].sort(), W.zebras.map((z) => z.street).sort());
+  for (const zb of W.zebras) {
+    const s = PLAN.streets.find((q) => q.id === zb.street)!;
+    assert.ok(Math.abs(zb.z0 - (s.pts[0][1] - s.half)) < 1e-6 && Math.abs(zb.z1 - (s.pts[0][1] + s.half)) < 1e-6, `${zb.street}'s zebra spans its asphalt`);
+  }
 });
 
 test('solids in the city\'s; the outskirts\' trees keep off it all, the park\'s own trees on its lawns', () => {

@@ -64,6 +64,8 @@ export interface Idle {
   act?: IdleAct;
   /** How big (a grown-up by default; kids at play are smaller) */
   scale?: number;
+  /** Only sometimes there (the stadium's queue on match night): out of the world while this says no (life.ts) */
+  when?: () => boolean;
 }
 
 export interface LandmarkCtx {

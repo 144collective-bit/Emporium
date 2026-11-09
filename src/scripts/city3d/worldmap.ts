@@ -28,7 +28,12 @@ import { DECKS } from './waterfront';
 import { ESPLANADE_DECKS } from './boulevard';
 import { HIGHRISES } from './highrise';
 import { HIGHWAY_BOX } from './highway';
-import { STADIUM_AREA } from './stadium';
+import { FACADE as STADIUM_FACADE, STADIUM_AREA, oval as stadiumOval } from './stadium';
+import { RESORTS } from './resorts';
+import { HARBOUR_MASTER, SHED, STACK_BLOCKS, WAREHOUSES } from './docksport';
+import { CIVIC, CLUB as GOLF_CLUB, HOTEL as CREST_HOTEL } from './crestsites';
+import { FENCE as LOT9_FENCE, LAUNDRY as LOT9_LAUNDRY, OFFICE as LOT9_OFFICE } from './lot9';
+import { CLUBHOUSE as SUN_CLUBHOUSE, SCHOOL as SUN_SCHOOL } from './sunplaces';
 import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, SHOPS as MALL_SHOPS } from './mall';
 import { TERRAIN_RECT, heightAt } from './terrain';
 import { EXITS } from './viaduct';
@@ -234,6 +239,29 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     }
     // Palm Court's shops and cinema, Starlight Mall and its anchors, the multi-storey (mall.ts)
     for (const r of [MALL_CINEMA.rect, MALL_HALL.rect, MALL_MSCP.rect, ...MALL_ANCHORS.map((a) => a.rect), ...MALL_SHOPS.map((s) => s.rect)]) rect([...r], C.tower);
+    // The places that had no footprint (the polish plan's Phase 7), in the same muted tone: the stadium's bowl, the
+    // Neon Mile's resorts, the Docks' sheds, warehouses and stacks, Crestmont's landmarks, Sunridge's club and school,
+    // Lot 9's huts inside its fence
+    ctx.fillStyle = C.tower;
+    poly(stadiumOval(STADIUM_FACADE.a, STADIUM_FACADE.b, 48));
+    ctx.fill();
+    for (const r of RESORTS)
+      for (const p of r.parts) {
+        if (p.solid === false) continue;
+        if (p.poly) {
+          poly(p.poly);
+          ctx.fill();
+        } else rect(p.rect, C.tower);
+      }
+    for (const r of [SHED.rect, HARBOUR_MASTER.rect, ...WAREHOUSES.map((w) => w.rect), ...STACK_BLOCKS]) rect(r, C.tower);
+    for (const r of [CREST_HOTEL.body, CREST_HOTEL.tower, CIVIC.hall, CIVIC.tower, GOLF_CLUB.house, SUN_CLUBHOUSE.rect, ...SUN_SCHOOL.wings, LOT9_OFFICE.rect, LOT9_LAUNDRY.rect]) rect([...r], C.tower);
+    {
+      const [x0, y0] = toScreen(LOT9_FENCE[0], LOT9_FENCE[1]);
+      const [x1, y1] = toScreen(LOT9_FENCE[2], LOT9_FENCE[3]);
+      ctx.strokeStyle = C.tower;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    }
     ctx.fillStyle = C.park;
     // Westlake Park (westlake.ts): its lawns, the lake and its paths
     for (const b of WESTLAKE_BLOCKS) {

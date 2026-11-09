@@ -12,8 +12,12 @@
  * - The roof ring over the upper tier, held off the facade on short posts,
  *   a lit line round its inner edge.
  * - Four floodlight masts outside the corners, their lamps aimed at the
- *   pitch (lit at night, their light pooled on the pitch), and the big
- *   screen on the north side's roof.
+ *   pitch, and the big screen on the north side's roof. Between matches the
+ *   screen (and a board beside the gate) shows the fixture board, the next
+ *   match from the clock (stadium.ts `fixtureAt()`, painted live); on a match
+ *   night (`matchOn()`) the lamps come full on with their light pooled on the
+ *   pitch, the screen plays its slides, and a few people queue at the shut
+ *   gate (the polish plan's Phase 7). Otherwise the masts glow dimly at night.
  * - A paved apron round it all, the forecourt in front.
  * - Since the north side's stage 1 (docs/north-plan.md) it stands north of
  *   the ring highway: Stadium Road off the north road, the car park inside
@@ -26,11 +30,11 @@
  * solid (`STADIUM_SOLIDS` is).
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, neon, toon } from './kit';
-import { SLAB, addPool } from './world';
+import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, liveTex, neon, toon } from './kit';
+import { SLAB, type Tick } from './world';
 import { parkedCars, type CarId } from './cars';
-import type { Spot } from './landmarks';
-import { CENTRE, CONCOURSE, FACADE, GATE, MAST, MASTS, NAME, PARKED, PITCH, ROOF, SCREEN, TIERS, TRACK, ovalAt, type Pt } from './stadium';
+import type { Idle, Spot } from './landmarks';
+import { CENTRE, CONCOURSE, FACADE, FIXTURE, GATE, MAST, MASTS, NAME, PARKED, PITCH, ROOF, SCREEN, TIERS, TRACK, clockText, fixtureAt, fixtureLines, matchOn, ovalAt, type Pt } from './stadium';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 /** Points round each oval: enough that its corners read round */
@@ -92,49 +96,94 @@ function band(a: number, b: number, y0: number, y1: number, inward: boolean, fro
   return g;
 }
 
-/** The name over the gate and the big screen's picture: one small atlas, a row each */
+/** The atlas's rows: the name over the gate, then the big screen's match-night slides (fixed made-up copy) */
+const SLIDES = ['MATCH NIGHT', 'COME ON SECTOR 7', `KICK-OFF ${clockText(FIXTURE.kickoff).toUpperCase()}`];
+const ROWS = 1 + SLIDES.length;
+/** How long each slide shows on a match night */
+const SLIDE_SECONDS = 6;
+/** The name over the gate and the screen's match-night slides: one small atlas, a row each */
 function signs() {
-  const tex = canvasTex(1024, 512, (c) => {
-    // Row 0: the name, white over a dark board with a cyan glow
-    c.fillStyle = '#0b0a18';
-    c.fillRect(0, 0, 1024, 256);
-    c.font = `900 150px ${FONT_DISPLAY}`;
+  const rh = 1024 / ROWS;
+  const tex = canvasTex(1024, 1024, (c) => {
     c.textAlign = 'center';
     c.textBaseline = 'middle';
+    // Row 0: the name, white over a dark board with a cyan glow
+    c.fillStyle = '#0b0a18';
+    c.fillRect(0, 0, 1024, rh);
+    c.font = `900 150px ${FONT_DISPLAY}`;
     c.shadowColor = PAL.cyan;
     c.shadowBlur = 26;
     c.fillStyle = '#e9fbff';
-    c.fillText(NAME, 512, 136);
+    c.fillText(NAME, 512, rh / 2 - 8);
     c.shadowBlur = 0;
-    // Row 1: the screen, the city's name and what's on
-    const g = c.createLinearGradient(0, 256, 1024, 512);
-    g.addColorStop(0, '#2b0a4a');
-    g.addColorStop(1, '#0a2a4a');
-    c.fillStyle = g;
-    c.fillRect(0, 256, 1024, 256);
-    c.fillStyle = '#ffffff';
-    c.font = `900 120px ${FONT_DISPLAY}`;
-    c.fillText('SECTOR 7', 512, 350);
-    c.fillStyle = '#7cf3ff';
-    c.font = `700 52px ${FONT_MONO}`;
-    c.fillText('EVENTS COMING SOON', 512, 450);
+    // Rows 1-3: the slides, each over its own wash
+    SLIDES.forEach((text, i) => {
+      const y = rh * (i + 1);
+      const g = c.createLinearGradient(0, y, 1024, y + rh);
+      g.addColorStop(0, ['#2b0a4a', '#0a2a4a', '#3a0a2a'][i]);
+      g.addColorStop(1, ['#0a2a4a', '#2b0a4a', '#0a1e3a'][i]);
+      c.fillStyle = g;
+      c.fillRect(0, y, 1024, rh);
+      c.fillStyle = i === 1 ? '#ffd36b' : '#ffffff';
+      c.font = `900 ${i === 2 ? 96 : 118}px ${FONT_DISPLAY}`;
+      c.fillText(text, 512, y + rh / 2 - 10);
+      c.fillStyle = '#7cf3ff';
+      c.font = `700 40px ${FONT_MONO}`;
+      c.fillText(i === 0 ? 'GATES SHUT TILL THE WHISTLE' : i === 1 ? 'HOME END · AWAY END' : 'STAY FOR THE LIGHTS', 512, y + rh - 48);
+    });
   });
   return lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.2);
 }
-/** A plane showing one row of the atlas (0 the name, 1 the screen) */
-function rowPlane(w: number, h: number, row: 0 | 1) {
+/** A plane showing one row of the atlas (0 the name, 1-3 the slides); `setRow()` moves it on */
+function setRow(g: THREE.PlaneGeometry, row: number) {
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - (row + 1) / ROWS + ((i < 2 ? 1 : 0) * 1) / ROWS);
+  uv.needsUpdate = true;
+}
+function rowPlane(w: number, h: number, row: number) {
   const g = new THREE.PlaneGeometry(w, h);
-  const uv = g.attributes.uv;
-  for (let i = 0; i < uv.count; i++) uv.setY(i, row === 0 ? 0.5 + uv.getY(i) * 0.5 : uv.getY(i) * 0.5);
+  setRow(g, row);
   return g;
 }
+/** The fixture board (the screen between matches, and the board by the gate): the next match from the clock; painted live, never baked */
+const BOARD = { w: 1024, h: 360 };
+function boardTex(lines: [string, string]) {
+  return liveTex(BOARD.w, BOARD.h, (c) => {
+    const g = c.createLinearGradient(0, 0, BOARD.w, BOARD.h);
+    g.addColorStop(0, '#2b0a4a');
+    g.addColorStop(1, '#0a2a4a');
+    c.fillStyle = g;
+    c.fillRect(0, 0, BOARD.w, BOARD.h);
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillStyle = '#7cf3ff';
+    c.font = `700 40px ${FONT_MONO}`;
+    c.fillText('NEXT FIXTURE', BOARD.w / 2, 58);
+    c.fillStyle = '#ffffff';
+    c.font = `900 92px ${FONT_DISPLAY}`;
+    const [sides, when] = lines;
+    const size = Math.min(92, (92 * (BOARD.w - 80)) / c.measureText(sides).width);
+    c.font = `900 ${size}px ${FONT_DISPLAY}`;
+    c.fillText(sides, BOARD.w / 2, 168);
+    c.fillStyle = '#ffd36b';
+    c.font = `700 62px ${FONT_MONO}`;
+    c.fillText(when, BOARD.w / 2, 286);
+  });
+}
 
-export function buildStadium(scene: THREE.Scene, opts: { low: boolean }): { spot: Spot } {
+/**
+ * The stadium, a place; `crowd` takes its match-night queue (life.ts `Idle.when`), `tick` runs its match night
+ * (stadium.ts: the floodlights, the screen, the fixture board from the clock)
+ */
+export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boolean; tick: (f: Tick) => void }): { spot: Spot } {
   const group = new THREE.Group();
   group.name = 'stadium';
   scene.add(group);
   const b = new Batch();
   const S = SLAB;
+  // The floodlights' lamps (one material, the tick's) and the fixture board's (its texture repainted when the board changes)
+  const floods = new THREE.MeshBasicMaterial({ color: '#fff6d8', toneMapped: true });
+  const boardMat = lit(new THREE.MeshBasicMaterial({ map: boardTex(fixtureLines(fixtureAt(Date.now()))), toneMapped: true }), 0.95, 1.2);
 
   // The apron round it all, over the lawn (and clear of the forecourt path's height)
   b.add(ring(FACADE.a, FACADE.b, FACADE.a + 3.2, FACADE.b + 3.2, S + 0.018), APRON);
@@ -231,24 +280,47 @@ export function buildStadium(scene: THREE.Scene, opts: { low: boolean }): { spot
       b.add(new THREE.BoxGeometry(w, h, d).translate(0, y, along).rotateY(ry).translate(m.x, S, m.z), mat);
     head(MAST.head.w + 0.3, 0.12, 1.2, MAST.h - 0.1, 0.2, IRON);
     head(MAST.head.w, MAST.head.h, 0.3, MAST.h + MAST.head.h / 2, 0.45, IRON);
-    // (the lamps: a grid of small ones on the front, lit at night)
+    // (the lamps: a grid of small ones on the front, one material of their own: dim but on a match night, when the
+    // tick turns them full on)
     for (let i = 0; i < 4; i++)
       for (let j = 0; j < 2; j++)
-        head(0.5, 0.42, 0.06, MAST.h + 0.2 + j * 0.52 + 0.21, 0.63, neon('#fff6d8', 0.4, 2.4));
+        head(0.5, 0.42, 0.06, MAST.h + 0.2 + j * 0.52 + 0.21, 0.63, floods);
   }
 
-  // The screen on the north roof, facing the pitch, on two legs; its back plain
+  // The screen on the north roof, facing the pitch, on two legs; its back plain. It shows the fixture board between
+  // matches and the slides on a match night (two planes, the tick shows one)
   const sign = signs();
   b.box(SCREEN.x - SCREEN.w / 2 - 0.2, S + SCREEN.y - 0.2, SCREEN.z - 0.35, SCREEN.w + 0.4, SCREEN.h + 0.4, 0.3, IRON);
   for (const sx of [-1, 1]) b.box(SCREEN.x + sx * (SCREEN.w / 2 - 1) - 0.15, S + ROOF.y1 - 0.1, SCREEN.z - 0.3, 0.3, SCREEN.y - ROOF.y1 + 0.2, 0.3, IRON);
-  b.add(rowPlane(SCREEN.w, SCREEN.h, 1).translate(SCREEN.x, S + SCREEN.y + SCREEN.h / 2, SCREEN.z - 0.045), sign);
-  // The name over the gate, on a board standing proud of the facade
+  const slidesGeo = rowPlane(SCREEN.w, SCREEN.h, 1);
+  const slides = new THREE.Mesh(slidesGeo, sign);
+  slides.position.set(SCREEN.x, S + SCREEN.y + SCREEN.h / 2, SCREEN.z - 0.045);
+  slides.visible = false;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN.w, SCREEN.h), boardMat);
+  screen.position.copy(slides.position);
+  for (const m of [slides, screen]) {
+    m.userData.keep = true;
+    group.add(m);
+  }
+  // The name over the gate, on a board standing proud of the facade, and the fixture board beside the gate
   const nw = 9;
   const nh = nw / 4;
   b.box(GATE.x - nw / 2 - 0.1, S + GATE.h + 0.5, GATE.z + 0.05, nw + 0.2, nh + 0.2, 0.2, IRON);
   b.add(rowPlane(nw, nh, 0).translate(GATE.x, S + GATE.h + 0.6 + nh / 2, GATE.z + 0.257), sign);
+  const bw = 5;
+  const bh = (bw * BOARD.h) / BOARD.w;
+  const bx = GATE.x + gw / 2 + 0.9 + bw / 2;
+  b.box(bx - bw / 2 - 0.1, S + 2.4, GATE.z - 0.1, bw + 0.2, bh + 0.2, 0.3, IRON);
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), boardMat);
+  board.position.set(bx, S + 2.5 + bh / 2, GATE.z + 0.207);
+  board.userData.keep = true;
+  group.add(board);
 
   b.build(group);
+  // (the floodlights' lamps are driven by the tick: drawn as they are at every distance)
+  group.traverse((o) => {
+    if ((o as THREE.Mesh).material === floods) o.userData.keep = true;
+  });
 
   // The hover ring round it
   const ringMesh = new THREE.Mesh(new THREE.RingGeometry(FACADE.a + 3.6, FACADE.a + 3.9, 96), glowMat(PAL.cyan, 0, null));
@@ -257,8 +329,52 @@ export function buildStadium(scene: THREE.Scene, opts: { low: boolean }): { spot
   ringMesh.position.set(CENTRE[0], S + 0.05, CENTRE[1]);
   group.add(fx(ringMesh));
 
-  // The floodlights' light on the pitch at night: pools over it, drawn with the street lamps' (world.ts)
-  for (const sx of [-1, 0, 1]) for (const sz of [-1, 1]) addPool(CENTRE[0] + sx * 10, CENTRE[1] + sz * 4.8, 13, S + 0.03);
+  // The floodlights' light on the pitch: pools over it, on a match night only (their own glow, the tick's)
+  const poolMat = glowMat('#fff2c8', 0);
+  for (const sx of [-1, 0, 1])
+    for (const sz of [-1, 1]) {
+      const pool = new THREE.Mesh(new THREE.PlaneGeometry(13, 13).rotateX(-Math.PI / 2), poolMat);
+      pool.position.set(CENTRE[0] + sx * 10, S + 0.03, CENTRE[1] + sz * 4.8);
+      pool.userData.keep = true;
+      group.add(fx(pool));
+    }
+
+  // On a match night a few people queue at the shut gate (life.ts `Idle.when`: out of the world the rest of the time),
+  // along the forecourt west of the gate's prompt, facing it, shuffling (the crowd's `wait` act)
+  for (let k = 0; k < (opts.low ? 3 : 5); k++) crowd.push({ x: GATE.x - 1.7 - k * 0.78 - (k % 2) * 0.12, z: GATE.z + 1.45 + (k % 2) * 0.38, ry: Math.PI / 2 + ((k % 3) - 1) * 0.3, act: 'wait', when: () => matchOn(Date.now()) });
+
+  // The match night and the fixture board, from the clock (stadium.ts), looked at once a second
+  let was = { on: null as boolean | null, board: '', slide: -1, at: -Infinity };
+  opts.tick((env) => {
+    if (was.on !== null && env.t - was.at < 1) return;
+    was.at = env.t;
+    const now = Date.now();
+    const on = matchOn(now);
+    // The lamps: full on for the match, a dim glow of the housings at night otherwise; the pools come up with them
+    const k = on ? 2.6 : 0.12 + 0.3 * env.night;
+    floods.color.setRGB(k, k * 0.965, k * 0.85);
+    poolMat.opacity = on ? 0.3 * Math.max(0.3, env.night) : 0;
+    if (on !== was.on) {
+      was.on = on;
+      slides.visible = on;
+      screen.visible = !on;
+    }
+    if (on) {
+      const slide = 1 + (Math.floor(now / (SLIDE_SECONDS * 1000)) % SLIDES.length);
+      if (slide !== was.slide) {
+        was.slide = slide;
+        setRow(slidesGeo, slide);
+      }
+    }
+    const lines = fixtureLines(fixtureAt(now));
+    const key = lines.join('|');
+    if (key !== was.board) {
+      was.board = key;
+      boardMat.map?.dispose();
+      boardMat.map = boardTex(lines);
+      boardMat.needsUpdate = true;
+    }
+  });
 
   // The car park's cars, on its asphalt (the grounds, roads, car park and footbridge, are a chunk loaded as you
   // approach: stadiumgrounds3d.ts, districts.ts)
