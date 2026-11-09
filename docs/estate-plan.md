@@ -406,3 +406,39 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
     the ice-cream van's jingle (a made-up tune) on a dry day; Bunker Sound's
     half-time grime beat out of its garage door; St Aldwyn's bell tolling the
     hour by the visitor's clock, heard across the estate.
+- **Phase 8 (places and polish):** `endsplaces.ts` (DOM-free, the boot's,
+  tested in `tests/endsplaces.test.ts`). The plan is done.
+  - **Places:** the estate (spot `endswood`, its pin over the tenants' hall
+    at the parade's east end), St Aldwyn's (`aldwyns`, its pin over the
+    spire) and Bunker Sound (`bunker`): pick boxes through crestspots.ts
+    `spot()` (`ENDS_SPOTS`; the estate's and the studio's fly-ins from the
+    north, the way they face), pins, directory entries, panels with their
+    marquee lines ("Welcome to the Ends", "The bell keeps the hour", "Turn it
+    up in the garage"; made up) and Walk in (`ENDS_SPAWNS`: in front of each
+    door, facing it), `PLACES` and `LIVE_PLACES` entries, all coming soon.
+    Their doors (`ENDS_DOORS`, in walk.ts's `ALL_DOORS`) open the panels;
+    a door can carry its own `label` ("Enter Tenants' Hall").
+  - **Fixes along the way:** walking now starts with Degen's body facing the
+    way the camera looks (walk.ts, `face = yaw + π`, as fast travel's
+    `placeAt()` did): every Walk in that didn't face south arrived with him
+    turned round. The lychgate's roof is a box for the walk camera
+    (`LYCH_CAMERA`), which had sat inside its tiles following you through.
+  - **Bench views** (`ends-circus`, `ends-street`, `ends-common`). Headless
+    (draws and triangles only; frame times need a real device), average
+    draws and triangles a frame:
+
+    | View | Desktop (medium) | Phone (low) |
+    | --- | --- | --- |
+    | home | 406 · 1.01M | 273 · 395k |
+    | trenches | 255 · 1.34M | 156 · 334k |
+    | ends-circus | 167 · 555k | 105 · 172k |
+    | ends-street | 273 · 1.60M | 137 · 250k |
+    | ends-common | 578 · 2.22M | 346 · 398k |
+
+    The common's view looks north over the estate across the whole city;
+    read the same way through `?fps` after the same settle it's 312 draws
+    to the Trenches view's 287, so most of the bench's figure is the city
+    beyond, not the estate. On phones the estate's own views are the
+    lightest measured. Phones already leave out the finest details (the
+    chunk's `low`: rails, tiles, bollards' segments, every other idle
+    person, the trimmed movers, a BMX and a moped).
