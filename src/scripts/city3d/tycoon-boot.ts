@@ -304,13 +304,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     const n = (m: Partial<Record<GoodId, number>>) => Object.values(m).reduce<number>((a, b) => a + (b ?? 0), 0);
     const parts = [
       s.quit.length ? 'staff left unpaid' : '',
-      s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} ran out` : '',
-      s.earned > 0 ? `sold ${n(s.sold)} · ${fmt.format(s.earned)} Dorras in the till` : '',
-      n(s.grown) ? `grew ${n(s.grown)} raw goods` : '',
-      n(s.made) ? `made ${n(s.made)} at the Workshop` : '',
-      s.arrived.length ? `${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''} came in` : '',
+      s.expired.length ? `${s.expired.length} contract${s.expired.length > 1 ? 's' : ''} expired` : '',
+      s.earned > 0 ? `${fmt.format(s.earned)} Dorras in the till` : '',
+      n(s.grown) ? `${n(s.grown)} grown` : '',
+      n(s.made) ? `${n(s.made)} made` : '',
+      s.arrived.length ? `${s.arrived.length} courier${s.arrived.length > 1 ? 's' : ''} in` : '',
     ].filter(Boolean);
-    return parts.length ? `While you were away · ${parts.slice(0, 2).join(' · ')}` : '';
+    return parts.length ? `While away · ${parts.slice(0, 2).join(' · ')}` : '';
   }
   function tick() {
     const sales = advance(save, Date.now(), serving() ?? false);
@@ -318,9 +318,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (sales.away > 0) {
       const msg = awayNote(sales);
       if (msg) toast(msg, 7000);
-    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left unpaid`);
-    else if (sales.expired.length) toast(`Contract ran out · ${sales.expired[0].qty} ${good(sales.expired[0].good).name} for ${DESTS[sales.expired[0].to]}`);
-    else if (sales.arrived.length) toast(`Courier delivered · ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}`, 4000);
+    } else if (sales.quit.length) toast(`Your ${sales.quit.map((p) => ROLES[roleAt(save, p) ?? 'hand'].name.toLowerCase()).join(' and ')} left · unpaid`);
+    else if (sales.expired.length) toast(`Contract expired · ${sales.expired[0].qty} ${good(sales.expired[0].good).name}`);
+    else if (sales.arrived.length) toast(`Delivered · ${sales.arrived[0].qty} ${good(sales.arrived[0].good).name} to ${placeName(sales.arrived[0].to)}`, 4000);
     // (the sold-out bonus, docs/polish-plan.md Phase 9: paid straight to your balance)
     else if (sales.bonus > 0) toast(`${good(sales.soldOut[0]).name} sold out · +${fmt.format(sales.bonus)} Dorras`, 4000);
     changed();

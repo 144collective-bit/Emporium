@@ -373,7 +373,7 @@ export const STATION_WALK = {
   /** Where it crosses a street: the street, the zebra's x and the asphalt's z range */
   zebras: [
     { street: 'ew2', x: -262, z0: 41.3, z1: 44.7 },
-    { street: 'ew1', x: -290, z0: 15.3, z1: 18.7 },
+    { street: 'ew1-w', x: -290, z0: 15.3, z1: 18.7 },
     { street: 'ew0', x: -318, z0: -8.2, z1: -0.8 },
   ],
 } as const;

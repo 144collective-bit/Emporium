@@ -43,18 +43,18 @@ export const VOICE: Record<CarId, Voice> = {
 
 /** What the garage says about each one, and how it drives (0..1, for the stat bars and the handling) */
 export const DRIVE: Record<PlayerCar, { kind: string; blurb: string; speed: number; accel: number; grip: number; electric?: true }> = {
-  hatch: { kind: 'Compact', blurb: 'Small, quick off the line and easy to park anywhere in the city.', speed: 0.55, accel: 0.75, grip: 0.7 },
-  sedan: { kind: 'Saloon', blurb: 'Smooth and steady: the comfy all-rounder for cruising the avenues.', speed: 0.7, accel: 0.6, grip: 0.65 },
-  coupe: { kind: 'Sports', blurb: 'Low, loud and fast. Sticks to the road through every corner.', speed: 0.95, accel: 0.9, grip: 0.9 },
-  pickup: { kind: 'Pickup', blurb: 'Big wheels, high seat and a bed for hauling. Slow to turn.', speed: 0.6, accel: 0.5, grip: 0.5 },
-  van: { kind: 'Van', blurb: 'Room for the whole crew and all their gear. Takes its time.', speed: 0.45, accel: 0.4, grip: 0.45 },
-  muscle: { kind: 'Muscle', blurb: 'A big block up front and fat tyres at the back. Fast in a straight line, lively in the corners.', speed: 0.85, accel: 0.95, grip: 0.6 },
-  suv: { kind: 'SUV', blurb: 'Tall and tough with a huge boot. Shrugs off kerbs, leans in the bends.', speed: 0.65, accel: 0.55, grip: 0.75 },
-  super: { kind: 'Supercar', blurb: 'Low, wide and savage. The fastest thing on the city\'s streets, and it sticks like glue.', speed: 1, accel: 1, grip: 0.95 },
+  hatch: { kind: 'Compact', blurb: 'Small, quick, easy to park', speed: 0.55, accel: 0.75, grip: 0.7 },
+  sedan: { kind: 'Saloon', blurb: 'Smooth, steady all-rounder', speed: 0.7, accel: 0.6, grip: 0.65 },
+  coupe: { kind: 'Sports', blurb: 'Low, fast, grips every corner', speed: 0.95, accel: 0.9, grip: 0.9 },
+  pickup: { kind: 'Pickup', blurb: 'Hauls a lot, slow to turn', speed: 0.6, accel: 0.5, grip: 0.5 },
+  van: { kind: 'Van', blurb: 'Roomy and slow', speed: 0.45, accel: 0.4, grip: 0.45 },
+  muscle: { kind: 'Muscle', blurb: 'Fast straights, lively corners', speed: 0.85, accel: 0.95, grip: 0.6 },
+  suv: { kind: 'SUV', blurb: 'Tough, huge boot, leans in bends', speed: 0.65, accel: 0.55, grip: 0.75 },
+  super: { kind: 'Supercar', blurb: 'Low, wide, grips like glue', speed: 1, accel: 1, grip: 0.95 },
   // Vehicle plan Phase 6: three more
-  classic: { kind: 'Classic', blurb: 'Chrome bumpers, tail fins and a soft ride. Floats down the boulevards in style.', speed: 0.66, accel: 0.5, grip: 0.55 },
-  offroad: { kind: 'Off-roader', blurb: 'Lifted, big tyres, roof lights and a snorkel. Takes kerbs and banks in its stride.', speed: 0.6, accel: 0.62, grip: 0.8 },
-  ev: { kind: 'Electric', blurb: 'Smooth and silent but for a whine. All its pick-up from the first touch of the pedal.', speed: 0.78, accel: 0.98, grip: 0.82, electric: true },
+  classic: { kind: 'Classic', blurb: 'Chrome, fins, a soft ride', speed: 0.66, accel: 0.5, grip: 0.55 },
+  offroad: { kind: 'Off-roader', blurb: 'Lifted, sure-footed on rough ground', speed: 0.6, accel: 0.62, grip: 0.8 },
+  ev: { kind: 'Electric', blurb: 'Silent, instant pick-up', speed: 0.78, accel: 0.98, grip: 0.82, electric: true },
 };
 
 /**

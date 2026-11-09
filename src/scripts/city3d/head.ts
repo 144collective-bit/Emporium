@@ -9,7 +9,7 @@ const COPY = {
   still: { title: 'The Trenches', sub: (root: HTMLElement) => (root.dataset.view === 'none' ? 'Needs 3D graphics' : 'Loading the city') },
   explore: {
     title: 'City view',
-    sub: () => (narrow() ? 'Tap a building to go in' : touch() ? 'Drag to move · tap a building to go in' : 'Drag to move · click a building to go in'),
+    sub: () => (narrow() ? 'Tap a building to go in' : touch() ? 'Drag to move · tap to go in' : 'Drag to move · click to go in'),
   },
   walk: {
     title: 'Walk mode',

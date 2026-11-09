@@ -153,7 +153,7 @@ export const BADGES: Badge[] = [
   b('drones-100', 'Air defence', 'Knocked down 100 drones.', 'drones', 100, 800),
   b('dummies-50', 'Range day', 'Knocked down 50 dummies.', 'dummies', 50, 150),
   b('fists-25', 'Bare knuckles', 'Knocked down 25 dummies by hand.', 'fistDowns', 25, 300),
-  b('partners-all', 'Street Fighter', 'Beat every sparring partner on the street.', 'partnersBeaten', PARTNER_IDS.length, 600),
+  b('partners-all', 'Street Fighter', 'Beat every sparring partner.', 'partnersBeaten', PARTNER_IDS.length, 600),
   b('karts-1', 'Karter', 'Finished a kart race.', 'kartRaces', 1, 100),
   b('karts-25', 'Track regular', 'Finished 25 kart races.', 'kartRaces', 25, 800),
   b('podiums-10', 'Podium regular', 'Ten podiums at the kart park.', 'podiums', 10, 500),

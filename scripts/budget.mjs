@@ -43,9 +43,10 @@ const BUDGETS = {
    * viaduct's shape and its exits' ramps, which the land use, The Trenches and Westlake Park read at the boot;
    * and for the views plan on main (docs/views-plan.md Phases 1-4, under the same standing call): one camera system
    * for every vehicle, ride, race and the ring, and the control card's hooks in walk mode (the key table itself is
-   * its own chunk); the two together from 720
+   * its own chunk); the two together from 720; and from 730 for Endswood Estate (docs/estate-plan.md Phases 2-5,
+   * under the same standing call): its streets' routes, its blocks' and street level's solids, and its decks walked on
    */
-  bootJs: 730,
+  bootJs: 740,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /** All the CSS */

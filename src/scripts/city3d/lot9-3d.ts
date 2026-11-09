@@ -7,8 +7,8 @@
  * charred to its studs), the chain-link fence (its mesh in the FX layer) with the gate, its LOT 9 board and the hole
  * cut by the footpath, the office and the coin laundry, the fire pit (the burn barrel's flames, couches and lawn chairs,
  * string lights, the bug zapper, the radio), the junk corner (the boat on its trailer, the mechanic's bay, tyre stacks,
- * scrap), the tunnel under the highway (its ramps, walls, parapets and bollards, the passage with its fluorescent
- * strips, some flickering, tags, a puddle) and its footpath. On the main thread: the parked cars, the kids' bikes, the
+ * scrap) and the tunnel's footpath (the tunnel itself is Endswood's subway, drawn in its chunk since
+ * docs/estate-plan.md Phase 6). On the main thread: the parked cars, the kids' bikes, the
  * loose and chained dogs, the fire's glow on the ground. One sign atlas of fixed made-up copy. Phones leave out the
  * finest details.
  */
@@ -17,17 +17,19 @@ import type { Tick } from './world';
 import { Batch, FONT_DISPLAY, canvasTex, fx, glowMat, lit, neon, paintMat, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { along } from './roads3d';
-import { buildFx, chainMesh, tag, poster } from './grime';
+import { buildFx, chainMesh, tag } from './grime';
 import { parkedCars } from './cars';
 import { CROWD_VIEW } from './character';
 import { dogGeometry } from './dogs3d';
 import { COVER, ROAD } from './palette';
 import {
-  AVE_EDGE, BAY, BOAT, BOLLARD, FENCE, FENCE_H, FENCE_RUNS, FIRE, FIRE_LOT, FIRE_POLES, FIRE_SEATS, FOOTPATH, GATE, GROUND_Y, HOIST, HOLE, KIDS_ON_BIKES, LAUNDRY, LOT9_CARS,
-  LOT9_DOGS, LOT9_RECT, LOT9_SIGNS, LOT9_STREETS, MAILBOXES, OFFICE, RADIO, RIDER, ROAD_Z, SCRAP, TOOLS, TUNNEL, TUNNEL_BOLLARDS, TYRES, ZAPPER, riderAt, rng, runnerAt, tunnelFloor,
+  AVE_EDGE, BAY, BOAT, INNER_RUNS, PARK_X0, FENCE, FENCE_H, FENCE_RUNS, FIRE, FIRE_LOT, FIRE_POLES, FIRE_SEATS, FOOTPATH, GATE, GROUND_Y, HOIST, HOLE, KIDS_ON_BIKES, LAUNDRY, LOT9_CARS,
+  LOT9_DOGS, LOT9_RECT, LOT9_SIGNS, LOT9_STREETS, MAILBOXES, OFFICE, RADIO, RIDER, ROAD_Z, SCRAP, TOOLS, TUNNEL, TYRES, ZAPPER, riderAt, rng, runnerAt,
   type Pt, type Rect,
 } from './lot9';
-import { CHAINED_DOGS, HOME_CARS, HOME_SOLIDS, LOTS, PORCH_SITTERS, type Home, type Lot } from './lot9homes';
+import { CHAINED_DOGS, HOME_CARS, HOME_SOLIDS, LOTS, POLE_SOLIDS, PORCH_SITTERS, type Home, type Lot } from './lot9homes';
+import { CAMP_CARS, CAMP_DOGS, CAMP_PEOPLE, CAMP_SOLIDS } from './lot9camp';
+import { campGlow, hookupOf, registerCamp, registerPower, xmasLights, yardThing } from './lot9camp3d';
 import { addSolids } from './solids';
 import { addPeople } from './life';
 
@@ -38,15 +40,14 @@ export const SELF = import.meta.url;
 /** The gravel's height over the ground, the pads' a hair over it */
 const Y = 0.03;
 const PAD_Y = 0.034;
+/** How many of the footpath's stretches go in one site (lot9.ts `FOOTPATH`: a point every `PATH_STEP`) */
+const PATH_RUN = 5;
 const GRAVEL = toon('#6f6b66');
 const GRAVEL_DARK = toon('#5d5955');
 const PAD = toon('#77736a');
 const PUDDLE = toon('#2a2b3b');
 const CONCRETE = toon('#8a8794');
 const CONCRETE_DARK = toon('#6c6977');
-const TUNNEL_WALL = toon('#77748a');
-const TUNNEL_FLOOR = toon('#55525f');
-const TUNNEL_CEIL = toon('#3a3843');
 const POST = toon('#9ea2b4');
 const RUST = toon('#7a4a32');
 const RUST_DARK = toon('#5a3626');
@@ -59,7 +60,6 @@ const GLASS = toon('#1e2033');
 const SOOT = toon('#1b1818');
 const CHAR = toon('#2c2523');
 const TYRE = toon('#1a1820');
-const YELLOW = toon('#d9b43a');
 const BLACK = toon('#1c1b22');
 const WEEDS = [toon(COVER.worn), toon(COVER.meadow), toon(COVER.dryGrass)];
 const TARPS = [toon('#2f5fa8'), toon('#3d7a4a'), toon('#8a6a3c'), toon('#5a6b8a')];
@@ -78,9 +78,6 @@ const FLAME = neon('#ff8a2a', 0.9, 2.2, 0.6);
 const FLAME_CORE = neon('#ffd23f', 0.9, 2.4, 0.4);
 const ZAP = neon('#5aa8ff', 0.3, 2.2, 0.5);
 const STRING = neon('#ffd9a0', 0.15, 2.0);
-const TUBE = neon('#e8f0ff', 0.6, 1.25);
-const TUBE_TIRED = neon('#e8f0ff', 0.6, 1.25, 0.9);
-const TUBE_DEAD = toon('#8a8f9a');
 const FLOWERS = [neon('#e23b6b', 0.6, 0.6), neon(ROAD.yellow, 0.6, 0.6), neon('#b06ae0', 0.6, 0.6)];
 
 /* ---------- Signs: one small atlas, a row each ---------- */
@@ -507,122 +504,22 @@ function ground(b: Batch, lot: Lot, low: boolean, r: () => number) {
   });
 }
 
-/* ---------- The tunnel ---------- */
+/* ---------- The tunnel's footpaths (the tunnel itself is Endswood's subway now: endswood3d.ts, docs/estate-plan.md Phase 6) ---------- */
 
-/** A vertical quad from (a, ya0..ya1) to (c, yc0..yc1), facing n */
-function wallQuad(b: Batch, a: Pt, c: Pt, ya0: number, ya1: number, yc0: number, yc1: number, n: Pt, m: THREE.Material) {
-  const g = new THREE.BufferGeometry();
-  const p = [a[0], ya0, a[1], c[0], yc0, c[1], c[0], yc1, c[1], a[0], ya1, a[1]];
-  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-  const e = new THREE.Vector3(c[0] - a[0], yc0 - ya0, c[1] - a[1]);
-  const u = new THREE.Vector3(0, 1, 0);
-  const face = e.clone().cross(u);
-  g.setIndex(face.dot(new THREE.Vector3(n[0], 0, n[1])) >= 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
-  g.computeVertexNormals();
-  b.add(g, m);
-}
-/** A sloping floor quad across the tunnel from za to zc (its height each end) */
-function floorQuad(b: Batch, za: number, zc: number, ya: number, yc: number, m: THREE.Material) {
+function registerTunnel() {
   const T = TUNNEL;
-  const g = new THREE.BufferGeometry();
-  const [xa, xc] = [T.x - T.half, T.x + T.half];
-  g.setAttribute('position', new THREE.Float32BufferAttribute([xa, ya, za, xc, ya, za, xc, yc, zc, xa, yc, zc], 3));
-  g.setIndex([0, 2, 1, 0, 3, 2]);
-  g.computeVertexNormals();
-  if (g.attributes.normal.getY(0) < 0) g.setIndex([0, 1, 2, 0, 2, 3]);
-  g.computeVertexNormals();
-  b.add(g, m);
-}
-
-function registerTunnel(low: boolean) {
-  const T = TUNNEL;
-  const [wx, ex] = [T.x - T.half, T.x + T.half];
-  // The stretches: the north ramp, the north cutting's flat, the passage, the south cutting's flat, the south ramp
-  const breaks = [T.z0, T.ramp0, T.roof0, T.roof1, T.ramp1, T.z1];
-  const pieces: [number, number][] = [
-    [T.z0, T.roof0],
-    [T.roof0, T.roof1],
-    [T.roof1, T.z1],
-  ];
-  pieces.forEach(([za, zc], i) =>
-    site(`lot9 tunnel ${i}`, [wx - 1, za - 1, ex + 1, zc + 1], (into) => {
+  // The footpath south of the tunnel: worn dirt from the top of the ramp over the open land, through the hole to the
+  // north lane, in stretches of a few points a site (it's long since Lot 9 moved south: docs/estate-plan.md Phase 1)
+  for (let i0 = 0, k = 0; i0 < FOOTPATH.length - 1; i0 += PATH_RUN, k++) {
+    const pts = FOOTPATH.slice(i0, Math.min(FOOTPATH.length, i0 + PATH_RUN + 1));
+    const xs = pts.map((p) => p[0]);
+    const zs = pts.map((p) => p[1]);
+    site(`lot9 footpath ${k}`, [Math.min(...xs) - 1, Math.min(...zs) - 1, Math.max(...xs) + 1, Math.max(...zs) + 1], (into) => {
       const b = new Batch();
-      const fx0 = new Batch();
-      const roofed = i === 1;
-      const zs = breaks.filter((z) => z >= za && z <= zc);
-      // Floor and walls, a piece between each break
-      for (let k = 1; k < zs.length; k++) {
-        const [a, c] = [zs[k - 1], zs[k]];
-        const [ya, yc] = [tunnelFloor(a), tunnelFloor(c)];
-        floorQuad(b, a, c, ya, yc, TUNNEL_FLOOR);
-        const top = roofed ? T.ceil : 0;
-        wallQuad(b, [wx, a], [wx, c], ya, top, yc, top, [1, 0], TUNNEL_WALL);
-        wallQuad(b, [ex, a], [ex, c], ya, top, yc, top, [-1, 0], TUNNEL_WALL);
-        // (a drain channel along the west wall's foot)
-        if (!low) {
-          const g = new THREE.BufferGeometry();
-          g.setAttribute('position', new THREE.Float32BufferAttribute([wx, ya + 0.004, a, wx + 0.18, ya + 0.004, a, wx + 0.18, yc + 0.004, c, wx, yc + 0.004, c], 3));
-          g.setIndex([0, 2, 1, 0, 3, 2]);
-          g.computeVertexNormals();
-          b.add(g, BLACK);
-        }
-      }
-      if (roofed) {
-        // The ceiling (facing down), the fluorescent strips along it: a few tired and flickering, one dead
-        b.add(new THREE.PlaneGeometry(ex - wx, zc - za).rotateX(Math.PI / 2).translate(T.x, T.ceil, (za + zc) / 2), TUNNEL_CEIL);
-        let n = 0;
-        for (let z = za + 1.2; z < zc - 0.8; z += 2.4, n++) {
-          const m = n === 3 ? TUBE_DEAD : n % 3 === 1 ? TUBE_TIRED : TUBE;
-          b.box(T.x - 0.06, T.ceil - 0.05, z - 0.6, 0.12, 0.04, 1.2, m);
-          b.box(T.x - 0.09, T.ceil - 0.02, z - 0.65, 0.18, 0.02, 1.3, CONCRETE_DARK);
-        }
-        // A puddle where the roof drips, rubbish against the wall
-        flat(b, [T.x - 0.5, 318, T.x + 0.4, 319.6], T.floor + 0.006, PUDDLE);
-        b.detail(() => {
-          if (low) return;
-          b.box(ex - 0.35, T.floor, 322.4, 0.25, 0.18, 0.35, toon('#cfc9b8'));
-          b.add(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 6).rotateZ(Math.PI / 2).translate(ex - 0.5, T.floor + 0.06, 323.1), toon('#3d7a4a'));
-        });
-        // Tags down both walls, a bill or two (the FX layer)
-        [314.2, 317.6, 321.4, 324.8].forEach((z, j) => {
-          tag(fx0, j * 3 + 1, 1.3, [1, 0], wx + 0.01, T.floor + 0.75 + (j % 2) * 0.25, z);
-          tag(fx0, j * 3 + 2, 1.1, [-1, 0], ex - 0.01, T.floor + 0.7 + ((j + 1) % 2) * 0.3, z + 1.3);
-        });
-        poster(fx0, 3, 1, [1, 0], wx + 0.012, T.floor + 1.05, 319.4);
-      } else {
-        // The open cutting: its walls' tops at the ground, the parapets over them, the headwall over the portal
-        const z1 = zc;
-        for (const x of [wx - T.wall, ex]) b.box(x, 0, za, T.wall, T.rail, z1 - za, CONCRETE);
-        // (a coping along each parapet)
-        for (const x of [wx - T.wall - 0.03, ex - 0.03]) b.box(x, T.rail, za, T.wall + 0.06, 0.05, z1 - za, CONCRETE_DARK);
-        const north = i === 0;
-        const portal = north ? T.roof0 : T.roof1;
-        const [hz0, hz1] = north ? [portal, portal + 0.3] : [portal - 0.3, portal];
-        b.box(wx - T.wall, T.ceil, hz0, ex - wx + 2 * T.wall, T.rail - T.ceil, hz1 - hz0, CONCRETE);
-        b.box(wx - T.wall - 0.03, T.rail, hz0 - 0.02, ex - wx + 2 * T.wall + 0.06, 0.05, hz1 - hz0 + 0.04, CONCRETE_DARK);
-        // A lamp in a cage over the portal
-        const pz = north ? portal - 0.02 : portal + 0.02;
-        b.box(T.x - 0.15, T.ceil - 0.18, pz - (north ? 0.12 : 0), 0.3, 0.12, 0.12, BLACK);
-        b.box(T.x - 0.1, T.ceil - 0.24, pz - (north ? 0.1 : -0.02), 0.2, 0.06, 0.08, BULB);
-        // Tags on the headwall's face and the cutting's walls, a SLOW / PRIVATE board at the top of the ramp
-        tag(fx0, north ? 7 : 9, 1.6, [0, north ? -1 : 1], T.x, (T.ceil + T.rail) / 2 + 0.1, portal + (north ? -0.012 : 0.012));
-        tag(fx0, north ? 4 : 10, 1.4, [1, 0], wx + 0.01, (tunnelFloor((za + z1) / 2) + 0) / 2, (za + z1) / 2);
-        // The bollards across the top of the ramp, yellow and black
-        for (const [x, z] of TUNNEL_BOLLARDS.filter(([, z]) => z > za - 0.5 && z < z1 + 0.5)) {
-          post(b, x, z, 0, BOLLARD.h, BOLLARD.r * 0.85, YELLOW, low ? 6 : 8);
-          b.add(new THREE.CylinderGeometry(BOLLARD.r * 0.86, BOLLARD.r * 0.86, 0.14, low ? 6 : 8, 1, true).translate(x, BOLLARD.h - 0.2, z), BLACK);
-        }
-      }
-      b.build(into, { cast: true, receive: true });
-      buildFx(fx0, into);
-    })
-  );
-  // The footpath on Lot 9's side: worn dirt from the top of the ramp through the hole to the north lane
-  site('lot9 footpath', [FOOTPATH[0][0] - 3, FOOTPATH[0][1] - 1, FOOTPATH[0][0] + 3, FOOTPATH[FOOTPATH.length - 1][1] + 1], (into) => {
-    const b = new Batch();
-    for (let i = 1; i < FOOTPATH.length; i++) strip(b, FOOTPATH[i - 1], FOOTPATH[i], 0.6, Y + 0.002, toon(COVER.bare));
-    b.build(into, { cast: false, receive: true });
-  });
+      for (let i = 1; i < pts.length; i++) strip(b, pts[i - 1], pts[i], 0.6, Y + 0.002, toon(COVER.bare));
+      b.build(into, { cast: false, receive: true });
+    });
+  }
   // On Bottom Street's side: a worn path between the blocks from the sidewalk to the top of the ramp
   site('lot9 tunnel path', [T.x - 2, 296, T.x + 2, T.z0 + 1], (into) => {
     const b = new Batch();
@@ -634,7 +531,10 @@ function registerTunnel(low: boolean) {
 /* ---------- The rest ---------- */
 
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
-  registerTunnel(low);
+  registerTunnel();
+  // The Field (the camp west of the old fence line) and the park's power lines (lot9camp3d.ts)
+  registerCamp(low);
+  registerPower(low);
 
   // The lanes: gravel, a darker rut down each wheel track, potholes with puddles near only
   for (const s of LOT9_STREETS)
@@ -693,6 +593,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       if (lot.home) {
         const top = shell(b, lot.home, low, r);
         dress(b, lot.home, top, low, r);
+        // The yard's life, the hookup, the Christmas lights left up
+        const h = lot.home;
+        for (const t of h.yard) yardThing(b, t, low, h.seed);
+        hookupOf(b, h, low);
+        if (h.xmas && !low) b.detail(() => xmasLights(b, h.body[0] - 0.02, h.body[2] + 0.02, h.body[1] + 0.1, h.body[3] - 0.1, top, h.seed));
         if (lot.home.dogRun) {
           const [rx0, rz0, rx1, rz1] = lot.home.dogRun;
           for (const [a, c] of [
@@ -718,6 +623,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // The fence: posts every three tiles, a top rail, the mesh in the FX layer; the hole's cut flap bent back
   FENCE_RUNS.forEach(([a, c], i) => {
     const runs = along(a, c, 18);
+    // (the old line between the park and the Field is half down: posts leaning, panels missing, the rail gone in places)
+    const old = INNER_RUNS.includes(FENCE_RUNS[i]);
     for (let k = 1; k < runs.length; k++) {
       const [p, q] = [runs[k - 1], runs[k]];
       site(`lot9 fence ${i} ${k}`, [Math.min(p[0], q[0]) - 1, Math.min(p[1], q[1]) - 1, Math.max(p[0], q[0]) + 1, Math.max(p[1], q[1]) + 1], (into) => {
@@ -725,6 +632,23 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
         const fx0 = new Batch();
         const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
         const n = Math.max(1, Math.round(l / 3));
+        const r = rng(i * 101 + k * 7);
+        if (old) {
+          for (let j = 0; j <= n; j++) {
+            const [x, z] = [p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n];
+            const lean = (r() - 0.5) * 0.5;
+            rod(b, new THREE.Vector3(x, 0, z), new THREE.Vector3(x + Math.sin(lean) * FENCE_H, Math.cos(lean) * FENCE_H, z), 0.035, POST, low ? 4 : 6);
+          }
+          for (let j = 0; j < n; j++) {
+            if (r() < 0.4) continue;
+            const [s0, s1] = [p[1] + ((q[1] - p[1]) * j) / n, p[1] + ((q[1] - p[1]) * (j + 1)) / n];
+            const sag = 0.1 + r() * 0.35;
+            chainMesh(fx0, [p[0], s0], [p[0], s1], 0.02 + sag * 0.2, FENCE_H - 0.08 - sag);
+          }
+          b.build(into, { cast: true, receive: true });
+          buildFx(fx0, into);
+          return;
+        }
         for (let j = 0; j <= n; j++) post(b, p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n, 0, FENCE_H, 0.035, POST, low ? 4 : 6);
         bar(b, p, q, 0.05, FENCE_H - 0.05, FENCE_H, POST);
         chainMesh(fx0, p, q, 0.02, FENCE_H - 0.08);
@@ -905,7 +829,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     flat(b, BAY, PAD_Y, CONCRETE_DARK);
     b.build(into, { cast: true, receive: true });
   });
-  site('lot9 junk south', [FENCE[0], TYRES[0][1] - 2, BAY[2] + 2, FENCE[3]], (into) => {
+  site('lot9 junk south', [PARK_X0, TYRES[0][1] - 2, BAY[2] + 2, FENCE[3]], (into) => {
     const b = new Batch();
     for (const [x, z, n] of TYRES) for (let j = 0; j < n; j++) tyre(b, x + (j % 2) * 0.04, j * 0.22, z, low);
     // The scrap pile: heaps of rusty sheet, pipes, a washing machine, a bike frame
@@ -926,9 +850,10 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   /* ---------- The main thread: cars, bikes, dogs, the fire's glow ---------- */
   if (!scene) return;
   // The homes and the residents' cars join the collision grids, the porch sitters the crowd's spare slots (phones: half)
-  addSolids(HOME_SOLIDS);
-  addPeople(PORCH_SITTERS.filter((_, i) => !low || i % 2 === 0), []);
-  parkedCars(scene, GROUND_Y, [...LOT9_CARS, ...HOME_CARS]);
+  addSolids([...HOME_SOLIDS, ...POLE_SOLIDS, ...CAMP_SOLIDS]);
+  addPeople([...PORCH_SITTERS, ...CAMP_PEOPLE].filter((_, i) => !low || i % 2 === 0), []);
+  parkedCars(scene, GROUND_Y, [...LOT9_CARS, ...HOME_CARS, ...CAMP_CARS]);
+  campGlow(scene);
   const group = new THREE.Group();
   group.name = 'lot9-life';
   scene.add(group);
@@ -938,14 +863,15 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   glow.position.set(FIRE.x, 0.05, FIRE.z);
   scene.add(fx(glow));
   // The dogs: the loose ones after the kids, the chained ones in their runs
-  const dogN = LOT9_DOGS.length + CHAINED_DOGS.length;
+  const TIED = [...CHAINED_DOGS, ...CAMP_DOGS];
+  const dogN = LOT9_DOGS.length + TIED.length;
   const dogs = new THREE.InstancedMesh(dogGeometry(), paintMat(), dogN);
   dogs.castShadow = true;
   dogs.frustumCulled = false;
   dogs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   const col = new THREE.Color();
   LOT9_DOGS.forEach((d, i) => dogs.setColorAt(i, col.set(d.coat)));
-  CHAINED_DOGS.forEach((d, i) => dogs.setColorAt(LOT9_DOGS.length + i, col.set(d.coat)));
+  TIED.forEach((d, i) => dogs.setColorAt(LOT9_DOGS.length + i, col.set(d.coat)));
   group.add(dogs);
   // The kids' bikes (BMX: small wheels, a low frame), under their riders
   const bikes = new THREE.InstancedMesh(bmx(), paintMat(), KIDS_ON_BIKES);
@@ -966,7 +892,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       e.set(0, p.ry - Math.PI / 2, Math.sin(ph) * 0.06, 'YXZ');
       dogs.setMatrixAt(k, m4.compose(v.set(p.x, GROUND_Y + Math.abs(Math.sin(ph)) * 0.03, p.z), q.setFromEuler(e), sv.setScalar(d.size)));
     });
-    CHAINED_DOGS.forEach((d, k) => {
+    TIED.forEach((d, k) => {
       // (pacing a little in its run, now and then)
       const sway = Math.sin(t * 0.7 + k * 2) * 0.25;
       e.set(0, d.ry + sway - Math.PI / 2, 0, 'YXZ');

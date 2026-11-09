@@ -27,6 +27,10 @@ import { STRIP_LAMPS } from './strip';
 import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
+import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
+import { ENDS_TREES } from './endsstreet';
+import { COMMON_LAMPS, COMMON_TREES } from './endsblend';
+import { RURAL_LAMPS } from './ruraldress';
 import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
@@ -41,6 +45,7 @@ import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
+import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -50,6 +55,7 @@ import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
+import { endsLiftDoors, endsLiftRide } from './endsdecks';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -137,9 +143,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 192, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 192, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 96, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 320, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 320, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 160, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -339,12 +345,24 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Lot 9, the trailer park south of the highway (lot9.ts, docs/trailer-plan.md): its spot over the whole fenced
   // land (drawn in its chunk), the pin over the fire pit, the fly-in from the north (from over the highway)
   spots.push({ ...pickSpot(scene, 'lot9', LOT9_Y, [{ rect: LOT9_FENCE, h: 1.9 }, { rect: LOT9_OFFICE.rect, h: LOT9_OFFICE.h + 0.4 }], LOT9_FENCE, 5.2, LOT9_PIN), faces: 'n' });
+  // ...and Endswood Estate's (endsplaces.ts, docs/estate-plan.md Phase 8): the estate on its tenants' hall, St Aldwyn's
+  // and Bunker Sound (drawn in its chunk)
+  for (const e of ENDS_SPOTS) {
+    const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
+    spots.push(e.faces ? { ...s, faces: e.faces } : s);
+  }
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
     spots.push(pickSpot(scene, 'sunclub', SLAB, [{ rect: CLUBHOUSE.rect, h: CLUBHOUSE.h + 1.2 }], CLUB_LAND, CLUBHOUSE.h + 3.6, mid(CLUBHOUSE.rect)));
     spots.push(pickSpot(scene, 'sunpark', SLAB, [{ rect: PARK_LAND, h: 1 }], PARK_LAND, 4.2));
     spots.push(pickSpot(scene, 'sunschool', SLAB, [...SCHOOL.wings.map((rect) => ({ rect, h: SCHOOL.h + 0.3 })), { rect: SCHOOL.hall.rect, h: SCHOOL.hall.h + 0.3 }], SCHOOL_LAND, SCHOOL.hall.h + 2.8, mid(SCHOOL.hall.rect)));
+  }
+  // The hover lift and glow ring are retired (the owner's call, 2026-11, with the pins off by default): every spot
+  // still comes with its ring (landmark-kit.ts and crestspots.ts `spot()`), taken out of the scene here
+  for (const sp of spots) {
+    sp.ring.removeFromParent();
+    sp.ring.geometry.dispose();
   }
   // (the outskirts' trees keep off the metro's line, the districts and the streets by one rule: landuse.ts)
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
@@ -370,6 +388,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   SF_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Lot 9's (lot9.ts): sodium along its lanes, by the gate and at the tunnel's mouth; its people about (phones: half)
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
+  // Endswood's (endswood.ts, docs/estate-plan.md): sodium along Endswood Road and the Close, round the Circus, the well and the spine
+  for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
+  // ...and its trees: the green's, the churchyard's, by the playground and round the community centre (endsstreet.ts, Phase 4)
+  for (const [x, z, s] of ENDS_TREES) addTree(x, z, s, false, SLAB);
+  // ...and the common's down to Lot 9: sodium along the footpath, a few hawthorns (endsblend.ts, Phase 6)
+  for (const [x, z, ry, y] of COMMON_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z, s] of COMMON_TREES) addTree(x, z, s, false);
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
@@ -377,6 +402,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z] of UNDER_LIGHTS) addPool(x, z, 4.2, 0.03);
   // The swing bridge's lamps on its fixed approaches (swingbridge.ts, Phase 5; the span's swing with it)
   for (const [x, z, ry, y] of SWING_LAMPS) addLamp(x, z, ry, y);
+  // ...and the odd lamp along the country roads past the highway (ruraldress.ts, Phase 7)
+  for (const [x, z, ry, y] of RURAL_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z, s] of LOT9_TREES) addTree(x, z, s, false, LOT9_Y);
   LOT9_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
@@ -577,6 +604,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Pins, hover and click ---------- */
   const pins = new Map<string, HTMLElement>();
   root.querySelectorAll<HTMLElement>('[data-pin]').forEach((el) => pins.set(el.dataset.pin!, el));
+  // The pins are off by default (the owner's call, 2026-11: places are found on the world map and the hub's Map
+  // tab); Settings > Labels turns them on, remembered in this browser (a screen preference, not in the backup)
+  const LABELS_KEY = 'degen-city-labels-v1';
+  let pinsOn = false;
+  try {
+    pinsOn = localStorage.getItem(LABELS_KEY) === 'on';
+  } catch {
+    /* no storage: off */
+  }
+  root.classList.toggle('has-pins', pinsOn);
   const raycaster = new THREE.Raycaster();
   // (and the shapes drawn nowhere that stand for a place drawn as a site: Sector 7 Tower)
   raycaster.layers.enable(PICK);
@@ -794,6 +831,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(HM_SPAWN);
       });
+    // Endswood's panels (the estate, St Aldwyn's, Bunker Sound): Walk in in front of each door, facing it
+    if (id === 'endswood' || id === 'aldwyns' || id === 'bunker')
+      panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
+      });
     // Lot 9's panel: Walk in on the lane outside its gate, facing in
     if (id === 'lot9')
       panelBody.querySelector('[data-lot9-walkin]')?.addEventListener('click', () => {
@@ -926,9 +969,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /** Up or down in Sector 7 Tower's lift */
   const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
   /** Up or down in a lift: a fade, then you step out at the other end (unless the owner has closed the place for now) */
-  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty' | 'mall', name: string, arrived: string) {
-    const gate = live.place(place);
-    if (!gate.open) return tycoon?.toast(closedLine(name, gate), 3500);
+  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty' | 'mall' | null, name: string, arrived: string) {
+    const gate = place ? live.place(place) : null;
+    if (gate && !gate.open) return tycoon?.toast(closedLine(name, gate), 3500);
     if (lifting) return;
     works.want(to.x, to.z, 40);
     lifting = true;
@@ -971,10 +1014,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors()],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y)],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
+      if (id.startsWith('lift:ends:')) {
+        // (Endswood's lifts, endsdecks.ts: Fennel House's cores, Harrier Point's lift tower)
+        const r = endsLiftRide(id);
+        return r ? rideTo(r.to, null, 'Endswood', r.arrived) : undefined;
+      }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
       if (id === 'mall-lift:up' || id === 'mall-lift:down') {
         const up = id === 'mall-lift:up';
@@ -990,14 +1038,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         if (shut) return tycoon?.toast(shut, 3500);
         return void loadMono()
           .then((ui) => ui.open(id.slice(5)))
-          .catch(() => game.toast('The monorail is not running: try again in a moment'));
+          .catch(() => game.toast('Monorail not running · try again'));
       }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
         if (shut) return tycoon?.toast(shut, 3500);
         return void loadRiverBus()
           .then((ui) => ui.open(id.slice(9)))
-          .catch(() => game.toast('The river bus is not running: try again in a moment'));
+          .catch(() => game.toast('River bus not running · try again'));
       }
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');
@@ -1375,6 +1423,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     soundBtn.setAttribute('aria-pressed', String(on));
     soundBtn.querySelector('[data-sound-label]')!.textContent = on ? 'Sound on' : 'Sound off';
   });
+  const labelsBtn = root.querySelector<HTMLButtonElement>('[data-labels]')!;
+  const showLabels = (on: boolean) => {
+    pinsOn = on;
+    root.classList.toggle('has-pins', on);
+    labelsBtn.setAttribute('aria-pressed', String(on));
+    labelsBtn.querySelector('[data-labels-label]')!.textContent = on ? 'Labels on' : 'Labels off';
+    // (hidden, the labels measure nothing: measured again once they show)
+    if (on) measurePins();
+    dirty = true;
+  };
+  labelsBtn.setAttribute('aria-pressed', String(pinsOn));
+  labelsBtn.querySelector('[data-labels-label]')!.textContent = pinsOn ? 'Labels on' : 'Labels off';
+  labelsBtn.addEventListener('click', () => {
+    showLabels(!pinsOn);
+    try {
+      localStorage.setItem(LABELS_KEY, pinsOn ? 'on' : 'off');
+    } catch {
+      /* not remembered */
+    }
+  });
   root.querySelector('[data-reset]')!.addEventListener('click', () => {
     stopWalking(false);
     close();
@@ -1663,26 +1731,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     post.bloom.threshold = 1.05 + near * 0.15;
     renderer.toneMappingExposure = 1 + s.night * 0.03;
 
-    // Hover lift and rings (never lifted while walking: Degen walks on the same ground as the building)
-    for (const sp of spots) {
-      const on = sp === hovered || sp === active;
-      sp.group.position.y += ((on && !walking ? 0.22 : 0) - sp.group.position.y) * Math.min(1, dt * 10);
-      const m = sp.ring.material as THREE.MeshBasicMaterial;
-      m.opacity += ((on ? 0.85 : 0) - m.opacity) * Math.min(1, dt * 8);
-      sp.ring.scale.setScalar(1 + (on ? Math.sin(t * 4) * 0.04 : 0));
-      // (faded out, it's not drawn at all: a draw call a place saved)
-      sp.ring.visible = m.opacity > 0.01;
-    }
+    // (a hovered building no longer lifts or shows its glow ring: the owner's call, with the pins off by default;
+    // the hover still lights its pin when the labels are on, and sets the cursor)
 
-    // Pins follow their buildings on screen; far ones shrink
+    // Pins follow their buildings on screen; far ones shrink (only while the labels are on: off, nothing is placed)
     const w = host.clientWidth;
     const h = host.clientHeight;
     pinState.length = 0;
-    for (const sp of spots) {
+    for (const sp of pinsOn ? spots : []) {
       const el = pins.get(sp.id);
       if (!el) continue;
       pinPos.copy(sp.pin);
-      pinPos.y += sp.group.position.y;
       const dist = pinPos.distanceTo(camera.position);
       pinPos.project(camera);
       const visible = pinPos.z < 1 && Math.abs(pinPos.x) < 1.1 && Math.abs(pinPos.y) < 1.1;
@@ -1703,7 +1762,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Declutter: the hovered pin and nearer pins win; a label that would
     // overlap one already placed folds to a dot (still tappable)
     pinState.sort((a, b) => a.rank - b.rank);
-    if (frames % 20 === 0) readChrome();
+    if (pinsOn && frames % 20 === 0) readChrome();
     placed.length = 0;
     for (const p of pinState) {
       const [pw, ph] = pinSize.get(p.id) ?? [120, 40];

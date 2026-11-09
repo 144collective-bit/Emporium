@@ -94,7 +94,9 @@ import { MALL_CAMERA, mallWall } from './mallinside';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
-import { DOWN as TUNNEL_DOWN, inTunnelZone, tunnelRoom, tunnelWall } from './lot9';
+import { ENDS_DOORS } from './endsplaces';
+import { DOWN as UNDER_DOWN } from './underground';
+import { endsDeckWall, upOnEnds } from './endsdecks';
 import { HARBOUR_MASTER } from './docksport';
 import { SITE_DOORS } from './crestsites';
 import { RESORTS } from './resorts';
@@ -116,7 +118,7 @@ import { live } from './live-client';
 import type { FeatureId } from './live';
 import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
-import { createGroundHeight } from './groundheight';
+import { UNDER, createGroundHeight } from './groundheight';
 import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
 import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
@@ -128,7 +130,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** The landmarks' doors, Trench Avenue's, the stadium's gate, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...SITE_DOORS];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS];
 /** Doors with a word of their own (the viewpoints: nothing to enter) */
 const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out' };
 /** Prompts that say their own label (the rest say "Enter ...") */
@@ -644,7 +646,7 @@ export function createWalk(d: WalkDeps) {
     const c = carrying;
     const here = Math.hypot(c.to.x - pos.x, c.to.z - pos.z) < PUT_R;
     const at = here ? c.to : { x: pos.x + Math.sin(face) * 0.6, z: pos.z + Math.cos(face) * 0.6 };
-    if (!here) c.done = () => d.game.toast('Put down. Nothing moved.', 2500);
+    if (!here) c.done = () => d.game.toast('Put down · nothing moved', 2500);
     c.stage = 'put';
     contact?.reset();
     moments.start(crateMark('put', at, pos.x, pos.z, groundAt(at.x, at.z, pos.y), (bx, bz) => blocked(bx, bz, pos.y)), () => (crateUp = false), pos.x, pos.z);
@@ -727,10 +729,13 @@ export function createWalk(d: WalkDeps) {
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
-    // Lot 9's tunnel (lot9.ts): down in it only its walls stop you (the highway's over the roof); at street level its open cuttings' edges do
-    if (inTunnelZone(x, z)) {
-      if (y < TUNNEL_DOWN) return tunnelWall(x, z, y, RADIUS);
-      if (tunnelWall(x, z, y, RADIUS)) return true;
+    // Up on Endswood's galleries and bridges (endsdecks.ts): only their parapets, end walls and faces stop you
+    if (upOnEnds(x, z, y)) return endsDeckWall(x, z, y, RADIUS);
+    // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
+    // at street level the open cuttings' and the well's edges do
+    if (UNDER.inZone(x, z)) {
+      if (y < UNDER_DOWN) return UNDER.wall(x, z, y, RADIUS);
+      if (UNDER.wall(x, z, y, RADIUS)) return true;
     }
     const open = leavesOpen();
     if (footbridgeY(x, z, y, RADIUS, open) !== null) return false;
@@ -762,9 +767,9 @@ export function createWalk(d: WalkDeps) {
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
-    // (down in Lot 9's tunnel, lot9.ts: its walls, floor and roof, under the ground)
-    const under = from.y < 0.6 && inTunnelZone(from.x, from.z);
-    if (under) t = tunnelRoom(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
+    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, Endswood's subways and its well)
+    const under = from.y < 0.6 && UNDER.inZone(from.x, from.z);
+    if (under) t = UNDER.room(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
     // Ground (and kerb) below
     if (dir.y < 0 && !under) {
       const floor = Math.max(groundAt(from.x, from.z, from.y), 0.035) + 0.22;
@@ -1443,7 +1448,7 @@ export function createWalk(d: WalkDeps) {
     kartQuit.reset();
     kartUI.close();
     leaveKart();
-    if (!done) d.game.toast('Race abandoned. No prize this time.', 3500);
+    if (!done) d.game.toast('Race abandoned · no prize', 3500);
     return true;
   }
 
@@ -1463,7 +1468,7 @@ export function createWalk(d: WalkDeps) {
   }
   function getOut() {
     // (not up on the raised highway or its ramps: nowhere to stand there, viaground.ts)
-    if (drive.height > 1 && viaductSurface(pos.x, pos.z, -1) !== null) return d.game.toast('Not up here: off the highway first.', 2500);
+    if (drive.height > 1 && viaductSurface(pos.x, pos.z, -1) !== null) return d.game.toast('Leave the highway first', 2500);
     const out = drive.exit();
     if (!out) return;
     standAt(out);
@@ -1487,7 +1492,7 @@ export function createWalk(d: WalkDeps) {
   function leavePlane() {
     const out = fly.exit();
     if (!out) {
-      d.game.toast('Land and stop first, then get out.', 2500);
+      d.game.toast('Land and stop first', 2500);
       return;
     }
     standAt(out);
@@ -1508,13 +1513,13 @@ export function createWalk(d: WalkDeps) {
         dropCrate();
         d.touched();
       })
-      .catch(() => d.game.toast('The boat hire is closed for a moment: try again', 2500));
+      .catch(() => d.game.toast('Boat hire closed · try again', 2500));
   }
   /** Out of it: only alongside a landing (or at its mooring), stopped */
   function leaveBoat() {
     const out = boat?.exit();
     if (!out) {
-      d.game.toast('Bring it alongside a landing and stop, then get out.', 2500);
+      d.game.toast('Stop at a landing first', 2500);
       return;
     }
     standAt(out);
@@ -2513,7 +2518,7 @@ export function createWalk(d: WalkDeps) {
     const st = drive.state as { x: number; z: number; yaw: number; speed: number; vx: number; vz: number; steer: number } | null;
     if (st && betweenBarriers(st.x, st.z) && swingShut()) {
       Object.assign(st, offSwing(st), { speed: 0, vx: 0, vz: 0, steer: 0 });
-      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+      d.game.toast('Kestrel Bridge · Opening for a ship', 3500);
     }
     const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
     let steer = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
@@ -2721,14 +2726,14 @@ export function createWalk(d: WalkDeps) {
       const z = north ? SWING_BARRIERS.n - 0.9 : SWING_BARRIERS.s + 0.9;
       pos.set(SWING_X + THREE.MathUtils.clamp(pos.x - SWING_X, -2.4, 2.4), groundAt(SWING_X, z, pos.y) , z);
       vel.set(0, 0);
-      d.game.toast('Kestrel Bridge · Swinging open for the tall ship', 3500);
+      d.game.toast('Kestrel Bridge · Opening for a ship', 3500);
     }
     // Liberty Bridge's gates shutting while he's out on its leaves: he's walked back through to the nearer tower
     if (pos.y > LOW_Y - 0.4 && pos.y < LOW_Y + 1.5 && onLeaves(pos.x, pos.z) && !leavesOpen()) {
       const i = pos.z < (FACES[0] + FACES[1]) / 2 ? 0 : 1;
       pos.set(LIBERTY_X + THREE.MathUtils.clamp(pos.x - LIBERTY_X, -1.1, 1.1), LOW_Y + 0.035, FACES[i] - TO_MIDDLE[i] * 0.8);
       vel.set(0, 0);
-      d.game.toast('Liberty Bridge · The leaves are lifting for the tall ship', 3500);
+      d.game.toast('Liberty Bridge · Lifting for a ship', 3500);
     }
 
     // What the player wants, in camera space
@@ -2907,12 +2912,12 @@ export function createWalk(d: WalkDeps) {
           if (fists!.brawl.landed(combat.melee(e.move, pos.x, pos.y, pos.z, face))) {
             count(d.game.save(), 'streetChains', 1);
             d.game.commit();
-            d.game.toast('Chain of three!', 1500);
+            d.game.toast('Chain of three', 1500);
           }
         }
         else if (e.kind === 'tired' && performance.now() - tiredAt > 4000) {
           tiredAt = performance.now();
-          d.game.toast('Out of breath: let him get it back for a moment.', 2200);
+          d.game.toast('Out of breath', 2200);
         }
       }
     const speed = vel.length();
@@ -3133,7 +3138,7 @@ export function createWalk(d: WalkDeps) {
           console.warn('Sector 7: the motion capture did not load, the simpler walk stands in', err);
           if (!mocapWarned) {
             mocapWarned = true;
-            d.game.toast("The motion capture didn't load: the simpler walk for now. Reload to try again.", 5000);
+            d.game.toast('Simple walk for now · reload to retry', 5000);
           }
         },
       );
@@ -3238,8 +3243,8 @@ export function createWalk(d: WalkDeps) {
     pivot.y += (pivotWant.y + dip - pivot.y) * damp(firstPerson ? 25 : 10, dt);
     // Looking up tilts the view but keeps the camera behind him (not down at his feet),
     // so he drops to the bottom of the frame and the sky opens up
-    // (down in Lot 9's tunnel the camera keeps low behind him, under its roof, instead of pinned to his head: lot9.ts)
-    const lowRoof = !firstPerson && pos.y < TUNNEL_DOWN && inTunnelZone(pos.x, pos.z);
+    // (down below ground the camera keeps low behind him, under the roof, instead of pinned to his head: underground.ts)
+    const lowRoof = !firstPerson && pos.y < UNDER_DOWN && UNDER.inZone(pos.x, pos.z) && UNDER.roofed(pos.x, pos.z);
     const camPitch = firstPerson ? pitch : lowRoof ? THREE.MathUtils.clamp(pitch, -0.12, 0.1) : Math.max(pitch, -0.12);
     offset.set(Math.sin(yaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(yaw) * Math.cos(camPitch));
     const want = firstPerson ? 0 : zoom * (aimNow ? 0.62 : 1);
@@ -3338,13 +3343,18 @@ export function createWalk(d: WalkDeps) {
       best = { id: `spar:${sp.id}`, label: `Spar · ${sp.name}` };
       bestD = 0;
     }
-    if (!drive.active)
-      // (and the snack bars, the inventory chunk's)
-      for (const p of hotbar ? [...d.places(), ...hotbar.doors] : d.places())
-        if (Math.hypot(p.x - pos.x, p.z - pos.z) < 1) {
+    if (!drive.active) {
+      // (and the snack bars, the inventory chunk's; the nearest, where two are close: a lift's Up and Down doors)
+      let near = 1;
+      for (const p of hotbar ? [...d.places(), ...hotbar.doors] : d.places()) {
+        const pd = Math.hypot(p.x - pos.x, p.z - pos.z);
+        if (pd < near) {
+          near = pd;
           best = { id: `place:${p.id}`, label: p.label };
           bestD = 0;
         }
+      }
+    }
     // The hire boat's ladder by Downtown's landing (river plan step 4c)
     if (!drive.active && Math.hypot(HIRE.door.x - pos.x, HIRE.door.z - pos.z) < 1) {
       best = { id: 'boat', label: 'Take a boat' };
@@ -3366,7 +3376,7 @@ export function createWalk(d: WalkDeps) {
       const dd = Math.hypot(door.x - pos.x, door.z - pos.z);
       if (dd < bestD) {
         bestD = dd;
-        best = { id: door.id, label: DOOR_LABEL[door.id] ?? root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
+        best = { id: door.id, label: DOOR_LABEL[door.id] ?? ('label' in door ? (door.label as string) : null) ?? root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
       }
     }
     // A free bench to sit on (moments.ts); seated, standing up
@@ -3613,6 +3623,8 @@ export function createWalk(d: WalkDeps) {
         pos.set(spawn.x, groundAt(spawn.x, spawn.z), spawn.z);
         yaw = spawn.yaw;
       }
+      // (his body facing the way the camera looks: the place in front of him, not always the same way)
+      face = yaw + Math.PI;
       // Over the shoulder by default; V (or the Controls panel) swaps to first person
       pitch = 0.35;
       zoom = camDist = homeZoom();

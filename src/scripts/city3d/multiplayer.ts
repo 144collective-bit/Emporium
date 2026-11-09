@@ -116,7 +116,7 @@ export function createMultiplayer(d: MultiplayerDeps) {
     );
     if (online()) {
       label.textContent = `${room} · ${people.length + 1}`;
-      status.textContent = people.length ? `You're in ${room} with ${people.length} other ${people.length === 1 ? 'Degen' : 'Degens'}.` : `You're in ${room}. Nobody else here yet.`;
+      status.textContent = people.length ? `${room} · ${people.length} other ${people.length === 1 ? 'Degen' : 'Degens'}` : `${room} · nobody else yet`;
     }
     changed();
   }
@@ -131,14 +131,14 @@ export function createMultiplayer(d: MultiplayerDeps) {
     label.textContent = s === 'connecting' || s === 'retrying' ? 'Joining…' : 'Go online';
     status.textContent =
       s === 'connecting'
-        ? 'Finding a city with room…'
+        ? 'Finding a city…'
         : s === 'retrying'
-          ? 'Connection lost. Trying again…'
+          ? 'Connection lost · retrying…'
           : s === 'full'
-            ? 'Every city is full right now. Try again in a minute.'
+            ? 'Every city is full · try soon'
             : s === 'error'
-              ? (detail ?? 'Something went wrong.')
-              : 'Walk the city with other Degens. Emotes and set phrases only, nothing typed.';
+              ? (detail ?? 'Something went wrong')
+              : 'Walk with other Degens · no typing';
     changed();
   }
 

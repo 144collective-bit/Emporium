@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import { MEDIAN, NS_ROADS } from '../src/scripts/city3d/layout';
 import { LOT9_STREETS, inLot9 } from '../src/scripts/city3d/lot9';
+import { inEndswood } from '../src/scripts/city3d/endswood';
 import { LOOP, IN } from '../src/scripts/city3d/stadium';
 import { DRIVE_X, EW0, LOOP as K_LOOP } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
@@ -62,6 +63,8 @@ const crestWay = (q: Pt) => q[0] > HIGHWAY_BOX[2] && q[0] < CREST_RECT[2] && q[1
 const docksWay = (q: Pt) => q[0] < HIGHWAY_BOX[0] && inDocks(q[0], q[1], 30);
 /** Lot 9's lane and loops south of the highway, and the south avenue down to them (lot9.ts) */
 const lot9Way = (q: Pt) => inLot9(q[0], q[1], 6) || (Math.abs(q[0] - NS_ROADS[0].c) < NS_ROADS[0].half + 6 && q[1] > HIGHWAY_BOX[3] && q[1] < LOT9_STREETS[0].pts[0][1] + 6);
+/** Endswood's streets south of the highway (endswood.ts, docs/estate-plan.md Phase 2): Endswood Road, the Circus and the avenues down to them */
+const endsWay = (q: Pt) => inEndswood(q[0], q[1], 9);
 const airportWay = (q: Pt) =>
   (q[0] > HIGHWAY_BOX[2] && q[0] < AIR_ROAD.x + 3 && q[1] > AIR_ROAD.z0 - 14 && q[1] < AIR_LOOP.out) ||
   // (Cargo Road off it and the truck yard's loop: step 3)
@@ -94,7 +97,10 @@ function alongPts(pts: Pt[], p: Pt) {
   return at;
 }
 
-test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks' and Lot 9's streets)", () => {
+test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks', Lot 9's and Endswood's streets, or the country roads)", () => {
+  // (the country roads past the highway, their joins and turning loops: rural.ts, docs/highway-plan.md Phase 7)
+  // (and the grid roads' town pieces out to them, past the last junction: the arterials, `ns` / `ew`)
+  const ruralWay = (q: [number, number]) => PLAN.streets.some((s) => (s.kind === 'rural' || /^(ns|ew)\d+[es]?$/.test(s.id)) && distToStreet(s, q) < s.half + 4);
   for (const [i, r] of ROUTES.entries())
     for (const { at: q } of points(r)) {
       assert.ok(
@@ -102,12 +108,12 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q) || exitWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q) || endsWay(q) || exitWay(q) || ruralWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 
 test('between them the routes drive every street that goes anywhere, each way (an avenue in one lane or the other)', () => {
-  const all = ROUTES.flatMap((r) => points(r, 1));
+  const all = ROUTES.flatMap((r) => points(r, 0.5));
   const grid = new Map<string, { at: Pt; dir: Pt }[]>();
   const cell = (x: number, z: number) => `${Math.floor(x / 10)},${Math.floor(z / 10)}`;
   for (const p of all) {
@@ -122,8 +128,8 @@ test('between them the routes drive every street that goes anywhere, each way (a
           if (Math.hypot(p.at[0] - q[0], p.at[1] - q[1]) < 0.9 && p.dir[0] * u[0] + p.dir[1] * u[1] > 0.9) return true;
     return false;
   };
-  /** Either lane of an avenue that way: the other lane is LANE across */
-  const drivenSide = (q: Pt, u: Pt) => [-1, 1].some((k) => driven([q[0] - u[1] * 1.7 * k, q[1] + u[0] * 1.7 * k], u));
+  /** Either lane of an avenue that way: the other lane is LANE across (or two, where a planted median pushes them out: routes.ts `wide()`) */
+  const drivenSide = (q: Pt, u: Pt) => [-2, -1, 1, 2].some((k) => driven([q[0] - u[1] * 1.7 * k, q[1] + u[0] * 1.7 * k], u));
   let checked = 0;
   // (Sunridge's cul-de-sacs go nowhere: no traffic down them, as Crestmont's spurs)
   for (const s of roads.filter((s) => !s.id.startsWith('sun-court')))

@@ -395,7 +395,7 @@ export function createFight(d: FightDeps): Fight {
           break;
         case 'parry':
           d.sfx('parry');
-          d.ui.pop(e.who === YOU ? 'Parry!' : 'Parried', e.who === YOU ? 'good' : 'bad');
+          d.ui.pop(e.who === YOU ? 'Parry' : 'Parried', e.who === YOU ? 'good' : 'bad');
           break;
         case 'stagger':
           if (e.who === YOU) d.ui.pop('Staggered', 'bad');
@@ -421,7 +421,7 @@ export function createFight(d: FightDeps): Fight {
             endAt = elapsed + 1.3;
             endWon = e.who === THEM;
           }
-          else d.ui.pop(e.who === YOU ? 'Knocked down' : 'Knockdown!', e.who === YOU ? 'bad' : 'good');
+          else d.ui.pop(e.who === YOU ? 'Knocked down' : 'Knockdown', e.who === YOU ? 'bad' : 'good');
           break;
         case 'getup':
           break;
@@ -632,7 +632,7 @@ export function createFight(d: FightDeps): Fight {
         return false;
       }
       if (!useItem(d.game.save(), 'snack', true).ok) {
-        d.ui.pop('No snacks: the diners and the Night Market sell them', 'bad');
+        d.ui.pop('No snacks · diners or Night Market', 'bad');
         return false;
       }
       a.health = Math.min(T.health, a.health + SNACK_HEAL * T.health);

@@ -166,7 +166,7 @@ const EXIT_DATA: [string, string, Pt, string, 1 | -1, Form, Form][] = [
   // (outside, Airport Drive runs where the loop would; it could only move east through the Runway Hotel: a slip)
   ['highway-ew4-0', 'ew4', [275, 137], 'Airport · Harbour', 1, 'slip', 'slip'],
   ['highway-ns3-1', 'ns3', [64.5, 320], 'Southfield · General Aviation', -1, 'full', 'slip'],
-  ['highway-ns0-0', 'ns0s', [-4.5, 320], 'Lot 9 · The Trenches', 1, 'slip', 'slip'],
+  ['highway-ns0-0', 'ns0s', [-4.5, 320], 'Endswood · The Trenches', 1, 'slip', 'slip'],
   // (outside, the Docks' ring road and everything east of it stand where a loop would go: a slip, the owner's open land only)
   ['highway-ew4-1', 'ew4', [-215, 137], 'Southbank Docks', -1, 'slip', 'slip'],
   ['highway-ew0-1', 'ew0', [-215, -4.5], 'Uptown · Kart Park', 1, 'full', 'full'],

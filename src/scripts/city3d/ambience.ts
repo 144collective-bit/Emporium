@@ -32,6 +32,9 @@
  * compressor running, a reversing beep now and then) and the kart park (`karts`: engines idling and a tannoy's
  * murmur, low; a race's own karts are kart.ts's). The polish plan's Phase 7 added the stadium on a match night
  * (`stadium`: the crowd's roar swelling now and then round the ground, from stadium.ts's `matchOn()` and the clock).
+ * On Endswood Estate (docs/estate-plan.md Phase 7) its own (`ends`: pigeons by day, a moped now and then, the two-tone
+ * siren far off, the ice-cream van's jingle on a summer's day), Bunker Sound's beat out of its garage door (`studio`)
+ * and St Aldwyn's bell on the hour, heard across the estate and beyond (`bell`).
  */
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
@@ -61,6 +64,9 @@ import { BLOCK as STADIUM_BLOCK, matchOn } from './stadium';
 import { DECKS, MARKET_DECK } from './waterfront';
 import { PROMENADE } from './outer';
 import { YARDS_RECT, inYards } from './southfield';
+import { ENDSWOOD_RECT, inEndswood } from './endswood';
+import { CHURCH, STUDIO } from './endsstreet';
+import { COMMON, inCommon } from './endsblend';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -109,7 +115,15 @@ export interface Ambience {
   karts: number;
   /** The stadium on a match night (stadium.ts `matchOn()`): the crowd's roar swelling now and then, 0-1; 0 any other time */
   stadium: number;
+  /** Endswood Estate: pigeons, mopeds, the two-tone siren far off, the ice-cream van, 0-1 */
+  ends: number;
+  /** Bunker Sound's beat out of its garage door, 0-1 */
+  studio: number;
+  /** St Aldwyn's bell (sound.ts tolls it on the hour), 0-1 */
+  bell: number;
 }
+/** The church's tower, where its bell hangs */
+const BELFRY = [(CHURCH.tower.rect[0] + CHURCH.tower.rect[2]) / 2, (CHURCH.tower.rect[1] + CHURCH.tower.rect[3]) / 2];
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
 export const CREST_HUM = 0.4;
 /** Crestmont's fountains: x, z, the basin's radius */
@@ -198,8 +212,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const k = 1 - 0.6 * smooth(20, 160, lift);
   // The Trenches: all of it inside, fading out over 30 past its edge
   const fromHood = inTrenches(x, z) ? 0 : past(TRENCH_RECT, x, z) + 4;
-  // (and Lot 9, south of the highway: its dogs, sirens far off; lot9.ts)
-  const fromLot9 = inLot9(x, z) ? 0 : past(LOT9_RECT, x, z) + 4;
+  // (and Endswood south of the highway, and Lot 9 south of it: their dogs, sirens far off; endswood.ts, lot9.ts)
+  const fromLot9 = Math.min(inLot9(x, z) ? 0 : past(LOT9_RECT, x, z) + 4, inEndswood(x, z) ? 0 : past(ENDSWOOD_RECT, x, z) + 4);
   const hood = 1 - smooth(0, 30, Math.min(fromHood, fromLot9));
   let box = Infinity;
   for (const b of BOOMBOXES) box = Math.min(box, Math.hypot(x - b.x, z - b.z));
@@ -266,6 +280,12 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const karts = near(KART_RECT, x, z, 0, 40);
   // The stadium's crowd on a match night (the polish plan's Phase 7): round the ground, carrying well past its block
   const stadium = matchOn(t * 1000) ? near(STADIUM_BLOCK, x, z, 0, 90) : 0;
+  // Endswood: all of it on its land and the common down to Lot 9, fading over 25 past them; the studio's beat by its
+  // door; the church's bell across the estate, fading over a long way
+  const fromEnds = Math.min(inEndswood(x, z) ? 0 : past(ENDSWOOD_RECT, x, z) + 4, inCommon(x, z) ? 0 : past(COMMON, x, z) + 4) - 4;
+  const ends = 1 - smooth(0, 25, Math.max(0, fromEnds));
+  const studio = 1 - smooth(2, 18, Math.hypot(x - STUDIO.door[0], z - STUDIO.door[1]) + lift * 0.5);
+  const bell = 1 - smooth(25, 170, Math.hypot(x - BELFRY[0], z - BELFRY[1]) + lift * 0.3);
   return {
     city: town,
     water: Math.max(water, lake) * k,
@@ -290,5 +310,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     yards: yards * k,
     karts: karts * k,
     stadium: stadium * k,
+    ends: ends * k,
+    studio,
+    bell,
   };
 }

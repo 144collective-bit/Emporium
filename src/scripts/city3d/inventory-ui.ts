@@ -173,13 +173,13 @@ export function buySnack(game: GameDeps, where: string) {
   const s = game.save();
   const r = buyItem(s, 'snack');
   if (!r.ok) {
-    game.toast(r.why === 'max' ? `Your bag holds ${ITEM_MAX} snacks.` : whyNot(r.why, ITEM_CATALOG.snack.level));
+    game.toast(r.why === 'max' ? `Bag full · ${ITEM_MAX} snacks max` : whyNot(r.why, ITEM_CATALOG.snack.level));
     game.sfx('denied');
     return false;
   }
   game.commit();
   game.sfx('buy');
-  game.toast(`${where} · snack bought · ${s.inventory.items.snack} of ${ITEM_MAX} in your bag`, 3600);
+  game.toast(`${where} · snack bought · ${s.inventory.items.snack} / ${ITEM_MAX} in bag`, 3600);
   return true;
 }
 

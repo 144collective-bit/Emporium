@@ -15,7 +15,7 @@
 import { BRIDGED_NS, BS, CORE_ROADS, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RIVER, RING_HI, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, ewStreet, nsRuns, nsStreet, type Road } from './layout';
 import { ALLEYS, BLOCKS_DT, DIAGONALS, LANES } from './downtown';
 import { BENDS, BEND_KERBS, OUTER_BLOCKS, OUTER_PARKS, OUTER_SQUARES, PADS } from './outer';
-import { AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
+import { AIRPORT_AREAS, AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROAD, GA_STREETS, ROAD } from './airfield';
 import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { EXITS, RAMPS, RAMP_HALF } from './viaduct';
@@ -24,15 +24,17 @@ import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
 import { HALF as SWING_HALF, ROAD as SWING_ROAD, SWING_STREET, SX as SWING_X, swingPts } from './swingbridge';
 import { NORTH_BLOCK } from './uptownnorth';
-import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadium';
-import { KART_CROSSINGS, KART_STREETS } from './kartpark';
+import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_RECTS, STADIUM_STREETS } from './stadium';
+import { KART_CROSSINGS, KART_PARK, KART_STREETS } from './kartpark';
 import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './mall';
 import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS, crestPoly } from './crestmont';
 import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
-import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS } from './docks';
+import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS, EL_X } from './docks';
 import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
-import { LOT9_CROSSINGS, LOT9_STREETS } from './lot9';
+import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS } from './lot9';
+import { ENDS_BLOCKS, ENDS_CROSSINGS, ENDS_STREETS } from './endswood';
+import { ruralSplit } from './rural';
 
 export type Pt = [number, number];
 
@@ -44,7 +46,7 @@ export type Pt = [number, number];
  *   from one, its heights in `ys` (docs/highway-plan.md Phase 3)
  * - alley: walk-only, no cars (cars never route along it)
  */
-export type StreetKind = 'street' | 'avenue' | 'highway' | 'ramp' | 'alley';
+export type StreetKind = 'street' | 'avenue' | 'highway' | 'ramp' | 'alley' | 'rural';
 /** Up off the ground: the raised highway and its ramps (what's drawn, walked and measured at street level leaves them out) */
 export const raised = (s: { kind: StreetKind }) => s.kind === 'highway' || s.kind === 'ramp';
 
@@ -397,6 +399,10 @@ export function cityPlan(): StreetPlan {
   // Lot 9's lane in off the south avenue past the highway and its two one-way loops (lot9.ts, docs/trailer-plan.md)
   for (const t of LOT9_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of LOT9_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  // Endswood Estate between them (endswood.ts, docs/estate-plan.md Phase 2): Endswood Road from the south avenue to the
+  // east one, the Circus (one way round, as Uptown's) and the Close off it
+  for (const t of ENDS_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.loop ? { loop: true } : {}), ...(t.oneway ? { oneway: t.oneway } : {}) });
+  for (const c of ENDS_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -496,6 +502,8 @@ export function cityPlan(): StreetPlan {
     ...DOCK_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'docks', walk: b.walk })),
     ...STRIP_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'strip', walk: b.walk })),
     ...SF_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use, ref: b.ref, walk: b.walk })),
+    // Endswood's round the Circus and either side of Endswood Road east of the avenue (endswood.ts)
+    ...ENDS_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];
@@ -504,6 +512,11 @@ export function cityPlan(): StreetPlan {
     ...OUTER_SQUARES.map((q): Plaza => ({ id: `square-${q.id}`, kind: 'square', poly: square(q.rect[0], q.rect[1], q.rect[2] - q.rect[0], q.rect[3] - q.rect[1]) })),
     ...OUTER_PARKS.map((q): Plaza => ({ id: `park-${q.id}`, kind: 'park', poly: square(q.rect[0], q.rect[1], q.rect[2] - q.rect[0], q.rect[3] - q.rect[1]) })),
   ];
+  // The country roads past the highway (rural.ts, docs/highway-plan.md Phase 7): each grid road's town piece ends past
+  // the last thing beside it, and runs on to the world's edge as a two-lane country road with a turning loop
+  const box = (poly: Pt[]): [number, number, number, number] => [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1]))];
+  // (the el down the Docks' line and over the river onto the north bank avenue's median counts too: docks.ts EL_X)
+  ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], LOT9_RECT, ...STADIUM_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
   return withSlabs({ streets, crossings, blocks, plazas });
 }
 

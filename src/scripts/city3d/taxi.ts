@@ -162,7 +162,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
     for (const s of route.stops) {
       const dd = s.enter - 1.0 - (p + 1.2);
       if (dd < -0.05 || dd > 14) continue;
-      const light = s.j.lit ? lightState(s.j, s.phase, t) : 'g';
+      const light = s.j.lit ? lightState(s.j, s.phase, t, s.left) : 'g';
       if (light === 'r' || (light === 'y' && dd > 2)) target = Math.min(target, Math.max(0, dd * 1.4));
     }
     // The swing bridge's barriers while it swings for the tall ship (swingbridge.ts)
@@ -237,11 +237,11 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
 
   /** Call a taxi to take you to a place */
   function call(to: Place) {
-    if (!d.free()) return d.toast('Taxis pick up on foot: get out first');
+    if (!d.free()) return d.toast('Get out first for a taxi');
     if (state === 'riding') return;
     const you = d.you();
     const there = pathBetween([you.x, you.z], [to.at.x, to.at.z]);
-    if (!there || there.len < 12) return d.toast(there ? `You're nearly at ${d.name(to)}: walk it` : 'No taxi can get there from here');
+    if (!there || there.len < 12) return d.toast(there ? `Nearly there · walk to ${d.name(to)}` : 'No taxi goes there from here');
     dest = to;
     make();
     // Its pickup: the start of the drive there. It comes from a spot a way off, out on the roads
@@ -268,11 +268,11 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
       p = 0;
       place();
       state = 'waiting';
-      show(`Your taxi to ${d.name(to)} is here`, { in: true, cancel: true });
+      show(`Taxi is here · ${d.name(to)}`, { in: true, cancel: true });
     } else {
       place();
       state = 'coming';
-      show(`A taxi's on its way · to ${d.name(to)}`, { cancel: true });
+      show(`Taxi on its way · ${d.name(to)}`, { cancel: true });
     }
     d.want(to.at.x, to.at.z, 70);
   }
@@ -325,7 +325,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
       d.toast(`As close as the road goes · ${d.name(to)} ahead`);
     } else {
       d.arrive(to);
-      d.toast(`Here you are: ${d.name(to)}`);
+      d.toast(`Arrived · ${d.name(to)}`);
     }
   }
   function stop() {
@@ -368,7 +368,7 @@ export function createTaxis(root: HTMLElement, d: TaxiDeps) {
           p = 0;
           seg = 0;
           place();
-          show(`Your taxi to ${dest ? d.name(dest) : ''} is here`, { in: true, cancel: true });
+          show(`Taxi is here · ${dest ? d.name(dest) : ''}`, { in: true, cancel: true });
         }
       } else if (state === 'waiting') {
         const you = d.you();

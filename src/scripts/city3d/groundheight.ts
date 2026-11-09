@@ -33,7 +33,10 @@ import { viaductY } from './viaground';
 import { skyDeckY } from './skydeck';
 import { mallFloor } from './mallinside';
 import { inChannel, shoreY } from './river';
-import { tunnelY } from './lot9';
+import { LOT9_PASSAGE } from './lot9';
+import { SUBWAYS, WELL } from './endswood';
+import { underworld } from './underground';
+import { endsDeckY } from './endsdecks';
 import { heightAt, onHills } from './terrain';
 import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
@@ -76,9 +79,15 @@ export function baseAt(x: number, z: number): { base: number; open: boolean; sla
   return { base: STREET, open: true, slab: false };
 }
 
+/** What's below street level for walking (underground.ts): Lot 9's tunnel under the highway, Endswood's subways and its well */
+export const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS], [WELL]);
+
 export const GROUND_LAYERS: GroundLayer[] = [
-  // Lot 9's tunnel under the highway (lot9.ts): its ramps and open cuttings, and its floor under the roof when `yNow` is down there
-  { id: 'tunnel', how: 'take', at: (x, z, yNow) => tunnelY(x, z, yNow) },
+  // Endswood's galleries and bridges, when `yNow` is up there (endsdecks.ts; over the subways' ramps too)
+  { id: 'endsdecks', how: 'take', at: (x, z, yNow) => endsDeckY(x, z, yNow) },
+  // Below ground (underground.ts): Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
+  // open floors, and a floor under a roof when `yNow` is down there
+  { id: 'tunnel', how: 'take', at: (x, z, yNow) => UNDER.y(x, z, yNow) },
   // A block's edge onto open land eases down to the ground (verges.ts: the bank's slope)
   {
     id: 'verge',

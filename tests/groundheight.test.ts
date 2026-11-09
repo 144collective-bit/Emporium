@@ -4,7 +4,8 @@
 // overlaps (a deck over the water, the tunnel under the highway, the mall's upper floor).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GROUND_LAYERS, SLAB, STREET, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
+import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
+import { ENDS_FLOORS, endsDeckY } from '../src/scripts/city3d/endsdecks';
 import { DECK_Y, MARKET_DECK, onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
 import { DEPARTURES, departuresY } from '../src/scripts/city3d/airfield';
@@ -23,7 +24,7 @@ import { TERRAIN_RECT } from '../src/scripts/city3d/terrain';
 import { SPIRE_LOT } from '../src/scripts/city3d/highrise';
 import { UP, UPPER, mallFloor } from '../src/scripts/city3d/mallinside';
 import { inChannel, shoreY } from '../src/scripts/city3d/river';
-import { TUNNEL, tunnelY } from '../src/scripts/city3d/lot9';
+import { TUNNEL } from '../src/scripts/city3d/lot9';
 import { heightAt, onHills } from '../src/scripts/city3d/terrain';
 import { rollsAt } from '../src/scripts/city3d/rolls';
 import { HX, harbourY } from '../src/scripts/city3d/harbour';
@@ -39,7 +40,9 @@ const DISC = { ...GARAGE_SITE.turntable, top: 0.07 };
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 function reference(leavesOpen: () => boolean) {
   return (x: number, z: number, yNow = 0) => {
-    const tn = tunnelY(x, z, yNow);
+    const ends = endsDeckY(x, z, yNow);
+    if (ends !== null) return ends;
+    const tn = UNDER.y(x, z, yNow);
     if (tn !== null) return tn;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
     if (slab === 0.035) {
@@ -98,8 +101,11 @@ const JETTY_AT: [number, number] = [JETTY.x, (JETTY.z0 + JETTY.z1) / 2];
 const SHORE = find([-150, 60, 150, 150], (x, z) => inChannel(x, z) && baseAt(x, z).open && !onDeck(x, z));
 /** The mall's east gallery, upstairs */
 const GALLERY = mid(UPPER[2]);
+/** One of Endswood's galleries (a level floor, not a stair or its foot): the estate's decks walked on (endsdecks.ts) */
+const GALLERY_FLOOR = ENDS_FLOORS.find((f) => !f.stair && !f.ground && !f.slope)!;
 /** The places the layers are: a point on each, and the heights they're asked at */
 const SPOTS: [number, number][] = [
+  mid(GALLERY_FLOOR.rect),
   mid(MARKET_DECK),
   [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2],
   [TUNNEL.x, TUNNEL.z0 + 1],
@@ -145,6 +151,7 @@ test('the layered ground agrees with the old groundAt() everywhere, at every hei
 test('every layer answers alone where it stands, and nowhere on the open street downtown', () => {
   const g = (x: number, z: number) => ({ ...baseAt(x, z), leavesOpen: true });
   const where: Record<string, [number, number, number]> = {
+    endsdecks: [mid(GALLERY_FLOOR.rect)[0], mid(GALLERY_FLOOR.rect)[1], GALLERY_FLOOR.y],
     tunnel: [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2, -2],
     hills: [HILL[0], HILL[1], 0],
     rolls: [ROLL[0], ROLL[1], 0],
@@ -188,7 +195,7 @@ test('the order resolves the overlaps: a deck over the water, the tunnel under t
   assert.equal(ground(mx, mz), DECK_Y);
   // Lot 9's tunnel: down there its floor, up at street level the ground over it
   const tz = (TUNNEL.z0 + TUNNEL.z1) / 2;
-  const down = tunnelY(TUNNEL.x, tz, -2)!;
+  const down = UNDER.y(TUNNEL.x, tz, -2)!;
   assert.equal(ground(TUNNEL.x, tz, -2), down);
   assert.ok(down < 0 && ground(TUNNEL.x, tz, 0) > down, 'the ground over the tunnel is higher than its floor');
   // The mall's two floors by height

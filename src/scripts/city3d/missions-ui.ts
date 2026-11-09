@@ -152,7 +152,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       const m = mission(ds.claim);
       const r = claimMission(s, ds.claim);
       if (r.ok && m) {
-        game.toast(`${m.name} done · ${fmt.format(r.reward)} Dorras +${fmt.format(r.xp)} XP`);
+        game.toast(`Mission done · +${fmt.format(r.reward)} Dorras, +${fmt.format(r.xp)} XP`);
         game.sfx('mission');
       } else {
         game.toast(r.ok ? 'Claimed' : whyNot(r.why));
@@ -174,10 +174,10 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       const m = mission(ds.take)!;
       const r = acceptMission(s, ds.take, Date.now());
       if (r.ok) {
-        game.toast(`Taken · ${m.name}`);
+        game.toast(`Mission taken · ${m.name}`);
         game.sfx('mission', 0.6);
       } else {
-        game.toast(r.why === 'max' ? `${MISSIONS_MAX} missions on the go already` : r.why === 'level' ? whyNot('level', m.level) : whyNot(r.why));
+        game.toast(r.why === 'max' ? `Already ${MISSIONS_MAX} missions on the go` : r.why === 'level' ? whyNot('level', m.level) : whyNot(r.why));
         game.sfx('denied');
       }
     } else return false;
@@ -253,7 +253,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
   trackerList?.addEventListener('click', (e) => {
     if (!(e.target as HTMLElement).closest('[data-guide-hide]')) return;
     hideGuide(game.save(), true);
-    game.toast('Guide hidden · back on at the Signal tower', 4000);
+    game.toast('Guide hidden · show it at the Signal tower', 4000);
     game.commit();
   });
 
@@ -281,7 +281,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       if (g) hooks.go(g);
     } else if (t.closest('[data-guide-close]')) {
       hideGuide(s, true);
-      game.toast('Guide hidden · back on at the Signal tower', 4000);
+      game.toast('Guide hidden · show it at the Signal tower', 4000);
       game.commit();
     }
   });
@@ -305,8 +305,7 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
     const s = game.save();
     for (const g of advanceGuide(s)) {
       const next = guideStep(s);
-      // (the next step is on the guide card; the toast keeps to one line)
-      game.toast(`${g.name} done · ${fmt.format(g.reward)} Dorras +${fmt.format(g.xp)} XP`, 5000);
+      game.toast(`${next ? 'Step done' : 'Basics done'} · +${fmt.format(g.reward)} Dorras, +${fmt.format(g.xp)} XP`, 5000);
       pop(g.name, next ? `Getting started · ${s.guide.step} / ${GUIDE_STEPS}` : 'Getting started · done', 'is-badge');
       if (booted) game.sfx('mission');
     }
@@ -320,8 +319,8 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       const newTitle = title !== titleFor(lastLevel);
       pop(`Level ${lv}`, newTitle ? `New title · ${title}` : title, 'is-level');
       // Past the guide's level, now and then: the save lives in this browser only
-      const remind = booted && lv >= 3 && guideDone(s) && Date.now() - s.backup > BACKUP_STALE ? ' · back up your save at the Vault' : '';
-      game.toast(`Level ${lv} · ${title}${remind}`, remind ? 6000 : 4000);
+      const remind = booted && lv >= 3 && guideDone(s) && Date.now() - s.backup > BACKUP_STALE ? ' · back up at the Vault' : '';
+      game.toast(`${newTitle ? `Level ${lv} · ${title}` : `Level ${lv}`}${remind}`, remind ? 6000 : 4000);
       if (booted) game.sfx('levelup');
     }
     lastLevel = lv;

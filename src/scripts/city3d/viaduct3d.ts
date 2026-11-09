@@ -26,7 +26,9 @@ import { fromHighway } from './highway';
 import { DECK_HALF, DECK_Y, GIRDER, OUTER_LANE, PARAPET, PIER, RAMPS, RAMP_HALF, RING_LEN, ringAt, ringPoint, type Pt, type Ramp } from './viaduct';
 import { BARRIER_TOP, JOINT_EVERY, PIERS } from './viapiers';
 import { RAMP_PARAPET, RAMP_PIER, RAMP_PIERS, deckGap, rampSegs } from './viaground';
-import { BAY, EXIT_SIGNS, GANTRIES, GANTRY, LOCKUP, MURALS, MURAL_ART, RAMP_SIGNS, SOFFIT_Y, SOUND_WALL, UNDER, UNDER_CARS, UNDER_LIGHTS, gantryPanel, soundWall, type Gantry, type Under } from './viadress';
+import { BAY, LOCKUP, SOFFIT_Y, UNDER, UNDER_CARS, UNDER_LIGHTS, skateParts, type Under } from './viadress';
+import { buildFx, tag } from './grime';
+import { EXIT_SIGNS, GANTRIES, GANTRY, MURALS, MURAL_ART, RAMP_SIGNS, SOUND_WALL, gantryPanel, soundWall, type Gantry } from './viasigns';
 import { ROAD } from './palette';
 
 export const SELF = import.meta.url;
@@ -285,6 +287,55 @@ function gantry(b: Batch, g: Gantry, m: { steel: THREE.Material; back: THREE.Mat
   const [fx, fz] = [pan.x + face[0] * 0.03, pan.z + face[1] * 0.03];
   b.add(ringBox(g.s, g.q * (OUTER_LANE - 0.8), pan.y - GANTRY.panel.h / 2, 0.05, GANTRY.panel.w, GANTRY.panel.h), m.back);
   sign(b, row, fx, pan.y, fz, face, GANTRY.panel.w, GANTRY.panel.h);
+}
+
+/** A shape drawn in the ring's frame at s (its x along the ring from s, its y up), extruded `across` either side of o */
+function ringShape(s: number, o: number, y: number, shape: THREE.Shape, across: number) {
+  const r = ringAt(s);
+  const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(r.tx, 0, r.tz), new THREE.Vector3(0, 1, 0), new THREE.Vector3(r.nx, 0, r.nz));
+  return new THREE.ExtrudeGeometry(shape, { depth: across, bevelEnabled: false, curveSegments: 8 })
+    .translate(0, y, o - across / 2)
+    .applyMatrix4(m)
+    .translate(r.x, 0, r.z);
+}
+/** A skate spot under the deck by Endswood (viadress.ts `skateParts()`): smooth concrete, a ledge with a steel edge, a
+ * manual pad, a flat rail, a quarter pipe at the far end with its coping, tags on the ledge and the pipe's back */
+function skate(b: Batch, fx: Batch, u: Under, m: Record<'steel' | 'smooth' | 'concrete', THREE.Material>) {
+  const Y = 0.03;
+  b.add(band(-3.4, 3.4, u.s0 + 0.6, u.s1, Y), m.smooth);
+  for (const p of skateParts(u)) {
+    const [sm, om] = [(p.s0 + p.s1) / 2, (p.o0 + p.o1) / 2];
+    if (p.kind === 'ledge' || p.kind === 'pad') {
+      b.add(ringBox(sm, om, Y, p.s1 - p.s0, p.o1 - p.o0, p.h), m.concrete);
+      if (p.kind === 'ledge') b.add(ringBox(sm, p.o0 + 0.03, Y + p.h - 0.04, p.s1 - p.s0 + 0.01, 0.07, 0.05), m.steel);
+      if (p.kind === 'ledge') {
+        const r = ringAt(sm);
+        const [x, z] = ringPoint(sm, p.o0 - 0.012);
+        tag(fx, 5, 0.9, [-r.nx, -r.nz], x, Y + p.h / 2, z);
+      }
+    } else if (p.kind === 'rail') {
+      for (const at of [p.s0 + 0.2, p.s1 - 0.2]) b.add(ringBox(at, om, Y, 0.06, 0.06, p.h), m.steel);
+      b.add(ringBox(sm, om, Y + p.h - 0.06, p.s1 - p.s0, 0.08, 0.06), m.steel);
+    } else {
+      // (its curve rising towards the far end: a quarter circle up to its deck, then straight down at the back)
+      const R = p.h;
+      const len = p.s1 - p.s0;
+      const sh = new THREE.Shape();
+      sh.moveTo(0, 0);
+      for (let k = 1; k <= 8; k++) {
+        const a = (k / 8) * (Math.PI / 2);
+        sh.lineTo(R * Math.sin(a), R - R * Math.cos(a));
+      }
+      sh.lineTo(len, R);
+      sh.lineTo(len, 0);
+      sh.lineTo(0, 0);
+      b.add(ringShape(p.s0, om, Y, sh, p.o1 - p.o0), m.concrete);
+      b.add(ringBox(p.s0 + R, om, Y + R - 0.02, 0.08, p.o1 - p.o0, 0.08), m.steel);
+      const r = ringAt(p.s1);
+      const [x, z] = ringPoint(p.s1 + 0.012, om + 1.2);
+      tag(fx, 9, 1.0, [r.tx, r.tz], x, Y + R / 2, z);
+    }
+  }
 }
 
 /** Under the deck between two piers: a car park's bays, lock-ups, or a court (its hoop at the far end) */
@@ -546,13 +597,18 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       b.build(into, { cast: true, receive: true });
     })
   );
+  const SKATE_SMOOTH = toon('#9c99a6');
+  const SKATE_CONCRETE = toon('#b2afba');
   const um = { asphalt, white, yellow, steel: sm.steel, lockup: toon('#8a7f6a'), door: toon('#c9c5b8'), court: toon('#3f6b56'), board: toon(ROAD.zebra) };
   UNDER.forEach((u, i) => {
     const pts = [ringPoint(u.s0, -DECK_HALF), ringPoint(u.s0, DECK_HALF), ringPoint(u.s1, -DECK_HALF), ringPoint(u.s1, DECK_HALF)];
     site(`viaduct under ${i}`, [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))], (into) => {
       const b = new Batch();
-      under(b, u, um);
+      const fx = new Batch();
+      if (u.kind === 'skate') skate(b, fx, u, { steel: sm.steel, smooth: SKATE_SMOOTH, concrete: SKATE_CONCRETE });
+      else under(b, u, um);
       b.build(into, { cast: false, receive: true });
+      buildFx(fx, into);
     });
   });
   MURALS.forEach((mu, i) =>

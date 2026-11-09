@@ -11,13 +11,15 @@
  * - `uptown`: slim steel with a flat head on a long arm (Uptown, Uptown North and the mall).
  * - `lantern`: an ornate black post with a lantern on top (Crestmont).
  * - `suburb`: a short residential post with a globe (Sunridge).
- * - `cobra`: a tall pole with a cobra head out over the road (The Trenches, Lot 9: the sodium districts' own).
+ * - `cobra`: a tall pole with a cobra head out over the road (The Trenches, Lot 9, Endswood Estate: the sodium districts' own).
  * - `park`: a park lantern on a short post (Westlake Park, its gardens).
  * - `strip`: a double-arm post with a head each side and a neon line down the pole (the Neon Mile).
  * - `airport`: a tall grey mast with a wide head (the airport's roads).
  */
 import { inTrenches } from './trenches';
-import { inLot9 } from './lot9';
+import { PATH_RECT, inLot9Lamps } from './lot9';
+import { inEndswood } from './endswood';
+import { inCommon } from './endsblend';
 import { inUptown } from './uptown';
 import { NORTH_RECT } from './uptownnorth';
 import { MALL_AREA } from './mall';
@@ -65,7 +67,8 @@ const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] -
 
 /** Which post a lamp at x, z is: the district it stands in picks it, the town's everywhere else */
 export function lampStyle(x: number, z: number): LampKind {
-  if (inTrenches(x, z) || inLot9(x, z, 0)) return 'cobra';
+  // (Lot 9's reach up the tunnel's footpath, and Endswood Estate with the common down to Lot 9: sodium estates, lampmix.ts)
+  if (inTrenches(x, z) || inLot9Lamps(x, z) || inRect(PATH_RECT, x, z, 2) || inEndswood(x, z) || inCommon(x, z)) return 'cobra';
   if (inUptown(x, z) || inRect(NORTH_RECT, x, z) || inRect(MALL_AREA, x, z)) return 'uptown';
   // (Crestmont's lamps along its east road stand a hair past its rect)
   if (inRect(CREST_RECT, x, z, 1)) return 'lantern';

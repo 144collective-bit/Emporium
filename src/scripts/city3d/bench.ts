@@ -55,11 +55,23 @@ export const BENCH_VIEWS: BenchView[] = [
   // The Neon Mile (docs/strip-plan.md Phase 6): over the boulevard from the west, and down it at street level
   { id: 'strip', name: 'The Neon Mile, over the boulevard', pos: [150, 30, 95], target: [200, 5, 30] },
   { id: 'strip-street', name: 'The Neon Mile, the boulevard', pos: [140, 2.2, 33.5], target: [190, 4, 30] },
+  // Endswood Estate (docs/estate-plan.md Phase 8): over the Circus and its well, down Endswood Road to St Aldwyn's,
+  // and from the common back up to the blocks
+  { id: 'ends-circus', name: 'Endswood, over the Circus', pos: [-28, 24, 412], target: [-56, 0, 378] },
+  { id: 'ends-street', name: 'Endswood Road, to the church', pos: [4, 2.2, 382.5], target: [30, 7, 366] },
+  { id: 'ends-common', name: 'Endswood, from the common', pos: [-74, 9, 468], target: [-58, 5, 395] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most
   { id: 'drive', name: 'Driving, the east ring avenue', pos: [RING_HI + 1.5 * LANE, 1.9, 52], target: [RING_HI + 1.5 * LANE, 1.2, 30] },
   { id: 'traffic', name: 'Traffic at a ring junction', pos: [RING_HI - 10, 9, CORE_ROADS[1] + 10], target: [RING_HI, 0, CORE_ROADS[1]] },
+  // The raised highway and the roads (docs/highway-plan.md Phase 9): along the deck, an exit's cloverleaf, a river
+  // span, Kestrel Bridge and a country road
+  { id: 'hw-straight', name: 'The raised highway, on the deck', pos: [110, 5.3, -168.5], target: [160, 4.6, -168.5] },
+  { id: 'hw-exit', name: 'The raised highway, exit 3', pos: [312, 32, 32], target: [280, 2, -4.5] },
+  { id: 'hw-river', name: 'The raised highway, a river span', pos: [-170, 10, 125], target: [-215, 2, 95] },
+  { id: 'swing', name: 'Kestrel Bridge', pos: [-78, 9, 100], target: [-112, 1.5, 96] },
+  { id: 'rural', name: 'A country road', pos: [72, 6, -380], target: [64.5, 0.5, -420] },
 ];
 /** The route, through these views in order and back home */
 const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];

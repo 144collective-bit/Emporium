@@ -57,9 +57,9 @@ export function steeringHead(id: BikeId): [number, number] {
 
 /** What the garage says about each, and how it rides (0..1, the stat bars and the handling) */
 export const BIKE_DRIVE: Record<BikeId, { kind: string; blurb: string; speed: number; accel: number; grip: number }> = {
-  scooter: { kind: 'Scooter', blurb: 'Nippy and easy: slips through the traffic, parks anywhere, a top box for the shopping.', speed: 0.42, accel: 0.62, grip: 0.62 },
-  streetbike: { kind: 'Street bike', blurb: 'Light, punchy and upright. Leans into every corner of the old town.', speed: 0.72, accel: 0.85, grip: 0.75 },
-  sportbike: { kind: 'Sport bike', blurb: 'Tucked in behind the screen, flat out. Corners on its knee.', speed: 0.97, accel: 1, grip: 0.9 },
+  scooter: { kind: 'Scooter', blurb: 'Nippy, easy, parks anywhere', speed: 0.42, accel: 0.62, grip: 0.62 },
+  streetbike: { kind: 'Street bike', blurb: 'Light, punchy, upright', speed: 0.72, accel: 0.85, grip: 0.75 },
+  sportbike: { kind: 'Sport bike', blurb: 'Flat out, corners hard', speed: 0.97, accel: 1, grip: 0.9 },
 };
 
 /** How many goods each carries (a top box adds more: the garage's fourth mod) */

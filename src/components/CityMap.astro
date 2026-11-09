@@ -18,6 +18,7 @@ import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
 import { KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
+import { FREE_PLAY } from '../scripts/city3d/freeplay';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
 
@@ -73,8 +74,11 @@ const spots: Record<SpotId, Spot> = {
   orbit: { title: 'Orbit', sub: 'Space-age tower' },
   sphere: { title: 'The Sphere', sub: 'Shows' },
   lot9: { title: 'Lot 9', sub: 'Trailer park' },
+  endswood: { title: 'Endswood Estate', sub: 'The Ends' },
+  aldwyns: { title: "St Aldwyn's", sub: 'Church' },
+  bunker: { title: 'Bunker Sound', sub: 'Studio' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -97,7 +101,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <div class="city-no3d" data-no3d hidden>
     <div class="city-no3d-card" role="status">
       <p class="kicker"><span class="kicker-num">3D</span> The Trenches</p>
-      <p class="city-no3d-text">The Trenches needs a device with 3D graphics (WebGL&nbsp;2).</p>
+      <p class="city-no3d-text">The Trenches needs 3D graphics (WebGL&nbsp;2).</p>
       <p class="city-no3d-note">Try another browser or device.</p>
       {/* Shown when a running city loses its graphics context (index.ts) */}
       <button type="button" class="city-no3d-btn" data-no3d-reload hidden onclick="location.reload()">Reload</button>
@@ -213,6 +217,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
       <div class="city-start-bar" data-start-bar><span></span></div>
       </div>
+      {FREE_PLAY && <p class="city-start-free">Everything is free for a limited time</p>}
       {/* (the one draft note is the corner tag, `.city-draft-tag`; this line is the owner's) */}
       <p class="city-start-note">Dorras are game money only.</p>
     </div>
@@ -435,6 +440,11 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
               <span data-sound-label>Sound off</span>
             </button>
             <button type="button" class="seg-wide" data-reset>Reset view</button>
+          </div>
+          {/* The place labels over the 3D city (the pins): off by default (the owner's call, 2026-11: places are found on the
+              world map); this turns them back on, remembered in this browser (index.ts, degen-city-labels-v1) */}
+          <div class="seg">
+            <button type="button" class="seg-wide" data-labels aria-pressed="false"><span data-labels-label>Labels off</span></button>
           </div>
         </div>
         <p class="mk-label hub-label">On foot</p>
@@ -659,7 +669,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
         </button>
       </header>
-      <p class="mk-marquee">Free ammo at the counter · Starters unlock with your score</p>
+      <p class="mk-marquee">Free ammo · Starters unlock with score</p>
       <nav class="mk-tabs" data-mk-tabs role="tablist" aria-label="Armoury">
         <button type="button" role="tab" data-tab="guns" aria-selected="true">Guns</button>
         <button type="button" role="tab" data-tab="bench" aria-selected="false">Workbench</button>
@@ -1008,13 +1018,13 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
 
   {/* The buildings' panels: each is a place in the city's game. Draft copy. `data-marquee` is its line on the
       marquee strip under its name (the menu plan's Phase 4: made-up, fixed copy). */}
-  <template data-panel-tpl="emporium" data-marquee="Fresh stock daily · Prices move with the clock">
+  <template data-panel-tpl="emporium" data-marquee="Fresh stock daily">
     <p class="kicker"><span class="kicker-num">01</span> The Emporium</p>
     <h2 id="city-panel-title" class="city-panel-title">Market hall</h2>
     <p class="city-panel-text">Buy stock for your places. Sell some back.</p>
     <div class="market" data-market></div>
   </template>
-  <template data-panel-tpl="shop" data-marquee="New fits on the rail · Try before you buy">
+  <template data-panel-tpl="shop" data-marquee="New fits on the rail">
     <p class="kicker"><span class="kicker-num">02</span> Clothes</p>
     <h2 id="city-panel-title" class="city-panel-title">Drop 001</h2>
     <p class="city-panel-text">Try on fits. Buy premium pieces.</p>
@@ -1037,43 +1047,43 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <button type="button" class="chip-link fit-reset" data-fit-reset>Back to the classic look</button>
     </section>
   </template>
-  <template data-panel-tpl="workshop" data-marquee="Raw in, goods out · The line never sleeps">
+  <template data-panel-tpl="workshop" data-marquee="Raw in, goods out">
     <p class="kicker"><span class="kicker-num">03</span> The Workshop</p>
     <h2 id="city-panel-title" class="city-panel-title">The Factory</h2>
     <p class="city-panel-text">Turn raw goods into products.</p>
     <div class="market" data-workshop></div>
   </template>
-  <template data-panel-tpl="vault" data-marquee="Your worth, your ledger, your backup">
+  <template data-panel-tpl="vault" data-marquee="Your worth, your ledger">
     <p class="kicker"><span class="kicker-num">04</span> The Vault</p>
     <h2 id="city-panel-title" class="city-panel-title">The Bank</h2>
     <p class="city-panel-text">Your worth, ledger, loans and save.</p>
     <div class="market" data-bank></div>
   </template>
-  <template data-panel-tpl="plan" data-marquee="Gear up at the counter · Ammo on the house">
+  <template data-panel-tpl="plan" data-marquee="Ammo on the house">
     <p class="kicker"><span class="kicker-num">05</span> The Armoury</p>
     <h2 id="city-panel-title" class="city-panel-title">Guns &amp; gear</h2>
     <p class="city-panel-text">Pick your two guns at the counter.</p>
   </template>
-  <template data-panel-tpl="signal" data-marquee="News on the hour · Contracts on the board">
+  <template data-panel-tpl="signal" data-marquee="Contracts on the board">
     <p class="kicker"><span class="kicker-num">06</span> Signal tower</p>
     <h2 id="city-panel-title" class="city-panel-title">News &amp; contracts</h2>
     <p class="city-panel-text">News, contracts and missions.</p>
     {/* Contracts, then the mission board (tycoon-ui.ts appends missions-ui.ts's board here) */}
     <div class="market" data-contracts></div>
   </template>
-  <template data-panel-tpl="telegram" data-marquee="Couriers ready · Anywhere in Sector 7">
+  <template data-panel-tpl="telegram" data-marquee="Couriers ready">
     <p class="kicker"><span class="kicker-num">07</span> Post office</p>
     <h2 id="city-panel-title" class="city-panel-title">Couriers</h2>
     <p class="city-panel-text">Send goods between your places.</p>
     <div class="market" data-couriers></div>
   </template>
-  <template data-panel-tpl="apartments" data-marquee="Hands for hire · Clerks and couriers">
+  <template data-panel-tpl="apartments" data-marquee="Hands for hire">
     <p class="kicker"><span class="kicker-num">08</span> The Apartments</p>
     <h2 id="city-panel-title" class="city-panel-title">Staff</h2>
     <p class="city-panel-text">Hire staff for your places.</p>
     <div class="market" data-staff></div>
   </template>
-  <template data-panel-tpl="karts" data-marquee="Green light soon · Two ways round">
+  <template data-panel-tpl="karts" data-marquee="Two ways round">
     <p class="kicker"><span class="kicker-num">09</span> The kart park</p>
     <h2 id="city-panel-title" class="city-panel-title">Go-karts</h2>
     <p class="city-panel-text">Race seven rivals. Both ways round.</p>
@@ -1081,7 +1091,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     {/* Your best laps, trophies and race counts (index.ts fills it with kartRecordsHtml() from kart-records.ts) */}
     <div class="kart-panel-records" data-kart-panel-records></div>
   </template>
-  <template data-panel-tpl="airport" data-marquee="Clear skies · Your hangar is waiting">
+  <template data-panel-tpl="airport" data-marquee="Your hangar is waiting">
     <p class="kicker"><span class="kicker-num">10</span> Sector 7 Airport</p>
     <h2 id="city-panel-title" class="city-panel-title">Fly it yourself</h2>
     <p class="city-panel-text">Fly your own aircraft from Hangar 1.</p>
@@ -1095,7 +1105,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     {/* Your record: wins, losses, knock-outs, best chain and each opponent (index.ts fills it with fightRecordHtml() from fight-ui.ts) */}
     <div class="fight-panel-record" data-fight-panel-record></div>
   </template>
-  <template data-panel-tpl="liberty" data-marquee="Walk the high level · Mind the leaves">
+  <template data-panel-tpl="liberty" data-marquee="Mind the leaves">
     <p class="kicker"><span class="kicker-num">12</span> The river</p>
     <h2 id="city-panel-title" class="city-panel-title">Liberty Bridge</h2>
     <p class="city-panel-text">Walk the towers. The deck lifts for ships.</p>
@@ -1107,13 +1117,13 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <p class="city-panel-text">The suspension bridge over the river.</p>
     <button type="button" class="chip-link kart-walkin" data-harbour-walkin>Walk in</button>
   </template>
-  <template data-panel-tpl="trenches" data-marquee="Next game on the court · Everyone plays">
+  <template data-panel-tpl="trenches" data-marquee="Next game on the court">
     <p class="kicker"><span class="kicker-num">13</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">The Block</h2>
     <p class="city-panel-text">The heart of the Trench Houses. Story coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-block-walkin>Walk in</button>
   </template>
-  <template data-panel-tpl="club" data-marquee="Doors soon · Feel the bass from the street">
+  <template data-panel-tpl="club" data-marquee="Feel the bass">
     <p class="kicker"><span class="kicker-num">14</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">Club PULSE</h2>
     <p class="city-panel-text">The riverside nightclub. Coming soon.</p>
@@ -1125,33 +1135,33 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <p class="city-panel-text">A corner dive bar. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="bar">Walk in</button>
   </template>
-  <template data-panel-tpl="arms" data-marquee="Ring the hatch · Same guns as the Armoury">
+  <template data-panel-tpl="arms" data-marquee="Ring the hatch">
     <p class="kicker"><span class="kicker-num">16</span> The Trenches</p>
     <h2 id="city-panel-title" class="city-panel-title">Guns &amp; gear</h2>
     <p class="city-panel-text">The Armoury's guns, at a street hatch.</p>
     <button type="button" class="chip-link kart-walkin" data-avenue-walkin="arms">Walk in</button>
   </template>
-  <template data-panel-tpl="pier" data-marquee="Bait, coffee and a view · Clock keeps your time">
+  <template data-panel-tpl="pier" data-marquee="Bait, coffee and a view">
     <p class="kicker"><span class="kicker-num">17</span> The waterfront</p>
     <h2 id="city-panel-title" class="city-panel-title">Pier 7</h2>
     <p class="city-panel-text">The boardwalk, the pier and the clock tower.</p>
     <button type="button" class="chip-link kart-walkin" data-pier-walkin>Walk in</button>
   </template>
-  <template data-panel-tpl="nightmarket" data-marquee="Hot food on the water · Lanterns at dusk">
+  <template data-panel-tpl="nightmarket" data-marquee="Hot food on the water">
     <p class="kicker"><span class="kicker-num">17</span> The waterfront</p>
     <h2 id="city-panel-title" class="city-panel-title">Night Market</h2>
     <p class="city-panel-text">Street food over the river. Best after dark.</p>
     <button type="button" class="chip-link kart-walkin" data-market-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="stadium" data-marquee="Gates shut till the first event">
+  <template data-panel-tpl="stadium" data-marquee="Gates shut for now">
     <p class="kicker"><span class="kicker-num">17</span> Westlake Park</p>
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Stadium</h2>
     <p class="city-panel-text">Two tiers round the pitch. Events coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-stadium-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="tower" data-marquee="Lift to the sky deck · Highest view in town">
+  <template data-panel-tpl="tower" data-marquee="Highest view in town">
     <p class="kicker"><span class="kicker-num">18</span> Uptown</p>
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Tower</h2>
     <p class="city-panel-text">Ride the lift to the sky deck.</p>
@@ -1165,14 +1175,14 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <button type="button" class="chip-link kart-walkin" data-palmcourt-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="mall" data-marquee="Two floors · Food court on the terrace">
+  <template data-panel-tpl="mall" data-marquee="Two floors of shops">
     <p class="kicker"><span class="kicker-num">20</span> North of downtown</p>
     <h2 id="city-panel-title" class="city-panel-title">Starlight Mall</h2>
     <p class="city-panel-text">Two floors of shops and a food court.</p>
     <button type="button" class="chip-link kart-walkin" data-mall-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="hotel" data-marquee="Valets at the door · Palms by the pool">
+  <template data-panel-tpl="hotel" data-marquee="Palms by the pool">
     <p class="kicker"><span class="kicker-num">21</span> Crestmont</p>
     <h2 id="city-panel-title" class="city-panel-title">The Coralline</h2>
     <p class="city-panel-text">Crestmont's grand hotel. Rooms coming soon.</p>
@@ -1186,7 +1196,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="golfclub" data-marquee="Six holes on the slopes · Tee off anytime">
+  <template data-panel-tpl="golfclub" data-marquee="Six holes on the slopes">
     <p class="kicker"><span class="kicker-num">23</span> Crestmont</p>
     <h2 id="city-panel-title" class="city-panel-title">Crestmont Hills Club</h2>
     <p class="city-panel-text">Six holes up the hill. Golf coming soon.</p>
@@ -1207,70 +1217,70 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="harbourmaster" data-marquee="Ships in, boxes out · Mind the cranes">
+  <template data-panel-tpl="harbourmaster" data-marquee="Ships in, boxes out">
     <p class="kicker"><span class="kicker-num">26</span> Southbank Docks</p>
     <h2 id="city-panel-title" class="city-panel-title">Harbour Master</h2>
     <p class="city-panel-text">The port's office. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-docks-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sunclub" data-marquee="Pool open · Courts booked till sundown">
+  <template data-panel-tpl="sunclub" data-marquee="Pool open">
     <p class="kicker"><span class="kicker-num">27</span> Sunridge</p>
     <h2 id="city-panel-title" class="city-panel-title">Sunridge Club</h2>
     <p class="city-panel-text">Pools and pickleball. Memberships coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sunpark" data-marquee="Swings, a ramada and a long walk round">
+  <template data-panel-tpl="sunpark" data-marquee="Swings and a long walk">
     <p class="kicker"><span class="kicker-num">28</span> Sunridge</p>
     <h2 id="city-panel-title" class="city-panel-title">Sunridge Park</h2>
     <p class="city-panel-text">A playground, a field and a loop walk.</p>
     <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sunschool" data-marquee="Bus at the bay · Playground after the bell">
+  <template data-panel-tpl="sunschool" data-marquee="Playground after the bell">
     <p class="kicker"><span class="kicker-num">29</span> Sunridge</p>
     <h2 id="city-panel-title" class="city-panel-title">Sunridge Elementary</h2>
     <p class="city-panel-text">Sunridge's school. Classes coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-sun-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="wildace" data-marquee="Bulbs, starbursts and a cowboy waving">
+  <template data-panel-tpl="wildace" data-marquee="Bulbs and a cowboy">
     <p class="kicker"><span class="kicker-num">30</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Wild Ace</h2>
     <p class="city-panel-text">Classic neon casino. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="dragonspire" data-marquee="Over the drawbridge, into the castle">
+  <template data-panel-tpl="dragonspire" data-marquee="Over the drawbridge">
     <p class="kicker"><span class="kicker-num">31</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Dragonspire</h2>
     <p class="city-panel-text">A castle resort. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="scarab" data-marquee="A beam of light from the tip at night">
+  <template data-panel-tpl="scarab" data-marquee="A beam of light at night">
     <p class="kicker"><span class="kicker-num">32</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">The Golden Scarab</h2>
     <p class="city-panel-text">A glass pyramid resort. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="bigcity" data-marquee="A whole skyline and a coaster round it">
+  <template data-panel-tpl="bigcity" data-marquee="A skyline and a coaster">
     <p class="kicker"><span class="kicker-num">33</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Big City</h2>
     <p class="city-panel-text">A skyline and a rollercoaster. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="gondolier" data-marquee="Gondolas at the steps, fountains on the lake">
+  <template data-panel-tpl="gondolier" data-marquee="Gondolas at the steps">
     <p class="kicker"><span class="kicker-num">34</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">The Gondolier</h2>
     <p class="city-panel-text">A canal palace. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="lagoon" data-marquee="Palms, waterfalls and a volcano">
+  <template data-panel-tpl="lagoon" data-marquee="Palms and a volcano">
     <p class="kicker"><span class="kicker-num">35</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">Lava Lagoon</h2>
     <p class="city-panel-text">Gold glass and a lagoon. Coming soon.</p>
@@ -1284,7 +1294,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <button type="button" class="chip-link kart-walkin" data-strip-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="sphere" data-marquee="A ball of light at the Strip's east end">
+  <template data-panel-tpl="sphere" data-marquee="A ball of light">
     <p class="kicker"><span class="kicker-num">37</span> The Neon Mile</p>
     <h2 id="city-panel-title" class="city-panel-title">The Sphere</h2>
     <p class="city-panel-text">A ball of light. Shows coming soon.</p>
@@ -1296,6 +1306,27 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">Lot 9</h2>
     <p class="city-panel-text">A trailer park past the highway. Story coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-lot9-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="endswood" data-marquee="Welcome to the Ends">
+    <p class="kicker"><span class="kicker-num">39</span> South of the highway</p>
+    <h2 id="city-panel-title" class="city-panel-title">Endswood Estate</h2>
+    <p class="city-panel-text">Concrete, decks and subways. Story coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="aldwyns" data-marquee="The bell keeps the hour">
+    <p class="kicker"><span class="kicker-num">40</span> Endswood Estate</p>
+    <h2 id="city-panel-title" class="city-panel-title">St Aldwyn's</h2>
+    <p class="city-panel-text">The estate's old church. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="bunker" data-marquee="Turn it up in the garage">
+    <p class="kicker"><span class="kicker-num">41</span> Endswood Estate</p>
+    <h2 id="city-panel-title" class="city-panel-title">Bunker Sound</h2>
+    <p class="city-panel-text">A studio in two garages. Sessions coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
   </template>
 
   <div class="city-hud mk-skin" data-city-hud>
@@ -1466,7 +1497,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     /* ---------- The 3D city ---------- */
     let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
     let booting = false;
-    const NO_3D = 'The Trenches needs a device with 3D graphics (WebGL 2).';
+    const NO_3D = 'The Trenches needs 3D graphics (WebGL 2).';
     /** No 3D here: the page says so, and so does the start menu (the header's Menu keeps the comic page and the links) */
     function no3d() {
       root!.dataset.view = 'none';
@@ -1613,7 +1644,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));
     start.querySelector<HTMLButtonElement>('[data-start-multi]')!.addEventListener('click', (e) => {
       if (!server) {
-        status.textContent = 'Multiplayer is coming soon. Single player has the whole city for now.';
+        status.textContent = 'Multiplayer coming soon';
         (e.currentTarget as HTMLElement).classList.add('is-nudged');
         return;
       }

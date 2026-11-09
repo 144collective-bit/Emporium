@@ -29,9 +29,9 @@ function guestToken() {
 
 /** Server close codes that mean "don't come straight back" (see server/src/room.ts) */
 const STOP: Record<number, string> = {
-  4001: 'You went online in another tab or window. Go online here to play in this one instead.',
-  4002: 'Disconnected for sending too many messages.',
-  4004: 'Something went wrong with your guest pass. Reload the page and try again.',
+  4001: 'Online in another tab · go online here',
+  4002: 'Disconnected: too many messages',
+  4004: 'Guest pass failed · reload to retry',
 };
 
 export type NetState = 'off' | 'connecting' | 'online' | 'retrying' | 'full' | 'error';

@@ -6,6 +6,9 @@
   "name": "emporium",
   "main": "src/index.ts",
   "compatibility_date": "2025-09-01",
+  // Free play (src/scripts/city3d/freeplay.ts), in step with the site's build (FREE_FOR_NOW in astro.config.mjs):
+  // the owner's test phase, every gun and rifle finish unlocked. "false" (or removing this) ends it here.
+  "define": { "__FREE_PLAY__": "true" },
   // The website, built by `wrangler deploy` itself (see "build") into ../dist and served from here.
   // The game's own paths always reach the Worker code; anything else is a page or a file of the site.
   "assets": {

@@ -33,6 +33,7 @@ import { SF_RECT } from './southfield';
 import { STRIP_RECT } from './strip';
 import { SUNRIDGE_RECT } from './sunridge';
 import { LOT9_RECT } from './lot9';
+import { ENDSWOOD_RECT } from './endswood';
 import { HIGHWAY_BOX } from './highway';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
@@ -77,11 +78,21 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'southfield', rect: SF_RECT, load: () => import('./southfield3d') },
   // Lot 9, the trailer park south of the highway's south-west corner, and its tunnel (lot9.ts, docs/trailer-plan.md; lot9-3d.ts)
   { id: 'lot9', rect: [LOT9_RECT[0], 300, LOT9_RECT[2], LOT9_RECT[3]], load: () => import('./lot9-3d') },
+  // Endswood Estate between them (endswood.ts, docs/estate-plan.md; endswood3d.ts): its streets, the Circus, the well and the subways
+  { id: 'endswood', rect: ENDSWOOD_RECT, load: () => import('./endswood3d') },
   // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the
   // town, so it comes in as soon as the city's up
   { id: 'viaduct', rect: [HIGHWAY_BOX[0] - 10, HIGHWAY_BOX[1] - 10, HIGHWAY_BOX[2] + 10, HIGHWAY_BOX[3] + 10], load: () => import('./viaduct3d') },
   // The swing bridge, Uptown to The Trenches (swingbridge.ts, docs/highway-plan.md Phase 5; swingbridge3d.ts)
   { id: 'swing', rect: [SWING_RECT[0] - 20, SWING_RECT[1] - 20, SWING_RECT[2] + 20, SWING_RECT[3] + 20], load: () => import('./swingbridge3d') },
+  // The turn lanes painted at the busiest avenue junctions (turnlanes.ts, docs/highway-plan.md Phase 6; turnlanes3d.ts)
+  // (all over the town and Crestmont: its junctions' data is the chunk's own, so the boot doesn't work it out)
+  { id: 'turnlanes', rect: [EXT[0], EXT[0], EXT[1], EXT[1]], load: () => import('./turnlanes3d') },
+  // The concrete-era look on the town's streets (streetwear.ts, docs/highway-plan.md Phase 8; streetwear3d.ts): gutters,
+  // drains, patches, manholes, stop lines, inside the highway
+  { id: 'streetwear', rect: [HIGHWAY_BOX[0], HIGHWAY_BOX[1], HIGHWAY_BOX[2], HIGHWAY_BOX[3]], load: () => import('./streetwear3d') },
+  // The country roads past the highway (rural.ts, docs/highway-plan.md Phase 7; rural3d.ts): all four ways out of town
+  { id: 'rural', rect: [EXT[0], EXT[0], EXT[1], EXT[1]], load: () => import('./rural3d') },
 ];
 
 

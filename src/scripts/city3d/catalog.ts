@@ -119,9 +119,9 @@ export const BOT_LEVELS: BotLevel[] = ['easy', 'medium', 'hard'];
 export const FIGHT_BOTS: Record<BotLevel, { name: string; blurb: string; skill: number; style: 'brawler' | 'kickboxer' | 'street'; prize: number; level: number; traits: Partial<BotTraits> }> = {
   // A clear curve (the owner's call): Ray rarely blocks and never parries; Knuckles blocks and kicks; the Mayor parries and
   // finishes, but telegraphs his heavy moves with a longer wind-up and backs off after a chain, so patience beats him
-  easy: { name: 'Rookie Ray', blurb: 'Slow hands, big heart. Learn the chain on him.', skill: 0.3, style: 'brawler', prize: 1_500, level: 1, traits: { block: 0.15, dodge: 0.03, kicks: 0.15, pace: 75 } },
-  medium: { name: 'Knuckles', blurb: 'Blocks when he sees it coming. Mix the kicks in.', skill: 0.55, style: 'kickboxer', prize: 3_000, level: 1, traits: { block: 0.5, dodge: 0.1, kicks: 0.45, pace: 50, backOff: 20 } },
-  hard: { name: 'The Mayor', blurb: 'Reads you, parries you, finishes you. Watch for the wind-up.', skill: 0.8, style: 'street', prize: 6_000, level: 3, traits: { block: 0.6, dodge: 0.15, parry: 0.4, kicks: 0.3, finisher: true, telegraph: 8, backOff: 45, pace: 44 } },
+  easy: { name: 'Rookie Ray', blurb: 'Slow hands. Learn the chain on him', skill: 0.3, style: 'brawler', prize: 1_500, level: 1, traits: { block: 0.15, dodge: 0.03, kicks: 0.15, pace: 75 } },
+  medium: { name: 'Knuckles', blurb: 'Blocks a lot. Mix in kicks', skill: 0.55, style: 'kickboxer', prize: 3_000, level: 1, traits: { block: 0.5, dodge: 0.1, kicks: 0.45, pace: 50, backOff: 20 } },
+  hard: { name: 'The Mayor', blurb: 'Parries and finishes. Watch the wind-up', skill: 0.8, style: 'street', prize: 6_000, level: 3, traits: { block: 0.6, dodge: 0.15, parry: 0.4, kicks: 0.3, finisher: true, telegraph: 8, backOff: 45, pace: 44 } },
 };
 /** XP for taking part is capped per spar so hits can't be farmed */
 export const SPAR_HIT_CAP = 30;
@@ -152,27 +152,27 @@ export interface CarEntry {
   pitch: string;
 }
 export const CAR_CATALOG: Record<PlayerCar, CarEntry> = {
-  hatch: { price: 0, level: 1, pitch: 'Yours from day one.' },
-  sedan: { price: 0, level: 1, pitch: 'Yours from day one.' },
-  coupe: { price: 0, level: 1, pitch: 'Yours from day one.' },
-  pickup: { price: 0, level: 1, pitch: 'Yours from day one.' },
-  van: { price: 0, level: 1, pitch: 'Yours from day one.' },
-  muscle: { price: 18000, level: 4, pitch: 'Big block, loud pipes, built for the straights.' },
-  suv: { price: 26000, level: 6, pitch: 'Tall, tough and roomy: hauls a lot and shrugs off kerbs.' },
-  super: { price: 64000, level: 10, pitch: 'The fastest thing in the city. Nothing else comes close.' },
+  hatch: { price: 0, level: 1, pitch: 'Yours from day one' },
+  sedan: { price: 0, level: 1, pitch: 'Yours from day one' },
+  coupe: { price: 0, level: 1, pitch: 'Yours from day one' },
+  pickup: { price: 0, level: 1, pitch: 'Yours from day one' },
+  van: { price: 0, level: 1, pitch: 'Yours from day one' },
+  muscle: { price: 18000, level: 4, pitch: 'Big block, loud pipes' },
+  suv: { price: 26000, level: 6, pitch: 'Shrugs off kerbs' },
+  super: { price: 64000, level: 10, pitch: 'The fastest car in the city' },
   // Vehicle plan Phase 6 (docs/vehicle-plan.md, "Decided")
-  classic: { price: 22000, level: 5, pitch: 'A rolling piece of chrome. Turns heads on every avenue.' },
-  offroad: { price: 30000, level: 7, pitch: 'Built for the rough stuff, happy anywhere.' },
-  ev: { price: 40000, level: 8, pitch: 'Instant pick-up, no engine note: just a whine and a grin.' },
+  classic: { price: 22000, level: 5, pitch: 'Turns heads on every avenue' },
+  offroad: { price: 30000, level: 7, pitch: 'Happy anywhere' },
+  ev: { price: 40000, level: 8, pitch: 'Just a whine and a grin' },
 };
 export const CAR_IDS = Object.keys(CAR_CATALOG) as PlayerCar[];
 export const STARTER_CARS = CAR_IDS.filter((id) => CAR_CATALOG[id].price === 0);
 
 /** Your motorbikes (vehicle plan Phase 7, "Decided"): the scooter free, the others for Dorras at a level; tuned like the cars (the roof rack is a top box) */
 export const BIKE_CATALOG: Record<BikeId, CarEntry> = {
-  scooter: { price: 0, level: 1, pitch: 'Yours from day one.' },
-  streetbike: { price: 9000, level: 3, pitch: 'Light and punchy: the city on two wheels.' },
-  sportbike: { price: 36000, level: 8, pitch: 'Tuck in and hold on.' },
+  scooter: { price: 0, level: 1, pitch: 'Yours from day one' },
+  streetbike: { price: 9000, level: 3, pitch: 'The city on two wheels' },
+  sportbike: { price: 36000, level: 8, pitch: 'Tuck in and hold on' },
 };
 export const BIKE_IDS = Object.keys(BIKE_CATALOG) as BikeId[];
 export const STARTER_BIKES = BIKE_IDS.filter((id) => BIKE_CATALOG[id].price === 0);
@@ -189,10 +189,10 @@ export interface CarMods {
   rack: number;
 }
 export const CAR_MODS: Record<CarModId, { name: string; blurb: string; stat: 'speed' | 'accel' | 'grip' | 'cargo' }> = {
-  engine: { name: 'Engine', blurb: 'More top speed each level.', stat: 'speed' },
-  turbo: { name: 'Turbo', blurb: 'Quicker off the line each level.', stat: 'accel' },
-  tyres: { name: 'Tyres', blurb: 'More grip through the corners each level.', stat: 'grip' },
-  rack: { name: 'Roof rack', blurb: 'Carries a quarter more goods each level.', stat: 'cargo' },
+  engine: { name: 'Engine', blurb: 'More top speed', stat: 'speed' },
+  turbo: { name: 'Turbo', blurb: 'Quicker off the line', stat: 'accel' },
+  tyres: { name: 'Tyres', blurb: 'More grip in corners', stat: 'grip' },
+  rack: { name: 'Roof rack', blurb: 'Carries more goods', stat: 'cargo' },
 };
 export const CAR_MOD_IDS = Object.keys(CAR_MODS) as CarModId[];
 export const NO_CAR_MODS: CarMods = { engine: 0, turbo: 0, tyres: 0, rack: 0 };
@@ -218,10 +218,10 @@ export interface KartEntry {
   pitch: string;
 }
 export const KART_CATALOG: Record<KartId, KartEntry> = {
-  rocket: { price: 0, level: 1, pitch: 'Yours from day one.' },
-  zip: { price: 9000, level: 3, pitch: 'Light as a feather: the drifter\'s kart.' },
-  tank: { price: 16000, level: 5, pitch: 'Plated. Bumps and spins barely slow it.' },
-  bigwheel: { price: 28000, level: 8, pitch: 'The fastest thing on the loop, once it gets going.' },
+  rocket: { price: 0, level: 1, pitch: 'Yours from day one' },
+  zip: { price: 9000, level: 3, pitch: 'Light. Built for drifting' },
+  tank: { price: 16000, level: 5, pitch: 'Heavy. Shrugs off bumps' },
+  bigwheel: { price: 28000, level: 8, pitch: 'Top speed, slow to get going' },
 };
 export const KART_IDS = Object.keys(KART_CATALOG) as KartId[];
 export const STARTER_KARTS = KART_IDS.filter((id) => KART_CATALOG[id].price === 0);
@@ -233,9 +233,9 @@ export interface KartMods {
   nitro: number;
 }
 export const KART_MODS: Record<KartModId, { name: string; blurb: string; stat: 'speed' | 'handling' | 'boost' }> = {
-  motor: { name: 'Motor', blurb: 'A bigger motor: more top speed and pick-up.', stat: 'speed' },
-  tyres: { name: 'Soft tyres', blurb: 'Stickier tyres: sharper turns, tighter drifts.', stat: 'handling' },
-  nitro: { name: 'Nitro kit', blurb: 'Longer boosts from drifts and boost pads.', stat: 'boost' },
+  motor: { name: 'Motor', blurb: 'More speed and pick-up', stat: 'speed' },
+  tyres: { name: 'Soft tyres', blurb: 'Sharper turns, tighter drifts', stat: 'handling' },
+  nitro: { name: 'Nitro kit', blurb: 'Longer boosts', stat: 'boost' },
 };
 export const KART_MOD_IDS = Object.keys(KART_MODS) as KartModId[];
 export const NO_KART_MODS: KartMods = { motor: 0, tyres: 0, nitro: 0 };
@@ -256,9 +256,9 @@ export function kartStats(base: { speed: number; accel: number; handling: number
 /** Engine classes: everyone's pace in a race, a level to unlock each; boards are kept per class */
 export type ClassId = 'street' | 'sport' | 'neon';
 export const KART_CLASSES: Record<ClassId, { name: string; blurb: string; level: number; pace: number }> = {
-  street: { name: 'Street', blurb: 'Easy pace. Learn the lines.', level: 1, pace: 0.82 },
-  sport: { name: 'Sport', blurb: 'The standard pace.', level: 3, pace: 1 },
-  neon: { name: 'Neon', blurb: 'Flat out. Every corner is a drift.', level: 8, pace: 1.18 },
+  street: { name: 'Street', blurb: 'Easy pace', level: 1, pace: 0.82 },
+  sport: { name: 'Sport', blurb: 'Standard pace', level: 3, pace: 1 },
+  neon: { name: 'Neon', blurb: 'Flat out', level: 8, pace: 1.18 },
 };
 export const CLASS_IDS = Object.keys(KART_CLASSES) as ClassId[];
 /** A cup's series: points by place in each race */
@@ -281,13 +281,13 @@ export interface GunEntry {
   pitch: string;
 }
 export const GUN_CATALOG: Record<WeaponId, GunEntry> = {
-  rifle: { price: 0, level: 1, pitch: 'Free at the counter.' },
-  smg: { price: 0, level: 1, pitch: 'Free once your score unlocks it.' },
-  shotgun: { price: 0, level: 1, pitch: 'Free once your score unlocks it.' },
-  dmr: { price: 0, level: 1, pitch: 'Free once your score unlocks it.' },
-  revolver: { price: 7500, level: 3, pitch: 'Six rounds. Each one counts.' },
-  burst: { price: 14000, level: 5, pitch: 'Three-round bursts, tight and quick.' },
-  lmg: { price: 32000, level: 8, pitch: 'A hundred rounds of noise.' },
+  rifle: { price: 0, level: 1, pitch: 'Free at the counter' },
+  smg: { price: 0, level: 1, pitch: 'Free, unlocked by score' },
+  shotgun: { price: 0, level: 1, pitch: 'Free, unlocked by score' },
+  dmr: { price: 0, level: 1, pitch: 'Free, unlocked by score' },
+  revolver: { price: 7500, level: 3, pitch: 'Six rounds, heavy hits' },
+  burst: { price: 14000, level: 5, pitch: 'Tight three-round bursts' },
+  lmg: { price: 32000, level: 8, pitch: 'A hundred-round belt' },
 };
 export const GUN_IDS = Object.keys(GUN_CATALOG) as WeaponId[];
 export const STARTER_GUNS = GUN_IDS.filter((id) => GUN_CATALOG[id].price === 0);
@@ -299,9 +299,9 @@ export interface GunMods {
   grip: number;
 }
 export const GUN_MODS: Record<GunModId, { name: string; blurb: string }> = {
-  barrel: { name: 'Barrel', blurb: 'Hits harder and reaches further each level.' },
-  mag: { name: 'Extended mag', blurb: 'A bigger magazine and more spare rounds each level.' },
-  grip: { name: 'Grip & stock', blurb: 'Tighter shots, less kick and quicker reloads each level.' },
+  barrel: { name: 'Barrel', blurb: 'Harder hits, longer reach' },
+  mag: { name: 'Extended mag', blurb: 'More rounds' },
+  grip: { name: 'Grip & stock', blurb: 'Steadier shots, faster reloads' },
 };
 export const GUN_MOD_IDS = Object.keys(GUN_MODS) as GunModId[];
 export const NO_GUN_MODS: GunMods = { barrel: 0, mag: 0, grip: 0 };
@@ -344,30 +344,30 @@ export interface WardrobeEntry {
 }
 /** The premium wardrobe: everything the original fitting room didn't have. Ids are the Look values they put on. */
 export const WARDROBE_CATALOG: WardrobeEntry[] = [
-  { id: 'varsity', name: 'Varsity Jacket', price: 4000, level: 2, tab: 'fit', pitch: 'Letterman jacket with striped cuffs and a chenille D.' },
-  { id: 'puffer', name: 'Puffer Jacket', price: 6500, level: 3, tab: 'fit', pitch: 'Quilted, shiny and twice your width.' },
-  { id: 'cowboy', name: 'Cowboy Hat', price: 2500, level: 1, tab: 'head', pitch: 'Wide brim, city attitude.' },
-  { id: 'tophat', name: 'Top Hat', price: 3500, level: 2, tab: 'head', pitch: 'For the Kingpin look.' },
-  { id: 'halo', name: 'Neon Halo', price: 9000, level: 6, tab: 'head', pitch: 'A floating ring of neon over your head.' },
-  { id: 'duffel', name: 'Duffel Bag', price: 3000, level: 2, tab: 'bag', pitch: 'Big enough for all the Dorras.' },
-  { id: 'wings', name: 'Neon Wings', price: 25000, level: 12, tab: 'bag', pitch: 'Glowing wings on your back. Purely decorative. Mostly.' },
-  { id: 'phone', name: 'Phone', price: 1000, level: 1, tab: 'hand', pitch: 'Never off it.' },
-  { id: 'briefcase', name: 'Briefcase', price: 5000, level: 4, tab: 'hand', pitch: 'Serious business.' },
-  { id: 'watch', name: 'Gold Watch', price: 8000, level: 5, tab: 'extras', pitch: 'A fat gold watch on the wrist.' },
-  { id: 'gold', name: 'Gold Pack', price: 10000, level: 7, tab: 'colours', pitch: 'Metallic gold and bronze for every fit.' },
-  { id: 'holo', name: 'Holo Pack', price: 6000, level: 4, tab: 'colours', pitch: 'Holographic pastels for every fit.' },
+  { id: 'varsity', name: 'Varsity Jacket', price: 4000, level: 2, tab: 'fit', pitch: 'Letterman jacket, striped cuffs' },
+  { id: 'puffer', name: 'Puffer Jacket', price: 6500, level: 3, tab: 'fit', pitch: 'Quilted and shiny' },
+  { id: 'cowboy', name: 'Cowboy Hat', price: 2500, level: 1, tab: 'head', pitch: 'Wide brim' },
+  { id: 'tophat', name: 'Top Hat', price: 3500, level: 2, tab: 'head', pitch: 'The Kingpin look' },
+  { id: 'halo', name: 'Neon Halo', price: 9000, level: 6, tab: 'head', pitch: 'A neon ring overhead' },
+  { id: 'duffel', name: 'Duffel Bag', price: 3000, level: 2, tab: 'bag', pitch: 'A big bag' },
+  { id: 'wings', name: 'Neon Wings', price: 25000, level: 12, tab: 'bag', pitch: 'Glowing wings on your back' },
+  { id: 'phone', name: 'Phone', price: 1000, level: 1, tab: 'hand', pitch: 'Always in hand' },
+  { id: 'briefcase', name: 'Briefcase', price: 5000, level: 4, tab: 'hand', pitch: 'Serious business' },
+  { id: 'watch', name: 'Gold Watch', price: 8000, level: 5, tab: 'extras', pitch: 'A heavy gold watch' },
+  { id: 'gold', name: 'Gold Pack', price: 10000, level: 7, tab: 'colours', pitch: 'Gold and bronze colours' },
+  { id: 'holo', name: 'Holo Pack', price: 6000, level: 4, tab: 'colours', pitch: 'Holographic pastel colours' },
   // The merch (character Phase 4): marks for the clothes (the Emporium diamond and the Sector 7 badge are free)
   // and all-over prints for the top. Placeholders in the city's style until the merch store's designs go in.
-  { id: 'mark-bolt', name: 'Bolt Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A lightning bolt for your chest, back, sleeve, hat or kicks.' },
-  { id: 'mark-star', name: 'Star Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A five-point star, wherever you want it.' },
-  { id: 'mark-heart', name: 'Heart Mark', price: 2000, level: 2, tab: 'merch', pitch: 'Wear it on your sleeve. Or anywhere.' },
-  { id: 'mark-wave', name: 'Wave Mark', price: 2500, level: 2, tab: 'merch', pitch: 'Three rolling waves.' },
-  { id: 'mark-eye', name: 'Eye Mark', price: 3500, level: 3, tab: 'merch', pitch: 'Watching the city.' },
-  { id: 'mark-mask', name: 'Degen Mask Mark', price: 5000, level: 4, tab: 'merch', pitch: 'The balaclava and shades, as a badge.' },
-  { id: 'pattern-stripes', name: 'Stripes Print', price: 3000, level: 2, tab: 'merch', pitch: 'Bold stripes all over the top.' },
-  { id: 'pattern-checks', name: 'Checks Print', price: 4000, level: 3, tab: 'merch', pitch: 'Checkerboard, all over.' },
-  { id: 'pattern-fade', name: 'Fade Print', price: 5000, level: 4, tab: 'merch', pitch: 'Dark at the hem, light at the shoulders.' },
-  { id: 'pattern-camo', name: 'Camo Print', price: 7500, level: 5, tab: 'merch', pitch: 'City camo. Blends in nowhere.' },
+  { id: 'mark-bolt', name: 'Bolt Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A lightning bolt' },
+  { id: 'mark-star', name: 'Star Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A five-point star' },
+  { id: 'mark-heart', name: 'Heart Mark', price: 2000, level: 2, tab: 'merch', pitch: 'A heart' },
+  { id: 'mark-wave', name: 'Wave Mark', price: 2500, level: 2, tab: 'merch', pitch: 'Three rolling waves' },
+  { id: 'mark-eye', name: 'Eye Mark', price: 3500, level: 3, tab: 'merch', pitch: 'A watching eye' },
+  { id: 'mark-mask', name: 'Degen Mask Mark', price: 5000, level: 4, tab: 'merch', pitch: 'The balaclava and shades' },
+  { id: 'pattern-stripes', name: 'Stripes Print', price: 3000, level: 2, tab: 'merch', pitch: 'Bold stripes all over' },
+  { id: 'pattern-checks', name: 'Checks Print', price: 4000, level: 3, tab: 'merch', pitch: 'Checks all over' },
+  { id: 'pattern-fade', name: 'Fade Print', price: 5000, level: 4, tab: 'merch', pitch: 'Dark to light, hem to shoulders' },
+  { id: 'pattern-camo', name: 'Camo Print', price: 7500, level: 5, tab: 'merch', pitch: 'City camo' },
 ];
 /** A mark's or a print's catalog id (null for the free ones) */
 export const markItem = (id: MarkId): string | null => (id === 'diamond' || id === 'seven' ? null : `mark-${id}`);
@@ -388,7 +388,7 @@ export interface ItemEntry {
   where: string;
 }
 export const ITEM_CATALOG: Record<ItemId, ItemEntry> = {
-  snack: { name: 'Snack', price: 500, level: 1, blurb: 'A bite to eat. Restores health in a spar.', where: 'the diners and the Night Market' },
+  snack: { name: 'Snack', price: 500, level: 1, blurb: 'Restores health in a spar', where: 'the diners and the Night Market' },
 };
 export const ITEM_IDS = Object.keys(ITEM_CATALOG) as ItemId[];
 /** How many of each he can carry */

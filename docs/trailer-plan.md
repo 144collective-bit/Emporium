@@ -6,6 +6,11 @@ community: the grittier edge (a burnt-out shell, boarded and condemned units,
 chained dogs behind fences, KEEP OUT signs), moody but nothing threatening, no
 violence or crime shown. Made-up names only, under the Emporium.
 
+**Moved (2026-11, docs/estate-plan.md Phase 1):** Lot 9 moved 130 south
+(`MOVED` in lot9.ts) so Endswood Estate can take its old land by the highway;
+the tunnel stayed, its footpath now running south over the open land to the
+hole in the north fence.
+
 ## The owner's answers
 
 - **Where:** hugging the highway, south of its south side, west of the south
@@ -75,6 +80,41 @@ Tests (`tests/lot9.test.ts`, and every suite at both world sizes), the
 budgets, and screenshots by day and at night, from the City view and in
 walk mode: the gate, the rows, the fire pit, the junk corner, both ends of
 the tunnel and inside it.
+
+## The polish round (built)
+
+The owner's call (2026-11): "run a round of polishing and a more realistic
+layout... a lived in feel that has everything a long term trailer park /
+camp site... almost a rough camp on a large scale". Built on Lot 9 where it
+stands since Endswood's Phase 1 moved it south.
+
+- **The park lived in** (`lot9homes.ts`): the homes no longer line up
+  exactly (each a little in or back, single-wides of varied length); every
+  lot has its yard (bins, propane, washing lines, above-ground pools, a
+  trampoline, kiddie pools, grills, picnic tables, garden beds, firewood,
+  flamingos, gnomes, toys, flags) wherever each fits, a hookup pedestal
+  with its cable and hose, and some have Christmas lights left up; power
+  poles run along the lanes with a drop to every home but the burnt one.
+  By the gate: dumpsters, an ice chest, a drinks machine, the propane cage.
+- **The Field** (`lot9camp.ts`, drawn by `lot9camp3d.ts`): the fence
+  carried west to x -205 round a rough camp on the land past the old
+  park's fence line (left half down, open where the ways through are). A
+  dirt track comes in from the west lane through the gap and loops round
+  the commons (the shower and toilet block, porta-potties, the standpipe,
+  the big fire circle, the camp kitchen, the firewood pile and its honour
+  box, the dumpster corral, the notice board, THE FIELD over the gap, a
+  vegetable patch and a chicken coop). About forty pitches, laid by a
+  seeded planner along the track and in the back corners: tents of three
+  kinds, travel trailers, teardrops, vans with awnings, pallet-and-tarp
+  shacks and bus conversions, each with its fire ring and camp chairs, and
+  canopies, cars, washing lines, coolers, jerrycans, generators, firewood,
+  solar panels, pallet windbreaks, dishes, flags, lanterns, potted plants,
+  decks and tied-out dogs. People round the lit fires and the commons
+  (the crowd's spare slots raised to 240, 120 on phones).
+- Checked: `tests/lot9.test.ts` and `tests/lot9camp.test.ts` (everything
+  in its place, off the track and the lanes, clear of each other and of
+  everything solid), every suite at both world sizes, the budgets, and
+  screenshots of the Field and the park by day and at night.
 
 ## Later (not built)
 

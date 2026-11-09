@@ -215,3 +215,14 @@ test("indoors in the mall's hall (not from over its roof); the kart park's idlin
   assert.equal(town.indoor, 0);
   assert.equal(town.karts, 0);
 });
+
+test("Endswood's own: the estate's sounds on its land and the common, Bunker Sound's beat by its door, the bell across the estate", () => {
+  const on = ambienceAt(-40, 400, 0, 0);
+  assert.ok(on.ends > 0.95 && on.studio < 0.05 && on.bell > 0.5);
+  assert.ok(ambienceAt(-80, 450, 0, 0).ends > 0.9, 'on the common');
+  assert.ok(ambienceAt(-79.4, 350, 0, 0).studio > 0.9 && ambienceAt(-79.4, 380, 0, 0).studio < 0.1);
+  assert.ok(ambienceAt(35, 369, 0, 0).bell > 0.99 && ambienceAt(35, 600, 0, 0).bell < 0.05);
+  // (and none of it downtown)
+  const town = ambienceAt(30, 30, 0, 0);
+  assert.ok(town.ends === 0 && town.studio === 0 && town.bell === 0);
+});

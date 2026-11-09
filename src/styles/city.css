@@ -172,10 +172,16 @@ body.is-walking .nav {
   visibility: visible;
   transition: opacity 0.9s var(--ease);
 }
+/* The pins (a place's name and dot over its building) are off by default (the owner's call, 2026-11: places are
+   found on the world map); Settings > Labels puts `has-pins` on the root and brings them back */
 .city-pins {
   position: absolute;
   inset: 0;
+  display: none;
   pointer-events: none;
+}
+.city.has-pins .city-pins {
+  display: block;
 }
 .city-pin {
   position: absolute;

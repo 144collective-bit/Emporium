@@ -14,6 +14,8 @@ import { PARK_LAMPS as WESTLAKE_LAMPS } from '../src/scripts/city3d/westlake';
 import { GARDEN_LAMPS } from '../src/scripts/city3d/gardens';
 import { STRIP_LAMPS } from '../src/scripts/city3d/strip';
 import { LOT9_LAMPS } from '../src/scripts/city3d/lot9';
+import { ENDS_LAMPS } from '../src/scripts/city3d/endswood';
+import { COMMON_LAMPS } from '../src/scripts/city3d/endsblend';
 import { AIRPORT_LAMPS } from '../src/scripts/city3d/airfield';
 import { DOCK_LAMPS } from '../src/scripts/city3d/docks';
 import { SF_LAMPS } from '../src/scripts/city3d/southfield';
@@ -56,6 +58,8 @@ test('each district gets its own post', () => {
   only(GARDEN_LAMPS, 'park', 'the formal garden');
   only(STRIP_LAMPS, 'strip', 'the Neon Mile');
   only(LOT9_LAMPS, 'cobra', 'Lot 9');
+  only(ENDS_LAMPS, 'cobra', 'Endswood Estate');
+  only(COMMON_LAMPS, 'cobra', "Endswood's common");
   only(AIRPORT_LAMPS, 'airport', 'the airport');
   // The Trenches' lamps stand along its streets (streets3d.ts places them): a point on each street is its own
   for (const s of TRENCH_STREETS) {
