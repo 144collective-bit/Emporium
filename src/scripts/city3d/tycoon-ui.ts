@@ -1011,7 +1011,6 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     repaint(state.panel.el, html);
   }
 
-
   return {
     paintCard,
     paintPanel,
