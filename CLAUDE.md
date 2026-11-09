@@ -2384,7 +2384,10 @@ it and has been retired completely. Build only on what's here.
   detailed building. Its LED wall shows (`drawWall`), pixel font, ticker and
   signs use fixed copy only (Insert coin, Player 1, Game on, Hi score with
   made-up names, GM degens, Arcade, Prizes); never put token details on
-  them. The rooftop hologram is `createDegen()` in hologram light. Its
+  them. The rooftop hologram is `createDegen()` in hologram light: it
+  dances the emotes' dance 16 s of every 28 and stands on the crowd pack's
+  captured idle between (`captureplay.ts`, the polish plan's Phase 8; the
+  formula idle until the pack is in). Its
   podium, claw machines and prize booth are mirrored in `walk.ts`
   (`SOLIDS`, `CAMERA_ONLY`).
 - The Armoury (`armoury()` in `armoury.ts`) is a modern
@@ -2725,8 +2728,21 @@ it and has been retired completely. Build only on what's here.
   (high-passed `hipMean`, `FP_BOB`; off under reduced motion). The
   collarbones from capture are held back (CMU's shoulder sits at the
   neck), and `locomotion.ts` stays (the gun's upper body, the fallbacks,
-  the crowd's `march`, the lab's compare). The clips file's limits are 640 KB (test) and 660 KB (budget),
-  raised for the takes on purpose:
+  the crowd's `march`, the lab's compare). The core clips file's limits are 560 KB (test) and 600 KB (budget),
+  raised for the takes on purpose and brought down with the polish plan's
+  Phase 8, which moved the rarely searched takes into **lazy packs**
+  (`mocap-load.ts` `LAZY_PACKS`: `crouch`, the crouched walks; `jumps`,
+  the standing jumps' wind-ups; `stairs`, the climb; 95 KB together,
+  budget `mocapLazy` 120): the animator asks for one the first time a
+  search wants it (`Animator.need`, set by walk.ts to `loadMocap(pack)`
+  → `extend()`, which builds its database again with the new clips after
+  the ones in, so what's playing carries on), and until it's in the walks
+  take the crouch (laid over, as standing still has it) and a slope, and a
+  running take-off serves a standing jump. The strafes stay core (the
+  first aimed frame searches them). The lab and the sparring demo take
+  every pack at once (`loadMocapAll()`); the tests read them joined
+  (`tests/mocapdata.ts`), and `tests/mocap.test.ts` holds every pack's
+  file to what the pipeline makes:
   - **The data** is CMU's motion capture (free for commercial use; the
     acknowledgment is in the start menu's Options > Credits, named, never
     linked): mostly subject 143's and 127's takes (137's idles, 132's fast walk, 122's climb, 136's crouched walks, 141's strafes), in `assets/mocap/cmu/`
@@ -2940,7 +2956,17 @@ it and has been retired completely. Build only on what's here.
     curl a little, `RELAXED`; `bakedHand()` sets one solid at a grip, for
     the first-person hands in `viewmodel.ts`). His hands are empty by
     default (the gummy bag was retired, the owner's call; saved looks that
-    held it come back empty).
+    held it come back empty). **What's in his hand behaves** on foot
+    (`heldpose.ts`, DOM-free, tested in `tests/heldpose.test.ts`, in walk
+    mode's on-foot chunk; the polish plan's Phase 8): the coffee comes up
+    for a sip every 14-26 s (never at a sprint), the phone is read standing
+    still (the head down, a glance up now and then) and glanced at on the
+    walk, the briefcase swings on the hand as a pendulum driven by the
+    hand's and his own acceleration; `createHeldLife()` keeps the schedule,
+    `applyHeld()` lays it on the animator's turns before the figure takes
+    them (the arm's reach through contact.ts's `reachArmBones()`), never
+    while something else has his arms (a gun, an emote, a slide, a vault, a
+    moment, the fists, a crate). The boombox hangs as it did.
   - **Walking and running** are `locomotion.ts` (DOM-free, tested in
     `tests/locomotion.test.ts`), for your Degen in walk mode
     (`createLocomotion()`; walk.ts feeds it his position, velocity,
@@ -3014,7 +3040,24 @@ it and has been retired completely. Build only on what's here.
     their colours by `COLOR_KEYS`, and in each item's column whether they
     wear it; `crowdAnim.w` is the row) says what they wear: items they don't
     fold to a point in every pass. Group by kind, never across kinds (a
-    hoodie would carry every suit's vertices). Skinned on the GPU (`crowdskin.ts`: `injectCrowdSkin()` in every
+    hoodie would carry every suit's vertices); the kinds a crowd carries
+    are `CROWD_KINDS` in `crowdlook.ts` (suit, hoodie, track, puffer) and
+    `CROWD_KINDS_LIGHT` on phones (track only added: one kind more than the
+    two they had, the owner's call; every kind is one more set of meshes a
+    detail level). **What the crowd wears** is `crowdlook.ts` (DOM-free,
+    tested in `tests/crowdlook.test.ts`; the polish plan's Phase 8):
+    `cityOutfit(r, { district, role, kinds })` from `STYLES` a district
+    (`districtAt(x, z)`: Uptown's suits and coats, The Trenches' hoodies
+    and track, the park's bright casual, hi-vis on the Docks' and Yards'
+    workers, Crestmont's pale suits, the Neon Mile's party colours, the
+    cove, Sunridge, Lot 9, the mall, the airport, the kart park, the town
+    everywhere else) with the role's rules first (`roleOf()`: joggers and
+    cyclists in track, kids bright with the cap back, bouncers in black),
+    seeded from each person's number (`seeded()`), so no two neighbours
+    match; life.ts dresses everyone by where they'll be, and a spare slot
+    filled later is dressed again through `Crowd.dress()` (colours and the
+    items its kind's meshes carry; the kind stays). A new district gets a
+    style in `STYLES` and a line in `districtAt()`. Skinned on the GPU (`crowdskin.ts`: `injectCrowdSkin()` in every
     pass that draws them: their materials (`crowdVersion()`), their
     shadows (`crowdDepth()`) and the ink outlines' normal pass in
     `post.ts`, where everything else reads `crowdOn` 0) from one float
@@ -3635,7 +3678,10 @@ it and has been retired completely. Build only on what's here.
   fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
   Hand, Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
-  open (still under reduced motion; drag turns him). The **Merch** tab
+  open (still under reduced motion; drag turns him); its idle and walk
+  are the crowd pack's captured takes on his bones (`captureplay.ts`:
+  the three idles in turn, crossfaded, the looped walk on the spot; the
+  formula poses until the pack is in). The **Merch** tab
   (`merchItems()`, `[data-fit-merch]`) dresses the top, the hat or the
   kicks with a mark, or the top with a print; where the top's mark goes
   and the ink are rows of their own; a note says when it won't show (no
@@ -4507,7 +4553,12 @@ it and has been retired completely. Build only on what's here.
   closed round the pistol grip, the left under the front) wear the sleeves of Degen's outfit (`setOutfit()`, called
   from `walk.setLook()` through `combat.setOutfit()`: a suit sleeve with a
   shirt cuff, or a looser hoodie / track sleeve with a ribbed cuff and the
-  track top's stripes). They're built `K` times bigger and further out (the camera's
+  track top's stripes). With empty hands the view shows his own fists
+  instead (`fistsview.ts`, the fists' chunk, brawl.ts: closed hands in
+  the same sleeves, up in the guard while the street fists are up, the
+  jab and hook thrown with the left and the cross and uppercut with the
+  right over the moves' frames, both in for the block; a kick drops them
+  and bobs the view, `KICK`, not under reduced motion). They're built `K` times bigger and further out (the camera's
   near plane is 0.5 m) and drawn in the front of the depth buffer, with
   their own flat shading (city lamps would otherwise light them wrongly).
   Keep the red dot on the line of sight: scale the whole holder, never only

@@ -381,6 +381,9 @@ export function createWalk(d: WalkDeps) {
   let contactMod: typeof import('./contact') | null = null;
   let contact: Contact | null = null;
   let contactRot: Float32Array | null = null;
+  /** The thing in his hand behaving (heldpose.ts, with the on-foot chunk): its schedule and swing, and the turns it lays on */
+  let heldLife: ReturnType<typeof import('./heldpose').createHeldLife> | null = null;
+  let heldRot: Float32Array | null = null;
   const contactBoxes: Box[] = [];
   const contactPeople: { x: number; z: number }[] = [];
   /** This frame his move was stopped by something, and how fast he was going into it */
@@ -944,11 +947,16 @@ export function createWalk(d: WalkDeps) {
   let sparWith: PartnerId | null = null;
   let fistsMod: typeof import('./brawl') | null = null;
   let fistsLoad: Promise<void> | null = null;
+  /** His own fists in first person (fistsview.ts, the polish plan's Phase 8), and a kick's bob of the view still to settle */
+  let fistsView: import('./brawl').FistsView | null = null;
+  let kickBob = 0;
   const loadFists = () =>
     (fistsLoad ??= import('./brawl')
       .then((m) => {
         fistsMod = m;
         fists = m.createStreetFists(d.game.save().fight.style);
+        fistsView = m.createFistsView(d.scene);
+        fistsView.setOutfit(outfit);
         // The sparring partners waiting on the street (Phase 3): drawn near him, solid where they stand
         partners = m.createPartners(d.scene, d.low, (x, z) => groundAt(x, z));
         // (solid where they stand: into the grids now, not the city's SOLIDS, whose lawn walks were routed at the load)
@@ -2934,6 +2942,8 @@ export function createWalk(d: WalkDeps) {
             swing.t = 0.4;
           }
         } else if (e.kind === 'strike') {
+          // (a kick in first person: the leg's out of shot, so the view bobs with it; not under reduced motion)
+          if (firstPerson && !d.reduced && fistsMod!.MOVES[e.move].kind === 'kick') kickBob = fistsMod!.KICK.settle;
           // (three landing close together on a dummy: a street chain, for the mission)
           if (fists!.brawl.landed(combat.melee(e.move, pos.x, pos.y, pos.z, face))) {
             count(d.game.save(), 'streetChains', 1);
@@ -3138,9 +3148,21 @@ export function createWalk(d: WalkDeps) {
           gaze ??= of.createGaze(11);
           mocapData = data;
           animator = m.createAnimator(data);
+          // The packs it reaches for now and then (the crouched walks, the standing jumps, the stairs climb:
+          // mocap-load.ts `LAZY_PACKS`), fetched the first time a search wants one and joined on; other players'
+          // animators made after that get them too (`motion`)
+          animator.need = (pack) =>
+            void loadMocap(pack).then(
+              (more) => {
+                animator?.extend(more);
+                if (animator) mocapData = animator.data;
+              },
+              () => {},
+            );
           contactMod = cm;
           contact = cm.createContact({ hands: !d.low });
           contactRot = new Float32Array(animator.rot.length);
+          heldRot = new Float32Array(animator.rot.length);
           mocapState = 'on';
         },
         // (it can be tried again: the procedural walk carries on meanwhile; say so once, so a reverted-looking
@@ -3197,13 +3219,27 @@ export function createWalk(d: WalkDeps) {
           }
           staggering = !!st.stagger;
         }
+        // The thing in his hand behaving (heldpose.ts, the polish plan's Phase 8): the cup to his lips now and then, the
+        // phone read standing still and glanced at on the walk, the briefcase swinging on his hand; not while something
+        // else has his arms (a gun, an emote, a slide, a vault, a moment, the fists up, a crate)
+        if (onFoot && outfit.held && hero.held?.visible && u < 0.5 && !moments.active && !carrying) {
+          heldLife ??= onFoot.createHeldLife(0.37);
+          heldLife.update(dt, outfit.held, speed, !emote && !slide && !over && guardAmt < 0.05 && !combat.armed);
+          if (heldLife.layer.kind) {
+            if (rot === animator.rot && heldRot) {
+              heldRot.set(animator.rot);
+              rot = heldRot;
+            }
+            onFoot.applyHeld(rot, animator.hips, heldLife, dt);
+          }
+        } else heldLife?.update(dt, null, speed, false);
         anim.applyTo(hero.rig, rot, animator.hips, w, u, face - drawFace);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5 + gazePitch, w * (1 - u));
         // Follow-through (follow.ts): the head a few frames behind the chest as it turns
         const trail = headFollow.update(dt, drawFace + anim.chestYaw(hero.rig));
         if (!firstPerson) anim.addLook(hero.rig, trail, 0, w * (1 - u));
-        // (anything in his hand held out in front of it, clear of his leg)
-        if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u));
+        // (anything in his hand held out in front of it, clear of his leg; not while it's up at his face)
+        if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u) * (1 - (heldLife?.layer.reach ?? 0)));
       }
       root0.roll = loco.root.roll * (1 - mocapW);
       root0.pitch = loco.root.pitch * (1 - mocapW);
@@ -3259,6 +3295,10 @@ export function createWalk(d: WalkDeps) {
       camera.position.z -= Math.sin(shakeT * 71) * k * Math.sin(yaw);
       camera.position.y += Math.sin(shakeT * 53 + 1) * k;
     }
+    if (kickBob > 0 && fistsMod) {
+      kickBob = Math.max(0, kickBob - dt);
+      camera.position.y -= fistsMod.KICK.bob * Math.sin(Math.PI * (1 - kickBob / fistsMod.KICK.settle));
+    }
     // First person, the eye rides the steps: on the motion capture its hips' rise and fall (high-passed: each
     // step's bob and a landing's squash, not the crouch, which lowers the eye itself), else the procedural walk's
     if (animator && mocapW > 0) {
@@ -3280,6 +3320,21 @@ export function createWalk(d: WalkDeps) {
     frameShowroom(dt);
     hero.ring.visible = !firstPerson;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
+    // Empty hands in first person: his own fists in the guard, thrown with the moves (fistsview.ts)
+    fistsView?.update(
+      camera,
+      dt,
+      {
+        up: fistsOn && fists!.brawl.up,
+        blocking: fistsOn && fists!.brawl.blocking,
+        clip: fistsOn ? fists!.brawl.clip() : { id: 'guard', frame: 0 },
+        move: stride,
+        phase,
+        run: runAmt,
+        dodge: dirX * Math.cos(yaw) - dirZ * Math.sin(yaw),
+      },
+      firstPerson && fistsOn,
+    );
 
     // Field of view widens with speed, narrows when aiming
     const wantFov = (firstPerson ? 70 : 52) + (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt) - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
@@ -3526,6 +3581,8 @@ export function createWalk(d: WalkDeps) {
       hero.torso.add(combat.gun);
       d.scene.add(hero.g);
       combat.setOutfit(o);
+      fistsView?.setOutfit(o);
+      heldLife?.reset();
     },
     playEmote(id: string) {
       emote = { id, t: 0 };

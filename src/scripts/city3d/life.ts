@@ -35,7 +35,8 @@ import { SCHOOL_BUS_PAINT, SUNRIDGE_RECT, SUN_MIX } from './sunridge';
 import { STRIP_LEAD, STRIP_MIX, STRIP_PAINTS, STRIP_RECT } from './strip';
 import { DRIVE_BLOCKS } from './coral';
 import { inTrenches } from './trenches';
-import { CROWD_VIEW, HIP_HEIGHT, cityOutfit, createCrowd } from './character';
+import { CROWD_VIEW, HIP_HEIGHT, createCrowd, type Outfit } from './character';
+import { CROWD_KINDS, CROWD_KINDS_LIGHT, cityOutfit, districtAt, roleOf, seeded } from './crowdlook';
 import { type CrowdClip, idleFor, secondsOf, strideOf, walkFor, seated, type IdleAct } from './crowdclips';
 import { PARK_PEOPLE, moment, type Moment, type ParkPerson } from './parklife';
 import { PLAY_PEOPLE } from './play';
@@ -1062,6 +1063,8 @@ const early: { idle: Idle[]; movers: ParkPerson[] }[] = [];
  */
 export const CHEER: { fn: ((x: number, z: number) => boolean) | null } = { fn: null };
 
+/** Dresses a spare slot's person for where they've been put (set by `buildPeople()` once the crowd's meshes exist) */
+let dresser: ((p: Person) => void) | null = null;
 export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) {
   if (!bodies.people.length) {
     early.push({ idle: [...idle], movers: [...movers] });
@@ -1071,11 +1074,13 @@ export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) 
     const p = spare.pop();
     if (!p) return;
     Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry });
+    dresser?.(p);
   }
   for (const pp of movers) {
     const p = spare.pop();
     if (!p) return;
     Object.assign(p, { kind: 'park', park: pp, m: moment(), face: NaN });
+    dresser?.(p);
   }
 }
 /** The row an idle person's act plays (a queue stands in their own idle) */
@@ -1213,20 +1218,40 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   bodies.people = people;
   for (const e of early.splice(0)) addPeople(e.idle, e.movers);
 
-  // Everyone is the shared Degen body in a city outfit: suits and hoodies, bags, headphones; a phone in the hand
-  // of those reading one (the revamp's Phase 6: an idle whose act is 'phone', and one walker in seven)
-  // (the riders all in hoodies: one kind of the crowd's meshes for them, not two, wherever they ride)
-  const hoodie = () => {
-    let o = cityOutfit(rand);
-    while (o.kind !== 'hoodie') o = cityOutfit(rand);
-    return o;
-  };
+  // Everyone is the shared Degen body in a city outfit by where they are and what they do (crowdlook.ts, the polish
+  // plan's Phase 8: Uptown's suits and coats, The Trenches' hoodies and track, the park's joggers in track, the
+  // Docks' and the Yards' workers in hi-vis, Crestmont's smart casual, the Neon Mile's party colours...), each
+  // seeded from their own number so no two neighbours match; a phone in the hand of those reading one (the revamp's
+  // Phase 6: an idle whose act is 'phone', and one walker in seven), a shopping bag on Crestmont's Drive
+  // (the riders all in hoodies: one kind of the crowd's meshes for them, not two, wherever they ride; phones carry one
+  // kind more than they did, the owner's call: `CROWD_KINDS_LIGHT`)
+  const kinds = opts.light ? CROWD_KINDS_LIGHT : CROWD_KINDS;
   const phoneOf = (p: Person) => (p.kind === 'idle' ? p.act === 'phone' : p.kind === 'walk' && onPhone(p.phase / 6));
-  const people3d = createCrowd(
-    scene,
-    people.map((p) => ({ ...(p.kind === 'ride' ? hoodie() : cityOutfit(rand)), ...(phoneOf(p) ? { held: 'phone' as const } : shopper(p) ? { held: 'shopping' as const } : {}) })),
-    { light: opts.light }
-  );
+  const outfitFor = (p: Person): Outfit => {
+    const r = seeded(p.seed);
+    if (p.kind === 'ride') return cityOutfit(r, { district: 'town', role: 'walk', kinds: ['hoodie'] });
+    // (where they'll be: a walker's block, a mover's place at the start of the clock, an idle's spot)
+    let x = p.x;
+    let z = p.z;
+    let role = roleOf({ act: p.act, scale: p.scale });
+    if (p.kind === 'walk' && p.loop) {
+      [x, z] = p.loop.pts[0];
+      role = roleOf({ shopper: shopper(p) });
+    } else if (p.kind === 'park' && p.park) {
+      const m = p.park.at(0, moment());
+      x = m.x;
+      z = m.z;
+      role = roleOf({ clip: m.clip, scale: p.park.scale, id: p.park.id });
+    }
+    const o = cityOutfit(r, { district: districtAt(x, z), role, kinds });
+    return phoneOf(p) ? { ...o, held: 'phone' } : shopper(p) ? { ...o, held: 'shopping' } : o;
+  };
+  const people3d = createCrowd(scene, people.map(outfitFor), { light: opts.light });
+  // (a spare slot filled later takes its district's look: `addPeople()`)
+  dresser = (p) => {
+    const i = people.indexOf(p);
+    if (i >= 0) people3d.dress(i, outfitFor(p));
+  };
   /** Start a walker over a crossing: from where they stand to the other block's lane corner */
   const startCrossing = (p: Person, link: Link) => {
     const to = loopOf(link.b, p.inset);

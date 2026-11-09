@@ -17,7 +17,7 @@ import { CLIP_IDS, type ClipId } from './fight-anim';
 import { createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { T, createFightSim, type FightEvent, type FightSim } from './fight-sim';
 import { fx, glowTex } from './kit';
-import { loadMocap } from './mocap-load';
+import { loadMocapAll } from './mocap-load';
 import type { Motion } from './remote';
 
 /** Where the sparring happens: the open north half of the hangout square, and the ring's radius */
@@ -55,7 +55,7 @@ export function buildFightDemo(d: FightDemoDeps) {
   }
 
   let motion: Motion | null = null;
-  void Promise.all([import('./animator'), loadMocap(), import('./onfoot')]).then(([anim, data, onFoot]) => (motion = { anim, data, onFoot }));
+  void Promise.all([import('./animator'), loadMocapAll(), import('./onfoot')]).then(([anim, data, onFoot]) => (motion = { anim, data, onFoot }));
   const figures: (FighterFigure & { id: string })[] = sim.fighters.map((f, i) => ({ id: f.id, ...createFighterFigure(group, outfits[i], d.low, i * 37, () => motion) }));
 
   // The ring on the ground: a neon circle, and the hit bursts

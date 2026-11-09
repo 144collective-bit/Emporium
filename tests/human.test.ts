@@ -5,14 +5,14 @@
 // so the entry comes out when the phase fixes it. HUMAN_REPORT=1 prints every row.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { createAnimator } from '../src/scripts/city3d/animator';
 import { BANDS, bandAt, clipRows, createRubric, froudeRate, froudeSpeed, type Row } from '../src/scripts/city3d/human';
-import { contacts, decodeMocap, mirrorClip, tagged } from '../src/scripts/city3d/mocap';
+import { contacts, mirrorClip, tagged } from '../src/scripts/city3d/mocap';
 import { GAITS, STAIRS, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { allMocap } from './mocapdata';
 
-const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
+const data = allMocap();
 const SCALE = 0.85;
 const DT = 1 / 60;
 const report = !!process.env.HUMAN_REPORT;

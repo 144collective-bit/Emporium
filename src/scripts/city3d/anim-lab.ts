@@ -41,7 +41,7 @@ import { createFollow } from './follow';
 import { createRubric, type Row } from './human';
 import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
-import { loadMocap } from './mocap-load';
+import { loadMocapAll } from './mocap-load';
 import { NB } from './mocap';
 import { GAITS, newMove, startSlide, stepMove, stepSlide, type MoveState, type Slide, STAIRS, climbAhead } from './movesim';
 import { slidePose } from './poses';
@@ -603,7 +603,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   };
 
   read.innerHTML = '<dt>Loading</dt><dd>the motion capture…</dd>';
-  const data = await loadMocap();
+  const data = await loadMocapAll();
   const anim: Animator = createAnimator(data);
   const move: MoveState = newMove(0);
   // The scorecard (human.ts): the rubric's rows over the last eight seconds

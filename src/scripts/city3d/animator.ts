@@ -36,7 +36,8 @@
 import * as THREE from 'three';
 import { FOOT_BONES, MB, MOCAP_BONES, MOCAP_FPS, NB, type MoData, PARENT, type Posed, REST, TOE_BONES, newPosed, posed, rootAt, tagged } from './mocap';
 import { angVel, createInertia, decay, expQ, logQ, rate as springRate, wrap } from './inertia';
-import { buildDatabase, cost, type Database, AHEAD, FEATURES, search, setTrajectory } from './motionmatch';
+import { buildDatabase, cost, type Database, AHEAD, FEATURES, JUMPS_ONLY, search, setTrajectory } from './motionmatch';
+import type { LazyPack } from './mocap-load';
 import { ahead, type MoveState, STAIRS, climbAhead } from './movesim';
 import { ANKLE_H, SHIN_GROUND, THIGH, type Skeleton } from './skeleton';
 
@@ -314,21 +315,23 @@ function reachNeed(at: THREE.Vector3, hip: THREE.Vector3, scale: number) {
 /* ---------- The animator ---------- */
 
 export function createAnimator(data: MoData) {
-  const db: Database = buildDatabase(data);
+  /** Every clip in (the core, then each pack `extend()` joins on, in order, so a playing clip keeps its number) */
+  let all: MoData = data;
+  let db: Database = buildDatabase(data);
   const inertia = createInertia(NB, BLEND);
   inertia.slow[MB.neck] = inertia.slow[MB.head] = HEAD_BLEND;
   const rot = new Float32Array(NB * 4);
   const hips = new THREE.Vector3();
   const P = newPosed();
   const q = new Float32Array(FEATURES);
-  const standing = Uint8Array.from(db.clips, (c) => (tagged(c, STAND.tag) ? 1 : 0));
+  let standing = Uint8Array.from(db.clips, (c) => (tagged(c, STAND.tag) ? 1 : 0));
   /** Settled in a standing clip, the next is looked for among the others (each idle's own loop, then another: no one idle over and over) */
   // (at a standing take's end, another take: not itself and not its mirror, so the idles take turns)
   const takeOf = (c: { name: string }) => c.name.replace(/~$/, '');
-  const takes = [...new Set(db.clips.map(takeOf))];
-  const takeIdx = db.clips.map((c) => takes.indexOf(takeOf(c)));
+  let takes = [...new Set(db.clips.map(takeOf))];
+  let takeIdx = db.clips.map((c) => takes.indexOf(takeOf(c)));
   /** When each take was last cut to (a count of cuts), for the standing takes' turns */
-  const takeStamp = new Float64Array(takes.length);
+  let takeStamp = new Float64Array(takes.length);
   let cuts = 0;
   /**
    * The standing clips to search next: not the one playing (nor its mirror), and of the rest the take least
@@ -341,25 +344,44 @@ export function createAnimator(data: MoData) {
     for (let j = 0; j < db.clips.length; j++) if (standing[j] && takeIdx[j] !== takeIdx[clip]) best = Math.min(best, takeStamp[takeIdx[j]]);
     return standing.map((v, j) => (v && takeIdx[j] !== takeIdx[clip] && takeStamp[takeIdx[j]] === best ? 1 : 0));
   }
-  const crouching = Uint8Array.from(db.clips, (c) => (tagged(c, CROUCH.tag) ? 1 : 0));
-  const stairs = Uint8Array.from(db.clips, (c) => (tagged(c, STAIRS.tag) ? 1 : 0));
-  const upright = crouching.map((v, i) => (v || stairs[i] ? 0 : 1));
+  let crouching = Uint8Array.from(db.clips, (c) => (tagged(c, CROUCH.tag) ? 1 : 0));
+  let stairs = Uint8Array.from(db.clips, (c) => (tagged(c, STAIRS.tag) ? 1 : 0));
+  let upright = crouching.map((v, i) => (v || stairs[i] ? 0 : 1));
+  /**
+   * Whether the crouched walks and the stairs take are in (their packs are fetched on first use, mocap-load.ts
+   * `LAZY_PACKS`): until they are, crouched the walks are searched with the crouch laid over them, and a slope
+   * is walked up; `need` is told which pack it wanted (once a pack), and walk.ts fetches it into `extend()`
+   */
+  let hasCrouch = crouching.some((v) => v === 1);
+  let hasStairs = stairs.some((v) => v === 1);
+  let hasStandingJumps = db.clips.some((c) => tagged(c, JUMPS_ONLY));
+  const asked = new Set<LazyPack>();
+  let need: ((pack: LazyPack) => void) | null = null;
+  const ask = (pack: LazyPack) => {
+    if (asked.has(pack)) return;
+    asked.add(pack);
+    need?.(pack);
+  };
   /**
    * Climbing stairs (STAIRS): only the stairs takes' climbing frames are searched (where the take's floor
    * rises over the next `STAIRS.look` frames, or rose over the last few: its approach on the level is the
    * walks' to do), and nothing else
    */
   let climbing = false;
-  const climbFrames = new Uint8Array(db.count);
-  db.clips.forEach((c, ci) => {
-    if (!stairs[ci] || !c.floor) return;
-    for (let f = 0; f < c.frames; f++) {
-      const g = db.start[ci] + f;
-      const soon = c.floor[Math.min(c.frames - 1, f + STAIRS.look)] - c.floor[f];
-      const lately = c.floor[f] - c.floor[Math.max(0, f - STAIRS.back)];
-      climbFrames[g] = db.open[g] && (soon > STAIRS.step || lately > STAIRS.step) ? 1 : 0;
-    }
-  });
+  let climbFrames = new Uint8Array(db.count);
+  const deriveClimb = () => {
+    climbFrames = new Uint8Array(db.count);
+    db.clips.forEach((c, ci) => {
+      if (!stairs[ci] || !c.floor) return;
+      for (let f = 0; f < c.frames; f++) {
+        const g = db.start[ci] + f;
+        const soon = c.floor[Math.min(c.frames - 1, f + STAIRS.look)] - c.floor[f];
+        const lately = c.floor[f] - c.floor[Math.max(0, f - STAIRS.back)];
+        climbFrames[g] = db.open[g] && (soon > STAIRS.step || lately > STAIRS.step) ? 1 : 0;
+      }
+    });
+  };
+  deriveClimb();
   /** Crouched (past CROUCH.at), and how much of the crouch is laid over a clip that isn't one */
   let crouched = false;
   let crouchW = 0;
@@ -412,16 +434,20 @@ export function createAnimator(data: MoData) {
   let airK = 1;
   const along = new THREE.Vector3(0, 0, 1);
   // Each frame's share of its clip's time round it with a foot down
-  const downShare = new Float32Array(db.count);
-  db.clips.forEach((c, ci) => {
-    const con = db.contacts[ci];
-    for (let f = 0; f < c.frames; f++) {
-      let d = 0;
-      let n = 0;
-      for (let k = Math.max(0, f - WARP.window); k <= Math.min(c.frames - 1, f + WARP.window); k++, n++) if (con[k * 2] || con[k * 2 + 1]) d++;
-      downShare[db.start[ci] + f] = d / n;
-    }
-  });
+  let downShare = new Float32Array(db.count);
+  const deriveDown = () => {
+    downShare = new Float32Array(db.count);
+    db.clips.forEach((c, ci) => {
+      const con = db.contacts[ci];
+      for (let f = 0; f < c.frames; f++) {
+        let d = 0;
+        let n = 0;
+        for (let k = Math.max(0, f - WARP.window); k <= Math.min(c.frames - 1, f + WARP.window); k++, n++) if (con[k * 2] || con[k * 2 + 1]) d++;
+        downShare[db.start[ci] + f] = d / n;
+      }
+    });
+  };
+  deriveDown();
   /** The way he's shown facing (the clip's turning, kept near the springs') */
   let face = 0;
   let lastCost = 0;
@@ -438,8 +464,41 @@ export function createAnimator(data: MoData) {
   let squashV = 0;
   let squashH = 0.12;
   // Where a fall without a jump starts: each flight's top
-  const falls = new Uint8Array(db.count);
-  for (const f of db.flights) falls[db.start[f.clip] + Math.round((f.from + f.to) / 2)] = 1;
+  let falls = new Uint8Array(db.count);
+  const deriveFalls = () => {
+    falls = new Uint8Array(db.count);
+    for (const f of db.flights) falls[db.start[f.clip] + Math.round((f.from + f.to) / 2)] = 1;
+  };
+  deriveFalls();
+  /**
+   * More clips joined on (a lazy pack arriving, mocap-load.ts): the database built again with them after the
+   * ones in (the mirrors come in pairs in order, so every clip playing or held keeps its number), and
+   * everything worked out from it again; what's playing carries on
+   */
+  function extend(more: MoData) {
+    const have = new Set(all.clips.map((c) => c.name));
+    const fresh = more.clips.filter((c) => !have.has(c.name));
+    if (!fresh.length) return;
+    all = { fps: all.fps, clips: [...all.clips, ...fresh] };
+    db = buildDatabase(all);
+    standing = Uint8Array.from(db.clips, (c) => (tagged(c, STAND.tag) ? 1 : 0));
+    takes = [...new Set(db.clips.map(takeOf))];
+    takeIdx = db.clips.map((c) => takes.indexOf(takeOf(c)));
+    const stamps = new Float64Array(takes.length);
+    stamps.set(takeStamp.subarray(0, Math.min(takeStamp.length, stamps.length)));
+    takeStamp = stamps;
+    crouching = Uint8Array.from(db.clips, (c) => (tagged(c, CROUCH.tag) ? 1 : 0));
+    stairs = Uint8Array.from(db.clips, (c) => (tagged(c, STAIRS.tag) ? 1 : 0));
+    upright = crouching.map((v, i) => (v || stairs[i] ? 0 : 1));
+    hasCrouch = crouching.some((v) => v === 1);
+    hasStairs = stairs.some((v) => v === 1);
+    hasStandingJumps = db.clips.some((c) => tagged(c, JUMPS_ONLY));
+    deriveClimb();
+    deriveDown();
+    deriveFalls();
+    // (crouched on the walks while the pack was fetched: over to a crouched walk at the next search)
+    searchIn = 0;
+  }
   const feet: Foot[] = [0, 1].map(() => ({ locked: false, wait: false, lock: new THREE.Vector3(), off: new THREE.Vector3(), offV: new THREE.Vector3(), slide: 0, drift: -1, held: new THREE.Vector3(), at: new THREE.Vector3(), rise: 0, riseV: 0, lockG: 0, ball: new THREE.Vector3() }));
 
   // The middle of the run's swing, per swinging bone, for the sprint to push away from
@@ -581,7 +640,8 @@ export function createAnimator(data: MoData) {
       // The first frame: whatever fits best, no blend
       q.fill(0);
       crouched = (inp.crouch ?? 0) > CROUCH.at;
-      const best = searchFor(true, 0, crouched ? crouching : upright);
+      if (crouched) ask('crouch');
+      const best = searchFor(true, 0, crouched && hasCrouch ? crouching : upright);
       clip = db.clipOf[best];
       t = db.frameOf[best];
       {
@@ -693,14 +753,20 @@ export function createAnimator(data: MoData) {
     if (stand && !standing[clip]) searchIn = 0;
     // (crouching or standing up on the move: over to the other kind of walk at once)
     crouched = (inp.crouch ?? 0) > CROUCH.at;
+    if (crouched) ask('crouch');
     {
       const dx = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vx : Math.sin(face);
       const dz = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vz : Math.cos(face);
-      climbing = !inAir && !crouched && simSpeed * inp.scale < STAIRS.fast && Math.hypot(inp.gx, inp.gz) > 0.1 && climbAhead(inp.ground, inp.x, inp.z, inp.y, dx, dz, inp.scale);
+      const rising = !inAir && !crouched && simSpeed * inp.scale < STAIRS.fast && Math.hypot(inp.gx, inp.gz) > 0.1 && climbAhead(inp.ground, inp.x, inp.z, inp.y, dx, dz, inp.scale);
+      if (rising) ask('stairs');
+      // (the stairs take not in yet: the walks take the slope, as they did before it was captured)
+      climbing = rising && hasStairs;
     }
+    // (the crouched walks' pack not in yet: the walks, with the crouch laid over them as standing still has it)
+    const crouchClips = crouched && hasCrouch;
     // (climbing, a stairs take's frames past its climb are the wrong kind too: played on into its standing tail
     // while he climbed, the held feet stretched the legs until they snapped)
-    const wrongKind = !stand && !inAir && (crouched ? !crouching[clip] : climbing ? !climbFrames[at(clip, t)] : crouching[clip] === 1 || stairs[clip] === 1);
+    const wrongKind = !stand && !inAir && (crouchClips ? !crouching[clip] : climbing ? !climbFrames[at(clip, t)] : crouching[clip] === 1 || stairs[clip] === 1);
     if (wrongKind) searchIn = 0;
     searchIn -= dt;
     const sharp = Math.hypot(inp.gx - lastGx, inp.gz - lastGz) > MATCH.sharp;
@@ -711,7 +777,7 @@ export function createAnimator(data: MoData) {
     if (!inAir && (force || searchIn <= 0 || sharp || sharpLeft > 0)) {
       searchIn = MATCH.every;
       const cur = at(clip, t);
-      const best = climbing && !stand ? searchFor(false, cur, undefined, climbFrames) : searchFor(false, cur, stand ? standNext() : crouched ? crouching : upright);
+      const best = climbing && !stand ? searchFor(false, cur, undefined, climbFrames) : searchFor(false, cur, stand ? standNext() : crouchClips ? crouching : upright);
       const curCost = db.open[cur] && !force ? cost(db, q, cur) : Infinity;
       const near = db.clipOf[best] === clip && Math.abs(db.frameOf[best] - t) < 3;
       const better = wrongKind || (settle > 0 ? lastCost < curCost * AIR.margin : lastCost + (stand && standing[clip] ? STAND.margin : climbing && stairs[clip] ? STAIRS.margin : MATCH.margin) < curCost || (stand && !standing[clip]));
@@ -1049,6 +1115,8 @@ export function createAnimator(data: MoData) {
   }
   /** Into the air: a jump from the take-off that carries on best from here; a fall from a flight's top */
   function takeOff(jumping: boolean, vy: number, jumpV: number) {
+    // (a standing jump's own take-off is in the jumps pack: asked for at the first jump, a running one's serves till then)
+    if (jumping && !hasStandingJumps) ask('jumps');
     const g = searchFor(false, at(clip, t), undefined, jumping ? db.takeoff : falls);
     if (g < 0) return;
     // (the push off plays at about its own speed, a fall's flight as the fall goes)
@@ -1083,9 +1151,22 @@ export function createAnimator(data: MoData) {
   return {
     rot,
     hips,
-    db,
+    get db() {
+      return db;
+    },
     feet,
     update,
+    extend,
+    /** Told which lazy pack a search first wanted (mocap-load.ts `LAZY_PACKS`): the caller fetches it into `extend()` */
+    set need(f: ((pack: LazyPack) => void) | null) {
+      need = f;
+      // (wanted before anyone was listening: told now)
+      if (f) for (const p of asked) f(p);
+    },
+    /** Every clip in now (the core and the packs joined on), for another animator made alongside */
+    get data() {
+      return all;
+    },
     /** The way he's shown facing (world yaw): place the figure with it */
     get face() {
       return face;

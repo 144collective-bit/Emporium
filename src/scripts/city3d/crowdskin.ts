@@ -60,6 +60,12 @@ export function addWardrobe(rows: Float32Array[]) {
   crowdWardrobe.value = t;
   return first;
 }
+/** One person's row written again (dressed anew: `Crowd.dress()`), in place */
+export function setWardrobeRow(row: number, data: Float32Array) {
+  if (row < 0 || row >= wardrobeRows) return;
+  wardrobe.set(data.subarray(0, WARDROBE_W * 4), row * WARDROBE_W * 4);
+  if (crowdWardrobe.value) crowdWardrobe.value.needsUpdate = true;
+}
 
 const HEAD = /* glsl */ `
 uniform highp sampler2D crowdBones;

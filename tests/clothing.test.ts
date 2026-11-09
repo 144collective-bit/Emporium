@@ -4,7 +4,6 @@
 // CLOTHING_REPORT=1 prints the worst of each.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { PLAYER, SOLDIER, type Outfit, type OutfitKind } from '../src/scripts/city3d/wardrobe';
 import { newPose, poseSkeleton, type Pose } from '../src/scripts/city3d/skeleton';
@@ -12,8 +11,8 @@ import { airPose, idlePose, sitPose, slidePose, walkPose } from '../src/scripts/
 import { EMOTE_IDS, emotePose, emoteSeconds } from '../src/scripts/city3d/emotes';
 import { CLIP_IDS, CLIPS, newFightPose, sampleClip } from '../src/scripts/city3d/fight-anim';
 import { applyTo, createAnimator } from '../src/scripts/city3d/animator';
-import { decodeMocap } from '../src/scripts/city3d/mocap';
 import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { allMocap } from './mocapdata';
 import { atRest, dress, layers, type Dressed } from './dress';
 
 /** How far one layer may show through another: a few millimetres (Degen is about 1.3 tall, 1.8 m) */
@@ -71,7 +70,7 @@ for (const id of CLIP_IDS) {
 }
 
 /** The animator through a program, the bones every quarter second */
-const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
+const data = allMocap();
 type Prog = { go: (t: number) => [number, number]; seconds: number; crouch?: number };
 const PROGS: Record<string, Prog> = {
   walk: { go: () => [0, GAITS.walk], seconds: 4 },
