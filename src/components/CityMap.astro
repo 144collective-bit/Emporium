@@ -99,6 +99,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <p class="kicker"><span class="kicker-num">3D</span> The Trenches</p>
       <p class="city-no3d-text">The Trenches needs a device with 3D graphics (WebGL&nbsp;2).</p>
       <p class="city-no3d-note">Try another browser or device.</p>
+      {/* Shown when a running city loses its graphics context (index.ts) */}
+      <button type="button" class="city-no3d-btn" data-no3d-reload hidden onclick="location.reload()">Reload</button>
     </div>
   </div>
 

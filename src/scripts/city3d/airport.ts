@@ -9,6 +9,7 @@
  * the fence, the roads) is airportgrounds3d.ts, loaded as you approach.
  */
 import * as THREE from 'three';
+import { nearGate } from './nearby';
 import { Batch, canvasTex, FONT_DISPLAY, fx, glowMat, lit, moving, neon, PAL, plane, rng, toon } from './kit';
 import { INK, PALE, ROOF, STEEL, TOP, YELLOW, box, cyl, glazing, soft } from './airportkit';
 import {
@@ -202,7 +203,9 @@ function tower(b: Batch, group: THREE.Group, tick: (f: Tick) => void) {
   const white = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), neon('#fff6c8', 0.4, 2.4));
   white.position.set(x, top, z);
   group.add(fx(beacon), fx(white));
+  const beaconNear = nearGate();
   tick(({ t }) => {
+    if (!beaconNear(x, z)) return;
     const on = Math.floor(t * 0.8) % 2 === 0;
     beacon.visible = on;
     white.visible = !on;
@@ -419,7 +422,9 @@ function rabbit(group: THREE.Group, tick: (f: Tick) => void, reduced: boolean) {
   flash.name = 'approach-rabbit';
   flash.visible = false;
   group.add(flash);
+  const rabbitNear = nearGate();
   tick(({ t, night }) => {
+    if (!rabbitNear(RABBIT.x0, APPROACH.z, RABBIT.x1, APPROACH.z)) return;
     const on = !reduced && night > 0.25;
     flash.visible = on;
     if (!on) return;

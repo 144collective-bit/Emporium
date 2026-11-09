@@ -11,6 +11,7 @@
  * checks, the post office's paper) goes through `design()` too.
  */
 import type { IdleAct } from './crowdclips';
+import { nearGate } from './nearby';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import {
@@ -347,7 +348,11 @@ function workshop(scene: THREE.Scene, ctx: LandmarkCtx) {
   scene.add(sparks);
   const p = sparks.geometry.attributes.position as THREE.BufferAttribute;
   const seeds = Array.from({ length: n }, () => [rand(), (rand() - 0.5) * 2.2, 0.8 + rand() * 1.6, rand() * 0.8]);
+  // (moved only while the camera is near: polish plan Phase 4)
+  const [doorX, doorZ] = design(14.9, 27.7);
+  const sparksNear = nearGate();
   ctx.tick(({ t }) => {
+    if (!sparksNear(doorX, doorZ)) return;
     for (let i = 0; i < n; i++) {
       const [ph, vx, vy, vz] = seeds[i];
       const k = (t * 0.9 + ph) % 1;

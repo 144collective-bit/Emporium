@@ -9,6 +9,7 @@
  * motion every show stands at its still frame.
  */
 import * as THREE from 'three';
+import { nearGate } from './nearby';
 import { Batch, FONT_DISPLAY, canvasTex, fx, glowTex, lit, moving, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { SLAB, type Tick } from './world';
@@ -28,7 +29,7 @@ import {
   jetHeights,
   showAt,
 } from './stripmarks';
-import type { Rect } from './strip';
+import { STRIP_RECT, type Rect } from './strip';
 
 type Pt = [number, number];
 
@@ -516,7 +517,10 @@ export function registerMarks({ low, scene, tick }: { low: boolean; scene: THREE
   setFlames(t0);
   setSphere(t0, 0);
   setBeams(t0, 0);
+  // (as the resorts': the shows keep the clock, only the drawing waits for the camera)
+  const stripNear = nearGate(260);
   tick?.((env) => {
+    if (!stripNear(...STRIP_RECT)) return;
     const t = now();
     setJets(t);
     setFlames(t);

@@ -1367,6 +1367,24 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
   };
+  // The GPU's context lost (a phone out of graphics memory, a driver reset): the loop and the sound stop and the
+  // page says so with a Reload, instead of going black with no message (polish plan Phase 4)
+  renderer.domElement.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    running = false;
+    cancelAnimationFrame(raf);
+    if (sound.on) sound.toggle();
+    root.dataset.view = 'none';
+    const card = root.querySelector<HTMLElement>('[data-no3d]');
+    if (!card) return;
+    card.hidden = false;
+    const text = card.querySelector<HTMLElement>('.city-no3d-text');
+    if (text) text.textContent = "The city's 3D graphics stopped.";
+    const note = card.querySelector<HTMLElement>('.city-no3d-note');
+    if (note) note.textContent = 'The device ran out of graphics memory, or its driver reset. Your save is kept.';
+    const reload = card.querySelector<HTMLElement>('[data-no3d-reload]');
+    if (reload) reload.hidden = false;
+  });
   // Fast screens (120 / 144 Hz) draw every other refresh: a steady 60-72fps
   // rather than an uneven, hotter 120. The refresh rate is read from the
   // browser's own frame timing, which doesn't depend on how long we take.
@@ -1437,6 +1455,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let windowSlow = 0;
   const pinPos = new THREE.Vector3();
   const pinState: { id: string; el: HTMLElement; x: number; y: number; scale: number; rank: number }[] = [];
+  /** Which pins are on screen (their visibility is written only when it changes) */
+  const pinShown = new Map<string, boolean>();
   const placed: { x: number; y: number; w: number; h: number }[] = [];
   // Label sizes, measured once fonts are in and again on resize
   const pinSize = new Map<string, [number, number]>();
@@ -1636,9 +1656,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       const x = ((pinPos.x + 1) / 2) * w;
       const y = ((1 - pinPos.y) / 2) * h;
       const scale = THREE.MathUtils.clamp(1.3 - dist / 85, 0.72, 1);
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-      el.style.setProperty('--s', scale.toFixed(3));
-      el.style.visibility = visible ? 'visible' : 'hidden';
+      // (a pin off screen and staying off gets no style writes: polish plan Phase 4)
+      if (visible) {
+        el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+        el.style.setProperty('--s', scale.toFixed(3));
+      }
+      if (visible !== pinShown.get(sp.id)) {
+        el.style.visibility = visible ? 'visible' : 'hidden';
+        pinShown.set(sp.id, visible);
+      }
       if (visible) pinState.push({ id: sp.id, el, x, y, scale, rank: sp === hovered || sp === active ? -1 : dist });
     }
     // Declutter: the hovered pin and nearer pins win; a label that would

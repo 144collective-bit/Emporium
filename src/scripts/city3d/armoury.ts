@@ -3,6 +3,7 @@
  * players' gun store, mirrored in solids.ts.
  */
 import * as THREE from 'three';
+import { nearGate } from './nearby';
 import {
   Batch,
   FONT_DISPLAY,
@@ -548,7 +549,11 @@ export function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
     }
   });
   flag(27.55, S + HH + 0.16, 26.55, 1.0, 0.65, degenFlag, 1.45);
+  // (the cloth ripples only while the camera is near: polish plan Phase 4)
+  const [flagX, flagZ] = design(27.55, 26.55);
+  const flagsNear = nearGate();
   ctx.tick(({ t }) => {
+    if (!flagsNear(flagX, flagZ)) return;
     for (const f of flags) {
       const pos = f.geo.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < pos.count; i++) {

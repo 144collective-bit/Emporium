@@ -4,6 +4,8 @@
  * machines and prize booth (mirrored in solids.ts).
  */
 import * as THREE from 'three';
+import { nearGate } from './nearby';
+import { design } from './layout';
 import { Batch, canvasTex, fx, glowMat, lit, liveTex, neonSign, occlude, PAL, place, rng, toon } from './kit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PLAYER, createDegen, idlePose } from './character';
@@ -182,6 +184,11 @@ function holoMaterial(base: number, height: number) {
 export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
   const CX = 14.7; // tower centre
   const CZ = 14.7;
+  // Where the tower stands in the world: its LED wall and hologram are drawn every frame only while the camera is
+  // near it (polish plan Phase 4; the shows and the hologram's turn are functions of the clock, so they're right
+  // the moment it comes back into reach)
+  const [towerX, towerZ] = design(CX, CZ);
+  const towerNear = nearGate();
   const N = 12; // floors
   const FH = 0.82;
   const HS = 2.0; // half the floor plate
@@ -510,7 +517,7 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     drawWall(c, H, SHOWS[0], 0, ctx.degen);
     tex.needsUpdate = true;
     ctx.tick(({ t }) => {
-      if (t < next) return;
+      if (!towerNear(towerX, towerZ) || t < next) return;
       next = t + 0.125;
       frameN++;
       if (t > nextShow) {
@@ -601,6 +608,7 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     cone.position.set(CX, holoBase + 1.8, CZ);
     g.add(fx(cone));
     ctx.tick(({ t, night }) => {
+      if (!towerNear(towerX, towerZ)) return;
       mat.uniforms.time.value = t;
       const glitch = Math.sin(t * 0.9) > 0.985 ? 1 : 0;
       mat.uniforms.power.value = (1.7 - night * 0.4) * (glitch ? 0.4 + Math.random() * 0.6 : 1);

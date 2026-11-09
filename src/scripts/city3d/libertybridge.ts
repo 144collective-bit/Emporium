@@ -26,6 +26,7 @@
  * gates move in it (`userData.keep`), the ship sails on its own.
  */
 import * as THREE from 'three';
+import { nearGate } from './nearby';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, fx, glowMat, glowTex, lit, moving, neon, roundRect, toon } from './kit';
 import { addPool, type Tick } from './world';
 import {
@@ -729,7 +730,13 @@ export function buildLibertyBridge(scene: THREE.Scene, opts: { flame: HTMLImageE
   };
   for (const gt of gates) gt.arm.rotation.z = Math.PI / 2;
   place();
+  // (the leaves, gates, ship and flames move only while the camera is near the bridge or the ship's anchorages:
+  // polish plan Phase 4; `leavesAt()` / `shipAt()` keep the clock, so they're right the moment it comes back)
+  const bridgeNear = nearGate();
+  const anchorX0 = Math.min(ANCHOR_X[0], ANCHOR_X[1]) - 20;
+  const anchorX1 = Math.max(ANCHOR_X[0], ANCHOR_X[1]) + 20;
   opts.tick(({ t, dt }) => {
+    if (!bridgeNear(anchorX0, TOWERS[0] - 40, anchorX1, TOWERS[1] + 40)) return;
     place();
     if (opts.reduced) return;
     flames.forEach((m, i) => {

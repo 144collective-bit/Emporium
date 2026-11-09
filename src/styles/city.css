@@ -70,6 +70,21 @@ body.is-walking .nav {
   line-height: 1.4;
   color: var(--text-2);
 }
+.city-no3d-btn {
+  margin-top: 6px;
+  padding: 10px 22px;
+  border: 1px solid #0000;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0a12, #0b0a12) padding-box,
+    var(--pulse) border-box;
+  color: #fff;
+  font: 700 14px var(--font-mono);
+  cursor: pointer;
+}
+.city-no3d-btn[hidden] {
+  display: none;
+}
 /* (the welcome tip's how-to-move line is the 3D city's) */
 .city[data-view="none"] .city-hint {
   display: none;

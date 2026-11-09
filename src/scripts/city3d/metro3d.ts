@@ -22,6 +22,7 @@
  * the train goes over (not under reduced motion).
  */
 import * as THREE from 'three';
+import { nearGate } from './nearby';
 import { Batch, PAL, boxAt, canvasTex, FONT_DISPLAY, fx, glowTex, lit, mergeMeshes, neon, roundRect, toon } from './kit';
 import { SLAB, addPool, type Tick } from './world';
 import { inTrenches } from './trenches';
@@ -493,9 +494,20 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   const last = new THREE.Vector3();
   /** How fast the train is going (tiles a second), from where it was a frame ago */
   let speed = 0;
+  const trainNear = nearGate();
+  let farNext = 0;
   tick((env) => {
     if (opts.reduced && !held) return;
+    // Far from the train its cars are placed twice a second (the timetable keeps the clock); near, every frame
+    // with the sparks (polish plan Phase 4)
+    const near = trainNear(Math.min(front.position.x, back.position.x), Math.min(front.position.z, back.position.z), Math.max(front.position.x, back.position.x), Math.max(front.position.z, back.position.z));
+    if (!near && env.t < farNext) return;
     set(held ?? trainAt(now()));
+    if (!near) {
+      farNext = env.t + 0.5;
+      last.copy(front.position);
+      return;
+    }
     const dt = Math.min(env.dt, 0.1);
     if (dt > 0) speed = speed * 0.8 + (front.position.distanceTo(last) / dt) * 0.2;
     last.copy(front.position);

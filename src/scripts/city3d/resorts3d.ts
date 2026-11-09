@@ -12,6 +12,7 @@
  * neon. Details near only; phones leave out the finest (loungers, flags, rocks, bulbs on the walls).
  */
 import * as THREE from 'three';
+import { nearGate } from './nearby';
 import { Batch, FONT_DISPLAY, canvasTex, fx, lit, moving, neon, rng, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { SLAB, waterMat, type Tick } from './world';
@@ -36,7 +37,7 @@ import {
   type Resort,
   type Skin,
 } from './resorts';
-import type { Rect } from './strip';
+import { STRIP_RECT, type Rect } from './strip';
 
 type Pt = [number, number];
 type V3 = [number, number, number];
@@ -1346,7 +1347,11 @@ export function registerResorts({ low, scene, tick }: { low: boolean; scene: THR
   // The chase and everything else that moves, on the city's tick
   const ON = new THREE.Color('#ffe9a8');
   const OFF = new THREE.Color('#5a4a2a');
+  // (drawn every frame only while the camera is near the Strip: polish plan Phase 4; everything here is a function
+  // of the clock, so it's right the moment it comes back into reach)
+  const stripNear = nearGate(260);
   tick?.((env) => {
+    if (!stripNear(...STRIP_RECT)) return;
     const t = now();
     place(t);
     arm.rotation.z = -0.35 + Math.sin(t * 3.2) * 0.45;
