@@ -342,3 +342,36 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
     not a place, so never closed), "Fennel House · Floor 3" on arrival.
   - The boot's code is 728.8 KB; the budget raised to 740 under the owner's
     standing call, for Phases 6-8.
+- **Phase 6 (the blend):** `endsblend.ts` (DOM-free, the boot's: solids,
+  lamps, trees, the ground; tested in `tests/endsblend.test.ts`), drawn by
+  `endsblend3d.ts` in Endswood's chunk.
+  - **The common** (`COMMON`, the land between the estate's south edge and
+    Lot 9's north fence): rough trodden ground (ground.ts `ends-common`), the
+    outskirts' trees kept off (landuse.ts `KEEPS`) for its own brambles and a
+    few hawthorns (`BRAMBLES`, `COMMON_TREES`). The footpath from the tunnel
+    to the hole in Lot 9's fence crosses it; a desire line worn off the
+    estate's south edge joins it (`DESIRE`, worn bare either side).
+  - **The ditch** across it (`DITCH_LINE`, `ditchZ()`): dark water between
+    muddy banks, rushes, its banks solid (`DITCH_SOLIDS`, low) but at the
+    plank bridge where the footpath crosses (`PLANK`: two scaffold boards on
+    breeze blocks) and round its ends.
+  - **Fly-tipping** (`TIPPED`): a stained mattress, a burnt-out moped on its
+    side in its scorch mark, a shopping trolley on its side, a sofa with a
+    cushion gone, a fridge with its door hanging, bin bags, tyres; the bulky
+    ones solid.
+  - **The estate's old chain-link** (`CHAIN_RUNS`): standing runs (solid,
+    tagged), runs leaning over south and one flat on the grass, gaps where
+    people walk; its mesh in the FX layer.
+  - **Sodium all the way:** lamps along the footpath across the common and by
+    the desire line's mouth (`COMMON_LAMPS`), lampmix.ts's `inSodiumBand()`
+    so none is mixed with the town's white.
+  - **The tunnel dressed:** Lot 9's tunnel under the highway is drawn as the
+    estate's subways are (endswood3d.ts `registerTunnel()`): tiles dirtier
+    low down and a grout line, THE ENDS painted on the passage's west wall,
+    SUBWAY plates on both headwalls with caged lamps, concrete bollards, tags
+    and a bill. Lot 9's chunk keeps only its footpath.
+  - **Under the viaduct:** between the courts by Endswood a skate spot and
+    lock-ups in turn (viadress.ts `skate`, `skateParts()`: a ledge with a
+    steel edge, a rail, a manual pad and a quarter pipe with its coping on
+    smooth concrete, tagged; solid in `UNDER_SOLIDS`).
+  - `COMMON_SOLIDS` (in `SOLIDS`). The boot's code is 730.3 of 740 KB.

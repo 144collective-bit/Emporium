@@ -7,8 +7,8 @@
  * charred to its studs), the chain-link fence (its mesh in the FX layer) with the gate, its LOT 9 board and the hole
  * cut by the footpath, the office and the coin laundry, the fire pit (the burn barrel's flames, couches and lawn chairs,
  * string lights, the bug zapper, the radio), the junk corner (the boat on its trailer, the mechanic's bay, tyre stacks,
- * scrap), the tunnel under the highway (its ramps, walls, parapets and bollards, the passage with its fluorescent
- * strips, some flickering, tags, a puddle) and its footpath. On the main thread: the parked cars, the kids' bikes, the
+ * scrap) and the tunnel's footpath (the tunnel itself is Endswood's subway, drawn in its chunk since
+ * docs/estate-plan.md Phase 6). On the main thread: the parked cars, the kids' bikes, the
  * loose and chained dogs, the fire's glow on the ground. One sign atlas of fixed made-up copy. Phones leave out the
  * finest details.
  */

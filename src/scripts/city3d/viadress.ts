@@ -5,7 +5,8 @@
  *
  * - Under the deck (`UNDER`): car parks off the arterials in town (`park`: bays either side of the piers' line, cars in
  *   most, `UNDER_CARS`), storage lock-ups by the industrial land (`store`), basketball courts in The Trenches and by
- *   Lot 9 (`court`, `besideIn()`), and lights under the deck wherever a street passes under it (`UNDER_LIGHTS`, their
+ *   Endswood (`court`, `besideIn()`) and between them by Endswood a skate spot and lock-ups in turn (`skate`,
+ *   `skateParts()`: docs/estate-plan.md Phase 6), and lights under the deck wherever a street passes under it (`UNDER_LIGHTS`, their
  *   pools at the boot); `UNDER_SOLIDS`.
  * - `RAMP_LAMPS`: street lamps up each ramp on its outer side, at its height.
  * - `exitBadge()`: where the world map puts an exit's number.
