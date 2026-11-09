@@ -30,7 +30,7 @@ import { MARK_IDS, type MarkId, type PatternId } from '../net/profile-data';
 import { ATLAS_COLS, ATLAS_ROWS, MARK_ART } from './marks';
 import { lit, liveTex, moving, neon, toon } from './kit';
 import { crowdFrame, type CrowdClip } from './crowdclips';
-import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion } from './crowdskin';
+import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setWardrobeRow } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
 import { COLOR_KEYS, PLAYER, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
 
@@ -432,6 +432,12 @@ export interface Crowd {
   set(i: number, x: number, y: number, z: number, yaw: number, scale: number, clip: CrowdClip, u: number): void;
   /** Call once a frame after setting everyone */
   commit(): void;
+  /**
+   * Figure `i` dressed anew (a spare slot filled by a district's chunk: life.ts `addPeople()`): its colours, and
+   * of the outfit's items those its kind's meshes carry; the kind itself can't change (the meshes are grouped by
+   * it), so the new outfit's is ignored
+   */
+  dress(i: number, o: Outfit): void;
   meshes: THREE.InstancedMesh[];
 }
 
@@ -548,21 +554,23 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
   sk.root.updateMatrixWorld(true);
   const near = opts.light ? CROWD_NEAR_LIGHT : CROWD_NEAR;
   const meshes: THREE.InstancedMesh[] = [];
-  // Everyone's row: their colours, then which items they wear
-  const rowOf = addWardrobe(
-    outfits.map((o) => {
-      const row = new Float32Array(WARDROBE_W * 4);
-      COLOR_KEYS.forEach((k, c) => {
-        tmp.set(outfitColor(o, k));
-        row[c * 4] = tmp.r;
-        row[c * 4 + 1] = tmp.g;
-        row[c * 4 + 2] = tmp.b;
-      });
-      for (const q of [1, 0] as Detail[]) for (const it of items(q, true)) if (it.when(o)) row[itemCol(it.id) * 4 + 3] = 1;
-      return row;
-    })
-  );
+  /** A person's row: their colours, then which items they wear (`allow` leaves out items the meshes can't draw: `dress()`) */
+  const rowFor = (o: Outfit, allow: (q: Detail, it: Item) => boolean = () => true) => {
+    const row = new Float32Array(WARDROBE_W * 4);
+    COLOR_KEYS.forEach((k, c) => {
+      tmp.set(outfitColor(o, k));
+      row[c * 4] = tmp.r;
+      row[c * 4 + 1] = tmp.g;
+      row[c * 4 + 2] = tmp.b;
+    });
+    for (const q of [1, 0] as Detail[]) for (const it of items(q, true)) if (it.when(o) && allow(q, it)) row[itemCol(it.id) * 4 + 3] = 1;
+    return row;
+  };
+  const rowOf = addWardrobe(outfits.map((o) => rowFor(o)));
   const kinds = [...new Set(outfits.map((o) => o.kind))];
+  /** The items each kind's meshes hold at each level (`level|kind|item`), and the part (mesh) for each of its materials (`level|kind|material`) */
+  const has = new Set<string>();
+  const partOf = new Map<string, Part>();
   const levels = ([1, 0] as Detail[]).map((q) => {
     const details = q === 1 && !opts.light;
     const parts: Part[] = [];
@@ -574,6 +582,7 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
       for (const it of items(q, true)) {
         const wearers = who.filter((i) => it.when(outfits[i]));
         if (!wearers.length) continue;
+        has.add(`${q}|${kind}|${it.id}`);
         const sub = new Map<string, Piece[]>();
         for (const p of it.pieces) {
           if (!details && p.detail) continue;
@@ -622,11 +631,24 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
         m.onBeforeShadow = () => void (m.count = part.shadow);
         m.onBeforeRender = () => void (m.count = part.view);
         parts.push(part);
+        partOf.set(`${q}|${kind}|${mat}`, part);
         for (const i of wearers) wear[i].push(part);
       }
     }
     return { parts, wear };
   });
+  /** Whether person `i` (of `kind`) can wear item `it` at level `q`: its kind's meshes hold it, and they have a slot for them in every material it takes */
+  const canWear = (i: number, kind: string, q: Detail, it: Item) => {
+    if (!has.has(`${q}|${kind}|${it.id}`)) return false;
+    const details = q === 1 && !opts.light;
+    const wear = levels[q === 1 ? 0 : 1].wear[i];
+    for (const p of it.pieces) {
+      if (!details && p.detail) continue;
+      const part = partOf.get(`${q}|${kind}|${p.mat ?? ''}`);
+      if (!part || !wear.includes(part)) return false;
+    }
+    return true;
+  };
   const at = new THREE.Vector3();
   const ball = new THREE.Sphere(at, 0);
   const m4 = new THREE.Matrix4();
@@ -659,6 +681,12 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
         g.anim.setXYZW(k, frame[0], frame[1], frame[2], rowOf + i);
       }
     },
+    dress(i, o) {
+      const kind = outfits[i].kind;
+      const fitted: Outfit = { ...o, kind };
+      outfits[i] = fitted;
+      setWardrobeRow(rowOf + i, rowFor(fitted, (q, it) => canWear(i, kind, q, it)));
+    },
     commit() {
       for (const l of levels)
         for (const g of l.parts) {
@@ -683,42 +711,4 @@ function moveInstance(g: Part, from: number, to: number) {
   if (from === to) return;
   g.mesh.instanceMatrix.array.copyWithin(to * 16, from * 16, from * 16 + 16);
   g.anim.array.copyWithin(to * 4, from * 4, from * 4 + 4);
-}
-
-/* ---------- A varied city crowd ---------- */
-
-/** Suits and hoodies in a spread of colours, some with bags or headphones. */
-export function cityOutfit(r: () => number): Outfit {
-  const pick = <T>(a: T[]) => a[Math.floor(r() * a.length)];
-  const extras = {
-    backpack: r() < 0.2 ? pick(['#14121f', '#2a2350', '#d8312f', '#1f9d6a', '#f3f2f7']) : undefined,
-    crossbody: r() < 0.15 ? pick(['#14121f', '#8f3dff', '#c99a4a']) : undefined,
-    headphones: r() < 0.22 ? pick(['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8']) : undefined,
-    build: 0.92 + r() * 0.2,
-    height: 0.95 + r() * 0.1,
-  };
-  if (r() < 0.55) {
-    const top = pick(['#16141f', '#16141f', '#16141f', '#1d2550', '#3b2a6a', '#f3f2f7', '#4a4a5a']);
-    return {
-      kind: 'suit',
-      top,
-      bottom: top === '#f3f2f7' && r() < 0.5 ? '#16141f' : top,
-      shoes: pick(['#1b1830', '#3a2418', '#16141f']),
-      tie: pick(['#1f9d55', '#1f9d55', '#e219e5', '#00b8d8', '#d8312f', '#c99a4a']),
-      cap: r() < 0.85 ? pick(['#d8312f', '#d8312f', '#d8312f', '#16141f', '#f3f2f7']) : undefined,
-      chain: r() < 0.3,
-      ...extras,
-      backpack: undefined,
-    };
-  }
-  const hood = r() < 0.4;
-  return {
-    kind: 'hoodie',
-    top: pick(['#16141f', '#2a2350', '#e219e5', '#00a8d8', '#f3f2f7', '#ff6a3d', '#1f9d6a', '#8f3dff']),
-    bottom: pick(['#3a3a48', '#16141f', '#4a4a5a']),
-    shoes: pick(['#f3f2f7', '#f3f2f7', '#16141f', '#ff6ad5', '#00b8d8']),
-    hood,
-    cap: hood ? undefined : r() < 0.7 ? pick(['#d8312f', '#16141f', '#f3f2f7', '#d8312f']) : undefined,
-    ...extras,
-  };
 }

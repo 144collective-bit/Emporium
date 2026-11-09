@@ -656,6 +656,47 @@ the typecheck and the budgets green; none moves anything that exists.
    first-person hands, the rarely used takes into on-demand packs, then
    the sitting-down take (a data step: the owner fetches or approves the
    CMU take). A week; the clothing, crowd and rubric tests hold it.
+   **Built** (2026-11-09), all but the data step: **the crowd's outfits**
+   are `crowdlook.ts` (`districtAt()`, `roleOf()`, `cityOutfit(r,
+   where)`, `STYLES` a district: Uptown's suits and coats with hardly a
+   cap, The Trenches' hoodies and track with hoods and beanies, the park's
+   joggers and cyclists in bright track, the Docks' and the Yards' workers
+   in hi-vis, Crestmont's pale suits with the collar open, the Neon Mile's
+   party colours and its own lenses, the cove's pale casual, Sunridge,
+   Lot 9, the mall, the airport and the kart park each their own, kids
+   bright with the cap back, bouncers in black; `seeded()` from each
+   person's number, so no two neighbours match and a visit is the same
+   each time); life.ts dresses everyone by where they'll be and what they
+   do, and a spare slot filled by a district's chunk is dressed again
+   through `Crowd.dress()` (its colours and the items its kind's meshes
+   carry; the kind stays). The crowd's kinds are `CROWD_KINDS` (suit,
+   hoodie, track, puffer) and `CROWD_KINDS_LIGHT` (track only added:
+   phones one kind more, the owner's call); the test counts the meshes.
+   **The captured idle and walk** on the stage and the hologram are
+   `captureplay.ts` (the crowd pack's three idles in turn, crossfaded, and
+   its looped walk, on a figure's bones after its `update()`; the formula
+   until the pack is in); the hologram now dances 16 s of every 28 and
+   stands on the capture between. **Held things** are `heldpose.ts` (in
+   the on-foot chunk: the coffee's sip every 14-26 s, the phone read
+   standing still with a glance up and glanced at on the walk, the
+   briefcase's pendulum on the hand; `applyHeld()` on the animator's turns
+   through contact.ts's arm IK; the boombox hangs as it did). **Fists in
+   first person** are `fistsview.ts` (the fists' chunk: his own hands
+   closed, in the outfit's sleeves, in the guard, the jab and hook with the
+   left, the cross and uppercut with the right over the moves' frames, the
+   block, the dodge; a kick drops the hands and bobs the view, `KICK`).
+   **The lazy packs**: the crouched walks, the standing jumps' wind-ups and
+   the stairs climb are `clips-crouch.bin` / `clips-jumps.bin` /
+   `clips-stairs.bin` (mocap-load.ts `LAZY_PACKS`, 95 KB together), fetched
+   when the animator first wants one (`Animator.need` → walk.ts →
+   `extend()`), the core down from 558 to 464 KB; until a pack is in the
+   walks take the crouch (laid over, as standing still has it) and the
+   slope, and a running take-off serves a standing jump. The strafes stay
+   core (the aim's first frame searches them); `run-long-2` was not dropped
+   (not asked in this phase). Tests: crowdlook, captureplay, heldpose, the
+   mocap test holds every pack file, the animation tests read the packs
+   joined (`tests/mocapdata.ts`). Shots wait for a build; the crowd's draws
+   measured by the test (meshes a kind), not yet with `?fps` on a phone.
 9. **Balance** (theme 1, as answered): the daily soft cap on race
    prizes and purses, the business side raised (XP a sale, a contract's
    XP, a sold-out bonus), the `prizes` switch wired to it, the game
@@ -727,6 +768,9 @@ changed how a thing works.
   uncapped (the owner's call), so the Neon Cup still pays about 170,000
   an hour from the second hour; capping it (or the Neon Cup's class
   prizes) is the next balance lever if the owner wants one.
+- **Phase 8's leftovers:** the boombox still hangs at the hip (the
+  shoulder carry would move the item's geometry: a clothing-test change),
+  and `run-long-2` (09_01, about 20 KB) is still in the core pack.
 - **The sitting-down take:** which CMU take, and whether `zenodo.org`
   may be allowed for 100STYLE's walks.
 

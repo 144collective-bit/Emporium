@@ -17,6 +17,8 @@ import { newFightPose, sampleClip } from './fight-anim';
 import { plantLegs } from './fightfeet';
 import { lit, liveTex, toon } from './kit';
 import { createPost } from './post';
+import { CROWD_PACK, loadMocap } from './mocap-load';
+import { createCapturePlayer, type CapturePlayer } from './captureplay';
 
 export type StagePose = 'idle' | 'walk' | 'guard' | 'wave' | 'dance' | 'cheer' | 'salute';
 export type StageLight = 'studio' | 'day' | 'night';
@@ -94,6 +96,16 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
   let pinch = 0;
   let ro: ResizeObserver | null = null;
   const fight = newFightPose();
+  // The captured idle and walk (the polish plan's Phase 8): the crowd pack's takes on his bones (captureplay.ts), the
+  // formula poses until it's in (it's fetched at the boot, so it usually is)
+  let capture: CapturePlayer | null = null;
+  loadMocap(CROWD_PACK).then(
+    (data) => {
+      capture = createCapturePlayer(data);
+      frame();
+    },
+    () => {},
+  );
 
   function light(id: StageLight) {
     const L = LIGHTS[id];
@@ -188,6 +200,11 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
     // (fists up: whatever he holds is put away, as in the ring)
     if (fig.held) fig.held.visible = pose !== 'guard' || cheer >= 0;
     fig.update();
+    // The captured idle or walk over the formula's bones (still under reduced motion: its first frame)
+    if (capture && cheer < 0) {
+      if (pose === 'idle') capture.idle(fig.rig, t);
+      else if (pose === 'walk') capture.walk(fig.rig, t);
+    }
     post.render();
   }
 

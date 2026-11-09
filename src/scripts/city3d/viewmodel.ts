@@ -84,15 +84,15 @@ const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(
  * sleeve and its knuckles lie along `along` (the pistol grip, the
  * handguard). `side` is the rig's: -1 his right hand, 1 his left.
  */
-function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vector3, size: number, at: THREE.Vector3) {
+export function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vector3, size: number, at: THREE.Vector3) {
   const z = along.clone().normalize();
   const y = dir.clone().addScaledVector(z, -dir.dot(z)).normalize();
   const x = new THREE.Vector3().crossVectors(y, z);
   return bakedHand(side, grip).applyMatrix4(new THREE.Matrix4().makeBasis(x, y, z).scale(new THREE.Vector3(size, size, size)).setPosition(at));
 }
 
-/** A forearm ending in a hand at the origin, reaching off along `dir`; `dress()` puts it in the outfit's sleeve */
-function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
+/** A forearm ending in a hand at the origin, reaching off along `dir`; `dress()` puts it in the outfit's sleeve (the fists' view, fistsview.ts, uses it too) */
+export function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
   const g = new THREE.Group();
   const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
   const along = (geo: THREE.BufferGeometry, from: number) => {
@@ -146,6 +146,23 @@ const flashTex = liveTex(128, 128, (c) => {
   c.fill();
 });
 
+// Draw in front of everything (see the note at the top), never cast shadows
+const front0 = (r: THREE.WebGLRenderer) => r.getContext().depthRange(0, 0.06);
+const back = (r: THREE.WebGLRenderer) => r.getContext().depthRange(0, 1);
+/** Everything under `o` drawn into the front sliver of the depth buffer, never culled, casting nothing */
+export const upFront = (o: THREE.Object3D) =>
+  o.traverse((c) => {
+    c.frustumCulled = false;
+    if ((c as THREE.Mesh).isMesh) {
+      c.castShadow = c.receiveShadow = false;
+      c.onBeforeRender = front0;
+      c.onAfterRender = back;
+    }
+  });
+/** How much bigger and further out than life the hands are built (the camera's near plane is 0.5 m) */
+export const FP_SCALE = K;
+export { FP_HAND };
+
 export interface ViewState {
   armed: boolean;
   /** Aiming down the sight */
@@ -198,19 +215,6 @@ export function createViewmodel(scene: THREE.Scene, skin: SkinId, weapon: Weapon
   flash.add(front);
   flash.visible = false;
   fx(flash);
-
-  // Draw in front of everything (see the note at the top), never cast shadows
-  const front0 = (r: THREE.WebGLRenderer) => r.getContext().depthRange(0, 0.06);
-  const back = (r: THREE.WebGLRenderer) => r.getContext().depthRange(0, 1);
-  const upFront = (o: THREE.Object3D) =>
-    o.traverse((c) => {
-      c.frustumCulled = false;
-      if ((c as THREE.Mesh).isMesh) {
-        c.castShadow = c.receiveShadow = false;
-        c.onBeforeRender = front0;
-        c.onAfterRender = back;
-      }
-    });
 
   // The gun in hand: swapped when Degen takes another from the store
   let gun: Gun = null!;

@@ -3,12 +3,12 @@
 // and a search is quick; the jumps (Phase 3) are found, and shut to the ground's searches.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { decodeMocap, tagged } from '../src/scripts/city3d/mocap';
+import { tagged } from '../src/scripts/city3d/mocap';
 import { AHEAD, FEATURES, JUMPS_ONLY, MOVING, OWN_KIND, TAKEOFF, buildDatabase, search, setTrajectory } from '../src/scripts/city3d/motionmatch';
 import { MOCAP_FPS } from '../src/scripts/city3d/mocap';
+import { allMocap } from './mocapdata';
 
-const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
+const data = allMocap();
 const db = buildDatabase(data);
 
 test('the database: every clip and its mirror image, features scaled round zero over the frames on the move', () => {

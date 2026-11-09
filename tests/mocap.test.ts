@@ -9,11 +9,15 @@ import { parseBvh, poseBvh, jointIndex } from '../src/scripts/city3d/bvh';
 import { buildMocap, packs, type Take } from '../src/scripts/city3d/mocap-build';
 import { CORE_PACK, MB, MOCAP_BONES, MOCAP_FPS, NB, PARENT, contacts, decodeMocap, encodeMocap, mirrorClip, newPosed, posedFrame, tagged } from '../src/scripts/city3d/mocap';
 import { ANKLE_H, BONES } from '../src/scripts/city3d/skeleton';
+import { LAZY_PACKS, allMocap } from './mocapdata';
 
 const takes: Take[] = JSON.parse(readFileSync('assets/mocap/takes.json', 'utf8'));
 const read = (file: string) => parseBvh(readFileSync(`assets/mocap/${file}`, 'utf8'));
 const file = readFileSync('src/data/mocap/clips.bin');
-const data = decodeMocap(file);
+/** The core pack (what walking fetches first) */
+const core = decodeMocap(file);
+/** ...and every clip, the lazy packs' too (the polish plan's Phase 8: the crouched walks, the standing jumps and the stairs climb are fetched on first use) */
+const data = allMocap();
 const clip = (name: string) => data.clips.find((c) => c.name === name)!;
 
 test('the BVH reader: the skeleton, the frames, the T-pose first', () => {
@@ -40,10 +44,11 @@ test('every clip carries the body bones, parents first, turns kept to their 16 b
   for (const b of MOCAP_BONES) assert.ok(BONES.includes(b), b);
   PARENT.forEach((p, i) => assert.ok(p < i, `${MOCAP_BONES[i]}'s parent comes first`));
   assert.equal(data.fps, MOCAP_FPS);
-  // (the core file: the crowd's takes are in their own pack)
-  assert.equal(data.clips.length, takes.filter((t) => !t.pack || t.pack === CORE_PACK).length);
+  // (the core file: the crowd's takes and the lazy packs' are in their own files)
+  assert.equal(core.clips.length, takes.filter((t) => !t.pack || t.pack === CORE_PACK).length);
+  assert.equal(data.clips.length, takes.filter((t) => t.pack !== 'crowd').length);
   // Round trip: what's decoded re-encodes to the same file
-  assert.ok(Buffer.from(encodeMocap(data)).equals(file));
+  assert.ok(Buffer.from(encodeMocap(core)).equals(file));
   for (const c of data.clips)
     for (let i = 0; i < c.frames * NB; i++) {
       const l = Math.hypot(c.rot[i * 4], c.rot[i * 4 + 1], c.rot[i * 4 + 2], c.rot[i * 4 + 3]);
@@ -139,11 +144,15 @@ test('the feet are on the ground about as long as a run and a walk keep them', (
   assert.equal(ct[(c.frames - 1) * 2 + 1], 1);
 });
 
-test('the clips file stays small (it loads when walking starts)', () => {
+test('the clips file stays small (it loads when walking starts), and the lazy packs smaller', () => {
   // (subject 143's takes at their real speed are twice as long as when they played at double speed;
-  // delta-coded since the revamp's Phase 1: 495 KB where plain 16-bit numbers made 703)  // (the revamp's Phase 2: three standing takes, a fast walk and the climb in, the three looped idles out, 558 KB; the
-  // limit raised on purpose)
-  assert.ok(file.length < 640 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  // delta-coded since the revamp's Phase 1: 495 KB where plain 16-bit numbers made 703; the revamp's Phase 2: three
+  // standing takes, a fast walk and the climb in, the three looped idles out, 558 KB; the polish plan's Phase 8: the
+  // crouched walks, the standing jumps and the climb out to their own packs, 464 KB)
+  assert.ok(file.length < 560 * 1024, `${(file.length / 1024).toFixed(0)} KB`);
+  let lazy = 0;
+  for (const pack of LAZY_PACKS) lazy += readFileSync(`src/data/mocap/clips-${pack}.bin`).length;
+  assert.ok(lazy < 120 * 1024, `the lazy packs together: ${(lazy / 1024).toFixed(0)} KB`);
 });
 
 test('every clip carries its tags, marks and pack, through the file and its mirror image', () => {
@@ -170,13 +179,28 @@ test('every clip carries its tags, marks and pack, through the file and its mirr
   assert.deepEqual(Array.from(sm.floor!), Array.from(st.floor!));
   assert.ok(Array.from(st.contact!).every((b, f) => sm.contact![f] === (((b & 1) << 1) | ((b >> 1) & 1))), 'the mirror\'s contacts swap sides');
   assert.equal(data.clips.find((c) => !tagged(c, 'stairs'))!.floor, undefined, 'a flat clip has no floor of its own');
-  // The packs: the core (this file) and the crowd's (crowdclips.ts), each its own file, and the crowd's is what the pipeline makes too
+  // The packs: the core (this file), the lazy ones (mocap-load.ts `LAZY_PACKS`, in the takes' order) and the crowd's
+  // (crowdclips.ts), each its own file, and every one is what the pipeline makes too
   const all = buildMocap(takes, read);
   const split = packs(all);
-  assert.deepEqual(split.map((p) => [p.pack, p.file]), [[CORE_PACK, 'clips.bin'], ['crowd', 'clips-crowd.bin']]);
-  assert.equal(split[0].data.clips.length, data.clips.length);
+  assert.deepEqual(
+    split.map((p) => [p.pack, p.file]),
+    [
+      [CORE_PACK, 'clips.bin'],
+      ['stairs', 'clips-stairs.bin'],
+      ['crouch', 'clips-crouch.bin'],
+      ['jumps', 'clips-jumps.bin'],
+      ['crowd', 'clips-crowd.bin'],
+    ],
+  );
+  assert.equal(split[0].data.clips.length, core.clips.length);
+  for (const p of split.slice(1)) {
+    const made = readFileSync(`src/data/mocap/${p.file}`);
+    assert.ok(Buffer.from(encodeMocap(p.data)).equals(made), `the ${p.pack} pack is what the pipeline makes: run \`npm run mocap\``);
+  }
+  // (the lazy packs hold only what the animator reaches for now and then: never a standing take or a plain walk or run)
+  for (const pack of LAZY_PACKS) for (const c of split.find((p) => p.pack === pack)!.data.clips) assert.ok(!tagged(c, 'stand') && c.tags.some((t) => ['crouch', 'jumps-only', 'stairs'].includes(t)), `${c.name} is in the ${pack} pack`);
   const crowdFile = readFileSync('src/data/mocap/clips-crowd.bin');
-  assert.ok(Buffer.from(encodeMocap(split[1].data)).equals(crowdFile), 'the crowd pack is what the pipeline makes: run `npm run mocap`');
   assert.ok(crowdFile.length < 80 * 1024, `the crowd pack stays small: ${(crowdFile.length / 1024).toFixed(0)} KB`);
 });
 

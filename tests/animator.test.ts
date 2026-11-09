@@ -4,15 +4,15 @@
 // stay at a person's height; up a slope the held feet stand on it; and it's the same every time.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { CROUCH, FACE, STAND, addLean, applyTo, createAnimator, twoBone } from '../src/scripts/city3d/animator';
 import { makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
-import { MB, NB, TOE_BONES, decodeMocap, newPosed, posed, tagged } from '../src/scripts/city3d/mocap';
+import { MB, NB, TOE_BONES, newPosed, posed, tagged } from '../src/scripts/city3d/mocap';
 import { wrap } from '../src/scripts/city3d/inertia';
 import { GAITS, newMove, stepMove, STAIRS } from '../src/scripts/city3d/movesim';
+import { allMocap } from './mocapdata';
 
-const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
+const data = allMocap();
 /** Whether the clip of that name (the animator's `debug.clip`) carries a tag */
 const tagOf = (name: string, tag: string) => tagged(data.clips.find((c) => c.name === name.replace('~', ''))!, tag);
 const SCALE = 0.85;

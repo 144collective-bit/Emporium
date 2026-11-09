@@ -5,15 +5,15 @@
 // ground, or moving fast past a wall, nothing happens and the pose is left exactly as it was.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { CONTACT, type ContactInput, applyContact, createContact, handOff, nearestOn, reachArmBones } from '../src/scripts/city3d/contact';
 import { createAnimator } from '../src/scripts/city3d/animator';
-import { MB, NB, decodeMocap, newPosed, posed } from '../src/scripts/city3d/mocap';
+import { MB, NB, newPosed, posed } from '../src/scripts/city3d/mocap';
 import { newMove, stepMove } from '../src/scripts/city3d/movesim';
 import type { Box } from '../src/scripts/city3d/solids';
+import { allMocap } from './mocapdata';
 
-const data = decodeMocap(readFileSync('src/data/mocap/clips.bin'));
+const data = allMocap();
 const SCALE = 0.85;
 const DT = 1 / 60;
 const CM = 180;

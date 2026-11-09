@@ -9,6 +9,8 @@ import { design } from './layout';
 import { Batch, canvasTex, fx, glowMat, lit, liveTex, neonSign, occlude, PAL, place, rng, toon } from './kit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PLAYER, createDegen, idlePose } from './character';
+import { CROWD_PACK, loadMocap } from './mocap-load';
+import { createCapturePlayer, type CapturePlayer } from './captureplay';
 import { SLAB as S, addLamp, addTree } from './world';
 import type { Idle, LandmarkCtx } from './landmarks';
 import { V, cylAt, sign, signMat, spot, unitBox, unitPlane } from './landmark-kit';
@@ -600,9 +602,16 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
     });
     holo.g.position.set(CX, holoBase, CZ);
     // The dance is the emotes' keyed clip (emotes.ts), fetched after the boot (it's walk mode's chunk, not the boot's):
-    // the hologram stands until it's in
+    // the hologram stands until it's in; standing, it's the captured idle (the crowd pack's takes, captureplay.ts:
+    // the polish plan's Phase 8) once that's in, the formula idle before. In each round (`HOLO_ROUND`) it dances
+    // `HOLO_DANCE` seconds, then stands on the capture, eased between over `HOLO_EASE`
     let dance: ((p: typeof holo.pose, t: number) => void) | null = null;
     import('./emotes').then((m) => (dance = m.dancePose), () => {});
+    let capture: CapturePlayer | null = null;
+    loadMocap(CROWD_PACK).then((d) => (capture = createCapturePlayer(d)), () => {});
+    const HOLO_ROUND = 28;
+    const HOLO_DANCE = 16;
+    const HOLO_EASE = 0.6;
     g.add(fx(holo.g));
     const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 0.6, 3.6, 24, 1, true), lit(glowMat('#00eaff', 1, null), 0.03, 0.08));
     cone.position.set(CX, holoBase + 1.8, CZ);
@@ -614,9 +623,16 @@ export function emporium(scene: THREE.Scene, ctx: LandmarkCtx, crowd: Idle[]) {
       mat.uniforms.power.value = (1.7 - night * 0.4) * (glitch ? 0.4 + Math.random() * 0.6 : 1);
       holo.g.rotation.y = t * 0.45;
       holo.g.position.x = CX + glitch * (Math.random() - 0.5) * 0.25;
-      if (dance) dance(holo.pose, t);
+      // (the dance for a stretch, then standing on the captured idle; without the capture the dance all round)
+      const phase = t % HOLO_ROUND;
+      const standing = !!capture?.ready && phase >= HOLO_DANCE;
+      if (dance && !standing) dance(holo.pose, t);
       else idlePose(holo.pose, t);
       holo.update();
+      if (standing) {
+        const edge = Math.min(phase - HOLO_DANCE, HOLO_ROUND - phase) / HOLO_EASE;
+        capture!.idle(holo.rig, t, Math.min(1, edge));
+      }
     });
   }
 

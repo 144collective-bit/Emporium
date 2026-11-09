@@ -59,9 +59,12 @@ const BUDGETS = {
   /**
    * The motion capture's core pack (`clips.bin`, fetched when walking starts; raw bytes: the server doesn't
    * compress it). Delta-coded since the revamp's Phase 1 (docs/animation-revamp-plan.md): 495 KB where plain
-   * 16-bit numbers made 703; room for Phase 2's takes
+   * 16-bit numbers made 703; room for Phase 2's takes; down from 660 with the polish plan's Phase 8, which moved
+   * the crouched walks, the standing jumps and the stairs climb into packs fetched on first use (464 KB left)
    */
-  mocap: 660,
+  mocap: 600,
+  /** Those packs together (`clips-crouch.bin`, `clips-jumps.bin`, `clips-stairs.bin`: mocap-load.ts `LAZY_PACKS`) */
+  mocapLazy: 120,
   /** The crowd's pack (`clips-crowd.bin`, fetched at the boot and swapped into the crowd's rows: crowdclips.ts) */
   mocapCrowd: 80,
 };
@@ -126,6 +129,8 @@ if (tex) {
 // The motion capture's core pack (named by its contents), raw: any other pack is fetched on first use
 const mocap = files.filter((f) => /^clips\.[\w-]+\.bin$/.test(f));
 if (mocap.length) rows.push(['mocap', mocap.reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024, `${mocap.join(' ')} (${mocap.map((f) => gz(join(astro, f)).toFixed(0)).join(' ')} KB gz)`]);
+const lazyPacks = files.filter((f) => /^clips-(crouch|jumps|stairs)\.[\w-]+\.bin$/.test(f));
+if (lazyPacks.length) rows.push(['mocapLazy', lazyPacks.reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024, `${lazyPacks.join(' ')} (${lazyPacks.map((f) => gz(join(astro, f)).toFixed(0)).join(' ')} KB gz)`]);
 const crowdPack = files.filter((f) => /^clips-crowd\.[\w-]+\.bin$/.test(f));
 if (crowdPack.length) rows.push(['mocapCrowd', crowdPack.reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024, `${crowdPack.join(' ')} (${crowdPack.map((f) => gz(join(astro, f)).toFixed(0)).join(' ')} KB gz)`]);
 let failed = false;
