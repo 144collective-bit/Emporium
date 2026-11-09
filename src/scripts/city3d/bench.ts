@@ -48,6 +48,11 @@ export const BENCH_VIEWS: BenchView[] = [
   // The Neon Mile (docs/strip-plan.md Phase 6): over the boulevard from the west, and down it at street level
   { id: 'strip', name: 'The Neon Mile, over the boulevard', pos: [150, 30, 95], target: [200, 5, 30] },
   { id: 'strip-street', name: 'The Neon Mile, the boulevard', pos: [140, 2.2, 33.5], target: [190, 4, 30] },
+  // Endswood Estate (docs/estate-plan.md Phase 8): over the Circus and its well, down Endswood Road to St Aldwyn's,
+  // and from the common back up to the blocks
+  { id: 'ends-circus', name: 'Endswood, over the Circus', pos: [-28, 24, 412], target: [-56, 0, 378] },
+  { id: 'ends-street', name: 'Endswood Road, to the church', pos: [4, 2.2, 382.5], target: [30, 7, 366] },
+  { id: 'ends-common', name: 'Endswood, from the common', pos: [-74, 9, 468], target: [-58, 5, 395] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

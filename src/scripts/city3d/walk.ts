@@ -93,6 +93,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater, shoreY } from './river';
 import { inBasin } from './docks';
 import { LOT9_PASSAGE } from './lot9';
+import { ENDS_DOORS } from './endsplaces';
 import { SUBWAYS, WELL } from './endswood';
 import { DOWN as UNDER_DOWN, underworld } from './underground';
 import { endsDeckWall, endsDeckY, upOnEnds } from './endsdecks';
@@ -132,7 +133,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 /** The landmarks' doors and Trench Avenue's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS];
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put']);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
@@ -3325,7 +3326,7 @@ export function createWalk(d: WalkDeps) {
       const dd = Math.hypot(door.x - pos.x, door.z - pos.z);
       if (dd < bestD) {
         bestD = dd;
-        best = { id: door.id, label: root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
+        best = { id: door.id, label: ('label' in door ? (door.label as string) : null) ?? root.querySelector(`[data-pin="${door.id}"] .city-pin-title`)?.textContent ?? door.id };
       }
     }
     // A free bench to sit on (moments.ts); seated, standing up
@@ -3570,6 +3571,8 @@ export function createWalk(d: WalkDeps) {
         pos.set(spawn.x, groundAt(spawn.x, spawn.z), spawn.z);
         yaw = spawn.yaw;
       }
+      // (his body facing the way the camera looks: the place in front of him, not always the same way)
+      face = yaw + Math.PI;
       // Over the shoulder by default; V (or the Controls panel) swaps to first person
       pitch = 0.35;
       zoom = camDist = homeZoom();

@@ -74,8 +74,11 @@ const spots: Record<SpotId, Spot> = {
   orbit: { title: 'Orbit', sub: 'Space-age tower' },
   sphere: { title: 'The Sphere', sub: 'Shows' },
   lot9: { title: 'Lot 9', sub: 'Trailer park' },
+  endswood: { title: 'Endswood Estate', sub: 'The Ends' },
+  aldwyns: { title: "St Aldwyn's", sub: 'Church' },
+  bunker: { title: 'Bunker Sound', sub: 'Studio' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1296,6 +1299,27 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">Lot 9</h2>
     <p class="city-panel-text">A trailer park past the highway. Story coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-lot9-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="endswood" data-marquee="Welcome to the Ends">
+    <p class="kicker"><span class="kicker-num">39</span> South of the highway</p>
+    <h2 id="city-panel-title" class="city-panel-title">Endswood Estate</h2>
+    <p class="city-panel-text">Concrete, decks and subways. Story coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="aldwyns" data-marquee="The bell keeps the hour">
+    <p class="kicker"><span class="kicker-num">40</span> Endswood Estate</p>
+    <h2 id="city-panel-title" class="city-panel-title">St Aldwyn's</h2>
+    <p class="city-panel-text">The estate's old church. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="bunker" data-marquee="Turn it up in the garage">
+    <p class="kicker"><span class="kicker-num">41</span> Endswood Estate</p>
+    <h2 id="city-panel-title" class="city-panel-title">Bunker Sound</h2>
+    <p class="city-panel-text">A studio in two garages. Sessions coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
   </template>
 
   <div class="city-hud mk-skin" data-city-hud>

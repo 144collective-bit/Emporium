@@ -59,7 +59,7 @@ import { SOUTHFIELD_SOLIDS } from './southfield';
 import { LOT9_SOLIDS } from './lot9';
 import { ENDS_SOLIDS } from './endswood';
 import { BLOCK_SOLIDS as ENDS_BLOCK_SOLIDS } from './endsblocks';
-import { STREET_SOLIDS as ENDS_STREET_SOLIDS } from './endsstreet';
+import { LYCH_CAMERA, STREET_SOLIDS as ENDS_STREET_SOLIDS } from './endsstreet';
 import { FRINGE_SOLIDS } from './fringes';
 import { NORTH_SOLIDS } from './uptownnorth';
 import { MALL_INSIDE_SOLIDS } from './mallinside';
@@ -340,7 +340,7 @@ export const SOLID_GRID = new BoxGrid(SOLIDS);
 /** What the walk camera bumps into (and the raised ring highway's deck, which you walk under: its boxes have a bottom, [5]) */
 // (and Endswood's galleries' slabs, their lintels and the bridges' floors and roofs, which he walks under and along:
 // boxes with a bottom, endsdecks.ts)
-export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY, ...(DECK_CAMERA as Box[]), ...(ENDS_CAMERA as unknown as Box[])]);
+export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY, ...(DECK_CAMERA as Box[]), ...(ENDS_CAMERA as unknown as Box[]), LYCH_CAMERA as unknown as Box]);
 /** What bullets stop on */
 const SHOT_GRID = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY]);
 /** Every grid that holds the solids (walk.ts adds the car's, which leaves out the turntable) */

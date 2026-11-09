@@ -26,7 +26,7 @@ import { STRIP_LAMPS } from './strip';
 import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
-import { ENDS_LAMPS } from './endswood';
+import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { ENDS_TREES } from './endsstreet';
 import { COMMON_LAMPS, COMMON_TREES } from './endsblend';
 import { RURAL_LAMPS } from './ruraldress';
@@ -44,6 +44,7 @@ import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
+import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -339,6 +340,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Lot 9, the trailer park south of the highway (lot9.ts, docs/trailer-plan.md): its spot over the whole fenced
   // land (drawn in its chunk), the pin over the fire pit, the fly-in from the north (from over the highway)
   spots.push({ ...pickSpot(scene, 'lot9', LOT9_Y, [{ rect: LOT9_FENCE, h: 1.9 }, { rect: LOT9_OFFICE.rect, h: LOT9_OFFICE.h + 0.4 }], LOT9_FENCE, 5.2, LOT9_PIN), faces: 'n' });
+  // ...and Endswood Estate's (endsplaces.ts, docs/estate-plan.md Phase 8): the estate on its tenants' hall, St Aldwyn's
+  // and Bunker Sound (drawn in its chunk)
+  for (const e of ENDS_SPOTS) {
+    const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
+    spots.push(e.faces ? { ...s, faces: e.faces } : s);
+  }
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -775,6 +782,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-docks-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(HM_SPAWN);
+      });
+    // Endswood's panels (the estate, St Aldwyn's, Bunker Sound): Walk in in front of each door, facing it
+    if (id === 'endswood' || id === 'aldwyns' || id === 'bunker')
+      panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
       });
     // Lot 9's panel: Walk in on the lane outside its gate, facing in
     if (id === 'lot9')

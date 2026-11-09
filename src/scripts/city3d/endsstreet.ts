@@ -70,6 +70,9 @@ export const RAIL_GATES = {
 };
 /** The lychgate over the main gate: its four posts and its roof */
 export const LYCHGATE = { x0: 27.7, x1: 30.3, z0: 376.3, z1: 377.5, eaves: 1.9, ridge: 2.9 };
+/** Its roof, walked under, as a box with a bottom for the walk camera (solids.ts `CAMERA_GRID`): x0, z0, x1, z1, top,
+ * bottom (the camera following you through it keeps out of the tiles) */
+export const LYCH_CAMERA = [LYCHGATE.x0 - 0.2, LYCHGATE.z0 - 0.25, LYCHGATE.x1 + 0.2, LYCHGATE.z1 + 0.25, LYCHGATE.ridge, LYCHGATE.eaves - 0.12] as const;
 export const YEWS: Pt[] = [
   [21.4, 374.4],
   [37.9, 374.6],

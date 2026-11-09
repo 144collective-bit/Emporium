@@ -79,7 +79,10 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // (and Lot 9 since it moved south of Endswood Estate, docs/estate-plan.md Phase 1: from Crestmont's civic hall
       // about 78 s)
       const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster' || id === 'karts' || id === 'metro-kart';
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'lot9' ? 18 : id === 'overlook' || id === 'reservoir' ? 22 : 0);
+      // (and Endswood Estate's places south of the highway's south-west bend, docs/estate-plan.md Phase 8: from
+      // Crestmont's grand hotel about 66 s)
+      const ends = (id: string) => id === 'endswood' || id === 'aldwyns' || id === 'bunker';
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) || ends(id) ? 12 : id === 'lot9' ? 18 : id === 'overlook' || id === 'reservoir' ? 22 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
       // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
       // round through town: the overlook to the airport's metro station about 94 s)

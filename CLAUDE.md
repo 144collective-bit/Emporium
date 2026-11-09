@@ -1576,8 +1576,17 @@ it and has been retired completely. Build only on what's here.
   (endsblocks3d.ts); its sound (ambience.ts `ends`, `studio`, `bell`:
   pigeons, mopeds, the two-tone siren, the ice-cream van's made-up jingle,
   Bunker Sound's beat, St Aldwyn's bell on the hour by the visitor's
-  clock). One phase at a time with the owner's sign-off; keep it
-  up to date.
+  clock). Phase 8 (places and polish) is built and the plan is done:
+  `endsplaces.ts` (DOM-free, the boot's, tested in
+  `tests/endsplaces.test.ts`): spots `endswood` (the estate, its pin over the
+  tenants' hall on the parade), `aldwyns` (St Aldwyn's, its pin over the
+  spire) and `bunker` (Bunker Sound), their pick boxes (`ENDS_SPOTS`, through
+  crestspots.ts `spot()`), pins, directory entries, panels with Walk in
+  (`data-ends-walkin` to `ENDS_SPAWNS`), doors (`ENDS_DOORS` in walk.ts's
+  `ALL_DOORS`, each with its own `label`: "Enter Tenants' Hall"), `PLACES` and
+  `LIVE_PLACES` entries, all coming soon; the lychgate's roof keeps the walk
+  camera out (`LYCH_CAMERA`); `?bench` views `ends-circus`, `ends-street`,
+  `ends-common`. Keep it up to date.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make
