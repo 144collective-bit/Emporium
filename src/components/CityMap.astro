@@ -429,6 +429,11 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             </button>
             <button type="button" class="seg-wide" data-reset>Reset view</button>
           </div>
+          {/* The place labels over the 3D city (the pins): off by default (the owner's call, 2026-11: places are found on the
+              world map); this turns them back on, remembered in this browser (index.ts, degen-city-labels-v1) */}
+          <div class="seg">
+            <button type="button" class="seg-wide" data-labels aria-pressed="false"><span data-labels-label>Labels off</span></button>
+          </div>
         </div>
         <p class="mk-label hub-label">On foot</p>
         <div class="hub-walkset">

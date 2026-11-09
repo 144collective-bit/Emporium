@@ -353,6 +353,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     spots.push(pickSpot(scene, 'sunpark', SLAB, [{ rect: PARK_LAND, h: 1 }], PARK_LAND, 4.2));
     spots.push(pickSpot(scene, 'sunschool', SLAB, [...SCHOOL.wings.map((rect) => ({ rect, h: SCHOOL.h + 0.3 })), { rect: SCHOOL.hall.rect, h: SCHOOL.hall.h + 0.3 }], SCHOOL_LAND, SCHOOL.hall.h + 2.8, mid(SCHOOL.hall.rect)));
   }
+  // The hover lift and glow ring are retired (the owner's call, 2026-11, with the pins off by default): every spot
+  // still comes with its ring (landmark-kit.ts and crestspots.ts `spot()`), taken out of the scene here
+  for (const sp of spots) {
+    sp.ring.removeFromParent();
+    sp.ring.geometry.dispose();
+  }
   // (the outskirts' trees keep off the metro's line, the districts and the streets by one rule: landuse.ts)
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
@@ -591,6 +597,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Pins, hover and click ---------- */
   const pins = new Map<string, HTMLElement>();
   root.querySelectorAll<HTMLElement>('[data-pin]').forEach((el) => pins.set(el.dataset.pin!, el));
+  // The pins are off by default (the owner's call, 2026-11: places are found on the world map and the hub's Map
+  // tab); Settings > Labels turns them on, remembered in this browser (a screen preference, not in the backup)
+  const LABELS_KEY = 'degen-city-labels-v1';
+  let pinsOn = false;
+  try {
+    pinsOn = localStorage.getItem(LABELS_KEY) === 'on';
+  } catch {
+    /* no storage: off */
+  }
+  root.classList.toggle('has-pins', pinsOn);
   const raycaster = new THREE.Raycaster();
   // (and the shapes drawn nowhere that stand for a place drawn as a site: Sector 7 Tower)
   raycaster.layers.enable(PICK);
@@ -1350,6 +1366,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     soundBtn.setAttribute('aria-pressed', String(on));
     soundBtn.querySelector('[data-sound-label]')!.textContent = on ? 'Sound on' : 'Sound off';
   });
+  const labelsBtn = root.querySelector<HTMLButtonElement>('[data-labels]')!;
+  const showLabels = (on: boolean) => {
+    pinsOn = on;
+    root.classList.toggle('has-pins', on);
+    labelsBtn.setAttribute('aria-pressed', String(on));
+    labelsBtn.querySelector('[data-labels-label]')!.textContent = on ? 'Labels on' : 'Labels off';
+    // (hidden, the labels measure nothing: measured again once they show)
+    if (on) measurePins();
+    dirty = true;
+  };
+  labelsBtn.setAttribute('aria-pressed', String(pinsOn));
+  labelsBtn.querySelector('[data-labels-label]')!.textContent = pinsOn ? 'Labels on' : 'Labels off';
+  labelsBtn.addEventListener('click', () => {
+    showLabels(!pinsOn);
+    try {
+      localStorage.setItem(LABELS_KEY, pinsOn ? 'on' : 'off');
+    } catch {
+      /* not remembered */
+    }
+  });
   root.querySelector('[data-reset]')!.addEventListener('click', () => {
     stopWalking(false);
     close();
@@ -1615,26 +1651,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     post.bloom.threshold = 1.05 + near * 0.15;
     renderer.toneMappingExposure = 1 + s.night * 0.03;
 
-    // Hover lift and rings (never lifted while walking: Degen walks on the same ground as the building)
-    for (const sp of spots) {
-      const on = sp === hovered || sp === active;
-      sp.group.position.y += ((on && !walking ? 0.22 : 0) - sp.group.position.y) * Math.min(1, dt * 10);
-      const m = sp.ring.material as THREE.MeshBasicMaterial;
-      m.opacity += ((on ? 0.85 : 0) - m.opacity) * Math.min(1, dt * 8);
-      sp.ring.scale.setScalar(1 + (on ? Math.sin(t * 4) * 0.04 : 0));
-      // (faded out, it's not drawn at all: a draw call a place saved)
-      sp.ring.visible = m.opacity > 0.01;
-    }
+    // (a hovered building no longer lifts or shows its glow ring: the owner's call, with the pins off by default;
+    // the hover still lights its pin when the labels are on, and sets the cursor)
 
-    // Pins follow their buildings on screen; far ones shrink
+    // Pins follow their buildings on screen; far ones shrink (only while the labels are on: off, nothing is placed)
     const w = host.clientWidth;
     const h = host.clientHeight;
     pinState.length = 0;
-    for (const sp of spots) {
+    for (const sp of pinsOn ? spots : []) {
       const el = pins.get(sp.id);
       if (!el) continue;
       pinPos.copy(sp.pin);
-      pinPos.y += sp.group.position.y;
       const dist = pinPos.distanceTo(camera.position);
       pinPos.project(camera);
       const visible = pinPos.z < 1 && Math.abs(pinPos.x) < 1.1 && Math.abs(pinPos.y) < 1.1;
@@ -1649,7 +1676,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Declutter: the hovered pin and nearer pins win; a label that would
     // overlap one already placed folds to a dot (still tappable)
     pinState.sort((a, b) => a.rank - b.rank);
-    if (frames % 20 === 0) readChrome();
+    if (pinsOn && frames % 20 === 0) readChrome();
     placed.length = 0;
     for (const p of pinState) {
       const [pw, ph] = pinSize.get(p.id) ?? [120, 40];
