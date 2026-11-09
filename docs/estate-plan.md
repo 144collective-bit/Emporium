@@ -474,8 +474,8 @@ Built one phase at a time, each with the owner's sign-off. Keep this up to date.
   `LIFT_NEAR`: a shaft beside the near landing, an up and a down door on it
   at the street and each gallery, `towerLift()`); the cores on its highway
   side are its escape stairs.
-- **Drawn** by endsblocks3d.ts's `drawStair()` (a site a tower): walls, a
-  glazed slit up each side lit at night, stepped flights on a stepped slab
+- **Drawn** by endsblocks3d.ts's `drawStair()` (a site a tower): walls faced
+  in the blocks' board-marked concrete, a glazed slit up each side lit at night, stepped flights on a stepped slab
   with a steel handrail on the middle wall, landings with a strip light
   under each, the roof, the lift's shaft and motor room; casting no shadows
   (as the mall's hall) so the day reaches the stairwell.

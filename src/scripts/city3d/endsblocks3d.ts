@@ -616,11 +616,24 @@ function drawStair(b: Batch, g: StairGeom, low: boolean) {
   const L = g.levels;
   const y0 = L[0];
   const r = (u0: number, v0: number, u1: number, v1: number) => g.rect(u0, v0, u1, v1);
+  // The board-marked concrete laid on its outer faces (the blocks' atlas, a hair out from the walls): a face at frame
+  // point (u, v) facing (du, dv), `w` wide, y0 to y1
+  const face = (u: number, v: number, du: number, dv: number, w: number, ya: number, yb: number) => {
+    const n: Pt = [g.across[0] * du + g.out[0] * dv, g.across[1] * du + g.out[1] * dv];
+    const [cx, cz] = g.at(u + du * 0.006, v + dv * 0.006);
+    // (left to right seen from outside: the viewer looks along -n, their right is (n.z, -n.x))
+    const rt: Pt = [n[1], -n[0]];
+    wall(b, ATLAS.bands.blank, [cx - (rt[0] * w) / 2, cz - (rt[1] * w) / 2], [cx + (rt[0] * w) / 2, cz + (rt[1] * w) / 2], ya, yb, n, 0);
+  };
   // The sides: past the porch from the street; over it from under the first landing
   for (const side of [-1, 1]) {
     const [u0, u1] = side < 0 ? [-half - t, -half] : [half, half + t];
     box(b, r(u0, near, u1, back + t), y0, g.top, SLAB);
     box(b, r(u0, 0, u1, near), L[1] - slab, g.top, SLAB);
+    // (its outside in concrete, but where the lift's shaft stands against it)
+    const uf = side * (half + t);
+    face(uf, (near + back + t) / 2, side, 0, back + t - near, y0, g.top);
+    if (!(side > 0 && g.tower.lift)) face(uf, near / 2, side, 0, near, L[1] - slab, g.top);
     // (a glazed slit up its outside, lit at night)
     const uo = side * (half + t + 0.006);
     const [ax, az] = g.at(uo, near + run * 0.5);
@@ -633,10 +646,15 @@ function drawStair(b: Batch, g: StairGeom, low: boolean) {
     }
   }
   box(b, r(-half - t, back, half + t, back + t), y0, g.top, SLAB);
+  face(0, back + t, 0, 1, 2 * (half + t), y0, g.top);
   // The lift's shaft beside the landings (Fennel House's): plain concrete to the roof, its motor room over it, the
   // doors on the landings' side (drawLiftDoors)
   if (g.tower.lift) {
     box(b, r(half + t, 0, half + t + SHAFT, near), y0, g.top + 0.6, SLAB);
+    const us = half + t + SHAFT / 2;
+    face(half + t + SHAFT, near / 2, 1, 0, near, y0, g.top + 0.6);
+    face(us, 0, 0, -1, SHAFT, y0, g.top + 0.6);
+    face(us, near, 0, 1, SHAFT, y0, g.top + 0.6);
     box(b, r(half + t - 0.03, -0.03, half + t + SHAFT + 0.03, near + 0.03), g.top + 0.6, g.top + 0.75, COPING);
     drawLiftDoors(b, `${g.tower.block}-lift`);
   }

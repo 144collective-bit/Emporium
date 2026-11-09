@@ -1546,7 +1546,8 @@ it and has been retired completely. Build only on what's here.
   `groundAt()` / `blocked()`, `ENDS_CAMERA` in `CAMERA_GRID`; lifts in
   Fennel's cores and Harrier's lift tower (`ENDS_LIFTS`, Up and Down doors,
   prompts `lift:ends:...` from `endsLiftDoors()`, `endsLiftRide()` through
-  index.ts `rideTo()`). Anything new walked on up there goes through
+  index.ts `rideTo()`; since the polish round Fennel's lifts are in its stair
+  towers, below). Anything new walked on up there goes through
   `ENDS_FLOORS`. Phase 6 (the blend) is built: `endsblend.ts` (DOM-free,
   the boot's, tested in `tests/endsblend.test.ts`): the common between the
   estate's south edge and Lot 9's fence (`COMMON`: in `KEEPS`, its own
@@ -1586,7 +1587,20 @@ it and has been retired completely. Build only on what's here.
   `ALL_DOORS`, each with its own `label`: "Enter Tenants' Hall"), `PLACES` and
   `LIVE_PLACES` entries, all coming soon; the lychgate's roof keeps the walk
   camera out (`LYCH_CAMERA`); `?bench` views `ends-circus`, `ends-street`,
-  `ends-common`. Keep it up to date.
+  `ends-common`. The polish round (the owner's call: "use a stairwell to get
+  to the balcony", "some buildings don't make sense") is built: a concrete
+  dog-leg stair tower off every block with galleries (`STAIRS`,
+  `STAIR_TOWERS`, `stairGeom()` in endsblocks.ts: a frame of its own, `u`
+  across, `v` out; off the gallery's outer edge through a gap in its parapet,
+  or off its end, `stairedAt()` opening the end wall), every gallery walked,
+  its flights floors that rise (endsdecks.ts `Floor.slope`, `floorY()`, its
+  porch a `ground` foot, `stairSolids()`, `stairCamera()`), Fennel House's
+  lifts moved from the gallery wall into its towers (`lift`, `SHAFT`,
+  `LIFT_NEAR`, `towerLift()`; its north cores, and Marten House's east ones,
+  are escape stairs), drawn by endsblocks3d.ts's `drawStair()` (concrete
+  faces from the blocks' atlas, a lit slit up each side, stepped flights and
+  a handrail, landing lights, the shaft; no shadows cast, as the mall's hall,
+  so the day reaches the stairwell). Keep it up to date.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make
