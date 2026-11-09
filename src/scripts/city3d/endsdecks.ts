@@ -7,7 +7,7 @@
  * Harrier Point's lift tower take him up and down (`ENDS_LIFTS`, `endsLiftDoors()`): walk prompts and a fade, as
  * Sector 7 Tower's.
  */
-import { BLOCKS, DECK, deckRect, finSpans, type EstateBlock, type Side } from './endsblocks';
+import { BLOCKS, DECK, STAIR, STAIRS, deckRect, finSpans, type EstateBlock, type Side, type StairGeom } from './endsblocks';
 import { SLAB_Y, type Rect } from './endswood';
 /** A box with a bottom: x0, z0, x1, z1, top, bottom */
 type CamBox = [number, number, number, number, number, number];
@@ -19,6 +19,19 @@ export interface Floor {
   rect: Rect;
   walk: Rect;
   y: number;
+  /** A stair's flight: its height rising from `y0` at world x or z `from` to `y1` at `to` (along x if `alongX`) */
+  slope?: { alongX: boolean; from: number; to: number; y0: number; y1: number };
+  /** A stair tower's piece (its flights and landings): he's on it only inside it, not near it */
+  stair?: true;
+  /** A stair's foot at street level: where he may step off the first flight, never ground of its own */
+  ground?: true;
+}
+/** A floor's height at `x, z` (a flight's along its slope, held at its ends) */
+export function floorY(f: Floor, x: number, z: number) {
+  if (!f.slope) return f.y;
+  const { alongX, from, to, y0, y1 } = f.slope;
+  const t = Math.min(1, Math.max(0, ((alongX ? x : z) - from) / (to - from)));
+  return y0 + (y1 - y0) * t;
 }
 /** A parapet's or an end wall's thickness */
 const EDGE = 0.12;
@@ -57,30 +70,69 @@ function bridgeFloors(b: EstateBlock): Floor[] {
     return { id: `${b.id}:bridge:${i}`, rect: br.rect, walk: inset(br.rect, alongX ? { n: EDGE, s: EDGE } : { w: EDGE, e: EDGE }), y: br.y0 };
   });
 }
-export const ENDS_FLOORS: Floor[] = BLOCKS.flatMap((b) => [...galleryFloors(b), ...bridgeFloors(b)]);
+/**
+ * A stair tower's pieces (endsblocks.ts `STAIRS`): at each gallery a landing where it meets the gallery (reaching into
+ * its parapet's gap), and between each two floors a flight out on lane A to a half landing and a flight back on lane B;
+ * at the foot, the porch under the first landing (street level, `ground`)
+ */
+function stairFloors(g: StairGeom): Floor[] {
+  const { half, spine, near, run, far } = STAIR;
+  const m = 0.03;
+  const L = g.levels;
+  const id = `stair:${g.tower.block}`;
+  const out: Floor[] = [];
+  const flight = (k: number, lane: 'a' | 'b', yNear: number, yFar: number): Floor => {
+    const [u0, u1] = lane === 'a' ? [-half, -spine] : [spine, half];
+    return {
+      id: `${id}:${lane}${k}`,
+      rect: g.rect(u0, near, u1, near + run),
+      walk: g.rect(u0 + m, near - 0.05, u1 - m, near + run + 0.05),
+      y: Math.min(yNear, yFar),
+      slope: { alongX: g.vAlongX, from: g.alongV(near), to: g.alongV(near + run), y0: yNear, y1: yFar },
+      stair: true,
+    };
+  };
+  out.push({ id: `${id}:foot`, rect: g.rect(-half, -0.3, half, near), walk: g.rect(-half + m, -0.3, half - m, near + 0.05), y: L[0], ground: true });
+  for (let k = 0; k + 1 < L.length; k++) {
+    const mid = (L[k] + L[k + 1]) / 2;
+    out.push(flight(k, 'a', L[k], mid), flight(k, 'b', L[k + 1], mid));
+    out.push({ id: `${id}:half${k}`, rect: g.rect(-half, near + run, half, near + run + far), walk: g.rect(-half + m, near + run - 0.05, half - m, near + run + far - m), y: mid, stair: true });
+    // (the landing at the gallery: into the parapet's gap, so its walk meets the gallery's)
+    out.push({ id: `${id}:land${k + 1}`, rect: g.rect(-half, -0.3, half, near), walk: g.rect(-half + m, -0.3, half - m, near + 0.05), y: L[k + 1], stair: true });
+  }
+  return out;
+}
+export const ENDS_FLOORS: Floor[] = [...BLOCKS.flatMap((b) => [...galleryFloors(b), ...bridgeFloors(b)]), ...STAIRS.flatMap(stairFloors)];
 /** All of them with a tile round them: nothing up there is further out */
 const ZONE: Rect = ENDS_FLOORS.reduce<Rect>((a, f) => [Math.min(a[0], f.rect[0] - 1), Math.min(a[1], f.rect[1] - 1), Math.max(a[2], f.rect[2] + 1), Math.max(a[3], f.rect[3] + 1)], [Infinity, Infinity, -Infinity, -Infinity]);
 
 const inRect = (r: Rect, x: number, z: number, m = 0) => x >= r[0] - m && x <= r[2] + m && z >= r[1] - m && z <= r[3] + m;
-/** The floor he's on at `x, z` when he's at `yNow`: its height, or null (on the ground, under it, or off it) */
+const level = (f: Floor, x: number, z: number, y: number) => {
+  const fy = floorY(f, x, z);
+  return y >= fy - UNDER && y <= fy + OVER;
+};
+/** The floor he's on at `x, z` when he's at `yNow`: its height, or null (on the ground, under it, or off it); a stair's
+ * flights from the street up */
 export function endsDeckY(x: number, z: number, yNow: number): number | null {
-  if (yNow < SLAB_Y + 1 || !inRect(ZONE, x, z)) return null;
+  if (yNow < SLAB_Y - 0.5 || !inRect(ZONE, x, z)) return null;
   let best: number | null = null;
-  for (const f of ENDS_FLOORS) if (yNow >= f.y - UNDER && yNow <= f.y + OVER && inRect(f.rect, x, z) && (best === null || f.y > best)) best = f.y;
+  for (const f of ENDS_FLOORS) {
+    if (f.ground || !inRect(f.rect, x, z) || (!f.stair && yNow < SLAB_Y + 1) || !level(f, x, z, yNow)) continue;
+    const fy = floorY(f, x, z);
+    if (best === null || fy > best) best = fy;
+  }
   return best;
 }
-/** Is he up on the decks at `y` near `x, z` (only their walls stop him then) */
+/** Is he up on the decks or a stair at `y` near `x, z` (only their walls stop him then) */
 export function upOnEnds(x: number, z: number, y: number) {
-  if (y < SLAB_Y + 1 || !inRect(ZONE, x, z)) return false;
-  return ENDS_FLOORS.some((f) => y >= f.y - UNDER && y <= f.y + OVER && inRect(f.rect, x, z, 1));
+  if (!inRect(ZONE, x, z)) return false;
+  return ENDS_FLOORS.some((f) => !f.ground && (f.stair ? inRect(f.rect, x, z) && level(f, x, z, y) : y >= SLAB_Y + 1 && level(f, x, z, y) && inRect(f.rect, x, z, 1)));
 }
 /** Up there, is a body `r` round at `x, z` against a parapet, an end wall or the face (outside every floor at its
  * height) */
 export function endsDeckWall(x: number, z: number, y: number, r: number) {
-  const level = ENDS_FLOORS.filter((f) => y >= f.y - UNDER && y <= f.y + OVER && inRect(f.rect, x, z, 1));
-  if (!level.length) return false;
-  const h = Math.max(...level.map((f) => f.y));
-  const on = level.filter((f) => Math.abs(f.y - h) < 0.01);
+  const near = ENDS_FLOORS.filter((f) => inRect(f.rect, x, z, 1 + r));
+  if (!near.length) return false;
   const d = r * Math.SQRT1_2;
   const pts = [
     [0, 0],
@@ -93,7 +145,8 @@ export function endsDeckWall(x: number, z: number, y: number, r: number) {
     [-d, d],
     [-d, -d],
   ];
-  return pts.some(([dx, dz]) => !on.some((f) => inRect(f.walk, x + dx, z + dz)));
+  // (each point inside a floor's walk at his height there: a flight's or the next landing's as he climbs)
+  return pts.some(([dx, dz]) => !near.some((f) => inRect(f.walk, x + dx, z + dz) && level(f, x + dx, z + dz, y)));
 }
 
 /** What the walk camera can't pass that he walks under or along: every gallery's slab (walked or not), a walked
@@ -110,7 +163,31 @@ export const ENDS_CAMERA: CamBox[] = BLOCKS.flatMap((b) => [
     [...br.rect, br.y0, br.y0 - 0.32],
     [...br.rect, br.y1 + 0.14, br.y1],
   ]),
-]);
+]).concat(STAIRS.flatMap(stairCamera));
+/** A stair tower's for the camera: its landings' slabs, its flights in short steps (each from its surface down to
+ * under its slab), its roof */
+function stairCamera(g: StairGeom): CamBox[] {
+  const out: CamBox[] = [];
+  const { half, wall, near, run, far, slab } = STAIR;
+  for (const f of stairFloors(g)) {
+    if (f.ground) continue;
+    if (!f.slope) {
+      out.push([...f.rect, f.y, f.y - slab]);
+      continue;
+    }
+    // (short steps, so a step's box isn't much lower than the flight over it)
+    const n = 16;
+    const [a, c] = [f.slope.from, f.slope.to];
+    for (let i = 0; i < n; i++) {
+      const [p, q] = [a + ((c - a) * i) / n, a + ((c - a) * (i + 1)) / n];
+      const r: Rect = f.slope.alongX ? [Math.min(p, q), f.rect[1], Math.max(p, q), f.rect[3]] : [f.rect[0], Math.min(p, q), f.rect[2], Math.max(p, q)];
+      const ys = [p, q].map((v) => floorY(f, f.slope!.alongX ? v : r[0], f.slope!.alongX ? r[1] : v));
+      out.push([...r, Math.max(...ys), Math.min(...ys) - slab]);
+    }
+  }
+  out.push([...g.rect(-half - wall, 0, half + wall, near + run + far + wall), g.top, g.top - 0.25]);
+  return out;
+}
 
 /* ---------- The lifts ---------- */
 

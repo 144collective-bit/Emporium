@@ -146,7 +146,7 @@ export const BLOCKS: EstateBlock[] = [
     name: 'Linnet Court',
     kind: 'maisonette',
     shells: [shell([-100, 352, -74, 358.5], 4, faces('blank', { n: 'flats', s: 'deck' }), { n: 'garage', s: 'entry', e: 'brick', w: 'brick' }, 1)],
-    decks: [{ shell: 0, side: 's', ys: decks(4, 2) }],
+    decks: [{ shell: 0, side: 's', ys: decks(4, 2), walk: true }],
     bridges: [],
     door: [-87, 359.1],
   },
@@ -212,7 +212,7 @@ export const BLOCKS: EstateBlock[] = [
     name: 'Sorrel Court',
     kind: 'maisonette',
     shells: [shell([1.5, 340, 8.5, 372], 4, faces('blank', { w: 'flats', e: 'deck' }), { e: 'entry', w: 'brick', n: 'brick', s: 'brick' }, 0)],
-    decks: [{ shell: 0, side: 'e', ys: decks(4, 2) }],
+    decks: [{ shell: 0, side: 'e', ys: decks(4, 2), walk: true }],
     bridges: [],
     door: [9.1, 352],
   },
@@ -221,7 +221,7 @@ export const BLOCKS: EstateBlock[] = [
     name: 'Teasel Court',
     kind: 'maisonette',
     shells: [shell([47.5, 340, 54.5, 372], 4, faces('blank', { w: 'flats', e: 'deck' }), { e: 'entry', w: 'garage', n: 'brick', s: 'brick' }, 1)],
-    decks: [{ shell: 0, side: 'e', ys: decks(4, 2) }],
+    decks: [{ shell: 0, side: 'e', ys: decks(4, 2), walk: true }],
     bridges: [],
     door: [55.1, 352],
   },
@@ -234,7 +234,7 @@ export const BLOCKS: EstateBlock[] = [
       plain([31.5, 390, 34, 392.5], topOf(7) + 1.2, { e: 'entry' }),
       plain([31.5, 417.5, 34, 420], topOf(7) + 1.2, { e: 'entry' }),
     ],
-    decks: [{ shell: 0, side: 'w', ys: decks(7, 2) }],
+    decks: [{ shell: 0, side: 'w', ys: decks(7, 2), walk: true }],
     bridges: [],
     door: [34.6, 391.2],
   },
@@ -243,11 +243,102 @@ export const BLOCKS: EstateBlock[] = [
     name: 'Wren Court',
     kind: 'maisonette',
     shells: [shell([47.5, 388, 54.5, 422], 4, faces('blank', { w: 'flats', e: 'deck' }), { e: 'entry', w: 'brick', n: 'brick', s: 'brick' }, 0)],
-    decks: [{ shell: 0, side: 'e', ys: decks(4, 2) }],
+    decks: [{ shell: 0, side: 'e', ys: decks(4, 2), walk: true }],
     bridges: [],
     door: [55.1, 400.7],
   },
 ];
+
+/* ---------- Stair towers (the polish round) ---------- */
+
+/**
+ * A concrete stair tower up to a block's galleries (the polish round, the owner's call: "use a stairwell to get to the
+ * balcony"), every one walked (endsdecks.ts): a dog-leg stair, two flights to each gallery with a half landing between,
+ * standing out from the gallery's outer edge (or its end) through a gap in its parapet. Written in its own frame: `u`
+ * across it (lane A, the flights out, at -u; lane B, the flights back, at +u), `v` out from the gallery's edge.
+ */
+export interface StairTower {
+  block: string;
+  deck: number;
+  /** The way it stands out from the gallery: the gallery's own side (off its outer edge) or along it (off its end) */
+  side: Side;
+  /** Its middle along the edge it stands on (world x for a north or south one, z for an east or west one); off a
+   * gallery's end, in line with its middle */
+  at?: number;
+}
+/** Its measurements: half its inside width, its walls, half the wall between the flights, the near landing (where it
+ * meets the gallery), the flights' run, the half landing, the porch's height at the foot (under the first landing) */
+export const STAIR = { half: 1, wall: 0.2, spine: 0.1, near: 0.9, run: 1.6, far: 0.8, porch: 1.4, slab: 0.15, rail: 0.95 };
+/** The tower's whole depth out from the gallery's edge */
+export const STAIR_DEPTH = STAIR.near + STAIR.run + STAIR.far + STAIR.wall;
+export const STAIR_TOWERS: StairTower[] = [
+  { block: 'fennel-w', deck: 0, side: 's', at: -66 },
+  { block: 'fennel-e', deck: 0, side: 's', at: -35.6 },
+  { block: 'linnet', deck: 0, side: 's', at: -87 },
+  // (Marten House's west galleries run the block's length: its tower stands off their north end)
+  { block: 'marten', deck: 0, side: 'n' },
+  { block: 'sorrel', deck: 0, side: 'e', at: 360 },
+  { block: 'teasel', deck: 0, side: 'e', at: 344 },
+  { block: 'wren', deck: 0, side: 'e', at: 392.5 },
+];
+export const STEP_OUT: Record<Side, [number, number]> = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+export interface StairGeom {
+  tower: StairTower;
+  /** The floors it reaches: the ground, then each gallery */
+  levels: number[];
+  /** Its roof's top */
+  top: number;
+  /** The middle of its edge on the gallery, out (v) and across (u, a quarter turn from v) */
+  origin: [number, number];
+  out: [number, number];
+  across: [number, number];
+  /** Is `v` along world x (an east or west tower) */
+  vAlongX: boolean;
+  /** A rect in its frame (u0, v0, u1, v1) as a world rect */
+  rect(u0: number, v0: number, u1: number, v1: number): Rect;
+  /** A point in its frame in world numbers */
+  at(u: number, v: number): [number, number];
+  /** World x or z (whichever runs along v) at `v` */
+  alongV(v: number): number;
+}
+export function stairGeom(t: StairTower): StairGeom {
+  const b = BLOCKS.find((q) => q.id === t.block)!;
+  const d = b.decks[t.deck];
+  const r = deckRect(b, d);
+  const out = STEP_OUT[t.side];
+  // (across: a quarter turn from out, so lane A, -u, is on the left looking out)
+  const across: [number, number] = [-out[1], out[0]];
+  const vAlongX = out[0] !== 0;
+  const edge = t.side === 'n' ? r[1] : t.side === 's' ? r[3] : t.side === 'w' ? r[0] : r[2];
+  // (off a gallery's end: in line with its middle)
+  const inline = t.side !== d.side;
+  const mid = inline ? (vAlongX ? (r[1] + r[3]) / 2 : (r[0] + r[2]) / 2) : t.at!;
+  const origin: [number, number] = vAlongX ? [edge, mid] : [mid, edge];
+  const at = (u: number, v: number): [number, number] => [origin[0] + across[0] * u + out[0] * v, origin[1] + across[1] * u + out[1] * v];
+  const rect = (u0: number, v0: number, u1: number, v1: number): Rect => {
+    const [ax, az] = at(u0, v0);
+    const [cx, cz] = at(u1, v1);
+    return [Math.min(ax, cx), Math.min(az, cz), Math.max(ax, cx), Math.max(az, cz)];
+  };
+  const levels = [SLAB_Y, ...d.ys];
+  return { tower: t, levels, top: levels[levels.length - 1] + 2, origin, out, across, vAlongX, rect, at, alongV: (v) => (vAlongX ? at(0, v)[0] : at(0, v)[1]) };
+}
+export const STAIRS: StairGeom[] = STAIR_TOWERS.map(stairGeom);
+/** Where along a gallery's edge (its parapet, or its end wall) each tower opens onto it: the world span and the tower */
+export const stairGapsOf = (b: EstateBlock, k: number) => STAIRS.filter((g) => g.tower.block === b.id && g.tower.deck === k);
+/** What's solid of each at street level: its two sides and its back past the porch, the wall between the flights, and
+ * the space under the first flight back (no walking under a stair) */
+export function stairSolids(g: StairGeom): Box[] {
+  const { half, wall, spine, near, run, far } = STAIR;
+  const back = near + run + far;
+  return [
+    [...g.rect(-half - wall, near, -half, back + wall), g.top],
+    [...g.rect(half, near, half + wall, back + wall), g.top],
+    [...g.rect(-half - wall, back, half + wall, back + wall), g.top],
+    [...g.rect(-spine, near, spine, near + run), g.top],
+    [...g.rect(spine, near, half, back), (g.levels[0] + g.levels[1]) / 2],
+  ];
+}
 
 /** Every block's bridges (the street in the sky is the west half's, and meets the east half's gallery too) */
 const BLOCKS_BRIDGES = () => BLOCKS.flatMap((b) => b.bridges);
@@ -283,7 +374,8 @@ export function finSpans(b: EstateBlock, d: Deck): { rect: Rect; spans: [number,
   const fins = finsOf(b, d);
   return fins.map((f, k) => {
     const end = k === 0 || k === fins.length - 1;
-    const open = d.walk ? d.ys.filter((y) => !end || bridgedAt(b, f, y)) : [];
+    // (an end's open where a bridge meets it at that gallery, or a stair tower stands off it)
+    const open = d.walk ? d.ys.filter((y) => !end || bridgedAt(b, f, y) || stairedAt(b, d, f)) : [];
     const spans: [number, number][] = [];
     let at = s.y0;
     for (const y of open) {
@@ -295,6 +387,13 @@ export function finSpans(b: EstateBlock, d: Deck): { rect: Rect; spans: [number,
     return { rect: f, spans };
   });
 }
+/** Does a stair tower stand off a gallery's end at its cross wall `f` (in line with the gallery) */
+const stairedAt = (b: EstateBlock, d: Deck, f: Rect) =>
+  STAIRS.some((g) => {
+    if (g.tower.block !== b.id || b.decks[g.tower.deck] !== d) return false;
+    const gap = g.rect(-STAIR.half, -0.5, STAIR.half, 0.2);
+    return f[0] < gap[2] && f[2] > gap[0] && f[1] < gap[3] && f[3] > gap[1];
+  });
 /** The hoardings' panels as thin runs round a rect, `gap` left open nowhere (a condemned block is shut) */
 export const HOARD = { h: 1.7, t: 0.12 };
 export function hoardingRuns(r: Rect): Rect[] {
@@ -310,10 +409,10 @@ export function hoardingRuns(r: Rect): Rect[] {
 
 /** What's solid: every shell standing on the slab to its roof's parapet, the galleries' cross walls and the hoardings
  * (the galleries and bridges are over a walker's head) */
-export const BLOCK_SOLIDS: Box[] = BLOCKS.flatMap((b) => [
+export const BLOCK_SOLIDS: Box[] = [...BLOCKS.flatMap((b) => [
   ...b.shells.map((s): Box => [s.rect[0], s.rect[1], s.rect[2], s.rect[3], s.y1 + PARAPET]),
   // (a walked gallery's cross walls to its first gallery's floor: over that they're open at each gallery, and their
   // lintels are the walk camera's, endsdecks.ts; nothing on the ground reaches higher)
   ...b.decks.flatMap((d) => finsOf(b, d).map((r): Box => [...r, d.walk ? d.ys[0] : finTop(d)])),
   ...(b.hoarding ? hoardingRuns(b.hoarding).map((r): Box => [...r, HOARD.h]) : []),
-]);
+]), ...STAIRS.flatMap(stairSolids)];

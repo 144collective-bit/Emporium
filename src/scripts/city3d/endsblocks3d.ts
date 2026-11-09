@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { Batch, PAL, canvasTex, lit, neon, rng, shadeHex, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { BLOCKS, DECK, GROUND, HOARD, PARAPET, STOREY, deckRect, finSpans, hoardingRuns, type EstateBlock, type Face, type Ground, type Shell, type Side } from './endsblocks';
+import { BLOCKS, DECK, GROUND, HOARD, PARAPET, STAIR as STAIR_SIZE, STAIRS, STOREY, deckRect, finSpans, hoardingRuns, stairGapsOf, type EstateBlock, type Face, type Ground, type Shell, type Side, type StairGeom } from './endsblocks';
 import type { Pt, Rect } from './endswood';
 import { ENDS_LIFTS } from './endsdecks';
 
@@ -334,6 +334,8 @@ const STAIR_FRAME = toon('#3a3843');
 const TUBE_TIRED = neon('#e8f0ff', 0.3, 1.25, 0.9);
 const TUBE_DEAD = toon('#8a8f9a');
 const LIFT_STEEL = toon('#9aa0aa');
+/** The stairs' handrails: painted steel, as the galleries' */
+const RAIL = toon('#3f6a5c');
 const LIFT_UP = neon('#7cff9a', 0.4, 1.3);
 const LIFT_DOWN = neon('#ffb04a', 0.4, 1.3);
 
@@ -459,13 +461,27 @@ function drawDeck(b: Batch, block: EstateBlock, k: number, seed: number, low: bo
   const alongX = d.side === 'n' || d.side === 's';
   const n = NORMAL[d.side];
   const r = rng(seed);
+  // (where stair towers open the parapet: their spans along it, in order)
+  const gaps = stairGapsOf(block, k)
+    .filter((g) => g.tower.side === d.side)
+    .map((g): [number, number] => {
+      const w = g.rect(-STAIR_SIZE.half, 0, STAIR_SIZE.half, 0.1);
+      return alongX ? [w[0], w[2]] : [w[1], w[3]];
+    })
+    .sort((a, c) => a[0] - c[0]);
+  const inGap = (u: number, m: number) => gaps.some(([g0, g1]) => u > g0 - m && u < g1 + m);
   for (const y of d.ys) {
     box(b, [x0, z0, x1, z1], y - DECK.slab, y, SLAB);
     // (its underside darker: the soffit)
     flat(b, [x0, z0, x1, z1], y - DECK.slab - 0.004, SOFFIT);
     const t = 0.12;
     const edge: Rect = alongX ? (n[1] < 0 ? [x0, z0, x1, z0 + t] : [x0, z1 - t, x1, z1]) : n[0] < 0 ? [x0, z0, x0 + t, z1] : [x1 - t, z0, x1, z1];
-    box(b, edge, y, y + DECK.parapet, SLAB);
+    // (open where a stair tower meets it, endsblocks.ts `STAIRS`)
+    let at = alongX ? x0 : z0;
+    for (const [g0, g1] of [...gaps, [alongX ? x1 : z1, Infinity] as [number, number]]) {
+      if (g0 > at + 0.01) box(b, alongX ? [at, edge[1], g0, edge[3]] : [edge[0], at, edge[2], g0], y, y + DECK.parapet, SLAB);
+      at = g1;
+    }
     // The fluorescent tubes under its slab, lighting the gallery (or the ground) under it: a few tired and flickering,
     // the odd one dead (docs/estate-plan.md Phase 7)
     const len = alongX ? x1 - x0 : z1 - z0;
@@ -486,6 +502,7 @@ function drawDeck(b: Batch, block: EstateBlock, k: number, seed: number, low: bo
         const v = r();
         if (v > 0.3) continue;
         const along = alongX ? x0 + u : z0 + u;
+        if (inGap(along, 0.6)) continue;
         const out = 0.25 + r() * 0.2;
         const [px, pz] = alongX ? [along, n[1] < 0 ? z1 - out : z0 + out] : [n[0] < 0 ? x1 - out : x0 + out, along];
         if (v < 0.2) {
@@ -589,7 +606,88 @@ function drawPlanters(b: Batch, block: EstateBlock, low: boolean) {
   });
 }
 
+/** A stair tower (endsblocks.ts `STAIRS`, the polish round): its concrete walls standing off the gallery, a porch
+ * at the foot under the first landing, a glazed slit up each side lit at night, the wall between the flights, each
+ * flight's steps with a steel handrail along that wall, the landings with a strip light under each, the roof */
+function drawStair(b: Batch, g: StairGeom, low: boolean) {
+  const { half, wall: t, spine, near, run, far, slab } = STAIR_SIZE;
+  const back = near + run + far;
+  const L = g.levels;
+  const y0 = L[0];
+  const r = (u0: number, v0: number, u1: number, v1: number) => g.rect(u0, v0, u1, v1);
+  // The sides: past the porch from the street; over it from under the first landing
+  for (const side of [-1, 1]) {
+    const [u0, u1] = side < 0 ? [-half - t, -half] : [half, half + t];
+    box(b, r(u0, near, u1, back + t), y0, g.top, SLAB);
+    box(b, r(u0, 0, u1, near), L[1] - slab, g.top, SLAB);
+    // (a glazed slit up its outside, lit at night)
+    const uo = side * (half + t + 0.006);
+    const [ax, az] = g.at(uo, near + run * 0.5);
+    const along = g.vAlongX;
+    const w = 0.3;
+    for (let y = y0 + 0.6; y < g.top - 0.6; y += 1) {
+      const h = Math.min(0.8, g.top - 0.5 - y);
+      if (along) b.box(ax - w / 2, y, az - 0.006, w, h, 0.012, STAIR);
+      else b.box(ax - 0.006, y, az - w / 2, 0.012, h, w, STAIR);
+    }
+  }
+  box(b, r(-half - t, back, half + t, back + t), y0, g.top, SLAB);
+  // The wall between the flights, the roof and its coping
+  box(b, r(-spine, near, spine, near + run), y0, g.top - 0.2, SLAB);
+  box(b, r(-half - t - 0.05, -0.05, half + t + 0.05, back + t + 0.05), g.top - 0.2, g.top, COPING);
+  flat(b, r(-half, 0, half, back), g.top - 0.204, SOFFIT);
+  // The landings and the half landings, a strip light under each
+  const landing = (v0: number, v1: number, y: number) => {
+    box(b, r(-half, v0, half, v1), y - slab, y, SLAB);
+    flat(b, r(-half, v0, half, v1), y - slab - 0.004, SOFFIT);
+    const [lx, lz] = g.at(0, (v0 + v1) / 2);
+    if (g.vAlongX) b.box(lx - 0.05, y - slab - 0.045, lz - 0.4, 0.1, 0.04, 0.8, TUBE);
+    else b.box(lx - 0.4, y - slab - 0.045, lz - 0.05, 0.8, 0.04, 0.1, TUBE);
+  };
+  // (the porch's light under the first landing, the landings at each gallery over it)
+  for (let k = 1; k < L.length; k++) landing(0, near, L[k]);
+  // The flights: steps up each (a riser about a tenth of a tile) on a stepped slab, the rail along the middle wall
+  const flight = (lane: number, yA: number, yB: number) => {
+    const [u0, u1] = lane < 0 ? [-half, -spine] : [spine, half];
+    const n = Math.max(3, Math.round(Math.abs(yB - yA) / 0.1));
+    for (let i = 0; i < n; i++) {
+      const va = near + (run * i) / n;
+      const vb = near + (run * (i + 1)) / n;
+      // (each tread's top where the slope passes its middle)
+      const ym = yA + ((yB - yA) * (i + 0.5)) / n;
+      // (a stepped slab following the slope: what's under it is the flight below's headroom)
+      const h = Math.abs(yB - yA) / n;
+      box(b, r(u0, va, u1, vb), ym - h / 2 - slab, ym + h / 2, SLAB);
+    }
+    b.detail(() => {
+      if (low) return;
+      const uR = lane < 0 ? -spine - 0.05 : spine + 0.05;
+      const [ax, az] = g.at(uR, near);
+      const [cx, cz] = g.at(uR, near + run);
+      const a = new THREE.Vector3(ax, yA + STAIR_SIZE.rail, az);
+      const c = new THREE.Vector3(cx, yB + STAIR_SIZE.rail, cz);
+      const rod = new THREE.CylinderGeometry(0.025, 0.025, a.distanceTo(c), 5, 1, true);
+      rod.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.clone().sub(a).normalize()));
+      b.add(rod.translate((a.x + c.x) / 2, (a.y + c.y) / 2, (a.z + c.z) / 2), RAIL);
+    });
+  };
+  for (let k = 0; k + 1 < L.length; k++) {
+    const mid = (L[k] + L[k + 1]) / 2;
+    flight(-1, L[k], mid);
+    flight(1, L[k + 1], mid);
+    landing(near + run, back, mid);
+  }
+}
+
 export function registerBlocks(low: boolean) {
+  STAIRS.forEach((g) => {
+    const w = g.rect(-STAIR_SIZE.half - STAIR_SIZE.wall, 0, STAIR_SIZE.half + STAIR_SIZE.wall, STAIR_SIZE.near + STAIR_SIZE.run + STAIR_SIZE.far + STAIR_SIZE.wall);
+    site(`ends stair ${g.tower.block}`, [w[0] - 2, w[1] - 2, w[2] + 2, w[3] + 2], (into) => {
+      const b = new Batch();
+      drawStair(b, g, low);
+      b.build(into, { cast: true, receive: true });
+    });
+  });
   BLOCKS.forEach((block, bi) => {
     block.shells.forEach((s, si) =>
       site(`ends block ${block.id} ${si}`, [s.rect[0] - 2, s.rect[1] - 2, s.rect[2] + 2, s.rect[3] + 2], (into) => {
