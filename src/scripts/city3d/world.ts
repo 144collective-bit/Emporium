@@ -1,6 +1,6 @@
 /*
  * The ground the city stands on: grass, roads with markings, the river and
- * its bridges, block slabs, trees, street lamps and a skyline in the haze.
+ * its bridges, block slabs, trees and street lamps.
  *
  * World units: 1 = one map tile (about 1.8 m); y is up.
  * The street plan is layout.ts and streetplan.ts (`PLAN`): downtown (0-60)
@@ -13,18 +13,17 @@
  * both banks a lamp-lit promenade.
  */
 import * as THREE from 'three';
-import { Batch, canvasTex, facadeMat, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, sidesBox, siteMat, toon } from './kit';
+import { WALL } from './wall';
+import { Batch, canvasTex, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, siteMat, toon } from './kit';
 import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
 import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, type Road } from './layout';
 import { PLAN, offsetLine, riverBridges, type Pt } from './streetplan';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
-import { RUNWAY } from './airfield';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
 import { TERRAIN_RECT, heightAt, onHills, slopeAt } from './terrain';
 import { DRIVE_BLOCKS } from './coral';
-import { SKYLINE } from './bounds';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
 import { kerbShare, lampTone } from './lampmix';
@@ -50,8 +49,8 @@ export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WAL
 /** District blocks around the core: one pad each (layout.ts DISTRICTS). */
 export { DISTRICTS };
 export const SLAB = 0.15;
-/** How far the grass carries on past the world's edge, under the skyline ring */
-export const SKIRT = 80;
+/** How far the grass carries on past the world's edge: out to the wall's inner face (wall.ts) */
+export const SKIRT = WALL.out;
 export const CENTER = new THREE.Vector3(CENTER_XZ.x, 0, CENTER_XZ.z);
 
 export type Env = { t: number; dt: number; night: number; rain: number; day: number; /** The hour of the city's day, 0-24 (sky.ts) */ hour: number };
@@ -867,7 +866,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   const [e0, e1] = EXT;
   const b = new Batch();
 
-  // Grass everywhere, a tile at a time (growth plan Phase 5), and on past the edge under the skyline's towers
+  // Grass everywhere, a tile at a time (growth plan Phase 5), and on past the edge to the wall's foot
   // (so they stand on land, not on nothing); then the river cut in on top
   const grass = toon(COVER.rough);
   const [g0, g1] = [e0 - SKIRT, e1 + SKIRT];
@@ -1272,58 +1271,6 @@ export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
   for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
 }
 
-
-/** The world's half-width the skyline's `count` is for (before Phase 6): a wider world's ring has more towers, as far apart */
-const SKYLINE_REACH = 220;
-/** A ring of towers on the horizon, past the world's edge, so the city reads as part of a metropolis. */
-export function buildSkyline(scene: THREE.Scene, count: number, tick: (f: Tick) => void) {
-  const mats = [
-    facadeMat({ cols: 6, rows: 26, wall: '#241d4a', lit: [PAL.warm, PAL.cyan], litRatio: 0.45, seed: 11 }, 0.1, 1.4),
-    facadeMat({ cols: 6, rows: 26, wall: '#2c1f55', lit: [PAL.pink, PAL.warm], litRatio: 0.4, seed: 12 }, 0.1, 1.4),
-    facadeMat({ cols: 6, rows: 26, wall: '#1b2550', lit: [PAL.cyan], litRatio: 0.5, seed: 13 }, 0.1, 1.4),
-  ];
-  const roof = toon('#1a1636', { fog: false });
-  // Out past the world's edge, the haze would swallow them whole: they stand clear of it, a skyline on the horizon
-  for (const m of mats) m.fog = false;
-  // Merged: one mesh per facade, one for the roofs and masts, one for the beacons
-  const b = new Batch();
-  const lights = new Batch();
-  const beaconMat = neon('#ff3b3b', 0.4, 3);
-  // As many as today's ring had for its length, wherever the edge is (growth plan Phase 5), each from its own seeded numbers
-  const reach = (EXT[1] - EXT[0]) / 2;
-  const n = Math.round((count * reach) / SKYLINE_REACH);
-  const r = rng(808);
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + r() * 0.1;
-    // A ring just past the world's edge, so the metropolis carries on beyond the land you can build on.
-    // The world is square: the ring follows its edge (a rounded square), so no tower stands on the
-    // land in the corners (the kart park fills the north-east one)
-    const rr = reach / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) + SKYLINE.gap + r() * SKYLINE.depth;
-    const x = (EXT[0] + EXT[1]) / 2 + Math.cos(a) * rr;
-    const z = (EXT[0] + EXT[1]) / 2 + Math.sin(a) * rr;
-    // None by the airport (on the world's south edge since docs/airport-plan.md Phase 3): none within 80 of the
-    // runway's line, 60 past either end, so nothing tall stands off its ends or beyond it
-    const w = 7 + r() * 9;
-    const h = 22 + r() * 50;
-    if (Math.hypot(x - Math.min(RUNWAY.x1 + 60, Math.max(RUNWAY.x0 - 60, x)), z - RUNWAY.z) < 80) continue;
-    const mat = mats[i % mats.length];
-    const mesh = new THREE.Mesh(sidesBox(w, h, w), [mat, roof]);
-    mesh.position.set(x, h / 2, z);
-    mesh.rotation.y = r() * Math.PI;
-    b.mesh(mesh);
-    if (h > 45) {
-      lights.add(new THREE.SphereGeometry(0.6, 8, 6).translate(x, h + 2.6, z), beaconMat);
-      b.add(new THREE.CylinderGeometry(0.14, 0.14, 2.6).translate(x, h + 1.3, z), roof);
-    }
-  }
-  b.build(scene, { cast: false, receive: false });
-  const beacons = new THREE.Group();
-  lights.build(beacons, { cast: false, receive: false });
-  scene.add(fx(beacons));
-  tick(({ t }) => {
-    beacons.visible = Math.sin(t * 3) > 0.3;
-  });
-}
 
 /* ---------- Instanced trees and lamps ---------- */
 

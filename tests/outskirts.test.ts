@@ -6,8 +6,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BELT, BELT_EASE, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, beltShare, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
 import { TOWN_BOX } from '../src/scripts/city3d/landuse';
-import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKYLINE, SKY_RADIUS } from '../src/scripts/city3d/bounds';
-import { EW_ROADS, EXT, NS_ROADS, STRIP_GAP, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKY_RADIUS } from '../src/scripts/city3d/bounds';
+import { WALL_OUTER } from '../src/scripts/city3d/wall';
+import { EW_ROADS, NS_ROADS, STRIP_GAP, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
 import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
 import { SUNRIDGE_RECT, inSunridge } from '../src/scripts/city3d/sunridge';
@@ -163,13 +164,11 @@ test('woods stand only well away from the city, never on the land the world had 
   assert.ok(w / n > 0.08 && w / n < 0.35, `woods cover ${w / n} of the far land`);
 });
 
-test('the camera sees the skyline ring past the edge from town, in front of the sky', () => {
+test('the camera sees the wall round the city from town, in front of the sky', () => {
   assert.ok(SKY_RADIUS >= 400 && CAMERA_FAR > SKY_RADIUS);
-  // The ring's far side, seen from downtown's middle: the middle of each side and its corners
-  const mid = (EXT[0] + EXT[1]) / 2;
-  const reach = (EXT[1] - EXT[0]) / 2 + SKYLINE.gap + SKYLINE.depth;
-  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]])
-    assert.ok(Math.hypot(mid + dx * reach - 30, mid + dz * reach - 30) <= SKY_RADIUS);
+  // The wall's far side, seen from downtown's middle: the middle of each side and its outer corners
+  const [o0, p0, o1, p1] = WALL_OUTER;
+  for (const x of [o0, (o0 + o1) / 2, o1]) for (const z of [p0, (p0 + p1) / 2, p1]) assert.ok(Math.hypot(x - 30, z - 30) <= SKY_RADIUS);
 });
 
 test('City view pans round the built-up area, never past the world', () => {

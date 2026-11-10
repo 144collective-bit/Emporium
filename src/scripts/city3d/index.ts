@@ -17,7 +17,7 @@ import { SHELTER_IDLES } from './transit';
 import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
-import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildSkyline, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
+import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES } from './westlake';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
@@ -143,9 +143,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 320, walkers: 100, trees: 250, skyline: 70, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 320, walkers: 62, trees: 150, skyline: 50, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 160, walkers: 15, trees: 90, skyline: 26, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 320, walkers: 100, trees: 250, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 320, walkers: 62, trees: 150, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 160, walkers: 15, trees: 90, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -444,7 +444,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   await waited(nextFrame());
   // (phones keep half of them: the trim)
   scatterOutskirts(Q.trees, 0.6, tier === 'low' ? 0.5 : 1);
-  buildSkyline(scene, Q.skyline, tick);
   buildTrees(tier === 'low');
   buildLamps(scene, tier === 'low', tick, reduced);
   buildBusStops(tier === 'low');
@@ -460,7 +459,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   await waited(nextFrame());
 
   /* ---------- Camera ---------- */
-  // Far enough to see the skyline ring past the world's edge from town (bounds.ts)
+  // Far enough to see the wall round the city from town (bounds.ts)
   const camera = new THREE.PerspectiveCamera(34, 1, 0.5, CAMERA_FAR);
   const controls = new MapControls(camera, renderer.domElement);
   controls.enableDamping = true;

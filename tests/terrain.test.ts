@@ -9,8 +9,7 @@ import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { SOLIDS, rayBoxes } from '../src/scripts/city3d/solids';
 import { PLACES } from '../src/scripts/city3d/places';
-import { EXT } from '../src/scripts/city3d/layout';
-import { SKYLINE } from '../src/scripts/city3d/bounds';
+import { WALL, WALL_INNER, WALL_OUTER } from '../src/scripts/city3d/wall';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { HIGHWAY, HIGHWAY_HALF } from '../src/scripts/city3d/highway';
 import { AIRSIDE, FLIGHTS, PERIOD, poseAt } from '../src/scripts/city3d/airfield';
@@ -88,10 +87,10 @@ test("gentle hills to 45-60 m (the owner's call), never under the ground, smooth
   assert.ok(heightAt(380, -320) > 20);
 });
 
-test('they fall away before the skyline ring, at both sizes of the world', () => {
-  // The skyline's towers stand SKYLINE.gap past the edge: the ground under them is all but level there
-  for (let z = TERRAIN_RECT[1]; z <= TERRAIN_RECT[3]; z += 2) assert.ok(heightAt(EXT[1] + SKYLINE.gap, z) < 3, `the skyline's ground at ${z}`);
-  for (let x = TERRAIN_RECT[0]; x <= TERRAIN_RECT[2]; x += 2) assert.ok(heightAt(x, EXT[0] - SKYLINE.gap) < 3);
+test('they fall away before the wall, at both sizes of the world', () => {
+  // The wall stands on level ground: nothing of the hills reaches its footprint, or the grass inside it
+  for (let z = WALL_OUTER[1]; z <= WALL_OUTER[3]; z += 2) for (const x of [WALL_INNER[0] - WALL.thick / 2, WALL_INNER[2] + WALL.thick / 2, WALL_INNER[2] - 1]) assert.ok(heightAt(x, z) < 0.01, `the wall's ground at ${x}, ${z}`);
+  for (let x = WALL_OUTER[0]; x <= WALL_OUTER[2]; x += 2) for (const z of [WALL_INNER[1] - WALL.thick / 2, WALL_INNER[1] + 1, WALL_INNER[3] + WALL.thick / 2]) assert.ok(heightAt(x, z) < 0.01, `the wall's ground at ${x}, ${z}`);
   // Written in fixed numbers: nothing past the hills' own end, however far out the edge is
   assert.equal(heightAt(HILLS.end.x + 1, -200), 0);
   assert.equal(heightAt(400, HILLS.end.z - 1), 0);
