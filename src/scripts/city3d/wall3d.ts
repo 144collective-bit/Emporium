@@ -15,7 +15,6 @@ import { SKY_RADIUS } from './bounds';
 import { BEYOND, CAMERAS, CULVERT, CULVERTS, FLOOD, FLOODS, SIDE, TOP, WALL, WALL_HAZE, WALL_INNER, WALL_LOOK, WALL_OUTER, WALL_TOP, archY } from './wall';
 import { WATER_Y } from './river';
 import type { Rect } from './downtown';
-import type { Tick } from './world';
 
 /** Where the wall's haze starts and ends, as distances from the camera */
 const HAZE: [number, number] = [WALL_HAZE.from * SKY_RADIUS, WALL_HAZE.to * SKY_RADIUS];
@@ -423,8 +422,8 @@ const lum = (c: THREE.Color) => c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 const LENS_DAY = new THREE.Color('#6f7682');
 const DOT = new THREE.Color('#ff2a2a');
 
-/** The wall, its top and its lights, and the murk past it, at the boot (`low`: phones, the outer wire left out) */
-export function buildWall(scene: THREE.Scene, tick: (f: Tick) => void, low = false) {
+/** The wall, its top and its lights, and the murk past it, at the boot (`low`: phones, the outer wire left out); `update()` each frame with the night */
+export function buildWall(scene: THREE.Scene, low = false) {
   const night: THREE.IUniform<number> = { value: 0 };
   const slab = new THREE.Mesh(slabGeometry(), slabMaterial(night));
   slab.name = 'wall';
@@ -461,15 +460,19 @@ export function buildWall(scene: THREE.Scene, tick: (f: Tick) => void, low = fal
   scene.add(murk);
   // The murk takes the sky's light: its cold grey as bright as the horizon (the fog's colour, sky.ts), a touch of the
   // horizon's own colour in it, so it's pale by day and dark at night, but always grey against the sky's blue.
-  // The floodlights come on with the night, their lenses with them; the cameras' dots are dim by day, bright at night
+  // The floodlights come on with the night, their lenses with them; the cameras' dots are dim by day, bright at night.
+  // (Every frame, from index.ts beside the city's own lights: the time of day isn't motion, so it runs under reduced
+  // motion too, when the city's ticks run on the first frame only)
   const col = (mat.uniforms.uColor as THREE.IUniform<THREE.Color>).value;
-  tick((env) => {
-    night.value = env.night;
-    lensMat.color.copy(LENS_DAY).lerp(FLOOD_LIGHT, env.night).multiplyScalar(1 + 0.25 * env.night);
-    dotMat.color.copy(DOT).multiplyScalar(0.45 + 1.15 * env.night);
-    const fog = scene.fog as THREE.FogExp2 | null;
-    if (!fog) return;
-    const k = THREE.MathUtils.clamp(lum(fog.color) / lum(GREY), 0.08, 1.15);
-    col.copy(GREY).multiplyScalar(k * 0.85).lerp(fog.color, 0.15);
-  });
+  return {
+    update(n: number) {
+      night.value = n;
+      lensMat.color.copy(LENS_DAY).lerp(FLOOD_LIGHT, n).multiplyScalar(1 + 0.25 * n);
+      dotMat.color.copy(DOT).multiplyScalar(0.45 + 1.15 * n);
+      const fog = scene.fog as THREE.FogExp2 | null;
+      if (!fog) return;
+      const k = THREE.MathUtils.clamp(lum(fog.color) / lum(GREY), 0.08, 1.15);
+      col.copy(GREY).multiplyScalar(k * 0.85).lerp(fog.color, 0.15);
+    },
+  };
 }

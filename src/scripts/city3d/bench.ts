@@ -18,6 +18,7 @@
 import * as THREE from 'three';
 import { mb, sceneMemory, type SceneMemory } from './perf';
 import { CORE_ROADS, EXT, LANE, RING_HI, WIDEN } from './layout';
+import { WALL_INNER } from './wall';
 
 type V3 = [number, number, number];
 export interface BenchView {
@@ -72,6 +73,11 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'hw-river', name: 'The raised highway, a river span', pos: [-170, 10, 125], target: [-215, 2, 95] },
   { id: 'swing', name: 'Kestrel Bridge', pos: [-78, 9, 100], target: [-112, 1.5, 96] },
   { id: 'rural', name: 'A country road', pos: [72, 6, -380], target: [64.5, 0.5, -420] },
+  // The wall round the city (docs/wall-plan.md Phase 6): its foot, a corner from over the land inside it, and the
+  // west culvert where the river runs under it
+  { id: 'wall', name: 'The wall, from its foot', pos: [WALL_INNER[0] + 40, 6, 40], target: [WALL_INNER[0], 22, 40] },
+  { id: 'wall-corner', name: 'The wall, a corner', pos: [WALL_INNER[0] + 55, 45, WALL_INNER[1] + 55], target: [WALL_INNER[0], 15, WALL_INNER[1]] },
+  { id: 'wall-culvert', name: 'The wall, the west culvert', pos: [WALL_INNER[0] + 45, 8, 100], target: [WALL_INNER[0], 2, 102] },
 ];
 /** The route, through these views in order and back home */
 const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];

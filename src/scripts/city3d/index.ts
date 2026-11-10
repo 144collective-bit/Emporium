@@ -442,7 +442,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Someone waiting at every third bus shelter (transit.ts, the polish plan's Phase 6; phones: half of them)
   SHELTER_IDLES.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.promenade ? 0.05 : SLAB, ry: p.ry, act: 'wait' }));
   // The wall round the city and the murk past it (wall3d.ts, docs/wall-plan.md Phase 2)
-  buildWall(scene, tick, tier === 'low');
+  const wall = buildWall(scene, tier === 'low');
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
@@ -1636,7 +1636,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
     // The benchmark has the camera while it runs (and the review shots while they hold a view)
     if (shots?.place(camera, controls.target) && !walking) dirty = true;
-    else if (bench?.active && !walking) {
+    else if (shots?.holding() && !walking) {
+      // (a review view resting: nothing moves the camera, shots.ts)
+    } else if (bench?.active && !walking) {
       if (flight) {
         flight = null;
         controls.enabled = true;
@@ -1671,8 +1673,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       dirty = true;
     } else if (controls.update()) dirty = true;
     // Keep the view over the city (round the built-up area, never past the world: bounds.ts, growth plan Phase 5)
-    controls.target.x = THREE.MathUtils.clamp(controls.target.x, PAN_BOUNDS[0], PAN_BOUNDS[2]);
-    controls.target.z = THREE.MathUtils.clamp(controls.target.z, PAN_BOUNDS[1], PAN_BOUNDS[3]);
+    // (not while a review view holds the camera: shots.ts)
+    if (!shots?.holding()) {
+      controls.target.x = THREE.MathUtils.clamp(controls.target.x, PAN_BOUNDS[0], PAN_BOUNDS[2]);
+      controls.target.z = THREE.MathUtils.clamp(controls.target.z, PAN_BOUNDS[1], PAN_BOUNDS[3]);
+    }
 
     // Shadows only while walking or driving, never in the City view or up in an aircraft (shadows.ts, the owner's call),
     // their box ahead of where the camera looks
@@ -1714,6 +1719,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     if (!reduced || frames === 0) for (const f of ticks) f(env);
     updateLights(s.night, env.t);
+    wall.update(s.night);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
     updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);
     if (s.thunder) sound.sfx('thunder', s.thunder);
