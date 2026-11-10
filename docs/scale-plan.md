@@ -31,7 +31,7 @@ owner's other call: bumping into things no longer slows or throws him
 | Speed and jump | In proportion (the owner's second answer: "natural", the square root of the size, made the motion capture's legs read too fast for him, as the animator works in his own body lengths) |
 | Kerbs | Smoothed in the animation, nothing in the world moves |
 | The Fight Club's ring | Left at 0.85 for now (its rules are the game server's too) |
-| Endswood's doors | Left for now |
+| Endswood's doors | Left for now, then repainted taller (the owner's next pick, below) |
 
 ## What was built
 
@@ -67,12 +67,20 @@ owner's other call: bumping into things no longer slows or throws him
   vault, moments, the slide and the stop, the old stadium footbridge's
   treads); the bike and kart tests' reaches in proportion.
 
+## Endswood's doors (the owner's next pick)
+
+The gallery doors are painted in the blocks' wall atlas (endsblocks3d.ts,
+band `deck`): they filled 0.73 of a storey (a tile), under his head even at
+0.66. Repainted nearly the storey's full height (about 0.97 tiles, the
+gallery's floor their sill; the gallery has two storeys of headroom), the
+glass panel, letterbox and handle moved with them, the light over each door
+on the wall above it, in the upstairs row's bottom under that window.
+Nothing moves; the rest of the atlas draws the same (the seeded numbers are
+asked in the same order).
+
 ## Left for later
 
 - The Fight Club's ring at 0.66 (its rules: reach, knock-back, the ring's
   distances, shared with the game server).
-- Endswood's doors: repaint them taller in the wall atlas (nothing moves),
-  or raise its `STOREY` (everything there moves: the owner's sign-off and
-  a snapshot rewrite).
 - The city's counters, rails and car roofs were built round him at 0.85:
   they sit higher on him now.
