@@ -144,6 +144,74 @@ memory; `npm run shots`). Nothing that exists moves (the snapshot test).
 - Measured after each district against the targets. If a phone falls under them,
   stop and fix before the next.
 
+## The land plan, first round (the owner's picks, 2026-11-10)
+
+The first talk about what the city is missing and how to grow it in sections.
+Places are rough until each section has its own plan. Nothing is built from
+this yet.
+
+**Four wards, the dystopia told by the map** (the owner's pick): power in the
+north, money and pleasure in the east, work in the west, the poor in the
+south. The centre (downtown, Uptown, the river) stays as it is.
+
+| Ward | Already there | To come |
+| --- | --- | --- |
+| North (power) | Westlake Park, the stadium, Uptown North, the mall | City Hall, the police headquarters and the courthouse; the military base by the north wall; the TV station; a surveillance centre |
+| East (money and pleasure) | Crestmont, the Neon Mile, Sunridge | the hospital, the university |
+| West (work) | the Docks, the kart park | an industrial zone, the rail freight yard, the power station, the water works, the scrapyard and landfill |
+| South (the poor) | The Trenches, Endswood, Lot 9, the airport | the Ends carried west in council-estate town houses, the prison, the ration depot, farms towards the wall |
+
+**The owner's picks:**
+
+- **City Hall** goes in the north-west park towards Uptown: Westlake Park
+  (x -201 to -43, z -161 to -8), on its south side facing Uptown. The reading
+  to confirm: City Hall on the park's walk (the Mall, x -140, Uptown's axis),
+  facing south over a civic square across the north avenue to Uptown's
+  plaza and its cross. The police headquarters and the courthouse stand
+  beside it as a civic quarter.
+- **The military base** by the north wall guards it and holds the wall's
+  first exit gate: leaving the city goes through the base (the wall plan's
+  exits and the storyline's conditions to leave).
+- **The wards** as above.
+- **Every missing piece** the first round listed: the hospital, the prison,
+  industry and the rail freight yard, the university, farms, the old town and
+  the TV station.
+- **The Ends carried further west** in council-estate town houses: two and
+  three storey terraces in rows. Footpaths along their fronts, garages and
+  parking courts behind (the estates of the 60s and 70s), small fenced back
+  gardens, a garage block, a parade with a corner shop, a playground.
+  - **The land:** the open land west of Endswood (x -130), outside the ring
+    highway's south-west corner, between the Docks to the north-west and
+    Lot 9 to the south. Roughly x -380 to -135, z 300 to 460, clear of the
+    highway's exit ramps.
+  - **How it's built:** the kits' terraces (`recipes.ts`) for the rows, in
+    Endswood's own concrete and brick, its sodium lamps and its life.
+  - **How it joins:** to Endswood Road and the south avenue.
+
+**Where the rest might go** (to settle, section by section):
+
+- **The old town:** the historic quarter the city grew from, on the north
+  bank west of the highway across the river from the Docks (the port the city
+  started at), by the metro's Kart Park station.
+- **The hospital and the university:** the east, near Crestmont and the
+  Neon Mile.
+- **The prison and the ration depot:** the south, past Lot 9 towards the
+  wall.
+- **The industry, the freight yard, the power station and the water works:**
+  the west, round the kart park and north of the Docks.
+- **The farms:** along the south and east walls.
+- **A fire station in each ward,** a cemetery in the south or east, and the
+  TV station and the surveillance centre in the north.
+
+**The order** (to agree):
+
+1. The civic quarter and City Hall (close to town, small: it fits today's
+   limits).
+2. The Ends carried west (beside a district that exists).
+3. The military base (far out and big: with the build-out plan's Phases 2
+   and 3).
+4. Then ward by ward.
+
 ## The risks
 
 - **Mid-range phones are the hard part.** Phases 2 to 4 are what make it possible;
