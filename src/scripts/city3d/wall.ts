@@ -7,7 +7,8 @@
  * Everything here is worked out from `EXT`, so the wall stands round whatever world a test run sets
  * (`WORLD_EXT`, `npm run test:wide`) as round the site's own.
  */
-import { EXT, RIVER } from './layout';
+import { EXT, RIVER, WALL_OUT } from './layout';
+import type { Box } from './solids';
 import type { Rect } from './downtown';
 
 /** 1 tile is about 1.8 m (layout.ts); 200 ft is 60.96 m */
@@ -19,7 +20,7 @@ export const WALL_H = (200 * 0.3048) / TILE_M;
  * The wall's numbers: its inner face `out` past the world's edge (where the grass ended before the wall, world.ts
  * `SKIRT`), `thick` through, `h` tall (200 ft, about 34 tiles: nearly three times the Emporium's roof)
  */
-export const WALL = { out: 80, thick: 8, h: WALL_H };
+export const WALL = { out: WALL_OUT, thick: 8, h: WALL_H };
 
 /** The wall's inner face, all round (x0, z0, x1, z1): the land you'll walk up to (Phase 3) */
 export const WALL_INNER: Rect = [EXT[0] - WALL.out, EXT[0] - WALL.out, EXT[1] + WALL.out, EXT[1] + WALL.out];
@@ -46,6 +47,12 @@ export const WALL_RUNS: WallRun[] = (() => {
     { side: 'e', rect: [i1, j0, o1, j1] },
   ];
 })();
+
+/**
+ * The wall solid (Phase 3, the owner's call: walk to the wall): each side to its full height, in every grid
+ * (walking, driving, flying, the walk camera, bullets: solids.ts `SOLIDS`)
+ */
+export const WALL_SOLIDS: Box[] = WALL_RUNS.map(({ rect }) => [...rect, WALL.h] as Box);
 
 /** Whether a point is in the wall's footprint, `m` further out each way */
 export function inWall(x: number, z: number, m = 0) {

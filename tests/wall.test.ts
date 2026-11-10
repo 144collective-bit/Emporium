@@ -4,12 +4,17 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, fromWall, inWall } from '../src/scripts/city3d/wall';
-import { EXT, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, WALL_SOLIDS, fromWall, inWall } from '../src/scripts/city3d/wall';
+import { EXT, RIVER, WALL_MARGIN, WALL_OUT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { TALLEST as UPTOWN_TALLEST } from '../src/scripts/city3d/highrise';
-import { CEILING } from '../src/scripts/city3d/flight-sim';
+import { CEILING, EDGE_TURN, TUNES, newFlight, stepFly } from '../src/scripts/city3d/flight-sim';
+import { CAMERA_GRID, SOLIDS, SOLID_GRID, rayBoxes, type Box } from '../src/scripts/city3d/solids';
+import { newBoat, stepBoat } from '../src/scripts/city3d/boat-sim';
+import { RIVER_WALLS } from '../src/scripts/city3d/drive-sim';
+import { PAN_BOUNDS } from '../src/scripts/city3d/bounds';
+import { laneAt } from '../src/scripts/city3d/river';
 import { SITE } from '../src/scripts/city3d/airfield';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { CAMERA_FAR, SKY_RADIUS } from '../src/scripts/city3d/bounds';
@@ -55,10 +60,8 @@ test('it is solid all round: the four sides meet at the corners, nothing overlap
 });
 
 test('everything that exists stands inside it, well clear: nothing moves for it', () => {
-  // Where you can walk and drive today, every street, block and slab, the airport and the kart park
+  // Every street, block and slab, the airport and the kart park
   const clear = (x: number, z: number, what: string) => assert.ok(fromWall(x, z) >= WALL.out, `${what} at ${x}, ${z} is ${fromWall(x, z)} from the wall`);
-  clear(WORLD_BOUNDS[0], WORLD_BOUNDS[1], 'the walk limit');
-  clear(WORLD_BOUNDS[2], WORLD_BOUNDS[3], 'the walk limit');
   for (const s of PLAN.streets) for (const [x, z] of s.pts) clear(x, z, s.id);
   for (const b of PLAN.blocks) for (const [x, z] of b.poly) clear(x, z, b.id);
   for (const r of [SITE, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1]]) {
@@ -96,4 +99,80 @@ test('from town every side stands clear of the far haze, and the haze is whole b
   for (const [x, z] of [[i0, mz], [i1, mz], [mx, j0], [mx, j1]]) assert.ok(Math.hypot(x - 30, z - 30) < from, `the middle of a side at ${x}, ${z}`);
   assert.ok(to < CAMERA_FAR, 'faded out before the far plane clips it');
   assert.ok(WALL_LOOK.std > 0 && WALL_LOOK.std < 1, 'some of the city haze, never all');
+});
+
+/* ---------- Phase 3: walk to the wall ---------- */
+
+test("walking and driving reach the wall's foot, all round, and no further", () => {
+  assert.equal(WALL_OUT, WALL.out);
+  for (const [x, z] of [
+    [WORLD_BOUNDS[0], WORLD_BOUNDS[1]],
+    [WORLD_BOUNDS[2], WORLD_BOUNDS[3]],
+  ])
+    assert.ok(Math.abs(fromWall(x, z) - WALL_MARGIN) < 1e-9, `the walk limit is ${fromWall(x, z)} from the wall`);
+  assert.ok(WALL_MARGIN > 0 && WALL_MARGIN <= 2, 'at its foot');
+  // The City view still pans round the town, not out to the wall
+  assert.ok(fromWall(PAN_BOUNDS[0], PAN_BOUNDS[1]) > WALL.out && fromWall(PAN_BOUNDS[2], PAN_BOUNDS[3]) > WALL.out);
+});
+
+test('it is solid in every grid: walking, the camera, driving and flying, and bullets stop on it', () => {
+  for (const r of WALL_SOLIDS) assert.equal(r[4], WALL.h, 'to its full height');
+  for (const b of WALL_SOLIDS) assert.ok(SOLIDS.includes(b));
+  const mid: [number, number][] = [
+    [(WALL_INNER[0] + WALL_INNER[2]) / 2, WALL_INNER[1] - 1],
+    [(WALL_INNER[0] + WALL_INNER[2]) / 2, WALL_INNER[3] + 1],
+    [WALL_INNER[0] - 1, 30],
+    [WALL_INNER[2] + 1, 30],
+  ];
+  for (const [x, z] of mid) {
+    for (const g of [SOLID_GRID, CAMERA_GRID]) assert.ok(g.near(x, z, 0.5).some((b) => WALL_SOLIDS.includes(b)), `the wall at ${x}, ${z}`);
+  }
+  // A shot fired along the ground at it stops at its inner face
+  const y = 1.5;
+  for (const [dx, dz, face] of [
+    [-1, 0, WALL_INNER[0]],
+    [1, 0, WALL_INNER[2]],
+  ] as const) {
+    const from = { x: face - dx * 20, y, z: 31 };
+    const t = rayBoxes(from, { x: dx, y: 0, z: dz }, 100);
+    assert.ok(Math.abs(t - 20) < 0.05, `the shot went ${t}`);
+  }
+});
+
+test('an aircraft turns back short of the wall and never goes through it, whatever its height', () => {
+  const bounds: Box = [...WORLD_BOUNDS, 0];
+  const world = { boxes: WALL_SOLIDS, ceilings: [], soft: [], ground: () => 0 };
+  for (const id of ['prop', 'bizjet', 'heli'] as const)
+    for (const y of [12, 50])
+      for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+        // Started 60 short of the wall's inner face, heading straight at it at full power
+        const [dx, dz] = [Math.round(Math.cos(yaw)), Math.round(-Math.sin(yaw))];
+        const x = dx > 0 ? WALL_INNER[2] - 60 : dx < 0 ? WALL_INNER[0] + 60 : 30;
+        const z = dz > 0 ? WALL_INNER[3] - 60 : dz < 0 ? WALL_INNER[1] + 60 : 30;
+        const s = newFlight(x, z, yaw, y);
+        s.ground = false;
+        s.gear = false;
+        s.power = s.spool = 1;
+        s.speed = TUNES[id].top * 0.9;
+        for (let t = 0; t < 30; t += 1 / 30) {
+          stepFly(s, { throttle: 1, turn: 0, climb: 0 }, TUNES[id], 1 / 30, world, bounds);
+          assert.ok(fromWall(s.x, s.z) >= WALL_MARGIN - 1e-6, `${id} at ${y} reached ${fromWall(s.x, s.z)} from the wall`);
+        }
+        assert.ok(fromWall(s.x, s.z) > EDGE_TURN * 0.25, `${id} turned back`);
+      }
+});
+
+test("the river runs on to the wall: a boat and a car's river walls reach its foot", () => {
+  // The car's walls along the water reach either end
+  const xs = RIVER_WALLS.map((b) => [b[0], b[2]]).flat();
+  assert.ok(Math.min(...xs) <= WALL_INNER[0] + 1e-6 && Math.max(...xs) >= WALL_INNER[2] - 1e-6);
+  // A boat at full power down the middle lane stops a little short of either end
+  for (const [x, yaw, face] of [
+    [WALL_INNER[2] - 60, 0, WALL_INNER[2]],
+    [WALL_INNER[0] + 60, Math.PI, WALL_INNER[0]],
+  ] as const) {
+    const s = newBoat({ x, z: laneAt((RIVER[0] + RIVER[1]) / 2, x), yaw });
+    for (let i = 0; i < 40 * 30; i++) stepBoat(s, { throttle: 1, steer: 0 }, 1 / 30, []);
+    assert.ok(Math.abs(s.x - face) < 6 && Math.abs(s.x - face) >= WALL_MARGIN - 1e-6, `the boat stopped ${Math.abs(s.x - face)} from the wall`);
+  }
 });

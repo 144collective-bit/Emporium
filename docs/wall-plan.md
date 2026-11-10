@@ -102,19 +102,34 @@ date. Roads don't change in this plan.
   the wall) doesn't change that.
 - The review views and the bench views for the wall come in Phase 6.
 
-### Phase 3: walk to the wall
+### Phase 3: walk to the wall (built, waiting on the owner's sign-off)
 
-- `WORLD_BOUNDS` moves out to the wall's inner face (less a small margin), so
-  walking, driving, riding and the boat reach the wall's foot.
-- The wall is solid in every grid (walking, the camera, bullets).
-- Flying turns back short of the wall (`EDGE_TURN`) and never flies through
-  it.
-- The server's movement checks (`protocol.ts`) follow.
-- City view's pan (`PAN_BOUNDS`) stays round the built-up area as it is.
-- The strip stays grass, no trees and no roads (the owner's call: "just
-  grass"; the outskirts' tree densities keep their measured land).
-- The world map draws the wall.
-- Tested at both sizes.
+- `WORLD_BOUNDS` (layout.ts) is the wall's foot: `WALL_OUT` (80, the wall's
+  `out`) past `EXT`, less `WALL_MARGIN` (1). Walking, driving and riding go
+  over the grass to it; the server's movement checks (`protocol.ts`
+  `WORLD`) follow by themselves.
+- The wall is solid in every grid (`WALL_SOLIDS` in wall.ts, in solids.ts
+  `SOLIDS`): walking, the walk camera, driving, flying and bullets.
+- Flying turns back short of the wall (`EDGE_TURN` inside the walk limit)
+  and never flies through it, low or high (the test flies each aircraft
+  straight at every side).
+- The river already ran on to the wall's inner face in the drawing
+  (`riverWater()` / `riverBanks()` to the grass's end); now a boat runs on to
+  it too (boat-sim.ts `END`), and a car's river walls go on to it
+  (drive-sim.ts `RIVER_WALLS`). The culverts are still Phase 5's: the
+  channel's end is the wall's face until then.
+- City view's pan (`PAN_BOUNDS`) is as it was (held by the test).
+- The strip stays grass, no trees and no roads.
+- The world map draws the wall as a frame round the land, the land and the
+  river out to it, and pans and zooms out to it; a waypoint can go anywhere
+  you can walk.
+- Tested at both sizes (`tests/wall.test.ts`: the walk limit at the wall's
+  foot, solid in every grid and to bullets, the aircraft turning back, a
+  boat and a car's river walls reaching it). The tests that held the old
+  edge now hold the wall's (layout, protocol, drive, solids); the collision
+  grid's random spots stay on the land inside the edge, where the boxes are.
+- Checked in the browser: standing at the west wall's foot, and the world
+  map with the wall round it.
 
 ### Phase 4: the top and the night
 

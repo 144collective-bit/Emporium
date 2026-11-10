@@ -98,7 +98,8 @@ test('the drawing grid seats each old block (0, 11, 22) on its landmark\'s lot t
 
 test('the world reaches well past the city, with room to build', () => {
   const world = [EXT[0], EXT[0], EXT[1], EXT[1]] as [number, number, number, number];
-  assert.ok(inside(WORLD_BOUNDS, world), 'you can walk or drive off the edge');
+  // (since the wall plan's Phase 3 you walk and drive past the edge, over the grass to the wall's foot: wall.test.ts)
+  assert.ok(inside(world, WORLD_BOUNDS), 'you can reach the edge');
   assert.ok(CITY_EXT[0] >= EXT[0] && CITY_EXT[1] <= EXT[1]);
   for (const s of SLABS.map(bounds)) assert.ok(inside(s, WORLD_BOUNDS), 'a block or district is out of reach');
   // At least a hundred tiles of open land on every side of what's built (but Crestmont's Flats, which run out to the
