@@ -42,11 +42,11 @@ export interface BikeSpec {
 
 export const BIKES: Record<BikeId, BikeSpec> = {
   // A step-through scooter: small wheels, a floorboard, a leg shield and a top box
-  scooter: { id: 'scooter', name: 'Hop Scoot', L: 1.45, W: 0.46, r: 0.15, tw: 0.09, axles: [-0.5, 0.5], seat: [-0.2, 0.5], bars: [0.12, 0.66, 0.2], pegs: [0.12, 0.17, 0.12], tuck: 0.05 },
+  scooter: { id: 'scooter', name: 'Hop Scoot', L: 1.45, W: 0.46, r: 0.15, tw: 0.09, axles: [-0.5, 0.5], seat: [-0.2, 0.44], bars: [0.06, 0.6, 0.16], pegs: [0.02, 0.15, 0.1], tuck: 0.08 },
   // A naked street bike: a round lamp, a tank, a flat bench, pegs under the rider
-  streetbike: { id: 'streetbike', name: 'Alley Cat', L: 1.75, W: 0.5, r: 0.22, tw: 0.11, axles: [-0.62, 0.6], seat: [-0.18, 0.58], bars: [0.18, 0.72, 0.22], pegs: [-0.08, 0.25, 0.14], tuck: 0.22 },
+  streetbike: { id: 'streetbike', name: 'Alley Cat', L: 1.75, W: 0.5, r: 0.22, tw: 0.11, axles: [-0.62, 0.6], seat: [-0.18, 0.46], bars: [0.08, 0.6, 0.18], pegs: [-0.1, 0.2, 0.12], tuck: 0.22 },
   // A sport bike: a full fairing, a screen, clip-ons low, rear-set pegs, a tail hump
-  sportbike: { id: 'sportbike', name: 'Neon Blade', L: 1.85, W: 0.44, r: 0.23, tw: 0.13, axles: [-0.66, 0.64], seat: [-0.22, 0.6], bars: [0.22, 0.66, 0.18], pegs: [-0.2, 0.3, 0.14], tuck: 0.55 },
+  sportbike: { id: 'sportbike', name: 'Neon Blade', L: 1.85, W: 0.44, r: 0.23, tw: 0.13, axles: [-0.66, 0.64], seat: [-0.22, 0.48], bars: [0.06, 0.56, 0.16], pegs: [-0.22, 0.24, 0.12], tuck: 0.55 },
 };
 
 /** The steering head (x, y): where the fork turns (the bars about it), the drawing's and the rider's pose's */

@@ -4,6 +4,7 @@
  * Vehicles and people are instanced, so a crowd costs a handful of draw calls.
  */
 import * as THREE from 'three';
+import { FIGURE_SCALE } from './skeleton';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, PAL, canvasTex, fx, glowTex, lit, mergeMeshes, moving, neon, rand, toon } from './kit';
 import type { BikeGeometry } from './bikes';
@@ -1126,7 +1127,7 @@ const WALK_LANES: { inset: number; dir: 1 | -1; speed: number }[] = [
   { inset: -0.47, dir: -1, speed: 0.56 },
   { inset: -0.62, dir: -1, speed: 0.48 },
 ];
-const PERSON_SCALE = 0.66;
+const PERSON_SCALE = FIGURE_SCALE;
 /** How far the hips sit above the feet when seated, at PERSON_SCALE */
 const SEAT_DROP = (HIP_HEIGHT - 0.03) * PERSON_SCALE;
 

@@ -94,8 +94,8 @@ export const MOVE_SPREAD: Record<WeaponId, { move: number; air: number }> = {
   lmg: { move: 0.03, air: 0.06 },
 };
 /** Speeds (tiles a second) where moving starts to cost (a walk, movesim.ts GAITS.walk) and costs it all (a run, GAITS.run) */
-export const MOVE_FREE = 0.78;
-export const MOVE_FULL = 2.8;
+export const MOVE_FREE = 0.69;
+export const MOVE_FULL = 2.47;
 /** Aiming, moving costs this share of it */
 export const MOVE_AIMED = 0.5;
 

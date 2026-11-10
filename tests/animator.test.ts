@@ -2,6 +2,7 @@
 // it's asked without ever bending a knee backwards; over every kind of running, walking, stopping
 // and turning a held foot stays put on the ground, nothing pops from one frame to the next, the hips
 // stay at a person's height; up a slope the held feet stand on it; and it's the same every time.
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -15,7 +16,7 @@ import { allMocap } from './mocapdata';
 const data = allMocap();
 /** Whether the clip of that name (the animator's `debug.clip`) carries a tag */
 const tagOf = (name: string, tag: string) => tagged(data.clips.find((c) => c.name === name.replace('~', ''))!, tag);
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 const DT = 1 / 60;
 /** A tile in centimetres */
 const CM = 180;

@@ -35,6 +35,7 @@
  *   builds them (the desktop's, 3, by default).
  */
 import * as THREE from 'three';
+import { FIGURE_SCALE } from './skeleton';
 import { HOLDING, PLAYER, SOLDIER, createDegen, type Degen } from './character';
 import { addCarry, addLean, addLook, applyTo, chestYaw, createAnimator, type Animator } from './animator';
 import { createFollow } from './follow';
@@ -57,7 +58,7 @@ import { POCKET, holdGun, newStance } from './stance';
 import type { WeaponId } from './combat-sim';
 import { createPost } from './post';
 
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
 type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'emotes' | 'brawl' | 'reel';

@@ -9,15 +9,15 @@
  * Car space, as carspec.ts: +x the front, y up, +z the car's right. The
  * driver sits on the left (-z), the side Degen gets in and out (drive.ts).
  */
-import { ARM_REACH, HIP_Y, SHIN_GROUND, SHOULDER_X, SHOULDER_Y, THIGH } from './skeleton';
+import { ARM_REACH, FIGURE_SCALE, HIP_Y, SHIN_GROUND, SHOULDER_X, SHOULDER_Y, THIGH } from './skeleton';
 import { CARS, type CarId, type CarSpec } from './carspec';
 
 type V2 = [number, number];
 /** Degen's crown over the ground at scale 1 (skeleton.ts) */
 const CROWN = 1.28;
 
-/** The driver's size: Degen at walk mode's scale (walk.ts `SCALE`, karts.ts `DRIVER_SCALE`) */
-export const DRIVER_SCALE = 0.85;
+/** The driver's size: Degen at walk mode's scale (everyone's, skeleton.ts `FIGURE_SCALE`) */
+export const DRIVER_SCALE = FIGURE_SCALE;
 /**
  * Degen seated, in tiles at `DRIVER_SCALE`, measured up his back from the hip point: his crown (skeleton.ts: about
  * 1.28 to the crown), his eyes, his shoulders (and their spread), his arm's reach from the shoulder, and his thigh
@@ -61,24 +61,28 @@ export interface Interior {
   door?: { hinge: number; back: number; y0: number; y1: number; open: number; handle: [number, number] };
 }
 
-/** Each model's seat: the hip point's x and height, the recline, the rear seats, a raised cab floor (the bus's) (the rest is worked out from the body) */
+/**
+ * Each model's seat (raised for him at everyone's size, 0.66, where his eyes no longer cleared the window line:
+ * docs/scale-plan.md): the hip point's x and height, the recline, the rear seats, a raised cab floor (the bus's)
+ * (the rest is worked out from the body)
+ */
 const SEATS: Record<CarId, { x: number; y: number; recline: number; rear?: { x: number; recline: number }; floor?: number; door?: false }> = {
   hatch: { x: -0.06, y: 0.27, recline: 0.3, rear: { x: -0.68, recline: 0.24 } },
   sedan: { x: 0.04, y: 0.26, recline: 0.32, rear: { x: -0.42, recline: 0.15 } },
-  coupe: { x: -0.22, y: 0.2, recline: 0.45 },
+  coupe: { x: -0.22, y: 0.24, recline: 0.4 },
   pickup: { x: 0.08, y: 0.42, recline: 0.26 },
-  van: { x: 0.44, y: 0.4, recline: 0.2 },
+  van: { x: 0.44, y: 0.47, recline: 0.2, floor: 0.26 },
   bus: { x: 2.25, y: 0.62, recline: 0.12, floor: 0.36, door: false },
-  muscle: { x: -0.2, y: 0.24, recline: 0.38 },
-  suv: { x: 0.3, y: 0.46, recline: 0.26, rear: { x: -0.36, recline: 0.2 } },
-  super: { x: -0.14, y: 0.21, recline: 0.48 },
+  muscle: { x: -0.2, y: 0.28, recline: 0.38 },
+  suv: { x: 0.3, y: 0.51, recline: 0.26, rear: { x: -0.36, recline: 0.2 } },
+  super: { x: -0.14, y: 0.21, recline: 0.42 },
   exec: { x: 0.26, y: 0.27, recline: 0.3, rear: { x: -0.5, recline: 0.2 } },
   classic: { x: 0.08, y: 0.28, recline: 0.28, rear: { x: -0.46, recline: 0.18 } },
-  offroad: { x: 0.27, y: 0.52, recline: 0.22, rear: { x: -0.4, recline: 0.18 } },
+  offroad: { x: 0.27, y: 0.6, recline: 0.22, rear: { x: -0.4, recline: 0.18 } },
   ev: { x: -0.04, y: 0.27, recline: 0.3, rear: { x: -0.66, recline: 0.24 } },
   police: { x: 0.04, y: 0.26, recline: 0.32, rear: { x: -0.42, recline: 0.15 } },
-  truck: { x: 1.16, y: 0.94, recline: 0.14, floor: 0.66 },
-  rig: { x: 0.0, y: 1.06, recline: 0.14, floor: 0.78 },
+  truck: { x: 1.16, y: 0.94, recline: 0.14, floor: 0.7 },
+  rig: { x: 0.0, y: 1.06, recline: 0.14, floor: 0.82 },
   limo: { x: 1.0, y: 0.27, recline: 0.3, rear: { x: -1.1, recline: 0.24 } },
   partybus: { x: 2.25, y: 0.62, recline: 0.12, floor: 0.36, door: false },
 };
@@ -126,7 +130,8 @@ function interior(s: CarSpec): Interior {
   const wheelTilt = 0.35 + seat.recline * 0.5;
   const out = SITTER.reach * 0.8;
   const wheel: V3 = [sh[0] + out * 0.92, sh[1] - out * 0.39, hip[2]];
-  const wheelR = 0.095;
+  // (0.095 when he was 0.85: in step with his size, docs/scale-plan.md)
+  const wheelR = 0.095 * (DRIVER_SCALE / 0.85);
   const seams = s.seams ?? [];
   const [back, hinge] = seams.slice(-2);
   // (the handle cars.ts lays on the door, else one a little in from its back edge)

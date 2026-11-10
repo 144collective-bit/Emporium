@@ -3,6 +3,7 @@
 // of the lab's programs. A row that fails today and belongs to a later phase is listed in HELD_BACK
 // with the phase that owns it (the audit in the plan says why); the test holds that it still fails,
 // so the entry comes out when the phase fixes it. HUMAN_REPORT=1 prints every row.
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -13,7 +14,7 @@ import { GAITS, STAIRS, newMove, stepMove } from '../src/scripts/city3d/movesim'
 import { allMocap } from './mocapdata';
 
 const data = allMocap();
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 const DT = 1 / 60;
 const report = !!process.env.HUMAN_REPORT;
 

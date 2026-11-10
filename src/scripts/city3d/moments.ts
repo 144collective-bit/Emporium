@@ -33,30 +33,37 @@ import { HIP_HEIGHT } from './skeleton';
 import { SEAT_H } from './pedestrians';
 
 /** The numbers (tiles, seconds, radians) */
+/*
+ * Lengths in tiles. Those of his own reach (where he stands, the door
+ * handle's height, the crate he carries) were set when he was 0.85 and
+ * brought down with his size to everyone's 0.66 (docs/scale-plan.md); the
+ * things in the world (a car's handle, the seats, the aircraft's frame, the
+ * boat's rails) are where they are.
+ */
 export const MOMENT = {
   /** How far from the thing he stands: a door, a counter, a bench (in front of its seat, his back to it) */
-  stand: { door: 0.36, counter: 0.4, bench: 0.42 },
+  stand: { door: 0.28, counter: 0.31, bench: 0.33 },
   /** The approach: at the mark within `at` of it and `faceAt` of its facing, slower than `still`; never from further than `max`; at most `timeout` seconds, then the clip plays from wherever he is */
-  approach: { at: 0.16, faceAt: 0.3, still: 0.4, max: 2.4, timeout: 2.0, speed: 0.78, slowIn: 0.4, turnIn: 0.7 },
+  approach: { at: 0.12, faceAt: 0.3, still: 0.4, max: 1.86, timeout: 2.0, speed: 0.69, slowIn: 0.31, turnIn: 0.7 },
   /** The door push: its length, the share of it at which the hand lands and the panel opens; the handle's height over the ground and its offset to his right; how far the push goes into the door */
-  door: { t: 0.6, open: 0.55, handleY: 0.56, handleSide: 0.16, push: 0.05, lean: 0.22 },
+  door: { t: 0.6, open: 0.55, handleY: 0.44, handleSide: 0.12, push: 0.04, lean: 0.22 },
   /** The lean on a counter: in and out, how far the spine leans, the hands' spread either side of his middle, the share of the lean-in at which the menu opens */
-  counter: { in: 0.4, out: 0.35, lean: 0.32, hands: 0.17, open: 0.6 },
+  counter: { in: 0.4, out: 0.35, lean: 0.32, hands: 0.13, open: 0.6 },
   /** The sit-down and the stand-up; the seat's place back from his stand spot */
-  bench: { down: 0.85, up: 0.7, back: 0.08 },
+  bench: { down: 0.85, up: 0.7, back: 0.06 },
   /** Getting in: how far short of the vehicle's side he stands, the clip's length by vehicle, the share of it at which the vehicle takes him (the hero hidden, the ride's own figure in the seat), and getting out */
-  board: { stand: 0.42, t: { car: 0.75, kart: 0.8, plane: 0.85, boat: 0.9, bike: 0.8 }, fireAt: { car: 0.72, kart: 0.8, plane: 0.85, boat: 0.75, bike: 0.78 }, out: 0.7 },
+  board: { stand: 0.33, t: { car: 0.75, kart: 0.8, plane: 0.85, boat: 0.9, bike: 0.8 }, fireAt: { car: 0.72, kart: 0.8, plane: 0.85, boat: 0.75, bike: 0.78 }, out: 0.7 },
   /** The car's handle height and the seat's over the ground; the kart's pod and seat; the aircraft's door frame (two hands) and sill; the boat's rails and its deck under the quay */
   car: { handle: 0.5, seat: 0.32, lean: 0.4, bob: -0.18, out: 0.42, behind: 0.04, turn: 0.45 },
   kart: { pod: 0.36, seat: 0.26, lean: 0.6, bob: -0.16 },
-  plane: { frame: [0.78, 1.0] as [number, number], sill: 0.45, lean: 0.3, bob: -0.08 },
-  boat: { rail: 0.72, railSide: 0.34, deck: -1.2, lean: 0.35, bob: -0.1 },
+  plane: { frame: [0.62, 0.8] as [number, number], sill: 0.45, lean: 0.3, bob: -0.08 },
+  boat: { rail: 0.56, railSide: 0.26, deck: -1.2, lean: 0.35, bob: -0.1 },
   /** The motorbike (vehicle plan Phase 7): how far off its side he stands, the seat's height (the scooter's; each bike's own is mybike.ts's), the lean in */
-  bike: { out: 0.36, seat: 0.5, lean: 0.25, bob: -0.08 },
+  bike: { out: 0.28, seat: 0.5, lean: 0.25, bob: -0.08 },
   /** The lift: inside the door, facing out, a beat before the fade */
   lift: { inside: 0.35, t: 0.3, fireAt: 0.5 },
   /** A crate: its size, how far short of it he stands, the lift and the set-down, where he carries it (out in front at the hips) */
-  crate: { w: 0.42, h: 0.3, d: 0.3, stand: 0.44, t: 0.9, fireAt: 0.5, out: 0.3, up: 0.06, bend: 0.9, squat: -0.5, lean: 0.06, slow: 0.78 },
+  crate: { w: 0.33, h: 0.23, d: 0.23, stand: 0.34, t: 0.9, fireAt: 0.5, out: 0.23, up: 0.05, bend: 0.9, squat: -0.5, lean: 0.06, slow: 0.78 },
   /** The palm's stand-off from a surface */
   palm: 0.035,
 };

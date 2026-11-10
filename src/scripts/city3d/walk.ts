@@ -30,6 +30,7 @@
  *   fly (fly.ts), land anywhere and get out.
  */
 import { SUN_DOORS } from './sunplaces';
+import { FIGURE_SCALE } from './skeleton';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { HOLDING, PLAYER, RELAXED, createDegen, type Outfit } from './character';
@@ -146,10 +147,11 @@ const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SP
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
-const RADIUS = 0.22;
+/** His body's circle (0.22 when he was 0.85: in step with his size) */
+const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
-const AIMING = 1.4;
+const AIMING = 1.23;
 /** Carrying a crate: how near its destination (the car's boot, the place) counts as there */
 const PUT_R = 1.8;
 /**
@@ -157,7 +159,7 @@ const PUT_R = 1.8;
  * button; crouching while sprinting slides): how fast he goes, and how far
  * the camera comes down crouched and sliding (tiles at his scale)
  */
-const CROUCH = { speed: 0.55, cam: 0.26, slideCam: 0.42 };
+const CROUCH = { speed: 0.48, cam: 0.26, slideCam: 0.42 };
 /**
  * Peeking (Q / E held; LB / RB while aiming on a gamepad; on touch, aiming
  * by a corner): how far the upper body leans out over the hips (radians),
@@ -165,14 +167,15 @@ const CROUCH = { speed: 0.55, cam: 0.26, slideCam: 0.42 };
  * first person, and its roll), how much slower he goes leaning right out,
  * the half-life it comes and goes with, and the head's levelling
  */
-const PEEK = { lean: 0.42, cam: 0.45, eye: 0.3, roll: 0.08, slow: 0.55, ease: 0.07, level: 0.85 };
+const PEEK = { lean: 0.42, cam: 0.35, eye: 0.23, roll: 0.08, slow: 0.55, ease: 0.07, level: 0.85 };
 /**
  * Peeking by a corner on touch (aiming): the view straight ahead blocked
  * within `near` (tiles), and clear for `far` from `side` out to one side;
  * looked at `every` seconds
  */
 const CORNER = { near: 1.4, far: 3.5, side: 0.55, every: 0.2 };
-const JUMP = 3.9;
+/** The jump's speed up (3.9 when he was 0.85: now as high for his size) and gravity */
+const JUMP = 3.44;
 const GRAVITY = 11.5;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
@@ -206,7 +209,8 @@ function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Pro
 
 /** The gaze before its module is in: straight ahead */
 const STILL_GAZE = { yaw: 0, pitch: 0 };
-const SCALE = 0.85;
+/** His size: everyone's (skeleton.ts `FIGURE_SCALE`) */
+const SCALE = FIGURE_SCALE;
 /** Getting into your car: how far through the reach to the handle the door starts to open (of the clip up to the car taking him) */
 const HAND_ON = 0.35;
 /** The quick swap's fade out (ms), as fast travel's */
@@ -528,7 +532,7 @@ export function createWalk(d: WalkDeps) {
    * How far behind him the camera sits to begin with (the mouse wheel sets it after): closer on an upright
    * screen, whose narrow view leaves him small at the distance a wide one frames him well
    */
-  const homeZoom = () => (innerHeight > innerWidth ? 3.2 : 3.3);
+  const homeZoom = () => (innerHeight > innerWidth ? 2.5 : 2.6);
   let zoom = homeZoom();
   let camDist = zoom;
   let firstPerson = false;
@@ -3197,7 +3201,7 @@ export function createWalk(d: WalkDeps) {
     armAmt += ((combat.armed ? 1 : 0) - armAmt) * damp(6, dt);
     // (less of it on an upright screen, whose narrow view would put him at its edge; armed, all of it, so the
     // crosshair stays off his head)
-    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 * Math.min(1, camera.aspect) + armAmt * 0.42;
+    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.3 * Math.min(1, camera.aspect) + armAmt * 0.33;
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
     let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
     // (lower crouched, lower still sliding)
