@@ -131,30 +131,62 @@ date. Roads don't change in this plan.
 - Checked in the browser: standing at the west wall's foot, and the world
   map with the wall round it.
 
-### Phase 4: the top and the night
+### Phase 4: the top and the night (built, waiting on the owner's sign-off)
 
-- A parapet along the top with coils of razor wire (in the FX layer, so the
-  ink doesn't draw black ropes) and cameras on posts.
-- At night, floodlights at the foot washing up the face (kept under the
-  bloom's threshold: the face never washes out), and the cameras' small red
-  dots.
-- Phones leave out the finest wire.
+- **The top** (wall.ts `TOP`, `EDGES`, `onEdge()`): a concrete parapet along
+  both edges, 1.1 high, in the slab's own material (one draw with it); coils
+  of razor wire along the inner one, a big coil and a thinner strand on top
+  (wall3d.ts `wireMesh()`: an open tube along each side with the coils on a
+  cut-out texture repeating along it, in the FX layer, so the ink doesn't
+  draw black ropes; phones leave the strand out); cameras on posts along the
+  inner edge every 64, kept 24 clear of the corners, each an arm and a
+  housing out over the city, looking in (`CAMERAS`, `lookIn()`).
+- **At night** (`FLOOD`, `FLOODS`): a floodlight housing against the inner
+  face at its foot every 36, clear of the corners and the culverts, solid and
+  low enough to see over (`FLOOD_SOLIDS`, in `SOLIDS`); each washes a soft fan
+  of cool light up the face (`washMesh()`: added light in the FX layer, its
+  strength from the tick's `night`, nothing by day, well under the bloom's
+  threshold so the face never washes out). The cameras' red dots and the
+  floodlights' lenses are two small meshes lit at night through `lit()`.
+- The cameras, the housings and the culverts' bars are one dark steel mesh
+  in the wall's own haze: the wall is now six draws (the slab, the steel,
+  the dots, the lenses, the wire, the wash) and the murk.
 
-### Phase 5: the river and the culverts
+### Phase 5: the river and the culverts (built, waiting on the owner's sign-off)
 
-- The river's channel carried on from the world's edge to the wall at both
-  ends: the water, its banks and the quays.
-- A low arch through the wall at each end with heavy bars. The water runs
-  under it.
-- Boats stop at the bars (`boat-sim.ts` `WATER_SOLIDS`), and the traffic's
-  boats keep turning back where they do.
-- The river's channel ends move from the edge to the bars.
+- The river runs on through the wall: its water and banks (world.ts
+  `riverWater()` / `riverBanks()`) from 30 past the outer face at either end
+  (`RIVER_PAST`, into the murk, where the channel's end is walled), the land
+  past the wall cut round it.
+- **The culverts** (wall.ts `ARCH`, `ARCH_SPAN`, `archTop()`): over the
+  river's band at the west and east sides the wall is an outline from under
+  the water (`CULVERT_FLOOR`, a sill below it) to the top with a low arch cut
+  through it (wall3d.ts `culvertGeometry()`): its sides straight up from
+  under the water to 3.2, a flat segmental arch 2.6 more to its crown, 2 in
+  from the band's edges.
+- **The bars** in the wall's middle (`CULVERT_X`, `ARCH.bars`): uprights 1.1
+  apart, 0.11 thick, from under the water to the arch, two rails across.
+  The boats stop at them (`CULVERT_BARS` in boat-sim.ts `WATER_SOLIDS`; the
+  hire boat's ends are now the wall's outer face, so the bars are what stops
+  it). The traffic's boats keep turning back well inside, as they did.
+- Walking and driving still stop at the wall's foot (Phase 3): the wall's
+  solids are the full ring, the culverts included.
 
-### Phase 6: polish
+### Phase 6: polish (built, waiting on the owner's sign-off)
 
-- The sound by the wall (`ambience.ts`: wind, a low hum near it).
-- The shots before and after, the bench on phones and desktops, and
-  CLAUDE.md.
+- **The sound by the wall** (ambience.ts `wall`, `WALL_SOUND` 70): full at
+  its foot, fading out over the strip, none in town; sound.ts blows the wind
+  harder along its face and adds a low hum off its concrete (a layer made the
+  first time it's heard).
+- **The views**: `wall-foot`, `wall-culvert` and `wall-corner` in the bench's
+  `BENCH_VIEWS` and the review shots' `BLEND_VIEWS`, from `WALL_INNER`, so they
+  stand where the wall does at either world size.
+- **Checked** in a local build (swiftshader, desktop tier): the top's cameras
+  and wire from the wall's foot, the culvert with its bars and the water
+  running under it from the north bank, and the floodlights' wash at night.
+  The bench on a real phone and laptop, and the full `npm run shots` contact
+  sheets, are for the owner's devices: the views are in for them.
+- The boot's code is 697.6 of 740 KB (694.8 before Phases 4-6).
 
 ## Later, with the storyline (not in this plan)
 

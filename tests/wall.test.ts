@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, WALL_SOLIDS, fromWall, inWall } from '../src/scripts/city3d/wall';
+import { ARCH, ARCH_SPAN, CAMERAS, CULVERT_BARS, CULVERT_FLOOR, CULVERT_X, EDGES, FLOOD, FLOODS, FLOOD_SOLIDS, TOP, archTop, BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, WALL_SOLIDS, fromWall, inWall } from '../src/scripts/city3d/wall';
 import { EXT, RIVER, WALL_MARGIN, WALL_OUT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
@@ -14,7 +14,8 @@ import { CAMERA_GRID, SOLIDS, SOLID_GRID, rayBoxes, type Box } from '../src/scri
 import { newBoat, stepBoat } from '../src/scripts/city3d/boat-sim';
 import { RIVER_WALLS } from '../src/scripts/city3d/drive-sim';
 import { PAN_BOUNDS } from '../src/scripts/city3d/bounds';
-import { laneAt } from '../src/scripts/city3d/river';
+import { WATER_Y, laneAt } from '../src/scripts/city3d/river';
+import { BOAT, WATER_SOLIDS } from '../src/scripts/city3d/boat-sim';
 import { SITE } from '../src/scripts/city3d/airfield';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { CAMERA_FAR, SKY_RADIUS } from '../src/scripts/city3d/bounds';
@@ -162,17 +163,91 @@ test('an aircraft turns back short of the wall and never goes through it, whatev
       }
 });
 
-test("the river runs on to the wall: a boat and a car's river walls reach its foot", () => {
+test("the river runs on to the wall: a boat stops at the culverts' bars, a car's river walls reach its foot", () => {
   // The car's walls along the water reach either end
   const xs = RIVER_WALLS.map((b) => [b[0], b[2]]).flat();
   assert.ok(Math.min(...xs) <= WALL_INNER[0] + 1e-6 && Math.max(...xs) >= WALL_INNER[2] - 1e-6);
-  // A boat at full power down the middle lane stops a little short of either end
-  for (const [x, yaw, face] of [
-    [WALL_INNER[2] - 60, 0, WALL_INNER[2]],
-    [WALL_INNER[0] + 60, Math.PI, WALL_INNER[0]],
+  // A boat at full power down the middle of the river runs on into the culvert and stops at its bars (Phase 5)
+  for (const [x, yaw, bars] of [
+    [WALL_INNER[2] - 60, 0, CULVERT_X[1]],
+    [WALL_INNER[0] + 60, Math.PI, CULVERT_X[0]],
   ] as const) {
     const s = newBoat({ x, z: laneAt((RIVER[0] + RIVER[1]) / 2, x), yaw });
-    for (let i = 0; i < 40 * 30; i++) stepBoat(s, { throttle: 1, steer: 0 }, 1 / 30, []);
-    assert.ok(Math.abs(s.x - face) < 6 && Math.abs(s.x - face) >= WALL_MARGIN - 1e-6, `the boat stopped ${Math.abs(s.x - face)} from the wall`);
+    for (let i = 0; i < 40 * 30; i++) stepBoat(s, { throttle: 1, steer: 0 }, 1 / 30);
+    const gap = Math.abs(s.x - bars);
+    assert.ok(gap < BOAT.len + 1 && gap > 0.3, `the boat stopped ${gap} from the bars`);
+    assert.ok(Math.sign(s.x - bars) === Math.sign(30 - bars), 'on the city side of them');
   }
+});
+
+/* ---------- Phase 4: the top and the night ---------- */
+
+test('the top: a parapet both sides, the wire on the inner one, cameras on posts along it looking in', () => {
+  assert.ok(TOP.parapet.h > 0.9 && TOP.parapet.h < 1.5 && TOP.parapet.w < WALL.thick / 4);
+  assert.ok(TOP.wire.r * 2 > TOP.parapet.w && TOP.wire.small < TOP.wire.r);
+  const top = WALL.h + TOP.parapet.h + 2 * TOP.wire.r + 2 * TOP.wire.small;
+  assert.ok(top < UPTOWN_TALLEST.roof && top < CEILING - 20, 'still under the spire and what flies');
+  assert.equal(EDGES.length, 4);
+  for (const side of ['n', 's', 'w', 'e']) {
+    const on = CAMERAS.filter((c) => c.side === side);
+    assert.ok(on.length >= 20, `${side}: ${on.length} cameras`);
+    for (let i = 1; i < on.length; i++) assert.ok(Math.abs(Math.hypot(on[i].x - on[i - 1].x, on[i].z - on[i - 1].z) - TOP.camera.every) < 1e-6, 'evenly spaced');
+  }
+  for (const c of CAMERAS) {
+    assert.ok(inWall(c.x, c.z), 'on the top');
+    assert.ok(fromWall(c.x, c.z) > -TOP.parapet.w - 1 && fromWall(c.x, c.z) < -TOP.parapet.w, 'just behind the inner parapet');
+    // Looking in: a step the way it looks takes it towards the city
+    const [x, z] = [c.x + Math.cos(c.yaw), c.z - Math.sin(c.yaw)];
+    assert.ok(fromWall(x, z) > fromWall(c.x, c.z), 'looking into the city');
+    assert.ok(Math.min(c.x - WALL_INNER[0], WALL_INNER[2] - c.x, c.z - WALL_INNER[1], WALL_INNER[3] - c.z) > -WALL.thick, 'not past the outer face');
+  }
+});
+
+test('the floodlights at its foot: clear of the corners and the culverts, low and solid, washing up under the top', () => {
+  assert.ok(FLOODS.length > 120);
+  for (const f of FLOODS) {
+    assert.ok(fromWall(f.x, f.z) > 0 && fromWall(f.x, f.z) < FLOOD.d, 'against the inner face, in the city');
+    const corner = Math.min(...[WALL_INNER[0], WALL_INNER[2]].flatMap((x) => [WALL_INNER[1], WALL_INNER[3]].map((z) => Math.hypot(f.x - x, f.z - z))));
+    assert.ok(corner > FLOOD.corner, 'clear of the corners');
+    if (f.side === 'w' || f.side === 'e') assert.ok(f.z < RIVER[0] - 4 || f.z > RIVER[1] + 4, 'clear of the culvert');
+  }
+  for (const b of FLOOD_SOLIDS) {
+    assert.ok(SOLIDS.includes(b) && b[4] < 0.75, 'solid and low enough to see over');
+    assert.ok(b[0] >= WORLD_BOUNDS[0] - 1 && b[2] <= WORLD_BOUNDS[2] + 1, 'at the walk limit');
+  }
+  assert.ok(FLOOD.wash < WALL.h && FLOOD.spread < FLOOD.every, 'each wash its own, under the top');
+});
+
+/* ---------- Phase 5: the river and the culverts ---------- */
+
+test('the culverts: a low arch over the water at each end, its bars across it in the wall', () => {
+  assert.equal(CULVERT_X.length, 2);
+  CULVERT_X.forEach((x, i) => {
+    assert.ok(inWall(x, (RIVER[0] + RIVER[1]) / 2), 'in the wall');
+    assert.equal(x, CULVERTS[i].side === 'w' ? WALL_INNER[0] - WALL.thick / 2 : WALL_INNER[2] + WALL.thick / 2);
+  });
+  // The arch: its sides rise from under the water to the springing, its crown over the middle, low
+  const [a, b] = ARCH_SPAN;
+  assert.ok(a > RIVER[0] && b < RIVER[1]);
+  assert.ok(CULVERT_FLOOR < WATER_Y - 2, 'its sides go down under the water');
+  assert.ok(Math.abs(archTop(a + 1e-6) - ARCH.spring) < 0.05 && Math.abs(archTop(b - 1e-6) - ARCH.spring) < 0.05, 'springing');
+  assert.ok(Math.abs(archTop((a + b) / 2) - (ARCH.spring + ARCH.rise)) < 1e-6, 'its crown');
+  for (let z = a + 0.5; z < b; z += 0.5) assert.ok(archTop(z) >= ARCH.spring - 1e-6 && archTop(z) <= ARCH.spring + ARCH.rise + 1e-6);
+  assert.ok(ARCH.spring + ARCH.rise < WALL.h / 4, 'low');
+  // The bars: across all of the river's band, and the boats keep off them
+  for (const r of CULVERT_BARS) {
+    assert.ok(r[1] <= RIVER[0] && r[3] >= RIVER[1]);
+    assert.ok(WATER_SOLIDS.some((w) => w.every((v, k) => v === r[k])), 'in the boats\' solids');
+  }
+  assert.ok(ARCH.bars.gap < 1.5 && ARCH.bars.r >= 0.1, 'heavy and close: nothing gets through');
+});
+
+/* ---------- Phase 6: polish ---------- */
+
+test("its sound: the wind and the hum full at its foot, fading out well before the town", async () => {
+  const { ambienceAt, WALL_SOUND } = await import('../src/scripts/city3d/ambience');
+  assert.ok(ambienceAt(WORLD_BOUNDS[0] + 0.5, 30, 0).wall > 0.95, 'at its foot');
+  assert.ok(ambienceAt(WALL_INNER[0] + WALL_SOUND / 2, 30, 0).wall > 0.2, 'carrying out over the strip');
+  assert.equal(ambienceAt(30, 30, 0).wall, 0, 'none in town');
+  assert.equal(ambienceAt(WALL_INNER[0] + WALL_SOUND + 1, 30, 0).wall, 0);
 });
