@@ -65,17 +65,40 @@ export function fromWall(x: number, z: number) {
 /**
  * Where the river meets the wall at either end (the owner's pick: a barred culvert, Phase 5): the river's band
  * between the quay lines, where it crosses the west and east sides. Reserved for now: the wall is solid there too,
- * and the river still ends at the world's edge as before.
+ * and the river ends against its inner face (the grass skirt's end, world.ts `SKIRT`).
  */
 export const CULVERTS: { side: 'w' | 'e'; x: number; z0: number; z1: number }[] = [
   { side: 'w', x: WALL_INNER[0], z0: RIVER[0], z1: RIVER[1] },
   { side: 'e', x: WALL_INNER[2], z0: RIVER[0], z1: RIVER[1] },
 ];
 
-/** The wall's outer corners, which the sky dome must reach past seen from town (bounds.ts `SKY_RADIUS`) */
+/**
+ * Past the wall (Phase 2, the owner's pick: a little land shows before the haze takes it): the grass carries on
+ * `land` past the outer face, and the grey murk stands on it in layers (`murk`: how far past the outer face each
+ * stands), `h` tall, fading up from the ground
+ */
+export const BEYOND = { land: 48, murk: [16, 28, 40] as readonly number[], h: 80 };
+/** The land past the wall, to where the grass ends (x0, z0, x1, z1) */
+export const WALL_LAND: Rect = [WALL_OUTER[0] - BEYOND.land, WALL_OUTER[1] - BEYOND.land, WALL_OUTER[2] + BEYOND.land, WALL_OUTER[3] + BEYOND.land];
+
+/** The corners of everything drawn out there (the land past the wall), which the sky dome must reach past seen from town (bounds.ts `SKY_RADIUS`) */
 export const WALL_CORNERS: [number, number][] = [
-  [WALL_OUTER[0], WALL_OUTER[1]],
-  [WALL_OUTER[2], WALL_OUTER[1]],
-  [WALL_OUTER[0], WALL_OUTER[3]],
-  [WALL_OUTER[2], WALL_OUTER[3]],
+  [WALL_LAND[0], WALL_LAND[1]],
+  [WALL_LAND[2], WALL_LAND[1]],
+  [WALL_LAND[0], WALL_LAND[3]],
+  [WALL_LAND[2], WALL_LAND[3]],
 ];
+
+/**
+ * The look (the owner's picks): a smooth slab in cold blue-grey concrete, one flat colour, a blank face; the murk
+ * past it a cold grey, shaded with the sky (wall3d.ts). `std`: how much of the city's haze the wall takes (it stands
+ * out of it, so it's seen from town, but not as a cut-out: some of the air between)
+ */
+export const WALL_LOOK = { face: '#8f9aa8', murk: '#9aa1aa', std: 0.5 };
+
+/**
+ * Far off the wall fades into the sky's horizon (Phase 2): from `from` of the sky dome's radius to `to` past it, so
+ * the far side, seen from the opposite wall about 3 km off, is the haze, not a cut edge where the sky dome ends.
+ * Seen from town every side but the corners stands clear.
+ */
+export const WALL_HAZE = { from: 0.8, to: 1.015 };

@@ -13,7 +13,7 @@
  * both banks a lamp-lit promenade.
  */
 import * as THREE from 'three';
-import { WALL } from './wall';
+import { WALL, WALL_LAND } from './wall';
 import { Batch, canvasTex, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, siteMat, toon } from './kit';
 import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
 import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, type Road } from './layout';
@@ -891,6 +891,17 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
           if (hill) tintHills(hill);
           else paintGround(flat!);
         }
+  }
+  // Past the wall (wall.ts, docs/wall-plan.md Phase 2): the last of the land, a tile at a time, under the murk
+  // (wall3d.ts); the wall stands over the seam
+  const [l0, l1] = [WALL_LAND[0], WALL_LAND[2]];
+  for (const [i, j] of tilesIn(l0, l0, l1 - 1e-6, l1 - 1e-6)) {
+    const r: Rect = [Math.max(l0, i * TILE), Math.max(l0, j * TILE), Math.min(l1, (i + 1) * TILE), Math.min(l1, (j + 1) * TILE)];
+    for (const [px0, pz0, px1, pz1] of minusRects(r, [[g0, g0, g1, g1]])) {
+      const flat = groundPlane(px0, pz0, px1, pz1, low);
+      b.add(flat, grass);
+      paintGround(flat);
+    }
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
   // (on past the edge with the grass, walled at its ends)

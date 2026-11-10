@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_INNER, WALL_OUTER, WALL_RUNS, fromWall, inWall } from '../src/scripts/city3d/wall';
+import { BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, fromWall, inWall } from '../src/scripts/city3d/wall';
 import { EXT, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
@@ -12,7 +12,7 @@ import { TALLEST as UPTOWN_TALLEST } from '../src/scripts/city3d/highrise';
 import { CEILING } from '../src/scripts/city3d/flight-sim';
 import { SITE } from '../src/scripts/city3d/airfield';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
-import { SKY_RADIUS } from '../src/scripts/city3d/bounds';
+import { CAMERA_FAR, SKY_RADIUS } from '../src/scripts/city3d/bounds';
 
 test('it is 200 ft of concrete: far over the Emporium, under the spire and what flies', () => {
   assert.ok(Math.abs(WALL_H * 1.8 - 60.96) < 1e-9, '200 ft at 1.8 m a tile');
@@ -50,7 +50,8 @@ test('it is solid all round: the four sides meet at the corners, nothing overlap
   for (let t = j0 - m; t <= j1 + m; t += 1) assert.ok(inWall(i0 - m, t) && inWall(i1 + m, t), `a gap at z ${t}`);
   // Neither inside it nor past it is wall
   assert.ok(!inWall(30, 30) && !inWall(WALL_OUTER[0] - 1, 30) && !inWall(30, WALL_OUTER[3] + 1));
-  for (const [x, z] of WALL_CORNERS) assert.ok(inWall(x + Math.sign(30 - x) * 0.5, z + Math.sign(30 - z) * 0.5), `the corner ${x}, ${z}`);
+  for (const x of [WALL_OUTER[0], WALL_OUTER[2]])
+    for (const z of [WALL_OUTER[1], WALL_OUTER[3]]) assert.ok(inWall(x + Math.sign(30 - x) * 0.5, z + Math.sign(30 - z) * 0.5), `the corner ${x}, ${z}`);
 });
 
 test('everything that exists stands inside it, well clear: nothing moves for it', () => {
@@ -77,4 +78,22 @@ test('the culverts are kept where the river meets the west and east sides', () =
 
 test('the sky dome reaches past it from town', () => {
   for (const [x, z] of WALL_CORNERS) assert.ok(Math.hypot(x - 30, z - 30) <= SKY_RADIUS);
+});
+
+test('past it, a little land, then the murk on it', () => {
+  for (let k = 0; k < 4; k++) assert.equal(Math.abs(WALL_LAND[k] - WALL_OUTER[k]), BEYOND.land);
+  // Some land shows before the first sheet of murk, and every sheet stands on the land
+  assert.ok(Math.min(...BEYOND.murk) >= 10, 'a strip of land seen before the murk');
+  for (const d of BEYOND.murk) assert.ok(d > 0 && d < BEYOND.land);
+  assert.ok(BEYOND.h > WALL.h, 'the murk rises over the wall');
+});
+
+test('from town every side stands clear of the far haze, and the haze is whole before the far plane', () => {
+  const [from, to] = [WALL_HAZE.from * SKY_RADIUS, WALL_HAZE.to * SKY_RADIUS];
+  const [i0, j0, i1, j1] = WALL_INNER;
+  const mx = (i0 + i1) / 2;
+  const mz = (j0 + j1) / 2;
+  for (const [x, z] of [[i0, mz], [i1, mz], [mx, j0], [mx, j1]]) assert.ok(Math.hypot(x - 30, z - 30) < from, `the middle of a side at ${x}, ${z}`);
+  assert.ok(to < CAMERA_FAR, 'faded out before the far plane clips it');
+  assert.ok(WALL_LOOK.std > 0 && WALL_LOOK.std < 1, 'some of the city haze, never all');
 });

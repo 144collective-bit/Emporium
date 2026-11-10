@@ -17,6 +17,7 @@ import { SHELTER_IDLES } from './transit';
 import { buildOuterDress } from './outerdress3d';
 import type { LifeSfx } from './life';
 import { createPost } from './post';
+import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES } from './westlake';
 import { CREST_LAMPS } from './crestmont';
@@ -440,6 +441,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Someone waiting at every third bus shelter (transit.ts, the polish plan's Phase 6; phones: half of them)
   SHELTER_IDLES.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.promenade ? 0.05 : SLAB, ry: p.ry, act: 'wait' }));
+  // The wall round the city and the murk past it (wall3d.ts, docs/wall-plan.md Phase 2)
+  buildWall(scene, tick);
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
