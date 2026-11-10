@@ -815,25 +815,17 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         crouched = Math.hypot(gx, gz) < 0.01;
       }
     } else {
-      const stag = contact.state.stagger;
-      stepMove(move, stag ? 0 : gx, stag ? 0 : gz, me.grounded, dt, faceGoal);
-      if (stag) {
-        const v = (CONTACT.stagger.back / CONTACT.stagger.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
-        move.vx = stag.hand.nx * v;
-        move.vz = stag.hand.nz * v;
-      }
+      stepMove(move, gx, gz, me.grounded, dt, faceGoal);
     }
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * (1 - Math.exp(-10 * dt));
     slideAmt += ((slide ? 1 : 0) - slideAmt) * (1 - Math.exp(-(slide ? 18 : 9) * dt));
-    // (on the contact floor he can't walk through its walls, and a sprint into one staggers him)
-    let hit = false;
-    const v0 = Math.hypot(move.vx, move.vz);
+    // (on the contact floor he can't walk through its walls)
     if (floorKind === 'contact') {
       const nx = x + move.vx * dt;
-      if (contactBlocked(nx, z)) (move.vx = 0), (hit = true);
+      if (contactBlocked(nx, z)) move.vx = 0;
       else x = nx;
       const nz = z + move.vz * dt;
-      if (contactBlocked(x, nz)) (move.vz = 0), (hit = true);
+      if (contactBlocked(x, nz)) move.vz = 0;
       else z = nz;
     } else {
       x += move.vx * dt;
@@ -858,8 +850,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
     anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
-    const cst = contact.update({ dt, x, y, z, face: anim.face, scale: SCALE, speed: v, moving: Math.hypot(gx, gz) > 0.1, walls: floorKind === 'contact' ? contactBoxes() : [], people: [], blocked: floorKind === 'contact' ? contactBlocked : undefined, hit, hitSpeed: v0 });
-    const contacting = !!(cst.hand || cst.lean || cst.stagger || cst.give.w > 1e-3 || cst.squeeze.w > 1e-3);
+    const cst = contact.update({ dt, x, y, z, face: anim.face, scale: SCALE, speed: v, moving: Math.hypot(gx, gz) > 0.1, walls: floorKind === 'contact' ? contactBoxes() : [], people: [], blocked: floorKind === 'contact' ? contactBlocked : undefined });
+    const contacting = !!(cst.hand || cst.lean || cst.give.w > 1e-3 || cst.squeeze.w > 1e-3);
     if (contacting) {
       contactRot.set(anim.rot);
       applyContact(contactRot, anim.hips, cst, x, y, z, anim.face, SCALE);
@@ -985,12 +977,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
       ...(gun ? ([['Gun', `${gunId}${aimOn ? ' · aiming' : ' · ready'} · looking ${lookPitch > 0 ? 'down' : 'up'} ${Math.abs((lookPitch * 180) / Math.PI).toFixed(0)}°`]] as [string, string][]) : []),
       ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
-      ...(contact.state.hand || contact.state.lean || contact.state.stagger || contact.state.give.w > 0.02 || contact.state.squeeze.w > 0.02
+      ...(contact.state.hand || contact.state.lean || contact.state.give.w > 0.02 || contact.state.squeeze.w > 0.02
         ? ([
             [
               'Contact',
               [
-                contact.state.stagger ? `staggering ${(contact.state.stagger.t * 100).toFixed(0)}%` : '',
                 contact.state.hand ? `${contact.state.hand.side ? 'left' : 'right'} hand on the wall ${(contact.state.hand.w * 100).toFixed(0)}%` : '',
                 contact.state.lean ? `leaning on the rail ${(contact.state.lean.w * 100).toFixed(0)}%` : '',
                 contact.state.give.w > 0.02 ? `${contact.state.give.side < 0 ? 'right' : 'left'} shoulder gives ${(contact.state.give.w * 100).toFixed(0)}%` : '',

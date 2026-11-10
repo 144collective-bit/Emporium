@@ -369,8 +369,9 @@ export function createWalk(d: WalkDeps) {
   let upperW = 0;
   /**
    * Contact (contact.ts, the revamp's Phase 3): what his body does about what he touches (a hand on a wall, the
-   * shoulder's give brushing past, a stagger into one at a sprint, a squeeze, a lean on a rail), a layer on the
-   * motion capture's pose; its code comes with the animator's. Phones leave out the hands and the lean.
+   * shoulder's give brushing past, a squeeze, a lean on a rail), a layer on the motion capture's pose; looks only,
+   * never his speed (no hitch or stagger: the owner's call, 2026-11). Its code comes with the animator's. Phones
+   * leave out the hands and the lean.
    */
   let contactMod: typeof import('./contact') | null = null;
   let contact: Contact | null = null;
@@ -380,10 +381,6 @@ export function createWalk(d: WalkDeps) {
   let heldRot: Float32Array | null = null;
   const contactBoxes: Box[] = [];
   const contactPeople: { x: number; z: number }[] = [];
-  /** This frame his move was stopped by something, and how fast he was going into it */
-  let hitWall = false;
-  let hitSpeed = 0;
-  let staggering = false;
   /** The peek: how far he's leaning (-1 his left to 1 his right), eased; the gamepad's lean, the touch corner's, and when it was looked for */
   let peek = 0;
   let padLean = 0;
@@ -2803,9 +2800,7 @@ export function createWalk(d: WalkDeps) {
     }
     // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
-    // (brushing something the step hitches: contact.ts)
-    const hitch = contact && contactMod ? contactMod.CONTACT.hitch * contact.state.hitch : 0;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp && fists!.brawl.blocking ? fistsMod!.BRAWL.blockSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp && fists!.brawl.blocking ? fistsMod!.BRAWL.blockSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
@@ -2827,8 +2822,6 @@ export function createWalk(d: WalkDeps) {
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
-    hitWall = false;
-    hitSpeed = 0;
     if (over) {
       // Over something low: along the way over, his feet over its top (vault.ts), the springs carried along
       over.t += dt;
@@ -2857,18 +2850,9 @@ export function createWalk(d: WalkDeps) {
           crouched = Math.hypot(gx, gz) < 0.01;
         }
       } else {
-        // (a stagger (contact.ts): thrown back from the wall over its time, the stick waiting)
-        const stag = contact?.state.stagger;
-        stepMove(ms, stag ? 0 : gx, stag ? 0 : gz, grounded, dt, faceGoal);
-        if (stag && contactMod) {
-          const k = contactMod.CONTACT.stagger;
-          const v = (k.back / k.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
-          ms.vx = stag.hand.nx * v;
-          ms.vz = stag.hand.nz * v;
-        }
+        stepMove(ms, gx, gz, grounded, dt, faceGoal);
       }
       vel.set(ms.vx, ms.vz);
-      const v0 = vel.length();
       // (getting into your car at home, the approach steps onto the turntable)
       const skip = moments.active && moments.mark?.kind === 'board' && moments.mark.side !== undefined ? isTurntable : undefined;
       const stuck = blocked(pos.x, pos.z, pos.y, skip);
@@ -2878,8 +2862,6 @@ export function createWalk(d: WalkDeps) {
       const nz = pos.z + vel.y * dt;
       if (stuck || !blocked(pos.x, nz, pos.y, skip)) pos.z = nz;
       else vel.y = 0;
-      hitWall = !slide && grounded && (vel.x !== ms.vx || vel.y !== ms.vz);
-      hitSpeed = hitWall ? v0 : 0;
       // (a slide into something stops there, crouched)
       if (slide && (vel.x !== ms.vx || vel.y !== ms.vz)) {
         slide = null;
@@ -3170,18 +3152,12 @@ export function createWalk(d: WalkDeps) {
           for (const b of d.placedSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
           contactPeople.length = 0;
           for (const p of bodies.people) if (p.act === undefined && Math.abs(p.x - pos.x) < 1.5 && Math.abs(p.z - pos.z) < 1.5) contactPeople.push(p);
-          const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked, hit: hitWall, hitSpeed });
-          if (u < 0.5 && (st.hand || st.lean || st.stagger || st.give.w > 1e-3 || st.squeeze.w > 1e-3)) {
+          const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked });
+          if (u < 0.5 && (st.hand || st.lean || st.give.w > 1e-3 || st.squeeze.w > 1e-3)) {
             contactRot.set(animator.rot);
             contactMod.applyContact(contactRot, animator.hips, st, pos.x, pos.y, pos.z, drawFace, SCALE);
             rot = contactRot;
           }
-          // (a small shake as a stagger starts)
-          if (st.stagger && !staggering && !d.reduced && !firstPerson) {
-            shakeT = LAND_SHAKE;
-            shakeK = 0.018;
-          }
-          staggering = !!st.stagger;
         }
         // The thing in his hand behaving (heldpose.ts, the polish plan's Phase 8): the cup to his lips now and then, the
         // phone read standing still and glanced at on the walk, the briefcase swinging on his hand; not while something

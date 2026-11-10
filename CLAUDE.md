@@ -2876,19 +2876,20 @@ it and has been retired completely. Build only on what's here.
   rows. Phase 3 (contact) is built: `contact.ts` (DOM-free, tested in
   `tests/contact.test.ts`) is a layer on the animator's pose from what's
   near him (`ContactInput`: the collision grid's boxes within
-  `CONTACT.reach`, the crowd's people, where he can't step, a move stopped
-  this frame and how fast), laid on by `applyContact()` after
-  `animator.update()` and before `applyTo()` in walk.ts (not with a gun in
-  his hands): brushing a wall or a person the shoulder gives and the step
-  hitches (`give`, `hitch`: 30% off his top speed for a moment; the crowd's
-  person steps aside and back, `bump` / `BUMP` in life.ts); stopped at a
+  `CONTACT.reach`, the crowd's people, where he can't step), laid on by
+  `applyContact()` after `animator.update()` and before `applyTo()` in
+  walk.ts (not with a gun in his hands). **Looks only** (the owner's call,
+  2026-11: bumping into things mustn't get in the way of play): it never
+  slows, stops or throws him, so the step's hitch and the stagger into a
+  wall at a sprint were taken out, and a wall, a car or anything solid just
+  stops him and he slides along it. Brushing a wall or a person the
+  shoulder gives (`give`; the crowd's person steps aside and back, `bump` /
+  `BUMP` in life.ts); stopped at a
   wall a hand goes onto it at shoulder height, walking slowly along one it
   trails along it at hip height (`reachArmBones()`, the arm's two-bone IK;
   a hand on stays put until it's let go; the test holds it within 1.5 cm);
   standing a while at an edge nothing solid explains (a quay, a railing)
-  he leans on the rail with both hands; into a wall at a sprint he
-  staggers (`stagger`: the chest back, a hand up, carried back on the
-  springs, a small camera shake); a gap narrower than `squeeze` turns the
+  he leans on the rail with both hands; a gap narrower than `squeeze` turns the
   shoulders. Phones (`createContact({ hands: false })`) leave out the
   hands and the lean. The lab's Contact program and floor show it all.
   Phase 4 (the game's moments) step 1 is built: `moments.ts` (DOM-free,

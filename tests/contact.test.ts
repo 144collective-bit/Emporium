@@ -1,6 +1,6 @@
 // Contact (the revamp's Phase 3, contact.ts): a hand goes onto a wall he's stopped at, or trails along
-// one at his side, within the rubric's 1.5 cm of its surface; the shoulder gives and the step hitches
-// brushing a wall or a person; running into a wall at a sprint staggers him (and never under it); a
+// one at his side, within the rubric's 1.5 cm of its surface; the shoulder gives brushing a wall or a
+// person; the layer never slows or throws him (no hitch, no stagger: the owner's call, 2026-11); a
 // narrow gap turns the shoulders; standing a while at a rail he leans on it with both hands; on open
 // ground, or moving fast past a wall, nothing happens and the pose is left exactly as it was.
 import { test } from 'node:test';
@@ -70,8 +70,7 @@ test('nothing happens on open ground, and the pose is left exactly as it was', (
   const st = c.state;
   assert.equal(st.hand, null);
   assert.equal(st.lean, null);
-  assert.equal(st.stagger, null);
-  assert.ok(st.give.w < 1e-6 && st.squeeze.w < 1e-6 && st.hitch === 0);
+  assert.ok(st.give.w < 1e-6 && st.squeeze.w < 1e-6);
   applyContact(an.rot, an.hips, st, 0, 0, 0, 0, SCALE);
   assert.deepEqual(Array.from(an.rot), Array.from(before));
 });
@@ -113,19 +112,13 @@ test('walking slowly along a wall at his side, that hand trails along it at hip 
   assert.equal(st.hand, null);
 });
 
-test('brushing a wall or a person at his side while moving, the shoulder gives that side and the step hitches once', () => {
+test('brushing a wall or a person at his side while moving, the shoulder gives that side', () => {
   const c = createContact();
   let st = c.state;
   // A wall close on his left
   for (let i = 0; i < 60; i++) st = c.update(inp({ walls: [[-1.3, -3, -0.26, 3, 2]], speed: 2.5, moving: true }));
   assert.equal(st.give.side, -1);
   assert.ok(st.give.w > 0.5, `the shoulder gives (${st.give.w.toFixed(2)})`);
-  // The hitch: full as the brush starts, gone within hitchT
-  const c2 = createContact();
-  c2.update(inp({ walls: [[-1.3, -3, -0.26, 3, 2]], speed: 2.5, moving: true }));
-  assert.ok(c2.state.hitch > 0.9, 'the hitch as the brush starts');
-  for (let i = 0; i < Math.ceil(CONTACT.hitchT / DT) + 2; i++) c2.update(inp({ walls: [[-1.3, -3, -0.26, 3, 2]], speed: 2.5, moving: true }));
-  assert.equal(c2.state.hitch, 0, 'the hitch is over');
   // A person on his right, level with him
   const c3 = createContact();
   for (let i = 0; i < 60; i++) st = c3.update(inp({ people: [{ x: 0.3, z: 0.05 }], speed: 2.5, moving: true }));
@@ -155,31 +148,11 @@ test('the give turns the chest and pulls that collarbone back; nothing else move
   assert.ok(P1.pos[MB.legL].distanceTo(P0.pos[MB.legL]) < 1e-9 && P1.pos[MB.footR].distanceTo(P0.pos[MB.footR]) < 1e-9, 'the legs as they were');
 });
 
-test('running into a wall at a sprint staggers him for its time; a walk into it does not', () => {
+test('running into a wall at a sprint never slows, stops or throws him: the layer has nothing that could', () => {
   const c = createContact();
-  const walls = [across(0.25)];
-  let st = c.update(inp({ walls, speed: 4, moving: true, hit: true, hitSpeed: 4.1 }));
-  assert.ok(st.stagger && st.stagger.t < 0.1, 'a stagger starts');
-  assert.equal(st.stagger!.hand.side, 1);
-  const an = standing();
-  let peak = 0;
-  let n = 0;
-  while (c.state.stagger) {
-    st = c.update(inp({ walls, speed: 0.5, moving: false }));
-    if (st.stagger) {
-      const rot = Float32Array.from(an.rot);
-      applyContact(rot, an.hips, st, 0, 0, 0, 0, SCALE);
-      const P1 = posed(rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());
-      const P0 = posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());
-      peak = Math.max(peak, P0.pos[MB.head].z - P1.pos[MB.head].z);
-    }
-    n++;
-  }
-  assert.ok(Math.abs(n * DT - CONTACT.stagger.t) < 0.05, `over its time (${(n * DT).toFixed(2)} s)`);
-  assert.ok(peak > 0.03, `the head thrown back (${(peak * CM).toFixed(1)} cm)`);
-  const c2 = createContact();
-  st = c2.update(inp({ walls, speed: 1.4, moving: true, hit: true, hitSpeed: 1.4 }));
-  assert.equal(st.stagger, null, 'a walk into a wall is no stagger');
+  const st = c.update(inp({ walls: [across(0.25)], speed: 4.2, moving: true }));
+  assert.ok(!('stagger' in st) && !('hitch' in st), 'no stagger or hitch in the state');
+  assert.ok(!('stagger' in CONTACT) && !('hitch' in CONTACT), 'no stagger or hitch in the numbers');
 });
 
 test('through a gap narrower than his shoulders need the shoulders turn, and not through a wide one', () => {
