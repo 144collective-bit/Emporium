@@ -89,9 +89,10 @@ function police(b: Batch) {
   b.box(x1, G, d.z - d.w / 2 - 0.35, 0.08, d.h + 0.4, d.w + 0.7, SHADE);
   b.box(x1 + 0.04, G, d.z - d.w / 2, 0.08, d.h, d.w, BRONZE);
   b.box(x1, G + d.h + 0.55, d.z - 1.6, 0.9, 0.16, 3.2, SHADE);
-  b.add(pane(x1 + 0.03, G + d.h + 1.05, d.z, 3.4, (3.4 * 52) / 1024, 'x', 1, true), POLICE_SIGN);
-  b.detail(() => b.box(x1 + 0.9, G + d.h + 0.71, d.z - 0.04, 0.08, 0.3, 0.08, BRONZE));
-  b.add(new THREE.BoxGeometry(0.26, 0.3, 0.26).translate(x1 + 0.94, G + d.h + 1.16, d.z), BLUE);
+  // (as wide as the entrance bay: read from across the square)
+  b.add(pane(x1 + 0.03, G + d.h + 1.25, d.z, 4, (4 * 52) / 1024, 'x', 1, true), POLICE_SIGN);
+  b.detail(() => b.box(x1 + 0.9, G + d.h + 0.71, d.z + 1.36, 0.08, 0.3, 0.08, BRONZE));
+  b.add(new THREE.BoxGeometry(0.26, 0.3, 0.26).translate(x1 + 0.94, G + d.h + 1.16, d.z + 1.4), BLUE);
   // The radio mast on the roof
   const [mx, mz] = [x0 + 2, z0 + 2];
   b.box(mx - 0.06, HQ.h + 0.25, mz - 0.06, 0.12, HQ.mast - 0.3, 0.12, SHADE);
