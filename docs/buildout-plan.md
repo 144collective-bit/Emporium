@@ -203,6 +203,14 @@ south. The centre (downtown, Uptown, the river) stays as it is.
 - **A fire station in each ward,** a cemetery in the south or east, and the
   TV station and the surveillance centre in the north.
 
+**The owner's second round (2026-11-10):**
+
+- **City Hall:** at the park's south end on the Mall, facing a civic square
+  across the avenue to Uptown's plaza.
+- **The police headquarters and the courthouse:** flanking it.
+- **The Ends' town houses:** as worn as Endswood.
+- **First:** the civic quarter. Its own plan is `docs/civic-plan.md`.
+
 **The order** (to agree):
 
 1. The civic quarter and City Hall (close to town, small: it fits today's
