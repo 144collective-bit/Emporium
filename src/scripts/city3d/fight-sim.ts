@@ -37,6 +37,7 @@
 // (the moves and the styles live in fight-moves.ts, so the screens and the save's rules read them without the
 // whole fight in the city's boot)
 import { MOVES, STYLES, damageOf, strikeHeight, type MoveId, type MoveSpec, type StyleId } from './fight-moves';
+import { SIZE_K } from './figure';
 export { MOVES, STYLES, damageOf, strikeHeight, type Limb, type MoveId, type MoveKind, type MoveSpec, type StyleId, type StyleSpec } from './fight-moves';
 
 export type Phase = 'startup' | 'active' | 'recovery';
@@ -66,13 +67,14 @@ export const T = {
   downFrames: 180,
   koFrames: 240,
   getupFrames: 40,
-  /** Walking, and while blocking (tiles a second) */
-  walk: 3.2,
-  blockWalk: 1.4,
+  /** Walking, and while blocking (tiles a second); the lengths and speeds here are in proportion with the
+   * fighters' size (figure.ts `SIZE_K`: written for them at 0.85) */
+  walk: 3.2 * SIZE_K,
+  blockWalk: 1.4 * SIZE_K,
   /** A fighter's body circle, and how close two can stand */
-  radius: 0.35,
+  radius: 0.35 * SIZE_K,
   /** Moves turn the fighter onto a target this close and within this angle */
-  lockReach: 3,
+  lockReach: 3 * SIZE_K,
   lockArc: 1.05,
   /** Health back in a spar: after this many frames without a hit, this much a second */
   healDelay: 180,
@@ -84,7 +86,7 @@ export const T = {
   /** A punch, kick or dodge pressed this many frames early still fires when it can */
   buffer: 8,
   /** A strike from just out of reach steps in this much further (tiles) */
-  stepIn: 0.6,
+  stepIn: 0.6 * SIZE_K,
   /** How fast a fighter turns to face (radians a second), and the most a move's start snaps the facing */
   turn: 9,
   lockSnap: 0.5,
@@ -400,7 +402,7 @@ export function createFightSim(setup: FightSetup) {
       const want = yawTo(f.x, f.z, o.x, o.z);
       const off = wrap(want - f.yaw);
       if (d < T.lockReach && Math.abs(off) < T.lockArc) f.yaw = wrap(f.yaw + clamp(off, -T.lockSnap, T.lockSnap));
-      const gap = d - (m.reach + T.radius) + 0.08;
+      const gap = d - (m.reach + T.radius) + 0.08 * SIZE_K;
       if (gap > 0 && gap <= T.stepIn && Math.abs(off) < T.lockArc) f.lungeNow = m.lunge + gap;
     }
     if (id === 'dodge') events.push({ kind: 'dodge', who: f.id });
@@ -426,7 +428,7 @@ export function createFightSim(setup: FightSetup) {
       const d = Math.hypot(dx, dz);
       if (d > m.reach + T.radius) continue;
       const ang = Math.abs(wrap(Math.atan2(dx, dz) - f.yaw));
-      if (ang > m.arc && d > T.radius * 2 + 0.05) continue;
+      if (ang > m.arc && d > T.radius * 2 + 0.05 * SIZE_K) continue;
       f.struck = true;
       const [px, py, pz] = strikeAt(f, m);
       // Facing the blow? A block only covers the front
@@ -524,8 +526,8 @@ export function createFightSim(setup: FightSetup) {
     if (b.react > 0) b.react--;
     if (b.blockT > 0) b.blockT--;
     if (b.backT > 0) b.backT--;
-    const inReach = d <= MOVES.jab.reach + T.radius - 0.05;
-    const kickReach = d <= MOVES.frontKick.reach + T.radius - 0.1;
+    const inReach = d <= MOVES.jab.reach + T.radius - 0.05 * SIZE_K;
+    const kickReach = d <= MOVES.frontKick.reach + T.radius - 0.1 * SIZE_K;
     const staggered = o.hurt === 'stagger' && o.stun > 0;
 
     // The opponent's move coming: decide once per move, after the reaction time
@@ -542,8 +544,8 @@ export function createFightSim(setup: FightSetup) {
       // A dodge needs its own start-up before the hit lands; too late for that, it's a block
       if (b.answer === 'dodge' && b.react <= 0 && o.startupNow - o.frame < MOVES.dodge.startup + 1) b.answer = 'block';
       // A parry: the block goes up in the last frames before the hit
-      if (b.answer === 'parry' && facing && d < MOVES[o.move].reach + T.radius + 0.5 && o.frame >= o.startupNow - 3 && !f.move) b.blockT = Math.max(b.blockT, MOVES[o.move].active + 4);
-      else if (b.answer !== 'parry' && b.react <= 0 && d < MOVES[o.move].reach + T.radius + 0.5 && facing) {
+      if (b.answer === 'parry' && facing && d < MOVES[o.move].reach + T.radius + 0.5 * SIZE_K && o.frame >= o.startupNow - 3 && !f.move) b.blockT = Math.max(b.blockT, MOVES[o.move].active + 4);
+      else if (b.answer !== 'parry' && b.react <= 0 && d < MOVES[o.move].reach + T.radius + 0.5 * SIZE_K && facing) {
         if (b.answer === 'block') b.blockT = Math.max(b.blockT, Math.ceil(o.startupNow) + MOVES[o.move].active + 4);
         else if (b.answer === 'dodge' && !f.move) {
           inp.dodge = true;
@@ -585,11 +587,11 @@ export function createFightSim(setup: FightSetup) {
       b.plan = 'approach';
       b.cool = 0;
     }
-    const want = b.plan === 'retreat' ? 2.4 : MOVES.jab.reach + T.radius - 0.25;
-    if (d > want + 0.15) {
+    const want = b.plan === 'retreat' ? 2.4 * SIZE_K : MOVES.jab.reach + T.radius - 0.25 * SIZE_K;
+    if (d > want + 0.15 * SIZE_K) {
       inp.x = ux;
       inp.z = uz;
-    } else if (d < want - 0.3) {
+    } else if (d < want - 0.3 * SIZE_K) {
       inp.x = -ux;
       inp.z = -uz;
     }

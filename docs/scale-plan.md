@@ -30,7 +30,7 @@ owner's other call: bumping into things no longer slows or throws him
 | Size | 0.66 for everyone (the crowd's) |
 | Speed and jump | In proportion (the owner's second answer: "natural", the square root of the size, made the motion capture's legs read too fast for him, as the animator works in his own body lengths) |
 | Kerbs | Smoothed in the animation, nothing in the world moves |
-| The Fight Club's ring | Left at 0.85 for now (its rules are the game server's too) |
+| The Fight Club's ring | At 0.66 too (the owner's next call, below) |
 | Endswood's doors | Left for now, then repainted taller (the owner's next pick, below) |
 
 ## What was built
@@ -78,9 +78,22 @@ on the wall above it, in the upstairs row's bottom under that window.
 Nothing moves; the rest of the atlas draws the same (the seeded numbers are
 asked in the same order).
 
+## The Fight Club at 0.66 (the owner's next call)
+
+The ring's fighters are everyone's size now (fight-figure.ts `FIGHTER_SCALE`
+is figure.ts's `FIGURE_SCALE`). The fight's numbers were written for
+fighters at 0.85 and come down by `SIZE_K` (0.66 / 0.85), so a fight plays
+as it did, only smaller: the moves' reach, step in and knock-back
+(fight-moves.ts: `AT_WAS` as written, `MOVES` scaled), the strike heights,
+the styles' dodges, fight-sim.ts's walk, block walk, body circle, lock-on
+reach and step in and the bots' distances, combat-sim.ts's `MELEE` (the
+street fists on the dummies, the server's check too), the ring's camera
+close up (far, over the ropes, as it was) and brawlsite.ts's `GAP`. The
+frames, damage, stamina and the rings themselves don't change.
+`figure.ts` holds the size on its own, free of three.js, so the game
+server bundles it.
+
 ## Left for later
 
-- The Fight Club's ring at 0.66 (its rules: reach, knock-back, the ring's
-  distances, shared with the game server).
 - The city's counters, rails and car roofs were built round him at 0.85:
   they sit higher on him now.

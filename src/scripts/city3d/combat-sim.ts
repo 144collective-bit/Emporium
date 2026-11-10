@@ -36,6 +36,7 @@ import { PRACTICE } from './downtown';
 import { applyGunMods, type GunMods } from './catalog';
 import { FREE_PLAY } from './freeplay';
 import { MOVES, strikeHeight, type MoveId } from './fight-moves';
+import { SIZE_K } from './figure';
 import { ADS, SHELLS, STRING_GAP, moveSpread, shellsTime } from './gunfeel';
 
 export const TICK = 1 / 60;
@@ -136,10 +137,11 @@ export const DRONES: { loop: number; phase: number }[] = [
 const DRONE = { hp: 75, down: 7.5, radius: 0.42, speed: 1.8 };
 /**
  * Fists on the street (`melee()`): a strike's height is the fight's (fight-moves.ts `strikeHeight()`, for a
- * figure at the ring's scale) times `scale` (the walker's); the fist's own size added to every reach (`body`);
+ * figure at everyone's size) times `scale` (the walker's against it); the fist's own size added to every reach (`body`, in
+ * proportion with his size as the reaches are: figure.ts);
  * a target this close is hit whatever the angle; the height may miss a board by this much
  */
-export const MELEE = { scale: 1, body: 0.12, close: 0.5, slack: 0.15 };
+export const MELEE = { scale: 1, body: 0.12 * SIZE_K, close: 0.5 * SIZE_K, slack: 0.15 };
 
 /** Where a drone is at `time` (pure, so every client agrees) */
 export function dronePose(i: number, time: number, out: { x: number; y: number; z: number; heading: number }) {

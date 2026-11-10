@@ -35,15 +35,8 @@ import * as THREE from 'three';
 
 /* ---------- Proportions ---------- */
 
-/**
- * Everyone's size in the city (docs/scale-plan.md, the owner's call,
- * 2026-11-10): your Degen on foot and at the wheel, other players and the
- * crowd all at the crowd's size, so he fits the city's doors as they do
- * (he was 0.85, about 29% taller). About 0.86 tiles tall. Kids keep their
- * own (play.ts `KID`); the Fight Club's ring keeps `FIGHTER_SCALE` (its
- * rules, shared with the game server, were tuned at 0.85).
- */
-export const FIGURE_SCALE = 0.66;
+/** Everyone's size in the city (figure.ts: the player, other players, the crowd, the Fight Club's fighters; kids keep their own, play.ts `KID`) */
+export { FIGURE_SCALE } from './figure';
 
 export const HIP_Y = 0.62;
 /** Hip height (for seating figures on benches and in karts) */

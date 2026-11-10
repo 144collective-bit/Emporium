@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { SIZE_K } from '../src/scripts/city3d/figure';
 import { MOVES, MOVE_IDS, NO_INPUT, STYLES, T, createFightSim, forward, moveFrames, nextMove, yawTo, type FighterInput, type FightEvent, type FightSetup } from '../src/scripts/city3d/fight-sim';
 
 const IDLE: FighterInput = { ...NO_INPUT };
@@ -29,7 +30,8 @@ test('the moves: frames, reach and the chain, as the plan tables them', () => {
     const m = MOVES[id];
     assert.ok(m.startup > 0 && m.active > 0 && m.recovery > 0);
     assert.equal(moveFrames(id), m.startup + m.active + m.recovery);
-    if (m.kind !== 'dodge') assert.ok(m.reach > 0.8 && m.reach <= 1.5 && m.damage > 0 && m.stamina > 0);
+    // (reach 0.8 to 1.5 tiles for fighters at 0.85, in proportion with everyone's size: figure.ts)
+    if (m.kind !== 'dodge') assert.ok(m.reach > 0.8 * SIZE_K && m.reach <= 1.5 * SIZE_K && m.damage > 0 && m.stamina > 0);
   }
   // Hit stun outlasts the next move's start-up, so a chain lands if its first hit does
   assert.ok(MOVES.jab.stun > MOVES.cross.startup);

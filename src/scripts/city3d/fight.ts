@@ -30,6 +30,7 @@
  * - Sounds go through sfx() (silent until the visitor turns sound on).
  */
 import * as THREE from 'three';
+import { SIZE_K } from './figure';
 import { crewOutfit } from './crew';
 import { BOT_LEVELS, FIGHT_BOTS, SNACK_HEAL, type BotLevel } from './catalog';
 import { PARTNERS, afterOf, arenaOf, partner, startOf, type PartnerId } from './brawlsite';
@@ -119,11 +120,11 @@ export function createFight(d: FightDeps): Fight {
     if (!on || !f) return;
     // The head lies about a tile behind the feet (fight-anim.ts: the fall pivots about the feet)
     const [fx_, fz] = forward(f.yaw);
-    const hx = f.x - fx_ * 0.85;
-    const hz = f.z - fz * 0.85;
+    const hx = f.x - fx_ * 0.85 * SIZE_K;
+    const hz = f.z - fz * 0.85 * SIZE_K;
     stars.forEach((s, i) => {
       const a = t * 3 + (i / stars.length) * Math.PI * 2;
-      s.position.set(hx + Math.cos(a) * 0.3, 0.42 + Math.sin(a * 2) * 0.05, hz + Math.sin(a) * 0.3);
+      s.position.set(hx + Math.cos(a) * 0.3 * SIZE_K, (0.42 + Math.sin(a * 2) * 0.05) * SIZE_K, hz + Math.sin(a) * 0.3 * SIZE_K);
     });
   }
 
@@ -484,9 +485,10 @@ export function createFight(d: FightDeps): Fight {
     const rz = -fx_;
     // (far: further back and higher, over the ropes; views.ts RING_FAR)
     const far = view === 'far';
-    const back = (2.3 + Math.min(0.9, Math.hypot(b.x - a.x, b.z - a.z) * 0.2)) * (far ? RING_FAR.back : 1);
-    const over = far ? RING_FAR.side : 0.6;
-    const want = new THREE.Vector3(a.x - fx_ * back + rx * over, far ? RING_FAR.up : 1.5, a.z - fz * back + rz * over);
+    // (near: in proportion with the fighters' size, figure.ts; far: over the ropes as it was)
+    const back = (2.3 * SIZE_K + Math.min(0.9 * SIZE_K, Math.hypot(b.x - a.x, b.z - a.z) * 0.2)) * (far ? RING_FAR.back / SIZE_K : 1);
+    const over = far ? RING_FAR.side : 0.6 * SIZE_K;
+    const want = new THREE.Vector3(a.x - fx_ * back + rx * over, far ? RING_FAR.up : 1.5 * SIZE_K, a.z - fz * back + rz * over);
     if (kind === 'street') {
       // A little past the street spar's ring, which is clear of everything round it
       const lim = arena.r + (far ? RING_FAR.past : 0.6);
@@ -504,7 +506,7 @@ export function createFight(d: FightDeps): Fight {
       want.x = THREE.MathUtils.clamp(want.x, RING.x - lim, RING.x + lim);
       want.z = THREE.MathUtils.clamp(want.z, RING.z - lim, RING.z + lim);
     }
-    const at = new THREE.Vector3(mx, 0.85 + (you?.y ?? 0), mz);
+    const at = new THREE.Vector3(mx, 0.85 * SIZE_K + (you?.y ?? 0), mz);
     if (!camReady || d.reduced) {
       camPos.copy(want);
       camAt.copy(at);
