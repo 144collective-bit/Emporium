@@ -20,7 +20,7 @@ import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES } from './westlake';
-import { SQUARE_LAMPS, SQUARE_TREES } from './civic';
+import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
@@ -353,6 +353,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
     spots.push(e.faces ? { ...s, faces: e.faces } : s);
   }
+  // ...and City Hall at the civic square's head (civic.ts, docs/civic-plan.md Phase 2; drawn in Westlake Park's
+  // chunk): the pin over its tower, the fly-in from the square (south)
+  spots.push(pickSpot(scene, 'cityhall', SLAB, CITYHALL_PICK, CITYHALL_LAND, CITYHALL_TIP - SLAB + 1.4, CITYHALL_TOWER));
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -842,6 +845,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
+      });
+    // City Hall's panel: Walk in on the civic square at the steps' foot, facing them
+    if (id === 'cityhall')
+      panelBody.querySelector('[data-civic-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(CITYHALL_SPAWN);
       });
     // Lot 9's panel: Walk in on the lane outside its gate, facing in
     if (id === 'lot9')

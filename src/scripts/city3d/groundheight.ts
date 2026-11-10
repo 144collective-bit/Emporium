@@ -4,7 +4,7 @@
  * over each other: the street, the blocks' slabs, the decks over the water, the bridges, the raised highway and the
  * airport's departures deck when you're up there, Liberty Bridge's two levels, the mall's two floors, Lot 9's tunnel
  * under the highway, Crestmont's hills, the open land's rolls, the verges' banks, the river's banks down to the water,
- * the garage's turntable, the park's jetty and terraces, Sector 7 Tower's sky deck, the kart park's circuit and its
+ * the garage's turntable, the park's jetty and terraces, Sector 7 Tower's sky deck, City Hall's steps, the kart park's circuit and its
  * grass banks. Each is a `GroundLayer` here, asked in `GROUND_LAYERS`' order with what's known so far (`GroundCtx`:
  * the base the point stands on, and whether that's open ground or a slab), and answers with a height or nothing:
  *
@@ -29,6 +29,7 @@ import { KART_PARK } from './kartpark';
 import { footbridgeY } from './liberty';
 import { swingY } from './swingbridge';
 import { JETTY, onJetty, terraceY } from './westlake';
+import { cityHallY } from './civic';
 import { viaductY } from './viaground';
 import { skyDeckY } from './skydeck';
 import { mallFloor } from './mallinside';
@@ -130,6 +131,8 @@ export const GROUND_LAYERS: GroundLayer[] = [
   { id: 'jetty', how: 'lift', at: (x, z) => (onJetty(x, z) ? SLAB + JETTY.y : null) },
   { id: 'terrace', how: 'lift', at: (x, z) => lift(terraceY(x, z), SLAB) },
   { id: 'skydeck', how: 'lift', at: (x, z, yNow) => lift(skyDeckY(x, z, yNow - SLAB), SLAB) },
+  // City Hall's steps and its portico's floor (civic.ts, docs/civic-plan.md Phase 2): heights of their own
+  { id: 'cityhall', how: 'lift', at: (x, z) => cityHallY(x, z) },
   // The kart park's circuit: its own ground (the deck, the banking, the hill), when `yNow` is on it (kartcircuit.ts)
   { id: 'circuit', how: 'lift', at: (x, z, yNow) => (inPark(x, z) ? lift(circuitSurfaceAt(x, z, yNow)?.y ?? null) : null) },
   // Its spectators' grass banks, whose berms carry on outside the fence (kartfacility.ts)

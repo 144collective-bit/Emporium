@@ -4,7 +4,8 @@ The first section of building out to the walls (`docs/buildout-plan.md`, the lan
 plan's first round): the seat of power in the North Ward. It's built in the
 south end of Westlake Park, facing Uptown across the avenue. Built one phase at
 a time, each with the owner's sign-off. Keep this plan up to date. Phase 1 (the
-land, the square and the walks) is built, waiting on the owner's sign-off.
+land, the square and the walks) and Phase 2 (City Hall) are built, waiting on
+the owner's sign-off.
 
 ## The owner's answers (2026-11-10)
 
@@ -112,11 +113,57 @@ In world numbers, x across and z north to south.
   - the zebra and Uptown's lane in line with City Hall's door;
   - the snapshot, rewritten only for what the owner moved (the Mall's south gate).
 
-### Phase 2: City Hall
+### Phase 2: City Hall (built)
 
-- Its exterior, a place: spot, pin, directory entry, panel saying coming soon,
-  Walk in, its door's prompt, `PLACES` and `LIVE_PLACES` entries, a live line.
-- Drawn as a site, the far form, lit at night.
+The owner's picks for its look (2026-11-10, all the suggestions):
+
+| Question | Answer |
+| --- | --- |
+| What rises over it | **A stepped tower** over the back block, seen across the city. |
+| How tall | **About 22**: the crown's roof at 22.4, its gold finial at 23.3. Well over the Emporium (12.5), under Uptown's tallest, every flight well over it (the test). |
+| Its emblem | **A seven-pointed star** for Sector 7 (made up), over the door and on the banners. |
+| Its front | **A colonnade** of square columns, wide steps down to the square, long banners. |
+
+The numbers are `civic.ts`; it's drawn by `cityhall3d.ts` as two sites in
+Westlake Park's chunk.
+
+- **The steps:** six of them across 22, up from the square's head to the
+  podium at 0.9 over the ground (`STEPS`, `PODIUM_Y`). They're walked as a
+  gentle slope, `cityHallY()`, a layer in groundheight.ts.
+- **The cheeks:** either side of the steps, each with a bronze torchère.
+- **The portico** (`PORTICO`), on the podium:
+  - eight square columns 0.9 across (`COLUMNS`), with bases and slab
+    capitals, between the antae;
+  - a plain entablature with SECTOR 7 · CITY HALL carved on its frieze
+    (`FRIEZE_H`);
+  - the attic over it, with the emblem in a gold ring (`STAR`).
+- **The front range's wall** behind the colonnade: the bronze door on the axis
+  (`DOOR`) with a lit transom, and six long crimson banners with the gold star
+  (`BANNER`, `BANNER_XS`).
+- **The front range and the back block** (`FRONT_RANGE`, `HALL.back`): pale
+  stone over a darker base, tall windows with sills and lintels, dark by day
+  and warm at night, and cornices.
+- **The tower** (`TIERS`, `TOWER_C`) over the back block, four tiers stepping
+  in:
+  - stone piers on every face, with slit windows between;
+  - a gold star lit softly at night on each face of the second tier;
+  - the lantern's glazing on the crown, a cap and a gold finial
+    (`CITYHALL_TOP`, `CITYHALL_TIP`).
+- **What's solid** (`CITYHALL_SOLIDS`, in `SOLIDS`): the front range, the
+  back block, the tiers, the columns, the antae and the cheeks. The steps and
+  the portico are walked on, with room to pass between the columns (the test).
+- **The place:** spot `cityhall`:
+  - its pick boxes at the boot (crestspots.ts `spot()`, `CITYHALL_PICK`,
+    `CITYHALL_LAND`), the pin over its tower, the fly-in from the square;
+  - a directory entry;
+  - its panel (`data-panel-tpl="cityhall"`, marquee "The city keeps its
+    records", coming soon), with Walk in (`data-civic-walkin`) to
+    `CITYHALL_SPAWN` at the steps' foot;
+  - its door's prompt on the portico (`CITYHALL_DOOR`, walk.ts `ALL_DOORS`);
+  - `PLACES` and `LIVE_PLACES` entries;
+  - a live line: the doors open on weekdays, and the council sits on Thursday
+    evenings;
+  - its footprint on the world map, with the square's paving.
 
 ### Phase 3: the police headquarters and the courthouse
 
