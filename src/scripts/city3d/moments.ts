@@ -44,7 +44,7 @@ export const MOMENT = {
   /** How far from the thing he stands: a door, a counter, a bench (in front of its seat, his back to it) */
   stand: { door: 0.28, counter: 0.31, bench: 0.33 },
   /** The approach: at the mark within `at` of it and `faceAt` of its facing, slower than `still`; never from further than `max`; at most `timeout` seconds, then the clip plays from wherever he is */
-  approach: { at: 0.12, faceAt: 0.3, still: 0.4, max: 1.86, timeout: 2.0, speed: 0.69, slowIn: 0.31, turnIn: 0.7 },
+  approach: { at: 0.12, faceAt: 0.3, still: 0.4, max: 1.86, timeout: 2.6, speed: 0.61, slowIn: 0.31, turnIn: 0.7 },
   /** The door push: its length, the share of it at which the hand lands and the panel opens; the handle's height over the ground and its offset to his right; how far the push goes into the door */
   door: { t: 0.6, open: 0.55, handleY: 0.44, handleSide: 0.12, push: 0.04, lean: 0.22 },
   /** The lean on a counter: in and out, how far the spine leans, the hands' spread either side of his middle, the share of the lean-in at which the menu opens */

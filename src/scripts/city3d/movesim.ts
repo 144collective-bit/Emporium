@@ -15,13 +15,14 @@ import { springAhead, springAngle, springVel, wrap } from './inertia';
 /**
  * His speeds (tiles a second): a walk (Caps Lock), the run he goes at by
  * default and the sprint (Shift). Set at 0.78 / 2.8 / 4.2 when he was 0.85
- * and brought down with his size to the crowd's 0.66 as real legs would
- * (the square root of the size: docs/scale-plan.md, the owner's call). The captures run at 3-4 m/s;
+ * and brought down in proportion with his size to the crowd's 0.66 (the
+ * owner's call, docs/scale-plan.md): the animator works in his own body
+ * lengths, so in proportion it plays exactly as it did. The captures run at 3-4 m/s;
  * the animator (animator.ts) makes up the rest a little in cadence and
  * mostly in longer strides, as a runner does (the owner's call, after the
  * capture's double-speed timing was fixed: quick but believable).
  */
-export const GAITS = { walk: 0.69, run: 2.47, sprint: 3.7 };
+export const GAITS = { walk: 0.61, run: 2.17, sprint: 3.26 };
 
 /** The springs' half-lives (seconds): speeding up, slowing down, turning to face, and the little control there is in the air */
 export const MOVE = { accel: 0.11, stop: 0.1, face: 0.075, air: 0.9 };
@@ -74,7 +75,7 @@ export const bendPull = (s: MoveState) => Math.hypot(s.vx, s.vz) * s.w;
  * `steer` radians a second towards the stick, until he's down to `end` or
  * it's been `most` seconds
  */
-export const SLIDE = { min: 3.0, start: 1.08, friction: 3.4, end: 1.32, most: 1.1, steer: 0.9 };
+export const SLIDE = { min: 2.64, start: 1.08, friction: 2.64, end: 1.16, most: 1.1, steer: 0.9 };
 export interface Slide {
   /** Seconds since it started, how fast he's going and which way (yaw) */
   t: number;
@@ -104,16 +105,16 @@ export function stepSlide(sl: Slide, s: MoveState, gx: number, gz: number, dt: n
 /**
  * Stairs (the revamp's Phase 2): the takes tagged `tag` (subject 122 walking up three steps) are searched
  * only while climbing: the ground `ahead` tiles on (scaled) is `rise` or more higher than here and still
- * rising at twice that (a kerb is one step and then flat), going slower than `fast` tiles a second (walk
+ * rising at twice that (a kerb is one step and then flat), going slower than `fast` (rig numbers a second) (walk
  * mode's climbing pace, `walk`, is under it; a brisk climb or a run up stairs keeps the run, the lock
  * putting its feet on the treads as before: faster than the takes' climb a held foot stretched and
  * snapped); never otherwise. Their climbing frames are those whose floor rises `step` (rig numbers)
  * over the next `look` frames or rose over the last `back`; once on one the search needs `margin`
  * better to leave it (the climbs are short: at the usual margin a take flipped to its mirror every
  * half second). Walk mode slows a climb to `walk` tiles a second walking and `run` running (a brisk
- * climb: nobody runs up stairs flat out).
+ * climb: nobody runs up stairs flat out). The speeds are in proportion with his size (docs/scale-plan.md).
  */
-export const STAIRS = { tag: 'stairs', ahead: 0.6, rise: 0.08, fast: 0.6, look: 12, back: 6, step: 0.03, margin: 0.6, walk: 0.4, run: 1.41 };
+export const STAIRS = { tag: 'stairs', ahead: 0.6, rise: 0.08, fast: 0.71, look: 12, back: 6, step: 0.03, margin: 0.6, walk: 0.35, run: 1.24 };
 /** Whether the ground ahead along (dx, dz) climbs like stairs from (x, z) at height y (STAIRS) */
 export function climbAhead(ground: (x: number, z: number, y: number) => number, x: number, z: number, y: number, dx: number, dz: number, scale: number) {
   const l = Math.hypot(dx, dz) || 1;

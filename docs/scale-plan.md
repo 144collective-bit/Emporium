@@ -6,7 +6,9 @@ tall, and the crowd at 0.66 (`PERSON_SCALE` in life.ts), about 0.86 tiles,
 so he stands about 29% taller than everyone else. The fix: **everyone at
 0.66**, the crowd's size (the owner's pick).
 
-Nothing changed yet: this is the plan, waiting on the owner's go.
+**Built** (2026-11-10), waiting on the owner's sign-off. Along with it, the
+owner's other call: bumping into things no longer slows or throws him
+(contact.ts is looks only: no hitch, no stagger).
 
 ## What the owner was told before picking
 
@@ -26,58 +28,51 @@ Nothing changed yet: this is the plan, waiting on the owner's go.
 | Question | The owner's answer |
 | --- | --- |
 | Size | 0.66 for everyone (the crowd's) |
-| Speed and jump | Natural for his size: scaled as real legs would |
-| Endswood's doors | Leave them for now |
+| Speed and jump | In proportion (the owner's second answer: "natural", the square root of the size, made the motion capture's legs read too fast for him, as the animator works in his own body lengths) |
+| Kerbs | Smoothed in the animation, nothing in the world moves |
+| The Fight Club's ring | Left at 0.85 for now (its rules are the game server's too) |
+| Endswood's doors | Left for now |
 
-**Natural for his size** means the Froude rule (speed goes with the square
-root of leg length; `froudeSpeed()` in human.ts already does it):
+## What was built
 
-- k = 0.66 / 0.85 = 0.776, √k = 0.881
-- Gaits (movesim.ts `GAITS`): walk 0.78 → 0.69, run 2.8 → 2.47, sprint
-  4.2 → 3.70 tiles a second (about 12% slower across the city; the speeds
-  were an earlier owner's call, "quick but believable", and this changes
-  them)
-- Jump (walk.ts `JUMP`, same gravity): 3.9 → 3.44, its height 0.66 → 0.51
-  tiles, the same share of his height as now
-- Vault and climb (vault.ts `OVER`): vault 0.75 → 0.58, climb 1.25 → 0.97,
-  so a climb never reaches over his head. Fewer things are climbable as a
-  result (the low things' real heights don't change)
-- The slide (`SLIDE` in movesim.ts) and the crouch's speed follow the gaits
-
-## Steps
-
-1. **One constant.** `ADULT_SCALE` in one DOM-free file (skeleton.ts),
-   imported everywhere the size lives today: walk.ts `SCALE`, remote.ts
-   `SCALE` (other players), boat.ts `SCALE`, fight-figure.ts
-   `FIGHTER_SCALE`, kartframe.ts and carinside.ts `DRIVER_SCALE`, human.ts
-   `ADULT_SCALE`, anim-lab.ts `SCALE`, and life.ts `PERSON_SCALE`, so the
-   player and the crowd can't drift apart again. Kids keep their own
-   `KID` scale.
-2. **What's in world units.** His collision radius (walk.ts `RADIUS` 0.22 →
-   0.17); the walk camera's distance and shoulder offset (`homeZoom()`
-   and the rest) by k, so he fills the same part of the screen; the gaits,
-   jump, vault and slide above; the moments' heights in moments.ts (door
-   handle, counter, bench, the car's handle and seat) checked so his
-   hands still land on them.
-3. **Seats re-fitted.** Car interiors (carinside.ts `INTERIORS`: seat
-   height so his eyes clear the dash and the window line), the kart's
-   pedals and wheel (kartframe.ts), the bikes' bars and pegs (bikes.ts,
-   acts.ts `ridePose()`), the hire boat's helm (boat.ts), the aircraft's
-   seat. The traffic's riders (life.ts `BIKE_K`) become 1:1.
-4. **The rubric.** human.ts reads metres from `TILE_M` (1.8) and
-   `ADULT_SCALE`: at 0.66 a figure reads 1.55 m. Its bands are checked and
-   any row that now fails is looked at, not hidden.
-5. **Checked.** `npm run typecheck`, `npm run lint`, `npm test` (carspec,
-   kartframe, kartclip, bike, human, animator, moments, clothing, gunfit,
-   vault among them), `npm run test:wide`; shots on the phone and desktop
-   tiers at a door, beside the crowd, in a car, on the bike, in a kart and
-   in the ring. CLAUDE.md updated (Degen's height, the gaits, the shared
-   constant).
+- **One size:** `FIGURE_SCALE` 0.66 in skeleton.ts, read by walk.ts,
+  remote.ts, boat.ts, anim-lab.ts, kartframe.ts and carinside.ts
+  (`DRIVER_SCALE`) and life.ts (`PERSON_SCALE`). Kids keep `KID`; the
+  ring keeps `FIGHTER_SCALE` 0.85.
+- **In proportion** (k = 0.66 / 0.85 = 0.776): the gaits 0.61 / 2.17 /
+  3.26 (were 0.78 / 2.8 / 4.2), aiming 1.09, crouched 0.43, the stairs'
+  0.35 / 1.24, the slide (movesim.ts `SLIDE`), the fists' block walk, the
+  guns' moving cost (gunfeel.ts), the jump 3.03 and gravity 8.92 (as long
+  in the air as before, as high for him), the landings (locomotion.ts
+  `LAND_CROUCH` / `LAND_ROLL`), the vault's heights (`OVER`: a vault to
+  0.58, a climb to 0.97), his radius 0.17, the walk camera (2.6 behind
+  him, the shoulder and the peek), the moments (where he stands, the door's
+  handle, the crate, the boat's grips, the aircraft's frame lower down,
+  the approach's reach and a longer timeout for world-sized lifts).
+- **The animator** in rig numbers where it had world ones (`AIR.kerb`,
+  `drop`, `crouch`, `hard`; `STAIRS.fast`), so at any size it plays as it
+  did at 0.85; stepping down a kerb, the hips keep their height and come
+  down with the lift's ease (`groundY`, the kerbs being relatively taller
+  for him now).
+- **Seats:** the cars' seats raised where his eyes no longer cleared the
+  window line (the van, the muscle car, the SUV, the Mud Buster), the
+  coupe's and the supercar's backs a little more upright, the truck's and
+  the rig's floors raised, the wheel's size with him; the kart's wheel and
+  pedals in with him (the pedals in the footwell now, not under the nose);
+  the bikes' seats lower, their bars and pegs nearer.
+- **The rubric** (human.ts) keeps its adult at 0.85: he's measured at it,
+  his world scaled up (the tests and the lab's Scorecard), since a figure
+  scaled in proportion reads to the rule of the square root as a child.
+- **Tests:** fixtures written for him at 0.85 scaled with him (contact,
+  vault, moments, the slide and the stop, the old stadium footbridge's
+  treads); the bike and kart tests' reaches in proportion.
 
 ## Left for later
 
+- The Fight Club's ring at 0.66 (its rules: reach, knock-back, the ring's
+  distances, shared with the game server).
 - Endswood's doors: repaint them taller in the wall atlas (nothing moves),
   or raise its `STOREY` (everything there moves: the owner's sign-off and
   a snapshot rewrite).
-- Car roofs sit over everyone's heads at this size: the cars' scale is a
-  separate question if the owner wants one.
+- The city's counters, rails and car roofs were built round him at 0.85:
+  they sit higher on him now.

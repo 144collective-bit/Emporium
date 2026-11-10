@@ -151,7 +151,7 @@ const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
-const AIMING = 1.23;
+const AIMING = 1.09;
 /** Carrying a crate: how near its destination (the car's boot, the place) counts as there */
 const PUT_R = 1.8;
 /**
@@ -159,7 +159,7 @@ const PUT_R = 1.8;
  * button; crouching while sprinting slides): how fast he goes, and how far
  * the camera comes down crouched and sliding (tiles at his scale)
  */
-const CROUCH = { speed: 0.48, cam: 0.26, slideCam: 0.42 };
+const CROUCH = { speed: 0.43, cam: 0.26, slideCam: 0.42 };
 /**
  * Peeking (Q / E held; LB / RB while aiming on a gamepad; on touch, aiming
  * by a corner): how far the upper body leans out over the hips (radians),
@@ -174,9 +174,14 @@ const PEEK = { lean: 0.42, cam: 0.35, eye: 0.23, roll: 0.08, slow: 0.55, ease: 0
  * looked at `every` seconds
  */
 const CORNER = { near: 1.4, far: 3.5, side: 0.55, every: 0.2 };
-/** The jump's speed up (3.9 when he was 0.85: now as high for his size) and gravity */
-const JUMP = 3.44;
-const GRAVITY = 11.5;
+/**
+ * The jump's speed up and gravity (3.9 and 11.5 when he was 0.85): in proportion with his size, as his speeds are
+ * (docs/scale-plan.md), so a jump is as high for him and as long in the air as it was; and the pull down once
+ * Jump is let go
+ */
+const JUMP = 3.03;
+const GRAVITY = 8.92;
+const CUT_JUMP = 12.4;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
 /** How much of the hips' rise and fall the first-person eye takes (the head steadies some of it) */
@@ -2945,7 +2950,7 @@ export function createWalk(d: WalkDeps) {
     jumpBuffer -= dt;
     if (over) vy = 0;
     else {
-      vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
+      vy -= (GRAVITY + (!jumpHeld && vy > 0 ? CUT_JUMP : 0)) * dt;
       pos.y += vy * dt;
     }
     const ground = groundAt(pos.x, pos.z, pos.y + 0.3);
@@ -2963,7 +2968,7 @@ export function createWalk(d: WalkDeps) {
     // A hard landing at a run plays the procedural roll before the motion capture takes him back (it
     // lands everything else itself: animator.ts); the camera dips with every landing and shakes with a hard one
     if (grounded && !wasGrounded) {
-      if (-fall > LAND_ROLL && speed > 2) landHold = 0.75;
+      if (-fall > LAND_ROLL && speed > 1.55) landHold = 0.75;
       else if (!animator && -fall > LAND_CROUCH) landHold = 0.5;
       if (!d.reduced && !firstPerson) {
         dipV -= 31 * 0.16 * THREE.MathUtils.clamp((-fall - 2) / 8, 0, 1);

@@ -31,7 +31,7 @@ export const BRAWL = {
   /** Slower than this (tiles a second), Space dodges; faster, it jumps */
   still: 0.3,
   /** Blocking, he walks no faster than this (tiles a second, the walk's own pace) */
-  blockSpeed: 0.69,
+  blockSpeed: 0.61,
   /** A swing makes anyone within this much of his reach step aside (tiles) */
   crowd: 0.5,
   /** Ticks between two strikes landing for them to be one chain */

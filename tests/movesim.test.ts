@@ -12,8 +12,8 @@ const speed = (s: { vx: number; vz: number }) => Math.hypot(s.vx, s.vz);
 test('the speeds: a walk, the run he goes at and a faster sprint', () => {
   assert.ok(GAITS.walk < GAITS.run && GAITS.run < GAITS.sprint);
   // (about 1.4, 5 and 7.5 m/s for the figure they were set for, 0.85, a tile about 1.8 m; at his size,
-  // FIGURE_SCALE, as real legs would: the square root of the size, docs/scale-plan.md)
-  const m = 1.8 * Math.sqrt(0.85 / FIGURE_SCALE);
+  // FIGURE_SCALE, in proportion: docs/scale-plan.md)
+  const m = 1.8 * (0.85 / FIGURE_SCALE);
   assert.ok(Math.abs(GAITS.walk * m - 1.4) < 0.15 && Math.abs(GAITS.run * m - 5) < 0.3 && Math.abs(GAITS.sprint * m - 7.5) < 0.3, 'a walk, a quick run and a sprint');
 });
 
@@ -43,7 +43,8 @@ test('stopping from a run takes a short distance, not none', () => {
     t += DT;
   }
   assert.ok(t < 0.45, `stopped in ${t.toFixed(2)} s`);
-  assert.ok(d > 0.3 && d < 1.2, `${d.toFixed(2)} tiles to stop`);
+  // (0.3 to 1.2 tiles at 0.85: in proportion with his size)
+  assert.ok(d > 0.3 * (FIGURE_SCALE / 0.85) && d < 1.2 * (FIGURE_SCALE / 0.85), `${d.toFixed(2)} tiles to stop`);
 });
 
 test('he turns round to face the other way in about a third of a second', () => {

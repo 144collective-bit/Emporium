@@ -39,7 +39,7 @@ import { FIGURE_SCALE } from './skeleton';
 import { HOLDING, PLAYER, SOLDIER, createDegen, type Degen } from './character';
 import { addCarry, addLean, addLook, applyTo, chestYaw, createAnimator, type Animator } from './animator';
 import { createFollow } from './follow';
-import { createRubric, type Row } from './human';
+import { ADULT_SCALE, createRubric, type Row } from './human';
 import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocapAll } from './mocap-load';
@@ -109,8 +109,8 @@ const contactBoxes = (): Box[] => [CONTACT_FLOOR.side, ...CONTACT_FLOOR.gap, CON
 const RADIUS = 0.22;
 const contactBlocked = (bx: number, bz: number) => bz < CONTACT_FLOOR.rail + RADIUS || contactBoxes().some((b) => bx > b[0] - RADIUS && bx < b[2] + RADIUS && bz > b[1] - RADIUS && bz < b[3] + RADIUS);
 /** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
-const JUMP = 3.9;
-const GRAVITY = 11.5;
+const JUMP = 3.03;
+const GRAVITY = 8.92;
 const LET_GO = 16;
 /** The ground he walks on (the stairs an even ramp, as the city's are) and what his feet stand on (their treads) */
 function floorAt(kind: Floor, z: number, feet: boolean) {
@@ -790,7 +790,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     crouchPress = false;
     // Over a wall: Jump at one by hand, or by itself when the program comes up to it
     if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (p === 'over' || (p === 'manual' && jumpPress))) {
-      const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.22, () => true);
+      const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.17, () => true);
       if (o && (p === 'manual' || o.near < 0.45)) {
         over = { o, t: 0 };
         jumpPress = false;
@@ -859,7 +859,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     }
     {
       const goal = Math.hypot(gx, gz);
-      rubric.push({ dt, rot: anim.rot, hips: anim.hips, x, y, z, yaw: anim.face, scale: SCALE, speed: v, goal, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [anim.feet[0].locked, anim.feet[1].locked], drift: [anim.feet[0].drift, anim.feet[1].drift], ground });
+      // (measured at the rubric's adult, his world scaled up to it: he plays in proportion to it, human.ts)
+      const R = ADULT_SCALE / SCALE;
+      rubric.push({ dt, rot: anim.rot, hips: anim.hips, x: x * R, y: y * R, z: z * R, yaw: anim.face, scale: ADULT_SCALE, speed: v * R, goal: goal * R, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [anim.feet[0].locked, anim.feet[1].locked], drift: [anim.feet[0].drift, anim.feet[1].drift], ground: (gx2: number, gz2: number) => ground(gx2 / R, gz2 / R) * R });
     }
     if (gun) {
       // (the gun's hold over the motion capture's legs, as walk.ts has it: the procedural walk under the hold

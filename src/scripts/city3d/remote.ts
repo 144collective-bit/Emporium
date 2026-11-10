@@ -53,7 +53,7 @@ const ANIM_NEAR = 25;
 const ANIM_FAR = 70;
 const FAR_DT = 1 / 30;
 /** A move between frames further than this is a jump (a warp, a fast travel): the animator starts afresh */
-const JUMP = 2;
+const JUMP = 1.55;
 const smooth = (x: number) => x * x * (3 - 2 * x);
 
 interface Sample {
