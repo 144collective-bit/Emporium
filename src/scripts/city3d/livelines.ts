@@ -55,6 +55,8 @@ export const LIVE_IDS = [
   'sunschool',
   'liberty',
   'cityhall',
+  'police',
+  'courthouse',
 ] as const;
 export type LiveId = (typeof LIVE_IDS)[number];
 
@@ -178,6 +180,11 @@ export function liveLine(id: string, t = Date.now()): string | null {
       if (c.dow === 4 && between(h, 18, 21)) return 'The council sits tonight · Gallery full';
       if (weekday(c) && between(h, 9, 17)) return 'Doors open till five · Permits upstairs';
       return 'Doors shut · Open weekdays at nine';
+    case 'police':
+      return h >= 22 || h < 6 ? 'Night shift on · Front desk open' : 'Front desk open · Patrols out';
+    case 'courthouse':
+      if (weekday(c) && between(h, 9, 16)) return c.dow === 1 ? 'Court in session · New week, full list' : 'Court in session till four';
+      return 'Court rises · Sits weekdays at nine';
     case 'golfclub':
       if (between(h, 7, 17)) return 'Tee times till five · Nineteenth hole after';
       if (between(h, 17, 22)) return 'Course closed · Clubhouse open till ten';

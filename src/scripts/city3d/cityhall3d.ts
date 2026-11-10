@@ -36,17 +36,17 @@ import {
   TOWER_C,
 } from './civic';
 
-const STONE = toon('#ddd6c6');
-const SHADE = toon('#c6bea9');
-const DARK = toon('#9d947e');
-const BRONZE = toon('#5c4128');
-const GOLD = toon('#c9a24c');
+export const STONE = toon('#ddd6c6');
+export const SHADE = toon('#c6bea9');
+export const DARK = toon('#9d947e');
+export const BRONZE = toon('#5c4128');
+export const GOLD = toon('#c9a24c');
 /** Windows: dark glass by day, warm at night (under the bloom's threshold) */
-const WIN = neon('#f0d39c', 0.07, 1.0);
+export const WIN = neon('#f0d39c', 0.07, 1.0);
 /** The stars on the tower and the lantern: soft gold at night */
 const STAR_LIT = neon('#ffd27a', 0.35, 1.25);
 const LANTERN = neon('#ffe7b8', 0.12, 1.1);
-const BULB = neon('#ffe6b0', 0.5, 2.4);
+export const BULB = neon('#ffe6b0', 0.5, 2.4);
 
 /** The banner: a crimson field, gold edges, the star at its head, a stripe down it (one small texture, both cities' copy fixed) */
 const BANNER_MAT = siteMat(
@@ -66,30 +66,33 @@ const BANNER_MAT = siteMat(
     }),
   })
 );
-/** The frieze's carved name (fixed, made-up copy) */
-const FRIEZE_MAT = siteMat(
-  'cityhall-frieze',
-  toon('#ffffff', {
-    map: canvasTex(1024, 52, (c) => {
-      c.fillStyle = '#ddd6c6';
-      c.fillRect(0, 0, 1024, 52);
-      c.fillStyle = '#6f675a';
-      c.font = `800 38px ${FONT_DISPLAY}`;
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      const word = 'SECTOR 7  ·  CITY HALL';
-      // (spaced out, as carved letters are)
-      const spread = 18;
-      const w = c.measureText(word).width + spread * (word.length - 1);
-      let x = 512 - w / 2;
-      c.textAlign = 'left';
-      for (const ch of word) {
-        c.fillText(ch, x, 28);
-        x += c.measureText(ch).width + spread;
-      }
-    }),
-  })
-);
+/** A name carved in the stone (fixed, made-up copy): 1024 x 52, letters spaced out, `ink` on the stone (the civic
+ * quarter's friezes and the police's sign, flank3d.ts) */
+export function carvedMat(key: string, word: string, ink = '#6f675a', ground = '#ddd6c6') {
+  return siteMat(
+    key,
+    toon('#ffffff', {
+      map: canvasTex(1024, 52, (c) => {
+        c.fillStyle = ground;
+        c.fillRect(0, 0, 1024, 52);
+        c.fillStyle = ink;
+        c.font = `800 38px ${FONT_DISPLAY}`;
+        c.textBaseline = 'middle';
+        // (spaced out, as carved letters are)
+        const spread = 18;
+        const w = c.measureText(word).width + spread * (word.length - 1);
+        let x = 512 - w / 2;
+        c.textAlign = 'left';
+        for (const ch of word) {
+          c.fillText(ch, x, 28);
+          x += c.measureText(ch).width + spread;
+        }
+      }),
+    })
+  );
+}
+/** The frieze's carved name */
+const FRIEZE_MAT = carvedMat('cityhall-frieze', 'SECTOR 7  ·  CITY HALL');
 
 /** A seven-pointed star's outline on a canvas */
 function starPath(c: CanvasRenderingContext2D, x: number, y: number, r: number, inner: number) {
@@ -103,7 +106,7 @@ function starPath(c: CanvasRenderingContext2D, x: number, y: number, r: number, 
   c.closePath();
 }
 /** The star as a thin solid, facing +z, its centre at the origin */
-function starGeometry(r: number, depth = 0.08) {
+export function starGeometry(r: number, depth = 0.08) {
   const s = new THREE.Shape();
   for (let k = 0; k < STAR.points * 2; k++) {
     const a = Math.PI / 2 + (k * Math.PI) / STAR.points;
@@ -116,7 +119,7 @@ function starGeometry(r: number, depth = 0.08) {
   return g;
 }
 /** A flat pane facing out of a wall: centre, size, the wall's axis ('x': it faces ±x, 'z': ±z) and which way */
-function pane(cx: number, cy: number, cz: number, w: number, h: number, axis: 'x' | 'z', sign: 1 | -1, uv = false) {
+export function pane(cx: number, cy: number, cz: number, w: number, h: number, axis: 'x' | 'z', sign: 1 | -1, uv = false) {
   const g = new THREE.PlaneGeometry(w, h);
   // (the shared paint has no texture: only a textured pane keeps its uv)
   if (!uv) g.deleteAttribute('uv');
@@ -125,7 +128,7 @@ function pane(cx: number, cy: number, cz: number, w: number, h: number, axis: 'x
   return g.translate(cx, cy, cz);
 }
 /** Tall windows along a wall: from a to b (along the wall), every `every`, on the face at `at` facing `sign`, rows between [y0, y1] */
-function windows(b: Batch, axis: 'x' | 'z', at: number, sign: 1 | -1, a: number, c: number, every: number, rows: [number, number][]) {
+export function windows(b: Batch, axis: 'x' | 'z', at: number, sign: 1 | -1, a: number, c: number, every: number, rows: [number, number][]) {
   const n = Math.max(1, Math.floor((c - a) / every));
   const step = (c - a) / n;
   for (let k = 0; k < n; k++) {

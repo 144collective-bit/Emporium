@@ -52,6 +52,29 @@ import {
   cityHallY,
 } from '../src/scripts/city3d/civic';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
+import {
+  COURT_BODY,
+  COURT_COLUMN,
+  COURT_COLUMNS,
+  COURT_DOOR,
+  COURT_PODIUM,
+  COURT_PORTICO,
+  COURTHOUSE_SPAWN,
+  COURT_STEPS,
+  COURT_TOP,
+  FLANK_SOLIDS,
+  HQ,
+  POLICE_DOOR,
+  POLICE_HQ,
+  POLICE_SPAWN,
+  POLICE_YARD,
+  YARD_CARS,
+  YARD_CAR_HALF,
+  YARD_GATE,
+  YARD_WALL,
+  courtY,
+  civicY,
+} from '../src/scripts/city3d/civic';
 import { FLIGHTS, PERIOD, REACH, poseAt } from '../src/scripts/city3d/airfield';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { HIGHRISES } from '../src/scripts/city3d/highrise';
@@ -93,7 +116,7 @@ test('the land: on the park, the square open to the avenue, the lots round it an
     assert.ok(!overlap(lots[i], SQUARE), 'a lot on the square');
   }
   // Flanking it: the police west, the courthouse east, facing across it
-  assert.ok(POLICE[2] < SQUARE[0] && COURT[0] > SQUARE[2]);
+  assert.ok(POLICE[2] < SQUARE[0] && COURT[0] >= SQUARE[2]);
   assert.deepEqual(LOTS.find((l) => l.id === 'police')!.faces, [1, 0]);
   assert.deepEqual(LOTS.find((l) => l.id === 'courthouse')!.faces, [-1, 0]);
   // The lake and its loop untouched: every lot and the square well off the water and the loop
@@ -203,4 +226,64 @@ test('its tower: stepped, over the Emporium, under Uptown\'s tallest, every flig
       const d = Math.hypot(Math.max(TOWER_C[0] - half - p.x, 0, p.x - TOWER_C[0] - half), Math.max(TOWER_C[1] - half - p.z, 0, p.z - TOWER_C[1] - half));
       if (d < REACH[f.kind] + 4) assert.ok(p.y > CITYHALL_TIP + 4, `${f.id} at ${p.y.toFixed(1)} over City Hall at t ${t}`);
     }
+});
+
+test('the police headquarters and the courthouse: under the Emporium, on their lots, solid', () => {
+  assert.ok(HQ.h + HQ.mast < EMPORIUM_ROOF - 0.5 && COURT_TOP < EMPORIUM_ROOF - 0.5, 'under the Emporium');
+  assert.ok(HQ.h < FRONT_H && COURT_TOP < FRONT_H, 'lower than City Hall');
+  const lotOf = (id: string) => LOTS.find((l) => l.id === id)!.rects;
+  const inside = (r: Rect, b: number[]) => b[0] >= r[0] - 1e-9 && b[2] <= r[2] + 1e-9 && b[1] >= r[1] - 1e-9 && b[3] <= r[3] + 1e-9;
+  for (const b of FLANK_SOLIDS) {
+    assert.ok(lotOf('police').some((r) => inside(r, b)) || inside(COURT, b), `a solid off its lot at ${b}`);
+    assert.ok(SOLIDS.includes(b), "in the city's solids");
+    for (const o of SOLIDS) if (!FLANK_SOLIDS.includes(o) && !CITYHALL_SOLIDS.includes(o)) assert.ok(!(o[0] < b[2] && o[2] > b[0] && o[1] < b[3] && o[3] > b[1]), `something else in it at ${o}`);
+  }
+});
+
+test("the police yard: walled, its gate open onto the ring walk, the patrol cars inside clear of the walls and each other", () => {
+  const [x0, z0, x1, z1] = POLICE_YARD;
+  assert.equal(z0, POLICE_HQ[3], 'behind the building, against it');
+  // The gate: nothing solid in its gap, the ring walk just outside it
+  const gx = (YARD_GATE.x0 + YARD_GATE.x1) / 2;
+  assert.ok(YARD_GATE.x1 - YARD_GATE.x0 > 2.8, 'a car fits through');
+  for (let x = YARD_GATE.x0 + 0.1; x < YARD_GATE.x1; x += 0.2) assert.ok(!SOLIDS.some((b) => x > b[0] && x < b[2] && z1 - 0.1 > b[1] && z1 - 0.1 < b[3]), `the gate shut at ${x}`);
+  assert.ok(fromPath('ring', [gx, z1]) < 2.5, 'the gate onto the ring walk');
+  for (const [, x, z] of YARD_CARS) {
+    assert.ok(x - YARD_CAR_HALF.w > x0 + YARD_WALL.w && x + YARD_CAR_HALF.w < x1 - YARD_WALL.w && z - YARD_CAR_HALF.l >= z0 && z + YARD_CAR_HALF.l < z1 - YARD_WALL.w - 3, `a car out of the yard at ${x}, ${z}`);
+  }
+  for (let i = 1; i < YARD_CARS.length; i++) assert.ok(YARD_CARS[i][1] - YARD_CARS[i - 1][1] > 2 * YARD_CAR_HALF.w + 0.5, 'cars apart');
+  assert.ok(YARD_CARS.every((c) => c[0] === 'police'));
+});
+
+test("the courthouse: up four steps from the square to its portico, room between its columns, its door on the portico", () => {
+  assert.equal(COURT_STEPS[0], COURT[0], "the steps' foot on the lot's square side");
+  for (let x = COURT_STEPS[0] + 0.01; x < COURT_STEPS[2]; x += 0.25) {
+    const y = courtY(x, -24)!;
+    const y2 = courtY(x + 0.25, -24)!;
+    assert.ok(y2 >= y - 1e-9 && (y2 - y) / 0.25 < 0.35, `a steep step at ${x}`);
+  }
+  assert.ok(Math.abs(courtY((COURT_PORTICO[0] + COURT_PORTICO[2]) / 2, -24)! - COURT_PODIUM) < 1e-9);
+  assert.equal(civicY(COURTHOUSE_SPAWN.x, COURTHOUSE_SPAWN.z), null, 'nothing raised on the square');
+  for (let k = 1; k < COURT_COLUMNS.length; k++) assert.ok(COURT_COLUMNS[k][1] - COURT_COLUMNS[k - 1][1] - COURT_COLUMN.w > 1.8, 'room between the columns');
+  const walkers = SOLIDS.filter((b) => !COURT_COLUMNS.some(([x, z]) => Math.abs((b[0] + b[2]) / 2 - x) < 1e-6 && Math.abs((b[1] + b[3]) / 2 - z) < 1e-6));
+  for (let x = COURT_STEPS[0] + 0.2; x < COURT_PORTICO[2] - 0.2; x += 0.4)
+    for (let z = COURT_STEPS[1] + 0.3; z < COURT_STEPS[3] - 0.3; z += 0.4) assert.ok(!walkers.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]), `blocked at ${x}, ${z}`);
+  assert.ok(COURT_DOOR.x > COURT_PORTICO[0] && COURT_DOOR.x < COURT_BODY[0] && civicY(COURT_DOOR.x, COURT_DOOR.z) === COURT_PODIUM);
+});
+
+test('their doors and walk-ins: in front of each door, facing it, on open ground', () => {
+  const facing = (yaw: number): Pt => [-Math.sin(yaw), -Math.cos(yaw)];
+  for (const [door, spawn] of [
+    [POLICE_DOOR, POLICE_SPAWN],
+    [COURT_DOOR, COURTHOUSE_SPAWN],
+  ] as const) {
+    const [fx, fz] = facing(spawn.yaw);
+    const [dx, dz] = [door.x - spawn.x, door.z - spawn.z];
+    const d = Math.hypot(dx, dz);
+    assert.ok(d > 1.5 && d < 6, `${door.label}'s walk-in ${d.toFixed(1)} from its door`);
+    assert.ok((fx * dx + fz * dz) / d > 0.95, `${door.label}'s walk-in faces it`);
+    for (const p of [door, spawn]) assert.ok(!SOLIDS.some((b) => p.x > b[0] - 0.3 && p.x < b[2] + 0.3 && p.z > b[1] - 0.3 && p.z < b[3] + 0.3), `${door.label} in a solid at ${p.x}, ${p.z}`);
+  }
+  assert.ok(fromPath('civic-w', [POLICE_SPAWN.x, POLICE_SPAWN.z]) < 0, "the police's walk-in on the west walk");
+  assert.ok(inSquare([COURTHOUSE_SPAWN.x, COURTHOUSE_SPAWN.z], -0.5), "the courthouse's on the square");
 });

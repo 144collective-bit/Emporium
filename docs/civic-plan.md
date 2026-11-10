@@ -4,8 +4,8 @@ The first section of building out to the walls (`docs/buildout-plan.md`, the lan
 plan's first round): the seat of power in the North Ward. It's built in the
 south end of Westlake Park, facing Uptown across the avenue. Built one phase at
 a time, each with the owner's sign-off. Keep this plan up to date. Phase 1 (the
-land, the square and the walks) and Phase 2 (City Hall) are built, waiting on
-the owner's sign-off.
+land, the square and the walks), Phase 2 (City Hall) and Phase 3 (the police
+headquarters and the courthouse) are built, waiting on the owner's sign-off.
 
 ## The owner's answers (2026-11-10)
 
@@ -165,11 +165,69 @@ Westlake Park's chunk.
     evenings;
   - its footprint on the world map, with the square's paving.
 
-### Phase 3: the police headquarters and the courthouse
+### Phase 3: the police headquarters and the courthouse (built)
 
-- Their exteriors, and the police's yard with its cars (the traffic's Patrol
-  car, parked).
-- Places, or scenery with signs: the owner's question below.
+The owner's picks (2026-11-10, all the suggestions):
+
+| Question | Answer |
+| --- | --- |
+| Their look | **City Hall's pale stone, plainer and lower**, so the three read as one quarter. |
+| The police yard | **A walled yard** with the patrol cars and a gate. |
+| The courthouse front | **A four-column portico** with steps, facing the square. |
+
+The numbers are `civic.ts`, drawn by `flank3d.ts` as two sites in Westlake
+Park's chunk.
+
+- **Making room for the yard:** the yard couldn't go behind the headquarters
+  (west), where the ring walk runs. So the police lot (`POLICE`) grew north
+  instead, and the building moved up it:
+  - the building (`POLICE_HQ`) is on the north part, alongside City Hall's
+    front range;
+  - the walled yard (`POLICE_YARD`) is south of it, towards the avenue;
+  - the yard's gate (`YARD_GATE`) opens onto the ring walk by the park's
+    south-west gate.
+
+  The ring walk didn't move.
+- **Sector 7 Police** (`HQ`):
+  - a three-storey block, 8.4 high, over a darker base;
+  - rows of tall windows, lit at night, a string course and a cornice;
+  - its entrance on the east face, onto the west walk at the square's
+    north-west corner: a bronze door, a canopy, SECTOR 7 POLICE carved over
+    it and the blue lamp;
+  - a radio mast with a red light on the roof.
+- **The yard:**
+  - a stone wall with a coping, 1.8 high (`YARD_WALL`);
+  - asphalt marked out in bays;
+  - four Patrol cars nosed up to the building (`YARD_CARS`, the traffic's
+    model, parked through `parkedCars()`);
+  - lamps on the gate's posts.
+- **The Sector 7 Courthouse:**
+  - four steps up from the square (`COURT_STEPS`; the lot reaches the
+    square's edge) between cheeks with torchères;
+  - a portico (`COURT_PORTICO`) of four square columns between antae
+    (`COURT_COLUMNS`);
+  - SECTOR 7 COURTHOUSE on its frieze, and a low pediment with the gold star
+    (`PEDIMENT_H`);
+  - the body behind (`COURT_BODY`), its windows lit at night, with a bronze
+    door and two tall windows on the portico wall.
+
+  Its top is 8.0 (`COURT_TOP`).
+- **Walking:** both stay under the Emporium and lower than City Hall. The
+  courthouse's steps and portico are walked as City Hall's are: `civicY()`,
+  the groundheight.ts layer now `civic`. What's solid is `FLANK_SOLIDS` (in
+  `SOLIDS`): the buildings, the yard's walls with the gate open, the cars,
+  the columns, the antae and the cheeks.
+- **The places:**
+  - spots `police` and `courthouse`, their pick boxes at the boot
+    (`POLICE_PICK`, `COURT_PICK`);
+  - pins, directory entries and panels, all coming soon, with Walk in
+    (`data-civic-walkin`, `POLICE_SPAWN` on the west walk,
+    `COURTHOUSE_SPAWN` at the steps' foot);
+  - doors (`POLICE_DOOR`, `COURT_DOOR` in walk.ts `ALL_DOORS`);
+  - `PLACES` and `LIVE_PLACES` entries;
+  - live lines: the front desk and the night shift, the court in session on
+    weekdays;
+  - their footprints on the world map.
 
 ### Phase 4: life, night and sound
 
