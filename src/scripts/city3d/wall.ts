@@ -77,7 +77,7 @@ export const CULVERTS: { side: 'w' | 'e'; x: number; z0: number; z1: number }[] 
  * `land` past the outer face, and the grey murk stands on it in layers (`murk`: how far past the outer face each
  * stands), `h` tall, fading up from the ground
  */
-export const BEYOND = { land: 48, murk: [16, 28, 40] as readonly number[], h: 80 };
+export const BEYOND = { land: 120, murk: [16, 34, 56, 84] as readonly number[], h: 110 };
 /** The land past the wall, to where the grass ends (x0, z0, x1, z1) */
 export const WALL_LAND: Rect = [WALL_OUTER[0] - BEYOND.land, WALL_OUTER[1] - BEYOND.land, WALL_OUTER[2] + BEYOND.land, WALL_OUTER[3] + BEYOND.land];
 
@@ -94,7 +94,7 @@ export const WALL_CORNERS: [number, number][] = [
  * past it a cold grey, shaded with the sky (wall3d.ts). `std`: how much of the city's haze the wall takes (it stands
  * out of it, so it's seen from town, but not as a cut-out: some of the air between)
  */
-export const WALL_LOOK = { face: '#8f9aa8', murk: '#9aa1aa', std: 0.5 };
+export const WALL_LOOK = { face: '#8f9aa8', murk: '#7d848d', std: 0.5 };
 
 /**
  * Far off the wall fades into the sky's horizon (Phase 2): from `from` of the sky dome's radius to `to` past it, so

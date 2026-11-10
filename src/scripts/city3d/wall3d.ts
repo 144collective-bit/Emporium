@@ -95,7 +95,7 @@ void main() {
 }`,
     fragmentShader: `uniform vec3 uColor; uniform vec2 uHaze; varying float vUp; varying float vDist;
 void main() {
-  float a = 0.6 * pow(1.0 - clamp(vUp, 0.0, 1.0), 1.6) * (1.0 - smoothstep(uHaze.x, uHaze.y, vDist));
+  float a = 0.8 * pow(1.0 - clamp(vUp, 0.0, 1.0), 1.2) * (1.0 - smoothstep(uHaze.x, uHaze.y, vDist));
   gl_FragColor = vec4(uColor, a);
   #include <colorspace_fragment>
 }`,
@@ -119,13 +119,13 @@ export function buildWall(scene: THREE.Scene, tick: (f: Tick) => void) {
   murk.name = 'wall-murk';
   murk.frustumCulled = false;
   scene.add(murk);
-  // The murk takes the sky's light: its cold grey as bright as the horizon (the fog's colour, sky.ts), a little of
-  // the horizon's own colour in it, so it's pale by day, dark at night, greyer in the rain
+  // The murk takes the sky's light: its cold grey as bright as the horizon (the fog's colour, sky.ts), a touch of the
+  // horizon's own colour in it, so it's pale by day and dark at night, but always grey against the sky's blue
   const col = (mat.uniforms.uColor as THREE.IUniform<THREE.Color>).value;
   tick(() => {
     const fog = scene.fog as THREE.FogExp2 | null;
     if (!fog) return;
     const k = THREE.MathUtils.clamp(lum(fog.color) / lum(GREY), 0.08, 1.15);
-    col.copy(GREY).multiplyScalar(k).lerp(fog.color, 0.35);
+    col.copy(GREY).multiplyScalar(k * 0.85).lerp(fog.color, 0.15);
   });
 }
