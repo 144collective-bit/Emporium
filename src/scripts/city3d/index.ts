@@ -131,6 +131,7 @@ import type { Bench } from './bench';
 import type { Shots } from './shots';
 import { mb, memoryRows, sceneMemory } from './perf';
 import { PACKED, tileBatch } from './tilebatch';
+import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
@@ -546,11 +547,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // airport's grounds, the kart park's circuit), only those in the home view and the intro's are built now
   // Most sites built off the main thread (performance phase 4): in the built site, unless ?worker=0
   const siteWorker = import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced() }) : null;
+  const horizonAsked = new URLSearchParams(location.search).get('horizon');
+  const horizonOff = horizonAsked === '0';
+  const horizonForced = Number(horizonAsked) || 0;
   const works = createTileWork(scene, {
     budget: (Number(new URLSearchParams(location.search).get('budget')) || Q.nearBudget) * 2 ** 20,
     compile: (meshes) => meshes.forEach((m) => compileFor(m)),
     worker: siteWorker,
     meshesOf,
+    // Phones, on the ground (walking, driving, riding; not up in an aircraft): tiles past where the haze hides
+    // everything let go of all their sites drew (docs/performance-plan.md). `?horizon=N` forces a distance on
+    // any tier while walking, `?horizon=0` turns it off, for testing
+    horizon: () => {
+      if (!walking || walk.flying || horizonOff) return Infinity;
+      if (horizonForced) return horizonForced;
+      return tier === 'low' ? hazeHorizon((scene.fog as THREE.FogExp2).density) : Infinity;
+    },
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
   const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
@@ -1840,7 +1852,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
-          (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
+          (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),

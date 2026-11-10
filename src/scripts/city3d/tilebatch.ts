@@ -50,6 +50,8 @@ interface Tile {
   lod: boolean;
   /** Its sites' near pieces were let go: drawn far until they're built again */
   released: boolean;
+  /** Past the haze (phones, on the ground): every piece its sites drew in the shared materials was let go */
+  gone: boolean;
   pieces: Piece[];
   /** The sites that drew into it */
   sites: Set<string>;
@@ -89,7 +91,20 @@ export interface TileBatches {
   /** The tiles holding near pieces that could be let go, and those that let them go */
   /** What the pieces held take, by level and whether they can be let go (for the ?fps console) */
   bytesBy(): Record<string, number>;
-  held(x: number, y: number, z: number): { key: string; d: number; bytes: number; near: boolean; released: boolean }[];
+  held(x: number, y: number, z: number): { key: string; d: number; bytes: number; near: boolean; released: boolean; all: number; gone: boolean }[];
+  /**
+   * Let go of everything a tile's sites drew in the shared materials, at every level (a tile past the haze on a
+   * phone: tileplan.ts `toVanish()`); nothing of them is drawn until the sites run again. Returns the bytes freed
+   */
+  vanish(tile: string): number;
+  /**
+   * Give back the room let go: each mesh with holes packs its pieces together and, where that leaves a fair share
+   * of it empty (`TRIM`), is made again the size of what it holds and `ROOM`. Returns the bytes given back. It
+   * copies every mesh it shrinks, so call it now and then, not every frame
+   */
+  trim(): number;
+  /** A tile's pieces drawn at every distance and its far ones were built again (its near ones are still let go) */
+  regained(tile: string): void;
   /** The sites whose near pieces a tile let go */
   lostSites(tile: string): string[];
   /** Bytes of near pieces that could be let go, held now */
@@ -184,6 +199,8 @@ export function compact(g: THREE.BufferGeometry, paint: boolean) {
 
 /** How much room a batched mesh is made with past what it holds, so sites built later mostly fit */
 const ROOM = 1.25;
+/** A mesh is made smaller only when what it holds (and `ROOM`) is under this share of it */
+const TRIM = 0.8;
 
 /**
  * Merge the Batches built onto `parents` (`userData.batched` meshes) into
@@ -202,7 +219,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
     if (!tile) {
       const [i, j] = t.split(',').map(Number);
       const [x0, z0, x1, z1] = tileRect(i, j);
-      tiles.set(t, (tile = { key: t, x0, z0, x1, z1, top: 0, near: true, lod: false, released: false, pieces: [], sites: new Set(), lost: new Set() }));
+      tiles.set(t, (tile = { key: t, x0, z0, x1, z1, top: 0, near: true, lod: false, released: false, gone: false, pieces: [], sites: new Set(), lost: new Set() }));
     }
     return tile;
   };
@@ -353,6 +370,9 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
 
   const evictable = (p: Piece) => p.lod === 'near' && p.site !== '' && !!p.set.bm.material && !!(p.set.bm.material as THREE.Material).userData.shared;
 
+  /** What a tile past the haze lets go: everything a site drew in the shared materials, whatever its level */
+  const losable = (p: Piece) => p.site !== '' && !!(p.set.bm.material as THREE.Material)?.userData.shared;
+
   add(parents);
   return {
     meshes,
@@ -385,6 +405,44 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       if (freed) t.released = true;
       return freed;
     },
+    vanish(key) {
+      const t = tiles.get(key);
+      // (a tile with nothing to swap is never marked near or far: its distance is the caller's business)
+      if (!t || t.gone || (t.lod && t.near)) return 0;
+      let freed = 0;
+      t.pieces = t.pieces.filter((p) => {
+        if (!losable(p)) return true;
+        p.set.bm.deleteGeometry(p.geo);
+        p.set.holes++;
+        t.lost.add(p.site);
+        freed += p.bytes;
+        return false;
+      });
+      if (freed) t.gone = t.released = true;
+      return freed;
+    },
+    trim() {
+      let back = 0;
+      const size = (g: THREE.BufferGeometry) => bytesOf(g) - (g.index ? g.index.count * 4 : 0) + (g.index ? (g.index.array as Uint32Array).byteLength : 0);
+      for (const set of sets.values()) {
+        if (!set.holes) continue;
+        const bm = set.bm;
+        const f = bm as unknown as { _maxVertexCount: number; _maxIndexCount: number };
+        bm.optimize();
+        set.holes = 0;
+        const v = Math.max(1, Math.ceil((f._maxVertexCount - bm.unusedVertexCount) * ROOM));
+        const i = Math.max(1, Math.ceil((f._maxIndexCount - bm.unusedIndexCount) * ROOM));
+        if (v > f._maxVertexCount * TRIM && i > f._maxIndexCount * TRIM) continue;
+        const before = size(bm.geometry);
+        bm.setGeometrySize(Math.min(v, f._maxVertexCount), Math.min(i, f._maxIndexCount));
+        back += before - size(bm.geometry);
+      }
+      return back;
+    },
+    regained(key) {
+      const t = tiles.get(key);
+      if (t) t.gone = false;
+    },
     restored(key) {
       const t = tiles.get(key);
       if (!t) return;
@@ -392,12 +450,13 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       t.lost.clear();
     },
     held(x, y, z) {
-      const out: { key: string; d: number; bytes: number; near: boolean; released: boolean }[] = [];
+      const out: { key: string; d: number; bytes: number; near: boolean; released: boolean; all: number; gone: boolean }[] = [];
       for (const t of tiles.values()) {
         if (!t.sites.size) continue;
         const bytes = t.pieces.reduce((n, p) => n + (evictable(p) ? p.bytes : 0), 0);
-        if (!bytes && !t.released) continue;
-        out.push({ key: t.key, d: boxDistance(x, y, z, t.x0, 0, t.z0, t.x1, t.top, t.z1), bytes, near: t.near, released: t.released });
+        const all = t.pieces.reduce((n, p) => n + (losable(p) ? p.bytes : 0), 0);
+        if (!bytes && !all && !t.released) continue;
+        out.push({ key: t.key, d: boxDistance(x, y, z, t.x0, 0, t.z0, t.x1, t.top, t.z1), bytes, near: t.lod && t.near, released: t.released, all, gone: t.gone });
       }
       return out;
     },

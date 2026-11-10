@@ -175,3 +175,79 @@ test('vertices are packed smaller: normals as bytes, the paint\'s colours as 16-
   // Packing twice changes nothing more
   assert.equal(size(compact(g, true)), 29);
 });
+
+test('a tile past the haze lets everything its sites drew go, and gets it back in two steps', () => {
+  const scene = new THREE.Scene();
+  const tiled = tileBatch(scene, [scene]);
+  tiled.update(0, 10, 0, 100);
+  const draw = () => {
+    const g = new THREE.Group();
+    scene.add(g);
+    piece(g, 905, 905, 'near');
+    piece(g, 906, 905, 'far');
+    piece(g, 907, 905);
+    piece(g, 908, 905, 'near', own);
+    return g;
+  };
+  tiled.add([draw()], { site: 'block' });
+  const [shared] = tiled.meshes;
+  assert.equal(visible(shared), 2);
+  const [h] = tiled.held(0, 10, 0);
+  assert.ok(h.all > h.bytes && !h.gone);
+  // Gone: the shared material's pieces at every level (the one in its own texture stays)
+  const pieces = tiled.pieces();
+  assert.equal(tiled.vanish('30,30'), h.all);
+  assert.equal(visible(shared), 0);
+  assert.deepEqual(tiled.lostSites('30,30'), ['block']);
+  const [g] = tiled.held(0, 10, 0);
+  assert.ok(g.gone && g.released && g.all === 0);
+  // (twice does nothing)
+  assert.equal(tiled.vanish('30,30'), 0);
+  // Inside the haze again: the walls and the far stand-in are built again, the near details not yet
+  tiled.add([draw()], { site: 'block', keep: (t, lod) => t === '30,30' && lod !== 'near' });
+  tiled.regained('30,30');
+  assert.equal(visible(shared), 2);
+  const [back] = tiled.held(0, 10, 0);
+  assert.ok(!back.gone && back.released && back.all === h.all - h.bytes);
+  // Close to: the near details too, as for a tile that only let those go
+  tiled.add([draw()], { site: 'block', keep: (t, lod) => t === '30,30' && lod === 'near' });
+  tiled.restored('30,30');
+  tiled.update(905, 2, 905, 100);
+  assert.equal(visible(shared), 2);
+  assert.equal(tiled.held(905, 2, 905)[0].all, h.all);
+  assert.equal(tiled.pieces(), pieces);
+  // A tile drawn near is never let go, nor the boot's own pieces
+  assert.equal(tiled.vanish('30,30'), 0);
+});
+
+test('the room tiles let go is given back: the meshes are made smaller, and still take new pieces', () => {
+  const scene = new THREE.Scene();
+  const tiled = tileBatch(scene, [scene]);
+  tiled.update(0, 10, 0, 100);
+  // Twenty tiles' worth of walls from one site each
+  const draw = (n: number) => {
+    const g = new THREE.Group();
+    scene.add(g);
+    for (let k = 0; k < 6; k++) piece(g, 600 + n * 30 + 5 + k, 905);
+    return g;
+  };
+  for (let n = 0; n < 20; n++) tiled.add([draw(n)], { site: `s${n}` });
+  const [bm] = tiled.meshes;
+  const bytes = () => Object.values(bm.geometry.attributes).reduce((n, a) => n + (a as THREE.BufferAttribute).array.byteLength, 0) + (bm.geometry.index!.array as Uint32Array).byteLength;
+  const full = bytes();
+  assert.equal(visible(bm), 20);
+  // Nothing let go: nothing to give back
+  assert.equal(tiled.trim(), 0);
+  // Fifteen of them go past the haze
+  for (let n = 5; n < 20; n++) assert.ok(tiled.vanish(`${20 + n},30`) > 0);
+  assert.equal(bytes(), full);
+  const back = tiled.trim();
+  assert.ok(back > full * 0.5, `${back} of ${full}`);
+  assert.equal(bytes(), full - back);
+  // What's left is still drawn, and a tile coming back fits again (the mesh grows for it)
+  assert.equal(visible(bm), 5);
+  tiled.add([draw(7)], { site: 's7', keep: (t) => t === '27,30' });
+  tiled.regained('27,30');
+  assert.equal(visible(bm), 6);
+  assert.equal(tiled.trim(), 0);
+});

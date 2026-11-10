@@ -338,6 +338,22 @@ keep it up to date when what it describes changes.
   where there were 44. A new shared material whose colours stay 0 to 1 can
   be marked `paint` too; one whose colours pass 1 must not be.
   `window.__mem()` under `?fps` says where the geometry memory is.
+- **Past the haze, phones let far tiles go altogether** (the owner's pick:
+  only on the ground, only what the haze already hides;
+  `docs/performance-plan.md`, phones' geometry memory step 2). On the low
+  tier, while walking, driving or riding (not the City view, not up in an
+  aircraft), `hazeHorizon()` (`tileplan.ts`) turns the scene's fog into the
+  distance past which under a hundredth of anything is left. A tile
+  `HORIZON_OUT` past it lets go of everything its sites drew in the shared
+  materials, at every level (`toVanish()`, `TileBatches.vanish()`), sites
+  still waiting out there wait on, and the meshes are made smaller once
+  enough has gone (`trim()`). A tile coming within `HORIZON_BACK` of it gets
+  its always-drawn and far pieces back (`toReturn()`, `regain()` in
+  `tilework.ts`: its sites run again), its near pieces when it's close, as
+  before; back in the City view every one returns, nearest first. `want()`
+  and `wantView()` bring back what they need at once. `?horizon=N` forces a
+  distance on any tier while walking, `?horizon=0` turns it off. Tested in
+  `tests/tileplan.test.ts` and `tests/tilebatch.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory

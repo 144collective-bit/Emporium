@@ -573,3 +573,44 @@ batched meshes of the shared toon paint held 170 of 240 MB. Each vertex was
   Also open: the uv (8 of the 29 bytes, zero but for the trees' sway), the
   places' near and far forms (32 MB as plain meshes) and the crowd's
   geometry (20 MB).
+
+## Phones' geometry memory, step 2: far tiles let go past the haze (2026-11)
+
+The owner's pick: only while on the ground, only what the haze already hides;
+the City view keeps everything.
+
+- **Built.** On the low tier, while walking, driving or riding (not the City
+  view, not up in an aircraft), `hazeHorizon()` in tileplan.ts turns the
+  scene's fog into the distance past which under a hundredth of anything is
+  left (about 580 by day at the haze's full thickness, about 204 at night).
+  A tile 60 past it lets go of everything its sites drew in the shared
+  materials, at every level (`vanish()` in tilebatch.ts), sites still waiting
+  out there wait on, and once 6 MB has gone the batched meshes are packed and
+  made smaller (`trim()`: until now room let go was only reused, never given
+  back). A tile coming within 20 of the horizon gets its always-drawn and far
+  pieces back (its sites run again), its near pieces when it's close as
+  before; in the City view every tile returns, nearest first. `?horizon=N`
+  forces a distance, `?horizon=0` turns it off.
+- **Measured** (headless phone tier, `?horizon=` forced, about 18 minutes
+  standing downtown each, still building slowly when stopped, so read them as
+  "about"): geometry about 113 MB at the night distance and 127 MB at the
+  day's, against 185 MB with most of the city held (step 1's figure). After
+  five minutes in the City view and then walking far across town at the
+  night distance: 120 tiles gone, the meshes 7.8 MB smaller, no errors.
+- **Not measured:** a real phone; a long session's steady state by day (from
+  downtown, 640 reaches most of the town, so by day the saving is mostly at
+  the city's edges); the hitch when `trim()` copies a mesh (it runs at most
+  every 4 s).
+- **Known limits.** After a fast travel or a ride's end on a phone, tiles
+  inside the horizon but far from where you arrive come back over the next
+  moments, nearest first. Going back to the City view builds everything
+  again (the owner's pick: it keeps everything), so the saving is for the
+  time on the ground.
+- **Open, the owner's call: the haze while walking.** sky.ts thins the haze
+  by how far the camera is from the City view's last target (`far`, down to
+  0.55 of its thickness), which was meant for the pulled-back City view but
+  also applies on foot: walking more than about 130 from where the City view
+  last looked, the day's haze is up to 45% thinner and the horizon up to
+  about 1,050, where little is past it. Holding the haze at full thickness on
+  the ground would make it the same wherever you walk and let this step save
+  by day too; it changes how far you see on foot, so it wasn't done.
