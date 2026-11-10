@@ -131,7 +131,8 @@ test('the formal garden: walled on the stadium\'s old site, open at the Mall and
 });
 
 test('the flower beds: along the Mall and round the walks, off every path, lamp, bench, tree, the lake and each other', () => {
-  assert.ok(MALL_BEDS.length > 10 && PLANTERS.length > 20);
+  // (the Mall's beds only behind City Hall since the civic square took its south stretch, civic.ts)
+  assert.ok(MALL_BEDS.length >= 4 && PLANTERS.length > 20);
   const spots: { at: Pt; r: number }[] = [...MALL_BEDS.map((b) => ({ at: [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2] as Pt, r: Math.hypot(b[2] - b[0], b[3] - b[1]) / 2 })), ...PLANTERS];
   for (const { at, r } of spots) {
     assert.ok(inPark(at, r), `a bed off the park at ${at}`);

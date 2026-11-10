@@ -20,6 +20,7 @@ import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES } from './westlake';
+import { SQUARE_LAMPS, SQUARE_TREES } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
@@ -371,6 +372,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // of its own, loaded as you approach (districts.ts)
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
+  // The civic square's (civic.ts, docs/civic-plan.md)
+  for (const [x, z] of SQUARE_TREES) addTree(x, z, 1, false);
+  for (const [x, z, ry] of SQUARE_LAMPS) addLamp(x, z, ry);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z, ry, y] of SUN_LAMPS) addLamp(x, z, ry, y);

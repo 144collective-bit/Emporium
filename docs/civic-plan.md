@@ -3,8 +3,8 @@
 The first section of building out to the walls (`docs/buildout-plan.md`, the land
 plan's first round): the seat of power in the North Ward. It's built in the
 south end of Westlake Park, facing Uptown across the avenue. Built one phase at
-a time, each with the owner's sign-off. Keep this plan up to date. Nothing here
-is built yet.
+a time, each with the owner's sign-off. Keep this plan up to date. Phase 1 (the
+land, the square and the walks) is built, waiting on the owner's sign-off.
 
 ## The owner's answers (2026-11-10)
 
@@ -13,6 +13,11 @@ is built yet.
 | Where is City Hall? | In Westlake Park, at its south end on the Mall (its central walk, x -140, Uptown's axis), facing a civic square across the avenue to Uptown's plaza and its gold cross: one line from City Hall to the cross. |
 | The police headquarters and the courthouse | **Flanking City Hall**, one civic quarter round the square. |
 | First section to build | **This one**: the civic quarter, close to town and small, within today's limits. |
+| City Hall's size (the second round) | **About 26 across**, the lake untouched. It came out at 24 across its front range with a 16-wide block behind on the axis, so the lake loop didn't have to move at all. |
+| Its height | **Over the Emporium**: a tower or dome seen across the city, the seat of power (the owner's exception, like Uptown's). |
+| Its style | **Stern stripped classicism**: pale stone, square columns, wide steps, long banners, a made-up emblem. |
+| The police headquarters and the courthouse | **Places** with pins and panels, coming soon. |
+| The names | **Plain**: Sector 7 City Hall, Sector 7 Police, the Sector 7 Courthouse (made up; the regime's own names can come with the storyline). |
 
 ## The site (measured)
 
@@ -44,44 +49,68 @@ is built yet.
   These are the park's own. The lake, its loop and the garden stay; what's in
   the square's way moves, the owner's call.
 
-## A first layout (to settle in Phase 1)
+## The layout (settled in Phase 1, `civic.ts`)
 
 In world numbers, x across and z north to south.
 
-- **The civic square:** about x -160 to -120, z -10 to -38, open to the avenue
-  all along its south side, the axis through its middle. The Mall's flower
-  beds and its avenue of trees are carried on as the square's edges.
-- **City Hall:** on the axis at the square's north side, about z -38 to -64.
-  It can be about 26 across (x -153 to -127) with the lake loop's west curve
-  nudged a few tiles east round its back corner (the lake itself untouched),
-  or about 18 across as things are. The Mall carries on north from behind it
-  to the garden and the north gate.
-- **The police headquarters:** west of the square, about x -175 to -162, z -12
-  to -50, its vehicle gate onto the avenue, patrol cars in its yard.
-- **The courthouse:** east of the square, south of the lake, about x -118 to
-  -102, z -12 to -28: steps up to a portico facing the square.
+- **The civic square** (`SQUARE`): x -156 to -124, z -36 to the park's edge
+  (-9), open to the avenue all along its south side (the Mall's south gate
+  went, and the park's low wall stops either side). The ring walk crosses it
+  at z -15 as paving.
+- **City Hall** (`HALL`): on the axis at the square's head, a front range 24
+  across (x -152 to -128, z -44 to -36) and a block 16 across behind it
+  (x -148 to -132, z -62 to -44), clear of the lake loop's west curve. Its
+  front door is on the axis at the square, its back door onto the Mall.
+- **The police headquarters** (`POLICE`): west of the square, x -167 to -158,
+  z -36 to -18, its front to the square. The ring walk runs past its back and
+  its south side, so its yard and a vehicle way out come with Phase 3.
+- **The courthouse** (`COURT`): east of the square, x -122 to -113, z -30 to
+  -18, its front to the square, the lake loop behind it.
+- **The walks:**
+  - the Mall starts at City Hall's back door;
+  - the west walk (`civic-w`) runs from the square's north-west corner up
+    City Hall's west side and round behind it to the Mall at z -66;
+  - the way to the lake (`mall-lake`) moved there too, straight across to
+    the loop;
+  - the east walk (`civic-e`) runs from the square's north-east corner to the
+    loop.
+
+  They're paved and kerbed like the main walks.
 - **Walking, the camera and traffic:** the square is walked on as paving. The
-  three buildings are solid. The police's patrol cars come and go by the
-  avenue.
+  three buildings will be solid (their phases).
 
 ## Phases
 
-### Phase 1: the land, the square and the paths
+### Phase 1: the land, the square and the paths (built)
 
-- A DOM-free `civic.ts`, tested:
+- A DOM-free `civic.ts`, tested in `tests/civic.test.ts`:
   - the square, the three buildings' lots, their solids;
   - the park's paths re-laid round them (westlake.ts `PATHS`: the Mall's south
     stretch, the ring walk, the meadow path, the south-west gate's path; the
     lake loop's west curve, if City Hall takes the wider width);
   - the trees, lamps, beds and benches moved or taken out;
   - the gates.
-- The square drawn: stone paving, the beds and trees along its edges, lamps,
-  benches, the axis inlaid.
+- The square drawn (`civic3d.ts`, in Westlake Park's chunk):
+  - Uptown's granite over the whole square (plaza3d.ts), so the axis reads as
+    one walk from City Hall's door to the plaza's cross;
+  - the axis inlaid down its middle in a darker stone, and a border of it
+    round its three park sides;
+  - a pale ring round its middle, level with the flanking lots;
+  - six trees in grates and six lamps along its edges (at the boot, with the
+    park's), and four benches facing the axis.
+- What moved for it:
+  - 31 of the park's 260 trees, 3 of its 68 lamps (net: the walks round City
+    Hall have lamps of their own), 6 of its 21 benches and the Mall's beds
+    south of City Hall;
+  - the Mall's south gate (its WESTLAKE PARK board went to the north gate);
+  - the two edge-row trees across the square's mouth.
+
+  The lake, its loop, the garden and every other path are as they were.
 - The tests:
   - nothing on the lake;
   - every path still joins up;
   - the zebra and Uptown's lane in line with City Hall's door;
-  - the snapshot, rewritten only for what the owner moved.
+  - the snapshot, rewritten only for what the owner moved (the Mall's south gate).
 
 ### Phase 2: City Hall
 
@@ -108,7 +137,7 @@ In world numbers, x across and z north to south.
 
 - `?bench` and review views, phones, the plan done.
 
-## Open questions for the owner
+## The second round's questions (answered: all the first options)
 
 1. **City Hall's size:**
    - A) About 26 across, the lake loop's path nudged a few tiles round its back

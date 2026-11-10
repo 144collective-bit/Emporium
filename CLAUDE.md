@@ -778,7 +778,8 @@ it and has been retired completely. Build only on what's here.
     walk.ts stops you on the lawn at its rim (`RIM`), cars stop at
     `LAKE_WALLS`, which drive-sim.ts adds near it); the paths (`PATHS`:
     `ring` round the big block, `loop` round the lake (`LOOP_OUT`), the
-    Mall (`MALL`) from the south gate to the stadium's forecourt, the ways
+    Mall (`MALL`) from City Hall's back door (the civic quarter, below) to
+    the stadium's forecourt, the ways
     in from `GATES`; `onPath()`); the gates' piers
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, clumps from a seeded noise; `clump` ones,
@@ -790,7 +791,7 @@ it and has been retired completely. Build only on what's here.
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
   - `westlake3d.ts` draws the rest as sites: the paths (a stretch a
     site: the main walks paved, the rest pale gravel), the lake's stone rim (in quarters), the
-    gates (stone piers, caps, lanterns; the Mall's with iron posts, a beam
+    gates (stone piers, caps, lanterns; the Mall's north gate with iron posts, a beam
     and WESTLAKE PARK on a board both ways, one small texture), benches
     (near only); and on the main thread the lake's water (one mesh, the
     river's `waterMat`). It's the first district loaded as you approach
@@ -866,6 +867,34 @@ it and has been retired completely. Build only on what's here.
     the formal garden (stage 3), the Mall running through it to the
     north gate; the old car park on the first strip
     went back to park.
+- **The civic quarter** (the owner's call, the build-out plan's first
+  section: City Hall, the police headquarters and the courthouse at
+  Westlake Park's south end, facing Uptown across the avenue) is planned in
+  `docs/civic-plan.md` in five phases, each with the owner's sign-off; keep
+  it up to date. City Hall may rise over the Emporium (the owner's
+  exception: a tower or dome, the seat of power), in stern stripped
+  classicism; the police headquarters and the courthouse are to be places;
+  names plain and made up (Sector 7 City Hall, Sector 7 Police, the Sector 7
+  Courthouse). Phase 1 (the land, the square and the walks) is built,
+  waiting on the owner's sign-off: `civic.ts` (DOM-free, tested in
+  `tests/civic.test.ts`):
+  - the civic square (`SQUARE`) on the axis (`AXIS`, the Mall's line and
+    Uptown's), open to the avenue (the Mall's south gate went, its WESTLAKE
+    PARK board to the north gate; the park's wall stops either side);
+  - the lots kept for the buildings (`LOTS`: City Hall's `HALL` front range
+    and back block at the square's head, `POLICE` west and `COURT` east,
+    facing across it; lawn until their phases);
+  - the walks round City Hall (westlake.ts `civic-w`, `civic-e`; the Mall
+    starts at its back door, `mall-lake` moved behind it, all three clear of
+    the lake loop, which didn't move);
+  - the square's trees, lamps and benches (`SQUARE_TREES`, `SQUARE_LAMPS`,
+    `SQUARE_BENCHES`).
+
+  The park's trees, lamps, benches, beds, planters, edge row and picnics
+  keep off it (`inCivic()`), and the kerbs stop at the square
+  (`inSquare()`). Drawn by `civic3d.ts` (Westlake Park's chunk): Uptown's
+  granite (plaza3d.ts) over the square, the axis and a border inlaid, a pale
+  ring at its middle, grates round its trees.
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
