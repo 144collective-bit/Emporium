@@ -32,6 +32,7 @@ import { PILLARS } from './metro';
 import { WALK_W } from './layout';
 import { rng } from './recipes';
 import { BUILT, baked } from './baked';
+import { CAR_SCALE } from './carspec';
 
 export type AmenityKind = 'playground' | 'halfcourt' | 'soccer' | 'skate' | 'garden' | 'chess' | 'washing';
 /** Each kind's size (w along x before turning, d along z) */
@@ -296,7 +297,7 @@ export const BAY_CARS: { bay: string; car: [string, number, number, number, stri
   return out;
 })();
 /** A parked car's footprint, half its length and width (the longest model) */
-export const CAR_HALF = { l: 1.5, w: 0.6 };
+export const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 
 /* ---------- Hydrants ---------- */
 

@@ -21,6 +21,7 @@
 import { BED, CREST_LAMPS, HILL_ROADS, nearHillRoad, roadY, type HillRoad, type Rect } from './crestmont';
 import { HILLS, TERRAIN_RECT, natural } from './hills';
 import { rng } from './recipes';
+import { CAR_SCALE } from './carspec';
 
 type Pt = [number, number];
 type Box = [number, number, number, number, number];
@@ -293,7 +294,7 @@ export function wallsOf(m: Mansion): [number, number, number, number][] {
 
 /* ---------- The cars, what's solid, and where the hills' planting keeps off ---------- */
 
-const CAR_HALF = { l: 1.5, w: 0.6 };
+const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 /** [model, x, z, yaw, paint] on each forecourt, by the drive, facing out; and its pad's height */
 export const MANSION_CARS: { y: number; car: [string, number, number, number, string] }[] = (() => {
   const r = rng(2727);

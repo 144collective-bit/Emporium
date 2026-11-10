@@ -110,7 +110,7 @@ server bundles it.
   his reach) and the cars (world props sized against the lanes; their door
   handles and roofs sit high on him, a car's scale is a question of its own).
 
-## The cars to match (the owner's pick; Phases 1 and 2 built)
+## The cars to match (the owner's pick; built)
 
 The owner's call (2026-11-10, option A): the cars come down about 12% so
 they sit against everyone as real cars sit against real people. Today the
@@ -186,7 +186,16 @@ him), karts, boats and aircraft stay as they are.
   door, the handle and the seat for getting in and out come from
   `inWorld()` (carinside.ts). The bikes' riders keep `DRIVER_SCALE` and
   `SITTER`.
-- **Left (Phase 3):** the parked cars' boxes written by hand (`CAR_HALF`
-  in commons, kerbside, mall, stadium, estates, mansions, coral, airfield,
-  the kart facility) are still the old size: a step bigger than the cars
-  now, so you stop a touch short of them. Then Phase 4's checks.
+- **Phase 3, the footprints written by hand:** every `CAR_HALF` (commons,
+  kerbside, mall, stadium, estates, mansions, coral, airfield, the kart
+  facility), the kart park's buses and trucks, streetwall.ts's `CAR` and
+  the cars under the viaduct (viadress.ts) times `CAR_SCALE`; the boxes
+  worked out from `CARS` (Southfield, Lot 9, the service yards, Sunridge's
+  driveways) came down by themselves. The airport's truck yard (`RIGS`,
+  drawn by its own code, not the cars') is as it was. The bus stops and
+  loading bays stop by the route, not the car's length: nothing to change.
+- **Phase 4, checked:** every test (1,296), the typecheck, lint and the
+  budget (boot 694.6 of 740 KB); shots by day and at night (the mall's
+  car park and taxi rank, downtown, the garage) and on the phone tier (the
+  far forms at the new size). The triangle counts are as they were (the
+  same geometry, scaled), so the bench wasn't rerun.

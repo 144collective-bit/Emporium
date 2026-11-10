@@ -33,6 +33,7 @@ import { CIRCUIT, CLEAR, GANTRY, PIT_HALF, PIT_LANE, RESET_AT, SITE, SUPPORTS, e
 import { DRIVE_X, EW0, GATE, KART_PARK, KART_W, LOOP, ROAD, frame, toLocal, toWorld, type Line, type Pt } from './kartpark';
 import type { Box } from './solids';
 import type { Rect } from './tiles';
+import { CAR_SCALE } from './carspec';
 
 /** A rectangle in local numbers */
 export interface LRect {
@@ -424,7 +425,7 @@ export const PARKED: [string, number, number, number, string][] = (() => {
   }
   return out;
 })();
-const CAR_HALF = { l: 1.5, w: 0.62 };
+const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.62 * CAR_SCALE };
 
 /* ---------- Lamps and trees ---------- */
 
@@ -572,7 +573,7 @@ export const FACILITY_SOLIDS: Box[] = [
   ...FLOODLIGHTS.map(({ x, z }): Box => [x - FLOOD.half, z - FLOOD.half, x + FLOOD.half, z + FLOOD.half, FLOOD.h]),
   ...[...PARKED, ...COACHES, ...TRANSPORTERS].map(([m, x, z, yaw]): Box => {
     const along = Math.abs(Math.cos(yaw)) > 0.5;
-    const half = m === 'bus' ? { l: 2.85, w: 0.85 } : m === 'truck' ? { l: 2, w: 0.65 } : CAR_HALF;
+    const half = m === 'bus' ? { l: 2.85 * CAR_SCALE, w: 0.85 * CAR_SCALE } : m === 'truck' ? { l: 2 * CAR_SCALE, w: 0.65 * CAR_SCALE } : CAR_HALF;
     const [hx, hz] = along ? [half.l, half.w] : [half.w, half.l];
     return [x - hx, z - hz, x + hx, z + hz, m === 'bus' || m === 'truck' ? 2.4 : 1.3];
   }),
