@@ -26,7 +26,7 @@
  *   never hurting anyone.
  */
 import type { Box } from './solids';
-import { RIVER } from './layout';
+import { RIVER, WALL_OUT } from './layout';
 import { edgeSamples, topsAt } from './river';
 import { riverCrossings } from './streetplan';
 import { LAKE_C, LAKE_WALLS } from './westlake';
@@ -161,12 +161,13 @@ export const RIVER_WALLS: Box[] = (() => {
       out.push([p0, Math.min(...e.map((q) => q[0])) - 0.3, p1, Math.max(...e.map((q) => q[1])) + 0.3, 2]);
     }
   };
-  let at = run[0];
+  let at = run[0] - WALL_OUT;
   for (const [g0, g1] of bridges) {
     stretch(at, g0 + 0.1);
     at = g1 - 0.1;
   }
-  stretch(at, run[1]);
+  // (on to the wall's foot at either end: the river runs to its inner face, docs/wall-plan.md Phase 3)
+  stretch(at, run[1] + WALL_OUT);
   return out;
 })();
 /** The river's walls a car at x might touch (`reach` either way): they're in order along x */

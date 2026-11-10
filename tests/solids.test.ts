@@ -16,6 +16,7 @@ import { UNDER_SOLIDS } from '../src/scripts/city3d/viadress';
 import { SWING_SOLIDS } from '../src/scripts/city3d/swingbridge';
 import assert from 'node:assert/strict';
 import { CAMERA_ONLY, DOORS, FIGHTCLUB_SITE, GARAGE_SITE, MARKET_SITE, RACK, SHOT_SOLIDS, SOLIDS, STALL_SPOT, TURNTABLE_BOX, UNIT_SITE, UNIT_SIZE, WALK_SPAWN, LOT_SITE, lotSolids, rayBoxes, unitSolids } from '../src/scripts/city3d/solids';
+import { FLOOD_SOLIDS, WALL_SOLIDS } from '../src/scripts/city3d/wall';
 import { BIG_LOTS, BS, EW_ROADS, GARAGE, LANE, MARKET, NS_ROADS, UNITS, ewRuns, nsRuns } from '../src/scripts/city3d/layout';
 import { CIRCUIT_SOLIDS as KART_SOLIDS } from '../src/scripts/city3d/kartcircuit';
 import { FACILITY_SOLIDS } from '../src/scripts/city3d/kartfacility';
@@ -42,12 +43,13 @@ test('every solid box stands on a block, district or the garage lot (the kart pa
   const laybyCar = (b: (typeof SOLIDS)[number]) => KERBSIDE_SOLIDS.indexOf(b) >= 0 && KERBSIDE_SOLIDS.indexOf(b) < LAYBY_CARS.length;
   const bayCar = (b: (typeof SOLIDS)[number]) => CORAL_SOLIDS.indexOf(b) >= CORAL_SOLIDS.length - CORAL_CARS.length;
   const stadiumOpen = (b: (typeof SOLIDS)[number]) => STADIUM_SOLIDS.includes(b) && [CAR_PARK].some((r) => (b[0] + b[2]) / 2 > r[0] && (b[0] + b[2]) / 2 < r[2] && (b[1] + b[3]) / 2 > r[1] && (b[1] + b[3]) / 2 < r[3]);
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !MONO_PILLAR_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !VERGE_SOLIDS.includes(b) && !FRINGE_SOLIDS.includes(b) && !LOT9_SOLIDS.includes(b) && !ENDS_SOLIDS.includes(b) && !COMMON_SOLIDS.includes(b) && !PIER_SOLIDS.includes(b) && !RAMP_PIER_SOLIDS.includes(b) && !UNDER_SOLIDS.includes(b) && !SWING_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !MONO_PILLAR_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !VERGE_SOLIDS.includes(b) && !FRINGE_SOLIDS.includes(b) && !LOT9_SOLIDS.includes(b) && !ENDS_SOLIDS.includes(b) && !COMMON_SOLIDS.includes(b) && !PIER_SOLIDS.includes(b) && !RAMP_PIER_SOLIDS.includes(b) && !UNDER_SOLIDS.includes(b) && !SWING_SOLIDS.includes(b) && !WALL_SOLIDS.includes(b) && !FLOOD_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
 test('no solid box sits on a road (but the metro\'s pillars in an avenue\'s median, metro.test.ts)', () => {
   for (const b of SOLIDS) {
-    if (METRO_SOLIDS.includes(b) || MONO_PILLAR_SOLIDS.includes(b)) continue;
+    // (and the wall round the city, past every road's end: wall.test.ts)
+    if (METRO_SOLIDS.includes(b) || MONO_PILLAR_SOLIDS.includes(b) || WALL_SOLIDS.includes(b)) continue;
     // (the short north-south streets only from the Parkway south: the mall's land past it, docs/mall-plan.md)
     NS_ROADS.forEach((r, i) => assert.ok(b[2] <= r.c - r.half || b[0] >= r.c + r.half || !nsRuns(i, b[3]), `box ${b.join(', ')} on the road at x ${r.c}`));
     // (and the small east-west streets don't run across the Neon Mile: docs/strip-plan.md)

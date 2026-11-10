@@ -163,8 +163,15 @@ declare const __WORLD_EXT__: [number, number] | undefined;
 export const EXT: [number, number] = typeof __WORLD_EXT__ !== 'undefined' ? __WORLD_EXT__ : [-680, 720];
 /** The built-up part: traffic loops here and the outskirts' trees fill round it */
 export const CITY_EXT: [number, number] = [-80, 140 + SOUTH_SHIFT];
-/** How far you can walk or drive: x0, z0, x1, z1 (a little inside the edge) */
-export const WORLD_BOUNDS: [number, number, number, number] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
+/** How far past the edge the wall's inner face stands (wall.ts `WALL.out`, docs/wall-plan.md: where the grass ended) */
+export const WALL_OUT = 80;
+/** How far short of the wall's inner face walking and driving stop (the wall is solid too: wall.ts `WALL_SOLIDS`) */
+export const WALL_MARGIN = 1;
+/**
+ * How far you can walk or drive: x0, z0, x1, z1. Since the wall plan's Phase 3 (the owner's call: "walk to the wall")
+ * the wall's foot, `WALL_MARGIN` inside its inner face; the strip past `EXT` is grass to it
+ */
+export const WORLD_BOUNDS: [number, number, number, number] = [EXT[0] - WALL_OUT + WALL_MARGIN, EXT[0] - WALL_OUT + WALL_MARGIN, EXT[1] + WALL_OUT - WALL_MARGIN, EXT[1] + WALL_OUT - WALL_MARGIN];
 
 /** Lane centres of a road, with the direction traffic runs (+1 / -1 along the road's axis) */
 export function laneCentres(r: Road, axis: 'x' | 'z'): { coord: number; dir: 1 | -1 }[] {
