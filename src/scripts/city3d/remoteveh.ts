@@ -14,7 +14,7 @@
  * the first time anyone is seen in one.
  */
 import * as THREE from 'three';
-import { createCar } from './cars';
+import { CAR_SCALE, createCar } from './cars';
 import { createFleet, type Fleet } from './aircraft';
 import { paintHex, type PlayerCar } from './mycar';
 import type { BikeId } from './mybike';
@@ -67,7 +67,7 @@ export function remoteVehicle(scene: THREE.Scene, tag: Vehicle, fig: Degen): Rem
   if (tag.k === 'car') {
     const car = createCar(tag.id as PlayerCar, hex);
     scene.add(car.group);
-    const wheelbase = car.spec.L * 0.6;
+    const wheelbase = car.spec.L * 0.6 * CAR_SCALE;
     let lastSpeed = 0;
     place = (f, _steer, _lean, dist) => {
       car.group.position.set(f.x, f.y, f.z);

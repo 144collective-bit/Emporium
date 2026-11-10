@@ -20,7 +20,7 @@ import { heightAt, onHills, riseAlong } from './terrain';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
 import { JUNCTIONS, ROUTES, SPOTS, climbOn, heightOn, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
-import { BAR, CARS, PAINTS, carGeometry, carMaterials, theFarCars, trailerGeometry, type CarId } from './cars';
+import { BAR, CARS, CAR_SCALE, PAINTS, carGeometry, carMaterials, theFarCars, trailerGeometry, type CarId } from './cars';
 import { BIKES, type BikeId } from './mybike';
 import { DRIVER_SCALE } from './carinside';
 import { riderRoot } from './acts';
@@ -576,7 +576,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
   // (an indicator lens: 0.04 tall, 0.1 wide, bigger than an ink outline)
   const LENS = new THREE.Vector3(1, 0.57, 0.67);
   // The patrol cars' light bars: a lens lit over each dark one, a touch bigger (cars.ts `BAR`)
-  const BAR_SCALE = new THREE.Vector3((BAR.w + 0.012) / 0.03, (BAR.h + 0.01) / 0.07, (BAR.d + 0.012) / 0.15);
+  const BAR_SCALE = new THREE.Vector3((BAR.w + 0.012) / 0.03, (BAR.h + 0.01) / 0.07, (BAR.d + 0.012) / 0.15).multiplyScalar(CAR_SCALE);
   const BAR_COL = [new THREE.Color('#3d6bff').multiplyScalar(1.5), new THREE.Color('#e219e5').multiplyScalar(1.4)];
   scene.add(fx(head), fx(tail));
 
@@ -997,7 +997,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
         const lit = barLit(t, v.seed);
         for (const k of [0, 1] as const) {
           const i = nVeh * PER_CAR + v.bar * 2 + k;
-          if (lit === k + 1) lamp(tail, i, M, [BAR.x, BAR.y, (k ? 1 : -1) * BAR.z], BAR_COL[k], BAR_SCALE);
+          if (lit === k + 1) lamp(tail, i, M, [BAR.x * CAR_SCALE, BAR.y * CAR_SCALE, (k ? 1 : -1) * BAR.z * CAR_SCALE], BAR_COL[k], BAR_SCALE);
           else tail.setMatrixAt(i, NONE);
         }
       }

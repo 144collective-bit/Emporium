@@ -2217,7 +2217,13 @@ it and has been retired completely. Build only on what's here.
   (vertex colours), plus the bus's lit windows, so the traffic in `life.ts`
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
-  scale with Degen (a hatch's roof is about 0.95 tiles up).
+  scale with Degen: every vehicle is drawn at `CAR_SCALE` (0.88, the scale
+  plan's cars, docs/scale-plan.md) of the numbers it's written in (`DRAWN`
+  in carspec.ts, what the drawing, the inside and the springs work in);
+  `CARS` is them at their size in the world, what everything else reads (a
+  hatch's roof about 0.84 tiles up, just under Degen's head). Degen sits in
+  a car's drawn numbers at `IN_CAR` (carinside.ts), and `inWorld()` gives a
+  seat and door in the world's.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,

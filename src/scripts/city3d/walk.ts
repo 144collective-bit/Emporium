@@ -72,7 +72,7 @@ import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
 import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, bikeMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
-import { INTERIORS } from './carinside';
+import { inWorld } from './carinside';
 import { CARS } from './cars';
 import { toon } from './kit';
 import { BENCHES } from './pedestrians';
@@ -602,7 +602,7 @@ export function createWalk(d: WalkDeps) {
       if (v.kind === 'bike' && v.bike) return bikeMark(v, BIKES[v.bike], pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
       // Your car (vehicle plan Phase 3): by the door on his side, onto its real seat; that side blocked, the quick
       // swap; under reduced motion always the quick version, no fade
-      const inside = v.kind === 'car' && v.model ? INTERIORS[v.model] : null;
+      const inside = v.kind === 'car' && v.model ? inWorld(v.model) : null;
       if (!inside?.door) return sideMark(v.kind, v, MOMENT[v.kind].seat);
       if (d.reduced) return null;
       // (at home the turntable is stood on to get in: carMark's spot is by the door, on the disc)

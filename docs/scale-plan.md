@@ -110,7 +110,7 @@ server bundles it.
   his reach) and the cars (world props sized against the lanes; their door
   handles and roofs sit high on him, a car's scale is a question of its own).
 
-## The cars to match (the owner's pick, planned, not built)
+## The cars to match (the owner's pick; Phases 1 and 2 built)
 
 The owner's call (2026-11-10, option A): the cars come down about 12% so
 they sit against everyone as real cars sit against real people. Today the
@@ -160,10 +160,33 @@ him), karts, boats and aircraft stay as they are.
    view), the bench before and after, every test, the layout snapshot
    unchanged.
 
-### Questions for the owner
+### The owner's answers
 
-- 0.88 (a hatch's roof just under his head), or 0.9 (level with it)?
-- The buses and trucks too? The City Bus is 5.6 long and 1.66 tall (about
-  10 m by 3 m, already a little short of a real one); at 0.88 it's a
-  midibus. The suggestion: everything at the one size, so nothing looks
-  out of place beside it.
+- 0.88 (a hatch's roof just under his head).
+- Everything at the one size: the buses, trucks and the rig too.
+
+### Built (2026-11-10), waiting on the owner's sign-off
+
+- **Phase 1, the bodies:** carspec.ts's `CAR_SCALE` 0.88; the models as
+  written are `DRAWN` (`DRAWN_TRAILER`, `DRAWN_FIFTH_WHEEL`), and `CARS`
+  (`TRAILER`, `FIFTH_WHEEL`) are them times `CAR_SCALE`, what the world
+  reads. cars.ts draws in `DRAWN` and brings each model to size once:
+  `carGeometry()` scales the traffic's and the parked cars' geometry and
+  their lamps' spots (`sized()`; carfine.ts's rebuild with the fine detail
+  does the same), the far forms and the trailer likewise; your own car
+  (`own`) keeps the drawing's numbers and its group is scaled instead
+  (`createCar()`), so its fitted inside, doors and springs stay as written.
+  The patrol cars' light bar (life.ts), other players' cars' wheelbase
+  (remoteveh.ts), the skid marks' and springs' ground under the wheels
+  (carride.ts) take the scale.
+- **Phase 2, inside (came with it):** Degen sits in a car's drawn numbers
+  at `IN_CAR` (0.66 / 0.88), so he's everyone's size in the world;
+  `IN_CAR_SITTER` is what the seats, the wheel and the pedals fit, and
+  every seat already fits him (carspec.test.ts, in the drawn numbers). The
+  door, the handle and the seat for getting in and out come from
+  `inWorld()` (carinside.ts). The bikes' riders keep `DRIVER_SCALE` and
+  `SITTER`.
+- **Left (Phase 3):** the parked cars' boxes written by hand (`CAR_HALF`
+  in commons, kerbside, mall, stadium, estates, mansions, coral, airfield,
+  the kart facility) are still the old size: a step bigger than the cars
+  now, so you stop a touch short of them. Then Phase 4's checks.

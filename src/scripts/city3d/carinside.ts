@@ -10,7 +10,7 @@
  * driver sits on the left (-z), the side Degen gets in and out (drive.ts).
  */
 import { ARM_REACH, FIGURE_SCALE, HIP_Y, SHIN_GROUND, SHOULDER_X, SHOULDER_Y, THIGH } from './skeleton';
-import { CARS, type CarId, type CarSpec } from './carspec';
+import { CAR_SCALE, DRAWN as CARS, type CarId, type CarSpec } from './carspec';
 
 type V2 = [number, number];
 /** Degen's crown over the ground at scale 1 (skeleton.ts) */
@@ -23,15 +23,23 @@ export const DRIVER_SCALE = FIGURE_SCALE;
  * 1.28 to the crown), his eyes, his shoulders (and their spread), his arm's reach from the shoulder, and his thigh
  * and shin
  */
-export const SITTER = {
-  crown: (CROWN - HIP_Y) * DRIVER_SCALE,
-  eye: (CROWN - 0.11 - HIP_Y) * DRIVER_SCALE,
-  shoulder: SHOULDER_Y * DRIVER_SCALE,
-  shoulderX: SHOULDER_X * DRIVER_SCALE,
-  reach: ARM_REACH * DRIVER_SCALE,
-  thigh: THIGH * DRIVER_SCALE,
-  shin: -SHIN_GROUND * DRIVER_SCALE,
-};
+const sitter = (k: number) => ({
+  crown: (CROWN - HIP_Y) * k,
+  eye: (CROWN - 0.11 - HIP_Y) * k,
+  shoulder: SHOULDER_Y * k,
+  shoulderX: SHOULDER_X * k,
+  reach: ARM_REACH * k,
+  thigh: THIGH * k,
+  shin: -SHIN_GROUND * k,
+});
+export const SITTER = sitter(DRIVER_SCALE);
+/**
+ * His size in a car's own numbers (`DRAWN`: the car is drawn in them and brought to its size in the world by
+ * `CAR_SCALE`, his group inside it with it), so he's everyone's size in the world (the scale plan's cars), and
+ * `IN_CAR_SITTER` his measurements there: what the seats, the wheel and the pedals are fitted to
+ */
+export const IN_CAR = FIGURE_SCALE / CAR_SCALE;
+export const IN_CAR_SITTER = sitter(IN_CAR);
 
 export type V3 = [number, number, number];
 
@@ -124,14 +132,14 @@ function interior(s: CarSpec): Interior {
   // The driver on the left, a little in from the middle of his half of the cabin
   const half = (s.W * s.cabinW) / 2;
   const hip: V3 = [seat.x, seat.y, -half * 0.5];
-  const shoulders: [V3, V3] = [alongBack(hip, seat.recline, SITTER.shoulder, 0, -SITTER.shoulderX), alongBack(hip, seat.recline, SITTER.shoulder, 0, SITTER.shoulderX)];
+  const shoulders: [V3, V3] = [alongBack(hip, seat.recline, IN_CAR_SITTER.shoulder, 0, -IN_CAR_SITTER.shoulderX), alongBack(hip, seat.recline, IN_CAR_SITTER.shoulder, 0, IN_CAR_SITTER.shoulderX)];
   // The wheel four-fifths of his reach out from the shoulders, a little under them, tilted back towards him
-  const sh = alongBack(hip, seat.recline, SITTER.shoulder);
+  const sh = alongBack(hip, seat.recline, IN_CAR_SITTER.shoulder);
   const wheelTilt = 0.35 + seat.recline * 0.5;
-  const out = SITTER.reach * 0.8;
+  const out = IN_CAR_SITTER.reach * 0.8;
   const wheel: V3 = [sh[0] + out * 0.92, sh[1] - out * 0.39, hip[2]];
   // (0.095 when he was 0.85: in step with his size, docs/scale-plan.md)
-  const wheelR = 0.095 * (DRIVER_SCALE / 0.85);
+  const wheelR = 0.095 * (IN_CAR / 0.85);
   const seams = s.seams ?? [];
   const [back, hinge] = seams.slice(-2);
   // (the handle cars.ts lays on the door, else one a little in from its back edge)
@@ -139,14 +147,14 @@ function interior(s: CarSpec): Interior {
   return {
     hip,
     recline: seat.recline,
-    eye: alongBack(hip, seat.recline, SITTER.eye, 0.04),
+    eye: alongBack(hip, seat.recline, IN_CAR_SITTER.eye, 0.04),
     shoulders,
     wheel,
     wheelR,
     wheelTilt,
     dash: [wheel[0] + 0.14, wheel[1] + 0.07],
     floor: seat.floor ?? s.clr + 0.04,
-    pedals: hip[0] + SITTER.thigh + 0.16,
+    pedals: hip[0] + IN_CAR_SITTER.thigh + 0.16,
     rear: seat.rear,
     door:
       seat.door === false || seams.length < 2
@@ -166,3 +174,11 @@ export function hollowFrom(s: CarSpec, n: Interior) {
   return s.rearGlass ? s.cabin[0][0] : Math.max(s.cabin[0][0], n.hip[0] - 0.42);
 }
 export const hollowTo = (s: CarSpec) => s.cabin[3][0];
+
+/** A model's seat and doorway in the world's numbers (the inside's are the drawing's: `CAR_SCALE`, the scale plan's cars) */
+export function inWorld(id: CarId): Pick<Interior, 'hip' | 'door'> {
+  const n = INTERIORS[id];
+  const k = CAR_SCALE;
+  const door = n.door && { ...n.door, hinge: n.door.hinge * k, back: n.door.back * k, y0: n.door.y0 * k, y1: n.door.y1 * k, handle: [n.door.handle[0] * k, n.door.handle[1] * k] as [number, number] };
+  return { hip: [n.hip[0] * k, n.hip[1] * k, n.hip[2] * k], door };
+}

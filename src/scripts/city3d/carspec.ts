@@ -61,9 +61,9 @@ export interface CarSpec {
  * tractor's rear axle; life.ts draws it as its own vehicle following the tractor along the route. Trailer space as
  * the cars': +x the front, the origin on the ground under its middle
  */
-export const TRAILER = { L: 5.2, W: 1.22, r: 0.27, tw: 0.24, axles: [-2.05, -1.5] as V2, floor: 0.74, h: 2.12, pin: 2.35 };
+export const DRAWN_TRAILER = { L: 5.2, W: 1.22, r: 0.27, tw: 0.24, axles: [-2.05, -1.5] as V2, floor: 0.74, h: 2.12, pin: 2.35 };
 /** Where the trailer's kingpin sits on the tractor (x, over its rear axle; clear of the cab however far the trailer swings) */
-export const FIFTH_WHEEL = -1.0;
+export const DRAWN_FIFTH_WHEEL = -1.0;
 
 /** Paint colours that suit each model (the traffic picks from these) */
 export const PAINTS: Record<CarId, string[]> = {
@@ -89,7 +89,17 @@ export const PAINTS: Record<CarId, string[]> = {
 
 /* ---------- Models ---------- */
 
-export const CARS: Record<CarId, CarSpec> = {
+/**
+ * The size every vehicle is drawn at against the numbers it's written in (the scale plan's cars, the owner's call:
+ * docs/scale-plan.md). The models are written life-size (a hatch 2.2 long, its roof 0.95 up) and everyone is 0.86
+ * tiles tall, so a hatch's roof stood over his head; at 0.88 it's just under it, as a real car's is beside a real
+ * person. `DRAWN` (and `DRAWN_TRAILER`, `DRAWN_FIFTH_WHEEL`) are the numbers as written, what the drawing works in
+ * (cars.ts, the fine detail, the inside, the springs: they scale what they've made once, or the group it's in);
+ * `CARS` (and `TRAILER`, `FIFTH_WHEEL`) are the sizes in the world, what everything else reads.
+ */
+export const CAR_SCALE = 0.88;
+
+export const DRAWN: Record<CarId, CarSpec> = {
   hatch: {
     id: 'hatch',
     name: 'City Hatch',
@@ -733,3 +743,13 @@ export const CARS: Record<CarId, CarSpec> = {
     screen: 0.15,
   },
 };
+
+/** Shares, counts and names: what a spec carries that isn't a length */
+const NOT_LENGTHS = new Set(['cabinW', 'screen', 'spokes']);
+const scaled = <T>(v: T, key = ''): T =>
+  (typeof v === 'number' ? (NOT_LENGTHS.has(key) ? v : v * CAR_SCALE) : Array.isArray(v) ? v.map((x) => scaled(x, key)) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, scaled(x, k)])) : v) as T;
+
+/** Every model at its size in the world (`DRAWN` times `CAR_SCALE`) */
+export const CARS = scaled(DRAWN);
+export const TRAILER = scaled(DRAWN_TRAILER);
+export const FIFTH_WHEEL = DRAWN_FIFTH_WHEEL * CAR_SCALE;
