@@ -116,9 +116,10 @@ function starGeometry(r: number, depth = 0.08) {
   return g;
 }
 /** A flat pane facing out of a wall: centre, size, the wall's axis ('x': it faces ±x, 'z': ±z) and which way */
-function pane(cx: number, cy: number, cz: number, w: number, h: number, axis: 'x' | 'z', sign: 1 | -1) {
+function pane(cx: number, cy: number, cz: number, w: number, h: number, axis: 'x' | 'z', sign: 1 | -1, uv = false) {
   const g = new THREE.PlaneGeometry(w, h);
-  g.deleteAttribute('uv');
+  // (the shared paint has no texture: only a textured pane keeps its uv)
+  if (!uv) g.deleteAttribute('uv');
   if (axis === 'x') g.rotateY((sign * Math.PI) / 2);
   else if (sign < 0) g.rotateY(Math.PI);
   return g.translate(cx, cy, cz);
@@ -177,7 +178,7 @@ function front(b: Batch) {
   // The entablature (the frieze over the columns, the portico's ceiling under it), a cornice, the attic, a cornice
   const ey = PODIUM_Y + COLUMN.h;
   b.box(x0, ey, z0, x1 - x0, FRIEZE_H, z1 - 0.3 - z0, STONE);
-  b.add(pane(AXIS, ey + FRIEZE_H / 2, z1 - 0.3 + 0.02, 20, (20 * 52) / 1024, 'z', 1), FRIEZE_MAT);
+  b.add(pane(AXIS, ey + FRIEZE_H / 2, z1 - 0.3 + 0.02, 20, (20 * 52) / 1024, 'z', 1, true), FRIEZE_MAT);
   b.box(x0 - 0.25, ey + FRIEZE_H, z0, x1 - x0 + 0.5, 0.2, z1 - 0.05 - z0, SHADE);
   b.box(x0, ey + FRIEZE_H + 0.2, z0, x1 - x0, FRONT_H - ey - FRIEZE_H - 0.2, z1 - 0.5 - z0, STONE);
   // The emblem on the attic over the door: a gold star in a ring
