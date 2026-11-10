@@ -9,8 +9,8 @@
  * - the paths, pale gravel laid on the lawn, a site for every stretch;
  * - the lake's stone rim, in quarters, and its water (on the main thread:
  *   one mesh with the river's shader, not a site);
- * - the gates: two stone piers with caps and lanterns, and over the Mall's,
- *   iron posts and a beam carrying the park's name both ways;
+ * - the gates: two stone piers with caps and lanterns, and over the Mall's
+ *   north gate, iron posts and a beam carrying the park's name both ways;
  * - benches round the lake and along the Mall (near only).
  */
 import * as THREE from 'three';
@@ -24,6 +24,7 @@ import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
 import { BENCHES, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, lakeLine, type ParkPath, type Pt } from './westlake';
 import { registerFringes } from './fringes3d';
+import { registerCivic } from './civic3d';
 import { STONE as PAL_STONE } from './palette';
 
 /** Its own address, for the site worker (sitework.ts) */
@@ -104,7 +105,7 @@ function stretches(q: ParkPath, len = 30) {
   return out;
 }
 
-/** The park's name over the Mall's gate: one small texture, both faces */
+/** The park's name over the Mall's north gate: one small texture, both faces */
 function nameSign() {
   const tex = canvasTex(512, 96, (c) => {
     c.fillStyle = '#16301f';
@@ -129,6 +130,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   if (scene && tick) registerParkLife(scene, tick, low);
   // The walks' kerbs and edges, the park's wall, the formal garden, the planters and the terraces (stage 3)
   registerGardens(low);
+  // The civic square at its south end (civic3d.ts, docs/civic-plan.md)
+  registerCivic();
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
   registerFringes(['west', 'north'], low);
   // The paths: a site a stretch
@@ -177,7 +180,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   const sign = nameSign();
   GATES.forEach((g, gi) => {
     const piers = GATE_PIERS.slice(gi * 2, gi * 2 + 2);
-    const main = g.id === 'gate-mall';
+    // (the park's name over the Mall's north gate: its south gate went with the civic square, civic.ts)
+    const main = g.id === 'gate-n';
     const xs = piers.flatMap((p) => [p[0], p[2]]);
     const zs = piers.flatMap((p) => [p[1], p[3]]);
     site(`westlake ${g.id}`, [Math.min(...xs) - 0.5, Math.min(...zs) - 0.5, Math.max(...xs) + 0.5, Math.max(...zs) + 0.5], (into) => {

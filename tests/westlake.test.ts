@@ -113,7 +113,8 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
 });
 
 test('trees, lamps and benches: on the park, off the paths, the water and the garden\'s site', () => {
-  assert.ok(PARK_TREES.length > 250, `${PARK_TREES.length} trees`);
+  // (fewer since the civic quarter took the park's south end, civic.ts, the owner's call: it has trees of its own)
+  assert.ok(PARK_TREES.length > 220, `${PARK_TREES.length} trees`);
   assert.ok(PARK_TREES.filter((t) => t.clump).length > 150);
   const [x0, z0, x1, z1] = GARDEN_SITE;
   const onSite = (p: Pt, m: number) => p[0] > x0 - m && p[0] < x1 + m && p[1] > z0 - m && p[1] < z1 + m;
@@ -133,7 +134,8 @@ test('trees, lamps and benches: on the park, off the paths, the water and the ga
     assert.ok(!inLake(x, z, 1), `a lamp in the lake at ${x}, ${z}`);
     assert.ok(PARK_TREES.every((t) => Math.hypot(t.x - x, t.z - z) > 0.6), `a lamp in a tree at ${x}, ${z}`);
   }
-  assert.ok(BENCHES.length > 15);
+  // (the Mall's south stretch's went with the civic square, civic.ts, which has benches of its own)
+  assert.ok(BENCHES.length >= 14);
   for (const b of BENCHES) {
     assert.ok(inPark(b.at, 0.5), `a bench off the park at ${b.at}`);
     assert.ok(!inLake(b.at[0], b.at[1], 0.6), `a bench in the lake at ${b.at}`);
