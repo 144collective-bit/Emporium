@@ -264,14 +264,48 @@ boot (index.ts, crestspots.ts's `spot()`).
   sites' own (walls, hulls, boxes and the cranes' members at every
   distance, details near only).
 
-### Phase 4: the docks' life and sound
+### Phase 4: the docks' life and sound (built, waiting on the owner's sign-off)
 
-- The cranes' trolleys lifting containers, straddle carriers on their
-  loops, trucks through the gate (the traffic's Box Runners and Heavy Haul
-  rigs on the docks' roads), the tugs and the pilot boat at work in the
-  basin, the dock workers; all functions of the clock, the same for
-  everyone, still under reduced motion. The sound (`docks` in
-  ambience.ts).
+The owner's picks: the cranes' **full cycle**, the rest of the port **quiet**.
+
+- `dockslife.ts` (DOM-free, tested in `tests/dockslife.test.ts`), everything
+  a function of the clock, the same for everyone, standing still under
+  reduced motion (at `STILL`, the box hanging from the crane):
+  - **The working crane** is the middle one (`WORK`): the north one's boom
+    stands raised and the south one stands over ORCA STAR's bridge, so only
+    it reaches a stack on deck. In a `CYCLE` of 120 s it works one box off
+    the ship and back on again: the trolley over the ship, the spreader
+    down onto the box on top of the stack under it (`PICK`), up, across,
+    down onto the quay between its legs; the straddle carrier parked north
+    of it (`STRADDLES[0]`, `PARK`) drives under, lifts it, and takes it
+    along the quay and into the stacks' lane to a slot there (`LANE_Z`,
+    `SLOT`, clear of the cranes' land legs); then all of it the other way.
+    One box goes round, never appearing or vanishing (`craneAt()`,
+    `carrierAt()`, `boxAt()` and who holds it).
+  - **A truck now and then** (`TRUCK_EVERY` 150 s): a Box Runner down West
+    Road, left in through the gate, round in the gate's lane, a while
+    there, out again and up West Road (`truckAt()`; null while it's away).
+  - **The pilot boat** out every 4 minutes: it backs out of its berth, eases
+    off the east wall, goes round the basin's east half and comes back up
+    into its berth bow first (`pilotAt()`). The tugs stay moored.
+  - **Five dock workers** (`DOCK_PEOPLE`, the crowd's spare slots through
+    `addPeople()`, in the Docks' hi-vis): one watching the crane, the gate's
+    man by the booth, two talking by the tugs, one by the land rail.
+- Drawn by docksport3d.ts's `life()` on the main thread, with the tick the
+  docks' chunk now passes on (docks3d.ts): the working crane's trolley and
+  cab, its spreader and ropes, the box, the carrier and the pilot boat as
+  groups built from the same drawing as before (`drawTug()`, `straddle()`,
+  `container()`), the truck the traffic's Box Runner; moved only while the
+  camera's within reach of the docks (`nearGate()`). The static drawing
+  leaves those out, and the moving carrier's spot isn't solid any more
+  (`PORT_SOLIDS`).
+- The tests hold: the cycle seamless and the box never jumping as it's
+  handed on; the trolley on its girders; the carrier on the quay and clear
+  of every solid and the stacks; the truck clear of them and of the
+  carrier; the pilot boat in the basin and clear of the ship and the tugs;
+  the workers out of everything's way.
+- The sound was already there (`docks` in ambience.ts: gulls, the crane's
+  hoist whine, a ship's horn).
 
 ## The owner's answers
 
