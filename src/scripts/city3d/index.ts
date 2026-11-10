@@ -129,8 +129,8 @@ import { CROWD_VIEW, figureDetail } from './character';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, sceneMemory } from './perf';
-import { tileBatch } from './tilebatch';
+import { mb, memoryRows, sceneMemory } from './perf';
+import { PACKED, tileBatch } from './tilebatch';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
@@ -1543,6 +1543,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
+    // (where the geometry memory is, for the console: perf.ts)
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { tileBatch } from '../src/scripts/city3d/tilebatch';
+import { PACKED, compact, tileBatch } from '../src/scripts/city3d/tilebatch';
 
 // A plain colour and a neon, as the Batches' shared materials (kit.ts marks them `shared`)
 const paint = new THREE.MeshBasicMaterial();
@@ -137,4 +137,41 @@ test('room let go is taken back before a mesh grows', () => {
     }
   }
   assert.ok((bm as unknown as { _maxVertexCount: number })._maxVertexCount <= size * 1.3);
+});
+
+test('vertices are packed smaller: normals as bytes, the paint\'s colours as 16-bit shares', () => {
+  const box = () => {
+    const g = new THREE.BoxGeometry(1, 2, 3);
+    const n = g.attributes.position.count;
+    const col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) col.set([0.0123, 0.5, 1], i * 3);
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  };
+  const size = (g: THREE.BufferGeometry) => Object.values(g.attributes).reduce((n, a) => n + (a as THREE.BufferAttribute).array.byteLength, 0) / g.attributes.position.count;
+  const before = box();
+  const g = compact(box(), true);
+  // 44 bytes a vertex (position, normal, uv, colour as floats) down to 29
+  assert.equal(size(before), 44);
+  assert.equal(size(g), 29);
+  const n = g.attributes.normal as THREE.BufferAttribute;
+  const c = g.attributes.color as THREE.BufferAttribute;
+  assert.ok(n.array instanceof Int8Array && n.normalized);
+  assert.ok(c.array instanceof Uint16Array && c.normalized);
+  // The shaders read the same numbers back (three's getters undo `normalized`)
+  for (let i = 0; i < n.count; i++) {
+    assert.ok(Math.abs(n.getX(i) - before.attributes.normal.getX(i)) < 1 / 127);
+    assert.ok(Math.abs(n.getY(i) - before.attributes.normal.getY(i)) < 1 / 127);
+    assert.ok(Math.abs(n.getZ(i) - before.attributes.normal.getZ(i)) < 1 / 127);
+    assert.ok(Math.abs(c.getX(i) - 0.0123) < 1 / 65535);
+    assert.ok(Math.abs(c.getY(i) - 0.5) < 1 / 65535);
+    assert.equal(c.getZ(i), 1);
+  }
+  assert.equal(PACKED.clamped, 0);
+  // Another material's colours (they may pass 1) stay as they are, its normals still packed
+  const other = compact(box(), false);
+  assert.ok(other.attributes.color.array instanceof Float32Array);
+  assert.ok(other.attributes.normal.array instanceof Int8Array);
+  // Packing twice changes nothing more
+  assert.equal(size(compact(g, true)), 29);
 });

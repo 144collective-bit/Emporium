@@ -331,6 +331,13 @@ keep it up to date when what it describes changes.
     have them), and the outskirts' trees keep off it (its land in `KEEPS`,
     `landuse.ts`).
   - Tested in `tests/recipes.test.ts`.
+- **Vertices are packed** as they join a batched mesh (`compact()` in
+  `tilebatch.ts`; `docs/performance-plan.md`, phones' geometry memory):
+  normals as signed bytes and the shared paint's colours (all 0 to 1,
+  `userData.paint`) as 16-bit shares, both `normalized`, 29 bytes a vertex
+  where there were 44. A new shared material whose colours stay 0 to 1 can
+  be marked `paint` too; one whose colours pass 1 must not be.
+  `window.__mem()` under `?fps` says where the geometry memory is.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory

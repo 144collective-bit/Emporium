@@ -545,3 +545,31 @@ trees and woods, built after the boot). What the edge added is small; what it
 showed is that phones' geometry, about 210 MB, is already past the 150 MB target
 from the districts built since Phase 6. Letting far districts go on phones and far
 districts as simple blocks (items 5 and 6 above) are the way back under it.
+
+## Phones' geometry memory, step 1: vertices packed smaller (2026-11)
+
+The 150 MB target against 210 MB (above). Measured first, with a breakdown
+(`window.__mem()` under `?fps`: `memoryRows()` in perf.ts, `bytesBy()` in
+tilebatch.ts): on the headless phone tier with every district loading, two
+batched meshes of the shared toon paint held 170 of 240 MB. Each vertex was
+44 bytes (position, normal, uv and colour, all floats).
+
+- **Built.** `compact()` in tilebatch.ts packs every piece as it joins a
+  batched mesh: normals as signed bytes, the shared paint's colours (all 0 to
+  1; `userData.paint` in kit.ts, a counter holds that none is clamped) as
+  16-bit shares, both `normalized`, so no shader changes: 29 bytes a vertex.
+  Every tier gets it. Tested in `tests/tilebatch.test.ts`; the home view and
+  a street shot before and after are the same picture.
+- **Measured** (headless phone tier, the same number of sites built, 3,442 of
+  4,411): geometry 221 MB before, 185 MB after. Like for like, the pieces
+  built at the boot went from 17.9 to 13.1 MB.
+- **What's left, and why the near budget alone can't reach the target:** of
+  the tile pieces, those drawn at every distance (`lod` all: walls, roofs,
+  ground) from sites were 64 MB before (54 after) and are never let go; the
+  near pieces that can be let go were 40 MB (35), the far pieces under 2 MB.
+  So "far districts let go on phones" means letting a far tile's `all` pieces
+  go too (and building them again on the way back), which shows wherever the
+  haze doesn't hide it: the owner's call on how far and in which views.
+  Also open: the uv (8 of the 29 bytes, zero but for the trees' sway), the
+  places' near and far forms (32 MB as plain meshes) and the crowd's
+  geometry (20 MB).

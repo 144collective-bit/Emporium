@@ -87,6 +87,8 @@ export interface TileBatches {
   /** Mark a tile's near pieces built again */
   restored(tile: string): void;
   /** The tiles holding near pieces that could be let go, and those that let them go */
+  /** What the pieces held take, by level and whether they can be let go (for the ?fps console) */
+  bytesBy(): Record<string, number>;
   held(x: number, y: number, z: number): { key: string; d: number; bytes: number; near: boolean; released: boolean }[];
   /** The sites whose near pieces a tile let go */
   lostSites(tile: string): string[];
@@ -150,6 +152,36 @@ const shapeOf = (g: THREE.BufferGeometry) =>
 const bytesOf = (g: THREE.BufferGeometry) =>
   Object.values(g.attributes).reduce((n, a) => n + (a as THREE.BufferAttribute).array.byteLength, 0) + (g.index ? g.index.count * 4 : 0);
 
+/**
+ * A piece's vertices packed smaller before they go in a batched mesh (the phones' memory: performance-plan.md).
+ * Normals as signed bytes (a 127th of a unit: half a degree, under anything the toon shading or the ink's normal
+ * pass can tell apart) in place of three floats, and the shared paint's colours, which are all 0 to 1, as 16-bit
+ * shares in place of three floats: 29 bytes a vertex where there were 44. Both are `normalized`, so the shaders
+ * read the same numbers as before. Every piece of a material goes through here, so a mesh's pieces always match.
+ */
+/** Colour values past 0 to 1 the packing had to clamp (none expected: a check for the ?fps console) */
+export const PACKED = { clamped: 0 };
+export function compact(g: THREE.BufferGeometry, paint: boolean) {
+  const n = g.attributes.normal as THREE.BufferAttribute | undefined;
+  if (n && n.array instanceof Float32Array) {
+    const src = n.array;
+    const dst = new Int8Array(src.length);
+    for (let i = 0; i < src.length; i++) dst[i] = Math.round(Math.max(-1, Math.min(1, src[i])) * 127);
+    g.setAttribute('normal', new THREE.BufferAttribute(dst, 3, true));
+  }
+  const c = g.attributes.color as THREE.BufferAttribute | undefined;
+  if (paint && c && c.array instanceof Float32Array) {
+    const src = c.array;
+    const dst = new Uint16Array(src.length);
+    for (let i = 0; i < src.length; i++) {
+      if (src[i] < -1e-4 || src[i] > 1 + 1e-4) PACKED.clamped++;
+      dst[i] = Math.round(Math.max(0, Math.min(1, src[i])) * 65535);
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(dst, c.itemSize, true));
+  }
+  return g;
+}
+
 /** How much room a batched mesh is made with past what it holds, so sites built later mostly fit */
 const ROOM = 1.25;
 
@@ -202,7 +234,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         const lod: Lod = m.userData.lod ?? 'all';
         // Building near pieces again: only the shared materials' (the only ones let go)
         if (opts.keep && !m.material.userData.shared) continue;
-        const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
+        const g = compact(m.geometry.clone().applyMatrix4(m.matrixWorld), !!m.material.userData.paint);
         const key = `${m.material.uuid}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.renderOrder}|${shapeOf(g)}`;
         const k2 = `${key}|${site}`;
         let inc = incoming.get(k2);
@@ -366,6 +398,14 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         const bytes = t.pieces.reduce((n, p) => n + (evictable(p) ? p.bytes : 0), 0);
         if (!bytes && !t.released) continue;
         out.push({ key: t.key, d: boxDistance(x, y, z, t.x0, 0, t.z0, t.x1, t.top, t.z1), bytes, near: t.near, released: t.released });
+      }
+      return out;
+    },
+    bytesBy: () => {
+      const out: Record<string, number> = {};
+      for (const t of tiles.values()) for (const p of t.pieces) {
+        const k = `${p.lod}${evictable(p) ? ' evictable' : p.site ? ' site' : ' boot'}`;
+        out[k] = (out[k] ?? 0) + p.bytes;
       }
       return out;
     },
