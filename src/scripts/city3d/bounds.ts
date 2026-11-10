@@ -4,10 +4,11 @@
  * the built-up area (the town, the airport, the kart park), how far City
  * view may pan round it.
  * A bigger world doesn't stretch them; more city does. And how far the camera
- * sees: the skyline ring past the world's edge stays on the horizon from town,
- * however far out the edge is (Phase 6).
+ * sees: the wall round the city stays in front of the sky from town
+ * (docs/wall-plan.md).
  */
-import { CITY_EXT, EXT, WORLD_BOUNDS } from './layout';
+import { CITY_EXT, WORLD_BOUNDS } from './layout';
+import { WALL_CORNERS } from './wall';
 import { SITE } from './airfield';
 import { KART_PARK } from './kartpark';
 import type { Rect } from './downtown';
@@ -27,20 +28,16 @@ export const PAN_BOUNDS: Rect = [
   Math.min(BUILT_UP[3] + PAN_MARGIN, WORLD_BOUNDS[3] - 10),
 ];
 
-/** The skyline ring (world.ts `buildSkyline()`): its towers stand `gap` to `gap` + `depth` past the world's edge */
-export const SKYLINE = { gap: 18, depth: 40 };
-/** The middle of downtown, where the skyline is seen from */
+/** The middle of downtown, where the wall is seen from */
 const TOWN: [number, number] = [30, 30];
 /**
- * How far off the sky dome travels round the camera (sky.ts): far enough that the
- * skyline ring's far side stands in front of it seen from town, out to the ring's
- * corners (the world is square; at -680 to 720 it's about 1,090), and never nearer
- * than it always was (400)
+ * How far off the sky dome travels round the camera (sky.ts): far enough that the wall round the city
+ * (wall.ts, docs/wall-plan.md; the skyline ring of towers it replaced was retired, the owner's call) and the
+ * land past it stand in front of it seen from town, out to the land's corners (at -680 to 720 about 1,300),
+ * and never nearer than it always was (400)
  */
 export const SKY_RADIUS = (() => {
-  const reach = (EXT[1] - EXT[0]) / 2 + SKYLINE.gap + SKYLINE.depth;
-  const mid = (EXT[0] + EXT[1]) / 2;
-  const corner = Math.max(...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => Math.hypot(mid + sx * reach - TOWN[0], mid + sz * reach - TOWN[1]))));
+  const corner = Math.max(...WALL_CORNERS.map(([x, z]) => Math.hypot(x - TOWN[0], z - TOWN[1])));
   return Math.max(400, Math.ceil(corner / 10) * 10);
 })();
 /** The camera's far plane: just past the sky dome, so the dome is always drawn */
