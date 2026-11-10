@@ -43,6 +43,7 @@
  */
 import { WALK_W } from './layout';
 import { MALL, Z0 as PARK_EDGE } from './westlake';
+import { CAR_SCALE } from './carspec';
 
 export type Pt = [number, number];
 export type Box = [number, number, number, number, number];
@@ -168,7 +169,7 @@ export const PARKED: [string, number, number, number, string][] = (() => {
   return out;
 })();
 /** A parked car's footprint, half its length and width (the longest model) */
-const CAR_HALF = { l: 1.5, w: 0.62 };
+const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.62 * CAR_SCALE };
 
 /* ---------- The streets ---------- */
 

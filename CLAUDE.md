@@ -222,7 +222,7 @@ it and has been retired completely. Build only on what's here.
   off it (`treeSpot()`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city and the server read it). 1 tile is about
-  1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
+  1.8 m and Degen is about 0.86 tiles tall (everyone's size, below). Roads are sized for real-proportion
   cars: lanes 1.7 wide, a 0.8 sidewalk round every block and district.
   Downtown's cross streets (`CORE_ROADS`, at 17 and 43) and the diagonals
   are 3.4 wide with one lane each way; the ring and the south bank road are
@@ -1640,7 +1640,10 @@ it and has been retired completely. Build only on what's here.
   avenue, and Kite House, condemned behind hoardings (`hoardingRuns()`); all
   under the Emporium (`TALLEST`), the galleries over a walker's head
   (`GROUND`); `BLOCK_SOLIDS` (in `SOLIDS`); drawn by `endsblocks3d.ts`
-  (`registerBlocks()`, a site a shell, its own atlas `ends-concrete`). Phase 4 (street level) is built:
+  (`registerBlocks()`, a site a shell, its own atlas `ends-concrete`; the
+  galleries' front doors painted nearly a storey tall, about 0.97 tiles,
+  their lights on the wall over them, so everyone fits them:
+  docs/scale-plan.md). Phase 4 (street level) is built:
   `endsstreet.ts` (DOM-free, tested in `tests/endsstreet.test.ts`): **St Aldwyn's** (`CHURCH`, its spire
   `SPIRE_TOP` the estate's one thing over the Emporium, every flight well over it) in its churchyard
   (`CHURCHYARD`: railings, the lychgate, yews, `HEADSTONES`), Endswood Parade's units (`PARADE_UNITS`; the block
@@ -2214,7 +2217,13 @@ it and has been retired completely. Build only on what's here.
   (vertex colours), plus the bus's lit windows, so the traffic in `life.ts`
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
-  scale with Degen (a hatch's roof is about 0.95 tiles up).
+  scale with Degen: every vehicle is drawn at `CAR_SCALE` (0.88, the scale
+  plan's cars, docs/scale-plan.md) of the numbers it's written in (`DRAWN`
+  in carspec.ts, what the drawing, the inside and the springs work in);
+  `CARS` is them at their size in the world, what everything else reads (a
+  hatch's roof about 0.84 tiles up, just under Degen's head). Degen sits in
+  a car's drawn numbers at `IN_CAR` (carinside.ts), and `inWorld()` gives a
+  seat and door in the world's.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
@@ -2881,19 +2890,20 @@ it and has been retired completely. Build only on what's here.
   rows. Phase 3 (contact) is built: `contact.ts` (DOM-free, tested in
   `tests/contact.test.ts`) is a layer on the animator's pose from what's
   near him (`ContactInput`: the collision grid's boxes within
-  `CONTACT.reach`, the crowd's people, where he can't step, a move stopped
-  this frame and how fast), laid on by `applyContact()` after
-  `animator.update()` and before `applyTo()` in walk.ts (not with a gun in
-  his hands): brushing a wall or a person the shoulder gives and the step
-  hitches (`give`, `hitch`: 30% off his top speed for a moment; the crowd's
-  person steps aside and back, `bump` / `BUMP` in life.ts); stopped at a
+  `CONTACT.reach`, the crowd's people, where he can't step), laid on by
+  `applyContact()` after `animator.update()` and before `applyTo()` in
+  walk.ts (not with a gun in his hands). **Looks only** (the owner's call,
+  2026-11: bumping into things mustn't get in the way of play): it never
+  slows, stops or throws him, so the step's hitch and the stagger into a
+  wall at a sprint were taken out, and a wall, a car or anything solid just
+  stops him and he slides along it. Brushing a wall or a person the
+  shoulder gives (`give`; the crowd's person steps aside and back, `bump` /
+  `BUMP` in life.ts); stopped at a
   wall a hand goes onto it at shoulder height, walking slowly along one it
   trails along it at hip height (`reachArmBones()`, the arm's two-bone IK;
   a hand on stays put until it's let go; the test holds it within 1.5 cm);
   standing a while at an edge nothing solid explains (a quay, a railing)
-  he leans on the rail with both hands; into a wall at a sprint he
-  staggers (`stagger`: the chest back, a hand up, carried back on the
-  springs, a small camera shake); a gap narrower than `squeeze` turns the
+  he leans on the rail with both hands; a gap narrower than `squeeze` turns the
   shoulders. Phones (`createContact({ hands: false })`) leave out the
   hands and the lean. The lab's Contact program and floor show it all.
   Phase 4 (the game's moments) step 1 is built: `moments.ts` (DOM-free,
@@ -3098,8 +3108,10 @@ it and has been retired completely. Build only on what's here.
     chunk (`import('./animator')`).
   - **Moving** is `movesim.ts`: velocity and facing on critically damped
     springs (`MOVE` half-lives), `ahead()` the trajectory; `GAITS` walk
-    0.78, run 2.8 (the default), sprint 4.2 tiles a second (about 1.4, 5 and
-    7.5 m/s, the owner's call: quick but believable).
+    0.61, run 2.17 (the default), sprint 3.26 tiles a second (0.78, 2.8 and
+    4.2 when he was 0.85, the owner's call: quick but believable; brought
+    down in proportion with his size, so the animation is as it was:
+    docs/scale-plan.md).
   - **The animation** is `animator.ts`: motion matching (`motionmatch.ts`,
     Holden's 27 features, every clip and its mirror, a search about ten
     times a second) with inertialization (`inertia.ts`), playback warped
@@ -3241,7 +3253,23 @@ it and has been retired completely. Build only on what's here.
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
   elbows, wrists (`Limb.wrist` { roll, bend }, zero by default so nothing
-  moves unless a pose asks; fighting turns the fist) and hand sockets.
+  moves unless a pose asks; fighting turns the fist) and hand sockets. It's
+  drawn at one size for everyone (**`FIGURE_SCALE` 0.66** in figure.ts,
+  re-exported by skeleton.ts, DOM-free so the game server reads it too; the
+  owner's call, `docs/scale-plan.md`: your Degen on foot and at the wheel,
+  other players, the crowd and the Fight Club's fighters (`FIGHTER_SCALE`),
+  about 0.86 tiles tall; kids keep `KID`). The fight's lengths and speeds
+  (fight-moves.ts `MOVES` from `AT_WAS`, the strike heights and the styles'
+  dodges; fight-sim.ts `T`, the bots' distances; combat-sim.ts `MELEE`; the
+  ring's camera; brawlsite.ts `GAP`) are written for fighters at 0.85
+  (`WAS_SCALE`) and brought down by `SIZE_K`. Everything
+  of his own size came down with him in proportion: his speeds, jump and
+  gravity, the vault's heights, his radius, the walk camera, the moments'
+  marks, the car seats, kart wheel and pedals and the bikes' seats, bars
+  and pegs; the animator's thresholds are in rig numbers, so it plays as
+  it did, and the motion rubric (human.ts) measures him at its adult,
+  0.85, his world scaled up to it. Anything new sized to him goes
+  through `FIGURE_SCALE`.
   - **The skeleton** is `skeleton.ts` (DOM-free, tested in
     `tests/skeleton.test.ts`): 34 bones (`BONES`: hips, `spine1`, `spine2`,
     `chest`, neck, head; per side collarbone, arm, forearm, hand, index
@@ -4252,7 +4280,7 @@ it and has been retired completely. Build only on what's here.
 - Nothing lifts or glows on hover (the owner's call, with the pins off by
   default); the cursor shows a building is clickable in City view, and
   while walking nothing is hovered (Degen stands on the same ground).
-- The over-the-shoulder camera starts 3.3 tiles behind him, 3.2 on an upright screen (`homeZoom()` in
+- The over-the-shoulder camera starts 2.6 tiles behind him, 2.5 on an upright screen (`homeZoom()` in
   walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
 - Esc frees the mouse first and only then opens the hub (its Back to City

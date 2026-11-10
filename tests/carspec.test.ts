@@ -1,13 +1,14 @@
 // The cars' measurements and what's inside them (carspec.ts, vehicle plan
 // Phase 0): every model has a driver's seat, a steering wheel and a dash that
-// fit the body drawn round them, with Degen seated at walk mode's size: his
+// fit the body drawn round them (in the drawing's numbers: the car and he come down together by CAR_SCALE in the
+// world), with Degen seated at walk mode's size: his
 // head under the roof, his eyes over the window line and the dash, his hands
 // on the wheel within reach, his knees under it and his feet on the floor;
 // the driver's door between two of the body's seams, wide enough to get in.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { INTERIORS, SITTER, beltAt, hollowFrom, hollowTo, roofAt, type V3 } from '../src/scripts/city3d/carinside';
-import { CARS } from '../src/scripts/city3d/carspec';
+import { INTERIORS, IN_CAR_SITTER as SITTER, beltAt, hollowFrom, hollowTo, roofAt, type V3 } from '../src/scripts/city3d/carinside';
+import { DRAWN as CARS } from '../src/scripts/city3d/carspec';
 
 const MODELS = Object.values(CARS);
 const along = (hip: V3, recline: number, up: number): V3 => [hip[0] - Math.sin(recline) * up, hip[1] + Math.cos(recline) * up, hip[2]];

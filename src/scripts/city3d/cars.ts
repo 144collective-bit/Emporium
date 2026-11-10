@@ -32,10 +32,10 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fx, lit, mergeMeshes, moving, toon } from './kit';
 import { addLodSwitch } from './lod';
 
-import { CARS, FIFTH_WHEEL, TRAILER, type CarId, type CarSpec } from './carspec';
+import { CAR_SCALE, DRAWN as CARS, DRAWN_FIFTH_WHEEL as FIFTH_WHEEL, DRAWN_TRAILER as TRAILER, type CarId, type CarSpec } from './carspec';
 import type { Degen } from './character';
 import type { CarState } from './drive-sim';
-export { CARS, PAINTS } from './carspec';
+export { CARS, CAR_SCALE, PAINTS } from './carspec';
 export type { CarId, CarSpec };
 type V2 = [number, number];
 
@@ -626,15 +626,29 @@ export interface CarGeometry {
    * front right (+z), front left, rear right, rear left
    */
   turn: [number, number, number][];
+  /** Brought to its size in the world (`sized()`) */
+  sized?: boolean;
 }
 
 const cache = new Map<string, CarGeometry>();
 
-/** A model's geometry; `crew` puts a driver (and a seat or two) behind its glass: the traffic's (vehicle plan Phase 8) */
-export function carGeometry(id: CarId, { wheels = true, crew = false } = {}): CarGeometry {
-  const key = `${id}:${wheels}:${crew}`;
+/**
+ * A model's geometry; `crew` puts a driver (and a seat or two) behind its glass: the traffic's (vehicle plan Phase 8).
+ * At its size in the world (`CAR_SCALE`, the scale plan), but `own`: your cars', in the numbers it's drawn in, their
+ * group scaled instead (createCar), so the inside, the doors and the springs fitted into it keep the drawing's numbers
+ */
+export function carGeometry(id: CarId, { wheels = true, crew = false, own = false } = {}): CarGeometry {
+  const key = `${id}:${wheels}:${crew}:${own}`;
   let g = cache.get(key);
   if (!g) cache.set(key, (g = build(id, wheels, '', crew)));
+  if (!own && !g.sized) sized(g);
+  return g;
+}
+/** A built model brought to its size in the world, in place (its geometry and its lamps' spots) */
+export function sized(g: CarGeometry) {
+  for (const k of ['paint', 'detail', 'glow'] as const) g[k]?.scale(CAR_SCALE, CAR_SCALE, CAR_SCALE);
+  for (const list of [g.head, g.tail, g.turn]) for (const p of list) for (let i = 0; i < 3; i++) p[i] *= CAR_SCALE;
+  g.sized = true;
   return g;
 }
 
@@ -871,6 +885,8 @@ export function trailerGeometry(): TrailerGeometry {
       [-half - 0.08, 0.42, -(t.W / 2 - 0.32)],
     ],
   };
+  for (const k of ['paint', 'detail'] as const) trailerGeo[k].scale(CAR_SCALE, CAR_SCALE, CAR_SCALE);
+  for (const list of [trailerGeo.tail, trailerGeo.turn]) for (const p of list) for (let i = 0; i < 3; i++) p[i] *= CAR_SCALE;
   return trailerGeo;
 }
 /** The trailer far away: its box and four block wheels */
@@ -942,6 +958,7 @@ export function farCarGeometry(id: CarId) {
   for (const g of parts) g.deleteAttribute('uv');
   const g = mergeGeometries(parts)!;
   for (const p of parts) p.dispose();
+  g.scale(CAR_SCALE, CAR_SCALE, CAR_SCALE);
   farCache.set(id, g);
   return g;
 }
@@ -1054,10 +1071,12 @@ export function parkedCars(parent: THREE.Object3D, y: number, list: [CarId, numb
  * with the origin on the ground under its middle, like the models.
  */
 export function createCar(id: CarId, paint: string, mine = false, look?: object) {
-  const g = carGeometry(id, { wheels: false });
+  const g = carGeometry(id, { wheels: false, own: true });
   const s = g.spec;
   const { detail } = carMaterials();
   const group = moving(new THREE.Group());
+  // (drawn in the model's own numbers, brought to its size in the world here: the scale plan's cars)
+  group.scale.setScalar(CAR_SCALE);
   const paintMat = toon(paint);
   const body = new THREE.Mesh(g.paint, paintMat);
   const trim = new THREE.Mesh(g.detail, detail);

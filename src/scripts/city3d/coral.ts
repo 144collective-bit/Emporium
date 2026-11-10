@@ -19,6 +19,7 @@
  */
 import { BAY_DEPTH, CORAL, CORAL_BAYS, CREST_BLOCKS, FLATS_X, bayRect, flatsHalf, type Rect } from './crestmont';
 import { rng } from './recipes';
+import { CAR_SCALE } from './carspec';
 
 type Pt = [number, number];
 type Box = [number, number, number, number, number];
@@ -210,7 +211,7 @@ export const TABLE_R = 0.62;
 /** A space in a bay, a car in each */
 export const SPACE = 3.2;
 /** A parked car's half length and width */
-const CAR_HALF = { l: 1.5, w: 0.6 };
+const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 /** The valets' stands: on the strip behind each valet's bay, at its middle (x, z) */
 export const VALET_STANDS: Pt[] = CORAL_BAYS.filter((b) => b.kind === 'valet').map((b): Pt => {
   const r = rectOf(b.block);

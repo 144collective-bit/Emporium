@@ -18,6 +18,7 @@
  * - It bumps softly off everything (boat-sim.ts), with a knock.
  */
 import * as THREE from 'three';
+import { FIGURE_SCALE } from './skeleton';
 import { HIP_HEIGHT, createDegen, reachArm, torsoFrame, type Degen, type Outfit } from './character';
 import { BOAT, HIRE_VIEW, TUNE, WATER_SOLIDS, aheadOf, leaveAt, moversAt, newBoat, speedOf, sprayOf, stepBoat, wakeShape, type BoatInput, type Circle } from './boat-sim';
 import { HIRE } from './riverbus';
@@ -49,7 +50,7 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 /** Tiles per second to km/h (a tile is about 1.8 m) */
 const KMH = 1.8 * 3.6;
 /** Degen's size (walk.ts's) */
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 const NAME = 'Hire boat';
 
 type HireModel = ReturnType<typeof hireBoat>;

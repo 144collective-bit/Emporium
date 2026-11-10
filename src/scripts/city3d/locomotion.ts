@@ -199,8 +199,8 @@ export const LANDINGS: Record<'soft' | 'crouch' | 'roll', Clip> = {
   },
 };
 /** How hard a landing is (falling speed, tiles a second) before it's a crouch, then a roll */
-export const LAND_CROUCH = 5.5;
-export const LAND_ROLL = 9.5;
+export const LAND_CROUCH = 4.27;
+export const LAND_ROLL = 7.37;
 
 /* ---------- Locomotion ---------- */
 
@@ -691,7 +691,7 @@ export function createLocomotion(): Locomotion {
   /** Touching down: the landing clip by how hard, and both feet planted (or one landing mid-stride on the run) */
   function land(inp: LocoInput, speed: number, dx: number, dz: number) {
     const hit = -fallSpeed;
-    const kind = hit > LAND_ROLL && speed > 1.5 ? 'roll' : hit > LAND_CROUCH ? 'crouch' : 'soft';
+    const kind = hit > LAND_ROLL && speed > 1.16 ? 'roll' : hit > LAND_CROUCH ? 'crouch' : 'soft';
     landing = { clip: LANDINGS[kind], t: 0 };
     lastLanding = kind;
     const S = inp.scale;

@@ -2,6 +2,8 @@
 // so the screens (fight-ui.ts) and the save's rules (tycoon.ts) read them without bringing the whole fight
 // into the city's boot (performance phase 2: features load when they're used); fight-sim.ts re-exports them.
 
+import { SIZE_K } from './figure';
+
 export type MoveId = 'jab' | 'cross' | 'hook' | 'uppercut' | 'frontKick' | 'roundhouse' | 'dodge';
 export type MoveKind = 'punch' | 'kick' | 'dodge';
 export type Limb = 'armL' | 'armR' | 'legL' | 'legR';
@@ -36,7 +38,8 @@ export interface MoveSpec {
   kick?: MoveId;
 }
 
-export const MOVES: Record<MoveId, MoveSpec> = {
+/** The moves as written for fighters at 0.85 (figure.ts `WAS_SCALE`); `MOVES` is them at everyone's size */
+const AT_WAS: Record<MoveId, MoveSpec> = {
   jab: { id: 'jab', name: 'Jab', kind: 'punch', limb: 'armL', startup: 6, active: 3, recovery: 8, reach: 1.1, arc: 0.6, damage: 8, stun: 12, knockback: 0.15, stamina: 8, lunge: 0.25, heavy: false, knockdown: false, next: 'cross' },
   cross: { id: 'cross', name: 'Cross', kind: 'punch', limb: 'armR', startup: 8, active: 3, recovery: 12, reach: 1.2, arc: 0.55, damage: 12, stun: 14, knockback: 0.25, stamina: 10, lunge: 0.35, heavy: false, knockdown: false, next: 'hook', kick: 'roundhouse' },
   hook: { id: 'hook', name: 'Hook', kind: 'punch', limb: 'armL', startup: 10, active: 4, recovery: 16, reach: 1.0, arc: 0.8, damage: 16, stun: 20, knockback: 0.3, stamina: 12, lunge: 0.2, heavy: true, knockdown: false, next: 'uppercut', kick: 'roundhouse' },
@@ -45,12 +48,19 @@ export const MOVES: Record<MoveId, MoveSpec> = {
   roundhouse: { id: 'roundhouse', name: 'Roundhouse', kind: 'kick', limb: 'legR', startup: 14, active: 5, recovery: 22, reach: 1.4, arc: 0.95, damage: 22, stun: 24, knockback: 0.45, stamina: 20, lunge: 0.2, heavy: true, knockdown: false },
   dodge: { id: 'dodge', name: 'Dodge', kind: 'dodge', limb: 'legL', startup: 4, active: 10, recovery: 8, reach: 0, arc: 0, damage: 0, stun: 0, knockback: 0, stamina: 16, lunge: 0, heavy: false, knockdown: false },
 };
+/**
+ * The moves at everyone's size (docs/scale-plan.md): reach, step in and knock-back in proportion, so a fight plays
+ * as it did, only smaller (the game server reads the same)
+ */
+export const MOVES = Object.fromEntries(
+  Object.entries(AT_WAS).map(([id, m]) => [id, { ...m, reach: m.reach * SIZE_K, lunge: m.lunge * SIZE_K, knockback: m.knockback * SIZE_K }]),
+) as Record<MoveId, MoveSpec>;
 
 /** How high a move strikes over the fighter's feet (tiles): a front kick at the body, the roundhouse higher, the uppercut under the chin, a punch at the head */
 /** What a move hits for in a style (the Kickboxer's kicks hit harder) */
 export const damageOf = (m: MoveSpec, style: StyleId) => (m.kind === 'kick' ? Math.round(m.damage * STYLES[style].kick) : m.damage);
 
-export const strikeHeight = (m: MoveSpec) => (m.kind === 'kick' ? (m.id === 'roundhouse' ? 0.95 : 0.7) : m.id === 'uppercut' ? 1.0 : 1.05);
+export const strikeHeight = (m: MoveSpec) => (m.kind === 'kick' ? (m.id === 'roundhouse' ? 0.95 : 0.7) : m.id === 'uppercut' ? 1.0 : 1.05) * SIZE_K;
 
 export type StyleId = 'brawler' | 'kickboxer' | 'street';
 
@@ -66,10 +76,11 @@ export interface StyleSpec {
   /** What its kicks' damage is multiplied by (the Kickboxer's hit harder) */
   kick: number;
 }
+/** The styles; their dodges' steps in proportion with the fighters' size (figure.ts) */
 export const STYLES: Record<StyleId, StyleSpec> = {
-  brawler: { id: 'brawler', name: 'Brawler', moves: ['jab', 'cross', 'hook', 'frontKick', 'dodge'], parry: false, dodge: 1.2, kick: 1 },
-  kickboxer: { id: 'kickboxer', name: 'Kickboxer', moves: ['jab', 'cross', 'hook', 'frontKick', 'roundhouse', 'dodge'], parry: false, dodge: 1.2, kick: 1.25 },
-  street: { id: 'street', name: 'Street', moves: ['jab', 'cross', 'hook', 'uppercut', 'frontKick', 'roundhouse', 'dodge'], parry: true, dodge: 1.6, kick: 1 },
+  brawler: { id: 'brawler', name: 'Brawler', moves: ['jab', 'cross', 'hook', 'frontKick', 'dodge'], parry: false, dodge: 1.2 * SIZE_K, kick: 1 },
+  kickboxer: { id: 'kickboxer', name: 'Kickboxer', moves: ['jab', 'cross', 'hook', 'frontKick', 'roundhouse', 'dodge'], parry: false, dodge: 1.2 * SIZE_K, kick: 1.25 },
+  street: { id: 'street', name: 'Street', moves: ['jab', 'cross', 'hook', 'uppercut', 'frontKick', 'roundhouse', 'dodge'], parry: true, dodge: 1.6 * SIZE_K, kick: 1 },
 };
 
 /** The sparring partners on the street (brawlsite.ts holds where they stand and how they fight): their ids and names, here so the save, the missions and the records read them without the partners' data in the boot */

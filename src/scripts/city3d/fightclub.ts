@@ -285,18 +285,19 @@ export function buildFightClub(scene: THREE.Scene, opts: { tick: (f: Tick) => vo
   const C = COUNTER;
   const CW = C.x1 - C.x0;
   const CD = C.z1 - C.z0;
-  b.box(C.x0, S, C.z0, CW, 0.5, CD, WALL);
-  b.box(C.x0, S + 0.14, C.z1 - 0.02, CW, 0.18, 0.04, PINK);
-  b.box(C.x0 - 0.05, S + 0.5, C.z0 - 0.05, CW + 0.1, 0.06, CD + 0.1, INK);
+  // (its top at a Degen's waist at everyone's size, docs/scale-plan.md: 0.44)
+  b.box(C.x0, S, C.z0, CW, 0.38, CD, WALL);
+  b.box(C.x0, S + 0.11, C.z1 - 0.02, CW, 0.15, 0.04, PINK);
+  b.box(C.x0 - 0.05, S + 0.38, C.z0 - 0.05, CW + 0.1, 0.06, CD + 0.1, INK);
   for (const x of [C.x0 + 0.1, C.x1 - 0.1]) b.box(x - 0.04, S, C.z0 + 0.06, 0.08, 2.0, 0.08, STEEL);
   b.box(C.x0 - 0.15, S + 2.0, C.z0 - 0.1, CW + 0.3, 0.08, CD + 0.5, PINK);
   b.add(new THREE.BoxGeometry(CW + 0.3, 0.035, 0.035).translate(C.x0 + CW / 2, S + 1.98, C.z1 + 0.4), neon(PAL.cyan, 0.8, 2.6));
   // The clipboard and the bell
-  b.box(C.x0 + 0.4, S + 0.56, C.z0 + 0.3, 0.26, 0.012, 0.34, LIGHT);
-  b.box(C.x0 + 0.47, S + 0.57, C.z0 + 0.3, 0.12, 0.025, 0.06, STEEL);
-  b.add(new THREE.CylinderGeometry(0.08, 0.08, 0.02, 12).translate(C.x1 - 0.45, S + 0.57, C.z0 + 0.5), STEEL);
-  b.add(new THREE.SphereGeometry(0.07, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2).translate(C.x1 - 0.45, S + 0.58, C.z0 + 0.5), toon(PAL.gold));
-  b.add(new THREE.SphereGeometry(0.018, 6, 5).translate(C.x1 - 0.45, S + 0.655, C.z0 + 0.5), INK);
+  b.box(C.x0 + 0.4, S + 0.44, C.z0 + 0.3, 0.26, 0.012, 0.34, LIGHT);
+  b.box(C.x0 + 0.47, S + 0.45, C.z0 + 0.3, 0.12, 0.025, 0.06, STEEL);
+  b.add(new THREE.CylinderGeometry(0.08, 0.08, 0.02, 12).translate(C.x1 - 0.45, S + 0.45, C.z0 + 0.5), STEEL);
+  b.add(new THREE.SphereGeometry(0.07, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2).translate(C.x1 - 0.45, S + 0.46, C.z0 + 0.5), toon(PAL.gold));
+  b.add(new THREE.SphereGeometry(0.018, 6, 5).translate(C.x1 - 0.45, S + 0.535, C.z0 + 0.5), INK);
   {
     const p = plane(0.9, 0.22, lit(new THREE.MeshBasicMaterial({ map: plateTexture() }), 0.9, 1.6));
     p.position.set(C.x0 + CW / 2, S + 1.84, C.z1 + 0.41);

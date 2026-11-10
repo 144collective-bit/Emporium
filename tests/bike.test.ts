@@ -10,7 +10,7 @@ import { CARS } from '../src/scripts/city3d/carspec';
 import { CARGO, DRIVE, FEEL, PLAYER_CARS } from '../src/scripts/city3d/mycar';
 import { buyCar, carMods, carStatsOf, cleanSave, gearValue, modCar, ownsCar } from '../src/scripts/city3d/tycoon';
 import { MOMENT, bikeMark } from '../src/scripts/city3d/moments';
-import { SITTER } from '../src/scripts/city3d/carinside';
+import { DRIVER_SCALE as RIDER_SCALE, SITTER } from '../src/scripts/city3d/carinside';
 
 const open = { boxes: [], soft: [] };
 const bounds: [number, number, number, number, number] = [-1e4, -1e4, 1e4, 1e4, 9];
@@ -47,7 +47,8 @@ test('each bike in proportion: the rider astride, the grips ahead of him in reac
     const [sx, sy] = s.seat;
     assert.ok(sx > ra && sx < fa && sy > s.r * 2, `${id}: the seat between the wheels, over them`);
     const [bx, by, bh] = s.bars;
-    assert.ok(bx > sx + 0.3 && bx < fa + 0.1 && by > sy, `${id}: the bars ahead and above`);
+    // (0.3 ahead for a rider at 0.85: in step with the rider's size, docs/scale-plan.md)
+    assert.ok(bx > sx + 0.3 * (RIDER_SCALE / 0.85) && bx < fa + 0.1 && by > sy, `${id}: the bars ahead and above`);
     assert.ok(bh * 2 <= s.W + 1e-9, `${id}: the bars inside its width`);
     const [px, py] = s.pegs;
     assert.ok(py < sy - 0.2 && py > 0.1 && Math.abs(px - sx) < 0.5, `${id}: the pegs under him`);

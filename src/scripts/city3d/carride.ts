@@ -25,6 +25,7 @@
  */
 import * as THREE from 'three';
 import type { Car } from './cars';
+import { CAR_SCALE } from './carspec';
 import type { Moving } from './carcabin';
 import { INTERIORS } from './carinside';
 import { SPRINGS, newSprings, stepSprings, wheelsOf } from './suspension';
@@ -258,12 +259,14 @@ export function rideOn(car: Car, m: Moving) {
   car.ride = (st, dt, slip, accel, revs, top, y, groundAt) => {
     const c = Math.cos(st.yaw);
     const sn = Math.sin(st.yaw);
-    const world = (x: number, z: number): [number, number] => [st.x + c * x + sn * z, st.z - sn * x + c * z];
+    // (the car's numbers are the drawing's, its group brought to its size in the world: CAR_SCALE)
+    const world = (x: number, z: number): [number, number] => [st.x + (c * x + sn * z) * CAR_SCALE, st.z + (-sn * x + c * z) * CAR_SCALE];
     // The springs: the ground under each wheel from the car's height (a step too big to be a kerb is a deck or a ramp
     // the car's own height already follows), the load of speeding up, braking and turning
     for (const [i, [x, z]] of at.entries()) {
-      const g = groundAt(...world(x, z), y) - y;
-      ground[i] = Math.abs(g) < 0.3 ? g : 0;
+      // (in the car's own numbers, as its springs are)
+      const g = (groundAt(...world(x, z), y) - y) / CAR_SCALE;
+      ground[i] = Math.abs(g) < 0.3 / CAR_SCALE ? g : 0;
     }
     stepSprings(sp, tune, at, { ax: Math.max(-12, Math.min(12, accel)), ay: st.speed * st.yawRate, ground }, dt);
     const b = m.body;

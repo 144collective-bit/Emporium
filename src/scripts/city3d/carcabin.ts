@@ -28,7 +28,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BLACKOUT, GLASS, bodyShape, build, carGeometry, carMaterials, clip, extrude, inset, merge, wheelGeometry, wheelSpots, type Car } from './cars';
-import { DRIVER_SCALE, INTERIORS, hollowFrom, hollowTo, type Interior } from './carinside';
+import { IN_CAR as DRIVER_SCALE, INTERIORS, hollowFrom, hollowTo, type Interior } from './carinside';
 import type { CarSpec } from './carspec';
 import { CALIPER, brakes, caliperGeometry, inward, paintAll } from './carparts';
 import type { Degen } from './character';
@@ -198,7 +198,7 @@ function makeShell(s: CarSpec, low: boolean, bare: string): Shell {
   const h0 = hollowFrom(s, n);
   const h1 = hollowTo(s);
   const mid: V2 = [(rb[0] + fb[0] + rr[0] + fr[0]) / 4, (rb[1] + fb[1] + rr[1] + fr[1]) / 4];
-  const model = bare ? build(s.id, false, bare) : carGeometry(s.id, { wheels: false });
+  const model = bare ? build(s.id, false, bare) : carGeometry(s.id, { wheels: false, own: true });
 
   // The paint: the model's own, less its first two pieces (the body's and the cabin's solids)
   const solids = extrude(bodyShape(s), s.W, 0.04).attributes.position.count + extrude(shape(s.cabin), cw, CABIN_ROUND).attributes.position.count;
@@ -566,7 +566,7 @@ export function fitOut(car: Car, o: { low: boolean; ready(obj: THREE.Object3D): 
   const key = `${s.id}|${bare}`;
   let sh = shells.get(key);
   if (!sh) shells.set(key, (sh = makeShell(s, o.low, bare)));
-  const model = carGeometry(s.id, { wheels: false });
+  const model = carGeometry(s.id, { wheels: false, own: true });
   const { detail } = carMaterials();
   // The body on its springs: everything but the wheels in a group of its own, the wheels with their discs and the
   // sidewall's ring
