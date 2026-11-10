@@ -36,6 +36,7 @@
  * siren far off, the ice-cream van's jingle on a summer's day), Bunker Sound's beat out of its garage door (`studio`)
  * and St Aldwyn's bell on the hour, heard across the estate and beyond (`bell`).
  */
+import { fromWall } from './wall';
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
 import { PLAN, distToStreet } from './streetplan';
@@ -121,7 +122,11 @@ export interface Ambience {
   studio: number;
   /** St Aldwyn's bell (sound.ts tolls it on the hour), 0-1 */
   bell: number;
+  /** By the wall round the city (wall.ts, docs/wall-plan.md Phase 6): the wind gusting against it and a low hum, 0-1 */
+  wall: number;
 }
+/** How far from the wall's inner face its sound carries (it's full at its foot, gone this far in) */
+export const WALL_SOUND = 70;
 /** The church's tower, where its bell hangs */
 const BELFRY = [(CHURCH.tower.rect[0] + CHURCH.tower.rect[2]) / 2, (CHURCH.tower.rect[1] + CHURCH.tower.rect[3]) / 2];
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
@@ -286,6 +291,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const ends = 1 - smooth(0, 25, Math.max(0, fromEnds));
   const studio = 1 - smooth(2, 18, Math.hypot(x - STUDIO.door[0], z - STUDIO.door[1]) + lift * 0.5);
   const bell = 1 - smooth(25, 170, Math.hypot(x - BELFRY[0], z - BELFRY[1]) + lift * 0.3);
+  // By the wall: full at its foot, gone `WALL_SOUND` in (and from high over it, more of it)
+  const cityWall = 1 - smooth(0, WALL_SOUND, Math.max(0, fromWall(x, z)) + lift * 0.2);
   return {
     city: town,
     water: Math.max(water, lake) * k,
@@ -313,5 +320,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     ends: ends * k,
     studio,
     bell,
+    wall: cityWall,
   };
 }

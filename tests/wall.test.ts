@@ -4,10 +4,12 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, WALL_SOLIDS, fromWall, inWall } from '../src/scripts/city3d/wall';
-import { EXT, FLY_BOUNDS, RIVER, WALL_FOOT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { BEYOND, BOAT_ENDS, CULVERT, CULVERTS, archY, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, WALL_SOLIDS, WALL_TOP, CAMERAS, FLOOD, FLOODS, SIDE, TOP, alongFace, fromWall, inWall } from '../src/scripts/city3d/wall';
+import { EXT, FLY_BOUNDS, WALL_FOOT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { WATER_Y } from '../src/scripts/city3d/river';
 import { EDGE_TURN } from '../src/scripts/city3d/flight-sim';
 import { SOLIDS } from '../src/scripts/city3d/solids';
+import { WALL_SOUND, ambienceAt } from '../src/scripts/city3d/ambience';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { TALLEST as UPTOWN_TALLEST } from '../src/scripts/city3d/highrise';
@@ -67,13 +69,29 @@ test('everything that exists stands inside it, well clear: nothing moves for it'
   }
 });
 
-test('the culverts are kept where the river meets the west and east sides', () => {
+test('the barred culverts: arches across the river where it meets the wall, the boats stopped at the bars', () => {
   assert.equal(CULVERTS.length, 2);
   for (const c of CULVERTS) {
     assert.equal(c.x, c.side === 'w' ? WALL_INNER[0] : WALL_INNER[2]);
-    assert.deepEqual([c.z0, c.z1], [RIVER[0], RIVER[1]]);
-    assert.ok(inWall(c.x + (c.side === 'w' ? -1 : 1), (c.z0 + c.z1) / 2), 'on the wall');
+    assert.ok(inWall(c.x - c.dir, (c.water[0] + c.water[1]) / 2), 'on the wall');
+    // The arches span the water edge to edge, a pier between each, none wider than a bay
+    assert.ok(Math.abs(c.bays[0][0] - c.water[0]) < 1e-9 && Math.abs(c.bays.at(-1)![1] - c.water[1]) < 1e-9);
+    for (let k = 0; k < c.bays.length; k++) {
+      const [z0, z1] = c.bays[k];
+      assert.ok(z1 - z0 > 4 && z1 - z0 <= CULVERT.bay + 1e-9, `a bay ${z1 - z0} across`);
+      if (k) assert.ok(Math.abs(z0 - c.bays[k - 1][1] - CULVERT.pier) < 1e-9, 'a pier between');
+      // Its top: the spring at its sides, the crown in its middle, over the water, under the wall's top
+      assert.ok(Math.abs(archY(c.bays[k], z0)! - (WATER_Y + CULVERT.spring)) < 1e-9);
+      assert.ok(Math.abs(archY(c.bays[k], (z0 + z1) / 2)! - (WATER_Y + CULVERT.crown)) < 1e-9);
+      assert.equal(archY(c.bays[k], z0 - 0.1), null);
+    }
+    assert.ok(WATER_Y + CULVERT.cap + CULVERT.lintel < WALL.h, 'the frame well under the top');
+    // The frame spans the channel to the slopes' tops
+    assert.ok(c.tops[0] <= c.water[0] && c.tops[1] >= c.water[1]);
   }
+  // The boats' ends are at the bars, so the river is boated its whole length inside the wall
+  assert.ok(BOAT_ENDS[0] > WALL_INNER[0] && BOAT_ENDS[0] < WALL_INNER[0] + CULVERT.out);
+  assert.ok(BOAT_ENDS[1] < WALL_INNER[2] && BOAT_ENDS[1] > WALL_INNER[2] - CULVERT.out);
 });
 
 test('the sky dome reaches past it from town', () => {
@@ -106,6 +124,39 @@ test('you walk and drive up to its foot and no further; flying turns back well s
   }
   // The wall is solid all the way up, a box a side
   assert.equal(WALL_SOLIDS.length, 4);
-  for (const b of WALL_SOLIDS) assert.equal(b[4], WALL.h);
+  for (const b of WALL_SOLIDS) assert.equal(b[4], WALL_TOP);
   assert.ok(SOLIDS.some((b) => b === WALL_SOLIDS[0]), 'in SOLIDS: walking, the camera, bullets');
+});
+
+test('its top: a parapet each side, wire on them, cameras along the inner one', () => {
+  assert.equal(WALL_TOP, WALL.h + TOP.parapet.h);
+  assert.ok(TOP.parapet.w * 2 < WALL.thick, 'a walk between the parapets');
+  assert.ok(WALL_TOP + TOP.post + 1 < CEILING - 20, 'the cameras well under what flies');
+  // A camera on every side, evenly along it, on the inner parapet's middle, looking into the city
+  assert.ok(CAMERAS.length >= 4 * Math.floor(SIDE / TOP.camEvery));
+  for (const c of CAMERAS) {
+    assert.ok(Math.abs(fromWall(c.x, c.z) - TOP.parapet.w / 2) < 1e-9, `a camera off the parapet at ${c.x}, ${c.z}`);
+    assert.ok(fromWall(c.x + c.nx * 10, c.z + c.nz * 10) > fromWall(c.x, c.z), 'facing into the city');
+  }
+});
+
+test('floodlights at its foot, evenly along every side, clear of the corners', () => {
+  assert.equal(FLOODS.length, 4 * Math.floor(SIDE / FLOOD.every + 0.5));
+  for (const f of FLOODS) {
+    assert.ok(Math.abs(fromWall(f.x, f.z) - FLOOD.out) < 1e-9);
+    assert.ok(f.s >= FLOOD.every / 2 - 1e-9 && f.s <= SIDE - FLOOD.every / 2 + 1e-9, 'half a spacing from each corner');
+    // (the wash in the shader lights a pool round each, at the same spacing: wall3d.ts)
+    assert.ok(Math.abs(((f.s / FLOOD.every) % 1) - 0.5) < 1e-6);
+  }
+  // Each spot is reachable on foot: inside where walking stops
+  for (const f of FLOODS) assert.ok(f.x > WORLD_BOUNDS[0] && f.x < WORLD_BOUNDS[2] && f.z > WORLD_BOUNDS[1] && f.z < WORLD_BOUNDS[3]);
+  assert.deepEqual(alongFace(SIDE, 1).length, 4, 'one a side when the spacing is a side');
+});
+
+test('its sound: the wind and the hum full at its foot, gone in town', () => {
+  const [i0, j0] = WALL_INNER;
+  assert.ok(ambienceAt(i0 + 1, 40, 0, 0).wall > 0.95, 'at its foot');
+  assert.ok(ambienceAt(30, j0 + 2, 0, 0).wall > 0.9);
+  assert.equal(ambienceAt(30, 30, 0, 0).wall, 0, 'downtown hears none of it');
+  assert.equal(ambienceAt(i0 + WALL_SOUND + 5, 40, 0, 0).wall, 0);
 });

@@ -21,7 +21,8 @@
  * x east, z south; world tiles (1 = about 1.8 m). A heading (`yaw`) is 0 with
  * the bow to +x, as every boat's.
  */
-import { EXT, RIVER } from './layout';
+import { RIVER } from './layout';
+import { BOAT_ENDS } from './wall';
 import { WATER_Y, edgesAt } from './river';
 import { BX, DECK_DEPTH, DECK_HALF, LIBERTY_RECTS, SHIP, lowY, shipAt } from './liberty';
 import { DEPTH as HARBOUR_DEPTH, HALF as HARBOUR_HALF, HX, TOWER, TOWERS, deckY } from './harbour';
@@ -163,8 +164,9 @@ function pushOut(c: Circle, solids: readonly Rect[], others: readonly Circle[]):
   const [n, s] = edgesAt(c.x);
   if (c.z - c.r < n + PUSH) pz += n + PUSH - (c.z - c.r);
   if (c.z + c.r > s - PUSH) pz -= c.z + c.r - (s - PUSH);
-  if (c.x - c.r < EXT[0] + 1) px += EXT[0] + 1 - (c.x - c.r);
-  if (c.x + c.r > EXT[1] - 1) px -= c.x + c.r - (EXT[1] - 1);
+  // (the river's ends: the bars of the culverts under the wall, wall.ts)
+  if (c.x - c.r < BOAT_ENDS[0]) px += BOAT_ENDS[0] - (c.x - c.r);
+  if (c.x + c.r > BOAT_ENDS[1]) px -= c.x + c.r - BOAT_ENDS[1];
   const x = c.x + px;
   const z = c.z + pz;
   for (const r of solids) {
