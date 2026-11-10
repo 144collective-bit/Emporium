@@ -110,7 +110,60 @@ server bundles it.
   his reach) and the cars (world props sized against the lanes; their door
   handles and roofs sit high on him, a car's scale is a question of its own).
 
-## Left for later
+## The cars to match (the owner's pick, planned, not built)
 
-- The cars' size against everyone's (a hatch's roof 0.95 tiles, him 0.86):
-  the owner's call if they should come down.
+The owner's call (2026-11-10, option A): the cars come down about 12% so
+they sit against everyone as real cars sit against real people. Today the
+cars are life-size (a hatch 2.2 x 0.98, its roof 0.95 tiles: about 4 m and
+1.7 m) and everyone is 0.86 tiles, about 1.55 m, so a hatch's roof is over
+his head. At 0.88 its roof is about 0.84, just under it.
+
+**Nothing in the world moves:** roads, lanes (1.7), lay-bys, bays, car
+parks, garages, the turntable and every parked car's spot stay where they
+are; the cars only get smaller on them. The bikes (already refitted to
+him), karts, boats and aircraft stay as they are.
+
+### How (one number, `CAR_SCALE`)
+
+- `CAR_SCALE` (0.88) in carspec.ts. The numbers each model is written in
+  stay as they are (the drawing's, `DRAWN`); `CARS` is them times
+  `CAR_SCALE`, so everything that reads a car's size (the driving's
+  circles, the traffic's gaps and bumps, the parked cars' boxes worked out
+  from `L` / `W`, the garage's cards, the multiplayer's cars) gets the new
+  size by itself.
+- The drawing (cars.ts `build()`, `farCarGeometry()`, `EXTRAS`, the fine
+  detail in carfine.ts, carstyle.ts's kit and livery, carparts.ts) keeps
+  working in the drawn numbers and scales the finished geometry once, so
+  none of the hundreds of hand numbers in the models change.
+- Your fitted car (carcabin.ts, carinside.ts `INTERIORS`, carride.ts's
+  springs and gauges, the doors) the same way: the inside drawn in its
+  numbers, scaled with the body; Degen, who doesn't shrink, sat in it at
+  his own size, the seats lowered or reclined where his head would meet the
+  lower roof (carspec.test.ts holds his head under the roof, his eyes over
+  the dash and the wheel in reach, as now).
+
+### Phases (each with the owner's sign-off)
+
+1. **The bodies:** `CAR_SCALE`, the drawing scaled, `CARS` scaled; the
+   traffic, the parked cars and your car (before it's fitted out) at the new
+   size. The rig's trailer (`TRAILER`, `FIFTH_WHEEL`, life.ts's `RIG_LEN`)
+   with them.
+2. **Inside:** the fitted car's inside, the seats refit for him, the doors
+   and getting in and out (moments.ts `carMark()`: the handle lower), the
+   driver's-seat camera, the step-out spot.
+3. **The footprints written by hand:** every `CAR_HALF` (commons, kerbside,
+   mall, stadium, estates, mansions, coral, airfield, kart facility) and
+   the bus's and truck's boxes brought down with `CAR_SCALE`; the bus
+   stops' and loading bays' stopping marks checked.
+4. **Checked:** shots by day and night at the phone and desktop tiers
+   (downtown's traffic, a car park, the garage, getting in, the driver's
+   view), the bench before and after, every test, the layout snapshot
+   unchanged.
+
+### Questions for the owner
+
+- 0.88 (a hatch's roof just under his head), or 0.9 (level with it)?
+- The buses and trucks too? The City Bus is 5.6 long and 1.66 tall (about
+  10 m by 3 m, already a little short of a real one); at 0.88 it's a
+  midibus. The suggestion: everything at the one size, so nothing looks
+  out of place beside it.
