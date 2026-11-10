@@ -12,6 +12,7 @@ import { Batch, toon } from './kit';
 import { site } from './tilework';
 import { GRANITE_TILE, bench, granite, quad } from './plaza3d';
 import { PAVE_Y } from './gardens3d';
+import { registerCityHall } from './cityhall3d';
 import { AXIS, AXIS_HALF, BORDER, COURT, GRATE, HALL, POLICE, SQUARE, SQUARE_BENCHES, SQUARE_TREES, type Rect } from './civic';
 
 /** The square's granite: over the park's paved walks where they cross it (nothing flush) */
@@ -37,6 +38,8 @@ export const RING_C: [number, number] = [AXIS, (Math.max(POLICE[1], COURT[1]) + 
 export const RING_R = 5.2;
 
 export function registerCivic() {
+  // City Hall (Phase 2, cityhall3d.ts)
+  registerCityHall();
   const [x0, z0, x1, z1] = SQUARE;
   site('civic square', [x0, z0, x1, z1], (into) => {
     const b = new Batch();

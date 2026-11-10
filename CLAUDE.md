@@ -869,9 +869,9 @@ it and has been retired completely. Build only on what's here.
   exception: a tower or dome, the seat of power), in stern stripped
   classicism; the police headquarters and the courthouse are to be places;
   names plain and made up (Sector 7 City Hall, Sector 7 Police, the Sector 7
-  Courthouse). Phase 1 (the land, the square and the walks) is built,
-  waiting on the owner's sign-off: `civic.ts` (DOM-free, tested in
-  `tests/civic.test.ts`):
+  Courthouse). Phases 1 (the land, the square and the walks) and 2 (City
+  Hall) are built, waiting on the owner's sign-off: `civic.ts` (DOM-free,
+  tested in `tests/civic.test.ts`):
   - the civic square (`SQUARE`) on the axis (`AXIS`, the Mall's line and
     Uptown's), open to the avenue (the Mall's south gate went, its WESTLAKE
     PARK board to the north gate; the park's wall stops either side);
@@ -889,6 +889,23 @@ it and has been retired completely. Build only on what's here.
   (`inSquare()`). Drawn by `civic3d.ts` (Westlake Park's chunk): Uptown's
   granite (plaza3d.ts) over the square, the axis and a border inlaid, a pale
   ring at its middle, grates round its trees.
+  - **City Hall** (Phase 2, the owner's picks): steps up from the square to a
+    podium (`STEPS`, `PODIUM_Y`; walked as a slope, `cityHallY()`, a layer in
+    groundheight.ts), a colonnade of eight square columns (`COLUMNS`) under
+    a frieze carved SECTOR 7 · CITY HALL, the emblem (a seven-pointed star,
+    `STAR`, made up) on the attic, crimson banners with the star (`BANNER`)
+    either side of the bronze door (`DOOR`), the front range and the back
+    block with tall windows lit at night, and the stepped tower over it
+    (`TIERS`, stars lit on its second tier, a lantern and a gold finial:
+    `CITYHALL_TOP` 22.4, `CITYHALL_TIP`; the owner's exception to "under
+    the Emporium", every flight well over it). It's solid
+    (`CITYHALL_SOLIDS` in `SOLIDS`), drawn by `cityhall3d.ts` (two sites in
+    Westlake Park's chunk). It's a place: spot `cityhall` (its pick boxes at
+    the boot, `CITYHALL_PICK`, through crestspots.ts `spot()`), a pin, a
+    directory entry, a panel with Walk in (`data-civic-walkin`,
+    `CITYHALL_SPAWN`), its door (`CITYHALL_DOOR` in walk.ts `ALL_DOORS`),
+    `PLACES` and `LIVE_PLACES` entries, its live line and its footprint on
+    the world map.
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
@@ -929,7 +946,7 @@ it and has been retired completely. Build only on what's here.
   about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
   Emporium" holds everywhere else but Uptown North, below, Southbank
-  Docks' cranes and the Neon Mile's resorts); the flying traffic and your own
+  Docks' cranes, the Neon Mile's resorts and City Hall's tower); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:

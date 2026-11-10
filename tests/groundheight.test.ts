@@ -16,6 +16,7 @@ import { HIGH_Y, LOW_Y, TOWERS, footbridgeY } from '../src/scripts/city3d/libert
 import { FOOTBRIDGE_X, EXT } from '../src/scripts/city3d/layout';
 import { SX as SWING_X, swingY } from '../src/scripts/city3d/swingbridge';
 import { JETTY, TERRACES, onJetty, terraceY } from '../src/scripts/city3d/westlake';
+import { cityHallY, CITYHALL_SPAWN, PORTICO } from '../src/scripts/city3d/civic';
 import { viaductY } from '../src/scripts/city3d/viaground';
 import { DECK_Y as VIADUCT_Y, ringPoint } from '../src/scripts/city3d/viaduct';
 import { DECK, skyDeckY } from '../src/scripts/city3d/skydeck';
@@ -68,7 +69,8 @@ function reference(leavesOpen: () => boolean) {
     if (mall !== null) return mall;
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
-    const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB));
+    // (City Hall's steps and portico came after, civic.ts: the one line added to the old groundAt())
+    const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), cityHallY(x, z) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) {
       const [bx0, bz0, bx1, bz1] = BANKS_AREA;
       return x > bx0 && x < bx1 && z > bz0 && z < bz1 ? Math.max(base, bankY(x, z) + 0.035) : base;
@@ -105,6 +107,9 @@ const GALLERY = mid(UPPER[2]);
 const GALLERY_FLOOR = ENDS_FLOORS.find((f) => !f.stair && !f.ground && !f.slope)!;
 /** The places the layers are: a point on each, and the heights they're asked at */
 const SPOTS: [number, number][] = [
+  // City Hall's steps (half way up) and its portico
+  [CITYHALL_SPAWN.x + 3, CITYHALL_SPAWN.z - 4.4],
+  [CITYHALL_SPAWN.x, (PORTICO[1] + PORTICO[3]) / 2],
   mid(GALLERY_FLOOR.rect),
   mid(MARKET_DECK),
   [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2],
@@ -166,6 +171,7 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     jetty: [JETTY_AT[0], JETTY_AT[1], 0],
     terrace: [terraceSpot(TERRACES[0])[0], terraceSpot(TERRACES[0])[1], 0],
     skydeck: [mid(SPIRE_LOT)[0], mid(SPIRE_LOT)[1], DECK.y + SLAB],
+    cityhall: [CITYHALL_SPAWN.x, (PORTICO[1] + PORTICO[3]) / 2, 0],
     circuit: [sample(12)[0], sample(12)[1], 0],
     banks: [sample(12)[0], sample(12)[1], 0],
   };

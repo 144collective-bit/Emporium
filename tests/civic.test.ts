@@ -29,6 +29,32 @@ import { PARK_EDGE_TREES } from '../src/scripts/city3d/ringstreet';
 import { AXIS_X, AXIS_ZEBRAS, UPTOWN_LANES } from '../src/scripts/city3d/uptown';
 import { CENTRE } from '../src/scripts/city3d/plaza';
 import { PICNICS } from '../src/scripts/city3d/parklife';
+import {
+  BANNER,
+  BANNER_XS,
+  CITYHALL_DOOR,
+  CITYHALL_SOLIDS,
+  CITYHALL_SPAWN,
+  CITYHALL_TIP,
+  CITYHALL_TOP,
+  FRIEZE_H,
+  STAR,
+  COLUMN,
+  COLUMNS,
+  DOOR,
+  FRONT_H,
+  FRONT_RANGE,
+  PODIUM_Y,
+  PORTICO,
+  STEPS,
+  TIERS,
+  TOWER_C,
+  cityHallY,
+} from '../src/scripts/city3d/civic';
+import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
+import { FLIGHTS, PERIOD, REACH, poseAt } from '../src/scripts/city3d/airfield';
+import { SOLIDS } from '../src/scripts/city3d/solids';
+import { HIGHRISES } from '../src/scripts/city3d/highrise';
 
 /** Every point of a rectangle, `step` apart */
 const fill = (r: Rect, step = 0.5): Pt[] => {
@@ -124,4 +150,57 @@ test("what stands on the square: on it, off the lots, the walks and each other, 
   assert.ok(SQUARE_TREES.length >= 6 && SQUARE_LAMPS.length >= 6 && SQUARE_BENCHES.length >= 4);
   // On the park's land
   for (const p of things) assert.ok(inPark(p, 1) || BIG.length === 0);
+});
+
+test('City Hall: on its lot, up wide steps from the square, the colonnade on the podium, the door on the axis', () => {
+  const inLot = (p: Pt, m = 0) => [HALL.front, HALL.back].some((r) => p[0] > r[0] - m && p[0] < r[2] + m && p[1] > r[1] - m && p[1] < r[3] + m);
+  // Everything but the steps on its lot; the steps on the square's head, wide, centred on the axis
+  for (const b of CITYHALL_SOLIDS) {
+    const c: Pt = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+    assert.ok(inLot(c, 0.01) || inSquare(c), `a solid off its lot at ${c}`);
+    for (const s of SOLIDS) if (!CITYHALL_SOLIDS.includes(s)) assert.ok(!(s[0] < b[2] && s[2] > b[0] && s[1] < b[3] && s[3] > b[1]), `something else in City Hall at ${s}`);
+  }
+  for (const b of CITYHALL_SOLIDS) assert.ok(SOLIDS.includes(b), 'in the city\'s solids');
+  assert.ok(STEPS[2] - STEPS[0] > 20 && Math.abs((STEPS[0] + STEPS[2]) / 2 - AXIS) < 1e-9);
+  assert.equal(STEPS[1], SQUARE[1]);
+  // A walker climbs them as a steady slope, gentle, to the podium; the portico's floor at the podium
+  for (let z = STEPS[3] - 0.01; z > STEPS[1]; z -= 0.3) {
+    const y = cityHallY(AXIS, z)!;
+    const y2 = cityHallY(AXIS, z - 0.3);
+    if (y2 !== null) assert.ok(y2 >= y && (y2 - y) / 0.3 < 0.35, `a steep step at ${z}`);
+  }
+  assert.ok(Math.abs(cityHallY(AXIS, (PORTICO[1] + PORTICO[3]) / 2)! - PODIUM_Y) < 1e-9);
+  assert.equal(cityHallY(AXIS, STEPS[3] + 1), null, 'nothing on the square');
+  // Nothing solid on the steps' or the portico's walk but the columns, and between them room to pass
+  const walkers = SOLIDS.filter((b) => !COLUMNS.some(([x, z]) => Math.abs((b[0] + b[2]) / 2 - x) < 1e-6 && Math.abs((b[1] + b[3]) / 2 - z) < 1e-6));
+  for (let x = STEPS[0] + 0.5; x < STEPS[2] - 0.5; x += 0.5)
+    for (let z = PORTICO[1] + 0.4; z < STEPS[3]; z += 0.5) assert.ok(!walkers.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]), `blocked at ${x}, ${z}`);
+  for (let k = 1; k < COLUMNS.length; k++) assert.ok(COLUMNS[k][0] - COLUMNS[k - 1][0] - COLUMN.w > 1.8, 'room between the columns');
+  // The door on the axis in the middle bay, its prompt on the portico, the walk-in on the square facing the steps
+  const mid = COLUMNS.findIndex((c) => c[0] > AXIS);
+  assert.ok(COLUMNS[mid][0] - COLUMNS[mid - 1][0] - COLUMN.w > DOOR.w, 'the door bay wider than the door');
+  assert.equal(CITYHALL_DOOR.x, AXIS);
+  assert.ok(CITYHALL_DOOR.z > FRONT_RANGE[3] && CITYHALL_DOOR.z < PORTICO[3] && cityHallY(CITYHALL_DOOR.x, CITYHALL_DOOR.z) === PODIUM_Y);
+  assert.ok(inSquare([CITYHALL_SPAWN.x, CITYHALL_SPAWN.z], -1) && CITYHALL_SPAWN.yaw === 0 && CITYHALL_SPAWN.z > STEPS[3]);
+  // The banners in the bays, none in the door's, under the portico's roof
+  assert.equal(BANNER_XS.length, COLUMNS.length - 2);
+  for (const x of BANNER_XS) assert.ok(Math.abs(x - AXIS) > DOOR.w / 2 + BANNER.w / 2, 'a banner over the door');
+  assert.ok(BANNER.top < COLUMN.h && PODIUM_Y + COLUMN.h < FRONT_H);
+  // The emblem fits the attic over the frieze, and the second tier's faces
+  assert.ok(2 * STAR.door + 0.3 < FRONT_H - PODIUM_Y - COLUMN.h - FRIEZE_H);
+  assert.ok(2 * STAR.tower + 0.3 < TIERS[1].top - TIERS[0].top && 2 * STAR.tower < 2 * TIERS[1].half - 1);
+});
+
+test('its tower: stepped, over the Emporium, under Uptown\'s tallest, every flight well over it', () => {
+  for (let k = 1; k < TIERS.length; k++) assert.ok(TIERS[k].half < TIERS[k - 1].half && TIERS[k].top > TIERS[k - 1].top, 'each tier in and up');
+  assert.ok(TIERS[0].half * 2 <= HALL.back[2] - HALL.back[0] && TOWER_C[0] === AXIS, 'on the back block, on the axis');
+  assert.ok(CITYHALL_TOP > EMPORIUM_ROOF + 8 && CITYHALL_TOP < 26, `its top at ${CITYHALL_TOP}`);
+  assert.ok(CITYHALL_TOP < Math.max(...HIGHRISES.map((h) => h.roof)), "under Uptown's tallest");
+  const half = TIERS[0].half;
+  for (let t = 0; t < PERIOD; t += 0.25)
+    for (const f of FLIGHTS) {
+      const p = poseAt(f, t);
+      const d = Math.hypot(Math.max(TOWER_C[0] - half - p.x, 0, p.x - TOWER_C[0] - half), Math.max(TOWER_C[1] - half - p.z, 0, p.z - TOWER_C[1] - half));
+      if (d < REACH[f.kind] + 4) assert.ok(p.y > CITYHALL_TIP + 4, `${f.id} at ${p.y.toFixed(1)} over City Hall at t ${t}`);
+    }
 });

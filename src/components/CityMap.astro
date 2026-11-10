@@ -77,8 +77,9 @@ const spots: Record<SpotId, Spot> = {
   endswood: { title: 'Endswood Estate', sub: 'The Ends' },
   aldwyns: { title: "St Aldwyn's", sub: 'Church' },
   bunker: { title: 'Bunker Sound', sub: 'Studio' },
+  cityhall: { title: 'City Hall', sub: 'Sector 7' },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
+const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1327,6 +1328,13 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">Bunker Sound</h2>
     <p class="city-panel-text">A studio in two garages. Sessions coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="cityhall" data-marquee="The city keeps its records">
+    <p class="kicker"><span class="kicker-num">42</span> The civic square</p>
+    <h2 id="city-panel-title" class="city-panel-title">City Hall</h2>
+    <p class="city-panel-text">The seat of the city. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-civic-walkin>Walk in</button>
   </template>
 
   <div class="city-hud mk-skin" data-city-hud>

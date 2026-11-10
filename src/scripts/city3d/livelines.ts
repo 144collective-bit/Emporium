@@ -7,7 +7,7 @@
  * the volcano's countdowns from the Neon Mile's own timetables, the ferry
  * hall's next sailing from the river bus's, Liberty Bridge's next lift from
  * the tall ship's, the Night Market open after dusk, the Harbour Master's
- * tide, Crestmont's and Sunridge's hours. `bouncerLine()` is what Club
+ * tide, Crestmont's and Sunridge's hours, City Hall's doors and its council. `bouncerLine()` is what Club
  * PULSE's bouncer says when you try the door (walk mode's toast).
  *
  * DOM-free (tested in tests/livelines.test.ts) and a chunk of its own,
@@ -54,6 +54,7 @@ export const LIVE_IDS = [
   'sunpark',
   'sunschool',
   'liberty',
+  'cityhall',
 ] as const;
 export type LiveId = (typeof LIVE_IDS)[number];
 
@@ -172,6 +173,11 @@ export function liveLine(id: string, t = Date.now()): string | null {
       if (c.dow === 2 && between(h, 10, 16)) return 'Council sits today · Gallery open';
       if (weekday(c) && between(h, 9, 17)) return 'Open till five · Records room upstairs';
       return 'Closed · Open weekdays from nine';
+    case 'cityhall':
+      // (the council sits on Thursday evenings; the doors open on weekdays)
+      if (c.dow === 4 && between(h, 18, 21)) return 'The council sits tonight · Gallery full';
+      if (weekday(c) && between(h, 9, 17)) return 'Doors open till five · Permits upstairs';
+      return 'Doors shut · Open weekdays at nine';
     case 'golfclub':
       if (between(h, 7, 17)) return 'Tee times till five · Nineteenth hole after';
       if (between(h, 17, 22)) return 'Course closed · Clubhouse open till ten';
