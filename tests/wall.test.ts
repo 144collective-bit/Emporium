@@ -4,8 +4,10 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, fromWall, inWall } from '../src/scripts/city3d/wall';
-import { EXT, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { BEYOND, CULVERTS, WALL, WALL_CORNERS, WALL_H, WALL_HAZE, WALL_INNER, WALL_LAND, WALL_LOOK, WALL_OUTER, WALL_RUNS, WALL_SOLIDS, fromWall, inWall } from '../src/scripts/city3d/wall';
+import { EXT, FLY_BOUNDS, RIVER, WALL_FOOT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EDGE_TURN } from '../src/scripts/city3d/flight-sim';
+import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { TALLEST as UPTOWN_TALLEST } from '../src/scripts/city3d/highrise';
@@ -55,10 +57,8 @@ test('it is solid all round: the four sides meet at the corners, nothing overlap
 });
 
 test('everything that exists stands inside it, well clear: nothing moves for it', () => {
-  // Where you can walk and drive today, every street, block and slab, the airport and the kart park
+  // Every street, block and slab, the airport and the kart park
   const clear = (x: number, z: number, what: string) => assert.ok(fromWall(x, z) >= WALL.out, `${what} at ${x}, ${z} is ${fromWall(x, z)} from the wall`);
-  clear(WORLD_BOUNDS[0], WORLD_BOUNDS[1], 'the walk limit');
-  clear(WORLD_BOUNDS[2], WORLD_BOUNDS[3], 'the walk limit');
   for (const s of PLAN.streets) for (const [x, z] of s.pts) clear(x, z, s.id);
   for (const b of PLAN.blocks) for (const [x, z] of b.poly) clear(x, z, b.id);
   for (const r of [SITE, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1]]) {
@@ -96,4 +96,16 @@ test('from town every side stands clear of the far haze, and the haze is whole b
   for (const [x, z] of [[i0, mz], [i1, mz], [mx, j0], [mx, j1]]) assert.ok(Math.hypot(x - 30, z - 30) < from, `the middle of a side at ${x}, ${z}`);
   assert.ok(to < CAMERA_FAR, 'faded out before the far plane clips it');
   assert.ok(WALL_LOOK.std > 0 && WALL_LOOK.std < 1, 'some of the city haze, never all');
+});
+
+test('you walk and drive up to its foot and no further; flying turns back well short of it', () => {
+  for (const [k, sgn] of [[0, 1], [1, 1], [2, -1], [3, -1]] as const) {
+    const gap = (WORLD_BOUNDS[k] - WALL_INNER[k]) * sgn;
+    assert.ok(gap > 0 && gap <= WALL_FOOT + 1e-9, `the walk limit ${gap} from the wall`);
+    assert.ok((FLY_BOUNDS[k] - WALL_INNER[k]) * sgn - EDGE_TURN > 40, 'the turn back starts well short of the wall');
+  }
+  // The wall is solid all the way up, a box a side
+  assert.equal(WALL_SOLIDS.length, 4);
+  for (const b of WALL_SOLIDS) assert.equal(b[4], WALL.h);
+  assert.ok(SOLIDS.some((b) => b === WALL_SOLIDS[0]), 'in SOLIDS: walking, the camera, bullets');
 });

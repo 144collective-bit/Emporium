@@ -10,7 +10,8 @@
  * to); tapping your car: bring it to you; tapping open ground: drop a
  * waypoint there. × or Esc closes it.
  */
-import { EXT } from './layout';
+import { WORLD_BOUNDS } from './layout';
+import { WALL_INNER, WALL_LOOK, WALL_OUTER } from './wall';
 import { edgeSamples } from './river';
 import { BASIN, CHANNEL, DRY_DOCK } from './docks';
 import { SHIP } from './docksport';
@@ -62,6 +63,8 @@ type Pick = { kind: 'place'; place: Place } | { kind: 'car' } | { kind: 'plane' 
 
 /** The map's colours: dark land, neon roads, PulseChain cyan for you and magenta for the metro */
 const C = {
+  /** The wall round the city (wall.ts): its own cold grey */
+  wall: WALL_LOOK.face,
   land: '#12222c',
   edge: '#0a0a14',
   river: '#1d4f7c',
@@ -118,9 +121,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     view.z = (z0 + z1) / 2;
   };
   const clampView = () => {
-    view.s = Math.min(24, Math.max(Math.min(w, h) / (EXT[1] - EXT[0]), view.s));
-    view.x = Math.min(EXT[1], Math.max(EXT[0], view.x));
-    view.z = Math.min(EXT[1], Math.max(EXT[0], view.z));
+    // (out to the wall round the city, wall.ts)
+    view.s = Math.min(24, Math.max(Math.min(w, h) / (WALL_OUTER[2] - WALL_OUTER[0]), view.s));
+    view.x = Math.min(WALL_INNER[2], Math.max(WALL_INNER[0], view.x));
+    view.z = Math.min(WALL_INNER[3], Math.max(WALL_INNER[1], view.z));
   };
 
   /** The hills' shading, worked out once: a pixel every HILL_PX tiles over their land */
@@ -164,13 +168,17 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = C.edge;
     ctx.fillRect(0, 0, w, h);
-    // The land, edge to edge, and the river across it
-    const [ax, ay] = toScreen(EXT[0], EXT[0]);
-    const [bx, by] = toScreen(EXT[1], EXT[1]);
+    // The wall round the city (wall.ts), then the land inside it, wall to wall, and the river across it
+    const [wx, wy] = toScreen(WALL_OUTER[0], WALL_OUTER[1]);
+    const [vx, vy] = toScreen(WALL_OUTER[2], WALL_OUTER[3]);
+    ctx.fillStyle = C.wall;
+    ctx.fillRect(wx, wy, vx - wx, vy - wy);
+    const [ax, ay] = toScreen(WALL_INNER[0], WALL_INNER[1]);
+    const [bx, by] = toScreen(WALL_INNER[2], WALL_INNER[3]);
     ctx.fillStyle = C.land;
     ctx.fillRect(ax, ay, bx - ax, by - ay);
     // (its edges as they curve: river.ts)
-    const banks = edgeSamples(EXT[0], EXT[1], 4);
+    const banks = edgeSamples(WALL_INNER[0], WALL_INNER[2], 4);
     ctx.fillStyle = C.river;
     ctx.beginPath();
     banks.forEach((e, i) => {
@@ -185,7 +193,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     const [hx0, hy0] = toScreen(TERRAIN_RECT[0], TERRAIN_RECT[1]);
     const [hx1, hy1] = toScreen(TERRAIN_RECT[2], TERRAIN_RECT[3]);
     ctx.imageSmoothingEnabled = true;
-    // (only over the land: the hills carry on a little past the world's edge, under the skyline)
+    // (only over the land inside the wall)
     ctx.save();
     ctx.beginPath();
     ctx.rect(ax, ay, bx - ax, by - ay);
@@ -638,7 +646,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     else if (plane && near(plane.x, plane.z, 14)) pick = { kind: 'plane' };
     else {
       const [x, z] = toWorld(sx, sy);
-      pick = x > EXT[0] && x < EXT[1] && z > EXT[0] && z < EXT[1] ? { kind: 'ground', x, z } : null;
+      pick = x > WORLD_BOUNDS[0] && x < WORLD_BOUNDS[2] && z > WORLD_BOUNDS[1] && z < WORLD_BOUNDS[3] ? { kind: 'ground', x, z } : null;
     }
     showCard();
     redraw();

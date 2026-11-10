@@ -1,6 +1,7 @@
 // The multiplayer protocol's checks (protocol.ts), shared by the site and the game server:
 // the world's edge, how fast each way of getting about may go, jumps, the guns' mods, and what a player is in.
 import { test } from 'node:test';
+import { WALL_INNER } from '../src/scripts/city3d/wall';
 import assert from 'node:assert/strict';
 import { FLAG, MODES, SPEEDS, VEH_KINDS, cleanMods, cleanVehicle, faceYaw, inWorld, jumped, modeBits, modeOf, moveOk, sameVehicle, vehFace } from '../src/scripts/net/protocol';
 import { CEILING } from '../src/scripts/city3d/flight-sim';
@@ -16,7 +17,9 @@ import { MOD_LEVELS } from '../src/scripts/city3d/catalog';
 test('the world is the one you can walk and drive, edge to edge', () => {
   const [x0, z0, x1, z1] = WORLD_BOUNDS;
   assert.ok(inWorld(x0, 0.15, z0) && inWorld(x1, 0.15, z1));
-  assert.ok(!inWorld(EXT[0] - 1, 0.15, 0) && !inWorld(0, 0.15, EXT[1] + 1));
+  // (out past the old edge, over the grass, to the wall's foot; never into the wall: wall.ts)
+  assert.ok(inWorld(EXT[0] - 1, 0.15, 0) && inWorld(0, 0.15, EXT[1] + 1));
+  assert.ok(!inWorld(WALL_INNER[0] - 0.1, 0.15, 0) && !inWorld(0, 0.15, WALL_INNER[3] + 0.1));
   // (down to the river's water, up to an aircraft's ceiling: your own flies there)
   assert.ok(inWorld(0, -1.5, 0) && inWorld(0, CEILING, 0));
   assert.ok(!inWorld(0, -4, 0) && !inWorld(0, CEILING + 9, 0));

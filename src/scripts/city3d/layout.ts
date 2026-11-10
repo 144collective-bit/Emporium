@@ -163,8 +163,20 @@ declare const __WORLD_EXT__: [number, number] | undefined;
 export const EXT: [number, number] = typeof __WORLD_EXT__ !== 'undefined' ? __WORLD_EXT__ : [-680, 720];
 /** The built-up part: traffic loops here and the outskirts' trees fill round it */
 export const CITY_EXT: [number, number] = [-80, 140 + SOUTH_SHIFT];
-/** How far you can walk or drive: x0, z0, x1, z1 (a little inside the edge) */
-export const WORLD_BOUNDS: [number, number, number, number] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
+/** How far past the world's edge the wall round the city stands, its inner face (wall.ts, docs/wall-plan.md) */
+export const WALL_OUT = 80;
+/** How far short of the wall's inner face walking and driving stop: at its foot */
+export const WALL_FOOT = 0.6;
+/**
+ * How far you can walk or drive: x0, z0, x1, z1. To the wall's foot since the wall plan's Phase 3 (it was 6 inside
+ * the edge): the grass past the edge is walked on, the wall itself is solid (wall.ts `WALL_SOLIDS`)
+ */
+export const WORLD_BOUNDS: [number, number, number, number] = [EXT[0] - WALL_OUT + WALL_FOOT, EXT[0] - WALL_OUT + WALL_FOOT, EXT[1] + WALL_OUT - WALL_FOOT, EXT[1] + WALL_OUT - WALL_FOOT];
+/**
+ * How far you can fly: where walking stopped before the wall, 6 inside the edge. Flying turns back `EDGE_TURN`
+ * (flight-sim.ts) inside it, so nothing that flies comes near the wall
+ */
+export const FLY_BOUNDS: [number, number, number, number] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
 
 /** Lane centres of a road, with the direction traffic runs (+1 / -1 along the road's axis) */
 export function laneCentres(r: Road, axis: 'x' | 'z'): { coord: number; dir: 1 | -1 }[] {

@@ -91,7 +91,7 @@ import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallWall } from './mallinside';
-import { WORLD_BOUNDS, design } from './layout';
+import { FLY_BOUNDS, WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
@@ -1110,7 +1110,8 @@ export function createWalk(d: WalkDeps) {
     traffic: d.airTraffic,
     sfx: d.sfx,
     aero: d.aero,
-    bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
+    // (flying turns back well short of the wall: layout.ts FLY_BOUNDS)
+    bounds: [FLY_BOUNDS[0], FLY_BOUNDS[1], FLY_BOUNDS[2], FLY_BOUNDS[3], 0],
   });
   // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
   let fpBeforeHangar = false;
