@@ -50,8 +50,12 @@ export const CONTACT = {
   palm: 0.03,
   /** How far out from his middle a hand lands on a wall ahead (about the shoulder's) */
   shoulder: 0.14,
-  /** A rail's top (rig numbers), the dwell before he leans, the lean (radians) and the hands' spread (rig) */
-  railH: 0.72,
+  /**
+   * A rail's top (tiles over his ground: the city's railings stand about this high, waterfront3d.ts and
+   * neighbourhoods.ts; it was 0.72 rig numbers, where they stood on him at 0.85, before he came down to everyone's
+   * size, docs/scale-plan.md), the dwell before he leans, the lean (radians) and the hands' spread (rig)
+   */
+  railH: 0.6,
   railDwell: 1.2,
   lean: 0.22,
   railSpread: 0.16,
@@ -272,7 +276,7 @@ export function createContact(opts: { hands?: boolean } = {}) {
     }
     leanW = ease(leanW, railAt ? 1 : 0, dt, railAt ? CONTACT.ease * 3 : CONTACT.easeOut);
     if (railAt) {
-      const y = inp.y + CONTACT.railH * s;
+      const y = inp.y + CONTACT.railH;
       const sp = CONTACT.railSpread * s;
       st.lean = {
         w: leanW,

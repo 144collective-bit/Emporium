@@ -138,10 +138,10 @@ const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', rese
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put', ...Object.keys(DOOR_LABEL)]);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
-const RACK_TOP_H = 0.6;
+const RACK_TOP_H = 0.48;
 /** The trainer's counter top (its near edge, a little in) and height */
 const TRAINER_TOP = { x: TRAINER.x, z: COUNTER.z1 - 0.1 };
-const TRAINER_TOP_H = 0.56;
+const TRAINER_TOP_H = 0.44;
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
 

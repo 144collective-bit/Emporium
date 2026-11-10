@@ -515,11 +515,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       }
       // (the rail: a bar on two posts at the edge)
       const bar = new THREE.Mesh(new THREE.BoxGeometry(3, 0.05, 0.05), stone);
-      bar.position.set(0, CONTACT.railH * SCALE, CONTACT_FLOOR.rail - 0.03);
+      bar.position.set(0, CONTACT.railH, CONTACT_FLOOR.rail - 0.03);
       terrain.add(bar);
       for (const px of [-1.4, 1.4]) {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, CONTACT.railH * SCALE, 0.05), stone);
-        post.position.set(px, (CONTACT.railH * SCALE) / 2, CONTACT_FLOOR.rail - 0.03);
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, CONTACT.railH, 0.05), stone);
+        post.position.set(px, CONTACT.railH / 2, CONTACT_FLOOR.rail - 0.03);
         terrain.add(post);
       }
     }

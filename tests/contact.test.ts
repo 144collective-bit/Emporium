@@ -192,7 +192,7 @@ test('standing a while facing a rail he leans on it, both hands on it; never at 
   for (const h of st.lean!.hands) {
     const off = handOff(rot, an.hips, h, 0, 0, 0, 0, SCALE) * CM;
     assert.ok(off < 1.5, `a hand on the rail within 1.5 cm (${off.toFixed(2)} cm)`);
-    assert.ok(Math.abs(h.y - CONTACT.railH * SCALE) < 1e-9);
+    assert.ok(Math.abs(h.y - CONTACT.railH) < 1e-9);
   }
   const P1 = posed(rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());
   const P0 = posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());

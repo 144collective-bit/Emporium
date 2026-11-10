@@ -180,7 +180,7 @@ export const CLUB: AvenuePlace & {
 
 export const BAR: AvenuePlace = onCorner('bar', 'The Rusty Nail', 'trench-a2', BAR_LOT, 4.6, 0.32);
 export const ARMS: AvenuePlace & {
-  /** The service hatch in the shopfront: x0, x1, its counter's height (a Degen's waist) and the opening's */
+  /** The service hatch in the shopfront: x0, x1, its counter's height (a Degen's waist at everyone's size, docs/scale-plan.md) and the opening's (its top where it was) */
   hatch: { x0: number; x1: number; y: number; h: number };
   /** Where you stand at the hatch: the counter (opens the gun store) */
   counter: { x: number; z: number };
@@ -189,7 +189,7 @@ export const ARMS: AvenuePlace & {
   const [x0, , x1] = p.body;
   // (right of the door, seen from the street)
   const hx = p.out > 0 ? x0 + (x1 - x0) * 0.68 : x1 - (x1 - x0) * 0.68;
-  return { ...p, hatch: { x0: hx - 0.8, x1: hx + 0.8, y: 0.55, h: 0.55 }, counter: { x: hx, z: p.street + (p.out * WALK_W) / 2 } };
+  return { ...p, hatch: { x0: hx - 0.8, x1: hx + 0.8, y: 0.43, h: 0.67 }, counter: { x: hx, z: p.street + (p.out * WALK_W) / 2 } };
 })();
 
 export const AVENUE_PLACES: AvenuePlace[] = [CLUB, BAR, ARMS];

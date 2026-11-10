@@ -93,7 +93,24 @@ frames, damage, stamina and the rings themselves don't change.
 `figure.ts` holds the size on its own, free of three.js, so the game
 server bundles it.
 
+## Counters and rails (the owner's next call)
+
+- **The counters he leans on** come down to his waist: the Armoury's gun
+  store counter (armoury.ts, its top 0.6 to 0.48, what's on it with it;
+  walk.ts `RACK_TOP_H`), the trainer's at the Fight Club (fightclub.ts, 0.56
+  to 0.44; `TRAINER_TOP_H`) and Trench Arms' hatch (avenue.ts `ARMS.hatch`,
+  its counter 0.55 to 0.43, the opening's top where it was).
+- **The rail lean** reaches for the railings' real tops (contact.ts
+  `CONTACT.railH`: 0.6 tiles over his ground, where the promenades' and the
+  boardwalk's railings stand) instead of a height on his body that came
+  down to 0.48 with him and left his hands inside the rail.
+- **Left as they are:** the market stalls' and the Night Market's counters
+  (0.5, about where a counter sits on someone his height), the railings
+  themselves (0.55 to 0.64: chest-high on him, a tall railing, never under
+  his reach) and the cars (world props sized against the lanes; their door
+  handles and roofs sit high on him, a car's scale is a question of its own).
+
 ## Left for later
 
-- The city's counters, rails and car roofs were built round him at 0.85:
-  they sit higher on him now.
+- The cars' size against everyone's (a hatch's roof 0.95 tiles, him 0.86):
+  the owner's call if they should come down.
