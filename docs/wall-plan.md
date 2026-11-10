@@ -24,6 +24,9 @@ date. Roads don't change in this plan.
 | The river at the wall | **A barred culvert**: the water flows under the wall through a low arch with heavy bars, and boats stop at the bars. |
 | At night | **Floodlit**: lights at its foot washing up the face, and the cameras' red dots along the top. |
 | Exits | **Solid all round** for now. Each exit is placed when its story is ready. |
+| Its colour (Phase 2) | **Cold blue-grey** (the most dystopian). |
+| Its face up close (Phase 2) | **Plain and blank**: no joints, matching "smooth slab". |
+| The haze beyond (Phase 2) | **A little land shows** past the wall before the haze takes it. |
 | How far past the edge | **80** (the grass's end). |
 | The ground up to it | **Just grass**: the open land carries on unchanged to the wall's foot. |
 | How thick | **8 tiles** (about 15 m). |
@@ -42,7 +45,7 @@ date. Roads don't change in this plan.
 
 ## Phases
 
-### Phase 1: the wall as data, the skyline gone (built, waiting on the owner's sign-off)
+### Phase 1: the wall as data, the skyline gone (built)
 
 - `wall.ts` (DOM-free, tested in `tests/wall.test.ts`):
   - `WALL` (`out` 80, `thick` 8, `h` 200 ft) and `WALL_INNER` / `WALL_OUTER`.
@@ -67,23 +70,37 @@ date. Roads don't change in this plan.
   - the sky dome reaching past it.
 - Nothing is drawn yet: until Phase 2 the horizon is open sky and haze.
 
-### Phase 2: the wall drawn
+### Phase 2: the wall drawn (built, waiting on the owner's sign-off)
 
-- A smooth grey concrete slab (one plain toon colour with ink outlines),
-  `WALL.h` tall and `WALL.thick` through, in pieces no longer than a tile
-  (`tileBatch()`'s rule).
-- A district loaded from anywhere (`LAZY_DISTRICTS`), or at the boot if it's
-  cheap enough. Measure it.
-- Out of the haze (`fog = false`, as the skyline was), so it's a band round
-  every horizon. Check it isn't a flat cut-out from far off: the top edge and
-  the corners must read.
-- The grey haze beyond: past the outer face the land and sky fade into murk,
-  so nothing past it is ever seen, from the air too.
-- Open question: walking at one side, the far side is about 3 km off, past
-  the sky dome (which travels with the camera). It needs either a dome far
-  enough out from anywhere or the far wall drawn into the haze. Measure both.
-- `?bench` and `?shots` views: the wall from downtown, from its foot, from the
-  air.
+- `wall3d.ts` (`buildWall()`, at the boot: it's seen from everywhere), two draws:
+  - **The slab**: each side a box from the ground to `WALL.h`, in one toon material of
+    its own (`WALL_LOOK.face`, cold blue-grey, a blank face). It casts no shadows and
+    nothing of it is solid yet (Phase 3).
+  - **Its haze**: its own fog in place of the city's. It takes only `WALL_LOOK.std`
+    (half) of the city's haze, so it stands out of it and is seen from town as a
+    band round every horizon. Far off (`WALL_HAZE`, from 0.8 of the sky dome's radius
+    to just past it) it fades all the way into the sky's horizon. So the far side,
+    seen from the opposite wall about 3 km off, is haze, not an edge cut by the sky
+    dome. From town every side's middle stands clear; the far corners go hazy.
+  - **The murk** (`BEYOND`): four upright sheets past the outer face (16 to 84 out),
+    110 tall, thick at the ground and thinning upwards. Their cold grey takes the
+    horizon's brightness, so they're pale by day and dark at night, but always grey
+    against the blue. They fade off far away with the wall. It's one transparent mesh
+    in the FX layer, so no ink is drawn on it.
+- The land past the wall: world.ts `buildGround()` carries the grass on, a tile at a
+  time, to `WALL_LAND` (120 past the outer face).
+- `SKY_RADIUS` reaches the land's corners from town (about 1,300; `CAMERA_FAR` 40
+  further).
+- Checked in the browser, by day and at night:
+  - from downtown looking west and north;
+  - from the wall's foot;
+  - from the air over it;
+  - at a corner.
+- What's seen over the wall's top is the murk. The strip of land before it shows only
+  from very high: flying tops out at 72 and turns back about 100 inside the wall, and
+  from there the wall's top hides the first 100 or so past it. Phase 3 (walking to
+  the wall) doesn't change that.
+- The review views and the bench views for the wall come in Phase 6.
 
 ### Phase 3: walk to the wall
 
