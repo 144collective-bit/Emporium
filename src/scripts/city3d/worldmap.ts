@@ -28,7 +28,7 @@ import { BX, WALKWAY } from './liberty';
 import { DECKS } from './waterfront';
 import { ESPLANADE_DECKS } from './boulevard';
 import { HIGHRISES } from './highrise';
-import { FRONT_RANGE, HALL as CITY_HALL, PORTICO, SQUARE as CIVIC_SQUARE } from './civic';
+import { COURT_BODY, COURT_PORTICO, FRONT_RANGE, HALL as CITY_HALL, POLICE_HQ, PORTICO, SQUARE as CIVIC_SQUARE } from './civic';
 import { HIGHWAY_BOX } from './highway';
 import { FACADE as STADIUM_FACADE, STADIUM_AREA, oval as stadiumOval } from './stadium';
 import { RESORTS } from './resorts';
@@ -292,7 +292,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     }
     // The civic square, paved, and City Hall's footprint at its head (civic.ts)
     rect(CIVIC_SQUARE, C.path);
-    for (const r of [FRONT_RANGE, PORTICO, CITY_HALL.back]) rect(r, C.tower);
+    for (const r of [FRONT_RANGE, PORTICO, CITY_HALL.back, POLICE_HQ, COURT_BODY, COURT_PORTICO]) rect(r, C.tower);
     // The roads, the highway widest, their real width (at least a hairline)
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';

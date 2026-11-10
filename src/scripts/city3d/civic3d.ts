@@ -13,6 +13,7 @@ import { site } from './tilework';
 import { GRANITE_TILE, bench, granite, quad } from './plaza3d';
 import { PAVE_Y } from './gardens3d';
 import { registerCityHall } from './cityhall3d';
+import { registerFlanks } from './flank3d';
 import { AXIS, AXIS_HALF, BORDER, COURT, GRATE, HALL, POLICE, SQUARE, SQUARE_BENCHES, SQUARE_TREES, type Rect } from './civic';
 
 /** The square's granite: over the park's paved walks where they cross it (nothing flush) */
@@ -37,9 +38,10 @@ function pieces([x0, z0, x1, z1]: Rect, most = 16): Rect[] {
 export const RING_C: [number, number] = [AXIS, (Math.max(POLICE[1], COURT[1]) + Math.min(POLICE[3], COURT[3])) / 2];
 export const RING_R = 5.2;
 
-export function registerCivic() {
-  // City Hall (Phase 2, cityhall3d.ts)
+export function registerCivic(scene: THREE.Scene | null = null) {
+  // City Hall (Phase 2, cityhall3d.ts), the police headquarters and the courthouse (Phase 3, flank3d.ts)
   registerCityHall();
+  registerFlanks(scene);
   const [x0, z0, x1, z1] = SQUARE;
   site('civic square', [x0, z0, x1, z1], (into) => {
     const b = new Batch();

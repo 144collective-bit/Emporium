@@ -36,10 +36,16 @@ export const HALL = {
   door: [AXIS, -36] as Pt,
   rear: [AXIS, -62] as Pt,
 };
-/** The police headquarters' lot (Phase 3), west of the square, its front to it (east) */
-export const POLICE: Rect = [-167, -36, -158, -18];
-/** The courthouse's lot (Phase 3), east of the square, its front to it (west); the lake loop is behind it */
-export const COURT: Rect = [-122, -30, -113, -18];
+/**
+ * The police headquarters' lot (Phase 3), west of the square: the building north (its front to the square's
+ * north-west corner, east), its walled yard south of it towards the avenue (the patrol cars, the gate onto the ring
+ * walk by the park's south-west gate)
+ */
+export const POLICE: Rect = [-167, -50, -158, -18];
+export const POLICE_HQ: Rect = [POLICE[0], POLICE[1], POLICE[2], -31];
+export const POLICE_YARD: Rect = [POLICE[0], POLICE_HQ[3], POLICE[2], POLICE[3]];
+/** The courthouse's lot (Phase 3), east of the square, its front to it (west), its steps at the lot's square side; the lake loop is behind it */
+export const COURT: Rect = [-124, -30, -113, -18];
 
 export interface Lot {
   id: 'cityhall' | 'police' | 'courthouse';
@@ -49,7 +55,7 @@ export interface Lot {
 }
 export const LOTS: Lot[] = [
   { id: 'cityhall', rects: [HALL.front, HALL.back], faces: [0, 1] },
-  { id: 'police', rects: [POLICE], faces: [1, 0] },
+  { id: 'police', rects: [POLICE_HQ, POLICE_YARD], faces: [1, 0] },
   { id: 'courthouse', rects: [COURT], faces: [-1, 0] },
 ];
 
@@ -158,6 +164,8 @@ export function cityHallY(x: number, z: number): number | null {
   if (x > PORTICO[0] && x < PORTICO[2] && z > PORTICO[1] && z < PORTICO[3]) return PODIUM_Y;
   return null;
 }
+/** The civic quarter's raised ground: City Hall's steps and portico, the courthouse's (groundheight.ts's layer) */
+export const civicY = (x: number, z: number): number | null => cityHallY(x, z) ?? courtY(x, z);
 
 type Box = [number, number, number, number, number];
 /** What's solid: the front range, the back block, the tower's tiers, the columns, the antae, the podium's cheeks beside the steps */
@@ -184,3 +192,83 @@ export const CITYHALL_PICK: { rect: Rect; h: number }[] = [
  * (its panel's Walk in): on the square at the steps' foot, facing them (yaw 0 faces north) */
 export const CITYHALL_DOOR = { x: AXIS, z: PORTICO[1] + 0.6, label: 'City Hall' };
 export const CITYHALL_SPAWN = { x: AXIS, z: STEPS[3] + 2.6, yaw: 0 };
+
+/* ---------- The police headquarters and the courthouse (Phase 3) ---------- */
+
+/** What the two flanking buildings are dressed in: City Hall's pale stone, plainer and lower (the owner's pick) */
+export const FLANK_TALLEST = 9.6;
+
+/**
+ * Sector 7 Police (made up): a plain three-storey block of pale stone with piers down its walls, the entrance on its
+ * east face onto the west walk at the square's north-west corner (a canopy, SECTOR 7 POLICE over it, the blue lamp),
+ * a mast on the roof; its walled yard south of it with the patrol cars parked against the building and the gate in
+ * the south wall onto the ring walk
+ */
+export const HQ = { rect: POLICE_HQ, h: 8.4, door: { x: POLICE_HQ[2], z: -40.5, w: 1.6, h: 2.8 }, mast: 3 };
+/** The yard's wall (thickness, height) and its gate (the gap in the south wall: from x0 to x1) */
+export const YARD_WALL = { w: 0.3, h: 1.8 };
+export const YARD_GATE = { x0: -164.2, x1: -160.8 };
+/** The patrol cars in the yard, nosed up to the building (the traffic's Patrol car, carspec.ts `police`):
+ * [model, x, z, yaw, paint] for cars.ts `parkedCars()` (yaw π/2 faces north) */
+export const YARD_CARS: [string, number, number, number, string][] = [-165.5, -163.5, -161.5, -159.5].map((x): [string, number, number, number, string] => ['police', x, POLICE_HQ[3] + 1.7, Math.PI / 2, '#141a3a']);
+/** A parked car's footprint, half its length and width (as kerbside.ts's) */
+export const YARD_CAR_HALF = { l: 1.5, w: 0.6 };
+
+/**
+ * The Sector 7 Courthouse (made up): a smaller temple front in the same stone, four square columns on a podium
+ * up four steps from the square under a low pediment, SECTOR 7 COURTHOUSE on its frieze, the body behind
+ */
+export const COURT_GROUND = HALL_GROUND;
+export const COURT_PODIUM = COURT_GROUND + 0.6;
+export const COURT_STEP_N = 4;
+/** The steps: from their foot at the lot's square side (x0) up to the portico (x1) */
+export const COURT_STEPS: Rect = [COURT[0], -28.5, COURT[0] + 2, -19.5];
+export const COURT_PORTICO: Rect = [COURT_STEPS[2], -29.5, COURT_STEPS[2] + 2.5, -18.5];
+export const COURT_BODY: Rect = [COURT_PORTICO[2], COURT[1], COURT[2], COURT[3]];
+export const COURT_H = 7.2;
+export const COURT_COLUMN = { w: 0.75, h: 4.6, x: COURT_PORTICO[0] + 0.6 };
+export const COURT_COLUMNS: Pt[] = [0, 1, 2, 3].map((k): Pt => [COURT_COLUMN.x, -28.3 + (8.6 * k) / 3]);
+/** The pediment over the portico: its ridge over the body's front */
+export const PEDIMENT_H = 1.5;
+export const COURT_TOP = COURT_PODIUM + COURT_COLUMN.h + 1 + 0.18 + PEDIMENT_H;
+
+/** The courthouse's ground: up its steps (a slope over their depth), its portico's floor */
+export function courtY(x: number, z: number): number | null {
+  const [s0, sz0, s1, sz1] = COURT_STEPS;
+  if (x > s0 - 1e-9 && x < s1 && z > sz0 && z < sz1) return COURT_GROUND + (COURT_PODIUM - COURT_GROUND) * ((x - s0) / (s1 - s0));
+  const [, pz0, p1, pz1] = COURT_PORTICO;
+  if (x >= s1 - 1e-9 && x < p1 && z > pz0 && z < pz1) return COURT_PODIUM;
+  return null;
+}
+
+/** What's solid: the headquarters and its mast's foot, the yard's walls (the gate open), the cars; the courthouse's
+ * body, columns, the antae closing its portico's ends and the cheeks beside its steps */
+export const FLANK_SOLIDS: Box[] = (() => {
+  const [x0, z0, x1, z1] = POLICE_YARD;
+  const w = YARD_WALL.w;
+  const out: Box[] = [
+    [...POLICE_HQ, HQ.h],
+    [x0, z0, x0 + w, z1, YARD_WALL.h],
+    [x1 - w, z0, x1, z1, YARD_WALL.h],
+    [x0, z1 - w, YARD_GATE.x0, z1, YARD_WALL.h],
+    [YARD_GATE.x1, z1 - w, x1, z1, YARD_WALL.h],
+    ...YARD_CARS.map(([, x, z]): Box => [x - YARD_CAR_HALF.w, z - YARD_CAR_HALF.l, x + YARD_CAR_HALF.w, z + YARD_CAR_HALF.l, 1.2]),
+    [...COURT_BODY, COURT_H],
+    ...COURT_COLUMNS.map(([x, z]): Box => [x - COURT_COLUMN.w / 2, z - COURT_COLUMN.w / 2, x + COURT_COLUMN.w / 2, z + COURT_COLUMN.w / 2, COURT_PODIUM + COURT_COLUMN.h]),
+    [COURT_PORTICO[0], COURT_PORTICO[1], COURT_PORTICO[2], COURT_PORTICO[1] + 0.4, COURT_PODIUM + COURT_COLUMN.h],
+    [COURT_PORTICO[0], COURT_PORTICO[3] - 0.4, COURT_PORTICO[2], COURT_PORTICO[3], COURT_PODIUM + COURT_COLUMN.h],
+    [COURT_STEPS[0], COURT_PORTICO[1], COURT_STEPS[2], COURT_STEPS[1], COURT_PODIUM + 0.3],
+    [COURT_STEPS[0], COURT_STEPS[3], COURT_STEPS[2], COURT_PORTICO[3], COURT_PODIUM + 0.3],
+  ];
+  return out;
+})();
+
+/** Their pick boxes for the City view (over the ground) */
+export const POLICE_PICK: { rect: Rect; h: number }[] = [{ rect: POLICE_HQ, h: HQ.h + HQ.mast - HALL_GROUND }, { rect: POLICE_YARD, h: YARD_WALL.h }];
+export const COURT_PICK: { rect: Rect; h: number }[] = [{ rect: COURT, h: COURT_TOP - HALL_GROUND }];
+/** Their doors (the walk prompts that open their panels) and where you arrive (their panels' Walk in), facing each
+ * (yaw π/2 faces west, -π/2 east) */
+export const POLICE_DOOR = { x: HQ.door.x + 0.6, z: HQ.door.z, label: 'Police' };
+export const POLICE_SPAWN = { x: WEST_WALK_X, z: HQ.door.z, yaw: Math.PI / 2 };
+export const COURT_DOOR = { x: COURT_BODY[0] - 0.6, z: (COURT[1] + COURT[3]) / 2, label: 'Courthouse' };
+export const COURTHOUSE_SPAWN = { x: COURT[0] - 1, z: (COURT[1] + COURT[3]) / 2, yaw: -Math.PI / 2 };

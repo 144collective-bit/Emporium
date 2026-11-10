@@ -875,9 +875,10 @@ it and has been retired completely. Build only on what's here.
   exception: a tower or dome, the seat of power), in stern stripped
   classicism; the police headquarters and the courthouse are to be places;
   names plain and made up (Sector 7 City Hall, Sector 7 Police, the Sector 7
-  Courthouse). Phases 1 (the land, the square and the walks) and 2 (City
-  Hall) are built, waiting on the owner's sign-off: `civic.ts` (DOM-free,
-  tested in `tests/civic.test.ts`):
+  Courthouse). Phases 1 (the land, the square and the walks), 2 (City
+  Hall) and 3 (the police headquarters and the courthouse) are built,
+  waiting on the owner's sign-off: `civic.ts` (DOM-free, tested in
+  `tests/civic.test.ts`):
   - the civic square (`SQUARE`) on the axis (`AXIS`, the Mall's line and
     Uptown's), open to the avenue (the Mall's south gate went, its WESTLAKE
     PARK board to the north gate; the park's wall stops either side);
@@ -912,6 +913,25 @@ it and has been retired completely. Build only on what's here.
     `CITYHALL_SPAWN`), its door (`CITYHALL_DOOR` in walk.ts `ALL_DOORS`),
     `PLACES` and `LIVE_PLACES` entries, its live line and its footprint on
     the world map.
+  - **The police headquarters and the courthouse** (Phase 3, the owner's
+    picks: City Hall's stone, plainer and lower), drawn by `flank3d.ts`
+    (two sites in the park's chunk, City Hall's materials and helpers
+    exported from cityhall3d.ts, `carvedMat()`):
+    - Sector 7 Police (`HQ` on `POLICE_HQ`): three storeys, its entrance
+      onto the west walk with the blue lamp and SECTOR 7 POLICE, a mast;
+      its walled yard south of it (`POLICE_YARD`, `YARD_WALL`, the gate
+      onto the ring walk, `YARD_GATE`) with four Patrol cars (`YARD_CARS`,
+      `parkedCars()` on the main thread).
+    - The Sector 7 Courthouse (`COURT`): four steps up from the square
+      (`COURT_STEPS`), a portico of four columns (`COURT_COLUMNS`) under
+      SECTOR 7 COURTHOUSE and a low pediment with the gold star, the body
+      behind (`COURT_BODY`).
+    - The steps and porticos are one ground layer (`civicY()`, groundheight.ts
+      `civic`); `FLANK_SOLIDS` in `SOLIDS`.
+    - Both are places: spots `police` and `courthouse`, pins, directory
+      entries, panels with Walk in (`POLICE_SPAWN`, `COURTHOUSE_SPAWN`),
+      doors (`POLICE_DOOR`, `COURT_DOOR`), `PLACES`, `LIVE_PLACES`, live
+      lines and world-map footprints.
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each

@@ -68,6 +68,11 @@ test("the club's set by the night and the hour, the bar's happy hour, the mall's
   assert.equal(liveLine('cityhall', at(10, 12)), 'Doors open till five · Permits upstairs');
   assert.equal(liveLine('cityhall', at(12, 19)), 'The council sits tonight · Gallery full', 'a Thursday evening');
   assert.equal(liveLine('cityhall', at(14, 12)), 'Doors shut · Open weekdays at nine', 'a Saturday');
+  assert.equal(liveLine('police', at(10, 12)), 'Front desk open · Patrols out');
+  assert.equal(liveLine('police', at(10, 23)), 'Night shift on · Front desk open');
+  assert.equal(liveLine('courthouse', at(11, 10)), 'Court in session till four');
+  assert.equal(liveLine('courthouse', at(9, 10)), 'Court in session · New week, full list', 'a Monday');
+  assert.equal(liveLine('courthouse', at(14, 10)), 'Court rises · Sits weekdays at nine', 'a Saturday');
 });
 
 test("the Neon Mile's timetables: the fountain show and the volcano count down and announce themselves", () => {
