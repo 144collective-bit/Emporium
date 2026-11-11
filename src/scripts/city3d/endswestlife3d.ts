@@ -9,7 +9,8 @@
  *   with the city's tick, only while the camera is near: the dogs on their leads; the porch lights' pools on the front
  *   paths and the late shops' on the forecourt, one additive mesh dark by day.
  *
- * Phones get every other person standing about and the movers' trimmed half left out, as the old estate's.
+ * Phones get every other person standing about and the movers' trimmed half left out, as the old estate's; every
+ * other garden's washing, and the bikes without the toys on the greens.
  */
 import * as THREE from 'three';
 import { Batch, PAL, fx, glowMat, lit, paintMat, toon } from './kit';
@@ -128,8 +129,9 @@ function registerBits(low: boolean) {
     site(`endswest life ${T.id}`, r, (into) => {
       const b = new Batch();
       b.detail(() => {
-        for (const w of wash) washing(b, w, low);
-        for (const f of bits) if (!low || f.kind !== 'ball') bit(b, f);
+        // (phones: every other garden's washing, and the bikes and scooters without the toys on the green)
+        wash.forEach((w, i) => (!low || i % 2 === 0) && washing(b, w, low));
+        for (const f of bits) if (!low || f.kind === 'bike' || f.kind === 'scooter') bit(b, f);
       });
       b.build(into, { cast: true, receive: true });
     });

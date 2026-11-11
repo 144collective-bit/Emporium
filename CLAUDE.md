@@ -1871,7 +1871,10 @@ it and has been retired completely. Build only on what's here.
     every porch light and the late shops' (`PORCH_POOLS`); drawn by
     `endswestlife3d.ts` (the bits as sites, near only; the dogs and the pools
     on the main thread); the kickabout green under two sodium lamps
-    (`WEST_LAMPS`), the playground dark; its sound Endswood's.
+    (`WEST_LAMPS`), the playground dark; its sound Endswood's. Phase 5
+    (polish) is built and the plan is done: `?bench` views `endsw-parade`,
+    `endsw-rows`, `endsw-kick`; no place of its own (it's Endswood's);
+    phones draw every other garden's washing and no toys on the greens.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make

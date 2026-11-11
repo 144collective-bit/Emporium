@@ -178,7 +178,22 @@ brutalist blocks:
      (ambience.ts `ends` reads `inEndswood()`, which takes in the
      extension).
 5. **Polish:** benchmark and review views, phones, a place on the map if
-   wanted; the plan done.
+   wanted; the plan done. The owner's picks (2026-11-11): three views, no
+   place of its own (it stays part of Endswood), phones checked and
+   trimmed.
+
+   Built, waiting on the owner's sign-off, and the plan is done:
+   - `?bench` views `endsw-parade` (the parade from the Close),
+     `endsw-rows` (along a pair of rows' fronts) and `endsw-kick` (the
+     kickabout green) in `BENCH_VIEWS` (bench.ts).
+   - No pin, panel or place: it's Endswood's, found on the world map with
+     the estate.
+   - Phones: every other person standing about and the movers' trimmed half
+     (as the old estate), every other garden's washing, and the bikes and
+     scooters out front without the toys on the greens
+     (endswestlife3d.ts); the terraces and the estate round them already
+     leave out their finest (brackets, gutters, pipes, the second bin, the
+     fence's bars, the chains and springs).
 
 ## The owner's questions (answered above)
 
