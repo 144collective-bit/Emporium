@@ -1851,7 +1851,16 @@ it and has been retired completely. Build only on what's here.
     the back gardens' fences and gates (`fencesOf()`, `gateOf()`), sheds;
     `TERRACE_SOLIDS` joined through `addSolids()` when the chunk loads;
     drawn by `endsterraces3d.ts` (a site a terrace, walls from infill.ts's
-    wall atlas).
+    wall atlas). Phase 3 (the estate round them) is built:
+    `endsweststreet.ts` (DOM-free, the chunk's, tested in
+    `tests/endsweststreet.test.ts`) on the blocks' east ends: the parade on
+    the Close with flats over (`PARADE_W`, `UNITS_W`, made-up names, one to
+    let), the fenced playground (`PLAY_W`), the lock-up garages on their
+    apron (`GARAGES`, `APRON`, a few doors up), the kickabout green and its
+    goals (`KICKABOUT`, `GOALS`), bin stores, the board, CCTV and benches;
+    `STREET_W_SOLIDS` joined when the chunk loads; drawn by
+    `endsweststreet3d.ts` (its shopfronts painted by `endsshopfront.ts`, the
+    old parade's painter, shared).
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make

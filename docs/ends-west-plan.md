@@ -115,6 +115,29 @@ brutalist blocks:
      pair; near only the fronts, back doors, fences, gates and sheds.
 3. **The estate round them:** the garage block, the parade and its corner
    shop, the playground, the green, bin stores, CCTV, the estate's board.
+   The owner's picks (2026-11-11): a parade of shops with flats over them on
+   the Close; a fenced playground and a kickabout green with goalposts; a
+   row of lock-up garages, a few doors left open.
+
+   Built, waiting on the owner's sign-off, on the blocks' east ends Phase 1
+   kept (`RESERVE`):
+   - `endsweststreet.ts` (DOM-free, the chunk's, tested in
+     `tests/endsweststreet.test.ts`): the parade on the Close (`PARADE_W`:
+     four units, `UNITS_W`, FENNEL MART, FRYING SQUAD, SPIN CYCLE and a
+     fourth to let, made up; a concrete canopy, two storeys of flats over,
+     their door and a steel stair at the back), a bin store behind it and
+     one by the garages (`BIN_STORES_W`); the fenced playground north of
+     the parade (`PLAY_W`, `PLAY_FENCE`: its gate onto the cross path;
+     swings, a slide, a roundabout, two springers); on the south block the
+     garages (`GARAGES`: eight lock-ups facing west onto their apron off
+     the Close, `APRON`, three doors up) and the kickabout green with a
+     goal at each end (`KICKABOUT`, `GOALS`); the estate's board by the
+     Close, CCTV over the parade and the apron, benches (`BOARD_W`,
+     `CCTV_W`, `BENCHES_W`); `STREET_W_SOLIDS` joined when the chunk loads.
+   - Drawn by `endsweststreet3d.ts` (sites): the shopfronts from an atlas
+     of their own (`ends-west-shops`, painted as the old parade's: the
+     painter is `endsshopfront.ts` now, shared with endsstreet3d.ts), the
+     flats from the city's wall atlas, the rest in the shared paint.
 4. **Life, night and sound:** people on the paths and at their doors, kids
    on the green, washing lines, dogs; the windows and porch lights at night;
    its sound (Endswood's, carried over).
