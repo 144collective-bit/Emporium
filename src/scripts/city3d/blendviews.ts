@@ -7,6 +7,9 @@
  * a seam or a gap the seam map found. Change one only between phases (the
  * shots before and after must match).
  */
+import { RIVER } from './layout';
+import { WALL_INNER } from './wall';
+
 export type V3 = [number, number, number];
 export interface ReviewView {
   id: string;
@@ -40,4 +43,9 @@ export const BLEND_VIEWS: ReviewView[] = [
   { id: 'sunridge-loop', name: 'Sunridge, over the loop', pos: [120, 28, 10], target: [180, 0, -80] },
   { id: 'southfield', name: 'Southfield, the yards and the park', pos: [60, 30, 300], target: [150, 0, 210] },
   { id: 'lot9', name: 'Lot 9, from the south avenue', pos: [-20, 24, 440], target: [-70, 0, 370] },
+  // The wall round the city (docs/wall-plan.md Phase 6): its face from its foot, a culvert from the river's bank,
+  // and its top and a corner from over the north-east
+  { id: 'wall-foot', name: 'The wall, from its foot', pos: [WALL_INNER[0] + 34, 3, 30], target: [WALL_INNER[0], 16, 12] },
+  { id: 'wall-culvert', name: 'The wall, a culvert', pos: [WALL_INNER[0] + 26, 3, RIVER[0] - 6], target: [WALL_INNER[0], 2, (RIVER[0] + RIVER[1]) / 2] },
+  { id: 'wall-corner', name: 'The wall, a corner from over the land', pos: [WALL_INNER[2] - 90, 46, WALL_INNER[1] + 90], target: [WALL_INNER[2], 30, WALL_INNER[1]] },
 ];

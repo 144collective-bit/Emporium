@@ -32,7 +32,10 @@ keep it up to date when what it describes changes.
   avenue, and Kite House, condemned behind hoardings (`hoardingRuns()`); all
   under the Emporium (`TALLEST`), the galleries over a walker's head
   (`GROUND`); `BLOCK_SOLIDS` (in `SOLIDS`); drawn by `endsblocks3d.ts`
-  (`registerBlocks()`, a site a shell, its own atlas `ends-concrete`). Phase 4 (street level) is built:
+  (`registerBlocks()`, a site a shell, its own atlas `ends-concrete`; the
+  galleries' front doors painted nearly a storey tall, about 0.97 tiles,
+  their lights on the wall over them, so everyone fits them:
+  docs/scale-plan.md). Phase 4 (street level) is built:
   `endsstreet.ts` (DOM-free, tested in `tests/endsstreet.test.ts`): **St Aldwyn's** (`CHURCH`, its spire
   `SPIRE_TOP` the estate's one thing over the Emporium, every flight well over it) in its churchyard
   (`CHURCHYARD`: railings, the lychgate, yews, `HEADSTONES`), Endswood Parade's units (`PARADE_UNITS`; the block

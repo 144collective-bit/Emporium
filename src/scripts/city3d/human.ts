@@ -29,7 +29,12 @@ import * as THREE from 'three';
 import { MB, MOCAP_BONES, NB, type Posed, TOE_BONES, newPosed, posed } from './mocap';
 import { HIP_Y } from './skeleton';
 
-/** A tile in metres, and the player's scale (the adult the bands are written for) */
+/**
+ * A tile in metres, and the adult the bands are written for (the player's scale when they were measured). The
+ * player came down to everyone's 0.66 in proportion, his speeds with him (docs/scale-plan.md), so his motion is
+ * this adult's made smaller: measure him at this size, his world scaled up to it (`ADULT_SCALE / FIGURE_SCALE`),
+ * as the tests and the lab do. Measured at 0.66 as he is, the scale rule here would read him as a child.
+ */
 export const TILE_M = 1.8;
 export const ADULT_SCALE = 0.85;
 /** The legs' length (hip height) in metres at a scale */

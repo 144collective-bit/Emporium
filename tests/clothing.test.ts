@@ -12,6 +12,10 @@ import { EMOTE_IDS, emotePose, emoteSeconds } from '../src/scripts/city3d/emotes
 import { CLIP_IDS, CLIPS, newFightPose, sampleClip } from '../src/scripts/city3d/fight-anim';
 import { applyTo, createAnimator } from '../src/scripts/city3d/animator';
 import { GAITS, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
+
+/** His speeds at scale 1, where this runs him: in proportion to his size (docs/scale-plan.md), as they always were */
+const G = { walk: GAITS.walk * (0.85 / FIGURE_SCALE), run: GAITS.run * (0.85 / FIGURE_SCALE), sprint: GAITS.sprint * (0.85 / FIGURE_SCALE) };
 import { allMocap } from './mocapdata';
 import { atRest, dress, layers, type Dressed } from './dress';
 
@@ -73,10 +77,10 @@ for (const id of CLIP_IDS) {
 const data = allMocap();
 type Prog = { go: (t: number) => [number, number]; seconds: number; crouch?: number };
 const PROGS: Record<string, Prog> = {
-  walk: { go: () => [0, GAITS.walk], seconds: 4 },
-  run: { go: () => [0, GAITS.run], seconds: 4 },
-  sprint: { go: () => [0, GAITS.sprint], seconds: 4 },
-  'run and stop': { go: (t) => (t % 3 < 1.6 ? [0, GAITS.run] : [0, 0]), seconds: 6 },
+  walk: { go: () => [0, G.walk], seconds: 4 },
+  run: { go: () => [0, G.run], seconds: 4 },
+  sprint: { go: () => [0, G.sprint], seconds: 4 },
+  'run and stop': { go: (t) => (t % 3 < 1.6 ? [0, G.run] : [0, 0]), seconds: 6 },
   'crouch walk': { go: () => [0, 0.55], seconds: 5, crouch: 1 },
   'crouch still': { go: (t) => (t < 0.5 ? [0, 0.55] : [0, 0]), seconds: 4, crouch: 1 },
 };
@@ -101,7 +105,7 @@ function each(d: Dressed, fn: (name: string) => void) {
       stepMove(mv, gx, gz, true, DT);
       x += mv.vx * DT;
       z += mv.vz * DT;
-      const sprint = THREE.MathUtils.clamp((Math.hypot(mv.vx, mv.vz) - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
+      const sprint = THREE.MathUtils.clamp((Math.hypot(mv.vx, mv.vz) - G.run) / (G.sprint - G.run), 0, 1);
       an.update({ dt: DT, x, y: 0, z, move: mv, gx, gz, scale: 1, ground: () => 0, feet: () => 0, sprint, crouch: pr.crouch ?? 0 });
       if (i < 30 || i % 15) continue;
       poseSkeleton(sk, newPose());

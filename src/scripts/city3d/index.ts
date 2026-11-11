@@ -443,7 +443,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Someone waiting at every third bus shelter (transit.ts, the polish plan's Phase 6; phones: half of them)
   SHELTER_IDLES.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.promenade ? 0.05 : SLAB, ry: p.ry, act: 'wait' }));
   // The wall round the city and the murk past it (wall3d.ts, docs/wall-plan.md Phase 2)
-  buildWall(scene, tick);
+  buildWall(scene, tick, tier === 'low');
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)

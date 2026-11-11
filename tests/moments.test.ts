@@ -6,6 +6,7 @@
 // the car, the kart, the aircraft and the boat (the hands on the handle, the rim, the frame or the rails; the root
 // to the seat and back), the lifts (walked in and turned to face out) and carrying a crate (picked up, carried in
 // both hands, set down).
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -17,7 +18,7 @@ import { HIP_HEIGHT, makeSkeleton, newPose, poseSkeleton } from '../src/scripts/
 import { idlePose } from '../src/scripts/city3d/poses';
 import { SEAT_H } from '../src/scripts/city3d/pedestrians';
 
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 const DT = 1 / 60;
 const CM = 180;
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -51,9 +52,11 @@ test('a door mark stands him short of the door facing it, with the handle to his
 });
 
 test('the approach walks him onto the mark and plays when he is there; from too far it plays at once; it never waits past its time', () => {
-  const m = doorMark({ x: 0, z: 2 }, 0.4, 0.3, 0);
+  // (lengths written for him at 0.85, in step with his size: K)
+  const K = SCALE / 0.85;
+  const m = doorMark({ x: 0, z: 2 * K }, 0.4 * K, 0.3 * K, 0);
   const mo = createMoment();
-  const w = walker(0.4, 0.3, 0.3);
+  const w = walker(0.4 * K, 0.3 * K, 0.3);
   let opened = 0;
   mo.start(m, () => opened++, w.w.x, w.w.z);
   assert.equal(mo.phase, 'approach');
@@ -73,9 +76,9 @@ test('the approach walks him onto the mark and plays when he is there; from too 
   assert.equal(far.phase, 'play');
   // A walker that never gets there (stuck): the clip plays on time
   const stuck = createMoment();
-  stuck.start(m, undefined, 1.5, 0);
+  stuck.start(m, undefined, 1.5 * K, 0);
   let n = 0;
-  while (stuck.phase === 'approach' && n < 600) (stuck.update({ dt: DT, x: 1.5, z: 0, face: 0, speed: 0 }), n++);
+  while (stuck.phase === 'approach' && n < 600) (stuck.update({ dt: DT, x: 1.5 * K, z: 0, face: 0, speed: 0 }), n++);
   assert.equal(stuck.phase, 'play');
   assert.ok(Math.abs(n * DT - MOMENT.approach.timeout) < 0.05, 'on time');
 });
@@ -444,7 +447,7 @@ test('carrying: the hands land on the crate on the ground, lift it into his hand
   idlePose(p, 0);
   carryPose(p, 1, 9, 0, 4, 0.7, SCALE);
   const c = carriedAt(9, 0, 4, 0.7, SCALE);
-  assert.ok(c.y > 0.45 && c.y < 0.75, `carried about hip height (${c.y.toFixed(2)})`);
+  assert.ok(c.y > 0.45 * (SCALE / 0.85) && c.y < 0.75 * (SCALE / 0.85), `carried about hip height (${c.y.toFixed(2)})`);
   for (const [i, name] of [[0, 'handL'], [1, 'handR']] as const) {
     const rx = -Math.cos(0.7);
     const rz = Math.sin(0.7);

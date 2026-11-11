@@ -28,6 +28,7 @@ import { THE_BLOCK, TOWERS, towerShell } from './projects';
 import { TRENCH_BLOCKS } from './trenches';
 import { heightOf, lotSolids, type Lot } from './kits';
 import { rng } from './recipes';
+import { CAR_SCALE } from './carspec';
 
 const bounds = (poly: Pt[]): Rect => [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1]))];
 const grow = ([x0, z0, x1, z1]: Rect, m: number): Rect => [x0 - m, z0 - m, x1 + m, z1 + m];
@@ -354,7 +355,7 @@ export const LOW_CARS: [string, number, number, number, string][] = (() => {
   return out;
 })();
 /** A parked car's footprint, half its length and width */
-const CAR = { l: 1.5, w: 0.6 };
+const CAR = { l: 1.5 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 export const carSolid = ([, x, z, yaw]: [string, number, number, number, string]): Footprint => {
   const along = Math.abs(Math.cos(yaw)) > 0.5;
   const [hx, hz] = along ? [CAR.l, CAR.w] : [CAR.w, CAR.l];

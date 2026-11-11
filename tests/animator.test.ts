@@ -2,6 +2,7 @@
 // it's asked without ever bending a knee backwards; over every kind of running, walking, stopping
 // and turning a held foot stays put on the ground, nothing pops from one frame to the next, the hips
 // stay at a person's height; up a slope the held feet stand on it; and it's the same every time.
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -15,7 +16,7 @@ import { allMocap } from './mocapdata';
 const data = allMocap();
 /** Whether the clip of that name (the animator's `debug.clip`) carries a tag */
 const tagOf = (name: string, tag: string) => tagged(data.clips.find((c) => c.name === name.replace('~', ''))!, tag);
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 const DT = 1 / 60;
 /** A tile in centimetres */
 const CM = 180;
@@ -217,9 +218,10 @@ test('up and down kerbs the feet stand on the slab and the road, never in them',
 });
 
 test('up a flight of the stadium footbridge\'s size the feet climb the treads (he walks up its even ramp; the stairs take at a climb\'s pace)', () => {
-  // (stadium.ts BRIDGE: 18 steps of 0.194 up, 0.42 deep; the city's stairs since Liberty Bridge's went)
-  const RISE = 0.194;
-  const RUN = 0.42;
+  // (the stadium's old footbridge: 18 steps of 0.194 up, 0.42 deep for him at 0.85, in proportion with his size
+  // since: the city's flights today, Endswood's, are walked as even ramps)
+  const RISE = 0.194 * (SCALE / 0.85);
+  const RUN = 0.42 * (SCALE / 0.85);
   const N = 18;
   const Z0 = 1.5;
   const ramp = (_x: number, z: number) => THREE.MathUtils.clamp(((z - Z0) / (RUN * N)) * RISE * N, 0, RISE * N);
@@ -274,8 +276,9 @@ test('up a flight of the stadium footbridge\'s size the feet climb the treads (h
 
 /* ---------- Phase 3: jumps, falls and landings ---------- */
 
-const JUMP = 3.9;
-const GRAVITY = 11.5;
+/** walk.ts's jump and gravity: in proportion with his size (docs/scale-plan.md) */
+const JUMP = 3.03;
+const GRAVITY = 8.92;
 /**
  * walk.ts's jumping: gravity always, Jump pressed at `at` and held `hold`
  * seconds (let go early it pulls down harder), the stick asking for
@@ -306,7 +309,7 @@ function jump(o: { speed: number; at?: number; hold?: number; stop?: number; gro
         grounded = false;
       }
     }
-    vy -= (GRAVITY + (t > at + (o.hold ?? 1) && vy > 0 ? 16 : 0)) * DT;
+    vy -= (GRAVITY + (t > at + (o.hold ?? 1) && vy > 0 ? 12.4 : 0)) * DT;
     y += vy * DT;
     const fall = vy;
     const g = ground(0, z);

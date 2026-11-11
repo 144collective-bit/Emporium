@@ -3,17 +3,24 @@
 // of the lab's programs. A row that fails today and belongs to a later phase is listed in HELD_BACK
 // with the phase that owns it (the audit in the plan says why); the test holds that it still fails,
 // so the entry comes out when the phase fixes it. HUMAN_REPORT=1 prints every row.
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { createAnimator } from '../src/scripts/city3d/animator';
-import { BANDS, bandAt, clipRows, createRubric, froudeRate, froudeSpeed, type Row } from '../src/scripts/city3d/human';
+import { ADULT_SCALE, BANDS, bandAt, clipRows, createRubric, froudeRate, froudeSpeed, type Row } from '../src/scripts/city3d/human';
 import { contacts, mirrorClip, tagged } from '../src/scripts/city3d/mocap';
-import { GAITS, STAIRS, newMove, stepMove } from '../src/scripts/city3d/movesim';
+import { GAITS as G0, STAIRS, newMove, stepMove } from '../src/scripts/city3d/movesim';
 import { allMocap } from './mocapdata';
 
 const data = allMocap();
-const SCALE = 0.85;
+/**
+ * The rubric's adult (human.ts `ADULT_SCALE`): he plays in proportion to it since he came down to everyone's size
+ * (docs/scale-plan.md), so he's measured at it, his speeds scaled up with him (`R`)
+ */
+const SCALE = ADULT_SCALE;
+const R = ADULT_SCALE / FIGURE_SCALE;
+const GAITS = { walk: G0.walk * R, run: G0.run * R, sprint: G0.sprint * R };
 const DT = 1 / 60;
 const report = !!process.env.HUMAN_REPORT;
 
@@ -100,7 +107,7 @@ const PROGS: Record<string, { go: Prog; seconds: number; gait?: Gait; ground?: (
   startBack: { go: (t) => (t % 4 < 1 ? [0, 0] : t % 8 < 4 ? [0, -GAITS.run] : [0, GAITS.run]), seconds: 16, gait: 'run' },
   stand: { go: (t) => (t < 1 ? [0, GAITS.run] : [0, 0]), seconds: 40 },
   // Up a flight at a climb's pace (the stairs takes; the steady rows don't apply: a climb isn't a level walk)
-  stairs: { go: () => [0, STAIRS.walk], seconds: 10, ground: ramp, feet: tread },
+  stairs: { go: () => [0, STAIRS.walk * R], seconds: 10, ground: ramp, feet: tread },
 };
 
 /** The animator through a program, every frame measured by the rubric */

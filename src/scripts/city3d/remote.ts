@@ -24,6 +24,7 @@
  * as a jump, not a slide across the city.
  */
 import * as THREE from 'three';
+import { FIGURE_SCALE } from './skeleton';
 import { HOLDING, RELAXED, createDegen, lookOutfit, type Degen } from './character';
 import { copyPose, createLocomotion, placeRoot, type Locomotion, type Root } from './locomotion';
 import type { Animator } from './animator';
@@ -38,7 +39,7 @@ import { FLAG, INTERP_DELAY, jumped as leapt, modeOf, sameVehicle, type PlayerIn
 import { remoteVehicle, type RemoteVehicle } from './remoteveh';
 
 /** Same size as the walker */
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 const TAG_RANGE = 30;
 /** The motion capture and its animator module, once walk mode has them */
 export interface Motion {
@@ -52,7 +53,7 @@ const ANIM_NEAR = 25;
 const ANIM_FAR = 70;
 const FAR_DT = 1 / 30;
 /** A move between frames further than this is a jump (a warp, a fast travel): the animator starts afresh */
-const JUMP = 2;
+const JUMP = 1.55;
 const smooth = (x: number) => x * x * (3 - 2 * x);
 
 interface Sample {

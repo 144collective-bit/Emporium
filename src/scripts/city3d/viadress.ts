@@ -12,6 +12,7 @@
  * - `exitBadge()`: where the world map puts an exit's number.
  */
 import type { CarId } from './carspec';
+import { CAR_SCALE } from './carspec';
 import type { Box } from './solids';
 import { fromHighway } from './highway';
 import { PLAN, RING_MEETS, distToStreet, raised } from './streetplan';
@@ -157,7 +158,7 @@ export const UNDER_SOLIDS: Box[] = [
   }),
   ...UNDER_CARS.map(([, x, z, yaw]): Box => {
     // (a car's footprint, about 4 by 1.8, turned to its yaw)
-    const [hx, hz] = [Math.abs(Math.cos(yaw)) * 2 + Math.abs(Math.sin(yaw)) * 0.9, Math.abs(Math.sin(yaw)) * 2 + Math.abs(Math.cos(yaw)) * 0.9];
+    const [hx, hz] = [Math.abs(Math.cos(yaw)) * 2 + Math.abs(Math.sin(yaw)) * 0.9, Math.abs(Math.sin(yaw)) * 2 + Math.abs(Math.cos(yaw)) * 0.9].map((v) => v * CAR_SCALE);
     return [x - hx, z - hz, x + hx, z + hz, 1.3];
   }),
   ...UNDER.filter((u) => u.kind === 'skate').flatMap((u) => skateParts(u).map((p) => ringRect(p.s0, p.s1, p.o0, p.o1, p.h))),

@@ -2,13 +2,14 @@
 // a planted foot never slides at any speed, turning, strafing or backing up, on flat ground and up
 // stairs; the gait follows the speed; standing still he settles and steps round when he turns;
 // jumps land with the clip their fall calls for; and nothing pops from one frame to the next.
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { LAND_CROUCH, LAND_ROLL, LANDINGS, LEG_REACH, createLocomotion, gait, placeRoot, reachLeg, type LocoInput } from '../src/scripts/city3d/locomotion';
 import { HIP_Y, LEG_X, makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 const DT = 1 / 60;
 
 test('the leg IK puts the ankle where it is asked, knee forward', () => {

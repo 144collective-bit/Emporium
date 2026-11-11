@@ -16,11 +16,11 @@
  *   into a drift, his head turned where he looks.
  */
 import * as THREE from 'three';
-import { ANKLE_H, HIP_HEIGHT, LEG_X, reachArm, reachLeg, torsoFrame, type Pose } from './skeleton';
+import { ANKLE_H, FIGURE_SCALE, HIP_HEIGHT, LEG_X, reachArm, reachLeg, torsoFrame, type Pose } from './skeleton';
 import type { KartId } from './mykart';
 
 /** The driver's size in the kart (walk mode's Degen) */
-export const DRIVER_SCALE = 0.85;
+export const DRIVER_SCALE = FIGURE_SCALE;
 
 type V2 = [number, number];
 export interface KartShape {
@@ -51,24 +51,26 @@ export const KART_SHAPES: Record<KartId, KartShape> = {
   tank: { r: 0.15, tw: 0.17, axles: [-0.4, 0.4], track: 0.39, floor: 0.08, seat: 0.25, pod: { x0: -0.3, x1: 0.22, h: 0.18, z: 0.34 }, engine: [0.24, 0.22, 0.28], rear: 'hoop', armour: true, bullbar: true, nose: 0.28 },
 };
 
+/** His size against the 0.85 the wheel and pedals were first placed for (docs/scale-plan.md): they come in with it */
+const K = DRIVER_SCALE / 0.85;
 /** The seat's x (every model's), and how far the wheel's grips are from its middle */
 export const SEAT_X = -0.1;
-export const WHEEL_R = 0.095;
+export const WHEEL_R = 0.095 * K;
 /** The steering wheel's tilt back from upright (radians) */
 export const WHEEL_TILT = 0.55;
 
 /** Where the driver's hips go (the seat's top) */
 export const seatOf = (id: KartId): [number, number, number] => [SEAT_X, KART_SHAPES[id].seat, 0];
 /** The steering wheel's middle: close in, so his elbows bend */
-export const wheelOf = (id: KartId): [number, number, number] => [SEAT_X + 0.34, KART_SHAPES[id].seat + 0.22, 0];
+export const wheelOf = (id: KartId): [number, number, number] => [SEAT_X + 0.34 * K, KART_SHAPES[id].seat + 0.22 * K, 0];
 /** The pedals (the brake on his left, the throttle on his right), under the nose: their faces, where his feet rest */
 export function pedalsOf(id: KartId): [number, number, number][] {
   const s = KART_SHAPES[id];
-  const x = s.axles[1] - 0.08;
+  const x = SEAT_X + (s.axles[1] - 0.08 - SEAT_X) * K;
   const y = s.floor + 0.06;
   return [
-    [x, y, -0.08],
-    [x, y, 0.08],
+    [x, y, -0.08 * K],
+    [x, y, 0.08 * K],
   ];
 }
 /** A grip on the wheel: 3 o'clock (`side` +1, the kart's right) or 9, turned with the wheel `turn` radians */

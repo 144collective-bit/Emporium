@@ -35,10 +35,11 @@
  *   builds them (the desktop's, 3, by default).
  */
 import * as THREE from 'three';
+import { FIGURE_SCALE } from './skeleton';
 import { HOLDING, PLAYER, SOLDIER, createDegen, type Degen } from './character';
 import { addCarry, addLean, addLook, applyTo, chestYaw, createAnimator, type Animator } from './animator';
 import { createFollow } from './follow';
-import { createRubric, type Row } from './human';
+import { ADULT_SCALE, createRubric, type Row } from './human';
 import { createGaze } from './gaze';
 import { copyPose, createLocomotion, placeRoot } from './locomotion';
 import { loadMocapAll } from './mocap-load';
@@ -57,7 +58,7 @@ import { POCKET, holdGun, newStance } from './stance';
 import type { WeaponId } from './combat-sim';
 import { createPost } from './post';
 
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
 /** One tile in centimetres, for the readouts */
 const CM = 180;
 type Prog = 'manual' | 'runstop' | 'turnback' | 'weave' | 'circle' | 'startstop' | 'startback' | 'gaits' | 'idle' | 'jumps' | 'standjump' | 'hops' | 'strafe' | 'aimturn' | 'peek' | 'crouch' | 'slide' | 'over' | 'stairs' | 'contact' | 'emotes' | 'brawl' | 'reel';
@@ -108,8 +109,8 @@ const contactBoxes = (): Box[] => [CONTACT_FLOOR.side, ...CONTACT_FLOOR.gap, CON
 const RADIUS = 0.22;
 const contactBlocked = (bx: number, bz: number) => bz < CONTACT_FLOOR.rail + RADIUS || contactBoxes().some((b) => bx > b[0] - RADIUS && bx < b[2] + RADIUS && bz > b[1] - RADIUS && bz < b[3] + RADIUS);
 /** walk.ts's jump, gravity and the extra pull down when the jump is let go early */
-const JUMP = 3.9;
-const GRAVITY = 11.5;
+const JUMP = 3.03;
+const GRAVITY = 8.92;
 const LET_GO = 16;
 /** The ground he walks on (the stairs an even ramp, as the city's are) and what his feet stand on (their treads) */
 function floorAt(kind: Floor, z: number, feet: boolean) {
@@ -514,11 +515,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       }
       // (the rail: a bar on two posts at the edge)
       const bar = new THREE.Mesh(new THREE.BoxGeometry(3, 0.05, 0.05), stone);
-      bar.position.set(0, CONTACT.railH * SCALE, CONTACT_FLOOR.rail - 0.03);
+      bar.position.set(0, CONTACT.railH, CONTACT_FLOOR.rail - 0.03);
       terrain.add(bar);
       for (const px of [-1.4, 1.4]) {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, CONTACT.railH * SCALE, 0.05), stone);
-        post.position.set(px, (CONTACT.railH * SCALE) / 2, CONTACT_FLOOR.rail - 0.03);
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, CONTACT.railH, 0.05), stone);
+        post.position.set(px, CONTACT.railH / 2, CONTACT_FLOOR.rail - 0.03);
         terrain.add(post);
       }
     }
@@ -789,7 +790,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     crouchPress = false;
     // Over a wall: Jump at one by hand, or by itself when the program comes up to it
     if (!over && floorKind === 'walls' && me.grounded && Math.hypot(gx, gz) > 0.1 && (p === 'over' || (p === 'manual' && jumpPress))) {
-      const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.22, () => true);
+      const o = overAhead(x, z, Math.atan2(gx, gz), ground(x, z), walls, 0.17, () => true);
       if (o && (p === 'manual' || o.near < 0.45)) {
         over = { o, t: 0 };
         jumpPress = false;
@@ -815,25 +816,17 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
         crouched = Math.hypot(gx, gz) < 0.01;
       }
     } else {
-      const stag = contact.state.stagger;
-      stepMove(move, stag ? 0 : gx, stag ? 0 : gz, me.grounded, dt, faceGoal);
-      if (stag) {
-        const v = (CONTACT.stagger.back / CONTACT.stagger.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
-        move.vx = stag.hand.nx * v;
-        move.vz = stag.hand.nz * v;
-      }
+      stepMove(move, gx, gz, me.grounded, dt, faceGoal);
     }
     crouchAmt += ((crouched ? 1 : 0) - crouchAmt) * (1 - Math.exp(-10 * dt));
     slideAmt += ((slide ? 1 : 0) - slideAmt) * (1 - Math.exp(-(slide ? 18 : 9) * dt));
-    // (on the contact floor he can't walk through its walls, and a sprint into one staggers him)
-    let hit = false;
-    const v0 = Math.hypot(move.vx, move.vz);
+    // (on the contact floor he can't walk through its walls)
     if (floorKind === 'contact') {
       const nx = x + move.vx * dt;
-      if (contactBlocked(nx, z)) (move.vx = 0), (hit = true);
+      if (contactBlocked(nx, z)) move.vx = 0;
       else x = nx;
       const nz = z + move.vz * dt;
-      if (contactBlocked(x, nz)) (move.vz = 0), (hit = true);
+      if (contactBlocked(x, nz)) move.vz = 0;
       else z = nz;
     } else {
       x += move.vx * dt;
@@ -858,15 +851,17 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
     const v = Math.hypot(move.vx, move.vz);
     const sprint = THREE.MathUtils.clamp((v - GAITS.run) / (GAITS.sprint - GAITS.run), 0, 1);
     anim.update({ dt, x, y, z, move, gx, gz, scale: SCALE, ground, feet, sprint, grounded: me.grounded, vy: me.grounded ? me.fall : me.vy, jump: JUMP, gravity: GRAVITY, faceGoal, crouch: crouchAmt });
-    const cst = contact.update({ dt, x, y, z, face: anim.face, scale: SCALE, speed: v, moving: Math.hypot(gx, gz) > 0.1, walls: floorKind === 'contact' ? contactBoxes() : [], people: [], blocked: floorKind === 'contact' ? contactBlocked : undefined, hit, hitSpeed: v0 });
-    const contacting = !!(cst.hand || cst.lean || cst.stagger || cst.give.w > 1e-3 || cst.squeeze.w > 1e-3);
+    const cst = contact.update({ dt, x, y, z, face: anim.face, scale: SCALE, speed: v, moving: Math.hypot(gx, gz) > 0.1, walls: floorKind === 'contact' ? contactBoxes() : [], people: [], blocked: floorKind === 'contact' ? contactBlocked : undefined });
+    const contacting = !!(cst.hand || cst.lean || cst.give.w > 1e-3 || cst.squeeze.w > 1e-3);
     if (contacting) {
       contactRot.set(anim.rot);
       applyContact(contactRot, anim.hips, cst, x, y, z, anim.face, SCALE);
     }
     {
       const goal = Math.hypot(gx, gz);
-      rubric.push({ dt, rot: anim.rot, hips: anim.hips, x, y, z, yaw: anim.face, scale: SCALE, speed: v, goal, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [anim.feet[0].locked, anim.feet[1].locked], drift: [anim.feet[0].drift, anim.feet[1].drift], ground });
+      // (measured at the rubric's adult, his world scaled up to it: he plays in proportion to it, human.ts)
+      const R = ADULT_SCALE / SCALE;
+      rubric.push({ dt, rot: anim.rot, hips: anim.hips, x: x * R, y: y * R, z: z * R, yaw: anim.face, scale: ADULT_SCALE, speed: v * R, goal: goal * R, goalDir: goal > 0.3 ? Math.atan2(gx, gz) : null, down: [anim.feet[0].locked, anim.feet[1].locked], drift: [anim.feet[0].drift, anim.feet[1].drift], ground: (gx2: number, gz2: number) => ground(gx2 / R, gz2 / R) * R });
     }
     if (gun) {
       // (the gun's hold over the motion capture's legs, as walk.ts has it: the procedural walk under the hold
@@ -985,12 +980,11 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       ['Hips down', `${(dbg.drop * SCALE * CM).toFixed(1)} cm`],
       ...(gun ? ([['Gun', `${gunId}${aimOn ? ' · aiming' : ' · ready'} · looking ${lookPitch > 0 ? 'down' : 'up'} ${Math.abs((lookPitch * 180) / Math.PI).toFixed(0)}°`]] as [string, string][]) : []),
       ['Air', dbg.air ? `in the air${jumpHeld ? ' · Jump held' : ''}${dbg.arms > 0.01 ? ` · arms up ${((dbg.arms * 180) / Math.PI).toFixed(0)}°` : ''}` : `on the ground${dbg.squash > 0.002 ? ` · landing ${(dbg.squash * SCALE * CM).toFixed(0)} cm down` : ''}`],
-      ...(contact.state.hand || contact.state.lean || contact.state.stagger || contact.state.give.w > 0.02 || contact.state.squeeze.w > 0.02
+      ...(contact.state.hand || contact.state.lean || contact.state.give.w > 0.02 || contact.state.squeeze.w > 0.02
         ? ([
             [
               'Contact',
               [
-                contact.state.stagger ? `staggering ${(contact.state.stagger.t * 100).toFixed(0)}%` : '',
                 contact.state.hand ? `${contact.state.hand.side ? 'left' : 'right'} hand on the wall ${(contact.state.hand.w * 100).toFixed(0)}%` : '',
                 contact.state.lean ? `leaning on the rail ${(contact.state.lean.w * 100).toFixed(0)}%` : '',
                 contact.state.give.w > 0.02 ? `${contact.state.give.side < 0 ? 'right' : 'left'} shoulder gives ${(contact.state.give.w * 100).toFixed(0)}%` : '',

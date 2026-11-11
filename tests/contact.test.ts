@@ -1,8 +1,9 @@
 // Contact (the revamp's Phase 3, contact.ts): a hand goes onto a wall he's stopped at, or trails along
-// one at his side, within the rubric's 1.5 cm of its surface; the shoulder gives and the step hitches
-// brushing a wall or a person; running into a wall at a sprint staggers him (and never under it); a
+// one at his side, within the rubric's 1.5 cm of its surface; the shoulder gives brushing a wall or a
+// person; the layer never slows or throws him (no hitch, no stagger: the owner's call, 2026-11); a
 // narrow gap turns the shoulders; standing a while at a rail he leans on it with both hands; on open
 // ground, or moving fast past a wall, nothing happens and the pose is left exactly as it was.
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -14,7 +15,9 @@ import type { Box } from '../src/scripts/city3d/solids';
 import { allMocap } from './mocapdata';
 
 const data = allMocap();
-const SCALE = 0.85;
+const SCALE = FIGURE_SCALE;
+/** His size against the 0.85 these fixtures were first written for: every distance in them goes with it */
+const K = SCALE / 0.85;
 const DT = 1 / 60;
 const CM = 180;
 const flat = () => 0;
@@ -31,9 +34,9 @@ function standing() {
 }
 const inp = (o: Partial<ContactInput>): ContactInput => ({ dt: DT, x: 0, y: 0, z: 0, face: 0, scale: SCALE, speed: 0, moving: false, walls: [], people: [], ...o });
 /** A wall across his way at z0 (facing -z), 2 tall */
-const across = (z0: number): Box => [-3, z0, 3, z0 + 1, 2];
+const across = (z0: number): Box => [-3, z0 * K, 3, z0 * K + 1, 2];
 /** A wall along his right side at x0 */
-const alongRight = (x0: number): Box => [x0, -3, x0 + 1, 3, 2];
+const alongRight = (x0: number): Box => [x0 * K, -3, x0 * K + 1, 3, 2];
 
 test('the nearest point on a box is on its outline, with the outward normal, inside or out', () => {
   const b: Box = [0, 0, 2, 1, 1];
@@ -70,8 +73,7 @@ test('nothing happens on open ground, and the pose is left exactly as it was', (
   const st = c.state;
   assert.equal(st.hand, null);
   assert.equal(st.lean, null);
-  assert.equal(st.stagger, null);
-  assert.ok(st.give.w < 1e-6 && st.squeeze.w < 1e-6 && st.hitch === 0);
+  assert.ok(st.give.w < 1e-6 && st.squeeze.w < 1e-6);
   applyContact(an.rot, an.hips, st, 0, 0, 0, 0, SCALE);
   assert.deepEqual(Array.from(an.rot), Array.from(before));
 });
@@ -89,7 +91,7 @@ test('stopped close to a wall he faces, a hand goes onto it within 1.5 cm, and c
     const off = handOff(rot, an.hips, st.hand!, 0, 0, 0, 0, SCALE) * CM;
     assert.ok(off < 1.5, `the hand within 1.5 cm of the wall at ${d} (${off.toFixed(2)} cm)`);
     // (the palm on the surface: the wall's face is at z = d, the palm a hair off it)
-    assert.ok(Math.abs(st.hand!.z - (d - CONTACT.palm * SCALE)) < 1e-9);
+    assert.ok(Math.abs(st.hand!.z - (d * K - CONTACT.palm * SCALE)) < 1e-9);
     // Turned away: the hand comes off over the ease-out
     for (let i = 0; i < 120; i++) c.update(inp({ walls, speed: 0.05, face: Math.PI }));
     assert.equal(c.state.hand, null, 'the hand off the wall once he faces away');
@@ -113,31 +115,25 @@ test('walking slowly along a wall at his side, that hand trails along it at hip 
   assert.equal(st.hand, null);
 });
 
-test('brushing a wall or a person at his side while moving, the shoulder gives that side and the step hitches once', () => {
+test('brushing a wall or a person at his side while moving, the shoulder gives that side', () => {
   const c = createContact();
   let st = c.state;
   // A wall close on his left
-  for (let i = 0; i < 60; i++) st = c.update(inp({ walls: [[-1.3, -3, -0.26, 3, 2]], speed: 2.5, moving: true }));
+  for (let i = 0; i < 60; i++) st = c.update(inp({ walls: [[-1.3, -3, -0.26 * K, 3, 2]], speed: 2.5, moving: true }));
   assert.equal(st.give.side, -1);
   assert.ok(st.give.w > 0.5, `the shoulder gives (${st.give.w.toFixed(2)})`);
-  // The hitch: full as the brush starts, gone within hitchT
-  const c2 = createContact();
-  c2.update(inp({ walls: [[-1.3, -3, -0.26, 3, 2]], speed: 2.5, moving: true }));
-  assert.ok(c2.state.hitch > 0.9, 'the hitch as the brush starts');
-  for (let i = 0; i < Math.ceil(CONTACT.hitchT / DT) + 2; i++) c2.update(inp({ walls: [[-1.3, -3, -0.26, 3, 2]], speed: 2.5, moving: true }));
-  assert.equal(c2.state.hitch, 0, 'the hitch is over');
   // A person on his right, level with him
   const c3 = createContact();
-  for (let i = 0; i < 60; i++) st = c3.update(inp({ people: [{ x: 0.3, z: 0.05 }], speed: 2.5, moving: true }));
+  for (let i = 0; i < 60; i++) st = c3.update(inp({ people: [{ x: 0.3 * K, z: 0.05 * K }], speed: 2.5, moving: true }));
   assert.equal(st.give.side, 1);
   assert.ok(st.give.w > 0.5, 'the shoulder gives for a person');
   // A person well ahead: no brush yet
   const c4 = createContact();
-  for (let i = 0; i < 60; i++) st = c4.update(inp({ people: [{ x: 0.3, z: 1.5 }], speed: 2.5, moving: true }));
+  for (let i = 0; i < 60; i++) st = c4.update(inp({ people: [{ x: 0.3 * K, z: 1.5 * K }], speed: 2.5, moving: true }));
   assert.ok(st.give.w < 1e-6);
   // Standing still beside a wall: nothing
   const c5 = createContact();
-  for (let i = 0; i < 60; i++) st = c5.update(inp({ walls: [[-1.3, -3, -0.26, 3, 2]], speed: 0, moving: false }));
+  for (let i = 0; i < 60; i++) st = c5.update(inp({ walls: [[-1.3, -3, -0.26 * K, 3, 2]], speed: 0, moving: false }));
   assert.ok(st.give.w < 1e-6);
 });
 
@@ -155,31 +151,11 @@ test('the give turns the chest and pulls that collarbone back; nothing else move
   assert.ok(P1.pos[MB.legL].distanceTo(P0.pos[MB.legL]) < 1e-9 && P1.pos[MB.footR].distanceTo(P0.pos[MB.footR]) < 1e-9, 'the legs as they were');
 });
 
-test('running into a wall at a sprint staggers him for its time; a walk into it does not', () => {
+test('running into a wall at a sprint never slows, stops or throws him: the layer has nothing that could', () => {
   const c = createContact();
-  const walls = [across(0.25)];
-  let st = c.update(inp({ walls, speed: 4, moving: true, hit: true, hitSpeed: 4.1 }));
-  assert.ok(st.stagger && st.stagger.t < 0.1, 'a stagger starts');
-  assert.equal(st.stagger!.hand.side, 1);
-  const an = standing();
-  let peak = 0;
-  let n = 0;
-  while (c.state.stagger) {
-    st = c.update(inp({ walls, speed: 0.5, moving: false }));
-    if (st.stagger) {
-      const rot = Float32Array.from(an.rot);
-      applyContact(rot, an.hips, st, 0, 0, 0, 0, SCALE);
-      const P1 = posed(rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());
-      const P0 = posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());
-      peak = Math.max(peak, P0.pos[MB.head].z - P1.pos[MB.head].z);
-    }
-    n++;
-  }
-  assert.ok(Math.abs(n * DT - CONTACT.stagger.t) < 0.05, `over its time (${(n * DT).toFixed(2)} s)`);
-  assert.ok(peak > 0.03, `the head thrown back (${(peak * CM).toFixed(1)} cm)`);
-  const c2 = createContact();
-  st = c2.update(inp({ walls, speed: 1.4, moving: true, hit: true, hitSpeed: 1.4 }));
-  assert.equal(st.stagger, null, 'a walk into a wall is no stagger');
+  const st = c.update(inp({ walls: [across(0.25)], speed: 4.2, moving: true }));
+  assert.ok(!('stagger' in st) && !('hitch' in st), 'no stagger or hitch in the state');
+  assert.ok(!('stagger' in CONTACT) && !('hitch' in CONTACT), 'no stagger or hitch in the numbers');
 });
 
 test('through a gap narrower than his shoulders need the shoulders turn, and not through a wide one', () => {
@@ -197,7 +173,7 @@ test('through a gap narrower than his shoulders need the shoulders turn, and not
   const w1 = Math.abs(P1.pos[MB.armR].x - P1.pos[MB.armL].x);
   assert.ok(w1 < w0 * 0.9, `the shoulders narrower across his way (${(w1 * CM).toFixed(1)} of ${(w0 * CM).toFixed(1)} cm)`);
   const c2 = createContact();
-  for (let i = 0; i < 60; i++) st = c2.update(inp({ walls: [[-2, -3, -0.8, 3, 1.2], [0.8, -3, 2, 3, 1.2]], speed: 1.4, moving: true }));
+  for (let i = 0; i < 60; i++) st = c2.update(inp({ walls: [[-2, -3, -0.8 * K, 3, 1.2], [0.8 * K, -3, 2, 3, 1.2]], speed: 1.4, moving: true }));
   assert.ok(st.squeeze.w < 1e-6, 'a wide gap');
 });
 
@@ -205,7 +181,7 @@ test('standing a while facing a rail he leans on it, both hands on it; never at 
   const an = standing();
   const c = createContact();
   // (an edge at z = 0.3 nothing solid explains: the quay)
-  const blocked = (_x: number, z: number) => z > 0.3;
+  const blocked = (_x: number, z: number) => z > 0.3 * K;
   let st = c.state;
   for (let i = 0; i < 60; i++) st = c.update(inp({ blocked }));
   assert.equal(st.lean, null, 'not before the dwell');
@@ -216,7 +192,7 @@ test('standing a while facing a rail he leans on it, both hands on it; never at 
   for (const h of st.lean!.hands) {
     const off = handOff(rot, an.hips, h, 0, 0, 0, 0, SCALE) * CM;
     assert.ok(off < 1.5, `a hand on the rail within 1.5 cm (${off.toFixed(2)} cm)`);
-    assert.ok(Math.abs(h.y - CONTACT.railH * SCALE) < 1e-9);
+    assert.ok(Math.abs(h.y - CONTACT.railH) < 1e-9);
   }
   const P1 = posed(rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());
   const P0 = posed(an.rot, 0, an.hips.x, an.hips.y, an.hips.z, newPosed());

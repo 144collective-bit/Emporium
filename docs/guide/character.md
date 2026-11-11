@@ -122,7 +122,23 @@ keep it up to date when what it describes changes.
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
   elbows, wrists (`Limb.wrist` { roll, bend }, zero by default so nothing
-  moves unless a pose asks; fighting turns the fist) and hand sockets.
+  moves unless a pose asks; fighting turns the fist) and hand sockets. It's
+  drawn at one size for everyone (**`FIGURE_SCALE` 0.66** in figure.ts,
+  re-exported by skeleton.ts, DOM-free so the game server reads it too; the
+  owner's call, `docs/scale-plan.md`: your Degen on foot and at the wheel,
+  other players, the crowd and the Fight Club's fighters (`FIGHTER_SCALE`),
+  about 0.86 tiles tall; kids keep `KID`). The fight's lengths and speeds
+  (fight-moves.ts `MOVES` from `AT_WAS`, the strike heights and the styles'
+  dodges; fight-sim.ts `T`, the bots' distances; combat-sim.ts `MELEE`; the
+  ring's camera; brawlsite.ts `GAP`) are written for fighters at 0.85
+  (`WAS_SCALE`) and brought down by `SIZE_K`. Everything
+  of his own size came down with him in proportion: his speeds, jump and
+  gravity, the vault's heights, his radius, the walk camera, the moments'
+  marks, the car seats, kart wheel and pedals and the bikes' seats, bars
+  and pegs; the animator's thresholds are in rig numbers, so it plays as
+  it did, and the motion rubric (human.ts) measures him at its adult,
+  0.85, his world scaled up to it. Anything new sized to him goes
+  through `FIGURE_SCALE`.
   - **The skeleton** is `skeleton.ts` (DOM-free, tested in
     `tests/skeleton.test.ts`): 34 bones (`BONES`: hips, `spine1`, `spine2`,
     `chest`, neck, head; per side collarbone, arm, forearm, hand, index

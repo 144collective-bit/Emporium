@@ -442,20 +442,20 @@ export function armoury(scene: THREE.Scene, ctx: LandmarkCtx) {
     g.add(sign(signMat(tex, 1, 1.25), 4.8, 0.3, 25.6, S + 1.52, HZ0 + HD + 1.012));
   }
   // The counter: where players gear up (RACK in solids.ts), a rifle on display, ammo boxes,
-  // and a little GEAR UP sign
+  // and a little GEAR UP sign; its top at a Degen's waist at everyone's size (docs/scale-plan.md: 0.48)
   {
     const cb = new Batch();
-    cb.box(23.9, S, 27.15, 1.6, 0.55, 0.35, oliveDk);
-    cb.box(23.85, S + 0.55, 27.1, 1.7, 0.05, 0.45, steel);
+    cb.box(23.9, S, 27.15, 1.6, 0.43, 0.35, oliveDk);
+    cb.box(23.85, S + 0.43, 27.1, 1.7, 0.05, 0.45, steel);
     for (let k = 0; k < 4; k++) cb.box(23.95 + k * 0.4, S + 0.08, 27.505, 0.3, 0.12, 0.005, k % 2 ? steel : hazard);
     const gun = rifleGeometry().rotateY(Math.PI / 2).rotateX(Math.PI / 2);
-    cb.add(gun.translate(24.3, S + 0.64, 27.32), toon('#2b2a33'));
+    cb.add(gun.translate(24.3, S + 0.52, 27.32), toon('#2b2a33'));
     for (const [x, z] of [
       [25.0, 27.25],
       [25.18, 27.28],
       [25.09, 27.4],
     ])
-      cb.box(x, S + 0.6, z, 0.14, 0.09, 0.09, olive);
+      cb.box(x, S + 0.48, z, 0.14, 0.09, 0.09, olive);
     cb.build(g);
     const tag = canvasTex(512, 128, (c) => {
       c.fillStyle = '#3e4a26';

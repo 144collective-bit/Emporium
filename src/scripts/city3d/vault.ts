@@ -53,7 +53,7 @@ export const isLow = (b: Box) => LOW_KEYS.has(key(b));
  * root) go over its top by `clear` (a vault's, a climb's: below it, his
  * knees tucked lift his feet over it)
  */
-export const OVER = { reach: 0.85, min: 0.25, vault: 0.75, climb: 1.25, deep: 1.3, square: 0.55, land: 0.42, vaultT: 0.55, climbT: 1.05, perTile: 0.2, drop: 0.45, clear: [-0.26, -0.2] };
+export const OVER = { reach: 0.66, min: 0.19, vault: 0.58, climb: 0.97, deep: 1.0, square: 0.55, land: 0.33, vaultT: 0.55, climbT: 1.05, perTile: 0.2, drop: 0.35, clear: [-0.2, -0.155] };
 
 export type OverKind = 'vault' | 'climb';
 export interface Over {

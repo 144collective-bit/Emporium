@@ -67,6 +67,7 @@ import { YARDS_RECT, inYards } from './southfield';
 import { ENDSWOOD_RECT, inEndswood } from './endswood';
 import { CHURCH, STUDIO } from './endsstreet';
 import { COMMON, inCommon } from './endsblend';
+import { fromWall } from './wall';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -121,7 +122,11 @@ export interface Ambience {
   studio: number;
   /** St Aldwyn's bell (sound.ts tolls it on the hour), 0-1 */
   bell: number;
+  /** By the wall round the city (docs/wall-plan.md Phase 6): the wind along its face and a low hum off it, 0-1 */
+  wall: number;
 }
+/** How far from the wall's inner face its sound carries (full at its foot) */
+export const WALL_SOUND = 70;
 /** The church's tower, where its bell hangs */
 const BELFRY = [(CHURCH.tower.rect[0] + CHURCH.tower.rect[2]) / 2, (CHURCH.tower.rect[1] + CHURCH.tower.rect[3]) / 2];
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
@@ -313,5 +318,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     ends: ends * k,
     studio,
     bell,
+    wall: (1 - smooth(0, WALL_SOUND, Math.max(0, fromWall(x, z)))) * k,
   };
 }

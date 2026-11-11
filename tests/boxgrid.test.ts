@@ -9,7 +9,7 @@ import { newCar, reachOf, stepCar, tune, type DriveInput } from '../src/scripts/
 import { TUNES, flyReach, newFlight, stepFly, type FlyInput } from '../src/scripts/city3d/flight-sim';
 import { HANGAR_ROOF } from '../src/scripts/city3d/airfield';
 import { DRIVE } from '../src/scripts/city3d/mycar';
-import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EXT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { hillsAlong } from '../src/scripts/city3d/terrain';
 import { rollsAlong } from '../src/scripts/city3d/rolls';
 
@@ -23,7 +23,9 @@ function rng(seed: number) {
   };
 }
 const r = rng(7);
-const [X0, Z0, X1, Z1] = WORLD_BOUNDS;
+// (the land inside the world's edge, where the boxes are: the walk limit reaches on to the wall since docs/wall-plan.md
+// Phase 3, over open grass)
+const [X0, Z0, X1, Z1] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
 /** A point somewhere in the world, half of them right by a solid box (where the answers matter) */
 function spot(): [number, number] {
   if (r() < 0.5) return [X0 + r() * (X1 - X0), Z0 + r() * (Z1 - Z0)];

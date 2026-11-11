@@ -13,7 +13,9 @@
  * both banks a lamp-lit promenade.
  */
 import * as THREE from 'three';
-import { WALL, WALL_LAND } from './wall';
+import { WALL, WALL_LAND, WALL_OUTER } from './wall';
+/** How far past the wall's outer face the river runs on, into the murk (docs/wall-plan.md Phase 5) */
+const RIVER_PAST = 30;
 import { Batch, canvasTex, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, siteMat, toon } from './kit';
 import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
 import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, type Road } from './layout';
@@ -895,18 +897,21 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
   // Past the wall (wall.ts, docs/wall-plan.md Phase 2): the last of the land, a tile at a time, under the murk
   // (wall3d.ts); the wall stands over the seam
   const [l0, l1] = [WALL_LAND[0], WALL_LAND[2]];
+  const [r0, r1] = [WALL_OUTER[0] - RIVER_PAST, WALL_OUTER[2] + RIVER_PAST];
   for (const [i, j] of tilesIn(l0, l0, l1 - 1e-6, l1 - 1e-6)) {
     const r: Rect = [Math.max(l0, i * TILE), Math.max(l0, j * TILE), Math.min(l1, (i + 1) * TILE), Math.min(l1, (j + 1) * TILE)];
-    for (const [px0, pz0, px1, pz1] of minusRects(r, [[g0, g0, g1, g1]])) {
+    // (and not over the river, which runs on under the wall through its culverts and a little past it: Phase 5)
+    for (const [px0, pz0, px1, pz1] of minusRects(r, [[g0, g0, g1, g1], [r0, RIVER[0], r1, RIVER[1]]])) {
       const flat = groundPlane(px0, pz0, px1, pz1, low);
       b.add(flat, grass);
       paintGround(flat);
     }
   }
   // The river between its edges (river.ts: straight quays, banks it pulls back from), and its banks
-  // (on past the edge with the grass, walled at its ends)
-  scene.add(riverWater(g0, g1));
-  riverBanks(b, g0, g1);
+  // (on past the edge with the grass, under the wall through its culverts and a little past it into the murk, walled
+  // at its ends there: docs/wall-plan.md Phase 5)
+  scene.add(riverWater(r0, r1));
+  riverBanks(b, r0, r1);
   // The Docks' basin and its mouth (docks.ts): water at the river's height between stone quay walls, the avenue over
   // the mouth on a deck
   scene.add(basinWater());

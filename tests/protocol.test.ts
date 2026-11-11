@@ -6,6 +6,7 @@ import { FLAG, MODES, SPEEDS, VEH_KINDS, cleanMods, cleanVehicle, faceYaw, inWor
 import { CEILING } from '../src/scripts/city3d/flight-sim';
 import { CAR_PAINTS, PLAYER_AIRCRAFT, PLAYER_BIKES, PLAYER_CARS, PLAYER_KARTS } from '../src/scripts/city3d/vehicleids';
 import { EXT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { WALL_INNER } from '../src/scripts/city3d/wall';
 import { BLOCK_SPAWN } from '../src/scripts/city3d/projects';
 import { KART_SPAWN } from '../src/scripts/city3d/kartpark';
 import { AIR_SPAWN } from '../src/scripts/city3d/airfield';
@@ -16,7 +17,9 @@ import { MOD_LEVELS } from '../src/scripts/city3d/catalog';
 test('the world is the one you can walk and drive, edge to edge', () => {
   const [x0, z0, x1, z1] = WORLD_BOUNDS;
   assert.ok(inWorld(x0, 0.15, z0) && inWorld(x1, 0.15, z1));
-  assert.ok(!inWorld(EXT[0] - 1, 0.15, 0) && !inWorld(0, 0.15, EXT[1] + 1));
+  // (out past the old edge to the wall's foot, docs/wall-plan.md Phase 3, and never through it)
+  assert.ok(inWorld(EXT[0] - 1, 0.15, 0) && inWorld(0, 0.15, EXT[1] + 1));
+  assert.ok(!inWorld(WALL_INNER[0] - 0.5, 0.15, 0) && !inWorld(0, 0.15, WALL_INNER[3] + 0.5));
   // (down to the river's water, up to an aircraft's ceiling: your own flies there)
   assert.ok(inWorld(0, -1.5, 0) && inWorld(0, CEILING, 0));
   assert.ok(!inWorld(0, -4, 0) && !inWorld(0, CEILING + 9, 0));

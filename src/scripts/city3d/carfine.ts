@@ -15,7 +15,7 @@
  *   inside, and you at the wheel.
  */
 import * as THREE from 'three';
-import { FINE, build, cache, clip, inset, lay, pane, screenFoot, topAt, wheelSpots, type Car, type Parts } from './cars';
+import { FINE, sized, build, cache, clip, inset, lay, pane, screenFoot, topAt, wheelSpots, type Car, type Parts } from './cars';
 import { INTERIORS, type V3 } from './carinside';
 import type { CarSpec } from './carspec';
 import { fitOut } from './carcabin';
@@ -276,8 +276,9 @@ export function fitCars(low: boolean, compile: (o: THREE.Object3D) => unknown, s
   FINE.add = (p, s, wheels, withCrew) => add(p, s, wheels, low, withCrew);
   FINE.fit = (car) => fitOut(car, o);
   for (const [key, g] of cache) {
-    const [, wheels, withCrew] = key.split(':');
+    const [, wheels, withCrew, own] = key.split(':');
     const n = build(g.spec.id, wheels === 'true', '', withCrew === 'true');
+    if (own !== 'true') sized(n);
     for (const k of ['paint', 'detail', 'glow'] as const) {
       // (disposed first: the renderer lets the old buffers go, then uploads the new ones on the next draw)
       g[k]?.dispose();

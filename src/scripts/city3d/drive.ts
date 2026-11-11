@@ -40,7 +40,7 @@ import * as THREE from 'three';
 import { createDegen, type Degen, type Outfit } from './character';
 import type { Sfx } from './combat';
 import { CARS, type Car } from './cars';
-import { INTERIORS } from './carinside';
+import { inWorld } from './carinside';
 import { carLights, circles, gearOf, motorOf, newCar, newSignal, reachOf, skidding, stepCar, tune, type CarState, type DriveInput, type DriveTune, type TurnSignal } from './drive-sim';
 import { blinkOn } from './traffic';
 import { DECK_WALLS, departuresSurface } from './airfield';
@@ -494,7 +494,7 @@ export function createDrive(d: DriveDeps) {
       const [x, z] = spots[i];
       // Your car: out of a front door (it swings open and shut behind him) from that side's seat; `from` is where the
       // step out starts (moments.ts), `seat` the hips' height there
-      const n = v.kind === 'car' ? INTERIORS[v.model as PlayerCar] : null;
+      const n = v.kind === 'car' ? inWorld(v.model as PlayerCar) : null;
       if (n?.door && i < 2) {
         v.car?.door?.(i, DOOR_HOLD);
         const off = (i ? 1 : -1) * Math.abs(n.hip[2]);
