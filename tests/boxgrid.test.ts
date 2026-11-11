@@ -9,7 +9,7 @@ import { newCar, reachOf, stepCar, tune, type DriveInput } from '../src/scripts/
 import { TUNES, flyReach, newFlight, stepFly, type FlyInput } from '../src/scripts/city3d/flight-sim';
 import { HANGAR_ROOF } from '../src/scripts/city3d/airfield';
 import { DRIVE } from '../src/scripts/city3d/mycar';
-import { FLY_BOUNDS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { EXT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { hillsAlong } from '../src/scripts/city3d/terrain';
 import { rollsAlong } from '../src/scripts/city3d/rolls';
 
@@ -23,7 +23,9 @@ function rng(seed: number) {
   };
 }
 const r = rng(7);
-const [X0, Z0, X1, Z1] = WORLD_BOUNDS;
+// (the land inside the world's edge, where the boxes are: the walk limit reaches on to the wall since docs/wall-plan.md
+// Phase 3, over open grass)
+const [X0, Z0, X1, Z1] = [EXT[0] + 6, EXT[0] + 6, EXT[1] - 6, EXT[1] - 6];
 /** A point somewhere in the world, half of them right by a solid box (where the answers matter) */
 function spot(): [number, number] {
   if (r() < 0.5) return [X0 + r() * (X1 - X0), Z0 + r() * (Z1 - Z0)];
@@ -119,8 +121,6 @@ test('bullets and the camera: a ray stops exactly where it did against every box
 const CAR = SOLIDS.filter((b) => b !== TURNTABLE_BOX);
 const CAR_GRID = new BoxGrid(CAR);
 const BOUNDS: Box = [...WORLD_BOUNDS, 0];
-/** Flying's own, well short of the wall (layout.ts FLY_BOUNDS, as walk.ts gives it) */
-const FLY: Box = [...FLY_BOUNDS, 0];
 
 test('driving: a car only given the boxes near it ends every step exactly where it would with all of them', () => {
   const T = tune(DRIVE.super, { L: 2.5, W: 1.05, wheelbase: 1.55 });
@@ -173,8 +173,8 @@ test('flying: an aircraft only given the boxes near it flies exactly as it would
       let inp: FlyInput = { throttle: 0, turn: 0, climb: 0 };
       for (let k = 0; k < 400; k++) {
         if (k % 50 === 0) inp = { throttle: r() * 2 - 1, turn: r() * 2 - 1, climb: r() * 2 - 1.2 };
-        const hitA = stepFly(a, inp, T, 1 / 60, { boxes: CAR, ceilings: [HANGAR_ROOF], soft: [], ground }, FLY);
-        const hitB = stepFly(b, inp, T, 1 / 60, { boxes: CAR_GRID.near(b.x, b.z, flyReach(b)), ceilings: [HANGAR_ROOF], soft: [], ground }, FLY);
+        const hitA = stepFly(a, inp, T, 1 / 60, { boxes: CAR, ceilings: [HANGAR_ROOF], soft: [], ground }, BOUNDS);
+        const hitB = stepFly(b, inp, T, 1 / 60, { boxes: CAR_GRID.near(b.x, b.z, flyReach(b)), ceilings: [HANGAR_ROOF], soft: [], ground }, BOUNDS);
         assert.deepEqual(b, a, `${id} run ${run}, step ${k}`);
         assert.equal(hitB, hitA);
         if (hitA > 0) bumps++;

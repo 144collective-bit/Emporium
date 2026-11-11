@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DRIFT, GEARS, RIVER_WALLS, riverWallsNear, SIGNAL_HOLD, SIGNAL_SPEED, carLights, circles, gearOf, motorOf, newCar, newSignal, skidding, slipOf, stepCar, tune, type CarState, type DriveInput, type DriveTune, type DriveWorld } from '../src/scripts/city3d/drive-sim';
-import { BRIDGED_NS, EXT, NS_ROADS, RIVER, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { BRIDGED_NS, EXT, NS_ROADS, RIVER, WALL_OUT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { topsAt } from '../src/scripts/city3d/river';
 import { CARGO, DRIVE, FEEL, PLAYER_CARS, type PlayerCar } from '../src/scripts/city3d/mycar';
 import { KART_FEEL, KART_SPECS } from '../src/scripts/city3d/mykart';
@@ -157,9 +157,10 @@ test('the river stops it except over the bridges', () => {
     const open = !RIVER_WALLS.some((w) => w[0] < r.c + r.half && w[2] > r.c - r.half);
     assert.equal(open, BRIDGED_NS.includes(i), `x ${r.c}`);
   });
-  // From the street plan (growth plan Phase 5): the river runs edge to edge, in order, broken only at the bridges
-  assert.equal(RIVER_WALLS[0][0], EXT[0]);
-  assert.equal(RIVER_WALLS.at(-1)![2], EXT[1]);
+  // From the street plan (growth plan Phase 5): the river runs edge to edge, in order, broken only at the bridges,
+  // and on to the wall's inner face at either end (docs/wall-plan.md Phase 3)
+  assert.equal(RIVER_WALLS[0][0], EXT[0] - WALL_OUT);
+  assert.equal(RIVER_WALLS.at(-1)![2], EXT[1] + WALL_OUT);
   for (let i = 1; i < RIVER_WALLS.length; i++) {
     const [p, q] = [RIVER_WALLS[i - 1], RIVER_WALLS[i]];
     assert.ok(q[0] >= p[2] - 1e-9 && q[0] - p[2] < 30, 'in order');

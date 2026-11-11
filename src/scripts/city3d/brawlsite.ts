@@ -23,6 +23,7 @@
  *   those when the city loads).
  */
 import type { Box } from './solids';
+import { SIZE_K } from './figure';
 import type { BotTraits } from './fight-sim';
 import { PARTNER_NAMES, type PartnerId, type StyleId } from './fight-moves';
 
@@ -45,8 +46,8 @@ export interface Partner {
   look: number;
 }
 
-/** How far in front of a partner you start a spar */
-export const GAP = 1.7;
+/** How far in front of a partner you start a spar (1.7 for fighters at 0.85: in proportion, figure.ts) */
+export const GAP = 1.7 * SIZE_K;
 /** How close the "Spar" prompt shows */
 export const PROMPT_R = 1.5;
 /** A partner's footprint while waiting (half a side) and height */

@@ -70,7 +70,7 @@ date. Roads don't change in this plan.
   - the sky dome reaching past it.
 - Nothing is drawn yet: until Phase 2 the horizon is open sky and haze.
 
-### Phase 2: the wall drawn (built, merged)
+### Phase 2: the wall drawn (built, waiting on the owner's sign-off)
 
 - `wall3d.ts` (`buildWall()`, at the boot: it's seen from everywhere), two draws:
   - **The slab**: each side a box from the ground to `WALL.h`, in one toon material of
@@ -102,82 +102,91 @@ date. Roads don't change in this plan.
   the wall) doesn't change that.
 - The review views and the bench views for the wall come in Phase 6.
 
-The owner's go for Phases 3 to 6 ("complete all steps") came after Phase 2 was merged; they were built together and
-merged as one.
+### Phase 3: walk to the wall (built, waiting on the owner's sign-off)
 
-### Phase 3: walk to the wall (built)
+- `WORLD_BOUNDS` (layout.ts) is the wall's foot: `WALL_OUT` (80, the wall's
+  `out`) past `EXT`, less `WALL_MARGIN` (1). Walking, driving and riding go
+  over the grass to it; the server's movement checks (`protocol.ts`
+  `WORLD`) follow by themselves.
+- The wall is solid in every grid (`WALL_SOLIDS` in wall.ts, in solids.ts
+  `SOLIDS`): walking, the walk camera, driving, flying and bullets.
+- Flying turns back short of the wall (`EDGE_TURN` inside the walk limit)
+  and never flies through it, low or high (the test flies each aircraft
+  straight at every side).
+- The river already ran on to the wall's inner face in the drawing
+  (`riverWater()` / `riverBanks()` to the grass's end); now a boat runs on to
+  it too (boat-sim.ts `END`), and a car's river walls go on to it
+  (drive-sim.ts `RIVER_WALLS`). The culverts are still Phase 5's: the
+  channel's end is the wall's face until then.
+- City view's pan (`PAN_BOUNDS`) is as it was (held by the test).
+- The strip stays grass, no trees and no roads.
+- The world map draws the wall as a frame round the land, the land and the
+  river out to it, and pans and zooms out to it; a waypoint can go anywhere
+  you can walk.
+- Tested at both sizes (`tests/wall.test.ts`: the walk limit at the wall's
+  foot, solid in every grid and to bullets, the aircraft turning back, a
+  boat and a car's river walls reaching it). The tests that held the old
+  edge now hold the wall's (layout, protocol, drive, solids); the collision
+  grid's random spots stay on the land inside the edge, where the boxes are.
+- Checked in the browser: standing at the west wall's foot, and the world
+  map with the wall round it.
 
-- **Walking and driving:** `WORLD_BOUNDS` (layout.ts) reaches the wall's foot. It
-  stops `WALL_FOOT` (0.6) short of the inner face (`WALL_OUT` is the wall's 80 past
-  the edge), so you cross the grass past the old edge right up to it. The ground
-  there is flat grass (no trees, no roads: the owner's "just grass"), and the
-  hills in the north-east corner run on to it.
-- **The wall is solid:** `WALL_SOLIDS` (wall.ts), in `SOLIDS`, a box a side to its
-  top. It stops walking, driving, the walk camera and bullets, and the game
-  server's movement checks follow (protocol.ts reads `WORLD_BOUNDS`).
-- **Flying keeps its old limit:** `FLY_BOUNDS`, 6 inside the old edge, which
-  walk.ts hands to the aircraft. Its turn back (`EDGE_TURN`) starts well over 40
-  short of the wall, so nothing flies near it.
-- **City view** pans as it did: `PAN_BOUNDS` stays round the built-up area.
-- **The world map:** the land out to the wall, the wall a cold grey band round it,
-  open ground (a waypoint) anywhere you can walk.
-- **The tests:** walking stops at the foot and never in it, and flying turns back
-  well short of it. The solids and road tests skip the wall, which stands past
-  every road's end. The collision grid's flying test uses `FLY_BOUNDS`, as the
-  game does.
+### Phase 4: the top and the night (built, waiting on the owner's sign-off)
 
-### Phase 4: the top and the night (built)
+- **The top** (wall.ts `TOP`, `EDGES`, `onEdge()`): a concrete parapet along
+  both edges, 1.1 high, in the slab's own material (one draw with it); coils
+  of razor wire along the inner one, a big coil and a thinner strand on top
+  (wall3d.ts `wireMesh()`: an open tube along each side with the coils on a
+  cut-out texture repeating along it, in the FX layer, so the ink doesn't
+  draw black ropes; phones leave the strand out); cameras on posts along the
+  inner edge every 64, kept 24 clear of the corners, each an arm and a
+  housing out over the city, looking in (`CAMERAS`, `lookIn()`).
+- **At night** (`FLOOD`, `FLOODS`): a floodlight housing against the inner
+  face at its foot every 36, clear of the corners and the culverts, solid and
+  low enough to see over (`FLOOD_SOLIDS`, in `SOLIDS`); each washes a soft fan
+  of cool light up the face (`washMesh()`: added light in the FX layer, its
+  strength from the tick's `night`, nothing by day, well under the bloom's
+  threshold so the face never washes out). The cameras' red dots and the
+  floodlights' lenses are two small meshes lit at night through `lit()`.
+- The cameras, the housings and the culverts' bars are one dark steel mesh
+  in the wall's own haze: the wall is now six draws (the slab, the steel,
+  the dots, the lenses, the wire, the wash) and the murk.
 
-- **The slab, built face by face** (wall3d.ts `slabGeometry()`): the inner and outer
-  faces, a parapet along each edge of the top (`TOP.parapet`, 1.2 over it), the
-  walk between them. What's solid goes up to `WALL_TOP`.
-- **Razor wire** coiled along both parapets: an upright ribbon with a coil texture
-  in the FX layer, so the ink doesn't draw it as a rope. Phones carry the inner
-  one only.
-- **Cameras** (`CAMERAS`, every 48 along the inner parapet): each on a post,
-  leaning out over the face and tilted down into the city, with a red dot by its
-  lens, dim by day and bright at night.
-- **Floodlights at the foot** (`FLOODS`, every 36 along the inner face, 1.6 out):
-  a squat housing on a base, its lens lit at night. Each washes a cone of cold
-  light up the inner face: the slab's shader draws it from the same spacing,
-  widening and fading up the face, kept under the bloom's threshold.
-- **Day and night every frame:** the night, the lenses, the dots and the murk's
-  colour are set by `update()` from index.ts beside the city's own lights. The
-  time of day isn't motion, so it runs under reduced motion too, when the city's
-  ticks run on the first frame only.
+### Phase 5: the river and the culverts (built, waiting on the owner's sign-off)
 
-### Phase 5: the river and the culverts (built)
+- The river runs on through the wall: its water and banks (world.ts
+  `riverWater()` / `riverBanks()`) from 30 past the outer face at either end
+  (`RIVER_PAST`, into the murk, where the channel's end is walled), the land
+  past the wall cut round it.
+- **The culverts** (wall.ts `ARCH`, `ARCH_SPAN`, `archTop()`): over the
+  river's band at the west and east sides the wall is an outline from under
+  the water (`CULVERT_FLOOR`, a sill below it) to the top with a low arch cut
+  through it (wall3d.ts `culvertGeometry()`): its sides straight up from
+  under the water to 3.2, a flat segmental arch 2.6 more to its crown, 2 in
+  from the band's edges.
+- **The bars** in the wall's middle (`CULVERT_X`, `ARCH.bars`): uprights 1.1
+  apart, 0.11 thick, from under the water to the arch, two rails across.
+  The boats stop at them (`CULVERT_BARS` in boat-sim.ts `WATER_SOLIDS`; the
+  hire boat's ends are now the wall's outer face, so the bars are what stops
+  it). The traffic's boats keep turning back well inside, as they did.
+- Walking and driving still stop at the wall's foot (Phase 3): the wall's
+  solids are the full ring, the culverts included.
 
-- **The arches** (`CULVERTS`, `CULVERT` in wall.ts): where the river meets the wall
-  at either end it runs on under it through a row of low arches.
-  - Each arch is at most 12 across. It rises straight from the water to `spring`
-    and curves to its crown at `crown` (`archY()`).
-  - Piers stand between the arches and over the channel's slopes at each end.
-  - A lintel runs across them all.
-  - The frame is drawn in the slab's own concrete and haze.
-- **The bars:** the dark under each arch, and its bars (rods 0.55 apart up to the
-  arch, two rails across): one draw coloured per vertex.
-- **The boats:** boat-sim.ts stops them at the bars (`BOAT_ENDS`), so the river is
-  boated its whole length inside the wall. The traffic's boats turn back where they
-  did. The river's water already ran to the wall's inner face (Phase 2).
+### Phase 6: polish (built, waiting on the owner's sign-off)
 
-### Phase 6: polish (built)
-
-- **The sound:** ambience.ts `wall`. Near its foot (fading over `WALL_SOUND`, 70)
-  the wind gusts harder against it, and there's a low hum in the concrete
-  (sound.ts, brown noise through a low, narrow band, slowly swelling).
-- **The views:**
-  - `?bench` views `wall`, `wall-corner` and `wall-culvert`;
-  - review views `wall-town`, `wall-foot`, `wall-culvert` and `wall-corner`
-    (blendviews.ts).
-  - Since the wall's views sit outside the City view's limits, the shots hold the
-    camera for as long as a view is on (shots.ts `holding()`): the controls don't
-    pull it back, and the pan doesn't clamp it.
-- **Checked in the browser,** by day and at night: the foot, the top, the culvert
-  and a corner.
-- **What it costs:** seven draws at most (the slab, the culverts' dark, the wire,
-  the fixtures, the lenses, the dots, the murk) and about 15k triangles, the
-  cameras' and floodlights' boxes most of them. Nothing of it casts a shadow.
+- **The sound by the wall** (ambience.ts `wall`, `WALL_SOUND` 70): full at
+  its foot, fading out over the strip, none in town; sound.ts blows the wind
+  harder along its face and adds a low hum off its concrete (a layer made the
+  first time it's heard).
+- **The views**: `wall-foot`, `wall-culvert` and `wall-corner` in the bench's
+  `BENCH_VIEWS` and the review shots' `BLEND_VIEWS`, from `WALL_INNER`, so they
+  stand where the wall does at either world size.
+- **Checked** in a local build (swiftshader, desktop tier): the top's cameras
+  and wire from the wall's foot, the culvert with its bars and the water
+  running under it from the north bank, and the floodlights' wash at night.
+  The bench on a real phone and laptop, and the full `npm run shots` contact
+  sheets, are for the owner's devices: the views are in for them.
+- The boot's code is 697.6 of 740 KB (694.8 before Phases 4-6).
 
 ## Later, with the storyline (not in this plan)
 

@@ -21,8 +21,13 @@
  * x east, z south; world tiles (1 = about 1.8 m). A heading (`yaw`) is 0 with
  * the bow to +x, as every boat's.
  */
-import { RIVER } from './layout';
-import { BOAT_ENDS } from './wall';
+import { EXT, RIVER, WALL_OUT } from './layout';
+import { CULVERT_BARS, WALL } from './wall';
+/**
+ * The river's ends a boat can't pass: the wall's outer face (docs/wall-plan.md Phase 5: the river runs on under it
+ * through the culverts, and their bars stop a boat first, `CULVERT_BARS` in `WATER_SOLIDS`)
+ */
+const END = [EXT[0] - WALL_OUT - WALL.thick, EXT[1] + WALL_OUT + WALL.thick];
 import { WATER_Y, edgesAt } from './river';
 import { BX, DECK_DEPTH, DECK_HALF, LIBERTY_RECTS, SHIP, lowY, shipAt } from './liberty';
 import { DEPTH as HARBOUR_DEPTH, HALF as HARBOUR_HALF, HX, TOWER, TOWERS, deckY } from './harbour';
@@ -121,6 +126,8 @@ export const WATER_SOLIDS: Rect[] = [
   ...riverBridges()
     .filter((b) => b.street === 'highway')
     .flatMap((b) => BRIDGE_PIERS.map((z): Rect => [b.x0, z - PIER_HALF, b.x1, z + PIER_HALF])),
+  // The culverts' bars under the wall at either end of the river (wall.ts, docs/wall-plan.md Phase 5)
+  ...CULVERT_BARS.map((r) => [...r] as Rect),
   // The decks over the water: the boardwalk, Pier 7, the market's; the esplanade, its overlooks and the marina
   ...DECKS.map((r) => [...r] as Rect),
   ...ESPLANADE_DECKS.map((r) => [...r] as Rect),
@@ -164,9 +171,9 @@ function pushOut(c: Circle, solids: readonly Rect[], others: readonly Circle[]):
   const [n, s] = edgesAt(c.x);
   if (c.z - c.r < n + PUSH) pz += n + PUSH - (c.z - c.r);
   if (c.z + c.r > s - PUSH) pz -= c.z + c.r - (s - PUSH);
-  // (the river's ends: the bars of the culverts under the wall, wall.ts)
-  if (c.x - c.r < BOAT_ENDS[0]) px += BOAT_ENDS[0] - (c.x - c.r);
-  if (c.x + c.r > BOAT_ENDS[1]) px -= c.x + c.r - BOAT_ENDS[1];
+  // (the river runs on to the wall's inner face at either end: docs/wall-plan.md Phase 3)
+  if (c.x - c.r < END[0]) px += END[0] - (c.x - c.r);
+  if (c.x + c.r > END[1]) px -= c.x + c.r - END[1];
   const x = c.x + px;
   const z = c.z + pz;
   for (const r of solids) {

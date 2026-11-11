@@ -91,7 +91,7 @@ export function createSound(given?: AudioContext) {
   let kartIdle: { g: GainNode; tannoy: GainNode } | null = null;
   /** Southfield Yards: a compressor running behind the sheds (a low chug through a low-pass) and a reversing beep now and then */
   let yardGain: GainNode | null = null;
-  /** The wall's low hum (made the first time it's heard) */
+  /** By the wall: a low hum off its face (docs/wall-plan.md Phase 6) */
   let wallHum: GainNode | null = null;
   let compressor: GainNode | null = null;
   let nextBeep = 0;
@@ -1519,8 +1519,13 @@ export function createSound(given?: AudioContext) {
       // (and the Gondolier's jets while the show's on)
       fountainGain.gain.setTargetAtTime(Math.max(a.fountain, showAt(Date.now() / 1000) >= 0 ? a.show * 0.8 : 0) * 0.07, t, 0.6);
       roadGain.gain.setTargetAtTime(a.road * 0.09, t, 1);
-      // (the wind gusts harder against the wall round the city)
-      windGain.gain.setTargetAtTime(Math.max(a.open, a.wall) * 0.16 * (1 + rain * 0.5 + a.wall * 0.6), t, 1.5);
+      // (the wind stronger along the wall's face, docs/wall-plan.md Phase 6)
+      windGain.gain.setTargetAtTime(Math.max(a.open, a.wall * 0.9) * 0.16 * (1 + rain * 0.5) * (1 + a.wall * 0.6), t, 1.5);
+      // By the wall: a low hum off its concrete, made the first time it's heard
+      if (a.wall > 0.02 || wallHum) {
+        wallHum ??= layer('lowpass', 70, 1.2, 0.25, 0.04, true);
+        wallHum.gain.setTargetAtTime(a.wall * 0.12, t, 2);
+      }
 
       // The polish pass's layers, each graph made the first time it's heard
       // The waterfront and the Docks: gulls by day (fewer in the rain); the foghorn now and then along the river, oftener at night; the ship's horn in the basin
@@ -1618,11 +1623,6 @@ export function createSound(given?: AudioContext) {
         }
         kartIdle.g.gain.setTargetAtTime(a.karts * 0.016, t, 1.5);
         kartIdle.tannoy.gain.setTargetAtTime(a.karts * 0.012, t, 1.5);
-      }
-      // The wall: a low hum in the concrete (brown noise through a low, narrow band, slowly swelling)
-      if (a.wall > 0.02 || wallHum) {
-        if (!wallHum) wallHum = layer('lowpass', 70, 2.2, 0.45, 0.07, true);
-        wallHum.gain.setTargetAtTime(a.wall * 0.11, t, 2);
       }
       // Southfield Yards: a compressor chugging behind the sheds (brown noise through a low-pass, chopped by a fast LFO), a truck reversing now and then
       if (a.yards > 0.02 || yardGain) {

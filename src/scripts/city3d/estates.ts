@@ -20,6 +20,7 @@
 import { CREST_BLOCKS, FLATS_EAST, type Rect } from './crestmont';
 import { DRIVE_BLOCKS } from './coral';
 import { rng } from './recipes';
+import { CAR_SCALE } from './carspec';
 
 type Pt = [number, number];
 type Box = [number, number, number, number, number];
@@ -223,7 +224,7 @@ export const gardenPalmsOf = (e: Estate): Pt[] =>
 /* ---------- The cars on the forecourts ---------- */
 
 /** A parked car's half length and width */
-const CAR_HALF = { l: 1.5, w: 0.6 };
+const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 /** [model, x, z, yaw, paint]: beside the fountain, facing the street */
 export const ESTATE_CARS: [string, number, number, number, string][] = (() => {
   const r = rng(9191);

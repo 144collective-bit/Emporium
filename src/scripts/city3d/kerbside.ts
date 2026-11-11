@@ -19,11 +19,12 @@
  */
 import { CIRCLE, LAYBYS, UPTOWN_BLOCKS, laybyRect, type Layby, type Pt, type Rect } from './uptown';
 import { HIGHRISES, PODIUM } from './highrise';
+import { CAR_SCALE } from './carspec';
 
 /** A space along a lay-by: this long, a car in each */
 export const SPACE = 3.3;
 /** A parked car's footprint: half its length and width (the longest model) */
-export const CAR_HALF = { l: 1.5, w: 0.6 };
+export const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 
 /** Which way the traffic runs along the kerb a lay-by opens off (keep right): the yaw a car parked in it faces */
 function yawOf(l: Layby): number {

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SPRINGS, newSprings, over, stepSprings, wheelsOf, type SpringInput } from '../src/scripts/city3d/suspension';
-import { CARS } from '../src/scripts/city3d/carspec';
+import { DRAWN as CARS } from '../src/scripts/city3d/carspec';
 
 const flat = (ax = 0, ay = 0): SpringInput => ({ ax, ay, ground: [0, 0, 0, 0] });
 const run = (id: keyof typeof CARS, inp: (t: number) => SpringInput, seconds: number, dt = 1 / 60, each?: (sp: ReturnType<typeof newSprings>, t: number) => void) => {

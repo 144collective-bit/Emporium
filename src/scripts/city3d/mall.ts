@@ -36,6 +36,7 @@
  * Inside the hall (step 2) is mallinside.ts.
  */
 import { NS_ROADS, WALK_W } from './layout';
+import { CAR_SCALE } from './carspec';
 
 export type Pt = [number, number];
 export type Rect = [number, number, number, number];
@@ -256,7 +257,7 @@ export const MSCP_CARS: [string, number, number, number, string, number][] = (()
       for (let z = z0 + 2; z < z1 - 1.5; z += BAY.w) if (r() < 0.6) out.push([MODELS[Math.floor(r() * MODELS.length)], x, z, yaw, COLOURS[Math.floor(r() * COLOURS.length)], d * MSCP.deck]);
   return out;
 })();
-const CAR_HALF = { l: 1.5, w: 0.62 };
+const CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.62 * CAR_SCALE };
 
 /* ---------- The streets ---------- */
 

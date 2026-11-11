@@ -4,14 +4,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GAITS, SLIDE, ahead, newMove, startSlide, stepMove, stepSlide } from '../src/scripts/city3d/movesim';
 import { wrap } from '../src/scripts/city3d/inertia';
+import { FIGURE_SCALE } from '../src/scripts/city3d/skeleton';
 
 const DT = 1 / 60;
 const speed = (s: { vx: number; vz: number }) => Math.hypot(s.vx, s.vz);
 
 test('the speeds: a walk, the run he goes at and a faster sprint', () => {
   assert.ok(GAITS.walk < GAITS.run && GAITS.run < GAITS.sprint);
-  // (about 1.4, 5 and 7.5 m/s: a tile is about 1.8 m)
-  assert.ok(Math.abs(GAITS.walk * 1.8 - 1.4) < 0.15 && Math.abs(GAITS.run * 1.8 - 5) < 0.3 && Math.abs(GAITS.sprint * 1.8 - 7.5) < 0.3, 'a walk, a quick run and a sprint');
+  // (about 1.4, 5 and 7.5 m/s for the figure they were set for, 0.85, a tile about 1.8 m; at his size,
+  // FIGURE_SCALE, in proportion: docs/scale-plan.md)
+  const m = 1.8 * (0.85 / FIGURE_SCALE);
+  assert.ok(Math.abs(GAITS.walk * m - 1.4) < 0.15 && Math.abs(GAITS.run * m - 5) < 0.3 && Math.abs(GAITS.sprint * m - 7.5) < 0.3, 'a walk, a quick run and a sprint');
 });
 
 test('from standing he reaches his run in about a quarter of a second, and never overshoots', () => {
@@ -40,7 +43,8 @@ test('stopping from a run takes a short distance, not none', () => {
     t += DT;
   }
   assert.ok(t < 0.45, `stopped in ${t.toFixed(2)} s`);
-  assert.ok(d > 0.3 && d < 1.2, `${d.toFixed(2)} tiles to stop`);
+  // (0.3 to 1.2 tiles at 0.85: in proportion with his size)
+  assert.ok(d > 0.3 * (FIGURE_SCALE / 0.85) && d < 1.2 * (FIGURE_SCALE / 0.85), `${d.toFixed(2)} tiles to stop`);
 });
 
 test('he turns round to face the other way in about a third of a second', () => {
@@ -105,7 +109,9 @@ test('a slide: only from a sprint, off faster than he was going, slowing to its 
     assert.ok(Math.abs(wrap(m.face - sl.dir)) < 1e-9, 'facing the way he slides');
   }
   assert.ok(t <= SLIDE.most + DT && t > 0.5, `${t.toFixed(2)} s`);
-  assert.ok(z > 2 && z < 4.5, `${z.toFixed(2)} tiles on`);
+  // (2 to 4.5 tiles at 0.85: in step with his size)
+  const k = FIGURE_SCALE / 0.85;
+  assert.ok(z > 2 * k && z < 4.5 * k, `${z.toFixed(2)} tiles on`);
   assert.ok(Math.abs(sl.dir) <= SLIDE.steer * (t + DT) + 1e-9, `turned ${sl.dir.toFixed(2)} rad`);
   assert.ok(x > 0, 'steered the way the stick asks');
 });

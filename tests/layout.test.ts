@@ -1,9 +1,8 @@
 // The street plan (layout.ts): downtown's size and cross streets, streets, avenues,
 // lanes, the river, and the landmarks' old drawing grid with their seats today.
 import { test } from 'node:test';
-import { WALL_INNER } from '../src/scripts/city3d/wall';
 import assert from 'node:assert/strict';
-import { BLOCKS, BS, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RING_HI, RING_LO, RIVER, SEATS, SOUTH_ROAD, THIRDS, WALK_W, FLY_BOUNDS, WORLD_BOUNDS, design, designBox, laneCentres, ewRuns, nsRuns, seat } from '../src/scripts/city3d/layout';
+import { BLOCKS, BS, CITY_EXT, CORE_ROADS, DOWNTOWN, EW_ROADS, EXT, GARAGE, LANE, MEDIAN, NS_ROADS, RING_HI, RING_LO, RIVER, SEATS, SOUTH_ROAD, THIRDS, WALK_W, WORLD_BOUNDS, design, designBox, laneCentres, ewRuns, nsRuns, seat } from '../src/scripts/city3d/layout';
 import { SLABS, bounds, inside, overlaps, polysOverlap } from './world';
 import { CREST_RECT } from '../src/scripts/city3d/crestmont';
 import { DOCKS_RECT } from '../src/scripts/city3d/docks';
@@ -99,11 +98,8 @@ test('the drawing grid seats each old block (0, 11, 22) on its landmark\'s lot t
 
 test('the world reaches well past the city, with room to build', () => {
   const world = [EXT[0], EXT[0], EXT[1], EXT[1]] as [number, number, number, number];
-  // (since the wall plan's Phase 3 you walk out past the old edge, over the grass, to the wall's foot, never into it)
-  assert.ok(inside(world, WORLD_BOUNDS), 'the grass past the edge is out of reach');
-  assert.ok(inside(WORLD_BOUNDS, WALL_INNER), 'you can walk or drive into the wall');
-  assert.ok(WALL_INNER[0] - WORLD_BOUNDS[0] > -1 && WALL_INNER[0] - WORLD_BOUNDS[0] < 0, 'walking stops short of the wall');
-  assert.ok(inside(FLY_BOUNDS, world), 'flying stays over the world, well short of the wall');
+  // (since the wall plan's Phase 3 you walk and drive past the edge, over the grass to the wall's foot: wall.test.ts)
+  assert.ok(inside(world, WORLD_BOUNDS), 'you can reach the edge');
   assert.ok(CITY_EXT[0] >= EXT[0] && CITY_EXT[1] <= EXT[1]);
   for (const s of SLABS.map(bounds)) assert.ok(inside(s, WORLD_BOUNDS), 'a block or district is out of reach');
   // At least a hundred tiles of open land on every side of what's built (but Crestmont's Flats, which run out to the

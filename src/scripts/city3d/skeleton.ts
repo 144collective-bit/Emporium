@@ -35,6 +35,9 @@ import * as THREE from 'three';
 
 /* ---------- Proportions ---------- */
 
+/** Everyone's size in the city (figure.ts: the player, other players, the crowd, the Fight Club's fighters; kids keep their own, play.ts `KID`) */
+export { FIGURE_SCALE } from './figure';
+
 export const HIP_Y = 0.62;
 /** Hip height (for seating figures on benches and in karts) */
 export const HIP_HEIGHT = HIP_Y;

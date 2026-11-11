@@ -68,14 +68,6 @@ export function createShots(d: ShotsDeps, night: boolean) {
       fresh = false;
       return hold > 0;
     },
-    /**
-     * Whether a view is held: the City view's controls leave the camera alone (they'd pull it back inside their
-     * limits, closer than 220 and never looking level, the moment the view rested, and shoot it from somewhere
-     * else: the wall's views are outside them)
-     */
-    holding() {
-      return !!view;
-    },
     /** A frame drawn */
     drawn() {
       api.frames++;

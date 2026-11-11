@@ -11,7 +11,10 @@ import { ENDS_TREES } from '../src/scripts/city3d/endsstreet';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PLAN, distToStreet, inPoly } from '../src/scripts/city3d/streetplan';
 
-/** Degen's height (1.3 at scale 1, walk.ts SCALE 0.85) and his radius (walk.ts RADIUS) */
+/**
+ * Degen's height and his radius as they were at 0.85 (1.3 at scale 1; walk.ts RADIUS 0.22): kept, so the headroom
+ * and the walkways' widths hold for him even at that size (he's everyone's 0.66 now, skeleton.ts `FIGURE_SCALE`)
+ */
 const DEGEN = 1.3 * 0.85;
 const R = 0.22;
 const fw = BLOCKS.find((b) => b.id === 'fennel-w')!;

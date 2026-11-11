@@ -25,6 +25,7 @@
  * - `manual` plays a clip by hand (the demo's clip picker) over the sim.
  */
 import * as THREE from 'three';
+import { FIGURE_SCALE } from './figure';
 import { createDegen, type Degen, type Limb, type Outfit } from './character';
 import { createLocomotion, type Locomotion } from './locomotion';
 import { CLIPS, blendPose, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
@@ -35,7 +36,8 @@ import { newMove, stepMove, type MoveState } from './movesim';
 import type { Motion } from './remote';
 
 /** Figures stand at the walker's scale */
-export const FIGHTER_SCALE = 0.85;
+/** The fighters' size: everyone's (figure.ts; the fight's lengths came down with it) */
+export const FIGHTER_SCALE = FIGURE_SCALE;
 const FADE = 6;
 
 export interface FighterFigure {

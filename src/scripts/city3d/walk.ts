@@ -30,6 +30,7 @@
  *   fly (fly.ts), land anywhere and get out.
  */
 import { SUN_DOORS } from './sunplaces';
+import { FIGURE_SCALE } from './skeleton';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
 import { HOLDING, PLAYER, RELAXED, createDegen, type Outfit } from './character';
@@ -71,7 +72,7 @@ import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
 import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, bikeMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
-import { INTERIORS } from './carinside';
+import { inWorld } from './carinside';
 import { CARS } from './cars';
 import { toon } from './kit';
 import { BENCHES } from './pedestrians';
@@ -91,7 +92,7 @@ import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallWall } from './mallinside';
-import { FLY_BOUNDS, WORLD_BOUNDS, design } from './layout';
+import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
@@ -138,19 +139,20 @@ const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', rese
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put', ...Object.keys(DOOR_LABEL)]);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
 const RACK_TOP = (([x, z]) => ({ x, z }))(design(24.7, 27.4));
-const RACK_TOP_H = 0.6;
+const RACK_TOP_H = 0.48;
 /** The trainer's counter top (its near edge, a little in) and height */
 const TRAINER_TOP = { x: TRAINER.x, z: COUNTER.z1 - 0.1 };
-const TRAINER_TOP_H = 0.56;
+const TRAINER_TOP_H = 0.44;
 /** The hangar menu's shot: from the doors, looking in at your aircraft */
 const HANGAR_VIEW = { eye: new THREE.Vector3(HANGAR_SPOT.x - 6.5, 3.4, HANGAR_SPOT.z + 12.5), at: new THREE.Vector3(HANGAR_SPOT.x, 1.2, HANGAR_SPOT.z) };
 
 /** Facing the Emporium's doors, the tower over his shoulder */
 const SPAWN_YAW = WALK_SPAWN.yaw;
-const RADIUS = 0.22;
+/** His body's circle (0.22 when he was 0.85: in step with his size) */
+const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
-const AIMING = 1.4;
+const AIMING = 1.09;
 /** Carrying a crate: how near its destination (the car's boot, the place) counts as there */
 const PUT_R = 1.8;
 /**
@@ -158,7 +160,7 @@ const PUT_R = 1.8;
  * button; crouching while sprinting slides): how fast he goes, and how far
  * the camera comes down crouched and sliding (tiles at his scale)
  */
-const CROUCH = { speed: 0.55, cam: 0.26, slideCam: 0.42 };
+const CROUCH = { speed: 0.43, cam: 0.26, slideCam: 0.42 };
 /**
  * Peeking (Q / E held; LB / RB while aiming on a gamepad; on touch, aiming
  * by a corner): how far the upper body leans out over the hips (radians),
@@ -166,15 +168,21 @@ const CROUCH = { speed: 0.55, cam: 0.26, slideCam: 0.42 };
  * first person, and its roll), how much slower he goes leaning right out,
  * the half-life it comes and goes with, and the head's levelling
  */
-const PEEK = { lean: 0.42, cam: 0.45, eye: 0.3, roll: 0.08, slow: 0.55, ease: 0.07, level: 0.85 };
+const PEEK = { lean: 0.42, cam: 0.35, eye: 0.23, roll: 0.08, slow: 0.55, ease: 0.07, level: 0.85 };
 /**
  * Peeking by a corner on touch (aiming): the view straight ahead blocked
  * within `near` (tiles), and clear for `far` from `side` out to one side;
  * looked at `every` seconds
  */
 const CORNER = { near: 1.4, far: 3.5, side: 0.55, every: 0.2 };
-const JUMP = 3.9;
-const GRAVITY = 11.5;
+/**
+ * The jump's speed up and gravity (3.9 and 11.5 when he was 0.85): in proportion with his size, as his speeds are
+ * (docs/scale-plan.md), so a jump is as high for him and as long in the air as it was; and the pull down once
+ * Jump is let go
+ */
+const JUMP = 3.03;
+const GRAVITY = 8.92;
+const CUT_JUMP = 12.4;
 /** How long a hard landing shakes the camera */
 const LAND_SHAKE = 0.3;
 /** How much of the hips' rise and fall the first-person eye takes (the head steadies some of it) */
@@ -207,7 +215,8 @@ function lazyMenu<T extends object>(opens: (keyof T & string)[], load: () => Pro
 
 /** The gaze before its module is in: straight ahead */
 const STILL_GAZE = { yaw: 0, pitch: 0 };
-const SCALE = 0.85;
+/** His size: everyone's (skeleton.ts `FIGURE_SCALE`) */
+const SCALE = FIGURE_SCALE;
 /** Getting into your car: how far through the reach to the handle the door starts to open (of the clip up to the car taking him) */
 const HAND_ON = 0.35;
 /** The quick swap's fade out (ms), as fast travel's */
@@ -370,8 +379,9 @@ export function createWalk(d: WalkDeps) {
   let upperW = 0;
   /**
    * Contact (contact.ts, the revamp's Phase 3): what his body does about what he touches (a hand on a wall, the
-   * shoulder's give brushing past, a stagger into one at a sprint, a squeeze, a lean on a rail), a layer on the
-   * motion capture's pose; its code comes with the animator's. Phones leave out the hands and the lean.
+   * shoulder's give brushing past, a squeeze, a lean on a rail), a layer on the motion capture's pose; looks only,
+   * never his speed (no hitch or stagger: the owner's call, 2026-11). Its code comes with the animator's. Phones
+   * leave out the hands and the lean.
    */
   let contactMod: typeof import('./contact') | null = null;
   let contact: Contact | null = null;
@@ -381,10 +391,6 @@ export function createWalk(d: WalkDeps) {
   let heldRot: Float32Array | null = null;
   const contactBoxes: Box[] = [];
   const contactPeople: { x: number; z: number }[] = [];
-  /** This frame his move was stopped by something, and how fast he was going into it */
-  let hitWall = false;
-  let hitSpeed = 0;
-  let staggering = false;
   /** The peek: how far he's leaning (-1 his left to 1 his right), eased; the gamepad's lean, the touch corner's, and when it was looked for */
   let peek = 0;
   let padLean = 0;
@@ -532,7 +538,7 @@ export function createWalk(d: WalkDeps) {
    * How far behind him the camera sits to begin with (the mouse wheel sets it after): closer on an upright
    * screen, whose narrow view leaves him small at the distance a wide one frames him well
    */
-  const homeZoom = () => (innerHeight > innerWidth ? 3.2 : 3.3);
+  const homeZoom = () => (innerHeight > innerWidth ? 2.5 : 2.6);
   let zoom = homeZoom();
   let camDist = zoom;
   let firstPerson = false;
@@ -597,7 +603,7 @@ export function createWalk(d: WalkDeps) {
       if (v.kind === 'bike' && v.bike) return bikeMark(v, BIKES[v.bike], pos.x, pos.z, y, (bx, bz) => blocked(bx, bz, pos.y));
       // Your car (vehicle plan Phase 3): by the door on his side, onto its real seat; that side blocked, the quick
       // swap; under reduced motion always the quick version, no fade
-      const inside = v.kind === 'car' && v.model ? INTERIORS[v.model] : null;
+      const inside = v.kind === 'car' && v.model ? inWorld(v.model) : null;
       if (!inside?.door) return sideMark(v.kind, v, MOMENT[v.kind].seat);
       if (d.reduced) return null;
       // (at home the turntable is stood on to get in: carMark's spot is by the door, on the disc)
@@ -1111,8 +1117,7 @@ export function createWalk(d: WalkDeps) {
     traffic: d.airTraffic,
     sfx: d.sfx,
     aero: d.aero,
-    // (flying turns back well short of the wall: layout.ts FLY_BOUNDS)
-    bounds: [FLY_BOUNDS[0], FLY_BOUNDS[1], FLY_BOUNDS[2], FLY_BOUNDS[3], 0],
+    bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
   });
   // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
   let fpBeforeHangar = false;
@@ -2805,9 +2810,7 @@ export function createWalk(d: WalkDeps) {
     }
     // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
-    // (brushing something the step hitches: contact.ts)
-    const hitch = contact && contactMod ? contactMod.CONTACT.hitch * contact.state.hitch : 0;
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp && fists!.brawl.blocking ? fistsMod!.BRAWL.blockSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek)) * (1 - hitch);
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp && fists!.brawl.blocking ? fistsMod!.BRAWL.blockSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
@@ -2829,8 +2832,6 @@ export function createWalk(d: WalkDeps) {
     ms.vx = vel.x;
     ms.vz = vel.y;
     ms.face = face;
-    hitWall = false;
-    hitSpeed = 0;
     if (over) {
       // Over something low: along the way over, his feet over its top (vault.ts), the springs carried along
       over.t += dt;
@@ -2859,18 +2860,9 @@ export function createWalk(d: WalkDeps) {
           crouched = Math.hypot(gx, gz) < 0.01;
         }
       } else {
-        // (a stagger (contact.ts): thrown back from the wall over its time, the stick waiting)
-        const stag = contact?.state.stagger;
-        stepMove(ms, stag ? 0 : gx, stag ? 0 : gz, grounded, dt, faceGoal);
-        if (stag && contactMod) {
-          const k = contactMod.CONTACT.stagger;
-          const v = (k.back / k.t) * (Math.PI / 2) * Math.sin(Math.PI * stag.t);
-          ms.vx = stag.hand.nx * v;
-          ms.vz = stag.hand.nz * v;
-        }
+        stepMove(ms, gx, gz, grounded, dt, faceGoal);
       }
       vel.set(ms.vx, ms.vz);
-      const v0 = vel.length();
       // (getting into your car at home, the approach steps onto the turntable)
       const skip = moments.active && moments.mark?.kind === 'board' && moments.mark.side !== undefined ? isTurntable : undefined;
       const stuck = blocked(pos.x, pos.z, pos.y, skip);
@@ -2880,8 +2872,6 @@ export function createWalk(d: WalkDeps) {
       const nz = pos.z + vel.y * dt;
       if (stuck || !blocked(pos.x, nz, pos.y, skip)) pos.z = nz;
       else vel.y = 0;
-      hitWall = !slide && grounded && (vel.x !== ms.vx || vel.y !== ms.vz);
-      hitSpeed = hitWall ? v0 : 0;
       // (a slide into something stops there, crouched)
       if (slide && (vel.x !== ms.vx || vel.y !== ms.vz)) {
         slide = null;
@@ -2961,7 +2951,7 @@ export function createWalk(d: WalkDeps) {
     jumpBuffer -= dt;
     if (over) vy = 0;
     else {
-      vy -= (GRAVITY + (!jumpHeld && vy > 0 ? 16 : 0)) * dt;
+      vy -= (GRAVITY + (!jumpHeld && vy > 0 ? CUT_JUMP : 0)) * dt;
       pos.y += vy * dt;
     }
     const ground = groundAt(pos.x, pos.z, pos.y + 0.3);
@@ -2979,7 +2969,7 @@ export function createWalk(d: WalkDeps) {
     // A hard landing at a run plays the procedural roll before the motion capture takes him back (it
     // lands everything else itself: animator.ts); the camera dips with every landing and shakes with a hard one
     if (grounded && !wasGrounded) {
-      if (-fall > LAND_ROLL && speed > 2) landHold = 0.75;
+      if (-fall > LAND_ROLL && speed > 1.55) landHold = 0.75;
       else if (!animator && -fall > LAND_CROUCH) landHold = 0.5;
       if (!d.reduced && !firstPerson) {
         dipV -= 31 * 0.16 * THREE.MathUtils.clamp((-fall - 2) / 8, 0, 1);
@@ -3172,18 +3162,12 @@ export function createWalk(d: WalkDeps) {
           for (const b of d.placedSolids()) if (b[0] - 1.2 < pos.x && pos.x < b[2] + 1.2 && b[1] - 1.2 < pos.z && pos.z < b[3] + 1.2) contactBoxes.push(b);
           contactPeople.length = 0;
           for (const p of bodies.people) if (p.act === undefined && Math.abs(p.x - pos.x) < 1.5 && Math.abs(p.z - pos.z) < 1.5) contactPeople.push(p);
-          const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked, hit: hitWall, hitSpeed });
-          if (u < 0.5 && (st.hand || st.lean || st.stagger || st.give.w > 1e-3 || st.squeeze.w > 1e-3)) {
+          const st = contact.update({ dt, x: pos.x, y: pos.y, z: pos.z, face: drawFace, scale: SCALE, speed, moving: mag > 0.1, walls: contactBoxes, people: contactPeople, blocked: contactBlocked });
+          if (u < 0.5 && (st.hand || st.lean || st.give.w > 1e-3 || st.squeeze.w > 1e-3)) {
             contactRot.set(animator.rot);
             contactMod.applyContact(contactRot, animator.hips, st, pos.x, pos.y, pos.z, drawFace, SCALE);
             rot = contactRot;
           }
-          // (a small shake as a stagger starts)
-          if (st.stagger && !staggering && !d.reduced && !firstPerson) {
-            shakeT = LAND_SHAKE;
-            shakeK = 0.018;
-          }
-          staggering = !!st.stagger;
         }
         // The thing in his hand behaving (heldpose.ts, the polish plan's Phase 8): the cup to his lips now and then, the
         // phone read standing still and glanced at on the walk, the briefcase swinging on his hand; not while something
@@ -3223,7 +3207,7 @@ export function createWalk(d: WalkDeps) {
     armAmt += ((combat.armed ? 1 : 0) - armAmt) * damp(6, dt);
     // (less of it on an upright screen, whose narrow view would put him at its edge; armed, all of it, so the
     // crosshair stays off his head)
-    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.38 * Math.min(1, camera.aspect) + armAmt * 0.42;
+    const shoulder = firstPerson ? 0 : THREE.MathUtils.clamp(1 - zoom / 10, 0, 1) * 0.3 * Math.min(1, camera.aspect) + armAmt * 0.33;
     // (a peek takes it out with him: further over his right shoulder, or across to his left; never into a wall beside him)
     let lateral = firstPerson ? peek * PEEK.eye : shoulder + peek * (peek > 0 ? PEEK.cam : 2 * shoulder + PEEK.cam);
     // (lower crouched, lower still sliding)

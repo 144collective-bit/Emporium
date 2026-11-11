@@ -152,28 +152,30 @@ function wallBand(c: CanvasRenderingContext2D, id: BandId, y0: number, glow: boo
         // Behind a gallery: a front door every second bay (its own colour, a letterbox, a light over it), a kitchen
         // window between; the floor's edge dark where the gallery's slab meets it. The galleries are every second
         // storey from the first (maisonettes): the storeys between are their upstairs, windows only (the band's
-        // bottom row is the first storey over the ground floor)
+        // bottom row is the first storey over the ground floor). The door is nearly the storey's full height (about
+        // 0.97 tiles, the gallery's floor its sill) so Degen at everyone's size fits it (docs/scale-plan.md: it was
+        // 0.73, under his head); its light is on the wall over it, in the upstairs row's bottom, under that window
         if (col % 2 === 0 && (ROWS - 1 - row) % 2 === 0) {
           const door = DOORS[Math.floor(r() * DOORS.length)];
           const over = lit_(0.55);
           if (glow) {
             if (over) {
               c.fillStyle = over;
-              c.fillRect(x + 16, y + 10, 14, 5);
+              c.fillRect(x + 16, y - 12, 14, 5);
             }
             continue;
           }
           c.fillStyle = PAL.ink;
-          c.fillRect(x + 9, y + 17, 28, PX_H - 17);
+          c.fillRect(x + 9, y + 3, 28, PX_H - 3);
           c.fillStyle = door;
-          c.fillRect(x + 11, y + 19, 24, PX_H - 19);
+          c.fillRect(x + 11, y + 5, 24, PX_H - 5);
           c.fillStyle = shadeHex(door, -0.3);
-          c.fillRect(x + 14, y + 23, 18, 12);
+          c.fillRect(x + 14, y + 11, 18, 15);
           c.fillStyle = '#c9c3a0';
-          c.fillRect(x + 19, y + 42, 8, 2);
-          c.fillRect(x + 31, y + 40, 2, 5);
+          c.fillRect(x + 19, y + 35, 8, 2);
+          c.fillRect(x + 31, y + 33, 2, 6);
           c.fillStyle = '#e8e2d2';
-          c.fillRect(x + 16, y + 10, 14, 5);
+          c.fillRect(x + 16, y - 12, 14, 5);
         } else {
           window_(c, x + 6, y + 18, 34, 20, lit_(0.35), glow, false, r() < 0.5 ? '#d8d0c0' : null);
           if (!glow) streak(c, x + 8, y + 42, 30, 18, 0.2);

@@ -6,19 +6,16 @@
  * layers are.
  *
  * - **Brushing** a wall or a person at his side while moving: that
- *   shoulder gives (the collarbone pulled back, the chest turned a touch)
- *   and the step hitches (`hitch`: the caller slows him a share for a
- *   moment).
+ *   shoulder gives (the collarbone pulled back, the chest turned a touch).
+ *   Looks only: his speed is never touched (the owner's call, 2026-11:
+ *   bumping into things mustn't get in the way of play, so the step's
+ *   hitch and the stagger into a wall at a sprint were taken out).
  * - **A hand on a wall:** stopped close to a wall he faces, a hand goes
  *   onto it at shoulder height; walking slowly with a wall at his side,
  *   that hand trails along it at hip height.
  * - **A lean on a rail:** standing a while at an edge he can't step over
  *   with nothing solid there (a railing, a parapet, the quay), facing it:
  *   both hands on the rail, the chest over them.
- * - **A stagger:** running into a wall at a sprint, the body is thrown
- *   back (the chest pitched back, the near hand up to the wall, the head
- *   back) over `stagger.t` while the caller carries him two steps back;
- *   never a stop dead.
  * - **A squeeze:** through a gap narrower than his shoulders need, the
  *   shoulders turn and the arms come in.
  *
@@ -35,14 +32,12 @@ import type { Box } from './solids';
 export const CONTACT = {
   /** A wall counts within this of his centre (his own radius is inside it) */
   reach: 0.62,
-  /** Brushing: a wall or a person within this at his side while he moves; the shoulder's give (radians), the chest's share, the step's hitch (a share of his speed) and how long it lasts */
+  /** Brushing: a wall or a person within this at his side while he moves; the shoulder's give (radians) and the chest's share */
   brush: 0.42,
   person: 0.5,
   close: 0.3,
   give: 0.45,
   giveChest: 0.25,
-  hitch: 0.3,
-  hitchT: 0.3,
   /** A hand on a wall: stopped (under `still`) within `handStop` of one he faces (within `handCone` of straight ahead), or walking under `slow` with one within `handAlong` at his side */
   still: 0.3,
   slow: 1.0,
@@ -55,18 +50,20 @@ export const CONTACT = {
   palm: 0.03,
   /** How far out from his middle a hand lands on a wall ahead (about the shoulder's) */
   shoulder: 0.14,
-  /** A rail's top (rig numbers), the dwell before he leans, the lean (radians) and the hands' spread (rig) */
-  railH: 0.72,
+  /**
+   * A rail's top (tiles over his ground: the city's railings stand about this high, waterfront3d.ts and
+   * neighbourhoods.ts; it was 0.72 rig numbers, where they stood on him at 0.85, before he came down to everyone's
+   * size, docs/scale-plan.md), the dwell before he leans, the lean (radians) and the hands' spread (rig)
+   */
+  railH: 0.6,
   railDwell: 1.2,
   lean: 0.22,
   railSpread: 0.16,
-  /** A stagger: into a wall faster than this (tiles a second) he's thrown back `back` tiles over `t` seconds; the chest's pitch back and the hand up (radians, rig) */
-  stagger: { speed: 2.2, back: 1.1, t: 0.75, pitch: 0.4, hand: 1.15 },
   /** A squeeze: a gap narrower than this (tiles, scaled, between the walls either side) turns the shoulders up to `squeezeTurn`, the arms in by `squeezeArms` */
   squeeze: 0.95,
   squeezeTurn: 0.65,
   squeezeArms: 0.35,
-  /** Everything eases in and out with this half-life (the stagger has its own curve) */
+  /** Everything eases in and out with this half-life */
   ease: 0.09,
   easeOut: 0.14,
   /** A hand goes onto a wall at this half-life (a reach, not a snap) */
@@ -89,9 +86,6 @@ export interface ContactInput {
   people: { x: number; z: number }[];
   /** Where he can't step (the caller's own check, for the rails: an edge no box explains); optional */
   blocked?: (x: number, z: number) => boolean;
-  /** This frame his move was stopped by something, and how fast he was going into it */
-  hit?: boolean;
-  hitSpeed?: number;
 }
 
 /** The nearest point on a box's outline to (x, z), outside it: the point, its distance and the outward normal there */
@@ -129,30 +123,25 @@ export interface Hand {
 export interface ContactState {
   /** The shoulder's give: which side (-1 the rig's -x, his right facing +z; 1 the +x) and how much */
   give: { side: -1 | 1; w: number };
-  /** The step's hitch (0 to 1: the caller slows him by `CONTACT.hitch` of it) */
-  hitch: number;
   /** A hand on a wall (the free one stays the pose's) */
   hand: Hand | null;
   /** A lean on a rail: both hands on it and the chest over them */
   lean: { w: number; hands: [Hand, Hand] } | null;
-  /** A stagger under way: how far through (0 to 1) */
-  stagger: { t: number; hand: Hand } | null;
   /** A squeeze: the shoulders' turn (signed) and how much */
   squeeze: { turn: number; w: number };
 }
 
 const ease = (now: number, want: number, dt: number, h: number) => now + (want - now) * (1 - Math.exp((-Math.LN2 * dt) / h));
 
-/** `hands`: false leaves out the hands and the lean (phones: the layer steps down first; the give, hitch, squeeze and stagger stay) */
+/** `hands`: false leaves out the hands and the lean (phones: the layer steps down first; the give and the squeeze stay) */
 export function createContact(opts: { hands?: boolean } = {}) {
   const hands = opts.hands !== false;
-  const st: ContactState = { give: { side: 1, w: 0 }, hitch: 0, hand: null, lean: null, stagger: null, squeeze: { turn: 0, w: 0 } };
+  const st: ContactState = { give: { side: 1, w: 0 }, hand: null, lean: null, squeeze: { turn: 0, w: 0 } };
   let handW = 0;
   let handWant: Hand | null = null;
   let handRel: THREE.Vector3 | null = null;
   let leanW = 0;
   let stillFor = 0;
-  let wasBrushing = false;
   let squeezeW = 0;
   let squeezeTurn = 0;
   let giveWant = 0;
@@ -187,22 +176,6 @@ export function createContact(opts: { hands?: boolean } = {}) {
     const high = inp.y + CONTACT.handHigh * s;
     const low = inp.y + CONTACT.handLow * s;
 
-    // A stagger: into a wall at a sprint (the wall ahead, the hit this frame)
-    if (st.stagger) {
-      st.stagger.t = Math.min(1, st.stagger.t + dt / CONTACT.stagger.t);
-      if (st.stagger.t >= 1) st.stagger = null;
-    } else if (inp.hit && (inp.hitSpeed ?? 0) > CONTACT.stagger.speed) {
-      const ahead = near.filter((n) => n.fwd > 0 && Math.abs(n.side) < 0.5 * s).sort((a, b) => a.d - b.d)[0];
-      if (ahead) {
-        const side: 0 | 1 = ahead.side < 0 ? 0 : 1;
-        let tx = -ahead.nz;
-        let tz = ahead.nx;
-        if (tx * sx + tz * sz < 0) (tx = -tx), (tz = -tz);
-        const off = (side ? 1 : -1) * CONTACT.shoulder * s;
-        st.stagger = { t: 0, hand: { side, x: ahead.px + tx * off + ahead.nx * CONTACT.palm * s, y: inp.y + CONTACT.stagger.hand * s, z: ahead.pz + tz * off + ahead.nz * CONTACT.palm * s, nx: ahead.nx, nz: ahead.nz, w: 1 } };
-      }
-    }
-
     // A squeeze: walls close on both sides
     let left = Infinity;
     let right = Infinity;
@@ -218,9 +191,8 @@ export function createContact(opts: { hands?: boolean } = {}) {
     st.squeeze = { turn: squeezeTurn, w: squeezeW };
 
     // Brushing: a wall or a person beside him while he moves
-    let brushing = false;
     giveWant = 0;
-    if (inp.moving && inp.speed > 0.4 && !st.stagger && !squeezing) {
+    if (inp.moving && inp.speed > 0.4 && !squeezing) {
       // (full within `close` of his middle, nothing at the limit)
       const close = CONTACT.close * s;
       const want = (d: number, limit: number) => Math.min(1, Math.max(0, (limit - d) / (limit - close)));
@@ -245,11 +217,7 @@ export function createContact(opts: { hands?: boolean } = {}) {
           giveSide = side < 0 ? -1 : 1;
         }
       }
-      brushing = giveWant > 0;
     }
-    if (brushing && !wasBrushing) st.hitch = 1;
-    wasBrushing = brushing;
-    st.hitch = Math.max(0, st.hitch - dt / CONTACT.hitchT);
     st.give.side = giveSide;
     st.give.w = ease(st.give.w, giveWant, dt, giveWant > st.give.w ? CONTACT.ease : CONTACT.easeOut);
 
@@ -264,7 +232,7 @@ export function createContact(opts: { hands?: boolean } = {}) {
       const off = (side ? 1 : -1) * CONTACT.shoulder * s;
       return { side, x: n.px + tx * off + n.nx * CONTACT.palm * s, y, z: n.pz + tz * off + n.nz * CONTACT.palm * s, nx: n.nx, nz: n.nz, w: 1 };
     };
-    if (hands && !st.stagger && !squeezing) {
+    if (hands && !squeezing) {
       if (inp.speed < CONTACT.still) {
         const ahead = near.filter((n) => n.fwd > 0 && n.d < CONTACT.handStop * s && Math.atan2(Math.abs(n.side), n.fwd) < CONTACT.handCone).sort((a, b) => a.d - b.d)[0];
         if (ahead) want = onWall(ahead, high, ahead.side < -0.05 * s ? -1 : 1);
@@ -295,7 +263,7 @@ export function createContact(opts: { hands?: boolean } = {}) {
     // A lean on a rail: standing a while facing an edge no wall explains
     let railAt: { px: number; pz: number; nx: number; nz: number } | null = null;
     stillFor = inp.speed < CONTACT.still && !inp.moving ? stillFor + dt : 0;
-    if (hands && inp.blocked && stillFor > CONTACT.railDwell && !st.hand && !st.stagger) {
+    if (hands && inp.blocked && stillFor > CONTACT.railDwell && !st.hand) {
       // (probe ahead: the first step he can't take, with nothing solid within reach of it)
       for (let r = 0.25 * s; r <= 0.5 * s; r += 0.125 * s) {
         const px = inp.x + fx * r;
@@ -308,7 +276,7 @@ export function createContact(opts: { hands?: boolean } = {}) {
     }
     leanW = ease(leanW, railAt ? 1 : 0, dt, railAt ? CONTACT.ease * 3 : CONTACT.easeOut);
     if (railAt) {
-      const y = inp.y + CONTACT.railH * s;
+      const y = inp.y + CONTACT.railH;
       const sp = CONTACT.railSpread * s;
       st.lean = {
         w: leanW,
@@ -332,12 +300,10 @@ export function createContact(opts: { hands?: boolean } = {}) {
     },
     reset() {
       st.give.w = 0;
-      st.hitch = 0;
-      st.hand = st.lean = st.stagger = null;
+      st.hand = st.lean = null;
       st.squeeze = { turn: 0, w: 0 };
       handW = leanW = stillFor = squeezeW = 0;
       handWant = handRel = null;
-      wasBrushing = false;
     },
   };
 }
@@ -430,10 +396,10 @@ export function toRig(out: THREE.Vector3, wx: number, wy: number, wz: number, x:
 const target = new THREE.Vector3();
 /**
  * The layer on the animator's pose (`rot`, `hips`: the figure's frame), where he stands and faces at
- * `scale`: the give, the squeeze, the lean and the stagger on the body, then the hands reaching
+ * `scale`: the give, the squeeze and the lean on the body, then the hands reaching
  */
 export function applyContact(rot: Float32Array, hips: THREE.Vector3, st: ContactState, x: number, y: number, z: number, face: number, scale: number) {
-  const any = st.give.w > 1e-3 || st.squeeze.w > 1e-3 || st.hand || st.lean || st.stagger;
+  const any = st.give.w > 1e-3 || st.squeeze.w > 1e-3 || st.hand || st.lean;
   if (!any) return;
   posed(rot, 0, hips.x, hips.y, hips.z, P);
   // The shoulder's give: the collarbone back, the chest turned a touch the same way
@@ -462,22 +428,10 @@ export function applyContact(rot: Float32Array, hips: THREE.Vector3, st: Contact
     posed(rot, 0, hips.x, hips.y, hips.z, P);
     turn(rot, MB.head, -CONTACT.lean * 0.8 * st.lean.w, 0, 0);
   }
-  // The stagger: thrown back, the head with it
-  if (st.stagger) {
-    const u = st.stagger.t;
-    const bell = Math.sin(Math.PI * Math.min(1, u)) ** 1.5;
-    posed(rot, 0, hips.x, hips.y, hips.z, P);
-    turn(rot, MB.spine1, -CONTACT.stagger.pitch * 0.5 * bell, 0, 0);
-    posed(rot, 0, hips.x, hips.y, hips.z, P);
-    turn(rot, MB.chest, -CONTACT.stagger.pitch * 0.5 * bell, 0, 0);
-    posed(rot, 0, hips.x, hips.y, hips.z, P);
-    turn(rot, MB.head, -CONTACT.stagger.pitch * 0.4 * bell, 0, 0);
-  }
-  // The hands: on the wall, on the rail, up at the wall in a stagger
+  // The hands: on the wall, on the rail
   const hands: Hand[] = [];
   if (st.hand) hands.push(st.hand);
   if (st.lean) hands.push(...st.lean.hands);
-  if (st.stagger) hands.push({ ...st.stagger.hand, w: Math.sin(Math.PI * Math.min(1, st.stagger.t)) });
   for (const h of hands) {
     if (h.w < 1e-3) continue;
     posed(rot, 0, hips.x, hips.y, hips.z, P);

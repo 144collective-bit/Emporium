@@ -146,18 +146,20 @@ export const HEAD_BLEND = 2.5;
 const LEG_BLEND = 0.05;
 const LEG_BONES = [MB.legL, MB.shinL, MB.footL, MB.legR, MB.shinR, MB.footR];
 /**
- * A free foot reaches no further down than `kerb` (world: a step) under his
- * ground, over an edge or before it's a fall. In the air: a fall without a jump counts once he's `drop` over the ground
- * (world) or `after` seconds up; a flight's last `lead` frames play as the
- * ground comes up; it lands on its own touchdown unless another costs under
- * `margin` of it; for `settle` seconds after, the landing plays on unless a
- * search finds something under `margin` of it too. A landing faster than
- * `crouch` (world speed) squashes the hips down, up to `squash` (rig
- * numbers) at `hard`, the chest bowing `bow` radians a rig number of it; a
+ * A free foot reaches no further down than `kerb` (a step) under his ground,
+ * over an edge or before it's a fall. In the air: a fall without a jump
+ * counts once he's `drop` over the ground or `after` seconds up; a flight's
+ * last `lead` frames play as the ground comes up; it lands on its own
+ * touchdown unless another costs under `margin` of it; for `settle` seconds
+ * after, the landing plays on unless a search finds something under
+ * `margin` of it too. A landing faster than `crouch` (a speed) squashes the
+ * hips down, up to `squash` at `hard`. Lengths and speeds in rig numbers
+ * (in proportion with his size: they were 0.3 and 4.5 / 9.5 tiles a second
+ * in the world when he was 0.85, docs/scale-plan.md); the chest bowing `bow` radians a rig number of it; a
  * long fall raises the arms up to `arms` radians over `armsIn` seconds,
  * once the flight's frames have been used up for `armsAfter`
  */
-export const AIR = { kerb: 0.3, margin: 0.75, drop: 0.3, after: 0.18, lead: 4, settle: 0.3, crouch: 4.5, hard: 9.5, squash: 0.16, bow: 1.6, arms: 0.7, armsAfter: 0.15, armsIn: 0.6 };
+export const AIR = { kerb: 0.35, margin: 0.75, drop: 0.35, after: 0.18, lead: 4, settle: 0.3, crouch: 5.3, hard: 11.2, squash: 0.16, bow: 1.6, arms: 0.7, armsAfter: 0.15, armsIn: 0.6 };
 /**
  * Crouching (Phase 5): past `at` of the way into a crouch, moving, only the
  * crouched walks are searched (the takes tagged `tag`), and standing up, never them;
@@ -199,8 +201,8 @@ export const GRIP = { base: 0.3, ease: 0.12 };
 /** The standing takes' wander (the weight shifts) eased in and out with this half-life */
 export const WANDER = { ease: 0.25 };
 /** The game's jump and gravity, when the input doesn't say (walk.ts's) */
-const JUMP = 3.9;
-const GRAVITY = 11.5;
+const JUMP = 3.03;
+const GRAVITY = 8.92;
 
 const X = new THREE.Vector3(1, 0, 0);
 const Z = new THREE.Vector3(0, 0, 1);
@@ -424,6 +426,8 @@ export function createAnimator(data: MoData) {
   let dropV = 0;
   let lift = 0;
   let liftV = 0;
+  /** His ground last frame (stepping down a kerb: `lift` takes the drop) */
+  let groundY = NaN;
   let rate = 1;
   /** How much further he reaches than the clip (stride warping), how much faster than it he's going, the rate eased towards, and the way he's going in his own frame */
   let warp = 1;
@@ -662,7 +666,7 @@ export function createAnimator(data: MoData) {
     airT = grounded ? 0 : airT + dt;
     if (!inAir && !grounded) {
       const jumping = vy > jumpV * 0.4;
-      if (jumping || over > AIR.drop || airT > AIR.after) takeOff(jumping, vy, jumpV);
+      if (jumping || over > AIR.drop * inp.scale || airT > AIR.after) takeOff(jumping, vy, jumpV);
     }
     let landed = 0;
     if (inAir && grounded) {
@@ -757,7 +761,7 @@ export function createAnimator(data: MoData) {
     {
       const dx = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vx : Math.sin(face);
       const dz = Math.abs(m.vx) + Math.abs(m.vz) > 0.05 ? m.vz : Math.cos(face);
-      const rising = !inAir && !crouched && simSpeed * inp.scale < STAIRS.fast && Math.hypot(inp.gx, inp.gz) > 0.1 && climbAhead(inp.ground, inp.x, inp.z, inp.y, dx, dz, inp.scale);
+      const rising = !inAir && !crouched && simSpeed < STAIRS.fast && Math.hypot(inp.gx, inp.gz) > 0.1 && climbAhead(inp.ground, inp.x, inp.z, inp.y, dx, dz, inp.scale);
       if (rising) ask('stairs');
       // (the stairs take not in yet: the walks take the slope, as they did before it was captured)
       climbing = rising && hasStairs;
@@ -866,8 +870,8 @@ export function createAnimator(data: MoData) {
       }
     }
     // A hard landing: the hips squash down and the chest bows, then he comes back up
-    if (landed > AIR.crouch) {
-      const k = THREE.MathUtils.clamp((landed - AIR.crouch) / (AIR.hard - AIR.crouch), 0, 1);
+    if (landed / inp.scale > AIR.crouch) {
+      const k = THREE.MathUtils.clamp((landed / inp.scale - AIR.crouch) / (AIR.hard - AIR.crouch), 0, 1);
       squashH = 0.1 + 0.08 * k;
       squashV = AIR.squash * (0.35 + 0.65 * k) * springRate(squashH) * Math.E;
       squash = 0;
@@ -940,7 +944,7 @@ export function createAnimator(data: MoData) {
         const bz = wb.z + f.off.z;
         // (in the air the legs are the flight's: nothing reaches for the ground)
         // (never further down than a step: over an edge, or off the ground before it's a fall)
-        const ahead = inAir ? 0 : Math.max(-AIR.kerb, Math.max(fg(bx, bz, inp.y + 0.3), fg(bx + m.vx * LOCK.look, bz + m.vz * LOCK.look, inp.y + 0.3)) - inp.y);
+        const ahead = inAir ? 0 : Math.max(-AIR.kerb * inp.scale, Math.max(fg(bx, bz, inp.y + 0.3), fg(bx + m.vx * LOCK.look, bz + m.vz * LOCK.look, inp.y + 0.3)) - inp.y);
         [f.rise, f.riseV] = decay(f.rise - ahead, f.riseV, ahead > f.rise ? 0.025 : 0.07, dt);
         f.rise += ahead;
         f.at.set(wv.x + f.off.x, wv.y + f.rise, wv.z + f.off.z);
@@ -954,6 +958,14 @@ export function createAnimator(data: MoData) {
     // The hips come up with the feet standing above his own ground, as a pelvis follows the
     // foot it stands on (a kerb before he's up it, the treads of a flight drawn over the even
     // ramp he walks up): held feet count, a free one a little
+    // (stepping down off a kerb his ground drops at once while a foot still stands on top: the hips keep their
+    // height and come down with the lift's ease, so the held leg's knee doesn't snap; the kerbs are relatively
+    // taller since he came down to everyone's size, docs/scale-plan.md)
+    // (the ground under him that dropped, while he stands on it: not a fall's first frames)
+    const gNow = inp.ground(inp.x, inp.z, inp.y + 0.3);
+    const fell = groundY - gNow;
+    if (!inAir && Math.abs(inp.y - gNow) < 0.01 * inp.scale && fell > 0.01 * inp.scale && fell < AIR.kerb * inp.scale) lift += fell / inp.scale;
+    groundY = gNow;
     const wsum = feet.reduce((a, f) => a + (f.locked ? 1 : LIFT.free), 0);
     const liftWant = inAir ? 0 : THREE.MathUtils.clamp(feet.reduce((a, f) => a + f.rise * (f.locked ? 1 : LIFT.free), 0) / wsum, 0, LIFT.most) / inp.scale;
     [lift, liftV] = decay(lift - liftWant, liftV, 0.06, dt);

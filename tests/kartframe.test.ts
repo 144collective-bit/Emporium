@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { DRIVER_SCALE, KART_SHAPES, driverRoot, gripOf, kartPose, pedalsOf, seatOf, wheelOf } from '../src/scripts/city3d/kartframe';
+import { DRIVER_SCALE, KART_SHAPES, SEAT_X, driverRoot, gripOf, kartPose, pedalsOf, seatOf, wheelOf } from '../src/scripts/city3d/kartframe';
 import { PLAYER_KARTS } from '../src/scripts/city3d/mykart';
 import { ANKLE_H, HIP_HEIGHT, makeSkeleton, newPose, poseSkeleton } from '../src/scripts/city3d/skeleton';
 
@@ -50,8 +50,9 @@ test('his feet rest on the pedals, tucked under the nose; the wheel sits ahead o
       const want = new THREE.Vector3(px - 0.04, py + ANKLE_H * DRIVER_SCALE, pz);
       const d = boneAt(p, id, name).distanceTo(want);
       assert.ok(d < 0.015, `${id}: ${name} on its pedal (${(d * CM).toFixed(1)} cm)`);
-      // Under the nose (it starts 0.16 behind the front axle's fairing and stands 0.22 over the floor)
-      assert.ok(px > s.axles[1] + 0.08 - 0.16 - 0.01 && py + 0.12 < s.floor + 0.22, `${id}: the pedal under the nose`);
+      // In the footwell: ahead of the seat, short of the front axle, low (brought back with his size from under
+      // the nose, docs/scale-plan.md)
+      assert.ok(px > SEAT_X + 0.2 && px < s.axles[1] && py + 0.12 < s.floor + 0.22, `${id}: the pedal in the footwell`);
     }
     const [wx, wy] = wheelOf(id);
     const [sx, sy] = seatOf(id);

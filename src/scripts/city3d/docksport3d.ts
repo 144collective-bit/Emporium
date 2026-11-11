@@ -15,18 +15,27 @@
  *   cars' own, `parkedCars()`, on the main thread; their trailers and boxes here).
  * - **Landmarks:** the Harbour Master's office (its clock tower and flag), the lighthouse, the floodlight masts.
  *
+ * - **Its life** (Phase 4, dockslife.ts, on the main thread: `life()`): the working crane's trolley, cab, spreader and
+ *   ropes, the one box going round, the carrier that takes it to the stacks' lane and back, a truck in through the
+ *   gate now and then and the pilot boat out round the basin, all from the clock (still under reduced motion), and
+ *   a few workers (the crowd's). The static drawing leaves those out.
+ *
  * One sign atlas of fixed made-up copy (painted, and the gate's lit). Walls, roofs, hulls and the cranes' main
  * members at every distance (their far form); the fine details near only, and phones leave out the finest.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, moving, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { ATLAS, kit } from './infill';
 import { WORLD, flatRoof, walls } from './riverside3d';
-import { parkedCars } from './cars';
+import { carGeometry, carMaterials, parkedCars } from './cars';
+import { nearGate } from './nearby';
+import { addPeople } from './life';
+import type { Tick } from './world';
+import { DOCK_PEOPLE, PILOT, STILL, WORK, boxAt, carrierAt, craneAt, pilotAt, truckAt } from './dockslife';
 import type { CarId } from './carspec';
 import { WATER_Y } from './river';
-import { BASIN, CAISSON, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
+import { BASIN, CAISSON, DOCKS_RECT, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import {
   BOX,
   BOOM,
@@ -311,7 +320,9 @@ function drawCrane(b: Batch, c: (typeof CRANES)[number], low: boolean) {
   box(b, back - 0.05, top + 2.4, z - 2.45, back + CRANE.house + 0.05, top + 2.6, z + 2.45, RED);
   box(b, apex[0] - 0.15, apex[1] + 0.2, z - 0.15, apex[0] + 0.15, apex[1] + 0.55, z + 0.15, WARN);
   box(b, boomTip[0] - 0.15, boomTip[1] + 0.1, z - 0.15, boomTip[0] + 0.15, boomTip[1] + 0.4, z + 0.15, WARN);
-  // The trolley on the girders, the cab under it, the spreader on its ropes (a box in it over the ship's deck)
+  // The trolley on the girders, the cab under it, the spreader on its ropes (a box in it over the ship's deck); the
+  // working crane's move (`life()`, below)
+  if (c === WORK) return;
   const t = c.trolley;
   box(b, t - 1.3, top, z - GZ - 0.5, t + 1.3, top + 0.9, z + GZ + 0.5, GREY);
   box(b, t + 0.2, G - 1.7, z + 0.4, t + 1.6, G - 0.2, z + 1.6, WHITE);
@@ -510,7 +521,11 @@ function drawDryDock(b: Batch, low: boolean) {
   });
 }
 function drawTugs(b: Batch, low: boolean) {
-  for (const t of TUGS) {
+  // (the pilot boat goes out now and then: `life()`)
+  for (const t of TUGS) if (t !== PILOT) drawTug(b, t, low);
+}
+function drawTug(b: Batch, t: (typeof TUGS)[number], low: boolean) {
+  {
     const r: Rect = [t.x - t.B / 2, t.z - t.L / 2, t.x + t.B / 2, t.z + t.L / 2];
     const hullTop = WATER_Y + (t.kind === 'tug' ? 1.3 : 1.0);
     hull(b, r, t.L * 0.3, WATER_Y - 0.5, hullTop, t.kind === 'tug' ? BLACK : ORANGE);
@@ -684,7 +699,92 @@ const each = (id: string, rect: Rect, draw: (b: Batch) => void, cast = true) =>
     b.build(into, { cast, receive: true });
   });
 
-export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | null }) {
+/* ---------- Its life (Phase 4) ---------- */
+
+/** A Batch drawn into a group of its own, moving (its shadows drawn each frame) */
+function part(scene: THREE.Scene, draw: (b: Batch) => void, cast = true) {
+  const b = new Batch();
+  draw(b);
+  const g = new THREE.Group();
+  b.build(g, { cast, receive: true });
+  scene.add(moving(g));
+  return g;
+}
+/**
+ * What moves at the port, on the main thread from the clock (dockslife.ts): the working crane's trolley and cab, its
+ * spreader and the ropes down to it, the box, the carrier, a truck now and then, the pilot boat. Placed only while
+ * the camera's near the docks; under reduced motion where they are at `STILL`.
+ */
+function life(scene: THREE.Scene, tick: (f: Tick) => void, low: boolean) {
+  const z = WORK.z;
+  const G = CRANE.girder;
+  const top = G + CRANE.depth;
+  const GZ = 1.6;
+  const trolley = part(scene, (b) => {
+    box(b, -1.3, top, z - GZ - 0.5, 1.3, top + 0.9, z + GZ + 0.5, GREY);
+    box(b, 0.2, G - 1.7, z + 0.4, 1.6, G - 0.2, z + 1.6, WHITE);
+    pane(b, 1.6, G - 0.95, z + 1.0, [1, 0], 1.0, 0.9, GLASS, 0.006);
+  });
+  const spreader = part(scene, (b) => box(b, -1.2, 0, z - 3.5, 1.2, 0.35, z + 3.5, YELLOW));
+  // (the ropes a tile tall, stretched to reach the girders)
+  const ropes = part(
+    scene,
+    (b) => {
+      for (const [dx, dz] of [
+        [-0.8, -3],
+        [0.8, -3],
+        [-0.8, 3],
+        [0.8, 3],
+      ])
+        box(b, dx - 0.03, 0, z + dz - 0.03, dx + 0.03, 1, z + dz + 0.03, STEEL);
+    },
+    false
+  );
+  const crate = part(scene, (b) => container(b, [-BOX.L / 2, -BOX.W / 2, BOX.L / 2, BOX.W / 2], 0, 1, low, true));
+  const carrier = part(scene, (b) => straddle(b, 0, 0, low));
+  const pilot = part(scene, (b) => drawTug(b, { ...PILOT, x: 0, z: 0 }, low));
+  const truckGeo = carGeometry('truck');
+  const truck = new THREE.Group();
+  const paint = toon('#f3f2f7');
+  truck.add(new THREE.Mesh(truckGeo.paint, paint), new THREE.Mesh(truckGeo.detail, carMaterials().detail));
+  for (const m of truck.children) m.castShadow = m.receiveShadow = true;
+  scene.add(moving(truck));
+  // The dock workers (the crowd's spare slots)
+  addPeople(DOCK_PEOPLE, []);
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const near = nearGate();
+  const place = (t: number) => {
+    const c = craneAt(t);
+    trolley.position.x = spreader.position.x = ropes.position.x = c.trolley;
+    spreader.position.y = c.spreader;
+    ropes.position.y = c.spreader + 0.35;
+    ropes.scale.y = Math.max(0.01, G - (c.spreader + 0.35));
+    const k = boxAt(t);
+    crate.position.set(k.x, k.y, k.z);
+    crate.rotation.y = k.yaw;
+    const r = carrierAt(t);
+    carrier.position.set(r.x, 0, r.z);
+    carrier.rotation.y = r.yaw;
+    const p = pilotAt(t);
+    pilot.position.set(p.x, 0, p.z);
+    pilot.rotation.y = p.yaw;
+    const q = truckAt(t);
+    truck.visible = !!q;
+    if (q) {
+      truck.position.set(q.x, S, q.z);
+      truck.rotation.y = q.yaw;
+    }
+  };
+  place(reduced ? STILL : Date.now() / 1000);
+  if (reduced) return;
+  tick(() => {
+    if (!near(DOCKS_RECT[0], DOCKS_RECT[1], DOCKS_RECT[2], DOCKS_RECT[3])) return;
+    place(Date.now() / 1000);
+  });
+}
+
+export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Scene | null; tick?: (f: Tick) => void }) {
   CRANES.forEach((c, i) => each(`docks crane ${i}`, craneRect(c), (b) => drawCrane(b, c, low)));
   each('docks ship', pad(SHIP.rect, 3), (b) => drawShip(b, low));
   each('docks crane rails', [LAND_RAIL - 1, 142, SEA_RAIL + 1, 200], drawRails, false);
@@ -695,7 +795,8 @@ export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | n
   );
   each('docks gate', [GATE.x - 2, GATE.z0 - 1, -357, GATE.z1 + 1], (b) => drawGate(b, low));
   each('docks carriers', [SEA_RAIL - 10, 143, SEA_RAIL + 1, 185], (b) => {
-    for (const [x, z] of STRADDLES) straddle(b, x, z, low);
+    // (the first carrier works the crane: `life()`)
+    for (const [x, z] of STRADDLES.slice(1)) straddle(b, x, z, low);
     reachStacker(b, low);
   });
   each('docks shed', pad(SHED.rect, 1), (b) => drawShed(b, low));
@@ -710,5 +811,6 @@ export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | n
   MASTS.forEach(([x, z], i) => each(`docks mast ${i}`, [x - 2, z - 2, x + 2, z + 2], (b) => drawMast(b, x, z, low)));
   // The truck park's rigs: the traffic's own Heavy Haul tractors, parked facing north (+x turned to -z; the main thread's)
   const paints = ['#e23b3b', '#2a3b66', '#f3f2f7', '#1f6b4a', '#ff8a3d'];
+  if (scene && tick) life(scene, tick, low);
   if (scene) parkedCars(scene, S, TRUCKS.map(({ x, z }, i): [CarId, number, number, number, string] => ['rig', x, z - TRUCK_BODY / 2 + 1.5, Math.PI / 2, paints[i % paints.length]]));
 }

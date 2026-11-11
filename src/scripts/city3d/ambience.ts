@@ -38,7 +38,6 @@
  * (docs/civic-plan.md Phase 4) footsteps and a murmur by day and the flags in the wind (`civic`), and City Hall's bell
  * on the hour from its tower, deeper than St Aldwyn's (`hallBell`).
  */
-import { fromWall } from './wall';
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
 import { PLAN, distToStreet } from './streetplan';
@@ -71,6 +70,7 @@ import { ENDSWOOD_RECT, inEndswood } from './endswood';
 import { CHURCH, STUDIO } from './endsstreet';
 import { FOUNTAIN as CIVIC_FOUNTAIN, FOUNTAINS as CIVIC_FOUNTAINS, HALL_BELL, SQUARE as CIVIC_SQUARE } from './civic';
 import { COMMON, inCommon } from './endsblend';
+import { fromWall } from './wall';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -129,10 +129,10 @@ export interface Ambience {
   civic: number;
   /** City Hall's bell in its tower (sound.ts tolls it on the hour, deeper than St Aldwyn's), 0-1 */
   hallBell: number;
-  /** By the wall round the city (wall.ts, docs/wall-plan.md Phase 6): the wind gusting against it and a low hum, 0-1 */
+  /** By the wall round the city (docs/wall-plan.md Phase 6): the wind along its face and a low hum off it, 0-1 */
   wall: number;
 }
-/** How far from the wall's inner face its sound carries (it's full at its foot, gone this far in) */
+/** How far from the wall's inner face its sound carries (full at its foot) */
 export const WALL_SOUND = 70;
 /** The church's tower, where its bell hangs */
 const BELFRY = [(CHURCH.tower.rect[0] + CHURCH.tower.rect[2]) / 2, (CHURCH.tower.rect[1] + CHURCH.tower.rect[3]) / 2];
@@ -304,8 +304,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   // The civic square: on it, fading over 22 past it and from high over it; City Hall's bell across the park and Uptown
   const civic = near(CIVIC_SQUARE, x, z, 0, 22) * (1 - smooth(8, 40, lift));
   const hallBell = 1 - smooth(30, 200, Math.hypot(x - HALL_BELL[0], z - HALL_BELL[1]) + lift * 0.3);
-  // By the wall: full at its foot, gone `WALL_SOUND` in (and from high over it, more of it)
-  const cityWall = 1 - smooth(0, WALL_SOUND, Math.max(0, fromWall(x, z)) + lift * 0.2);
   return {
     city: town,
     water: Math.max(water, lake) * k,
@@ -335,6 +333,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     bell,
     civic: civic * k,
     hallBell,
-    wall: cityWall,
+    wall: (1 - smooth(0, WALL_SOUND, Math.max(0, fromWall(x, z)))) * k,
   };
 }

@@ -222,7 +222,7 @@ it and has been retired completely. Build only on what's here.
   off it (`treeSpot()`).
 - **The street plan** is `src/scripts/city3d/layout.ts` (DOM-free; the 3D
   city and the server read it). 1 tile is about
-  1.8 m and Degen is about one tile tall. Roads are sized for real-proportion
+  1.8 m and Degen is about 0.86 tiles tall (everyone's size, below). Roads are sized for real-proportion
   cars: lanes 1.7 wide, a 0.8 sidewalk round every block and district.
   Downtown's cross streets (`CORE_ROADS`, at 17 and 43) and the diagonals
   are 3.4 wide with one lane each way; the ring and the south bank road are
@@ -242,18 +242,12 @@ it and has been retired completely. Build only on what's here.
   - **The water lies under the streets** (river plan step 2, the owner's pick): `WATER_Y` (-1.5) in `river.ts`. Where it keeps to the quay line a stone quay wall drops to it; where it pulls back the bank slopes down to it (`SLOPE` wide at most, flat land left above it; the cove's beach all the way: `slopeAt()`, `topsAt()` the slopes' tops, `shoreY()` the ground's height, `inChannel()` the slopes and the water). The grass stops at the band (world.ts); `riverBanks()` draws the walls, the slopes, the sand or pebbles and the reeds down at the water, and walls the channel's ends at the world's edge. Walking follows `shoreY()` down a slope (walk.ts `groundAt()`), the cars stop at the slopes' tops (`RIVER_WALLS`), the trees keep off the channel. Everything afloat is at `WATER_Y` (the traffic's boats and the moored ones in life.ts, Uptown's yachts and tenders, the barge), and everything standing in the water reaches down to it (the decks' piles, the jetties' posts, Uptown's marina pontoon on piles, Liberty Bridge's piers, the highway's bridges' piers). Anything new on the water goes there too.
   - **Bridges** (river plan step 1): the four avenue bridges were taken out. Only the east ring avenue keeps one (`BRIDGED_NS` in layout.ts: Harbour Bridge since step 2, below, the metro's; the el's posts stand on its median); the other north-south roads end at the bank avenues, each two streets in the plan (`ns<i>` north of the river, `ns<i>s` south of it, `nsStreet()`), and the ring highway keeps its two bridges far out of town. Liberty Bridge, a footbridge, was rebuilt in step 3 (below).
   - **River life** (river plan step 4, the owner's picks: more boats, the river bus, boating yourself; all three built). Everything on the water keeps to a line of its own, a function of the clock, and the tests hold each clear of everything else there (`tests/water.ts`: the piers, decks, moored boats and landings). 4a, more boats: two traffic boats to a lane and the police launch in the middle one (life.ts), and `riverlife.ts` (DOM-free, tested in `tests/riverlife.test.ts`): the cruise boat (`CRUISE`, round the town's reach), the rowing eight (`CREW`) and the dinghies out west (`DINGHIES`), drawn by `riverlife3d.ts`, a district loaded as you approach the river (`LAZY_DISTRICTS` id `river`). The highway's bridges' piers stand between the lanes (`BRIDGE_PIERS` in waterfront.ts). 4b, the river bus (below, under Getting about). 4c, boating yourself (below, after Driving your car).
-  - `WORLD_BOUNDS` is how far you can walk or drive.
+  - `WORLD_BOUNDS` is how far you can walk or drive: the wall's foot since the wall plan's Phase 3 (below).
   - `CITY_EXT` (-80 to 140 + `SOUTH_SHIFT`) is the town past the Parkway (with the airport and the kart park it's `BUILT_UP`); the outskirts' tree belt fills a band round the town (outside the bends) and a lighter sprinkle covers the rest, seeded tile by tile at a density per area (`outskirtsTrees()` in `outskirts.ts`: `BELT_FREE` / `OPEN_FREE` are the land a tree could stand on in the world before Phase 6, so a bigger world gets more trees, never thinner ones, and a tile's trees are the same whatever the world's size; the belt's density eases out to the open land's, `BELT_EASE`, `beltShare()`, no edge). **Where a tree may stand is one rule** (`landuse.ts`, docs/blend-plan.md Phase 1, tested in `tests/landuse.test.ts`): `KEEPS`, everything the trees keep off (the highway and its ramps, every plan street, each district's land, the airport and its approach, the river, the hills, the metro's line, `EL_CLEAR`), filed by tile, each margin wobbled further out (`wobble()`, never in) so tree lines come out ragged; `treeSpot()` asks it. A new district's land goes in `KEEPS` (with `since`, as it came after the densities were measured), never in a call from its drawing; land a district left goes in with `gone` (counted when the densities are measured, never kept off: the kart park's old land, docs/kart-west-plan.md), so the open land's trees stay as thick. Pine woods stand in patches on the land well away from the city (`WOODS`, `inWoods()`: a smooth seeded noise, only past `WOODS.clear` from `WOODS_OFF` (the town and the kart park with the airport's old land in one box, and the airport's parts), so none on the land the world had before Phase 6), their trees bigger than the town's.
-  - **The wall** (the owner's call, 2026-11; `docs/wall-plan.md`, its phases each with the owner's sign-off, keep it up to date): 200 ft of solid concrete round the city, a smooth slab, its inner face `WALL.out` (80) past `EXT` where the grass ends (`SKIRT` is `WALL.out`), `WALL.thick` (8) through, `WALL.h` (200 ft, about 34 tiles: the owner's exception to "under the Emporium"). The storyline will be a dystopia; the conditions to leave and the exits come later (solid all round until then). It locks the city in at its size: the world never grows past it, new districts go inside. `wall.ts` (DOM-free, tested in `tests/wall.test.ts`): `WALL_INNER` / `WALL_OUTER`, `WALL_RUNS` (the four sides, closed at the corners), `inWall()`, `fromWall()`, `CULVERTS` (where the river will run under it through bars, Phase 5), `WALL_CORNERS`. All six phases are built:
-    - Phase 1: the data, the skyline ring of dark towers retired.
-    - Phase 2, drawn (`wall3d.ts`, `buildWall()` at the boot, `update(night)` every frame from index.ts, so day and night follow under reduced motion too):
-      - the slab in cold blue-grey (`WALL_LOOK`), taking only `WALL_LOOK.std` of the city's haze and fading into the horizon far off (`WALL_HAZE`);
-      - the murk past it (`BEYOND`);
-      - the land to `WALL_LAND` (world.ts).
-    - Phase 3, walked to: `WORLD_BOUNDS` reaches its foot (`WALL_OUT`, `WALL_FOOT` in layout.ts), `WALL_SOLIDS` in `SOLIDS`; flying keeps `FLY_BOUNDS`, the old edge; the world map draws it.
-    - Phase 4, the top and the night: parapets (`TOP`, `WALL_TOP`), razor wire in the FX layer, cameras (`CAMERAS`) with red dots, floodlights (`FLOODS`, `FLOOD`) washing up the inner face in the slab's shader.
-    - Phase 5, the barred culverts where the river meets it (`CULVERTS`, `CULVERT`, `archY()`); boats stop at the bars (`BOAT_ENDS`, boat-sim.ts).
-    - Phase 6: its sound (ambience.ts `wall`), the views (`?bench` `wall`, `wall-corner`, `wall-culvert`; blendviews.ts `wall-*`, held by shots.ts `holding()`).
+  - **The wall** (the owner's call, 2026-11; `docs/wall-plan.md`, its phases each with the owner's sign-off, keep it up to date): 200 ft of solid concrete round the city, a smooth slab, its inner face `WALL.out` (80) past `EXT` where the grass ends (`SKIRT` is `WALL.out`), `WALL.thick` (8) through, `WALL.h` (200 ft, about 34 tiles: the owner's exception to "under the Emporium"). The storyline will be a dystopia; the conditions to leave and the exits come later (solid all round until then). It locks the city in at its size: the world never grows past it, new districts go inside. `wall.ts` (DOM-free, tested in `tests/wall.test.ts`): `WALL_INNER` / `WALL_OUTER`, `WALL_RUNS` (the four sides, closed at the corners), `inWall()`, `fromWall()`, `CULVERTS` (where the river will run under it through bars, Phase 5), `WALL_CORNERS`. Phase 1 (the data, the skyline ring of dark towers retired) is built. Phase 3 (walk to the wall) is built: `WORLD_BOUNDS` is its foot (`WALL_OUT`, `WALL_MARGIN` in layout.ts), the wall solid in every grid (`WALL_SOLIDS`), aircraft turning back short of it, the river's boats and the car's river walls running on to it, the world map drawing it; the strip stays grass. Phase 4 (the top and the night) is built: a parapet both sides (`TOP`, in the slab), razor wire on the inner one (wall3d.ts `wireMesh()`, FX layer, phones without the thin strand), cameras on posts looking in (`CAMERAS`), floodlights at the foot (`FLOODS`, `FLOOD_SOLIDS`) washing up the face at night (`washMesh()`, FX layer, under the bloom's threshold), the cameras' red dots and the lenses lit through `lit()`. Phase 5 (the culverts) is built: the river runs on under the wall and 30 past it into the murk (world.ts `RIVER_PAST`), a low arch through each side over it (`ARCH`, `archTop()`, wall3d.ts `culvertGeometry()`), bars in the wall's middle (`CULVERT_X`) the boats stop at (`CULVERT_BARS` in boat-sim.ts `WATER_SOLIDS`). Phase 6 (polish) is built: its sound (ambience.ts `wall`: the wind harder along it, a low hum), the views `wall-foot`, `wall-culvert`, `wall-corner` in `BENCH_VIEWS` and `BLEND_VIEWS`. The plan is done; the exits and the storyline come later. Phase 2 (drawn) is built: `wall3d.ts` (`buildWall()`, at the boot):
+    - the slab in cold blue-grey (`WALL_LOOK`), a toon material of its own, taking only `WALL_LOOK.std` of the city's haze so it's seen from town, and fading into the sky's horizon far off (`WALL_HAZE`), so its far side is never cut by the sky dome;
+    - the murk past it (`BEYOND`: grey sheets thick at the ground, in the FX layer, shaded with the horizon's light);
+    - the land past it to `WALL_LAND` (world.ts `buildGround()`).
 
     `SKY_RADIUS` reaches the land's corners. Don't bring the skyline ring back without the owner.
   - **Building out to the walls** (the owner's call, 2026-11: the whole map inside the wall built up eventually, still running in a browser on mid-range phones; a mix, districts with character near the centre and kit-built filler towards the walls) is planned in `docs/buildout-plan.md`: the baseline on real devices, a test fill to measure, letting far districts go, far districts as simple blocks, the world's data downloaded by region, a land plan, then the land filled district by district. A plan only so far: nothing built until the owner signs off a phase. Keep it up to date.
@@ -1448,7 +1442,15 @@ it and has been retired completely. Build only on what's here.
   `PORT_SOLIDS` (in `SOLIDS`), everything but the cranes under the Emporium
   (`PORT_TALLEST`), the cranes well under every flight (the test). Drawn by
   `docksport3d.ts` (sites in the docks' chunk, one sign atlas of fixed
-  made-up copy). Made-up names only.
+  made-up copy). Phase 4 (its life, the owner's picks: the cranes' full
+  cycle, the rest quiet) is built: `dockslife.ts` (DOM-free, tested in
+  `tests/dockslife.test.ts`): the middle crane (`WORK`) works one box off
+  ORCA STAR, onto the quay, the carrier takes it to a slot in the stacks'
+  lane and back, the crane puts it back on (`CYCLE` 120 s, `craneAt()`,
+  `carrierAt()`, `boxAt()`); a Box Runner in through the gate now and then
+  (`truckAt()`); the pilot boat out round the basin (`pilotAt()`); five
+  workers (`DOCK_PEOPLE`); drawn by docksport3d.ts's `life()` on the main
+  thread from the clock, still under reduced motion (`STILL`). Made-up names only.
 - **The Neon Mile** (the owner's call: a strip like Las Vegas, lights and
   casinos) on the open land between the Parkway's east side and the ring
   highway's east side, north of the river (the kart park's old land),
@@ -1737,7 +1739,10 @@ it and has been retired completely. Build only on what's here.
   avenue, and Kite House, condemned behind hoardings (`hoardingRuns()`); all
   under the Emporium (`TALLEST`), the galleries over a walker's head
   (`GROUND`); `BLOCK_SOLIDS` (in `SOLIDS`); drawn by `endsblocks3d.ts`
-  (`registerBlocks()`, a site a shell, its own atlas `ends-concrete`). Phase 4 (street level) is built:
+  (`registerBlocks()`, a site a shell, its own atlas `ends-concrete`; the
+  galleries' front doors painted nearly a storey tall, about 0.97 tiles,
+  their lights on the wall over them, so everyone fits them:
+  docs/scale-plan.md). Phase 4 (street level) is built:
   `endsstreet.ts` (DOM-free, tested in `tests/endsstreet.test.ts`): **St Aldwyn's** (`CHURCH`, its spire
   `SPIRE_TOP` the estate's one thing over the Emporium, every flight well over it) in its churchyard
   (`CHURCHYARD`: railings, the lychgate, yews, `HEADSTONES`), Endswood Parade's units (`PARADE_UNITS`; the block
@@ -2311,7 +2316,13 @@ it and has been retired completely. Build only on what's here.
   (vertex colours), plus the bus's lit windows, so the traffic in `life.ts`
   costs two draw calls a model. Parked cars use `parkedCars()`; give them a
   footprint in `solids.ts`. Keep a new model inside a 1.7-wide lane and in
-  scale with Degen (a hatch's roof is about 0.95 tiles up).
+  scale with Degen: every vehicle is drawn at `CAR_SCALE` (0.88, the scale
+  plan's cars, docs/scale-plan.md) of the numbers it's written in (`DRAWN`
+  in carspec.ts, what the drawing, the inside and the springs work in);
+  `CARS` is them at their size in the world, what everything else reads (a
+  hatch's roof about 0.84 tiles up, just under Degen's head). Degen sits in
+  a car's drawn numbers at `IN_CAR` (carinside.ts), and `inWorld()` gives a
+  seat and door in the world's.
 - **The vehicle upgrade** (the owner's call: more detail and more function
   for every vehicle) is planned in `docs/vehicle-plan.md`: interiors and
   sharper bodywork, doors and suspension that move, getting in and out,
@@ -2978,19 +2989,20 @@ it and has been retired completely. Build only on what's here.
   rows. Phase 3 (contact) is built: `contact.ts` (DOM-free, tested in
   `tests/contact.test.ts`) is a layer on the animator's pose from what's
   near him (`ContactInput`: the collision grid's boxes within
-  `CONTACT.reach`, the crowd's people, where he can't step, a move stopped
-  this frame and how fast), laid on by `applyContact()` after
-  `animator.update()` and before `applyTo()` in walk.ts (not with a gun in
-  his hands): brushing a wall or a person the shoulder gives and the step
-  hitches (`give`, `hitch`: 30% off his top speed for a moment; the crowd's
-  person steps aside and back, `bump` / `BUMP` in life.ts); stopped at a
+  `CONTACT.reach`, the crowd's people, where he can't step), laid on by
+  `applyContact()` after `animator.update()` and before `applyTo()` in
+  walk.ts (not with a gun in his hands). **Looks only** (the owner's call,
+  2026-11: bumping into things mustn't get in the way of play): it never
+  slows, stops or throws him, so the step's hitch and the stagger into a
+  wall at a sprint were taken out, and a wall, a car or anything solid just
+  stops him and he slides along it. Brushing a wall or a person the
+  shoulder gives (`give`; the crowd's person steps aside and back, `bump` /
+  `BUMP` in life.ts); stopped at a
   wall a hand goes onto it at shoulder height, walking slowly along one it
   trails along it at hip height (`reachArmBones()`, the arm's two-bone IK;
   a hand on stays put until it's let go; the test holds it within 1.5 cm);
   standing a while at an edge nothing solid explains (a quay, a railing)
-  he leans on the rail with both hands; into a wall at a sprint he
-  staggers (`stagger`: the chest back, a hand up, carried back on the
-  springs, a small camera shake); a gap narrower than `squeeze` turns the
+  he leans on the rail with both hands; a gap narrower than `squeeze` turns the
   shoulders. Phones (`createContact({ hands: false })`) leave out the
   hands and the lean. The lab's Contact program and floor show it all.
   Phase 4 (the game's moments) step 1 is built: `moments.ts` (DOM-free,
@@ -3195,8 +3207,10 @@ it and has been retired completely. Build only on what's here.
     chunk (`import('./animator')`).
   - **Moving** is `movesim.ts`: velocity and facing on critically damped
     springs (`MOVE` half-lives), `ahead()` the trajectory; `GAITS` walk
-    0.78, run 2.8 (the default), sprint 4.2 tiles a second (about 1.4, 5 and
-    7.5 m/s, the owner's call: quick but believable).
+    0.61, run 2.17 (the default), sprint 3.26 tiles a second (0.78, 2.8 and
+    4.2 when he was 0.85, the owner's call: quick but believable; brought
+    down in proportion with his size, so the animation is as it was:
+    docs/scale-plan.md).
   - **The animation** is `animator.ts`: motion matching (`motionmatch.ts`,
     Holden's 27 features, every clip and its mirror, a search about ten
     times a second) with inertialization (`inertia.ts`), playback warped
@@ -3338,7 +3352,23 @@ it and has been retired completely. Build only on what's here.
   sculpted after the brand art at human proportions (about 1.3 tall at
   scale 1, six and a half heads, hips `HIP_HEIGHT` 0.62), with knees,
   elbows, wrists (`Limb.wrist` { roll, bend }, zero by default so nothing
-  moves unless a pose asks; fighting turns the fist) and hand sockets.
+  moves unless a pose asks; fighting turns the fist) and hand sockets. It's
+  drawn at one size for everyone (**`FIGURE_SCALE` 0.66** in figure.ts,
+  re-exported by skeleton.ts, DOM-free so the game server reads it too; the
+  owner's call, `docs/scale-plan.md`: your Degen on foot and at the wheel,
+  other players, the crowd and the Fight Club's fighters (`FIGHTER_SCALE`),
+  about 0.86 tiles tall; kids keep `KID`). The fight's lengths and speeds
+  (fight-moves.ts `MOVES` from `AT_WAS`, the strike heights and the styles'
+  dodges; fight-sim.ts `T`, the bots' distances; combat-sim.ts `MELEE`; the
+  ring's camera; brawlsite.ts `GAP`) are written for fighters at 0.85
+  (`WAS_SCALE`) and brought down by `SIZE_K`. Everything
+  of his own size came down with him in proportion: his speeds, jump and
+  gravity, the vault's heights, his radius, the walk camera, the moments'
+  marks, the car seats, kart wheel and pedals and the bikes' seats, bars
+  and pegs; the animator's thresholds are in rig numbers, so it plays as
+  it did, and the motion rubric (human.ts) measures him at its adult,
+  0.85, his world scaled up to it. Anything new sized to him goes
+  through `FIGURE_SCALE`.
   - **The skeleton** is `skeleton.ts` (DOM-free, tested in
     `tests/skeleton.test.ts`): 34 bones (`BONES`: hips, `spine1`, `spine2`,
     `chest`, neck, head; per side collarbone, arm, forearm, hand, index
@@ -4349,7 +4379,7 @@ it and has been retired completely. Build only on what's here.
 - Nothing lifts or glows on hover (the owner's call, with the pins off by
   default); the cursor shows a building is clickable in City view, and
   while walking nothing is hovered (Degen stands on the same ground).
-- The over-the-shoulder camera starts 3.3 tiles behind him, 3.2 on an upright screen (`homeZoom()` in
+- The over-the-shoulder camera starts 2.6 tiles behind him, 2.5 on an upright screen (`homeZoom()` in
   walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
 - Esc frees the mouse first and only then opens the hub (its Back to City

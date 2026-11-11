@@ -22,6 +22,7 @@
  */
 import { RIVER, SEATS, WIDEN } from './layout';
 import { ROOF_PAD } from './highrise';
+import { CAR_SCALE } from './carspec';
 
 /** The middle of the river (the prop plane flies along it) */
 const RIVER_MID = (RIVER[0] + RIVER[1]) / 2;
@@ -450,7 +451,7 @@ export const PARKED: [string, number, number, number, string][] = (() => {
   return out;
 })();
 /** How big a parked car's footprint is (the longest model, either way round) */
-const CAR_HALF = { l: 1.35, w: 0.6 };
+const CAR_HALF = { l: 1.35 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 /** Lamps along the drive and round the loop: x, z, which way the arm reaches */
 export const AIRPORT_LAMPS: [number, number, number][] = (() => {
   const out: [number, number, number][] = [];
