@@ -1821,6 +1821,26 @@ it and has been retired completely. Build only on what's here.
   faces from the blocks' atlas, a lit slit up each side, stepped flights and
   a handrail, landing lights, the shaft; no shadows cast, as the mall's hall,
   so the day reaches the stairwell). Keep it up to date.
+  - **Carried west** (the owner's call, the build-out's second section:
+    still Endswood, an extension, no new name or pin) is planned in
+    `docs/ends-west-plan.md` in five phases, each with the owner's sign-off;
+    keep it up to date. Phase 1 (the land and the streets) is built:
+    `endswest.ts` (DOM-free, the boot's, tested in `tests/endswest.test.ts`):
+    the estate's land grows by `WEST_RECT` (endswood.ts; `inEndswood()` is
+    the old land, the new and the band between, so lampmix.ts, lampposts.ts,
+    ambience.ts and the trees read it as one), the Close carried on west
+    from the old estate to `CLOSE_WEST`, its bollards moved there
+    (`CLOSE_BOLLARDS`), a zebra with beacons where the tunnel's footpath
+    crosses it (`ZEBRA`), the pavements between (`LINK_BLOCKS`), two blocks
+    either side of it (`WEST_BLOCKS`, ref `endswood`) laid as those estates
+    were (the owner's pick): service lanes in from the Close (`LANES`) to
+    parking courts behind the rows (`COURTS`), the rows' footprints kept
+    for Phase 2 (`ROWS`, each with the way it faces), back gardens
+    (`GARDENS`), front paths either side of a green (`PATHS`, `GREENS`), a
+    cross path down each block's east side (`CROSS_PATHS`), the east ends
+    kept for Phase 3 (`RESERVE`), sodium lamps (`WEST_LAMPS`, at the boot);
+    its land in `KEEPS` and ground.ts; drawn by `endswest3d.ts`
+    (`LAZY_DISTRICTS` id `endswest`). Still a dead end: no traffic down it.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make

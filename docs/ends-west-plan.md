@@ -54,10 +54,35 @@ brutalist blocks:
 
 ## The phases (each with the owner's sign-off)
 
-1. **The land and the streets:** the way in, the estate's roads and parking
-   courts, its blocks in the street plan (traffic, taxis, the world map),
-   footpaths, sodium lamps; the outskirts' trees and the rolls kept off
-   (`KEEPS`).
+1. **The land and the streets** (built, waiting on the owner's sign-off):
+   the way in, the estate's roads and parking courts, its blocks in the
+   street plan (the world map, walking), footpaths, sodium lamps; the
+   outskirts' trees and the rolls kept off (`KEEPS`). What's built:
+   - `endswest.ts` (DOM-free, the boot's, tested in
+     `tests/endswest.test.ts`): Endswood's land grows by `WEST_RECT`
+     (x -204 to -128, z 330 to 466), read as one with the old land by
+     `inEndswood()`, so its lamps are sodium, its posts the estate's and its
+     sound Endswood's.
+   - The Close carried west from the old estate's bollards (x -107) to
+     `CLOSE_WEST` (x -200.8), the bollards moved to its far end; a zebra
+     with flashing beacons where the tunnel's footpath to Lot 9 crosses it
+     (`ZEBRA`), and short pavements between the old estate and the
+     extension (`LINK_BLOCKS`). It's still a dead end, so no traffic drives
+     it; you walk or drive in.
+   - Two blocks either side of it (`WEST_BLOCKS`): on each a service lane
+     in from the Close at its west end (`LANES`) to parking courts behind
+     the rows (`COURTS`, the bays marked), six rows' footprints kept for
+     Phase 2 (`ROWS`, facing each other in pairs), their back gardens
+     (`GARDENS`), front paths either side of a green between each pair
+     (`PATHS`, `GREENS`), a cross path down each block's east side to the
+     Close (`CROSS_PATHS`), and the east ends kept for Phase 3 (`RESERVE`:
+     the parade, the playground, the garage block).
+   - Sodium lamps along the Close, in each court and over each green
+     (`WEST_LAMPS`); its land in `KEEPS` (the trees and the rolls keep off)
+     and worn ground round it (ground.ts).
+   - Drawn by `endswest3d.ts` (`LAZY_DISTRICTS` id `endswest`), all sites:
+     the Close's worn asphalt and line, the zebra and beacons, the
+     bollards, the lanes, courts, paths, greens and gardens.
 2. **The terraces:** the rows of town houses through the building kits
    (`recipes.ts` terraces), in Endswood's brick and concrete, the porches,
    the back gardens and their fences.

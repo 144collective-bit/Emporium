@@ -50,7 +50,18 @@ export const NORTH_Z = 335;
 export const SOUTH_Z = 428;
 /** The estate's land: the highway's south edge to the common, Lot 9's old west fence to the east avenue's west kerb */
 export const ENDSWOOD_RECT: Rect = [-130, HW_EDGE + 2, EAST.c - EAST.half, SOUTH_Z + 2];
-export const inEndswood = (x: number, z: number, m = 0) => x > ENDSWOOD_RECT[0] - m && x < ENDSWOOD_RECT[2] + m && z > ENDSWOOD_RECT[1] - m && z < ENDSWOOD_RECT[3] + m;
+/**
+ * The estate carried west (docs/ends-west-plan.md, the owner's call: still Endswood, an extension): its land west of
+ * Lot 9's tunnel's footpath, outside the highway's south-west bend, to the near half's west edge; what's on it is
+ * endswest.ts's. Reaching east to the old land, so the Close's run between them is the estate's too
+ */
+export const WEST_RECT: Rect = [-204, HW_EDGE + 6, -128, 466];
+const inR = (r: Rect, x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+/** The band the two share, across both (inside them both together): so a margin taken further in (lampmix.ts's depth)
+ * reads the join between them as the estate's middle, not an edge */
+const JOIN: Rect = [WEST_RECT[0], Math.max(ENDSWOOD_RECT[1], WEST_RECT[1]), ENDSWOOD_RECT[2], Math.min(ENDSWOOD_RECT[3], WEST_RECT[3])];
+/** On the estate's land, the old and the extension's (`m` more round it; negative, further in) */
+export const inEndswood = (x: number, z: number, m = 0) => inR(ENDSWOOD_RECT, x, z, m) || inR(WEST_RECT, x, z, m) || inR(JOIN, x, z, m);
 
 /* ---------- The streets ---------- */
 
@@ -63,11 +74,17 @@ export const CIRCUS = { x: -56, z: ROAD_Z, r: 11, half: 2 };
 export const ISLAND_R = CIRCUS.r - CIRCUS.half;
 /** How far from its middle the blocks round it keep (its outer kerb and the sidewalk), a hair more for the arcs' chords */
 export const CIRCUS_OUT = CIRCUS.r + CIRCUS.half + WALK_W + 0.1;
-/** The Close's end (the blocks' west edge's sidewalk): bollards across it */
+/** Where the Close's old stretch ends (the blocks' west edge's sidewalk): the old estate's drawing of it stops here,
+ * and it runs on west from here into the extension (endswest.ts) */
 export const CLOSE_END = WEST_X - WALK_W;
-/** The Close's bollards across its end (x, z): a walker gets between them, no car does */
+/** The extension's blocks' west edge, and the Close's far end (their west sidewalks' outer edge): bollards across it,
+ * the land past it kept for later (docs/ends-west-plan.md: the near half now) */
+export const WEST_X0 = -200;
+export const CLOSE_WEST = WEST_X0 - WALK_W;
+/** The Close's bollards across its far end (x, z): a walker gets between them, no car does (the owner's pick: moved
+ * from the old end to the far one when the Close was carried west) */
 export const BOLLARD = { r: 0.14, h: 0.9 };
-export const CLOSE_BOLLARDS: Pt[] = [-1.2, -0.4, 0.4, 1.2].map((o): Pt => [CLOSE_END + 0.35, ROAD_Z + o * ROAD_HALF]);
+export const CLOSE_BOLLARDS: Pt[] = [-1.2, -0.4, 0.4, 1.2].map((o): Pt => [CLOSE_WEST + 0.35, ROAD_Z + o * ROAD_HALF]);
 
 export interface EndsStreet {
   id: string;
@@ -96,12 +113,13 @@ export const ENDS_STREETS: EndsStreet[] = [
     half: ROAD_HALF,
   },
   { id: 'ends-circus', pts: circusPts(), half: CIRCUS.half, loop: true, oneway: 1 },
-  // The Close: west off the Circus to its bollards
+  // The Close: west off the Circus, over the tunnel's footpath and on into the extension to its bollards
   {
     id: 'ends-close',
     pts: [
       [CIRCUS.x - CIRCUS.r, ROAD_Z],
       [CLOSE_END, ROAD_Z],
+      [CLOSE_WEST, ROAD_Z],
     ],
     half: ROAD_HALF,
   },
