@@ -89,7 +89,30 @@ brutalist blocks:
    - a mix of two and three storeys, varied along each row;
    - roofs a mix, flat behind a parapet and shallow pitched;
    - as worn as Endswood: a few boarded windows, satellite dishes, patched
-     porches.
+     porches;
+   - (asked before starting) the front doors in mixed colours, as after
+     right-to-buy.
+
+   Built, waiting on the owner's sign-off. Its own module rather than the
+   kits' terrace (that kit is two storeys and pitched only):
+   - `endsterraces.ts` (DOM-free, the chunk's, tested in
+     `tests/endsterraces.test.ts`): each row broken into two or three
+     terraces (`TERRACES`, `PLANS`) by passages through to the gardens and
+     the courts (`GINNELS`, `GINNEL` wide), every row mixing two- and
+     three-storey builds and flat and pitched roofs, in red, buff or dark
+     brick; 48 houses (`HOUSES`) mirrored in pairs so their doors sit side
+     by side on the front path, each door its own colour (`DOOR_COLOURS`,
+     never a neighbour's), a concrete canopy (flat-roofed terraces) or a
+     brick porch (pitched), a glazed porch someone added on about one in
+     five; worn: a boarded window, dishes, faded doors, stained canopies;
+     wheelie bins by each front, the back gardens in close-board fences
+     (`fencesOf()`) with a gate each (`gateOf()`), a shed in some;
+     `TERRACE_SOLIDS` joined through `addSolids()` when the chunk loads.
+   - Drawn by `endsterraces3d.ts` (a site a terrace and a passage): the
+     walls from the city's wall atlas (windows lit at night), flat roofs
+     inside a parapet with coping, vents and aerials, pitched roofs in
+     concrete tiles with brick gables, gutters, downpipes and a chimney a
+     pair; near only the fronts, back doors, fences, gates and sheds.
 3. **The estate round them:** the garage block, the parade and its corner
    shop, the playground, the green, bin stores, CCTV, the estate's board.
 4. **Life, night and sound:** people on the paths and at their doors, kids

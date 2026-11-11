@@ -1841,6 +1841,17 @@ it and has been retired completely. Build only on what's here.
     kept for Phase 3 (`RESERVE`), sodium lamps (`WEST_LAMPS`, at the boot);
     its land in `KEEPS` and ground.ts; drawn by `endswest3d.ts`
     (`LAZY_DISTRICTS` id `endswest`). Still a dead end: no traffic down it.
+    Phase 2 (the terraces) is built: `endsterraces.ts` (DOM-free, the
+    chunk's, tested in `tests/endsterraces.test.ts`): each row two or three
+    terraces (`TERRACES`) with passages through to the gardens and courts
+    (`GINNELS`), every row mixing two and three storeys and flat and pitched
+    roofs (the owner's picks), 48 houses (`HOUSES`) mirrored in pairs, every
+    door its own colour (`DOOR_COLOURS`, the owner's pick), canopies, brick
+    or glazed porches, worn as Endswood (boards, dishes, faded doors), bins,
+    the back gardens' fences and gates (`fencesOf()`, `gateOf()`), sheds;
+    `TERRACE_SOLIDS` joined through `addSolids()` when the chunk loads;
+    drawn by `endsterraces3d.ts` (a site a terrace, walls from infill.ts's
+    wall atlas).
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make

@@ -6,8 +6,8 @@
  *   asphalt a hair over the tunnel's footpath (which runs on under it), the dashed centre line, patches near only; a
  *   zebra where the footpath crosses, with a flashing beacon either side; the Close's bollards across its far end.
  * - **On the blocks:** the service lanes and parking courts in Endswood's tired asphalt, the bays marked; concrete
- *   flags along the rows' fronts and down the blocks' east sides; the greens and the back gardens in grass. The rows'
- *   footprints and the east ends wait for Phases 2 and 3 on the blocks' own concrete.
+ *   flags along the rows' fronts and down the blocks' east sides; the greens and the back gardens in grass. The
+ *   terraces on the rows' footprints are endsterraces3d.ts's (Phase 2); the east ends wait for Phase 3.
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
@@ -17,6 +17,9 @@ import { along } from './roads3d';
 import { COVER, KERB } from './palette';
 import { BOLLARD, CLOSE_BOLLARDS, CLOSE_END, ROAD_HALF, ROAD_Z, SLAB_Y, type Pt, type Rect } from './endswood';
 import { CLOSE_WEST, COURTS, CROSS_PATHS, GARDENS, GREENS, LANES, PATHS, ZEBRA } from './endswest';
+import { registerTerraces } from './endsterraces3d';
+import { TERRACE_SOLIDS } from './endsterraces';
+import { addSolids } from './solids';
 
 export const SELF = import.meta.url;
 
@@ -132,7 +135,10 @@ function registerGrounds() {
     );
 }
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerClose(low);
   registerGrounds();
+  // Phase 2: the terraces, their gardens and the passages through the rows; what's solid joins the grids on the main thread
+  registerTerraces(low);
+  if (scene) addSolids(TERRACE_SOLIDS);
 }
