@@ -38,6 +38,7 @@ export const BLEND_VIEWS: ReviewView[] = [
   { id: 'countryside', name: 'The open land outside the highway, looking in', pos: [-330, 46, -330], target: [-180, 0, -180] },
   // The districts that had no view (the polish plan's Phase 10)
   { id: 'uptown-north', name: 'Uptown North, from the park', pos: [-62, 20, -20], target: [-25, 10, -100] },
+  { id: 'civic', name: 'The civic square and City Hall', pos: [-140, 7, 4], target: [-140, 6, -40] },
   { id: 'mall', name: 'Starlight Mall and Palm Court', pos: [30, 26, -40], target: [60, 2, -120] },
   { id: 'harbour', name: 'Harbour Bridge, from the south bank', pos: [40, 12, 160], target: [64.5, 4, 100] },
   { id: 'sunridge-loop', name: 'Sunridge, over the loop', pos: [120, 28, 10], target: [180, 0, -80] },

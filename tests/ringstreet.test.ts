@@ -126,7 +126,8 @@ test("the median is planted on west to Uptown's edge, broken at the axis's zebra
 });
 
 test("the park's edge row stands just inside its wall, clear of its walks, gates, planters, lamps and trees", () => {
-  assert.ok(PARK_EDGE_TREES.length >= 10);
+  // (none across the civic square's mouth, civic.ts: it opens onto the avenue)
+  assert.ok(PARK_EDGE_TREES.length >= 8);
   const xs: number[] = [];
   for (const [x, z] of PARK_EDGE_TREES) {
     assert.ok(z < ZS - 1.5 && z > ZS - 4, `${x}, ${z}`);

@@ -57,6 +57,7 @@ import {
   type Rect,
 } from './westlake';
 import type { Box } from './solids';
+import { inCivic, inSquare } from './civic';
 
 /** The lawns' slab (world.ts SLAB): everything here stands on it */
 const SLAB = 0.15;
@@ -109,7 +110,7 @@ const ROUND_AT: Pt[] = GARDEN_XS.map((x) => [x, GARDEN_Z]);
 const ROUND_R = 4.6;
 
 /** The main walks, paved, kerbed both sides */
-export const MAIN_WALKS = ['ring', 'loop', 'mall'];
+export const MAIN_WALKS = ['ring', 'loop', 'mall', 'civic-w', 'civic-e'];
 export const isMain = (q: ParkPath) => MAIN_WALKS.includes(q.id);
 /** The kerbs: their width (inside the walk's edge) and height over the paving */
 export const KERB = { w: 0.14, h: 0.07 };
@@ -131,6 +132,8 @@ function edgeCut(q: ParkPath, p: Pt) {
   if (Math.abs(p[0] - JETTY.x) < JETTY.half + 0.4 && p[1] > JETTY.z0 - 0.6 && p[1] < JETTY.z1) return true;
   // (and the garden's round places, which the walks open into)
   if (ROUND_AT.some(([x, z]) => Math.hypot(p[0] - x, p[1] - z) < ROUND_R + 0.1)) return true;
+  // (and the civic square, paved edge to edge: the walks that cross it or come into it open into it)
+  if (inSquare(p, 0.1)) return true;
   return nearTerrace(p, 0.4);
 }
 /** Runs along both edges of each path, `inside` in from its edge, broken where something crosses */
@@ -166,7 +169,7 @@ const inGate = (p: Pt) =>
 /** The wall's runs round the park's block, broken at the gates and where a path goes out */
 export const WALLS: Pt[][] = [BIG].flatMap((poly) => {
   const line = dense(inset(poly, WALL.in), 0.5, true);
-  return runs(line, (p) => !inGate(p) && !onPath(p, WALL.w / 2 + 0.25), true, 3);
+  return runs(line, (p) => !inGate(p) && !onPath(p, WALL.w / 2 + 0.25) && !inSquare(p, WALL.w / 2 + 0.2), true, 3);
 });
 
 /* ---------- The formal garden ---------- */
@@ -305,7 +308,7 @@ export const GARDEN_PEOPLE: { x: number; z: number; y: number; ry: number; act: 
 export const PLANTER = { h: 0.42, wall: 0.12 };
 /** Is a spot clear for a planter of radius r: on the park, off every path, the lake, the lamps, benches, trees and courts */
 function plantable(p: Pt, r: number, others: Pt[]) {
-  if (onPath(p, r + 0.25)) return false;
+  if (onPath(p, r + 0.25) || inCivic(p, r + 0.6)) return false;
   if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5)) return false;
   if (inRect(GARDEN_SITE, p, r + 0.5) || inRect(BOATHOUSE.rect, p, r + 1)) return false;
   if (PARK_LAMPS.some(([x, z]) => Math.hypot(x - p[0], z - p[1]) < r + 0.6)) return false;
@@ -323,6 +326,7 @@ export const MALL_BEDS: Rect[] = (() => {
       const x = MALL.x + side * (MALL.half + 1.45);
       const r: Rect = [x - 0.45, z - 1, x + 0.45, z + 1];
       const clear =
+        !inCivic([x, z], 1.5) &&
         PATHS.every((q) => q.id === 'mall' || distToLine(q.pts, [x, z], q.loop) > q.half + 1.6) &&
         PARK_LAMPS.every(([lx, lz]) => !inRect(r, [lx, lz], 0.4)) &&
         BENCHES.every((b) => !inRect(r, b.at, 0.6)) &&

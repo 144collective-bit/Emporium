@@ -31,6 +31,7 @@ import { TRENCH_WALKS } from './projects';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { CREST_MIX, CREST_PEOPLE, TOUR_PAINT } from './crestlife';
 import { LOT9_PEOPLE } from './lot9';
+import { CIVIC_WALKERS } from './civic';
 import { CREST_RECT } from './crestmont';
 import { SCHOOL_BUS_PAINT, SUNRIDGE_RECT, SUN_MIX } from './sunridge';
 import { STRIP_LEAD, STRIP_MIX, STRIP_PAINTS, STRIP_RECT } from './strip';
@@ -1054,7 +1055,7 @@ interface Person {
   /** How big (PERSON_SCALE unless set: kids) */
   scale?: number;
   /** An idle only sometimes there (`Idle.when`): stood out of the world while it says no, back at `home` when it does */
-  when?: () => boolean;
+  when?: (hour: number) => boolean;
   home?: { x: number; z: number };
   /** How far they've walked in all (their walk is played at its stride from it) */
   walked: number;
@@ -1238,7 +1239,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   // ...and Uptown's joggers on the esplanade and cyclists in the bike lanes (uptownlife.ts), and the kids at play
   // on The Trenches' courts and swings (play.ts, at their own size), the same way
   // (and Lot 9's kids on their bikes and running round its lanes: lot9.ts)
-  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE, ...CREST_PEOPLE, ...LOT9_PEOPLE]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
+  for (const pp of [...PARK_PEOPLE, ...UPTOWN_PEOPLE, ...PLAY_PEOPLE, ...CREST_PEOPLE, ...LOT9_PEOPLE, ...CIVIC_WALKERS]) if (!(opts.light && pp.trim)) people.push({ kind: 'park', park: pp, m: moment(), seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: rand() * 6, x: 0, z: 0, ry: 0, face: NaN, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } });
   // The traffic's riders (vehicle plan Phase 8): sat on their bikes wherever the traffic puts them (buildTraffic)
   riders.forEach((_, k) => people.push({ kind: 'ride', ride: k, seg: 0, inset: 0, u: 0, dir: 1, speed: 0, phase: 0, x: -1e5, z: -1e5, ry: 0, face: 0, walked: 0, crossed: 0, seed: rand(), notice: { hold: 0 } }));
   // The spare slots (`addPeople()`): idle, far out of the world until a district's chunk fills them
@@ -1421,7 +1422,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       const y = p.act && seated(clipOf(p.act, 'idle')) ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
       // (an idle only sometimes there, the stadium's queue on match night: out of the world the rest of the time)
       if (p.when && p.home) {
-        const here = p.when();
+        const here = p.when(hour);
         p.x = here ? p.home.x : -1e5;
         p.z = here ? p.home.z : -1e5;
       }
