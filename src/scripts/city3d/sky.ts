@@ -226,11 +226,14 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
   const fixed = newFixedMap();
   let fixedDue = false;
   const centre = { x: 0, z: 0 };
+  /** How thin the haze is drawn (1 its full thickness; the pulled-back City view thins it), eased */
+  let hazeThin = NaN;
   const sunDir: [number, number, number] = [0, 1, 0];
   /**
-   * `look`: the way the camera looks (the shadow box goes ahead of it, shadows.ts); `eye` is where it is
+   * `look`: the way the camera looks (the shadow box goes ahead of it, shadows.ts); `eye` is where it is;
+   * `ground`: the camera is down in the city (walking, driving, riding), where the haze keeps its full thickness
    */
-  function update(t: number, dt: number, focus: THREE.Vector3, eye: THREE.Vector3, look: THREE.Vector3 = UP) {
+  function update(t: number, dt: number, focus: THREE.Vector3, eye: THREE.Vector3, look: THREE.Vector3 = UP, ground = false) {
     dome.position.copy(eye);
     stars.position.copy(eye);
     // Time of day: ease towards the target hour so switching modes glides
@@ -265,8 +268,12 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
     (scene.background as THREE.Color).copy(tmpHor);
     // Thin haze by day so colours stay crisp; thicker at night and in rain
     // and thinner when pulled far back (the benchmark's view from high takes in the whole map), so the edges don't drown
-    const far = THREE.MathUtils.clamp(70 / Math.max(1, eye.distanceTo(focus)), 0.55, 1);
-    fog.density = (0.0105 - day * 0.0068 + rainAmt * 0.0055 + dusk * 0.002) * far;
+    // (only the City view pulls back: down on the ground the haze is the same wherever you are, the owner's call.
+    // It used to thin with the distance to wherever the City view last looked, on foot too. Eased, so going
+    // between the two never jumps)
+    const thin = ground ? 1 : THREE.MathUtils.clamp(70 / Math.max(1, eye.distanceTo(focus)), 0.55, 1);
+    hazeThin = Number.isNaN(hazeThin) || dt <= 0 ? thin : hazeThin + (thin - hazeThin) * Math.min(1, dt * 2.5);
+    fog.density = (0.0105 - day * 0.0068 + rainAmt * 0.0055 + dusk * 0.002) * hazeThin;
 
     // Sun by day, moon by night, both from the south-east
     const az = ang * 0.5 + 0.6;

@@ -351,7 +351,9 @@ keep it up to date when what it describes changes.
   its always-drawn and far pieces back (`toReturn()`, `regain()` in
   `tilework.ts`: its sites run again), its near pieces when it's close, as
   before; back in the City view every one returns, nearest first. `want()`
-  and `wantView()` bring back what they need at once. `?horizon=N` forces a
+  and `wantView()` bring back what they need at once. The haze keeps its full
+  thickness on the ground (`sky.update()`'s `ground`: only the City view
+  thins it), so the horizon is the same wherever you walk. `?horizon=N` forces a
   distance on any tier while walking, `?horizon=0` turns it off. Tested in
   `tests/tileplan.test.ts` and `tests/tilebatch.test.ts`.
 - `?fps` in the address (`.city-stats`, built in

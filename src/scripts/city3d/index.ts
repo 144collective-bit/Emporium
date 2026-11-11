@@ -499,10 +499,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return r;
   };
 
+  // The city's size on the page, kept from the last resize (the frame loop never asks the page for it), and whether
+  // the start menu covers the city (kept from the root's class as it changes, not read every frame)
+  let hostW = host.clientWidth;
+  let hostH = host.clientHeight;
+  let startCovers = root.classList.contains('has-start');
+  new MutationObserver(() => (startCovers = root.classList.contains('has-start'))).observe(root, { attributes: true, attributeFilter: ['class'] });
+  const startUp = () => startCovers;
   function resize() {
     const w = host.clientWidth;
     const h = host.clientHeight;
     if (!w || !h) return;
+    hostW = w;
+    hostH = h;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -1641,7 +1650,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     timer.update();
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
-    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting && !districts.pending()) bench.begin(t);
+    if (bench && !bench.active && !bench.done && !walking && !startUp() && !works.stats().waiting && !districts.pending()) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
@@ -1692,7 +1701,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
     sky.setShadows(walking && !walk.airborne);
-    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look);
+    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -1711,7 +1720,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Building as you go (growth plan Phase 3): a few milliseconds a frame, nearest what the City view looks at
     // (round Degen while walking). The start menu covers the city completely: behind it the city is drawn only
     // once a second (its shaders made ready as it fills) and the frame's time goes on building instead
-    const covered = root.classList.contains('has-start');
+    const covered = startUp();
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
@@ -1751,8 +1760,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // the hover still lights its pin when the labels are on, and sets the cursor)
 
     // Pins follow their buildings on screen; far ones shrink (only while the labels are on: off, nothing is placed)
-    const w = host.clientWidth;
-    const h = host.clientHeight;
+    const w = hostW;
+    const h = hostH;
     pinState.length = 0;
     for (const sp of pinsOn ? spots : []) {
       const el = pins.get(sp.id);

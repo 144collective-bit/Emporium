@@ -606,11 +606,27 @@ the City view keeps everything.
   moments, nearest first. Going back to the City view builds everything
   again (the owner's pick: it keeps everything), so the saving is for the
   time on the ground.
-- **Open, the owner's call: the haze while walking.** sky.ts thins the haze
-  by how far the camera is from the City view's last target (`far`, down to
-  0.55 of its thickness), which was meant for the pulled-back City view but
-  also applies on foot: walking more than about 130 from where the City view
-  last looked, the day's haze is up to 45% thinner and the horizon up to
-  about 1,050, where little is past it. Holding the haze at full thickness on
-  the ground would make it the same wherever you walk and let this step save
-  by day too; it changes how far you see on foot, so it wasn't done.
+- **The haze on the ground (the owner's call, 2026-11: full thickness).**
+  sky.ts thinned the haze by how far the camera was from the City view's
+  last target (down to 0.55 of its thickness): meant for the pulled-back City
+  view, it applied on foot too, so walking more than about 130 from where the
+  City view last looked the day's haze was up to 45% thinner and the horizon
+  up to about 1,050. `sky.update(..., ground)` now holds it at full thickness
+  while walking, driving or riding (eased between the two, never a jump; in
+  an aircraft and the City view as before), so the haze is the same wherever
+  you walk and the day's horizon is about 580 everywhere.
+
+## Quick wins after the memory steps (2026-11)
+
+- **The frame loop asks the page for nothing.** The city's size is kept
+  from the last resize and whether the start menu covers it from the root's
+  class as it changes (index.ts `hostW` / `hostH`, `startUp()`), where each
+  frame read `clientWidth` / `clientHeight` and the class list.
+- **The tests share one bake.** `scripts/test.mjs` works the baked data out
+  once a run and `scripts/test-baked.mjs` hands it to every test file as it
+  starts (baked.ts `__cityTestBaked`), but the tests of what's baked, which
+  make it themselves. The whole suite: about 215 s to 160 s here, at both
+  world sizes. `TEST_BAKED=0` turns it off.
+- **Left as it is: the crowd's capture pack.** It was on the list to load
+  later, but it's already fetched beside the boot's own work and applied
+  behind the start menu, so later would only show the crowd changing.

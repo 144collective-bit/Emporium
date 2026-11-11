@@ -21,6 +21,12 @@ keep it up to date when what it describes changes.
   wall-clock check is skipped under `CI`). `npm run test:wide` runs them all in Phase
   10's bigger world (`WORLD_EXT`): run both when anything reads the edge. The "Build site" Action runs them before the
   build: a failing test means no zip.
+- The baked data (the routes, verges, rolls...) is worked out once a run
+  and handed to every test file (`scripts/test-baked.mjs`, baked.ts
+  `__cityTestBaked`), so each doesn't make it again; the tests of what's
+  baked (`MAKE` there: baked, routes, crowdclips, commons, verges, rolls)
+  make it themselves. A new module that bakes adds its test to `MAKE`.
+  `TEST_BAKED=0 npm test` runs without it.
 - They cover the code that's free of the DOM and scene code: the street plan
   (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), your motorbikes (`mybike.ts`, `bike-sim.ts`, their place in the save and `bikeMark()`, in `tests/bike.test.ts`), the traffic's trucks, patrol cars and bikes (`fleet.ts`), downtown (`downtown.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
