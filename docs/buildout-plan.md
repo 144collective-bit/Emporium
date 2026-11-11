@@ -187,6 +187,8 @@ south. The centre (downtown, Uptown, the river) stays as it is.
   - **How it's built:** the kits' terraces (`recipes.ts`) for the rows, in
     Endswood's own concrete and brick, its sodium lamps and its life.
   - **How it joins:** to Endswood Road and the south avenue.
+  - **Its own plan** is `docs/ends-west-plan.md` (five phases and the
+    owner's questions; nothing built yet).
 
 **Where the rest might go** (to settle, section by section):
 
