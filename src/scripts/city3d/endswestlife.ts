@@ -206,6 +206,9 @@ const terraceOf = (h: House) => TERRACES.find((t) => t.houses.includes(h))!;
 const outOf = (T: Terrace) => Math.atan2(T.n[0], T.n[1]);
 const alongOf = (T: Terrace, s: number) => Math.atan2(T.t[0] * s, T.t[1] * s);
 
+/** A springer's seat: the top of its body (endsweststreet3d.ts draws it 0.32 to 0.56 up, along x) */
+export const SPRINGER_TOP = 0.56;
+
 /** Where someone stands on a canopied doorstep: in front of the step, under the canopy's edge */
 export const STEP_OUT = CANOPY.d - 0.12;
 
@@ -327,7 +330,7 @@ export const WEST_IDLE: Idle[] = [
   idle(unitAt(2)[0] + 1.35, PARADE_W.front + 0.6, W, 'chat'),
   // The playground: a parent pushing the swings, a kid on a springer, two on the benches outside the fence
   idle(SWING_SEATS[0][0], SWINGS[3] + 0.5, S, 'look'),
-  idle(SPRINGERS[0][0], SPRINGERS[0][1], 0, 'sit', SLAB_Y + 0.32, KID),
+  idle(SPRINGERS[0][0], SPRINGERS[0][1], E, 'sit', SLAB_Y + SPRINGER_TOP, KID),
   idle(BENCHES_W[0].at[0], BENCHES_W[0].at[1], Math.atan2(...BENCHES_W[0].faces), 'sit', SLAB_Y + 0.48),
   idle(BENCHES_W[1].at[0], BENCHES_W[1].at[1], Math.atan2(...BENCHES_W[1].faces), 'phone', SLAB_Y + 0.48),
   // The green: on a bench watching the game, and someone stood by it
