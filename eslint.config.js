@@ -19,6 +19,8 @@ const DOM_FREE = [
   'src/scripts/city3d/drive-sim.ts',
   'src/scripts/city3d/solids.ts',
   'src/scripts/city3d/layout.ts',
+  'src/scripts/city3d/wall.ts',
+  'src/scripts/city3d/dockslife.ts',
   'src/scripts/city3d/streetplan.ts',
   'src/scripts/city3d/routes.ts',
   'src/scripts/city3d/live.ts',

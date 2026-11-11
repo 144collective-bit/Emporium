@@ -246,7 +246,8 @@ export const PORT_SOLIDS: Box[] = [
   ...STACKS.map((k) => boxOf(k.rect, S + k.tiers.length * BOX.H)),
   boxOf(GATE.booth, 2.6),
   ...[GATE.z0 + 0.3, GATE.z1 - 0.3].map((z) => sq(GATE.x, z, 0.2, GATE.h)),
-  ...STRADDLES.map(([x, z]): Box => [x - STRADDLE.L / 2, z - STRADDLE.W / 2, x + STRADDLE.L / 2, z + STRADDLE.W / 2, STRADDLE.H]),
+  // (the parked carriers: the first works the crane, dockslife.ts, so it isn't solid where it parks)
+  ...STRADDLES.slice(1).map(([x, z]): Box => [x - STRADDLE.L / 2, z - STRADDLE.W / 2, x + STRADDLE.L / 2, z + STRADDLE.W / 2, STRADDLE.H]),
   [REACH_STACKER.x - REACH_STACKER.L / 2, REACH_STACKER.z - REACH_STACKER.W / 2, REACH_STACKER.x + REACH_STACKER.L / 2, REACH_STACKER.z + REACH_STACKER.W / 2, REACH_STACKER.H],
   boxOf(SHED.rect, SHED.ridge),
   ...WAREHOUSES.map((w) => boxOf(w.rect, w.h)),
