@@ -131,7 +131,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // The walks' kerbs and edges, the park's wall, the formal garden, the planters and the terraces (stage 3)
   registerGardens(low);
   // The civic square at its south end (civic3d.ts, docs/civic-plan.md)
-  registerCivic(scene);
+  registerCivic(scene, tick);
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
   registerFringes(['west', 'north'], low);
   // The paths: a site a stretch

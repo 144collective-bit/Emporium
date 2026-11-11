@@ -876,8 +876,8 @@ it and has been retired completely. Build only on what's here.
   classicism; the police headquarters and the courthouse are to be places;
   names plain and made up (Sector 7 City Hall, Sector 7 Police, the Sector 7
   Courthouse). Phases 1 (the land, the square and the walks), 2 (City
-  Hall) and 3 (the police headquarters and the courthouse) are built,
-  waiting on the owner's sign-off: `civic.ts` (DOM-free, tested in
+  Hall), 3 (the police headquarters and the courthouse) and 4 (life, night
+  and sound) are built, waiting on the owner's sign-off: `civic.ts` (DOM-free, tested in
   `tests/civic.test.ts`):
   - the civic square (`SQUARE`) on the axis (`AXIS`, the Mall's line and
     Uptown's), open to the avenue (the Mall's south gate went, its WESTLAKE
@@ -932,6 +932,22 @@ it and has been retired completely. Build only on what's here.
       entries, panels with Walk in (`POLICE_SPAWN`, `COURTHOUSE_SPAWN`),
       doors (`POLICE_DOOR`, `COURT_DOOR`), `PLACES`, `LIVE_PLACES`, live
       lines and world-map footprints.
+  - **Life, night and sound** (Phase 4, the owner's picks):
+    - the flagpole in the ring's dark heart (`FLAGPOLE`, `RING_C`, solid
+      `FLAG_SOLIDS`), the city's flag (the gold star on crimson) waved by the
+      park's chunk's tick near the camera;
+    - floodlights (`FLOODS`: City Hall's columns, frieze and tower, the
+      police's front, the courthouse's columns and frieze): fixtures as a
+      site and their washes one additive `lit()` mesh, a hair in front of
+      each face (`WASH_OFF`), fading up it, under the bloom's threshold; the
+      police's pools at the boot (`FLOOD_POOLS`);
+    - people: `CIVIC_IDLE` (guards always; by day, `civicDay()`, officials,
+      the queue, the pigeons' friend: `Idle.when` takes the city's hour),
+      `CIVIC_WALKERS` round `CIVIC_LOOPS` (life.ts), the pigeons (`PIGEONS`,
+      main thread, by day);
+    - sound: ambience.ts `civic` (murmur, footsteps, the flags) and
+      `hallBell` (City Hall's bell on the hour, deeper than St Aldwyn's,
+      sound.ts `toll()` with its own gain and pitch).
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each

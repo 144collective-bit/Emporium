@@ -287,3 +287,128 @@ test('their doors and walk-ins: in front of each door, facing it, on open ground
   assert.ok(fromPath('civic-w', [POLICE_SPAWN.x, POLICE_SPAWN.z]) < 0, "the police's walk-in on the west walk");
   assert.ok(inSquare([COURTHOUSE_SPAWN.x, COURTHOUSE_SPAWN.z], -0.5), "the courthouse's on the square");
 });
+
+/* ---------- Phase 4: life, night and sound ---------- */
+
+import {
+  CIVIC_IDLE,
+  CIVIC_LOOPS,
+  CIVIC_WALKERS,
+  FLAGPOLE,
+  FLAG_SOLIDS,
+  FLAG_TOP,
+  FLOODS,
+  FLOOD_POOLS,
+  GRATE,
+  HALL_GROUND,
+  PIGEON_C,
+  PIGEONS,
+  RING_C,
+  WASH_OFF,
+  civicDay,
+  loopAt,
+  loopLen,
+} from '../src/scripts/city3d/civic';
+import { ambienceAt } from '../src/scripts/city3d/ambience';
+import { moment } from '../src/scripts/city3d/parklife';
+
+/** Inside a solid (its footprint `m` more round it, below its top) */
+const inSolid = (x: number, z: number, y = 0.5, m = 0) => SOLIDS.some((b) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m && y < b[4]);
+
+test('the flagpole: in the ring\'s dark heart on the axis, solid, under the Emporium, clear of the way in', () => {
+  const [x, z] = FLAGPOLE.at;
+  assert.equal(x, AXIS);
+  assert.deepEqual(RING_C, FLAGPOLE.at);
+  // (the plinth inside the dark disc round the ring's middle, 1.4 across its radius)
+  assert.ok(FLAGPOLE.plinth.r < 1.4 - 0.2);
+  assert.ok(FLAG_TOP + 0.3 < EMPORIUM_ROOF, `the flag's top ${FLAG_TOP.toFixed(1)}`);
+  for (const b of FLAG_SOLIDS) assert.ok(SOLIDS.includes(b));
+  assert.ok(inSolid(x, z, FLAG_TOP - 0.1), 'the pole is solid to its top');
+  // (the arrival on the square and City Hall's door well clear of it)
+  assert.ok(Math.hypot(CITYHALL_SPAWN.x - x, CITYHALL_SPAWN.z - z) > 3);
+  // (the flag flies within the square, over everyone's head)
+  assert.ok(inSquare([x + FLAGPOLE.flag.w, z]) && FLAG_TOP - FLAGPOLE.flag.h - 0.3 > 3);
+});
+
+test('the floodlights: each wash a hair in front of its face (nothing flush), out of every solid; the fixtures on their ground', () => {
+  assert.ok(WASH_OFF >= 0.005);
+  // Every face lit: City Hall's eight columns, its frieze, two of its tower's tiers; the police's front; the courthouse's four columns and frieze
+  assert.equal(FLOODS.length, COLUMNS.length + 1 + 2 + 4 + COURT_COLUMNS.length + 1);
+  for (const f of FLOODS) {
+    assert.ok(f.a1 > f.a0 && f.y1 > f.y0);
+    const at = f.at + f.sign * WASH_OFF;
+    for (const a of [f.a0 + 0.02, (f.a0 + f.a1) / 2, f.a1 - 0.02])
+      for (const y of [f.y0 + 0.02, (f.y0 + f.y1) / 2, f.y1 - 0.02]) {
+        const [x, z] = f.axis === 'x' ? [at, a] : [a, at];
+        assert.ok(!inSolid(x, z, y), `a wash at ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)} is inside something`);
+        // (and it lights something: just behind it is solid)
+        const [bx, bz] = f.axis === 'x' ? [at - f.sign * 0.2, a] : [a, at - f.sign * 0.2];
+        if (f.foot) assert.ok(inSolid(bx, bz, y), `nothing behind a wash at ${bx.toFixed(2)}, ${y.toFixed(2)}, ${bz.toFixed(2)}`);
+      }
+    if (!f.foot) continue;
+    const [x, y, z] = f.foot;
+    // (on the ground it stands on: the podiums, the square, the back block's or the tower's roof)
+    const ground = civicY(x, z) ?? HALL_GROUND;
+    assert.ok(Math.abs(y - ground) < 1e-9 || y > 10, `a fixture at ${x}, ${y}, ${z} on ${ground}`);
+    assert.ok(!inSolid(x, z, y + 0.06), `a fixture at ${x}, ${z} inside something`);
+  }
+  assert.equal(FLOOD_POOLS.length, 4);
+});
+
+test("the square's people: guards at every door always, the rest by day, each on its ground and out of everything solid", () => {
+  const guards = CIVIC_IDLE.filter((p) => p.act === 'guard');
+  assert.equal(guards.length, 4);
+  assert.ok(guards.every((g) => !g.day));
+  assert.ok(CIVIC_IDLE.filter((p) => p.act === 'queue').length >= 4);
+  for (const p of CIVIC_IDLE) {
+    assert.ok(inCivic([p.x, p.z], 1.5), `someone at ${p.x}, ${p.z} off the civic quarter`);
+    if (p.act !== 'sit') {
+      assert.ok(Math.abs(p.y - (civicY(p.x, p.z) ?? HALL_GROUND)) < 1e-9, `someone at ${p.x}, ${p.z} standing at ${p.y}`);
+      assert.ok(!inSolid(p.x, p.z, p.y + 0.5, 0.25), `someone at ${p.x}, ${p.z} in something solid`);
+    }
+  }
+  // (no two on top of each other)
+  for (const [i, a] of CIVIC_IDLE.entries()) for (const b of CIVIC_IDLE.slice(i + 1)) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) > 0.6, `two people at ${a.x}, ${a.z}`);
+  // The queue faces City Hall's door; the guards face out
+  for (const q of CIVIC_IDLE.filter((p) => p.act === 'queue')) assert.ok(-Math.sin(q.ry) > 0.9 && q.x > AXIS);
+  assert.ok(civicDay(12) && civicDay(9) && !civicDay(22) && !civicDay(3));
+  // The pigeons on the square in front of their friend, clear of everything solid and the axis's walkers
+  for (let a = 0; a < 6.28; a += 0.3) {
+    const [x, z] = [PIGEON_C[0] + Math.cos(a) * PIGEONS.r, PIGEON_C[1] + Math.sin(a) * PIGEONS.r];
+    assert.ok(inSquare([x, z], -0.3) && !inSolid(x, z, 0.3, 0.1));
+  }
+});
+
+test('the people crossing the square: round their loops at a stroll, on the square, clear of everything on it', () => {
+  assert.ok(CIVIC_WALKERS.length >= 6);
+  for (const { rect, dir } of CIVIC_LOOPS) {
+    const L = loopLen(rect);
+    let last = loopAt(rect, 0, dir);
+    for (let u = 0.25; u <= L + 1e-9; u += 0.25) {
+      const p = loopAt(rect, u, dir);
+      assert.ok(Math.hypot(p.x - last.x, p.z - last.z) < 0.26, 'a loop jumps');
+      last = p;
+      assert.ok(inSquare([p.x, p.z], -0.5), `a walker off the square at ${p.x}, ${p.z}`);
+      assert.ok(!inSolid(p.x, p.z, 0.5, 0.4), `a walker in something at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`);
+      for (const [tx, tz] of SQUARE_TREES) assert.ok(Math.hypot(p.x - tx, p.z - tz) > GRATE + 0.4);
+      for (const [lx, lz] of SQUARE_LAMPS) assert.ok(Math.hypot(p.x - lx, p.z - lz) > 0.6);
+      for (const b of SQUARE_BENCHES) assert.ok(Math.hypot(p.x - b.at[0], p.z - b.at[1]) > 1.2);
+      for (const q of CIVIC_IDLE) assert.ok(Math.hypot(p.x - q.x, p.z - q.z) > 0.5, `a walker through someone at ${q.x}, ${q.z}`);
+    }
+  }
+  const m = moment();
+  for (const w of CIVIC_WALKERS) {
+    w.at(37, m);
+    assert.equal(m.clip, 'walk');
+    assert.ok(m.speed > 0.3 && m.speed < 0.8);
+  }
+});
+
+test("its sound: the square's on it and soon gone past it; City Hall's bell across the park, not across town", () => {
+  const on = ambienceAt(AXIS, -22, 0, 0);
+  assert.ok(on.civic > 0.9 && on.hallBell > 0.8, `on the square ${on.civic.toFixed(2)}, ${on.hallBell.toFixed(2)}`);
+  const off = ambienceAt(150, 150, 0, 0);
+  assert.ok(off.civic === 0 && off.hallBell === 0);
+  // (and from high over it, less of the square)
+  assert.ok(ambienceAt(AXIS, -22, 60, 0).civic < 0.05);
+});

@@ -112,6 +112,11 @@ export function createSound(given?: AudioContext) {
   let studioStep = 0;
   /** The hour the bell last tolled (the visitor's clock), so it tolls once */
   let tolled = -1;
+  /** The civic square (docs/civic-plan.md Phase 4): its footsteps and murmur, the flags fluttering (each made the first
+   * time it's heard), and City Hall's bell */
+  let civicMurmur: GainNode | null = null;
+  let civicFlags: GainNode | null = null;
+  let hallBellGain: GainNode;
   const BOOM_BPM = 88;
   const CLUB_BPM = 124;
   const STUDIO_BPM = 140;
@@ -301,6 +306,9 @@ export function createSound(given?: AudioContext) {
     bellGain = ctx.createGain();
     bellGain.gain.value = 0;
     bellGain.connect(master);
+    hallBellGain = ctx.createGain();
+    hallBellGain.gain.value = 0;
+    hallBellGain.connect(master);
     nextPigeon = ctx.currentTime + 3 + Math.random() * 6;
     nextMoped = ctx.currentTime + 15 + Math.random() * 25;
     nextTwoTone = ctx.currentTime + 25 + Math.random() * 40;
@@ -398,8 +406,9 @@ export function createSound(given?: AudioContext) {
       o.stop(at + 0.3);
     });
   }
-  /** St Aldwyn's bell: `n` strikes, each a deep hum and its partials ringing a long time */
-  function toll(t: number, n: number) {
+  /** A bell: `n` strikes, each a deep hum and its partials ringing a long time (St Aldwyn's at G, City Hall's lower,
+   * slower, through its own gain) */
+  function toll(t: number, n: number, into = bellGain, base = 196, gap = 2.6) {
     const PARTIALS: [number, number, number][] = [
       [0.5, 0.5, 5],
       [1, 1, 3.6],
@@ -409,16 +418,16 @@ export function createSound(given?: AudioContext) {
       [2.74, 0.18, 1],
     ];
     for (let i = 0; i < n; i++) {
-      const at = t + i * 2.6;
+      const at = t + i * gap;
       for (const [mul, level, dec] of PARTIALS) {
         const o = ctx!.createOscillator();
         o.type = 'sine';
-        o.frequency.value = 196 * mul;
+        o.frequency.value = base * mul;
         const g = ctx!.createGain();
         g.gain.setValueAtTime(0.0001, at);
         g.gain.exponentialRampToValueAtTime(0.05 * level, at + 0.01);
         g.gain.exponentialRampToValueAtTime(0.0001, at + dec);
-        o.connect(g).connect(bellGain);
+        o.connect(g).connect(into);
         o.start(at);
         o.stop(at + dec + 0.05);
       }
@@ -1488,6 +1497,17 @@ export function createSound(given?: AudioContext) {
       if (now.getMinutes() === 0 && now.getHours() !== tolled) {
         tolled = now.getHours();
         if (a.bell > 0.05) toll(t, now.getHours() % 12 || 12);
+        // (City Hall's from its tower, a fourth under St Aldwyn's, its strikes slower: a second after it)
+        if (a.hallBell > 0.05) toll(t + 1, now.getHours() % 12 || 12, hallBellGain, 147, 3.2);
+      }
+      hallBellGain.gain.setTargetAtTime(a.hallBell, t, 0.5);
+      // The civic square: footsteps and a murmur by day (a crowd's voices, softer than the Strip's), the flags fluttering
+      // in the wind (high, quick), more of it in the rain's gusts
+      if (a.civic > 0.01 || civicMurmur) {
+        civicMurmur ??= layer('bandpass', 560, 1, 0.45, 0.28);
+        civicFlags ??= layer('highpass', 1500, 0.7, 0.85, 7.5);
+        civicMurmur.gain.setTargetAtTime(a.civic * (1 - night * 0.8) * 0.045, t, 1.2);
+        civicFlags.gain.setTargetAtTime(a.civic * (0.012 + 0.02 * rain), t, 1);
       }
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium

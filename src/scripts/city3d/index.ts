@@ -20,7 +20,7 @@ import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES } from './westlake';
-import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER } from './civic';
+import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER, CIVIC_IDLE, FLOOD_POOLS, civicDay } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
@@ -384,6 +384,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The civic square's (civic.ts, docs/civic-plan.md)
   for (const [x, z] of SQUARE_TREES) addTree(x, z, 1, false);
   for (const [x, z, ry] of SQUARE_LAMPS) addLamp(x, z, ry);
+  // ...its people (Phase 4): a guard at each door always, by day officials on City Hall's steps, the queue at its door,
+  // people on the square and the pigeons' friend on a bench (phones: half but the guards); the floodlights' pools
+  CIVIC_IDLE.forEach((p, i) => (tier !== 'low' || p.act === 'guard' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.y, ry: p.ry, act: p.act, when: p.day ? civicDay : undefined }));
+  for (const [x, z, size] of FLOOD_POOLS) addPool(x, z, size);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z, ry, y] of SUN_LAMPS) addLamp(x, z, ry, y);

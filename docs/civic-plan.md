@@ -229,14 +229,57 @@ Park's chunk.
     weekdays;
   - their footprints on the world map.
 
-### Phase 4: life, night and sound
+### Phase 4: life, night and sound (built)
 
-- **People:** officials on the steps, a queue at City Hall's door, people
-  crossing the square, guards at the doors.
-- **Night:** the buildings floodlit, the square's lamps lit.
-- **Sound:** the square's own (footsteps, a fountain or the flags in the wind,
-  a bell on the hour).
-- **Nothing threatening**, as everywhere in the city.
+The owner's answers (2026-11-11: "Go", the suggested picks):
+
+| Question | Pick |
+| --- | --- |
+| 1. Night | A) Floodlights at the foot of all three facades |
+| 2. People | A) A daytime crowd: officials on City Hall's steps, a queue at its door, people crossing the square, a guard at each door, someone feeding the pigeons |
+| 3. The square's middle | A) A tall flagpole with the city's flag (the star) in the ring |
+| 4. Sound | A) Footsteps and a murmur on the square, the flags in the wind, City Hall's bell on the hour |
+
+What's built (`civic.ts`, drawn by `civic3d.ts`):
+
+- **The flagpole** (`FLAGPOLE`, `FLAG_TOP`) in the ring's dark heart
+  (`RING_C`, moved into civic.ts): an octagonal stone plinth, a white pole,
+  a gold ball, under the Emporium; its plinth and pole are solid
+  (`FLAG_SOLIDS` in `SOLIDS`). The flag (the gold star on crimson, as City
+  Hall's banners, made up) is on the main thread, its cloth waved by
+  Westlake Park's chunk's tick near the camera (more in the rain's gusts,
+  still under reduced motion).
+- **The floodlights** (`FLOODS`): a fixture at the foot of each face (a site,
+  `civic floods`) and its wash of warm light up the face, a hair in front of
+  it (`WASH_OFF`): City Hall's eight columns, its frieze and the front of its
+  tower's two lower tiers; the police's front in four bays either side of
+  the entrance; the courthouse's four columns and its frieze. The washes are
+  one additive mesh on the main thread (`lit()`: dark by day), brightest at
+  each face's foot and fading up it, under the bloom's threshold; the
+  police's fixtures throw a pool on the ground too (`FLOOD_POOLS`, at the
+  boot).
+- **People** (the crowd's, placed at the boot):
+  - `CIVIC_IDLE`: a guard at each door (two at City Hall's), always; by day
+    (`civicDay()`, the city's hour, eight to half past six; `Idle.when` is
+    given the hour now) officials in pairs on the steps, one on their phone
+    under the colonnade, a queue of four at the door, two looking up at the
+    flag, a pair chatting, someone on their phone and the pigeons' friend on
+    a bench. Phones keep the guards and half the rest.
+  - `CIVIC_WALKERS`: six people crossing the square at a stroll, round two
+    loops (`CIVIC_LOOPS`, `loopAt()`): up and down either side of the axis
+    between the avenue and the steps, and across between the police's walk
+    and the courthouse's steps either side of the flag (the park's kind of
+    crowd person, life.ts; every other one left out on phones).
+  - The pigeons (`PIGEONS`, `PIGEON_C`): seven pecking round in front of
+    their friend's bench by day, an instanced mesh on the main thread near
+    the camera.
+- **Sound** (ambience.ts, sound.ts): `civic`, on the square and fading over
+  22 past it (a murmur and footsteps by day, the flags fluttering, more in
+  the rain), and `hallBell`, City Hall's bell in its tower (`HALL_BELL`) on
+  the hour by the visitor's clock, a fourth under St Aldwyn's and slower,
+  heard across the park and Uptown (`toll()` takes the bell's gain and
+  pitch now).
+- **Nothing threatening:** the guards stand at their doors, that's all.
 
 ### Phase 5: polish
 

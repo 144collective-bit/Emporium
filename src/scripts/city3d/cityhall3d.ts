@@ -95,7 +95,7 @@ export function carvedMat(key: string, word: string, ink = '#6f675a', ground = '
 const FRIEZE_MAT = carvedMat('cityhall-frieze', 'SECTOR 7  ·  CITY HALL');
 
 /** A seven-pointed star's outline on a canvas */
-function starPath(c: CanvasRenderingContext2D, x: number, y: number, r: number, inner: number) {
+export function starPath(c: CanvasRenderingContext2D, x: number, y: number, r: number, inner: number) {
   c.beginPath();
   for (let k = 0; k < STAR.points * 2; k++) {
     const a = -Math.PI / 2 + (k * Math.PI) / STAR.points;
