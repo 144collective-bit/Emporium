@@ -173,8 +173,8 @@ brutalist blocks:
      parade's canopy over the two late shops; on the main thread the dogs
      and their leads and the porch lights' pools (one additive mesh in the
      FX layer, dark by day), drawn only while the camera is near. The
-     playground has no lamp; two sodium lamps along the south block's cross
-     path light the kickabout green (`WEST_LAMPS`). Its sound is Endswood's
+     playground has no lamp; two sodium lamps at the kickabout green's west
+     edge, their heads out over it, light its game (`WEST_LAMPS`). Its sound is Endswood's
      (ambience.ts `ends` reads `inEndswood()`, which takes in the
      extension).
 5. **Polish:** benchmark and review views, phones, a place on the map if

@@ -20,7 +20,7 @@ import {
 } from '../src/scripts/city3d/endswestlife';
 import { GARDENS, PATHS, GREENS, WEST_BLOCKS, LINK_BLOCKS, ZEBRA, WEST_LAMPS } from '../src/scripts/city3d/endswest';
 import { HOUSES, TERRACES, TERRACE_SOLIDS, fencesOf } from '../src/scripts/city3d/endsterraces';
-import { STREET_W_SOLIDS, UNITS_W } from '../src/scripts/city3d/endsweststreet';
+import { KICKABOUT, STREET_W_SOLIDS, UNITS_W } from '../src/scripts/city3d/endsweststreet';
 import { ROAD_HALF, ROAD_Z, SLAB_Y } from '../src/scripts/city3d/endswood';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { moment } from '../src/scripts/city3d/parklife';
@@ -124,8 +124,13 @@ test("a pool under every porch light and the late shops' (the corner shop, the c
   assert.equal(PORCH_POOLS.length, HOUSES.length + LATE_UNITS.length);
   assert.ok(LATE_UNITS.every((k) => !UNITS_W[k].shut));
   for (const [x, z] of PORCH_POOLS) assert.ok([...PATHS, ...LAND].some((r) => inBox(r, x, z, 0.01)));
-  const green = WEST_LAMPS.filter(([, z]) => z > 410 && z < 450 && Math.abs(z - ROAD_Z) > 5);
+  const green = WEST_LAMPS.filter(([x, z]) => x > KICKABOUT[0] - 3 && z > KICKABOUT[1] && z < KICKABOUT[3]);
   assert.ok(green.length >= 2 && green.every(([x, z]) => sodiumShare(x, z) > 0.99));
+  // (their heads out over the green: a lamp's arm points along cos ry, -sin ry; world.ts buildLamps())
+  for (const [x, z, ry] of green) {
+    const [hx, hz] = [x + Math.cos(ry) * 0.6, z - Math.sin(ry) * 0.6];
+    assert.ok(hx > x && hx > KICKABOUT[0] - 0.8 && hz > KICKABOUT[1] && hz < KICKABOUT[3], `a green lamp's head at ${hx.toFixed(1)}, ${hz.toFixed(1)}`);
+  }
 });
 
 test("room for them all in the crowd's spare slots (index.ts TIERS reserve), with the other chunks' people", () => {

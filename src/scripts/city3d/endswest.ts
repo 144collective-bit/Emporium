@@ -147,7 +147,8 @@ export const WEST_LAMPS: [number, number, number, number][] = (() => {
   for (const x of [-128, -158, -182]) out.push([x, ROAD_Z + IN, -Math.PI / 2, SLAB_Y]);
   const mid = (ROW_X[0] + ROW_X[1]) / 2;
   for (const r of [...COURTS, ...GREENS]) out.push([mid, r[1] + 0.35, Math.PI / 2, SLAB_Y]);
-  // (and the kickabout green, Phase 4: two along the south block's cross path, over the green, its game lit at night)
-  for (const z of [418, 444]) out.push([CROSS_PATHS[1][2] - 0.15, z, Math.PI, SLAB_Y]);
+  // (and the kickabout green, Phase 4: two at its west edge by the cross path, their heads out over the green (+x:
+  // a lamp's arm points along cos ry, -sin ry), its game lit at night)
+  for (const z of [418, 444]) out.push([CROSS_PATHS[1][2] + 1.4, z, 0, SLAB_Y]);
   return out;
 })();
