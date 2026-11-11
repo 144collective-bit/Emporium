@@ -1531,7 +1531,7 @@ it and has been retired completely. Build only on what's here.
   paints, `strip` in `TIERS`); walkers round its rows with their shopping;
   `striplife.ts` (DOM-free, tested in `tests/striplife.test.ts`: valets,
   doormen, the crowds at the fountains, the volcano and the Sphere, added
-  from the chunk through `addPeople()`, the crowd's `reserve` now 320 since Endswood's life); its
+  from the chunk through `addPeople()`, the crowd's `reserve` now 360 since Endswood's west extension's life); its
   sound (ambience.ts `strip`, `casino`, `show`: the crowd's babble, slot
   chimes by the casino doors, the fountain show's music while a show is on). Phase 6 (polish and performance) is built and the plan
   is done: `?bench` views `strip` and `strip-street`; phones draw the Sphere's
@@ -1594,7 +1594,7 @@ it and has been retired completely. Build only on what's here.
   porches, at their grills, patio tables and pool loungers) and the
   residents' cars on about a driveway in three (`DRIVEWAY_CARS`, nosed up to
   the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
-  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 320, 160 on
+  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 360, 180 on
   phones, with the Neon Mile's and Lot 9's; `addPeople()` fills them when the chunk loads, or queues them
   before the crowd's built, and places them at once through `repaint()`: under reduced motion the ticks run on the
   first frame only) and life.ts's home cars are per district
@@ -1695,7 +1695,7 @@ it and has been retired completely. Build only on what's here.
     conversions, each with its fire ring and chairs, a canopy over a
     table, its car, and what a long stay gathers; `CAMP_SOLIDS` (solid
     only inside each thing, `inner()`), `CAMP_CARS`, `CAMP_PEOPLE` (the
-    crowd's spare slots: the reserve is 320, 160 on phones),
+    crowd's spare slots: the reserve is 360, 180 on phones),
     `CAMP_DOGS`. Drawn by `lot9camp3d.ts` (`registerCamp()`,
     `registerPower()`, `yardThing()`, `hookupOf()`, `xmasLights()`,
     `campGlow()`: the fires' glow one mesh; one sign atlas of fixed made-up
@@ -1790,7 +1790,7 @@ it and has been retired completely. Build only on what's here.
   kickabout on the ball court, kids on the swings (`ENDS_PEOPLE`), and
   people standing about (`ENDS_IDLE`: on the deck railings, at the parade,
   the corner shops, Bunker Sound's sofa, the church, the bus stops, the
-  well, the benches), into the crowd's spare slots (the reserve 320, 160 on
+  well, the benches), into the crowd's spare slots (the reserve 360, 180 on
   phones); drawn by `endslife3d.ts`; at night the stairwells' glazing lit
   up each core and lift tower, fluorescent tubes under every gallery (some
   tired, the odd one dead) and TVs' blue among the windows
@@ -1860,7 +1860,18 @@ it and has been retired completely. Build only on what's here.
     goals (`KICKABOUT`, `GOALS`), bin stores, the board, CCTV and benches;
     `STREET_W_SOLIDS` joined when the chunk loads; drawn by
     `endsweststreet3d.ts` (its shopfronts painted by `endsshopfront.ts`, the
-    old parade's painter, shared).
+    old parade's painter, shared). Phase 4 (life, night and sound) is built:
+    `endswestlife.ts` (DOM-free, the chunk's, tested in
+    `tests/endswestlife.test.ts`): walkers round the rows' front paths, along
+    the Close and up the cross path, dogs on leads (`WEST_DOGS`), kids in the
+    playground and a kickabout on the green, neighbours on their doorsteps,
+    a queue at the chippy, people on the benches (`WEST_PEOPLE`,
+    `WEST_IDLE`, into the crowd's spare slots), washing in some back gardens
+    and bikes and toys out front (`WASHING`, `FRONT_BITS`), a pool under
+    every porch light and the late shops' (`PORCH_POOLS`); drawn by
+    `endswestlife3d.ts` (the bits as sites, near only; the dogs and the pools
+    on the main thread); the kickabout green under two sodium lamps
+    (`WEST_LAMPS`), the playground dark; its sound Endswood's.
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make

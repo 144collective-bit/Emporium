@@ -8,7 +8,7 @@
  * - **On the blocks:** the service lanes and parking courts in Endswood's tired asphalt, the bays marked; concrete
  *   flags along the rows' fronts and down the blocks' east sides; the greens and the back gardens in grass. The
  *   terraces on the rows' footprints are endsterraces3d.ts's (Phase 2), what's on the east ends endsweststreet3d.ts's
- *   (Phase 3).
+ *   (Phase 3), its life endswestlife3d.ts's (Phase 4).
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
@@ -20,6 +20,7 @@ import { BOLLARD, CLOSE_BOLLARDS, CLOSE_END, ROAD_HALF, ROAD_Z, SLAB_Y, type Pt,
 import { CLOSE_WEST, COURTS, CROSS_PATHS, GARDENS, GREENS, LANES, PATHS, ZEBRA } from './endswest';
 import { registerTerraces } from './endsterraces3d';
 import { registerStreetWest } from './endsweststreet3d';
+import { registerWestLife } from './endswestlife3d';
 import { STREET_W_SOLIDS } from './endsweststreet';
 import { TERRACE_SOLIDS } from './endsterraces';
 import { addSolids } from './solids';
@@ -138,7 +139,7 @@ function registerGrounds() {
     );
 }
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerClose(low);
   registerGrounds();
   // Phase 2: the terraces, their gardens and the passages through the rows; what's solid joins the grids on the main thread
@@ -146,4 +147,6 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   // Phase 3: the parade, the playground, the garages, the green and the rest round the terraces
   registerStreetWest(low);
   if (scene) addSolids([...TERRACE_SOLIDS, ...STREET_W_SOLIDS]);
+  // Phase 4: the people, the dogs, the washing and the kids' things out, the porch lights at night
+  registerWestLife(low, scene, tick);
 }

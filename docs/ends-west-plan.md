@@ -140,7 +140,43 @@ brutalist blocks:
      flats from the city's wall atlas, the rest in the shared paint.
 4. **Life, night and sound:** people on the paths and at their doors, kids
    on the green, washing lines, dogs; the windows and porch lights at night;
-   its sound (Endswood's, carried over).
+   its sound (Endswood's, carried over). The owner's picks (2026-11-11): a
+   busy estate (kids on the playground and the green, neighbours at their
+   doors and on the parade, a queue at the chippy, dog walkers on the
+   paths); washing lines in some back gardens and a few bikes and toys out
+   front; at night the porch lights on, the chippy and the corner shop lit
+   late, the playground dark, the green under the sodium lamps.
+
+   Built, waiting on the owner's sign-off:
+   - `endswestlife.ts` (DOM-free, the chunk's, tested in
+     `tests/endswestlife.test.ts`): walkers round each pair of rows on their
+     front paths (`PATH_OUT`, on the path's outer half, past the porches and
+     bins), along the Close's sidewalks (`CLOSE_OFF`, over at the zebra and
+     the lanes' mouth, `LANE_MOUTH`) and up the north block's cross path, a
+     dog on the lead with some (`WEST_DOGS`); kids running round the
+     playground (`PLAY_IN`), round the roundabout (`ROUND_R`), on the swings
+     (`SWING_SEATS`) and a springer; a kickabout between the goals with a
+     keeper in each (`WEST_PEOPLE`); neighbours on their doorsteps and
+     chatting at a mirrored pair's doors side by side (`STEP_OUT`), someone
+     at the washing, a queue of three at FRYING SQUAD, others at FENNEL MART
+     and SPIN CYCLE, a parent at the swings, people on the benches, someone
+     at an open garage, someone reading the board (`WEST_IDLE`); a rotary
+     airer or a line of washing in about two gardens in five (`WASHING`,
+     `AIRER`, `LINE`), a kid's bike or scooter against the front wall by
+     some doors and toys on the green (`FRONT_BITS`); a pool under every
+     porch light and the corner shop's and the chippy's on the forecourt
+     (`PORCH_POOLS`, `LATE_UNITS`); all of it into the crowd's spare slots
+     (the reserve raised to 360, 180 on phones, so every chunk's people fit
+     at once, the test holds it).
+   - Drawn by `endswestlife3d.ts` (`registerWestLife()`): the washing,
+     bikes and toys a site a terrace, near only; warm tubes under the
+     parade's canopy over the two late shops; on the main thread the dogs
+     and their leads and the porch lights' pools (one additive mesh in the
+     FX layer, dark by day), drawn only while the camera is near. The
+     playground has no lamp; two sodium lamps along the south block's cross
+     path light the kickabout green (`WEST_LAMPS`). Its sound is Endswood's
+     (ambience.ts `ends` reads `inEndswood()`, which takes in the
+     extension).
 5. **Polish:** benchmark and review views, phones, a place on the map if
    wanted; the plan done.
 

@@ -12,7 +12,7 @@
  *   Phase 2 (`ROWS`, each with the way it faces), their back gardens (`GARDENS`), the footpaths along their fronts
  *   (`PATHS`) either side of a green (`GREENS`), a footpath down the blocks' east side from the fronts to the Close, and
  *   the blocks' east ends kept for Phase 3 (the parade, the playground, the garage block: `RESERVE`).
- * - **Sodium lamps** along the Close and in the courts and over the greens (`WEST_LAMPS`, at the boot).
+ * - **Sodium lamps** along the Close and in the courts, over the greens and the kickabout green (`WEST_LAMPS`, at the boot).
  *
  * In world numbers, x across, z north (-) to south (+); every rect is x0, z0, x1, z1.
  */
@@ -147,5 +147,7 @@ export const WEST_LAMPS: [number, number, number, number][] = (() => {
   for (const x of [-128, -158, -182]) out.push([x, ROAD_Z + IN, -Math.PI / 2, SLAB_Y]);
   const mid = (ROW_X[0] + ROW_X[1]) / 2;
   for (const r of [...COURTS, ...GREENS]) out.push([mid, r[1] + 0.35, Math.PI / 2, SLAB_Y]);
+  // (and the kickabout green, Phase 4: two along the south block's cross path, over the green, its game lit at night)
+  for (const z of [418, 444]) out.push([CROSS_PATHS[1][2] - 0.15, z, Math.PI, SLAB_Y]);
   return out;
 })();

@@ -188,8 +188,9 @@ south. The centre (downtown, Uptown, the river) stays as it is.
     Endswood's own concrete and brick, its sodium lamps and its life.
   - **How it joins:** Endswood's Close carried west (the owner's pick).
   - **Its own plan** is `docs/ends-west-plan.md` (five phases, the owner's
-    answers: still Endswood, the near half first; Phase 1, the land and
-    the streets, is built).
+    answers: still Endswood, the near half first; Phases 1 to 4 are built:
+    the land and the streets, the terraces, the estate round them, and its
+    life, night and sound).
 
 **Where the rest might go** (to settle, section by section):
 
