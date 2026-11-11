@@ -1,5 +1,18 @@
 # The Ends carried west (a plan)
 
+## The owner's answers (2026-11-11)
+
+| Question | Answer |
+| --- | --- |
+| 1. Its name | Still Endswood: it's an extension of the estate, not a new one (the owner's call) |
+| 2. How it joins | A) The Close opened and carried west as the extension's spine road, the bollards moved to its far end |
+| 3. Layout | A) Houses facing footpaths and greens, cars in courts behind |
+| 4. How much land | A) The near half now (about x -215 to -135), the rest kept for later |
+
+So it's built as Endswood's own land grown west: `ENDSWOOD_RECT` and its
+blocks reach further, with Endswood's lamps, sound and life carried over, and
+no new place or pin of its own (the estate's `endswood` spot covers it).
+
 The owner's call (the build-out plan's land plan, `docs/buildout-plan.md`,
 second round): carry Endswood Estate, "the Ends", further west in
 council-estate town houses, as worn as Endswood itself. This is the second
@@ -56,9 +69,9 @@ brutalist blocks:
 5. **Polish:** benchmark and review views, phones, a place on the map if
    wanted; the plan done.
 
-## The owner's questions
+## The owner's questions (answered above)
 
-1. **Its name** (made up):
+1. **Its name** (answered: still Endswood, an extension):
    - A) Endswood West, so it reads as part of the Ends (my pick).
    - B) The Rows.
    - C) Kestrel Fields.
