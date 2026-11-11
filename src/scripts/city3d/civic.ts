@@ -11,6 +11,7 @@
  * park's edge and the axis are worked out the same way and the test holds them equal.
  */
 import { EW_ROADS, WALK_W } from './layout';
+import type { Moment, ParkPerson } from './parklife';
 
 export type Pt = [number, number];
 /** x0, z0, x1, z1 */
@@ -272,3 +273,197 @@ export const POLICE_DOOR = { x: HQ.door.x + 0.6, z: HQ.door.z, label: 'Police' }
 export const POLICE_SPAWN = { x: WEST_WALK_X, z: HQ.door.z, yaw: Math.PI / 2 };
 export const COURT_DOOR = { x: COURT_BODY[0] - 0.6, z: (COURT[1] + COURT[3]) / 2, label: 'Courthouse' };
 export const COURTHOUSE_SPAWN = { x: COURT[0] - 1, z: (COURT[1] + COURT[3]) / 2, yaw: -Math.PI / 2 };
+
+/* ---------- Life, night and sound (Phase 4) ---------- */
+
+/** The pale ring in the square's middle: on the axis, level with the middle of the flanking lots, and its radius */
+export const RING_C: Pt = [AXIS, (Math.max(POLICE[1], COURT[1]) + Math.min(POLICE[3], COURT[3])) / 2];
+export const RING_R = 5.2;
+
+/**
+ * The flagpole in the ring's dark heart (the owner's pick): a stone plinth, a tall white pole and a gold ball, the
+ * city's flag (the seven-pointed star in gold on crimson, made up, as City Hall's banners) flying from its top;
+ * under the Emporium
+ */
+export const FLAGPOLE = { at: RING_C, plinth: { r: 1.05, h: 0.5 }, h: 10.2, r: 0.09, flag: { w: 2.6, h: 1.6 } };
+/** The pole's top over the ground (the ball on it) */
+export const FLAG_TOP = HALL_GROUND + FLAGPOLE.plinth.h + FLAGPOLE.h;
+/** What's solid: the plinth, and the pole up to its top */
+export const FLAG_SOLIDS: Box[] = (() => {
+  const [x, z] = FLAGPOLE.at;
+  const { r, h } = FLAGPOLE.plinth;
+  const p = FLAGPOLE.r;
+  return [
+    [x - r, z - r, x + r, z + r, HALL_GROUND + h],
+    [x - p, z - p, x + p, z + p, FLAG_TOP],
+  ];
+})();
+
+/**
+ * The floodlights (the owner's pick: all three facades lit from their feet at night): a low fixture at the foot of
+ * each face and its wash of light up it, a rect on the face: `axis` the way the face points ('x' or 'z'), `sign`
+ * which side, `at` the face's line (the wash a hair in front of it), `a0`-`a1` along the face, `y0`-`y1` up it
+ * (the wash fading towards its top), `foot` where its fixture stands (x, y, z; none for the friezes, lit by the
+ * columns' from below)
+ */
+export interface Flood {
+  axis: 'x' | 'z';
+  sign: 1 | -1;
+  at: number;
+  a0: number;
+  a1: number;
+  y0: number;
+  y1: number;
+  foot: [number, number, number] | null;
+}
+/** The washes a hair in front of what they light (nothing flush) */
+export const WASH_OFF = 0.012;
+export const FLOODS: Flood[] = (() => {
+  const out: Flood[] = [];
+  // City Hall: each column's face, from its base to its capital, the fixture on the podium in front of it...
+  const cw = COLUMN.w / 2;
+  for (const [x, z] of COLUMNS)
+    out.push({ axis: 'z', sign: 1, at: z + cw, a0: x - cw, a1: x + cw, y0: PODIUM_Y + 0.3, y1: PODIUM_Y + COLUMN.h - 0.35, foot: [x, PODIUM_Y, PORTICO[3] - 0.13] });
+  // ...the frieze over them (its face 0.3 back from the portico's front), and the tower's front over the back block
+  const ey = PODIUM_Y + COLUMN.h;
+  out.push({ axis: 'z', sign: 1, at: PORTICO[3] - 0.3 + 0.03, a0: PORTICO[0] + ANTA_W, a1: PORTICO[2] - ANTA_W, y0: ey, y1: ey + FRIEZE_H, foot: null });
+  const [tx, tz] = TOWER_C;
+  for (const [i, t] of TIERS.slice(0, 2).entries()) {
+    const under = i ? TIERS[i - 1].top : BACK_H;
+    out.push({ axis: 'z', sign: 1, at: tz + t.half, a0: tx - t.half, a1: tx + t.half, y0: under, y1: t.top - 0.3, foot: [tx, under, tz + t.half + 0.6] });
+  }
+  // The police: its front (east), in bays either side of the entrance, the fixtures on the ground by the wall
+  const [, hz0, hx1, hz1] = POLICE_HQ;
+  const d = HQ.door;
+  for (const [a0, a1] of [
+    [hz0 + 0.6, d.z - 5.2],
+    [d.z - 5.2, d.z - 2.1],
+    [d.z + 2.1, d.z + 5.2],
+    [d.z + 5.2, hz1 - 0.6],
+  ])
+    out.push({ axis: 'x', sign: 1, at: hx1 + 0.12, a0, a1, y0: HALL_GROUND, y1: HQ.h - 0.05, foot: [hx1 + 0.45, HALL_GROUND, (a0 + a1) / 2] });
+  // The courthouse: each column's face (west), the fixture on the portico in front of it, and the frieze
+  const kw = COURT_COLUMN.w / 2;
+  const top = COURT_PODIUM + COURT_COLUMN.h;
+  for (const [x, z] of COURT_COLUMNS)
+    out.push({ axis: 'x', sign: -1, at: x - kw, a0: z - kw, a1: z + kw, y0: COURT_PODIUM + 0.25, y1: top - 0.3, foot: [COURT_PORTICO[0] + 0.06, COURT_PODIUM, z] });
+  out.push({ axis: 'x', sign: -1, at: COURT_PORTICO[0] + 0.05 - 0.03, a0: COURT_PORTICO[1] + 0.4, a1: COURT_PORTICO[3] - 0.4, y0: top, y1: top + 1, foot: null });
+  return out;
+})();
+/** A pool of light on the ground where the police's fixtures stand (world.ts `addPool()` at the boot) */
+export const FLOOD_POOLS: [number, number, number][] = FLOODS.filter((f) => f.axis === 'x' && f.sign === 1 && f.foot).map((f) => [f.foot![0] + 0.5, f.foot![2], 2.4]);
+
+/** Whether the square's daytime people are about (the city's hour: City Hall's doors open nine to five, a little either side) */
+export const civicDay = (hour: number) => hour >= 8 && hour < 18.5;
+
+/**
+ * The square's people standing about (the owner's pick): a guard at each door, always; by day officials talking
+ * on City Hall's steps and one on their phone under the colonnade, a queue at its door, people looking up at the
+ * flag and chatting, and someone on a bench feeding the pigeons. `y` is where they stand (or the seat), `day` the
+ * ones only about by day
+ */
+export interface CivicIdle {
+  x: number;
+  z: number;
+  y: number;
+  ry: number;
+  act: 'guard' | 'chat' | 'queue' | 'phone' | 'look' | 'sit';
+  day: boolean;
+}
+/** The bench the pigeons' friend sits on (one of the square's), and where the pigeons peck: on the granite in front of it */
+export const FEEDER_BENCH = 0;
+export const PIGEONS = { n: 7, r: 1.3, out: 1.9 };
+export const CIVIC_IDLE: CivicIdle[] = (() => {
+  const out: CivicIdle[] = [];
+  const on = (x: number, z: number) => cityHallY(x, z) ?? HALL_GROUND;
+  const stand = (x: number, z: number, ry: number, act: CivicIdle['act'], day = true) => out.push({ x, z, y: on(x, z), ry, act, day });
+  // The guards: either side of City Hall's door facing the square, by the police's door facing the walk, on the courthouse's portico
+  for (const s of [-1, 1]) stand(AXIS + s * (DOOR.w / 2 + 0.35), PORTICO[1] + 0.4, 0, 'guard', false);
+  out.push({ x: HQ.door.x + 1, z: HQ.door.z + 1.6, y: HALL_GROUND, ry: Math.PI / 2, act: 'guard', day: false });
+  out.push({ x: COURT_BODY[0] - 0.7, z: (COURT[1] + COURT[3]) / 2 + 1.5, y: COURT_PODIUM, ry: -Math.PI / 2, act: 'guard', day: false });
+  // Officials in pairs on the steps, facing each other; one on their phone under the colonnade
+  for (const [x, z] of [
+    [AXIS - 6, -34.8],
+    [AXIS + 6, -33.4],
+  ]) {
+    stand(x - 0.4, z, Math.PI / 2, 'chat');
+    stand(x + 0.4, z, -Math.PI / 2, 'chat');
+  }
+  stand(AXIS + 6.1, PORTICO[1] + 1.9, 0, 'phone');
+  // The queue at the door: along the portico behind the colonnade, facing the door
+  for (let k = 0; k < 4; k++) stand(AXIS + 2.1 + k * 0.8, PORTICO[1] + 1.3, -Math.PI / 2, 'queue');
+  // On the square: two looking up at the flag (inside the ring, between the walkers' loops), a pair chatting, someone on their phone
+  const [fx, fz] = FLAGPOLE.at;
+  for (const [x, z] of [
+    [fx - 2, fz + 2.2],
+    [fx + 2.2, fz - 1.9],
+  ])
+    stand(x, z, Math.atan2(fx - x, fz - z), 'look');
+  stand(AXIS + 9.2, -14.2, Math.PI / 2, 'chat');
+  stand(AXIS + 10, -14.2, -Math.PI / 2, 'chat');
+  stand(AXIS - 8.8, -16.6, Math.PI, 'phone');
+  // The pigeons' friend, on the seat a touch forward of its middle
+  const b = SQUARE_BENCHES[FEEDER_BENCH];
+  out.push({ x: b.at[0] + Math.sin(b.ry) * 0.08, z: b.at[1] + Math.cos(b.ry) * 0.08, y: HALL_GROUND + 0.3, ry: b.ry, act: 'sit', day: true });
+  return out;
+})();
+/** Where the pigeons peck: in front of the feeder's bench, the way it faces */
+export const PIGEON_C: Pt = (() => {
+  const b = SQUARE_BENCHES[FEEDER_BENCH];
+  return [b.at[0] + Math.sin(b.ry) * PIGEONS.out, b.at[1] + Math.cos(b.ry) * PIGEONS.out];
+})();
+
+/**
+ * People crossing the square (the owner's pick), walking round two loops at a stroll: up and down either side of
+ * the axis between the avenue and City Hall's steps, and across between the police's walk and the courthouse's
+ * steps, either side of the flag. Each is a rect walked round; `n` people evenly spread round it
+ */
+export const CIVIC_LOOPS: { rect: Rect; n: number; dir: 1 | -1 }[] = [
+  { rect: [AXIS - 3.4, STEPS[3] + 0.8, AXIS + 3.4, PARK_EDGE - 1.5], n: 3, dir: 1 },
+  { rect: [SQUARE[0] + 4, RING_C[1] - 3.6, SQUARE[2] - 4, RING_C[1] + 3.6], n: 3, dir: -1 },
+];
+/** Their pace (tiles a second: the park's stroll) */
+export const CIVIC_PACE = 0.5;
+/** Where on a loop `u` along it is (wrapping), and which way they face (0 is +z), going round the way `dir` says */
+export function loopAt(rect: Rect, u: number, dir: 1 | -1): { x: number; z: number; ry: number } {
+  const [x0, z0, x1, z1] = rect;
+  const corners: Pt[] = [
+    [x0, z0],
+    [x0, z1],
+    [x1, z1],
+    [x1, z0],
+  ];
+  if (dir < 0) corners.reverse();
+  const len = 2 * (x1 - x0 + z1 - z0);
+  u = ((u % len) + len) % len;
+  for (let i = 0; i < 4; i++) {
+    const [a, b] = [corners[i], corners[(i + 1) % 4]];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (u <= l || i === 3) {
+      const k = Math.min(1, u / l);
+      return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, ry: Math.atan2(b[0] - a[0], b[1] - a[1]) };
+    }
+    u -= l;
+  }
+  return { x: x0, z: z0, ry: 0 };
+}
+/** A loop's length */
+export const loopLen = ([x0, z0, x1, z1]: Rect) => 2 * (x1 - x0 + z1 - z0);
+
+/** The people crossing the square, as the park's (life.ts moves them with the park's people; every other one left out on phones) */
+export const CIVIC_WALKERS: ParkPerson[] = CIVIC_LOOPS.flatMap(({ rect, n, dir }, li) =>
+  Array.from({ length: n }, (_, k): ParkPerson => {
+    const u0 = (loopLen(rect) * k) / n + li * 3.7;
+    return {
+      id: `civic-${li}-${k}`,
+      trim: k % 2 === 1,
+      at(t: number, out: Moment) {
+        const p = loopAt(rect, u0 + t * CIVIC_PACE, dir);
+        return Object.assign(out, { x: p.x, z: p.z, ry: p.ry, y: HALL_GROUND, clip: 'walk', speed: CIVIC_PACE });
+      },
+    };
+  })
+);
+
+/** City Hall's bell (the owner's pick: on the hour, by the visitor's clock as St Aldwyn's): in its tower's lantern */
+export const HALL_BELL: Pt = TOWER_C;
