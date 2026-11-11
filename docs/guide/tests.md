@@ -24,7 +24,8 @@ keep it up to date when what it describes changes.
 - The baked data (the routes, verges, rolls...) is worked out once a run
   and handed to every test file (`scripts/test-baked.mjs`, baked.ts
   `__cityTestBaked`), so each doesn't make it again; the tests of what's
-  baked (`MAKE` there: baked, routes, crowdclips, commons, verges, rolls)
+  baked (`MAKE` there: baked, routes, crowdclips, commons, verges, rolls,
+  metro, viaduct)
   make it themselves. A new module that bakes adds its test to `MAKE`.
   `TEST_BAKED=0 npm test` runs without it.
 - They cover the code that's free of the DOM and scene code: the street plan

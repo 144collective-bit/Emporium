@@ -630,3 +630,43 @@ the City view keeps everything.
 - **Left as it is: the crowd's capture pack.** It was on the list to load
   later, but it's already fetched beside the boot's own work and applied
   behind the start menu, so later would only show the crowd changing.
+
+## The start-up profiled: data the phone worked out before the boot (2026-11)
+
+The owner picked "shrink the start-up by moving district data out of it".
+Measured first, and that isn't where the time is:
+
+- **The boot's code by kind** (esbuild's metafile over index.ts, minified,
+  without three): 1,326 KB in 240 modules. Drawing 335 KB (The Trenches'
+  alone 103 KB: it predates districts loaded as you approach), the lazy
+  districts' data 243 KB in 57 files, walking and vehicles 157 KB, the
+  character 98 KB, the economy 71 KB.
+- **The district data can't leave**: collisions, the street plan and the
+  traffic read it at the boot, by design. The Trenches' drawing could (a
+  district loaded as you approach), but timed on a phone slowed four times
+  it is about 0.5 s of a 10 s boot and about 30 KB of 699 over the wire, for
+  a refactor of twelve files and the district filling in later. Not done.
+- **A CPU profile of the start** (an unminified build, CDP's profiler)
+  found what was: before `bootCity()` even ran, `metro.ts` spent 0.6 s and
+  `viadress.ts` 0.3 s (unthrottled) working out the el's pillars (every
+  quarter tile of every track against every street), its raised stretches
+  and what stands under the highway's deck: the same for everyone, on every
+  visit. The boot's own readout starts after the modules load, so it never
+  showed.
+- **Built.** Those three are baked when the site is built (`baked()` keys
+  `metro-pillars`, `metro-plateaus`, `under-deck`; scripts/bake.mjs
+  `MODULES`; tests/baked.test.ts holds each to exactly what `make()` makes;
+  the baked file 44 to 47 KB gzipped, the boot's code 1 KB smaller).
+- **Measured** (headless phone, CPU slowed four times, the old and new
+  builds taking turns, six runs each): opening the page to the first frame
+  a median 20.4 s before, 17.0 s after.
+- **Also found, not a fault in the live site:** without the textures made
+  at build time, lod.ts `average()` reads each canvas texture back to find
+  its colour for the far forms: 6 s of the main thread after the first
+  frame in the headless renderer. The built textures carry their average,
+  so a build whose texture bake ran doesn't pay it; a build whose bake
+  failed would.
+- **Still in the start, for later:** about 4 s (slowed four times) between
+  opening the page and `bootCity()` (three.js and the city's code parsed,
+  the modules' own data), and in the boot the ground (`buildGround()`), the
+  landmarks and the characters, each a few hundred ms unthrottled.

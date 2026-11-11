@@ -50,7 +50,10 @@ keep it up to date when what it describes changes.
     (the tests, the game server). Today:
     the traffic's routes (`routes.ts`, packed with `packRoutes()`: each route's points as millimetre steps in one string), the
     crowd's walk, jog and march cycles (`crowdclips.ts`, rounded to a ten-thousandth as they're recorded, `rounded()`) and The Trenches'
-    amenities (`commons.ts`). A new module that bakes goes in `MODULES` in
+    amenities (`commons.ts`), the blocks' verges and the rolls, and since the
+    start-up profile (`docs/performance-plan.md`) the metro's pillars and
+    raised stretches (`metro.ts` `PILLARS`, `PLATEAUS`) and what's under the
+    highway's deck (`viadress.ts` `UNDER`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.

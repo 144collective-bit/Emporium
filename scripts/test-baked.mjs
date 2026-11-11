@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 
 /** The tests that must work the data out: the bake's own, and each baking module's */
-const MAKE = ['baked', 'routes', 'crowdclips', 'commons', 'verges', 'rolls'];
+const MAKE = ['baked', 'routes', 'crowdclips', 'commons', 'verges', 'rolls', 'metro', 'viaduct'];
 const file = process.argv.find((a) => a.endsWith('.test.mjs')) ?? '';
 const name = file.split(/[\\/]/).pop()?.replace('.test.mjs', '') ?? '';
 if (process.env.TEST_BAKED_FILE && file && !MAKE.includes(name)) globalThis.__cityTestBaked = JSON.parse(readFileSync(process.env.TEST_BAKED_FILE, 'utf8'));
