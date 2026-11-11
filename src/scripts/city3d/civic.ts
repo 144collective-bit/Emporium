@@ -11,6 +11,7 @@
  * park's edge and the axis are worked out the same way and the test holds them equal.
  */
 import { EW_ROADS, WALK_W } from './layout';
+import { CAR_SCALE } from './carspec';
 import type { Moment, ParkPerson } from './parklife';
 
 export type Pt = [number, number];
@@ -212,8 +213,8 @@ export const YARD_GATE = { x0: -164.2, x1: -160.8 };
 /** The patrol cars in the yard, nosed up to the building (the traffic's Patrol car, carspec.ts `police`):
  * [model, x, z, yaw, paint] for cars.ts `parkedCars()` (yaw π/2 faces north) */
 export const YARD_CARS: [string, number, number, number, string][] = [-165.5, -163.5, -161.5, -159.5].map((x): [string, number, number, number, string] => ['police', x, POLICE_HQ[3] + 1.7, Math.PI / 2, '#141a3a']);
-/** A parked car's footprint, half its length and width (as kerbside.ts's) */
-export const YARD_CAR_HALF = { l: 1.5, w: 0.6 };
+/** A parked car's footprint, half its length and width (as kerbside.ts's; brought down with the cars, the scale plan's `CAR_SCALE`) */
+export const YARD_CAR_HALF = { l: 1.5 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 
 /**
  * The Sector 7 Courthouse (made up): a smaller temple front in the same stone, four square columns on a podium
