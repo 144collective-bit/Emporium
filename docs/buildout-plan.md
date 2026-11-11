@@ -209,8 +209,10 @@ south. The centre (downtown, Uptown, the river) stays as it is.
   across the avenue to Uptown's plaza.
 - **The police headquarters and the courthouse:** flanking it.
 - **The Ends' town houses:** as worn as Endswood.
-- **First:** the civic quarter. Its own plan is `docs/civic-plan.md` (Phase 1,
-  the square and the walks, is built).
+- **First:** the civic quarter. Its own plan is `docs/civic-plan.md`: all five
+  phases are built (the square and the walks; City Hall; the police
+  headquarters and the courthouse; life, night and sound; polish), waiting on
+  the owner's sign-off.
 
 **The order** (to agree):
 

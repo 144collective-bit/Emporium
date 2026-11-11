@@ -12,6 +12,10 @@
  * the friezes, City Hall's tower and the police's front (one additive mesh on the main thread, dark by day: each
  * wash fades up its face, under the bloom's threshold); and the pigeons pecking by the bench in front of their
  * friend, by day. The square's people are the crowd's, placed at the boot (civic.ts `CIVIC_IDLE`, `CIVIC_LOOPS`).
+ *
+ * Phase 5 (polish): the twin fountains flanking the axis in front of City Hall's steps (in the square's site: a
+ * stone rim and cap, the water, a stepped bowl, the jets near only), and the flag run up the pole in the morning
+ * and down it in the evening by the city's hour (civic.ts `flagLift()`), taken in between.
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -29,8 +33,12 @@ import {
   BORDER,
   COURT,
   FLAGPOLE,
+  FLAG_HIGH,
+  FLAG_LOW,
   FLAG_TOP,
   FLOODS,
+  FOUNTAIN,
+  FOUNTAINS,
   GRATE,
   HALL,
   HALL_GROUND,
@@ -45,6 +53,7 @@ import {
   STAR,
   WASH_OFF,
   civicDay,
+  flagLift,
   type Flood,
   type Rect,
 } from './civic';
@@ -70,6 +79,9 @@ function pieces([x0, z0, x1, z1]: Rect, most = 16): Rect[] {
 /* ---------- Phase 4: the flag, the floodlights, the pigeons ---------- */
 
 const POLE = toon('#eceae4');
+/** The fountains' water and spray (Uptown's plaza's colours) */
+const WATER = toon('#3f9fd2');
+const SPRAY = toon('#d4f1ff');
 const FIXTURE = toon('#2b2838');
 /** The fixtures' lenses: a soft glow at night (small panels, under the bulbs' brightness) */
 const LENS = neon('#ffe6b0', 0.05, 1.3);
@@ -134,7 +146,33 @@ function flagpole(b: Batch) {
   b.add(new THREE.SphereGeometry(0.16, 12, 8).translate(x, FLAG_TOP + 0.12, z), GOLD);
 }
 
-/** The flag on the main thread: its cloth waving in the tick, near the camera (still under reduced motion) */
+/** A fountain: the rim and its cap, the water, a stepped bowl in the middle, the jets (near) */
+function fountain(b: Batch, [x, z]: [number, number]) {
+  const { r, w, rim, water, bowl, jet } = FOUNTAIN;
+  const g = HALL_GROUND;
+  b.add(new THREE.CylinderGeometry(r + w, r + w + 0.06, rim, 40, 1, true).translate(x, g + rim / 2, z), SHADE);
+  b.add(new THREE.CylinderGeometry(r, r, rim, 40, 1, true).translate(x, g + rim / 2, z), STONE);
+  b.add(new THREE.RingGeometry(r - 0.01, r + w + 0.01, 40).rotateX(-Math.PI / 2).translate(x, g + rim + 0.004, z), STONE);
+  b.add(new THREE.CircleGeometry(r, 40).rotateX(-Math.PI / 2).translate(x, g + water, z), WATER);
+  // (a pedestal out of the water, the bowl on it, its own water a hair under its lip)
+  b.add(new THREE.CylinderGeometry(0.22, 0.3, bowl, 12).translate(x, g + water + bowl / 2, z), STONE);
+  b.add(new THREE.CylinderGeometry(0.62, 0.3, 0.2, 20).translate(x, g + water + bowl + 0.1, z), SHADE);
+  b.add(new THREE.CircleGeometry(0.56, 20).rotateX(-Math.PI / 2).translate(x, g + water + bowl + 0.19, z), WATER);
+  b.detail(() => {
+    // The jet up out of the bowl and its top, four arcs falling into the basin
+    const top = g + water + bowl + 0.2;
+    b.add(new THREE.ConeGeometry(0.08, jet, 8, 1, true).rotateX(Math.PI).translate(x, top + jet / 2, z), SPRAY);
+    b.add(new THREE.SphereGeometry(0.14, 8, 6).translate(x, top + jet, z), SPRAY);
+    for (let k = 0; k < 4; k++) {
+      const a = Math.PI / 4 + (k * Math.PI) / 2;
+      const [jx, jz] = [x + Math.sin(a) * (r - 0.35), z + Math.cos(a) * (r - 0.35)];
+      b.add(new THREE.ConeGeometry(0.07, 0.6, 6, 1, true).translate(jx, g + water + 0.3, jz), SPRAY);
+    }
+  });
+}
+
+/** The flag on the main thread: its cloth waving in the tick, near the camera (still under reduced motion); run up
+ * the pole in the morning and down it in the evening by the city's hour, taken in between (Phase 5) */
 function flag(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
   const { w, h } = FLAGPOLE.flag;
   const geo = new THREE.PlaneGeometry(w, h, 12, 4).translate(w / 2, 0, 0);
@@ -154,12 +192,16 @@ function flag(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
   wave(0, 0.5);
   const mesh = moving(new THREE.Mesh(geo, toon('#ffffff', { map: FLAG_TEX, side: THREE.DoubleSide })));
   const [x, z] = FLAGPOLE.at;
-  mesh.position.set(x + FLAGPOLE.r, FLAG_TOP - h / 2 - 0.25, z);
+  mesh.position.set(x + FLAGPOLE.r, FLAG_HIGH, z);
   mesh.castShadow = true;
   scene.add(mesh);
   const near = nearGate();
-  tick?.(({ t, rain }) => {
-    if (near(x, z)) wave(t, 0.4 + 0.5 * rain + 0.2 * Math.sin(t * 0.37));
+  tick?.(({ t, rain, hour }) => {
+    const lift = flagLift(hour);
+    mesh.visible = lift > 0.001;
+    mesh.position.y = FLAG_LOW + (FLAG_HIGH - FLAG_LOW) * lift;
+    // (it hangs slacker on its way: the cloth flies out as it nears the top)
+    if (mesh.visible && near(x, z)) wave(t, (0.4 + 0.5 * rain + 0.2 * Math.sin(t * 0.37)) * (0.4 + 0.6 * lift));
   });
 }
 
@@ -262,8 +304,9 @@ export function registerCivic(scene: THREE.Scene | null = null, tick?: (f: Tick)
     }
     // Benches facing the axis
     for (const s of SQUARE_BENCHES) bench(b, s.at, s.ry, TOP);
-    // The flagpole in the ring's dark heart (Phase 4)
+    // The flagpole in the ring's dark heart (Phase 4), the fountains in front of the steps (Phase 5)
     flagpole(b);
+    for (const f of FOUNTAINS) fountain(b, f);
     b.build(into, { cast: true, receive: true });
   });
 }

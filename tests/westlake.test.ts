@@ -31,7 +31,7 @@ import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { STADIUM_SOLIDS } from '../src/scripts/city3d/stadium';
 import { GARDEN_SOLIDS } from '../src/scripts/city3d/gardens';
-import { CITYHALL_SOLIDS, FLAG_SOLIDS, FLANK_SOLIDS } from '../src/scripts/city3d/civic';
+import { CITYHALL_SOLIDS, FLAG_SOLIDS, FLANK_SOLIDS, FOUNTAIN_SOLIDS } from '../src/scripts/city3d/civic';
 import { PADS } from '../src/scripts/city3d/outer';
 import { inTown } from '../src/scripts/city3d/outer';
 import { inTrenches } from '../src/scripts/city3d/trenches';
@@ -75,7 +75,7 @@ test('its blocks are the street plan\'s, and no other block or pad is on them', 
   for (const pad of PADS) assert.ok(!inPark([(pad.rect[0] + pad.rect[2]) / 2, (pad.rect[1] + pad.rect[3]) / 2]), `${pad.id} on the park`);
   // What was solid there before (nothing): the park's land is open (but its own gates, the stadium (stadium.ts) and its
   // walls, garden and planters (gardens.ts, gardens.test.ts))
-  const before = SOLIDS.filter((s) => !WESTLAKE_SOLIDS.includes(s as never) && !STADIUM_SOLIDS.includes(s) && !GARDEN_SOLIDS.includes(s) && !CITYHALL_SOLIDS.includes(s) && !FLANK_SOLIDS.includes(s) && !FLAG_SOLIDS.includes(s));
+  const before = SOLIDS.filter((s) => !WESTLAKE_SOLIDS.includes(s as never) && !STADIUM_SOLIDS.includes(s) && !GARDEN_SOLIDS.includes(s) && !CITYHALL_SOLIDS.includes(s) && !FLANK_SOLIDS.includes(s) && !FLAG_SOLIDS.includes(s) && !FOUNTAIN_SOLIDS.includes(s));
   for (const s of before) assert.ok(!inPark([(s[0] + s[2]) / 2, (s[1] + s[3]) / 2]), `a solid on the park at ${s}`);
   const [x0, z0, x1, z1] = WESTLAKE_RECT;
   for (const b of WESTLAKE_BLOCKS) for (const p of b.poly) assert.ok(p[0] >= x0 && p[0] <= x1 && p[1] >= z0 && p[1] <= z1);

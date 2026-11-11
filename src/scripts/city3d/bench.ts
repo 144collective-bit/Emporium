@@ -42,6 +42,9 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'uptown', name: 'Uptown, its towers from the river', pos: [-60, 16, 92], target: [-120, 12, 30] },
   // (the polish plan's Phase 10: the districts that had no view)
   { id: 'uptown-north', name: 'Uptown North, from the park', pos: [-62, 20, -20], target: [-25, 10, -100] },
+  // The civic quarter (docs/civic-plan.md Phase 5): City Hall over the square from the avenue, and from over Uptown's axis
+  { id: 'civic', name: 'The civic square and City Hall', pos: [-140, 7, 4], target: [-140, 6, -40] },
+  { id: 'civic-high', name: 'The civic quarter, from over the avenue', pos: [-140, 30, 30], target: [-140, 4, -32] },
   { id: 'mall', name: 'Starlight Mall and Palm Court', pos: [30, 26, -40], target: [60, 2, -120] },
   { id: 'harbour', name: 'Harbour Bridge, from the south bank', pos: [40, 12, 160], target: [64.5, 4, 100] },
   { id: 'sunridge', name: 'Sunridge, over the loop', pos: [120, 28, 10], target: [180, 0, -80] },

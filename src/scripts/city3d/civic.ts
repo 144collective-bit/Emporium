@@ -369,7 +369,11 @@ export interface CivicIdle {
   ry: number;
   act: 'guard' | 'chat' | 'queue' | 'phone' | 'look' | 'sit';
   day: boolean;
+  /** The honour guard at the flagpole, there only while the flag is raised or lowered (Phase 5, `flagCeremony()`) */
+  ceremony?: true;
 }
+/** How far from the flagpole the honour guard stands (Phase 5) */
+export const HONOUR = 1.7;
 /** The bench the pigeons' friend sits on (one of the square's), and where the pigeons peck: on the granite in front of it */
 export const FEEDER_BENCH = 0;
 export const PIGEONS = { n: 7, r: 1.3, out: 1.9 };
@@ -405,6 +409,8 @@ export const CIVIC_IDLE: CivicIdle[] = (() => {
   // The pigeons' friend, on the seat a touch forward of its middle
   const b = SQUARE_BENCHES[FEEDER_BENCH];
   out.push({ x: b.at[0] + Math.sin(b.ry) * 0.08, z: b.at[1] + Math.cos(b.ry) * 0.08, y: HALL_GROUND + 0.3, ry: b.ry, act: 'sit', day: true });
+  // The honour guard (Phase 5): either side of the flagpole's plinth, facing it, while the flag goes up or comes down
+  for (const s of [-1, 1]) out.push({ x: fx + s * HONOUR, z: fz, y: HALL_GROUND, ry: (-s * Math.PI) / 2, act: 'guard', day: false, ceremony: true });
   return out;
 })();
 /** Where the pigeons peck: in front of the feeder's bench, the way it faces */
@@ -467,3 +473,43 @@ export const CIVIC_WALKERS: ParkPerson[] = CIVIC_LOOPS.flatMap(({ rect, n, dir }
 
 /** City Hall's bell (the owner's pick: on the hour, by the visitor's clock as St Aldwyn's): in its tower's lantern */
 export const HALL_BELL: Pt = TOWER_C;
+
+/* ---------- Polish (Phase 5) ---------- */
+
+/**
+ * The flag's day (the owner's pick: lowered in the evening, raised in the morning, by the city's hour): it goes up
+ * from `up` and comes down from `down`, each over `takes` of an hour (a few minutes on the Live clock), and is
+ * taken in between; the honour guard stands at the pole from `guard` before to `guard` after
+ */
+export const FLAG_DAY = { up: 7, down: 19, takes: 0.05, guard: 0.05 };
+const ease = (t: number) => t * t * (3 - 2 * t);
+/** How far up the flag is at the city's hour: 1 at the top, 0 taken in */
+export function flagLift(hour: number): number {
+  const { up, down, takes } = FLAG_DAY;
+  const h = ((hour % 24) + 24) % 24;
+  if (h < up || h >= down + takes) return 0;
+  if (h < up + takes) return ease((h - up) / takes);
+  if (h < down) return 1;
+  return 1 - ease((h - down) / takes);
+}
+/** Whether the honour guard is at the pole: round the raising and the lowering */
+export function flagCeremony(hour: number): boolean {
+  const { up, down, takes, guard } = FLAG_DAY;
+  const h = ((hour % 24) + 24) % 24;
+  return [up, down].some((at) => h >= at - guard && h < at + takes + guard);
+}
+/** The flag's middle at the top of the pole and down at the guard's hands, over the ground */
+export const FLAG_HIGH = FLAG_TOP - 0.25 - FLAGPOLE.flag.h / 2;
+export const FLAG_LOW = HALL_GROUND + FLAGPOLE.plinth.h + 0.9 + FLAGPOLE.flag.h / 2;
+
+/**
+ * The fountains (the owner's pick): twin round basins flanking the axis in front of City Hall's steps, between the
+ * steps' foot and the walkers' cross loop, each a stone rim, the water and a stepped bowl with a jet in the middle
+ */
+export const FOUNTAIN = { r: 1.4, w: 0.25, rim: 0.45, water: 0.32, bowl: 0.55, jet: 1.5 };
+export const FOUNTAINS: Pt[] = [-1, 1].map((s): Pt => [AXIS + s * 9.5, -30]);
+/** What's solid: each basin to its rim */
+export const FOUNTAIN_SOLIDS: Box[] = FOUNTAINS.map(([x, z]): Box => {
+  const r = FOUNTAIN.r + FOUNTAIN.w;
+  return [x - r, z - r, x + r, z + r, HALL_GROUND + FOUNTAIN.rim];
+});

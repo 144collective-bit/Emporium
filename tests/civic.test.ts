@@ -356,7 +356,7 @@ test('the floodlights: each wash a hair in front of its face (nothing flush), ou
 });
 
 test("the square's people: guards at every door always, the rest by day, each on its ground and out of everything solid", () => {
-  const guards = CIVIC_IDLE.filter((p) => p.act === 'guard');
+  const guards = CIVIC_IDLE.filter((p) => p.act === 'guard' && !p.ceremony);
   assert.equal(guards.length, 4);
   assert.ok(guards.every((g) => !g.day));
   assert.ok(CIVIC_IDLE.filter((p) => p.act === 'queue').length >= 4);
@@ -411,4 +411,65 @@ test("its sound: the square's on it and soon gone past it; City Hall's bell acro
   assert.ok(off.civic === 0 && off.hallBell === 0);
   // (and from high over it, less of the square)
   assert.ok(ambienceAt(AXIS, -22, 60, 0).civic < 0.05);
+});
+
+/* ---------- Phase 5: polish ---------- */
+
+import { FLAG_DAY, FLAG_HIGH, FLAG_LOW, FOUNTAIN, FOUNTAINS, FOUNTAIN_SOLIDS, HONOUR, flagCeremony, flagLift } from '../src/scripts/city3d/civic';
+
+test("the flag's day: up in the morning, down in the evening, taken in at night; the honour guard round both", () => {
+  assert.equal(flagLift(12), 1);
+  assert.equal(flagLift(23), 0);
+  assert.equal(flagLift(3), 0);
+  assert.equal(flagLift(FLAG_DAY.up), 0);
+  assert.equal(flagLift(FLAG_DAY.down - 1e-6), 1);
+  // (going up and coming down smoothly, never back and forth)
+  let last = -1;
+  for (let h = FLAG_DAY.up; h <= FLAG_DAY.up + FLAG_DAY.takes; h += 0.002) {
+    const l = flagLift(h);
+    assert.ok(l >= last - 1e-9 && l >= 0 && l <= 1);
+    last = l;
+  }
+  last = 2;
+  for (let h = FLAG_DAY.down; h < FLAG_DAY.down + FLAG_DAY.takes; h += 0.002) {
+    const l = flagLift(h);
+    assert.ok(l <= last + 1e-9);
+    last = l;
+  }
+  // The guard is there through each, not at midday or midnight; the Day preset (13) has the flag up and no guard
+  for (const at of [FLAG_DAY.up, FLAG_DAY.down]) for (const h of [at, at + FLAG_DAY.takes / 2]) assert.ok(flagCeremony(h));
+  assert.ok(!flagCeremony(13) && !flagCeremony(23) && !flagCeremony(1));
+  // The flag's run: from the guard's hands to the top, the cloth clear of the plinth and the gold ball
+  assert.ok(FLAG_LOW - FLAGPOLE.flag.h / 2 > HALL_GROUND + FLAGPOLE.plinth.h + 0.5);
+  assert.ok(FLAG_HIGH + FLAGPOLE.flag.h / 2 < FLAG_TOP && FLAG_HIGH > FLAG_LOW);
+  // The honour guard: either side of the plinth, facing the pole, off it and clear of the walkers
+  const honour = CIVIC_IDLE.filter((p) => p.ceremony);
+  assert.equal(honour.length, 2);
+  for (const g of honour) {
+    const [fx, fz] = FLAGPOLE.at;
+    assert.ok(Math.abs(Math.hypot(g.x - fx, g.z - fz) - HONOUR) < 1e-9 && HONOUR > FLAGPOLE.plinth.r + 0.4);
+    assert.ok((Math.sin(g.ry) * (fx - g.x) + Math.cos(g.ry) * (fz - g.z)) / HONOUR > 0.99, 'facing the pole');
+    assert.ok(g.act === 'guard' && !g.day);
+  }
+});
+
+test('the fountains: on the square either side of the axis in front of the steps, solid, clear of the walkers and the way in', () => {
+  assert.equal(FOUNTAINS.length, 2);
+  const R = FOUNTAIN.r + FOUNTAIN.w;
+  assert.equal(FOUNTAINS[0][1], FOUNTAINS[1][1]);
+  assert.ok(Math.abs(FOUNTAINS[0][0] - AXIS + (FOUNTAINS[1][0] - AXIS)) < 1e-9, 'mirrored about the axis');
+  for (const [x, z] of FOUNTAINS) {
+    assert.ok(inSquare([x - R, z - R], -0.3) && inSquare([x + R, z + R], -0.3));
+    assert.ok(z - R > STEPS[3] + 0.5, 'clear of the steps');
+    assert.ok(Math.abs(x - AXIS) - R > AXIS_HALF + 2, 'clear of the axis');
+    assert.ok(Math.hypot(CITYHALL_SPAWN.x - x, CITYHALL_SPAWN.z - z) > R + 2);
+    for (const [tx, tz] of SQUARE_TREES) assert.ok(Math.hypot(tx - x, tz - z) > R + GRATE + 0.5);
+    for (const [lx, lz] of SQUARE_LAMPS) assert.ok(Math.hypot(lx - x, lz - z) > R + 0.8);
+    for (const b of SQUARE_BENCHES) assert.ok(Math.hypot(b.at[0] - x, b.at[1] - z) > R + 1.2);
+    for (const p of CIVIC_IDLE) assert.ok(Math.hypot(p.x - x, p.z - z) > R + 0.5, `someone in a fountain at ${p.x}, ${p.z}`);
+    assert.ok(FOUNTAIN.water < FOUNTAIN.rim && FOUNTAIN.water + FOUNTAIN.bowl + 0.2 + FOUNTAIN.jet < 3.5);
+  }
+  for (const b of FOUNTAIN_SOLIDS) assert.ok(SOLIDS.includes(b));
+  // (the walkers' loops already keep 0.4 off everything solid: the test above, with the fountains in SOLIDS)
+  assert.ok(ambienceAt(FOUNTAINS[0][0] + R + 1, FOUNTAINS[0][1], 0, 0).fountain > 0.6, 'the fountains are heard by them');
 });

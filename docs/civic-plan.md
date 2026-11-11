@@ -281,9 +281,32 @@ What's built (`civic.ts`, drawn by `civic3d.ts`):
   pitch now).
 - **Nothing threatening:** the guards stand at their doors, that's all.
 
-### Phase 5: polish
+### Phase 5: polish (built, and the plan is done)
 
-- `?bench` and review views, phones, the plan done.
+The owner's answer (2026-11-11): B, the polish and two extras, a fountain on
+the square and the flag lowered in the evening.
+
+- **The fountains** (`FOUNTAINS`, `FOUNTAIN`, `FOUNTAIN_SOLIDS` in `SOLIDS`):
+  twin round basins flanking the axis in front of City Hall's steps, between
+  the steps' foot and the walkers' cross loop, each a stone rim and cap, the
+  water, a stepped bowl on a pedestal and a jet, four small jets round the
+  basin (near only); in the square's site. They're heard as the plaza's are
+  (ambience.ts `fountain`).
+- **The flag's day** (`FLAG_DAY`, `flagLift()`, `FLAG_HIGH`, `FLAG_LOW`):
+  run up the pole at seven in the morning and down at seven in the evening by
+  the city's hour, each over a few minutes of the Live clock, taken in
+  between; the cloth flies out as it nears the top. The honour guard (two of
+  the crowd, `ceremony` in `CIVIC_IDLE`, `HONOUR` either side of the plinth,
+  facing the pole) stands there round each (`flagCeremony()`). The Day and
+  Night presets show it up and taken in; Live shows the ceremony.
+- **Views:** `?bench` `civic` (City Hall over the square from the avenue) and
+  `civic-high` (the quarter from over the avenue); `BLEND_VIEWS` `civic` for
+  the shots.
+- **Phones:** the three panels checked at 320 and 375 wide (no sideways
+  scroll); the crowd keeps the guards and half the rest, the walkers half.
+- **Known:** under reduced motion the city reads its hour on the first frame
+  only, which is the day's, so the daytime people and the flag stay as by
+  day (the stadium's queue has the same).
 
 ## The second round's questions (answered: all the first options)
 
