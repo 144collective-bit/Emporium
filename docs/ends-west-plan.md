@@ -85,7 +85,11 @@ brutalist blocks:
      bollards, the lanes, courts, paths, greens and gardens.
 2. **The terraces:** the rows of town houses through the building kits
    (`recipes.ts` terraces), in Endswood's brick and concrete, the porches,
-   the back gardens and their fences.
+   the back gardens and their fences. The owner's picks (2026-11-11):
+   - a mix of two and three storeys, varied along each row;
+   - roofs a mix, flat behind a parapet and shallow pitched;
+   - as worn as Endswood: a few boarded windows, satellite dishes, patched
+     porches.
 3. **The estate round them:** the garage block, the parade and its corner
    shop, the playground, the green, bin stores, CCTV, the estate's board.
 4. **Life, night and sound:** people on the paths and at their doors, kids
