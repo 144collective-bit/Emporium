@@ -876,8 +876,9 @@ it and has been retired completely. Build only on what's here.
   classicism; the police headquarters and the courthouse are to be places;
   names plain and made up (Sector 7 City Hall, Sector 7 Police, the Sector 7
   Courthouse). Phases 1 (the land, the square and the walks), 2 (City
-  Hall), 3 (the police headquarters and the courthouse) and 4 (life, night
-  and sound) are built, waiting on the owner's sign-off: `civic.ts` (DOM-free, tested in
+  Hall), 3 (the police headquarters and the courthouse), 4 (life, night
+  and sound) and 5 (polish) are built, and the plan is done, waiting on the
+  owner's sign-off: `civic.ts` (DOM-free, tested in
   `tests/civic.test.ts`):
   - the civic square (`SQUARE`) on the axis (`AXIS`, the Mall's line and
     Uptown's), open to the avenue (the Mall's south gate went, its WESTLAKE
@@ -948,6 +949,13 @@ it and has been retired completely. Build only on what's here.
     - sound: ambience.ts `civic` (murmur, footsteps, the flags) and
       `hallBell` (City Hall's bell on the hour, deeper than St Aldwyn's,
       sound.ts `toll()` with its own gain and pitch).
+  - **Polish** (Phase 5, the owner's pick: the polish and two extras): the
+    twin fountains flanking the axis in front of City Hall's steps
+    (`FOUNTAINS`, `FOUNTAIN_SOLIDS`, heard as ambience.ts `fountain`); the
+    flag run up at seven and down at seven by the city's hour (`FLAG_DAY`,
+    `flagLift()`, taken in between) with the honour guard at the pole round
+    each (`ceremony` in `CIVIC_IDLE`, `flagCeremony()`); `?bench` views
+    `civic` and `civic-high`, `BLEND_VIEWS` `civic`.
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each

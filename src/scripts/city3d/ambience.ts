@@ -69,7 +69,7 @@ import { PROMENADE } from './outer';
 import { YARDS_RECT, inYards } from './southfield';
 import { ENDSWOOD_RECT, inEndswood } from './endswood';
 import { CHURCH, STUDIO } from './endsstreet';
-import { HALL_BELL, SQUARE as CIVIC_SQUARE } from './civic';
+import { FOUNTAIN as CIVIC_FOUNTAIN, FOUNTAINS as CIVIC_FOUNTAINS, HALL_BELL, SQUARE as CIVIC_SQUARE } from './civic';
 import { COMMON, inCommon } from './endsblend';
 
 export interface Ambience {
@@ -249,7 +249,10 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const crest = near(CREST_RECT, x, z, 0, 30);
   let spring = Infinity;
   for (const [fx, fz, r] of CREST_FOUNTAINS) spring = Math.min(spring, Math.max(0, Math.hypot(x - fx, z - fz) - r));
-  const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, spring + lift * 0.5)));
+  // (and the civic square's twin fountains in front of City Hall, docs/civic-plan.md Phase 5)
+  let civicJet = Infinity;
+  for (const [fx, fz] of CIVIC_FOUNTAINS) civicJet = Math.min(civicJet, Math.max(0, Math.hypot(x - fx, z - fz) - CIVIC_FOUNTAIN.r));
+  const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, Math.min(spring, civicJet) + lift * 0.5)));
   // Sunridge: all of it on its land, fading out over 30 past its wall
   const suburb = 1 - smooth(0, 30, inSunridge(x, z, 0) ? 0 : past(SUNRIDGE_RECT, x, z) + 2);
   // (the gardened districts: their lawns and walls take the wind)
