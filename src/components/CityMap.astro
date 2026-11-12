@@ -80,8 +80,9 @@ const spots: Record<SpotId, Spot> = {
   cityhall: { title: 'City Hall', sub: 'Sector 7' },
   police: { title: 'Sector 7 Police', sub: 'Headquarters' },
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
+  home: { title: 'Home', sub: "Degen's place" },
 };
-const directory: SpotId[] = ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
+const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1351,6 +1352,14 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">The Courthouse</h2>
     <p class="city-panel-text">The city's court. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-civic-walkin>Walk in</button>
+  </template>
+
+  {/* Degen's home in the Ends (home.ts, docs/home-plan.md): his house, garage and driveway; Walk in at the front door */}
+  <template data-panel-tpl="home" data-marquee="Yours, in the Ends">
+    <p class="kicker"><span class="kicker-num">45</span> Endswood Estate</p>
+    <h2 id="city-panel-title" class="city-panel-title">Home</h2>
+    <p class="city-panel-text">Degen's house. Garage and driveway out back.</p>
+    <button type="button" class="chip-link kart-walkin" data-home-walkin>Walk in</button>
   </template>
 
   <div class="city-hud mk-skin" data-city-hud>
