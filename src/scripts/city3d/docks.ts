@@ -212,10 +212,11 @@ export const DOCK_LAMPS: [number, number, number, number][] = (() => {
     }
   // Quay Road's south sidewalk (the north one is the basin's quay, kept clear for the berth) and Yard Road's north one
   for (let x = X0 + 6; x < X1 - 3; x += 14) {
-    out.push([x, QUAY_Z + IN, -Math.PI / 2, SLAB_Y]);
-    out.push([x, YARD_Z - IN, Math.PI / 2, SLAB_Y]);
+    // (a lamp's arm reaches along cos ry, -sin ry: world.ts buildLamps())
+    out.push([x, QUAY_Z + IN, Math.PI / 2, SLAB_Y]);
+    out.push([x, YARD_Z - IN, -Math.PI / 2, SLAB_Y]);
   }
   // The avenue's south sidewalk, clear of the ring's ends, the bridge and the metro's arch (its feet either side of `EL_X`)
-  for (let x = X0 + 6; x < X1 - 3; x += 14) if ((x < CHANNEL[0] - 2 || x > CHANNEL[2] + 2) && Math.abs(x - EL_X) > 4.5) out.push([x, AVENUE_KERB + 0.45, -Math.PI / 2, SLAB_Y]);
+  for (let x = X0 + 6; x < X1 - 3; x += 14) if ((x < CHANNEL[0] - 2 || x > CHANNEL[2] + 2) && Math.abs(x - EL_X) > 4.5) out.push([x, AVENUE_KERB + 0.45, Math.PI / 2, SLAB_Y]);
   return out;
 })();

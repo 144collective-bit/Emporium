@@ -456,15 +456,15 @@ const CAR_HALF = { l: 1.35 * CAR_SCALE, w: 0.6 * CAR_SCALE };
 export const AIRPORT_LAMPS: [number, number, number][] = (() => {
   const out: [number, number, number][] = [];
   const o = ROAD.half + 0.6;
-  for (let z = ROAD.z0 + 10; z < LOOP.out - 6; z += 14) out.push([ROAD.x - o, z, Math.PI], [ROAD.x + o, z + 7, 0]);
+  for (let z = ROAD.z0 + 10; z < LOOP.out - 6; z += 14) out.push([ROAD.x - o, z, 0], [ROAD.x + o, z + 7, Math.PI]);
   // (round the loop's street-level stretches: along its north side and its east sides)
   for (let x = ROAD.x + 12; x < LOOP.east - 4; x += 14) out.push([x, LOOP.out - o, -Math.PI / 2]);
-  for (const z of [LOOP.out + 4, LOOP.z0 + 12]) out.push([LOOP.x1 + o, z, 0]);
+  for (const z of [LOOP.out + 4, LOOP.z0 + 12]) out.push([LOOP.x1 + o, z, Math.PI]);
   // ...along Cargo Road and round the truck yard's loop
   for (let x = ROAD.x + 14; x < CARGO_ROAD.x1 - 4; x += 16) out.push([x, CARGO_ROAD.z - o, -Math.PI / 2]);
-  for (const z of [CARGO_ROAD.z + 16, CARGO_ROAD.z + 40]) out.push([CARGO_ROAD.x1 + o, z, 0], [CARGO_ROAD.loopX - o, z, Math.PI]);
+  for (const z of [CARGO_ROAD.z + 16, CARGO_ROAD.z + 40]) out.push([CARGO_ROAD.x1 + o, z, Math.PI], [CARGO_ROAD.loopX - o, z, 0]);
   // ...and along the GA road, and by the gate
-  out.push([GA_ROAD.x0 + 14, GA_ROAD.z - o, -Math.PI / 2], [GA_ROAD.x1 + o, GA_ROAD.loopZ - 2, 0]);
+  out.push([GA_ROAD.x0 + 14, GA_ROAD.z - o, -Math.PI / 2], [GA_ROAD.x1 + o, GA_ROAD.loopZ - 2, Math.PI]);
   return out;
 })();
 
