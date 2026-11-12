@@ -59,7 +59,7 @@ keep it up to date when what it describes changes.
   porches, at their grills, patio tables and pool loungers) and the
   residents' cars on about a driveway in three (`DRIVEWAY_CARS`, nosed up to
   the garage, `DRIVEWAY_SOLIDS`); since the houses are the chunk's, the
-  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 320, 160 on
+  crowd keeps spare slots for them (life.ts `LifeOpts.reserve`, 360, 180 on
   phones, with the Neon Mile's and Lot 9's; `addPeople()` fills them when the chunk loads, or queues them
   before the crowd's built, and places them at once through `repaint()`: under reduced motion the ticks run on the
   first frame only) and life.ts's home cars are per district

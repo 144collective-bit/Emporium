@@ -290,3 +290,14 @@ test("the park's yards are lived in, its homes on the power, its poles off the l
   // (each home's hookup on its lot, in front of it)
   for (const h of HOMES) assert.ok(inRect(h.lot.rect, h.hookup[0], h.hookup[1]), h.lot.id);
 });
+
+test('its lane lamps and the gate lamp reach out over their lanes (an arm reaches along cos ry, -sin ry)', () => {
+  const lanes = PLAN.streets.filter((s) => LOT9_STREETS.some((l) => l.id === s.id));
+  const by = LOT9_LAMPS.filter(([x, z]) => lanes.some((s) => distToStreet(s, [x, z]) < s.half + 0.8));
+  assert.ok(by.length >= 8, `${by.length} lamps by the lanes`);
+  for (const [x, z, ry] of by) {
+    const near = lanes.reduce((a, s) => (distToStreet(s, [x, z]) < distToStreet(a, [x, z]) ? s : a));
+    const head: Pt = [x + Math.cos(ry) * 0.6, z - Math.sin(ry) * 0.6];
+    assert.ok(distToStreet(near, head) < distToStreet(near, [x, z]) - 0.5, `the lamp at ${x.toFixed(1)}, ${z.toFixed(1)} reaches away from ${near.id}`);
+  }
+});

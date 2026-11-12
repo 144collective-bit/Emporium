@@ -83,7 +83,7 @@ keep it up to date when what it describes changes.
   paints, `strip` in `TIERS`); walkers round its rows with their shopping;
   `striplife.ts` (DOM-free, tested in `tests/striplife.test.ts`: valets,
   doormen, the crowds at the fountains, the volcano and the Sphere, added
-  from the chunk through `addPeople()`, the crowd's `reserve` now 320 since Endswood's life); its
+  from the chunk through `addPeople()`, the crowd's `reserve` now 360 since Endswood's west extension's life); its
   sound (ambience.ts `strip`, `casino`, `show`: the crowd's babble, slot
   chimes by the casino doors, the fountain show's music while a show is on). Phase 6 (polish and performance) is built and the plan
   is done: `?bench` views `strip` and `strip-street`; phones draw the Sphere's

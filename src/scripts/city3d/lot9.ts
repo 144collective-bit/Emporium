@@ -449,12 +449,13 @@ export const LOT9_LAMPS: [number, number, number, number][] = (() => {
   const IN = LANE_HALF + 0.45;
   for (let c = 1; c < COLS; c += 3) {
     const x = COL0 + c * LOT_W;
-    out.push([x, ROAD_Z - ROAD_HALF - 0.45, Math.PI / 2, GROUND_Y]);
-    out.push([x + LOT_W, LANE_N + IN, -Math.PI / 2, GROUND_Y]);
-    if (c + 1.5 < COLS) out.push([x + LOT_W * 1.5, LANE_S - IN, Math.PI / 2, GROUND_Y]);
+    // (a lamp's arm reaches along cos ry, -sin ry: world.ts buildLamps(); each out over its lane)
+    out.push([x, ROAD_Z - ROAD_HALF - 0.45, -Math.PI / 2, GROUND_Y]);
+    out.push([x + LOT_W, LANE_N + IN, Math.PI / 2, GROUND_Y]);
+    if (c + 1.5 < COLS) out.push([x + LOT_W * 1.5, LANE_S - IN, -Math.PI / 2, GROUND_Y]);
   }
-  // By the gate, outside it, and at the top of each ramp
-  out.push([GATE.x + 1.2, GATE.z - GATE.half - 0.6, Math.PI / 2, GROUND_Y]);
+  // By the gate, outside it (reaching over the way in), and at the top of each ramp
+  out.push([GATE.x + 1.2, GATE.z - GATE.half - 0.6, -Math.PI / 2, GROUND_Y]);
   out.push([TUNNEL.x + TUNNEL.half + TUNNEL.wall + 0.9, TUNNEL.z1 + 0.8, Math.PI, GROUND_Y]);
   // The Field's three: by the way in, by the shower block and by the camp kitchen (lot9camp.ts)
   out.push([-131, 380.4 + MOVED, -Math.PI / 2, GROUND_Y]);

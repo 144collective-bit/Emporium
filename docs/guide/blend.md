@@ -134,7 +134,11 @@ keep it up to date when what it describes changes.
     shapes (a draw a kind, the phones' trim as before); the light's colour
     is still lampmix.ts's, the halos and pools unchanged; the posts' paint is
     the palette's `LAMP_POST`. A new district picks its kind in
-    `lampStyle()`.
+    `lampStyle()`. A lamp's arm reaches along (cos ry, -sin ry) (`addLamp()`'s
+    `ry`: 0 is +x, `Math.PI / 2` is -z, `-Math.PI / 2` is +z): a street lamp
+    reaches out over its street, and `tests/lampfacing.test.ts` holds every
+    lamp list's lamps by a street to it (the owner's call, 2026-11-12, after
+    many had been written mirrored); a new list goes in that test.
   - **The kerb blended at The Trenches' edge** (the polish plan's Phase 10,
     the owner's call) is lampmix.ts's `kerbShare(x, z)`: over `MIX` either
     side of the west ring avenue's centre line (`KERB_SEAM`, along The
