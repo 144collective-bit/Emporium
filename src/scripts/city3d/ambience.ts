@@ -34,7 +34,9 @@
  * (`stadium`: the crowd's roar swelling now and then round the ground, from stadium.ts's `matchOn()` and the clock).
  * On Endswood Estate (docs/estate-plan.md Phase 7) its own (`ends`: pigeons by day, a moped now and then, the two-tone
  * siren far off, the ice-cream van's jingle on a summer's day), Bunker Sound's beat out of its garage door (`studio`)
- * and St Aldwyn's bell on the hour, heard across the estate and beyond (`bell`).
+ * and St Aldwyn's bell on the hour, heard across the estate and beyond (`bell`). On the civic square
+ * (docs/civic-plan.md Phase 4) footsteps and a murmur by day and the flags in the wind (`civic`), and City Hall's bell
+ * on the hour from its tower, deeper than St Aldwyn's (`hallBell`).
  */
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
@@ -66,6 +68,7 @@ import { PROMENADE } from './outer';
 import { YARDS_RECT, inYards } from './southfield';
 import { ENDSWOOD_RECT, inEndswood } from './endswood';
 import { CHURCH, STUDIO } from './endsstreet';
+import { FOUNTAIN as CIVIC_FOUNTAIN, FOUNTAINS as CIVIC_FOUNTAINS, HALL_BELL, SQUARE as CIVIC_SQUARE } from './civic';
 import { COMMON, inCommon } from './endsblend';
 import { fromWall } from './wall';
 
@@ -122,6 +125,10 @@ export interface Ambience {
   studio: number;
   /** St Aldwyn's bell (sound.ts tolls it on the hour), 0-1 */
   bell: number;
+  /** The civic square (docs/civic-plan.md Phase 4): footsteps and murmur by day, the flag and banners in the wind, 0-1 */
+  civic: number;
+  /** City Hall's bell in its tower (sound.ts tolls it on the hour, deeper than St Aldwyn's), 0-1 */
+  hallBell: number;
   /** By the wall round the city (docs/wall-plan.md Phase 6): the wind along its face and a low hum off it, 0-1 */
   wall: number;
 }
@@ -242,7 +249,10 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const crest = near(CREST_RECT, x, z, 0, 30);
   let spring = Infinity;
   for (const [fx, fz, r] of CREST_FOUNTAINS) spring = Math.min(spring, Math.max(0, Math.hypot(x - fx, z - fz) - r));
-  const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, spring + lift * 0.5)));
+  // (and the civic square's twin fountains in front of City Hall, docs/civic-plan.md Phase 5)
+  let civicJet = Infinity;
+  for (const [fx, fz] of CIVIC_FOUNTAINS) civicJet = Math.min(civicJet, Math.max(0, Math.hypot(x - fx, z - fz) - CIVIC_FOUNTAIN.r));
+  const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, Math.min(spring, civicJet) + lift * 0.5)));
   // Sunridge: all of it on its land, fading out over 30 past its wall
   const suburb = 1 - smooth(0, 30, inSunridge(x, z, 0) ? 0 : past(SUNRIDGE_RECT, x, z) + 2);
   // (the gardened districts: their lawns and walls take the wind)
@@ -291,6 +301,9 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const ends = 1 - smooth(0, 25, Math.max(0, fromEnds));
   const studio = 1 - smooth(2, 18, Math.hypot(x - STUDIO.door[0], z - STUDIO.door[1]) + lift * 0.5);
   const bell = 1 - smooth(25, 170, Math.hypot(x - BELFRY[0], z - BELFRY[1]) + lift * 0.3);
+  // The civic square: on it, fading over 22 past it and from high over it; City Hall's bell across the park and Uptown
+  const civic = near(CIVIC_SQUARE, x, z, 0, 22) * (1 - smooth(8, 40, lift));
+  const hallBell = 1 - smooth(30, 200, Math.hypot(x - HALL_BELL[0], z - HALL_BELL[1]) + lift * 0.3);
   return {
     city: town,
     water: Math.max(water, lake) * k,
@@ -318,6 +331,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     ends: ends * k,
     studio,
     bell,
+    civic: civic * k,
+    hallBell,
     wall: (1 - smooth(0, WALL_SOUND, Math.max(0, fromWall(x, z)))) * k,
   };
 }

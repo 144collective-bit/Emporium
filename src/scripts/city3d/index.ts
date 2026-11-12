@@ -20,6 +20,7 @@ import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES } from './westlake';
+import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER, CIVIC_IDLE, FLOOD_POOLS, civicDay, flagCeremony } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
@@ -353,6 +354,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
     spots.push(e.faces ? { ...s, faces: e.faces } : s);
   }
+  // ...and City Hall at the civic square's head (civic.ts, docs/civic-plan.md Phase 2; drawn in Westlake Park's
+  // chunk): the pin over its tower, the fly-in from the square (south)
+  spots.push(pickSpot(scene, 'cityhall', SLAB, CITYHALL_PICK, CITYHALL_LAND, CITYHALL_TIP - SLAB + 1.4, CITYHALL_TOWER));
+  // ...and the police headquarters and the courthouse flanking the square (Phase 3): their pins over their roofs
+  {
+    const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
+    spots.push(pickSpot(scene, 'police', SLAB, POLICE_PICK, POLICE_LOT, POLICE_PICK[0].h + 1.2, mid(POLICE_PICK[0].rect)));
+    spots.push(pickSpot(scene, 'courthouse', SLAB, COURT_PICK, COURT_LOT, COURT_PICK[0].h + 1.2, mid(COURT_PICK[0].rect)));
+  }
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -372,6 +382,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // of its own, loaded as you approach (districts.ts)
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
+  // The civic square's (civic.ts, docs/civic-plan.md)
+  for (const [x, z] of SQUARE_TREES) addTree(x, z, 1, false);
+  for (const [x, z, ry] of SQUARE_LAMPS) addLamp(x, z, ry);
+  // ...its people (Phase 4): a guard at each door always, by day officials on City Hall's steps, the queue at its door,
+  // people on the square, the pigeons' friend on a bench and the honour guard at the flag's raising and lowering
+  // (Phase 5; phones: half but the guards); the floodlights' pools
+  CIVIC_IDLE.forEach((p, i) => (tier !== 'low' || p.act === 'guard' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.y, ry: p.ry, act: p.act, when: p.ceremony ? flagCeremony : p.day ? civicDay : undefined }));
+  for (const [x, z, size] of FLOOD_POOLS) addPool(x, z, size);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z, ry, y] of SUN_LAMPS) addLamp(x, z, ry, y);
@@ -859,6 +877,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
+      });
+    // City Hall's panel: Walk in on the civic square at the steps' foot, facing them
+    // (and the police's and the courthouse's, in front of their doors)
+    if (id === 'cityhall' || id === 'police' || id === 'courthouse')
+      panelBody.querySelector('[data-civic-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(id === 'police' ? POLICE_SPAWN : id === 'courthouse' ? COURTHOUSE_SPAWN : CITYHALL_SPAWN);
       });
     // Lot 9's panel: Walk in on the lane outside its gate, facing in
     if (id === 'lot9')

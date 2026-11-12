@@ -53,4 +53,12 @@ keep it up to date when what it describes changes.
   `PORT_SOLIDS` (in `SOLIDS`), everything but the cranes under the Emporium
   (`PORT_TALLEST`), the cranes well under every flight (the test). Drawn by
   `docksport3d.ts` (sites in the docks' chunk, one sign atlas of fixed
-  made-up copy). Made-up names only.
+  made-up copy). Phase 4 (its life, the owner's picks: the cranes' full
+  cycle, the rest quiet) is built: `dockslife.ts` (DOM-free, tested in
+  `tests/dockslife.test.ts`): the middle crane (`WORK`) works one box off
+  ORCA STAR, onto the quay, the carrier takes it to a slot in the stacks'
+  lane and back, the crane puts it back on (`CYCLE` 120 s, `craneAt()`,
+  `carrierAt()`, `boxAt()`); a Box Runner in through the gate now and then
+  (`truckAt()`); the pilot boat out round the basin (`pilotAt()`); five
+  workers (`DOCK_PEOPLE`); drawn by docksport3d.ts's `life()` on the main
+  thread from the clock, still under reduced motion (`STILL`). Made-up names only.

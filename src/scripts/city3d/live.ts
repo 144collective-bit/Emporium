@@ -66,6 +66,9 @@ export const LIVE_PLACES = [
   { id: 'endswood', name: 'Endswood Estate' },
   { id: 'aldwyns', name: "St Aldwyn's" },
   { id: 'bunker', name: 'Bunker Sound' },
+  { id: 'cityhall', name: 'City Hall' },
+  { id: 'police', name: 'Sector 7 Police' },
+  { id: 'courthouse', name: 'The Courthouse' },
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 

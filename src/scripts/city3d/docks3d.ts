@@ -15,6 +15,7 @@ import { SLAB } from './world';
 import { WATER_Y } from './river';
 import { AVENUE_KERB, BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_CROSSINGS, DOCK_STREETS, DRY_DOCK, HALF, type Rect } from './docks';
 import { register as registerPort } from './docksport3d';
+import type { Tick } from './world';
 import { ROAD } from './palette';
 
 export const SELF = import.meta.url;
@@ -55,7 +56,7 @@ function cut(a: Pt, b: Pt): [Pt, Pt][] {
 }
 const boxOf = ([a, b]: [Pt, Pt], pad: number): Rect => [Math.min(a[0], b[0]) - pad, Math.min(a[1], b[1]) - pad, Math.max(a[0], b[0]) + pad, Math.max(a[1], b[1]) + pad];
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const asphalt = toon('#2a2838');
   const yellow = neon(ROAD.yellow, 0.9, 1.1);
   const zebra = toon(ROAD.zebra);
@@ -190,5 +191,5 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   );
 
   /* ---------- The port (Phase 3): docksport3d.ts ---------- */
-  registerPort({ low, scene });
+  registerPort({ low, scene, tick });
 }

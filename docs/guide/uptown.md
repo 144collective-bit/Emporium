@@ -13,7 +13,7 @@ keep it up to date when what it describes changes.
   about 22; the Emporium
   stays the tallest downtown and the most detailed, and "under the
   Emporium" holds everywhere else but Uptown North, below, Southbank
-  Docks' cranes and the Neon Mile's resorts); the flying traffic and your own
+  Docks' cranes, the Neon Mile's resorts and City Hall's tower); the flying traffic and your own
   aircraft clear them. The strips' courts and their players are retired
   with it. Phases 1 (the land and the streets), 2 (the towers), 3 (the
   plaza), 4 (the waterfront boulevard), 5 (the redesign, the owner's call:

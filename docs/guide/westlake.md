@@ -19,7 +19,8 @@ keep it up to date when what it describes changes.
     walk.ts stops you on the lawn at its rim (`RIM`), cars stop at
     `LAKE_WALLS`, which drive-sim.ts adds near it); the paths (`PATHS`:
     `ring` round the big block, `loop` round the lake (`LOOP_OUT`), the
-    Mall (`MALL`) from the south gate to the stadium's forecourt, the ways
+    Mall (`MALL`) from City Hall's back door (the civic quarter, below) to
+    the stadium's forecourt, the ways
     in from `GATES`; `onPath()`); the gates' piers
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, clumps from a seeded noise; `clump` ones,
@@ -31,7 +32,7 @@ keep it up to date when what it describes changes.
     at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
   - `westlake3d.ts` draws the rest as sites: the paths (a stretch a
     site: the main walks paved, the rest pale gravel), the lake's stone rim (in quarters), the
-    gates (stone piers, caps, lanterns; the Mall's with iron posts, a beam
+    gates (stone piers, caps, lanterns; the Mall's north gate with iron posts, a beam
     and WESTLAKE PARK on a board both ways, one small texture), benches
     (near only); and on the main thread the lake's water (one mesh, the
     river's `waterMat`). It's the first district loaded as you approach
@@ -107,6 +108,95 @@ keep it up to date when what it describes changes.
     the formal garden (stage 3), the Mall running through it to the
     north gate; the old car park on the first strip
     went back to park.
+- **The civic quarter** (the owner's call, the build-out plan's first
+  section: City Hall, the police headquarters and the courthouse at
+  Westlake Park's south end, facing Uptown across the avenue) is planned in
+  `docs/civic-plan.md` in five phases, each with the owner's sign-off; keep
+  it up to date. City Hall may rise over the Emporium (the owner's
+  exception: a tower or dome, the seat of power), in stern stripped
+  classicism; the police headquarters and the courthouse are to be places;
+  names plain and made up (Sector 7 City Hall, Sector 7 Police, the Sector 7
+  Courthouse). Phases 1 (the land, the square and the walks), 2 (City
+  Hall), 3 (the police headquarters and the courthouse), 4 (life, night
+  and sound) and 5 (polish) are built, and the plan is done, waiting on the
+  owner's sign-off: `civic.ts` (DOM-free, tested in
+  `tests/civic.test.ts`):
+  - the civic square (`SQUARE`) on the axis (`AXIS`, the Mall's line and
+    Uptown's), open to the avenue (the Mall's south gate went, its WESTLAKE
+    PARK board to the north gate; the park's wall stops either side);
+  - the lots kept for the buildings (`LOTS`: City Hall's `HALL` front range
+    and back block at the square's head, `POLICE` west and `COURT` east,
+    facing across it; lawn until their phases);
+  - the walks round City Hall (westlake.ts `civic-w`, `civic-e`; the Mall
+    starts at its back door, `mall-lake` moved behind it, all three clear of
+    the lake loop, which didn't move);
+  - the square's trees, lamps and benches (`SQUARE_TREES`, `SQUARE_LAMPS`,
+    `SQUARE_BENCHES`).
+
+  The park's trees, lamps, benches, beds, planters, edge row and picnics
+  keep off it (`inCivic()`), and the kerbs stop at the square
+  (`inSquare()`). Drawn by `civic3d.ts` (Westlake Park's chunk): Uptown's
+  granite (plaza3d.ts) over the square, the axis and a border inlaid, a pale
+  ring at its middle, grates round its trees.
+  - **City Hall** (Phase 2, the owner's picks): steps up from the square to a
+    podium (`STEPS`, `PODIUM_Y`; walked as a slope, `cityHallY()`, a layer in
+    groundheight.ts), a colonnade of eight square columns (`COLUMNS`) under
+    a frieze carved SECTOR 7 · CITY HALL, the emblem (a seven-pointed star,
+    `STAR`, made up) on the attic, crimson banners with the star (`BANNER`)
+    either side of the bronze door (`DOOR`), the front range and the back
+    block with tall windows lit at night, and the stepped tower over it
+    (`TIERS`, stars lit on its second tier, a lantern and a gold finial:
+    `CITYHALL_TOP` 22.4, `CITYHALL_TIP`; the owner's exception to "under
+    the Emporium", every flight well over it). It's solid
+    (`CITYHALL_SOLIDS` in `SOLIDS`), drawn by `cityhall3d.ts` (two sites in
+    Westlake Park's chunk). It's a place: spot `cityhall` (its pick boxes at
+    the boot, `CITYHALL_PICK`, through crestspots.ts `spot()`), a pin, a
+    directory entry, a panel with Walk in (`data-civic-walkin`,
+    `CITYHALL_SPAWN`), its door (`CITYHALL_DOOR` in walk.ts `ALL_DOORS`),
+    `PLACES` and `LIVE_PLACES` entries, its live line and its footprint on
+    the world map.
+  - **The police headquarters and the courthouse** (Phase 3, the owner's
+    picks: City Hall's stone, plainer and lower), drawn by `flank3d.ts`
+    (two sites in the park's chunk, City Hall's materials and helpers
+    exported from cityhall3d.ts, `carvedMat()`):
+    - Sector 7 Police (`HQ` on `POLICE_HQ`): three storeys, its entrance
+      onto the west walk with the blue lamp and SECTOR 7 POLICE, a mast;
+      its walled yard south of it (`POLICE_YARD`, `YARD_WALL`, the gate
+      onto the ring walk, `YARD_GATE`) with four Patrol cars (`YARD_CARS`,
+      `parkedCars()` on the main thread).
+    - The Sector 7 Courthouse (`COURT`): four steps up from the square
+      (`COURT_STEPS`), a portico of four columns (`COURT_COLUMNS`) under
+      SECTOR 7 COURTHOUSE and a low pediment with the gold star, the body
+      behind (`COURT_BODY`).
+    - The steps and porticos are one ground layer (`civicY()`, groundheight.ts
+      `civic`); `FLANK_SOLIDS` in `SOLIDS`.
+    - Both are places: spots `police` and `courthouse`, pins, directory
+      entries, panels with Walk in (`POLICE_SPAWN`, `COURTHOUSE_SPAWN`),
+      doors (`POLICE_DOOR`, `COURT_DOOR`), `PLACES`, `LIVE_PLACES`, live
+      lines and world-map footprints.
+  - **Life, night and sound** (Phase 4, the owner's picks):
+    - the flagpole in the ring's dark heart (`FLAGPOLE`, `RING_C`, solid
+      `FLAG_SOLIDS`), the city's flag (the gold star on crimson) waved by the
+      park's chunk's tick near the camera;
+    - floodlights (`FLOODS`: City Hall's columns, frieze and tower, the
+      police's front, the courthouse's columns and frieze): fixtures as a
+      site and their washes one additive `lit()` mesh, a hair in front of
+      each face (`WASH_OFF`), fading up it, under the bloom's threshold; the
+      police's pools at the boot (`FLOOD_POOLS`);
+    - people: `CIVIC_IDLE` (guards always; by day, `civicDay()`, officials,
+      the queue, the pigeons' friend: `Idle.when` takes the city's hour),
+      `CIVIC_WALKERS` round `CIVIC_LOOPS` (life.ts), the pigeons (`PIGEONS`,
+      main thread, by day);
+    - sound: ambience.ts `civic` (murmur, footsteps, the flags) and
+      `hallBell` (City Hall's bell on the hour, deeper than St Aldwyn's,
+      sound.ts `toll()` with its own gain and pitch).
+  - **Polish** (Phase 5, the owner's pick: the polish and two extras): the
+    twin fountains flanking the axis in front of City Hall's steps
+    (`FOUNTAINS`, `FOUNTAIN_SOLIDS`, heard as ambience.ts `fountain`); the
+    flag run up at seven and down at seven by the city's hour (`FLAG_DAY`,
+    `flagLift()`, taken in between) with the honour guard at the pole round
+    each (`ceremony` in `CIVIC_IDLE`, `flagCeremony()`); `?bench` views
+    `civic` and `civic-high`, `BLEND_VIEWS` `civic`.
 - **The north side** (the owner's call): the stadium and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
