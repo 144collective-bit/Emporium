@@ -12,7 +12,10 @@ keep it up to date when what it describes changes.
   (2) the brick tower blocks (8-10 floors, under the Emporium),
   brownstones, The Block and its pin (built); (3) four corner shops for Dorras
   (20,000 / 30,000 / 45,000 / 60,000 from level 5, run like your units;
-  built).
+  built). **More real and more varied** (the owner's call, 2026-11-12: "the
+  buildings are all the same") is planned in `docs/trenches-variety-plan.md`
+  in six phases (windows, facades, rooflines, ground floors, streets and
+  yards, polish), each with the owner's sign-off; keep it up to date.
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets
