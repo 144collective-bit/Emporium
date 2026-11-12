@@ -18,8 +18,9 @@ keep it up to date when what it describes changes.
 - Nothing lifts or glows on hover (the owner's call, with the pins off by
   default); the cursor shows a building is clickable in City view, and
   while walking nothing is hovered (Degen stands on the same ground).
-- The over-the-shoulder camera starts 2.6 tiles behind him, 2.5 on an upright screen (`homeZoom()` in
-  walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
+- The over-the-shoulder camera starts 1.7 tiles behind him, 1.6 on an upright screen (the owner's call,
+  2026-11: a tight over the shoulder, `WALK_ZOOM` in views.ts, `homeZoom()` in walk.ts; the mouse wheel sets
+  it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
