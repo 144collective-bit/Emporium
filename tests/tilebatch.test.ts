@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { PACKED, compact, tileBatch } from '../src/scripts/city3d/tilebatch';
+import { PACKED, compact, splitByTile, tileBatch } from '../src/scripts/city3d/tilebatch';
+import { tileKey, tileOf } from '../src/scripts/city3d/tiles';
 
 // A plain colour and a neon, as the Batches' shared materials (kit.ts marks them `shared`)
 const paint = new THREE.MeshBasicMaterial();
@@ -250,4 +251,66 @@ test('the room tiles let go is given back: the meshes are made smaller, and stil
   tiled.regained('27,30');
   assert.equal(visible(bm), 6);
   assert.equal(tiled.trim(), 0);
+});
+
+/** The split as it was first written (accessors, a string a triangle, a map of vertices): what the quick one must match */
+function splitPlainly(g: THREE.BufferGeometry): Map<string, THREE.BufferGeometry> {
+  const pos = g.attributes.position;
+  const index = g.index!.array;
+  const tris = new Map<string, number[]>();
+  for (let t = 0; t < index.length; t += 3) {
+    const [a, b, c] = [index[t], index[t + 1], index[t + 2]];
+    const [i, j] = tileOf((pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3, (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3);
+    const k = tileKey(i, j);
+    let list = tris.get(k);
+    if (!list) tris.set(k, (list = []));
+    list.push(a, b, c);
+  }
+  const out = new Map<string, THREE.BufferGeometry>();
+  for (const [k, list] of tris) {
+    const remap = new Map<number, number>();
+    const idx = new Uint32Array(list.length);
+    list.forEach((v, n) => {
+      let m = remap.get(v);
+      if (m === undefined) remap.set(v, (m = remap.size));
+      idx[n] = m;
+    });
+    const part = new THREE.BufferGeometry();
+    for (const [name, attr] of Object.entries(g.attributes) as [string, THREE.BufferAttribute][]) {
+      const size = attr.itemSize;
+      const dst = new (attr.array.constructor as new (n: number) => THREE.TypedArray)(remap.size * size);
+      for (const [from, to] of remap) for (let q = 0; q < size; q++) dst[to * size + q] = attr.array[from * size + q];
+      part.setAttribute(name, new THREE.BufferAttribute(dst, size, attr.normalized));
+    }
+    part.setIndex(new THREE.BufferAttribute(idx, 1));
+    out.set(k, part);
+  }
+  return out;
+}
+
+test('triangles are split by tile exactly as the plain way splits them, negative tiles and all', () => {
+  // A wide, finely cut sheet over many tiles either side of the origin, turned so its triangles cross tile lines
+  const sheet = compact(new THREE.PlaneGeometry(190, 130, 37, 23).rotateX(-Math.PI / 2).rotateY(0.3).translate(-12.5, 0, 7.25), false);
+  const quick = splitByTile(sheet);
+  const plain = splitPlainly(sheet);
+  assert.ok(quick.size > 20);
+  // The same tiles in the same order, each with the same vertices in the same order
+  assert.deepEqual([...quick.keys()], [...plain.keys()]);
+  assert.ok([...quick.keys()].some((k) => k.startsWith('-')) && [...quick.keys()].some((k) => k.includes(',-')));
+  for (const [k, g] of quick) {
+    const p = plain.get(k)!;
+    assert.deepEqual(Object.keys(g.attributes), Object.keys(p.attributes));
+    for (const name of Object.keys(g.attributes)) {
+      const [a, b] = [g.attributes[name] as THREE.BufferAttribute, p.attributes[name] as THREE.BufferAttribute];
+      assert.equal(a.array.constructor, b.array.constructor);
+      assert.equal(a.normalized, b.normalized);
+      assert.deepEqual(a.array, b.array, `${k} ${name}`);
+    }
+    assert.deepEqual(g.index!.array, p.index!.array, k);
+  }
+  // Every triangle is in exactly one tile
+  assert.equal([...quick.values()].reduce((n, g) => n + g.index!.count, 0), sheet.index!.count);
+  // One tile: the geometry itself comes back, not a copy
+  const small = new THREE.BoxGeometry(1, 1, 1).translate(5, 0.5, 5);
+  assert.equal(splitByTile(small).get('0,0'), small);
 });

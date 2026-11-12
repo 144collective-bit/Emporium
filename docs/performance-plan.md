@@ -670,3 +670,25 @@ Measured first, and that isn't where the time is:
   opening the page and `bootCity()` (three.js and the city's code parsed,
   the modules' own data), and in the boot the ground (`buildGround()`), the
   landmarks and the characters, each a few hundred ms unthrottled.
+
+## The boot itself profiled (2026-11)
+
+The same profile over `bootCity()` (unthrottled, about 3.1 s sampled, the
+canvas painting a real build doesn't do left out): no one thing is left.
+The ground 0.6 s (`buildGround()`: the hills' tint 0.13, the river's banks
+0.09, the rest in a dozen pieces), the landmarks 0.5 s (the Emporium and the
+Armoury, mostly their figures), merging into tiles 0.36 s, the crowd and
+traffic 0.22 s, the el 0.13 s, and `WebGLRenderer.setSize()` 0.24 s (the
+headless renderer's own).
+
+- **Built: the tile split.** `splitByTile()` in tilebatch.ts, which every
+  site goes through as it joins the city (so after the boot too), went
+  through the accessors, a string a triangle and a map of vertices. It reads
+  the arrays, keys tiles by number and hands a one-tile geometry straight
+  back: 39 ms to 13 ms for 180,000 triangles over 400 tiles, 4 ms to 0.5 ms
+  for one tile, the same output to the byte (tests/tilebatch.test.ts holds it
+  against the plain way).
+- **Left, each a bigger change for a tenth of a second or two:** the hills'
+  ground built at the boot though it's far from the home view (it could be
+  a site); the hills' tint measuring the slope with four more heights a
+  vertex; the landmarks' figures built before the first frame.

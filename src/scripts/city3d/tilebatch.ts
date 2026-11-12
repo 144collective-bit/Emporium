@@ -23,7 +23,7 @@
  * until they're built again (`add()` with `keep`).
  */
 import * as THREE from 'three';
-import { boxDistance, isNear, tileKey, tileOf, tileRect } from './tiles';
+import { TILE, boxDistance, isNear, tileKey, tileRect } from './tiles';
 import type { Lod } from './kit';
 
 /** One tile's share of one material: a geometry and its one instance in a batched mesh */
@@ -111,47 +111,84 @@ export interface TileBatches {
   heldBytes(): number;
 }
 
-/** The triangles of `g` whose middle falls in each tile, each as its own compact geometry */
-function splitByTile(g: THREE.BufferGeometry): Map<string, THREE.BufferGeometry> {
-  const pos = g.attributes.position;
+/**
+ * The triangles of `g` whose middle falls in each tile, each as its own compact geometry (the tiles in the order
+ * their first triangle comes, each tile's vertices in the order its triangles use them). Every site that joins the
+ * city comes through here, so it reads the arrays themselves and keys the tiles by number, where it
+ * went through the accessors, a string a triangle and a map of vertices: about a third of the time over many tiles, an eighth for one
+ */
+export function splitByTile(g: THREE.BufferGeometry): Map<string, THREE.BufferGeometry> {
+  const pos = g.attributes.position as THREE.BufferAttribute;
   const index = g.index!.array;
-  const tris = new Map<string, number[]>();
-  for (let t = 0; t < index.length; t += 3) {
-    const a = index[t];
-    const b = index[t + 1];
-    const c = index[t + 2];
-    const x = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3;
-    const z = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3;
-    const [i, j] = tileOf(x, z);
-    const k = tileKey(i, j);
-    let list = tris.get(k);
-    if (!list) tris.set(k, (list = []));
-    list.push(a, b, c);
+  const plain = !(pos as unknown as { isInterleavedBufferAttribute?: boolean }).isInterleavedBufferAttribute && pos.itemSize === 3;
+  const pa = pos.array;
+  // A tile as one number (its indices offset to stay positive: the world is a few dozen tiles across)
+  const OFF = 1 << 15;
+  const n = index.length / 3;
+  // Each triangle's tile first: most of what comes is all in one tile, and goes back as it is
+  const keys = new Float64Array(n);
+  let one = true;
+  for (let t = 0; t < n; t++) {
+    const a = index[t * 3];
+    const b = index[t * 3 + 1];
+    const c = index[t * 3 + 2];
+    const x = plain ? pa[a * 3] + pa[b * 3] + pa[c * 3] : pos.getX(a) + pos.getX(b) + pos.getX(c);
+    const z = plain ? pa[a * 3 + 2] + pa[b * 3 + 2] + pa[c * 3 + 2] : pos.getZ(a) + pos.getZ(b) + pos.getZ(c);
+    const k = (keys[t] = (Math.floor(x / 3 / TILE) + OFF) * 65536 + Math.floor(z / 3 / TILE) + OFF);
+    if (k !== keys[0]) one = false;
   }
+  const tris = new Map<number, number[]>();
+  if (one) tris.set(keys[0], []);
+  else {
+    let lastKey = NaN;
+    let last: number[] | undefined;
+    for (let t = 0; t < n; t++) {
+      const k = keys[t];
+      if (k !== lastKey) {
+        lastKey = k;
+        last = tris.get(k);
+        if (!last) tris.set(k, (last = []));
+      }
+      last!.push(index[t * 3], index[t * 3 + 1], index[t * 3 + 2]);
+    }
+  }
+  const name = (k: number) => tileKey(Math.floor(k / 65536) - OFF, (k % 65536) - OFF);
   const out = new Map<string, THREE.BufferGeometry>();
   if (tris.size === 1) {
-    out.set(tris.keys().next().value!, g);
+    out.set(name(tris.keys().next().value!), g);
     return out;
   }
+  const attrs = Object.entries(g.attributes) as [string, THREE.BufferAttribute][];
+  // Where each vertex goes in the tile being made (-1: not used yet), put back after each tile
+  const to = new Int32Array(pos.count).fill(-1);
   for (const [k, list] of tris) {
-    // Only the vertices this tile's triangles use, renumbered
-    const remap = new Map<number, number>();
+    // Only the vertices this tile's triangles use, renumbered in the order they come
     const idx = new Uint32Array(list.length);
-    list.forEach((v, n) => {
-      let m = remap.get(v);
-      if (m === undefined) remap.set(v, (m = remap.size));
+    const from: number[] = [];
+    for (let n = 0; n < list.length; n++) {
+      const v = list[n];
+      let m = to[v];
+      if (m < 0) {
+        m = to[v] = from.length;
+        from.push(v);
+      }
       idx[n] = m;
-    });
+    }
     const part = new THREE.BufferGeometry();
-    for (const [name, attr] of Object.entries(g.attributes) as [string, THREE.BufferAttribute][]) {
+    for (const [attr_name, attr] of attrs) {
       const size = attr.itemSize;
       const src = attr.array;
-      const dst = new (src.constructor as new (n: number) => typeof src)(remap.size * size);
-      for (const [from, to] of remap) for (let s = 0; s < size; s++) dst[to * size + s] = src[from * size + s];
-      part.setAttribute(name, new THREE.BufferAttribute(dst, size, attr.normalized));
+      const dst = new (src.constructor as new (n: number) => typeof src)(from.length * size);
+      for (let n = 0; n < from.length; n++) {
+        const f = from[n] * size;
+        const d = n * size;
+        for (let q = 0; q < size; q++) dst[d + q] = src[f + q];
+      }
+      part.setAttribute(attr_name, new THREE.BufferAttribute(dst, size, attr.normalized));
     }
     part.setIndex(new THREE.BufferAttribute(idx, 1));
-    out.set(k, part);
+    out.set(name(k), part);
+    for (const v of from) to[v] = -1;
   }
   return out;
 }
