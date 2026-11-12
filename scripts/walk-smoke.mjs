@@ -1,5 +1,5 @@
 // A smoke test of walk mode in the built site (`npm run smoke` after `npm run build`): a headless Chromium opens the
-// city and plays through it a scene at a time, each from a fresh page at its own spot: the car (in at the garage's
+// city and plays through it a scene at a time, each from a fresh page at its own spot: home (walking starts at Degen's front door, his panel), the car (in at the garage's
 // turntable, a drive, out), on foot (walk, sprint, jump, crouch, the hub open and closed), the gun store's counter,
 // the metro (the station's card, a ride, skipped to the end), a kart race (the clubhouse's menu, a single race, quit),
 // flying (into your aircraft in the hangar, rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error or a step that didn't happen.
@@ -96,7 +96,8 @@ async function scene(name, spawn, play, init) {
   };
   let why = '';
   try {
-    await page.goto(`http://127.0.0.1:${server.address().port}/?fps&spawn=${spawn}`);
+    // (no spot given: walking starts where it does for everyone, at home)
+    await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}`);
     await t.click('[data-start-guest]');
     await t.click('[data-start-single]');
     await until('the start menu to go', () => !document.querySelector('.has-start'), null, 600000);
@@ -113,6 +114,15 @@ async function scene(name, spawn, play, init) {
   for (const e of errors) console.error(`[smoke] ${name}: page error: ${e}`);
   if (why || errors.length) failed++;
 }
+
+// Home (home.ts): walking starts on Degen's front path in the Ends; his door's prompt opens his panel
+await scene('home', null, async (t) => {
+  const at = await t.where();
+  if (Math.hypot(at[0] + 189.75, at[1] - 363.25) > 1.5) throw new Error(`walking started at ${at.join(', ')}, not at home`);
+  await t.prompt('Home');
+  await t.until('his panel', () => document.querySelector('#city-panel-title')?.textContent === 'Home');
+  await t.step('the door opened his panel');
+});
 
 // The car: beside it on the garage's turntable (solids.ts GARAGE_SITE), in, a drive, out
 await scene('car', '83.9,143.35', async (t) => {
