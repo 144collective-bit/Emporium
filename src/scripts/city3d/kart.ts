@@ -51,7 +51,7 @@ import { KART_SPECS, PLAYER_KARTS, type KartId, type KartLook, type MyKart } fro
 import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { finishKartRace, kartStatsOf, keepSplits, parLap, recordKey, seriesRace, startSeries } from './tycoon';
 import { live } from './live-client';
-import { RACE_FAR, START_VIEW, nextView, type ViewId } from './views';
+import { RACE_FAR, RACE_NEAR, START_VIEW, nextView, type ViewId } from './views';
 
 /* ---------- The rivals ---------- */
 
@@ -334,9 +334,9 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     const fxx = Math.cos(camYaw);
     const fzz = -Math.sin(camYaw);
     const far = view === 'far';
-    const pitch = far ? RACE_FAR.pitch : 0.3;
+    const pitch = far ? RACE_FAR.pitch : RACE_NEAR.pitch;
     const boost = p.boostT > 0 ? 1 : 0;
-    const dist = (3.3 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 0.6 + boost * 0.4) * (far ? RACE_FAR.scale : 1);
+    const dist = (RACE_NEAR.base + Math.min(1, Math.abs(p.speed) / p.tune.top) * RACE_NEAR.perSpeed + boost * 0.4) * (far ? RACE_FAR.scale : 1);
     goal.set(p.x - fxx * Math.cos(pitch) * dist, p.y + 0.6 + Math.sin(pitch) * dist, p.z - fzz * Math.cos(pitch) * dist);
     // The countdown: in close from the side, settling in behind as the lights go
     const intro = !d.reduced && sim.countdown > 0 && view !== 'first';

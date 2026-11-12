@@ -37,20 +37,27 @@ export interface Chase {
 }
 
 /**
- * Each kind's near and far chase. Near is the chase camera each had before the plan, to the number; far is about
- * twice as far back and looks down a little more, so more of the street ahead and round it is in view.
+ * The car's, the bike's and the kart's near chase (the owner's call, 2026-11: closer): about a quarter in from the one
+ * they had before (base 3.6, perL 0.95, perSpeed 0.1, pitch 0.26), a little lower, falling back less with speed
+ */
+export const NEAR_ROAD: Chase = { base: 2.7, perL: 0.71, perSpeed: 0.06, speedMax: Infinity, pitch: 0.22, fov: 58 };
+
+/**
+ * Each kind's near and far chase. Near is the chase camera each had before the plan, to the number (but the road
+ * vehicles', `NEAR_ROAD`); far is about twice as far back and looks down a little more, so more of the street ahead
+ * and round it is in view.
  */
 export const CHASE: Record<ViewKind, Record<'near' | 'far', Chase>> = {
   car: {
-    near: { base: 3.6, perL: 0.95, perSpeed: 0.1, speedMax: Infinity, pitch: 0.26, fov: 58 },
+    near: NEAR_ROAD,
     far: { base: 7, perL: 1.4, perSpeed: 0.14, speedMax: Infinity, pitch: 0.34, fov: 58 },
   },
   bike: {
-    near: { base: 3.6, perL: 0.95, perSpeed: 0.1, speedMax: Infinity, pitch: 0.26, fov: 58 },
+    near: NEAR_ROAD,
     far: { base: 6.5, perL: 1.4, perSpeed: 0.14, speedMax: Infinity, pitch: 0.34, fov: 58 },
   },
   kart: {
-    near: { base: 3.6, perL: 0.95, perSpeed: 0.1, speedMax: Infinity, pitch: 0.26, fov: 58 },
+    near: NEAR_ROAD,
     far: { base: 6.5, perL: 1.4, perSpeed: 0.14, speedMax: Infinity, pitch: 0.34, fov: 58 },
   },
   boat: {
@@ -68,8 +75,13 @@ export function chaseDistance(c: Chase, L: number, speed: number): number {
   return c.base + c.perL * L + Math.min(c.speedMax, Math.abs(speed) * c.perSpeed);
 }
 
-/** A kart race's far camera (kart.ts): the near one's distance times `scale`, looking down at `pitch` (near's 0.3) */
-export const RACE_FAR = { scale: 1.9, pitch: 0.4 };
+/**
+ * A kart race's near camera (kart.ts): `base` back, `perSpeed` more at top speed, looking down at `pitch` (a quarter in
+ * from 3.3, 0.6 and 0.3, the owner's call: closer); its far camera the near one's distance times `scale` (as far back
+ * as it was), looking down at `pitch`
+ */
+export const RACE_NEAR = { base: 2.5, perSpeed: 0.45, pitch: 0.26 };
+export const RACE_FAR = { scale: 2.5, pitch: 0.4 };
 
 /**
  * The ring's far camera (fight.ts): `back` times further behind you than the near one, `up` high, `side` over your
@@ -155,3 +167,9 @@ export function viewName(kind: ViewKind | RideKind | 'ring' | 'foot', v: ViewId)
   if (v === 'first') return kind === 'foot' ? 'First person' : kind in RIDE_FIRST ? RIDE_FIRST[kind as RideKind] : kind === 'ring' ? 'Near' : FIRST_NAME[kind as ViewKind];
   return kind === 'foot' ? 'Over the shoulder' : v === 'near' ? 'Near' : 'Far';
 }
+
+/**
+ * How far behind Degen the walk camera starts (walk.ts's `homeZoom()`; the mouse wheel sets it after), on a wide
+ * screen and an upright one: a tight over the shoulder (the owner's call, 2026-11: about a third in from 2.6 and 2.5)
+ */
+export const WALK_ZOOM = { wide: 1.7, upright: 1.6 };

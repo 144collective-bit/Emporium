@@ -120,7 +120,7 @@ import type { FeatureId } from './live';
 import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { UNDER, createGroundHeight } from './groundheight';
-import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
+import { RIDE_CAM, WALK_ZOOM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
 import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
 import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
@@ -537,7 +537,7 @@ export function createWalk(d: WalkDeps) {
    * How far behind him the camera sits to begin with (the mouse wheel sets it after): closer on an upright
    * screen, whose narrow view leaves him small at the distance a wide one frames him well
    */
-  const homeZoom = () => (innerHeight > innerWidth ? 2.5 : 2.6);
+  const homeZoom = () => (innerHeight > innerWidth ? WALK_ZOOM.upright : WALK_ZOOM.wide);
   let zoom = homeZoom();
   let camDist = zoom;
   let firstPerson = false;

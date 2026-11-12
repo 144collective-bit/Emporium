@@ -37,11 +37,16 @@ test('every vehicle starts near and steps near, far, first person, then back', (
   assert.deepEqual(seen, ['near', 'far', 'first', 'near']);
 });
 
-test('near is the chase camera each vehicle had before the plan', () => {
-  // the car's, the bike's and the kart's (drive.ts), the boat's and the aircraft's, at a few speeds
+test('near is the chase camera each vehicle had before the plan, the road vehicles\' a quarter closer', () => {
+  // the car's, the bike's and the kart's (drive.ts): about a quarter in from 3.6 + 0.95 L + 0.1 v, a little lower
   for (const k of ['car', 'bike', 'kart'] as const) {
-    for (const [L, v] of [[4.2, 0], [4.2, 30], [1.2, 12]]) assert.equal(chaseDistance(CHASE[k].near, L, v), 3.6 + L * 0.95 + v * 0.1);
-    assert.equal(CHASE[k].near.pitch, 0.26);
+    for (const [L, v] of [[4.2, 0], [4.2, 30], [1.2, 12]]) {
+      const was = 3.6 + L * 0.95 + v * 0.1;
+      const now = chaseDistance(CHASE[k].near, L, v);
+      assert.ok(now > was * 0.6 && now < was * 0.8, `${k} at ${L}, ${v}: ${now.toFixed(2)} of ${was.toFixed(2)}`);
+      assert.ok(now < chaseDistance(CHASE[k].far, L, v) * 0.5, 'far stays well back');
+    }
+    assert.ok(CHASE[k].near.pitch < 0.26);
     assert.equal(CHASE[k].near.fov, 58);
   }
   for (const v of [0, 4, 20]) assert.equal(chaseDistance(CHASE.boat.near, 0, v), 5 + Math.min(4, v * 0.45));

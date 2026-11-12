@@ -4288,8 +4288,9 @@ it and has been retired completely. Build only on what's here.
 - Nothing lifts or glows on hover (the owner's call, with the pins off by
   default); the cursor shows a building is clickable in City view, and
   while walking nothing is hovered (Degen stands on the same ground).
-- The over-the-shoulder camera starts 2.6 tiles behind him, 2.5 on an upright screen (`homeZoom()` in
-  walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
+- The over-the-shoulder camera starts 1.7 tiles behind him, 1.6 on an upright screen (the owner's call,
+  2026-11: a tight over the shoulder, `WALK_ZOOM` in views.ts, `homeZoom()` in walk.ts; the mouse wheel sets
+  it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
@@ -4380,7 +4381,7 @@ it and has been retired completely. Build only on what's here.
 - `drive.ts` is the view:
   - **Getting in:** "Get in" at your car, on the turntable (it drives off facing the avenue) or wherever it was left.
   - **The car on screen:** it climbs kerbs smoothly, leans into turns and squats under gas or brakes (your car fitted out on its springs, `suspension.ts` and `carride.ts`; the kart and an unfitted car on the drawn-on lean). The wheels roll and steer.
-  - **Cameras** (views.ts, docs/views-plan.md): near and far chase cameras that swing in behind, where you can look around and they settle back; pulled in by buildings like the walk camera. V (R3, the touch View button) steps near, far, first person: in your car fitted out the driver's seat (`car.eye()`; the near plane comes in for it and goes back on getting out; the roof camera until it's fitted out), on your bike the helmet, in your kart the seat. Every time you get in it starts near.
+  - **Cameras** (views.ts, docs/views-plan.md): near and far chase cameras that swing in behind, where you can look around and they settle back; pulled in by buildings like the walk camera. Near for the car, the bike and the kart is `NEAR_ROAD` (the owner's call, 2026-11: about a quarter closer and a little lower than it was, falling back less with speed; a kart race's near is `RACE_NEAR`, its far as far back as before); far, the boat's and the aircraft's are as they were. V (R3, the touch View button) steps near, far, first person: in your car fitted out the driver's seat (`car.eye()`; the near plane comes in for it and goes back on getting out; the roof camera until it's fitted out), on your bike the helmet, in your kart the seat. Every time you get in it starts near.
   - **Readout:** speed in km/h and the gear (`data-drive-hud`).
   - **Sound:** a synthesised engine (`engine()` in `sound.ts`) plus bump and door sounds, all through the sound switch.
   - **Getting out:** "Get out" anywhere. Degen steps out of the left door, or wherever there's room, and the car stays parked and solid to walk round. Leaving walk mode parks it too.
