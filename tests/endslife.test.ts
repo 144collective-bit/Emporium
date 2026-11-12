@@ -124,7 +124,7 @@ test("the dogs ahead of their walkers, the trolley behind its lady, the bikes in
 });
 
 test("room for them all in the crowd's spare slots (index.ts TIERS reserve), with the other chunks' people", () => {
-  const RESERVE = { high: 320, low: 160 };
+  const RESERVE = { high: 360, low: 180 };
   const all = SUN_IDLE.length + SUN_PEOPLE.length + STRIP_IDLE.length + PORCH_SITTERS.length + CAMP_PEOPLE.length + ENDS_IDLE.length + ENDS_PEOPLE.length;
   assert.ok(all <= RESERVE.high, `${all} people for ${RESERVE.high} slots`);
   // (phones get every other idle person and the movers' trimmed half: about half)

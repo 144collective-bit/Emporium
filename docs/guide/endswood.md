@@ -83,7 +83,7 @@ keep it up to date when what it describes changes.
   kickabout on the ball court, kids on the swings (`ENDS_PEOPLE`), and
   people standing about (`ENDS_IDLE`: on the deck railings, at the parade,
   the corner shops, Bunker Sound's sofa, the church, the bus stops, the
-  well, the benches), into the crowd's spare slots (the reserve 320, 160 on
+  well, the benches), into the crowd's spare slots (the reserve 360, 180 on
   phones); drawn by `endslife3d.ts`; at night the stairwells' glazing lit
   up each core and lift tower, fluorescent tubes under every gallery (some
   tired, the odd one dead) and TVs' blue among the windows
@@ -114,3 +114,57 @@ keep it up to date when what it describes changes.
   faces from the blocks' atlas, a lit slit up each side, stepped flights and
   a handrail, landing lights, the shaft; no shadows cast, as the mall's hall,
   so the day reaches the stairwell). Keep it up to date.
+  - **Carried west** (the owner's call, the build-out's second section:
+    still Endswood, an extension, no new name or pin) is planned in
+    `docs/ends-west-plan.md` in five phases, each with the owner's sign-off;
+    keep it up to date. Phase 1 (the land and the streets) is built:
+    `endswest.ts` (DOM-free, the boot's, tested in `tests/endswest.test.ts`):
+    the estate's land grows by `WEST_RECT` (endswood.ts; `inEndswood()` is
+    the old land, the new and the band between, so lampmix.ts, lampposts.ts,
+    ambience.ts and the trees read it as one), the Close carried on west
+    from the old estate to `CLOSE_WEST`, its bollards moved there
+    (`CLOSE_BOLLARDS`), a zebra with beacons where the tunnel's footpath
+    crosses it (`ZEBRA`), the pavements between (`LINK_BLOCKS`), two blocks
+    either side of it (`WEST_BLOCKS`, ref `endswood`) laid as those estates
+    were (the owner's pick): service lanes in from the Close (`LANES`) to
+    parking courts behind the rows (`COURTS`), the rows' footprints kept
+    for Phase 2 (`ROWS`, each with the way it faces), back gardens
+    (`GARDENS`), front paths either side of a green (`PATHS`, `GREENS`), a
+    cross path down each block's east side (`CROSS_PATHS`), the east ends
+    kept for Phase 3 (`RESERVE`), sodium lamps (`WEST_LAMPS`, at the boot);
+    its land in `KEEPS` and ground.ts; drawn by `endswest3d.ts`
+    (`LAZY_DISTRICTS` id `endswest`). Still a dead end: no traffic down it.
+    Phase 2 (the terraces) is built: `endsterraces.ts` (DOM-free, the
+    chunk's, tested in `tests/endsterraces.test.ts`): each row two or three
+    terraces (`TERRACES`) with passages through to the gardens and courts
+    (`GINNELS`), every row mixing two and three storeys and flat and pitched
+    roofs (the owner's picks), 48 houses (`HOUSES`) mirrored in pairs, every
+    door its own colour (`DOOR_COLOURS`, the owner's pick), canopies, brick
+    or glazed porches, worn as Endswood (boards, dishes, faded doors), bins,
+    the back gardens' fences and gates (`fencesOf()`, `gateOf()`), sheds;
+    `TERRACE_SOLIDS` joined through `addSolids()` when the chunk loads;
+    drawn by `endsterraces3d.ts` (a site a terrace, walls from infill.ts's
+    wall atlas). Phase 3 (the estate round them) is built:
+    `endsweststreet.ts` (DOM-free, the chunk's, tested in
+    `tests/endsweststreet.test.ts`) on the blocks' east ends: the parade on
+    the Close with flats over (`PARADE_W`, `UNITS_W`, made-up names, one to
+    let), the fenced playground (`PLAY_W`), the lock-up garages on their
+    apron (`GARAGES`, `APRON`, a few doors up), the kickabout green and its
+    goals (`KICKABOUT`, `GOALS`), bin stores, the board, CCTV and benches;
+    `STREET_W_SOLIDS` joined when the chunk loads; drawn by
+    `endsweststreet3d.ts` (its shopfronts painted by `endsshopfront.ts`, the
+    old parade's painter, shared). Phase 4 (life, night and sound) is built:
+    `endswestlife.ts` (DOM-free, the chunk's, tested in
+    `tests/endswestlife.test.ts`): walkers round the rows' front paths, along
+    the Close and up the cross path, dogs on leads (`WEST_DOGS`), kids in the
+    playground and a kickabout on the green, neighbours on their doorsteps,
+    a queue at the chippy, people on the benches (`WEST_PEOPLE`,
+    `WEST_IDLE`, into the crowd's spare slots), washing in some back gardens
+    and bikes and toys out front (`WASHING`, `FRONT_BITS`), a pool under
+    every porch light and the late shops' (`PORCH_POOLS`); drawn by
+    `endswestlife3d.ts` (the bits as sites, near only; the dogs and the pools
+    on the main thread); the kickabout green under two sodium lamps
+    (`WEST_LAMPS`), the playground dark; its sound Endswood's. Phase 5
+    (polish) is built and the plan is done: `?bench` views `endsw-parade`,
+    `endsw-rows`, `endsw-kick`; no place of its own (it's Endswood's);
+    phones draw every other garden's washing and no toys on the greens.

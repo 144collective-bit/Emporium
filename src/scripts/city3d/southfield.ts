@@ -441,9 +441,10 @@ export const SF_LAMPS: [number, number, number, number][] = (() => {
     }
   // Yard Street's sidewalks and the ring's south leg's north one
   for (let x = FX + 8; x < KX - 4; x += 14) {
-    out.push([x, YARD_Z - IN, Math.PI / 2, SLAB_Y]);
-    out.push([x + 7, YARD_Z + IN, -Math.PI / 2, SLAB_Y]);
-    out.push([x, MILL_Z - IN, Math.PI / 2, SLAB_Y]);
+    // (a lamp's arm reaches along cos ry, -sin ry: world.ts buildLamps())
+    out.push([x, YARD_Z - IN, -Math.PI / 2, SLAB_Y]);
+    out.push([x + 7, YARD_Z + IN, Math.PI / 2, SLAB_Y]);
+    out.push([x, MILL_Z - IN, -Math.PI / 2, SLAB_Y]);
   }
   return out;
 })();

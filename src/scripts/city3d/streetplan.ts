@@ -34,6 +34,7 @@ import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
 import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS } from './lot9';
 import { ENDS_BLOCKS, ENDS_CROSSINGS, ENDS_STREETS } from './endswood';
+import { LINK_BLOCKS, WEST_BLOCKS } from './endswest';
 import { ruralSplit } from './rural';
 
 export type Pt = [number, number];
@@ -504,6 +505,8 @@ export function cityPlan(): StreetPlan {
     ...SF_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use, ref: b.ref, walk: b.walk })),
     // Endswood's round the Circus and either side of Endswood Road east of the avenue (endswood.ts)
     ...ENDS_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
+    // ...and carried west (endswest.ts, docs/ends-west-plan.md): the extension's two blocks and the pavements along the Close to them
+    ...[...WEST_BLOCKS, ...LINK_BLOCKS].map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];

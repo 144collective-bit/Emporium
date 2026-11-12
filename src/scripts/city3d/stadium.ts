@@ -194,7 +194,8 @@ export const STADIUM_LAMPS: [number, number, number, number][] = (() => {
   for (let x = ROAD.x1 + 4; x < ROAD.x0 - 3; x += 14) if (Math.abs(x - MALL.x) > 4) out.push([x, north, -Math.PI / 2, 0.15]);
   for (let x = LOOP.x1 + 6; x < IN.x0 - 5; x += 12) out.push([x, IN.z - ROAD.half - 0.45, -Math.PI / 2, 0.02]);
   for (let z = IN.z - 10; z > LOOP.z1 + 3; z -= 14) out.push([LOOP.x1 + LOOP.half + 0.45, z, Math.PI, 0.02]);
-  for (let x = LOOP.x1 - 6; x > LOOP.x0 + 3; x -= 14) out.push([x, LOOP.z1 - LOOP.half - 0.45, Math.PI / 2, 0.02]);
+  // (a lamp's arm reaches along cos ry, -sin ry: world.ts buildLamps())
+  for (let x = LOOP.x1 - 6; x > LOOP.x0 + 3; x -= 14) out.push([x, LOOP.z1 - LOOP.half - 0.45, -Math.PI / 2, 0.02]);
   return out;
 })();
 

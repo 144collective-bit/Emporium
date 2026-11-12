@@ -17,7 +17,7 @@ import { site } from './tilework';
 import { along } from './roads3d';
 import { buildFx, poster, tag } from './grime';
 import { COVER, KERB } from './palette';
-import { BOLLARD, CIRCUS, CLOSE_BOLLARDS, CLOSE_END, ENDS_NICK, ISLAND_R, NORTH_Z, ROAD_HALF, ROAD_Z, SOUTH_Z, SPINE, SUBWAYS, SUBWAY_BOLLARDS, WELL, subwayEnds, type Pt, type Rect } from './endswood';
+import { BOLLARD, CIRCUS, CLOSE_END, ENDS_NICK, ISLAND_R, NORTH_Z, ROAD_HALF, ROAD_Z, SOUTH_Z, SPINE, SUBWAYS, SUBWAY_BOLLARDS, WELL, subwayEnds, type Pt, type Rect } from './endswood';
 import { floorOf, type Passage } from './underground';
 import { NS_ROADS, WALK_W } from './layout';
 import { registerBlocks } from './endsblocks3d';
@@ -235,15 +235,7 @@ function registerRoads(low: boolean) {
     }
     b.build(into, { cast: false, receive: true });
   });
-  // The Close's end: concrete bollards across it, a strip of paving past them to the open land
-  site('ends close end', [CLOSE_END - 1.5, ROAD_Z - ROAD_HALF - 1, CLOSE_END + 1.5, ROAD_Z + ROAD_HALF + 1], (into) => {
-    const b = new Batch();
-    for (const [x, z] of CLOSE_BOLLARDS) {
-      post(b, x, z, 0, BOLLARD.h, BOLLARD.r, CONCRETE, low ? 6 : 10);
-      b.add(new THREE.SphereGeometry(BOLLARD.r, low ? 6 : 10, 4, 0, Math.PI * 2, 0, Math.PI / 2).translate(x, BOLLARD.h, z), CONCRETE);
-    }
-    b.build(into, { cast: true, receive: true });
-  });
+  // (the Close's bollards stand at its far end since it was carried west: endswest3d.ts)
 }
 
 /* ---------- The Circus and its island ---------- */

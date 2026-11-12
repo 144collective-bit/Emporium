@@ -89,7 +89,7 @@ keep it up to date when what it describes changes.
     conversions, each with its fire ring and chairs, a canopy over a
     table, its car, and what a long stay gathers; `CAMP_SOLIDS` (solid
     only inside each thing, `inner()`), `CAMP_CARS`, `CAMP_PEOPLE` (the
-    crowd's spare slots: the reserve is 320, 160 on phones),
+    crowd's spare slots: the reserve is 360, 180 on phones),
     `CAMP_DOGS`. Drawn by `lot9camp3d.ts` (`registerCamp()`,
     `registerPower()`, `yardThing()`, `hookupOf()`, `xmasLights()`,
     `campGlow()`: the fires' glow one mesh; one sign atlas of fixed made-up

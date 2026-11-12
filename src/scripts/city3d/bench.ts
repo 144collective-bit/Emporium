@@ -64,6 +64,10 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'ends-circus', name: 'Endswood, over the Circus', pos: [-28, 24, 412], target: [-56, 0, 378] },
   { id: 'ends-street', name: 'Endswood Road, to the church', pos: [4, 2.2, 382.5], target: [30, 7, 366] },
   { id: 'ends-common', name: 'Endswood, from the common', pos: [-74, 9, 468], target: [-58, 5, 395] },
+  // ...carried west (docs/ends-west-plan.md Phase 5): the parade on the Close, along a pair of rows' fronts, the kickabout
+  { id: 'endsw-parade', name: 'Endswood west, the parade', pos: [-131, 2, 381.6], target: [-144, 1.4, 376] },
+  { id: 'endsw-rows', name: 'Endswood west, the rows', pos: [-150, 2.2, 409.5], target: [-172, 0.9, 407] },
+  { id: 'endsw-kick', name: 'Endswood west, the kickabout', pos: [-151, 3, 410], target: [-142, 0.4, 426] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

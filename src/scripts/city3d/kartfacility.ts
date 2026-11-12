@@ -439,7 +439,8 @@ export const KART_LAMPS: [number, number, number, number][] = (() => {
   const north = ROAD.z - ROAD.half - 0.45;
   for (let x = ROAD.x0 + 8; x < ROAD.x1 - 2; x += 12) if (Math.abs(x - LOOP.x0) > LOOP.half + 2 && Math.abs(x - LOOP.x1) > LOOP.half + 2) out.push([x, north, -Math.PI / 2, 0.02]);
   for (let z = ROAD.z - 10; z > LOOP.z1 + 3; z -= 14) out.push([LOOP.x0 - LOOP.half - 0.45, z, 0, 0.02], [LOOP.x1 + LOOP.half + 0.45, z, Math.PI, 0.02]);
-  for (let x = LOOP.x0 + 6; x < LOOP.x1 - 3; x += 14) out.push([x, LOOP.z1 - LOOP.half - 0.45, Math.PI / 2, 0.02]);
+  // (a lamp's arm reaches along cos ry, -sin ry: world.ts buildLamps())
+  for (let x = LOOP.x0 + 6; x < LOOP.x1 - 3; x += 14) out.push([x, LOOP.z1 - LOOP.half - 0.45, -Math.PI / 2, 0.02]);
   for (const [u, v, ry] of [
     [-6, 94, 0],
     [18, 94, Math.PI],
