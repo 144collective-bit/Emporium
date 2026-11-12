@@ -143,12 +143,13 @@ export const RESERVE: Rect[] = [
 export const WEST_LAMPS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const IN = ROAD_HALF + 0.45;
-  for (const x of [-122, -146, -170, -190]) out.push([x, ROAD_Z - IN, Math.PI / 2, SLAB_Y]);
-  for (const x of [-128, -158, -182]) out.push([x, ROAD_Z + IN, -Math.PI / 2, SLAB_Y]);
+  // (a lamp's arm reaches along cos ry, -sin ry: the Close's over the road, the courts' and greens' south over them)
+  for (const x of [-122, -146, -170, -190]) out.push([x, ROAD_Z - IN, -Math.PI / 2, SLAB_Y]);
+  for (const x of [-128, -158, -182]) out.push([x, ROAD_Z + IN, Math.PI / 2, SLAB_Y]);
   const mid = (ROW_X[0] + ROW_X[1]) / 2;
-  for (const r of [...COURTS, ...GREENS]) out.push([mid, r[1] + 0.35, Math.PI / 2, SLAB_Y]);
-  // (and the kickabout green, Phase 4: two at its west edge by the cross path, their heads out over the green (+x:
-  // a lamp's arm points along cos ry, -sin ry), its game lit at night)
+  for (const r of [...COURTS, ...GREENS]) out.push([mid, r[1] + 0.35, -Math.PI / 2, SLAB_Y]);
+  // (and the kickabout green, Phase 4: two at its west edge by the cross path, their heads out over the green (+x),
+  // its game lit at night)
   for (const z of [418, 444]) out.push([CROSS_PATHS[1][2] + 1.4, z, 0, SLAB_Y]);
   return out;
 })();

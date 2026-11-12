@@ -272,28 +272,30 @@ export const ENDS_SOLIDS: Box[] = [
 /* ---------- Lamps ---------- */
 
 /** Sodium lamps (x, z, the way the arm reaches, the ground's height; lampmix.ts): along Endswood Road's sidewalks, round
- * the Circus's outer sidewalk, down the spine either side of the subways' ramps, and round the well on its island */
+ * the Circus's outer sidewalk, down the spine either side of the subways' ramps, and round the well on its island. A
+ * lamp's arm reaches along (cos ry, -sin ry) (world.ts `buildLamps()`): the roads' over the carriageway, the Circus's
+ * and the well's in towards their middles */
 export const ENDS_LAMPS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const IN = ROAD_HALF + 0.45;
   /** Clear of a crossing by this much */
   const clear = (x: number) => [AVE.c, NS1.c, NS2.c, EAST.c].every((c) => Math.abs(x - c) > 7) && x > CIRCUS.x + CIRCUS_OUT + 2;
   for (let x = CIRCUS.x + CIRCUS_OUT + 4; x < EAST.c - 4; x += 13) {
-    if (clear(x)) out.push([x, ROAD_Z - IN, Math.PI / 2, SLAB_Y]);
-    if (clear(x + 6.5)) out.push([x + 6.5, ROAD_Z + IN, -Math.PI / 2, SLAB_Y]);
+    if (clear(x)) out.push([x, ROAD_Z - IN, -Math.PI / 2, SLAB_Y]);
+    if (clear(x + 6.5)) out.push([x + 6.5, ROAD_Z + IN, Math.PI / 2, SLAB_Y]);
   }
   // The Close's, one each side
   for (const [x, k] of [
     [-84, -1],
     [-96, 1],
   ] as const)
-    out.push([x, ROAD_Z + k * IN, (-k * Math.PI) / 2, SLAB_Y]);
+    out.push([x, ROAD_Z + k * IN, (k * Math.PI) / 2, SLAB_Y]);
   // Round the Circus on its outer sidewalk, between the road and the spine (arms reaching in over the carriageway)
   const R = CIRCUS.r + CIRCUS.half + 0.45;
-  for (const a of [Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4]) out.push([CIRCUS.x + R * Math.cos(a), CIRCUS.z + R * Math.sin(a), a + Math.PI, SLAB_Y]);
+  for (const a of [Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4]) out.push([CIRCUS.x + R * Math.cos(a), CIRCUS.z + R * Math.sin(a), Math.PI - a, SLAB_Y]);
   // Round the well on the island, reaching in over it
   const r = WELL.r + WELL.wall + 0.9;
-  for (const a of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((v) => v + Math.PI / 4)) out.push([WELL.x + r * Math.cos(a), WELL.z + r * Math.sin(a), a + Math.PI, GROUND_Y]);
+  for (const a of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((v) => v + Math.PI / 4)) out.push([WELL.x + r * Math.cos(a), WELL.z + r * Math.sin(a), Math.PI - a, GROUND_Y]);
   // Down the spine beside each subway's cutting, at its top
   for (const p of SUBWAYS) {
     const { top, out: o } = subwayEnds(p);
