@@ -20,6 +20,7 @@ import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
 import { PARK_LAMPS, PARK_TREES } from './westlake';
+import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER, CIVIC_IDLE, FLOOD_POOLS, civicDay, flagCeremony } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
@@ -29,6 +30,7 @@ import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
+import { WEST_LAMPS as ENDS_WEST_LAMPS } from './endswest';
 import { ENDS_TREES } from './endsstreet';
 import { COMMON_LAMPS, COMMON_TREES } from './endsblend';
 import { RURAL_LAMPS } from './ruraldress';
@@ -129,8 +131,9 @@ import { CROWD_VIEW, figureDetail } from './character';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, sceneMemory } from './perf';
-import { tileBatch } from './tilebatch';
+import { mb, memoryRows, sceneMemory } from './perf';
+import { PACKED, tileBatch } from './tilebatch';
+import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
@@ -144,9 +147,9 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 320, walkers: 100, trees: 250, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 320, walkers: 62, trees: 150, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
-  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 160, walkers: 15, trees: 90, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 360, walkers: 100, trees: 250, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 360, walkers: 62, trees: 150, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 180, walkers: 15, trees: 90, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
 function pickTier(): Tier {
@@ -352,6 +355,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
     spots.push(e.faces ? { ...s, faces: e.faces } : s);
   }
+  // ...and City Hall at the civic square's head (civic.ts, docs/civic-plan.md Phase 2; drawn in Westlake Park's
+  // chunk): the pin over its tower, the fly-in from the square (south)
+  spots.push(pickSpot(scene, 'cityhall', SLAB, CITYHALL_PICK, CITYHALL_LAND, CITYHALL_TIP - SLAB + 1.4, CITYHALL_TOWER));
+  // ...and the police headquarters and the courthouse flanking the square (Phase 3): their pins over their roofs
+  {
+    const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
+    spots.push(pickSpot(scene, 'police', SLAB, POLICE_PICK, POLICE_LOT, POLICE_PICK[0].h + 1.2, mid(POLICE_PICK[0].rect)));
+    spots.push(pickSpot(scene, 'courthouse', SLAB, COURT_PICK, COURT_LOT, COURT_PICK[0].h + 1.2, mid(COURT_PICK[0].rect)));
+  }
   // ...and Sunridge's club, park and school (docs/suburb-plan.md Phase 4): their spots (drawn in Sunridge's chunk)
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -371,6 +383,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // of its own, loaded as you approach (districts.ts)
   PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
+  // The civic square's (civic.ts, docs/civic-plan.md)
+  for (const [x, z] of SQUARE_TREES) addTree(x, z, 1, false);
+  for (const [x, z, ry] of SQUARE_LAMPS) addLamp(x, z, ry);
+  // ...its people (Phase 4): a guard at each door always, by day officials on City Hall's steps, the queue at its door,
+  // people on the square, the pigeons' friend on a bench and the honour guard at the flag's raising and lowering
+  // (Phase 5; phones: half but the guards); the floodlights' pools
+  CIVIC_IDLE.forEach((p, i) => (tier !== 'low' || p.act === 'guard' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.y, ry: p.ry, act: p.act, when: p.ceremony ? flagCeremony : p.day ? civicDay : undefined }));
+  for (const [x, z, size] of FLOOD_POOLS) addPool(x, z, size);
   // Crestmont's (crestmont.ts): along the Flats' sidewalks and up the hill roads at their beds' height
   for (const [x, z, ry, y] of CREST_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z, ry, y] of SUN_LAMPS) addLamp(x, z, ry, y);
@@ -391,6 +411,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
   // Endswood's (endswood.ts, docs/estate-plan.md): sodium along Endswood Road and the Close, round the Circus, the well and the spine
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
+  // ...and carried west (endswest.ts, docs/ends-west-plan.md Phase 1): along the Close, in the courts, over the greens
+  for (const [x, z, ry, y] of ENDS_WEST_LAMPS) addLamp(x, z, ry, y);
   // ...and its trees: the green's, the churchyard's, by the playground and round the community centre (endsstreet.ts, Phase 4)
   for (const [x, z, s] of ENDS_TREES) addTree(x, z, s, false, SLAB);
   // ...and the common's down to Lot 9: sodium along the footpath, a few hawthorns (endsblend.ts, Phase 6)
@@ -498,10 +520,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return r;
   };
 
+  // The city's size on the page, kept from the last resize (the frame loop never asks the page for it), and whether
+  // the start menu covers the city (kept from the root's class as it changes, not read every frame)
+  let hostW = host.clientWidth;
+  let hostH = host.clientHeight;
+  let startCovers = root.classList.contains('has-start');
+  new MutationObserver(() => (startCovers = root.classList.contains('has-start'))).observe(root, { attributes: true, attributeFilter: ['class'] });
+  const startUp = () => startCovers;
   function resize() {
     const w = host.clientWidth;
     const h = host.clientHeight;
     if (!w || !h) return;
+    hostW = w;
+    hostH = h;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -546,11 +577,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // airport's grounds, the kart park's circuit), only those in the home view and the intro's are built now
   // Most sites built off the main thread (performance phase 4): in the built site, unless ?worker=0
   const siteWorker = import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced() }) : null;
+  const horizonAsked = new URLSearchParams(location.search).get('horizon');
+  const horizonOff = horizonAsked === '0';
+  const horizonForced = Number(horizonAsked) || 0;
   const works = createTileWork(scene, {
     budget: (Number(new URLSearchParams(location.search).get('budget')) || Q.nearBudget) * 2 ** 20,
     compile: (meshes) => meshes.forEach((m) => compileFor(m)),
     worker: siteWorker,
     meshesOf,
+    // Phones, on the ground (walking, driving, riding; not up in an aircraft): tiles past where the haze hides
+    // everything let go of all their sites drew (docs/performance-plan.md). `?horizon=N` forces a distance on
+    // any tier while walking, `?horizon=0` turns it off, for testing
+    horizon: () => {
+      if (!walking || walk.flying || horizonOff) return Infinity;
+      if (horizonForced) return horizonForced;
+      return tier === 'low' ? hazeHorizon((scene.fog as THREE.FogExp2).density) : Infinity;
+    },
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
   const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
@@ -838,6 +880,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
+      });
+    // City Hall's panel: Walk in on the civic square at the steps' foot, facing them
+    // (and the police's and the courthouse's, in front of their doors)
+    if (id === 'cityhall' || id === 'police' || id === 'courthouse')
+      panelBody.querySelector('[data-civic-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(id === 'police' ? POLICE_SPAWN : id === 'courthouse' ? COURTHOUSE_SPAWN : CITYHALL_SPAWN);
       });
     // Lot 9's panel: Walk in on the lane outside its gate, facing in
     if (id === 'lot9')
@@ -1543,6 +1592,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
+    // (where the geometry memory is, for the console: perf.ts)
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -1627,7 +1678,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     timer.update();
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
-    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting && !districts.pending()) bench.begin(t);
+    if (bench && !bench.active && !bench.done && !walking && !startUp() && !works.stats().waiting && !districts.pending()) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
@@ -1678,7 +1729,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
     sky.setShadows(walking && !walk.airborne);
-    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look);
+    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -1697,7 +1748,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Building as you go (growth plan Phase 3): a few milliseconds a frame, nearest what the City view looks at
     // (round Degen while walking). The start menu covers the city completely: behind it the city is drawn only
     // once a second (its shaders made ready as it fills) and the frame's time goes on building instead
-    const covered = root.classList.contains('has-start');
+    const covered = startUp();
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
@@ -1737,8 +1788,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // the hover still lights its pin when the labels are on, and sets the cursor)
 
     // Pins follow their buildings on screen; far ones shrink (only while the labels are on: off, nothing is placed)
-    const w = host.clientWidth;
-    const h = host.clientHeight;
+    const w = hostW;
+    const h = hostH;
     pinState.length = 0;
     for (const sp of pinsOn ? spots : []) {
       const el = pins.get(sp.id);
@@ -1838,7 +1889,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
-          (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
+          (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),

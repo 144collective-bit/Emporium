@@ -3,7 +3,7 @@
 // first past the budget, never near the camera, and built again before they're needed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { KEEP_LEAD, LOOK_AHEAD, REBUILD_LEAD, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, type HeldTile, type SiteArea } from '../src/scripts/city3d/tileplan';
+import { KEEP_LEAD, LOOK_AHEAD, REBUILD_LEAD, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, type HeldTile, type SiteArea, HAZE_SEEN, HORIZON_BACK, HORIZON_OUT, hazeHorizon, toReturn, toVanish } from '../src/scripts/city3d/tileplan';
 import { TILE, tileKey, tileOf, tilesNear } from '../src/scripts/city3d/tiles';
 
 let seed = 7;
@@ -94,4 +94,28 @@ test('near forms are let go past the budget, furthest first, never near the came
   );
   // Between where it's let go and where it's built again there's room, so a tile on the line doesn't churn
   assert.ok(KEEP_LEAD > REBUILD_LEAD);
+});
+
+test('past the haze a tile lets everything go, and comes back before it could show', () => {
+  // The horizon is where the scene's fog leaves under a hundredth of a thing: thicker haze, nearer
+  const day = hazeHorizon(0.0037);
+  const night = hazeHorizon(0.0105);
+  assert.ok(Math.abs(Math.exp(-((0.0037 * day) ** 2)) - HAZE_SEEN) < 1e-9);
+  assert.ok(day > 550 && day < 620 && night > 190 && night < 220);
+  assert.equal(hazeHorizon(0), Infinity);
+  const t = (key: string, d: number, o: Partial<{ all: number; near: boolean; gone: boolean }> = {}) => ({ key, d, all: 100, near: false, gone: false, ...o });
+  const tiles = [t('a', 100), t('b', 300), t('c', 261), t('d', 900), t('e', 500, { all: 0 }), t('f', 400, { gone: true }), t('g', 700, { near: true })];
+  // Only past the horizon and a margin, furthest first; never one with nothing to give, one gone already or one drawn near
+  assert.deepEqual(toVanish(tiles, 200), ['d', 'b', 'c']);
+  assert.deepEqual(toVanish(tiles, 200 + 1 - HORIZON_OUT + 60), ['d', 'b']);
+  // No horizon (the City view, a desktop, an aircraft): nothing is let go
+  assert.deepEqual(toVanish(tiles, Infinity), []);
+  // Coming back: only those gone, inside the horizon and a smaller margin, nearest first
+  const gone = [t('p', 215, { gone: true }), t('q', 221, { gone: true }), t('r', 90, { gone: true }), t('s', 50)];
+  assert.deepEqual(toReturn(gone, 200), ['r', 'p']);
+  assert.ok(HORIZON_BACK < HORIZON_OUT);
+  // ... and every one of them once nothing hides them any more
+  assert.deepEqual(toReturn(gone, Infinity), ['r', 'p', 'q']);
+  // A tile let go at the margin isn't asked back at once
+  assert.deepEqual(toReturn([t('x', 200 + HORIZON_OUT + 1, { gone: true })], 200), []);
 });

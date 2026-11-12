@@ -42,6 +42,9 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'uptown', name: 'Uptown, its towers from the river', pos: [-60, 16, 92], target: [-120, 12, 30] },
   // (the polish plan's Phase 10: the districts that had no view)
   { id: 'uptown-north', name: 'Uptown North, from the park', pos: [-62, 20, -20], target: [-25, 10, -100] },
+  // The civic quarter (docs/civic-plan.md Phase 5): City Hall over the square from the avenue, and from over Uptown's axis
+  { id: 'civic', name: 'The civic square and City Hall', pos: [-140, 7, 4], target: [-140, 6, -40] },
+  { id: 'civic-high', name: 'The civic quarter, from over the avenue', pos: [-140, 30, 30], target: [-140, 4, -32] },
   { id: 'mall', name: 'Starlight Mall and Palm Court', pos: [30, 26, -40], target: [60, 2, -120] },
   { id: 'harbour', name: 'Harbour Bridge, from the south bank', pos: [40, 12, 160], target: [64.5, 4, 100] },
   { id: 'sunridge', name: 'Sunridge, over the loop', pos: [120, 28, 10], target: [180, 0, -80] },
@@ -61,6 +64,10 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'ends-circus', name: 'Endswood, over the Circus', pos: [-28, 24, 412], target: [-56, 0, 378] },
   { id: 'ends-street', name: 'Endswood Road, to the church', pos: [4, 2.2, 382.5], target: [30, 7, 366] },
   { id: 'ends-common', name: 'Endswood, from the common', pos: [-74, 9, 468], target: [-58, 5, 395] },
+  // ...carried west (docs/ends-west-plan.md Phase 5): the parade on the Close, along a pair of rows' fronts, the kickabout
+  { id: 'endsw-parade', name: 'Endswood west, the parade', pos: [-131, 2, 381.6], target: [-144, 1.4, 376] },
+  { id: 'endsw-rows', name: 'Endswood west, the rows', pos: [-150, 2.2, 409.5], target: [-172, 0.9, 407] },
+  { id: 'endsw-kick', name: 'Endswood west, the kickabout', pos: [-151, 3, 410], target: [-142, 0.4, 426] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

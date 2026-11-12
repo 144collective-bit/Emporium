@@ -201,8 +201,8 @@ export const PARK_SIDE_LAMPS: [number, number, number][] = UPTOWN_LAMPS.filter((
   if (Math.abs(x - AXIS_X) < LANE_HALF + 1.5) return [];
   if (edgeGates.some((g) => Math.abs(g.at[0] - x) < g.half + GATE_CLEAR - 1e-6)) return [];
   if (solidAt(q, 0.3) || onOtherStreet(NORTH, q, 1.2)) return [];
-  // (the arm reaches south over the road)
-  return [[x, q[1], Math.atan2(1, 0)] as [number, number, number]];
+  // (the arm reaches south over the road: an arm reaches along cos ry, -sin ry, world.ts buildLamps())
+  return [[x, q[1], -Math.PI / 2] as [number, number, number]];
 });
 
 /** The park's edge row: how far apart, how far in from the park's edge (the wall stands just inside it), and its size */

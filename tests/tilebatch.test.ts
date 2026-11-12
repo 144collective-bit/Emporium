@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { tileBatch } from '../src/scripts/city3d/tilebatch';
+import { PACKED, compact, splitByTile, tileBatch } from '../src/scripts/city3d/tilebatch';
+import { tileKey, tileOf } from '../src/scripts/city3d/tiles';
 
 // A plain colour and a neon, as the Batches' shared materials (kit.ts marks them `shared`)
 const paint = new THREE.MeshBasicMaterial();
@@ -137,4 +138,179 @@ test('room let go is taken back before a mesh grows', () => {
     }
   }
   assert.ok((bm as unknown as { _maxVertexCount: number })._maxVertexCount <= size * 1.3);
+});
+
+test('vertices are packed smaller: normals as bytes, the paint\'s colours as 16-bit shares', () => {
+  const box = () => {
+    const g = new THREE.BoxGeometry(1, 2, 3);
+    const n = g.attributes.position.count;
+    const col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) col.set([0.0123, 0.5, 1], i * 3);
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  };
+  const size = (g: THREE.BufferGeometry) => Object.values(g.attributes).reduce((n, a) => n + (a as THREE.BufferAttribute).array.byteLength, 0) / g.attributes.position.count;
+  const before = box();
+  const g = compact(box(), true);
+  // 44 bytes a vertex (position, normal, uv, colour as floats) down to 29
+  assert.equal(size(before), 44);
+  assert.equal(size(g), 29);
+  const n = g.attributes.normal as THREE.BufferAttribute;
+  const c = g.attributes.color as THREE.BufferAttribute;
+  assert.ok(n.array instanceof Int8Array && n.normalized);
+  assert.ok(c.array instanceof Uint16Array && c.normalized);
+  // The shaders read the same numbers back (three's getters undo `normalized`)
+  for (let i = 0; i < n.count; i++) {
+    assert.ok(Math.abs(n.getX(i) - before.attributes.normal.getX(i)) < 1 / 127);
+    assert.ok(Math.abs(n.getY(i) - before.attributes.normal.getY(i)) < 1 / 127);
+    assert.ok(Math.abs(n.getZ(i) - before.attributes.normal.getZ(i)) < 1 / 127);
+    assert.ok(Math.abs(c.getX(i) - 0.0123) < 1 / 65535);
+    assert.ok(Math.abs(c.getY(i) - 0.5) < 1 / 65535);
+    assert.equal(c.getZ(i), 1);
+  }
+  assert.equal(PACKED.clamped, 0);
+  // Another material's colours (they may pass 1) stay as they are, its normals still packed
+  const other = compact(box(), false);
+  assert.ok(other.attributes.color.array instanceof Float32Array);
+  assert.ok(other.attributes.normal.array instanceof Int8Array);
+  // Packing twice changes nothing more
+  assert.equal(size(compact(g, true)), 29);
+});
+
+test('a tile past the haze lets everything its sites drew go, and gets it back in two steps', () => {
+  const scene = new THREE.Scene();
+  const tiled = tileBatch(scene, [scene]);
+  tiled.update(0, 10, 0, 100);
+  const draw = () => {
+    const g = new THREE.Group();
+    scene.add(g);
+    piece(g, 905, 905, 'near');
+    piece(g, 906, 905, 'far');
+    piece(g, 907, 905);
+    piece(g, 908, 905, 'near', own);
+    return g;
+  };
+  tiled.add([draw()], { site: 'block' });
+  const [shared] = tiled.meshes;
+  assert.equal(visible(shared), 2);
+  const [h] = tiled.held(0, 10, 0);
+  assert.ok(h.all > h.bytes && !h.gone);
+  // Gone: the shared material's pieces at every level (the one in its own texture stays)
+  const pieces = tiled.pieces();
+  assert.equal(tiled.vanish('30,30'), h.all);
+  assert.equal(visible(shared), 0);
+  assert.deepEqual(tiled.lostSites('30,30'), ['block']);
+  const [g] = tiled.held(0, 10, 0);
+  assert.ok(g.gone && g.released && g.all === 0);
+  // (twice does nothing)
+  assert.equal(tiled.vanish('30,30'), 0);
+  // Inside the haze again: the walls and the far stand-in are built again, the near details not yet
+  tiled.add([draw()], { site: 'block', keep: (t, lod) => t === '30,30' && lod !== 'near' });
+  tiled.regained('30,30');
+  assert.equal(visible(shared), 2);
+  const [back] = tiled.held(0, 10, 0);
+  assert.ok(!back.gone && back.released && back.all === h.all - h.bytes);
+  // Close to: the near details too, as for a tile that only let those go
+  tiled.add([draw()], { site: 'block', keep: (t, lod) => t === '30,30' && lod === 'near' });
+  tiled.restored('30,30');
+  tiled.update(905, 2, 905, 100);
+  assert.equal(visible(shared), 2);
+  assert.equal(tiled.held(905, 2, 905)[0].all, h.all);
+  assert.equal(tiled.pieces(), pieces);
+  // A tile drawn near is never let go, nor the boot's own pieces
+  assert.equal(tiled.vanish('30,30'), 0);
+});
+
+test('the room tiles let go is given back: the meshes are made smaller, and still take new pieces', () => {
+  const scene = new THREE.Scene();
+  const tiled = tileBatch(scene, [scene]);
+  tiled.update(0, 10, 0, 100);
+  // Twenty tiles' worth of walls from one site each
+  const draw = (n: number) => {
+    const g = new THREE.Group();
+    scene.add(g);
+    for (let k = 0; k < 6; k++) piece(g, 600 + n * 30 + 5 + k, 905);
+    return g;
+  };
+  for (let n = 0; n < 20; n++) tiled.add([draw(n)], { site: `s${n}` });
+  const [bm] = tiled.meshes;
+  const bytes = () => Object.values(bm.geometry.attributes).reduce((n, a) => n + (a as THREE.BufferAttribute).array.byteLength, 0) + (bm.geometry.index!.array as Uint32Array).byteLength;
+  const full = bytes();
+  assert.equal(visible(bm), 20);
+  // Nothing let go: nothing to give back
+  assert.equal(tiled.trim(), 0);
+  // Fifteen of them go past the haze
+  for (let n = 5; n < 20; n++) assert.ok(tiled.vanish(`${20 + n},30`) > 0);
+  assert.equal(bytes(), full);
+  const back = tiled.trim();
+  assert.ok(back > full * 0.5, `${back} of ${full}`);
+  assert.equal(bytes(), full - back);
+  // What's left is still drawn, and a tile coming back fits again (the mesh grows for it)
+  assert.equal(visible(bm), 5);
+  tiled.add([draw(7)], { site: 's7', keep: (t) => t === '27,30' });
+  tiled.regained('27,30');
+  assert.equal(visible(bm), 6);
+  assert.equal(tiled.trim(), 0);
+});
+
+/** The split as it was first written (accessors, a string a triangle, a map of vertices): what the quick one must match */
+function splitPlainly(g: THREE.BufferGeometry): Map<string, THREE.BufferGeometry> {
+  const pos = g.attributes.position;
+  const index = g.index!.array;
+  const tris = new Map<string, number[]>();
+  for (let t = 0; t < index.length; t += 3) {
+    const [a, b, c] = [index[t], index[t + 1], index[t + 2]];
+    const [i, j] = tileOf((pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3, (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3);
+    const k = tileKey(i, j);
+    let list = tris.get(k);
+    if (!list) tris.set(k, (list = []));
+    list.push(a, b, c);
+  }
+  const out = new Map<string, THREE.BufferGeometry>();
+  for (const [k, list] of tris) {
+    const remap = new Map<number, number>();
+    const idx = new Uint32Array(list.length);
+    list.forEach((v, n) => {
+      let m = remap.get(v);
+      if (m === undefined) remap.set(v, (m = remap.size));
+      idx[n] = m;
+    });
+    const part = new THREE.BufferGeometry();
+    for (const [name, attr] of Object.entries(g.attributes) as [string, THREE.BufferAttribute][]) {
+      const size = attr.itemSize;
+      const dst = new (attr.array.constructor as new (n: number) => THREE.TypedArray)(remap.size * size);
+      for (const [from, to] of remap) for (let q = 0; q < size; q++) dst[to * size + q] = attr.array[from * size + q];
+      part.setAttribute(name, new THREE.BufferAttribute(dst, size, attr.normalized));
+    }
+    part.setIndex(new THREE.BufferAttribute(idx, 1));
+    out.set(k, part);
+  }
+  return out;
+}
+
+test('triangles are split by tile exactly as the plain way splits them, negative tiles and all', () => {
+  // A wide, finely cut sheet over many tiles either side of the origin, turned so its triangles cross tile lines
+  const sheet = compact(new THREE.PlaneGeometry(190, 130, 37, 23).rotateX(-Math.PI / 2).rotateY(0.3).translate(-12.5, 0, 7.25), false);
+  const quick = splitByTile(sheet);
+  const plain = splitPlainly(sheet);
+  assert.ok(quick.size > 20);
+  // The same tiles in the same order, each with the same vertices in the same order
+  assert.deepEqual([...quick.keys()], [...plain.keys()]);
+  assert.ok([...quick.keys()].some((k) => k.startsWith('-')) && [...quick.keys()].some((k) => k.includes(',-')));
+  for (const [k, g] of quick) {
+    const p = plain.get(k)!;
+    assert.deepEqual(Object.keys(g.attributes), Object.keys(p.attributes));
+    for (const name of Object.keys(g.attributes)) {
+      const [a, b] = [g.attributes[name] as THREE.BufferAttribute, p.attributes[name] as THREE.BufferAttribute];
+      assert.equal(a.array.constructor, b.array.constructor);
+      assert.equal(a.normalized, b.normalized);
+      assert.deepEqual(a.array, b.array, `${k} ${name}`);
+    }
+    assert.deepEqual(g.index!.array, p.index!.array, k);
+  }
+  // Every triangle is in exactly one tile
+  assert.equal([...quick.values()].reduce((n, g) => n + g.index!.count, 0), sheet.index!.count);
+  // One tile: the geometry itself comes back, not a copy
+  const small = new THREE.BoxGeometry(1, 1, 1).translate(5, 0.5, 5);
+  assert.equal(splitByTile(small).get('0,0'), small);
 });

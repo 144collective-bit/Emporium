@@ -106,6 +106,45 @@ export function toRebuild(released: readonly { key: string; d: number }[], far: 
     .map((t) => t.key);
 }
 
+/**
+ * Past the haze (phones' memory, docs/performance-plan.md): on the ground, the haze hides everything past a
+ * distance, so a tile out there can let go of all its sites drew, not only its near pieces, and nobody sees it.
+ * `hazeHorizon()` is that distance for the scene's fog (exponential squared: what's left of a thing at d is
+ * exp(-(density d)^2)): where less than `seen` of it is left. A tile is let go `HORIZON_OUT` past it and built
+ * again `HORIZON_BACK` past it, well before any of it could show.
+ */
+export const HAZE_SEEN = 0.01;
+export const HORIZON_OUT = 60;
+export const HORIZON_BACK = 20;
+export const hazeHorizon = (density: number, seen = HAZE_SEEN) => (density > 0 ? Math.sqrt(-Math.log(seen)) / density : Infinity);
+
+/** A tile as the horizon sees it */
+export interface FarTile {
+  key: string;
+  d: number;
+  /** What it could let go at every level, in bytes */
+  all: number;
+  near: boolean;
+  gone: boolean;
+}
+
+/** The tiles past the horizon to let go altogether, furthest first (none while the horizon is infinite) */
+export function toVanish(tiles: readonly FarTile[], horizon: number): string[] {
+  if (!Number.isFinite(horizon)) return [];
+  return tiles
+    .filter((t) => !t.gone && !t.near && t.all > 0 && t.d > horizon + HORIZON_OUT)
+    .sort((a, b) => b.d - a.d)
+    .map((t) => t.key);
+}
+
+/** The tiles let go altogether that are coming back inside the horizon (all of them when it's infinite), nearest first */
+export function toReturn(tiles: readonly FarTile[], horizon: number): string[] {
+  return tiles
+    .filter((t) => t.gone && t.d <= horizon + HORIZON_BACK)
+    .sort((a, b) => a.d - b.d)
+    .map((t) => t.key);
+}
+
 /** A tile's footprint from its key */
 export function keyRect(key: string): Rect {
   const [i, j] = key.split(',').map(Number);

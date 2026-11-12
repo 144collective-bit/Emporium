@@ -27,6 +27,7 @@ import { HM_SPAWN } from './docksport';
 import { SUN_SPAWNS } from './sunplaces';
 import { LOT9_SPAWN } from './lot9';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS } from './endsplaces';
+import { CITYHALL_SPAWN, COURTHOUSE_SPAWN, POLICE_SPAWN } from './civic';
 import { RESORTS } from './resorts';
 import { SPHERE_SPAWN } from './stripmarks';
 import { MONO_STATIONS } from './monorail';
@@ -96,6 +97,11 @@ export const PLACES: Place[] = [
   { id: 'lot9', kind: 'spot', spot: 'lot9', at: LOT9_SPAWN },
   // Endswood Estate's (endsplaces.ts): in front of the tenants' hall, St Aldwyn's west door and Bunker Sound's
   ...ENDS_PLACE_IDS.map((id): Place => ({ id, kind: 'spot', spot: id, at: ENDS_SPAWNS[id] })),
+  // City Hall (civic.ts): on the civic square at its steps' foot, facing them
+  { id: 'cityhall', kind: 'spot', spot: 'cityhall', at: CITYHALL_SPAWN },
+  // ...and the police headquarters and the courthouse either side of the square, facing their doors
+  { id: 'police', kind: 'spot', spot: 'police', at: POLICE_SPAWN },
+  { id: 'courthouse', kind: 'spot', spot: 'courthouse', at: COURTHOUSE_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

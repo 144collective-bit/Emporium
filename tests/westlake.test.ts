@@ -31,6 +31,7 @@ import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { STADIUM_SOLIDS } from '../src/scripts/city3d/stadium';
 import { GARDEN_SOLIDS } from '../src/scripts/city3d/gardens';
+import { CITYHALL_SOLIDS, FLAG_SOLIDS, FLANK_SOLIDS, FOUNTAIN_SOLIDS } from '../src/scripts/city3d/civic';
 import { PADS } from '../src/scripts/city3d/outer';
 import { inTown } from '../src/scripts/city3d/outer';
 import { inTrenches } from '../src/scripts/city3d/trenches';
@@ -74,7 +75,7 @@ test('its blocks are the street plan\'s, and no other block or pad is on them', 
   for (const pad of PADS) assert.ok(!inPark([(pad.rect[0] + pad.rect[2]) / 2, (pad.rect[1] + pad.rect[3]) / 2]), `${pad.id} on the park`);
   // What was solid there before (nothing): the park's land is open (but its own gates, the stadium (stadium.ts) and its
   // walls, garden and planters (gardens.ts, gardens.test.ts))
-  const before = SOLIDS.filter((s) => !WESTLAKE_SOLIDS.includes(s as never) && !STADIUM_SOLIDS.includes(s) && !GARDEN_SOLIDS.includes(s));
+  const before = SOLIDS.filter((s) => !WESTLAKE_SOLIDS.includes(s as never) && !STADIUM_SOLIDS.includes(s) && !GARDEN_SOLIDS.includes(s) && !CITYHALL_SOLIDS.includes(s) && !FLANK_SOLIDS.includes(s) && !FLAG_SOLIDS.includes(s) && !FOUNTAIN_SOLIDS.includes(s));
   for (const s of before) assert.ok(!inPark([(s[0] + s[2]) / 2, (s[1] + s[3]) / 2]), `a solid on the park at ${s}`);
   const [x0, z0, x1, z1] = WESTLAKE_RECT;
   for (const b of WESTLAKE_BLOCKS) for (const p of b.poly) assert.ok(p[0] >= x0 && p[0] <= x1 && p[1] >= z0 && p[1] <= z1);
@@ -113,7 +114,8 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
 });
 
 test('trees, lamps and benches: on the park, off the paths, the water and the garden\'s site', () => {
-  assert.ok(PARK_TREES.length > 250, `${PARK_TREES.length} trees`);
+  // (fewer since the civic quarter took the park's south end, civic.ts, the owner's call: it has trees of its own)
+  assert.ok(PARK_TREES.length > 220, `${PARK_TREES.length} trees`);
   assert.ok(PARK_TREES.filter((t) => t.clump).length > 150);
   const [x0, z0, x1, z1] = GARDEN_SITE;
   const onSite = (p: Pt, m: number) => p[0] > x0 - m && p[0] < x1 + m && p[1] > z0 - m && p[1] < z1 + m;
@@ -133,7 +135,8 @@ test('trees, lamps and benches: on the park, off the paths, the water and the ga
     assert.ok(!inLake(x, z, 1), `a lamp in the lake at ${x}, ${z}`);
     assert.ok(PARK_TREES.every((t) => Math.hypot(t.x - x, t.z - z) > 0.6), `a lamp in a tree at ${x}, ${z}`);
   }
-  assert.ok(BENCHES.length > 15);
+  // (the Mall's south stretch's went with the civic square, civic.ts, which has benches of its own)
+  assert.ok(BENCHES.length >= 14);
   for (const b of BENCHES) {
     assert.ok(inPark(b.at, 0.5), `a bench off the park at ${b.at}`);
     assert.ok(!inLake(b.at[0], b.at[1], 0.6), `a bench in the lake at ${b.at}`);

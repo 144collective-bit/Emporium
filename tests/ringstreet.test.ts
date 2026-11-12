@@ -101,7 +101,7 @@ test("the park's sidewalk is lit across from Uptown's lamps, flanking the gates,
     // (on the park's sidewalk, as far from the centre line as Uptown's)
     assert.ok(Math.abs(z - (2 * north.c - uptown[0][1])) < 1e-6, `${x}, ${z}`);
     assert.ok(z < north.c - north.street.half && z > ZS, `${x}, ${z} is off the sidewalk`);
-    assert.ok(Math.abs(Math.cos(ry)) < 1e-6 && Math.sin(ry) > 0.99, `${x}: the arm reaches over the road`);
+    assert.ok(Math.abs(Math.cos(ry)) < 1e-6 && -Math.sin(ry) > 0.99, `${x}: the arm reaches over the road (along cos ry, -sin ry)`);
     // (across from one of Uptown's, or beside a gate it stands aside for)
     const across = uptown.some(([ux]) => Math.abs(ux - x) < 1e-6);
     const gate = GATES.find((g) => Math.abs(g.at[1] - ZS) < 1 && Math.abs(g.at[0] - x) < g.half + 3);
@@ -126,7 +126,8 @@ test("the median is planted on west to Uptown's edge, broken at the axis's zebra
 });
 
 test("the park's edge row stands just inside its wall, clear of its walks, gates, planters, lamps and trees", () => {
-  assert.ok(PARK_EDGE_TREES.length >= 10);
+  // (none across the civic square's mouth, civic.ts: it opens onto the avenue)
+  assert.ok(PARK_EDGE_TREES.length >= 8);
   const xs: number[] = [];
   for (const [x, z] of PARK_EDGE_TREES) {
     assert.ok(z < ZS - 1.5 && z > ZS - 4, `${x}, ${z}`);

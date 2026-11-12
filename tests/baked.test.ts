@@ -8,6 +8,8 @@ import { AMENITIES } from '../src/scripts/city3d/commons';
 import { JOG_STRIDE, WALK_STRIDE, MARCH_STRIDE } from '../src/scripts/city3d/crowdclips';
 import { VERGES, packVerges } from '../src/scripts/city3d/verges';
 import { rollShares } from '../src/scripts/city3d/rolls';
+import { PILLARS, PLATEAUS, packPlateaus } from '../src/scripts/city3d/metro';
+import { UNDER } from '../src/scripts/city3d/viadress';
 
 const made: Record<string, unknown> = await bake({ quiet: true });
 /** Into the page and back, as the browser gets it */
@@ -24,7 +26,7 @@ function assertPlain(v: unknown, path: string) {
 }
 
 test('everything baked is plain data: it comes into the page as it was made', () => {
-  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'jog-cycle', 'march-cycle', 'rolls', 'routes', 'verges', 'walk-cycle']);
+  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'jog-cycle', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'under-deck', 'verges', 'walk-cycle']);
   for (const [key, v] of Object.entries(made)) assertPlain(v, key);
 });
 
@@ -51,4 +53,14 @@ test("the blocks' verges from the page are the ones worked out here", () => {
 test("the rolls' shares from the page are the ones worked out here", () => {
   assert.equal(typeof made.rolls, 'string');
   assert.equal(viaPage(made.rolls), rollShares());
+});
+
+test("the metro's pillars and raised stretches, and what's under the highway's deck, from the page are the ones worked out here", () => {
+  assert.deepStrictEqual(viaPage(made['metro-pillars']), PILLARS);
+  assert.ok(PILLARS.length > 100);
+  // (the plateaus' open ends are infinities: packed as null for the page)
+  assert.deepStrictEqual(viaPage(made['metro-plateaus']), packPlateaus(PLATEAUS));
+  assert.ok(Object.values(PLATEAUS).some((runs) => runs.some(([a, b]) => !Number.isFinite(a) || !Number.isFinite(b))));
+  assert.deepStrictEqual(viaPage(made['under-deck']), UNDER);
+  assert.ok(UNDER.length > 10);
 });

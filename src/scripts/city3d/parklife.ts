@@ -34,7 +34,6 @@ import {
   RING_IN,
   GARDEN_SITE,
   Z0,
-  ZS,
   inLake,
   inPark,
   inset,
@@ -42,6 +41,7 @@ import {
   onPath,
   type Pt,
 } from './westlake';
+import { HALL, inCivic } from './civic';
 
 /** What a person in the park is doing at a moment: where, facing (0 is +z), standing (or seat) height, the crowd clip, how fast */
 export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing';
@@ -129,7 +129,7 @@ export const LANES: Lane[] = (() => {
   lane('ring-jog-in', inset(BIG, RING_IN + 0.85), -1, JOG_PACE, 3);
   lane('ring-jog-out', inset(BIG, RING_IN - 0.85), 1, JOG_PACE, 2);
   // The Mall, up one side and down the other
-  lane('mall', thin([[MALL.x, ZS - 0.6], [MALL.x, Z0 + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
+  lane('mall', thin([[MALL.x, HALL.rear[1] - 1.2], [MALL.x, Z0 + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
   return out;
 })();
 
@@ -179,7 +179,7 @@ export const PICNICS: Picnic[] = (() => {
   const [z0, z1] = [Math.min(...BIG.map((p) => p[1])), Math.max(...BIG.map((p) => p[1]))];
   for (let tries = 0; tries < 4000 && out.length < 9; tries++) {
     const p: Pt = [x0 + r() * (x1 - x0), z0 + r() * (z1 - z0)];
-    if (!inPark(p, 4) || onPath(p, 3.2) || inLake(p[0], p[1], LOOP_OUT + 3.5)) continue;
+    if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5)) continue;
     if (p[0] > GARDEN_SITE[0] - 5 && p[0] < GARDEN_SITE[2] + 5 && p[1] > GARDEN_SITE[1] - 5 && p[1] < GARDEN_SITE[3] + 5) continue;
     if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < 3.2)) continue;
     if (out.some((o) => Math.hypot(o.at[0] - p[0], o.at[1] - p[1]) < 16)) continue;

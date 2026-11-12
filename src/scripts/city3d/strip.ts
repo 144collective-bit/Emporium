@@ -144,10 +144,11 @@ export const STRIP_LAMPS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const IN = BH + 0.45;
   // The boulevard's sidewalks, both sides, every 10 (staggered), clear of its ends
-  // (their arms over the road: the north side's reach south, +z, the south side's north)
+  // (their arms over the road: the north side's reach south, +z, the south side's north; an arm reaches along
+  // cos ry, -sin ry, world.ts buildLamps())
   for (let x = BLVD_WEST + 9; x < STRIP_EAST_X - 6; x += 10) {
-    out.push([x, BZ - IN, Math.PI / 2, SLAB_Y]);
-    if (x + 5 < STRIP_EAST_X - 6) out.push([x + 5, BZ + IN, -Math.PI / 2, SLAB_Y]);
+    out.push([x, BZ - IN, -Math.PI / 2, SLAB_Y]);
+    if (x + 5 < STRIP_EAST_X - 6) out.push([x + 5, BZ + IN, Math.PI / 2, SLAB_Y]);
   }
   // The east road's west sidewalk, clear of the junctions
   for (let z = NORTH.c + 8; z < BANK.c - 6; z += 12) if ([17, BZ, 43].every((c) => Math.abs(z - c) > 6)) out.push([X1 + W - 0.45, z, 0, SLAB_Y]);

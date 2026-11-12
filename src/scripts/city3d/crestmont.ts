@@ -398,7 +398,7 @@ export const CREST_LAMPS: [number, number, number, number][] = (() => {
   });
   for (let x = FLATS_X[0] + 7; x < FLATS_X[FLATS_X.length - 1] - 5; x += 13) {
     if (FLATS_X.some((c) => Math.abs(c - x) < 6)) continue;
-    out.push([x, FOOTHILL_Z + LANE + 0.45, -Math.PI / 2, SLAB_Y]);
+    out.push([x, FOOTHILL_Z + LANE + 0.45, Math.PI / 2, SLAB_Y]);
   }
   // The hill roads: one side, every 16, on their beds (outside the bend's lip, clear of each other's ends)
   for (const r of HILL_ROADS)
