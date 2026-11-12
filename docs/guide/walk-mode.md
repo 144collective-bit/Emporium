@@ -61,3 +61,14 @@ keep it up to date when what it describes changes.
   (`solids(x, z, reach)`). `tests/boxgrid.test.ts` holds them to exactly
   the answers of checking every box; keep new checks going through it.
 - Cars yield to the walker through `walker` in `life.ts`.
+- **Why `walk.ts` is one file** (measured 2026-11, when splitting it was
+  asked for): `createWalk()` is one closure of about 3,400 lines holding 120
+  `let`s; its `update()` reads 99 of them, the gamepad's `pollPad()` 13 and
+  some 40 of its functions. Only about 250 lines (the tuning constants, the
+  settings' loader, `cameraRoom()`, the joystick's helpers) read none of
+  that state, so a split by moving functions would be a bag of fifty
+  getters a file, and the file changes on main most days (61 commits in a
+  fortnight), so moved blocks would collide with whatever is in flight. A
+  real split means grouping the state by feature first (the pad, the
+  fight, the karts, the camera), a feature a phase, each checked with
+  `npm run smoke`; it wasn't started.

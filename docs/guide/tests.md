@@ -51,5 +51,12 @@ keep it up to date when what it describes changes.
 - `npm run budget` (after `npm run build`) holds the start's download to
   its budgets (`scripts/budget.mjs`); the "Build site" Action runs it after
   the build.
+- `npm run smoke` (after `npm run build`; `scripts/walk-smoke.mjs`) walks
+  through walk mode in a headless Chromium: in at the garage's turntable,
+  into the car, a drive, out, a walk, a sprint, a jump, a crouch, the hub
+  open and closed, and fails on any page error or a step that didn't
+  happen. `walk.ts` is the view and has no unit tests, so run it before and
+  after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
+  takes a few minutes in the software renderer, so it isn't in the Action.
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.

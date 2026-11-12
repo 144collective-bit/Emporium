@@ -214,7 +214,9 @@ guide file listed in the index above.
   anything reads the edge), `npm run budget` after `npm run build`. The
   "Build site" Action runs them; a failure means no zip.
 - Browser checks (the widths above, walk and drive flows) are done by hand
-  with Playwright against `npm run preview`.
+  with Playwright against `npm run preview`. `npm run smoke` (after a build)
+  walks through walk mode, the car and the hub in a headless browser: run it
+  before and after changing `walk.ts`.
 - What they cover, file by file: `docs/guide/tests.md`.
 
 ## Hosting
