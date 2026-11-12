@@ -52,10 +52,13 @@ keep it up to date when what it describes changes.
   its budgets (`scripts/budget.mjs`); the "Build site" Action runs it after
   the build.
 - `npm run smoke` (after `npm run build`; `scripts/walk-smoke.mjs`) walks
-  through walk mode in a headless Chromium: in at the garage's turntable,
-  into the car, a drive, out, a walk, a sprint, a jump, a crouch, the hub
-  open and closed, and fails on any page error or a step that didn't
-  happen. `walk.ts` is the view and has no unit tests, so run it before and
+  plays through walk mode in a headless Chromium, a scene a fresh page:
+  the car (in at the garage's turntable, a drive, out), on foot (walk,
+  sprint, jump, crouch, the hub), the gun store's counter, the metro (the
+  card, a ride, skipped), a kart race (a single race started and quit),
+  flying (into your aircraft, rolling out) and the gamepad (a made-up pad:
+  the stick, A, Start, B); it fails on any page error or a step that
+  didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
   after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
   takes a few minutes in the software renderer, so it isn't in the Action.
 - Browser checks (the widths above, walk and drive flows) are still done by

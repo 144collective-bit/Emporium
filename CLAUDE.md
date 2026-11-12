@@ -77,7 +77,7 @@ it and has been retired completely. Build only on what's here.
 | The kart park, its circuit, races, karts and save | `docs/guide/kart-park.md` |
 | Degen's body, skeleton, wardrobe, clothes, tailoring, crowds | `docs/guide/character.md` |
 | Motion capture, the animator, contact, moments, emotes, the crowd's acts, the lab | `docs/guide/animation.md` |
-| Walk mode, collisions, the ground under a point | `docs/guide/walk-mode.md` |
+| Walk mode, collisions, the ground under a point, the split of `walk.ts` (`docs/walk-plan.md`) | `docs/guide/walk-mode.md` |
 | The inventory, fists on the street, sparring partners, free play | `docs/guide/inventory.md` |
 | Target practice, the guns, the gun store, the Fight Club | `docs/guide/combat.md` |
 | Dorras, the market, units, lots, contracts, staff, the Vault, missions, Getting started, the save and its backup | `docs/guide/economy.md` |
@@ -215,8 +215,9 @@ guide file listed in the index above.
   "Build site" Action runs them; a failure means no zip.
 - Browser checks (the widths above, walk and drive flows) are done by hand
   with Playwright against `npm run preview`. `npm run smoke` (after a build)
-  walks through walk mode, the car and the hub in a headless browser: run it
-  before and after changing `walk.ts`.
+  plays through walk mode in a headless browser (the car, on foot, the gun
+  store, the metro, a kart race, flying, the gamepad): run it before and
+  after changing `walk.ts`.
 - What they cover, file by file: `docs/guide/tests.md`.
 
 ## Hosting

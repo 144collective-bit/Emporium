@@ -66,6 +66,7 @@ import type { HangarUI } from './hangar-ui';
 import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
+import { pollPad as pollPadOf, type PadHost, type PadState } from './walkpad';
 import { KART_PARK } from './kartpark';
 import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
@@ -2183,248 +2184,92 @@ export function createWalk(d: WalkDeps) {
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
   // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands);
   // with empty hands X punches, Y kicks (nothing to do there), LB held blocks, A dodges standing with the guard up
-  function pollPad(dt: number) {
-    const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
-    if (!gp) {
-      pad.x = pad.y = 0;
-      pad.run = false;
-      padDrive.steer = padDrive.throttle = 0;
-      padDrive.handbrake = false;
-      padKart.steer = padKart.throttle = 0;
-      padKart.drift = padKart.item = false;
-      padFly.turn = padFly.climb = padFly.throttle = 0;
-      // Unplugged with a trigger down: let go of it
-      if (pad.prev[6]) setAim(false);
-      if (pad.prev[7]) combat.trigger(false);
-      if (pad.prev.length) pad.prev = [];
-      return;
-    }
-    const dz = (v = 0) => (Math.abs(v) < 0.15 ? 0 : (v - Math.sign(v) * 0.15) / 0.85);
-    pad.x = dz(gp.axes[0]);
-    pad.y = dz(gp.axes[1]);
-    const rx = dz(gp.axes[2]);
-    const ry = dz(gp.axes[3]);
-    if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
-    const b = gp.buttons.map((x) => x.pressed);
-    const edge = (i: number) => b[i] && !pad.prev[i];
-    if (pad.x || pad.y || rx || ry || b.some(Boolean)) setInput('pad');
-    // The hub: the D-pad moves round it, LB / RB the tabs, A presses, B or Start closes
-    if (d.hub?.open) {
-      d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]));
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The inventory: the D-pad moves round it, A does the selected thing, B or View closes
-    if (hotbar?.open) {
-      hotbar.pad(edge);
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The store: D-pad picks, A takes, B (or Y again) closes
-    // (the menus' kit, menukit.ts: the d-pad moves round its buttons, A presses, LB / RB the tabs)
-    if (shop.open) {
-      if (b.some((x, i) => x && !pad.prev[i])) shop.input('pad');
-      if (edge(12)) shop.move('up');
-      if (edge(13)) shop.move('down');
-      if (edge(14)) shop.move('left');
-      if (edge(15)) shop.move('right');
-      if (edge(4)) shop.tab(-1);
-      if (edge(5)) shop.tab(1);
-      if (edge(0)) shop.press();
-      if (edge(1) || edge(3)) shop.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The garage: D-pad left / right picks the model, up / down the paint, the bumpers the tabs, A keeps it
-    if (garageUI.open) {
-      if (edge(4)) garageUI.stepTab(-1);
-      if (edge(5)) garageUI.stepTab(1);
-      if (edge(14)) garageUI.step(-1);
-      if (edge(15)) garageUI.step(1);
-      if (edge(12)) garageUI.stepPaint(-1);
-      if (edge(13)) garageUI.stepPaint(1);
-      if (edge(0)) garageUI.keep();
-      if (edge(1) || edge(3)) garageUI.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The hangar menu: like the garage's
-    if (hangarUI.open) {
-      if (edge(14)) hangarUI.step(-1);
-      if (edge(15)) hangarUI.step(1);
-      if (edge(12)) hangarUI.stepPaint(-1);
-      if (edge(13)) hangarUI.stepPaint(1);
-      if (edge(0)) hangarUI.keep();
-      if (edge(1) || edge(3)) hangarUI.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The trainer's menu: D-pad moves, A takes, B closes
-    if (fightUI.open) {
-      if (edge(4)) fightUI.stepTab(-1);
-      if (edge(5)) fightUI.stepTab(1);
-      if (edge(12) || edge(14)) fightUI.step(-1);
-      if (edge(13) || edge(15)) fightUI.step(1);
-      if (edge(0)) fightUI.take();
-      if (edge(1)) fightUI.close();
-      padFight.x = padFight.y = 0;
-      return;
-    }
-    // Start opens the hub (the pause screen), but in a fight or a kart race, where it quits (keymap.ts `quit`)
-    if (edge(9) && d.hub && !fighting() && !karts.active) {
-      still(false);
-      d.hub.show();
-      pad.prev = b;
-      return;
-    }
-    // The d-pad's down: the control card (the kart hut's menu has it for its list)
-    if (edge(13) && !kartUI.open) askCard();
-    // On a ride: the right stick looks round, pressed it steps the camera, B skips the ride (the ride has the rest)
-    if (ride) {
-      if (edge(11)) nextCam();
-      if (edge(1)) d.skipRide?.();
-      if (b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits, the right stick pressed the camera
-    if (fighting()) {
-      if (edge(11)) nextCam();
-      padFight.x = pad.x;
-      padFight.y = pad.y;
-      if (hm('block', 'pad') === 'toggle') {
-        if (edge(4)) padFight.block = !padFight.block;
-      } else padFight.block = !!b[4];
-      if (edge(2)) fightBtns.punch = true;
-      if (edge(3)) fightBtns.kick = true;
-      if (edge(0)) fightBtns.dodge = true;
-      // (the d-pad's up: a snack, in a spar)
-      if (edge(12)) fight?.snack();
-      if (edge(9)) quitFight();
-      if (pad.x || pad.y || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // At the wheel (the boat, your aircraft, your car, bike or kart): the right stick pressed steps the camera, View opens
-    // the world map; while it's open the vehicle coasts and only View (closing it) is heard
-    if (boat?.active || fly.active || drive.active) {
-      if (edge(11)) nextCam();
-      if (edge(8)) d.worldMap?.();
-      if (d.mapOpen?.()) {
-        padDrive.steer = padDrive.throttle = 0;
-        padDrive.handbrake = false;
-        padFly.turn = padFly.climb = padFly.throttle = 0;
-        pad.prev = b;
-        return;
-      }
-    }
-    // Boating: left stick steers, RT ahead, LT astern, Y gets out, the left stick pressed is the horn
-    if (boat?.active) {
-      padDrive.steer = pad.x;
-      padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      if (edge(3)) act();
-      if (edge(10)) boat.horn();
-      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // Flying: left stick turns and climbs (up climbs), RT faster, LT slower, Y gets out
-    if (fly.active) {
-      padFly.turn = pad.x;
-      padFly.climb = -pad.y;
-      padFly.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      if (edge(3)) act();
-      if (pad.x || pad.y || padFly.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // The kart hut's menu: D-pad moves, A takes, B (or Y again) closes
-    if (kartUI.open) {
-      if (edge(4)) kartUI.stepTab(-1);
-      if (edge(5)) kartUI.stepTab(1);
-      if (edge(12) || edge(14)) kartUI.step(-1);
-      if (edge(13) || edge(15)) kartUI.step(1);
-      if (edge(0)) kartUI.take();
-      if (edge(1) || edge(3)) kartUI.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Start quits (as in the ring), the right stick pressed the camera
-    if (karts.active) {
-      if (edge(11)) nextCam();
-      padKart.steer = pad.x;
-      padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      padKart.drift = !!b[0];
-      padKart.item = !!b[2];
-      if (edge(9)) abandonKart();
-      if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, the left stick pressed is the horn
-    if (drive.active) {
-      padDrive.steer = pad.x;
-      padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      padDrive.handbrake = !!b[0];
-      if (edge(3)) act();
-      if (edge(10)) drive.horn();
-      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    if (edge(0)) tryJump();
-    if (b[1] !== !!pad.prev[1]) crouchInput('pad', !!b[1]);
-    jumpHeld = jumpHeld || b[0] || false;
-    if (!b[0] && pad.prev[0]) jumpHeld = false;
-    // (aiming, LB and RB lean out instead: peeking)
-    // (aim on toggle: LT puts the sight up and the next takes it down; peeking then while it's up)
-    const aimToggle = hm('aim', 'pad') === 'toggle';
-    if (aimToggle && edge(6)) setAim(!aim);
-    const aiming = aimToggle ? aim : !!b[6];
-    padLean = aiming ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
-    // (the run is the left stick pressed, a gun out or not (keymap.ts); empty hands: LB held blocks)
-    const fb = fistsReady();
-    if (hm('block', 'pad') === 'toggle') {
-      if (edge(4)) padBlockOn = !padBlockOn;
-      if (!fb) padBlockOn = false;
-      padBlock = fb && padBlockOn;
-    } else padBlock = fb && !!b[4];
-    // (sprint on toggle: L3 locks it, again lets it go)
-    if (hm('sprint', 'pad') === 'toggle') {
-      if (edge(10)) setSprintLock(!sprintLock);
-      pad.run = false;
-    } else pad.run = !!b[10];
-    if (!aimToggle) {
-      aim = aim || !!b[6];
-      if (!b[6] && pad.prev[6]) setAim(false);
-    }
-    // (Y does what the prompt says; with empty hands and nothing to do, it kicks)
-    if (edge(3)) {
-      if (fistsReady() && !near) fightBtns.kick = true;
-      else act();
-    }
-    // View opens the inventory; the right stick pressed swaps first and third person
-    if (edge(8) && !moments.active) toggleInv();
-    if (edge(11)) nextCam();
-    if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
-    // (X reloads; with empty hands it punches)
-    if (edge(2)) {
-      if (fistsReady()) fightBtns.punch = true;
-      else combat.reload();
-    }
-    if (edge(12)) combat.toggleHolster();
-    // RB or D-pad right: the hotbar's next slot of the fists and the guns; D-pad left: the one before
-    if ((edge(5) && !aiming) || edge(15)) stepSlot(1);
-    if (edge(14)) stepSlot(-1);
-    if (pad.x || pad.y || b.some(Boolean)) d.touched();
-    pad.prev = b;
-  }
+  /** The gamepad (walkpad.ts, docs/walk-plan.md Phase 1): what it reads and calls of walk mode, and what it fills */
+  const padState: PadState = { pad, drive: padDrive, kart: padKart, fly: padFly, fight: padFight };
+  const padHost: PadHost = {
+    d,
+    get hotbar() {
+      return hotbar;
+    },
+    get karts() {
+      return karts;
+    },
+    get kartUI() {
+      return kartUI;
+    },
+    get ride() {
+      return ride;
+    },
+    get fight() {
+      return fight;
+    },
+    get boat() {
+      return boat;
+    },
+    get near() {
+      return near;
+    },
+    get sprintLock() {
+      return sprintLock;
+    },
+    get jumpHeld() {
+      return jumpHeld;
+    },
+    set jumpHeld(v) {
+      jumpHeld = v;
+    },
+    get aim() {
+      return aim;
+    },
+    set aim(v) {
+      aim = v;
+    },
+    get padLean() {
+      return padLean;
+    },
+    set padLean(v) {
+      padLean = v;
+    },
+    get padBlock() {
+      return padBlock;
+    },
+    set padBlock(v) {
+      padBlock = v;
+    },
+    get padBlockOn() {
+      return padBlockOn;
+    },
+    set padBlockOn(v) {
+      padBlockOn = v;
+    },
+    shop,
+    garageUI,
+    hangarUI,
+    fightUI,
+    fly,
+    drive,
+    combat,
+    fightBtns,
+    moments,
+    fighting,
+    quitFight,
+    abandonKart,
+    look,
+    setInput,
+    setAim,
+    still,
+    askCard,
+    nextCam,
+    hm,
+    act,
+    tryJump,
+    crouchInput,
+    fistsReady,
+    setSprintLock,
+    toggleInv,
+    stepSlot,
+  };
+  const pollPad = (dt: number) => pollPadOf(Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected), dt, padState, padHost);
 
   /* ---------- Per frame ---------- */
 
