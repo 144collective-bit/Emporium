@@ -34,6 +34,28 @@ everything under the Emporium, phones light.
    blinds and curtains half drawn, the odd one lit; at night a lived-in mix
    (warm light, TV blue, dark), from the light map. Bands laid so neighbours
    don't repeat.
+
+   The owner's picks (2026-11-12): the whole city's shared atlas (downtown,
+   the kits, The Trenches and Endswood's terraces change together); by day
+   about one window in twenty lit, warm; at night about half, mostly warm,
+   some a television's blue, the odd pink or cyan.
+
+   Built, waiting on the owner's sign-off:
+   - `windows.ts` (DOM-free, tested in `tests/windows.test.ts`):
+     `WINDOW_TYPE` gives each wall kind its own window (sashes on red brick,
+     pairs on tan, wide steel casements between concrete bands on dark
+     brick, round-headed on brownstone; shutters, balcony doors, the
+     warehouses' steel and the curtain walls as they were); `paneAt()` says
+     what each window shows from a hash of where it is in its band: lit at
+     night and in which light (`NIGHT_LIT`, `NIGHT_MIX`), lit by day too
+     (`DAY_LIT`, only ever a warm one lit at night), and a blind part drawn,
+     curtains or bare glass behind it.
+   - infill.ts's `wallBand()` paints them (`glazed()`): by day dark glass
+     with the sky's sheen and a streak across, the blind or curtains behind;
+     on the light map the night's light. The atlas's light map shows by day
+     at 0.05 where it was 0.15, so lit windows no longer tint the day.
+   - Bands already start at a seeded bay on each building, so neighbours of
+     one kind don't line up.
 2. **Facades.** More materials: orange-red, purple-brown and painted brick,
    the cream glazed brick of post-war projects, precast concrete panels;
    weathering (stains under sills and copings, soot near the roofs, faded

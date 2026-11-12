@@ -26,6 +26,7 @@ import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL
 import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
+import { WINDOW_TYPE, paneAt, type Light, type Pane } from './windows';
 
 /* ---------- The wall atlas ---------- */
 
@@ -66,7 +67,6 @@ const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
   brickTan: { wall: '#9c7650', trim: '#e6dccb' },
   brickDark: { wall: '#4f2d30', trim: '#bfb2a6' },
 };
-const GLOWS = [PAL.warm, PAL.warm, PAL.cyan, PAL.pink];
 
 interface Band {
   v0: number;
@@ -103,11 +103,68 @@ function pane(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   c.fillRect(x, y + h * 0.42, w, 2);
 }
 
-/** One wall band: ROWS floors of COLS bays, `glow` for the light map */
+/** The light behind a lit window (windows.ts `Light`): warm, a television's blue, the odd neon */
+const LIGHT: Record<Light, string> = { warm: PAL.warm, tv: '#8fb4ff', pink: PAL.pink, cyan: PAL.cyan };
+/** What hangs behind the glass, muted (it's seen through it) */
+const BLIND = '#9a927f';
+const CURTAINS = ['#7a3a44', '#3f5a6e', '#8a7a52', '#5a4a6a', '#6b5a48'];
+
+/**
+ * A wall's window (windows.ts `paneAt()`): an ink outline, its frame, then the glass. On the light map only its night
+ * light. By day dark glass with the sky in it (a sheen down from the top and a streak across), a blind part drawn or
+ * curtains either side behind it; the odd one lit warm (`day`). Glazing bars over it all.
+ */
+function glazed(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frame: string, p: Pane, glow: boolean, bars = 1, transom = true) {
+  if (glow) {
+    if (p.night) {
+      c.fillStyle = LIGHT[p.night];
+      c.fillRect(x, y, w, h);
+    }
+    return;
+  }
+  c.fillStyle = PAL.ink;
+  c.fillRect(x - 4, y - 4, w + 8, h + 8);
+  c.fillStyle = frame;
+  c.fillRect(x - 2, y - 2, w + 4, h + 4);
+  if (p.day) {
+    c.fillStyle = shadeHex(PAL.warm, -0.3);
+    c.fillRect(x, y, w, h);
+  } else {
+    const g = c.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, '#56658f');
+    g.addColorStop(0.35, '#1f2648');
+    g.addColorStop(1, '#0c0f24');
+    c.fillStyle = g;
+    c.fillRect(x, y, w, h);
+    // (the sky's streak across the glass)
+    c.fillStyle = 'rgba(205, 218, 255, 0.16)';
+    c.beginPath();
+    c.moveTo(x, y + h * 0.55);
+    c.lineTo(x + w * 0.55, y);
+    c.lineTo(x + w * 0.8, y);
+    c.lineTo(x, y + h * 0.85);
+    c.closePath();
+    c.fill();
+  }
+  if (p.dressing === 'blind') {
+    c.fillStyle = p.day ? shadeHex(BLIND, 0.25) : BLIND;
+    c.fillRect(x, y, w, h * p.drop);
+    c.fillStyle = shadeHex(BLIND, -0.3);
+    c.fillRect(x, y + h * p.drop - 1, w, 1.5);
+  } else if (p.dressing === 'curtains') {
+    c.fillStyle = CURTAINS[Math.floor(p.drop * 9) % CURTAINS.length];
+    c.fillRect(x, y, Math.max(3, w * 0.2), h);
+    c.fillRect(x + w - Math.max(3, w * 0.2), y, Math.max(3, w * 0.2), h);
+  }
+  c.fillStyle = frame;
+  for (let k = 1; k <= bars; k++) c.fillRect(x + (w * k) / (bars + 1) - 1, y, 2, h);
+  if (transom) c.fillRect(x, y + h * 0.42, w, 2);
+}
+
+/** One wall band: ROWS floors of COLS bays, `glow` for the light map; each kind its own window (windows.ts) */
 function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow: boolean, seed: number) {
-  const r = rng(seed);
   const { wall, trim } = WALL_COLOR[kind];
-  const lit = () => (r() < 0.4 ? GLOWS[Math.floor(r() * GLOWS.length)] : null);
+  const type = WINDOW_TYPE[kind];
   if (!glow) {
     c.fillStyle = wall;
     c.fillRect(0, y0, ATLAS_W, WALL_PX);
@@ -116,6 +173,8 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
     c.fillRect(0, y0, ATLAS_W, WALL_PX);
   }
   const dark = shadeHex(wall, -0.25);
+  const bricky = kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'brownstone';
+  const frame = bricky ? '#e8e2f0' : trim;
   for (let row = 0; row < ROWS; row++) {
     const y = y0 + row * PX_H;
     // The wall's surface
@@ -130,13 +189,13 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
       c.fillStyle = dark;
       for (let k = 0; k < PX_H; k += 16) c.fillRect(0, y + k, ATLAS_W, 1);
     }
-    if (kind === 'glassBlue' || kind === 'glassTeal') {
+    if (type === 'curtain') {
       // A curtain wall: glass from slab to slab, a dark band at each floor, mullions every half bay
       for (let x = 0; x < ATLAS_W; x += 24) {
-        const on = lit();
+        const p = paneAt(seed, row, x / 24);
         if (glow) {
-          if (on) {
-            c.fillStyle = on;
+          if (p.night) {
+            c.fillStyle = LIGHT[p.night];
             c.fillRect(x + 2, y + 10, 20, PX_H - 12);
           }
           continue;
@@ -145,7 +204,7 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
         g.addColorStop(0, shadeHex(wall, 0.35));
         g.addColorStop(0.6, wall);
         g.addColorStop(1, shadeHex(wall, -0.4));
-        c.fillStyle = on ? shadeHex(on, -0.45) : g;
+        c.fillStyle = p.day ? shadeHex(PAL.warm, -0.45) : g;
         c.fillRect(x, y + 8, 24, PX_H - 8);
         c.fillStyle = PAL.ink;
         c.fillRect(x, y + 8, 2, PX_H - 8);
@@ -158,13 +217,18 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
       }
       continue;
     }
+    if (type === 'casement' && !glow) {
+      // The projects' concrete bands: a lintel band and a sill band right across each floor
+      c.fillStyle = shadeHex(trim, -0.12);
+      c.fillRect(0, y + 10, ATLAS_W, 4);
+      c.fillRect(0, y + 48, ATLAS_W, 5);
+    }
     for (let col = 0; col < COLS; col++) {
       const x = col * PX_W;
-      if (kind === 'industrial') {
+      if (type === 'steel') {
         // Big steel windows, one for every two bays
         if (col % 2) continue;
-        const on = lit();
-        pane(c, x + 10, y + 10, PX_W * 2 - 20, 42, '#2a2b38', on, glow, 3);
+        glazed(c, x + 10, y + 10, PX_W * 2 - 20, 42, '#2a2b38', paneAt(seed, row, col), glow, 3);
         if (!glow) {
           c.fillStyle = '#2a2b38';
           c.fillRect(x + 10, y + 24, PX_W * 2 - 20, 2);
@@ -174,24 +238,38 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
         }
         continue;
       }
-      const on = lit();
-      if (kind === 'hotel' && col % 2 === 0) {
+      if (type === 'balcony' && col % 2 === 0) {
         // A balcony door (the balconies are geometry)
-        pane(c, x + 12, y + 8, 24, PX_H - 8, trim, on, glow);
+        glazed(c, x + 12, y + 8, 24, PX_H - 8, trim, paneAt(seed, row, col), glow);
         continue;
       }
-      const [wx, wy, ww, wh] = kind === 'brownstone' ? [x + 12, y + 10, 24, 42] : [x + 11, y + 13, 26, 36];
-      if (!glow && (kind === 'stuccoTeal' || kind === 'stuccoPink' || kind === 'stuccoViolet')) {
+      if (type === 'pair') {
+        // Two narrow sashes side by side under one lintel
+        for (const k of [0, 1]) glazed(c, x + 8 + k * 19, y + 14, 13, 34, frame, paneAt(seed, row, col, k), glow, 0);
+        if (!glow) {
+          c.fillStyle = trim;
+          c.fillRect(x + 3, y + 7, 42, 4);
+          c.fillRect(x + 3, y + 52, 42, 4);
+        }
+        continue;
+      }
+      if (type === 'casement') {
+        // A wide steel casement, three lights across
+        glazed(c, x + 5, y + 19, 38, 27, '#c9c6bc', paneAt(seed, row, col), glow, 2, false);
+        continue;
+      }
+      const [wx, wy, ww, wh] = type === 'arched' ? [x + 12, y + 10, 24, 42] : [x + 11, y + 13, 26, 36];
+      if (!glow && type === 'shuttered') {
         // Shutters either side
         c.fillStyle = shadeHex(wall, -0.4);
         c.fillRect(wx - 9, wy - 1, 6, wh + 2);
         c.fillRect(wx + ww + 3, wy - 1, 6, wh + 2);
       }
-      pane(c, wx, wy, ww, wh, kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'brownstone' ? '#e8e2f0' : trim, on, glow);
+      glazed(c, wx, wy, ww, wh, frame, paneAt(seed, row, col), glow);
       if (!glow) {
         // Lintel and sill
         c.fillStyle = trim;
-        if (kind === 'brownstone') {
+        if (type === 'arched') {
           c.beginPath();
           c.ellipse(wx + ww / 2, wy - 3, ww / 2 + 4, 6, 0, Math.PI, 0);
           c.fill();
@@ -347,7 +425,8 @@ const ATLAS = (() => {
   // Canvas textures are flipped: the canvas's top row is v = 1. Ground bands keep a pixel off each edge.
   const band = (top: number, h: number, tw: number, th: number): Band => ({ v0: 1 - (top + h) / H, vh: h / H, tw, th });
   return {
-    mat: siteMat('wall-atlas', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1)),
+    // (by day the light map barely shows: the day texture has its own few lit windows, windows.ts `DAY_LIT`)
+    mat: siteMat('wall-atlas', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.05, 1)),
     wall: Object.fromEntries(WALL_KINDS.map((k, i) => [k, band(i * WALL_PX, WALL_PX, CELL_W * COLS, FLOOR * ROWS)])) as Record<WallKind, Band>,
     ground: Object.fromEntries(GROUND_KINDS.map((k, i) => [k, band(WALL_KINDS.length * WALL_PX + i * GROUND_PX + 1, GROUND_PX - 2, SHOP_W, SHOP_H)])) as Record<GroundKind, Band>,
   };

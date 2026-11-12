@@ -16,6 +16,8 @@ keep it up to date when what it describes changes.
   buildings are all the same") is planned in `docs/trenches-variety-plan.md`
   in six phases (windows, facades, rooflines, ground floors, streets and
   yards, polish), each with the owner's sign-off; keep it up to date.
+  Phase 1 (the windows, city-wide: `windows.ts`, painted by infill.ts's
+  `wallBand()`) is built.
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets
