@@ -1,6 +1,9 @@
 // A smoke test of walk mode in the built site (`npm run smoke` after `npm run build`): a headless Chromium opens the
-// city, walks, sprints, jumps and crouches, opens and closes the hub, gets into the car on the garage's turntable,
-// drives and gets out, and fails on any page error or a step that didn't happen. walk.ts has no unit tests (it's
+// city and plays through it a scene at a time, each from a fresh page at its own spot: the car (in at the garage's
+// turntable, a drive, out), on foot (walk, sprint, jump, crouch, the hub open and closed), the gun store's counter,
+// the metro (the station's card, a ride, skipped to the end), a kart race (the clubhouse's menu, a single race, quit),
+// flying (into your aircraft in the hangar, rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error or a step that didn't happen.
+//   npm run smoke -- car,foot    only these scenes walk.ts has no unit tests (it's
 // the view), so this is the check to run before and after changing it. It's slow in the headless software
 // renderer (a few frames a second), so every step waits on what it expects, not on the clock.
 //   CHROMIUM_PATH=...   the browser (default: Playwright's own, else /opt/pw-browsers/chromium)
@@ -30,93 +33,224 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined),
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 });
-const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
-const errors = [];
-page.on('pageerror', (e) => errors.push(e.message));
+const only = process.argv[2]?.split(',');
+let failed = 0;
 
-/** Where Degen stands, from the ?fps readout ("at x, z") */
-const where = () =>
-  page.evaluate(() => {
-    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return m ? [Number(m[1]), Number(m[2])] : null;
-  });
-const moved = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
-/** Hold a key until Degen (or what he's in) has moved `far` from where he was, or fail */
-async function go(key, far, what, extra = []) {
-  const from = await where();
-  for (const k of [...extra, key]) await page.keyboard.down(k);
+/** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it */
+async function scene(name, spawn, play, init) {
+  if (only && !only.includes(name)) return;
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  if (init) await page.addInitScript(init);
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  let n = 0;
+  const step = async (what) => {
+    console.log(`[smoke] ${name}: ok  ${what}`);
+    if (shots) await page.screenshot({ path: join(shots, `${name}-${String(++n).padStart(2, '0')}.png`), timeout: 300000 }).catch(() => {});
+  };
+  /** Where Degen (or what he's in) is, from the ?fps readout ("at x, z") */
+  const where = () =>
+    page.evaluate(() => {
+      const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+      return m ? [Number(m[1]), Number(m[2])] : null;
+    });
+  const dist = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+  /** Wait for something in the page, or fail saying what */
+  const until = async (what, fn, arg, timeout = 180000) => {
+    await page.waitForFunction(fn, arg, { timeout, polling: 500 }).catch(() => {
+      throw new Error(`waited for: ${what}`);
+    });
+  };
+  const t = {
+    page,
+    step,
+    where,
+    until,
+    has: (sel) => page.evaluate((s) => !!document.querySelector(s), sel),
+    click: (sel) => page.evaluate((s) => document.querySelector(s).click(), sel),
+    /** Hold a key (and any `extra`) until he has moved `far` from where he was */
+    async go(key, far, what, extra = []) {
+      const from = await where();
+      for (const k of [...extra, key]) await page.keyboard.down(k);
+      try {
+        await until(
+          `${what}: ${far} tiles from ${from.join(', ')}`,
+          ([x, z, far]) => {
+            const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+            return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) >= far;
+          },
+          [from[0], from[1], far]
+        );
+      } finally {
+        for (const k of [key, ...extra]) await page.keyboard.up(k);
+      }
+      await step(`${what} (${dist(from, await where()).toFixed(1)} tiles)`);
+    },
+    /** The walk prompt reading `label`, then F */
+    async prompt(label) {
+      await until(`the "${label}" prompt`, (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').toLowerCase().includes(l), label.toLowerCase(), 120000);
+      await step(`the "${label}" prompt shows`);
+      await page.keyboard.press('f');
+    },
+  };
+  let why = '';
   try {
-    await page.waitForFunction(
-      ([x, z, far]) => {
-        const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-        return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) >= far;
-      },
-      [from[0], from[1], far],
-      { timeout: 180000, polling: 500 }
-    );
-  } finally {
-    for (const k of [key, ...extra]) await page.keyboard.up(k);
+    await page.goto(`http://127.0.0.1:${server.address().port}/?fps&spawn=${spawn}`);
+    await t.click('[data-start-guest]');
+    await t.click('[data-start-single]');
+    await until('the start menu to go', () => !document.querySelector('.has-start'), null, 600000);
+    await t.click('[data-walk-toggle]');
+    await until('walk mode', () => document.body.classList.contains('is-walking') && /at -?[\d.]+, -?[\d.]+/.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 300000);
+    await step(`walking, at ${(await where()).join(', ')}`);
+    await play(t);
+  } catch (e) {
+    why = e.message.split('\n')[0];
+    if (shots) await page.screenshot({ path: join(shots, `${name}-failed.png`), timeout: 300000 }).catch(() => {});
   }
-  await step(`${what} (${moved(from, await where()).toFixed(1)} tiles)`);
+  await ctx.close();
+  if (why) console.error(`[smoke] ${name}: FAILED: ${why}`);
+  for (const e of errors) console.error(`[smoke] ${name}: page error: ${e}`);
+  if (why || errors.length) failed++;
 }
-let n = 0;
-const step = async (what) => {
-  console.log(`[smoke] ok  ${what}`);
-  if (shots) await page.screenshot({ path: join(shots, `${String(++n).padStart(2, '0')}.png`), timeout: 300000 }).catch(() => {});
-};
-const has = (sel) => page.evaluate((s) => !!document.querySelector(s), sel);
 
-let failed = '';
-try {
-  // (straight onto the garage's turntable beside the car: solids.ts GARAGE_SITE)
-  await page.goto(`http://127.0.0.1:${server.address().port}/?fps&spawn=83.9,143.35`);
-  await page.evaluate(() => document.querySelector('[data-start-guest]').click());
-  await page.evaluate(() => document.querySelector('[data-start-single]').click());
-  await page.waitForFunction(() => !document.querySelector('.has-start'), null, { timeout: 600000, polling: 500 });
-  await step('the city is up and the start menu gone');
-  await page.evaluate(() => document.querySelector('[data-walk-toggle]').click());
-  await page.waitForFunction(() => document.body.classList.contains('is-walking') && /at -?[\d.]+, -?[\d.]+/.test(document.querySelector('.city-stats')?.textContent ?? ''), null, { timeout: 300000, polling: 500 });
-  await step(`walking, at ${(await where()).join(', ')}`);
+// The car: beside it on the garage's turntable (solids.ts GARAGE_SITE), in, a drive, out
+await scene('car', '83.9,143.35', async (t) => {
+  await t.prompt('Get in');
+  await t.until('in the car', () => !!document.querySelector('.city.is-driving'));
+  await t.step('in the car');
+  await t.go('w', 4, 'drove');
+  await t.page.keyboard.press('f');
+  await t.until('out of the car', () => !document.querySelector('.city.is-driving'));
+  await t.step('out of the car');
+});
 
-  // The car first, while he stands by it: the prompt, in, a drive, out
-  await page.waitForFunction(() => /get in/i.test(document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? ''), null, { timeout: 120000, polling: 500 });
-  await step('the "Get in" prompt shows by the car');
-  await page.keyboard.press('f');
-  await page.waitForFunction(() => !!document.querySelector('.city.is-driving'), null, { timeout: 180000, polling: 500 });
-  await step('in the car');
-  await go('w', 4, 'drove');
-  await page.keyboard.press('f');
-  await page.waitForFunction(() => !document.querySelector('.city.is-driving'), null, { timeout: 180000, polling: 500 });
-  await step('out of the car');
-
-  // On foot
-  await go('w', 1.5, 'walked');
-  await go('w', 2.5, 'sprinted', ['Shift']);
-  await page.keyboard.press('Space');
-  await page.waitForTimeout(3000);
-  await step('jumped');
-  await page.keyboard.press('c');
-  await go('s', 0.6, 'crouched and backed up');
-  await page.keyboard.press('c');
-
-  // The hub: Esc opens it (a first Esc may only free the mouse), Esc closes it
-  for (let i = 0; i < 2 && !(await has('.city.is-hub')); i++) {
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(2500);
+// On foot, out on the garage's forecourt (open ground all round): walk, sprint, jump, crouch, and the hub
+await scene('foot', '86,138.5', async (t) => {
+  await t.go('w', 1.5, 'walked');
+  await t.go('w', 2.5, 'sprinted', ['Shift']);
+  await t.page.keyboard.press('Space');
+  await t.page.waitForTimeout(3000);
+  await t.step('jumped');
+  await t.page.keyboard.press('c');
+  await t.go('s', 0.6, 'crouched and backed up');
+  await t.page.keyboard.press('c');
+  // (a first Esc may only free the mouse)
+  for (let i = 0; i < 2 && !(await t.has('.city.is-hub')); i++) {
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(2500);
   }
-  if (!(await has('.city.is-hub'))) throw new Error('the hub did not open on Esc');
-  await step('the hub opened');
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(() => !document.querySelector('.city.is-hub'), null, { timeout: 60000, polling: 500 });
-  await step('the hub closed');
-  if (!(await page.evaluate(() => document.body.classList.contains('is-walking')))) throw new Error('walking ended when the hub closed');
-} catch (e) {
-  failed = e.message.split('\n')[0];
-  if (shots) await page.screenshot({ path: join(shots, 'failed.png'), timeout: 300000 }).catch(() => {});
-}
+  if (!(await t.has('.city.is-hub'))) throw new Error('the hub did not open on Esc');
+  await t.step('the hub opened');
+  await t.page.keyboard.press('Escape');
+  await t.until('the hub to close', () => !document.querySelector('.city.is-hub'), null, 60000);
+  if (!(await t.page.evaluate(() => document.body.classList.contains('is-walking')))) throw new Error('walking ended when the hub closed');
+  await t.step('the hub closed, still walking');
+});
+
+// The gun store: at the Armoury's counter (solids.ts RACK), the store open and closed
+await scene('guns', '50.7,54.7', async (t) => {
+  await t.prompt('Gun store');
+  await t.until('the gun store', () => !!document.querySelector('[data-shop]:not([hidden])'));
+  await t.step('the gun store opened');
+  await t.click('[data-shop-close]');
+  await t.until('the gun store to close', () => !document.querySelector('[data-shop]:not([hidden])'), null, 60000);
+  await t.step('the gun store closed');
+});
+
+// The metro: at Downtown station's door (metro.ts STATIONS), its card, a ride, skipped to the end
+await scene('metro', '68.4,37.5', async (t) => {
+  const from = await t.where();
+  await t.prompt('Metro');
+  await t.until('the station card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-metro-to]'));
+  await t.step('the station card opened');
+  await t.click('[data-metro] [data-metro-to]');
+  await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
+  await t.step('riding');
+  await t.page.waitForTimeout(4000);
+  await t.click('[data-metro-skip]');
+  await t.until('the ride to end', () => !document.querySelector('.city.is-riding'));
+  // (the readout is painted once a second: wait for it to say where he stepped out)
+  await t.until('him to step out at another station', ([x, z]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) > 30;
+  }, from, 60000);
+  await t.step(`stepped out at ${(await t.where()).join(', ')}`);
+});
+
+// A kart race: at the clubhouse's door (kartcircuit.ts HUT_DOOR), a single race started, driven a little, quit
+await scene('karts', '-338.8,-46.9', async (t) => {
+  await t.prompt('Clubhouse');
+  await t.until('the clubhouse menu', () => !!document.querySelector('[data-karts]:not([hidden]) [data-kart-single]'));
+  await t.step('the clubhouse menu opened');
+  await t.click('[data-karts] [data-kart-single]');
+  await t.until('the race', () => !!document.querySelector('.city.is-karting'), null, 300000);
+  await t.step('on the grid');
+  // (the lights, then the clock runs)
+  await t.page.keyboard.down('w');
+  const clock = () => t.page.evaluate(() => document.querySelector('[data-kart-clock]')?.textContent ?? '');
+  const c0 = await clock();
+  await t.until('the race clock to run', (c) => (document.querySelector('[data-kart-clock]')?.textContent ?? '') !== c, c0, 240000);
+  await t.page.waitForTimeout(6000);
+  await t.page.keyboard.up('w');
+  await t.step(`racing, the clock at ${await clock()}`);
+  // (two presses quit a race, the second while the first's ask still shows)
+  for (let i = 0; i < 4 && (await t.has('.city.is-karting')); i++) {
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(500);
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(3000);
+  }
+  if (await t.has('.city.is-karting')) throw new Error('the race did not end on Esc');
+  await t.step('quit the race');
+});
+
+// Flying: beside your aircraft in Hangar 1 (airfield.ts HANGAR_SPOT), in, rolling out under power
+await scene('fly', '126.8,347.4', async (t) => {
+  await t.prompt('Fly the');
+  await t.until('in the aircraft', () => !!document.querySelector('.city.is-flying'));
+  await t.step('in the aircraft');
+  await t.go('w', 4, 'rolled out');
+});
+
+// The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
+await scene(
+  'pad',
+  '86,138.5',
+  async (t) => {
+    const from = await t.where();
+    await t.page.evaluate(() => (window.__pad.axes[1] = -1));
+    await t.until('the stick to walk him', ([x, z]) => {
+      const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+      return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) >= 1.5;
+    }, from);
+    await t.page.evaluate(() => (window.__pad.axes[1] = 0));
+    await t.step('the left stick walked him');
+    const press = async (i, ms = 1500) => {
+      await t.page.evaluate((i) => (window.__pad.buttons[i] = { pressed: true, value: 1 }), i);
+      await t.page.waitForTimeout(ms);
+      await t.page.evaluate((i) => (window.__pad.buttons[i] = { pressed: false, value: 0 }), i);
+      await t.page.waitForTimeout(ms);
+    };
+    await press(0);
+    await t.step('A (jump)');
+    await press(9);
+    await t.until('Start to open the hub', () => !!document.querySelector('.city.is-hub'), null, 60000);
+    await t.step('Start opened the hub');
+    await press(1);
+    await t.until('B to close the hub', () => !document.querySelector('.city.is-hub'), null, 60000);
+    await t.step('B closed the hub');
+  },
+  () => {
+    window.__pad = { connected: true, axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) };
+    navigator.getGamepads = () => [window.__pad];
+  }
+);
+
 await browser.close();
 server.close();
-if (failed) console.error(`[smoke] FAILED: ${failed}`);
-for (const e of errors) console.error(`[smoke] page error: ${e}`);
-if (failed || errors.length) process.exit(1);
+if (failed) {
+  console.error(`[smoke] ${failed} scene${failed > 1 ? 's' : ''} failed`);
+  process.exit(1);
+}
 console.log('[smoke] walk mode is fine');
