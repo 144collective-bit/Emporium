@@ -170,6 +170,8 @@ export function paintMat() {
   if (!paintShared) {
     paintShared = new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: gradient, vertexColors: true });
     paintShared.userData.shared = true;
+    // (its colours are all 0 to 1: tilebatch.ts packs them smaller)
+    paintShared.userData.paint = true;
     paintShared.userData.siteKey = 'paint';
     paintShared.onBeforeCompile = (sh) => injectWind(sh);
     paintShared.customProgramCacheKey = () => 'paint-wind';

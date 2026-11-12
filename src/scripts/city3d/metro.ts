@@ -51,6 +51,7 @@ import { DOCKS_NAME, EL_STATION, EL_X } from './docks';
 import { PLAN, distToStreet, type Street } from './streetplan';
 import { AVENUE_Z, NS_X } from './trenches';
 import type { Box } from './solids';
+import { BUILT, baked } from './baked';
 import { DECK_HALF as RING_HALF, DECK_Y as RING_DECK, RAMPS, RAMP_HALF, ringS } from './viaduct';
 
 export type Pt = [number, number];
@@ -279,7 +280,7 @@ function needAt(p: Pt) {
   return need;
 }
 /** The track's raised stretches (from, to along it; past an end where it's up there): flat at `HIGH_Y`, eased down over `RISE` either side */
-export const PLATEAUS: Record<TrackId, [number, number][]> = (() => {
+function makePlateaus(): Record<TrackId, [number, number][]> {
   const out = {} as Record<TrackId, [number, number][]>;
   // The main line first: the spurs start where they leave it
   for (const id of ['main', 'branch', 'crest'] as TrackId[]) {
@@ -320,7 +321,17 @@ export const PLATEAUS: Record<TrackId, [number, number][]> = (() => {
     out[id] = runs;
   }
   return out;
-})();
+}
+/** The plateaus as plain data for the page (their open ends, infinities, as null) and back */
+type PackedPlateaus = Record<string, [number | null, number | null][]>;
+export const packPlateaus = (p: Record<TrackId, [number, number][]>): PackedPlateaus =>
+  Object.fromEntries(Object.entries(p).map(([id, runs]) => [id, runs.map(([a, b]) => [Number.isFinite(a) ? a : null, Number.isFinite(b) ? b : null])])) as PackedPlateaus;
+const unpackPlateaus = (p: PackedPlateaus) => Object.fromEntries(Object.entries(p).map(([id, runs]) => [id, runs.map(([a, b]) => [a ?? -Infinity, b ?? Infinity])])) as Record<TrackId, [number, number][]>;
+/**
+ * (worked out when the site is built, `baked()`: walking every track half a tile at a time against the highway's
+ * ramps took a visitor's phone over a second before the city began to build; tests/baked.test.ts holds the two the same)
+ */
+export const PLATEAUS: Record<TrackId, [number, number][]> = baked('metro-plateaus', BUILT ? undefined : makePlateaus, packPlateaus, unpackPlateaus);
 /** The el's deck's height `s` along a track (a spur before its start is the main line) */
 export function trackY(id: TrackId, s: number, plateaus: Record<TrackId, [number, number][]> = PLATEAUS): number {
   if (id !== 'main' && s < 0) return trackY('main', JUNCTION[id] + s, plateaus);
@@ -413,7 +424,8 @@ function clearFor(p: Pt) {
   return !wet || median !== null;
 }
 /** Pillars down each track: at each end of every stretch they can stand on and evenly between, never more than 12 apart there */
-export const PILLARS: { track: TrackId; s: number; at: Pt }[] = (Object.values(TRACKS) as Track[]).flatMap((t) => {
+const makePillars = (): { track: TrackId; s: number; at: Pt }[] =>
+  (Object.values(TRACKS) as Track[]).flatMap((t) => {
   const step = 0.25;
   // The branch shares its first stretch with the main line's pillars north of the switch: it starts a little way out
   const s0 = t.id === 'branch' ? 2.5 : 0.5;
@@ -432,6 +444,12 @@ export const PILLARS: { track: TrackId; s: number; at: Pt }[] = (Object.values(T
     return (n ? Array.from({ length: n + 1 }, (_, i) => a + ((b - a) * i) / n) : [(a + b) / 2]).map((s) => ({ track: t.id, s, at: pointOn(t.id, s).at }));
   });
 });
+/**
+ * (worked out when the site is built, `baked()`: every quarter tile of every track measured against every street
+ * was the slowest thing a visitor's phone did before the city began to build; they're the same pillars, held so by
+ * tests/baked.test.ts)
+ */
+export const PILLARS: { track: TrackId; s: number; at: Pt }[] = baked('metro-pillars', BUILT ? undefined : makePillars);
 
 /** The land under Crestmont's spur where nothing grows (the outskirts' trees, the Flats' palms): a box every few tiles along it, past the main line */
 export const SPUR_CLEAR: [number, number, number, number][] = (() => {

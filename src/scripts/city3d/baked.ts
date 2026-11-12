@@ -50,7 +50,11 @@ export function loadBaked(): Promise<Baked> {
 
 const early = (globalThis as WithEarly).__cityBakedP;
 /** The build's data (one fetch, awaited here so every module that bakes finds it as it loads) */
-export const FROM_BUILD: Baked = BAKED_URL ? await (early ?? loadBaked()) : {};
+export const FROM_BUILD: Baked = BAKED_URL
+  ? await (early ?? loadBaked())
+  : // (the tests: scripts/test.mjs bakes once a run and hands every test file the result, so each doesn't work the
+    // city's data out again; the tests of what's baked, tests/baked.test.ts first, get none and call `make()`)
+    ((globalThis as { __cityTestBaked?: Baked }).__cityTestBaked ?? {});
 /** A bake run's record of what each key made (scripts/bake.mjs sets it before loading the modules) */
 const BAKING = (globalThis as { __cityBake?: Map<string, unknown> }).__cityBake ?? null;
 

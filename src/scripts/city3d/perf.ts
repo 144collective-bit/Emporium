@@ -75,3 +75,60 @@ export function sceneMemory(scene: THREE.Object3D): SceneMemory {
 }
 
 export const mb = (bytes: number) => `${(bytes / 1048576).toFixed(bytes < 10 * 1048576 ? 1 : 0)} MB`;
+
+/** One line of the breakdown: what holds the bytes */
+export interface MemoryRow {
+  /** What it is: the mesh's kind and name, and its material's name */
+  what: string;
+  bytes: number;
+  /** For a batched mesh: the share of its buffers its pieces fill (the rest is room kept) */
+  used?: number;
+}
+
+/**
+ * Where the geometry memory is, biggest first (`window.__mem()` under ?fps): a row a geometry, named after the
+ * mesh that draws it. For finding what to let go, not for the game.
+ */
+export function memoryRows(scene: THREE.Object3D): MemoryRow[] {
+  const seen = new Set<THREE.BufferGeometry>();
+  const rows: MemoryRow[] = [];
+  const size = (g: THREE.BufferGeometry) => {
+    const bufs = new Set<unknown>();
+    let n = 0;
+    for (const a of [...Object.values(g.attributes), g.index]) {
+      if (!a) continue;
+      const key = 'data' in a && a.data ? a.data : a;
+      if (bufs.has(key)) continue;
+      bufs.add(key);
+      n += bytesOf('data' in a && a.data ? a.data : (a as THREE.BufferAttribute));
+    }
+    return n;
+  };
+  scene.traverse((o) => {
+    const m = o as THREE.Mesh & Partial<THREE.InstancedMesh> & Partial<THREE.BatchedMesh>;
+    if (!m.geometry) return;
+    let bytes = (m.instanceMatrix ? bytesOf(m.instanceMatrix) : 0) + (m.instanceColor ? bytesOf(m.instanceColor) : 0);
+    if (!seen.has(m.geometry)) {
+      seen.add(m.geometry);
+      bytes += size(m.geometry);
+    }
+    if (!bytes) return;
+    const mat = Array.isArray(m.material) ? m.material[0] : m.material;
+    const kind = m.isBatchedMesh ? 'batched' : m.isInstancedMesh ? 'instanced' : (m as unknown as THREE.SkinnedMesh).isSkinnedMesh ? 'skinned' : 'mesh';
+    let p: THREE.Object3D | null = o;
+    let name = '';
+    while (p && !name) {
+      name = p.name;
+      p = p.parent;
+    }
+    const attrs = [...Object.entries(m.geometry.attributes), ['index', m.geometry.index] as const].map(([n, at]) => (at ? `${n}:${(at as THREE.BufferAttribute).array.constructor.name.replace('Array', '')}x${(at as THREE.BufferAttribute).itemSize}` : '')).join(' ');
+    const row: MemoryRow = { what: `${kind} ${name || '?'} / ${mat?.name || mat?.type || '?'} [${attrs}]`, bytes };
+    if (m.isBatchedMesh) {
+      const b = m as unknown as { unusedVertexCount: number; maxVertexCount?: number; _maxVertexCount?: number };
+      const max = b.maxVertexCount ?? b._maxVertexCount ?? 0;
+      if (max) row.used = 1 - b.unusedVertexCount / max;
+    }
+    rows.push(row);
+  });
+  return rows.sort((a, b) => b.bytes - a.bytes);
+}
