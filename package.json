@@ -15,7 +15,8 @@
     "bake:textures": "node scripts/bake-textures.mjs",
     "mocap": "node scripts/mocap.mjs",
     "seams": "node scripts/seams.mjs",
-    "shots": "node scripts/shots.mjs"
+    "shots": "node scripts/shots.mjs",
+    "smoke": "node scripts/walk-smoke.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

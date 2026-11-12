@@ -131,8 +131,9 @@ import { CROWD_VIEW, figureDetail } from './character';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, sceneMemory } from './perf';
-import { tileBatch } from './tilebatch';
+import { mb, memoryRows, sceneMemory } from './perf';
+import { PACKED, tileBatch } from './tilebatch';
+import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
@@ -519,10 +520,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return r;
   };
 
+  // The city's size on the page, kept from the last resize (the frame loop never asks the page for it), and whether
+  // the start menu covers the city (kept from the root's class as it changes, not read every frame)
+  let hostW = host.clientWidth;
+  let hostH = host.clientHeight;
+  let startCovers = root.classList.contains('has-start');
+  new MutationObserver(() => (startCovers = root.classList.contains('has-start'))).observe(root, { attributes: true, attributeFilter: ['class'] });
+  const startUp = () => startCovers;
   function resize() {
     const w = host.clientWidth;
     const h = host.clientHeight;
     if (!w || !h) return;
+    hostW = w;
+    hostH = h;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -567,11 +577,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // airport's grounds, the kart park's circuit), only those in the home view and the intro's are built now
   // Most sites built off the main thread (performance phase 4): in the built site, unless ?worker=0
   const siteWorker = import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced() }) : null;
+  const horizonAsked = new URLSearchParams(location.search).get('horizon');
+  const horizonOff = horizonAsked === '0';
+  const horizonForced = Number(horizonAsked) || 0;
   const works = createTileWork(scene, {
     budget: (Number(new URLSearchParams(location.search).get('budget')) || Q.nearBudget) * 2 ** 20,
     compile: (meshes) => meshes.forEach((m) => compileFor(m)),
     worker: siteWorker,
     meshesOf,
+    // Phones, on the ground (walking, driving, riding; not up in an aircraft): tiles past where the haze hides
+    // everything let go of all their sites drew (docs/performance-plan.md). `?horizon=N` forces a distance on
+    // any tier while walking, `?horizon=0` turns it off, for testing
+    horizon: () => {
+      if (!walking || walk.flying || horizonOff) return Infinity;
+      if (horizonForced) return horizonForced;
+      return tier === 'low' ? hazeHorizon((scene.fog as THREE.FogExp2).density) : Infinity;
+    },
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
   const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
@@ -1571,6 +1592,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.className = 'city-stats';
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
+    // (where the geometry memory is, for the console: perf.ts)
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -1655,7 +1678,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     timer.update();
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
-    if (bench && !bench.active && !bench.done && !walking && !root.classList.contains('has-start') && !works.stats().waiting && !districts.pending()) bench.begin(t);
+    if (bench && !bench.active && !bench.done && !walking && !startUp() && !works.stats().waiting && !districts.pending()) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
@@ -1706,7 +1729,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
     sky.setShadows(walking && !walk.airborne);
-    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look);
+    const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -1725,7 +1748,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Building as you go (growth plan Phase 3): a few milliseconds a frame, nearest what the City view looks at
     // (round Degen while walking). The start menu covers the city completely: behind it the city is drawn only
     // once a second (its shaders made ready as it fills) and the frame's time goes on building instead
-    const covered = root.classList.contains('has-start');
+    const covered = startUp();
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
@@ -1765,8 +1788,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // the hover still lights its pin when the labels are on, and sets the cursor)
 
     // Pins follow their buildings on screen; far ones shrink (only while the labels are on: off, nothing is placed)
-    const w = host.clientWidth;
-    const h = host.clientHeight;
+    const w = hostW;
+    const h = hostH;
     pinState.length = 0;
     for (const sp of pinsOn ? spots : []) {
       const el = pins.get(sp.id);
@@ -1866,7 +1889,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
-          (({ released, held, budget, rebuilt }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again`)(works.stats()),
+          (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),

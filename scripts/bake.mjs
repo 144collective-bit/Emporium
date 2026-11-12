@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 /** Every module that calls `baked()` */
-const MODULES = ['routes', 'crowdclips', 'commons', 'verges', 'rolls'];
+const MODULES = ['routes', 'crowdclips', 'commons', 'verges', 'rolls', 'metro', 'viadress'];
 
 export async function bake({ quiet = false } = {}) {
   const t0 = performance.now();

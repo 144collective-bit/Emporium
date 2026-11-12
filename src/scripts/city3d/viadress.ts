@@ -31,6 +31,7 @@ import { DECK_HALF, DECK_Y, GIRDER, RAMPS, RING_LEN, exitS, ringAt, ringPoint, r
 import { PIERS } from './viapiers';
 import { RAMP_PARAPET, rampSegs } from './viaground';
 import { ROAD } from './palette';
+import { BUILT, baked } from './baked';
 
 type Rect = [number, number, number, number];
 const inRect = (r: Rect, x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
@@ -70,7 +71,7 @@ const WINDOWS: [number, number][] = PIERS.map((p, i) => {
 }).filter(([a, b]) => b - a > 6 && b < RING_LEN);
 /** The land beside the deck either side at s (inside, -1; outside, 1), within 40 out */
 export const besideIn = (s: number, rs: Rect[]) => [-1, 1].some((q) => [12, 25, 40].some((d) => rs.some((r) => inRect(r, ...ringPoint(s, q * d)))));
-export const UNDER: Under[] = (() => {
+function makeUnder(): Under[] {
   const out: Under[] = [];
   const parks = new Set<string>();
   let courts = 0;
@@ -102,7 +103,9 @@ export const UNDER: Under[] = (() => {
     }
   }
   return out;
-})();
+}
+/** (worked out when the site is built, `baked()`: it measures every stretch under the deck against the streets, the river, the hills and the el) */
+export const UNDER: Under[] = baked('under-deck', BUILT ? undefined : makeUnder);
 /** A skate spot's pieces (ring coordinates: `s` along, `o` across from the piers' line): a ledge with a steel edge, a
  * manual pad, a flat rail and a quarter pipe at the far end */
 export type SkatePart = { kind: 'ledge' | 'pad' | 'rail' | 'quarter'; s0: number; s1: number; o0: number; o1: number; h: number };

@@ -545,3 +545,150 @@ trees and woods, built after the boot). What the edge added is small; what it
 showed is that phones' geometry, about 210 MB, is already past the 150 MB target
 from the districts built since Phase 6. Letting far districts go on phones and far
 districts as simple blocks (items 5 and 6 above) are the way back under it.
+
+## Phones' geometry memory, step 1: vertices packed smaller (2026-11)
+
+The 150 MB target against 210 MB (above). Measured first, with a breakdown
+(`window.__mem()` under `?fps`: `memoryRows()` in perf.ts, `bytesBy()` in
+tilebatch.ts): on the headless phone tier with every district loading, two
+batched meshes of the shared toon paint held 170 of 240 MB. Each vertex was
+44 bytes (position, normal, uv and colour, all floats).
+
+- **Built.** `compact()` in tilebatch.ts packs every piece as it joins a
+  batched mesh: normals as signed bytes, the shared paint's colours (all 0 to
+  1; `userData.paint` in kit.ts, a counter holds that none is clamped) as
+  16-bit shares, both `normalized`, so no shader changes: 29 bytes a vertex.
+  Every tier gets it. Tested in `tests/tilebatch.test.ts`; the home view and
+  a street shot before and after are the same picture.
+- **Measured** (headless phone tier, the same number of sites built, 3,442 of
+  4,411): geometry 221 MB before, 185 MB after. Like for like, the pieces
+  built at the boot went from 17.9 to 13.1 MB.
+- **What's left, and why the near budget alone can't reach the target:** of
+  the tile pieces, those drawn at every distance (`lod` all: walls, roofs,
+  ground) from sites were 64 MB before (54 after) and are never let go; the
+  near pieces that can be let go were 40 MB (35), the far pieces under 2 MB.
+  So "far districts let go on phones" means letting a far tile's `all` pieces
+  go too (and building them again on the way back), which shows wherever the
+  haze doesn't hide it: the owner's call on how far and in which views.
+  Also open: the uv (8 of the 29 bytes, zero but for the trees' sway), the
+  places' near and far forms (32 MB as plain meshes) and the crowd's
+  geometry (20 MB).
+
+## Phones' geometry memory, step 2: far tiles let go past the haze (2026-11)
+
+The owner's pick: only while on the ground, only what the haze already hides;
+the City view keeps everything.
+
+- **Built.** On the low tier, while walking, driving or riding (not the City
+  view, not up in an aircraft), `hazeHorizon()` in tileplan.ts turns the
+  scene's fog into the distance past which under a hundredth of anything is
+  left (about 580 by day at the haze's full thickness, about 204 at night).
+  A tile 60 past it lets go of everything its sites drew in the shared
+  materials, at every level (`vanish()` in tilebatch.ts), sites still waiting
+  out there wait on, and once 6 MB has gone the batched meshes are packed and
+  made smaller (`trim()`: until now room let go was only reused, never given
+  back). A tile coming within 20 of the horizon gets its always-drawn and far
+  pieces back (its sites run again), its near pieces when it's close as
+  before; in the City view every tile returns, nearest first. `?horizon=N`
+  forces a distance, `?horizon=0` turns it off.
+- **Measured** (headless phone tier, `?horizon=` forced, about 18 minutes
+  standing downtown each, still building slowly when stopped, so read them as
+  "about"): geometry about 113 MB at the night distance and 127 MB at the
+  day's, against 185 MB with most of the city held (step 1's figure). After
+  five minutes in the City view and then walking far across town at the
+  night distance: 120 tiles gone, the meshes 7.8 MB smaller, no errors.
+- **Not measured:** a real phone; a long session's steady state by day (from
+  downtown, 640 reaches most of the town, so by day the saving is mostly at
+  the city's edges); the hitch when `trim()` copies a mesh (it runs at most
+  every 4 s).
+- **Known limits.** After a fast travel or a ride's end on a phone, tiles
+  inside the horizon but far from where you arrive come back over the next
+  moments, nearest first. Going back to the City view builds everything
+  again (the owner's pick: it keeps everything), so the saving is for the
+  time on the ground.
+- **The haze on the ground (the owner's call, 2026-11: full thickness).**
+  sky.ts thinned the haze by how far the camera was from the City view's
+  last target (down to 0.55 of its thickness): meant for the pulled-back City
+  view, it applied on foot too, so walking more than about 130 from where the
+  City view last looked the day's haze was up to 45% thinner and the horizon
+  up to about 1,050. `sky.update(..., ground)` now holds it at full thickness
+  while walking, driving or riding (eased between the two, never a jump; in
+  an aircraft and the City view as before), so the haze is the same wherever
+  you walk and the day's horizon is about 580 everywhere.
+
+## Quick wins after the memory steps (2026-11)
+
+- **The frame loop asks the page for nothing.** The city's size is kept
+  from the last resize and whether the start menu covers it from the root's
+  class as it changes (index.ts `hostW` / `hostH`, `startUp()`), where each
+  frame read `clientWidth` / `clientHeight` and the class list.
+- **The tests share one bake.** `scripts/test.mjs` works the baked data out
+  once a run and `scripts/test-baked.mjs` hands it to every test file as it
+  starts (baked.ts `__cityTestBaked`), but the tests of what's baked, which
+  make it themselves. The whole suite: about 215 s to 160 s here, at both
+  world sizes. `TEST_BAKED=0` turns it off.
+- **Left as it is: the crowd's capture pack.** It was on the list to load
+  later, but it's already fetched beside the boot's own work and applied
+  behind the start menu, so later would only show the crowd changing.
+
+## The start-up profiled: data the phone worked out before the boot (2026-11)
+
+The owner picked "shrink the start-up by moving district data out of it".
+Measured first, and that isn't where the time is:
+
+- **The boot's code by kind** (esbuild's metafile over index.ts, minified,
+  without three): 1,326 KB in 240 modules. Drawing 335 KB (The Trenches'
+  alone 103 KB: it predates districts loaded as you approach), the lazy
+  districts' data 243 KB in 57 files, walking and vehicles 157 KB, the
+  character 98 KB, the economy 71 KB.
+- **The district data can't leave**: collisions, the street plan and the
+  traffic read it at the boot, by design. The Trenches' drawing could (a
+  district loaded as you approach), but timed on a phone slowed four times
+  it is about 0.5 s of a 10 s boot and about 30 KB of 699 over the wire, for
+  a refactor of twelve files and the district filling in later. Not done.
+- **A CPU profile of the start** (an unminified build, CDP's profiler)
+  found what was: before `bootCity()` even ran, `metro.ts` spent 0.6 s and
+  `viadress.ts` 0.3 s (unthrottled) working out the el's pillars (every
+  quarter tile of every track against every street), its raised stretches
+  and what stands under the highway's deck: the same for everyone, on every
+  visit. The boot's own readout starts after the modules load, so it never
+  showed.
+- **Built.** Those three are baked when the site is built (`baked()` keys
+  `metro-pillars`, `metro-plateaus`, `under-deck`; scripts/bake.mjs
+  `MODULES`; tests/baked.test.ts holds each to exactly what `make()` makes;
+  the baked file 44 to 47 KB gzipped, the boot's code 1 KB smaller).
+- **Measured** (headless phone, CPU slowed four times, the old and new
+  builds taking turns, six runs each): opening the page to the first frame
+  a median 20.4 s before, 17.0 s after.
+- **Also found, not a fault in the live site:** without the textures made
+  at build time, lod.ts `average()` reads each canvas texture back to find
+  its colour for the far forms: 6 s of the main thread after the first
+  frame in the headless renderer. The built textures carry their average,
+  so a build whose texture bake ran doesn't pay it; a build whose bake
+  failed would.
+- **Still in the start, for later:** about 4 s (slowed four times) between
+  opening the page and `bootCity()` (three.js and the city's code parsed,
+  the modules' own data), and in the boot the ground (`buildGround()`), the
+  landmarks and the characters, each a few hundred ms unthrottled.
+
+## The boot itself profiled (2026-11)
+
+The same profile over `bootCity()` (unthrottled, about 3.1 s sampled, the
+canvas painting a real build doesn't do left out): no one thing is left.
+The ground 0.6 s (`buildGround()`: the hills' tint 0.13, the river's banks
+0.09, the rest in a dozen pieces), the landmarks 0.5 s (the Emporium and the
+Armoury, mostly their figures), merging into tiles 0.36 s, the crowd and
+traffic 0.22 s, the el 0.13 s, and `WebGLRenderer.setSize()` 0.24 s (the
+headless renderer's own).
+
+- **Built: the tile split.** `splitByTile()` in tilebatch.ts, which every
+  site goes through as it joins the city (so after the boot too), went
+  through the accessors, a string a triangle and a map of vertices. It reads
+  the arrays, keys tiles by number and hands a one-tile geometry straight
+  back: 39 ms to 13 ms for 180,000 triangles over 400 tiles, 4 ms to 0.5 ms
+  for one tile, the same output to the byte (tests/tilebatch.test.ts holds it
+  against the plain way).
+- **Left, each a bigger change for a tenth of a second or two:** the hills'
+  ground built at the boot though it's far from the home view (it could be
+  a site); the hills' tint measuring the slope with four more heights a
+  vertex; the landmarks' figures built before the first frame.
