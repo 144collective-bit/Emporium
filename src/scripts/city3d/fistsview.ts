@@ -12,7 +12,8 @@
  *   behind him, and from his eyes their guard is under his chin, out of shot) carries the fists forward into shot,
  *   up and in, without moving his body; the elbows are solved again round towards his own.
  * - Running with his hands down (the owner's calls: "a classic FPS pump", "his steps, a designed arc", loose fists),
- *   the pump: his body sets the timing (each arm's wrist ahead of the other's, against the size of his swing lately,
+ *   the pump: his body sets the timing (each arm's wrist ahead of the other's, about the middle of his swing lately
+ *   and against its size,
  *   fparm.ts `pumpSwing()`) and the arm follows a designed arc (`pumpArm()`, `PUMP`): the elbow held at a right
  *   angle, the fist swung up into its lower corner and back down out of shot, higher sprinting, the fist loose (a
  *   second forearm, swapped in, so still two draws an arm). Standing or walking they're out of sight below.
@@ -171,6 +172,8 @@ export function createFistsView(scene: THREE.Scene) {
   const tmp = new THREE.Vector3();
   // The pump's timing: the size of his swing lately (these metres), each arm's swing smoothed, and the fists loose
   let swingAmp = 0.12;
+  /** (his swing's middle lately: the motion capture's sprint can carry one hand ahead of the other all the way, and the pump swings about the middle, never stuck forward) */
+  let swingMid = 0;
   const swung = [0, 0];
   let loose = false;
 
@@ -231,13 +234,15 @@ export function createFistsView(scene: THREE.Scene) {
       }
       // The pump's timing, his own: how far each wrist is ahead of the other's, against the size of his swing lately
       const run = s.run * (1 - s.guard);
-      const gap = Math.abs(arms[0].ahead - arms[1].ahead);
-      if (run > 0.05) swingAmp += (Math.max(gap, 0.04) - swingAmp) * Math.min(1, dt * 1.5);
+      const gap = arms[0].ahead - arms[1].ahead;
+      if (run > 0.05) {
+        swingMid += (gap - swingMid) * Math.min(1, dt * 1.2);
+        swingAmp += (Math.max(Math.abs(gap - swingMid), 0.04) - swingAmp) * Math.min(1, dt * 1.5);
+      }
       // (the fists loose for the run, tight again as the guard comes up: swapped either side of half way)
       loose = loose ? run > 0.3 && s.guard < 0.4 : run > 0.6 && s.guard < 0.2;
       for (let i = 0; i < 2; i++) {
-        const h = arms[i];
-        const want = pumpSwing(h.ahead - arms[1 - i].ahead, swingAmp);
+        const want = pumpSwing((i === 0 ? 1 : -1) * (gap - swingMid), swingAmp);
         swung[i] += (want - swung[i]) * Math.min(1, dt * 16);
       }
       for (const h of arms) {

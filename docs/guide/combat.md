@@ -130,8 +130,9 @@ keep it up to date when what it describes changes.
   (`solveArm()`), never moving his body. Running with his hands down (the
   owner's calls: "a classic FPS pump", "his steps, a designed arc", loose
   fists) the pump takes over (`pumpArm()`, `PUMP`): his body sets the
-  timing (each arm's wrist ahead of the other's against the size of his
-  swing lately, `pumpSwing()`) and the arm follows a designed arc, the
+  timing (each arm's wrist ahead of the other's, about the middle of his
+  swing lately, so a sprint carrying one hand ahead never sticks it
+  forward, against its size, `pumpSwing()`) and the arm follows a designed arc, the
   elbow held at a right angle (the wrist on a sphere round his shoulder),
   the fist swung up into its lower corner and back down out of shot like
   a pendulum, higher sprinting, the elbow driving back; the fist is loose
