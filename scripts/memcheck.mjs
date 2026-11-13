@@ -100,13 +100,15 @@ try {
   if (off > 0.1) fail.push(`targets.ts's formula is ${(off * 100).toFixed(0)}% off what the phone holds: post.ts or sky.ts changed without it`);
 
   if (SOAK) {
-    // Half in the City view (the benchmark's route, then still), half walking: sampled every 30 s
+    // Half in the City view (the benchmark's route, then still), half walking: sampled every 30 s, or ten times
+    // each half if that's shorter
     const half = (SOAK_MIN * 60000) / 2;
+    const every = Math.min(30000, half / 10);
     const series = { city: [], walk: [] };
     const watch = async (into, until, step) => {
       while (Date.now() < until) {
         if (step) await step();
-        await page.waitForTimeout(30000);
+        await page.waitForTimeout(every);
         const v = await sample();
         if (v) into.push(v);
       }
@@ -152,7 +154,7 @@ server.close();
 for (const e of errors.slice(0, 10)) fail.push(e);
 if (fail.length) {
   for (const f of fail) console.error(`[memcheck] FAILED: ${f}`);
-  console.error('[memcheck] over a ceiling: make it lighter, or raise MEMORY_CEILINGS (targets.ts) on purpose, saying why');
+  if (fail.some((f) => /ceiling/.test(f))) console.error('[memcheck] over a ceiling: make it lighter, or raise MEMORY_CEILINGS (targets.ts) on purpose, saying why');
   process.exit(1);
 }
 console.log(`[memcheck] the city is within its memory ceilings (${secs()} s)`);
