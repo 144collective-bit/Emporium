@@ -66,6 +66,9 @@ import type { HangarUI } from './hangar-ui';
 import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
+import { pollPad as pollPadOf, type PadHost, type PadState } from './walkpad';
+import { onKey as onKeyOf, type KeyHost } from './walkkeys';
+import { wireTouch, type TouchHost } from './walktouch';
 import { KART_PARK } from './kartpark';
 import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
@@ -96,6 +99,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
+import { HOME_CAMERA, HOME_GARAGE_DOOR, homeWall, inHouse } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { endsDeckWall, upOnEnds } from './endsdecks';
@@ -114,16 +118,16 @@ import type { Partners, StreetFists } from './brawl';
 import type { PartnerId } from './fight-moves';
 import type { FightStart } from './fight-types';
 import type { Hub } from './hub';
-import { onTap, type GameDeps } from './ui';
+import type { GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
 import { layoutControls } from './controls';
 import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { UNDER, createGroundHeight } from './groundheight';
-import { RIDE_CAM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
+import { RIDE_CAM, WALK_ZOOM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
-import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
+import { inPedalZone, inSteerZone, type Screen } from './touchdrive';
 import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
 import type { CardInput } from './ctrlcard';
 
@@ -538,7 +542,7 @@ export function createWalk(d: WalkDeps) {
    * How far behind him the camera sits to begin with (the mouse wheel sets it after): closer on an upright
    * screen, whose narrow view leaves him small at the distance a wide one frames him well
    */
-  const homeZoom = () => (innerHeight > innerWidth ? 2.5 : 2.6);
+  const homeZoom = () => (innerHeight > innerWidth ? WALK_ZOOM.upright : WALK_ZOOM.wide);
   let zoom = homeZoom();
   let camDist = zoom;
   let firstPerson = false;
@@ -592,7 +596,7 @@ export function createWalk(d: WalkDeps) {
     if (n.id === 'trainer') return counterMark(TRAINER_TOP, y + TRAINER_TOP_H, y, pos.x, pos.z);
     // (a sparring partner: the spar starts at once)
     if (n.id.startsWith('spar:')) return null;
-    if (n.id === 'garage') return door(GARAGE_SITE.door);
+    if (n.id === 'garage') return door(garageAt === 'home' ? HOME_GARAGE_DOOR : GARAGE_SITE.door);
     if (n.id === 'hangar') return door(HANGAR_DOOR);
     if (n.id === 'karts') return door(HUT_DOOR);
     // Getting in (step 2): the car's or the kart's side nearest him, the aircraft's door, the hire boat's ladder
@@ -736,6 +740,8 @@ export function createWalk(d: WalkDeps) {
   /** `y`: how high Degen is (up on Liberty Bridge only its parapets stop you; under it, its pillars and stairs do) */
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
+    // Inside Degen's house (home.ts, docs/home-plan.md Phase 3): only the room's walls and what stands in it stop you
+    if (inHouse(x, z)) return homeWall(x, z, RADIUS);
     // Up on Endswood's galleries and bridges (endsdecks.ts): only their parapets, end walls and faces stop you
     if (upOnEnds(x, z, y)) return endsDeckWall(x, z, y, RADIUS);
     // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
@@ -793,7 +799,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, HOME_CAMERA] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -1015,6 +1021,8 @@ export function createWalk(d: WalkDeps) {
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
+  /** Which garage's door the Garage prompt is at: the city's office, or Degen's own at home (home.ts) */
+  let garageAt: 'home' | 'city' = 'city';
   const garageUI = lazyMenu<GarageUI>(['show'], async () => (await import('./garage-ui')).createGarageUI(root, {
     preview: (c) => d.garage.show(c),
     // Kept: if your car is out on the streets, it comes home
@@ -1043,10 +1051,14 @@ export function createWalk(d: WalkDeps) {
       still();
       fpBeforeGarage = firstPerson;
       if (firstPerson) setFirstPerson(false);
+      // (at the city garage the car and the bike come to its turntable and stand, a showroom, while the menu is open;
+      // at home they're looked at where they live: garage.ts)
+      d.garage.at(garageAt);
       d.garage.spin(true);
     },
     onClose() {
       d.garage.spin(false);
+      d.garage.at('home');
       if (fpBeforeGarage) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
@@ -1142,30 +1154,7 @@ export function createWalk(d: WalkDeps) {
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
   const pedals = { gas: false, brake: false };
-  /** The fingers on the pedals (touchdrive.ts): each pointer and the pedal it presses */
-  const pedalFingers = new Map<number, Pedal>();
   const pedalBtns = [$('[data-drive-gas]'), $('[data-drive-brake]')];
-  const rectOf = (el: Element): Rect | null => {
-    const r = el.getBoundingClientRect();
-    return r.width ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null;
-  };
-  function syncPedals() {
-    const on = [...pedalFingers.values()];
-    pedals.gas = on.includes('gas');
-    pedals.brake = on.includes('brake');
-    pedalBtns[0].classList.toggle('is-held', pedals.gas);
-    pedalBtns[1].classList.toggle('is-held', pedals.brake);
-  }
-  function clearPedals() {
-    pedalFingers.clear();
-    syncPedals();
-  }
-  function pressPedal(e: PointerEvent, el: HTMLElement) {
-    capture(el, e.pointerId);
-    pedalFingers.set(e.pointerId, pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), 'gas'));
-    syncPedals();
-    d.touched();
-  }
   /** The screen for the floating stick's and the pedals' zones */
   function screen(): Screen {
     // (in the screen's own numbers, as the fingers' are: the city fills it)
@@ -1663,33 +1652,6 @@ export function createWalk(d: WalkDeps) {
     else crouchTouch = down;
     if (down && !crouched && !slide) crouchPress();
   }
-  /** Keep a finger's let-go on the button it pressed (a pointer that isn't live, as a synthetic one, can't be) */
-  const capture = (el: HTMLElement, id: number) => {
-    try {
-      el.setPointerCapture?.(id);
-    } catch {
-      /* fine */
-    }
-  };
-  /** A touch button that's held or toggled by the setting for `job`: `set` turns it on or off, `get` says whether it's on */
-  function holdButton(btn: HTMLElement | null, job: HoldJob, set: (on: boolean) => void, get: () => boolean) {
-    if (!btn) return;
-    btn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      capture(btn, e.pointerId);
-      set(press(hm(job, 'touch'), get(), true));
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
-      btn.addEventListener(ev, () => {
-        if (hm(job, 'touch') === 'hold' && get()) set(false);
-      });
-    // (Enter or Space on it, focused: a toggle either way; a pointer's own click already pressed it)
-    btn.addEventListener('click', (e) => {
-      if (e.detail === 0) set(!get());
-    });
-  }
-
   /** The camera at the wheel (V, the right stick pressed, the touch View button; views.ts): the next view, named in a toast */
   function nextCam() {
     let kind: ViewKind | RideKind | 'ring' | 'foot' | null = null;
@@ -1712,141 +1674,74 @@ export function createWalk(d: WalkDeps) {
     if (kind && view) d.game.toast(`Camera · ${viewName(kind, view)}`, 1200);
   }
 
-  const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
-  function onKey(e: KeyboardEvent, down: boolean) {
-    if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
-    const c = e.code;
-    if (down) setInput('keys');
-    // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
-    if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
-    // The hub open: its own keys (menukit.ts), and walking keys wait
-    if (d.hub?.open) return false;
-    // The inventory open: its keys (Tab closes it; Esc too, index.ts), and walking keys wait
-    if (hotbar?.open) return hotbar.key(e, down);
-    // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
-    if (shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open) {
-      if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
-      return false;
-    }
-    // / or ?: the control card for where you are (again: closes it)
-    if (down && !e.repeat && (c === 'Slash' || e.key === '?' || e.key === '/')) {
-      askCard();
-      e.preventDefault();
-      return true;
-    }
-    // On a ride: V steps its camera (the ride has the rest)
-    if (ride && down && !e.repeat && c === 'KeyV') {
-      nextCam();
-      e.preventDefault();
-      return true;
-    }
-    // Fighting, on the street's keys (keymap.ts): move with the move keys (W towards the opponent), G kicks, Space
-    // dodges, E a snack, V the camera; the mouse punches and blocks (right button held)
-    if (fighting()) {
-      if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') {
-        if (down && !e.repeat) fightBtns.dodge = true;
-      } else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
-      else if (down && !e.repeat && c === 'KeyE') fight?.snack();
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Boating: W / S ahead and astern, A / D steer, V swaps camera, H the horn, F gets out (alongside a landing)
-    if (boat?.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (down && !e.repeat && c === 'KeyH') boat.horn();
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, F gets out
-    if (fly.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c) || c === 'KeyC') {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Karting: steer and pedal with the move keys, Space hops into a drift (F does nothing in a race: no getting out mid-lap)
-    if (karts.active) {
-      if (c === 'KeyF') {
-        /* swallowed */
-      } else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
-    if (drive.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (down && !e.repeat && c === 'KeyH') drive.horn();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    if (down && c === 'KeyF' && near) act();
-    // Tab: the inventory (on foot, not in the middle of a moment)
-    else if (c === 'Tab') {
-      if (down && !e.repeat && !moments.active) toggleInv();
-    } else if (down && !e.repeat && c === 'KeyV') nextCam();
-    else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
-    else if (down && !e.repeat && c === 'KeyR') combat.reload();
-    else if (down && !e.repeat && c === 'KeyG') {
-      // (empty hands: G kicks; a gun is drawn with 1 or 2)
-      if (fistsReady()) fightBtns.kick = true;
-      else combat.toggleHolster();
-    } else if (down && !e.repeat && c === 'KeyX') stepSlot(1);
-    else if (c === 'KeyC') {
-      if (!e.repeat) crouchInput('keys', down);
-    }
-    // Shift on toggle: a press locks the sprint, the next lets it go
-    else if ((c === 'ShiftLeft' || c === 'ShiftRight') && hm('sprint', 'keys') === 'toggle') {
-      if (down && !e.repeat) setSprintLock(!sprintLock);
-    }
-    // Q / E held: peek left and right
-    else if (c === 'KeyQ' || c === 'KeyE') {
-      if (down) keys.add(c);
-      else keys.delete(c);
-    }
-    // 1-7 pick a hotbar slot (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]:not([data-hub-emotes] *)')) pickSlot(Number(c.slice(5)) - 1);
-    else if (c === 'Space') {
-      if (down && !e.repeat) tryJump();
-      jumpHeld = down;
-    } else if (MOVE.includes(c)) {
-      if (down) keys.add(c);
-      else keys.delete(c);
-    } else return false;
-    d.touched();
-    e.preventDefault();
-    return true;
-  }
+  /** The keyboard (walkkeys.ts, docs/walk-plan.md Phase 2): what it reads and calls of walk mode */
+  const keyHost: KeyHost = {
+    d,
+    get active() {
+      return active;
+    },
+    get hotbar() {
+      return hotbar;
+    },
+    get kartUI() {
+      return kartUI;
+    },
+    get ride() {
+      return ride;
+    },
+    get fight() {
+      return fight;
+    },
+    get boat() {
+      return boat;
+    },
+    get karts() {
+      return karts;
+    },
+    get near() {
+      return near;
+    },
+    get sprintLock() {
+      return sprintLock;
+    },
+    get jumpHeld() {
+      return jumpHeld;
+    },
+    set jumpHeld(v) {
+      jumpHeld = v;
+    },
+    get walkLock() {
+      return walkLock;
+    },
+    set walkLock(v) {
+      walkLock = v;
+    },
+    keys,
+    shop,
+    garageUI,
+    hangarUI,
+    fightUI,
+    fly,
+    drive,
+    combat,
+    fightBtns,
+    moments,
+    fighting,
+    emotesOpen: () => !!root.querySelector('[data-emotes][open]:not([data-hub-emotes] *)'),
+    setInput,
+    askCard,
+    nextCam,
+    hm,
+    act,
+    tryJump,
+    crouchInput,
+    fistsReady,
+    setSprintLock,
+    toggleInv,
+    stepSlot,
+    pickSlot,
+  };
+  const onKey = (e: KeyboardEvent, down: boolean) => onKeyOf(e, down, keyHost);
   // A click punches and the right button held blocks while fighting, as on the street (the mouse isn't captured in the ring)
   canvas.addEventListener('mousedown', (e) => {
     if (active && fighting()) {
@@ -1976,455 +1871,150 @@ export function createWalk(d: WalkDeps) {
     { passive: false }
   );
 
-  // Touch joystick: one finger, followed wherever it goes (on the window, the finger captured) and never another's.
-  // At the wheel it floats (touchdrive.ts): a thumb landing on the city on the stick's side of the lower screen is the
-  // stick, its ring moved under the thumb, so the steering thumb never misses it
-  const setJoy = (e: PointerEvent) => {
-    const R = stick.getBoundingClientRect().width / 2 || 1;
-    let x = (e.clientX - joy.ox) / R;
-    let y = (e.clientY - joy.oy) / R;
-    const m = Math.hypot(x, y);
-    if (m > 1) ((x /= m), (y /= m));
-    joy.x = x;
-    joy.y = y;
-    const sh = stickRead(e.clientX - joy.ox, e.clientY - joy.oy, R);
-    joy.sx = sh.x;
-    joy.sy = sh.y;
-    knob.style.transform = `translate(${x * R * 0.54}px, ${y * R * 0.54}px)`;
-    d.touched();
+  /** The touch controls (walktouch.ts, docs/walk-plan.md Phase 3): the page, walk mode's shared objects, and what they read and call */
+  const touchHost: TouchHost = {
+    d,
+    get active() {
+      return active;
+    },
+    get ride() {
+      return ride;
+    },
+    get boat() {
+      return boat;
+    },
+    get crouched() {
+      return crouched;
+    },
+    get firstPerson() {
+      return firstPerson;
+    },
+    get sprintLock() {
+      return sprintLock;
+    },
+    get jumpHeld() {
+      return jumpHeld;
+    },
+    set jumpHeld(v) {
+      jumpHeld = v;
+    },
+    get aim() {
+      return aim;
+    },
+    set aim(v) {
+      aim = v;
+    },
+    drive,
+    combat,
+    hm,
+    tryJump,
+    setSprintLock,
+    crouchInput,
+    crouchPress,
+    nextCam,
+    setBlock,
+    quitFight,
+    setFirstPerson,
+    saveSettings,
+    act,
+    look,
+    stepSlot,
   };
-  /** A finger takes the stick (on the stick itself, or floating at the wheel); false if another already has it */
-  function startJoy(e: PointerEvent, el: HTMLElement, float: boolean) {
-    if (joy.id >= 0) return false;
-    const r = stick.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    joy.id = e.pointerId;
-    joy.float = float;
-    joy.ox = float ? e.clientX : cx;
-    joy.oy = float ? e.clientY : cy;
-    stick.style.translate = float ? `${e.clientX - cx}px ${e.clientY - cy}px` : '';
-    stick.classList.toggle('is-held', true);
-    capture(el, e.pointerId);
-    setJoy(e);
-    return true;
-  }
-  stick.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    if (startJoy(e, stick, false)) e.stopPropagation();
-  });
-  window.addEventListener('pointermove', (e) => e.pointerId === joy.id && setJoy(e));
-  const endJoy = (e?: PointerEvent) => {
-    if (e && e.pointerId !== joy.id) return;
-    joy.id = -1;
-    joy.x = joy.y = joy.sx = joy.sy = 0;
-    joy.float = false;
-    knob.style.transform = '';
-    stick.style.translate = '';
-    stick.classList.remove('is-held');
-  };
-  for (const ev of ['pointerup', 'pointercancel'] as const) window.addEventListener(ev, (e) => endJoy(e));
-  const jumpBtn = $('[data-walk-jump]');
-  jumpBtn.addEventListener('pointerdown', () => {
-    tryJump();
-    jumpHeld = true;
-  });
-  jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
-  jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
-  // (the touch buttons answer a finger at once, with the thumb still on the stick: onTap() in ui.ts)
-  holdButton(runBtn, 'sprint', setSprintLock, () => sprintLock);
-  crouchBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    capture(crouchBtn, e.pointerId);
-    crouchInput('touch', true);
-    // (a crouch lets go of the locked sprint, which would stand him straight back up)
-    if (crouched) setSprintLock(false);
-  });
-  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) crouchBtn.addEventListener(ev, () => crouchInput('touch', false));
-  crouchBtn.addEventListener('click', (e) => e.detail === 0 && crouchPress());
-  // Touch pedals at the wheel (touchdrive.ts): each pedal finger followed on its own, pressing the pedal it's on or
-  // the nearer one, so a thumb rolled from Gas onto Brake switches without lifting; a finger landing on the city just
-  // round them presses one too. Only its own lift (or the browser's cancel) lets a pedal go, never another finger.
-  pedalBtns.forEach((b) =>
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      pressPedal(e, b);
-    })
+  const { startJoy, endJoy, pressPedal, clearPedals, rectOf, setAim } = wireTouch(
+    { window, document, Element, root, $, stick, knob, runBtn, crouchBtn, pedalBtns, rideViewBtns, blockBtnEl, fpBtn, sensInput, invertInput, prompt },
+    { joy, pedals, kartBtns, fightBtns, settings },
+    touchHost
   );
-  window.addEventListener('pointermove', (e) => {
-    const was = pedalFingers.get(e.pointerId);
-    if (!was) return;
-    const now = pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), was);
-    if (now === was) return;
-    pedalFingers.set(e.pointerId, now);
-    syncPedals();
-  });
-  for (const ev of ['pointerup', 'pointercancel'] as const)
-    window.addEventListener(ev, (e) => {
-      if (pedalFingers.delete(e.pointerId)) syncPedals();
-    });
-  // The phone's own gestures never take a finger off the controls (Safari's pinch, its long-press magnifier and
-  // callout, Android's long-press menu): a touch landing on a control or the city while walking keeps its default from
-  // happening (the pointer events go on as they were)
-  const onControls = (t: EventTarget | null) => t instanceof Element && !!t.closest('.tc, .walk-stick, canvas');
-  for (const ev of ['touchstart', 'touchmove'] as const)
-    root.addEventListener(
-      ev,
-      (e) => {
-        if (active && e.cancelable && onControls(e.target)) e.preventDefault();
-      },
-      { passive: false }
-    );
-  for (const ev of ['gesturestart', 'gesturechange'] as const) document.addEventListener(ev, (e) => active && e.preventDefault());
-  root.addEventListener('contextmenu', (e) => active && onControls(e.target) && e.preventDefault());
-  // The horn while driving your car (city life plan, Phase 2)
-  $('[data-drive-horn]').addEventListener('pointerdown', () => {
-    if (boat?.active) boat.horn();
-    else drive.horn();
-    d.touched();
-  });
-  // The camera at the wheel on touch (V on a keyboard): the boat's, the aircraft's or the car's next view
-  onTap($('[data-drive-view]'), () => {
-    nextCam();
-    d.touched();
-  });
-  // ... on foot (over the shoulder or first person), and on a ride (its bar's View)
-  onTap($('[data-walk-view]'), () => {
-    nextCam();
-    d.touched();
-  });
-  for (const b of rideViewBtns) b.addEventListener('click', () => ride && (nextCam(), d.touched()));
-  // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
-  const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
-  if (driftBtn) {
-    driftBtn.addEventListener('pointerdown', (e) => {
-      try {
-        driftBtn.setPointerCapture(e.pointerId);
-      } catch {
-        /* still pressed */
-      }
-      kartBtns.drift = true;
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
-  }
-  const itemBtn = root.querySelector<HTMLButtonElement>('[data-kart-item]');
-  if (itemBtn) {
-    itemBtn.addEventListener('pointerdown', (e) => {
-      try {
-        itemBtn.setPointerCapture(e.pointerId);
-      } catch {
-        /* still pressed */
-      }
-      kartBtns.item = true;
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) itemBtn.addEventListener(ev, () => (kartBtns.item = false));
-  }
-  // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
-  for (const k of ['punch', 'kick', 'dodge'] as const) {
-    const b = root.querySelector(`[data-fight-${k}]`);
-    if (b)
-      onTap(b, () => {
-        fightBtns[k] = true;
-        d.touched();
-      });
-  }
-  holdButton(blockBtnEl, 'block', setBlock, () => fightBtns.block);
-  root.querySelector('[data-fight-quit]')?.addEventListener('click', () => quitFight());
-  fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
-  sensInput.addEventListener('input', () => {
-    settings.sens = Number(sensInput.value);
-    saveSettings();
-  });
-  invertInput.addEventListener('change', () => {
-    settings.invert = invertInput.checked;
-    saveSettings();
-  });
-  onTap(prompt, act);
-  // Touch: hold Fire (and drag it to aim, so one thumb shoots and steers), tap Reload, tap Swap
-  const fireBtn = $('[data-walk-fire]');
-  let fireAt: { id: number; x: number; y: number } | null = null;
-  fireBtn.addEventListener('pointerdown', (e) => {
-    fireBtn.setPointerCapture(e.pointerId);
-    fireAt = { id: e.pointerId, x: e.clientX, y: e.clientY };
-    combat.trigger(true, true);
-    d.touched();
-  });
-  fireBtn.addEventListener('pointermove', (e) => {
-    if (!fireAt || e.pointerId !== fireAt.id) return;
-    look(e.clientX - fireAt.x, e.clientY - fireAt.y, 0.0075);
-    fireAt.x = e.clientX;
-    fireAt.y = e.clientY;
-  });
-  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
-    fireBtn.addEventListener(ev, (e) => {
-      if (fireAt && e.pointerId !== fireAt.id) return;
-      fireAt = null;
-      combat.trigger(false, true);
-    });
-  onTap($('[data-walk-reload]'), () => {
-    combat.reload();
-    d.touched();
-  });
-  // (the hotbar's step: through the fists and the guns)
-  onTap($('[data-walk-swap]'), () => {
-    stepSlot(1);
-    d.touched();
-  });
-  // Touch: Aim toggles the sight (one thumb can't hold Aim and Fire)
-  const aimBtn = $<HTMLButtonElement>('[data-walk-aim]');
-  const setAim = (on: boolean) => {
-    aim = on;
-    aimBtn.setAttribute('aria-pressed', String(on));
-  };
-  holdButton(aimBtn, 'aim', setAim, () => aim);
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
   // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands);
   // with empty hands X punches, Y kicks (nothing to do there), LB held blocks, A dodges standing with the guard up
-  function pollPad(dt: number) {
-    const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
-    if (!gp) {
-      pad.x = pad.y = 0;
-      pad.run = false;
-      padDrive.steer = padDrive.throttle = 0;
-      padDrive.handbrake = false;
-      padKart.steer = padKart.throttle = 0;
-      padKart.drift = padKart.item = false;
-      padFly.turn = padFly.climb = padFly.throttle = 0;
-      // Unplugged with a trigger down: let go of it
-      if (pad.prev[6]) setAim(false);
-      if (pad.prev[7]) combat.trigger(false);
-      if (pad.prev.length) pad.prev = [];
-      return;
-    }
-    const dz = (v = 0) => (Math.abs(v) < 0.15 ? 0 : (v - Math.sign(v) * 0.15) / 0.85);
-    pad.x = dz(gp.axes[0]);
-    pad.y = dz(gp.axes[1]);
-    const rx = dz(gp.axes[2]);
-    const ry = dz(gp.axes[3]);
-    if (rx || ry) look(rx * 2.8 * dt, ry * 2 * dt, 1);
-    const b = gp.buttons.map((x) => x.pressed);
-    const edge = (i: number) => b[i] && !pad.prev[i];
-    if (pad.x || pad.y || rx || ry || b.some(Boolean)) setInput('pad');
-    // The hub: the D-pad moves round it, LB / RB the tabs, A presses, B or Start closes
-    if (d.hub?.open) {
-      d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]));
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The inventory: the D-pad moves round it, A does the selected thing, B or View closes
-    if (hotbar?.open) {
-      hotbar.pad(edge);
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The store: D-pad picks, A takes, B (or Y again) closes
-    // (the menus' kit, menukit.ts: the d-pad moves round its buttons, A presses, LB / RB the tabs)
-    if (shop.open) {
-      if (b.some((x, i) => x && !pad.prev[i])) shop.input('pad');
-      if (edge(12)) shop.move('up');
-      if (edge(13)) shop.move('down');
-      if (edge(14)) shop.move('left');
-      if (edge(15)) shop.move('right');
-      if (edge(4)) shop.tab(-1);
-      if (edge(5)) shop.tab(1);
-      if (edge(0)) shop.press();
-      if (edge(1) || edge(3)) shop.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The garage: D-pad left / right picks the model, up / down the paint, the bumpers the tabs, A keeps it
-    if (garageUI.open) {
-      if (edge(4)) garageUI.stepTab(-1);
-      if (edge(5)) garageUI.stepTab(1);
-      if (edge(14)) garageUI.step(-1);
-      if (edge(15)) garageUI.step(1);
-      if (edge(12)) garageUI.stepPaint(-1);
-      if (edge(13)) garageUI.stepPaint(1);
-      if (edge(0)) garageUI.keep();
-      if (edge(1) || edge(3)) garageUI.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The hangar menu: like the garage's
-    if (hangarUI.open) {
-      if (edge(14)) hangarUI.step(-1);
-      if (edge(15)) hangarUI.step(1);
-      if (edge(12)) hangarUI.stepPaint(-1);
-      if (edge(13)) hangarUI.stepPaint(1);
-      if (edge(0)) hangarUI.keep();
-      if (edge(1) || edge(3)) hangarUI.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // The trainer's menu: D-pad moves, A takes, B closes
-    if (fightUI.open) {
-      if (edge(4)) fightUI.stepTab(-1);
-      if (edge(5)) fightUI.stepTab(1);
-      if (edge(12) || edge(14)) fightUI.step(-1);
-      if (edge(13) || edge(15)) fightUI.step(1);
-      if (edge(0)) fightUI.take();
-      if (edge(1)) fightUI.close();
-      padFight.x = padFight.y = 0;
-      return;
-    }
-    // Start opens the hub (the pause screen), but in a fight or a kart race, where it quits (keymap.ts `quit`)
-    if (edge(9) && d.hub && !fighting() && !karts.active) {
-      still(false);
-      d.hub.show();
-      pad.prev = b;
-      return;
-    }
-    // The d-pad's down: the control card (the kart hut's menu has it for its list)
-    if (edge(13) && !kartUI.open) askCard();
-    // On a ride: the right stick looks round, pressed it steps the camera, B skips the ride (the ride has the rest)
-    if (ride) {
-      if (edge(11)) nextCam();
-      if (edge(1)) d.skipRide?.();
-      if (b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // Fighting: left stick moves, X punches, Y kicks, LB (held) blocks, A dodges, Start quits, the right stick pressed the camera
-    if (fighting()) {
-      if (edge(11)) nextCam();
-      padFight.x = pad.x;
-      padFight.y = pad.y;
-      if (hm('block', 'pad') === 'toggle') {
-        if (edge(4)) padFight.block = !padFight.block;
-      } else padFight.block = !!b[4];
-      if (edge(2)) fightBtns.punch = true;
-      if (edge(3)) fightBtns.kick = true;
-      if (edge(0)) fightBtns.dodge = true;
-      // (the d-pad's up: a snack, in a spar)
-      if (edge(12)) fight?.snack();
-      if (edge(9)) quitFight();
-      if (pad.x || pad.y || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // At the wheel (the boat, your aircraft, your car, bike or kart): the right stick pressed steps the camera, View opens
-    // the world map; while it's open the vehicle coasts and only View (closing it) is heard
-    if (boat?.active || fly.active || drive.active) {
-      if (edge(11)) nextCam();
-      if (edge(8)) d.worldMap?.();
-      if (d.mapOpen?.()) {
-        padDrive.steer = padDrive.throttle = 0;
-        padDrive.handbrake = false;
-        padFly.turn = padFly.climb = padFly.throttle = 0;
-        pad.prev = b;
-        return;
-      }
-    }
-    // Boating: left stick steers, RT ahead, LT astern, Y gets out, the left stick pressed is the horn
-    if (boat?.active) {
-      padDrive.steer = pad.x;
-      padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      if (edge(3)) act();
-      if (edge(10)) boat.horn();
-      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // Flying: left stick turns and climbs (up climbs), RT faster, LT slower, Y gets out
-    if (fly.active) {
-      padFly.turn = pad.x;
-      padFly.climb = -pad.y;
-      padFly.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      if (edge(3)) act();
-      if (pad.x || pad.y || padFly.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // The kart hut's menu: D-pad moves, A takes, B (or Y again) closes
-    if (kartUI.open) {
-      if (edge(4)) kartUI.stepTab(-1);
-      if (edge(5)) kartUI.stepTab(1);
-      if (edge(12) || edge(14)) kartUI.step(-1);
-      if (edge(13) || edge(15)) kartUI.step(1);
-      if (edge(0)) kartUI.take();
-      if (edge(1) || edge(3)) kartUI.close();
-      pad.x = pad.y = 0;
-      pad.prev = b;
-      return;
-    }
-    // Karting: left stick steers, RT gas, LT brake, A hops into a drift, Start quits (as in the ring), the right stick pressed the camera
-    if (karts.active) {
-      if (edge(11)) nextCam();
-      padKart.steer = pad.x;
-      padKart.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      padKart.drift = !!b[0];
-      padKart.item = !!b[2];
-      if (edge(9)) abandonKart();
-      if (pad.x || padKart.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, the left stick pressed is the horn
-    if (drive.active) {
-      padDrive.steer = pad.x;
-      padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
-      padDrive.handbrake = !!b[0];
-      if (edge(3)) act();
-      if (edge(10)) drive.horn();
-      if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
-      pad.prev = b;
-      return;
-    }
-    if (edge(0)) tryJump();
-    if (b[1] !== !!pad.prev[1]) crouchInput('pad', !!b[1]);
-    jumpHeld = jumpHeld || b[0] || false;
-    if (!b[0] && pad.prev[0]) jumpHeld = false;
-    // (aiming, LB and RB lean out instead: peeking)
-    // (aim on toggle: LT puts the sight up and the next takes it down; peeking then while it's up)
-    const aimToggle = hm('aim', 'pad') === 'toggle';
-    if (aimToggle && edge(6)) setAim(!aim);
-    const aiming = aimToggle ? aim : !!b[6];
-    padLean = aiming ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
-    // (the run is the left stick pressed, a gun out or not (keymap.ts); empty hands: LB held blocks)
-    const fb = fistsReady();
-    if (hm('block', 'pad') === 'toggle') {
-      if (edge(4)) padBlockOn = !padBlockOn;
-      if (!fb) padBlockOn = false;
-      padBlock = fb && padBlockOn;
-    } else padBlock = fb && !!b[4];
-    // (sprint on toggle: L3 locks it, again lets it go)
-    if (hm('sprint', 'pad') === 'toggle') {
-      if (edge(10)) setSprintLock(!sprintLock);
-      pad.run = false;
-    } else pad.run = !!b[10];
-    if (!aimToggle) {
-      aim = aim || !!b[6];
-      if (!b[6] && pad.prev[6]) setAim(false);
-    }
-    // (Y does what the prompt says; with empty hands and nothing to do, it kicks)
-    if (edge(3)) {
-      if (fistsReady() && !near) fightBtns.kick = true;
-      else act();
-    }
-    // View opens the inventory; the right stick pressed swaps first and third person
-    if (edge(8) && !moments.active) toggleInv();
-    if (edge(11)) nextCam();
-    if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
-    // (X reloads; with empty hands it punches)
-    if (edge(2)) {
-      if (fistsReady()) fightBtns.punch = true;
-      else combat.reload();
-    }
-    if (edge(12)) combat.toggleHolster();
-    // RB or D-pad right: the hotbar's next slot of the fists and the guns; D-pad left: the one before
-    if ((edge(5) && !aiming) || edge(15)) stepSlot(1);
-    if (edge(14)) stepSlot(-1);
-    if (pad.x || pad.y || b.some(Boolean)) d.touched();
-    pad.prev = b;
-  }
+  /** The gamepad (walkpad.ts, docs/walk-plan.md Phase 1): what it reads and calls of walk mode, and what it fills */
+  const padState: PadState = { pad, drive: padDrive, kart: padKart, fly: padFly, fight: padFight };
+  const padHost: PadHost = {
+    d,
+    get hotbar() {
+      return hotbar;
+    },
+    get karts() {
+      return karts;
+    },
+    get kartUI() {
+      return kartUI;
+    },
+    get ride() {
+      return ride;
+    },
+    get fight() {
+      return fight;
+    },
+    get boat() {
+      return boat;
+    },
+    get near() {
+      return near;
+    },
+    get sprintLock() {
+      return sprintLock;
+    },
+    get jumpHeld() {
+      return jumpHeld;
+    },
+    set jumpHeld(v) {
+      jumpHeld = v;
+    },
+    get aim() {
+      return aim;
+    },
+    set aim(v) {
+      aim = v;
+    },
+    get padLean() {
+      return padLean;
+    },
+    set padLean(v) {
+      padLean = v;
+    },
+    get padBlock() {
+      return padBlock;
+    },
+    set padBlock(v) {
+      padBlock = v;
+    },
+    get padBlockOn() {
+      return padBlockOn;
+    },
+    set padBlockOn(v) {
+      padBlockOn = v;
+    },
+    shop,
+    garageUI,
+    hangarUI,
+    fightUI,
+    fly,
+    drive,
+    combat,
+    fightBtns,
+    moments,
+    fighting,
+    quitFight,
+    abandonKart,
+    look,
+    setInput,
+    setAim,
+    still,
+    askCard,
+    nextCam,
+    hm,
+    act,
+    tryJump,
+    crouchInput,
+    fistsReady,
+    setSprintLock,
+    toggleInv,
+    stepSlot,
+  };
+  const pollPad = (dt: number) => pollPadOf(Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected), dt, padState, padHost);
 
   /* ---------- Per frame ---------- */
 
@@ -3312,6 +2902,13 @@ export function createWalk(d: WalkDeps) {
     if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
+      garageAt = 'city';
+    }
+    // Degen's own garage at home (home.ts): the same menu, by its door on his driveway
+    if (Math.hypot(HOME_GARAGE_DOOR.x - pos.x, HOME_GARAGE_DOOR.z - pos.z) < 1) {
+      best = { id: 'garage', label: 'Garage' };
+      bestD = 0;
+      garageAt = 'home';
     }
     // The kart hut's door, at the kart park
     if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {

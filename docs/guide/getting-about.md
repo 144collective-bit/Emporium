@@ -140,7 +140,8 @@ keep it up to date when what it describes changes.
     (gulls, a crane's hoist whine, a ship's horn), `jets` (`jetsAt()`: an
     airliner's roar as one takes off or lands, from the airport's timetable
     and the clock, `ambienceAt(x, z, lift, t)`), `indoor` (inside the mall's
-    hall; sound.ts damps the outdoor layers by it), `karts` (the kart
+    hall; sound.ts damps the outdoor layers by it), `home` (in Degen's
+    house on foot, home.ts `inHouse()`: damped further, a faint hum), `karts` (the kart
     park: engines idling, a tannoy) and `stadium` (a match night's crowd
     round the ground, stadium.ts `matchOn()`: a murmur, a roar swelling now
     and then); `sound.update()` mixes its layers

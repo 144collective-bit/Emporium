@@ -18,8 +18,9 @@ keep it up to date when what it describes changes.
 - Nothing lifts or glows on hover (the owner's call, with the pins off by
   default); the cursor shows a building is clickable in City view, and
   while walking nothing is hovered (Degen stands on the same ground).
-- The over-the-shoulder camera starts 2.6 tiles behind him, 2.5 on an upright screen (`homeZoom()` in
-  walk.ts; the mouse wheel sets it after), its shoulder offset eased on an upright screen so he stays in
+- The over-the-shoulder camera starts 1.7 tiles behind him, 1.6 on an upright screen (the owner's call,
+  2026-11: a tight over the shoulder, `WALK_ZOOM` in views.ts, `homeZoom()` in walk.ts; the mouse wheel sets
+  it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
@@ -61,14 +62,18 @@ keep it up to date when what it describes changes.
   (`solids(x, z, reach)`). `tests/boxgrid.test.ts` holds them to exactly
   the answers of checking every box; keep new checks going through it.
 - Cars yield to the walker through `walker` in `life.ts`.
-- **Why `walk.ts` is one file** (measured 2026-11, when splitting it was
-  asked for): `createWalk()` is one closure of about 3,400 lines holding 120
-  `let`s; its `update()` reads 99 of them, the gamepad's `pollPad()` 13 and
-  some 40 of its functions. Only about 250 lines (the tuning constants, the
-  settings' loader, `cameraRoom()`, the joystick's helpers) read none of
-  that state, so a split by moving functions would be a bag of fifty
-  getters a file, and the file changes on main most days (61 commits in a
-  fortnight), so moved blocks would collide with whatever is in flight. A
-  real split means grouping the state by feature first (the pad, the
-  fight, the karts, the camera), a feature a phase, each checked with
-  `npm run smoke`; it wasn't started.
+- **`walk.ts` is being split, a feature a phase** (`docs/walk-plan.md`, the
+  owner's call): `createWalk()` was one closure of about 3,400 lines
+  holding 120 `let`s. Each phase moves one feature out word for word behind
+  a host interface walk.ts builds once, DOM-free where it can be, with unit
+  tests, checked with `npm run smoke`. Phase 1, the gamepad, is
+  `walkpad.ts` (`pollPad()`: one poll a frame, by what's on screen;
+  `PadHost` what it reads and calls of walk mode, `PadState` what it fills;
+  tested in `tests/walkpad.test.ts`). Phase 2, the keyboard, is
+  `walkkeys.ts` (`onKey()`: a key by what's on screen; `KeyHost` what it
+  reads and calls of walk mode; tested in `tests/walkkeys.test.ts`, which
+  also holds it to `keymap.ts`'s table). Phase 3, touch, is
+  `walktouch.ts` (`wireTouch()`, called once: the stick, the pedals'
+  fingers, `holdButton()` and every touch button's wiring; the page comes
+  in as `TouchEls`, so `tests/walktouch.test.ts` stands in for it). When a button's or a key's job
+  changes there, change its line in `keymap.ts`.

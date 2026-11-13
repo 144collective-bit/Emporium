@@ -9,6 +9,7 @@
  *   then his hands are his fists), the thing in his hand, the consumables
  *   and where things sit in the 4 x 4 grid (`grid`, a key a space).
  * - `setHeld()`: the thing in his hand, kept in step with the look.
+ * - `Stash` and `cleanStash()`: the save's `stash`, what's put away in the trunk at home.
  *
  * DOM-free; nothing here is real money.
  */
@@ -68,6 +69,22 @@ export function cleanInventory(raw: unknown, s: Pick<TycoonSave, 'armoury' | 'wa
   }
   const grid = (Array.isArray(o.grid) ? o.grid : []).slice(0, GRID_SIZE).map((k) => (typeof k === 'string' && KEY.test(k) ? k : ''));
   return { guns: [first, second], held, items, grid };
+}
+
+/** The stash, the trunk in Degen's house (home.ts, docs/home-plan.md Phase 4): consumables put away, how many of each */
+export type Stash = Partial<Record<ItemId, number>>;
+/** How many of each the trunk holds */
+export const STASH_MAX = 20;
+/** The save's stash made safe: whole counts up to STASH_MAX of things there are; a save from before it has none */
+export function cleanStash(raw: unknown): Stash {
+  const out: Stash = {};
+  const it = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  for (const id of ITEM_IDS) {
+    const n = it[id];
+    const k = typeof n === 'number' && Number.isFinite(n) ? Math.min(STASH_MAX, Math.max(0, Math.floor(n))) : 0;
+    if (k > 0) out[id] = k;
+  }
+  return out;
 }
 
 /** The thing in his hand, kept in step with the look (the fitting room's Hand tab picks it) */

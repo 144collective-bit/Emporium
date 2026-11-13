@@ -38,6 +38,7 @@
  * (docs/civic-plan.md Phase 4) footsteps and a murmur by day and the flags in the wind (`civic`), and City Hall's bell
  * on the hour from its tower, deeper than St Aldwyn's (`hallBell`).
  */
+import { inHouse } from './home';
 import { CITY_EXT } from './layout';
 import { edgesAt } from './river';
 import { PLAN, distToStreet } from './streetplan';
@@ -113,6 +114,8 @@ export interface Ambience {
   jets: number;
   /** Inside Starlight Mall: a soft indoor hum and murmur (the outdoor layers damped by it), 0-1 */
   indoor: number;
+  /** Inside Degen's house (home.ts): the street comes through the walls faintly, a quiet room's hum, 0-1 */
+  home: number;
   /** Southfield Yards: a compressor running, a reversing beep now and then, 0-1 */
   yards: number;
   /** The kart park: engines idling, a tannoy's murmur, 0-1 */
@@ -292,6 +295,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const jets = jetsAt(x, z, t);
   // Inside the mall's hall (a little way out of its doors too); the City view's camera over its roof hears none of it
   const indoor = near(HALL.rect, x, z, 0, 5) * (1 - smooth(HALL.h, HALL.h + 10, lift));
+  // Inside Degen's house (walking: the City view over its roof hears the street)
+  const home = inHouse(x, z) && lift < 3 ? 1 : 0;
   const karts = near(KART_RECT, x, z, 0, 40);
   // The stadium's crowd on a match night (the polish plan's Phase 7): round the ground, carrying well past its block
   const stadium = matchOn(t * 1000) ? near(STADIUM_BLOCK, x, z, 0, 90) : 0;
@@ -325,6 +330,7 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     docks: docks * k,
     jets,
     indoor,
+    home,
     yards: yards * k,
     karts: karts * k,
     stadium: stadium * k,

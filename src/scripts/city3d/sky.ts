@@ -226,6 +226,7 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
   const fixed = newFixedMap();
   let fixedDue = false;
   const centre = { x: 0, z: 0 };
+  let indoors = false;
   /** How thin the haze is drawn (1 its full thickness; the pulled-back City view thins it), eased */
   let hazeThin = NaN;
   const sunDir: [number, number, number] = [0, 1, 0];
@@ -328,9 +329,10 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
     } else rainTarget = weatherMode === 'rain' ? 1 : 0;
     rainAmt += (rainTarget - rainAmt) * Math.min(1, dt * 0.35);
     rainMat.uniforms.time.value = t;
-    rainMat.uniforms.amount.value = rainAmt;
+    // (under a roof, Degen's house: none is drawn; it goes on falling outside, and the sound says so)
+    rainMat.uniforms.amount.value = indoors ? 0 : rainAmt;
     rainMat.uniforms.origin.value.set(focus.x, 0, focus.z);
-    rain.visible = rainAmt > 0.01;
+    rain.visible = !indoors && rainAmt > 0.01;
 
     // Lighter by day so they never sit over the city like fog
     const cloudOpacity = 0.18 + day * 0.1 + rainAmt * 0.3;
@@ -373,6 +375,10 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
   return {
     update,
     /** Shadows on (walking, on the ground) or off (the City view, up in an aircraft); they ease in and out */
+    /** The camera is under a roof (Degen's house, home.ts): the rain isn't drawn */
+    setIndoors(on: boolean) {
+      indoors = on;
+    },
     setShadows(on: boolean) {
       shadowsWanted = on && !!opts.shadows;
     },

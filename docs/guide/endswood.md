@@ -168,3 +168,63 @@ keep it up to date when what it describes changes.
     (polish) is built and the plan is done: `?bench` views `endsw-parade`,
     `endsw-rows`, `endsw-kick`; no place of its own (it's Endswood's);
     phones draw every other garden's washing and no toys on the greens.
+- **Degen's home** (the owner's call: a home with a garage in the Ends, room
+  for a car and a bike on the driveway) is planned in `docs/home-plan.md`
+  in five phases, each with the owner's sign-off; keep it up to date. Phase
+  1 is built: `home.ts` (DOM-free, the boot's, tested in
+  `tests/home.test.ts`): the west end house of the row backing onto the
+  Close (endsterraces.ts `rn2-0-2`, `HOME_HOUSE`: the house stands where it
+  stood), `HOME.garage` in its back garden (its door, `garageDoor`, in its
+  west wall; shut for now, one solid box in `SOLIDS`), `HOME.drive` on the
+  strip between the row's end and the service lane down to the Close
+  (`HOME.kerb` the dropped kerb), the bays on it (`CAR_BAY`, `BIKE_BAY`),
+  the place (spot `home`: `HOME_PICK`, `HOME_PIN`, `HOME_DOOR`'s prompt,
+  `HOME_SPAWN`, a `PLACES` and `LIVE_PLACES` entry, panel
+  `data-panel-tpl="home"` with Walk in, `data-home-walkin`), `onHome()`.
+  Walking starts at `HOME_SPAWN` (index.ts's walk button; `?spawn=` in the
+  address still starts it elsewhere). endsterraces.ts makes room (no shed,
+  gate or fence where the garage stands: `cutBy()`), endswestlife.ts no
+  washing there. Drawn by `home3d.ts` (a site in the estate's chunk, from
+  endswest3d.ts's `register()`).
+  Phase 2 (home base) is built: the garage is hollow, its door up
+  (`HOME_SOLIDS`: its walls, `WALL`; the doorway clear), your car inside
+  (`CAR_HOME`) and your bike on the driveway (`BIKE_HOME`; a vehicle's yaw
+  is its group's turn, nose along (cos yaw, -sin yaw)). garage.ts has the
+  two sets of stands (`at('home' | 'city')`, `where`: the city garage's
+  turntable and stand are a showroom, used only while its menu is open),
+  and its `turntable`, `yaw`, `bikeSpot`, `takeOut()`, `takeOutBike()` and
+  `view` answer for the stands in use, so drive.ts and walk.ts needed no
+  other change but `drive.blocks()` (the car at home is solid) and the
+  second Garage prompt (`HOME_GARAGE_DOOR`, walk.ts `garageAt`).
+  `startsAtHome()`: a new player's first walk starts downtown.
+  Phase 3 (the interior) is built: `ROOM` and `CEIL` (the ground floor,
+  one room), `FURNITURE` (each a kind, a footprint and a height;
+  home3d.ts's `furnish()` draws each kind), `HALL_W` (the hall kept
+  clear), `inHouse()` / `homeWall()` (walk.ts `blocked()` asks them first:
+  inside the house's footprint only the room's walls and furniture stop
+  you), `HOME_CAMERA` (the ceiling, in walk.ts's `cameraRoom()`),
+  `HOME_PORTALS` (the front and back doors, a prompt outside and in, each
+  a fade through index.ts's `rideTo()`; walk `places` entries `home:in`,
+  `home:out`, `home:yard`, `home:back`), `YARD_GATE`. The house is sealed:
+  `HOME_SOLIDS` has its four walls, and endsterraces.ts's `TERRACE_SOLIDS`
+  leaves it out of its terrace's box. A new thing in the room goes in
+  `FURNITURE` (the test floods the room to hold everything reachable).
+  Phase 4 (the wardrobe and the stash) is built: `HOME_USES` (two prompts
+  in the room, by the wardrobe and by the trunk, in walk `places` beside
+  `HOME_PORTALS`); index.ts's `openPlace` opens the fitting room for
+  `home:wardrobe` (`open('shop', true)`: Drop 001's panel, closed with it
+  by the live settings) and the stash's card for `home:stash`
+  (stash-ui.ts, loaded then; markup `[data-stash]` in `CityMap.astro`, the
+  metro card's styles; its rules are inventory.ts's, `inventory.md`).
+  Phase 5's rest: the panel's live line (`home` in livelines.ts) and the
+  benchmark's view of the house (`ends-home` in bench.ts).
+  Phase 5's first part (the room at night) is built: the inside of the
+  house and of the garage is drawn in the shared `neon()` paint (home3d.ts
+  `paint(hex, k)`: one material a shade, the day's and night's brightness
+  in the vertices, so it stays lit at night and never blooms; `icube()`
+  shades a box's sides by hand, as nothing lights it), never a light of
+  its own; `sky.setIndoors()` (index.ts's frame, from `inHouse()`) stops
+  the rain being drawn in the house; ambience.ts's `home` (1 in the house
+  on foot) lets sound.ts turn the street down further than the mall's
+  hall does, over a faint hum. The garage door's lamp has a pool on the
+  driveway (the last of endswestlife.ts's `PORCH_POOLS`).

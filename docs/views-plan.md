@@ -259,3 +259,12 @@ sign-off. Keep this file up to date. It follows `docs/controls-plan.md`
   gamepad tuning and a text-size setting (asked, not picked this time).
 - The touch buttons' look and slots (the controls plan's), but for the
   new View buttons.
+
+## After the plan: the cameras closer (the owner's call, 2026-11)
+
+- Walking: the over-the-shoulder camera starts 1.7 tiles behind Degen (1.6 on an upright screen), about a third
+  in from 2.6 / 2.5 (`WALK_ZOOM` in views.ts). The mouse wheel still sets it after.
+- Driving: the car's, the bike's and the kart's near chase is `NEAR_ROAD`, about a quarter in from what it was
+  (base 2.7 from 3.6, 0.71 a length from 0.95, 0.06 a unit of speed from 0.1), looking down at 0.22 from 0.26. A
+  kart race's near is `RACE_NEAR` (2.5 back from 3.3); its far (`RACE_FAR.scale` 2.5 from 1.9) stays as far back.
+- Far, first person, the boat's and the aircraft's cameras are unchanged.

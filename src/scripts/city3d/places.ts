@@ -27,6 +27,7 @@ import { HM_SPAWN } from './docksport';
 import { SUN_SPAWNS } from './sunplaces';
 import { LOT9_SPAWN } from './lot9';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS } from './endsplaces';
+import { HOME_SPAWN } from './home';
 import { CITYHALL_SPAWN, COURTHOUSE_SPAWN, POLICE_SPAWN } from './civic';
 import { RESORTS } from './resorts';
 import { SPHERE_SPAWN } from './stripmarks';
@@ -102,6 +103,8 @@ export const PLACES: Place[] = [
   // ...and the police headquarters and the courthouse either side of the square, facing their doors
   { id: 'police', kind: 'spot', spot: 'police', at: POLICE_SPAWN },
   { id: 'courthouse', kind: 'spot', spot: 'courthouse', at: COURTHOUSE_SPAWN },
+  // Degen's home in the Ends (home.ts): on its front path, facing the door
+  { id: 'home', kind: 'spot', spot: 'home', at: HOME_SPAWN },
   // The garage's forecourt, facing its office door; the market square, at your stall
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },

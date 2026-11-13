@@ -69,6 +69,7 @@ export const LIVE_PLACES = [
   { id: 'cityhall', name: 'City Hall' },
   { id: 'police', name: 'Sector 7 Police' },
   { id: 'courthouse', name: 'The Courthouse' },
+  { id: 'home', name: 'Home' },
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 

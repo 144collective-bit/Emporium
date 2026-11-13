@@ -6,7 +6,8 @@
  * horn, the map, the menu, quitting...), and no two jobs share a key or a button in a mode unless one says it takes
  * it over by context (`shares`: with empty hands Y kicks when there's nothing to do, Space dodges with the guard up).
  * The control card (Phase 4, ctrlcard.ts, walk mode's own chunk) shows a mode's rows from `cardBinds()`.
- * walk.ts keeps its own handlers; when one changes, change its line here too (and the other way round).
+ * walk.ts keeps its own handlers (the keyboard's is walkkeys.ts, the gamepad's walkpad.ts, both held to this table
+ * by their tests; the touch buttons' is walktouch.ts); when one changes, change its line here too (and the other way round).
  * DOM-free and kept out of the boot: only the hub's page and the tests read it.
  */
 
@@ -150,6 +151,19 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
 };
 
 export const MODE_IDS = Object.keys(KEYMAP) as ModeId[];
+
+/** The hub's Settings > Controls rows for City view (CityMap.astro; the free camera, freecam.ts):
+ * keys and the mouse only, touch keeps its drag and pinch. Not a mode of `KEYMAP`: City view has no views, nor a gamepad */
+export const FLY_KEYS: { keys: string[]; label: string }[] = [
+  { keys: ['WASD', '↑ ← ↓ →'], label: 'Fly' },
+  { keys: ['E', 'Space'], label: 'Up' },
+  { keys: ['Q', 'C'], label: 'Down' },
+  { keys: ['Shift'], label: 'Faster' },
+  { keys: ['Right-drag'], label: 'Look' },
+  { keys: ['Drag'], label: 'Pan' },
+  { keys: ['Ctrl-drag'], label: 'Orbit' },
+  { keys: ['Wheel'], label: 'Zoom' },
+];
 
 /** A mode's jobs with its base's (empty hands and a gun out on top of on foot) */
 export function bindsOf(id: ModeId): Binding[] {
