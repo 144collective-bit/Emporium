@@ -22,6 +22,23 @@ keep it up to date when what it describes changes.
   2026-11: a tight over the shoulder, `WALK_ZOOM` in views.ts, `homeZoom()` in walk.ts; the mouse wheel sets
   it after), its shoulder offset eased on an upright screen so he stays in
   the middle (all of it armed, so the crosshair stays off his head).
+- **The lens up close** (`lens.ts`, DOM-free, `tests/lens.test.ts`): the city's
+  near plane is 0.5, and on foot the camera stops a third of a tile off a
+  wall, so walls were cut away and you saw through them. Each frame on foot,
+  walk.ts asks `cameraRoom()` how far the walls are from the lens, straight
+  ahead and at the view's two edges, and `nearFor()` brings the near plane in
+  to a share of that (never under 0.05); first person it's in all the time
+  (0.06, as the car's seat has it). With nothing close it stays at 0.5 (in for
+  the whole walk, faces close together far off would flicker). Every other
+  mode gets the city's back (the car and kart set their own). The crowd
+  isn't in the camera's way, so anyone the lens is inside or near enough to
+  cut open isn't drawn that frame (`onLens()`, in character.ts's `set()`,
+  with `CROWD_VIEW.near`), and the sparring partners waiting in the street
+  the same (`createPartners()`, brawl.ts). In a fight (the Fight Club or a
+  street spar) the fight's camera brings the near plane in by how far the
+  nearer fighter's body is (`bodyGap()`, fight.ts `placeCamera()`), so the
+  ropes or the ring pushing it up against one don't cut them open; only a
+  fighter the lens is right inside isn't drawn.
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
   clicked.

@@ -44,5 +44,25 @@ export default defineConfig({
         },
       },
     },
+    // The wallet's log-in library (@walletconnect and what it brings in: only in a build with a game server, the
+    // Worker's, loaded when someone connects a wallet) is named apart, `wallet-*`, so scripts/budget.mjs holds it to a
+    // budget of its own (the owner's call, 2026-11): a chunk made of nothing but packages, none of them three.js's,
+    // Astro's or Vite's. Every other chunk keeps Astro's own name (its `cleanChunkName()`: anything unsafe made `_`).
+    // (The client's chunk names are only taken from here: Astro sets its own over the top-level output's)
+    environments: {
+      client: {
+        build: {
+          rolldownOptions: {
+            output: {
+              chunkFileNames: (chunk) => {
+                const ids = chunk.moduleIds.filter((id) => !id.startsWith('\0'));
+                const wallet = ids.length > 0 && ids.every((id) => id.includes('/node_modules/') && !/\/node_modules\/(three|astro|@astrojs|vite)\//.test(id));
+                return `_astro/${wallet ? 'wallet-' : ''}${chunk.name.replace(/[^\w.\-/]/g, '_')}.[hash].js`;
+              },
+            },
+          },
+        },
+      },
+    },
   },
 });

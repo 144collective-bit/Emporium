@@ -20,7 +20,9 @@ import type * as THREE from 'three';
 import type { Limb, Pose } from './skeleton';
 import { crewOutfit } from './crew';
 import { PARTNERS, partnerNear, type PartnerId } from './brawlsite';
-import { createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { FIGHTER_SCALE, createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { CROWD_VIEW } from './character';
+import { onLens } from './lens';
 import { newFightPose, sampleClip, type FightPose } from './fight-anim';
 import { plantLegs } from './fightfeet';
 import { BRAWL, NO_BRAWL, createBrawl, type BrawlEvent, type BrawlInput } from './brawl-sim';
@@ -117,7 +119,9 @@ export function createPartners(parent: THREE.Object3D, low: boolean, groundAt: (
           a.fg = createFighterFigure(parent, crewOutfit(a.p.look), low, 23 + a.p.look);
           a.fg.y = groundAt(a.p.x, a.p.z);
         }
-        a.fg.degen.g.visible = true;
+        // (with the lens on them, as the crowd: not drawn that frame rather than cut open, lens.ts)
+        const eye = CROWD_VIEW.eye;
+        a.fg.degen.g.visible = !onLens(a.p.x - eye.x, a.fg.y + 0.6 * FIGHTER_SCALE - eye.y, a.p.z - eye.z, CROWD_VIEW.near, FIGHTER_SCALE);
         // (turned to face him as he comes up, back to their own way when he goes)
         const want = Math.hypot(a.p.x - x, a.p.z - z) < LOOK ? yawTo(a.p.x, a.p.z, x, z) : a.p.yaw;
         let dy = want - a.f.yaw;
