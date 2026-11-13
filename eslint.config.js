@@ -16,6 +16,7 @@ const DOM_FREE = [
   'src/scripts/city3d/walktouch.ts',
   'src/scripts/city3d/endsfar.ts',
   'src/scripts/city3d/endsfarhomes.ts',
+  'src/scripts/city3d/endsfarlife.ts',
   'src/scripts/city3d/home.ts',
   'src/scripts/city3d/fparm.ts',
   'src/scripts/city3d/lampposts.ts',

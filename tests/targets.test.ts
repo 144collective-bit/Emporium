@@ -2,7 +2,7 @@
 // screen, and what a render target holds on the GPU.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SMAA_FROM, antialias, targetBytes } from '../src/scripts/city3d/targets';
+import { MEMORY_CEILINGS, SMAA_FROM, antialias, pictureBytes, targetBytes } from '../src/scripts/city3d/targets';
 
 const MB = 1048576;
 
@@ -51,4 +51,25 @@ test('Phase 2 at a retina 1440 x 900: the buffers a quarter of what they were, S
     // (SMAA's two RGBA8 targets in their place)
     2 * targetBytes({ width: w, height: h, bpp: 4, samples: 0, depthBuffer: false, depthTexture: false });
   assert.ok(after <= before / 4, `${(before / MB).toFixed(0)} MiB to ${(after / MB).toFixed(0)} MiB`);
+});
+
+// The high tier as index.ts's TIERS has it (dpr 2, 4x MSAA, bloom at half, shadow maps 2048): keep these in step
+const HIGH = { dpr: 2, msaa: 4, bloomScale: 0.5, shadowMap: 2048 };
+const desktop = (screenDpr: number) => {
+  const pr = Math.min(screenDpr, HIGH.dpr);
+  const aa = antialias('high', screenDpr, HIGH.dpr, HIGH.msaa);
+  return pictureBytes({ width: 1440 * pr, height: 900 * pr, msaa: aa.msaa, smaa: aa.smaa, bloomScale: HIGH.bloomScale, shadowMap: HIGH.shadowMap }) / MB;
+};
+
+test('the formula gives what the browser measured (Phase 2: 291 MiB at 2x, 175 at 1x, the high tier at 1440 x 900)', () => {
+  // (perf.ts targetMemory() over post.ts's targets and the shadow maps, headless; within 3%)
+  assert.ok(Math.abs(desktop(2) - 291) / 291 < 0.03, `2x: ${desktop(2).toFixed(1)} MiB`);
+  assert.ok(Math.abs(desktop(1) - 175) / 175 < 0.03, `1x: ${desktop(1).toFixed(1)} MiB`);
+});
+
+test("the desktop's render targets under their ceilings (the owner's pick: today's and 10%)", () => {
+  assert.ok(desktop(2) <= MEMORY_CEILINGS.desktop.retina, `retina: ${desktop(2).toFixed(1)} of ${MEMORY_CEILINGS.desktop.retina} MiB`);
+  assert.ok(desktop(1) <= MEMORY_CEILINGS.desktop.standard, `1x: ${desktop(1).toFixed(1)} of ${MEMORY_CEILINGS.desktop.standard} MiB`);
+  // (a 3x screen draws at the tier's 2x, the same as retina)
+  assert.equal(desktop(3), desktop(2));
 });

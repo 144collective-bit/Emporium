@@ -4,6 +4,7 @@
 // the Close but at the zebra and the lanes' mouth, the dogs ahead of their walkers, the washing in its back garden,
 // the bikes by their front walls, a pool under every porch light, and room for them all in the crowd's spare slots
 // with the other districts' chunks' people.
+import { FAR_IDLE, FAR_PEOPLE } from '../src/scripts/city3d/endsfarlife';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -135,7 +136,9 @@ test("a pool under every porch light and the late shops' (the corner shop, the c
 
 test("room for them all in the crowd's spare slots (index.ts TIERS reserve), with the other chunks' people", () => {
   const RESERVE = { high: 360, low: 180 };
-  const all = SUN_IDLE.length + SUN_PEOPLE.length + STRIP_IDLE.length + PORCH_SITTERS.length + CAMP_PEOPLE.length + ENDS_IDLE.length + ENDS_PEOPLE.length + WEST_IDLE.length + WEST_PEOPLE.length;
+  const most = SUN_IDLE.length + SUN_PEOPLE.length + STRIP_IDLE.length + PORCH_SITTERS.length + CAMP_PEOPLE.length + ENDS_IDLE.length + ENDS_PEOPLE.length + WEST_IDLE.length + WEST_PEOPLE.length;
+  // (and the far west's, endsfarlife.ts: on desktops only; phones' slots are all spoken for, so it has nobody there)
+  const all = most + FAR_IDLE.length + FAR_PEOPLE.length;
   assert.ok(all <= RESERVE.high, `${all} people for ${RESERVE.high} slots`);
-  assert.ok(Math.ceil(all / 2) + 10 <= RESERVE.low, `about ${Math.ceil(all / 2)} people on phones for ${RESERVE.low} slots`);
+  assert.ok(Math.ceil(most / 2) + 10 <= RESERVE.low, `about ${Math.ceil(most / 2)} people on phones for ${RESERVE.low} slots`);
 });

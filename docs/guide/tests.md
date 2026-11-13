@@ -68,5 +68,12 @@ keep it up to date when what it describes changes.
   step that didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
   after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
   takes a few minutes in the software renderer, so it isn't in the Action.
+- `npm run memcheck` (after a build and the texture bake;
+  `scripts/memcheck.mjs`): the whole city built on a headless phone, held
+  to `MEMORY_CEILINGS` (`targets.ts`), red on a page error or NaN; `--
+  soak` adds the leak check. About 13 minutes (more with the soak), so it's
+  run by hand or by the "Memory" Action, which only runs when started.
+  `tests/targets.test.ts` holds the desktop's render targets (by formula)
+  to their ceilings on every `npm test`.
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.

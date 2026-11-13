@@ -10,7 +10,7 @@
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
-import { Batch, toon } from './kit';
+import { Batch, PAL, fx, glowMat, lit, toon } from './kit';
 import { site } from './tilework';
 import { COVER } from './palette';
 import { CLOSE_WEST, ROAD_HALF, ROAD_Z, SLAB_Y, type Rect } from './endswood';
@@ -19,6 +19,8 @@ import { registerHome } from './home3d';
 import { registerFarHomes } from './endsfarhomes3d';
 import { FAR_HOME_SOLIDS } from './endsfarhomes';
 import { addSolids } from './solids';
+import { addPeople } from './life';
+import { FAR_IDLE, FAR_PEOPLE, FAR_POOLS } from './endsfarlife';
 
 export const SELF = import.meta.url;
 
@@ -117,5 +119,17 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   registerHome(low);
   // Phase 4: the bungalows along the lane and the allotments behind; what's solid joins the grids on the main thread
   registerFarHomes(low);
-  if (scene) addSolids(FAR_HOME_SOLIDS);
+  if (!scene) return;
+  addSolids(FAR_HOME_SOLIDS);
+  // Phase 5: its people into the crowd's spare slots (not on phones: their slots are all spoken for by the rest of the
+  // city, and the reserve isn't raised for a quiet corner), and the pools of light at the gates, the garage and his
+  // front door: flat glows, dark by day (as the lamps' pools)
+  if (!low) addPeople(FAR_IDLE, FAR_PEOPLE);
+  const flatQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), lit(glowMat(PAL.warm, 1), 0, 0.24), FAR_POOLS.length);
+  const [m4, v, sv] = [new THREE.Matrix4(), new THREE.Vector3(), new THREE.Vector3()];
+  FAR_POOLS.forEach(([x, z, size], i) => pools.setMatrixAt(i, m4.compose(v.set(x, SLAB_Y + 0.04, z), flatQ, sv.setScalar(size))));
+  pools.frustumCulled = false;
+  pools.name = 'endsfar-pools';
+  scene.add(fx(pools));
 }
