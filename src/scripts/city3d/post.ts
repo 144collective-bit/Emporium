@@ -120,6 +120,11 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
 
   const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: opts.msaa });
   const composer = new EffectComposer(renderer, target);
+  // MSAA for the scene's own pass only: the composer clones the target for its second buffer, which the ink, bloom
+  // and output passes ping-pong through drawing full-screen quads, so it needs neither MSAA nor depth (at 2880 x 1800
+  // with 4x MSAA that clone was about 290 MB: docs/stability-plan.md, Phase 2). Set before it's first drawn into
+  composer.renderTarget2.samples = 0;
+  composer.renderTarget2.depthBuffer = false;
   composer.addPass(new RenderPass(scene, camera));
 
   const ink = new ShaderPass(InkShader);
@@ -140,7 +145,13 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   composer.addPass(new OutputPass());
   // SMAA (desktops at a low pixel ratio, the fitting room on phones) comes in its own chunk, after the boot:
   // its look-up textures are 60 KB nobody else needs (until it's there the frame goes out without it)
-  if (opts.smaa) import('three/addons/postprocessing/SMAAPass.js').then(({ SMAAPass }) => composer.addPass(new SMAAPass()));
+  let smaa: { _edgesRT?: THREE.WebGLRenderTarget; _weightsRT?: THREE.WebGLRenderTarget } | null = null;
+  if (opts.smaa)
+    import('three/addons/postprocessing/SMAAPass.js').then(({ SMAAPass }) => {
+      const pass = new SMAAPass();
+      smaa = pass as unknown as typeof smaa;
+      composer.addPass(pass);
+    });
   // FXAA (phones, which draw no MSAA or SMAA): after the output pass, on the finished picture
   const px = new THREE.Vector2(size.x, size.y);
   let fxaa: ShaderPass | null = null;
@@ -234,5 +245,18 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     composer.render();
   }
 
-  return { composer, bloom, ink, render, setSize, shadowStat };
+  /** Every render target the picture is drawn through, for counting what they hold (perf.ts `targetMemory()`) */
+  const bloomTargets = bloom as unknown as { renderTargetBright: THREE.WebGLRenderTarget; renderTargetsHorizontal: THREE.WebGLRenderTarget[]; renderTargetsVertical: THREE.WebGLRenderTarget[] };
+  const targets = (): THREE.WebGLRenderTarget[] => [
+    composer.renderTarget1,
+    composer.renderTarget2,
+    normalTarget,
+    bloomTargets.renderTargetBright,
+    // (all of them: the levels a phone leaves out are never drawn into, but the composite still samples them)
+    ...bloomTargets.renderTargetsHorizontal,
+    ...bloomTargets.renderTargetsVertical,
+    ...(smaa?._edgesRT && smaa._weightsRT ? [smaa._edgesRT, smaa._weightsRT] : []),
+  ];
+
+  return { composer, bloom, ink, render, setSize, shadowStat, targets };
 }

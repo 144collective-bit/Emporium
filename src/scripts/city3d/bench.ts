@@ -118,6 +118,8 @@ export interface BenchResult {
   views: (BenchStats & { id: string; name: string })[];
   route: BenchStats;
   memory: SceneMemory;
+  /** What the picture's render targets and shadow maps hold, in bytes (docs/stability-plan.md, Phase 2) */
+  targets: number;
   boot: Record<string, number>;
 }
 
@@ -171,6 +173,8 @@ export interface BenchDeps {
   scene: THREE.Scene;
   tier: string;
   pixelRatio(): number;
+  /** Bytes the render targets hold (perf.ts `targetMemory()`) */
+  targets?(): number;
   home(): { pos: THREE.Vector3; target: THREE.Vector3 };
   /** Clear day (or night) for the run; the visitor's own sky back after */
   conditions(night: boolean): () => void;
@@ -245,7 +249,7 @@ export function createBench(d: BenchDeps, night: boolean) {
     if (out) {
       const r = out.route;
       lines.push(`${'Route'.padEnd(32)} ${String(r.fps).padStart(5)} fps · ${String(r.p95).padStart(5)} ms p95 · worst ${r.worst} ms · ${r.draws} draws · ${(r.tris / 1e6).toFixed(2)}M`);
-      lines.push(`Memory: geometry ${mb(out.memory.geometry)} · textures ${mb(out.memory.textures)} · ${out.memory.objects} objects`);
+      lines.push(`Memory: geometry ${mb(out.memory.geometry)} · textures ${mb(out.memory.textures)} · targets ${mb(out.targets)} · ${out.memory.objects} objects`);
       lines.push(`Boot: ${Object.entries(out.boot).map(([k, v]) => `${k} ${(v / 1000).toFixed(2)} s`).join(' · ')}`);
       lines.push('Done. Full results in the console (window.__bench), or Copy results.');
     }
@@ -306,6 +310,7 @@ export function createBench(d: BenchDeps, night: boolean) {
             views: results,
             route: sampler.stats(),
             memory: sceneMemory(d.scene),
+            targets: d.targets?.() ?? 0,
             boot: d.boot(),
           };
           (window as unknown as { __bench?: BenchResult }).__bench = out;
