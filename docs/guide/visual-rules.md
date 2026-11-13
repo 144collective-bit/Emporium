@@ -14,6 +14,15 @@ keep it up to date when what it describes changes.
   use the softer `soft()` (1.3), and never light a whole roof or slab:
   give it a neon trim instead. Check new lights close up at night on the
   phone tier, not just from the home view.
+- **No NaN reaches the bloom.** The bloom's blur spreads a single NaN or
+  infinite pixel over the whole screen, which goes black (blinking as the
+  bad pixel comes in and out of view). The ink pass (`post.ts`, just before
+  the bloom) turns any such pixel black on its own, and `tileBatch()` leaves
+  out a piece with NaN corners (with a warning in the console). The one
+  that did it (2026-11) was `crest-0-2`'s lot: Coral Drive's bay park-w2 cut to
+  the block's corner left its outline a repeated corner and a spike, and
+  `insetPoly()` divided by zero; it tidies the outline first now
+  (`tidyPoly()`, `streetplan.ts`, tested in `tests/streetplan.test.ts`).
 - **Nothing flush** (z-fighting): two faces in the same plane, facing the
   same way, in different colours flicker against each other, even with the
   camera still (a door's side level with the wall it's in, a roof slab's

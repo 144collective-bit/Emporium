@@ -1790,6 +1790,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.on = !reduced;
     camera.updateMatrixWorld();
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
+    CROWD_VIEW.near = camera.near;
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
     // What the camera looks at on the ground (straight ahead a way when it looks level, walking; `look` from above)

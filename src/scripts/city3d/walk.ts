@@ -128,6 +128,7 @@ import type { ModeId } from './keymap';
 import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
 import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
 import type { CardInput } from './ctrlcard';
+import { LENS, nearFor } from './lens';
 
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
@@ -552,6 +553,13 @@ export function createWalk(d: WalkDeps) {
   let sprintLock = false;
   let walkLock = false;
   let baseFov = camera.fov;
+  /** The city's near plane, which the walk pulls in as walls come close to the lens (lens.ts) */
+  const baseNear = camera.near;
+  const setNear = (v: number) => {
+    if (camera.near === v) return;
+    camera.near = v;
+    camera.updateProjectionMatrix();
+  };
   let fov = 52;
   const pivot = new THREE.Vector3();
   const keys = new Set<string>();
@@ -2327,6 +2335,9 @@ export function createWalk(d: WalkDeps) {
   const pivotWant = new THREE.Vector3();
   const view = new THREE.Vector3();
   const lookAt = new THREE.Vector3();
+  const lensFwd = new THREE.Vector3();
+  const lensSide = new THREE.Vector3();
+  const lensDir = new THREE.Vector3();
 
   /**
    * The garage's showroom shot: while its menu is open the camera eases over to look at the
@@ -2558,6 +2569,8 @@ export function createWalk(d: WalkDeps) {
 
   function update(dt: number, t: number) {
     if (!active) return;
+    // (the near plane is the walk's own on foot, below; the car and the kart set their own; everything else has the city's)
+    if (!drive.active && !karts.active) setNear(baseNear);
     pollPad(dt);
     cardFrame(dt);
     kartUI.update(dt);
@@ -3119,6 +3132,17 @@ export function createWalk(d: WalkDeps) {
     camera.lookAt(lookAt);
     // (leaning out in first person, the view tilts with his head a little)
     if (firstPerson && peek && !d.reduced) camera.rotateZ(-peek * PEEK.roll);
+    // The near plane in as a wall comes close to the lens, straight ahead or at the view's edges (at the city's 0.5 the
+    // wall was cut away and you saw through it), out again when nothing is: lens.ts
+    lensFwd.copy(view).negate();
+    lensSide.set(-lensFwd.z, 0, lensFwd.x).normalize();
+    const spread = Math.min(1.5, Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
+    let gap = cameraRoom(camera.position, lensFwd, LENS.probe, 0) + 0.15;
+    for (const sgn of [-1, 1]) {
+      lensDir.copy(lensFwd).addScaledVector(lensSide, sgn * spread).normalize();
+      gap = Math.min(gap, cameraRoom(camera.position, lensDir, LENS.probe, 0) + 0.15);
+    }
+    setNear(nearFor(gap, firstPerson, baseNear));
     // (seated, the bench and what's round it may keep the camera close: he still shows)
     hero.g.visible = !firstPerson && camDist > (seated() ? 0.3 : 0.6);
     frameShowroom(dt);
@@ -3541,6 +3565,7 @@ export function createWalk(d: WalkDeps) {
       hero.g.visible = hero.ring.visible = false;
       if (locked()) document.exitPointerLock();
       camera.fov = baseFov;
+      camera.near = baseNear;
       camera.updateProjectionMatrix();
       root.dataset.mode = 'explore';
     },
