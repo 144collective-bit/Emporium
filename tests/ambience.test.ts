@@ -227,12 +227,12 @@ test("Endswood's own: the estate's sounds on its land and the common, Bunker Sou
   assert.ok(town.ends === 0 && town.studio === 0 && town.bell === 0);
 });
 
-test("in Degen's house the street is shut out (not from over its roof, nor on his driveway)", async () => {
-  const { HOME, ROOM, inHouse } = await import('../src/scripts/city3d/home');
+test("in Degen's house the street is shut out (not from over its roof, nor out in his yard)", async () => {
+  const { HOME_SPAWN, ROOM, inHouse } = await import('../src/scripts/city3d/home');
   const [x, z] = [(ROOM[0] + ROOM[2]) / 2, (ROOM[1] + ROOM[3]) / 2];
   assert.ok(inHouse(x, z));
   assert.equal(ambienceAt(x, z, 0, 0).home, 1);
   assert.equal(ambienceAt(x, z, 0, 0).indoor, 0, "the mall's murmur isn't his");
   assert.equal(ambienceAt(x, z, 30, 0).home, 0, 'the City view over the roof');
-  assert.equal(ambienceAt((HOME.drive[0] + HOME.drive[2]) / 2, (HOME.drive[1] + HOME.drive[3]) / 2, 0, 0).home, 0);
+  assert.equal(ambienceAt(HOME_SPAWN.x, HOME_SPAWN.z, 0, 0).home, 0);
 });

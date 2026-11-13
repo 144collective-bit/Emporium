@@ -544,7 +544,8 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     kept = true;
     close();
   }
-  function show() {
+  /** Open it, on its Model tab or (from the workshop's door at home) another */
+  function show(first: Tab = 'model') {
     if (open) return;
     open = true;
     saved = loadCar();
@@ -554,7 +555,7 @@ export function createGarageUI(root: HTMLElement, d: GarageDeps) {
     kind = 'car';
     kept = false;
     asking = false;
-    tab = 'model';
+    tab = first;
     // Your car (or bike) is out: show it on the turntable (its stand) while you look
     if (d.away()) d.preview(saved);
     if (d.bikeAway()) d.previewBike(bsaved);

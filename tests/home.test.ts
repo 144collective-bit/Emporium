@@ -1,183 +1,175 @@
-// Degen's home (home.ts, docs/home-plan.md Phase 1): the west end house of the row by the Close, his garage in its
-// garden and his driveway beside it, with room for a car and a bike; a place, and where walking starts.
+// Degen's home, his compound (home.ts, docs/ends-far-west-plan.md Phase 2, the owner's picks: a walled yard with
+// gates on its own plot in the Ends' far west, a double garage, a house with a roof terrace, a workshop, lawns): its
+// wall round the plot with the gates open on the Close's line; the buildings inside the wall, apart, under the
+// estate's rows and the Emporium; what's solid, and the ways through it; the car and the bike in the garage behind a
+// door each; the place, where walking starts; the room inside, its doors' fades and the things to use; the old house
+// a neighbour's again.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BIKE_BAY, BIKE_HOME, CAR_BAY, CAR_HOME, HOME, HOME_GARAGE_DOOR, HOME_VIEW, WALL, startsAtHome, CEIL, FURNITURE, HALL_W, HOME_CAMERA, HOME_PORTALS, HOME_USES, ROOM, SHELL, YARD_GATE, homeWall, inHouse, HOME_HOUSE, HOME_LAND, HOME_PICK, HOME_PIN, HOME_ROW, HOME_SOLIDS, HOME_SPAWN, bayRect, onHome } from '../src/scripts/city3d/home';
-import { HOUSES, TERRACES, TERRACE_SOLIDS, fencesOf, rectOf, toWorld, TALLEST } from '../src/scripts/city3d/endsterraces';
-import { COURTS, CROSS_PATHS, GREENS, LANES, N_EDGE, PATHS, WEST_LAMPS } from '../src/scripts/city3d/endswest';
+import {
+  BIKE_HOME, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, HOME_CAMERA, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
+  HOME_WORKSHOP_DOOR, PIER, ROOM, SHELL, WALL, WALL_H, WALL_T, homeWall, inHouse, onHome, startsAtHome,
+} from '../src/scripts/city3d/home';
+import { GATES, HEAD, LANE_HALF, LANE_X, PLOT } from '../src/scripts/city3d/endsfar';
+import { HOUSES, TERRACES, TERRACE_SOLIDS, TALLEST } from '../src/scripts/city3d/endsterraces';
 import { ROAD_HALF, ROAD_Z, SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
-import { STREET_W_SOLIDS } from '../src/scripts/city3d/endsweststreet';
-import { WASHING } from '../src/scripts/city3d/endswestlife';
 import { SOLIDS } from '../src/scripts/city3d/solids';
-import { BENCH_VIEWS } from '../src/scripts/city3d/bench';
 import { PLACES } from '../src/scripts/city3d/places';
 import { LIVE_PLACES } from '../src/scripts/city3d/live';
 import { CARS } from '../src/scripts/city3d/carspec';
 import { PLAYER_CARS } from '../src/scripts/city3d/mycar';
+import { BENCH_VIEWS } from '../src/scripts/city3d/bench';
 
-type Rect = readonly [number, number, number, number];
-const overlap = (a: Rect, b: Rect, m = 0) => a[0] < b[2] - m && a[2] > b[0] + m && a[1] < b[3] - m && a[3] > b[1] + m;
-const inside = (a: Rect, b: Rect, m = 1e-6) => a[0] >= b[0] - m && a[1] >= b[1] - m && a[2] <= b[2] + m && a[3] <= b[3] + m;
-const T = TERRACES.find((t) => t.houses.some((h) => h.id === HOME_HOUSE))!;
-const house = HOUSES.find((h) => h.id === HOME_HOUSE)!;
+type Rect = [number, number, number, number];
+const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+const within = (inner: readonly number[], outer: readonly number[], m = 0) => inner[0] >= outer[0] - m && inner[1] >= outer[1] - m && inner[2] <= outer[2] + m && inner[3] <= outer[3] + m;
+const overlap = (a: readonly number[], b: readonly number[], m = 1e-6) => a[0] < b[2] - m && a[2] > b[0] + m && a[1] < b[3] - m && a[3] > b[1] + m;
+const solidAt = (x: number, z: number, m = 0) => HOME_SOLIDS.some((b) => inRect(b, x, z, m));
+/** Someone this wide can stand at x, z out in the yard */
+const R = 0.14;
+const stands = (x: number, z: number) => !HOME_SOLIDS.some((b) => inRect(b, x, z, R));
 
-test('the house is the terrace\'s own west end house, where it stood', () => {
-  assert.equal(T.row.id, HOME_ROW);
-  const r = rectOf(T, house.u0, house.u1, -T.d, 0);
-  for (let i = 0; i < 4; i++) assert.ok(Math.abs(r[i] - HOME.house[i]) < 1e-9, `${r} against ${HOME.house}`);
-  // The row's west end: nothing of the row is west of it
-  assert.equal(HOME.house[0], T.row.rect[0]);
-  // Its door where the terrace has it, its height the terrace's
-  const d = toWorld(T, house.door, 0);
-  assert.ok(Math.abs(d[0] - HOME.door[0]) < 1e-9 && Math.abs(d[1] - HOME.door[1]) < 1e-9);
-  assert.ok(Math.abs(SLAB_Y + HOME.eaves - T.top) < 1e-9 && Math.abs(SLAB_Y + HOME.ridge - T.peak) < 1e-9);
-  assert.ok(HOME.ridge < TALLEST);
-  assert.ok(inEndswood(HOME_SPAWN.x, HOME_SPAWN.z));
-});
-
-test('the garage stands in the back garden, off the house, its door on the driveway', () => {
-  assert.ok(inside(HOME.garage, HOME.garden));
-  // A yard between it and the house's back wall, the back door onto it
-  assert.ok(HOME.garage[1] - HOME.house[3] >= 1);
-  // Big enough for the longest car you can own, with room to open a door, and under the house's eaves
-  const longest = Math.max(...PLAYER_CARS.map((id) => CARS[id].L));
-  assert.ok(longest > 1.5 && HOME.garage[2] - HOME.garage[0] > longest + 0.6, `a ${longest} long car fits`);
-  assert.ok(HOME.garage[3] - HOME.garage[1] >= 3.4, 'room to open its doors');
-  // ... and the driveway's bay holds it too
-  assert.ok(CAR_BAY.hl * 2 >= longest, `the driveway's bay takes a ${longest} long car`);
-  assert.ok(HOME.garageTop < HOME.eaves);
-  // The door: in the west wall, inside it, wide enough, onto the driveway
-  const D = HOME.garageDoor;
-  assert.equal(D.x, HOME.garage[0]);
-  assert.equal(D.x, HOME.drive[2]);
-  assert.ok(D.z0 > HOME.garage[1] + 0.2 && D.z1 < HOME.garage[3] - 0.2 && D.z1 - D.z0 >= 2.2 && D.h < HOME.garageH);
-  // Solid at the boot: its four walls, the door's opening left clear (and the house's own four: the test below)
-  assert.equal(HOME_SOLIDS.length, 9);
-  for (const b of HOME_SOLIDS) assert.ok(SOLIDS.includes(b));
-  const hit = (x: number, z: number) => HOME_SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]);
-  for (let z = D.z0 + 0.05; z < D.z1; z += 0.1) assert.ok(!hit(D.x + WALL / 2, z), `the doorway is clear at z ${z}`);
-  assert.ok(hit(D.x + WALL / 2, D.z0 - 0.1) && hit(D.x + WALL / 2, D.z1 + 0.1) && hit(HOME.garage[2] - WALL / 2, CAR_HOME.z), 'walls either side and behind');
-  for (let x = HOME.garage[0] + WALL + 0.05; x < HOME.garage[2] - WALL; x += 0.25) assert.ok(!hit(x, CAR_HOME.z), 'open inside');
-});
-
-test('the driveway: off the Close and the lane, clear of everything, room for a car and a bike', () => {
-  const dr = HOME.drive;
-  assert.ok(dr[2] - dr[0] >= 3 && dr[3] - dr[1] >= 6);
-  // It runs down to the block's edge by the Close, the dropped kerb on to the road's edge; the lane lies along its west side
-  assert.equal(dr[3], N_EDGE);
-  assert.deepEqual([HOME.kerb[1], HOME.kerb[3]], [N_EDGE, ROAD_Z - ROAD_HALF]);
-  assert.ok(LANES.some((l) => l[2] === dr[0] && l[1] <= dr[1] && l[3] >= dr[3]), 'the lane beside it');
-  // Nothing built or planted on it: no terrace, fence, bin, street furniture, path, green, court or lamp
-  for (const b of [...TERRACE_SOLIDS, ...STREET_W_SOLIDS]) assert.ok(!overlap(dr, b as unknown as Rect, 0.01), `a solid on the driveway: ${b}`);
-  for (const r of [...PATHS, ...GREENS, ...COURTS, ...CROSS_PATHS]) assert.ok(!overlap(dr, r, 0.01), `on the driveway: ${r}`);
-  for (const [x, z] of WEST_LAMPS) assert.ok(!(x > dr[0] - 0.3 && x < dr[2] + 0.3 && z > dr[1] - 0.3 && z < HOME.kerb[3] + 0.3), `a lamp on the driveway at ${x}, ${z}`);
-  // The bays: on the driveway, apart, clear of the garage's door's swing
-  const [car, bike] = [bayRect(CAR_BAY), bayRect(BIKE_BAY)];
-  assert.ok(inside(car, dr) && inside(bike, dr));
-  assert.ok(!overlap(car, bike, -0.2), 'the car and the bike apart');
-  const swing: Rect = [HOME.garageDoor.x - 1, HOME.garageDoor.z0, HOME.garageDoor.x, HOME.garageDoor.z1];
-  assert.ok(!overlap(car, swing) && !overlap(bike, swing), 'clear of the garage door');
-});
-
-test('the terrace makes room: no shed, gate, washing or fence where the garage stands', () => {
-  assert.ok(!house.shed);
-  assert.ok(!WASHING.some((w) => w.house === HOME_HOUSE));
-  const g = HOME.garage;
-  for (const [a, c] of fencesOf(T)) {
-    const line: Rect = [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])];
-    assert.ok(!(line[0] < g[2] - 0.05 && line[2] > g[0] + 0.05 && line[1] < g[3] - 0.05 && line[3] > g[1] + 0.05), `a fence through the garage: ${line}`);
+test('the compound is on its plot at the head of the Close: the wall round it, the gates open on the road\'s line', () => {
+  assert.deepEqual(HOME.plot, PLOT);
+  assert.deepEqual(HOME_LAND, PLOT);
+  assert.deepEqual(HOME.gates, GATES);
+  const [x0, z0, x1, z1] = PLOT;
+  for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) assert.ok(inEndswood(x, z, 0.01), 'on the estate\'s land');
+  // The wall: solid all the way round at head height, but for the gates and the back gate
+  const B = HOME.backGate;
+  for (let x = x0 + 0.1; x < x1; x += 0.25) for (const z of [z0 + WALL_T / 2, z1 - WALL_T / 2]) assert.ok(solidAt(x, z), `a gap in the wall at ${x}, ${z}`);
+  for (let z = z0 + 0.1; z < z1; z += 0.25) {
+    assert.equal(solidAt(x0 + WALL_T / 2, z), !(z > B.z0 && z < B.z1), `the west wall at ${z}`);
+    assert.equal(solidAt(x1 - WALL_T / 2, z), !(z > GATES.z0 && z < GATES.z1), `the east wall at ${z}`);
   }
-  // The neighbours keep theirs: the far fence still runs behind the other two gardens; between his yard and his
-  // driveway there's none (the gate stands open there)
-  const far = fencesOf(T).filter(([a, c]) => Math.abs(a[1] - c[1]) < 1e-9);
-  assert.equal(far.length, 1);
-  assert.ok(Math.min(far[0][0][0], far[0][1][0]) >= g[2] - 1e-6);
-  assert.ok(!fencesOf(T).some(([a, c]) => Math.abs(a[0] - c[0]) < 1e-9 && Math.abs(a[0] - HOME.house[0]) < 0.1));
-  assert.ok(YARD_GATE[1] === HOME.house[3] && YARD_GATE[3] === g[1]);
-  // No other terrace's fences changed in number (theirs have one a party line, both ends and the far edge)
-  for (const o of TERRACES) if (o !== T) assert.equal(fencesOf(o).length, o.houses.length + 2);
+  assert.ok(WALL_H > 1.1 && WALL_H < 1.5, 'about head high');
+  // The gates: on the Close's line, as wide as the road and a little more, a pier each side, taller than the wall
+  assert.equal((GATES.z0 + GATES.z1) / 2, ROAD_Z);
+  assert.ok(GATES.z1 - GATES.z0 >= ROAD_HALF * 2);
+  assert.ok(PIER.h > WALL_H);
+  for (const z of [GATES.z0 - PIER.w / 2, GATES.z1 + PIER.w / 2]) assert.ok(HOME_SOLIDS.some((b) => inRect(b, x1 - PIER.w / 2, z) && b[4] === SLAB_Y + PIER.h), 'a pier');
+  // A car coming down the Close meets nothing from the lane to well inside the yard
+  for (let x = LANE_X - LANE_HALF; x > x1 - 8; x -= 0.25) for (const z of [ROAD_Z - 1.2, ROAD_Z, ROAD_Z + 1.2]) assert.ok(![...SOLIDS].some((b) => inRect(b, x, z)), `something in the way at ${x}, ${z}`);
+  assert.deepEqual(HEAD, [LANE_X, ROAD_Z]);
+  // The back gate: a walker's width, in the west wall by the north-west lawn
+  assert.ok(B.z1 - B.z0 >= 0.8 && B.z1 - B.z0 <= 1.2 && inRect(HOME.lawns[0], x0 + WALL_T + 0.5, (B.z0 + B.z1) / 2));
 });
 
-test('a place: its pin, door and where you arrive, clear and on its own ground', () => {
-  assert.ok(PLACES.some((p) => p.id === 'home' && p.at.x === HOME_SPAWN.x && p.at.z === HOME_SPAWN.z));
-  assert.ok(LIVE_PLACES.some((p) => p.id === 'home'));
-  assert.equal(HOME_PICK.length, 2);
-  assert.ok(onHome(HOME_PIN[0], HOME_PIN[1]) && onHome(HOME.garage[0] + 1, HOME.garage[1] + 1) && onHome(CAR_BAY.x, CAR_BAY.z));
-  assert.ok(!onHome(HOME_LAND[2] + 1, HOME.house[1] + 1), 'not the neighbour');
-  // The spawn stands in front of the door (north), clear of every solid, on the front path
-  const free = (x: number, z: number) => ![...SOLIDS, ...TERRACE_SOLIDS, ...STREET_W_SOLIDS].some((b) => x > b[0] - 0.2 && x < b[2] + 0.2 && z > b[1] - 0.2 && z < b[3] + 0.2);
-  assert.ok(free(HOME_SPAWN.x, HOME_SPAWN.z), 'the spawn is clear');
-  assert.ok(PATHS.some((p) => HOME_SPAWN.x > p[0] && HOME_SPAWN.x < p[2] && HOME_SPAWN.z > p[1] - 0.6 && HOME_SPAWN.z < p[3] + 0.6), 'on the front path');
-  // Facing the door: south; within a place prompt's reach (1) of his front door's "Go in"
-  assert.equal(HOME_SPAWN.yaw, Math.PI);
-  const goIn = HOME_PORTALS.find((p) => p.id === 'home:in')!;
-  assert.ok(Math.hypot(goIn.x - HOME_SPAWN.x, goIn.z - HOME_SPAWN.z) < 0.95);
-});
-
-test('home base: the car in the garage nose to its door, the bike on its bay, the garage\'s prompt on the driveway', () => {
-  const g = HOME.garage;
-  const D = HOME.garageDoor;
-  // Every car you can own stands inside clear of the walls, nose west to the door, room to walk down both its sides
-  assert.equal(CAR_HOME.yaw, Math.PI);
-  assert.ok(Math.abs(Math.cos(CAR_HOME.yaw) + 1) < 1e-9, 'its nose points west: (cos yaw, -sin yaw)');
-  for (const id of PLAYER_CARS) {
-    const { L, W } = CARS[id];
-    assert.ok(CAR_HOME.x - L / 2 > g[0] + WALL + 0.05 && CAR_HOME.x + L / 2 < g[2] - WALL - 0.05, `${id} fits the garage's length`);
-    assert.ok(CAR_HOME.z - W / 2 - 0.5 > g[1] + WALL && CAR_HOME.z + W / 2 + 0.5 < g[3] - WALL, `room beside ${id}`);
-    // ... and it goes out through the door: its width inside the opening, in line with it
-    assert.ok(CAR_HOME.z - W / 2 > D.z0 + 0.15 && CAR_HOME.z + W / 2 < D.z1 - 0.15, `${id} through the door`);
+test('inside the wall: the garage on the Close\'s line, the house, the workshop and the lawns, apart, under the rows and the Emporium', () => {
+  const things: [string, Rect][] = [['the house', HOME.house], ['the garage', HOME.garage], ['the workshop', HOME.workshop], ...HOME.lawns.map((r, i): [string, Rect] => [`lawn ${i}`, r])];
+  for (const [id, r] of things) {
+    assert.ok(r[2] > r[0] && r[3] > r[1], `${id} empty`);
+    assert.ok(within(r, HOME.inner, 1e-9), `${id} through the wall`);
   }
-  // The bike on its bay on the driveway, nose to the Close (south)
-  assert.ok(Math.abs(-Math.sin(BIKE_HOME.yaw) - 1) < 1e-9);
-  assert.deepEqual([BIKE_HOME.x, BIKE_HOME.z], [BIKE_BAY.x, BIKE_BAY.z]);
-  // The prompt: on the driveway, outside the garage, by the door, away from the car (its Get in is another prompt)
-  const dr = HOME.drive;
-  assert.ok(HOME_GARAGE_DOOR.x > dr[0] && HOME_GARAGE_DOOR.x < dr[2] && HOME_GARAGE_DOOR.z > dr[1] && HOME_GARAGE_DOOR.z < dr[3]);
-  assert.ok(Math.hypot(HOME_GARAGE_DOOR.x - CAR_HOME.x, HOME_GARAGE_DOOR.z - CAR_HOME.z) - CAR_HOME.r > 1.75);
-  // The menu's camera: out on the driveway side, looking in at the car
-  assert.ok(HOME_VIEW.eye[0] < g[0] && HOME_VIEW.at[0] > g[0] && HOME_VIEW.at[0] < g[2]);
+  for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++) assert.ok(!overlap(things[i][1], things[j][1]), `${things[i][0]} on ${things[j][0]}`);
+  // The owner's sizes: the house about 9 by 7, the garage 8 by 5 with two doors, the workshop 5 by 4
+  const size = (r: Rect) => [r[2] - r[0], r[3] - r[1]].map((n) => Math.round(n * 10) / 10);
+  assert.deepEqual(size(HOME.house), [9, 6.5]);
+  assert.deepEqual(size(HOME.garage), [5, 8]);
+  assert.deepEqual(size(HOME.workshop), [5, 4]);
+  // The garage faces the gates down the Close's line; nothing stands between them
+  assert.equal((HOME.garage[1] + HOME.garage[3]) / 2, ROAD_Z);
+  for (let x = HOME.garage[2] + 0.3; x < PLOT[2]; x += 0.3) assert.ok(stands(x, ROAD_Z), `something on the drive at ${x}`);
+  // Everything under the estate's tallest row, and so far under the Emporium
+  const tallest = Math.max(...TERRACES.map((t) => t.peak));
+  for (const p of HOME_PICK) assert.ok(SLAB_Y + p.h < tallest, 'under the rows');
+  assert.ok(HOME.ridge > HOME.eaves && HOME.eaves >= 2.2, 'two storeys under a parapet');
+  assert.ok(TALLEST > 0);
+  // The yard is the wide drive: room to turn a car between the garage and the gates
+  assert.ok(PLOT[2] - HOME.garage[2] > 12 && HOME.house[1] - HOME.workshop[3] > 10);
 });
 
-test('walking starts at home, but a new player\'s first walk', () => {
-  assert.ok(!startsAtHome([]));
-  assert.ok(startsAtHome(['emporium']));
-});
-
-test('inside: the house is his own shell, sealed; the room inside is walked in, its doors fades', () => {
+test("what's solid: the buildings' walls, the garage's two doors open, the workshop shut; nothing of it on a road or on the old estate's", () => {
+  for (const b of HOME_SOLIDS) {
+    assert.ok(b[2] > b[0] && b[3] > b[1] && b[4] > SLAB_Y, `an empty solid ${b}`);
+    assert.ok(within(b, PLOT, 1e-9), `a solid off the plot: ${b}`);
+    assert.ok(SOLIDS.includes(b), 'joined at the boot');
+  }
+  // The house is sealed all round (its doors are fades)
   const [hx0, hz0, hx1, hz1] = HOME.house;
-  // The terraces' solid leaves his house out (the neighbours' part of the terrace is still one box to its peak)
-  const mid: [number, number] = [(hx0 + hx1) / 2, (hz0 + hz1) / 2];
-  assert.ok(!TERRACE_SOLIDS.some((b) => mid[0] > b[0] && mid[0] < b[2] && mid[1] > b[1] && mid[1] < b[3]), "the terrace's box covers his room");
-  assert.ok(TERRACE_SOLIDS.some((b) => Math.abs(b[0] - hx1) < 1e-9 && b[1] === hz0 && b[3] === hz1 && b[4] === T.peak), "the neighbours' part");
-  // His own walls: sealed all round (no way in on foot), the room inside them open
-  const hit = (x: number, z: number) => HOME_SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]);
-  for (let x = hx0 + 0.02; x < hx1; x += 0.1) assert.ok(hit(x, hz0 + SHELL / 2) && hit(x, hz1 - SHELL / 2), `a gap in the front or back wall at x ${x}`);
-  for (let z = hz0 + 0.02; z < hz1; z += 0.1) assert.ok(hit(hx0 + SHELL / 2, z) && hit(hx1 - SHELL / 2, z), `a gap in a side wall at z ${z}`);
-  assert.ok(!hit(mid[0], mid[1]));
-  for (const b of HOME_SOLIDS) assert.ok(SOLIDS.includes(b));
-  // The room: inside the shell, a ceiling a grown-up clears, the camera kept under it
-  assert.deepEqual(ROOM, [hx0 + SHELL, hz0 + SHELL, hx1 - SHELL, hz1 - SHELL]);
-  assert.ok(CEIL >= 1.15 && CEIL <= 1.25);
-  assert.deepEqual(HOME_CAMERA.slice(0, 4), [...HOME.house]);
-  assert.ok(Math.abs(HOME_CAMERA[5] - (SLAB_Y + CEIL)) < 1e-9 && HOME_CAMERA[4] > HOME_CAMERA[5]);
-  assert.ok(inHouse(mid[0], mid[1]) && !inHouse(hx0 - 0.1, mid[1]) && !inHouse(mid[0], hz1 + 0.1));
+  for (let x = hx0 + 0.05; x < hx1; x += 0.2) for (const z of [hz0 + SHELL / 2, hz1 - SHELL / 2]) assert.ok(solidAt(x, z), `a gap in the house at ${x}, ${z}`);
+  for (let z = hz0 + 0.05; z < hz1; z += 0.2) for (const x of [hx0 + SHELL / 2, hx1 - SHELL / 2]) assert.ok(solidAt(x, z), `a gap in the house at ${x}, ${z}`);
+  // The garage: three walls whole, the east one open at its two doors only
+  const [gx0, gz0, gx1, gz1] = HOME.garage;
+  const { carDoor: C, bikeDoor: K } = HOME;
+  for (let z = gz0 + 0.05; z < gz1; z += 0.1) {
+    assert.ok(solidAt(gx0 + WALL / 2, z), 'the back wall');
+    const open = (z > C.z0 && z < C.z1) || (z > K.z0 && z < K.z1);
+    assert.equal(solidAt(gx1 - WALL / 2, z), !open, `the garage's front at ${z}`);
+  }
+  assert.ok(C.z1 < K.z0, 'a pier between the doors');
+  assert.ok(C.z1 - C.z0 >= 3 && K.z1 - K.z0 >= 3, 'a car\'s width each');
+  // The workshop is shut all round
+  const [wx0, wz0, wx1, wz1] = HOME.workshop;
+  for (let x = wx0 + 0.05; x < wx1; x += 0.2) for (const z of [wz0 + WALL / 2, wz1 - WALL / 2]) assert.ok(solidAt(x, z), `a gap in the workshop at ${x}`);
+  // The old end house is a neighbour's again: its terrace's solid is whole, and nothing of the home's is there
+  const row = TERRACES.find((t) => t.houses.some((h) => h.id === 'rn2-0-2'))!;
+  assert.ok(TERRACE_SOLIDS.some((b) => b[0] <= row.rect[0] + 1e-6 && b[2] >= row.rect[2] - 1e-6));
+  for (const b of HOME_SOLIDS) for (const t of TERRACES) assert.ok(!overlap(b, t.rect), 'a home solid on a terrace');
+  assert.ok(HOUSES.some((h) => h.id === 'rn2-0-2'));
 });
 
-test('the furniture: in the room, apart, the hall clear from door to door, everything reachable', () => {
-  const R = 0.17;
+test('the car and the bike live in the garage, a door each, noses out; the garage\'s and the workshop\'s prompts in the yard', () => {
+  const [gx0, gz0, gx1, gz1] = HOME.garage;
+  const { carDoor: C, bikeDoor: K } = HOME;
+  // Each behind its own door, inside the walls, nose east (the way out)
+  assert.ok(CAR_HOME.z > C.z0 + 0.8 && CAR_HOME.z < C.z1 - 0.8);
+  assert.ok(BIKE_HOME.z > K.z0 + 0.5 && BIKE_HOME.z < K.z1 - 0.5);
+  assert.equal(CAR_HOME.yaw, 0);
+  assert.equal(BIKE_HOME.yaw, 0);
+  // The longest car fits its bay front to back, and any car its door's width; the two stand apart
+  const longest = Math.max(...PLAYER_CARS.map((id) => CARS[id].L));
+  const widest = Math.max(...PLAYER_CARS.map((id) => CARS[id].W));
+  assert.ok(CAR_HOME.x - longest / 2 > gx0 + WALL && CAR_HOME.x + longest / 2 < gx1, `a ${longest} long car in a ${gx1 - gx0} deep garage`);
+  assert.ok(widest < C.z1 - C.z0 - 0.4);
+  assert.ok(Math.abs(CAR_HOME.z - BIKE_HOME.z) > widest / 2 + 0.6);
+  assert.ok(inRect([gx0 + WALL, gz0 + WALL, gx1, gz1 - WALL], BIKE_HOME.x, BIKE_HOME.z, -0.3));
+  // The way out of each door is clear to the gates
+  for (const z of [CAR_HOME.z, BIKE_HOME.z]) for (let x = CAR_HOME.x; x < gx1 + 3; x += 0.2) assert.ok(!solidAt(x, z, 0.3), `something in a bay's way at ${x}, ${z}`);
+  // The prompts stand in the yard where you can, by their doors, apart
+  for (const p of [HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, HOME_SPAWN]) assert.ok(stands(p.x, p.z) && inRect(HOME.inner, p.x, p.z), `a prompt in something at ${p.x}, ${p.z}`);
+  assert.ok(HOME_GARAGE_DOOR.x > gx1 && HOME_GARAGE_DOOR.x - gx1 < 1 && HOME_GARAGE_DOOR.z > C.z1 && HOME_GARAGE_DOOR.z < K.z0, 'by the pier between the doors');
+  const D = HOME.workshopDoor;
+  assert.ok(HOME_WORKSHOP_DOOR.z > D.z && HOME_WORKSHOP_DOOR.z - D.z < 1 && HOME_WORKSHOP_DOOR.x > D.x0 && HOME_WORKSHOP_DOOR.x < D.x1);
+  assert.ok(Math.hypot(HOME_GARAGE_DOOR.x - HOME_WORKSHOP_DOOR.x, HOME_GARAGE_DOOR.z - HOME_WORKSHOP_DOOR.z) > 2.5);
+  // The menu's camera looks from the yard into the garage, clear of everything
+  assert.ok(stands(HOME_VIEW.eye[0], HOME_VIEW.eye[2]) && inRect(HOME.inner, HOME_VIEW.eye[0], HOME_VIEW.eye[2]));
+  assert.ok(inRect(HOME.garage, HOME_VIEW.at[0], HOME_VIEW.at[2]));
+});
+
+test('the place: a spot with a panel, its pin over the house, walking starts in the yard facing the front door', () => {
+  const place = PLACES.find((p) => p.spot === 'home')!;
+  assert.ok(place && place.kind === 'spot');
+  assert.deepEqual(place.at, HOME_SPAWN);
+  assert.ok(LIVE_PLACES.some((p) => p.id === 'home'));
+  assert.ok(inRect(HOME.house, HOME_PIN[0], HOME_PIN[1]));
+  assert.deepEqual(HOME_PICK.map((p) => p.rect), [HOME.house, HOME.garage, HOME.workshop]);
+  // In the yard by the front door, facing it (south), within reach of its prompt
+  assert.ok(stands(HOME_SPAWN.x, HOME_SPAWN.z) && HOME_SPAWN.z < HOME.house[1]);
+  assert.equal(HOME_SPAWN.yaw, Math.PI);
+  const go = HOME_PORTALS.find((p) => p.id === 'home:in')!;
+  assert.ok(Math.hypot(go.x - HOME_SPAWN.x, go.z - HOME_SPAWN.z) < 1);
+  // A new player's first walk starts downtown; every one after, at home
+  assert.equal(startsAtHome([]), false);
+  assert.equal(startsAtHome(['emporium']), true);
+  // Its land is the plot
+  assert.ok(onHome(HOME_SPAWN.x, HOME_SPAWN.z) && !onHome(LANE_X, ROAD_Z));
+});
+
+test('the room: wall to wall inside the shell, its ceiling the camera\'s, everything in it apart and reachable', () => {
+  const [hx0, hz0, hx1, hz1] = HOME.house;
+  assert.deepEqual(ROOM.map((n) => Math.round(n * 1e6) / 1e6), [hx0 + SHELL, hz0 + SHELL, hx1 - SHELL, hz1 - SHELL].map((n) => Math.round(n * 1e6) / 1e6));
+  assert.ok(CEIL > 1 && CEIL < HOME.eaves / 2 + 0.2, 'the ground floor of two');
+  assert.deepEqual(HOME_CAMERA, [hx0, hz0, hx1, hz1, SLAB_Y + HOME.ridge, SLAB_Y + CEIL]);
+  assert.ok(inHouse((hx0 + hx1) / 2, (hz0 + hz1) / 2) && !inHouse(HOME_SPAWN.x, HOME_SPAWN.z));
   for (const f of FURNITURE) {
-    assert.ok(inside(f.rect, ROOM), `${f.kind} in the room`);
-    assert.ok(f.h > 0.1 && f.h <= CEIL, `${f.kind}'s height`);
-    // Nothing in the hall down the west wall
-    assert.ok(f.rect[0] >= ROOM[0] + HALL_W - 1e-9, `${f.kind} stands in the hall`);
+    assert.ok(within(f.rect, ROOM, 1e-9), `${f.kind} through a wall`);
+    assert.ok(f.h > 0 && f.h <= CEIL);
   }
-  for (const [i, a] of FURNITURE.entries()) for (const b of FURNITURE.slice(i + 1)) assert.ok(!overlap(a.rect, b.rect, 1e-6), `${a.kind} and ${b.kind} overlap`);
-  for (const k of ['stairs', 'sofa', 'tv', 'counter', 'fridge', 'wardrobe', 'stash'] as const) assert.ok(FURNITURE.some((f) => f.kind === k), k);
-  // The walls and the furniture stop you; the middle of the hall doesn't
-  assert.ok(homeWall(ROOM[0] + 0.05, ROOM[1] + 1, R) && homeWall(ROOM[2] - 0.3, ROOM[1] + 1, R));
-  assert.ok(!homeWall(ROOM[0] + HALL_W / 2, (ROOM[1] + ROOM[3]) / 2, R));
-  // From inside the front door you can walk to inside the back door, and up to everything but the stairs (a flood
-  // over a fine grid of where he can stand)
+  for (let i = 0; i < FURNITURE.length; i++) for (let j = i + 1; j < FURNITURE.length; j++) assert.ok(!overlap(FURNITURE[i].rect, FURNITURE[j].rect), `${FURNITURE[i].kind} on ${FURNITURE[j].kind}`);
+  assert.deepEqual(FURNITURE.map((f) => f.kind).sort(), ['counter', 'dining', 'fridge', 'sofa', 'stairs', 'stash', 'table', 'tv', 'wardrobe']);
+  assert.ok(homeWall(ROOM[0] + 0.05, ROOM[1] + 3, R) && !homeWall(HOME.door[0], (ROOM[1] + ROOM[3]) / 2, R));
+  // From inside the front door you can walk to inside the side door and up to everything (a flood over a fine grid)
   const step = 0.1;
   const key = (i: number, j: number) => `${i},${j}`;
   const at = (i: number, j: number): [number, number] => [ROOM[0] + i * step, ROOM[1] + j * step];
@@ -201,60 +193,65 @@ test('the furniture: in the room, apart, the hall clear from door to door, every
       const [px, pz] = at(i, j);
       return Math.hypot(px - x, pz - z) < r;
     });
-  for (const p of HOME_PORTALS.filter((q) => inHouse(q.x, q.z))) assert.ok(reach(p.x, p.z, 0.4), `${p.id}'s prompt can be walked to`);
-  for (const f of FURNITURE.filter((g) => g.kind !== 'stairs')) {
-    const [cx, cz] = [(f.rect[0] + f.rect[2]) / 2, (f.rect[1] + f.rect[3]) / 2];
-    assert.ok(reach(cx, cz, Math.hypot(f.rect[2] - f.rect[0], f.rect[3] - f.rect[1]) / 2 + 0.45), `${f.kind} can be walked up to`);
+  const side = HOME_PORTALS.find((p) => p.id === 'home:back')!.to;
+  assert.ok(reach(side.x, side.z, 0.2), 'the side door from the front');
+  for (const f of FURNITURE) {
+    const [x0, z0, x1, z1] = f.rect;
+    assert.ok(reach(Math.max(x0, Math.min(x1, (x0 + x1) / 2)), (z0 + z1) / 2, Math.max(x1 - x0, z1 - z0) / 2 + 0.5), `${f.kind} can't be walked up to`);
   }
+  // The middle of the room is clear from the front door across to the side door, a hall's width
+  const dx = HOME.door[0];
+  for (let z = ROOM[1] + HALL_W / 2 + 0.05; z < HOME.sideDoor[1]; z += 0.2) assert.ok(!homeWall(dx, z, HALL_W / 2), `the way in blocked at ${z}`);
+  for (let x = dx; x < ROOM[2] - HALL_W / 2 - 0.05; x += 0.2) assert.ok(!homeWall(x, HOME.sideDoor[1], 0.3), `the way to the side door blocked at ${x}`);
 });
 
-test('the doors: a prompt outside and in for the front and the back, each fade landing somewhere you can stand', () => {
+test('the doors: a prompt outside and in for the front and the side, each fade landing somewhere you can stand', () => {
   assert.deepEqual(HOME_PORTALS.map((p) => p.id), ['home:in', 'home:out', 'home:yard', 'home:back']);
-  const by = (id: string) => HOME_PORTALS.find((p) => p.id === id)!;
-  const solid = (x: number, z: number, r = 0.17) => [...SOLIDS, ...TERRACE_SOLIDS].some((b) => x + r > b[0] && x - r < b[2] && z + r > b[1] && z - r < b[3]);
-  // Going in lands in the room clear of everything; the outside prompts stand clear
-  for (const id of ['home:in', 'home:back']) {
-    const p = by(id);
-    assert.ok(!inHouse(p.x, p.z) && inHouse(p.to.x, p.to.z) && !homeWall(p.to.x, p.to.z, 0.17), id);
-    assert.ok(!solid(p.x, p.z), `${id}'s prompt stands clear`);
+  for (const p of HOME_PORTALS) {
+    const inside = p.id === 'home:out' || p.id === 'home:yard';
+    // The prompt on its own side of the wall, the landing on the other
+    assert.equal(inHouse(p.x, p.z), inside, `${p.id}'s prompt`);
+    assert.equal(inHouse(p.to.x, p.to.z), !inside, `${p.id}'s landing`);
+    if (inside) {
+      assert.ok(!homeWall(p.x, p.z, R), `${p.id}'s prompt in something`);
+      assert.ok(stands(p.to.x, p.to.z) && inRect(HOME.inner, p.to.x, p.to.z), `${p.id} lands in something`);
+    } else {
+      assert.ok(stands(p.x, p.z) && inRect(HOME.inner, p.x, p.z), `${p.id}'s prompt in something`);
+      assert.ok(!homeWall(p.to.x, p.to.z, R), `${p.id} lands in something`);
+    }
+    assert.equal(p.to.y, SLAB_Y);
+    assert.ok(p.label.split(' ').length <= 3 && p.arrived.length > 2);
   }
-  // Going out lands outside clear of every solid: the front on the path's side, the back in the yard
-  for (const id of ['home:out', 'home:yard']) {
-    const p = by(id);
-    assert.ok(inHouse(p.x, p.z) && !homeWall(p.x, p.z, 0.17) && !inHouse(p.to.x, p.to.z), id);
-    assert.ok(!solid(p.to.x, p.to.z), `${id} lands clear`);
-  }
-  assert.ok(by('home:out').to.z < HOME.house[1] && by('home:yard').to.z > HOME.house[3] && by('home:yard').to.z < HOME.garage[1]);
-  // The two prompts of a door are apart, so each side shows its own
-  assert.ok(Math.hypot(by('home:in').x - by('home:out').x, by('home:in').z - by('home:out').z) > 1);
-  assert.ok(Math.hypot(by('home:back').x - by('home:yard').x, by('home:back').z - by('home:yard').z) >= 0.75);
-  // The yard opens onto the driveway through the gate's gap: nothing solid across it
-  const [gx0, gz0, gx1, gz1] = YARD_GATE;
-  for (let z = gz0 + 0.2; z < gz1 - 0.15; z += 0.1) assert.ok(!solid((gx0 + gx1) / 2, z, 0.05), `the gate's gap is blocked at z ${z}`);
+  // Each door's two prompts are either side of the same door; you never land on the prompt that takes you back
+  const [fin, fout, sout, sin] = HOME_PORTALS;
+  assert.ok(Math.abs(fin.x - fout.x) < 1e-9 && Math.abs(fin.x - HOME.door[0]) < 1e-9);
+  assert.ok(Math.abs(sin.z - sout.z) < 1e-9 && Math.abs(sin.z - HOME.sideDoor[1]) < 1e-9);
+  // The side door opens onto the east lawn
+  assert.ok(inRect(HOME.lawns[1], sout.to.x, sout.to.z));
+  // Facing in as you come in, out as you go out (walking's yaw: 0 north, π south, π/2 west, -π/2 east)
+  assert.deepEqual([fin.to.yaw, fout.to.yaw, sout.to.yaw, sin.to.yaw], [Math.PI, 0, -Math.PI / 2, Math.PI / 2]);
 });
 
-test("Phase 4: the wardrobe's and the trunk's prompts stand in the room where he can, by the thing, apart from the doors'", () => {
+test("the wardrobe's and the trunk's prompts stand in the room where he can, by the thing, apart from the doors'", () => {
   assert.deepEqual(HOME_USES.map((u) => u.id), ['home:wardrobe', 'home:stash']);
-  const R = 0.14;
   for (const u of HOME_USES) {
     assert.ok(inHouse(u.x, u.z) && !homeWall(u.x, u.z, R), `${u.id} is somewhere he can stand`);
     const f = FURNITURE.find((x) => x.kind === (u.id === 'home:wardrobe' ? 'wardrobe' : 'stash'))!.rect;
     const d = Math.hypot(u.x - Math.max(f[0], Math.min(f[2], u.x)), u.z - Math.max(f[1], Math.min(f[3], u.z)));
     assert.ok(d < 0.5, `${u.id} is at its ${u.label.toLowerCase()}`);
     assert.ok(u.label.split(' ').length <= 3);
-    // (standing on a prompt, it's the nearest: a door's prompt never takes its place)
     for (const p of [...HOME_PORTALS, ...HOME_USES]) if (p.id !== u.id) assert.ok(Math.hypot(p.x - u.x, p.z - u.z) > 0.6, `${u.id} and ${p.id} apart`);
   }
 });
 
-test("Phase 5: the benchmark has a view of the house, from open ground on the Close's side, looking at it", () => {
+test('the benchmark has a view of the compound, from the Close down its line, looking at his land', () => {
   const v = BENCH_VIEWS.find((b) => b.id === 'ends-home')!;
   assert.ok(v, 'the view is there');
   const [x, y, z] = v.pos;
   assert.ok(!SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]), 'the camera stands in nothing');
   assert.ok(y > SLAB_Y + 1 && y < SLAB_Y + 6, 'near eye level');
-  // (it looks at the house or its garage, from within a short street's length)
+  assert.ok(Math.abs(z - ROAD_Z) < ROAD_HALF, 'on the Close');
   const [tx, , tz] = v.target;
   assert.ok(onHome(tx, tz), 'looking at his land');
-  assert.ok(Math.hypot(tx - x, tz - z) < 20);
+  assert.ok(Math.hypot(tx - x, tz - z) < 40);
 });

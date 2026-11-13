@@ -6,7 +6,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COURTS, CROSS_PATHS, GARDENS, GREENS, LANES, PATHS, ROWS, WEST_LAMPS } from '../src/scripts/city3d/endswest';
-import { HOME, HOME_HOUSE } from '../src/scripts/city3d/home';
 import { BIN, CANOPY, DOOR_COLOURS, FENCE, GINNEL, GINNELS, HOUSES, PORCH, TALLEST, TERRACES, TERRACE_SOLIDS, binsOf, courtBehind, fencesOf, gateOf, rectOf, toWorld } from '../src/scripts/city3d/endsterraces';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 
@@ -92,8 +91,7 @@ test('the gardens: fenced on every party line and their far edge, inside the gar
   for (const t of TERRACES) {
     const g = GARDENS[ROWS.indexOf(t.row)];
     const lines = fencesOf(t);
-    // (Degen's terrace, home.ts: no fence between his yard and his driveway, where his gate stands open)
-    assert.equal(lines.length, t.houses.length + (t.houses.some((h) => h.id === HOME_HOUSE) ? 1 : 2));
+    assert.equal(lines.length, t.houses.length + 2);
     for (const [a, c] of lines) for (const [x, z] of [a, c]) assert.ok(inside(g, x, z, FENCE.t) || inside(t.rect, x, z, E), `${t.id}'s fence off its garden at ${x}, ${z}`);
     // (the far fence along the garden's far edge)
     const far = toWorld(t, t.w / 2, -t.d - t.garden);
@@ -110,8 +108,7 @@ test('what is solid: on the blocks, off the lanes, courts, greens and cross path
   }
   // (every house's body is solid, its porch too where it has one)
   for (const t of TERRACES) {
-    // (but Degen's house, the west end of its terrace: its own walls are home.ts's, the room inside them walked in)
-    const x0 = t.houses.some((h) => h.id === HOME_HOUSE) ? HOME.house[2] : t.rect[0];
+    const x0 = t.rect[0];
     assert.ok(TERRACE_SOLIDS.some((b) => b[0] <= x0 + E && b[2] >= t.rect[2] - E && b[1] <= t.rect[1] + E && b[3] >= t.rect[3] - E));
     for (const h of t.houses) if (h.porch !== 'canopy') assert.ok(TERRACE_SOLIDS.some((b) => overlap(b, rectOf(t, h.door - 0.1, h.door + 0.1, 0.1, 0.5))), `${h.id}'s porch`);
   }

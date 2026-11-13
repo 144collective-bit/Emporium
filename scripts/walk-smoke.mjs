@@ -123,12 +123,12 @@ async function scene(name, spawn, play, init) {
   if (why || errors.length) failed++;
 }
 
-// Home (home.ts): on Degen's front path in the Ends, in through his front door (a fade into the room), a few steps
-// down the hall, and out again by the same door
-await scene('home', '-189.75,363.55,3.14', async (t) => {
+// Home (home.ts): in the yard of Degen's compound in the far west, in through his front door (a fade into the room), a
+// few steps in, and out again by the same door
+await scene('home', '-232.8,383.45,3.14', async (t) => {
   const inside = () => t.until('him to be inside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[2]) > 365.2 && Number(m[2]) < 370.9;
+    return !!m && Number(m[2]) > 385.0 && Number(m[2]) < 391.3;
   });
   await t.prompt('Go in');
   await inside();
@@ -142,13 +142,13 @@ await scene('home', '-189.75,363.55,3.14', async (t) => {
   await t.prompt('Front door');
   await t.until('him to be outside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[2]) < 364.5;
+    return !!m && Number(m[2]) < 384.5;
   });
   await t.step('out by the front door');
 });
 
-// His garage's menu: by its door on the driveway, the garage menu open and closed
-await scene('homegarage', '-191.55,372.35', async (t) => {
+// His garage's menu: in the yard by the pier between its two doors, the garage menu open and closed
+await scene('homegarage', '-238.35,380', async (t) => {
   await t.prompt('Garage');
   await t.until('the garage menu', () => !!document.querySelector('[data-garage]:not([hidden])'));
   await t.step('the garage menu opened at home');
@@ -157,9 +157,19 @@ await scene('homegarage', '-191.55,372.35', async (t) => {
   await t.step('the garage menu closed');
 });
 
+// His workshop's roller door (docs/ends-far-west-plan.md Phase 2): the garage's menu, opened on its kit
+await scene('homeworkshop', '-233.7,373.15', async (t) => {
+  await t.prompt('Workshop');
+  await t.until('the garage menu on its kit', () => !!document.querySelector('[data-garage]:not([hidden]) [data-tab="kit"][aria-selected="true"], [data-garage]:not([hidden]) [data-tab="kit"].is-on, [data-garage]:not([hidden]) [data-tab="kit"][aria-pressed="true"]'));
+  await t.step('the garage menu opened on its kit at the workshop');
+  await t.click('[data-garage-close]');
+  await t.until('the garage menu to close', () => !document.querySelector('[data-garage]:not([hidden])'), null, 60000);
+  await t.step('the garage menu closed');
+});
+
 // In his room (home.ts HOME_USES, the home plan's Phase 4): at the trunk, the stash's card opens and closes; at the
 // wardrobe, the fitting room opens in Drop 001's panel and closes
-await scene('homestash', '-189.7,366.25', async (t) => {
+await scene('homestash', '-236.3,386.15', async (t) => {
   await t.prompt('Stash');
   await t.until('the stash card', () => !!document.querySelector('[data-stash]:not([hidden]) [data-stash-inv]'));
   await t.step('the stash opened');
@@ -167,7 +177,7 @@ await scene('homestash', '-189.7,366.25', async (t) => {
   await t.until('the stash to close', () => !document.querySelector('[data-stash]:not([hidden])'), null, 60000);
   await t.step('the stash closed');
 });
-await scene('homewardrobe', '-187.575,368.7', async (t) => {
+await scene('homewardrobe', '-229.85,388.6', async (t) => {
   await t.prompt('Wardrobe');
   await t.until('the fitting room', () => !!document.querySelector('[data-panel]:not([hidden]) [data-fit-items]'));
   await t.step('the fitting room opened at the wardrobe');
@@ -177,7 +187,7 @@ await scene('homewardrobe', '-187.575,368.7', async (t) => {
 });
 
 // The car: beside it in Degen's garage at home (home.ts CAR_HOME), in, out through the door and down the driveway, out
-await scene('car', '-188.7,375.2', async (t) => {
+await scene('car', '-241.3,379.3', async (t) => {
   await t.prompt('Get in');
   await t.until('in the car', () => !!document.querySelector('.city.is-driving'));
   await t.step('in the car');
