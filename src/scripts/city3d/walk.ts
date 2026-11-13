@@ -99,7 +99,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
-import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse } from './home';
+import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse, onRoof, roofWall } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { endsDeckWall, upOnEnds } from './endsdecks';
@@ -752,7 +752,9 @@ export function createWalk(d: WalkDeps) {
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     // Inside Degen's house (home.ts, docs/home-plan.md Phase 3): only the room's walls and what stands in it stop you
-    if (inHouse(x, z)) return homeWall(x, z, RADIUS);
+    if (inHouse(x, z, y)) return homeWall(x, z, RADIUS);
+    // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
+    if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
     // Up on Endswood's galleries and bridges (endsdecks.ts): only their parapets, end walls and faces stop you
     if (upOnEnds(x, z, y)) return endsDeckWall(x, z, y, RADIUS);
     // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
