@@ -15,7 +15,10 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: when ubuntu-latest became 26.04, Playwright (1.56) had no Chromium for it ("does not
+    # support chromium on ubuntu26.04-x64"), so the textures weren't made and the budget failed every build. Move it
+    # on together with a playwright-core that supports the newer image.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 

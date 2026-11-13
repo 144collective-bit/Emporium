@@ -115,7 +115,10 @@ keep it up to date when what it describes changes.
   - **Textures made at build time** (performance phase 4): every canvas
     texture the boot paints (`canvasTex()` in `kit.ts`) is painted once by
     `scripts/bake-textures.mjs` (`npm run bake:textures` after a build;
-    the "Build site" Action runs it) in a headless Chromium with
+    the "Build site" Action runs it, on `ubuntu-24.04`: pinned, since
+    Playwright 1.56 has no Chromium for `ubuntu-latest`'s 26.04, and
+    without one the bake is skipped and the budget fails; locally,
+    `CHROMIUM_PATH` points it at a browser) in a headless Chromium with
     `?bake-textures`, for phones (`low`) and everyone else (`full`), twice
     each (a fresh save at noon, a well-used one at midnight): only what
     both runs painted the same is kept, so a key (`texKey()`: what draws
