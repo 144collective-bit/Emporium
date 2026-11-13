@@ -104,8 +104,12 @@ Each with the owner's sign-off.
    has its pool on the driveway (`PORCH_POOLS`), no rain is drawn while
    you're in the house (`sky.setIndoors()`), and the street's sound comes
    through the walls faintly, over a quiet hum (`home` in ambience.ts).
-   *Still to do:* a line for the panel, a `?bench` view, the smoke test's
-   home scene grown to cover the wardrobe; checked at every width.
+   *The rest is built too:* the panel has its live line (livelines.ts
+   `home`: the day at his house, the lights on after dusk), `?bench` has a
+   view of the house from the Close's corner (`ends-home` in bench.ts), the
+   smoke test covers the stash and the wardrobe (Phase 4), and the stash,
+   the wardrobe and the panel are checked at every width. **The plan is
+   complete.**
 
 ## Decided along the way
 

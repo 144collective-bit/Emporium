@@ -9,6 +9,7 @@ import { ROAD_HALF, ROAD_Z, SLAB_Y, inEndswood } from '../src/scripts/city3d/end
 import { STREET_W_SOLIDS } from '../src/scripts/city3d/endsweststreet';
 import { WASHING } from '../src/scripts/city3d/endswestlife';
 import { SOLIDS } from '../src/scripts/city3d/solids';
+import { BENCH_VIEWS } from '../src/scripts/city3d/bench';
 import { PLACES } from '../src/scripts/city3d/places';
 import { LIVE_PLACES } from '../src/scripts/city3d/live';
 import { CARS } from '../src/scripts/city3d/carspec';
@@ -244,4 +245,16 @@ test("Phase 4: the wardrobe's and the trunk's prompts stand in the room where he
     // (standing on a prompt, it's the nearest: a door's prompt never takes its place)
     for (const p of [...HOME_PORTALS, ...HOME_USES]) if (p.id !== u.id) assert.ok(Math.hypot(p.x - u.x, p.z - u.z) > 0.6, `${u.id} and ${p.id} apart`);
   }
+});
+
+test("Phase 5: the benchmark has a view of the house, from open ground on the Close's side, looking at it", () => {
+  const v = BENCH_VIEWS.find((b) => b.id === 'ends-home')!;
+  assert.ok(v, 'the view is there');
+  const [x, y, z] = v.pos;
+  assert.ok(!SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]), 'the camera stands in nothing');
+  assert.ok(y > SLAB_Y + 1 && y < SLAB_Y + 6, 'near eye level');
+  // (it looks at the house or its garage, from within a short street's length)
+  const [tx, , tz] = v.target;
+  assert.ok(onHome(tx, tz), 'looking at his land');
+  assert.ok(Math.hypot(tx - x, tz - z) < 20);
 });
