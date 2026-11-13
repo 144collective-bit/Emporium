@@ -9,6 +9,7 @@ import {
   SUBWAYS, SUBWAY_BOLLARDS, SUBWAY_HOLES, WELL, WEST_X, inEndswood, subwayEnds,
 } from '../src/scripts/city3d/endswood';
 import { LINK_BLOCKS, WEST_BLOCKS } from '../src/scripts/city3d/endswest';
+import { FAR_BLOCKS } from '../src/scripts/city3d/endsfar';
 import { DOWN, GROUND_Y, floorOf, underworld } from '../src/scripts/city3d/underground';
 import { FENCE as LOT9_FENCE, FOOTPATH, LOT9_PASSAGE, TUNNEL } from '../src/scripts/city3d/lot9';
 import { PLAN, distToStreet, inPoly, type Pt } from '../src/scripts/city3d/streetplan';
@@ -29,7 +30,8 @@ const R = 0.22;
 const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
 const overlap = (a: readonly number[], b: readonly number[], m = 0) => a[0] < b[2] - m && a[2] > b[0] + m && a[1] < b[3] - m && a[3] > b[1] + m;
 // (the old estate's: the extension west is tests/endswest.test.ts's)
-const WEST_IDS = new Set([...WEST_BLOCKS, ...LINK_BLOCKS].map((b) => b.id));
+// (the rows' and the far west's blocks have tests of their own: endswest.test.ts, endsfar.test.ts)
+const WEST_IDS = new Set([...WEST_BLOCKS, ...LINK_BLOCKS, ...FAR_BLOCKS].map((b) => b.id));
 const blocks = PLAN.blocks.map((b, i) => ({ b, slab: PLAN.slabs[i] })).filter(({ b }) => b.ref === 'endswood' && !WEST_IDS.has(b.id));
 const [N, S] = [SUBWAYS.find((p) => p.id.endsWith('-n'))!, SUBWAYS.find((p) => p.id.endsWith('-s'))!];
 

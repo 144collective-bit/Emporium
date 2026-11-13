@@ -31,6 +31,7 @@ import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { WEST_LAMPS as ENDS_WEST_LAMPS } from './endswest';
+import { FAR_LAMPS as ENDS_FAR_LAMPS } from './endsfar';
 import { ENDS_TREES } from './endsstreet';
 import { COMMON_LAMPS, COMMON_TREES } from './endsblend';
 import { RURAL_LAMPS } from './ruraldress';
@@ -420,6 +421,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
   // ...and carried west (endswest.ts, docs/ends-west-plan.md Phase 1): along the Close, in the courts, over the greens
   for (const [x, z, ry, y] of ENDS_WEST_LAMPS) addLamp(x, z, ry, y);
+  // ...and its far west (endsfar.ts)
+  for (const [x, z, ry, y] of ENDS_FAR_LAMPS) addLamp(x, z, ry, y);
   // ...and its trees: the green's, the churchyard's, by the playground and round the community centre (endsstreet.ts, Phase 4)
   for (const [x, z, s] of ENDS_TREES) addTree(x, z, s, false, SLAB);
   // ...and the common's down to Lot 9: sodium along the footpath, a few hawthorns (endsblend.ts, Phase 6)
