@@ -18,6 +18,7 @@ import { BLVD_WEST, STRIP_BLOCKS, STRIP_CROSSINGS } from '../src/scripts/city3d/
 import { SF_BLOCKS, SF_CROSSINGS } from '../src/scripts/city3d/southfield';
 import { ENDS_BLOCKS, ENDS_CROSSINGS } from '../src/scripts/city3d/endswood';
 import { LINK_BLOCKS, WEST_BLOCKS } from '../src/scripts/city3d/endswest';
+import { FAR_BLOCKS } from '../src/scripts/city3d/endsfar';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
 /** The arterials and where they meet (the grid the city is built on) */
@@ -91,7 +92,7 @@ test('the city as built: the grid\'s roads, three diagonals from the ring\'s cor
 test('the city\'s blocks: downtown\'s outlines, every district and lot, off the asphalt, the landmarks on theirs', () => {
   const p = cityPlan();
   // (and the stadium's, north of the highway)
-  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + CREST_BLOCKS.length + DOCK_BLOCKS.length + SUN_BLOCKS.length + STRIP_BLOCKS.length + SF_BLOCKS.length + ENDS_BLOCKS.length + WEST_BLOCKS.length + LINK_BLOCKS.length + 1 + 1 + 3);
+  assert.equal(p.blocks.length, BLOCKS_DT.length + OUTER_BLOCKS.length + BEND_KERBS.length + TRENCH_BLOCKS.length + WESTLAKE_BLOCKS.length + UPTOWN_BLOCKS.length + CREST_BLOCKS.length + DOCK_BLOCKS.length + SUN_BLOCKS.length + STRIP_BLOCKS.length + SF_BLOCKS.length + ENDS_BLOCKS.length + WEST_BLOCKS.length + LINK_BLOCKS.length + FAR_BLOCKS.length + 1 + 1 + 3);
   // (Uptown North's block too, on Palm Court's old land)
   // (the stadium's, Uptown North's, and the mall's three: Palm Court, the mall, its car park)
   // Every plot and every lot sits on an outer block

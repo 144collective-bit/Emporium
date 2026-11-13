@@ -15,9 +15,9 @@ off a phase; keep this plan up to date.
 | How | One plan for the Ends' far-west phase as a whole, the home its centrepiece, the home built first |
 | How grand | Made good, not flash: brick and render, one bold colour, a modest lit sign |
 | Round it (Phase 4) | A small close of bungalows along the new road, allotments behind |
-| The workshop | A working place (what it opens is still to settle: see below) |
+| The workshop | A working place: its door opens the garage menu's upgrade tab (asked again, 2026-11-13) |
 | The inside (Phase 3) | One bigger room downstairs, the roof terrace upstairs |
-| The gates | Not asked: taken as standing open (my pick) unless the owner says otherwise |
+| The gates | Standing open: drive and walk straight in |
 
 ## What it is
 
@@ -70,15 +70,10 @@ gates.
   the home garage's as built (garage.ts `at('home')`).
 - **The workshop** (about 5 by 4): a lean-to with a roller door half up, a
   bench and a tyre stack seen through it. **A working place** (the owner's
-  pick). What its door opens is still to settle, because the question was
-  put wrongly: it offered "your car's upgrades (what the city's Workshop
-  does)", but the city's Workshop is the business's (jobs that make
-  goods, tycoon.ts `startJob()`), and a car's upgrades are the garage
-  menu's, which the home garage has already. So, asked again before
-  Phase 2 builds it: (a) the garage menu's upgrade tab, opened at the
-  workshop's door; or (b) the business Workshop's jobs, started and
-  collected from home (a new way into that feature: through
-  `live.closed()`, and only once you own the Workshop).
+  pick): its door opens the garage menu on its upgrade tab, a second way
+  in to what the home garage has already (the first question put it
+  wrongly as "what the city's Workshop does", which is the business's
+  jobs; asked again, this is the answer).
 - **The garden:** behind the house inside the wall: grass, one tree, a
   bench, a washing line, a gate in the back wall.
 
@@ -140,7 +135,7 @@ in `docs/far-west-shots/`.
 - Phones: the low tier's trims as the rest of the Ends (no string lights'
   bulbs, fewer garden things).
 
-## The owner's questions (answered above, but for the gates and what the workshop opens)
+## The owner's questions (all answered above)
 
 1. **How grand?**
    - A) Made good, not flash: brick and render, one bold colour, a modest

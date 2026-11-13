@@ -35,6 +35,7 @@ import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
 import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS } from './lot9';
 import { ENDS_BLOCKS, ENDS_CROSSINGS, ENDS_STREETS } from './endswood';
 import { LINK_BLOCKS, WEST_BLOCKS } from './endswest';
+import { FAR_BLOCKS, FAR_CROSSINGS, FAR_STREETS } from './endsfar';
 import { ruralSplit } from './rural';
 
 export type Pt = [number, number];
@@ -404,6 +405,9 @@ export function cityPlan(): StreetPlan {
   // east one, the Circus (one way round, as Uptown's) and the Close off it
   for (const t of ENDS_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.loop ? { loop: true } : {}), ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of ENDS_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
+  // ...and its far west (endsfar.ts, docs/ends-far-west-plan.md Phase 1): the Close's run on to the lane across its end
+  for (const t of FAR_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
+  for (const c of FAR_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -507,6 +511,8 @@ export function cityPlan(): StreetPlan {
     ...ENDS_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
     // ...and carried west (endswest.ts, docs/ends-west-plan.md): the extension's two blocks and the pavements along the Close to them
     ...[...WEST_BLOCKS, ...LINK_BLOCKS].map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
+    // ...and its far west (endsfar.ts): the compound's plot, the plots round it and the verge by the lane
+    ...FAR_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];
