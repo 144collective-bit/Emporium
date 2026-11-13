@@ -148,6 +148,25 @@ await scene('homegarage', '-191.55,372.35', async (t) => {
   await t.step('the garage menu closed');
 });
 
+// In his room (home.ts HOME_USES, the home plan's Phase 4): at the trunk, the stash's card opens and closes; at the
+// wardrobe, the fitting room opens in Drop 001's panel and closes
+await scene('homestash', '-189.7,366.25', async (t) => {
+  await t.prompt('Stash');
+  await t.until('the stash card', () => !!document.querySelector('[data-stash]:not([hidden]) [data-stash-inv]'));
+  await t.step('the stash opened');
+  await t.click('[data-stash-close]');
+  await t.until('the stash to close', () => !document.querySelector('[data-stash]:not([hidden])'), null, 60000);
+  await t.step('the stash closed');
+});
+await scene('homewardrobe', '-187.575,368.7', async (t) => {
+  await t.prompt('Wardrobe');
+  await t.until('the fitting room', () => !!document.querySelector('[data-panel]:not([hidden]) [data-fit-items]'));
+  await t.step('the fitting room opened at the wardrobe');
+  await t.click('[data-panel-close]');
+  await t.until('the fitting room to close', () => !document.querySelector('[data-panel] [data-fit-items]') || !!document.querySelector('[data-panel][hidden]'), null, 60000);
+  await t.step('the fitting room closed');
+});
+
 // The car: beside it in Degen's garage at home (home.ts CAR_HOME), in, out through the door and down the driveway, out
 await scene('car', '-188.7,375.2', async (t) => {
   await t.prompt('Get in');

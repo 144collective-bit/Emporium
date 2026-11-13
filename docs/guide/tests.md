@@ -54,7 +54,8 @@ keep it up to date when what it describes changes.
 - `npm run smoke` (after `npm run build`; `scripts/walk-smoke.mjs`) walks
   plays through walk mode in a headless Chromium, a scene a fresh page:
   home (in through Degen's front door, down the hall, out again), his
-  garage's menu, the car
+  garage's menu, the stash's card at his trunk, the fitting room at his
+  wardrobe, the car
   (in at his garage, out through its door, a drive, out), on foot (walk,
   sprint, jump, crouch, the hub), the gun store's counter, the metro (the
   card, a ride, skipped), a kart race (a single race started and quit),

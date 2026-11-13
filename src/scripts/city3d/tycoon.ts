@@ -50,7 +50,7 @@ import { COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
 import { MY_STALL_DOOR } from './nightmarket';
-import { cleanInventory, emptyInventory, type Inventory } from './inventory-save';
+import { cleanInventory, cleanStash, emptyInventory, type Inventory, type Stash } from './inventory-save';
 import { FREE_PLAY } from './freeplay';
 import {
   BOT_LEVELS,
@@ -510,6 +510,8 @@ export interface TycoonSave {
   visited: string[];
   /** What Degen carries (inventory.ts, save v11): his loadout of two guns, the thing in his hand, his consumables */
   inventory: Inventory;
+  /** What's put away in the trunk at home (home.ts, docs/home-plan.md Phase 4): consumables; a save from before it has none */
+  stash: Stash;
   /** The daily prize cap (save v13, catalog.ts PRIZE_CAP): the day (`dayKey()`), and the cup races and purses paid on it */
   prizes: Prizes;
 }
@@ -555,6 +557,7 @@ export function newSave(now: number): TycoonSave {
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
+    stash: {},
     prizes: emptyPrizes(),
   };
 }
@@ -664,11 +667,14 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
+    stash: {},
     prizes: emptyPrizes(),
   };
   cleanGame(s, o, now);
   // (v11: a save from before the inventory carries the rifle and the first gun it bought)
   s.inventory = cleanInventory(o.inventory, s);
+  // (the trunk at home: a save from before it has nothing put away)
+  s.stash = cleanStash(o.stash);
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
   const places = (v: unknown) => PLACE_IDS.find((p) => p === v);
   s.staff = [...new Set((Array.isArray(o.staff) ? o.staff : []).map(places).filter((p): p is PlaceId => !!p && !!roleAt(s, p)))];

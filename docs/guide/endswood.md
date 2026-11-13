@@ -209,6 +209,13 @@ keep it up to date when what it describes changes.
   `HOME_SOLIDS` has its four walls, and endsterraces.ts's `TERRACE_SOLIDS`
   leaves it out of its terrace's box. A new thing in the room goes in
   `FURNITURE` (the test floods the room to hold everything reachable).
+  Phase 4 (the wardrobe and the stash) is built: `HOME_USES` (two prompts
+  in the room, by the wardrobe and by the trunk, in walk `places` beside
+  `HOME_PORTALS`); index.ts's `openPlace` opens the fitting room for
+  `home:wardrobe` (`open('shop', true)`: Drop 001's panel, closed with it
+  by the live settings) and the stash's card for `home:stash`
+  (stash-ui.ts, loaded then; markup `[data-stash]` in `CityMap.astro`, the
+  metro card's styles; its rules are inventory.ts's, `inventory.md`).
   Phase 5's first part (the room at night) is built: the inside of the
   house and of the garage is drawn in the shared `neon()` paint (home3d.ts
   `paint(hex, k)`: one material a shade, the day's and night's brightness
