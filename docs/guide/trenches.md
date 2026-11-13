@@ -22,7 +22,10 @@ keep it up to date when what it describes changes.
   rooflines: `rooftones.ts`, roofs in tar, gravel, silver or navy,
   cornices of four kinds, the tenements 3 to 6 storeys) and Phase 4 (the
   ground floors: `shopfronts.ts`, fire escapes on about half, half-up
-  shutters, recessed doorways, gates, painted ground floors) are built.
+  shutters, recessed doorways, gates, painted ground floors) and Phase 5
+  (the yards and streets: `yardbits.ts`, benches with bins, bike racks and
+  planters in the yards, timber poles and their wires along the yards'
+  open street edges) are built.
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets
@@ -132,7 +135,17 @@ keep it up to date when what it describes changes.
     some of the rows' alleys (`TRASH`); about two in five of the rows' shops
     shuttered (`shuttered()`, never a corner shop), windows boarded
     (`boarded()`); three boombox corners by walk-ups' stoops with folding
-    chairs and neighbours (`BOOMBOXES`); the el's pillars and spans in The
+    chairs and neighbours (`BOOMBOXES`); since the variety plan's Phase 5
+    (`yardbits.ts`, tested in `tests/yardbits.test.ts`, drawn in each
+    yard's site) benches with a bin, bike racks and planters on the bare
+    concrete (`YARD_BITS`, on a `BIT_GRID` clear of `taken()`, the
+    patches, trees, dumpsters and each other, a quarter turn towards the
+    nearest tower's door) and timber poles just inside the yards' street
+    edges (`STREET_POLES`, `POLE`, every `POLE_GAP`, sliding up to
+    `POLE_SLIDE` off a taken spot, clear of what's built, `taken()` and the
+    trees; a transformer on some) with three wires between neighbours on
+    an edge (`POLE_WIRES`, at most `WIRE_MAX` long, never across a
+    tenement or tower; near only); none of it solid; the el's pillars and spans in The
     Trenches (`EL_PILLARS`, `PLINTH`, `EL_SPANS`); `GRIT_SOLIDS` (in
     `SOLIDS`: the barriers, the dumpsters). Tags and wheatpasted bills are
     two atlases in `grime.ts` (`TAGS`, `POSTERS`: made-up names and made-up

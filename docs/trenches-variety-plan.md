@@ -131,6 +131,25 @@ everything under the Emporium, phones light.
    allow, street trees in pits, utility poles and their wires, more signs and
    tags, scaffolding on a few more fronts; the yards less bare (worn grass,
    low fences, benches, bins).
+
+   The grit already gave the streets trees in pits, tags and bills, worn
+   grass and dirt, dumpsters and bags, and the streets their parked cars;
+   this phase fills in what was still bare (the owner's "continue",
+   2026-11-13).
+
+   Built, waiting on the owner's sign-off:
+   - `yardbits.ts` (DOM-free, tested in `tests/yardbits.test.ts`):
+     `YARD_BITS` (benches with a bin, bike racks of three hoops, concrete
+     planters with a shrub; on a grid over each yard, about one spot in
+     five left bare, clear of the towers, their ways in, the amenities, the
+     worn ground, the trees, the dumpsters and each other, each turned to
+     the nearest tower's door), `STREET_POLES` (a timber pole every
+     `POLE_GAP` just inside a yard's open street edge, slid along it off a
+     taken spot, a cross arm, insulators, a transformer on some) and
+     `POLE_WIRES` (three wires sagging between neighbouring poles, never
+     across a tenement or a tower).
+   - grit3d.ts draws them in each yard's site: the bits and poles at every
+     distance in the yard's batch, the wires near only. Nothing is solid.
 6. **Polish.** Review and benchmark views, phones, the budget; the plan done.
 
 ## Phase 1's questions (to answer before it starts)
