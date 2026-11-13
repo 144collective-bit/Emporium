@@ -31,7 +31,7 @@ import { MALL_AREA } from './mall';
 import { STRIP_RECT } from './strip';
 import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
 import { FENCE as LOT9_FENCE, FIELD as LOT9_FIELD, PARK_X0 as LOT9_PARK_X0 } from './lot9';
-import { ENDSWOOD_RECT, NORTH_Z, SOUTH_Z, WEST_X, WEST_X0 } from './endswood';
+import { ENDSWOOD_RECT, FAR_RECT as ENDS_FAR_RECT, NORTH_Z, SOUTH_Z, WEST_X, WEST_X0 } from './endswood';
 import { EAST as WEST_EAST, NORTH as WEST_NORTH, SOUTH as WEST_SOUTH } from './endswest';
 import { COMMON as ENDS_COMMON, DESIRE as ENDS_DESIRE, DESIRE_HALF } from './endsblend';
 import { STADIUM_RECTS } from './stadium';
@@ -137,6 +137,9 @@ export const INFLUENCES: Influence[] = [
   // (and carried west: endswest.ts)
   around('endswest', [WEST_X0, WEST_NORTH, WEST_EAST, WEST_SOUTH], 'worn', 16, 0.6),
   around('endswest-edge', [WEST_X0, WEST_NORTH, WEST_EAST, WEST_SOUTH], 'bare', 4, 0.35),
+  // (and its far west: endsfar.ts)
+  around('endsfar', ENDS_FAR_RECT, 'worn', 16, 0.6),
+  around('endsfar-edge', ENDS_FAR_RECT, 'bare', 4, 0.35),
   // ...the common down to Lot 9 (endsblend.ts, Phase 6): rough, trodden, the desire line worn bare either side
   around('ends-common', ENDS_COMMON, 'worn', 3, 0.45),
   verge('ends-desire', ENDS_DESIRE, DESIRE_HALF, 'bare', 1.2, 0.5),

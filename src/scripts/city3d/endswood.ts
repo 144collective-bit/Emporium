@@ -56,12 +56,20 @@ export const ENDSWOOD_RECT: Rect = [-130, HW_EDGE + 2, EAST.c - EAST.half, SOUTH
  * endswest.ts's. Reaching east to the old land, so the Close's run between them is the estate's too
  */
 export const WEST_RECT: Rect = [-204, HW_EDGE + 6, -128, 466];
+/**
+ * ...and further west (docs/ends-far-west-plan.md, the owner's call: still Endswood): the land west of the rows, the
+ * half that plan kept for later, as far as its first part is built; what's on it is endsfar.ts's. Reaching east into
+ * the rows' land, so the two read as one
+ */
+export const FAR_RECT: Rect = [-264, 340, -200, 420];
 const inR = (r: Rect, x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
 /** The band the two share, across both (inside them both together): so a margin taken further in (lampmix.ts's depth)
  * reads the join between them as the estate's middle, not an edge */
 const JOIN: Rect = [WEST_RECT[0], Math.max(ENDSWOOD_RECT[1], WEST_RECT[1]), ENDSWOOD_RECT[2], Math.min(ENDSWOOD_RECT[3], WEST_RECT[3])];
 /** On the estate's land, the old and the extension's (`m` more round it; negative, further in) */
-export const inEndswood = (x: number, z: number, m = 0) => inR(ENDSWOOD_RECT, x, z, m) || inR(WEST_RECT, x, z, m) || inR(JOIN, x, z, m);
+/** ...and the band the rows' land and the far west's share, the same way */
+const JOIN_FAR: Rect = [FAR_RECT[0], Math.max(FAR_RECT[1], WEST_RECT[1]), WEST_RECT[2], Math.min(FAR_RECT[3], WEST_RECT[3])];
+export const inEndswood = (x: number, z: number, m = 0) => inR(ENDSWOOD_RECT, x, z, m) || inR(WEST_RECT, x, z, m) || inR(JOIN, x, z, m) || inR(FAR_RECT, x, z, m) || inR(JOIN_FAR, x, z, m);
 
 /* ---------- The streets ---------- */
 
@@ -84,7 +92,9 @@ export const CLOSE_WEST = WEST_X0 - WALK_W;
 /** The Close's bollards across its far end (x, z): a walker gets between them, no car does (the owner's pick: moved
  * from the old end to the far one when the Close was carried west) */
 export const BOLLARD = { r: 0.14, h: 0.9 };
-export const CLOSE_BOLLARDS: Pt[] = [-1.2, -0.4, 0.4, 1.2].map((o): Pt => [CLOSE_WEST + 0.35, ROAD_Z + o * ROAD_HALF]);
+// (taken up when the Close was carried on to the far west, docs/ends-far-west-plan.md Phase 1, the owner's call: you
+// drive on to the lane and Degen's gates)
+export const CLOSE_BOLLARDS: Pt[] = [];
 
 export interface EndsStreet {
   id: string;

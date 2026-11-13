@@ -30,7 +30,9 @@ keep it up to date when what it describes changes.
   to a share of that (never under 0.05); first person it's in all the time
   (0.06, as the car's seat has it). With nothing close it stays at 0.5 (in for
   the whole walk, faces close together far off would flicker). Every other
-  mode gets the city's back (the car and kart set their own). The crowd
+  mode gets the city's back (the car and kart set their own), the city's
+  being `LENS.base` (0.5), never whatever the camera has when the walk is
+  made (City view's moves with its height: `menus.md`). The crowd
   isn't in the camera's way, so anyone the lens is inside or near enough to
   cut open isn't drawn that frame (`onLens()`, in character.ts's `set()`,
   with `CROWD_VIEW.near`), and the sparring partners waiting in the street

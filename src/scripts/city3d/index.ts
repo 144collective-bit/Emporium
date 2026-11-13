@@ -31,6 +31,7 @@ import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { WEST_LAMPS as ENDS_WEST_LAMPS } from './endswest';
+import { FAR_LAMPS as ENDS_FAR_LAMPS } from './endsfar';
 import { ENDS_TREES } from './endsstreet';
 import { COMMON_LAMPS, COMMON_TREES } from './endsblend';
 import { RURAL_LAMPS } from './ruraldress';
@@ -71,6 +72,7 @@ import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { FLY, POLAR, anyHeld, clampCam, easeVel, groundUnder, keyDir, noKeys, reach, turn, wish, type V3 } from './freecam';
+import { LENS, cityNear, nearFor } from './lens';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
@@ -419,6 +421,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
   // ...and carried west (endswest.ts, docs/ends-west-plan.md Phase 1): along the Close, in the courts, over the greens
   for (const [x, z, ry, y] of ENDS_WEST_LAMPS) addLamp(x, z, ry, y);
+  // ...and its far west (endsfar.ts)
+  for (const [x, z, ry, y] of ENDS_FAR_LAMPS) addLamp(x, z, ry, y);
   // ...and its trees: the green's, the churchyard's, by the playground and round the community centre (endsstreet.ts, Phase 4)
   for (const [x, z, s] of ENDS_TREES) addTree(x, z, s, false, SLAB);
   // ...and the common's down to Lot 9: sodium along the footpath, a few hawthorns (endsblend.ts, Phase 6)
@@ -491,7 +495,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Camera ---------- */
   // Far enough to see the wall round the city from town (bounds.ts)
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.5, CAMERA_FAR);
+  const camera = new THREE.PerspectiveCamera(34, 1, LENS.base, CAMERA_FAR);
   const controls = new MapControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
@@ -1884,6 +1888,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         camera.lookAt(controls.target);
         dirty = true;
       }
+      // Low down among the street's signs, trees, lamps and cars (which it flies through) and beside a building, the near
+      // plane comes in so they aren't cut open as it comes up to them; high over the city it's the city's (lens.ts)
+      let near = cityNear(p.y - groundUnder(p.x, p.z), FLY.floor);
+      if (camSolids) near = Math.min(near, nearFor(camSolids.gap([p.x, p.y, p.z]), false));
+      if (camera.near !== near) {
+        camera.near = near;
+        camera.updateProjectionMatrix();
+        dirty = true;
+      }
     }
     // Keep the view inside the wall (bounds.ts: up to its inner face, the free camera's reach)
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, PAN_BOUNDS[0], PAN_BOUNDS[2]);
@@ -2068,7 +2081,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
               ]
             : []),
           // and where City view's free camera is (freecam.ts)
-          ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`] : []),
+          ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)}`] : []),
         ].join('\n');
         Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
       }
