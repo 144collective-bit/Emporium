@@ -21,7 +21,6 @@
  *
  * In world numbers, x across, z north (-) to south (+).
  */
-import { HOME, HOME_HOUSE } from './home';
 import { ROAD_HALF, ROAD_Z, SLAB_Y, type Pt } from './endswood';
 import { GREENS, LANE, ROW_X, CROSS_PATHS, N_EDGE, ZEBRA } from './endswest';
 import { BIN, BIN_OFF, CANOPY, HOUSES, PORCH, TERRACES, binsOf, toWorld, type House, type Terrace } from './endsterraces';
@@ -252,8 +251,7 @@ export const LINE = { h: 1.2, back: 1.2 };
 const CLOTHES = ['#ecebe6', '#2b4c86', '#c9302b', '#e6c13c', '#5a5d66', '#e7a1b6', '#3f7f88', '#1c1b21', '#9ccfe0'];
 export const WASHING: Washing[] = HOUSES.flatMap((h, k): Washing[] => {
   const r = rng(7500 + k);
-  // (Degen's home, home.ts: his garage fills its garden)
-  if (r() > 0.4 || h.id === HOME_HOUSE) return [];
+  if (r() > 0.4) return [];
   const T = terraceOf(h);
   const mid = (h.u0 + h.u1) / 2;
   const clothes = Array.from({ length: 4 + Math.floor(r() * 3) }, () => CLOTHES[Math.floor(r() * CLOTHES.length)]);
@@ -304,8 +302,6 @@ export const PORCH_POOLS: [number, number, number][] = [
     const [x, z] = toWorld(T, h.door, h.porch === 'canopy' ? 0.55 : PORCH.d + 0.4);
     return [x, z, 1.5];
   }),
-  // (the lamp over Degen's garage door, home.ts, on his driveway)
-  [HOME.garageDoor.x - 0.9, (HOME.garageDoor.z0 + HOME.garageDoor.z1) / 2, 2.4],
   // (the corner shop's and the chippy's light out under the canopy: open late)
   ...[0, 1].map((k): [number, number, number] => {
     const [a, b] = unitAt(k);

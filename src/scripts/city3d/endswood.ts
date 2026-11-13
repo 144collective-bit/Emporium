@@ -62,6 +62,8 @@ export const WEST_RECT: Rect = [-204, HW_EDGE + 6, -128, 466];
  * the rows' land, so the two read as one
  */
 export const FAR_RECT: Rect = [-264, 340, -200, 420];
+/** The lane across the Close's far end there (endsfar.ts `LANE_X`): its centre line's x */
+export const FAR_LANE_X = -216;
 const inR = (r: Rect, x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
 /** The band the two share, across both (inside them both together): so a margin taken further in (lampmix.ts's depth)
  * reads the join between them as the estate's middle, not an edge */
@@ -123,13 +125,15 @@ export const ENDS_STREETS: EndsStreet[] = [
     half: ROAD_HALF,
   },
   { id: 'ends-circus', pts: circusPts(), half: CIRCUS.half, loop: true, oneway: 1 },
-  // The Close: west off the Circus, over the tunnel's footpath and on into the extension to its bollards
+  // The Close: west off the Circus, over the tunnel's footpath, on through the extension and to the far west's lane
   {
     id: 'ends-close',
     pts: [
       [CIRCUS.x - CIRCUS.r, ROAD_Z],
       [CLOSE_END, ROAD_Z],
       [CLOSE_WEST, ROAD_Z],
+      // (and on to the lane across its end in the far west, endsfar.ts: one street, so a route runs the length of it)
+      [FAR_LANE_X, ROAD_Z],
     ],
     half: ROAD_HALF,
   },

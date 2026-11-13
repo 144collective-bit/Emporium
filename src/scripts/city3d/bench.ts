@@ -68,8 +68,8 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'endsw-parade', name: 'Endswood west, the parade', pos: [-131, 2, 381.6], target: [-144, 1.4, 376] },
   { id: 'endsw-rows', name: 'Endswood west, the rows', pos: [-150, 2.2, 409.5], target: [-172, 0.9, 407] },
   { id: 'endsw-kick', name: 'Endswood west, the kickabout', pos: [-151, 3, 410], target: [-142, 0.4, 426] },
-  // Degen's house (docs/home-plan.md Phase 5): from the Close's corner over his driveway, the garage and the house
-  { id: 'ends-home', name: "Endswood west, Degen's home", pos: [-197, 2.6, 380.5], target: [-189, 1.1, 371.5] },
+  // Degen's compound (docs/ends-far-west-plan.md Phase 2): from the Close down its line, through the gates to the garage
+  { id: 'ends-home', name: "The far west, Degen's compound", pos: [-208, 2.6, 381.2], target: [-238, 1.2, 380] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

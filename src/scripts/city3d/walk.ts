@@ -99,7 +99,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
-import { HOME_CAMERA, HOME_GARAGE_DOOR, homeWall, inHouse } from './home';
+import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { endsDeckWall, upOnEnds } from './endsdecks';
@@ -605,7 +605,7 @@ export function createWalk(d: WalkDeps) {
     if (n.id === 'trainer') return counterMark(TRAINER_TOP, y + TRAINER_TOP_H, y, pos.x, pos.z);
     // (a sparring partner: the spar starts at once)
     if (n.id.startsWith('spar:')) return null;
-    if (n.id === 'garage') return door(garageAt === 'home' ? HOME_GARAGE_DOOR : GARAGE_SITE.door);
+    if (n.id === 'garage') return door(garageAt === 'home' ? (garageTab === 'kit' ? HOME_WORKSHOP_DOOR : HOME_GARAGE_DOOR) : GARAGE_SITE.door);
     if (n.id === 'hangar') return door(HANGAR_DOOR);
     if (n.id === 'karts') return door(HUT_DOOR);
     // Getting in (step 2): the car's or the kart's side nearest him, the aircraft's door, the hire boat's ladder
@@ -700,7 +700,7 @@ export function createWalk(d: WalkDeps) {
     const n = near;
     const open = () => {
       if (n.id === 'gear') shop.show(n.label === ARMS.name ? ARMS.name : 'Armoury');
-      else if (n.id === 'garage') garageUI.show();
+      else if (n.id === 'garage') garageUI.show(garageTab);
       else if (n.id === 'hangar') hangarUI.show();
       else if (n.id === 'plane') (fly.active ? leavePlane() : board());
       else if (n.id === 'boat') (boating() ? leaveBoat() : takeBoat());
@@ -1032,6 +1032,8 @@ export function createWalk(d: WalkDeps) {
   let fpBeforeGarage = false;
   /** Which garage's door the Garage prompt is at: the city's office, or Degen's own at home (home.ts) */
   let garageAt: 'home' | 'city' = 'city';
+  /** The tab its menu opens on: the model, or its kit from the workshop's door at home */
+  let garageTab: 'model' | 'kit' = 'model';
   const garageUI = lazyMenu<GarageUI>(['show'], async () => (await import('./garage-ui')).createGarageUI(root, {
     preview: (c) => d.garage.show(c),
     // Kept: if your car is out on the streets, it comes home
@@ -2928,12 +2930,21 @@ export function createWalk(d: WalkDeps) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
       garageAt = 'city';
+      garageTab = 'model';
     }
     // Degen's own garage at home (home.ts): the same menu, by its door on his driveway
     if (Math.hypot(HOME_GARAGE_DOOR.x - pos.x, HOME_GARAGE_DOOR.z - pos.z) < 1) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
       garageAt = 'home';
+      garageTab = 'model';
+    }
+    // ...and his workshop's roller door (docs/ends-far-west-plan.md Phase 2): the same menu, opened on its kit
+    if (Math.hypot(HOME_WORKSHOP_DOOR.x - pos.x, HOME_WORKSHOP_DOOR.z - pos.z) < 1) {
+      best = { id: 'garage', label: 'Workshop' };
+      bestD = 0;
+      garageAt = 'home';
+      garageTab = 'kit';
     }
     // The kart hut's door, at the kart park
     if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {

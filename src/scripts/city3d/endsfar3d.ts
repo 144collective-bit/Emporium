@@ -14,7 +14,8 @@ import { Batch, toon } from './kit';
 import { site } from './tilework';
 import { COVER } from './palette';
 import { CLOSE_WEST, ROAD_HALF, ROAD_Z, SLAB_Y, type Rect } from './endswood';
-import { FAR_BLOCKS, GATES, LANE_HALF, LANE_X, LANE_Z, PLOT } from './endsfar';
+import { FAR_BLOCKS, LANE_HALF, LANE_X, LANE_Z, PLOT } from './endsfar';
+import { registerHome } from './home3d';
 
 export const SELF = import.meta.url;
 
@@ -30,7 +31,6 @@ const LINE = toon('#d8d4c8');
 const LAWN = toon(COVER.wornLawn);
 const PAVING = toon('#6d6672');
 const PAVING_DARK = toon('#5f5965');
-const BRICK = toon('#7a4337');
 
 /** A flat quad over a rect at y, facing up */
 function flat(b: Batch, [x0, z0, x1, z1]: Rect, y: number, m: THREE.Material) {
@@ -94,8 +94,7 @@ function registerPlots() {
       })
     );
   }
-  // The compound's plot: block paving in two tones (courses across it), a brick kerb round it where the wall will
-  // stand, left open at the gates
+  // The compound's plot: block paving in two tones (courses across it); its wall, gates and buildings are home3d.ts's
   pieces(PLOT, 13).forEach((p, j) =>
     site(`endsfar plot ${j}`, grow(p, 0.5), (into) => {
       const b = new Batch();
@@ -106,26 +105,11 @@ function registerPlots() {
       b.build(into, { cast: false, receive: true });
     })
   );
-  site('endsfar plot edge', grow(PLOT, 0.5), (into) => {
-    const b = new Batch();
-    const [x0, z0, x1, z1] = PLOT;
-    const W = 0.3;
-    const edge = (r: Rect) => {
-      const g = new THREE.BoxGeometry(r[2] - r[0], 0.12, r[3] - r[1]);
-      g.deleteAttribute('uv');
-      b.add(g.translate((r[0] + r[2]) / 2, SLAB_Y + 0.06, (r[1] + r[3]) / 2), BRICK);
-    };
-    edge([x0, z0, x1, z0 + W]);
-    edge([x0, z1 - W, x1, z1]);
-    edge([x0, z0 + W, x0 + W, z1 - W]);
-    // (the east side either side of the gates)
-    edge([x1 - W, z0 + W, x1, GATES.z0]);
-    edge([x1 - W, GATES.z1, x1, z1 - W]);
-    b.build(into, { cast: false, receive: true });
-  });
 }
 
 export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerRoads(low);
   registerPlots();
+  // Degen's compound on its plot (home.ts, home3d.ts: docs/ends-far-west-plan.md Phase 2)
+  registerHome(low);
 }

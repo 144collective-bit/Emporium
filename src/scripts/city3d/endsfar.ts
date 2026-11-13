@@ -3,8 +3,9 @@
  * compound its centrepiece; DOM-free, the boot's, tested in tests/endsfar.test.ts): the land west of the rows
  * (endswest.ts), the half docs/ends-west-plan.md kept for later. Phase 1 is the land and the road:
  *
- * - **The Close carried on** from where it ended (`CLOSE_WEST`, its bollards taken up: the owner's call) to a T
- *   (`HEAD`) with **the lane** (`ends-lane`), which runs north and south across its end (`LANE_X`, `LANE_Z`).
+ * - **The Close carried on** (endswood.ts `ends-close`, one street) from where it ended (`CLOSE_WEST`, its bollards
+ *   taken up: the owner's call) to a T (`HEAD`) with **the lane** (`ends-lane`), which runs north and south across
+ *   its end (`LANE_X`, `LANE_Z`).
  * - **The compound's plot** (`PLOT`, block `ends-fc`) west of the lane, its gates' place on the lane opposite the
  *   Close's end (`GATES`), so the road runs straight at them.
  * - **The plots round it** (Phase 4 builds on them, the owner's pick: a close of bungalows and allotments): the
@@ -15,12 +16,12 @@
  * In world numbers, x across, z north (-) to south (+); every rect is x0, z0, x1, z1.
  */
 import { WALK_W } from './layout';
-import { CLOSE_WEST, FAR_RECT, ROAD_HALF, ROAD_Z, SLAB_Y, WEST_X0, type Pt, type Rect } from './endswood';
+import { CLOSE_WEST, FAR_LANE_X, FAR_RECT, ROAD_HALF, ROAD_Z, SLAB_Y, WEST_X0, type Pt, type Rect } from './endswood';
 
 export { FAR_RECT };
 
 /** The lane across the Close's end: its centre line's x, and how far it runs north and south */
-export const LANE_X = -216;
+export const LANE_X = FAR_LANE_X;
 export const LANE_Z: [number, number] = [348, 412];
 export const LANE_HALF = ROAD_HALF;
 /** The T where the Close meets the lane */
@@ -31,12 +32,11 @@ export interface FarStreet {
   pts: Pt[];
   half: number;
 }
-/** The Close's run on from its old end to the T, and the lane (dead ends both ways: no traffic, you walk or drive in) */
-export const FAR_STREETS: FarStreet[] = [
-  { id: 'ends-close-far', pts: [[CLOSE_WEST, ROAD_Z], HEAD], half: ROAD_HALF },
-  { id: 'ends-lane', pts: [[LANE_X, LANE_Z[0]], HEAD, [LANE_X, LANE_Z[1]]], half: LANE_HALF },
-];
-export const FAR_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [{ id: 'ends-head', at: HEAD, streets: ['ends-close-far', 'ends-lane'] }];
+/** The lane (a dead end both ways: no traffic, you walk or drive in); the Close's run on to the T is the Close's own
+ * (endswood.ts `ends-close`, one street to the T) */
+export const FAR_STREETS: FarStreet[] = [{ id: 'ends-lane', pts: [[LANE_X, LANE_Z[0]], HEAD, [LANE_X, LANE_Z[1]]], half: LANE_HALF }];
+/** Where the Close meets the lane */
+export const FAR_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [{ id: 'ends-head', at: HEAD, streets: ['ends-close', 'ends-lane'] }];
 
 /** The blocks' edges by the roads (inside their sidewalks) */
 const LANE_W = LANE_X - LANE_HALF - WALK_W;

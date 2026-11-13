@@ -10,7 +10,6 @@
  *   terraces on the rows' footprints are endsterraces3d.ts's (Phase 2), what's on the east ends endsweststreet3d.ts's
  *   (Phase 3), its life endswestlife3d.ts's (Phase 4).
  */
-import { registerHome } from './home3d';
 import * as THREE from 'three';
 import type { Tick } from './world';
 import { Batch, neon, toon } from './kit';
@@ -149,8 +148,6 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // Phase 3: the parade, the playground, the garages, the green and the rest round the terraces
   registerStreetWest(low);
   if (scene) addSolids([...TERRACE_SOLIDS, ...STREET_W_SOLIDS]);
-  // Degen's home (home.ts, docs/home-plan.md): his garage and driveway at the west end of the row by the Close
-  registerHome(low);
   // Phase 4: the people, the dogs, the washing and the kids' things out, the porch lights at night
   registerWestLife(low, scene, tick);
 }

@@ -68,7 +68,8 @@ test("the Close carried west: in the street plan to its far end, its bollards ac
   const close = PLAN.streets.find((s) => s.id === 'ends-close')!;
   assert.ok(close, 'the Close is a street');
   const xs = close.pts.map((p) => p[0]);
-  assert.ok(Math.abs(Math.min(...xs) - CLOSE_WEST) < 1e-9, 'it reaches the far end');
+  // (it reaches the extension's far end, and since the far west runs on past it to the lane there: endsfar.ts)
+  assert.ok(xs.some((x) => Math.abs(x - CLOSE_WEST) < 1e-9) && Math.min(...xs) <= CLOSE_WEST, 'it reaches the far end');
   assert.ok(close.pts.every((p) => p[1] === ROAD_Z), 'straight along the road line');
   // The bollards across its far end were taken up when it was carried on to the far west (endsfar.ts, the owner's
   // call): none there now, nothing solid in their place, and the old end open as before

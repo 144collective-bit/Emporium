@@ -62,12 +62,12 @@ test("its land: west of the rows and one with them, outside the highway, off Lot
 test('the Close carried on to a T with the lane: in the street plan, joined end to end, nothing solid on them, no traffic', () => {
   for (const t of FAR_STREETS) assert.ok(PLAN.streets.some((s) => s.id === t.id && s.kind === 'street'), t.id);
   for (const c of FAR_CROSSINGS) assert.ok(PLAN.crossings.some((x) => x.id === c.id && !x.lights), c.id);
-  const [run, lane] = FAR_STREETS;
-  // It starts where the Close ended and runs straight on to the lane's centre line
+  const [lane] = FAR_STREETS;
+  // The Close is one street from the Circus to the lane's centre line, straight through where it used to end
   const close = PLAN.streets.find((s) => s.id === 'ends-close')!;
-  assert.deepEqual(run.pts[0], [Math.min(...close.pts.map((p) => p[0])), ROAD_Z]);
-  assert.deepEqual(run.pts[0], [CLOSE_WEST, ROAD_Z]);
-  assert.deepEqual(run.pts.at(-1), HEAD);
+  assert.deepEqual(close.pts.at(-1), HEAD);
+  assert.ok(close.pts.some((p) => p[0] === CLOSE_WEST) && close.pts.every((p) => p[1] === ROAD_Z));
+  assert.ok(PLAN.crossings.find((c) => c.id === 'ends-head')!.streets.includes('ends-close'));
   assert.deepEqual(HEAD, [LANE_X, ROAD_Z]);
   // The lane crosses its end, north and south of it, through the T
   assert.ok(lane.pts.every((p) => p[0] === LANE_X));
