@@ -29,7 +29,7 @@ keep it up to date when what it describes changes.
   make it themselves. A new module that bakes adds its test to `MAKE`.
   `TEST_BAKED=0 npm test` runs without it.
 - They cover the code that's free of the DOM and scene code: the street plan
-  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), your motorbikes (`mybike.ts`, `bike-sim.ts`, their place in the save and `bikeMark()`, in `tests/bike.test.ts`), the traffic's trucks, patrol cars and bikes (`fleet.ts`), downtown (`downtown.ts`), the ring highway
+  (`layout.ts`, `streetplan.ts`), the cars' measurements, interiors and where your car is hollow (`carspec.ts`, `carinside.ts`), your car's springs (`suspension.ts`), the garage's customisation (`carlook.ts`, the look in `mycar.ts`), your motorbikes (`mybike.ts`, `bike-sim.ts`, their place in the save and `bikeMark()`, in `tests/bike.test.ts`), the traffic's trucks, patrol cars and bikes (`fleet.ts`), downtown (`downtown.ts`), its modelled fronts (`facade.ts`), the ring highway
   (`highway.ts`), the traffic's routes and lights (`routes.ts`), collision data, doors, the gun counter, the garage
   and the spawn (`solids.ts`), your car
   (`mycar.ts`), the driving rules (`drive-sim.ts`), target practice
