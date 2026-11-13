@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { ARM, FIST, aimPiece, cuffGeometry, fistGeometry, merge, paint, sleeveGeometry, solveArm, stripeGeometry } from '../src/scripts/city3d/fparm';
+import { ARM, FIST, aimPiece, cuffGeometry, fistGeometry, merge, paint, sleeveGeometry, sleeveRadius, solveArm, stripeGeometry } from '../src/scripts/city3d/fparm';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const near = (a: number, b: number, e = 1e-6) => Math.abs(a - b) < e;
@@ -88,9 +88,15 @@ test('the sleeves and cuffs: their lengths, round both ends; painted pieces merg
   const c = cuffGeometry(0.04, 0.037, 0.2, 0.25, 3);
   c.computeBoundingBox();
   assert.ok(c.boundingBox!.min.y >= 0.2 - 0.003 && c.boundingBox!.max.y <= 0.25 + 0.003);
-  const st = stripeGeometry(Math.PI / 2, 0.06, 0.05, 0.2);
+  const st = stripeGeometry(Math.PI / 2, 0.058, 0.052, ARM.upper, 0.03, ARM.upper - 0.01);
   st.computeBoundingBox();
   assert.ok(st.boundingBox!.min.z > 0.05, 'a stripe at +z sits out on +z');
+  // (on the sleeve all the way along: never sunk into it, never more than a few millimetres off it)
+  const sp = st.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < sp.count; i++) {
+    const out = Math.hypot(sp.getX(i), sp.getZ(i)) - sleeveRadius(0.058, 0.052, ARM.upper, sp.getY(i));
+    assert.ok(out > 0 && out < 0.006, `stripe ${out} off the sleeve at ${sp.getY(i)}`);
+  }
   const g = merge([paint(s, '#ff0000'), paint(fistGeometry(-1).translate(0, ARM.fore, 0), '#00ff00')]);
   const tint = g.attributes.tint as THREE.BufferAttribute;
   assert.equal(tint.count, g.attributes.position.count);

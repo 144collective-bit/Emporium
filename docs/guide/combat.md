@@ -109,7 +109,9 @@ keep it up to date when what it describes changes.
   elbow solved each frame for where the fist goes (`solveArm()`, swung
   towards a pole), the sleeves turned and dressed by the outfit (the
   suit's slim sleeve and shirt cuff, ribbed cuffs, the track top's
-  stripes on the outside of the arm, the puffer's quilting), each piece's
+  two stripes lying on the sleeve down to the cuff, turned onto the top
+  of the forearm where the eye sees them (`STRIPE`, `sleeveRadius()`),
+  the puffer's quilting), each piece's
   colour its own `tint` attribute so an arm is two draws (not three's
   vertex colours: those keep it out of the ink's pre-pass, so no
   outline). `fistsview.ts` (the fists' chunk, brawl.ts) moves them: the

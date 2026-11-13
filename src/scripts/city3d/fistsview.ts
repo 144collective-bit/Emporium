@@ -63,6 +63,12 @@ const DOWN = V(0.22, -0.5, -0.24);
 export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
 /** How fast he's going (0..1 of the run's pace) for the arms to show pumping, from nothing to all */
 const PUMP = { from: 0.55, to: 0.9 };
+/**
+ * The track top's stripes: how far apart round the sleeve (radians either side), how far round from the back of the
+ * hand (negative: towards the thumb's side, the side the eye sees, so they read on the top of the forearm), and how
+ * wide (metres)
+ */
+const STRIPE = { gap: 0.15, out: -0.35, w: 0.011 };
 /** The guard's spring: how quick, and how little it settles (under 1 overshoots a touch) */
 const LIFT = { rate: 17, damp: 0.62 };
 
@@ -124,7 +130,10 @@ function armPieces(o: Outfit, thumb: -1 | 1) {
   const sleeve = varsity ? FP_VARSITY : top;
   // (a tailored sleeve is slimmer; a puffer's fuller)
   const r = suit ? 0.047 : puffer ? 0.064 : 0.055;
-  const upper: THREE.BufferGeometry[] = [paint(sleeveGeometry(r * 1.06, r * 0.94, ARM.upper), sleeve)];
+  // (the sleeves' radii at each end: the stripes lie on them)
+  const up = [r * 1.06, r * 0.94, ARM.upper] as const;
+  const lo = [r * 0.94, r * 0.84, ARM.fore - 0.05] as const;
+  const upper: THREE.BufferGeometry[] = [paint(sleeveGeometry(...up), sleeve)];
   const fore: THREE.BufferGeometry[] = [];
   const end = ARM.fore;
   if (suit) {
@@ -133,7 +142,7 @@ function armPieces(o: Outfit, thumb: -1 | 1) {
     fore.push(paint(cuffGeometry(0.034, 0.033, end - 0.05, end - 0.012), FP_SHIRT));
   } else {
     // A looser sleeve gathered into a ribbed cuff (the varsity's in its top's colour)
-    fore.push(paint(sleeveGeometry(r * 0.94, r * 0.84, end - 0.05, false), sleeve));
+    fore.push(paint(sleeveGeometry(...lo, false), sleeve));
     fore.push(paint(cuffGeometry(r * 0.78, 0.037, end - 0.056, end - 0.008, 3), fpShade(top, varsity ? 0.72 : 0.8)));
     if (puffer)
       for (const k of [0.35, 0.65]) {
@@ -144,13 +153,13 @@ function armPieces(o: Outfit, thumb: -1 | 1) {
       }
   }
   if (o.kind === 'track')
-    for (const a of [-0.13, 0.13]) {
-      // The track top's two stripes down the outside of the arm, where the eye sees it: the upper arm's +z (laid
-      // facing out and up, `lay()`), and on the forearm between the back of the hand (+z) and the side away from
-      // the thumb; just proud of the sleeve, its fullness through the middle included (sleeveGeometry())
-      const out = thumb < 0 ? 0.7 : Math.PI - 0.7;
-      upper.push(paint(stripeGeometry(Math.PI / 2 + a, r * 1.06 * 1.06 + 0.002, 0.05, ARM.upper - 0.05, 0.01), FP_SHIRT));
-      fore.push(paint(stripeGeometry(out + a, r * 0.94 * 1.06 + 0.002, 0.05, end - 0.08, 0.01), FP_SHIRT));
+    for (const a of [-STRIPE.gap, STRIPE.gap]) {
+      // The track top's two stripes down the outside of the arm, where the eye sees it, lying on the sleeve all the
+      // way along: the upper arm's +z (laid facing out and up, `lay()`), and on the forearm turned from the back of
+      // the hand (+z) by `STRIPE.out`, onto the top of the forearm the eye sees, right down to the cuff (the part in shot)
+      const out = thumb < 0 ? Math.PI / 2 - STRIPE.out : Math.PI / 2 + STRIPE.out;
+      upper.push(paint(stripeGeometry(Math.PI / 2 + a, ...up, 0.03, ARM.upper - 0.01, STRIPE.w), FP_SHIRT));
+      fore.push(paint(stripeGeometry(out + a, ...lo, 0.02, end - 0.054, STRIPE.w), FP_SHIRT));
     }
   fore.push(paint(fistGeometry(thumb).translate(0, end, 0), FP_SKIN));
   return { upper: merge(upper), fore: merge(fore) };

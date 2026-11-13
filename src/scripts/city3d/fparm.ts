@@ -135,10 +135,7 @@ export function sleeveGeometry(r0: number, r1: number, len: number, cap = true, 
     pts.push(new THREE.Vector2(Math.max(1e-4, r0 * Math.cos(a)), r0 * Math.sin(a)));
   }
   // (a little fullness through the middle: cloth over muscle, not a pipe)
-  for (let i = 1; i < 6; i++) {
-    const k = i / 6;
-    pts.push(new THREE.Vector2(THREE.MathUtils.lerp(r0, r1, k) * (1 + 0.06 * Math.sin(Math.PI * k)), len * k));
-  }
+  for (let i = 1; i < 6; i++) pts.push(new THREE.Vector2(sleeveRadius(r0, r1, len, (len * i) / 6), (len * i) / 6));
   if (cap)
     for (let i = 0; i <= steps; i++) {
       const a = (i / steps) * (Math.PI / 2);
@@ -167,10 +164,23 @@ export function cuffGeometry(r0: number, r1: number, y0: number, y1: number, rib
   return merge(parts);
 }
 
-/** A stripe down a sleeve's side: a thin strip at angle `a` round +y (0 is +x), from `y0` to `y1`, at radius `r` */
-export function stripeGeometry(a: number, r: number, y0: number, y1: number, w = 0.007) {
-  const g = new THREE.BoxGeometry(0.003, y1 - y0, w);
-  g.translate(r, (y0 + y1) / 2, 0);
+/** How far out a sleeve from `sleeveGeometry(r0, r1, len)` is at `y` along it (its fullness through the middle included) */
+export function sleeveRadius(r0: number, r1: number, len: number, y: number) {
+  const k = THREE.MathUtils.clamp(y / len, 0, 1);
+  return THREE.MathUtils.lerp(r0, r1, k) * (1 + 0.06 * Math.sin(Math.PI * k));
+}
+
+/**
+ * A stripe down a sleeve's side (the sleeve `sleeveGeometry(r0, r1, len)`): a thin strip `w` wide at angle `a` round
+ * +y (0 is +x, π/2 is +z), from `y0` to `y1`, lying on the sleeve all the way along, however it tapers and fills out
+ */
+export function stripeGeometry(a: number, r0: number, r1: number, len: number, y0: number, y1: number, w = 0.01) {
+  const g = new THREE.BoxGeometry(0.0024, y1 - y0, w, 1, 8, 1);
+  g.translate(0, (y0 + y1) / 2, 0);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  // (each row out to the sleeve's own radius there, a hair proud of it)
+  for (let i = 0; i < p.count; i++) p.setX(i, p.getX(i) + sleeveRadius(r0, r1, len, p.getY(i)) + 0.0014);
+  g.computeVertexNormals();
   g.rotateY(-a);
   return plain(g);
 }
