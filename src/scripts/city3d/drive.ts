@@ -56,6 +56,7 @@ import { DRIVE, FEEL, VOICE, type MyCar, type PlayerCar, type Voice } from './my
 import { KART_FEEL, type KartId } from './mykart';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 import type { Box } from './solids';
+import { LENS } from './lens';
 
 export interface DriveDeps {
   scene: THREE.Scene;
@@ -156,7 +157,8 @@ export function createDrive(d: DriveDeps) {
   let frozen = false;
   /** The camera (V; views.ts): near, far, first person (the seat, the helmet; the roof's until your car's fitted out) */
   let view: ViewId = START_VIEW;
-  const near0 = camera.near;
+  // (the city's own near plane, not whatever the camera has now: City view and the walk move theirs, lens.ts)
+  const near0 = LENS.base;
   let camYaw = 0;
   let lookYaw = 0;
   let lookPitch = 0;
