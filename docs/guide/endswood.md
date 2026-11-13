@@ -256,3 +256,9 @@ keep it up to date when what it describes changes.
   `HOME_PORTALS` has `home:up` and `home:down`; `homePlaces(y)` is what
   index.ts gives walk mode as the home's prompts, by floor. A new thing on
   the terrace goes in `ROOF_THINGS`.
+  Phase 4 (round the compound) is built: `endsfarhomes.ts` (DOM-free, the
+  chunk's: `BUNGALOWS` with `frontWall()` and `backFences()`, `ALLOTMENT`
+  with its `paths`, `fence` and `PLOTS`, `FAR_HOME_SOLIDS` joined through
+  `addSolids()`), drawn by `endsfarhomes3d.ts` (sites: a bungalow, a pair
+  of plots, a run of fence). The compound's back gate, the allotments' east
+  gate and their middle path are on one line (`ALLOTMENT.gateZ`).

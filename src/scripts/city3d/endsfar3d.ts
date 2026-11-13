@@ -16,6 +16,9 @@ import { COVER } from './palette';
 import { CLOSE_WEST, ROAD_HALF, ROAD_Z, SLAB_Y, type Rect } from './endswood';
 import { FAR_BLOCKS, LANE_HALF, LANE_X, LANE_Z, PLOT } from './endsfar';
 import { registerHome } from './home3d';
+import { registerFarHomes } from './endsfarhomes3d';
+import { FAR_HOME_SOLIDS } from './endsfarhomes';
+import { addSolids } from './solids';
 
 export const SELF = import.meta.url;
 
@@ -107,9 +110,12 @@ function registerPlots() {
   );
 }
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerRoads(low);
   registerPlots();
   // Degen's compound on its plot (home.ts, home3d.ts: docs/ends-far-west-plan.md Phase 2)
   registerHome(low);
+  // Phase 4: the bungalows along the lane and the allotments behind; what's solid joins the grids on the main thread
+  registerFarHomes(low);
+  if (scene) addSolids(FAR_HOME_SOLIDS);
 }
