@@ -7,7 +7,7 @@ import { WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
 import { UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PLAN, blockAt, cityPlan, distToStreet, gridCrossings, gridStreets, inPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, type Pt, type Street } from '../src/scripts/city3d/streetplan';
+import { PLAN, blockAt, cityPlan, distToStreet, gridCrossings, gridStreets, inPoly, insetPoly, lanePaths, offsetLine, onSlab, outset, pointAt, polyArea, polyCentre, streetLength, tidyPoly, type Pt, type Street } from '../src/scripts/city3d/streetplan';
 import { BRIDGED_NS, CORE_ROADS, EW_ROADS, EXT, EXTRA_LOTS, NS_ROADS, RING_HI, RING_LO, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, laneCentres } from '../src/scripts/city3d/layout';
 import { BLOCKS_DT, DIAGONALS } from '../src/scripts/city3d/downtown';
 import { BEND_KERBS, OUTER_BLOCKS } from '../src/scripts/city3d/outer';
@@ -197,4 +197,28 @@ test('outlines: inside, area and centre', () => {
   assert.ok(inPoly(L, [1, 1]) && inPoly(L, [5, 5]) && !inPoly(L, [4, 2]));
   assert.equal(polyArea(L), 6 * 2 + 4 * 2);
   assert.ok(WALK_W > 0);
+});
+
+// A repeated corner or a spike (the outline running straight back: Coral Drive's park-w2 cut to crest-0-2's corner,
+// which outset() makes the sidewalk round the bay's end) left insetPoly() a zero to divide by: crest-0-2's lot, drawn
+// inside its outline (world.ts), came out NaN and blacked out the screen behind the bloom
+test('every block pulled in to its lot stays a number; tidied, an outline keeps its area and loses only repeats and spikes', () => {
+  for (const b of PLAN.blocks) {
+    for (const d of [0.4, b.walk + 0.4]) for (const p of insetPoly(b.poly, d)) assert.ok(Number.isFinite(p[0]) && Number.isFinite(p[1]), `${b.id}: pulled in ${d}, NaN`);
+    const t = tidyPoly(b.poly);
+    assert.ok(Math.abs(polyArea(t) - polyArea(b.poly)) < 1e-6, `${b.id}: tidied, its area changed`);
+    t.forEach((p, i) => {
+      const a = t[(i + t.length - 1) % t.length];
+      const c = t[(i + 1) % t.length];
+      const [ex, ez, fx, fz] = [p[0] - a[0], p[1] - a[1], c[0] - p[0], c[1] - p[1]];
+      assert.ok(Math.hypot(ex, ez) > 1e-9, `${b.id}: corner ${i} repeated`);
+      assert.ok(!(Math.abs(ex * fz - ez * fx) < 1e-9 && ex * fx + ez * fz < 0), `${b.id}: a spike at corner ${i}`);
+    });
+  }
+  // The one that had both: its lot an L round the bay, every corner a number
+  const lot = insetPoly(PLAN.blocks.find((b) => b.id === 'crest-0-2')!.poly, 0.4);
+  assert.equal(lot.length, 6);
+  // A square with a repeated corner and a spike is pulled in as the square
+  const sq: Pt[] = [[0, 0], [0, 4], [4, 4], [4, 4], [3, 4], [4, 4], [4, 0]];
+  assert.deepEqual(tidyPoly(sq), [[0, 0], [0, 4], [4, 4], [4, 0]]);
 });

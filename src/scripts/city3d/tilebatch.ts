@@ -359,6 +359,14 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       geos.forEach((g, n) => {
         // (its box first: the batched mesh keeps a copy for culling the piece, rather than working it out)
         g.computeBoundingBox();
+        // (a piece with NaN corners is left out: in, it would make the whole mesh's bounds NaN, so it's never culled,
+        // and on many graphics cards its broken triangles cover the screen; post.ts keeps them off the bloom too)
+        const { min, max } = g.boundingBox!;
+        if (![min.x, min.y, min.z, max.x, max.y, max.z].every(Number.isFinite)) {
+          console.warn(`tileBatch: a piece with NaN corners left out (${keys[n]})`);
+          g.dispose();
+          return;
+        }
         const geo = bm.addGeometry(g);
         const id = bm.addInstance(geo);
         const [t, lod] = keys[n].split('|') as [string, Lod];

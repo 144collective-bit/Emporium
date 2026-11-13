@@ -10,6 +10,7 @@ const DOM_FREE = [
   'src/scripts/city3d/freecam.ts',
   'src/scripts/city3d/freecollide.ts',
   'src/scripts/city3d/walkpad.ts',
+  'src/scripts/city3d/lens.ts',
   'src/scripts/city3d/walkkeys.ts',
   'src/scripts/city3d/walktouch.ts',
   'src/scripts/city3d/lampposts.ts',

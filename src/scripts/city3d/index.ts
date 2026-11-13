@@ -1714,6 +1714,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
+  /** (the camera's look, for the readout) */
+  const statLook = new THREE.Vector3();
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
     // (`build` includes merging per tile, `tiles`, which includes building the sites round the home view, `sites`;
@@ -1904,6 +1906,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.on = !reduced;
     camera.updateMatrixWorld();
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
+    CROWD_VIEW.near = camera.near;
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
     // What the camera looks at on the ground (straight ahead a way when it looks level, walking; `look` from above)
@@ -2057,6 +2060,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
+          // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
+          // reads here as under the ground, or the near plane, or the view gone wrong)
+          ...(walking
+            ? [
+                `height ${walk.position.y.toFixed(2)} · camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)} · looks ${camera.getWorldDirection(statLook).y.toFixed(2)} · fog ${(scene.fog as THREE.FogExp2 | null)?.density?.toFixed(4) ?? '-'}`,
+              ]
+            : []),
           // and where City view's free camera is (freecam.ts)
           ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`] : []),
         ].join('\n');
