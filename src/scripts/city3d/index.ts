@@ -1383,7 +1383,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || stashUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
