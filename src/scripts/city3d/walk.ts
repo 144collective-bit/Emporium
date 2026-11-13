@@ -67,6 +67,7 @@ import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { pollPad as pollPadOf, type PadHost, type PadState } from './walkpad';
+import { onKey as onKeyOf, type KeyHost } from './walkkeys';
 import { KART_PARK } from './kartpark';
 import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
@@ -1722,141 +1723,74 @@ export function createWalk(d: WalkDeps) {
     if (kind && view) d.game.toast(`Camera · ${viewName(kind, view)}`, 1200);
   }
 
-  const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
-  function onKey(e: KeyboardEvent, down: boolean) {
-    if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
-    const c = e.code;
-    if (down) setInput('keys');
-    // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
-    if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
-    // The hub open: its own keys (menukit.ts), and walking keys wait
-    if (d.hub?.open) return false;
-    // The inventory open: its keys (Tab closes it; Esc too, index.ts), and walking keys wait
-    if (hotbar?.open) return hotbar.key(e, down);
-    // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
-    if (shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open) {
-      if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
-      return false;
-    }
-    // / or ?: the control card for where you are (again: closes it)
-    if (down && !e.repeat && (c === 'Slash' || e.key === '?' || e.key === '/')) {
-      askCard();
-      e.preventDefault();
-      return true;
-    }
-    // On a ride: V steps its camera (the ride has the rest)
-    if (ride && down && !e.repeat && c === 'KeyV') {
-      nextCam();
-      e.preventDefault();
-      return true;
-    }
-    // Fighting, on the street's keys (keymap.ts): move with the move keys (W towards the opponent), G kicks, Space
-    // dodges, E a snack, V the camera; the mouse punches and blocks (right button held)
-    if (fighting()) {
-      if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') {
-        if (down && !e.repeat) fightBtns.dodge = true;
-      } else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
-      else if (down && !e.repeat && c === 'KeyE') fight?.snack();
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Boating: W / S ahead and astern, A / D steer, V swaps camera, H the horn, F gets out (alongside a landing)
-    if (boat?.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (down && !e.repeat && c === 'KeyH') boat.horn();
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, F gets out
-    if (fly.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c) || c === 'KeyC') {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Karting: steer and pedal with the move keys, Space hops into a drift (F does nothing in a race: no getting out mid-lap)
-    if (karts.active) {
-      if (c === 'KeyF') {
-        /* swallowed */
-      } else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
-    if (drive.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (down && !e.repeat && c === 'KeyH') drive.horn();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    if (down && c === 'KeyF' && near) act();
-    // Tab: the inventory (on foot, not in the middle of a moment)
-    else if (c === 'Tab') {
-      if (down && !e.repeat && !moments.active) toggleInv();
-    } else if (down && !e.repeat && c === 'KeyV') nextCam();
-    else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
-    else if (down && !e.repeat && c === 'KeyR') combat.reload();
-    else if (down && !e.repeat && c === 'KeyG') {
-      // (empty hands: G kicks; a gun is drawn with 1 or 2)
-      if (fistsReady()) fightBtns.kick = true;
-      else combat.toggleHolster();
-    } else if (down && !e.repeat && c === 'KeyX') stepSlot(1);
-    else if (c === 'KeyC') {
-      if (!e.repeat) crouchInput('keys', down);
-    }
-    // Shift on toggle: a press locks the sprint, the next lets it go
-    else if ((c === 'ShiftLeft' || c === 'ShiftRight') && hm('sprint', 'keys') === 'toggle') {
-      if (down && !e.repeat) setSprintLock(!sprintLock);
-    }
-    // Q / E held: peek left and right
-    else if (c === 'KeyQ' || c === 'KeyE') {
-      if (down) keys.add(c);
-      else keys.delete(c);
-    }
-    // 1-7 pick a hotbar slot (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]:not([data-hub-emotes] *)')) pickSlot(Number(c.slice(5)) - 1);
-    else if (c === 'Space') {
-      if (down && !e.repeat) tryJump();
-      jumpHeld = down;
-    } else if (MOVE.includes(c)) {
-      if (down) keys.add(c);
-      else keys.delete(c);
-    } else return false;
-    d.touched();
-    e.preventDefault();
-    return true;
-  }
+  /** The keyboard (walkkeys.ts, docs/walk-plan.md Phase 2): what it reads and calls of walk mode */
+  const keyHost: KeyHost = {
+    d,
+    get active() {
+      return active;
+    },
+    get hotbar() {
+      return hotbar;
+    },
+    get kartUI() {
+      return kartUI;
+    },
+    get ride() {
+      return ride;
+    },
+    get fight() {
+      return fight;
+    },
+    get boat() {
+      return boat;
+    },
+    get karts() {
+      return karts;
+    },
+    get near() {
+      return near;
+    },
+    get sprintLock() {
+      return sprintLock;
+    },
+    get jumpHeld() {
+      return jumpHeld;
+    },
+    set jumpHeld(v) {
+      jumpHeld = v;
+    },
+    get walkLock() {
+      return walkLock;
+    },
+    set walkLock(v) {
+      walkLock = v;
+    },
+    keys,
+    shop,
+    garageUI,
+    hangarUI,
+    fightUI,
+    fly,
+    drive,
+    combat,
+    fightBtns,
+    moments,
+    fighting,
+    emotesOpen: () => !!root.querySelector('[data-emotes][open]:not([data-hub-emotes] *)'),
+    setInput,
+    askCard,
+    nextCam,
+    hm,
+    act,
+    tryJump,
+    crouchInput,
+    fistsReady,
+    setSprintLock,
+    toggleInv,
+    stepSlot,
+    pickSlot,
+  };
+  const onKey = (e: KeyboardEvent, down: boolean) => onKeyOf(e, down, keyHost);
   // A click punches and the right button held blocks while fighting, as on the street (the mouse isn't captured in the ring)
   canvas.addEventListener('mousedown', (e) => {
     if (active && fighting()) {
