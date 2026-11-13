@@ -10,6 +10,12 @@
  *   down to the Close as a ramp, a drain by the garage's door.
  * - **The yard** between the house and the garage in flags, and a mat at the front door.
  *
+ * - **Inside** (Phase 3): the room on the ground floor, behind the house's own walls: its four walls' inner faces
+ *   with a window front and back and the two doors, a laminate floor, the ceiling and its light, and what stands in
+ *   it (home.ts `FURNITURE`): the boxed-in stairs, a sofa, a low table, the telly, the kitchen's counter and fridge,
+ *   a table and stools, the wardrobe, a trunk. Drawn without shadows, cast or taken (the house over it would put it
+ *   all in the dark), so it's evenly lit, as the mall's hall is.
+ *
  * All in the shared paint (plain colours), the walls, roof, door and driveway at every distance, the rest near only;
  * phones leave out the finest (the shelves, the joints).
  */
@@ -18,7 +24,8 @@ import { Batch, PAL, toon } from './kit';
 import { site } from './tilework';
 import { KERB } from './palette';
 import { glow, METAL } from './infill';
-import { HOME, HOME_LAND, HOME_SLAB, WALL } from './home';
+import { CEIL, FURNITURE, HOME, HOME_HOUSE, HOME_LAND, HOME_SLAB, ROOM, WALL, type Furniture } from './home';
+import { HOUSES } from './endsterraces';
 import type { Rect } from './endswood';
 
 const S = HOME_SLAB;
@@ -122,6 +129,140 @@ export function registerHome(low: boolean) {
       // A mat at the front door
       flat(b, [HOME.door[0] - 0.3, HOME.door[1] - 0.52, HOME.door[0] + 0.3, HOME.door[1] - 0.16], OVER, MAT);
     });
+    // The yard's gate onto the driveway, standing open against the garage's wall
+    b.detail(() => cube(b, [HOME.house[0] - 0.72, gz0 - 0.07, HOME.house[0] - 0.02, gz0 - 0.02], S + 0.04, S + 0.9, GATE));
     b.build(into, { cast: true, receive: true });
+    inside(into, low);
   });
+}
+
+const WALLS_IN = toon('#d9d0c2');
+const SKIRT = toon('#b7ad9e');
+const LAMINATE = toon('#8c6c4c');
+const CEILING_IN = toon('#e8e4dc');
+const WINDOW = toon('#bfe3f2');
+const FRAME = toon('#f1eee8');
+const SOFA = toon('#3f3a5a');
+const CUSHION = toon('#b0307a');
+const RUG = toon('#2f7f88');
+const WOOD = toon('#6b4a30');
+const WOOD_DARK = toon('#4a3322');
+const SCREEN = toon('#15141c');
+const UNIT = toon('#4a5a6a');
+const WORKTOP = toon('#cfcac4');
+const FRIDGE = toon('#dcdce0');
+const TRUNK = toon('#2e663c');
+const GATE = toon('#7a5a3a');
+
+/** A wall's inner face: a plane from a to c along the wall (x or z), from y0 to y1, facing the way `turn` turns it */
+function face(b: Batch, cx: number, cz: number, w: number, y0: number, y1: number, turn: number, m: THREE.Material) {
+  const g = new THREE.PlaneGeometry(w, y1 - y0).rotateY(turn);
+  g.deleteAttribute('uv');
+  b.add(g.translate(cx, (y0 + y1) / 2, cz), m);
+}
+
+/** The room inside (home.ts `ROOM`, `FURNITURE`) */
+function inside(into: THREE.Object3D, low: boolean) {
+  const b = new Batch();
+  const [x0, z0, x1, z1] = ROOM;
+  const [cx, cz, w, d] = [(x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0];
+  const top = S + CEIL;
+  // The four walls' inner faces (north faces south into the room, and so on), the floor and the ceiling
+  face(b, cx, z0, w, S, top, 0, WALLS_IN);
+  face(b, cx, z1, w, S, top, Math.PI, WALLS_IN);
+  face(b, x0, cz, d, S, top, Math.PI / 2, WALLS_IN);
+  face(b, x1, cz, d, S, top, -Math.PI / 2, WALLS_IN);
+  flat(b, ROOM, ON, LAMINATE);
+  {
+    const g = new THREE.PlaneGeometry(w, d).rotateX(Math.PI / 2);
+    g.deleteAttribute('uv');
+    b.add(g.translate(cx, top, cz), CEILING_IN);
+  }
+  // The two doors (his own colour on the front one) and a window front and back, a hair off the walls
+  const door = toon(HOUSES.find((h) => h.id === HOME_HOUSE)?.colour ?? '#2b4c86');
+  const dx = HOME.door[0];
+  cube(b, [dx - 0.3, z0 + 0.006, dx + 0.3, z0 + 0.04], S, S + 1.08, door);
+  cube(b, [dx - 0.28, z1 - 0.04, dx + 0.28, z1 - 0.006], S, S + 1.05, WOOD_DARK);
+  for (const [z, s] of [[z0, 1], [z1, -1]] as [number, number][]) {
+    const [wa, wb] = [x0 + 1.75, x1 - 1.2];
+    cube(b, [wa, Math.min(z + s * 0.006, z + s * 0.02), wb, Math.max(z + s * 0.006, z + s * 0.02)], S + 0.6, S + 1.02, WINDOW);
+    b.detail(() => {
+      cube(b, [wa - 0.04, Math.min(z + s * 0.006, z + s * 0.035), wb + 0.04, Math.max(z + s * 0.006, z + s * 0.035)], S + 0.56, S + 0.6, FRAME);
+      cube(b, [wa - 0.04, Math.min(z + s * 0.006, z + s * 0.035), wb + 0.04, Math.max(z + s * 0.006, z + s * 0.035)], S + 1.02, S + 1.06, FRAME);
+      cube(b, [(wa + wb) / 2 - 0.02, Math.min(z + s * 0.021, z + s * 0.035), (wa + wb) / 2 + 0.02, Math.max(z + s * 0.021, z + s * 0.035)], S + 0.6, S + 1.02, FRAME);
+    });
+  }
+  for (const f of FURNITURE) furnish(b, f, low);
+  b.detail(() => {
+    // The ceiling's light, a rug under the low table, the skirting along the west wall
+    b.add(new THREE.SphereGeometry(0.09, 8, 6).translate(cx - 0.3, top - 0.12, z0 + 1.7), glow(PAL.warm));
+    b.add(new THREE.SphereGeometry(0.08, 8, 6).translate(cx + 0.4, top - 0.12, z1 - 1.4), glow(PAL.warm));
+    const t = FURNITURE.find((f) => f.kind === 'table')!.rect;
+    flat(b, [t[0] - 0.45, t[1] - 0.3, t[2] + 0.45, t[3] + 0.35], OVER, RUG);
+    cube(b, [x0, z0, x0 + 0.02, z1], S, S + 0.07, SKIRT);
+  });
+  // (no shadows: the house over it would put the whole room in the dark)
+  b.build(into, { cast: false, receive: false });
+}
+
+/** One thing in the room, by its kind */
+function furnish(b: Batch, { kind, rect, h }: Furniture, low: boolean) {
+  const [x0, z0, x1, z1] = rect;
+  const y = S + 0.012;
+  if (kind === 'stairs') {
+    // Boxed in: a wall the room's colour, the cupboard's door under them on the room's side
+    cube(b, rect, S, S + h - 0.004, WALLS_IN);
+    b.detail(() => cube(b, [x0 - 0.02, z1 - 0.9, x0 - 0.004, z1 - 0.35], S, S + 0.85, WOOD_DARK));
+  } else if (kind === 'sofa') {
+    cube(b, [x0, z0 + 0.22, x1, z1], y, S + 0.22, SOFA);
+    cube(b, [x0, z0, x1, z0 + 0.22], y, S + h, SOFA);
+    for (const x of [x0, x1 - 0.14]) cube(b, [x, z0, x + 0.14, z1], y, S + 0.32, SOFA);
+    b.detail(() => {
+      for (const x of [x0 + 0.2, x1 - 0.52]) cube(b, [x, z0 + 0.2, x + 0.32, z0 + 0.3], S + 0.22, S + 0.4, CUSHION);
+    });
+  } else if (kind === 'table') {
+    cube(b, [x0, z0, x1, z1], S + h - 0.04, S + h, WOOD);
+    b.detail(() => {
+      for (const [x, z] of [[x0, z0], [x1 - 0.05, z0], [x0, z1 - 0.05], [x1 - 0.05, z1 - 0.05]]) cube(b, [x, z, x + 0.05, z + 0.05], y, S + h - 0.04, WOOD_DARK);
+    });
+  } else if (kind === 'tv') {
+    cube(b, rect, y, S + h, WOOD_DARK);
+    const m = (x0 + x1) / 2;
+    cube(b, [m - 0.55, z0 + 0.12, m + 0.55, z0 + 0.17], S + h + 0.06, S + h + 0.7, SCREEN);
+    b.detail(() => {
+      cube(b, [m - 0.08, z0 + 0.1, m + 0.08, z0 + 0.2], S + h, S + h + 0.06, SCREEN);
+      // (a standby light: small, so it glows without lighting the room)
+      b.add(new THREE.SphereGeometry(0.015, 5, 4).translate(m + 0.5, S + h + 0.09, z0 + 0.11), glow(PAL.cyan));
+    });
+  } else if (kind === 'counter') {
+    cube(b, [x0, z0 + 0.04, x1, z1], y, S + h - 0.04, UNIT);
+    cube(b, [x0 - 0.02, z0, x1, z1], S + h - 0.04, S + h, WORKTOP);
+    b.detail(() => {
+      // A sink, a hob, the cupboards' doors and a kettle
+      cube(b, [x0 + 0.5, z0 + 0.14, x0 + 1.0, z1 - 0.12], S + h, S + h + 0.006, UNIT);
+      cube(b, [x1 - 0.85, z0 + 0.14, x1 - 0.35, z1 - 0.12], S + h, S + h + 0.012, SCREEN);
+      if (!low) for (let x = x0 + 0.5; x < x1 - 0.2; x += 0.55) cube(b, [x - 0.01, z0 + 0.025, x + 0.01, z0 + 0.04], S + 0.06, S + h - 0.08, WORKTOP);
+      b.add(new THREE.CylinderGeometry(0.07, 0.08, 0.16, 8).translate(x0 + 0.25, S + h + 0.08, z0 + 0.3), FRIDGE);
+    });
+  } else if (kind === 'fridge') {
+    cube(b, rect, y, S + h, FRIDGE);
+    b.detail(() => cube(b, [x0 + 0.06, z0 - 0.02, x0 + 0.09, z0 - 0.004], S + 0.35, S + 0.75, UNIT));
+  } else if (kind === 'dining') {
+    cube(b, [x0, z0, x1, z1], S + h - 0.04, S + h, WOOD);
+    cube(b, [(x0 + x1) / 2 - 0.05, (z0 + z1) / 2 - 0.05, (x0 + x1) / 2 + 0.05, (z0 + z1) / 2 + 0.05], y, S + h - 0.04, WOOD_DARK);
+    b.detail(() => {
+      for (const x of [x0 - 0.02, x1 - 0.24]) b.add(new THREE.CylinderGeometry(0.13, 0.11, 0.3, 8).translate(x + 0.13, S + 0.16, z1 + 0.22), WOOD_DARK);
+    });
+  } else if (kind === 'wardrobe') {
+    cube(b, rect, y, S + h, WOOD);
+    b.detail(() => {
+      const m = (z0 + z1) / 2;
+      cube(b, [x0 - 0.012, m - 0.008, x0 - 0.002, m + 0.008], S + 0.05, S + h - 0.05, WOOD_DARK);
+      for (const z of [m - 0.07, m + 0.05]) cube(b, [x0 - 0.03, z, x0 - 0.004, z + 0.02], S + 0.5, S + 0.62, METAL);
+    });
+  } else {
+    // The stash: a trunk, a band round its lid
+    cube(b, rect, y, S + h, TRUNK);
+    b.detail(() => cube(b, [x0 - 0.008, z0 - 0.008, x1 + 0.008, z1 + 0.008], S + h - 0.09, S + h - 0.06, METAL));
+  }
 }
