@@ -97,6 +97,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
+import { HOME_DOOR, HOME_GARAGE_DOOR } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { endsDeckWall, upOnEnds } from './endsdecks';
@@ -133,7 +134,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** The landmarks' doors, Trench Avenue's, the stadium's gate, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, HOME_DOOR, ...SITE_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }];
 /** Doors with a word of their own (the viewpoints: nothing to enter) */
 const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out' };
 /** Prompts that say their own label (the rest say "Enter ...") */
@@ -593,7 +594,7 @@ export function createWalk(d: WalkDeps) {
     if (n.id === 'trainer') return counterMark(TRAINER_TOP, y + TRAINER_TOP_H, y, pos.x, pos.z);
     // (a sparring partner: the spar starts at once)
     if (n.id.startsWith('spar:')) return null;
-    if (n.id === 'garage') return door(GARAGE_SITE.door);
+    if (n.id === 'garage') return door(garageAt === 'home' ? HOME_GARAGE_DOOR : GARAGE_SITE.door);
     if (n.id === 'hangar') return door(HANGAR_DOOR);
     if (n.id === 'karts') return door(HUT_DOOR);
     // Getting in (step 2): the car's or the kart's side nearest him, the aircraft's door, the hire boat's ladder
@@ -1016,6 +1017,8 @@ export function createWalk(d: WalkDeps) {
   // The garage menu: like the store it frees the mouse and pauses walking; the camera goes to the
   // turntable (from over the shoulder, so the first-person hands stay out of the shot)
   let fpBeforeGarage = false;
+  /** Which garage's door the Garage prompt is at: the city's office, or Degen's own at home (home.ts) */
+  let garageAt: 'home' | 'city' = 'city';
   const garageUI = lazyMenu<GarageUI>(['show'], async () => (await import('./garage-ui')).createGarageUI(root, {
     preview: (c) => d.garage.show(c),
     // Kept: if your car is out on the streets, it comes home
@@ -1044,10 +1047,14 @@ export function createWalk(d: WalkDeps) {
       still();
       fpBeforeGarage = firstPerson;
       if (firstPerson) setFirstPerson(false);
+      // (at the city garage the car and the bike come to its turntable and stand, a showroom, while the menu is open;
+      // at home they're looked at where they live: garage.ts)
+      d.garage.at(garageAt);
       d.garage.spin(true);
     },
     onClose() {
       d.garage.spin(false);
+      d.garage.at('home');
       if (fpBeforeGarage) setFirstPerson(true);
       canvas.focus({ preventScroll: true });
     },
@@ -3157,6 +3164,13 @@ export function createWalk(d: WalkDeps) {
     if (Math.hypot(GARAGE_SITE.door.x - pos.x, GARAGE_SITE.door.z - pos.z) < 1.3) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
+      garageAt = 'city';
+    }
+    // Degen's own garage at home (home.ts): the same menu, by its door on his driveway
+    if (Math.hypot(HOME_GARAGE_DOOR.x - pos.x, HOME_GARAGE_DOOR.z - pos.z) < 1) {
+      best = { id: 'garage', label: 'Garage' };
+      bestD = 0;
+      garageAt = 'home';
     }
     // The kart hut's door, at the kart park
     if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {

@@ -1,9 +1,12 @@
 // A smoke test of walk mode in the built site (`npm run smoke` after `npm run build`): a headless Chromium opens the
-// city and plays through it a scene at a time, each from a fresh page at its own spot: the car (in at the garage's
-// turntable, a drive, out), on foot (walk, sprint, jump, crouch, the hub open and closed), the gun store's counter,
-// the metro (the station's card, a ride, skipped to the end), a kart race (the clubhouse's menu, a single race, quit),
-// flying (into your aircraft in the hangar, rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error or a step that didn't happen.
-//   npm run smoke -- car,foot    only these scenes walk.ts has no unit tests (it's
+// city and plays through it a scene at a time, each from a fresh page at its own spot: home (Degen's front door, his
+// panel), his garage's menu, the car (in at his garage, out through its door, a drive, out), on foot (walk, sprint,
+// jump, crouch, the hub open and closed), the gun store's counter, the metro (the station's card, a ride, skipped to
+// the end), a kart race (the clubhouse's menu, a single race, quit), flying (into your aircraft in the hangar,
+// rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error or a step that
+// didn't happen.
+//   npm run smoke -- car,foot    only these scenes
+// walk.ts has little of its own under unit tests (it's
 // the view), so this is the check to run before and after changing it. It's slow in the headless software
 // renderer (a few frames a second), so every step waits on what it expects, not on the clock.
 //   CHROMIUM_PATH=...   the browser (default: Playwright's own, else /opt/pw-browsers/chromium)
@@ -96,7 +99,8 @@ async function scene(name, spawn, play, init) {
   };
   let why = '';
   try {
-    await page.goto(`http://127.0.0.1:${server.address().port}/?fps&spawn=${spawn}`);
+    // (no spot given: walking starts where it does for everyone, at home)
+    await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}`);
     await t.click('[data-start-guest]');
     await t.click('[data-start-single]');
     await until('the start menu to go', () => !document.querySelector('.has-start'), null, 600000);
@@ -114,12 +118,30 @@ async function scene(name, spawn, play, init) {
   if (why || errors.length) failed++;
 }
 
-// The car: beside it on the garage's turntable (solids.ts GARAGE_SITE), in, a drive, out
-await scene('car', '83.9,143.35', async (t) => {
+// Home (home.ts): on Degen's front path in the Ends his door's prompt opens his panel (a new player's first walk
+// starts downtown, so the spot is given)
+await scene('home', '-189.75,363.25,3.14', async (t) => {
+  await t.prompt('Home');
+  await t.until('his panel', () => document.querySelector('#city-panel-title')?.textContent === 'Home');
+  await t.step('the door opened his panel');
+});
+
+// His garage's menu: by its door on the driveway, the garage menu open and closed
+await scene('homegarage', '-191.55,372.35', async (t) => {
+  await t.prompt('Garage');
+  await t.until('the garage menu', () => !!document.querySelector('[data-garage]:not([hidden])'));
+  await t.step('the garage menu opened at home');
+  await t.click('[data-garage-close]');
+  await t.until('the garage menu to close', () => !document.querySelector('[data-garage]:not([hidden])'), null, 60000);
+  await t.step('the garage menu closed');
+});
+
+// The car: beside it in Degen's garage at home (home.ts CAR_HOME), in, out through the door and down the driveway, out
+await scene('car', '-188.7,375.2', async (t) => {
   await t.prompt('Get in');
   await t.until('in the car', () => !!document.querySelector('.city.is-driving'));
   await t.step('in the car');
-  await t.go('w', 4, 'drove');
+  await t.go('w', 4, 'drove out of the garage');
   await t.page.keyboard.press('f');
   await t.until('out of the car', () => !document.querySelector('.city.is-driving'));
   await t.step('out of the car');

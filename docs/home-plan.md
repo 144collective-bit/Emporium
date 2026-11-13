@@ -1,0 +1,84 @@
+# The home plan: Degen's house in the Ends
+
+The owner's call (2026-11): "Degen needs a home with a garage. Preferably in
+the Ends estate ... functional, with space for a car and a bike on the
+driveway." The owner's answers:
+
+- **Where:** the end of a terrace in Endswood carried west.
+- **The garage and driveway:** home base. The car waits in the garage and the
+  bike on the driveway; "Bring my car home" sends them here; the garage's
+  door opens the same customise menu as the city garage, which stays open.
+- **The house:** walking starts here, with Home on the world map and in fast
+  travel; a walk-in interior; a wardrobe inside (Drop 001's fitting room);
+  a stash for what the bag doesn't carry.
+- **Whose:** his from the start, every save.
+
+## The plot
+
+Nothing that stands moved. The rows fill their blocks from the lane to the
+cross path, so there's no room to add a house to one: Degen's is the west
+end house of the row that backs onto the Close (endswest.ts row `rn2`,
+endsterraces.ts house `rn2-0-2`: two storeys, red brick, a pitched roof, its
+front on the green). Behind it the back garden reaches almost to the Close,
+and beside it lies the strip between the row's end and the service lane:
+
+- **The garage** stands in the back garden, as long as the garden is wide,
+  a yard between it and the house's back door, its up-and-over door in its
+  west wall.
+- **The driveway** is that strip, 3 by 7 tiles, from the house's back corner
+  to the Close, a dropped kerb at its foot; open to the lane along its west
+  side too. A car's bay along the lane's side and a bike's by the garage's
+  wall, both clear of the garage's door.
+
+The terrace made room: that garden has no shed, gate or washing, and its
+fences stop at the garage's walls. The neighbours' are as they were.
+
+## The phases
+
+Each with the owner's sign-off.
+
+1. **The house, the garage and the driveway; the place** (built, waiting on
+   the owner's sign-off). `home.ts` (DOM-free, the boot's, tested in
+   `tests/home.test.ts`), drawn by `home3d.ts` (a site in the estate's
+   chunk). Spot `home`: its pin over the roof, a panel with Walk in, the
+   front door's prompt ("Home", which opens the panel until the house can
+   be gone into), on the world map and in fast travel. Walking starts on
+   his front path (it started by the Emporium); `?spawn=` still says
+   otherwise. Shots: `docs/home-shots/`.
+2. **Home base** (built, waiting on the owner's sign-off). The garage is
+   hollow, its door up (`HOME_SOLIDS`: four walls, the opening clear;
+   inside a strip light, a workbench, shelves, tyres). garage.ts keeps two
+   sets of stands for the same car and bike: **home** (`CAR_HOME` in
+   Degen's garage, nose to its door; `BIKE_HOME` on its bay on the
+   driveway) and **the city garage's** turntable and stand, a showroom the
+   two come to only while that garage's menu is open (`garage.at()`).
+   Everything that asked the garage where the car is at home (getting in,
+   its door, taking it out, the menu's camera, Keep's "Bring my car home",
+   a reload) reads the stand it's on, so all of it happens at home now.
+   The car at home is solid to walk round (`drive.blocks()`). The garage
+   menu opens at his garage's door too (`HOME_GARAGE_DOOR`, the prompt
+   "Garage"), its camera out on the driveway looking in (`HOME_VIEW`).
+   A new player's very first walk starts downtown by the Emporium, every
+   one after it at home (`startsAtHome()`, the owner's call). The smoke
+   test's car scene starts in his garage and drives out through its door,
+   and a scene opens the garage menu there. Shots: `docs/home-shots/`.
+3. **The interior.** The front door lets you in: one room downstairs
+   (a sofa and a TV, a kitchen along the back wall, the stairs boxed in),
+   walked as the mall's hall is (its own floor, walls and camera limits),
+   the house's solid hollowed for it, a back door onto the yard. The
+   estate's first interior.
+4. **The wardrobe and the stash.** A wardrobe by the stairs opens the
+   fitting room (fitting.ts, as Drop 001's panel does); a cupboard opens
+   the stash: guns and items not carried (the inventory's bag, its rules in
+   inventory.ts, a `stash` in the save with its migration).
+5. **Polish.** Lights on at night and a porch light's pool, a line for the
+   panel, a `?bench` view, the smoke test's home scene grown to cover the
+   garage, the interior and the wardrobe; checked at every width.
+
+## Decided along the way
+
+- **The city garage** is a showroom with the same menu: its turntable and
+  bike stand are empty until its menu is open, when your car and bike
+  stand there to be looked at, and go home when it closes.
+- **A new player's first walk** starts downtown, where Getting started's
+  first steps are; every walk after that starts at home.

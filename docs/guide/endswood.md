@@ -168,3 +168,32 @@ keep it up to date when what it describes changes.
     (polish) is built and the plan is done: `?bench` views `endsw-parade`,
     `endsw-rows`, `endsw-kick`; no place of its own (it's Endswood's);
     phones draw every other garden's washing and no toys on the greens.
+- **Degen's home** (the owner's call: a home with a garage in the Ends, room
+  for a car and a bike on the driveway) is planned in `docs/home-plan.md`
+  in five phases, each with the owner's sign-off; keep it up to date. Phase
+  1 is built: `home.ts` (DOM-free, the boot's, tested in
+  `tests/home.test.ts`): the west end house of the row backing onto the
+  Close (endsterraces.ts `rn2-0-2`, `HOME_HOUSE`: the house stands where it
+  stood), `HOME.garage` in its back garden (its door, `garageDoor`, in its
+  west wall; shut for now, one solid box in `SOLIDS`), `HOME.drive` on the
+  strip between the row's end and the service lane down to the Close
+  (`HOME.kerb` the dropped kerb), the bays on it (`CAR_BAY`, `BIKE_BAY`),
+  the place (spot `home`: `HOME_PICK`, `HOME_PIN`, `HOME_DOOR`'s prompt,
+  `HOME_SPAWN`, a `PLACES` and `LIVE_PLACES` entry, panel
+  `data-panel-tpl="home"` with Walk in, `data-home-walkin`), `onHome()`.
+  Walking starts at `HOME_SPAWN` (index.ts's walk button; `?spawn=` in the
+  address still starts it elsewhere). endsterraces.ts makes room (no shed,
+  gate or fence where the garage stands: `cutBy()`), endswestlife.ts no
+  washing there. Drawn by `home3d.ts` (a site in the estate's chunk, from
+  endswest3d.ts's `register()`).
+  Phase 2 (home base) is built: the garage is hollow, its door up
+  (`HOME_SOLIDS`: its walls, `WALL`; the doorway clear), your car inside
+  (`CAR_HOME`) and your bike on the driveway (`BIKE_HOME`; a vehicle's yaw
+  is its group's turn, nose along (cos yaw, -sin yaw)). garage.ts has the
+  two sets of stands (`at('home' | 'city')`, `where`: the city garage's
+  turntable and stand are a showroom, used only while its menu is open),
+  and its `turntable`, `yaw`, `bikeSpot`, `takeOut()`, `takeOutBike()` and
+  `view` answer for the stands in use, so drive.ts and walk.ts needed no
+  other change but `drive.blocks()` (the car at home is solid) and the
+  second Garage prompt (`HOME_GARAGE_DOOR`, walk.ts `garageAt`).
+  `startsAtHome()`: a new player's first walk starts downtown.

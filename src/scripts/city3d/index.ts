@@ -49,6 +49,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_SLAB, HOME_SPAWN, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -355,6 +356,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
     spots.push(e.faces ? { ...s, faces: e.faces } : s);
   }
+  // ...and Degen's home at the west end of the row by the Close (home.ts, docs/home-plan.md; drawn in Endswood
+  // carried west's chunk): the pin over its roof, the fly-in from the north (its front faces the green)
+  spots.push({ ...pickSpot(scene, 'home', HOME_SLAB, HOME_PICK, HOME_LAND, HOME_PIN_H, HOME_PIN), faces: 'n' });
   // ...and City Hall at the civic square's head (civic.ts, docs/civic-plan.md Phase 2; drawn in Westlake Park's
   // chunk): the pin over its tower, the fly-in from the square (south)
   spots.push(pickSpot(scene, 'cityhall', SLAB, CITYHALL_PICK, CITYHALL_LAND, CITYHALL_TIP - SLAB + 1.4, CITYHALL_TOWER));
@@ -881,6 +885,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
       });
+    // Home's panel: Walk in on the front path, facing the door
+    if (id === 'home')
+      panelBody.querySelector('[data-home-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(HOME_SPAWN);
+      });
     // City Hall's panel: Walk in on the civic square at the steps' foot, facing them
     // (and the police's and the courthouse's, in front of their doors)
     if (id === 'cityhall' || id === 'police' || id === 'courthouse')
@@ -1303,7 +1313,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
     beforeWalk = null;
   }
-  walkBtn.addEventListener('click', () => startWalking());
+  // Walking starts at home, on Degen's front path in the Ends (home.ts, the owner's call), but a new player's very
+  // first walk, which starts downtown by the Emporium as it always did. `?spawn=x,z` in the address still says
+  // otherwise (walk.ts reads it when no spot is given)
+  walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') || !startsAtHome(game.save().visited) ? undefined : HOME_SPAWN));
   walkBtn.hidden = false;
   // The mode header's City button: back to the city view from walking
   const head = createCityHead(root);

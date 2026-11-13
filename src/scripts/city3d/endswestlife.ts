@@ -21,6 +21,7 @@
  *
  * In world numbers, x across, z north (-) to south (+).
  */
+import { HOME_HOUSE } from './home';
 import { ROAD_HALF, ROAD_Z, SLAB_Y, type Pt } from './endswood';
 import { GREENS, LANE, ROW_X, CROSS_PATHS, N_EDGE, ZEBRA } from './endswest';
 import { BIN, BIN_OFF, CANOPY, HOUSES, PORCH, TERRACES, binsOf, toWorld, type House, type Terrace } from './endsterraces';
@@ -251,7 +252,8 @@ export const LINE = { h: 1.2, back: 1.2 };
 const CLOTHES = ['#ecebe6', '#2b4c86', '#c9302b', '#e6c13c', '#5a5d66', '#e7a1b6', '#3f7f88', '#1c1b21', '#9ccfe0'];
 export const WASHING: Washing[] = HOUSES.flatMap((h, k): Washing[] => {
   const r = rng(7500 + k);
-  if (r() > 0.4) return [];
+  // (Degen's home, home.ts: his garage fills its garden)
+  if (r() > 0.4 || h.id === HOME_HOUSE) return [];
   const T = terraceOf(h);
   const mid = (h.u0 + h.u1) / 2;
   const clothes = Array.from({ length: 4 + Math.floor(r() * 3) }, () => CLOTHES[Math.floor(r() * CLOTHES.length)]);
