@@ -6,7 +6,7 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { BAKING_TEXTURES, PICK, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
+import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
 import { CROWD_PACK, loadMocap } from './mocap-load';
 import type { MoData } from './mocap';
 import { setCrowdCapture } from './crowdclips';
@@ -2162,6 +2162,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Reveal ---------- */
   root.dataset.view = '3d';
+  // (the texture bake keeps what the boot painted, up to here: kit.ts)
+  bootTexturesPainted();
   loader.classList.add('is-done');
   setTimeout(() => (loader.hidden = true), 600);
   const start = home();

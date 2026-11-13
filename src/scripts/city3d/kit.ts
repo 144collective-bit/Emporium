@@ -420,6 +420,14 @@ export interface BuiltTex {
 /** ?bake-textures: the build's own run, recording what's painted (each texture's key and canvas) */
 const BAKING: { key: string; canvas: HTMLCanvasElement; src: string }[] | null =
   !NO_DOM && /[?&]bake-textures\b/.test(location.search) ? ((globalThis as { __texBake?: unknown[] }).__texBake = []) as never : null;
+/**
+ * ?bake-textures: the boot is done (index.ts, as the loader goes). The bake keeps only what was painted by now
+ * (`__texBakeBoot`): a district loaded as you approach paints its textures whenever it arrives, a little before or
+ * after the bake looks, so counting them made the set (and the phones' texture budget) differ run to run
+ */
+export function bootTexturesPainted() {
+  if (BAKING) (globalThis as { __texBakeBoot?: number }).__texBakeBoot ??= BAKING.length;
+}
 /** Where the build put them, and the transcoder (three's, under its version) */
 let builtBase = '';
 let builtTranscoder = '';

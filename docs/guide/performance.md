@@ -130,6 +130,12 @@ keep it up to date when what it describes changes.
     each (a fresh save at noon, a well-used one at midnight): only what
     both runs painted the same is kept, so a key (`texKey()`: what draws
     it, its size, how many like it came before) stands for one picture.
+    Only what the boot painted counts: index.ts calls
+    `bootTexturesPainted()` (kit.ts) as the loader goes, and the bake keeps
+    the textures painted up to then (`__texBakeBoot`). A district loaded as
+    you approach paints its own whenever it arrives, so counting those made
+    the set differ run to run (2026-11: two extra kept on one run tipped
+    `texLow` over its budget); the bake logs any it left out.
     Each is GPU-compressed (KTX2: Basis ETC1S, UASTC where ETC1S loses
     too much), written to `_astro/tex/` and listed in the page
     (`#city-tex`); `loadBuiltTextures()` loads them with three's
