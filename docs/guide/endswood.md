@@ -228,3 +228,13 @@ keep it up to date when what it describes changes.
   on foot) lets sound.ts turn the street down further than the mall's
   hall does, over a faint hum. The garage door's lamp has a pool on the
   driveway (the last of endswestlife.ts's `PORCH_POOLS`).
+- **The far west and Degen's compound** (`docs/ends-far-west-plan.md`, the
+  owner's call: the home is a landmark with a design of its own, a walled
+  compound on a new plot west of the rows, planned with that phase of the
+  estate). Phase 1 (the land and the road) is built: `FAR_RECT` in
+  endswood.ts (read by `inEndswood()`), `endsfar.ts` (DOM-free, the boot's:
+  `FAR_STREETS` the Close's run on and the lane, `HEAD` their T,
+  `FAR_BLOCKS` with a `use` each, `PLOT` and `GATES` the compound's, 
+  `FAR_LAMPS`), drawn by `endsfar3d.ts` (`LAZY_DISTRICTS` id `endsfar`).
+  The Close's bollards are gone (`CLOSE_BOLLARDS` is empty): you drive on
+  to the lane. Until Phase 2 the home is still the end house of row `rn2`.

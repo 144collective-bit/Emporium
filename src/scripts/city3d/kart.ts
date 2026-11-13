@@ -52,6 +52,7 @@ import { CAR_PAINTS, paintHex, type PaintId } from './mycar';
 import { finishKartRace, kartStatsOf, keepSplits, parLap, recordKey, seriesRace, startSeries } from './tycoon';
 import { live } from './live-client';
 import { RACE_FAR, RACE_NEAR, START_VIEW, nextView, type ViewId } from './views';
+import { LENS } from './lens';
 
 /* ---------- The rivals ---------- */
 
@@ -320,7 +321,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   let fov0 = 60;
   /** The camera (V, R3, the touch View button; views.ts): near, far, the kart's seat; near every race */
   let view: ViewId = START_VIEW;
-  const near0 = camera.near;
+  // (the city's own near plane, not whatever the camera has now: City view and the walk move theirs, lens.ts)
+  const near0 = LENS.base;
   /** His eyes over the seat (kart space): seated at the driver's scale, a touch forward */
   const EYE = new THREE.Vector3(0.06, 0.47, 0);
   const camPos = new THREE.Vector3();

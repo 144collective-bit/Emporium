@@ -52,3 +52,18 @@ export function bodyGap(dx: number, dy: number, dz: number, scale: number): numb
 export function onLens(dx: number, dy: number, dz: number, near: number, scale: number): boolean {
   return bodyGap(dx, dy, dz, scale) < near;
 }
+
+/**
+ * City view's free camera (menus.md): low down it flies among the street's signs, trees, lamps and cars, which aren't
+ * in its way (freecollide.ts bumps it into the buildings only), and at the city's 0.5 the near plane cut them open as it
+ * came up to them. The near plane comes in with its height over the ground, `rise` a tile from `floor` at the least
+ * height it flies (`floor`, freecam.ts FLY.floor), back to the city's by about six tiles up, so high over the city
+ * (where the far-off faces are) nothing changes
+ */
+export const CITY_LENS = { floor: 0.1, rise: 0.08 };
+
+/** City view's near plane `height` over the ground, the least height it flies at `floor` */
+export function cityNear(height: number, floor: number, base = LENS.base): number {
+  const want = CITY_LENS.floor + Math.max(0, height - floor) * CITY_LENS.rise;
+  return Math.min(base, Math.max(LENS.min, Math.floor(want / LENS.step) * LENS.step));
+}

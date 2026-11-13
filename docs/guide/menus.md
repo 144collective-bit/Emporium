@@ -222,6 +222,17 @@ keep it up to date when what it describes changes.
   damping) from where the camera was before `controls.update()`; a move
   that shifted the target too (the drag, the zoom to the cursor) is held
   back with the camera. Fly-ins to places aren't swept.
+  **Its near plane comes in low down** (lens.ts `cityNear()`, tested in
+  `tests/lens.test.ts`): the street's signs, trees, lamps, cars and
+  people aren't in its way, and at the city's 0.5 they were cut open as
+  it came up to them. It's 0.1 at its least height (`FLY.floor`), rising
+  0.08 a tile to the city's 0.5 about six tiles up, so high over the city
+  nothing changes; beside a building it comes in by the distance to the
+  nearest box too (`freecollide.ts` `gap()`, `nearFor()`). The crowd
+  hides anyone on the lens whatever the camera (`CROWD_VIEW.near`).
+  `?fps`'s City view line shows it (`camera x, y, z · near n`). Walk mode,
+  the car and the kart take the city's own 0.5 from `LENS.base`, not
+  whatever the camera has when they're made.
 - **The views and controls plan** (the owner's call: "switch views in all
   walk modes in the vehicles", the controls simpler and more accessible)
   is planned in `docs/views-plan.md`: near, far and first person in every
