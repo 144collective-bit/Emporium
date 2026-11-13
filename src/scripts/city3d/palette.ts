@@ -141,3 +141,28 @@ export const LAMP_POST = {
   green: '#2e4b3b',
   dead: '#3a3644',
 } as const;
+
+/**
+ * The Outlands' ground (docs/outlands-plan.md, Phase 0): the country past the wall, wilder and greyer than the
+ * city's greens. Its own family, as the Outlands is its own map; the view (outlands3d.ts) mixes them by height,
+ * slope and a seeded noise
+ */
+export const OUTLANDS_COVER = {
+  /** The open grass of the low country */
+  grass: '#3b5a3a',
+  /** Meadow: the lighter, yellower patches */
+  meadow: '#5c6b40',
+  /** The higher, drier ground */
+  heath: '#6b6247',
+  /** Bare earth and scree on the steeper slopes */
+  earth: '#6e5a46',
+  /** Rock up in the mountains at the edge */
+  rock: '#6f6e6c',
+  /** The mud and gravel at the water's edge */
+  shore: '#7d6f55',
+  /** The water: the river and the lake */
+  water: '#3e6070',
+  /** The haze that takes the land in the distance, and the sky behind it */
+  haze: '#a7adb0',
+  sky: '#b9c0c2',
+} as const;

@@ -59,13 +59,15 @@ up to date. Nothing in Sector 7 moves or changes for it.
 
 ## The numbers
 
-- 1 tile is about 1.8 m, so 8 km is about **4,400 tiles across** (Sector
+- 1 tile is about 1.8 m, so 8 km is about **4,400 tiles across** (4,352 built) (Sector
   7's land inside the wall is about 1,560 across, 2.8 km). The Outlands is
   about 3 times the city across and about 8 times its area.
-- Terrain in **chunks** (about 128 tiles, 230 m, a side: about 35 x 35 of
-  them), each a height grid drawn near at full detail and simpler with
-  distance, built off the main thread from the seed, as the city's sites
-  are. Only the chunks round Degen are kept; the rest are let go.
+- Terrain in **chunks** (256 tiles, about 460 m, a side: 17 x 17 of them,
+  4,352 tiles, about 7.8 km), each a height grid drawn near at full detail
+  and simpler with distance, built from the seed a few milliseconds a
+  frame (a worker if the measurements ask for one). Only the chunks round
+  Degen are kept; the rest are let go. Desktop draws about 80 chunks,
+  phones about 35, shorter and coarser.
 - Trees, rocks, fences and wrecks are **instanced** per chunk; buildings
   come from the **building kits** (`kits.ts`, recipes), merged per chunk
   through a `Batch`, so the draw-call budget holds.
@@ -78,7 +80,7 @@ up to date. Nothing in Sector 7 moves or changes for it.
 
 ## Phases
 
-### Phase 0: the way in and the empty land (to build after sign-off)
+### Phase 0: the way in and the empty land (built, waiting on the owner's sign-off)
 
 The risky part first: can the city hand over to an 8 km world and back, on
 a phone too?
@@ -86,13 +88,13 @@ a phone too?
 - **The Outlands in the hub**: an entry (the hub's Map tab, "The
   Outlands"), behind `live.closed('outlands')`, with a short card (what it
   is, permadeath in the zone only) and **Go** / **Back**.
-- **Switching worlds**: picking it fetches the Outlands chunk, hides the
-  city's scene and lets go of what it can (crowds, traffic, near forms),
-  and the one render loop (`loop()` in `index.ts`) draws the Outlands'
-  scene instead. Leaving does the reverse and puts Degen back where he
-  was. Measured with `?fps` and `?bench` on the desktop and phone tiers:
-  the city must come back as it was, and memory must not climb with every
-  trip.
+- **Switching worlds**: picking it fetches the Outlands chunk and the one
+  render loop (`loop()` in `index.ts`) draws the Outlands' scene instead of
+  the city's. The city is held as it is (not drawn, not ticked: letting go
+  of its parts and building them again cost more than holding them), and
+  leaving puts the City view back as it was. The Outlands' scene and post
+  chain are made once and kept, its land let go on leaving, so memory
+  doesn't climb with every trip (`?fps` reads the geometries).
 - **The land, plain**: the seeded height map (hills, valleys, a river,
   a lake), its chunks streamed round Degen, grass and dirt from a palette
   of its own (the Outlands' answer to `palette.ts`), the grey haze at the
@@ -106,6 +108,17 @@ a phone too?
   slope), the chunks (which are kept round a point), the save's cleaning.
   `npm run smoke` gains a trip to the Outlands and back.
 - `docs/guide/outlands.md` started, and its row in `CLAUDE.md`'s index.
+
+**What was built** (2026-11-13): all of the above. The way in is the hub's
+Map tab and its card (Go / Back), behind the `outlands` live switch; the
+land is one seeded height map with a wadeable river, a deep lake and
+mountains at the edge; Degen walks, sprints, wades and jumps on it with the
+motion capture; keys, mouse, touch (a stick on the left half, looking on
+the right, a tap to jump) and a gamepad; a pause card; the run kept in its
+own save. Measured in the headless software renderer: about 60 draws and
+0.4M triangles on desktop, about 30 draws and 0.1M on the phone tier; from
+Go to walking there took about 2 s in the software renderer. Phase 1
+(the country) waits on the owner's sign-off.
 
 ### Phase 1: the country
 

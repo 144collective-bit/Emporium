@@ -31,7 +31,7 @@ export interface HubHooks {
 const PHONE = '(max-width: 640px), (pointer: coarse) and (max-height: 500px)';
 
 /** Inside the hub, these open screens of their own: the hub closes first */
-const OWN_SCREENS = '[data-worldmap-open], [data-inv-open], [data-dir-spot], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
+const OWN_SCREENS = '[data-worldmap-open], [data-outlands-open], [data-inv-open], [data-dir-spot], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
 
 export function createHub(root: HTMLElement) {
   const el = root.querySelector<HTMLElement>('[data-hub]')!;

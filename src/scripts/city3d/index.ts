@@ -84,6 +84,7 @@ import { createCityHead } from './head';
 import { buildMarket } from './market';
 import { createTycoonUI, type TycoonUI } from './tycoon-boot';
 import { lazy, setLazyToast } from './lazy';
+import type { Outlands } from './outlands3d';
 import { buildUnits } from './units';
 import { buildBigLots } from './biglots';
 import { buildCornerShops } from './cornershops';
@@ -129,7 +130,7 @@ import { kartRecordsHtml } from './kart-records';
 import { destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
-import { CROWD_VIEW, figureDetail } from './character';
+import { CROWD_VIEW, PLAYER, figureDetail, type Outfit } from './character';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
@@ -165,6 +166,14 @@ function pickTier(): Tier {
   return 'high';
 }
 
+/** What the Outlands sounds like (Phase 0): only the wind over open land and the birds, nothing of the city */
+const OUTLANDS_AMBIENCE = (() => {
+  const a = ambienceAt(0, 0);
+  for (const k of Object.keys(a) as (keyof typeof a)[]) a[k] = 0;
+  a.open = 0.8;
+  a.park = 0.35;
+  return a;
+})();
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -511,7 +520,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
-  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, thinInk: tier === 'low', fxaa: tier === 'low', shadows: sky });
+  // (the Outlands' own post chain takes the same, without the city's shadows: outlands3d.ts)
+  const postOpts = { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, thinInk: tier === 'low', fxaa: tier === 'low' };
+  const post = createPost(renderer, scene, camera, { ...postOpts, shadows: sky });
   /**
    * Shaders compiled for where the city really draws: the post chain's target (linear colour), not the
    * screen. Compiled for the screen, each material gets a program no frame uses, and the real one is
@@ -532,6 +543,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let startCovers = root.classList.contains('has-start');
   new MutationObserver(() => (startCovers = root.classList.contains('has-start'))).observe(root, { attributes: true, attributeFilter: ['class'] });
   const startUp = () => startCovers;
+  /** The Outlands (docs/outlands-plan.md): its own map, drawn in place of the city while it shows (below) */
+  let outlands: Outlands | null = null;
+  let inOutlands = false;
+  /** Degen's look now (the wardrobe's), for the Outlands' Degen */
+  let outfitNow: Outfit = PLAYER;
   function resize() {
     const w = host.clientWidth;
     const h = host.clientHeight;
@@ -542,6 +558,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     post.setSize(w, h, renderer.getPixelRatio());
+    outlands?.resize(w, h, renderer.getPixelRatio());
     dirty = true;
   }
   let dirty = true;
@@ -1239,7 +1256,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
   const profileUI = createProfileUI(root, {
-    setLook: (o) => walk.setLook(o),
+    setLook: (o) => {
+      // (kept for the Outlands too, which dresses its own Degen: outlands3d.ts)
+      outfitNow = o;
+      walk.setLook(o);
+    },
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
     openChar: () => charScreen.open(),
@@ -1361,6 +1382,75 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   head.city.hidden = false;
   root.querySelector('[data-walk-exit]')?.addEventListener('click', () => stopWalking());
 
+  /*
+   * The Outlands (docs/outlands-plan.md, Phase 0): the land past the wall, a map of its own. The hub's Map tab
+   * opens its card; Go fetches its chunk and hands it the frame: the city's scene is held as it is (not drawn, not
+   * ticked) until he comes back, to the City view as it was.
+   */
+  const loadOutlands = lazy(() => import('./outlands3d'), 'the Outlands');
+  const olCard = root.querySelector<HTMLElement>('[data-outlands-card]');
+  const closeOlCard = () => {
+    if (!olCard || olCard.hidden) return false;
+    olCard.hidden = true;
+    return true;
+  };
+  root.querySelectorAll<HTMLButtonElement>('[data-outlands-open]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const shut = live.closed('outlands');
+      if (shut) return tycoon?.toast(shut, 3500);
+      if (!olCard) return;
+      close();
+      olCard.hidden = false;
+      olCard.querySelector<HTMLButtonElement>('[data-outlands-go]')?.focus({ preventScroll: true });
+    })
+  );
+  olCard?.querySelectorAll('[data-outlands-back]').forEach((b) => b.addEventListener('click', () => closeOlCard()));
+  olCard?.querySelector('[data-outlands-go]')?.addEventListener('click', () => void enterOutlands());
+  async function enterOutlands() {
+    if (inOutlands) return;
+    const shut = live.closed('outlands');
+    if (shut) return void tycoon?.toast(shut, 3500);
+    closeOlCard();
+    let m: typeof import('./outlands3d');
+    try {
+      m = await loadOutlands();
+    } catch {
+      return;
+    }
+    if (walking) stopWalking(false);
+    close();
+    hub?.close();
+    setHover(null);
+    flight = null;
+    outlands ??= m.createOutlands({
+      renderer,
+      root,
+      post: postOpts,
+      low: tier === 'low',
+      reduced,
+      look: () => outfitNow,
+      size: () => ({ w: hostW, h: hostH }),
+      toast: (text, ms) => tycoon?.toast(text, ms),
+      leave: () => leaveOutlands(),
+      touched,
+    });
+    inOutlands = true;
+    controls.enabled = false;
+    root.classList.add('in-outlands');
+    document.body.classList.add('is-outlands');
+    outlands.enter();
+  }
+  function leaveOutlands() {
+    if (!inOutlands) return;
+    outlands?.exit();
+    inOutlands = false;
+    controls.enabled = true;
+    root.classList.remove('in-outlands');
+    document.body.classList.remove('is-outlands');
+    dirty = true;
+    sky.invalidateShadows();
+  }
+
   // Esc closes an open drop-open menu (the emotes) before it closes
   // a panel or leaves a mode
   const closePop = () => {
@@ -1375,6 +1465,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && accountUI?.close()) return;
     if (root.dataset.view !== '3d') return;
+    // (in the Outlands, every key is its own: outlands3d.ts)
+    if (inOutlands) return outlands?.onKey(e, true);
+    if (e.key === 'Escape' && closeOlCard()) return;
     if (accountUI?.isOpen) return;
     // The hub (hub.ts): Esc closes it (from outside it too: its own keys take Esc inside it)
     if (e.key === 'Escape' && hub?.close()) return;
@@ -1394,7 +1487,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (a panel closes first; with nothing open, the hub)
     if (e.key === 'Escape') active ? close() : hub?.show();
   });
-  document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
+  document.addEventListener('keyup', (e) => (inOutlands ? outlands?.onKey(e, false) : walking && walk.onKey(e, false)));
   let down: { x: number; y: number } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     down = { x: e.clientX, y: e.clientY };
@@ -1727,11 +1820,36 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
     if (bench && !bench.active && !bench.done && !walking && !startUp() && !works.stats().waiting && !districts.pending()) bench.begin(t);
-    const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
+    const busy = !!flight || walking || inOutlands || t - lastInput < 1 || !!bench?.active;
     // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
     if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
+    // The Outlands showing: its frame, not the city's (the city held as it is until he's back)
+    if (inOutlands && outlands) {
+      if (statsEl) renderer.info.reset();
+      outlands.frame(dt, t);
+      sound.update(0, 0, OUTLANDS_AMBIENCE, 0, 0);
+      if (statsEl) {
+        const now = performance.now();
+        stat.frames++;
+        stat.draws += renderer.info.render.calls;
+        stat.tris += renderer.info.render.triangles;
+        if (now - stat.since >= 1000) {
+          const n = Math.max(1, stat.frames);
+          const o = outlands.stats();
+          statsEl.textContent = [
+            `${Math.round((stat.frames * 1000) / (now - stat.since))} fps`,
+            `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris · ${renderer.info.memory.geometries} geometries`,
+            `the Outlands · ${o.chunks} chunks drawn · ${o.built} built · ${tier} · px ${renderer.getPixelRatio().toFixed(2)}`,
+            `at ${o.x.toFixed(1)}, ${o.z.toFixed(1)} · motion capture ${o.mocap}`,
+          ].join('\n');
+          Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
+        }
+      }
+      frames++;
+      return;
+    }
 
     // The benchmark has the camera while it runs (and the review shots while they hold a view)
     if (shots?.place(camera, controls.target) && !walking) dirty = true;

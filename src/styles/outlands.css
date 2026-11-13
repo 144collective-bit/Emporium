@@ -1,0 +1,138 @@
+/* The Outlands (outlands3d.ts, docs/outlands-plan.md): its card in the city (the hub's Map tab opens it) and its
+   screen while it shows, in the menus' arcade kit (.mk-skin). Base.astro imports it last. */
+
+/* While the Outlands shows, the site header steps aside (as walking), and of the city's own screens only the
+   drawing (the city's canvas, drawing the Outlands), the toasts, the owner's notices, the draft tag and the
+   maintenance cover stay; the Outlands' screen takes the rest */
+body.is-outlands .nav {
+  display: none;
+}
+.city.in-outlands > :not(.city3d, .ol, .mk-sprite, .city-toast, .city-hud, [data-maint]) {
+  display: none !important;
+}
+.city.in-outlands .city3d > :not(canvas, .city-stats) {
+  display: none !important;
+}
+/* (of the city's own corner, only the draft tag: no welcome card, no getting started) */
+.city.in-outlands .city-hud > :not(.city-draft-tag) {
+  display: none !important;
+}
+.city.in-outlands .city-draft-tag {
+  display: inline-flex;
+}
+
+/* The card: what it is, Go or Back (and the pause card, the same look) */
+.ol-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 30;
+  display: grid;
+  gap: 10px;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  padding: 12px 14px 14px;
+  transform: translate(-50%, -50%);
+}
+.ol-card[hidden] {
+  display: none;
+}
+.mk-skin.ol-card {
+  border: 2px solid #0000;
+  background:
+    repeating-linear-gradient(to bottom, #ffffff05 0 1px, #0000 1px 3px) padding-box,
+    linear-gradient(var(--m-cab), var(--m-cab)) padding-box,
+    linear-gradient(var(--m-edge), var(--m-edge)) border-box;
+  box-shadow: 0 18px 40px -16px #000c;
+  clip-path: var(--notch-4);
+  color: var(--m-text);
+}
+.ol-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.ol-note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--m-dim);
+}
+.ol-btns {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* The screen over the drawing: it takes the pointer (the mouse to look, the touch stick), never the page's scroll */
+.ol {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ol[hidden] {
+  display: none;
+}
+.ol-head {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+.ol-title {
+  margin: 0;
+  padding: 6px 10px;
+  background: #0c0d10b8;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--m-text);
+}
+.ol-menu {
+  pointer-events: auto;
+}
+.ol-hint {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  margin: 0;
+  padding: 8px 14px;
+  background: #0c0d10b0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m-text);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+.ol-hint[hidden],
+.ol-stick[hidden] {
+  display: none;
+}
+/* The touch stick: a ring where the thumb went down */
+.ol-stick {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  border: 2px solid #f1efe680;
+  border-radius: 50%;
+  background: #0c0d1040;
+  pointer-events: none;
+}

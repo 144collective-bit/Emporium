@@ -88,7 +88,7 @@ keep it up to date when what it describes changes.
   `CityMap.astro`, `gunshop.ts`). Phase 2 is built, waiting on the owner's
   sign-off: **the hub** (`hub.ts`, markup `[data-hub]` in `CityMap.astro`,
   styles `.mk-hub` in `menus.css`), the pause screen: tabs Map (World map,
-  every place, More's comic and store, PulseChain native, X and Telegram),
+  The Outlands (its card: `docs/guide/outlands.md`), every place, More's comic and store, PulseChain native, X and Telegram),
   Bag (opens the inventory; what you carry is Business's Bag), Business
   (the business card `[data-biz]`, moved in), Missions (level and badges),
   Profile (look, finish, wardrobe, wallet), Settings (`[data-controls]`:

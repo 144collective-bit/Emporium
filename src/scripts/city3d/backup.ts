@@ -28,6 +28,8 @@ export const BACKUP_KEYS = [
   'degen-city-combat-v1',
   'degen-city-walk-v1',
   'degen-city-ghosts-v2',
+  // (the Outlands' run, outlands-save.ts OUTLANDS_KEY: its own save, apart from the city's game)
+  'degen-city-outlands-v1',
 ] as const;
 export type BackupKey = (typeof BACKUP_KEYS)[number];
 export const BACKUP_KIND = 'sector7-save';

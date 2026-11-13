@@ -328,6 +328,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <div class="mk-body" data-mk-swipe>
       <div class="mk-page hub-page" data-page="map" role="tabpanel" aria-label="Map">
         <button type="button" class="mk-btn is-main hub-wide hub-3d" data-worldmap-open>World map<span class="hub-key" aria-hidden="true">M</span></button>
+        {/* The Outlands (docs/outlands-plan.md): the land past the wall, a map of its own; its card says what it is first */}
+        <button type="button" class="mk-btn hub-wide hub-3d" data-outlands-open>The Outlands</button>
         <p class="mk-label hub-label hub-3d">Places</p>
         <ul class="hub-places dir-places hub-3d">
             {directory.map((id) => {
@@ -965,6 +967,42 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <ul class="metro-list" data-riverbus-list></ul>
   </section>
   {/* The stash (stash-ui.ts, docs/home-plan.md Phase 4): the trunk in Degen's house, what's carried and what's put away */}
+  {/* The Outlands' card (index.ts): what it is, Go or Back. Then its screen over the city's (outlands3d.ts): its
+      header, the look hint, the touch stick, the pause card. The Outlands draws in place of the city meanwhile. */}
+  <section class="ol-card mk-skin" data-outlands-card hidden role="dialog" aria-modal="true" aria-labelledby="ol-card-title">
+    <div class="pop-head">
+      <p class="pop-title" id="ol-card-title">The Outlands</p>
+      <button type="button" class="pop-close" data-outlands-back aria-label="Close">
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
+      </button>
+    </div>
+    <p class="ol-text">The wild land past the wall.</p>
+    <p class="ol-note">Early build: the land only, for now.</p>
+    <div class="ol-btns">
+      <button type="button" class="mk-btn is-main" data-outlands-go>Go</button>
+      <button type="button" class="mk-btn" data-outlands-back>Back</button>
+    </div>
+  </section>
+  <div class="ol" data-outlands hidden>
+    <header class="ol-head mk-skin">
+      <p class="ol-title">The Outlands</p>
+      <button type="button" class="mk-btn is-small ol-menu" data-ol-menu aria-label="Menu (Esc)">Menu</button>
+    </header>
+    <p class="ol-hint mk-skin" data-ol-hint hidden>Click to look around</p>
+    <span class="ol-stick" data-ol-stick hidden aria-hidden="true"></span>
+    <section class="ol-card ol-pause mk-skin" data-ol-pause hidden role="dialog" aria-modal="true" aria-labelledby="ol-pause-title">
+      <div class="pop-head">
+        <p class="pop-title" id="ol-pause-title">Paused</p>
+        <button type="button" class="pop-close" data-ol-close aria-label="Resume">
+          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
+        </button>
+      </div>
+      <div class="ol-btns">
+        <button type="button" class="mk-btn is-main" data-ol-resume>Resume</button>
+        <button type="button" class="mk-btn" data-ol-leave>Back to Sector 7</button>
+      </div>
+    </section>
+  </div>
   <section class="metro-card stash-card mk-skin" data-stash hidden aria-labelledby="stash-title">
     <div class="pop-head">
       <p class="pop-title" id="stash-title">Stash</p>

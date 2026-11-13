@@ -42,7 +42,7 @@ keep it up to date when what it describes changes.
   (`airfield.ts`), flying your own aircraft (`flight-sim.ts`,
   `myplane.ts`), the merch looks and marks (`profile-data.ts`, `marks.ts`,
   in `tests/merch.test.ts`), the crowd's baked clips (`crowdclips.ts`) and Degen's skeleton, weights, head and hands
-  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`), the head's follow-through (`follow.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
+  (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`), the head's follow-through (`follow.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`), the Outlands' land, chunks and save (`outlands.ts`, `outlands-save.ts`, `tests/outlands.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
 - When you change a rule or move something in the city, run the tests and
@@ -59,8 +59,9 @@ keep it up to date when what it describes changes.
   (in at his garage, out through its door, a drive, out), on foot (walk,
   sprint, jump, crouch, the hub), the gun store's counter, the metro (the
   card, a ride, skipped), a kart race (a single race started and quit),
-  flying (into your aircraft, rolling out) and the gamepad (a made-up pad:
-  the stick, A, Start, B); it fails on any page error or a step that
+  flying (into your aircraft, rolling out), the gamepad (a made-up pad:
+  the stick, A, Start, B) and the Outlands (in from the hub, a walk and a
+  sprint on its land, its pause card, back, the run kept); it fails on any page error or a step that
   didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
   after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
   takes a few minutes in the software renderer, so it isn't in the Action.

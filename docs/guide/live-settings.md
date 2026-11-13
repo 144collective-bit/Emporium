@@ -15,7 +15,8 @@ keep it up to date when what it describes changes.
     test checks) and `LIVE_FEATURES` (walk, drive, fly, karts,
     fight, guns (the gun stores' counters), prizes (the kart races',
     series' and bouts' Dorras: closed, they run and pay 0, the XP as
-    before), taxi, metro, travel) are what can be switched; the command
+    before), taxi, metro, travel, outlands (the hub's way into the
+    Outlands)) are what can be switched; the command
     center reads these lists from here, so a new place or feature is added
     once, here.
   - `live-client.ts` fetches it: once at the boot (the 3D city's boot waits

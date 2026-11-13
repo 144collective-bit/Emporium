@@ -88,6 +88,7 @@ it and has been retired completely. Build only on what's here.
 | The owner's live settings (places and features switched from outside) | `docs/guide/live-settings.md` |
 | Wallet log-in, multiplayer, the game server | `docs/guide/multiplayer.md` |
 | What the tests cover and how they run | `docs/guide/tests.md` |
+| The Outlands, the survival game past the wall (`docs/outlands-plan.md`) | `docs/guide/outlands.md` |
 | Build mode and the grand station (both retired) | `docs/guide/retired.md` |
 
 ## Rules that hold everywhere
@@ -118,7 +119,8 @@ it and has been retired completely. Build only on what's here.
   players can't type text that shows.
 - **Nothing threatening, and nothing in the city attacks you.** Targets are
   the dummies and the drones only; the crowd is never a target; there's no
-  player health outside the Fight Club's ring.
+  player health outside the Fight Club's ring. (The owner's one exception:
+  the Outlands, its own map past the wall, `docs/outlands-plan.md`.)
 - **Retired, the owner's calls; don't bring any back without the owner:**
   the 2D map, the stage and screen on the hangout square, the skyline ring
   of dark towers, Sector 7 Central (the grand station), the street races,

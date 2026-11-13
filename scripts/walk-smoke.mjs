@@ -3,7 +3,7 @@
 // door, down the hall, out again), his garage's menu, the car (in at his garage, out through its door, a drive, out), on foot (walk, sprint,
 // jump, crouch, the hub open and closed), the gun store's counter, the metro (the station's card, a ride, skipped to
 // the end), a kart race (the clubhouse's menu, a single race, quit), flying (into your aircraft in the hangar,
-// rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error or a step that
+// rolling out), the gamepad (a made-up pad: the stick, A, Start, B) and the Outlands (in from the hub, a walk, back). It fails on any page error or a step that
 // didn't happen.
 //   npm run smoke -- car,foot    only these scenes
 // walk.ts has little of its own under unit tests (it's
@@ -299,6 +299,35 @@ await scene(
     navigator.getGamepads = () => [window.__pad];
   }
 );
+
+// The Outlands (docs/outlands-plan.md, Phase 0): from walking, the hub's way in, its card's Go, a few steps on its land,
+// its pause card (Esc), back to Sector 7 in the City view, and the run kept in its own save
+await scene('outlands', '86,138.5', async (t) => {
+  for (let i = 0; i < 2 && !(await t.has('.city.is-hub')); i++) {
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(2500);
+  }
+  if (!(await t.has('.city.is-hub'))) throw new Error('the hub did not open on Esc');
+  await t.click('[data-outlands-open]');
+  await t.until('the Outlands card', () => !document.querySelector('[data-outlands-card]')?.hidden, null, 60000);
+  await t.step('the Outlands card opened');
+  await t.click('[data-outlands-go]');
+  await t.until('the Outlands', () => document.querySelector('.city')?.classList.contains('in-outlands') && /the Outlands/.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 300000);
+  await t.step(`out in the Outlands, at ${(await t.where()).join(', ')}`);
+  await t.go('w', 1.5, 'walked on its land');
+  await t.go('w', 2, 'sprinted', ['Shift']);
+  for (let i = 0; i < 3 && (await t.page.evaluate(() => document.querySelector('[data-ol-pause]').hidden)); i++) {
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(2500);
+  }
+  if (await t.page.evaluate(() => document.querySelector('[data-ol-pause]').hidden)) throw new Error('the pause card did not open on Esc');
+  await t.step('paused');
+  await t.click('[data-ol-leave]');
+  await t.until('back in Sector 7', () => !document.querySelector('.city')?.classList.contains('in-outlands') && !document.body.classList.contains('is-outlands'), null, 60000);
+  const kept = await t.page.evaluate(() => JSON.parse(localStorage.getItem('degen-city-outlands-v1') ?? 'null'));
+  if (!kept?.run) throw new Error('the run was not kept');
+  await t.step('back in Sector 7, the run kept');
+});
 
 await browser.close();
 server.close();
