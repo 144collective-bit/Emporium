@@ -81,8 +81,14 @@ keep it up to date when what it describes changes.
   Degen stands each tick, so it only times the moves (frames, chains, the
   block, the dodge, stamina) and hands back what a move moves him (a
   step in, the dodge's slide) for walk mode to move him by through its
-  collisions; a `strike` on a move's first active frame; the guard up
-  with any press and `BRAWL.guard` after, dropped by sprinting. The hits
+  collisions; a `strike` on a move's first active frame. The guard is held
+  (the owner's call, 2026-11: hold the right mouse button to lift the
+  fists, then click to punch): up only while `guard` is held, punches,
+  kicks and the dodge thrown only with it up (a press without it is
+  nothing, a move going plays out when it's let go), and the guard is the
+  block (held between moves he's blocking; no block of its own on the
+  street); dropped by sprinting, back when the sprint ends if still held;
+  up, he moves no faster than `BRAWL.guardSpeed`. The hits
   are `melee()` in combat-sim.ts (the dummies in reach, arc and height,
   `strikeHeight()` in fight-moves.ts, shared with the ring; the drones
   fly out of a fist's reach; nothing with a gun out; online the `melee`
@@ -91,11 +97,17 @@ keep it up to date when what it describes changes.
   and Street fighter, badge Bare knuckles). The look is `brawl.ts` (walk
   mode's chunk): `lay()` puts the fight's clip on his pose after the
   walk, the upper body over the motion capture (`upperW`), a kick or the
-  dodge whole and standing (`rooted`). Controls: click punch, right-click
-  held block, G kick, Space dodges with the guard up and standing (jumps
-  otherwise), Shift sprints; touch (`.is-fists` on the root): Punch,
-  Block and Kick in Fire's, Reload's and Aim's places; gamepad X punch, Y
-  kick, LB held block, A dodge, the run on L3. A swing makes anyone near
+  dodge whole and standing (`rooted`); the guard held is the fight's
+  `guard` clip. Controls: right-click held lifts the guard, and with it up
+  click punches (the combo by timing: jab, cross, hook, uppercut), G
+  kicks, Space dodges standing (jumps otherwise), Shift sprints; touch
+  (`.is-fists` on the root): the ring's Block button is the Guard on the
+  street (walk.ts `labelBlockBtn()`, toggled), Punch and Kick showing
+  while it's up (`.is-guard`), in Fire's, Aim's and Reload's places;
+  gamepad LB held the guard, then X punch, Y kick, A dodge, the run on
+  L3. Hold or toggle: the guard is its own job (comfort.ts `guard`, held
+  on the keys and the pad, toggled on touch; Settings > Guard), the
+  ring's block keeps `block` ("Ring block"). A swing makes anyone near
   step aside (`swing` in life.ts, a `bump`): the crowd is never a target.
   The lab's Brawl program (`?anim&prog=brawl`) plays them.
 - **Sparring partners and styles** (Phase 3, with the fight plan's Phase

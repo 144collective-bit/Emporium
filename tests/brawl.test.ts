@@ -14,12 +14,13 @@ import { newPose } from '../src/scripts/city3d/skeleton';
 
 const tick = T.tick;
 /** Run the street fighter for `frames` ticks with `first` pressed on the first and `held` after */
+/** (the guard held throughout unless the call says otherwise: nothing's thrown without it) */
 function run(b: ReturnType<typeof createBrawl>, frames: number, first: Partial<typeof NO_BRAWL> = {}, held: Partial<typeof NO_BRAWL> = {}) {
   const out: { frame: number; e: BrawlEvent }[] = [];
   let dx = 0;
   let dz = 0;
   for (let i = 0; i < frames; i++) {
-    const r = b.step(tick, dx, dz, 0, { ...NO_BRAWL, ...(i === 0 ? first : held) });
+    const r = b.step(tick, dx, dz, 0, { ...NO_BRAWL, guard: true, ...(i === 0 ? first : held) });
     dx += r.dx;
     dz += r.dz;
     for (const e of r.events) out.push({ frame: i, e });
@@ -44,23 +45,23 @@ test('a punch in the recovery chains on: jab, then cross', () => {
   const moves: string[] = [];
   for (let i = 0; i < 80; i++) {
     const press = i === 0 || i === MOVES.jab.startup + MOVES.jab.active + 2;
-    for (const e of b.step(tick, 0, 0, 0, { ...NO_BRAWL, punch: press }).events) if (e.kind === 'strike') moves.push(e.move);
+    for (const e of b.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, punch: press }).events) if (e.kind === 'strike') moves.push(e.move);
   }
   assert.deepEqual(moves, ['jab', 'cross']);
 });
 
 test('punches are the upper body over the walk; kicks and the dodge take him whole', () => {
   const b = createBrawl('brawler');
-  b.step(tick, 0, 0, 0, { ...NO_BRAWL, punch: true });
+  b.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, punch: true });
   assert.equal(b.move, 'jab');
   assert.equal(b.rooted, false);
   assert.equal(b.clip().id, 'jab');
   const k = createBrawl('brawler');
-  k.step(tick, 0, 0, 0, { ...NO_BRAWL, kick: true });
+  k.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, kick: true });
   assert.equal(k.move, 'frontKick');
   assert.equal(k.rooted, true);
   const d = createBrawl('brawler');
-  d.step(tick, 0, 0, 0, { ...NO_BRAWL, dodge: true });
+  d.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, dodge: true });
   assert.equal(d.move, 'dodge');
   assert.equal(d.rooted, true);
 });
@@ -75,26 +76,60 @@ test("a dodge slides him back (the move's own step comes back to walk mode), a p
   assert.ok(fwd.dz > 0.1 && fwd.dz < MOVES.jab.lunge + 0.01, `stepped in ${fwd.dz}`);
 });
 
-test('the guard comes up with a move or the block, stays a while, drops; sprinting drops it and throws nothing', () => {
+test('the guard is up only while held, and it blocks between moves; let go, it drops at once', () => {
   const b = createBrawl('brawler');
   assert.equal(b.up, false);
-  run(b, 2, { block: true }, { block: true });
+  run(b, 2);
   assert.equal(b.up, true);
+  assert.equal(b.blocking, true, 'the guard is the block');
+  assert.equal(b.clip().id, 'guard');
+  run(b, 1, { guard: false });
+  assert.equal(b.up, false, 'down the moment it is let go');
+  assert.equal(b.blocking, false);
+});
+
+test('nothing is thrown without the guard: a punch, kick or dodge pressed with it down does nothing', () => {
+  const b = createBrawl('brawler');
+  const r = run(b, 60, { punch: true, guard: false }, { guard: false });
+  assert.equal(r.events.length, 0);
+  run(b, 1, { kick: true, guard: false }, { guard: false });
+  run(b, 1, { dodge: true, guard: false }, { guard: false });
+  assert.equal(b.move, null);
+  assert.equal(b.up, false);
+});
+
+test('a punch from the guard: not blocking while it plays, blocking again after; let go mid-move, it plays out', () => {
+  const b = createBrawl('brawler');
+  run(b, 3);
+  b.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, punch: true });
+  assert.equal(b.move, 'jab');
+  assert.equal(b.blocking, false);
+  // (let go: the jab still plays out, the guard up while it does)
+  b.step(tick, 0, 0, 0, { ...NO_BRAWL });
+  assert.equal(b.move, 'jab');
+  assert.equal(b.up, true);
+  const total = MOVES.jab.startup + MOVES.jab.active + MOVES.jab.recovery;
+  run(b, total + 2, { guard: false }, { guard: false });
+  assert.equal(b.move, null);
+  assert.equal(b.up, false);
+  run(b, total + 2);
   assert.equal(b.blocking, true);
-  run(b, Math.ceil((BRAWL.guard - 0.5) / tick));
-  assert.equal(b.up, true, 'still up a while after');
-  run(b, Math.ceil(1 / tick));
-  assert.equal(b.up, false, 'down after the guard time');
+});
+
+test('sprinting drops the guard and throws nothing; still held, it comes back when the sprint ends', () => {
   const s = createBrawl('brawler');
   const r = run(s, 30, { punch: true, sprinting: true }, { sprinting: true });
   assert.equal(r.events.length, 0);
   assert.equal(s.up, false);
+  run(s, 1);
+  assert.equal(s.up, true);
+  assert.ok(BRAWL.guardSpeed > BRAWL.still);
 });
 
 test('out of stamina he tires: no more moves until some is back', () => {
   const b = createBrawl('brawler');
   let tired = 0;
-  for (let i = 0; i < 600; i++) for (const e of b.step(tick, 0, 0, 0, { ...NO_BRAWL, kick: i % 31 === 0 }).events) if (e.kind === 'tired') tired++;
+  for (let i = 0; i < 600; i++) for (const e of b.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, kick: i % 31 === 0 }).events) if (e.kind === 'tired') tired++;
   assert.ok(tired > 0);
 });
 
@@ -176,7 +211,7 @@ test("the fists' clip over the walk: the upper body only, the legs left to the w
     p.bob = 0.03;
     return p;
   };
-  fists.brawl.step(tick, 0, 0, 0, { ...NO_BRAWL, punch: true });
+  fists.brawl.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, punch: true });
   const P = walk();
   const before = JSON.stringify(walk().legs);
   fists.lay(P, 1, 0);
@@ -189,7 +224,7 @@ test("the fists' clip over the walk: the upper body only, the legs left to the w
   fists.lay(Q, 0, 0);
   assert.equal(JSON.stringify(Q), JSON.stringify(walk()));
   const k = createStreetFists('brawler');
-  k.brawl.step(tick, 0, 0, 0, { ...NO_BRAWL, kick: true });
+  k.brawl.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, kick: true });
   for (let i = 0; i < MOVES.frontKick.startup; i++) k.brawl.step(tick, 0, 0, 0, NO_BRAWL);
   const R = walk();
   k.lay(R, 1, 1);
@@ -202,7 +237,7 @@ test("the fists' clip over the walk: the upper body only, the legs left to the w
 test('every street move ends back on the guard, where the guard clip starts', () => {
   for (const m of ['jab', 'frontKick', 'dodge'] as const) {
     const f = createStreetFists('brawler');
-    f.brawl.step(tick, 0, 0, 0, { ...NO_BRAWL, punch: m === 'jab', kick: m === 'frontKick', dodge: m === 'dodge' });
+    f.brawl.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, punch: m === 'jab', kick: m === 'frontKick', dodge: m === 'dodge' });
     const at = () => {
       const P = newPose();
       f.lay(P, 1, 1);

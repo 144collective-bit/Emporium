@@ -99,7 +99,7 @@ function setup(over: Partial<TouchHost> & { holds?: Record<string, 'hold' | 'tog
     joy: { x: 0, y: 0, sx: 0, sy: 0, id: -1, ox: 0, oy: 0, float: false },
     pedals: { gas: false, brake: false },
     kartBtns: { drift: false, item: false },
-    fightBtns: { punch: false, kick: false, dodge: false, block: false },
+    fightBtns: { punch: false, kick: false, dodge: false, block: false, guard: false },
     settings: { sens: 1, invert: false },
   };
   const h: TouchHost = {
@@ -110,6 +110,7 @@ function setup(over: Partial<TouchHost> & { holds?: Record<string, 'hold' | 'tog
     crouched: false,
     firstPerson: false,
     sprintLock: false,
+    ring: true,
     jumpHeld: false,
     aim: false,
     drive: { horn: say('horn') },
@@ -126,6 +127,10 @@ function setup(over: Partial<TouchHost> & { holds?: Record<string, 'hold' | 'tog
     setBlock: (on) => {
       s.fightBtns.block = on;
       log.push(`block:${on}`);
+    },
+    setGuard: (on) => {
+      s.fightBtns.guard = on;
+      log.push(`guard:${on}`);
     },
     quitFight: say('quitFight'),
     setFirstPerson: say('firstPerson'),
@@ -252,6 +257,18 @@ test('held or toggled by the setting: Run, Block and Aim', () => {
   assert.ok(hold.s.fightBtns.block);
   hold.p.block.fire('click', { detail: 1 });
   assert.ok(hold.s.fightBtns.block, "a pointer's own click already pressed it");
+  // On the street the same button is the Guard: on the guard's own setting (a toggle on touch), never the block
+  const street = setup({ ring: false, holds: { guard: 'toggle', block: 'hold' } });
+  street.p.block.fire('pointerdown');
+  street.p.block.fire('pointerup');
+  assert.deepEqual(street.log, ['guard:true']);
+  assert.ok(street.s.fightBtns.guard && !street.s.fightBtns.block);
+  street.p.block.fire('pointerdown');
+  assert.deepEqual(street.log, ['guard:true', 'guard:false']);
+  const held = setup({ ring: false, holds: { guard: 'hold' } });
+  held.p.block.fire('pointerdown');
+  held.p.block.fire('pointerup');
+  assert.deepEqual(held.log, ['guard:true', 'guard:false']);
   // Aim: the sight, and the button says so
   const aimBtn = hold.p.byId['[data-walk-aim]'];
   aimBtn.fire('pointerdown');

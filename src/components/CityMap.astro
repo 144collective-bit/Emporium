@@ -508,10 +508,17 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             </div>
           </div>
           <div class="walk-field" role="group" aria-labelledby="hold-block-label">
-            <span id="hold-block-label">Block</span>
+            <span id="hold-block-label">Ring block</span>
             <div class="walk-seg">
               <button type="button" data-hold="block:hold" aria-pressed="false">Hold</button>
               <button type="button" data-hold="block:toggle" aria-pressed="false">Toggle</button>
+            </div>
+          </div>
+          <div class="walk-field" role="group" aria-labelledby="hold-guard-label">
+            <span id="hold-guard-label">Guard</span>
+            <div class="walk-seg">
+              <button type="button" data-hold="guard:hold" aria-pressed="false">Hold</button>
+              <button type="button" data-hold="guard:toggle" aria-pressed="false">Toggle</button>
             </div>
           </div>
           <p class="walk-pad">Toggle: press once for on, again for off</p>
@@ -905,7 +912,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <button type="button" class="fight-btn fight-kick tc" data-fight-kick aria-label="Kick"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-kick" /></svg><span class="tc-word">Kick</span></button>
     <button type="button" class="fight-btn fight-block tc" data-fight-block aria-label="Block (hold)"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-block" /></svg><span class="tc-word">Block</span></button>
     <button type="button" class="fight-btn fight-dodge tc-go tc" data-fight-dodge aria-label="Dodge"><svg class="tc-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-jump" /></svg><span class="tc-word">Dodge</span></button>
-    {/* Fists on the street (brawl.ts): empty hands, the keys instead (.city.is-fists); on touch the fight's Punch, Kick and Block above take Fire's, Aim's and Reload's places */}
+    {/* Fists on the street (brawl.ts): empty hands, the keys instead (.city.is-fists); on touch the fight's Block above is the Guard (walk.ts relabels it), and Punch and Kick show while it's up (.is-guard), in Fire's, Aim's and Reload's places */}
     {/* Driving your car (drive.ts): speed readout, touch pedals (the stick steers) */}
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>

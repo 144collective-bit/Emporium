@@ -57,8 +57,9 @@ export interface PadHost {
   jumpHeld: boolean;
   aim: boolean;
   padLean: number;
-  padBlock: boolean;
-  padBlockOn: boolean;
+  /** LB with empty hands: the fists' guard held (and, on toggle, whether it's on) */
+  padGuard: boolean;
+  padGuardOn: boolean;
   // The menus
   shop: { open: boolean; input(k: 'pad'): void; move(dir: 'up' | 'down' | 'left' | 'right'): void; tab(dir: 1 | -1): void; press(): void; close(): void };
   garageUI: Stepper & { stepTab(dir: 1 | -1): void; stepPaint(dir: 1 | -1): void; keep(): void };
@@ -298,13 +299,14 @@ export function pollPad(gp: PadLike | null | undefined, dt: number, s: PadState,
   if (aimToggle && edge(6)) setAim(!h.aim);
   const aiming = aimToggle ? h.aim : !!b[6];
   h.padLean = aiming ? (b[5] ? 1 : 0) - (b[4] ? 1 : 0) : 0;
-  // (the run is the left stick pressed, a gun out or not (keymap.ts); empty hands: LB held blocks)
+  // (the run is the left stick pressed, a gun out or not (keymap.ts); empty hands: LB held lifts the guard, and X,
+  // Y and A punch, kick and dodge with it up)
   const fb = fistsReady();
-  if (hm('block', 'pad') === 'toggle') {
-    if (edge(4)) h.padBlockOn = !h.padBlockOn;
-    if (!fb) h.padBlockOn = false;
-    h.padBlock = fb && h.padBlockOn;
-  } else h.padBlock = fb && !!b[4];
+  if (hm('guard', 'pad') === 'toggle') {
+    if (edge(4)) h.padGuardOn = !h.padGuardOn;
+    if (!fb) h.padGuardOn = false;
+    h.padGuard = fb && h.padGuardOn;
+  } else h.padGuard = fb && !!b[4];
   // (sprint on toggle: L3 locks it, again lets it go)
   if (hm('sprint', 'pad') === 'toggle') {
     if (edge(10)) setSprintLock(!h.sprintLock);
@@ -314,7 +316,7 @@ export function pollPad(gp: PadLike | null | undefined, dt: number, s: PadState,
     h.aim = h.aim || !!b[6];
     if (!b[6] && pad.prev[6]) setAim(false);
   }
-  // (Y does what the prompt says; with empty hands and nothing to do, it kicks)
+  // (Y does what the prompt says; with empty hands and nothing to do, it kicks: with the guard up, brawl-sim.ts)
   if (edge(3)) {
     if (fistsReady() && !h.near) fightBtns.kick = true;
     else act();
@@ -323,7 +325,7 @@ export function pollPad(gp: PadLike | null | undefined, dt: number, s: PadState,
   if (edge(8) && !moments.active) toggleInv();
   if (edge(11)) nextCam();
   if (b[7] !== !!pad.prev[7]) combat.trigger(!!b[7]);
-  // (X reloads; with empty hands it punches)
+  // (X reloads; with empty hands it punches: with the guard up, brawl-sim.ts)
   if (edge(2)) {
     if (fistsReady()) fightBtns.punch = true;
     else combat.reload();
