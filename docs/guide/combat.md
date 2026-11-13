@@ -114,19 +114,28 @@ keep it up to date when what it describes changes.
   the puffer's quilting), each piece's
   colour its own `tint` attribute so an arm is two draws (not three's
   vertex colours: those keep it out of the ink's pre-pass, so no
-  outline). `fistsview.ts` (the fists' chunk, brawl.ts) moves them: the
-  fists up from below on a spring with a touch of overshoot while the
-  guard is held, a high guard by the chin (the lead left further out),
-  bobbing with the steps, breathing, a little bounce standing, lagging
-  the look; each punch chambered over its start-up, out over the active
-  frames with the shoulder driving behind it and the fist turning over,
-  back over the recovery, the other hand tucked in (jab and hook left,
-  cross and uppercut right); running with his hands down the arms pump
-  into the lower corners in step, harder sprinting (`PUMP`), hidden
-  standing and walking; a kick drops them and bobs the view (`KICK`).
-  Narrow screens (a phone upright) take the arms in and hold them
-  further off. Nothing bobs, breathes or sways under reduced motion. In
-  first person the view narrows `GUARD_ZOOM` (5°) with the guard up
+  outline). The arms are his body's (the owner's call, 2026-11: "too
+  straight... use his real body's clips"): `fistsview.ts` (the fists'
+  chunk, brawl.ts) reads the skeleton third person draws (`Degen.rig`,
+  posed by the motion capture and, with the guard up, the fight's clips
+  through brawl.ts `lay()`) each frame from an eye in his head
+  (`eyeFrame()`, `EYE`: the walk camera's own height is above his head)
+  and lays each arm on his shoulder, elbow and wrist, the fist turned as
+  his hand is (`bodyArm()`), so the guard, the jab, cross, hook and
+  uppercut, the kicks' hands and the run are the clips' own and both views
+  agree. From his eyes the clips' guard is under his chin, out of shot, so
+  with the guard up a first-person correction (`FP_FIX`) raises the fists,
+  draws them in, carries them forward the more the arm is bent and never
+  nearer the eye than `near`; running with his hands down `FP_RUN` lifts
+  his swing into the lower corners. Both solve the elbow again round
+  towards his own (`solveArm()`), never moving his body; while one arm is
+  out punching the other hand's draw in is eased off (`PUNCH_ASIDE`), so
+  the punch has the middle. With the left lead (the Fight Club, below) the
+  jab and hook are his left.
+  The arms are tied to the camera (in shot looking up or down) and lag
+  the look; narrow screens hold them further off; a kick bobs the view
+  (`KICK`). Nothing sways under reduced motion. In first person the view
+  narrows `GUARD_ZOOM` (5°) with the guard up
   (walk.ts). They're built `K` times bigger and further out (the camera's
   near plane is 0.5 m) and drawn in the front of the depth buffer, with
   their own flat shading (city lamps would otherwise light them wrongly).
@@ -189,7 +198,17 @@ keep it up to date when what it describes changes.
   `blendPose()`, `moveClip()`, `hurtClip()`; the hips' `turn` and `sway`
   go into every punch and kick, the reactions are keyed for a blow from the
   right and mirrored for one from the left (`hurtMirror()`, from the sim's
-  `hurtBy`), the clips' head turn is over square hips (the figure takes
+  `hurtBy`). **A left lead** (the owner's call, 2026-11): the clips are
+  keyed on the rig's sides by name (the jab and the hook `armL`), but the
+  rig's L is its -x side, his right on a figure facing +z, so every fight
+  drew as a southpaw; drawn, every clip is mirrored once more
+  (`LEFT_LEAD`, `drawnMirror()`, used by brawl.ts, fight-figure.ts,
+  fightrubric.ts and stage.ts): the jab and hook his left, the cross and
+  uppercut his right, the left foot forward (fightfeet.ts `STANCE` is the
+  keyed stance mirrored; `drawnPlantWeight()` swaps which leg stays
+  planted, so a kick comes off the other rig leg), the reactions flipped
+  with it; the rules (fight-sim.ts, fight-moves.ts) are unchanged. The
+  clips' head turn is over square hips (the figure takes
   the hips' turn back out); `root` { y, pitch, pivot } for
   the lying poses (the fall and the get-up pivot at the hips, `rootShift()`
   in `fight-figure.ts` moves the group so); `fists: true` on an `Outfit`

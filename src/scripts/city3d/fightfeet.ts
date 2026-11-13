@@ -30,7 +30,7 @@
  */
 import * as THREE from 'three';
 import { ANKLE_H, BALL_Z, HIP_Y, LEG_REACH, LEG_X, looseFoot, makeSkeleton, poseSkeleton, reachLeg, type Limb } from './skeleton';
-import { CLIPS, newFightPose, sampleClip, type ClipId, type FightPose } from './fight-anim';
+import { CLIPS, LEFT_LEAD, newFightPose, sampleClip, type ClipId, type FightPose } from './fight-anim';
 
 /** A clip's feet: legs L, R */
 export interface Plant {
@@ -81,6 +81,13 @@ export const PLANTS: Partial<Record<ClipId, Plant>> = {
 };
 
 /** How far leg `i` is on the canvas (0-1) in clip `id` at `frame` */
+/**
+ * Rig leg `i`'s weight on the canvas in a clip drawn mirrored or not (`mirror`, fight-anim.ts `drawnMirror()`): a
+ * mirrored clip's legs swap, so leg `i` plants as the keyed other leg does (the left lead's kicks come off the other
+ * rig leg)
+ */
+export const drawnPlantWeight = (id: ClipId, i: 0 | 1, frame: number, mirror: boolean) => plantWeight(id, (mirror ? 1 - i : i) as 0 | 1, frame);
+
 export function plantWeight(id: ClipId, i: 0 | 1, frame: number): number {
   const c = PLANTS[id];
   if (!c) return 0;
@@ -117,8 +124,8 @@ export interface Spot {
   toe: number;
 }
 
-/** Where the guard's feet stand */
-export const STANCE: [Spot, Spot] = (() => {
+/** Where the guard's feet stand as the clips are keyed (the rig's own sides) */
+const KEYED_STANCE: [Spot, Spot] = (() => {
   poseSkeleton(SK, GUARD_POSE);
   SK.root.updateMatrixWorld(true);
   const e = new THREE.Euler();
@@ -130,6 +137,13 @@ export const STANCE: [Spot, Spot] = (() => {
     return { x: b.x, y: 0, z: b.z, yaw: e.y, pitch: e.x, roll: e.z, toe: looseFoot(GUARD_POSE.legs[i]).toe };
   }) as [Spot, Spot];
 })();
+/** A foot's spot on the other side */
+const mirrorSpot = (s: Spot): Spot => ({ ...s, x: -s.x, yaw: -s.yaw, roll: -s.roll });
+/**
+ * Where the guard's feet stand as drawn: with the left lead (fight-anim.ts `LEFT_LEAD`) the keyed stance mirrored,
+ * each rig leg on the other's spot across the middle (so the left foot is forward)
+ */
+export const STANCE: [Spot, Spot] = LEFT_LEAD ? [mirrorSpot(KEYED_STANCE[1]), mirrorSpot(KEYED_STANCE[0])] : KEYED_STANCE;
 
 /* ---------- Planting ---------- */
 
@@ -161,7 +175,7 @@ function hipSpace(p: FightPose, i: number, out: THREE.Vector3) {
 
 /**
  * Plant the feet of a pose sampled from clip `id` at `frame` (`mirror` as it
- * was sampled): each leg on the canvas reaches its foot's spot (`STANCE`, or
+ * was sampled, the left lead's included: fight-anim.ts `drawnMirror()`): each leg on the canvas reaches its foot's spot (`STANCE`, or
  * `balls[i]` where the footwork has a foot), turned on its ball and its heel
  * up as `PLANTS` says, and weighed in by `plantWeight()` (or `w`, each
  * leg's weight as the view eases it). Changes `p`'s legs
@@ -171,7 +185,7 @@ export function plantLegs(p: FightPose, id: ClipId, frame: number, opts: { mirro
   const c = PLANTS[id];
   if (!c) return p;
   const { mirror = false, balls } = opts;
-  const w = opts.w ?? [plantWeight(id, 0, frame), plantWeight(id, 1, frame)];
+  const w = opts.w ?? [drawnPlantWeight(id, 0, frame, mirror), drawnPlantWeight(id, 1, frame, mirror)];
   if (w[0] <= 0 && w[1] <= 0) return p;
   // (a mirrored clip turns its hips the other way, and its driving foot is the other one)
   const m = mirror ? -1 : 1;

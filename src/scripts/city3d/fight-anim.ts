@@ -677,6 +677,17 @@ export function sampleClip(id: ClipId, frame: number, out: FightPose, opts: { mi
   return out;
 }
 
+/**
+ * A left lead (the owner's call, 2026-11): the clips are keyed on the rig's sides by name (the jab and the hook
+ * `armL`), but the rig's L is its -x side, which on a figure facing +z is his right, so every fight drew as a
+ * southpaw. Drawn, every clip is mirrored once more (`drawnMirror()`): the jab and the hook are his left, the cross and
+ * the uppercut his right, the left foot forward (fightfeet.ts `STANCE` follows), and the hit reactions flip with
+ * them. The fight's rules (fight-sim.ts, fight-moves.ts) don't change: only which side is drawn.
+ */
+export const LEFT_LEAD = true;
+/** How a clip is drawn: `mirror` (a reaction to a blow from the other side) on top of the left lead */
+export const drawnMirror = (mirror?: boolean) => !!mirror !== LEFT_LEAD;
+
 /** The clip a move plays */
 export const moveClip = (move: MoveId): ClipId => move;
 
