@@ -1412,9 +1412,10 @@ export function createSound(given?: AudioContext) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
       // Indoors (the mall's hall) the outdoor layers come through the walls damped, the rain too
-      const outdoors = 1 - a0.indoor * 0.7;
+      // (and in Degen's house, home.ts, more so: a small room with its door shut)
+      const outdoors = 1 - Math.max(a0.indoor * 0.7, a0.home * 0.85);
       const a: Ambience = { ...a0 };
-      for (const key of Object.keys(a) as (keyof Ambience)[]) if (key !== 'indoor') a[key] = a0[key] * outdoors;
+      for (const key of Object.keys(a) as (keyof Ambience)[]) if (key !== 'indoor' && key !== 'home') a[key] = a0[key] * outdoors;
       rain *= outdoors;
       rumble *= outdoors;
       // The Trenches: the el as the train goes over, the boombox, sirens and dogs now and then
@@ -1583,10 +1584,11 @@ export function createSound(given?: AudioContext) {
         jetGain.gain.setTargetAtTime(a.jets * 0.2, t, 0.6);
       }
       // Inside the mall: a low hum (the air handling) and a murmur of people under the vault
-      if (a0.indoor > 0.01 || indoorGain) {
+      if (a0.indoor > 0.01 || a0.home > 0.01 || indoorGain) {
         indoorGain ??= layer('lowpass', 210, 0.9, 0.12, 0.08, true);
         murmurGain ??= layer('bandpass', 620, 1.4, 0.5, 1.7);
-        indoorGain.gain.setTargetAtTime(a0.indoor * 0.14, t, 1);
+        // (the same low hum, quieter, for Degen's room: the fridge; no murmur there)
+        indoorGain.gain.setTargetAtTime(a0.indoor * 0.14 + a0.home * 0.05, t, 1);
         murmurGain!.gain.setTargetAtTime(a0.indoor * 0.045, t, 1);
       }
       // The Night Market after dusk: its diners' murmur over the water

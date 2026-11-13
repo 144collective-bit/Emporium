@@ -49,7 +49,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_SPAWN, startsAtHome } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_SPAWN, inHouse, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -1747,6 +1747,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
     sky.setShadows(walking && !walk.airborne);
+    // (in Degen's house, home.ts: no rain indoors)
+    sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z));
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
