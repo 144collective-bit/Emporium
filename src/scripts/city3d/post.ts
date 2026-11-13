@@ -120,11 +120,18 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
 
   const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: opts.msaa });
   const composer = new EffectComposer(renderer, target);
-  // MSAA for the scene's own pass only: the composer clones the target for its second buffer, which the ink, bloom
-  // and output passes ping-pong through drawing full-screen quads, so it needs neither MSAA nor depth (at 2880 x 1800
-  // with 4x MSAA that clone was about 290 MB: docs/stability-plan.md, Phase 2). Set before it's first drawn into
+  // MSAA and depth for the scene's own pass only: the composer clones the target for its second buffer, which the
+  // ink, bloom and output passes ping-pong through drawing full-screen quads, so it needs neither (at 2880 x 1800 with
+  // 4x MSAA that clone was about 290 MB: docs/stability-plan.md, Phase 2). Set before it's first drawn into. The
+  // composer's scene pass draws into its *read* buffer, which starts as renderTarget2 and moves with every swap, so
+  // `render()` hands it back renderTarget1 at the start of each frame (`sceneFirst()`): without that the scene was
+  // drawn with no depth (phones every frame, desktops with SMAA every other)
   composer.renderTarget2.samples = 0;
   composer.renderTarget2.depthBuffer = false;
+  const sceneFirst = () => {
+    composer.readBuffer = composer.renderTarget1;
+    composer.writeBuffer = composer.renderTarget2;
+  };
   composer.addPass(new RenderPass(scene, camera));
 
   const ink = new ShaderPass(InkShader);
@@ -242,6 +249,7 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     camera.layers.enable(FX);
     renderer.setRenderTarget(null);
 
+    sceneFirst();
     composer.render();
   }
 

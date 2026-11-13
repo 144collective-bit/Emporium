@@ -117,6 +117,23 @@ and that's what's live:
    (`targets`) count the picture's render targets and every shadow map
    (`targetMemory()` in `perf.ts`, `targetBytes()` in `targets.ts`).
 
+### Phase 2's bug, found live and fixed (2026-11-13)
+
+Merged, the phones drew the scene with no depth: only the ink's outlines
+and the sky and haze, far things painted over near ones (the owner's
+screenshot, walk mode). three's composer draws the scene into its *read*
+buffer, which starts as `renderTarget2`, the buffer item 1 stripped of
+depth, and moves with every swap: phones swap twice a frame (the ink, the
+output), so the scene was always drawn without depth; desktops with SMAA
+swap three times, so every other frame was (the review shot had caught a
+good frame). **Fixed:** `post.ts` hands the composer `renderTarget1` (the
+scene's, with its MSAA and depth) as its read buffer at the start of every
+frame (`sceneFirst()`), so the scene is always drawn there. Checked in walk
+mode on the phone tier (390 x 844 touch) and a desktop with SMAA, six
+frames in a row each: every frame drawn right. **The lesson for review
+shots: take several frames in a row, on the phone tier too, after anything
+that changes how a frame is drawn.**
+
 ### What Phase 2 measured
 
 The high tier in headless Chromium at 1440 x 900 (`?fps`), the render targets
