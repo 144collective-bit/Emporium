@@ -126,9 +126,17 @@ keep it up to date when what it describes changes.
   agree. From his eyes the clips' guard is under his chin, out of shot, so
   with the guard up a first-person correction (`FP_FIX`) raises the fists,
   draws them in, carries them forward the more the arm is bent and never
-  nearer the eye than `near`; running with his hands down `FP_RUN` lifts
-  his swing into the lower corners. Both solve the elbow again round
-  towards his own (`solveArm()`), never moving his body; while one arm is
+  nearer the eye than `near`, the elbow solved again round towards his own
+  (`solveArm()`), never moving his body. Running with his hands down (the
+  owner's calls: "a classic FPS pump", "his steps, a designed arc", loose
+  fists) the pump takes over (`pumpArm()`, `PUMP`): his body sets the
+  timing (each arm's wrist ahead of the other's against the size of his
+  swing lately, `pumpSwing()`) and the arm follows a designed arc, the
+  elbow held at a right angle (the wrist on a sphere round his shoulder),
+  the fist swung up into its lower corner and back down out of shot like
+  a pendulum, higher sprinting, the elbow driving back; the fist is loose
+  (`fistGeometry(thumb, loose)`, a second forearm swapped in, so still two
+  draws an arm) and eases back to the clip's arm as he slows (`blendArm()`); while one arm is
   out punching the other hand's draw in is eased off (`PUNCH_ASIDE`), so
   the punch has the middle. With the left lead (the Fight Club, below) the
   jab and hook are his left.

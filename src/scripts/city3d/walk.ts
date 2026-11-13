@@ -2936,7 +2936,7 @@ export function createWalk(d: WalkDeps) {
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
     // Empty hands in first person: his own arms, his body's (fistsview.ts): the skeleton as posed this frame (the
     // motion capture, and the fight's clips with the guard up) read from an eye in his head
-    fistsView?.update(camera, dt, { guard: guardAmt, run: THREE.MathUtils.smoothstep(stride, FP_PUMP[0], FP_PUMP[1]), still: d.reduced }, firstPerson && fistsOn, { rig: hero.rig, root: hero.g });
+    fistsView?.update(camera, dt, { guard: guardAmt, run: THREE.MathUtils.smoothstep(stride, FP_PUMP[0], FP_PUMP[1]), sprint: runAmt, still: d.reduced }, firstPerson && fistsOn, { rig: hero.rig, root: hero.g });
 
     // Field of view widens with speed, narrows when aiming, and in first person a touch with the guard up (the
     // owner's call, 2026-11: the fight in focus)

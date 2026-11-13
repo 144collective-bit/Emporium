@@ -106,7 +106,7 @@ test('the sleeves and cuffs: their lengths, round both ends; painted pieces merg
 
 // His body's arms read from the eye (the owner's call, 2026-11: "use his real body's clips")
 import { makeSkeleton, newPose, poseSkeleton, UPPER_ARM } from '../src/scripts/city3d/skeleton';
-import { BODY_TO_ARM, EYE, FP_FIX, FP_RUN, bodyArm, eyeFrame, newLaidArm, type BodyJoints } from '../src/scripts/city3d/fparm';
+import { BODY_TO_ARM, EYE, FP_FIX, KNUCKLES, PUMP, blendArm, bodyArm, eyeFrame, newLaidArm, pumpArm, pumpSwing, type BodyJoints } from '../src/scripts/city3d/fparm';
 
 /** His skeleton posed (arms by `arms`), scaled `unit` and facing +z: its head and each arm's joints in the world */
 function body(unit: number, arms?: (p: ReturnType<typeof newPose>) => void) {
@@ -160,7 +160,7 @@ test('laid on his body: his arm lengths become the arm\'s, the elbow his own, th
   assert.ok(near(BODY_TO_ARM * UPPER_ARM, ARM.upper));
 });
 
-test('the first-person corrections: the guard\'s fists up, in and never at the eye; the run\'s lifted; the arm keeps its lengths', () => {
+test('the guard\'s first-person correction: the fists up, in and never at the eye; the arm keeps its lengths', () => {
   const unit = 0.66;
   // (a tight guard: the fists by his chin)
   const b = body(unit, (p) => {
@@ -177,8 +177,61 @@ test('the first-person corrections: the guard\'s fists up, in and never at the e
     assert.ok(near(fixed.shoulder.distanceTo(fixed.elbow), ARM.upper, 1e-4) && near(fixed.elbow.distanceTo(fixed.wrist), ARM.fore, 1e-4));
     // (none of it with the guard down)
     assert.ok(bodyArm(j, eye, unit, newLaidArm(), 0).wrist.distanceTo(raw.wrist) < 1e-9);
-    const run = bodyArm(j, eye, unit, newLaidArm(), 0, 1);
-    assert.ok(run.wrist.y > raw.wrist.y && FP_RUN.lift > 0, 'the run lifts his swing');
-    assert.ok(run.wrist.y <= FP_RUN.top + 1e-3 && run.wrist.z <= -FP_RUN.near + 1e-3, 'never over the corner nor at the eye');
+  }
+});
+
+test('the pump: the elbow at a right angle all the way, the fist up into its corner forward and out of shot back', () => {
+  for (const side of [1, -1]) {
+    const S = V(0.2 * side, -0.21, 0.06);
+    let last: THREE.Vector3 | null = null;
+    for (let k = -1; k <= 1.0001; k += 0.05) {
+      const a = pumpArm(S, k, 0, newLaidArm());
+      // (the arm's lengths, and the elbow square)
+      assert.ok(near(a.shoulder.distanceTo(a.elbow), ARM.upper, 1e-4) && near(a.elbow.distanceTo(a.wrist), ARM.fore, 1e-4));
+      const bend = a.shoulder.clone().sub(a.elbow).angleTo(a.wrist.clone().sub(a.elbow));
+      assert.ok(Math.abs(bend - Math.PI / 2) < 0.02, `elbow ${((bend * 180) / Math.PI).toFixed(0)}`);
+      // (a smooth swing, a pendulum's, lowest beside him mid-way: never a jump, never stopped against an edge)
+      if (last) assert.ok(a.wrist.distanceTo(last) < 0.1 && a.wrist.distanceTo(last) > 1e-4, 'smooth');
+      last = a.wrist.clone();
+      // (the back of the fist facing out; forward, the elbow driving behind and below the wrist)
+      assert.ok(a.face.x * side > 0);
+      if (k > 0.4) assert.ok(a.elbow.y < a.wrist.y && a.elbow.z > a.wrist.z);
+    }
+    const fwd = pumpArm(S, 1, 0, newLaidArm());
+    const back = pumpArm(S, -1, 0, newLaidArm());
+    // Forward: ahead and in its lower corner (inside a 65-degree view, below the middle, on its own side)
+    const inView = (w: THREE.Vector3) => w.z < -0.2 && Math.abs(w.y / w.z) < Math.tan((32.5 * Math.PI) / 180) && w.y < 0;
+    const knuckles = (a: ReturnType<typeof newLaidArm>) => a.wrist.clone().addScaledVector(a.wrist.clone().sub(a.elbow).normalize(), KNUCKLES);
+    assert.ok(inView(knuckles(fwd)) && fwd.wrist.x * side > 0, `forward ${knuckles(fwd).toArray().map((n) => n.toFixed(2))}`);
+    // Back: down beside him, out of shot
+    assert.ok(!inView(knuckles(back)) && !inView(back.wrist));
+    // Sprinting it swings higher
+    assert.ok(pumpArm(S, 1, 1, newLaidArm()).wrist.y > fwd.wrist.y);
+    assert.ok(PUMP.reach > ARM.upper && PUMP.reach < ARM.upper + ARM.fore);
+  }
+});
+
+test('the pump\'s timing is his: each arm\'s swing from how far it is ahead of the other, and blending keeps the arm whole', () => {
+  assert.equal(pumpSwing(0, 0.1), 0);
+  assert.ok(pumpSwing(0.1, 0.1) > 0.5 && pumpSwing(-0.1, 0.1) < -0.5);
+  assert.equal(pumpSwing(5, 0.1), 1);
+  // (blended half way from his own arm to the pump, the arm keeps its lengths)
+  const S = V(0.2, -0.21, 0.06);
+  const own = pumpArm(S, -1, 0, newLaidArm());
+  const pump = pumpArm(S, 1, 0, newLaidArm());
+  const mid = blendArm(own, pump, 0.5);
+  assert.ok(near(mid.shoulder.distanceTo(mid.elbow), ARM.upper, 1e-4) && near(mid.elbow.distanceTo(mid.wrist), ARM.fore, 1e-4));
+});
+
+test('the loose fist: the same size as the tight one, its fingers eased open', () => {
+  for (const thumb of [-1, 1] as const) {
+    const tight = fistGeometry(thumb);
+    const loose = fistGeometry(thumb, 1);
+    tight.computeBoundingBox();
+    loose.computeBoundingBox();
+    const a = tight.boundingBox!.getSize(V(0, 0, 0));
+    const b = loose.boundingBox!.getSize(V(0, 0, 0));
+    assert.ok(Math.abs(a.x - b.x) < 0.01 && b.y < a.y + 0.03, 'about the same size');
+    assert.ok(loose.boundingBox!.max.y > tight.boundingBox!.max.y, 'the fingers further out');
   }
 });

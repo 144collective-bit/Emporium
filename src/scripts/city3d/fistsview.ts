@@ -11,8 +11,11 @@
  * - The guard held, a first-person correction (fparm.ts `FP_FIX`, the owner's call: the clips are made to read from
  *   behind him, and from his eyes their guard is under his chin, out of shot) carries the fists forward into shot,
  *   up and in, without moving his body; the elbows are solved again round towards his own.
- * - Running with his hands down, a running correction (fparm.ts `FP_RUN`) lifts his own swing into the lower
- *   corners, so each arm comes into shot as it swings forward; standing or walking they're out of sight below.
+ * - Running with his hands down (the owner's calls: "a classic FPS pump", "his steps, a designed arc", loose fists),
+ *   the pump: his body sets the timing (each arm's wrist ahead of the other's, against the size of his swing lately,
+ *   fparm.ts `pumpSwing()`) and the arm follows a designed arc (`pumpArm()`, `PUMP`): the elbow held at a right
+ *   angle, the fist swung up into its lower corner and back down out of shot, higher sprinting, the fist loose (a
+ *   second forearm, swapped in, so still two draws an arm). Standing or walking they're out of sight below.
  * - The arms are tied to the camera (so they stay in shot looking up or down) and lag the look (sway); narrow screens
  *   hold them further off. A kick also bobs the view (walk.ts: `kickBob()`, `KICK`).
  *
@@ -27,7 +30,7 @@ import type { Outfit } from './character';
 import { FP_LEVEL, FP_SCALE, FP_SHIRT, FP_SKIN, FP_VARSITY, fpShade, upFront } from './viewmodel';
 import type { Skeleton } from './skeleton';
 import { UPPER_ARM } from './skeleton';
-import { ARM, aimPiece, bodyArm, cuffGeometry, eyeFrame, stretch, fistGeometry, merge, newLaidArm, paint, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
+import { ARM, aimPiece, blendArm, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
 
 /** A kick: how far the hands drop and the view bobs (metres), and how long after the strike the bob settles */
 export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
@@ -43,8 +46,10 @@ const PUNCH_ASIDE = 0.8;
 export interface FistsState {
   /** How far the guard's up (0..1, walk mode's eased `guardAmt`): the first-person correction's share */
   guard: number;
-  /** How far into a run he is with his hands down (0..1): the running correction's share, his arms swinging into shot */
+  /** How far into a run he is with his hands down (0..1): the pump's share, his arms swinging into shot */
   run: number;
+  /** How far into a sprint (0..1): the pump swings higher */
+  sprint: number;
   /** Reduced motion: no sway */
   still?: boolean;
 }
@@ -85,7 +90,7 @@ function flatPainted() {
 }
 
 /** One arm's pieces for an outfit: the upper arm, and the forearm with its cuff and the fist (`thumb`: which side of the fist's x) */
-function armPieces(o: Outfit, thumb: -1 | 1) {
+function armPieces(o: Outfit, thumb: -1 | 1, loose = 0) {
   const top = o.top;
   const suit = o.kind === 'suit';
   const varsity = o.kind === 'varsity';
@@ -124,7 +129,7 @@ function armPieces(o: Outfit, thumb: -1 | 1) {
       upper.push(paint(stripeGeometry(Math.PI / 2 + a, ...up, 0.03, ARM.upper - 0.01, STRIPE.w), FP_SHIRT));
       fore.push(paint(stripeGeometry(out + a, ...lo, 0.02, end - 0.054, STRIPE.w), FP_SHIRT));
     }
-  fore.push(paint(fistGeometry(thumb).translate(0, end, 0), FP_SKIN));
+  fore.push(paint(fistGeometry(thumb, loose).translate(0, end, 0), FP_SKIN));
   return { upper: merge(upper), fore: merge(fore) };
 }
 
@@ -141,10 +146,13 @@ export function createFistsView(scene: THREE.Scene) {
   const make = (S: 'L' | 'R') => {
     const s = (S === 'R' ? 1 : -1) as -1 | 1;
     const upper = new THREE.Mesh(new THREE.BufferGeometry(), mat);
+    // (two forearms, the fist tight for the guard and loose for the run: only one drawn at a time)
     const fore = new THREE.Mesh(new THREE.BufferGeometry(), mat);
-    holder.add(upper, fore);
+    const foreLoose = new THREE.Mesh(new THREE.BufferGeometry(), mat);
+    foreLoose.visible = false;
+    holder.add(upper, fore, foreLoose);
     const j: BodyJoints = { shoulder: new THREE.Vector3(), elbow: new THREE.Vector3(), hand: new THREE.Vector3(), back: new THREE.Vector3() };
-    return { S, s, thumb: s, upper, fore, j, laid: newLaidArm(), out: 0 };
+    return { S, s, thumb: s, upper, fore, foreLoose, j, laid: newLaidArm(), pump: newLaidArm(), out: 0, ahead: 0 };
   };
   const arms = [make('L'), make('R')];
   upFront(root);
@@ -161,6 +169,10 @@ export function createFistsView(scene: THREE.Scene) {
   const fwd = new THREE.Vector3();
   const q = new THREE.Quaternion();
   const tmp = new THREE.Vector3();
+  // The pump's timing: the size of his swing lately (these metres), each arm's swing smoothed, and the fists loose
+  let swingAmp = 0.12;
+  const swung = [0, 0];
+  let loose = false;
 
   return {
     root,
@@ -170,8 +182,12 @@ export function createFistsView(scene: THREE.Scene) {
         const p = armPieces(o, h.thumb);
         h.upper.geometry.dispose();
         h.fore.geometry.dispose();
+        h.foreLoose.geometry.dispose();
         h.upper.geometry = p.upper;
         h.fore.geometry = p.fore;
+        const l = armPieces(o, h.thumb, 1);
+        l.upper.dispose();
+        h.foreLoose.geometry = l.fore;
       }
       upFront(root);
     },
@@ -211,18 +227,37 @@ export function createFistsView(scene: THREE.Scene) {
         b[`hand${h.S}`].getWorldPosition(h.j.hand);
         h.j.back.set(h.s, 0, 0).applyQuaternion(b[`hand${h.S}`].getWorldQuaternion(q));
         h.out = stretch(bodyArm(h.j, eye, unit, h.laid));
+        h.ahead = -h.laid.wrist.z;
+      }
+      // The pump's timing, his own: how far each wrist is ahead of the other's, against the size of his swing lately
+      const run = s.run * (1 - s.guard);
+      const gap = Math.abs(arms[0].ahead - arms[1].ahead);
+      if (run > 0.05) swingAmp += (Math.max(gap, 0.04) - swingAmp) * Math.min(1, dt * 1.5);
+      // (the fists loose for the run, tight again as the guard comes up: swapped either side of half way)
+      loose = loose ? run > 0.3 && s.guard < 0.4 : run > 0.6 && s.guard < 0.2;
+      for (let i = 0; i < 2; i++) {
+        const h = arms[i];
+        const want = pumpSwing(h.ahead - arms[1 - i].ahead, swingAmp);
+        swung[i] += (want - swung[i]) * Math.min(1, dt * 16);
       }
       for (const h of arms) {
         // (with the guard up, the first-person correction: the fists carried into shot, fparm.ts FP_FIX; the hand
         // left in the guard while the other is out punching drawn in less, so the punch has the middle)
         const other = arms[0] === h ? arms[1] : arms[0];
         const pull = 1 - PUNCH_ASIDE * THREE.MathUtils.smoothstep(other.out - h.out, 0.25, 0.5);
-        const laid = bodyArm(h.j, eye, unit, h.laid, s.guard, s.run * (1 - s.guard), pull);
+        const laid = bodyArm(h.j, eye, unit, h.laid, s.guard, pull);
+        // Running with his hands down, the pump: his swing's timing on the designed arc (fparm.ts PUMP), the elbow
+        // at a right angle all the way; eased in over the run's share
+        if (run > 0) blendArm(laid, pumpArm(laid.shoulder, swung[arms.indexOf(h)], s.sprint, h.pump), run);
+        h.fore.visible = !loose;
+        h.foreLoose.visible = loose;
         // The upper arm (its +z out and up, where the track top's stripes are) and the forearm with its fist
         h.upper.position.copy(laid.shoulder);
         h.upper.quaternion.copy(aimPiece(laid.shoulder, laid.elbow, tmp.set(Math.sign(laid.shoulder.x) || 1, 0.7, 0.2), q));
         h.fore.position.copy(laid.elbow);
         h.fore.quaternion.copy(aimPiece(laid.elbow, laid.wrist, laid.face, q));
+        h.foreLoose.position.copy(h.fore.position);
+        h.foreLoose.quaternion.copy(h.fore.quaternion);
       }
       // (narrow screens, a phone upright: the arms held further off, so the fists stay in shot and apart)
       const aspect = (camera as THREE.PerspectiveCamera).aspect || 1.6;
