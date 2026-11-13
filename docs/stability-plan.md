@@ -102,18 +102,40 @@ and that's what's live:
 5. **On the owner's laptop**: the live build, the City view and a walk
    along Crestmont's Coral Drive, to confirm the black screen has gone.
 
-## Phase 2: the render targets (S-M, low risk; the biggest saving on desktop)
+## Phase 2: the render targets (done, 2026-11-13; waiting on the owner's laptop)
 
 1. **MSAA on the scene's pass only.** The composer's second buffer (what the
-   ink, bloom and output ping-pong through) has no MSAA: about 290 MB back at
-   2880 x 1800, with the same picture.
-2. **No MSAA at 1.75x pixels and over** (the owner's pick, 2026-11-13). At
-   retina density the pixels are already small: SMAA (already in its own
-   chunk) smooths the edges for a fraction of the memory; MSAA stays on 1x to
-   1.5x screens.
-3. **Count them.** `?fps`, `?bench` and `window.__mem()` add the render
-   targets and the shadow maps to geometry and textures: one total for what
-   the city holds on the GPU.
+   ink, bloom and output ping-pong through, full-screen quads only) has no
+   MSAA and no depth (`post.ts`).
+2. **No MSAA at 1.75x pixels and over** (the owner's pick). At retina
+   density the pixels are already small: SMAA (already in its own chunk)
+   smooths the edges instead. Below that, as before: 1x and 1.25x desktops
+   draw MSAA and SMAA, 1.5x MSAA only; medium never draws MSAA; phones FXAA.
+   The rule is `antialias()` in `targets.ts` (DOM-free, `tests/targets.test.ts`).
+3. **Counted.** `?fps` (the memory line: `targets`, and which smoothing),
+   `?bench` (its Memory line and `__bench.targets`) and `window.__mem()`
+   (`targets`) count the picture's render targets and every shadow map
+   (`targetMemory()` in `perf.ts`, `targetBytes()` in `targets.ts`).
+
+### What Phase 2 measured
+
+The high tier in headless Chromium at 1440 x 900 (`?fps`), the render targets
+and shadow maps after; before worked out with the same `targetBytes()` for
+the targets as they were (the tests hold the arithmetic). MiB.
+
+| | Before | After |
+|---|---|---|
+| A retina screen, 2x (2880 x 1800) | about 706 | **291** (SMAA): 59% less |
+| A 1x screen (1440 x 900) | about 234 | **175** (4x MSAA): 25% less |
+
+- The picture at 2x with SMAA: outlines, glow and edges as they were (a
+  review shot of downtown).
+- `npm test`, typecheck, lint and the budget pass; the boot's code 1.6 KB
+  bigger (713.8 of 740 KB).
+- **What's left in the targets** (for later, not in this phase): the high
+  tier's two shadow maps, 2048 each, are about 64 MiB of the 175-291
+  (drawn only on the ground, never in the City view); the ink's normal and
+  depth pre-pass at full size, about 40 MiB at 2x.
 
 ## Phase 3: hold less geometry, on every tier (M, medium risk)
 

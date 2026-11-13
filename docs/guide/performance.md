@@ -32,7 +32,14 @@ keep it up to date when what it describes changes.
   `post.ts`: each line on one side of its edge only, one texel out, about half
   the width, its edges soft) and smooth the picture with FXAA last (`fxaa`,
   three's shader in its own chunk after the boot; phones draw no MSAA or
-  SMAA); desktop's are as they are.
+  SMAA); desktop's are as they are, but for a retina screen's (the
+  stability plan's Phase 2, `docs/stability-plan.md`): the high tier at
+  1.75x pixels and over draws no MSAA and smooths with SMAA
+  (`antialias()` in `targets.ts`, DOM-free, `tests/targets.test.ts`). MSAA
+  is the scene's own pass only: the composer's second buffer, which the
+  ink, bloom and output passes draw full-screen quads through, has no MSAA
+  and no depth (`post.ts`). What the render targets and shadow maps hold is
+  counted in `?fps`, `?bench` and `__mem()` (`targetMemory()` in `perf.ts`).
 - **Start-up stays light** (performance phase 2,
   `docs/performance-plan.md`):
   - Data that's the same for everyone is worked out when the site is

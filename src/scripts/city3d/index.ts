@@ -134,7 +134,8 @@ import { CROWD_VIEW, figureDetail } from './character';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, memoryRows, sceneMemory } from './perf';
+import { mb, memoryRows, sceneMemory, targetMemory } from './perf';
+import { antialias } from './targets';
 import { PACKED, tileBatch } from './tilebatch';
 import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
@@ -515,7 +516,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return { pos: CENTER.clone().add(new THREE.Vector3(27, 31, 34).multiplyScalar(k)), target: CENTER.clone().add(new THREE.Vector3(0, 3.4, 1)) };
   };
 
-  const post = createPost(renderer, scene, camera, { msaa: Q.msaa, bloomScale: Q.bloomScale, smaa: devicePixelRatio < 1.5 && tier !== 'low', bloomMips: tier === 'low' ? 3 : 5, thinInk: tier === 'low', fxaa: tier === 'low', shadows: sky });
+  // MSAA or SMAA by the screen (targets.ts: the high tier at a retina's 2x pixels smooths with SMAA, not 4x MSAA)
+  const aa = antialias(tier, devicePixelRatio, Q.dpr, Q.msaa);
+  const post = createPost(renderer, scene, camera, { msaa: aa.msaa, bloomScale: Q.bloomScale, smaa: aa.smaa, bloomMips: tier === 'low' ? 3 : 5, thinInk: tier === 'low', fxaa: tier === 'low', shadows: sky });
   /**
    * Shaders compiled for where the city really draws: the post chain's target (linear colour), not the
    * screen. Compiled for the screen, each material gets a program no frame uses, and the real one is
@@ -1696,7 +1699,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let bench: Bench | null = null;
   if (query.has('bench'))
     void import('./bench').then(({ createBench }) => {
-      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
+      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
     });
   // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
   let shots: Shots | null = null;
@@ -1740,7 +1743,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
     // (where the geometry memory is, for the console: perf.ts)
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -2044,7 +2047,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         // Memory every few seconds (it walks the whole scene)
         if (now - stat.memAt > 5000) {
           const m = sceneMemory(scene);
-          stat.mem = `geometry ${mb(m.geometry)} · textures ${mb(m.textures)}`;
+          stat.mem = `geometry ${mb(m.geometry)} · textures ${mb(m.textures)} · targets ${mb(targetMemory(post.targets(), scene))}${aa.msaa ? ` (MSAA ${aa.msaa}x)` : aa.smaa ? ' (SMAA)' : ''}`;
           stat.memAt = now;
         }
         const b = bootTimes();

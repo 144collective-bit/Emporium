@@ -6,6 +6,7 @@
  * time, so it shows what a change costs.
  */
 import * as THREE from 'three';
+import { targetBytes } from './targets';
 
 export interface SceneMemory {
   /** Geometry: vertex attributes, indices, instance matrices and colours, in bytes */
@@ -72,6 +73,30 @@ export function sceneMemory(scene: THREE.Object3D): SceneMemory {
   let textures = 0;
   for (const t of texs) textures += textureBytes(t);
   return { geometry, textures, geometries: geos.size, textureCount: texs.size, objects };
+}
+
+/** Bytes a colour pixel of a render target's texture takes (RGBA: 4 a byte channel, 8 half-float, 16 float) */
+const pixelBytes = (t: THREE.Texture) => (t.type === THREE.HalfFloatType ? 8 : t.type === THREE.FloatType ? 16 : 4) * (t.format === THREE.RedFormat ? 0.25 : t.format === THREE.RGFormat ? 0.5 : 1);
+
+/**
+ * What render targets hold on the GPU (docs/stability-plan.md, Phase 2): the picture's own (post.ts `targets()`) and
+ * every light's shadow map in the scene, each counted once. Not in `sceneMemory()`, which counts what the scene's
+ * materials draw with: these are what the frame is drawn into
+ */
+export function targetMemory(targets: (THREE.WebGLRenderTarget | null | undefined)[], scene?: THREE.Object3D): number {
+  const seen = new Set<THREE.WebGLRenderTarget>();
+  const all = [...targets];
+  scene?.traverse((o) => {
+    const l = o as THREE.Light & { shadow?: { map?: THREE.WebGLRenderTarget | null } };
+    if (l.isLight && l.shadow?.map) all.push(l.shadow.map);
+  });
+  let bytes = 0;
+  for (const rt of all) {
+    if (!rt || seen.has(rt)) continue;
+    seen.add(rt);
+    bytes += targetBytes({ width: rt.width, height: rt.height, bpp: pixelBytes(rt.texture), samples: rt.samples, depthBuffer: rt.depthBuffer && !rt.depthTexture, depthTexture: !!rt.depthTexture });
+  }
+  return bytes;
 }
 
 export const mb = (bytes: number) => `${(bytes / 1048576).toFixed(bytes < 10 * 1048576 ? 1 : 0)} MB`;
