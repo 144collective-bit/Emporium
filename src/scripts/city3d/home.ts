@@ -206,5 +206,22 @@ export const HOME_PORTALS: Portal[] = [
   { id: 'home:yard', x: DX, z: rz1 - 0.3, label: 'Back door', to: { x: DX, z: z1 + 0.6, y: SLAB_Y, yaw: Math.PI }, arrived: 'The yard' },
   { id: 'home:back', x: DX, z: z1 + 0.5, label: 'Go in', to: { x: DX, z: rz1 - 0.55, y: SLAB_Y, yaw: 0 }, arrived: 'Home' },
 ];
+/** A thing in the room to use: where its prompt stands and its label (walk `places`; index.ts opens what it's for) */
+export interface HomeUse {
+  id: 'home:wardrobe' | 'home:stash';
+  x: number;
+  z: number;
+  label: string;
+}
+const at = (kind: FurnitureKind) => FURNITURE.find((f) => f.kind === kind)!.rect;
+/**
+ * Phase 4: the wardrobe (stood in front of, on its west side: the fitting room) and the trunk (from the hall, by its
+ * west end: the stash)
+ */
+export const HOME_USES: HomeUse[] = [
+  { id: 'home:wardrobe', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },
+  { id: 'home:stash', x: at('stash')[0] - 0.35, z: (at('stash')[1] + at('stash')[3]) / 2, label: 'Stash' },
+];
+
 /** The yard's gate onto the driveway (the fence's stub by the row's end is a gap, an open gate drawn in it) */
 export const YARD_GATE: Rect = [HOUSE[0] - 0.1, z1, HOUSE[0] + 0.1, HOME.garage[1]];

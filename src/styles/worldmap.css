@@ -543,6 +543,43 @@
     linear-gradient(#100d1ef5, #100d1ef5) padding-box,
     linear-gradient(135deg, #1fb5d6, #8000ff) border-box;
 }
+/* The stash's card (stash-ui.ts): a row a thing, its counts over its two buttons */
+.stash-body {
+  display: grid;
+  gap: 8px;
+}
+.stash-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.stash-name {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 14px;
+}
+.stash-name small {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+}
+.stash-card .metro-go:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* (no keyboard on a touch screen: the key's name goes) */
+@media (pointer: coarse) {
+  .stash-card [data-stash-inv] small {
+    display: none;
+  }
+}
+.stash-rack b {
+  margin-right: 6px;
+  color: #fff;
+}
 .metro-note {
   margin: 0;
   font-size: 12.5px;

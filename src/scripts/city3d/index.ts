@@ -49,7 +49,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_SPAWN, inHouse, startsAtHome } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_USES, HOME_SPAWN, inHouse, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -94,6 +94,7 @@ import { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
 import { createMetroUI, type MetroUI } from './metro-ui';
 import type { RiverBusUI } from './riverbus-ui';
+import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
 import { MONO_STATIONS } from './monorail';
@@ -959,6 +960,25 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The river bus's card and rides (river plan step 4b, riverbus-ui.ts): loaded when a pier's card first opens
   let riverBusUI: RiverBusUI | null = null;
   const RIVER_BUS_DOORS = BUS_STOPS_RIVER.map((s) => ({ id: `riverbus:${s.id}`, x: s.door.x, z: s.door.z, label: 'River bus' }));
+  // The stash's card (stash-ui.ts, the trunk in Degen's house: docs/home-plan.md Phase 4): loaded when it first opens
+  let stashUI: StashUI | null = null;
+  const loadStash = lazy(() =>
+    import('./stash-ui').then(({ createStashUI }) =>
+      (stashUI = createStashUI(root, {
+        game,
+        may: (id) => walk.combat.canTake(id),
+        free: () => walking && walk.onFoot && inHouse(walk.position.x, walk.position.z),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+        },
+        // (the Bag button's handler, inventory-ui.ts: the same screen Tab opens)
+        inventory: () => root.querySelector<HTMLElement>('[data-inv-open]')?.click(),
+      }))
+    ),
+    'the stash'
+  );
   const loadRiverBus = lazy(
     () =>
       import('./riverbus-ui').then(({ createRiverBusUI }) =>
@@ -1075,7 +1095,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y), ...HOME_PORTALS],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y), ...HOME_PORTALS, ...HOME_USES],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1085,6 +1105,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         return r ? rideTo(r.to, null, 'Endswood', r.arrived) : undefined;
       }
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
+      // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
+      if (id === 'home:wardrobe') {
+        walk.releaseMouse();
+        return open('shop', true);
+      }
+      if (id === 'home:stash')
+        return void loadStash()
+          .then((ui) => ui.open())
+          .catch(() => game.toast('Stash stuck · try again'));
       if (id.startsWith('home:')) {
         const p = HOME_PORTALS.find((q) => q.id === id);
         return p ? rideTo(p.to, 'home', 'Home', p.arrived) : undefined;
@@ -1307,6 +1336,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     metroUI?.close();
     riverBusUI?.close();
     monoUI?.close();
+    stashUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
     close();
@@ -1353,7 +1383,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || stashUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }

@@ -31,6 +31,14 @@ keep it up to date when what it describes changes.
   doors, the Night Market's stalls and, since the polish plan's Phase 7,
   The Rusty Nail's door, walk prompts `snack:<id>` that buy one there and
   then).
+- **The stash** (the home plan's Phase 4): the trunk in Degen's house
+  keeps consumables he doesn't carry. The save's `stash` (how many of
+  each, up to `STASH_MAX` 20; `cleanStash()` in inventory-save.ts, run by
+  `cleanSave()`: a save from before it has none), `stashItem()` and
+  `takeItem()` (one at a time, nothing made or lost, never past `ITEM_MAX`
+  carried) and `racked()` (the guns he owns and doesn't carry: listed on
+  the card, changed in the inventory) in inventory.ts; the card is
+  stash-ui.ts (`endswood.md`). Nothing is bought or sold there.
 - On screen (`inventory-ui.ts`, a chunk of its own fetched when walking
   starts, with the inventory's keys, the pad, the wheel and the snack
   doors; styles `src/styles/inventory.css`): the hotbar (`[data-hotbar]`,

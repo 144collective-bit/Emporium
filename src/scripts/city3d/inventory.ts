@@ -34,8 +34,8 @@ import { STALLS } from './nightmarket';
 import { BAR } from './avenue';
 
 // The save's side (the boot's): its shape and cleaning, the hand kept in step with the look, where snacks are sold
-import { GRID_SIZE, heldOk } from './inventory-save';
-export { GRID_COLS, GRID_SIZE, cleanInventory, emptyInventory, setHeld, type Inventory } from './inventory-save';
+import { GRID_SIZE, STASH_MAX, heldOk } from './inventory-save';
+export { GRID_COLS, GRID_SIZE, STASH_MAX, cleanInventory, cleanStash, emptyInventory, setHeld, type Inventory, type Stash } from './inventory-save';
 
 /* ---------- The hotbar ---------- */
 
@@ -230,6 +230,35 @@ export function useItem(s: TycoonSave, id: ItemId, inSpar: boolean): InvResult {
   if (have > 1) s.inventory.items[id] = have - 1;
   else delete s.inventory.items[id];
   return { ok: true };
+}
+
+/* ---------- The stash (the trunk at home, docs/home-plan.md Phase 4) ---------- */
+
+/** Put one he carries away in the trunk ('stock': he has none; 'max': the trunk's full of them) */
+export function stashItem(s: TycoonSave, id: ItemId): InvResult {
+  const have = s.inventory.items[id] ?? 0;
+  const put = s.stash[id] ?? 0;
+  if (!ITEM_CATALOG[id] || have <= 0) return { ok: false, why: 'stock' };
+  if (put >= STASH_MAX) return { ok: false, why: 'max' };
+  if (have > 1) s.inventory.items[id] = have - 1;
+  else delete s.inventory.items[id];
+  s.stash[id] = put + 1;
+  return { ok: true };
+}
+/** Take one out of the trunk to carry ('stock': none put away; 'max': he carries all he can) */
+export function takeItem(s: TycoonSave, id: ItemId): InvResult {
+  const have = s.inventory.items[id] ?? 0;
+  const put = s.stash[id] ?? 0;
+  if (!ITEM_CATALOG[id] || put <= 0) return { ok: false, why: 'stock' };
+  if (have >= ITEM_MAX) return { ok: false, why: 'max' };
+  if (put > 1) s.stash[id] = put - 1;
+  else delete s.stash[id];
+  s.inventory.items[id] = have + 1;
+  return { ok: true };
+}
+/** The guns he owns and doesn't carry: they wait in the trunk's rack (carried from there with `carryGun()`) */
+export function racked(s: TycoonSave, may: (id: WeaponId) => boolean = (id) => ownsGun(s, id)): WeaponId[] {
+  return GUN_IDS.filter((id) => ownsGun(s, id) && may(id) && !s.inventory.guns.includes(id));
 }
 
 /* ---------- Where snacks are sold ---------- */
