@@ -13,9 +13,9 @@ keep it up to date when what it describes changes.
   brownstones, The Block and its pin (built); (3) four corner shops for Dorras
   (20,000 / 30,000 / 45,000 / 60,000 from level 5, run like your units;
   built). **More real and more varied** (the owner's call, 2026-11-12: "the
-  buildings are all the same") is planned in `docs/trenches-variety-plan.md`
-  in six phases (windows, facades, rooflines, ground floors, streets and
-  yards, polish), each with the owner's sign-off; keep it up to date.
+  buildings are all the same") is `docs/trenches-variety-plan.md` (done,
+  2026-11-13) in six phases (windows, facades, rooflines, ground floors, streets and
+  yards, polish), each with the owner's sign-off.
   Phase 1 (the windows, city-wide: `windows.ts`, painted by infill.ts's
   `wallBand()`) and Phase 2 (the facades: five more wall materials in the
   atlas, weathering, the towers and tenements in a mix) and Phase 3 (the
@@ -25,7 +25,8 @@ keep it up to date when what it describes changes.
   shutters, recessed doorways, gates, painted ground floors) and Phase 5
   (the yards and streets: `yardbits.ts`, benches with bins, bike racks and
   planters in the yards, timber poles and their wires along the yards'
-  open street edges) are built.
+  open street edges) are built, and Phase 6 reviewed them (phones level
+  with before the plan).
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets

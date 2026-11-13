@@ -40,7 +40,7 @@ everything under the Emporium, phones light.
    about one window in twenty lit, warm; at night about half, mostly warm,
    some a television's blue, the odd pink or cyan.
 
-   Built, waiting on the owner's sign-off:
+   Built, signed off by the owner:
    - `windows.ts` (DOM-free, tested in `tests/windows.test.ts`):
      `WINDOW_TYPE` gives each wall kind its own window (sashes on red brick,
      pairs on tan, wide steel casements between concrete bands on dark
@@ -61,7 +61,7 @@ everything under the Emporium, phones light.
    weathering (stains under sills and copings, soot near the roofs, faded
    paint); a ground floor in its own material on the tenements and rows.
 
-   Built, waiting on the owner's sign-off (the owner's "go" on the plan's
+   Built, signed off by the owner (the owner's "go" on the plan's
    set):
    - Five more wall kinds in the shared atlas (`WallKindName` in
      windows.ts, `WALL_COLOR` in infill.ts): `brickOrange` (sashes),
@@ -91,7 +91,7 @@ everything under the Emporium, phones light.
    neighbours alike; roofs in tar grey, gravel and silver paint with some
    navy kept; varied clutter on most roofs.
 
-   Built, waiting on the owner's sign-off:
+   Built, signed off by the owner:
    - `rooftones.ts` (DOM-free, tested in `tests/rooftones.test.ts`): each
      pick a hash of where a building stands, so nothing in the seeded layout
      moves: `roofTone()` (`ROOF_TONES`, `ROOF_MIX`: tar, gravel, silver,
@@ -113,7 +113,7 @@ everything under the Emporium, phones light.
    The owner's picks (2026-11-13): fire escapes on about half, mostly the
    taller tenements; a mix of shopfronts; some ground floors painted.
 
-   Built, waiting on the owner's sign-off:
+   Built, signed off by the owner:
    - `shopfronts.ts` (DOM-free, tested in `tests/shopfronts.test.ts`), each
      pick a hash of where a tenement stands (rooftones.ts `spotHash()`):
      `escapeAt()` (`ESCAPE`: most with four floors or more over the shop, a
@@ -137,7 +137,7 @@ everything under the Emporium, phones light.
    this phase fills in what was still bare (the owner's "continue",
    2026-11-13).
 
-   Built, waiting on the owner's sign-off:
+   Built, signed off by the owner:
    - `yardbits.ts` (DOM-free, tested in `tests/yardbits.test.ts`):
      `YARD_BITS` (benches with a bin, bike racks of three hoops, concrete
      planters with a shrub; on a grid over each yard, about one spot in
@@ -151,6 +151,24 @@ everything under the Emporium, phones light.
    - grit3d.ts draws them in each yard's site: the bits and poles at every
      distance in the yard's batch, the wires near only. Nothing is solid.
 6. **Polish.** Review and benchmark views, phones, the budget; the plan done.
+
+   Done (2026-11-13), the owner's pick: a full review.
+   - Phones (the low tier, 390 by 844), the city before the plan
+     (2de34c00) against after Phase 5, at five views of The Trenches
+     (`?shots&fps`): draws 195 to 193 over The Trenches, 188 to 192 in a
+     yard, 246 to 246 along the poles, 205 to 200 on Trench Avenue, 196 to
+     176 on Bottom Street; triangles up at most 0.02M a view; geometry 184
+     to 182 MB, textures 108 to 109 MB (the wall atlas's five more bands,
+     half size on phones).
+   - The desktop tier couldn't be measured in the cloud's software
+     renderer (its sites never finished building); run `?bench` on a
+     laptop to confirm it.
+   - The boot 707.2 KB of its 740 (`npm run budget`).
+   - Night shots: about half the windows lit, mostly warm, some a
+     television's blue, the odd pink or cyan; nothing washes out; the
+     yards' bits read in the lamplight. Nothing to fix.
+
+   **The plan is done.**
 
 ## Phase 1's questions (to answer before it starts)
 
