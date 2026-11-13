@@ -9,7 +9,11 @@
  *   `LENS.min`; first person it's in all the time, as the car's seat has it (drive.ts). It stays at 0.5 when nothing
  *   is close: pulled in for the whole walk, faces close together far off would flicker.
  * - People (`onLens()`): the crowd isn't in the camera's way (it passes through them), so anyone the lens is inside,
- *   or near enough that the near plane would cut them open, isn't drawn that frame (character.ts).
+ *   or near enough that the near plane would cut them open, isn't drawn that frame (character.ts), and the sparring
+ *   partners waiting in the street the same (brawl.ts).
+ * - Fighters (`bodyGap()`): in a fight the camera stays on the pair, and the ropes or the street spar's ring can push
+ *   it up against one; hiding your opponent mid-fight would be worse than the cut, so the fight's camera brings the
+ *   near plane in by how far the nearer body is (fight.ts), and only one the lens is inside isn't drawn.
  */
 
 export const LENS = {
@@ -37,10 +41,14 @@ export function nearFor(gap: number, firstPerson: boolean, base = LENS.base): nu
 }
 
 /**
- * Whether the lens is inside a person or so close the near plane cuts them: `dx`, `dy`, `dz` from the lens to the
- * middle of their body, `near` the camera's near plane, `scale` theirs
+ * How far the lens is from a person's body (their half-width round the middle, their half-height up and down): `dx`,
+ * `dy`, `dz` from the lens to the middle of their body, `scale` theirs. Below 0, the lens is inside them
  */
+export function bodyGap(dx: number, dy: number, dz: number, scale: number): number {
+  return Math.max(Math.hypot(dx, dz) - LENS.body.r * scale, Math.abs(dy) - LENS.body.h * scale);
+}
+
+/** Whether the lens is inside a person or so close the near plane (`near`) cuts them (as `bodyGap()`) */
 export function onLens(dx: number, dy: number, dz: number, near: number, scale: number): boolean {
-  const r = LENS.body.r * scale + near;
-  return dx * dx + dz * dz < r * r && Math.abs(dy) < LENS.body.h * scale + near;
+  return bodyGap(dx, dy, dz, scale) < near;
 }

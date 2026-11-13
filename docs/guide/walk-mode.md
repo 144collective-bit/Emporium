@@ -33,7 +33,12 @@ keep it up to date when what it describes changes.
   mode gets the city's back (the car and kart set their own). The crowd
   isn't in the camera's way, so anyone the lens is inside or near enough to
   cut open isn't drawn that frame (`onLens()`, in character.ts's `set()`,
-  with `CROWD_VIEW.near`).
+  with `CROWD_VIEW.near`), and the sparring partners waiting in the street
+  the same (`createPartners()`, brawl.ts). In a fight (the Fight Club or a
+  street spar) the fight's camera brings the near plane in by how far the
+  nearer fighter's body is (`bodyGap()`, fight.ts `placeCamera()`), so the
+  ropes or the ring pushing it up against one don't cut them open; only a
+  fighter the lens is right inside isn't drawn.
 - Esc frees the mouse first and only then opens the hub (its Back to City
   view stops walking). Door panels free the mouse so their links can be
   clicked.

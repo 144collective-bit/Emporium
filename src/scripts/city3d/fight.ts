@@ -36,7 +36,8 @@ import { BOT_LEVELS, FIGHT_BOTS, SNACK_HEAL, type BotLevel } from './catalog';
 import { PARTNERS, afterOf, arenaOf, partner, startOf, type PartnerId } from './brawlsite';
 import type { StyleId } from './fight-moves';
 import { useItem } from './inventory';
-import { createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { FIGHTER_SCALE, createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { bodyGap, nearFor } from './lens';
 import { T, createFightSim, forward, yawTo, type FightEvent, type FightSim, type Fighter, type FighterInput } from './fight-sim';
 import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView, FightStart } from './fight-types';
 import { CORNERS, OUT, RING, RING_HALF } from './fightsite';
@@ -522,6 +523,23 @@ export function createFight(d: FightDeps): Fight {
       shake = Math.max(0, shake - dt * (shake > 0.2 ? 1.1 : 1.6));
     }
     camera.lookAt(camAt);
+    // The ropes or the spar's ring can push the camera up against one of them: the near plane comes in by how far the
+    // nearer body is, so neither is cut open, and one the lens is right inside isn't drawn (lens.ts)
+    let gap = Infinity;
+    for (const [fg, f] of [
+      [you, a],
+      [them, b],
+    ] as const) {
+      if (!fg) continue;
+      const g = bodyGap(f.x - camera.position.x, fg.y + 0.6 * FIGHTER_SCALE - camera.position.y, f.z - camera.position.z, FIGHTER_SCALE);
+      fg.degen.g.visible = g > 0;
+      gap = Math.min(gap, g);
+    }
+    const near = nearFor(gap, false);
+    if (camera.near !== near) {
+      camera.near = near;
+      camera.updateProjectionMatrix();
+    }
   }
 
   /* ---------- The interface ---------- */

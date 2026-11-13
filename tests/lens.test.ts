@@ -2,7 +2,7 @@
 // people the lens is inside left undrawn.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LENS, nearFor, onLens } from '../src/scripts/city3d/lens';
+import { LENS, bodyGap, nearFor, onLens } from '../src/scripts/city3d/lens';
 
 test('the near plane: the city\'s with nothing close, in as a wall comes near, never under its least', () => {
   // Nothing within the probe: the city's own
@@ -42,4 +42,19 @@ test('people: not drawn with the lens inside them or the near plane cutting them
   assert.ok(!onLens(0, -2, 0, 0.5, 1));
   // Smaller people, a smaller body
   assert.ok(!onLens(0.3, 0, 0, 0.05, 0.5));
+});
+
+test('a body\'s gap from the lens: below 0 inside, growing as the lens backs off; onLens() is the gap under the near plane', () => {
+  assert.ok(bodyGap(0, 0, 0, 1) < 0);
+  assert.ok(Math.abs(bodyGap(1, 0, 0, 1) - (1 - LENS.body.r)) < 1e-12);
+  assert.ok(bodyGap(2, 0, 0, 1) > bodyGap(1, 0, 0, 1));
+  // Over their head, by how far over
+  assert.ok(Math.abs(bodyGap(0, 1, 0, 1) - (1 - LENS.body.h)) < 1e-12);
+  // Smaller people, smaller bodies
+  assert.ok(bodyGap(0.5, 0, 0, 0.5) > bodyGap(0.5, 0, 0, 1));
+  for (const [dx, dy, dz, near] of [[0.4, 0, 0, 0.2], [0.6, 0.1, 0.2, 0.5], [0, 0.9, 0, 0.3], [1, 1, 1, 0.05]])
+    assert.equal(onLens(dx, dy, dz, near, 1), bodyGap(dx, dy, dz, 1) < near);
+  // A fighter a step from the camera keeps the near plane well short of them
+  const g = bodyGap(0.45, 0, 0, 0.66);
+  assert.ok(nearFor(g, false) < g);
 });
