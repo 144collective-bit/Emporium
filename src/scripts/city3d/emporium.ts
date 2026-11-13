@@ -170,7 +170,9 @@ function holoMaterial(base: number, height: number) {
       uniform float time; uniform float power; uniform float base; uniform float height;
       varying vec3 vN; varying vec3 vV; varying float vY;
       void main() {
-        float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+        // (clamped: a dot product a hair past 1 would make the base negative, and a negative number to a power is not a
+        // number on a real graphics card)
+        float rim = pow(clamp(1.0 - abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 2.0);
         float scan = 0.6 + 0.4 * step(0.45, fract(vY * 9.0 - time * 1.2));
         float t = clamp((vY - base) / height, 0.0, 1.0);
         vec3 col = mix(vec3(1.0, 0.25, 0.8), vec3(0.0, 0.92, 1.0), smoothstep(0.1, 0.8, t));

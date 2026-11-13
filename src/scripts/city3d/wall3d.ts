@@ -196,7 +196,10 @@ void main() {
   float across = 1.0 - pow(abs(vUv.x * 2.0 - 1.0), 2.0);
   // (narrow at the foot, fanning out as it rises, fading to nothing at the top)
   float fan = smoothstep(0.0, 0.35 + 0.65 * vUv.y, across);
-  float a = uNight * 0.42 * fan * pow(1.0 - vUv.y, 1.6);
+  // (clamped: under multisampling a sample off the quad's top edge reads vUv.y a hair past 1, and a negative number
+  // to a power is not a number on a real graphics card; nothing times that is still not a number, which the bloom
+  // then spreads over the whole picture: the black screens of 2026-11)
+  float a = uNight * 0.42 * fan * pow(clamp(1.0 - vUv.y, 0.0, 1.0), 1.6);
   gl_FragColor = vec4(uColor * a, 1.0);
   #include <colorspace_fragment>
 }`,
@@ -326,7 +329,12 @@ export function buildWall(scene: THREE.Scene, tick: (f: Tick) => void, low = fal
   scene.add(wireMesh(low));
   const wash = washMesh();
   scene.add(wash.mesh);
-  tick((f) => void (wash.night.value = f.night));
+  // (and not drawn at all by day, when it adds nothing)
+  wash.mesh.visible = false;
+  tick((f) => {
+    wash.night.value = f.night;
+    wash.mesh.visible = f.night > 0.003;
+  });
 
   const mat = murkMaterial();
   const murk = fx(new THREE.Mesh(murkGeometry(), mat));
