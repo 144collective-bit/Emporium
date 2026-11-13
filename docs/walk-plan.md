@@ -36,12 +36,19 @@ with work in flight.
 ## The phases
 
 0. **The safety net** (built): `npm run smoke`, seven scenes.
-1. **The gamepad** (built, waiting on the owner's sign-off): `walkpad.ts`
+1. **The gamepad** (built): `walkpad.ts`
    (`pollPad()`, `PadHost`, `PadState`), tested in `tests/walkpad.test.ts`
    (on foot, empty hands, hold or toggle, the menus, the wheel of each
    vehicle, the ring, a ride). walk.ts: 3,705 to 3,550 lines.
-2. **The keyboard**: `onKey()` (134 lines, 11 `let`s) the same way, on the
-   same kind of host, with tests against `keymap.ts`'s table.
+2. **The keyboard** (built, waiting on the owner's sign-off): `walkkeys.ts`
+   (`onKey()`, `KeyHost`, `MOVE`), tested in `tests/walkkeys.test.ts` (not
+   walking or typing, on foot, a menu open, the wheel of each vehicle, the
+   ring, a ride, and every key `keymap.ts`'s table lists for a mode is
+   walk mode's there). The one thing it asked the page (is the emote panel
+   open) is the host's `emotesOpen()`. walk.ts: 3,566 to 3,500 lines.
+   The table test found a fault older than the move: a kart's item key (E)
+   was never held, so it did nothing; fixed after the move, in a commit of
+   its own (the karts' branch holds E as the ring's holds the move keys).
 3. **Touch**: the stick, the buttons' wiring, `holdButton()`, the pedals'
    fingers (touchdrive.ts has their rules already): about 250 lines.
 4. **The frames by mode**: `driveFrame()`, `boatFrame()`, `flyFrame()`,
