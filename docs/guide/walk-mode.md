@@ -72,5 +72,8 @@ keep it up to date when what it describes changes.
   tested in `tests/walkpad.test.ts`). Phase 2, the keyboard, is
   `walkkeys.ts` (`onKey()`: a key by what's on screen; `KeyHost` what it
   reads and calls of walk mode; tested in `tests/walkkeys.test.ts`, which
-  also holds it to `keymap.ts`'s table). When a button's or a key's job
+  also holds it to `keymap.ts`'s table). Phase 3, touch, is
+  `walktouch.ts` (`wireTouch()`, called once: the stick, the pedals'
+  fingers, `holdButton()` and every touch button's wiring; the page comes
+  in as `TouchEls`, so `tests/walktouch.test.ts` stands in for it). When a button's or a key's job
   changes there, change its line in `keymap.ts`.
