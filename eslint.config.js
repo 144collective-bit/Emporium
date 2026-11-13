@@ -9,6 +9,7 @@ import tseslint from 'typescript-eslint';
 const DOM_FREE = [
   'src/scripts/city3d/walkpad.ts',
   'src/scripts/city3d/walkkeys.ts',
+  'src/scripts/city3d/walktouch.ts',
   'src/scripts/city3d/lampposts.ts',
   'src/scripts/city3d/lampmix.ts',
   'src/scripts/city3d/groundheight.ts',
