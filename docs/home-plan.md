@@ -62,11 +62,26 @@ Each with the owner's sign-off.
    one after it at home (`startsAtHome()`, the owner's call). The smoke
    test's car scene starts in his garage and drives out through its door,
    and a scene opens the garage menu there. Shots: `docs/home-shots/`.
-3. **The interior.** The front door lets you in: one room downstairs
-   (a sofa and a TV, a kitchen along the back wall, the stairs boxed in),
-   walked as the mall's hall is (its own floor, walls and camera limits),
-   the house's solid hollowed for it, a back door onto the yard. The
-   estate's first interior.
+3. **The interior** (built, waiting on the owner's sign-off). The ground
+   floor is one room inside the house's own walls (`ROOM`, a ceiling
+   `CEIL` over the slab): the hall down the west wall from the front door
+   to the back door, the stairs boxed in, a sofa under the front window
+   facing the telly across a low table, the kitchen along the back wall (a
+   counter, the fridge, a table and stools), the wardrobe and a trunk
+   (`FURNITURE`; the last two are Phase 4's). **The doors are fades**, as
+   the lifts are (`HOME_PORTALS`, index.ts `rideTo()`): "Go in" at the
+   front door and at the back door in the yard, "Front door" and "Back
+   door" inside; the house stays sealed, so nothing else gets in. The
+   terraces' solid leaves his house out and home.ts has its four walls
+   (`HOME_SOLIDS`); inside its footprint walking asks `homeWall()` (the
+   room's walls and furniture) in place of the city's solids, and the
+   camera stays under the ceiling (`HOME_CAMERA`). His front door is under
+   a plain canopy (a porch's box stood where he steps in). The yard opens
+   onto the driveway through a gate. Drawn by home3d.ts without shadows,
+   so it's evenly lit. The front door no longer opens the panel (the City
+   view's click still does). Shots: `docs/home-shots/phase-3-*`.
+   Left for Phase 5: the room is as dark as the night outside (no lamp
+   lights it), the rain shows indoors, and the sound is the street's.
 4. **The wardrobe and the stash.** A wardrobe by the stairs opens the
    fitting room (fitting.ts, as Drop 001's panel does); a cupboard opens
    the stash: guns and items not carried (the inventory's bag, its rules in

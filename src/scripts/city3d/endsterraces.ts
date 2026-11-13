@@ -164,7 +164,9 @@ export const TERRACES: Terrace[] = ROWS.flatMap((row, ri) => {
       const prev = T.houses[i - 1]?.colour ?? out.at(-1)?.houses.at(-1)?.colour;
       let c = Math.floor(r() * DOOR_COLOURS.length);
       if (DOOR_COLOURS[c] === prev) c = (c + 1) % DOOR_COLOURS.length;
-      const porch: PorchKind = r() < 0.18 ? 'glazed' : p.roof === 'pitched' ? 'box' : 'canopy';
+      // (Degen's own door, home.ts, is under a plain canopy: a porch's box would stand where he steps in)
+      const drawn: PorchKind = r() < 0.18 ? 'glazed' : p.roof === 'pitched' ? 'box' : 'canopy';
+      const porch: PorchKind = `${T.id}-${i}` === HOME_HOUSE ? 'canopy' : drawn;
       const away = door > (u0 + u1) / 2 ? u0 + 0.35 : u1 - 0.35 - BIN.w;
       T.houses.push({
         id: `${T.id}-${i}`,
@@ -226,7 +228,9 @@ export function fencesOf(T: Terrace): [Pt, Pt][] {
   }
   lines.push([toWorld(T, FENCE.t / 2, far + FENCE.t / 2), toWorld(T, T.w - FENCE.t / 2, far + FENCE.t / 2)]);
   // Degen's home (home.ts): where his garage stands its walls are the garden's edge, and the fences stop at them
-  return T.houses.some((h) => h.id === HOME_HOUSE) ? lines.flatMap((l) => cutBy(l, HOME.garage)) : lines;
+  // (and the stub between his yard and his driveway is a gap: its gate stands open, home3d.ts)
+  if (!T.houses.some((h) => h.id === HOME_HOUSE)) return lines;
+  return lines.flatMap((l) => cutBy(l, HOME.garage)).filter(([a, c]) => !(Math.abs(a[0] - c[0]) < 1e-9 && Math.abs(a[0] - HOME.house[0]) < 0.1));
 }
 
 /** A fence line (along x or z) less the stretch that runs along or inside a rect (within a fence's thickness of it) */
@@ -253,7 +257,9 @@ export const binsOf = (h: House) => Array.from({ length: h.bins }, (_, b) => h.b
 
 /** What's solid: the terraces to their tops, the porches, the bins and the gardens' fences (gates shut) */
 export const TERRACE_SOLIDS: Box[] = TERRACES.flatMap((T): Box[] => {
-  const out: Box[] = [[...T.rect, T.peak] as Box];
+  // (Degen's house, the row's west end, is home.ts's own: its walls solid at the boot, the room inside walked in)
+  const mine = T.houses.some((h) => h.id === HOME_HOUSE);
+  const out: Box[] = [[mine ? HOME.house[2] : T.rect[0], T.rect[1], T.rect[2], T.rect[3], T.peak] as Box];
   for (const h of T.houses) {
     if (h.porch !== 'canopy') out.push([...rectOf(T, h.door - PORCH.w / 2, h.door + PORCH.w / 2, 0, PORCH.d), SLAB_Y + PORCH.h] as Box);
     for (const u of binsOf(h)) out.push([...rectOf(T, u, u + BIN.w, BIN_OFF, BIN_OFF + BIN.d), SLAB_Y + BIN.h] as Box);

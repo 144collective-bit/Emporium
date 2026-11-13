@@ -1,6 +1,6 @@
 // A smoke test of walk mode in the built site (`npm run smoke` after `npm run build`): a headless Chromium opens the
-// city and plays through it a scene at a time, each from a fresh page at its own spot: home (Degen's front door, his
-// panel), his garage's menu, the car (in at his garage, out through its door, a drive, out), on foot (walk, sprint,
+// city and plays through it a scene at a time, each from a fresh page at its own spot: home (in through Degen's front
+// door, down the hall, out again), his garage's menu, the car (in at his garage, out through its door, a drive, out), on foot (walk, sprint,
 // jump, crouch, the hub open and closed), the gun store's counter, the metro (the station's card, a ride, skipped to
 // the end), a kart race (the clubhouse's menu, a single race, quit), flying (into your aircraft in the hangar,
 // rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error or a step that
@@ -118,12 +118,24 @@ async function scene(name, spawn, play, init) {
   if (why || errors.length) failed++;
 }
 
-// Home (home.ts): on Degen's front path in the Ends his door's prompt opens his panel (a new player's first walk
-// starts downtown, so the spot is given)
-await scene('home', '-189.75,363.25,3.14', async (t) => {
-  await t.prompt('Home');
-  await t.until('his panel', () => document.querySelector('#city-panel-title')?.textContent === 'Home');
-  await t.step('the door opened his panel');
+// Home (home.ts): on Degen's front path in the Ends, in through his front door (a fade into the room), a few steps
+// down the hall, and out again by the same door
+await scene('home', '-189.75,363.55,3.14', async (t) => {
+  const inside = () => t.until('him to be inside', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) > 365.2 && Number(m[2]) < 370.9;
+  });
+  await t.prompt('Go in');
+  await inside();
+  await t.step(`inside, at ${(await t.where()).join(', ')}`);
+  await t.go('w', 1.2, 'walked down the hall');
+  await t.go('s', 1.0, 'and back to the door');
+  await t.prompt('Front door');
+  await t.until('him to be outside', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) < 364.5;
+  });
+  await t.step('out by the front door');
 });
 
 // His garage's menu: by its door on the driveway, the garage menu open and closed
