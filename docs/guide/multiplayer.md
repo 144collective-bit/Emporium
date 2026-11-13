@@ -18,7 +18,11 @@ keep it up to date when what it describes changes.
   `server/` that serves its own copy of the site, built with
   `PUBLIC_GAME_SERVER`. degenemporium.com (Hostinger) stays single-player,
   built without it (see Hosting). Getting it fit for today's city is
-  `docs/multiplayer-plan.md`'s "Testing on workers.dev".
+  `docs/multiplayer-plan.md`'s "Testing on workers.dev". **Paused for now**
+  (the owner's call, 2026-11): no automatic Cloudflare deploys (Workers
+  Builds to be disconnected, the "Deploy game server" Action by hand only)
+  and Vercel's Git deployments off (`vercel.json`); resume when the owner
+  asks.
 - **Movement checks** (`protocol.ts`, tested in `tests/protocol.test.ts`):
   the world is `WORLD_BOUNDS`; the 'in' message's flags carry how you're
   getting about (`MODES`, `modeBits()` / `modeOf()`: walk, drive, kart,
