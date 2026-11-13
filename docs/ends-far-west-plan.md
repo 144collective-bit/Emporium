@@ -180,7 +180,27 @@ one:
      `tests/groundheight.test.ts`; the smoke test's `hometerrace` scene
      (up, along the rail, down). Shot:
      `docs/far-west-shots/phase-3-on-the-terrace.webp`.
-4. **The far west round it** (the owner's pick, question 3).
+4. **The far west round it** (built, waiting on the owner's sign-off):
+   the owner's pick, bungalows and allotments.
+   - `endsfarhomes.ts` (DOM-free, the chunk's, tested in
+     `tests/endsfarhomes.test.ts`): **four bungalows** (`BUNGALOWS`), two
+     on each block north and south of the compound, facing the lane: one
+     storey under a pitched roof (ridge 1.85: under his garage's top, so
+     the compound is the tallest thing out there), pebble-dash or brick,
+     each door its own colour; a front garden behind a low wall with a gap
+     at the path (`frontWall()`), a back garden in close-board fencing
+     (`backFences()`), a shed in some, a bin. **The allotments**
+     (`ALLOTMENT`): the long block behind all three in a low wire fence, a
+     gate at each end and one opposite the compound's back gate, a path
+     down the middle and one in from that gate; sixteen plots (`PLOTS`),
+     each with three or four beds (a crop in rows, or dug earth), a shed
+     and a water butt on some, a couple left to grass. Seeded, so they're
+     the same every time. `FAR_HOME_SOLIDS`, joined with the chunk.
+   - Drawn by `endsfarhomes3d.ts` (registered by `endsfar3d.ts`): a site a
+     bungalow, a site a pair of plots, the fence a site a run; all in the
+     shared paint, the crops' greens and the paths' earth from the
+     palette; phones draw every other crop row.
+   - Shots: `docs/far-west-shots/phase-4-*`.
 5. **Life, night and sound.** Neighbours and walkers on the new road, the
    compound's windows, sign and terrace lights at night, a pool at the
    gates; its sound Endswood's, the house quiet inside as now.
