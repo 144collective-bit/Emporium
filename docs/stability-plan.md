@@ -189,23 +189,51 @@ the targets as they were (the tests hold the arithmetic). MiB.
    far away drawn at half size on every tier (phones already do), and no
    mipmaps on textures only seen face-on near.
 
-## Phase 5: budgets that hold as the city grows (M, low risk)
+## Phase 5: budgets that hold as the city grows (built, 2026-11-13)
 
-The guard rails, so a new district can't undo the work:
+The owner's picks: **on demand only** (a full city takes too long in CI to
+run on every push); the ceilings **today's numbers and 10%**; the desktop's
+render targets **held by a formula**; the leak check with it.
 
-1. **A memory ceiling per tier** in `scripts/budget.mjs`: after a build, a
-   headless run of `?bench` at the phone and desktop tiers; the build is red
-   if the GPU total (geometry, textures, targets) at any view is over the
-   ceiling. *The owner's call: the ceilings (suggested: 150 MB phones,
-   300 MB desktop, set from Phases 2-4's measured numbers plus a margin).*
-2. **A district's own budget**: each entry in `LAZY_DISTRICTS` states the
-   geometry it may hold near and far; a test builds its sites and fails if
-   it's over.
-3. **No NaN, ever**: the smoke test and the bench fail on any NaN warning
-   (from Phase 1), so a broken outline is caught before it's merged.
-4. **Long-session check**: `npm run soak` (new), the city left in the City
-   view and then walked across town for 20 minutes headless, failing if
-   memory keeps climbing after it has settled (a leak).
+1. **The ceilings** (`MEMORY_CEILINGS` in `targets.ts`, MiB): the phone
+   tier with the whole city built, in the City view (which keeps every
+   tile): geometry **207**, textures **70**, render targets **10**. The high
+   tier's render targets at 1440 x 900: **320** at a retina 2x, **193** at
+   1x. Lower one when a phase cuts it, to keep the saving; raise one only on
+   purpose, as `scripts/budget.mjs`'s are.
+2. **`npm run memcheck`** (after a build and the texture bake;
+   `scripts/memcheck.mjs`): a headless phone (390 x 844, touch) under
+   `?bench` loads every district and builds the whole city, then holds what
+   it holds (`__mem()`) to the ceilings. Red on any page error or NaN
+   warning too. About 13 minutes to build the city here.
+3. **The desktop by formula**: `pictureTargets()` / `pictureBytes()` in
+   `targets.ts` list the render targets post.ts and sky.ts make, as
+   `targetMemory()` counts them; `tests/targets.test.ts` holds them to Phase
+   2's measured 291 and 175 MiB (within 3%) and under the desktop ceilings,
+   on every `npm test`. memcheck holds the same formula to what the phone
+   really holds (within 10%), so a change to post.ts or sky.ts it misses
+   shows. A desktop building the whole city in the headless browser takes
+   over an hour (about a site a second), too slow even on demand.
+4. **The leak check**: `npm run memcheck -- soak` then spends `SOAK_MIN`
+   minutes (20) half in the City view and half walking (W held, turning now
+   and then), sampling memory, and is red if geometry or textures climb (the
+   last third of a half over its first by 10% and 4 MiB) or pass a ceiling.
+5. **The "Memory" Action** (`.github/workflows/memory.yml`): the same, on a
+   CI machine, run by hand only (Actions, Memory, Run workflow; the leak
+   check's minutes an input, 0 for none).
+6. **Not built** (for later): a district's own budget (each
+   `LAZY_DISTRICTS` entry stating what it may hold, a test building its
+   sites in Node). The site worker builds sites without the DOM, but from
+   the main thread's placed trees and lamps, so building them in a test is
+   a piece of work of its own.
+
+### What Phase 5 measured
+
+The phone tier, the whole city built (4,562 sites), the City view, baked
+textures: geometry **187.7**, textures **64.3**, render targets **9.0**
+MiB (the quality step had lowered its pixels to 1x; the formula gave 9.0
+for the same). On foot, past the haze, a phone holds less (about 113-127
+MiB of geometry, the memory steps' figures).
 
 ## Phase 6: smoother frames (S-M, low risk)
 
@@ -231,5 +259,6 @@ measured → Phases 3 and 4 → Phase 6. Real-device numbers (`?bench`'s
 - **Phase 1 first, on its own** (2026-11-13), tested on the owner's laptop
   before anything else. **Phase 2 next** once it's confirmed.
 - **Retina: SMAA above 1.75x pixels, MSAA below** (Phase 2.2).
-- (waiting) How far the City view keeps the full city (Phase 3.2); the
-  ceilings (Phase 5.1).
+- **Phase 5** (2026-11-13): on demand only; the ceilings today's numbers
+  and 10%; the desktop's render targets by formula; the leak check too.
+- (waiting) How far the City view keeps the full city (Phase 3.2).

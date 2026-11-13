@@ -390,6 +390,18 @@ keep it up to date when what it describes changes.
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the
   parameter.
+- **Memory ceilings** (`docs/stability-plan.md`, Phase 5; the owner's
+  picks): `MEMORY_CEILINGS` in `targets.ts` (MiB). `npm run memcheck`
+  (after a build and `npm run bake:textures`; `scripts/memcheck.mjs`, about
+  13 minutes) builds the whole city on a headless phone under `?bench` and
+  holds its geometry, textures and render targets to the phone's; `npm run
+  memcheck -- soak` adds the leak check (`SOAK_MIN`, 20: half the City
+  view, half walking). The "Memory" Action runs it by hand only. The
+  desktop's render targets are held by a formula (`pictureTargets()`,
+  `pictureBytes()` in `targets.ts`, `tests/targets.test.ts`), which
+  memcheck holds to what the phone measures: **a change to the targets
+  post.ts or sky.ts make goes in `pictureTargets()` too.** Lower a ceiling
+  when a change cuts it; raise one only on purpose.
 - `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build

@@ -16,7 +16,8 @@
     "mocap": "node scripts/mocap.mjs",
     "seams": "node scripts/seams.mjs",
     "shots": "node scripts/shots.mjs",
-    "smoke": "node scripts/walk-smoke.mjs"
+    "smoke": "node scripts/walk-smoke.mjs",
+    "memcheck": "node scripts/memcheck.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

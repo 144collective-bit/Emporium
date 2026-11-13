@@ -1,0 +1,47 @@
+# The memory ceilings (docs/stability-plan.md, Phase 5): run by hand only (the owner's pick), from
+# GitHub -> Actions -> "Memory" -> Run workflow. It builds the site as Build site does, makes the
+# textures, then `npm run memcheck -- soak`: the whole city built on the phone tier and held to its
+# ceilings (MEMORY_CEILINGS in src/scripts/city3d/targets.ts), then the leak check. About 45 minutes,
+# so it's never part of Build site.
+name: Memory
+
+on:
+  workflow_dispatch:
+    inputs:
+      soak_minutes:
+        description: Minutes for the leak check (half in the City view, half walking; 0 for none)
+        default: '20'
+
+permissions:
+  contents: read
+
+jobs:
+  memcheck:
+    # (pinned as Build site is: Playwright 1.56 has no Chromium for ubuntu-latest's 26.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - name: Cache Playwright's Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright-core install chromium
+      # (the textures made at build time, as the live site has them: what's measured is what visitors hold)
+      - name: Make the textures
+        timeout-minutes: 30
+        run: npm run bake:textures
+      - name: The memory ceilings and the leak check
+        env:
+          SOAK_MIN: ${{ inputs.soak_minutes }}
+        run: |
+          if [ "${SOAK_MIN:-0}" = "0" ]; then npm run memcheck; else npm run memcheck -- soak; fi
