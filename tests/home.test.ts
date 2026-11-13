@@ -2,7 +2,7 @@
 // garden and his driveway beside it, with room for a car and a bike; a place, and where walking starts.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BIKE_BAY, CAR_BAY, HOME, HOME_DOOR, HOME_HOUSE, HOME_LAND, HOME_PICK, HOME_PIN, HOME_ROW, HOME_SOLIDS, HOME_SPAWN, bayRect, onHome } from '../src/scripts/city3d/home';
+import { BIKE_BAY, BIKE_HOME, CAR_BAY, CAR_HOME, HOME, HOME_GARAGE_DOOR, HOME_VIEW, WALL, startsAtHome, HOME_DOOR, HOME_HOUSE, HOME_LAND, HOME_PICK, HOME_PIN, HOME_ROW, HOME_SOLIDS, HOME_SPAWN, bayRect, onHome } from '../src/scripts/city3d/home';
 import { HOUSES, TERRACES, TERRACE_SOLIDS, fencesOf, rectOf, toWorld, TALLEST } from '../src/scripts/city3d/endsterraces';
 import { COURTS, CROSS_PATHS, GREENS, LANES, N_EDGE, PATHS, WEST_LAMPS } from '../src/scripts/city3d/endswest';
 import { ROAD_HALF, ROAD_Z, SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
@@ -50,9 +50,13 @@ test('the garage stands in the back garden, off the house, its door on the drive
   assert.equal(D.x, HOME.garage[0]);
   assert.equal(D.x, HOME.drive[2]);
   assert.ok(D.z0 > HOME.garage[1] + 0.2 && D.z1 < HOME.garage[3] - 0.2 && D.z1 - D.z0 >= 2.2 && D.h < HOME.garageH);
-  // Solid at the boot, the one box
-  assert.equal(HOME_SOLIDS.length, 1);
-  assert.ok(SOLIDS.includes(HOME_SOLIDS[0]));
+  // Solid at the boot: its four walls, the door's opening left clear
+  assert.equal(HOME_SOLIDS.length, 5);
+  for (const b of HOME_SOLIDS) assert.ok(SOLIDS.includes(b));
+  const hit = (x: number, z: number) => HOME_SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]);
+  for (let z = D.z0 + 0.05; z < D.z1; z += 0.1) assert.ok(!hit(D.x + WALL / 2, z), `the doorway is clear at z ${z}`);
+  assert.ok(hit(D.x + WALL / 2, D.z0 - 0.1) && hit(D.x + WALL / 2, D.z1 + 0.1) && hit(HOME.garage[2] - WALL / 2, CAR_HOME.z), 'walls either side and behind');
+  for (let x = HOME.garage[0] + WALL + 0.05; x < HOME.garage[2] - WALL; x += 0.25) assert.ok(!hit(x, CAR_HOME.z), 'open inside');
 });
 
 test('the driveway: off the Close and the lane, clear of everything, room for a car and a bike', () => {
@@ -104,4 +108,33 @@ test('a place: its pin, door and where you arrive, clear and on its own ground',
   assert.ok(PATHS.some((p) => HOME_SPAWN.x > p[0] && HOME_SPAWN.x < p[2] && HOME_SPAWN.z > p[1] - 0.6 && HOME_SPAWN.z < p[3] + 0.6), 'on the front path');
   // Facing the door: south
   assert.equal(HOME_SPAWN.yaw, Math.PI);
+});
+
+test('home base: the car in the garage nose to its door, the bike on its bay, the garage\'s prompt on the driveway', () => {
+  const g = HOME.garage;
+  const D = HOME.garageDoor;
+  // Every car you can own stands inside clear of the walls, nose west to the door, room to walk down both its sides
+  assert.equal(CAR_HOME.yaw, Math.PI);
+  assert.ok(Math.abs(Math.cos(CAR_HOME.yaw) + 1) < 1e-9, 'its nose points west: (cos yaw, -sin yaw)');
+  for (const id of PLAYER_CARS) {
+    const { L, W } = CARS[id];
+    assert.ok(CAR_HOME.x - L / 2 > g[0] + WALL + 0.05 && CAR_HOME.x + L / 2 < g[2] - WALL - 0.05, `${id} fits the garage's length`);
+    assert.ok(CAR_HOME.z - W / 2 - 0.5 > g[1] + WALL && CAR_HOME.z + W / 2 + 0.5 < g[3] - WALL, `room beside ${id}`);
+    // ... and it goes out through the door: its width inside the opening, in line with it
+    assert.ok(CAR_HOME.z - W / 2 > D.z0 + 0.15 && CAR_HOME.z + W / 2 < D.z1 - 0.15, `${id} through the door`);
+  }
+  // The bike on its bay on the driveway, nose to the Close (south)
+  assert.ok(Math.abs(-Math.sin(BIKE_HOME.yaw) - 1) < 1e-9);
+  assert.deepEqual([BIKE_HOME.x, BIKE_HOME.z], [BIKE_BAY.x, BIKE_BAY.z]);
+  // The prompt: on the driveway, outside the garage, by the door, away from the car (its Get in is another prompt)
+  const dr = HOME.drive;
+  assert.ok(HOME_GARAGE_DOOR.x > dr[0] && HOME_GARAGE_DOOR.x < dr[2] && HOME_GARAGE_DOOR.z > dr[1] && HOME_GARAGE_DOOR.z < dr[3]);
+  assert.ok(Math.hypot(HOME_GARAGE_DOOR.x - CAR_HOME.x, HOME_GARAGE_DOOR.z - CAR_HOME.z) - CAR_HOME.r > 1.75);
+  // The menu's camera: out on the driveway side, looking in at the car
+  assert.ok(HOME_VIEW.eye[0] < g[0] && HOME_VIEW.at[0] > g[0] && HOME_VIEW.at[0] < g[2]);
+});
+
+test('walking starts at home, but a new player\'s first walk', () => {
+  assert.ok(!startsAtHome([]));
+  assert.ok(startsAtHome(['emporium']));
 });

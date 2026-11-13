@@ -44,16 +44,24 @@ Each with the owner's sign-off.
    front door's prompt ("Home", which opens the panel until the house can
    be gone into), on the world map and in fast travel. Walking starts on
    his front path (it started by the Emporium); `?spawn=` still says
-   otherwise. The garage is shut and the driveway empty: the car and the
-   bike still live at the city garage. Shots: `docs/home-shots/`.
-2. **Home base.** The garage opens: the car inside it, the bike on its bay;
-   getting in and out there; "Bring my car home" (the garage menu's Keep, a
-   reload) sends each here; the garage's door opens the garage menu, its
-   camera on the car in the garage; the city garage keeps its menu and its
-   turntable as a showroom. What it touches: garage.ts (the turntable's
-   car), drive.ts (`bring()`, where each vehicle is at home), mybike's
-   stand, garage-ui.ts's camera, walk.ts's prompts. The smoke test's car
-   scene moves here.
+   otherwise. Shots: `docs/home-shots/`.
+2. **Home base** (built, waiting on the owner's sign-off). The garage is
+   hollow, its door up (`HOME_SOLIDS`: four walls, the opening clear;
+   inside a strip light, a workbench, shelves, tyres). garage.ts keeps two
+   sets of stands for the same car and bike: **home** (`CAR_HOME` in
+   Degen's garage, nose to its door; `BIKE_HOME` on its bay on the
+   driveway) and **the city garage's** turntable and stand, a showroom the
+   two come to only while that garage's menu is open (`garage.at()`).
+   Everything that asked the garage where the car is at home (getting in,
+   its door, taking it out, the menu's camera, Keep's "Bring my car home",
+   a reload) reads the stand it's on, so all of it happens at home now.
+   The car at home is solid to walk round (`drive.blocks()`). The garage
+   menu opens at his garage's door too (`HOME_GARAGE_DOOR`, the prompt
+   "Garage"), its camera out on the driveway looking in (`HOME_VIEW`).
+   A new player's very first walk starts downtown by the Emporium, every
+   one after it at home (`startsAtHome()`, the owner's call). The smoke
+   test's car scene starts in his garage and drives out through its door,
+   and a scene opens the garage menu there. Shots: `docs/home-shots/`.
 3. **The interior.** The front door lets you in: one room downstairs
    (a sofa and a TV, a kitchen along the back wall, the stairs boxed in),
    walked as the mall's hall is (its own floor, walls and camera limits),
@@ -67,12 +75,10 @@ Each with the owner's sign-off.
    panel, a `?bench` view, the smoke test's home scene grown to cover the
    garage, the interior and the wardrobe; checked at every width.
 
-## Open questions for later phases
+## Decided along the way
 
-- The city garage after Phase 2: a showroom with the same menu (the answer
-  given), so which car stands on its turntable? Proposed: none, until one
-  is being looked at in the menu there.
-- New players start walking in the Ends, about 400 tiles from the Emporium
-  and the market hall where Getting started sends them first. A taxi or
-  fast travel gets them there; if that proves a poor first minute, the
-  first walk could start downtown and every one after it at home.
+- **The city garage** is a showroom with the same menu: its turntable and
+  bike stand are empty until its menu is open, when your car and bike
+  stand there to be looked at, and go home when it closes.
+- **A new player's first walk** starts downtown, where Getting started's
+  first steps are; every walk after that starts at home.

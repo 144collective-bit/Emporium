@@ -421,7 +421,19 @@ export function createDrive(d: DriveDeps) {
     },
     /** Does a parked vehicle block this spot (walking)? */
     blocks(x: number, z: number, pad: number) {
-      return parkedCircles().some((c) => Math.hypot(c.x - x, c.z - z) < c.r + pad);
+      if (parkedCircles().some((c) => Math.hypot(c.x - x, c.z - z) < c.r + pad)) return true;
+      // (your car at home in Degen's garage, home.ts: its body, as long and wide as it is; on the showroom's turntable
+      // the turntable's own box stops you)
+      if (!car && d.garage.hasCar && d.garage.where === 'home') {
+        const { x: cx, z: cz } = d.garage.turntable;
+        const yaw = d.garage.yaw;
+        const spec = CARS[d.myCar().model];
+        const [fx, fz] = [Math.cos(yaw), -Math.sin(yaw)];
+        const along = (x - cx) * fx + (z - cz) * fz;
+        const across = -(x - cx) * fz + (z - cz) * fx;
+        return Math.abs(along) < spec.L / 2 + pad && Math.abs(across) < spec.W / 2 + pad;
+      }
+      return false;
     },
     /** Get into the nearest vehicle (from the turntable, the pits, or wherever it's parked); `from` 1: by your car's passenger door */
     enter(x: number, z: number, from = 0) {

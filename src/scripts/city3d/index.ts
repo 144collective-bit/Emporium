@@ -49,7 +49,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_SLAB, HOME_SPAWN } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_SLAB, HOME_SPAWN, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -1313,9 +1313,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
     beforeWalk = null;
   }
-  // Walking starts at home, on Degen's front path in the Ends (home.ts, the owner's call; it started by the Emporium).
-  // `?spawn=x,z` in the address still says otherwise (walk.ts reads it when no spot is given)
-  walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') ? undefined : HOME_SPAWN));
+  // Walking starts at home, on Degen's front path in the Ends (home.ts, the owner's call), but a new player's very
+  // first walk, which starts downtown by the Emporium as it always did. `?spawn=x,z` in the address still says
+  // otherwise (walk.ts reads it when no spot is given)
+  walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') || !startsAtHome(game.save().visited) ? undefined : HOME_SPAWN));
   walkBtn.hidden = false;
   // The mode header's City button: back to the city view from walking
   const head = createCityHead(root);

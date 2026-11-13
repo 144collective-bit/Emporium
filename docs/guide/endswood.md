@@ -186,3 +186,14 @@ keep it up to date when what it describes changes.
   gate or fence where the garage stands: `cutBy()`), endswestlife.ts no
   washing there. Drawn by `home3d.ts` (a site in the estate's chunk, from
   endswest3d.ts's `register()`).
+  Phase 2 (home base) is built: the garage is hollow, its door up
+  (`HOME_SOLIDS`: its walls, `WALL`; the doorway clear), your car inside
+  (`CAR_HOME`) and your bike on the driveway (`BIKE_HOME`; a vehicle's yaw
+  is its group's turn, nose along (cos yaw, -sin yaw)). garage.ts has the
+  two sets of stands (`at('home' | 'city')`, `where`: the city garage's
+  turntable and stand are a showroom, used only while its menu is open),
+  and its `turntable`, `yaw`, `bikeSpot`, `takeOut()`, `takeOutBike()` and
+  `view` answer for the stands in use, so drive.ts and walk.ts needed no
+  other change but `drive.blocks()` (the car at home is solid) and the
+  second Garage prompt (`HOME_GARAGE_DOOR`, walk.ts `garageAt`).
+  `startsAtHome()`: a new player's first walk starts downtown.

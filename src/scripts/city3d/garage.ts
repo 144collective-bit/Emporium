@@ -18,6 +18,7 @@ import { paintHex, type MyCar } from './mycar';
 import type { MyBike } from './mybike';
 import type { Bike } from './bikes';
 import { REST as BIKE_REST } from './bike-sim';
+import { BIKE_HOME, CAR_HOME, HOME_SLAB, HOME_VIEW } from './home';
 
 /**
  * Your motorbikes' drawing (vehicle plan Phase 7): bikes.ts, a chunk fetched once the city is up; index.ts hands its
@@ -167,6 +168,30 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
   addLamp(ox + 0.4, oz + 0.3, -Math.PI / 2);
   addLamp(ox + 8.6, oz + 0.3, -Math.PI / 2);
 
+  // Where your car and bike stand when they're not out (docs/home-plan.md Phase 2): at home in the Ends, the car in
+  // Degen's garage and the bike on his driveway (home.ts), or here, the car on the turntable and the bike on its
+  // stand, while this garage's menu is open (`at('city')`: a showroom). The same car and bike, moved between the two.
+  let where: 'home' | 'city' = 'home';
+  const homeCar = new THREE.Group();
+  homeCar.position.set(CAR_HOME.x, HOME_SLAB + 0.012, CAR_HOME.z);
+  homeCar.rotation.y = CAR_HOME.yaw;
+  homeCar.userData.keep = true;
+  scene.add(homeCar);
+  const homeBike = new THREE.Group();
+  homeBike.position.set(BIKE_HOME.x, HOME_SLAB + 0.012, BIKE_HOME.z);
+  homeBike.rotation.y = BIKE_HOME.yaw;
+  homeBike.userData.keep = true;
+  scene.add(homeBike);
+  /** Put the car and the bike on the stands they belong on now */
+  function settle() {
+    if (car) {
+      (where === 'city' ? spin : homeCar).add(car.group);
+      car.group.position.set(0, where === 'city' ? 0.07 : 0, 0);
+      car.group.rotation.set(0, 0, 0);
+    }
+    if (bike) (where === 'city' ? stand : homeBike).add(bike.group);
+  }
+
   let car: Car | null = null;
   let showing = '';
   function show(c: MyCar) {
@@ -175,11 +200,11 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     showing = key;
     car?.dispose();
     car = createCar(c.model, paintHex(c.paint), true, c.look);
-    car.group.position.y = 0.07;
-    spin.add(car.group);
+    settle();
   }
-  show(opts.car);
 
+  const CITY_VIEW = { eye: new THREE.Vector3(TT.x - 2.6, S + 2.3, TT.z - 6.8), at: new THREE.Vector3(TT.x + 0.5, S + 0.95, TT.z + 0.6) };
+  const AT_HOME_VIEW = { eye: new THREE.Vector3(HOME_VIEW.eye[0], HOME_SLAB + HOME_VIEW.eye[1], HOME_VIEW.eye[2]), at: new THREE.Vector3(HOME_VIEW.at[0], HOME_SLAB + HOME_VIEW.at[1], HOME_VIEW.at[2]) };
   let spinning = false;
   opts.tick(({ dt }) => {
     if (!spinning || opts.reduced) return;
@@ -206,7 +231,7 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     bike = BIKE_3D.create(b.model, paintHex(b.paint));
     // (resting on its side stand, a touch over to its left)
     bike.group.rotation.x = BIKE_REST.lean;
-    stand.add(bike.group);
+    settle();
   }
   function clearBike() {
     bike?.dispose();
@@ -222,6 +247,9 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     showing = '';
   }
 
+  // (once the stands and the bike's are made: `settle()` reads them)
+  show(opts.car);
+
   return {
     /** Put a car on the turntable (picking in the menu shows each one here) */
     show,
@@ -230,15 +258,28 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     get hasCar() {
       return !!car;
     },
-    /** The turntable's car (its door opens as you get in at home), and which way it faces there */
+    /** Which stands the car and the bike are on: 'home' (Degen's garage and driveway) but while this garage's menu is open */
+    at(w: 'home' | 'city') {
+      if (w === where) return;
+      where = w;
+      spinning = false;
+      spin.rotation.y = REST;
+      settle();
+    },
+    get where() {
+      return where;
+    },
+    /** The car at home (its door opens as you get in there), and which way it faces */
     get car() {
       return car;
     },
     get yaw() {
-      return spin.rotation.y;
+      return where === 'city' ? spin.rotation.y : CAR_HOME.yaw;
     },
-    /** Where the turntable is (getting in at home) */
-    turntable: TT,
+    /** Where the car stands at home, and how far round it reaches (getting in there): the turntable in the showroom */
+    get turntable() {
+      return where === 'city' ? TT : CAR_HOME;
+    },
     /** Your motorbike's stand: the drawing comes (bikes.ts), what's on it, and taking it out (vehicle plan Phase 7) */
     setBikeMaker(create: NonNullable<typeof BIKE_3D.create>) {
       BIKE_3D.create = create;
@@ -249,7 +290,9 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
     get hasBike() {
       return !!bike;
     },
-    bikeSpot: BIKE_SPOT,
+    get bikeSpot() {
+      return where === 'city' ? BIKE_SPOT : BIKE_HOME;
+    },
     takeOutBike() {
       if (!bike) return null;
       const out = bike;
@@ -257,7 +300,8 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
       bikeShowing = '';
       bikeWant = null;
       scene.add(out.group);
-      return { bike: out, x: BIKE_SPOT.x, z: BIKE_SPOT.z, yaw: BIKE_SPOT.yaw };
+      const sp = where === 'city' ? BIKE_SPOT : BIKE_HOME;
+      return { bike: out, x: sp.x, z: sp.z, yaw: sp.yaw };
     },
     /**
      * Drive it off: the turntable's car moves into the city (facing the avenue) and is the
@@ -270,18 +314,22 @@ export function buildGarage(scene: THREE.Scene, opts: { tick: (f: Tick) => void;
       showing = '';
       spin.rotation.y = REST;
       scene.add(out.group);
+      // (out of Degen's garage nose first, or off the turntable facing the avenue)
+      if (where === 'home') {
+        out.group.position.set(CAR_HOME.x, HOME_SLAB, CAR_HOME.z);
+        return { car: out, x: CAR_HOME.x, z: CAR_HOME.z, yaw: CAR_HOME.yaw };
+      }
       out.group.position.set(TT.x, S + 0.07, TT.z);
       return { car: out, x: TT.x, z: TT.z, yaw: Math.PI / 2 };
     },
     /** Turn slowly while the menu is open (it stands still under reduced motion); back to rest after */
     spin(on: boolean) {
-      spinning = on;
+      spinning = on && where === 'city';
       if (!on) spin.rotation.y = REST;
     },
-    /** Where the showroom camera looks from and at */
-    view: {
-      eye: new THREE.Vector3(TT.x - 2.6, S + 2.3, TT.z - 6.8),
-      at: new THREE.Vector3(TT.x + 0.5, S + 0.95, TT.z + 0.6),
+    /** Where the menu's camera looks from and at: the showroom's turntable, or into Degen's garage from his driveway */
+    get view() {
+      return where === 'city' ? CITY_VIEW : AT_HOME_VIEW;
     },
   };
 }

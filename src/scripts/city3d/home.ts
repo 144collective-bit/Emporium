@@ -5,8 +5,8 @@
  * itself stands where it stood, nothing moved), with what makes it his:
  *
  * - **The garage** (`HOME.garage`) in its back garden, a brick box under a flat felt roof as long as the garden is
- *   wide, its up-and-over door in its west wall (`HOME.garageDoor`) onto the driveway. Shut in Phase 1 (one solid
- *   box); it opens with the car inside in Phase 2.
+ *   wide, its up-and-over door in its west wall (`HOME.garageDoor`) onto the driveway, up: the car stands inside
+ *   (`CAR_HOME`), the walls solid (`HOME_SOLIDS`), the opening clear. Its menu's prompt is `HOME_GARAGE_DOOR`.
  * - **The driveway** (`HOME.drive`): the strip between the row's west end and the service lane, from the house's
  *   back corner down to the Close's pavement, concrete, with a dropped kerb onto the Close (`HOME.kerb`); it lies
  *   open to the lane on its west side too, so a car comes in off either. Room for the car (`HOME.carBay`) and the
@@ -51,10 +51,10 @@ export const HOME = {
   door: [x0 + DOOR_IN, z0] as Pt,
   /** The garage: its body, its walls' height and its parapet's top (over the slab) */
   garage: [HOUSE[0], z1 + YARD, HOUSE[2] - 0.04, GARDEN[3]] as Rect,
-  garageH: 1.55,
-  garageTop: 1.7,
+  garageH: 1.75,
+  garageTop: 1.9,
   /** Its door in its west wall: from, to along z, and its height */
-  garageDoor: { x: HOUSE[0], z0: z1 + YARD + 0.3, z1: z1 + YARD + 2.7, h: 1.25 },
+  garageDoor: { x: HOUSE[0], z0: z1 + YARD + 0.3, z1: z1 + YARD + 2.7, h: 1.45 },
   /** The driveway: from the lane's edge to the row's end, from the house's back corner to the block's edge by the Close */
   drive: [LANE.x1, z1 - 0.6, HOUSE[0], N_EDGE] as Rect,
   /** The dropped kerb across the Close's pavement at the driveway's foot (to the road's edge) */
@@ -82,6 +82,12 @@ export const HOME_DOOR = { id: 'home' as const, x: HOME.door[0], z: HOME.door[1]
 /** Where you arrive, and where walking starts: on the front path, facing the door (yaw π faces south) */
 export const HOME_SPAWN = { x: HOME.door[0] + 0.5, z: HOME.door[1] - 1.75, yaw: Math.PI };
 
+/**
+ * Does walking start at home? Not a new player's very first walk (the owner's call): that starts downtown by the
+ * Emporium, where Getting started's first steps are; once anywhere has been walked to (the save's `visited`), home.
+ */
+export const startsAtHome = (visited: readonly string[]) => visited.length > 0;
+
 /** The place's pick boxes (over the slab), the land its ring goes round, and its pin over the roof */
 export const HOME_PICK: { rect: Rect; h: number }[] = [
   { rect: HOME.house, h: RIDGE },
@@ -92,8 +98,37 @@ export const HOME_PIN: Pt = [(HOUSE[0] + HOUSE[2]) / 2, (z0 + z1) / 2];
 export const HOME_PIN_H = RIDGE + 1.6;
 export const HOME_SLAB = SLAB_Y;
 
-/** What's solid at the boot: the garage, shut (the house and its fences are the terraces', joined with their chunk) */
-export const HOME_SOLIDS: Box[] = [[...HOME.garage, SLAB_Y + HOME.garageTop] as Box];
+/** The garage's walls' thickness */
+export const WALL = 0.12;
+/**
+ * What's solid at the boot: the garage's four walls, its door's opening left clear (Phase 2: the door is up, the car
+ * inside; the house and its fences are the terraces', joined with their chunk)
+ */
+export const HOME_SOLIDS: Box[] = (() => {
+  const [gx0, gz0, gx1, gz1] = HOME.garage;
+  const D = HOME.garageDoor;
+  const top = SLAB_Y + HOME.garageTop;
+  return [
+    [gx0, gz0, gx1, gz0 + WALL, top],
+    [gx0, gz1 - WALL, gx1, gz1, top],
+    [gx1 - WALL, gz0, gx1, gz1, top],
+    // (the west wall either side of the door)
+    [gx0, gz0, gx0 + WALL, D.z0, top],
+    [gx0, D.z1, gx0 + WALL, gz1, top],
+  ];
+})();
+
+/**
+ * Where his vehicles live (Phase 2, garage.ts's home stands). A vehicle's yaw is its group's turn: its nose points
+ * along (cos yaw, -sin yaw), so π is west, -π/2 south, π/2 north (walking's yaw is another thing: 0 north, π south).
+ * The car in the garage, nose to its door; the bike on its bay on the driveway, nose to the Close.
+ */
+export const CAR_HOME = { x: (HOME.garage[0] + HOME.garage[2]) / 2 + 0.1, z: (HOME.garageDoor.z0 + HOME.garageDoor.z1) / 2, yaw: Math.PI, r: 1.1 };
+export const BIKE_HOME = { x: BIKE_BAY.x, z: BIKE_BAY.z, yaw: -Math.PI / 2 };
+/** The garage's prompt (its menu, as the city garage's office door): on the driveway by the door's north jamb */
+export const HOME_GARAGE_DOOR = { x: HOME.garageDoor.x - 0.55, z: HOME.garageDoor.z0 - 0.15 };
+/** Where the garage menu's camera looks from and at (over the slab): from out on the driveway, into the garage */
+export const HOME_VIEW = { eye: [HOME.drive[0] - 1.6, 2.0, HOME.garageDoor.z1 + 1.9] as [number, number, number], at: [CAR_HOME.x - 0.6, 0.7, CAR_HOME.z] as [number, number, number] };
 
 /** Is a point on the home's own ground (the house, its garden, the driveway)? What grows or stands about keeps off it */
 export const onHome = (x: number, z: number, m = 0) => x > HOME_LAND[0] - m && x < HOME_LAND[2] + m && z > HOME_LAND[1] - m && z < HOME_LAND[3] + m;
