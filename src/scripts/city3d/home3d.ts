@@ -28,7 +28,7 @@ import { Batch, PAL, neon, toon } from './kit';
 import { site } from './tilework';
 import { COVER, KERB, TREE } from './palette';
 import { glow, METAL } from './infill';
-import { CEIL, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, ROOM, SHELL, WALL, WALL_H, WALL_T, type Furniture } from './home';
+import { CEIL, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, ROOF_THINGS, ROOF_Y, ROOM, SHELL, WALL, WALL_H, WALL_T, type Furniture } from './home';
 import type { Rect } from './endswood';
 
 const S = HOME_SLAB;
@@ -233,12 +233,29 @@ function house(b: Batch, low: boolean) {
       for (let z = tz0 + (tz1 - tz0) / 4; z < tz1 - 0.5; z += (tz1 - tz0) / 4) for (const x of [tx0, tx1 - 0.04]) cube(b, [x, z - 0.02, x + 0.04, z + 0.02], S + R - 0.05, top - 0.04, GATE);
       for (let k = 0; k <= 8; k++) b.add(new THREE.SphereGeometry(0.035, 5, 4).translate(tx0 + 1.2 + k * 0.02, S + R + 0.75 - Math.sin((k / 8) * Math.PI) * 0.2, tz0 + ((tz1 - tz0) * k) / 8), glow(PAL.warm));
     }
-    const y = S + E + 0.06;
-    for (const x of [dx - 1.2, dx + 0.5]) {
-      cube(b, [x, z0 + 1.2, x + 0.5, z0 + 1.7], y, y + 0.22, CHAIR);
-      cube(b, [x, z0 + 1.64, x + 0.5, z0 + 1.7], y + 0.22, y + 0.5, CHAIR);
+    // What stands on the terrace (home.ts `ROOF_THINGS`): the stairs' hatch with its lid up, two chairs and a low
+    // table at the front rail, a planter in each back corner
+    const y = S + ROOF_Y;
+    for (const t of ROOF_THINGS) {
+      const [a0, c0, a1, c1] = t.rect;
+      if (t.kind === 'hatch') {
+        // (a kerb round the opening, the dark of the stairs in it, the lid stood open on its east side)
+        const K = 0.08;
+        cube(b, [a0, c0, a1, c0 + K], y, y + 0.18, COPING);
+        cube(b, [a0, c1 - K, a1, c1], y, y + 0.18, COPING);
+        cube(b, [a0, c0 + K, a0 + K, c1 - K], y, y + 0.18, COPING);
+        cube(b, [a1 - K, c0 + K, a1, c1 - K], y, y + 0.18, COPING);
+        flat(b, [a0 + K, c0 + K, a1 - K, c1 - K], y + 0.02, DARK);
+        cube(b, [a1 - 0.05, c0, a1, c1], y + 0.18, y + t.h + 0.5, GATE);
+      } else if (t.kind === 'chair') {
+        cube(b, [a0, c0, a1, c1], y, y + 0.22, CHAIR);
+        cube(b, [a0, c1 - 0.06, a1, c1], y + 0.22, y + t.h, CHAIR);
+      } else if (t.kind === 'table') cube(b, [a0, c0, a1, c1], y + t.h - 0.04, y + t.h, BENCH);
+      else {
+        cube(b, [a0, c0, a1, c1], y, y + t.h, BENCH);
+        cube(b, [a0 + 0.05, c0 + 0.05, a1 - 0.05, c1 - 0.05], y + t.h, y + t.h + 0.16, CROWN);
+      }
     }
-    cube(b, [dx - 0.45, z0 + 0.9, dx + 0.05, z0 + 1.3], y + 0.18, y + 0.22, BENCH);
   });
 }
 

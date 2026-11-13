@@ -160,10 +160,26 @@ one:
    - The smoke test's home scenes are at the compound, with one for the
      workshop; `?bench`'s `ends-home` view looks down the Close through
      the gates. Shots: `docs/far-west-shots/phase-2-*`.
-3. **Inside, and the roof terrace.** The room refitted to the new house
-   (bigger: the same furniture kinds, the stash and the wardrobe where they
-   make sense), the stair's fade up to the terrace and back, the camera's
-   room for both; the garage's two bays seen through its doors.
+3. **Inside, and the roof terrace** (built, waiting on the owner's
+   sign-off). The room was refitted in Phase 2; this is the way up.
+   - `home.ts`: the terrace's floor (`ROOF_Y`) and the roof inside its
+     rail (`TERRACE`), what stands on it (`ROOF_THINGS`: the stairs' hatch
+     over the stairs below, two chairs and a low table at the front rail,
+     a planter in each back corner), `onRoof()`, `roofWall()`,
+     `homeRoofY()`; `inHouse()` takes how high he is, so the room is the
+     ground floor only. Two more fades in `HOME_PORTALS`: **Upstairs** at
+     the stairs' foot in the room, **Downstairs** by the hatch.
+     `homePlaces(y)` gives each floor its own prompts (the room's and the
+     terrace's stand over one another).
+   - `groundheight.ts` has a `homeroof` layer; walk.ts's `blocked()` asks
+     `roofWall()` up there (only the rail and what stands on it stop
+     you); index.ts passes his height to the rain's and the stash's checks,
+     and the sound is the street's again on the roof.
+   - `home3d.ts` draws the terrace's things from `ROOF_THINGS`.
+   - Tests: the terrace in `tests/home.test.ts`, the layer in
+     `tests/groundheight.test.ts`; the smoke test's `hometerrace` scene
+     (up, along the rail, down). Shot:
+     `docs/far-west-shots/phase-3-on-the-terrace.webp`.
 4. **The far west round it** (the owner's pick, question 3).
 5. **Life, night and sound.** Neighbours and walkers on the new road, the
    compound's windows, sign and terrace lights at night, a pool at the
