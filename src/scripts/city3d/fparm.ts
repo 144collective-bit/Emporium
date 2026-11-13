@@ -4,8 +4,12 @@
  * dresses and moves them.
  *
  * - Each arm is two pieces jointed at the elbow: the upper arm from the shoulder (out of shot, behind the eye) and
- *   the forearm with the fist on its end, the elbow solved each frame for where the fist is wanted (`solveArm()`, a
- *   two-bone reach: the elbow swings round towards a pole, down and out in the guard, up and out in a hook).
+ *   the forearm with the fist on its end. They're his body's own arms (the owner's call, 2026-11: "use his real
+ *   body's clips"): each frame his skeleton, posed by the motion capture and the fight's clips as third person
+ *   shows him, is read from an eye in his head (`eyeFrame()`), and the arm laid on his shoulder, elbow and wrist
+ *   (`bodyArm()`), the fist turned as his hand is. With the guard up a first-person correction (`FP_FIX`) carries
+ *   the fists into shot without moving the body: the elbow is then solved again (`solveArm()`, a two-bone reach)
+ *   round towards where his own elbow is, so the arm keeps its lengths and its bend.
  * - The fist is modelled for being seen up close (`fistGeometry()`), not the body's hand closed (body.ts
  *   `bakedHand()`, built to read from a distance): the back of the hand, four knuckles in a row that slopes off to the
  *   little finger, each finger folded in two under them, and the thumb wrapped across the front. Its frame: the wrist
@@ -20,9 +24,25 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { HAND, UPPER_ARM, WRIST_Y, WRIST_Z } from './skeleton';
 
-/** The arm's two lengths (metres): shoulder to elbow, elbow to wrist */
-export const ARM = { upper: 0.29, fore: 0.265 };
+/** The fist's wrist (its origin) to its knuckles, along +y */
+export const KNUCKLES = 0.09;
+/** His forearm in the body's units: the elbow to the hand bone, and on from it to his knuckles */
+const BODY_FORE = Math.hypot(WRIST_Y, WRIST_Z);
+const BODY_KNUCKLES = Math.abs(HAND.knuckleY);
+/**
+ * The arm's two lengths (metres): shoulder to elbow, elbow to the fist's wrist. In his body's proportions, so laid on
+ * his skeleton the fist's knuckles land where his own do (`bodyArm()`)
+ */
+export const ARM = { upper: 0.29, fore: (0.29 * (BODY_FORE + BODY_KNUCKLES)) / UPPER_ARM - KNUCKLES };
+/** How many of these metres to one of his body's units (his arm's length against `UPPER_ARM`) */
+export const BODY_TO_ARM = ARM.upper / UPPER_ARM;
+/**
+ * The eye in his head, in his body's units from the head bone: up, and forward (the camera's own first-person height
+ * is above his head, so the arms are read from here instead)
+ */
+export const EYE = { up: 0.07, fwd: 0.06 };
 
 /** The fist's size: across the knuckles, wrist to the front of the folded fingers, and its depth (metres) */
 export const FIST = { width: 0.094, length: 0.118, depth: 0.072 };
@@ -226,4 +246,96 @@ export function aimPiece(from: THREE.Vector3, to: THREE.Vector3, face: THREE.Vec
   z.normalize();
   const x = new THREE.Vector3().crossVectors(y, z);
   return q.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+}
+
+/**
+ * The eye's frame in the world, from his head bone at `head` and his body's facing `forward` (level), `unit` the
+ * world length of one of his body's units: x to his right, y up, -z the way he faces, as a camera's. Into `out`
+ */
+export function eyeFrame(head: THREE.Vector3, forward: THREE.Vector3, unit: number, out: THREE.Matrix4) {
+  const f = new THREE.Vector3(forward.x, 0, forward.z);
+  if (f.lengthSq() < 1e-9) f.set(0, 0, 1);
+  f.normalize();
+  const right = new THREE.Vector3().crossVectors(f, UP);
+  const at = head.clone().addScaledVector(UP, EYE.up * unit).addScaledVector(f, EYE.fwd * unit);
+  return out.makeBasis(right, UP, f.clone().negate()).setPosition(at);
+}
+
+/** One of his arms as the skeleton has it, in the world: the shoulder, elbow and hand bones, and which way the back of the hand faces */
+export interface BodyJoints {
+  shoulder: THREE.Vector3;
+  elbow: THREE.Vector3;
+  hand: THREE.Vector3;
+  back: THREE.Vector3;
+}
+
+/** An arm laid in the eye's frame, in these metres: the shoulder, the elbow, the fist's wrist and the way its back faces */
+export interface LaidArm {
+  shoulder: THREE.Vector3;
+  elbow: THREE.Vector3;
+  wrist: THREE.Vector3;
+  face: THREE.Vector3;
+}
+export const newLaidArm = (): LaidArm => ({ shoulder: new THREE.Vector3(), elbow: new THREE.Vector3(), wrist: new THREE.Vector3(), face: new THREE.Vector3() });
+
+const toEye = new THREE.Matrix4();
+const rotEye = new THREE.Matrix3();
+const tA = new THREE.Vector3();
+const tB = new THREE.Vector3();
+
+/**
+ * The first-person correction (the owner's call: the clips are made to read from behind him, and from his own eyes
+ * their guard holds the fists at his chin, under and beside the eye, out of shot): with the guard up, each fist is
+ * raised `lift`, drawn `pull` of the way in towards the middle, carried forward `reach` the more the arm is bent
+ * (none at full stretch, where the clip already reaches) and never nearer the eye than `near` (the clips bring a
+ * hand back beside his face: from the eye it would fill the screen), the elbow solved again round towards his own.
+ * These metres, the eye's frame.
+ */
+export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3 };
+/**
+ * Running with his hands down (the owner's call: the arms show as he runs): his own swing (the motion capture) lifted
+ * into the lower corners and carried forward, so each arm comes into shot as it swings forward and goes as it swings
+ * back; never higher than `top` nor nearer the eye than `near` (the motion capture's swing comes up higher than the
+ * procedural walk's: a fist must never fill the screen). These metres, the eye's frame.
+ */
+export const FP_RUN = { lift: 0.24, pull: 0.25, fwd: 0.14, top: -0.17, near: 0.32 };
+
+/** How far out an arm laid in the eye's frame is (0 folded, 1 at full stretch) */
+export const stretch = (l: LaidArm) => THREE.MathUtils.clamp(l.wrist.distanceTo(l.shoulder) / (ARM.upper + ARM.fore), 0, 1);
+
+/**
+ * His arm `j` (the world) read from the eye `eye` (`eyeFrame()`), `unit` the world length of one of his body's units,
+ * into `out` in these metres: the fist's wrist set back along his forearm so its knuckles are where his are. `fix`
+ * (0..1: the guard's share) lays the first-person correction (`FP_FIX`) on it, and `run` (0..1: the run's share,
+ * the guard down) the running one (`FP_RUN`), without moving his body. `pull` (0..1) scales the draw in towards the
+ * middle (less for the hand left in the guard while the other is out punching: the punch has the middle).
+ */
+export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: LaidArm, fix = 0, run = 0, pull = 1) {
+  const k = BODY_TO_ARM / unit;
+  toEye.copy(eye).invert();
+  rotEye.setFromMatrix4(toEye);
+  const put = (w: THREE.Vector3, o: THREE.Vector3) => o.copy(w).applyMatrix4(toEye).multiplyScalar(k);
+  put(j.shoulder, out.shoulder);
+  put(j.elbow, out.elbow);
+  put(j.hand, tA);
+  // (the fist's wrist: back from his hand bone along the forearm, by the fist's knuckles less his)
+  const along = tB.copy(tA).sub(out.elbow).normalize();
+  out.wrist.copy(out.elbow).addScaledVector(along, ARM.fore);
+  out.face.copy(j.back).applyMatrix3(rotEye).normalize();
+  if (fix > 0 || run > 0) {
+    const bent = 1 - THREE.MathUtils.clamp(out.wrist.distanceTo(out.shoulder) / (ARM.upper + ARM.fore), 0, 1);
+    const target = tA.set(-out.wrist.x * FP_FIX.pull * pull, FP_FIX.lift, -FP_FIX.reach * bent).multiplyScalar(fix).add(out.wrist);
+    target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_FIX.near, fix));
+    target.x -= out.wrist.x * FP_RUN.pull * run;
+    target.y += FP_RUN.lift * run;
+    target.z -= FP_RUN.fwd * run;
+    if (run > 0) {
+      target.y = Math.min(target.y, THREE.MathUtils.lerp(target.y, FP_RUN.top, run));
+      target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_RUN.near, run));
+    }
+    // (round towards his own elbow: its side of the line from the shoulder to the wrist)
+    const pole = tB.copy(out.elbow).sub(out.shoulder).addScaledVector(out.wrist.clone().sub(out.shoulder), -0.5);
+    solveArm(out.shoulder, target, pole, out.elbow, out.wrist);
+  }
+  return out;
 }

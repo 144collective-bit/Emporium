@@ -8,6 +8,7 @@
 // nothing is NaN.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
 import { CLIPS, CLIP_IDS, KNOCKDOWN_LIE, PELVIS, blendPose, hipHeight, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from '../src/scripts/city3d/fight-anim';
 import { MOVES, MOVE_IDS, T, moveFrames } from '../src/scripts/city3d/fight-sim';
 
@@ -356,4 +357,26 @@ test('the knockdown and the get-up use the whole body: the hips and shoulders tu
   const turnOf = (id: ClipId) => Array.from({ length: CLIPS[id].frames }, (_, f) => Math.abs(sample(id, f).turn - (id === 'getup' ? 0 : GUARD.turn)));
   assert.ok(Math.max(...turnOf('knockdown')) > 0.15);
   assert.ok(Math.max(...turnOf('getup')) > 0.25);
+});
+
+// The left lead (the owner's call, 2026-11): the jab and the hook drawn off his left hand, the left foot forward
+import { LEFT_LEAD, drawnMirror } from '../src/scripts/city3d/fight-anim';
+import { STANCE } from '../src/scripts/city3d/fightfeet';
+import { makeSkeleton as mkSk, poseSkeleton as poseSk } from '../src/scripts/city3d/skeleton';
+
+test('the left lead: drawn, the jab is his left hand and the left foot is forward', () => {
+  assert.equal(LEFT_LEAD, true);
+  assert.equal(drawnMirror(false), true);
+  assert.equal(drawnMirror(true), false);
+  // (his left, on a figure facing +z, is the +x side: the rig's R)
+  const sk = mkSk();
+  const jab = sampleClip('jab', MOVES.jab.startup + 1, newFightPose(), { mirror: drawnMirror() });
+  poseSk(sk, jab);
+  sk.root.updateMatrixWorld(true);
+  const v = () => new THREE.Vector3();
+  const left = sk.bones.handR.getWorldPosition(v());
+  const right = sk.bones.handL.getWorldPosition(v());
+  assert.ok(left.x > 0 && left.z > right.z + 0.1, `the jab is the left hand: ${left.z.toFixed(2)} vs ${right.z.toFixed(2)}`);
+  const lead = STANCE[0].z > STANCE[1].z ? STANCE[0] : STANCE[1];
+  assert.ok(lead.x > 0, 'the left foot forward');
 });
