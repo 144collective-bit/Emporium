@@ -27,6 +27,11 @@ import {
   swapSlots,
   unequip,
   useItem,
+  STASH_MAX,
+  cleanStash,
+  racked,
+  stashItem,
+  takeItem,
 } from '../src/scripts/city3d/inventory';
 import { WEAPONS, createSim } from '../src/scripts/city3d/combat-sim';
 import { FREE_PLAY } from '../src/scripts/city3d/freeplay';
@@ -294,4 +299,53 @@ test('free play is off in the tests, the server and the live build: the real pri
   const s = newSave(NOW);
   s.dorras = 0;
   assert.equal(pay(s, 100, 1, 'gear').ok, false);
+});
+
+test("the stash (the trunk at home): snacks go in and come out one at a time, within what he carries and what it holds", () => {
+  const s = rich();
+  assert.deepEqual(s.stash, {});
+  assert.deepEqual(stashItem(s, 'snack'), { ok: false, why: 'stock' }, 'nothing to put away');
+  assert.deepEqual(takeItem(s, 'snack'), { ok: false, why: 'stock' }, 'nothing put away');
+  for (let i = 0; i < ITEM_MAX; i++) assert.ok(buyItem(s, 'snack').ok);
+  const before = s.dorras;
+  for (let i = 0; i < ITEM_MAX; i++) assert.ok(stashItem(s, 'snack').ok);
+  assert.deepEqual(s.inventory.items, {}, 'none left on him (the key goes with the last)');
+  assert.deepEqual(s.stash, { snack: ITEM_MAX });
+  assert.equal(s.dorras, before, 'putting away costs nothing');
+  // (he can buy more now, and carry only ITEM_MAX out again)
+  for (let i = 0; i < ITEM_MAX; i++) assert.ok(buyItem(s, 'snack').ok);
+  assert.deepEqual(takeItem(s, 'snack'), { ok: false, why: 'max' });
+  assert.ok(stashItem(s, 'snack').ok);
+  assert.ok(takeItem(s, 'snack').ok);
+  assert.equal((s.inventory.items.snack ?? 0) + (s.stash.snack ?? 0), ITEM_MAX * 2, 'none made or lost');
+  // The trunk's full at STASH_MAX
+  s.stash.snack = STASH_MAX;
+  assert.deepEqual(stashItem(s, 'snack'), { ok: false, why: 'max' });
+  s.stash.snack = 1;
+  s.inventory.items = {};
+  assert.ok(takeItem(s, 'snack').ok);
+  assert.deepEqual(s.stash, {}, 'the key goes with the last');
+});
+
+test("the save's stash is cleaned (a save from before it has none), and the guns not carried are on the rack", () => {
+  assert.deepEqual(cleanSave({ v: 14 }, NOW).stash, {});
+  assert.deepEqual(cleanStash({ snack: 3.7, gold: 9, __proto__: 1 }), { snack: 3 });
+  assert.deepEqual(cleanStash({ snack: 1e9 }), { snack: STASH_MAX });
+  assert.deepEqual(cleanStash({ snack: -2 }), {});
+  assert.deepEqual(cleanStash([5]), {});
+  assert.deepEqual(cleanStash('snack'), {});
+  const s = rich();
+  s.stash.snack = 4;
+  assert.deepEqual(cleanSave(JSON.parse(JSON.stringify(s)), NOW).stash, { snack: 4 }, 'kept through a save and a load');
+  // (the rack: what he owns and doesn't carry, and nothing he doesn't own)
+  assert.ok(!racked(s).includes('rifle'), 'the rifle is carried');
+  const id = (Object.keys(GUN_CATALOG) as (keyof typeof GUN_CATALOG)[]).find((g) => GUN_CATALOG[g].price > 0)!;
+  assert.ok(!racked(s).includes(id), "a gun he hasn't bought isn't his");
+  assert.ok(buyGun(s, id).ok);
+  assert.equal(racked(s).includes(id), !s.inventory.guns.includes(id));
+  assert.ok(carryGun(s, 1, id).ok);
+  assert.ok(!racked(s).includes(id));
+  assert.ok(carryGun(s, 1, null).ok);
+  assert.ok(racked(s).includes(id));
+  assert.deepEqual(racked(s, () => false), []);
 });

@@ -2,7 +2,7 @@
 // garden and his driveway beside it, with room for a car and a bike; a place, and where walking starts.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BIKE_BAY, BIKE_HOME, CAR_BAY, CAR_HOME, HOME, HOME_GARAGE_DOOR, HOME_VIEW, WALL, startsAtHome, CEIL, FURNITURE, HALL_W, HOME_CAMERA, HOME_PORTALS, ROOM, SHELL, YARD_GATE, homeWall, inHouse, HOME_HOUSE, HOME_LAND, HOME_PICK, HOME_PIN, HOME_ROW, HOME_SOLIDS, HOME_SPAWN, bayRect, onHome } from '../src/scripts/city3d/home';
+import { BIKE_BAY, BIKE_HOME, CAR_BAY, CAR_HOME, HOME, HOME_GARAGE_DOOR, HOME_VIEW, WALL, startsAtHome, CEIL, FURNITURE, HALL_W, HOME_CAMERA, HOME_PORTALS, HOME_USES, ROOM, SHELL, YARD_GATE, homeWall, inHouse, HOME_HOUSE, HOME_LAND, HOME_PICK, HOME_PIN, HOME_ROW, HOME_SOLIDS, HOME_SPAWN, bayRect, onHome } from '../src/scripts/city3d/home';
 import { HOUSES, TERRACES, TERRACE_SOLIDS, fencesOf, rectOf, toWorld, TALLEST } from '../src/scripts/city3d/endsterraces';
 import { COURTS, CROSS_PATHS, GREENS, LANES, N_EDGE, PATHS, WEST_LAMPS } from '../src/scripts/city3d/endswest';
 import { ROAD_HALF, ROAD_Z, SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
@@ -230,4 +230,18 @@ test('the doors: a prompt outside and in for the front and the back, each fade l
   // The yard opens onto the driveway through the gate's gap: nothing solid across it
   const [gx0, gz0, gx1, gz1] = YARD_GATE;
   for (let z = gz0 + 0.2; z < gz1 - 0.15; z += 0.1) assert.ok(!solid((gx0 + gx1) / 2, z, 0.05), `the gate's gap is blocked at z ${z}`);
+});
+
+test("Phase 4: the wardrobe's and the trunk's prompts stand in the room where he can, by the thing, apart from the doors'", () => {
+  assert.deepEqual(HOME_USES.map((u) => u.id), ['home:wardrobe', 'home:stash']);
+  const R = 0.14;
+  for (const u of HOME_USES) {
+    assert.ok(inHouse(u.x, u.z) && !homeWall(u.x, u.z, R), `${u.id} is somewhere he can stand`);
+    const f = FURNITURE.find((x) => x.kind === (u.id === 'home:wardrobe' ? 'wardrobe' : 'stash'))!.rect;
+    const d = Math.hypot(u.x - Math.max(f[0], Math.min(f[2], u.x)), u.z - Math.max(f[1], Math.min(f[3], u.z)));
+    assert.ok(d < 0.5, `${u.id} is at its ${u.label.toLowerCase()}`);
+    assert.ok(u.label.split(' ').length <= 3);
+    // (standing on a prompt, it's the nearest: a door's prompt never takes its place)
+    for (const p of [...HOME_PORTALS, ...HOME_USES]) if (p.id !== u.id) assert.ok(Math.hypot(p.x - u.x, p.z - u.z) > 0.6, `${u.id} and ${p.id} apart`);
+  }
 });

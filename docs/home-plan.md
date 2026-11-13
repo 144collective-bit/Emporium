@@ -84,6 +84,19 @@ Each with the owner's sign-off.
    fitting room (fitting.ts, as Drop 001's panel does); a cupboard opens
    the stash: guns and items not carried (the inventory's bag, its rules in
    inventory.ts, a `stash` in the save with its migration).
+   *Built.* Two prompts in the room (`HOME_USES` in home.ts, walk
+   `places`): **Wardrobe** opens the fitting room in Drop 001's panel
+   (index.ts `open('shop', true)`, so the owner's live switch for Drop 001
+   closes it too), and **Stash** at the trunk opens the stash's card
+   (stash-ui.ts, a chunk of its own): snacks put away and taken out one at
+   a time (`stashItem()` / `takeItem()` in inventory.ts; the trunk holds
+   `STASH_MAX` 20, he carries `ITEM_MAX` 5), the guns he owns and doesn't
+   carry listed as the gun rack (`racked()`), and "Change weapons", which
+   opens the inventory, where his weapons are changed as anywhere. The
+   save's `stash` is cleaned by `cleanStash()` in `cleanSave()` (a save
+   from before it has nothing put away; the save's version is unchanged,
+   and it's inside the business save, so the backup already carries it).
+   The smoke test has a scene for each (`homestash`, `homewardrobe`).
 5. **Polish.** *The first part is built (ahead of Phase 4, the owner's
    call):* the room and the garage are lit at night (their inside faces
    are the shared `neon()` paint, which the night doesn't darken, shaded by
