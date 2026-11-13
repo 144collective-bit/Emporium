@@ -7,7 +7,7 @@
  * it over by context (`shares`: with empty hands Y kicks when there's nothing to do, Space dodges with the guard up).
  * The control card (Phase 4, ctrlcard.ts, walk mode's own chunk) shows a mode's rows from `cardBinds()`.
  * walk.ts keeps its own handlers (the keyboard's is walkkeys.ts, the gamepad's walkpad.ts, both held to this table
- * by their tests); when one changes, change its line here too (and the other way round).
+ * by their tests; the touch buttons' is walktouch.ts); when one changes, change its line here too (and the other way round).
  * DOM-free and kept out of the boot: only the hub's page and the tests read it.
  */
 

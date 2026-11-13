@@ -40,7 +40,7 @@ with work in flight.
    (`pollPad()`, `PadHost`, `PadState`), tested in `tests/walkpad.test.ts`
    (on foot, empty hands, hold or toggle, the menus, the wheel of each
    vehicle, the ring, a ride). walk.ts: 3,705 to 3,550 lines.
-2. **The keyboard** (built, waiting on the owner's sign-off): `walkkeys.ts`
+2. **The keyboard** (built): `walkkeys.ts`
    (`onKey()`, `KeyHost`, `MOVE`), tested in `tests/walkkeys.test.ts` (not
    walking or typing, on foot, a menu open, the wheel of each vehicle, the
    ring, a ride, and every key `keymap.ts`'s table lists for a mode is
@@ -49,8 +49,19 @@ with work in flight.
    The table test found a fault older than the move: a kart's item key (E)
    was never held, so it did nothing; fixed after the move, in a commit of
    its own (the karts' branch holds E as the ring's holds the move keys).
-3. **Touch**: the stick, the buttons' wiring, `holdButton()`, the pedals'
-   fingers (touchdrive.ts has their rules already): about 250 lines.
+3. **Touch** (built, waiting on the owner's sign-off): `walktouch.ts`
+   (`wireTouch()`, called once; `TouchEls` the page's own objects, the
+   window and the document among them under their own names, so the text
+   is as it was and a test stands in for the page; `TouchState` walk
+   mode's shared objects; `TouchHost` what it reads and calls). Three
+   stretches moved: the pedals' fingers, `capture()` and `holdButton()`,
+   and the stick with every touch button's wiring (the look settings'
+   inputs and the prompt's tap sat among them and went along). It answers
+   with what the rest of walk mode calls (`startJoy`, `endJoy`,
+   `pressPedal`, `clearPedals`, `rectOf`, `setAim`). Tested in
+   `tests/walktouch.test.ts` (the stick, floating at the wheel, the
+   pedals, held or toggled, each button, the phone's gestures). walk.ts:
+   3,500 to 3,302 lines.
 4. **The frames by mode**: `driveFrame()`, `boatFrame()`, `flyFrame()`,
    `kartFrame()`, `fightFrame()`, `rideFrame()`, `frameShowroom()` (about
    230 lines): what each reads of the pad, the keys and touch as one input
