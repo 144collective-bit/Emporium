@@ -17,7 +17,7 @@ import pulsechain from '../assets/pulsechain.png';
 import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
-import { KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
+import { FLY_KEYS, KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
 import { FREE_PLAY } from '../scripts/city3d/freeplay';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
@@ -530,6 +530,18 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
             {/* Made from keymap.ts when the site is built (docs/views-plan.md Phase 3: one key for one job); each row shows
                 the input in use (the hub's data-input: keys, pad or touch) */}
             <button type="button" class="mk-btn is-small km-card" data-ctrlcard-open data-hub-walk>Controls card</button>
+            {/* City view's free camera (freecam.ts): keys and the mouse only */}
+            <details class="hub-more km km-city">
+              <summary>City view</summary>
+              <dl class="walk-keys km-list">
+                {FLY_KEYS.map((b) => (
+                  <>
+                    <dt class="km-nopad km-notouch"><span data-for="keys">{b.keys.map((k) => <kbd>{k}</kbd>)}</span><span data-for="pad">–</span><span data-for="touch">–</span></dt>
+                    <dd class="km-nopad km-notouch">{b.label}</dd>
+                  </>
+                ))}
+              </dl>
+            </details>
             {MODE_IDS.map((id) => (
               <details class="hub-more km" open={id === 'foot'}>
                 <summary>{KEYMAP[id].name}</summary>

@@ -6,9 +6,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BELT, BELT_EASE, BELT_FREE, OPEN_FREE, WOODS, WOODS_OFF, beltShare, freeLand, inWoods, outskirtsTrees, treeSpot } from '../src/scripts/city3d/outskirts';
 import { TOWN_BOX } from '../src/scripts/city3d/landuse';
-import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_MARGIN, SKY_RADIUS } from '../src/scripts/city3d/bounds';
-import { WALL_OUTER } from '../src/scripts/city3d/wall';
-import { EW_ROADS, NS_ROADS, STRIP_GAP, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
+import { BUILT_UP, CAMERA_FAR, PAN_BOUNDS, PAN_PAD, SKY_RADIUS } from '../src/scripts/city3d/bounds';
+import { WALL_INNER, WALL_OUTER } from '../src/scripts/city3d/wall';
+import { EW_ROADS, NS_ROADS, STRIP_GAP } from '../src/scripts/city3d/layout';
 import { MALL_AREA } from '../src/scripts/city3d/mall';
 import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
 import { SUNRIDGE_RECT, inSunridge } from '../src/scripts/city3d/sunridge';
@@ -171,15 +171,11 @@ test('the camera sees the wall round the city from town, in front of the sky', (
   for (const x of [o0, (o0 + o1) / 2, o1]) for (const z of [p0, (p0 + p1) / 2, p1]) assert.ok(Math.hypot(x - 30, z - 30) <= SKY_RADIUS);
 });
 
-test('City view pans round the built-up area, never past the world', () => {
+test('City view goes anywhere inside the wall, up to its inner face (the free camera, freecam.ts)', () => {
   for (const k of [0, 1, 2, 3] as const) {
-    // Inside the world, 10 in from where you can walk
-    assert.ok(k < 2 ? PAN_BOUNDS[k] >= WORLD_BOUNDS[k] + 10 - 1e-9 : PAN_BOUNDS[k] <= WORLD_BOUNDS[k] - 10 + 1e-9);
-    // and never further than PAN_MARGIN from the built-up area
-    assert.ok(Math.abs(PAN_BOUNDS[k] - BUILT_UP[k]) <= PAN_MARGIN + 1e-9);
+    // PAN_PAD in from the wall's inner face, round the whole built-up area
+    assert.ok(Math.abs(PAN_BOUNDS[k] - (k < 2 ? WALL_INNER[k] + PAN_PAD : WALL_INNER[k] - PAN_PAD)) < 1e-9);
+    assert.ok(k < 2 ? PAN_BOUNDS[k] < BUILT_UP[k] : PAN_BOUNDS[k] > BUILT_UP[k]);
   }
-  // Since Phase 6 the world is bigger than that: the pan stops round the city, short of the edge (but to the north,
-  // where the kart park moved past the ring highway, and the east and south, where the airport stands on the edge:
-  // there it can reach the edge's margin)
-  assert.ok(PAN_BOUNDS[0] > WORLD_BOUNDS[0] + 10);
+  assert.ok(PAN_PAD > 0.5 && PAN_PAD <= 3, 'near the wall, never in it');
 });

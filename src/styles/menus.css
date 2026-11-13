@@ -1164,6 +1164,11 @@
 .mk-hub[data-input="touch"] .km-list .km-notouch {
   display: none;
 }
+/* City view's free camera is the keyboard's and the mouse's (freecam.ts) */
+.mk-hub[data-input="pad"] .km-city,
+.mk-hub[data-input="touch"] .km-city {
+  display: none;
+}
 .mk-hub .km-list kbd + kbd {
   margin-left: 3px;
 }

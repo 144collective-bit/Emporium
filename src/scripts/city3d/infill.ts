@@ -26,6 +26,8 @@ import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL
 import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
+import { ROOF_TONES, corniceAt, roofTone, type CorniceKind } from './rooftones';
+import { WINDOW_TYPE, paneAt, type Light, type Pane, type WallKindName } from './windows';
 
 /* ---------- The wall atlas ---------- */
 
@@ -47,9 +49,9 @@ const WALL_PX = ROWS * PX_H;
 const SHOP_W = 3.2;
 const GROUND_PX = 100;
 
-type WallKind = 'brick' | 'brownstone' | 'stuccoTeal' | 'stuccoPink' | 'stuccoViolet' | 'industrial' | 'glassBlue' | 'glassTeal' | 'hotel' | 'brickTan' | 'brickDark';
+type WallKind = WallKindName;
 type GroundKind = 'shopWarm' | 'shopPink' | 'shopCyan' | 'diner' | 'lobby' | 'stoneBase' | 'loading';
-const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark'];
+const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel'];
 const GROUND_KINDS: GroundKind[] = ['shopWarm', 'shopPink', 'shopCyan', 'diner', 'lobby', 'stoneBase', 'loading'];
 /** Each wall's own colour (for its trim and parapet) and the colour of its stone trim */
 const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
@@ -65,8 +67,13 @@ const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
   // The Trench Houses' other bricks (projects.ts): tan and dark
   brickTan: { wall: '#9c7650', trim: '#e6dccb' },
   brickDark: { wall: '#4f2d30', trim: '#bfb2a6' },
+  // The variety plan's Phase 2 (docs/trenches-variety-plan.md): more materials
+  brickOrange: { wall: '#9a4a2e', trim: '#d9c8b4' },
+  brickPurple: { wall: '#5e3a48', trim: '#cbbfb8' },
+  brickPainted: { wall: '#b3ab98', trim: '#76726a' },
+  brickGlazed: { wall: '#d6cba6', trim: '#8c8678' },
+  panel: { wall: '#8f8c86', trim: '#6e6b66' },
 };
-const GLOWS = [PAL.warm, PAL.warm, PAL.cyan, PAL.pink];
 
 interface Band {
   v0: number;
@@ -103,11 +110,68 @@ function pane(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   c.fillRect(x, y + h * 0.42, w, 2);
 }
 
-/** One wall band: ROWS floors of COLS bays, `glow` for the light map */
+/** The light behind a lit window (windows.ts `Light`): warm, a television's blue, the odd neon */
+const LIGHT: Record<Light, string> = { warm: PAL.warm, tv: '#8fb4ff', pink: PAL.pink, cyan: PAL.cyan };
+/** What hangs behind the glass, muted (it's seen through it) */
+const BLIND = '#9a927f';
+const CURTAINS = ['#7a3a44', '#3f5a6e', '#8a7a52', '#5a4a6a', '#6b5a48'];
+
+/**
+ * A wall's window (windows.ts `paneAt()`): an ink outline, its frame, then the glass. On the light map only its night
+ * light. By day dark glass with the sky in it (a sheen down from the top and a streak across), a blind part drawn or
+ * curtains either side behind it; the odd one lit warm (`day`). Glazing bars over it all.
+ */
+function glazed(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frame: string, p: Pane, glow: boolean, bars = 1, transom = true) {
+  if (glow) {
+    if (p.night) {
+      c.fillStyle = LIGHT[p.night];
+      c.fillRect(x, y, w, h);
+    }
+    return;
+  }
+  c.fillStyle = PAL.ink;
+  c.fillRect(x - 4, y - 4, w + 8, h + 8);
+  c.fillStyle = frame;
+  c.fillRect(x - 2, y - 2, w + 4, h + 4);
+  if (p.day) {
+    c.fillStyle = shadeHex(PAL.warm, -0.3);
+    c.fillRect(x, y, w, h);
+  } else {
+    const g = c.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, '#56658f');
+    g.addColorStop(0.35, '#1f2648');
+    g.addColorStop(1, '#0c0f24');
+    c.fillStyle = g;
+    c.fillRect(x, y, w, h);
+    // (the sky's streak across the glass)
+    c.fillStyle = 'rgba(205, 218, 255, 0.16)';
+    c.beginPath();
+    c.moveTo(x, y + h * 0.55);
+    c.lineTo(x + w * 0.55, y);
+    c.lineTo(x + w * 0.8, y);
+    c.lineTo(x, y + h * 0.85);
+    c.closePath();
+    c.fill();
+  }
+  if (p.dressing === 'blind') {
+    c.fillStyle = p.day ? shadeHex(BLIND, 0.25) : BLIND;
+    c.fillRect(x, y, w, h * p.drop);
+    c.fillStyle = shadeHex(BLIND, -0.3);
+    c.fillRect(x, y + h * p.drop - 1, w, 1.5);
+  } else if (p.dressing === 'curtains') {
+    c.fillStyle = CURTAINS[Math.floor(p.drop * 9) % CURTAINS.length];
+    c.fillRect(x, y, Math.max(3, w * 0.2), h);
+    c.fillRect(x + w - Math.max(3, w * 0.2), y, Math.max(3, w * 0.2), h);
+  }
+  c.fillStyle = frame;
+  for (let k = 1; k <= bars; k++) c.fillRect(x + (w * k) / (bars + 1) - 1, y, 2, h);
+  if (transom) c.fillRect(x, y + h * 0.42, w, 2);
+}
+
+/** One wall band: ROWS floors of COLS bays, `glow` for the light map; each kind its own window (windows.ts) */
 function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow: boolean, seed: number) {
-  const r = rng(seed);
   const { wall, trim } = WALL_COLOR[kind];
-  const lit = () => (r() < 0.4 ? GLOWS[Math.floor(r() * GLOWS.length)] : null);
+  const type = WINDOW_TYPE[kind];
   if (!glow) {
     c.fillStyle = wall;
     c.fillRect(0, y0, ATLAS_W, WALL_PX);
@@ -116,27 +180,44 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
     c.fillRect(0, y0, ATLAS_W, WALL_PX);
   }
   const dark = shadeHex(wall, -0.25);
+  const bricky = kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'brownstone' || kind === 'brickOrange' || kind === 'brickPurple' || kind === 'brickPainted' || kind === 'brickGlazed';
+  /** The band's own numbers for its grain and weathering */
+  const wr = rng(seed * 7 + 3);
+  const frame = bricky ? '#e8e2f0' : trim;
   for (let row = 0; row < ROWS; row++) {
     const y = y0 + row * PX_H;
     // The wall's surface
-    if (!glow && (kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'industrial')) {
-      c.fillStyle = dark;
+    if (!glow && (kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'industrial' || kind === 'brickOrange' || kind === 'brickPurple' || kind === 'brickPainted' || kind === 'brickGlazed')) {
+      // (painted brick's courses faint under the paint; glazed brick's joints pale against its shine)
+      c.fillStyle = kind === 'brickPainted' ? shadeHex(wall, -0.08) : kind === 'brickGlazed' ? shadeHex(wall, -0.12) : dark;
       for (let k = 0; k < PX_H; k += 8) {
         c.fillRect(0, y + k, ATLAS_W, 1.5);
         for (let x = (k / 8) % 2 ? 0 : 8; x < ATLAS_W; x += 16) c.fillRect(x, y + k, 1.5, 8);
       }
+      if (kind === 'brickGlazed') {
+        c.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        for (let k = 2; k < PX_H; k += 8) c.fillRect(0, y + k, ATLAS_W, 1);
+      }
+    }
+    if (!glow && kind === 'panel') {
+      // Precast panels: a joint at each floor and every two bays, the aggregate speckled
+      c.fillStyle = shadeHex(wall, -0.35);
+      c.fillRect(0, y, ATLAS_W, 2);
+      for (let x = 0; x < ATLAS_W; x += PX_W * 2) c.fillRect(x, y, 2, PX_H);
+      c.fillStyle = shadeHex(wall, -0.15);
+      for (let k = 0; k < 90; k++) c.fillRect(wr() * ATLAS_W, y + wr() * PX_H, 1.5, 1.5);
     }
     if (!glow && kind === 'brownstone') {
       c.fillStyle = dark;
       for (let k = 0; k < PX_H; k += 16) c.fillRect(0, y + k, ATLAS_W, 1);
     }
-    if (kind === 'glassBlue' || kind === 'glassTeal') {
+    if (type === 'curtain') {
       // A curtain wall: glass from slab to slab, a dark band at each floor, mullions every half bay
       for (let x = 0; x < ATLAS_W; x += 24) {
-        const on = lit();
+        const p = paneAt(seed, row, x / 24);
         if (glow) {
-          if (on) {
-            c.fillStyle = on;
+          if (p.night) {
+            c.fillStyle = LIGHT[p.night];
             c.fillRect(x + 2, y + 10, 20, PX_H - 12);
           }
           continue;
@@ -145,7 +226,7 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
         g.addColorStop(0, shadeHex(wall, 0.35));
         g.addColorStop(0.6, wall);
         g.addColorStop(1, shadeHex(wall, -0.4));
-        c.fillStyle = on ? shadeHex(on, -0.45) : g;
+        c.fillStyle = p.day ? shadeHex(PAL.warm, -0.45) : g;
         c.fillRect(x, y + 8, 24, PX_H - 8);
         c.fillStyle = PAL.ink;
         c.fillRect(x, y + 8, 2, PX_H - 8);
@@ -158,13 +239,18 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
       }
       continue;
     }
+    if (type === 'casement' && !glow) {
+      // The projects' concrete bands: a lintel band and a sill band right across each floor
+      c.fillStyle = shadeHex(trim, -0.12);
+      c.fillRect(0, y + 10, ATLAS_W, 4);
+      c.fillRect(0, y + 48, ATLAS_W, 5);
+    }
     for (let col = 0; col < COLS; col++) {
       const x = col * PX_W;
-      if (kind === 'industrial') {
+      if (type === 'steel') {
         // Big steel windows, one for every two bays
         if (col % 2) continue;
-        const on = lit();
-        pane(c, x + 10, y + 10, PX_W * 2 - 20, 42, '#2a2b38', on, glow, 3);
+        glazed(c, x + 10, y + 10, PX_W * 2 - 20, 42, '#2a2b38', paneAt(seed, row, col), glow, 3);
         if (!glow) {
           c.fillStyle = '#2a2b38';
           c.fillRect(x + 10, y + 24, PX_W * 2 - 20, 2);
@@ -174,30 +260,73 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
         }
         continue;
       }
-      const on = lit();
-      if (kind === 'hotel' && col % 2 === 0) {
+      if (type === 'balcony' && col % 2 === 0) {
         // A balcony door (the balconies are geometry)
-        pane(c, x + 12, y + 8, 24, PX_H - 8, trim, on, glow);
+        glazed(c, x + 12, y + 8, 24, PX_H - 8, trim, paneAt(seed, row, col), glow);
         continue;
       }
-      const [wx, wy, ww, wh] = kind === 'brownstone' ? [x + 12, y + 10, 24, 42] : [x + 11, y + 13, 26, 36];
-      if (!glow && (kind === 'stuccoTeal' || kind === 'stuccoPink' || kind === 'stuccoViolet')) {
+      if (type === 'pair') {
+        // Two narrow sashes side by side under one lintel
+        for (const k of [0, 1]) glazed(c, x + 8 + k * 19, y + 14, 13, 34, frame, paneAt(seed, row, col, k), glow, 0);
+        if (!glow) {
+          c.fillStyle = trim;
+          c.fillRect(x + 3, y + 7, 42, 4);
+          c.fillRect(x + 3, y + 52, 42, 4);
+        }
+        continue;
+      }
+      if (type === 'ribbon') {
+        // A long low window a bay, with an opening light in it
+        glazed(c, x + 4, y + 20, PX_W - 8, 22, '#3a3d44', paneAt(seed, row, col), glow, 1, false);
+        continue;
+      }
+      if (type === 'casement') {
+        // A wide steel casement, three lights across
+        glazed(c, x + 5, y + 19, 38, 27, '#c9c6bc', paneAt(seed, row, col), glow, 2, false);
+        continue;
+      }
+      const [wx, wy, ww, wh] = type === 'arched' ? [x + 12, y + 10, 24, 42] : [x + 11, y + 13, 26, 36];
+      if (!glow && type === 'shuttered') {
         // Shutters either side
         c.fillStyle = shadeHex(wall, -0.4);
         c.fillRect(wx - 9, wy - 1, 6, wh + 2);
         c.fillRect(wx + ww + 3, wy - 1, 6, wh + 2);
       }
-      pane(c, wx, wy, ww, wh, kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'brownstone' ? '#e8e2f0' : trim, on, glow);
+      glazed(c, wx, wy, ww, wh, frame, paneAt(seed, row, col), glow);
       if (!glow) {
         // Lintel and sill
         c.fillStyle = trim;
-        if (kind === 'brownstone') {
+        if (type === 'arched') {
           c.beginPath();
           c.ellipse(wx + ww / 2, wy - 3, ww / 2 + 4, 6, 0, Math.PI, 0);
           c.fill();
         } else c.fillRect(wx - 4, wy - 7, ww + 8, 4);
         c.fillRect(wx - 5, wy + wh + 4, ww + 10, 4);
       }
+    }
+  }
+  // Weathering (the variety plan's Phase 2): soft stains down from every sill and a few water streaks down the band
+  // (none on glass)
+  if (!glow && type !== 'curtain') {
+    for (let row = 0; row < ROWS; row++)
+      for (let col = 0; col < COLS; col++) {
+        if (type === 'steel' && col % 2) continue;
+        const sx = col * PX_W + (type === 'steel' ? PX_W : PX_W / 2);
+        const g = c.createLinearGradient(0, y0 + row * PX_H + 54, 0, y0 + row * PX_H + 64);
+        g.addColorStop(0, 'rgba(20, 16, 24, 0.16)');
+        g.addColorStop(1, 'rgba(20, 16, 24, 0)');
+        c.fillStyle = g;
+        c.fillRect(sx - (type === 'steel' ? 30 : 12), y0 + row * PX_H + 54, type === 'steel' ? 60 : 24, 10);
+      }
+    for (let k = 0; k < 3; k++) {
+      const x = wr() * ATLAS_W;
+      const w = 3 + wr() * 5;
+      const g = c.createLinearGradient(x, 0, x + w, 0);
+      g.addColorStop(0, 'rgba(20, 16, 24, 0)');
+      g.addColorStop(0.5, 'rgba(20, 16, 24, 0.09)');
+      g.addColorStop(1, 'rgba(20, 16, 24, 0)');
+      c.fillStyle = g;
+      c.fillRect(x, y0, w, WALL_PX);
     }
   }
 }
@@ -347,7 +476,8 @@ const ATLAS = (() => {
   // Canvas textures are flipped: the canvas's top row is v = 1. Ground bands keep a pixel off each edge.
   const band = (top: number, h: number, tw: number, th: number): Band => ({ v0: 1 - (top + h) / H, vh: h / H, tw, th });
   return {
-    mat: siteMat('wall-atlas', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.15, 1)),
+    // (by day the light map barely shows: the day texture has its own few lit windows, windows.ts `DAY_LIT`)
+    mat: siteMat('wall-atlas', lit(toon('#ffffff', { map, emissiveMap, emissive: '#ffffff' }), 0.05, 1)),
     wall: Object.fromEntries(WALL_KINDS.map((k, i) => [k, band(i * WALL_PX, WALL_PX, CELL_W * COLS, FLOOR * ROWS)])) as Record<WallKind, Band>,
     ground: Object.fromEntries(GROUND_KINDS.map((k, i) => [k, band(WALL_KINDS.length * WALL_PX + i * GROUND_PX + 1, GROUND_PX - 2, SHOP_W, SHOP_H)])) as Record<GroundKind, Band>,
   };
@@ -503,6 +633,9 @@ const INK = toon('#1b1830');
 const STONE = toon('#8f8ab0');
 const METAL = toon('#2a2b38');
 const ROOF = toon('#2a2547');
+/** A roll shutter's slats and their ribs (The Trenches' tenements' half-up shutters, the variety plan's Phase 4) */
+const SHUTTER = toon('#8a8f96');
+const SHUTTER_RIB = toon('#6e737a');
 const WOOD = toon('#8a5a3c');
 const GREEN = toon('#2a8a55');
 const LEAF = toon('#36b06c');
@@ -632,16 +765,28 @@ const R_IN = 0.006;
 function roof(k: Kit, F: Frame, top: number, par: THREE.Material, ph = 0.22) {
   const { w, d } = F;
   const t = 0.12;
-  // The slab tucked just inside the walls (flush with them, its edge flickers against them); the parapet covers the gap
-  k.all(() => k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, ROOF));
+  // The slab tucked just inside the walls (flush with them, its edge flickers against them); the parapet covers the gap.
+  // Its covering from where the building stands (rooftones.ts: tar, gravel, silver paint or the old navy)
+  const cover = toon(ROOF_TONES[roofTone(F.M.elements[12], F.M.elements[14])]);
+  k.all(() => k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, cover));
   k.lbox(0, w, top, top + ph, -t, 0, par);
   k.lbox(0, w, top, top + ph, -d, -d + t, par);
   k.lbox(0, t, top, top + ph, -d + t, -t, par);
   k.lbox(w - t, w, top, top + ph, -d + t, -t, par);
 }
 
-/** A bracketed cornice along the front */
-function cornice(k: Kit, w: number, top: number, trim: THREE.Material, low: boolean, brackets = true) {
+/** A cornice along the front: bracketed (the default), stepped, a plain coping, or none (rooftones.ts `corniceAt()`) */
+function cornice(k: Kit, w: number, top: number, trim: THREE.Material, low: boolean, brackets = true, kind: CorniceKind = 'bracketed') {
+  if (kind === 'none') return;
+  if (kind === 'coping') {
+    k.lbox(-0.03, w + 0.03, top - 0.12, top - 0.02, 0, 0.08, trim);
+    return;
+  }
+  if (kind === 'stepped') {
+    k.lbox(-0.04, w + 0.04, top - 0.34, top - 0.24, 0, 0.12, trim);
+    k.lbox(-0.08, w + 0.08, top - 0.24, top - 0.1, 0, 0.22, trim);
+    return;
+  }
   k.lbox(-0.06, w + 0.06, top - 0.34, top - 0.14, 0, 0.22, trim);
   if (LOW) return;
   k.lbox(-0.03, w + 0.03, top - 0.14, top - 0.06, 0, 0.12, trim);
@@ -895,7 +1040,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     shell(k, F, top, ATLAS.wall[kind], ATLAS.ground[shopBand(sg.color)], upper, u0);
     k.all(() => fascia(k, w, id, sg.color));
     if (f.floors > 0) dress(k, w, upper, top, f.floors, trimM);
-    cornice(k, w, top, trimM, low, kind === 'brick' || kind === 'brownstone');
+    cornice(k, w, top, trimM, low, kind === 'brick' || kind === 'brownstone', corniceAt(F.M.elements[12], F.M.elements[14]));
     roof(k, F, top, toon(shadeHex(wall, -0.25)));
     // An awning in the shop's colours, a blade sign, a fire escape on taller ones
     const stripes = id === 'crumpet' ? ['#f2c94c', '#f3f2f7'] : id === 'coffee' ? ['#5a3a2a', '#e8d9c0'] : [AWNINGS[Math.floor(r() * AWNINGS.length)], '#f3f2f7'];
@@ -903,6 +1048,34 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const escape = f.floors >= 2 && w >= 3.1 && !named && (f.escape ?? r() < 0.55) && !LOW;
     if (f.floors >= 1) k.all(() => blade(k, id, w - 0.3, upper + 0.15, Math.min(top - 0.5, upper + 0.15 + 1.5)));
     if (escape) fireEscape(k, 0.3, Math.min(w - 0.8, 1.9), upper, f.floors, low);
+    // The Trenches' tenements' ground floors (the variety plan's Phase 4, shopfronts.ts): a painted surround, then the
+    // front's own kind; near only, every face held clear of the wall behind it
+    if (f.paint) {
+      const pm = toon(f.paint);
+      k.lbox(-0.01, 0.16, S, S + SHOP_H, 0.006, 0.05, pm);
+      k.lbox(w - 0.16, w + 0.01, S, S + SHOP_H, 0.006, 0.05, pm);
+      k.lbox(0.16, w - 0.16, S, S + 0.22, 0.006, 0.04, pm);
+    }
+    if (f.shopfront === 'halfShutter') {
+      // A roll shutter half up: its slats down to half the shop's height, the box it rolls into over them
+      const y0 = S + SHOP_H * 0.5;
+      k.lbox(0.22, w - 0.22, y0, S + SHOP_H - 0.06, 0.012, 0.045, SHUTTER);
+      if (!LOW) for (let y = y0 + 0.08; y < S + SHOP_H - 0.1; y += 0.08) k.lbox(0.22, w - 0.22, y, y + 0.012, 0.045, 0.052, SHUTTER_RIB);
+      k.lbox(0.18, w - 0.18, S + SHOP_H - 0.08, S + SHOP_H - 0.005, 0.012, 0.09, METAL);
+    } else if (f.shopfront === 'recessed') {
+      // The door set back: the dark of the recess, its jambs and head standing out, a stone threshold
+      const u = w * 0.55;
+      k.lbox(u - 0.42, u + 0.42, S, S + 1.05, 0.006, 0.012, INK);
+      k.lbox(u - 0.48, u - 0.4, S, S + 1.1, 0.006, 0.12, trimM);
+      k.lbox(u + 0.4, u + 0.48, S, S + 1.1, 0.006, 0.12, trimM);
+      k.lbox(u - 0.48, u + 0.48, S + 1.1, S + 1.18, 0.006, 0.12, trimM);
+      k.lbox(u - 0.4, u + 0.4, S, S + 0.03, 0.012, 0.12, STONE);
+    } else if (f.shopfront === 'gated') {
+      // A steel gate drawn across the window: upright bars between two rails
+      const [g0, g1] = [0.2, Math.max(1.2, w * 0.5)];
+      for (let u = g0; u <= g1; u += LOW ? 0.18 : 0.09) k.lbox(u - 0.008, u + 0.008, S + 0.02, S + SHOP_H * 0.86, 0.02, 0.035, METAL);
+      for (const y of [S + 0.05, S + SHOP_H * 0.84]) k.lbox(g0, g1, y, y + 0.03, 0.018, 0.04, METAL);
+    }
     // Out front: café tables (with people), or a chalk board, a planter and a bike
     if (id === 'coffee') {
       for (const [u, p] of [

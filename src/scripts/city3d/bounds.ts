@@ -1,14 +1,14 @@
 /*
  * What the camera works out from the city rather than the world's edge
  * (docs/growth-plan.md Phase 5; DOM-free, tested in tests/outskirts.test.ts):
- * the built-up area (the town, the airport, the kart park), how far City
- * view may pan round it.
+ * the built-up area (the town, the airport, the kart park), and how far City
+ * view may go: up to the wall.
  * A bigger world doesn't stretch them; more city does. And how far the camera
  * sees: the wall round the city stays in front of the sky from town
  * (docs/wall-plan.md).
  */
-import { CITY_EXT, WORLD_BOUNDS } from './layout';
-import { WALL_CORNERS } from './wall';
+import { CITY_EXT } from './layout';
+import { WALL_CORNERS, WALL_INNER } from './wall';
 import { SITE } from './airfield';
 import { KART_PARK } from './kartpark';
 import type { Rect } from './downtown';
@@ -18,15 +18,13 @@ const union = (rs: Rect[]): Rect => [Math.min(...rs.map((r) => r[0])), Math.min(
 /** The built-up area: the town with its traffic loops, the airport and the kart park (x0, z0, x1, z1) */
 export const BUILT_UP: Rect = union([[CITY_EXT[0], CITY_EXT[0], CITY_EXT[1], CITY_EXT[1]], SITE, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1]]);
 
-/** How far past the built-up area City view's target may pan */
-export const PAN_MARGIN = 160;
-/** Where City view's target may go: round the built-up area, and never past 10 in from where you can walk */
-export const PAN_BOUNDS: Rect = [
-  Math.max(BUILT_UP[0] - PAN_MARGIN, WORLD_BOUNDS[0] + 10),
-  Math.max(BUILT_UP[1] - PAN_MARGIN, WORLD_BOUNDS[1] + 10),
-  Math.min(BUILT_UP[2] + PAN_MARGIN, WORLD_BOUNDS[2] - 10),
-  Math.min(BUILT_UP[3] + PAN_MARGIN, WORLD_BOUNDS[3] - 10),
-];
+/** How far in from the wall's inner face City view's camera and its target stay (freecam.ts) */
+export const PAN_PAD = 1.5;
+/**
+ * Where City view's camera and its target may go: anywhere inside the wall, up to `PAN_PAD` from its inner face (the
+ * owner's call, 2026-11: the free camera near the wall; it panned round the built-up area before)
+ */
+export const PAN_BOUNDS: Rect = [WALL_INNER[0] + PAN_PAD, WALL_INNER[1] + PAN_PAD, WALL_INNER[2] - PAN_PAD, WALL_INNER[3] - PAN_PAD];
 
 /** The middle of downtown, where the wall is seen from */
 const TOWN: [number, number] = [30, 30];

@@ -219,10 +219,15 @@ export interface Infill {
   front: number;
   /** What's solid: the building, and a stoop */
   solids: Footprint[];
-  /** A shop with a fire escape up its front for certain (The Trenches' tenements); unset, the shop picks */
+  /** A shop with a fire escape up its front, or without one (The Trenches' tenements); unset, the shop picks */
   escape?: boolean;
+  /** A shop's front: a roll shutter half up, a recessed doorway or a gate across it (The Trenches' tenements,
+   * shopfronts.ts); unset, as it always was */
+  shopfront?: 'open' | 'halfShutter' | 'recessed' | 'gated';
+  /** A shop's ground floor painted this colour (pilasters, the stall riser; The Trenches' tenements) */
+  paint?: string;
   /** A shop's walls in this brick (The Trenches' tenements); unset, the shop picks */
-  wall?: 'brick' | 'brownstone' | 'brickTan' | 'brickDark';
+  wall?: 'brick' | 'brownstone' | 'brickTan' | 'brickDark' | 'brickOrange' | 'brickPurple' | 'brickPainted' | 'brickGlazed';
 }
 export interface Alley {
   /** The walk-only gap between two buildings, from the street front to the back */

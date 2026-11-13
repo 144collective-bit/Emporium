@@ -70,6 +70,7 @@ import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
+import { FLY, POLAR, anyHeld, clampCam, easeVel, groundUnder, keyDir, noKeys, reach, turn, wish, type V3 } from './freecam';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
@@ -495,11 +496,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
-  controls.minDistance = 7;
+  // (the free camera, freecam.ts: it looks level and a little up, and comes in close; the right button looks round,
+  // not orbits: Ctrl or Shift with the left still orbits)
+  controls.minDistance = FLY.pivot;
   controls.maxDistance = 220;
-  controls.minPolarAngle = 0.32;
-  controls.maxPolarAngle = 1.18;
+  controls.minPolarAngle = POLAR[0];
+  controls.maxPolarAngle = POLAR[1];
   controls.zoomToCursor = true;
+  controls.mouseButtons.RIGHT = null;
 
   const home = () => {
     const portrait = host.clientWidth < host.clientHeight;
@@ -1395,6 +1399,92 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape') active ? close() : hub?.show();
   });
   document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
+  /* ---------- The free camera (freecam.ts): WASD flies City view's camera where it looks, the right button looks round ---------- */
+  const flyKeys = noKeys();
+  let flyVel: V3 = [0, 0, 0];
+  const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+  /** City view with nothing over it: no panel, menu, map or start menu, not walking */
+  const flyable = () => root.dataset.view === '3d' && !walking && !active && !hub?.open && !travel.isOpen && !startUp() && !accountUI?.isOpen;
+  const stopFlying = () => {
+    Object.assign(flyKeys, noKeys());
+    flyVel = [0, 0, 0];
+  };
+  document.addEventListener('keydown', (e) => {
+    const dir = keyDir(e.code);
+    if (!dir || e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || !flyable()) return;
+    // (Space on a focused button presses it)
+    if (e.code === 'Space' && e.target instanceof HTMLElement && e.target.closest('button, a, summary, [role="button"]')) return;
+    flyKeys[dir] = true;
+    if (dir !== 'fast') {
+      e.preventDefault();
+      // (a fly-in to a place gives the camera back)
+      if (flight) {
+        flight = null;
+        controls.enabled = true;
+      }
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    const dir = keyDir(e.code);
+    if (dir) flyKeys[dir] = false;
+  });
+  addEventListener('blur', stopFlying);
+  const flyLook = new THREE.Vector3();
+  const flyMove = new THREE.Vector3();
+  /** One frame of flying: true when the camera moved */
+  function flyStep(dt: number) {
+    if (!flyable()) {
+      if (anyHeld(flyKeys) || flyVel.some((v) => v)) stopFlying();
+      return false;
+    }
+    camera.getWorldDirection(flyLook);
+    flyVel = easeVel(flyVel, wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y), dt, reduced);
+    if (!flyVel.some((v) => v)) return false;
+    const p = camera.position;
+    const to = clampCam([p.x + flyVel[0] * dt, p.y + flyVel[1] * dt, p.z + flyVel[2] * dt], 0);
+    const [x, y, z] = clampCam(to, groundUnder(to[0], to[2]));
+    flyMove.set(x - p.x, y - p.y, z - p.z);
+    p.add(flyMove);
+    controls.target.add(flyMove);
+    keepPivot();
+    touched();
+    return true;
+  }
+  /** The orbit's pivot (the target) kept inside the wall, along the look */
+  function keepPivot() {
+    const p = camera.position;
+    flyLook.subVectors(controls.target, p);
+    const d = flyLook.length();
+    if (d < 1e-6) return;
+    flyLook.divideScalar(d);
+    const r = reach([p.x, p.y, p.z], [flyLook.x, flyLook.y, flyLook.z], d);
+    if (r < d - 1e-6) controls.target.copy(p).addScaledVector(flyLook, r);
+  }
+  // Mouse look: the right button held turns the camera where it stands (its pivot kept as far ahead)
+  let lookDrag: number | null = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 2 || e.pointerType !== 'mouse' || !flyable() || flight) return;
+    lookDrag = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== lookDrag || !flyable()) return;
+    const p = camera.position;
+    flyLook.subVectors(controls.target, p);
+    const d = flyLook.length() || 1;
+    const [lx, ly, lz] = turn([flyLook.x / d, flyLook.y / d, flyLook.z / d], e.movementX, e.movementY);
+    controls.target.set(p.x + lx * d, p.y + ly * d, p.z + lz * d);
+    keepPivot();
+    camera.lookAt(controls.target);
+    dirty = true;
+  });
+  const endLook = (e: PointerEvent) => {
+    if (e.pointerId !== lookDrag) return;
+    lookDrag = null;
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+  };
+  canvas.addEventListener('pointerup', endLook);
+  canvas.addEventListener('pointercancel', endLook);
   let down: { x: number; y: number } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     down = { x: e.clientX, y: e.clientY };
@@ -1768,8 +1858,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (walk.airborne) walker.x = walker.z = 1e6;
       mp?.update(dt, t);
       dirty = true;
-    } else if (controls.update()) dirty = true;
-    // Keep the view over the city (round the built-up area, never past the world: bounds.ts, growth plan Phase 5)
+    } else {
+      if (flyStep(dt)) dirty = true;
+      if (controls.update()) dirty = true;
+      // (orbiting and zooming kept inside the wall and over the ground too: freecam.ts)
+      const p = camera.position;
+      const [x, y, z] = clampCam([p.x, p.y, p.z], groundUnder(p.x, p.z));
+      if (x !== p.x || y !== p.y || z !== p.z) {
+        p.set(x, y, z);
+        camera.lookAt(controls.target);
+        dirty = true;
+      }
+    }
+    // Keep the view inside the wall (bounds.ts: up to its inner face, the free camera's reach)
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, PAN_BOUNDS[0], PAN_BOUNDS[2]);
     controls.target.z = THREE.MathUtils.clamp(controls.target.z, PAN_BOUNDS[1], PAN_BOUNDS[3]);
 
@@ -1944,6 +2045,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
+          // and where City view's free camera is (freecam.ts)
+          ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`] : []),
         ].join('\n');
         Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
       }
