@@ -182,10 +182,9 @@ test('the guard\'s first-person correction: the fists up, in and never at the ey
 
 test('the pump: the elbow at a right angle all the way, the fist up into its corner forward and out of shot back', () => {
   for (const side of [1, -1]) {
-    const S = V(0.2 * side, -0.21, 0.06);
     let last: THREE.Vector3 | null = null;
     for (let k = -1; k <= 1.0001; k += 0.05) {
-      const a = pumpArm(S, k, 0, newLaidArm());
+      const a = pumpArm(side, k, 0, newLaidArm());
       // (the arm's lengths, and the elbow square)
       assert.ok(near(a.shoulder.distanceTo(a.elbow), ARM.upper, 1e-4) && near(a.elbow.distanceTo(a.wrist), ARM.fore, 1e-4));
       const bend = a.shoulder.clone().sub(a.elbow).angleTo(a.wrist.clone().sub(a.elbow));
@@ -197,8 +196,8 @@ test('the pump: the elbow at a right angle all the way, the fist up into its cor
       assert.ok(a.face.x * side > 0);
       if (k > 0.4) assert.ok(a.elbow.y < a.wrist.y && a.elbow.z > a.wrist.z);
     }
-    const fwd = pumpArm(S, 1, 0, newLaidArm());
-    const back = pumpArm(S, -1, 0, newLaidArm());
+    const fwd = pumpArm(side, 1, 0, newLaidArm());
+    const back = pumpArm(side, -1, 0, newLaidArm());
     // Forward: ahead and in its lower corner (inside a 65-degree view, below the middle, on its own side)
     const inView = (w: THREE.Vector3) => w.z < -0.2 && Math.abs(w.y / w.z) < Math.tan((32.5 * Math.PI) / 180) && w.y < 0;
     const knuckles = (a: ReturnType<typeof newLaidArm>) => a.wrist.clone().addScaledVector(a.wrist.clone().sub(a.elbow).normalize(), KNUCKLES);
@@ -206,7 +205,7 @@ test('the pump: the elbow at a right angle all the way, the fist up into its cor
     // Back: down beside him, out of shot
     assert.ok(!inView(knuckles(back)) && !inView(back.wrist));
     // Sprinting it swings higher
-    assert.ok(pumpArm(S, 1, 1, newLaidArm()).wrist.y > fwd.wrist.y);
+    assert.ok(pumpArm(side, 1, 1, newLaidArm()).wrist.y > fwd.wrist.y);
     assert.ok(PUMP.reach > ARM.upper && PUMP.reach < ARM.upper + ARM.fore);
   }
 });
@@ -216,10 +215,14 @@ test('the pump\'s timing is his: each arm\'s swing from how far it is ahead of t
   assert.ok(pumpSwing(0.1, 0.1) > 0.5 && pumpSwing(-0.1, 0.1) < -0.5);
   assert.equal(pumpSwing(5, 0.1), 1);
   // (blended half way from his own arm to the pump, the arm keeps its lengths)
-  const S = V(0.2, -0.21, 0.06);
-  const own = pumpArm(S, -1, 0, newLaidArm());
-  const pump = pumpArm(S, 1, 0, newLaidArm());
+  // (his own arm from a shoulder elsewhere: the blend moves the shoulder too)
+  const own = pumpArm(1, -1, 0, newLaidArm());
+  own.shoulder.add(V(0, 0.03, 0.12));
+  own.elbow.add(V(0, 0.03, 0.12));
+  own.wrist.add(V(0, 0.03, 0.12));
+  const pump = pumpArm(1, 1, 0, newLaidArm());
   const mid = blendArm(own, pump, 0.5);
+  assert.ok(near(mid.shoulder.z, (0.06 + 0.12 + 0.06) / 2, 1e-6), 'the shoulder half way');
   assert.ok(near(mid.shoulder.distanceTo(mid.elbow), ARM.upper, 1e-4) && near(mid.elbow.distanceTo(mid.wrist), ARM.fore, 1e-4));
 });
 

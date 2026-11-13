@@ -304,9 +304,12 @@ export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3 };
  * (`pumpArm()`): the elbow held at a right angle all the way (the wrist on a sphere round the shoulder, `reach`), the
  * fist swung from `back` (down behind him, out of shot) to `fwd` (up into its lower corner, a touch in towards the
  * middle), further up sprinting (`sprint`), the elbow driving back and out (`pole`), the back of the loose fist
- * facing out, thumb up (`face`). For the arm on the right, the eye's frame; the left mirrors it.
+ * facing out, thumb up (`face`), all from a shoulder of its own (`shoulder`: his real one moves about the eye as he
+ * leans, the motion capture's sprint carrying his head out ahead of it, which would swing the fist up into the
+ * camera). For the arm on the right, the eye's frame; the left mirrors it.
  */
 export const PUMP = {
+  shoulder: new THREE.Vector3(0.2, -0.21, 0.06),
   reach: Math.hypot(ARM.upper, ARM.fore),
   back: new THREE.Vector3(0.12, -0.8, 0.58).normalize(),
   fwd: new THREE.Vector3(-0.08, 0.17, -1).normalize(),
@@ -362,19 +365,19 @@ const pFwd = new THREE.Vector3();
 const pBack = new THREE.Vector3();
 
 /**
- * The pump's arm for the shoulder at `shoulder` (the eye's frame, his own: it bobs with him), swung `swing` (-1 back
- * .. 1 forward, `pumpSwing()`), `sprint` (0 a jog .. 1 a sprint) of the way to the sprint's height: into `out` (the
- * shoulder kept, the elbow at a right angle, the wrist on its arc, the back of the fist out)
+ * The pump's arm on side `side` (1 the right of the eye, -1 the left), swung `swing` (-1 back .. 1 forward,
+ * `pumpSwing()`), `sprint` (0 a jog .. 1 a sprint) of the way to the sprint's height: into `out` (its own shoulder,
+ * the elbow at a right angle, the wrist on its arc, the back of the fist out)
  */
-export function pumpArm(shoulder: THREE.Vector3, swing: number, sprint: number, out: LaidArm) {
-  const side = Math.sign(shoulder.x) || 1;
+export function pumpArm(side: number, swing: number, sprint: number, out: LaidArm) {
+  side = Math.sign(side) || 1;
   const mirror = (v: THREE.Vector3, o: THREE.Vector3) => o.set(v.x * side, v.y, v.z);
   mirror(PUMP.back, pBack);
   mirror(PUMP.fwd, pFwd).lerp(mirror(PUMP.sprint, pDir), sprint).normalize();
   // (eased at the ends, as an arm slows to turn at the top and the bottom of its swing)
   const t = THREE.MathUtils.smoothstep((swing + 1) / 2, 0, 1);
   pDir.copy(pBack).lerp(pFwd, t).normalize();
-  out.shoulder.copy(shoulder);
+  const shoulder = mirror(PUMP.shoulder, out.shoulder);
   const target = tA.copy(shoulder).addScaledVector(pDir, PUMP.reach);
   solveArm(shoulder, target, mirror(PUMP.pole, tB), out.elbow, out.wrist);
   mirror(PUMP.face, out.face).normalize();
@@ -382,8 +385,8 @@ export function pumpArm(shoulder: THREE.Vector3, swing: number, sprint: number, 
 }
 
 /**
- * `a` eased `w` (0..1) of the way to `b`, both laid from the same shoulder: the wrist and the way the fist faces
- * between them, the elbow solved again round between theirs (so the arm keeps its lengths), into `a`
+ * `a` eased `w` (0..1) of the way to `b`: the shoulder, the wrist and the way the fist faces between them, the elbow
+ * solved again round between theirs (so the arm keeps its lengths), into `a`
  */
 export function blendArm(a: LaidArm, b: LaidArm, w: number) {
   if (w <= 0) return a;
@@ -391,6 +394,7 @@ export function blendArm(a: LaidArm, b: LaidArm, w: number) {
   const mid = (l: LaidArm, o: THREE.Vector3) => o.copy(l.elbow).sub(l.shoulder).addScaledVector(tmpS.copy(l.wrist).sub(l.shoulder), -0.5);
   const pole = mid(a, tB).lerp(mid(b, pDir), w);
   a.face.lerp(b.face, w).normalize();
+  a.shoulder.lerp(b.shoulder, w);
   solveArm(a.shoulder, target, pole, a.elbow, a.wrist);
   return a;
 }

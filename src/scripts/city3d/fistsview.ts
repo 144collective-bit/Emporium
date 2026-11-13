@@ -248,7 +248,7 @@ export function createFistsView(scene: THREE.Scene) {
         const laid = bodyArm(h.j, eye, unit, h.laid, s.guard, pull);
         // Running with his hands down, the pump: his swing's timing on the designed arc (fparm.ts PUMP), the elbow
         // at a right angle all the way; eased in over the run's share
-        if (run > 0) blendArm(laid, pumpArm(laid.shoulder, swung[arms.indexOf(h)], s.sprint, h.pump), run);
+        if (run > 0) blendArm(laid, pumpArm(laid.shoulder.x, swung[arms.indexOf(h)], s.sprint, h.pump), run);
         h.fore.visible = !loose;
         h.foreLoose.visible = loose;
         // The upper arm (its +z out and up, where the track top's stripes are) and the forearm with its fist
