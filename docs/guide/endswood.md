@@ -197,3 +197,15 @@ keep it up to date when what it describes changes.
   other change but `drive.blocks()` (the car at home is solid) and the
   second Garage prompt (`HOME_GARAGE_DOOR`, walk.ts `garageAt`).
   `startsAtHome()`: a new player's first walk starts downtown.
+  Phase 3 (the interior) is built: `ROOM` and `CEIL` (the ground floor,
+  one room), `FURNITURE` (each a kind, a footprint and a height;
+  home3d.ts's `furnish()` draws each kind), `HALL_W` (the hall kept
+  clear), `inHouse()` / `homeWall()` (walk.ts `blocked()` asks them first:
+  inside the house's footprint only the room's walls and furniture stop
+  you), `HOME_CAMERA` (the ceiling, in walk.ts's `cameraRoom()`),
+  `HOME_PORTALS` (the front and back doors, a prompt outside and in, each
+  a fade through index.ts's `rideTo()`; walk `places` entries `home:in`,
+  `home:out`, `home:yard`, `home:back`), `YARD_GATE`. The house is sealed:
+  `HOME_SOLIDS` has its four walls, and endsterraces.ts's `TERRACE_SOLIDS`
+  leaves it out of its terrace's box. A new thing in the room goes in
+  `FURNITURE` (the test floods the room to hold everything reachable).

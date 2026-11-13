@@ -49,7 +49,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_SLAB, HOME_SPAWN, startsAtHome } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_SPAWN, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -1030,7 +1030,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /** Up or down in Sector 7 Tower's lift */
   const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
   /** Up or down in a lift: a fade, then you step out at the other end (unless the owner has closed the place for now) */
-  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty' | 'mall' | null, name: string, arrived: string) {
+  function rideTo(to: { x: number; z: number; y: number; yaw: number }, place: 'tower' | 'liberty' | 'mall' | 'home' | null, name: string, arrived: string) {
     const gate = place ? live.place(place) : null;
     if (gate && !gate.open) return tycoon?.toast(closedLine(name, gate), 3500);
     if (lifting) return;
@@ -1075,7 +1075,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y)],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y), ...HOME_PORTALS],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1083,6 +1083,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         // (Endswood's lifts, endsdecks.ts: Fennel House's cores, Harrier Point's lift tower)
         const r = endsLiftRide(id);
         return r ? rideTo(r.to, null, 'Endswood', r.arrived) : undefined;
+      }
+      // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
+      if (id.startsWith('home:')) {
+        const p = HOME_PORTALS.find((q) => q.id === id);
+        return p ? rideTo(p.to, 'home', 'Home', p.arrived) : undefined;
       }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
       if (id === 'mall-lift:up' || id === 'mall-lift:down') {
