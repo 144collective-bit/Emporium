@@ -96,14 +96,29 @@ one:
 
 ## The phases (each with the owner's sign-off)
 
-1. **The land and the road.** Endswood's land grows west again (a second
-   rect read by `inEndswood()`); the Close carried west from its bollards
-   to the compound's gates, the bollards taken up, a turning head in front
-   of the gates; the compound's plot and whatever else the owner picks as
-   blocks in the street plan (the world map, walking); footpaths, sodium
-   lamps; the land in `KEEPS`, its ground in `INFLUENCES`, its edge in
-   `BY_CHARACTER`. A new chunk (`LAZY_DISTRICTS`), its data DOM-free in the
-   boot. Tests for all of it, and `npm run test:wide`.
+1. **The land and the road** (built, waiting on the owner's sign-off).
+   - `endswood.ts`: Endswood's land grows west by `FAR_RECT` (x -264 to
+     -200, z 340 to 420), read as one with the rest by `inEndswood()`; the
+     Close's bollards are taken up (`CLOSE_BOLLARDS` is empty).
+   - `endsfar.ts` (DOM-free, the boot's, tested in `tests/endsfar.test.ts`):
+     the Close's run on from its old end to a T (`ends-close-far`, `HEAD`)
+     with the lane across it (`ends-lane`, x -216, z 348 to 412; dead ends,
+     no traffic); the compound's plot at the head of the Close (`PLOT`,
+     block `ends-fc`, 26 by 24) with its gates' place opposite the road's
+     end (`GATES`); the bungalows' land north and south of it (`ends-fn`,
+     `ends-fs`), the allotments behind (`ends-fa`) and the verge between
+     the lane and the rows (`ends-fen`, `ends-fes`), all blocks in the
+     street plan (ref `endswood`); five sodium lamps (`FAR_LAMPS`).
+   - Its land in `KEEPS` (`endsfar`), its ground worn and bare-edged as
+     the estate's (ground.ts), its lamps, edge, crowd and sound Endswood's
+     through `inEndswood()` and the blocks' ref.
+   - Drawn by `endsfar3d.ts` (`LAZY_DISTRICTS` id `endsfar`), all sites:
+     the Close's worn asphalt and dashed line to a give-way line at the T,
+     the lane, the compound's plot in block paving with a brick kerb where
+     its wall will stand (open at the gates), the other plots in worn
+     grass.
+   - `tests/snapshot.test.ts` gained the two streets and lost nothing.
+   - Shot: `docs/far-west-shots/phase-1-close-to-the-gates.webp`.
 2. **The compound's outside.** The wall, the gates, the courtyard, the
    house, the double garage, the workshop, the garden; its solids and
    doors. Home base moves (the list above); the old house goes back to its
