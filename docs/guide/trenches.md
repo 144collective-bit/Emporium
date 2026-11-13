@@ -155,7 +155,7 @@ keep it up to date when what it describes changes.
   - **Built up** (the grit's step 2, the owner's call) is `streetwall.ts`
     (DOM-free, tested in `tests/streetwall.test.ts`), drawn by
     `streetwall3d.ts` (`buildStreetWalls()`, sites, after the grit): the
-    street walls (`TENEMENTS`: 4-6 storey tenements, the kits' shops with
+    street walls (`TENEMENTS`: 3-6 storey tenements, no two neighbours alike, the kits' shops with
     `escape` (a fire escape up the front for certain) and `wall` (their
     brick), Infill fields infill.ts honours; made-up names `TRENCH_SIGNS`
     (CLUCK HOUSE, GLOSS NAILS, HERO DELI, CELL FIX, KING'S CUTS, LUCKY 7
