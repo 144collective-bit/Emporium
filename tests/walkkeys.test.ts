@@ -263,7 +263,7 @@ test("keymap.ts's table and the handler agree: every key a mode lists is walk mo
     ride: () => ({ ride: {} }),
   };
   // (jobs the keyboard does elsewhere, or with the mouse only)
-  const NOT_KEYS: Job[] = ['look', 'map', 'menu', 'quit', 'skip', 'emotes', 'fire', 'aim', 'punch', 'block'];
+  const NOT_KEYS: Job[] = ['look', 'map', 'menu', 'quit', 'skip', 'emotes', 'fire', 'aim', 'punch', 'block', 'guard'];
   let checked = 0;
   for (const [id, mode] of Object.entries(KEYMAP) as [ModeId, (typeof KEYMAP)[ModeId]][]) {
     for (const b of mode.binds) {

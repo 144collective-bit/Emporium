@@ -1,0 +1,229 @@
+/*
+ * Degen's arms in first person with empty hands (the owner's call, 2026-11: "the arms look deformed and unnatural";
+ * "we want this looking premium"): the shapes and the reach. DOM-free, tested in tests/fparm.test.ts; fistsview.ts
+ * dresses and moves them.
+ *
+ * - Each arm is two pieces jointed at the elbow: the upper arm from the shoulder (out of shot, behind the eye) and
+ *   the forearm with the fist on its end, the elbow solved each frame for where the fist is wanted (`solveArm()`, a
+ *   two-bone reach: the elbow swings round towards a pole, down and out in the guard, up and out in a hook).
+ * - The fist is modelled for being seen up close (`fistGeometry()`), not the body's hand closed (body.ts
+ *   `bakedHand()`, built to read from a distance): the back of the hand, four knuckles in a row that slopes off to the
+ *   little finger, each finger folded in two under them, and the thumb wrapped across the front. Its frame: the wrist
+ *   at the origin, +y out to the knuckles, +z the back of the hand, the thumb on the side `thumb` says.
+ * - Sleeves are turned (`sleeveGeometry()`): round at both ends, so the elbow bends without a seam, tapering a touch
+ *   towards the cuff.
+ * - Every piece carries its own colour (`paint()`), so an arm is two draws, the upper arm and the
+ *   forearm with its cuff and fist, whatever the outfit (a `tint` attribute of its own, not three's vertex colours).
+ *
+ * Lengths are metres, life size (fistsview.ts builds them `FP_SCALE` times bigger and further out).
+ */
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/** The arm's two lengths (metres): shoulder to elbow, elbow to wrist */
+export const ARM = { upper: 0.29, fore: 0.265 };
+
+/** The fist's size: across the knuckles, wrist to the front of the folded fingers, and its depth (metres) */
+export const FIST = { width: 0.094, length: 0.118, depth: 0.072 };
+
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** Only the position and normal kept, not indexed, so every piece merges */
+function plain(g: THREE.BufferGeometry) {
+  const n = g.index ? g.toNonIndexed() : g;
+  for (const k of Object.keys(n.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'tint') n.deleteAttribute(k);
+  return n;
+}
+
+/** A piece's every vertex in one colour (its `tint`, linear), so pieces of different colours share one draw */
+export function paint(g: THREE.BufferGeometry, color: string | THREE.Color) {
+  const c = new THREE.Color(color);
+  const n = g.attributes.position.count;
+  const a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3);
+  g.setAttribute('tint', new THREE.BufferAttribute(a, 3));
+  return g;
+}
+
+/** Pieces made into one (each painted first) */
+export function merge(parts: THREE.BufferGeometry[]) {
+  return mergeGeometries(parts)!;
+}
+
+/** A capsule from `a` to `b` of radius `r` */
+function capsule(a: THREE.Vector3, b: THREE.Vector3, r: number, seg = 8) {
+  const d = b.clone().sub(a);
+  const g = new THREE.CapsuleGeometry(r, Math.max(1e-4, d.length()), 3, seg);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, d.normalize()));
+  g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  return plain(g);
+}
+
+/** A rounded box `w` (x) by `h` (y) by `d` (z) centred at (x, y, z), tilted `tilt` about x */
+function block(w: number, h: number, d: number, r: number, x: number, y: number, z: number, tilt = 0) {
+  const g = new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2 - 1e-4, h / 2 - 1e-4, d / 2 - 1e-4));
+  if (tilt) g.rotateX(tilt);
+  g.translate(x, y, z);
+  return plain(g);
+}
+
+/**
+ * The fist, closed tight: the wrist at the origin, +y out to the knuckles, +z the back of the hand, the thumb on the
+ * `thumb` side of x (-1 or 1). Its index finger is next to the thumb; the knuckles' line slopes back to the little
+ * finger, as a real fist's does.
+ */
+export function fistGeometry(thumb: -1 | 1) {
+  const parts: THREE.BufferGeometry[] = [];
+  // The wrist, into the cuff
+  const wrist = new THREE.CylinderGeometry(0.026, 0.024, 0.04, 12);
+  wrist.scale(1.12, 1, 0.82);
+  wrist.translate(0, 0.006, -0.004);
+  parts.push(plain(wrist));
+  // The back of the hand, narrowing a little to the wrist
+  const back = block(0.088, 0.078, 0.038, 0.014, 0, 0.05, 0.001);
+  const p = back.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const k = THREE.MathUtils.clamp((p.getY(i) - 0.011) / 0.078, 0, 1);
+    p.setX(i, p.getX(i) * (0.84 + 0.16 * k));
+  }
+  back.computeVertexNormals();
+  parts.push(back);
+  // The palm, under it, where the fingertips tuck in
+  parts.push(block(0.08, 0.06, 0.024, 0.01, 0, 0.042, -0.024));
+  // Four fingers, index (by the thumb) to little: each knuckle, and the finger folded under it in two
+  const at = [0.0315, 0.0105, -0.0105, -0.0305];
+  const reach = [0.089, 0.092, 0.089, 0.083];
+  const wide = [0.0215, 0.0225, 0.021, 0.0185];
+  for (let f = 0; f < 4; f++) {
+    const x = at[f] * thumb;
+    const y = reach[f];
+    const w = wide[f];
+    // the knuckle, standing proud of the back of the hand
+    const kn = new THREE.SphereGeometry(w * 0.5, 10, 8);
+    kn.scale(1, 0.8, 0.62);
+    kn.translate(x, y - 0.004, 0.013);
+    parts.push(plain(kn));
+    // the first bone, folded straight down at the front (the face that lands a punch)
+    parts.push(block(w, 0.024, 0.044, 0.009, x, y + 0.004, -0.009));
+    // the second, folded back under towards the palm
+    parts.push(block(w * 0.95, 0.032, 0.021, 0.008, x, y - 0.013, -0.033));
+  }
+  // The thumb: from the heel of the hand, round the side and across the front of the first two fingers
+  const t0 = new THREE.Vector3(0.039 * thumb, 0.022, -0.014);
+  const t1 = new THREE.Vector3(0.036 * thumb, 0.06, -0.04);
+  const t2 = new THREE.Vector3(0.006 * thumb, 0.074, -0.05);
+  parts.push(capsule(t0, t1, 0.0145));
+  parts.push(capsule(t1, t2, 0.0128));
+  // (the ball of the thumb, filling the heel of the hand on its side)
+  const ball = new THREE.SphereGeometry(0.019, 10, 8);
+  ball.scale(1, 1.3, 0.9);
+  ball.translate(0.03 * thumb, 0.03, -0.022);
+  parts.push(plain(ball));
+  return merge(parts);
+}
+
+/**
+ * A sleeve turned round +y from 0 to `len`, radius `r0` at 0 to `r1` at `len`, rounded off at both ends (so a joint
+ * bends without a seam); `cap` false leaves the far end open-ended square (a cuff runs on from it)
+ */
+export function sleeveGeometry(r0: number, r1: number, len: number, cap = true, seg = 14) {
+  const pts: THREE.Vector2[] = [];
+  const steps = 5;
+  for (let i = 0; i <= steps; i++) {
+    const a = -Math.PI / 2 + (i / steps) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(Math.max(1e-4, r0 * Math.cos(a)), r0 * Math.sin(a)));
+  }
+  // (a little fullness through the middle: cloth over muscle, not a pipe)
+  for (let i = 1; i < 6; i++) pts.push(new THREE.Vector2(sleeveRadius(r0, r1, len, (len * i) / 6), (len * i) / 6));
+  if (cap)
+    for (let i = 0; i <= steps; i++) {
+      const a = (i / steps) * (Math.PI / 2);
+      pts.push(new THREE.Vector2(Math.max(1e-4, r1 * Math.cos(a)), len + r1 * Math.sin(a)));
+    }
+  else pts.push(new THREE.Vector2(r1, len));
+  const g = new THREE.LatheGeometry(pts, seg);
+  return plain(g);
+}
+
+/** A ribbed or plain cuff: a short tube round +y from `y0` to `y1` */
+export function cuffGeometry(r0: number, r1: number, y0: number, y1: number, ribs = 0) {
+  const parts: THREE.BufferGeometry[] = [];
+  const g = new THREE.CylinderGeometry(r1, r0, y1 - y0, 16, 1, false);
+  g.translate(0, (y0 + y1) / 2, 0);
+  parts.push(plain(g));
+  // (ribbing: a few raised rings, each an edge the ink picks out)
+  for (let i = 0; i < ribs; i++) {
+    const y = y0 + ((i + 0.5) / ribs) * (y1 - y0);
+    const r = THREE.MathUtils.lerp(r0, r1, (y - y0) / (y1 - y0));
+    const ring = new THREE.TorusGeometry(r, 0.0022, 4, 16);
+    ring.rotateX(Math.PI / 2);
+    ring.translate(0, y, 0);
+    parts.push(plain(ring));
+  }
+  return merge(parts);
+}
+
+/** How far out a sleeve from `sleeveGeometry(r0, r1, len)` is at `y` along it (its fullness through the middle included) */
+export function sleeveRadius(r0: number, r1: number, len: number, y: number) {
+  const k = THREE.MathUtils.clamp(y / len, 0, 1);
+  return THREE.MathUtils.lerp(r0, r1, k) * (1 + 0.06 * Math.sin(Math.PI * k));
+}
+
+/**
+ * A stripe down a sleeve's side (the sleeve `sleeveGeometry(r0, r1, len)`): a thin strip `w` wide at angle `a` round
+ * +y (0 is +x, π/2 is +z), from `y0` to `y1`, lying on the sleeve all the way along, however it tapers and fills out
+ */
+export function stripeGeometry(a: number, r0: number, r1: number, len: number, y0: number, y1: number, w = 0.01) {
+  const g = new THREE.BoxGeometry(0.0024, y1 - y0, w, 1, 8, 1);
+  g.translate(0, (y0 + y1) / 2, 0);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  // (each row out to the sleeve's own radius there, a hair proud of it)
+  for (let i = 0; i < p.count; i++) p.setX(i, p.getX(i) + sleeveRadius(r0, r1, len, p.getY(i)) + 0.0014);
+  g.computeVertexNormals();
+  g.rotateY(-a);
+  return plain(g);
+}
+
+/**
+ * Where the elbow goes for a hand wanted at `target` from `shoulder` (a two-bone reach, lengths `upper` and
+ * `fore`): the hand at the target when it's in reach, else as far as the straight arm goes towards it; the elbow
+ * swung round the line from the shoulder towards `pole`. Fills `elbow` and `hand`.
+ */
+export function solveArm(
+  shoulder: THREE.Vector3,
+  target: THREE.Vector3,
+  pole: THREE.Vector3,
+  elbow: THREE.Vector3,
+  hand: THREE.Vector3,
+  upper = ARM.upper,
+  fore = ARM.fore,
+) {
+  const dir = target.clone().sub(shoulder);
+  let dist = dir.length();
+  if (dist < 1e-6) dir.set(0, 0, -1);
+  dir.normalize();
+  // (never quite straight, so the elbow keeps its side; never folded through itself)
+  dist = THREE.MathUtils.clamp(dist, Math.abs(upper - fore) + 0.02, (upper + fore) * 0.999);
+  hand.copy(shoulder).addScaledVector(dir, dist);
+  const a = (upper * upper + dist * dist - fore * fore) / (2 * dist);
+  const h = Math.sqrt(Math.max(0, upper * upper - a * a));
+  const side = pole.clone().addScaledVector(dir, -pole.dot(dir));
+  if (side.lengthSq() < 1e-8) side.set(0, -1, 0).addScaledVector(dir, -dir.y);
+  side.normalize();
+  elbow.copy(shoulder).addScaledVector(dir, a).addScaledVector(side, h);
+  return { elbow, hand };
+}
+
+/**
+ * The turn of a piece reaching from `from` to `to` (+y along it), with +z as near `face` as it can be (the back of
+ * the hand, or a sleeve's front): into `q`
+ */
+export function aimPiece(from: THREE.Vector3, to: THREE.Vector3, face: THREE.Vector3, q: THREE.Quaternion) {
+  const y = to.clone().sub(from).normalize();
+  const z = face.clone().addScaledVector(y, -face.dot(y));
+  if (z.lengthSq() < 1e-8) z.set(0, 0, 1).addScaledVector(y, -y.z);
+  z.normalize();
+  const x = new THREE.Vector3().crossVectors(y, z);
+  return q.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+}

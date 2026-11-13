@@ -722,6 +722,10 @@ the typecheck and the budgets green; none moves anything that exists.
    closed, in the outfit's sleeves, in the guard, the jab and hook with the
    left, the cross and uppercut with the right over the moves' frames, the
    block, the dodge; a kick drops the hands and bobs the view, `KICK`).
+   Rebuilt (the owner's call, 2026-11: "the arms look deformed and
+   unnatural... premium"): jointed arms and a modelled fist (`fparm.ts`),
+   the guard held on the right mouse button, the arms pumping when he runs
+   (`docs/guide/combat.md`, `docs/guide/inventory.md`).
    **The lazy packs**: the crouched walks, the standing jumps' wind-ups and
    the stairs climb are `clips-crouch.bin` / `clips-jumps.bin` /
    `clips-stairs.bin` (mocap-load.ts `LAZY_PACKS`, 95 KB together), fetched

@@ -98,7 +98,7 @@ export function onKey(e: KeyboardEvent, down: boolean, h: KeyHost) {
     return true;
   }
   // Fighting, on the street's keys (keymap.ts): move with the move keys (W towards the opponent), G kicks, Space
-  // dodges, E a snack, V the camera; the mouse punches and blocks (right button held)
+  // dodges, E a snack, V the camera; the mouse punches and blocks (right button held; on the street it's the guard)
   if (fighting()) {
     if (down && !e.repeat && c === 'KeyV') nextCam();
     else if (c === 'Space') {
@@ -176,7 +176,7 @@ export function onKey(e: KeyboardEvent, down: boolean, h: KeyHost) {
   else if (down && !e.repeat && c === 'CapsLock') h.walkLock = !h.walkLock;
   else if (down && !e.repeat && c === 'KeyR') combat.reload();
   else if (down && !e.repeat && c === 'KeyG') {
-    // (empty hands: G kicks; a gun is drawn with 1 or 2)
+    // (empty hands: G kicks, with the guard up (brawl-sim.ts); a gun is drawn with 1 or 2)
     if (fistsReady()) fightBtns.kick = true;
     else combat.toggleHolster();
   } else if (down && !e.repeat && c === 'KeyX') stepSlot(1);

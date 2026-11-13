@@ -177,8 +177,9 @@ function emoteAt(t: number): { id: EmoteId; t: number } | null {
   return null;
 }
 /**
- * The Brawl program (fists on the street, brawl.ts): standing, a jab, cross and hook chained, a front kick, then
- * walking on, two punches over the walk, stopping, a dodge, and the block held, the guard dropping at the end
+ * The Brawl program (fists on the street, brawl.ts): the guard lifted (held, as the right mouse button holds it),
+ * standing, a jab, cross and hook chained, a front kick, then walking on, two punches over the walk, stopping, a
+ * dodge, the guard held a while, and let go at the end
  */
 const BRAWL_CYCLE = 14;
 const BRAWL_PRESSES: [number, 'punch' | 'kick' | 'dodge'][] = [
@@ -193,7 +194,7 @@ const BRAWL_PRESSES: [number, 'punch' | 'kick' | 'dodge'][] = [
 function brawlOf(p: Prog, t: number, dt: number): BrawlInput {
   if (p !== 'brawl') return NO_BRAWL;
   const u = t % BRAWL_CYCLE;
-  const inp = { ...NO_BRAWL, block: u > 8.8 && u < 10 };
+  const inp = { ...NO_BRAWL, guard: u > 0.5 && u < 10 };
   for (const [at, kind] of BRAWL_PRESSES) if (u >= at && u - dt < at) inp[kind] = true;
   return inp;
 }
@@ -351,7 +352,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       <div class="anim-lab-row" data-toggles></div>
       <dl class="anim-lab-read" data-read></dl>
       <dl class="anim-lab-score" data-score></dl>
-      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek, C crouches (slides sprinting; armed and aiming, he faces +z), J punches, K kicks, L (held) blocks. P pauses, . steps.</p>
+      <p class="anim-lab-hint">By hand: W A S D, Shift sprints, Caps Lock walks, Space jumps, Q / E peek, C crouches (slides sprinting; armed and aiming, he faces +z), L (held) lifts the guard, J punches and K kicks with it up. P pauses, . steps.</p>
     </div>`;
   root.append(ui);
   const canvas = ui.querySelector<HTMLCanvasElement>('canvas')!;
@@ -638,7 +639,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   /** An upper-body emote over the capture's legs (the upper mask), and the dance in place of the capture */
   let emoteAmt = 0;
   let danceAmt = 0;
-  /** Fists (brawl.ts): the guard's share of the upper body, a kick's or the dodge's of all of him; J punches, K kicks, L blocks by hand */
+  /** Fists (brawl.ts): the guard's share of the upper body, a kick's or the dodge's of all of him; L held lifts the guard, J punches and K kicks with it up, by hand */
   const fists = createStreetFists('street');
   let guardAmt = 0;
   let wholeAmt = 0;
@@ -768,7 +769,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       }
     }
     // Fists: the program's presses, or J / K / L by hand; a kick or the dodge stands him for it
-    const fin: BrawlInput = p === 'manual' ? { ...NO_BRAWL, ...fistPress, block: keys.has('KeyL'), sprinting: keys.has('ShiftLeft') || keys.has('ShiftRight') } : brawlOf(p, pt, dt);
+    const fin: BrawlInput = p === 'manual' ? { ...NO_BRAWL, ...fistPress, guard: keys.has('KeyL'), sprinting: keys.has('ShiftLeft') || keys.has('ShiftRight') } : brawlOf(p, pt, dt);
     fistPress = { punch: false, kick: false };
     const fistStep = p === 'brawl' || p === 'manual' ? fists.brawl.step(dt, x, z, move.face, fin) : null;
     if (!fistStep && (fists.brawl.up || fists.brawl.move)) fists.brawl.cancel();

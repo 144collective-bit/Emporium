@@ -3,8 +3,8 @@
 // door, down the hall, out again), his garage's menu, the car (in at his garage, out through its door, a drive, out), on foot (walk, sprint,
 // jump, crouch, the hub open and closed), the gun store's counter, the metro (the station's card, a ride, skipped to
 // the end), a kart race (the clubhouse's menu, a single race, quit), flying (into your aircraft in the hangar,
-// rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error or a step that
-// didn't happen.
+// rolling out) and the gamepad (a made-up pad: the stick, A, Start, B). It fails on any page error, any NaN geometry
+// in the console, or a step that didn't happen.
 //   npm run smoke -- car,foot    only these scenes
 // walk.ts has little of its own under unit tests (it's
 // the view), so this is the check to run before and after changing it. It's slow in the headless software
@@ -47,6 +47,11 @@ async function scene(name, spawn, play, init) {
   if (init) await page.addInitScript(init);
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  // Geometry with NaN corners fails it too (three's bounding-box warning, or the city leaving the triangles out): on
+  // a real GPU it can black the screen out (docs/stability-plan.md), though this software renderer draws on
+  page.on('console', (m) => {
+    if (/NaN/.test(m.text())) errors.push(m.text().slice(0, 300));
+  });
   let n = 0;
   const step = async (what) => {
     console.log(`[smoke] ${name}: ok  ${what}`);

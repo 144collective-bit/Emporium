@@ -84,15 +84,15 @@ const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(
  * sleeve and its knuckles lie along `along` (the pistol grip, the
  * handguard). `side` is the rig's: -1 his right hand, 1 his left.
  */
-export function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vector3, size: number, at: THREE.Vector3) {
+function fpHand(side: -1 | 1, grip: number, dir: THREE.Vector3, along: THREE.Vector3, size: number, at: THREE.Vector3) {
   const z = along.clone().normalize();
   const y = dir.clone().addScaledVector(z, -dir.dot(z)).normalize();
   const x = new THREE.Vector3().crossVectors(y, z);
   return bakedHand(side, grip).applyMatrix4(new THREE.Matrix4().makeBasis(x, y, z).scale(new THREE.Vector3(size, size, size)).setPosition(at));
 }
 
-/** A forearm ending in a hand at the origin, reaching off along `dir`; `dress()` puts it in the outfit's sleeve (the fists' view, fistsview.ts, uses it too) */
-export function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
+/** A forearm ending in a hand at the origin, reaching off along `dir`; `dress()` puts it in the outfit's sleeve (the fists' arms are fistsview.ts's own, jointed: fparm.ts) */
+function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
   const g = new THREE.Group();
   const q = new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
   const along = (geo: THREE.BufferGeometry, from: number) => {
@@ -161,7 +161,8 @@ export const upFront = (o: THREE.Object3D) =>
   });
 /** How much bigger and further out than life the hands are built (the camera's near plane is 0.5 m) */
 export const FP_SCALE = K;
-export { FP_HAND };
+/** The hands' light level (dimmed at night by `setNight()`), the outfit's sleeve colours and the skin: the fists' arms (fistsview.ts) share them */
+export { level as FP_LEVEL, SKIN as FP_SKIN, SHIRT as FP_SHIRT, VARSITY_SLEEVE as FP_VARSITY, shade as fpShade };
 
 export interface ViewState {
   armed: boolean;

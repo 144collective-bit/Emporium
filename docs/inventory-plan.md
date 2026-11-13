@@ -285,9 +285,10 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   stamina); what a move moves him itself (a strike's step in, the
   dodge's slide) comes back as `dx, dz` and walk mode moves him by it
   through its collisions. A move fires a `strike` on its first active
-  frame, once. The guard comes up with any press or the block and stays
-  `BRAWL.guard` (4 s) after the last, then drops; sprinting drops it and
-  throws nothing. Blocking, he walks no faster than `BRAWL.blockSpeed`.
+  frame, once. The guard is held (revised, the owner's call 2026-11: up
+  only while held, nothing thrown without it, the guard the block);
+  sprinting drops it and throws nothing. With it up, he moves no faster
+  than `BRAWL.guardSpeed`.
   Out of stamina: "Out of breath", nothing thrown until some is back.
 - **The hits** are `combat-sim.ts`'s `melee(id, x, y, z, yaw, move)`: a
   dummy within the move's reach (and its board's half-width and `MELEE`'s
@@ -308,6 +309,10 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   or the dodge takes him whole, standing (`rooted`: the motion capture
   steps aside, he doesn't walk). With the guard up he faces where the
   camera looks.
+- **Controls, revised** (the owner's call, 2026-11): the guard is held
+  (right-click, LB, the touch Guard toggled), and punch, kick and dodge
+  work only with it up; the guard is the block. The rest of this
+  paragraph is how it stood before (`docs/guide/inventory.md` has it now).
 - **Controls** as decided: click punch, right-click held block, G kick
   (empty hands; armed, G holsters as before), Space dodges with the guard
   up and standing (otherwise it jumps), Shift sprints. Touch (`.is-fists`

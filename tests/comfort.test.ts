@@ -16,6 +16,10 @@ test('unpicked, each works as it always has', () => {
     assert.equal(holdMode({}, 'crouch', i), 'toggle');
     assert.equal(holdMode({}, 'block', i), 'hold');
   }
+  // (the fists' guard: held on the keys and the pad, a toggle on touch, the other thumb on Punch)
+  assert.equal(holdMode({}, 'guard', 'keys'), 'hold');
+  assert.equal(holdMode({}, 'guard', 'pad'), 'hold');
+  assert.equal(holdMode({}, 'guard', 'touch'), 'toggle');
 });
 
 test('picked, it is the same on the keyboard, the gamepad and touch', () => {
@@ -38,5 +42,5 @@ test('hold is on while pressed; toggle flips on each press and ignores the let-g
 test('a saved choice is cleaned', () => {
   assert.deepEqual(cleanHolds(undefined), {});
   assert.deepEqual(cleanHolds('x'), {});
-  assert.deepEqual(cleanHolds({ sprint: 'toggle', aim: 'hold', crouch: 'sideways', jump: 'toggle', block: 3 }), { sprint: 'toggle', aim: 'hold' });
+  assert.deepEqual(cleanHolds({ sprint: 'toggle', aim: 'hold', crouch: 'sideways', jump: 'toggle', block: 3, guard: 'toggle' }), { sprint: 'toggle', aim: 'hold', guard: 'toggle' });
 });

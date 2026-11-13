@@ -38,8 +38,8 @@ function host(over: Partial<PadHost> & { holds?: Record<string, 'hold' | 'toggle
     jumpHeld: false,
     aim: false,
     padLean: 0,
-    padBlock: false,
-    padBlockOn: false,
+    padGuard: false,
+    padGuardOn: false,
     shop: { open: false, input: () => {}, move: say('shop.move'), tab: say('shop.tab'), press: say('shop.press'), close: say('shop.close') },
     garageUI: menu('garage'),
     hangarUI: menu('hangar'),
@@ -121,27 +121,30 @@ test('on foot: the sticks, and one job a button', () => {
   assert.deepEqual(log, ['stepSlot:-1']);
 });
 
-test('empty hands: X punches, Y kicks with nothing to do, LB blocks; toggles where the settings ask', () => {
+test('empty hands: LB holds the guard, X punches, Y kicks with nothing to do; toggles where the settings ask', () => {
   const s = state();
   const { h, log } = host({ fistsReady: () => true });
   pollPad(gp({ down: [X, Y, LB] }), 0.016, s, h);
-  assert.ok(h.fightBtns.punch && h.fightBtns.kick && h.padBlock);
+  assert.ok(h.fightBtns.punch && h.fightBtns.kick && h.padGuard);
+  // (let go of LB, the guard drops)
+  pollPad(gp(), 0.016, s, h);
+  assert.ok(!h.padGuard);
   assert.deepEqual(log, []);
   // With a prompt showing, Y does it
   pollPad(gp(), 0.016, s, h);
   (h as { near: unknown }).near = { id: 'car' };
   pollPad(gp({ down: [Y] }), 0.016, s, h);
   assert.deepEqual(log, ['act']);
-  // Sprint, aim and block on toggle: a press turns each on, the next off
-  const t = host({ fistsReady: () => true, holds: { sprint: 'toggle', aim: 'toggle', block: 'toggle' } });
+  // Sprint, aim and the guard on toggle: a press turns each on, the next off
+  const t = host({ fistsReady: () => true, holds: { sprint: 'toggle', aim: 'toggle', guard: 'toggle' } });
   const s2 = state();
   pollPad(gp({ down: [L3, LT, LB] }), 0.016, s2, t.h);
   assert.deepEqual(t.log, ['setAim:true', 'sprintLock:true']);
-  assert.ok(t.h.padBlockOn && t.h.padBlock && !s2.pad.run);
+  assert.ok(t.h.padGuardOn && t.h.padGuard && !s2.pad.run);
   pollPad(gp(), 0.016, s2, t.h);
-  assert.ok(t.h.aim && t.h.padBlock);
+  assert.ok(t.h.aim && t.h.padGuard);
   pollPad(gp({ down: [LT, LB] }), 0.016, s2, t.h);
-  assert.ok(!t.h.aim && !t.h.padBlock);
+  assert.ok(!t.h.aim && !t.h.padGuard);
 });
 
 test('a menu open has the pad: the hub, the inventory, the store, the garage', () => {

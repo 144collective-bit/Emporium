@@ -41,7 +41,8 @@ export interface TouchState {
   joy: { x: number; y: number; sx: number; sy: number; id: number; ox: number; oy: number; float: boolean };
   pedals: { gas: boolean; brake: boolean };
   kartBtns: { drift: boolean; item: boolean };
-  fightBtns: { punch: boolean; kick: boolean; dodge: boolean; block: boolean };
+  /** Punch, Kick and Dodge tapped; Block held in the ring; Guard (the same button on the street) held or toggled */
+  fightBtns: { punch: boolean; kick: boolean; dodge: boolean; block: boolean; guard: boolean };
   settings: { sens: number; invert: boolean };
 }
 
@@ -55,6 +56,8 @@ export interface TouchHost {
   readonly crouched: boolean;
   readonly firstPerson: boolean;
   readonly sprintLock: boolean;
+  /** In the ring (its Block button), not on the street (where the same button is the Guard) */
+  readonly ring: boolean;
   // What the buttons set as well as read
   jumpHeld: boolean;
   aim: boolean;
@@ -68,6 +71,7 @@ export interface TouchHost {
   crouchPress(): void;
   nextCam(): void;
   setBlock(on: boolean): void;
+  setGuard(on: boolean): void;
   quitFight(): void;
   setFirstPerson(on: boolean): void;
   saveSettings(): void;
@@ -80,7 +84,7 @@ export interface TouchHost {
 export function wireTouch(el: TouchEls, s: TouchState, h: TouchHost) {
   const { window, document, Element, root, $, stick, knob, runBtn, crouchBtn, pedalBtns, rideViewBtns, blockBtnEl, fpBtn, sensInput, invertInput, prompt } = el;
   const { joy, pedals, kartBtns, fightBtns, settings } = s;
-  const { d, drive, combat, hm, tryJump, setSprintLock, crouchInput, crouchPress, nextCam, setBlock, quitFight, setFirstPerson, saveSettings, act, look, stepSlot } = h;
+  const { d, drive, combat, hm, tryJump, setSprintLock, crouchInput, crouchPress, nextCam, setBlock, setGuard, quitFight, setFirstPerson, saveSettings, act, look, stepSlot } = h;
   /** The fingers on the pedals (touchdrive.ts): each pointer and the pedal it presses */
   const pedalFingers = new Map<number, Pedal>();
   const rectOf = (el: Element): Rect | null => {
@@ -113,17 +117,18 @@ export function wireTouch(el: TouchEls, s: TouchState, h: TouchHost) {
     }
   };
   /** A touch button that's held or toggled by the setting for `job`: `set` turns it on or off, `get` says whether it's on */
-  function holdButton(btn: HTMLElement | null, job: HoldJob, set: (on: boolean) => void, get: () => boolean) {
+  function holdButton(btn: HTMLElement | null, jobOf: HoldJob | (() => HoldJob), set: (on: boolean) => void, get: () => boolean) {
     if (!btn) return;
+    const job = () => (typeof jobOf === 'function' ? jobOf() : jobOf);
     btn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       capture(btn, e.pointerId);
-      set(press(hm(job, 'touch'), get(), true));
+      set(press(hm(job(), 'touch'), get(), true));
       d.touched();
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
       btn.addEventListener(ev, () => {
-        if (hm(job, 'touch') === 'hold' && get()) set(false);
+        if (hm(job(), 'touch') === 'hold' && get()) set(false);
       });
     // (Enter or Space on it, focused: a toggle either way; a pointer's own click already pressed it)
     btn.addEventListener('click', (e) => {
@@ -276,7 +281,8 @@ export function wireTouch(el: TouchEls, s: TouchState, h: TouchHost) {
     });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) itemBtn.addEventListener(ev, () => (kartBtns.item = false));
   }
-  // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
+  // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit; on the street the Block button is the Guard
+  // (a toggle unless picked: the fists lifted, Punch and Kick showing while it's up)
   for (const k of ['punch', 'kick', 'dodge'] as const) {
     const b = root.querySelector(`[data-fight-${k}]`);
     if (b)
@@ -285,7 +291,12 @@ export function wireTouch(el: TouchEls, s: TouchState, h: TouchHost) {
         d.touched();
       });
   }
-  holdButton(blockBtnEl, 'block', setBlock, () => fightBtns.block);
+  holdButton(
+    blockBtnEl,
+    () => (h.ring ? 'block' : 'guard'),
+    (on) => (h.ring ? setBlock(on) : setGuard(on)),
+    () => (h.ring ? fightBtns.block : fightBtns.guard),
+  );
   root.querySelector('[data-fight-quit]')?.addEventListener('click', () => quitFight());
   fpBtn.addEventListener('click', () => setFirstPerson(!h.firstPerson));
   sensInput.addEventListener('input', () => {

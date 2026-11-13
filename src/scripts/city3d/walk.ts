@@ -157,6 +157,8 @@ const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
+/** How far the first-person view narrows with the fists' guard up (degrees) */
+const GUARD_ZOOM = 5;
 const AIMING = 1.09;
 /** Carrying a crate: how near its destination (the car's boot, the place) counts as there */
 const PUT_R = 1.8;
@@ -915,8 +917,9 @@ export function createWalk(d: WalkDeps) {
   const toggleInv = () => (hotbar ? hotbar.toggle() : void loadHotbar().then(() => hotbar?.toggle()));
   const stepSlot = (dir: 1 | -1) => (hotbar ? hotbar.step(dir) : void loadHotbar().then(() => hotbar?.step(dir)));
   // Fists on the street (brawl.ts, docs/inventory-plan.md Phase 2, a chunk of its own fetched when walking starts):
-  // empty hands are his fists. Click punches, right-click (held) blocks, G kicks, Space with the guard up and standing
-  // dodges; on a gamepad X, Y, LB held and A; on touch Punch, Kick and Block in Fire's, Aim's and Reload's places
+  // empty hands are his fists. The right mouse button held lifts the guard (the owner's call, 2026-11), and with it up
+  // a click punches, G kicks and Space standing dodges; on a gamepad LB held, then X, Y and A; on touch the Guard (the
+  // Block button, toggled) with Punch and Kick showing while it's up, in Fire's, Aim's and Reload's places
   let fists: StreetFists | null = null;
   let partners: Partners | null = null;
   /** The partner a street spar is with (they're hidden while the fight draws its own) */
@@ -940,13 +943,18 @@ export function createWalk(d: WalkDeps) {
       }),
     'the fists'
   );
-  /** The guard's and the whole-body moves' share of his pose, the right mouse button and LB held (the block), the last "out of breath" */
+  /**
+   * The guard's and the whole-body moves' share of his pose; the right mouse button in the ring (the block); on the
+   * street the right mouse button and LB held (or toggled on) lift the guard (the owner's call, 2026-11); the last
+   * "out of breath"
+   */
   let guardAmt = 0;
   let wholeAmt = 0;
   let mouseBlock = false;
-  let padBlock = false;
-  /** Block on toggle on a gamepad: LB turned it on */
-  let padBlockOn = false;
+  let mouseGuard = false;
+  let padGuard = false;
+  /** The guard on toggle on a gamepad: LB turned it on */
+  let padGuardOn = false;
   const blockBtnEl = root.querySelector<HTMLButtonElement>('[data-fight-block]');
   let tiredAt = -1e9;
   let fistsShown = false;
@@ -1302,8 +1310,8 @@ export function createWalk(d: WalkDeps) {
   /** The card is up (the fight's over): closing it leaves the ring */
   let fightDone = false;
   const fightOver = () => !!fight?.sim?.over;
-  /** The buttons while fighting: Block held, Punch / Kick / Dodge pressed (edges) */
-  const fightBtns = { punch: false, kick: false, block: false, dodge: false };
+  /** The buttons while fighting: Block held (the ring) or the Guard (the street), Punch / Kick / Dodge pressed (edges) */
+  const fightBtns = { punch: false, kick: false, block: false, dodge: false, guard: false };
   const padFight = { x: 0, y: 0, block: false };
   let fightUIReady = false;
   function startFight(setup: FightStart) {
@@ -1323,8 +1331,10 @@ export function createWalk(d: WalkDeps) {
     fists?.brawl.cancel();
     fistsShown = false;
     guardAmt = wholeAmt = 0;
-    mouseBlock = padBlock = false;
-    root.classList.remove('is-fists');
+    letGoGuard();
+    mouseBlock = false;
+    root.classList.remove('is-fists', 'is-guard');
+    labelBlockBtn(true);
     fightBtns.punch = fightBtns.kick = fightBtns.block = fightBtns.dodge = false;
     still();
     hero.g.visible = hero.ring.visible = false;
@@ -1641,12 +1651,30 @@ export function createWalk(d: WalkDeps) {
     if (aim) setAim(false);
     mouseR = false;
     setBlock(false);
-    mouseBlock = padBlock = padBlockOn = false;
+    mouseBlock = false;
+    letGoGuard();
   }
   /** The touch Block button's state (lit while it's on, as a toggle) */
   function setBlock(on: boolean) {
     fightBtns.block = on;
     blockBtnEl?.setAttribute('aria-pressed', String(on));
+  }
+  /** On the street the Block button is the Guard: its state, lit while it's up */
+  function setGuard(on: boolean) {
+    fightBtns.guard = on;
+    blockBtnEl?.setAttribute('aria-pressed', String(on));
+  }
+  /** The guard let go on every input (hands no longer empty, a fight, a setting changed) */
+  function letGoGuard() {
+    mouseGuard = padGuard = padGuardOn = false;
+    if (fightBtns.guard) setGuard(false);
+  }
+  /** The touch button's words: the ring's Block, or the street's Guard */
+  function labelBlockBtn(ring: boolean) {
+    if (!blockBtnEl) return;
+    blockBtnEl.setAttribute('aria-label', ring ? 'Block (hold)' : 'Guard');
+    const w = blockBtnEl.querySelector('.tc-word');
+    if (w) w.textContent = ring ? 'Block' : 'Guard';
   }
   /** Crouch held (comfort.ts: crouch on hold): his key, button or touch button down */
   let crouchKey = false;
@@ -1765,7 +1793,9 @@ export function createWalk(d: WalkDeps) {
     keys.clear();
     padLean = 0;
     jumpHeld = false;
-    mouseL = mouseR = mouseBlock = padBlock = false;
+    mouseL = mouseR = mouseBlock = false;
+    if (hm('guard', 'keys') === 'hold') mouseGuard = false;
+    padGuard = false;
     crouchKey = crouchPad = crouchTouch = false;
     setAim(false);
     combat.trigger(false);
@@ -1807,10 +1837,11 @@ export function createWalk(d: WalkDeps) {
   canvas.addEventListener('pointerdown', (e) => (lastPointer = e.pointerType), true);
   canvas.addEventListener('mousedown', (e) => {
     if (!active || lastPointer !== 'mouse' || fighting()) return;
-    // Empty hands: a click punches (once the mouse is captured), the right button held blocks
+    // Empty hands: the right button held lifts the guard (the owner's call, 2026-11), and a click punches with it
+    // up (once the mouse is captured; brawl-sim.ts throws nothing without the guard)
     if (fistsReady()) {
       if (e.button === 0 && (locked() || noLock)) fightBtns.punch = true;
-      if (e.button === 2) mouseBlock = press(hm('block', 'keys'), mouseBlock, true);
+      if (e.button === 2) mouseGuard = press(hm('guard', 'keys'), mouseGuard, true);
       d.touched();
       return;
     }
@@ -1826,6 +1857,7 @@ export function createWalk(d: WalkDeps) {
   });
   window.addEventListener('mouseup', (e) => {
     if (e.button === 2 && hm('block', 'keys') === 'hold') mouseBlock = false;
+    if (e.button === 2 && hm('guard', 'keys') === 'hold') mouseGuard = false;
     if (e.button === 2 && mouseR) aim = mouseR = false;
     if (e.button === 0 && mouseL) {
       mouseL = false;
@@ -1903,6 +1935,9 @@ export function createWalk(d: WalkDeps) {
     get sprintLock() {
       return sprintLock;
     },
+    get ring() {
+      return fighting();
+    },
     get jumpHeld() {
       return jumpHeld;
     },
@@ -1924,6 +1959,7 @@ export function createWalk(d: WalkDeps) {
     crouchPress,
     nextCam,
     setBlock,
+    setGuard,
     quitFight,
     setFirstPerson,
     saveSettings,
@@ -1939,7 +1975,7 @@ export function createWalk(d: WalkDeps) {
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
   // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands);
-  // with empty hands X punches, Y kicks (nothing to do there), LB held blocks, A dodges standing with the guard up
+  // with empty hands LB held lifts the guard, and with it up X punches, Y kicks (nothing to do there), A dodges standing
   /** The gamepad (walkpad.ts, docs/walk-plan.md Phase 1): what it reads and calls of walk mode, and what it fills */
   const padState: PadState = { pad, drive: padDrive, kart: padKart, fly: padFly, fight: padFight };
   const padHost: PadHost = {
@@ -1986,17 +2022,17 @@ export function createWalk(d: WalkDeps) {
     set padLean(v) {
       padLean = v;
     },
-    get padBlock() {
-      return padBlock;
+    get padGuard() {
+      return padGuard;
     },
-    set padBlock(v) {
-      padBlock = v;
+    set padGuard(v) {
+      padGuard = v;
     },
-    get padBlockOn() {
-      return padBlockOn;
+    get padGuardOn() {
+      return padGuardOn;
     },
-    set padBlockOn(v) {
-      padBlockOn = v;
+    set padGuardOn(v) {
+      padGuardOn = v;
     },
     shop,
     garageUI,
@@ -2404,8 +2440,10 @@ export function createWalk(d: WalkDeps) {
     if (fists && fistsMod && !fists.brawl.move && fists.style !== style) fists = fistsMod.createStreetFists(style);
     const fistsOn = fistsReady() && !moments.active && !over && !slide;
     if (!fistsOn && fists && (fists.brawl.up || fists.brawl.move)) fists.brawl.cancel();
+    // (the guard: the right mouse button, LB or the touch Guard; punches, kicks and the dodge only with it up)
+    const guardHeld = mouseGuard || padGuard || fightBtns.guard;
     const fistStep = fistsOn
-      ? fists!.brawl.step(dt, pos.x, pos.z, face, { punch: fightBtns.punch, kick: fightBtns.kick, dodge: fightBtns.dodge, block: fightBtns.block || mouseBlock || padBlock, sprinting: sprint && mag > 0.1, dx: dirX, dz: dirZ })
+      ? fists!.brawl.step(dt, pos.x, pos.z, face, { punch: fightBtns.punch, kick: fightBtns.kick, dodge: fightBtns.dodge, guard: guardHeld, sprinting: sprint && mag > 0.1, dx: dirX, dz: dirZ })
       : null;
     if (!fighting()) fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
     const guardUp = fistsOn && fists!.brawl.up;
@@ -2413,10 +2451,15 @@ export function createWalk(d: WalkDeps) {
     if (fistsOn !== fistsShown) {
       fistsShown = fistsOn;
       root.classList.toggle('is-fists', fistsOn);
+      labelBlockBtn(!fistsOn);
+      // (hands full, or anything else on: the guard let go, so it isn't up again the moment they're empty)
+      if (!fistsOn) letGoGuard();
     }
+    // (touch: Punch and Kick show while the guard's up)
+    if (guardUp !== root.classList.contains('is-guard')) root.classList.toggle('is-guard', guardUp);
     // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp && fists!.brawl.blocking ? fistsMod!.BRAWL.blockSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp ? fistsMod!.BRAWL.guardSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
@@ -2887,24 +2930,29 @@ export function createWalk(d: WalkDeps) {
     frameShowroom(dt);
     hero.ring.visible = !firstPerson;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
-    // Empty hands in first person: his own fists in the guard, thrown with the moves (fistsview.ts)
+    // Empty hands in first person: his own arms, the fists up in the guard and thrown with the moves, pumping when
+    // he runs with his hands down (fistsview.ts)
     fistsView?.update(
       camera,
       dt,
       {
         up: fistsOn && fists!.brawl.up,
-        blocking: fistsOn && fists!.brawl.blocking,
         clip: fistsOn ? fists!.brawl.clip() : { id: 'guard', frame: 0 },
         move: stride,
         phase,
         run: runAmt,
         dodge: dirX * Math.cos(yaw) - dirZ * Math.sin(yaw),
+        still: d.reduced,
       },
       firstPerson && fistsOn,
     );
 
-    // Field of view widens with speed, narrows when aiming
-    const wantFov = (firstPerson ? 70 : 52) + (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt) - (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
+    // Field of view widens with speed, narrows when aiming, and in first person a touch with the guard up (the
+    // owner's call, 2026-11: the fight in focus)
+    const wantFov =
+      (firstPerson ? 70 : 52) +
+      (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt - (firstPerson ? GUARD_ZOOM * guardAmt : 0)) -
+      (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
     fov += (wantFov - fov) * damp(6, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;
@@ -3277,9 +3325,10 @@ export function createWalk(d: WalkDeps) {
       // (the fists down)
       fists?.brawl.cancel();
       partners?.hide();
-      mouseBlock = padBlock = fistsShown = false;
+      mouseBlock = fistsShown = false;
+      letGoGuard();
       guardAmt = wholeAmt = 0;
-      root.classList.remove('is-fists');
+      root.classList.remove('is-fists', 'is-guard');
       // On the water: the hire boat goes home
       boat?.abandon();
       // ...and a kart race is abandoned too
