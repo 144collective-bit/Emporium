@@ -11,7 +11,7 @@
  *   the butts and the sheds' doors. Phones draw every other crop row.
  */
 import * as THREE from 'three';
-import { Batch, toon } from './kit';
+import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { COVER, KERB, SOIL } from './palette';
 import { METAL } from './infill';
@@ -31,6 +31,8 @@ const paint = (hex: string) => {
 const FLAGS = toon(KERB.grit);
 const TRIM = toon('#f1eee8');
 const GLASS = toon('#22304a');
+/** A window with a lamp on behind it (Phase 5): dark by day, warm at night, under the bloom's threshold */
+const LIT_GLASS = neon('#ffd58a', 0.14, 0.95);
 const WALL_BRICK = toon('#7a4337');
 const COPING = toon('#a9a5ad');
 const FENCE = toon('#7a5a3a');
@@ -94,7 +96,8 @@ function bungalow(h: Bungalow, low: boolean) {
     const wins: [number, number][] = [];
     if (h.doorZ - z0 > 2.6) wins.push([z0 + 0.6, h.doorZ - 0.75]);
     if (z1 - h.doorZ > 2.6) wins.push([h.doorZ + 0.75, z1 - 0.6]);
-    for (const [a, c] of wins) cube(b, [F, a, F + 0.012, c], S + 0.45, S + 0.95, GLASS);
+    // (a lamp on behind the first window of three in four of them)
+    wins.forEach(([a, c], k) => cube(b, [F, a, F + 0.012, c], S + 0.45, S + 0.95, k === 0 && h.id !== 'bungalow-1-0' ? LIT_GLASS : GLASS));
     // The front wall along the lane, the path from its gap to the door, the back garden's fences, the shed
     for (const r of frontWall(h)) {
       cube(b, r, S, S + FRONT_WALL.h - 0.05, WALL_BRICK);

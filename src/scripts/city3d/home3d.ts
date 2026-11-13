@@ -57,6 +57,8 @@ const TYRE = toon('#1f1e25');
 const RENDER = toon('#e8a23a');
 const TRIM = toon('#f1eee8');
 const GLASS = toon('#22304a');
+/** A window with a lamp on behind it (Phase 5): dark by day, warm at night, under the bloom's threshold */
+const LIT_GLASS = neon('#ffd58a', 0.14, 0.95);
 const HIS_DOOR = toon('#e0563a');
 const LAWN = toon(COVER.lawn);
 const TRUNK_M = toon(TREE.trunk);
@@ -198,8 +200,8 @@ function house(b: Batch, low: boolean) {
   const F = z0 - 0.02;
   cube(b, [dx - 0.34, F, dx + 0.34, z0 - 0.004], S, S + 1.12, HIS_DOOR);
   cube(b, [dx - 0.7, z0 - 0.75, dx + 0.7, z0], S + 1.22, S + 1.3, COPING);
-  const win = (wa: number, wb: number, y0: number, y1: number) => {
-    cube(b, [wa, F, wb, z0 - 0.004], S + y0, S + y1, GLASS);
+  const win = (wa: number, wb: number, y0: number, y1: number, on = true) => {
+    cube(b, [wa, F, wb, z0 - 0.004], S + y0, S + y1, on ? LIT_GLASS : GLASS);
     b.detail(() => {
       cube(b, [wa - 0.05, F - 0.012, wb + 0.05, z0 - 0.004], S + y0 - 0.05, S + y0, TRIM);
       cube(b, [wa - 0.05, F - 0.012, wb + 0.05, z0 - 0.004], S + y1, S + y1 + 0.05, TRIM);
@@ -208,7 +210,8 @@ function house(b: Batch, low: boolean) {
   };
   win(x0 + 0.65, dx - 0.9, 0.5, 1.05);
   win(dx + 0.9, x1 - 0.65, 0.5, 1.05);
-  for (const [wa, wb] of [[x0 + 0.65, x0 + 2.65], [dx - 1.0, dx + 1.0], [x1 - 2.65, x1 - 0.65]]) win(wa, wb, 1.55, 2.15);
+  // (upstairs: the middle one's lamp is off)
+  [[x0 + 0.65, x0 + 2.65], [dx - 1.0, dx + 1.0], [x1 - 2.65, x1 - 0.65]].forEach(([wa, wb], k) => win(wa, wb, 1.55, 2.15, k !== 1));
   // The side door onto the lawn, and a window in the back wall
   const sz = HOME.sideDoor[1];
   cube(b, [x1 + 0.004, sz - 0.3, x1 + 0.02, sz + 0.3], S, S + 1.08, SIDE_DOOR);
