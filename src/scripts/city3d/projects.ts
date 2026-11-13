@@ -37,7 +37,7 @@ export const EMPORIUM_ROOF = 12.5;
 export type TowerDesign = 'cross' | 'slab' | 'L' | 'T' | 'stepped' | 'walkup' | 'point';
 export const TOWER_DESIGNS: TowerDesign[] = ['cross', 'slab', 'L', 'T', 'stepped', 'walkup', 'point'];
 /** Brick: mostly red, some brown, tan and dark (wall atlas bands, infill.ts) */
-export type Brick = 'brick' | 'brownstone' | 'brickTan' | 'brickDark';
+export type Brick = 'brick' | 'brownstone' | 'brickTan' | 'brickDark' | 'brickOrange' | 'brickPurple' | 'brickGlazed' | 'panel';
 /** One piece of a tower: its footprint and its own height (a stepped tower's ends are lower than its middle) */
 export interface TowerPart {
   rect: Rect;
@@ -84,7 +84,9 @@ export const STOOP = { out: 0.75, w: 1.3, h: 0.45 };
 export const SCAFFOLD_OUT = 0.9;
 
 /** Five in eight red, then brown, tan and dark (picked by a tower's number, so they scatter) */
-const BRICKS: Brick[] = ['brick', 'brick', 'brownstone', 'brick', 'brickTan', 'brick', 'brick', 'brickDark'];
+// (the variety plan's Phase 2: orange and purple brick, the post-war cream glazed brick and precast panels among them)
+// (ten of them: the towers take every third in turn, so the length shares no factor with 3)
+const BRICKS: Brick[] = ['brick', 'brickOrange', 'brownstone', 'brickGlazed', 'brickTan', 'brick', 'brickPurple', 'brickDark', 'panel', 'brickOrange'];
 const roofOver = (floors: number) => Math.round((SHOP_H + floors * FLOOR + PARAPET) * 100) / 100;
 
 /**

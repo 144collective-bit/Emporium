@@ -28,6 +28,7 @@ import { parkedCars, type CarId } from './cars';
 import { AVENUE_Z, TRENCH_BLOCKS } from './trenches';
 import { LOWRISE, LOWRISE_NAMES, LOW_CARS, TENEMENTS, VACANT, lowFrame, type LowLot, type Vacant } from './streetwall';
 import { buildFx, poster, tag, atlasQuad } from './grime';
+import { shuttered } from './grit';
 import type { Idle } from './landmarks';
 import type { Pt, Rect } from './downtown';
 import { COVER } from './palette';
@@ -310,7 +311,8 @@ export function buildStreetWalls(scene: THREE.Scene, crowd: Idle[], opts: { low:
       const rect: Rect = [Math.min(...mine.map((o) => o.box[0])), Math.min(...mine.map((o) => o.box[1])), Math.max(...mine.map((o) => o.box[2])), Math.max(...mine.map((o) => o.box[3]))];
       site(`trench tenements ${id} ${n / 2}`, rect, (into) => {
         const b = new Batch();
-        for (const o of mine) drawLot(b, o, low);
+        // (a lot the grit shutters right down (grit.ts `shuttered()`) keeps its shopfront plain under the shutter)
+        for (const o of mine) drawLot(b, shuttered(o) ? { ...o, shopfront: undefined } : o, low);
         b.build(into);
       });
     }

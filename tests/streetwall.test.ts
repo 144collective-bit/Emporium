@@ -39,7 +39,7 @@ const roads = PLAN.streets.filter((s) => s.kind !== 'alley');
 const fronting = (r: Rect, face: string, b: Rect) => (face === 'n' ? Math.abs(r[1] - b[1]) < 1e-6 : face === 's' ? Math.abs(r[3] - b[3]) < 1e-6 : face === 'w' ? Math.abs(r[0] - b[0]) < 1e-6 : Math.abs(r[2] - b[2]) < 1e-6);
 const EMPORIUM_TOP = 12;
 
-test('the street walls: tenements round the yards, shops below, fire escapes, 4 to 6 storeys, made-up names', () => {
+test('the street walls: tenements round the yards, shops below, 3 to 6 storeys (the variety plan, Phase 3), made-up names', () => {
   assert.ok(TENEMENTS.length >= 40, `${TENEMENTS.length} tenements`);
   assert.ok(new Set(TENEMENTS.map((t) => t.block)).size >= 8, 'round most of the yards');
   for (const t of TENEMENTS) {
@@ -52,8 +52,7 @@ test('the street walls: tenements round the yards, shops below, fire escapes, 4 
     const [w, d] = t.face === 'n' || t.face === 's' ? [t.box[2] - t.box[0], t.box[3] - t.box[1]] : [t.box[3] - t.box[1], t.box[2] - t.box[0]];
     assert.ok(Math.abs(d - WALL_DEPTH) < 1e-6 && w >= 3.1 - 1e-6 && w <= 6 + 1e-6, `${t.seed} ${w.toFixed(2)} wide`);
     assert.equal(t.type, 'shop');
-    assert.ok(t.escape, 'a fire escape up the front');
-    assert.ok(t.floors >= 3 && t.floors <= 5, '4 to 6 storeys');
+    assert.ok(t.floors >= 2 && t.floors <= 5, '3 to 6 storeys');
     assert.ok(t.h < EMPORIUM_TOP, 'under the Emporium');
     assert.ok(t.sign && TRENCH_SIGNS.includes(t.sign));
     assert.ok(t.solids.length >= 1);
@@ -68,7 +67,7 @@ test('the street walls: tenements round the yards, shops below, fire escapes, 4 
   }
   for (const a of TENEMENTS) for (const c of TENEMENTS) if (a !== c) assert.ok(!overlaps(a.box, c.box), 'shoulder to shoulder, never on top');
   // Their storeys vary
-  assert.equal(new Set(TENEMENTS.map((t) => t.floors)).size, 3);
+  assert.equal(new Set(TENEMENTS.map((t) => t.floors)).size, 4);
 });
 
 test('the tenements\' names: a long list, each from the list once, none twice within a few doors (the polish plan, Phase 2)', () => {

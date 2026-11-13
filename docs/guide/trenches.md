@@ -12,7 +12,21 @@ keep it up to date when what it describes changes.
   (2) the brick tower blocks (8-10 floors, under the Emporium),
   brownstones, The Block and its pin (built); (3) four corner shops for Dorras
   (20,000 / 30,000 / 45,000 / 60,000 from level 5, run like your units;
-  built).
+  built). **More real and more varied** (the owner's call, 2026-11-12: "the
+  buildings are all the same") is `docs/trenches-variety-plan.md` (done,
+  2026-11-13) in six phases (windows, facades, rooflines, ground floors, streets and
+  yards, polish), each with the owner's sign-off.
+  Phase 1 (the windows, city-wide: `windows.ts`, painted by infill.ts's
+  `wallBand()`) and Phase 2 (the facades: five more wall materials in the
+  atlas, weathering, the towers and tenements in a mix) and Phase 3 (the
+  rooflines: `rooftones.ts`, roofs in tar, gravel, silver or navy,
+  cornices of four kinds, the tenements 3 to 6 storeys) and Phase 4 (the
+  ground floors: `shopfronts.ts`, fire escapes on about half, half-up
+  shutters, recessed doorways, gates, painted ground floors) and Phase 5
+  (the yards and streets: `yardbits.ts`, benches with bins, bike racks and
+  planters in the yards, timber poles and their wires along the yards'
+  open street edges) are built, and Phase 6 reviewed them (phones level
+  with before the plan).
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets
@@ -39,8 +53,10 @@ keep it up to date when what it describes changes.
     own; a tower is parts (`TowerPart`: a footprint and its own storeys, 3
     to 9 over the ground floor), its `main` part carrying the stair house
     (and a water tank up to 8 storeys), every top `EMPORIUM_ROOF` less half
-    a tile or more under; mostly red brick with some brown, tan and dark
-    (`Brick`, new wall atlas bands `brickTan` / `brickDark` in infill.ts);
+    a tile or more under; a mix of materials, red brick the most common
+    (`Brick`; since the variety plan's Phase 2 orange and purple brick,
+    the post-war cream glazed brick and precast panels too, bands in
+    infill.ts's wall atlas);
     balconies on some (`balconies`), scaffolding up one (`scaffold`); each
     door on the side nearest a street. `towerShell()` turns the parts into
     walls and roofs: the footprint cut into cells, each as tall as the
@@ -120,7 +136,17 @@ keep it up to date when what it describes changes.
     some of the rows' alleys (`TRASH`); about two in five of the rows' shops
     shuttered (`shuttered()`, never a corner shop), windows boarded
     (`boarded()`); three boombox corners by walk-ups' stoops with folding
-    chairs and neighbours (`BOOMBOXES`); the el's pillars and spans in The
+    chairs and neighbours (`BOOMBOXES`); since the variety plan's Phase 5
+    (`yardbits.ts`, tested in `tests/yardbits.test.ts`, drawn in each
+    yard's site) benches with a bin, bike racks and planters on the bare
+    concrete (`YARD_BITS`, on a `BIT_GRID` clear of `taken()`, the
+    patches, trees, dumpsters and each other, a quarter turn towards the
+    nearest tower's door) and timber poles just inside the yards' street
+    edges (`STREET_POLES`, `POLE`, every `POLE_GAP`, sliding up to
+    `POLE_SLIDE` off a taken spot, clear of what's built, `taken()` and the
+    trees; a transformer on some) with three wires between neighbours on
+    an edge (`POLE_WIRES`, at most `WIRE_MAX` long, never across a
+    tenement or tower; near only); none of it solid; the el's pillars and spans in The
     Trenches (`EL_PILLARS`, `PLINTH`, `EL_SPANS`); `GRIT_SOLIDS` (in
     `SOLIDS`: the barriers, the dumpsters). Tags and wheatpasted bills are
     two atlases in `grime.ts` (`TAGS`, `POSTERS`: made-up names and made-up
@@ -145,8 +171,8 @@ keep it up to date when what it describes changes.
   - **Built up** (the grit's step 2, the owner's call) is `streetwall.ts`
     (DOM-free, tested in `tests/streetwall.test.ts`), drawn by
     `streetwall3d.ts` (`buildStreetWalls()`, sites, after the grit): the
-    street walls (`TENEMENTS`: 4-6 storey tenements, the kits' shops with
-    `escape` (a fire escape up the front for certain) and `wall` (their
+    street walls (`TENEMENTS`: 3-6 storey tenements, no two neighbours alike, the kits' shops with
+    `escape` (a fire escape up the front or not, shopfronts.ts `escapeAt()`), `shopfront`, `paint` and `wall` (their
     brick), Infill fields infill.ts honours; made-up names `TRENCH_SIGNS`
     (CLUCK HOUSE, GLOSS NAILS, HERO DELI, CELL FIX, KING'S CUTS, LUCKY 7
     PHARMACY and the rest added to `SIGNS`; each tenement's picked from

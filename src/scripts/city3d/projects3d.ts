@@ -19,7 +19,8 @@
  */
 import * as THREE from 'three';
 import { Batch, canvasTex, FONT_DISPLAY, lit, PAL, roundRect, siteMat, toon } from './kit';
-import { ATLAS, INK, METAL, ROOF, STONE, CREAM, WOOD, acUnit, glow, kit, planter, tank, type Frame } from './infill';
+import { ATLAS, INK, METAL, ROOF, STONE, CREAM, WOOD, acUnit, antenna, glow, kit, planter, tank, type Frame } from './infill';
+import { ROOF_TONES, aerialAt, roofTone, tankAt, ventsAt } from './rooftones';
 import { drawLot } from './kits3d';
 import { SLAB as S, addLamp, addTree } from './world';
 import { site } from './tilework';
@@ -126,7 +127,16 @@ function atlasPlane(row: number, rows: number, w: number, h: number, n: Pt, x: n
 
 const FACE_N: Record<Tower['door']['face'], Pt> = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] };
 /** The parapets' brick, a shade under each wall's */
-const PARAPET_OF: Record<Brick, string> = { brick: '#5a2c2a', brownstone: '#4e3326', brickTan: '#7a5c40', brickDark: '#3a2124' };
+const PARAPET_OF: Record<Brick, string> = {
+  brick: '#5a2c2a',
+  brownstone: '#4e3326',
+  brickTan: '#7a5c40',
+  brickDark: '#3a2124',
+  brickOrange: '#6a3020',
+  brickPurple: '#40262f',
+  brickGlazed: '#9a9078',
+  panel: '#5f5c57',
+};
 const BULK_H = 0.9;
 /** The wall atlas's bays (infill.ts): a window every 0.75 along, one a floor; the sill this far over the floor line */
 const BAY = 0.75;
@@ -259,7 +269,9 @@ function tower(b: Batch, t: Tower, low: boolean, piece: TowerPiece, fxb: Batch) 
 
   k.all(() => {
     for (const w of walls) k.wall(band, w.a, w.c, S + w.y0, S + w.y1, w.n, 0);
-    for (const rf of roofs) k.lbox(rf.rect[0], rf.rect[2], S + rf.h - 0.04, S + rf.h, rf.rect[1], rf.rect[3], ROOF);
+    // (its covering from where it stands: rooftones.ts, the variety plan's Phase 3)
+    const cover = toon(ROOF_TONES[roofTone(t.door.x, t.door.z)]);
+    for (const rf of roofs) k.lbox(rf.rect[0], rf.rect[2], S + rf.h - 0.04, S + rf.h, rf.rect[1], rf.rect[3], cover);
     // Parapets along every wall's top, on the inside
     for (const w of walls) {
       const L = laid(w);
@@ -282,7 +294,14 @@ function tower(b: Batch, t: Tower, low: boolean, piece: TowerPiece, fxb: Batch) 
   b.detail(() => {
     k.lbox(cx - (wide ? 1.2 : 0.8), cx + (wide ? 1.2 : 0.8), top + BULK_H, top + BULK_H + 0.08, cz - (wide ? 0.8 : 1.2), cz + (wide ? 0.8 : 1.2), ROOF);
     const room = Math.max(m[2] - m[0], m[3] - m[1]) / 2;
-    if (t.tank) tank(k, cx + (wide ? Math.min(2.6, room - 1) : 0), cz + (wide ? 0 : Math.min(2.6, room - 1)), top + 0.02);
+    // The water tank, round timber or square steel (rooftones.ts `tankAt()`); vent stacks and an aerial on most
+    const [tx, tz] = [cx + (wide ? Math.min(2.6, room - 1) : 0), cz + (wide ? 0 : Math.min(2.6, room - 1))];
+    if (t.tank) (tankAt(t.door.x, t.door.z) === 'round' ? tank : squareTank)(k, tx, tz, top + 0.02);
+    for (let i = 0, n = ventsAt(t.door.x, t.door.z); i < n; i++) {
+      const [vx, vz] = [cx + (wide ? -0.6 + i * 0.5 : 1.1 + i * 0.12), cz + (wide ? 1.1 + i * 0.12 : -0.6 + i * 0.5)];
+      vent(k, vx, vz, top);
+    }
+    if (aerialAt(t.door.x, t.door.z) && !low) antenna(k, cx + (wide ? -0.8 : 0.4), cz + (wide ? 0.4 : -0.8), top + BULK_H + 0.08, 1.3);
     if (!low) {
       acUnit(k, cx - (wide ? Math.min(3, room - 1) : 0.6), cz + (wide ? 0.4 : -Math.min(3, room - 1)), top);
       // A satellite dish or two on the roof
@@ -370,6 +389,25 @@ function tower(b: Batch, t: Tower, low: boolean, piece: TowerPiece, fxb: Batch) 
 const PARAPET_GAP = 0.35;
 
 /** A satellite dish on a bracket, facing `ry` */
+/** A square steel water tank on its stilts (the round timber one is infill.ts's `tank()`) */
+function squareTank(k: ReturnType<typeof kit>, x: number, z: number, base: number) {
+  for (const [dx, dz] of [
+    [-0.32, -0.32],
+    [0.32, -0.32],
+    [0.32, 0.32],
+    [-0.32, 0.32],
+  ])
+    k.lbox(x + dx - 0.035, x + dx + 0.035, base, base + 0.65, z + dz - 0.035, z + dz + 0.035, METAL);
+  k.lbox(x - 0.42, x + 0.42, base + 0.65, base + 1.35, z - 0.42, z + 0.42, toon('#7d8288'));
+  k.lbox(x - 0.45, x + 0.45, base + 1.35, base + 1.4, z - 0.45, z + 0.45, METAL);
+  // (a ladder up its side)
+  k.lbox(x + 0.42, x + 0.45, base + 0.2, base + 1.4, z - 0.1, z + 0.1, METAL);
+}
+/** A vent stack: a short pipe with a cap */
+function vent(k: ReturnType<typeof kit>, x: number, z: number, base: number) {
+  k.put(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 6, 1, true).translate(x, base + 0.25, z), METAL);
+  k.put(new THREE.ConeGeometry(0.12, 0.1, 6).translate(x, base + 0.55, z), METAL);
+}
 function dish(k: ReturnType<typeof kit>, x: number, y: number, z: number, ry: number) {
   k.put(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4).translate(x, y + 0.15, z), METAL);
   k.put(new THREE.CylinderGeometry(0.2, 0.06, 0.06, 10).rotateX(Math.PI / 2 - 0.5).rotateY(ry).translate(x, y + 0.36, z), toon('#e8e2f0'));
