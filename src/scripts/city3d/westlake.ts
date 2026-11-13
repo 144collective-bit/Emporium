@@ -213,7 +213,7 @@ export function inset(poly: Pt[], d: number): Pt[] {
   const nrm = poly.map((p, i) => {
     const q = poly[(i + 1) % n];
     const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    // Inward: to the left of travel (counter-clockwise from above, as world.ts insetPoly)
+    // Inward: to the left of travel (counter-clockwise from above, as streetplan.ts insetPoly)
     return [(q[1] - p[1]) / l, -(q[0] - p[0]) / l] as Pt;
   });
   return poly.map((p, i) => {

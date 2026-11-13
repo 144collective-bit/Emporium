@@ -1,5 +1,5 @@
 // Endswood carried west (endswest.ts, docs/ends-west-plan.md Phase 1, the owner's picks: still Endswood, the Close
-// carried west (its bollards at the far end, until the far west took them up), houses facing paths and greens with cars in courts behind, the near
+// carried west with its bollards at the far end, houses facing paths and greens with cars in courts behind, the near
 // half): its land outside the highway's bend and off Lot 9 and the Docks; the Close in the street plan reaching its far
 // end, crossing the tunnel's footpath on a zebra, carrying no traffic; the blocks, lanes, courts, rows, gardens, paths,
 // greens and the reserve where they belong and never on each other; its lamps sodium, the trees and its sound
@@ -70,10 +70,12 @@ test("the Close carried west: in the street plan to its far end, its bollards ac
   const xs = close.pts.map((p) => p[0]);
   assert.ok(Math.abs(Math.min(...xs) - CLOSE_WEST) < 1e-9, 'it reaches the far end');
   assert.ok(close.pts.every((p) => p[1] === ROAD_Z), 'straight along the road line');
-  // The bollards across its far end were taken up when it was carried on to the far west (endsfar.ts, the owner's
-  // call): none there now, nothing solid in their place, and the old end open as before
-  assert.equal(CLOSE_BOLLARDS.length, 0);
-  for (const o of [-1.2, -0.4, 0.4, 1.2]) assert.ok(![...SOLIDS, ...ENDS_SOLIDS].some((b) => inRect(b, CLOSE_WEST + 0.35, ROAD_Z + o * ROAD_HALF)), 'a bollard left at the far end');
+  // The bollards: four across the road at the far end, none left at the old end
+  assert.equal(CLOSE_BOLLARDS.length, 4);
+  for (const [x, z] of CLOSE_BOLLARDS) {
+    assert.ok(Math.abs(x - CLOSE_WEST) < 0.5 && Math.abs(z - ROAD_Z) <= ROAD_HALF * 1.25, `a bollard at ${x}, ${z}`);
+    assert.ok(SOLIDS.some((b) => inRect(b, x, z)) && ENDS_SOLIDS.some((b) => inRect(b, x, z)));
+  }
   assert.ok(!SOLIDS.some((b) => inRect(b, CLOSE_END + 0.35, ROAD_Z)), 'the old end is open');
   // (a dead end: no route drives it past the old end)
   for (const r of ROUTES) for (const p of r.pts) assert.ok(!(p[0] < CLOSE_END - 1 && Math.abs(p[1] - ROAD_Z) < ROAD_HALF + 1), `a route down the Close at ${p}`);

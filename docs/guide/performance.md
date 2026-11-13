@@ -151,7 +151,14 @@ keep it up to date when what it describes changes.
     script, the 3D city's boot code (its chunk and what it imports
     straight away), the biggest lazy chunk and the CSS, gzipped, each
     under a fixed size. Raise one only on purpose, never to get a build
-    through. The baked data's file is an information row (`baked`); on CI
+    through. The wallet's log-in library (`@walletconnect`, only in the
+    Worker's build with a game server, loaded when someone connects a
+    wallet) has its own row, `walletJs` (120 KB, the owner's call, 2026-11:
+    its core alone is 112 KB, which held the Worker's build red at
+    `lazyJs`): astro.config.mjs names its chunks `wallet-*` (a chunk made
+    of nothing but packages other than three.js's, Astro's and Vite's;
+    every other chunk keeps Astro's own name), and `lazyJs` counts the
+    rest. The baked data's file is an information row (`baked`); on CI
     (`process.env.CI`) a build without the texture sets made at build time
     is red (`texLow`, `texFull`: the bake didn't run or failed).
 - One render loop only: always (re)start it with `loop()` in `index.ts`,

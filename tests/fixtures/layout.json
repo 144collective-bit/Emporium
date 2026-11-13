@@ -10291,42 +10291,6 @@
    ]
   },
   {
-   "id": "ends-close-far",
-   "kind": "street",
-   "half": 1.7,
-   "lanes": 1,
-   "pts": [
-    [
-     -200.8,
-     380
-    ],
-    [
-     -216,
-     380
-    ]
-   ]
-  },
-  {
-   "id": "ends-lane",
-   "kind": "street",
-   "half": 1.7,
-   "lanes": 1,
-   "pts": [
-    [
-     -216,
-     348
-    ],
-    [
-     -216,
-     380
-    ],
-    [
-     -216,
-     412
-    ]
-   ]
-  },
-  {
    "id": "mall-loop",
    "kind": "street",
    "half": 1.7,

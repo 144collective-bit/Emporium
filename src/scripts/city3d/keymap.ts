@@ -152,6 +152,19 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
 
 export const MODE_IDS = Object.keys(KEYMAP) as ModeId[];
 
+/** The hub's Settings > Controls rows for City view (CityMap.astro; the free camera, freecam.ts):
+ * keys and the mouse only, touch keeps its drag and pinch. Not a mode of `KEYMAP`: City view has no views, nor a gamepad */
+export const FLY_KEYS: { keys: string[]; label: string }[] = [
+  { keys: ['WASD', '↑ ← ↓ →'], label: 'Fly' },
+  { keys: ['E', 'Space'], label: 'Up' },
+  { keys: ['Q', 'C'], label: 'Down' },
+  { keys: ['Shift'], label: 'Faster' },
+  { keys: ['Right-drag'], label: 'Look' },
+  { keys: ['Drag'], label: 'Pan' },
+  { keys: ['Ctrl-drag'], label: 'Orbit' },
+  { keys: ['Wheel'], label: 'Zoom' },
+];
+
 /** A mode's jobs with its base's (empty hands and a gun out on top of on foot) */
 export function bindsOf(id: ModeId): Binding[] {
   const m = KEYMAP[id];

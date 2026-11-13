@@ -31,7 +31,6 @@ import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { WEST_LAMPS as ENDS_WEST_LAMPS } from './endswest';
-import { FAR_LAMPS as ENDS_FAR_LAMPS } from './endsfar';
 import { ENDS_TREES } from './endsstreet';
 import { COMMON_LAMPS, COMMON_TREES } from './endsblend';
 import { RURAL_LAMPS } from './ruraldress';
@@ -71,6 +70,7 @@ import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
+import { FLY, POLAR, anyHeld, clampCam, easeVel, groundUnder, keyDir, noKeys, reach, turn, wish, type V3 } from './freecam';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
@@ -419,8 +419,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
   // ...and carried west (endswest.ts, docs/ends-west-plan.md Phase 1): along the Close, in the courts, over the greens
   for (const [x, z, ry, y] of ENDS_WEST_LAMPS) addLamp(x, z, ry, y);
-  // ...and its far west (endsfar.ts)
-  for (const [x, z, ry, y] of ENDS_FAR_LAMPS) addLamp(x, z, ry, y);
   // ...and its trees: the green's, the churchyard's, by the playground and round the community centre (endsstreet.ts, Phase 4)
   for (const [x, z, s] of ENDS_TREES) addTree(x, z, s, false, SLAB);
   // ...and the common's down to Lot 9: sodium along the footpath, a few hawthorns (endsblend.ts, Phase 6)
@@ -498,11 +496,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
-  controls.minDistance = 7;
+  // (the free camera, freecam.ts: it looks level and a little up, and comes in close; the right button looks round,
+  // not orbits: Ctrl or Shift with the left still orbits)
+  controls.minDistance = FLY.pivot;
   controls.maxDistance = 220;
-  controls.minPolarAngle = 0.32;
-  controls.maxPolarAngle = 1.18;
+  controls.minPolarAngle = POLAR[0];
+  controls.maxPolarAngle = POLAR[1];
   controls.zoomToCursor = true;
+  controls.mouseButtons.RIGHT = null;
 
   const home = () => {
     const portrait = host.clientWidth < host.clientHeight;
@@ -1398,6 +1399,99 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape') active ? close() : hub?.show();
   });
   document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
+  /* ---------- The free camera (freecam.ts): WASD flies City view's camera where it looks, the right button looks round ---------- */
+  // What it bumps into (freecollide.ts, the walk camera's solids): its own chunk, loaded once the city is up
+  let camSolids: typeof import('./freecollide') | null = null;
+  const camFrom = new THREE.Vector3();
+  const camTargetFrom = new THREE.Vector3();
+  const flyKeys = noKeys();
+  let flyVel: V3 = [0, 0, 0];
+  const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+  /** City view with nothing over it: no panel, menu, map or start menu, not walking */
+  const flyable = () => root.dataset.view === '3d' && !walking && !active && !hub?.open && !travel.isOpen && !startUp() && !accountUI?.isOpen;
+  const stopFlying = () => {
+    Object.assign(flyKeys, noKeys());
+    flyVel = [0, 0, 0];
+  };
+  document.addEventListener('keydown', (e) => {
+    const dir = keyDir(e.code);
+    if (!dir || e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || !flyable()) return;
+    // (Space on a focused button presses it)
+    if (e.code === 'Space' && e.target instanceof HTMLElement && e.target.closest('button, a, summary, [role="button"]')) return;
+    flyKeys[dir] = true;
+    if (dir !== 'fast') {
+      e.preventDefault();
+      // (a fly-in to a place gives the camera back)
+      if (flight) {
+        flight = null;
+        controls.enabled = true;
+      }
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    const dir = keyDir(e.code);
+    if (dir) flyKeys[dir] = false;
+  });
+  addEventListener('blur', stopFlying);
+  const flyLook = new THREE.Vector3();
+  const flyMove = new THREE.Vector3();
+  /** One frame of flying: true when the camera moved */
+  function flyStep(dt: number) {
+    if (!flyable()) {
+      if (anyHeld(flyKeys) || flyVel.some((v) => v)) stopFlying();
+      return false;
+    }
+    camera.getWorldDirection(flyLook);
+    flyVel = easeVel(flyVel, wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y), dt, reduced);
+    if (!flyVel.some((v) => v)) return false;
+    const p = camera.position;
+    const from: V3 = [p.x, p.y, p.z];
+    // (the buildings stop it, sliding along their faces, once their chunk has come: freecollide.ts)
+    const want = clampCam([p.x + flyVel[0] * dt, p.y + flyVel[1] * dt, p.z + flyVel[2] * dt], 0);
+    const to = camSolids ? camSolids.bump(from, want) : want;
+    const [x, y, z] = clampCam(to, groundUnder(to[0], to[2]));
+    flyMove.set(x - p.x, y - p.y, z - p.z);
+    p.add(flyMove);
+    controls.target.add(flyMove);
+    keepPivot();
+    touched();
+    return true;
+  }
+  /** The orbit's pivot (the target) kept inside the wall, along the look */
+  function keepPivot() {
+    const p = camera.position;
+    flyLook.subVectors(controls.target, p);
+    const d = flyLook.length();
+    if (d < 1e-6) return;
+    flyLook.divideScalar(d);
+    const r = reach([p.x, p.y, p.z], [flyLook.x, flyLook.y, flyLook.z], d);
+    if (r < d - 1e-6) controls.target.copy(p).addScaledVector(flyLook, r);
+  }
+  // Mouse look: the right button held turns the camera where it stands (its pivot kept as far ahead)
+  let lookDrag: number | null = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 2 || e.pointerType !== 'mouse' || !flyable() || flight) return;
+    lookDrag = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== lookDrag || !flyable()) return;
+    const p = camera.position;
+    flyLook.subVectors(controls.target, p);
+    const d = flyLook.length() || 1;
+    const [lx, ly, lz] = turn([flyLook.x / d, flyLook.y / d, flyLook.z / d], e.movementX, e.movementY);
+    controls.target.set(p.x + lx * d, p.y + ly * d, p.z + lz * d);
+    keepPivot();
+    camera.lookAt(controls.target);
+    dirty = true;
+  });
+  const endLook = (e: PointerEvent) => {
+    if (e.pointerId !== lookDrag) return;
+    lookDrag = null;
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+  };
+  canvas.addEventListener('pointerup', endLook);
+  canvas.addEventListener('pointercancel', endLook);
   let down: { x: number; y: number } | null = null;
   canvas.addEventListener('pointerdown', (e) => {
     down = { x: e.clientX, y: e.clientY };
@@ -1620,6 +1714,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
+  /** (the camera's look, for the readout) */
+  const statLook = new THREE.Vector3();
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
     // (`build` includes merging per tile, `tiles`, which includes building the sites round the home view, `sites`;
@@ -1771,8 +1867,25 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (walk.airborne) walker.x = walker.z = 1e6;
       mp?.update(dt, t);
       dirty = true;
-    } else if (controls.update()) dirty = true;
-    // Keep the view over the city (round the built-up area, never past the world: bounds.ts, growth plan Phase 5)
+    } else {
+      if (flyStep(dt)) dirty = true;
+      camFrom.copy(camera.position);
+      camTargetFrom.copy(controls.target);
+      if (controls.update()) dirty = true;
+      // (orbiting, zooming, the drag and touch kept inside the wall, over the ground and out of the buildings too:
+      // freecam.ts, freecollide.ts; a drag or a zoom to the cursor that moved the target is held back with the camera)
+      const p = camera.position;
+      const moved: V3 = [p.x, p.y, p.z];
+      const swept = camSolids && !camFrom.equals(p) ? camSolids.bump([camFrom.x, camFrom.y, camFrom.z], moved) : moved;
+      const [x, y, z] = clampCam(swept, groundUnder(swept[0], swept[2]));
+      if (x !== p.x || y !== p.y || z !== p.z) {
+        if (!camTargetFrom.equals(controls.target)) controls.target.add(flyMove.set(x - p.x, y - p.y, z - p.z));
+        p.set(x, y, z);
+        camera.lookAt(controls.target);
+        dirty = true;
+      }
+    }
+    // Keep the view inside the wall (bounds.ts: up to its inner face, the free camera's reach)
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, PAN_BOUNDS[0], PAN_BOUNDS[2]);
     controls.target.z = THREE.MathUtils.clamp(controls.target.z, PAN_BOUNDS[1], PAN_BOUNDS[3]);
 
@@ -1793,6 +1906,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.on = !reduced;
     camera.updateMatrixWorld();
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
+    CROWD_VIEW.near = camera.near;
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
     // What the camera looks at on the ground (straight ahead a way when it looks level, walking; `look` from above)
@@ -1946,6 +2060,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
+          // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
+          // reads here as under the ground, or the near plane, or the view gone wrong)
+          ...(walking
+            ? [
+                `height ${walk.position.y.toFixed(2)} · camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)} · looks ${camera.getWorldDirection(statLook).y.toFixed(2)} · fog ${(scene.fog as THREE.FogExp2 | null)?.density?.toFixed(4) ?? '-'}`,
+              ]
+            : []),
+          // and where City view's free camera is (freecam.ts)
+          ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`] : []),
         ].join('\n');
         Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
       }
@@ -2031,6 +2154,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   camera.lookAt(controls.target);
   flyTo(start.pos, start.target, 2.8);
   // The cars' fine detail and your car's inside (vehicle plan Phase 1): its own chunk, once the city is up
+  // What City view's free camera bumps into (freecollide.ts: the walk camera's solids)
+  idle(() => void lazy(() => import('./freecollide'), 'the buildings for the camera')().then((m) => (camSolids = m)).catch(() => {}));
   idle(() => void lazy(() => import('./carfine'), "the cars' detail")().then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
   // Your motorbikes' drawing (vehicle plan Phase 7): the garage's stand shows yours once it's come
   idle(() =>

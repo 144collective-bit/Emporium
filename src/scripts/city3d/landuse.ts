@@ -42,7 +42,7 @@ import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
 import { FOOTPATH as LOT9_PATH, LOT9_RECT } from './lot9';
-import { ENDSWOOD_RECT, FAR_RECT as ENDS_FAR_RECT, WEST_RECT as ENDS_WEST_RECT } from './endswood';
+import { ENDSWOOD_RECT, WEST_RECT as ENDS_WEST_RECT } from './endswood';
 import { COMMON as ENDS_COMMON } from './endsblend';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
@@ -171,8 +171,6 @@ export const KEEPS: Keep[] = [
   land('endswood', ENDSWOOD_RECT, 2, true),
   // ...and carried west (endswest.ts, docs/ends-west-plan.md Phase 1)
   land('endswest', ENDS_WEST_RECT, 2, true),
-  // ...and its far west (endsfar.ts, docs/ends-far-west-plan.md Phase 1)
-  land('endsfar', ENDS_FAR_RECT, 2, true),
   // ...and the common down to Lot 9, its own brambles and hawthorns (endsblend.ts, docs/estate-plan.md Phase 6)
   land('ends-common', ENDS_COMMON, 1, true),
   land('lot9', LOT9_RECT, 2, true),

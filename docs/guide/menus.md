@@ -179,6 +179,49 @@ keep it up to date when what it describes changes.
   (`arrangeKey()`, shares of the screen in the right hand's frame),
   `layoutFor()` falls back to the slots where it clashes, and `moveItem()`
   holds a drag clear through the same `clash()`.
+- **City view's free camera** (the owner's call, 2026-11: "the camera
+  free, fly round with WASD; near the wall"; always on, true free fly,
+  up to the wall's inner face): `freecam.ts` (DOM-free, tested in
+  `tests/freecam.test.ts`): `keyDir()` (by `e.code`: WASD and the arrows
+  fly, W along the look, up or down with it, A and D level and square to
+  it; E or Space up, Q or C down; Shift faster: `FLY.fast`), `wish()`
+  (the speed grows with height: `speedAt()`), `easeVel()` (eased in and
+  out, at once under reduced motion), `turn()` (mouse look, the pitch
+  held in `FLY.pitch`; `POLAR` is the same range for MapControls),
+  `clampCam()` (inside `PAN_BOUNDS`, the wall's inner face `PAN_PAD` in,
+  over `groundUnder()` by `FLY.floor`, under `ceilingAt()`: the wall's top
+  near it, `FLY.ceiling` away from it) and `reach()` (the orbit's pivot
+  kept inside the wall along the look). index.ts reads the keys on the
+  document only in City view with nothing over it (`flyable()`: no panel,
+  hub, map, start menu or account card, not walking; never while typing,
+  never with Ctrl, Alt or Meta, Space left to a focused button), moves the
+  camera and its target together (`flyStep()`, in the frame loop before
+  `controls.update()`), and clamps the camera after orbiting and zooming
+  too. The right mouse button looks round where the camera stands (its
+  pivot kept as far ahead); MapControls' right-drag orbit is off
+  (`mouseButtons.RIGHT = null`), Ctrl or Shift with the left still
+  orbits, the left pans, the wheel zooms (to `FLY.pivot` close). A key
+  pressed during a fly-in to a place takes the camera back. Touch keeps
+  its drag and pinch. The hub's Settings > Controls has a City view list
+  (`FLY_KEYS` in keymap.ts, keys and mouse only, hidden on a gamepad or
+  touch: `.km-city`), the header's hint on a desktop reads "WASD to fly"
+  (head.ts), and `?fps` shows `camera x, y, z` in City view.
+  **It bumps into the city** (the owner's call, 2026-11: what walk mode's
+  camera bumps into, sliding along the faces, every move):
+  `freecollide.ts` (DOM-free, tested in `tests/freecollide.test.ts`):
+  `sweep()` moves a direction at a time (x, z, then y) against the boxes
+  grown by `CAM_R` (0.6), stopping at the first face whatever the move's
+  length (nothing tunnels), flying under boxes with a bottom (`b[5]`: the
+  highway's deck, the airport's departures deck, Endswood's galleries),
+  and letting a camera already inside a box out of it; `bump()` takes
+  them from `CAMERA_GRID` (solids.ts, with every district's solids as its
+  chunk joins them). It's its own chunk, loaded by `lazy()` once the city
+  is up (`camSolids` in index.ts; the boot never carries the solids):
+  until it comes the camera flies through. index.ts sweeps WASD's move
+  in `flyStep()`, and every other move (orbit, zoom, the drag, touch, the
+  damping) from where the camera was before `controls.update()`; a move
+  that shifted the target too (the drag, the zoom to the cursor) is held
+  back with the camera. Fly-ins to places aren't swept.
 - **The views and controls plan** (the owner's call: "switch views in all
   walk modes in the vehicles", the controls simpler and more accessible)
   is planned in `docs/views-plan.md`: near, far and first person in every

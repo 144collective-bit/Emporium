@@ -49,10 +49,21 @@ const BUDGETS = {
   bootJs: 740,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
+  /**
+   * Any one piece of the wallet's log-in library (`wallet-*`, named apart in astro.config.mjs): only in a build with
+   * a game server (the Worker's, workers.dev), loaded only when someone connects a wallet. Its own budget, on purpose
+   * (the owner's call, 2026-11): @walletconnect's core alone is 112 KB, which had held the Worker's build at lazyJs
+   */
+  walletJs: 120,
   /** All the CSS */
   css: 60,
-  /** The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed) */
-  texLow: 2300,
+  /**
+   * The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed).
+   * Raised from 2300 on purpose (the owner's call, 2026-11): with every one of the 118 phone textures baked (as most
+   * bakes now do: a texture is only left to paint when its noon and midnight runs differ), the set is about 2340 KB,
+   * which held the Worker's build red on main
+   */
+  texLow: 2450,
   /** ... and as everyone else does */
   texFull: 3500,
   /** Their transcoder (three's Basis wasm and its script) */
@@ -96,8 +107,13 @@ const city = files.find((f) => /^city3d\.[\w-]+\.js$/.test(f));
 if (!city) throw new Error('no city3d chunk in ' + astro);
 const boot = closure([city]);
 for (const n of page) boot.delete(n);
-const lazy = files.filter((f) => f.endsWith('.js') && !boot.has(f) && !page.has(f));
-const biggestLazy = lazy.map((f) => [f, gz(join(astro, f))]).sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
+const later = files.filter((f) => f.endsWith('.js') && !boot.has(f) && !page.has(f));
+/** The wallet's pieces (astro.config.mjs names them `wallet-*`), held to their own budget; the rest are lazyJs's */
+const wallet = later.filter((f) => f.startsWith('wallet-'));
+const lazy = later.filter((f) => !f.startsWith('wallet-'));
+const biggest = (names) => names.map((f) => [f, gz(join(astro, f))]).sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
+const biggestLazy = biggest(lazy);
+const biggestWallet = biggest(wallet);
 const css = files.filter((f) => f.endsWith('.css'));
 /** On CI the texture sets must be there (scripts/bake-textures.mjs ran): a row goes red without them */
 let missingTex = false;
@@ -109,6 +125,7 @@ const rows = [
   ['pageJs', sum(page), [...page].join(' ')],
   ['bootJs', sum(boot), [...boot].join(' ')],
   ['lazyJs', biggestLazy[1], `${biggestLazy[0]} (the biggest of ${lazy.length})`],
+  ['walletJs', biggestWallet[1], wallet.length ? `${biggestWallet[0]} (the biggest of ${wallet.length})` : '(none: no game server in this build)'],
   ['css', sum(css), `${css.length} files`],
   ['baked', bakedFile ? gz(join(astro, bakedFile)) : 0, bakedFile ?? '(none: the city would work its data out itself)'],
 ];

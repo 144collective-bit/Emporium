@@ -13,9 +13,6 @@ driveway." The owner's answers:
   a stash for what the bag doesn't carry.
 - **Whose:** his from the start, every save.
 
-**What comes next** (the owner's call, 2026-11-13): the home moves to a compound of its own in the Ends' far
-west, `docs/ends-far-west-plan.md`. Until that plan's Phase 2 is built, the home is as this plan left it.
-
 ## The plot
 
 Nothing that stands moved. The rows fill their blocks from the lane to the
