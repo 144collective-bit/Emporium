@@ -295,9 +295,10 @@ export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3 };
 /**
  * Running with his hands down (the owner's call: the arms show as he runs): his own swing (the motion capture) lifted
  * into the lower corners and carried forward, so each arm comes into shot as it swings forward and goes as it swings
- * back. These metres, the eye's frame.
+ * back; never higher than `top` nor nearer the eye than `near` (the motion capture's swing comes up higher than the
+ * procedural walk's: a fist must never fill the screen). These metres, the eye's frame.
  */
-export const FP_RUN = { lift: 0.24, pull: 0.25, fwd: 0.14 };
+export const FP_RUN = { lift: 0.24, pull: 0.25, fwd: 0.14, top: -0.17, near: 0.32 };
 
 /** How far out an arm laid in the eye's frame is (0 folded, 1 at full stretch) */
 export const stretch = (l: LaidArm) => THREE.MathUtils.clamp(l.wrist.distanceTo(l.shoulder) / (ARM.upper + ARM.fore), 0, 1);
@@ -328,6 +329,10 @@ export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: La
     target.x -= out.wrist.x * FP_RUN.pull * run;
     target.y += FP_RUN.lift * run;
     target.z -= FP_RUN.fwd * run;
+    if (run > 0) {
+      target.y = Math.min(target.y, THREE.MathUtils.lerp(target.y, FP_RUN.top, run));
+      target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_RUN.near, run));
+    }
     // (round towards his own elbow: its side of the line from the shoulder to the wrist)
     const pole = tB.copy(out.elbow).sub(out.shoulder).addScaledVector(out.wrist.clone().sub(out.shoulder), -0.5);
     solveArm(out.shoulder, target, pole, out.elbow, out.wrist);

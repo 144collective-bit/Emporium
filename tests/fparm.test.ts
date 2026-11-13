@@ -179,5 +179,6 @@ test('the first-person corrections: the guard\'s fists up, in and never at the e
     assert.ok(bodyArm(j, eye, unit, newLaidArm(), 0).wrist.distanceTo(raw.wrist) < 1e-9);
     const run = bodyArm(j, eye, unit, newLaidArm(), 0, 1);
     assert.ok(run.wrist.y > raw.wrist.y && FP_RUN.lift > 0, 'the run lifts his swing');
+    assert.ok(run.wrist.y <= FP_RUN.top + 1e-3 && run.wrist.z <= -FP_RUN.near + 1e-3, 'never over the corner nor at the eye');
   }
 });
