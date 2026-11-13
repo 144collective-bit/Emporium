@@ -98,7 +98,8 @@ function registerClose(low: boolean) {
     }
     b.build(into, { cast: true, receive: true });
   });
-  // The Close's bollards across its far end
+  // The Close's bollards across its far end (none since it was carried on to the far west: endsfar.ts)
+  if (!CLOSE_BOLLARDS.length) return;
   const [bx0, bx1] = [Math.min(...CLOSE_BOLLARDS.map((p) => p[0])), Math.max(...CLOSE_BOLLARDS.map((p) => p[0]))];
   site('endswest close end', [bx0 - 1.5, ROAD_Z - ROAD_HALF - 1, bx1 + 1.5, ROAD_Z + ROAD_HALF + 1], (into) => {
     const b = new Batch();
