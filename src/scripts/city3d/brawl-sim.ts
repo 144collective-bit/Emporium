@@ -12,12 +12,17 @@
  *   through its collisions.
  * - A move strikes on its first active frame (the frame the ring lands a hit
  *   on): `strike` events, one a move, for the view to test with `melee()`.
- * - Empty hands are the fists (the controls round): the guard comes up with
- *   any move or block and stays `BRAWL.guard` seconds after the last, then
- *   drops; sprinting drops it at once and nothing is thrown while sprinting
- *   (the owner's call: Shift still sprints).
- * - Punches, the block and the guard are the upper body's (over the walk:
- *   `upper`); kicks and the dodge take him whole, standing (`rooted`).
+ * - Empty hands are the fists, and the guard is held (the owner's call,
+ *   2026-11: hold the right mouse button, LB or the touch Guard to lift the
+ *   fists): the guard is up only while `guard` is held, and punches, kicks
+ *   and the dodge are thrown only with it up (a press without it is
+ *   nothing); a move already going plays out when it's let go. The guard is
+ *   the block (the owner's call: no block of its own on the street): held
+ *   and between moves, he's blocking. Sprinting drops it at once and nothing
+ *   is thrown while sprinting (Shift still sprints); still held, it comes
+ *   back up when the sprint ends.
+ * - Punches and the guard are the upper body's (over the walk: `upper`);
+ *   kicks and the dodge take him whole, standing (`rooted`).
  * - A street chain (Phase 3's mission): walk mode says whether each strike
  *   landed (`landed()`); three landing each within `BRAWL.chain` ticks of
  *   the last is a chain, counted once however long it runs; a miss ends it.
@@ -26,12 +31,10 @@ import { createFightSim, MOVES, NO_INPUT, T, type FighterInput, type MoveId, typ
 import type { ClipId } from './fight-anim';
 
 export const BRAWL = {
-  /** Seconds the guard stays up after the last move or block */
-  guard: 4,
   /** Slower than this (tiles a second), Space dodges; faster, it jumps */
   still: 0.3,
-  /** Blocking, he walks no faster than this (tiles a second, the walk's own pace) */
-  blockSpeed: 0.61,
+  /** With the guard up, he moves no faster than this (tiles a second: a fighter's shuffle, between the walk and the run) */
+  guardSpeed: 1.1,
   /** A swing makes anyone within this much of his reach step aside (tiles) */
   crowd: 0.5,
   /** Ticks between two strikes landing for them to be one chain */
@@ -39,17 +42,18 @@ export const BRAWL = {
 };
 
 export interface BrawlInput {
-  /** Pressed this frame (punch, kick, dodge) or held (block) */
+  /** Pressed this frame (punch, kick, dodge): thrown only with the guard up */
   punch: boolean;
   kick: boolean;
-  block: boolean;
   dodge: boolean;
+  /** Held: the guard (the fists lifted, and the block between moves) */
+  guard: boolean;
   sprinting: boolean;
   /** Which way a dodge steps (world axes; none: back) */
   dx: number;
   dz: number;
 }
-export const NO_BRAWL: BrawlInput = { punch: false, kick: false, block: false, dodge: false, sprinting: false, dx: 0, dz: 0 };
+export const NO_BRAWL: BrawlInput = { punch: false, kick: false, dodge: false, guard: false, sprinting: false, dx: 0, dz: 0 };
 
 export type BrawlEvent =
   | { kind: 'swing'; move: MoveId }
@@ -61,7 +65,7 @@ export type BrawlEvent =
 export function createBrawl(style: StyleId, seed = 7) {
   const sim = createFightSim({ seed, fighters: [{ id: 'me', name: 'Degen', style, x: 0, z: 0, yaw: 0 }] });
   const f = sim.fighter('me')!;
-  let guardT = 0;
+  let guardOn = false;
   let struckFor = -1;
   let ticks = 0;
   let acc = 0;
@@ -76,7 +80,7 @@ export function createBrawl(style: StyleId, seed = 7) {
     f.buffer = null;
     f.blocking = false;
     f.vx = f.vz = 0;
-    guardT = 0;
+    guardOn = false;
   }
 
   return {
@@ -84,10 +88,11 @@ export function createBrawl(style: StyleId, seed = 7) {
     get stamina() {
       return f.stamina / T.stamina;
     },
-    /** The guard is up (a move, the block, or one lately) */
+    /** The guard is up: held (and not sprinting), or a move still playing out */
     get up() {
-      return guardT > 0 || !!f.move || f.blocking;
+      return guardOn || !!f.move;
     },
+    /** Held up between moves: the guard is the block */
     get blocking() {
       return f.blocking;
     },
@@ -101,8 +106,8 @@ export function createBrawl(style: StyleId, seed = 7) {
     },
     /** The clip the fight's animations play for him now, and its frame (fight-anim.ts) */
     clip(): { id: ClipId; frame: number } {
+      // (the guard held is the block, drawn as the fighter's guard: nothing on the street hits back)
       if (f.move) return { id: f.move, frame: f.frame };
-      if (f.blocking) return { id: 'block', frame: f.blockFrames };
       return { id: 'guard', frame: ticks };
     },
     /**
@@ -113,18 +118,15 @@ export function createBrawl(style: StyleId, seed = 7) {
       const events: BrawlEvent[] = [];
       let dx = 0;
       let dz = 0;
-      if (inp.sprinting) {
-        // (sprinting: nothing thrown, the guard down; a move already going plays out)
-        guardT = 0;
-        f.blocking = false;
-      }
-      const pressed = !inp.sprinting && (inp.punch || inp.kick || inp.dodge || inp.block);
-      if (pressed) guardT = BRAWL.guard;
-      else if (!f.move && !f.blocking) guardT = Math.max(0, guardT - dt);
-      // A press is kept by the fight's own buffer: hand it in on the first tick only
-      let first: FighterInput = inp.sprinting
-        ? { ...NO_INPUT, face: yaw }
-        : { x: inp.dodge ? inp.dx : 0, z: inp.dodge ? inp.dz : 0, face: yaw, punch: inp.punch, kick: inp.kick, block: inp.block, dodge: inp.dodge };
+      // (sprinting: nothing thrown, the guard down; a move already going plays out)
+      guardOn = inp.guard && !inp.sprinting;
+      // Only with the guard up is anything thrown; a press is kept by the fight's own buffer: hand it in on the first tick only
+      const punch = guardOn && inp.punch;
+      const kick = guardOn && inp.kick;
+      const dodge = guardOn && inp.dodge;
+      // (the guard blocks between moves: not on a tick a move is asked for, nor while one waits in the buffer)
+      const blockNow = () => guardOn && !f.move && !f.buffer;
+      let first: FighterInput = { x: dodge ? inp.dx : 0, z: dodge ? inp.dz : 0, face: yaw, punch, kick, block: guardOn && !punch && !kick && !dodge && !f.move && !f.buffer, dodge };
       acc += Math.min(dt, 0.1);
       while (acc >= T.tick) {
         acc -= T.tick;
@@ -140,7 +142,7 @@ export function createBrawl(style: StyleId, seed = 7) {
           else if (e.kind === 'dodge') events.push({ kind: 'dodge' });
           else if (e.kind === 'tired') events.push({ kind: 'tired' });
         }
-        first = { ...NO_INPUT, face: yaw, block: !inp.sprinting && inp.block };
+        first = { ...NO_INPUT, face: yaw, block: blockNow() };
         // What the move moved him (a step in, a dodge's slide); his own walking is walk mode's
         if (f.move || Math.hypot(f.vx, f.vz) > 0.02) {
           dx += f.x - wasX;

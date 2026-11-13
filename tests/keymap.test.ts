@@ -58,11 +58,13 @@ test('the shared jobs are where they should be', () => {
   // a way out of every mode: the menu, quitting or skipping
   for (const id of MODE_IDS) assert.ok(has(id, 'menu') || has(id, 'quit') || has(id, 'skip'), `${id} has no way out`);
   // the ring's fists are the street's
-  for (const job of ['punch', 'kick', 'block', 'dodge'] as Job[]) {
+  for (const job of ['punch', 'kick', 'dodge'] as Job[]) {
     const [a, b] = [has('fists', job)!, has('ring', job)!];
     assert.deepEqual([a.keys[0], a.pad[0]], [b.keys[0], b.pad[0]], job);
   }
-  // sprint is the left stick pressed with a gun out too (LB is the fists' block and the gun's peek)
+  // (the street's guard is held where the ring's block is: the right mouse button, LB)
+  assert.deepEqual([has('fists', 'guard')!.keys[0], has('fists', 'guard')!.pad[0]], [has('ring', 'block')!.keys[0], has('ring', 'block')!.pad[0]]);
+  // sprint is the left stick pressed with a gun out too (LB is the fists' guard and the gun's peek)
   assert.equal(has('armed', 'sprint')!.pad[0], 'L3');
 });
 
@@ -91,6 +93,8 @@ test('the control card (Phase 4) is short, has its mode\'s own jobs and a way to
   }
   // laid on on foot: the mode's own jobs first, then on foot's main ones
   const fists = cardBinds('fists');
-  assert.equal(fists[0].job, 'punch');
+  // (empty hands: the guard first, held before anything's thrown)
+  assert.equal(fists[0].job, 'guard');
+  assert.equal(fists[1].job, 'punch');
   assert.ok(fists.some((b) => b.job === 'interact') && !fists.some((b) => b.job === 'emotes'));
 });

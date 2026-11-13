@@ -4,7 +4,7 @@
  * from it when the site is built (CityMap.astro), the control card (Phase 4) reads it, and tests/keymap.test.ts holds
  * it to the rule: a job's key and button are the same in every mode it's in (getting in and out, the camera, the
  * horn, the map, the menu, quitting...), and no two jobs share a key or a button in a mode unless one says it takes
- * it over by context (`shares`: with empty hands Y kicks when there's nothing to do, Space dodges with the guard up).
+ * it over by context (`shares`: with empty hands Y kicks with the guard up, Space dodges with the guard up).
  * The control card (Phase 4, ctrlcard.ts, walk mode's own chunk) shows a mode's rows from `cardBinds()`.
  * walk.ts keeps its own handlers (the keyboard's is walkkeys.ts, the gamepad's walkpad.ts, both held to this table
  * by their tests; the touch buttons' is walktouch.ts); when one changes, change its line here too (and the other way round).
@@ -14,7 +14,7 @@
 /** A job: what a key does. The same job is the same key everywhere */
 export type Job =
   | 'move' | 'look' | 'sprint' | 'walk' | 'jump' | 'crouch' | 'interact' | 'camera' | 'hotbar' | 'inventory' | 'map' | 'menu'
-  | 'emotes' | 'punch' | 'kick' | 'block' | 'dodge' | 'fire' | 'aim' | 'reload' | 'peek' | 'holster' | 'steer' | 'gas'
+  | 'emotes' | 'punch' | 'kick' | 'block' | 'guard' | 'dodge' | 'fire' | 'aim' | 'reload' | 'peek' | 'holster' | 'steer' | 'gas'
   | 'brake' | 'handbrake' | 'horn' | 'climb' | 'drift' | 'item' | 'snack' | 'quit' | 'skip';
 
 export interface Binding {
@@ -76,10 +76,11 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
     name: 'Empty hands',
     base: 'foot',
     binds: [
-      { job: 'punch', label: 'Punch', keys: ['Click'], pad: ['X'], touch: 'Punch' },
-      { job: 'kick', label: 'Kick', keys: ['G'], pad: ['Y'], touch: 'Kick', shares: ['interact'] },
-      { job: 'block', label: 'Block', keys: ['Right-click'], pad: ['LB'], touch: 'Block' },
-      { job: 'dodge', label: 'Dodge', keys: ['Space'], pad: ['A'], touch: 'Jump', shares: ['jump'] },
+      // (the owner's call, 2026-11: the guard is held to lift the fists, and blocks; punch, kick and dodge with it up)
+      { job: 'guard', label: 'Guard (blocks)', keys: ['Right-click'], pad: ['LB'], touch: 'Guard' },
+      { job: 'punch', label: 'Punch (guard up)', keys: ['Click'], pad: ['X'], touch: 'Punch' },
+      { job: 'kick', label: 'Kick (guard up)', keys: ['G'], pad: ['Y'], touch: 'Kick', shares: ['interact'] },
+      { job: 'dodge', label: 'Dodge (guard up)', keys: ['Space'], pad: ['A'], touch: 'Jump', shares: ['jump'] },
     ],
   },
   armed: {

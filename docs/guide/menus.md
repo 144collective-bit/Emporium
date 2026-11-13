@@ -269,7 +269,8 @@ keep it up to date when what it describes changes.
   no two jobs on one in a mode unless `shares` says so); the hub's
   Settings > Keys is made from it at build time (a section a mode, only
   the input in use shown, `data-input`); the ring on the street's keys
-  (right-click held block, Shift nothing), the gamepad's sprint L3 only,
+  (right-click held block, Shift nothing; on the street right-click held
+  is the fists' guard, `guard`, the control card's first row), the gamepad's sprint L3 only,
   Start quits a kart race, B skips a ride, M opens the world map at the
   wheel too. When a handler in walk.ts changes, change its line in
   keymap.ts. Phase 4 (the control card) is built, waiting on the

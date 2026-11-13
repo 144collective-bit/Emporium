@@ -996,12 +996,13 @@
 }
 
 /* ---------- Fists on the street (brawl.ts, docs/inventory-plan.md Phase 2): empty hands ---------- */
-/* Touch: Punch, Block and Kick show; they take Fire's, Reload's and Aim's slots (touchlayout.ts LAYOUTS, placed by
-   controls.ts; their look is controls.css's). Jump stays: standing with the guard up, it dodges. */
+/* Touch: the Block button is the Guard here (walk.ts relabels it), always showing; Punch and Kick show while the
+   guard's up (.is-guard, the owner's call 2026-11). They take Fire's, Reload's and Aim's slots (touchlayout.ts
+   LAYOUTS, placed by controls.ts; their look is controls.css's). Jump stays: standing with the guard up, it dodges. */
 @media (pointer: coarse) {
-  .city.is-fists .fight-punch,
-  .city.is-fists .fight-kick,
-  .city.is-fists .fight-block {
+  .city.is-fists .fight-block,
+  .city.is-fists.is-guard .fight-punch,
+  .city.is-fists.is-guard .fight-kick {
     display: grid;
   }
 }

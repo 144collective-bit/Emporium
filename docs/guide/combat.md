@@ -100,12 +100,34 @@ keep it up to date when what it describes changes.
   closed round the pistol grip, the left under the front) wear the sleeves of Degen's outfit (`setOutfit()`, called
   from `walk.setLook()` through `combat.setOutfit()`: a suit sleeve with a
   shirt cuff, or a looser hoodie / track sleeve with a ribbed cuff and the
-  track top's stripes). With empty hands the view shows his own fists
-  instead (`fistsview.ts`, the fists' chunk, brawl.ts: closed hands in
-  the same sleeves, up in the guard while the street fists are up, the
-  jab and hook thrown with the left and the cross and uppercut with the
-  right over the moves' frames, both in for the block; a kick drops them
-  and bobs the view, `KICK`, not under reduced motion). They're built `K` times bigger and further out (the camera's
+  track top's stripes). With empty hands the view shows his own arms
+  instead (rebuilt on the owner's call, 2026-11: "premium", not
+  deformed): `fparm.ts` (DOM-free, tested in `tests/fparm.test.ts`) makes
+  them, each arm jointed at the elbow (the upper arm from a shoulder out
+  of shot, the forearm with its cuff and a fist modelled to be seen up
+  close: knuckles, the fingers folded in two, the thumb across), the
+  elbow solved each frame for where the fist goes (`solveArm()`, swung
+  towards a pole), the sleeves turned and dressed by the outfit (the
+  suit's slim sleeve and shirt cuff, ribbed cuffs, the track top's
+  two stripes lying on the sleeve down to the cuff, turned onto the top
+  of the forearm where the eye sees them (`STRIPE`, `sleeveRadius()`),
+  the puffer's quilting), each piece's
+  colour its own `tint` attribute so an arm is two draws (not three's
+  vertex colours: those keep it out of the ink's pre-pass, so no
+  outline). `fistsview.ts` (the fists' chunk, brawl.ts) moves them: the
+  fists up from below on a spring with a touch of overshoot while the
+  guard is held, a high guard by the chin (the lead left further out),
+  bobbing with the steps, breathing, a little bounce standing, lagging
+  the look; each punch chambered over its start-up, out over the active
+  frames with the shoulder driving behind it and the fist turning over,
+  back over the recovery, the other hand tucked in (jab and hook left,
+  cross and uppercut right); running with his hands down the arms pump
+  into the lower corners in step, harder sprinting (`PUMP`), hidden
+  standing and walking; a kick drops them and bobs the view (`KICK`).
+  Narrow screens (a phone upright) take the arms in and hold them
+  further off. Nothing bobs, breathes or sways under reduced motion. In
+  first person the view narrows `GUARD_ZOOM` (5°) with the guard up
+  (walk.ts). They're built `K` times bigger and further out (the camera's
   near plane is 0.5 m) and drawn in the front of the depth buffer, with
   their own flat shading (city lamps would otherwise light them wrongly).
   Keep the red dot on the line of sight: scale the whole holder, never only
@@ -114,7 +136,7 @@ keep it up to date when what it describes changes.
   `SOLIDS` except the dummies' own footprints (`SHOT_SOLIDS`), on what's
   built on your units and lots, and on the ground. When dummies move, their footprints follow
   `DUMMIES` automatically.
-- Keys: click fires, right-click aims, R reloads, G holsters (with empty hands it kicks: the fists, above), X
+- Keys: click fires, right-click aims, R reloads, G holsters (with empty hands right-click held lifts the guard and G kicks with it up: the fists, above), X
   and 1-7 work the hotbar (the inventory, above), Q / E held peek round a corner (animation Phase 4), C crouches and
   slides when sprinting (Phase 5); F does what the
   prompt says (the owner's call: every door, counter and getting in or
