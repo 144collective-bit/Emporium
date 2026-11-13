@@ -112,8 +112,9 @@ test("walking and driving reach the wall's foot, all round, and no further", () 
   ])
     assert.ok(Math.abs(fromWall(x, z) - WALL_MARGIN) < 1e-9, `the walk limit is ${fromWall(x, z)} from the wall`);
   assert.ok(WALL_MARGIN > 0 && WALL_MARGIN <= 2, 'at its foot');
-  // The City view still pans round the town, not out to the wall
-  assert.ok(fromWall(PAN_BOUNDS[0], PAN_BOUNDS[1]) > WALL.out && fromWall(PAN_BOUNDS[2], PAN_BOUNDS[3]) > WALL.out);
+  // The City view's free camera goes up to the wall too (freecam.ts), never into it
+  assert.ok(fromWall(PAN_BOUNDS[0], PAN_BOUNDS[1]) > 0 && fromWall(PAN_BOUNDS[2], PAN_BOUNDS[3]) > 0);
+  assert.ok(fromWall(PAN_BOUNDS[0], PAN_BOUNDS[1]) <= 3 && fromWall(PAN_BOUNDS[2], PAN_BOUNDS[3]) <= 3);
 });
 
 test('it is solid in every grid: walking, the camera, driving and flying, and bullets stop on it', () => {
