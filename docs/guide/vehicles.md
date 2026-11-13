@@ -225,11 +225,14 @@ keep it up to date when what it describes changes.
 
 ## Where your car and bike live now (docs/home-plan.md Phase 2)
 
-- Your car's and bike's home is **Degen's house in the Ends** (home.ts:
-  the car in his garage, `CAR_HOME`, the bike on his driveway,
-  `BIKE_HOME`), not the city garage's turntable and stand as the sections
+- Your car's and bike's home is **Degen's compound in the Ends' far west**
+  (home.ts, docs/ends-far-west-plan.md Phase 2: both in his double garage,
+  a door each, noses out: `CAR_HOME`, `BIKE_HOME`; until that phase it was
+  the end house of a terrace, the bike on its driveway), not the city
+  garage's turntable and stand as the sections
   above say. The city garage is a showroom: garage.ts moves the same car
   and bike onto its turntable and stand while its menu is open
   (`garage.at('city')`) and home again when it closes. "Bring my car home"
   (the menu's Keep, a reload) sends them to the Ends. The garage menu opens
-  at both garages' doors.
+  at both garages' doors, and at his workshop's roller door on its Kit tab
+  (`HOME_WORKSHOP_DOOR`, `garageUI.show('kit')`).

@@ -103,3 +103,82 @@ test('the sleeves and cuffs: their lengths, round both ends; painted pieces merg
   assert.ok(tint.getX(0) > 0.9 && tint.getY(0) < 0.1);
   assert.ok(tint.getY(tint.count - 1) > 0.9);
 });
+
+// His body's arms read from the eye (the owner's call, 2026-11: "use his real body's clips")
+import { makeSkeleton, newPose, poseSkeleton, UPPER_ARM } from '../src/scripts/city3d/skeleton';
+import { BODY_TO_ARM, EYE, FP_FIX, FP_RUN, bodyArm, eyeFrame, newLaidArm, type BodyJoints } from '../src/scripts/city3d/fparm';
+
+/** His skeleton posed (arms by `arms`), scaled `unit` and facing +z: its head and each arm's joints in the world */
+function body(unit: number, arms?: (p: ReturnType<typeof newPose>) => void) {
+  const sk = makeSkeleton();
+  const p = newPose();
+  arms?.(p);
+  poseSkeleton(sk, p, [1, 1]);
+  sk.root.scale.setScalar(unit);
+  sk.root.updateMatrixWorld(true);
+  const v = () => new THREE.Vector3();
+  const side = (S: 'L' | 'R'): BodyJoints => ({
+    shoulder: sk.bones[`arm${S}`].getWorldPosition(v()),
+    elbow: sk.bones[`fore${S}`].getWorldPosition(v()),
+    hand: sk.bones[`hand${S}`].getWorldPosition(v()),
+    back: V(S === 'R' ? 1 : -1, 0, 0).applyQuaternion(sk.bones[`hand${S}`].getWorldQuaternion(new THREE.Quaternion())),
+  });
+  return { head: sk.bones.head.getWorldPosition(v()), L: side('L'), R: side('R') };
+}
+
+test('the eye: in his head, up and forward of the head bone, looking the way he faces', () => {
+  const head = V(1, 2, 3);
+  const m = eyeFrame(head, V(0, 0.3, 1), 0.66, new THREE.Matrix4());
+  const at = new THREE.Vector3().setFromMatrixPosition(m);
+  assert.ok(near(at.y - head.y, EYE.up * 0.66) && near(at.z - head.z, EYE.fwd * 0.66) && near(at.x, 1));
+  // (-z the way he faces, level: a point ahead of him is ahead of the eye)
+  const ahead = V(1, 2, 13).applyMatrix4(m.clone().invert());
+  assert.ok(ahead.z < -9 && Math.abs(ahead.x) < 1e-6);
+});
+
+test('laid on his body: his arm lengths become the arm\'s, the elbow his own, the fist on his forearm', () => {
+  for (const unit of [0.66, 1]) {
+    const b = body(unit, (p) => {
+      p.arms[0].fwd = p.arms[1].fwd = 0.8;
+      p.arms[0].bend = p.arms[1].bend = 1.6;
+    });
+    const eye = eyeFrame(b.head, V(0, 0, 1), unit, new THREE.Matrix4());
+    for (const j of [b.L, b.R]) {
+      const l = bodyArm(j, eye, unit, newLaidArm());
+      assert.ok(near(l.shoulder.distanceTo(l.elbow), ARM.upper, 1e-4), 'the upper arm');
+      assert.ok(near(l.elbow.distanceTo(l.wrist), ARM.fore, 1e-4), 'the forearm');
+      // (the elbow is his: his elbow read from the eye, in these metres)
+      const mine = j.elbow.clone().applyMatrix4(eye.clone().invert()).multiplyScalar(BODY_TO_ARM / unit);
+      assert.ok(mine.distanceTo(l.elbow) < 1e-6);
+      assert.ok(near(l.face.length(), 1));
+    }
+    // (his two arms either side of the eye, both below it)
+    const L = bodyArm(b.L, eye, unit, newLaidArm());
+    const R = bodyArm(b.R, eye, unit, newLaidArm());
+    assert.ok(L.shoulder.x * R.shoulder.x < 0 && L.shoulder.y < 0 && R.shoulder.y < 0);
+  }
+  assert.ok(near(BODY_TO_ARM * UPPER_ARM, ARM.upper));
+});
+
+test('the first-person corrections: the guard\'s fists up, in and never at the eye; the run\'s lifted; the arm keeps its lengths', () => {
+  const unit = 0.66;
+  // (a tight guard: the fists by his chin)
+  const b = body(unit, (p) => {
+    p.arms[0].fwd = p.arms[1].fwd = 0.45;
+    p.arms[0].bend = p.arms[1].bend = 2.4;
+  });
+  const eye = eyeFrame(b.head, V(0, 0, 1), unit, new THREE.Matrix4());
+  for (const j of [b.L, b.R]) {
+    const raw = bodyArm(j, eye, unit, newLaidArm());
+    const fixed = bodyArm(j, eye, unit, newLaidArm(), 1);
+    assert.ok(fixed.wrist.y > raw.wrist.y, 'up');
+    assert.ok(Math.abs(fixed.wrist.x) < Math.abs(raw.wrist.x), 'in');
+    assert.ok(fixed.wrist.z <= -FP_FIX.near + 1e-3, 'not at the eye');
+    assert.ok(near(fixed.shoulder.distanceTo(fixed.elbow), ARM.upper, 1e-4) && near(fixed.elbow.distanceTo(fixed.wrist), ARM.fore, 1e-4));
+    // (none of it with the guard down)
+    assert.ok(bodyArm(j, eye, unit, newLaidArm(), 0).wrist.distanceTo(raw.wrist) < 1e-9);
+    const run = bodyArm(j, eye, unit, newLaidArm(), 0, 1);
+    assert.ok(run.wrist.y > raw.wrist.y && FP_RUN.lift > 0, 'the run lifts his swing');
+    assert.ok(run.wrist.y <= FP_RUN.top + 1e-3 && run.wrist.z <= -FP_RUN.near + 1e-3, 'never over the corner nor at the eye');
+  }
+});

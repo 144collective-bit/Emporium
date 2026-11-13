@@ -4,7 +4,6 @@
 // the Close but at the zebra and the lanes' mouth, the dogs ahead of their walkers, the washing in its back garden,
 // the bikes by their front walls, a pool under every porch light, and room for them all in the crowd's spare slots
 // with the other districts' chunks' people.
-import { HOME } from '../src/scripts/city3d/home';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -122,11 +121,9 @@ test("the washing in its own back garden, clear of the fences; the kids' things 
 });
 
 test("a pool under every porch light and the late shops' (the corner shop, the chippy, not the shut unit); the green lit in sodium", () => {
-  // (and one on Degen's driveway, under the lamp over his garage door: home.ts)
-  assert.equal(PORCH_POOLS.length, HOUSES.length + LATE_UNITS.length + 1);
-  assert.ok(PORCH_POOLS.some(([x, z]) => inBox(HOME.drive, x, z, 0.01)));
+  assert.equal(PORCH_POOLS.length, HOUSES.length + LATE_UNITS.length);
   assert.ok(LATE_UNITS.every((k) => !UNITS_W[k].shut));
-  for (const [x, z] of PORCH_POOLS) assert.ok([...PATHS, ...LAND, HOME.drive].some((r) => inBox(r, x, z, 0.01)));
+  for (const [x, z] of PORCH_POOLS) assert.ok([...PATHS, ...LAND].some((r) => inBox(r, x, z, 0.01)));
   const green = WEST_LAMPS.filter(([x, z]) => x > KICKABOUT[0] - 3 && z > KICKABOUT[1] && z < KICKABOUT[3]);
   assert.ok(green.length >= 2 && green.every(([x, z]) => sodiumShare(x, z) > 0.99));
   // (their heads out over the green: a lamp's arm points along cos ry, -sin ry; world.ts buildLamps())

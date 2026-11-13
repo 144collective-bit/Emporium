@@ -11,6 +11,7 @@ import { MISSIONS, BADGES } from '../src/scripts/city3d/missions';
 import { newSave, takedown } from '../src/scripts/city3d/tycoon';
 import { createStreetFists } from '../src/scripts/city3d/brawl';
 import { newPose } from '../src/scripts/city3d/skeleton';
+import { drawnMirror } from '../src/scripts/city3d/fight-anim';
 
 const tick = T.tick;
 /** Run the street fighter for `frames` ticks with `first` pressed on the first and `held` after */
@@ -207,7 +208,7 @@ test("the fists' clip over the walk: the upper body only, the legs left to the w
     const p = newPose();
     p.legs[0].fwd = 0.4;
     p.legs[1].fwd = -0.3;
-    p.legs[0].foot = 0.2;
+    p.legs[0].foot = p.legs[1].foot = 0.2;
     p.bob = 0.03;
     return p;
   };
@@ -229,9 +230,11 @@ test("the fists' clip over the walk: the upper body only, the legs left to the w
   const R = walk();
   k.lay(R, 1, 1);
   assert.notEqual(JSON.stringify(R.legs), before, 'a kick takes the legs');
-  // (the standing foot is the clip's, planted under it: fightfeet.ts)
-  assert.notEqual(R.legs[0].foot, 0.2, "the walk's foot replaced");
-  assert.equal(typeof R.legs[0].foot, 'number', 'the clip\'s planted foot');
+  // (the standing foot is the clip's, planted under it: fightfeet.ts; drawn with the left lead the kick comes off
+  // the other rig leg, so it stands on the other)
+  const stand = drawnMirror() ? 1 : 0;
+  assert.notEqual(R.legs[stand].foot, 0.2, "the walk's foot replaced");
+  assert.equal(typeof R.legs[stand].foot, 'number', 'the clip\'s planted foot');
 });
 
 test('every street move ends back on the guard, where the guard clip starts', () => {

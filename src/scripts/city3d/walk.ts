@@ -99,7 +99,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
-import { HOME_CAMERA, HOME_GARAGE_DOOR, homeWall, inHouse } from './home';
+import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { endsDeckWall, upOnEnds } from './endsdecks';
@@ -157,6 +157,8 @@ const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
+/** First person with empty hands: the run's pace (a share of RUN) over which his swinging arms come into shot */
+const FP_PUMP = [0.55, 0.9] as const;
 /** How far the first-person view narrows with the fists' guard up (degrees) */
 const GUARD_ZOOM = 5;
 const AIMING = 1.09;
@@ -607,7 +609,7 @@ export function createWalk(d: WalkDeps) {
     if (n.id === 'trainer') return counterMark(TRAINER_TOP, y + TRAINER_TOP_H, y, pos.x, pos.z);
     // (a sparring partner: the spar starts at once)
     if (n.id.startsWith('spar:')) return null;
-    if (n.id === 'garage') return door(garageAt === 'home' ? HOME_GARAGE_DOOR : GARAGE_SITE.door);
+    if (n.id === 'garage') return door(garageAt === 'home' ? (garageTab === 'kit' ? HOME_WORKSHOP_DOOR : HOME_GARAGE_DOOR) : GARAGE_SITE.door);
     if (n.id === 'hangar') return door(HANGAR_DOOR);
     if (n.id === 'karts') return door(HUT_DOOR);
     // Getting in (step 2): the car's or the kart's side nearest him, the aircraft's door, the hire boat's ladder
@@ -702,7 +704,7 @@ export function createWalk(d: WalkDeps) {
     const n = near;
     const open = () => {
       if (n.id === 'gear') shop.show(n.label === ARMS.name ? ARMS.name : 'Armoury');
-      else if (n.id === 'garage') garageUI.show();
+      else if (n.id === 'garage') garageUI.show(garageTab);
       else if (n.id === 'hangar') hangarUI.show();
       else if (n.id === 'plane') (fly.active ? leavePlane() : board());
       else if (n.id === 'boat') (boating() ? leaveBoat() : takeBoat());
@@ -1040,6 +1042,8 @@ export function createWalk(d: WalkDeps) {
   let fpBeforeGarage = false;
   /** Which garage's door the Garage prompt is at: the city's office, or Degen's own at home (home.ts) */
   let garageAt: 'home' | 'city' = 'city';
+  /** The tab its menu opens on: the model, or its kit from the workshop's door at home */
+  let garageTab: 'model' | 'kit' = 'model';
   const garageUI = lazyMenu<GarageUI>(['show'], async () => (await import('./garage-ui')).createGarageUI(root, {
     preview: (c) => d.garage.show(c),
     // Kept: if your car is out on the streets, it comes home
@@ -2928,22 +2932,9 @@ export function createWalk(d: WalkDeps) {
     frameShowroom(dt);
     hero.ring.visible = !firstPerson;
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
-    // Empty hands in first person: his own arms, the fists up in the guard and thrown with the moves, pumping when
-    // he runs with his hands down (fistsview.ts)
-    fistsView?.update(
-      camera,
-      dt,
-      {
-        up: fistsOn && fists!.brawl.up,
-        clip: fistsOn ? fists!.brawl.clip() : { id: 'guard', frame: 0 },
-        move: stride,
-        phase,
-        run: runAmt,
-        dodge: dirX * Math.cos(yaw) - dirZ * Math.sin(yaw),
-        still: d.reduced,
-      },
-      firstPerson && fistsOn,
-    );
+    // Empty hands in first person: his own arms, his body's (fistsview.ts): the skeleton as posed this frame (the
+    // motion capture, and the fight's clips with the guard up) read from an eye in his head
+    fistsView?.update(camera, dt, { guard: guardAmt, run: THREE.MathUtils.smoothstep(stride, FP_PUMP[0], FP_PUMP[1]), still: d.reduced }, firstPerson && fistsOn, { rig: hero.rig, root: hero.g });
 
     // Field of view widens with speed, narrows when aiming, and in first person a touch with the guard up (the
     // owner's call, 2026-11: the fight in focus)
@@ -2976,12 +2967,21 @@ export function createWalk(d: WalkDeps) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
       garageAt = 'city';
+      garageTab = 'model';
     }
     // Degen's own garage at home (home.ts): the same menu, by its door on his driveway
     if (Math.hypot(HOME_GARAGE_DOOR.x - pos.x, HOME_GARAGE_DOOR.z - pos.z) < 1) {
       best = { id: 'garage', label: 'Garage' };
       bestD = 0;
       garageAt = 'home';
+      garageTab = 'model';
+    }
+    // ...and his workshop's roller door (docs/ends-far-west-plan.md Phase 2): the same menu, opened on its kit
+    if (Math.hypot(HOME_WORKSHOP_DOOR.x - pos.x, HOME_WORKSHOP_DOOR.z - pos.z) < 1) {
+      best = { id: 'garage', label: 'Workshop' };
+      bestD = 0;
+      garageAt = 'home';
+      garageTab = 'kit';
     }
     // The kart hut's door, at the kart park
     if (!drive.active && Math.hypot(HUT_DOOR.x - pos.x, HUT_DOOR.z - pos.z) < 1.4) {

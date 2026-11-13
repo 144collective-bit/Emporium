@@ -14,7 +14,8 @@ driveway." The owner's answers:
 - **Whose:** his from the start, every save.
 
 **What comes next** (the owner's call, 2026-11-13): the home moves to a compound of its own in the Ends' far
-west, `docs/ends-far-west-plan.md`. Until that plan's Phase 2 is built, the home is as this plan left it.
+west, `docs/ends-far-west-plan.md`. That plan's Phase 2 is built: the home is the compound now, and the end house of row `rn2` is a neighbour's again.
+What follows is how the first home was built; the room, the stash, the wardrobe and the garage's rules carried over.
 
 ## The plot
 

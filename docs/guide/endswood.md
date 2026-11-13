@@ -237,4 +237,16 @@ keep it up to date when what it describes changes.
   `FAR_BLOCKS` with a `use` each, `PLOT` and `GATES` the compound's, 
   `FAR_LAMPS`), drawn by `endsfar3d.ts` (`LAZY_DISTRICTS` id `endsfar`).
   The Close's bollards are gone (`CLOSE_BOLLARDS` is empty): you drive on
-  to the lane. Until Phase 2 the home is still the end house of row `rn2`.
+  to the lane. Phase 2 (the compound's outside) is built, and **home base
+  is the compound**: `home.ts` is written round the plot (`HOME`: the wall
+  and its gates, the double garage with `carDoor` and `bikeDoor`, the
+  house, the workshop, the lawns; `HOME_SOLIDS`; `CAR_HOME`, `BIKE_HOME`,
+  `HOME_GARAGE_DOOR`, `HOME_WORKSHOP_DOOR`, `HOME_VIEW`, `HOME_SPAWN`; the
+  room's `ROOM`, `FURNITURE`, `HOME_PORTALS` (front door and side door),
+  `HOME_USES`), drawn by `home3d.ts` (one site, registered by
+  `endsfar3d.ts`; its surfaces lie 24 mm over the slab, clear of the plot's
+  paving). What the paragraphs above say of the home's place (the end
+  house of row `rn2`, its garage in the back garden, the driveway, the
+  yard's gate) is how it was: that house is a neighbour's again, and
+  nothing in the terraces' code knows of the home. The Close is one street
+  to the T (`FAR_LANE_X` in endswood.ts).

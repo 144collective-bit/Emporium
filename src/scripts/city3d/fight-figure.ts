@@ -28,9 +28,9 @@ import * as THREE from 'three';
 import { FIGURE_SCALE } from './figure';
 import { createDegen, type Degen, type Limb, type Outfit } from './character';
 import { createLocomotion, type Locomotion } from './locomotion';
-import { CLIPS, blendPose, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
+import { CLIPS, blendPose, drawnMirror, hurtClip, hurtMirror, moveClip, newFightPose, rootShift, sampleClip, type ClipId, type FightPose } from './fight-anim';
 import { T, type Fighter } from './fight-sim';
-import { createFootwork, plantLegs, plantWeight, type Footwork } from './fightfeet';
+import { createFootwork, drawnPlantWeight, plantLegs, type Footwork } from './fightfeet';
 import type { Animator } from './animator';
 import { newMove, stepMove, type MoveState } from './movesim';
 import type { Motion } from './remote';
@@ -170,7 +170,8 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
     fg.mirror = !!mirror;
   }
   fg.frame = frame;
-  sampleClip(id, frame, fg.pose, { mirror });
+  // (drawn with the left lead on top: fight-anim.ts LEFT_LEAD)
+  sampleClip(id, frame, fg.pose, { mirror: drawnMirror(mirror) });
   // Moving round the ring: the motion capture's legs under the guard (or the planted-feet walk until it's in),
   // facing the opponent, so the feet step instead of sliding; they fade in over the guard's stance and back out
   const vx = fg.last && dt > 0 ? (f.x - fg.last.x) / dt : 0;
@@ -206,7 +207,7 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
   // The feet on the canvas: while the walk has the legs they're wherever it put them; else they keep their place and
   // step after the fighter as the sim moves it, and the clip's legs reach down to them
   const root = { x: f.x, z: f.z, yaw: f.yaw, scale: FIGHTER_SCALE };
-  const want = [plantWeight(id, 0, frame), plantWeight(id, 1, frame)];
+  const want = [drawnPlantWeight(id, 0, frame, drawnMirror(mirror)), drawnPlantWeight(id, 1, frame, drawnMirror(mirror))];
   for (let i = 0; i < 2; i++) {
     const p = Math.max(0, want[i] - fg.walk);
     fg.plant[i] = dt > 0 ? fg.plant[i] + THREE.MathUtils.clamp(p - fg.plant[i], -PLANT_RATE * dt * 60, PLANT_RATE * dt * 60) : p;
@@ -220,7 +221,7 @@ export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: nu
       fg.feet.place(i, ball.x, ball.z);
     }
   }
-  plantLegs(fg.pose, id, frame, { mirror: !!mirror, balls, w: fg.plant });
+  plantLegs(fg.pose, id, frame, { mirror: drawnMirror(mirror), balls, w: fg.plant });
 
   const deg = fg.degen;
   deg.pose.bob = fg.pose.bob;

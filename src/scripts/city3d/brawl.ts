@@ -23,7 +23,7 @@ import { PARTNERS, partnerNear, type PartnerId } from './brawlsite';
 import { FIGHTER_SCALE, createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { CROWD_VIEW } from './character';
 import { onLens } from './lens';
-import { newFightPose, sampleClip, type FightPose } from './fight-anim';
+import { drawnMirror, newFightPose, sampleClip, type FightPose } from './fight-anim';
 import { plantLegs } from './fightfeet';
 import { BRAWL, NO_BRAWL, createBrawl, type BrawlEvent, type BrawlInput } from './brawl-sim';
 import { MOVES, createFightSim, yawTo, type Fighter, type FightSim, type MoveId, type StyleId } from './fight-sim';
@@ -70,8 +70,10 @@ export function createStreetFists(style: StyleId) {
     lay(P: Pose, upper: number, whole: number) {
       if (upper < 0.01 && whole < 0.01) return;
       const c = brawl.clip();
-      sampleClip(c.id, c.frame, clip);
-      plantLegs(clip, c.id, c.frame);
+      // (drawn with the left lead: fight-anim.ts LEFT_LEAD)
+      const mirror = drawnMirror();
+      sampleClip(c.id, c.frame, clip, { mirror });
+      plantLegs(clip, c.id, c.frame, { mirror });
       const turn = clip.turn ?? 0;
       const k = Math.max(upper, whole);
       // The upper body: the arms, the lean, the spine's twist (with the clip's hip turn while the walk keeps his hips) and the head

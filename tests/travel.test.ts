@@ -82,16 +82,19 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // (and Endswood Estate's places south of the highway's south-west bend, docs/estate-plan.md Phase 8: from
       // Crestmont's grand hotel about 66 s)
       const ends = (id: string) => id === 'endswood' || id === 'aldwyns' || id === 'bunker';
-      // (and Degen's home at the far end of the Close in Endswood carried west, docs/home-plan.md: as far out as Lot 9;
-      // from the stadium about 73 s)
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) || ends(id) ? 12 : id === 'lot9' || id === 'home' ? 18 : id === 'overlook' || id === 'reservoir' ? 22 : 0);
+      // (and Degen's home: first at the far end of the Close in Endswood carried west, docs/home-plan.md, as far out
+      // as Lot 9; since it moved to his compound past the Close's end in the far west, the owner's call,
+      // docs/ends-far-west-plan.md Phase 2, a little further: from Crestmont's grand hotel about 85 s)
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) || ends(id) ? 12 : id === 'lot9' ? 18 : id === 'home' || id === 'overlook' || id === 'reservoir' ? 22 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
       // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
       // round through town: the overlook to the airport's metro station about 94 s)
       // (and the kart park out west to the overlook, right across the world, about 98 s)
       // (and Lot 9 since it moved south of Endswood, docs/estate-plan.md Phase 1: the overlook to it, the far north-east
       // corner to the far south-west, about 100 s)
-      const most = 106;
+      // (and Degen's compound in the far west, docs/ends-far-west-plan.md Phase 2, the owner's call: the overlook to it,
+      // the far north-east corner to further south-west still, about 107 s)
+      const most = 110;
       // (Stadium Road's way in from the north road went up past the raised highway's exit 1, docs/highway-plan.md
       // Phase 1b: from the stadium to Crestmont's civic hall about 63 s, to its overlook about 85 s)
       // (and since its Phase 2 the ring highway is up on its viaduct, its exits to come in Phase 3: a taxi goes the

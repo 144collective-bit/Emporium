@@ -14,7 +14,6 @@ import { site } from './tilework';
 import { KERB } from './palette';
 import { ATLAS, INK, METAL, WALL_COLOR, glow, kit, roof, type Frame, type Kit } from './infill';
 import { SLAB_Y, type Pt, type Rect } from './endswood';
-import { HOME_HOUSE } from './home';
 import { BIN, BIN_OFF, CANOPY, DOOR, FENCE, GATE_W, GINNELS, GROUND_H, PARAPET_H, PITCH, PORCH, TERRACES, binsOf, fencesOf, gateOf, rectOf, type House, type Terrace } from './endsterraces';
 
 const S = SLAB_Y;
@@ -118,8 +117,6 @@ function house(k: Kit, T: Terrace, h: House, trim: THREE.Material, brick: THREE.
   const far = -T.d - T.garden;
   k.lbox(du - 0.28, du + 0.28, S, S + 1.05, -T.d - 0.05, -T.d - 0.005, toon(shadeHex(h.colour, -0.25)));
   const gu = gateOf(h);
-  // (Degen's home, home.ts: his garage stands where its gate and shed would)
-  if (h.id === HOME_HOUSE) return;
   k.lbox(gu - GATE_W / 2, gu + GATE_W / 2, S, S + FENCE.h - 0.03, far + FENCE.t / 2 - 0.05, far + FENCE.t / 2 + 0.05, GATE);
   if (h.shed) {
     const su = gu > (h.u0 + h.u1) / 2 ? h.u0 + 0.2 : h.u1 - 1.3;

@@ -119,10 +119,47 @@ one:
      grass.
    - `tests/snapshot.test.ts` gained the two streets and lost nothing.
    - Shot: `docs/far-west-shots/phase-1-close-to-the-gates.webp`.
-2. **The compound's outside.** The wall, the gates, the courtyard, the
-   house, the double garage, the workshop, the garden; its solids and
-   doors. Home base moves (the list above); the old house goes back to its
-   row. The smoke test's home scenes moved to the new spots.
+2. **The compound's outside** (built, waiting on the owner's sign-off).
+   Home base is the compound now.
+   - `home.ts` (DOM-free, the boot's, tested in `tests/home.test.ts`) is
+     written round the plot (`endsfar.ts` `PLOT`, `GATES`): the wall
+     (`WALL_T`, `WALL_H`) with the gates open on the Close's line between
+     two piers (`PIER`) and a small back gate in the west wall
+     (`HOME.backGate`); the double garage at the yard's west end on the
+     Close's line, so its two doors face you down the road (`HOME.garage`,
+     `carDoor`, `bikeDoor`; `CAR_HOME` and `BIKE_HOME` inside, noses out);
+     the house along the south side, 9 by 6.5, two storeys under a flat
+     roof (`HOME.house`, its front door on the yard, a side door onto the
+     east lawn); the workshop against the north wall (`HOME.workshop`); two
+     lawns (`HOME.lawns`); the yard between them is the wide drive.
+     `HOME_SOLIDS` (22 boxes) at the boot.
+   - **How it differs from the sketch above:** the garage, not the house,
+     is on the Close's line (the car on show as you arrive), the house
+     faces north onto the yard, and the garden is two lawns (the
+     north-west corner with the tree and the bench, and east of the house
+     with the washing line) rather than one behind the house.
+   - The room came with it (it has to be inside the house's walls): the
+     same furniture kinds refitted to the bigger ground floor (8.7 by 6.2),
+     the stash and the wardrobe as before, the back door now a side door.
+     Phase 3 is the roof terrace's stair and the room's polish.
+   - The workshop's prompt (`HOME_WORKSHOP_DOOR`, walk.ts) opens the
+     garage's menu on its Kit tab (`garageUI.show('kit')`).
+   - Drawn by `home3d.ts`, one site registered by `endsfar3d.ts`: all in
+     the shared paint; the terrace's rail, chairs and string of lights are
+     drawn on the roof already. The plaque on the gate's pier is plain (no
+     lettering yet). Windows are dark glass: lit at night comes in Phase 5.
+   - The old end house (`rn2-0-2`) is a neighbour's again: endsterraces.ts,
+     endsterraces3d.ts and endswestlife.ts have no special case left (its
+     shed, gate, fences, porch, washing and solid as its row's).
+   - The Close is one street to the T (`ends-close` in endswood.ts ends at
+     `FAR_LANE_X`), so a taxi's route reaches the compound;
+     `tests/travel.test.ts` allows the longer ride (the overlook to the
+     compound, corner to corner, about 107 s; the cap is 110).
+   - `tests/snapshot.test.ts`: the Close's line is longer and the separate
+     run Phase 1 added is gone; nothing else moved.
+   - The smoke test's home scenes are at the compound, with one for the
+     workshop; `?bench`'s `ends-home` view looks down the Close through
+     the gates. Shots: `docs/far-west-shots/phase-2-*`.
 3. **Inside, and the roof terrace.** The room refitted to the new house
    (bigger: the same furniture kinds, the stash and the wardrobe where they
    make sense), the stair's fade up to the terrace and back, the camera's
