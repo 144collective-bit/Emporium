@@ -60,8 +60,9 @@ with work in flight.
    with what the rest of walk mode calls (`startJoy`, `endJoy`,
    `pressPedal`, `clearPedals`, `rectOf`, `setAim`). Tested in
    `tests/walktouch.test.ts` (the stick, floating at the wheel, the
-   pedals, held or toggled, each button, the phone's gestures). walk.ts:
-   3,500 to 3,302 lines.
+   pedals, held or toggled, each button, the phone's gestures); the smoke
+   test has a `touch` scene (made-up fingers: the stick, Aim, Gas).
+   walk.ts: 3,500 to 3,302 lines.
 4. **The frames by mode**: `driveFrame()`, `boatFrame()`, `flyFrame()`,
    `kartFrame()`, `fightFrame()`, `rideFrame()`, `frameShowroom()` (about
    230 lines): what each reads of the pad, the keys and touch as one input
