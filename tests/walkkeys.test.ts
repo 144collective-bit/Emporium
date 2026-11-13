@@ -213,6 +213,11 @@ test('at the wheel: each vehicle its own keys', () => {
   assert.deepEqual(kart.key('KeyV').asked, ['nextCam']);
   kart.key('Space');
   assert.ok(kart.h.jumpHeld);
+  // E is held for the item, and let go
+  assert.equal(kart.key('KeyE').mine, true);
+  assert.ok(kart.h.keys.has('KeyE'));
+  kart.key('KeyE', false);
+  assert.ok(!kart.h.keys.has('KeyE'));
 });
 
 test('the ring and a ride', () => {
@@ -263,8 +268,6 @@ test("keymap.ts's table and the handler agree: every key a mode lists is walk mo
   for (const [id, mode] of Object.entries(KEYMAP) as [ModeId, (typeof KEYMAP)[ModeId]][]) {
     for (const b of mode.binds) {
       if (NOT_KEYS.includes(b.job)) continue;
-      // (KART-E: the kart's item key was never held by the handler as it was moved; the next commit fixes it)
-      if (id === 'kart' && b.job === 'item') continue;
       for (const k of b.keys) {
         if (ELSEWHERE.test(k)) continue;
         // (a range of digits, "1-7", is its ends)

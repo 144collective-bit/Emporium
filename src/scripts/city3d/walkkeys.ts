@@ -139,13 +139,14 @@ export function onKey(e: KeyboardEvent, down: boolean, h: KeyHost) {
     e.preventDefault();
     return true;
   }
-  // Karting: steer and pedal with the move keys, Space hops into a drift (F does nothing in a race: no getting out mid-lap)
+  // Karting: steer and pedal with the move keys, Space hops into a drift, E uses the item (F does nothing in a race: no getting out mid-lap)
   if (h.karts.active) {
     if (c === 'KeyF') {
       /* swallowed */
     } else if (down && !e.repeat && c === 'KeyV') nextCam();
     else if (c === 'Space') h.jumpHeld = down;
-    else if (MOVE.includes(c)) {
+    // (E is held for the item, as the kart's frame reads it: it was never held before the walk plan's Phase 2 found it)
+    else if (MOVE.includes(c) || c === 'KeyE') {
       if (down) keys.add(c);
       else keys.delete(c);
     } else return false;
