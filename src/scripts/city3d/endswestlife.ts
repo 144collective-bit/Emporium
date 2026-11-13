@@ -21,7 +21,7 @@
  *
  * In world numbers, x across, z north (-) to south (+).
  */
-import { HOME_HOUSE } from './home';
+import { HOME, HOME_HOUSE } from './home';
 import { ROAD_HALF, ROAD_Z, SLAB_Y, type Pt } from './endswood';
 import { GREENS, LANE, ROW_X, CROSS_PATHS, N_EDGE, ZEBRA } from './endswest';
 import { BIN, BIN_OFF, CANOPY, HOUSES, PORCH, TERRACES, binsOf, toWorld, type House, type Terrace } from './endsterraces';
@@ -304,6 +304,8 @@ export const PORCH_POOLS: [number, number, number][] = [
     const [x, z] = toWorld(T, h.door, h.porch === 'canopy' ? 0.55 : PORCH.d + 0.4);
     return [x, z, 1.5];
   }),
+  // (the lamp over Degen's garage door, home.ts, on his driveway)
+  [HOME.garageDoor.x - 0.9, (HOME.garageDoor.z0 + HOME.garageDoor.z1) / 2, 2.4],
   // (the corner shop's and the chippy's light out under the canopy: open late)
   ...[0, 1].map((k): [number, number, number] => {
     const [a, b] = unitAt(k);

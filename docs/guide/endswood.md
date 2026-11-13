@@ -209,3 +209,13 @@ keep it up to date when what it describes changes.
   `HOME_SOLIDS` has its four walls, and endsterraces.ts's `TERRACE_SOLIDS`
   leaves it out of its terrace's box. A new thing in the room goes in
   `FURNITURE` (the test floods the room to hold everything reachable).
+  Phase 5's first part (the room at night) is built: the inside of the
+  house and of the garage is drawn in the shared `neon()` paint (home3d.ts
+  `paint(hex, k)`: one material a shade, the day's and night's brightness
+  in the vertices, so it stays lit at night and never blooms; `icube()`
+  shades a box's sides by hand, as nothing lights it), never a light of
+  its own; `sky.setIndoors()` (index.ts's frame, from `inHouse()`) stops
+  the rain being drawn in the house; ambience.ts's `home` (1 in the house
+  on foot) lets sound.ts turn the street down further than the mall's
+  hall does, over a faint hum. The garage door's lamp has a pool on the
+  driveway (the last of endswestlife.ts's `PORCH_POOLS`).

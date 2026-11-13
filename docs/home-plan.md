@@ -80,15 +80,19 @@ Each with the owner's sign-off.
    onto the driveway through a gate. Drawn by home3d.ts without shadows,
    so it's evenly lit. The front door no longer opens the panel (the City
    view's click still does). Shots: `docs/home-shots/phase-3-*`.
-   Left for Phase 5: the room is as dark as the night outside (no lamp
-   lights it), the rain shows indoors, and the sound is the street's.
 4. **The wardrobe and the stash.** A wardrobe by the stairs opens the
    fitting room (fitting.ts, as Drop 001's panel does); a cupboard opens
    the stash: guns and items not carried (the inventory's bag, its rules in
    inventory.ts, a `stash` in the save with its migration).
-5. **Polish.** Lights on at night and a porch light's pool, a line for the
-   panel, a `?bench` view, the smoke test's home scene grown to cover the
-   garage, the interior and the wardrobe; checked at every width.
+5. **Polish.** *The first part is built (ahead of Phase 4, the owner's
+   call):* the room and the garage are lit at night (their inside faces
+   are the shared `neon()` paint, which the night doesn't darken, shaded by
+   hand: home3d.ts's `paint()`, `icube()`), the lamp over the garage door
+   has its pool on the driveway (`PORCH_POOLS`), no rain is drawn while
+   you're in the house (`sky.setIndoors()`), and the street's sound comes
+   through the walls faintly, over a quiet hum (`home` in ambience.ts).
+   *Still to do:* a line for the panel, a `?bench` view, the smoke test's
+   home scene grown to cover the wardrobe; checked at every width.
 
 ## Decided along the way
 
