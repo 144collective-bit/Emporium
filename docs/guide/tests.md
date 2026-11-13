@@ -61,8 +61,10 @@ keep it up to date when what it describes changes.
   card, a ride, skipped), a kart race (a single race started and quit),
   flying (into your aircraft, rolling out), the gamepad (a made-up pad:
   the stick, A, Start, B) and the touch controls (made-up fingers: the
-  stick, Aim, Gas); it fails on any page error or a step that
-  didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
+  stick, Aim, Gas); it fails on any page error, any NaN warning in
+  the console (NaN geometry can black a real GPU's screen out,
+  docs/stability-plan.md; the software renderer draws on regardless) or a
+  step that didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
   after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
   takes a few minutes in the software renderer, so it isn't in the Action.
 - Browser checks (the widths above, walk and drive flows) are still done by
