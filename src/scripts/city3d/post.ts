@@ -52,6 +52,9 @@ const InkShader = {
 
     void main() {
       vec4 col = texture2D(tDiffuse, vUv);
+      // A pixel that isn't a number (or is infinite) goes out as the ink's own colour: the bloom after this blurs
+      // every pixel into its neighbours, so one NaN would spread over the screen as black (docs/stability-plan.md)
+      if (any(isnan(col)) || any(isinf(col))) col = vec4(ink, 1.0);
       vec2 o = texel * thickness;
       float d0 = dist(vUv);
       float dl = dist(vUv - vec2(o.x, 0.0));

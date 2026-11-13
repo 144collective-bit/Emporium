@@ -45,6 +45,12 @@ keep it up to date when what it describes changes.
   (`skeleton.ts`, `body.ts`), his walking (`locomotion.ts`), the motion capture and its animation (`bvh.ts`, `mocap-build.ts`, `mocap.ts`, `movesim.ts`, `inertia.ts`, `motionmatch.ts`, `animator.ts`), the rubric of human movement over every clip and program (`human.ts`, `tests/human.test.ts`), what his body does about what he touches (`contact.ts`), the game's moments (`moments.ts`), the guns in his hands (`gunfit.ts`, `stance.ts`), what he carries (`inventory.ts`, `inventory-save.ts`), fists on the street, the sparring partners and the styles (`brawl-sim.ts`, `brawlsite.ts`, `fightsave.ts`), the fight clips' planted feet, footwork and rubric (`fightfeet.ts`, `fightrubric.ts`), the head's follow-through (`follow.ts`) and his clothes not clipping (`wardrobe.ts`, the trunk's weights in `skeleton.ts`, `tests/clothing.test.ts`) and his accessories where they're worn (`tests/accessories.test.ts`), the suit's tailoring on the desktop only (`tests/tailoring.test.ts`). Modules that touch the DOM or `kit.ts` (canvas
   textures) can't load in Node; keep data a test needs in the DOM-free
   files.
+- `tests/outlines.test.ts`: every block's lot (`insetPoly()` of
+  `tidyOutline()`), the inset of its outline as it is and its slab are
+  finite numbers, the lot on its slab; Crestmont's `crest-0-2` keeps its
+  fold (the sidewalk across `park-w2`'s end). `tests/tilebatch.test.ts`
+  holds that `splitByTile()` leaves out a triangle with a NaN or infinite
+  corner and counts it (`DROPPED`).
 - When you change a rule or move something in the city, run the tests and
   extend them: a new landmark's boxes and door, a new model's handling, a
   new road. Fix the code, not the test, unless the test was wrong.
@@ -61,8 +67,9 @@ keep it up to date when what it describes changes.
   card, a ride, skipped), a kart race (a single race started and quit),
   flying (into your aircraft, rolling out), the gamepad (a made-up pad:
   the stick, A, Start, B) and the touch controls (made-up fingers: the
-  stick, Aim, Gas); it fails on any page error or a step that
-  didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
+  stick, Aim, Gas); it fails on any page error, any NaN geometry in
+  the console (it can black a real GPU's screen out, docs/stability-plan.md;
+  the software renderer draws on regardless) or a step that didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
   after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
   takes a few minutes in the software renderer, so it isn't in the Action.
 - Browser checks (the widths above, walk and drive flows) are still done by

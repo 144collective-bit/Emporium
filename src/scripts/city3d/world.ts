@@ -19,7 +19,7 @@ const RIVER_PAST = 30;
 import { Batch, canvasTex, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, siteMat, toon } from './kit';
 import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
 import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, type Road } from './layout';
-import { PLAN, offsetLine, riverBridges, type Pt } from './streetplan';
+import { PLAN, insetPoly, offsetLine, riverBridges, tidyOutline, type Pt } from './streetplan';
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
@@ -201,24 +201,6 @@ export function flatPoly(poly: Pt[], y: number, repeat = BS - 0.8) {
 export function slabPoly(poly: Pt[], h: number) {
   const shape = new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z)));
   return new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false }).rotateX(-Math.PI / 2);
-}
-/** An outline pulled in by d, corners mitred */
-export function insetPoly(poly: Pt[], d: number): Pt[] {
-  const n = poly.length;
-  return poly.map((p, i) => {
-    const a = poly[(i + n - 1) % n];
-    const b = poly[(i + 1) % n];
-    const e0 = [p[0] - a[0], p[1] - a[1]];
-    const e1 = [b[0] - p[0], b[1] - p[1]];
-    const l0 = Math.hypot(e0[0], e0[1]);
-    const l1 = Math.hypot(e1[0], e1[1]);
-    // Inward normals of a counter-clockwise outline (from above): to the left of travel
-    const n0 = [e0[1] / l0, -e0[0] / l0];
-    const n1 = [e1[1] / l1, -e1[0] / l1];
-    const m = [n0[0] + n1[0], n0[1] + n1[1]];
-    const k = d / (1 + n0[0] * n1[0] + n0[1] * n1[1]);
-    return [p[0] + m[0] * k, p[1] + m[1] * k] as Pt;
-  });
 }
 /** A convex outline clipped to a rectangle (empty if it's outside it) */
 function clipRect(poly: Pt[], x0: number, z0: number, x1: number, z1: number): Pt[] {
@@ -1077,7 +1059,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     const slab = PLAN.slabs[i];
     if (blk.id.startsWith('trench-')) {
       slabKerb(slab, slabPoly(slab, SLAB), trenchKerb);
-      b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.005, YARD_REPEAT), LOTS.yard);
+      b.add(flatPoly(insetPoly(tidyOutline(blk.poly), 0.4), SLAB + 0.005, YARD_REPEAT), LOTS.yard);
       return;
     }
     // (the Docks' as The Trenches': grey sidewalks, worn concrete, in pieces a tile each round the basin; their strips
@@ -1111,7 +1093,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     } else {
       slabKerb(slab, slabPoly(slab, SLAB), kerb);
       // (A bend's outer sidewalk is all sidewalk: no lot)
-      if (blk.walk) b.add(flatPoly(insetPoly(blk.poly, 0.4), SLAB + 0.003), LOTS[kind]);
+      // (the lot inside the outline tidied: an outline that folds back for its sidewalk's sake has no lot in the fold)
+      if (blk.walk) b.add(flatPoly(insetPoly(tidyOutline(blk.poly), 0.4), SLAB + 0.003), LOTS[kind]);
     }
   });
   // The landmarks' own lots inside their blocks (grass round the Signal tower, concrete in the compound...)

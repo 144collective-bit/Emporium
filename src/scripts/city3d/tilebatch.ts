@@ -117,6 +117,10 @@ export interface TileBatches {
  * city comes through here, so it reads the arrays themselves and keys the tiles by number, where it
  * went through the accessors, a string a triangle and a map of vertices: about a third of the time over many tiles, an eighth for one
  */
+/** Triangles left out of the city because a corner wasn't a finite number (`splitByTile()`; ?fps and the smoke test read it) */
+export const DROPPED = { tris: 0 };
+/** The sites that have warned about it (once each) */
+const warned = new Set<string>();
 export function splitByTile(g: THREE.BufferGeometry): Map<string, THREE.BufferGeometry> {
   const pos = g.attributes.position as THREE.BufferAttribute;
   const index = g.index!.array;
@@ -128,15 +132,26 @@ export function splitByTile(g: THREE.BufferGeometry): Map<string, THREE.BufferGe
   // Each triangle's tile first: most of what comes is all in one tile, and goes back as it is
   const keys = new Float64Array(n);
   let one = true;
+  // (a triangle with a corner that isn't a number, or is infinite, is left out: on a GPU it can write NaN pixels,
+  // which the bloom spreads over the screen as black; `DROPPED` counts them, docs/stability-plan.md)
+  let bad = 0;
   for (let t = 0; t < n; t++) {
     const a = index[t * 3];
     const b = index[t * 3 + 1];
     const c = index[t * 3 + 2];
     const x = plain ? pa[a * 3] + pa[b * 3] + pa[c * 3] : pos.getX(a) + pos.getX(b) + pos.getX(c);
+    const y = plain ? pa[a * 3 + 1] + pa[b * 3 + 1] + pa[c * 3 + 1] : pos.getY(a) + pos.getY(b) + pos.getY(c);
     const z = plain ? pa[a * 3 + 2] + pa[b * 3 + 2] + pa[c * 3 + 2] : pos.getZ(a) + pos.getZ(b) + pos.getZ(c);
+    if (!Number.isFinite(x + y + z)) {
+      keys[t] = NaN;
+      bad++;
+      one = false;
+      continue;
+    }
     const k = (keys[t] = (Math.floor(x / 3 / TILE) + OFF) * 65536 + Math.floor(z / 3 / TILE) + OFF);
     if (k !== keys[0]) one = false;
   }
+  DROPPED.tris += bad;
   const tris = new Map<number, number[]>();
   if (one) tris.set(keys[0], []);
   else {
@@ -144,6 +159,7 @@ export function splitByTile(g: THREE.BufferGeometry): Map<string, THREE.BufferGe
     let last: number[] | undefined;
     for (let t = 0; t < n; t++) {
       const k = keys[t];
+      if (k !== k) continue;
       if (k !== lastKey) {
         lastKey = k;
         last = tris.get(k);
@@ -154,7 +170,7 @@ export function splitByTile(g: THREE.BufferGeometry): Map<string, THREE.BufferGe
   }
   const name = (k: number) => tileKey(Math.floor(k / 65536) - OFF, (k % 65536) - OFF);
   const out = new Map<string, THREE.BufferGeometry>();
-  if (tris.size === 1) {
+  if (tris.size === 1 && !bad) {
     out.set(name(tris.keys().next().value!), g);
     return out;
   }
@@ -293,7 +309,13 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         const k2 = `${key}|${site}`;
         let inc = incoming.get(k2);
         if (!inc) incoming.set(k2, (inc = { key, site, mat: m.material, layers: m.layers.mask, cast: m.castShadow, receive: m.receiveShadow, order: m.renderOrder, pieces: new Map() }));
-        for (const [t, part] of splitByTile(g)) {
+        const was = DROPPED.tris;
+        const parts = splitByTile(g);
+        if (DROPPED.tris > was && !warned.has(site)) {
+          warned.add(site);
+          console.warn(`[city] left out ${DROPPED.tris - was} triangles with NaN corners (site "${site || 'boot'}", ${m.material.name || m.material.type})`);
+        }
+        for (const [t, part] of parts) {
           if (opts.keep && !opts.keep(t, lod)) {
             part.dispose();
             continue;

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { PACKED, compact, splitByTile, tileBatch } from '../src/scripts/city3d/tilebatch';
+import { DROPPED, PACKED, compact, splitByTile, tileBatch } from '../src/scripts/city3d/tilebatch';
 import { tileKey, tileOf } from '../src/scripts/city3d/tiles';
 
 // A plain colour and a neon, as the Batches' shared materials (kit.ts marks them `shared`)
@@ -313,4 +313,24 @@ test('triangles are split by tile exactly as the plain way splits them, negative
   // One tile: the geometry itself comes back, not a copy
   const small = new THREE.BoxGeometry(1, 1, 1).translate(5, 0.5, 5);
   assert.equal(splitByTile(small).get('0,0'), small);
+});
+
+test('a triangle with a corner that is not a number is left out, and counted (docs/stability-plan.md)', () => {
+  // Two quads in one tile; one corner of the second made NaN
+  const g = new THREE.PlaneGeometry(4, 2, 2, 1).rotateX(-Math.PI / 2).translate(5, 0, 5);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const tris = g.index!.count / 3;
+  // (the last vertex: only the second quad's triangles use it)
+  pos.setXYZ(pos.count - 1, NaN, 0, 5);
+  const was = DROPPED.tris;
+  const parts = splitByTile(g);
+  const left = [...parts.values()].reduce((n, p) => n + p.index!.count / 3, 0);
+  assert.ok(left > 0 && left < tris, `${left} of ${tris} left`);
+  assert.equal(DROPPED.tris - was, tris - left);
+  for (const p of parts.values()) assert.ok(Array.from(p.attributes.position.array).every(Number.isFinite), 'a NaN got through');
+  // (an infinite corner too)
+  const h = new THREE.BoxGeometry(1, 1, 1).translate(5, 0.5, 5);
+  (h.attributes.position as THREE.BufferAttribute).setX(0, Infinity);
+  const kept = [...splitByTile(h).values()];
+  assert.ok(kept.every((p) => Array.from(p.attributes.position.array).every(Number.isFinite)));
 });

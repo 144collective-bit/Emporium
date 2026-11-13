@@ -359,6 +359,15 @@ keep it up to date when what it describes changes.
   thins it), so the horizon is the same wherever you walk. `?horizon=N` forces a
   distance on any tier while walking, `?horizon=0` turns it off. Tested in
   `tests/tileplan.test.ts` and `tests/tilebatch.test.ts`.
+- **Nothing drawn may be NaN** (`docs/stability-plan.md`): on a real GPU a
+  triangle with a NaN corner can write NaN pixels, which the bloom spreads
+  over the screen as black (the software renderer the tests use draws on,
+  so it never shows there). `splitByTile()` in `tilebatch.ts`, which every
+  tile-merged piece goes through, leaves such triangles out, counts them
+  (`DROPPED`; `?fps` says so, `__mem()`'s `nanTris`) and warns once a site;
+  the ink pass (`post.ts`) turns any NaN or infinite pixel into the ink's
+  colour before the bloom; `insetPoly()` and `tidyOutline()`
+  (`streetplan.ts`) never make one; `npm run smoke` fails on a NaN warning.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory

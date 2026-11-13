@@ -43,7 +43,11 @@ keep it up to date when what it describes changes.
   cobbled walk-only lane to a piazza, `ARCH`, `FOUNTAINS`, `LANE_SHOPS`),
   the valets' stands and the cars in the bays (`VALET_STANDS`,
   `CORAL_CARS`); the bays are crestmont.ts's (`CORAL_BAYS`, `crestPoly()`:
-  the block notched so the sidewalk wraps round them, `inBay()`);
+  the block notched so the sidewalk wraps round them, `inBay()`; `park-w2`
+  reaches `crest-0-2`'s corner, so that outline runs out to the corner and
+  back on purpose, the slab carrying the sidewalk across the bay's end:
+  its lot is drawn inside the tidied outline, `tidyOutline()` in
+  streetplan.ts, docs/stability-plan.md);
   `CORAL_SOLIDS` (in `SOLIDS`), `onDrive()` (the planting keeps off);
   drawn by `coral3d.ts` (one sign atlas `coral-signs`, the cars through
   `parkedCars()`). Phase 5 (the Flats' estates) is built: `estates.ts`
