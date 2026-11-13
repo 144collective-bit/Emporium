@@ -3,7 +3,7 @@
 // already inside a box can leave it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAM_R, bump, sweep } from '../src/scripts/city3d/freecollide';
+import { CAM_R, bump, gap, sweep } from '../src/scripts/city3d/freecollide';
 import { CAMERA_GRID, type Box } from '../src/scripts/city3d/solids';
 import type { V3 } from '../src/scripts/city3d/freecam';
 
@@ -68,4 +68,18 @@ test("the city's own buildings stop it (the walk camera's solids)", () => {
   // high over everything, it passes
   const over: V3 = [b[0] - 20, 400, z];
   assert.deepEqual(bump(over, [b[2] + 20, 400, z]), [b[2] + 20, 400, z]);
+});
+
+test("gap(): how far the camera is from the nearest building (its near plane comes in by it, lens.ts)", () => {
+  // A box of the city's, from a point by it
+  const b = CAMERA_GRID.query(20, 20, 40, 40).find((q) => q[4] > 3 && (q as unknown as number[])[5] === undefined)!;
+  assert.ok(b, 'a box downtown');
+  const mid: V3 = [(b[0] + b[2]) / 2, b[4] / 2, (b[1] + b[3]) / 2];
+  // Inside it: none
+  assert.equal(gap(mid), 0);
+  // Off its east face: no more than that (another box may be nearer)
+  const off: V3 = [b[2] + 0.7, b[4] / 2, mid[2]];
+  assert.ok(gap(off) <= 0.7 + 1e-9);
+  // Out where nothing is within reach: none to come in for
+  assert.equal(gap([1e6, 5, 1e6]), Infinity);
 });

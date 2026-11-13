@@ -2,7 +2,8 @@
 // people the lens is inside left undrawn.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LENS, bodyGap, nearFor, onLens } from '../src/scripts/city3d/lens';
+import { CITY_LENS, LENS, bodyGap, cityNear, nearFor, onLens } from '../src/scripts/city3d/lens';
+import { FLY } from '../src/scripts/city3d/freecam';
 
 test('the near plane: the city\'s with nothing close, in as a wall comes near, never under its least', () => {
   // Nothing within the probe: the city's own
@@ -57,4 +58,22 @@ test('a body\'s gap from the lens: below 0 inside, growing as the lens backs off
   // A fighter a step from the camera keeps the near plane well short of them
   const g = bodyGap(0.45, 0, 0, 0.66);
   assert.ok(nearFor(g, false) < g);
+});
+
+test("City view's free camera: the near plane in low down among the street's things, the city's high up", () => {
+  // At the least height it flies: well in, so a sign or a tree it comes up to isn't cut open
+  assert.equal(cityNear(FLY.floor, FLY.floor), CITY_LENS.floor);
+  assert.ok(cityNear(FLY.floor, FLY.floor) <= 0.1);
+  // Rising with the height, never past the city's or under the least
+  let last = 0;
+  for (let h = FLY.floor; h < 40; h += 0.25) {
+    const n = cityNear(h, FLY.floor);
+    assert.ok(n >= last - 1e-12 && n >= LENS.min && n <= LENS.base, `${h}: ${n}`);
+    last = n;
+  }
+  // Back to the city's by about six tiles up, and from there on (high over the city nothing changes)
+  assert.equal(cityNear(FLY.floor + 6, FLY.floor), LENS.base);
+  assert.equal(cityNear(200, FLY.floor), LENS.base);
+  // (under the floor, as a fly-in can pass: the least)
+  assert.equal(cityNear(0, FLY.floor), CITY_LENS.floor);
 });

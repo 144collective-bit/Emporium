@@ -52,3 +52,18 @@ export function bump(from: V3, to: V3, r = CAM_R): V3 {
   if (from[0] === to[0] && from[1] === to[1] && from[2] === to[2]) return [to[0], to[1], to[2]];
   return sweep(from, to, boxesFor(from, to, r, scratch), r);
 }
+
+/**
+ * How far a point is from the nearest box within `reach` (Infinity with none): the free camera's near plane comes in
+ * by it beside a building (lens.ts `nearFor()`, index.ts), for what stands out of its box
+ */
+export function gap(p: V3, reach = 1.5): number {
+  let best = Infinity;
+  for (const b of CAMERA_GRID.query(p[0] - reach, p[2] - reach, p[0] + reach, p[2] + reach, scratch)) {
+    const dx = Math.max(b[0] - p[0], 0, p[0] - b[2]);
+    const dz = Math.max(b[1] - p[2], 0, p[2] - b[3]);
+    const dy = Math.max(bottomOf(b) - p[1], 0, p[1] - b[4]);
+    best = Math.min(best, Math.hypot(dx, dy, dz));
+  }
+  return best;
+}

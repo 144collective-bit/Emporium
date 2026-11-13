@@ -556,7 +556,8 @@ export function createWalk(d: WalkDeps) {
   let walkLock = false;
   let baseFov = camera.fov;
   /** The city's near plane, which the walk pulls in as walls come close to the lens (lens.ts) */
-  const baseNear = camera.near;
+  // (the city's own, not whatever the camera has when the walk is made: City view's moves with its height, lens.ts)
+  const baseNear = LENS.base;
   const setNear = (v: number) => {
     if (camera.near === v) return;
     camera.near = v;
