@@ -41,6 +41,8 @@ export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
  * wide (metres)
  */
 const STRIPE = { gap: 0.15, out: -0.35, w: 0.011 };
+/** How quickly the pump takes over as he picks up from a walk to a jog (its share times this, at most all) */
+const PUMP_IN = 3;
 /** How much less the hand left in the guard is drawn in towards the middle while the other is out punching */
 const PUNCH_ASIDE = 0.8;
 
@@ -253,7 +255,8 @@ export function createFistsView(scene: THREE.Scene) {
         const laid = bodyArm(h.j, eye, unit, h.laid, s.guard, pull);
         // Running with his hands down, the pump: his swing's timing on the designed arc (fparm.ts PUMP), the elbow
         // at a right angle all the way; eased in over the run's share
-        if (run > 0) blendArm(laid, pumpArm(laid.shoulder.x, swung[arms.indexOf(h)], s.sprint, h.pump), run);
+        // (taken over quickly once he's jogging: half way to his hanging arm, a fist would sit below the shot)
+        if (run > 0) blendArm(laid, pumpArm(laid.shoulder.x, swung[arms.indexOf(h)], s.sprint, h.pump), Math.min(1, run * PUMP_IN));
         h.fore.visible = !loose;
         h.foreLoose.visible = loose;
         // The upper arm (its +z out and up, where the track top's stripes are) and the forearm with its fist

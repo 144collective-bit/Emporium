@@ -137,7 +137,10 @@ keep it up to date when what it describes changes.
   the fist swung up into its lower corner and back down out of shot like
   a pendulum, higher sprinting, the elbow driving back; the fist is loose
   (`fistGeometry(thumb, loose)`, a second forearm swapped in, so still two
-  draws an arm) and eases back to the clip's arm as he slows (`blendArm()`); while one arm is
+  draws an arm), shown from a light jog (the owner's call; walk.ts
+  `FP_PUMP`, a third of the run's pace, never at a walk) and taken over
+  quickly (`PUMP_IN`), easing back to the clip's arm as he slows
+  (`blendArm()`); while one arm is
   out punching the other hand's draw in is eased off (`PUNCH_ASIDE`), so
   the punch has the middle. With the left lead (the Fight Club, below) the
   jab and hook are his left.

@@ -157,8 +157,8 @@ const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
-/** First person with empty hands: the run's pace (a share of RUN) over which his swinging arms come into shot */
-const FP_PUMP = [0.55, 0.9] as const;
+/** First person with empty hands: the pace (a share of RUN) over which his swinging arms come into shot: from a light jog (the owner's call), never at a walk (WALK is 0.28 of RUN) */
+const FP_PUMP = [0.33, 0.6] as const;
 /** How far the first-person view narrows with the fists' guard up (degrees) */
 const GUARD_ZOOM = 5;
 const AIMING = 1.09;
