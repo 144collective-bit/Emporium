@@ -18,7 +18,9 @@ keep it up to date when what it describes changes.
   yards, polish), each with the owner's sign-off; keep it up to date.
   Phase 1 (the windows, city-wide: `windows.ts`, painted by infill.ts's
   `wallBand()`) and Phase 2 (the facades: five more wall materials in the
-  atlas, weathering, the towers and tenements in a mix) are built.
+  atlas, weathering, the towers and tenements in a mix) and Phase 3 (the
+  rooflines: `rooftones.ts`, roofs in tar, gravel, silver or navy,
+  cornices of four kinds, the tenements 3 to 6 storeys) are built.
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets

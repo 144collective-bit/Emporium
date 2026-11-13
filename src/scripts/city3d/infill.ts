@@ -26,6 +26,7 @@ import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL
 import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
+import { ROOF_TONES, corniceAt, roofTone, type CorniceKind } from './rooftones';
 import { WINDOW_TYPE, paneAt, type Light, type Pane, type WallKindName } from './windows';
 
 /* ---------- The wall atlas ---------- */
@@ -761,16 +762,28 @@ const R_IN = 0.006;
 function roof(k: Kit, F: Frame, top: number, par: THREE.Material, ph = 0.22) {
   const { w, d } = F;
   const t = 0.12;
-  // The slab tucked just inside the walls (flush with them, its edge flickers against them); the parapet covers the gap
-  k.all(() => k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, ROOF));
+  // The slab tucked just inside the walls (flush with them, its edge flickers against them); the parapet covers the gap.
+  // Its covering from where the building stands (rooftones.ts: tar, gravel, silver paint or the old navy)
+  const cover = toon(ROOF_TONES[roofTone(F.M.elements[12], F.M.elements[14])]);
+  k.all(() => k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, cover));
   k.lbox(0, w, top, top + ph, -t, 0, par);
   k.lbox(0, w, top, top + ph, -d, -d + t, par);
   k.lbox(0, t, top, top + ph, -d + t, -t, par);
   k.lbox(w - t, w, top, top + ph, -d + t, -t, par);
 }
 
-/** A bracketed cornice along the front */
-function cornice(k: Kit, w: number, top: number, trim: THREE.Material, low: boolean, brackets = true) {
+/** A cornice along the front: bracketed (the default), stepped, a plain coping, or none (rooftones.ts `corniceAt()`) */
+function cornice(k: Kit, w: number, top: number, trim: THREE.Material, low: boolean, brackets = true, kind: CorniceKind = 'bracketed') {
+  if (kind === 'none') return;
+  if (kind === 'coping') {
+    k.lbox(-0.03, w + 0.03, top - 0.12, top - 0.02, 0, 0.08, trim);
+    return;
+  }
+  if (kind === 'stepped') {
+    k.lbox(-0.04, w + 0.04, top - 0.34, top - 0.24, 0, 0.12, trim);
+    k.lbox(-0.08, w + 0.08, top - 0.24, top - 0.1, 0, 0.22, trim);
+    return;
+  }
   k.lbox(-0.06, w + 0.06, top - 0.34, top - 0.14, 0, 0.22, trim);
   if (LOW) return;
   k.lbox(-0.03, w + 0.03, top - 0.14, top - 0.06, 0, 0.12, trim);
@@ -1024,7 +1037,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     shell(k, F, top, ATLAS.wall[kind], ATLAS.ground[shopBand(sg.color)], upper, u0);
     k.all(() => fascia(k, w, id, sg.color));
     if (f.floors > 0) dress(k, w, upper, top, f.floors, trimM);
-    cornice(k, w, top, trimM, low, kind === 'brick' || kind === 'brownstone');
+    cornice(k, w, top, trimM, low, kind === 'brick' || kind === 'brownstone', corniceAt(F.M.elements[12], F.M.elements[14]));
     roof(k, F, top, toon(shadeHex(wall, -0.25)));
     // An awning in the shop's colours, a blade sign, a fire escape on taller ones
     const stripes = id === 'crumpet' ? ['#f2c94c', '#f3f2f7'] : id === 'coffee' ? ['#5a3a2a', '#e8d9c0'] : [AWNINGS[Math.floor(r() * AWNINGS.length)], '#f3f2f7'];

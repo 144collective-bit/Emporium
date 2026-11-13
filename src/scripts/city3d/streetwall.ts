@@ -3,7 +3,7 @@
  * up and have more buildings"; DOM-free, tested in tests/streetwall.test.ts),
  * drawn by streetwall3d.ts:
  *
- * - **The street walls** (`TENEMENTS`): 4-6 storey tenements, shops on the
+ * - **The street walls** (`TENEMENTS`): 3-6 storey tenements, no two neighbours the same height, shops on the
  *   ground floor and a fire escape up the front, shoulder to shoulder along
  *   the projects' yards' street fronts wherever there's room, the towers
  *   behind. A row breaks at every way in (a tower's door, an amenity's way
@@ -174,8 +174,13 @@ const LAID = (() => {
   let k = 0;
   for (const run of RUNS.filter((o) => o.depth === WALL_DEPTH)) {
     let a = run.a0;
+    let before = 0;
     for (const w of widths(run.a1 - run.a0, r)) {
-      const floors = 3 + Math.floor(r() * 3);
+      // 3 to 6 storeys with the shop's (2 to 5 over it), never the same as the one before it along the run (the variety
+      // plan's Phase 3, the owner's pick)
+      let floors = 2 + Math.floor(r() * 4);
+      if (floors === before) floors = floors === 5 ? 4 : floors + 1;
+      before = floors;
       const box = plotOf(run.block, run.face, a, a + w, WALL_DEPTH);
       const [cx, cz] = centre(box);
       const near = lots.filter((o) => Math.hypot(centre(o.box)[0] - cx, centre(o.box)[1] - cz) < NAME_CLEAR).map((o) => o.sign!);

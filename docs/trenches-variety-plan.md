@@ -86,6 +86,26 @@ everything under the Emporium, phones light.
    setbacks; roofs in tar grey, gravel and silver paint, not all navy;
    rooftop clutter in variety (water tanks of different shapes, bulkheads,
    vents, aerials, dishes).
+
+   The owner's picks (2026-11-12): tenements of 3 to 6 storeys, no two
+   neighbours alike; roofs in tar grey, gravel and silver paint with some
+   navy kept; varied clutter on most roofs.
+
+   Built, waiting on the owner's sign-off:
+   - `rooftones.ts` (DOM-free, tested in `tests/rooftones.test.ts`): each
+     pick a hash of where a building stands, so nothing in the seeded layout
+     moves: `roofTone()` (`ROOF_TONES`, `ROOF_MIX`: tar, gravel, silver,
+     navy), `corniceAt()` (`CORNICE_MIX`: bracketed, stepped, a plain
+     coping, none), `tankAt()` (round timber or square steel), `ventsAt()`,
+     `aerialAt()`.
+   - infill.ts: every flat roof's slab in its covering (`roof()`, so
+     downtown's and the kits' too), the shop kit's cornice by `corniceAt()`.
+   - projects3d.ts: the Trench Houses' roofs in their covering, a round or
+     square tank (`squareTank()`), one to three vent stacks (`vent()`) and
+     an aerial on most bulkheads.
+   - streetwall.ts: the tenements 2 to 5 storeys over the shop (3 to 6 in
+     all), never as tall as the one before along the run, still one roll a
+     lot; the tests hold neighbours apart.
 4. **Ground floors.** A mix of shopfronts (roll shutters half up, bodegas
    with awnings, recessed doorways, gated entries, stoops), fire escapes on
    some fronts only, door surrounds, a few painted ground floors.
