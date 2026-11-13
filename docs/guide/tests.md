@@ -59,8 +59,9 @@ keep it up to date when what it describes changes.
   (in at his garage, out through its door, a drive, out), on foot (walk,
   sprint, jump, crouch, the hub), the gun store's counter, the metro (the
   card, a ride, skipped), a kart race (a single race started and quit),
-  flying (into your aircraft, rolling out) and the gamepad (a made-up pad:
-  the stick, A, Start, B); it fails on any page error or a step that
+  flying (into your aircraft, rolling out), the gamepad (a made-up pad:
+  the stick, A, Start, B) and the touch controls (made-up fingers: the
+  stick, Aim, Gas); it fails on any page error or a step that
   didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
   after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
   takes a few minutes in the software renderer, so it isn't in the Action.

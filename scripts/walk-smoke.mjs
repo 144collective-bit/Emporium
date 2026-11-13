@@ -300,6 +300,42 @@ await scene(
   }
 );
 
+// The touch controls (walktouch.ts): fingers made up in the page (pointer events of the touch kind): the stick pushed
+// up walks him and lets go when its finger lifts, Aim presses, a finger on Gas holds the pedal until it lifts
+await scene('touch', '86,138.5', async (t) => {
+  const finger = (sel, type, o = {}) =>
+    t.page.evaluate(
+      ([sel, type, o]) => {
+        const el = sel === 'window' ? window : document.querySelector(sel);
+        const r = sel === 'window' ? null : el.getBoundingClientRect();
+        const at = r ? { clientX: r.left + r.width / 2 + (o.dx ?? 0), clientY: r.top + r.height / 2 + (o.dy ?? 0) } : { clientX: o.x ?? 0, clientY: o.y ?? 0 };
+        el.dispatchEvent(new PointerEvent(type, { pointerId: o.id ?? 11, pointerType: 'touch', isPrimary: true, bubbles: true, cancelable: true, ...at }));
+      },
+      [sel, type, o]
+    );
+  const from = await t.where();
+  // (pushed well past the ring's top edge: full ahead, whatever size the ring is drawn)
+  await finger('[data-walk-stick]', 'pointerdown', { id: 11, dy: -400 });
+  await t.until('the stick to walk him', ([x, z]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) >= 1.5;
+  }, from);
+  await t.until('the stick to be held', () => document.querySelector('[data-walk-stick]').classList.contains('is-held'), null, 30000);
+  await t.step('the stick walked him');
+  await finger('window', 'pointerup', { id: 11 });
+  await t.until('the stick to be let go', () => !document.querySelector('[data-walk-stick]').classList.contains('is-held'), null, 30000);
+  await t.step('the stick let go');
+  await finger('[data-walk-aim]', 'pointerdown', { id: 12 });
+  await t.until('Aim to be pressed', () => document.querySelector('[data-walk-aim]').getAttribute('aria-pressed') === 'true', null, 30000);
+  await t.step('Aim pressed');
+  await finger('[data-walk-aim]', 'pointerup', { id: 12 });
+  await finger('[data-drive-gas]', 'pointerdown', { id: 13 });
+  await t.until('Gas to be held', () => document.querySelector('[data-drive-gas]').classList.contains('is-held'), null, 30000);
+  await finger('window', 'pointerup', { id: 13 });
+  await t.until('Gas to be let go', () => !document.querySelector('[data-drive-gas]').classList.contains('is-held'), null, 30000);
+  await t.step('Gas held and let go');
+});
+
 await browser.close();
 server.close();
 if (failed) {

@@ -67,6 +67,8 @@ import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
 import { pollPad as pollPadOf, type PadHost, type PadState } from './walkpad';
+import { onKey as onKeyOf, type KeyHost } from './walkkeys';
+import { wireTouch, type TouchHost } from './walktouch';
 import { KART_PARK } from './kartpark';
 import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
@@ -116,7 +118,7 @@ import type { Partners, StreetFists } from './brawl';
 import type { PartnerId } from './fight-moves';
 import type { FightStart } from './fight-types';
 import type { Hub } from './hub';
-import { onTap, type GameDeps } from './ui';
+import type { GameDeps } from './ui';
 import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol';
 import { live } from './live-client';
 import type { FeatureId } from './live';
@@ -125,7 +127,7 @@ import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
 import { UNDER, createGroundHeight } from './groundheight';
 import { RIDE_CAM, WALK_ZOOM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
-import { inPedalZone, inSteerZone, pedalAt, stickRead, type Pedal, type Rect, type Screen } from './touchdrive';
+import { inPedalZone, inSteerZone, type Screen } from './touchdrive';
 import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
 import type { CardInput } from './ctrlcard';
 import { LENS, nearFor } from './lens';
@@ -1160,30 +1162,7 @@ export function createWalk(d: WalkDeps) {
   /** Driving input from the gamepad and the touch pedals */
   const padDrive = { steer: 0, throttle: 0, handbrake: false };
   const pedals = { gas: false, brake: false };
-  /** The fingers on the pedals (touchdrive.ts): each pointer and the pedal it presses */
-  const pedalFingers = new Map<number, Pedal>();
   const pedalBtns = [$('[data-drive-gas]'), $('[data-drive-brake]')];
-  const rectOf = (el: Element): Rect | null => {
-    const r = el.getBoundingClientRect();
-    return r.width ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null;
-  };
-  function syncPedals() {
-    const on = [...pedalFingers.values()];
-    pedals.gas = on.includes('gas');
-    pedals.brake = on.includes('brake');
-    pedalBtns[0].classList.toggle('is-held', pedals.gas);
-    pedalBtns[1].classList.toggle('is-held', pedals.brake);
-  }
-  function clearPedals() {
-    pedalFingers.clear();
-    syncPedals();
-  }
-  function pressPedal(e: PointerEvent, el: HTMLElement) {
-    capture(el, e.pointerId);
-    pedalFingers.set(e.pointerId, pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), 'gas'));
-    syncPedals();
-    d.touched();
-  }
   /** The screen for the floating stick's and the pedals' zones */
   function screen(): Screen {
     // (in the screen's own numbers, as the fingers' are: the city fills it)
@@ -1681,33 +1660,6 @@ export function createWalk(d: WalkDeps) {
     else crouchTouch = down;
     if (down && !crouched && !slide) crouchPress();
   }
-  /** Keep a finger's let-go on the button it pressed (a pointer that isn't live, as a synthetic one, can't be) */
-  const capture = (el: HTMLElement, id: number) => {
-    try {
-      el.setPointerCapture?.(id);
-    } catch {
-      /* fine */
-    }
-  };
-  /** A touch button that's held or toggled by the setting for `job`: `set` turns it on or off, `get` says whether it's on */
-  function holdButton(btn: HTMLElement | null, job: HoldJob, set: (on: boolean) => void, get: () => boolean) {
-    if (!btn) return;
-    btn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      capture(btn, e.pointerId);
-      set(press(hm(job, 'touch'), get(), true));
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
-      btn.addEventListener(ev, () => {
-        if (hm(job, 'touch') === 'hold' && get()) set(false);
-      });
-    // (Enter or Space on it, focused: a toggle either way; a pointer's own click already pressed it)
-    btn.addEventListener('click', (e) => {
-      if (e.detail === 0) set(!get());
-    });
-  }
-
   /** The camera at the wheel (V, the right stick pressed, the touch View button; views.ts): the next view, named in a toast */
   function nextCam() {
     let kind: ViewKind | RideKind | 'ring' | 'foot' | null = null;
@@ -1730,141 +1682,74 @@ export function createWalk(d: WalkDeps) {
     if (kind && view) d.game.toast(`Camera · ${viewName(kind, view)}`, 1200);
   }
 
-  const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
-  function onKey(e: KeyboardEvent, down: boolean) {
-    if (!active || (e.target as HTMLElement).matches?.('input, select, textarea')) return false;
-    const c = e.code;
-    if (down) setInput('keys');
-    // (a peek key let go anywhere is let go: it may have been held into a car or a menu)
-    if (!down && (c === 'KeyQ' || c === 'KeyE')) keys.delete(c);
-    // The hub open: its own keys (menukit.ts), and walking keys wait
-    if (d.hub?.open) return false;
-    // The inventory open: its keys (Tab closes it; Esc too, index.ts), and walking keys wait
-    if (hotbar?.open) return hotbar.key(e, down);
-    // While the store, the garage, the hangar, the kart hut's or the trainer's menu is open, F closes it and walking keys wait
-    if (shop.open || garageUI.open || hangarUI.open || kartUI.open || fightUI.open) {
-      if (down && !e.repeat && c === 'KeyF') (shop.open ? shop.close() : garageUI.open ? garageUI.close() : hangarUI.open ? hangarUI.close() : kartUI.open ? kartUI.close() : fightUI.close());
-      return false;
-    }
-    // / or ?: the control card for where you are (again: closes it)
-    if (down && !e.repeat && (c === 'Slash' || e.key === '?' || e.key === '/')) {
-      askCard();
-      e.preventDefault();
-      return true;
-    }
-    // On a ride: V steps its camera (the ride has the rest)
-    if (ride && down && !e.repeat && c === 'KeyV') {
-      nextCam();
-      e.preventDefault();
-      return true;
-    }
-    // Fighting, on the street's keys (keymap.ts): move with the move keys (W towards the opponent), G kicks, Space
-    // dodges, E a snack, V the camera; the mouse punches and blocks (right button held)
-    if (fighting()) {
-      if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') {
-        if (down && !e.repeat) fightBtns.dodge = true;
-      } else if (down && !e.repeat && c === 'KeyG') fightBtns.kick = true;
-      else if (down && !e.repeat && c === 'KeyE') fight?.snack();
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Boating: W / S ahead and astern, A / D steer, V swaps camera, H the horn, F gets out (alongside a landing)
-    if (boat?.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (down && !e.repeat && c === 'KeyH') boat.horn();
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Flying: W / S faster and slower, A / D turn, the arrows (or Space and Shift / C) climb and dive, V swaps camera, F gets out
-    if (fly.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c) || c === 'KeyC') {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Karting: steer and pedal with the move keys, Space hops into a drift (F does nothing in a race: no getting out mid-lap)
-    if (karts.active) {
-      if (c === 'KeyF') {
-        /* swallowed */
-      } else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
-    if (drive.active) {
-      if (down && !e.repeat && c === 'KeyF') act();
-      else if (down && !e.repeat && c === 'KeyV') nextCam();
-      else if (down && !e.repeat && c === 'KeyH') drive.horn();
-      else if (c === 'Space') jumpHeld = down;
-      else if (MOVE.includes(c)) {
-        if (down) keys.add(c);
-        else keys.delete(c);
-      } else return false;
-      d.touched();
-      e.preventDefault();
-      return true;
-    }
-    if (down && c === 'KeyF' && near) act();
-    // Tab: the inventory (on foot, not in the middle of a moment)
-    else if (c === 'Tab') {
-      if (down && !e.repeat && !moments.active) toggleInv();
-    } else if (down && !e.repeat && c === 'KeyV') nextCam();
-    else if (down && !e.repeat && c === 'CapsLock') walkLock = !walkLock;
-    else if (down && !e.repeat && c === 'KeyR') combat.reload();
-    else if (down && !e.repeat && c === 'KeyG') {
-      // (empty hands: G kicks; a gun is drawn with 1 or 2)
-      if (fistsReady()) fightBtns.kick = true;
-      else combat.toggleHolster();
-    } else if (down && !e.repeat && c === 'KeyX') stepSlot(1);
-    else if (c === 'KeyC') {
-      if (!e.repeat) crouchInput('keys', down);
-    }
-    // Shift on toggle: a press locks the sprint, the next lets it go
-    else if ((c === 'ShiftLeft' || c === 'ShiftRight') && hm('sprint', 'keys') === 'toggle') {
-      if (down && !e.repeat) setSprintLock(!sprintLock);
-    }
-    // Q / E held: peek left and right
-    else if (c === 'KeyQ' || c === 'KeyE') {
-      if (down) keys.add(c);
-      else keys.delete(c);
-    }
-    // 1-7 pick a hotbar slot (unless the emote panel has them)
-    else if (down && !e.repeat && /^Digit[1-7]$/.test(c) && !root.querySelector('[data-emotes][open]:not([data-hub-emotes] *)')) pickSlot(Number(c.slice(5)) - 1);
-    else if (c === 'Space') {
-      if (down && !e.repeat) tryJump();
-      jumpHeld = down;
-    } else if (MOVE.includes(c)) {
-      if (down) keys.add(c);
-      else keys.delete(c);
-    } else return false;
-    d.touched();
-    e.preventDefault();
-    return true;
-  }
+  /** The keyboard (walkkeys.ts, docs/walk-plan.md Phase 2): what it reads and calls of walk mode */
+  const keyHost: KeyHost = {
+    d,
+    get active() {
+      return active;
+    },
+    get hotbar() {
+      return hotbar;
+    },
+    get kartUI() {
+      return kartUI;
+    },
+    get ride() {
+      return ride;
+    },
+    get fight() {
+      return fight;
+    },
+    get boat() {
+      return boat;
+    },
+    get karts() {
+      return karts;
+    },
+    get near() {
+      return near;
+    },
+    get sprintLock() {
+      return sprintLock;
+    },
+    get jumpHeld() {
+      return jumpHeld;
+    },
+    set jumpHeld(v) {
+      jumpHeld = v;
+    },
+    get walkLock() {
+      return walkLock;
+    },
+    set walkLock(v) {
+      walkLock = v;
+    },
+    keys,
+    shop,
+    garageUI,
+    hangarUI,
+    fightUI,
+    fly,
+    drive,
+    combat,
+    fightBtns,
+    moments,
+    fighting,
+    emotesOpen: () => !!root.querySelector('[data-emotes][open]:not([data-hub-emotes] *)'),
+    setInput,
+    askCard,
+    nextCam,
+    hm,
+    act,
+    tryJump,
+    crouchInput,
+    fistsReady,
+    setSprintLock,
+    toggleInv,
+    stepSlot,
+    pickSlot,
+  };
+  const onKey = (e: KeyboardEvent, down: boolean) => onKeyOf(e, down, keyHost);
   // A click punches and the right button held blocks while fighting, as on the street (the mouse isn't captured in the ring)
   canvas.addEventListener('mousedown', (e) => {
     if (active && fighting()) {
@@ -1994,209 +1879,60 @@ export function createWalk(d: WalkDeps) {
     { passive: false }
   );
 
-  // Touch joystick: one finger, followed wherever it goes (on the window, the finger captured) and never another's.
-  // At the wheel it floats (touchdrive.ts): a thumb landing on the city on the stick's side of the lower screen is the
-  // stick, its ring moved under the thumb, so the steering thumb never misses it
-  const setJoy = (e: PointerEvent) => {
-    const R = stick.getBoundingClientRect().width / 2 || 1;
-    let x = (e.clientX - joy.ox) / R;
-    let y = (e.clientY - joy.oy) / R;
-    const m = Math.hypot(x, y);
-    if (m > 1) ((x /= m), (y /= m));
-    joy.x = x;
-    joy.y = y;
-    const sh = stickRead(e.clientX - joy.ox, e.clientY - joy.oy, R);
-    joy.sx = sh.x;
-    joy.sy = sh.y;
-    knob.style.transform = `translate(${x * R * 0.54}px, ${y * R * 0.54}px)`;
-    d.touched();
+  /** The touch controls (walktouch.ts, docs/walk-plan.md Phase 3): the page, walk mode's shared objects, and what they read and call */
+  const touchHost: TouchHost = {
+    d,
+    get active() {
+      return active;
+    },
+    get ride() {
+      return ride;
+    },
+    get boat() {
+      return boat;
+    },
+    get crouched() {
+      return crouched;
+    },
+    get firstPerson() {
+      return firstPerson;
+    },
+    get sprintLock() {
+      return sprintLock;
+    },
+    get jumpHeld() {
+      return jumpHeld;
+    },
+    set jumpHeld(v) {
+      jumpHeld = v;
+    },
+    get aim() {
+      return aim;
+    },
+    set aim(v) {
+      aim = v;
+    },
+    drive,
+    combat,
+    hm,
+    tryJump,
+    setSprintLock,
+    crouchInput,
+    crouchPress,
+    nextCam,
+    setBlock,
+    quitFight,
+    setFirstPerson,
+    saveSettings,
+    act,
+    look,
+    stepSlot,
   };
-  /** A finger takes the stick (on the stick itself, or floating at the wheel); false if another already has it */
-  function startJoy(e: PointerEvent, el: HTMLElement, float: boolean) {
-    if (joy.id >= 0) return false;
-    const r = stick.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    joy.id = e.pointerId;
-    joy.float = float;
-    joy.ox = float ? e.clientX : cx;
-    joy.oy = float ? e.clientY : cy;
-    stick.style.translate = float ? `${e.clientX - cx}px ${e.clientY - cy}px` : '';
-    stick.classList.toggle('is-held', true);
-    capture(el, e.pointerId);
-    setJoy(e);
-    return true;
-  }
-  stick.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    if (startJoy(e, stick, false)) e.stopPropagation();
-  });
-  window.addEventListener('pointermove', (e) => e.pointerId === joy.id && setJoy(e));
-  const endJoy = (e?: PointerEvent) => {
-    if (e && e.pointerId !== joy.id) return;
-    joy.id = -1;
-    joy.x = joy.y = joy.sx = joy.sy = 0;
-    joy.float = false;
-    knob.style.transform = '';
-    stick.style.translate = '';
-    stick.classList.remove('is-held');
-  };
-  for (const ev of ['pointerup', 'pointercancel'] as const) window.addEventListener(ev, (e) => endJoy(e));
-  const jumpBtn = $('[data-walk-jump]');
-  jumpBtn.addEventListener('pointerdown', () => {
-    tryJump();
-    jumpHeld = true;
-  });
-  jumpBtn.addEventListener('pointerup', () => (jumpHeld = false));
-  jumpBtn.addEventListener('pointercancel', () => (jumpHeld = false));
-  // (the touch buttons answer a finger at once, with the thumb still on the stick: onTap() in ui.ts)
-  holdButton(runBtn, 'sprint', setSprintLock, () => sprintLock);
-  crouchBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    capture(crouchBtn, e.pointerId);
-    crouchInput('touch', true);
-    // (a crouch lets go of the locked sprint, which would stand him straight back up)
-    if (crouched) setSprintLock(false);
-  });
-  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) crouchBtn.addEventListener(ev, () => crouchInput('touch', false));
-  crouchBtn.addEventListener('click', (e) => e.detail === 0 && crouchPress());
-  // Touch pedals at the wheel (touchdrive.ts): each pedal finger followed on its own, pressing the pedal it's on or
-  // the nearer one, so a thumb rolled from Gas onto Brake switches without lifting; a finger landing on the city just
-  // round them presses one too. Only its own lift (or the browser's cancel) lets a pedal go, never another finger.
-  pedalBtns.forEach((b) =>
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      pressPedal(e, b);
-    })
+  const { startJoy, endJoy, pressPedal, clearPedals, rectOf, setAim } = wireTouch(
+    { window, document, Element, root, $, stick, knob, runBtn, crouchBtn, pedalBtns, rideViewBtns, blockBtnEl, fpBtn, sensInput, invertInput, prompt },
+    { joy, pedals, kartBtns, fightBtns, settings },
+    touchHost
   );
-  window.addEventListener('pointermove', (e) => {
-    const was = pedalFingers.get(e.pointerId);
-    if (!was) return;
-    const now = pedalAt(e.clientX, e.clientY, rectOf(pedalBtns[0]), rectOf(pedalBtns[1]), was);
-    if (now === was) return;
-    pedalFingers.set(e.pointerId, now);
-    syncPedals();
-  });
-  for (const ev of ['pointerup', 'pointercancel'] as const)
-    window.addEventListener(ev, (e) => {
-      if (pedalFingers.delete(e.pointerId)) syncPedals();
-    });
-  // The phone's own gestures never take a finger off the controls (Safari's pinch, its long-press magnifier and
-  // callout, Android's long-press menu): a touch landing on a control or the city while walking keeps its default from
-  // happening (the pointer events go on as they were)
-  const onControls = (t: EventTarget | null) => t instanceof Element && !!t.closest('.tc, .walk-stick, canvas');
-  for (const ev of ['touchstart', 'touchmove'] as const)
-    root.addEventListener(
-      ev,
-      (e) => {
-        if (active && e.cancelable && onControls(e.target)) e.preventDefault();
-      },
-      { passive: false }
-    );
-  for (const ev of ['gesturestart', 'gesturechange'] as const) document.addEventListener(ev, (e) => active && e.preventDefault());
-  root.addEventListener('contextmenu', (e) => active && onControls(e.target) && e.preventDefault());
-  // The horn while driving your car (city life plan, Phase 2)
-  $('[data-drive-horn]').addEventListener('pointerdown', () => {
-    if (boat?.active) boat.horn();
-    else drive.horn();
-    d.touched();
-  });
-  // The camera at the wheel on touch (V on a keyboard): the boat's, the aircraft's or the car's next view
-  onTap($('[data-drive-view]'), () => {
-    nextCam();
-    d.touched();
-  });
-  // ... on foot (over the shoulder or first person), and on a ride (its bar's View)
-  onTap($('[data-walk-view]'), () => {
-    nextCam();
-    d.touched();
-  });
-  for (const b of rideViewBtns) b.addEventListener('click', () => ride && (nextCam(), d.touched()));
-  // Touch while karting: Drift held, Item tapped (the stick steers, the pedals pedal)
-  const driftBtn = root.querySelector<HTMLButtonElement>('[data-kart-drift]');
-  if (driftBtn) {
-    driftBtn.addEventListener('pointerdown', (e) => {
-      try {
-        driftBtn.setPointerCapture(e.pointerId);
-      } catch {
-        /* still pressed */
-      }
-      kartBtns.drift = true;
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) driftBtn.addEventListener(ev, () => (kartBtns.drift = false));
-  }
-  const itemBtn = root.querySelector<HTMLButtonElement>('[data-kart-item]');
-  if (itemBtn) {
-    itemBtn.addEventListener('pointerdown', (e) => {
-      try {
-        itemBtn.setPointerCapture(e.pointerId);
-      } catch {
-        /* still pressed */
-      }
-      kartBtns.item = true;
-      d.touched();
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) itemBtn.addEventListener(ev, () => (kartBtns.item = false));
-  }
-  // Touch while fighting: Punch, Kick and Dodge tapped, Block held, Quit
-  for (const k of ['punch', 'kick', 'dodge'] as const) {
-    const b = root.querySelector(`[data-fight-${k}]`);
-    if (b)
-      onTap(b, () => {
-        fightBtns[k] = true;
-        d.touched();
-      });
-  }
-  holdButton(blockBtnEl, 'block', setBlock, () => fightBtns.block);
-  root.querySelector('[data-fight-quit]')?.addEventListener('click', () => quitFight());
-  fpBtn.addEventListener('click', () => setFirstPerson(!firstPerson));
-  sensInput.addEventListener('input', () => {
-    settings.sens = Number(sensInput.value);
-    saveSettings();
-  });
-  invertInput.addEventListener('change', () => {
-    settings.invert = invertInput.checked;
-    saveSettings();
-  });
-  onTap(prompt, act);
-  // Touch: hold Fire (and drag it to aim, so one thumb shoots and steers), tap Reload, tap Swap
-  const fireBtn = $('[data-walk-fire]');
-  let fireAt: { id: number; x: number; y: number } | null = null;
-  fireBtn.addEventListener('pointerdown', (e) => {
-    fireBtn.setPointerCapture(e.pointerId);
-    fireAt = { id: e.pointerId, x: e.clientX, y: e.clientY };
-    combat.trigger(true, true);
-    d.touched();
-  });
-  fireBtn.addEventListener('pointermove', (e) => {
-    if (!fireAt || e.pointerId !== fireAt.id) return;
-    look(e.clientX - fireAt.x, e.clientY - fireAt.y, 0.0075);
-    fireAt.x = e.clientX;
-    fireAt.y = e.clientY;
-  });
-  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const)
-    fireBtn.addEventListener(ev, (e) => {
-      if (fireAt && e.pointerId !== fireAt.id) return;
-      fireAt = null;
-      combat.trigger(false, true);
-    });
-  onTap($('[data-walk-reload]'), () => {
-    combat.reload();
-    d.touched();
-  });
-  // (the hotbar's step: through the fists and the guns)
-  onTap($('[data-walk-swap]'), () => {
-    stepSlot(1);
-    d.touched();
-  });
-  // Touch: Aim toggles the sight (one thumb can't hold Aim and Fire)
-  const aimBtn = $<HTMLButtonElement>('[data-walk-aim]');
-  const setAim = (on: boolean) => {
-    aim = on;
-    aimBtn.setAttribute('aria-pressed', String(on));
-  };
-  holdButton(aimBtn, 'aim', setAim, () => aim);
 
   // Gamepad: left stick move, right stick look, A jump, LB / L3 run, Y enter, View the inventory, R3 first person,
   // RT fire, LT aim, X reload, D-pad up holster, RB / D-pad left-right step the hotbar (the weapons and empty hands);
