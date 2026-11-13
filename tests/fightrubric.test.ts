@@ -86,8 +86,10 @@ test('the footwork: a lunge steps in (the feet never slide), a knock back steps 
     assert.ok(!(fw.feet[0].from && fw.feet[1].from), `frame ${f} both feet up`);
     last = now;
   }
-  // The lead (left) foot steps first going forward, and the feet end on their spots
-  assert.equal(first, 0, 'the lead foot first');
+  // The lead foot (the one further forward in the stance: his left, the left lead) steps first going forward, and
+  // the feet end on their spots
+  const lead = STANCE[0].z > STANCE[1].z ? 0 : 1;
+  assert.equal(first, lead, 'the lead foot first');
   assert.ok(steps >= 2, `steps ${steps}`);
   for (let i = 0; i < 2; i++) assert.ok(Math.hypot(fw.balls[i].x - STANCE[i].x, fw.balls[i].z - STANCE[i].z) <= STEP.settle + 1e-6, `foot ${i} in the stance`);
   // Knocked back: the rear foot goes first
@@ -100,7 +102,7 @@ test('the footwork: a lunge steps in (the feet never slide), a knock back steps 
     fw2.update(dt, r2, [1, 1]);
     for (let i = 0; i < 2; i++) if (fw2.feet[i].from && back === null) back = i;
   }
-  assert.equal(back, 1, 'the rear foot first going back');
+  assert.equal(back, 1 - lead, 'the rear foot first going back');
 });
 
 test('a leg off the canvas lands back on its spot', () => {

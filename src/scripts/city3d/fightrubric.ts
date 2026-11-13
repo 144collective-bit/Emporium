@@ -23,9 +23,9 @@
  */
 import * as THREE from 'three';
 import { BANDS, ADULT_SCALE, TILE_M, type Row } from './human';
-import { CLIPS, newFightPose, sampleClip, type ClipId, type FightPose } from './fight-anim';
+import { CLIPS, drawnMirror, newFightPose, sampleClip, type ClipId, type FightPose } from './fight-anim';
 import { MOVES } from './fight-moves';
-import { plantLegs, plantWeight } from './fightfeet';
+import { drawnPlantWeight, plantLegs } from './fightfeet';
 import { makeSkeleton, poseSkeleton } from './skeleton';
 
 export const FIGHT_BANDS = {
@@ -66,8 +66,9 @@ interface Sample {
   pose: FightPose;
 }
 
-/** Clip `id` frame by frame, planted, posed on the bones */
-function frames(id: ClipId, mirror = false): Sample[] {
+/** Clip `id` frame by frame, planted, posed on the bones, as it's drawn (the left lead's mirror on top: fight-anim.ts `drawnMirror()`) */
+function frames(id: ClipId, keyed = false): Sample[] {
+  const mirror = drawnMirror(keyed);
   const out: Sample[] = [];
   const at = (n: string) => sk.bones[n as keyof typeof sk.bones].getWorldPosition(new THREE.Vector3());
   for (let f = 0; f < CLIPS[id].frames; f++) {
@@ -83,7 +84,7 @@ function frames(id: ClipId, mirror = false): Sample[] {
       sway: pose.sway,
       head: Math.hypot(pose.headPitch, pose.headYaw),
       lean: pose.lean,
-      kick: -pose.legs[1].bend,
+      kick: -pose.legs[mirror ? 0 : 1].bend,
       balls: [at('toeL'), at('toeR')],
       ankles: [at('footL'), at('footR')],
       tips: [tip('L'), tip('R')],
@@ -127,13 +128,16 @@ const row = (id: string, name: string, n: number, ok: boolean, value: string): R
 /** The rubric's rows for clip `id` (played as it's keyed, or mirrored) */
 export function fightRows(id: ClipId, mirror = false): Row[] {
   const s = frames(id, mirror);
+  // (the rig's legs as drawn: with the left lead on top, a mirrored clip's legs swap)
+  const drawn = drawnMirror(mirror);
+  const rear = drawn ? 0 : 1;
   const rows: Row[] = [];
   // Planted feet: the ball never moves while the leg is fully on the canvas
   for (const i of [0, 1] as const) {
     let worst = 0;
     let from: THREE.Vector3 | null = null;
     for (let f = 0; f < s.length; f++) {
-      if (plantWeight(id, i, f) < 1) {
+      if (drawnPlantWeight(id, i, f, drawn) < 1) {
         from = null;
         continue;
       }
@@ -156,8 +160,8 @@ export function fightRows(id: ClipId, mirror = false): Row[] {
     const lead = driven - hips;
     rows.push(row('lead', m.kind === 'kick' ? 'Hips before the kick' : 'Hips before the shoulders', lead, lead >= FIGHT_BANDS.lead, `${lead.toFixed(1)} frames`));
     if (id === 'cross' || id === 'uppercut') {
-      const up = (s[hit].ankles[1].y - s[0].ankles[1].y) * M;
-      const toes = Math.abs(s[hit].tips[1].y) * M;
+      const up = (s[hit].ankles[rear].y - s[0].ankles[rear].y) * M;
+      const toes = Math.abs(s[hit].tips[rear].y) * M;
       rows.push(row('heel', 'Rear heel up', up, up >= FIGHT_BANDS.heel && toes <= FIGHT_BANDS.toes, `${(up * 100).toFixed(1)} cm, toes ${(toes * 100).toFixed(1)} cm up`));
     }
   }
@@ -177,7 +181,7 @@ export function fightRows(id: ClipId, mirror = false): Row[] {
     rows.push(row('hips', 'Hips in the reaction', turn, turn >= FIGHT_BANDS.hipsTurn || shift >= FIGHT_BANDS.hipsShift, `${turn.toFixed(2)} rad, ${(shift * 100).toFixed(1)} cm`));
   }
   if (TO_GUARD.includes(id)) {
-    const guard = plantLegs(sampleClip('guard', 0, newFightPose(), { mirror }), 'guard', 0, { mirror });
+    const guard = plantLegs(sampleClip('guard', 0, newFightPose(), { mirror: drawn }), 'guard', 0, { mirror: drawn });
     const g = poseGap(s[s.length - 1].pose, guard);
     rows.push(row('recover', 'Back in the guard', g, g <= FIGHT_BANDS.recover, `${g.toFixed(3)} rad off`));
   }

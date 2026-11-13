@@ -19,6 +19,10 @@ and `src/scripts/city3d/solids.ts`. Keep those free of DOM and scene code.
 
 ## Deploying from GitHub through Cloudflare (Workers Builds)
 
+**Paused** (the owner's call, 2026-11): no automatic Cloudflare deploys for now. Workers Builds is to be
+disconnected in the dashboard (*Workers & Pages* → **emporium** → *Settings* → *Build*), and the "Deploy game
+server" Action runs only when started by hand. Resume both together when the owner asks.
+
 The Worker is called **emporium** (it must match `"name"` in `wrangler.jsonc`)
 and is connected to this GitHub repository in Cloudflare, so Cloudflare builds
 and deploys it on every push to `main`. It serves the game server **and the

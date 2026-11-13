@@ -237,9 +237,15 @@ guide file listed in the index above.
   site" Action builds without `PUBLIC_GAME_SERVER`, so the city runs on its
   own there: the whole city game in the browser's save, no Online switch,
   multiplayer or Connect wallet. Don't set it in that Action.
+- **Cloudflare and Vercel are paused** (the owner's call, 2026-11: "stop
+  pushing to Cloudflare and Vercel, we will resume another time"): the
+  "Deploy game server" Action runs only by hand, `vercel.json` turns
+  Vercel's Git deployments off, and Cloudflare's Workers Builds is to be
+  disconnected in its dashboard. Don't turn any of them back on until the
+  owner says so; degenemporium.com (Hostinger) is unaffected.
 - **Multiplayer lives on workers.dev only**: the `server/` Worker (emporium
   on https://emporium.144collective.workers.dev, deployed by Cloudflare's
-  Workers Builds from `main`) serves the game server and its own copy of
+  Workers Builds from `main`, paused for now: above) serves the game server and its own copy of
   the site, built against itself (`build` in `wrangler.jsonc`, which also
   makes the textures and runs the budget, as the Action does: the polish
   plan's Phase 4).

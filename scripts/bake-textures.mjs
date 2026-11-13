@@ -126,7 +126,9 @@ async function paintRun(set, run) {
     const tiny = document.createElement('canvas');
     tiny.width = tiny.height = 8;
     const t = tiny.getContext('2d', { willReadFrequently: true });
-    for (const { key, canvas, src } of globalThis.__texBake ?? []) {
+    // (only what the boot painted: kit.ts `bootTexturesPainted()`; a district arriving after it would make the set differ run to run)
+    const painted = globalThis.__texBake ?? [];
+    for (const { key, canvas, src } of painted.slice(0, globalThis.__texBakeBoot ?? painted.length)) {
       // The far forms' average colour (lod.ts `average()`, worked out the same way)
       t.clearRect(0, 0, 8, 8);
       t.drawImage(canvas, 0, 0, 8, 8);
@@ -142,6 +144,9 @@ async function paintRun(set, run) {
       const n = Math.max(a, 1e-3) * 255;
       out[key] = { src, png: canvas.toDataURL('image/png'), avg: [r / n, g / n, b / n, a / 64].map((v) => +v.toFixed(4)) };
     }
+    return { out, after: painted.length - Object.keys(out).length };
+  }).then(({ out, after }) => {
+    if (after) log(`${set}/${run.name}: ${after} painted after the boot (a district arriving), left out`);
     return out;
   });
   await ctx.close();

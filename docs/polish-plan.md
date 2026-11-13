@@ -725,7 +725,10 @@ the typecheck and the budgets green; none moves anything that exists.
    Rebuilt (the owner's call, 2026-11: "the arms look deformed and
    unnatural... premium"): jointed arms and a modelled fist (`fparm.ts`),
    the guard held on the right mouse button, the arms pumping when he runs
-   (`docs/guide/combat.md`, `docs/guide/inventory.md`).
+   (`docs/guide/combat.md`, `docs/guide/inventory.md`). Then driven by his
+   body (the owner's call: "too straight... use his real body's clips"):
+   the arms laid on his skeleton's joints each frame, read from an eye in
+   his head, with a first-person correction for the guard and the run.
    **The lazy packs**: the crouched walks, the standing jumps' wind-ups and
    the stairs climb are `clips-crouch.bin` / `clips-jumps.bin` /
    `clips-stairs.bin` (mocap-load.ts `LAZY_PACKS`, 95 KB together), fetched
