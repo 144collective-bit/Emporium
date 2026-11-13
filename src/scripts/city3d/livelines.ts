@@ -7,7 +7,7 @@
  * the volcano's countdowns from the Neon Mile's own timetables, the ferry
  * hall's next sailing from the river bus's, Liberty Bridge's next lift from
  * the tall ship's, the Night Market open after dusk, the Harbour Master's
- * tide, Crestmont's and Sunridge's hours, City Hall's doors and its council. `bouncerLine()` is what Club
+ * tide, Crestmont's and Sunridge's hours, City Hall's doors and its council, the day at Degen's house. `bouncerLine()` is what Club
  * PULSE's bouncer says when you try the door (walk mode's toast).
  *
  * DOM-free (tested in tests/livelines.test.ts) and a chunk of its own,
@@ -57,6 +57,7 @@ export const LIVE_IDS = [
   'cityhall',
   'police',
   'courthouse',
+  'home',
 ] as const;
 export type LiveId = (typeof LIVE_IDS)[number];
 
@@ -185,6 +186,13 @@ export function liveLine(id: string, t = Date.now()): string | null {
     case 'courthouse':
       if (weekday(c) && between(h, 9, 16)) return c.dow === 1 ? 'Court in session · New week, full list' : 'Court in session till four';
       return 'Court rises · Sits weekdays at nine';
+    // (Degen's house in the Ends, docs/home-plan.md Phase 5: the day at home)
+    case 'home':
+      if (between(h, 6, 10)) return 'Kettle on · Car on the drive';
+      if (between(h, 10, 17)) return 'Nobody in · Key under the mat';
+      if (h >= sunset && h < 23) return 'Lights on · Telly on low';
+      if (between(h, 17, 23)) return 'Back from town · Tea on the hob';
+      return 'Lights out · Garage locked';
     case 'golfclub':
       if (between(h, 7, 17)) return 'Tee times till five · Nineteenth hole after';
       if (between(h, 17, 22)) return 'Course closed · Clubhouse open till ten';

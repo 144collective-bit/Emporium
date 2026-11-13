@@ -25,6 +25,10 @@ test('every place with a line has one at every hour: short, plain, never money',
         assert.ok(line.split(/\s+/).length <= 11, `${id} too long: ${line}`);
       }
   }
+  // (Degen's house: its day, and its lights on after dusk)
+  assert.equal(liveLine('home', at(9, 8)), 'Kettle on · Car on the drive');
+  assert.equal(liveLine('home', at(9, 21)), 'Lights on · Telly on low');
+  assert.equal(liveLine('home', at(9, 3)), 'Lights out · Garage locked');
   assert.equal(liveLine('emporium'), null, 'a place with a game has none');
   assert.equal(liveLine('nowhere'), null);
 });

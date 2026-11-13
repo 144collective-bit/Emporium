@@ -216,6 +216,8 @@ keep it up to date when what it describes changes.
   by the live settings) and the stash's card for `home:stash`
   (stash-ui.ts, loaded then; markup `[data-stash]` in `CityMap.astro`, the
   metro card's styles; its rules are inventory.ts's, `inventory.md`).
+  Phase 5's rest: the panel's live line (`home` in livelines.ts) and the
+  benchmark's view of the house (`ends-home` in bench.ts).
   Phase 5's first part (the room at night) is built: the inside of the
   house and of the garage is drawn in the shared `neon()` paint (home3d.ts
   `paint(hex, k)`: one material a shade, the day's and night's brightness
