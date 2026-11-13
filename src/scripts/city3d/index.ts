@@ -135,7 +135,7 @@ import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
 import { mb, memoryRows, sceneMemory } from './perf';
-import { DROPPED, PACKED, tileBatch } from './tilebatch';
+import { PACKED, tileBatch } from './tilebatch';
 import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
@@ -1400,6 +1400,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
   /* ---------- The free camera (freecam.ts): WASD flies City view's camera where it looks, the right button looks round ---------- */
+  // What it bumps into (freecollide.ts, the walk camera's solids): its own chunk, loaded once the city is up
+  let camSolids: typeof import('./freecollide') | null = null;
+  const camFrom = new THREE.Vector3();
+  const camTargetFrom = new THREE.Vector3();
   const flyKeys = noKeys();
   let flyVel: V3 = [0, 0, 0];
   const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -1441,7 +1445,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     flyVel = easeVel(flyVel, wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y), dt, reduced);
     if (!flyVel.some((v) => v)) return false;
     const p = camera.position;
-    const to = clampCam([p.x + flyVel[0] * dt, p.y + flyVel[1] * dt, p.z + flyVel[2] * dt], 0);
+    const from: V3 = [p.x, p.y, p.z];
+    // (the buildings stop it, sliding along their faces, once their chunk has come: freecollide.ts)
+    const want = clampCam([p.x + flyVel[0] * dt, p.y + flyVel[1] * dt, p.z + flyVel[2] * dt], 0);
+    const to = camSolids ? camSolids.bump(from, want) : want;
     const [x, y, z] = clampCam(to, groundUnder(to[0], to[2]));
     flyMove.set(x - p.x, y - p.y, z - p.z);
     p.add(flyMove);
@@ -1707,6 +1714,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
+  /** (the camera's look, for the readout) */
+  const statLook = new THREE.Vector3();
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
     // (`build` includes merging per tile, `tiles`, which includes building the sites round the home view, `sites`;
@@ -1731,7 +1740,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
     // (where the geometry memory is, for the console: perf.ts)
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, nanTris: DROPPED.tris });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -1860,11 +1869,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       dirty = true;
     } else {
       if (flyStep(dt)) dirty = true;
+      camFrom.copy(camera.position);
+      camTargetFrom.copy(controls.target);
       if (controls.update()) dirty = true;
-      // (orbiting and zooming kept inside the wall and over the ground too: freecam.ts)
+      // (orbiting, zooming, the drag and touch kept inside the wall, over the ground and out of the buildings too:
+      // freecam.ts, freecollide.ts; a drag or a zoom to the cursor that moved the target is held back with the camera)
       const p = camera.position;
-      const [x, y, z] = clampCam([p.x, p.y, p.z], groundUnder(p.x, p.z));
+      const moved: V3 = [p.x, p.y, p.z];
+      const swept = camSolids && !camFrom.equals(p) ? camSolids.bump([camFrom.x, camFrom.y, camFrom.z], moved) : moved;
+      const [x, y, z] = clampCam(swept, groundUnder(swept[0], swept[2]));
       if (x !== p.x || y !== p.y || z !== p.z) {
+        if (!camTargetFrom.equals(controls.target)) controls.target.add(flyMove.set(x - p.x, y - p.y, z - p.z));
         p.set(x, y, z);
         camera.lookAt(controls.target);
         dirty = true;
@@ -1891,6 +1906,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     CROWD_VIEW.on = !reduced;
     camera.updateMatrixWorld();
     CROWD_VIEW.eye.setFromMatrixPosition(camera.matrixWorld);
+    CROWD_VIEW.near = camera.near;
     CROWD_VIEW.frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     CROWD_VIEW.shadowOn = renderer.shadowMap.enabled && sky.shadowFrustum(CROWD_VIEW.shadow);
     // What the camera looks at on the ground (straight ahead a way when it looks level, walking; `look` from above)
@@ -2041,9 +2057,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
-          `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}${DROPPED.tris ? ` · ${DROPPED.tris} NaN triangles left out` : ''}`,
+          `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
+          // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
+          // reads here as under the ground, or the near plane, or the view gone wrong)
+          ...(walking
+            ? [
+                `height ${walk.position.y.toFixed(2)} · camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)} · looks ${camera.getWorldDirection(statLook).y.toFixed(2)} · fog ${(scene.fog as THREE.FogExp2 | null)?.density?.toFixed(4) ?? '-'}`,
+              ]
+            : []),
           // and where City view's free camera is (freecam.ts)
           ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`] : []),
         ].join('\n');
@@ -2131,6 +2154,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   camera.lookAt(controls.target);
   flyTo(start.pos, start.target, 2.8);
   // The cars' fine detail and your car's inside (vehicle plan Phase 1): its own chunk, once the city is up
+  // What City view's free camera bumps into (freecollide.ts: the walk camera's solids)
+  idle(() => void lazy(() => import('./freecollide'), 'the buildings for the camera')().then((m) => (camSolids = m)).catch(() => {}));
   idle(() => void lazy(() => import('./carfine'), "the cars' detail")().then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
   // Your motorbikes' drawing (vehicle plan Phase 7): the garage's stand shows yours once it's come
   idle(() =>

@@ -77,34 +77,30 @@ first NaN position and its stack):
 - **Every buffer is held twice**: three keeps each geometry's arrays in
   JavaScript after it's uploaded to the GPU.
 
-## Phase 1: the black screen (S, low risk; built, waiting on the owner's laptop)
+## Phase 1: the black screen (done, on main: #141; waiting on the owner's laptop)
 
-1. **The block's lot drawn right, the block left as it is.** The fold in
-   `crest-0-2`'s outline is what carries the sidewalk across the bay's end to
-   the corner (its slab is the outline grown outwards, `slabOf()`), so the
-   outline, its slab, its kerb and walking on it stay exactly as they were.
-   Only the lot inside it (and every block's lot and The Trenches' yards) is
-   drawn inside the tidied outline: `tidyOutline()` in `streetplan.ts` drops
-   repeated points and corners the outline runs straight through or back
-   from. The lot ends where the bay begins, as it always should have.
-2. **`insetPoly()` hardened** (moved beside `outset()` in `streetplan.ts`,
-   DOM-free): a repeated point takes its neighbours' sides, and a side that
-   turns straight back is moved in square to the side it leaves. The same
-   corners as before everywhere else; never NaN.
-3. **A guard where geometry joins the city**: `splitByTile()` in
-   `tilebatch.ts` (every tile-merged piece comes through it) leaves out any
-   triangle with a NaN or infinite corner, counts it (`DROPPED`: `?fps`
-   says so, `__mem()` has `nanTris`) and warns once a site.
-4. **A safety net in the picture**: the ink pass (`post.ts`) turns any NaN
-   or infinite pixel into the ink's colour before the bloom sees it, so a
-   stray pixel from anything else stays one pixel instead of spreading.
-5. **Tests that hold it**: `tests/outlines.test.ts` (every block's lot, the
-   inset of its outline as it is and its slab finite, the lot on its slab;
-   `crest-0-2` keeps its fold and its sidewalk); `tests/tilebatch.test.ts`
-   (a NaN or infinite corner left out and counted); `npm run smoke` fails on
-   any NaN warning in the console.
-6. **On the owner's laptop**: the new build, the City view and a walk
-   through Crestmont's Coral Drive, to confirm the black screen has gone.
+The same cause was found and fixed in parallel (`Merge pull request #141`),
+and that's what's live:
+
+1. **The lot drawn right, the block left as it is.** `insetPoly()` moved to
+   `streetplan.ts` (DOM-free) and tidies the outline first (`tidyPoly()`:
+   repeated corners and spikes out, its area the same), so `crest-0-2`'s lot
+   is an L round the bay with every corner a number. The outline, its slab
+   (the sidewalk across the bay's end), its kerb and walking on it are as
+   they were.
+2. **A guard where geometry joins the city**: `tileBatch()` leaves out a
+   piece whose bounds aren't numbers, and warns.
+3. **A safety net in the picture**: the ink pass (`post.ts`) turns a NaN or
+   infinite pixel into a dark one before the bloom (written as a comparison
+   NaN fails, which drivers keep, rather than `isnan()`, which some optimise
+   away).
+4. **Tests**: `tests/streetplan.test.ts` (every block pulled in to its lot
+   stays a number; tidied, an outline keeps its area). Added with this plan:
+   `npm run smoke` fails on any NaN warning in the console (three's
+   bounding-box one or the guard's), since the software renderer it runs in
+   draws on regardless.
+5. **On the owner's laptop**: the live build, the City view and a walk
+   along Crestmont's Coral Drive, to confirm the black screen has gone.
 
 ## Phase 2: the render targets (S-M, low risk; the biggest saving on desktop)
 
@@ -194,7 +190,7 @@ measured → Phases 3 and 4 → Phase 6. Real-device numbers (`?bench`'s
 ## The owner's decisions
 
 - **Phase 1 first, on its own** (2026-11-13), tested on the owner's laptop
-  before anything else.
+  before anything else. **Phase 2 next** once it's confirmed.
 - **Retina: SMAA above 1.75x pixels, MSAA below** (Phase 2.2).
 - (waiting) How far the City view keeps the full city (Phase 3.2); the
   ceilings (Phase 5.1).

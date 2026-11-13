@@ -151,7 +151,14 @@ keep it up to date when what it describes changes.
     script, the 3D city's boot code (its chunk and what it imports
     straight away), the biggest lazy chunk and the CSS, gzipped, each
     under a fixed size. Raise one only on purpose, never to get a build
-    through. The baked data's file is an information row (`baked`); on CI
+    through. The wallet's log-in library (`@walletconnect`, only in the
+    Worker's build with a game server, loaded when someone connects a
+    wallet) has its own row, `walletJs` (120 KB, the owner's call, 2026-11:
+    its core alone is 112 KB, which held the Worker's build red at
+    `lazyJs`): astro.config.mjs names its chunks `wallet-*` (a chunk made
+    of nothing but packages other than three.js's, Astro's and Vite's;
+    every other chunk keeps Astro's own name), and `lazyJs` counts the
+    rest. The baked data's file is an information row (`baked`); on CI
     (`process.env.CI`) a build without the texture sets made at build time
     is red (`texLow`, `texFull`: the bake didn't run or failed).
 - One render loop only: always (re)start it with `loop()` in `index.ts`,
@@ -359,15 +366,6 @@ keep it up to date when what it describes changes.
   thins it), so the horizon is the same wherever you walk. `?horizon=N` forces a
   distance on any tier while walking, `?horizon=0` turns it off. Tested in
   `tests/tileplan.test.ts` and `tests/tilebatch.test.ts`.
-- **Nothing drawn may be NaN** (`docs/stability-plan.md`): on a real GPU a
-  triangle with a NaN corner can write NaN pixels, which the bloom spreads
-  over the screen as black (the software renderer the tests use draws on,
-  so it never shows there). `splitByTile()` in `tilebatch.ts`, which every
-  tile-merged piece goes through, leaves such triangles out, counts them
-  (`DROPPED`; `?fps` says so, `__mem()`'s `nanTris`) and warns once a site;
-  the ink pass (`post.ts`) turns any NaN or infinite pixel into the ink's
-  colour before the bloom; `insetPoly()` and `tidyOutline()`
-  (`streetplan.ts`) never make one; `npm run smoke` fails on a NaN warning.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory

@@ -257,62 +257,53 @@ export function outset(poly: Pt[], d: number): Pt[] {
 }
 
 /**
- * An outline pulled in by d, corners mitred (world.ts: a block's lot inside its sidewalk, a sidewalk's inner edge).
- * Never NaN: a repeated point takes its neighbours' sides, and a side that turns straight back (or nearly) is moved in
- * square to the side it leaves, where the mitre divided by nothing (docs/stability-plan.md)
+ * An outline without repeated corners or spikes (a corner it runs straight back from), its shape and area the same.
+ * Both are there on purpose in places (a bay cut to its block's corner, Coral Drive's park-w2 on crest-0-2: `outset()`
+ * makes the spike the sidewalk round the bay's end), but pulled in they leave a zero to divide by
  */
-export function insetPoly(poly: Pt[], d: number): Pt[] {
-  const n = poly.length;
-  const EPS = 1e-9;
-  /** The first point from i, a step at a time in `dir`, that isn't where poly[i] is (poly[i] itself if none is) */
-  const apart = (i: number, dir: 1 | -1) => {
-    const p = poly[i];
-    for (let k = 1; k < n; k++) {
-      const q = poly[(i + dir * k + n * k) % n];
-      if (Math.hypot(q[0] - p[0], q[1] - p[1]) > EPS) return q;
+export function tidyPoly(poly: Pt[]): Pt[] {
+  const out = poly.slice();
+  for (let changed = true; changed && out.length > 3; ) {
+    changed = false;
+    for (let i = 0; i < out.length && out.length > 3; i++) {
+      const a = out[(i + out.length - 1) % out.length];
+      const p = out[i];
+      const b = out[(i + 1) % out.length];
+      const [ex, ez, fx, fz] = [p[0] - a[0], p[1] - a[1], b[0] - p[0], b[1] - p[1]];
+      const same = Math.hypot(ex, ez) < 1e-9;
+      const back = Math.abs(ex * fz - ez * fx) < 1e-9 && ex * fx + ez * fz < 0;
+      if (same || back) {
+        out.splice(i, 1);
+        changed = true;
+        i--;
+      }
     }
-    return p;
-  };
-  return poly.map((p, i) => {
-    const a = apart(i, -1);
-    const b = apart(i, 1);
-    const e0 = [p[0] - a[0], p[1] - a[1]];
-    const e1 = [b[0] - p[0], b[1] - p[1]];
-    const l0 = Math.hypot(e0[0], e0[1]) || 1;
-    const l1 = Math.hypot(e1[0], e1[1]) || 1;
-    // Inward normals of a counter-clockwise outline (from above): to the left of travel
-    const n0 = [e0[1] / l0, -e0[0] / l0];
-    const n1 = [e1[1] / l1, -e1[0] / l1];
-    const turn = 1 + n0[0] * n1[0] + n0[1] * n1[1];
-    if (turn < 1e-6) return [p[0] + n0[0] * d, p[1] + n0[1] * d] as Pt;
-    const k = d / turn;
-    return [p[0] + (n0[0] + n1[0]) * k, p[1] + (n0[1] + n1[1]) * k] as Pt;
-  });
+  }
+  return out;
 }
 
 /**
- * An outline with no repeated point and no corner it runs straight through or turns straight back at, for drawing
- * what's inside it. A block's outline may fold back on purpose: Crestmont's `crest-0-2`, its bay `park-w2` reaching
- * the corner, runs out to the corner and back so its slab (`slabOf()`) carries the sidewalk across the bay's end. Its
- * lot ends where the bay starts, so world.ts insets the tidied outline, where the inset of the fold made NaN
- * corners (docs/stability-plan.md)
+ * An outline pulled in by d, corners mitred (a lot inside its sidewalk: world.ts). Tidied first (`tidyPoly()`): a
+ * repeated corner or a spike gave it a zero to divide by, and crest-0-2's lot came out NaN, which blacked out the
+ * screen behind the bloom (a spike pulled in has no inside anyway)
  */
-export function tidyOutline(poly: Pt[], eps = 1e-6): Pt[] {
-  const dedupe = (ps: Pt[]) =>
-    ps.filter((p, i) => {
-      const q = ps[(i + 1) % ps.length];
-      return Math.hypot(q[0] - p[0], q[1] - p[1]) > eps;
-    });
-  let out = dedupe(poly);
-  // (a corner taken out can leave its neighbours repeated, straight or folded in turn: again until none is)
-  for (let i = 0; i < out.length && out.length > 3; i++) {
-    const [a, p, b] = [out[(i + out.length - 1) % out.length], out[i], out[(i + 1) % out.length]];
-    const cross = (p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0]);
-    if (Math.abs(cross) > eps) continue;
-    out = dedupe(out.filter((_, j) => j !== i));
-    i = -1;
-  }
-  return out;
+export function insetPoly(poly: Pt[], d: number): Pt[] {
+  const p0 = tidyPoly(poly);
+  const n = p0.length;
+  return p0.map((p, i) => {
+    const a = p0[(i + n - 1) % n];
+    const b = p0[(i + 1) % n];
+    const e0 = [p[0] - a[0], p[1] - a[1]];
+    const e1 = [b[0] - p[0], b[1] - p[1]];
+    const l0 = Math.hypot(e0[0], e0[1]);
+    const l1 = Math.hypot(e1[0], e1[1]);
+    // Inward normals of a counter-clockwise outline (from above): to the left of travel
+    const n0 = [e0[1] / l0, -e0[0] / l0];
+    const n1 = [e1[1] / l1, -e1[0] / l1];
+    const m = [n0[0] + n1[0], n0[1] + n1[1]];
+    const k = d / (1 + n0[0] * n1[0] + n0[1] * n1[1]);
+    return [p[0] + m[0] * k, p[1] + m[1] * k] as Pt;
+  });
 }
 
 /** A block's raised slab: its lot and the sidewalk round it */

@@ -33,6 +33,7 @@ import { crowdFrame, type CrowdClip } from './crowdclips';
 import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setWardrobeRow } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
 import { COLOR_KEYS, PLAYER, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
+import { onLens } from './lens';
 
 export { PLAYER, SOLDIER, lookOutfit, type Detail, type Outfit, type OutfitKind } from './wardrobe';
 export { ARM_REACH, HIP_HEIGHT, newPose, reachArm, shoulderTo, torsoFrame, type Limb, type Pose, type Wrist } from './skeleton';
@@ -454,6 +455,8 @@ export const CROWD_VIEW = {
   shadowOn: false,
   /** Where on the ground the camera is looking, about (the traffic and the boats stay round it: life.ts) */
   focus: new THREE.Vector3(),
+  /** The camera's near plane (anyone it would cut open isn't drawn: lens.ts `onLens()`) */
+  near: 0.5,
 };
 /** People nearer the camera than this get the crowd's detail, the rest the far one (and past `CROWD_FAR` nobody is drawn) */
 const CROWD_NEAR = 12;
@@ -669,6 +672,9 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
         ball.radius = 1.6 * scale;
         const d = at.distanceTo(CROWD_VIEW.eye);
         if (d > CROWD_FAR || !CROWD_VIEW.frustum.intersectsSphere(ball)) return;
+        // (the camera passes through people: with the lens inside someone, or close enough to cut them open, they're
+        // left out that frame rather than seen from inside)
+        if (d < 2 && onLens(at.x - CROWD_VIEW.eye.x, at.y - CROWD_VIEW.eye.y, at.z - CROWD_VIEW.eye.z, CROWD_VIEW.near, scale)) return;
         if (d > near) level = levels[1];
         // Out of the sun's shadow box, they cast nothing it can see
         shadow = !CROWD_VIEW.shadowOn || CROWD_VIEW.shadow.intersectsSphere(ball);

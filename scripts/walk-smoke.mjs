@@ -133,8 +133,12 @@ await scene('home', '-189.75,363.55,3.14', async (t) => {
   await t.prompt('Go in');
   await inside();
   await t.step(`inside, at ${(await t.where()).join(', ')}`);
+  // (back as far as he went: a fixed 1.0 left him wherever the walk in's coasting put him, at a frame or two a
+  // second sometimes nearer the stash's prompt than the door's)
+  const hall = await t.where();
   await t.go('w', 1.2, 'walked down the hall');
-  await t.go('s', 1.0, 'and back to the door');
+  const down = await t.where();
+  await t.go('s', Math.hypot(down[0] - hall[0], down[1] - hall[1]), 'and back to the door');
   await t.prompt('Front door');
   await t.until('him to be outside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);

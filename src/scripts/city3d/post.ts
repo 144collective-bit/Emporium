@@ -52,9 +52,10 @@ const InkShader = {
 
     void main() {
       vec4 col = texture2D(tDiffuse, vUv);
-      // A pixel that isn't a number (or is infinite) goes out as the ink's own colour: the bloom after this blurs
-      // every pixel into its neighbours, so one NaN would spread over the screen as black (docs/stability-plan.md)
-      if (any(isnan(col)) || any(isinf(col))) col = vec4(ink, 1.0);
+      // A NaN or infinite pixel (a broken mesh, something too bright for the half-float target) would be spread by
+      // the bloom's blur over the whole screen and black it out: it's one dark pixel instead. (Written as a
+      // comparison NaN fails, which drivers keep, rather than isnan(), which some optimise away)
+      if (!(abs(col.r) + abs(col.g) + abs(col.b) < 6.0e4)) col.rgb = vec3(0.0);
       vec2 o = texel * thickness;
       float d0 = dist(vUv);
       float dl = dist(vUv - vec2(o.x, 0.0));
