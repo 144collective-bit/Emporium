@@ -17,6 +17,7 @@ import { ROW_BLOCKS, rows } from './projects';
 import { PILLAR_HALF } from './metro';
 import { BARRIERS, BOOMBOXES, CAR_PARKS, DUMPSTER, DUMPSTERS, EL_PILLARS, JERSEY, PATCHES, PIT, PLINTH, TRASH, YARDS, YARD_TREES, barrierRect, shuttered, type Dumpster } from './grit';
 import { buildFx, poster, tag } from './grime';
+import { POLE, POLE_WIRES, STREET_POLES, YARD_BITS, type StreetPole, type YardBit } from './yardbits';
 import { TENEMENTS } from './streetwall';
 import type { Lot } from './kits';
 import type { Idle } from './landmarks';
@@ -154,6 +155,19 @@ export function buildGrit(scene: THREE.Scene, crowd: Idle[], opts: { low: boolea
         });
         bx.chairs.forEach(([x, z, ry], i) => chair(b, x, z, ry, toon(i ? '#2aabee' : '#1fbf6b')));
       }
+      // The variety plan's Phase 5 (yardbits.ts): benches with a bin, bike racks and planters on the bare concrete; the
+      // poles along the yard's open street edges, their wires near only
+      for (const y of YARD_BITS.filter((o) => o.block === blk.id)) yardBit(b, y, low);
+      for (const p of STREET_POLES.filter((o) => o.block === blk.id)) pole(b, p, low);
+      b.detail(() => {
+        for (const [a, c] of POLE_WIRES.filter(([a]) => inRect(a[0], a[1], rect))) {
+          const alongX = Math.abs(c[0] - a[0]) > Math.abs(c[1] - a[1]);
+          for (const o of [-0.45, 0, 0.45]) {
+            const [ox, oz] = alongX ? [0, o] : [o, 0];
+            sagLine(b, new THREE.Vector3(a[0] + ox, POLE.arm + 0.2, a[1] + oz), new THREE.Vector3(c[0] + ox, POLE.arm + 0.2, c[1] + oz), 0.3, low ? 3 : 6);
+          }
+        }
+      });
       b.build(into);
       buildFx(fxb, into);
     });
@@ -259,4 +273,60 @@ export function buildGrit(scene: THREE.Scene, crowd: Idle[], opts: { low: boolea
       buildFx(fxb, into);
     });
   });
+}
+
+/* ---------- The yards filled in and the street poles (the variety plan's Phase 5, yardbits.ts) ---------- */
+
+const TIMBER = toon('#7a5a3c');
+const CONCRETE = toon('#9a968e');
+const BIN_GREEN = toon('#2f4a3a');
+const SHRUB = toon('#3f7a44');
+const POLE_WOOD = toon('#6b5f55');
+const INSULATOR = toon('#4a6a5a');
+
+/** A bench with a bin beside it, a bike rack (three hoops) or a concrete planter with a shrub, turned to its facing */
+function yardBit(b: Batch, y: YardBit, low: boolean) {
+  const at = (g: THREE.BufferGeometry) => g.rotateY(y.ry).translate(y.x, S, y.z);
+  const box = (w: number, h: number, d: number, px: number, py: number, pz: number, m: THREE.Material) => b.add(at(new THREE.BoxGeometry(w, h, d).translate(px, py, pz)), m);
+  if (y.kind === 'bench') {
+    for (const sx of [-0.5, 0.5]) box(0.12, 0.4, 0.38, sx, 0.2, 0, CONCRETE);
+    box(1.4, 0.06, 0.42, 0, 0.43, 0, TIMBER);
+    box(1.4, 0.32, 0.05, 0, 0.66, -0.2, TIMBER);
+    b.add(at(new THREE.CylinderGeometry(0.2, 0.18, 0.62, low ? 6 : 10).translate(0.98, 0.31, 0)), BIN_GREEN);
+    return;
+  }
+  if (y.kind === 'rack') {
+    // Three steel hoops in a row
+    for (const sx of [-0.45, 0, 0.45]) {
+      b.add(at(new THREE.TorusGeometry(0.28, 0.025, 4, low ? 6 : 10, Math.PI).translate(sx, 0.48, 0)), METAL);
+      for (const k of [-0.28, 0.28]) box(0.05, 0.48, 0.05, sx + k, 0.24, 0, METAL);
+    }
+    return;
+  }
+  box(1.0, 0.45, 1.0, 0, 0.225, 0, CONCRETE);
+  box(0.9, 0.04, 0.9, 0, 0.46, 0, toon('#3b2a22'));
+  b.add(at(new THREE.IcosahedronGeometry(0.42, low ? 0 : 1).scale(1, 0.85, 1).translate(0, 0.82, 0)), SHRUB);
+}
+
+/** A timber pole with its cross arm across the line and three insulators, a transformer on every third */
+function pole(b: Batch, p: StreetPole, low: boolean) {
+  b.add(new THREE.CylinderGeometry(POLE.r * 0.8, POLE.r, POLE.h, low ? 5 : 7).translate(p.x, S + POLE.h / 2, p.z), POLE_WOOD);
+  const [aw, ad] = p.alongX ? [0.1, 1.2] : [1.2, 0.1];
+  b.add(new THREE.BoxGeometry(aw, 0.1, ad).translate(p.x, S + POLE.arm, p.z), POLE_WOOD);
+  for (const o of [-0.45, 0, 0.45]) {
+    const [ox, oz] = p.alongX ? [0, o] : [o, 0];
+    b.add(new THREE.CylinderGeometry(0.03, 0.04, 0.12, 5).translate(p.x + ox, S + POLE.arm + 0.11, p.z + oz), INSULATOR);
+  }
+  if (Math.round(p.at) % 3 === 0) b.add(new THREE.CylinderGeometry(0.2, 0.2, 0.55, 8).translate(p.x + (p.alongX ? 0 : 0.25), S + POLE.arm - 0.55, p.z + (p.alongX ? 0.25 : 0)), CONCRETE);
+}
+
+/** A wire sagging from a to c (over the slab), in short straight pieces */
+function sagLine(b: Batch, a: THREE.Vector3, c: THREE.Vector3, sag: number, n: number) {
+  const at = (t: number) => new THREE.Vector3(a.x + (c.x - a.x) * t, S + a.y + (c.y - a.y) * t - sag * 4 * t * (1 - t), a.z + (c.z - a.z) * t);
+  for (let i = 0; i < n; i++) {
+    const [p, q] = [at(i / n), at((i + 1) / n)];
+    const g = new THREE.CylinderGeometry(0.012, 0.012, p.distanceTo(q), 3, 1, true);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), q.clone().sub(p).normalize()));
+    b.add(g.translate((p.x + q.x) / 2, (p.y + q.y) / 2, (p.z + q.z) / 2), INK);
+  }
 }
