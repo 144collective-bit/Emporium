@@ -20,7 +20,9 @@ keep it up to date when what it describes changes.
   `wallBand()`) and Phase 2 (the facades: five more wall materials in the
   atlas, weathering, the towers and tenements in a mix) and Phase 3 (the
   rooflines: `rooftones.ts`, roofs in tar, gravel, silver or navy,
-  cornices of four kinds, the tenements 3 to 6 storeys) are built.
+  cornices of four kinds, the tenements 3 to 6 storeys) and Phase 4 (the
+  ground floors: `shopfronts.ts`, fire escapes on about half, half-up
+  shutters, recessed doorways, gates, painted ground floors) are built.
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets
@@ -156,7 +158,7 @@ keep it up to date when what it describes changes.
     (DOM-free, tested in `tests/streetwall.test.ts`), drawn by
     `streetwall3d.ts` (`buildStreetWalls()`, sites, after the grit): the
     street walls (`TENEMENTS`: 3-6 storey tenements, no two neighbours alike, the kits' shops with
-    `escape` (a fire escape up the front for certain) and `wall` (their
+    `escape` (a fire escape up the front or not, shopfronts.ts `escapeAt()`), `shopfront`, `paint` and `wall` (their
     brick), Infill fields infill.ts honours; made-up names `TRENCH_SIGNS`
     (CLUCK HOUSE, GLOSS NAILS, HERO DELI, CELL FIX, KING'S CUTS, LUCKY 7
     PHARMACY and the rest added to `SIGNS`; each tenement's picked from

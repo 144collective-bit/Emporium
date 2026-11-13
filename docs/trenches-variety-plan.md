@@ -109,6 +109,24 @@ everything under the Emporium, phones light.
 4. **Ground floors.** A mix of shopfronts (roll shutters half up, bodegas
    with awnings, recessed doorways, gated entries, stoops), fire escapes on
    some fronts only, door surrounds, a few painted ground floors.
+
+   The owner's picks (2026-11-13): fire escapes on about half, mostly the
+   taller tenements; a mix of shopfronts; some ground floors painted.
+
+   Built, waiting on the owner's sign-off:
+   - `shopfronts.ts` (DOM-free, tested in `tests/shopfronts.test.ts`), each
+     pick a hash of where a tenement stands (rooftones.ts `spotHash()`):
+     `escapeAt()` (`ESCAPE`: most with four floors or more over the shop, a
+     few of the rest), `frontAt()` (`FRONT_MIX`: open, a roll shutter half
+     up, a recessed doorway, a steel gate), `paintAt()` (`PAINTED` of them in
+     one of `PAINTS`).
+   - streetwall.ts sets them on each tenement (`escape`, `shopfront`,
+     `paint`: new Infill fields in downtown.ts); infill.ts's shop kit draws
+     them, near only (pilasters and a stall riser in the paint; the shutter's
+     slats, ribs and box; the recess, its jambs, head and threshold; the
+     gate's bars and rails). Downtown's shops carry none of it.
+   - streetwall3d.ts leaves the new front off a lot the grit shutters right
+     down (grit.ts `shuttered()`), so the two never overlap.
 5. **Streets and yards.** Cars parked along the kerbs where the streets
    allow, street trees in pits, utility poles and their wires, more signs and
    tags, scaffolding on a few more fronts; the yards less bare (worn grass,

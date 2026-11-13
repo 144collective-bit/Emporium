@@ -27,6 +27,7 @@ const DOM_FREE = [
   'src/scripts/city3d/endswestlife.ts',
   'src/scripts/city3d/windows.ts',
   'src/scripts/city3d/rooftones.ts',
+  'src/scripts/city3d/shopfronts.ts',
   'src/scripts/city3d/streetplan.ts',
   'src/scripts/city3d/routes.ts',
   'src/scripts/city3d/live.ts',

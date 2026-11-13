@@ -29,6 +29,7 @@ import { TRENCH_BLOCKS } from './trenches';
 import { heightOf, lotSolids, type Lot } from './kits';
 import { rng } from './recipes';
 import { CAR_SCALE } from './carspec';
+import { escapeAt, frontAt, paintAt } from './shopfronts';
 
 const bounds = (poly: Pt[]): Rect => [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1]))];
 const grow = ([x0, z0, x1, z1]: Rect, m: number): Rect => [x0 - m, z0 - m, x1 + m, z1 + m];
@@ -195,7 +196,11 @@ const LAID = (() => {
         sign: signAt(box, near),
         front: 0.5,
         solids: [],
-        escape: true,
+        // (the variety plan's Phase 4: fire escapes on about half, mostly the taller ones; a mix of shopfronts; some
+        // ground floors painted)
+        escape: escapeAt(cx, cz, floors),
+        shopfront: frontAt(cx, cz),
+        paint: paintAt(cx, cz) ?? undefined,
         wall: BRICKS[Math.floor(r() * BRICKS.length)],
       };
       lot.solids = lotSolids(lot);

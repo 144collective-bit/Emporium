@@ -633,6 +633,9 @@ const INK = toon('#1b1830');
 const STONE = toon('#8f8ab0');
 const METAL = toon('#2a2b38');
 const ROOF = toon('#2a2547');
+/** A roll shutter's slats and their ribs (The Trenches' tenements' half-up shutters, the variety plan's Phase 4) */
+const SHUTTER = toon('#8a8f96');
+const SHUTTER_RIB = toon('#6e737a');
 const WOOD = toon('#8a5a3c');
 const GREEN = toon('#2a8a55');
 const LEAF = toon('#36b06c');
@@ -1045,6 +1048,34 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const escape = f.floors >= 2 && w >= 3.1 && !named && (f.escape ?? r() < 0.55) && !LOW;
     if (f.floors >= 1) k.all(() => blade(k, id, w - 0.3, upper + 0.15, Math.min(top - 0.5, upper + 0.15 + 1.5)));
     if (escape) fireEscape(k, 0.3, Math.min(w - 0.8, 1.9), upper, f.floors, low);
+    // The Trenches' tenements' ground floors (the variety plan's Phase 4, shopfronts.ts): a painted surround, then the
+    // front's own kind; near only, every face held clear of the wall behind it
+    if (f.paint) {
+      const pm = toon(f.paint);
+      k.lbox(-0.01, 0.16, S, S + SHOP_H, 0.006, 0.05, pm);
+      k.lbox(w - 0.16, w + 0.01, S, S + SHOP_H, 0.006, 0.05, pm);
+      k.lbox(0.16, w - 0.16, S, S + 0.22, 0.006, 0.04, pm);
+    }
+    if (f.shopfront === 'halfShutter') {
+      // A roll shutter half up: its slats down to half the shop's height, the box it rolls into over them
+      const y0 = S + SHOP_H * 0.5;
+      k.lbox(0.22, w - 0.22, y0, S + SHOP_H - 0.06, 0.012, 0.045, SHUTTER);
+      if (!LOW) for (let y = y0 + 0.08; y < S + SHOP_H - 0.1; y += 0.08) k.lbox(0.22, w - 0.22, y, y + 0.012, 0.045, 0.052, SHUTTER_RIB);
+      k.lbox(0.18, w - 0.18, S + SHOP_H - 0.08, S + SHOP_H - 0.005, 0.012, 0.09, METAL);
+    } else if (f.shopfront === 'recessed') {
+      // The door set back: the dark of the recess, its jambs and head standing out, a stone threshold
+      const u = w * 0.55;
+      k.lbox(u - 0.42, u + 0.42, S, S + 1.05, 0.006, 0.012, INK);
+      k.lbox(u - 0.48, u - 0.4, S, S + 1.1, 0.006, 0.12, trimM);
+      k.lbox(u + 0.4, u + 0.48, S, S + 1.1, 0.006, 0.12, trimM);
+      k.lbox(u - 0.48, u + 0.48, S + 1.1, S + 1.18, 0.006, 0.12, trimM);
+      k.lbox(u - 0.4, u + 0.4, S, S + 0.03, 0.012, 0.12, STONE);
+    } else if (f.shopfront === 'gated') {
+      // A steel gate drawn across the window: upright bars between two rails
+      const [g0, g1] = [0.2, Math.max(1.2, w * 0.5)];
+      for (let u = g0; u <= g1; u += LOW ? 0.18 : 0.09) k.lbox(u - 0.008, u + 0.008, S + 0.02, S + SHOP_H * 0.86, 0.02, 0.035, METAL);
+      for (const y of [S + 0.05, S + SHOP_H * 0.84]) k.lbox(g0, g1, y, y + 0.03, 0.018, 0.04, METAL);
+    }
     // Out front: café tables (with people), or a chalk board, a planter and a bike
     if (id === 'coffee') {
       for (const [u, p] of [

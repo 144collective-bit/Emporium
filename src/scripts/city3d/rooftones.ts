@@ -28,8 +28,8 @@ export const CORNICE_MIX: [CorniceKind, number][] = [
 ];
 export type TankKind = 'round' | 'square';
 
-/** A hash in [0, 1) of a point (rounded to centimetres) and a salt */
-function hash(x: number, z: number, salt: number) {
+/** A hash in [0, 1) of a point (rounded to centimetres) and a salt (shopfronts.ts's picks too) */
+export function spotHash(x: number, z: number, salt: number) {
   let h = (Math.round(x * 100) * 374761393 + Math.round(z * 100) * 668265263 + salt * 2147483647) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   h ^= h >>> 16;
@@ -43,9 +43,9 @@ function pick<T>(mix: [T, number][], u: number): T {
   return mix[0][0];
 }
 
-export const roofTone = (x: number, z: number): RoofTone => pick(ROOF_MIX, hash(x, z, 11));
-export const corniceAt = (x: number, z: number): CorniceKind => pick(CORNICE_MIX, hash(x, z, 23));
-export const tankAt = (x: number, z: number): TankKind => (hash(x, z, 37) < 0.55 ? 'round' : 'square');
+export const roofTone = (x: number, z: number): RoofTone => pick(ROOF_MIX, spotHash(x, z, 11));
+export const corniceAt = (x: number, z: number): CorniceKind => pick(CORNICE_MIX, spotHash(x, z, 23));
+export const tankAt = (x: number, z: number): TankKind => (spotHash(x, z, 37) < 0.55 ? 'round' : 'square');
 /** How many vent stacks and whether an aerial stands on a tower's roof */
-export const ventsAt = (x: number, z: number) => 1 + Math.floor(hash(x, z, 41) * 3);
-export const aerialAt = (x: number, z: number) => hash(x, z, 43) < 0.6;
+export const ventsAt = (x: number, z: number) => 1 + Math.floor(spotHash(x, z, 41) * 3);
+export const aerialAt = (x: number, z: number) => spotHash(x, z, 43) < 0.6;
