@@ -57,8 +57,13 @@ const BUDGETS = {
   walletJs: 120,
   /** All the CSS */
   css: 60,
-  /** The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed) */
-  texLow: 2300,
+  /**
+   * The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed).
+   * Raised from 2300 on purpose (the owner's call, 2026-11): with every one of the 118 phone textures baked (as most
+   * bakes now do: a texture is only left to paint when its noon and midnight runs differ), the set is about 2340 KB,
+   * which held the Worker's build red on main
+   */
+  texLow: 2450,
   /** ... and as everyone else does */
   texFull: 3500,
   /** Their transcoder (three's Basis wasm and its script) */
