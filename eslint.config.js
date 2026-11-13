@@ -8,6 +8,7 @@ import tseslint from 'typescript-eslint';
 /** The DOM-free rules files: no `document`, `window` or `localStorage` in them (a test or the server would fail to load; three.js's maths is fine in Node) */
 const DOM_FREE = [
   'src/scripts/city3d/freecam.ts',
+  'src/scripts/city3d/freecollide.ts',
   'src/scripts/city3d/walkpad.ts',
   'src/scripts/city3d/lens.ts',
   'src/scripts/city3d/walkkeys.ts',

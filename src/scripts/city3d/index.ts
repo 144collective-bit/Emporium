@@ -1400,6 +1400,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   document.addEventListener('keyup', (e) => walking && walk.onKey(e, false));
   /* ---------- The free camera (freecam.ts): WASD flies City view's camera where it looks, the right button looks round ---------- */
+  // What it bumps into (freecollide.ts, the walk camera's solids): its own chunk, loaded once the city is up
+  let camSolids: typeof import('./freecollide') | null = null;
+  const camFrom = new THREE.Vector3();
+  const camTargetFrom = new THREE.Vector3();
   const flyKeys = noKeys();
   let flyVel: V3 = [0, 0, 0];
   const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -1441,7 +1445,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     flyVel = easeVel(flyVel, wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y), dt, reduced);
     if (!flyVel.some((v) => v)) return false;
     const p = camera.position;
-    const to = clampCam([p.x + flyVel[0] * dt, p.y + flyVel[1] * dt, p.z + flyVel[2] * dt], 0);
+    const from: V3 = [p.x, p.y, p.z];
+    // (the buildings stop it, sliding along their faces, once their chunk has come: freecollide.ts)
+    const want = clampCam([p.x + flyVel[0] * dt, p.y + flyVel[1] * dt, p.z + flyVel[2] * dt], 0);
+    const to = camSolids ? camSolids.bump(from, want) : want;
     const [x, y, z] = clampCam(to, groundUnder(to[0], to[2]));
     flyMove.set(x - p.x, y - p.y, z - p.z);
     p.add(flyMove);
@@ -1862,11 +1869,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       dirty = true;
     } else {
       if (flyStep(dt)) dirty = true;
+      camFrom.copy(camera.position);
+      camTargetFrom.copy(controls.target);
       if (controls.update()) dirty = true;
-      // (orbiting and zooming kept inside the wall and over the ground too: freecam.ts)
+      // (orbiting, zooming, the drag and touch kept inside the wall, over the ground and out of the buildings too:
+      // freecam.ts, freecollide.ts; a drag or a zoom to the cursor that moved the target is held back with the camera)
       const p = camera.position;
-      const [x, y, z] = clampCam([p.x, p.y, p.z], groundUnder(p.x, p.z));
+      const moved: V3 = [p.x, p.y, p.z];
+      const swept = camSolids && !camFrom.equals(p) ? camSolids.bump([camFrom.x, camFrom.y, camFrom.z], moved) : moved;
+      const [x, y, z] = clampCam(swept, groundUnder(swept[0], swept[2]));
       if (x !== p.x || y !== p.y || z !== p.z) {
+        if (!camTargetFrom.equals(controls.target)) controls.target.add(flyMove.set(x - p.x, y - p.y, z - p.z));
         p.set(x, y, z);
         camera.lookAt(controls.target);
         dirty = true;
@@ -2141,6 +2154,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   camera.lookAt(controls.target);
   flyTo(start.pos, start.target, 2.8);
   // The cars' fine detail and your car's inside (vehicle plan Phase 1): its own chunk, once the city is up
+  // What City view's free camera bumps into (freecollide.ts: the walk camera's solids)
+  idle(() => void lazy(() => import('./freecollide'), 'the buildings for the camera')().then((m) => (camSolids = m)).catch(() => {}));
   idle(() => void lazy(() => import('./carfine'), "the cars' detail")().then((m) => m.fitCars(tier === 'low', compileFor, sky, scene)));
   // Your motorbikes' drawing (vehicle plan Phase 7): the garage's stand shows yours once it's come
   idle(() =>
