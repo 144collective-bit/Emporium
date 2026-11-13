@@ -157,6 +157,19 @@ await scene('homegarage', '-238.35,380', async (t) => {
   await t.step('the garage menu closed');
 });
 
+// The roof terrace (docs/ends-far-west-plan.md Phase 3): at the stairs' foot in his room, up (a fade to the roof), a few
+// steps along the rail, and down again
+await scene('hometerrace', '-230.25,387.5,3.14', async (t) => {
+  await t.prompt('Upstairs');
+  await t.until('the way down to show (he is on the terrace)', () => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes('Downstairs'), null, 120000);
+  await t.step(`up on the terrace, at ${(await t.where()).join(', ')}`);
+  await t.go('w', 1.5, 'walked along the terrace');
+  await t.go('s', 1.3, 'and back to the hatch');
+  await t.prompt('Downstairs');
+  await t.until('the way up to show (he is back in the room)', () => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes('Upstairs'), null, 120000);
+  await t.step('down in the room again');
+});
+
 // His workshop's roller door (docs/ends-far-west-plan.md Phase 2): the garage's menu, opened on its kit
 await scene('homeworkshop', '-233.7,373.15', async (t) => {
   await t.prompt('Workshop');

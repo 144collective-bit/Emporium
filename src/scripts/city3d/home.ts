@@ -19,6 +19,8 @@
  * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where walking
  *   starts (`HOME_SPAWN`: in the yard, facing the front door).
  * - **Inside**: one room on the ground floor (`ROOM`, `FURNITURE`), sealed: the doors are fades (`HOME_PORTALS`).
+ * - **The roof terrace** (Phase 3): up the stairs (a fade too) to the roof inside its rail (`TERRACE`, `ROOF_THINGS`,
+ *   `onRoof()`, `roofWall()`), the yard and the Close below.
  *
  * In world numbers (x across, z north (-) to south (+)), all from the plot, so the boot carries nothing else.
  */
@@ -219,12 +221,47 @@ export const FURNITURE: Furniture[] = [
   { kind: 'counter', rect: [rx0 + 0.2, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
   { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.02 },
 ];
-/** Inside the house (its footprint)? */
-export const inHouse = (x: number, z: number) => x > hx0 && x < hx1 && z > hz0 && z < hz1;
+/** How high someone is once he's up on the roof and no longer in the room (between the ceiling and the roof) */
+const UP = SLAB_Y + CEIL + 0.5;
+/** Inside the house (its footprint, on the ground floor: `y` is how high he is; up on the roof is `onRoof()`)? */
+export const inHouse = (x: number, z: number, y = 0) => y < UP && x > hx0 && x < hx1 && z > hz0 && z < hz1;
 /** Does someone `r` wide at x, z in the room touch its walls or anything standing in it? */
 export function homeWall(x: number, z: number, r: number) {
   if (x - r < rx0 || x + r > rx1 || z - r < rz0 || z + r > rz1) return true;
   return FURNITURE.some(({ rect: f }) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3]);
+}
+
+/* ---------- The roof terrace (Phase 3) ---------- */
+
+/** The terrace's floor over the slab (the roof's felt), and the roof inside its parapet and rail */
+export const ROOF_Y = EAVES + 0.06;
+export const TERRACE: Rect = [hx0 + SHELL + 0.1, hz0 + SHELL + 0.1, hx1 - SHELL - 0.1, hz1 - SHELL - 0.1];
+/** The stairs' head: a hatch in the roof over the stairs below, its lid up, a rail round three sides */
+export const HATCH: Rect = [rx1 - 1.05, rz0 + 0.3, rx1 - 0.1, rz0 + 1.7];
+/** What stands on the terrace: its footprint, how tall (over the roof), and what it is (home3d.ts draws each) */
+export interface RoofThing {
+  kind: 'hatch' | 'chair' | 'table' | 'planter';
+  rect: Rect;
+  h: number;
+}
+const [tx0, tz0, tx1, tz1] = TERRACE;
+/** Two chairs and a low table at the front rail, looking over the yard and down the Close; planters in the back corners */
+export const ROOF_THINGS: RoofThing[] = [
+  { kind: 'hatch', rect: HATCH, h: 0.5 },
+  { kind: 'chair', rect: [tx0 + 2.4, tz0 + 0.9, tx0 + 2.9, tz0 + 1.45], h: 0.5 },
+  { kind: 'chair', rect: [tx0 + 4.0, tz0 + 0.9, tx0 + 4.5, tz0 + 1.45], h: 0.5 },
+  { kind: 'table', rect: [tx0 + 3.2, tz0 + 0.5, tx0 + 3.7, tz0 + 0.95], h: 0.22 },
+  { kind: 'planter', rect: [tx0 + 0.1, tz1 - 0.6, tx0 + 1.5, tz1 - 0.1], h: 0.3 },
+  { kind: 'planter', rect: [tx1 - 1.5, tz1 - 0.6, tx1 - 0.1, tz1 - 0.1], h: 0.3 },
+];
+/** Up on the roof (over the house's footprint, above the room)? */
+export const onRoof = (x: number, z: number, y: number) => y >= UP && x > hx0 && x < hx1 && z > hz0 && z < hz1;
+/** The roof under someone `yNow` high (null: not up there), for groundheight.ts */
+export const homeRoofY = (x: number, z: number, yNow: number) => (onRoof(x, z, yNow) ? SLAB_Y + ROOF_Y : null);
+/** Does someone `r` wide at x, z on the terrace touch its rail or anything standing on it? */
+export function roofWall(x: number, z: number, r: number) {
+  if (x - r < tx0 || x + r > tx1 || z - r < tz0 || z + r > tz1) return true;
+  return ROOF_THINGS.some(({ rect: f }) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3]);
 }
 
 /** A door's two sides: where its prompt stands, its label, and where the fade puts you (walking's yaw: 0 north, π south, π/2 west) */
@@ -242,6 +279,9 @@ export const HOME_PORTALS: Portal[] = [
   { id: 'home:out', x: DX, z: rz0 + 0.3, label: 'Front door', to: { x: DX + 0.5, z: hz0 - 1.75, y: SLAB_Y, yaw: 0 }, arrived: 'The yard' },
   { id: 'home:yard', x: rx1 - 0.3, z: SZ, label: 'Side door', to: { x: hx1 + 0.6, z: SZ, y: SLAB_Y, yaw: -Math.PI / 2 }, arrived: 'The garden' },
   { id: 'home:back', x: hx1 + 0.5, z: SZ, label: 'Go in', to: { x: rx1 - 0.55, z: SZ, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
+  // The stairs (Phase 3): from the room at their foot up to the hatch's side on the terrace, and down again
+  { id: 'home:up', x: rx1 - 1.3, z: rz0 + 2.45, label: 'Upstairs', to: { x: HATCH[0] - 0.55, z: (HATCH[1] + HATCH[3]) / 2, y: SLAB_Y + ROOF_Y, yaw: Math.PI / 2 }, arrived: 'The terrace' },
+  { id: 'home:down', x: HATCH[0] - 0.35, z: (HATCH[1] + HATCH[3]) / 2, label: 'Downstairs', to: { x: rx1 - 1.75, z: rz0 + 2.45, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
 ];
 /** A thing in the room to use: where its prompt stands and its label (walk `places`; index.ts opens what it's for) */
 export interface HomeUse {
@@ -251,6 +291,14 @@ export interface HomeUse {
   label: string;
 }
 const at = (kind: FurnitureKind) => FURNITURE.find((f) => f.kind === kind)!.rect;
+/**
+ * The home's prompts for someone `y` high: on the terrace only the way down; anywhere else everything but that (the
+ * room's and the terrace's stand over one another, so each shows on its own floor)
+ */
+export function homePlaces(y: number): { id: string; x: number; z: number; label: string }[] {
+  const up = y >= UP;
+  return [...HOME_PORTALS.filter((p) => (p.id === 'home:down') === up), ...(up ? [] : HOME_USES)];
+}
 /** The wardrobe (stood in front of, on its west side: the fitting room) and the trunk (from its east end: the stash) */
 export const HOME_USES: HomeUse[] = [
   { id: 'home:wardrobe', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },

@@ -50,7 +50,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_USES, HOME_SPAWN, inHouse, startsAtHome } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, homePlaces, HOME_SPAWN, inHouse, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -978,7 +978,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       (stashUI = createStashUI(root, {
         game,
         may: (id) => walk.combat.canTake(id),
-        free: () => walking && walk.onFoot && inHouse(walk.position.x, walk.position.z),
+        free: () => walking && walk.onFoot && inHouse(walk.position.x, walk.position.z, walk.position.y),
         opened: () => {
           walk.releaseMouse();
           close();
@@ -1106,7 +1106,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y), ...HOME_PORTALS, ...HOME_USES],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y), ...homePlaces(walk.position.y)],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1910,7 +1910,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     camera.getWorldDirection(look);
     sky.setShadows(walking && !walk.airborne);
     // (in Degen's house, home.ts: no rain indoors)
-    sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z));
+    sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
@@ -2020,6 +2020,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (ambT <= 0) {
       ambT = 0.25;
       amb = walking ? ambienceAt(walk.position.x, walk.position.z) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
+      // (up on his roof terrace he's out of doors: home.ts)
+      if (walking && amb.home && !inHouse(walk.position.x, walk.position.z, walk.position.y)) amb = { ...amb, home: 0 };
     }
     // (the el rumbles where the train is: walking, by Degen; in the City view, where it looks, softened by height)
     const ear = walking ? walk.position : controls.target;

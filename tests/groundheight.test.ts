@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
 import { ENDS_FLOORS, endsDeckY } from '../src/scripts/city3d/endsdecks';
+import { HOME, ROOF_Y, homeRoofY } from '../src/scripts/city3d/home';
 import { DECK_Y, MARKET_DECK, onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
 import { DEPARTURES, departuresY } from '../src/scripts/city3d/airfield';
@@ -43,6 +44,9 @@ function reference(leavesOpen: () => boolean) {
   return (x: number, z: number, yNow = 0) => {
     const ends = endsDeckY(x, z, yNow);
     if (ends !== null) return ends;
+    // (Degen's roof terrace, home.ts: new since the old groundAt(), so the reference takes it as the layers do)
+    const roof = homeRoofY(x, z, yNow);
+    if (roof !== null) return roof;
     const tn = UNDER.y(x, z, yNow);
     if (tn !== null) return tn;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
@@ -160,6 +164,7 @@ test('every layer answers alone where it stands, and nowhere on the open street 
   const g = (x: number, z: number) => ({ ...baseAt(x, z), leavesOpen: true });
   const where: Record<string, [number, number, number]> = {
     endsdecks: [mid(GALLERY_FLOOR.rect)[0], mid(GALLERY_FLOOR.rect)[1], GALLERY_FLOOR.y],
+    homeroof: [(HOME.house[0] + HOME.house[2]) / 2, (HOME.house[1] + HOME.house[3]) / 2, SLAB + ROOF_Y],
     tunnel: [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2, -2],
     hills: [HILL[0], HILL[1], 0],
     rolls: [ROLL[0], ROLL[1], 0],

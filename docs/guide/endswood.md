@@ -250,3 +250,9 @@ keep it up to date when what it describes changes.
   yard's gate) is how it was: that house is a neighbour's again, and
   nothing in the terraces' code knows of the home. The Close is one street
   to the T (`FAR_LANE_X` in endswood.ts).
+  Phase 3 (the roof terrace) is built: `ROOF_Y`, `TERRACE`, `HATCH`,
+  `ROOF_THINGS`, `onRoof()`, `roofWall()`, `homeRoofY()` (groundheight.ts's
+  `homeroof` layer); `inHouse(x, z, y)` is the ground floor only;
+  `HOME_PORTALS` has `home:up` and `home:down`; `homePlaces(y)` is what
+  index.ts gives walk mode as the home's prompts, by floor. A new thing on
+  the terrace goes in `ROOF_THINGS`.

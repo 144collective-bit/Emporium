@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BIKE_HOME, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, HOME_CAMERA, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
-  HOME_WORKSHOP_DOOR, PIER, ROOM, SHELL, WALL, WALL_H, WALL_T, homeWall, inHouse, onHome, startsAtHome,
+  HOME_WORKSHOP_DOOR, HATCH, PIER, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, homePlaces, homeRoofY, homeWall, inHouse, onHome, onRoof, roofWall, startsAtHome,
 } from '../src/scripts/city3d/home';
 import { GATES, HEAD, LANE_HALF, LANE_X, PLOT } from '../src/scripts/city3d/endsfar';
 import { HOUSES, TERRACES, TERRACE_SOLIDS, TALLEST } from '../src/scripts/city3d/endsterraces';
@@ -206,8 +206,8 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
 });
 
 test('the doors: a prompt outside and in for the front and the side, each fade landing somewhere you can stand', () => {
-  assert.deepEqual(HOME_PORTALS.map((p) => p.id), ['home:in', 'home:out', 'home:yard', 'home:back']);
-  for (const p of HOME_PORTALS) {
+  assert.deepEqual(HOME_PORTALS.map((p) => p.id), ['home:in', 'home:out', 'home:yard', 'home:back', 'home:up', 'home:down']);
+  for (const p of HOME_PORTALS.slice(0, 4)) {
     const inside = p.id === 'home:out' || p.id === 'home:yard';
     // The prompt on its own side of the wall, the landing on the other
     assert.equal(inHouse(p.x, p.z), inside, `${p.id}'s prompt`);
@@ -254,4 +254,70 @@ test('the benchmark has a view of the compound, from the Close down its line, lo
   const [tx, , tz] = v.target;
   assert.ok(onHome(tx, tz), 'looking at his land');
   assert.ok(Math.hypot(tx - x, tz - z) < 40);
+});
+
+test('the roof terrace: up the stairs to the roof inside its rail, the room under it; each floor its own ground, walls and prompts', () => {
+  const [hx0, hz0, hx1, hz1] = HOME.house;
+  const roof = SLAB_Y + ROOF_Y;
+  assert.ok(ROOF_Y > HOME.eaves && ROOF_Y < HOME.ridge, 'on the roof, below the parapet\'s top');
+  assert.ok(TERRACE[0] > hx0 && TERRACE[1] > hz0 && TERRACE[2] < hx1 && TERRACE[3] < hz1, 'inside the parapet');
+  // By height: in the room on the ground floor, on the roof up there; never both
+  const [mx, mz] = [(hx0 + hx1) / 2, (hz0 + hz1) / 2];
+  assert.ok(inHouse(mx, mz, SLAB_Y) && !onRoof(mx, mz, SLAB_Y));
+  assert.ok(onRoof(mx, mz, roof) && !inHouse(mx, mz, roof));
+  assert.ok(!onRoof(HOME_SPAWN.x, HOME_SPAWN.z, roof), 'not out over the yard');
+  for (const y of [0, SLAB_Y, 1, roof - 0.5, roof, roof + 1.4]) assert.notEqual(inHouse(mx, mz, y), onRoof(mx, mz, y), `at ${y}`);
+  // The ground: the roof when he's up there (a jump too), the room's floor when he isn't
+  assert.equal(homeRoofY(mx, mz, roof), roof);
+  assert.equal(homeRoofY(mx, mz, roof + 1.2), roof);
+  assert.equal(homeRoofY(mx, mz, SLAB_Y), null);
+  assert.equal(homeRoofY(HOME_SPAWN.x, HOME_SPAWN.z, roof), null);
+  // The rail: nowhere on the roof past the terrace's edge, all the way round
+  const R = 0.14;
+  for (let x = hx0; x <= hx1; x += 0.25) for (const z of [hz0 + 0.1, hz1 - 0.1]) assert.ok(roofWall(x, z, R), `over the edge at ${x}, ${z}`);
+  for (let z = hz0; z <= hz1; z += 0.25) for (const x of [hx0 + 0.1, hx1 - 0.1]) assert.ok(roofWall(x, z, R), `over the edge at ${x}, ${z}`);
+  // What stands on it: on the terrace, apart; the hatch over the stairs below
+  for (const t of ROOF_THINGS) assert.ok(within(t.rect, TERRACE, 1e-9) && t.h > 0 && t.h < 0.8, `${t.kind} off the terrace`);
+  for (let i = 0; i < ROOF_THINGS.length; i++) for (let j = i + 1; j < ROOF_THINGS.length; j++) assert.ok(!overlap(ROOF_THINGS[i].rect, ROOF_THINGS[j].rect), `${ROOF_THINGS[i].kind} on ${ROOF_THINGS[j].kind}`);
+  const stairs = FURNITURE.find((f) => f.kind === 'stairs')!.rect;
+  assert.ok(overlap(HATCH, stairs), 'the hatch is over the stairs');
+  assert.deepEqual(ROOF_THINGS[0], { kind: 'hatch', rect: HATCH, h: ROOF_THINGS[0].h });
+  // The stairs' fades: from the room at their foot to the hatch's side, and down again, each landing where he can stand
+  const up = HOME_PORTALS.find((p) => p.id === 'home:up')!;
+  const down = HOME_PORTALS.find((p) => p.id === 'home:down')!;
+  assert.ok(inHouse(up.x, up.z) && !homeWall(up.x, up.z, R), 'the way up stands in the room');
+  assert.ok(Math.hypot(up.x - Math.max(stairs[0], Math.min(stairs[2], up.x)), up.z - Math.max(stairs[1], Math.min(stairs[3], up.z))) < 0.6, 'by the stairs');
+  assert.equal(up.to.y, roof);
+  assert.ok(!roofWall(up.to.x, up.to.z, R), 'he arrives on the terrace');
+  assert.ok(!roofWall(down.x, down.z, R) && Math.hypot(down.x - up.to.x, down.z - up.to.z) < 1, 'the way down is where he arrives');
+  assert.equal(down.to.y, SLAB_Y);
+  assert.ok(!homeWall(down.to.x, down.to.z, R) && Math.hypot(down.to.x - up.x, down.to.z - up.z) < 1);
+  assert.deepEqual([up.label, down.label, up.arrived, down.arrived], ['Upstairs', 'Downstairs', 'The terrace', 'Home']);
+  // From where he arrives he can walk to both chairs and the front rail (a flood over the terrace)
+  const step = 0.1;
+  const seen = new Set<string>();
+  const start: [number, number] = [Math.round((up.to.x - TERRACE[0]) / step), Math.round((up.to.z - TERRACE[1]) / step)];
+  const at = (i: number, j: number): [number, number] => [TERRACE[0] + i * step, TERRACE[1] + j * step];
+  const queue = [start];
+  seen.add(start.join());
+  while (queue.length) {
+    const [i, j] = queue.pop()!;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const n: [number, number] = [i + di, j + dj];
+      if (seen.has(n.join()) || roofWall(...at(...n), R)) continue;
+      seen.add(n.join());
+      queue.push(n);
+    }
+  }
+  const reach = (x: number, z: number, r: number) => [...seen].some((k) => Math.hypot(at(...(k.split(',').map(Number) as [number, number]))[0] - x, at(...(k.split(',').map(Number) as [number, number]))[1] - z) < r);
+  for (const t of ROOF_THINGS) assert.ok(reach((t.rect[0] + t.rect[2]) / 2, (t.rect[1] + t.rect[3]) / 2, 1), `${t.kind} can't be walked up to`);
+  // (the front corner by the rail, and the back rail between the planters)
+  assert.ok(reach(TERRACE[0] + 0.3, TERRACE[1] + 0.3, 0.3) && reach((TERRACE[0] + TERRACE[2]) / 2, TERRACE[3] - 0.3, 0.3), 'front to back');
+  // Each floor shows its own prompts: on the terrace only the way down; below, everything but it
+  assert.deepEqual(homePlaces(roof).map((p) => p.id), ['home:down']);
+  const low = homePlaces(SLAB_Y).map((p) => p.id);
+  assert.deepEqual(low, ['home:in', 'home:out', 'home:yard', 'home:back', 'home:up', 'home:wardrobe', 'home:stash']);
+  for (const p of homePlaces(SLAB_Y)) if (p.id !== 'home:up') assert.ok(Math.hypot(p.x - up.x, p.z - up.z) > 0.6, `home:up and ${p.id} apart`);
+  // The camera's ceiling box ends under the terrace's floor's level... the parapet's top, so the camera stays over it up there
+  assert.ok(roof < HOME_CAMERA[4] && roof + 1 > HOME_CAMERA[4]);
 });
