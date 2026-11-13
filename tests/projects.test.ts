@@ -87,7 +87,9 @@ test('the towers: on their blocks with room round them, under the Emporium, door
   }
   // Every design, and every brick, in the mix; most of it red; the tallest the point towers; scaffolding on one
   for (const d of TOWER_DESIGNS) assert.ok(TOWERS.some((t) => t.design === d), `a ${d}`);
-  assert.ok(TOWERS.filter((t) => t.brick === 'brick').length > TOWERS.length / 2);
+  // (a mix since the variety plan's Phase 2, the owner's call: red brick the most common, but no longer most of them)
+  const reds = TOWERS.filter((t) => t.brick === 'brick').length;
+  assert.ok(new Set(TOWERS.map((t) => t.brick)).size >= 6 && TOWERS.every((t) => TOWERS.filter((o) => o.brick === t.brick).length <= reds));
   assert.ok(new Set(TOWERS.map((t) => t.brick)).size >= 3);
   assert.equal(Math.max(...TOWERS.map((t) => t.floors)), Math.max(...TOWERS.filter((t) => t.design === 'point').map((t) => t.floors)));
   assert.equal(TOWERS.filter((t) => t.scaffold).length, 1);

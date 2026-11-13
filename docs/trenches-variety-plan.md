@@ -60,6 +60,27 @@ everything under the Emporium, phones light.
    the cream glazed brick of post-war projects, precast concrete panels;
    weathering (stains under sills and copings, soot near the roofs, faded
    paint); a ground floor in its own material on the tenements and rows.
+
+   Built, waiting on the owner's sign-off (the owner's "go" on the plan's
+   set):
+   - Five more wall kinds in the shared atlas (`WallKindName` in
+     windows.ts, `WALL_COLOR` in infill.ts): `brickOrange` (sashes),
+     `brickPurple` (pairs), `brickPainted` (sashes, its courses faint under
+     the paint), `brickGlazed` (casements between concrete bands, a shine
+     on each course) and `panel` (precast concrete, joints at each floor and
+     every two bays, a long low `ribbon` window a bay).
+   - Weathering on every band but glass: soft stains down from each sill
+     and a few water streaks down the band.
+   - The Trench Houses take ten picks over eight materials (`BRICKS` in
+     projects.ts: ten, since the towers take every third in turn), red brick
+     the most common but no longer most of them (the projects test holds
+     it); the tenements seven over seven (`BRICKS` in streetwall.ts). The
+     tests hold both to at least five materials, none on 40% or more.
+   - The tenements' ground floors were already shopfronts in their own
+     band, and the rows' brownstones stand on their stone base, so that item
+     needed nothing new.
+   - The atlas grew from 11 wall bands to 16 (4,796 pixels tall; phones draw
+     it at half size).
 3. **Rooflines.** Tenements of mixed heights (3 to 6 storeys), cornices of
    different kinds (bracketed, stepped, a plain coping, none), a few
    setbacks; roofs in tar grey, gravel and silver paint, not all navy;

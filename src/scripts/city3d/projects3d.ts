@@ -126,7 +126,16 @@ function atlasPlane(row: number, rows: number, w: number, h: number, n: Pt, x: n
 
 const FACE_N: Record<Tower['door']['face'], Pt> = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] };
 /** The parapets' brick, a shade under each wall's */
-const PARAPET_OF: Record<Brick, string> = { brick: '#5a2c2a', brownstone: '#4e3326', brickTan: '#7a5c40', brickDark: '#3a2124' };
+const PARAPET_OF: Record<Brick, string> = {
+  brick: '#5a2c2a',
+  brownstone: '#4e3326',
+  brickTan: '#7a5c40',
+  brickDark: '#3a2124',
+  brickOrange: '#6a3020',
+  brickPurple: '#40262f',
+  brickGlazed: '#9a9078',
+  panel: '#5f5c57',
+};
 const BULK_H = 0.9;
 /** The wall atlas's bays (infill.ts): a window every 0.75 along, one a floor; the sill this far over the floor line */
 const BAY = 0.75;

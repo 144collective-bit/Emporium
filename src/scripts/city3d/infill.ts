@@ -26,7 +26,7 @@ import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL
 import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
-import { WINDOW_TYPE, paneAt, type Light, type Pane } from './windows';
+import { WINDOW_TYPE, paneAt, type Light, type Pane, type WallKindName } from './windows';
 
 /* ---------- The wall atlas ---------- */
 
@@ -48,9 +48,9 @@ const WALL_PX = ROWS * PX_H;
 const SHOP_W = 3.2;
 const GROUND_PX = 100;
 
-type WallKind = 'brick' | 'brownstone' | 'stuccoTeal' | 'stuccoPink' | 'stuccoViolet' | 'industrial' | 'glassBlue' | 'glassTeal' | 'hotel' | 'brickTan' | 'brickDark';
+type WallKind = WallKindName;
 type GroundKind = 'shopWarm' | 'shopPink' | 'shopCyan' | 'diner' | 'lobby' | 'stoneBase' | 'loading';
-const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark'];
+const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel'];
 const GROUND_KINDS: GroundKind[] = ['shopWarm', 'shopPink', 'shopCyan', 'diner', 'lobby', 'stoneBase', 'loading'];
 /** Each wall's own colour (for its trim and parapet) and the colour of its stone trim */
 const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
@@ -66,6 +66,12 @@ const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
   // The Trench Houses' other bricks (projects.ts): tan and dark
   brickTan: { wall: '#9c7650', trim: '#e6dccb' },
   brickDark: { wall: '#4f2d30', trim: '#bfb2a6' },
+  // The variety plan's Phase 2 (docs/trenches-variety-plan.md): more materials
+  brickOrange: { wall: '#9a4a2e', trim: '#d9c8b4' },
+  brickPurple: { wall: '#5e3a48', trim: '#cbbfb8' },
+  brickPainted: { wall: '#b3ab98', trim: '#76726a' },
+  brickGlazed: { wall: '#d6cba6', trim: '#8c8678' },
+  panel: { wall: '#8f8c86', trim: '#6e6b66' },
 };
 
 interface Band {
@@ -173,17 +179,32 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
     c.fillRect(0, y0, ATLAS_W, WALL_PX);
   }
   const dark = shadeHex(wall, -0.25);
-  const bricky = kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'brownstone';
+  const bricky = kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'brownstone' || kind === 'brickOrange' || kind === 'brickPurple' || kind === 'brickPainted' || kind === 'brickGlazed';
+  /** The band's own numbers for its grain and weathering */
+  const wr = rng(seed * 7 + 3);
   const frame = bricky ? '#e8e2f0' : trim;
   for (let row = 0; row < ROWS; row++) {
     const y = y0 + row * PX_H;
     // The wall's surface
-    if (!glow && (kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'industrial')) {
-      c.fillStyle = dark;
+    if (!glow && (kind === 'brick' || kind === 'brickTan' || kind === 'brickDark' || kind === 'industrial' || kind === 'brickOrange' || kind === 'brickPurple' || kind === 'brickPainted' || kind === 'brickGlazed')) {
+      // (painted brick's courses faint under the paint; glazed brick's joints pale against its shine)
+      c.fillStyle = kind === 'brickPainted' ? shadeHex(wall, -0.08) : kind === 'brickGlazed' ? shadeHex(wall, -0.12) : dark;
       for (let k = 0; k < PX_H; k += 8) {
         c.fillRect(0, y + k, ATLAS_W, 1.5);
         for (let x = (k / 8) % 2 ? 0 : 8; x < ATLAS_W; x += 16) c.fillRect(x, y + k, 1.5, 8);
       }
+      if (kind === 'brickGlazed') {
+        c.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        for (let k = 2; k < PX_H; k += 8) c.fillRect(0, y + k, ATLAS_W, 1);
+      }
+    }
+    if (!glow && kind === 'panel') {
+      // Precast panels: a joint at each floor and every two bays, the aggregate speckled
+      c.fillStyle = shadeHex(wall, -0.35);
+      c.fillRect(0, y, ATLAS_W, 2);
+      for (let x = 0; x < ATLAS_W; x += PX_W * 2) c.fillRect(x, y, 2, PX_H);
+      c.fillStyle = shadeHex(wall, -0.15);
+      for (let k = 0; k < 90; k++) c.fillRect(wr() * ATLAS_W, y + wr() * PX_H, 1.5, 1.5);
     }
     if (!glow && kind === 'brownstone') {
       c.fillStyle = dark;
@@ -253,6 +274,11 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
         }
         continue;
       }
+      if (type === 'ribbon') {
+        // A long low window a bay, with an opening light in it
+        glazed(c, x + 4, y + 20, PX_W - 8, 22, '#3a3d44', paneAt(seed, row, col), glow, 1, false);
+        continue;
+      }
       if (type === 'casement') {
         // A wide steel casement, three lights across
         glazed(c, x + 5, y + 19, 38, 27, '#c9c6bc', paneAt(seed, row, col), glow, 2, false);
@@ -276,6 +302,30 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
         } else c.fillRect(wx - 4, wy - 7, ww + 8, 4);
         c.fillRect(wx - 5, wy + wh + 4, ww + 10, 4);
       }
+    }
+  }
+  // Weathering (the variety plan's Phase 2): soft stains down from every sill and a few water streaks down the band
+  // (none on glass)
+  if (!glow && type !== 'curtain') {
+    for (let row = 0; row < ROWS; row++)
+      for (let col = 0; col < COLS; col++) {
+        if (type === 'steel' && col % 2) continue;
+        const sx = col * PX_W + (type === 'steel' ? PX_W : PX_W / 2);
+        const g = c.createLinearGradient(0, y0 + row * PX_H + 54, 0, y0 + row * PX_H + 64);
+        g.addColorStop(0, 'rgba(20, 16, 24, 0.16)');
+        g.addColorStop(1, 'rgba(20, 16, 24, 0)');
+        c.fillStyle = g;
+        c.fillRect(sx - (type === 'steel' ? 30 : 12), y0 + row * PX_H + 54, type === 'steel' ? 60 : 24, 10);
+      }
+    for (let k = 0; k < 3; k++) {
+      const x = wr() * ATLAS_W;
+      const w = 3 + wr() * 5;
+      const g = c.createLinearGradient(x, 0, x + w, 0);
+      g.addColorStop(0, 'rgba(20, 16, 24, 0)');
+      g.addColorStop(0.5, 'rgba(20, 16, 24, 0.09)');
+      g.addColorStop(1, 'rgba(20, 16, 24, 0)');
+      c.fillStyle = g;
+      c.fillRect(x, y0, w, WALL_PX);
     }
   }
 }

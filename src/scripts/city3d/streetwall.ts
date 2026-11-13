@@ -158,7 +158,8 @@ function widths(len: number, r: () => number): number[] {
   }
   return out;
 }
-const BRICKS: NonNullable<Lot['wall']>[] = ['brick', 'brick', 'brickDark', 'brick', 'brickTan', 'brownstone'];
+// (the variety plan's Phase 2: orange, purple and painted brick among them)
+const BRICKS: NonNullable<Lot['wall']>[] = ['brick', 'brickOrange', 'brickDark', 'brickPurple', 'brickTan', 'brownstone', 'brickPainted'];
 
 /** A vacant lot in a wall: its plot, the side it faces */
 export interface Vacant {

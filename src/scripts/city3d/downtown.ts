@@ -222,7 +222,7 @@ export interface Infill {
   /** A shop with a fire escape up its front for certain (The Trenches' tenements); unset, the shop picks */
   escape?: boolean;
   /** A shop's walls in this brick (The Trenches' tenements); unset, the shop picks */
-  wall?: 'brick' | 'brownstone' | 'brickTan' | 'brickDark';
+  wall?: 'brick' | 'brownstone' | 'brickTan' | 'brickDark' | 'brickOrange' | 'brickPurple' | 'brickPainted' | 'brickGlazed';
 }
 export interface Alley {
   /** The walk-only gap between two buildings, from the street front to the back */

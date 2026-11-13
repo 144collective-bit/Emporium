@@ -13,8 +13,26 @@
  *   night), and what hangs behind the glass.
  */
 
-export type WallKindName = 'brick' | 'brownstone' | 'stuccoTeal' | 'stuccoPink' | 'stuccoViolet' | 'industrial' | 'glassBlue' | 'glassTeal' | 'hotel' | 'brickTan' | 'brickDark';
-export type WindowType = 'sash' | 'pair' | 'casement' | 'arched' | 'shuttered' | 'balcony' | 'steel' | 'curtain';
+export type WallKindName =
+  | 'brick'
+  | 'brownstone'
+  | 'stuccoTeal'
+  | 'stuccoPink'
+  | 'stuccoViolet'
+  | 'industrial'
+  | 'glassBlue'
+  | 'glassTeal'
+  | 'hotel'
+  | 'brickTan'
+  | 'brickDark'
+  // (Phase 2's materials: orange-red and purple-brown brick, painted brick, the post-war projects' cream glazed brick,
+  // precast concrete panels)
+  | 'brickOrange'
+  | 'brickPurple'
+  | 'brickPainted'
+  | 'brickGlazed'
+  | 'panel';
+export type WindowType = 'sash' | 'pair' | 'casement' | 'arched' | 'shuttered' | 'balcony' | 'steel' | 'curtain' | 'ribbon';
 
 export const WINDOW_TYPE: Record<WallKindName, WindowType> = {
   brick: 'sash',
@@ -28,6 +46,12 @@ export const WINDOW_TYPE: Record<WallKindName, WindowType> = {
   industrial: 'steel',
   glassBlue: 'curtain',
   glassTeal: 'curtain',
+  brickOrange: 'sash',
+  brickPurple: 'pair',
+  brickPainted: 'sash',
+  brickGlazed: 'casement',
+  // (a long low window a bay, between the panels' joints)
+  panel: 'ribbon',
 };
 
 /** The light behind a lit window at night */

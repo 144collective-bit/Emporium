@@ -4,10 +4,12 @@
 // lit by day is a warm one lit at night, and the same window always paints the same.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { TOWERS } from '../src/scripts/city3d/projects';
+import { TENEMENTS } from '../src/scripts/city3d/streetwall';
 import { DAY_LIT, NIGHT_LIT, NIGHT_MIX, WINDOW_TYPE, paneAt, type Pane, type WallKindName } from '../src/scripts/city3d/windows';
 
-const KINDS: WallKindName[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark'];
-/** Every window of the atlas's eleven bands, as infill.ts seeds them (60 + the band's place), 4 floors of 8 bays, pairs */
+const KINDS: WallKindName[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel'];
+/** Every window of the atlas's bands, as infill.ts seeds them (60 + the band's place), 4 floors of 8 bays, pairs */
 const ALL: Pane[] = KINDS.flatMap((_, i) => Array.from({ length: 4 }, (_, row) => Array.from({ length: 16 }, (_, k) => paneAt(60 + i, row, k >> 1, k & 1))).flat());
 
 test('every wall kind has its window, and the bricks each a different one', () => {
@@ -38,4 +40,16 @@ test('what hangs behind the glass varies, and the same window always paints the 
   // (the bands don't share one pattern)
   const pattern = (seed: number) => Array.from({ length: 32 }, (_, i) => (paneAt(seed, i >> 3, i & 7).night ? 1 : 0)).join('');
   assert.equal(new Set(KINDS.map((_, i) => pattern(60 + i))).size, KINDS.length);
+});
+
+test("The Trench Houses and the tenements in a mix of materials (the variety plan's Phase 2), none of them most", () => {
+  for (const [what, picks] of [
+    ['towers', TOWERS.map((t) => t.brick)],
+    ['tenements', TENEMENTS.map((t) => t.wall ?? 'brick')],
+  ] as const) {
+    const count = new Map<string, number>();
+    for (const b of picks) count.set(b, (count.get(b) ?? 0) + 1);
+    assert.ok(count.size >= 5, `${what}: only ${[...count.keys()].join(', ')}`);
+    for (const [b, n] of count) assert.ok(n / picks.length < 0.4, `${what}: ${b} on ${n} of ${picks.length}`);
+  }
 });

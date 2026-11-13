@@ -17,7 +17,8 @@ keep it up to date when what it describes changes.
   in six phases (windows, facades, rooflines, ground floors, streets and
   yards, polish), each with the owner's sign-off; keep it up to date.
   Phase 1 (the windows, city-wide: `windows.ts`, painted by infill.ts's
-  `wallBand()`) is built.
+  `wallBand()`) and Phase 2 (the facades: five more wall materials in the
+  atlas, weathering, the towers and tenements in a mix) are built.
   - `trenches.ts` (DOM-free, tested in `tests/trenches.test.ts`): Trench
     Avenue (`AVENUE_Z`, an avenue from the west ring avenue to West
     Street, lit junctions, the el over its median), the cross streets
@@ -44,8 +45,10 @@ keep it up to date when what it describes changes.
     own; a tower is parts (`TowerPart`: a footprint and its own storeys, 3
     to 9 over the ground floor), its `main` part carrying the stair house
     (and a water tank up to 8 storeys), every top `EMPORIUM_ROOF` less half
-    a tile or more under; mostly red brick with some brown, tan and dark
-    (`Brick`, new wall atlas bands `brickTan` / `brickDark` in infill.ts);
+    a tile or more under; a mix of materials, red brick the most common
+    (`Brick`; since the variety plan's Phase 2 orange and purple brick,
+    the post-war cream glazed brick and precast panels too, bands in
+    infill.ts's wall atlas);
     balconies on some (`balconies`), scaffolding up one (`scaffold`); each
     door on the side nearest a street. `towerShell()` turns the parts into
     walls and roofs: the footprint cut into cells, each as tall as the
