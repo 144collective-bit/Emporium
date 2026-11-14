@@ -144,6 +144,7 @@ import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, freedNear, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
+import { createQuality, type QualityStep } from './quality';
 import { GPU_KEY, RELOAD_KEY, pickTier, reloadOnRestore, type Device, type Lost, type Picked } from './gputier';
 
 type Tier = 'high' | 'medium' | 'low';
@@ -1928,7 +1929,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Shadows only while walking or driving, never in the City view or up in an aircraft (shadows.ts, the owner's call),
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
-    sky.setShadows(walking && !walk.airborne);
+    sky.setShadows(walking && !walk.airborne && !lowered.shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
@@ -2136,41 +2137,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
   }
 
-  // Too slow: fewer pixels, then no shadows, then no bloom. The ink outlines always stay.
+  // Too slow: fewer pixels, then no shadows, then no bloom; fast again for a while, they come back (quality.ts: the
+  // order, each step back once). The ink outlines always stay. Shadows go by their intensity (sky.setShadows(), above),
+  // never the shadow map or castShadow, which recompiled every material in one frame (the stability plan's 6.1)
   const fullPixels = renderer.getPixelRatio();
-  const lowered = { pixels: false, shadows: false, bloom: false };
+  const quality = createQuality();
+  const lowered = quality.lowered;
+  const canDegrade = () => quality.canDegrade();
   let fastWindows = 0;
-  // A stage put back and then lost again stays off (no see-sawing)
-  const settled = new Set<keyof typeof lowered>();
-  const canDegrade = () => !lowered.pixels || !lowered.shadows || !lowered.bloom;
-  function degrade() {
-    if (!lowered.pixels) {
-      lowered.pixels = true;
-      renderer.setPixelRatio(Math.max(1, fullPixels - 0.5));
+  function apply(step: QualityStep | null) {
+    if (step === 'pixels') {
+      renderer.setPixelRatio(lowered.pixels ? Math.max(1, fullPixels - 0.5) : fullPixels);
       resize();
-    } else if (!lowered.shadows) {
-      lowered.shadows = true;
-      renderer.shadowMap.enabled = false;
-      scene.traverse((o) => {
-        if ((o as THREE.DirectionalLight).isDirectionalLight) (o as THREE.DirectionalLight).castShadow = false;
-      });
-    } else lowered.bloom = true;
-    post.bloom.enabled = !lowered.bloom;
+    } else if (step === 'bloom') post.bloom.enabled = !lowered.bloom;
+    // ('shadows': the frame asks sky.setShadows() with `lowered.shadows`, and they ease out or in)
   }
-  // Fast again for a while: bloom, then pixels, come back. Shadows don't
-  // (turning them back on recompiles every material, a visible hitch).
-  function restore() {
-    if (lowered.bloom && !settled.has('bloom')) {
-      lowered.bloom = false;
-      settled.add('bloom');
-      post.bloom.enabled = true;
-    } else if (lowered.pixels && !settled.has('pixels')) {
-      lowered.pixels = false;
-      settled.add('pixels');
-      renderer.setPixelRatio(fullPixels);
-      resize();
-    }
-  }
+  const degrade = () => apply(quality.degrade());
+  const restore = () => apply(quality.restore());
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {

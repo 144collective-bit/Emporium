@@ -20,8 +20,12 @@ keep it up to date when what it describes changes.
   It runs phones
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
-  slow. When frames stay fast again, bloom and then pixels come back (once
-  each; shadows stay off, re-enabling them recompiles every material).
+  slow. When frames stay fast again, bloom, shadows and then pixels come
+  back (once each; `quality.ts`, DOM-free, `tests/quality.test.ts`).
+  Shadows go by their intensity (`sky.setShadows()`, eased, as in the City
+  view), never `renderer.shadowMap.enabled` or a light's `castShadow`:
+  those change every material's shader, and turning them off recompiled
+  the whole city in one frame (the stability plan's Phase 6.1).
   The trim (the owner's call, phones only; `docs/performance-plan.md`):
   trees are lighter near (a dodecahedron canopy, four-sided trunks, open
   five-sided cones) and two crossed flat cards far (`crossedCards()` in

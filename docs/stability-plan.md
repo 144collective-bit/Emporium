@@ -343,10 +343,14 @@ MiB of geometry, the memory steps' figures).
 
 ## Phase 6: smoother frames (S-M, low risk)
 
-1. **The quality step-down without the hitch**: today, turning shadows off on
-   a slow desktop recompiles every material in one frame (a freeze of a
-   second or more on a laptop). Shadows go by their intensity (already 0 in
-   the City view) instead, so nothing recompiles.
+1. **The quality step-down without the hitch** (built, 2026-11-14): turning
+   shadows off on a slow desktop recompiled every material in one frame (a
+   freeze of a second or more on a laptop). Now shadows go by their
+   intensity (`sky.setShadows()`, as in the City view): they ease out, the
+   shadow maps stop being drawn, and nothing recompiles, so they can come
+   back too when frames are fast again (`quality.ts`: bloom, shadows, then
+   pixels, each once). The shaders still read the maps (as in the City
+   view); what's saved is the shadow pass's draws.
 2. **A lost GPU comes back** (built, 2026-11-14): on `webglcontextrestored`
    the city reloads itself (the save is kept, the tier a step lower: "The
    tier by the graphics"), instead of waiting on Reload. Once a minute at
