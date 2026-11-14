@@ -47,15 +47,26 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   brook between its banks and the bridge's parapets, the hedges, the rec ground's and the churchyard's grass, the
   compound's paved plot and the compound itself (`registerHome()`, home3d.ts), and Lot 9's tunnel under the ring road
   (`tunnel3d.ts`, the estate's subway dressing it always had).
-- **The blocks** (`southblocks.ts`, DOM-free, tested in `tests/southblocks.test.ts`, docs/south-plan.md Phase 2): data
-  only so far (2a), drawn in 2b, walked in 2c. `BLOCKS` (the Rampart, Harrier and Kite Points, The Core, Linnet, Marten
+- **The blocks** (`southblocks.ts`, DOM-free, tested in `tests/southblocks.test.ts`, docs/south-plan.md Phase 2): drawn
+  by `southblocks3d.ts` (2b; `LAZY_DISTRICTS` id `south-blocks`, `BLOCKS_RECT`), walked on in 2c. `BLOCKS` (the Rampart, Harrier and Kite Points, The Core, Linnet, Marten
   and Wren Courts, Sorrel, Fennel and Teasel Houses: each its footprint, spine, depth, galleried side, steps of storeys,
   base, accent; the Rampart's `arch`, Teasel's `refit`), `CORES` (the stair cores), `GALLERIES` (every third floor,
   `SKY_FLOORS`), `BRIDGES` and `DECKS` (the sky network), `COURTS`, `GRASS`, `DESIRE_LINES`, `PLAY`, `BUNKER` (Bunker
   Sound's door), `BLOCK_SOLIDS` (strips over each footprint, `cover()`; not in solids.ts until they're drawn). Heights
   by `floorY()` / `roofY()` / `topOf()`: a storey 1, the ground floor `GROUND_H` 1.4. The slabs round the Circus follow
   their streets (`alongStreet()`: the street moved off to its side); a block's base is its slab over the highest ground
-  under it.
+  under it. `stepShape()` gives each step's outline with its edges tagged (its sides, rounded corners, ends, the cuts
+  where steps meet; `outward()` their normals), which is what's drawn.
+- **The blocks drawn** (`southblocks3d.ts`, sites a step, a tower, a core, a bridge span, the deck): the wall atlas's
+  `panel` band (precast panels, ribbon windows lit at night) over a glazed ground floor (`lobby` band and an accent
+  fascia) on the galleried side and the ends, concrete on the other; the taller step's wall where steps meet; roofs and
+  parapets; the Rampart's arch (soffit, piers' faces); galleries at every third floor (deck, accent upstand, warm strip
+  light under it); balconies with accent fronts on the slabs' other sides, Teasel's boarded windows and hoarding, sky
+  garden planters on the roofs (near only, not on phones); the towers' ledge rings, flared plant room and beacon; the
+  cores' lit stair slots; the bridges (concrete, a glass band each side lit warm at night, a strip light under); the
+  podium deck on its columns; Bunker Sound's door with its neon. Built with `lift: false` (kit.ts `Batch.build()`):
+  they stand level on their plinths, not on the rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in
+  solids.ts. Bench views `south-blocks` and `south-rampart`.
 - **The rolling ground** (`southground.ts`, docs/south-plan.md Phase 1c, tested in `tests/southground.test.ts`): the
   village's hill (`HILL_H` 2.4, St Aldwyn's on top), swells in the fields, the brook's valley, today's ground wherever
   the south meets what's fixed (`freedom()`); each street on a bed (`ROAD_BEDS`, one in ten at most, level across, the
@@ -69,8 +80,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   village and the rows (`VILLAGE_LAND`), the brook's banks lush. **Trees keep off** (landuse.ts `KEEPS`) the estate's
   land, the brook and the rec ground; the fields keep theirs.
 - **Its places** (`endsplaces.ts`, tested in `tests/endsplaces.test.ts`): the estate (pin over the Circus), St
-  Aldwyn's (over its churchyard) and Bunker Sound (by Endswood Road), still "coming soon", their pins where they're to
-  be built, no doors until their buildings stand (the owner's call), `ENDS_SPAWNS` on a sidewalk by each.
+  Aldwyn's (over its churchyard) and Bunker Sound (its door under Teasel House's hoarded half, `southblocks.ts`
+  `BUNKER`, off Endswood Road: its pin over it and a door prompt, `ENDS_DOORS`), still "coming soon"; the others' doors
+  when their buildings stand (the owner's call); `ENDS_SPAWNS` on a sidewalk by each.
 - **Its sound** (ambience.ts `ends`): on its land and 25 past it. Bunker Sound's beat and St Aldwyn's bell are off
   until their buildings come back (`studio`, `bell` are 0).
 - **Below ground**: Lot 9's tunnel only (groundheight.ts `UNDER`, underground.ts); the Circus's well and its subways

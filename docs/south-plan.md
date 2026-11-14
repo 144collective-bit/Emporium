@@ -189,10 +189,18 @@ From the Circus west, patchy as high roads are:
   with its desire lines, the play area east of Kite; the solids
   (`BLOCK_SOLIDS`, the arch open). A storey is 1, the ground floor 1.4.
   Plan from the data: `9-phase-2a-blocks.png`.
-- **2b, the buildings drawn**: one retro-future kit (rounded corners,
-  curved balcony fronts, board-marked concrete, accents, sky gardens,
-  plant rooms, the towers' beacons), its own lazy chunk, fine detail near
-  only, lights at night; shots and the phone tier measured.
+- **2b, the buildings drawn** (built, signed off by the owner 2026-11-14):
+  `southblocks3d.ts`, its own lazy chunk (`south-blocks`), sites a step,
+  a tower, a core, a bridge span, the deck; the wall atlas's precast
+  panels (ribbon windows lit at night) over glazed ground floors with an
+  accent fascia, rounded ends, galleries with accent upstands and warm
+  strip lights, balconies with accent fronts and sky-garden planters
+  (near only, not on phones), the towers' ledge rings, flared plant
+  rooms and beacons, the cores' lit stair slots, covered bridges with
+  glass bands lit at night, the podium deck on columns, Teasel's boarded
+  half and Bunker Sound's door (its pin, door prompt and arrival moved
+  there). The blocks stand level on their plinths (`lift: false`); their
+  solids are in the city's. Shots `10-phase-2b-*`.
 - **2c, the sky network walked**: stairs and lifts up the cores, the
   bridges and decks underfoot (groundheight.ts), the archway, the smoke
   test through it.

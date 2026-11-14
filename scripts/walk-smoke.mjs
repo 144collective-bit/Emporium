@@ -322,7 +322,9 @@ await scene(
     await press(9);
     await t.until('Start to open the hub', () => !!document.querySelector('.city.is-hub'), null, 60000);
     await t.step('Start opened the hub');
-    await press(1);
+    // (held longer: headless, in software, the hub's frames come a second or two apart, so a shorter press can fall
+    // between two of them; a real pad is read every frame)
+    await press(1, 4000);
     await t.until('B to close the hub', () => !document.querySelector('.city.is-hub'), null, 60000);
     await t.step('B closed the hub');
   },

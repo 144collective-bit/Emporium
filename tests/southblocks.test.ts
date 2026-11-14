@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARCH_X, BLOCKS, BLOCK_SOLIDS, BRIDGES, BRIDGE_CLEAR, BUNKER, CORES, COURTS, DECKS, DESIRE_LINES, GALLERIES, GRASS, PLAY,
-  RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, storeysOf, topOf, type Pt,
+  BLOCKS_RECT, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
 } from '../src/scripts/city3d/southblocks';
 import { EDGE_Z, FOOTPATHS, LOT9_EDGE, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, UNDERHILL } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
@@ -200,4 +200,32 @@ test('the solids: every footprint covered (the arch open), nothing solid on a st
   assert.ok(Math.max(...BLOCK_SOLIDS.map((b) => b[4])) < 21);
   // (cover() itself: a square's one box a strip)
   assert.equal(cover([[0, 0], [3, 0], [3, 1], [0, 1]], 2, 1).length, 3);
+});
+
+test("each step's outline (what's drawn): its edges tagged, its cuts where steps meet, together the block's footprint", () => {
+  const area = (r: Pt[]) => Math.abs(r.reduce((s, p, i) => s + p[0] * r[(i + 1) % r.length][1] - r[(i + 1) % r.length][0] * p[1], 0) / 2);
+  for (const b of BLOCKS.filter((q) => q.spine)) {
+    let sum = 0;
+    b.steps.forEach((st, i) => {
+      const sh = stepShape(b, st);
+      assert.equal(sh.ring.length, sh.tags.length);
+      assert.equal(selfCrossings(sh.ring), 0, `${b.id} step ${i} crosses itself`);
+      assert.equal(sh.cutStart, i > 0);
+      assert.equal(sh.cutEnd, i < b.steps.length - 1);
+      for (const t of ['right', 'left', 'start', 'end'] as const) assert.ok(sh.tags.includes(t), `${b.id} step ${i} has no ${t}`);
+      assert.equal(sh.tags.includes('corner'), !sh.cutStart || !sh.cutEnd, `${b.id} step ${i}: rounded only at the block's ends`);
+      // (each edge's outward normal points out of it)
+      sh.ring.forEach((a, j) => {
+        const c = sh.ring[(j + 1) % sh.ring.length];
+        const n = outward(sh.ring, j);
+        if (Math.hypot(c[0] - a[0], c[1] - a[1]) < 0.05) return;
+        const m: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+        assert.ok(!inside(sh.ring, [m[0] + n[0] * 0.05, m[1] + n[1] * 0.05]) && inside(sh.ring, [m[0] - n[0] * 0.05, m[1] - n[1] * 0.05]), `${b.id} step ${i} edge ${j} faces in`);
+      });
+      sum += area(sh.ring);
+    });
+    assert.ok(Math.abs(sum - area(b.foot)) / area(b.foot) < 0.02, `${b.id}'s steps ${sum.toFixed(0)} against its footprint ${area(b.foot).toFixed(0)}`);
+  }
+  // (and the district's rect round every block)
+  for (const b of BLOCKS) for (const [x, z] of b.foot) assert.ok(x > BLOCKS_RECT[0] && x < BLOCKS_RECT[2] && z > BLOCKS_RECT[1] && z < BLOCKS_RECT[3]);
 });
