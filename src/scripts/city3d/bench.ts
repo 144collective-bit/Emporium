@@ -70,6 +70,12 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'endsw-kick', name: 'Endswood west, the kickabout', pos: [-151, 3, 410], target: [-142, 0.4, 426] },
   // Degen's compound (docs/ends-far-west-plan.md Phase 2): from the Close down its line, through the gates to the garage
   { id: 'ends-home', name: "The far west, Degen's compound", pos: [-208, 2.6, 381.2], target: [-238, 1.2, 380] },
+  // ...and the rest of the far west (Phase 6): in his yard, from his roof terrace down the Close, along the lane past
+  // the bungalows, and over the allotments
+  { id: 'far-yard', name: 'The far west, in the yard', pos: [-223, 2.4, 384], target: [-240, 1.2, 379] },
+  { id: 'far-terrace', name: 'The far west, from the terrace', pos: [-233, 4.4, 388], target: [-205, 1, 380] },
+  { id: 'far-lane', name: 'The far west, the lane', pos: [-216, 2.2, 351], target: [-221, 1, 396] },
+  { id: 'far-allot', name: 'The far west, the allotments', pos: [-253, 3, 350.5], target: [-253, 0.4, 398] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

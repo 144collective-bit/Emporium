@@ -79,3 +79,23 @@ test('at night: a pool under each of his lamps, on the ground it lights', () => 
   assert.ok(inRect(HOME.inner, door[0], door[1]) && door[1] < HOME.house[1] && Math.abs(door[0] - HOME.door[0]) < 1e-9);
   for (const [, , size] of FAR_POOLS) assert.ok(size > 1 && size < 3);
 });
+
+test('the benchmark has four views of the far west besides the compound\'s, each standing in nothing, looking at the estate', async () => {
+  const { BENCH_VIEWS } = await import('../src/scripts/city3d/bench');
+  const { onRoof, ROOF_Y } = await import('../src/scripts/city3d/home');
+  const ids = ['far-yard', 'far-terrace', 'far-lane', 'far-allot'];
+  for (const id of ids) {
+    const v = BENCH_VIEWS.find((b) => b.id === id)!;
+    assert.ok(v, id);
+    const [x, y, z] = v.pos;
+    assert.ok(free(x, z, 0.05), `${id}'s camera in something`);
+    assert.ok(inEndswood(x, z) && inEndswood(v.target[0], v.target[2], 12), `${id} off the estate`);
+    assert.ok(y > SLAB_Y + 1.5 && y < SLAB_Y + 6);
+  }
+  // (the terrace's is up over his roof, the yard's inside his wall, the lane's on the lane, the allotments' on their path)
+  const at = (id: string) => BENCH_VIEWS.find((b) => b.id === id)!.pos;
+  assert.ok(onRoof(at('far-terrace')[0], at('far-terrace')[2], at('far-terrace')[1]) && at('far-terrace')[1] > SLAB_Y + ROOF_Y + 1);
+  assert.ok(inRect(HOME.inner, at('far-yard')[0], at('far-yard')[2]));
+  assert.ok(inRect(LANE_RUN, at('far-lane')[0], at('far-lane')[2]));
+  assert.ok(ALLOTMENT.paths.some((r) => inRect(r, at('far-allot')[0], at('far-allot')[2])));
+});
