@@ -1,6 +1,7 @@
 // The accessories sit where they're worn (docs/clothing-plan.md Phase 5): every hat seated on the head (the head
-// never through its crown, the band close round it), and the things in the hand held without a finger through
-// them (a handle's bar in the fingers' hook). At every detail level, the crowd's too.
+// never through its crown, the band close round it), and the crowd's shopping bag held by its cord in the fingers'
+// hook. At every detail level, the crowd's too. The costume pieces and the player's things in the hand were retired
+// (docs/wardrobe-plan.md Phase 1): no item draws them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -14,9 +15,6 @@ const HATS: [string, Partial<Outfit>][] = [
   ['capBack', { capBack: true }],
   ['beanie', { beanie: '#3355ff' }],
   ['bucket', { bucket: '#3355ff' }],
-  ['crown', { crown: true }],
-  ['cowboy', { cowboy: '#a06838' }],
-  ['tophat', { tophat: '#222222' }],
 ];
 
 /** The crown of a hat's first piece: of its parts (a brim, a button, the points) the one that reaches furthest up and down */
@@ -83,56 +81,26 @@ for (const q of LEVELS) {
   });
 }
 
-/** How many of the hand's points (closed to hold) are inside a closed convex shape, and how deep */
-function through(geo: THREE.BufferGeometry, hand: THREE.BufferGeometry) {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  const P = g.attributes.position;
-  const H = hand.attributes.position;
-  const tri = new THREE.Triangle();
-  const n = new THREE.Vector3();
-  const v = new THREE.Vector3();
-  const planes: THREE.Plane[] = [];
-  for (let t = 0; t < P.count; t += 3) {
-    tri.set(new THREE.Vector3().fromBufferAttribute(P, t), new THREE.Vector3().fromBufferAttribute(P, t + 1), new THREE.Vector3().fromBufferAttribute(P, t + 2));
-    if (tri.getArea() < 1e-10) continue;
-    tri.getNormal(n);
-    planes.push(new THREE.Plane().setFromNormalAndCoplanarPoint(n.clone(), tri.a));
-  }
-  let deep = 0;
-  for (let i = 0; i < H.count; i++) {
-    v.fromBufferAttribute(H, i);
-    // (inside a convex shape: behind every face's plane; how deep: the least of them)
-    let d = Infinity;
-    for (const p of planes) d = Math.min(d, -p.distanceToPoint(v));
-    if (d > 0) deep = Math.max(deep, d);
-  }
-  return deep;
+for (const q of [3, 2, 1, 0] as Detail[]) {
+  test(`accessories: the retired pieces are gone from the wardrobe (detail ${q})`, () => {
+    const ids = items(q, true).map((i) => i.id);
+    for (const gone of ['crown', 'cowboy', 'tophat', 'halo', 'coffee', 'boombox', 'briefcase']) assert.ok(!ids.includes(gone), gone);
+    assert.ok(!ids.some((id) => id.startsWith('wings-')), 'the wings');
+    // (the crowd keeps its phones and shopping bags; the player's look can't hold either)
+    assert.ok(ids.includes('phone') && ids.includes('shopping'));
+  });
 }
 
 for (const q of [3, 2] as Detail[]) {
-  test(`accessories: the things in the hand are held, no finger through them (detail ${q})`, () => {
+  test(`accessories: the crowd's shopping bag is held by its cord, no finger through it (detail ${q})`, () => {
     const hand = bakedHand(1, 0.62, 9);
     const H = hand.attributes.position;
     const all = items(q, true);
-    const cup = all.find((i) => i.id === 'coffee')!;
-    // The cup and its sleeve: nothing more than a whisker inside them
-    for (const k of [0, 1]) assert.ok(through(cup.pieces[k].geo, hand) < 0.0015, `the cup's piece ${k}`);
-    // The briefcase hangs under the hand by its handle, the handle's bar in the fingers' hook
-    const [body, handle] = all.find((i) => i.id === 'briefcase')!.pieces.map((p) => p.geo);
-    body.computeBoundingBox();
     let lowest = 9;
     for (let i = 0; i < H.count; i++) lowest = Math.min(lowest, H.getY(i));
-    assert.ok(body.boundingBox!.max.y < lowest, 'the briefcase under the hand');
-    const A = handle.attributes.position;
     const v = new THREE.Vector3();
     const w = new THREE.Vector3();
-    let near = 9;
-    for (let i = 0; i < A.count; i++) {
-      v.fromBufferAttribute(A, i);
-      for (let k = 0; k < H.count; k += 3) near = Math.min(near, v.distanceTo(w.fromBufferAttribute(H, k)));
-    }
-    assert.ok(near < 0.003, `the handle ${(near * 1000).toFixed(1)} mm from the fingers`);
-    // The crowd's shopping bag (Crestmont's Drive) the same: under the hand, its cord in the fingers' hook
+    // (Crestmont's Drive: under the hand, its cord in the fingers' hook)
     const [bag, cord] = all.find((i) => i.id === 'shopping')!.pieces.map((p) => p.geo);
     bag.computeBoundingBox();
     assert.ok(bag.boundingBox!.max.y < lowest, 'the shopping bag under the hand');

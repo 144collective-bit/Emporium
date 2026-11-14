@@ -1,13 +1,11 @@
 /*
  * The fitting room in Drop 001's panel: pick what your Degen wears (fit,
- * headwear, bag, extras, kicks) and see it on him, turning on a podium.
- * The original wardrobe is free. The premium wardrobe (WARDROBE_CATALOG in
- * catalog.ts: jackets, hats, bags, things for the hand, the watch and two
- * colour packs) costs Dorras earned in the city and needs a level: each
- * card carries its price and level, a tap asks "Buy the ... for ...?" and
- * Confirm pays through tycoon.ts (`buyWardrobe`). Pack colours sit in the
- * Jacket / Trousers rows under a lock until the pack is bought. Only for
- * your Degen in the city: never real money, never tied to the merch store.
+ * headwear, bag, extras, kicks, merch) and see it on him, turning on a
+ * podium. Everything is free and open to everyone, at any level, in any
+ * colour (docs/wardrobe-plan.md Phase 1, the owner's call): each colour row
+ * has quick swatches and a picker for any colour (`safeColour()` keeps it a
+ * shade under white). Only for your Degen in the city: never real money,
+ * never tied to the merch store.
  *
  * The look itself lives in profile-ui.ts (saved in the browser, and on the
  * player profile when online); this is the menu and the preview.
@@ -15,12 +13,9 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
-import { markItem, patternItem, wardrobeEntry, type WardrobeEntry } from './catalog';
+import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PALETTE, PATTERNS, safeColour, type Bag, type Hat, type Look, type MarkId, type PatternId } from '../net/profile-data';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
-import { buyWardrobe, level, ownsWardrobe } from './tycoon';
-import { D, LV, fmt, whyNot, type GameDeps } from './ui';
 
 type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
 interface Colors {
@@ -43,11 +38,7 @@ interface Item {
   colors?: Colors[];
   /** Only offered with some outfits (the hood needs the hoodie) */
   only?(l: Look): boolean;
-  /** Premium: its id in WARDROBE_CATALOG (bought with Dorras) */
-  catalog?: string;
 }
-/** What a card can do: the free originals, a premium piece owned, one on sale, one for a higher level */
-type State = 'free' | 'owned' | 'buy' | 'locked';
 interface Tab {
   id: string;
   label: string;
@@ -62,37 +53,26 @@ interface Tab {
 let lastHeadphones = PALETTE.extra[1];
 
 const NONE = 'M12 3a9 9 0 1 0 0.01 0z M6 6l12 12';
-const LOCK = 'M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v10H5z';
+/** The picker's icon: an eyedropper */
+const PICK = 'M14.5 4.5l5 5 M17 7l-9.5 9.5-3 1 1-3L15 5 M7 14l3 3';
 const hatColors: Colors[] = [{ key: 'hatColor', label: 'Colour', list: PALETTE.cap }];
 const bagColors: Colors[] = [{ key: 'bagColor', label: 'Colour', list: PALETTE.extra }];
 const hood = (l: Look) => l.kind === 'hoodie' && l.hood;
-/** The premium pieces' names come from the catalog, so the card and the confirm say the same thing */
-const named = (id: string, fallback: string) => wardrobeEntry(id)?.name ?? fallback;
-const hat = (id: Hat, name: string, icon: string, colors = true, catalog?: string): Item => ({
+const hat = (id: Hat, name: string, icon: string): Item => ({
   id,
-  name: catalog ? named(catalog, name) : name,
+  name,
   icon,
   on: (l) => l.hat === id && !hood(l),
   wear: (l) => ({ ...l, hat: id, hood: false }),
-  colors: colors ? hatColors : undefined,
-  catalog,
+  colors: hatColors,
 });
-const bag = (id: Bag, name: string, icon: string, catalog?: string): Item => ({
+const bag = (id: Bag, name: string, icon: string): Item => ({
   id,
-  name: catalog ? named(catalog, name) : name,
+  name,
   icon,
   on: (l) => l.bag === id,
   wear: (l) => ({ ...l, bag: id }),
   colors: bagColors,
-  catalog,
-});
-const held = (id: Held | null, name: string, icon: string, catalog?: string): Item => ({
-  id: id ?? 'nothing',
-  name: catalog ? named(catalog, name) : name,
-  icon,
-  on: (l) => l.held === id,
-  wear: (l) => ({ ...l, held: id }),
-  catalog,
 });
 
 /* ----- The merch: marks for the top, the hat and the sneakers, and prints for the top ----- */
@@ -133,16 +113,14 @@ function merchItems(of: MerchFor): Item[] {
     iconHtml: markIcon(id),
     on: (l) => l[key] === id,
     wear: (l) => ({ ...l, [key]: id }),
-    catalog: markItem(id) ?? undefined,
   });
   if (of === 'print')
     return PATTERNS.map((p) => ({
       id: `print-${p.id}`,
-      name: p.id === 'plain' ? 'Plain' : (wardrobeEntry(patternItem(p.id)!)?.name ?? p.name),
+      name: p.name,
       icon: PRINT_ICONS[p.id],
       on: (l) => l.pattern === p.id,
       wear: (l) => ({ ...l, pattern: p.id }),
-      catalog: patternItem(p.id) ?? undefined,
     }));
   const key = of === 'top' ? 'mark' : of === 'hat' ? 'hatMark' : 'shoeMark';
   const cards = MARKS.map((m) => markCard(m.id, key));
@@ -198,7 +176,7 @@ const TABS: Tab[] = [
       },
       {
         id: 'varsity',
-        name: named('varsity', 'Varsity Jacket'),
+        name: 'Varsity Jacket',
         icon: 'M8 3l4 2 4-2 4 3-2 5h-2v10H8V11H6L4 6z M12 5v16 M8 18h2 M14 18h2 M9 12l1.5-1.5L12 12l-1.5 1.5z',
         on: (l) => l.kind === 'varsity',
         wear: (l) => ({ ...l, kind: 'varsity', hood: false }),
@@ -206,11 +184,10 @@ const TABS: Tab[] = [
           { key: 'top', label: 'Jacket', list: PALETTE.top },
           { key: 'bottom', label: 'Pants', list: PALETTE.bottom },
         ],
-        catalog: 'varsity',
       },
       {
         id: 'puffer',
-        name: named('puffer', 'Puffer Jacket'),
+        name: 'Puffer Jacket',
         icon: 'M7 4h10l4 4-2 4h-2v9H7v-9H5L3 8z M7 11h10 M7 15h10 M7 19h10',
         on: (l) => l.kind === 'puffer',
         wear: (l) => ({ ...l, kind: 'puffer', hood: false }),
@@ -218,7 +195,6 @@ const TABS: Tab[] = [
           { key: 'top', label: 'Jacket', list: PALETTE.top },
           { key: 'bottom', label: 'Joggers', list: PALETTE.bottom },
         ],
-        catalog: 'puffer',
       },
     ],
   },
@@ -230,10 +206,6 @@ const TABS: Tab[] = [
       hat('backcap', 'Backwards Cap', 'M5 15a7 7 0 0 1 14 0z M3 15h9 M10 11h4'),
       hat('beanie', 'Street Beanie', 'M6 15a6 7 0 0 1 12 0z M5 15h14v3H5z M12 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'),
       hat('bucket', 'Bucket Hat', 'M8 7h8l1 7H7z M3 17l4-3h10l4 3z'),
-      hat('crown', 'Gold Crown', 'M4 18l1-10 4 4 3-6 3 6 4-4 1 10z M4 18h16', false),
-      hat('cowboy', 'Cowboy Hat', 'M8 12V7a4 4 0 0 1 8 0v5 M2 14c3 2 6 3 10 3s7-1 10-3c0 3-4 5-10 5S2 17 2 14z M8 12h8', true, 'cowboy'),
-      hat('tophat', 'Top Hat', 'M7 4h10v12H7z M3 16h18 M3 16c0 2 4 3 9 3s9-1 9-3 M7 13h10', true, 'tophat'),
-      hat('halo', 'Neon Halo', 'M12 7c5 0 8-1.3 8-3s-3-3-8-3-8 1.3-8 3 3 3 8 3z M8 22c0-5 1.7-9 4-9s4 4 4 9', false, 'halo'),
       {
         id: 'hood',
         name: 'Hood Up',
@@ -264,20 +236,8 @@ const TABS: Tab[] = [
       bag('backpack', 'Backpack', 'M7 9a5 5 0 0 1 10 0v11H7z M9 15h6 M10 4.5a2 2 0 0 1 4 0'),
       bag('crossbody', 'Crossbody', 'M5 3l12 11 M13 13h7v7h-7z'),
       bag('board', 'Skate Deck', 'M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M5 7h2 M17 7h2 M5 17h2 M17 17h2'),
-      bag('duffel', 'Duffel Bag', 'M4 9h16a3 3 0 0 1 0 6H4a3 3 0 0 1 0-6z M9 9V7h6v2 M12 9v6', 'duffel'),
-      bag('wings', 'Neon Wings', 'M12 20V8 M12 10c-2-4-5-6-9-6 1 3 3 5 5 6-2 1-3 3-3 6 3 0 5-2 7-5 M12 10c2-4 5-6 9-6-1 3-3 5-5 6 2 1 3 3 3 6-3 0-5-2-7-5', 'wings'),
+      bag('duffel', 'Duffel Bag', 'M4 9h16a3 3 0 0 1 0 6H4a3 3 0 0 1 0-6z M9 9V7h6v2 M12 9v6'),
       { id: 'nobag', name: 'No bag', icon: NONE, on: (l) => !l.bag, wear: (l) => ({ ...l, bag: null }) },
-    ],
-  },
-  {
-    id: 'hand',
-    label: 'Hand',
-    items: [
-      held('coffee', 'Iced Coffee', 'M7 8h10l-1.5 13h-7z M6.5 8a5.5 3 0 0 1 11 0 M13 5l2-3 M8 13h8'),
-      held('boombox', 'Boombox', 'M3 9h18v10H3z M8 9V6h8v3 M8 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M16 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0'),
-      held('phone', 'Phone', 'M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z M10 18h4 M9 7l2 3 2-4 2 5', 'phone'),
-      held('briefcase', 'Briefcase', 'M3 8h18v12H3z M9 8V5h6v3 M3 13h18 M11 12h2v3h-2z', 'briefcase'),
-      held(null, 'Empty hand', NONE),
     ],
   },
   {
@@ -309,11 +269,10 @@ const TABS: Tab[] = [
       },
       {
         id: 'watch',
-        name: named('watch', 'Gold Watch'),
+        name: 'Gold Watch',
         icon: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z M9 7V3h6v4 M9 17v4h6v-4 M12 10v2l1.5 1',
         on: (l) => l.watch,
         wear: (l) => ({ ...l, watch: !l.watch }),
-        catalog: 'watch',
       },
     ],
   },
@@ -337,63 +296,23 @@ export interface FittingDeps {
   apply(l: Look): void;
   /** Called whenever the look changes, from here or anywhere else (the server) */
   onChange(fn: (l: Look) => void): void;
-  /** The economy: the save (Dorras, level, what's owned), buying, toasts and sounds */
-  game: GameDeps;
   reduced: boolean;
   /** Phones: fewer pixels and no multisampling in the preview */
   low: boolean;
 }
 
-/** A purchase waiting for Confirm: the catalog id, and the look to wear once it's paid for */
-interface Pending {
-  id: string;
-  then?: (l: Look) => Look;
-}
+/** While a colour is dragged round the picker, the look changes at most this often (ms): each change dresses him again */
+const PICK_EVERY = 120;
 
 export function createFitting(d: FittingDeps) {
   let el: HTMLElement | null = null;
   let tab = TABS[0];
   let preview: Stage | null = null;
-  let pending: Pending | null = null;
-  let tick = 0;
   let merchFor: MerchFor = 'top';
+  /** A colour being picked: the latest, worn at most every PICK_EVERY ms, and at once when the picker closes */
+  let picked: { key: ColorKey; value: string } | null = null;
+  let pickTimer = 0;
   const itemsOf = (t: Tab) => (t.id === 'merch' ? merchItems(merchFor) : t.items);
-
-  /** A premium card's state, from the save: owned, on sale, or locked behind a level */
-  function stateOf(it: Item): { entry: WardrobeEntry | null; state: State } {
-    const entry = it.catalog ? wardrobeEntry(it.catalog) : null;
-    if (!entry) return { entry: null, state: 'free' };
-    const s = d.game.save();
-    if (ownsWardrobe(s, entry.id)) return { entry, state: 'owned' };
-    return { entry, state: level(s) < entry.level ? 'locked' : 'buy' };
-  }
-  const owns = (id: string) => ownsWardrobe(d.game.save(), id);
-
-  /** Your Dorras and level, in the fitting room's head (ticks while the panel is open) */
-  function paintBalance() {
-    const b = el?.querySelector<HTMLElement>('[data-fit-balance]');
-    if (!b) return;
-    const s = d.game.save();
-    const html = `${D(s.dorras)} ${LV(level(s))}`;
-    if (b.dataset.html !== html) {
-      b.dataset.html = html;
-      b.innerHTML = html;
-    }
-  }
-
-  function paintConfirm() {
-    const box = el?.querySelector<HTMLElement>('[data-fit-confirm]');
-    if (!box) return;
-    const entry = pending ? wardrobeEntry(pending.id) : null;
-    box.hidden = !entry;
-    if (!entry) {
-      box.replaceChildren();
-      return;
-    }
-    box.innerHTML = `<p class="fit-confirm-text"></p><div class="fit-confirm-row"><button type="button" class="chip-link fit-confirm-yes" data-fit-buy>Confirm</button><button type="button" class="chip-link fit-confirm-no" data-fit-cancel>Cancel</button></div>`;
-    const p = box.querySelector('p')!;
-    p.append(`Buy the ${entry.name} for `, Object.assign(document.createElement('b'), { textContent: fmt.format(entry.price) }), ' Dorras?');
-  }
 
   /** The Merch tab's own rows over its cards: what it's dressing, where the top's mark goes, and a note if it won't show */
   function paintMerch(l: Look) {
@@ -424,6 +343,75 @@ export function createFitting(d: FittingDeps) {
     }
   }
 
+  /** The colour rows for what's on in this tab */
+  function colourSets(l: Look): Colors[] {
+    const list = itemsOf(tab);
+    const sets = [...(tab.colors ?? []), ...list.filter((it) => it.on(l) && (!it.only || it.only(l))).flatMap((it) => it.colors ?? [])];
+    // (the marks' ink, shared by the top, the hat and the sneakers)
+    if (tab.id === 'merch' && merchFor !== 'print') sets.push({ key: 'ink', label: 'Ink', list: PALETTE.ink });
+    return sets.filter((c) => c.key !== 'tie' || l.kind === 'suit');
+  }
+
+  /**
+   * The colour rows: quick swatches and a picker for any colour. Built again only when the rows themselves change
+   * (another item, another tab); otherwise brought up to date where they are, so a picker that's open stays open
+   * while its colour goes on him.
+   */
+  function paintColours(l: Look) {
+    const rows = el?.querySelector<HTMLElement>('[data-fit-colors]');
+    if (!rows) return;
+    const sets = colourSets(l);
+    const sig = sets.map((c) => c.key).join(',');
+    if (rows.dataset.sig !== sig) {
+      rows.dataset.sig = sig;
+      rows.replaceChildren();
+      for (const c of sets) {
+        const row = document.createElement('div');
+        row.className = 'fit-row';
+        row.innerHTML = `<span></span><div class="sw-row" role="group"></div>`;
+        row.querySelector('span')!.textContent = c.label;
+        const sw = row.querySelector('.sw-row')!;
+        sw.setAttribute('aria-label', `${c.label} colour`);
+        c.list.forEach((col, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'sw-btn';
+          b.style.setProperty('--c', col);
+          b.dataset.key = c.key;
+          b.dataset.value = col;
+          b.setAttribute('aria-label', `${c.label} colour ${i + 1}`);
+          sw.append(b);
+        });
+        // Any colour: the browser's own picker, under a swatch of its own
+        const pick = document.createElement('label');
+        pick.className = 'sw-pick';
+        pick.dataset.pickFor = c.key;
+        pick.title = 'Any colour';
+        pick.innerHTML = `${svg(PICK, 13)}<input type="color" data-pick="${c.key}">`;
+        pick.querySelector('input')!.setAttribute('aria-label', `${c.label}: any colour`);
+        sw.append(pick);
+        rows.append(row);
+      }
+    }
+    // (what's worn now: its swatch pressed, or the picker lit in it)
+    for (const c of sets) {
+      const now = (l[c.key] as string | null) ?? '';
+      let listed = false;
+      for (const b of rows.querySelectorAll<HTMLButtonElement>(`.sw-btn[data-key="${c.key}"]`)) {
+        const on = b.dataset.value === now;
+        listed ||= on;
+        b.setAttribute('aria-pressed', String(on));
+      }
+      const pick = rows.querySelector<HTMLElement>(`[data-pick-for="${c.key}"]`);
+      const input = pick?.querySelector<HTMLInputElement>('input');
+      if (!pick || !input) continue;
+      pick.classList.toggle('is-on', !!now && !listed);
+      if (now && !listed) pick.style.setProperty('--c', now);
+      else pick.style.removeProperty('--c');
+      if (now && picked?.key !== c.key && document.activeElement !== input) input.value = now;
+    }
+  }
+
   function paint() {
     if (!el) return;
     const l = d.look();
@@ -431,26 +419,14 @@ export function createFitting(d: FittingDeps) {
     const items = el.querySelector<HTMLElement>('[data-fit-items]')!;
     items.replaceChildren();
     const list = itemsOf(tab);
-    let premium = false;
     for (const it of list) {
       if (it.only && !it.only(l)) continue;
-      const { entry, state } = stateOf(it);
-      // The premium pieces follow the free ones under a header
-      if (entry && !premium) {
-        premium = true;
-        const h = document.createElement('p');
-        h.className = 'fit-section';
-        h.innerHTML = '<span>Premium</span>';
-        items.append(h);
-      }
       const on = it.on(l);
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = `fit-item${entry ? ' is-premium' : ''}${state === 'locked' ? ' is-locked' : ''}`;
+      b.className = 'fit-item';
       b.dataset.item = it.id;
-      b.dataset.state = state;
       b.setAttribute('aria-pressed', String(on));
-      if (state === 'locked') b.setAttribute('aria-disabled', 'true');
       b.innerHTML = `${it.iconHtml ?? svg(it.icon)}<b></b><small></small>`;
       // A mark's card shows it in your ink
       if (it.iconHtml) {
@@ -458,75 +434,12 @@ export function createFitting(d: FittingDeps) {
         b.style.setProperty('--mark', l.ink);
       }
       b.querySelector('b')!.textContent = it.name;
-      const small = b.querySelector('small')!;
-      if (on) small.textContent = 'Wearing';
-      else if (state === 'locked') {
-        small.className = 'fit-lock';
-        small.innerHTML = `${svg(LOCK, 10)}<span></span>`;
-        small.querySelector('span')!.textContent = `Level ${entry!.level}`;
-      } else if (state === 'buy') small.textContent = `Buy · ${fmt.format(entry!.price)}`;
-      else small.textContent = tab.toggles ? 'Add' : 'Wear';
-      if (entry) {
-        const tag = document.createElement('span');
-        tag.className = 'fit-tag';
-        tag.innerHTML = `${state === 'owned' ? '<i>Owned</i>' : D(entry.price)} ${LV(entry.level)}`;
-        b.append(tag);
-      }
+      b.querySelector('small')!.textContent = on ? 'Wearing' : tab.toggles ? 'Add' : 'Wear';
       items.append(b);
     }
     items.hidden = !list.length;
     paintMerch(l);
-    // Colours for what's on in this tab
-    const rows = el.querySelector<HTMLElement>('[data-fit-colors]')!;
-    rows.replaceChildren();
-    const sets = [...(tab.colors ?? []), ...list.filter((it) => it.on(l) && (!it.only || it.only(l))).flatMap((it) => it.colors ?? [])];
-    // The marks' ink (shared by the top, the hat and the sneakers)
-    if (tab.id === 'merch' && merchFor !== 'print') sets.push({ key: 'ink', label: 'Ink', list: PALETTE.ink });
-    for (const c of sets) {
-      if (c.key === 'tie' && l.kind !== 'suit') continue;
-      const row = document.createElement('div');
-      row.className = 'fit-row';
-      row.innerHTML = `<span></span><div class="sw-row" role="group"></div>`;
-      row.querySelector('span')!.textContent = c.label;
-      const sw = row.querySelector('.sw-row')!;
-      sw.setAttribute('aria-label', `${c.label} colour`);
-      const swatch = (col: string, label: string, pack?: PackId) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'sw-btn';
-        b.style.setProperty('--c', col);
-        b.dataset.key = c.key;
-        b.dataset.value = col;
-        b.setAttribute('aria-pressed', String(l[c.key] === col));
-        if (pack) {
-          b.dataset.pack = pack;
-          const entry = wardrobeEntry(pack);
-          if (!owns(pack)) {
-            b.classList.add('is-locked');
-            b.innerHTML = svg(LOCK, 9);
-            label += entry ? `, locked: ${entry.name}, ${fmt.format(entry.price)} Dorras, level ${entry.level}` : ', locked';
-          }
-        }
-        b.setAttribute('aria-label', label);
-        sw.append(b);
-      };
-      c.list.forEach((col, i) => swatch(col, `${c.label} colour ${i + 1}`));
-      // Tops and bottoms also come in the colour packs, locked until the pack is bought
-      if (c.key === 'top' || c.key === 'bottom')
-        for (const pack of PACK_IDS) {
-          const entry = wardrobeEntry(pack);
-          const name = entry?.name ?? pack;
-          const sep = document.createElement('span');
-          sep.className = `sw-pack${owns(pack) ? '' : ' is-locked'}`;
-          sep.textContent = name.replace(/ Pack$/, '');
-          sep.title = name;
-          sw.append(sep);
-          PACKS[pack].forEach((col, i) => swatch(col, `${c.label} ${name} colour ${i + 1}`, pack));
-        }
-      rows.append(row);
-    }
-    paintBalance();
-    paintConfirm();
+    paintColours(l);
   }
 
   function wear(next: Look, showOff = true) {
@@ -535,47 +448,26 @@ export function createFitting(d: FittingDeps) {
     if (showOff) preview?.showOff();
   }
 
-  /** Ask before paying: the confirm row under the cards */
-  function ask(id: string, then?: (l: Look) => Look) {
-    const entry = wardrobeEntry(id);
-    if (!entry) return;
-    const s = d.game.save();
-    if (level(s) < entry.level) {
-      d.game.sfx('denied');
-      d.game.toast(whyNot('level', entry.level));
-      return;
-    }
-    if (s.dorras < entry.price) {
-      d.game.sfx('denied');
-      d.game.toast(whyNot('money'));
-      return;
-    }
-    pending = { id, then };
-    paintConfirm();
-    // The row sits under the cards: bring it into view before the focus lands on Confirm
-    el?.querySelector<HTMLElement>('[data-fit-confirm]')?.scrollIntoView({ block: 'nearest', behavior: d.reduced ? 'auto' : 'smooth' });
-    el?.querySelector<HTMLButtonElement>('[data-fit-buy]')?.focus({ preventScroll: true });
+  /** Wear the colour being picked (the picker's latest) */
+  function wearPicked() {
+    clearTimeout(pickTimer);
+    pickTimer = 0;
+    if (!picked) return;
+    const { key, value } = picked;
+    if (d.look()[key] !== value) wear({ ...d.look(), [key]: value }, false);
   }
-
-  /** Confirm: pay through the rules, then wear it */
-  function buy() {
-    if (!pending) return;
-    const { id, then } = pending;
-    pending = null;
-    const entry = wardrobeEntry(id);
-    if (!entry) return;
-    const r = buyWardrobe(d.game.save(), id);
-    if (!r.ok) {
-      d.game.sfx('denied');
-      d.game.toast(whyNot(r.why, entry.level));
-      paint();
-      return;
-    }
-    d.game.commit();
-    d.game.sfx('buy');
-    d.game.toast(`${entry.name} is yours.`);
-    if (then) wear(then(d.look()));
-    paint();
+  function onPick(e: Event) {
+    const input = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-pick]');
+    if (!input) return;
+    const value = safeColour(input.value);
+    if (!value) return;
+    picked = { key: input.dataset.pick as ColorKey, value };
+    // (the picker closed: the colour goes on now, and the picker's own value is worn as it was kept)
+    if (e.type === 'change') {
+      wearPicked();
+      picked = null;
+      paintColours(d.look());
+    } else if (!pickTimer) pickTimer = window.setTimeout(wearPicked, PICK_EVERY);
   }
 
   function onClick(e: Event) {
@@ -583,23 +475,12 @@ export function createFitting(d: FittingDeps) {
     const tb = t.closest<HTMLButtonElement>('[data-fit-tab]');
     if (tb) {
       tab = TABS.find((x) => x.id === tb.dataset.fitTab) ?? tab;
-      pending = null;
       paint();
-      return;
-    }
-    if (t.closest('[data-fit-buy]')) {
-      buy();
-      return;
-    }
-    if (t.closest('[data-fit-cancel]')) {
-      pending = null;
-      paintConfirm();
       return;
     }
     const mf = t.closest<HTMLButtonElement>('[data-merch-for]');
     if (mf) {
       merchFor = mf.dataset.merchFor as MerchFor;
-      pending = null;
       paint();
       el?.querySelector<HTMLButtonElement>(`[data-merch-for="${merchFor}"]`)?.focus({ preventScroll: true });
       return;
@@ -614,11 +495,6 @@ export function createFitting(d: FittingDeps) {
     if (ib) {
       const it = itemsOf(tab).find((x) => x.id === ib.dataset.item);
       if (!it) return;
-      const { entry, state } = stateOf(it);
-      if (entry && state !== 'owned') {
-        ask(entry.id, (l) => it.wear(l));
-        return;
-      }
       // In a one-of tab, picking what you already wear does nothing
       if (!tab.toggles && it.on(d.look())) return;
       wear(it.wear(d.look()));
@@ -627,16 +503,7 @@ export function createFitting(d: FittingDeps) {
     }
     const sb = t.closest<HTMLButtonElement>('.sw-btn[data-key]');
     if (sb) {
-      const key = sb.dataset.key as ColorKey;
-      const value = sb.dataset.value!;
-      const pack = sb.dataset.pack as PackId | undefined;
-      // A locked pack colour offers the pack; the colour goes on once it's bought
-      if (pack && !owns(pack)) {
-        ask(pack, (l) => ({ ...l, [key]: value }));
-        return;
-      }
-      wear({ ...d.look(), [key]: value }, false);
-      el?.querySelector<HTMLButtonElement>(`.sw-btn[data-key="${key}"][data-value="${value}"]`)?.focus({ preventScroll: true });
+      wear({ ...d.look(), [sb.dataset.key as ColorKey]: sb.dataset.value! }, false);
       return;
     }
     if (t.closest('[data-fit-reset]')) wear({ ...DEFAULT_LOOK });
@@ -648,7 +515,6 @@ export function createFitting(d: FittingDeps) {
     if (!tb || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
     const i = TABS.indexOf(tab) + (e.key === 'ArrowRight' ? 1 : -1);
     tab = TABS[(i + TABS.length) % TABS.length];
-    pending = null;
     paint();
     el?.querySelector<HTMLButtonElement>(`[data-fit-tab="${tab.id}"]`)?.focus();
     e.preventDefault();
@@ -676,10 +542,9 @@ export function createFitting(d: FittingDeps) {
       }
       el.addEventListener('click', onClick);
       el.addEventListener('keydown', onKey);
-      pending = null;
+      el.addEventListener('input', onPick);
+      el.addEventListener('change', onPick);
       paint();
-      // Takings keep coming in while you browse: keep the balance honest
-      tick = window.setInterval(paintBalance, 1000);
       const canvas = el.querySelector<HTMLCanvasElement>('[data-fit-canvas]')!;
       // (the stage comes in its own chunk the first time: it's only for this and the character screen)
       const at = el;
@@ -693,12 +558,11 @@ export function createFitting(d: FittingDeps) {
         el.querySelector<HTMLButtonElement>('[data-fit-tab]')?.focus({ preventScroll: true });
       }
     },
-    /** The panel closed (or changed): stop drawing */
+    /** The panel closed (or changed): stop drawing (a colour mid-pick goes on first) */
     unmount() {
+      wearPicked();
+      picked = null;
       preview?.detach();
-      clearInterval(tick);
-      tick = 0;
-      pending = null;
       el = null;
     },
   };

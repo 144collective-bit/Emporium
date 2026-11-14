@@ -1339,39 +1339,3 @@ export function chestYaw(sk: Skeleton): number {
   return Math.atan2(cfw.x, cfw.z);
 }
 
-/**
- * Something carried in his right hand (a coffee, a phone): the arm `out`
- * radians from his side and the forearm turned about its length so the
- * thumb leads, so it's held in front of the hand, clear of his leg (the
- * capture's hands hang thumbs in, which put it into his thigh); `w` of
- * the way. On top of the pose, after `applyTo()`.
- */
-export const CARRY = { out: 0.12, most: 1.4 };
-const cr = new THREE.Quaternion();
-const cp = new THREE.Quaternion();
-const cu = new THREE.Vector3();
-const cv = new THREE.Vector3();
-const cf = new THREE.Vector3();
-const cx = new THREE.Vector3();
-export function addCarry(sk: Skeleton, w = 1) {
-  if (w < 1e-3) return;
-  const arm = sk.bones.armR;
-  const fore = sk.bones.foreR;
-  sk.root.updateMatrixWorld(true);
-  // (turns in his own frame: the root's taken out)
-  const rootInv = sk.root.getWorldQuaternion(cr).invert();
-  const pw = arm.parent!.getWorldQuaternion(cp).premultiply(rootInv);
-  qt.setFromAxisAngle(Z, CARRY.out * w);
-  arm.quaternion.premultiply(qw.copy(pw).invert().multiply(qt).multiply(pw)).normalize();
-  arm.updateMatrixWorld(true);
-  const fw = fore.getWorldQuaternion(cp).premultiply(rootInv);
-  const hw = sk.bones.handR.getWorldQuaternion(qw).premultiply(rootInv);
-  // (the thumb's way and his forward, both across the forearm)
-  cu.set(0, 1, 0).applyQuaternion(fw);
-  cv.set(0, 0, 1).applyQuaternion(hw);
-  cv.addScaledVector(cu, -cv.dot(cu));
-  cf.set(0, 0, 1).addScaledVector(cu, -cu.z);
-  if (cv.lengthSq() < 1e-6 || cf.lengthSq() < 1e-6) return;
-  const turn = THREE.MathUtils.clamp(Math.atan2(cx.crossVectors(cv, cf).dot(cu), cv.dot(cf)), -CARRY.most, CARRY.most);
-  fore.quaternion.multiply(qt.setFromAxisAngle(UPV, turn * w)).normalize();
-}

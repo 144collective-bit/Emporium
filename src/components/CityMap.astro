@@ -1061,12 +1061,11 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <template data-panel-tpl="shop" data-marquee="New fits on the rail">
     <p class="kicker"><span class="kicker-num">02</span> Clothes</p>
     <h2 id="city-panel-title" class="city-panel-title">Drop 001</h2>
-    <p class="city-panel-text">Try on fits. Buy premium pieces.</p>
-    {/* Dress your Degen (fitting.ts): the originals are free, the premium wardrobe costs Dorras earned in the city (never real money, nothing to do with the merch store). */}
+    <p class="city-panel-text">Try on fits. Every piece is free.</p>
+    {/* Dress your Degen (fitting.ts): every piece, colour, mark and print is free, in any colour (docs/wardrobe-plan.md Phase 1; never real money, nothing to do with the merch store). */}
     <section class="fit" data-fit aria-labelledby="fit-title">
       <div class="fit-head">
         <h3 id="fit-title" class="fit-title">Fitting room</h3>
-        <span class="fit-balance" data-fit-balance aria-label="Your Dorras and level"></span>
       </div>
       <div class="fit-stage">
         <canvas class="fit-canvas" data-fit-canvas aria-hidden="true"></canvas>
@@ -1075,9 +1074,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <div class="fit-tabs" data-fit-tabs role="tablist" aria-label="Wardrobe"></div>
       <div class="fit-merch" data-fit-merch hidden></div>
       <div class="fit-items" data-fit-items></div>
-      <div class="fit-confirm" data-fit-confirm role="group" aria-label="Confirm the purchase" hidden></div>
       <div class="fit-colors" data-fit-colors></div>
-      <p class="fit-note">Originals are free.</p>
+      <p class="fit-note">Any colour: tap the dropper.</p>
       <button type="button" class="chip-link fit-reset" data-fit-reset>Back to the classic look</button>
     </section>
   </template>

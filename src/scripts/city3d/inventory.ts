@@ -3,16 +3,14 @@
  * free of the DOM and of scene code like the rest of the city's game.
  *
  * - The save's `inventory` (save v11): his two weapon slots (either may be
- *   empty), the thing in his hand (the look's `held`, kept in step with it
- *   by the view), his consumables (the snack first) and the grid's order.
+ *   empty), his consumables (the snack first) and the grid's order.
  * - The grid (Tab, the owner's call): 4 x 4 spaces holding everything he
  *   carries that isn't in a weapon slot (`carried()`, `layout()`): his other
- *   guns, the things for his hand, his consumables stacked. Things are
+ *   guns and his consumables stacked. Things are
  *   moved round it (`moveCell()`), guns into a weapon slot (`equipCell()`)
  *   and back (`unequip()`), anywhere.
  * - The hotbar's slots, in his order: weapon slots 1 and 2 (an empty slot
- *   while there's none), the thing in his hand, then the consumables he
- *   has. 1-7 pick them (the gun out again puts it away: empty hands are his
+ *   while there's none), then the consumables he has. 1-7 pick them (the gun out again puts it away: empty hands are his
  *   fists); X, the wheel, the touch Swap button and the d-pad step through
  *   the weapons and empty hands.
  * - Ammo stays free (every gun comes full, the counter refills all) and no
@@ -21,35 +19,32 @@
  *   (`SNACK_BARS`) for Dorras, `ITEM_MAX` at most; they restore health in a
  *   spar (Phase 3), so using one anywhere else does nothing yet.
  *
- * The save's side (its shape and cleaning, the hand) is inventory-save.ts, which the boot needs; this file loads with the
+ * The save's side (its shape and cleaning) is inventory-save.ts, which the boot needs; this file loads with the
  * hotbar and the gun store. Nothing here is real money or tied to the token
  * or the store.
  */
 import { GUN_IDS, ITEM_CATALOG, ITEM_IDS, ITEM_MAX, type ItemId } from './catalog';
 import type { WeaponId } from './combat-sim';
-import { HELD, type Held } from '../net/profile-data';
 import { ownsGun, pay, type BuyResult, type TycoonSave } from './tycoon';
 import { INFILL, SIGNS, bodyOf } from './downtown';
 import { STALLS } from './nightmarket';
 import { BAR } from './avenue';
 
-// The save's side (the boot's): its shape and cleaning, the hand kept in step with the look, where snacks are sold
-import { GRID_SIZE, STASH_MAX, heldOk } from './inventory-save';
-export { GRID_COLS, GRID_SIZE, STASH_MAX, cleanInventory, cleanStash, emptyInventory, setHeld, type Inventory, type Stash } from './inventory-save';
+// The save's side (the boot's): its shape and cleaning
+import { GRID_SIZE, STASH_MAX } from './inventory-save';
+export { GRID_COLS, GRID_SIZE, STASH_MAX, cleanInventory, cleanStash, emptyInventory, type Inventory, type Stash } from './inventory-save';
 
 /* ---------- The hotbar ---------- */
 
 export type Slot =
   | { kind: 'gun'; i: 0 | 1; weapon: WeaponId | null }
-  | { kind: 'held'; held: Held }
   | { kind: 'item'; item: ItemId; n: number };
 /** The most slots a hotbar holds (1-7) */
 export const SLOTS_MAX = 7;
-/** The hotbar in his order: weapon slots 1 and 2 (empty or not), the thing in his hand, the consumables he has */
+/** The hotbar in his order: weapon slots 1 and 2 (empty or not), then the consumables he has */
 export function slots(s: Pick<TycoonSave, 'inventory'>): Slot[] {
   const inv = s.inventory;
   const out: Slot[] = [{ kind: 'gun', i: 0, weapon: inv.guns[0] }, { kind: 'gun', i: 1, weapon: inv.guns[1] }];
-  if (inv.held) out.push({ kind: 'held', held: inv.held });
   for (const id of ITEM_IDS) {
     const n = inv.items[id] ?? 0;
     if (n > 0) out.push({ kind: 'item', item: id, n });
@@ -57,7 +52,7 @@ export function slots(s: Pick<TycoonSave, 'inventory'>): Slot[] {
   return out.slice(0, SLOTS_MAX);
 }
 /** A slot's key, the same while it's the same thing (the view compares them); 'hands' is nothing out (his fists) */
-export const slotKey = (x: Slot) => (x.kind === 'gun' ? `gun${x.i}` : x.kind === 'held' ? 'held' : `item:${x.item}`);
+export const slotKey = (x: Slot) => (x.kind === 'gun' ? `gun${x.i}` : `item:${x.item}`);
 
 /** What picking a slot does */
 export type SlotAction =
@@ -65,14 +60,11 @@ export type SlotAction =
   | { do: 'draw'; weapon: WeaponId }
   /** An empty weapon slot: say how to fill it */
   | { do: 'empty' }
-  /** Take the thing in his hand out (the gun goes away), or put it away if it's out */
-  | { do: 'held'; held: Held }
   /** Use a consumable */
   | { do: 'use'; item: ItemId };
 export function pickSlot(x: Slot | undefined): SlotAction | null {
   if (!x) return null;
   if (x.kind === 'gun') return x.weapon ? { do: 'draw', weapon: x.weapon } : { do: 'empty' };
-  if (x.kind === 'held') return { do: 'held', held: x.held };
   return { do: 'use', item: x.item };
 }
 
@@ -84,7 +76,7 @@ export function stepKey(s: Pick<TycoonSave, 'inventory'>, at: string, dir: 1 | -
   const g = s.inventory.guns;
   const ring = [...(g[0] ? ['gun0'] : []), ...(g[1] ? ['gun1'] : []), 'hands'];
   const i = ring.indexOf(at);
-  // (from the thing in his hand or a consumable: forward is the first weapon, back the last)
+  // (from a consumable: forward is the first weapon, back the last)
   if (i < 0) return dir > 0 ? ring[0] : ring[Math.max(0, ring.length - 2)];
   return ring[(i + dir + ring.length) % ring.length];
 }
@@ -93,26 +85,22 @@ export function stepKey(s: Pick<TycoonSave, 'inventory'>, at: string, dir: 1 | -
 
 export type GridKey = string;
 export const gunKey = (w: WeaponId) => `gun:${w}`;
-export const heldKey = (h: Held) => `held:${h}`;
 export const itemKey = (id: ItemId) => `item:${id}`;
 /** What a grid key stands for */
-export function parseKey(k: GridKey): { kind: 'gun'; weapon: WeaponId } | { kind: 'held'; held: Held } | { kind: 'item'; item: ItemId } | null {
+export function parseKey(k: GridKey): { kind: 'gun'; weapon: WeaponId } | { kind: 'item'; item: ItemId } | null {
   const [kind, id] = k.split(':');
   if (kind === 'gun' && (GUN_IDS as string[]).includes(id)) return { kind, weapon: id as WeaponId };
-  if (kind === 'held' && (HELD as string[]).includes(id)) return { kind, held: id as Held };
   if (kind === 'item' && (ITEM_IDS as string[]).includes(id)) return { kind, item: id as ItemId };
   return null;
 }
 /**
  * Everything he carries that goes in the grid: the guns he owns and may carry (`may`: the
- * starters unlock with score) that aren't in a weapon slot, the things for his hand he owns,
- * and the consumables he has (a kind to a space, stacked). Never more than GRID_SIZE today.
+ * starters unlock with score) that aren't in a weapon slot, and the consumables he has (a kind to a space, stacked). Never more than GRID_SIZE today.
  */
 export function carried(s: TycoonSave, may: (id: WeaponId) => boolean = (id) => ownsGun(s, id)): GridKey[] {
   const g = s.inventory.guns;
   return [
     ...GUN_IDS.filter((w) => ownsGun(s, w) && may(w) && !g.includes(w)).map(gunKey),
-    ...HELD.filter((h) => heldOk(s, h)).map(heldKey),
     ...ITEM_IDS.filter((id) => (s.inventory.items[id] ?? 0) > 0).map(itemKey),
   ];
 }

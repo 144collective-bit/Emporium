@@ -4,12 +4,9 @@
  * One body after the brand art (balaclava with the eye opening, red cap with
  * the diamond patch, green shades on a gold chain, collar, tie and a lapelled
  * suit) with knees and elbows, so walks and runs can bend. Outfits swap the
- * clothes on that body: suits, hoodies and joggers, soldier fatigues, and
- * Drop 001's premium wardrobe (the varsity and puffer jackets, the cowboy hat,
- * top hat and neon halo, the duffel bag and neon wings, the phone, the
- * briefcase and the gold watch). Neon pieces (the halo, the wings' edges, the
- * phone's screen) glow through `neon()` in kit.ts, kept dim enough by day
- * not to bloom.
+ * clothes on that body: suits, hoodies, track suits, varsity and puffer
+ * jackets, joggers, soldier fatigues, hats, bags and jewellery (wardrobe.ts,
+ * docs/wardrobe-plan.md).
  *
  * Two ways to build it:
  * - createDegen(): one figure, the skinned body on real bones
@@ -75,9 +72,9 @@ function items(q: Detail, hero = false): Item[] {
 
 /* ---------- Materials ---------- */
 
+let neonMat: THREE.MeshBasicMaterial | null = null;
 let plainMat: THREE.Material | null = null;
 let doubleMat: THREE.Material | null = null;
-let neonMat: THREE.MeshBasicMaterial | null = null;
 let logoMat: THREE.Material | null = null;
 let atlas: THREE.Texture | null = null;
 /**
@@ -245,8 +242,8 @@ function material(m: Mat | undefined, o?: Outfit): THREE.Material {
       vertexColors: true,
     }));
   if (m === 'neon') {
-    // One unlit glow for every neon piece, coloured per vertex: plain by day (under the bloom
-    // threshold, so a halo never blooms out of control), brighter at night like the city's signs
+    // One unlit glow, coloured per vertex (a crowd phone's screen): plain by day (under the bloom
+    // threshold), brighter at night like the city's signs
     if (!neonMat) {
       neonMat = neon('#ffffff', 1, 1.8);
       neonMat.vertexColors = true;
@@ -323,9 +320,9 @@ function atlasUV(geo: THREE.BufferGeometry, id: MarkId) {
 /**
  * One figure: the skinned body (skeleton.ts) with everything it wears as
  * one mesh coloured per vertex, plus one each for the lenses, the cap
- * patch, the raised hood (both sides drawn) and any neon, so a figure is
- * about four draw calls whatever he wears. Things in the hand (a coffee, a
- * rifle) ride the hand bone unbent.
+ * patch and the raised hood (both sides drawn), so a figure is about four
+ * draw calls whatever he wears. Things in the hand (a rifle, a crowd
+ * shopper's bag or phone) ride the hand bone unbent.
  */
 /** A single figure's detail where its caller doesn't say: 2 on phones, 3 on desktops (the city sets it by its tier) */
 let figure: Detail = 2;
@@ -472,7 +469,7 @@ function crowdMaterial(m: Mat | undefined) {
   let c = crowdMats.get(key);
   if (!c) {
     c = crowdVersion(material(m), key);
-    // (the lenses and neon follow the time of day like everyone's)
+    // (the lenses and a phone's screen follow the time of day like everyone's)
     if (m === 'lens') lit(c, 0.12, 0.7);
     if (m === 'neon') lit(c, 1, 1.8);
     crowdMats.set(key, c);

@@ -92,7 +92,7 @@ keep it up to date when what it describes changes.
     ring's sag added to every gap (`SAG`) so the crowd's clear it too; the
     cap's brim from the crown's base (`brimSweep()`); the shades' arms back
     along the head past the ear (`armPath()`), the chain hooked on them;
-    bags, boards, wings and the necklace on each top's own outline
+    bags, boards and the necklace on each top's own outline
     (`TORSOS`, `OVER`, items `backpack-<kind>` and the rest; straps laid on
     by `strapOver()`); the watch on the wrist riding the hand; a held
     thing's handle in the fingers' hook (`HOOK`, `handle()`), the cup
@@ -164,7 +164,7 @@ keep it up to date when what it describes changes.
     joint (shoulders take a collarbone share; the trunk by where a point
     is alone, `trunk()`, so a top's hem and the trousers under it bend as
     one); `bone` pins a piece to one
-    bone unbent (bags, boards, wings on the chest); `skin` gives a piece
+    bone unbent (bags and boards on the chest); `skin` gives a piece
     its own weights per vertex (the fingers).
   - **The head and hands** are `body.ts` (DOM-free, tested): the balaclava
     after the brand art (`HEAD_ROWS`, `headGeometry()`: a tall oval with a
@@ -175,19 +175,12 @@ keep it up to date when what it describes changes.
     vertex weighted, sized by `HAND` in skeleton.ts: a tenth of his height
     wrist to fingertip, the palm a hand's thickness; relaxed, the fingers
     curl a little, `RELAXED`; `bakedHand()` sets one solid at a grip, for
-    the first-person hands in `viewmodel.ts`). His hands are empty by
-    default (the gummy bag was retired, the owner's call; saved looks that
-    held it come back empty). **What's in his hand behaves** on foot
-    (`heldpose.ts`, DOM-free, tested in `tests/heldpose.test.ts`, in walk
-    mode's on-foot chunk; the polish plan's Phase 8): the coffee comes up
-    for a sip every 14-26 s (never at a sprint), the phone is read standing
-    still (the head down, a glance up now and then) and glanced at on the
-    walk, the briefcase swings on the hand as a pendulum driven by the
-    hand's and his own acceleration; `createHeldLife()` keeps the schedule,
-    `applyHeld()` lays it on the animator's turns before the figure takes
-    them (the arm's reach through contact.ts's `reachArmBones()`), never
-    while something else has his arms (a gun, an emote, a slide, a vault, a
-    moment, the fists, a crate). The boombox hangs as it did.
+    the first-person hands in `viewmodel.ts`). His hands hold only weapons
+    (`docs/wardrobe-plan.md` Phase 1, the owner's call: the coffee, boombox,
+    phone and briefcase were retired with `heldpose.ts`, as the gummy bag
+    was before them; saved looks that held one come back empty-handed). The
+    crowd keeps its phones (`held: 'phone'`) and shopping bags
+    (`held: 'shopping'`), riding the hand bone unbent.
   - **Walking and running** are `locomotion.ts` (DOM-free, tested in
     `tests/locomotion.test.ts`), for your Degen in walk mode
     (`createLocomotion()`; walk.ts feeds it his position, velocity,
@@ -231,12 +224,13 @@ keep it up to date when what it describes changes.
     shirt V, the tie, pockets; zips and plackets are `tape()`). Shoes are
     lofts along their length (`shoe()`).
   - The wardrobe is `items()` in `wardrobe.ts`: each item (`head`, `cap`, `suit`, `hoodie`,
-    `joggers`, `backpack`, `coffee`...) has a `when` rule on the `Outfit` and
+    `joggers`, `backpack`, `watch`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
   - Four detail levels (`Detail`): 3 for single figures on desktops and 2
     on phones (`createDegen()`: the player, other players, the fitting
-    room, the hologram; about 23-26k triangles at 3, 14-17k at 2;
+    room, the hologram; about 23-38k triangles at 3, 14-17k at 2, by what
+    he wears, held under 40k and 18k by `tests/wardrobe.test.ts`;
     `figureDetail()` sets which), 1 for crowd people near the camera (the new head, fingers
     and shoes at a crowd's detail, about 7-9k; the phones' `light` crowd
     leaves out the `detail` pieces), 0 for crowd people further away (`far`:
@@ -245,7 +239,7 @@ keep it up to date when what it describes changes.
   - `createDegen()` builds the skinned body (`items(q, true)`: the hero
     wardrobe, with the new head, fingers and shoes on the feet) as one
     `SkinnedMesh` coloured per vertex, plus one each for the lenses, the
-    patches, the raised hood and neon, all on one `Skeleton` (3-5 draw
+    patches and the raised hood, all on one `Skeleton` (3-5 draw
     calls a figure, never frustum-culled); things in the hand stay solid on
     the hand bone. `dispose()` frees a figure's geometry and bones. A
     material swapped onto a figure (the hologram's `ShaderMaterial`, a

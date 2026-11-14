@@ -31,15 +31,9 @@ export interface Outfit {
   /** Beanie or bucket hat colour (instead of a cap) */
   beanie?: string;
   bucket?: string;
-  crown?: boolean;
-  /** Cowboy hat or top hat colour (premium, instead of a cap) */
-  cowboy?: string;
-  tophat?: string;
   /** A kart driver's helmet colour (docs/kart-west-plan.md Phase 6: the kart park's races; no hat with it) */
   helmet?: string;
-  /** A neon halo floating over the head (premium, instead of a hat; glows in the lens colour) */
-  halo?: boolean;
-  /** Colour of the shades' lenses (green as in the art), and of any neon he wears */
+  /** Colour of the shades' lenses (green as in the art) */
   lens?: string;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
@@ -47,20 +41,18 @@ export interface Outfit {
   crossbody?: string;
   /** Skate deck on the back */
   board?: string;
-  /** Duffel bag slung across the back (premium) */
+  /** Duffel bag slung across the back */
   duffel?: string;
-  /** Neon-edged wings on the back (premium): the wings' colour, the edges glow in the lens colour */
-  wings?: string;
   headphones?: string;
   /** Gold chain on the shades */
   chain?: boolean;
   /** Gold chain with a diamond round the neck */
   necklace?: boolean;
-  /** Gold watch on the left wrist (premium) */
+  /** Gold watch on the left wrist */
   watch?: boolean;
-  /** In the right hand: an iced coffee, a boombox, a phone or a briefcase (empty-handed by default); the crowd's
-   * shoppers on Crestmont's Drive carry a shopping bag (never the player's: `Look` has none) */
-  held?: 'coffee' | 'boombox' | 'phone' | 'briefcase' | 'shopping';
+  /** In the right hand, the crowd's only: a phone (people reading theirs) or a shopping bag (the shoppers on
+   * Crestmont's Drive). Never the player's: his hands hold only weapons (docs/wardrobe-plan.md Phase 1) */
+  held?: 'phone' | 'shopping';
   /** Which hand carries a rifle (soldiers) */
   rifle?: 'left' | 'right';
   /** Both hands closed into fists (fighting; the open hands are left off) */
@@ -109,10 +101,6 @@ export function lookOutfit(l: Look): Outfit {
     capBack: hat === 'backcap',
     beanie: hat === 'beanie' ? l.hatColor : undefined,
     bucket: hat === 'bucket' ? l.hatColor : undefined,
-    crown: hat === 'crown',
-    cowboy: hat === 'cowboy' ? l.hatColor : undefined,
-    tophat: hat === 'tophat' ? l.hatColor : undefined,
-    halo: hat === 'halo',
     hood: l.kind === 'hoodie' && l.hood,
     lens: l.lens,
     headphones: l.headphones ?? undefined,
@@ -120,11 +108,9 @@ export function lookOutfit(l: Look): Outfit {
     crossbody: bag('crossbody'),
     board: bag('board'),
     duffel: bag('duffel'),
-    wings: bag('wings'),
     chain: l.chain,
     necklace: l.necklace,
     watch: l.watch,
-    held: l.held ?? undefined,
     mark: l.mark ?? undefined,
     markAt: l.markAt,
     ink: l.ink,
@@ -417,29 +403,6 @@ const ringAt = ([y, hw, hd, z = 0]: Sec, a: number, n: number): [number, number,
   const s = Math.sin(a);
   return [Math.sign(c) * Math.abs(c) ** e * hw, y, z + Math.sign(s) * Math.abs(s) ** e * hd];
 };
-/** A loft's sides only, its ends left open (for a lid of its own that shades flat) */
-function openLoft(secs: Sec[], seg: number, n: number) {
-  const g = loft(secs, seg, n);
-  g.setIndex(Array.from(g.index!.array).slice(0, (secs.length - 1) * seg * 6));
-  g.computeVertexNormals();
-  return g;
-}
-/** A strip between two rings (`flip` faces it inwards): a hat band's wall, its rim, a crown's inside; to a point, a flat lid */
-function ringStrip(a: Sec, b: Sec, seg: number, n: number, flip = false) {
-  const pos: number[] = [];
-  const idx: number[] = [];
-  for (const sec of [a, b]) for (let k = 0; k < seg; k++) pos.push(...ringAt(sec, (k / seg) * Math.PI * 2, n));
-  for (let k = 0; k < seg; k++) {
-    const k1 = (k + 1) % seg;
-    if (flip) idx.push(k, k1, seg + k, k1, seg + k1, seg + k);
-    else idx.push(k, seg + k, k1, k1, seg + k, seg + k1);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  return g;
-}
 /**
  * A brim swept along `seg` steps from its inner edge to its outer one (`at(t)`: both, t 0 to 1, in x and z):
  * a flat top and underside `thick` apart and a rounded outer edge, the inner edge hidden in the crown;
@@ -502,11 +465,6 @@ function meridian(secs: Sec[], n: number, a: number, from: number, r: number, li
 }
 
 const rbox = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0, segs = 2) => new RoundedBoxGeometry(w, h, d, segs, r).translate(x, y, z);
-const flat = (pts: [number, number][], z: number, depth: number) => {
-  const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))), { depth, bevelEnabled: false });
-  g.translate(0, 0, z);
-  return g;
-};
 const mirror = (pts: [number, number][]) => pts.map(([x, y]) => [-x, y] as [number, number]).reverse();
 /** Wider or narrower everywhere, for looser clothes on the same body */
 const grow = (secs: Sec[], k: number, dz = 0): Sec[] => secs.map(([y, hw, hd, z = 0]) => [y, hw * k, hd * k, z + dz]);
@@ -671,13 +629,13 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'ink' | 'helmet';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'ink', 'helmet'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
- * the raised hood (both sides drawn), neon (unlit, coloured per
- * vertex, brighter at night through `neon()`), and on single figures the
+ * the raised hood (both sides drawn), neon (a crowd phone's screen: unlit,
+ * coloured per vertex, brighter at night through `neon()`), and on single figures the
  * merch: marks printed from the logo atlas (`logo`, in the outfit's ink)
  * and the top's all-over print (`pattern`, chosen in createDegen)
  */
@@ -1106,7 +1064,7 @@ export function items(q: Detail, hero = false): Item[] {
   /** Fits worn with joggers and sneakers */
   const casual = (o: Outfit) => o.kind === 'hoodie' || o.kind === 'track' || varsity(o) || puffer(o);
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
-  const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && !o.crown && !o.cowboy && !o.tophat && !o.halo && bare(o);
+  const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && bare(o);
 
   /* ----- Head: the balaclava over a real head shape, the eye opening, the shades ----- */
   const HEAD: Sec[] = [
@@ -1414,29 +1372,6 @@ export function items(q: Detail, hero = false): Item[] {
   ];
   // (snug where the crown is, so it stays round the crown all the way)
   const bucketBand = snug(loft([BUCKET_BAND(0.17), BUCKET_BAND(0.19)], R(20), HN_HAT), 0.168, () => 0.0058);
-  // The crown: a gold band resting on the head where it's wide enough, five points round its top
-  const CROWN_Y = 0.2;
-  const crownBase = (() => {
-    const { hw, zf, zb } = headAt(CROWN_Y);
-    return [CROWN_Y, hw + 0.0045 + SAG, (zf - zb) / 2 + 0.0045 + SAG, (zf + zb) / 2] as Sec;
-  })();
-  const CROWN_H = 0.05;
-  const crownTop: Sec = [CROWN_Y + CROWN_H, crownBase[1] * 1.06, crownBase[2] * 1.06, crownBase[3]];
-  const crownIn = (sec: Sec): Sec => [sec[0], sec[1] - 0.004, sec[2] - 0.004, sec[3]];
-  const CS = R(24);
-  const crown = [
-    ringStrip(crownBase, crownTop, CS, HN_HAT),
-    ringStrip(crownIn(crownBase), crownIn(crownTop), CS, HN_HAT, true),
-    ringStrip(crownTop, crownIn(crownTop), CS, HN_HAT),
-    ...[0, 1, 2, 3, 4].flatMap((k) => {
-      const [x, , z] = ringAt([0, crownTop[1] - 0.002, crownTop[2] - 0.002, crownTop[3]], Math.PI / 2 + (k / 5) * Math.PI * 2, HN_HAT);
-      const y = crownTop[0];
-      return [new THREE.ConeGeometry(0.02, 0.048, R(8)).translate(x, y + 0.024, z), new THREE.SphereGeometry(0.012, R(8), R(6)).translate(x, y + 0.051, z)];
-    }),
-  ];
-  const crownGem = new THREE.SphereGeometry(0.013, R(8), R(6))
-    .scale(1, 1.2, 0.6)
-    .translate(0, CROWN_Y + 0.024, crownBase[3]! + crownBase[2] * 1.03 + 0.004);
   const hoodUp = new THREE.SphereGeometry(0.112, R(18), R(12), Math.PI / 2 + 1.0, Math.PI * 2 - 2.0, 0, Math.PI * 0.74).scale(1, 1.16, 1.12).translate(0, 0.12, -0.012);
   const HELMET: Sec[] = [
     [0.152, 0.101, 0.112, -0.004],
@@ -1983,13 +1918,10 @@ export function items(q: Detail, hero = false): Item[] {
   const boot = shoe(BOOT, SG, 2.8, SS);
   const bootSole = shoe(sole(BOOT, 0.004, 0.008, 0.007), SG, 3.2, SS);
 
-  /* ----- Held things ----- */
+  /* ----- Held things (the crowd's phones and shopping bags; the player's hands hold only weapons) ----- */
   // In the hand's own space (the socket in the palm; the palm is the right hand's -x side, facing his thigh,
-  // the thumb +z): the cup forward of the palm, in the fingers' curl (on the palm side it sank into his leg)
-  // Held things sit in the hand as it closes to hold (docs/clothing-plan.md Phase 5): the cup against the front of
-  // the curled fingers and the thumb, none through it; a handle's bar in the fingers' hook (`HOOK`), the thing
-  // hanging under it
-  const CUP: [number, number, number] = [-0.021, -0.08, 0.06];
+  // the thumb +z), in the hand as it closes to hold (docs/clothing-plan.md Phase 5): a handle's bar in the
+  // fingers' hook (`HOOK`), the thing hanging under it
   const HOOK: [number, number] = [-0.02, -0.026];
   /** A carry handle through the hook, its posts down past the hand's sides to `y` (z0 to z1 along the hand) */
   const handle = (y: number, z0: number, z1: number, r: number) =>
@@ -2006,18 +1938,8 @@ export function items(q: Detail, hero = false): Item[] {
       R(16),
       q === 3 ? 8 : 5
     );
-  const cup = new THREE.CylinderGeometry(0.034, 0.027, 0.11, R(14), q === 3 ? 4 : 1).translate(...CUP);
-  const cupSleeve = new THREE.CylinderGeometry(0.0335, 0.0305, 0.04, R(14)).translate(CUP[0], CUP[1] - 0.005, CUP[2]);
-  const cupTop = [
-    new THREE.SphereGeometry(0.035, R(12), R(6), 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(CUP[0], CUP[1] + 0.055, CUP[2]),
-    // (the straw leaning forward, away from his fingers)
-    new THREE.CylinderGeometry(0.004, 0.004, 0.064, q === 3 ? 8 : 6).translate(0, 0.032, 0).rotateX(0.42).translate(CUP[0], CUP[1] + 0.06, CUP[2] + 0.004),
-  ];
-  const BOOM: [number, number, number] = [HOOK[0], -0.141, 0.005];
-  const boombox = [rb(0.085, 0.15, 0.27, 0.018, ...BOOM), handle(BOOM[1] + 0.075, BOOM[2] - 0.05, BOOM[2] + 0.05, 0.0085)];
-  const speakers = [-0.045, 0.045].flatMap((x) => [-0.075, 0.075].map((z) => new THREE.CylinderGeometry(0.046, 0.046, 0.012, R(16)).rotateZ(Math.PI / 2).translate(BOOM[0] + x, BOOM[1] - 0.005, BOOM[2] + z)));
 
-  /* ----- The premium wardrobe (Drop 001, catalog.ts) ----- */
+  /* ----- The varsity and the puffer ----- */
   /** The varsity's sleeves and ribbing stripe: a fixed cream, a shade under white */
   const CREAM = '#e4dcc4';
   /**
@@ -2328,36 +2250,6 @@ export function items(q: Detail, hero = false): Item[] {
       [-0.15, 0.03, 0],
       [-0.12, 0.05, B],
     ], 0.011);
-    // Wings: two flat wing shapes on the back, swept back, their outlines traced in neon
-    const wingPts: [number, number][] = [
-      [0.015, 0.34],
-      [0.09, 0.44],
-      [0.2, 0.49],
-      [0.3, 0.47],
-      [0.36, 0.4],
-      [0.33, 0.33],
-      [0.36, 0.26],
-      [0.31, 0.2],
-      [0.32, 0.12],
-      [0.24, 0.1],
-      [0.19, 0.15],
-      [0.12, 0.08],
-      [0.06, 0.14],
-      [0.015, 0.1],
-    ];
-    const wingZ = BK(0, 0.25) - 0.02;
-    const wings = [-1, 1].map((s) => {
-      const pts = s > 0 ? wingPts : mirror(wingPts);
-      const plane = flat(pts, -0.003, 0.006)
-        .rotateY(s * 0.45)
-        .translate(0, 0, wingZ);
-      const loop = pts.map(([x, y]): [number, number, number] => [x, y, 0]);
-      loop.push(loop[0]);
-      const edge = tube(loop, 0.0045, R(70), 4)
-        .rotateY(s * 0.45)
-        .translate(0, 0, wingZ);
-      return { plane, edge };
-    });
     const is = (o: Outfit) => o.kind === t.kind;
     const k = t.kind;
     return [
@@ -2374,79 +2266,10 @@ export function items(q: Detail, hero = false): Item[] {
         when: (o) => !!o.duffel && is(o),
         pieces: [P('torso', one([duffelBody, duffelHandle]), 'duffel', CHEST), P('torso', one(duffelEnds), 'duffel', { shade: 0.6, ...CHEST }), P('torso', duffelStrap, 'duffel', { shade: 0.6 })],
       },
-      {
-        id: `wings-${k}`,
-        when: (o) => !!o.wings && is(o),
-        pieces: [P('torso', one(wings.map((v) => v.plane)), 'wings', CHEST), P('torso', one(wings.map((v) => v.edge)), 'lens', { mat: 'neon', ...CHEST })],
-      },
     ];
   });
 
-  // Cowboy hat: a wide brim curled up at the sides, a crown with a crease down the middle, a band with a buckle
-  const COWBOY = fitTo(
-    [
-      [0.165, 0.1, 0.11, -0.004],
-      [0.2, 0.098, 0.108, -0.005],
-      [0.25, 0.088, 0.1, -0.006],
-      [0.29, 0.072, 0.088, -0.007],
-      [0.31, 0.05, 0.07, -0.007],
-      [0.32, 0.004, 0.01, -0.007],
-    ],
-    0.004
-  );
-  const cowboyCrown = snug(loft(q === 3 ? curve(COWBOY, 0.008) : banded(COWBOY, [0.175, 0.188]), R(20), 2.4), 0.168, () => 0.004, 0.02);
-  {
-    const p = cowboyCrown.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < p.count; i++) {
-      const y = p.getY(i);
-      if (y < 0.27) continue;
-      const k = Math.min(1, (y - 0.27) / 0.045);
-      p.setY(i, y - 0.03 * k * Math.max(0, 1 - Math.abs(p.getX(i)) / 0.05));
-    }
-    cowboyCrown.computeVertexNormals();
-  }
-  /** A flat brim that curls up at the sides (and dips a touch front and back), round the band on its middle */
-  const curledBrim = (r: number, curl: number, y: number, z: number) => {
-    const g = new THREE.CylinderGeometry(r, r, 0.008, R(28)).scale(1, 1, 1.08);
-    const p = g.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i);
-      const z = p.getZ(i);
-      p.setY(i, p.getY(i) + x * x * curl - z * z * curl * 0.15);
-    }
-    g.computeVertexNormals();
-    return g.translate(0, y, z);
-  };
-  const cowboyBrim = curledBrim(0.19, 1.6, 0.172, COWBOY[0][3] ?? 0);
-  const BAND = (secs: Sec[], y: number, out = 0.0025): Sec => {
-    const [, hw, hd, z] = secAt(secs, y);
-    return [y, hw + out, hd + out, z];
-  };
-  const cowboyBand = snug(loft([BAND(COWBOY, 0.18), BAND(COWBOY, 0.202)], R(20), 2.4), 0.168, () => 0.0065, 0.02);
-  const buckle = new THREE.BoxGeometry(0.02, 0.016, 0.006).translate(0, 0.191, (BAND(COWBOY, 0.191)[3] ?? 0) + BAND(COWBOY, 0.191)[2] + 0.002);
-
-  // Top hat: a tall crown, wider a touch at the top, on a band fitted to the head, a ribbon round its base
-  const TOPHAT = fitTo(
-    [
-      [0.166, 0.092, 0.0994, -0.006],
-      [0.3, 0.091, 0.098, -0.006],
-      [0.34, 0.094, 0.101, -0.006],
-    ],
-    0.004
-  );
-  const TS = R(22);
-  const tophatTop = TOPHAT[TOPHAT.length - 1];
-  const tophat = [
-    snug(openLoft(q === 3 ? curve(TOPHAT, 0.01) : banded(TOPHAT, [0.174, 0.186, 0.2]), TS, HN_HAT), 0.168, () => 0.004, 0.02),
-    ringStrip(tophatTop, [tophatTop[0], 1e-4, 1e-4, tophatTop[3]], TS, HN_HAT),
-    curledBrim(0.14, 1.1, 0.17, TOPHAT[0][3] ?? 0),
-  ];
-  const tophatBand = snug(loft([BAND(TOPHAT, 0.18, 0.002), BAND(TOPHAT, 0.206, 0.002)], TS, HN_HAT), 0.168, () => 0.006, 0.02);
-
-  // Halo: a thin ring floating above the head, tilted a touch (neon, in the lens colour)
-  const halo = new THREE.TorusGeometry(0.072, 0.008, R(8), R(28)).rotateX(Math.PI / 2 - 0.12).translate(0, 0.305, -0.006);
-
-  // The phone: a slim slab in the hand, tilted up so he can see the screen (the screen glows)
+  // The crowd's phone: a slim slab in the hand, tilted up so they can see the screen (the screen glows)
   const phoneBody = rb(0.046, 0.09, 0.008, 0.004)
     .rotateX(-0.35)
     .translate(-0.004, -0.045, 0.046);
@@ -2454,11 +2277,6 @@ export function items(q: Detail, hero = false): Item[] {
     .translate(0, 0, 0.0045)
     .rotateX(-0.35)
     .translate(-0.004, -0.045, 0.046);
-  // The briefcase: a boxy leather case hanging from the right hand by its handle, gold clasps on top
-  const CASE: [number, number, number] = [HOOK[0], -0.152, 0.005];
-  const briefcaseBody = rb(0.05, 0.17, 0.24, 0.01, ...CASE);
-  const briefcaseHandle = handle(CASE[1] + 0.085, CASE[2] - 0.042, CASE[2] + 0.048, 0.0065);
-  const clasps = [-0.08, 0.08].map((z) => new THREE.BoxGeometry(0.016, 0.014, 0.022).translate(CASE[0] + 0.022, CASE[1] + 0.082, CASE[2] + z));
   // A shopping bag (the crowd's, on Crestmont's Drive): a stiff paper bag hanging by its cord, a band round its top
   const BAG: [number, number, number] = [HOOK[0], -0.172, 0.005];
   const bagBody = rb(0.07, 0.19, 0.2, 0.005, ...BAG);
@@ -2554,11 +2372,6 @@ export function items(q: Detail, hero = false): Item[] {
       id: 'bucket',
       when: (o) => !!o.bucket && bare(o),
       pieces: [P('head', one(bucket), 'bucket'), P('head', bucketBand, BLACK, { detail: true })],
-    },
-    {
-      id: 'crown',
-      when: (o) => !!o.crown && bare(o),
-      pieces: [P('head', one(crown), GOLD), P('head', crownGem, '#d8312f', { detail: true })],
     },
     {
       id: 'beanie',
@@ -2710,19 +2523,6 @@ export function items(q: Detail, hero = false): Item[] {
     // (the necklace, bags, boards and wings on the top he's wearing: each top its own)
     ...OVER,
     {
-      id: 'coffee',
-      held: true,
-      when: (o) => o.held === 'coffee',
-      pieces: [P('handR', cup, WHITE), P('handR', cupSleeve, '#ff6ad5'), P('handR', one(cupTop), WHITE)],
-    },
-    {
-      id: 'boombox',
-      held: true,
-      when: (o) => o.held === 'boombox',
-      pieces: [P('handR', one(boombox), '#2b2a33'), P('handR', one(speakers), '#00d8ff')],
-    },
-    /* The premium wardrobe (Drop 001) */
-    {
       id: 'varsity',
       when: varsity,
       pieces: [
@@ -2753,21 +2553,6 @@ export function items(q: Detail, hero = false): Item[] {
       ],
     },
     {
-      id: 'cowboy',
-      when: (o) => !!o.cowboy && bare(o),
-      pieces: [P('head', one([cowboyCrown, cowboyBrim]), 'cowboy'), P('head', cowboyBand, BLACK, { detail: true }), P('head', buckle, GOLD, { detail: true })],
-    },
-    {
-      id: 'tophat',
-      when: (o) => !!o.tophat && bare(o),
-      pieces: [P('head', one(tophat), 'tophat'), P('head', tophatBand, '#c99a4a', { detail: true })],
-    },
-    {
-      id: 'halo',
-      when: (o) => !!o.halo && bare(o),
-      pieces: [P('head', halo, 'lens', { mat: 'neon' })],
-    },
-    {
       id: 'watch',
       when: (o) => !!o.watch && q > 0,
       pieces: [P('foreL', one([watchBand, watchFace]), GOLD, { detail: true, bone: 'handL' }), P('foreL', watchDial, '#1a1a2a', { detail: true, bone: 'handL' })],
@@ -2777,12 +2562,6 @@ export function items(q: Detail, hero = false): Item[] {
       held: true,
       when: (o) => o.held === 'phone',
       pieces: [P('handR', phoneBody, '#0d0c14'), P('handR', phoneScreen, '#49c2f0', { mat: 'neon' })],
-    },
-    {
-      id: 'briefcase',
-      held: true,
-      when: (o) => o.held === 'briefcase',
-      pieces: [P('handR', briefcaseBody, '#4a2e1a'), P('handR', briefcaseHandle, '#2b1a10'), P('handR', one(clasps), GOLD, { detail: true })],
     },
     {
       id: 'shopping',

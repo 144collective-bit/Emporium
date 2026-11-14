@@ -7,7 +7,7 @@ keep it up to date when what it describes changes.
 
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
   fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
-  Hand, Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
+  Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
   open (still under reduced motion; drag turns him); its idle and walk
   are the crowd pack's captured takes on his bones (`captureplay.ts`:
@@ -27,34 +27,41 @@ keep it up to date when what it describes changes.
   while it's open no other key handler hears the keyboard (Esc never
   stops walking). Check it upright and on its side at phone widths.
 - The look belongs to `profile-ui.ts` (browser and player profile); the
-  fitting room only calls `wear()`. The original wardrobe is free; the
-  premium wardrobe (`WARDROBE_CATALOG` in `catalog.ts`) costs Dorras and
-  needs a level (`buyWardrobe()` in `tycoon.ts`). Everything is cosmetic
-  and only for the city: never tied to the Shopify store or the token, never
-  real money.
-- **The premium wardrobe** (the city's game): Drop 001 also sells
-  `WARDROBE_CATALOG` (catalog.ts) for Dorras earned in the city, each piece
-  with a price and a level: the varsity and puffer fits, the cowboy hat, top
-  hat and neon halo, the duffel bag and neon wings, the phone and briefcase,
-  the gold watch, the Gold and Holo colour packs for tops and bottoms
-  (`PALETTE.gold` / `PALETTE.holo`, `PACKS`, `packOf()`), and the merch:
-  the marks but the diamond and the Sector 7 badge (`markItem()`, ids
-  `mark-<id>`) and the prints (`patternItem()`, `pattern-<id>`), tab
-  `merch`. The look carries
-  them as ordinary values (`cleanLook()` validates, it never checks
-  ownership); owning them is `wardrobe` in the save (`buyWardrobe()` /
-  `ownsWardrobe()`), and the fitting room (`fitting.ts`, with
-  `game: GameDeps`) is what enforces it: cards show the price and `Lv n`,
-  "Buy · 4,000" opens an inline confirm, locked pieces say the level, pack
-  colours sit under a lock in the colour rows, and the head shows your
-  Dorras and level. Styles in `src/styles/fitting.css`. In `character.ts`
-  the pieces are items like any other; neon pieces (the halo, the wings'
-  edges, the phone's screen) share one `neon()` material coloured per
-  vertex in the lens colour, dim by day so they never bloom out of control.
-- A new item needs a `Look` field with its palette and rules in
-  `profile-data.ts` `cleanLook()` (the server checks it too), the mapping in
-  `lookOutfit()`, an item in `items()` in `wardrobe.ts` and an entry in `fitting.ts`
-  `TABS`. One hat (`hat`), one bag (`bag`) and one thing in the hand
-  (`held`) at a time; `cleanLook()` also upgrades looks saved in older
-  formats, so keep its migration when fields change. Held items are put
-  away while Degen carries a gun (`Degen.held`).
+  fitting room only calls `wear()`. Everything is cosmetic and only for the
+  city: never tied to the Shopify store or the token, never real money.
+- **The whole wardrobe is free** (`docs/wardrobe-plan.md` Phase 1, the
+  owner's call, 2026-11): every piece, colour, mark and print, at any
+  level, with no Buy step, no prices, no locks and no Premium header (the
+  premium wardrobe, `WARDROBE_CATALOG`, `buyWardrobe()` and the Dorras in
+  the fitting room's head are gone). The save's `wardrobe` (what was bought
+  before) is kept as a record only, cleaned to short plain ids; nothing
+  reads it, and there were no refunds (the owner's call).
+- **Any colour** (the wardrobe plan's Phase 1): a look's colours are any
+  `#rrggbb`, made safe by `safeColour()` in `profile-data.ts` (lower case;
+  anything brighter than the palette's white, `BRIGHTEST`, dimmed to it
+  with its hue kept, so nothing blooms; every swatch passes as it is), on
+  the browser and the game server alike. `PALETTE` is only the quick
+  swatches. Each colour row ends in a picker (`.sw-pick`, the browser's own
+  `<input type="color">` under a rainbow-edged swatch with a dropper; lit in
+  the colour once it's one off the list); dragging round it changes the
+  look at most every `PICK_EVERY` ms, and at once when it closes. The rows
+  are built again only when they change (another item or tab), so an open
+  picker stays open while the colour goes on him. A worn swatch keeps its
+  own colour in the arcade kit, framed in coin. Styles in
+  `src/styles/fitting.css`.
+- **Retired** (the wardrobe plan's Phase 1, the owner's call): the crown,
+  the halo, the top hat, the cowboy hat, the wings, the Gold and Holo
+  colour packs, and every thing in the hand (the coffee, boombox, phone and
+  briefcase: the Hand tab, the inventory's hand slot and `heldpose.ts`).
+  `cleanLook()` drops them from saved looks (a retired hat is bare-headed,
+  the wings no bag, a pack colour stays the colour it was). His hands hold
+  only weapons; the crowd keeps its phones and shopping bags.
+- A new item needs a `Look` field with its rules in `profile-data.ts`
+  `cleanLook()` (the server checks it too; a colour goes through
+  `safeColour()`, with quick swatches in `PALETTE`), the mapping in
+  `lookOutfit()`, an item in `items()` in `wardrobe.ts` and an entry in
+  `fitting.ts` `TABS`. One hat (`hat`) and one bag (`bag`) at a time;
+  `cleanLook()` also upgrades looks saved in older formats, so keep its
+  migration when fields change. `tests/wardrobe.test.ts` builds random looks
+  at both detail levels and holds the figure to its triangle budget
+  (`BUDGET`): a new piece that would make him heavier says so.

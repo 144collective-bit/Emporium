@@ -101,8 +101,6 @@ import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
 import { MONO_STATIONS } from './monorail';
-import { setHeld } from './inventory-save';
-import type { Held } from '../net/profile-data';
 import { PLACES } from './places';
 import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
@@ -1107,8 +1105,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
     places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y), ...homePlaces(walk.position.y)],
-    // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
-    hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
       if (id.startsWith('lift:ends:')) {
         // (Endswood's lifts, endsdecks.ts: Fennel House's cores, Harrier Point's lift tower)
@@ -1255,12 +1251,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     openFitting: () => open('shop', true),
     openChar: () => charScreen.open(),
   });
-  // The thing in his hand is a hotbar slot: the save's inventory keeps in step with the look (inventory.ts)
-  const syncHeld = (l: { held: Held | null }) => {
-    if (setHeld(game.save(), l.held)) game.commit();
-  };
-  syncHeld(profileUI.look);
-  profileUI.onChange(syncHeld);
   // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
   kartPark.trophies(game.save().karts.trophies);
   const charScreen = createCharScreen({
@@ -1278,7 +1268,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         look: () => profileUI.look,
         apply: (l) => profileUI.wear(l),
         onChange: (fn) => profileUI.onChange(fn),
-        game,
         reduced,
         low: tier === 'low',
       }))

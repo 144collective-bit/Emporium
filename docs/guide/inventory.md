@@ -11,14 +11,13 @@ keep it up to date when what it describes changes.
   inventory) and the controls after it (the owner's call: Tab opens a 4 x 4
   grid with two weapon slots), Phase 2 (fists on the street, below) and
   Phase 3 (sparring partners and styles, below) are built: what Degen carries is the save's
-  `inventory` (v11: two weapon slots, `guns`, either may be empty; the
-  thing in his hand, `held`, kept in step with the look by `setHeld()`; his
+  `inventory` (v11: two weapon slots, `guns`, either may be empty; his
   consumables, `items`; where each thing lies in the grid, `grid`), its
   shape and cleaning in `inventory-save.ts` (the boot's; `GRID_SIZE` 16,
   `GRID_COLS` 4) and its rules in `inventory.ts` (DOM-free, tested in
   `tests/inventory.test.ts`, loaded with the hotbar and the gun store):
   the hotbar's slots in his order (`slots()`: weapon 1, weapon 2, the
-  thing in his hand, the consumables he has; no fists slot: empty hands
+  consumables he has; no fists slot: empty hands
   are the fists; `pickSlot()` (the drawn weapon's key again puts it away),
   `stepKey()` through the weapons and empty hands), the grid (`carried()`,
   `layout()`: what was where stays there, the new in the first free
@@ -62,9 +61,10 @@ keep it up to date when what it describes changes.
   it away), 3-7 the rest, X, the touch Swap button, RB and the d-pad
   step, and the wheel steps while the mouse is captured (free, it still
   sets the camera's distance); first person is the gamepad's right stick
-  click. The thing in his hand puts the gun away and takes that out;
-  which is out isn't saved (walking starts with the thing in his hand
-  out).
+  click. Which gun is out isn't saved. The thing in his hand (its hotbar
+  slot, its grid space, "Hold it") was retired with the wardrobe's held
+  things (`docs/wardrobe-plan.md` Phase 1): `cleanInventory()` drops a
+  saved one and its `held:` space in the grid.
 - The loadout is picked in the inventory or at the gun store's Loadout row
   (gunshop.ts: tap a slot, then a gun, or "Leave it empty"; picking
   gears him up with the first weapon, all full); the guns

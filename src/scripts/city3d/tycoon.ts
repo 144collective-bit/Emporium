@@ -89,14 +89,12 @@ import {
   STYLE_CATALOG,
   STARTER_KARTS,
   UNIT_LEVEL_COSTS,
-  WARDROBE_CATALOG,
   WORKSHOP_LEVEL_COSTS,
   XP,
   carStats,
   kartStats,
   levelFor,
   modCost,
-  wardrobeEntry,
   type CarModId,
   type CarMods,
   type GunModId,
@@ -491,7 +489,10 @@ export interface TycoonSave {
   /** The cars and (vehicle plan Phase 7) the motorbikes you've bought, and their mods */
   garage: { owned: GarageId[]; mods: Partial<Record<GarageId, CarMods>> };
   armoury: { owned: WeaponId[]; mods: Partial<Record<WeaponId, GunMods>> };
-  /** Premium wardrobe items (catalog.ts) you've bought */
+  /**
+   * The premium wardrobe you bought before the whole wardrobe went free (docs/wardrobe-plan.md Phase 1): kept as a
+   * record only; nothing reads it, and nothing is bought into it now
+   */
   wardrobe: string[];
   /** The level of each place you run (1 where unset) */
   levels: Partial<Record<PlaceId, number>>;
@@ -1528,7 +1529,6 @@ export function gearValue(s: TycoonSave) {
     const m = gunMods(s, id);
     for (const k of GUN_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(GUN_CATALOG[id].price, l) ?? 0;
   }
-  for (const id of s.wardrobe) v += wardrobeEntry(id)?.price ?? 0;
   for (const id of s.fight.styles) v += STYLE_CATALOG[id as keyof typeof STYLE_CATALOG]?.price ?? 0;
   return v;
 }
@@ -1927,20 +1927,6 @@ export function modGun(s: TycoonSave, id: WeaponId, mod: GunModId): BuyResult {
   return r;
 }
 
-/* ---------- Drop 001: the premium wardrobe ---------- */
-
-export const ownsWardrobe = (s: TycoonSave, id: string) => s.wardrobe.includes(id);
-export function buyWardrobe(s: TycoonSave, id: string): BuyResult {
-  const w = wardrobeEntry(id);
-  if (!w) return { ok: false, why: 'place' };
-  if (ownsWardrobe(s, id)) return { ok: false, why: 'owned' };
-  const r = pay(s, w.price, w.level, 'clothes');
-  if (!r.ok) return r;
-  s.wardrobe.push(id);
-  count(s, 'bought', 1);
-  return r;
-}
-
 /* ---------- The district plots, retired with Build mode (save v12) ---------- */
 
 /** What a save from before v12 paid for its district plots and what it built on them: given back when it loads */
@@ -1993,7 +1979,8 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     for (const k of GUN_MOD_IDS) mods[k] = Math.round(num(m[k], 0, MOD_LEVELS, 0));
     if (GUN_MOD_IDS.some((k) => mods[k] > 0) && (STARTER_GUNS.includes(id) || s.armoury.owned.includes(id))) s.armoury.mods[id] = mods;
   }
-  s.wardrobe = [...new Set((Array.isArray(o.wardrobe) ? o.wardrobe : []).filter((id): id is string => typeof id === 'string' && WARDROBE_CATALOG.some((w) => w.id === id)))];
+  // (the record of what was bought before the wardrobe went free: short plain ids only)
+  s.wardrobe = [...new Set((Array.isArray(o.wardrobe) ? o.wardrobe : []).filter((id): id is string => typeof id === 'string' && /^[a-z0-9-]{1,24}$/.test(id)))].slice(0, 64);
   // (v12: Build mode retired; the district plots a save owned are refunded in full)
   const refund = plotRefund(o);
   if (refund) {

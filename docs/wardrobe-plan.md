@@ -94,8 +94,8 @@ detail), which stay the record of how the clothes were built.
   levels and no Buy step in the fitting room. The clothing and merch leave
   `WARDROBE_CATALOG`, while `wardrobe` in the save is kept and still read,
   so old saves load.
-- **Dorras already paid for removed pieces:** the owner's call (see the
-  questions below).
+- **Dorras already paid for removed pieces:** no refund (the owner's
+  call); the save's `wardrobe` stays as a record.
 - **The colour picker** on every colour row: a row of quick swatches and a
   picker in the arcade kit (`.mk`), sized for touch, at every width.
   `cleanLook()` and the server take any colour through `safeColour()`.
@@ -103,6 +103,40 @@ detail), which stay the record of how the clothes were built.
   pack colour, odd and bad colours), `safeColour()`, the fitting room's
   cards, and a fuzz test that builds the figure for random looks at both
   detail levels.
+- **As built (14 November 2026):**
+  - `profile-data.ts`: `Hat` and `Bag` without the retired pieces, `Held`,
+    `HELD` and `held` gone from `Look`; `PACKS`, `packOf()` and the gold
+    and holo lists gone; `safeColour()` (any `#rrggbb`, lower case, dimmed
+    to `BRIGHTEST`, the palette's white, if brighter, hue kept) on every
+    colour in `cleanLook()`, the headphones' too; a retired hat comes back
+    bare-headed (`RETIRED_HATS`), the wings as no bag.
+  - `wardrobe.ts`: the crown, halo, cowboy hat, top hat, wings, coffee,
+    boombox and briefcase items and their shapes gone (with the helpers
+    only they used); the crowd keeps its phone (`held: 'phone'`, the
+    `neon` screen) and shopping bag. `heldpose.ts` and its test retired;
+    walk.ts, the lab and `animator.ts` (`addCarry()`) lose the held
+    things' behaviour.
+  - The inventory (`inventory-save.ts`, `inventory.ts`, `inventory-ui.ts`):
+    no hand slot, no `held:` grid spaces, no "Hold it"; a saved one is
+    dropped by `cleanInventory()`.
+  - `catalog.ts` / `tycoon.ts`: `WARDROBE_CATALOG`, `markItem()`,
+    `patternItem()`, `wardrobeEntry()`, `buyWardrobe()` and
+    `ownsWardrobe()` gone; the save's `wardrobe` cleaned to short plain
+    ids, read by nothing, out of the net worth.
+  - `fitting.ts`: no prices, levels, locks, Premium header, confirm row or
+    balance; every colour row ends in the picker (`.sw-pick` in
+    `fitting.css`), worn at most every `PICK_EVERY` (120 ms) while dragged
+    and at once when it closes; the rows built again only when they change,
+    so an open picker stays open. A worn swatch keeps its colour in the
+    arcade kit (a coin frame), where before it lit solid coin and hid it.
+  - Tests: `profile.test.ts` (any colour, `safeColour()`, the retired
+    pieces dropped), `accessories.test.ts` (no retired item drawn),
+    `inventory.test.ts`, `game.test.ts`, `merch.test.ts` and the new
+    `wardrobe.test.ts` (60 random looks a level, cleaned as the server
+    cleans them, dressed at detail 3 and 2: numbers only, nothing retired,
+    nothing in the hand, the colours as picked, under `BUDGET`: 40k
+    triangles on the desktop, 18k on phones; the worst measured 38.2k and
+    16.8k).
 
 ### Phase 2: the three ranges and the separates
 
@@ -198,17 +232,15 @@ A proposed first set; the owner picks what goes in:
   1440px, phones upright and on their side; by day and at night (no
   bloom).
 
-## Open questions for the owner
+## The owner's answers
 
-1. **Dorras paid for pieces that go or go free:** the cowboy hat, top
-   hat, halo, wings, phone, briefcase and packs are removed, and the
-   varsity, puffer, watch, marks and prints become free. Refund each
-   owner the price once, or not? Under free play most were bought for
-   nothing.
-2. **The Gold Watch and the Diamond Chain:** keep them as extras (they're
-   jewellery, not costume)?
-3. **The Phase 5 list:** which pieces first?
+1. **Dorras paid for pieces that went or went free:** no refund.
+2. **The Gold Watch and the Diamond Chain:** kept, as extras.
+3. **Building:** Phase 1 first, shown to the owner before Phase 2.
+4. **Still open:** the Phase 5 list (which pieces first).
 
 ## Status
 
-- Planned, 14 November 2026. No phase is built yet.
+- Planned, 14 November 2026.
+- **Phase 1 (clear out and open up): built**, 14 November 2026, waiting
+  for the owner's look before Phase 2.

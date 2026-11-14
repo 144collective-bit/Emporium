@@ -26,8 +26,8 @@
  * - `buySnack()`: a snack bought at a diner's door or a Night Market stall
  *   (walk mode's prompts, `SNACK_BARS`).
  *
- * The hand (empty or the thing he holds out) is this view's: the save keeps
- * what he carries, not what's out.
+ * What's out (a gun or his empty hands, his fists) is this view's: the save
+ * keeps what he carries, not what's out.
  */
 import { GUN_MODS, GUN_MOD_IDS, ITEM_CATALOG, ITEM_MAX, applyGunMods, type ItemId } from './catalog';
 import { WEAPONS, type Weapon, type WeaponId } from './combat-sim';
@@ -53,16 +53,6 @@ import {
 } from './inventory';
 import { gunMods, type TycoonSave } from './tycoon';
 import { esc, fmt, onTap, repaint, whyNot, type GameDeps } from './ui';
-import type { Held } from '../net/profile-data';
-
-export const HELD_NAMES: Record<Held, string> = { coffee: 'Iced coffee', boombox: 'Boombox', phone: 'Phone', briefcase: 'Briefcase' };
-/** Line icons in a 24 box (the fitting room's Hand tab draws the same) */
-const HELD_ICONS: Record<Held, string> = {
-  coffee: 'M7 8h10l-1.5 13h-7z M6.5 8a5.5 3 0 0 1 11 0 M13 5l2-3 M8 13h8',
-  boombox: 'M3 9h18v10H3z M8 9V6h8v3 M8 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M16 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
-  phone: 'M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z M10 18h4 M9 7l2 3 2-4 2 5',
-  briefcase: 'M3 8h18v12H3z M9 8V5h6v3 M3 13h18 M11 12h2v3h-2z',
-};
 /** A bun with a filling */
 const ITEM_ICONS: Record<ItemId, string> = { snack: 'M4 11a8 5.5 0 0 1 16 0z M3 14h18 M4 17h16a2 2 0 0 1-2 3H6a2 2 0 0 1-2-3z M9 7.5h.01 M13 6.5h.01' };
 
@@ -83,7 +73,6 @@ function statBars(w: Weapon) {
 /** The name a hotbar slot goes by */
 function slotName(x: Slot) {
   if (x.kind === 'gun') return x.weapon ? WEAPONS[x.weapon].short : 'Empty';
-  if (x.kind === 'held') return HELD_NAMES[x.held];
   return ITEM_CATALOG[x.item].name;
 }
 /** A grid key's art, name and count */
@@ -95,7 +84,6 @@ function thing(save: TycoonSave, key: string, ammo?: (id: WeaponId) => [number, 
     const [mag, res] = ammo?.(it.weapon) ?? [w.mag, w.reserve];
     return { art: gunArt(it.weapon), name: WEAPONS[it.weapon].name, short: WEAPONS[it.weapon].short, count: String(mag), about: `${modLine(save, it.weapon)} · ${mag} / ${res}`, stats: statBars(w), it };
   }
-  if (it.kind === 'held') return { art: icon(HELD_ICONS[it.held]), name: HELD_NAMES[it.held], short: HELD_NAMES[it.held], count: '', about: 'Held in your hand', it };
   const n = save.inventory.items[it.item] ?? 0;
   const c = ITEM_CATALOG[it.item];
   return { art: icon(ITEM_ICONS[it.item]), name: c.name, short: c.name, count: `×${n}`, about: `${c.blurb} ${n} of ${ITEM_MAX} · ${fmt.format(c.price)} each`, it };
@@ -112,8 +100,8 @@ export interface GridOpts {
   live: boolean;
   /** What's selected: a grid space (0-15) or a weapon slot (-1, -2) */
   sel?: number | null;
-  /** The weapon slot whose gun is out, and whether the thing in his hand is out */
-  out?: { slot: 0 | 1 | null; held: boolean };
+  /** The weapon slot whose gun is out */
+  out?: { slot: 0 | 1 | null };
   /** Where something was just dropped (it settles with a bounce) */
   land?: number | null;
 }
@@ -138,10 +126,9 @@ export function gridParts(save: TycoonSave, o: GridOpts) {
     .map((k, i) => {
       const t = k ? thing(save, k, o.ammo) : null;
       const on = o.sel === i;
-      const out = !!t && t.it.kind === 'held' && o.out?.held && save.inventory.held === t.it.held;
       return (
-        `<${tag} class="inv-cell${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${out ? ' is-out' : ''}${o.land === i ? ' is-landed' : ''}" data-cell="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="${t ? esc(t.name) : `Space ${i + 1}: empty`}">` +
-        (t ? `<span class="inv-art">${t.art}</span><span class="inv-name">${esc(t.short)}</span>${t.count ? `<span class="inv-count">${t.count}</span>` : ''}${out ? '<span class="inv-badge">Out</span>' : ''}` : '') +
+        `<${tag} class="inv-cell${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${o.land === i ? ' is-landed' : ''}" data-cell="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="${t ? esc(t.name) : `Space ${i + 1}: empty`}">` +
+        (t ? `<span class="inv-art">${t.art}</span><span class="inv-name">${esc(t.short)}</span>${t.count ? `<span class="inv-count">${t.count}</span>` : ''}` : '') +
         `</${end}>`
       );
     })
@@ -200,8 +187,6 @@ export interface HotbarDeps {
   game: GameDeps;
   combat: HotbarCombat;
   touched(): void;
-  /** Put a thing in his hand (the look's `held`, which the save follows) */
-  hold(held: Held): void;
   /** The inventory opened (free the mouse, stand him still) and closed */
   opened(): void;
   closed(): void;
@@ -222,8 +207,6 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   const weaponsEl = panel.querySelector<HTMLElement>('[data-inv-weapons]')!;
   const gridEl = panel.querySelector<HTMLElement>('[data-inv-grid]')!;
   const infoEl = panel.querySelector<HTMLElement>('[data-inv-info]')!;
-  /** With no gun out: his hands empty (his fists) or the thing he holds out */
-  let hand: 'hands' | 'held' = 'held';
   let shown = '';
   let open = false;
   /** Selected in the inventory: a grid space (0-15) or a weapon slot (-1 slot 1, -2 slot 2) */
@@ -241,7 +224,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   function current() {
     const g = save().inventory.guns;
     if (d.combat.armed) return d.combat.weapon === g[1] && g[1] !== g[0] ? 'gun1' : d.combat.weapon === g[0] ? 'gun0' : 'hands';
-    return hand === 'held' && save().inventory.held ? 'held' : 'hands';
+    return 'hands';
   }
   const outSlot = (): 0 | 1 | null => {
     const c = current();
@@ -249,16 +232,10 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   };
   /** Nothing in his hands: his fists */
   function hands() {
-    hand = 'hands';
     d.combat.holster();
   }
   function drawGun(w: WeaponId) {
     if (!d.combat.draw(w)) d.game.toast(`The ${WEAPONS[w].name} isn't unlocked yet.`);
-  }
-  function holdOut(h: Held) {
-    if (save().inventory.held !== h) d.hold(h);
-    hand = 'held';
-    d.combat.holster();
   }
   function pickAt(x: Slot | undefined) {
     const a = pickSlot(x);
@@ -270,10 +247,6 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
         // (the gun out already: put it away, empty hands)
         if (at === slotKey(x)) hands();
         else drawGun(a.weapon);
-        break;
-      case 'held':
-        if (at === 'held') hand = 'hands';
-        else holdOut(a.held);
         break;
       case 'empty':
         // (empty hands are his fists: the gun out goes away)
@@ -354,7 +327,6 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
       const first = !g[0] ? 0 : !g[1] ? 1 : out === 0 ? 1 : 0;
       return [first, 1 - first].map((k) => ({ id: `slot${k}`, label: `${g[k] ? 'Swap' : 'To'} slot ${k + 1}` }));
     }
-    if (t.it.kind === 'held') return [current() === 'held' && save().inventory.held === t.it.held ? { id: 'away', label: 'Put away' } : { id: 'hold', label: 'Hold it' }];
     return [{ id: 'use', label: 'Use' }];
   }
   /** A right-click's quick move: a weapon back in the bag, the rest their first action */
@@ -379,7 +351,6 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     }
     if (id === 'draw' && t.it.kind === 'gun') drawGun(t.it.weapon);
     else if (id === 'away') hands();
-    else if (id === 'hold' && t.it.kind === 'held') holdOut(t.it.held);
     else if (id === 'use' && t.it.kind === 'item') useOne(d.game, t.it.item);
     paint();
   }
@@ -405,7 +376,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
         list
           .map((x, i) => {
             const k = slotKey(x);
-            const art = x.kind === 'gun' ? (x.weapon ? gunArt(x.weapon) : '') : x.kind === 'held' ? icon(HELD_ICONS[x.held]) : icon(ITEM_ICONS[x.item]);
+            const art = x.kind === 'gun' ? (x.weapon ? gunArt(x.weapon) : '') : icon(ITEM_ICONS[x.item]);
             // (a gun's count is its magazine; its reserve under it, shown on phones where the header leaves it out)
             const ammo = x.kind === 'gun' && x.weapon ? d.combat.ammo(x.weapon) : null;
             const count = ammo ? `<span class="hb-count">${ammo[0]}</span><small class="hb-res">/${ammo[1]}</small>` : x.kind === 'item' ? `<span class="hb-count">×${x.n}</span>` : '';
@@ -419,7 +390,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
       );
     }
     if (!open) return;
-    const out = { slot: outSlot(), held: now === 'held' };
+    const out = { slot: outSlot() };
     const landing = land.at !== null && performance.now() - land.t < LAND_MS ? land.at : null;
     const { weapons, cells } = gridParts(s, { ammo: (w) => d.combat.ammo(w), may, live: true, sel, out, land: landing });
     repaint(weaponsEl, weapons);
@@ -634,17 +605,12 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     step,
     /** Per frame on foot: the bar (and the inventory while it's open) kept up to date */
     update: paint,
-    /** The thing in his hand is out (no gun drawn, and his hand on it) */
-    get heldOut() {
-      return !d.combat.armed && hand === 'held';
-    },
-    /** Nothing in his hands (no gun drawn, nothing held out): his fists (brawl.ts) */
+    /** Nothing in his hands (no gun drawn): his fists (brawl.ts) */
     get handsEmpty() {
-      return !d.combat.armed && (hand === 'hands' || !save().inventory.held);
+      return !d.combat.armed;
     },
-    /** Walking starts with the thing in his hand out, as before the inventory */
+    /** Walking starts with the bar painted afresh */
     reset() {
-      hand = 'held';
       shown = '';
     },
     /** The inventory (Tab, the Bag button, View on a gamepad) */

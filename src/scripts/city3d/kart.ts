@@ -666,10 +666,10 @@ export function createKartRace(d: KartRaceDeps): KartRace {
 
   /**
    * You as a driver (docs/kart-west-plan.md Phase 6): your helmet and your race suit (a track suit in its colour) over
-   * your own look, no hat, hood, bag or wings under the helmet
+   * your own look, no hat, hood or bag under the helmet
    */
   function driverOutfit(o: Outfit, look: KartLook): Outfit {
-    return { ...o, kind: 'track', top: look.suit, bottom: look.suit, helmet: look.helmet, cap: undefined, beanie: undefined, bucket: undefined, cowboy: undefined, tophat: undefined, halo: false, hood: false, headphones: undefined, backpack: undefined, crossbody: undefined, board: undefined, duffel: undefined, wings: undefined };
+    return { ...o, kind: 'track', top: look.suit, bottom: look.suit, helmet: look.helmet, cap: undefined, beanie: undefined, bucket: undefined, hood: false, headphones: undefined, backpack: undefined, crossbody: undefined, board: undefined, duffel: undefined };
   }
   /** The boost flames in your trail's colour (the rivals' are the plain ones) */
   const trailMats = new Map<string, THREE.Material>();

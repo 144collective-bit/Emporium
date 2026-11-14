@@ -1,8 +1,15 @@
-// Player profiles (profile-data.ts): the look validator the site and the game server share,
-// with the premium wardrobe and the colour packs, and its migration of older saves.
+// Player profiles (profile-data.ts): the look validator the site and the game server share, any colour held
+// under white (`safeColour()`), the retired pieces dropped (docs/wardrobe-plan.md Phase 1), and its migration of
+// older saves.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BAGS, DEFAULT_LOOK, HATS, HELD, KINDS, PACKS, PACK_IDS, PALETTE, cleanLook, guestName, isGuestName, packOf } from '../src/scripts/net/profile-data';
+import { BAGS, BRIGHTEST, DEFAULT_LOOK, HATS, KINDS, PALETTE, cleanLook, guestName, isGuestName, safeColour } from '../src/scripts/net/profile-data';
+
+/** A colour's brightness as `safeColour()` weighs it */
+const lumOf = (c: string) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
 
 test('garbage becomes the default look', () => {
   assert.deepEqual(cleanLook(null), DEFAULT_LOOK);
@@ -22,16 +29,16 @@ test('garbage becomes the default look', () => {
     lens: '#fff',
     bag: 'suitcase',
     bagColor: 'blue',
-    held: 'sword',
     headphones: 'on',
     chain: 'no',
     necklace: 1,
     watch: 'yes',
   });
-  // (a chain field that's there but isn't `true` is off: only a missing one means Degen's own)
-  assert.deepEqual(bad, { ...DEFAULT_LOOK, chain: false });
+  // (a chain field that's there but isn't `true` is off: only a missing one means Degen's own; any well-formed colour is
+  // kept, so the bottom and the hat keep theirs)
+  assert.deepEqual(bad, { ...DEFAULT_LOOK, bottom: '#123456', hatColor: '#000000', chain: false });
   assert.equal(cleanLook({ kind: 'cape' }).chain, true);
-  // The default look has no premium pieces on
+  // The default look has no watch on
   assert.equal(DEFAULT_LOOK.watch, false);
   assert.equal(DEFAULT_LOOK.kind, 'suit');
 });
@@ -41,15 +48,11 @@ test('the default look is itself valid and comes back unchanged', () => {
   assert.deepEqual(cleanLook(JSON.parse(JSON.stringify(DEFAULT_LOOK))), DEFAULT_LOOK);
 });
 
-test('the premium wardrobe is accepted: kinds, hats, bags, held things and the watch', () => {
+test('every fit, hat and bag is accepted, and the watch', () => {
   for (const kind of KINDS) assert.equal(cleanLook({ ...DEFAULT_LOOK, kind }).kind, kind);
-  assert.ok(KINDS.includes('varsity') && KINDS.includes('puffer'));
+  assert.deepEqual(KINDS, ['suit', 'hoodie', 'track', 'varsity', 'puffer']);
   for (const hat of HATS) assert.equal(cleanLook({ ...DEFAULT_LOOK, hat }).hat, hat);
-  for (const hat of ['cowboy', 'tophat', 'halo'] as const) assert.ok(HATS.includes(hat));
   for (const bag of BAGS) assert.equal(cleanLook({ ...DEFAULT_LOOK, bag }).bag, bag);
-  for (const bag of ['duffel', 'wings'] as const) assert.ok(BAGS.includes(bag));
-  for (const held of HELD) assert.equal(cleanLook({ ...DEFAULT_LOOK, held }).held, held);
-  for (const held of ['phone', 'briefcase'] as const) assert.ok(HELD.includes(held));
   assert.equal(cleanLook({ ...DEFAULT_LOOK, watch: true }).watch, true);
   assert.equal(cleanLook({ ...DEFAULT_LOOK, watch: false }).watch, false);
   // The watch is a plain boolean: anything else is off
@@ -61,28 +64,50 @@ test('the premium wardrobe is accepted: kinds, hats, bags, held things and the w
   assert.equal(cleanLook(older).watch, false);
 });
 
-test('the colour packs pass for tops and bottoms, and only there', () => {
-  assert.deepEqual(PACK_IDS, ['gold', 'holo']);
-  for (const id of PACK_IDS) {
-    assert.ok(PACKS[id].length >= 4, `${id} pack has colours`);
-    for (const c of PACKS[id]) {
-      assert.equal(cleanLook({ ...DEFAULT_LOOK, top: c }).top, c);
-      assert.equal(cleanLook({ ...DEFAULT_LOOK, bottom: c }).bottom, c);
-      assert.equal(packOf(c), id);
-      // Pack colours are not shades, ties, kicks, hats or bag colours
-      assert.equal(cleanLook({ ...DEFAULT_LOOK, tie: c }).tie, DEFAULT_LOOK.tie);
-      assert.equal(cleanLook({ ...DEFAULT_LOOK, shoes: c }).shoes, DEFAULT_LOOK.shoes);
-      assert.equal(cleanLook({ ...DEFAULT_LOOK, hatColor: c }).hatColor, DEFAULT_LOOK.hatColor);
-      assert.equal(cleanLook({ ...DEFAULT_LOOK, bagColor: c }).bagColor, DEFAULT_LOOK.bagColor);
-      assert.equal(cleanLook({ ...DEFAULT_LOOK, lens: c }).lens, DEFAULT_LOOK.lens);
-    }
+test('the retired pieces are gone, and looks that wore them lose them (the wardrobe plan, Phase 1)', () => {
+  assert.deepEqual(HATS, ['cap', 'backcap', 'beanie', 'bucket']);
+  assert.deepEqual(BAGS, ['backpack', 'crossbody', 'board', 'duffel']);
+  // A retired hat comes back bare-headed (not the default cap: he took his hat off for it)
+  for (const hat of ['crown', 'cowboy', 'tophat', 'halo']) assert.equal(cleanLook({ ...DEFAULT_LOOK, hat }).hat, null, hat);
+  // The wings come back as no bag
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, bag: 'wings' }).bag, null);
+  // Nothing in the hand: a look that held something has no such field any more
+  for (const held of ['coffee', 'boombox', 'phone', 'briefcase', 'gummy']) assert.equal('held' in cleanLook({ ...DEFAULT_LOOK, held }), false, held);
+  assert.equal('held' in DEFAULT_LOOK, false);
+  // The gold and holo pack colours stay as the colours they were
+  for (const c of ['#e2b04a', '#8c5a2b', '#b9f3ff', '#ffc6f2']) {
+    assert.equal(cleanLook({ ...DEFAULT_LOOK, top: c }).top, c);
+    assert.equal(cleanLook({ ...DEFAULT_LOOK, bottom: c }).bottom, c);
   }
-  // The free colours are free: no pack
-  for (const c of [...PALETTE.top, ...PALETTE.bottom]) assert.equal(packOf(c), null);
-  // The packs don't overlap each other or the free lists
-  const all = [...PALETTE.top, ...PALETTE.bottom, ...PALETTE.gold, ...PALETTE.holo].map((c) => c.toLowerCase());
-  for (const c of PALETTE.gold) assert.ok(!PALETTE.holo.includes(c));
-  for (const c of [...PALETTE.gold, ...PALETTE.holo]) assert.equal(all.filter((x) => x === c.toLowerCase()).length, 1, `${c} listed once`);
+  assert.equal('gold' in PALETTE || 'holo' in PALETTE, false);
+});
+
+test('any colour goes on every piece, held a shade under white (the wardrobe plan, Phase 1)', () => {
+  const keys = ['top', 'bottom', 'tie', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const;
+  for (const c of ['#123456', '#00ff00', '#ff00ff', '#000000', '#7f7f7f', '#3a2418'])
+    for (const k of keys) assert.equal(cleanLook({ ...DEFAULT_LOOK, [k]: c })[k], c, `${k} ${c}`);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, headphones: '#123456' }).headphones, '#123456');
+  // Upper case comes back lower case
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, top: '#ABCDEF' }).top, '#abcdef');
+  // Not a colour: the default (headphones: none)
+  for (const v of ['red', '#fff', '#12345', '#1234567', '#gggggg', 'rgb(1,2,3)', 7, null, {}, ' #123456'])
+    for (const k of keys) assert.equal(cleanLook({ ...DEFAULT_LOOK, [k]: v })[k], DEFAULT_LOOK[k], `${k} ${String(v)}`);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, headphones: '#fff' }).headphones, null);
+  // Pure white and the brightest colours are dimmed to the palette's white, their hue kept
+  const white = safeColour('#ffffff')!;
+  assert.ok(lumOf(white) <= BRIGHTEST + 1e-9);
+  assert.ok(lumOf(white) > BRIGHTEST - 3, 'still white');
+  assert.equal(white.slice(1, 3), white.slice(3, 5));
+  for (const c of ['#ffffff', '#fffffe', '#f8fff8', '#ffffaa', '#eeffff']) {
+    const out = safeColour(c)!;
+    assert.match(out, /^#[0-9a-f]{6}$/);
+    assert.ok(lumOf(out) <= BRIGHTEST + 1e-9, `${c} -> ${out}`);
+    assert.equal(cleanLook({ ...DEFAULT_LOOK, top: c }).top, out);
+  }
+  // Every swatch the fitting room offers passes as it is
+  for (const list of Object.values(PALETTE)) for (const c of list) assert.equal(safeColour(c), c, c);
+  // Safe twice is the same as once
+  for (const c of ['#ffffff', '#123456', '#ffe0f0']) assert.equal(safeColour(safeColour(c)), safeColour(c));
 });
 
 test('every palette colour is a lower-case six-digit hex', () => {
@@ -98,17 +123,15 @@ test('hood and tie follow the fit', () => {
   assert.equal(cleanLook({ ...DEFAULT_LOOK, kind: 'puffer', tie: '#e219e5' }).tie, '#e219e5');
 });
 
-test('null means none for the hat, bag, held thing and headphones', () => {
-  const l = cleanLook({ ...DEFAULT_LOOK, hat: null, bag: null, held: null, headphones: null });
+test('null means none for the hat, bag and headphones', () => {
+  const l = cleanLook({ ...DEFAULT_LOOK, hat: null, bag: null, headphones: null });
   assert.equal(l.hat, null);
   assert.equal(l.bag, null);
-  assert.equal(l.held, null);
   assert.equal(l.headphones, null);
-  // Unknown values fall back: the default hat and held thing, no bag
-  const u = cleanLook({ ...DEFAULT_LOOK, hat: 'fez', bag: 'suitcase', held: 'sword', headphones: 'on' });
+  // Unknown values fall back: the default hat, no bag
+  const u = cleanLook({ ...DEFAULT_LOOK, hat: 'fez', bag: 'suitcase', headphones: 'on' });
   assert.equal(u.hat, DEFAULT_LOOK.hat);
   assert.equal(u.bag, null);
-  assert.equal(u.held, DEFAULT_LOOK.held);
   assert.equal(u.headphones, null);
 });
 
@@ -128,10 +151,6 @@ test('looks saved in older formats are upgraded', () => {
   const cross = cleanLook({ kind: 'suit', crossbody: '#8f3dff' });
   assert.equal(cross.bag, 'crossbody');
   assert.equal(cross.bagColor, '#8f3dff');
-  // Empty-handed by default; the gummy bag was retired, so looks that held it come back empty
-  assert.equal(cleanLook({ kind: 'suit' }).held, null);
-  assert.equal(cleanLook({ kind: 'suit', held: 'gummy' }).held, null);
-  assert.equal(cleanLook({ kind: 'suit', held: 'coffee' }).held, 'coffee');
   // Older looks never had a watch
   assert.equal(capped.watch, false);
   // The fields a newer look carries win over the old ones

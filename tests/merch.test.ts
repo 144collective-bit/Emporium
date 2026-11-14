@@ -1,10 +1,9 @@
 // The merch (character rebuild Phase 4): the marks, where they go, their inks and the all-over prints are
 // ordinary Look values that cleanLook() checks (the game server too) and fills in for looks saved before them;
-// the premium ones are on sale at Drop 001 for Dorras with a level, and the free ones aren't.
+// every one is free (docs/wardrobe-plan.md Phase 1), and the ink can be any colour.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_LOOK, MARK_IDS, PALETTE, PATTERN_IDS, SLOT_IDS, cleanLook } from '../src/scripts/net/profile-data';
-import { WARDROBE_CATALOG, markItem, patternItem, wardrobeEntry } from '../src/scripts/city3d/catalog';
 
 test('the default look is Degen as in the art: the diamond on his cap, nothing else', () => {
   assert.equal(DEFAULT_LOOK.hatMark, 'diamond');
@@ -27,7 +26,7 @@ test('a look saved before the merch gets the defaults; every merch value round-t
 });
 
 test('anything else is turned away: unknown marks, places, inks and prints', () => {
-  const l = cleanLook({ ...DEFAULT_LOOK, mark: 'swoosh', markAt: 'forehead', ink: '#123456', hatMark: '<b>', shoeMark: 7, pattern: 'leopard' });
+  const l = cleanLook({ ...DEFAULT_LOOK, mark: 'swoosh', markAt: 'forehead', ink: 'teal', hatMark: '<b>', shoeMark: 7, pattern: 'leopard' });
   assert.equal(l.mark, null);
   assert.equal(l.markAt, 'chest');
   assert.equal(l.ink, DEFAULT_LOOK.ink);
@@ -36,25 +35,14 @@ test('anything else is turned away: unknown marks, places, inks and prints', () 
   assert.equal(l.pattern, 'plain');
   // Taking a mark off stays off
   assert.equal(cleanLook({ ...DEFAULT_LOOK, mark: 'bolt', shoeMark: null }).shoeMark, null);
+  // Any colour of ink
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, ink: '#123456' }).ink, '#123456');
 });
 
-test('the premium marks and prints are on sale with a price and a level; the free ones are not', () => {
-  for (const m of MARK_IDS) {
-    const id = markItem(m);
-    if (m === 'diamond' || m === 'seven') assert.equal(id, null);
-    else {
-      const w = wardrobeEntry(id!);
-      assert.ok(w && w.tab === 'merch' && w.price > 0 && w.level >= 1, m);
-    }
-  }
-  for (const p of PATTERN_IDS) {
-    const id = patternItem(p);
-    if (p === 'plain') assert.equal(id, null);
-    else assert.ok(wardrobeEntry(id!)?.tab === 'merch', p);
-  }
-  // Nothing on the merch tab that isn't a mark or a print
-  for (const w of WARDROBE_CATALOG.filter((w) => w.tab === 'merch'))
-    assert.ok(MARK_IDS.some((m) => markItem(m) === w.id) || PATTERN_IDS.some((p) => patternItem(p) === w.id), w.id);
+test('every mark and print is free: none is sold', async () => {
+  const catalog = await import('../src/scripts/city3d/catalog');
+  for (const k of ['WARDROBE_CATALOG', 'markItem', 'patternItem', 'wardrobeEntry']) assert.equal(k in catalog, false, k);
+  assert.ok(MARK_IDS.length >= 8 && PATTERN_IDS.length >= 5);
 });
 
 test('every mark has its art, and the logo atlas has a cell for each', async () => {

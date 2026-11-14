@@ -19,7 +19,6 @@ import type { BikeId } from './mybike';
 import type { KartId } from './mykart';
 import type { BotTraits } from './fight-sim';
 import type { StyleId } from './fight-moves';
-import type { MarkId, PatternId } from '../net/profile-data';
 import { FREE_PLAY } from './freeplay';
 
 /* ---------- XP, levels and titles ---------- */
@@ -333,46 +332,8 @@ export function applyGunMods(w: Weapon, mods: GunMods): Weapon {
 
 /* ---------- Clothes (Drop 001) ---------- */
 
-export type WardrobeTab = 'fit' | 'head' | 'bag' | 'hand' | 'extras' | 'colours' | 'merch';
-export interface WardrobeEntry {
-  id: string;
-  name: string;
-  price: number;
-  level: number;
-  tab: WardrobeTab;
-  pitch: string;
-}
-/** The premium wardrobe: everything the original fitting room didn't have. Ids are the Look values they put on. */
-export const WARDROBE_CATALOG: WardrobeEntry[] = [
-  { id: 'varsity', name: 'Varsity Jacket', price: 4000, level: 2, tab: 'fit', pitch: 'Letterman jacket, striped cuffs' },
-  { id: 'puffer', name: 'Puffer Jacket', price: 6500, level: 3, tab: 'fit', pitch: 'Quilted and shiny' },
-  { id: 'cowboy', name: 'Cowboy Hat', price: 2500, level: 1, tab: 'head', pitch: 'Wide brim' },
-  { id: 'tophat', name: 'Top Hat', price: 3500, level: 2, tab: 'head', pitch: 'The Kingpin look' },
-  { id: 'halo', name: 'Neon Halo', price: 9000, level: 6, tab: 'head', pitch: 'A neon ring overhead' },
-  { id: 'duffel', name: 'Duffel Bag', price: 3000, level: 2, tab: 'bag', pitch: 'A big bag' },
-  { id: 'wings', name: 'Neon Wings', price: 25000, level: 12, tab: 'bag', pitch: 'Glowing wings on your back' },
-  { id: 'phone', name: 'Phone', price: 1000, level: 1, tab: 'hand', pitch: 'Always in hand' },
-  { id: 'briefcase', name: 'Briefcase', price: 5000, level: 4, tab: 'hand', pitch: 'Serious business' },
-  { id: 'watch', name: 'Gold Watch', price: 8000, level: 5, tab: 'extras', pitch: 'A heavy gold watch' },
-  { id: 'gold', name: 'Gold Pack', price: 10000, level: 7, tab: 'colours', pitch: 'Gold and bronze colours' },
-  { id: 'holo', name: 'Holo Pack', price: 6000, level: 4, tab: 'colours', pitch: 'Holographic pastel colours' },
-  // The merch (character Phase 4): marks for the clothes (the Emporium diamond and the Sector 7 badge are free)
-  // and all-over prints for the top. Placeholders in the city's style until the merch store's designs go in.
-  { id: 'mark-bolt', name: 'Bolt Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A lightning bolt' },
-  { id: 'mark-star', name: 'Star Mark', price: 1500, level: 1, tab: 'merch', pitch: 'A five-point star' },
-  { id: 'mark-heart', name: 'Heart Mark', price: 2000, level: 2, tab: 'merch', pitch: 'A heart' },
-  { id: 'mark-wave', name: 'Wave Mark', price: 2500, level: 2, tab: 'merch', pitch: 'Three rolling waves' },
-  { id: 'mark-eye', name: 'Eye Mark', price: 3500, level: 3, tab: 'merch', pitch: 'A watching eye' },
-  { id: 'mark-mask', name: 'Degen Mask Mark', price: 5000, level: 4, tab: 'merch', pitch: 'The balaclava and shades' },
-  { id: 'pattern-stripes', name: 'Stripes Print', price: 3000, level: 2, tab: 'merch', pitch: 'Bold stripes all over' },
-  { id: 'pattern-checks', name: 'Checks Print', price: 4000, level: 3, tab: 'merch', pitch: 'Checks all over' },
-  { id: 'pattern-fade', name: 'Fade Print', price: 5000, level: 4, tab: 'merch', pitch: 'Dark to light, hem to shoulders' },
-  { id: 'pattern-camo', name: 'Camo Print', price: 7500, level: 5, tab: 'merch', pitch: 'City camo' },
-];
-/** A mark's or a print's catalog id (null for the free ones) */
-export const markItem = (id: MarkId): string | null => (id === 'diamond' || id === 'seven' ? null : `mark-${id}`);
-export const patternItem = (id: PatternId): string | null => (id === 'plain' ? null : `pattern-${id}`);
-export const wardrobeEntry = (id: string) => WARDROBE_CATALOG.find((w) => w.id === id) ?? null;
+// (none for sale: the whole wardrobe, its colours, marks and prints are free and open to everyone,
+// docs/wardrobe-plan.md Phase 1; fitting.ts)
 
 /* ---------- Consumables (the inventory, docs/inventory-plan.md) ---------- */
 
@@ -415,7 +376,7 @@ export const LEVEL_SPEED = [1, 1.3, 1.6];
 
 // (after the starters are worked out from the real prices: the rest still have to be bought, for nothing)
 if (FREE_PLAY) {
-  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(BIKE_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...WARDROBE_CATALOG, ...Object.values(ITEM_CATALOG), ...Object.values(STYLE_CATALOG)]) {
+  for (const c of [...Object.values(CAR_CATALOG), ...Object.values(BIKE_CATALOG), ...Object.values(KART_CATALOG), ...Object.values(GUN_CATALOG), ...Object.values(ITEM_CATALOG), ...Object.values(STYLE_CATALOG)]) {
     c.price = 0;
     c.level = 1;
   }

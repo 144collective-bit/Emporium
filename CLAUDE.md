@@ -81,7 +81,7 @@ it and has been retired completely. Build only on what's here.
 | The inventory, fists on the street, sparring partners, free play | `docs/guide/inventory.md` |
 | Target practice, the guns, the gun store, the Fight Club | `docs/guide/combat.md` |
 | Dorras, the market, units, lots, contracts, staff, the Vault, missions, Getting started, the save and its backup | `docs/guide/economy.md` |
-| Drop 001's fitting room, the character screen, the premium wardrobe | `docs/guide/fitting-room.md` |
+| Drop 001's fitting room, the character screen, the free wardrobe, any colour (`docs/wardrobe-plan.md`) | `docs/guide/fitting-room.md` |
 | Menus, the start menu, the header, the hub, pins, touch controls, views, keys | `docs/guide/menus.md` |
 | Bloom, z-fighting, cut-out signs, the comic page, palette, type, styles | `docs/guide/visual-rules.md` |
 | Phones, start-up, lazy chunks, baked data, textures, draw calls, shadows, near and far, sites, building kits, lazy districts, `?fps`, `?bench`, the snapshot | `docs/guide/performance.md` |

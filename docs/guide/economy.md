@@ -55,9 +55,9 @@ keep it up to date when what it describes changes.
   at a time earns no more than its sales; `Sales.soldOut` / `bonus` tell
   the screens). Existing saves keep their Dorras.
 - **The city's game (Phase 5)** sits on the same save: XP and levels
-  (`xp`, `level()`, `addXp()`), owned cars, guns and clothes with their mods
-  (`buyCar()` / `modCar()` / `carStatsOf()`, `buyGun()` / `modGun()`,
-  `buyWardrobe()`), levels for the places you run (`upgradePlace()`,
+  (`xp`, `level()`, `addXp()`), owned cars and guns with their mods
+  (`buyCar()` / `modCar()` / `carStatsOf()`, `buyGun()` / `modGun()`; the
+  clothes are all free since `docs/wardrobe-plan.md` Phase 1), levels for the places you run (`upgradePlace()`,
   `capOf()`, `capacityMul()`), missions, badges and the
   `counters` everything watches (`count()`, `takedown()`). Prices, the
   level each thing needs, the XP curve and what each mod does are

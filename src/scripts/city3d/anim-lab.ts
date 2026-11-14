@@ -29,15 +29,15 @@
  *   program in turn (REEL), for a recording in one take.
  * - The address can set it all up for recordings: `prog` (`reel` for the
  *   reel), `gait`, `cam`, `floor`, `speed`, `gun`, `aim=0`, `pitch`,
- *   `outfit`, `held`, `orbit`, `compare=0`, `traces=0`, `score=0`,
+ *   `outfit`, `orbit`, `compare=0`, `traces=0`, `score=0`,
  *   `at`, `clip`, the clipping view (the top, trousers and shoes in colours far
  *   apart: docs/clothing-plan.md), and `detail=2`, the clothes as a phone
  *   builds them (the desktop's, 3, by default).
  */
 import * as THREE from 'three';
 import { FIGURE_SCALE } from './skeleton';
-import { HOLDING, PLAYER, SOLDIER, createDegen, type Degen } from './character';
-import { addCarry, addLean, addLook, applyTo, chestYaw, createAnimator, type Animator } from './animator';
+import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
+import { addLean, addLook, applyTo, chestYaw, createAnimator, type Animator } from './animator';
 import { createFollow } from './follow';
 import { ADULT_SCALE, createRubric, type Row } from './human';
 import { createGaze } from './gaze';
@@ -539,9 +539,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   buildFloor();
 
   // (`outfit=hoodie|track|varsity|puffer|soldier` in the address: the player's look in another kind of top)
-  // (`held=coffee|boombox|phone|briefcase`: something in his right hand)
   const kind = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'soldier'] as const).find((k) => k === q.get('outfit'));
-  const held = (['coffee', 'boombox', 'phone', 'briefcase'] as const).find((h) => h === q.get('held'));
   // (`clip`: the clipping view, docs/clothing-plan.md: the top, the trousers and the shoes in colours far apart, so a
   // layer coming through another shows at a glance)
   const clip = q.has('clip') ? { top: '#d0463e', bottom: '#3f73c8', shoes: '#ece9e0', tie: '#f2c230' } : {};
@@ -550,9 +548,9 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const wear: Record<string, string | boolean | undefined> = {};
   for (const w of (q.get('wear') ?? '').split(',').filter(Boolean)) {
     const [k, v] = w.split(':');
-    wear[k] = v === '' ? undefined : v ?? (['crown', 'halo', 'hood', 'chain', 'necklace', 'watch', 'capBack'].includes(k) ? true : '#4f7fd0');
+    wear[k] = v === '' ? undefined : v ?? (['hood', 'chain', 'necklace', 'watch', 'capBack'].includes(k) ? true : '#4f7fd0');
   }
-  const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), held, ...(wear as {}), ...clip };
+  const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), ...(wear as {}), ...clip };
   const detail = q.get('detail') === '2' ? 2 : 3;
   const hero: Degen = createDegen(outfit, detail);
   const old: Degen = createDegen(outfit, detail);
@@ -895,13 +893,12 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
       const ov = over?.o ?? overLast;
       if (ov && overAmt > 0.01) overPose(hero.pose, ov, over ? Math.min(1, over.t / over.o.dur) : 1, overAmt, x, y, z, anim.face, SCALE);
       // (the hands as the playing take closes them, as walk.ts has it)
-      if (!hero.pose.grip) hero.pose.grip = [anim.grip, hero.held?.visible ? Math.max(anim.grip, HOLDING) : anim.grip];
+      if (!hero.pose.grip) hero.pose.grip = [anim.grip, anim.grip];
       hero.update();
       const capW = 1 - Math.max(slideAmt, overAmt, danceAmt * danceAmt * (3 - 2 * danceAmt), wholeAmt * wholeAmt * (3 - 2 * wholeAmt));
       const upA = Math.max(emoteAmt, guardAmt);
       const upW = upA * upA * (3 - 2 * upA);
       applyTo(hero.rig, contacting ? contactRot : anim.rot, anim.hips, capW, upW);
-      if (hero.held?.visible) addCarry(hero.rig, capW * (1 - upW));
       const gz = gaze.update({ dt, x, y: y + 1.1 * SCALE, z, face: anim.face, ahead: move.face, speed: v, interests: [] });
       if (gazeOn) addLook(hero.rig, gz.yaw, gz.pitch, capW * (1 - upW));
       // (the head's follow-through in turns, follow.ts, as walk.ts has it)

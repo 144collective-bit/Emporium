@@ -11,7 +11,6 @@ import {
   MOD_LEVELS,
   STARTER_CARS,
   STARTER_GUNS,
-  WARDROBE_CATALOG,
   XP,
   carStats,
   levelFor,
@@ -26,7 +25,6 @@ import {
   buyCar,
   buyGun,
   buyUnit,
-  buyWardrobe,
   capOf,
   cargoCap,
   carMods,
@@ -84,8 +82,6 @@ test('the catalog: starters are free and level 1, everything else costs Dorras a
   assert.deepEqual(STARTER_CARS, ['hatch', 'sedan', 'coupe', 'pickup', 'van']);
   for (const id of WEAPON_IDS) assert.ok(GUN_CATALOG[id], id);
   assert.deepEqual(STARTER_GUNS, ['rifle', 'smg', 'shotgun', 'dmr']);
-  for (const w of WARDROBE_CATALOG) assert.ok(w.price > 0 && w.level >= 1 && w.name && w.pitch, w.id);
-  assert.equal(new Set(WARDROBE_CATALOG.map((w) => w.id)).size, WARDROBE_CATALOG.length);
   for (const id of PLAYER_CARS) assert.ok(CARGO[id] > 0 && DRIVE[id], id);
   // Mods cost more each level, and more on dearer things; nothing past the top
   assert.ok(modCost(0, 1)! < modCost(0, 2)! && modCost(0, 2)! < modCost(0, 3)!);
@@ -172,13 +168,19 @@ test('guns: the starters are owned, premium ones are bought, mods go up three le
   assert.ok(WEAPONS.revolver.need === 0 && WEAPONS.burst.burst === 3);
 });
 
-test('clothes: bought once, level and money checked', () => {
-  const s = rich();
-  assert.ok(buyWardrobe(s, 'halo').ok);
-  assert.deepEqual(buyWardrobe(s, 'halo'), { ok: false, why: 'owned' });
-  assert.deepEqual(buyWardrobe(s, 'nothing'), { ok: false, why: 'place' });
-  assert.equal(s.ledger.totals.clothes, 9000);
-  assert.deepEqual(buyWardrobe(fresh(), 'phone'), { ok: false, why: 'money' });
+test('clothes: nothing to buy (the wardrobe plan, Phase 1); what was bought before stays on the save as a record', async () => {
+  const catalog = await import('../src/scripts/city3d/catalog');
+  const tycoon = await import('../src/scripts/city3d/tycoon');
+  assert.equal('WARDROBE_CATALOG' in catalog, false);
+  assert.equal('buyWardrobe' in tycoon, false);
+  assert.deepEqual(fresh().wardrobe, []);
+  // (no refund, the owner's call: the record is kept, short plain ids only, never twice, at most 64)
+  const s = cleanSave({ ...cleanSave(null, T0), wardrobe: ['varsity', 'halo', 'halo', 'pattern-camo', '<b>', 7, 'x'.repeat(40)] }, T0);
+  assert.deepEqual(s.wardrobe, ['varsity', 'halo', 'pattern-camo']);
+  assert.equal(cleanSave({ ...cleanSave(null, T0), wardrobe: Array.from({ length: 99 }, (_, i) => `w${i}`) }, T0).wardrobe.length, 64);
+  // Dorras aren't touched by the record
+  const before = cleanSave({ ...cleanSave(null, T0), dorras: 1234, wardrobe: ['halo'] }, T0);
+  assert.equal(before.dorras, 1234);
 });
 
 test('Build mode retired (save v12): a save with district plots gets back what they cost and what was built on them, once', () => {
@@ -246,7 +248,7 @@ test('cleanSave carries a Phase 4 save into Phase 5 and keeps everything within 
   assert.deepEqual(dirty.garage.mods, { super: { engine: 3, turbo: 0, tyres: 0, rack: 0 } }, 'mods only on cars you own');
   assert.deepEqual(dirty.armoury.owned, ['lmg']);
   assert.deepEqual(dirty.armoury.mods, { lmg: { barrel: 0, mag: 2, grip: 0 }, rifle: { barrel: 0, mag: 0, grip: 1 } });
-  assert.deepEqual(dirty.wardrobe, ['halo']);
+  assert.deepEqual(dirty.wardrobe, ['halo', 'cape']);
   assert.deepEqual(dirty.levels, { u0: 3, workshop: 2 });
   assert.equal(dirty.missions.active.length, 1);
   assert.equal(dirty.missions.active[0].from.drones, 2);
