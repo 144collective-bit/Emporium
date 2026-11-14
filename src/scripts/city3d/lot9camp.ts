@@ -1,13 +1,15 @@
 /*
  * The Field (docs/trailer-plan.md's polish round, the owner's call: "a lived in feel that has everything a long term
  * trailer park / camp site... almost a rough camp on a large scale"; DOM-free, the chunk's, tested in
- * tests/lot9camp.test.ts): Lot 9's camp on the ground west of the old park's fence line (lot9.ts `FIELD`), round its
- * dirt track (`TRACK_LOOP`, `TRACK_SPUR`).
+ * tests/lot9camp.test.ts): Lot 9's camp on the land just south of the park (lot9.ts `FIELD`: it stood west of the park
+ * until the owner's call of 2026-11-14 moved it as a block, `CAMP_SHIFT`), round its dirt track (`TRACK_LOOP`, and
+ * `TRACK_SPUR` in off the park's south lane down the strip east of it).
  *
  * - **The commons** inside the loop and by the way in (`COMMONS`): the shower and toilet block, the porta-potties,
  *   the standpipe and its trough, the big fire circle with its log benches, the camp kitchen (a tarp roof over
  *   tables, a grill, a sink), the firewood pile and its honour box, a washing line, the dumpster corral, the notice
- *   board, THE FIELD over the gap in the old fence, the vegetable patch and the chicken coop.
+ *   board, THE FIELD over the track's gap in the camp's east side (the old fence line), the vegetable patch and the
+ *   chicken coop.
  * - **The pitches** (`PITCHES`): laid by a seeded planner along both sides of the track and in the back corners,
  *   each facing the track, nothing on one touching the track, a tree, a lamp, the commons or another pitch: tents
  *   (domes, ridge tents, family cabin tents), travel trailers and teardrops, vans with their awnings, pallet-and-tarp
@@ -18,7 +20,7 @@
  *   slots), `CAMP_DOGS`. Every name is made up; everything is under the Emporium.
  */
 import { CARS, type CarId } from './carspec';
-import { FIELD, FIELD_TREES, INNER_GAPS, LOT9_LAMPS, MOVED, PARK_X0, ROAD_Z, TRACK_HALF, TRACK_LOOP, TRACK_SPUR, carBox, fromTrack, rng, type Box, type Pt, type Rect } from './lot9';
+import { CAMP_SHIFT, CAMP_X1, FIELD, FIELD_TREES, INNER_GAPS, LOT9_LAMPS, MOVED, ROAD_Z, TRACK_HALF, TRACK_LOOP, TRACK_SPUR, carBox, fromTrack, rng, type Box, type Pt, type Rect } from './lot9';
 import type { Idle } from './landmarks';
 
 /* ---------- What's placed ---------- */
@@ -100,22 +102,26 @@ const rectDist = (r: Rect, x: number, z: number) => Math.hypot(Math.max(r[0] - x
 
 /* ---------- The commons ---------- */
 
+/** Where the camp moved to (lot9.ts `CAMP_SHIFT`): the commons' numbers are where they stood before, plus these */
+const X = CAMP_SHIFT.dx;
+const Z = MOVED + CAMP_SHIFT.dz;
+
 /** A thing of the commons: an item, solid or not */
 const C = (kind: ItemKind, x: number, z: number, ry: number, w: number, d: number, h: number, tone = 0): Item => ({ kind, x, z, ry, w, d, h, tone });
-export const SHOWERS = { rect: [-171, 361.5 + MOVED, -161, 365.5 + MOVED] as Rect, h: 2.05 };
+export const SHOWERS = { rect: [-171 + X, 361.5 + Z, -161 + X, 365.5 + Z] as Rect, h: 2.05 };
 /** The shower block's doors on its south side (into the middle): showers, then toilets */
 export const SHOWER_DOORS: Pt[] = [
-  [-169.2, SHOWERS.rect[3]],
-  [-166.8, SHOWERS.rect[3]],
-  [-163.6, SHOWERS.rect[3]],
+  [-169.2 + X, SHOWERS.rect[3]],
+  [-166.8 + X, SHOWERS.rect[3]],
+  [-163.6 + X, SHOWERS.rect[3]],
 ];
-export const POTTIES: Rect[] = [0, 1, 2].map((k): Rect => [-160.4 + k * 1.2, 362 + MOVED, -159.3 + k * 1.2, 363.1 + MOVED]);
+export const POTTIES: Rect[] = [0, 1, 2].map((k): Rect => [-160.4 + X + k * 1.2, 362 + Z, -159.3 + X + k * 1.2, 363.1 + Z]);
 export const POTTY_H = 2.1;
 /** The standpipe and its trough */
-export const STANDPIPE: Pt = [-163.2, 369 + MOVED];
-export const TROUGH: Rect = [-164.4, 369.5 + MOVED, -162, 370.1 + MOVED];
+export const STANDPIPE: Pt = [-163.2 + X, 369 + Z];
+export const TROUGH: Rect = [-164.4 + X, 369.5 + Z, -162 + X, 370.1 + Z];
 /** The big fire circle: its ring, the log benches round it */
-export const CIRCLE = { x: -168, z: 381.5 + MOVED, r: 0.85 };
+export const CIRCLE = { x: -168 + X, z: 381.5 + Z, r: 0.85 };
 export const LOGS: Item[] = [0, 1, 2, 3, 4].map((k) => {
   const a = (k / 5) * Math.PI * 2 + 0.4;
   const [x, z] = [CIRCLE.x + Math.cos(a) * 3.1, CIRCLE.z + Math.sin(a) * 3.1];
@@ -123,44 +129,44 @@ export const LOGS: Item[] = [0, 1, 2, 3, 4].map((k) => {
   return C('wood', x, z, Math.atan2(Math.cos(a), -Math.sin(a)) - Math.PI / 2, 1.8, 0.42, 0.4);
 });
 /** The camp kitchen: a tarp roof on posts over two tables, the grill and the sink at its back */
-export const KITCHEN: Rect = [-158, 382 + MOVED, -151.2, 388 + MOVED];
+export const KITCHEN: Rect = [-158 + X, 382 + Z, -151.2 + X, 388 + Z];
 export const KITCHEN_TABLES: Item[] = [
-  C('table', -156.2, 384.4 + MOVED, 0, 2.0, 1.5, 0.75),
-  C('table', -153.0, 384.4 + MOVED, 0, 2.0, 1.5, 0.75),
+  C('table', -156.2 + X, 384.4 + Z, 0, 2.0, 1.5, 0.75),
+  C('table', -153.0 + X, 384.4 + Z, 0, 2.0, 1.5, 0.75),
 ];
-export const GRILL: Rect = [-157.4, 386.8 + MOVED, -156.0, 387.5 + MOVED];
-export const SINK: Rect = [-153.6, 386.9 + MOVED, -152.2, 387.5 + MOVED];
+export const GRILL: Rect = [-157.4 + X, 386.8 + Z, -156.0 + X, 387.5 + Z];
+export const SINK: Rect = [-153.6 + X, 386.9 + Z, -152.2 + X, 387.5 + Z];
 /** The firewood pile and its honour box */
-export const WOODPILE: Rect = [-180, 371 + MOVED, -177, 373 + MOVED];
+export const WOODPILE: Rect = [-180 + X, 371 + Z, -177 + X, 373 + Z];
 /** The commons' washing line */
 export const WASHING: [Pt, Pt] = [
-  [-179, 386.4 + MOVED],
-  [-175, 389.2 + MOVED],
+  [-179 + X, 386.4 + Z],
+  [-175 + X, 389.2 + Z],
 ];
 /** The dumpster corral by the way in, and the dumpsters in it */
-export const CORRAL: Rect = [-139.5, 381 + MOVED, -133.5, 385 + MOVED];
+export const CORRAL: Rect = [-139.5 + X, 381 + Z, -133.5 + X, 385 + Z];
 export const DUMPSTERS: Rect[] = [
-  [-139, 381.6 + MOVED, -136.6, 383.6 + MOVED],
-  [-136.2, 381.6 + MOVED, -133.8, 383.6 + MOVED],
+  [-139 + X, 381.6 + Z, -136.6 + X, 383.6 + Z],
+  [-136.2 + X, 381.6 + Z, -133.8 + X, 383.6 + Z],
 ];
 /** The notice board by the way in */
-export const NOTICE: Pt = [-130.6, 373.8 + MOVED];
+export const NOTICE: Pt = [-130.6 + X, 373.8 + Z];
 /** THE FIELD over the gap in the old fence where the track goes through: its two poles */
 export const FIELD_ARCH: [Pt, Pt] = [
-  [PARK_X0 - 0.3, INNER_GAPS[1][0] + 0.3],
-  [PARK_X0 - 0.3, INNER_GAPS[1][1] - 0.3],
+  [CAMP_X1 - 0.3, INNER_GAPS[1][0] + 0.3],
+  [CAMP_X1 - 0.3, INNER_GAPS[1][1] - 0.3],
 ];
 /** The vegetable patch (raised beds) and the chicken coop with its run, in the Field's north-east corner */
-export const GARDEN: Rect = [-143, 345 + MOVED, -133, 351.4 + MOVED];
+export const GARDEN: Rect = [-143 + X, 345 + Z, -133 + X, 351.4 + Z];
 export const BEDS: Rect[] = [0, 1, 2, 3].map((k): Rect => [GARDEN[0] + 0.6 + k * 2.4, GARDEN[1] + 0.8, GARDEN[0] + 2.2 + k * 2.4, GARDEN[3] - 0.8]);
-export const COOP: Rect = [-132.4, 345 + MOVED, -130, 347.4 + MOVED];
-export const COOP_RUN: Rect = [-132.4, 347.6 + MOVED, -129.6, 350.6 + MOVED];
+export const COOP: Rect = [-132.4 + X, 345 + Z, -130 + X, 347.4 + Z];
+export const COOP_RUN: Rect = [-132.4 + X, 347.6 + Z, -129.6 + X, 350.6 + Z];
 /** What the commons cover (the planner keeps the pitches off them, with room round) */
 const COMMON_RECTS: Rect[] = [SHOWERS.rect, ...POTTIES, TROUGH, [CIRCLE.x - 4.2, CIRCLE.z - 4.2, CIRCLE.x + 4.2, CIRCLE.z + 4.2], KITCHEN, WOODPILE, [WASHING[0][0], WASHING[0][1], WASHING[1][0], WASHING[1][1]], CORRAL, [NOTICE[0] - 0.8, NOTICE[1] - 0.4, NOTICE[0] + 0.8, NOTICE[1] + 0.4], GARDEN, COOP, COOP_RUN];
-/** The ways through the old fence's gaps kept open (the walk from the park's north-west corner, the track's mouth) */
+/** The ways through the camp's east side's gaps kept open (the walk in from the strip, the track's mouth) */
 const WAYS: Rect[] = [
-  [PARK_X0 - 7, INNER_GAPS[0][0], PARK_X0, INNER_GAPS[0][1]],
-  [PARK_X0 - 6, INNER_GAPS[1][0] - 1, PARK_X0, INNER_GAPS[1][1] + 1],
+  [CAMP_X1 - 7, INNER_GAPS[0][0], CAMP_X1, INNER_GAPS[0][1]],
+  [CAMP_X1 - 6, INNER_GAPS[1][0] - 1, CAMP_X1, INNER_GAPS[1][1] + 1],
 ];
 
 /** By the old park's gate (the strip between the east lane and the fence): the dumpsters north of the office; south of
@@ -494,10 +500,10 @@ export const PITCHES: Pitch[] = (() => {
       tryAt(`lot9-pitch-${side > 0 ? 'o' : 'i'}${Math.round(d)}`, p.x, p.z, nx, nz);
     }
   // Along the way in, both sides
-  for (const x of [-142, -137])
+  for (const x of [-142 + X, -137 + X])
     for (const s of [-1, 1]) {
-      const z = ROAD_Z - 0.5;
-      tryAt(`lot9-pitch-s${-x}${s > 0 ? 's' : 'n'}`, x, z, 0, s);
+      const z = ROAD_Z + CAMP_SHIFT.dz - 0.5;
+      tryAt(`lot9-pitch-s${-(x - X)}${s > 0 ? 's' : 'n'}`, x, z, 0, s);
     }
   // The back corners: wherever there's room, facing the nearest bit of track
   for (let x = FIELD[0] + 5; x < FIELD[2] - 4; x += 7)

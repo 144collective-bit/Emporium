@@ -41,7 +41,7 @@ import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
-import { FOOTPATH as LOT9_PATH, LOT9_RECT } from './lot9';
+import { FOOTPATH as LOT9_PATH, LOT9_RECT, inLot9 } from './lot9';
 import { ENDSWOOD_RECT, FAR_RECT as ENDS_FAR_RECT, WEST_RECT as ENDS_WEST_RECT } from './endswood';
 import { COMMON as ENDS_COMMON } from './endsblend';
 import { RAMP, VERGES } from './verges';
@@ -175,7 +175,8 @@ export const KEEPS: Keep[] = [
   land('endsfar', ENDS_FAR_RECT, 2, true),
   // ...and the common down to Lot 9, its own brambles and hawthorns (endsblend.ts, docs/estate-plan.md Phase 6)
   land('ends-common', ENDS_COMMON, 1, true),
-  land('lot9', LOT9_RECT, 2, true),
+  // (Lot 9's land follows its wandering fence: lot9.ts `inLot9()`)
+  { ...shaped('lot9', LOT9_RECT, 2, inLot9), since: true },
   ...line('lot9-path', LOT9_PATH, 1.5, false, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it
