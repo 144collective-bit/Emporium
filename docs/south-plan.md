@@ -150,8 +150,38 @@ From the Circus west, patchy as high roads are:
 - **The sky network:** covered bridges at two or three levels between the
   Wall, the towers and the stairwell blocks, so you can cross the estate
   without touching the ground; warm strip lights under them at night.
-- The "abandoned" feel (Kite House's hoardings) moves to a part of one of
-  the kept blocks, emptied for refit; where, to settle in Phase 2.
+- The "abandoned" feel (Kite House's hoardings) moves to half of one
+  stairwell block, hoarded for refit, the other half lived in; Bunker
+  Sound in its basement.
+
+### Phase 2's answers (the owner, 2026-11-14; sketch `8-phase-2-sketch-blocks.png`)
+
+| | |
+| --- | --- |
+| The towers | Site A: Harrier Point and Kite Point north-east of the Circus, on the big block by the ring road, their core between them |
+| The Rampart | The core run north-east of the Circus and on west along the ring road to the closes, an archway where the Circus's north spoke passes under it |
+| The stairwell blocks | Six sites: 1, 2, 3 (tall thin slabs between the avenues, east of ns0s) and 4, 5, 6 (round the Circus's south and east, on courts) |
+| The emptied wing | Half of one stairwell block, Bunker Sound in its basement |
+| The sky network | Walked, all of it: up the stair cores, across every bridge and deck, the estate crossed without touching the ground |
+| Heights | The stairwell blocks mixed 6 to 10: the slabs between the avenues about 10, those round the Circus about 6; the Rampart to 14, the towers to 20 lead |
+| Concrete | Warm board-marked grey, each block its own accent (orange, teal, mustard) on balcony fronts and doors |
+| The ground | Parking courts (cars, bins, bike sheds), grass with desire lines and a few trees, a 70s concrete play area, raised podium decks over the parking with planters and benches, joined to the sky network |
+
+### Phase 2's steps (each shown to the owner)
+
+- **2a, the blocks as data** (DOM-free, tested): every block's footprint,
+  height, cores, galleries and doors; the sky network's bridges and decks
+  as walkable floors; the courts, decks, grass and play area; solids;
+  the sketch redrawn from the data.
+- **2b, the buildings drawn**: one retro-future kit (rounded corners,
+  curved balcony fronts, board-marked concrete, accents, sky gardens,
+  plant rooms, the towers' beacons), its own lazy chunk, fine detail near
+  only, lights at night; shots and the phone tier measured.
+- **2c, the sky network walked**: stairs and lifts up the cores, the
+  bridges and decks underfoot (groundheight.ts), the archway, the smoke
+  test through it.
+- **2d, the ground round them**: courts with cars and bins, grass and
+  desire lines, the play area, the podium decks' planters and benches.
 
 ## The phases (each with the owner's sign-off)
 
