@@ -23,7 +23,7 @@ import { CROWD_VIEW } from './character';
 import { dogGeometry } from './dogs3d';
 import { COVER, ROAD } from './palette';
 import {
-  AVE_EDGE, BAY, BOAT, INNER_RUNS, PARK_X0, FENCE, FENCE_H, FENCE_RUNS, FIRE, FIRE_LOT, FIRE_POLES, FIRE_SEATS, FOOTPATH, GATE, GROUND_Y, HOIST, HOLE, KIDS_ON_BIKES, LAUNDRY, LOT9_CARS,
+  AVE_EDGE, BAY, BOAT, INNER_RUNS, PARK, PARK_X0, FENCE_H, FENCE_RUNS, FIRE, FIRE_LOT, FIRE_POLES, FIRE_SEATS, FOOTPATH, GATE, GATE_W, GROUND_Y, HOIST, HOLE, KIDS_ON_BIKES, LAUNDRY, LOT9_CARS,
   LOT9_DOGS, LOT9_RECT, LOT9_SIGNS, LOT9_STREETS, MAILBOXES, OFFICE, RADIO, RIDER, ROAD_Z, SCRAP, TOOLS, TUNNEL, TYRES, ZAPPER, riderAt, rng, runnerAt,
   type Pt, type Rect,
 } from './lot9';
@@ -623,7 +623,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // The fence: posts every three tiles, a top rail, the mesh in the FX layer; the hole's cut flap bent back
   FENCE_RUNS.forEach(([a, c], i) => {
     const runs = along(a, c, 18);
-    // (the old line between the park and the Field is half down: posts leaning, panels missing, the rail gone in places)
+    // (the old line, the camp's east side now, is half down: posts leaning, panels missing, the rail gone in places)
     const old = INNER_RUNS.includes(FENCE_RUNS[i]);
     for (let k = 1; k < runs.length; k++) {
       const [p, q] = [runs[k - 1], runs[k]];
@@ -657,13 +657,13 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       });
     }
   });
-  site('lot9 hole', [HOLE.x - 2, FENCE[1] - 1.5, HOLE.x + 2, FENCE[1] + 1.5], (into) => {
+  site('lot9 hole', [HOLE.x - 2, HOLE.z - 1.5, HOLE.x + 2, HOLE.z + 1.5], (into) => {
     const fx0 = new Batch();
     const b = new Batch();
     // (the cut mesh peeled back on either side, the posts either side of the gap)
-    chainMesh(fx0, [HOLE.x - HOLE.half, FENCE[1]], [HOLE.x - HOLE.half + 0.5, FENCE[1] + 0.85], 0.02, 1.0);
-    chainMesh(fx0, [HOLE.x + HOLE.half, FENCE[1]], [HOLE.x + HOLE.half - 0.35, FENCE[1] - 0.7], 0.3, 0.8);
-    for (const x of [HOLE.x - HOLE.half, HOLE.x + HOLE.half]) post(b, x, FENCE[1], 0, FENCE_H, 0.04, POST);
+    chainMesh(fx0, [HOLE.x - HOLE.half, HOLE.z], [HOLE.x - HOLE.half + 0.5, HOLE.z + 0.85], 0.02, 1.0);
+    chainMesh(fx0, [HOLE.x + HOLE.half, HOLE.z], [HOLE.x + HOLE.half - 0.35, HOLE.z - 0.7], 0.3, 0.8);
+    for (const x of [HOLE.x - HOLE.half, HOLE.x + HOLE.half]) post(b, x, HOLE.z, 0, FENCE_H, 0.04, POST);
     // (and tagged)
     b.build(into, { cast: true, receive: true });
     buildFx(fx0, into);
@@ -692,6 +692,27 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     sign(b, SIGN_ROW.gate, GATE.x + 0.24, (y0 + y1) / 2, GATE.z, [-1, 0], 2 * GATE.half - 0.2, y1 - y0 - 0.08);
     // (and PRIVATE PROPERTY on the fence by it)
     sign(b, SIGN_ROW.private, GATE.x + 0.05, 1.0, GATE.z + GATE.half + 1.6, [1, 0], 0.9, 0.18);
+    b.build(into, { cast: true, receive: true });
+    buildFx(fx0, into);
+  });
+
+  // The west gate (Lot Lane's way in): its posts, the two leaves swung open against the fence inside, one hanging askew
+  site('lot9 west gate', [GATE_W.x - 2, GATE_W.z - 6, GATE_W.x + 5, GATE_W.z + 6], (into) => {
+    const b = new Batch();
+    const fx0 = new Batch();
+    for (const d of [-1, 1]) {
+      const z = GATE_W.z + d * GATE_W.half;
+      post(b, GATE_W.x, z, 0, FENCE_H + 0.2, 0.07, POST, 8);
+      const leaf: [Pt, Pt] = [
+        [GATE_W.x + 0.15, z + d * 0.1],
+        [GATE_W.x + 0.15 + (d < 0 ? 0.35 : 0), z + d * (GATE_W.half - 0.1)],
+      ];
+      bar(b, leaf[0], leaf[1], 0.04, FENCE_H - 0.1, FENCE_H - 0.05, POST);
+      bar(b, leaf[0], leaf[1], 0.04, 0.1, 0.14, POST);
+      chainMesh(fx0, leaf[0], leaf[1], 0.12, FENCE_H - 0.25);
+    }
+    // (PRIVATE PROPERTY on the fence by it, facing out)
+    sign(b, SIGN_ROW.private, GATE_W.x - 0.05, 1.0, GATE_W.z - GATE_W.half - 1.6, [-1, 0], 0.9, 0.18);
     b.build(into, { cast: true, receive: true });
     buildFx(fx0, into);
   });
@@ -829,7 +850,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     flat(b, BAY, PAD_Y, CONCRETE_DARK);
     b.build(into, { cast: true, receive: true });
   });
-  site('lot9 junk south', [PARK_X0, TYRES[0][1] - 2, BAY[2] + 2, FENCE[3]], (into) => {
+  site('lot9 junk south', [PARK_X0, TYRES[0][1] - 2, BAY[2] + 2, PARK[3]], (into) => {
     const b = new Batch();
     for (const [x, z, n] of TYRES) for (let j = 0; j < n; j++) tyre(b, x + (j % 2) * 0.04, j * 0.22, z, low);
     // The scrap pile: heaps of rusty sheet, pipes, a washing machine, a bike frame

@@ -287,7 +287,12 @@ keep it up to date when what it describes changes.
     still can. `addLod()` / `addLodSwitch()` swap them (`updateLods()`
     from `index.ts`). They're made after the first frame, a place at a
     time in spare moments (`farQueue` in `index.ts`); until then a place
-    stays near.
+    stays near. Once a place's far form has shown `FREE_AFTER` (15 s), its
+    near form's geometries are freed on the GPU (`release()` on its switch,
+    `geometry.dispose()`: the arrays stay, three uploads them again as
+    they're next drawn; the stability plan's Phase 3, item 6); `?fps` says
+    how many and how much (`freedNear()`). Code that changes a near part's
+    geometry while it's far needs nothing special: it's uploaded when drawn.
   - Cars far away (parked and traffic) are their model's far form
     (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
     extruded, block wheels, about a hundred triangles), all in one
@@ -320,7 +325,8 @@ keep it up to date when what it describes changes.
     waiting where they're going, so nothing pops in on screen.
   - A tile far away (past `far` + `KEEP_LEAD`) lets its sites' near pieces
     in the shared materials go when what's held passes the tier's
-    `nearBudget` (`TIERS`: 96, 64, 32 MB; `?budget=MB` in the address
+    `nearBudget` (`TIERS`: 64, 48, 32 MB, high's and medium's lowered from
+    96 and 64 in the stability plan's Phase 3a; `?budget=MB` in the address
     overrides it, for testing), furthest first (`toRelease()`); it's drawn
     far until the site runs again and puts them back, before it's near
     (`toRebuild()`, `REBUILD_LEAD`). The room they took is reused
@@ -376,11 +382,19 @@ keep it up to date when what it describes changes.
   `perf.ts`: under `?fps` and `?bench` a painted texture is named after the
   start of what drew it, `named()` in `kit.ts`), and `gl`, what three holds
   on the GPU (a count above the scene's that keeps growing is a leak).
-- **Past the haze, phones let far tiles go altogether** (the owner's pick:
-  only on the ground, only what the haze already hides;
-  `docs/performance-plan.md`, phones' geometry memory step 2). On the low
-  tier, while walking, driving or riding (not the City view, not up in an
-  aircraft), `hazeHorizon()` (`tileplan.ts`) turns the scene's fog into the
+  The uv is left out where nothing reads it (`dropsUv()` in
+  `tilebatch.ts`, the stability plan's Phase 3b): the shared materials
+  have no texture, and only the paint's trees' sway reads the uv
+  (`injectWind()`), so the shared materials' pieces carry none, but the
+  paint's while its trees sway (`UV.sway`: every tier but phones'). 21
+  bytes a vertex there. A shared material that comes to read its uv must
+  be kept out of `dropsUv()`.
+- **Past the haze, far tiles go altogether** (the owner's pick: only on the
+  ground, only what the haze already hides; `docs/performance-plan.md`,
+  phones' geometry memory step 2; every tier since the stability plan's
+  Phase 3a, `docs/stability-plan.md`, where it was phones only). On every
+  tier, while walking, driving or riding (not the City view, which keeps
+  everything, the owner's call; not up in an aircraft), `hazeHorizon()` (`tileplan.ts`) turns the scene's fog into the
   distance past which under a hundredth of anything is left. A tile
   `HORIZON_OUT` past it lets go of everything its sites drew in the shared
   materials, at every level (`toVanish()`, `TileBatches.vanish()`), sites

@@ -167,7 +167,27 @@ keep it up to date when what it describes changes.
   one that lands holds the fight about three frames (`hitStop`: the street
   fists step with no time) and kicks the view forward a touch; the arms dip
   on a landing and spring back (fistsview.ts `LAND_DIP`). None of it under
-  reduced motion.
+  reduced motion. **Natural motion** (the owner's call, 2026-11: "his arm
+  movements... look robotic", subtle, first person only): the guard held
+  is alive (fparm.ts `LIFE`, `guardLife()`: a slow breath lifting both
+  fists, each hand's own drift on waves that never line up, so the hands
+  are never in step or mirrored, and a slow weight shift), eased off while
+  either hand is out punching and as the run takes over; the hands' paths
+  up into the guard and into the run are arcs (`ARC`, `arcBulge()`: out and
+  forward part way, nothing at either end), each a nudge of the fist with
+  the elbow solved again (`nudgeArm()`); the look's lag has weight (`SWAY`,
+  `springStep()`: a damped spring a touch under critical, so the arms
+  swing a little past before settling); follow-through and overlap
+  (`FOLLOW`, `followStep()`, run last on each arm): each fist follows its
+  place through a quick spring a touch under critical (in steps of at most
+  1/120 s, so the same at any frame rate), so a punch arrives a hair late,
+  swings a little past full reach and settles, the same coming back,
+  never more than `most` off and a cut taken at once; and the fist's turn
+  lags its forearm's, so the wrist snaps over at the end; and running
+  into a turn, the pump leans into it (`TURN_LEAN`, `turnLean()`: rolled
+  towards the turn's inside by the look's turn rate at full run, capped,
+  eased in and out). The life, the sway, the follow and the lean are off
+  under reduced motion.
   The arms are tied to the camera (in shot looking up or down) and lag
   the look; narrow screens hold them further off; a kick bobs the view
   (`KICK`). Nothing sways under reduced motion. In first person the view

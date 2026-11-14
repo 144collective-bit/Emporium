@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { PACKED, compact, splitByTile, tileBatch } from '../src/scripts/city3d/tilebatch';
+import { PACKED, UV, compact, dropsUv, splitByTile, tileBatch } from '../src/scripts/city3d/tilebatch';
 import { tileKey, tileOf } from '../src/scripts/city3d/tiles';
 
 // A plain colour and a neon, as the Batches' shared materials (kit.ts marks them `shared`)
@@ -313,4 +313,40 @@ test('triangles are split by tile exactly as the plain way splits them, negative
   // One tile: the geometry itself comes back, not a copy
   const small = new THREE.BoxGeometry(1, 1, 1).translate(5, 0.5, 5);
   assert.equal(splitByTile(small).get('0,0'), small);
+});
+
+test('the uv is left out where nothing reads it: the shared materials, the paint only while its trees are still', () => {
+  // (the paint as kit.ts makes it: shared, its trees' sway read from the uv; a textured one of its own)
+  const wind = new THREE.MeshBasicMaterial();
+  wind.userData.shared = true;
+  wind.userData.wind = true;
+  const neon = new THREE.MeshBasicMaterial();
+  neon.userData.shared = true;
+  const textured = new THREE.MeshBasicMaterial({ map: new THREE.Texture() });
+  const uvOf = (mat: THREE.Material) => {
+    const scene = new THREE.Scene();
+    piece(scene, 5, 5, undefined, mat);
+    const tiled = tileBatch(scene, [scene]);
+    return !!tiled.meshes[0].geometry.attributes.uv;
+  };
+  const was = UV.sway;
+  try {
+    // Desktops: the paint's trees sway, so it keeps its uv; the neon never needs one; a texture always does
+    UV.sway = true;
+    assert.equal(dropsUv(wind), false);
+    assert.equal(uvOf(wind), true);
+    assert.equal(uvOf(neon), false);
+    assert.equal(uvOf(textured), true);
+    // Phones: nothing sways, so the paint drops it too
+    UV.sway = false;
+    assert.equal(dropsUv(wind), true);
+    assert.equal(uvOf(wind), false);
+    assert.equal(uvOf(textured), true);
+  } finally {
+    UV.sway = was;
+  }
+  // What it saves: 8 bytes a vertex (two floats) of the 29 the packed paint takes
+  const box = compact(new THREE.BoxGeometry(1, 1, 1), false, true);
+  assert.equal(box.attributes.uv, undefined);
+  assert.ok(box.attributes.position && box.attributes.normal);
 });

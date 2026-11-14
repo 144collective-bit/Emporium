@@ -85,7 +85,9 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // (and Degen's home: first at the far end of the Close in Endswood carried west, docs/home-plan.md, as far out
       // as Lot 9; since it moved to his compound past the Close's end in the far west, the owner's call,
       // docs/ends-far-west-plan.md Phase 2, a little further: from Crestmont's grand hotel about 85 s)
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) || ends(id) ? 12 : id === 'lot9' ? 18 : id === 'home' || id === 'overlook' || id === 'reservoir' ? 22 : 0);
+      // (since the south was re-laid, docs/south-plan.md Phase 1b, St Aldwyn's on the village's hill is as far out as
+      // Degen's compound: from Crestmont's grand hotel about 86 s)
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'lot9' ? 18 : id === 'home' || ends(id) || id === 'overlook' || id === 'reservoir' ? 22 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
       // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
       // round through town: the overlook to the airport's metro station about 94 s)

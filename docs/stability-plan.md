@@ -156,22 +156,83 @@ the targets as they were (the tests hold the arithmetic). MiB.
 
 ## Phase 3: hold less geometry, on every tier (M, medium risk)
 
-1. **Past the haze, every tier lets far tiles go on the ground** (today
-   phones only; the same horizon, the same rules, `toVanish()` / `regain()`).
+**Phase 3a (built, 2026-11-13): items 1 and 3.** The owner's picks: these two
+first; **the City view keeps everything** (item 2 is not built).
+
+- **Built.** On the ground (walking, driving, riding; not the City view, not
+  flying) every tier's horizon is `hazeHorizon()` of the scene's fog
+  (index.ts; it was phones only). `TIERS` near budgets: high 96 to **64**
+  MB, medium 64 to **48** (low stays 32).
+- **Measured** (the high tier, headless, 1440 x 900): eight minutes near
+  downtown, and ten in the City view then walking at Degen's home on the
+  far side of town: the same to the MiB before and after (115 to 136, and
+  to 148 MiB), nothing let go. The software renderer builds about a site a
+  second, so in that time nothing is built past the haze (about 580 by day,
+  let go 60 past it) or near the lower budget (16 of 64 MB held). With the
+  haze forced to 150 (`?horizon=150`), the high tier let 131 tiles go (17
+  MB) within seconds of walking, the picture near Degen as it was: the
+  machinery works on every tier. **The saving comes on a real device**,
+  which builds the whole city in a minute or two in the City view: on
+  phones the same rule took geometry from about 185 to 113-127 MiB on the
+  ground (the memory steps' figures), and a desktop should drop by about
+  the same share. Not measured on a real desktop.
+
+1. **Past the haze, every tier lets far tiles go on the ground** (built in
+   3a; the same horizon, the same rules, `toVanish()` / `regain()`).
 2. **The City view's far city as far forms only**: past the tier's `far`,
    tiles keep their always-drawn and far pieces and let near pieces go
    sooner. *The owner's call: how far the City view keeps the full city.*
-3. **Lower near budgets**: high 96 to 64 MB, medium 64 to 48 (`TIERS`),
-   measured with `?bench` for pop-in.
+3. **Lower near budgets** (built in 3a): high 96 to 64 MB, medium 64 to 48
+   (`TIERS`). Pop-in to check on the owner's laptop.
 4. **Districts load nearest first, a few at a time**, not all 13 at once,
    and a district far away for a while lets its near pieces and its
    main-thread drawing go (unloading is new: today a district only loads).
-5. **The uv attribute left out where nothing reads it** (8 of each vertex's
-   29 bytes; only the trees' sway and the textured surfaces use it): about a
-   quarter off the tile geometry.
-6. **Places' near forms let go when far**: their GPU buffers freed past the
-   far distance and uploaded again on the way back (the arrays stay in
-   JavaScript, so it's quick).
+5. **The uv attribute left out where nothing reads it** (built in 3b,
+   below).
+
+**Phase 3b (built, 2026-11-14): item 5.** The shared materials (the paint,
+the steady and flickering neon) have no texture; the only thing any of them
+reads from a vertex's uv is the paint's trees' sway (`injectWind()`), and
+phones' trees don't sway.
+
+- **Built.** `dropsUv()` in tilebatch.ts: a shared material's tile pieces
+  carry no uv, but the paint's while its trees sway (`UV.sway`, set by
+  index.ts: every tier but the phones'); `compact()` leaves it out, 21 bytes
+  a vertex where there were 29. Textured materials keep theirs; desktops'
+  trees sway as before (repacking the paint's uv for them was left out: a
+  sway mark small enough to pack is a number textured shapes' own
+  coordinates could land on, read by the outline pass). Tested in
+  `tests/tilebatch.test.ts`.
+- **Measured** (`npm run memcheck`, the phone tier, the whole city built):
+  geometry **187.7 to 169.8 MiB** (-17.9, about -10%); textures and render
+  targets as they were. The phone's geometry ceiling lowered from 207 to
+  **187** to keep it. Walk mode on the phone tier and a desktop, six
+  frames in a row each: every frame drawn right. Budget: boot 715.8 of 740
+  KB.
+6. **Places' near forms let go when far** (built, 2026-11-14, below).
+
+**Item 6 (built, 2026-11-14).** The owner's pick after item 4 (districts
+loaded nearest first, far ones unloaded) was measured first and left out:
+what districts draw on the main thread is about 1 MiB on phones and 15 on a
+desktop, the rest is sites, which the near budget and the haze already let
+go. Item 7 (the JavaScript copies) is held up by picking: a click raycasts
+every mesh of a place, so the places' arrays must stay.
+
+- **Built.** lod.ts: a place's far form (`farForm()`) frees its near form's
+  geometries on the GPU (`geometry.dispose()`: the arrays stay in
+  JavaScript, and three uploads them again as they're next drawn) once it
+  has shown far for `FREE_AFTER` (15 s), once; coming near holds them again,
+  and going far starts the wait over, so a camera on the line never churns.
+  Textures and materials are left alone (shared). `freedNear()`: `?fps`
+  (after the far forms' count) and `__mem().freedNear`. Tested in
+  `tests/lod.test.ts`.
+- **Measured** (headless, the City view, then walking at Degen's home, then
+  the City view again): walking far, **22 places' near forms freed: 13 MB on
+  the phone tier, 15 MB on a desktop**; even in the City view 9 (4.2 MB) far
+  from where it looks. Back in the City view the 13 that came near again
+  were drawn as before (the frames before and after: the same picture, but
+  the LED wall's animation), no errors. `memcheck` counts the arrays, so
+  its numbers don't move: this saving is on the GPU.
 7. **The JavaScript copies dropped** for geometry that's uploaded and never
    read again (three's `onUpload`), halving what fixed geometry costs the
    page's own memory. What a batched mesh needs to grow or pack (`optimize()`,
@@ -223,7 +284,8 @@ render targets **held by a formula**; the leak check with it.
 
 1. **The ceilings** (`MEMORY_CEILINGS` in `targets.ts`, MiB): the phone
    tier with the whole city built, in the City view (which keeps every
-   tile): geometry **207**, textures **70**, render targets **10**. The high
+   tile): geometry **207** (187 since Phase 3b), textures **70**, render
+   targets **10**. The high
    tier's render targets at 1440 x 900: **320** at a retina 2x, **193** at
    1x. Lower one when a phase cuts it, to keep the saving; raise one only on
    purpose, as `scripts/budget.mjs`'s are.
@@ -316,7 +378,8 @@ measured → Phases 3 and 4 → Phase 6. Real-device numbers (`?bench`'s
 - **Retina: SMAA above 1.75x pixels, MSAA below** (Phase 2.2).
 - **Phase 5** (2026-11-13): on demand only; the ceilings today's numbers
   and 10%; the desktop's render targets by formula; the leak check too.
-- (waiting) How far the City view keeps the full city (Phase 3.2).
+- **Phase 3** (2026-11-13): 3a first (the haze on every tier, the lower near
+  budgets); the City view keeps everything (item 2 left out).
 - **The tier by the graphics** (2026-11-14): built-in graphics start on
   medium, plain Apple M chips included; a lost GPU keeps the device a tier
   lower for 14 days. **Phase 6.2 next** (the reload on a restored GPU).

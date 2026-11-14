@@ -5,7 +5,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
-import { ENDS_FLOORS, endsDeckY } from '../src/scripts/city3d/endsdecks';
 import { HOME, ROOF_Y, homeRoofY } from '../src/scripts/city3d/home';
 import { DECK_Y, MARKET_DECK, onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
@@ -42,8 +41,6 @@ const DISC = { ...GARAGE_SITE.turntable, top: 0.07 };
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 function reference(leavesOpen: () => boolean) {
   return (x: number, z: number, yNow = 0) => {
-    const ends = endsDeckY(x, z, yNow);
-    if (ends !== null) return ends;
     // (Degen's roof terrace, home.ts: new since the old groundAt(), so the reference takes it as the layers do)
     const roof = homeRoofY(x, z, yNow);
     if (roof !== null) return roof;
@@ -107,8 +104,6 @@ const JETTY_AT: [number, number] = [JETTY.x, (JETTY.z0 + JETTY.z1) / 2];
 const SHORE = find([-150, 60, 150, 150], (x, z) => inChannel(x, z) && baseAt(x, z).open && !onDeck(x, z));
 /** The mall's east gallery, upstairs */
 const GALLERY = mid(UPPER[2]);
-/** One of Endswood's galleries (a level floor, not a stair or its foot): the estate's decks walked on (endsdecks.ts) */
-const GALLERY_FLOOR = ENDS_FLOORS.find((f) => !f.stair && !f.ground && !f.slope)!;
 /** The places the layers are: a point on each, and the heights they're asked at */
 const SPOTS: [number, number][] = [
   // City Hall's steps (half way up) and its portico
@@ -117,7 +112,6 @@ const SPOTS: [number, number][] = [
   // and the courthouse's
   [COURT_PORTICO[0] - 1, (COURT_PORTICO[1] + COURT_PORTICO[3]) / 2],
   [(COURT_PORTICO[0] + COURT_PORTICO[2]) / 2, (COURT_PORTICO[1] + COURT_PORTICO[3]) / 2],
-  mid(GALLERY_FLOOR.rect),
   mid(MARKET_DECK),
   [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2],
   [TUNNEL.x, TUNNEL.z0 + 1],
@@ -163,7 +157,6 @@ test('the layered ground agrees with the old groundAt() everywhere, at every hei
 test('every layer answers alone where it stands, and nowhere on the open street downtown', () => {
   const g = (x: number, z: number) => ({ ...baseAt(x, z), leavesOpen: true });
   const where: Record<string, [number, number, number]> = {
-    endsdecks: [mid(GALLERY_FLOOR.rect)[0], mid(GALLERY_FLOOR.rect)[1], GALLERY_FLOOR.y],
     homeroof: [(HOME.house[0] + HOME.house[2]) / 2, (HOME.house[1] + HOME.house[3]) / 2, SLAB + ROOF_Y],
     tunnel: [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2, -2],
     hills: [HILL[0], HILL[1], 0],

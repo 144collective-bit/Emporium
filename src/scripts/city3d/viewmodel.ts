@@ -101,10 +101,13 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
     return geo;
   };
   const clothes = new THREE.Group();
-  g.add(clothes, new THREE.Mesh(hand, shared(SKIN)));
+  const skin = new THREE.Mesh(hand, shared(SKIN));
+  g.add(clothes, skin);
   return {
     g,
     dress(o: Outfit) {
+      // (the hand in the player's skin tone: one of the cached flat materials, never a colour changed in place)
+      skin.material = shared(o.skin ?? SKIN);
       clothes.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
       clothes.clear();
       const top = o.top;

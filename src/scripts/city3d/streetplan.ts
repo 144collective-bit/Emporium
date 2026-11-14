@@ -32,10 +32,8 @@ import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
 import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS, EL_X } from './docks';
 import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
-import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS } from './lot9';
-import { ENDS_BLOCKS, ENDS_CROSSINGS, ENDS_STREETS } from './endswood';
-import { LINK_BLOCKS, WEST_BLOCKS } from './endswest';
-import { FAR_BLOCKS, FAR_CROSSINGS, FAR_STREETS } from './endsfar';
+import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS, PARK as LOT9_PARK } from './lot9';
+import { NS_BENDS, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, type Zone } from './south';
 import { ruralSplit } from './rural';
 
 export type Pt = [number, number];
@@ -358,6 +356,9 @@ export function gridCrossings(): Crossing[] {
   return out;
 }
 
+/** The south's blocks' refs by zone: the estate's paved, the rest grassed */
+const SOUTH_REF: Record<Zone, string> = { tall: 'endswood', estate: 'endswood', council: 'south', village: 'south', bungalow: 'south', lot9: 'south', fields: 'south' };
+
 const withSlabs = (p: Omit<StreetPlan, 'slabs'>): StreetPlan => ({ ...p, slabs: p.blocks.map(slabOf) });
 
 /** Landmark spot ids by their old block on the drawing grid (layout.ts SEATS) */
@@ -451,13 +452,16 @@ export function cityPlan(): StreetPlan {
   // Lot 9's lane in off the south avenue past the highway and its two one-way loops (lot9.ts, docs/trailer-plan.md)
   for (const t of LOT9_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of LOT9_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
-  // Endswood Estate between them (endswood.ts, docs/estate-plan.md Phase 2): Endswood Road from the south avenue to the
-  // east one, the Circus (one way round, as Uptown's) and the Close off it
-  for (const t of ENDS_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.loop ? { loop: true } : {}), ...(t.oneway ? { oneway: t.oneway } : {}) });
-  for (const c of ENDS_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: c.lights });
-  // ...and its far west (endsfar.ts, docs/ends-far-west-plan.md Phase 1): the Close's run on to the lane across its end
-  for (const t of FAR_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
-  for (const c of FAR_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  // South of The Trenches, re-laid (south.ts, docs/south-plan.md Phase 1b): the Circus and its spokes, the links, the
+  // village's streets, the closes and crescents; ns1s and ns2s bent in to it (they end where their bends begin)
+  for (const [id, z] of Object.entries(NS_BENDS)) {
+    const s = streets.find((q) => q.id === id)!;
+    s.pts = [s.pts[0], [s.pts[0][0], z]];
+  }
+  for (const t of SOUTH_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.loop ? { loop: true } : {}), ...(t.oneway ? { oneway: t.oneway } : {}) });
+  for (const c of SOUTH_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
+  // (Lot Lane in through Lot 9's west gate, onto its lane's west end: lot9.ts, docs/south-plan.md, the owner's pick)
+  crossings.find((c) => c.id === 'lot9-w')!.streets.push('south-lot');
   // The mall's two-way loop off the north avenue past the Parkway (mall.ts, docs/mall-plan.md)
   for (const t of MALL_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
   for (const c of MALL_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
@@ -557,12 +561,9 @@ export function cityPlan(): StreetPlan {
     ...DOCK_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'docks', walk: b.walk })),
     ...STRIP_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'strip', walk: b.walk })),
     ...SF_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use, ref: b.ref, walk: b.walk })),
-    // Endswood's round the Circus and either side of Endswood Road east of the avenue (endswood.ts)
-    ...ENDS_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
-    // ...and carried west (endswest.ts, docs/ends-west-plan.md): the extension's two blocks and the pavements along the Close to them
-    ...[...WEST_BLOCKS, ...LINK_BLOCKS].map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
-    // ...and its far west (endsfar.ts): the compound's plot, the plots round it and the verge by the lane
-    ...FAR_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: 'endswood', walk: WALK_W })),
+    // The south's (south.ts): the estate's round the Circus and along the ring road paved as the Docks' (ref
+    // `endswood`), the village's, the council rows' and the bungalows' grassed (ref `south`)
+    ...SOUTH_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: 'plain', ref: SOUTH_REF[b.zone], walk: WALK_W })),
     // The bends' outer sidewalks (their own outline is the sidewalk)
     ...BEND_KERBS.map((poly, i): Block => ({ id: `kerb-${i}`, poly, use: 'plain', walk: 0 })),
   ];
@@ -574,8 +575,10 @@ export function cityPlan(): StreetPlan {
   // The country roads past the highway (rural.ts, docs/highway-plan.md Phase 7): each grid road's town piece ends past
   // the last thing beside it, and runs on to the world's edge as a two-lane country road with a turning loop
   const box = (poly: Pt[]): [number, number, number, number] => [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1]))];
+  // (Lot 9 by its park and its lane in: its camp, south of the park since docs/south-plan.md Phase 1b, stands back from the
+  // avenue behind its strip, and the country road runs on past its fence as it did)
   // (the el down the Docks' line and over the river onto the north bank avenue's median counts too: docks.ts EL_X)
-  ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], LOT9_RECT, ...STADIUM_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
+  ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], [LOT9_RECT[0], LOT9_RECT[1], LOT9_RECT[2], LOT9_PARK[3] + 2], ...STADIUM_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
   return withSlabs({ streets, crossings, blocks, plazas });
 }
 

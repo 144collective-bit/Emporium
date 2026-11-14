@@ -59,16 +59,12 @@ export const BENCH_VIEWS: BenchView[] = [
   // The Neon Mile (docs/strip-plan.md Phase 6): over the boulevard from the west, and down it at street level
   { id: 'strip', name: 'The Neon Mile, over the boulevard', pos: [150, 30, 95], target: [200, 5, 30] },
   { id: 'strip-street', name: 'The Neon Mile, the boulevard', pos: [140, 2.2, 33.5], target: [190, 4, 30] },
-  // Endswood Estate (docs/estate-plan.md Phase 8): over the Circus and its well, down Endswood Road to St Aldwyn's,
-  // and from the common back up to the blocks
-  { id: 'ends-circus', name: 'Endswood, over the Circus', pos: [-28, 24, 412], target: [-56, 0, 378] },
-  { id: 'ends-street', name: 'Endswood Road, to the church', pos: [4, 2.2, 382.5], target: [30, 7, 366] },
-  { id: 'ends-common', name: 'Endswood, from the common', pos: [-74, 9, 468], target: [-58, 5, 395] },
-  // ...carried west (docs/ends-west-plan.md Phase 5): the parade on the Close, along a pair of rows' fronts, the kickabout
-  { id: 'endsw-parade', name: 'Endswood west, the parade', pos: [-131, 2, 381.6], target: [-144, 1.4, 376] },
-  { id: 'endsw-rows', name: 'Endswood west, the rows', pos: [-150, 2.2, 409.5], target: [-172, 0.9, 407] },
-  { id: 'endsw-kick', name: 'Endswood west, the kickabout', pos: [-151, 3, 410], target: [-142, 0.4, 426] },
-  // Degen's compound (docs/ends-far-west-plan.md Phase 2): from the Close down its line, through the gates to the garage
+  // South of The Trenches re-laid (docs/south-plan.md Phase 1b): over the Circus and its spokes, down the High Road
+  // from the Circus at eye level, and over the village round St Aldwyn's hill
+  { id: 'south-circus', name: 'The Ends, over the Circus', pos: [-56, 24, 446], target: [-82, 0, 418] },
+  { id: 'south-high', name: 'The High Road, from the Circus', pos: [-102, 2.2, 413.4], target: [-150, 1.5, 395] },
+  { id: 'south-village', name: "The village, round St Aldwyn's hill", pos: [-168, 26, 506], target: [-205, 0, 462] },
+  // Degen's compound (docs/ends-far-west-plan.md Phase 2): from the High Road's end, through the gates to the garage
   { id: 'ends-home', name: "The far west, Degen's compound", pos: [-208, 2.6, 381.2], target: [-238, 1.2, 380] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
