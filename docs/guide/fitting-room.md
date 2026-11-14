@@ -6,8 +6,8 @@ keep it up to date when what it describes changes.
 ## Drop 001's fitting room
 
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
-  fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
-  Hand, Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
+  fitting room (`fitting.ts`): item cards by tab (Fit, Head, Face, Shades, Bags,
+  Hand, Extras, Kicks, Merch; five and four in two rows), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
   open (still under reduced motion; drag turns him); its idle and walk
   are the crowd pack's captured takes on his bones (`captureplay.ts`:
@@ -26,6 +26,12 @@ keep it up to date when what it describes changes.
   he's wearing (`describe()`) and the way to Drop 001. × or Esc closes it;
   while it's open no other key handler hears the keyboard (Esc never
   stops walking). Check it upright and on its side at phone widths.
+- **The Face tab** (`docs/faces-plan.md` Phase 2; `faceItems`): the
+  Balaclava, or a face with a cut (`CUTS`: Buzz, Crop, Curls, Bun, Bald),
+  one of them, with Skin (`tone`) and Hair (`hair`) rows from
+  `PALETTE.tone` / `PALETTE.hair`; all free. On a face the Shades tab
+  offers Shades or No shades (`shades`), and Extras' Shades Chain shows
+  only with them on. The character screen's `describe()` has a Face row.
 - The look belongs to `profile-ui.ts` (browser and player profile); the
   fitting room only calls `wear()`. The original wardrobe is free; the
   premium wardrobe (`WARDROBE_CATALOG` in `catalog.ts`) costs Dorras and
