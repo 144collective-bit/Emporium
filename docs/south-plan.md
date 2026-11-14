@@ -150,8 +150,54 @@ From the Circus west, patchy as high roads are:
 - **The sky network:** covered bridges at two or three levels between the
   Wall, the towers and the stairwell blocks, so you can cross the estate
   without touching the ground; warm strip lights under them at night.
-- The "abandoned" feel (Kite House's hoardings) moves to a part of one of
-  the kept blocks, emptied for refit; where, to settle in Phase 2.
+- The "abandoned" feel (Kite House's hoardings) moves to half of one
+  stairwell block, hoarded for refit, the other half lived in; Bunker
+  Sound in its basement.
+
+### Phase 2's answers (the owner, 2026-11-14; sketch `8-phase-2-sketch-blocks.png`)
+
+| | |
+| --- | --- |
+| The towers | Site A: Harrier Point and Kite Point north-east of the Circus, on the big block by the ring road, their core between them |
+| The Rampart | The core run north-east of the Circus and on west along the ring road to the closes, an archway where the Circus's north spoke passes under it |
+| The stairwell blocks | Six sites: 1, 2, 3 (tall thin slabs between the avenues, east of ns0s) and 4, 5, 6 (round the Circus's south and east, on courts) |
+| The emptied wing | Half of one stairwell block, Bunker Sound in its basement |
+| The sky network | Walked, all of it: up the stair cores, across every bridge and deck, the estate crossed without touching the ground |
+| Heights | The stairwell blocks mixed 6 to 10: the slabs between the avenues about 10, those round the Circus about 6; the Rampart to 14, the towers to 20 lead |
+| Concrete | Warm board-marked grey, each block its own accent (orange, teal, mustard) on balcony fronts and doors |
+| The ground | Parking courts (cars, bins, bike sheds), grass with desire lines and a few trees, a 70s concrete play area, raised podium decks over the parking with planters and benches, joined to the sky network |
+
+### Phase 2's steps (each shown to the owner)
+
+- **2a, the blocks as data** (built, signed off by the owner 2026-11-14):
+  `southblocks.ts` (DOM-free, `tests/southblocks.test.ts`, not drawn or
+  solid in the city yet). The Rampart (x -168 to -15 along the ring road,
+  7, 9, 11, 13, 11, 9 storeys west to east, the archway over Underhill
+  Lane's turning circle and the tunnel's path, five stair cores standing
+  out from its south galleries); Harrier Point and Kite Point (18 storeys
+  and a plant room, to about 20.7) with The Core between them (bridges
+  every third floor); Linnet, Marten and Wren Courts between the avenues
+  (9 storeys); Sorrel and Fennel Houses along Marsh Lane, Teasel House
+  along Endswood Road (5 storeys; Teasel's west half hoarded for refit,
+  Bunker Sound's door under it); a stair core at each slab's ends, flush
+  with its galleries. Galleries at every third floor (`SKY_FLOORS`);
+  bridges between the cores at floors 3, 6 and 9 (over the avenues along
+  the ring road, over Endswood Road, the avenue to Sorrel and Teasel),
+  the podium deck between Teasel and Fennel at the third floor. The
+  courts (behind the Rampart off Underhill's turning circle, under the
+  podium off Marsh Lane, north of Sorrel off Endswood Road), the grass
+  with its desire lines, the play area east of Kite; the solids
+  (`BLOCK_SOLIDS`, the arch open). A storey is 1, the ground floor 1.4.
+  Plan from the data: `9-phase-2a-blocks.png`.
+- **2b, the buildings drawn**: one retro-future kit (rounded corners,
+  curved balcony fronts, board-marked concrete, accents, sky gardens,
+  plant rooms, the towers' beacons), its own lazy chunk, fine detail near
+  only, lights at night; shots and the phone tier measured.
+- **2c, the sky network walked**: stairs and lifts up the cores, the
+  bridges and decks underfoot (groundheight.ts), the archway, the smoke
+  test through it.
+- **2d, the ground round them**: courts with cars and bins, grass and
+  desire lines, the play area, the podium decks' planters and benches.
 
 ## The phases (each with the owner's sign-off)
 
