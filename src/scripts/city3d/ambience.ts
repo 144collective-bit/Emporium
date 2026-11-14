@@ -298,7 +298,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const stadium = matchOn(t * 1000) ? near(STADIUM_BLOCK, x, z, 0, 90) : 0;
   // Endswood: all of it on its land, fading over 25 past it. Bunker Sound's beat and St Aldwyn's bell come back with
   // their buildings (docs/south-plan.md Phases 2 and 3: the south was re-laid, Phase 1b)
-  const fromEnds = (inEndswood(x, z) ? 0 : past(ENDSWOOD_RECT, x, z) + 4) - 4;
+  // (how far off its land: its land is its blocks and streets, not the fields inside its bounds)
+  const fromEnds = inEndswood(x, z) ? 0 : ([4, 8, 12, 16, 20, 25].find((m) => inEndswood(x, z, m)) ?? 30) - 4;
   const ends = 1 - smooth(0, 25, Math.max(0, fromEnds));
   const studio = 0;
   const bell = 0;

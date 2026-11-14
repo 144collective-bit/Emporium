@@ -110,7 +110,7 @@ const at = (pts: Pt[], s: number): Pt => {
 };
 const cut = (pts: Pt[], s0: number, s1: number): Pt[] => {
   const out: Pt[] = [at(pts, s0)];
-  for (let k = Math.floor(s0) + 1; k < s1 - 1e-9; k++) if (k > s0 + 1e-9) out.push(pts[k]);
+  for (let k = Math.max(0, Math.floor(s0) + 1); k < s1 - 1e-9 && k < pts.length; k++) if (k > s0 + 1e-9) out.push(pts[k]);
   out.push(at(pts, s1));
   return out;
 };
@@ -325,15 +325,29 @@ export function faces(noded: { lines: GraphLine[]; nodes: Pt[] }, bulbs: { at: P
         for (let k = 1; k < steps; k++) arc.push([v[0] + Math.cos(a0 + (sweep * k) / steps) * R, v[1] + Math.sin(a0 + (sweep * k) / steps) * R]);
         return { s1: sP, s0: sQ, arc };
       }
-      // Two lines' kerbs crossing near the node: the crossing nearest it
+      // Two lines' kerbs crossing near the node: the crossing nearest it (each carried a little past its end, where two
+      // streets meet at a sharp angle and their kerbs cross just short of the node)
+      const EXT = 8;
+      const run = (a: Pt, b: Pt): Pt => {
+        const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+        return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+      };
+      const [pu, qu] = [run(P[P.length - 2], P[P.length - 1]), run(Q[0], Q[1])];
+      const pLast = Math.hypot(P[P.length - 1][0] - P[P.length - 2][0], P[P.length - 1][1] - P[P.length - 2][1]) || 1;
+      const qFirst = Math.hypot(Q[1][0] - Q[0][0], Q[1][1] - Q[0][1]) || 1;
+      const Pe: Pt[] = [...P, [P[P.length - 1][0] + pu[0] * EXT, P[P.length - 1][1] + pu[1] * EXT]];
+      const Qe: Pt[] = [[Q[0][0] - qu[0] * EXT, Q[0][1] - qu[1] * EXT], ...Q];
       let best: { s1: number; s0: number; d: number } | null = null;
-      for (let p = Math.max(0, P.length - 40); p < P.length - 1; p++)
-        for (let q = 0; q < Math.min(Q.length - 1, 40); q++) {
-          const c = cross(P[p], P[p + 1], Q[q], Q[q + 1]);
+      for (let p = Math.max(0, Pe.length - 41); p < Pe.length - 1; p++)
+        for (let q = 0; q < Math.min(Qe.length - 1, 41); q++) {
+          const c = cross(Pe[p], Pe[p + 1], Qe[q], Qe[q + 1]);
           if (!c) continue;
-          const pt = at(P, p + c[0]);
+          // (back to P's and Q's own params: past P's end, before Q's start, as a share of their end segments)
+          const s1 = p < P.length - 1 ? p + c[0] : P.length - 1 + (c[0] * EXT) / pLast;
+          const s0 = q > 0 ? q - 1 + c[1] : -((1 - c[1]) * EXT) / qFirst;
+          const pt = at(P, s1);
           const dd = Math.hypot(pt[0] - v[0], pt[1] - v[1]);
-          if (!best || dd < best.d) best = { s1: p + c[0], s0: q + c[1], d: dd };
+          if (!best || dd < best.d) best = { s1, s0, d: dd };
         }
       if (best) return { s1: best.s1, s0: best.s0, arc: [] as Pt[] };
       return { s1: P.length - 1, s0: 0, arc: [] as Pt[] };

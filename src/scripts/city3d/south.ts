@@ -23,6 +23,7 @@
  * band along the ring road, the estate round the Circus, the council rows, the village, the bungalows.
  */
 import { GATES, HEAD, PLOT } from './endsfar';
+import { NS_SOUTH_END } from './layout';
 import { area, cross, distTo, faces, inside, nearestIndex, node, seeded, selfCrossings, smooth, type FaceBlock, type GraphLine, type Pt } from './streetfaces';
 
 export type { Pt };
@@ -88,14 +89,14 @@ export const SOUTHFOLD = S('south-southfold', 'Southfold Lane', 'main', [
 export const GATE_LANE = S('south-gate', 'Gate Lane', 'main', [[-229, 340.5], [-221, 343], [-216.3, 350], [-216, 358], HEAD, [-216, 402], [-216.5, 410], [-221, 420], [-229, 432], on(CHURCH_ROAD, [-236, 446])]);
 export const FIELD_LANE = S('south-field', 'Field Lane', 'main', [[-229, 340.5], [-245, 338.5], [-262, 338.5], [-282, 341], [-300, 343], [-320, 341], [-340, 339], [-360, 342], [-380, 346], [-400, 344], [-424, 342]]);
 // ns1s bent in to the Circus (Endswood Road), ns2s down to Southfold Lane (Marsh Lane)
-const NS1_BEND: Pt = [AVE.ns1s.x, 350];
-const NS2_BEND: Pt = [AVE.ns2s.x, 358];
+const NS1_BEND: Pt = [AVE.ns1s.x, NS_SOUTH_END[1]];
+const NS2_BEND: Pt = [AVE.ns2s.x, NS_SOUTH_END[2]];
 /** Where the bent avenues' straight runs end (streetplan.ts ends ns1s and ns2s there: the south's streets go on) */
 export const NS_BENDS: Record<'ns1s' | 'ns2s', number> = { ns1s: NS1_BEND[1], ns2s: NS2_BEND[1] };
 /** Where Lot Lane meets Lot 9's own lane, through its west gate (lot9.ts `lot9-road`'s west end) */
 export const LOT9_W: Pt = [-118, 507];
-export const ENDSWOOD_ROAD = S('south-endswood', 'Endswood Road', 'main', [NS1_BEND, [16.5, 362], [14, 376], [8, 390], [-2, 401], [-14, 408], [-30, 412], [-46, 414], [-60, 414.5], ...spoke(345).reverse()]);
-export const MARSH_LANE = S('south-marsh', 'Marsh Lane', 'main', [NS2_BEND, [42.5, 376], [41, 394], [36, 410], [28, 424], [16, 434], [0, 442], [-16, 448], [-34, 452], [-56, 455], [-78, 455], on(SOUTHFOLD, [-98, 452])]);
+export const ENDSWOOD_ROAD = S('south-endswood', 'Endswood Road', 'main', [NS1_BEND, [16.5, 362], [14, 376], [9, 387], [2, 392.4], [-11, 393.6], [-26, 397], [-41, 405], [-54, 412], ...spoke(345).reverse()]);
+export const MARSH_LANE = S('south-marsh', 'Marsh Lane', 'main', [NS2_BEND, [42.5, 376], [41, 394], [36, 410], [28, 424], [16, 434], [3, 440.2], [-12, 441.6], [-30, 446], [-52, 452], [-76, 454.5], on(SOUTHFOLD, [-98, 452])]);
 // The links between the spokes
 export const FENNEL_WAY = S('south-fennel', 'Fennel Way', 'link', [on(UNDERHILL, [-102, 368]), [-114, 371], [-128, 372], [-150, 366], [-176, 353], [-200, 346], on(GATE_LANE, [-216.5, 352])]);
 export const RUNWAY_VIEW = S('south-runway', 'Runway View', 'link', [on(MARSH_LANE, [36, 410]), [46, 420], [56, 428], [AVE.ns3.x, 434]]);
@@ -409,7 +410,10 @@ export const SOUTH_CROSSINGS: SouthCrossing[] = (() => {
   for (const n of GRAPH.nodes) {
     const ids = GRAPH.lines.filter((l) => l.street && l.pts.some((p) => Math.abs(p[0] - n[0]) < 1e-4 && Math.abs(p[1] - n[1]) < 1e-4)).map((l) => l.street!);
     const uniq = [...new Set(ids)];
-    if (uniq.length >= 2) out.push({ id: `south-x${out.length}`, at: [n[0], n[1]], streets: uniq });
+    if (uniq.length < 2) continue;
+    // (where a bent avenue carries on as a south street, end to end: a join, straight on only, routes.ts)
+    const bend = Object.entries(NS_BENDS).find(([id, z]) => uniq.includes(id) && Math.abs(n[1] - z) < 1e-6);
+    out.push({ id: bend ? `south-${bend[0]}-join` : `south-x${out.length}`, at: [n[0], n[1]], streets: uniq });
   }
   return out;
 })();
