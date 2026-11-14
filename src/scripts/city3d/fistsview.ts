@@ -31,7 +31,7 @@ import type { Outfit } from './character';
 import { FP_LEVEL, FP_SCALE, FP_SHIRT, FP_SKIN, FP_VARSITY, fpShade, upFront } from './viewmodel';
 import type { Skeleton } from './skeleton';
 import { UPPER_ARM } from './skeleton';
-import { ARM, aimPiece, blendArm, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
+import { ARM, aimPiece, blendArm, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, paintFist, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
 
 /** A kick: how far the hands drop and the view bobs (metres), and how long after the strike the bob settles */
 export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
@@ -138,7 +138,7 @@ function armPieces(o: Outfit, thumb: -1 | 1, loose = 0) {
       upper.push(paint(stripeGeometry(Math.PI / 2 + a, ...up, 0.03, ARM.upper - 0.01, STRIPE.w), FP_SHIRT));
       fore.push(paint(stripeGeometry(out + a, ...lo, 0.02, end - 0.054, STRIPE.w), FP_SHIRT));
     }
-  fore.push(paint(fistGeometry(thumb, loose).translate(0, end, 0), FP_SKIN));
+  fore.push(paintFist(fistGeometry(thumb, loose).translate(0, end, 0), FP_SKIN));
   return { upper: merge(upper), fore: merge(fore) };
 }
 
