@@ -99,6 +99,21 @@ keep it up to date when what it describes changes.
     against the fingers' front. `tests/accessories.test.ts` holds the hats
     clear of the head at every level and the held things clear of the
     fingers. The lab takes `wear=` and `at=x,y,z`.
+  - **The hood up** (`docs/wardrobe-plan.md` Phase 3): cloth over the head,
+    not a helmet. Its sections are the head's outline carried out
+    (`headShell()`, `HOOD_SIDE` at the sides, fuller behind), falling under
+    the jaw to rest on the hoodie's shoulders (`HOOD_FOOT`, where the
+    chest's weights carry it; the crown turns with the head). Its opening
+    (`hoodOpen()`: an angle round each row either side of the front) frames
+    the face behind the shades' frames, closing to a soft point over the
+    brow and to a narrow V at the throat; each row is drawn only round its
+    cloth, a rolled edge (`hoodRim`) runs round the opening and a rolled hem
+    (`hoodHem`) where it rests. With the hood up the shades' chain is its own
+    (`chain-hood`): forward inside the hood, out through the opening by the
+    jaw and over the hem at the throat. `tests/accessories.test.ts` holds the
+    head, ears and the shades' arms inside it and the lenses clear of it, the
+    chain and headphones out of its cloth, at every level;
+    `tests/clothing.test.ts` holds it out of the hoodie through every pose.
 - **The suit's tailoring** (the owner's call, after the clothing plan) is
   planned in `docs/tailoring-plan.md`: the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the

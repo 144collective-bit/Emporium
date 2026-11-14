@@ -192,6 +192,24 @@ detail), which stay the record of how the clothes were built.
 - Weighted across the head and neck so it turns with the head and stays
   on the shoulders, clear of the head, the shades and the face gear in
   every pose (`tests/accessories.test.ts`).
+- **As built (14 November 2026):** `hoodUp` in `wardrobe.ts`, replacing the
+  cut sphere: sections from `headShell()` (`HOOD_SIDE` 0.02 at the sides,
+  fuller behind, a little closer over the crown, closed to a point on top)
+  and, under the jaw, eased out to `HOOD_FOOT` on the hoodie's shoulders,
+  where the head's own weights hand it to the chest. The opening
+  (`hoodOpen()`) is an angle round each row either side of the front:
+  `HOOD_FACE` behind the shades' frames, narrowing smoothly to a point over
+  the brow (a flat cut there left a stretched sliver of cloth across the
+  forehead) and to `HOOD_THROAT` at the throat. A rolled edge round the
+  opening and a rolled hem where it rests, a shade darker. The shades' chain
+  with the hood up is its own item (`chain-hood`), out through the opening;
+  the headphones fit inside the hood's foot. Both hoods' materials as before
+  (the cloth both sides drawn): no new draw calls.
+  - Tests: `accessories.test.ts` (every level: the head, ears, frames and
+    arms inside the cloth, the ears, back and top covered, nothing in front
+    of the lenses; the chain and headphones out of the cloth) and
+    `clothing.test.ts` (the hood never into the hoodie through every pose,
+    both single-figure levels).
 
 ### Phase 4: eyewear and face gear
 
@@ -273,4 +291,6 @@ A proposed first set; the owner picks what goes in:
 - Planned, 14 November 2026.
 - **Phase 1 (clear out and open up): built**, 14 November 2026.
 - **Phase 2 (the three ranges and the separates): built**, 14 November
-  2026, waiting for the owner's look before Phase 3.
+  2026.
+- **Phase 3 (the hood up, rebuilt): built**, 14 November 2026, waiting for
+  the owner's look before Phase 4.

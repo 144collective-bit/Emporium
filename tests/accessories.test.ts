@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { items, PLAYER, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
+import { HEAD_Y } from '../src/scripts/city3d/skeleton';
 import { bakedHand, headGeometry, headRow, HEAD_TOP } from '../src/scripts/city3d/body';
 
 const LEVELS: Detail[] = [3, 2, 1, 0];
@@ -113,3 +114,100 @@ for (const q of [3, 2] as Detail[]) {
     assert.ok(close < 0.003, `the bag's cord ${(close * 1000).toFixed(1)} mm from the fingers`);
   });
 }
+
+/*
+ * The hood up (docs/wardrobe-plan.md Phase 3): cloth over the head with the face in its opening. At every detail
+ * level: no point of the head, its ears or the shades' frames and arms comes through the hood (looking out from the
+ * head's middle, the hood is further out than they are, by a little), the ears and the back of the head are under
+ * it, and nothing of the hood is in front of the lenses (the shades show).
+ */
+for (const q of LEVELS)
+  test(`accessories: the hood up covers the head and ears, clear of them, the shades in its opening (detail ${q})`, () => {
+    const all = items(q, true);
+    const o = { ...PLAYER, kind: 'hoodie' as const, hood: true, cap: undefined };
+    const hoodIt = all.find((i) => i.id === 'hoodUp' && i.when(o))!;
+    assert.ok(hoodIt, 'the hood is worn with the hoodie, hood up');
+    const hood = new THREE.Mesh(hoodIt.pieces[0].geo, side);
+    const head = all.find((i) => i.id === 'head')!;
+    // (the skull and ears, the frames and their arms: everything on the head but the lenses, the last piece)
+    const parts = head.pieces.slice(0, -1).map((p) => p.geo);
+    const lenses = head.pieces[head.pieces.length - 1].geo;
+    const v = new THREE.Vector3();
+    const o3 = new THREE.Vector3();
+    const d = new THREE.Vector3();
+    let worst = 9;
+    let worstAt = '';
+    for (const g of parts) {
+      const P = g.attributes.position;
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i);
+        if (v.y < 0.06 || v.y > HEAD_TOP) continue;
+        const r = headRow(v.y);
+        o3.set(0, v.y, r.zc);
+        d.subVectors(v, o3).setY(0);
+        const dv = d.length();
+        if (dv < 1e-4) continue;
+        d.normalize();
+        const dh = hit(hood, o3, d, false);
+        // (none: that way is the opening)
+        if (!Number.isFinite(dh)) continue;
+        if (dh - dv < worst) {
+          worst = dh - dv;
+          worstAt = `${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)}`;
+        }
+      }
+    }
+    assert.ok(worst > 0.001, `something on the head comes within ${(worst * 1000).toFixed(1)} thousandths of the hood's cloth (at ${worstAt})`);
+    // The ears, the back and the top of the head are under it
+    for (const [y, dx, dy, dz] of [
+      [0.125, 1, 0, 0],
+      [0.125, -1, 0, 0],
+      [0.15, 0, 0, -1],
+      [0.2, 0, 1, 0],
+    ]) {
+      o3.set(0, y, headRow(y).zc);
+      assert.ok(Number.isFinite(hit(hood, o3, d.set(dx, dy, dz), false)), `the hood covers the head from ${y} along ${dx},${dy},${dz}`);
+    }
+    // Nothing of the hood in front of the lenses
+    const L = lenses.attributes.position;
+    const fwd = new THREE.Vector3(0, 0, 1);
+    for (let i = 0; i < L.count; i += 3) {
+      v.fromBufferAttribute(L, i);
+      assert.ok(!Number.isFinite(hit(hood, v, fwd, false)), `the hood is in front of a lens at ${v.x.toFixed(3)},${v.y.toFixed(3)}`);
+    }
+  });
+
+/*
+ * What's worn round the head with the hood up (the wardrobe plan's Phase 3): the shades' chain runs inside the hood and
+ * out through its opening, the headphones sit round the neck inside it; neither in the cloth (between just inside it
+ * and a little outside, looking out from the head's middle).
+ */
+for (const q of LEVELS)
+  test(`accessories: the chain and the headphones clear of the hood's cloth (detail ${q})`, () => {
+    const all = items(q, true);
+    const o: Outfit = { ...PLAYER, kind: 'hoodie', hood: true, cap: undefined, chain: true, headphones: '#3355ff' };
+    const hood = new THREE.Mesh(all.find((i) => i.id === 'hoodUp' && i.when(o))!.pieces[0].geo, side);
+    const chain = all.find((i) => i.id === 'chain-hood')!;
+    assert.ok(chain.when(o) && !all.some((i) => i.id === 'chain-hoodie' && i.when(o)), "the hood's own chain");
+    const phones = all.find((i) => i.id === 'headphones' && i.when(o));
+    // (each in the head's space: the headphones are drawn on the torso)
+    const worn: [string, THREE.BufferGeometry, number][] = [['the chain', chain.pieces[0].geo, 0], ...(phones ? phones.pieces.map((p): [string, THREE.BufferGeometry, number] => ['the headphones', p.geo, -HEAD_Y]) : [])];
+    const v = new THREE.Vector3();
+    const o3 = new THREE.Vector3();
+    const d = new THREE.Vector3();
+    for (const [what, g, dy] of worn) {
+      const P = g.attributes.position;
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i);
+        v.y += dy;
+        if (v.y < -0.08 || v.y > HEAD_TOP) continue;
+        o3.set(0, v.y, headRow(Math.max(v.y, -0.08)).zc);
+        d.subVectors(v, o3).setY(0);
+        const dv = d.length();
+        if (dv < 1e-4) continue;
+        const dh = hit(hood, o3, d.normalize(), false);
+        if (!Number.isFinite(dh)) continue;
+        assert.ok(dv < dh - 0.002 || dv > dh + 0.006, `${what} is in the hood's cloth at ${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)} (${((dv - dh) * 1000).toFixed(1)} thousandths)`);
+      }
+    }
+  });

@@ -181,3 +181,32 @@ for (const q of [2, 3] as const)
         if (report) console.log(`${bottoms} / ${shoeStyle} q${q}: deepest ${(worst.d * 1000).toFixed(1)} (thousandths) at ${worst.at}`);
         assert.ok(worst.d <= ANKLE, `the ${bottoms} go ${(worst.d * 1000).toFixed(1)} thousandths into the ${shoeStyle} shoes at ${worst.at}`);
       });
+
+/*
+ * The hood up (docs/wardrobe-plan.md Phase 3) rests on the hoodie's shoulders: through every pose, none of the hood's
+ * cloth that's clear of the hoodie at rest sinks into it (the hood's foot rides the chest, its crown the head).
+ */
+for (const q of [2, 3] as const)
+  test(`clothes: the hood up never sinks into the hoodie (detail ${q})`, () => {
+    const d = dress({ ...PLAYER, kind: 'hoodie', hood: true, cap: undefined }, q);
+    const hood = d.worn.filter((w) => w.item === 'hoodUp');
+    const body = d.worn.filter((w) => w.piece.shell === 'top');
+    assert.ok(hood.length && body.length);
+    const rest = shells(body.map((w) => w.rest));
+    const clear = hood.map((w) => Array.from({ length: w.rest.length / 3 }, (_, i) => i).filter((i) => !inside(rest, w.rest[i * 3], w.rest[i * 3 + 1], w.rest[i * 3 + 2])));
+    let worst = { d: 0, at: '' };
+    each(d, (name) => {
+      const sh = shells(body.map((w) => posed(d, w)));
+      hood.forEach((w, k) => {
+        const p = posed(d, w);
+        for (const i of clear[k]) {
+          const [x, y, z] = [p[i * 3], p[i * 3 + 1], p[i * 3 + 2]];
+          if (!inside(sh, x, y, z)) continue;
+          const dd = distance(sh, x, y, z).d;
+          if (dd > worst.d) worst = { d: dd, at: name };
+        }
+      });
+    });
+    if (report) console.log(`hood q${q}: deepest into the hoodie ${(worst.d * 1000).toFixed(1)} (thousandths) at ${worst.at}`);
+    assert.ok(worst.d <= TOL, `the hood goes ${(worst.d * 1000).toFixed(1)} thousandths into the hoodie at ${worst.at}`);
+  });
