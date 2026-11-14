@@ -52,7 +52,7 @@ Each with the owner's sign-off.
    curls, bun and a cap over the nape; the crowd by the Emporium). It costs
    no draw calls; the near crowd's meshes carry about 14% more vertices,
    the far crowd's about 3% (one hair shape for every cut far off).
-2. **The player's option** (built, waiting on the owner's sign-off). The
+2. **The player's option** (built, signed off by the owner, 2026-11). The
    owner's answers: a Face tab of its own, all free, the shades optional
    on a face. `Look` (profile-data.ts) gets `face`, `tone`, `hair`, `cut`
    (`CUTS`, with `bald`) and `shades`, its colours from `PALETTE.tone` and
@@ -68,6 +68,7 @@ Each with the owner's sign-off.
    players see it (the look is their profile's). The tabs sit five and four
    in two rows. Shots: `docs/faces-shots/fitting.png`,
    `fitting-shades.png`.
-3. **Faces that move (optional).** A blink and two or three expressions
+3. **Faces that move (optional; not started, the owner's call: stop after
+   Phase 2 for now).** A blink and two or three expressions
    (a grin, a frown) for emotes and the Fight Club, still within the same
    draw calls; held still under `prefers-reduced-motion`.
