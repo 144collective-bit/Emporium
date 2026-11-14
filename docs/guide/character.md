@@ -108,6 +108,14 @@ keep it up to date when what it describes changes.
     (`ARM_EAR`) are alike. Items `shades-<style>` (`eyesOf()`: the crowd's
     the classic); the frames in the outfit's `frame` colour, the lenses its
     `lens`.
+  - **Face gear** (`docs/wardrobe-plan.md` Phase 4): the gas mask, the half
+    respirator and the safety and ski goggles (`face-<id>`, single figures
+    only), moulded on the face (`moulded()`: the face's smooth oval pushed
+    out from the head's middle, domed, held off the real face and its nose)
+    with rolled rims and straps on the head's measured surface
+    (`headStrap()`); the gas mask and goggles take the shades' place
+    (`coversEyes()`, `eyesOf()` null: the shades and chain come off). In the
+    outfit's `gear` colour; the goggles' lens in its `lens`.
   - **The hood up** (`docs/wardrobe-plan.md` Phase 3): cloth over the head,
     not a helmet, and one with the hoodie (the owner's call: no line between
     hood and sweater). Its sections are the head's outline carried out

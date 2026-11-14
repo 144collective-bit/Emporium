@@ -8,8 +8,8 @@ keep it up to date when what it describes changes.
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
   fitting room (`fitting.ts`): the ranges (Streetwear, Business, Work:
   `RANGES` in `profile-data.ts`, `[data-fit-ranges]`), then item cards by
-  slot (Tops, Bottoms, Shoes, Head, Eyewear, Bags, Extras, Merch: `TABS`, two
-  rows of four), colours, and a turning preview of the player's Degen drawn by a
+  slot (Tops, Bottoms, Shoes, Head, Eyewear, Face, Bags, Extras, Merch:
+  `TABS`, two rows of five), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
   open (still under reduced motion; drag turns him); its idle and walk
   are the crowd pack's captured takes on his bones (`captureplay.ts`:

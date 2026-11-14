@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bottomsFor, shoesFor, type Bottoms, type EyeStyle, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
+import { bottomsFor, coversEyes, shoesFor, type Bottoms, type EyeStyle, type FaceGear, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
@@ -43,6 +43,9 @@ export interface Outfit {
   /** The shades' style and their frames' colour (left out: the classic, in black: docs/wardrobe-plan.md Phase 4) */
   eyewear?: EyeStyle;
   frame?: string;
+  /** Face gear and its colour (single figures: the crowd wears none) */
+  face?: FaceGear;
+  gear?: string;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -101,7 +104,7 @@ export const bottomsOf = (o: Outfit): Bottoms | null => (o.kind === 'soldier' ? 
 export const shoesOf = (o: Outfit): ShoeStyle | null => (o.kind === 'soldier' ? null : (o.shoeStyle ?? shoesFor(o.kind)));
 
 /** The shades an outfit wears: its own style, or the classic */
-export const eyesOf = (o: Outfit): EyeStyle => o.eyewear ?? 'classic';
+export const eyesOf = (o: Outfit): EyeStyle | null => (coversEyes(o.face) ? null : (o.eyewear ?? 'classic'));
 
 /** A player's wardrobe choices as a Degen outfit */
 export function lookOutfit(l: Look): Outfit {
@@ -124,6 +127,8 @@ export function lookOutfit(l: Look): Outfit {
     lens: l.lens,
     eyewear: l.eyewear,
     frame: l.frame,
+    face: l.face ?? undefined,
+    gear: l.gear,
     headphones: l.headphones ?? undefined,
     backpack: bag('backpack'),
     crossbody: bag('crossbody'),
@@ -650,9 +655,9 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'frame' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'frame' | 'gear' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'frame', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'frame', 'gear', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
  * the raised hood (both sides drawn), neon (a crowd phone's screen: unlit,
@@ -1164,20 +1169,23 @@ export function items(q: Detail, hero = false): Item[] {
       return new THREE.Vector2(x, y - 0.002);
     });
   const EYE_STYLES: EyeStyle[] = ['classic', 'aviator', 'round', 'slim', 'wrap'];
+  /** Points round a lens: enough for a smooth outline at the size it's seen */
+  const LENS_PTS = q === 3 ? 24 : 18;
   /**
    * Each style: its right lens's outline (the outer side +x; the left is its mirror), the rim's width, how far out
    * each lens's middle is, how far each side turns round the face (toe), how much the lens curves (bend), whether
    * the bridge is doubled
    */
   const EYES: Record<EyeStyle, { lens: () => THREE.Vector2[]; rim: number; cx: number; toe: number; bend: number; double?: boolean }> = {
-    classic: { lens: () => roundRect(0.066, 0.036, 4, R(28), 0.16).getPoints(), rim: 0.0032, cx: 0.043, toe: 0.24, bend: 1.2 },
-    aviator: { lens: () => teardrop(R(32)), rim: 0.0016, cx: 0.042, toe: 0.2, bend: 1.4, double: true },
-    round: { lens: () => roundRect(0.05, 0.05, 2, R(32)).getPoints(), rim: 0.0022, cx: 0.036, toe: 0.12, bend: 0.8 },
-    slim: { lens: () => roundRect(0.07, 0.025, 6, R(28), 0.05).getPoints(), rim: 0.0024, cx: 0.044, toe: 0.24, bend: 1.2 },
-    wrap: { lens: () => roundRect(0.076, 0.036, 2.6, R(28), 0.32).getPoints(), rim: 0.0014, cx: 0.042, toe: 0.42, bend: 4.5 },
+    classic: { lens: () => roundRect(0.066, 0.036, 4, LENS_PTS, 0.16).getPoints(), rim: 0.0032, cx: 0.043, toe: 0.24, bend: 1.2 },
+    aviator: { lens: () => teardrop(LENS_PTS + 4), rim: 0.0016, cx: 0.042, toe: 0.2, bend: 1.4, double: true },
+    round: { lens: () => roundRect(0.05, 0.05, 2, LENS_PTS + 4).getPoints(), rim: 0.0022, cx: 0.036, toe: 0.12, bend: 0.8 },
+    slim: { lens: () => roundRect(0.07, 0.025, 6, LENS_PTS, 0.05).getPoints(), rim: 0.0024, cx: 0.044, toe: 0.24, bend: 1.2 },
+    wrap: { lens: () => roundRect(0.076, 0.036, 2.6, LENS_PTS, 0.32).getPoints(), rim: 0.0014, cx: 0.042, toe: 0.42, bend: 4.5 },
   };
   const FRAME_D = q === 3 ? 0.0036 : 0.0048;
-  const BEVEL = q === 3 ? { bevelEnabled: true, bevelThickness: 0.0007, bevelSize: 0.0005, bevelSegments: 1 } : { bevelEnabled: false };
+  // (no bevel: at a rim this thin it doesn't show, and it doubled the frames' triangles)
+  const BEVEL = { bevelEnabled: false };
   /** A style's pieces in the head's space: the frames' front (rims, bridge, hinge blocks), the lenses, and each hinge */
   const shadesFront = (style: EyeStyle) => {
     const e = EYES[style];
@@ -1384,12 +1392,153 @@ export function items(q: Detail, hero = false): Item[] {
   // (every style's arms: alike past the temples, its hinges being at one height; thin, as real arms are)
   const ARMS_OF = Object.fromEntries(EYE_STYLES.map((st) => [st, [-1, 1].map((s) => armPath(s, SHADES[st].hinge))])) as Record<EyeStyle, [number, number, number][][]>;
   const ARMS = ARMS_OF.classic;
-  const armTubes = (st: EyeStyle) => ARMS_OF[st].map((pts) => tube(pts, q === 3 ? 0.0021 : 0.003, q === 3 ? R(16) : R(8), q === 3 ? 6 : 4));
+  const armTubes = (st: EyeStyle) => ARMS_OF[st].map((pts) => tube(pts, q === 3 ? 0.0021 : 0.003, q === 3 ? 20 : R(8), q === 3 ? 5 : 4));
   /** Where the chain hooks onto each arm (s: the side): under it, by the ear */
   const armHook = (s: number): [number, number, number] => {
     const [x, y, z] = ARMS[s < 0 ? 0 : 1].find((p) => p[2] === ARM_EAR)!;
     return [x + s * 0.003, y - 0.004, z];
   };
+
+  /*
+   * Face gear (docs/wardrobe-plan.md Phase 4): moulded on the face it's worn on. A mask is a shell over the face
+   * (`moulded()`: the face's own surface carried out `off`, domed `dome` at its middle, inside a rounded outline), its
+   * edge sealed by a rolled rim, held by straps round the head (`headStrap()`: the head's outline carried out at a height,
+   * from one side of the face round the back to the other). The gas mask covers the face and has its own eye windows
+   * (the shades come off); the half respirator covers the nose and mouth (any shades over it); the goggles are one
+   * curved lens across both eyes in a frame, their strap round the head over the ears (the shades come off).
+   */
+  /** The face's smooth surface (its oval without the nose, cheekbones and brow), what a moulded mask follows */
+  const smoothFace = (x: number, y: number) => {
+    if (!hero) return face(x, y);
+    const r = headRow(y);
+    const u = Math.min(0.995, Math.abs(x) / r.hw);
+    return r.zc + r.front * (1 - u ** r.n) ** (1 / r.n);
+  };
+  /** A moulded shell over the face: centre height yc, half-width w and half-height h, roundness n, narrower at the bottom by `chin` */
+  const moulded = (yc: number, w: number, h: number, n: number, chin: number, off: number, dome: number, rim: number, rings = q === 3 ? 6 : 5, segs = q === 3 ? 26 : 20) => {
+    const at = (r: number, a: number): [number, number, number] => {
+      const c = Math.cos(a);
+      const si = Math.sin(a);
+      const yy = Math.sign(si) * Math.abs(si) ** (2 / n) * h;
+      const x = Math.sign(c) * Math.abs(c) ** (2 / n) * w * (1 - chin * Math.max(0, -yy / h)) * r;
+      const y = yc + yy * r;
+      // (out from the head's middle, so the sides stand off the face as well as the front; never nearer the face
+      // itself, its nose and all, than 4 thousandths, and at the edge than its rolled rim is thick)
+      const { zf, zb } = headAt(y);
+      const zc = (zf + zb) / 2;
+      const z0 = smoothFace(x, y);
+      const out = Math.max(off + dome * (1 - r * r), face(x, y) - z0 + 0.004 + rim * 1.6 * r ** 6);
+      const l = Math.hypot(x, z0 - zc) || 1;
+      return [x + (x / l) * out, y, z0 + ((z0 - zc) / l) * out];
+    };
+    const pos: number[] = [];
+    const idx: number[] = [];
+    pos.push(...at(0, 0));
+    for (let i = 1; i <= rings; i++) for (let k = 0; k < segs; k++) pos.push(...at(i / rings, (k / segs) * Math.PI * 2));
+    for (let k = 0; k < segs; k++) idx.push(0, 1 + k, 1 + ((k + 1) % segs));
+    for (let i = 1; i < rings; i++)
+      for (let k = 0; k < segs; k++) {
+        const a = 1 + (i - 1) * segs + k;
+        const b = 1 + (i - 1) * segs + ((k + 1) % segs);
+        const c2 = a + segs;
+        const d = b + segs;
+        idx.push(a, c2, b, b, c2, d);
+      }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    // (facing out: forward at its middle)
+    if ((g.attributes.normal as THREE.BufferAttribute).getZ(0) < 0) {
+      const ix = g.index!.array as unknown as number[];
+      for (let t = 0; t < ix.length; t += 3) [ix[t + 1], ix[t + 2]] = [ix[t + 2], ix[t + 1]];
+      g.index!.needsUpdate = true;
+      g.computeVertexNormals();
+    }
+    const edge = Array.from({ length: segs + 1 }, (_, k) => at(1, (k / segs) * Math.PI * 2));
+    return { shell: g, edge, at };
+  };
+  /** A strap round the head at height y (rising to `yBack` behind), `gap` off it, from the face's side at angle a0 round the back */
+  const headStrap = (y: number, yBack: number, gap: number, a0: number, r: number) => {
+    const pts: [number, number, number][] = [];
+    const n = 16;
+    for (let k = 0; k <= n; k++) {
+      const a = a0 - ((Math.PI + 2 * a0) * k) / n;
+      const yy = y + (yBack - y) * Math.sin(Math.PI * (k / n));
+      // (on the head's own surface, measured out from its middle that way, then `gap` further)
+      const { zf, zb } = headAt(yy);
+      const zc = (zf + zb) / 2;
+      const dx = Math.cos(a);
+      const dz = Math.sin(a);
+      const r = headR(yy, dx, dz) + gap;
+      pts.push([dx * r, yy, zc + dz * r]);
+    }
+    return tube(pts, r, q === 3 ? 32 : 24, 4);
+  };
+  /** A disc facing `dir` at p: a filter, a pad, a valve (r its radius, d its depth) */
+  const disc = (p: [number, number, number], dir: THREE.Vector3, r: number, d: number, seg = q === 3 ? 14 : 10) =>
+    new THREE.CylinderGeometry(r, r * 0.96, d, seg).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize())).translate(...p);
+  const STRAP_R = q === 3 ? 0.0028 : 0.0034;
+  const RIM_R = q === 3 ? 0.0042 : 0.005;
+
+  // The gas mask: brow to under the chin, two eye windows, two filters low on the cheeks, a valve at the mouth
+  const gasMask = (() => {
+    const m = moulded(0.08, 0.074, 0.08, 2.5, 0.38, 0.008, 0.012, RIM_R);
+    const front = (x: number, y: number) => {
+      // (the shell's surface over a point of the face: the nearest of its rings)
+      const r = Math.min(1, Math.hypot(x / 0.074, (y - 0.08) / 0.08));
+      return smoothFace(x, y) + 0.008 + 0.012 * (1 - r * r);
+    };
+    // (the eye windows stand proud of the shell in their rings, so they read from any side)
+    const eyes = [-1, 1].map((s) => {
+      const p: [number, number, number] = [s * 0.031, EYE_Y + 0.004, front(s * 0.031, EYE_Y + 0.004) + 0.003];
+      const dir = new THREE.Vector3(s * 0.3, 0.05, 1).normalize();
+      return { glass: disc([p[0] + dir.x * 0.0035, p[1], p[2] + dir.z * 0.0035], dir, 0.018, 0.003), ring: disc(p, dir, 0.0225, 0.007) };
+    });
+    const filters = [-1, 1].map((s) => {
+      const p: [number, number, number] = [s * 0.048, 0.034, front(s * 0.048, 0.034) + 0.017];
+      const dir = new THREE.Vector3(s * 0.75, -0.25, 0.7);
+      return [disc(p, dir, 0.017, 0.024), disc([p[0] + dir.x * 0.016, p[1] - 0.004, p[2] + 0.011], dir, 0.0155, 0.004)];
+    });
+    const valve = disc([0, 0.03, front(0, 0.03) + 0.006], new THREE.Vector3(0, -0.15, 1), 0.011, 0.012);
+    const rim = tube(m.edge, RIM_R, q === 3 ? 44 : 30, q === 3 ? 5 : 4);
+    const straps = [headStrap(0.142, 0.152, 0.004, 0.42, STRAP_R), headStrap(0.06, 0.07, 0.004, 0.55, STRAP_R)];
+    return {
+      body: [m.shell, rim, valve, ...filters.map((f) => f[0]), ...straps, ...eyes.map((e) => e.ring)],
+      dark: filters.map((f) => f[1]),
+      glass: eyes.map((e) => e.glass),
+    };
+  })();
+
+  // The half respirator: over the nose and mouth, two filter pads at the sides, straps under the ears and round the neck
+  const respirator = (() => {
+    const m = moulded(0.052, 0.05, 0.042, 2.3, 0.3, 0.006, 0.017, RIM_R * 0.85);
+    const front = (x: number, y: number) => {
+      const r = Math.min(1, Math.hypot(x / 0.05, (y - 0.052) / 0.042));
+      return smoothFace(x, y) + 0.006 + 0.017 * (1 - r * r);
+    };
+    const pads = [-1, 1].map((s) => {
+      const p: [number, number, number] = [s * 0.036, 0.046, front(s * 0.036, 0.046) + 0.003];
+      return disc(p, new THREE.Vector3(s * 0.85, -0.1, 0.55), 0.019, 0.008);
+    });
+    const valve = disc([0, 0.03, front(0, 0.03) + 0.004], new THREE.Vector3(0, -0.1, 1), 0.009, 0.008);
+    const rim = tube(m.edge, RIM_R * 0.85, q === 3 ? 36 : 26, q === 3 ? 5 : 4);
+    const straps = [headStrap(0.085, 0.095, 0.004, 0.62, STRAP_R), headStrap(0.035, 0.03, 0.004, 0.75, STRAP_R)];
+    return { body: [m.shell, rim, valve, ...straps], pads };
+  })();
+
+  // Goggles: one curved lens across both eyes in a frame, a strap round the head over the ears (the ski pair taller,
+  // its frame padded)
+  const goggles = (ski: boolean) => {
+    const h = ski ? 0.026 : 0.024;
+    const fr = ski ? 0.0065 : 0.004;
+    const m = moulded(EYE_Y + 0.003, 0.078, h, 3.2, 0.12, ski ? 0.016 : 0.013, ski ? 0.006 : 0.004, fr, q === 3 ? 5 : 4, q === 3 ? 36 : 26);
+    const frame = tube(m.edge, fr, q === 3 ? 48 : 32, q === 3 ? 6 : 4);
+    const band = headStrap(EYE_Y + 0.003, EYE_Y + 0.02, 0.012, 0.1, ski ? 0.0045 : 0.0032);
+    return { lens: m.shell, frame: [frame, band] };
+  };
+  const safety = goggles(false);
+  const ski = goggles(true);
 
   // The cap: six panels close over the crown, rising a touch higher than the head, the brim from the band
   const CAP_GAP = (y: number) => 0.003 + 0.011 * THREE.MathUtils.smoothstep(y, 0.176, HEAD_HI);
@@ -1655,7 +1804,7 @@ export function items(q: Detail, hero = false): Item[] {
    * frames from the cheeks to the brow, narrowing smoothly to a point over the brow (so the rows close a little at a
    * time and the cloth keeps its curve), and to a narrow V at the throat
    */
-  const HOOD_FACE = 1.12;
+  const HOOD_FACE = 1.2;
   const HOOD_THROAT = 0.18;
   const hoodOpen = (y: number) =>
     y >= 0.19
@@ -2574,6 +2723,24 @@ export function items(q: Detail, hero = false): Item[] {
         P('head', eyesSkin, SKIN),
       ],
     },
+    // Face gear (docs/wardrobe-plan.md Phase 4): single figures only
+    {
+      id: 'face-gasmask',
+      when: (o) => o.face === 'gasmask',
+      pieces: [P('head', one(gasMask.body), 'gear'), P('head', one(gasMask.dark), 'gear', { shade: 0.55 }), P('head', one(gasMask.glass), '#3a4a55')],
+    },
+    {
+      id: 'face-respirator',
+      when: (o) => o.face === 'respirator',
+      pieces: [P('head', one(respirator.body), 'gear'), P('head', one(respirator.pads), 'gear', { shade: 0.6 })],
+    },
+    ...([['safety', safety], ['ski', ski]] as const).map(
+      ([id, g]): Item => ({
+        id: `face-${id}`,
+        when: (o) => o.face === id,
+        pieces: [P('head', one(g.frame), 'gear'), P('head', g.lens, '#ffffff', { mat: 'lens' })],
+      })
+    ),
     // The shades in the outfit's style (the crowd's the classic; far off, a plain bar)
     ...EYE_STYLES.map(
       (st): Item => ({
@@ -2587,12 +2754,12 @@ export function items(q: Detail, hero = false): Item[] {
     ),
     ...CHAINS.map(([kind, geo]): Item => ({
       id: `chain-${kind}`,
-      when: (o) => !!o.chain && o.kind === kind && !(hoodie(o) && o.hood),
+      when: (o) => !!o.chain && !!eyesOf(o) && o.kind === kind && !(hoodie(o) && o.hood),
       pieces: [P('head', geo, GOLD, { detail: true })],
     })),
     {
       id: 'chain-hood',
-      when: (o) => !!o.chain && hoodie(o) && !!o.hood,
+      when: (o) => !!o.chain && !!eyesOf(o) && hoodie(o) && !!o.hood,
       pieces: [P('head', chainHood, GOLD, { detail: true })],
     },
     {

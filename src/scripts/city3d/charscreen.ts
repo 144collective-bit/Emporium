@@ -9,7 +9,7 @@
  * It's an overlay on the city: × or Esc closes it (Esc only closes it, it
  * never stops walking), and nothing else hears the keys while it's open.
  */
-import { EYE_STYLES, MARKS, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
+import { EYE_STYLES, FACE_GEAR, MARKS, coversEyes, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
 import type { Stage, StageLight, StagePose } from './stage';
 
 const POSES: { id: StagePose; name: string }[] = [
@@ -42,7 +42,8 @@ export function describe(l: Look): [string, string, string[]][] {
     ['Top', FITS[l.kind], l.kind === 'suit' ? [l.top, l.shirt, l.tie] : [l.top]],
     ['Bottoms', BOTTOMS[l.bottoms], [l.bottom]],
     ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : '') : 'Nothing', !hood && l.hat ? [l.hatColor] : []],
-    ['Eyewear', EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic', [l.frame, l.lens]],
+    ['Eyewear', coversEyes(l.face) ? 'Off (face gear)' : (EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic'), coversEyes(l.face) ? [] : [l.frame, l.lens]],
+    ['Face', l.face ? (FACE_GEAR.find((f) => f.id === l.face)?.name ?? '') : 'Nothing', l.face ? [l.gear] : []],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],
     ['Extras', extras.length ? extras.join(', ') : 'None', l.headphones ? [l.headphones] : []],
     ['Shoes', l.shoeStyle === 'dress' ? 'Dress Shoes' : `Sneakers${l.shoeMark ? ` · ${markName(l.shoeMark)}` : ''}`, [l.shoes]],

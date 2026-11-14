@@ -265,6 +265,37 @@ detail), which stay the record of how the clothes were built.
     the lenses ahead of the eyes; with the hood up, every style's frames and
     arms inside its cloth and its lenses clear), `profile.test.ts`,
     `wardrobe.test.ts` (one pair, the look's).
+- **As built, the face gear (Phase 4b, 14 November 2026):** the look's
+  `face` (`FACE_GEAR`: gas mask, respirator, safety goggles, ski goggles, or
+  none) and `gear` colour (swatches `PALETTE.gear`, the picker);
+  `coversEyes()` (the gas mask and goggles): the shades and their chain
+  come off while they're worn (`eyesOf()` null), and picking shades in the
+  fitting room takes them off again. In `wardrobe.ts`: `moulded()`, a shell
+  over the face's smooth oval (`smoothFace()`), pushed out from the head's
+  middle (the sides stand off the face as well as the front), domed at its
+  middle, never nearer the real face (nose and all) than 4 thousandths, its
+  edge standing off by its rolled rim's thickness; `headStrap()`, a strap
+  laid on the head's measured surface (`headR()`) from one side of the
+  face round the back. The gas mask: brow to under the chin, eye windows
+  proud in their rings, two filters low on the cheeks, a valve, two straps.
+  The respirator: nose and mouth, two pads, a valve, straps under the ears
+  and round the neck. The goggles: one curved lens across both eyes
+  (`lens` material, the lens colour) in a frame, a strap round the head over
+  the ears; the ski pair taller, the frame padded. Items `face-<id>`
+  (single figures; the crowd wears none). The fitting room's Face slot (by
+  range: the masks in Work and Streetwear, the safety goggles in Work, the
+  ski goggles in Streetwear); the slots in two rows of five. The hood's
+  opening is a touch wider (`HOOD_FACE` 1.2) so a goggle strap leaves the
+  frame inside it.
+  - Budget: the gear and the shades were thinned until the heaviest random
+    look fits the unchanged 40k (39.9k): the frames lost their bevel (at
+    3.6 thousandths deep it didn't show), the lens outlines take 24 points,
+    the straps and rims fewer segments. The budget wasn't raised.
+  - Tests: `accessories.test.ts` (each piece of gear at both single-figure
+    levels: none of it in the head, under every hat, out of the hood's
+    cloth; the respirator clear of all five shades by 2 thousandths; the
+    shades and chain off under the gas mask and goggles),
+    `profile.test.ts`, `wardrobe.test.ts` (random face gear).
 
 ### Phase 5: premium streetwear (first)
 
@@ -330,5 +361,6 @@ A proposed first set; the owner picks what goes in:
 - **Phase 1 (clear out and open up): built**, 14 November 2026.
 - **Phase 2 (the three ranges and the separates): built**, 14 November
   2026.
-- **Phase 3 (the hood up, rebuilt): built**, 14 November 2026, waiting for
-  the owner's look before Phase 4.
+- **Phase 3 (the hood up, rebuilt): built**, 14 November 2026.
+- **Phase 4 (eyewear and face gear): built**, 14 November 2026, waiting for
+  the owner's look before Phase 5.

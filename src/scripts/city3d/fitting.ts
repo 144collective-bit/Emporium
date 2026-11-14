@@ -13,11 +13,11 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type EyeStyle, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
+import { DEFAULT_LOOK, MARKS, coversEyes, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type EyeStyle, type FaceGear, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'frame' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'frame' | 'gear' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -117,9 +117,21 @@ const eyes = (id: EyeStyle, name: string, icon: string, ranges: Range[]): Item =
   id: `eyes-${id}`,
   name,
   icon,
-  on: (l) => l.eyewear === id,
-  wear: (l) => ({ ...l, eyewear: id }),
+  // (picking shades takes off a gas mask or goggles: they're worn in the shades' place)
+  on: (l) => l.eyewear === id && !coversEyes(l.face),
+  wear: (l) => ({ ...l, eyewear: id, face: coversEyes(l.face) ? null : l.face }),
   colors: frameColors,
+  in: ranges,
+});
+const gearColors: Colors[] = [{ key: 'gear', label: 'Colour', list: PALETTE.gear }];
+/** Face gear (docs/wardrobe-plan.md Phase 4): goggles also show the lens colour row */
+const gear = (id: FaceGear, name: string, icon: string, ranges: Range[], lenses = false): Item => ({
+  id: `face-${id}`,
+  name,
+  icon,
+  on: (l) => l.face === id,
+  wear: (l) => ({ ...l, face: id }),
+  colors: lenses ? [...gearColors, { key: 'lens', label: 'Lenses', list: PALETTE.lens }] : gearColors,
   in: ranges,
 });
 /** The range his top is from: where the fitting room opens */
@@ -255,6 +267,17 @@ const TABS: Tab[] = [
       eyes('wrap', 'Sport Wrap', 'M2 11c2-2 6-2 9-1v3c-3 1-7 1-9-2z M22 11c-2-2-6-2-9-1v3c3 1 7 1 9-2z', ['street', 'work']),
     ],
     colors: [{ key: 'lens', label: 'Lenses', list: PALETTE.lens }],
+  },
+  {
+    id: 'face',
+    label: 'Face',
+    items: [
+      gear('gasmask', 'Gas Mask', 'M12 3c4 0 7 3 7 8 0 5-3 9-7 9s-7-4-7-9c0-5 3-8 7-8z M9 10a1.6 1.6 0 1 0 0.01 0z M15 10a1.6 1.6 0 1 0 0.01 0z M5 16l-2 2 M19 16l2 2 M12 17v2', ['work', 'street']),
+      gear('respirator', 'Respirator', 'M7 11c0-2 2-3 5-3s5 1 5 3c0 4-2 7-5 7s-5-3-5-7z M4 13h3 M17 13h3 M12 15v2', ['work', 'street']),
+      gear('safety', 'Safety Goggles', 'M3 9h18v6H3z M3 12H1 M21 12h2 M12 9v6', ['work'], true),
+      gear('ski', 'Ski Goggles', 'M2 8h20v8H2z M2 12H0 M22 12h2 M12 14l-2 2h4z', ['street'], true),
+      { id: 'face-none', name: 'Nothing', icon: NONE, on: (l) => !l.face, wear: (l) => ({ ...l, face: null }) },
+    ],
   },
   {
     id: 'bag',

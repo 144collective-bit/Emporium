@@ -98,6 +98,20 @@ export const EYE_STYLES: { id: EyeStyle; name: string }[] = [
   { id: 'wrap', name: 'Sport Wrap' },
 ];
 export const EYE_IDS = EYE_STYLES.map((e) => e.id);
+/**
+ * Face gear (the wardrobe plan's Phase 4, the owner's picks): a full gas mask and goggles (each in place of the shades
+ * while worn), a half respirator (with any shades)
+ */
+export type FaceGear = 'gasmask' | 'respirator' | 'safety' | 'ski';
+export const FACE_GEAR: { id: FaceGear; name: string }[] = [
+  { id: 'gasmask', name: 'Gas Mask' },
+  { id: 'respirator', name: 'Respirator' },
+  { id: 'safety', name: 'Safety Goggles' },
+  { id: 'ski', name: 'Ski Goggles' },
+];
+export const FACE_IDS = FACE_GEAR.map((f) => f.id);
+/** Whether face gear covers the eyes (the shades come off for it) */
+export const coversEyes = (f: FaceGear | null | undefined) => f === 'gasmask' || f === 'safety' || f === 'ski';
 /*
  * The ranges (the wardrobe plan's Phase 2): how the fitting room sorts the clothes, for browsing only (any piece goes
  * with any other). Work wear arrives in Phase 6.
@@ -169,6 +183,9 @@ export interface Look {
   eyewear: EyeStyle;
   frame: string;
   lens: string;
+  /** Face gear (or none), and its colour */
+  face: FaceGear | null;
+  gear: string;
   /** One bag at a time */
   bag: Bag | null;
   bagColor: string;
@@ -200,6 +217,7 @@ export const PALETTE = {
   extra: ['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8', '#d8312f', '#1f9d6a', '#8f3dff'],
   shoes: ['#1b1830', '#f3f2f7', '#d8312f', '#00a8d8', '#e219e5', '#ffd23f', '#1f9d6a'],
   lens: ['#22d07a', '#ff3dbb', '#00d8ff', '#ffc23a', '#9b5cff', '#ff4a3a'],
+  gear: ['#2b2a33', '#16141f', '#4a5a3a', '#c8b58a', '#ff6a3d', '#f3f2f7', '#1d2550'],
   frame: ['#0d0c14', '#f3f2f7', '#c99a4a', '#8b889c', '#3a2418', '#d8312f', '#1d2550'],
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
@@ -241,6 +259,8 @@ export const DEFAULT_LOOK: Look = {
   eyewear: 'classic',
   frame: '#0d0c14',
   lens: '#22d07a',
+  face: null,
+  gear: '#2b2a33',
   bag: null,
   bagColor: '#00b8d8',
   headphones: null,
@@ -291,6 +311,8 @@ export function cleanLook(raw: unknown): Look {
     eyewear: from(o.eyewear, EYE_IDS, DEFAULT_LOOK.eyewear),
     frame: colour(o.frame, DEFAULT_LOOK.frame),
     lens: colour(o.lens, DEFAULT_LOOK.lens),
+    face: orNull(o.face, FACE_IDS, null),
+    gear: colour(o.gear, DEFAULT_LOOK.gear),
     bag: orNull(o.bag, BAGS, null),
     bagColor: colour(o.bagColor, DEFAULT_LOOK.bagColor),
     headphones: safeColour(o.headphones),

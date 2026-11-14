@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { items, PLAYER, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
 import { bakedHand, headGeometry, headRow, inHead, HEAD_TOP } from '../src/scripts/city3d/body';
-import { EYE_IDS } from '../src/scripts/net/profile-data';
+import { EYE_IDS, FACE_IDS, coversEyes } from '../src/scripts/net/profile-data';
 
 const LEVELS: Detail[] = [3, 2, 1, 0];
 const HATS: [string, Partial<Outfit>][] = [
@@ -243,4 +243,73 @@ for (const q of [3, 2, 1] as Detail[])
       const L = shades.pieces[1].geo;
       L.computeBoundingBox();
       assert.ok(L.boundingBox!.max.z > 0.1, 'the lenses are in front of the eyes');
+    });
+
+/*
+ * Face gear (docs/wardrobe-plan.md Phase 4): on the face it's worn on, under every hat, clear of the hood's cloth, and
+ * the half respirator clear of every pair of shades. The gas mask and the goggles take the shades' place (and their
+ * chain's); the respirator goes with any.
+ */
+for (const q of [3, 2] as Detail[])
+  for (const face of FACE_IDS)
+    test(`accessories: the ${face} on the face, under every hat, clear of the hood and the shades (detail ${q})`, () => {
+      const all = items(q, true);
+      const o: Outfit = { ...PLAYER, face, chain: true };
+      const gear = all.find((i) => i.id === `face-${face}` && i.when(o))!;
+      assert.ok(gear, `the ${face} is worn`);
+      const shadesOn = all.filter((i) => (i.id.startsWith('shades-') || i.id.startsWith('chain-')) && i.when(o));
+      assert.equal(shadesOn.length > 0, !coversEyes(face), coversEyes(face) ? 'the shades and their chain come off' : 'the shades stay on');
+      const pts: THREE.Vector3[] = [];
+      for (const p of gear.pieces) {
+        const P = p.geo.attributes.position;
+        for (let i = 0; i < P.count; i++) pts.push(new THREE.Vector3().fromBufferAttribute(P, i));
+      }
+      // On the face, not in it
+      for (const v of pts) assert.ok(!inHead(v.x, v.y, v.z), `${face}: a point at ${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)} is in the head`);
+      // Under every hat: looking down from above, nothing of the gear at or over the hat's lowest surface there
+      const down = new THREE.Vector3(0, -1, 0);
+      for (const [id, extra] of HATS) {
+        const ho = { ...o, ...extra };
+        const hat = all.find((i) => i.id === id && i.when(ho))!;
+        const mesh = new THREE.Mesh(hat.pieces.length > 1 ? hat.pieces[0].geo : hat.pieces[0].geo, side);
+        for (const v of pts) {
+          if (v.y < 0.12) continue;
+          ray.set(new THREE.Vector3(v.x, 1, v.z), down);
+          const h = ray.intersectObject(mesh);
+          if (!h.length) continue;
+          const lowest = Math.min(...h.map((x) => x.point.y));
+          assert.ok(v.y < lowest - 0.0015, `${face} under the ${id}: a point at ${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)} meets it (${lowest.toFixed(3)})`);
+        }
+      }
+      // Clear of the hood's cloth, the hood up
+      const hoodO: Outfit = { ...o, kind: 'hoodie', hood: true, cap: undefined };
+      const hood = new THREE.Mesh(all.find((i) => i.id === 'hoodUp' && i.when(hoodO))!.pieces[0].geo, side);
+      const o3 = new THREE.Vector3();
+      const d = new THREE.Vector3();
+      for (const v of pts) {
+        if (v.y < -0.08 || v.y > HEAD_TOP) continue;
+        o3.set(0, v.y, headRow(v.y).zc);
+        d.subVectors(v, o3).setY(0);
+        const dv = d.length();
+        if (dv < 1e-4) continue;
+        const dh = hit(hood, o3, d.normalize(), false);
+        if (!Number.isFinite(dh)) continue;
+        assert.ok(dv < dh - 0.002 || dv > dh + 0.003, `${face} is in the hood's cloth at ${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)} (${((dv - dh) * 1000).toFixed(1)} thousandths)`);
+      }
+      // The respirator under every pair of shades, never touching them
+      if (face === 'respirator')
+        for (const eyewear of EYE_IDS) {
+          const sh = all.find((i) => i.id === `shades-${eyewear}`)!;
+          const sp: THREE.Vector3[] = [];
+          for (const p of sh.pieces) {
+            const P = p.geo.attributes.position;
+            for (let i = 0; i < P.count; i++) {
+              const v = new THREE.Vector3().fromBufferAttribute(P, i);
+              if (v.z > 0.05) sp.push(v);
+            }
+          }
+          let near = 9;
+          for (const v of pts) if (v.y > 0.07) for (const w of sp) near = Math.min(near, v.distanceTo(w));
+          assert.ok(near > 0.002, `the respirator comes within ${(near * 1000).toFixed(1)} thousandths of the ${eyewear} shades`);
+        }
     });
