@@ -298,6 +298,28 @@ await scene('fly', '126.8,347.4', async (t) => {
   await t.go('w', 4, 'rolled out');
 });
 
+// Endswood's sky network (southsky.ts): at The Core's lift door (its north face), up to the third floor and down again;
+// then from the foot of its stair (its south face, facing up it) walked up to its landing
+const upNow = () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0);
+await scene('sky', '-50.15,370.6,2.926', async (t) => {
+  await t.prompt('Lift');
+  await t.until('the lift card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-lift-to="3"]'));
+  await t.step('the lift card opened');
+  await t.click('[data-lift-to="3"]');
+  await t.until('up on the third floor', (f) => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 3, null, 120000);
+  await t.step(`up on the third floor (${(await t.page.evaluate(upNow)).toFixed(1)})`);
+  await t.prompt('Lift');
+  await t.until('the lift card again', () => !!document.querySelector('[data-metro]:not([hidden]) [data-lift-to="0"]'));
+  await t.click('[data-lift-to="0"]');
+  await t.until('back on the ground', () => !/ · up /.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 120000);
+  await t.step('back on the ground');
+});
+await scene('stair', '-56.6,377.6,-1.786', async (t) => {
+  await t.go('w', 4, 'walked up the stair');
+  await t.until('up the stair', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 2, null, 60000);
+  await t.step(`up the stair (${(await t.page.evaluate(upNow)).toFixed(1)})`);
+});
+
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
 await scene(
   'pad',

@@ -27,9 +27,10 @@ import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CONCRETE, CORES, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
-  SKY_FLOORS, TOWER_HALF, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
+  SKY_FLOORS, TOWER_HALF, blockById, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Core, type Pt,
 } from './southblocks';
+import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, coreFloors } from './southsky';
 
 export const SELF = import.meta.url;
 
@@ -183,6 +184,20 @@ function parapet(b: Batch, a: Pt, c: Pt, n: Pt, top: number) {
   flat(b, [a, c, ci, ai], top + PARAPET, CONC);
 }
 
+/** A gallery's line in runs, broken where a core stands out from it (the Rampart's: the way into its landing) */
+function openRuns(blk: Block, part: Pt[]): Pt[][] {
+  const cores = CORES.filter((c) => c.of === blk.id && blk.kind === 'rampart').map((c) => alongOf(blk.spine!, c.at));
+  if (!cores.length) return [part];
+  const runs: Pt[][] = [[]];
+  for (const p of part) {
+    const d = alongOf(blk.spine!, p);
+    if (cores.some((c) => Math.abs(c - d) < CORE_GAP / 2 + 0.2)) {
+      if (runs[runs.length - 1].length) runs.push([]);
+    } else runs[runs.length - 1].push(p);
+  }
+  return runs.filter((r) => r.length > 1);
+}
+
 /* ---------- A slab and the Rampart, a step at a time ---------- */
 
 const accentOf = (b: Block) => (b.accent ? ACCENT[b.accent] : CONC);
@@ -257,8 +272,9 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
       const deck = [...inner, ...[...outer].reverse()];
       flat(b, deck, y, CONC);
       flat(b, deck, y - 0.16, CONC_DARK, false);
-      // (the front: a solid upstand, the block's colour, its outer face on the gallery's edge)
-      upstand(b, part, s * (blk.depth! / 2 + GALLERY_W), 0.12, y - 0.16, y + 0.62, acc);
+      // (the front: a solid upstand, the block's colour, its outer face on the gallery's edge; open where a core stands
+      // out from it, southsky.ts `CORE_GAP`)
+      for (const run of openRuns(blk, part)) upstand(b, run, s * (blk.depth! / 2 + GALLERY_W), 0.12, y - 0.16, y + 0.62, acc);
     });
     stripAlong(b, part, s * (blk.depth! / 2 + GALLERY_W - 0.3), 0.08, y - 0.18, STRIP);
   }
@@ -341,11 +357,30 @@ function drawTower(b: Batch, t: Block, low: boolean) {
 
 /* ---------- The cores ---------- */
 
-/** A core: concrete, a lit stair slot down each face turned away from what it serves */
-function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from: Pt[]) {
+/**
+ * A core: concrete, open at each landing (`landings`: the levels of its floors, a post at each corner), a lit stair slot
+ * down each face turned away from what it serves; its lift's door at its foot
+ */
+function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from: Pt[], landings: number[], door: { x: number; z: number; yaw: number } | null) {
   const k = kit(b, WORLD);
+  const cuts = [...landings].sort((p, q) => p - q);
   k.all(() => {
-    prism(b, ring, base, top, CONC, ROOF);
+    // (solid between its landings, each landing's floor the cap of the stretch under it, its ceiling the next one's
+    // underside)
+    let y0 = base;
+    for (const y of [...cuts, Infinity]) {
+      const y1 = Math.min(y, top);
+      if (y1 - y0 > 0.05) {
+        prism(b, ring, y0, y1, CONC, y1 === top ? ROOF : CONC);
+        if (y0 > base) flat(b, ring, y0, CONC_DARK, false);
+      }
+      if (!Number.isFinite(y)) break;
+      y0 = y + LANDING_H;
+    }
+    // The landings' corner posts
+    const posts = cornersOf(ring);
+    for (const y of cuts) for (const p of posts) b.add(plain(new THREE.BoxGeometry(0.3, LANDING_H, 0.3).translate(p[0], y + LANDING_H / 2, p[1])), CONC);
+    // The stair slots, a stretch between each landing
     ring.forEach((a, j) => {
       const c = ring[(j + 1) % ring.length];
       const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
@@ -355,9 +390,33 @@ function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from:
       if (!away) return;
       const m: Pt = [(a[0] + c[0]) / 2 + n[0] * 0.012, (a[1] + c[1]) / 2 + n[1] * 0.012];
       const t: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
-      quad(b, [m[0] - t[0] * 0.14, m[1] - t[1] * 0.14], [m[0] + t[0] * 0.14, m[1] + t[1] * 0.14], base + 1.5, top - 0.6, n, SLOT);
+      let s0 = base + 1.5;
+      for (const y of [...cuts, top - 0.6]) {
+        if (y - 0.3 > s0) quad(b, [m[0] - t[0] * 0.14, m[1] - t[1] * 0.14], [m[0] + t[0] * 0.14, m[1] + t[1] * 0.14], s0, y - 0.3, n, SLOT);
+        s0 = y + LANDING_H + 0.3;
+      }
     });
+    // The lift's door at its foot: dark, a lit strip over it
+    if (door) {
+      const n: Pt = [-Math.sin(door.yaw), -Math.cos(door.yaw)];
+      const t: Pt = [-n[1], n[0]];
+      const f: Pt = [door.x - n[0] * (DOOR_OUT - 0.012), door.z - n[1] * (DOOR_OUT - 0.012)];
+      const p = (s: number): Pt => [f[0] + t[0] * s, f[1] + t[1] * s];
+      quad(b, p(-0.5), p(0.5), base, base + 1.25, n, DOOR);
+      quad(b, p(-0.55), p(0.55), base + 1.3, base + 1.36, n, STRIP);
+    }
   });
+}
+/** A rounded square's four corners, a little in: the ring's points furthest out each way round its middle */
+function cornersOf(ring: Pt[]): Pt[] {
+  const c = centre(ring);
+  const far = [...ring].sort((p, q) => Math.hypot(q[0] - c[0], q[1] - c[1]) - Math.hypot(p[0] - c[0], p[1] - c[1]));
+  const out: Pt[] = [];
+  for (const p of far) {
+    if (out.length === 4) break;
+    if (out.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) > 1)) out.push(p);
+  }
+  return out.map((p) => [c[0] + (p[0] - c[0]) * 0.85, c[1] + (p[1] - c[1]) * 0.85]);
 }
 const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length];
 
@@ -419,6 +478,74 @@ function drawBunkerDoor(b: Batch, base: number) {
   });
 }
 
+/** The Core's stair: its steps up its south face, the landing at the third floor, a rail each side */
+function drawStair(b: Batch) {
+  const k = kit(b, WORLD);
+  const { base, top, w, o0, s0, s1, landing, steps } = STAIR;
+  const foot = blockById('twin-core').foot;
+  const c = centre(foot);
+  const h = blockById('harrier').foot;
+  const kc = blockById('kite').foot;
+  const hc = centre(h);
+  const kk = centre(kc);
+  const l = Math.hypot(kk[0] - hc[0], kk[1] - hc[1]);
+  const u: Pt = [(kk[0] - hc[0]) / l, (kk[1] - hc[1]) / l];
+  const v: Pt = [-u[1], u[0]];
+  const at = (s: number, o: number): Pt => [c[0] + u[0] * s + v[0] * o, c[1] + u[1] * s + v[1] * o];
+  const rise = (top - base) / steps;
+  const run = (s1 - s0) / steps;
+  k.all(() => {
+    for (let i = 0; i < steps; i++) {
+      const [a, e] = [at(s0 + run * i, o0 + w / 2), at(s0 + run * (i + 1), o0 + w / 2)];
+      along(b, a, e, w, base + rise * i, base + rise * (i + 1), CONC);
+    }
+    // (its landing, on a column, against the face)
+    flat(b, [at(s1, o0), at(s1 + landing, o0), at(s1 + landing, o0 + w), at(s1, o0 + w)], top, CONC);
+    flat(b, [at(s1, o0), at(s1 + landing, o0), at(s1 + landing, o0 + w), at(s1, o0 + w)], top - 0.2, CONC_DARK, false);
+    const col = at(s1 + landing / 2, o0 + w / 2);
+    b.add(plain(new THREE.CylinderGeometry(0.18, 0.18, top - 0.2 - base, 8).translate(col[0], (base + top - 0.2) / 2, col[1])), CONC);
+  });
+  // Its rails (the face side and the open side), up the flight and round the landing
+  b.detail(() => {
+    for (const o of [o0 + 0.05, o0 + w - 0.05]) {
+      const n = 6;
+      for (let i = 0; i < n; i++) {
+        const [sa, sb] = [s0 + ((s1 - s0) * i) / n, s0 + ((s1 - s0) * (i + 1)) / n];
+        const [ya, yb] = [base + ((top - base) * i) / n, base + ((top - base) * (i + 1)) / n];
+        const [a, e] = [at(sa, o), at(sb, o)];
+        b.add(plain(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 5).translate(a[0], ya + 0.45, a[1])), CONC_DARK);
+        const g = new THREE.CylinderGeometry(0.035, 0.035, Math.hypot(sb - sa, yb - ya), 5);
+        g.rotateZ(-Math.atan2(sb - sa, yb - ya));
+        g.rotateY(-Math.atan2(u[1], u[0]));
+        g.translate((a[0] + e[0]) / 2, (ya + yb) / 2 + 0.9, (a[1] + e[1]) / 2);
+        b.add(plain(g), ACCENT.mustard);
+      }
+    }
+    along(b, at(s1, o0 + w - 0.05), at(s1 + landing, o0 + w - 0.05), 0.07, top, top + 0.9, ACCENT.mustard);
+    along(b, at(s1 + landing - 0.05, o0 + 0.2), at(s1 + landing - 0.05, o0 + w), 0.07, top, top + 0.9, ACCENT.mustard);
+  });
+}
+
+/** A tower's doors where bridges meet it: dark, a floor's height, on its face */
+function drawTowerDoors(b: Batch, t: Block) {
+  const k = kit(b, WORLD);
+  k.all(() => {
+    for (const br of BRIDGES) {
+      const hit = 'block' in br.a && br.a.block === t.id ? 0 : 'block' in br.b && br.b.block === t.id ? 1 : null;
+      if (hit === null) continue;
+      const end: 0 | 1 = hit;
+      const p = br.pts[end];
+      const q = br.pts[1 - end];
+      const l = Math.hypot(p[0] - q[0], p[1] - q[1]) || 1;
+      const n: Pt = [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
+      const tt: Pt = [-n[1], n[0]];
+      const f: Pt = [p[0] + n[0] * 0.015, p[1] + n[1] * 0.015];
+      const y = br.ys[end];
+      quad(b, [f[0] - tt[0] * 0.55, f[1] - tt[1] * 0.55], [f[0] + tt[0] * 0.55, f[1] + tt[1] * 0.55], y, y + 1.3, n, DOOR);
+    }
+  });
+}
+
 /* ---------- Registered ---------- */
 
 export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
@@ -438,13 +565,16 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
       site(`south-blocks ${blk.id}`, rectOf(blk.foot, 2), (into) => {
         const b = new Batch();
         drawTower(b, blk, low);
+        drawTowerDoors(b, blk);
         b.build(into, opts);
       });
     else
       site(`south-blocks ${blk.id}`, rectOf(blk.foot, 1), (into) => {
         const b = new Batch();
         const towers = BLOCKS.filter((q) => q.kind === 'tower').map((q) => centre(q.foot));
-        drawCore(b, blk.foot, blk.base, roofY(blk.base, storeysOf(blk)) + 0.8, centre(blk.foot), towers);
+        const lift = SKY_LIFTS.find((q) => q.id === blk.id)!;
+        drawCore(b, blk.foot, blk.base, roofY(blk.base, storeysOf(blk)) + 0.8, centre(blk.foot), towers, coreFloors(blk.id).map((f) => floorY(blk.base, f)), lift.door);
+        drawStair(b);
         b.build(into, opts);
       });
   }
@@ -454,7 +584,8 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
       const blk = BLOCKS.find((q) => q.id === c.of)!;
       // (its slot down the face away from its block's spine)
       const near = pointAt(blk.spine!, Math.min(lineLength(blk.spine!), Math.max(0, alongOf(blk.spine!, c.at)))).p;
-      drawCore(b, c.foot, blk.base, c.top, c.at, [near]);
+      const lift = SKY_LIFTS.find((q) => q.id === c.id)!;
+      drawCore(b, c.foot, blk.base, c.top, c.at, [near], coreFloors(c.id).map((f) => floorY(blk.base, f)), lift.door);
       b.build(into, opts);
     })
   );

@@ -42,6 +42,7 @@ import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
 import { vergeY } from './verges';
 import { onSouthGround, southLift } from './southground';
+import { skyFloorAt } from './southsky';
 import { GARAGE_SITE } from './solids';
 import { PLAN, inPoly, type Pt } from './streetplan';
 
@@ -89,6 +90,9 @@ export const GROUND_LAYERS: GroundLayer[] = [
   // Below ground (underground.ts): Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
   // open floors, and a floor under a roof when `yNow` is down there
   { id: 'tunnel', how: 'take', at: (x, z, yNow) => UNDER.y(x, z, yNow) },
+  // Endswood's sky network (southsky.ts, docs/south-plan.md Phase 2c), when `yNow` is up there: the galleries, bridges,
+  // the podium deck, the cores' landings and The Core's stair
+  { id: 'sky', how: 'take', at: (x, z, yNow) => skyFloorAt(x, z, yNow) },
   // The south's rolling ground (southground.ts, docs/south-plan.md Phase 1c): its slabs, sidewalks, streets and land
   // all lifted by the ground under them, as what's drawn there is (kit.ts `Batch.build()`)
   {
