@@ -95,6 +95,7 @@ import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallWall } from './mallinside';
+import { skyUp, skyWall } from './southsky';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
@@ -777,6 +778,8 @@ export function createWalk(d: WalkDeps) {
     if (y < WALK_UNDER && walkOff(x, z, RADIUS)) return true;
     // Sector 7 Tower's sky deck (skydeck.ts): up there only its rail, the lift house and the viewers stop you
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
+    // Up in Endswood's sky network (southsky.ts): only its railings stop you (off its galleries, bridges and decks)
+    if (skyUp(x, z, y)) return skyWall(x, z, y, RADIUS);
     // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
     if (mallWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)

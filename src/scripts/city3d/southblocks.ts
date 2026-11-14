@@ -44,6 +44,8 @@ export const BRIDGE_HALF = 0.9;
 export const SKY_FLOORS = [3, 6, 9, 12, 15];
 /** The clear height under a bridge over a street (a bus's under it) */
 export const BRIDGE_CLEAR = 3;
+/** A stair core's lift house over its block's roof (room for a landing on the top gallery's floor under it) */
+export const CORE_OVER = 1.8;
 /** How round a slab's corners are: this much of its depth */
 export const CORNER_R = 0.3;
 /** The towers' plant room over their roofs, and their beacon's height over that */
@@ -313,7 +315,7 @@ export interface Core {
 const rotOf = (dir: Pt) => Math.atan2(dir[1], dir[0]);
 function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number): Core {
   const rot = rotOf(dir);
-  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + 0.8, foot: squareFoot(at, CORE_HALF, rot, 0.6) };
+  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + CORE_OVER, foot: squareFoot(at, CORE_HALF, rot, 0.6) };
 }
 /** A slab's cores: one past each end, flush with its galleries' outer edge, so each gallery runs into them */
 function endCores(b: Block): Core[] {

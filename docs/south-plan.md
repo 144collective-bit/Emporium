@@ -201,9 +201,25 @@ From the Circus west, patchy as high roads are:
   half and Bunker Sound's door (its pin, door prompt and arrival moved
   there). The blocks stand level on their plinths (`lift: false`); their
   solids are in the city's. Shots `10-phase-2b-*`.
-- **2c, the sky network walked**: stairs and lifts up the cores, the
-  bridges and decks underfoot (groundheight.ts), the archway, the smoke
-  test through it.
+- **2c, the sky network walked** (built, signed off by the owner 2026-11-14;
+  the owner's calls, 2026-11-14: a lift in every core with a floor picker
+  and a walked stair up The Core, only the railings stop you, just
+  walking for now): `southsky.ts` (DOM-free, `tests/southsky.test.ts`):
+  every floor you stand on up there (`SKY_SHAPES`: the galleries inside
+  their upstands, the bridges between their parapets, the podium deck,
+  each core's open landing at every third floor it serves, the ways
+  through the Rampart's gallery fronts into its cores, The Core's stair
+  and landing), `skyFloorAt()` (groundheight.ts's `sky` layer), `skyUp()`
+  / `skyWall()` (walk.ts: up there, off every shape is a railing); the
+  lifts (`SKY_LIFTS`: a door at every core's foot, a call point on each
+  landing; `skyLiftDoors()` the prompts by your height), the floor picker
+  (`skylift-ui.ts`, the metro's card, loaded when first used; index.ts
+  `rideTo()`). Drawn: the cores open at each landing on corner posts,
+  their lift doors with a lit strip, The Core's stair with its rails and
+  landing, a door where each bridge meets a tower (the towers aren't
+  entered). The cores' lift houses stand 1.8 over the roofs (`CORE_OVER`).
+  The smoke test rides The Core's lift up and down and walks its stair;
+  the `?fps` readout says how high you are when you're off the ground.
 - **2d, the ground round them**: courts with cars and bins, grass and
   desire lines, the play area, the podium decks' planters and benches.
 

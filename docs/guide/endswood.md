@@ -67,6 +67,13 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   podium deck on its columns; Bunker Sound's door with its neon. Built with `lift: false` (kit.ts `Batch.build()`):
   they stand level on their plinths, not on the rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in
   solids.ts. Bench views `south-blocks` and `south-rampart`.
+- **The sky network walked** (`southsky.ts`, DOM-free, tested in `tests/southsky.test.ts`, docs/south-plan.md 2c):
+  `SKY_SHAPES` (the galleries, the bridges, the podium deck, the cores' open landings, the ways through the Rampart's
+  gallery fronts, The Core's stair and landing), `skyFloorAt()` (groundheight.ts's `sky` layer, before `south`),
+  `skyUp()` / `skyWall()` (walk.ts's `blocked()`: up there only the railings stop you, the solids don't); the lifts
+  (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's
+  card, `[data-metro]`, its words put back after; index.ts `rideTo()`). A bridge to a tower ends at its door: the towers
+  aren't entered. The smoke test's `sky` and `stair` scenes.
 - **The rolling ground** (`southground.ts`, docs/south-plan.md Phase 1c, tested in `tests/southground.test.ts`): the
   village's hill (`HILL_H` 2.4, St Aldwyn's on top), swells in the fields, the brook's valley, today's ground wherever
   the south meets what's fixed (`freedom()`); each street on a bed (`ROAD_BEDS`, one in ten at most, level across, the
