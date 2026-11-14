@@ -189,6 +189,32 @@ the targets as they were (the tests hold the arithmetic). MiB.
    far away drawn at half size on every tier (phones already do), and no
    mipmaps on textures only seen face-on near.
 
+### What Phase 4 found (2026-11-14)
+
+- **The climb isn't a leak.** The desktop's high tier, the City view, idle
+  for 5 minutes (headless, baked textures): textures 37.6 → 97.9 MB as the
+  scene's textures went 128 → 182; what three holds on the GPU stayed 11-23
+  above the scene's the whole time (`__mem().gl`), so nothing painted again
+  is left behind. The repainted ones (the stadium's fixture board, the
+  crowd's wardrobe) dispose the old.
+- **It's the districts' painted textures.** After 150 s: 84.5 MB, of which
+  **55 MB painted in the browser** (uncompressed, mipmapped) and 29 MB
+  baked. The bake keeps only what the boot paints (`__texBakeBoot`), so
+  every district's atlases arrive as full-size canvases: the Neon Mile's
+  resorts (`resorts3d.ts`, two 1024 x 1024, 5.3 MB each), the Strip's signs
+  (`stripmarks3d.ts`), Uptown's high-rises (`highrise3d.ts`, 3 MB), street
+  life, the riverside, the boulevard, the corner shops.
+- **The stages held a GPU context each.** The fitting room's preview and
+  the character screen kept their renderer (a second and third context,
+  with MSAA picture buffers at the panel's size) after closing, forever.
+  **Built**: 15 s after its panel closes (`RELEASE_AFTER` in `stage.ts`)
+  the stage frees its figure, podium and backdrops, disposes the renderer,
+  loses its context on purpose and puts a blank canvas in place of its
+  own; the next open makes it again (checked: the same picture, no errors;
+  reopened sooner, it's kept). The garage and the gun store draw in the
+  city's own renderer: nothing to free there.
+- **Measuring**: `__mem()` has `gl` and `textureRows` (performance.md).
+
 ## Phase 5: budgets that hold as the city grows (built, 2026-11-13)
 
 The owner's picks: **on demand only** (a full city takes too long in CI to

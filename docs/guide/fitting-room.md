@@ -9,7 +9,9 @@ keep it up to date when what it describes changes.
   fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
   Hand, Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
-  open (still under reduced motion; drag turns him); its idle and walk
+  open (still under reduced motion; drag turns him); 15 s after the panel
+  closes (`RELEASE_AFTER`) that renderer, a GPU context of its own, is let go
+  and made again on the next open (the stability plan's Phase 4.2); its idle and walk
   are the crowd pack's captured takes on his bones (`captureplay.ts`:
   the three idles in turn, crossfaded, the looped walk on the spot; the
   formula poses until the pack is in). The **Merch** tab

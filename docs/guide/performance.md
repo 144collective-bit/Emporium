@@ -371,7 +371,11 @@ keep it up to date when what it describes changes.
   `userData.paint`) as 16-bit shares, both `normalized`, 29 bytes a vertex
   where there were 44. A new shared material whose colours stay 0 to 1 can
   be marked `paint` too; one whose colours pass 1 must not be.
-  `window.__mem()` under `?fps` says where the geometry memory is.
+  `window.__mem()` under `?fps` says where the geometry memory is;
+  `textureRows` in it, where the texture memory is (`textureRows()` in
+  `perf.ts`: under `?fps` and `?bench` a painted texture is named after the
+  start of what drew it, `named()` in `kit.ts`), and `gl`, what three holds
+  on the GPU (a count above the scene's that keeps growing is a leak).
 - **Past the haze, phones let far tiles go altogether** (the owner's pick:
   only on the ground, only what the haze already hides;
   `docs/performance-plan.md`, phones' geometry memory step 2). On the low

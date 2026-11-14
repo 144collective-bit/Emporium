@@ -136,7 +136,7 @@ import { CROWD_VIEW, figureDetail } from './character';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, memoryRows, sceneMemory, targetMemory } from './perf';
+import { mb, memoryRows, sceneMemory, targetMemory, textureRows } from './perf';
 import { antialias } from './targets';
 import { PACKED, tileBatch } from './tilebatch';
 import { hazeHorizon } from './tileplan';
@@ -1783,7 +1783,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
     // (where the geometry memory is, for the console: perf.ts)
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: textureRows(scene) });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view

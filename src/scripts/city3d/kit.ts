@@ -374,7 +374,14 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
   if (made) return builtTexture(made, () => paint(w, h, draw));
   const c = paint(w, h, draw);
   if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160) });
-  return canvasTexOf(c);
+  return named(canvasTexOf(c), draw);
+}
+/** Under ?fps or ?bench a painted texture carries the start of what drew it, for `textureRows()` (perf.ts) */
+let nameTex: boolean | undefined;
+function named(t: THREE.CanvasTexture, draw: Draw) {
+  nameTex ??= !NO_DOM && /[?&](fps|bench)\b/.test(location.search);
+  if (nameTex) t.name = draw.toString().replace(/\s+/g, ' ').slice(0, 90);
+  return t;
 }
 
 /**
@@ -383,7 +390,7 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
  */
 export function liveTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
   if (NO_DOM) return canvasTex(w, h, draw);
-  return canvasTexOf(paint(w, h, draw));
+  return named(canvasTexOf(paint(w, h, draw)), draw);
 }
 
 function paint(w: number, h: number, draw: Draw) {
