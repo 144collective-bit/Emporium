@@ -66,7 +66,8 @@ it and has been retired completely. Build only on what's here.
 | The Neon Mile, its resorts, shows and monorail | `docs/guide/neon-mile.md` |
 | Sunridge | `docs/guide/sunridge.md` |
 | Lot 9, its tunnel and the Field | `docs/guide/lot9.md` |
-| Endswood Estate, what's below ground, its decks, Endswood carried west, Degen's home (`docs/home-plan.md`), the far west and his compound (`docs/ends-far-west-plan.md`) | `docs/guide/endswood.md` |
+| Everything south of The Trenches redesigned (Endswood, Aldwyn's Green, Lot 9), its phases | `docs/south-plan.md` |
+| Endswood as re-laid: the street web (`south.ts`), its land, lamps and places, Degen's home and compound (`docs/home-plan.md`) | `docs/guide/endswood.md` |
 | The raised highway, its exits, turn lanes, country roads, street wear | `docs/guide/highway.md` |
 | The ground palette, ground cover, verges, rolls, Southfield, the fringes, lamps by district, the seams, the review shots | `docs/guide/blend.md` |
 | Palm Court and Starlight Mall, inside the mall | `docs/guide/mall.md` |
@@ -111,11 +112,24 @@ it and has been retired completely. Build only on what's here.
 - **The Emporium is the centrepiece**: keep it the tallest, most detailed
   building. Everything else stays under it, but for the owner's exceptions
   (Uptown's and Uptown North's towers, the Neon Mile's resorts, the Docks'
-  cranes, St Aldwyn's spire, the wall).
+  cranes, St Aldwyn's spire, the wall, and the south's new blocks to about
+  20: `docs/south-plan.md`, the owner's call, 2026-11-14, the Emporium to be
+  upgraded later).
 - **Made-up names only.** Signs, shops, airlines, cars, guns and people use
   fixed made-up copy: never a real brand, make, badge, crew or person,
   never the token, never a price or a number on a sign. Visitors and
   players can't type text that shows.
+- **Streets follow the land** (the owner's call, 2026-11): roads bend round
+  hills, water, old field lines and landmarks, and meet at angles rather
+  than square. Straight runs only where a street was planned straight (the
+  avenues, the ring road, downtown's grid).
+- **No ruler-straight edges** (the owner's call, 2026-11): where districts,
+  land and fences meet, the edge wanders (gardens, scrub, hedges and paths
+  break the line); no straight rectangle of land touching another.
+- **Nowhere is a dead end on foot** (the owner's call, 2026-11): every
+  cul-de-sac and crescent ends in a footpath through to the next street or
+  green, every row of terraces has a back alley and a ginnel through long
+  rows; cut-throughs are for walking and bikes, bollards at each end.
 - **Nothing threatening, and nothing in the city attacks you.** Targets are
   the dummies and the drones only; the crowd is never a target; there's no
   player health outside the Fight Club's ring.

@@ -131,7 +131,8 @@ export const JUNCTIONS: Junction[] = PLAN.crossings.map((c, ix) => ({
   three: c.streets.some((id) => id.startsWith('diag') || id === 'uptown-diag'),
   merge: c.streets.includes('highway') && c.streets.some((id) => id.startsWith('ramp-')),
   arrows: arrowsAt(c),
-  join: c.id.endsWith('-join') && c.streets.some((id) => PLAN.streets.find((s) => s.id === id)?.kind === 'rural'),
+  // (and where a grid road bends on as one of the south's streets, south.ts: ns1s into Endswood Road, ns2s into Marsh Lane)
+  join: c.id.endsWith('-join') && (c.streets.some((id) => PLAN.streets.find((s) => s.id === id)?.kind === 'rural') || c.streets.length === 2),
 }));
 
 /** The right-hand side of travel along (dx, dz) */
@@ -762,7 +763,8 @@ function allRoutes(): Route[] {
     fails.set(key(st), n);
     if (n >= 40) driven.add(key(st));
   };
-  for (let tries = 0; tries < 4000; tries++) {
+  // (the south's closes are dead ends: each gives up after its tries, so there are tries enough for the rest)
+  for (let tries = 0; tries < 9000; tries++) {
     // Set off down a stretch nobody drives yet
     const todo = stretches.find((s) => !driven.has(key(s)));
     if (!todo) break;

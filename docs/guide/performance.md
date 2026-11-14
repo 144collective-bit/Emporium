@@ -312,7 +312,8 @@ keep it up to date when what it describes changes.
     waiting where they're going, so nothing pops in on screen.
   - A tile far away (past `far` + `KEEP_LEAD`) lets its sites' near pieces
     in the shared materials go when what's held passes the tier's
-    `nearBudget` (`TIERS`: 96, 64, 32 MB; `?budget=MB` in the address
+    `nearBudget` (`TIERS`: 64, 48, 32 MB, high's and medium's lowered from
+    96 and 64 in the stability plan's Phase 3a; `?budget=MB` in the address
     overrides it, for testing), furthest first (`toRelease()`); it's drawn
     far until the site runs again and puts them back, before it's near
     (`toRebuild()`, `REBUILD_LEAD`). The room they took is reused
@@ -364,11 +365,19 @@ keep it up to date when what it describes changes.
   where there were 44. A new shared material whose colours stay 0 to 1 can
   be marked `paint` too; one whose colours pass 1 must not be.
   `window.__mem()` under `?fps` says where the geometry memory is.
-- **Past the haze, phones let far tiles go altogether** (the owner's pick:
-  only on the ground, only what the haze already hides;
-  `docs/performance-plan.md`, phones' geometry memory step 2). On the low
-  tier, while walking, driving or riding (not the City view, not up in an
-  aircraft), `hazeHorizon()` (`tileplan.ts`) turns the scene's fog into the
+  The uv is left out where nothing reads it (`dropsUv()` in
+  `tilebatch.ts`, the stability plan's Phase 3b): the shared materials
+  have no texture, and only the paint's trees' sway reads the uv
+  (`injectWind()`), so the shared materials' pieces carry none, but the
+  paint's while its trees sway (`UV.sway`: every tier but phones'). 21
+  bytes a vertex there. A shared material that comes to read its uv must
+  be kept out of `dropsUv()`.
+- **Past the haze, far tiles go altogether** (the owner's pick: only on the
+  ground, only what the haze already hides; `docs/performance-plan.md`,
+  phones' geometry memory step 2; every tier since the stability plan's
+  Phase 3a, `docs/stability-plan.md`, where it was phones only). On every
+  tier, while walking, driving or riding (not the City view, which keeps
+  everything, the owner's call; not up in an aircraft), `hazeHorizon()` (`tileplan.ts`) turns the scene's fog into the
   distance past which under a hundredth of anything is left. A tile
   `HORIZON_OUT` past it lets go of everything its sites drew in the shared
   materials, at every level (`toVanish()`, `TileBatches.vanish()`), sites

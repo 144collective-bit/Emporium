@@ -351,3 +351,129 @@ test('the wrist: inside every cuff with room to spare (nothing flush), no narrow
   assert.ok(widest < 0.033 - 0.002, `inside the suit's cuff ${widest}`);
   assert.ok(narrowest > 0.026, `no neck ${narrowest}`);
 });
+
+// Natural motion (the owner's call, 2026-11: "his arm movements... look robotic", subtle, first person only)
+import { ARC, LIFE, SWAY, arcBulge, guardLife, nudgeArm, springStep } from '../src/scripts/city3d/fparm';
+
+test('the guard alive: small, slow, and the two hands never in step', () => {
+  const a = V(0, 0, 0);
+  const b = V(0, 0, 0);
+  const prev = V(0, 0, 0);
+  let most = 0;
+  let fastest = 0;
+  const ys: [number, number][] = [];
+  for (let t = 0; t < 30; t += 1 / 60) {
+    guardLife(t, 1, a);
+    guardLife(t, -1, b);
+    most = Math.max(most, a.length(), b.length());
+    if (t > 0) fastest = Math.max(fastest, a.distanceTo(prev) * 60);
+    prev.copy(a);
+    ys.push([a.y, b.y]);
+  }
+  assert.ok(most < 0.012 && most > 0.003, `small ${most}`);
+  assert.ok(fastest < 0.03, `slow ${fastest} m/s`);
+  // (correlation of the two hands' rise and fall: they share the breath, never move as one)
+  const m = ys.reduce((s, [x, y]) => [s[0] + x / ys.length, s[1] + y / ys.length], [0, 0]);
+  let sxy = 0;
+  let sxx = 0;
+  let syy = 0;
+  for (const [x, y] of ys) {
+    sxy += (x - m[0]) * (y - m[1]);
+    sxx += (x - m[0]) ** 2;
+    syy += (y - m[1]) ** 2;
+  }
+  const r = sxy / Math.sqrt(sxx * syy);
+  assert.ok(r < 0.8, `not in step ${r}`);
+  assert.ok(LIFE.breath.period > 3 && LIFE.breath.period < 6, 'a resting breath');
+});
+
+test('the arcs: nothing at either end, all of it half way; outward and forward into the guard', () => {
+  assert.ok(near(arcBulge(0), 0) && near(arcBulge(1), 0, 1e-9) && near(arcBulge(0.5), 1));
+  assert.ok(arcBulge(-1) === 0 && near(arcBulge(2), 0, 1e-9));
+  assert.ok(ARC.guard[0] > 0 && ARC.guard[2] > 0 && Math.hypot(...ARC.guard) < 0.08, 'subtle: under a fist and a half');
+});
+
+test('a nudged arm: the fist moved, the arm whole, the elbow on its side', () => {
+  const a = newLaidArm();
+  a.shoulder.set(0.2, -0.2, 0.05);
+  solveArm(a.shoulder, V(0.15, -0.12, -0.3), V(0.4, -0.7, 0.6), a.elbow, a.wrist);
+  const was = a.wrist.clone();
+  const side = a.elbow.x;
+  nudgeArm(a, V(0.01, 0.005, -0.004));
+  assert.ok(a.wrist.distanceTo(was.add(V(0.01, 0.005, -0.004))) < 1e-4, 'moved');
+  assert.ok(near(a.shoulder.distanceTo(a.elbow), ARM.upper, 1e-4) && near(a.elbow.distanceTo(a.wrist), ARM.fore, 1e-4), 'whole');
+  assert.ok(Math.abs(a.elbow.x - side) < 0.02, 'the elbow where it was');
+});
+
+test('the weighted sway: pushed back, it swings a little past and settles', () => {
+  const s = { x: 1, v: 0 };
+  let low = 0;
+  for (let t = 0; t < 1.2; t += 1 / 60) {
+    springStep(s, 1 / 60, SWAY.spring, SWAY.damp);
+    low = Math.min(low, s.x);
+  }
+  assert.ok(low < -0.03 && low > -0.25, `a little past ${low}`);
+  assert.ok(Math.abs(s.x) < 0.02 && Math.abs(s.v) < 0.2, 'settled');
+});
+
+import { FOLLOW, followStep, newFollow } from '../src/scripts/city3d/fparm';
+
+test('follow-through: a fist sent out arrives a hair late, swings a little past and settles; a cut is taken at once', () => {
+  const f = newFollow();
+  const face = V(0, 0, 1);
+  const off = V(0, 0, 0);
+  followStep(f, V(0, 0, 0), face, 1 / 60, off);
+  // (a jab: the target out 5 cm at once)
+  const target = V(0, 0, -0.05);
+  let past = 0;
+  let firstFrame = 0;
+  for (let i = 0; i < 40; i++) {
+    followStep(f, target, face, 1 / 60, off);
+    if (i === 0) firstFrame = -f.at.z;
+    past = Math.max(past, -f.at.z - 0.05);
+  }
+  assert.ok(firstFrame < 0.04 && firstFrame > 0.005, `a hair late ${firstFrame}`);
+  assert.ok(past > 0.05 * 0.03 && past < 0.05 * 0.25, `a little past ${past}`);
+  assert.ok(f.at.distanceTo(target) < 0.002, 'settled');
+  // The same spring at 30 frames a second: it still gets there
+  const slow = newFollow();
+  followStep(slow, V(0, 0, 0), face, 1 / 30, off);
+  for (let i = 0; i < 20; i++) followStep(slow, target, face, 1 / 30, off);
+  assert.ok(slow.at.distanceTo(target) < 0.002, 'at 30 fps too');
+  // A cut: taken at once
+  followStep(f, V(1, 0, 0), face, 1 / 60, off);
+  assert.ok(off.length() === 0 && f.at.x === 1);
+  // Never more than FOLLOW.most off
+  for (let i = 0; i < 5; i++) followStep(f, V(1 - 0.2 * (i + 1) * 0.5, 0, 0), face, 1 / 60, off);
+  assert.ok(off.length() <= FOLLOW.most + 1e-9);
+});
+
+test('overlap: the fist turns after its forearm, catching up within a few frames', () => {
+  const f = newFollow();
+  const off = V(0, 0, 0);
+  followStep(f, V(0, 0, 0), V(0, 0, 1), 1 / 60, off);
+  const turned = V(1, 0, 0);
+  followStep(f, V(0, 0, 0), turned, 1 / 60, off);
+  assert.ok(f.face.angleTo(turned) > 0.5, 'late');
+  for (let i = 0; i < 12; i++) followStep(f, V(0, 0, 0), turned, 1 / 60, off);
+  assert.ok(f.face.angleTo(turned) < 0.05, 'caught up');
+});
+
+import { TURN_LEAN, turnLean } from '../src/scripts/city3d/fparm';
+
+test('running into a turn: the arms lean into it, more the faster, never past the most, none standing', () => {
+  let left = 0;
+  for (let i = 0; i < 60; i++) left = turnLean(left, 2, 1, 1 / 60);
+  assert.ok(left > 0 && near(left, 2 * TURN_LEAN.gain, 0.01), `into a left turn ${left}`);
+  let right = 0;
+  for (let i = 0; i < 60; i++) right = turnLean(right, -2, 1, 1 / 60);
+  assert.ok(near(right, -left, 1e-9), 'the other way for a right turn');
+  let hard = 0;
+  for (let i = 0; i < 60; i++) hard = turnLean(hard, 40, 1, 1 / 60);
+  assert.ok(near(hard, TURN_LEAN.most, 1e-3), 'never past the most');
+  let standing = 0;
+  for (let i = 0; i < 60; i++) standing = turnLean(standing, 3, 0, 1 / 60);
+  assert.equal(standing, 0);
+  // (eased: one frame takes only part of the way)
+  assert.ok(turnLean(0, 2, 1, 1 / 60) < 0.5 * 2 * TURN_LEAN.gain);
+});

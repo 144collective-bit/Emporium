@@ -11,7 +11,6 @@
  * `MIX` either side of the avenue (`kerbShare()`, read by world.ts's slab paint vertex by vertex), so the two meet in
  * the middle of the street instead of switching on a line. Nothing moves.
  */
-import { inSodiumBand } from './endsblend';
 import { RING_W, TRENCH_RECT, inTrenches, lampKind } from './trenches';
 import { inDocks } from './docks';
 import { inYards } from './southfield';
@@ -31,7 +30,6 @@ export const SODIUM_AREAS: ((x: number, z: number, m: number) => boolean)[] = [
   (x, z, m) => inRect(WATERFRONT_RECT, x, z, m),
   inLot9,
   inEndswood,
-  inSodiumBand,
 ];
 
 /**

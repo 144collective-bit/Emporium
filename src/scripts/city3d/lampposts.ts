@@ -19,7 +19,6 @@
 import { inTrenches } from './trenches';
 import { PATH_RECT, inLot9Lamps } from './lot9';
 import { inEndswood } from './endswood';
-import { inCommon } from './endsblend';
 import { inUptown } from './uptown';
 import { NORTH_RECT } from './uptownnorth';
 import { MALL_AREA } from './mall';
@@ -68,7 +67,7 @@ const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] -
 /** Which post a lamp at x, z is: the district it stands in picks it, the town's everywhere else */
 export function lampStyle(x: number, z: number): LampKind {
   // (Lot 9's reach up the tunnel's footpath, and Endswood Estate with the common down to Lot 9: sodium estates, lampmix.ts)
-  if (inTrenches(x, z) || inLot9Lamps(x, z) || inRect(PATH_RECT, x, z, 2) || inEndswood(x, z) || inCommon(x, z)) return 'cobra';
+  if (inTrenches(x, z) || inLot9Lamps(x, z) || inRect(PATH_RECT, x, z, 2) || inEndswood(x, z)) return 'cobra';
   if (inUptown(x, z) || inRect(NORTH_RECT, x, z) || inRect(MALL_AREA, x, z)) return 'uptown';
   // (Crestmont's lamps along its east road stand a hair past its rect)
   if (inRect(CREST_RECT, x, z, 1)) return 'lantern';

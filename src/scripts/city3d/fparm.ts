@@ -637,6 +637,126 @@ export function blendArm(a: LaidArm, b: LaidArm, w: number) {
 }
 const tmpS = new THREE.Vector3();
 
+/** Move a laid arm's fist by `d` (in the eye's frame), the elbow solved again round the way it was: the arm whole */
+export function nudgeArm(a: LaidArm, d: THREE.Vector3) {
+  if (d.lengthSq() < 1e-12) return a;
+  const pole = tB.copy(a.elbow).sub(a.shoulder).addScaledVector(tmpS.copy(a.wrist).sub(a.shoulder), -0.5);
+  solveArm(a.shoulder, tA.copy(a.wrist).add(d), pole, a.elbow, a.wrist);
+  return a;
+}
+
+/**
+ * The guard alive (the owner's call, 2026-11: "his arm movements... look robotic", subtle, first person only): a
+ * slow breath lifting both fists (`breath`: its period in seconds, how far up and forward, metres), each hand's own
+ * drift (`drift`: three slow waves a hand at frequencies that never line up, its own phases, so the hands are never
+ * in step or mirrored) and a slow weight shift from foot to foot (`weight`: both hands across, the leaning side's a
+ * touch lower)
+ */
+export const LIFE = {
+  breath: { period: 4.2, up: 0.005, fwd: 0.002 },
+  drift: { amp: 0.0035, hz: [0.37, 0.59, 0.23], phase: { [1]: [0, 1.7, 4.1], [-1]: [2.3, 0.4, 5.5] } as Record<1 | -1, number[]> },
+  weight: { period: 9.5, across: 0.004, drop: 0.002 },
+};
+
+/** Where the guard's life has a fist at time `t` (seconds): an offset in the eye's frame (+x right, +y up, -z ahead) */
+export function guardLife(t: number, side: 1 | -1, out: THREE.Vector3) {
+  const TAU = Math.PI * 2;
+  const b = Math.sin((TAU * t) / LIFE.breath.period);
+  const ph = LIFE.drift.phase[side];
+  const [f0, f1, f2] = LIFE.drift.hz;
+  const w = Math.sin((TAU * t) / LIFE.weight.period);
+  out.set(
+    LIFE.drift.amp * (0.6 * Math.sin(TAU * f0 * t + ph[0]) + 0.4 * Math.sin(TAU * f2 * t + ph[2])) + LIFE.weight.across * w,
+    LIFE.breath.up * b + LIFE.drift.amp * Math.sin(TAU * f1 * t + ph[1]) - LIFE.weight.drop * w * side,
+    -LIFE.breath.fwd * b,
+  );
+  return out;
+}
+
+/**
+ * The hands' paths between states are arcs, not straight lines (the owner's call, 2026-11): part way up into the
+ * guard the fists swing out and forward (`guard`, metres: out, up, ahead at half way), part way into the run's pump
+ * out and up (`run`); nothing at either end
+ */
+export const ARC = { guard: [0.045, -0.012, 0.05], run: [0.03, 0.015, 0.0] } as const;
+
+/** How far along an arc's bulge a blend `w` (0-1) is: none at either end, all of it half way */
+export const arcBulge = (w: number) => Math.sin(Math.PI * THREE.MathUtils.clamp(w, 0, 1));
+
+/**
+ * The arms' lag behind the look, with weight (the owner's call, 2026-11: "weighted sway"): a turn of the look
+ * pushes them back by `gain` of it (at most `most`, radians-ish: across, up), and a spring (`spring`, `damp`: a
+ * touch under critical) brings them back, swinging a little past before they settle
+ */
+export const SWAY = { gain: 0.8, most: [0.1, 0.08], spring: 60, damp: 9 };
+
+/**
+ * Follow-through and overlap (the owner's call, 2026-11: "robotic", subtle, first person only): each fist follows
+ * where its pose puts it through a quick spring a touch under critical (`spring`, `damp`), so a punch arrives a hair
+ * late, swings a little past full reach and settles, and the same coming back; never more than `most` (metres) off,
+ * and a jump of more than `jump` (a cut, the first frame) is taken at once. The fist's turn lags its forearm's
+ * (`turn`: how fast it catches up, a second), so the wrist snaps over at the end, not all of a piece with the arm
+ */
+export const FOLLOW = { spring: 2500, damp: 48, most: 0.06, jump: 0.3, turn: 22 };
+
+/** A fist's follow: where it is and how fast it's going (the eye's frame), and which way its back faces */
+export interface Follow {
+  at: THREE.Vector3;
+  v: THREE.Vector3;
+  face: THREE.Vector3;
+  fresh: boolean;
+}
+export const newFollow = (): Follow => ({ at: new THREE.Vector3(), v: new THREE.Vector3(), face: new THREE.Vector3(0, 0, 1), fresh: true });
+
+/** One step of a fist's follow towards `target` (its wrist this frame) and `face`: returns how far it's off the target */
+export function followStep(f: Follow, target: THREE.Vector3, face: THREE.Vector3, dt: number, out: THREE.Vector3) {
+  if (f.fresh || f.at.distanceTo(target) > FOLLOW.jump) {
+    f.at.copy(target);
+    f.v.set(0, 0, 0);
+    f.face.copy(face);
+    f.fresh = false;
+    return out.set(0, 0, 0);
+  }
+  const h = Math.min(dt, 1 / 30);
+  // (spring towards the target, the speed eased by the damping: in steps of at most 1/120 s, so it's the same
+  // spring at any frame rate)
+  const n = Math.max(1, Math.ceil(h * 120));
+  const k = h / n;
+  const ease = Math.exp(-FOLLOW.damp * k);
+  for (let i = 0; i < n; i++) {
+    out.copy(f.at).sub(target);
+    f.v.addScaledVector(out, -FOLLOW.spring * k).multiplyScalar(ease);
+    f.at.addScaledVector(f.v, k);
+  }
+  out.copy(f.at).sub(target);
+  if (out.length() > FOLLOW.most) {
+    out.setLength(FOLLOW.most);
+    f.at.copy(target).add(out);
+  }
+  f.face.lerp(face, 1 - Math.exp(-FOLLOW.turn * h)).normalize();
+  return out;
+}
+
+/**
+ * Turning while running (the owner's call, 2026-11: natural arms, subtle, first person only): the pump leans into
+ * the turn, the arms rolled towards its inside by `gain` of the look's turn rate (radians a second) at full run, at
+ * most `most` (radians), eased in and out at `ease` a second, so a sweep of the look while running banks them
+ */
+export const TURN_LEAN = { gain: 0.05, most: 0.14, ease: 7 };
+
+/** The arms' lean this frame, from last frame's `lean`, the look's turn rate (+ to the left) and the run (0-1) */
+export function turnLean(lean: number, yawRate: number, run: number, dt: number) {
+  const want = THREE.MathUtils.clamp(yawRate * TURN_LEAN.gain * run, -TURN_LEAN.most, TURN_LEAN.most);
+  return lean + (want - lean) * (1 - Math.exp(-TURN_LEAN.ease * Math.min(dt, 0.1)));
+}
+
+/** One step of a damped spring towards 0: `s.x` its place, `s.v` its speed */
+export function springStep(s: { x: number; v: number }, dt: number, spring: number, damp: number) {
+  s.v += (-spring * s.x - damp * s.v) * dt;
+  s.x += s.v * dt;
+  return s;
+}
+
 /**
  * A punch's feel in first person (the owner's call, 2026-11: "subtle"): how far the view turns with the shoulder
  * behind each punch (radians, + to the left: a left hand turns him right, a right hand left) and leans with it (+ up),

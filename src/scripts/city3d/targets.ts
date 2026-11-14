@@ -107,8 +107,11 @@ export const pictureBytes = (o: PictureOpts) => pictureTargets(o).reduce((n, t) 
  * Lower one when a phase cuts it, to keep the saving; raise one only on purpose (scripts/budget.mjs's rule).
  */
 export const MEMORY_CEILINGS = {
-  /** Measured 2026-11-13: geometry 188, textures 64, render targets 9 */
-  phone: { geometry: 207, textures: 70, targets: 10 },
+  /**
+   * Measured 2026-11-13: geometry 188, textures 64, render targets 9; geometry lowered to 187 when Phase 3b left the
+   * unused uv out (169.8 measured)
+   */
+  phone: { geometry: 187, textures: 70, targets: 10 },
   /** Phase 2's measured 291 (a retina 1440 x 900 at 2x, SMAA) and 175 (1x, 4x MSAA) */
   desktop: { retina: 320, standard: 193 },
 } as const;
