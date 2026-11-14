@@ -1,0 +1,482 @@
+/*
+ * Endswood's blocks as data (docs/south-plan.md Phase 2, step 2a; the owner's calls, 2026-11-14): DOM-free, tested in
+ * tests/southblocks.test.ts. Drawn in 2b, walked in 2c, the ground round them in 2d.
+ *
+ * - **The Rampart**: one long block curving along the ring road (a barrier against its noise), from the closes in the
+ *   west to the avenue, stepping up to 13 storeys north-east of the Circus; an archway over Underhill Lane's turning
+ *   circle and the path to Lot 9's tunnel; its galleries face the estate, its stair cores stand out from them.
+ * - **Harrier Point and Kite Point**: the twin towers north-east of the Circus, 18 storeys, a plant room on top, their
+ *   lifts and stairs in a separate core between them, joined to it by bridges every third floor.
+ * - **The stairwell blocks**: Linnet, Marten and Wren Courts, tall thin slabs between the avenues (9 storeys); Sorrel,
+ *   Fennel and Teasel Houses round the Circus's south and east, along the streets' curves (5 storeys). A stair core at
+ *   each end, on the side its galleries face, the galleries running into them. Teasel's west half is hoarded for refit,
+ *   Bunker Sound in its basement.
+ * - **The sky network**: covered bridges between the cores at the third, sixth and ninth floors, a podium deck between
+ *   Teasel and Fennel over their parking court; the estate crossed without touching the ground.
+ * - **The ground**: parking courts off the streets, grass with desire lines, a play area.
+ *
+ * Heights are in the city's units: a storey 1 (as the old estate's), the ground floor taller; the towers' plant rooms
+ * reach about 20 (the owner's figure, St Aldwyn's spire 22.5).
+ */
+import { HALF, PATH_HALF, MARSH_LANE, ENDSWOOD_ROAD, type Pt } from './south';
+import { cross, inside, shift, smooth } from './streetfaces';
+import { southLift } from './southground';
+import type { Box } from './underground';
+
+export type { Pt, Box };
+
+/* ---------- The measures ---------- */
+
+/** A storey's height (the old estate's), the ground floor's (taller: entrances, the hall), the roof's parapet */
+export const STOREY = 1;
+export const GROUND_H = 1.4;
+export const PARAPET = 0.3;
+/** The block's slab's height over today's ground (world.ts `SLAB`, endswood.ts `SLAB_Y`) */
+const SLAB_Y = 0.15;
+/** A sidewalk's width: a block stands at least `KERB_GAP` back from it */
+const WALK = 0.8;
+export const KERB_GAP = 1;
+/** A gallery's width (a street in the sky, walked), a stair core's half width, a bridge's half width */
+export const GALLERY_W = 1.6;
+export const CORE_HALF = 1.4;
+export const BRIDGE_HALF = 0.9;
+/** The floors the galleries run along and the bridges cross at: every third ("streets in the sky") */
+export const SKY_FLOORS = [3, 6, 9, 12, 15];
+/** The clear height under a bridge over a street (a bus's under it) */
+export const BRIDGE_CLEAR = 3;
+/** The towers' plant room over their roofs, and their beacon's height over that */
+export const PLANT_H = 1.6;
+export const BEACON_H = 0.5;
+
+/** A floor's level over a block's base: the ground floor 0, the first floor over it, and so on */
+export const floorY = (base: number, n: number) => base + (n === 0 ? 0 : GROUND_H + (n - 1) * STOREY);
+/** A block's roof's level with `storeys` storeys (the ground floor one of them) */
+export const roofY = (base: number, storeys: number) => floorY(base, storeys);
+
+/* ---------- The accents (70s retro-future: warm board-marked concrete, each block its own colour) ---------- */
+
+export type Accent = 'orange' | 'teal' | 'mustard';
+export const ACCENTS: Record<Accent, number> = { orange: 0xd9692e, teal: 0x2c9a92, mustard: 0xd6a12a };
+/** The concrete: warm grey, board-marked */
+export const CONCRETE = 0xb3aa9e;
+
+/* ---------- Lines and shapes ---------- */
+
+const len = (a: Pt, b: Pt) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+/** A line's length */
+export const lineLength = (pts: Pt[]) => pts.reduce((s, p, i) => (i ? s + len(pts[i - 1], p) : s), 0);
+/** The point `d` along a line, and its direction there */
+export function pointAt(pts: Pt[], d: number): { p: Pt; dir: Pt } {
+  let left = Math.max(0, d);
+  for (let i = 1; i < pts.length; i++) {
+    const l = len(pts[i - 1], pts[i]);
+    if (left <= l || i === pts.length - 1) {
+      const t = l ? Math.min(1, left / l) : 0;
+      const dir: Pt = l ? [(pts[i][0] - pts[i - 1][0]) / l, (pts[i][1] - pts[i - 1][1]) / l] : [1, 0];
+      return { p: [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t], dir };
+    }
+    left -= l;
+  }
+  return { p: pts[0], dir: [1, 0] };
+}
+/** The part of a line from `a` to `b` along it */
+export function section(pts: Pt[], a: number, b: number, step = 1.5): Pt[] {
+  const n = Math.max(1, Math.ceil((b - a) / step));
+  return Array.from({ length: n + 1 }, (_, k) => pointAt(pts, a + ((b - a) * k) / n).p);
+}
+/** How far along a line it first reaches `x` (a line running one way in x there) */
+export function alongToX(pts: Pt[], x: number) {
+  let d = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const l = len(a, b);
+    if ((a[0] - x) * (b[0] - x) <= 0 && a[0] !== b[0]) return d + (l * (x - a[0])) / (b[0] - a[0]);
+    d += l;
+  }
+  return Number.NaN;
+}
+/** A line's right side (`side` 1) or left (-1): streetfaces.ts `shift()` moves a line to its right */
+const SIDE = { right: 1, left: -1 } as const;
+export type Side = keyof typeof SIDE;
+
+/** Corners rounded: each corner at `at` replaced by a curve `r` back along each edge */
+function roundAt(poly: Pt[], at: number[], r: number, n = 5): Pt[] {
+  const out: Pt[] = [];
+  poly.forEach((v, i) => {
+    if (!at.includes(i)) return void out.push(v);
+    const [p, q] = [poly[(i - 1 + poly.length) % poly.length], poly[(i + 1) % poly.length]];
+    const rr = Math.min(r, len(p, v) * 0.45, len(v, q) * 0.45);
+    const a: Pt = [v[0] + ((p[0] - v[0]) * rr) / len(p, v), v[1] + ((p[1] - v[1]) * rr) / len(p, v)];
+    const b: Pt = [v[0] + ((q[0] - v[0]) * rr) / len(v, q), v[1] + ((q[1] - v[1]) * rr) / len(v, q)];
+    for (let k = 0; k <= n; k++) {
+      const t = k / n;
+      const u = 1 - t;
+      out.push([u * u * a[0] + 2 * u * t * v[0] + t * t * b[0], u * u * a[1] + 2 * u * t * v[1] + t * t * b[1]]);
+    }
+  });
+  return out;
+}
+/** A slab's footprint: its spine widened `depth`, its four corners rounded */
+export function slabFoot(spine: Pt[], depth: number, r = depth * 0.3): Pt[] {
+  const [right, left] = [shift(spine, depth / 2), shift(spine, -depth / 2)];
+  const poly = [...right, ...left.reverse()];
+  return roundAt(poly, [0, right.length - 1, right.length, poly.length - 1], r);
+}
+/** A rounded square, `half` each way, turned `rot` (radians, from +x towards +z) */
+export function squareFoot(c: Pt, half: number, rot: number, r = half * 0.4): Pt[] {
+  const [cs, sn] = [Math.cos(rot), Math.sin(rot)];
+  const sq: Pt[] = [[half, half], [-half, half], [-half, -half], [half, -half]].map(([x, z]): Pt => [c[0] + x * cs - z * sn, c[1] + x * sn + z * cs]);
+  return roundAt(sq, [0, 1, 2, 3], r);
+}
+
+/* ---------- The blocks ---------- */
+
+export interface Step {
+  /** Along its spine, from and to */
+  from: number;
+  to: number;
+  storeys: number;
+}
+export interface Block {
+  id: string;
+  name: string;
+  kind: 'rampart' | 'slab' | 'tower' | 'core';
+  /** Its footprint, a closed ring */
+  foot: Pt[];
+  /** A slab's and the Rampart's: the line along its middle, its depth, the side its galleries face */
+  spine?: Pt[];
+  depth?: number;
+  galleries?: Side;
+  /** Its heights along its spine (a tower's one step) */
+  steps: Step[];
+  /** Its ground floor's level: its slab over the highest ground under it (where the ground falls, a plinth) */
+  base: number;
+  accent?: Accent;
+  /** An archway through it at the ground (the Rampart's): along its spine, from and to, and the clear height under */
+  arch?: { from: number; to: number; clear: number };
+  /** The part hoarded for refit, along its spine (Teasel House's west half) */
+  refit?: { from: number; to: number };
+}
+
+/** A block's base: its slab over the highest ground under its footprint (sampled at its corners and its middle) */
+function baseOf(foot: Pt[]) {
+  const c: Pt = [foot.reduce((s, p) => s + p[0], 0) / foot.length, foot.reduce((s, p) => s + p[1], 0) / foot.length];
+  return SLAB_Y + Math.max(...[...foot, c].map((p) => southLift(p[0], p[1])));
+}
+/** The highest storeys a block has */
+export const storeysOf = (b: Block) => Math.max(...b.steps.map((s) => s.storeys));
+/** The top of a block: its roof's parapet (a tower's beacon over its plant room; a core's lift house) */
+export function topOf(b: Block) {
+  const roof = roofY(b.base, storeysOf(b));
+  return b.kind === 'tower' ? roof + PLANT_H + BEACON_H : b.kind === 'core' ? roof + 0.8 : roof + PARAPET;
+}
+/** The storeys a block has at a point along its spine */
+export const storeysAt = (b: Block, d: number) => (b.steps.find((s) => d >= s.from && d <= s.to) ?? b.steps[0]).storeys;
+
+function slab(id: string, name: string, kind: Block['kind'], spine: Pt[], depth: number, galleries: Side, steps: Step[] | number, accent?: Accent, extra: Partial<Block> = {}): Block {
+  const foot = slabFoot(spine, depth);
+  const L = lineLength(spine);
+  return { id, name, kind, foot, spine, depth, galleries, steps: typeof steps === 'number' ? [{ from: 0, to: L, storeys: steps }] : steps, base: baseOf(foot), accent, ...extra };
+}
+/** A street's centre line moved `d` to its right, from `x0` to `x1` along it (a line running one way in x there) */
+function alongStreet(pts: Pt[], d: number, x0: number, x1: number): Pt[] {
+  const line = shift(pts, d);
+  const [a, b] = [alongToX(line, x0), alongToX(line, x1)];
+  return section(line, Math.min(a, b), Math.max(a, b));
+}
+
+// The Rampart: west to east along the ring road (its left side north, to the road; its galleries on its right, south)
+const RAMPART_SPINE = smooth([[-168, 342.4], [-150, 341.6], [-130, 342.2], [-112, 343.6], [-95, 343.4], [-75, 342.6], [-55, 342.2], [-35, 342.6], [-15, 343.2]], 2);
+const atX = (x: number) => alongToX(RAMPART_SPINE, x);
+/** Its heights, west to east: rising to 13 storeys north-east of the Circus, falling again to the avenue */
+const RAMPART_STEPS: [number, number][] = [[-140, 7], [-121, 9], [-97, 11], [-58, 13], [-34, 11], [Infinity, 9]];
+const rampartSteps = (): Step[] => {
+  const L = lineLength(RAMPART_SPINE);
+  let from = 0;
+  return RAMPART_STEPS.map(([x, storeys]) => {
+    const to = Number.isFinite(x) ? atX(x) : L;
+    const s = { from, to, storeys };
+    from = to;
+    return s;
+  });
+};
+export const RAMPART: Block = slab('rampart', 'The Rampart', 'rampart', RAMPART_SPINE, 9, 'right', rampartSteps(), 'mustard', {
+  // (over Underhill Lane's turning circle and the path to Lot 9's tunnel: the first two floors open, the third over them)
+  arch: { from: atX(-121), to: atX(-97), clear: GROUND_H + STOREY - 0.25 },
+});
+
+// The twin towers and their core between them, north-east of the Circus
+const TWIN_ROT = Math.atan2(7, 32);
+export const TOWER_HALF = 7;
+export const TWIN_CORE_HALF = 3;
+const twin = (id: string, name: string, c: Pt, accent: Accent): Block => {
+  const foot = squareFoot(c, TOWER_HALF, TWIN_ROT);
+  return { id, name, kind: 'tower', foot, steps: [{ from: 0, to: 0, storeys: 18 }], base: baseOf(foot), accent };
+};
+export const HARRIER = twin('harrier', 'Harrier Point', [-67, 371.5], 'orange');
+export const KITE = twin('kite', 'Kite Point', [-35, 378.5], 'teal');
+const twinCoreFoot = squareFoot([-51, 375], TWIN_CORE_HALF, TWIN_ROT, 1.2);
+export const TWIN_CORE: Block = { id: 'twin-core', name: 'The Core', kind: 'core', foot: twinCoreFoot, steps: [{ from: 0, to: 0, storeys: 19 }], base: baseOf(twinCoreFoot) };
+
+// The stairwell blocks: three tall slabs between the avenues (running south: their right side west, their galleries
+// there), three lower round the Circus along the streets' curves
+const GAP = HALF + WALK + KERB_GAP;
+export const LINNET = slab('linnet', 'Linnet Court', 'slab', [[8, 343], [8, 369]], 7, 'right', 9, 'teal');
+export const MARTEN = slab('marten', 'Marten Court', 'slab', [[29.5, 343], [29.5, 386]], 8, 'right', 9, 'orange');
+export const WREN = slab('wren', 'Wren Court', 'slab', [[53.5, 343], [53.5, 396]], 7, 'right', 9, 'mustard');
+// (Marsh Lane and Endswood Road run west: their right side is north)
+export const SORREL = slab('sorrel', 'Sorrel House', 'slab', alongStreet(MARSH_LANE.pts, GAP + 4 + 1.5, 26, 7.5), 8, 'right', 5, 'orange');
+export const FENNEL = slab('fennel', 'Fennel House', 'slab', alongStreet(MARSH_LANE.pts, GAP + 4 + 1.5, -30, -66), 8, 'right', 5, 'teal');
+const TEASEL_SPINE = alongStreet(ENDSWOOD_ROAD.pts, -(GAP + 4 + 1.5), -26, -60);
+export const TEASEL = slab('teasel', 'Teasel House', 'slab', TEASEL_SPINE, 8, 'left', 5, 'mustard', {
+  // (its west half, by the Circus, hoarded for refit; the spine runs east to west, so its second half)
+  refit: { from: lineLength(TEASEL_SPINE) / 2, to: lineLength(TEASEL_SPINE) },
+});
+
+/* ---------- The stair cores ---------- */
+
+export interface Core {
+  id: string;
+  /** The block it serves */
+  of: string;
+  at: Pt;
+  /** Its turn (radians, from +x towards +z): square to its block */
+  rot: number;
+  half: number;
+  /** Its roof: over its block's, the lift's machine room */
+  top: number;
+  foot: Pt[];
+}
+const rotOf = (dir: Pt) => Math.atan2(dir[1], dir[0]);
+function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number): Core {
+  const rot = rotOf(dir);
+  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + 0.8, foot: squareFoot(at, CORE_HALF, rot, 0.6) };
+}
+/** A slab's cores: one past each end, flush with its galleries' outer edge, so each gallery runs into them */
+function endCores(b: Block): Core[] {
+  const spine = b.spine!;
+  const L = lineLength(spine);
+  const s = SIDE[b.galleries!];
+  const off = s * (b.depth! / 2 + GALLERY_W - CORE_HALF);
+  return ([['a', 0, -1], ['b', L, 1]] as const).map(([k, d, out]) => {
+    const { p, dir } = pointAt(spine, d);
+    const right: Pt = [-dir[1], dir[0]];
+    const at: Pt = [p[0] + dir[0] * out * (CORE_HALF + 0.05) + right[0] * off, p[1] + dir[1] * out * (CORE_HALF + 0.05) + right[1] * off];
+    return coreAt(b, `${b.id}-${k}`, at, dir, storeysAt(b, d));
+  });
+}
+/** The Rampart's cores: standing out from its galleries, at these points along it (none under the arch) */
+const RAMPART_CORE_XS = [-152, -128, -88, -51, -21];
+function sideCores(b: Block, xs: number[]): Core[] {
+  const spine = b.spine!;
+  const s = SIDE[b.galleries!];
+  return xs.map((x, i) => {
+    const d = alongToX(spine, x);
+    const { p, dir } = pointAt(spine, d);
+    const right: Pt = [-dir[1], dir[0]];
+    const off = s * (b.depth! / 2 + GALLERY_W + CORE_HALF + 0.05);
+    return coreAt(b, `${b.id}-${i}`, [p[0] + right[0] * off, p[1] + right[1] * off], dir, storeysAt(b, d));
+  });
+}
+export const CORES: Core[] = [...sideCores(RAMPART, RAMPART_CORE_XS), ...[LINNET, MARTEN, WREN, SORREL, FENNEL, TEASEL].flatMap(endCores)];
+
+/** Every block, the cores apart */
+export const BLOCKS: Block[] = [RAMPART, HARRIER, KITE, TWIN_CORE, LINNET, MARTEN, WREN, SORREL, FENNEL, TEASEL];
+export const blockById = (id: string) => BLOCKS.find((b) => b.id === id)!;
+export const coreById = (id: string) => CORES.find((c) => c.id === id)!;
+
+/* ---------- The galleries ---------- */
+
+export interface Gallery {
+  of: string;
+  floor: number;
+  y: number;
+  /** Its deck: a band along its block's galleried side */
+  poly: Pt[];
+}
+/** Every gallery: along each slab's and the Rampart's galleried side at each sky floor it rises past */
+export const GALLERIES: Gallery[] = BLOCKS.filter((b) => b.spine).flatMap((b) => {
+  const s = SIDE[b.galleries!];
+  return SKY_FLOORS.flatMap((floor) => {
+    // (along every stretch of it tall enough for this floor)
+    return b.steps
+      .filter((st) => st.storeys > floor)
+      .map((st) => {
+        const part = section(b.spine!, st.from, st.to);
+        const [inner, outer] = [shift(part, (s * b.depth!) / 2), shift(part, s * (b.depth! / 2 + GALLERY_W))];
+        return { of: b.id, floor, y: floorY(b.base, floor), poly: [...inner, ...outer.reverse()] };
+      });
+  });
+});
+
+/* ---------- The sky network ---------- */
+
+/** One end of a bridge: a core, a tower's face, the podium deck */
+export type End = { core: string } | { block: string } | { deck: string };
+export interface Bridge {
+  id: string;
+  a: End;
+  b: End;
+  floor: number;
+  /** Its two ends, each where it meets its end's face, and their levels (level, unless the ground under its ends differs) */
+  pts: [Pt, Pt];
+  ys: [number, number];
+}
+const footOf = (e: End) => ('core' in e ? coreById(e.core).foot : 'block' in e ? blockById(e.block).foot : DECKS.find((d) => d.id === e.deck)!.poly);
+const centreOf = (poly: Pt[]): Pt => [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
+const baseOfEnd = (e: End) => ('core' in e ? blockById(coreById(e.core).of).base : 'block' in e ? blockById(e.block).base : null);
+/** Where a line from `from` to `to` crosses a ring's edge last (`last`) or first */
+function edgeHit(poly: Pt[], from: Pt, to: Pt, last: boolean): Pt {
+  let best: number | null = null;
+  for (let i = 0; i < poly.length; i++) {
+    const hit = cross(from, to, poly[i], poly[(i + 1) % poly.length]);
+    if (hit && (best === null || (last ? hit[0] > best : hit[0] < best))) best = hit[0];
+  }
+  const t = best ?? (last ? 0 : 1);
+  return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
+}
+function bridge(id: string, a: End, b: End, floor: number, via?: [Pt, Pt]): Bridge {
+  const [fa, fb] = [footOf(a), footOf(b)];
+  const [ca, cb] = via ?? [centreOf(fa), centreOf(fb)];
+  const pts: [Pt, Pt] = [edgeHit(fa, ca, cb, true), edgeHit(fb, ca, cb, false)];
+  const yOf = (e: End) => {
+    const base = baseOfEnd(e);
+    return base === null ? DECKS.find((d) => 'deck' in e && d.id === e.deck)!.y : floorY(base, floor);
+  };
+  return { id, a, b, floor, pts, ys: [yOf(a), yOf(b)] };
+}
+
+/* ---------- The podium deck, the courts, the grass, the play area ---------- */
+
+export interface Deck {
+  id: string;
+  poly: Pt[];
+  y: number;
+}
+/** The podium deck between Teasel House's galleries and Fennel House's, over their parking court, at the third floor */
+const PODIUM_X = [-56, -36];
+const podium = (): Deck => {
+  const [t, f] = [TEASEL, FENNEL];
+  const edge = (b: Block): Pt[] => {
+    const s = SIDE[b.galleries!];
+    const line = shift(b.spine!, s * (b.depth! / 2 + GALLERY_W - 0.2));
+    const [a, c] = [alongToX(line, PODIUM_X[0]), alongToX(line, PODIUM_X[1])];
+    return section(line, Math.min(a, c), Math.max(a, c));
+  };
+  const [te, fe] = [edge(t), edge(f)];
+  // (Teasel's runs east to west, Fennel's too: one forward, the other back, to close the ring)
+  return { id: 'podium', poly: [...te, ...fe.reverse()], y: floorY(Math.max(t.base, f.base), 3) };
+};
+export const DECKS: Deck[] = [podium()];
+
+export const BRIDGES: Bridge[] = [
+  // The Rampart to the towers' core, at the third, sixth and ninth floors
+  ...[3, 6, 9].map((f) => bridge(`rampart-core-${f}`, { core: 'rampart-3' }, { block: 'twin-core' }, f)),
+  // The core to each tower, every third floor
+  ...[3, 6, 9, 12, 15].flatMap((f) => [bridge(`core-harrier-${f}`, { block: 'twin-core' }, { block: 'harrier' }, f), bridge(`core-kite-${f}`, { block: 'twin-core' }, { block: 'kite' }, f)]),
+  // Along the ring road, over the avenues: the Rampart's east end to Linnet, Linnet to Marten, Marten to Wren
+  bridge('rampart-linnet', { core: 'rampart-4' }, { core: 'linnet-a' }, 3),
+  ...[3, 6].flatMap((f) => [bridge(`linnet-marten-${f}`, { core: 'linnet-a' }, { core: 'marten-a' }, f), bridge(`marten-wren-${f}`, { core: 'marten-a' }, { core: 'wren-a' }, f)]),
+  // Marten's south end to Sorrel's east end
+  bridge('marten-sorrel', { core: 'marten-b' }, { core: 'sorrel-a' }, 3),
+  // Sorrel's west end over the avenue to Teasel's east end
+  bridge('sorrel-teasel', { core: 'sorrel-b' }, { core: 'teasel-a' }, 3),
+  // Kite Point over Endswood Road to Teasel's east end
+  bridge('kite-teasel', { block: 'kite' }, { core: 'teasel-a' }, 3),
+];
+
+export interface Court {
+  id: string;
+  poly: Pt[];
+  /** Where cars come in: the street it opens off, and the point on its kerb */
+  street: string;
+  entry: Pt;
+}
+/** The parking courts: behind the Rampart (in off Underhill Lane's turning circle), between Teasel and Fennel (in off
+ * Marsh Lane, under the podium deck), north of Sorrel (in off Endswood Road) */
+export const COURTS: Court[] = [
+  { id: 'court-rampart', poly: smooth([[-101, 353.2], [-80, 352.6], [-60, 352.4], [-40, 352.6], [-24, 353.4], [-24, 359.4], [-40, 361], [-60, 361], [-80, 361], [-101, 360]], 3, true), street: 'south-underhill', entry: [-102, 355] },
+  {
+    id: 'court-podium',
+    // (the ground between Teasel's galleries and Fennel's, under the deck, opening east of Fennel onto Marsh Lane)
+    poly: [
+      [-58, 428.2], [-50, 426.8], [-44, 424], [-38.3, 421], [-33.4, 418.2], [-28.2, 415.3], [-25.6, 414], [-20.5, 416], [-19.5, 441], [-26, 441.6],
+      [-26.6, 434.5], [-27.6, 430.4], [-31.8, 430.4], [-37.3, 432.2], [-43, 433.9], [-48.5, 435.5], [-53.9, 436.8], [-58, 437.5],
+    ],
+    street: 'south-marsh',
+    entry: [-23, 443.4],
+  },
+  {
+    id: 'court-sorrel',
+    poly: [[3.5, 398], [10, 393.5], [14.5, 388], [18.5, 391], [19.5, 398], [17.5, 405.5], [13.5, 412], [9.5, 416.5], [5, 419.5], [3.2, 417]],
+    street: 'south-endswood',
+    entry: [7, 389],
+  },
+];
+/** Grass with desire lines between the towers and Endswood Road, round them, and by Teasel and Sorrel */
+export const GRASS: Pt[][] = [
+  smooth([[-97, 364], [-80, 363.5], [-60, 363], [-44, 364], [-26, 363], [-26, 384], [-12, 384], [-12, 387.5], [-26, 391.5], [-41, 399.5], [-54, 406.5], [-62, 404], [-72, 401], [-84, 396], [-87, 390], [-92, 380], [-97.5, 370]], 3, true),
+];
+/** The paths worn across the grass: from Underhill Lane and from Endswood Road to the towers' core, and to Kite Point */
+export const DESIRE_LINES: Pt[][] = [
+  smooth([[-89, 386], [-72, 384], [-58, 381], [-52, 379]], 2),
+  smooth([[-46.5, 404], [-46, 396], [-50, 386], [-51, 379.5]], 2),
+  smooth([[-17, 390.5], [-23, 389.4], [-29, 389.2]], 2),
+];
+/** A 70s concrete play area east of Kite Point: a climbing frame, a sandpit, a ball court (2d) */
+export const PLAY: Pt[] = smooth([[-24, 363], [-13, 363], [-13, 382], [-24, 382]], 3, true);
+
+/* ---------- Basement and refit ---------- */
+
+/** Bunker Sound: in Teasel House's basement, under its hoarded half, its door off Endswood Road */
+export const BUNKER = (() => {
+  const { p, dir } = pointAt(TEASEL.spine!, (TEASEL.refit!.from + TEASEL.refit!.to) / 2);
+  const s = -SIDE[TEASEL.galleries!];
+  const right: Pt = [-dir[1], dir[0]];
+  const d = (TEASEL.depth! / 2 + 0.3) * s;
+  return { of: TEASEL.id, door: [p[0] + right[0] * d, p[1] + right[1] * d] as Pt, face: Math.atan2(right[1] * s, right[0] * s) };
+})();
+
+/* ---------- Solids (walk mode's boxes; 2b adds them to the city's) ---------- */
+
+/**
+ * A footprint as boxes: strips `step` wide across its longer way, each from the shape's least to most along the other,
+ * `top` high. Strips whose middle is in `skip` (along x or z, as the strips run) are left out (an archway).
+ */
+export function cover(poly: Pt[], top: number, step = 0.6, skip?: [number, number]): Box[] {
+  const xs = poly.map((p) => p[0]);
+  const zs = poly.map((p) => p[1]);
+  const alongX = Math.max(...xs) - Math.min(...xs) >= Math.max(...zs) - Math.min(...zs);
+  const [lo, hi] = alongX ? [Math.min(...xs), Math.max(...xs)] : [Math.min(...zs), Math.max(...zs)];
+  const out: Box[] = [];
+  for (let a = lo; a < hi - 1e-6; a += step) {
+    const b = Math.min(hi, a + step);
+    if (skip && (a + b) / 2 > skip[0] && (a + b) / 2 < skip[1]) continue;
+    let [m0, m1] = [Infinity, -Infinity];
+    const take = (v: number) => ((m0 = Math.min(m0, v)), (m1 = Math.max(m1, v)));
+    for (let i = 0; i < poly.length; i++) {
+      const [p, q] = [poly[i], poly[(i + 1) % poly.length]];
+      const [pu, pv, qu, qv] = alongX ? [p[0], p[1], q[0], q[1]] : [p[1], p[0], q[1], q[0]];
+      if (pu >= a && pu <= b) take(pv);
+      for (const u of [a, b]) if ((pu - u) * (qu - u) < 0) take(pv + ((qv - pv) * (u - pu)) / (qu - pu));
+    }
+    if (m0 < m1) out.push(alongX ? [a, m0, b, m1, top] : [m0, a, m1, b, top]);
+  }
+  return out;
+}
+/** The archway's span along x (the Rampart runs east-west there) */
+export const ARCH_X: [number, number] = [pointAt(RAMPART_SPINE, RAMPART.arch!.from).p[0], pointAt(RAMPART_SPINE, RAMPART.arch!.to).p[0]];
+export const BLOCK_SOLIDS: Box[] = [
+  ...BLOCKS.flatMap((b) => cover(b.foot, topOf(b), 0.6, b.arch ? ARCH_X : undefined)),
+  ...CORES.map((c) => cover(c.foot, c.top, 0.6)).flat(),
+];
+
+/** Is a point inside any block or core (for the tests and the ground's things kept clear of them) */
+export const inBlock = (p: Pt, m = 0) => [...BLOCKS.map((b) => b.foot), ...CORES.map((c) => c.foot)].some((f) => inside(f, p) || (m > 0 && f.some((q, i) => segDist(p, q, f[(i + 1) % f.length]) < m)));
+function segDist(p: Pt, a: Pt, b: Pt) {
+  const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+  const l2 = vx * vx + vz * vz || 1;
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vz) / l2));
+  return Math.hypot(p[0] - a[0] - vx * t, p[1] - a[1] - vz * t);
+}
+export { PATH_HALF };

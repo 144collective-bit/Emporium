@@ -169,10 +169,26 @@ From the Circus west, patchy as high roads are:
 
 ### Phase 2's steps (each shown to the owner)
 
-- **2a, the blocks as data** (DOM-free, tested): every block's footprint,
-  height, cores, galleries and doors; the sky network's bridges and decks
-  as walkable floors; the courts, decks, grass and play area; solids;
-  the sketch redrawn from the data.
+- **2a, the blocks as data** (built, waiting on the owner's sign-off):
+  `southblocks.ts` (DOM-free, `tests/southblocks.test.ts`, not drawn or
+  solid in the city yet). The Rampart (x -168 to -15 along the ring road,
+  7, 9, 11, 13, 11, 9 storeys west to east, the archway over Underhill
+  Lane's turning circle and the tunnel's path, five stair cores standing
+  out from its south galleries); Harrier Point and Kite Point (18 storeys
+  and a plant room, to about 20.7) with The Core between them (bridges
+  every third floor); Linnet, Marten and Wren Courts between the avenues
+  (9 storeys); Sorrel and Fennel Houses along Marsh Lane, Teasel House
+  along Endswood Road (5 storeys; Teasel's west half hoarded for refit,
+  Bunker Sound's door under it); a stair core at each slab's ends, flush
+  with its galleries. Galleries at every third floor (`SKY_FLOORS`);
+  bridges between the cores at floors 3, 6 and 9 (over the avenues along
+  the ring road, over Endswood Road, the avenue to Sorrel and Teasel),
+  the podium deck between Teasel and Fennel at the third floor. The
+  courts (behind the Rampart off Underhill's turning circle, under the
+  podium off Marsh Lane, north of Sorrel off Endswood Road), the grass
+  with its desire lines, the play area east of Kite; the solids
+  (`BLOCK_SOLIDS`, the arch open). A storey is 1, the ground floor 1.4.
+  Plan from the data: `9-phase-2a-blocks.png`.
 - **2b, the buildings drawn**: one retro-future kit (rounded corners,
   curved balcony fronts, board-marked concrete, accents, sky gardens,
   plant rooms, the towers' beacons), its own lazy chunk, fine detail near
