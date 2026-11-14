@@ -116,6 +116,17 @@ it and has been retired completely. Build only on what's here.
   fixed made-up copy: never a real brand, make, badge, crew or person,
   never the token, never a price or a number on a sign. Visitors and
   players can't type text that shows.
+- **Streets follow the land** (the owner's call, 2026-11): roads bend round
+  hills, water, old field lines and landmarks, and meet at angles rather
+  than square. Straight runs only where a street was planned straight (the
+  avenues, the ring road, downtown's grid).
+- **No ruler-straight edges** (the owner's call, 2026-11): where districts,
+  land and fences meet, the edge wanders (gardens, scrub, hedges and paths
+  break the line); no straight rectangle of land touching another.
+- **Nowhere is a dead end on foot** (the owner's call, 2026-11): every
+  cul-de-sac and crescent ends in a footpath through to the next street or
+  green, every row of terraces has a back alley and a ginnel through long
+  rows; cut-throughs are for walking and bikes, bollards at each end.
 - **Nothing threatening, and nothing in the city attacks you.** Targets are
   the dummies and the drones only; the crowd is never a target; there's no
   player health outside the Fight Club's ring.
