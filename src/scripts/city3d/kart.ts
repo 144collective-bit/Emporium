@@ -669,7 +669,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
    * your own look, no hat, hood or bag under the helmet
    */
   function driverOutfit(o: Outfit, look: KartLook): Outfit {
-    return { ...o, kind: 'track', top: look.suit, bottom: look.suit, helmet: look.helmet, cap: undefined, beanie: undefined, bucket: undefined, hood: false, headphones: undefined, backpack: undefined, crossbody: undefined, board: undefined, duffel: undefined };
+    return { ...o, kind: 'track', top: look.suit, bottoms: 'trackpants', bottom: look.suit, helmet: look.helmet, cap: undefined, beanie: undefined, bucket: undefined, hood: false, headphones: undefined, backpack: undefined, crossbody: undefined, board: undefined, duffel: undefined };
   }
   /** The boost flames in your trail's colour (the rivals' are the plain ones) */
   const trailMats = new Map<string, THREE.Material>();

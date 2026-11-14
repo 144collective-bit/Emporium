@@ -13,11 +13,11 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PALETTE, PATTERNS, safeColour, type Bag, type Hat, type Look, type MarkId, type PatternId } from '../net/profile-data';
+import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -38,16 +38,21 @@ interface Item {
   colors?: Colors[];
   /** Only offered with some outfits (the hood needs the hoodie) */
   only?(l: Look): boolean;
+  /** The ranges it's shown in (docs/wardrobe-plan.md Phase 2); left out, every range ("Nothing", the shades chain) */
+  in?: Range[];
 }
+/** A slot: what part of him its cards dress (tops, bottoms, shoes, head, ...) */
 interface Tab {
   id: string;
   label: string;
   items: Item[];
   /** Items here switch on and off independently (otherwise it's one of them) */
   toggles?: boolean;
-  /** Colours that belong to the tab rather than an item (lenses, kicks) */
+  /** Colours that belong to the slot rather than an item (the lenses) */
   colors?: Colors[];
 }
+const STREET: Range[] = ['street'];
+const BUSINESS: Range[] = ['business'];
 
 /** The last headphones colour, so taking them off and on again keeps it */
 let lastHeadphones = PALETTE.extra[1];
@@ -58,22 +63,56 @@ const PICK = 'M14.5 4.5l5 5 M17 7l-9.5 9.5-3 1 1-3L15 5 M7 14l3 3';
 const hatColors: Colors[] = [{ key: 'hatColor', label: 'Colour', list: PALETTE.cap }];
 const bagColors: Colors[] = [{ key: 'bagColor', label: 'Colour', list: PALETTE.extra }];
 const hood = (l: Look) => l.kind === 'hoodie' && l.hood;
-const hat = (id: Hat, name: string, icon: string): Item => ({
+const hat = (id: Hat, name: string, icon: string, ranges: Range[]): Item => ({
   id,
   name,
   icon,
   on: (l) => l.hat === id && !hood(l),
   wear: (l) => ({ ...l, hat: id, hood: false }),
   colors: hatColors,
+  in: ranges,
 });
-const bag = (id: Bag, name: string, icon: string): Item => ({
+const bag = (id: Bag, name: string, icon: string, ranges: Range[]): Item => ({
   id,
   name,
   icon,
   on: (l) => l.bag === id,
   wear: (l) => ({ ...l, bag: id }),
   colors: bagColors,
+  in: ranges,
 });
+/** A top: the fit's kind (the bottoms and shoes are chosen on their own) */
+const top = (kind: Look['kind'], name: string, icon: string, label: string, ranges: Range[], more: Colors[] = []): Item => ({
+  id: kind,
+  name,
+  icon,
+  on: (l) => l.kind === kind,
+  wear: (l) => ({ ...l, kind, hood: kind === 'hoodie' && l.hood }),
+  colors: [{ key: 'top', label, list: PALETTE.top }, ...more],
+  in: ranges,
+});
+const bottomColors: Colors[] = [{ key: 'bottom', label: 'Colour', list: PALETTE.bottom }];
+const bottoms = (id: Bottoms, name: string, icon: string, ranges: Range[]): Item => ({
+  id,
+  name,
+  icon,
+  on: (l) => l.bottoms === id,
+  wear: (l) => ({ ...l, bottoms: id }),
+  colors: bottomColors,
+  in: ranges,
+});
+const shoeColors: Colors[] = [{ key: 'shoes', label: 'Colour', list: PALETTE.shoes }];
+const shoes = (id: ShoeStyle, name: string, icon: string, ranges: Range[]): Item => ({
+  id,
+  name,
+  icon,
+  on: (l) => l.shoeStyle === id,
+  wear: (l) => ({ ...l, shoeStyle: id }),
+  colors: shoeColors,
+  in: ranges,
+});
+/** The range his top is from: where the fitting room opens */
+const rangeOf = (l: Look): Range => (l.kind === 'suit' ? 'business' : 'street');
 
 /* ----- The merch: marks for the top, the hat and the sneakers, and prints for the top ----- */
 
@@ -131,81 +170,51 @@ function merchItems(of: MerchFor): Item[] {
 /** Can what the Merch tab is dressing be seen? (Else a note says what shows it) */
 function merchNote(of: MerchFor, l: Look): string | null {
   if (of === 'hat' && !((l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie') && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
-  if (of === 'kicks' && l.kind === 'suit') return 'Shows on sneakers, not the suit';
+  if (of === 'kicks' && l.shoeStyle !== 'sneaker') return 'Shows on sneakers';
   return null;
 }
 
+/** The slots, each across every range (docs/wardrobe-plan.md Phase 2): a card shows in the ranges it's in */
 const TABS: Tab[] = [
   {
-    id: 'fit',
-    label: 'Fit',
+    id: 'tops',
+    label: 'Tops',
     items: [
-      {
-        id: 'suit',
-        name: 'Classic Suit',
-        icon: 'M8 3l4 4 4-4 4 3-2 5h-2v10H8V11H6L4 6z M12 7v7',
-        on: (l) => l.kind === 'suit',
-        wear: (l) => ({ ...l, kind: 'suit', hood: false }),
-        colors: [
-          { key: 'top', label: 'Jacket', list: PALETTE.top },
-          { key: 'bottom', label: 'Trousers', list: PALETTE.bottom },
-          { key: 'tie', label: 'Tie', list: PALETTE.tie },
-        ],
-      },
-      {
-        id: 'hoodie',
-        name: 'Drop Hoodie',
-        icon: 'M8 4c0 2 2 3 4 3s4-1 4-3l4 3-2 5h-2v9H8v-9H6L4 7z M10 15h4',
-        on: (l) => l.kind === 'hoodie',
-        wear: (l) => ({ ...l, kind: 'hoodie' }),
-        colors: [
-          { key: 'top', label: 'Hoodie', list: PALETTE.top },
-          { key: 'bottom', label: 'Joggers', list: PALETTE.bottom },
-        ],
-      },
-      {
-        id: 'track',
-        name: 'Track Suit',
-        icon: 'M9 4h6l5 3-2 5h-2v9H8v-9H6L4 7z M12 4v17 M6 8l1.5 3 M18 8l-1.5 3',
-        on: (l) => l.kind === 'track',
-        wear: (l) => ({ ...l, kind: 'track', hood: false }),
-        colors: [
-          { key: 'top', label: 'Jacket', list: PALETTE.top },
-          { key: 'bottom', label: 'Pants', list: PALETTE.bottom },
-        ],
-      },
-      {
-        id: 'varsity',
-        name: 'Varsity Jacket',
-        icon: 'M8 3l4 2 4-2 4 3-2 5h-2v10H8V11H6L4 6z M12 5v16 M8 18h2 M14 18h2 M9 12l1.5-1.5L12 12l-1.5 1.5z',
-        on: (l) => l.kind === 'varsity',
-        wear: (l) => ({ ...l, kind: 'varsity', hood: false }),
-        colors: [
-          { key: 'top', label: 'Jacket', list: PALETTE.top },
-          { key: 'bottom', label: 'Pants', list: PALETTE.bottom },
-        ],
-      },
-      {
-        id: 'puffer',
-        name: 'Puffer Jacket',
-        icon: 'M7 4h10l4 4-2 4h-2v9H7v-9H5L3 8z M7 11h10 M7 15h10 M7 19h10',
-        on: (l) => l.kind === 'puffer',
-        wear: (l) => ({ ...l, kind: 'puffer', hood: false }),
-        colors: [
-          { key: 'top', label: 'Jacket', list: PALETTE.top },
-          { key: 'bottom', label: 'Joggers', list: PALETTE.bottom },
-        ],
-      },
+      top('suit', 'Classic Suit', 'M8 3l4 4 4-4 4 3-2 5h-2v10H8V11H6L4 6z M12 7v7', 'Jacket', BUSINESS, [
+        { key: 'shirt', label: 'Shirt', list: PALETTE.shirt },
+        { key: 'tie', label: 'Tie', list: PALETTE.tie },
+      ]),
+      top('hoodie', 'Drop Hoodie', 'M8 4c0 2 2 3 4 3s4-1 4-3l4 3-2 5h-2v9H8v-9H6L4 7z M10 15h4', 'Hoodie', STREET),
+      top('track', 'Track Jacket', 'M9 4h6l5 3-2 5h-2v9H8v-9H6L4 7z M12 4v17 M6 8l1.5 3 M18 8l-1.5 3', 'Jacket', STREET),
+      top('varsity', 'Varsity Jacket', 'M8 3l4 2 4-2 4 3-2 5h-2v10H8V11H6L4 6z M12 5v16 M8 18h2 M14 18h2 M9 12l1.5-1.5L12 12l-1.5 1.5z', 'Jacket', STREET),
+      top('puffer', 'Puffer Jacket', 'M7 4h10l4 4-2 4h-2v9H7v-9H5L3 8z M7 11h10 M7 15h10 M7 19h10', 'Jacket', STREET),
+    ],
+  },
+  {
+    id: 'bottoms',
+    label: 'Bottoms',
+    items: [
+      bottoms('trousers', 'Suit Trousers', 'M7 3h10l1 18h-4l-2-11-2 11H6z M12 3v4', BUSINESS),
+      bottoms('joggers', 'Joggers', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7 6h10', STREET),
+      bottoms('trackpants', 'Track Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7.5 4l-1 14 M16.5 4l1 14', STREET),
+    ],
+  },
+  {
+    id: 'shoes',
+    label: 'Shoes',
+    items: [
+      shoes('dress', 'Dress Shoes', 'M3 16h14c2 0 4 1 4 2.5V19H3z M3 16v-3h5l3 3', BUSINESS),
+      shoes('sneaker', 'Sneakers', 'M3 13h5l3 3h6c2 0 4 1 4 3v1H3z M3 18h18 M10 15l1-1 M12 16l1-1', STREET),
     ],
   },
   {
     id: 'head',
     label: 'Head',
     items: [
-      hat('cap', 'Diamond Cap', 'M5 15a7 7 0 0 1 14 0z M12 15h9 M10 11l2-2 2 2-2 2z'),
-      hat('backcap', 'Backwards Cap', 'M5 15a7 7 0 0 1 14 0z M3 15h9 M10 11h4'),
-      hat('beanie', 'Street Beanie', 'M6 15a6 7 0 0 1 12 0z M5 15h14v3H5z M12 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'),
-      hat('bucket', 'Bucket Hat', 'M8 7h8l1 7H7z M3 17l4-3h10l4 3z'),
+      hat('cap', 'Diamond Cap', 'M5 15a7 7 0 0 1 14 0z M12 15h9 M10 11l2-2 2 2-2 2z', ['street', 'work']),
+      hat('backcap', 'Backwards Cap', 'M5 15a7 7 0 0 1 14 0z M3 15h9 M10 11h4', STREET),
+      hat('beanie', 'Street Beanie', 'M6 15a6 7 0 0 1 12 0z M5 15h14v3H5z M12 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z', ['street', 'work']),
+      hat('bucket', 'Bucket Hat', 'M8 7h8l1 7H7z M3 17l4-3h10l4 3z', STREET),
       {
         id: 'hood',
         name: 'Hood Up',
@@ -213,6 +222,7 @@ const TABS: Tab[] = [
         only: (l) => l.kind === 'hoodie',
         on: hood,
         wear: (l) => ({ ...l, hood: true }),
+        in: STREET,
       },
       {
         id: 'bare',
@@ -233,10 +243,10 @@ const TABS: Tab[] = [
     id: 'bag',
     label: 'Bags',
     items: [
-      bag('backpack', 'Backpack', 'M7 9a5 5 0 0 1 10 0v11H7z M9 15h6 M10 4.5a2 2 0 0 1 4 0'),
-      bag('crossbody', 'Crossbody', 'M5 3l12 11 M13 13h7v7h-7z'),
-      bag('board', 'Skate Deck', 'M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M5 7h2 M17 7h2 M5 17h2 M17 17h2'),
-      bag('duffel', 'Duffel Bag', 'M4 9h16a3 3 0 0 1 0 6H4a3 3 0 0 1 0-6z M9 9V7h6v2 M12 9v6'),
+      bag('backpack', 'Backpack', 'M7 9a5 5 0 0 1 10 0v11H7z M9 15h6 M10 4.5a2 2 0 0 1 4 0', ['street', 'work']),
+      bag('crossbody', 'Crossbody', 'M5 3l12 11 M13 13h7v7h-7z', STREET),
+      bag('board', 'Skate Deck', 'M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M5 7h2 M17 7h2 M5 17h2 M17 17h2', STREET),
+      bag('duffel', 'Duffel Bag', 'M4 9h16a3 3 0 0 1 0 6H4a3 3 0 0 1 0-6z M9 9V7h6v2 M12 9v6', ['street', 'business', 'work']),
       { id: 'nobag', name: 'No bag', icon: NONE, on: (l) => !l.bag, wear: (l) => ({ ...l, bag: null }) },
     ],
   },
@@ -252,6 +262,7 @@ const TABS: Tab[] = [
         on: (l) => !!l.headphones,
         wear: (l) => ({ ...l, headphones: l.headphones ? null : lastHeadphones }),
         colors: [{ key: 'headphones', label: 'Headphones', list: PALETTE.extra }],
+        in: ['street', 'work'],
       },
       {
         id: 'necklace',
@@ -259,6 +270,7 @@ const TABS: Tab[] = [
         icon: 'M5 4c0 7 3 11 7 11s7-4 7-11 M12 15l-2.5 2.5L12 21l2.5-3.5z',
         on: (l) => l.necklace,
         wear: (l) => ({ ...l, necklace: !l.necklace }),
+        in: STREET,
       },
       {
         id: 'chain',
@@ -276,15 +288,13 @@ const TABS: Tab[] = [
       },
     ],
   },
-  {
-    id: 'kicks',
-    label: 'Kicks',
-    items: [],
-    colors: [{ key: 'shoes', label: 'Kicks', list: PALETTE.shoes }],
-  },
-  // (its cards depend on what it's dressing: merchItems())
+  // (its cards depend on what it's dressing: merchItems(); every range)
   { id: 'merch', label: 'Merch', items: [] },
 ];
+/** A slot's cards in a range (and the hood only with the hoodie) */
+const cardsIn = (items: Item[], r: Range, l: Look) => items.filter((it) => (!it.in || it.in.includes(r)) && (!it.only || it.only(l)));
+/** Whether a range has anything of its own in a slot (not only "Nothing" or "No bag") */
+const ownIn = (items: Item[], r: Range) => items.some((it) => it.in?.includes(r));
 
 const svg = (d: string, size = 22) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -307,6 +317,8 @@ const PICK_EVERY = 120;
 export function createFitting(d: FittingDeps) {
   let el: HTMLElement | null = null;
   let tab = TABS[0];
+  /** The range browsed (Streetwear, Business, Work): set from his top when the room opens */
+  let range: Range = 'street';
   let preview: Stage | null = null;
   let merchFor: MerchFor = 'top';
   /** A colour being picked: the latest, worn at most every PICK_EVERY ms, and at once when the picker closes */
@@ -345,6 +357,7 @@ export function createFitting(d: FittingDeps) {
 
   /** The colour rows for what's on in this tab */
   function colourSets(l: Look): Colors[] {
+    // (what he wears in this slot, whichever range it's from: a suit's colours while browsing Streetwear)
     const list = itemsOf(tab);
     const sets = [...(tab.colors ?? []), ...list.filter((it) => it.on(l) && (!it.only || it.only(l))).flatMap((it) => it.colors ?? [])];
     // (the marks' ink, shared by the top, the hat and the sneakers)
@@ -415,12 +428,20 @@ export function createFitting(d: FittingDeps) {
   function paint() {
     if (!el) return;
     const l = d.look();
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-fit-range]')) b.setAttribute('aria-pressed', String(b.dataset.fitRange === range));
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-fit-tab]')) b.setAttribute('aria-selected', String(b.dataset.fitTab === tab.id));
     const items = el.querySelector<HTMLElement>('[data-fit-items]')!;
     items.replaceChildren();
-    const list = itemsOf(tab);
+    const all = itemsOf(tab);
+    const list = cardsIn(all, range, l);
+    // (a slot the range has nothing of its own in yet: say so over its "Nothing" card)
+    const empty = el.querySelector<HTMLElement>('[data-fit-empty]');
+    if (empty) {
+      const none = tab.items.length > 0 && !ownIn(tab.items, range);
+      empty.hidden = !none;
+      empty.textContent = none ? (range === 'work' ? 'Work wear is coming soon.' : `No ${tab.label.toLowerCase()} in ${RANGES.find((r) => r.id === range)!.name} yet.`) : '';
+    }
     for (const it of list) {
-      if (it.only && !it.only(l)) continue;
       const on = it.on(l);
       const b = document.createElement('button');
       b.type = 'button';
@@ -478,6 +499,13 @@ export function createFitting(d: FittingDeps) {
       paint();
       return;
     }
+    const rb = t.closest<HTMLButtonElement>('[data-fit-range]');
+    if (rb) {
+      range = (rb.dataset.fitRange as Range) ?? range;
+      paint();
+      el?.querySelector<HTMLButtonElement>(`[data-fit-range="${range}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     const mf = t.closest<HTMLButtonElement>('[data-merch-for]');
     if (mf) {
       merchFor = mf.dataset.merchFor as MerchFor;
@@ -531,6 +559,17 @@ export function createFitting(d: FittingDeps) {
       this.unmount();
       el = body.querySelector<HTMLElement>('[data-fit]');
       if (!el) return;
+      // The ranges, then the slots (docs/wardrobe-plan.md Phase 2); it opens on his top's range
+      range = rangeOf(d.look());
+      const ranges = el.querySelector<HTMLElement>('[data-fit-ranges]');
+      for (const r of RANGES) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'fit-chip';
+        b.dataset.fitRange = r.id;
+        b.textContent = r.name;
+        ranges?.append(b);
+      }
       const tabs = el.querySelector<HTMLElement>('[data-fit-tabs]')!;
       for (const t of TABS) {
         const b = document.createElement('button');

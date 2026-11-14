@@ -1071,8 +1071,10 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <canvas class="fit-canvas" data-fit-canvas aria-hidden="true"></canvas>
         <span class="fit-hint" aria-hidden="true">Drag to turn</span>
       </div>
+      <div class="fit-chips fit-ranges" data-fit-ranges role="group" aria-label="Range"></div>
       <div class="fit-tabs" data-fit-tabs role="tablist" aria-label="Wardrobe"></div>
       <div class="fit-merch" data-fit-merch hidden></div>
+      <p class="fit-note" data-fit-empty hidden></p>
       <div class="fit-items" data-fit-items></div>
       <div class="fit-colors" data-fit-colors></div>
       <p class="fit-note">Any colour: tap the dropper.</p>

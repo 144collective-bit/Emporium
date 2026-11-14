@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { Look, MarkId, MarkSlot, PatternId } from '../net/profile-data';
+import { bottomsFor, shoesFor, type Bottoms, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
@@ -20,10 +20,15 @@ export interface Outfit {
   kind: OutfitKind;
   /** Jacket, hoodie, track jacket, varsity or puffer jacket, or fatigues */
   top: string;
-  /** Trousers or joggers */
+  /** The bottoms' colour, and which (left out: what the top comes with, `bottomsOf()`) */
   bottom: string;
+  bottoms?: Bottoms;
+  /** The shoes' colour, and which (left out: what the top comes with, `shoesOf()`) */
   shoes: string;
+  shoeStyle?: ShoeStyle;
   tie?: string;
+  /** The suit's shirt (left out: the shirt white, `SHIRT`) */
+  shirt?: string;
   /** Cap colour; leave out for no cap */
   cap?: string;
   /** The cap worn backwards */
@@ -87,6 +92,11 @@ export const SOLDIER: Outfit = {
   rifle: 'right',
 };
 
+/** What an outfit wears on its legs: its own, or what its top comes with (the crowd's); soldiers wear their fatigues */
+export const bottomsOf = (o: Outfit): Bottoms | null => (o.kind === 'soldier' ? null : (o.bottoms ?? bottomsFor(o.kind)));
+/** What an outfit wears on its feet: its own, or what its top comes with; soldiers wear their boots */
+export const shoesOf = (o: Outfit): ShoeStyle | null => (o.kind === 'soldier' ? null : (o.shoeStyle ?? shoesFor(o.kind)));
+
 /** A player's wardrobe choices as a Degen outfit */
 export function lookOutfit(l: Look): Outfit {
   const hat = l.kind === 'hoodie' && l.hood ? null : l.hat;
@@ -95,8 +105,11 @@ export function lookOutfit(l: Look): Outfit {
     kind: l.kind,
     top: l.top,
     bottom: l.bottom,
+    bottoms: l.bottoms,
     shoes: l.shoes,
+    shoeStyle: l.shoeStyle,
     tie: l.kind === 'suit' ? l.tie : undefined,
+    shirt: l.shirt,
     cap: hat === 'cap' || hat === 'backcap' ? l.hatColor : undefined,
     capBack: hat === 'backcap',
     beanie: hat === 'beanie' ? l.hatColor : undefined,
@@ -629,9 +642,9 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
  * the raised hood (both sides drawn), neon (a crowd phone's screen: unlit,
@@ -667,7 +680,7 @@ export interface Piece {
   shell?: Shell;
 }
 /** A layer the clipping test checks: the top over the hips, the trousers under it */
-export type Shell = 'top' | 'bottom';
+export type Shell = 'top' | 'bottom' | 'shoe';
 export interface Item {
   id: string;
   when: (o: Outfit) => boolean;
@@ -1047,6 +1060,8 @@ export function items(q: Detail, hero = false): Item[] {
   /** The shells the clipping test holds in layers */
   const TOP: Partial<Piece> = { shell: 'top' };
   const BOTTOM: Partial<Piece> = { shell: 'bottom' };
+  /** A shoe's upper: the bottoms' legs held clear of it (docs/wardrobe-plan.md Phase 2) */
+  const UPPER: Partial<Piece> = { ...SHOE, shell: 'shoe' };
   /** A hat's patch: the diamond printed on it (the crowd's), or on single figures a cream patch with the hat's mark */
   const hatPatch = (patch: THREE.BufferGeometry, logo: THREE.BufferGeometry): Piece[] =>
     hero ? [P('head', patch, PATCH), P('head', logo, 'ink', { mat: 'logo', logo: 'hat' })] : [P('head', patch, '#ffffff', { mat: 'patch', detail: true })];
@@ -1061,8 +1076,8 @@ export function items(q: Detail, hero = false): Item[] {
   const soldier = (o: Outfit) => o.kind === 'soldier';
   const varsity = (o: Outfit) => o.kind === 'varsity';
   const puffer = (o: Outfit) => o.kind === 'puffer';
-  /** Fits worn with joggers and sneakers */
-  const casual = (o: Outfit) => o.kind === 'hoodie' || o.kind === 'track' || varsity(o) || puffer(o);
+  /** On his feet: sneakers or dress shoes (docs/wardrobe-plan.md Phase 2: any with any top) */
+  const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
   const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && bare(o);
 
@@ -2336,7 +2351,7 @@ export function items(q: Detail, hero = false): Item[] {
     for (const [at, piece] of marks) merch.push({ id: `mark-${i}-${at}`, when: (o) => t.is(o) && !!o.mark && slot(o) === at, pieces: [piece] });
   });
   const shoeMark = ([-1, 1] as const).map((s) => decal(0.034, (u, v) => [s * 0.049, G + 0.054 + v, 0.045 - s * u]));
-  merch.push({ id: 'shoeMarks', when: (o) => casual(o) && !!o.shoeMark, pieces: both('shin', shoeMark, 'ink', { mat: 'logo', logo: 'shoe', ...SHOE }) });
+  merch.push({ id: 'shoeMarks', when: (o) => sneakers(o) && !!o.shoeMark, pieces: both('shin', shoeMark, 'ink', { mat: 'logo', logo: 'shoe', ...SHOE }) });
   const all: Item[] = [
     {
       id: 'head',
@@ -2400,7 +2415,8 @@ export function items(q: Detail, hero = false): Item[] {
       pieces: [
         P('torso', jacket, 'top', TOP),
         P('torso', one([...lapels, ...flaps, ...(tailor ? [tailor.collar] : [])]), 'top', { shade: 1.45 }),
-        P('torso', one([shirtFront, tailor?.stand ?? collarBand, ...collars, pocketSquare]), SHIRT),
+        P('torso', one([shirtFront, tailor?.stand ?? collarBand, ...collars]), 'shirt'),
+        P('torso', pocketSquare, SHIRT),
         ...(tailor && sleeveBtns
           ? [
               P('torso', one(tailor.cloth), 'top', { shade: 1.2 }),
@@ -2415,7 +2431,7 @@ export function items(q: Detail, hero = false): Item[] {
         P('torso', one([tailor?.knot ?? tieKnot, tieBlade]), 'tie'),
         ...both('arm', suitUpper, 'top'),
         ...both('fore', suitFore, 'top'),
-        ...both('fore', shirtCuff, SHIRT, { detail: true }),
+        ...both('fore', shirtCuff, 'shirt', { detail: true }),
       ],
     },
     {
@@ -2448,8 +2464,6 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('fore', ribCuff, 'top', { shade: 0.8 }),
         ...both('arm', upperStripes, SHIRT, { detail: true }),
         ...both('fore', foreStripes, SHIRT, { detail: true }),
-        ...both('leg', thighStripes, SHIRT, { detail: true }),
-        ...both('shin', shinStripes, SHIRT, { detail: true }),
       ],
     },
     {
@@ -2487,23 +2501,33 @@ export function items(q: Detail, hero = false): Item[] {
             pieces: both('wrist', one(fist), SKIN),
           },
         ]),
+    // The bottoms and the shoes, each on its own (docs/wardrobe-plan.md Phase 2): any with any top
     {
       id: 'trousers',
-      when: suit,
-      pieces: [
-        P('pelvis', trouserLegs, 'bottom', BOTTOM),
-        ...(crease ? both('shin', crease, 'bottom', { shade: 0.75, detail: true }) : []),
-        ...both('shin', dress, 'shoes', SHOE),
-        ...both('shin', dressSole, '#14121a', SHOE),
-      ],
+      when: (o) => bottomsOf(o) === 'trousers',
+      pieces: [P('pelvis', trouserLegs, 'bottom', BOTTOM), ...(crease ? both('shin', crease, 'bottom', { shade: 0.75, detail: true }) : [])],
     },
     {
       id: 'joggers',
-      when: casual,
+      when: (o) => bottomsOf(o) === 'joggers' || bottomsOf(o) === 'trackpants',
+      pieces: [P('pelvis', joggers, 'bottom', BOTTOM), ...both('shin', joggerCuff, 'bottom', { shade: 0.8 })],
+    },
+    // Track pants: the joggers with the track suit's stripes down the outside of each leg
+    {
+      id: 'trackStripes',
+      when: (o) => bottomsOf(o) === 'trackpants',
+      pieces: [...both('leg', thighStripes, SHIRT, { detail: true }), ...both('shin', shinStripes, SHIRT, { detail: true })],
+    },
+    {
+      id: 'dressShoes',
+      when: (o) => shoesOf(o) === 'dress',
+      pieces: [...both('shin', dress, 'shoes', UPPER), ...both('shin', dressSole, '#14121a', SHOE)],
+    },
+    {
+      id: 'sneakers',
+      when: sneakers,
       pieces: [
-        P('pelvis', joggers, 'bottom', BOTTOM),
-        ...both('shin', joggerCuff, 'bottom', { shade: 0.8 }),
-        ...both('shin', sneaker, 'shoes', SHOE),
+        ...both('shin', sneaker, 'shoes', UPPER),
         ...both('shin', sneakerSole, SHIRT, SHOE),
         ...(laces.length ? both('shin', one(laces), SHIRT, { detail: true, ...SHOE }) : []),
       ],
@@ -2511,7 +2535,7 @@ export function items(q: Detail, hero = false): Item[] {
     // The sneakers' side stripe, unless a mark is printed there instead
     {
       id: 'swoop',
-      when: (o) => casual(o) && !(hero && o.shoeMark),
+      when: (o) => sneakers(o) && !(hero && o.shoeMark),
       pieces: both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true, ...SHOE }),
     },
     // (the puffer's high collar covers the headphones, and the necklace, below)

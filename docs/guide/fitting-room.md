@@ -6,8 +6,10 @@ keep it up to date when what it describes changes.
 ## Drop 001's fitting room
 
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
-  fitting room (`fitting.ts`): item cards by tab (Fit, Head, Shades, Bags,
-  Extras, Kicks, Merch), colours, and a turning preview of the player's Degen drawn by a
+  fitting room (`fitting.ts`): the ranges (Streetwear, Business, Work:
+  `RANGES` in `profile-data.ts`, `[data-fit-ranges]`), then item cards by
+  slot (Tops, Bottoms, Shoes, Head, Shades, Bags, Extras, Merch: `TABS`, two
+  rows of four), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
   open (still under reduced motion; drag turns him); its idle and walk
   are the crowd pack's captured takes on his bones (`captureplay.ts`:
@@ -49,6 +51,18 @@ keep it up to date when what it describes changes.
   picker stays open while the colour goes on him. A worn swatch keeps its
   own colour in the arcade kit, framed in coin. Styles in
   `src/styles/fitting.css`.
+- **The ranges and the separates** (the wardrobe plan's Phase 2, the
+  owner's calls: ranges first, then slots; any piece with any other): a
+  card's `in` says which ranges show it (left out, every range: "Nothing",
+  "No bag", the shades chain, the watch), and `cardsIn()` picks them; the
+  room opens on his top's range (`rangeOf()`). A slot with nothing of a
+  range's own says so (`[data-fit-empty]`: "Work wear is coming soon." until
+  the plan's Phase 6). The colour rows are what he wears in the slot,
+  whichever range it's from. The look carries the separates: `bottoms`
+  (`BOTTOMS`: trousers, joggers, track pants), `shoeStyle` (`SHOE_STYLES`:
+  dress shoes, sneakers) and the suit's `shirt` colour; a look from before
+  them wears what its top came with (`bottomsFor()`, `shoesFor()`), and the
+  track top is the Track Jacket now that its pants are their own.
 - **Retired** (the wardrobe plan's Phase 1, the owner's call): the crown,
   the halo, the top hat, the cowboy hat, the wings, the Gold and Holo
   colour packs, and every thing in the hand (the coffee, boombox, phone and
@@ -60,7 +74,8 @@ keep it up to date when what it describes changes.
   `cleanLook()` (the server checks it too; a colour goes through
   `safeColour()`, with quick swatches in `PALETTE`), the mapping in
   `lookOutfit()`, an item in `items()` in `wardrobe.ts` and an entry in
-  `fitting.ts` `TABS`. One hat (`hat`) and one bag (`bag`) at a time;
+  `fitting.ts` `TABS` (its slot, and the ranges it's in, `in`). One hat
+  (`hat`) and one bag (`bag`) at a time;
   `cleanLook()` also upgrades looks saved in older formats, so keep its
   migration when fields change. `tests/wardrobe.test.ts` builds random looks
   at both detail levels and holds the figure to its triangle budget

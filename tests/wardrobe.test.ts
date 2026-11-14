@@ -4,8 +4,8 @@
 // and the figure stays inside its budget of triangles (`BUDGET`; WARDROBE_REPORT=1 prints the most).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BAGS, HATS, KINDS, MARK_IDS, PATTERN_IDS, SLOT_IDS, cleanLook, safeColour, type Look } from '../src/scripts/net/profile-data';
-import { lookOutfit } from '../src/scripts/city3d/wardrobe';
+import { BAGS, BOTTOMS, HATS, KINDS, MARK_IDS, PATTERN_IDS, SHOE_STYLES, SLOT_IDS, cleanLook, safeColour, type Look } from '../src/scripts/net/profile-data';
+import { bottomsOf, lookOutfit, shoesOf } from '../src/scripts/city3d/wardrobe';
 import { dress } from './dress';
 
 /** A seeded generator (the same looks every run) */
@@ -27,8 +27,11 @@ function randomLook(r: () => number): Record<string, unknown> {
   return {
     kind: pick(KINDS),
     top: hex(),
+    bottoms: pick(BOTTOMS),
     bottom: hex(),
     tie: hex(),
+    shirt: hex(),
+    shoeStyle: pick(SHOE_STYLES),
     shoes: r() < 0.1 ? '#ffffff' : hex(),
     hat: r() < 0.2 ? null : pick(HATS),
     hatColor: hex(),
@@ -69,10 +72,18 @@ for (const q of [3, 2] as const) {
       const look: Look = cleanLook(raw);
       // (cleaned once is clean: the server and the browser agree)
       assert.deepEqual(cleanLook(look), look);
-      for (const k of ['top', 'bottom', 'tie', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const) assert.equal(look[k], safeColour(raw[k]), k);
+      for (const k of ['top', 'bottom', 'tie', 'shirt', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const) assert.equal(look[k], safeColour(raw[k]), k);
       const o = lookOutfit(look);
       assert.equal(o.held, undefined, 'nothing in his hand');
+      // (the separates as picked: one bottoms, one pair of shoes)
+      assert.deepEqual([bottomsOf(o), shoesOf(o)], [look.bottoms, look.shoeStyle]);
       const d = dress(o, q);
+      const ids = new Set(d.worn.map((w) => w.item));
+      assert.equal(ids.has('trousers'), look.bottoms === 'trousers');
+      assert.equal(ids.has('joggers'), look.bottoms !== 'trousers');
+      assert.equal(ids.has('trackStripes'), look.bottoms === 'trackpants');
+      assert.equal(ids.has('dressShoes'), look.shoeStyle === 'dress');
+      assert.equal(ids.has('sneakers'), look.shoeStyle === 'sneaker');
       let tris = 0;
       for (const w of d.worn) {
         assert.ok(!RETIRED.includes(w.item) && !w.item.startsWith('wings-'), `${w.item} is retired`);

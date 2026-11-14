@@ -3,7 +3,7 @@
 // older saves.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BAGS, BRIGHTEST, DEFAULT_LOOK, HATS, KINDS, PALETTE, cleanLook, guestName, isGuestName, safeColour } from '../src/scripts/net/profile-data';
+import { BAGS, BOTTOMS, BRIGHTEST, DEFAULT_LOOK, HATS, KINDS, PALETTE, RANGES, SHOE_STYLES, bottomsFor, cleanLook, guestName, isGuestName, safeColour, shoesFor } from '../src/scripts/net/profile-data';
 
 /** A colour's brightness as `safeColour()` weighs it */
 const lumOf = (c: string) => {
@@ -83,7 +83,7 @@ test('the retired pieces are gone, and looks that wore them lose them (the wardr
 });
 
 test('any colour goes on every piece, held a shade under white (the wardrobe plan, Phase 1)', () => {
-  const keys = ['top', 'bottom', 'tie', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const;
+  const keys = ['top', 'bottom', 'tie', 'shirt', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const;
   for (const c of ['#123456', '#00ff00', '#ff00ff', '#000000', '#7f7f7f', '#3a2418'])
     for (const k of keys) assert.equal(cleanLook({ ...DEFAULT_LOOK, [k]: c })[k], c, `${k} ${c}`);
   assert.equal(cleanLook({ ...DEFAULT_LOOK, headphones: '#123456' }).headphones, '#123456');
@@ -112,6 +112,37 @@ test('any colour goes on every piece, held a shade under white (the wardrobe pla
 
 test('every palette colour is a lower-case six-digit hex', () => {
   for (const [name, list] of Object.entries(PALETTE)) for (const c of list) assert.match(c, /^#[0-9a-f]{6}$/, `${name}: ${c}`);
+});
+
+test('the separates: any top, bottoms and shoes together; a look from before them wears what its top came with (the wardrobe plan, Phase 2)', () => {
+  assert.deepEqual(BOTTOMS, ['trousers', 'joggers', 'trackpants']);
+  assert.deepEqual(SHOE_STYLES, ['dress', 'sneaker']);
+  assert.deepEqual(RANGES.map((r) => r.id), ['street', 'business', 'work']);
+  // Degen as in the art: the suit, its trousers, dress shoes and a white shirt
+  assert.equal(DEFAULT_LOOK.bottoms, 'trousers');
+  assert.equal(DEFAULT_LOOK.shoeStyle, 'dress');
+  assert.equal(DEFAULT_LOOK.shirt, '#cfcedb');
+  // Every pairing is kept as it is
+  for (const kind of KINDS)
+    for (const bottoms of BOTTOMS)
+      for (const shoeStyle of SHOE_STYLES) {
+        const l = cleanLook({ ...DEFAULT_LOOK, kind, bottoms, shoeStyle });
+        assert.deepEqual([l.kind, l.bottoms, l.shoeStyle], [kind, bottoms, shoeStyle]);
+      }
+  // A look saved before the separates: what its top came with
+  const old = (kind: string) => {
+    const { bottoms: _b, shoeStyle: _s, shirt: _c, ...o } = { ...DEFAULT_LOOK, kind } as Record<string, unknown>;
+    void _b, _s, _c;
+    return cleanLook(o);
+  };
+  assert.deepEqual([old('suit').bottoms, old('suit').shoeStyle], ['trousers', 'dress']);
+  assert.deepEqual([old('track').bottoms, old('track').shoeStyle], ['trackpants', 'sneaker']);
+  for (const kind of ['hoodie', 'varsity', 'puffer']) assert.deepEqual([old(kind).bottoms, old(kind).shoeStyle], ['joggers', 'sneaker'], kind);
+  assert.equal(old('suit').shirt, DEFAULT_LOOK.shirt);
+  for (const kind of KINDS) assert.deepEqual([bottomsFor(kind), shoesFor(kind)], [old(kind).bottoms, old(kind).shoeStyle]);
+  // Unknown ones fall back to what the top comes with
+  const odd = cleanLook({ ...DEFAULT_LOOK, kind: 'hoodie', bottoms: 'kilt', shoeStyle: 'clogs' });
+  assert.deepEqual([odd.bottoms, odd.shoeStyle], ['joggers', 'sneaker']);
 });
 
 test('hood and tie follow the fit', () => {

@@ -75,6 +75,29 @@ export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel';
 export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer';
 export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer'];
 export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket'];
+/*
+ * Separates (docs/wardrobe-plan.md Phase 2): the top, the bottoms and the shoes are chosen on their own, worn in any
+ * pairing. A look saved before them wears what its top came with: the suit its trousers and dress shoes, the track
+ * top its track pants, the rest joggers, all but the suit sneakers (`bottomsFor()`, `shoesFor()`).
+ */
+export type Bottoms = 'trousers' | 'joggers' | 'trackpants';
+export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants'];
+export type ShoeStyle = 'dress' | 'sneaker';
+export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker'];
+/** The bottoms a top came with before the separates */
+export const bottomsFor = (kind: string): Bottoms => (kind === 'suit' ? 'trousers' : kind === 'track' ? 'trackpants' : 'joggers');
+/** The shoes a top came with before the separates */
+export const shoesFor = (kind: string): ShoeStyle => (kind === 'suit' ? 'dress' : 'sneaker');
+/*
+ * The ranges (the wardrobe plan's Phase 2): how the fitting room sorts the clothes, for browsing only (any piece goes
+ * with any other). Work wear arrives in Phase 6.
+ */
+export type Range = 'street' | 'business' | 'work';
+export const RANGES: { id: Range; name: string }[] = [
+  { id: 'street', name: 'Streetwear' },
+  { id: 'business', name: 'Business' },
+  { id: 'work', name: 'Work' },
+];
 export const BAGS: Bag[] = ['backpack', 'crossbody', 'board', 'duffel'];
 
 /*
@@ -118,8 +141,14 @@ export const PATTERN_IDS = PATTERNS.map((p) => p.id);
 export interface Look {
   kind: LookKind;
   top: string;
+  /** What he wears on his legs, and its colour */
+  bottoms: Bottoms;
   bottom: string;
   tie: string;
+  /** The shirt under the suit's jacket */
+  shirt: string;
+  /** What's on his feet, and its colour */
+  shoeStyle: ShoeStyle;
   shoes: string;
   /** One thing on the head: a hat (or null), unless a hoodie's hood is up */
   hat: Hat | null;
@@ -155,6 +184,7 @@ export const PALETTE = {
   bottom: ['#16141f', '#2a2350', '#1d2550', '#4a4a5a', '#f3f2f7', '#3a2418'],
   cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f', '#a0652f', '#3a2418'],
   tie: ['#1f9d55', '#e219e5', '#00b8d8', '#d8312f', '#c99a4a', '#16141f'],
+  shirt: ['#cfcedb', '#16141f', '#9fb4d8', '#e4dcc4', '#d8a0b8', '#4a4a5a'],
   extra: ['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8', '#d8312f', '#1f9d6a', '#8f3dff'],
   shoes: ['#1b1830', '#f3f2f7', '#d8312f', '#00a8d8', '#e219e5', '#ffd23f', '#1f9d6a'],
   lens: ['#22d07a', '#ff3dbb', '#00d8ff', '#ffc23a', '#9b5cff', '#ff4a3a'],
@@ -186,8 +216,11 @@ export function safeColour(v: unknown): string | null {
 export const DEFAULT_LOOK: Look = {
   kind: 'suit',
   top: '#16141f',
+  bottoms: 'trousers',
   bottom: '#16141f',
   tie: '#1f9d55',
+  shirt: '#cfcedb',
+  shoeStyle: 'dress',
   shoes: '#1b1830',
   hat: 'cap',
   hatColor: '#d8312f',
@@ -229,8 +262,12 @@ export function cleanLook(raw: unknown): Look {
   return {
     kind,
     top: colour(o.top, DEFAULT_LOOK.top),
+    // (a look from before the separates: what its top came with)
+    bottoms: from(o.bottoms, BOTTOMS, bottomsFor(kind)),
     bottom: colour(o.bottom, DEFAULT_LOOK.bottom),
     tie: colour(o.tie, DEFAULT_LOOK.tie),
+    shirt: colour(o.shirt, DEFAULT_LOOK.shirt),
+    shoeStyle: from(o.shoeStyle, SHOE_STYLES, shoesFor(kind)),
     shoes: colour(o.shoes, DEFAULT_LOOK.shoes),
     // (a retired hat, the crown, halo, top hat or cowboy hat, comes back as no hat)
     hat: orNull(o.hat, HATS, RETIRED_HATS.includes(o.hat as string) ? null : DEFAULT_LOOK.hat),

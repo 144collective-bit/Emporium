@@ -47,8 +47,8 @@ function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
   out.set(outfitColor(o, p.color as ColorKey));
   return p.shade ? out.multiplyScalar(p.shade) : out;
 }
-/** An outfit's colour for a key (the lenses are green as in the art when an outfit doesn't say) */
-const outfitColor = (o: Outfit, k: ColorKey) => (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : '#ff00ff');
+/** An outfit's colour for a key (the lenses are green as in the art, and the shirt white, when an outfit doesn't say) */
+const outfitColor = (o: Outfit, k: ColorKey) => (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : k === 'shirt' ? '#cfcedb' : '#ff00ff');
 
 /* ---------- The wardrobe, with the soldiers' rifle (guns.ts draws it, so it's added here) ---------- */
 

@@ -151,6 +151,35 @@ detail), which stay the record of how the clothes were built.
   business. Work wear fills in at Phase 6.
 - The clipping test runs every top over every bottom, and every bottom
   over every shoe, at both detail levels.
+- **The owner's calls:** ranges first, then slots; any piece goes with
+  any other (the ranges are only for browsing).
+- **As built (14 November 2026):**
+  - `profile-data.ts`: `Bottoms` / `BOTTOMS` (trousers, joggers, track
+    pants), `ShoeStyle` / `SHOE_STYLES` (dress, sneaker), `bottoms`,
+    `shoeStyle` and `shirt` on `Look` (swatches `PALETTE.shirt`); a look from
+    before wears what its top came with (`bottomsFor()`, `shoesFor()`).
+    `Range` / `RANGES` for the fitting room.
+  - `wardrobe.ts`: `trousers`, `joggers`, `trackStripes` (the track top's
+    leg stripes moved to the track pants), `dressShoes` and `sneakers` as
+    items of their own, picked by `bottomsOf()` / `shoesOf()` (the crowd's
+    by its top, as before); the suit's shirt, collar and cuffs in the
+    `shirt` colour (`ColorKey` and the crowd's columns gain it, the crowd's
+    the shirt white). The kart's race suit wears its track pants.
+  - `fitting.ts`: the range row (`[data-fit-ranges]`) over eight slots in
+    two rows of four (Tops, Bottoms, Shoes, Head, Shades, Bags, Extras,
+    Merch); each card `in` its ranges; a slot with nothing of a range's own
+    says so ("Work wear is coming soon."); it opens on his top's range. The
+    character screen lists Top, Bottoms and Shoes.
+  - Tests: `clothing.test.ts` holds every top over every bottoms (15
+    pairings and the soldier, both levels: all within 2 mm) and every
+    bottoms over every shoe; `profile.test.ts` the separates and the
+    upgrade of older looks; `wardrobe.test.ts` random separates.
+  - **Found on the way:** at the ankle, as the foot flexes mid-step, the
+    legs' cloth goes up to `ANKLE` (0.034, about 3% of his height) into the
+    shoe, in the pairings the clothes were built in too (the clothing plan
+    never held the shoes to the legs); and the sneaker's laces stand out
+    past its sides. The new pairings are no worse; the test holds them
+    there, and Phase 5's shoes are the place to fix both.
 
 ### Phase 3: the hood up, rebuilt
 
@@ -242,5 +271,6 @@ A proposed first set; the owner picks what goes in:
 ## Status
 
 - Planned, 14 November 2026.
-- **Phase 1 (clear out and open up): built**, 14 November 2026, waiting
-  for the owner's look before Phase 2.
+- **Phase 1 (clear out and open up): built**, 14 November 2026.
+- **Phase 2 (the three ranges and the separates): built**, 14 November
+  2026, waiting for the owner's look before Phase 3.

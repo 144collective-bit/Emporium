@@ -848,14 +848,9 @@
 }
 .fit-tabs {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  /* (eight slots, docs/wardrobe-plan.md Phase 2: two rows of four, so the longest names fit the panel at every width) */
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-}
-/* Narrow panels: the tabs take two rows */
-@media (max-width: 520px) {
-  .fit-tabs {
-    grid-template-columns: repeat(4, 1fr);
-  }
 }
 .fit-tabs button {
   min-width: 0;

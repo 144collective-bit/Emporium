@@ -93,6 +93,26 @@
   text-transform: uppercase;
   cursor: pointer;
 }
+/* The ranges over the slots (docs/wardrobe-plan.md Phase 2): three across, the one browsed lit */
+.fit-ranges {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.fit-ranges .fit-chip {
+  min-height: 34px;
+  padding: 4px 2px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+/* (the narrowest phones: a touch smaller, never broken mid-word) */
+@media (max-width: 380px) {
+  .fit-ranges .fit-chip {
+    font-size: 9.5px;
+    letter-spacing: 0;
+  }
+}
 .fit-chip[aria-pressed="true"] {
   border-color: #0000;
   background:
