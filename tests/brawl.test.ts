@@ -260,3 +260,18 @@ test('every street move ends back on the guard, where the guard clip starts', ()
     }
   }
 });
+
+test('on the street a click on a frame no tick runs (a fast screen, a hit-stop) still punches, once', () => {
+  const b = createBrawl('brawler');
+  b.step(0, 0, 0, 0, { ...NO_BRAWL, guard: true, punch: true });
+  const { events } = run(b, 40);
+  assert.equal(events.filter((x) => x.e.kind === 'swing').length, 1);
+  // And a chain pressed in time on the street flows: the cross swung sooner than one pressed early
+  const crossAt = (at: number) => {
+    const c = createBrawl('brawler');
+    for (let i = 0; i < 80; i++) for (const e of c.step(tick, 0, 0, 0, { ...NO_BRAWL, guard: true, punch: i === 0 || i === at }).events) if (e.kind === 'swing' && e.move === 'cross') return i;
+    return -1;
+  };
+  const window = MOVES.jab.startup + MOVES.jab.active;
+  assert.ok(crossAt(window + 1) > 0 && crossAt(window + 1) < crossAt(window - 3));
+});

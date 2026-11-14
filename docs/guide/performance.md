@@ -406,7 +406,7 @@ keep it up to date when what it describes changes.
   into the 3D city, clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
-  The Trenches round The Block, Degen's home in the Ends, the Neon Mile from over its boulevard and down it,
+  The Trenches round The Block, Degen's compound and the far west round it (five views), the Neon Mile from over its boulevard and down it,
   where the edge was before Phase 6, the far edge (from `EXT`), and since the
   polish plan's Phase 10 Uptown North, the mall, Harbour Bridge, Sunridge,
   Southfield and Lot 9 (`BLEND_VIEWS` has the same six for the shots)) measured for a few

@@ -98,7 +98,10 @@ keep it up to date when what it describes changes.
   mode's chunk): `lay()` puts the fight's clip on his pose after the
   walk, the upper body over the motion capture (`upperW`), a kick or the
   dodge whole and standing (`rooted`); the guard held is the fight's
-  `guard` clip. Controls: right-click held lifts the guard, and with it up
+  `guard` clip; a change of clip eases over `FADE` (4) of its frames from
+  where the last left off, as the ring's figures do (a chain pressed in
+  time starts part way through the last move's recovery: flow,
+  `combat.md`). Controls: right-click held lifts the guard, and with it up
   click punches (the combo by timing: jab, cross, hook, uppercut), G
   kicks, Space dodges standing (jumps otherwise), Shift sprints; touch
   (`.is-fists` on the root): the ring's Block button is the Guard on the

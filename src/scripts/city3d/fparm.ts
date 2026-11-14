@@ -12,8 +12,9 @@
  *   round towards where his own elbow is, so the arm keeps its lengths and its bend.
  * - The fist is modelled for being seen up close (`fistGeometry()`), not the body's hand closed (body.ts
  *   `bakedHand()`, built to read from a distance): the back of the hand, four knuckles in a row that slopes off to the
- *   little finger, each finger folded in two under them, and the thumb wrapped across the front. Its frame: the wrist
- *   at the origin, +y out to the knuckles, +z the back of the hand, the thumb on the side `thumb` says.
+ *   little finger, each finger folded in two under them, and the thumb wrapped across the front, all one smooth shape
+ *   (`fistField()` meshed by `meshField()`), its creases drawn in (`paintFist()`). Its frame: the wrist at the origin,
+ *   +y out to the knuckles, +z the back of the hand, the thumb on the side `thumb` says.
  * - Sleeves are turned (`sleeveGeometry()`): round at both ends, so the elbow bends without a seam, tapering a touch
  *   towards the cuff.
  * - Every piece carries its own colour (`paint()`), so an arm is two draws, the upper arm and the
@@ -22,7 +23,6 @@
  * Lengths are metres, life size (fistsview.ts builds them `FP_SCALE` times bigger and further out).
  */
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HAND, UPPER_ARM, WRIST_Y, WRIST_Z } from './skeleton';
 
@@ -71,76 +71,296 @@ export function merge(parts: THREE.BufferGeometry[]) {
   return mergeGeometries(parts)!;
 }
 
-/** A capsule from `a` to `b` of radius `r` */
-function capsule(a: THREE.Vector3, b: THREE.Vector3, r: number, seg = 8) {
-  const d = b.clone().sub(a);
-  const g = new THREE.CapsuleGeometry(r, Math.max(1e-4, d.length()), 3, seg);
-  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, d.normalize()));
-  g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
-  return plain(g);
-}
-
-/** A rounded box `w` (x) by `h` (y) by `d` (z) centred at (x, y, z), tilted `tilt` about x */
-function block(w: number, h: number, d: number, r: number, x: number, y: number, z: number, tilt = 0) {
-  const g = new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2 - 1e-4, h / 2 - 1e-4, d / 2 - 1e-4));
-  if (tilt) g.rotateX(tilt);
-  g.translate(x, y, z);
-  return plain(g);
-}
-
 /**
- * The fist, closed tight: the wrist at the origin, +y out to the knuckles, +z the back of the hand, the thumb on the
+ * The fist, closed tight (or `loose`, 0..1, as he runs): the wrist at the origin, +y out to the knuckles, +z the back of the hand, the thumb on the
  * `thumb` side of x (-1 or 1). Its index finger is next to the thumb; the knuckles' line slopes back to the little
  * finger, as a real fist's does.
  */
-export function fistGeometry(thumb: -1 | 1) {
-  const parts: THREE.BufferGeometry[] = [];
-  // The wrist, into the cuff
-  const wrist = new THREE.CylinderGeometry(0.026, 0.024, 0.04, 12);
-  wrist.scale(1.12, 1, 0.82);
-  wrist.translate(0, 0.006, -0.004);
-  parts.push(plain(wrist));
-  // The back of the hand, narrowing a little to the wrist
-  const back = block(0.088, 0.078, 0.038, 0.014, 0, 0.05, 0.001);
-  const p = back.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < p.count; i++) {
-    const k = THREE.MathUtils.clamp((p.getY(i) - 0.011) / 0.078, 0, 1);
-    p.setX(i, p.getX(i) * (0.84 + 0.16 * k));
+export function fistGeometry(thumb: -1 | 1, loose = 0, low = false): THREE.BufferGeometry {
+  const key = `${thumb}:${loose}:${low}`;
+  const had = FISTS.get(key);
+  if (had) return had.clone();
+  // (made once for the thumb on +x; the other hand is it mirrored, turned inside out back again)
+  const field = fistField(1, loose);
+  const crease = [0];
+  const g: THREE.BufferGeometry =
+    thumb === 1
+      ? meshField(field, FIST_BOX, low ? FIST_CELL.low : FIST_CELL.high, (x, y, z) => {
+          crease[0] = 0;
+          field(x, y, z, crease);
+          return crease[0];
+        })
+      : mirrorX(fistGeometry(1, loose, low));
+  FISTS.set(key, g);
+  return g.clone();
+}
+
+/** A non-indexed geometry mirrored across x, its faces turned back out */
+function mirrorX(g: THREE.BufferGeometry) {
+  const out = g.clone();
+  for (const k of ['position', 'normal'] as const) {
+    const a = out.attributes[k] as THREE.BufferAttribute;
+    for (let i = 0; i < a.count; i++) a.setX(i, -a.getX(i));
   }
-  back.computeVertexNormals();
-  parts.push(back);
-  // The palm, under it, where the fingertips tuck in
-  parts.push(block(0.08, 0.06, 0.024, 0.01, 0, 0.042, -0.024));
-  // Four fingers, index (by the thumb) to little: each knuckle, and the finger folded under it in two
+  for (const a of Object.values(out.attributes) as THREE.BufferAttribute[])
+    for (let t = 0; t < a.count; t += 3)
+      for (let c = 0; c < a.itemSize; c++) {
+        const s = a.array[(t + 1) * a.itemSize + c];
+        a.array[(t + 1) * a.itemSize + c] = a.array[(t + 2) * a.itemSize + c];
+        a.array[(t + 2) * a.itemSize + c] = s;
+      }
+  return out;
+}
+/** The fists made so far (each is a few milliseconds' work: made once) */
+const FISTS = new Map<string, THREE.BufferGeometry>();
+/** Where the fist's field is sampled, and how finely (metres): a cell of about 3 mm, smooth at the size it's seen;
+ * on the phone tier about 4.5 mm (half the triangles, the owner's call, 2026-11) */
+const FIST_BOX = { min: [-0.068, -0.034, -0.082], max: [0.068, 0.124, 0.042] } as const;
+export const FIST_CELL = { high: 0.0032, low: 0.0046 };
+
+/** (Math.hypot is slow; this runs a few hundred thousand times a fist) */
+const len3 = (x: number, y: number, z: number) => Math.sqrt(x * x + y * y + z * z);
+/** A smooth minimum: two shapes run into each other over `k` (a soft crease, not a seam); how deep in the crease a
+ * point is (0-1) goes onto `crease[0]`, weighed by `w` */
+const smin = (a: number, b: number, k: number, crease?: number[], w = 1) => {
+  const h = Math.max(k - Math.abs(a - b), 0) / k;
+  if (crease && h > 0) crease[0] = Math.max(crease[0], h * w);
+  return Math.min(a, b) - h * h * k * 0.25;
+};
+
+/** The fist's creases drawn in, comic style: the skin darkened this much at the deepest, from this deep in */
+export const CREASE = { dark: 0.2, from: 0.55, full: 1 };
+
+/** The fist in one colour, its creases (from `fistGeometry()`'s tint) darkened in it */
+export function paintFist(g: THREE.BufferGeometry, color: string | THREE.Color) {
+  const c = new THREE.Color(color);
+  const t = g.attributes.tint as THREE.BufferAttribute | undefined;
+  const n = g.attributes.position.count;
+  const a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const k = 1 - CREASE.dark * THREE.MathUtils.smoothstep(t ? t.getX(i) : 0, CREASE.from, CREASE.full);
+    a.set([c.r * k, c.g * k, c.b * k], i * 3);
+  }
+  g.setAttribute('tint', new THREE.BufferAttribute(a, 3));
+  return g;
+}
+/** How far (x, y, z) is outside a capsule from a to b of radius r (negative inside) */
+function capsuleAt(x: number, y: number, z: number, a: readonly number[], b: readonly number[], r: number) {
+  const px = x - a[0];
+  const py = y - a[1];
+  const pz = z - a[2];
+  const bx = b[0] - a[0];
+  const by = b[1] - a[1];
+  const bz = b[2] - a[2];
+  const h = Math.min(1, Math.max(0, (px * bx + py * by + pz * bz) / (bx * bx + by * by + bz * bz || 1)));
+  return len3(px - bx * h, py - by * h, pz - bz * h) - r;
+}
+/** How far (x, y, z) is outside a box of half sizes (hx, hy, hz) centred at c, its edges rounded by r */
+function boxAt(x: number, y: number, z: number, c: readonly number[], hx: number, hy: number, hz: number, r: number) {
+  const qx = Math.abs(x - c[0]) - hx + r;
+  const qy = Math.abs(y - c[1]) - hy + r;
+  const qz = Math.abs(z - c[2]) - hz + r;
+  return len3(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - r;
+}
+
+/**
+ * The fist as one soft shape (the owner's call, 2026-11: "smoother, more natural", a chunky cartoon fist): how far
+ * a point is outside it. The back of the hand and the palm, the wrist, four fingers curled in two and the thumb,
+ * each run into the next over a few millimetres, so it reads as one hand with creases, not a bundle of pieces
+ */
+function fistField(thumb: -1 | 1, loose: number): (x: number, y: number, z: number, crease?: number[]) => number {
+  // (loose, as a runner carries his hands: the fingers eased open about their knuckles, the thumb along the index)
+  const ease = 0.34 * loose;
+  const turn = (ky: number, dy: number, dz: number, a: number): number[] => {
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    return [0, ky + dy * c - dz * s, 0.012 + dy * s + dz * c];
+  };
+  // Four fingers, index (by the thumb) to little: the knuckle, then the finger folded down the front and back under
   const at = [0.0315, 0.0105, -0.0105, -0.0305];
-  const reach = [0.089, 0.092, 0.089, 0.083];
-  const wide = [0.0215, 0.0225, 0.021, 0.0185];
-  for (let f = 0; f < 4; f++) {
-    const x = at[f] * thumb;
-    const y = reach[f];
-    const w = wide[f];
-    // the knuckle, standing proud of the back of the hand
-    const kn = new THREE.SphereGeometry(w * 0.5, 10, 8);
-    kn.scale(1, 0.8, 0.62);
-    kn.translate(x, y - 0.004, 0.013);
-    parts.push(plain(kn));
-    // the first bone, folded straight down at the front (the face that lands a punch)
-    parts.push(block(w, 0.024, 0.044, 0.009, x, y + 0.004, -0.009));
-    // the second, folded back under towards the palm
-    parts.push(block(w * 0.95, 0.032, 0.021, 0.008, x, y - 0.013, -0.033));
+  const reach = [0.092, 0.095, 0.092, 0.086];
+  const wide = [0.0225, 0.0235, 0.022, 0.0195];
+  const fingers = at.map((x0, f) => {
+    const x = x0 * thumb;
+    const k = [x, reach[f] + 0.002, 0.009];
+    const m = turn(reach[f], 0.0, -0.042, ease);
+    const t = turn(reach[f], -0.026, -0.04, ease * 1.35);
+    m[0] = t[0] = x;
+    return { k, m, t, r: wide[f] * 0.5 };
+  });
+  const t0 = [0.04 * thumb, 0.024, -0.014];
+  const t1 = new THREE.Vector3(0.037 * thumb, 0.06, -0.038).lerp(new THREE.Vector3(0.042 * thumb, 0.063, -0.032), loose).toArray();
+  const t2 = new THREE.Vector3(0.008 * thumb, 0.074, -0.045).lerp(new THREE.Vector3(0.031 * thumb, 0.084, -0.036), loose).toArray();
+  const back = [0, 0.052, -0.002];
+  const palm = [0, 0.044, -0.022];
+  return (x: number, y: number, z: number, cr?: number[]) => {
+    // The back of the hand, narrowing a little to the wrist, and the palm under it
+    const narrow = 0.84 + 0.16 * Math.min(1, Math.max(0, (y - 0.012) / 0.078));
+    let d = boxAt(x / narrow, y, z, back, 0.044, 0.04, 0.02, 0.016) * Math.min(1, narrow);
+    d = smin(d, boxAt(x, y, z, palm, 0.04, 0.03, 0.014, 0.012), 0.012);
+    // The wrist, a flattened round into the cuff
+    d = smin(d, capsuleAt(x / 1.12, y, z / 0.82, [0, -0.008, -0.005], [0, 0.022, -0.005], 0.025) * 0.82, 0.014);
+    // The fingers: each finger's two bones run into each other, the fingers barely into their neighbours (the creases)
+    let fs = Infinity;
+    for (const f of fingers) {
+      // (the knuckles one smooth ridge, the owner's call: "too lumpy around the knuckles")
+      const one = smin(capsuleAt(x, y, z, f.k, f.m, f.r), capsuleAt(x, y, z, f.m, f.t, f.r * 0.94), 0.01);
+      fs = smin(fs, one, 0.009, cr);
+    }
+    d = smin(d, fs, 0.011);
+    // The thumb, round the side and across the front, and its ball filling the heel of the hand
+    const th = smin(capsuleAt(x, y, z, t0, t1, 0.0165), capsuleAt(x, y, z, t1, t2, 0.0148), 0.006);
+    const bx = (x - 0.028 * thumb) / 0.016;
+    const by = (y - 0.03) / 0.022;
+    const bz = (z + 0.024) / 0.015;
+    const ball = (len3(bx, by, bz) - 1) * 0.015;
+    d = smin(d, smin(th, ball, 0.01), 0.005, cr);
+    return d;
+  };
+}
+
+/**
+ * A smooth mesh of where `field` is zero, sampled in `box` every `cell` (a surface net: one point per cell the
+ * surface crosses, eased onto it; shaded by the field's own slope, so it's smooth however it was cut)
+ */
+export function meshField(
+  field: (x: number, y: number, z: number) => number,
+  box: { min: readonly number[]; max: readonly number[] },
+  cell: number,
+  shade?: (x: number, y: number, z: number) => number,
+) {
+  const n = [0, 1, 2].map((a) => Math.ceil((box.max[a] - box.min[a]) / cell) + 1);
+  const [nx, ny, nz] = n;
+  const at = (i: number, j: number, k: number) => i + nx * (j + ny * k);
+  const val = new Float32Array(nx * ny * nz);
+  // (first every `C`th point; a point whose nearest of those is well clear of the surface takes its value: only its
+  // sign is ever read, so only the points near the surface are worked out)
+  const C = 4;
+  const cn = n.map((v) => Math.floor((v - 1) / C) + 1);
+  const coarse = new Float32Array(cn[0] * cn[1] * cn[2]);
+  for (let k = 0; k < cn[2]; k++)
+    for (let j = 0; j < cn[1]; j++)
+      for (let i = 0; i < cn[0]; i++) coarse[i + cn[0] * (j + cn[1] * k)] = field(box.min[0] + i * C * cell, box.min[1] + j * C * cell, box.min[2] + k * C * cell);
+  // (a point is at most √3·C/2 cells from its nearest coarse point; half as much again, for the fields that stretch)
+  const clear = 1.5 * Math.sqrt(3) * (C / 2) * cell;
+  for (let k = 0; k < nz; k++)
+    for (let j = 0; j < ny; j++)
+      for (let i = 0; i < nx; i++) {
+        const ci = Math.min(cn[0] - 1, Math.round(i / C));
+        const cj = Math.min(cn[1] - 1, Math.round(j / C));
+        const ck = Math.min(cn[2] - 1, Math.round(k / C));
+        const near = coarse[ci + cn[0] * (cj + cn[1] * ck)];
+        val[at(i, j, k)] = Math.abs(near) > clear ? near : field(box.min[0] + i * cell, box.min[1] + j * cell, box.min[2] + k * cell);
+      }
+  const grad = (x: number, y: number, z: number, out: number[]) => {
+    const e = cell * 0.25;
+    out[0] = field(x + e, y, z) - field(x - e, y, z);
+    out[1] = field(x, y + e, z) - field(x, y - e, z);
+    out[2] = field(x, y, z + e) - field(x, y, z - e);
+    const l = Math.hypot(out[0], out[1], out[2]) || 1;
+    out[0] /= l;
+    out[1] /= l;
+    out[2] /= l;
+  };
+  // One point per cell the surface crosses: where its edges cross, averaged, then stepped onto the surface
+  const vert = new Int32Array((nx - 1) * (ny - 1) * (nz - 1)).fill(-1);
+  const cellAt = (i: number, j: number, k: number) => i + (nx - 1) * (j + (ny - 1) * k);
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const tone: number[] = [];
+  const g = [0, 0, 0];
+  const corner = [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1];
+  const edges = [0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 1, 3, 4, 6, 5, 7, 0, 4, 1, 5, 2, 6, 3, 7];
+  for (let k = 0; k < nz - 1; k++)
+    for (let j = 0; j < ny - 1; j++)
+      for (let i = 0; i < nx - 1; i++) {
+        // (a cell whose eight corners agree has nothing in it: most of them)
+        const o = at(i, j, k);
+        const s0 = val[o] < 0;
+        if (
+          s0 === val[o + 1] < 0 &&
+          s0 === val[o + nx] < 0 &&
+          s0 === val[o + nx + 1] < 0 &&
+          s0 === val[o + nx * ny] < 0 &&
+          s0 === val[o + nx * ny + 1] < 0 &&
+          s0 === val[o + nx * ny + nx] < 0 &&
+          s0 === val[o + nx * ny + nx + 1] < 0
+        )
+          continue;
+        let sx = 0;
+        let sy = 0;
+        let sz = 0;
+        let c = 0;
+        for (let e = 0; e < 24; e += 2) {
+          const a = edges[e] * 3;
+          const b = edges[e + 1] * 3;
+          const va = val[at(i + corner[a], j + corner[a + 1], k + corner[a + 2])];
+          const vb = val[at(i + corner[b], j + corner[b + 1], k + corner[b + 2])];
+          if (va < 0 === vb < 0) continue;
+          const t = va / (va - vb);
+          sx += corner[a] + (corner[b] - corner[a]) * t;
+          sy += corner[a + 1] + (corner[b + 1] - corner[a + 1]) * t;
+          sz += corner[a + 2] + (corner[b + 2] - corner[a + 2]) * t;
+          c++;
+        }
+        if (!c) continue;
+        let x = box.min[0] + (i + sx / c) * cell;
+        let y = box.min[1] + (j + sy / c) * cell;
+        let z = box.min[2] + (k + sz / c) * cell;
+        // (onto the surface: a step down the slope by how far off it is; that slope shades it)
+        const d = field(x, y, z);
+        grad(x, y, z, g);
+        x -= g[0] * d;
+        y -= g[1] * d;
+        z -= g[2] * d;
+        vert[cellAt(i, j, k)] = pos.length / 3;
+        pos.push(x, y, z);
+        nor.push(g[0], g[1], g[2]);
+        if (shade) {
+          const v = shade(x, y, z);
+          tone.push(v, v, v);
+        }
+      }
+  // A quad round every grid edge the surface crosses, from the four cells that share it, facing out
+  const idx: number[] = [];
+  const quad = (a: number, b: number, c: number, d: number, flip: boolean) => {
+    if (a < 0 || b < 0 || c < 0 || d < 0) return;
+    if (flip) idx.push(a, c, b, a, d, c);
+    else idx.push(a, b, c, a, c, d);
+  };
+  for (let k = 1; k < nz - 1; k++)
+    for (let j = 1; j < ny - 1; j++)
+      for (let i = 1; i < nx - 1; i++) {
+        const v = val[at(i, j, k)] < 0;
+        if (v !== val[at(i + 1, j, k)] < 0) quad(vert[cellAt(i, j - 1, k - 1)], vert[cellAt(i, j, k - 1)], vert[cellAt(i, j, k)], vert[cellAt(i, j - 1, k)], !v);
+        if (v !== val[at(i, j + 1, k)] < 0) quad(vert[cellAt(i - 1, j, k - 1)], vert[cellAt(i - 1, j, k)], vert[cellAt(i, j, k)], vert[cellAt(i, j, k - 1)], !v);
+        if (v !== val[at(i, j, k + 1)] < 0) quad(vert[cellAt(i - 1, j - 1, k)], vert[cellAt(i, j - 1, k)], vert[cellAt(i, j, k)], vert[cellAt(i - 1, j, k)], !v);
+      }
+  // (each face turned to agree with the field's slope, whatever way round the quad came)
+  for (let t = 0; t < idx.length; t += 3) {
+    const [a, b, c] = [idx[t] * 3, idx[t + 1] * 3, idx[t + 2] * 3];
+    const ux = pos[b] - pos[a];
+    const uy = pos[b + 1] - pos[a + 1];
+    const uz = pos[b + 2] - pos[a + 2];
+    const vx = pos[c] - pos[a];
+    const vy = pos[c + 1] - pos[a + 1];
+    const vz = pos[c + 2] - pos[a + 2];
+    const fx = uy * vz - uz * vy;
+    const fy = uz * vx - ux * vz;
+    const fz = ux * vy - uy * vx;
+    if (fx * (nor[a] + nor[b] + nor[c]) + fy * (nor[a + 1] + nor[b + 1] + nor[c + 1]) + fz * (nor[a + 2] + nor[b + 2] + nor[c + 2]) < 0) {
+      const s = idx[t + 1];
+      idx[t + 1] = idx[t + 2];
+      idx[t + 2] = s;
+    }
   }
-  // The thumb: from the heel of the hand, round the side and across the front of the first two fingers
-  const t0 = new THREE.Vector3(0.039 * thumb, 0.022, -0.014);
-  const t1 = new THREE.Vector3(0.036 * thumb, 0.06, -0.04);
-  const t2 = new THREE.Vector3(0.006 * thumb, 0.074, -0.05);
-  parts.push(capsule(t0, t1, 0.0145));
-  parts.push(capsule(t1, t2, 0.0128));
-  // (the ball of the thumb, filling the heel of the hand on its side)
-  const ball = new THREE.SphereGeometry(0.019, 10, 8);
-  ball.scale(1, 1.3, 0.9);
-  ball.translate(0.03 * thumb, 0.03, -0.022);
-  parts.push(plain(ball));
-  return merge(parts);
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  // (a shade, if asked for, rides in `tint` until the fist is painted: paintFist())
+  if (shade) out.setAttribute('tint', new THREE.Float32BufferAttribute(tone, 3));
+  out.setIndex(idx);
+  return plain(out);
 }
 
 /**
@@ -287,18 +507,36 @@ const tB = new THREE.Vector3();
  * The first-person correction (the owner's call: the clips are made to read from behind him, and from his own eyes
  * their guard holds the fists at his chin, under and beside the eye, out of shot): with the guard up, each fist is
  * raised `lift`, drawn `pull` of the way in towards the middle, carried forward `reach` the more the arm is bent
- * (none at full stretch, where the clip already reaches) and never nearer the eye than `near` (the clips bring a
- * hand back beside his face: from the eye it would fill the screen), the elbow solved again round towards his own.
+ * (none at full stretch, where the clip already reaches), never nearer the eye than `near` (the clips bring a hand
+ * back beside his face: from the eye it would fill the screen) and eased under `top` (`softTop()`: the uppercut's
+ * fist would leave the top of the shot), the elbow solved again round towards his own.
  * These metres, the eye's frame.
  */
-export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3 };
+export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3, top: -0.03, soft: 0.03 };
+/** `y` eased under `top` (a soft minimum over `soft`): the uppercut's fist peaks at the eye's height instead of leaving the top of the shot, with no edge to slide along */
+export const softTop = (y: number, top: number, soft: number) => -soft * Math.log(Math.exp(-y / soft) + Math.exp(-top / soft));
 /**
- * Running with his hands down (the owner's call: the arms show as he runs): his own swing (the motion capture) lifted
- * into the lower corners and carried forward, so each arm comes into shot as it swings forward and goes as it swings
- * back; never higher than `top` nor nearer the eye than `near` (the motion capture's swing comes up higher than the
- * procedural walk's: a fist must never fill the screen). These metres, the eye's frame.
+ * Running with his hands down (the owner's calls, 2026-11: "a classic FPS pump", "his steps, a designed arc", loose
+ * fists; then "his hands should just move up and down, but his whole arm locks out when sprinting"): his body sets
+ * the timing (each arm's own swing, `pumpSwing()`), the arm a designed bob (`pumpArm()`): the fist rising from `low`
+ * (its top just peeking over the bottom of the shot) to `high` in its lower corner and back, mostly up and down, the
+ * elbow always bent (`pole`: down, back and out), higher and a touch bigger sprinting (`sprint`), lower and smaller
+ * walking (`walk`: `walkLow`, `walkHigh`), the back of the loose fist facing out, thumb up (`face`), all from a
+ * shoulder of its own (`shoulder`: his real one moves about the eye as he leans). For the arm on the right, the
+ * eye's frame; the left mirrors it.
  */
-export const FP_RUN = { lift: 0.24, pull: 0.25, fwd: 0.14, top: -0.17, near: 0.32 };
+export const PUMP = {
+  shoulder: new THREE.Vector3(0.2, -0.21, 0.06),
+  low: new THREE.Vector3(0.2, -0.33, -0.28),
+  high: new THREE.Vector3(0.165, -0.19, -0.35),
+  sprint: new THREE.Vector3(0.155, -0.15, -0.37),
+  walkLow: new THREE.Vector3(0.215, -0.39, -0.27),
+  walkHigh: new THREE.Vector3(0.2, -0.265, -0.31),
+  /** (a touch forward through the middle of the bob, as a fist swings on a bent arm) */
+  bulge: 0.02,
+  pole: new THREE.Vector3(0.4, -0.7, 0.6),
+  face: new THREE.Vector3(1, 0.3, 0.1),
+};
 
 /** How far out an arm laid in the eye's frame is (0 folded, 1 at full stretch) */
 export const stretch = (l: LaidArm) => THREE.MathUtils.clamp(l.wrist.distanceTo(l.shoulder) / (ARM.upper + ARM.fore), 0, 1);
@@ -306,11 +544,11 @@ export const stretch = (l: LaidArm) => THREE.MathUtils.clamp(l.wrist.distanceTo(
 /**
  * His arm `j` (the world) read from the eye `eye` (`eyeFrame()`), `unit` the world length of one of his body's units,
  * into `out` in these metres: the fist's wrist set back along his forearm so its knuckles are where his are. `fix`
- * (0..1: the guard's share) lays the first-person correction (`FP_FIX`) on it, and `run` (0..1: the run's share,
- * the guard down) the running one (`FP_RUN`), without moving his body. `pull` (0..1) scales the draw in towards the
- * middle (less for the hand left in the guard while the other is out punching: the punch has the middle).
+ * (0..1: the guard's share) lays the first-person correction (`FP_FIX`) on it without moving his body. `pull` (0..1)
+ * scales the draw in towards the middle (less for the hand left in the guard while the other is out punching: the
+ * punch has the middle).
  */
-export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: LaidArm, fix = 0, run = 0, pull = 1) {
+export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: LaidArm, fix = 0, pull = 1) {
   const k = BODY_TO_ARM / unit;
   toEye.copy(eye).invert();
   rotEye.setFromMatrix4(toEye);
@@ -322,20 +560,83 @@ export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: La
   const along = tB.copy(tA).sub(out.elbow).normalize();
   out.wrist.copy(out.elbow).addScaledVector(along, ARM.fore);
   out.face.copy(j.back).applyMatrix3(rotEye).normalize();
-  if (fix > 0 || run > 0) {
+  if (fix > 0) {
     const bent = 1 - THREE.MathUtils.clamp(out.wrist.distanceTo(out.shoulder) / (ARM.upper + ARM.fore), 0, 1);
     const target = tA.set(-out.wrist.x * FP_FIX.pull * pull, FP_FIX.lift, -FP_FIX.reach * bent).multiplyScalar(fix).add(out.wrist);
     target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_FIX.near, fix));
-    target.x -= out.wrist.x * FP_RUN.pull * run;
-    target.y += FP_RUN.lift * run;
-    target.z -= FP_RUN.fwd * run;
-    if (run > 0) {
-      target.y = Math.min(target.y, THREE.MathUtils.lerp(target.y, FP_RUN.top, run));
-      target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_RUN.near, run));
-    }
+    target.y = THREE.MathUtils.lerp(target.y, softTop(target.y, FP_FIX.top, FP_FIX.soft), fix);
     // (round towards his own elbow: its side of the line from the shoulder to the wrist)
     const pole = tB.copy(out.elbow).sub(out.shoulder).addScaledVector(out.wrist.clone().sub(out.shoulder), -0.5);
     solveArm(out.shoulder, target, pole, out.elbow, out.wrist);
   }
   return out;
+}
+
+/**
+ * One arm's swing from his body (-1 back, 1 forward), the timing of the pump: how far ahead of the other arm its wrist
+ * is (`ahead`: this arm's wrist forward of the other's, in these metres; the two swing opposite, so this stays centred
+ * whatever his lean), against `amp`, the size of his swing as it's been lately (the caller keeps it)
+ */
+export function pumpSwing(ahead: number, amp: number) {
+  return THREE.MathUtils.clamp(ahead / Math.max(amp * 1.4, 0.02), -1, 1);
+}
+
+const pDir = new THREE.Vector3();
+const pFwd = new THREE.Vector3();
+const pBack = new THREE.Vector3();
+
+/**
+ * The pump's arm on side `side` (1 the right of the eye, -1 the left), swung `swing` (-1 down .. 1 up, `pumpSwing()`),
+ * `sprint` (0 a jog .. 1 a sprint) of the way to the sprint's height and `walk` (0 a jog .. 1 a walk) of the way down
+ * to the walk's: into `out` (its own shoulder, the elbow bent, the wrist on its bob, the back of the fist out)
+ */
+export function pumpArm(side: number, swing: number, sprint: number, out: LaidArm, walk = 0) {
+  side = Math.sign(side) || 1;
+  const mirror = (v: THREE.Vector3, o: THREE.Vector3) => o.set(v.x * side, v.y, v.z);
+  const low = mirror(PUMP.low, pBack).lerp(mirror(PUMP.walkLow, pDir), walk);
+  const high = mirror(PUMP.high, pFwd).lerp(mirror(PUMP.sprint, pDir), sprint).lerp(mirror(PUMP.walkHigh, pDir), walk);
+  // (eased at the ends, as an arm slows to turn at the top and the bottom of its swing)
+  const t = THREE.MathUtils.smoothstep((swing + 1) / 2, 0, 1);
+  const target = tA.copy(low).lerp(high, t);
+  target.z -= PUMP.bulge * Math.sin(Math.PI * t);
+  const shoulder = mirror(PUMP.shoulder, out.shoulder);
+  solveArm(shoulder, target, mirror(PUMP.pole, tB), out.elbow, out.wrist);
+  mirror(PUMP.face, out.face).normalize();
+  return out;
+}
+
+/**
+ * `a` eased `w` (0..1) of the way to `b`: the shoulder, the wrist and the way the fist faces between them, the elbow
+ * solved again round between theirs (so the arm keeps its lengths), into `a`
+ */
+export function blendArm(a: LaidArm, b: LaidArm, w: number) {
+  if (w <= 0) return a;
+  const target = tA.copy(a.wrist).lerp(b.wrist, w);
+  const mid = (l: LaidArm, o: THREE.Vector3) => o.copy(l.elbow).sub(l.shoulder).addScaledVector(tmpS.copy(l.wrist).sub(l.shoulder), -0.5);
+  const pole = mid(a, tB).lerp(mid(b, pDir), w);
+  a.face.lerp(b.face, w).normalize();
+  a.shoulder.lerp(b.shoulder, w);
+  solveArm(a.shoulder, target, pole, a.elbow, a.wrist);
+  return a;
+}
+const tmpS = new THREE.Vector3();
+
+/**
+ * A punch's feel in first person (the owner's call, 2026-11: "subtle"): how far the view turns with the shoulder
+ * behind each punch (radians, + to the left: a left hand turns him right, a right hand left) and leans with it (+ up),
+ * how long a landed hit holds the fight (seconds: about three frames) and the view's kick forward (tiles, before his
+ * scale) and how long it takes
+ */
+export const PUNCH_FEEL = {
+  turn: { jab: -0.018, cross: 0.032, hook: -0.045, uppercut: 0.026 },
+  lean: { jab: -0.008, cross: -0.014, hook: -0.01, uppercut: 0.022 },
+  stop: 0.05,
+  kick: 0.035,
+  kickTime: 0.14,
+};
+/** A punch's share at frame `f` (0..1): up over its start-up, held through the active frames, eased back over the recovery */
+export function punchEnvelope(f: number, startup: number, active: number, recovery: number) {
+  if (f < startup) return THREE.MathUtils.smoothstep(f / startup, 0, 1);
+  if (f < startup + active) return 1;
+  return 1 - THREE.MathUtils.smoothstep((f - startup - active) / recovery, 0, 1);
 }

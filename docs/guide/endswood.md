@@ -267,3 +267,6 @@ keep it up to date when what it describes changes.
   `endsfar3d.ts` on the main thread (`addPeople()`, not on phones: their
   crowd's reserve is full; the pools one instanced mesh in the FX layer).
   Lit windows are `LIT_GLASS` in home3d.ts and endsfarhomes3d.ts.
+  Phase 6 (polish) closes the plan: `?bench` has five views of the far
+  west (`ends-home`, `far-yard`, `far-terrace`, `far-lane`, `far-allot` in
+  bench.ts).
