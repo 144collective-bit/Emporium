@@ -74,6 +74,9 @@ keep it up to date when what it describes changes.
   soak` adds the leak check. About 13 minutes (more with the soak), so it's
   run by hand or by the "Memory" Action, which only runs when started.
   `tests/targets.test.ts` holds the desktop's render targets (by formula)
-  to their ceilings on every `npm test`.
+  to their ceilings on every `npm test`. `tests/gputier.test.ts` holds the
+  tier each device starts on: graphics built into the processor told from
+  cards by their names as browsers give them, and the step down after a
+  lost GPU.
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.

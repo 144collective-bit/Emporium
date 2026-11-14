@@ -9,7 +9,15 @@ keep it up to date when what it describes changes.
   once a second (`builtShows()`). Sound is always off until the visitor
   turns it on.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
-  (fewer cars and people, no shadows, smaller bloom on phones), runs phones
+  (fewer cars and people, no shadows, smaller bloom on phones) by the rules
+  in `gputier.ts` (DOM-free, `tests/gputier.test.ts`; the stability plan's
+  "The tier by the graphics"): a phone's screen takes low; a touch screen,
+  4 GB or less, 4 cores or fewer, or graphics built into the processor
+  (Intel's, AMD's Radeon Graphics / Vega, a plain Apple M chip, by WebGL's
+  name for them) take medium; and for 14 days after the 3D graphics stopped
+  (`webglcontextlost`, kept in `degen-city-gpu-v1`, not in the backup) a
+  start is a tier below the one that stopped. `?fps` says which and why.
+  It runs phones
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
   slow. When frames stay fast again, bloom and then pixels come back (once

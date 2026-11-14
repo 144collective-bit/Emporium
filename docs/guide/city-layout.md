@@ -17,7 +17,9 @@ keep it up to date when what it describes changes.
     `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`). A
     running city whose GPU context is lost (`webglcontextlost` on the
     renderer's canvas, index.ts) stops its loop and sound and shows the
-    same card saying its 3D graphics stopped, with a Reload button.
+    same card saying its 3D graphics stopped, with a Reload button, and
+    keeps the tier that stopped so the next start is a tier lower
+    (`gputier.ts`, `performance.md`).
     `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
     Don't bring the 2D map back without the owner.
   Pin copy and panel copy live in `src/components/CityMap.astro`.

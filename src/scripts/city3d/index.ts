@@ -149,6 +149,7 @@ import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
+import { GPU_KEY, pickTier, type Device, type Lost, type Picked } from './gputier';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -158,15 +159,29 @@ const TIERS = {
   low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 180, walkers: 15, trees: 90, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
-function pickTier(): Tier {
-  const coarse = matchMedia('(pointer: coarse)').matches;
-  const small = Math.min(innerWidth, innerHeight) < 700;
+/** The device as the tier's rules (gputier.ts) read it; `gpu`, the graphics' name, once there's a renderer */
+function device(gpu = ''): Device {
   const nav = navigator as Navigator & { deviceMemory?: number };
-  // Phones (a short side under 700) take the low tier; a big touch screen (a tablet) the medium one (the owner's call,
-  // docs/polish-plan.md), and little memory or few cores hold a desktop to medium too
-  if (small) return 'low';
-  if (coarse || (nav.deviceMemory ?? 8) <= 4 || (navigator.hardwareConcurrency ?? 8) <= 4) return 'medium';
-  return 'high';
+  let lost: unknown = null;
+  try {
+    lost = JSON.parse(localStorage.getItem(GPU_KEY) ?? 'null');
+  } catch {
+    /* none kept */
+  }
+  return { small: Math.min(innerWidth, innerHeight) < 700, coarse: matchMedia('(pointer: coarse)').matches, memory: nav.deviceMemory, cores: navigator.hardwareConcurrency, gpu, lost: lost as Lost | null, now: Date.now() };
+}
+
+/** The graphics' name as WebGL gives it ('' when the browser hides it): Firefox says it plainly, Chrome behind an extension */
+function gpuName(renderer: THREE.WebGLRenderer): string {
+  try {
+    const gl = renderer.getContext();
+    const plain = String(gl.getParameter(gl.RENDERER) ?? '');
+    if (plain && !/^webkit webgl$/i.test(plain)) return plain;
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '') : '';
+  } catch {
+    return '';
+  }
 }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -178,14 +193,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const tier = (root.dataset.tier as Tier) || pickTier();
-  const Q = TIERS[tier];
-  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
-  figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // ?anim: the animation lab on its own, over the page (no city behind it)
   if (new URLSearchParams(location.search).has('anim')) {
-    await (await import('./anim-lab')).openLab(root, { reduced, low: tier === 'low' });
+    await (await import('./anim-lab')).openLab(root, { reduced, low: ((root.dataset.tier as Tier) || pickTier(device()).tier) === 'low' });
     return null;
   }
   // When each part of the boot finished (the ?fps readout and the benchmark)
@@ -205,6 +216,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   } catch {
     return null;
   }
+  // The tier (gputier.ts): the screen, memory and cores as before, graphics built into the processor a step down, and
+  // a step down after the 3D graphics stopped here lately. `data-tier` on the page overrides it.
+  const gpu = gpuName(renderer);
+  const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
+  const tier = picked.tier;
+  const Q = TIERS[tier];
+  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
+  figureDetail(tier === 'low' ? 2 : 3);
   loader.hidden = false;
   progress(0.05);
 
@@ -1676,6 +1695,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   renderer.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault();
     running = false;
+    // Kept, so the next start is a tier lower (gputier.ts, for LOST_DAYS)
+    try {
+      localStorage.setItem(GPU_KEY, JSON.stringify({ tier, at: Date.now() } satisfies Lost));
+    } catch {
+      /* not kept */
+    }
     cancelAnimationFrame(raf);
     if (sound.on) sound.toggle();
     root.dataset.view = 'none';
@@ -2075,7 +2100,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
-          `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
+          `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot

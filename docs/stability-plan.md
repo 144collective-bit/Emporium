@@ -247,6 +247,31 @@ MiB of geometry, the memory steps' figures).
    the budget, so a step that freezes (a big `trim()`, a district arriving)
    is red.
 
+## The tier by the graphics (built, 2026-11-14; waiting on the owner's laptop)
+
+The owner's laptop (a Ryzen 5 4000: AMD's Radeon Graphics, built into the
+processor) showed "The city's 3D graphics stopped". It reports plenty of
+memory and cores, so it took the high tier: 2x pixels, a 2048 shadow map,
+MSAA, the 96 MB near budget, all from the memory the computer shares with
+everything else.
+
+1. **Graphics built into the processor start on medium** (`gputier.ts`,
+   DOM-free, `tests/gputier.test.ts`): the name WebGL gives the graphics
+   (Firefox plainly, Chrome through `WEBGL_debug_renderer_info`) is read once
+   the renderer exists. Intel's, AMD's Radeon Graphics / Vega and the 3-digit
+   M ones, Linux's chip names (Renoir...) and a plain Apple M chip take
+   medium; NVIDIA, Radeon RX / Pro, Intel Arc A / B and Apple Pro / Max /
+   Ultra keep high. A hidden name (Safari's "Apple GPU") changes nothing.
+2. **A step down after a lost GPU**: `webglcontextlost` keeps the tier that
+   stopped (`degen-city-gpu-v1`, the device's own, not in the backup); for
+   `LOST_DAYS` (14) the next start is a tier below it, and a second loss
+   steps down again, to low at the least.
+3. `?fps`'s tier line says why (`medium (shared graphics)`) and the
+   graphics' name. `data-tier` on the page still overrides it.
+
+*The owner's calls, open*: whether plain Apple M chips belong on medium, and
+how long a loss keeps the device lower (14 days today).
+
 ## Suggested order
 
 Phase 1 now (it's the reported bug, and small) → Phase 2 (the biggest
