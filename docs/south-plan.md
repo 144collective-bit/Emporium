@@ -201,7 +201,7 @@ From the Circus west, patchy as high roads are:
   half and Bunker Sound's door (its pin, door prompt and arrival moved
   there). The blocks stand level on their plinths (`lift: false`); their
   solids are in the city's. Shots `10-phase-2b-*`.
-- **2c, the sky network walked** (built, waiting on the owner's sign-off;
+- **2c, the sky network walked** (built, signed off by the owner 2026-11-14;
   the owner's calls, 2026-11-14: a lift in every core with a floor picker
   and a walked stair up The Core, only the railings stop you, just
   walking for now): `southsky.ts` (DOM-free, `tests/southsky.test.ts`):
