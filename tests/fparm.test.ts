@@ -351,3 +351,67 @@ test('the wrist: inside every cuff with room to spare (nothing flush), no narrow
   assert.ok(widest < 0.033 - 0.002, `inside the suit's cuff ${widest}`);
   assert.ok(narrowest > 0.026, `no neck ${narrowest}`);
 });
+
+// Natural motion (the owner's call, 2026-11: "his arm movements... look robotic", subtle, first person only)
+import { ARC, LIFE, SWAY, arcBulge, guardLife, nudgeArm, springStep } from '../src/scripts/city3d/fparm';
+
+test('the guard alive: small, slow, and the two hands never in step', () => {
+  const a = V(0, 0, 0);
+  const b = V(0, 0, 0);
+  const prev = V(0, 0, 0);
+  let most = 0;
+  let fastest = 0;
+  const ys: [number, number][] = [];
+  for (let t = 0; t < 30; t += 1 / 60) {
+    guardLife(t, 1, a);
+    guardLife(t, -1, b);
+    most = Math.max(most, a.length(), b.length());
+    if (t > 0) fastest = Math.max(fastest, a.distanceTo(prev) * 60);
+    prev.copy(a);
+    ys.push([a.y, b.y]);
+  }
+  assert.ok(most < 0.012 && most > 0.003, `small ${most}`);
+  assert.ok(fastest < 0.03, `slow ${fastest} m/s`);
+  // (correlation of the two hands' rise and fall: they share the breath, never move as one)
+  const m = ys.reduce((s, [x, y]) => [s[0] + x / ys.length, s[1] + y / ys.length], [0, 0]);
+  let sxy = 0;
+  let sxx = 0;
+  let syy = 0;
+  for (const [x, y] of ys) {
+    sxy += (x - m[0]) * (y - m[1]);
+    sxx += (x - m[0]) ** 2;
+    syy += (y - m[1]) ** 2;
+  }
+  const r = sxy / Math.sqrt(sxx * syy);
+  assert.ok(r < 0.8, `not in step ${r}`);
+  assert.ok(LIFE.breath.period > 3 && LIFE.breath.period < 6, 'a resting breath');
+});
+
+test('the arcs: nothing at either end, all of it half way; outward and forward into the guard', () => {
+  assert.ok(near(arcBulge(0), 0) && near(arcBulge(1), 0, 1e-9) && near(arcBulge(0.5), 1));
+  assert.ok(arcBulge(-1) === 0 && near(arcBulge(2), 0, 1e-9));
+  assert.ok(ARC.guard[0] > 0 && ARC.guard[2] > 0 && Math.hypot(...ARC.guard) < 0.08, 'subtle: under a fist and a half');
+});
+
+test('a nudged arm: the fist moved, the arm whole, the elbow on its side', () => {
+  const a = newLaidArm();
+  a.shoulder.set(0.2, -0.2, 0.05);
+  solveArm(a.shoulder, V(0.15, -0.12, -0.3), V(0.4, -0.7, 0.6), a.elbow, a.wrist);
+  const was = a.wrist.clone();
+  const side = a.elbow.x;
+  nudgeArm(a, V(0.01, 0.005, -0.004));
+  assert.ok(a.wrist.distanceTo(was.add(V(0.01, 0.005, -0.004))) < 1e-4, 'moved');
+  assert.ok(near(a.shoulder.distanceTo(a.elbow), ARM.upper, 1e-4) && near(a.elbow.distanceTo(a.wrist), ARM.fore, 1e-4), 'whole');
+  assert.ok(Math.abs(a.elbow.x - side) < 0.02, 'the elbow where it was');
+});
+
+test('the weighted sway: pushed back, it swings a little past and settles', () => {
+  const s = { x: 1, v: 0 };
+  let low = 0;
+  for (let t = 0; t < 1.2; t += 1 / 60) {
+    springStep(s, 1 / 60, SWAY.spring, SWAY.damp);
+    low = Math.min(low, s.x);
+  }
+  assert.ok(low < -0.03 && low > -0.25, `a little past ${low}`);
+  assert.ok(Math.abs(s.x) < 0.02 && Math.abs(s.v) < 0.2, 'settled');
+});

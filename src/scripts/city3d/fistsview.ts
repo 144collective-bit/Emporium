@@ -31,7 +31,7 @@ import type { Outfit } from './character';
 import { FP_LEVEL, FP_SCALE, FP_SHIRT, FP_SKIN, FP_VARSITY, fpShade, upFront } from './viewmodel';
 import type { Skeleton } from './skeleton';
 import { UPPER_ARM } from './skeleton';
-import { ARM, aimPiece, blendArm, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, paintFist, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
+import { ARC, ARM, SWAY, aimPiece, arcBulge, blendArm, guardLife, nudgeArm, springStep, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, paintFist, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
 
 /** A kick: how far the hands drop and the view bobs (metres), and how long after the strike the bob settles */
 export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
@@ -169,8 +169,13 @@ export function createFistsView(scene: THREE.Scene, low = false) {
   root.visible = false;
   scene.add(root);
 
-  let swayX = 0;
-  let swayY = 0;
+  // (the look's lag: a spring each way, fparm.ts SWAY)
+  const swayX = { x: 0, v: 0 };
+  const swayY = { x: 0, v: 0 };
+  /** The guard's life's own clock (fparm.ts LIFE), and each fist's offset this frame */
+  let lifeT = 0;
+  const nudge = new THREE.Vector3();
+  const lifeAt = new THREE.Vector3();
   const lastDir = new THREE.Vector3();
   const dirNow = new THREE.Vector3();
   let haveDir = false;
@@ -215,18 +220,21 @@ export function createFistsView(scene: THREE.Scene, low = false) {
       }
       root.position.copy(camera.position);
       root.quaternion.copy(camera.quaternion);
-      // Sway: the arms lag the look and settle
+      // Sway: the arms lag the look, with weight: pushed back by a turn, then a spring brings them home, swinging a
+      // little past before they settle (fparm.ts SWAY)
       camera.getWorldDirection(dirNow);
       if (haveDir && !s.still) {
         const dyaw = Math.atan2(dirNow.x, dirNow.z) - Math.atan2(lastDir.x, lastDir.z);
-        swayX = THREE.MathUtils.clamp(swayX - Math.atan2(Math.sin(dyaw), Math.cos(dyaw)) * 0.8, -0.1, 0.1);
-        swayY = THREE.MathUtils.clamp(swayY - (dirNow.y - lastDir.y) * 0.8, -0.08, 0.08);
+        swayX.x = THREE.MathUtils.clamp(swayX.x - Math.atan2(Math.sin(dyaw), Math.cos(dyaw)) * SWAY.gain, -SWAY.most[0], SWAY.most[0]);
+        swayY.x = THREE.MathUtils.clamp(swayY.x - (dirNow.y - lastDir.y) * SWAY.gain, -SWAY.most[1], SWAY.most[1]);
       }
       lastDir.copy(dirNow);
       haveDir = true;
-      const settle = Math.exp(-Math.min(dt, 0.05) * 8);
-      swayX *= settle;
-      swayY *= settle;
+      const sdt = Math.min(dt, 1 / 30);
+      springStep(swayX, sdt, SWAY.spring, SWAY.damp);
+      springStep(swayY, sdt, SWAY.spring, SWAY.damp);
+      if (s.still) swayX.x = swayX.v = swayY.x = swayY.v = 0;
+      if (!s.still) lifeT += Math.min(dt, 0.1);
       // His skeleton as posed this frame, read from the eye in his head, level and facing his way
       const { rig } = body;
       body.root.updateMatrixWorld(true);
@@ -266,7 +274,19 @@ export function createFistsView(scene: THREE.Scene, low = false) {
         // Running with his hands down, the pump: his swing's timing on the designed arc (fparm.ts PUMP), the elbow
         // at a right angle all the way; eased in over the run's share
         // (taken over quickly once he's jogging: half way to his hanging arm, a fist would sit below the shot)
-        if (run > 0) blendArm(laid, pumpArm(laid.shoulder.x, swung[arms.indexOf(h)], s.sprint, h.pump, s.walk), Math.min(1, run * PUMP_IN));
+        const runIn = Math.min(1, run * PUMP_IN);
+        if (run > 0) blendArm(laid, pumpArm(laid.shoulder.x, swung[arms.indexOf(h)], s.sprint, h.pump, s.walk), runIn);
+        // Natural motion (the owner's call, 2026-11: "robotic", subtle): the hands' paths up into the guard and into
+        // the run are arcs (fparm.ts ARC), and the guard held is alive (LIFE: a breath, each hand its own drift, a
+        // slow weight shift), eased off while either hand is out punching and as the run takes over
+        const g = arcBulge(s.guard);
+        const r = arcBulge(runIn);
+        nudge.set(h.s * (ARC.guard[0] * g + ARC.run[0] * r), ARC.guard[1] * g + ARC.run[1] * r, -ARC.guard[2] * g - ARC.run[2] * r);
+        if (!s.still) {
+          const alive = s.guard * (1 - runIn) * (1 - THREE.MathUtils.smoothstep(Math.max(h.out, other.out), 0.25, 0.5));
+          if (alive > 0) nudge.addScaledVector(guardLife(lifeT, h.s, lifeAt), alive);
+        }
+        nudgeArm(laid, nudge);
         h.fore.visible = !loose;
         h.foreLoose.visible = loose;
         // The upper arm (its +z out and up, where the track top's stripes are) and the forearm with its fist
@@ -285,8 +305,8 @@ export function createFistsView(scene: THREE.Scene, low = false) {
       const ddt = Math.min(dt, 0.05);
       dipVel += (-LAND_DIP.spring * dip - LAND_DIP.damp * dipVel) * ddt;
       dip = Math.max(-LAND_DIP.most, dip + dipVel * ddt);
-      holder.position.set(-swayX * 0.05, -0.025 * tight - swayY * 0.04 + dip, -0.17 * tight);
-      holder.rotation.set(-swayY * 0.3, swayX * 0.3, 0, 'YXZ');
+      holder.position.set(-swayX.x * 0.05, -0.025 * tight - swayY.x * 0.04 + dip, -0.17 * tight);
+      holder.rotation.set(-swayY.x * 0.3, swayX.x * 0.3, 0, 'YXZ');
     },
   };
 }
