@@ -6,7 +6,8 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
+import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, setGroundLift, updateLights, updateWind } from './kit';
+import { SOUTH_GROUND_RECT, southLift } from './southground';
 import { CROWD_PACK, loadMocap } from './mocap-load';
 import type { MoData } from './mocap';
 import { setCrowdCapture } from './crowdclips';
@@ -144,6 +145,10 @@ import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
+
+// The south's rolling ground under everything drawn there (docs/south-plan.md Phase 1c): set as this module loads, so
+// the site worker, which loads it too, lifts what it builds the same way
+setGroundLift(southLift, SOUTH_GROUND_RECT);
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -355,7 +360,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Endswood Estate's (endsplaces.ts, docs/estate-plan.md Phase 8): the estate on its tenants' hall, St Aldwyn's
   // and Bunker Sound (drawn in its chunk)
   for (const e of ENDS_SPOTS) {
-    const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
+    const s = pickSpot(scene, e.id, ENDS_SLAB + southLift(e.pin[0], e.pin[1]), e.boxes, e.land, e.pinH, e.pin);
     spots.push(e.faces ? { ...s, faces: e.faces } : s);
   }
   // ...and Degen's home at the west end of the row by the Close (home.ts, docs/home-plan.md; drawn in Endswood

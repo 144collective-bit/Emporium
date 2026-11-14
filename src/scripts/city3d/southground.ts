@@ -238,3 +238,41 @@ export function southHeightAt(x: number, z: number) {
   if (x > px0 - 8 && x < px1 + 8 && z > pz0 - 8 && z < pz1 + 8) h *= smooth(0, 6, Math.hypot(Math.max(px0 - x, 0, x - px1), Math.max(pz0 - z, 0, z - pz1)));
   return h;
 }
+
+/* ---------- The lift the city reads (cached) ---------- */
+
+/** The grid the city's lift is read from: a sample every `LIFT_STEP`, worked out as it's first asked for */
+export const LIFT_STEP = 0.5;
+const [GX0, GZ0] = [SOUTH_GROUND_RECT[0], SOUTH_GROUND_RECT[1]];
+const GNX = Math.ceil((SOUTH_GROUND_RECT[2] - GX0) / LIFT_STEP) + 2;
+const GNZ = Math.ceil((SOUTH_GROUND_RECT[3] - GZ0) / LIFT_STEP) + 2;
+let GRID: Float32Array | null = null;
+const sample = (i: number, j: number) => {
+  GRID ??= new Float32Array(GNX * GNZ).fill(Number.NaN);
+  const k = j * GNX + i;
+  let v = GRID[k];
+  // (stored, then read back: the same number the first time as every time after)
+  if (Number.isNaN(v)) {
+    GRID[k] = southHeightAt(GX0 + i * LIFT_STEP, GZ0 + j * LIFT_STEP);
+    v = GRID[k];
+  }
+  return v;
+};
+/** Is a point on the south's rolling ground at all (a cheap test first) */
+export const onSouthGround = (x: number, z: number, m = 0) =>
+  x > SOUTH_GROUND_RECT[0] - m && x < SOUTH_GROUND_RECT[2] + m && z > SOUTH_GROUND_RECT[1] - m && z < SOUTH_GROUND_RECT[3] + m;
+/**
+ * How far the city is lifted at a point over today's ground (0 outside the south's ground): `southHeightAt()` read off
+ * its grid, between its samples a straight line each way. Everything the city draws, walks, drives and stands there
+ * reads this one (kit.ts `Batch.build()`, groundheight.ts, terrain.ts), so what's drawn is what's walked on.
+ */
+export function southLift(x: number, z: number) {
+  if (!onSouthGround(x, z)) return 0;
+  const [u, v] = [(x - GX0) / LIFT_STEP, (z - GZ0) / LIFT_STEP];
+  const [i, j] = [Math.floor(u), Math.floor(v)];
+  if (i < 0 || j < 0 || i >= GNX - 1 || j >= GNZ - 1) return 0;
+  const [fx, fz] = [u - i, v - j];
+  const a = sample(i, j) + (sample(i + 1, j) - sample(i, j)) * fx;
+  const b = sample(i, j + 1) + (sample(i + 1, j + 1) - sample(i, j + 1)) * fx;
+  return a + (b - a) * fz;
+}

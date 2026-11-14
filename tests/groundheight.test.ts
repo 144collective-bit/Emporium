@@ -3,6 +3,7 @@
 // with it everywhere, at every height. Then each layer answers alone where it stands, and the order resolves the
 // overlaps (a deck over the water, the tunnel under the highway, the mall's upper floor).
 import { test } from 'node:test';
+import { onSouthGround, southLift } from '../src/scripts/city3d/southground';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
 import { HOME, ROOF_Y, homeRoofY } from '../src/scripts/city3d/home';
@@ -47,6 +48,11 @@ function reference(leavesOpen: () => boolean) {
     const tn = UNDER.y(x, z, yNow);
     if (tn !== null) return tn;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
+    // (the south's rolling ground, southground.ts: new since the old groundAt(), so the reference takes it as the layers do)
+    if (onSouthGround(x, z) && (slab === SLAB || slab === 0.035)) {
+      const l = southLift(x, z);
+      if (l !== 0) return (slab === SLAB ? SLAB : 0.035 + Math.max(0, vergeY(x, z))) + l;
+    }
     if (slab === 0.035) {
       const v = vergeY(x, z);
       if (v > 0) return v + 0.035;
@@ -158,6 +164,8 @@ test('every layer answers alone where it stands, and nowhere on the open street 
   const g = (x: number, z: number) => ({ ...baseAt(x, z), leavesOpen: true });
   const where: Record<string, [number, number, number]> = {
     homeroof: [(HOME.house[0] + HOME.house[2]) / 2, (HOME.house[1] + HOME.house[3]) / 2, SLAB + ROOF_Y],
+    // (the south's rolling ground on the village's hill, St Aldwyn's churchyard)
+    south: [-205, 462, 0],
     tunnel: [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2, -2],
     hills: [HILL[0], HILL[1], 0],
     rolls: [ROLL[0], ROLL[1], 0],

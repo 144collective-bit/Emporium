@@ -89,3 +89,44 @@ test('no step anywhere, and nowhere too steep to walk', () => {
   // (every street's a bed: none left out)
   assert.equal(ROAD_BEDS.length, SOUTH_STREETS.length);
 });
+
+test('the city reads it: walking on its slabs and streets, what is drawn lifted and split, the solids on it', async () => {
+  const THREE = await import('three');
+  const { Batch, setGroundLift, LIFT_EDGE } = await import('../src/scripts/city3d/kit');
+  const { createGroundHeight, SLAB, STREET } = await import('../src/scripts/city3d/groundheight');
+  const { SOLIDS } = await import('../src/scripts/city3d/solids');
+  const { ENDS_SOLIDS } = await import('../src/scripts/city3d/endswood');
+  const { southLift } = await import('../src/scripts/city3d/southground');
+  const { SOUTH_BLOCKS } = await import('../src/scripts/city3d/south');
+  // (the cached lift is the ground, near enough)
+  for (const [x, z] of [[-205, 462], [-300, 470], [-150, 500], [-260, 400]] as Pt[]) assert.ok(Math.abs(southLift(x, z) - southHeightAt(x, z)) < 0.02, `the lift at ${x}, ${z}`);
+  // Walking: a block's slab and a street, lifted by the ground under them
+  const groundAt = createGroundHeight({ leavesOpen: () => true });
+  const village = SOUTH_BLOCKS.find((b) => b.zone === 'village' && Math.abs(southLift(b.poly[0][0], b.poly[0][1])) > 0.3)!;
+  const [bx, bz] = [village.poly.reduce((s, p) => s + p[0], 0) / village.poly.length, village.poly.reduce((s, p) => s + p[1], 0) / village.poly.length];
+  if (inside(village.poly, [bx, bz])) assert.ok(Math.abs(groundAt(bx, bz) - (SLAB + southLift(bx, bz))) < 1e-9, 'on a lifted slab');
+  const road = ROAD_BEDS.find((b) => b.street === 'south-church')!;
+  const [rx, rz] = road.pts[Math.floor(road.pts.length / 2)];
+  assert.ok(Math.abs(groundAt(rx, rz) - (STREET + southLift(rx, rz))) < 1e-9, 'on a lifted street');
+  // What's drawn: a long flat strip on the hill lifted onto it, split along it; one downtown left as it was
+  setGroundLift(southLift, SOUTH_GROUND_RECT);
+  const draw = (x0: number, z0: number) => {
+    const b = new Batch();
+    b.add(new THREE.PlaneGeometry(30, 2).rotateX(-Math.PI / 2).translate(x0, 0.2, z0), new THREE.MeshBasicMaterial());
+    const g = new THREE.Group();
+    b.build(g);
+    return (g.children[0] as InstanceType<typeof THREE.Mesh>).geometry;
+  };
+  const up = draw(-205, 462);
+  const pos = up.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) assert.ok(Math.abs(pos.getY(i) - (0.2 + southLift(pos.getX(i), pos.getZ(i)))) < 1e-5, 'a vertex not on the ground');
+  for (let i = 0; i + 2 < pos.count; i += 3)
+    for (const [a, c] of [[i, i + 1], [i + 1, i + 2], [i + 2, i]]) assert.ok(Math.hypot(pos.getX(a) - pos.getX(c), pos.getZ(a) - pos.getZ(c)) <= LIFT_EDGE + 1e-6, 'an edge too long to follow the ground');
+  const flat = draw(30, 30).getAttribute('position');
+  for (let i = 0; i < flat.count; i++) assert.ok(Math.abs(flat.getY(i) - 0.2) < 1e-6, 'downtown lifted');
+  // The solids: each bollard's top over the ground it stands on
+  for (const b of ENDS_SOLIDS) {
+    const s = SOLIDS.find((q) => q[0] === b[0] && q[1] === b[1] && q[2] === b[2] && q[3] === b[3])!;
+    assert.ok(Math.abs(s[4] - (b[4] + southLift((b[0] + b[2]) / 2, (b[1] + b[3]) / 2))) < 1e-9, 'a bollard left at the old ground');
+  }
+});

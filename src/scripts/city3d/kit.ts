@@ -733,6 +733,61 @@ function ensureUv(g: THREE.BufferGeometry) {
  */
 export type Lod = 'all' | 'near' | 'far';
 
+/**
+ * The ground the city's fixed geometry stands on, where it isn't flat (the south's rolling ground, southground.ts:
+ * docs/south-plan.md Phase 1c): set once at the start (index.ts, on the main thread and in the site worker alike).
+ * `Batch.build()` lifts every vertex inside `rect` by `lift(x, z)`, its faces first split so no edge runs longer than
+ * `LIFT_EDGE` along the ground (so a big slab or a long wall follows the slope); everything else is left as it was.
+ */
+let groundLift: { lift: (x: number, z: number) => number; rect: readonly [number, number, number, number] } | null = null;
+export function setGroundLift(lift: (x: number, z: number) => number, rect: readonly [number, number, number, number]) {
+  groundLift = { lift, rect };
+}
+/** The longest an edge may run along the ground once lifted (the south's ground bends by under a centimetre in it) */
+export const LIFT_EDGE = 5;
+/** A geometry lifted onto the ground: split (unindexed) till no edge is longer than `LIFT_EDGE` across x and z, then
+ * each vertex raised by the lift under it; or the same geometry where none of it is on the lifted ground */
+function liftOnto(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  if (!groundLift) return g;
+  const [rx0, rz0, rx1, rz1] = groundLift.rect;
+  g.computeBoundingBox();
+  const bb = g.boundingBox!;
+  if (bb.max.x <= rx0 || bb.min.x >= rx1 || bb.max.z <= rz0 || bb.min.z >= rz1) return g;
+  const src = g.index ? g.toNonIndexed() : g;
+  const names = Object.keys(src.attributes);
+  const attrs = names.map((n) => src.getAttribute(n) as THREE.BufferAttribute);
+  const sizes = attrs.map((a) => a.itemSize);
+  const out: number[][] = names.map(() => []);
+  const pos = src.getAttribute('position');
+  const vert = (i: number) => attrs.map((a, k) => Array.from({ length: sizes[k] }, (_, c) => a.getComponent(i, c)));
+  const P = names.indexOf('position');
+  const mid = (a: number[][], b: number[][]) => a.map((v, k) => v.map((x, c) => (x + b[k][c]) / 2));
+  const flat2 = (a: number[][], b: number[][]) => Math.hypot(a[P][0] - b[P][0], a[P][2] - b[P][2]);
+  const emit = (a: number[][], b: number[][], c: number[][], depth: number) => {
+    const [ab, bc, ca] = [flat2(a, b), flat2(b, c), flat2(c, a)];
+    if (depth < 6 && Math.max(ab, bc, ca) > LIFT_EDGE) {
+      const [m1, m2, m3] = [mid(a, b), mid(b, c), mid(c, a)];
+      emit(a, m1, m3, depth + 1);
+      emit(m1, b, m2, depth + 1);
+      emit(m3, m2, c, depth + 1);
+      emit(m1, m2, m3, depth + 1);
+      return;
+    }
+    for (const v of [a, b, c]) v.forEach((x, k) => out[k].push(...x));
+  };
+  for (let i = 0; i + 2 < pos.count; i += 3) emit(vert(i), vert(i + 1), vert(i + 2), 0);
+  const res = new THREE.BufferGeometry();
+  names.forEach((n, k) => res.setAttribute(n, new THREE.Float32BufferAttribute(out[k], sizes[k], attrs[k].normalized)));
+  // (a split face's normals are the means of its corners': made whole again)
+  if (res.getAttribute('normal')) res.normalizeNormals();
+  const p = res.getAttribute('position');
+  const { lift } = groundLift;
+  for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + lift(p.getX(i), p.getZ(i)));
+  if (src !== g) src.dispose();
+  g.dispose();
+  return res;
+}
+
 export class Batch {
   private parts = new Map<string, { mat: THREE.Material; lod: Lod; geos: THREE.BufferGeometry[] }>();
   /** The level what's added now is drawn at (see `Lod`; `detail()` sets it for a while) */
@@ -859,8 +914,10 @@ export class Batch {
   /** `details`: whether the near-only details cast shadows too (they don't: small, and the shadow map's triangles are dear) */
   build(parent: THREE.Object3D, { cast = true, receive = true, details = false } = {}) {
     for (const { mat, lod, geos } of this.parts.values()) {
-      const merged = mergeGeometries(geos, false);
-      if (!merged) continue;
+      const joined = mergeGeometries(geos, false);
+      if (!joined) continue;
+      // (onto the ground where it isn't flat: the south's rolling ground)
+      const merged = liftOnto(joined);
       const mesh = new THREE.Mesh(merged, mat);
       if (lod !== 'all') mesh.userData.lod = lod;
       mesh.castShadow = cast && (lod !== 'near' || details);

@@ -41,6 +41,7 @@ import { heightAt, onHills } from './terrain';
 import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
 import { vergeY } from './verges';
+import { onSouthGround, southLift } from './southground';
 import { GARAGE_SITE } from './solids';
 import { PLAN, inPoly, type Pt } from './streetplan';
 
@@ -88,6 +89,18 @@ export const GROUND_LAYERS: GroundLayer[] = [
   // Below ground (underground.ts): Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
   // open floors, and a floor under a roof when `yNow` is down there
   { id: 'tunnel', how: 'take', at: (x, z, yNow) => UNDER.y(x, z, yNow) },
+  // The south's rolling ground (southground.ts, docs/south-plan.md Phase 1c): its slabs, sidewalks, streets and land
+  // all lifted by the ground under them, as what's drawn there is (kit.ts `Batch.build()`)
+  {
+    id: 'south',
+    how: 'take',
+    at: (x, z, _y, g) => {
+      if (!onSouthGround(x, z) || (!g.slab && !g.open)) return null;
+      const l = southLift(x, z);
+      if (l === 0) return null;
+      return (g.slab ? SLAB : STREET + Math.max(0, vergeY(x, z))) + l;
+    },
+  },
   // A block's edge onto open land eases down to the ground (verges.ts: the bank's slope)
   {
     id: 'verge',

@@ -24,7 +24,7 @@ import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
-import { TERRAIN_RECT, heightAt, onHills, slopeAt } from './terrain';
+import { TERRAIN_RECT, heightAt, onCrest, onHills, slopeAt } from './terrain';
 import { DRIVE_BLOCKS } from './coral';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
@@ -1420,7 +1420,8 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
     halos[tone].push(l.x + dir.x * out, l.y + hy - 0.03, l.z + dir.z * out);
     // (on Crestmont's hill roads the ground under the bulb: a pool flat on a slope sits a little up, terrain.ts)
     const [px, pz] = [l.x + dir.x * out, l.z + dir.z * out];
-    const py = onHills(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + 0.02;
+    // (the south's lamps stand on its rolling ground already, their own height lifted: endswood.ts `ENDS_LAMPS`)
+    const py = onCrest(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + 0.02 + 1.3 * slopeAt(px, pz) * (onHills(px, pz) ? 1 : 0);
     poolsOf[tone].push(new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
   for (const p of pools) poolsOf[p.sodium ? 'sodium' : 'white'].push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size)));
