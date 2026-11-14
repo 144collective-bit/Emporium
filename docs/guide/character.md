@@ -175,8 +175,16 @@ keep it up to date when what it describes changes.
     flat ink laid on the face (`features`: bean eyes with a white glint,
     brows, the mouth; not on the far crowd) and the hair (`hairShell()`
     over the head's own outline from `hairline()`; `hair-<cut>` for
-    `HAIR_CUTS`, `hair-nape` under a hat or a helmet, none under the hood or
-    when bald; the far crowd's every cut the crop). No new draw calls: all
+    `HAIR_CUTS`: buzz, crop, curls, bun, twists (locs, a `detail`),
+    high-top (a block over a fade) and long (`longLine()`, falling straight
+    below `LONG_HANG`, out over the ears: `overEars()`); `hair-nape` under a
+    hat or a helmet, `hair-longunder` for long hair on single figures; none
+    under the hood or when bald; the far crowd's every cut the crop). **Head
+    shapes** (Phase 3, unmasked only): `HEAD_SCALE` by `Outfit.headShape`,
+    a stretch about the head bone by each vertex's weight on it
+    (`shapeHead()`): done once to a figure's mesh (`stretchHead()` in
+    character.ts), in the crowd's shader from texel `SHAPE_TEXEL` of the
+    person's wardrobe row (crowdskin.ts), so hats and hair stretch with it. No new draw calls: all
     on the plain material. Who goes unmasked in the crowd is `unmask()` in
     crowdlook.ts (`MASKED_SHARE` keep the balaclava, the bouncers all do;
     `SKIN_TONES`, `HAIR_COLORS`, `HAIR_DYES`), seeded after the clothes.
