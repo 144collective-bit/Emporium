@@ -1387,89 +1387,6 @@ export function items(q: Detail, hero = false): Item[] {
   ];
   // (snug where the crown is, so it stays round the crown all the way)
   const bucketBand = snug(loft([BUCKET_BAND(0.17), BUCKET_BAND(0.19)], R(20), HN_HAT), 0.168, () => 0.0058);
-  /*
-   * The hood up (docs/wardrobe-plan.md Phase 3): cloth over the head, not a helmet. Its sections are the head's own
-   * outline carried out (`headShell()`), roomier at the sides (`HOOD_SIDE`, over the ears and the shades' arms) and
-   * fuller at the back, rising a little over the crown; under the jaw it falls away from the face to rest on the
-   * hoodie's shoulders (`HOOD_FOOT`), where the chest carries it (the head's own weights: the crown turns with the
-   * head). Its opening frames the face, from the brow round behind the shades' frames and down the cheeks to a
-   * narrow V at the throat (`hoodOpen()`), each row drawn only round its cloth so the edge is clean; a rolled edge
-   * (`hoodRim`) runs round the opening and a rolled hem (`hoodHem`) where it rests.
-   */
-  const HOOD_SIDE = 0.02;
-  const HOOD_N = 2.2;
-  /** Where the hood rests on the hoodie's shoulders (head space: the hoodie's own sections there, a touch outside) */
-  const HOOD_FOOT: Sec = [-0.036, 0.125, 0.092, -0.006];
-  /**
-   * The opening's half-width at a height, as an angle round the hood's ring each side of the front: behind the shades'
-   * frames from the cheeks to the brow, narrowing smoothly to a point over the brow (so the rows close a little at a
-   * time and the cloth keeps its curve), and to a narrow V at the throat
-   */
-  const HOOD_FACE = 1.12;
-  const HOOD_THROAT = 0.18;
-  const hoodOpen = (y: number) =>
-    y >= 0.19 ? 0 : HOOD_THROAT + (HOOD_FACE - HOOD_THROAT) * THREE.MathUtils.smoothstep(y, -0.045, 0.04) - HOOD_FACE * THREE.MathUtils.smoothstep(y, 0.148, 0.19);
-  const hoodSecs = (() => {
-    // (the head's outline carried out over the cheeks, the brow and the crown; fuller behind, where a hood hangs)
-    const upper = headShell(0.06, (y) => HOOD_SIDE - 0.006 * THREE.MathUtils.smoothstep(y, 0.2, HEAD_HI)).map(([y, hw, hd, z = 0]): Sec => {
-      const full = 0.012 * Math.exp(-(((y - 0.12) / 0.07) ** 2));
-      return [y, hw, hd + full / 2, z - full / 2];
-    });
-    // (under the jaw: falling away from the face to the shoulders)
-    const top = upper[0];
-    const lower: Sec[] = [];
-    const n = Math.max(3, Math.round((top[0] - HOOD_FOOT[0]) / HAT_STEP));
-    for (let i = 0; i < n; i++) {
-      const f = THREE.MathUtils.smoothstep(i / n, 0, 1);
-      const mix = (k: number) => (HOOD_FOOT[k] ?? 0) + ((top[k] ?? 0) - (HOOD_FOOT[k] ?? 0)) * f;
-      lower.push([mix(0), mix(1), mix(2), mix(3)]);
-    }
-    // (closed over the crown: a last row to a point)
-    const last = upper[upper.length - 1];
-    return [...lower, ...upper, [last[0] + 0.0005, 0, 0, last[3] ?? 0] as Sec];
-  })();
-  /** Each row's cloth: from the opening's left edge round the back to its right edge (or all the way round) */
-  const hoodRows = hoodSecs.map((sec) => {
-    const t = Math.max(0, hoodOpen(sec[0]));
-    return { sec, from: Math.PI / 2 + t, to: Math.PI / 2 - t + 2 * Math.PI, open: t > 1e-4 };
-  });
-  const HOOD_M = R(32);
-  const hoodUp = (() => {
-    const pos: number[] = [];
-    const idx: number[] = [];
-    for (const r of hoodRows) for (let j = 0; j <= HOOD_M; j++) pos.push(...ringAt(r.sec, r.from + ((r.to - r.from) * j) / HOOD_M, HOOD_N));
-    const W = HOOD_M + 1;
-    for (let i = 0; i < hoodRows.length - 1; i++)
-      for (let j = 0; j < HOOD_M; j++) {
-        const a = i * W + j;
-        const b = (i + 1) * W + j;
-        idx.push(a, b, a + 1, a + 1, b, b + 1);
-      }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setIndex(idx);
-    // (the rows closed all the way round meet themselves at the front: one smooth seam)
-    const m = mergeVertices(g, 1e-6);
-    m.computeVertexNormals();
-    return m;
-  })();
-  /** The opening's edge, up the right side, over the brow and down the left */
-  const hoodEdge = (() => {
-    const open = hoodRows.filter((r) => r.open);
-    const right = open.map((r) => ringAt(r.sec, r.to, HOOD_N));
-    const left = open.map((r) => ringAt(r.sec, r.from, HOOD_N));
-    // (over the top of the opening, the brow: the middle of the first closed row's front)
-    const crest = hoodRows[hoodRows.indexOf(open[open.length - 1]) + 1];
-    const peak = crest ? [ringAt(crest.sec, Math.PI / 2, HOOD_N)] : [];
-    return [...right, ...peak, ...left.reverse()];
-  })();
-  const ROLL = q === 3 ? 0.0055 : 0.0065;
-  const hoodRim = tube(hoodEdge.filter((_, i) => i % (q === 3 ? 1 : 2) === 0 || i === hoodEdge.length - 1), ROLL, q === 3 ? R(64) : R(32), q === 3 ? R(10) : R(6));
-  const hoodHem = (() => {
-    const r = hoodRows[0];
-    const pts = Array.from({ length: R(20) + 1 }, (_, j) => ringAt(r.sec, r.from + ((r.to - r.from) * j) / R(20), HOOD_N));
-    return tube(pts, ROLL, R(40), q === 3 ? R(10) : R(6));
-  })();
   const HELMET: Sec[] = [
     [0.152, 0.101, 0.112, -0.004],
     [0.2, 0.096, 0.106, -0.005],
@@ -1627,6 +1544,97 @@ export function items(q: Detail, hero = false): Item[] {
   const HK = smooth(HOODIE);
   const hoodieFront = surface(HK, HN2);
   const hoodieBody = loft(HK, TOP_RINGS, HN2);
+  /*
+   * The hood up (docs/wardrobe-plan.md Phase 3): cloth over the head, not a helmet, and one with the hoodie. Its
+   * sections are the head's own outline carried out (`headShell()`), roomier at the sides (`HOOD_SIDE`, over the ears
+   * and the shades' arms) and fuller at the back, rising a little over the crown; under the jaw it falls to the
+   * neck (`HOOD_NECK`) and grows out of the hoodie's own neckline: its lowest rows lie on the sweater's surface (its
+   * sections, a little inside, then a little out: `HOOD_INTO`), leaving it at a shallow angle so no line shows where
+   * one becomes the other, weighted as the sweater is there (the `hood` region, skeleton.ts) and as the head above
+   * the jaw. Its opening frames the face, from the brow round behind the shades' frames and down the cheeks to a
+   * narrow V at the throat that closes where it meets the sweater (`hoodOpen()`), each row drawn only round its
+   * cloth so the edge is clean, a rolled edge (`hoodRim`) round it.
+   */
+  const HOOD_SIDE = 0.02;
+  const HOOD_N = 2.2;
+  /** The hood round the neck, over the hoodie's neckline (head space) */
+  const HOOD_NECK: Sec = [-0.03, 0.124, 0.102, -0.006];
+  /** Where the hood grows out of the sweater: its lowest row this far inside it, rising to this far out (head space) */
+  const HOOD_INTO = { from: -0.085, under: 0.005, to: -0.05, over: 0.003 };
+  /**
+   * The opening's half-width at a height, as an angle round the hood's ring each side of the front: behind the shades'
+   * frames from the cheeks to the brow, narrowing smoothly to a point over the brow (so the rows close a little at a
+   * time and the cloth keeps its curve), and to a narrow V at the throat
+   */
+  const HOOD_FACE = 1.12;
+  const HOOD_THROAT = 0.18;
+  const hoodOpen = (y: number) =>
+    y >= 0.19
+      ? 0
+      : (HOOD_THROAT + (HOOD_FACE - HOOD_THROAT) * THREE.MathUtils.smoothstep(y, -0.045, 0.04) - HOOD_FACE * THREE.MathUtils.smoothstep(y, 0.148, 0.19)) *
+        THREE.MathUtils.smoothstep(y, -0.052, -0.028);
+  const hoodSecs = (() => {
+    // (the head's outline carried out over the cheeks, the brow and the crown; fuller behind, where a hood hangs)
+    const upper = headShell(0.06, (y) => HOOD_SIDE - 0.006 * THREE.MathUtils.smoothstep(y, 0.2, HEAD_HI)).map(([y, hw, hd, z = 0]): Sec => {
+      const full = 0.012 * Math.exp(-(((y - 0.12) / 0.07) ** 2));
+      return [y, hw, hd + full / 2, z - full / 2];
+    });
+    // (under the jaw: falling to the neck, then into the hoodie's neckline, on the sweater's own sections)
+    const top = upper[0];
+    const lerp = (a: Sec, b: Sec, f: number): Sec => [0, 1, 2, 3].map((k) => (a[k] ?? 0) + ((b[k] ?? 0) - (a[k] ?? 0)) * f) as Sec;
+    const lower: Sec[] = [];
+    const n = Math.max(6, Math.round((top[0] - HOOD_INTO.from) / HAT_STEP));
+    for (let i = 0; i < n; i++) {
+      const y = HOOD_INTO.from + ((top[0] - HOOD_INTO.from) * i) / n;
+      const [, bw, bd, bz = 0] = secAt(HK, Math.min(y + HEAD_Y, HK[HK.length - 1][0]));
+      const off = -HOOD_INTO.under + (HOOD_INTO.under + HOOD_INTO.over) * THREE.MathUtils.smoothstep(y, HOOD_INTO.from, HOOD_INTO.to);
+      const body: Sec = [y, bw + off, bd + off, bz];
+      const neck = lerp(HOOD_NECK, top, THREE.MathUtils.smoothstep(y, HOOD_NECK[0], top[0]));
+      const out = lerp(body, neck, THREE.MathUtils.smoothstep(y, -0.06, -0.015));
+      out[0] = y;
+      lower.push(out);
+    }
+    // (closed over the crown: a last row to a point)
+    const last = upper[upper.length - 1];
+    return [...lower, ...upper, [last[0] + 0.0005, 0, 0, last[3] ?? 0] as Sec];
+  })();
+  /** Each row's cloth: from the opening's left edge round the back to its right edge (or all the way round) */
+  const hoodRows = hoodSecs.map((sec) => {
+    const t = Math.max(0, hoodOpen(sec[0]));
+    return { sec, from: Math.PI / 2 + t, to: Math.PI / 2 - t + 2 * Math.PI, open: t > 1e-4 };
+  });
+  const HOOD_M = R(32);
+  const hoodUp = (() => {
+    const pos: number[] = [];
+    const idx: number[] = [];
+    for (const r of hoodRows) for (let j = 0; j <= HOOD_M; j++) pos.push(...ringAt(r.sec, r.from + ((r.to - r.from) * j) / HOOD_M, HOOD_N));
+    const W = HOOD_M + 1;
+    for (let i = 0; i < hoodRows.length - 1; i++)
+      for (let j = 0; j < HOOD_M; j++) {
+        const a = i * W + j;
+        const b = (i + 1) * W + j;
+        idx.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    // (the rows closed all the way round meet themselves at the front: one smooth seam)
+    const m = mergeVertices(g, 1e-6);
+    m.computeVertexNormals();
+    return m;
+  })();
+  /** The opening's edge, up the right side, over the brow and down the left */
+  const hoodEdge = (() => {
+    const open = hoodRows.filter((r) => r.open);
+    const right = open.map((r) => ringAt(r.sec, r.to, HOOD_N));
+    const left = open.map((r) => ringAt(r.sec, r.from, HOOD_N));
+    // (over the top of the opening, the brow: the middle of the first closed row's front)
+    const crest = hoodRows[hoodRows.indexOf(open[open.length - 1]) + 1];
+    const peak = crest ? [ringAt(crest.sec, Math.PI / 2, HOOD_N)] : [];
+    return [...right, ...peak, ...left.reverse()];
+  })();
+  const ROLL = q === 3 ? 0.0055 : 0.0065;
+  const hoodRim = tube(hoodEdge.filter((_, i) => i % (q === 3 ? 1 : 2) === 0 || i === hoodEdge.length - 1), ROLL, q === 3 ? R(64) : R(32), q === 3 ? R(10) : R(6));
   const hem = loft(
     [
       [-0.095, 0.152, 0.104, 0],
@@ -2168,7 +2176,8 @@ export function items(q: Detail, hero = false): Item[] {
    * the hoodie's chest
    */
   const chainHood = (() => {
-    const lift = (x: number) => 0.006 + 0.01 * Math.max(0, 1 - Math.abs(x) / 0.035);
+    // (a little further off the chest than on the plain hoodie: the hood's cloth lies over the sweater there)
+    const lift = (x: number) => 0.012 + 0.01 * Math.max(0, 1 - Math.abs(x) / 0.035);
     const on = (x: number, y: number): [number, number, number] => [x, y - HEAD_Y, hoodieFront(x, y) + lift(x)];
     const side = (s: number): [number, number, number][] => [
       armHook(s),
@@ -2176,9 +2185,11 @@ export function items(q: Detail, hero = false): Item[] {
       [s * 0.074, 0.06, 0.074],
       [s * 0.05, 0.015, 0.088],
       [s * 0.034, -0.03, 0.1],
-      // (over the hood's hem where it rests at the throat)
+      // (over the hood's V where it meets the sweater, then down the chest)
       [s * 0.038, -0.048, 0.1],
-      on(s * 0.04, 0.385),
+      on(s * 0.04, 0.392),
+      on(s * 0.039, 0.378),
+      on(s * 0.035, 0.362),
       on(s * 0.03, 0.35),
     ];
     return tube([...side(-1), on(0, 0.34), ...side(1).reverse()], 0.0035, R(48), q === 3 ? 6 : 4);
@@ -2504,7 +2515,7 @@ export function items(q: Detail, hero = false): Item[] {
     {
       id: 'hoodUp',
       when: (o) => hoodie(o) && !!o.hood,
-      pieces: [P('head', hoodUp, 'top', { mat: 'double' }), P('head', one([hoodRim, hoodHem]), 'top', { shade: 0.85 })],
+      pieces: [P('head', hoodUp, 'top', { mat: 'double', region: 'hood' }), P('head', hoodRim, 'top', { shade: 0.85, region: 'hood' })],
     },
     {
       id: 'helmet',
@@ -2646,10 +2657,11 @@ export function items(q: Detail, hero = false): Item[] {
       when: (o) => sneakers(o) && !(hero && o.shoeMark),
       pieces: both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true, ...SHOE }),
     },
-    // (the puffer's high collar covers the headphones, and the necklace, below)
+    // (the puffer's high collar covers the headphones, and the necklace, below; so does the hood up, where it meets the
+    // sweater round the neck)
     {
       id: 'headphones',
-      when: (o) => !!o.headphones && !puffer(o),
+      when: (o) => !!o.headphones && !puffer(o) && !(hoodie(o) && o.hood),
       pieces: [P('torso', one(headphones), 'headphones', { detail: true }), ...(cushions.length ? [P('torso', one(cushions), 'headphones', { shade: 0.45, detail: true })] : [])],
     },
     // (the necklace, bags, boards and wings on the top he's wearing: each top its own)

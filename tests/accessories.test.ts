@@ -7,7 +7,6 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { items, PLAYER, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
-import { HEAD_Y } from '../src/scripts/city3d/skeleton';
 import { bakedHand, headGeometry, headRow, HEAD_TOP } from '../src/scripts/city3d/body';
 
 const LEVELS: Detail[] = [3, 2, 1, 0];
@@ -179,19 +178,19 @@ for (const q of LEVELS)
 
 /*
  * What's worn round the head with the hood up (the wardrobe plan's Phase 3): the shades' chain runs inside the hood and
- * out through its opening, the headphones sit round the neck inside it; neither in the cloth (between just inside it
- * and a little outside, looking out from the head's middle).
+ * out through its opening and down over the hoodie; it isn't in the cloth (between just inside it and the chain's
+ * thickness outside, looking out from the head's middle). The headphones go under the hood: none are drawn with it up.
  */
 for (const q of LEVELS)
-  test(`accessories: the chain and the headphones clear of the hood's cloth (detail ${q})`, () => {
+  test(`accessories: the chain clear of the hood's cloth, the headphones under it (detail ${q})`, () => {
     const all = items(q, true);
     const o: Outfit = { ...PLAYER, kind: 'hoodie', hood: true, cap: undefined, chain: true, headphones: '#3355ff' };
     const hood = new THREE.Mesh(all.find((i) => i.id === 'hoodUp' && i.when(o))!.pieces[0].geo, side);
     const chain = all.find((i) => i.id === 'chain-hood')!;
     assert.ok(chain.when(o) && !all.some((i) => i.id === 'chain-hoodie' && i.when(o)), "the hood's own chain");
-    const phones = all.find((i) => i.id === 'headphones' && i.when(o));
-    // (each in the head's space: the headphones are drawn on the torso)
-    const worn: [string, THREE.BufferGeometry, number][] = [['the chain', chain.pieces[0].geo, 0], ...(phones ? phones.pieces.map((p): [string, THREE.BufferGeometry, number] => ['the headphones', p.geo, -HEAD_Y]) : [])];
+    // (the headphones go under the hood, as under the puffer's collar)
+    assert.ok(!all.some((i) => i.id === 'headphones' && i.when(o)), 'no headphones over the hood up');
+    const worn: [string, THREE.BufferGeometry, number][] = [['the chain', chain.pieces[0].geo, 0]];
     const v = new THREE.Vector3();
     const o3 = new THREE.Vector3();
     const d = new THREE.Vector3();
@@ -207,7 +206,8 @@ for (const q of LEVELS)
         if (dv < 1e-4) continue;
         const dh = hit(hood, o3, d.normalize(), false);
         if (!Number.isFinite(dh)) continue;
-        assert.ok(dv < dh - 0.002 || dv > dh + 0.006, `${what} is in the hood's cloth at ${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)} (${((dv - dh) * 1000).toFixed(1)} thousandths)`);
+        // (the chain's own thickness out from the cloth: resting on it, as on the sweater)
+        assert.ok(dv < dh - 0.002 || dv > dh + 0.0034, `${what} is in the hood's cloth at ${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)} (${((dv - dh) * 1000).toFixed(1)} thousandths)`);
       }
     }
   });

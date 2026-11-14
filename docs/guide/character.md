@@ -100,20 +100,25 @@ keep it up to date when what it describes changes.
     clear of the head at every level and the held things clear of the
     fingers. The lab takes `wear=` and `at=x,y,z`.
   - **The hood up** (`docs/wardrobe-plan.md` Phase 3): cloth over the head,
-    not a helmet. Its sections are the head's outline carried out
+    not a helmet, and one with the hoodie (the owner's call: no line between
+    hood and sweater). Its sections are the head's outline carried out
     (`headShell()`, `HOOD_SIDE` at the sides, fuller behind), falling under
-    the jaw to rest on the hoodie's shoulders (`HOOD_FOOT`, where the
-    chest's weights carry it; the crown turns with the head). Its opening
-    (`hoodOpen()`: an angle round each row either side of the front) frames
-    the face behind the shades' frames, closing to a soft point over the
-    brow and to a narrow V at the throat; each row is drawn only round its
-    cloth, a rolled edge (`hoodRim`) runs round the opening and a rolled hem
-    (`hoodHem`) where it rests. With the hood up the shades' chain is its own
-    (`chain-hood`): forward inside the hood, out through the opening by the
-    jaw and over the hem at the throat. `tests/accessories.test.ts` holds the
-    head, ears and the shades' arms inside it and the lenses clear of it, the
-    chain and headphones out of its cloth, at every level;
-    `tests/clothing.test.ts` holds it out of the hoodie through every pose.
+    the jaw to the neck (`HOOD_NECK`) and growing out of the hoodie's own
+    neckline: its lowest rows lie on the sweater's sections, a little inside
+    then a little out (`HOOD_INTO`), leaving it at a shallow angle so no ink
+    line shows; there it's weighted as the sweater is (the `hood` region in
+    `weigh()`: the trunk's weights, collarbones and all, handed to the
+    neck's and the head's up past the jaw). Its opening (`hoodOpen()`: an
+    angle round each row either side of the front) frames the face behind the
+    shades' frames, closing to a soft point over the brow and to a V at the
+    throat that closes where it meets the sweater, a rolled edge (`hoodRim`)
+    round it. With the hood up the shades' chain is its own (`chain-hood`):
+    inside the hood, out through the opening by the jaw, over the V and down
+    the chest; the headphones go under the hood (not drawn, as under the
+    puffer's collar). `tests/accessories.test.ts` holds the head, ears and
+    the shades' arms inside it and the lenses clear of it, the chain out of
+    its cloth, at every level; `tests/clothing.test.ts` holds it out of the
+    hoodie through every pose.
 - **The suit's tailoring** (the owner's call, after the clothing plan) is
   planned in `docs/tailoring-plan.md`: the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the
