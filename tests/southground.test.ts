@@ -130,3 +130,16 @@ test('the city reads it: walking on its slabs and streets, what is drawn lifted 
     assert.ok(Math.abs(s[4] - (b[4] + southLift((b[0] + b[2]) / 2, (b[1] + b[3]) / 2))) < 1e-9, 'a bollard left at the old ground');
   }
 });
+
+test("what's lifted keeps an index (the site worker hands back only indexed meshes)", async () => {
+  const THREE = await import('three');
+  const { Batch, setGroundLift } = await import('../src/scripts/city3d/kit');
+  const { southLift } = await import('../src/scripts/city3d/southground');
+  setGroundLift(southLift, SOUTH_GROUND_RECT);
+  const b = new Batch();
+  b.add(new THREE.PlaneGeometry(30, 2).rotateX(-Math.PI / 2).translate(-205, 0.2, 462), new THREE.MeshBasicMaterial());
+  const g = new THREE.Group();
+  b.build(g);
+  const geo = (g.children[0] as InstanceType<typeof THREE.Mesh>).geometry;
+  assert.ok(geo.index && geo.index.count === geo.getAttribute('position').count);
+});

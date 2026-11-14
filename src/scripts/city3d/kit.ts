@@ -783,6 +783,11 @@ function liftOnto(g: THREE.BufferGeometry): THREE.BufferGeometry {
   const p = res.getAttribute('position');
   const { lift } = groundLift;
   for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + lift(p.getX(i), p.getZ(i)));
+  // (indexed as everything a Batch builds is: the site worker hands back only indexed meshes, sitework.ts)
+  const n = p.count;
+  const ix = n > 65535 ? new Uint32Array(n) : new Uint16Array(n);
+  for (let i = 0; i < n; i++) ix[i] = i;
+  res.setIndex(new THREE.BufferAttribute(ix, 1));
   if (src !== g) src.dispose();
   g.dispose();
   return res;
