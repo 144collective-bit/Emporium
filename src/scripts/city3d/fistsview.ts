@@ -31,7 +31,7 @@ import type { Outfit } from './character';
 import { FP_LEVEL, FP_SCALE, FP_SHIRT, FP_SKIN, FP_VARSITY, fpShade, upFront } from './viewmodel';
 import type { Skeleton } from './skeleton';
 import { UPPER_ARM } from './skeleton';
-import { ARC, ARM, SWAY, aimPiece, arcBulge, blendArm, guardLife, nudgeArm, springStep, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, paintFist, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
+import { ARC, ARM, SWAY, aimPiece, arcBulge, blendArm, followStep, guardLife, newFollow, nudgeArm, springStep, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, paintFist, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
 
 /** A kick: how far the hands drop and the view bobs (metres), and how long after the strike the bob settles */
 export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
@@ -162,7 +162,7 @@ export function createFistsView(scene: THREE.Scene, low = false) {
     foreLoose.visible = false;
     holder.add(upper, fore, foreLoose);
     const j: BodyJoints = { shoulder: new THREE.Vector3(), elbow: new THREE.Vector3(), hand: new THREE.Vector3(), back: new THREE.Vector3() };
-    return { S, s, thumb: s, upper, fore, foreLoose, j, laid: newLaidArm(), pump: newLaidArm(), out: 0, ahead: 0 };
+    return { S, s, thumb: s, upper, fore, foreLoose, j, laid: newLaidArm(), pump: newLaidArm(), out: 0, ahead: 0, follow: newFollow() };
   };
   const arms = [make('L'), make('R')];
   upFront(root);
@@ -216,6 +216,7 @@ export function createFistsView(scene: THREE.Scene, low = false) {
       root.visible = on && !!body;
       if (!root.visible || !body) {
         haveDir = false;
+        for (const h of arms) h.follow.fresh = true;
         return;
       }
       root.position.copy(camera.position);
@@ -287,6 +288,13 @@ export function createFistsView(scene: THREE.Scene, low = false) {
           if (alive > 0) nudge.addScaledVector(guardLife(lifeT, h.s, lifeAt), alive);
         }
         nudgeArm(laid, nudge);
+        // Follow-through and overlap (fparm.ts FOLLOW): the fist follows its place through a quick spring, a little
+        // late and a little past, and its turn lags the forearm's, so the wrist snaps over at the end
+        if (s.still) h.follow.fresh = true;
+        else {
+          nudgeArm(laid, followStep(h.follow, laid.wrist, laid.face, dt, nudge));
+          laid.face.copy(h.follow.face);
+        }
         h.fore.visible = !loose;
         h.foreLoose.visible = loose;
         // The upper arm (its +z out and up, where the track top's stripes are) and the forearm with its fist
