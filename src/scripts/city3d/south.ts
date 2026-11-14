@@ -24,6 +24,7 @@
  */
 import { GATES, HEAD, PLOT } from './endsfar';
 import { NS_SOUTH_END } from './layout';
+import { LOT9_FENCE } from './lot9';
 import { area, cross, distTo, faces, inside, nearestIndex, node, seeded, selfCrossings, smooth, type FaceBlock, type GraphLine, type Pt } from './streetfaces';
 
 export type { Pt };
@@ -133,7 +134,9 @@ const AVENUE_RUNS: GraphLine[] = [
 ];
 /** The land's edge by the ring road: along it to the bend, then round with it to Gate Lane's top */
 const RING_EDGE: Pt[] = [
-  ...Array.from({ length: 38 }, (_, k): Pt => [AVE.ns3.x - k * 6, EDGE_Z]).filter((p) => p[0] > -160),
+  // (round Lot 9's tunnel's mouth, lot9.ts `TUNNEL`: its cutting comes up to z 336.6, the land's edge steps back round it)
+  ...Array.from({ length: 38 }, (_, k): Pt => [AVE.ns3.x - k * 6, EDGE_Z]).filter((p) => p[0] > -160 && (p[0] > -105 || p[0] < -119)),
+  [-105, EDGE_Z], [-106.5, 338.4], [-117.5, 338.4], [-119, EDGE_Z],
   ...smooth([[-160, EDGE_Z], [-178, 336.5], [-196, 338], [-212, 339.5], [-229, 340.5]], 3),
 ];
 // (the avenues' tops on it exactly)
@@ -146,10 +149,8 @@ RING_EDGE.sort((p, q) => q[0] - p[0]);
 export const COMPOUND: Rect = [PLOT[0], PLOT[1], PLOT[2], PLOT[3]];
 /** St Aldwyn's churchyard, on the village's hilltop (the church moves here in Phase 3) */
 export const CHURCHYARD: Pt[] = [[-219, 451], [-205, 449], [-192, 451], [-190, 462], [-193, 473], [-207, 475], [-220, 472], [-222, 461]];
-/** Lot 9's new fence (the owner's pick: it hugs the brook's bank on its west side and wanders with the slope) */
-export const LOT9_EDGE: Pt[] = [
-  [-128, 470], [-112, 468.5], [-96, 470], [-80, 468], [-64, 469.5], [-48, 468], [-32, 470], [-21, 474], [-19, 490], [-20, 506], [-18.5, 522], [-20, 538], [-18.5, 554], [-20, 570], [-18.5, 586], [-20, 602], [-21, 618], [-38, 621], [-56, 619.5], [-74, 621.5], [-92, 619.5], [-110, 621], [-119.5, 610], [-118, 594], [-120, 578], [-118.5, 562], [-120, 548], [-129, 545], [-130, 530], [-128.5, 514], [-130, 498], [-128.5, 484],
-];
+/** Lot 9's fence (lot9.ts `LOT9_FENCE`, the owner's pick: it wanders with the land, its west side along the brook) */
+export const LOT9_EDGE: Pt[] = LOT9_FENCE;
 /** The land Lot 9's fence keeps inside (its agreed bounds: the park, its camp moved south of it, the strip between) */
 export const LOT9_BOUNDS: Rect[] = [[-131, 467, -17, 546], [-121, 546, -17, 623]];
 /** The brook's centre line, from the fields in the west along the village's south edge, on past Lot 9 */

@@ -98,6 +98,7 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
   const clear = (x: number, z: number) =>
     crossings.every((c) => Math.hypot(c[0] - x, c[1] - z) > 7.5) &&
     ends.every((e) => Math.hypot(e[0] - x, e[1] - z) > 2.5) &&
+    FOOTPATHS.every((f) => distTo(f.pts, [x, z]) > PATH_HALF + 0.8) &&
     BRIDGES.every((b) => Math.hypot(b.at[0] - x, b.at[1] - z) > 6) &&
     out.every((l) => Math.hypot(l[0] - x, l[1] - z) > 6);
   for (const s of SOUTH_STREETS) {

@@ -41,7 +41,7 @@ import { WESTLAKE_RECT } from './westlake';
 import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
-import { FOOTPATH as LOT9_PATH, LOT9_RECT } from './lot9';
+import { FOOTPATH as LOT9_PATH, LOT9_RECT, inLot9 } from './lot9';
 import { ENDSWOOD_RECT, inEndswood } from './endswood';
 import { BROOK, BROOK_HALF, REC } from './south';
 import { distTo, inside } from './streetfaces';
@@ -171,11 +171,11 @@ export const KEEPS: Keep[] = [
   land('southyards', YARDS_RECT, 2, true),
   // South of The Trenches re-laid (south.ts, docs/south-plan.md Phase 1b): its built-up land (its blocks and its
   // streets with their sidewalks: endswood.ts `inEndswood()`; the fields round it keep their trees), the brook and its
-  // banks, the rec ground; Lot 9, the trailer park, south-east of it (lot9.ts)
+  // banks, the rec ground; Lot 9, the trailer park, south-east of it (lot9.ts), its land following its wandering fence
   { ...shaped('endswood', ENDSWOOD_RECT, 2, (x, z, m) => inEndswood(x, z, m)), since: true },
   ...line('south-brook', BROOK, BROOK_HALF + 2, false, true),
   { ...shaped('south-rec', boxOf(REC), 1, (x, z, m) => inside(REC, [x, z]) || distTo(REC, [x, z], true) < m), since: true },
-  land('lot9', LOT9_RECT, 2, true),
+  { ...shaped('lot9', LOT9_RECT, 2, inLot9), since: true },
   ...line('lot9-path', LOT9_PATH, 1.5, false, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it
