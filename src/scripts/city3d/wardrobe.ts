@@ -1558,7 +1558,7 @@ export function items(q: Detail, hero = false): Item[] {
   const HOOD_SIDE = 0.02;
   const HOOD_N = 2.2;
   /** The hood round the neck, over the hoodie's neckline (head space) */
-  const HOOD_NECK: Sec = [-0.03, 0.124, 0.102, -0.006];
+  const HOOD_NECK: Sec = [-0.03, 0.1, 0.084, -0.006];
   /** Where the hood grows out of the sweater: its lowest row this far inside it, rising to this far out (head space) */
   const HOOD_INTO = { from: -0.085, under: 0.005, to: -0.05, over: 0.003 };
   /**
@@ -1596,7 +1596,16 @@ export function items(q: Detail, hero = false): Item[] {
     }
     // (closed over the crown: a last row to a point)
     const last = upper[upper.length - 1];
-    return [...lower, ...upper, [last[0] + 0.0005, 0, 0, last[3] ?? 0] as Sec];
+    // (its back hangs straight from the back of the head down to the upper back, as cloth would, rather than in
+    // round the nape: each row's back no further in than that line, its front as it is)
+    const drape = (y: number) => -0.085 - 0.031 * THREE.MathUtils.clamp((y + 0.06) / 0.16, 0, 1);
+    const hung = [...lower, ...upper].map(([y, hw, hd, z = 0]): Sec => {
+      if (y <= -0.06 || y >= 0.1) return [y, hw, hd, z];
+      const front = z + hd;
+      const back = Math.min(z - hd, drape(y));
+      return [y, hw, (front - back) / 2, (front + back) / 2];
+    });
+    return [...hung, [last[0] + 0.0005, 0, 0, last[3] ?? 0] as Sec];
   })();
   /** Each row's cloth: from the opening's left edge round the back to its right edge (or all the way round) */
   const hoodRows = hoodSecs.map((sec) => {

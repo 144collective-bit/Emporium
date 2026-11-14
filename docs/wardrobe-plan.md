@@ -215,6 +215,12 @@ detail), which stay the record of how the clothes were built.
   foot). The V at the throat closes where it meets the sweater; the
   drawstrings come out of it. The headphones go under the hood (not drawn
   with it up, as under the puffer's collar).
+- **Slimmer at the neck** (the owner's call, after a second look: "reduce
+  the bulge around his neck"): `HOOD_NECK` brought in to about the jaw's
+  width (the room once made for the headphones wasn't needed once they went
+  under the hood), so it tapers from the shoulders to the jaw; and its back
+  hangs straight from the back of the head to the upper back (`drape` in
+  `hoodSecs`) instead of dipping in round the nape.
   - Tests: `accessories.test.ts` (every level: the head, ears, frames and
     arms inside the cloth, the ears, back and top covered, nothing in front
     of the lenses; the chain out of the cloth; no headphones over it) and
