@@ -313,6 +313,14 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
       canvas = null;
       drag = null;
       pointers.clear();
+      // Closed: its drawing buffer and the picture's targets go down to a pixel, giving their memory back (a 4x MSAA
+      // half-float target at a panel's size on a desktop, tens of MB, was held after the first open: the stability
+      // plan's Phase 4). The context and its compiled shaders stay, so it opens again at once; `size()` on the next
+      // `attach()` makes them the panel's size again
+      if (renderer && post) {
+        renderer.setSize(1, 1, false);
+        post.setSize(1, 1, 1);
+      }
     },
     dress(l) {
       if (canvas) dress(l);

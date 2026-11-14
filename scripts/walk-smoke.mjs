@@ -197,6 +197,15 @@ await scene('homewardrobe', '-229.85,388.6', async (t) => {
   await t.click('[data-panel-close]');
   await t.until('the fitting room to close', () => !document.querySelector('[data-panel] [data-fit-items]') || !!document.querySelector('[data-panel][hidden]'), null, 60000);
   await t.step('the fitting room closed');
+  // Again: closed, its drawing gave its memory back (stage.ts); open, it's the panel's size again, not a pixel
+  await t.prompt('Wardrobe');
+  await t.until('the fitting room again', () => !!document.querySelector('[data-panel]:not([hidden]) [data-fit-items]'));
+  await t.until('its stage drawn at its size', () => {
+    const c = document.querySelector('[data-panel]:not([hidden]) canvas');
+    return !!c && c.width > 16 && c.height > 16;
+  }, null, 60000);
+  await t.step('the fitting room opened again, its stage at its size');
+  await t.click('[data-panel-close]');
 });
 
 // The car: beside it in Degen's garage at home (home.ts CAR_HOME), in, out through the door and down the driveway, out

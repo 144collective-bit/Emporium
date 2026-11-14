@@ -99,6 +99,50 @@ export function targetMemory(targets: (THREE.WebGLRenderTarget | null | undefine
   return bytes;
 }
 
+/** One texture the scene draws with: what it is (its name, or what draws with it), its size and its bytes */
+export interface TextureRow {
+  what: string;
+  size: string;
+  bytes: number;
+  /** Made at build time (GPU-compressed) or painted in the browser */
+  kind: 'built' | 'painted' | 'image' | 'other';
+  /** How many materials draw with it */
+  users: number;
+}
+/**
+ * Where the texture memory is, biggest first (`window.__mem().textures` under ?fps; the stability plan's Phase 4): a
+ * row a texture, named by its own name or the first mesh drawing with it. For finding what to make smaller.
+ */
+export function textureRows(scene: THREE.Object3D): TextureRow[] {
+  const rows = new Map<THREE.Texture, TextureRow>();
+  const seenMats = new Set<THREE.Material>();
+  scene.traverse((o) => {
+    const m = o as THREE.Mesh;
+    const list = m.material ? (Array.isArray(m.material) ? m.material : [m.material]) : [];
+    for (const mat of list) {
+      if (seenMats.has(mat)) continue;
+      seenMats.add(mat);
+      const found: THREE.Texture[] = [];
+      for (const v of Object.values(mat)) if (v && (v as THREE.Texture).isTexture) found.push(v as THREE.Texture);
+      const u = (mat as THREE.ShaderMaterial).uniforms;
+      if (u) for (const { value } of Object.values(u)) if (value && (value as THREE.Texture).isTexture) found.push(value as THREE.Texture);
+      for (const t of found) {
+        const row = rows.get(t);
+        if (row) {
+          row.users++;
+          continue;
+        }
+        let name = t.name;
+        for (let p: THREE.Object3D | null = o; !name && p; p = p.parent) name = p.name;
+        const img = t.image as { width?: number; height?: number } | null;
+        const kind = (t as THREE.CompressedTexture).isCompressedTexture ? 'built' : (t as THREE.CanvasTexture).isCanvasTexture ? 'painted' : img && 'naturalWidth' in img ? 'image' : 'other';
+        rows.set(t, { what: `${name || '?'} / ${mat.name || mat.type}`, size: `${img?.width ?? '?'}x${img?.height ?? '?'}`, bytes: textureBytes(t), kind, users: 1 });
+      }
+    }
+  });
+  return [...rows.values()].sort((a, b) => b.bytes - a.bytes);
+}
+
 export const mb = (bytes: number) => `${(bytes / 1048576).toFixed(bytes < 10 * 1048576 ? 1 : 0)} MB`;
 
 /** One line of the breakdown: what holds the bytes */
