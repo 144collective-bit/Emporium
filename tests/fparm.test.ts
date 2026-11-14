@@ -106,7 +106,7 @@ test('the sleeves and cuffs: their lengths, round both ends; painted pieces merg
 
 // His body's arms read from the eye (the owner's call, 2026-11: "use his real body's clips")
 import { makeSkeleton, newPose, poseSkeleton, UPPER_ARM } from '../src/scripts/city3d/skeleton';
-import { BODY_TO_ARM, EYE, FP_FIX, KNUCKLES, PUMP, blendArm, bodyArm, eyeFrame, newLaidArm, pumpArm, pumpSwing, type BodyJoints } from '../src/scripts/city3d/fparm';
+import { BODY_TO_ARM, EYE, FP_FIX, KNUCKLES, blendArm, bodyArm, eyeFrame, newLaidArm, pumpArm, pumpSwing, type BodyJoints } from '../src/scripts/city3d/fparm';
 
 /** His skeleton posed (arms by `arms`), scaled `unit` and facing +z: its head and each arm's joints in the world */
 function body(unit: number, arms?: (p: ReturnType<typeof newPose>) => void) {
@@ -180,33 +180,38 @@ test('the guard\'s first-person correction: the fists up, in and never at the ey
   }
 });
 
-test('the pump: the elbow at a right angle all the way, the fist up into its corner forward and out of shot back', () => {
+test('the pump: the fists bob up and down in their corners, the elbow always bent, never locked out', () => {
+  const knuckles = (a: ReturnType<typeof newLaidArm>) => a.wrist.clone().addScaledVector(a.wrist.clone().sub(a.elbow).normalize(), KNUCKLES);
+  const inView = (w: THREE.Vector3) => w.z < -0.2 && Math.abs(w.y / w.z) < Math.tan((32.5 * Math.PI) / 180) && w.y < 0;
   for (const side of [1, -1]) {
-    let last: THREE.Vector3 | null = null;
-    for (let k = -1; k <= 1.0001; k += 0.05) {
-      const a = pumpArm(side, k, 0, newLaidArm());
-      // (the arm's lengths, and the elbow square)
-      assert.ok(near(a.shoulder.distanceTo(a.elbow), ARM.upper, 1e-4) && near(a.elbow.distanceTo(a.wrist), ARM.fore, 1e-4));
-      const bend = a.shoulder.clone().sub(a.elbow).angleTo(a.wrist.clone().sub(a.elbow));
-      assert.ok(Math.abs(bend - Math.PI / 2) < 0.02, `elbow ${((bend * 180) / Math.PI).toFixed(0)}`);
-      // (a smooth swing, a pendulum's, lowest beside him mid-way: never a jump, never stopped against an edge)
-      if (last) assert.ok(a.wrist.distanceTo(last) < 0.1 && a.wrist.distanceTo(last) > 1e-4, 'smooth');
-      last = a.wrist.clone();
-      // (the back of the fist facing out; forward, the elbow driving behind and below the wrist)
-      assert.ok(a.face.x * side > 0);
-      if (k > 0.4) assert.ok(a.elbow.y < a.wrist.y && a.elbow.z > a.wrist.z);
+    for (const [sprint, walk] of [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+    ]) {
+      let last: THREE.Vector3 | null = null;
+      for (let k = -1; k <= 1.0001; k += 0.05) {
+        const a = pumpArm(side, k, sprint, newLaidArm(), walk);
+        // (the arm's lengths, and the elbow bent all the way: an arm that's never straight)
+        assert.ok(near(a.shoulder.distanceTo(a.elbow), ARM.upper, 1e-4) && near(a.elbow.distanceTo(a.wrist), ARM.fore, 1e-4));
+        const bend = (a.shoulder.clone().sub(a.elbow).angleTo(a.wrist.clone().sub(a.elbow)) * 180) / Math.PI;
+        assert.ok(bend > 65 && bend < 115, `elbow ${bend.toFixed(0)}`);
+        // (smooth: never a jump, never stopped against an edge)
+        if (last) assert.ok(a.wrist.distanceTo(last) < 0.04 && a.wrist.distanceTo(last) > 1e-5, 'smooth');
+        last = a.wrist.clone();
+        // (the back of the fist out; the elbow below and behind the wrist, on its own side)
+        assert.ok(a.face.x * side > 0 && a.elbow.y < a.wrist.y && a.elbow.z > a.wrist.z && a.elbow.x * side > 0);
+      }
+      const up = pumpArm(side, 1, sprint, newLaidArm(), walk);
+      const down = pumpArm(side, -1, sprint, newLaidArm(), walk);
+      // Mostly up and down: it rises far more than it travels forward and back
+      assert.ok(up.wrist.y - down.wrist.y > 2 * Math.abs(up.wrist.z - down.wrist.z), 'up and down');
+      // At the top, the fist in its own lower corner
+      assert.ok(inView(knuckles(up)) && up.wrist.x * side > 0 && up.wrist.y < -0.1, `top ${knuckles(up).toArray().map((n) => n.toFixed(2))}`);
     }
-    const fwd = pumpArm(side, 1, 0, newLaidArm());
-    const back = pumpArm(side, -1, 0, newLaidArm());
-    // Forward: ahead and in its lower corner (inside a 65-degree view, below the middle, on its own side)
-    const inView = (w: THREE.Vector3) => w.z < -0.2 && Math.abs(w.y / w.z) < Math.tan((32.5 * Math.PI) / 180) && w.y < 0;
-    const knuckles = (a: ReturnType<typeof newLaidArm>) => a.wrist.clone().addScaledVector(a.wrist.clone().sub(a.elbow).normalize(), KNUCKLES);
-    assert.ok(inView(knuckles(fwd)) && fwd.wrist.x * side > 0, `forward ${knuckles(fwd).toArray().map((n) => n.toFixed(2))}`);
-    // Back: down beside him, out of shot
-    assert.ok(!inView(knuckles(back)) && !inView(back.wrist));
-    // Sprinting it swings higher
-    assert.ok(pumpArm(side, 1, 1, newLaidArm()).wrist.y > fwd.wrist.y);
-    assert.ok(PUMP.reach > ARM.upper && PUMP.reach < ARM.upper + ARM.fore);
+    // Sprinting it bobs higher, walking lower
+    assert.ok(pumpArm(side, 1, 1, newLaidArm()).wrist.y > pumpArm(side, 1, 0, newLaidArm()).wrist.y);
+    assert.ok(pumpArm(side, 1, 0, newLaidArm(), 1).wrist.y < pumpArm(side, 1, 0, newLaidArm()).wrist.y);
   }
 });
 

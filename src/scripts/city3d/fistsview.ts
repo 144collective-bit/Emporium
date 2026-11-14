@@ -53,6 +53,8 @@ export interface FistsState {
   run: number;
   /** How far into a sprint (0..1): the pump swings higher */
   sprint: number;
+  /** How near a walk (0 a jog .. 1 a walk): the pump bobs lower and smaller (the owner's call: arms at a walk too) */
+  walk: number;
   /** Reduced motion: no sway */
   still?: boolean;
 }
@@ -256,7 +258,7 @@ export function createFistsView(scene: THREE.Scene) {
         // Running with his hands down, the pump: his swing's timing on the designed arc (fparm.ts PUMP), the elbow
         // at a right angle all the way; eased in over the run's share
         // (taken over quickly once he's jogging: half way to his hanging arm, a fist would sit below the shot)
-        if (run > 0) blendArm(laid, pumpArm(laid.shoulder.x, swung[arms.indexOf(h)], s.sprint, h.pump), Math.min(1, run * PUMP_IN));
+        if (run > 0) blendArm(laid, pumpArm(laid.shoulder.x, swung[arms.indexOf(h)], s.sprint, h.pump, s.walk), Math.min(1, run * PUMP_IN));
         h.fore.visible = !loose;
         h.foreLoose.visible = loose;
         // The upper arm (its +z out and up, where the track top's stripes are) and the forearm with its fist

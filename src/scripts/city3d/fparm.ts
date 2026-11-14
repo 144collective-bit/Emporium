@@ -299,22 +299,25 @@ const tB = new THREE.Vector3();
  */
 export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3 };
 /**
- * Running with his hands down (the owner's calls, 2026-11: the arms show as he runs, "a classic FPS pump", "his steps,
- * a designed arc"): his body sets the timing (each arm's own swing, `pumpSwing()`), the arm a designed path
- * (`pumpArm()`): the elbow held at a right angle all the way (the wrist on a sphere round the shoulder, `reach`), the
- * fist swung from `back` (down behind him, out of shot) to `fwd` (up into its lower corner, a touch in towards the
- * middle), further up sprinting (`sprint`), the elbow driving back and out (`pole`), the back of the loose fist
- * facing out, thumb up (`face`), all from a shoulder of its own (`shoulder`: his real one moves about the eye as he
- * leans, the motion capture's sprint carrying his head out ahead of it, which would swing the fist up into the
- * camera). For the arm on the right, the eye's frame; the left mirrors it.
+ * Running with his hands down (the owner's calls, 2026-11: "a classic FPS pump", "his steps, a designed arc", loose
+ * fists; then "his hands should just move up and down, but his whole arm locks out when sprinting"): his body sets
+ * the timing (each arm's own swing, `pumpSwing()`), the arm a designed bob (`pumpArm()`): the fist rising from `low`
+ * (its top just peeking over the bottom of the shot) to `high` in its lower corner and back, mostly up and down, the
+ * elbow always bent (`pole`: down, back and out), higher and a touch bigger sprinting (`sprint`), lower and smaller
+ * walking (`walk`: `walkLow`, `walkHigh`), the back of the loose fist facing out, thumb up (`face`), all from a
+ * shoulder of its own (`shoulder`: his real one moves about the eye as he leans). For the arm on the right, the
+ * eye's frame; the left mirrors it.
  */
 export const PUMP = {
   shoulder: new THREE.Vector3(0.2, -0.21, 0.06),
-  reach: Math.hypot(ARM.upper, ARM.fore),
-  back: new THREE.Vector3(0.12, -0.8, 0.58).normalize(),
-  fwd: new THREE.Vector3(-0.08, 0.17, -1).normalize(),
-  sprint: new THREE.Vector3(-0.1, 0.33, -1).normalize(),
-  pole: new THREE.Vector3(0.35, -0.6, 0.75),
+  low: new THREE.Vector3(0.2, -0.33, -0.28),
+  high: new THREE.Vector3(0.165, -0.19, -0.35),
+  sprint: new THREE.Vector3(0.155, -0.15, -0.37),
+  walkLow: new THREE.Vector3(0.215, -0.39, -0.27),
+  walkHigh: new THREE.Vector3(0.2, -0.265, -0.31),
+  /** (a touch forward through the middle of the bob, as a fist swings on a bent arm) */
+  bulge: 0.02,
+  pole: new THREE.Vector3(0.4, -0.7, 0.6),
   face: new THREE.Vector3(1, 0.3, 0.1),
 };
 
@@ -365,20 +368,20 @@ const pFwd = new THREE.Vector3();
 const pBack = new THREE.Vector3();
 
 /**
- * The pump's arm on side `side` (1 the right of the eye, -1 the left), swung `swing` (-1 back .. 1 forward,
- * `pumpSwing()`), `sprint` (0 a jog .. 1 a sprint) of the way to the sprint's height: into `out` (its own shoulder,
- * the elbow at a right angle, the wrist on its arc, the back of the fist out)
+ * The pump's arm on side `side` (1 the right of the eye, -1 the left), swung `swing` (-1 down .. 1 up, `pumpSwing()`),
+ * `sprint` (0 a jog .. 1 a sprint) of the way to the sprint's height and `walk` (0 a jog .. 1 a walk) of the way down
+ * to the walk's: into `out` (its own shoulder, the elbow bent, the wrist on its bob, the back of the fist out)
  */
-export function pumpArm(side: number, swing: number, sprint: number, out: LaidArm) {
+export function pumpArm(side: number, swing: number, sprint: number, out: LaidArm, walk = 0) {
   side = Math.sign(side) || 1;
   const mirror = (v: THREE.Vector3, o: THREE.Vector3) => o.set(v.x * side, v.y, v.z);
-  mirror(PUMP.back, pBack);
-  mirror(PUMP.fwd, pFwd).lerp(mirror(PUMP.sprint, pDir), sprint).normalize();
+  const low = mirror(PUMP.low, pBack).lerp(mirror(PUMP.walkLow, pDir), walk);
+  const high = mirror(PUMP.high, pFwd).lerp(mirror(PUMP.sprint, pDir), sprint).lerp(mirror(PUMP.walkHigh, pDir), walk);
   // (eased at the ends, as an arm slows to turn at the top and the bottom of its swing)
   const t = THREE.MathUtils.smoothstep((swing + 1) / 2, 0, 1);
-  pDir.copy(pBack).lerp(pFwd, t).normalize();
+  const target = tA.copy(low).lerp(high, t);
+  target.z -= PUMP.bulge * Math.sin(Math.PI * t);
   const shoulder = mirror(PUMP.shoulder, out.shoulder);
-  const target = tA.copy(shoulder).addScaledVector(pDir, PUMP.reach);
   solveArm(shoulder, target, mirror(PUMP.pole, tB), out.elbow, out.wrist);
   mirror(PUMP.face, out.face).normalize();
   return out;

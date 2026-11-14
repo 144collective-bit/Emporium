@@ -157,8 +157,13 @@ const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
-/** First person with empty hands: the pace (a share of RUN) over which his swinging arms come into shot: from a light jog (the owner's call), never at a walk (WALK is 0.28 of RUN) */
-const FP_PUMP = [0.33, 0.6] as const;
+/**
+ * First person with empty hands: the pace (a share of RUN) over which his swinging arms come into shot (from a
+ * walk: WALK is 0.28 of RUN; the owner's calls, arms at a walk too), and over which the walk's low, small bob
+ * grows into the jog's
+ */
+const FP_PUMP = [0.12, 0.26] as const;
+const FP_WALK = [0.3, 0.6] as const;
 /** How far the first-person view narrows with the fists' guard up (degrees) */
 const GUARD_ZOOM = 5;
 const AIMING = 1.09;
@@ -2936,7 +2941,7 @@ export function createWalk(d: WalkDeps) {
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
     // Empty hands in first person: his own arms, his body's (fistsview.ts): the skeleton as posed this frame (the
     // motion capture, and the fight's clips with the guard up) read from an eye in his head
-    fistsView?.update(camera, dt, { guard: guardAmt, run: THREE.MathUtils.smoothstep(stride, FP_PUMP[0], FP_PUMP[1]), sprint: runAmt, still: d.reduced }, firstPerson && fistsOn, { rig: hero.rig, root: hero.g });
+    fistsView?.update(camera, dt, { guard: guardAmt, run: THREE.MathUtils.smoothstep(stride, FP_PUMP[0], FP_PUMP[1]), sprint: runAmt, walk: 1 - THREE.MathUtils.smoothstep(stride, FP_WALK[0], FP_WALK[1]), still: d.reduced }, firstPerson && fistsOn, { rig: hero.rig, root: hero.g });
 
     // Field of view widens with speed, narrows when aiming, and in first person a touch with the guard up (the
     // owner's call, 2026-11: the fight in focus)
