@@ -4830,7 +4830,7 @@
     ],
     [
      -4.5,
-     "edge"
+     571
     ]
    ]
   },
@@ -27465,6 +27465,26 @@
   },
   {
    "id": "ns0-n-turn",
+   "kind": "rural",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": "edge"
+  },
+  {
+   "id": "ns0s-s",
+   "kind": "rural",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     -4.5,
+     571
+    ],
+    "edge"
+   ]
+  },
+  {
+   "id": "ns0s-s-turn",
    "kind": "rural",
    "half": 1.7,
    "lanes": 1,

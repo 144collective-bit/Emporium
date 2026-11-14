@@ -32,7 +32,7 @@ import { SUN_BLOCKS, SUN_CROSSINGS, SUN_STREETS } from './sunridge';
 import { DOCK_BLOCKS, DOCK_CROSSINGS, DOCK_STREETS, EL_X } from './docks';
 import { STRIP_BLOCKS, STRIP_CROSSINGS, STRIP_STREETS } from './strip';
 import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
-import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS } from './lot9';
+import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS, PARK as LOT9_PARK } from './lot9';
 import { NS_BENDS, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, type Zone } from './south';
 import { ruralSplit } from './rural';
 
@@ -575,8 +575,10 @@ export function cityPlan(): StreetPlan {
   // The country roads past the highway (rural.ts, docs/highway-plan.md Phase 7): each grid road's town piece ends past
   // the last thing beside it, and runs on to the world's edge as a two-lane country road with a turning loop
   const box = (poly: Pt[]): [number, number, number, number] => [Math.min(...poly.map((p) => p[0])), Math.min(...poly.map((p) => p[1])), Math.max(...poly.map((p) => p[0])), Math.max(...poly.map((p) => p[1]))];
+  // (Lot 9 by its park and its lane in: its camp, south of the park since docs/south-plan.md Phase 1b, stands back from the
+  // avenue behind its strip, and the country road runs on past its fence as it did)
   // (the el down the Docks' line and over the river onto the north bank avenue's median counts too: docks.ts EL_X)
-  ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], LOT9_RECT, ...STADIUM_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
+  ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], [LOT9_RECT[0], LOT9_RECT[1], LOT9_RECT[2], LOT9_PARK[3] + 2], ...STADIUM_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
   return withSlabs({ streets, crossings, blocks, plazas });
 }
 

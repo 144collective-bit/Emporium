@@ -139,7 +139,7 @@ export const INFLUENCES: Influence[] = [
   // down to the camp and just past them, the Field trampled
   { id: 'lot9', cover: 'worn', reach: 14, strength: 0.8, box: [LOT9_FENCE_BOX[0] - 14, LOT9_FENCE_BOX[1] - 14, LOT9_FENCE_BOX[2] + 14, LOT9_FENCE_BOX[3] + 14], dist: fromLot9Fence },
   around('lot9-dirt', LOT9_PARK, 'bare', 2, 0.55),
-  around('lot9-strip', [LOT9_CAMP_X1, LOT9_PARK[3], LOT9_PARK[2], LOT9_FIELD[3]], 'bare', 2, 0.55),
+  around('lot9-strip', [LOT9_CAMP_X1, LOT9_PARK[3], LOT9_PARK[2], LOT9_FIELD[3]], 'bare', 4, 0.55),
   around('lot9-field', LOT9_FIELD, 'bare', 1, 0.28),
   // Lusher by the river (its banks are the river's own, river.ts; this is the grass running down to them)
   { id: 'river', cover: 'bank', reach: 10, strength: 0.6, box: [SKY[0], RIVER[0] - 10, SKY[2], RIVER[1] + 10], dist: (_x, z) => Math.max(0, RIVER[0] - z, z - RIVER[1]) },
