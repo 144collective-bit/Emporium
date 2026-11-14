@@ -402,3 +402,23 @@ export function blendArm(a: LaidArm, b: LaidArm, w: number) {
   return a;
 }
 const tmpS = new THREE.Vector3();
+
+/**
+ * A punch's feel in first person (the owner's call, 2026-11: "subtle"): how far the view turns with the shoulder
+ * behind each punch (radians, + to the left: a left hand turns him right, a right hand left) and leans with it (+ up),
+ * how long a landed hit holds the fight (seconds: about three frames) and the view's kick forward (tiles, before his
+ * scale) and how long it takes
+ */
+export const PUNCH_FEEL = {
+  turn: { jab: -0.018, cross: 0.032, hook: -0.045, uppercut: 0.026 },
+  lean: { jab: -0.008, cross: -0.014, hook: -0.01, uppercut: 0.022 },
+  stop: 0.05,
+  kick: 0.035,
+  kickTime: 0.14,
+};
+/** A punch's share at frame `f` (0..1): up over its start-up, held through the active frames, eased back over the recovery */
+export function punchEnvelope(f: number, startup: number, active: number, recovery: number) {
+  if (f < startup) return THREE.MathUtils.smoothstep(f / startup, 0, 1);
+  if (f < startup + active) return 1;
+  return 1 - THREE.MathUtils.smoothstep((f - startup - active) / recovery, 0, 1);
+}

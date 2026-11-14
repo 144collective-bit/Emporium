@@ -243,3 +243,28 @@ test('the loose fist: the same size as the tight one, its fingers eased open', (
     assert.ok(loose.boundingBox!.max.y > tight.boundingBox!.max.y, 'the fingers further out');
   }
 });
+
+// A punch's feel in first person (the owner's call, 2026-11: subtle)
+import { PUNCH_FEEL, punchEnvelope } from '../src/scripts/city3d/fparm';
+import { MOVES as FIGHT_MOVES } from '../src/scripts/city3d/fight-sim';
+
+test("a punch's feel: up over its start-up, held while it lands, eased back over its recovery; small and the right way", () => {
+  for (const id of ['jab', 'cross', 'hook', 'uppercut'] as const) {
+    const m = FIGHT_MOVES[id];
+    assert.equal(punchEnvelope(0, m.startup, m.active, m.recovery), 0);
+    assert.equal(punchEnvelope(m.startup, m.startup, m.active, m.recovery), 1);
+    assert.equal(punchEnvelope(m.startup + m.active + m.recovery, m.startup, m.active, m.recovery), 0);
+    let last = 0;
+    for (let f = 0; f <= m.startup; f++) {
+      const e = punchEnvelope(f, m.startup, m.active, m.recovery);
+      assert.ok(e >= last && e >= 0 && e <= 1);
+      last = e;
+    }
+    // (subtle: never more than about three degrees)
+    assert.ok(Math.abs(PUNCH_FEEL.turn[id]) < 0.06 && Math.abs(PUNCH_FEEL.lean[id]) < 0.03);
+  }
+  // (a left hand turns him right, a right hand left: the jab and hook the left, with the left lead)
+  assert.ok(PUNCH_FEEL.turn.jab < 0 && PUNCH_FEEL.turn.hook < 0 && PUNCH_FEEL.turn.cross > 0 && PUNCH_FEEL.turn.uppercut > 0);
+  // (a hit holds the fight about three frames)
+  assert.ok(PUNCH_FEEL.stop > 0.03 && PUNCH_FEEL.stop < 0.08);
+});

@@ -41,6 +41,8 @@ export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
  * wide (metres)
  */
 const STRIPE = { gap: 0.15, out: -0.35, w: 0.011 };
+/** A landing's dip: the kick down (metres a second at full strength), the spring back and its damping, and the most it goes */
+const LAND_DIP = { kick: 0.9, spring: 140, damp: 15, most: 0.08 };
 /** How quickly the pump takes over as he picks up from a walk to a jog (its share times this, at most all) */
 const PUMP_IN = 3;
 /** How much less the hand left in the guard is drawn in towards the middle while the other is out punching */
@@ -55,6 +57,8 @@ export interface FistsState {
   sprint: number;
   /** How near a walk (0 a jog .. 1 a walk): the pump bobs lower and smaller (the owner's call: arms at a walk too) */
   walk: number;
+  /** A landing this frame (0..1, how hard): the arms dip and spring back */
+  land?: number;
   /** Reduced motion: no sway */
   still?: boolean;
 }
@@ -175,6 +179,9 @@ export function createFistsView(scene: THREE.Scene) {
   const q = new THREE.Quaternion();
   const tmp = new THREE.Vector3();
   // The pump's timing: the size of his swing lately (these metres), each arm's swing smoothed, and the fists loose
+  // The landing's dip: how far the arms are down (metres) and how fast they're moving
+  let dip = 0;
+  let dipVel = 0;
   let swingAmp = 0.12;
   /** (his swing's middle lately: the motion capture's sprint can carry one hand ahead of the other all the way, and the pump swings about the middle, never stuck forward) */
   let swingMid = 0;
@@ -272,7 +279,12 @@ export function createFistsView(scene: THREE.Scene) {
       // (narrow screens, a phone upright: the arms held further off, so the fists stay in shot and apart)
       const aspect = (camera as THREE.PerspectiveCamera).aspect || 1.6;
       const tight = THREE.MathUtils.clamp((1.3 - aspect) / 0.8, 0, 1);
-      holder.position.set(-swayX * 0.05, -0.025 * tight - swayY * 0.04, -0.17 * tight);
+      // (a landing: the arms dip and spring back, settling with a touch of overshoot)
+      if (s.land && !s.still) dipVel -= LAND_DIP.kick * s.land;
+      const ddt = Math.min(dt, 0.05);
+      dipVel += (-LAND_DIP.spring * dip - LAND_DIP.damp * dipVel) * ddt;
+      dip = Math.max(-LAND_DIP.most, dip + dipVel * ddt);
+      holder.position.set(-swayX * 0.05, -0.025 * tight - swayY * 0.04 + dip, -0.17 * tight);
       holder.rotation.set(-swayY * 0.3, swayX * 0.3, 0, 'YXZ');
     },
   };
