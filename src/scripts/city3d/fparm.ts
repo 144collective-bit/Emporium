@@ -76,8 +76,8 @@ export function merge(parts: THREE.BufferGeometry[]) {
  * `thumb` side of x (-1 or 1). Its index finger is next to the thumb; the knuckles' line slopes back to the little
  * finger, as a real fist's does.
  */
-export function fistGeometry(thumb: -1 | 1, loose = 0): THREE.BufferGeometry {
-  const key = `${thumb}:${loose}`;
+export function fistGeometry(thumb: -1 | 1, loose = 0, low = false): THREE.BufferGeometry {
+  const key = `${thumb}:${loose}:${low}`;
   const had = FISTS.get(key);
   if (had) return had.clone();
   // (made once for the thumb on +x; the other hand is it mirrored, turned inside out back again)
@@ -85,12 +85,12 @@ export function fistGeometry(thumb: -1 | 1, loose = 0): THREE.BufferGeometry {
   const crease = [0];
   const g: THREE.BufferGeometry =
     thumb === 1
-      ? meshField(field, FIST_BOX, FIST_CELL, (x, y, z) => {
+      ? meshField(field, FIST_BOX, low ? FIST_CELL.low : FIST_CELL.high, (x, y, z) => {
           crease[0] = 0;
           field(x, y, z, crease);
           return crease[0];
         })
-      : mirrorX(fistGeometry(1, loose));
+      : mirrorX(fistGeometry(1, loose, low));
   FISTS.set(key, g);
   return g.clone();
 }
@@ -113,9 +113,10 @@ function mirrorX(g: THREE.BufferGeometry) {
 }
 /** The fists made so far (each is a few milliseconds' work: made once) */
 const FISTS = new Map<string, THREE.BufferGeometry>();
-/** Where the fist's field is sampled, and how finely (metres): a cell of about 3 mm, smooth at the size it's seen */
+/** Where the fist's field is sampled, and how finely (metres): a cell of about 3 mm, smooth at the size it's seen;
+ * on the phone tier about 4.5 mm (half the triangles, the owner's call, 2026-11) */
 const FIST_BOX = { min: [-0.068, -0.034, -0.082], max: [0.068, 0.124, 0.042] } as const;
-const FIST_CELL = 0.0032;
+export const FIST_CELL = { high: 0.0032, low: 0.0046 };
 
 /** (Math.hypot is slow; this runs a few hundred thousand times a fist) */
 const len3 = (x: number, y: number, z: number) => Math.sqrt(x * x + y * y + z * z);
@@ -128,7 +129,7 @@ const smin = (a: number, b: number, k: number, crease?: number[], w = 1) => {
 };
 
 /** The fist's creases drawn in, comic style: the skin darkened this much at the deepest, from this deep in */
-export const CREASE = { dark: 0.2, from: 0.35, full: 1 };
+export const CREASE = { dark: 0.2, from: 0.55, full: 1 };
 
 /** The fist in one colour, its creases (from `fistGeometry()`'s tint) darkened in it */
 export function paintFist(g: THREE.BufferGeometry, color: string | THREE.Color) {
@@ -202,12 +203,11 @@ function fistField(thumb: -1 | 1, loose: number): (x: number, y: number, z: numb
     // The fingers: each finger's two bones run into each other, the fingers barely into their neighbours (the creases)
     let fs = Infinity;
     for (const f of fingers) {
-      // (each knuckle a bump proud of the back of the hand)
-      const kn = len3(x - f.k[0], y - f.k[1], z - f.k[2] - 0.004) - f.r * 0.92;
-      const one = smin(smin(capsuleAt(x, y, z, f.k, f.m, f.r), capsuleAt(x, y, z, f.m, f.t, f.r * 0.94), 0.006), kn, 0.004);
-      fs = smin(fs, one, 0.003, cr);
+      // (the knuckles one smooth ridge, the owner's call: "too lumpy around the knuckles")
+      const one = smin(capsuleAt(x, y, z, f.k, f.m, f.r), capsuleAt(x, y, z, f.m, f.t, f.r * 0.94), 0.01);
+      fs = smin(fs, one, 0.009, cr);
     }
-    d = smin(d, fs, 0.008);
+    d = smin(d, fs, 0.011);
     // The thumb, round the side and across the front, and its ball filling the heel of the hand
     const th = smin(capsuleAt(x, y, z, t0, t1, 0.0165), capsuleAt(x, y, z, t1, t2, 0.0148), 0.006);
     const bx = (x - 0.028 * thumb) / 0.016;

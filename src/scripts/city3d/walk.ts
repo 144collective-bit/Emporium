@@ -951,7 +951,7 @@ export function createWalk(d: WalkDeps) {
       .then((m) => {
         fistsMod = m;
         fists = m.createStreetFists(d.game.save().fight.style);
-        fistsView = m.createFistsView(d.scene);
+        fistsView = m.createFistsView(d.scene, d.low);
         fistsView.setOutfit(outfit);
         // The sparring partners waiting on the street (Phase 3): drawn near him, solid where they stand
         partners = m.createPartners(d.scene, d.low, (x, z) => groundAt(x, z));

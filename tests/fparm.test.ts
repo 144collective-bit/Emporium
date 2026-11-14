@@ -318,3 +318,17 @@ test('the soft top: a fist well under it is left alone, one rising past it eases
     last = t;
   }
 });
+
+test('the phone tier\'s fist: the same hand, coarser (about half the triangles)', () => {
+  for (const thumb of [-1, 1] as const) {
+    const hi = fistGeometry(thumb);
+    const lo = fistGeometry(thumb, 0, true);
+    hi.computeBoundingBox();
+    lo.computeBoundingBox();
+    const a = hi.boundingBox!.getSize(V(0, 0, 0));
+    const b = lo.boundingBox!.getSize(V(0, 0, 0));
+    assert.ok(a.distanceTo(b) < 0.006, `same size ${a.toArray()} ${b.toArray()}`);
+    const ratio = lo.attributes.position.count / hi.attributes.position.count;
+    assert.ok(ratio < 0.6, `fewer triangles ${ratio}`);
+  }
+});

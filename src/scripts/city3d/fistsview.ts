@@ -99,7 +99,7 @@ function flatPainted() {
 }
 
 /** One arm's pieces for an outfit: the upper arm, and the forearm with its cuff and the fist (`thumb`: which side of the fist's x) */
-function armPieces(o: Outfit, thumb: -1 | 1, loose = 0) {
+function armPieces(o: Outfit, thumb: -1 | 1, loose = 0, low = false) {
   const top = o.top;
   const suit = o.kind === 'suit';
   const varsity = o.kind === 'varsity';
@@ -138,11 +138,12 @@ function armPieces(o: Outfit, thumb: -1 | 1, loose = 0) {
       upper.push(paint(stripeGeometry(Math.PI / 2 + a, ...up, 0.03, ARM.upper - 0.01, STRIPE.w), FP_SHIRT));
       fore.push(paint(stripeGeometry(out + a, ...lo, 0.02, end - 0.054, STRIPE.w), FP_SHIRT));
     }
-  fore.push(paintFist(fistGeometry(thumb, loose).translate(0, end, 0), FP_SKIN));
+  fore.push(paintFist(fistGeometry(thumb, loose, low).translate(0, end, 0), FP_SKIN));
   return { upper: merge(upper), fore: merge(fore) };
 }
 
-export function createFistsView(scene: THREE.Scene) {
+/** `low`: the phone tier (a coarser fist, fparm.ts `FIST_CELL`) */
+export function createFistsView(scene: THREE.Scene, low = false) {
   const root = new THREE.Group();
   const scaler = new THREE.Group();
   scaler.scale.setScalar(FP_SCALE);
@@ -193,13 +194,13 @@ export function createFistsView(scene: THREE.Scene) {
     /** The arms in the sleeves of what he wears */
     setOutfit(o: Outfit) {
       for (const h of arms) {
-        const p = armPieces(o, h.thumb);
+        const p = armPieces(o, h.thumb, 0, low);
         h.upper.geometry.dispose();
         h.fore.geometry.dispose();
         h.foreLoose.geometry.dispose();
         h.upper.geometry = p.upper;
         h.fore.geometry = p.fore;
-        const l = armPieces(o, h.thumb, 1);
+        const l = armPieces(o, h.thumb, 1, low);
         l.upper.dispose();
         h.foreLoose.geometry = l.fore;
       }
