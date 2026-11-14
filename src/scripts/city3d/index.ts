@@ -98,6 +98,7 @@ import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
 import type { SkyLiftUI } from './skylift-ui';
 import { skyLiftDoors } from './southsky';
+import { YARD_TREES } from './southyard';
 import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
@@ -424,6 +425,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
   // The south's (endswood.ts, docs/south-plan.md Phase 1b): sodium along every street of the re-laid estate and village
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
+  // Endswood's trees on the grass round its towers (southyard.ts, docs/south-plan.md 2d), on the rolling ground
+  for (const [x, z, sc] of YARD_TREES) addTree(x, z, sc, false, ENDS_SLAB + southLift(x, z));
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
