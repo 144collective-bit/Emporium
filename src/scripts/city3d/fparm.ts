@@ -637,6 +637,66 @@ export function blendArm(a: LaidArm, b: LaidArm, w: number) {
 }
 const tmpS = new THREE.Vector3();
 
+/** Move a laid arm's fist by `d` (in the eye's frame), the elbow solved again round the way it was: the arm whole */
+export function nudgeArm(a: LaidArm, d: THREE.Vector3) {
+  if (d.lengthSq() < 1e-12) return a;
+  const pole = tB.copy(a.elbow).sub(a.shoulder).addScaledVector(tmpS.copy(a.wrist).sub(a.shoulder), -0.5);
+  solveArm(a.shoulder, tA.copy(a.wrist).add(d), pole, a.elbow, a.wrist);
+  return a;
+}
+
+/**
+ * The guard alive (the owner's call, 2026-11: "his arm movements... look robotic", subtle, first person only): a
+ * slow breath lifting both fists (`breath`: its period in seconds, how far up and forward, metres), each hand's own
+ * drift (`drift`: three slow waves a hand at frequencies that never line up, its own phases, so the hands are never
+ * in step or mirrored) and a slow weight shift from foot to foot (`weight`: both hands across, the leaning side's a
+ * touch lower)
+ */
+export const LIFE = {
+  breath: { period: 4.2, up: 0.005, fwd: 0.002 },
+  drift: { amp: 0.0035, hz: [0.37, 0.59, 0.23], phase: { [1]: [0, 1.7, 4.1], [-1]: [2.3, 0.4, 5.5] } as Record<1 | -1, number[]> },
+  weight: { period: 9.5, across: 0.004, drop: 0.002 },
+};
+
+/** Where the guard's life has a fist at time `t` (seconds): an offset in the eye's frame (+x right, +y up, -z ahead) */
+export function guardLife(t: number, side: 1 | -1, out: THREE.Vector3) {
+  const TAU = Math.PI * 2;
+  const b = Math.sin((TAU * t) / LIFE.breath.period);
+  const ph = LIFE.drift.phase[side];
+  const [f0, f1, f2] = LIFE.drift.hz;
+  const w = Math.sin((TAU * t) / LIFE.weight.period);
+  out.set(
+    LIFE.drift.amp * (0.6 * Math.sin(TAU * f0 * t + ph[0]) + 0.4 * Math.sin(TAU * f2 * t + ph[2])) + LIFE.weight.across * w,
+    LIFE.breath.up * b + LIFE.drift.amp * Math.sin(TAU * f1 * t + ph[1]) - LIFE.weight.drop * w * side,
+    -LIFE.breath.fwd * b,
+  );
+  return out;
+}
+
+/**
+ * The hands' paths between states are arcs, not straight lines (the owner's call, 2026-11): part way up into the
+ * guard the fists swing out and forward (`guard`, metres: out, up, ahead at half way), part way into the run's pump
+ * out and up (`run`); nothing at either end
+ */
+export const ARC = { guard: [0.045, -0.012, 0.05], run: [0.03, 0.015, 0.0] } as const;
+
+/** How far along an arc's bulge a blend `w` (0-1) is: none at either end, all of it half way */
+export const arcBulge = (w: number) => Math.sin(Math.PI * THREE.MathUtils.clamp(w, 0, 1));
+
+/**
+ * The arms' lag behind the look, with weight (the owner's call, 2026-11: "weighted sway"): a turn of the look
+ * pushes them back by `gain` of it (at most `most`, radians-ish: across, up), and a spring (`spring`, `damp`: a
+ * touch under critical) brings them back, swinging a little past before they settle
+ */
+export const SWAY = { gain: 0.8, most: [0.1, 0.08], spring: 60, damp: 9 };
+
+/** One step of a damped spring towards 0: `s.x` its place, `s.v` its speed */
+export function springStep(s: { x: number; v: number }, dt: number, spring: number, damp: number) {
+  s.v += (-spring * s.x - damp * s.v) * dt;
+  s.x += s.v * dt;
+  return s;
+}
+
 /**
  * A punch's feel in first person (the owner's call, 2026-11: "subtle"): how far the view turns with the shoulder
  * behind each punch (radians, + to the left: a left hand turns him right, a right hand left) and leans with it (+ up),
