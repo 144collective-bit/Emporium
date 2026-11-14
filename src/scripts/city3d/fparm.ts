@@ -737,6 +737,19 @@ export function followStep(f: Follow, target: THREE.Vector3, face: THREE.Vector3
   return out;
 }
 
+/**
+ * Turning while running (the owner's call, 2026-11: natural arms, subtle, first person only): the pump leans into
+ * the turn, the arms rolled towards its inside by `gain` of the look's turn rate (radians a second) at full run, at
+ * most `most` (radians), eased in and out at `ease` a second, so a sweep of the look while running banks them
+ */
+export const TURN_LEAN = { gain: 0.05, most: 0.14, ease: 7 };
+
+/** The arms' lean this frame, from last frame's `lean`, the look's turn rate (+ to the left) and the run (0-1) */
+export function turnLean(lean: number, yawRate: number, run: number, dt: number) {
+  const want = THREE.MathUtils.clamp(yawRate * TURN_LEAN.gain * run, -TURN_LEAN.most, TURN_LEAN.most);
+  return lean + (want - lean) * (1 - Math.exp(-TURN_LEAN.ease * Math.min(dt, 0.1)));
+}
+
 /** One step of a damped spring towards 0: `s.x` its place, `s.v` its speed */
 export function springStep(s: { x: number; v: number }, dt: number, spring: number, damp: number) {
   s.v += (-spring * s.x - damp * s.v) * dt;

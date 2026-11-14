@@ -31,7 +31,7 @@ import type { Outfit } from './character';
 import { FP_LEVEL, FP_SCALE, FP_SHIRT, FP_SKIN, FP_VARSITY, fpShade, upFront } from './viewmodel';
 import type { Skeleton } from './skeleton';
 import { UPPER_ARM } from './skeleton';
-import { ARC, ARM, SWAY, aimPiece, arcBulge, blendArm, followStep, guardLife, newFollow, nudgeArm, springStep, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, paintFist, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
+import { ARC, ARM, SWAY, aimPiece, turnLean, arcBulge, blendArm, followStep, guardLife, newFollow, nudgeArm, springStep, bodyArm, cuffGeometry, eyeFrame, pumpArm, pumpSwing, stretch, fistGeometry, merge, newLaidArm, paint, paintFist, sleeveGeometry, stripeGeometry, type BodyJoints } from './fparm';
 
 /** A kick: how far the hands drop and the view bobs (metres), and how long after the strike the bob settles */
 export const KICK = { drop: 0.08, bob: 0.045, settle: 0.35 };
@@ -174,6 +174,9 @@ export function createFistsView(scene: THREE.Scene, low = false) {
   const swayY = { x: 0, v: 0 };
   /** The guard's life's own clock (fparm.ts LIFE), and each fist's offset this frame */
   let lifeT = 0;
+  /** Running into a turn: the arms' lean (fparm.ts TURN_LEAN), and the look's turn rate this frame */
+  let lean = 0;
+  let yawRate = 0;
   const nudge = new THREE.Vector3();
   const lifeAt = new THREE.Vector3();
   const lastDir = new THREE.Vector3();
@@ -226,6 +229,7 @@ export function createFistsView(scene: THREE.Scene, low = false) {
       camera.getWorldDirection(dirNow);
       if (haveDir && !s.still) {
         const dyaw = Math.atan2(dirNow.x, dirNow.z) - Math.atan2(lastDir.x, lastDir.z);
+        yawRate = Math.atan2(Math.sin(dyaw), Math.cos(dyaw)) / Math.max(dt, 1 / 240);
         swayX.x = THREE.MathUtils.clamp(swayX.x - Math.atan2(Math.sin(dyaw), Math.cos(dyaw)) * SWAY.gain, -SWAY.most[0], SWAY.most[0]);
         swayY.x = THREE.MathUtils.clamp(swayY.x - (dirNow.y - lastDir.y) * SWAY.gain, -SWAY.most[1], SWAY.most[1]);
       }
@@ -235,6 +239,9 @@ export function createFistsView(scene: THREE.Scene, low = false) {
       springStep(swayX, sdt, SWAY.spring, SWAY.damp);
       springStep(swayY, sdt, SWAY.spring, SWAY.damp);
       if (s.still) swayX.x = swayX.v = swayY.x = swayY.v = 0;
+      // (running into a turn, the pump leans into it: off under reduced motion)
+      lean = s.still ? 0 : turnLean(lean, yawRate, s.run * (1 - s.guard), dt);
+      yawRate = 0;
       if (!s.still) lifeT += Math.min(dt, 0.1);
       // His skeleton as posed this frame, read from the eye in his head, level and facing his way
       const { rig } = body;
@@ -314,7 +321,7 @@ export function createFistsView(scene: THREE.Scene, low = false) {
       dipVel += (-LAND_DIP.spring * dip - LAND_DIP.damp * dipVel) * ddt;
       dip = Math.max(-LAND_DIP.most, dip + dipVel * ddt);
       holder.position.set(-swayX.x * 0.05, -0.025 * tight - swayY.x * 0.04 + dip, -0.17 * tight);
-      holder.rotation.set(-swayY.x * 0.3, swayX.x * 0.3, 0, 'YXZ');
+      holder.rotation.set(-swayY.x * 0.3, swayX.x * 0.3, lean, 'YXZ');
     },
   };
 }
