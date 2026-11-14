@@ -89,11 +89,15 @@ function block(w: number, h: number, d: number, r: number, x: number, y: number,
 }
 
 /**
- * The fist, closed tight: the wrist at the origin, +y out to the knuckles, +z the back of the hand, the thumb on the
+ * The fist, closed tight (or `loose`, 0..1, as he runs): the wrist at the origin, +y out to the knuckles, +z the back of the hand, the thumb on the
  * `thumb` side of x (-1 or 1). Its index finger is next to the thumb; the knuckles' line slopes back to the little
  * finger, as a real fist's does.
  */
-export function fistGeometry(thumb: -1 | 1) {
+export function fistGeometry(thumb: -1 | 1, loose = 0) {
+  // (loose, as a runner carries his hands: the fingers eased open about their knuckles, the thumb resting along the
+  // index finger's side instead of across the front)
+  const ease = 0.34 * loose;
+  const about = (knuckleY: number, off: THREE.Vector3, turn: number) => off.applyAxisAngle(new THREE.Vector3(1, 0, 0), turn).add(new THREE.Vector3(0, knuckleY, 0.013));
   const parts: THREE.BufferGeometry[] = [];
   // The wrist, into the cuff
   const wrist = new THREE.CylinderGeometry(0.026, 0.024, 0.04, 12);
@@ -125,14 +129,16 @@ export function fistGeometry(thumb: -1 | 1) {
     kn.translate(x, y - 0.004, 0.013);
     parts.push(plain(kn));
     // the first bone, folded straight down at the front (the face that lands a punch)
-    parts.push(block(w, 0.024, 0.044, 0.009, x, y + 0.004, -0.009));
+    const b1 = about(y, new THREE.Vector3(0, 0.004, -0.022), ease);
+    parts.push(block(w, 0.024, 0.044, 0.009, x, b1.y, b1.z, ease));
     // the second, folded back under towards the palm
-    parts.push(block(w * 0.95, 0.032, 0.021, 0.008, x, y - 0.013, -0.033));
+    const b2 = about(y, new THREE.Vector3(0, -0.013, -0.046), ease * 1.35);
+    parts.push(block(w * 0.95, 0.032, 0.021, 0.008, x, b2.y, b2.z, ease * 1.35));
   }
   // The thumb: from the heel of the hand, round the side and across the front of the first two fingers
   const t0 = new THREE.Vector3(0.039 * thumb, 0.022, -0.014);
-  const t1 = new THREE.Vector3(0.036 * thumb, 0.06, -0.04);
-  const t2 = new THREE.Vector3(0.006 * thumb, 0.074, -0.05);
+  const t1 = new THREE.Vector3(0.036 * thumb, 0.06, -0.04).lerp(new THREE.Vector3(0.04 * thumb, 0.063, -0.032), loose);
+  const t2 = new THREE.Vector3(0.006 * thumb, 0.074, -0.05).lerp(new THREE.Vector3(0.03 * thumb, 0.084, -0.036), loose);
   parts.push(capsule(t0, t1, 0.0145));
   parts.push(capsule(t1, t2, 0.0128));
   // (the ball of the thumb, filling the heel of the hand on its side)
@@ -287,18 +293,36 @@ const tB = new THREE.Vector3();
  * The first-person correction (the owner's call: the clips are made to read from behind him, and from his own eyes
  * their guard holds the fists at his chin, under and beside the eye, out of shot): with the guard up, each fist is
  * raised `lift`, drawn `pull` of the way in towards the middle, carried forward `reach` the more the arm is bent
- * (none at full stretch, where the clip already reaches) and never nearer the eye than `near` (the clips bring a
- * hand back beside his face: from the eye it would fill the screen), the elbow solved again round towards his own.
+ * (none at full stretch, where the clip already reaches), never nearer the eye than `near` (the clips bring a hand
+ * back beside his face: from the eye it would fill the screen) and eased under `top` (`softTop()`: the uppercut's
+ * fist would leave the top of the shot), the elbow solved again round towards his own.
  * These metres, the eye's frame.
  */
-export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3 };
+export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3, top: -0.03, soft: 0.03 };
+/** `y` eased under `top` (a soft minimum over `soft`): the uppercut's fist peaks at the eye's height instead of leaving the top of the shot, with no edge to slide along */
+export const softTop = (y: number, top: number, soft: number) => -soft * Math.log(Math.exp(-y / soft) + Math.exp(-top / soft));
 /**
- * Running with his hands down (the owner's call: the arms show as he runs): his own swing (the motion capture) lifted
- * into the lower corners and carried forward, so each arm comes into shot as it swings forward and goes as it swings
- * back; never higher than `top` nor nearer the eye than `near` (the motion capture's swing comes up higher than the
- * procedural walk's: a fist must never fill the screen). These metres, the eye's frame.
+ * Running with his hands down (the owner's calls, 2026-11: "a classic FPS pump", "his steps, a designed arc", loose
+ * fists; then "his hands should just move up and down, but his whole arm locks out when sprinting"): his body sets
+ * the timing (each arm's own swing, `pumpSwing()`), the arm a designed bob (`pumpArm()`): the fist rising from `low`
+ * (its top just peeking over the bottom of the shot) to `high` in its lower corner and back, mostly up and down, the
+ * elbow always bent (`pole`: down, back and out), higher and a touch bigger sprinting (`sprint`), lower and smaller
+ * walking (`walk`: `walkLow`, `walkHigh`), the back of the loose fist facing out, thumb up (`face`), all from a
+ * shoulder of its own (`shoulder`: his real one moves about the eye as he leans). For the arm on the right, the
+ * eye's frame; the left mirrors it.
  */
-export const FP_RUN = { lift: 0.24, pull: 0.25, fwd: 0.14, top: -0.17, near: 0.32 };
+export const PUMP = {
+  shoulder: new THREE.Vector3(0.2, -0.21, 0.06),
+  low: new THREE.Vector3(0.2, -0.33, -0.28),
+  high: new THREE.Vector3(0.165, -0.19, -0.35),
+  sprint: new THREE.Vector3(0.155, -0.15, -0.37),
+  walkLow: new THREE.Vector3(0.215, -0.39, -0.27),
+  walkHigh: new THREE.Vector3(0.2, -0.265, -0.31),
+  /** (a touch forward through the middle of the bob, as a fist swings on a bent arm) */
+  bulge: 0.02,
+  pole: new THREE.Vector3(0.4, -0.7, 0.6),
+  face: new THREE.Vector3(1, 0.3, 0.1),
+};
 
 /** How far out an arm laid in the eye's frame is (0 folded, 1 at full stretch) */
 export const stretch = (l: LaidArm) => THREE.MathUtils.clamp(l.wrist.distanceTo(l.shoulder) / (ARM.upper + ARM.fore), 0, 1);
@@ -306,11 +330,11 @@ export const stretch = (l: LaidArm) => THREE.MathUtils.clamp(l.wrist.distanceTo(
 /**
  * His arm `j` (the world) read from the eye `eye` (`eyeFrame()`), `unit` the world length of one of his body's units,
  * into `out` in these metres: the fist's wrist set back along his forearm so its knuckles are where his are. `fix`
- * (0..1: the guard's share) lays the first-person correction (`FP_FIX`) on it, and `run` (0..1: the run's share,
- * the guard down) the running one (`FP_RUN`), without moving his body. `pull` (0..1) scales the draw in towards the
- * middle (less for the hand left in the guard while the other is out punching: the punch has the middle).
+ * (0..1: the guard's share) lays the first-person correction (`FP_FIX`) on it without moving his body. `pull` (0..1)
+ * scales the draw in towards the middle (less for the hand left in the guard while the other is out punching: the
+ * punch has the middle).
  */
-export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: LaidArm, fix = 0, run = 0, pull = 1) {
+export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: LaidArm, fix = 0, pull = 1) {
   const k = BODY_TO_ARM / unit;
   toEye.copy(eye).invert();
   rotEye.setFromMatrix4(toEye);
@@ -322,20 +346,83 @@ export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: La
   const along = tB.copy(tA).sub(out.elbow).normalize();
   out.wrist.copy(out.elbow).addScaledVector(along, ARM.fore);
   out.face.copy(j.back).applyMatrix3(rotEye).normalize();
-  if (fix > 0 || run > 0) {
+  if (fix > 0) {
     const bent = 1 - THREE.MathUtils.clamp(out.wrist.distanceTo(out.shoulder) / (ARM.upper + ARM.fore), 0, 1);
     const target = tA.set(-out.wrist.x * FP_FIX.pull * pull, FP_FIX.lift, -FP_FIX.reach * bent).multiplyScalar(fix).add(out.wrist);
     target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_FIX.near, fix));
-    target.x -= out.wrist.x * FP_RUN.pull * run;
-    target.y += FP_RUN.lift * run;
-    target.z -= FP_RUN.fwd * run;
-    if (run > 0) {
-      target.y = Math.min(target.y, THREE.MathUtils.lerp(target.y, FP_RUN.top, run));
-      target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_RUN.near, run));
-    }
+    target.y = THREE.MathUtils.lerp(target.y, softTop(target.y, FP_FIX.top, FP_FIX.soft), fix);
     // (round towards his own elbow: its side of the line from the shoulder to the wrist)
     const pole = tB.copy(out.elbow).sub(out.shoulder).addScaledVector(out.wrist.clone().sub(out.shoulder), -0.5);
     solveArm(out.shoulder, target, pole, out.elbow, out.wrist);
   }
   return out;
+}
+
+/**
+ * One arm's swing from his body (-1 back, 1 forward), the timing of the pump: how far ahead of the other arm its wrist
+ * is (`ahead`: this arm's wrist forward of the other's, in these metres; the two swing opposite, so this stays centred
+ * whatever his lean), against `amp`, the size of his swing as it's been lately (the caller keeps it)
+ */
+export function pumpSwing(ahead: number, amp: number) {
+  return THREE.MathUtils.clamp(ahead / Math.max(amp * 1.4, 0.02), -1, 1);
+}
+
+const pDir = new THREE.Vector3();
+const pFwd = new THREE.Vector3();
+const pBack = new THREE.Vector3();
+
+/**
+ * The pump's arm on side `side` (1 the right of the eye, -1 the left), swung `swing` (-1 down .. 1 up, `pumpSwing()`),
+ * `sprint` (0 a jog .. 1 a sprint) of the way to the sprint's height and `walk` (0 a jog .. 1 a walk) of the way down
+ * to the walk's: into `out` (its own shoulder, the elbow bent, the wrist on its bob, the back of the fist out)
+ */
+export function pumpArm(side: number, swing: number, sprint: number, out: LaidArm, walk = 0) {
+  side = Math.sign(side) || 1;
+  const mirror = (v: THREE.Vector3, o: THREE.Vector3) => o.set(v.x * side, v.y, v.z);
+  const low = mirror(PUMP.low, pBack).lerp(mirror(PUMP.walkLow, pDir), walk);
+  const high = mirror(PUMP.high, pFwd).lerp(mirror(PUMP.sprint, pDir), sprint).lerp(mirror(PUMP.walkHigh, pDir), walk);
+  // (eased at the ends, as an arm slows to turn at the top and the bottom of its swing)
+  const t = THREE.MathUtils.smoothstep((swing + 1) / 2, 0, 1);
+  const target = tA.copy(low).lerp(high, t);
+  target.z -= PUMP.bulge * Math.sin(Math.PI * t);
+  const shoulder = mirror(PUMP.shoulder, out.shoulder);
+  solveArm(shoulder, target, mirror(PUMP.pole, tB), out.elbow, out.wrist);
+  mirror(PUMP.face, out.face).normalize();
+  return out;
+}
+
+/**
+ * `a` eased `w` (0..1) of the way to `b`: the shoulder, the wrist and the way the fist faces between them, the elbow
+ * solved again round between theirs (so the arm keeps its lengths), into `a`
+ */
+export function blendArm(a: LaidArm, b: LaidArm, w: number) {
+  if (w <= 0) return a;
+  const target = tA.copy(a.wrist).lerp(b.wrist, w);
+  const mid = (l: LaidArm, o: THREE.Vector3) => o.copy(l.elbow).sub(l.shoulder).addScaledVector(tmpS.copy(l.wrist).sub(l.shoulder), -0.5);
+  const pole = mid(a, tB).lerp(mid(b, pDir), w);
+  a.face.lerp(b.face, w).normalize();
+  a.shoulder.lerp(b.shoulder, w);
+  solveArm(a.shoulder, target, pole, a.elbow, a.wrist);
+  return a;
+}
+const tmpS = new THREE.Vector3();
+
+/**
+ * A punch's feel in first person (the owner's call, 2026-11: "subtle"): how far the view turns with the shoulder
+ * behind each punch (radians, + to the left: a left hand turns him right, a right hand left) and leans with it (+ up),
+ * how long a landed hit holds the fight (seconds: about three frames) and the view's kick forward (tiles, before his
+ * scale) and how long it takes
+ */
+export const PUNCH_FEEL = {
+  turn: { jab: -0.018, cross: 0.032, hook: -0.045, uppercut: 0.026 },
+  lean: { jab: -0.008, cross: -0.014, hook: -0.01, uppercut: 0.022 },
+  stop: 0.05,
+  kick: 0.035,
+  kickTime: 0.14,
+};
+/** A punch's share at frame `f` (0..1): up over its start-up, held through the active frames, eased back over the recovery */
+export function punchEnvelope(f: number, startup: number, active: number, recovery: number) {
+  if (f < startup) return THREE.MathUtils.smoothstep(f / startup, 0, 1);
+  if (f < startup + active) return 1;
+  return 1 - THREE.MathUtils.smoothstep((f - startup - active) / recovery, 0, 1);
 }

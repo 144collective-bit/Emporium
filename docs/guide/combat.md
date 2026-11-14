@@ -126,12 +126,33 @@ keep it up to date when what it describes changes.
   agree. From his eyes the clips' guard is under his chin, out of shot, so
   with the guard up a first-person correction (`FP_FIX`) raises the fists,
   draws them in, carries them forward the more the arm is bent and never
-  nearer the eye than `near`; running with his hands down `FP_RUN` lifts
-  his swing into the lower corners. Both solve the elbow again round
-  towards his own (`solveArm()`), never moving his body; while one arm is
+  nearer the eye than `near`, the elbow solved again round towards his own
+  (`solveArm()`), never moving his body. Running with his hands down (the
+  owner's calls: "a classic FPS pump", "his steps, a designed arc", loose
+  fists, then "his hands should just move up and down... his whole arm
+  locks out when sprinting") the pump takes over (`pumpArm()`, `PUMP`):
+  his body sets the timing (each arm's wrist ahead of the other's, about
+  the middle of his swing lately, so a sprint carrying one hand ahead
+  never sticks it forward, against its size, `pumpSwing()`) and each fist
+  bobs up and down in its lower corner (`low` to `high`, a touch forward
+  through the middle), the elbow always bent, from a shoulder of its own
+  (`PUMP.shoulder`: the sprint carries his head ahead of his real one),
+  higher sprinting, lower and smaller at a walk (`walkLow`, `walkHigh`;
+  walk.ts `FP_PUMP` from a walk, `FP_WALK`); the fist is loose
+  (`fistGeometry(thumb, loose)`, a second forearm swapped in, so still two
+  draws an arm), taken over quickly (`PUMP_IN`) and eased back to the
+  clip's arm as he slows
+  (`blendArm()`); while one arm is
   out punching the other hand's draw in is eased off (`PUNCH_ASIDE`), so
   the punch has the middle. With the left lead (the Fight Club, below) the
-  jab and hook are his left.
+  jab and hook are his left. A punch's feel in first person (the owner's
+  call: subtle; `PUNCH_FEEL`, walk.ts): the view turns a touch with the
+  shoulder behind each punch (a left hand turns him right, a right hand
+  left) and leans with it over the punch's frames (`punchEnvelope()`), and
+  one that lands holds the fight about three frames (`hitStop`: the street
+  fists step with no time) and kicks the view forward a touch; the arms dip
+  on a landing and spring back (fistsview.ts `LAND_DIP`). None of it under
+  reduced motion.
   The arms are tied to the camera (in shot looking up or down) and lag
   the look; narrow screens hold them further off; a kick bobs the view
   (`KICK`). Nothing sways under reduced motion. In first person the view

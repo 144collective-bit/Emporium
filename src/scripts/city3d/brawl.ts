@@ -33,6 +33,8 @@ export { BRAWL, NO_BRAWL, MOVES, type BrawlEvent, type BrawlInput, type MoveId }
 export { PARTNER_SOLIDS } from './brawlsite';
 /** The fists in first person (fistsview.ts, the polish plan's Phase 8) */
 export { KICK, createFistsView, type FistsView } from './fistsview';
+/** A punch's feel in first person (fparm.ts): walk mode turns and kicks the view by it */
+export { PUNCH_FEEL, punchEnvelope } from './fparm';
 
 /** The hands closed into fists with the guard up (0 open, 1 a fist), and as they are relaxed */
 const FIST = 1;
