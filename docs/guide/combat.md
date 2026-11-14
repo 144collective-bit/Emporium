@@ -140,7 +140,19 @@ keep it up to date when what it describes changes.
   higher sprinting, lower and smaller at a walk (`walkLow`, `walkHigh`;
   walk.ts `FP_PUMP` from a walk, `FP_WALK`); the fist is loose
   (`fistGeometry(thumb, loose)`, a second forearm swapped in, so still two
-  draws an arm), taken over quickly (`PUMP_IN`) and eased back to the
+  draws an arm). **The fist is one smooth shape** (the owner's call,
+  2026-11: "smoothing... more natural", a chunky cartoon fist, first person
+  only): `fistField()` is how far a point is outside the hand (the back
+  of the hand and palm, the wrist, four fingers curled in two, their
+  knuckles one smooth ridge ("too lumpy around the knuckles"), the thumb
+  and its ball), each part run into the next with a
+  smooth minimum (`smin()`), so it reads as one hand with creases;
+  `meshField()` turns that into a mesh once as the fists load (a surface
+  net, about 3 mm cells, 4.6 mm on the phone tier for about half the
+  triangles, `FIST_CELL`, `createFistsView(scene, low)`, sampled finely only near the surface, shaded by
+  the field's slope; the other hand mirrored, `mirrorX()`; made once,
+  `FISTS`), and the creases where fingers and thumb meet are drawn in,
+  comic style, by darkening the skin there (`CREASE`, `paintFist()`), taken over quickly (`PUMP_IN`) and eased back to the
   clip's arm as he slows
   (`blendArm()`); while one arm is
   out punching the other hand's draw in is eased off (`PUNCH_ASIDE`), so

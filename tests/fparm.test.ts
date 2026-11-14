@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { ARM, FIST, aimPiece, cuffGeometry, fistGeometry, merge, paint, sleeveGeometry, sleeveRadius, solveArm, stripeGeometry } from '../src/scripts/city3d/fparm';
+import { ARM, CREASE, FIST, aimPiece, cuffGeometry, fistGeometry, merge, paint, paintFist, sleeveGeometry, sleeveRadius, solveArm, stripeGeometry } from '../src/scripts/city3d/fparm';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const near = (a: number, b: number, e = 1e-6) => Math.abs(a - b) < e;
@@ -74,7 +74,46 @@ test('the fist: closed, its size, the knuckles out front, the thumb on its side,
         lowX = pos.getX(i);
       }
     assert.ok(lowX * thumb > -0.01, `thumb on side ${thumb}`);
-    assert.deepEqual(Object.keys(g.attributes).sort(), ['normal', 'position']);
+    // (its crease shade rides in `tint` until it's painted: paintFist())
+    assert.deepEqual(Object.keys(g.attributes).sort(), ['normal', 'position', 'tint']);
+  }
+});
+
+test('the smooth fist: one shape, every face out, creases drawn in where the fingers and thumb meet', () => {
+  for (const thumb of [-1, 1] as const) {
+    const g = fistGeometry(thumb);
+    const p = g.attributes.position as THREE.BufferAttribute;
+    const n = g.attributes.normal as THREE.BufferAttribute;
+    const t = g.attributes.tint as THREE.BufferAttribute;
+    // Every face turned the way the surface faces (none inside out, the mirrored hand included)
+    let wrong = 0;
+    const [a, b, c, e1, e2] = [V(0, 0, 0), V(0, 0, 0), V(0, 0, 0), V(0, 0, 0), V(0, 0, 0)];
+    for (let i = 0; i < p.count; i += 3) {
+      a.fromBufferAttribute(p, i);
+      b.fromBufferAttribute(p, i + 1);
+      c.fromBufferAttribute(p, i + 2);
+      const f = e1.subVectors(b, a).cross(e2.subVectors(c, a));
+      const nn = V(n.getX(i) + n.getX(i + 1) + n.getX(i + 2), n.getY(i) + n.getY(i + 1) + n.getY(i + 2), n.getZ(i) + n.getZ(i + 1) + n.getZ(i + 2));
+      if (f.dot(nn) < 0) wrong++;
+    }
+    assert.equal(wrong, 0, 'faces inside out');
+    // Creases: some of it deep in one, most of it clear of any
+    let deep = 0;
+    for (let i = 0; i < t.count; i++) {
+      assert.ok(t.getX(i) >= 0 && t.getX(i) <= 1);
+      if (t.getX(i) > CREASE.full * 0.8) deep++;
+    }
+    assert.ok(deep > t.count * 0.01 && deep < t.count * 0.25, `creases ${deep / t.count}`);
+    // Painted: the skin, darker in the creases, never lighter
+    const painted = paintFist(g.clone(), '#e8c49a');
+    const skin = new THREE.Color('#e8c49a');
+    const pt = painted.attributes.tint as THREE.BufferAttribute;
+    let darkest = 1;
+    for (let i = 0; i < pt.count; i++) {
+      assert.ok(pt.getX(i) <= skin.r + 1e-6);
+      darkest = Math.min(darkest, pt.getX(i) / skin.r);
+    }
+    assert.ok(near(darkest, 1 - CREASE.dark, 0.02), `darkest ${darkest}`);
   }
 });
 
@@ -277,5 +316,19 @@ test('the soft top: a fist well under it is left alone, one rising past it eases
     const t = softTop(y, -0.03, 0.03);
     assert.ok(t > last && t < -0.03 + 1e-9, 'rising smoothly, never past it');
     last = t;
+  }
+});
+
+test('the phone tier\'s fist: the same hand, coarser (about half the triangles)', () => {
+  for (const thumb of [-1, 1] as const) {
+    const hi = fistGeometry(thumb);
+    const lo = fistGeometry(thumb, 0, true);
+    hi.computeBoundingBox();
+    lo.computeBoundingBox();
+    const a = hi.boundingBox!.getSize(V(0, 0, 0));
+    const b = lo.boundingBox!.getSize(V(0, 0, 0));
+    assert.ok(a.distanceTo(b) < 0.006, `same size ${a.toArray()} ${b.toArray()}`);
+    const ratio = lo.attributes.position.count / hi.attributes.position.count;
+    assert.ok(ratio < 0.6, `fewer triangles ${ratio}`);
   }
 });
