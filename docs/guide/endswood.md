@@ -47,6 +47,15 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   brook between its banks and the bridge's parapets, the hedges, the rec ground's and the churchyard's grass, the
   compound's paved plot and the compound itself (`registerHome()`, home3d.ts), and Lot 9's tunnel under the ring road
   (`tunnel3d.ts`, the estate's subway dressing it always had).
+- **The rolling ground** (`southground.ts`, docs/south-plan.md Phase 1c, tested in `tests/southground.test.ts`): the
+  village's hill (`HILL_H` 2.4, St Aldwyn's on top), swells in the fields, the brook's valley, today's ground wherever
+  the south meets what's fixed (`freedom()`); each street on a bed (`ROAD_BEDS`, one in ten at most, level across, the
+  same height where streets meet, a bridge over the brook); `southHeightAt()` exactly, `southLift()` off a cached grid.
+  **Everything in the south stands on it**: kit.ts `Batch.build()` lifts what's drawn there (`setGroundLift()`, set in
+  index.ts for the main thread and the site worker; faces split to `LIFT_EDGE`), terrain.ts reads it (cars, taxis, trees,
+  cameras), groundheight.ts's `south` layer walks on it, solids.ts's `onGround()` lifts the boxes, the lamps carry their
+  lifted height. Anything new drawn in the south is lifted for free; anything placed outside a Batch (a lamp, a tree, a
+  pin, a pool of light, a person) adds `southLift(x, z)` itself.
 - **The ground** (ground.ts): worn grass and bare patches round the estate (`ESTATE_LAND`), a worn lawn through the
   village and the rows (`VILLAGE_LAND`), the brook's banks lush. **Trees keep off** (landuse.ts `KEEPS`) the estate's
   land, the brook and the rec ground; the fields keep theirs.

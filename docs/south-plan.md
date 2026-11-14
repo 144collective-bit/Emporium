@@ -198,10 +198,41 @@ From the Circus west, patchy as high roads are:
      estate's modules and tests are gone; Bunker Sound's beat and St Aldwyn's
      bell are off until their buildings return. `tests/fixtures/layout.json`
      rewritten: only streets changed. Shots: `5-phase-1b-*`.
-   - **1c, the rolling ground:** a height field under the south (as
-     Crestmont's `terrain.ts`): the village's hill with St Aldwyn's on
-     top, the brook's valley, swells in the fields, level under every
-     street, block and place.
+   - **1c, the rolling ground** (the owner's calls, 2026-11-14: rolling
+     under everything in Endswood and its new land, nothing built
+     elsewhere changing; the village's hill about two storeys, St
+     Aldwyn's on top; Degen's compound on a level pad). In two steps:
+     - **The ground as data** (built, waiting on the owner's sign-off):
+       `southground.ts` (DOM-free, tested in `tests/southground.test.ts`):
+       the land's shape (`landAt()`: the hill, `HILL_H` 2.4, swells in the
+       fields and under the rows, the brook's valley `VALLEY`), eased to
+       today's ground where the south meets what's fixed (`freedom()`: the
+       ring road's edge, the south avenue and east of it, Lot 9, the
+       tunnel's mouth, Degen's plot, the land's edge); each street on a
+       bed (`ROAD_BEDS`: its land averaged along it, pinned at today's
+       height by what's fixed, the same height where streets meet, held
+       to `GRADE` (one in ten), level across it, over the brook a bridge's
+       deck `BRIDGE_CLEAR` over the water); the ground (`southHeightAt()`)
+       the land eased onto the beds past each sidewalk, held at today's
+       height to Lot 9's fence and over Degen's plot. Shot:
+       `6-phase-1c-ground.webp` (bands every 0.3, from the data).
+     - **Into the city** (built, waiting on the owner's sign-off): one lift
+       for everything there. `southLift()` (southground.ts: the ground read
+       off a cached grid every 0.5) is set once as the city's module loads
+       (index.ts `setGroundLift()`, so the site worker lifts the same), and
+       kit.ts `Batch.build()` raises every vertex inside the south's ground
+       by the ground under it, its faces first split so no edge runs longer
+       than `LIFT_EDGE` (5) along the ground: the land, the slabs, the
+       streets, the footpaths, the compound, the brook all follow it.
+       terrain.ts's `heightAt()` / `onHills()` / `hillsAlong()` read the south
+       too (`onCrest()` for Crestmont's own), so cars, taxis, the outskirts'
+       trees, the free camera and the walk camera follow it; groundheight.ts's
+       `south` layer lifts its slabs, sidewalks and streets for walking and
+       driving; solids.ts lifts the boxes standing on it (`onGround()`, the
+       chunks' too); endswood.ts's lamps carry their lifted height; the rolls
+       keep off it. Cost on the phone tier: the south's chunk 18k triangles
+       to 29k, about a second's build spread over the worker. Shots:
+       `7-phase-1c-day.webp`, `7-phase-1c-night.webp`.
 2. **The blocks.** The Wall, the twin towers and their cores, the upgraded
    stairwell blocks re-sited, the sky network walked on (`endsdecks.ts`'s
    floors), the estate's courts, decks and grass.

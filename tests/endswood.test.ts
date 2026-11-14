@@ -10,6 +10,7 @@ import { distTo, inside } from '../src/scripts/city3d/streetfaces';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { HW_EDGE } from '../src/scripts/city3d/endswood';
+import { southLift } from '../src/scripts/city3d/southground';
 
 const centroid = (poly: Pt[]): Pt => [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
 
@@ -32,7 +33,8 @@ test("its land: every street and block on it; the fields, Lot 9 and the ring roa
 test('sodium lamps along every street: on its sidewalk, never on the asphalt, apart, plenty of them', () => {
   assert.ok(ENDS_LAMPS.length > 80, `${ENDS_LAMPS.length} lamps`);
   for (const [x, z, ry, y] of ENDS_LAMPS) {
-    assert.equal(y, SLAB_Y);
+    // (on the sidewalk's top, lifted by the south's rolling ground: southground.ts)
+    assert.equal(y, SLAB_Y + southLift(x, z));
     assert.ok(inEndswood(x, z), `a lamp at ${x}, ${z} off the land`);
     for (const s of PLAN.streets) if (s.kind !== 'highway' && s.kind !== 'ramp') assert.ok(distToStreet(s, [x, z]) > s.half + 0.2, `a lamp on ${s.id} at ${x.toFixed(1)}, ${z.toFixed(1)}`);
     // (its arm over the nearest street: (cos ry, -sin ry) points at its asphalt)
@@ -49,7 +51,8 @@ test('sodium lamps along every street: on its sidewalk, never on the asphalt, ap
 
 test('bollards at each end of every footpath: off the asphalt, a walker\'s way between them, all solid', () => {
   assert.equal(ENDS_SOLIDS.length, PATH_BOLLARDS.length);
-  for (const b of ENDS_SOLIDS) assert.ok(SOLIDS.includes(b), 'a bollard not in the solids');
+  // (by its footprint: on the rolling ground it's a lifted copy, solids.ts `onGround()`)
+  for (const b of ENDS_SOLIDS) assert.ok(SOLIDS.some((q) => q[0] === b[0] && q[1] === b[1] && q[2] === b[2] && q[3] === b[3]), 'a bollard not in the solids');
   for (const [x, z] of PATH_BOLLARDS)
     for (const s of PLAN.streets) if (s.kind !== 'highway' && s.kind !== 'ramp') assert.ok(distToStreet(s, [x, z]) > s.half + 0.15, `a bollard on ${s.id} at ${x.toFixed(1)}, ${z.toFixed(1)}`);
   for (const f of FOOTPATHS) {
