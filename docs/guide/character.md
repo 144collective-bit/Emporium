@@ -102,8 +102,10 @@ keep it up to date when what it describes changes.
   - **The hood up** (`docs/wardrobe-plan.md` Phase 3): cloth over the head,
     not a helmet, and one with the hoodie (the owner's call: no line between
     hood and sweater). Its sections are the head's outline carried out
-    (`headShell()`, `HOOD_SIDE` at the sides, fuller behind), falling under
-    the jaw to the neck (`HOOD_NECK`) and growing out of the hoodie's own
+    (`headShell()`, `HOOD_SIDE` at the sides, fuller behind), tapering under
+    the jaw to the neck (`HOOD_NECK`, about the jaw's width: no bulge round
+    the neck), its back hanging straight from the head to the upper back
+    (`drape`), and growing out of the hoodie's own
     neckline: its lowest rows lie on the sweater's sections, a little inside
     then a little out (`HOOD_INTO`), leaving it at a shallow angle so no ink
     line shows; there it's weighted as the sweater is (the `hood` region in
