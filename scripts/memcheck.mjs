@@ -29,7 +29,7 @@ const MiB = 1048576;
 // The ceilings and the formula, from the city's own DOM-free rules file
 const out = join(mkdtempSync(join(tmpdir(), 'memcheck-')), 'targets.mjs');
 await build({ entryPoints: ['src/scripts/city3d/targets.ts'], bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'error' });
-const { MEMORY_CEILINGS, pictureBytes } = await import(pathToFileURL(out).href);
+const { HITCH_CEILINGS, MEMORY_CEILINGS, pictureBytes } = await import(pathToFileURL(out).href);
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.wasm': 'application/wasm', '.bin': 'application/octet-stream', '.ktx2': 'image/ktx2', '.png': 'image/png', '.webp': 'image/webp', '.avif': 'image/avif', '.woff2': 'font/woff2' };
 const server = createServer((req, res) => {
@@ -98,6 +98,19 @@ try {
   const off = Math.abs(formula - s.targets) / Math.max(s.targets, 1e-6);
   console.log(`${off > 0.1 ? 'OFF ' : 'ok  '} formula    ${formula.toFixed(1).padStart(6)} MiB for ${s.targets.toFixed(1)} MiB measured (px ${s.px})`);
   if (off > 0.1) fail.push(`targets.ts's formula is ${(off * 100).toFixed(0)}% off what the phone holds: post.ts or sky.ts changed without it`);
+
+  // The hitches (Phase 6.3): the benchmark's slowest frame by CPU, each view and the route, held to HITCH_CEILINGS
+  const bench = await page.waitForFunction(() => window.__bench, null, { timeout: 1800000, polling: 5000 }).then((h) => h.jsonValue());
+  const h = HITCH_CEILINGS.phone;
+  const hitch = (what, v, max, parts = {}) => {
+    const over = max != null && v > max;
+    // (where the slowest frame's CPU went: the parts over a tenth of it, biggest first)
+    const where = Object.entries(parts).filter(([, ms]) => ms >= v / 10).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `${k} ${ms.toFixed(0)}`).join(', ');
+    console.log(`${over ? 'OVER' : 'ok  '} ${`cpu ${what}`.padEnd(22).slice(0, 22)} ${v.toFixed(0).padStart(5)} ms of ${max == null ? '  -- (no ceiling yet)' : `${String(max).padStart(4)} ms`}${where ? `  (${where})` : ''}`);
+    if (over) fail.push(`${what}: a frame took ${v.toFixed(0)} ms of CPU, over its ${max} ms ceiling`);
+  };
+  for (const v of bench.views) hitch(v.id, v.worstCpu, h?.view, v.worstParts);
+  hitch('the route', bench.route.worstCpu, h?.route, bench.route.worstParts);
 
   if (SOAK) {
     // Half in the City view (the benchmark's route, then still), half walking: sampled every 30 s, or ten times

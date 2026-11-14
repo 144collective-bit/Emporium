@@ -115,3 +115,15 @@ export const MEMORY_CEILINGS = {
   /** Phase 2's measured 291 (a retina 1440 x 900 at 2x, SMAA) and 175 (1x, 4x MSAA) */
   desktop: { retina: 320, standard: 193 },
 } as const;
+
+/**
+ * The hitch ceilings (docs/stability-plan.md, Phase 6.3), ms: the most CPU one frame of `?bench` may take, in any of
+ * its views and on its route (`worstCpu`, bench.ts), on the headless phone `npm run memcheck` runs (scripts/memcheck.mjs).
+ * A frame's CPU is its own script and draw submission: a step that freezes the city (a big trim, a district arriving,
+ * every shader recompiling, as the step-down's shadows did) shows here, whatever the software renderer's own pace.
+ * Set from what that phone measured, with room for a slower machine; lower one when a change cuts it. Null: not set
+ * yet (memcheck prints the numbers and holds nothing to them; the first runs found spikes to look into first).
+ */
+export const HITCH_CEILINGS: { phone: { view: number; route: number } | null } = {
+  phone: null,
+};

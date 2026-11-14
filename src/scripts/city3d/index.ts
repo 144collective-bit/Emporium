@@ -1676,6 +1676,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // for; without cancelling it, coming back would start a second loop beside it
   // (and each trip away another), each drawing the whole city.
   let raf = 0;
+  // (the frame's CPU by part: `part(k)` adds the time since the last mark to `k`)
+  const parts = { before: 0, sky: 0, works: 0, tiles: 0, lods: 0, ticks: 0, render: 0, between: 0 };
+  let partAt = 0;
+  const part = (k: keyof typeof parts) => {
+    const now = performance.now();
+    parts[k] += now - partAt;
+    partAt = now;
+  };
   const loop = () => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
@@ -1855,6 +1863,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (++tickN % skip) return spare(2);
     if (!onScreen && !walking) return;
     const cpuStart = performance.now();
+    // Where the frame's CPU goes, for the benchmark's slowest frame (bench.ts `worstParts`, the stability plan's 6.3)
+    partAt = cpuStart;
+    for (const k in parts) parts[k as keyof typeof parts] = 0;
     timer.update();
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
@@ -1937,7 +1948,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     sky.setShadows(walking && !walk.airborne && !lowered.shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
+    part('before');
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
+    part('sky');
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -1968,12 +1981,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
     const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
     const waiting = works.pending();
+    part('between');
     works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : share, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
     if (works.pending() !== waiting) builtShows();
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
+    part('works');
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
+    part('tiles');
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
+    part('lods');
     if (!reduced || frames === 0) for (const f of ticks) f(env);
+    part('ticks');
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
     updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);
@@ -2062,7 +2080,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         renderer.info.reset();
         post.shadowStat.calls = post.shadowStat.tris = 0;
       }
+      part('between');
       post.render();
+      part('render');
       shots?.drawn();
       dirty = false;
       if (!bootAt.first) {
@@ -2075,7 +2095,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         stat.tris += triangles;
         stat.shadowDraws += post.shadowStat.calls;
         stat.shadowTris += post.shadowStat.tris;
-        if (bench?.active) bench.sample(t, performance.now(), performance.now() - cpuStart, calls, triangles, post.shadowStat.calls, post.shadowStat.tris);
+        part('between');
+        if (bench?.active) bench.sample(t, performance.now(), performance.now() - cpuStart, calls, triangles, post.shadowStat.calls, post.shadowStat.tris, parts);
       }
     }
     if (statsEl) {

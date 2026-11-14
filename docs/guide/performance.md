@@ -450,7 +450,11 @@ keep it up to date when what it describes changes.
   Southfield and Lot 9 (`BLEND_VIEWS` has the same six for the shots)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,
-  average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
+  average / 95th-percentile / slowest frame, CPU ms, the slowest frame's CPU
+  and where it went (`worstCpu`, `worstParts`: index.ts's `part()` marks
+  the sky, building, tiles, far forms, ticks and rendering; the stability
+  plan's 6.3, which `npm run memcheck` prints and will hold to
+  `HITCH_CEILINGS` in `targets.ts`), draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`; the card's **Copy results** button copies them with the
   device (its user agent and screen), so a real phone's numbers can be
