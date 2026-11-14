@@ -143,7 +143,10 @@ keep it up to date when what it describes changes.
   draws an arm). **The fist is one smooth shape** (the owner's call,
   2026-11: "smoothing... more natural", a chunky cartoon fist, first person
   only): `fistField()` is how far a point is outside the hand (the back
-  of the hand and palm, the wrist, four fingers curled in two, their
+  of the hand and palm, the wrist ("smooth wrist": from inside the cuff
+  a flattened round tapering into the heel of the hand over a long blend,
+  `WRIST`, a few millimetres clear inside the suit's shirt cuff so nothing
+  sits flush), four fingers curled in two, their
   knuckles one smooth ridge ("too lumpy around the knuckles"), the thumb
   and its ball), each part run into the next with a
   smooth minimum (`smin()`), so it reads as one hand with creases;
