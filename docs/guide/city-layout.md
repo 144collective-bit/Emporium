@@ -80,6 +80,19 @@ keep it up to date when what it describes changes.
     wraps), every sign from one sign atlas, and details are bottomless
     boxes in the shared paint: keep new infill going through them. Phones
     (`LOW` in `infill.ts`) leave out the finest details.
+  - **Modelled fronts** (the owner's call, `docs/buildings-plan.md`; Phase 1,
+    the pilot, is built on the Emporium's block only, `PILOT` in
+    `infill.ts`): the painted windows get real frames, sills and lintels
+    near, by their window type (windows.ts: hoods on the round-headed
+    ones, shutters on stucco, a post between a pair, the casements'
+    concrete bands, steel on the lofts; a window box or an air conditioner
+    here and there; phones the sills and lintels alone), the bays are
+    centred between corner piers so no window is cut by a wall's end, and
+    the piers, cornice and parapet are drawn at every distance. Where each
+    window's opening stands is `facade.ts` (DOM-free, tested in
+    `tests/facade.test.ts`: `PANES`, `baysOf()`, `windowsOf()`), which the
+    atlas's painter reads too: change an opening there, never in one of
+    the two.
   - The hangout square (`SQUARE`) is the whole south block, a block from the
     Emporium: an open plaza (the owner had the stage and its screen taken
     out; don't put them back), with the fountain, benches facing it, kiosks,

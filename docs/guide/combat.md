@@ -143,7 +143,10 @@ keep it up to date when what it describes changes.
   draws an arm). **The fist is one smooth shape** (the owner's call,
   2026-11: "smoothing... more natural", a chunky cartoon fist, first person
   only): `fistField()` is how far a point is outside the hand (the back
-  of the hand and palm, the wrist, four fingers curled in two, their
+  of the hand and palm, the wrist ("smooth wrist": from inside the cuff
+  a flattened round tapering into the heel of the hand over a long blend,
+  `WRIST`, a few millimetres clear inside the suit's shirt cuff so nothing
+  sits flush), four fingers curled in two, their
   knuckles one smooth ridge ("too lumpy around the knuckles"), the thumb
   and its ball), each part run into the next with a
   smooth minimum (`smin()`), so it reads as one hand with creases;
@@ -164,7 +167,24 @@ keep it up to date when what it describes changes.
   one that lands holds the fight about three frames (`hitStop`: the street
   fists step with no time) and kicks the view forward a touch; the arms dip
   on a landing and spring back (fistsview.ts `LAND_DIP`). None of it under
-  reduced motion.
+  reduced motion. **Natural motion** (the owner's call, 2026-11: "his arm
+  movements... look robotic", subtle, first person only): the guard held
+  is alive (fparm.ts `LIFE`, `guardLife()`: a slow breath lifting both
+  fists, each hand's own drift on waves that never line up, so the hands
+  are never in step or mirrored, and a slow weight shift), eased off while
+  either hand is out punching and as the run takes over; the hands' paths
+  up into the guard and into the run are arcs (`ARC`, `arcBulge()`: out and
+  forward part way, nothing at either end), each a nudge of the fist with
+  the elbow solved again (`nudgeArm()`); the look's lag has weight (`SWAY`,
+  `springStep()`: a damped spring a touch under critical, so the arms
+  swing a little past before settling); follow-through and overlap
+  (`FOLLOW`, `followStep()`, run last on each arm): each fist follows its
+  place through a quick spring a touch under critical (in steps of at most
+  1/120 s, so the same at any frame rate), so a punch arrives a hair late,
+  swings a little past full reach and settles, the same coming back,
+  never more than `most` off and a cut taken at once; and the fist's turn
+  lags its forearm's, so the wrist snaps over at the end. The life, the
+  sway and the follow are off under reduced motion.
   The arms are tied to the camera (in shot looking up or down) and lag
   the look; narrow screens hold them further off; a kick bobs the view
   (`KICK`). Nothing sways under reduced motion. In first person the view
