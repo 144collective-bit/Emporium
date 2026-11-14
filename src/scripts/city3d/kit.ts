@@ -173,6 +173,8 @@ export function paintMat() {
     // (its colours are all 0 to 1: tilebatch.ts packs them smaller)
     paintShared.userData.paint = true;
     paintShared.userData.siteKey = 'paint';
+    // (its trees sway, read from the uv: tilebatch.ts keeps the uv while they do, `dropsUv()`)
+    paintShared.userData.wind = true;
     paintShared.onBeforeCompile = (sh) => injectWind(sh);
     paintShared.customProgramCacheKey = () => 'paint-wind';
   }

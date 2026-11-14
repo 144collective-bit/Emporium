@@ -210,10 +210,22 @@ const bytesOf = (g: THREE.BufferGeometry) =>
  * pass can tell apart) in place of three floats, and the shared paint's colours, which are all 0 to 1, as 16-bit
  * shares in place of three floats: 29 bytes a vertex where there were 44. Both are `normalized`, so the shaders
  * read the same numbers as before. Every piece of a material goes through here, so a mesh's pieces always match.
+ * The uv is left out where nothing reads it (`dropsUv()`): 21 bytes a vertex there.
  */
 /** Colour values past 0 to 1 the packing had to clamp (none expected: a check for the ?fps console) */
 export const PACKED = { clamped: 0 };
-export function compact(g: THREE.BufferGeometry, paint: boolean) {
+/**
+ * Whether the shared paint's trees sway (index.ts sets it from the tier: phones' don't, `low ? 0 : SWAY`). The sway
+ * is the only thing a shared material reads from a vertex's uv (kit.ts `injectWind()`), so where nothing sways the
+ * uv is left out (the stability plan's Phase 3b, docs/stability-plan.md)
+ */
+export const UV = { sway: true };
+/** A material whose tile pieces carry no uv: the shared ones (no texture), but the paint while its trees sway */
+export const dropsUv = (mat: THREE.Material) => !!mat.userData.shared && !(mat as THREE.MeshBasicMaterial).map && (!mat.userData.wind || !UV.sway);
+
+export function compact(g: THREE.BufferGeometry, paint: boolean, dropUv = false) {
+  // (no texture and nothing swaying: the uv is 8 of a vertex's 29 bytes for nothing)
+  if (dropUv && g.attributes.uv) g.deleteAttribute('uv');
   const n = g.attributes.normal as THREE.BufferAttribute | undefined;
   if (n && n.array instanceof Float32Array) {
     const src = n.array;
@@ -288,7 +300,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         const lod: Lod = m.userData.lod ?? 'all';
         // Building near pieces again: only the shared materials' (the only ones let go)
         if (opts.keep && !m.material.userData.shared) continue;
-        const g = compact(m.geometry.clone().applyMatrix4(m.matrixWorld), !!m.material.userData.paint);
+        const g = compact(m.geometry.clone().applyMatrix4(m.matrixWorld), !!m.material.userData.paint, dropsUv(m.material));
         const key = `${m.material.uuid}|${m.layers.mask}|${m.castShadow}|${m.receiveShadow}|${m.renderOrder}|${shapeOf(g)}`;
         const k2 = `${key}|${site}`;
         let inc = incoming.get(k2);
