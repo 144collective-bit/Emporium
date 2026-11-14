@@ -23,7 +23,8 @@
 import * as THREE from 'three';
 import { Batch, canvasTex, FONT_DISPLAY, fx, glowTex, lit, neon, PAL, rng, shadeHex, siteMat, toon } from './kit';
 import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type Pt, type SignId } from './downtown';
-import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
+import { CORE_ROADS, DOWNTOWN, LANE, THIRDS } from './layout';
+import { BALCONY_DOOR, CASEMENT_BANDS, CELL_W, COLS, LINTEL, PAIR_SASH, PANES, PX, PX_H, PX_W, ROWS, baysOf, styleOf, windowsOf, type Bays, type FacadeStyle } from './facade';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
 import { ROOF_TONES, corniceAt, roofTone, type CorniceKind } from './rooftones';
@@ -39,11 +40,6 @@ import { WINDOW_TYPE, paneAt, type Light, type Pane, type WallKindName } from '.
  * ground floor tall. Each band repeats across (u, in world units). The glow
  * map is drawn at half size (it only needs to say which windows are lit).
  */
-const CELL_W = 0.75;
-const COLS = 8;
-const ROWS = 4;
-const PX_W = 48;
-const PX_H = 64;
 const ATLAS_W = COLS * PX_W;
 const WALL_PX = ROWS * PX_H;
 const SHOP_W = 3.2;
@@ -242,15 +238,14 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
     if (type === 'casement' && !glow) {
       // The projects' concrete bands: a lintel band and a sill band right across each floor
       c.fillStyle = shadeHex(trim, -0.12);
-      c.fillRect(0, y + 10, ATLAS_W, 4);
-      c.fillRect(0, y + 48, ATLAS_W, 5);
+      for (const [a, e] of CASEMENT_BANDS) c.fillRect(0, y + a, ATLAS_W, e - a);
     }
     for (let col = 0; col < COLS; col++) {
       const x = col * PX_W;
       if (type === 'steel') {
         // Big steel windows, one for every two bays
         if (col % 2) continue;
-        glazed(c, x + 10, y + 10, PX_W * 2 - 20, 42, '#2a2b38', paneAt(seed, row, col), glow, 3);
+        glazed(c, x + PANES.steel.x, y + PANES.steel.y, PANES.steel.w, PANES.steel.h, '#2a2b38', paneAt(seed, row, col), glow, 3);
         if (!glow) {
           c.fillStyle = '#2a2b38';
           c.fillRect(x + 10, y + 24, PX_W * 2 - 20, 2);
@@ -262,12 +257,12 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
       }
       if (type === 'balcony' && col % 2 === 0) {
         // A balcony door (the balconies are geometry)
-        glazed(c, x + 12, y + 8, 24, PX_H - 8, trim, paneAt(seed, row, col), glow);
+        glazed(c, x + BALCONY_DOOR.x, y + BALCONY_DOOR.y, BALCONY_DOOR.w, BALCONY_DOOR.h, trim, paneAt(seed, row, col), glow);
         continue;
       }
       if (type === 'pair') {
         // Two narrow sashes side by side under one lintel
-        for (const k of [0, 1]) glazed(c, x + 8 + k * 19, y + 14, 13, 34, frame, paneAt(seed, row, col, k), glow, 0);
+        for (const k of [0, 1]) glazed(c, x + PANES.pair.x + k * (PAIR_SASH.w + PAIR_SASH.gap), y + PANES.pair.y, PAIR_SASH.w, PANES.pair.h, frame, paneAt(seed, row, col, k), glow, 0);
         if (!glow) {
           c.fillStyle = trim;
           c.fillRect(x + 3, y + 7, 42, 4);
@@ -277,15 +272,16 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
       }
       if (type === 'ribbon') {
         // A long low window a bay, with an opening light in it
-        glazed(c, x + 4, y + 20, PX_W - 8, 22, '#3a3d44', paneAt(seed, row, col), glow, 1, false);
+        glazed(c, x + PANES.ribbon.x, y + PANES.ribbon.y, PANES.ribbon.w, PANES.ribbon.h, '#3a3d44', paneAt(seed, row, col), glow, 1, false);
         continue;
       }
       if (type === 'casement') {
         // A wide steel casement, three lights across
-        glazed(c, x + 5, y + 19, 38, 27, '#c9c6bc', paneAt(seed, row, col), glow, 2, false);
+        glazed(c, x + PANES.casement.x, y + PANES.casement.y, PANES.casement.w, PANES.casement.h, '#c9c6bc', paneAt(seed, row, col), glow, 2, false);
         continue;
       }
-      const [wx, wy, ww, wh] = type === 'arched' ? [x + 12, y + 10, 24, 42] : [x + 11, y + 13, 26, 36];
+      const p = PANES[type === 'arched' ? 'arched' : 'sash'];
+      const [wx, wy, ww, wh] = [x + p.x, y + p.y, p.w, p.h];
       if (!glow && type === 'shuttered') {
         // Shutters either side
         c.fillStyle = shadeHex(wall, -0.4);
@@ -698,6 +694,19 @@ const OPEN_BOX = (() => {
   return g;
 })();
 
+/** A box against a wall, without the face on it (ten triangles), and a jamb: its two sides and front only (six) */
+const [WALL_BOX, JAMB_BOX] = (() => {
+  const idx = Array.from(new THREE.BoxGeometry(1, 1, 1).index!.array);
+  const make = (keep: number[]) => {
+    const g = new THREE.BoxGeometry(1, 1, 1);
+    g.setIndex(keep);
+    g.clearGroups();
+    return g;
+  };
+  // Faces run +x, -x, +y, -y, +z, -z, six indices each: -z is the wall's
+  return [make(idx.slice(0, 30)), make([...idx.slice(0, 12), ...idx.slice(24, 30)])];
+})();
+
 /** Drawing in a building's frame */
 function kit(b: Batch, F: Frame) {
   const put = (g: THREE.BufferGeometry, mat: THREE.Material) => b.add(g.applyMatrix4(F.M), mat);
@@ -705,20 +714,33 @@ function kit(b: Batch, F: Frame) {
     const g = OPEN_BOX.clone().scale(Math.abs(u1 - u0), Math.abs(y1 - y0), Math.abs(v1 - v0));
     put(g.translate((u0 + u1) / 2, (y0 + y1) / 2, (v0 + v1) / 2), mat);
   };
+  /** A box standing `out` from the front wall (v 0), and a jamb the same way */
+  const onWall = (shape: THREE.BufferGeometry, u0: number, u1: number, y0: number, y1: number, out: number, mat: THREE.Material) =>
+    put(shape.clone().scale(u1 - u0, y1 - y0, out).translate((u0 + u1) / 2, (y0 + y1) / 2, out / 2), mat);
+  const wbox = (u0: number, u1: number, y0: number, y1: number, out: number, mat: THREE.Material) => onWall(WALL_BOX, u0, u1, y0, y1, out, mat);
+  const jamb = (u0: number, u1: number, y0: number, y1: number, out: number, mat: THREE.Material) => onWall(JAMB_BOX, u0, u1, y0, y1, out, mat);
+  /** A flat panel just off the front wall */
+  const panel = (u0: number, u1: number, y0: number, y1: number, out: number, mat: THREE.Material) =>
+    put(new THREE.PlaneGeometry(u1 - u0, y1 - y0).translate((u0 + u1) / 2, (y0 + y1) / 2, out), mat);
   /** An upright wall from a to c (u, v), y0 to y1, facing n (u, v), its atlas band laid on from u0 (stacked when taller than the band) */
-  const wall = (band: Band, a: Pt, c: Pt, y0: number, y1: number, n: Pt, u0: number) => {
+  const wall = (band: Band, a: Pt, c: Pt, y0: number, y1: number, n: Pt, u0: number, row = 0) => {
     if (-(c[1] - a[1]) * n[0] + (c[0] - a[0]) * n[1] < 0) [a, c] = [c, a];
     const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-    for (let ya = y0; ya < y1 - 0.01; ya += band.th) {
-      const yb = Math.min(y1, ya + band.th);
+    // (`row`: the band's floor the wall starts on, so two fronts of one kind don't show the same windows)
+    let from = (row % ROWS) / ROWS;
+    for (let ya = y0; ya < y1 - 0.01; ) {
+      const yb = Math.min(y1, ya + band.th * (1 - from));
+      const vA = band.v0 + from * band.vh;
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute([a[0], ya, a[1], c[0], ya, c[1], c[0], yb, c[1], a[0], yb, a[1]], 3));
       g.setAttribute('normal', new THREE.Float32BufferAttribute([n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1]], 3));
       const u1 = u0 + len / band.tw;
-      const v1 = band.v0 + ((yb - ya) / band.th) * band.vh;
-      g.setAttribute('uv', new THREE.Float32BufferAttribute([u0, band.v0, u1, band.v0, u1, v1, u0, v1], 2));
+      const v1 = vA + ((yb - ya) / band.th) * band.vh;
+      g.setAttribute('uv', new THREE.Float32BufferAttribute([u0, vA, u1, vA, u1, v1, u0, v1], 2));
       g.setIndex([0, 1, 2, 0, 2, 3]);
       put(g, ATLAS.mat);
+      ya = yb;
+      from = 0;
     }
   };
   /** A sign board (or blade) from the sign atlas: centred at (u, y, v), facing out (ry turns it) */
@@ -738,56 +760,71 @@ function kit(b: Batch, F: Frame) {
   };
   /** What `draw` adds is drawn at every distance (the walls, roofs, signs and lit crowns: a building's far form); the rest is near only */
   const all = (draw: () => void) => b.detail(draw, 'all');
-  return { put, lbox, wall, sign, beam, all };
+  return { put, lbox, wbox, jamb, panel, wall, sign, beam, all };
 }
 type Kit = ReturnType<typeof kit>;
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 /** The four walls: the front's ground floor (if any) and upper floors from `upper`, the sides and back full height */
-function shell(k: Kit, F: Frame, top: number, wallBand: Band, ground: Band | null, upper: number, u0: number) {
-  k.all(() => shellWalls(k, F, top, wallBand, ground, upper, u0));
+function shell(k: Kit, F: Frame, top: number, wallBand: Band, ground: Band | null, upper: number, u0: number, fine: Fine | null = null) {
+  k.all(() => shellWalls(k, F, top, wallBand, ground, upper, u0, fine));
 }
-function shellWalls(k: Kit, F: Frame, top: number, wallBand: Band, ground: Band | null, upper: number, u0: number) {
+function shellWalls(k: Kit, F: Frame, top: number, wallBand: Band, ground: Band | null, upper: number, u0: number, fine: Fine | null = null) {
   const { w, d } = F;
+  // (a modelled front: its bays centred, and the band started on a floor of its own)
+  const uf = fine ? fine.bays.start : u0;
+  const row = fine ? fine.row : 0;
   if (ground) {
     k.wall(ground, [0, 0], [w, 0], S, S + SHOP_H, [0, 1], u0 * 0.37);
-    k.wall(wallBand, [0, 0], [w, 0], upper, top, [0, 1], u0);
-  } else k.wall(wallBand, [0, 0], [w, 0], S, top, [0, 1], u0);
-  k.wall(wallBand, [0, -d], [0, 0], S, top, [-1, 0], u0 + 0.25);
-  k.wall(wallBand, [w, 0], [w, -d], S, top, [1, 0], u0 + 0.5);
-  k.wall(wallBand, [w, -d], [0, -d], S, top, [0, -1], u0 + 0.75);
+    k.wall(wallBand, [0, 0], [w, 0], upper, top, [0, 1], uf, row);
+  } else k.wall(wallBand, [0, 0], [w, 0], S, top, [0, 1], uf, row);
+  k.wall(wallBand, [0, -d], [0, 0], S, top, [-1, 0], u0 + 0.25, row);
+  k.wall(wallBand, [w, 0], [w, -d], S, top, [1, 0], u0 + 0.5, row);
+  k.wall(wallBand, [w, -d], [0, -d], S, top, [0, -1], u0 + 0.75, row);
 }
 
 /** How far a roof slab stands in from the walls it sits between */
 const R_IN = 0.006;
 
 /** The roof slab and its parapet */
-function roof(k: Kit, F: Frame, top: number, par: THREE.Material, ph = 0.22) {
+function roof(k: Kit, F: Frame, top: number, par: THREE.Material, ph = 0.22, fine: Fine | null = null) {
   const { w, d } = F;
   const t = 0.12;
   // The slab tucked just inside the walls (flush with them, its edge flickers against them); the parapet covers the gap.
   // Its covering from where the building stands (rooftones.ts: tar, gravel, silver paint or the old navy)
   const cover = toon(ROOF_TONES[roofTone(F.M.elements[12], F.M.elements[14])]);
   k.all(() => k.lbox(R_IN, w - R_IN, top - 0.04, top, -d + R_IN, -R_IN, cover));
-  k.lbox(0, w, top, top + ph, -t, 0, par);
-  k.lbox(0, w, top, top + ph, -d, -d + t, par);
-  k.lbox(0, t, top, top + ph, -d + t, -t, par);
-  k.lbox(w - t, w, top, top + ph, -d + t, -t, par);
+  const parapet = () => {
+    k.lbox(0, w, top, top + ph, -t, 0, par);
+    k.lbox(0, w, top, top + ph, -d, -d + t, par);
+    k.lbox(0, t, top, top + ph, -d + t, -t, par);
+    k.lbox(w - t, w, top, top + ph, -d + t, -t, par);
+  };
+  // (a modelled building keeps its roofline at every distance)
+  if (fine) k.all(parapet);
+  else parapet();
 }
 
+/** How far under the roofline a cornice's underside is: what the modelled windows stop at */
+const corniceFoot = (kind: CorniceKind) => (kind === 'none' ? 0 : kind === 'coping' ? 0.12 : 0.34);
+
 /** A cornice along the front: bracketed (the default), stepped, a plain coping, or none (rooftones.ts `corniceAt()`) */
-function cornice(k: Kit, w: number, top: number, trim: THREE.Material, low: boolean, brackets = true, kind: CorniceKind = 'bracketed') {
+function cornice(k: Kit, w: number, top: number, trim: THREE.Material, low: boolean, brackets = true, kind: CorniceKind = 'bracketed', fine: Fine | null = null) {
   if (kind === 'none') return;
+  // (a modelled building's main courses are drawn at every distance)
+  const main = (draw: () => void) => (fine ? k.all(draw) : draw());
   if (kind === 'coping') {
-    k.lbox(-0.03, w + 0.03, top - 0.12, top - 0.02, 0, 0.08, trim);
+    main(() => k.lbox(-0.03, w + 0.03, top - 0.12, top - 0.02, 0, 0.08, trim));
     return;
   }
   if (kind === 'stepped') {
-    k.lbox(-0.04, w + 0.04, top - 0.34, top - 0.24, 0, 0.12, trim);
-    k.lbox(-0.08, w + 0.08, top - 0.24, top - 0.1, 0, 0.22, trim);
+    main(() => {
+      k.lbox(-0.04, w + 0.04, top - 0.34, top - 0.24, 0, 0.12, trim);
+      k.lbox(-0.08, w + 0.08, top - 0.24, top - 0.1, 0, 0.22, trim);
+    });
     return;
   }
-  k.lbox(-0.06, w + 0.06, top - 0.34, top - 0.14, 0, 0.22, trim);
+  main(() => k.lbox(-0.06, w + 0.06, top - 0.34, top - 0.14, 0, 0.22, trim));
   if (LOW) return;
   k.lbox(-0.03, w + 0.03, top - 0.14, top - 0.06, 0, 0.12, trim);
   if (brackets && !low) for (let u = 0.25; u < w - 0.15; u += 0.55) k.lbox(u - 0.05, u + 0.05, top - 0.52, top - 0.34, 0, 0.16, trim);
@@ -799,13 +836,110 @@ let LOW = false;
 let IN_SITE = false;
 
 /** A string course at each floor line and pilasters at the ends: the front isn't flat */
-function dress(k: Kit, w: number, from: number, top: number, floors: number, trim: THREE.Material) {
+function dress(k: Kit, w: number, from: number, top: number, floors: number, trim: THREE.Material, fine: Fine | null = null, wall = '') {
+  if (fine) piers(k, w, fine, from, top - 0.3, wall);
   if (LOW) return;
   for (let i = 0; i < floors; i++) {
     const y = from + i * FLOOR;
     k.lbox(-0.02, w + 0.02, y - 0.03, y + 0.03, 0, 0.05, trim);
   }
   for (const u of [0.07, w - 0.07]) k.lbox(u - 0.07, u + 0.07, from, top - 0.3, 0, 0.06, trim);
+}
+
+/* ---------- Modelled fronts (docs/buildings-plan.md) ---------- */
+
+/** A building's modelled front: how its windows are built, its bays, and the band's floor its walls start on */
+interface Fine {
+  style: FacadeStyle;
+  bays: Bays;
+  row: number;
+}
+/** The pilot: the centre block's buildings (the Emporium's own block), downtown's only */
+const PILOT = [THIRDS[1][0], THIRDS[1][0], THIRDS[1][1], THIRDS[1][1]];
+function fineOf(f: Infill, kind: WallKind, w: number, col: number): Fine | null {
+  if (IN_SITE || f.floors < 1) return null;
+  const [cx, cz] = [(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2];
+  if (cx < PILOT[0] || cx > PILOT[2] || cz < PILOT[1] || cz > PILOT[3]) return null;
+  const style = styleOf(kind);
+  if (!style) return null;
+  const bays = baysOf(w, style, col);
+  return bays.n > 0 ? { style, bays, row: Math.floor(rng(f.seed + 977)() * ROWS) } : null;
+}
+
+/** The plain wall at each end of a centred front: a pier over it, at every distance (it covers the band's cut bay) */
+function piers(k: Kit, w: number, fine: Fine, y0: number, y1: number, wall: string) {
+  const { s0 } = fine.bays;
+  if (s0 < 0.01) return;
+  const mat = toon(shadeHex(wall, -0.12));
+  k.all(() => {
+    k.wbox(0, s0, y0, y1, 0.05, mat);
+    k.wbox(w - s0, w, y0, y1, 0.05, mat);
+  });
+}
+
+/** Brick and brownstone: their windows' frames are painted cream */
+const bricky = (kind: WallKind) => kind.startsWith('brick') || kind === 'brownstone';
+/** How wide a window's frame is painted round its glass (four atlas pixels) */
+const RING = 4 * PX;
+/** Each window type's frame, as the atlas paints it (null: the wall's own trim, or cream on brick) */
+const FRAME_HEX: Partial<Record<FacadeStyle, string>> = { steel: '#2a2b38', ribbon: '#3a3d44', casement: '#c9c6bc' };
+
+/**
+ * The windows as geometry over the painted ones: a frame standing off the wall (so the glass sits back in it), a
+ * sill, a lintel, a hood on the round-headed ones, shutters on stucco, the casements' concrete bands, a post between
+ * a pair, and here and there a window box or an air conditioner. Near only; phones get the sills and lintels alone.
+ */
+function modelled(k: Kit, f: Infill, fine: Fine, w: number, from: number, clip: number, wall: string, trim: string, cream: boolean, skip?: [number, number]) {
+  const r = rng(f.seed + 4177);
+  const { style, bays } = fine;
+  const trimM = toon(trim);
+  const frameM = FRAME_HEX[style] ? toon(FRAME_HEX[style]!) : cream ? CREAM : trimM;
+  const sillM = style === 'steel' ? toon(shadeHex(wall, 0.2)) : trimM;
+  const headM = style === 'steel' ? METAL : trimM;
+  // What has neither a painted lintel nor a sill of its own: the bands carry the casements', a ribbon has a frame only
+  const plain = style === 'casement' || style === 'ribbon';
+  const j = style === 'shuttered' ? 0.047 : plain ? 0.04 : RING;
+  if (style === 'casement') {
+    const band = toon(shadeHex(trim, -0.12));
+    for (let floor = 0; floor < f.floors; floor++)
+      for (const [a, e] of CASEMENT_BANDS) {
+        const [y0, y1] = [from + floor * FLOOR + FLOOR - e * PX, from + floor * FLOOR + FLOOR - a * PX];
+        if (y1 <= clip) k.wbox(bays.s0, w - bays.s0, y0, y1, 0.06, band);
+      }
+  }
+  for (const win of windowsOf(bays, style, f.floors, clip - from, skip)) {
+    const [u0, u1, y0, y1] = [win.u0, win.u1, from + win.y0, from + win.y1];
+    const pick = r();
+    if (!plain) {
+      if (win.head) {
+        k.wbox(u0 - j - 0.02, u1 + j + 0.02, y1, y1 + LINTEL, 0.07, headM);
+        if (style === 'arched' && !LOW) k.wbox(u0 - j - 0.05, u1 + j + 0.05, y1 + LINTEL, y1 + LINTEL + 0.04, 0.1, trimM);
+      }
+      if (!win.door) k.wbox(u0 - RING - 0.02, u1 + RING + 0.02, y0 - 2 * RING, y0 - RING, 0.09, sillM);
+    }
+    if (LOW) continue;
+    const foot = win.door || plain ? y0 : y0 - RING;
+    k.jamb(u0 - j, u0, foot, y1, 0.045, frameM);
+    k.jamb(u1, u1 + j, foot, y1, 0.045, frameM);
+    if (plain) {
+      k.wbox(u0 - j, u1 + j, y1, y1 + j, 0.045, frameM);
+      k.wbox(u0 - j, u1 + j, y0 - j, y0, 0.06, frameM);
+    }
+    if (win.post) k.jamb(win.post[0], win.post[1], foot, y1, 0.045, frameM);
+    if (style === 'shuttered') {
+      const shut = toon(shadeHex(wall, -0.4));
+      k.wbox(u0 - 0.141, u0 - j, y0 - 0.016, y1, 0.03, shut);
+      k.wbox(u1 + j, u1 + 0.141, y0 - 0.016, y1, 0.03, shut);
+    }
+    if (win.door || style === 'steel' || plain) continue;
+    if (pick < 0.14) {
+      k.wbox(u0, u1, y0 - RING, y0 + 0.05, 0.15, toon('#6e6a8c'));
+      for (const t of [0.28, 0.72]) k.put(new THREE.IcosahedronGeometry(0.07, 0).translate(u0 + (u1 - u0) * t, y0 + 0.09, 0.08), t < 0.5 ? LEAF : GREEN);
+    } else if (pick < 0.22 && style !== 'arched') {
+      k.wbox(u0 + 0.04, u1 - 0.04, y0 - 0.02, y0 + 0.2, 0.2, toon('#c9c4e6'));
+      k.panel(u0 + 0.08, u1 - 0.08, y0 + 0.02, y0 + 0.16, 0.206, INK);
+    }
+  }
 }
 
 /* ---------- Rooftop and street things ---------- */
@@ -967,6 +1101,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
   const { w, d } = F;
   const top = S + f.h;
   const u0 = Math.floor(r() * COLS) / COLS;
+  const col = Math.round(u0 * COLS);
   const hasTower = f === WATER_TOWER;
   const roofTop = (things: () => void) => {
     if (!hasTower) things();
@@ -976,10 +1111,11 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const kind: WallKind = r() < 0.6 ? 'brownstone' : 'brick';
     const { wall, trim } = WALL_COLOR[kind];
     const trimM = toon(trim);
-    shell(k, F, top, ATLAS.wall[kind], ATLAS.ground.stoneBase, S + SHOP_H, u0);
-    dress(k, w, S + SHOP_H, top, f.floors, trimM);
-    cornice(k, w, top, trimM, low);
-    roof(k, F, top, toon(shadeHex(wall, -0.25)), 0.12);
+    const fine = fineOf(f, kind, w, col);
+    shell(k, F, top, ATLAS.wall[kind], ATLAS.ground.stoneBase, S + SHOP_H, u0, fine);
+    dress(k, w, S + SHOP_H, top, f.floors, trimM, fine, wall);
+    cornice(k, w, top, trimM, low, true, 'bracketed', fine);
+    roof(k, F, top, toon(shadeHex(wall, -0.25)), 0.12, fine);
     // The stoop up to the door, with its rails; the door in a carved surround
     const [sa, sb] = [toLocal(F, [stoopOf(f)[0], stoopOf(f)[1]]), toLocal(F, [stoopOf(f)[2], stoopOf(f)[3]])];
     const s0 = Math.min(sa[0], sb[0]);
@@ -997,9 +1133,11 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     k.lbox(uc - 0.47, uc + 0.47, S + 1.5, S + 1.62, 0, 0.14, trimM);
     k.put(new THREE.SphereGeometry(0.05, 6, 4).translate(uc - 0.4, S + 1.32, 0.12), glow(PAL.warm));
     // A bay window up the front, if it's wide enough
+    let bay: [number, number] | undefined;
     if (w >= 3.2 && f.floors >= 2) {
       const b0 = Math.min(w - 1.45, Math.max(s1 + 0.4, w * 0.55));
       const b1 = b0 + 1.2;
+      bay = [b0 - 0.05, b1 + 0.05];
       const y0 = S + SHOP_H + 0.08;
       const y1 = top - 0.55;
       k.lbox(b0, b1, y0 - 0.1, y1 + 0.08, 0, 0.36, toon(wall));
@@ -1008,6 +1146,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
       k.lbox(b0 - 0.05, b1 + 0.05, y0 - 0.18, y0 - 0.1, 0, 0.42, trimM);
     }
     // Planters either side of the stoop, a bin
+    if (fine) modelled(k, f, fine, w, S + SHOP_H, top - 0.34, wall, trim, true, bay);
     planter(k, Math.max(0.25, s0 - 0.3), 0.5);
     if (s1 + 0.6 < w) planter(k, s1 + 0.3, 0.5);
     roofTop(() => {
@@ -1037,11 +1176,14 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     const { wall, trim } = WALL_COLOR[kind];
     const trimM = toon(trim);
     const upper = S + SHOP_H + FASCIA;
-    shell(k, F, top, ATLAS.wall[kind], ATLAS.ground[shopBand(sg.color)], upper, u0);
+    const fine = fineOf(f, kind, w, col);
+    const ck = corniceAt(F.M.elements[12], F.M.elements[14]);
+    shell(k, F, top, ATLAS.wall[kind], ATLAS.ground[shopBand(sg.color)], upper, u0, fine);
     k.all(() => fascia(k, w, id, sg.color));
-    if (f.floors > 0) dress(k, w, upper, top, f.floors, trimM);
-    cornice(k, w, top, trimM, low, kind === 'brick' || kind === 'brownstone', corniceAt(F.M.elements[12], F.M.elements[14]));
-    roof(k, F, top, toon(shadeHex(wall, -0.25)));
+    if (f.floors > 0) dress(k, w, upper, top, f.floors, trimM, fine, wall);
+    cornice(k, w, top, trimM, low, kind === 'brick' || kind === 'brownstone', ck, fine);
+    roof(k, F, top, toon(shadeHex(wall, -0.25)), 0.22, fine);
+    if (fine) modelled(k, f, fine, w, upper, top - corniceFoot(ck), wall, trim, bricky(kind));
     // An awning in the shop's colours, a blade sign, a fire escape on taller ones
     const stripes = id === 'crumpet' ? ['#f2c94c', '#f3f2f7'] : id === 'coffee' ? ['#5a3a2a', '#e8d9c0'] : [AWNINGS[Math.floor(r() * AWNINGS.length)], '#f3f2f7'];
     if (named || r() < 0.65) awning(k, 0.15, w - 0.15, S + SHOP_H - 0.02, 0.48, stripes);
@@ -1168,7 +1310,12 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
 
   if (f.type === 'loft') {
     const { wall } = WALL_COLOR.industrial;
-    shell(k, F, top, ATLAS.wall.industrial, ATLAS.ground.loading, S + SHOP_H, u0);
+    const fine = fineOf(f, 'industrial', w, col);
+    shell(k, F, top, ATLAS.wall.industrial, ATLAS.ground.loading, S + SHOP_H, u0, fine);
+    if (fine) {
+      piers(k, w, fine, S + SHOP_H + 0.1, top - 0.15, wall);
+      modelled(k, f, fine, w, S + SHOP_H, top, wall, WALL_COLOR.industrial.trim, false);
+    }
     // A steel lintel over the loading floor, a bracket lamp
     k.lbox(-0.02, w + 0.02, S + SHOP_H - 0.02, S + SHOP_H + 0.1, 0, 0.1, METAL);
     for (const u of [0.07, w - 0.07]) k.lbox(u - 0.08, u + 0.08, S, top - 0.15, 0, 0.07, toon(shadeHex(wall, -0.2)));
@@ -1187,7 +1334,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
         k.lbox(i * du + du - 0.02, i * du + du + 0.005, top + 0.08, top + ht - 0.06, -d + 0.15, -0.15, toon('#6f8fc4'));
       }
     } else {
-      roof(k, F, top, toon(shadeHex(wall, -0.2)));
+      roof(k, F, top, toon(shadeHex(wall, -0.2)), 0.22, fine);
       roofTop(() => {
         if (r() < 0.5) tank(k, w * 0.35, -d * 0.5, top);
         else {
@@ -1264,10 +1411,12 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
   // Hotel: a lobby, balconies on every floor, a canopy over the door and a tall sign on the corner
   const { wall, trim } = WALL_COLOR.hotel;
   const trimM = toon(trim);
-  shell(k, F, top, ATLAS.wall.hotel, ATLAS.ground.lobby, S + SHOP_H, 0);
-  dress(k, w, S + SHOP_H, top, f.floors, trimM);
-  cornice(k, w, top, trimM, low, false);
-  roof(k, F, top, toon(shadeHex(wall, -0.25)));
+  const fine = fineOf(f, 'hotel', w, 0);
+  shell(k, F, top, ATLAS.wall.hotel, ATLAS.ground.lobby, S + SHOP_H, 0, fine);
+  dress(k, w, S + SHOP_H, top, f.floors, trimM, fine, wall);
+  cornice(k, w, top, trimM, low, false, 'bracketed', fine);
+  roof(k, F, top, toon(shadeHex(wall, -0.25)), 0.22, fine);
+  if (fine) modelled(k, f, fine, w, S + SHOP_H, top - 0.34, wall, trim, false);
   const rail = toon('#d6d2ea');
   for (let i = 1; i < f.floors; i++) {
     const y = S + SHOP_H + i * FLOOR + 0.06;
