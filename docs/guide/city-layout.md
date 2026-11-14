@@ -19,7 +19,9 @@ keep it up to date when what it describes changes.
     renderer's canvas, index.ts) stops its loop and sound and shows the
     same card saying its 3D graphics stopped, with a Reload button, and
     keeps the tier that stopped so the next start is a tier lower
-    (`gputier.ts`, `performance.md`).
+    (`gputier.ts`, `performance.md`). When the browser gives the GPU back
+    (`webglcontextrestored`) the city reloads itself, once a minute at
+    most (`reloadOnRestore()`).
     `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
     Don't bring the 2D map back without the owner.
   Pin copy and panel copy live in `src/components/CityMap.astro`.

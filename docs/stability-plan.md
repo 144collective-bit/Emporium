@@ -241,8 +241,12 @@ MiB of geometry, the memory steps' figures).
    a slow desktop recompiles every material in one frame (a freeze of a
    second or more on a laptop). Shadows go by their intensity (already 0 in
    the City view) instead, so nothing recompiles.
-2. **A lost GPU comes back**: on `webglcontextrestored` the city reloads
-   itself once (the save is kept), instead of waiting on Reload.
+2. **A lost GPU comes back** (built, 2026-11-14): on `webglcontextrestored`
+   the city reloads itself (the save is kept, the tier a step lower: "The
+   tier by the graphics"), instead of waiting on Reload. Once a minute at
+   most (`reloadOnRestore()` in `gputier.ts`, `RELOAD_GAP`, noted in the
+   tab's sessionStorage): a GPU that keeps dropping out stays on the card,
+   and so does a tab that can't note it.
 3. **Hitches measured and capped**: `?bench`'s slowest frame per view goes in
    the budget, so a step that freezes (a big `trim()`, a district arriving)
    is red.
@@ -269,8 +273,8 @@ everything else.
 3. `?fps`'s tier line says why (`medium (shared graphics)`) and the
    graphics' name. `data-tier` on the page still overrides it.
 
-*The owner's calls, open*: whether plain Apple M chips belong on medium, and
-how long a loss keeps the device lower (14 days today).
+*The owner's calls* (2026-11-14): plain Apple M chips stay on medium; a
+loss keeps the device lower for 14 days.
 
 ## Suggested order
 
@@ -287,3 +291,6 @@ measured → Phases 3 and 4 → Phase 6. Real-device numbers (`?bench`'s
 - **Phase 5** (2026-11-13): on demand only; the ceilings today's numbers
   and 10%; the desktop's render targets by formula; the leak check too.
 - (waiting) How far the City view keeps the full city (Phase 3.2).
+- **The tier by the graphics** (2026-11-14): built-in graphics start on
+  medium, plain Apple M chips included; a lost GPU keeps the device a tier
+  lower for 14 days. **Phase 6.2 next** (the reload on a restored GPU).

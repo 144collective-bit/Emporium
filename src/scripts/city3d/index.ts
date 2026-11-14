@@ -149,7 +149,7 @@ import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
-import { GPU_KEY, pickTier, type Device, type Lost, type Picked } from './gputier';
+import { GPU_KEY, RELOAD_KEY, pickTier, reloadOnRestore, type Device, type Lost, type Picked } from './gputier';
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -1713,6 +1713,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (note) note.textContent = 'The device ran out of graphics memory, or its driver reset. Your save is kept.';
     const reload = card.querySelector<HTMLElement>('[data-no3d-reload]');
     if (reload) reload.hidden = false;
+  });
+  // The GPU came back (the stability plan's Phase 6.2): the city reloads itself, the save kept and the tier a step
+  // lower, instead of waiting on Reload. Once a minute at most (gputier.ts); where the tab can't note it, Reload it is.
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    try {
+      if (!reloadOnRestore(sessionStorage.getItem(RELOAD_KEY), Date.now())) return;
+      sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+    } catch {
+      return;
+    }
+    location.reload();
   });
   // Fast screens (120 / 144 Hz) draw every other refresh: a steady 60-72fps
   // rather than an uneven, hotter 120. The refresh rate is read from the

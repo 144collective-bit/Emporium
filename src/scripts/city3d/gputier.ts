@@ -10,6 +10,8 @@
  *   or Pro, Intel Arc A / B, Apple Pro / Max / Ultra) keeps high. A name the browser hides changes nothing.
  * - The 3D graphics stopped here lately (the GPU's context lost): the next start is one tier below the one that
  *   stopped, for `LOST_DAYS` (a second loss steps down again, to low at the least).
+ * - The GPU coming back (`webglcontextrestored`) reloads the city by itself, once a minute at most
+ *   (`reloadOnRestore()`): the save is kept, and the tier is a step lower by the rule above.
  */
 import type { Tier } from './targets';
 
@@ -98,4 +100,15 @@ export function pickTier(d: Device): Picked {
     if (rank(cap) < rank(picked.tier)) picked = { tier: cap, why: 'graphics stopped lately' };
   }
   return picked;
+}
+
+/** A restored context reloads the city at most once in this long (ms): a GPU that keeps dropping out stays on the card */
+export const RELOAD_GAP = 60_000;
+/** When the city last reloaded itself on a restored context (sessionStorage: this tab only) */
+export const RELOAD_KEY = 'degen-city-gpu-reload-v1';
+
+/** The GPU came back (`webglcontextrestored`): reload by itself, unless it did so under `RELOAD_GAP` ago (`last`, as kept) */
+export function reloadOnRestore(last: unknown, now: number): boolean {
+  const at = typeof last === 'string' && last.trim() ? Number(last) : NaN;
+  return !(Number.isFinite(at) && at <= now && now - at < RELOAD_GAP);
 }

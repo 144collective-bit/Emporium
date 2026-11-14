@@ -2,7 +2,7 @@
 // cores as before, graphics built into the processor a step down, and a step down after the 3D graphics stopped.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LOST_DAYS, below, cleanLost, pickTier, sharedGpu, type Device } from '../src/scripts/city3d/gputier';
+import { LOST_DAYS, RELOAD_GAP, below, cleanLost, pickTier, reloadOnRestore, sharedGpu, type Device } from '../src/scripts/city3d/gputier';
 
 const NOW = Date.UTC(2026, 10, 14);
 const DAY = 86_400_000;
@@ -87,4 +87,14 @@ test('one tier below', () => {
   assert.equal(below('high'), 'medium');
   assert.equal(below('medium'), 'low');
   assert.equal(below('low'), 'low');
+});
+
+test('a restored GPU reloads the city, once a minute at most', () => {
+  // never before, or nothing readable kept: reload
+  for (const last of [null, undefined, '', '  ', 'soon', String(NOW + DAY)]) assert.equal(reloadOnRestore(last, NOW), true, String(last));
+  // reloaded just now: stay on the card
+  assert.equal(reloadOnRestore(String(NOW - 1000), NOW), false);
+  assert.equal(reloadOnRestore(String(NOW - (RELOAD_GAP - 1)), NOW), false);
+  // a minute on: again
+  assert.equal(reloadOnRestore(String(NOW - RELOAD_GAP), NOW), true);
 });
