@@ -104,8 +104,9 @@ Concept sketches, not to scale: what goes where, not the final lines.
 - **The brook** from the fields along the village's south edge, under the
   south spoke and on past Lot 9, in a green valley; **the rec ground** on
   it.
-- **Lot 9**, shrunk to the south-east (about x -120 to -20, z 476 to 556),
-  its fence along the brook and the slope.
+- **Lot 9**, its park where it was and its camp moved south of it (about x
+  -131 to -18, z 468 to 622), one wandering fence round both, the brook
+  along its west side.
 - **The hedged fields** west of about x -330 and along the south.
 - The airliners' approach (z about 430 to 460, east of the avenue) stays
   low only.
@@ -175,17 +176,28 @@ From the Circus west, patchy as high roads are:
      noded where they meet, the blocks traced (Sunridge's way, made
      general). Shot: `4-phase-1a-street-web.webp`, drawn from the data
      to scale.
-   - **1b, into the city:** the street web in the street plan
-     (`streetplan.ts`) and drawn (a lazy chunk, roads3d.ts's kit), the
-     footpaths as walk-only alleys with bollards; ns1s and ns2s cut at
-     their bends; the old estate's streets, blocks and what stands in the
-     new roads' way taken up (the removed blocks gone; the kept blocks,
-     the old places, the west rows, the bungalows and allotments off
-     until their phases re-lay them); Lot 9 inside its new fence, its
-     homes and camp packed in; the brook, the hedges and the fields'
-     ground; `KEEPS`, ground, lamps, traffic and taxis' routes;
-     `tests/snapshot.test.ts` rewritten (the owner's go: everything but
-     the compound may move).
+   - **1b, into the city** (built, waiting on the owner's sign-off; the
+     owner's calls on the way: Lot 9's camp moved now, the places' pins at
+     their new spots with no doors, the old code taken out). The south's
+     streets, crossings and blocks are in the street plan, drawn by
+     `south3d.ts` (a lazy chunk, `south`): the asphalt along every curve,
+     centre lines, turning circles, the Circus's island, footpaths and
+     their bollards, the brook and its bridge, the hedges, the rec ground's
+     and the churchyard's grass, Degen's plot and compound, the tunnel's
+     dressing (`tunnel3d.ts`). `endswood.ts` is now the south's land (a
+     grid over its blocks and streets: the fields aren't the estate's),
+     lamps and bollards; `endsfar.ts` only the compound's plot. ns1s and
+     ns2s end at their bends (layout.ts `NS_SOUTH_END`) and carry on as
+     Endswood Road and Marsh Lane (joins, routes.ts), both crossing the
+     south avenue near square (the city's turns need it). **Lot 9** keeps
+     its park where it was; its camp moved whole by (88, 76.5) to the open
+     land south of the park; one wandering fence (`LOT9_FENCE`) round both
+     with a west gate where Lot Lane comes onto its lane (`docs/guide/lot9.md`).
+     Lot 9 now reaches z 624 beside the south avenue, so the avenue runs on to
+     the world's edge as itself (no room for its country-road stretch). The old
+     estate's modules and tests are gone; Bunker Sound's beat and St Aldwyn's
+     bell are off until their buildings return. `tests/fixtures/layout.json`
+     rewritten: only streets changed. Shots: `5-phase-1b-*`.
    - **1c, the rolling ground:** a height field under the south (as
      Crestmont's `terrain.ts`): the village's hill with St Aldwyn's on
      top, the brook's valley, swells in the fields, level under every
