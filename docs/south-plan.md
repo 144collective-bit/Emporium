@@ -216,11 +216,23 @@ From the Circus west, patchy as high roads are:
        the land eased onto the beds past each sidewalk, held at today's
        height to Lot 9's fence and over Degen's plot. Shot:
        `6-phase-1c-ground.webp` (bands every 0.3, from the data).
-     - **Into the city:** the ground's mesh over the south, the streets'
-       asphalt, the blocks' slabs, the footpaths, the lamps and the
-       bollards on it; walking, driving, the traffic's heights, the crowd
-       and the cameras following it (as Crestmont's hills, terrain.ts),
-       the brook in its valley under its bridge.
+     - **Into the city** (built, waiting on the owner's sign-off): one lift
+       for everything there. `southLift()` (southground.ts: the ground read
+       off a cached grid every 0.5) is set once as the city's module loads
+       (index.ts `setGroundLift()`, so the site worker lifts the same), and
+       kit.ts `Batch.build()` raises every vertex inside the south's ground
+       by the ground under it, its faces first split so no edge runs longer
+       than `LIFT_EDGE` (5) along the ground: the land, the slabs, the
+       streets, the footpaths, the compound, the brook all follow it.
+       terrain.ts's `heightAt()` / `onHills()` / `hillsAlong()` read the south
+       too (`onCrest()` for Crestmont's own), so cars, taxis, the outskirts'
+       trees, the free camera and the walk camera follow it; groundheight.ts's
+       `south` layer lifts its slabs, sidewalks and streets for walking and
+       driving; solids.ts lifts the boxes standing on it (`onGround()`, the
+       chunks' too); endswood.ts's lamps carry their lifted height; the rolls
+       keep off it. Cost on the phone tier: the south's chunk 18k triangles
+       to 29k, about a second's build spread over the worker. Shots:
+       `7-phase-1c-day.webp`, `7-phase-1c-night.webp`.
 2. **The blocks.** The Wall, the twin towers and their cores, the upgraded
    stairwell blocks re-sited, the sky network walked on (`endsdecks.ts`'s
    floors), the estate's courts, decks and grass.
