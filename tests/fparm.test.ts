@@ -245,7 +245,7 @@ test('the loose fist: the same size as the tight one, its fingers eased open', (
 });
 
 // A punch's feel in first person (the owner's call, 2026-11: subtle)
-import { PUNCH_FEEL, punchEnvelope } from '../src/scripts/city3d/fparm';
+import { PUNCH_FEEL, punchEnvelope, softTop } from '../src/scripts/city3d/fparm';
 import { MOVES as FIGHT_MOVES } from '../src/scripts/city3d/fight-sim';
 
 test("a punch's feel: up over its start-up, held while it lands, eased back over its recovery; small and the right way", () => {
@@ -267,4 +267,15 @@ test("a punch's feel: up over its start-up, held while it lands, eased back over
   assert.ok(PUNCH_FEEL.turn.jab < 0 && PUNCH_FEEL.turn.hook < 0 && PUNCH_FEEL.turn.cross > 0 && PUNCH_FEEL.turn.uppercut > 0);
   // (a hit holds the fight about three frames)
   assert.ok(PUNCH_FEEL.stop > 0.03 && PUNCH_FEEL.stop < 0.08);
+});
+
+test('the soft top: a fist well under it is left alone, one rising past it eases under it, never a hard edge', () => {
+  assert.ok(Math.abs(softTop(-0.3, -0.03, 0.03) - -0.3) < 1e-4);
+  assert.ok(softTop(0.2, -0.03, 0.03) <= -0.03 + 1e-9);
+  let last = -Infinity;
+  for (let y = -0.2; y < 0.3; y += 0.01) {
+    const t = softTop(y, -0.03, 0.03);
+    assert.ok(t > last && t < -0.03 + 1e-9, 'rising smoothly, never past it');
+    last = t;
+  }
 });

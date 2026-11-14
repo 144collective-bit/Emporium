@@ -293,11 +293,14 @@ const tB = new THREE.Vector3();
  * The first-person correction (the owner's call: the clips are made to read from behind him, and from his own eyes
  * their guard holds the fists at his chin, under and beside the eye, out of shot): with the guard up, each fist is
  * raised `lift`, drawn `pull` of the way in towards the middle, carried forward `reach` the more the arm is bent
- * (none at full stretch, where the clip already reaches) and never nearer the eye than `near` (the clips bring a
- * hand back beside his face: from the eye it would fill the screen), the elbow solved again round towards his own.
+ * (none at full stretch, where the clip already reaches), never nearer the eye than `near` (the clips bring a hand
+ * back beside his face: from the eye it would fill the screen) and eased under `top` (`softTop()`: the uppercut's
+ * fist would leave the top of the shot), the elbow solved again round towards his own.
  * These metres, the eye's frame.
  */
-export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3 };
+export const FP_FIX = { lift: 0.1, pull: 0.45, reach: 0.12, near: 0.3, top: -0.03, soft: 0.03 };
+/** `y` eased under `top` (a soft minimum over `soft`): the uppercut's fist peaks at the eye's height instead of leaving the top of the shot, with no edge to slide along */
+export const softTop = (y: number, top: number, soft: number) => -soft * Math.log(Math.exp(-y / soft) + Math.exp(-top / soft));
 /**
  * Running with his hands down (the owner's calls, 2026-11: "a classic FPS pump", "his steps, a designed arc", loose
  * fists; then "his hands should just move up and down, but his whole arm locks out when sprinting"): his body sets
@@ -347,6 +350,7 @@ export function bodyArm(j: BodyJoints, eye: THREE.Matrix4, unit: number, out: La
     const bent = 1 - THREE.MathUtils.clamp(out.wrist.distanceTo(out.shoulder) / (ARM.upper + ARM.fore), 0, 1);
     const target = tA.set(-out.wrist.x * FP_FIX.pull * pull, FP_FIX.lift, -FP_FIX.reach * bent).multiplyScalar(fix).add(out.wrist);
     target.z = Math.min(target.z, THREE.MathUtils.lerp(target.z, -FP_FIX.near, fix));
+    target.y = THREE.MathUtils.lerp(target.y, softTop(target.y, FP_FIX.top, FP_FIX.soft), fix);
     // (round towards his own elbow: its side of the line from the shoulder to the wrist)
     const pole = tB.copy(out.elbow).sub(out.shoulder).addScaledVector(out.wrist.clone().sub(out.shoulder), -0.5);
     solveArm(out.shoulder, target, pole, out.elbow, out.wrist);
