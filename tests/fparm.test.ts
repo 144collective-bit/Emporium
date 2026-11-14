@@ -415,3 +415,46 @@ test('the weighted sway: pushed back, it swings a little past and settles', () =
   assert.ok(low < -0.03 && low > -0.25, `a little past ${low}`);
   assert.ok(Math.abs(s.x) < 0.02 && Math.abs(s.v) < 0.2, 'settled');
 });
+
+import { FOLLOW, followStep, newFollow } from '../src/scripts/city3d/fparm';
+
+test('follow-through: a fist sent out arrives a hair late, swings a little past and settles; a cut is taken at once', () => {
+  const f = newFollow();
+  const face = V(0, 0, 1);
+  const off = V(0, 0, 0);
+  followStep(f, V(0, 0, 0), face, 1 / 60, off);
+  // (a jab: the target out 5 cm at once)
+  const target = V(0, 0, -0.05);
+  let past = 0;
+  let firstFrame = 0;
+  for (let i = 0; i < 40; i++) {
+    followStep(f, target, face, 1 / 60, off);
+    if (i === 0) firstFrame = -f.at.z;
+    past = Math.max(past, -f.at.z - 0.05);
+  }
+  assert.ok(firstFrame < 0.04 && firstFrame > 0.005, `a hair late ${firstFrame}`);
+  assert.ok(past > 0.05 * 0.03 && past < 0.05 * 0.25, `a little past ${past}`);
+  assert.ok(f.at.distanceTo(target) < 0.002, 'settled');
+  // The same spring at 30 frames a second: it still gets there
+  const slow = newFollow();
+  followStep(slow, V(0, 0, 0), face, 1 / 30, off);
+  for (let i = 0; i < 20; i++) followStep(slow, target, face, 1 / 30, off);
+  assert.ok(slow.at.distanceTo(target) < 0.002, 'at 30 fps too');
+  // A cut: taken at once
+  followStep(f, V(1, 0, 0), face, 1 / 60, off);
+  assert.ok(off.length() === 0 && f.at.x === 1);
+  // Never more than FOLLOW.most off
+  for (let i = 0; i < 5; i++) followStep(f, V(1 - 0.2 * (i + 1) * 0.5, 0, 0), face, 1 / 60, off);
+  assert.ok(off.length() <= FOLLOW.most + 1e-9);
+});
+
+test('overlap: the fist turns after its forearm, catching up within a few frames', () => {
+  const f = newFollow();
+  const off = V(0, 0, 0);
+  followStep(f, V(0, 0, 0), V(0, 0, 1), 1 / 60, off);
+  const turned = V(1, 0, 0);
+  followStep(f, V(0, 0, 0), turned, 1 / 60, off);
+  assert.ok(f.face.angleTo(turned) > 0.5, 'late');
+  for (let i = 0; i < 12; i++) followStep(f, V(0, 0, 0), turned, 1 / 60, off);
+  assert.ok(f.face.angleTo(turned) < 0.05, 'caught up');
+});

@@ -177,8 +177,14 @@ keep it up to date when what it describes changes.
   forward part way, nothing at either end), each a nudge of the fist with
   the elbow solved again (`nudgeArm()`); the look's lag has weight (`SWAY`,
   `springStep()`: a damped spring a touch under critical, so the arms
-  swing a little past before settling). The life and the sway are off
-  under reduced motion.
+  swing a little past before settling); follow-through and overlap
+  (`FOLLOW`, `followStep()`, run last on each arm): each fist follows its
+  place through a quick spring a touch under critical (in steps of at most
+  1/120 s, so the same at any frame rate), so a punch arrives a hair late,
+  swings a little past full reach and settles, the same coming back,
+  never more than `most` off and a cut taken at once; and the fist's turn
+  lags its forearm's, so the wrist snaps over at the end. The life, the
+  sway and the follow are off under reduced motion.
   The arms are tied to the camera (in shot looking up or down) and lag
   the look; narrow screens hold them further off; a kick bobs the view
   (`KICK`). Nothing sways under reduced motion. In first person the view
