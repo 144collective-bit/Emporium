@@ -44,6 +44,10 @@ export const BRIDGE_HALF = 0.9;
 export const SKY_FLOORS = [3, 6, 9, 12, 15];
 /** The clear height under a bridge over a street (a bus's under it) */
 export const BRIDGE_CLEAR = 3;
+/** A stair core's lift house over its block's roof (room for a landing on the top gallery's floor under it) */
+export const CORE_OVER = 1.8;
+/** How round a slab's corners are: this much of its depth */
+export const CORNER_R = 0.3;
 /** The towers' plant room over their roofs, and their beacon's height over that */
 export const PLANT_H = 1.6;
 export const BEACON_H = 0.5;
@@ -116,12 +120,8 @@ function roundAt(poly: Pt[], at: number[], r: number, n = 5): Pt[] {
   });
   return out;
 }
-/** A slab's footprint: its spine widened `depth`, its four corners rounded */
-export function slabFoot(spine: Pt[], depth: number, r = depth * 0.3): Pt[] {
-  const [right, left] = [shift(spine, depth / 2), shift(spine, -depth / 2)];
-  const poly = [...right, ...left.reverse()];
-  return roundAt(poly, [0, right.length - 1, right.length, poly.length - 1], r);
-}
+/** A slab's footprint: its spine widened `depth`, its ends' corners rounded */
+export const slabFoot = (spine: Pt[], depth: number): Pt[] => slabRing(spine, depth, 0, lineLength(spine), true, true).ring;
 /** A rounded square, `half` each way, turned `rot` (radians, from +x towards +z) */
 export function squareFoot(c: Pt, half: number, rot: number, r = half * 0.4): Pt[] {
   const [cs, sn] = [Math.cos(rot), Math.sin(rot)];
@@ -233,6 +233,71 @@ export const TEASEL = slab('teasel', 'Teasel House', 'slab', TEASEL_SPINE, 8, 'l
   refit: { from: lineLength(TEASEL_SPINE) / 2, to: lineLength(TEASEL_SPINE) },
 });
 
+/* ---------- A block's steps as outlines (for drawing them) ---------- */
+
+/** What an edge of a step's outline is: along its spine's right side or left, a rounded corner, its start or end (a
+ * block's end, or where it meets its next step: `cut`) */
+export type EdgeTag = 'right' | 'left' | 'corner' | 'start' | 'end';
+export interface StepShape {
+  /** Its outline, a closed ring, and each edge's tag (`tags[i]`: the edge from `ring[i]` to the next) */
+  ring: Pt[];
+  tags: EdgeTag[];
+  /** Whether its start and end are cuts (where it meets the step before or after it) rather than the block's ends */
+  cutStart: boolean;
+  cutEnd: boolean;
+}
+/** A step of a slab or the Rampart as an outline: its sides along its spine, its corners rounded where the block ends */
+export function stepShape(b: Block, st: Step): StepShape {
+  const L = lineLength(b.spine!);
+  const [cutStart, cutEnd] = [st.from > 1e-6, st.to < L - 1e-6];
+  return { ...slabRing(b.spine!, b.depth!, st.from, st.to, !cutStart, !cutEnd), cutStart, cutEnd };
+}
+/**
+ * A stretch `from` to `to` of a spine widened `depth`, as a ring with each edge tagged: its right side, a quarter-round
+ * corner (`rs`, `re`: at its start, its end), the end across, its left side back, the start across
+ */
+function slabRing(spine: Pt[], depth: number, from: number, to: number, rs: boolean, re: boolean, n = 5): { ring: Pt[]; tags: EdgeTag[] } {
+  const r = depth * CORNER_R;
+  const h = depth / 2;
+  const [a, c] = [from + (rs ? r : 0), to - (re ? r : 0)];
+  // (a point every 3 along: the spines bend gently)
+  const sec = section(spine, a, c, 3);
+  const [right, left] = [shift(sec, h), shift(sec, -h).reverse()];
+  const ring: Pt[] = [];
+  const tags: EdgeTag[] = [];
+  const emit = (p: Pt, t: EdgeTag) => (ring.push(p), tags.push(t));
+  /** The two corners at an end: round from its side to across it, then on round to the other side (`back`: the start) */
+  const corners = (d: number, back: boolean, cap: EdgeTag) => {
+    const { p, dir } = pointAt(spine, d);
+    const t: Pt = back ? [-dir[0], -dir[1]] : dir;
+    // (looking along t, its right: the spine's right at the end, its left at the start)
+    const nr: Pt = [-t[1], t[0]];
+    const c1: Pt = [p[0] + nr[0] * (h - r), p[1] + nr[1] * (h - r)];
+    const c2: Pt = [p[0] - nr[0] * (h - r), p[1] - nr[1] * (h - r)];
+    for (let k = 1; k <= n; k++) {
+      const q = ((k / n) * Math.PI) / 2;
+      emit([c1[0] + r * (Math.cos(q) * nr[0] + Math.sin(q) * t[0]), c1[1] + r * (Math.cos(q) * nr[1] + Math.sin(q) * t[1])], k < n ? 'corner' : cap);
+    }
+    for (let k = 0; k < n; k++) {
+      const q = ((k / n) * Math.PI) / 2;
+      emit([c2[0] + r * (Math.cos(q) * t[0] - Math.sin(q) * nr[0]), c2[1] + r * (Math.cos(q) * t[1] - Math.sin(q) * nr[1])], 'corner');
+    }
+  };
+  right.forEach((p, i) => emit(p, i < right.length - 1 ? 'right' : re ? 'corner' : 'end'));
+  if (re) corners(c, false, 'end');
+  left.forEach((p, i) => emit(p, i < left.length - 1 ? 'left' : rs ? 'corner' : 'start'));
+  if (rs) corners(a, true, 'start');
+  return { ring, tags };
+}
+/** A ring's outward normal along its edge `i` (x, z), whichever way round it runs */
+export function outward(ring: Pt[], i: number): Pt {
+  const area = ring.reduce((s, p, k) => s + p[0] * ring[(k + 1) % ring.length][1] - ring[(k + 1) % ring.length][0] * p[1], 0);
+  const [a, c] = [ring[i], ring[(i + 1) % ring.length]];
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+  const [dx, dz] = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  return area > 0 ? [dz, -dx] : [-dz, dx];
+}
+
 /* ---------- The stair cores ---------- */
 
 export interface Core {
@@ -250,7 +315,7 @@ export interface Core {
 const rotOf = (dir: Pt) => Math.atan2(dir[1], dir[0]);
 function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number): Core {
   const rot = rotOf(dir);
-  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + 0.8, foot: squareFoot(at, CORE_HALF, rot, 0.6) };
+  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + CORE_OVER, foot: squareFoot(at, CORE_HALF, rot, 0.6) };
 }
 /** A slab's cores: one past each end, flush with its galleries' outer edge, so each gallery runs into them */
 function endCores(b: Block): Core[] {
@@ -471,6 +536,11 @@ export const BLOCK_SOLIDS: Box[] = [
   ...CORES.map((c) => cover(c.foot, c.top, 0.6)).flat(),
 ];
 
+/** Where the blocks stand, all of them, their bridges and their deck (districts.ts loads their drawing within reach of it) */
+export const BLOCKS_RECT: [number, number, number, number] = (() => {
+  const pts = [...BLOCKS.flatMap((b) => b.foot), ...CORES.flatMap((c) => c.foot)];
+  return [Math.min(...pts.map((p) => p[0])) - 4, Math.min(...pts.map((p) => p[1])) - 4, Math.max(...pts.map((p) => p[0])) + 4, Math.max(...pts.map((p) => p[1])) + 4];
+})();
 /** Is a point inside any block or core (for the tests and the ground's things kept clear of them) */
 export const inBlock = (p: Pt, m = 0) => [...BLOCKS.map((b) => b.foot), ...CORES.map((c) => c.foot)].some((f) => inside(f, p) || (m > 0 && f.some((q, i) => segDist(p, q, f[(i + 1) % f.length]) < m)));
 function segDist(p: Pt, a: Pt, b: Pt) {

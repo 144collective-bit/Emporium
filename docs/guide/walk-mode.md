@@ -67,7 +67,8 @@ keep it up to date when what it describes changes.
   rolls, the mall's floors, the river's banks, the turntable), goes `over`
   (its height or the base, and stop: the bridges, the raised highway, the
   departures deck, Liberty Bridge) or `lift`s the base and goes on (the
-  jetty, the terraces, the sky deck, the circuit, the banks); the order
+  jetty, the terraces, the sky deck, the circuit, the banks; Endswood's sky
+  network, `sky`, takes: southsky.ts, with `skyWall()` its railings); the order
   resolves the overlaps (the tunnel first, the decks before the river's
   banks, the mall by `yNow`, the kart park's flyover last). The test holds
   the old `groundAt()` word for word against it at over 20,000 points and

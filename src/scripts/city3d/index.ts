@@ -96,6 +96,8 @@ import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { SkyLiftUI } from './skylift-ui';
+import { skyLiftDoors } from './southsky';
 import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
@@ -1025,6 +1027,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           tycoon?.closeCard();
           metroUI?.close();
           monoUI?.close();
+          skyLiftUI?.close();
         },
       }))
     ),
@@ -1054,10 +1057,33 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           tycoon?.closeCard();
           metroUI?.close();
           riverBusUI?.close();
+          skyLiftUI?.close();
         },
       }))
     ),
     'the monorail'
+  );
+  // Endswood's lifts (southsky.ts, docs/south-plan.md Phase 2c): a door at every core's foot and a call point on each
+  // of its landings; the floor picker (the metro's card) loaded the first time one's used
+  let skyLiftUI: SkyLiftUI | null = null;
+  const loadSkyLift = lazy(
+    () =>
+      import('./skylift-ui').then(({ createSkyLiftUI }) =>
+      (skyLiftUI = createSkyLiftUI(root, {
+        free: () => walking && walk.onFoot,
+        height: () => walk.position.y,
+        ride: (to, arrived) => rideTo({ ...to, y: to.y ?? 0 }, null, 'Endswood', arrived),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+        },
+      }))
+    ),
+    'the lifts'
   );
   // Sector 7 Tower's lift (skydeck.ts): a door in the pavilion at its foot and one at the lift house on the sky deck
   const LIFT_DOORS = [
@@ -1120,7 +1146,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...homePlaces(walk.position.y)],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...homePlaces(walk.position.y)],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1139,6 +1165,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         return p ? rideTo(p.to, 'home', 'Home', p.arrived) : undefined;
       }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
+      if (id.startsWith('sky-lift:')) return void loadSkyLift().then((ui) => ui.open(id.slice('sky-lift:'.length)));
       if (id === 'mall-lift:up' || id === 'mall-lift:down') {
         const up = id === 'mall-lift:up';
         return rideTo(up ? MALL_LIFT.up : MALL_LIFT.down, 'mall', 'Starlight Mall', up ? 'Starlight Mall · Upper floor' : 'Starlight Mall · Ground floor');
@@ -1356,6 +1383,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     metroUI?.close();
     riverBusUI?.close();
     monoUI?.close();
+    skyLiftUI?.close();
     stashUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
@@ -1403,7 +1431,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1609,6 +1637,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       tycoon?.closeCard();
       riverBusUI?.close();
       monoUI?.close();
+      skyLiftUI?.close();
     },
   });
 
@@ -2125,7 +2154,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
+          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
           // reads here as under the ground, or the near plane, or the view gone wrong)
           ...(walking

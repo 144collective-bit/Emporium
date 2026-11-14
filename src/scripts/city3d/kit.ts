@@ -922,12 +922,13 @@ export class Batch {
   private lastAdded: { geo: THREE.BufferGeometry; mat: THREE.Material } | null = null;
 
   /** `details`: whether the near-only details cast shadows too (they don't: small, and the shadow map's triangles are dear) */
-  build(parent: THREE.Object3D, { cast = true, receive = true, details = false } = {}) {
+  build(parent: THREE.Object3D, { cast = true, receive = true, details = false, lift = true } = {}) {
     for (const { mat, lod, geos } of this.parts.values()) {
       const joined = mergeGeometries(geos, false);
       if (!joined) continue;
-      // (onto the ground where it isn't flat: the south's rolling ground)
-      const merged = liftOnto(joined);
+      // (onto the ground where it isn't flat: the south's rolling ground; `lift` false for what stands level on its own
+      // plinth there, drawn at its own heights: the south's blocks, southblocks3d.ts)
+      const merged = lift ? liftOnto(joined) : joined;
       const mesh = new THREE.Mesh(merged, mat);
       if (lod !== 'all') mesh.userData.lod = lod;
       mesh.castShadow = cast && (lod !== 'near' || details);

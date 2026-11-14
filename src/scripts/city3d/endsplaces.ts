@@ -2,16 +2,16 @@
  * Endswood's places (docs/estate-plan.md Phase 8; re-sited with the south, docs/south-plan.md Phase 1b, the owner's
  * call: their pins stand where they're to be built, still "coming soon", no doors until their buildings go up; DOM-free,
  * the boot's, tested in tests/endsplaces.test.ts): the estate itself (its pin over the Circus, the heart), St Aldwyn's
- * (over its churchyard on the village's hilltop) and Bunker Sound (by Endswood Road, under a block in Phase 2). Each
+ * (over its churchyard on the village's hilltop) and Bunker Sound (in Teasel House's basement, its door off Endswood
+ * Road: docs/south-plan.md Phase 2, southblocks.ts `BUNKER`). Each
  * has a pin, a panel with Walk in (CityMap.astro), its pick boxes (index.ts, through crestspots.ts `spot()`) and where
  * you arrive (`ENDS_SPAWNS`: the panel's Walk in, places.ts).
  */
-import { CHURCHYARD, CIRCUS, ENDSWOOD_ROAD } from './south';
+import { CHURCHYARD, CIRCUS } from './south';
+import { BUNKER as BUNKER_DOOR } from './southblocks';
 
 import type { Rect } from './endswood';
 
-/** A street's z where it passes x (its point nearest in x) */
-const onRoad = (s: { pts: [number, number][] }, x: number) => s.pts.reduce((b, p) => (Math.abs(p[0] - x) < Math.abs(b[0] - x) ? p : b))[1];
 
 export type EndsPlaceId = 'endswood' | 'aldwyns' | 'bunker';
 export const ENDS_PLACE_IDS: EndsPlaceId[] = ['endswood', 'aldwyns', 'bunker'];
@@ -28,8 +28,10 @@ export interface EndsSpot {
 }
 const box = (pts: [number, number][]): Rect => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
 const YARD = box(CHURCHYARD);
-/** Bunker Sound's ground, north of Endswood Road west of the south avenue (its block is Phase 2's) */
-const BUNKER: Rect = [-60, 398, -52, 406];
+/** Bunker Sound's door under Teasel House's hoarded half, the way out of it (to Endswood Road), and its ground round it */
+const [DX, DZ] = BUNKER_DOOR.door;
+const OUT: [number, number] = [Math.cos(BUNKER_DOOR.face), Math.sin(BUNKER_DOOR.face)];
+const BUNKER: Rect = [DX - 2.5, DZ - 2.5, DX + 2.5, DZ + 2.5];
 const ISLAND = CIRCUS.r - CIRCUS.half;
 export const ENDS_SPOTS: EndsSpot[] = [
   {
@@ -49,17 +51,18 @@ export const ENDS_SPOTS: EndsSpot[] = [
     pinH: 6,
   },
   {
-    // Bunker Sound: the pin over its ground by Endswood Road (it faces the road, south)
+    // Bunker Sound: the pin over its door in Teasel House (over the block's roof)
     id: 'bunker',
     boxes: [{ rect: BUNKER, h: 1.2 }],
     land: BUNKER,
-    pin: [(BUNKER[0] + BUNKER[2]) / 2, (BUNKER[1] + BUNKER[3]) / 2],
-    pinH: 5,
+    pin: [DX, DZ],
+    pinH: 8,
   },
 ];
 
-/** The doors (walk prompts that open each panel): none until their buildings stand (Phases 2 and 3) */
-export const ENDS_DOORS: { id: EndsPlaceId; x: number; z: number; label: string }[] = [];
+/** The doors (walk prompts that open each panel): Bunker Sound's, under Teasel House; the others when their buildings
+ * stand (Phase 3) */
+export const ENDS_DOORS: { id: EndsPlaceId; x: number; z: number; label: string }[] = [{ id: 'bunker', x: DX + OUT[0] * 0.8, z: DZ + OUT[1] * 0.8, label: 'Bunker Sound' }];
 
 /** Where you arrive (the panels' Walk in, places.ts): on a sidewalk by each, facing it (yaw 0 faces north, π south) */
 export const ENDS_SPAWNS: Record<EndsPlaceId, { x: number; z: number; yaw: number }> = {
@@ -67,6 +70,6 @@ export const ENDS_SPAWNS: Record<EndsPlaceId, { x: number; z: number; yaw: numbe
   endswood: { x: CIRCUS.x + (CIRCUS.r + CIRCUS.half + 0.5) * Math.cos((300 * Math.PI) / 180), z: CIRCUS.z + (CIRCUS.r + CIRCUS.half + 0.5) * Math.sin((300 * Math.PI) / 180), yaw: Math.PI },
   // (on Church Road's sidewalk, the churchyard south of it)
   aldwyns: { x: (YARD[0] + YARD[2]) / 2, z: 443, yaw: Math.PI },
-  // (on Endswood Road's north sidewalk, where it passes; its ground north of it)
-  bunker: { x: (BUNKER[0] + BUNKER[2]) / 2, z: onRoad(ENDSWOOD_ROAD, (BUNKER[0] + BUNKER[2]) / 2) - ENDSWOOD_ROAD.half - 0.4, yaw: 0 },
+  // (on Endswood Road's south sidewalk in front of its door, facing it: yaw 0 looks north, -z)
+  bunker: { x: DX + OUT[0] * 2.3, z: DZ + OUT[1] * 2.3, yaw: Math.atan2(OUT[0], OUT[1]) },
 };
