@@ -30,10 +30,8 @@ import { UPTOWN_RECT } from './uptown';
 import { MALL_AREA } from './mall';
 import { STRIP_RECT } from './strip';
 import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
-import { FENCE as LOT9_FENCE, FIELD as LOT9_FIELD, PARK_X0 as LOT9_PARK_X0 } from './lot9';
-import { ENDSWOOD_RECT, FAR_RECT as ENDS_FAR_RECT, NORTH_Z, SOUTH_Z, WEST_X, WEST_X0 } from './endswood';
-import { EAST as WEST_EAST, NORTH as WEST_NORTH, SOUTH as WEST_SOUTH } from './endswest';
-import { COMMON as ENDS_COMMON, DESIRE as ENDS_DESIRE, DESIRE_HALF } from './endsblend';
+import { CAMP_X1 as LOT9_CAMP_X1, FENCE as LOT9_FENCE_BOX, FIELD as LOT9_FIELD, PARK as LOT9_PARK, fromLot9Fence } from './lot9';
+import { BROOK, BROOK_HALF, ESTATE_LAND, VILLAGE_LAND } from './south';
 import { STADIUM_RECTS } from './stadium';
 import { KART_RECTS } from './kartfacility';
 import { TILE, tileKey, type Rect } from './tiles';
@@ -131,21 +129,17 @@ export const INFLUENCES: Influence[] = [
   // The Trenches: worn grass, bare dirt at its edge
   around('trenches', TRENCH_RECT, 'worn', 20, 0.5),
   around('trenches-edge', TRENCH_RECT, 'bare', 6, 0.4),
-  // Endswood (endswood.ts, docs/estate-plan.md): worn grass round its blocks, the estate's land bare in places
-  around('endswood', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'worn', 16, 0.6),
-  around('endswood-edge', [WEST_X, NORTH_Z, ENDSWOOD_RECT[2], SOUTH_Z], 'bare', 4, 0.35),
-  // (and carried west: endswest.ts)
-  around('endswest', [WEST_X0, WEST_NORTH, WEST_EAST, WEST_SOUTH], 'worn', 16, 0.6),
-  around('endswest-edge', [WEST_X0, WEST_NORTH, WEST_EAST, WEST_SOUTH], 'bare', 4, 0.35),
-  // (and its far west: endsfar.ts)
-  around('endsfar', ENDS_FAR_RECT, 'worn', 16, 0.6),
-  around('endsfar-edge', ENDS_FAR_RECT, 'bare', 4, 0.35),
-  // ...the common down to Lot 9 (endsblend.ts, Phase 6): rough, trodden, the desire line worn bare either side
-  around('ends-common', ENDS_COMMON, 'worn', 3, 0.45),
-  verge('ends-desire', ENDS_DESIRE, DESIRE_HALF, 'bare', 1.2, 0.5),
-  // Lot 9 (lot9.ts): worn grass round it, bare dirt inside the old park's fence and just past it, the Field trampled
-  around('lot9', LOT9_FENCE, 'worn', 14, 0.8),
-  around('lot9-dirt', [LOT9_PARK_X0, LOT9_FENCE[1], LOT9_FENCE[2], LOT9_FENCE[3]], 'bare', 2, 0.55),
+  // South of The Trenches re-laid (south.ts, docs/south-plan.md Phase 1b): worn grass round the estate's blocks by the
+  // ring road and the Circus, bare in places; a worn lawn through the village and the rows; lush along the brook
+  around('endswood', ESTATE_LAND, 'worn', 16, 0.6),
+  around('endswood-edge', ESTATE_LAND, 'bare', 4, 0.35),
+  around('south-village', VILLAGE_LAND, 'wornLawn', 14, 0.45),
+  verge('south-brook', BROOK, BROOK_HALF + 2, 'bank', 5, 0.6),
+  // Lot 9 (lot9.ts): worn grass round its fence (measured to its wandering line), bare dirt over the park and the strip
+  // down to the camp and just past them, the Field trampled
+  { id: 'lot9', cover: 'worn', reach: 14, strength: 0.8, box: [LOT9_FENCE_BOX[0] - 14, LOT9_FENCE_BOX[1] - 14, LOT9_FENCE_BOX[2] + 14, LOT9_FENCE_BOX[3] + 14], dist: fromLot9Fence },
+  around('lot9-dirt', LOT9_PARK, 'bare', 2, 0.55),
+  around('lot9-strip', [LOT9_CAMP_X1, LOT9_PARK[3], LOT9_PARK[2], LOT9_FIELD[3]], 'bare', 4, 0.55),
   around('lot9-field', LOT9_FIELD, 'bare', 1, 0.28),
   // Lusher by the river (its banks are the river's own, river.ts; this is the grass running down to them)
   { id: 'river', cover: 'bank', reach: 10, strength: 0.6, box: [SKY[0], RIVER[0] - 10, SKY[2], RIVER[1] + 10], dist: (_x, z) => Math.max(0, RIVER[0] - z, z - RIVER[1]) },

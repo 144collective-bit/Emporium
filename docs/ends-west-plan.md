@@ -1,5 +1,8 @@
 # The Ends carried west (a plan)
 
+> **Superseded (2026-11-14):** the south of The Trenches was re-laid (`docs/south-plan.md` Phase 1b, the owner's
+> call). What this plan built was taken up; it's kept as the history of how the estate was. Degen's compound stayed.
+
 ## The owner's answers (2026-11-11)
 
 | Question | Answer |

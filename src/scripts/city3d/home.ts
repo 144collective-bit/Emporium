@@ -304,3 +304,12 @@ export const HOME_USES: HomeUse[] = [
   { id: 'home:wardrobe', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },
   { id: 'home:stash', x: at('stash')[2] + 0.35, z: (at('stash')[1] + at('stash')[3]) / 2, label: 'Stash' },
 ];
+
+/** Pools of light at night (docs/ends-far-west-plan.md Phase 5): on Gate Lane under each of the gates' lamps, in the
+ * yard by the garage's lamp and at his front door (x, z, size; drawn by south3d.ts, dark by day as the lamps' pools) */
+export const HOME_POOLS: [number, number, number][] = [
+  [HOME.gates.x + 0.5, HOME.gates.z0 - PIER.w / 2, 2.2],
+  [HOME.gates.x + 0.5, HOME.gates.z1 + PIER.w / 2, 2.2],
+  [HOME.garage[2] + 0.9, (HOME.carDoor.z1 + HOME.bikeDoor.z0) / 2, 2.6],
+  [HOME.door[0], HOME.door[1] - 0.6, 1.8],
+];

@@ -10,9 +10,8 @@ import {
   BIKE_HOME, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, HOME_CAMERA, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
   HOME_WORKSHOP_DOOR, HATCH, PIER, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, homePlaces, homeRoofY, homeWall, inHouse, onHome, onRoof, roofWall, startsAtHome,
 } from '../src/scripts/city3d/home';
-import { GATES, HEAD, LANE_HALF, LANE_X, PLOT } from '../src/scripts/city3d/endsfar';
-import { HOUSES, TERRACES, TERRACE_SOLIDS, TALLEST } from '../src/scripts/city3d/endsterraces';
-import { ROAD_HALF, ROAD_Z, SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
+import { GATES, HEAD, LANE_HALF, LANE_X, PLOT, ROAD_HALF, ROAD_Z } from '../src/scripts/city3d/endsfar';
+import { SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PLACES } from '../src/scripts/city3d/places';
 import { LIVE_PLACES } from '../src/scripts/city3d/live';
@@ -70,11 +69,9 @@ test('inside the wall: the garage on the Close\'s line, the house, the workshop 
   // The garage faces the gates down the Close's line; nothing stands between them
   assert.equal((HOME.garage[1] + HOME.garage[3]) / 2, ROAD_Z);
   for (let x = HOME.garage[2] + 0.3; x < PLOT[2]; x += 0.3) assert.ok(stands(x, ROAD_Z), `something on the drive at ${x}`);
-  // Everything under the estate's tallest row, and so far under the Emporium
-  const tallest = Math.max(...TERRACES.map((t) => t.peak));
-  for (const p of HOME_PICK) assert.ok(SLAB_Y + p.h < tallest, 'under the rows');
+  // Everything low: two storeys, far under the Emporium
+  for (const p of HOME_PICK) assert.ok(SLAB_Y + p.h < 6, 'two storeys');
   assert.ok(HOME.ridge > HOME.eaves && HOME.eaves >= 2.2, 'two storeys under a parapet');
-  assert.ok(TALLEST > 0);
   // The yard is the wide drive: room to turn a car between the garage and the gates
   assert.ok(PLOT[2] - HOME.garage[2] > 12 && HOME.house[1] - HOME.workshop[3] > 10);
 });
@@ -102,11 +99,6 @@ test("what's solid: the buildings' walls, the garage's two doors open, the works
   // The workshop is shut all round
   const [wx0, wz0, wx1, wz1] = HOME.workshop;
   for (let x = wx0 + 0.05; x < wx1; x += 0.2) for (const z of [wz0 + WALL / 2, wz1 - WALL / 2]) assert.ok(solidAt(x, z), `a gap in the workshop at ${x}`);
-  // The old end house is a neighbour's again: its terrace's solid is whole, and nothing of the home's is there
-  const row = TERRACES.find((t) => t.houses.some((h) => h.id === 'rn2-0-2'))!;
-  assert.ok(TERRACE_SOLIDS.some((b) => b[0] <= row.rect[0] + 1e-6 && b[2] >= row.rect[2] - 1e-6));
-  for (const b of HOME_SOLIDS) for (const t of TERRACES) assert.ok(!overlap(b, t.rect), 'a home solid on a terrace');
-  assert.ok(HOUSES.some((h) => h.id === 'rn2-0-2'));
 });
 
 test('the car and the bike live in the garage, a door each, noses out; the garage\'s and the workshop\'s prompts in the yard', () => {
@@ -250,7 +242,7 @@ test('the benchmark has a view of the compound, from the Close down its line, lo
   const [x, y, z] = v.pos;
   assert.ok(!SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]), 'the camera stands in nothing');
   assert.ok(y > SLAB_Y + 1 && y < SLAB_Y + 6, 'near eye level');
-  assert.ok(Math.abs(z - ROAD_Z) < ROAD_HALF, 'on the Close');
+  assert.ok(Math.abs(z - ROAD_Z) < ROAD_HALF + 3, 'on the High Road by the gates');
   const [tx, , tz] = v.target;
   assert.ok(onHome(tx, tz), 'looking at his land');
   assert.ok(Math.hypot(tx - x, tz - z) < 40);

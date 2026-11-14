@@ -1,7 +1,6 @@
 // Collision data (solids.ts, shared by walk mode, your car and the game server):
 // everything solid stands on a slab and off the roads, and every door, the gun
 // counter, the garage door and the walk-mode spawn can be reached.
-import { COMMON_SOLIDS } from '../src/scripts/city3d/endsblend';
 import { WHEEL_SOLIDS } from '../src/scripts/city3d/wheel';
 import { HARBOUR_SOLIDS } from '../src/scripts/city3d/harbour';
 import { KERBSIDE_SOLIDS, LAYBY_CARS } from '../src/scripts/city3d/kerbside';
@@ -43,7 +42,7 @@ test('every solid box stands on a block, district or the garage lot (the kart pa
   const laybyCar = (b: (typeof SOLIDS)[number]) => KERBSIDE_SOLIDS.indexOf(b) >= 0 && KERBSIDE_SOLIDS.indexOf(b) < LAYBY_CARS.length;
   const bayCar = (b: (typeof SOLIDS)[number]) => CORAL_SOLIDS.indexOf(b) >= CORAL_SOLIDS.length - CORAL_CARS.length;
   const stadiumOpen = (b: (typeof SOLIDS)[number]) => STADIUM_SOLIDS.includes(b) && [CAR_PARK].some((r) => (b[0] + b[2]) / 2 > r[0] && (b[0] + b[2]) / 2 < r[2] && (b[1] + b[3]) / 2 > r[1] && (b[1] + b[3]) / 2 < r[3]);
-  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !MONO_PILLAR_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !VERGE_SOLIDS.includes(b) && !FRINGE_SOLIDS.includes(b) && !LOT9_SOLIDS.includes(b) && !ENDS_SOLIDS.includes(b) && !COMMON_SOLIDS.includes(b) && !PIER_SOLIDS.includes(b) && !RAMP_PIER_SOLIDS.includes(b) && !UNDER_SOLIDS.includes(b) && !SWING_SOLIDS.includes(b) && !WALL_SOLIDS.includes(b) && !FLOOD_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
+  for (const b of [...SOLIDS, ...CAMERA_ONLY]) if (!KART_SOLIDS.includes(b) && !AIRPORT_SOLIDS.includes(b) && !LIBERTY_SOLIDS.includes(b) && !HARBOUR_SOLIDS.includes(b) && !METRO_SOLIDS.includes(b) && !MONO_PILLAR_SOLIDS.includes(b) && !WATERFRONT_SOLIDS.includes(b) && !NIGHT_MARKET_SOLIDS.includes(b) && !WHEEL_SOLIDS.includes(b) && !FACILITY_SOLIDS.includes(b) && !stadiumOpen(b) && !laybyCar(b) && !bayCar(b) && !MANSION_SOLIDS.includes(b) && !WELCOME_SOLIDS.includes(b) && !VERGE_SOLIDS.includes(b) && !FRINGE_SOLIDS.includes(b) && !LOT9_SOLIDS.includes(b) && !ENDS_SOLIDS.includes(b) && !PIER_SOLIDS.includes(b) && !RAMP_PIER_SOLIDS.includes(b) && !UNDER_SOLIDS.includes(b) && !SWING_SOLIDS.includes(b) && !WALL_SOLIDS.includes(b) && !FLOOD_SOLIDS.includes(b) && !(SITE_SOLIDS.includes(b) && !(b[0] >= HOTEL.block[0] && b[2] <= HOTEL.block[2] && b[1] >= HOTEL.block[1] && b[3] <= HOTEL.block[3]))) assert.ok(onSlab(b), `box ${b.join(', ')} is off the slabs`);
 });
 
 test('no solid box sits on a road (but the metro\'s pillars in an avenue\'s median, metro.test.ts)', () => {

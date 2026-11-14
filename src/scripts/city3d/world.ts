@@ -34,7 +34,6 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEDGE as RING_HEDGE, RING_MEDIAN } from './ringstreet';
 import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import { TUNNEL_HOLES } from './lot9';
-import { SUBWAY_HOLES } from './endswood';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF } from './waterfront';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
@@ -867,7 +866,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts; nor over Lot 9's
         // tunnel's open cuttings, lot9.ts: its walls go down to its floor, lot9-3d.ts; nor over Endswood's subways and
         // its well, endswood.ts, endswood3d.ts)
-        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES, ...SUBWAY_HOLES])) {
+        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
           // (the open land outside the town rolls, rolls.ts; flat everywhere anything stands)
           const flat = hill ? null : (rolledPlane(px0, pz0, px1, pz1, low) ?? groundPlane(px0, pz0, px1, pz1, low));

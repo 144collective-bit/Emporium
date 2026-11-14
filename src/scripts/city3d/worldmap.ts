@@ -34,7 +34,7 @@ import { FACADE as STADIUM_FACADE, STADIUM_AREA, oval as stadiumOval } from './s
 import { RESORTS } from './resorts';
 import { HARBOUR_MASTER, SHED, STACK_BLOCKS, WAREHOUSES } from './docksport';
 import { CIVIC, CLUB as GOLF_CLUB, HOTEL as CREST_HOTEL } from './crestsites';
-import { FENCE as LOT9_FENCE, LAUNDRY as LOT9_LAUNDRY, OFFICE as LOT9_OFFICE } from './lot9';
+import { LAUNDRY as LOT9_LAUNDRY, LOT9_FENCE, OFFICE as LOT9_OFFICE } from './lot9';
 import { CLUBHOUSE as SUN_CLUBHOUSE, SCHOOL as SUN_SCHOOL } from './sunplaces';
 import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, SHOPS as MALL_SHOPS } from './mall';
 import { TERRAIN_RECT, heightAt } from './terrain';
@@ -265,13 +265,12 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       }
     for (const r of [SHED.rect, HARBOUR_MASTER.rect, ...WAREHOUSES.map((w) => w.rect), ...STACK_BLOCKS]) rect(r, C.tower);
     for (const r of [CREST_HOTEL.body, CREST_HOTEL.tower, CIVIC.hall, CIVIC.tower, GOLF_CLUB.house, SUN_CLUBHOUSE.rect, ...SUN_SCHOOL.wings, LOT9_OFFICE.rect, LOT9_LAUNDRY.rect]) rect([...r], C.tower);
-    {
-      const [x0, y0] = toScreen(LOT9_FENCE[0], LOT9_FENCE[1]);
-      const [x1, y1] = toScreen(LOT9_FENCE[2], LOT9_FENCE[3]);
-      ctx.strokeStyle = C.tower;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
-    }
+    // (Lot 9's fence, wandering round the park and its camp: lot9.ts)
+    poly(LOT9_FENCE);
+    ctx.closePath();
+    ctx.strokeStyle = C.tower;
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.fillStyle = C.park;
     // Westlake Park (westlake.ts): its lawns, the lake and its paths
     for (const b of WESTLAKE_BLOCKS) {
