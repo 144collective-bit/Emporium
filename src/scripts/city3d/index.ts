@@ -138,7 +138,7 @@ import type { Bench } from './bench';
 import type { Shots } from './shots';
 import { mb, memoryRows, sceneMemory, targetMemory } from './perf';
 import { antialias } from './targets';
-import { PACKED, tileBatch } from './tilebatch';
+import { PACKED, UV, tileBatch } from './tilebatch';
 import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
@@ -180,6 +180,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const tier = (root.dataset.tier as Tier) || pickTier();
   const Q = TIERS[tier];
+  // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
+  UV.sway = tier !== 'low';
   // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
   figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
