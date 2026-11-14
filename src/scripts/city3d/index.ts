@@ -1919,7 +1919,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     viewSpot[0] = CROWD_VIEW.focus.x;
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
-    if (bench || shots) districts.all();
+    if (bench || shots) void districts.all();
     districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
@@ -2148,8 +2148,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Reveal ---------- */
   root.dataset.view = '3d';
-  // (the texture bake keeps what the boot painted, up to here: kit.ts)
+  // (the texture bake keeps what the boot painted, up to here, and every district's, each under its own keys: kit.ts)
   bootTexturesPainted();
+  if (BAKING_TEXTURES) void districts.all().then(() => ((globalThis as { __texBakeDistricts?: boolean }).__texBakeDistricts = true));
   loader.classList.add('is-done');
   setTimeout(() => (loader.hidden = true), 600);
   const start = home();

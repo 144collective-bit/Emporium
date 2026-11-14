@@ -464,11 +464,28 @@ const BUILT: Record<string, BuiltTex> | null = (() => {
  * with two different saves and clocks, so a key always stands for the same picture.
  */
 const texCounts = new Map<string, number>();
+/** The district whose textures are being painted (`texScope()`), or null for the boot's and the rest */
+let scope: string | null = null;
+/**
+ * Paint `fn`'s textures under a scope of their own (districts.ts, round a district's `register()`): their keys start
+ * with it and count within it, so they're the same however the districts' loading interleaves with the rest of the
+ * city (a district arrives when the player comes near it). That's what lets the bake make them too (the stability
+ * plan's Phase 4): the boot's keys count in its fixed order; a district's within the district
+ */
+export function texScope<T>(id: string, fn: () => T): T {
+  const was = scope;
+  scope = id;
+  try {
+    return fn();
+  } finally {
+    scope = was;
+  }
+}
 function texKey(w: number, h: number, draw: Draw) {
   const src = draw.toString();
   let x = 2166136261;
   for (let i = 0; i < src.length; i++) x = Math.imul(x ^ src.charCodeAt(i), 16777619);
-  const base = `${(x >>> 0).toString(36)}-${w}x${h}`;
+  const base = `${scope ? `${scope}:` : ''}${(x >>> 0).toString(36)}-${w}x${h}`;
   const n = texCounts.get(base) ?? 0;
   texCounts.set(base, n + 1);
   return `${base}-${n}`;

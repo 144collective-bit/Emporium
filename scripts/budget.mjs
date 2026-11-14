@@ -6,6 +6,9 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
+/** The districts' texture sets' budgets, KB (below; set once the first bake that makes them has run) */
+const DISTRICT_TEX = { low: 75, full: 102 };
+
 /** Kilobytes, gzipped (what goes over the wire) */
 const BUDGETS = {
   /** The homepage's HTML */
@@ -66,6 +69,14 @@ const BUDGETS = {
   texLow: 2450,
   /** ... and as everyone else does */
   texFull: 3500,
+  /**
+   * The districts' textures made at build time (the stability plan's Phase 4, the owner's call: a row of their own):
+   * keyed within their district (kit.ts `texScope()`), fetched only when the district loads, never at the start, so
+   * they're out of texLow and texFull. Set from the first bake's sets and about 10% (2026-11-14: 7 textures, 67
+   * and 93 KB)
+   */
+  texLowDistricts: DISTRICT_TEX.low,
+  texFullDistricts: DISTRICT_TEX.full,
   /** Their transcoder (three's Basis wasm and its script) */
   transcoder: 300,
   /**
@@ -133,10 +144,14 @@ const rows = [
 const tex = html.match(/<script type="application\/json" id="city-tex">(.*?)<\/script>/s);
 if (tex) {
   const { transcoder, sets } = JSON.parse(tex[1]);
-  const bytes = (set) => [...new Set(Object.values(sets[set]).map((t) => t.file))].reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024;
+  // (the start's: the boot's own; a district's, keyed "d-<id>:...", are fetched when it loads)
+  const of = (set, districts) => Object.entries(sets[set]).filter(([k]) => k.startsWith('d-') === districts).map(([, t]) => t);
+  const bytes = (list) => [...new Set(list.map((t) => t.file))].reduce((s, f) => s + readFileSync(join(astro, f)).length, 0) / 1024;
   const tdir = join(astro, transcoder);
-  rows.push(['texLow', bytes('low'), `${Object.keys(sets.low).length} textures`]);
-  rows.push(['texFull', bytes('full'), `${Object.keys(sets.full).length} textures`]);
+  for (const [row, set] of [['texLow', 'low'], ['texFull', 'full']]) {
+    rows.push([row, bytes(of(set, false)), `${of(set, false).length} textures`]);
+    rows.push([`${row}Districts`, bytes(of(set, true)), `${of(set, true).length} textures`]);
+  }
   rows.push(['transcoder', readdirSync(tdir).reduce((s, f) => s + gz(join(tdir, f)), 0), transcoder]);
 } else if (process.env.CI) {
   // A build on CI without them is a bake that failed (the Action's and the Worker's builds run it): red, not silent

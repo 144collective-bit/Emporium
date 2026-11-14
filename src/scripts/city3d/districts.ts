@@ -18,6 +18,7 @@ import { SWING_RECT } from './swingbridge';
 import type * as THREE from 'three';
 import type { DistrictModule, SiteWorker } from './sitework';
 import { rectDistance } from './tileplan';
+import { texScope } from './kit';
 import type { Rect } from './tiles';
 import type { Tick } from './world';
 import { WESTLAKE_RECT } from './westlake';
@@ -103,8 +104,8 @@ export const LEAD = 90;
 export interface Districts {
   /** Load any district within reach of what the camera looks at (x, z), every frame (cheap) */
   step(x: number, z: number, far: number): void;
-  /** Load every district now (the benchmark: it measures the whole city) */
-  all(): void;
+  /** Load every district now, settled when they all are (the benchmark: it measures the whole city; the texture bake) */
+  all(): Promise<void>;
   /** How many are loading, or within reach and not loaded yet */
   pending(): number;
   loaded(): string[];
@@ -113,13 +114,16 @@ export interface Districts {
 export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; tick?: (f: Tick) => void; list?: LazyDistrict[] }): Districts {
   const list = opts.list ?? LAZY_DISTRICTS;
   const state = new Map<string, 'loading' | 'done' | 'failed'>();
+  const loads = new Map<string, Promise<void>>();
   let near = 0;
-  function load(d: LazyDistrict) {
-    if (state.has(d.id)) return;
+  function load(d: LazyDistrict): Promise<void> {
+    if (state.has(d.id)) return loads.get(d.id) ?? Promise.resolve();
     state.set(d.id, 'loading');
-    d.load()
+    const p = d
+      .load()
       .then(async (m) => {
-        m.register({ low: opts.low, scene: opts.scene, tick: opts.tick });
+        // (its textures keyed within it: the same keys whenever it arrives, so they can be made at build time, kit.ts)
+        texScope(`d-${d.id}`, () => m.register({ low: opts.low, scene: opts.scene, tick: opts.tick }));
         // The worker registers the same sites before they're queued here, so it can take them (a few seconds at most)
         if (opts.worker) await Promise.race([opts.worker.load(m.SELF), new Promise((r) => setTimeout(r, 4000))]);
         opts.adopt();
@@ -128,7 +132,10 @@ export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker
       .catch(() => {
         // (a chunk that wouldn't load: tried again when it comes into reach again)
         state.delete(d.id);
+        loads.delete(d.id);
       });
+    loads.set(d.id, p);
+    return p;
   }
   return {
     step(x, z, far) {
@@ -141,7 +148,8 @@ export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker
       }
     },
     all() {
-      list.forEach(load);
+      // (in any order: a district's texture keys count within it, kit.ts `texScope()`)
+      return Promise.all(list.map(load)).then(() => undefined);
     },
     pending: () => Math.max(near, [...state.values()].filter((s) => s === 'loading').length),
     loaded: () => list.filter((d) => state.get(d.id) === 'done').map((d) => d.id),

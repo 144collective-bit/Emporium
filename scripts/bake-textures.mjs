@@ -121,14 +121,19 @@ async function paintRun(set, run) {
   // Painted with the site's own fonts, or not at all (a stand-in font would be baked in for everyone)
   const fonts = await page.evaluate(() => ['900 64px "Big Shoulders Display"', '700 32px "JetBrains Mono"'].every((f) => document.fonts.check(f)));
   if (!fonts) throw new Error(`${set}/${run.name}: the web fonts didn't load`);
+  // Every district loaded (index.ts loads them all after the boot under ?bake-textures): their textures are made too
+  await page.waitForFunction(() => globalThis.__texBakeDistricts === true, null, { timeout: 300000, polling: 500 }).catch(() => log(`${set}/${run.name}: the districts didn't all load (their textures are left to paint)`));
   const got = await page.evaluate(async () => {
     const out = {};
     const tiny = document.createElement('canvas');
     tiny.width = tiny.height = 8;
     const t = tiny.getContext('2d', { willReadFrequently: true });
-    // (only what the boot painted: kit.ts `bootTexturesPainted()`; a district arriving after it would make the set differ run to run)
+    // What the boot painted (kit.ts `bootTexturesPainted()`), and every district's, keyed within it ("d-<id>:...",
+    // `texScope()`): the same whenever it arrived. Anything else painted after the boot is left out (its key would
+    // depend on when it came, so the set would differ run to run)
     const painted = globalThis.__texBake ?? [];
-    for (const { key, canvas, src } of painted.slice(0, globalThis.__texBakeBoot ?? painted.length)) {
+    const boot = globalThis.__texBakeBoot ?? painted.length;
+    for (const { key, canvas, src } of painted.filter((p, i) => i < boot || p.key.startsWith('d-'))) {
       // The far forms' average colour (lod.ts `average()`, worked out the same way)
       t.clearRect(0, 0, 8, 8);
       t.drawImage(canvas, 0, 0, 8, 8);
@@ -146,7 +151,7 @@ async function paintRun(set, run) {
     }
     return { out, after: painted.length - Object.keys(out).length };
   }).then(({ out, after }) => {
-    if (after) log(`${set}/${run.name}: ${after} painted after the boot (a district arriving), left out`);
+    if (after) log(`${set}/${run.name}: ${after} painted after the boot outside a district, left out`);
     return out;
   });
   await ctx.close();
