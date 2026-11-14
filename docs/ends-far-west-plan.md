@@ -204,9 +204,27 @@ one:
      shared paint, the crops' greens and the paths' earth from the
      palette; phones draw every other crop row.
    - Shots: `docs/far-west-shots/phase-4-*`.
-5. **Life, night and sound.** Neighbours and walkers on the new road, the
-   compound's windows, sign and terrace lights at night, a pool at the
-   gates; its sound Endswood's, the house quiet inside as now.
+5. **Life, night and sound** (built, waiting on the owner's sign-off).
+   - `endsfarlife.ts` (DOM-free, the chunk's, tested in
+     `tests/endsfarlife.test.ts`): **walkers** (`FAR_PEOPLE`: three round
+     the lane's two sidewalks, one up and down the allotments' middle
+     path) and **people standing about** (`FAR_IDLE`: two neighbours
+     chatting over a bungalow's front wall, one at another's gate on the
+     phone, three at their plots, one at the allotments' gate). Nobody on
+     the compound: it's his. Into the crowd's spare slots **on desktops
+     only**: the phones' reserve (180) is all spoken for by the rest of the
+     city, and it isn't raised for a quiet corner.
+   - **At night:** most of the house's front windows and a window on three
+     of the four bungalows are lit (a `neon()` glass, dark by day, warm at
+     night, under the bloom's threshold); pools of light (`FAR_POOLS`) on
+     the lane under the gates' two lamps, in the yard by the garage's lamp
+     and at his front door (one instanced mesh in the FX layer, dark by
+     day, added by `endsfar3d.ts` on the main thread).
+   - **Sound** is Endswood's already (`inEndswood()`), the house quiet
+     inside and the street heard on the terrace (Phases 2 and 3).
+   - Not done: lettering on the gate pier's plaque (it's a plain lit
+     plaque), and dogs with the walkers.
+   - Shot: `docs/far-west-shots/phase-5-night-lit-windows.webp`.
 6. **Polish.** `?bench` views (the gates from the Close, the yard, from
    the terrace), the review shots, phones checked and trimmed, every width;
    the guides (`endswood.md`, `vehicles.md`, `tests.md`); the plan done.

@@ -36,7 +36,7 @@ import { BOT_LEVELS, FIGHT_BOTS, SNACK_HEAL, type BotLevel } from './catalog';
 import { PARTNERS, afterOf, arenaOf, partner, startOf, type PartnerId } from './brawlsite';
 import type { StyleId } from './fight-moves';
 import { useItem } from './inventory';
-import { FIGHTER_SCALE, createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
+import { FIGHTER_SCALE, blocked, createFighterFigure, disposeFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { bodyGap, nearFor } from './lens';
 import { T, createFightSim, forward, yawTo, type FightEvent, type FightSim, type Fighter, type FighterInput } from './fight-sim';
 import type { Fight, FightDeps, FightHud, FightInput, FightKind, FightResultView, FightStart } from './fight-types';
@@ -50,6 +50,10 @@ const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const BOUT = { rounds: 3, seconds: 90 };
 const YOU = 'you';
 const THEM = 'them';
+
+/** A blow on your guard: the view's kick back (tiles a second), its spring and damping, the most it rides back
+ * (tiles), and the hit-stop (seconds): subtle, a touch under a clean hit's */
+const BLOCK_FEEL = { kick: 1.6, spring: 170, damp: 18, most: 0.1, stop: 0.025 };
 
 export function createFight(d: FightDeps): Fight {
   const { camera, root } = d;
@@ -78,6 +82,9 @@ export function createFight(d: FightDeps): Fight {
   let intro = 0;
   let countT = 0;
   let shake = 0;
+  /** The view nudged back when your guard takes a blow: a spring (tiles), and its speed */
+  let nudge = 0;
+  let nudgeV = 0;
   let elapsed = 0;
   let tiredAt = -10;
   const camPos = new THREE.Vector3();
@@ -288,6 +295,7 @@ export function createFight(d: FightDeps): Fight {
     done = false;
     stop = 0;
     shake = 0;
+    nudge = nudgeV = 0;
     elapsed = 0;
     endAt = -1;
     camReady = false;
@@ -393,7 +401,18 @@ export function createFight(d: FightDeps): Fight {
           burst(e.x, e.y, e.z, 'block');
           impact(e.x, e.y, e.z, 'block');
           dmgPop(e.x, e.y, e.z, 'Blocked', 'is-block');
-          if (e.who === YOU) d.ui.pop('Blocked', 'good');
+          // (the guard that took it jolts back; yours nudges the view back with it, subtly: the owner's call, 2026-11)
+          {
+            const fg = e.who === YOU ? you : them;
+            if (fg) blocked(fg);
+          }
+          if (e.who === YOU) {
+            d.ui.pop('Blocked', 'good');
+            if (!d.reduced) {
+              nudgeV += BLOCK_FEEL.kick;
+              stop = Math.max(stop, BLOCK_FEEL.stop);
+            }
+          }
           break;
         case 'parry':
           d.sfx('parry');
@@ -517,6 +536,15 @@ export function createFight(d: FightDeps): Fight {
       camAt.lerp(at, damp(8, dt));
     }
     camera.position.copy(camPos);
+    // (your guard took a blow: the view rides back with it on a spring)
+    if (nudge !== 0 || nudgeV !== 0) {
+      nudgeV += (-BLOCK_FEEL.spring * nudge - BLOCK_FEEL.damp * nudgeV) * Math.min(dt, 1 / 30);
+      nudge = Math.min(BLOCK_FEEL.most, nudge + nudgeV * Math.min(dt, 1 / 30));
+      if (Math.abs(nudge) < 1e-4 && Math.abs(nudgeV) < 1e-3) nudge = nudgeV = 0;
+      camera.position.x -= fx_ * nudge;
+      camera.position.z -= fz * nudge;
+      camera.position.y -= nudge * 0.3;
+    }
     if (shake > 0 && !d.reduced) {
       camera.position.x += (Math.random() - 0.5) * shake;
       camera.position.y += (Math.random() - 0.5) * shake * 0.6;

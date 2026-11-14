@@ -156,8 +156,13 @@ const SPAWN_YAW = WALK_SPAWN.yaw;
 const RADIUS = 0.17;
 /** His speeds (movesim.ts): a walk (Caps Lock), the run he goes at, the sprint (Shift), and walking while he aims */
 const { walk: WALK, run: RUN, sprint: SPRINT } = GAITS;
-/** First person with empty hands: the run's pace (a share of RUN) over which his swinging arms come into shot */
-const FP_PUMP = [0.55, 0.9] as const;
+/**
+ * First person with empty hands: the pace (a share of RUN) over which his swinging arms come into shot (from a
+ * walk: WALK is 0.28 of RUN; the owner's calls, arms at a walk too), and over which the walk's low, small bob
+ * grows into the jog's
+ */
+const FP_PUMP = [0.12, 0.26] as const;
+const FP_WALK = [0.3, 0.6] as const;
 /** How far the first-person view narrows with the fists' guard up (degrees) */
 const GUARD_ZOOM = 5;
 const AIMING = 1.09;
@@ -929,13 +934,21 @@ export function createWalk(d: WalkDeps) {
   /** His own fists in first person (fistsview.ts, the polish plan's Phase 8), and a kick's bob of the view still to settle */
   let fistsView: import('./brawl').FistsView | null = null;
   let kickBob = 0;
+  /**
+   * The punch's feel in first person (the owner's call, 2026-11: subtle): a landed punch holds the fight a few frames
+   * (`hitStop`, seconds left) with a small kick of the view forward (`hitKick`), and the view turns and leans a touch
+   * with each punch (fparm.ts PUNCH_FEEL); the arms dip on a landing (`landDip`, this frame's)
+   */
+  let hitStop = 0;
+  let hitKick = 0;
+  let landDip = 0;
   const loadFists = lazy(
     () =>
     import('./brawl')
       .then((m) => {
         fistsMod = m;
         fists = m.createStreetFists(d.game.save().fight.style);
-        fistsView = m.createFistsView(d.scene);
+        fistsView = m.createFistsView(d.scene, d.low);
         fistsView.setOutfit(outfit);
         // The sparring partners waiting on the street (Phase 3): drawn near him, solid where they stand
         partners = m.createPartners(d.scene, d.low, (x, z) => groundAt(x, z));
@@ -2444,7 +2457,7 @@ export function createWalk(d: WalkDeps) {
     // (the guard: the right mouse button, LB or the touch Guard; punches, kicks and the dodge only with it up)
     const guardHeld = mouseGuard || padGuard || fightBtns.guard;
     const fistStep = fistsOn
-      ? fists!.brawl.step(dt, pos.x, pos.z, face, { punch: fightBtns.punch, kick: fightBtns.kick, dodge: fightBtns.dodge, guard: guardHeld, sprinting: sprint && mag > 0.1, dx: dirX, dz: dirZ })
+      ? fists!.brawl.step(hitStop > 0 ? 0 : dt, pos.x, pos.z, face, { punch: fightBtns.punch, kick: fightBtns.kick, dodge: fightBtns.dodge, guard: guardHeld, sprinting: sprint && mag > 0.1, dx: dirX, dz: dirZ })
       : null;
     if (!fighting()) fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
     const guardUp = fistsOn && fists!.brawl.up;
@@ -2551,7 +2564,13 @@ export function createWalk(d: WalkDeps) {
           // (a kick in first person: the leg's out of shot, so the view bobs with it; not under reduced motion)
           if (firstPerson && !d.reduced && fistsMod!.MOVES[e.move].kind === 'kick') kickBob = fistsMod!.KICK.settle;
           // (three landing close together on a dummy: a street chain, for the mission)
-          if (fists!.brawl.landed(combat.melee(e.move, pos.x, pos.y, pos.z, face))) {
+          const hit = combat.melee(e.move, pos.x, pos.y, pos.z, face);
+          // (a landed punch or kick: the fight held a moment and the view kicked forward, first person, not under reduced motion)
+          if (hit && firstPerson && !d.reduced) {
+            hitStop = fistsMod!.PUNCH_FEEL.stop;
+            hitKick = fistsMod!.PUNCH_FEEL.kickTime;
+          }
+          if (fists!.brawl.landed(hit)) {
             count(d.game.save(), 'streetChains', 1);
             d.game.commit();
             d.game.toast('Chain of three', 1500);
@@ -2621,6 +2640,8 @@ export function createWalk(d: WalkDeps) {
     if (grounded && !wasGrounded) {
       if (-fall > LAND_ROLL && speed > 1.55) landHold = 0.75;
       else if (!animator && -fall > LAND_CROUCH) landHold = 0.5;
+      // (first person, the arms dip with the landing and spring back: fistsview.ts)
+      if (!d.reduced && firstPerson) landDip = THREE.MathUtils.clamp((-fall - 1) / 7, 0, 1);
       if (!d.reduced && !firstPerson) {
         dipV -= 31 * 0.16 * THREE.MathUtils.clamp((-fall - 2) / 8, 0, 1);
         if (-fall > LAND_CROUCH) {
@@ -2895,6 +2916,14 @@ export function createWalk(d: WalkDeps) {
       camera.position.z -= Math.sin(shakeT * 71) * k * Math.sin(yaw);
       camera.position.y += Math.sin(shakeT * 53 + 1) * k;
     }
+    hitStop = Math.max(0, hitStop - dt);
+    if (hitKick > 0 && fistsMod) {
+      const { kick, kickTime } = fistsMod.PUNCH_FEEL;
+      hitKick = Math.max(0, hitKick - dt);
+      const k = Math.sin(Math.PI * (1 - hitKick / kickTime)) * kick * SCALE;
+      camera.position.x += Math.sin(yaw) * -k;
+      camera.position.z += Math.cos(yaw) * -k;
+    }
     if (kickBob > 0 && fistsMod) {
       kickBob = Math.max(0, kickBob - dt);
       camera.position.y -= fistsMod.KICK.bob * Math.sin(Math.PI * (1 - kickBob / fistsMod.KICK.settle));
@@ -2915,6 +2944,18 @@ export function createWalk(d: WalkDeps) {
     camera.lookAt(lookAt);
     // (leaning out in first person, the view tilts with his head a little)
     if (firstPerson && peek && !d.reduced) camera.rotateZ(-peek * PEEK.roll);
+    // (first person, the view turns a touch with each punch's shoulder and leans in: fparm.ts PUNCH_FEEL)
+    if (firstPerson && !d.reduced && fistsOn && fistsMod) {
+      const c = fists!.brawl.clip();
+      const feel = fistsMod.PUNCH_FEEL;
+      const turn = feel.turn[c.id as keyof typeof feel.turn];
+      if (turn !== undefined) {
+        const m = fistsMod.MOVES[c.id as keyof typeof fistsMod.MOVES];
+        const e = fistsMod.punchEnvelope(c.frame, m.startup, m.active, m.recovery);
+        camera.rotateY(turn * e);
+        camera.rotateX(feel.lean[c.id as keyof typeof feel.lean] * e);
+      }
+    }
     // The near plane in as a wall comes close to the lens, straight ahead or at the view's edges (at the city's 0.5 the
     // wall was cut away and you saw through it), out again when nothing is: lens.ts
     lensFwd.copy(view).negate();
@@ -2933,7 +2974,8 @@ export function createWalk(d: WalkDeps) {
     combat.view(dt, t, { firstPerson, aim: aimNow, move: stride, phase, run: runAmt, air });
     // Empty hands in first person: his own arms, his body's (fistsview.ts): the skeleton as posed this frame (the
     // motion capture, and the fight's clips with the guard up) read from an eye in his head
-    fistsView?.update(camera, dt, { guard: guardAmt, run: THREE.MathUtils.smoothstep(stride, FP_PUMP[0], FP_PUMP[1]), still: d.reduced }, firstPerson && fistsOn, { rig: hero.rig, root: hero.g });
+    fistsView?.update(camera, dt, { guard: guardAmt, run: THREE.MathUtils.smoothstep(stride, FP_PUMP[0], FP_PUMP[1]), sprint: runAmt, walk: 1 - THREE.MathUtils.smoothstep(stride, FP_WALK[0], FP_WALK[1]), land: landDip, still: d.reduced }, firstPerson && fistsOn, { rig: hero.rig, root: hero.g });
+    landDip = 0;
 
     // Field of view widens with speed, narrows when aiming, and in first person a touch with the guard up (the
     // owner's call, 2026-11: the fight in focus)

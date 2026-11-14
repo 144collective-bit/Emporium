@@ -521,3 +521,41 @@ test("the Mayor's tells: a telegraphed hook winds up longer, he parries, and he 
   const d1 = Math.hypot(B.x - A.x, B.z - A.z);
   assert.ok(d1 > d0 + 0.3, `backed off from ${d0.toFixed(2)} to ${d1.toFixed(2)}`);
 });
+
+test('flow: a chain pressed in time skips half the recovery; held, mashed or early presses chain at the plain pace', () => {
+  const window = MOVES.jab.startup + MOVES.jab.active;
+  /** The tick the cross is swung, with the punch pressed on these ticks */
+  const crossAt = (pressed: (i: number) => boolean) => {
+    const sim = pair(1.0);
+    for (let i = 0; i < 80; i++) for (const e of sim.step(T.tick, { a: press({ punch: pressed(i) }) })) if (e.kind === 'swing' && e.move === 'cross') return i;
+    return -1;
+  };
+  const plain = crossAt((i) => i === 0 || i === window - 3);
+  const inTime = crossAt((i) => i === 0 || i === window + 1);
+  const held = crossAt(() => true);
+  const mashed = crossAt((i) => i % 3 === 0);
+  assert.ok(plain > 0 && inTime > 0 && held > 0 && mashed > 0);
+  assert.equal(plain - inTime, Math.floor(MOVES.jab.recovery * T.flow), 'in time: half the recovery skipped');
+  assert.equal(held, plain, 'held: the plain pace');
+  assert.equal(mashed, plain, 'mashed: the plain pace');
+  // The whole chain in rhythm lands, quicker
+  const sim = pair(1.0);
+  const ev: FightEvent[] = [];
+  const a = sim.fighter('a')!;
+  let pressNext = true;
+  for (let i = 0; i < 90; i++) {
+    const inRecovery = a.move !== null && a.phase === 'recovery' && !a.queued;
+    ev.push(...sim.step(T.tick, { a: press({ punch: i === 0 || (inRecovery && pressNext) }) }));
+    pressNext = !(a.queued !== null);
+  }
+  assert.deepEqual(ev.filter((e) => e.kind === 'hit').map((e) => (e as { move: string }).move).slice(0, 3), ['jab', 'cross', 'hook']);
+});
+
+test('a press on a frame no tick runs waits for the next tick', () => {
+  const sim = pair(1.0);
+  const ev: FightEvent[] = [];
+  // (a 120 Hz screen: half a tick a frame, the press on a frame with none)
+  ev.push(...sim.step(T.tick / 2, { a: press({ punch: true }) }));
+  for (let i = 0; i < 6; i++) ev.push(...sim.step(T.tick / 2, {}));
+  assert.ok(ev.some((e) => e.kind === 'swing' && e.move === 'jab'));
+});

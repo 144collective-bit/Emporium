@@ -126,12 +126,45 @@ keep it up to date when what it describes changes.
   agree. From his eyes the clips' guard is under his chin, out of shot, so
   with the guard up a first-person correction (`FP_FIX`) raises the fists,
   draws them in, carries them forward the more the arm is bent and never
-  nearer the eye than `near`; running with his hands down `FP_RUN` lifts
-  his swing into the lower corners. Both solve the elbow again round
-  towards his own (`solveArm()`), never moving his body; while one arm is
+  nearer the eye than `near`, the elbow solved again round towards his own
+  (`solveArm()`), never moving his body. Running with his hands down (the
+  owner's calls: "a classic FPS pump", "his steps, a designed arc", loose
+  fists, then "his hands should just move up and down... his whole arm
+  locks out when sprinting") the pump takes over (`pumpArm()`, `PUMP`):
+  his body sets the timing (each arm's wrist ahead of the other's, about
+  the middle of his swing lately, so a sprint carrying one hand ahead
+  never sticks it forward, against its size, `pumpSwing()`) and each fist
+  bobs up and down in its lower corner (`low` to `high`, a touch forward
+  through the middle), the elbow always bent, from a shoulder of its own
+  (`PUMP.shoulder`: the sprint carries his head ahead of his real one),
+  higher sprinting, lower and smaller at a walk (`walkLow`, `walkHigh`;
+  walk.ts `FP_PUMP` from a walk, `FP_WALK`); the fist is loose
+  (`fistGeometry(thumb, loose)`, a second forearm swapped in, so still two
+  draws an arm). **The fist is one smooth shape** (the owner's call,
+  2026-11: "smoothing... more natural", a chunky cartoon fist, first person
+  only): `fistField()` is how far a point is outside the hand (the back
+  of the hand and palm, the wrist, four fingers curled in two, their
+  knuckles one smooth ridge ("too lumpy around the knuckles"), the thumb
+  and its ball), each part run into the next with a
+  smooth minimum (`smin()`), so it reads as one hand with creases;
+  `meshField()` turns that into a mesh once as the fists load (a surface
+  net, about 3 mm cells, 4.6 mm on the phone tier for about half the
+  triangles, `FIST_CELL`, `createFistsView(scene, low)`, sampled finely only near the surface, shaded by
+  the field's slope; the other hand mirrored, `mirrorX()`; made once,
+  `FISTS`), and the creases where fingers and thumb meet are drawn in,
+  comic style, by darkening the skin there (`CREASE`, `paintFist()`), taken over quickly (`PUMP_IN`) and eased back to the
+  clip's arm as he slows
+  (`blendArm()`); while one arm is
   out punching the other hand's draw in is eased off (`PUNCH_ASIDE`), so
   the punch has the middle. With the left lead (the Fight Club, below) the
-  jab and hook are his left.
+  jab and hook are his left. A punch's feel in first person (the owner's
+  call: subtle; `PUNCH_FEEL`, walk.ts): the view turns a touch with the
+  shoulder behind each punch (a left hand turns him right, a right hand
+  left) and leans with it over the punch's frames (`punchEnvelope()`), and
+  one that lands holds the fight about three frames (`hitStop`: the street
+  fists step with no time) and kicks the view forward a touch; the arms dip
+  on a landing and spring back (fistsview.ts `LAND_DIP`). None of it under
+  reduced motion.
   The arms are tied to the camera (in shot looking up or down) and lag
   the look; narrow screens hold them further off; a kick bobs the view
   (`KICK`). Nothing sways under reduced motion. In first person the view
@@ -187,7 +220,14 @@ keep it up to date when what it describes changes.
   so the fight's rules load with the fight, not at the boot), bots via
   `think()`, spars and bouts;
   a fighter faces along (sin yaw, cos yaw); a press is kept `T.buffer`
-  frames so it fires when it can, a strike from just out of reach steps in
+  frames so it fires when it can (and a press on a frame no tick runs, a
+  screen faster than 60 Hz or a hit-stop, waits for the next tick: `held`
+  in the sim's `step()`, `carry` in brawl-sim.ts); **flow** (the owner's
+  call, 2026-11): a player's chain pressed in time (one press inside the
+  recovery, nothing pressed through the move's start-up or strike:
+  `early`) starts `T.flow` (half) into the recovery (`flow`), so a jab,
+  cross and hook in rhythm run into each other; held or mashed, it chains
+  at the plain pace, and bots keep it; a strike from just out of reach steps in
   (`T.stepIn`), the facing turns at `T.turn` and a move's lock-on snaps at
   most `T.lockSnap`; bots are `BotTraits` (`botTraits()`: block, dodge,
   parry, telegraph (extra wind-up on heavy moves, a tell), kicks, finisher,
@@ -198,7 +238,10 @@ keep it up to date when what it describes changes.
   `blendPose()`, `moveClip()`, `hurtClip()`; the hips' `turn` and `sway`
   go into every punch and kick, the reactions are keyed for a blow from the
   right and mirrored for one from the left (`hurtMirror()`, from the sim's
-  `hurtBy`). **A left lead** (the owner's call, 2026-11): the clips are
+  `hurtBy`); a blow taken on the block plays `blockHit` (fight-figure.ts
+  `blocked()`, `jolt`), and on your guard the ring's view rides back on a
+  spring with a short hit-stop (fight.ts `BLOCK_FEEL`, off under reduced
+  motion; the owner's call, 2026-11: subtle). **A left lead** (the owner's call, 2026-11): the clips are
   keyed on the rig's sides by name (the jab and the hook `armL`), but the
   rig's L is its -x side, his right on a figure facing +z, so every fight
   drew as a southpaw; drawn, every clip is mirrored once more

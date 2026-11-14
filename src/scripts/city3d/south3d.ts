@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import type { Tick } from './world';
 import { SLAB } from './world';
-import { Batch, toon } from './kit';
+import { Batch, PAL, fx, glowMat, lit, toon } from './kit';
 import { site } from './tilework';
 import { dashes, pieces, ribbon, unit } from './roads3d';
 import { COVER, KERB, PLANT, ROAD, STONE, VERGE } from './palette';
@@ -18,6 +18,7 @@ import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, FOOTPATHS, HEDGES
 import { BOLLARD, PATH_BOLLARDS } from './endswood';
 import { PLOT } from './endsfar';
 import { registerHome } from './home3d';
+import { HOME_POOLS } from './home';
 import { registerTunnel } from './tunnel3d';
 
 export const SELF = import.meta.url;
@@ -253,7 +254,7 @@ function registerPlot() {
   );
 }
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerStreets(low);
   registerFootpaths(low);
   registerBrook();
@@ -264,4 +265,14 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   registerHome(low);
   // Lot 9's tunnel under the ring road, its mouth on Underhill Lane
   registerTunnel(low);
+  // The compound's pools of light at night (home.ts `HOME_POOLS`): flat glows on the main thread, dark by day (as the
+  // lamps' pools), one instanced mesh in the FX layer
+  if (!scene) return;
+  const flatQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), lit(glowMat(PAL.warm, 1), 0, 0.24), HOME_POOLS.length);
+  const [m4, v, sv] = [new THREE.Matrix4(), new THREE.Vector3(), new THREE.Vector3()];
+  HOME_POOLS.forEach(([x, z, size], i) => pools.setMatrixAt(i, m4.compose(v.set(x, SLAB + 0.04, z), flatQ, sv.setScalar(size))));
+  pools.frustumCulled = false;
+  pools.name = 'home-pools';
+  scene.add(fx(pools));
 }
