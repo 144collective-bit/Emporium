@@ -243,6 +243,28 @@ detail), which stay the record of how the clothes were built.
   **goggles** (safety and ski styles, a strap round the head or the hat).
   Each sits on the balaclava's own outline, never through it, and the
   tests hold it clear with every hat and the hood.
+- **As built, the shades (Phase 4a, 14 November 2026):** `EYES` in
+  `wardrobe.ts`, a recipe a style (its right lens's outline, the left its
+  mirror; the rim's width; each lens's middle; the toe round the face; the
+  lens's curve; the aviator's double bridge): the rim is the outline pushed
+  out along its normals (`outset()`), 1.4 to 3.2 thousandths wide (the old
+  frames were 7), the lens set into it, both curved round the eye
+  (`bend`); a bridge tube, small hinge blocks, and arms of 2 thousandths
+  (the old 3.2) sampled along the side of the head every centimetre, so
+  they keep off its curve (a narrow pair's arms swing round the temple
+  first). Every style's hinges are at one height (`HINGE_DY`), so past the
+  temples the arms, and the chain hooked under them (`ARM_EAR`), are alike.
+  Items `shades-<style>` (the crowd's the classic; far off a plain bar).
+  The look's `eyewear` (`EYE_STYLES`) and `frame` colour (swatches
+  `PALETTE.frame`, the picker); the fitting room's Eyewear slot (cards by
+  range, the frames' and the lenses' colours). The lenses stay one glowing
+  colour (the picker reaches any tint); a clear lens would need a see-
+  through material, a draw call more a figure, so it isn't offered.
+  - Tests: `accessories.test.ts` (every style, three levels: no point of
+    the frames, lenses or arms in the head, all of it close round the head,
+    the lenses ahead of the eyes; with the hood up, every style's frames and
+    arms inside its cloth and its lenses clear), `profile.test.ts`,
+    `wardrobe.test.ts` (one pair, the look's).
 
 ### Phase 5: premium streetwear (first)
 

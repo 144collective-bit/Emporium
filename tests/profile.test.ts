@@ -3,7 +3,7 @@
 // older saves.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BAGS, BOTTOMS, BRIGHTEST, DEFAULT_LOOK, HATS, KINDS, PALETTE, RANGES, SHOE_STYLES, bottomsFor, cleanLook, guestName, isGuestName, safeColour, shoesFor } from '../src/scripts/net/profile-data';
+import { BAGS, BOTTOMS, BRIGHTEST, DEFAULT_LOOK, EYE_IDS, HATS, KINDS, PALETTE, RANGES, SHOE_STYLES, bottomsFor, cleanLook, guestName, isGuestName, safeColour, shoesFor } from '../src/scripts/net/profile-data';
 
 /** A colour's brightness as `safeColour()` weighs it */
 const lumOf = (c: string) => {
@@ -83,7 +83,7 @@ test('the retired pieces are gone, and looks that wore them lose them (the wardr
 });
 
 test('any colour goes on every piece, held a shade under white (the wardrobe plan, Phase 1)', () => {
-  const keys = ['top', 'bottom', 'tie', 'shirt', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const;
+  const keys = ['top', 'bottom', 'tie', 'shirt', 'frame', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const;
   for (const c of ['#123456', '#00ff00', '#ff00ff', '#000000', '#7f7f7f', '#3a2418'])
     for (const k of keys) assert.equal(cleanLook({ ...DEFAULT_LOOK, [k]: c })[k], c, `${k} ${c}`);
   assert.equal(cleanLook({ ...DEFAULT_LOOK, headphones: '#123456' }).headphones, '#123456');
@@ -143,6 +143,18 @@ test('the separates: any top, bottoms and shoes together; a look from before the
   // Unknown ones fall back to what the top comes with
   const odd = cleanLook({ ...DEFAULT_LOOK, kind: 'hoodie', bottoms: 'kilt', shoeStyle: 'clogs' });
   assert.deepEqual([odd.bottoms, odd.shoeStyle], ['joggers', 'sneaker']);
+});
+
+test('the shades: five styles, the frames any colour; a look from before them wears the classic in black (the wardrobe plan, Phase 4)', () => {
+  assert.deepEqual(EYE_IDS, ['classic', 'aviator', 'round', 'slim', 'wrap']);
+  assert.equal(DEFAULT_LOOK.eyewear, 'classic');
+  assert.equal(DEFAULT_LOOK.frame, '#0d0c14');
+  for (const eyewear of EYE_IDS) assert.equal(cleanLook({ ...DEFAULT_LOOK, eyewear }).eyewear, eyewear);
+  const { eyewear: _e, frame: _f, ...old } = DEFAULT_LOOK;
+  void _e, _f;
+  assert.deepEqual([cleanLook(old).eyewear, cleanLook(old).frame], ['classic', '#0d0c14']);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, eyewear: 'monocle' }).eyewear, 'classic');
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, frame: '#c99a4a' }).frame, '#c99a4a');
 });
 
 test('hood and tie follow the fit', () => {

@@ -88,6 +88,16 @@ export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker'];
 export const bottomsFor = (kind: string): Bottoms => (kind === 'suit' ? 'trousers' : kind === 'track' ? 'trackpants' : 'joggers');
 /** The shoes a top came with before the separates */
 export const shoesFor = (kind: string): ShoeStyle => (kind === 'suit' ? 'dress' : 'sneaker');
+/** The shades' styles (docs/wardrobe-plan.md Phase 4): Degen's own (classic, as in the art, thinner now) and four more */
+export type EyeStyle = 'classic' | 'aviator' | 'round' | 'slim' | 'wrap';
+export const EYE_STYLES: { id: EyeStyle; name: string }[] = [
+  { id: 'classic', name: 'Classic' },
+  { id: 'aviator', name: 'Aviator' },
+  { id: 'round', name: 'Round' },
+  { id: 'slim', name: 'Slim' },
+  { id: 'wrap', name: 'Sport Wrap' },
+];
+export const EYE_IDS = EYE_STYLES.map((e) => e.id);
 /*
  * The ranges (the wardrobe plan's Phase 2): how the fitting room sorts the clothes, for browsing only (any piece goes
  * with any other). Work wear arrives in Phase 6.
@@ -155,7 +165,9 @@ export interface Look {
   /** The hat's colour */
   hatColor: string;
   hood: boolean;
-  /** The shades' lens colour */
+  /** The shades: their style, their frames' colour and their lenses' */
+  eyewear: EyeStyle;
+  frame: string;
   lens: string;
   /** One bag at a time */
   bag: Bag | null;
@@ -188,6 +200,7 @@ export const PALETTE = {
   extra: ['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8', '#d8312f', '#1f9d6a', '#8f3dff'],
   shoes: ['#1b1830', '#f3f2f7', '#d8312f', '#00a8d8', '#e219e5', '#ffd23f', '#1f9d6a'],
   lens: ['#22d07a', '#ff3dbb', '#00d8ff', '#ffc23a', '#9b5cff', '#ff4a3a'],
+  frame: ['#0d0c14', '#f3f2f7', '#c99a4a', '#8b889c', '#3a2418', '#d8312f', '#1d2550'],
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
 };
@@ -225,6 +238,8 @@ export const DEFAULT_LOOK: Look = {
   hat: 'cap',
   hatColor: '#d8312f',
   hood: false,
+  eyewear: 'classic',
+  frame: '#0d0c14',
   lens: '#22d07a',
   bag: null,
   bagColor: '#00b8d8',
@@ -273,6 +288,8 @@ export function cleanLook(raw: unknown): Look {
     hat: orNull(o.hat, HATS, RETIRED_HATS.includes(o.hat as string) ? null : DEFAULT_LOOK.hat),
     hatColor: colour(o.hatColor, DEFAULT_LOOK.hatColor),
     hood: kind === 'hoodie' && o.hood === true,
+    eyewear: from(o.eyewear, EYE_IDS, DEFAULT_LOOK.eyewear),
+    frame: colour(o.frame, DEFAULT_LOOK.frame),
     lens: colour(o.lens, DEFAULT_LOOK.lens),
     bag: orNull(o.bag, BAGS, null),
     bagColor: colour(o.bagColor, DEFAULT_LOOK.bagColor),

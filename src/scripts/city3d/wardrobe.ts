@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bottomsFor, shoesFor, type Bottoms, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
+import { bottomsFor, shoesFor, type Bottoms, type EyeStyle, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
@@ -40,6 +40,9 @@ export interface Outfit {
   helmet?: string;
   /** Colour of the shades' lenses (green as in the art) */
   lens?: string;
+  /** The shades' style and their frames' colour (left out: the classic, in black: docs/wardrobe-plan.md Phase 4) */
+  eyewear?: EyeStyle;
+  frame?: string;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -97,6 +100,9 @@ export const bottomsOf = (o: Outfit): Bottoms | null => (o.kind === 'soldier' ? 
 /** What an outfit wears on its feet: its own, or what its top comes with; soldiers wear their boots */
 export const shoesOf = (o: Outfit): ShoeStyle | null => (o.kind === 'soldier' ? null : (o.shoeStyle ?? shoesFor(o.kind)));
 
+/** The shades an outfit wears: its own style, or the classic */
+export const eyesOf = (o: Outfit): EyeStyle => o.eyewear ?? 'classic';
+
 /** A player's wardrobe choices as a Degen outfit */
 export function lookOutfit(l: Look): Outfit {
   const hat = l.kind === 'hoodie' && l.hood ? null : l.hat;
@@ -116,6 +122,8 @@ export function lookOutfit(l: Look): Outfit {
     bucket: hat === 'bucket' ? l.hatColor : undefined,
     hood: l.kind === 'hoodie' && l.hood,
     lens: l.lens,
+    eyewear: l.eyewear,
+    frame: l.frame,
     headphones: l.headphones ?? undefined,
     backpack: bag('backpack'),
     crossbody: bag('crossbody'),
@@ -642,9 +650,9 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'frame' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'frame', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
  * the raised hood (both sides drawn), neon (a crowd phone's screen: unlit,
@@ -1119,34 +1127,107 @@ export function items(q: Detail, hero = false): Item[] {
       .translate(0, y, -0.006)
   );
   const eyesSkin = onBody(roundRect(0.15, 0.058, 5, R(28), 0, EYE_Y + 0.003), 0.004, face, 0.0005);
-  // Shades: two rounded lenses in thick black frames, a bridge and arms back to the ears
-  const lensShape = () => roundRect(0.064, 0.038, 4, R(24), 0.18);
-  const frameShape = () => {
-    const s = roundRect(0.078, 0.05, 4, R(24), 0.16);
-    s.holes.push(new THREE.Path(lensShape().getPoints().reverse()));
-    return s;
-  };
+  /*
+   * Shades (docs/wardrobe-plan.md Phase 4): real proportions, in five styles (`EYES`). Each is its lens's outline,
+   * a thin rim round it (`outset()`), the lens set into the rim a little behind its front and both curved round the
+   * eye a touch (`bend`), each side toed in round the face; a bridge (the aviator's double), small hinge blocks at the
+   * outer edges and arms back along the head to the ear. Every style's hinges are at one height, so the arms past the
+   * temples (and the chain hooked under them) are the same whichever is worn. The frames take the outfit's `frame`
+   * colour; the lenses glow in its `lens` colour as before.
+   */
   const lensZ = face(0, EYE_Y) + 0.012;
-  const atEye = (g: THREE.BufferGeometry, s: number, dz: number) => g.rotateY(s * 0.24).translate(s * 0.043, EYE_Y, lensZ + dz - Math.abs(s) * 0.004);
-  // (on the desktop the frames' edges bevelled round, docs/clothing-plan.md Phase 5; the arms come with the hats' head, below)
-  const BEVEL = q === 3 ? { bevelEnabled: true, bevelThickness: 0.0014, bevelSize: 0.0012, bevelSegments: 1 } : { bevelEnabled: false };
-  const frames = [
-    ...[-1, 1].map((s) => atEye(new THREE.ExtrudeGeometry(frameShape(), { depth: q === 3 ? 0.0082 : 0.011, curveSegments: 4, ...BEVEL }).translate(0, 0, q === 3 ? 0.0014 : 0), s, 0)),
-    q === 3 ? rbox(0.018, 0.009, 0.01, 0.003, 0, EYE_Y + 0.008, lensZ + 0.006) : new THREE.BoxGeometry(0.018, 0.009, 0.01).translate(0, EYE_Y + 0.008, lensZ + 0.006),
-  ];
-  /** The frames' outer top corner, where each arm is hinged (s: the side) */
-  const hinge = (s: number) => new THREE.Vector3(s * 0.039, 0.013, 0.0055).applyAxisAngle(new THREE.Vector3(0, 1, 0), s * 0.24).add(new THREE.Vector3(s * 0.043, EYE_Y, lensZ - 0.004));
-  const lenses = [-1, 1].map((s) =>
-    atEye(
-      new THREE.ExtrudeGeometry(lensShape(), {
-        depth: 0.006,
-        bevelEnabled: false,
-        curveSegments: 4,
-      }),
-      s,
-      0.003
-    )
-  );
+  /** The hinges' height over the eyes' middle */
+  const HINGE_DY = 0.013;
+  /** An outline pushed out `d` along its own normals (the rim round a lens), anticlockwise */
+  const outset = (pts: THREE.Vector2[], d: number) => {
+    const p = THREE.ShapeUtils.isClockWise(pts) ? [...pts].reverse() : pts;
+    return p.map((v, i) => {
+      const a = p[(i - 1 + p.length) % p.length];
+      const b = p[(i + 1) % p.length];
+      const t = new THREE.Vector2().subVectors(b, a).normalize();
+      return new THREE.Vector2(v.x + t.y * d, v.y - t.x * d);
+    });
+  };
+  /** The aviator's teardrop: a nearly straight top, the outer side dropping and the bottom swelling out and down */
+  const teardrop = (n: number) =>
+    Array.from({ length: n }, (_, k) => {
+      const a = (k / n) * Math.PI * 2;
+      const c = Math.cos(a);
+      const si = Math.sin(a);
+      let x = Math.sign(c) * Math.abs(c) ** (2 / 2.4) * 0.033;
+      let y = Math.sign(si) * Math.abs(si) ** (2 / 2.4) * 0.026;
+      if (y < 0) {
+        const f = -y / 0.026;
+        x = x * (1 - 0.22 * f) + 0.008 * f;
+        y *= 1.08;
+      } else y *= 0.82;
+      return new THREE.Vector2(x, y - 0.002);
+    });
+  const EYE_STYLES: EyeStyle[] = ['classic', 'aviator', 'round', 'slim', 'wrap'];
+  /**
+   * Each style: its right lens's outline (the outer side +x; the left is its mirror), the rim's width, how far out
+   * each lens's middle is, how far each side turns round the face (toe), how much the lens curves (bend), whether
+   * the bridge is doubled
+   */
+  const EYES: Record<EyeStyle, { lens: () => THREE.Vector2[]; rim: number; cx: number; toe: number; bend: number; double?: boolean }> = {
+    classic: { lens: () => roundRect(0.066, 0.036, 4, R(28), 0.16).getPoints(), rim: 0.0032, cx: 0.043, toe: 0.24, bend: 1.2 },
+    aviator: { lens: () => teardrop(R(32)), rim: 0.0016, cx: 0.042, toe: 0.2, bend: 1.4, double: true },
+    round: { lens: () => roundRect(0.05, 0.05, 2, R(32)).getPoints(), rim: 0.0022, cx: 0.036, toe: 0.12, bend: 0.8 },
+    slim: { lens: () => roundRect(0.07, 0.025, 6, R(28), 0.05).getPoints(), rim: 0.0024, cx: 0.044, toe: 0.24, bend: 1.2 },
+    wrap: { lens: () => roundRect(0.076, 0.036, 2.6, R(28), 0.32).getPoints(), rim: 0.0014, cx: 0.042, toe: 0.42, bend: 4.5 },
+  };
+  const FRAME_D = q === 3 ? 0.0036 : 0.0048;
+  const BEVEL = q === 3 ? { bevelEnabled: true, bevelThickness: 0.0007, bevelSize: 0.0005, bevelSegments: 1 } : { bevelEnabled: false };
+  /** A style's pieces in the head's space: the frames' front (rims, bridge, hinge blocks), the lenses, and each hinge */
+  const shadesFront = (style: EyeStyle) => {
+    const e = EYES[style];
+    const lens = e.lens().map((v) => new THREE.Vector2(v.x, v.y));
+    const rimPts = outset(lens, e.rim);
+    const mirror = (pts: THREE.Vector2[]) => pts.map((v) => new THREE.Vector2(-v.x, v.y)).reverse();
+    /** Curved round the eye, turned round the face and put on side s */
+    const place = (g: THREE.BufferGeometry, s: number, dz: number) => {
+      const P = g.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < P.count; i++) P.setZ(i, P.getZ(i) - e.bend * P.getX(i) ** 2);
+      g.computeVertexNormals();
+      return g.rotateY(s * e.toe).translate(s * e.cx, EYE_Y, lensZ + dz - Math.abs(s) * 0.004);
+    };
+    const side = (s: number) => {
+      const outer = s > 0 ? rimPts : mirror(rimPts);
+      const inner = s > 0 ? lens : mirror(lens);
+      const ccw = (pts: THREE.Vector2[]) => (THREE.ShapeUtils.isClockWise(pts) ? [...pts].reverse() : pts);
+      const rim = new THREE.Shape(ccw(outer));
+      rim.holes.push(new THREE.Path([...ccw(inner)].reverse()));
+      return {
+        frame: place(new THREE.ExtrudeGeometry(rim, { depth: FRAME_D, curveSegments: 4, ...BEVEL }), s, 0),
+        lens: place(new THREE.ExtrudeGeometry(new THREE.Shape(ccw(inner)), { depth: 0.0024, bevelEnabled: false, curveSegments: 4 }), s, FRAME_D * 0.35),
+      };
+    };
+    const sides = [-1, 1].map(side);
+    /** A point of the right lens's rim (local x, y, its depth) where it ends up on side s */
+    const at = (s: number, x: number, y: number, z: number) =>
+      new THREE.Vector3(s * x, y, z - e.bend * x * x).applyAxisAngle(new THREE.Vector3(0, 1, 0), s * e.toe).add(new THREE.Vector3(s * e.cx, EYE_Y, lensZ - 0.004));
+    // (the rim's outer edge at the hinges' height, and its inner edge high on the nose side)
+    const near = (pts: THREE.Vector2[], y: number, pick: (a: number, b: number) => boolean) =>
+      pts.filter((v) => Math.abs(v.y - y) < 0.006).reduce((m, v) => (pick(v.x, m) ? v.x : m), pick(1, 0) ? -9 : 9);
+    const outerX = near(rimPts, HINGE_DY, (a, b) => a > b);
+    const top = Math.max(...lens.map((v) => v.y));
+    const innerX = near(rimPts, top * 0.5, (a, b) => a < b);
+    const hinge = (s: number) => at(s, outerX, HINGE_DY, FRAME_D / 2 + 0.004);
+    const tubeR = q === 3 ? 0.0022 : 0.0026;
+    const bridgeAt = (y: number, lift: number) => {
+      const l = at(-1, innerX, y, FRAME_D / 2 + 0.004);
+      const r = at(1, innerX, y, FRAME_D / 2 + 0.004);
+      const mid = l.clone().add(r).multiplyScalar(0.5).add(new THREE.Vector3(0, lift, 0.002));
+      return tube([l.toArray(), mid.toArray(), r.toArray()] as [number, number, number][], tubeR, q === 3 ? R(12) : R(6), q === 3 ? 6 : 4);
+    };
+    const bridges = [bridgeAt(top * 0.5, 0.004), ...(e.double ? [bridgeAt(top + e.rim * 0.5, 0)] : [])];
+    const blocks = [-1, 1].map((s) => {
+      const h = hinge(s);
+      return (q === 3 ? rbox(0.0045, 0.006, 0.009, 0.0015) : new THREE.BoxGeometry(0.0045, 0.006, 0.009)).rotateY(s * e.toe).translate(h.x - s * 0.001, h.y, h.z - 0.002);
+    });
+    return { frames: [...sides.map((v) => v.frame), ...bridges, ...blocks], lenses: sides.map((v) => v.lens), hinge };
+  };
+  const SHADES = Object.fromEntries(EYE_STYLES.map((st) => [st, shadesFront(st)])) as Record<EyeStyle, ReturnType<typeof shadesFront>>;
 
   /* ----- Hats ----- */
   // Every hat seated on the head the figure has, the hero's (body.ts) or the crowd's (docs/clothing-plan.md
@@ -1271,6 +1352,8 @@ export function items(q: Detail, hero = false): Item[] {
   // The shades' arms: from the hinges straight back, then along the side of the head, over the ear's root and
   // down behind it
   const ARM_GAP = 0.0045;
+  /** How far forward of the ear's middle the arm starts over it (where the chain hooks) */
+  const ARM_EAR = 0.012;
   /** How far out the head's side is at height y and depth z */
   const sideAt = (y: number, z: number) => {
     const { hw, zf, zb } = headAt(y);
@@ -1279,26 +1362,32 @@ export function items(q: Detail, hero = false): Item[] {
     const n = hero ? headRow(y).n : HN;
     return hw * Math.max(0, 1 - Math.min(1, Math.abs((z - zc) / d)) ** n) ** (1 / n);
   };
-  const armPath = (s: number): [number, number, number][] => {
+  const armPath = (s: number, hinge: (s: number) => THREE.Vector3): [number, number, number][] => {
     const h = hinge(s);
     const along = (y: number, z: number, out = 0): [number, number, number] => [s * Math.max(sideAt(y, z) + ARM_GAP + out, 0), y, z];
     // (level with the hinges, out past the ear's root, so from the front they keep behind the frames)
     const y = h.y + 0.001;
+    // (from a narrow pair's hinges, out round the temple first, then along the side every centimetre so the arm keeps
+    // off the head's curve between its points: docs/wardrobe-plan.md Phase 4)
+    const side: [number, number, number][] = [];
+    for (let z = h.z - 0.03; z > 0.02; z -= 0.01) side.push(along(y, z));
     return [
       [h.x, h.y, h.z - 0.002],
-      [s * Math.max(Math.abs(h.x) + 0.002, sideAt(h.y, h.z - 0.03) + ARM_GAP), y, h.z - 0.03],
-      along(y, 0.035),
-      along(y, 0.012, EAR_OUT * 0.5),
+      [s * Math.max(Math.abs(h.x) + 0.001, sideAt(h.y, h.z - 0.012) + ARM_GAP), y, h.z - 0.012],
+      ...side.map(([x, , z], i): [number, number, number] => [i ? x : s * Math.max(Math.abs(x), Math.abs(h.x) + 0.002), y, z]),
+      along(y, ARM_EAR, EAR_OUT * 0.5),
       along(y, -0.004, EAR_OUT),
       along(y - 0.012, -0.02),
       along(y - 0.026, -0.026),
     ];
   };
-  const ARMS = [-1, 1].map((s) => armPath(s));
-  frames.push(...ARMS.map((pts) => tube(pts, q === 3 ? 0.0032 : 0.0038, q === 3 ? R(16) : R(8), q === 3 ? 6 : 4)));
+  // (every style's arms: alike past the temples, its hinges being at one height; thin, as real arms are)
+  const ARMS_OF = Object.fromEntries(EYE_STYLES.map((st) => [st, [-1, 1].map((s) => armPath(s, SHADES[st].hinge))])) as Record<EyeStyle, [number, number, number][][]>;
+  const ARMS = ARMS_OF.classic;
+  const armTubes = (st: EyeStyle) => ARMS_OF[st].map((pts) => tube(pts, q === 3 ? 0.0021 : 0.003, q === 3 ? R(16) : R(8), q === 3 ? 6 : 4));
   /** Where the chain hooks onto each arm (s: the side): under it, by the ear */
   const armHook = (s: number): [number, number, number] => {
-    const [x, y, z] = ARMS[s < 0 ? 0 : 1][3];
+    const [x, y, z] = ARMS[s < 0 ? 0 : 1].find((p) => p[2] === ARM_EAR)!;
     return [x + s * 0.003, y - 0.004, z];
   };
 
@@ -2483,10 +2572,19 @@ export function items(q: Detail, hero = false): Item[] {
         P('head', far ? skull : one(hero ? [skull, ...ears] : [skull, nose, ...ears]), BLACK),
         ...(hero ? [P('head', one([neckFold, eyeRim]), BLACK, { detail: true })] : q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
         P('head', eyesSkin, SKIN),
-        P('head', far ? new THREE.BoxGeometry(0.17, 0.05, 0.008).translate(0, EYE_Y, lensZ - 0.002) : one(frames), '#0d0c14'),
-        P('head', one(lenses), '#ffffff', { mat: 'lens' }),
       ],
     },
+    // The shades in the outfit's style (the crowd's the classic; far off, a plain bar)
+    ...EYE_STYLES.map(
+      (st): Item => ({
+        id: `shades-${st}`,
+        when: (o) => eyesOf(o) === st,
+        pieces: [
+          P('head', far ? new THREE.BoxGeometry(0.17, 0.05, 0.008).translate(0, EYE_Y, lensZ - 0.002) : one([...SHADES[st].frames, ...armTubes(st)]), 'frame'),
+          P('head', one(SHADES[st].lenses), '#ffffff', { mat: 'lens' }),
+        ],
+      })
+    ),
     ...CHAINS.map(([kind, geo]): Item => ({
       id: `chain-${kind}`,
       when: (o) => !!o.chain && o.kind === kind && !(hoodie(o) && o.hood),

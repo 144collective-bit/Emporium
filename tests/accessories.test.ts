@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { items, PLAYER, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
-import { bakedHand, headGeometry, headRow, HEAD_TOP } from '../src/scripts/city3d/body';
+import { bakedHand, headGeometry, headRow, inHead, HEAD_TOP } from '../src/scripts/city3d/body';
+import { EYE_IDS } from '../src/scripts/net/profile-data';
 
 const LEVELS: Detail[] = [3, 2, 1, 0];
 const HATS: [string, Partial<Outfit>][] = [
@@ -121,16 +122,19 @@ for (const q of [3, 2] as Detail[]) {
  * it, and nothing of the hood is in front of the lenses (the shades show).
  */
 for (const q of LEVELS)
-  test(`accessories: the hood up covers the head and ears, clear of them, the shades in its opening (detail ${q})`, () => {
+  for (const eyewear of EYE_IDS)
+  test(`accessories: the hood up covers the head and ears, clear of them, the ${eyewear} shades in its opening (detail ${q})`, () => {
     const all = items(q, true);
-    const o = { ...PLAYER, kind: 'hoodie' as const, hood: true, cap: undefined };
+    const o: Outfit = { ...PLAYER, kind: 'hoodie', hood: true, cap: undefined, eyewear };
     const hoodIt = all.find((i) => i.id === 'hoodUp' && i.when(o))!;
     assert.ok(hoodIt, 'the hood is worn with the hoodie, hood up');
     const hood = new THREE.Mesh(hoodIt.pieces[0].geo, side);
     const head = all.find((i) => i.id === 'head')!;
-    // (the skull and ears, the frames and their arms: everything on the head but the lenses, the last piece)
-    const parts = head.pieces.slice(0, -1).map((p) => p.geo);
-    const lenses = head.pieces[head.pieces.length - 1].geo;
+    const shades = all.find((i) => i.id === `shades-${eyewear}` && i.when(o))!;
+    assert.ok(shades && !all.some((i) => i.id.startsWith('shades-') && i !== shades && i.when(o)), 'one pair of shades');
+    // (the skull and ears, the frames and their arms: everything on the head but the lenses)
+    const parts = [...head.pieces.map((p) => p.geo), shades.pieces[0].geo];
+    const lenses = shades.pieces[1].geo;
     const v = new THREE.Vector3();
     const o3 = new THREE.Vector3();
     const d = new THREE.Vector3();
@@ -211,3 +215,32 @@ for (const q of LEVELS)
       }
     }
   });
+
+/*
+ * The shades (docs/wardrobe-plan.md Phase 4): every style at every level sits on the face, not in it: no point of the
+ * frames, the lenses or the arms inside the head (the crowd's far-off bar aside, a plain box over the eyes).
+ */
+for (const q of [3, 2, 1] as Detail[])
+  for (const eyewear of EYE_IDS)
+    test(`accessories: the ${eyewear} shades sit on the face, none of them in it (detail ${q})`, () => {
+      const o: Outfit = { ...PLAYER, eyewear };
+      const shades = items(q, true).find((i) => i.id === `shades-${eyewear}` && i.when(o))!;
+      assert.ok(shades);
+      const v = new THREE.Vector3();
+      for (const p of shades.pieces) {
+        const P = p.geo.attributes.position;
+        for (let i = 0; i < P.count; i++) {
+          v.fromBufferAttribute(P, i);
+          assert.ok(!inHead(v.x, v.y, v.z), `${eyewear}: a point at ${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)} is in the head`);
+        }
+      }
+      // (all of it close round the head: the frames and arms within the head's own reach, nothing off to one side)
+      const F = shades.pieces[0].geo;
+      F.computeBoundingBox();
+      const b = F.boundingBox!;
+      assert.ok(b.max.x < 0.11 && b.min.x > -0.11 && b.min.z > -0.06 && b.max.z < 0.14 && b.min.y > 0.08 && b.max.y < 0.17, `${eyewear}: the frames reach ${JSON.stringify(b)}`);
+      // (in front of the eyes: the lenses' middles are ahead of the face)
+      const L = shades.pieces[1].geo;
+      L.computeBoundingBox();
+      assert.ok(L.boundingBox!.max.z > 0.1, 'the lenses are in front of the eyes');
+    });

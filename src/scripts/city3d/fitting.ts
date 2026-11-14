@@ -13,11 +13,11 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
+import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type EyeStyle, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'frame' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -109,6 +109,17 @@ const shoes = (id: ShoeStyle, name: string, icon: string, ranges: Range[]): Item
   on: (l) => l.shoeStyle === id,
   wear: (l) => ({ ...l, shoeStyle: id }),
   colors: shoeColors,
+  in: ranges,
+});
+const frameColors: Colors[] = [{ key: 'frame', label: 'Frames', list: PALETTE.frame }];
+/** A pair of shades (docs/wardrobe-plan.md Phase 4) */
+const eyes = (id: EyeStyle, name: string, icon: string, ranges: Range[]): Item => ({
+  id: `eyes-${id}`,
+  name,
+  icon,
+  on: (l) => l.eyewear === id,
+  wear: (l) => ({ ...l, eyewear: id }),
+  colors: frameColors,
   in: ranges,
 });
 /** The range his top is from: where the fitting room opens */
@@ -235,8 +246,14 @@ const TABS: Tab[] = [
   },
   {
     id: 'shades',
-    label: 'Shades',
-    items: [],
+    label: 'Eyewear',
+    items: [
+      eyes('classic', 'Classic', 'M3 9h7v5H3z M14 9h7v5h-7z M10 10.5h4', ['street', 'business', 'work']),
+      eyes('aviator', 'Aviator', 'M3 9h7c0 4-1.5 6-3.5 6S3 12 3 9z M14 9h7c0 3-1.5 6-3.5 6S14 13 14 9z M10 9.5h4 M10 8h4', ['street', 'business']),
+      eyes('round', 'Round', 'M6.5 15a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M17.5 15a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M10 11h4', ['street', 'business']),
+      eyes('slim', 'Slim', 'M2.5 10h8v3h-8z M13.5 10h8v3h-8z M10.5 11h3', ['street', 'business']),
+      eyes('wrap', 'Sport Wrap', 'M2 11c2-2 6-2 9-1v3c-3 1-7 1-9-2z M22 11c-2-2-6-2-9-1v3c3 1 7 1 9-2z', ['street', 'work']),
+    ],
     colors: [{ key: 'lens', label: 'Lenses', list: PALETTE.lens }],
   },
   {

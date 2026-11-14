@@ -99,6 +99,15 @@ keep it up to date when what it describes changes.
     against the fingers' front. `tests/accessories.test.ts` holds the hats
     clear of the head at every level and the held things clear of the
     fingers. The lab takes `wear=` and `at=x,y,z`.
+  - **The shades** (`docs/wardrobe-plan.md` Phase 4): five styles from one
+    recipe each (`EYES`: classic, aviator, round, slim, sport wrap), thin
+    rims round the lens's outline (`outset()`), the lenses set in and curved
+    (`bend`), a bridge, hinge blocks, and thin arms sampled along the side of
+    the head every centimetre; every style's hinges at one height
+    (`HINGE_DY`), so the arms past the temples and the chain under them
+    (`ARM_EAR`) are alike. Items `shades-<style>` (`eyesOf()`: the crowd's
+    the classic); the frames in the outfit's `frame` colour, the lenses its
+    `lens`.
   - **The hood up** (`docs/wardrobe-plan.md` Phase 3): cloth over the head,
     not a helmet, and one with the hoodie (the owner's call: no line between
     hood and sweater). Its sections are the head's outline carried out
