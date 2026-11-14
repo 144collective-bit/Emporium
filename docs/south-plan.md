@@ -154,18 +154,42 @@ From the Circus west, patchy as high roads are:
 
 ## The phases (each with the owner's sign-off)
 
-1. **The ground and the roads.** The rolling ground (as Crestmont's
-   terrain, `terrain.ts`: a height field under the south, the brook's
-   valley and the village's hill, level under every street, block and
-   place). The street web: the Circus, the spokes, the bent avenues, the
-   links, the village's streets, the closes and crescents, their
-   cut-throughs and back alleys. The brook and the rec ground's land.
-   Lot 9 shrunk, its fence a line along the brook. The hedged fields. The
-   removed blocks and the paving cleared; what stands in the new roads'
-   way moved aside (the kept blocks, the old places, the west rows, the
-   bungalows and allotments) until their own phase re-lays them.
-   `tests/snapshot.test.ts` rewritten (the owner's go: everything but the
-   compound may move).
+1. **The ground and the roads**, in three steps, each shown to the owner
+   (the owner signed the plan off and started it, 2026-11-14):
+   - **1a, the street web as data** (built, waiting on the owner's
+     sign-off). `south.ts` (DOM-free, not in the city yet, tested in
+     `tests/south.test.ts`): the Circus moved to (-82, 418), its five
+     spokes (`HIGH_ROAD`, `UNDERHILL`, `CHURCH_ROAD`, `SOUTHFOLD`,
+     `ENDSWOOD_ROAD`), Gate Lane past Degen's gates (`HEAD`), Field Lane
+     out west, ns1s bent into Endswood Road and ns2s into Marsh Lane (the
+     south avenue and ns3 stay straight: the city's arterial with its
+     buses and Lot 9's road, and the airport's edge), the links, the
+     village's streets, and the closes and crescents grown off them
+     (seeded, the same every time; the crescents first) with a footpath
+     out of every one (`FOOTPATHS`); `SOUTH_CROSSINGS`; the blocks between
+     the streets traced as the faces of the street graph
+     (`SOUTH_BLOCKS`, each with its zone, `zoneAt()`); the brook and its
+     bridge, the rec ground, St Aldwyn's churchyard on the hill, Lot 9's
+     new fence (`LOT9_EDGE`, its west side along the brook), the hedges.
+     `streetfaces.ts` (DOM-free) is the kit: smooth lines, the lines
+     noded where they meet, the blocks traced (Sunridge's way, made
+     general). Shot: `4-phase-1a-street-web.webp`, drawn from the data
+     to scale.
+   - **1b, into the city:** the street web in the street plan
+     (`streetplan.ts`) and drawn (a lazy chunk, roads3d.ts's kit), the
+     footpaths as walk-only alleys with bollards; ns1s and ns2s cut at
+     their bends; the old estate's streets, blocks and what stands in the
+     new roads' way taken up (the removed blocks gone; the kept blocks,
+     the old places, the west rows, the bungalows and allotments off
+     until their phases re-lay them); Lot 9 inside its new fence, its
+     homes and camp packed in; the brook, the hedges and the fields'
+     ground; `KEEPS`, ground, lamps, traffic and taxis' routes;
+     `tests/snapshot.test.ts` rewritten (the owner's go: everything but
+     the compound may move).
+   - **1c, the rolling ground:** a height field under the south (as
+     Crestmont's `terrain.ts`): the village's hill with St Aldwyn's on
+     top, the brook's valley, swells in the fields, level under every
+     street, block and place.
 2. **The blocks.** The Wall, the twin towers and their cores, the upgraded
    stairwell blocks re-sited, the sky network walked on (`endsdecks.ts`'s
    floors), the estate's courts, decks and grass.
