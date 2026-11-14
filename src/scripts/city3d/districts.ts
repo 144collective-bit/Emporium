@@ -105,19 +105,28 @@ export interface Districts {
   step(x: number, z: number, far: number): void;
   /** Load every district now (the benchmark: it measures the whole city) */
   all(): void;
+  /**
+   * Load every district one after another, in the list's order or the reverse (the texture bake: the textures a
+   * district paints as it loads are counted in the order the districts arrive, so the bake's two runs load them in
+   * opposite orders, and a key that depends on the order comes out different and isn't kept)
+   */
+  inTurn(reverse: boolean): Promise<void>;
   /** How many are loading, or within reach and not loaded yet */
   pending(): number;
   loaded(): string[];
+  /** How many there are in all */
+  total(): number;
 }
 
 export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; tick?: (f: Tick) => void; list?: LazyDistrict[] }): Districts {
   const list = opts.list ?? LAZY_DISTRICTS;
   const state = new Map<string, 'loading' | 'done' | 'failed'>();
   let near = 0;
-  function load(d: LazyDistrict) {
-    if (state.has(d.id)) return;
+  function load(d: LazyDistrict): Promise<void> {
+    if (state.has(d.id)) return Promise.resolve();
     state.set(d.id, 'loading');
-    d.load()
+    return d
+      .load()
       .then(async (m) => {
         m.register({ low: opts.low, scene: opts.scene, tick: opts.tick });
         // The worker registers the same sites before they're queued here, so it can take them (a few seconds at most)
@@ -143,7 +152,11 @@ export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker
     all() {
       list.forEach(load);
     },
+    async inTurn(reverse) {
+      for (const d of reverse ? [...list].reverse() : list) await load(d);
+    },
     pending: () => Math.max(near, [...state.values()].filter((s) => s === 'loading').length),
     loaded: () => list.filter((d) => state.get(d.id) === 'done').map((d) => d.id),
+    total: () => list.length,
   };
 }

@@ -23,6 +23,7 @@ import * as THREE from 'three';
 import type { TileBatches } from './tilebatch';
 import type { BuiltSite, SiteWorker } from './sitework';
 import { boxInView, tileKey, type Plane, type Rect, type TileIx } from './tiles';
+import { inTexScope } from './texscope';
 import { HORIZON_OUT, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, toReturn, toVanish } from './tileplan';
 
 export interface Site {
@@ -38,7 +39,8 @@ const SITES: Site[] = [];
 export const takeSites = () => SITES.splice(0);
 /** Register a site of the fixed city (built at the boot if it's round the home view, otherwise later) */
 export function site(id: string, rect: Rect, build: (into: THREE.Object3D) => void) {
-  SITES.push({ id, rect, build });
+  // (the textures its builder paints are counted within the site: texscope.ts)
+  SITES.push({ id, rect, build: (into) => inTexScope(id, () => build(into)) });
 }
 
 export interface TileWork {

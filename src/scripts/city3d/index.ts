@@ -1956,7 +1956,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
     if (bench || shots) districts.all();
-    districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
+    // (the texture bake loads them itself, in turn, once the boot is over: below)
+    if (!BAKING_TEXTURES) districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
     const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
@@ -2184,8 +2185,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Reveal ---------- */
   root.dataset.view = '3d';
-  // (the texture bake keeps what the boot painted, up to here: kit.ts)
+  // (the texture bake keeps what the boot painted, up to here: kit.ts; then every district, one after another, in
+  // the list's order or with ?bake-textures=reverse the other way round, and says when they're all in)
   bootTexturesPainted();
+  if (BAKING_TEXTURES)
+    void districts.inTurn(new URLSearchParams(location.search).get('bake-textures') === 'reverse').then(() => ((globalThis as { __texBakeDistricts?: { loaded: string[]; of: number } }).__texBakeDistricts = { loaded: districts.loaded(), of: districts.total() }));
   loader.classList.add('is-done');
   setTimeout(() => (loader.hidden = true), 600);
   const start = home();

@@ -61,11 +61,14 @@ const BUDGETS = {
    * The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed).
    * Raised from 2300 on purpose (the owner's call, 2026-11): with every one of the 118 phone textures baked (as most
    * bakes now do: a texture is only left to paint when its noon and midnight runs differ), the set is about 2340 KB,
-   * which held the Worker's build red on main
+   * which held the Worker's build red on main. Raised again on purpose (the owner's call, 2026-11-14: the stability
+   * plan's Phase 4.3): the districts' textures are baked too, 189 a set (3282 KB for phones, 4729 for the rest), a
+   * download about 0.9 MB (phones) to 1.3 MB bigger that took the desktop's painted textures from 55 to 12 MB on the
+   * GPU
    */
-  texLow: 2450,
+  texLow: 3450,
   /** ... and as everyone else does */
-  texFull: 3500,
+  texFull: 4950,
   /** Their transcoder (three's Basis wasm and its script) */
   transcoder: 300,
   /**

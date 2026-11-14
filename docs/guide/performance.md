@@ -138,12 +138,20 @@ keep it up to date when what it describes changes.
     each (a fresh save at noon, a well-used one at midnight): only what
     both runs painted the same is kept, so a key (`texKey()`: what draws
     it, its size, how many like it came before) stands for one picture.
-    Only what the boot painted counts: index.ts calls
-    `bootTexturesPainted()` (kit.ts) as the loader goes, and the bake keeps
-    the textures painted up to then (`__texBakeBoot`). A district loaded as
-    you approach paints its own whenever it arrives, so counting those made
-    the set differ run to run (2026-11: two extra kept on one run tipped
-    `texLow` over its budget); the bake logs any it left out.
+    What the boot painted counts (index.ts calls `bootTexturesPainted()`
+    (kit.ts) as the loader goes: `__texBakeBoot`), and since the stability
+    plan's Phase 4.3 what every district paints as it loads: in bake mode
+    the districts don't load during the boot, then load one after another
+    (`inTurn()` in `districts.ts`), in the list's order on the noon run and
+    the reverse on the midnight one (`?bake-textures=reverse`), so a key that
+    depends on the order the districts arrive in comes out different and
+    isn't kept; a run where a district wouldn't load is tried once more.
+    What a district's sites paint as they're built later is left out (how
+    many are built by then varies run to run: 2026-11, two extra kept on one
+    run tipped `texLow` over its budget); the bake logs any it left out. A
+    texture a site's builder paints is counted within the site
+    (`texscope.ts`, `inTexScope()` from `site()` in `tilework.ts`), so its
+    key doesn't depend on which sites were built first.
     Each is GPU-compressed (KTX2: Basis ETC1S, UASTC where ETC1S loses
     too much), written to `_astro/tex/` and listed in the page
     (`#city-tex`); `loadBuiltTextures()` loads them with three's

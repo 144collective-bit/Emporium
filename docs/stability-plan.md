@@ -276,6 +276,24 @@ every mesh of a place, so the places' arrays must stay.
   city's own renderer: nothing to free there.
 - **Measuring**: `__mem()` has `gl` and `textureRows` (performance.md).
 
+### Phase 4.3: the districts' textures baked (built, 2026-11-14; the owner's pick over the plan's half sizes)
+
+- The bake loads every district after the boot, one after another, forwards
+  on one run and in reverse on the other, and keeps what each paints as it
+  loads (performance.md, "Textures made at build time"); a site's builder
+  counts its textures within the site (`texscope.ts`). 189 textures a set
+  (was 118), the same on two whole bakes in a row; one drawing (a 1024 x 512
+  sign atlas drawn differently at noon and midnight) is left to paint.
+- **The desktop's high tier, 150 s idle in the City view: textures 84.5 →
+  51.8 MB, painted 55.2 → 11.6 MB** (the Neon Mile's resorts, the Strip's
+  signs, Uptown's facades and the rest now arrive GPU-compressed). The
+  Neon Mile and Uptown photographed baked and painted (`?textures=0`): the
+  same signs and facades.
+- The download grows: phones' set 2432 → 3282 KB, everyone else's 3480 →
+  4729 KB; `texLow` and `texFull` raised on purpose to 3450 and 4950 (the
+  owner's call). A bake takes about 8 minutes here (all four runs load every
+  district).
+
 ## Phase 5: budgets that hold as the city grows (built, 2026-11-13)
 
 The owner's picks: **on demand only** (a full city takes too long in CI to
