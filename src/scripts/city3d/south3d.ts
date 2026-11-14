@@ -109,7 +109,7 @@ function registerStreets(low: boolean) {
   // disc under them; the blocks' slabs stand over its rim)
   for (const [i, c] of SOUTH_CROSSINGS.entries()) {
     // (as far as the kerbs' corners reach at a sharpish junction, short of showing on open ground beyond)
-    const r = 4.4;
+    const r = c.streets.includes('south-circus') ? 6.2 : 4.4;
     site(`south junction ${i}`, [c.at[0] - r - 0.5, c.at[1] - r - 0.5, c.at[0] + r + 0.5, c.at[1] + r + 0.5], (into) => {
       const b = new Batch();
       b.add(new THREE.CircleGeometry(r, low ? 16 : 24).rotateX(-Math.PI / 2).translate(c.at[0], Y - 0.003, c.at[1]), ASPHALT);

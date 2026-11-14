@@ -284,7 +284,7 @@ const grown = (() => {
       for (const q of s.pts) {
         const d = Math.hypot(q[0] - e[0], q[1] - e[1]);
         // (on ahead, out past the close's end or the crescent's back: never back the way it came)
-        if (d > 4 && d < 36 && ((q[0] - e[0]) * ahead[0] + (q[1] - e[1]) * ahead[1]) / d > 0.35) cands.push([d, q, i]);
+        if (d > 4 && d < 36 && ((q[0] - e[0]) * ahead[0] + (q[1] - e[1]) * ahead[1]) / d > 0.15) cands.push([d, q, i]);
       }
     });
     cands.sort((p, q) => p[0] - q[0]);
@@ -293,7 +293,7 @@ const grown = (() => {
   };
   let tries = 0;
   let crescents = 0;
-  while (tries++ < 16000 && streets.length < NAMES.length) {
+  while (tries++ < 40000 && streets.length < NAMES.length) {
     const pi = Math.floor(rnd() * parents.length);
     const par = parents[pi];
     const parIdx = MAIN.indexOf(par);
