@@ -187,9 +187,28 @@ first; **the City view keeps everything** (item 2 is not built).
 4. **Districts load nearest first, a few at a time**, not all 13 at once,
    and a district far away for a while lets its near pieces and its
    main-thread drawing go (unloading is new: today a district only loads).
-5. **The uv attribute left out where nothing reads it** (8 of each vertex's
-   29 bytes; only the trees' sway and the textured surfaces use it): about a
-   quarter off the tile geometry.
+5. **The uv attribute left out where nothing reads it** (built in 3b,
+   below).
+
+**Phase 3b (built, 2026-11-14): item 5.** The shared materials (the paint,
+the steady and flickering neon) have no texture; the only thing any of them
+reads from a vertex's uv is the paint's trees' sway (`injectWind()`), and
+phones' trees don't sway.
+
+- **Built.** `dropsUv()` in tilebatch.ts: a shared material's tile pieces
+  carry no uv, but the paint's while its trees sway (`UV.sway`, set by
+  index.ts: every tier but the phones'); `compact()` leaves it out, 21 bytes
+  a vertex where there were 29. Textured materials keep theirs; desktops'
+  trees sway as before (repacking the paint's uv for them was left out: a
+  sway mark small enough to pack is a number textured shapes' own
+  coordinates could land on, read by the outline pass). Tested in
+  `tests/tilebatch.test.ts`.
+- **Measured** (`npm run memcheck`, the phone tier, the whole city built):
+  geometry **187.7 to 169.8 MiB** (-17.9, about -10%); textures and render
+  targets as they were. The phone's geometry ceiling lowered from 207 to
+  **187** to keep it. Walk mode on the phone tier and a desktop, six
+  frames in a row each: every frame drawn right. Budget: boot 715.8 of 740
+  KB.
 6. **Places' near forms let go when far**: their GPU buffers freed past the
    far distance and uploaded again on the way back (the arrays stay in
    JavaScript, so it's quick).
@@ -218,7 +237,8 @@ render targets **held by a formula**; the leak check with it.
 
 1. **The ceilings** (`MEMORY_CEILINGS` in `targets.ts`, MiB): the phone
    tier with the whole city built, in the City view (which keeps every
-   tile): geometry **207**, textures **70**, render targets **10**. The high
+   tile): geometry **207** (187 since Phase 3b), textures **70**, render
+   targets **10**. The high
    tier's render targets at 1440 x 900: **320** at a retina 2x, **193** at
    1x. Lower one when a phase cuts it, to keep the saving; raise one only on
    purpose, as `scripts/budget.mjs`'s are.
