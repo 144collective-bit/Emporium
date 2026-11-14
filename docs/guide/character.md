@@ -166,6 +166,21 @@ keep it up to date when what it describes changes.
     one); `bone` pins a piece to one
     bone unbent (bags, boards, wings on the chest); `skin` gives a piece
     its own weights per vertex (the fingers).
+  - **Faces** (`docs/faces-plan.md`, Phase 1 built, waiting on the owner's
+    sign-off): an unmasked figure (`Outfit.face`) has no balaclava or shades
+    (item `mask`, and so no chain on them): the same head in the skin tone
+    (colour key `head`: the balaclava's black, or `skin` unmasked; `skin`
+    also colours the hands and the eye opening, the art's tone by default),
+    flat ink laid on the face (`features`: bean eyes with a white glint,
+    brows, the mouth; not on the far crowd) and the hair (`hairShell()`
+    over the head's own outline from `hairline()`; `hair-<cut>` for
+    `HAIR_CUTS`, `hair-nape` under a hat or a helmet, none under the hood or
+    when bald; the far crowd's every cut the crop). No new draw calls: all
+    on the plain material. Who goes unmasked in the crowd is `unmask()` in
+    crowdlook.ts (`MASKED_SHARE` keep the balaclava, the bouncers all do;
+    `SKIN_TONES`, `HAIR_COLORS`, `HAIR_DYES`), seeded after the clothes.
+    Tested in `tests/faces.test.ts`; the lab shows one with
+    `?anim&wear=face,skin:%23c99068,hair:%232b1d14,cut:curls,cap:`.
   - **The head and hands** are `body.ts` (DOM-free, tested): the balaclava
     after the brand art (`HEAD_ROWS`, `headGeometry()`: a tall oval with a
     flatter front, nose ridge, cheekbones, brow over the eye sockets, jaw,

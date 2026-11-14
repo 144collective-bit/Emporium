@@ -16,6 +16,9 @@ import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, ty
 /* ---------- Outfits ---------- */
 
 export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'soldier';
+/** The unmasked hair's styles (docs/faces-plan.md); bald is no `hair` */
+export type HairCut = 'buzz' | 'crop' | 'curls' | 'bun';
+export const HAIR_CUTS: readonly HairCut[] = ['buzz', 'crop', 'curls', 'bun'];
 export interface Outfit {
   kind: OutfitKind;
   /** Jacket, hoodie, track jacket, varsity or puffer jacket, or fatigues */
@@ -41,6 +44,17 @@ export interface Outfit {
   halo?: boolean;
   /** Colour of the shades' lenses (green as in the art), and of any neon he wears */
   lens?: string;
+  /**
+   * Unmasked (docs/faces-plan.md): no balaclava and no shades, the head in the skin tone with the face's ink laid on
+   * it, and the hair (`hair`, `cut`) unless a hat or the hood covers it
+   */
+  face?: boolean;
+  /** The skin tone: the hands, the eye opening, and the head when unmasked (the art's tone if not said) */
+  skin?: string;
+  /** The hair's colour, unmasked; leave out for bald */
+  hair?: string;
+  /** The hair's style (a crop if not said) */
+  cut?: HairCut;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -671,9 +685,9 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'ink' | 'helmet';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'cap' | 'beanie' | 'bucket' | 'cowboy' | 'tophat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings' | 'headphones' | 'lens' | 'ink' | 'helmet' | 'skin' | 'head' | 'hair';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'ink', 'helmet'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'cap', 'beanie', 'bucket', 'cowboy', 'tophat', 'backpack', 'crossbody', 'board', 'duffel', 'wings', 'headphones', 'lens', 'ink', 'helmet', 'skin', 'head', 'hair'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
  * the raised hood (both sides drawn), neon (unlit, coloured per
@@ -718,8 +732,10 @@ export interface Item {
   held?: boolean;
 }
 
-const SKIN = '#e8c39e';
-const BLACK = '#16141f';
+/** The art's skin tone: the hands and the eye opening when an outfit doesn't say (docs/faces-plan.md) */
+export const SKIN = '#e8c39e';
+/** The balaclava's black, and the ink of the face */
+export const BLACK = '#16141f';
 const WHITE = '#f3f2f7';
 /** The cream of a patch a mark is printed on */
 const PATCH = '#dedce8';
@@ -1106,6 +1122,12 @@ export function items(q: Detail, hero = false): Item[] {
   /** Fits worn with joggers and sneakers */
   const casual = (o: Outfit) => o.kind === 'hoodie' || o.kind === 'track' || varsity(o) || puffer(o);
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
+  /** In the balaclava and shades (everyone but the unmasked: docs/faces-plan.md) */
+  const masked = (o: Outfit) => !o.face;
+  /** Hair that shows: unmasked, not bald, the hood down */
+  const hairy = (o: Outfit) => !!o.face && !!o.hair && !(o.kind === 'hoodie' && o.hood);
+  /** A hat or a helmet over it (the halo floats clear): only the hair at the nape shows */
+  const covered = (o: Outfit) => !!(o.cap || o.beanie || o.bucket || o.crown || o.cowboy || o.tophat || o.helmet) || o.kind === 'soldier';
   const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && !o.crown && !o.cowboy && !o.tophat && !o.halo && bare(o);
 
   /* ----- Head: the balaclava over a real head shape, the eye opening, the shades ----- */
@@ -1174,6 +1196,41 @@ export function items(q: Detail, hero = false): Item[] {
       0.003
     )
   );
+
+  /* ----- The face, unmasked (docs/faces-plan.md): flat ink laid on the head's own features ----- */
+  /** A closed outline round (cx, cy): a superellipse w by h, `n` squarer, tilted by `tilt` */
+  const blob = (cx: number, cy: number, w: number, h: number, n: number, pts: number, tilt = 0): [number, number][] =>
+    Array.from({ length: pts }, (_, k) => {
+      const a = (k / pts) * Math.PI * 2;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      const x = Math.sign(c) * Math.abs(c) ** (2 / n) * (w / 2);
+      const y = Math.sign(s) * Math.abs(s) ** (2 / n) * (h / 2);
+      return [cx + x * Math.cos(tilt) - y * Math.sin(tilt), cy + x * Math.sin(tilt) + y * Math.cos(tilt)];
+    });
+  /** A stroke along y(t) for t from -1 to 1 across x0..x1, `hw(t)` its half-width (the brows, the mouth) */
+  const stroke = (x0: number, x1: number, y: (t: number) => number, hw: (t: number) => number, pts: number): [number, number][] => {
+    const at = (t: number) => x0 + ((x1 - x0) * (t + 1)) / 2;
+    const ts = Array.from({ length: pts + 1 }, (_, k) => -1 + (2 * k) / pts);
+    return [...ts.map((t): [number, number] => [at(t), y(t) + hw(t)]), ...ts.reverse().map((t): [number, number] => [at(t), y(t) - hw(t)])];
+  };
+  const INK_DEPTH = 0.0016;
+  const FACE_LIFT = 0.0005;
+  const EYE_X = 0.032;
+  const eyes = [-1, 1].map((s) => onBody(blob(s * EYE_X, EYE_Y + 0.002, 0.015, 0.023, 2.3, R(16)), INK_DEPTH, face, FACE_LIFT));
+  // (a white glint high on each eye, towards the outside, standing just off it)
+  const glints = [-1, 1].map((s) => onBody(blob(s * (EYE_X + 0.003), EYE_Y + 0.0085, 0.005, 0.0055, 2, R(10)), 0.0008, face, FACE_LIFT + INK_DEPTH + 0.0006));
+  // Brows arched a little, thicker at the inside; the mouth a short line turned up at the corners
+  const brows = [-1, 1].map((s) =>
+    onBody(
+      // (t runs from the inside end to the outside on either side)
+      stroke(s * 0.017, s * 0.049, (t) => 0.151 + 0.0028 * (1 - t * t) - 0.0012 * t, (t) => 0.0029 * (1 - 0.175 * (t + 1)), R(8)),
+      INK_DEPTH,
+      face,
+      FACE_LIFT
+    )
+  );
+  const mouth = onBody(stroke(-0.015, 0.015, (t) => 0.05 + 0.0032 * t * t, (t) => 0.0017 * (1 - 0.4 * t * t), R(10)), INK_DEPTH, face, FACE_LIFT);
 
   /* ----- Hats ----- */
   // Every hat seated on the head the figure has, the hero's (body.ts) or the crowd's (docs/clothing-plan.md
@@ -1328,6 +1385,107 @@ export function items(q: Detail, hero = false): Item[] {
     const [x, y, z] = ARMS[s < 0 ? 0 : 1][3];
     return [x + s * 0.003, y - 0.004, z];
   };
+
+  /* ----- Hair, unmasked (docs/faces-plan.md): a shell over the scalp from the hairline up ----- */
+  /** The hairline's height round the head (a: 0 is +x, PI/2 the front): over the brow, above the ears, down to the nape */
+  const hairline = (a: number) => {
+    const f = Math.sin(a);
+    return f >= 0 ? 0.158 + 0.038 * f ** 1.6 : 0.158 - 0.09 * THREE.MathUtils.smoothstep(-f, 0.15, 0.85);
+  };
+  /**
+   * The hair: in each direction round the head, the head's own outline (bottom to top, as `headR()` finds it) from
+   * the hairline up, carried out `gap(y, a)` along its normal; the edge tucked onto the scalp so it reads as a line.
+   * Up to y1 (and open there) for the hair left showing under a hat, else over the top to a point.
+   */
+  const hairShell = (gap: (y: number, a: number) => number, y1 = Infinity) => {
+    const seg = R(24);
+    const rows = [3, 5, 8, 11][q];
+    const closed = y1 > HEAD_HI;
+    const pos: number[] = [];
+    for (let k = 0; k < seg; k++) {
+      const a = (k / seg) * Math.PI * 2;
+      const dx = Math.cos(a);
+      const dz = Math.sin(a);
+      const top = Math.min(y1, HEAD_HI - 0.0005);
+      // (under a hat, none at the sides where the hairline's already above the band: a point there, folded away)
+      const y0 = Math.min(hairline(a), top);
+      // The outline from the hairline up (its points every 2 mm), and its length along the way
+      const prof: [r: number, y: number, zc: number][] = [];
+      for (let y = y0; y < top; y += 0.002) prof.push([headR(y, dx, dz), y, (headAt(y).zf + headAt(y).zb) / 2]);
+      prof.push([headR(top, dx, dz), top, (headAt(top).zf + headAt(top).zb) / 2]);
+      const len = [0];
+      for (let i = 1; i < prof.length; i++) len.push(len[i - 1] + Math.hypot(prof[i][0] - prof[i - 1][0], prof[i][1] - prof[i - 1][1]));
+      const L = len[len.length - 1];
+      for (let j = 0; j <= rows; j++) {
+        // (rows closer together at the edge, where it turns out from the scalp)
+        const s = L * (j / rows) ** 1.25;
+        let i = 1;
+        while (i < prof.length - 1 && len[i] < s) i++;
+        const f = len[i] > len[i - 1] ? (s - len[i - 1]) / (len[i] - len[i - 1]) : 0;
+        const [r0, ya, z0] = prof[i - 1];
+        const [r1, yb, z1] = prof[Math.min(i, prof.length - 1)];
+        const r = r0 + (r1 - r0) * f;
+        const y = ya + (yb - ya) * f;
+        const zc = z0 + (z1 - z0) * f;
+        // Its normal in the outline's own plane, out from the head
+        const tr = r1 - r0;
+        const ty = yb - ya;
+        const tl = Math.hypot(tr, ty) || 1;
+        const tuck = j === 0 || (!closed && j === rows) ? 0.06 : j === 1 || (!closed && j === rows - 1) ? 0.6 : 1;
+        // (the edge too clears the head between its points: the ring's sag)
+        const g = 0.0006 + SAG + gap(y, a) * tuck;
+        const rr = r + (ty / tl) * g;
+        pos.push(dx * rr, y + (-tr / tl) * g, zc + dz * rr);
+      }
+    }
+    const idx: number[] = [];
+    const at = (k: number, j: number) => (k % seg) * (rows + 1) + j;
+    for (let k = 0; k < seg; k++)
+      for (let j = 0; j < rows; j++) {
+        idx.push(at(k, j), at(k, j + 1), at(k + 1, j));
+        idx.push(at(k + 1, j), at(k, j + 1), at(k + 1, j + 1));
+      }
+    if (closed) {
+      // The crown's point: over the top, as far out as the gap there
+      const apex = pos.length / 3;
+      const { zf, zb } = headAt(HEAD_HI);
+      pos.push(0, HEAD_HI + 0.0006 + gap(HEAD_HI, 0) + SAG, (zf + zb) / 2);
+      for (let k = 0; k < seg; k++) idx.push(at(k, rows), apex, at(k + 1, rows));
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    // (wound outwards whichever way the ring turned)
+    g.computeVertexNormals();
+    const p = g.attributes.position;
+    const n = g.attributes.normal;
+    let out = 0;
+    for (let i = 0; i < p.count; i++) out += n.getX(i) * p.getX(i) + n.getZ(i) * (p.getZ(i) - headAt(p.getY(i)).zf * 0.5 - headAt(p.getY(i)).zb * 0.5);
+    if (out < 0) {
+      const ix = g.index!.array as Uint32Array | Uint16Array;
+      for (let t = 0; t < ix.length; t += 3) [ix[t + 1], ix[t + 2]] = [ix[t + 2], ix[t + 1]];
+      g.computeVertexNormals();
+    }
+    return g;
+  };
+  const ease = THREE.MathUtils.smoothstep;
+  /** Each cut's thickness off the scalp by height (and way round, for the curls) */
+  const CUT_GAP: Record<HairCut, (y: number, a: number) => number> = {
+    buzz: () => 0.0016,
+    crop: (y) => 0.0025 + 0.0075 * ease(y, 0.18, 0.226),
+    curls: (y, a) => 0.006 + 0.015 * ease(y, 0.12, 0.215) + 0.0035 * (0.5 + 0.5 * Math.sin(a * 9)) * (0.5 + 0.5 * Math.sin(y * 260)),
+    bun: () => 0.0024,
+  };
+  const hairs = Object.fromEntries(HAIR_CUTS.map((c) => [c, hairShell(CUT_GAP[c])])) as Record<HairCut, THREE.BufferGeometry>;
+  // The bun: a ball high on the back of the head, sunk into the hair
+  const bun = (() => {
+    const y = 0.206;
+    const { zb } = headAt(y);
+    return new THREE.SphereGeometry(0.03, R(12), R(9)).scale(1, 0.9, 0.85).translate(0, y + 0.006, zb - 0.012);
+  })();
+  /** The hair left showing under a hat (or a helmet): close to the scalp at the back, below the lowest hat's band */
+  const NAPE_TOP = 0.162;
+  const nape = hairShell(() => 0.0012, NAPE_TOP);
 
   // The cap: six panels close over the crown, rising a touch higher than the head, the brim from the band
   const CAP_GAP = (y: number) => 0.003 + 0.011 * THREE.MathUtils.smoothstep(y, 0.176, HEAD_HI);
@@ -2521,19 +2679,45 @@ export function items(q: Detail, hero = false): Item[] {
   merch.push({ id: 'shoeMarks', when: (o) => casual(o) && !!o.shoeMark, pieces: both('shin', shoeMark, 'ink', { mat: 'logo', logo: 'shoe', ...SHOE }) });
   const all: Item[] = [
     {
+      // (the balaclava's black, or the skin unmasked: the `head` colour)
       id: 'head',
       when: () => true,
+      pieces: [P('head', far ? skull : one(hero ? [skull, ...ears] : [skull, nose, ...ears]), 'head')],
+    },
+    {
+      // The balaclava's folds, the eye opening and the shades
+      id: 'mask',
+      when: masked,
       pieces: [
-        P('head', far ? skull : one(hero ? [skull, ...ears] : [skull, nose, ...ears]), BLACK),
         ...(hero ? [P('head', one([neckFold, eyeRim]), BLACK, { detail: true })] : q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
-        P('head', eyesSkin, SKIN),
+        P('head', eyesSkin, 'skin'),
         P('head', far ? new THREE.BoxGeometry(0.17, 0.05, 0.008).translate(0, EYE_Y, lensZ - 0.002) : one(frames), '#0d0c14'),
         P('head', one(lenses), '#ffffff', { mat: 'lens' }),
       ],
     },
+    // The face's ink, unmasked: the eyes wherever there's a face to see (not the far crowd), the rest close up
+    ...(far
+      ? []
+      : [
+          {
+            id: 'features',
+            when: (o: Outfit) => !!o.face,
+            pieces: [P('head', one(eyes), BLACK), P('head', one([...brows, mouth]), BLACK, { detail: true }), P('head', one(glints), WHITE, { detail: true })],
+          },
+        ]),
+    // (the far crowd's every cut the crop: a few pixels can't tell them apart, and each is a shell more on every person)
+    ...(far ? (['crop'] as const) : HAIR_CUTS).map(
+      (c): Item => ({
+        id: `hair-${c}`,
+        when: (o) => hairy(o) && !covered(o) && (far || (o.cut ?? 'crop') === c),
+        pieces: [P('head', c === 'bun' ? one([hairs[c], bun]) : hairs[c], 'hair')],
+      })
+    ),
+    { id: 'hair-nape', when: (o) => hairy(o) && covered(o), pieces: [P('head', nape, 'hair')] },
     ...CHAINS.map(([kind, geo]): Item => ({
       id: `chain-${kind}`,
-      when: (o) => !!o.chain && o.kind === kind,
+      // (it hangs from the shades: none without them)
+      when: (o) => !!o.chain && o.kind === kind && masked(o),
       pieces: [P('head', geo, GOLD, { detail: true })],
     })),
     {
@@ -2660,18 +2844,18 @@ export function items(q: Detail, hero = false): Item[] {
     ...(hero
       ? [
           // The skinned body's hands have fingers: a fist is the same hand, closed (`grip`)
-          { id: 'fingers', when: (o: Outfit) => !soldier(o), pieces: fingers(SKIN) },
+          { id: 'fingers', when: (o: Outfit) => !soldier(o), pieces: fingers('skin') },
         ]
       : [
           {
             id: 'hands',
             when: (o: Outfit) => !soldier(o) && !o.fists,
-            pieces: both('wrist', one(hand), SKIN),
+            pieces: both('wrist', one(hand), 'skin'),
           },
           {
             id: 'fists',
             when: (o: Outfit) => !soldier(o) && !!o.fists,
-            pieces: both('wrist', one(fist), SKIN),
+            pieces: both('wrist', one(fist), 'skin'),
           },
         ]),
     {

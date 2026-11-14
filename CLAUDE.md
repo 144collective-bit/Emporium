@@ -75,7 +75,7 @@ it and has been retired completely. Build only on what's here.
 | How traffic, people, buses and boats behave; dusk, wind, thunder | `docs/guide/city-life.md` |
 | The car models, the vehicle upgrade, the garage, driving, motorbikes, boating | `docs/guide/vehicles.md` |
 | The kart park, its circuit, races, karts and save | `docs/guide/kart-park.md` |
-| Degen's body, skeleton, wardrobe, clothes, tailoring, crowds | `docs/guide/character.md` |
+| Degen's body, skeleton, wardrobe, clothes, tailoring, crowds, faces (`docs/faces-plan.md`) | `docs/guide/character.md` |
 | Motion capture, the animator, contact, moments, emotes, the crowd's acts, the lab | `docs/guide/animation.md` |
 | Walk mode, collisions, the ground under a point, the split of `walk.ts` (`docs/walk-plan.md`) | `docs/guide/walk-mode.md` |
 | The inventory, fists on the street, sparring partners, free play | `docs/guide/inventory.md` |

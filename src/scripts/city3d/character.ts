@@ -32,7 +32,7 @@ import { lit, liveTex, moving, neon, toon } from './kit';
 import { crowdFrame, type CrowdClip } from './crowdclips';
 import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setWardrobeRow } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
-import { COLOR_KEYS, PLAYER, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
+import { BLACK, COLOR_KEYS, PLAYER, SKIN, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
 import { onLens } from './lens';
 
 export { PLAYER, SOLDIER, lookOutfit, type Detail, type Outfit, type OutfitKind } from './wardrobe';
@@ -50,8 +50,18 @@ function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
   out.set(outfitColor(o, p.color as ColorKey));
   return p.shade ? out.multiplyScalar(p.shade) : out;
 }
-/** An outfit's colour for a key (the lenses are green as in the art when an outfit doesn't say) */
-const outfitColor = (o: Outfit, k: ColorKey) => (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : '#ff00ff');
+/**
+ * An outfit's colour for a key (the lenses are green as in the art when an outfit doesn't say); the head is the
+ * balaclava's black, or the skin unmasked (docs/faces-plan.md)
+ */
+const outfitColor = (o: Outfit, k: ColorKey): string =>
+  k === 'head'
+    ? o.face
+      ? (o.skin ?? SKIN)
+      : BLACK
+    : k === 'skin'
+      ? (o.skin ?? SKIN)
+      : ((o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : k === 'hair' ? BLACK : '#ff00ff'));
 
 /* ---------- The wardrobe, with the soldiers' rifle (guns.ts draws it, so it's added here) ---------- */
 

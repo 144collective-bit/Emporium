@@ -12,7 +12,9 @@
  * kids bright with the cap backwards, the Docks' and Southfield Yards' workers
  * in hi-vis, bouncers in black). `r` is a seeded generator (`seeded()` from
  * the person's own number), so an outfit is the same every visit and no two
- * neighbours share a seed.
+ * neighbours share a seed. `unmask()` then gives all but a few of them a face
+ * instead of the balaclava (docs/faces-plan.md): a skin tone and hair, drawn
+ * after the clothes so the clothes stay as they were.
  *
  * The instanced crowd groups its meshes by kind (character.ts createCrowd():
  * every kind is one more set of meshes a detail level), so a style's kinds are
@@ -22,7 +24,7 @@
  * a kind the crowd hasn't got falls back to its nearest (a puffer to a suit
  * or a hoodie, track to a hoodie).
  */
-import type { Outfit, OutfitKind } from './wardrobe';
+import type { HairCut, Outfit, OutfitKind } from './wardrobe';
 import type { IdleAct, CrowdClip } from './crowdclips';
 import { inTrenches } from './trenches';
 import { inUptown } from './uptown';
@@ -395,6 +397,41 @@ function hat(r: () => number, s: Style, kind: OutfitKind, out: Outfit) {
  * to their nearest (`kinds`, `CROWD_KINDS` by default).
  */
 export function cityOutfit(r: () => number, where: Where = {}): Outfit {
+  // (the face is drawn after the clothes, so the clothes are what they were before faces came)
+  return unmask(r, clothed(r, where), where.role ?? 'walk', where.district ?? 'town');
+}
+
+/* ---------- Faces (docs/faces-plan.md) ---------- */
+
+/** How many of the crowd still wear the balaclava and shades (the bouncers all do) */
+export const MASKED_SHARE = 0.15;
+/** Skin tones, pale to deep: made-up flat tones under the key light, none bright enough to bloom */
+export const SKIN_TONES: readonly string[] = ['#f1d2b6', '#e8c39e', '#dcae86', '#c99068', '#b07650', '#8f5a3a', '#6e4129', '#52301f'];
+/** Hair: the natural shades, and now and then a dyed one (more of those on the Neon Mile and in The Trenches) */
+export const HAIR_COLORS: readonly string[] = ['#16141f', '#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#8a3a22', '#9d9aa8'];
+export const HAIR_DYES: readonly string[] = ['#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'];
+/** The cuts and how often each is seen (and bald for the rest) */
+const CUTS: readonly [HairCut, number][] = [
+  ['buzz', 0.24],
+  ['crop', 0.34],
+  ['curls', 0.2],
+  ['bun', 0.13],
+];
+
+/** Unmasked, a skin tone and hair, seeded (all but `MASKED_SHARE` of the crowd, and never the bouncers) */
+export function unmask(r: () => number, o: Outfit, role: Role = 'walk', district: District = 'town'): Outfit {
+  const masked = r() < MASKED_SHARE;
+  const skin = pick(r, SKIN_TONES);
+  const u = r();
+  let acc = 0;
+  const cut = CUTS.find(([, p]) => (acc += p) > u)?.[0];
+  const dyed = r() < (district === 'strip' || district === 'trenches' ? 0.14 : 0.05);
+  const hair = dyed ? pick(r, HAIR_DYES) : pick(r, HAIR_COLORS);
+  if (role === 'guard' || masked) return o;
+  return { ...o, face: true, skin, ...(cut || role === 'kid' ? { hair, cut: cut ?? 'crop' } : {}) };
+}
+
+function clothed(r: () => number, where: Where): Outfit {
   const district = where.district ?? 'town';
   const role = where.role ?? 'walk';
   const kinds = where.kinds ?? CROWD_KINDS;
