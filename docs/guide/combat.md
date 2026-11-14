@@ -208,7 +208,14 @@ keep it up to date when what it describes changes.
   so the fight's rules load with the fight, not at the boot), bots via
   `think()`, spars and bouts;
   a fighter faces along (sin yaw, cos yaw); a press is kept `T.buffer`
-  frames so it fires when it can, a strike from just out of reach steps in
+  frames so it fires when it can (and a press on a frame no tick runs, a
+  screen faster than 60 Hz or a hit-stop, waits for the next tick: `held`
+  in the sim's `step()`, `carry` in brawl-sim.ts); **flow** (the owner's
+  call, 2026-11): a player's chain pressed in time (one press inside the
+  recovery, nothing pressed through the move's start-up or strike:
+  `early`) starts `T.flow` (half) into the recovery (`flow`), so a jab,
+  cross and hook in rhythm run into each other; held or mashed, it chains
+  at the plain pace, and bots keep it; a strike from just out of reach steps in
   (`T.stepIn`), the facing turns at `T.turn` and a move's lock-on snaps at
   most `T.lockSnap`; bots are `BotTraits` (`botTraits()`: block, dodge,
   parry, telegraph (extra wind-up on heavy moves, a tell), kicks, finisher,
@@ -219,7 +226,10 @@ keep it up to date when what it describes changes.
   `blendPose()`, `moveClip()`, `hurtClip()`; the hips' `turn` and `sway`
   go into every punch and kick, the reactions are keyed for a blow from the
   right and mirrored for one from the left (`hurtMirror()`, from the sim's
-  `hurtBy`). **A left lead** (the owner's call, 2026-11): the clips are
+  `hurtBy`); a blow taken on the block plays `blockHit` (fight-figure.ts
+  `blocked()`, `jolt`), and on your guard the ring's view rides back on a
+  spring with a short hit-stop (fight.ts `BLOCK_FEEL`, off under reduced
+  motion; the owner's call, 2026-11: subtle). **A left lead** (the owner's call, 2026-11): the clips are
   keyed on the rig's sides by name (the jab and the hook `armL`), but the
   rig's L is its -x side, his right on a figure facing +z, so every fight
   drew as a southpaw; drawn, every clip is mirrored once more

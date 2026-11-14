@@ -8,7 +8,8 @@
  *   `getup`. Stunned: the hit reaction for `hurt` (`hurtClip`), timed by
  *   `hurtFrame`. In a move: the move's clip at the sim's own `frame`, so
  *   the strike lands on the frame the rules say. Blocking: `block` (its
- *   hold loops). Else the `guard` loop; moving round the ring, its legs
+ *   hold loops), and a blow taken on it plays `blockHit` (the arms jolted
+ *   back, the weight rocked onto the back foot, `blocked()`). Else the `guard` loop; moving round the ring, its legs
  *   and hips are the animator's on the motion capture (animator.ts, the
  *   animation revamp's Phase 7: the guard's upper body over them, as a
  *   gun's is over the player's), or the planted-feet walk (locomotion.ts)
@@ -56,6 +57,8 @@ export interface FighterFigure {
   last: { x: number; z: number } | null;
   /** A clip being played by hand, with its frame */
   manual: { id: ClipId; frame: number } | null;
+  /** Frames since a blow landed on its block (-1: none lately): the `blockHit` jolt */
+  jolt: number;
   /** The guard loop's own phase so two figures don't bounce in step */
   seed: number;
   /** The ground it fights on (0 in the ring; a street spar's, a pier's deck) */
@@ -86,6 +89,7 @@ export function createFighterFigure(parent: THREE.Object3D, outfit: Outfit, low:
     walk: 0,
     last: null,
     manual: null,
+    jolt: -1,
     seed,
     y: 0,
     feet: createFootwork(),
@@ -146,7 +150,7 @@ export function pickClip(f: Fighter, fg: FighterFigure, ticks: number): { id: Cl
   if (f.getup > 0) return { id: 'getup', frame: T.getupFrames - f.getup };
   if (f.stun > 0 && f.hurt) return { id: hurtClip(f.hurt), frame: f.hurtFrame, mirror: hurtMirror(f.hurtBy) };
   if (f.move) return { id: moveClip(f.move), frame: f.frame };
-  if (f.blocking) return { id: 'block', frame: f.blockFrames };
+  if (f.blocking) return fg.jolt >= 0 && fg.jolt < CLIPS.blockHit.frames ? { id: 'blockHit', frame: fg.jolt } : { id: 'block', frame: f.blockFrames };
   return { id: 'guard', frame: fg.seed + ticks };
 }
 
@@ -156,8 +160,14 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const smooth = (x: number) => x * x * (3 - 2 * x);
 const ball = new THREE.Vector3();
 
+/** A blow just landed on its block: the guard jolts back (`blockHit`) */
+export function blocked(fg: FighterFigure) {
+  fg.jolt = 0;
+}
+
 /** Pose and place the figure from the fighter's state; `dt` 0 holds the frame */
 export function drawFighter(fg: FighterFigure, f: Fighter, dt: number, ticks: number, overrideClip?: { id: ClipId; frame: number; mirror?: boolean }) {
+  if (fg.jolt >= 0) fg.jolt = fg.jolt + dt * 60 >= CLIPS.blockHit.frames || !f.blocking ? -1 : fg.jolt + dt * 60;
   const { id, frame, mirror } = overrideClip ?? pickClip(f, fg, ticks);
   if (fg.manual) {
     fg.manual.frame += dt * 60;

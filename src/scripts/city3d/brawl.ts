@@ -23,7 +23,7 @@ import { PARTNERS, partnerNear, type PartnerId } from './brawlsite';
 import { FIGHTER_SCALE, createFighterFigure, drawFighter, type FighterFigure } from './fight-figure';
 import { CROWD_VIEW } from './character';
 import { onLens } from './lens';
-import { drawnMirror, newFightPose, sampleClip, type FightPose } from './fight-anim';
+import { blendPose, drawnMirror, newFightPose, sampleClip, type FightPose } from './fight-anim';
 import { plantLegs } from './fightfeet';
 import { BRAWL, NO_BRAWL, createBrawl, type BrawlEvent, type BrawlInput } from './brawl-sim';
 import { MOVES, createFightSim, yawTo, type Fighter, type FightSim, type MoveId, type StyleId } from './fight-sim';
@@ -58,9 +58,19 @@ function mixLimb(to: Limb, from: Limb, k: number, arm: boolean) {
   }
 }
 
+/** Frames a change of clip eases over on the street */
+const FADE = 4;
+
 export function createStreetFists(style: StyleId) {
   const brawl = createBrawl(style);
   const clip: FightPose = newFightPose();
+  // A change of clip eases over `FADE` of its frames from where the last left off (a chain pressed in time starts
+  // part way through the last move's recovery: brawl-sim.ts flow), as the ring's figures do (fight-figure.ts)
+  const shown: FightPose = newFightPose();
+  const from: FightPose = newFightPose();
+  let was: string | null = null;
+  let fadeAt = 0;
+  let fading = false;
   return {
     brawl,
     /** The style the fists were made in (walk mode makes them again when the save's changes) */
@@ -76,6 +86,20 @@ export function createStreetFists(style: StyleId) {
       const mirror = drawnMirror();
       sampleClip(c.id, c.frame, clip, { mirror });
       plantLegs(clip, c.id, c.frame, { mirror });
+      if (c.id !== was) {
+        if (was !== null) {
+          blendPose(shown, shown, 0, from);
+          fadeAt = c.frame;
+          fading = true;
+        }
+        was = c.id;
+      }
+      if (fading) {
+        const f = (c.frame - fadeAt + 1) / FADE;
+        if (f >= 1) fading = false;
+        else blendPose(from, clip, f, clip);
+      }
+      blendPose(clip, clip, 0, shown);
       const turn = clip.turn ?? 0;
       const k = Math.max(upper, whole);
       // The upper body: the arms, the lean, the spine's twist (with the clip's hip turn while the walk keeps his hips) and the head
