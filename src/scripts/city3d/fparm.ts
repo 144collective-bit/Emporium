@@ -115,7 +115,7 @@ function mirrorX(g: THREE.BufferGeometry) {
 const FISTS = new Map<string, THREE.BufferGeometry>();
 /** Where the fist's field is sampled, and how finely (metres): a cell of about 3 mm, smooth at the size it's seen;
  * on the phone tier about 4.5 mm (half the triangles, the owner's call, 2026-11) */
-const FIST_BOX = { min: [-0.068, -0.034, -0.082], max: [0.068, 0.124, 0.042] } as const;
+const FIST_BOX = { min: [-0.068, -0.078, -0.082], max: [0.068, 0.124, 0.042] } as const;
 export const FIST_CELL = { high: 0.0032, low: 0.0046 };
 
 /** (Math.hypot is slow; this runs a few hundred thousand times a fist) */
@@ -155,6 +155,21 @@ function capsuleAt(x: number, y: number, z: number, a: readonly number[], b: rea
   const h = Math.min(1, Math.max(0, (px * bx + py * by + pz * bz) / (bx * bx + by * by + bz * bz || 1)));
   return len3(px - bx * h, py - by * h, pz - bz * h) - r;
 }
+/** How far (x, y, z) is outside a cone round +y from radius r0 at y 0 to r1 at y h, both ends rounded */
+function roundConeAt(x: number, y: number, z: number, r0: number, r1: number, h: number) {
+  const q = Math.sqrt(x * x + z * z);
+  const b = (r0 - r1) / h;
+  const a = Math.sqrt(1 - b * b);
+  const k = -b * q + a * y;
+  if (k < 0) return Math.sqrt(q * q + y * y) - r0;
+  if (k > a * h) return Math.sqrt(q * q + (y - h) * (y - h)) - r1;
+  return q * a + y * b - r0;
+}
+
+/** The wrist: from `from` (inside the cuff, which ends 8-12 mm short of the fist) at radius `r0` to `to` at `r1`,
+ * flattened across the back of the hand (`flat`: x and z), a touch to the palm side (`z`), blended in over `blend` */
+export const WRIST = { from: -0.04, to: 0.03, r0: 0.026, r1: 0.0245, flat: [1.12, 0.8], z: -0.004, blend: 0.022 };
+
 /** How far (x, y, z) is outside a box of half sizes (hx, hy, hz) centred at c, its edges rounded by r */
 function boxAt(x: number, y: number, z: number, c: readonly number[], hx: number, hy: number, hz: number, r: number) {
   const qx = Math.abs(x - c[0]) - hx + r;
@@ -198,8 +213,9 @@ function fistField(thumb: -1 | 1, loose: number): (x: number, y: number, z: numb
     const narrow = 0.84 + 0.16 * Math.min(1, Math.max(0, (y - 0.012) / 0.078));
     let d = boxAt(x / narrow, y, z, back, 0.044, 0.04, 0.02, 0.016) * Math.min(1, narrow);
     d = smin(d, boxAt(x, y, z, palm, 0.04, 0.03, 0.014, 0.012), 0.012);
-    // The wrist, a flattened round into the cuff
-    d = smin(d, capsuleAt(x / 1.12, y, z / 0.82, [0, -0.008, -0.005], [0, 0.022, -0.005], 0.025) * 0.82, 0.014);
+    // The wrist (the owner's call, 2026-11: "smooth wrist"): from inside the cuff at its size, a flattened round
+    // tapering into the heel of the hand, run into it over a long blend, so it flows, never a neck
+    d = smin(d, roundConeAt(x / WRIST.flat[0], y - WRIST.from, (z - WRIST.z) / WRIST.flat[1], WRIST.r0, WRIST.r1, WRIST.to - WRIST.from) * WRIST.flat[1], WRIST.blend);
     // The fingers: each finger's two bones run into each other, the fingers barely into their neighbours (the creases)
     let fs = Infinity;
     for (const f of fingers) {

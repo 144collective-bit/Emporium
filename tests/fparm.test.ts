@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { ARM, CREASE, FIST, aimPiece, cuffGeometry, fistGeometry, merge, paint, paintFist, sleeveGeometry, sleeveRadius, solveArm, stripeGeometry } from '../src/scripts/city3d/fparm';
+import { ARM, CREASE, FIST, WRIST, aimPiece, cuffGeometry, fistGeometry, merge, paint, paintFist, sleeveGeometry, sleeveRadius, solveArm, stripeGeometry } from '../src/scripts/city3d/fparm';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const near = (a: number, b: number, e = 1e-6) => Math.abs(a - b) < e;
@@ -331,4 +331,23 @@ test('the phone tier\'s fist: the same hand, coarser (about half the triangles)'
     const ratio = lo.attributes.position.count / hi.attributes.position.count;
     assert.ok(ratio < 0.6, `fewer triangles ${ratio}`);
   }
+});
+
+test('the wrist: inside every cuff with room to spare (nothing flush), no narrower than the hand above it wants', () => {
+  // (the suit's shirt cuff is the tightest: 33 mm at its rim, 12 mm short of the fist; fistsview.ts)
+  const g = fistGeometry(1);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  let widest = 0;
+  let narrowest = Infinity;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    if (y > -0.016 && y < -0.008) widest = Math.max(widest, Math.hypot(p.getX(i), p.getZ(i) - WRIST.z));
+  }
+  for (const y of [0.0, 0.01]) {
+    let w = 0;
+    for (let i = 0; i < p.count; i++) if (Math.abs(p.getY(i) - y) < 0.002) w = Math.max(w, Math.abs(p.getX(i)));
+    narrowest = Math.min(narrowest, w);
+  }
+  assert.ok(widest < 0.033 - 0.002, `inside the suit's cuff ${widest}`);
+  assert.ok(narrowest > 0.026, `no neck ${narrowest}`);
 });
