@@ -153,8 +153,8 @@ import { closedLine } from './live';
 type Tier = 'high' | 'medium' | 'low';
 
 const TIERS = {
-  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 360, walkers: 100, trees: 250, rain: 6000, clouds: 12, far: 120, nearBudget: 96 },
-  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 360, walkers: 62, trees: 150, rain: 3500, clouds: 9, far: 110, nearBudget: 64 },
+  high: { dpr: 2, shadows: 2048, msaa: 4, bloomScale: 0.5, cars: 38, buses: 3, trucks: 4, police: 3, bikes: 6, crest: 6, sun: 3, strip: 7, reserve: 360, walkers: 100, trees: 250, rain: 6000, clouds: 12, far: 120, nearBudget: 64 },
+  medium: { dpr: 1.5, shadows: 768, msaa: 0, bloomScale: 0.5, cars: 27, buses: 2, trucks: 3, police: 3, bikes: 6, crest: 5, sun: 2, strip: 6, reserve: 360, walkers: 62, trees: 150, rain: 3500, clouds: 9, far: 110, nearBudget: 48 },
   low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 180, walkers: 15, trees: 90, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
@@ -601,13 +601,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     compile: (meshes) => meshes.forEach((m) => compileFor(m)),
     worker: siteWorker,
     meshesOf,
-    // Phones, on the ground (walking, driving, riding; not up in an aircraft): tiles past where the haze hides
-    // everything let go of all their sites drew (docs/performance-plan.md). `?horizon=N` forces a distance on
-    // any tier while walking, `?horizon=0` turns it off, for testing
+    // On the ground (walking, driving, riding; not up in an aircraft), every tier: tiles past where the haze hides
+    // everything let go of all their sites drew (docs/performance-plan.md; phones only until the stability plan's
+    // Phase 3, docs/stability-plan.md). The City view keeps everything (the owner's call). `?horizon=N` forces a
+    // distance while walking, `?horizon=0` turns it off, for testing
     horizon: () => {
       if (!walking || walk.flying || horizonOff) return Infinity;
       if (horizonForced) return horizonForced;
-      return tier === 'low' ? hazeHorizon((scene.fog as THREE.FogExp2).density) : Infinity;
+      return hazeHorizon((scene.fog as THREE.FogExp2).density);
     },
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
