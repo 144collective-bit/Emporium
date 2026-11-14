@@ -105,7 +105,7 @@ export interface TextureRow {
   size: string;
   bytes: number;
   /** Made at build time (GPU-compressed) or painted in the browser */
-  kind: 'built' | 'painted' | 'image' | 'other';
+  kind: 'built' | 'live' | 'unbaked' | 'painted' | 'image' | 'other';
   /** How many materials draw with it */
   users: number;
 }
@@ -135,8 +135,8 @@ export function textureRows(scene: THREE.Object3D): TextureRow[] {
         let name = t.name;
         for (let p: THREE.Object3D | null = o; !name && p; p = p.parent) name = p.name;
         const img = t.image as { width?: number; height?: number } | null;
-        const kind = (t as THREE.CompressedTexture).isCompressedTexture ? 'built' : (t as THREE.CanvasTexture).isCanvasTexture ? 'painted' : img && 'naturalWidth' in img ? 'image' : 'other';
-        rows.set(t, { what: `${name || '?'} / ${mat.name || mat.type}`, size: `${img?.width ?? '?'}x${img?.height ?? '?'}`, bytes: textureBytes(t), kind, users: 1 });
+        const kind = (t as THREE.CompressedTexture).isCompressedTexture ? 'built' : (t as THREE.CanvasTexture).isCanvasTexture ? ((t.userData.made as 'live' | 'unbaked' | undefined) ?? 'painted') : img && 'naturalWidth' in img ? 'image' : 'other';
+        rows.set(t, { what: `${name || '?'} / ${mat.name || mat.type}${t.userData.key ? ` (${t.userData.key})` : ''}`, size: `${img?.width ?? '?'}x${img?.height ?? '?'}`, bytes: textureBytes(t), kind, users: 1 });
       }
     }
   });

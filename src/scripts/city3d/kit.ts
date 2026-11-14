@@ -376,7 +376,8 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
   if (made) return builtTexture(made, () => paint(w, h, draw));
   const c = paint(w, h, draw);
   if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160) });
-  return canvasTexOf(c);
+  // (painted though it could have been made at build time: a district's, painted after the boot; perf.ts counts them)
+  return tagged(canvasTexOf(c), 'unbaked', key);
 }
 
 /**
@@ -385,7 +386,13 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
  */
 export function liveTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
   if (NO_DOM) return canvasTex(w, h, draw);
-  return canvasTexOf(paint(w, h, draw));
+  return tagged(canvasTexOf(paint(w, h, draw)), 'live', `${w}x${h}`);
+}
+/** How a canvas texture was made, for the texture breakdown (perf.ts `textureRows()`): live, or bakeable but painted */
+function tagged(t: THREE.CanvasTexture, made: 'live' | 'unbaked', key: string) {
+  t.userData.made = made;
+  t.userData.key = key;
+  return t;
 }
 
 function paint(w: number, h: number, draw: Draw) {
