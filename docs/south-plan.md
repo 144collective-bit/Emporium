@@ -169,7 +169,7 @@ From the Circus west, patchy as high roads are:
 
 ### Phase 2's steps (each shown to the owner)
 
-- **2a, the blocks as data** (built, waiting on the owner's sign-off):
+- **2a, the blocks as data** (built, signed off by the owner 2026-11-14):
   `southblocks.ts` (DOM-free, `tests/southblocks.test.ts`, not drawn or
   solid in the city yet). The Rampart (x -168 to -15 along the ring road,
   7, 9, 11, 13, 11, 9 storeys west to east, the archway over Underhill
