@@ -62,6 +62,8 @@ export type BrawlEvent =
   | { kind: 'dodge' }
   | { kind: 'tired' };
 
+const NO_PRESS = { punch: false, kick: false, dodge: false };
+
 export function createBrawl(style: StyleId, seed = 7) {
   const sim = createFightSim({ seed, fighters: [{ id: 'me', name: 'Degen', style, x: 0, z: 0, yaw: 0 }] });
   const f = sim.fighter('me')!;
@@ -70,6 +72,8 @@ export function createBrawl(style: StyleId, seed = 7) {
   let ticks = 0;
   let acc = 0;
   let chainN = 0;
+  /** Presses from a step that ran no tick, for the next one */
+  let carry = NO_PRESS;
   let lastHit = -1e9;
 
   function cancel() {
@@ -121,9 +125,11 @@ export function createBrawl(style: StyleId, seed = 7) {
       // (sprinting: nothing thrown, the guard down; a move already going plays out)
       guardOn = inp.guard && !inp.sprinting;
       // Only with the guard up is anything thrown; a press is kept by the fight's own buffer: hand it in on the first tick only
-      const punch = guardOn && inp.punch;
-      const kick = guardOn && inp.kick;
-      const dodge = guardOn && inp.dodge;
+      // (a press on a frame no tick runs, a screen faster than 60 Hz or a hit-stop, waits for the next tick)
+      const punch = guardOn && (inp.punch || carry.punch);
+      const kick = guardOn && (inp.kick || carry.kick);
+      const dodge = guardOn && (inp.dodge || carry.dodge);
+      carry = { punch, kick, dodge };
       // (the guard blocks between moves: not on a tick a move is asked for, nor while one waits in the buffer)
       const blockNow = () => guardOn && !f.move && !f.buffer;
       let first: FighterInput = { x: dodge ? inp.dx : 0, z: dodge ? inp.dz : 0, face: yaw, punch, kick, block: guardOn && !punch && !kick && !dodge && !f.move && !f.buffer, dodge };
@@ -143,6 +149,7 @@ export function createBrawl(style: StyleId, seed = 7) {
           else if (e.kind === 'tired') events.push({ kind: 'tired' });
         }
         first = { ...NO_INPUT, face: yaw, block: blockNow() };
+        carry = NO_PRESS;
         // What the move moved him (a step in, a dodge's slide); his own walking is walk mode's
         if (f.move || Math.hypot(f.vx, f.vz) > 0.02) {
           dx += f.x - wasX;

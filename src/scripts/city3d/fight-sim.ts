@@ -12,6 +12,11 @@
  *   hook is the roundhouse. Hit stun is a little longer than the next
  *   move's start-up, so a chain lands if the first hit does. A blocked hit
  *   breaks the chain (the attacker's recovery runs longer).
+ * - Flow (the owner's call, 2026-11): a player's chain pressed in time (one
+ *   press inside the recovery, nothing pressed through the move's start-up
+ *   or strike) skips `T.flow` of the recovery, so a jab, cross and hook in
+ *   rhythm run into each other; a held or mashed button chains at the plain
+ *   pace. Bots keep the plain pace.
  * - Block (hold): damage to a fifth, no stun, stamina pays. A block begun
  *   in the last `T.parryWindow` frames before the hit is a parry: the
  *   attacker staggers instead.
@@ -85,6 +90,8 @@ export const T = {
   slide: 7,
   /** A punch, kick or dodge pressed this many frames early still fires when it can */
   buffer: 8,
+  /** The share of a move's recovery a chain pressed in time skips (flow) */
+  flow: 0.5,
   /** A strike from just out of reach steps in this much further (tiles) */
   stepIn: 0.6 * SIZE_K,
   /** How fast a fighter turns to face (radians a second), and the most a move's start snaps the facing */
@@ -182,6 +189,10 @@ export interface Fighter {
   struck: boolean;
   /** The next move queued from a chain input during recovery */
   queued: MoveId | null;
+  /** Pressed through this move's start-up or strike (a held or mashed button: no flow), and the queued move
+   * pressed in time (it starts `T.flow` into the recovery) */
+  early: boolean;
+  flow: boolean;
   /** A press waiting for its moment (T.buffer frames), and the tick the move began */
   buffer: { kind: 'punch' | 'kick' | 'dodge'; frames: number } | null;
   moveAt: number;
@@ -300,6 +311,8 @@ function newFighter(s: FighterSetup): Fighter {
     frame: 0,
     struck: false,
     queued: null,
+    early: false,
+    flow: false,
     buffer: null,
     moveAt: -1,
     startupNow: 0,
@@ -353,6 +366,8 @@ export function createFightSim(setup: FightSetup) {
   let acc = 0;
   let ticks = 0;
   let events: FightEvent[] = [];
+  /** Presses from a step that ran no tick, for the next one */
+  let held: Record<string, FighterInput> = {};
   /** The bout's state */
   let round = bout ? 1 : 0;
   let boutPhase: BoutPhase = bout ? 'bell' : 'fight';
@@ -384,6 +399,8 @@ export function createFightSim(setup: FightSetup) {
     f.frame = 0;
     f.struck = false;
     f.queued = null;
+    f.early = false;
+    f.flow = false;
     f.extraRecovery = 0;
     f.blocking = false;
     f.stamina -= m.stamina;
@@ -627,6 +644,8 @@ export function createFightSim(setup: FightSetup) {
     // A press is kept for a few frames so it fires when it can (the latest wins)
     if (inp.punch || inp.kick || inp.dodge) f.buffer = { kind: inp.dodge ? 'dodge' : inp.punch ? 'punch' : 'kick', frames: T.buffer };
     else if (f.buffer && --f.buffer.frames <= 0) f.buffer = null;
+    // (a press through a move's start-up or strike: held or mashed, not in time)
+    if ((inp.punch || inp.kick) && f.move && f.phase !== 'recovery') f.early = true;
     const wants = (k: 'punch' | 'kick' | 'dodge') => f.buffer?.kind === k;
     const take = () => (f.buffer = null);
     if (f.down > 0) {
@@ -684,11 +703,16 @@ export function createFightSim(setup: FightSetup) {
       if (f.phase === 'recovery' && f.extraRecovery === 0 && !f.queued && (wants('punch') || wants('kick'))) {
         const kind = wants('punch') ? 'punch' : 'kick';
         const n = nextMove(f, kind);
+        // (pressed on this very tick, in the recovery, with nothing pressed before it: in time)
+        const inTime = !f.bot && !f.early && (kind === 'punch' ? inp.punch : inp.kick);
         take();
-        if (n && !f.empty && f.stamina >= MOVES[n].stamina * 0.5) f.queued = n;
-        else if (n) events.push({ kind: 'tired', who: f.id });
+        if (n && !f.empty && f.stamina >= MOVES[n].stamina * 0.5) {
+          f.queued = n;
+          f.flow = inTime;
+        } else if (n) events.push({ kind: 'tired', who: f.id });
       }
-      if (f.frame >= total) {
+      // (flow: a chain pressed in time starts part way into the recovery)
+      if (f.frame >= total || (f.queued && f.flow && f.frame >= m.startup + m.active + Math.ceil(m.recovery * (1 - T.flow)))) {
         const q = f.queued;
         f.move = null;
         f.phase = null;
@@ -897,6 +921,13 @@ export function createFightSim(setup: FightSetup) {
     /** Advance by `dt` seconds (whole ticks; the rest is carried); returns the events of those ticks */
     step(dt: number, inputs: Record<string, FighterInput> = {}): FightEvent[] {
       events = [];
+      // A press on a frame no tick runs (a screen faster than 60 Hz, a hit-stop) waits for the next tick, not lost
+      for (const id in held) {
+        const i = inputs[id] ?? NO_INPUT;
+        const h = held[id];
+        inputs = { ...inputs, [id]: { ...i, punch: i.punch || h.punch, kick: i.kick || h.kick, dodge: i.dodge || h.dodge } };
+      }
+      held = {};
       acc += Math.min(dt, 0.1);
       let n = 0;
       while (acc >= T.tick && n < 8) {
@@ -904,6 +935,11 @@ export function createFightSim(setup: FightSetup) {
         n++;
         tick(inputs);
       }
+      if (n === 0)
+        for (const id in inputs) {
+          const i = inputs[id];
+          if (i.punch || i.kick || i.dodge) held[id] = { ...NO_INPUT, punch: i.punch, kick: i.kick, dodge: i.dodge };
+        }
       return events;
     },
   };
