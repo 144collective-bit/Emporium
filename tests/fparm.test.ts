@@ -458,3 +458,22 @@ test('overlap: the fist turns after its forearm, catching up within a few frames
   for (let i = 0; i < 12; i++) followStep(f, V(0, 0, 0), turned, 1 / 60, off);
   assert.ok(f.face.angleTo(turned) < 0.05, 'caught up');
 });
+
+import { TURN_LEAN, turnLean } from '../src/scripts/city3d/fparm';
+
+test('running into a turn: the arms lean into it, more the faster, never past the most, none standing', () => {
+  let left = 0;
+  for (let i = 0; i < 60; i++) left = turnLean(left, 2, 1, 1 / 60);
+  assert.ok(left > 0 && near(left, 2 * TURN_LEAN.gain, 0.01), `into a left turn ${left}`);
+  let right = 0;
+  for (let i = 0; i < 60; i++) right = turnLean(right, -2, 1, 1 / 60);
+  assert.ok(near(right, -left, 1e-9), 'the other way for a right turn');
+  let hard = 0;
+  for (let i = 0; i < 60; i++) hard = turnLean(hard, 40, 1, 1 / 60);
+  assert.ok(near(hard, TURN_LEAN.most, 1e-3), 'never past the most');
+  let standing = 0;
+  for (let i = 0; i < 60; i++) standing = turnLean(standing, 3, 0, 1 / 60);
+  assert.equal(standing, 0);
+  // (eased: one frame takes only part of the way)
+  assert.ok(turnLean(0, 2, 1, 1 / 60) < 0.5 * 2 * TURN_LEAN.gain);
+});

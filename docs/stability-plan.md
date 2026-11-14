@@ -209,9 +209,30 @@ phones' trees don't sway.
   **187** to keep it. Walk mode on the phone tier and a desktop, six
   frames in a row each: every frame drawn right. Budget: boot 715.8 of 740
   KB.
-6. **Places' near forms let go when far**: their GPU buffers freed past the
-   far distance and uploaded again on the way back (the arrays stay in
-   JavaScript, so it's quick).
+6. **Places' near forms let go when far** (built, 2026-11-14, below).
+
+**Item 6 (built, 2026-11-14).** The owner's pick after item 4 (districts
+loaded nearest first, far ones unloaded) was measured first and left out:
+what districts draw on the main thread is about 1 MiB on phones and 15 on a
+desktop, the rest is sites, which the near budget and the haze already let
+go. Item 7 (the JavaScript copies) is held up by picking: a click raycasts
+every mesh of a place, so the places' arrays must stay.
+
+- **Built.** lod.ts: a place's far form (`farForm()`) frees its near form's
+  geometries on the GPU (`geometry.dispose()`: the arrays stay in
+  JavaScript, and three uploads them again as they're next drawn) once it
+  has shown far for `FREE_AFTER` (15 s), once; coming near holds them again,
+  and going far starts the wait over, so a camera on the line never churns.
+  Textures and materials are left alone (shared). `freedNear()`: `?fps`
+  (after the far forms' count) and `__mem().freedNear`. Tested in
+  `tests/lod.test.ts`.
+- **Measured** (headless, the City view, then walking at Degen's home, then
+  the City view again): walking far, **22 places' near forms freed: 13 MB on
+  the phone tier, 15 MB on a desktop**; even in the City view 9 (4.2 MB) far
+  from where it looks. Back in the City view the 13 that came near again
+  were drawn as before (the frames before and after: the same picture, but
+  the LED wall's animation), no errors. `memcheck` counts the arrays, so
+  its numbers don't move: this saving is on the GPU.
 7. **The JavaScript copies dropped** for geometry that's uploaded and never
    read again (three's `onUpload`), halving what fixed geometry costs the
    page's own memory. What a batched mesh needs to grow or pack (`optimize()`,

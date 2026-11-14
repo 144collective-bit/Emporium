@@ -9,7 +9,7 @@
  * It's an overlay on the city: × or Esc closes it (Esc only closes it, it
  * never stops walking), and nothing else hears the keys while it's open.
  */
-import { MARKS, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
+import { CUTS, MARKS, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
 import type { Stage, StageLight, StagePose } from './stage';
 
 const POSES: { id: StagePose; name: string }[] = [
@@ -37,11 +37,12 @@ const markName = (id: MarkId) => MARKS.find((m) => m.id === id)?.name ?? id;
 export function describe(l: Look): [string, string, string[]][] {
   const hood = l.kind === 'hoodie' && l.hood;
   const patched = !hood && (l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie');
-  const extras = [l.headphones && 'Headphones', l.chain && 'Shades Chain', l.necklace && 'Diamond Chain', l.watch && 'Gold Watch'].filter(Boolean) as string[];
+  const extras = [l.headphones && 'Headphones', l.chain && (!l.face || l.shades) && 'Shades Chain', l.necklace && 'Diamond Chain', l.watch && 'Gold Watch'].filter(Boolean) as string[];
   const rows: [string, string, string[]][] = [
     ['Fit', FITS[l.kind], l.kind === 'suit' ? [l.top, l.bottom, l.tie] : [l.top, l.bottom]],
     ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : '') : 'Nothing', !hood && l.hat && l.hat !== 'crown' && l.hat !== 'halo' ? [l.hatColor] : []],
-    ['Shades', 'Lenses', [l.lens]],
+    ['Face', l.face ? (l.cut === 'bald' ? 'Bald' : `${CUTS.find((c) => c.id === l.cut)!.name} cut`) : 'Balaclava', l.face && l.cut !== 'bald' ? [l.tone, l.hair] : [l.tone]],
+    ['Shades', !l.face || l.shades ? 'Lenses' : 'None', !l.face || l.shades ? [l.lens] : []],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],
     ['Hand', l.held ? HELD[l.held] : 'Empty', []],
     ['Extras', extras.length ? extras.join(', ') : 'None', l.headphones ? [l.headphones] : []],

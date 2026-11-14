@@ -279,7 +279,12 @@ keep it up to date when what it describes changes.
     still can. `addLod()` / `addLodSwitch()` swap them (`updateLods()`
     from `index.ts`). They're made after the first frame, a place at a
     time in spare moments (`farQueue` in `index.ts`); until then a place
-    stays near.
+    stays near. Once a place's far form has shown `FREE_AFTER` (15 s), its
+    near form's geometries are freed on the GPU (`release()` on its switch,
+    `geometry.dispose()`: the arrays stay, three uploads them again as
+    they're next drawn; the stability plan's Phase 3, item 6); `?fps` says
+    how many and how much (`freedNear()`). Code that changes a near part's
+    geometry while it's far needs nothing special: it's uploaded when drawn.
   - Cars far away (parked and traffic) are their model's far form
     (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
     extruded, block wheels, about a hundred triangles), all in one

@@ -15,14 +15,14 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
+import { CUTS, DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Cut, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
 import { markItem, patternItem, wardrobeEntry, type WardrobeEntry } from './catalog';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
 import { buyWardrobe, level, ownsWardrobe } from './tycoon';
 import { D, LV, fmt, whyNot, type GameDeps } from './ui';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink' | 'tone' | 'hair';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -94,6 +94,40 @@ const held = (id: Held | null, name: string, icon: string, catalog?: string): It
   wear: (l) => ({ ...l, held: id }),
   catalog,
 });
+
+/* ----- The face (docs/faces-plan.md Phase 2): the balaclava, or a face with a haircut; all free ----- */
+
+/** A head's outline, for the face cards' icons */
+const HEAD = 'M12 6.5c-3.4 0-5.5 2.9-5.5 7.2S8.6 21 12 21s5.5-3 5.5-7.3S15.4 6.5 12 6.5z';
+const CUT_ICONS: Record<Cut, string> = {
+  buzz: `${HEAD} M7.4 10c1.3-1.8 2.8-2.6 4.6-2.6s3.3.8 4.6 2.6`,
+  crop: `${HEAD} M6.4 12c-.3-5 2.3-7.6 5.6-7.6s5.9 2.6 5.6 7.6c-1.6-1.8-3.6-2.6-5.6-2.6s-4 .8-5.6 2.6z`,
+  curls: `${HEAD} M6.3 12c-1.6-2.4-.4-5.9 2.2-6.2.6-2.4 6.4-2.4 7 0 2.6.3 3.8 3.8 2.2 6.2`,
+  bun: `${HEAD} M12 6.5a2.3 2.3 0 1 1 0-4.6 2.3 2.3 0 0 1 0 4.6z M7.4 10c1.3-1.8 2.8-2.6 4.6-2.6s3.3.8 4.6 2.6`,
+  bald: `${HEAD} M10 14h.01 M14 14h.01`,
+};
+const toneColors: Colors = { key: 'tone', label: 'Skin', list: PALETTE.tone };
+const hairColors: Colors = { key: 'hair', label: 'Hair', list: PALETTE.hair };
+const faceItems: Item[] = [
+  {
+    id: 'mask',
+    name: 'Balaclava',
+    icon: `${HEAD} M8.6 12h6.8v2.6H8.6z`,
+    on: (l) => !l.face,
+    wear: (l) => ({ ...l, face: false }),
+    colors: [toneColors],
+  },
+  ...CUTS.map(
+    (c): Item => ({
+      id: `cut-${c.id}`,
+      name: c.name,
+      icon: CUT_ICONS[c.id],
+      on: (l) => l.face && l.cut === c.id,
+      wear: (l) => ({ ...l, face: true, cut: c.id }),
+      colors: c.id === 'bald' ? [toneColors] : [toneColors, hairColors],
+    })
+  ),
+];
 
 /* ----- The merch: marks for the top, the hat and the sneakers, and prints for the top ----- */
 
@@ -251,10 +285,22 @@ const TABS: Tab[] = [
       },
     ],
   },
+  { id: 'face', label: 'Face', items: faceItems },
   {
     id: 'shades',
     label: 'Shades',
-    items: [],
+    // (the balaclava always wears them; a face can go without)
+    items: [
+      {
+        id: 'shades-on',
+        name: 'Shades',
+        icon: 'M3 8h8v5a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z M13 8h8v5a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3z M11 10h2',
+        only: (l) => l.face,
+        on: (l) => l.shades,
+        wear: (l) => ({ ...l, shades: true }),
+      },
+      { id: 'shades-off', name: 'No shades', icon: NONE, only: (l) => l.face, on: (l) => !l.shades, wear: (l) => ({ ...l, shades: false }) },
+    ],
     colors: [{ key: 'lens', label: 'Lenses', list: PALETTE.lens }],
   },
   {
@@ -303,6 +349,8 @@ const TABS: Tab[] = [
       {
         id: 'chain',
         name: 'Shades Chain',
+        // (it hangs from the shades)
+        only: (l) => !l.face || l.shades,
         icon: 'M3 7h7v4H3z M14 7h7v4h-7z M10 9h4 M4 11c0 6 4 9 8 9s8-3 8-9',
         on: (l) => l.chain,
         wear: (l) => ({ ...l, chain: !l.chain }),
