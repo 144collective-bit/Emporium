@@ -359,19 +359,20 @@ MiB of geometry, the memory steps' figures).
    and so does a tab that can't note it.
 3. **Hitches measured and capped**: `?bench`'s slowest frame per view goes in
    the budget, so a step that freezes (a big `trim()`, a district arriving)
-   is red. **Measuring built (2026-11-14), ceilings not set yet.** The
+   is red. **Built (2026-11-14).** The
    benchmark keeps each view's and the route's slowest frame by CPU
    (`worstCpu`, the frame's own script and draw submission, which a freeze
    from the city's own work shows in whatever the renderer's pace) and where
-   it went (`worstParts`). `npm run memcheck` prints them and will hold them
-   to `HITCH_CEILINGS` (`targets.ts`; null until set). The first run, on
-   memcheck's headless phone (one run, before the south's Phase 1c): most
-   views 27-110 ms, but Sunridge 547, the south circus 300, Lot 9 180,
-   Crestmont's hills 135 and the route 493. *The owner's call (2026-11-14):
-   find those spikes before setting the ceilings.* Since `main` took the
-   south's Phase 1c, the phone's city takes over memcheck's 40 minutes to
-   build, and its geometry reads 330-400 MiB against the 187 ceiling (the
-   same on `main`: not this phase's).
+   it went (`worstParts`), and `npm run memcheck` holds them to
+   `HITCH_CEILINGS` (`targets.ts`): **250 ms** a view and the route on its
+   headless phone. The first run read Sunridge 547, the south circus 300,
+   Lot 9 180 and the route 493 (*the owner's call: find those spikes
+   first*); a second, on a quiet machine, read every view 20-104 ms (the
+   wall's corner the slowest) and the route 71, mostly the render: the first
+   run had the test suite beside it. Since the south's re-laying the phone's
+   city takes about 55 minutes to build there, so memcheck now waits up to
+   75 (the Action's job allows 120). Its geometry reads 330-400 MiB against
+   the 187 ceiling, the same on `main`: not this phase's, still to find.
 
 ## The tier by the graphics (built, 2026-11-14; waiting on the owner's laptop)
 

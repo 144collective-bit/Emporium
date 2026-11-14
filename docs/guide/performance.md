@@ -431,8 +431,10 @@ keep it up to date when what it describes changes.
 - **Memory ceilings** (`docs/stability-plan.md`, Phase 5; the owner's
   picks): `MEMORY_CEILINGS` in `targets.ts` (MiB). `npm run memcheck`
   (after a build and `npm run bake:textures`; `scripts/memcheck.mjs`, about
-  13 minutes) builds the whole city on a headless phone under `?bench` and
-  holds its geometry, textures and render targets to the phone's; `npm run
+  an hour since the south's re-laying) builds the whole city on a headless
+  phone under `?bench` and holds its geometry, textures and render targets
+  to the phone's, and the benchmark's slowest CPU frames to
+  `HITCH_CEILINGS` (the stability plan's 6.3); `npm run
   memcheck -- soak` adds the leak check (`SOAK_MIN`, 20: half the City
   view, half walking). The "Memory" Action runs it by hand only. The
   desktop's render targets are held by a formula (`pictureTargets()`,
@@ -453,8 +455,8 @@ keep it up to date when what it describes changes.
   average / 95th-percentile / slowest frame, CPU ms, the slowest frame's CPU
   and where it went (`worstCpu`, `worstParts`: index.ts's `part()` marks
   the sky, building, tiles, far forms, ticks and rendering; the stability
-  plan's 6.3, which `npm run memcheck` prints and will hold to
-  `HITCH_CEILINGS` in `targets.ts`), draws and triangles,
+  plan's 6.3, which `npm run memcheck` holds to `HITCH_CEILINGS` in
+  `targets.ts`: 250 ms a view on its headless phone), draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`; the card's **Copy results** button copies them with the
   device (its user agent and screen), so a real phone's numbers can be

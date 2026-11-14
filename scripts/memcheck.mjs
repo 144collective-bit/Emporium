@@ -67,10 +67,11 @@ const sample = () =>
 
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}/?bench&fps`, { timeout: 600000 });
-  // Every site built: nothing waiting twice in a row (a district arriving adds more), 40 minutes at the most
+  // Every site built: nothing waiting twice in a row (a district arriving adds more), 75 minutes at the most (since the
+  // south's re-laying the phone's city takes about 55 here; the Action's job allows 120)
   let still = 0;
   let s = null;
-  for (let last = -1; secs() < 2400; ) {
+  for (let last = -1; secs() < 4500; ) {
     await page.waitForTimeout(15000);
     s = await sample();
     if (!s) continue;
@@ -79,7 +80,7 @@ try {
     still = s.waiting === 0 ? still + 1 : 0;
     if (still >= 2) break;
   }
-  if (!s || still < 2) throw new Error('the city never finished building (40 minutes)');
+  if (!s || still < 2) throw new Error('the city never finished building (75 minutes)');
   if (s.tier !== 'low') fail.push(`the phone took the ${s.tier} tier, not low`);
 
   // The ceilings

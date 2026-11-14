@@ -70,8 +70,9 @@ keep it up to date when what it describes changes.
   takes a few minutes in the software renderer, so it isn't in the Action.
 - `npm run memcheck` (after a build and the texture bake;
   `scripts/memcheck.mjs`): the whole city built on a headless phone, held
-  to `MEMORY_CEILINGS` (`targets.ts`), red on a page error or NaN; `--
-  soak` adds the leak check. About 13 minutes (more with the soak), so it's
+  to `MEMORY_CEILINGS` (`targets.ts`) and its benchmark's slowest CPU frame
+  a view to `HITCH_CEILINGS`, red on a page error or NaN; `--
+  soak` adds the leak check. About an hour (more with the soak), so it's
   run by hand or by the "Memory" Action, which only runs when started.
   `tests/targets.test.ts` holds the desktop's render targets (by formula)
   to their ceilings on every `npm test`. `tests/gputier.test.ts` holds the
