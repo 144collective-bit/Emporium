@@ -25,6 +25,7 @@
  * or a hoodie, track to a hoodie).
  */
 import type { HairCut, Outfit, OutfitKind } from './wardrobe';
+import { PALETTE } from '../net/profile-data';
 import type { IdleAct, CrowdClip } from './crowdclips';
 import { inTrenches } from './trenches';
 import { inUptown } from './uptown';
@@ -406,10 +407,11 @@ export function cityOutfit(r: () => number, where: Where = {}): Outfit {
 /** How many of the crowd still wear the balaclava and shades (the bouncers all do) */
 export const MASKED_SHARE = 0.15;
 /** Skin tones, pale to deep: made-up flat tones under the key light, none bright enough to bloom */
-export const SKIN_TONES: readonly string[] = ['#f1d2b6', '#e8c39e', '#dcae86', '#c99068', '#b07650', '#8f5a3a', '#6e4129', '#52301f'];
-/** Hair: the natural shades, and now and then a dyed one (more of those on the Neon Mile and in The Trenches) */
-export const HAIR_COLORS: readonly string[] = ['#16141f', '#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#8a3a22', '#9d9aa8'];
-export const HAIR_DYES: readonly string[] = ['#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'];
+// (the players' own: profile-data.ts `PALETTE`)
+export const SKIN_TONES: readonly string[] = PALETTE.tone;
+/** Hair: the natural shades (black twice as often), and now and then a dyed one (more of those on the Neon Mile and in The Trenches) */
+export const HAIR_COLORS: readonly string[] = ['#16141f', ...PALETTE.hair.slice(0, 7)];
+export const HAIR_DYES: readonly string[] = PALETTE.hair.slice(7);
 /** The cuts and how often each is seen (and bald for the rest) */
 const CUTS: readonly [HairCut, number][] = [
   ['buzz', 0.24],

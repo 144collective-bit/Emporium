@@ -138,7 +138,7 @@ function armPieces(o: Outfit, thumb: -1 | 1, loose = 0, low = false) {
       upper.push(paint(stripeGeometry(Math.PI / 2 + a, ...up, 0.03, ARM.upper - 0.01, STRIPE.w), FP_SHIRT));
       fore.push(paint(stripeGeometry(out + a, ...lo, 0.02, end - 0.054, STRIPE.w), FP_SHIRT));
     }
-  fore.push(paintFist(fistGeometry(thumb, loose, low).translate(0, end, 0), FP_SKIN));
+  fore.push(paintFist(fistGeometry(thumb, loose, low).translate(0, end, 0), o.skin ?? FP_SKIN));
   return { upper: merge(upper), fore: merge(fore) };
 }
 

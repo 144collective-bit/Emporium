@@ -55,6 +55,8 @@ export interface Outfit {
   hair?: string;
   /** The hair's style (a crop if not said) */
   cut?: HairCut;
+  /** The shades on an unmasked face (the balaclava always wears them) */
+  shades?: boolean;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -145,6 +147,11 @@ export function lookOutfit(l: Look): Outfit {
     hatMark: l.hatMark,
     shoeMark: l.shoeMark ?? undefined,
     pattern: l.pattern,
+    face: l.face || undefined,
+    skin: l.tone,
+    hair: l.face && l.cut !== 'bald' ? l.hair : undefined,
+    cut: l.cut === 'bald' ? undefined : l.cut,
+    shades: l.face && l.shades ? true : undefined,
   };
 }
 
@@ -1124,6 +1131,8 @@ export function items(q: Detail, hero = false): Item[] {
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
   /** In the balaclava and shades (everyone but the unmasked: docs/faces-plan.md) */
   const masked = (o: Outfit) => !o.face;
+  /** In the shades: the balaclava's always, a face's when chosen */
+  const shaded = (o: Outfit) => masked(o) || !!o.shades;
   /** Hair that shows: unmasked, not bald, the hood down */
   const hairy = (o: Outfit) => !!o.face && !!o.hair && !(o.kind === 'hoodie' && o.hood);
   /** A hat or a helmet over it (the halo floats clear): only the hair at the nape shows */
@@ -2685,12 +2694,19 @@ export function items(q: Detail, hero = false): Item[] {
       pieces: [P('head', far ? skull : one(hero ? [skull, ...ears] : [skull, nose, ...ears]), 'head')],
     },
     {
-      // The balaclava's folds, the eye opening and the shades
+      // The balaclava's folds and the eye opening
       id: 'mask',
       when: masked,
       pieces: [
         ...(hero ? [P('head', one([neckFold, eyeRim]), BLACK, { detail: true })] : q > 0 ? [P('head', one(folds), BLACK, { detail: true })] : []),
         P('head', eyesSkin, 'skin'),
+      ],
+    },
+    {
+      // The shades: always with the balaclava, a choice on a face
+      id: 'shades',
+      when: shaded,
+      pieces: [
         P('head', far ? new THREE.BoxGeometry(0.17, 0.05, 0.008).translate(0, EYE_Y, lensZ - 0.002) : one(frames), '#0d0c14'),
         P('head', one(lenses), '#ffffff', { mat: 'lens' }),
       ],
@@ -2717,7 +2733,7 @@ export function items(q: Detail, hero = false): Item[] {
     ...CHAINS.map(([kind, geo]): Item => ({
       id: `chain-${kind}`,
       // (it hangs from the shades: none without them)
-      when: (o) => !!o.chain && o.kind === kind && masked(o),
+      when: (o) => !!o.chain && o.kind === kind && shaded(o),
       pieces: [P('head', geo, GOLD, { detail: true })],
     })),
     {

@@ -43,7 +43,7 @@ accessories." The owner's answers:
 
 Each with the owner's sign-off.
 
-1. **The crowd's faces** (built, waiting on the owner's sign-off). The
+1. **The crowd's faces** (built, signed off by the owner, 2026-11). The
    colour keys, the `mask`, `features` and hair items, and the crowd dressed
    by `unmask()`: nearly everyone in the city's crowd unmasked
    (`MASKED_SHARE`, about one in seven, still wears the balaclava and shades,
@@ -52,12 +52,22 @@ Each with the owner's sign-off.
    curls, bun and a cap over the nape; the crowd by the Emporium). It costs
    no draw calls; the near crowd's meshes carry about 14% more vertices,
    the far crowd's about 3% (one hair shape for every cut far off).
-2. **The player's option.** `Look` gets `face`, `skin`, `hair` and `cut`
-   (the save keeps its migration: `cleanSave()`; old looks stay masked),
-   and the fitting room and character screen a "Face" row: Mask or Face,
-   then the skin tone, the cut and the hair's colour, all free. Other
-   players see it (profile-data). The shades as an extra for the unmasked
-   (`Outfit.shades`).
+2. **The player's option** (built, waiting on the owner's sign-off). The
+   owner's answers: a Face tab of its own, all free, the shades optional
+   on a face. `Look` (profile-data.ts) gets `face`, `tone`, `hair`, `cut`
+   (`CUTS`, with `bald`) and `shades`, its colours from `PALETTE.tone` and
+   `PALETTE.hair` (the crowd's own); `cleanLook()` keeps looks saved
+   before faces in the balaclava and falls back on anything else (the
+   game server checks the same). `lookOutfit()` maps it (the tone always,
+   on the hands too). Drop 001's fitting room has a **Face** tab: Balaclava,
+   Buzz, Crop, Curls, Bun, Bald, with Skin and Hair rows; the Shades tab
+   offers Shades or No shades on a face (the lenses' row as before), and
+   the Shades Chain is offered only with them on. The shades are their
+   own item (`shades` in wardrobe.ts). The character screen says the face
+   (`describe()`); the first-person hands and fists take the tone. Other
+   players see it (the look is their profile's). The tabs sit five and four
+   in two rows. Shots: `docs/faces-shots/fitting.png`,
+   `fitting-shades.png`.
 3. **Faces that move (optional).** A blink and two or three expressions
    (a grin, a frown) for emotes and the Fight Club, still within the same
    draw calls; held still under `prefers-reduced-motion`.

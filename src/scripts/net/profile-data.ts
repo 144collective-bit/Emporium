@@ -120,6 +120,20 @@ export const PATTERNS: { id: PatternId; name: string }[] = [
 ];
 export const PATTERN_IDS = PATTERNS.map((p) => p.id);
 
+/*
+ * The face (docs/faces-plan.md Phase 2): Degen in the balaclava and shades as in the art, or unmasked, his face in a
+ * skin tone with a haircut and its colour (all free), the shades on or off.
+ */
+export type Cut = 'buzz' | 'crop' | 'curls' | 'bun' | 'bald';
+export const CUTS: { id: Cut; name: string }[] = [
+  { id: 'buzz', name: 'Buzz' },
+  { id: 'crop', name: 'Crop' },
+  { id: 'curls', name: 'Curls' },
+  { id: 'bun', name: 'Bun' },
+  { id: 'bald', name: 'Bald' },
+];
+export const CUT_IDS = CUTS.map((c) => c.id);
+
 export interface Look {
   kind: LookKind;
   top: string;
@@ -155,6 +169,13 @@ export interface Look {
   shoeMark: MarkId | null;
   /** An all-over print on the top */
   pattern: PatternId;
+  /** Unmasked: no balaclava, the face in `tone` with the hair (`cut`, `hair`) */
+  face: boolean;
+  tone: string;
+  hair: string;
+  cut: Cut;
+  /** The shades on an unmasked face (the balaclava always has them) */
+  shades: boolean;
 }
 
 export const PALETTE = {
@@ -171,6 +192,10 @@ export const PALETTE = {
   holo: ['#b9f3ff', '#ffc6f2', '#d9c6ff', '#c6ffe4', '#fff3b0', '#ffd3c2'],
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
+  /** Skin tones, pale to deep (the crowd's too, crowdlook.ts): flat tones, none bright enough to bloom */
+  tone: ['#f1d2b6', '#e8c39e', '#dcae86', '#c99068', '#b07650', '#8f5a3a', '#6e4129', '#52301f'],
+  /** Hair: the natural shades, then the dyes */
+  hair: ['#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#8a3a22', '#9d9aa8', '#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'],
 };
 /** The colour packs sold at Drop 001 (ids are the catalog's), each a list of top and bottom colours */
 export const PACKS = { gold: PALETTE.gold, holo: PALETTE.holo } as const;
@@ -209,6 +234,11 @@ export const DEFAULT_LOOK: Look = {
   hatMark: 'diamond',
   shoeMark: null,
   pattern: 'plain',
+  face: false,
+  tone: '#e8c39e',
+  hair: '#16141f',
+  cut: 'crop',
+  shades: false,
 };
 
 /** Anything from a player, made safe: unknown values fall back to Degen's own look */
@@ -250,6 +280,12 @@ export function cleanLook(raw: unknown): Look {
     hatMark: from(o.hatMark, MARK_IDS, DEFAULT_LOOK.hatMark),
     shoeMark: orNull(o.shoeMark, MARK_IDS, null),
     pattern: from(o.pattern, PATTERN_IDS, DEFAULT_LOOK.pattern),
+    // (looks saved before faces had none of these: in the balaclava, as in the art)
+    face: o.face === true,
+    tone: from(o.tone, PALETTE.tone, DEFAULT_LOOK.tone),
+    hair: from(o.hair, PALETTE.hair, DEFAULT_LOOK.hair),
+    cut: from(o.cut, CUT_IDS, DEFAULT_LOOK.cut),
+    shades: o.shades === true,
   };
 }
 

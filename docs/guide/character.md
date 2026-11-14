@@ -166,9 +166,10 @@ keep it up to date when what it describes changes.
     one); `bone` pins a piece to one
     bone unbent (bags, boards, wings on the chest); `skin` gives a piece
     its own weights per vertex (the fingers).
-  - **Faces** (`docs/faces-plan.md`, Phase 1 built, waiting on the owner's
-    sign-off): an unmasked figure (`Outfit.face`) has no balaclava or shades
-    (item `mask`, and so no chain on them): the same head in the skin tone
+  - **Faces** (`docs/faces-plan.md`: Phase 1, the crowd, signed off; Phase
+    2, the player's Face tab, built): an unmasked figure (`Outfit.face`) has
+    no balaclava (item `mask`) and no shades (item `shades`, and so no chain
+    on them) unless `Outfit.shades`: the same head in the skin tone
     (colour key `head`: the balaclava's black, or `skin` unmasked; `skin`
     also colours the hands and the eye opening, the art's tone by default),
     flat ink laid on the face (`features`: bean eyes with a white glint,

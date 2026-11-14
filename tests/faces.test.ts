@@ -4,9 +4,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { HAIR_CUTS, items, PLAYER, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
+import { HAIR_CUTS, items, lookOutfit, PLAYER, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
+import { CUT_IDS, DEFAULT_LOOK, PALETTE, cleanLook, type Look } from '../src/scripts/net/profile-data';
 import { headFront, headGeometry, headRow, inHead, HEAD_TOP } from '../src/scripts/city3d/body';
-import { MASKED_SHARE, SKIN_TONES, cityOutfit, seeded } from '../src/scripts/city3d/crowdlook';
+import { HAIR_COLORS, HAIR_DYES, MASKED_SHARE, SKIN_TONES, cityOutfit, seeded } from '../src/scripts/city3d/crowdlook';
 
 const LEVELS: Detail[] = [3, 2, 1, 0];
 const FACE: Outfit = { ...PLAYER, cap: undefined, chain: true, face: true, skin: '#8f5a3a', hair: '#2b1d14' };
@@ -22,10 +23,10 @@ const each = (g: THREE.BufferGeometry, f: (v: THREE.Vector3) => void) => {
 test('faces: the mask, the shades and their chain only on the masked; the face and the hair only unmasked', () => {
   for (const q of LEVELS) {
     const masked = ids(q, PLAYER);
-    assert.ok(masked.includes('head') && masked.includes('mask'), `detail ${q}: the balaclava`);
+    assert.ok(masked.includes('head') && masked.includes('mask') && masked.includes('shades'), `detail ${q}: the balaclava and shades`);
     assert.ok(!masked.some((id) => id === 'features' || id.startsWith('hair-')), `detail ${q}: no face under the balaclava`);
     const bare = ids(q, FACE);
-    assert.ok(bare.includes('head') && !bare.includes('mask'), `detail ${q}: no balaclava`);
+    assert.ok(bare.includes('head') && !bare.includes('mask') && !bare.includes('shades'), `detail ${q}: no balaclava, no shades`);
     assert.ok(!bare.some((id) => id.startsWith('chain-')), `detail ${q}: no chain without the shades`);
     assert.equal(bare.includes('features'), q > 0, `detail ${q}: the face's ink (not on the far crowd)`);
     assert.deepEqual(
@@ -117,4 +118,40 @@ test('faces: the crowd unmasked but for its share and the bouncers, seeded, in i
   }
   assert.ok(Math.abs(bare / n - (1 - MASKED_SHARE)) < 0.06, `${bare} of ${n} unmasked`);
   for (let i = 0; i < 40; i++) assert.ok(!cityOutfit(seeded(i / 40), { role: 'guard' }).face, 'the bouncers in the balaclava');
+});
+
+test('faces: the look keeps the face, cleaned; looks saved before faces stay in the balaclava', () => {
+  const old = { ...DEFAULT_LOOK } as Record<string, unknown>;
+  for (const k of ['face', 'tone', 'hair', 'cut', 'shades']) delete old[k];
+  const was = cleanLook(old);
+  assert.equal(was.face, false);
+  assert.equal(was.shades, false);
+  assert.ok(ids(2, lookOutfit(was)).includes('mask'), 'the balaclava');
+  const mine: Look = { ...DEFAULT_LOOK, face: true, tone: PALETTE.tone[6], hair: PALETTE.hair[8], cut: 'curls', shades: true };
+  assert.deepEqual(cleanLook(mine), mine);
+  for (const c of CUT_IDS) assert.equal(cleanLook({ ...mine, cut: c }).cut, c);
+  // Anything else falls back: no colour or cut of a player's own
+  const bad = cleanLook({ ...mine, face: 'yes', tone: '#ff00ff', hair: 'red', cut: 'mohawk', shades: 1 });
+  assert.deepEqual([bad.face, bad.tone, bad.hair, bad.cut, bad.shades], [false, DEFAULT_LOOK.tone, DEFAULT_LOOK.hair, DEFAULT_LOOK.cut, false]);
+});
+
+test('faces: the look on the figure: the cut, bald, the shades and their chain only with them on, the tone on the hands', () => {
+  const face: Look = { ...DEFAULT_LOOK, hat: null, face: true, tone: PALETTE.tone[5], hair: PALETTE.hair[1], cut: 'bun', shades: false, chain: true };
+  const o = lookOutfit(face);
+  assert.equal(o.skin, PALETTE.tone[5]);
+  const on = ids(3, o);
+  assert.ok(on.includes('hair-bun') && on.includes('features') && !on.includes('mask') && !on.includes('shades'));
+  assert.ok(!on.some((id) => id.startsWith('chain-')), 'no chain without the shades');
+  const shaded = ids(3, lookOutfit({ ...face, shades: true }));
+  assert.ok(shaded.includes('shades') && shaded.includes('chain-suit') && !shaded.includes('mask'));
+  assert.ok(!ids(3, lookOutfit({ ...face, cut: 'bald' })).some((id) => id.startsWith('hair-')), 'bald');
+  const masked = ids(3, lookOutfit({ ...face, face: false }));
+  assert.ok(masked.includes('mask') && masked.includes('shades') && !masked.includes('features') && !masked.some((id) => id.startsWith('hair-')), 'the balaclava, shades and all');
+  // (the hands take the tone either way: the hands item's pieces are coloured by `skin`)
+  assert.ok(worn(3, o).find((i) => i.id === 'fingers')!.pieces.every((p) => p.color === 'skin'));
+});
+
+test("faces: the crowd's skin tones and hair are the players' own", () => {
+  for (const c of [...SKIN_TONES]) assert.ok(PALETTE.tone.includes(c), c);
+  for (const c of [...HAIR_COLORS, ...HAIR_DYES]) assert.ok(PALETTE.hair.includes(c), c);
 });
