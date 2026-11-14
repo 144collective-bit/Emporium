@@ -262,3 +262,8 @@ keep it up to date when what it describes changes.
   `addSolids()`), drawn by `endsfarhomes3d.ts` (sites: a bungalow, a pair
   of plots, a run of fence). The compound's back gate, the allotments' east
   gate and their middle path are on one line (`ALLOTMENT.gateZ`).
+  Phase 5 (life and night) is built: `endsfarlife.ts` (DOM-free, the
+  chunk's: `FAR_LOOPS` and `FAR_PEOPLE`, `FAR_IDLE`, `FAR_POOLS`), added by
+  `endsfar3d.ts` on the main thread (`addPeople()`, not on phones: their
+  crowd's reserve is full; the pools one instanced mesh in the FX layer).
+  Lit windows are `LIT_GLASS` in home3d.ts and endsfarhomes3d.ts.
