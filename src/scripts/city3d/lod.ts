@@ -19,8 +19,18 @@ interface Switch {
   apply(near: boolean): void;
   box: THREE.Box3;
   isNear: boolean;
+  /**
+   * A place's far form (`farForm()`): frees its near form's buffers on the GPU, giving the bytes freed. Done once it
+   * has been far `FREE_AFTER` (the stability plan's Phase 3, item 6); three uploads them again when they're next drawn
+   */
+  release?: () => number;
+  /** When it last went far (ms), and the bytes it has freed (0: holding them) */
+  farSince?: number;
+  freed?: number;
 }
 const SWITCHES: Switch[] = [];
+/** How long a place's far form shows before its near form's buffers are freed (a camera on the line never churns) */
+export const FREE_AFTER = 15000;
 
 /** Call `apply(near)` whenever the camera crosses the swap distance from `box` (world numbers); it starts near */
 export function addLodSwitch(apply: (near: boolean) => void, box: THREE.Box3) {
@@ -38,19 +48,28 @@ export function addLod(near: THREE.Object3D[], far: THREE.Object3D[], box: THREE
   }, box);
 }
 
-/** Swap every switch for a camera at x, y, z (near within `far`) */
-export function updateLods(x: number, y: number, z: number, far: number) {
+/** Swap every switch for a camera at x, y, z (near within `far`); `now` (ms) times the freeing of near forms */
+export function updateLods(x: number, y: number, z: number, far: number, now = performance.now()) {
   for (const s of SWITCHES) {
     const { min, max } = s.box;
     const near = isNear(boxDistance(x, y, z, min.x, min.y, min.z, max.x, max.y, max.z), far, s.isNear);
-    if (near === s.isNear) continue;
-    s.isNear = near;
-    s.apply(near);
+    if (near !== s.isNear) {
+      s.isNear = near;
+      s.apply(near);
+      s.farSince = now;
+      // (coming near: what was freed is uploaded again as it's drawn)
+      if (near) s.freed = 0;
+    } else if (!near && s.release && !s.freed && now - (s.farSince ?? now) > FREE_AFTER) s.freed = s.release() || 1;
   }
 }
 
 /** How many switches are showing their far form (the ?fps readout) */
 export const farLods = () => SWITCHES.filter((s) => !s.isNear).length;
+/** The places whose near forms are freed on the GPU, and the bytes (the ?fps readout, `__mem()`) */
+export const freedNear = () => {
+  const list = SWITCHES.filter((s) => s.freed);
+  return { places: list.length, bytes: list.reduce((n, s) => n + (s.freed ?? 0), 0) };
+};
 
 /* ---------- A place's far form ---------- */
 
@@ -370,5 +389,23 @@ export function farForm(group: THREE.Object3D) {
   if (!farRoot.children.length) return null;
   group.add(farRoot);
   const box = new THREE.Box3().setFromObject(nearRoot);
-  return addLod([nearRoot], [farRoot], box);
+  const sw = addLod([nearRoot], [farRoot], box);
+  // Far for a while, the near form's geometries are freed on the GPU (the arrays stay, so they come back as they're
+  // next drawn). Its textures and materials are left alone (others share them); a geometry another mesh draws too
+  // is uploaded again by that mesh, once
+  sw.release = () => {
+    const geos = new Set<THREE.BufferGeometry>();
+    nearRoot.traverse((o) => {
+      const g = (o as THREE.Mesh).geometry;
+      if (g) geos.add(g);
+    });
+    let bytes = 0;
+    for (const g of geos) {
+      for (const a of Object.values(g.attributes)) bytes += (a as THREE.BufferAttribute).array?.byteLength ?? 0;
+      bytes += g.index?.array.byteLength ?? 0;
+      g.dispose();
+    }
+    return bytes;
+  };
+  return sw;
 }
