@@ -77,7 +77,7 @@ And for this area:
   concrete and the scale, never in violence or anything that attacks you.
 - **Made-up names only**, fixed copy, as everywhere.
 
-## The layout (`1-sketch-zones.webp`, `2-sketch-streets.webp`)
+## The layout (`1-sketch-zones.webp`, `2-sketch-streets.webp`, `3-sketch-on-foot.webp`)
 
 Concept sketches, not to scale: what goes where, not the final lines.
 
@@ -87,6 +87,10 @@ Concept sketches, not to scale: what goes where, not the final lines.
   the new south-west exit; **the south-west spoke** over the village's
   hill to the fields; **the south spoke** past Lot 9 to the country; and
   the bent avenues coming in from the east.
+- **On foot** (`3-sketch-on-foot.webp`): every close and crescent has a
+  footpath through to the next street or the green (none left a dead
+  end), back alleys run behind the village's terraced streets and the
+  High Road's rows, and ginnels cut through the rows between them.
 - **Links** between the spokes, meeting them at angles; **the village's
   streets** curving with the ground; **closes and crescents** off them,
   every one ending in a footpath through.
