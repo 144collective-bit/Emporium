@@ -34,6 +34,8 @@ const ON = SLAB + 0.006;
 const OVER = ON + 0.006;
 /** On the open ground (the brook's banks, the rec ground) */
 const GROUND = 0.02;
+/** The brook's banks and water, a little higher still (the valley's mesh) */
+const BROOK_Y = 0.12;
 
 const ASPHALT = toon(ROAD.asphalt);
 const LINE = toon(ROAD.line);
@@ -172,8 +174,9 @@ function registerBrook() {
   pieces(BROOK, BROOK_HALF + 1.8).forEach((pc, k) =>
     site(`south brook ${k}`, pc.rect, (into) => {
       const b = new Batch();
-      b.add(ribbon(pc.pts, -BROOK_HALF - 1.4, BROOK_HALF + 1.4, () => GROUND), BANKS);
-      b.add(ribbon(pc.pts, -BROOK_HALF, BROOK_HALF, () => GROUND + 0.005), WATER);
+      // (a little over the ground: in the valley the ground's mesh is a hair over the curve it follows, kit.ts LIFT_EDGE)
+      b.add(ribbon(pc.pts, -BROOK_HALF - 1.4, BROOK_HALF + 1.4, () => BROOK_Y), BANKS);
+      b.add(ribbon(pc.pts, -BROOK_HALF, BROOK_HALF, () => BROOK_Y + 0.006), WATER);
       b.build(into, { cast: false, receive: true });
     })
   );

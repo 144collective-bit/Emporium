@@ -13,6 +13,7 @@ import { HIGHWAY_BOX, HIGHWAY_HALF } from './highway';
 import type { Box, Pt, Rect } from './underground';
 import { CIRCUS, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, BRIDGES, BULB } from './south';
 import { distTo, inside } from './streetfaces';
+import { southLift } from './southground';
 
 export type { Rect, Pt, Box };
 
@@ -119,7 +120,7 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
       // (and clear of every other street's asphalt)
       const onRoad = !offRoad([x, z], 0.3);
       if (clear(x, z) && !onRoad) {
-        out.push([x, z, Math.atan2(nz, -nx), SLAB_Y]);
+        out.push([x, z, Math.atan2(nz, -nx), SLAB_Y + southLift(x, z)]);
         side = -side;
         d = run + (s.kind === 'close' || s.kind === 'crescent' ? 13 : 15);
       } else d = run + 2;
@@ -129,7 +130,7 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
   const R = CIRCUS.r + CIRCUS.half + 0.45;
   for (const a of [40, 130, 220, 310].map((v) => (v * Math.PI) / 180)) {
     const [x, z] = [CIRCUS.x + R * Math.cos(a), CIRCUS.z + R * Math.sin(a)];
-    if (SOUTH_STREETS.every((o) => o.loop || o.pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > o.half + 0.6))) out.push([x, z, Math.PI - a, SLAB_Y]);
+    if (SOUTH_STREETS.every((o) => o.loop || o.pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > o.half + 0.6))) out.push([x, z, Math.PI - a, SLAB_Y + southLift(x, z)]);
   }
   return out;
 })();

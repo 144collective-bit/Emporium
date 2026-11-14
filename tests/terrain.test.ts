@@ -4,7 +4,10 @@
 // away before the skyline ring, and every aircraft flies well over them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HILLS, TERRAIN_RECT, heightAt, hillsAlong, naturalAt, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { HILLS, TERRAIN_RECT, heightAt, hillsAlong, naturalAt, onCrest, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { onSouthGround } from '../src/scripts/city3d/southground';
+/** The ground's height but the south's rolling ground (docs/south-plan.md Phase 1c: its own, tests/southground.test.ts) */
+const crestAt = (x: number, z: number) => (onSouthGround(x, z) ? 0 : heightAt(x, z));
 import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { SOLIDS, rayBoxes } from '../src/scripts/city3d/solids';
@@ -29,7 +32,7 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
     [400, TERRAIN_RECT[3] + 0.01],
     [400, 200],
   ])
-    assert.equal(heightAt(x, z), 0, `the ground rises at ${x}, ${z}`);
+    assert.equal(crestAt(x, z), 0, `the ground rises at ${x}, ${z}`);
   // Every street of the plan, along its centre line and out to its edges, and every block's outline
   // (but the hill roads, which climb the hills on their beds: crestmont.ts, tests/crestmont.test.ts)
   for (const s of PLAN.streets.filter((s) => !HILL_ROADS.some((r) => r.id === s.id)))
@@ -46,22 +49,22 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
           [0, s.half + 1],
           [0, -s.half - 1],
         ])
-          assert.equal(heightAt(x + dx, z + dz), 0, `${s.id} rises at ${(x + dx).toFixed(0)}, ${(z + dz).toFixed(0)}`);
+          assert.equal(crestAt(x + dx, z + dz), 0, `${s.id} rises at ${(x + dx).toFixed(0)}, ${(z + dz).toFixed(0)}`);
       }
     }
-  for (const blk of PLAN.blocks) for (const [x, z] of blk.poly) assert.equal(heightAt(x, z), 0, `block ${blk.id}`);
+  for (const blk of PLAN.blocks) for (const [x, z] of blk.poly) assert.equal(crestAt(x, z), 0, `block ${blk.id}`);
   // The ring highway with its verges, the kart park, everything solid, every place you arrive at
-  for (const [x, z] of HIGHWAY) assert.equal(heightAt(x + HIGHWAY_HALF + 4, z) + heightAt(x - HIGHWAY_HALF - 4, z), 0);
+  for (const [x, z] of HIGHWAY) assert.equal(crestAt(x + HIGHWAY_HALF + 4, z) + crestAt(x - HIGHWAY_HALF - 4, z), 0);
   for (const [x, z] of [
     [KART_PARK.x0, KART_PARK.z0],
     [KART_PARK.x1, KART_PARK.z0],
     [KART_PARK.x1, KART_PARK.z1],
   ])
-    assert.equal(heightAt(x, z), 0);
+    assert.equal(crestAt(x, z), 0);
   // (but the hills' mansions and landmarks, which stand on their ground up there: tests/mansions.test.ts, tests/crestsites.test.ts)
-  for (const b of SOLIDS.filter((b) => !MANSION_SOLIDS.includes(b) && !SITE_SOLIDS.includes(b))) for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) assert.equal(heightAt(x, z), 0, `a solid at ${x}, ${z} is on the hills`);
+  for (const b of SOLIDS.filter((b) => !MANSION_SOLIDS.includes(b) && !SITE_SOLIDS.includes(b))) for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) assert.equal(crestAt(x, z), 0, `a solid at ${x}, ${z} is on the hills`);
   // (but the landmarks up in the hills: the overlook and the reservoir, tests/crestsites.test.ts)
-  for (const p of PLACES.filter((p) => p.id !== 'overlook' && p.id !== 'reservoir')) assert.equal(heightAt(p.at.x, p.at.z), 0, `${p.id} is on the hills`);
+  for (const p of PLACES.filter((p) => p.id !== 'overlook' && p.id !== 'reservoir')) assert.equal(crestAt(p.at.x, p.at.z), 0, `${p.id} is on the hills`);
 });
 
 test("gentle hills to 45-60 m (the owner's call), never under the ground, smooth enough to walk and drive", () => {
@@ -132,10 +135,11 @@ test('a ray stops on the hills where it first meets them, and passes where it ne
 });
 
 test('every aircraft that crosses the hills (none does today) flies well over them', () => {
+  // (Crestmont's hills: the south's rolling ground is a storey or two, under the approach, tests/southground.test.ts)
   for (let t = 0; t < PERIOD; t += 0.25)
     for (const f of FLIGHTS) {
       const p = poseAt(f, t);
-      if (!onHills(p.x, p.z)) continue;
+      if (!onCrest(p.x, p.z)) continue;
       const [x0, z0, x1, z1] = AIRSIDE;
       if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1) continue;
       assert.ok(p.y > heightAt(p.x, p.z) + 10, `${f.id} is ${(p.y - heightAt(p.x, p.z)).toFixed(1)} over the hills at ${p.x.toFixed(0)}, ${p.z.toFixed(0)}`);
