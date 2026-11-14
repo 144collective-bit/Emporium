@@ -47,6 +47,15 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   brook between its banks and the bridge's parapets, the hedges, the rec ground's and the churchyard's grass, the
   compound's paved plot and the compound itself (`registerHome()`, home3d.ts), and Lot 9's tunnel under the ring road
   (`tunnel3d.ts`, the estate's subway dressing it always had).
+- **The blocks** (`southblocks.ts`, DOM-free, tested in `tests/southblocks.test.ts`, docs/south-plan.md Phase 2): data
+  only so far (2a), drawn in 2b, walked in 2c. `BLOCKS` (the Rampart, Harrier and Kite Points, The Core, Linnet, Marten
+  and Wren Courts, Sorrel, Fennel and Teasel Houses: each its footprint, spine, depth, galleried side, steps of storeys,
+  base, accent; the Rampart's `arch`, Teasel's `refit`), `CORES` (the stair cores), `GALLERIES` (every third floor,
+  `SKY_FLOORS`), `BRIDGES` and `DECKS` (the sky network), `COURTS`, `GRASS`, `DESIRE_LINES`, `PLAY`, `BUNKER` (Bunker
+  Sound's door), `BLOCK_SOLIDS` (strips over each footprint, `cover()`; not in solids.ts until they're drawn). Heights
+  by `floorY()` / `roofY()` / `topOf()`: a storey 1, the ground floor `GROUND_H` 1.4. The slabs round the Circus follow
+  their streets (`alongStreet()`: the street moved off to its side); a block's base is its slab over the highest ground
+  under it.
 - **The rolling ground** (`southground.ts`, docs/south-plan.md Phase 1c, tested in `tests/southground.test.ts`): the
   village's hill (`HILL_H` 2.4, St Aldwyn's on top), swells in the fields, the brook's valley, today's ground wherever
   the south meets what's fixed (`freedom()`); each street on a bed (`ROAD_BEDS`, one in ten at most, level across, the
