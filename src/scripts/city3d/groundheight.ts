@@ -36,9 +36,7 @@ import { skyDeckY } from './skydeck';
 import { mallFloor } from './mallinside';
 import { inChannel, shoreY } from './river';
 import { LOT9_PASSAGE } from './lot9';
-import { SUBWAYS, WELL } from './endswood';
 import { underworld } from './underground';
-import { endsDeckY } from './endsdecks';
 import { heightAt, onHills } from './terrain';
 import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
@@ -82,11 +80,9 @@ export function baseAt(x: number, z: number): { base: number; open: boolean; sla
 }
 
 /** What's below street level for walking (underground.ts): Lot 9's tunnel under the highway, Endswood's subways and its well */
-export const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS], [WELL]);
+export const UNDER = underworld([LOT9_PASSAGE], []);
 
 export const GROUND_LAYERS: GroundLayer[] = [
-  // Endswood's galleries and bridges, when `yNow` is up there (endsdecks.ts; over the subways' ramps too)
-  { id: 'endsdecks', how: 'take', at: (x, z, yNow) => endsDeckY(x, z, yNow) },
   // Degen's roof terrace, when `yNow` is up there (home.ts; the room is under it)
   { id: 'homeroof', how: 'take', at: (x, z, yNow) => homeRoofY(x, z, yNow) },
   // Below ground (underground.ts): Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and

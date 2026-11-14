@@ -66,8 +66,8 @@ it and has been retired completely. Build only on what's here.
 | The Neon Mile, its resorts, shows and monorail | `docs/guide/neon-mile.md` |
 | Sunridge | `docs/guide/sunridge.md` |
 | Lot 9, its tunnel and the Field | `docs/guide/lot9.md` |
-| Everything south of The Trenches redesigned (Endswood, Aldwyn's Green, Lot 9: planned, not built) | `docs/south-plan.md` |
-| Endswood Estate, what's below ground, its decks, Endswood carried west, Degen's home (`docs/home-plan.md`), the far west and his compound (`docs/ends-far-west-plan.md`) | `docs/guide/endswood.md` |
+| Everything south of The Trenches redesigned (Endswood, Aldwyn's Green, Lot 9), its phases | `docs/south-plan.md` |
+| Endswood as re-laid: the street web (`south.ts`), its land, lamps and places, Degen's home and compound (`docs/home-plan.md`) | `docs/guide/endswood.md` |
 | The raised highway, its exits, turn lanes, country roads, street wear | `docs/guide/highway.md` |
 | The ground palette, ground cover, verges, rolls, Southfield, the fringes, lamps by district, the seams, the review shots | `docs/guide/blend.md` |
 | Palm Court and Starlight Mall, inside the mall | `docs/guide/mall.md` |

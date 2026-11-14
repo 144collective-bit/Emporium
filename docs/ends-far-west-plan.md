@@ -1,5 +1,8 @@
 # The Ends' far west, and Degen's compound (a plan)
 
+> **Superseded (2026-11-14):** the south of The Trenches was re-laid (`docs/south-plan.md` Phase 1b, the owner's
+> call). What this plan built was taken up; it's kept as the history of how the estate was. Degen's compound stayed.
+
 The owner's call (2026-11-13): Degen's home is a landmark and deserves its
 own design; it may move; the Ends still needs work, so build it as the
 next phase of building in the Ends. Nothing is built until the owner signs

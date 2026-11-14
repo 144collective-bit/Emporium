@@ -30,10 +30,6 @@ import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
-import { WEST_LAMPS as ENDS_WEST_LAMPS } from './endswest';
-import { FAR_LAMPS as ENDS_FAR_LAMPS } from './endsfar';
-import { ENDS_TREES } from './endsstreet';
-import { COMMON_LAMPS, COMMON_TREES } from './endsblend';
 import { RURAL_LAMPS } from './ruraldress';
 import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
@@ -60,7 +56,6 @@ import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
-import { endsLiftDoors, endsLiftRide } from './endsdecks';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -418,17 +413,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   SF_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Lot 9's (lot9.ts): sodium along its lanes, by the gate and at the tunnel's mouth; its people about (phones: half)
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
-  // Endswood's (endswood.ts, docs/estate-plan.md): sodium along Endswood Road and the Close, round the Circus, the well and the spine
+  // The south's (endswood.ts, docs/south-plan.md Phase 1b): sodium along every street of the re-laid estate and village
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
-  // ...and carried west (endswest.ts, docs/ends-west-plan.md Phase 1): along the Close, in the courts, over the greens
-  for (const [x, z, ry, y] of ENDS_WEST_LAMPS) addLamp(x, z, ry, y);
-  // ...and its far west (endsfar.ts)
-  for (const [x, z, ry, y] of ENDS_FAR_LAMPS) addLamp(x, z, ry, y);
-  // ...and its trees: the green's, the churchyard's, by the playground and round the community centre (endsstreet.ts, Phase 4)
-  for (const [x, z, s] of ENDS_TREES) addTree(x, z, s, false, SLAB);
-  // ...and the common's down to Lot 9: sodium along the footpath, a few hawthorns (endsblend.ts, Phase 6)
-  for (const [x, z, ry, y] of COMMON_LAMPS) addLamp(x, z, ry, y);
-  for (const [x, z, s] of COMMON_TREES) addTree(x, z, s, false);
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
@@ -1106,15 +1092,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...endsLiftDoors(walk.position.y), ...homePlaces(walk.position.y)],
+    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...homePlaces(walk.position.y)],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
-      if (id.startsWith('lift:ends:')) {
-        // (Endswood's lifts, endsdecks.ts: Fennel House's cores, Harrier Point's lift tower)
-        const r = endsLiftRide(id);
-        return r ? rideTo(r.to, null, 'Endswood', r.arrived) : undefined;
-      }
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
       if (id === 'home:wardrobe') {

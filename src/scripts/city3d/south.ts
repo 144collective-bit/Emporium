@@ -23,7 +23,7 @@
  * band along the ring road, the estate round the Circus, the council rows, the village, the bungalows.
  */
 import { GATES, HEAD, PLOT } from './endsfar';
-import { area, cross, distTo, faces, inside, nearestIndex, node, seeded, smooth, type FaceBlock, type GraphLine, type Pt } from './streetfaces';
+import { area, cross, distTo, faces, inside, nearestIndex, node, seeded, selfCrossings, smooth, type FaceBlock, type GraphLine, type Pt } from './streetfaces';
 
 export type { Pt };
 type Rect = [number, number, number, number];
@@ -83,31 +83,35 @@ export const CHURCH_ROAD = S('south-church', 'Church Road', 'main', [
   ...spoke(150), [-104, 433], [-122, 440], [-142, 446], [-160, 445], [-176, 442], [-192, 440], [-208, 440], [-222, 442], [-236, 446], [-252, 451], [-266, 456], [-284, 465], [-300, 473], [-318, 476], [-340, 475], [-360, 470], [-378, 466], [-400, 469], [-424, 474],
 ]);
 export const SOUTHFOLD = S('south-southfold', 'Southfold Lane', 'main', [
-  ...spoke(105), [-90, 446], [-97, 458], [-108, 469], [-118, 480], [-126, 490], [-133, 502], [-138, 514], [-143, 526], [-149, 538], [-155, 552], [-159, 568], [-161, 584], [-162, 600],
+  ...spoke(105), [-91, 445], [-102, 454], [-118, 459], [-134, 464], [-143, 474], [-148, 486], [-151, 500], [-153, 514], [-154, 526], [-155, 540], [-157, 556], [-160, 572], [-162, 588], [-163, 604],
 ]);
 export const GATE_LANE = S('south-gate', 'Gate Lane', 'main', [[-229, 340.5], [-221, 343], [-216.3, 350], [-216, 358], HEAD, [-216, 402], [-216.5, 410], [-221, 420], [-229, 432], on(CHURCH_ROAD, [-236, 446])]);
 export const FIELD_LANE = S('south-field', 'Field Lane', 'main', [[-229, 340.5], [-245, 338.5], [-262, 338.5], [-282, 341], [-300, 343], [-320, 341], [-340, 339], [-360, 342], [-380, 346], [-400, 344], [-424, 342]]);
 // ns1s bent in to the Circus (Endswood Road), ns2s down to Southfold Lane (Marsh Lane)
 const NS1_BEND: Pt = [AVE.ns1s.x, 350];
 const NS2_BEND: Pt = [AVE.ns2s.x, 358];
+/** Where the bent avenues' straight runs end (streetplan.ts ends ns1s and ns2s there: the south's streets go on) */
+export const NS_BENDS: Record<'ns1s' | 'ns2s', number> = { ns1s: NS1_BEND[1], ns2s: NS2_BEND[1] };
+/** Where Lot Lane meets Lot 9's own lane, through its west gate (lot9.ts `lot9-road`'s west end) */
+export const LOT9_W: Pt = [-118, 507];
 export const ENDSWOOD_ROAD = S('south-endswood', 'Endswood Road', 'main', [NS1_BEND, [16.5, 362], [14, 376], [8, 390], [-2, 401], [-14, 408], [-30, 412], [-46, 414], [-60, 414.5], ...spoke(345).reverse()]);
-export const MARSH_LANE = S('south-marsh', 'Marsh Lane', 'main', [NS2_BEND, [42.5, 376], [41, 394], [36, 410], [28, 424], [16, 434], [0, 442], [-16, 448], [-34, 452], [-56, 456], [-78, 458], on(SOUTHFOLD, [-97, 458])]);
+export const MARSH_LANE = S('south-marsh', 'Marsh Lane', 'main', [NS2_BEND, [42.5, 376], [41, 394], [36, 410], [28, 424], [16, 434], [0, 442], [-16, 448], [-34, 452], [-56, 455], [-78, 455], on(SOUTHFOLD, [-98, 452])]);
 // The links between the spokes
 export const FENNEL_WAY = S('south-fennel', 'Fennel Way', 'link', [on(UNDERHILL, [-102, 368]), [-114, 371], [-128, 372], [-150, 366], [-176, 353], [-200, 346], on(GATE_LANE, [-216.5, 352])]);
 export const RUNWAY_VIEW = S('south-runway', 'Runway View', 'link', [on(MARSH_LANE, [36, 410]), [46, 420], [56, 428], [AVE.ns3.x, 434]]);
-export const LOT_LANE = S('south-lot', 'Lot Lane', 'link', [on(SOUTHFOLD, [-108, 469]), [-99, 476], [-90, 476.5], [-78, 480]]);
+export const LOT_LANE = S('south-lot', 'Lot Lane', 'link', [on(SOUTHFOLD, [-151, 500]), [-142, 505], [-134, 506.6], [-126, 507.2], LOT9_W]);
 export const BRAMBLE_LANE = S('south-bramble', 'Bramble Lane', 'link', [on(FIELD_LANE, [-262, 338.5]), [-268, 352], [-274, 368], [-282, 388], [-288, 408], [-292, 428], [-290, 446], [-286, 458], on(CHURCH_ROAD, [-284, 465])]);
 export const BROOKSIDE = S('south-brookside', 'Brookside', 'link', [
-  on(CHURCH_ROAD, [-142, 446]), [-146, 460], [-150, 476], [-158, 494], [-168, 506], [-180, 515], [-196, 521], [-212, 524], [-230, 525], [-248, 522], [-266, 515], [-282, 506], [-296, 496], [-308, 486], on(CHURCH_ROAD, [-318, 476]),
+  on(CHURCH_ROAD, [-160, 445]), [-164, 460], [-167, 476], [-171, 492], [-179, 506], [-190, 515], [-202, 520], [-212, 524], [-230, 525], [-248, 522], [-266, 515], [-282, 506], [-296, 496], [-308, 486], on(CHURCH_ROAD, [-318, 476]),
 ]);
 // The village's streets (the owner's photo: red-brick terraces), curving with the ground
 export const BELL_STREET = S('south-bell', 'Bell Street', 'street', [on(HIGH_ROAD, [-152, 393]), [-156, 404], [-160, 414], [-165, 428], [-171, 436], on(CHURCH_ROAD, [-176, 442])]);
 export const YEW_WALK = S('south-yew', 'Yew Walk', 'street', [on(BELL_STREET, [-160, 414]), [-146, 417], [-134, 424], on(CHURCH_ROAD, [-122, 440])]);
 export const CHAPEL_ROW = S('south-chapel', 'Chapel Row', 'street', [on(CHURCH_ROAD, [-192, 440]), [-186, 450], [-184, 466], [-188, 480], [-200, 489], [-216, 492], [-232, 491], [-246, 486], [-256, 476], [-262, 465], on(CHURCH_ROAD, [-266, 456])]);
-export const ORCHARD_STREET = S('south-orchard', 'Orchard Street', 'street', [on(BROOKSIDE, [-150, 476]), [-162, 478], [-176, 481], on(CHAPEL_ROW, [-188, 480])]);
+export const ORCHARD_STREET = S('south-orchard', 'Orchard Street', 'street', [on(BROOKSIDE, [-167, 476]), [-177, 479], on(CHAPEL_ROW, [-188, 480])]);
 export const LARK_STREET = S('south-lark', 'Lark Street', 'street', [on(CHAPEL_ROW, [-216, 492]), [-214, 502], [-212, 513], on(BROOKSIDE, [-212, 524])]);
 export const HILL_STREET = S('south-hill', 'Hill Street', 'street', [on(CHAPEL_ROW, [-246, 486]), [-250, 498], [-252, 510], on(BROOKSIDE, [-248, 522])]);
-export const MILL_STREET = S('south-mill', 'Mill Street', 'street', [on(SOUTHFOLD, [-126, 490]), [-136, 492], [-147, 493], on(BROOKSIDE, [-158, 494])]);
+export const MILL_STREET = S('south-mill', 'Mill Street', 'street', [on(SOUTHFOLD, [-148, 486]), [-157, 489], on(BROOKSIDE, [-171, 492])]);
 export const THORN_STREET = S('south-thorn', 'Thorn Street', 'street', [on(CHURCH_ROAD, [-252, 451]), [-262, 444], [-276, 436], on(BRAMBLE_LANE, [-292, 428])]);
 
 /** The Circus itself: one way round */
@@ -143,11 +147,13 @@ export const COMPOUND: Rect = [PLOT[0], PLOT[1], PLOT[2], PLOT[3]];
 export const CHURCHYARD: Pt[] = [[-219, 451], [-205, 449], [-192, 451], [-190, 462], [-193, 473], [-207, 475], [-220, 472], [-222, 461]];
 /** Lot 9's new fence (the owner's pick: it hugs the brook's bank on its west side and wanders with the slope) */
 export const LOT9_EDGE: Pt[] = [
-  [-114, 486], [-100, 481], [-84, 480], [-66, 483], [-48, 481], [-32, 485], [-22, 492], [-19, 506], [-21, 522], [-18, 538], [-24, 552], [-40, 558], [-50, 559.5], [-60, 556], [-70, 558.5], [-80, 559], [-98, 556], [-117, 558], [-120, 546], [-126, 534], [-121, 520], [-117, 508], [-118, 498],
+  [-128, 470], [-112, 468.5], [-96, 470], [-80, 468], [-64, 469.5], [-48, 468], [-32, 470], [-21, 474], [-19, 490], [-20, 506], [-18.5, 522], [-20, 538], [-18.5, 554], [-20, 570], [-18.5, 586], [-20, 602], [-21, 618], [-38, 621], [-56, 619.5], [-74, 621.5], [-92, 619.5], [-110, 621], [-119.5, 610], [-118, 594], [-120, 578], [-118.5, 562], [-120, 548], [-129, 545], [-130, 530], [-128.5, 514], [-130, 498], [-128.5, 484],
 ];
+/** The land Lot 9's fence keeps inside (its agreed bounds: the park, its camp moved south of it, the strip between) */
+export const LOT9_BOUNDS: Rect[] = [[-131, 467, -17, 546], [-121, 546, -17, 623]];
 /** The brook's centre line, from the fields in the west along the village's south edge, on past Lot 9 */
 export const BROOK: Pt[] = smooth([
-  [-430, 490], [-400, 491], [-372, 498], [-340, 512], [-318, 522], [-300, 530], [-280, 537], [-262, 540], [-240, 539], [-214, 537], [-190, 535], [-170, 534], [-155, 533], [-146, 532], [-136, 538], [-128, 548], [-124, 560], [-121, 576], [-119, 592], [-118, 610],
+  [-430, 490], [-400, 491], [-372, 498], [-340, 512], [-318, 522], [-300, 530], [-280, 537], [-262, 540], [-240, 539], [-214, 537], [-190, 535], [-170, 534], [-155, 533], [-147, 535], [-141, 541], [-137, 552], [-134, 566], [-132, 586], [-131, 610],
 ], 2);
 /** Its water's half width */
 export const BROOK_HALF = 1.2;
@@ -164,7 +170,6 @@ export const HEDGES: Pt[][] = [
   [[-372, 524], [-380, 560], [-376, 600]],
   [[-292, 578], [-250, 584], [-214, 580], [-190, 590], [-170, 600]],
   [[-214, 580], [-220, 610]],
-  [[-108, 575], [-80, 580], [-50, 576], [-20, 584], [-10, 590]],
 ].map((h) => smooth(h as Pt[], 3));
 
 /* ---------- The zones ---------- */
@@ -226,6 +231,7 @@ const keptOff = (x: number, z: number, m: number) =>
   (x > COMPOUND[0] - m && x < COMPOUND[2] + m && z > COMPOUND[1] - m && z < COMPOUND[3] + m) ||
   inside(CHURCHYARD, [x, z]) || distTo(CHURCHYARD, [x, z], true) < m ||
   inside(LOT9_EDGE, [x, z]) || distTo(LOT9_EDGE, [x, z], true) < m ||
+  LOT9_BOUNDS.some((r) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m) ||
   distTo(BROOK, [x, z]) < BROOK_HALF + m + 2 ||
   inside(REC, [x, z]);
 
@@ -269,13 +275,14 @@ const grown = (() => {
     return true;
   };
   /** From a point, a footpath out to the nearest other street (not those given) within reach */
-  const pathFrom = (e: Pt, own: number[]): Pt | null => {
+  const pathFrom = (e: Pt, own: number[], notTo: number, ahead: Pt): Pt | null => {
     const cands: [number, Pt, number][] = [];
     all.forEach((s, i) => {
-      if (own.includes(i)) return;
+      if (own.includes(i) || i === notTo) return;
       for (const q of s.pts) {
         const d = Math.hypot(q[0] - e[0], q[1] - e[1]);
-        if (d > 4 && d < 36) cands.push([d, q, i]);
+        // (on ahead, out past the close's end or the crescent's back: never back the way it came)
+        if (d > 4 && d < 36 && ((q[0] - e[0]) * ahead[0] + (q[1] - e[1]) * ahead[1]) / d > 0.35) cands.push([d, q, i]);
       }
     });
     cands.sort((p, q) => p[0] - q[0]);
@@ -284,7 +291,7 @@ const grown = (() => {
   };
   let tries = 0;
   let crescents = 0;
-  while (tries++ < 9000 && streets.length < NAMES.length) {
+  while (tries++ < 16000 && streets.length < NAMES.length) {
     const pi = Math.floor(rnd() * parents.length);
     const par = parents[pi];
     const parIdx = MAIN.indexOf(par);
@@ -335,6 +342,8 @@ const grown = (() => {
       const p = pts[k];
       const zn = zoneAt(p[0], p[1]);
       if (!GROWS.includes(zn) || keptOff(p[0], p[1], crescent ? 3 : 4)) ok = false;
+      // (and over no footpath laid already)
+      if (ok && paths.some((fp) => distTo(fp.pts, p) < HALF + PATH_HALF + 0.5)) ok = false;
       // (clear of every other street; of its parent but where it leaves it, and comes back to it)
       const fromStart = Math.hypot(p[0] - sx0, p[1] - sz0);
       const fromEnd = Math.hypot(p[0] - end[0], p[1] - end[1]);
@@ -351,7 +360,11 @@ const grown = (() => {
     const own = [all.length];
     const from = crescent ? pts[Math.floor(pts.length / 2)] : end;
     all.push({ id, name: '', kind: 'close', pts, half: HALF });
-    const to = pathFrom(from, own);
+    // (the way on: past a close's end along its last stretch; out from a crescent's back, away from its parent)
+    const tail = pts.length - 1;
+    const ahead: Pt = crescent ? [nx0, nz0] : [pts[tail][0] - pts[tail - 3][0], pts[tail][1] - pts[tail - 3][1]];
+    const al = Math.hypot(ahead[0], ahead[1]) || 1;
+    const to = pathFrom(from, own, parIdx, [ahead[0] / al, ahead[1] / al]);
     if (!to) {
       all.pop();
       continue;
@@ -416,7 +429,12 @@ const centroid = (poly: Pt[]): Pt => {
   return a ? [cx / (3 * a), cz / (3 * a)] : poly[0];
 };
 /** The blocks between the streets, each with the zone it's mostly in */
-export const SOUTH_BLOCKS: SouthBlock[] = faces(GRAPH, SOUTH_STREETS.filter((s) => s.bulb).map((s) => ({ at: s.pts[s.pts.length - 1], r: BULB })), 'south-b', WALK).map((b) => {
+const FACES = faces(GRAPH, SOUTH_STREETS.filter((s) => s.bulb).map((s) => ({ at: s.pts[s.pts.length - 1], r: BULB })), 'south-b', WALK);
+/** A face too thin for anything to stand on (inside a tight crescent, say): left as the grass of the verge */
+const sliver = (b: FaceBlock) => Math.abs(area(b.poly)) < 120 || selfCrossings(b.poly) > 0;
+/** The slivers' outlines (the greens between a crescent and its street) */
+export const SOUTH_GREENS: Pt[][] = FACES.filter(sliver).map((b) => b.poly);
+export const SOUTH_BLOCKS: SouthBlock[] = FACES.filter((b) => !sliver(b)).map((b, i) => ({ ...b, id: `south-b${i}` })).map((b) => {
   const c = centroid(b.poly);
   const zone = inside(b.poly, c) ? zoneAt(c[0], c[1]) : zoneAt(b.poly[0][0], b.poly[0][1]);
   return { ...b, zone };
@@ -432,6 +450,15 @@ export const BRIDGES: { street: string; at: Pt }[] = (() => {
     }
   return out;
 })();
+
+/** The estate's land round the Circus and along the ring road, and the village's and the rows' (ground.ts: what
+ * covers their ground) */
+export const ESTATE_LAND: Rect = [-176, EDGE_Z, AVE.ns3.x, 470];
+export const VILLAGE_LAND: Rect = [-322, EDGE_Z, -104, 530];
+
+/** What the south's drawing covers (districts.ts: its chunk loads as you come near): the streets, the brook, the
+ * hedges and the fields' edge, the tunnel's mouth */
+export const SOUTH_DRAWN: Rect = [-432, 300, 66, 615];
 
 /** The compound's gates face Gate Lane (endsfar.ts `GATES`), at `HEAD` */
 export const COMPOUND_GATES = { ...GATES, on: GATE_LANE.id };

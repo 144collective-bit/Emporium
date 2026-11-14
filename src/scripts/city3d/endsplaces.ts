@@ -1,20 +1,16 @@
 /*
- * Endswood's places (docs/estate-plan.md Phase 8; DOM-free, the boot's, tested in tests/endsplaces.test.ts): the
- * estate itself (its spot on the tenants' hall at the parade's east end), St Aldwyn's and Bunker Sound. Each has a
- * pin, a panel with Walk in (CityMap.astro), its pick boxes (index.ts, through crestspots.ts `spot()`; the drawing is
- * the chunk's), a door that opens its panel (walk.ts `ALL_DOORS`, `ENDS_DOORS`) and where you arrive (`ENDS_SPAWNS`:
- * the panel's Walk in, places.ts). The storyline starts at Lot 9; these say "coming soon".
+ * Endswood's places (docs/estate-plan.md Phase 8; re-sited with the south, docs/south-plan.md Phase 1b, the owner's
+ * call: their pins stand where they're to be built, still "coming soon", no doors until their buildings go up; DOM-free,
+ * the boot's, tested in tests/endsplaces.test.ts): the estate itself (its pin over the Circus, the heart), St Aldwyn's
+ * (over its churchyard on the village's hilltop) and Bunker Sound (by Endswood Road, under a block in Phase 2). Each
+ * has a pin, a panel with Walk in (CityMap.astro), its pick boxes (index.ts, through crestspots.ts `spot()`) and where
+ * you arrive (`ENDS_SPAWNS`: the panel's Walk in, places.ts).
  */
-import { BLOCKS, topOf } from './endsblocks';
-import { CHURCH, CHURCHYARD, CHURCH_PARTS, PARADE, PARADE_UNITS, SPIRE_TOP, STUDIO, unitX } from './endsstreet';
-import { SLAB_Y, type Rect } from './endswood';
+import { CHURCHYARD, CIRCUS } from './south';
+import type { Rect } from './endswood';
 
 export type EndsPlaceId = 'endswood' | 'aldwyns' | 'bunker';
 export const ENDS_PLACE_IDS: EndsPlaceId[] = ['endswood', 'aldwyns', 'bunker'];
-
-const parade = BLOCKS.find((b) => b.id === 'parade')!;
-const HALL = PARADE_UNITS.findIndex((u) => u.kind === 'hall');
-const [hx0, hx1] = unitX(HALL);
 
 /** Each one's pick boxes (over its ground, `h` tall), the land its hover ring goes round, the pin's spot and height,
  * and the way the fly-in comes from (the side it faces) */
@@ -26,46 +22,47 @@ export interface EndsSpot {
   pinH: number;
   faces?: 'n';
 }
+const box = (pts: [number, number][]): Rect => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+const YARD = box(CHURCHYARD);
+/** Bunker Sound's ground, north of Endswood Road west of the south avenue (its block is Phase 2's) */
+const BUNKER: Rect = [-60, 398, -52, 406];
+const ISLAND = CIRCUS.r - CIRCUS.half;
 export const ENDS_SPOTS: EndsSpot[] = [
   {
-    // The estate: the parade, the pin over the tenants' hall (it faces the road, north)
+    // The estate: the pin over the Circus's island
     id: 'endswood',
-    boxes: [{ rect: [PARADE.x0, PARADE.z, PARADE.x1, PARADE.back], h: topOf(PARADE.storeys) - SLAB_Y }],
-    land: [PARADE.x0, PARADE.z, PARADE.x1, PARADE.back],
-    pin: [(hx0 + hx1) / 2, (PARADE.z + PARADE.back) / 2],
-    pinH: topOf(PARADE.storeys) - SLAB_Y + 2.4,
-    faces: 'n',
+    boxes: [{ rect: [CIRCUS.x - ISLAND, CIRCUS.z - ISLAND, CIRCUS.x + ISLAND, CIRCUS.z + ISLAND], h: 1.2 }],
+    land: [CIRCUS.x - ISLAND, CIRCUS.z - ISLAND, CIRCUS.x + ISLAND, CIRCUS.z + ISLAND],
+    pin: [CIRCUS.x, CIRCUS.z],
+    pinH: 6,
   },
   {
-    // St Aldwyn's: the nave, aisles, chancel and the tower; the pin over the spire (its west door faces the road, south)
+    // St Aldwyn's: the pin over its churchyard on the hill (its church is Phase 3's)
     id: 'aldwyns',
-    boxes: [...CHURCH_PARTS.map((p) => ({ rect: p.rect, h: p.ridge })), { rect: CHURCH.tower.rect, h: CHURCH.tower.pinnacle }],
-    land: CHURCHYARD,
-    pin: [(CHURCH.tower.rect[0] + CHURCH.tower.rect[2]) / 2, (CHURCH.tower.rect[1] + CHURCH.tower.rect[3]) / 2],
-    pinH: SPIRE_TOP + 1.8,
+    boxes: [{ rect: YARD, h: 1.2 }],
+    land: YARD,
+    pin: [(YARD[0] + YARD[2]) / 2, (YARD[1] + YARD[3]) / 2],
+    pinH: 6,
   },
   {
-    // Bunker Sound: its two garages in Linnet Court's north face, the pin over them (they face north, the yard)
+    // Bunker Sound: the pin over its ground by Endswood Road (it faces the road, south)
     id: 'bunker',
-    boxes: [{ rect: [STUDIO.x0, STUDIO.z, STUDIO.x1, STUDIO.z + 1.6], h: topOf(0) - SLAB_Y }],
-    land: [STUDIO.x0 - 1.5, STUDIO.z - 4.4, STUDIO.x1 + 1.5, STUDIO.z + 1],
-    pin: [(STUDIO.x0 + STUDIO.x1) / 2, STUDIO.z + 0.8],
-    // (over Linnet Court's roof, its four storeys over the garages)
-    pinH: topOf(4) - SLAB_Y + 1.8,
-    faces: 'n',
+    boxes: [{ rect: BUNKER, h: 1.2 }],
+    land: BUNKER,
+    pin: [(BUNKER[0] + BUNKER[2]) / 2, (BUNKER[1] + BUNKER[3]) / 2],
+    pinH: 5,
   },
 ];
 
-/** The doors (walk prompts that open each panel): the tenants' hall's, the church's west door, the studio's */
-export const ENDS_DOORS: { id: EndsPlaceId; x: number; z: number; label: string }[] = [
-  { id: 'endswood', x: parade.door[0], z: parade.door[1], label: "Tenants' Hall" },
-  { id: 'aldwyns', x: CHURCH.door[0], z: CHURCH.door[1] + 0.4, label: "St Aldwyn's" },
-  { id: 'bunker', x: STUDIO.door[0], z: STUDIO.door[1], label: 'Bunker Sound' },
-];
+/** The doors (walk prompts that open each panel): none until their buildings stand (Phases 2 and 3) */
+export const ENDS_DOORS: { id: EndsPlaceId; x: number; z: number; label: string }[] = [];
 
-/** Where you arrive (the panels' Walk in, places.ts): in front of each door, facing it (yaw 0 faces north, π south) */
+/** Where you arrive (the panels' Walk in, places.ts): on a sidewalk by each, facing it (yaw 0 faces north, π south) */
 export const ENDS_SPAWNS: Record<EndsPlaceId, { x: number; z: number; yaw: number }> = {
-  endswood: { x: parade.door[0], z: parade.door[1] - 1.3, yaw: Math.PI },
-  aldwyns: { x: CHURCH.door[0], z: CHURCH.door[1] + 3.4, yaw: 0 },
-  bunker: { x: STUDIO.door[0] + 0.5, z: STUDIO.door[1] - 2.8, yaw: Math.PI },
+  // (on the Circus's outer sidewalk between Underhill Lane and Endswood Road, looking over it)
+  endswood: { x: CIRCUS.x + (CIRCUS.r + CIRCUS.half + 0.5) * Math.cos((300 * Math.PI) / 180), z: CIRCUS.z + (CIRCUS.r + CIRCUS.half + 0.5) * Math.sin((300 * Math.PI) / 180), yaw: Math.PI },
+  // (on Church Road's sidewalk, the churchyard south of it)
+  aldwyns: { x: (YARD[0] + YARD[2]) / 2, z: 443, yaw: Math.PI },
+  // (on Endswood Road's north sidewalk, its ground north of it)
+  bunker: { x: (BUNKER[0] + BUNKER[2]) / 2, z: 411.8, yaw: 0 },
 };

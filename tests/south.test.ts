@@ -6,7 +6,7 @@
 // owner's rule: no ruler-straight edges).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, COMPOUND, EDGE_Z, FOOTPATHS, GATE_LANE, HEDGES, LOT9_EDGE, LOT_LANE, NODED, PATH_HALF, REC, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, zoneAt, type Pt } from '../src/scripts/city3d/south';
+import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, COMPOUND, EDGE_Z, FOOTPATHS, GATE_LANE, HEDGES, LOT9_BOUNDS, LOT9_EDGE, LOT9_W, LOT_LANE, NODED, PATH_HALF, REC, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, zoneAt, type Pt } from '../src/scripts/city3d/south';
 import { area, cross, distTo, inside, selfCrossings } from '../src/scripts/city3d/streetfaces';
 import { HEAD, PLOT } from '../src/scripts/city3d/endsfar';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
@@ -163,18 +163,23 @@ test('the blocks: clean outlines behind their kerbs, none on another, each in a 
   for (const z of ['tall', 'estate', 'council', 'village', 'bungalow']) assert.ok(SOUTH_BLOCKS.some((b) => b.zone === z), `no ${z} block`);
 });
 
-test("Lot 9's new fence: wanders with the land, its west side by the brook, no street through it, Lot Lane at its gate", () => {
+test("Lot 9's new fence: wanders with the land inside its agreed bounds, its west side by the brook, Lot Lane in at its west gate", () => {
   assert.equal(selfCrossings(LOT9_EDGE), 0);
   for (let i = 0; i < LOT9_EDGE.length; i++) {
     const [p, q] = [LOT9_EDGE[i], LOT9_EDGE[(i + 1) % LOT9_EDGE.length]];
     assert.ok(Math.hypot(q[0] - p[0], q[1] - p[1]) <= 20, `a ruler-straight run of fence at ${p}`);
+    assert.ok(LOT9_BOUNDS.some((r) => p[0] >= r[0] && p[0] <= r[2] && p[1] >= r[1] && p[1] <= r[3]), `the fence out of its bounds at ${p}`);
   }
-  for (const s of SOUTH_STREETS) for (const p of s.pts) assert.ok(!inside(LOT9_EDGE, p) && distTo(LOT9_EDGE, p, true) >= Math.min(s.half + WALK_W, s.id === LOT_LANE.id ? 0 : 99), `${s.id} in Lot 9`);
-  const end = LOT_LANE.pts[LOT_LANE.pts.length - 1];
-  assert.ok(distTo(LOT9_EDGE, end, true) < 2, 'Lot Lane reaches its gate');
+  for (const s of SOUTH_STREETS) {
+    if (s.id === LOT_LANE.id) continue;
+    for (const p of s.pts) {
+      assert.ok(!inside(LOT9_EDGE, p) && distTo(LOT9_EDGE, p, true) >= s.half + WALK_W, `${s.id} in Lot 9`);
+      for (const r of LOT9_BOUNDS) assert.ok(toRect(r, p) >= s.half + WALK_W, `${s.id} in Lot 9's bounds at ${p}`);
+    }
+  }
+  assert.ok(near(LOT_LANE.pts[LOT_LANE.pts.length - 1], LOT9_W), "Lot Lane ends on Lot 9's lane");
   for (const p of LOT9_EDGE) assert.ok(distTo(BROOK, p) > BROOK_HALF + 4, 'its fence off the brook');
-  // (its west side along the brook: the fence's west points within reach of the bank)
-  assert.ok(LOT9_EDGE.filter((p) => p[0] < -110 && p[1] > 520).every((p) => distTo(BROOK, p) < 16), 'its west side by the brook');
+  assert.ok(LOT9_EDGE.filter((p) => p[0] < -116 && p[1] > 546).every((p) => distTo(BROOK, p) < 20), 'its west side by the brook');
 });
 
 test('the brook: crossed only at its bridges; the rec ground on its bank; the hedges round the fields', () => {

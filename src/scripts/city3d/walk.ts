@@ -102,7 +102,6 @@ import { ENDS_DOORS } from './endsplaces';
 import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse, onRoof, roofWall } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
-import { endsDeckWall, upOnEnds } from './endsdecks';
 import { HARBOUR_MASTER } from './docksport';
 import { SITE_DOORS } from './crestsites';
 import { RESORTS } from './resorts';
@@ -757,8 +756,6 @@ export function createWalk(d: WalkDeps) {
     if (inHouse(x, z, y)) return homeWall(x, z, RADIUS);
     // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
     if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
-    // Up on Endswood's galleries and bridges (endsdecks.ts): only their parapets, end walls and faces stop you
-    if (upOnEnds(x, z, y)) return endsDeckWall(x, z, y, RADIUS);
     // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
     // at street level the open cuttings' and the well's edges do
     if (UNDER.inZone(x, z)) {

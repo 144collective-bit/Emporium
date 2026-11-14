@@ -68,9 +68,7 @@ import { DECKS, MARKET_DECK } from './waterfront';
 import { PROMENADE } from './outer';
 import { YARDS_RECT, inYards } from './southfield';
 import { ENDSWOOD_RECT, inEndswood } from './endswood';
-import { CHURCH, STUDIO } from './endsstreet';
 import { FOUNTAIN as CIVIC_FOUNTAIN, FOUNTAINS as CIVIC_FOUNTAINS, HALL_BELL, SQUARE as CIVIC_SQUARE } from './civic';
-import { COMMON, inCommon } from './endsblend';
 import { fromWall } from './wall';
 
 export interface Ambience {
@@ -137,8 +135,6 @@ export interface Ambience {
 }
 /** How far from the wall's inner face its sound carries (full at its foot) */
 export const WALL_SOUND = 70;
-/** The church's tower, where its bell hangs */
-const BELFRY = [(CHURCH.tower.rect[0] + CHURCH.tower.rect[2]) / 2, (CHURCH.tower.rect[1] + CHURCH.tower.rect[3]) / 2];
 /** How much of the town's hum Crestmont has (a quiet, well-off hum) */
 export const CREST_HUM = 0.4;
 /** Crestmont's fountains: x, z, the basin's radius */
@@ -300,12 +296,12 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const karts = near(KART_RECT, x, z, 0, 40);
   // The stadium's crowd on a match night (the polish plan's Phase 7): round the ground, carrying well past its block
   const stadium = matchOn(t * 1000) ? near(STADIUM_BLOCK, x, z, 0, 90) : 0;
-  // Endswood: all of it on its land and the common down to Lot 9, fading over 25 past them; the studio's beat by its
-  // door; the church's bell across the estate, fading over a long way
-  const fromEnds = Math.min(inEndswood(x, z) ? 0 : past(ENDSWOOD_RECT, x, z) + 4, inCommon(x, z) ? 0 : past(COMMON, x, z) + 4) - 4;
+  // Endswood: all of it on its land, fading over 25 past it. Bunker Sound's beat and St Aldwyn's bell come back with
+  // their buildings (docs/south-plan.md Phases 2 and 3: the south was re-laid, Phase 1b)
+  const fromEnds = (inEndswood(x, z) ? 0 : past(ENDSWOOD_RECT, x, z) + 4) - 4;
   const ends = 1 - smooth(0, 25, Math.max(0, fromEnds));
-  const studio = 1 - smooth(2, 18, Math.hypot(x - STUDIO.door[0], z - STUDIO.door[1]) + lift * 0.5);
-  const bell = 1 - smooth(25, 170, Math.hypot(x - BELFRY[0], z - BELFRY[1]) + lift * 0.3);
+  const studio = 0;
+  const bell = 0;
   // The civic square: on it, fading over 22 past it and from high over it; City Hall's bell across the park and Uptown
   const civic = near(CIVIC_SQUARE, x, z, 0, 22) * (1 - smooth(8, 40, lift));
   const hallBell = 1 - smooth(30, 200, Math.hypot(x - HALL_BELL[0], z - HALL_BELL[1]) + lift * 0.3);

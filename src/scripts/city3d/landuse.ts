@@ -42,8 +42,9 @@ import { STADIUM_RECTS } from './stadium';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
 import { FOOTPATH as LOT9_PATH, LOT9_RECT } from './lot9';
-import { ENDSWOOD_RECT, FAR_RECT as ENDS_FAR_RECT, WEST_RECT as ENDS_WEST_RECT } from './endswood';
-import { COMMON as ENDS_COMMON } from './endsblend';
+import { ENDSWOOD_RECT, inEndswood } from './endswood';
+import { BROOK, BROOK_HALF, REC } from './south';
+import { distTo, inside } from './streetfaces';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
@@ -107,6 +108,8 @@ const KARTS_GONE: Rect[] = [
 ];
 /** A district's land as a rectangle, kept off by `m` (and the wobble) */
 const land = (id: string, r: Rect, m: number, since = false): Keep => ({ id, since, box: grow(r, m + WOBBLE), hit: (x, z, w) => inRect(r, x, z, m + w) });
+/** A line's or an outline's box */
+const boxOf = (pts: readonly Pt[]): Rect => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
 /** Land with a test of its own (`m` its margin), inside a box */
 const shaped = (id: string, box: Rect, m: number, test: (x: number, z: number, m: number) => boolean): Keep => ({ id, box: grow(box, m + WOBBLE), hit: (x, z, w) => test(x, z, m + w) });
 /** A line kept clear of by `m` either side (its segments' boxes, each its own keep) */
@@ -166,15 +169,12 @@ export const KEEPS: Keep[] = [
   // Southfield (southfield.ts, docs/blend-plan.md Phase 5a): its park, allotments and gardens, and the yards' blocks
   land('southfield', SOUTHFIELD_RECT, 1, true),
   land('southyards', YARDS_RECT, 2, true),
-  // Endswood Estate, south of the highway's south-west corner, on Lot 9's old land with the tunnel's ramp (endswood.ts,
-  // docs/estate-plan.md); Lot 9, the trailer park, moved south of it (lot9.ts), and the path from the tunnel down to it
-  land('endswood', ENDSWOOD_RECT, 2, true),
-  // ...and carried west (endswest.ts, docs/ends-west-plan.md Phase 1)
-  land('endswest', ENDS_WEST_RECT, 2, true),
-  // ...and its far west (endsfar.ts, docs/ends-far-west-plan.md Phase 1)
-  land('endsfar', ENDS_FAR_RECT, 2, true),
-  // ...and the common down to Lot 9, its own brambles and hawthorns (endsblend.ts, docs/estate-plan.md Phase 6)
-  land('ends-common', ENDS_COMMON, 1, true),
+  // South of The Trenches re-laid (south.ts, docs/south-plan.md Phase 1b): its built-up land (its blocks and its
+  // streets with their sidewalks: endswood.ts `inEndswood()`; the fields round it keep their trees), the brook and its
+  // banks, the rec ground; Lot 9, the trailer park, south-east of it (lot9.ts)
+  { ...shaped('endswood', ENDSWOOD_RECT, 2, (x, z, m) => inEndswood(x, z, m)), since: true },
+  ...line('south-brook', BROOK, BROOK_HALF + 2, false, true),
+  { ...shaped('south-rec', boxOf(REC), 1, (x, z, m) => inside(REC, [x, z]) || distTo(REC, [x, z], true) < m), since: true },
   land('lot9', LOT9_RECT, 2, true),
   ...line('lot9-path', LOT9_PATH, 1.5, false, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
