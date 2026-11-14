@@ -6,8 +6,12 @@
  * has a pin, a panel with Walk in (CityMap.astro), its pick boxes (index.ts, through crestspots.ts `spot()`) and where
  * you arrive (`ENDS_SPAWNS`: the panel's Walk in, places.ts).
  */
-import { CHURCHYARD, CIRCUS } from './south';
+import { CHURCHYARD, CIRCUS, ENDSWOOD_ROAD } from './south';
+
 import type { Rect } from './endswood';
+
+/** A street's z where it passes x (its point nearest in x) */
+const onRoad = (s: { pts: [number, number][] }, x: number) => s.pts.reduce((b, p) => (Math.abs(p[0] - x) < Math.abs(b[0] - x) ? p : b))[1];
 
 export type EndsPlaceId = 'endswood' | 'aldwyns' | 'bunker';
 export const ENDS_PLACE_IDS: EndsPlaceId[] = ['endswood', 'aldwyns', 'bunker'];
@@ -63,6 +67,6 @@ export const ENDS_SPAWNS: Record<EndsPlaceId, { x: number; z: number; yaw: numbe
   endswood: { x: CIRCUS.x + (CIRCUS.r + CIRCUS.half + 0.5) * Math.cos((300 * Math.PI) / 180), z: CIRCUS.z + (CIRCUS.r + CIRCUS.half + 0.5) * Math.sin((300 * Math.PI) / 180), yaw: Math.PI },
   // (on Church Road's sidewalk, the churchyard south of it)
   aldwyns: { x: (YARD[0] + YARD[2]) / 2, z: 443, yaw: Math.PI },
-  // (on Endswood Road's north sidewalk, its ground north of it)
-  bunker: { x: (BUNKER[0] + BUNKER[2]) / 2, z: 411.8, yaw: 0 },
+  // (on Endswood Road's north sidewalk, where it passes; its ground north of it)
+  bunker: { x: (BUNKER[0] + BUNKER[2]) / 2, z: onRoad(ENDSWOOD_ROAD, (BUNKER[0] + BUNKER[2]) / 2) - ENDSWOOD_ROAD.half - 0.4, yaw: 0 },
 };
