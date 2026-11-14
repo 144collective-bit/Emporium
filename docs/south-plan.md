@@ -189,7 +189,7 @@ From the Circus west, patchy as high roads are:
   with its desire lines, the play area east of Kite; the solids
   (`BLOCK_SOLIDS`, the arch open). A storey is 1, the ground floor 1.4.
   Plan from the data: `9-phase-2a-blocks.png`.
-- **2b, the buildings drawn** (built, waiting on the owner's sign-off):
+- **2b, the buildings drawn** (built, signed off by the owner 2026-11-14):
   `southblocks3d.ts`, its own lazy chunk (`south-blocks`), sites a step,
   a tower, a core, a bridge span, the deck; the wall atlas's precast
   panels (ribbon windows lit at night) over glazed ground floors with an
