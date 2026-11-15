@@ -432,6 +432,13 @@ keep it up to date when what it describes changes.
   device (its user agent and screen), so a real phone's numbers can be
   pasted back. Run it before and after anything that could make the
   city heavier, on a phone and a laptop.
+- **Measured, the south's lift** (2026-11-15, headless, the medium tier at 1280 x 800, the City view): Phase 1c's
+  lift (kit.ts `liftOnto()`) split and unshared every batch that so much as reached into the south's rect, the city's
+  ground among them: the boot went from 6.6 s to 19.0 s (its own work 3.3 to 14.3 s) and geometry from 262 to 546 MB.
+  Now only the faces over the rect are split (the rest kept whole and shared), and southground.ts and south.ts skip
+  the outline tests (Lot 9's fence, the brook, the churchyard, the rec ground) for points well clear of their boxes,
+  which gives the same numbers. Measured after the lift's fix the same way: the boot 8.8 s (its work 4.7 s),
+  geometry 265 MB, triangles back to 0.39M in the City view (from 0.49M).
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is

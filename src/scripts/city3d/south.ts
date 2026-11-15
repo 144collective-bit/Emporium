@@ -228,14 +228,19 @@ class Near {
   }
 }
 
+/** An outline's or a line's box, and whether a point is within `m` of it (a point farther off is farther from the
+ * line too: a cheap test first, the street web's layout asks many thousands of times as the city loads) */
+const boxOf = (pts: Pt[]) => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))] as const;
+const nearBox = (b: readonly [number, number, number, number], x: number, z: number, m: number) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m;
+const [CHURCH_BOX, LOT9_BOX, BROOK_BOX, REC_BOX] = [boxOf(CHURCHYARD), boxOf(LOT9_EDGE), boxOf(BROOK), boxOf(REC)];
 /** Kept clear of streets: the compound, the churchyard, Lot 9, the brook and the rec ground */
 const keptOff = (x: number, z: number, m: number) =>
   (x > COMPOUND[0] - m && x < COMPOUND[2] + m && z > COMPOUND[1] - m && z < COMPOUND[3] + m) ||
-  inside(CHURCHYARD, [x, z]) || distTo(CHURCHYARD, [x, z], true) < m ||
-  inside(LOT9_EDGE, [x, z]) || distTo(LOT9_EDGE, [x, z], true) < m ||
+  (nearBox(CHURCH_BOX, x, z, m) && (inside(CHURCHYARD, [x, z]) || distTo(CHURCHYARD, [x, z], true) < m)) ||
+  (nearBox(LOT9_BOX, x, z, m) && (inside(LOT9_EDGE, [x, z]) || distTo(LOT9_EDGE, [x, z], true) < m)) ||
   LOT9_BOUNDS.some((r) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m) ||
-  distTo(BROOK, [x, z]) < BROOK_HALF + m + 2 ||
-  inside(REC, [x, z]);
+  (nearBox(BROOK_BOX, x, z, BROOK_HALF + m + 2) && distTo(BROOK, [x, z]) < BROOK_HALF + m + 2) ||
+  (nearBox(REC_BOX, x, z, 1) && inside(REC, [x, z]));
 
 export interface Footpath {
   id: string;

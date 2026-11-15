@@ -745,27 +745,69 @@ export function setGroundLift(lift: (x: number, z: number) => number, rect: read
 }
 /** The longest an edge may run along the ground once lifted (the south's ground bends by under a centimetre in it) */
 export const LIFT_EDGE = 5;
-/** A geometry lifted onto the ground: split (unindexed) till no edge is longer than `LIFT_EDGE` across x and z, then
- * each vertex raised by the lift under it; or the same geometry where none of it is on the lifted ground */
+/**
+ * A geometry lifted onto the ground: the faces that reach onto the lifted ground split till no edge is longer than
+ * `LIFT_EDGE` across x and z, then each of their corners raised by the lift under it; the rest of it kept as it was,
+ * its corners still shared (the lift is 0 off the ground's rect, so they'd only be split into more of the same flat
+ * faces: a batch that's mostly elsewhere, the city's ground for one, isn't split or unshared whole). The same geometry
+ * where none of it is on the lifted ground.
+ */
 function liftOnto(g: THREE.BufferGeometry): THREE.BufferGeometry {
   if (!groundLift) return g;
   const [rx0, rz0, rx1, rz1] = groundLift.rect;
   g.computeBoundingBox();
   const bb = g.boundingBox!;
   if (bb.max.x <= rx0 || bb.min.x >= rx1 || bb.max.z <= rz0 || bb.min.z >= rz1) return g;
-  const src = g.index ? g.toNonIndexed() : g;
-  const names = Object.keys(src.attributes);
-  const attrs = names.map((n) => src.getAttribute(n) as THREE.BufferAttribute);
+  const pos = g.getAttribute('position');
+  const index = g.index;
+  const tris = Math.floor((index ? index.count : pos.count) / 3);
+  const corner = (k: number) => (index ? index.getX(k) : k);
+  // Which faces reach onto the lifted ground (their box over its rect)
+  const onto = new Uint8Array(tris);
+  let split = 0;
+  for (let t = 0; t < tris; t++) {
+    const [a, b, c] = [corner(3 * t), corner(3 * t + 1), corner(3 * t + 2)];
+    const [xa, xb, xc, za, zb, zc] = [pos.getX(a), pos.getX(b), pos.getX(c), pos.getZ(a), pos.getZ(b), pos.getZ(c)];
+    if (Math.max(xa, xb, xc) <= rx0 || Math.min(xa, xb, xc) >= rx1 || Math.max(za, zb, zc) <= rz0 || Math.min(za, zb, zc) >= rz1) continue;
+    onto[t] = 1;
+    split++;
+  }
+  if (!split) return g;
+  const names = Object.keys(g.attributes);
+  const attrs = names.map((n) => g.getAttribute(n) as THREE.BufferAttribute);
   const sizes = attrs.map((a) => a.itemSize);
-  const out: number[][] = names.map(() => []);
-  const pos = src.getAttribute('position');
-  const vert = (i: number) => attrs.map((a, k) => Array.from({ length: sizes[k] }, (_, c) => a.getComponent(i, c)));
-  const P = names.indexOf('position');
-  const mid = (a: number[][], b: number[][]) => a.map((v, k) => v.map((x, c) => (x + b[k][c]) / 2));
-  const flat2 = (a: number[][], b: number[][]) => Math.hypot(a[P][0] - b[P][0], a[P][2] - b[P][2]);
-  const emit = (a: number[][], b: number[][], c: number[][], depth: number) => {
-    const [ab, bc, ca] = [flat2(a, b), flat2(b, c), flat2(c, a)];
-    if (depth < 6 && Math.max(ab, bc, ca) > LIFT_EDGE) {
+  const offs = sizes.map((_, k) => sizes.slice(0, k).reduce((s, n) => s + n, 0));
+  const stride = sizes.reduce((s, n) => s + n, 0);
+  const P = offs[names.indexOf('position')];
+  // The kept faces' corners, each once (renumbered in the order they're met)
+  const keptOf = new Int32Array(pos.count).fill(-1);
+  const keptFrom: number[] = [];
+  const ix: number[] = [];
+  for (let t = 0; t < tris; t++) {
+    if (onto[t]) continue;
+    for (let c = 0; c < 3; c++) {
+      const v = corner(3 * t + c);
+      if (keptOf[v] < 0) {
+        keptOf[v] = keptFrom.length;
+        keptFrom.push(v);
+      }
+      ix.push(keptOf[v]);
+    }
+  }
+  const kept = keptFrom.length;
+  // The split faces' corners after them, a face's own three each (all of a corner's attributes in a row: `stride`)
+  const out: number[] = [];
+  const read = (v: number) => {
+    const r = new Array<number>(stride);
+    attrs.forEach((a, k) => {
+      for (let c = 0; c < sizes[k]; c++) r[offs[k] + c] = a.getComponent(v, c);
+    });
+    return r;
+  };
+  const mid = (a: number[], b: number[]) => a.map((x, i) => (x + b[i]) / 2);
+  const flat2 = (a: number[], b: number[]) => Math.hypot(a[P] - b[P], a[P + 2] - b[P + 2]);
+  const emit = (a: number[], b: number[], c: number[], depth: number) => {
+    if (depth < 6 && Math.max(flat2(a, b), flat2(b, c), flat2(c, a)) > LIFT_EDGE) {
       const [m1, m2, m3] = [mid(a, b), mid(b, c), mid(c, a)];
       emit(a, m1, m3, depth + 1);
       emit(m1, b, m2, depth + 1);
@@ -773,22 +815,30 @@ function liftOnto(g: THREE.BufferGeometry): THREE.BufferGeometry {
       emit(m1, m2, m3, depth + 1);
       return;
     }
-    for (const v of [a, b, c]) v.forEach((x, k) => out[k].push(...x));
+    for (const v of [a, b, c]) for (let i = 0; i < stride; i++) out.push(v[i]);
   };
-  for (let i = 0; i + 2 < pos.count; i += 3) emit(vert(i), vert(i + 1), vert(i + 2), 0);
+  for (let t = 0; t < tris; t++) if (onto[t]) emit(read(corner(3 * t)), read(corner(3 * t + 1)), read(corner(3 * t + 2)), 0);
+  const made = out.length / stride;
+  const n = kept + made;
+  for (let i = 0; i < made; i++) ix.push(kept + i);
   const res = new THREE.BufferGeometry();
-  names.forEach((n, k) => res.setAttribute(n, new THREE.Float32BufferAttribute(out[k], sizes[k], attrs[k].normalized)));
-  // (a split face's normals are the means of its corners': made whole again)
-  if (res.getAttribute('normal')) res.normalizeNormals();
-  const p = res.getAttribute('position');
   const { lift } = groundLift;
-  for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + lift(p.getX(i), p.getZ(i)));
+  names.forEach((name, k) => {
+    const [a, size, o] = [attrs[k], sizes[k], offs[k]];
+    const arr = new Float32Array(n * size);
+    for (let i = 0; i < kept; i++) for (let c = 0; c < size; c++) arr[i * size + c] = a.getComponent(keptFrom[i], c);
+    for (let i = 0; i < made; i++) for (let c = 0; c < size; c++) arr[(kept + i) * size + c] = out[i * stride + o + c];
+    if (o === P) for (let i = kept; i < n; i++) arr[i * 3 + 1] += lift(arr[i * 3], arr[i * 3 + 2]);
+    // (a split face's normals are the means of its corners': made whole again)
+    if (name === 'normal')
+      for (let i = kept; i < n; i++) {
+        const l = Math.hypot(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2]) || 1;
+        for (let c = 0; c < 3; c++) arr[i * 3 + c] /= l;
+      }
+    res.setAttribute(name, new THREE.Float32BufferAttribute(arr, size, a.normalized));
+  });
   // (indexed as everything a Batch builds is: the site worker hands back only indexed meshes, sitework.ts)
-  const n = p.count;
-  const ix = n > 65535 ? new Uint32Array(n) : new Uint16Array(n);
-  for (let i = 0; i < n; i++) ix[i] = i;
-  res.setIndex(new THREE.BufferAttribute(ix, 1));
-  if (src !== g) src.dispose();
+  res.setIndex(new THREE.BufferAttribute(n > 65535 ? new Uint32Array(ix) : new Uint16Array(ix), 1));
   g.dispose();
   return res;
 }
