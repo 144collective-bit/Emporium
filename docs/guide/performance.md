@@ -279,7 +279,16 @@ keep it up to date when what it describes changes.
     still can. `addLod()` / `addLodSwitch()` swap them (`updateLods()`
     from `index.ts`). They're made after the first frame, a place at a
     time in spare moments (`farQueue` in `index.ts`); until then a place
-    stays near. Once a place's far form has shown `FREE_AFTER` (15 s), its
+    stays near. A far form's colours take each texture's average: a
+    texture made at build time carries it (`userData.average`); one the
+    city painted is averaged on the GPU first and read back without the
+    page waiting (`primeAverages()` in `lod.ts`: a 32 x 32 grid of samples,
+    weighted by cover, a texel each, `readRenderTargetPixelsAsync()`), as
+    reading the canvas back (`average()`, still there for anything missed)
+    stalled the page till the GPU had done all it was given: measured
+    headless with no textures baked (2026-11-16), 22 textures' averages
+    took 23.7 s of the page's time read from their canvases and 3.1 s
+    averaged on the GPU (most of it each texture's first upload). Once a place's far form has shown `FREE_AFTER` (15 s), its
     near form's geometries are freed on the GPU (`release()` on its switch,
     `geometry.dispose()`: the arrays stay, three uploads them again as
     they're next drawn; the stability plan's Phase 3, item 6); `?fps` says

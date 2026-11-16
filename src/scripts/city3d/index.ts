@@ -144,7 +144,7 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { farForm, farLods, freedNear, updateLods } from './lod';
+import { farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 
@@ -620,10 +620,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const nextFar = () => {
     const g = farQueue.shift();
     if (!g) return;
-    farForm(g);
-    // (its shader now, not the first time it's seen from far off)
-    compileFor(g);
-    idle(nextFar);
+    // (its painted textures' averages read back from the GPU first, without the page waiting on it: lod.ts)
+    void primeAverages(renderer, g).then(() => {
+      farForm(g);
+      // (its shader now, not the first time it's seen from far off)
+      compileFor(g);
+      idle(nextFar);
+    });
   };
   bootAt.built = performance.now();
   // (in parallel where the GPU can: the page stays free while they compile)
