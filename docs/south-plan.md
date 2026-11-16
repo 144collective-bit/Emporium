@@ -220,7 +220,7 @@ From the Circus west, patchy as high roads are:
   entered). The cores' lift houses stand 1.8 over the roofs (`CORE_OVER`).
   The smoke test rides The Core's lift up and down and walks its stair;
   the `?fps` readout says how high you are when you're off the ground.
-- **2d, the ground round them** (built, waiting on the owner's sign-off):
+- **2d, the ground round them** (built, signed off by the owner 2026-11-16):
   `southyard.ts` (DOM-free, `tests/southyard.test.ts`): the courts' bays
   (`BAYS`, rows inside each court) with cars in about two in three
   (`YARD_CARS`, cars.ts `parkedCars()`), bin stores and bike sheds by the
