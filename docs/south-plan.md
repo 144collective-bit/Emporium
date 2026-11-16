@@ -326,9 +326,22 @@ From the Circus west, patchy as high roads are:
    yard; St Aldwyn's **Victorian Gothic** (grey stone, its 22.5 spire,
    pointed windows lit at night, a lychgate, gravestones). Its steps,
    each signed off:
-   - **3a, the terraces**: the terrace kit (DOM-free rows laid along the
-     village's streets, instanced by the house) and the village's
-     streets lined with them, their back alleys and ginnels.
+   - **3a, the terraces** (built, signed off by the owner 2026-11-16):
+     `southterraces.ts` (DOM-free, `tests/southterraces.test.ts`): 246
+     houses (`HOUSES`) laid block by block along the village's streets
+     (not the High Road's frontage, 3c's), a short row facing Degen's
+     gates; each a yard back from the sidewalk, level on its base (a
+     plinth where the hill falls), its front (red, yellow, painted,
+     pebble-dash), door, dormer, chimney, lit rooms and row ends; the
+     back alleys (`ALLEYS`, behind 208, taking some rear yard where rows
+     back on), ginnels (`GINNELS`) through long rows, front walls with
+     a gate (`frontWalls()`), `TERRACE_SOLIDS` / `TERRACE_GROUND_SOLIDS`.
+     Drawn by `village3d.ts` (`LAZY_DISTRICTS` id `village`,
+     `TERRACES_RECT`): one house's pieces copied to every house
+     (`Batch.instances()`), sills, fanlights and pots near only and not
+     on phones; yards, walls, alleys and ginnels on the rolling ground.
+     About 30k triangles at every distance on phones. Shots `12-` (the
+     plan) and `13-phase-3a-*`.
    - **3b, St Aldwyn's** on its hill in its churchyard.
    - **3c, the High Road's places** (the table above).
    - **3d, the council rows, the bungalows and the allotments.**
