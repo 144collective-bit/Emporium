@@ -257,7 +257,8 @@ export const GATE_W = 0.8;
 export function frontWalls(h: House): [Pt, Pt][] {
   const [nx, nz] = h.face;
   const [tx, tz] = [-nz, nx];
-  const f: Pt = [h.at[0] + nx * (TERRACE.yard - 0.1), h.at[1] + nz * (TERRACE.yard - 0.1)];
+  // (a little in from the sidewalk's edge: clear of the lamps along it)
+  const f: Pt = [h.at[0] + nx * (TERRACE.yard - 0.4), h.at[1] + nz * (TERRACE.yard - 0.4)];
   const p = (u: number): Pt => [f[0] + tx * u, f[1] + tz * u];
   const [g0, g1] = [DOOR_U - GATE_W / 2, DOOR_U + GATE_W / 2];
   return [
