@@ -14,6 +14,7 @@ import { CHURCHYARD, COMPOUND_GATES, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_S
 import { distTo, inside, seeded } from './streetfaces';
 import { southLift } from './southground';
 import { cover, type Box } from './southblocks';
+import { CHURCH_PATH, PATH_W } from './aldwyns';
 
 /** Degen's gates' middle (endsfar.ts `GATES`: on Gate Lane, its plot's east edge) */
 const GATE_AT: Pt = [COMPOUND_GATES.x, (COMPOUND_GATES.z0 + COMPOUND_GATES.z1) / 2];
@@ -159,12 +160,16 @@ export const HOUSES: House[] = (() => {
           bend < 0.3 &&
           shrink(plot, 0.06).every((q) => inside(b.poly, q)) &&
           !foot.some((q) => inside(CHURCHYARD, q)) &&
+          // (a gap for the path up to St Aldwyn's, aldwyns.ts)
+          plot.every((q) => distTo(CHURCH_PATH, q) > PATH_W / 2 + 0.4) &&
+          distTo(plot, CHURCH_PATH[0], true) > PATH_W / 2 + 0.4 &&
+          !inside(plot, [(CHURCH_PATH[0][0] + CHURCH_PATH[1][0]) / 2, Math.min(CHURCH_PATH[0][1] + 3, CHURCH_PATH[1][1])]) &&
           // (an end house's back corner kept off a side street's sidewalk)
           foot.every((q) => SOUTH_STREETS.every((st) => distTo(st.pts, q, st.loop) - st.half - 0.8 > 0.4)) &&
           FOOTPATHS.every((f) => foot.every((q) => distTo(f.pts, q) > PATH_HALF + 0.4)) &&
           !plots.some((o) => overlaps(shrink(plot, 0.15), o)) &&
           // (and no house in another, at a bend's back corners: each pulled a tenth in towards its middle)
-          !feet.some((o) => overlaps(shrink(foot, 0.1), o));
+          !feet.some((o) => overlaps(shrink(foot, 0.1), o) || overlaps(foot, shrink(o, 0.1)));
         // (a ginnel through a long row: a house's gap)
         if (fits && inRow >= TERRACE.most) {
           inRow = 0;
@@ -266,7 +271,7 @@ export function frontWalls(h: House): [Pt, Pt][] {
     [p(g1), p(h.w / 2)],
   ];
 }
-export const WALL_H = 0.45;
+export const WALL_H = 0.32;
 /** The houses (their tops over their bases: not lifted again) and their front walls (on the ground: lifted, solids.ts) */
 export const TERRACE_SOLIDS: Box[] = HOUSES.flatMap((h) => cover(houseFoot(h), h.base + TERRACE.eaves + TERRACE.ridge, 0.6));
 export const TERRACE_GROUND_SOLIDS: Box[] = HOUSES.flatMap((h) =>

@@ -9,6 +9,7 @@
  */
 import { CHURCH_ROAD, CHURCHYARD, CIRCUS } from './south';
 import { BUNKER as BUNKER_DOOR } from './southblocks';
+import { DOOR_SPOT as CHURCH_DOOR, PORCH_DOOR } from './aldwyns';
 
 import type { Rect } from './endswood';
 
@@ -43,12 +44,12 @@ export const ENDS_SPOTS: EndsSpot[] = [
     pinH: 6,
   },
   {
-    // St Aldwyn's: the pin over its churchyard on the hill (its church is Phase 3's)
+    // St Aldwyn's: the pin over its porch, clear of the nave's roof (aldwyns.ts)
     id: 'aldwyns',
     boxes: [{ rect: YARD, h: 1.2 }],
     land: YARD,
-    pin: [(YARD[0] + YARD[2]) / 2, (YARD[1] + YARD[3]) / 2],
-    pinH: 6,
+    pin: [PORCH_DOOR[0], PORCH_DOOR[1]],
+    pinH: 12,
   },
   {
     // Bunker Sound: the pin over its door in Teasel House (over the block's roof)
@@ -60,9 +61,12 @@ export const ENDS_SPOTS: EndsSpot[] = [
   },
 ];
 
-/** The doors (walk prompts that open each panel): Bunker Sound's, under Teasel House; the others when their buildings
- * stand (Phase 3) */
-export const ENDS_DOORS: { id: EndsPlaceId; x: number; z: number; label: string }[] = [{ id: 'bunker', x: DX + OUT[0] * 0.8, z: DZ + OUT[1] * 0.8, label: 'Bunker Sound' }];
+/** The doors (walk prompts that open each panel): Bunker Sound's under Teasel House, St Aldwyn's porch (aldwyns.ts);
+ * the estate's is its pin */
+export const ENDS_DOORS: { id: EndsPlaceId; x: number; z: number; label: string }[] = [
+  { id: 'bunker', x: DX + OUT[0] * 0.8, z: DZ + OUT[1] * 0.8, label: 'Bunker Sound' },
+  { id: 'aldwyns', x: CHURCH_DOOR[0], z: CHURCH_DOOR[1], label: "St Aldwyn's" },
+];
 
 /** Church Road's south sidewalk's middle where it passes the churchyard (clear of the terraces' front walls behind it) */
 const CHURCH_SIDEWALK = (() => {

@@ -17,6 +17,9 @@ import { site } from './tilework';
 import { COVER, STONE } from './palette';
 import { shift } from './streetfaces';
 import { ALLEYS, DOOR_U, GINNELS, HOUSES, TERRACE, WALL_H, frontWalls, houseFoot, plotOf, type House } from './southterraces';
+import { CHANCEL, CHURCH_BASE, CHURCH_LOW, CHURCH_PATH, GRAVES, HEIGHTS, LYCHGATE, NAVE, PATH_W, PORCH, PORCH_DOOR, SPIRE_TIP, TOWER, YARD_WALL, YARD_WALL_H, YEWS } from './aldwyns';
+import { CHURCHYARD } from './south';
+import { PLANT } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -111,8 +114,29 @@ const PIECES = (() => {
   const bayLidEdge = box(1.0, 0.1, 0.05, BAY_X, E - 0.15, BO + 0.06);
   // The windows: the bay's front, down and up; over the door
   const win = (x: number, y0: number, y1: number, z: number, w: number) => tris(quad([x - w / 2, y0, z], [x + w / 2, y0, z], [x + w / 2, y1, z], [x - w / 2, y1, z], [0, 0, 1]));
-  const winDown = win(BAY_X, 0.32, 1.05, BO + 0.012, 0.72);
-  const winUp = merge([win(BAY_X, 1.45, 2.08, BO + 0.012, 0.72), win(-DOOR_U, 1.45, 2.08, 0.012, 0.6)]);
+  // (a narrow window on each of the bay's slanted sides too, so they read as glazed, not blank)
+  const onSide = (a: Pt, c: Pt, y0: number, y1: number, w: number) => {
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const t = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+    let n = [t[1], -t[0]];
+    if (n[1] < 0) n = [-n[0], -n[1]];
+    const m = [(a[0] + c[0]) / 2 + n[0] * 0.012, (a[1] + c[1]) / 2 + n[1] * 0.012];
+    const [p0, p1] = [[m[0] - (t[0] * w) / 2, m[1] - (t[1] * w) / 2], [m[0] + (t[0] * w) / 2, m[1] + (t[1] * w) / 2]];
+    return tris(quad([p0[0], y0, p0[1]], [p1[0], y0, p1[1]], [p1[0], y1, p1[1]], [p0[0], y1, p0[1]], [n[0], 0, n[1]]));
+  };
+  const sides = (y0: number, y1: number) => [onSide(outline[0], outline[1], y0, y1, 0.3), onSide(outline[2], outline[3], y0, y1, 0.3)];
+  const winDown = merge([win(BAY_X, 0.32, 1.05, BO + 0.012, 0.72), ...sides(0.32, 1.05)]);
+  const winUp = merge([win(BAY_X, 1.45, 2.08, BO + 0.012, 0.72), win(-DOOR_U, 1.45, 2.08, 0.012, 0.6), ...sides(1.45, 2.08)]);
+  // Up close: a white frame round the bay's front windows and the one over the door, a sash bar across each
+  const frame = (x: number, y0: number, y1: number, z: number, w: number) => [
+    box(w + 0.08, 0.05, 0.03, x, y1 + 0.02, z),
+    box(w + 0.08, 0.05, 0.03, x, y0 - 0.02, z),
+    box(0.05, y1 - y0, 0.03, x - w / 2 - 0.015, (y0 + y1) / 2, z),
+    box(0.05, y1 - y0, 0.03, x + w / 2 + 0.015, (y0 + y1) / 2, z),
+    box(w, 0.035, 0.03, x, (y0 + y1) / 2, z),
+    box(0.03, y1 - y0, 0.02, x, (y0 + y1) / 2, z),
+  ];
+  const frames = merge([...frame(BAY_X, 0.32, 1.05, BO + 0.02, 0.72), ...frame(BAY_X, 1.45, 2.08, BO + 0.02, 0.72), ...frame(-DOOR_U, 1.45, 2.08, 0.02, 0.6)]);
   const door = win(-DOOR_U, 0.04, 1.02, 0.012, 0.6);
   const fan = win(-DOOR_U, 1.06, 1.22, 0.012, 0.6);
   const sills = merge([box(0.8, 0.05, 0.1, BAY_X, 1.42, BO + 0.05), box(0.68, 0.05, 0.1, -DOOR_U, 1.42, 0.05), box(0.8, 0.05, 0.1, BAY_X, 0.3, BO + 0.05)]);
@@ -125,7 +149,7 @@ const PIECES = (() => {
   const dy = E + R * (-dz1 / (D / 2));
   const dormer = merge([box(1.0, 0.75, dz1 - dz0, -0.35, dy + 0.3, (dz0 + dz1) / 2), box(1.12, 0.08, dz1 - dz0 + 0.12, -0.35, dy + 0.72, (dz0 + dz1) / 2)]);
   const dormerWin = win(-0.35, dy + 0.05, dy + 0.55, dz1 + 0.012, 0.66);
-  return { body, plinth, roof, gableL: gable(1), gableR: gable(-1), bay, bayLid, bayLidEdge, winDown, winUp, door, fan, sills, chimney, pots, dormer, dormerWin };
+  return { body, plinth, roof, gableL: gable(1), gableR: gable(-1), bay, bayLid, bayLidEdge, winDown, winUp, frames, door, fan, sills, chimney, pots, dormer, dormerWin };
 })();
 
 /** A house's frame: x along its front (against t: a right-handed frame), z out of its front, stretched to its frontage */
@@ -171,6 +195,7 @@ function drawHouses(b: Batch, list: House[], low: boolean) {
   if (low) return;
   b.detail(() => {
     b.instances(P.sills, SILL, list.map((h) => frameOf(h)));
+    b.instances(P.frames, SILL, list.map((h) => frameOf(h)));
     b.instances(P.fan, WIN_LIT, list.filter((h) => h.lit & 8).map((h) => frameOf(h)));
     b.instances(P.fan, WIN_DARK, list.filter((h) => !(h.lit & 8)).map((h) => frameOf(h)));
     b.instances(P.pots, POT, list.filter((h) => h.chimney).map((h) => frameOf(h)));
@@ -202,9 +227,9 @@ function drawGround(b: Batch, list: House[], low: boolean) {
     flat(b, f, ON, PAVING);
     // Its front wall, capped, a gate's gap by the door
     for (const [a, c] of frontWalls(h)) {
-      along(b, a, c, 0.14, 0.15, 0.15 + WALL_H, FRONTS.red);
+      along(b, a, c, 0.1, 0.15, 0.15 + WALL_H, FRONTS.red);
       // (its coping stones: not on phones)
-      if (!low) along(b, a, c, 0.18, 0.15 + WALL_H, 0.15 + WALL_H + 0.05, CAP);
+      if (!low) along(b, a, c, 0.14, 0.15 + WALL_H, 0.15 + WALL_H + 0.04, CAP);
     }
     // The rear yard: grass, to the alley (or the plot's end)
     const alley = ALLEYS.find((q) => q.house === h.id);
@@ -233,6 +258,113 @@ function drawGinnels(b: Batch) {
 
 const rectOf = (pts: Pt[], pad: number): Rect => [Math.min(...pts.map((p) => p[0])) - pad, Math.min(...pts.map((p) => p[1])) - pad, Math.max(...pts.map((p) => p[0])) + pad, Math.max(...pts.map((p) => p[1])) + pad];
 
+/* ---------- St Aldwyn's (aldwyns.ts, 3b) ---------- */
+
+const KIRK = toon('#8e8a85');
+const DRESSING = toon('#b9b3a8');
+const SPIRE = toon('#4a4f5c');
+const GLASS_LIT = neon('#ffc46b', 0.1, 1.15);
+const GLASS_DARK = toon('#2a2f45');
+const OAK = toon('#4a2e1f');
+const GRAVE = toon('#a7a39b');
+const YEW = toon(PLANT.shrubDark);
+const GRAVEL = toon(STONE.gravel);
+
+type R4 = [number, number, number, number];
+/** A box over a rect, y0 to y1 */
+const rbox = (b: Batch, r: R4, y0: number, y1: number, m: THREE.Material) => b.add(box(r[2] - r[0], y1 - y0, r[3] - r[1], (r[0] + r[2]) / 2, (y0 + y1) / 2, (r[1] + r[3]) / 2), m);
+/** A gabled roof over a rect from its eaves (`y`), rising `rise`, its ridge along x (or along z); its gables in stone */
+function gabled(b: Batch, r: R4, y: number, rise: number, alongX: boolean, roof: THREE.Material, gable: THREE.Material, o = 0.2) {
+  const [x0, z0, x1, z1] = r;
+  if (alongX) {
+    const zm = (z0 + z1) / 2;
+    b.add(tris([...quad([x0 - o, y, z0 - o], [x1 + o, y, z0 - o], [x1 + o, y + rise, zm], [x0 - o, y + rise, zm], [0, 1, -1]), ...quad([x0 - o, y, z1 + o], [x1 + o, y, z1 + o], [x1 + o, y + rise, zm], [x0 - o, y + rise, zm], [0, 1, 1])]), roof);
+    b.add(tris([{ p: [[x0, y, z0], [x0, y, z1], [x0, y + rise, zm]], n: [-1, 0, 0] }, { p: [[x1, y, z0], [x1, y, z1], [x1, y + rise, zm]], n: [1, 0, 0] }]), gable);
+  } else {
+    const xm = (x0 + x1) / 2;
+    b.add(tris([...quad([x0 - o, y, z0 - o], [x0 - o, y, z1 + o], [xm, y + rise, z1 + o], [xm, y + rise, z0 - o], [-1, 1, 0]), ...quad([x1 + o, y, z0 - o], [x1 + o, y, z1 + o], [xm, y + rise, z1 + o], [xm, y + rise, z0 - o], [1, 1, 0])]), roof);
+    b.add(tris([{ p: [[x0, y, z0], [x1, y, z0], [xm, y + rise, z0]], n: [0, 0, -1] }, { p: [[x0, y, z1], [x1, y, z1], [xm, y + rise, z1]], n: [0, 0, 1] }]), gable);
+  }
+}
+/** A lancet: a pointed-arch window on a wall facing n (x, z), its middle at (u along the wall: x or z), y0 to y1 */
+function lancet(x: number, z: number, n: Pt, w: number, y0: number, y1: number) {
+  const t: Pt = [-n[1], n[0]];
+  const p = (u: number, y: number) => [x + t[0] * u + n[0] * 0.02, y, z + t[1] * u + n[1] * 0.02];
+  const spring = y1 - w * 0.8;
+  return tris([...quad(p(-w / 2, y0), p(w / 2, y0), p(w / 2, spring), p(-w / 2, spring), [n[0], 0, n[1]]), { p: [p(-w / 2, spring), p(w / 2, spring), p(0, y1)], n: [n[0], 0, n[1]] }]);
+}
+function drawChurch(b: Batch, low: boolean) {
+  const B = CHURCH_BASE;
+  const H = HEIGHTS;
+  const top = B + H.tower;
+  b.detail(() => {
+    // The walls, from the plinth up (where the hill falls), the roofs and gables
+    for (const [r, h] of [[NAVE, H.nave], [CHANCEL, H.chancel], [TOWER, H.tower], [PORCH, H.porch]] as [R4, number][]) rbox(b, r, CHURCH_LOW - 0.1, B + h, KIRK);
+    gabled(b, NAVE, B + H.nave, H.naveRoof, true, SPIRE, KIRK);
+    gabled(b, CHANCEL, B + H.chancel, H.chancelRoof, true, SPIRE, KIRK);
+    gabled(b, PORCH, B + H.porch, H.porchRoof, false, SPIRE, KIRK, 0.15);
+    // The tower's parapet and its broach spire, octagonal, to the owner's 22.5
+    const [tx, tz] = [(TOWER[0] + TOWER[2]) / 2, (TOWER[1] + TOWER[3]) / 2];
+    rbox(b, [TOWER[0] - 0.12, TOWER[1] - 0.12, TOWER[2] + 0.12, TOWER[3] + 0.12], top, top + 0.45, DRESSING);
+    const spire = new THREE.CylinderGeometry(0.05, (TOWER[2] - TOWER[0]) / 2 - 0.15, B + SPIRE_TIP - top - 0.2, 8).rotateY(Math.PI / 8).translate(tx, (top + 0.2 + B + SPIRE_TIP) / 2, tz);
+    spire.deleteAttribute('uv');
+    b.add(spire, SPIRE);
+    // The windows: lancets along the nave and the chancel, three tall ones in the east end, the tower's belfry
+    const lit = (m: THREE.BufferGeometry, on: boolean) => b.add(m, on ? GLASS_LIT : GLASS_DARK);
+    let k = 0;
+    for (const z of [NAVE[1], NAVE[3]]) {
+      const n: Pt = [0, z === NAVE[1] ? -1 : 1];
+      for (let x = NAVE[0] + 2; x < NAVE[2] - 1; x += 3.1) if (!(z === NAVE[1] && x > PORCH[0] - 0.8 && x < PORCH[2] + 0.8)) lit(lancet(x, z, n, 0.8, B + 1.0, B + 3.4), k++ % 3 !== 1);
+    }
+    for (const z of [CHANCEL[1], CHANCEL[3]]) lit(lancet((CHANCEL[0] + CHANCEL[2]) / 2, z, [0, z === CHANCEL[1] ? -1 : 1], 0.7, B + 0.9, B + 2.7), true);
+    for (const dz of [-1.1, 0, 1.1]) lit(lancet(CHANCEL[2], (CHANCEL[1] + CHANCEL[3]) / 2 + dz, [1, 0], 0.7, B + 0.8, B + (dz === 0 ? 3.0 : 2.5)), true);
+    for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as Pt[]) {
+      const [x, z] = [tx + nx * ((TOWER[2] - TOWER[0]) / 2), tz + nz * ((TOWER[3] - TOWER[1]) / 2)];
+      b.add(lancet(x, z, [nx, nz], 0.9, top - 2.6, top - 0.8), GLASS_DARK);
+    }
+    // The porch's door (pointed, oak) and the west door under the tower
+    b.add(lancet(PORCH_DOOR[0], PORCH_DOOR[1], [0, -1], 1.1, B, B + 1.9), OAK);
+    b.add(lancet(TOWER[0], tz, [-1, 0], 1.0, B, B + 1.8), OAK);
+  }, 'all');
+  if (low) return;
+  // Up close: buttresses between the nave's windows, the dressed stone at the corners
+  b.detail(() => {
+    for (const z of [NAVE[1], NAVE[3]]) {
+      const s = z === NAVE[1] ? -1 : 1;
+      for (let x = NAVE[0] + 0.45; x < NAVE[2]; x += 3.1) {
+        if (z === NAVE[1] && x > PORCH[0] - 0.4 && x < PORCH[2] + 0.4) continue;
+        rbox(b, [x - 0.2, Math.min(z, z + s * 0.45), x + 0.2, Math.max(z, z + s * 0.45)], CHURCH_LOW, B + H.nave - 0.6, DRESSING);
+      }
+    }
+    for (const [x, z] of [[TOWER[0], TOWER[1]], [TOWER[2], TOWER[1]], [TOWER[0], TOWER[3]], [TOWER[2], TOWER[3]]] as Pt[]) rbox(b, [x - 0.18, z - 0.18, x + 0.18, z + 0.18], CHURCH_LOW, top, DRESSING);
+  });
+}
+function drawChurchyard(b: Batch, low: boolean) {
+  // The path (gravel) from Church Road through the lychgate to the porch
+  const [l, r] = [shift(CHURCH_PATH, -PATH_W / 2), shift(CHURCH_PATH, PATH_W / 2)];
+  flat(b, [l[0], l[1], r[1], r[0]], ON + 0.004, GRAVEL);
+  // The low stone wall round the churchyard, and the lychgate (posts, a small gabled roof)
+  for (const [p, q] of YARD_WALL) along(b, p, q, 0.24, 0.15, 0.15 + YARD_WALL_H, KIRK);
+  const g = LYCHGATE;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) along(b, [g.at[0] + sx * (g.w / 2 - 0.15), g.at[1] + sz * (g.d / 2 - 0.15) - 0.01], [g.at[0] + sx * (g.w / 2 - 0.15), g.at[1] + sz * (g.d / 2 - 0.15) + 0.01], 0.22, 0.15, 0.15 + g.h - 0.6, OAK);
+  gabled(b, [g.at[0] - g.w / 2, g.at[1] - g.d / 2, g.at[0] + g.w / 2, g.at[1] + g.d / 2], 0.15 + g.h - 0.6, 0.7, true, SPIRE, OAK, 0.25);
+  // The graves: headstones, crosses, a few chest tombs
+  const m = new THREE.Matrix4();
+  const at = (x: number, z: number, ry: number) => m.clone().makeRotationY(ry).setPosition(x, 0.15, z);
+  const HEAD = box(0.5, 0.72, 0.12, 0, 0.36, 0);
+  const CROSS = merge([box(0.12, 0.95, 0.1, 0, 0.475, 0), box(0.5, 0.11, 0.1, 0, 0.66, 0)]);
+  const TOMB = box(1.0, 0.5, 0.55, 0, 0.25, 0);
+  b.instances(HEAD, GRAVE, GRAVES.filter((q) => q[3] === 0).map(([x, z, ry]) => at(x, z, ry)));
+  b.instances(CROSS, GRAVE, GRAVES.filter((q) => q[3] === 1).map(([x, z, ry]) => at(x, z, ry)));
+  b.instances(TOMB, GRAVE, GRAVES.filter((q) => q[3] === 2).map(([x, z, ry]) => at(x, z, ry)));
+  // The yews: dark, close-clipped cones
+  for (const [x, z, sc] of YEWS) {
+    const cone = new THREE.ConeGeometry(1.1 * sc, 3.2 * sc, low ? 7 : 10).translate(x, 0.15 + 0.3 + 1.6 * sc, z);
+    cone.deleteAttribute('uv');
+    b.add(cone, YEW);
+  }
+}
+
 /** The houses in sites of about ten (in the order they were laid: along a street) */
 export const CHUNK = 10;
 export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
@@ -247,6 +379,15 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
       g.build(into, { cast: true, receive: true });
     });
   }
+  // St Aldwyn's: the church level on its plinth, its churchyard on the hill
+  site('village st aldwyns', [CHURCHYARD.reduce((v, p) => Math.min(v, p[0]), Infinity) - 2, CHURCHYARD.reduce((v, p) => Math.min(v, p[1]), Infinity) - 10, CHURCHYARD.reduce((v, p) => Math.max(v, p[0]), -Infinity) + 2, CHURCHYARD.reduce((v, p) => Math.max(v, p[1]), -Infinity) + 2], (into) => {
+    const b = new Batch();
+    drawChurch(b, low);
+    b.build(into, { cast: true, receive: true, lift: false });
+    const g = new Batch();
+    drawChurchyard(g, low);
+    g.build(into, { cast: true, receive: true });
+  });
   if (GINNELS.length)
     site('village ginnels', rectOf(GINNELS.map((g) => g.at), 10), (into) => {
       const b = new Batch();

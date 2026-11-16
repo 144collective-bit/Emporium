@@ -13,7 +13,7 @@ import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 
 const inBox = (b: readonly number[], x: number, z: number, m = 0) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m;
 
-test('each is a place on the map and in the live settings, with a spot and where you arrive; Bunker Sound\'s door', () => {
+test('each is a place on the map and in the live settings, with a spot and where you arrive; its doors', () => {
   for (const id of ENDS_PLACE_IDS) {
     const p = PLACES.find((q) => q.id === id);
     assert.ok(p && p.kind === 'spot' && p.spot === id, id);
@@ -22,11 +22,13 @@ test('each is a place on the map and in the live settings, with a spot and where
     assert.ok(ENDS_SPAWNS[id], id);
   }
   // (Bunker Sound's under Teasel House, Phase 2; the others' buildings are Phase 3's)
-  assert.deepEqual(ENDS_DOORS.map((d) => d.id), ['bunker']);
-  const door = ENDS_DOORS[0];
-  assert.ok(!SOLIDS.some((b) => inBox(b, door.x, door.z, 0.2)), 'its door in something solid');
-  const pin = ENDS_SPOTS.find((q) => q.id === 'bunker')!.pin;
-  assert.ok(Math.hypot(door.x - pin[0], door.z - pin[1]) < 1.5, 'its door by its pin');
+  // (Bunker Sound's under Teasel House, St Aldwyn's porch: Phases 2 and 3b)
+  assert.deepEqual(ENDS_DOORS.map((d) => d.id), ['bunker', 'aldwyns']);
+  for (const door of ENDS_DOORS) {
+    assert.ok(!SOLIDS.some((b) => inBox(b, door.x, door.z, 0.2)), `${door.id}'s door in something solid`);
+    const pin = ENDS_SPOTS.find((q) => q.id === door.id)!.pin;
+    assert.ok(Math.hypot(door.x - pin[0], door.z - pin[1]) < 1.5, `${door.id}'s door by its pin`);
+  }
 });
 
 test('you arrive on a sidewalk by each, clear of the asphalt and of anything solid, facing its pin', () => {
