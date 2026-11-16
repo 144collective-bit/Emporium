@@ -448,6 +448,14 @@ keep it up to date when what it describes changes.
   the outline tests (Lot 9's fence, the brook, the churchyard, the rec ground) for points well clear of their boxes,
   which gives the same numbers. Measured after the lift's fix the same way: the boot 8.8 s (its work 4.7 s),
   geometry 265 MB, triangles back to 0.39M in the City view (from 0.49M).
+- **The south's layout as the city loads** (2026-11-16): `?bench` across every view, against the build before
+  Phase 1c, found draws, triangles and memory back in line (the south's new blocks add up to 9% triangles in the views
+  that see them), and the boot's work about 1.9 s longer, half of it the south's street web laid out at load. Its
+  hot tests now skip the far: `zoneAt()` tests Lot 9's fence only within its box, each footpath laid has its box
+  for the closes' and crescents' clearance tests, and the brook's distance is `brookDist` (south.ts), a
+  `nearLine()` (streetfaces.ts) with the brook's stretches bucketed by cell: exactly `distTo` within 14, which is all
+  that's asked of it (`keptOff()`, the bridges, the valley in southground.ts). The same streets, blocks and heights
+  to the bit; about 1 s less of the main thread's time at load, the boot about 0.5 s shorter measured headless.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is
