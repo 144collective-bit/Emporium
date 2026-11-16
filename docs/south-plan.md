@@ -318,7 +318,34 @@ From the Circus west, patchy as high roads are:
 3. **Aldwyn's Green.** The photo's terraces (a new kit: bays, slate roofs,
    chimneys, dormers, front yards, back alleys), the High Road's places,
    St Aldwyn's on its hill, the council rows, the bungalows and the
-   allotments re-laid, the rec ground.
+   allotments re-laid, the rec ground. The owner's answers (2026-11-16):
+   the rows **mostly as the photo** (red brick, slate, white bays), with
+   a few painted fronts, some yellow brick and the odd pebble-dashed
+   house; **two storeys** with a two-storey white bay, a dormer on about
+   one house in four, chimneys every pair, a low wall and a small front
+   yard; St Aldwyn's **Victorian Gothic** (grey stone, its 22.5 spire,
+   pointed windows lit at night, a lychgate, gravestones). Its steps,
+   each signed off:
+   - **3a, the terraces** (built, signed off by the owner 2026-11-16):
+     `southterraces.ts` (DOM-free, `tests/southterraces.test.ts`): 246
+     houses (`HOUSES`) laid block by block along the village's streets
+     (not the High Road's frontage, 3c's), a short row facing Degen's
+     gates; each a yard back from the sidewalk, level on its base (a
+     plinth where the hill falls), its front (red, yellow, painted,
+     pebble-dash), door, dormer, chimney, lit rooms and row ends; the
+     back alleys (`ALLEYS`, behind 208, taking some rear yard where rows
+     back on), ginnels (`GINNELS`) through long rows, front walls with
+     a gate (`frontWalls()`), `TERRACE_SOLIDS` / `TERRACE_GROUND_SOLIDS`.
+     Drawn by `village3d.ts` (`LAZY_DISTRICTS` id `village`,
+     `TERRACES_RECT`): one house's pieces copied to every house
+     (`Batch.instances()`), sills, fanlights and pots near only and not
+     on phones; yards, walls, alleys and ginnels on the rolling ground.
+     About 30k triangles at every distance on phones. Shots `12-` (the
+     plan) and `13-phase-3a-*`.
+   - **3b, St Aldwyn's** on its hill in its churchyard.
+   - **3c, the High Road's places** (the table above).
+   - **3d, the council rows, the bungalows and the allotments.**
+   - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
    street entrances, stairs, ticket halls, platforms walked on, the ride

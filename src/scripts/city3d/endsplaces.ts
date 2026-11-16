@@ -7,7 +7,7 @@
  * has a pin, a panel with Walk in (CityMap.astro), its pick boxes (index.ts, through crestspots.ts `spot()`) and where
  * you arrive (`ENDS_SPAWNS`: the panel's Walk in, places.ts).
  */
-import { CHURCHYARD, CIRCUS } from './south';
+import { CHURCH_ROAD, CHURCHYARD, CIRCUS } from './south';
 import { BUNKER as BUNKER_DOOR } from './southblocks';
 
 import type { Rect } from './endswood';
@@ -64,12 +64,18 @@ export const ENDS_SPOTS: EndsSpot[] = [
  * stand (Phase 3) */
 export const ENDS_DOORS: { id: EndsPlaceId; x: number; z: number; label: string }[] = [{ id: 'bunker', x: DX + OUT[0] * 0.8, z: DZ + OUT[1] * 0.8, label: 'Bunker Sound' }];
 
+/** Church Road's south sidewalk's middle where it passes the churchyard (clear of the terraces' front walls behind it) */
+const CHURCH_SIDEWALK = (() => {
+  const x = (YARD[0] + YARD[2]) / 2;
+  const z = CHURCH_ROAD.pts.reduce((b, p) => (Math.abs(p[0] - x) < Math.abs(b[0] - x) ? p : b))[1];
+  return z + CHURCH_ROAD.half + 0.4;
+})();
 /** Where you arrive (the panels' Walk in, places.ts): on a sidewalk by each, facing it (yaw 0 faces north, π south) */
 export const ENDS_SPAWNS: Record<EndsPlaceId, { x: number; z: number; yaw: number }> = {
   // (on the Circus's outer sidewalk between Underhill Lane and Endswood Road, looking over it)
   endswood: { x: CIRCUS.x + (CIRCUS.r + CIRCUS.half + 0.5) * Math.cos((300 * Math.PI) / 180), z: CIRCUS.z + (CIRCUS.r + CIRCUS.half + 0.5) * Math.sin((300 * Math.PI) / 180), yaw: Math.PI },
   // (on Church Road's sidewalk, the churchyard south of it)
-  aldwyns: { x: (YARD[0] + YARD[2]) / 2, z: 443, yaw: Math.PI },
+  aldwyns: { x: (YARD[0] + YARD[2]) / 2, z: CHURCH_SIDEWALK, yaw: Math.PI },
   // (on Endswood Road's south sidewalk in front of its door, facing it: yaw 0 looks north, -z)
   bunker: { x: DX + OUT[0] * 2.3, z: DZ + OUT[1] * 2.3, yaw: Math.atan2(OUT[0], OUT[1]) },
 };
