@@ -17,6 +17,7 @@ import {
   lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
 } from './southblocks';
 import { inside, shift } from './streetfaces';
+import { onDeckProp } from './southyard';
 
 /** The block's slab (world.ts `SLAB`): walk.ts's heights are over the street, the blocks' bases over today's ground */
 const SLAB = 0.15;
@@ -185,6 +186,8 @@ function standOn(x: number, z: number, y: number): number[] {
     const b = BOX[i];
     if (x < b[0] || x > b[2] || z < b[1] || z > b[3] || y < s.lo - REACH || y > s.hi + REACH) continue;
     if (!inside(s.poly, [x, z])) continue;
+    // (the podium deck's planters and benches stand on it: not stood in, southyard.ts)
+    if (s.id.startsWith('deck') && onDeckProp(x, z)) continue;
     const fy = s.y(x, z);
     if (Math.abs(fy - y) <= REACH) out.push(fy);
   }

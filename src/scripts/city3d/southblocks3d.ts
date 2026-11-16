@@ -31,6 +31,11 @@ import {
   type Block, type Core, type Pt,
 } from './southblocks';
 import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, coreFloors } from './southsky';
+import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COLUMN_R, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
+import { COURTS, DESIRE_LINES, GRASS, PLAY } from './southblocks';
+import { BANK, COVER, ROAD, STONE } from './palette';
+import { parkedCars } from './cars';
+import type { CarId } from './carspec';
 
 export const SELF = import.meta.url;
 
@@ -449,20 +454,8 @@ function drawDeck(b: Batch, poly: Pt[], y: number, base: number) {
       const mid: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
       if (!inBlock(mid, 2.4)) along(b, a, c, 0.12, y, y + 0.6, CONC, -0.07);
     });
-    // Its columns, on a grid inside it
-    const [x0, z0, x1, z1] = rectOf(poly, 0);
-    const insidePoly = (p: Pt) => {
-      let inside = false;
-      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++)
-        if (poly[i][1] > p[1] !== poly[j][1] > p[1] && p[0] < ((poly[j][0] - poly[i][0]) * (p[1] - poly[i][1])) / (poly[j][1] - poly[i][1]) + poly[i][0]) inside = !inside;
-      return inside;
-    };
-    for (let x = x0 + 2; x < x1; x += 5)
-      for (let z = z0 + 2; z < z1; z += 5) {
-        const p: Pt = [x, z];
-        if (!insidePoly(p) || inBlock(p, 3)) continue;
-        b.add(plain(new THREE.CylinderGeometry(0.26, 0.26, y - 0.3 - base, 10).translate(x, (base + y - 0.3) / 2, z)), CONC);
-      }
+    // Its columns down to the court (southyard.ts)
+    for (const [x, z] of DECK_COLUMNS) b.add(plain(new THREE.CylinderGeometry(COLUMN_R, COLUMN_R, y - 0.3 - base, 10).translate(x, (base + y - 0.3) / 2, z)), CONC);
   });
 }
 
@@ -546,9 +539,169 @@ function drawTowerDoors(b: Batch, t: Block) {
   });
 }
 
+/* ---------- The ground round them (2d: southyard.ts) ---------- */
+
+/** On the block's slab (world.ts `SLAB`), a hair over it; these follow the rolling ground (their Batches are lifted) */
+const ON = 0.15 + 0.006;
+const ASPHALT = toon(ROAD.asphalt);
+const BAY_LINE = toon(ROAD.line);
+const LAWN = toon(COVER.lawn);
+const WORN = toon(COVER.dry);
+const PLAY_FLOOR = toon(STONE.edge);
+const SAND = toon(BANK.sand);
+const BIN_COLOURS = ['#2f6a3c', '#2b2d3a', '#55697f', '#8b5a2b'].map((c) => toon(c));
+const RAIL = toon('#3b3846');
+
+/** A thing's box (its corners, `y0` to `y1`) */
+function thingBox(b: Batch, t: Thing, y0: number, y1: number, m: THREE.Material, shrink = 0) {
+  b.add(plain(new THREE.BoxGeometry(t.w - shrink, y1 - y0, t.d - shrink).rotateY(-t.rot).translate(t.at[0], (y0 + y1) / 2, t.at[1])), m);
+}
+/** A point in a thing's frame (u along it, v across) */
+const inThing = (t: Thing, u: number, v: number): Pt => [t.at[0] + u * Math.cos(t.rot) - v * Math.sin(t.rot), t.at[1] + u * Math.sin(t.rot) + v * Math.cos(t.rot)];
+
+function drawCourt(b: Batch, poly: Pt[], court: string) {
+  flat(b, poly, ON, ASPHALT);
+  // (the bays' white lines: each bay's two sides)
+  for (const bay of BAYS.filter((q) => q.court === court)) {
+    const [p, q, r, t] = bayCorners(bay);
+    for (const [a, c] of [[p, q], [t, r]] as [Pt, Pt][]) {
+      const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      const n: Pt = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
+      flat(b, [[a[0] + n[0] * 0.05, a[1] + n[1] * 0.05], [c[0] + n[0] * 0.05, c[1] + n[1] * 0.05], [c[0] - n[0] * 0.05, c[1] - n[1] * 0.05], [a[0] - n[0] * 0.05, a[1] - n[1] * 0.05]], ON + 0.004, BAY_LINE);
+    }
+  }
+}
+function drawBins(b: Batch, t: Thing, low: boolean) {
+  // A low concrete pen, open on its long front, the bins in it
+  const [c0, c1, c2, c3] = thingCorners(t);
+  for (const [a, c] of [[c1, c2], [c2, c3], [c3, c0]] as [Pt, Pt][]) along(b, a, c, 0.12, ON, ON + t.h, CONC, 0);
+  if (low) return;
+  b.detail(() => {
+    const n = Math.max(2, Math.floor(Math.max(t.w, t.d) / 0.7));
+    const longU = t.w >= t.d;
+    for (let i = 0; i < n; i++) {
+      const s = -Math.max(t.w, t.d) / 2 + 0.45 + i * 0.7;
+      const at = longU ? inThing(t, s, 0) : inThing(t, 0, s);
+      b.add(plain(new THREE.BoxGeometry(0.5, 0.85, 0.55).rotateY(-t.rot).translate(at[0], ON + 0.425, at[1])), BIN_COLOURS[i % BIN_COLOURS.length]);
+    }
+  });
+}
+function drawShed(b: Batch, t: Thing) {
+  // Posts at its corners, a roof over them, the bike stands under it
+  for (const [u, v] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const p = inThing(t, (u * t.w) / 2 * 0.92, (v * t.d) / 2 * 0.85);
+    b.add(plain(new THREE.CylinderGeometry(0.05, 0.05, t.h - 0.3, 5).translate(p[0], ON + (t.h - 0.3) / 2, p[1])), RAIL);
+  }
+  // (its roof: a shallow slab in the estate's teal, a lip each long side)
+  thingBox(b, t, ON + t.h - 0.3, ON + t.h - 0.2, ACCENT.teal, -0.2);
+  b.detail(() => {
+    for (let i = 0; i < 4; i++) {
+      const p = inThing(t, -t.w / 2 + 0.5 + i * 0.75, 0);
+      b.add(plain(new THREE.TorusGeometry(0.28, 0.025, 4, 10, Math.PI).rotateY(-t.rot + Math.PI / 2).translate(p[0], ON, p[1])), RAIL);
+    }
+  });
+}
+function drawPlay(b: Batch, low: boolean) {
+  flat(b, PLAY, ON + 0.003, PLAY_FLOOR);
+  // The climbing frame: a box of bars, a deck half way up, a slide off one end
+  const f = FRAME;
+  const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => inThing(f, (u * f.w) / 2, (v * f.d) / 2));
+  for (const p of corners) b.add(plain(new THREE.CylinderGeometry(0.06, 0.06, f.h, 6).translate(p[0], ON + f.h / 2, p[1])), ACCENT.orange);
+  for (let i = 0; i < 4; i++) {
+    const [p, q] = [corners[i], corners[(i + 1) % 4]];
+    along(b, p, q, 0.08, ON + f.h - 0.08, ON + f.h, ACCENT.orange);
+  }
+  thingBox(b, f, ON + 1.0, ON + 1.08, CONC, 0.2);
+  if (!low) {
+    const s0 = inThing(f, f.w / 2, 0);
+    const s1 = inThing(f, f.w / 2 + 1.8, 0);
+    const l = 1.8;
+    b.add(plain(new THREE.BoxGeometry(Math.hypot(l, 1.0), 0.06, 0.6).rotateZ(-Math.atan2(1.0, l)).rotateY(-f.rot).translate((s0[0] + s1[0]) / 2, ON + 0.55, (s0[1] + s1[1]) / 2)), ACCENT.teal);
+  }
+  // The sandpit: a low concrete edge, the sand in it
+  const sp = SANDPIT;
+  const sc = thingCorners(sp);
+  for (let i = 0; i < 4; i++) along(b, sc[i], sc[(i + 1) % 4], 0.18, ON, ON + sp.h, CONC, 0);
+  flat(b, thingCorners({ ...sp, w: sp.w - 0.3, d: sp.d - 0.3 }), ON + sp.h - 0.08, SAND);
+  // The ball court: its lines, its fence (a gap in its west side), a goal at each end
+  const bc = BALL_COURT;
+  const [a, c, d, e] = thingCorners({ ...bc, w: bc.w - 0.6, d: bc.d - 0.6 });
+  for (const [p, q] of [[a, c], [c, d], [d, e], [e, a]] as [Pt, Pt][]) {
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    const n: Pt = [-(q[1] - p[1]) / l, (q[0] - p[0]) / l];
+    flat(b, [[p[0] + n[0] * 0.05, p[1] + n[1] * 0.05], [q[0] + n[0] * 0.05, q[1] + n[1] * 0.05], [q[0] - n[0] * 0.05, q[1] - n[1] * 0.05], [p[0] - n[0] * 0.05, p[1] - n[1] * 0.05]], ON + 0.008, BAY_LINE);
+  }
+  for (const [p, q] of courtFence()) {
+    along(b, p, q, 0.05, ON + bc.h - 0.06, ON + bc.h, RAIL);
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    for (let k = 0; k <= Math.ceil(l / 1.5); k++) {
+      const t = Math.min(1, k / Math.ceil(l / 1.5));
+      b.add(plain(new THREE.CylinderGeometry(0.04, 0.04, bc.h, 5).translate(p[0] + (q[0] - p[0]) * t, ON + bc.h / 2, p[1] + (q[1] - p[1]) * t)), RAIL);
+    }
+    if (!low) b.detail(() => along(b, p, q, 0.01, ON + 0.1, ON + bc.h - 0.1, toon('#4d4a5c'), 0));
+  }
+  for (const v of [-1, 1]) {
+    const g0 = inThing(bc, -0.9, (v * (bc.d - 1.4)) / 2);
+    const g1 = inThing(bc, 0.9, (v * (bc.d - 1.4)) / 2);
+    for (const p of [g0, g1]) b.add(plain(new THREE.CylinderGeometry(0.05, 0.05, 1, 5).translate(p[0], ON + 0.5, p[1])), CONC);
+    along(b, g0, g1, 0.06, ON + 0.96, ON + 1.04, CONC);
+  }
+}
+function drawDeckProps(b: Batch, low: boolean) {
+  for (const t of DECK_PROPS) {
+    if (t.kind === 'planter') {
+      thingBox(b, t, t.y, t.y + t.h, CONC);
+      if (!low) b.detail(() => thingBox(b, t, t.y + t.h - 0.04, t.y + t.h + 0.25, GREEN, 0.15));
+    } else if (!low) {
+      b.detail(() => {
+        thingBox(b, t, t.y + 0.38, t.y + 0.45, toon('#a3804f'));
+        for (const u of [-0.5, 0.5]) {
+          const p = inThing(t, u, 0);
+          b.add(plain(new THREE.BoxGeometry(0.08, 0.38, t.d * 0.8).rotateY(-t.rot).translate(p[0], t.y + 0.19, p[1])), CONC);
+        }
+      });
+    }
+  }
+}
+function registerYard(low: boolean, scene: THREE.Scene | null) {
+  for (const c of COURTS)
+    site(`south-blocks ${c.id}`, rectOf(c.poly, 1), (into) => {
+      const b = new Batch();
+      drawCourt(b, c.poly, c.id);
+      for (const t of [...BIN_STORES, ...BIKE_SHEDS].filter((q) => rectHas(rectOf(c.poly, 4), q.at))) (t.kind === 'bins' ? drawBins(b, t, low) : drawShed(b, t));
+      b.build(into, { cast: true, receive: true });
+    });
+  GRASS.forEach((g, i) =>
+    site(`south-blocks grass ${i}`, rectOf(g, 1), (into) => {
+      const b = new Batch();
+      flat(b, g, ON + 0.002, LAWN);
+      for (const l of DESIRE_LINES) stripAlong(b, l, 0, 0.7, ON + 0.006, WORN, true);
+      b.build(into, { cast: false, receive: true });
+    })
+  );
+  site('south-blocks play', rectOf(PLAY, 1), (into) => {
+    const b = new Batch();
+    drawPlay(b, low);
+    b.build(into, { cast: true, receive: true });
+  });
+  site('south-blocks deck props', rectOf(DECK_PROPS.map((t) => t.at), 2), (into) => {
+    const b = new Batch();
+    drawDeckProps(b, low);
+    b.build(into, { cast: true, receive: true, lift: false });
+  });
+  // The parked cars (cars.ts: instanced near, the far fleet far; phones always far), on the main thread only
+  if (scene)
+    for (const c of COURTS) {
+      const list = YARD_CARS.filter((q) => q[5] === c.id).map(([id, x, z, yaw, paint]): [CarId, number, number, number, string] => [id, x, z, yaw, paint]);
+      if (list.length) parkedCars(scene, ON + 0.004, list);
+    }
+}
+const rectHas = (r: Rect, [x, z]: Pt) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
+
 /* ---------- Registered ---------- */
 
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  registerYard(low, scene);
   const opts = { cast: true, receive: true, lift: false };
   for (const blk of BLOCKS) {
     if (blk.spine)

@@ -220,8 +220,17 @@ From the Circus west, patchy as high roads are:
   entered). The cores' lift houses stand 1.8 over the roofs (`CORE_OVER`).
   The smoke test rides The Core's lift up and down and walks its stair;
   the `?fps` readout says how high you are when you're off the ground.
-- **2d, the ground round them**: courts with cars and bins, grass and
-  desire lines, the play area, the podium decks' planters and benches.
+- **2d, the ground round them** (built, signed off by the owner 2026-11-16):
+  `southyard.ts` (DOM-free, `tests/southyard.test.ts`): the courts' bays
+  (`BAYS`, rows inside each court) with cars in about two in three
+  (`YARD_CARS`, cars.ts `parkedCars()`), bin stores and bike sheds by the
+  courts, the play area's climbing frame, sandpit and fenced ball court
+  (a way in at its west side), eleven trees on the grass (`YARD_TREES`,
+  placed at the boot, under no bridge), planters and benches along the
+  podium deck's open edges (`DECK_PROPS`: they stop you up there,
+  southsky.ts) and its columns (`DECK_COLUMNS`); `YARD_SOLIDS` in the
+  city's. Drawn in southblocks3d.ts (the courts' asphalt and bay lines,
+  the grass and its worn desire lines, all on the rolling ground).
 
 ## The phases (each with the owner's sign-off)
 
