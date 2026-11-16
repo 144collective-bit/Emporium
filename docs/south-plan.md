@@ -318,7 +318,21 @@ From the Circus west, patchy as high roads are:
 3. **Aldwyn's Green.** The photo's terraces (a new kit: bays, slate roofs,
    chimneys, dormers, front yards, back alleys), the High Road's places,
    St Aldwyn's on its hill, the council rows, the bungalows and the
-   allotments re-laid, the rec ground.
+   allotments re-laid, the rec ground. The owner's answers (2026-11-16):
+   the rows **mostly as the photo** (red brick, slate, white bays), with
+   a few painted fronts, some yellow brick and the odd pebble-dashed
+   house; **two storeys** with a two-storey white bay, a dormer on about
+   one house in four, chimneys every pair, a low wall and a small front
+   yard; St Aldwyn's **Victorian Gothic** (grey stone, its 22.5 spire,
+   pointed windows lit at night, a lychgate, gravestones). Its steps,
+   each signed off:
+   - **3a, the terraces**: the terrace kit (DOM-free rows laid along the
+     village's streets, instanced by the house) and the village's
+     streets lined with them, their back alleys and ginnels.
+   - **3b, St Aldwyn's** on its hill in its churchyard.
+   - **3c, the High Road's places** (the table above).
+   - **3d, the council rows, the bungalows and the allotments.**
+   - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
    street entrances, stairs, ticket halls, platforms walked on, the ride
