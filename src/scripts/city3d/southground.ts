@@ -17,6 +17,13 @@ import { BROOK, BROOK_HALF, CHURCHYARD, COMPOUND, EDGE_Z, LOT9_EDGE, SOUTH_STREE
 import { distTo, inside } from './streetfaces';
 import { smooth } from './hills';
 
+/** An outline's or a line's box, and whether a point is at least `m` from it (so at least `m` from the line: the
+ * ground's grid asks millions of times, and most of the south is far from Lot 9's fence and the brook) */
+const boxOf = (pts: Pt[]) => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))] as const;
+const farFrom = (b: readonly [number, number, number, number], x: number, z: number, m: number) => x <= b[0] - m || x >= b[2] + m || z <= b[1] - m || z >= b[3] + m;
+const LOT9_BOX = boxOf(LOT9_EDGE);
+const BROOK_BOX = boxOf(BROOK);
+
 type Rect = [number, number, number, number];
 
 /** The village's hill: about two storeys over today's ground (home.ts's two storeys are 2.5) */
@@ -63,8 +70,11 @@ export function freedom(x: number, z: number) {
   // (the south avenue and everything east of it)
   f *= 1 - smooth(-44, -14, x);
   // (Lot 9's fence, and inside it)
-  if (inside(LOT9_EDGE, [x, z])) return 0;
-  f *= smooth(2, 16, distTo(LOT9_EDGE, [x, z], true));
+  // (far from it, nothing: a full 1)
+  if (!farFrom(LOT9_BOX, x, z, 16)) {
+    if (inside(LOT9_EDGE, [x, z])) return 0;
+    f *= smooth(2, 16, distTo(LOT9_EDGE, [x, z], true));
+  }
   // (Degen's plot: level at today's height, eased round its walls)
   const [px0, pz0, px1, pz1] = COMPOUND;
   f *= smooth(1, 14, Math.hypot(Math.max(px0 - x, 0, x - px1), Math.max(pz0 - z, 0, z - pz1)));
@@ -85,7 +95,7 @@ export function landAt(x: number, z: number) {
     const d = Math.hypot(u, v);
     if (d < 1) h += s.h * 0.5 * (1 + Math.cos(Math.PI * d));
   }
-  const b = distTo(BROOK, [x, z]);
+  const b = farFrom(BROOK_BOX, x, z, BROOK_HALF + VALLEY.side) ? Infinity : distTo(BROOK, [x, z]);
   if (b < BROOK_HALF + VALLEY.side) h -= VALLEY.depth * (1 - smooth(BROOK_HALF, BROOK_HALF + VALLEY.side, b));
   return h * f;
 }
@@ -232,7 +242,7 @@ export function southHeightAt(x: number, z: number) {
   const bed = bedAt(x, z);
   if (bed) h += (bed.y - h) * bed.w;
   // (and right up to Lot 9's fence, today's ground: a road's bank by it eased down to it)
-  if (x > -140 && z > 455) h *= smooth(2, 8, inside(LOT9_EDGE, [x, z]) ? 0 : distTo(LOT9_EDGE, [x, z], true));
+  if (x > -140 && z > 455 && !farFrom(LOT9_BOX, x, z, 8)) h *= smooth(2, 8, inside(LOT9_EDGE, [x, z]) ? 0 : distTo(LOT9_EDGE, [x, z], true));
   // (and Degen's plot level at today's height to its edge, the lane's bank by his gates eased down to it)
   const [px0, pz0, px1, pz1] = COMPOUND;
   if (x > px0 - 8 && x < px1 + 8 && z > pz0 - 8 && z < pz1 + 8) h *= smooth(0, 6, Math.hypot(Math.max(px0 - x, 0, x - px1), Math.max(pz0 - z, 0, z - pz1)));
