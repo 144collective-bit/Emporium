@@ -12,6 +12,8 @@
  */
 import { CHURCHYARD, COMPOUND_GATES, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, type Pt } from './south';
 import { distTo, inside, seeded } from './streetfaces';
+import { southLift } from './southground';
+import { cover, type Box } from './southblocks';
 
 /** Degen's gates' middle (endsfar.ts `GATES`: on Gate Lane, its plot's east edge) */
 const GATE_AT: Pt = [COMPOUND_GATES.x, (COMPOUND_GATES.z0 + COMPOUND_GATES.z1) / 2];
@@ -59,6 +61,17 @@ export interface House {
   /** Where its row ends: a gable to its left (looking at its front), to its right */
   endL: boolean;
   endR: boolean;
+  /** Its ground floor's level (its slab over the highest ground under it), and the lowest ground under it (its plinth
+   * goes down to there) */
+  base: number;
+  low: number;
+}
+/** A ginnel: a gap through a long row, from the street to the alley behind */
+export interface Ginnel {
+  at: Pt;
+  face: Pt;
+  w: number;
+  block: string;
 }
 
 const PAINTS = ['#e9d9b8', '#cfe0d8', '#e8c9c3', '#f2ecd9', '#c9d4e8', '#e7dfa6'];
@@ -100,6 +113,9 @@ const runsOf = (b: (typeof SOUTH_BLOCKS)[number]) => (b.zone === 'village' ? b.r
 /** The streets whose frontage isn't the terraces' (the High Road's shops, 3c) */
 const NOT_TERRACED = new Set(['south-high']);
 
+/** The block's slab (world.ts `SLAB`) */
+const SLAB = 0.15;
+const GINNEL_LIST: Ginnel[] = [];
 export const HOUSES: House[] = (() => {
   const r = seeded(16112026);
   const out: House[] = [];
@@ -152,6 +168,8 @@ export const HOUSES: House[] = (() => {
         // (a ginnel through a long row: a house's gap)
         if (fits && inRow >= TERRACE.most) {
           inRow = 0;
+          const g = at(d + TERRACE.ginnel / 2);
+          GINNEL_LIST.push({ at: [g.p[0] - n[0] * TERRACE.yard, g.p[1] - n[1] * TERRACE.yard], face: n, w: TERRACE.ginnel, block: b.id });
           d += TERRACE.ginnel;
           continue;
         }
@@ -179,6 +197,8 @@ export const HOUSES: House[] = (() => {
           lit: Math.floor(r() * 16),
           endL: false,
           endR: false,
+          base: 0,
+          low: 0,
         });
         inRow++;
         d += w;
@@ -192,6 +212,9 @@ export const HOUSES: House[] = (() => {
     const has = (q: Pt) => out.some((o) => o !== h && inside(houseFoot(o), q));
     h.endL = !has(side(-1));
     h.endR = !has(side(1));
+    const lifts = houseFoot(h).map((q) => southLift(q[0], q[1]));
+    h.base = SLAB + Math.max(...lifts);
+    h.low = SLAB + Math.min(...lifts);
   }
   return out;
 })();
@@ -203,3 +226,60 @@ export const backOf = (h: House): [Pt, Pt] => {
   const p = plotOf(h);
   return [p[2], p[3]];
 };
+export const GINNELS: Ginnel[] = GINNEL_LIST;
+
+/**
+ * A strip behind a house's rear yard, the alley's width: kept where it's in the block and in no one else's plot; where
+ * rows back onto each other close, the alley takes some of the rear yard (`rear`: how deep the yard is left)
+ */
+export const ALLEYS: { house: string; poly: Pt[]; rear: number }[] = HOUSES.flatMap((h) => {
+  const [a0, c0] = backOf(h);
+  const [nx, nz] = h.face;
+  const w = TERRACE.alley;
+  const b = SOUTH_BLOCKS.find((q) => q.id === h.block)!;
+  for (const into of [0, 0.8, 1.4]) {
+    const [a, c]: Pt[] = [[a0[0] + nx * into, a0[1] + nz * into], [c0[0] + nx * into, c0[1] + nz * into]];
+    const poly: Pt[] = [a, c, [c[0] - nx * w, c[1] - nz * w], [a[0] - nx * w, a[1] - nz * w]];
+    const ok =
+      shrink(poly, 0.1).every((q) => inside(b.poly, q)) &&
+      !HOUSES.some((o) => o !== h && (overlaps(shrink(poly, 0.15), shrink(plotOf(o), 0.05)) || overlaps(poly, houseFoot(o))));
+    if (ok) return [{ house: h.id, poly, rear: TERRACE.rear - into }];
+  }
+  return [];
+});
+
+/* ---------- The front walls, the solids ---------- */
+
+/** Where the door is along the front (from the middle, along t): the bay to the other side */
+export const DOOR_U = 0.75;
+export const GATE_W = 0.8;
+/** A house's front wall (a low brick wall along its yard's front, at the sidewalk), in two runs either side of its gate */
+export function frontWalls(h: House): [Pt, Pt][] {
+  const [nx, nz] = h.face;
+  const [tx, tz] = [-nz, nx];
+  const f: Pt = [h.at[0] + nx * (TERRACE.yard - 0.1), h.at[1] + nz * (TERRACE.yard - 0.1)];
+  const p = (u: number): Pt => [f[0] + tx * u, f[1] + tz * u];
+  const [g0, g1] = [DOOR_U - GATE_W / 2, DOOR_U + GATE_W / 2];
+  return [
+    [p(-h.w / 2), p(g0)],
+    [p(g1), p(h.w / 2)],
+  ];
+}
+export const WALL_H = 0.45;
+/** The houses (their tops over their bases: not lifted again) and their front walls (on the ground: lifted, solids.ts) */
+export const TERRACE_SOLIDS: Box[] = HOUSES.flatMap((h) => cover(houseFoot(h), h.base + TERRACE.eaves + TERRACE.ridge, 0.6));
+export const TERRACE_GROUND_SOLIDS: Box[] = HOUSES.flatMap((h) =>
+  frontWalls(h).flatMap(([a, c]) => {
+    // (in short pieces, so a slanting wall's boxes don't fill the yard behind it)
+    const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.5));
+    return Array.from({ length: n }, (_, i): Box => {
+      const [p, q] = [i / n, (i + 1) / n].map((f): Pt => [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f]);
+      return [Math.min(p[0], q[0]) - 0.07, Math.min(p[1], q[1]) - 0.07, Math.max(p[0], q[0]) + 0.07, Math.max(p[1], q[1]) + 0.07, WALL_H];
+    });
+  })
+);
+/** Where the terraces stand, all of them (districts.ts loads their drawing within reach of it) */
+export const TERRACES_RECT: [number, number, number, number] = (() => {
+  const pts = HOUSES.flatMap((h) => plotOf(h));
+  return [Math.min(...pts.map((p) => p[0])) - 4, Math.min(...pts.map((p) => p[1])) - 4, Math.max(...pts.map((p) => p[0])) + 4, Math.max(...pts.map((p) => p[1])) + 4];
+})();

@@ -4,7 +4,8 @@
 // a row facing Degen's gates; no row longer than twelve before a ginnel.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HOUSES, TERRACE, houseFoot, plotOf } from '../src/scripts/city3d/southterraces';
+import { ALLEYS, GINNELS, HOUSES, TERRACE, houseFoot, plotOf } from '../src/scripts/city3d/southterraces';
+import { southLift } from '../src/scripts/city3d/southground';
 import { CHURCHYARD, COMPOUND_GATES, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, type Pt } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { distTo, inside } from '../src/scripts/city3d/streetfaces';
@@ -74,4 +75,20 @@ test("a row facing Degen's gates; and no row longer than twelve without a ginnel
       assert.ok(n <= TERRACE.most, `a row of ${n} on ${s}`);
     }
   }
+});
+
+test('behind the rows: a back alley behind most houses, in no one else\'s plot; level houses on the hill', () => {
+  assert.ok(ALLEYS.length / HOUSES.length > 0.8, `alleys behind ${ALLEYS.length} of ${HOUSES.length}`);
+  for (const a of ALLEYS) {
+    const h = HOUSES.find((q) => q.id === a.house)!;
+    assert.ok(a.rear >= 0.9, `${h.id}'s rear yard all alley`);
+    for (const p of a.poly) assert.ok(offStreet(p) > -0.9, `${h.id}'s alley on a street`);
+    for (const o of HOUSES) if (o !== h && Math.hypot(o.at[0] - h.at[0], o.at[1] - h.at[1]) < 14) for (const p of houseFoot(o)) assert.ok(!inside(a.poly, p), `${h.id}'s alley through ${o.id}`);
+  }
+  assert.ok(GINNELS.length >= 1, 'a ginnel through a long row');
+  for (const h of HOUSES) {
+    assert.ok(h.base >= h.low && h.base - h.low < 0.8, `${h.id} on a steep plot`);
+    for (const p of houseFoot(h)) assert.ok(h.base - 0.15 >= southLift(p[0], p[1]) - 1e-6, `${h.id} under the ground`);
+  }
+  assert.ok(Math.max(...HOUSES.map((h) => h.base)) > 1, "some up the village's hill");
 });
