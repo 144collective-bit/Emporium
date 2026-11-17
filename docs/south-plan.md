@@ -357,7 +357,29 @@ From the Circus west, patchy as high roads are:
      corners near only. With it, the terraces' polish (the owner's B):
      windows on the bays' slanted sides, lower, thinner front walls, and
      white window frames with a sash bar up close.
-   - **3c, the High Road's places** (the table above).
+   - **3c, the High Road's places** (the table above). The owner's
+     answers (2026-11-17): the big four are places (a pin, a panel,
+     coming soon): the Brook & Lantern, Rosa's Café, Kestrel Fuel and the
+     bus garage; the rest shopfronts with their signs; buildings on both
+     sides of the High Road; two to three storeys with flats over the
+     shops (the parade two, the pub two under a big gable, the petrol
+     station and the car wash low); the station's site left behind a
+     hoarding for Phase 4. Built, signed off by the owner 2026-11-17:
+     `highroad.ts` (DOM-free, `tests/highroad.test.ts`): 23 buildings
+     (`SHOPS`) laid along the High Road's runs, first (the terraces fit
+     round them): south side, from the Circus, Endswood Parade (five
+     shops), Rosa's Café, Golden Wing, Sharp Lines, the Brook & Lantern on
+     Bell Street's corner; past Bell Street, a launderette, phone repair,
+     fish bar, off-licence, the gap site, a greengrocer, a hardware shop,
+     a bookshop and Mo's Corner Store; north side, Sparkle Hand Wash by
+     Degen's gates, the station's site with Kestrel Fuel past it (laid
+     where every point of its edges is on the block), the bus garage in
+     the small block by the close, the boarded Duke of
+     Endswood by the Circus. Each level on its base; `SHOP_SOLIDS`; the
+     four are places (endsplaces.ts `HIGH_ROAD_PLACES`: pins over their
+     fronts, doors, Walk in on the sidewalk; their panels in
+     CityMap.astro, coming soon; `LIVE_PLACES`). Drawn by `highroad3d.ts`
+     in the village's chunk, the signs from one atlas lit at night.
    - **3d, the council rows, the bungalows and the allotments.**
    - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,

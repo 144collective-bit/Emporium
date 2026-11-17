@@ -77,12 +77,16 @@ const spots: Record<SpotId, Spot> = {
   endswood: { title: 'Endswood Estate', sub: 'The Ends' },
   aldwyns: { title: "St Aldwyn's", sub: 'Church' },
   bunker: { title: 'Bunker Sound', sub: 'Studio' },
+  brook: { title: 'The Brook & Lantern', sub: 'Pub' },
+  rosas: { title: "Rosa's Café", sub: 'Café' },
+  kestrel: { title: 'Kestrel Fuel', sub: 'Petrol station' },
+  busgarage: { title: "Aldwyn's Green Bus Garage", sub: 'Bus garage' },
   cityhall: { title: 'City Hall', sub: 'Sector 7' },
   police: { title: 'Sector 7 Police', sub: 'Headquarters' },
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
   home: { title: 'Home', sub: "Degen's place" },
 };
-const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
+const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1360,6 +1364,34 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <p class="kicker"><span class="kicker-num">41</span> Endswood Estate</p>
     <h2 id="city-panel-title" class="city-panel-title">Bunker Sound</h2>
     <p class="city-panel-text">A studio in two garages. Sessions coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="brook" data-marquee="Last orders by the brook">
+    <p class="kicker"><span class="kicker-num">46</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Brook &amp; Lantern</h2>
+    <p class="city-panel-text">The village's old corner pub. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="rosas" data-marquee="Full breakfast all day">
+    <p class="kicker"><span class="kicker-num">47</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">Rosa's Café</h2>
+    <p class="city-panel-text">Tea, toast and the full works. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="kestrel" data-marquee="Fill up, head out">
+    <p class="kicker"><span class="kicker-num">48</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">Kestrel Fuel</h2>
+    <p class="city-panel-text">Pumps, a kiosk and an air line. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="busgarage" data-marquee="The night buses start here">
+    <p class="kicker"><span class="kicker-num">49</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">Aldwyn's Green Bus Garage</h2>
+    <p class="city-panel-text">Victorian brick, the buses' home. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
   </template>
 

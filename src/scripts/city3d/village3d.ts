@@ -20,6 +20,7 @@ import { ALLEYS, DOOR_U, GINNELS, HOUSES, TERRACE, WALL_H, frontWalls, houseFoot
 import { CHANCEL, CHURCH_BASE, CHURCH_LOW, CHURCH_PATH, GRAVES, HEIGHTS, LYCHGATE, NAVE, PATH_W, PORCH, PORCH_DOOR, SPIRE_TIP, TOWER, YARD_WALL, YARD_WALL_H, YEWS } from './aldwyns';
 import { CHURCHYARD } from './south';
 import { PLANT } from './palette';
+import { registerHighRoad } from './highroad3d';
 
 export const SELF = import.meta.url;
 
@@ -128,13 +129,15 @@ const PIECES = (() => {
   const winDown = merge([win(BAY_X, 0.32, 1.05, BO + 0.012, 0.72), ...sides(0.32, 1.05)]);
   const winUp = merge([win(BAY_X, 1.45, 2.08, BO + 0.012, 0.72), win(-DOOR_U, 1.45, 2.08, 0.012, 0.6), ...sides(1.45, 2.08)]);
   // Up close: a white frame round the bay's front windows and the one over the door, a sash bar across each
+  // (flat strips just proud of the glass: from the street they read as the frame and its bars)
+  const strip = (x0: number, x1: number, y0: number, y1: number, z: number) => tris(quad([x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], [0, 0, 1]));
   const frame = (x: number, y0: number, y1: number, z: number, w: number) => [
-    box(w + 0.08, 0.05, 0.03, x, y1 + 0.02, z),
-    box(w + 0.08, 0.05, 0.03, x, y0 - 0.02, z),
-    box(0.05, y1 - y0, 0.03, x - w / 2 - 0.015, (y0 + y1) / 2, z),
-    box(0.05, y1 - y0, 0.03, x + w / 2 + 0.015, (y0 + y1) / 2, z),
-    box(w, 0.035, 0.03, x, (y0 + y1) / 2, z),
-    box(0.03, y1 - y0, 0.02, x, (y0 + y1) / 2, z),
+    strip(x - w / 2 - 0.05, x + w / 2 + 0.05, y1 - 0.01, y1 + 0.05, z),
+    strip(x - w / 2 - 0.05, x + w / 2 + 0.05, y0 - 0.05, y0 + 0.01, z),
+    strip(x - w / 2 - 0.05, x - w / 2 + 0.01, y0, y1, z),
+    strip(x + w / 2 - 0.01, x + w / 2 + 0.05, y0, y1, z),
+    strip(x - w / 2, x + w / 2, (y0 + y1) / 2 - 0.018, (y0 + y1) / 2 + 0.018, z),
+    strip(x - 0.015, x + 0.015, y0, y1, z + 0.002),
   ];
   const frames = merge([...frame(BAY_X, 0.32, 1.05, BO + 0.02, 0.72), ...frame(BAY_X, 1.45, 2.08, BO + 0.02, 0.72), ...frame(-DOOR_U, 1.45, 2.08, 0.02, 0.6)]);
   const door = win(-DOOR_U, 0.04, 1.02, 0.012, 0.6);
@@ -379,6 +382,8 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
       g.build(into, { cast: true, receive: true });
     });
   }
+  // The High Road's places (highroad3d.ts, 3c)
+  registerHighRoad(low);
   // St Aldwyn's: the church level on its plinth, its churchyard on the hill
   site('village st aldwyns', [CHURCHYARD.reduce((v, p) => Math.min(v, p[0]), Infinity) - 2, CHURCHYARD.reduce((v, p) => Math.min(v, p[1]), Infinity) - 10, CHURCHYARD.reduce((v, p) => Math.max(v, p[0]), -Infinity) + 2, CHURCHYARD.reduce((v, p) => Math.max(v, p[1]), -Infinity) + 2], (into) => {
     const b = new Batch();
