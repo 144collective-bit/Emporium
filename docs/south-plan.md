@@ -364,7 +364,7 @@ From the Circus west, patchy as high roads are:
      sides of the High Road; two to three storeys with flats over the
      shops (the parade two, the pub two under a big gable, the petrol
      station and the car wash low); the station's site left behind a
-     hoarding for Phase 4. Built, waiting on the owner's sign-off:
+     hoarding for Phase 4. Built, signed off by the owner 2026-11-17:
      `highroad.ts` (DOM-free, `tests/highroad.test.ts`): 23 buildings
      (`SHOPS`) laid along the High Road's runs, first (the terraces fit
      round them): south side, from the Circus, Endswood Parade (five
