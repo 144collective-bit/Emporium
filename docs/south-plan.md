@@ -342,8 +342,8 @@ From the Circus west, patchy as high roads are:
      on phones; yards, walls, alleys and ginnels on the rolling ground.
      About 30k triangles at every distance on phones. Shots `12-` (the
      plan) and `13-phase-3a-*`.
-   - **3b, St Aldwyn's** on its hill in its churchyard (built, waiting on
-     the owner's sign-off): `aldwyns.ts` (DOM-free, `tests/aldwyns.test.ts`):
+   - **3b, St Aldwyn's** on its hill in its churchyard (built, signed off
+     by the owner 2026-11-17): `aldwyns.ts` (DOM-free, `tests/aldwyns.test.ts`):
      Victorian Gothic, laid east to west (the tower and its octagonal
      broach spire west, its tip 22.5 over the church's base, the nave,
      the narrower chancel east, the north porch), level on a plinth on
