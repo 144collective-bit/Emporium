@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, roundRect, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { HEIGHT, SHOPS, shopFoot, type Shop } from './highroad';
+import { BACK_IN, HEIGHT, SHOPS, shopFoot, type Shop } from './highroad';
 
 type Pt = [number, number];
 
@@ -199,8 +199,8 @@ function drawShop(b: Batch, s: Shop, low: boolean) {
           for (const dx of [-0.45, 0.45]) k.box(x + dx - 0.2, x + dx + 0.2, 0.18, 1.1, (c0 + c1) / 2 - 0.15, (c0 + c1) / 2 + 0.15, PUMP);
         }
         const kw = s.w * 0.45 / 2;
-        k.box(-kw, kw, -plinth, 2.2, -s.d, -s.d + 4, CONCRETE);
-        k.box(-kw, kw, 2.2, 2.35, -s.d, -s.d + 4.2, paintOf(s.colour));
+        k.box(-kw, kw, -plinth, 2.2, -s.d + BACK_IN, -s.d + 4, CONCRETE);
+        k.box(-kw, kw, 2.2, 2.35, -s.d + BACK_IN, -s.d + 4.2, paintOf(s.colour));
         // (the kiosk's glass front: to the forecourt)
         put(k, s, -kw + 0.3, kw - 0.3, 0.3, 1.8, -s.d + 4 + 0.012);
         break;
@@ -230,7 +230,7 @@ function drawShop(b: Batch, s: Shop, low: boolean) {
         k.box(-w + 0.3, w - 0.3, h, h + 0.35, -s.d + 0.5, -0.3, paintOf(s.colour));
         k.sign(-w + 1.5, w - 1.5, h + 0.18, 0.3, -0.3 + 0.012);
         const kw = s.w * 0.45 / 2;
-        k.box(-kw, kw, -plinth, 2.2, -s.d, -s.d + 4, CONCRETE);
+        k.box(-kw, kw, -plinth, 2.2, -s.d + BACK_IN, -s.d + 4, CONCRETE);
         break;
       }
       case 'gap':

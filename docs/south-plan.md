@@ -372,8 +372,9 @@ From the Circus west, patchy as high roads are:
      Bell Street's corner; past Bell Street, a launderette, phone repair,
      fish bar, off-licence, the gap site, a greengrocer, a hardware shop,
      a bookshop and Mo's Corner Store; north side, Sparkle Hand Wash by
-     Degen's gates, Kestrel Fuel with the station's site beside it, the
-     bus garage in the small block by the close, the boarded Duke of
+     Degen's gates, the station's site with Kestrel Fuel past it (laid
+     where every point of its edges is on the block), the bus garage in
+     the small block by the close, the boarded Duke of
      Endswood by the Circus. Each level on its base; `SHOP_SOLIDS`; the
      four are places (endsplaces.ts `HIGH_ROAD_PLACES`: pins over their
      fronts, doors, Walk in on the sidewalk; their panels in

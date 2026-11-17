@@ -43,7 +43,7 @@ export const KINDS: Record<ShopKind, { w: number; d: number; storeys: number }> 
   garage: { w: 15, d: 9, storeys: 0 },
   station: { w: 8, d: 4, storeys: 0 },
   carwash: { w: 13, d: 10, storeys: 0 },
-  boarded: { w: 10, d: 8.5, storeys: 2 },
+  boarded: { w: 9, d: 7, storeys: 2 },
 };
 /** The shop floor's height, a storey's, a canopy's (the petrol station's, the car wash's), the bus garage's eaves */
 export const HEIGHT = { shop: 1.4, storey: 1, canopy: 2.6, garage: 4.6, garageRidge: 2.2, hoarding: 1.8 };
@@ -81,7 +81,7 @@ const ITEMS: { block: string; from: Pt; items: Item[] }[] = [
   },
   // North side: by Degen's gates, then east to the estate's edge
   { block: 'north-gates', from: [-213, 378], items: [{ kind: 'carwash', name: 'Sparkle Hand Wash', colour: '#2aabee' }] },
-  { block: 'north-mid', from: [-166, 386], items: [{ kind: 'petrol', name: 'Kestrel Fuel', id: 'kestrel', colour: '#d6a12a' }, { kind: 'station', name: '' }] },
+  { block: 'north-mid', from: [-166, 386], items: [{ kind: 'station', name: '' }, { kind: 'petrol', name: 'Kestrel Fuel', id: 'kestrel', colour: '#d6a12a' }] },
   // (the small block between the High Road and its close: the bus garage)
   { block: 'north-garage', from: [-128, 399], items: [{ kind: 'garage', name: "Aldwyn's Green Bus Garage", id: 'busgarage', colour: '#7a1f2b' }] },
   { block: 'north-east', from: [-107, 409], items: [{ kind: 'boarded', name: 'The Duke of Endswood', colour: '#3b3846' }] },
@@ -93,6 +93,13 @@ const shrink = (r: Pt[], k: number): Pt[] => {
   const c: Pt = [r.reduce((s, p) => s + p[0], 0) / r.length, r.reduce((s, p) => s + p[1], 0) / r.length];
   return r.map((p) => [p[0] + (c[0] - p[0]) * k, p[1] + (c[1] - p[1]) * k]);
 };
+/** Points every half along a ring's edges */
+const edgePoints = (r: Pt[]): Pt[] =>
+  r.flatMap((a, i) => {
+    const c = r[(i + 1) % r.length];
+    const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.5));
+    return Array.from({ length: n }, (_, k): Pt => [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n]);
+  });
 /** A shop's footprint (front wall to back wall) */
 export function shopFoot(s: Pick<Shop, 'at' | 'face' | 'w' | 'd'>): Pt[] {
   const [nx, nz] = s.face;
@@ -144,7 +151,8 @@ export const SHOPS: Shop[] = (() => {
         const front: Pt = [p[0] - n[0] * 0.15, p[1] - n[1] * 0.15];
         const s = { at: front, face: n, w: k.w, d: k.d };
         const foot = shopFoot(s);
-        const fits = shrink(foot, 0.04).every((q) => inside(poly, q)) && !out.some((o) => overlaps(shrink(foot, 0.08), shopFoot(o)) || overlaps(foot, shrink(shopFoot(o), 0.08)));
+        // (every point along its edges in the block, not just its corners: a block's edge can dip in between them)
+        const fits = edgePoints(shrink(foot, 0.04)).every((q) => inside(poly, q)) && !out.some((o) => overlaps(shrink(foot, 0.08), shopFoot(o)) || overlaps(foot, shrink(shopFoot(o), 0.08)));
         if (!fits) {
           d += 0.5;
           continue;
@@ -168,6 +176,8 @@ export function topOf(s: Shop) {
   const roof = s.kind === 'pub' || s.kind === 'boarded' ? 2.2 : 0.35;
   return HEIGHT.shop + (s.storeys - 1) * HEIGHT.storey + roof;
 }
+/** How far in from the plot's back the petrol station's kiosk and the car wash's bay stand */
+export const BACK_IN = 0.6;
 /** Where you stand at a shop's door (on the sidewalk, in front of it) */
 export const doorOf = (s: Shop): Pt => [s.at[0] + s.face[0] * 0.6, s.at[1] + s.face[1] * 0.6];
 
@@ -176,12 +186,14 @@ export const doorOf = (s: Shop): Pt => [s.at[0] + s.face[0] * 0.6, s.at[1] + s.f
 export const SHOP_SOLIDS: Box[] = SHOPS.flatMap((s): Box[] => {
   if (s.kind === 'petrol' || s.kind === 'carwash') {
     // (the kiosk or the bay at the back of the plot)
-    const back = shopFoot({ ...s, at: [s.at[0] - s.face[0] * (s.d - 4), s.at[1] - s.face[1] * (s.d - 4)], d: 4, w: s.w * 0.45 });
-    return cover(back, s.base + 2.2, 0.25);
+    // (a little in from the plot's back: it stands on the block's slab)
+    const back = shopFoot({ ...s, at: [s.at[0] - s.face[0] * (s.d - 4), s.at[1] - s.face[1] * (s.d - 4)], d: 4 - BACK_IN, w: s.w * 0.45 });
+    return cover(shrink(back, 0.04), s.base + 2.2, 0.25);
   }
-  if (s.kind === 'gap' || s.kind === 'station') return cover(shopFoot({ ...s, d: 0.3 }), s.base + HEIGHT.hoarding, 0.5);
+  if (s.kind === 'gap' || s.kind === 'station') return cover(shrink(shopFoot({ ...s, d: 0.3 }), 0.02), s.base + HEIGHT.hoarding, 0.5);
   // (in fine strips: a slanted front's strips stand out from it no more than a hand)
-  return cover(shopFoot(s), s.base + topOf(s), 0.25);
+  // (pulled a little in, so a strip at a slanted back never stands past the block's edge)
+  return cover(shrink(shopFoot(s), 0.02), s.base + topOf(s), 0.25);
 });
 /** Where the High Road's buildings stand, all of them */
 export const HIGHROAD_RECT: [number, number, number, number] = (() => {
