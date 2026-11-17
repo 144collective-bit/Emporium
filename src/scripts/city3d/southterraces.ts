@@ -15,6 +15,7 @@ import { distTo, inside, seeded } from './streetfaces';
 import { southLift } from './southground';
 import { cover, type Box } from './southblocks';
 import { CHURCH_PATH, PATH_W } from './aldwyns';
+import { SHOPS, shopFoot } from './highroad';
 
 /** Degen's gates' middle (endsfar.ts `GATES`: on Gate Lane, its plot's east edge) */
 const GATE_AT: Pt = [COMPOUND_GATES.x, (COMPOUND_GATES.z0 + COMPOUND_GATES.z1) / 2];
@@ -168,6 +169,8 @@ export const HOUSES: House[] = (() => {
           foot.every((q) => SOUTH_STREETS.every((st) => distTo(st.pts, q, st.loop) - st.half - 0.8 > 0.4)) &&
           FOOTPATHS.every((f) => foot.every((q) => distTo(f.pts, q) > PATH_HALF + 0.4)) &&
           !plots.some((o) => overlaps(shrink(plot, 0.15), o)) &&
+          // (the High Road's buildings first, highroad.ts: a house's plot keeps out of theirs)
+          !SHOPS.some((sh) => overlaps(shrink(plot, 0.1), shopFoot(sh))) &&
           // (and no house in another, at a bend's back corners: each pulled a tenth in towards its middle)
           !feet.some((o) => overlaps(shrink(foot, 0.1), o) || overlaps(foot, shrink(o, 0.1)));
         // (a ginnel through a long row: a house's gap)
