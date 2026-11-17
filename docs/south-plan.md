@@ -380,7 +380,16 @@ From the Circus west, patchy as high roads are:
      fronts, doors, Walk in on the sidewalk; their panels in
      CityMap.astro, coming soon; `LIVE_PLACES`). Drawn by `highroad3d.ts`
      in the village's chunk, the signs from one atlas lit at night.
-   - **3d, the council rows, the bungalows and the allotments.**
+   - **3d, the council rows, the bungalows and the allotments.** The
+     owner's answers (2026-11-17): the council land north of the High
+     Road **postwar semis** (1950s pairs and short rows of four, pale
+     brick or render, hipped roofs, front gardens behind hedges, some
+     porches and pebble-dash); the land west of Degen's compound **neat
+     60s bungalows** (detached on wide plots, low hipped roofs, garages,
+     tidy lawns, a caravan here and there); **the allotments by the
+     brook** west of the village (plots, sheds, water butts, bean poles, a
+     gate and a path); **corner shops** at a few junctions and **the
+     derelict community centre** on a corner of the council estate.
    - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
