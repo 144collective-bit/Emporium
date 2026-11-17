@@ -390,6 +390,17 @@ From the Circus west, patchy as high roads are:
      brook** west of the village (plots, sheds, water butts, bean poles, a
      gate and a path); **corner shops** at a few junctions and **the
      derelict community centre** on a corner of the council estate.
+     Built, waiting on the owner's sign-off: `council.ts` (DOM-free,
+     `tests/council.test.ts`): `lay()` puts lots along the streets where
+     they fit (every point of their edges in the block, clear of what's
+     there: the High Road's buildings, the terraces' plots, the estate's
+     blocks, Degen's compound); the corner shops and the community centre
+     first, then 13 pairs of semis on the council land (along Fennel Way
+     and its closes: the council land is small, the High Road's frontage
+     and the closes take most of it) and 18 bungalows round the compound;
+     the allotments' strip on the brook's north bank with its plots and
+     sheds; the solids. Drawn by `council3d.ts` in the village's chunk
+     (copied shapes; gardens, hedges and drives on the rolling ground).
    - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
