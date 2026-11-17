@@ -342,7 +342,21 @@ From the Circus west, patchy as high roads are:
      on phones; yards, walls, alleys and ginnels on the rolling ground.
      About 30k triangles at every distance on phones. Shots `12-` (the
      plan) and `13-phase-3a-*`.
-   - **3b, St Aldwyn's** on its hill in its churchyard.
+   - **3b, St Aldwyn's** on its hill in its churchyard (built, signed off
+     by the owner 2026-11-17): `aldwyns.ts` (DOM-free, `tests/aldwyns.test.ts`):
+     Victorian Gothic, laid east to west (the tower and its octagonal
+     broach spire west, its tip 22.5 over the church's base, the nave,
+     the narrower chancel east, the north porch), level on a plinth on
+     the hilltop; the lychgate on the churchyard's north edge in line
+     with the porch, the gravel path from Church Road (the terraces leave
+     a gap for it), the low stone wall round the churchyard, about ninety
+     graves (headstones, crosses, chest tombs), yews; its solids; the
+     porch door is St Aldwyn's (`ENDS_DOORS`), its pin over the porch.
+     Drawn in village3d.ts: lancets lit amber at night, three tall ones
+     in the east end, the belfry, oak doors; buttresses and dressed
+     corners near only. With it, the terraces' polish (the owner's B):
+     windows on the bays' slanted sides, lower, thinner front walls, and
+     white window frames with a sash bar up close.
    - **3c, the High Road's places** (the table above).
    - **3d, the council rows, the bungalows and the allotments.**
    - **3e, the rec ground** (pitches, pavilion, skate park).
