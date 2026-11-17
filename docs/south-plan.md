@@ -364,7 +364,21 @@ From the Circus west, patchy as high roads are:
      sides of the High Road; two to three storeys with flats over the
      shops (the parade two, the pub two under a big gable, the petrol
      station and the car wash low); the station's site left behind a
-     hoarding for Phase 4.
+     hoarding for Phase 4. Built, waiting on the owner's sign-off:
+     `highroad.ts` (DOM-free, `tests/highroad.test.ts`): 23 buildings
+     (`SHOPS`) laid along the High Road's runs, first (the terraces fit
+     round them): south side, from the Circus, Endswood Parade (five
+     shops), Rosa's Café, Golden Wing, Sharp Lines, the Brook & Lantern on
+     Bell Street's corner; past Bell Street, a launderette, phone repair,
+     fish bar, off-licence, the gap site, a greengrocer, a hardware shop,
+     a bookshop and Mo's Corner Store; north side, Sparkle Hand Wash by
+     Degen's gates, Kestrel Fuel with the station's site beside it, the
+     bus garage in the small block by the close, the boarded Duke of
+     Endswood by the Circus. Each level on its base; `SHOP_SOLIDS`; the
+     four are places (endsplaces.ts `HIGH_ROAD_PLACES`: pins over their
+     fronts, doors, Walk in on the sidewalk; their panels in
+     CityMap.astro, coming soon; `LIVE_PLACES`). Drawn by `highroad3d.ts`
+     in the village's chunk, the signs from one atlas lit at night.
    - **3d, the council rows, the bungalows and the allotments.**
    - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,

@@ -62,6 +62,7 @@ import { BLOCK_SOLIDS as SOUTH_BLOCK_SOLIDS } from './southblocks';
 import { YARD_SOLIDS as ENDS_YARD_SOLIDS } from './southyard';
 import { TERRACE_GROUND_SOLIDS, TERRACE_SOLIDS } from './southterraces';
 import { CHURCH_SOLIDS, CHURCHYARD_SOLIDS } from './aldwyns';
+import { SHOP_SOLIDS } from './highroad';
 import { HOME_SOLIDS } from './home';
 import { FRINGE_SOLIDS } from './fringes';
 import { NORTH_SOLIDS } from './uptownnorth';
@@ -322,7 +323,9 @@ export const SOLIDS: Box[] = onGround([...DRAWN.map(designBox), ...DOWNTOWN_SOLI
   // (Aldwyn's Green's houses: theirs too, southterraces.ts)
   TERRACE_SOLIDS,
   // (St Aldwyn's: its tops over its base too, aldwyns.ts)
-  CHURCH_SOLIDS
+  CHURCH_SOLIDS,
+  // (the High Road's buildings: theirs too, highroad.ts)
+  SHOP_SOLIDS
 );
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));

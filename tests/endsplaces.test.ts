@@ -22,8 +22,8 @@ test('each is a place on the map and in the live settings, with a spot and where
     assert.ok(ENDS_SPAWNS[id], id);
   }
   // (Bunker Sound's under Teasel House, Phase 2; the others' buildings are Phase 3's)
-  // (Bunker Sound's under Teasel House, St Aldwyn's porch: Phases 2 and 3b)
-  assert.deepEqual(ENDS_DOORS.map((d) => d.id), ['bunker', 'aldwyns']);
+  // (Bunker Sound's under Teasel House, St Aldwyn's porch, the High Road's four: Phases 2, 3b and 3c)
+  assert.deepEqual(ENDS_DOORS.map((d) => d.id), ['bunker', 'aldwyns', 'brook', 'rosas', 'kestrel', 'busgarage']);
   for (const door of ENDS_DOORS) {
     assert.ok(!SOLIDS.some((b) => inBox(b, door.x, door.z, 0.2)), `${door.id}'s door in something solid`);
     const pin = ENDS_SPOTS.find((q) => q.id === door.id)!.pin;

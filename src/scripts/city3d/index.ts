@@ -46,7 +46,7 @@ import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
-import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
+import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
 import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, homePlaces, HOME_SPAWN, inHouse, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
@@ -893,8 +893,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(HM_SPAWN);
       });
-    // Endswood's panels (the estate, St Aldwyn's, Bunker Sound): Walk in in front of each door, facing it
-    if (id === 'endswood' || id === 'aldwyns' || id === 'bunker')
+    // The south's panels (the estate, St Aldwyn's, Bunker Sound, the High Road's four): Walk in in front of each door
+    if ((ENDS_PLACE_IDS as string[]).includes(id))
       panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
