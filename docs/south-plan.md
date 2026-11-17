@@ -357,7 +357,14 @@ From the Circus west, patchy as high roads are:
      corners near only. With it, the terraces' polish (the owner's B):
      windows on the bays' slanted sides, lower, thinner front walls, and
      white window frames with a sash bar up close.
-   - **3c, the High Road's places** (the table above).
+   - **3c, the High Road's places** (the table above). The owner's
+     answers (2026-11-17): the big four are places (a pin, a panel,
+     coming soon): the Brook & Lantern, Rosa's Café, Kestrel Fuel and the
+     bus garage; the rest shopfronts with their signs; buildings on both
+     sides of the High Road; two to three storeys with flats over the
+     shops (the parade two, the pub two under a big gable, the petrol
+     station and the car wash low); the station's site left behind a
+     hoarding for Phase 4.
    - **3d, the council rows, the bungalows and the allotments.**
    - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
