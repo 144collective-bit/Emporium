@@ -30,9 +30,26 @@ only once he's near it.
 Measured on 2026-11-18, headless Chromium on software graphics (slow, so read the numbers against each other, not
 as a real phone's), the built textures not baked (painted in the browser), a fresh save:
 
-*(the timings are being taken; they go here before the plan is signed off)*
+| Desktop window, 1440 wide (the medium tier: few cores, software graphics) | |
+|---|---|
+| Page opened to the title screen's "The city is ready" | 15.9 s |
+| of which the boot itself (`bootCity()` to its first frame) | 6.3 s (building 4.4, shaders 0.1) |
+| so before the boot starts (the page's code fetched and run, the baked data, the fonts) | about 9.6 s |
+| Walk pressed (at home) to the south's chunk loaded, the compound drawn | 5.8 s |
+| Walk pressed to every site in the city built | not reached in 15 min (1,768 still waiting) |
 
-What it says: to follow with the timings.
+What it says:
+
+- **Most of the wait is before the boot.** About 9.6 s go on fetching and running the city's code (the DOM-free
+  data worked out as modules load, such as the south's street web) before `bootCity()` starts. The house can't hide
+  that unless what the room needs is split off from it too: Phase 3 measures it piece by piece.
+- **The house is the last thing there today.** A returning player's walk starts at home 5.8 s before the compound
+  is drawn. Phase 1 asks for it first.
+- **"The street is ready" has to mean near the house**, not the whole city: the whole city's sites take far longer
+  than anyone waits in a room (on this machine they never finished). The doors' rule counts only the sites within
+  reach of the gates.
+- The phone tier isn't measured here: on software graphics an emulated phone runs on the same CPU, so it says
+  nothing more. Phase 1 measures it with `?bench` on a real phone, before and after.
 
 ## The phases
 
