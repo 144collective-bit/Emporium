@@ -151,6 +151,13 @@ What it says:
    side), the guide files (`menus.md`'s start menu, `endswood.md`'s home, `performance.md`'s start-up,
    `walk-mode.md`), and the home plan's note that walking starts in the room.
 
+## Checked after the merge (2026-11-18)
+
+On `main` as merged (PR #189): the "Build site" Action (run 302) passed every step; every smoke scene passed (wake,
+home, homegarage, hometerrace, homeworkshop, homestash, homewardrobe, car, foot, guns, metro, karts, fly, sky, stair,
+pad, touch); at 320, 375, 768, 1024 and 1440 wide and a phone upright and on its side, no sideways scroll, the doors'
+prompt and the guide's Head out card on screen and apart, no page errors. Not yet: a real phone's `?bench`.
+
 ## Open questions for the owner
 
 - **Getting started's first step** is stocking the stall at the market hall downtown, a long way from the house.
