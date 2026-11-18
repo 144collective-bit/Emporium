@@ -68,7 +68,7 @@ side door (`HALL_W`).
 - **The lounge** (west half): an L-shaped corner sofa where the sofa is, a wide wall-hung telly on a long low media
   unit with a light strip behind it and a games console, a rug, a floor lamp, two plants. The trunk (the stash) stays
   where its prompt is.
-- **The trophy wall** on the lounge's west wall (the owner's pick): lit shelves, see below.
+- **The trophy wall** on the lounge's west wall (the owner's pick): lit shelves, see below (built in Phase 2).
 - **The kitchen** (along the back wall): the counter with a splashback and a light strip under its wall cupboards,
   the fridge tall, an island with three stools in place of the dining table, a pendant over it.
 - **The hall**: a console table by the front door, a mirror, a mat; a framed print or two on the walls (his style,
@@ -142,7 +142,7 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
    and inside, the yard's bollards, monogram and planter, the workshop's frame. `home.ts` (anything solid: the
    planter, the bollards, in `HOME_SOLIDS`), `home3d.ts`, `tests/home.test.ts` (nothing new blocks the gates, the
    car's way out or the doors' prompts). Bench and shots by day and night from the Close and the yard.
-   *Built, waiting on the owner's sign-off.* `home.ts`: `BOLLARDS` (ten, `BOLLARD` 0.07 by 0.38: five along the east
+   *Built, signed off by the owner (2026-11-18).* `home.ts`: `BOLLARDS` (ten, `BOLLARD` 0.07 by 0.38: five along the east
    lawn's edge from a little past the house's corner, so the way round to the side door stays open, and five along
    the north strip past the workshop) and `PLANTERS` (`PLANTER_H`), both in `HOME_SOLIDS`. `home3d.ts`: `STEEL_BLACK`
    and `HIS_NEON` (`PAL.magenta`, 0.6 by day, 2.4 at night: thin tubes only, one shared neon paint, so no draw call
@@ -167,11 +167,31 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
    **Seen:** the neon holds as a line from the Close, the yard and the door; from high over the compound at night it
    breaks into dashes (the ink outlines over a line that thin at that distance; making it half again as thick didn't
    change it). Shots: `docs/compound-shots/phase-1-*` (before and after, desktop by day and night, the phone after).
-2. **The ground floor refit**: the lounge, the kitchen, the hall, the open stairs; `FURNITURE`'s new kinds;
-   `homeWall()` round them; the stash and wardrobe prompts unmoved. Shots of the room by day and night, on a phone.
-3. **The upstairs and the trophy wall**: the first floor (the landing, the bedroom, the office), its walking and
-   prompts (the desk), the stairs' fades re-routed (room ↔ upstairs ↔ terrace), `hometrophies.ts` and its tests,
-   the wall drawn. The smoke test gains scenes for the upstairs and the desk; its terrace scene goes by the landing.
+2. **The ground floor refit and the trophy wall** (the trophy wall moved here from Phase 3 with the owner's go-ahead,
+   2026-11-18): the lounge, the kitchen, the hall, the open stairs; `FURNITURE`'s new kinds; `homeWall()` round them;
+   the stash and wardrobe prompts unmoved; `hometrophies.ts` and its tests, the wall drawn. Shots of the room by day
+   and night, on a phone.
+   *Built, waiting on the owner's sign-off.* `home.ts` `FURNITURE` (new kinds `chaise`, `lamp`, `plant`, `trophies`,
+   `console`, `island`, `stools`; `dining` gone): the corner sofa (its run under the front window and the chaise at
+   its east end), the coffee table, the media unit with the telly facing the sofa, the trunk (the stash, where it
+   was), a floor lamp, the trophy wall on the lounge's west wall; the counter and fridge, a plant, the island with
+   three stools on the lounge's side; the console table and a plant under the front window east of the door; the
+   stairs (same footprint) and the wardrobe as they were. `home3d.ts`: the furniture in black steel, dark units and
+   a pale worktop, his magenta for the cushions and stools; the telly's magenta backlight and a strip under the
+   island's overhang (`BACKLIGHT`, softer than the street's neon); a pendant over the island; the open stairs (nine
+   treads, a black steel stringer, handrail and posts, the opening in the ceiling over their top); the second front
+   window inside (east of the door, as outside); two prints of his own (blocks of his colours); a bigger rug.
+   **The trophy wall:** `hometrophies.ts` (DOM-free, the boot's: `trophies()` from the save, `MILESTONES` 5, 10, 20,
+   30, 40, `SHELF` the feed), set by tycoon-boot.ts as the save loads and on every commit; `home3d.ts`
+   `trophyWall()`, added by south3d.ts on the main thread (the house's site may be built in the worker), builds one
+   small batch in the room's paint and builds it again only when what the wall shows changes. Cups in gold, silver or
+   bronze; the belt; red gloves; gold frames; an empty stand for each slot not yet won.
+   Tests: `tests/home.test.ts` (the refit's places, the prompts where they were, the ways round the island and past
+   the stools; the flood test reaches everything), `tests/hometrophies.test.ts` (the slots, the metals, the belt and
+   gloves, the milestones, the feed).
+3. **The upstairs**: the first floor (the landing, the bedroom, the office), its walking and prompts (the desk), the
+   stairs' fades re-routed (room ↔ upstairs ↔ terrace). The smoke test gains scenes for the upstairs and the desk;
+   its terrace scene goes by the landing.
 4. **The basement**: the den's floor, walls and ceiling, its stair down and up (fades), the trading desk and its
    screens' chart texture, the cave's things, its walking, its sound; tests in `tests/home.test.ts` and
    `tests/groundheight.test.ts`; a smoke scene (down, round the desk, up). Shots by its own light.

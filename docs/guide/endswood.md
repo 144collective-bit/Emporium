@@ -141,6 +141,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   Phase 1 (the outside) is built: black steel and his neon (home3d.ts `STEEL_BLACK`, `HIS_NEON`, his D by `mark()` on
   the gate pier's plaque and in the paving), a hoop on the garage's pier, and the yard's lit bollards and the planters
   by the front door (home.ts `BOLLARDS`, `PLANTERS`, in `HOME_SOLIDS`).
+  Phase 2 (the ground floor refit) is built: the lounge, kitchen island and hall in `FURNITURE`, the open stairs, and
+  the trophy wall (`hometrophies.ts`: `trophies()` from the save, the `SHELF` feed set by tycoon-boot.ts; drawn on the
+  main thread by home3d.ts `trophyWall()`, added by south3d.ts).
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

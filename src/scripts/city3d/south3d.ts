@@ -17,7 +17,7 @@ import { COVER, KERB, PLANT, ROAD, STONE, VERGE } from './palette';
 import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, FOOTPATHS, HEDGES, PATH_HALF, REC, SOUTH_CROSSINGS, SOUTH_STREETS, type Pt } from './south';
 import { BOLLARD, PATH_BOLLARDS } from './endswood';
 import { PLOT } from './endsfar';
-import { registerHome } from './home3d';
+import { registerHome, trophyWall } from './home3d';
 import { HOME_POOLS } from './home';
 import { registerTunnel } from './tunnel3d';
 
@@ -278,4 +278,7 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   pools.frustumCulled = false;
   pools.name = 'home-pools';
   scene.add(fx(pools));
+  // The trophy wall in his lounge (docs/compound-plan.md Phase 2): what's on its shelves, from the save, on the main
+  // thread (home3d.ts `trophyWall()`, hometrophies.ts)
+  trophyWall(scene, low);
 }

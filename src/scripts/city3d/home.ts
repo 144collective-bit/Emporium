@@ -217,7 +217,22 @@ export const CEIL = 1.2;
 export const HOME_CAMERA: [number, number, number, number, number, number] = [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + CEIL];
 
 /** A thing in the room: its footprint, how tall, and what it is (home3d.ts draws each kind) */
-export type FurnitureKind = 'stairs' | 'sofa' | 'table' | 'tv' | 'counter' | 'fridge' | 'dining' | 'wardrobe' | 'stash';
+export type FurnitureKind =
+  | 'stairs'
+  | 'sofa'
+  | 'chaise'
+  | 'table'
+  | 'tv'
+  | 'lamp'
+  | 'plant'
+  | 'trophies'
+  | 'counter'
+  | 'fridge'
+  | 'island'
+  | 'stools'
+  | 'console'
+  | 'wardrobe'
+  | 'stash';
 export interface Furniture {
   kind: FurnitureKind;
   rect: Rect;
@@ -230,21 +245,31 @@ const SZ = HOME.sideDoor[1];
 /** The way through the room from the front door to the side door, kept clear: this wide */
 export const HALL_W = 1.25;
 /**
- * The room: the sitting room in its west half (the sofa under the front window facing the telly on its unit across
- * a low table, the trunk at the sofa's end: the stash), the kitchen along the back wall (a counter, the fridge at
- * its end, a table), the stairs boxed in along the east wall by the front and the wardrobe past them; the middle
- * clear from the front door to the side door
+ * The room, refitted (docs/compound-plan.md Phase 2): **the lounge** in its west half (the corner sofa: its long run
+ * under the front window and a chaise at its east end, a coffee table, the media unit across the room with the telly
+ * on it facing the sofa, the trunk at the sofa's west end (the stash), a floor lamp, and **the trophy wall** on the
+ * west wall); **the kitchen** along the back wall (the counter, the fridge at its end, a plant at its west end, an
+ * island with its stools on the lounge's side); **the hall** from the front door to the side door, clear (a console
+ * table and a plant under the front window east of the door), the stairs open along the east wall by the front and the
+ * wardrobe past them. The stash's, the wardrobe's and the doors' prompts stand where they always have
  */
 export const FURNITURE: Furniture[] = [
   { kind: 'stairs', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: CEIL },
   { kind: 'sofa', rect: [rx0 + 0.3, rz0 + 0.04, rx0 + 3.2, rz0 + 0.78], h: 0.42 },
+  { kind: 'chaise', rect: [rx0 + 2.46, rz0 + 0.78, rx0 + 3.2, rz0 + 1.9], h: 0.42 },
   { kind: 'stash', rect: [rx0 + 0.3, rz0 + 0.9, rx0 + 1.0, rz0 + 1.3], h: 0.3 },
-  { kind: 'table', rect: [rx0 + 1.3, rz0 + 1.5, rx0 + 2.7, rz0 + 1.95], h: 0.24 },
-  { kind: 'tv', rect: [rx0 + 0.6, rz0 + 2.75, rx0 + 3.0, rz0 + 3.1], h: 0.36 },
-  { kind: 'wardrobe', rect: [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15], h: 1.1 },
-  { kind: 'dining', rect: [rx0 + 1.3, rz1 - 2.0, rx0 + 2.5, rz1 - 1.4], h: 0.42 },
+  { kind: 'table', rect: [rx0 + 1.6, rz0 + 1.3, rx0 + 2.2, rz0 + 1.9], h: 0.2 },
+  { kind: 'tv', rect: [rx0 + 0.4, rz0 + 2.75, rx0 + 3.0, rz0 + 3.1], h: 0.24 },
+  { kind: 'trophies', rect: [rx0, rz0 + 1.5, rx0 + 0.22, rz0 + 2.6], h: 1.1 },
+  { kind: 'lamp', rect: [rx0 + 0.05, rz0 + 2.8, rx0 + 0.3, rz0 + 3.05], h: 1.0 },
+  { kind: 'plant', rect: [rx0 + 0.06, rz1 - 1.75, rx0 + 0.36, rz1 - 1.45], h: 0.75 },
+  { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
+  { kind: 'plant', rect: [DX + 2.2, rz0 + 0.03, DX + 2.48, rz0 + 0.31], h: 0.55 },
+  { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
+  { kind: 'stools', rect: [rx0 + 1.15, rz1 - 2.25, rx0 + 3.05, rz1 - 1.88], h: 0.3 },
   { kind: 'counter', rect: [rx0 + 0.2, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
   { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.02 },
+  { kind: 'wardrobe', rect: [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15], h: 1.1 },
 ];
 /** How high someone is once he's up on the roof and no longer in the room (between the ceiling and the roof) */
 const UP = SLAB_Y + CEIL + 0.5;

@@ -194,7 +194,10 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
     assert.ok(f.h > 0 && f.h <= CEIL);
   }
   for (let i = 0; i < FURNITURE.length; i++) for (let j = i + 1; j < FURNITURE.length; j++) assert.ok(!overlap(FURNITURE[i].rect, FURNITURE[j].rect), `${FURNITURE[i].kind} on ${FURNITURE[j].kind}`);
-  assert.deepEqual(FURNITURE.map((f) => f.kind).sort(), ['counter', 'dining', 'fridge', 'sofa', 'stairs', 'stash', 'table', 'tv', 'wardrobe']);
+  assert.deepEqual(
+    [...new Set(FURNITURE.map((f) => f.kind))].sort(),
+    ['chaise', 'console', 'counter', 'fridge', 'island', 'lamp', 'plant', 'sofa', 'stairs', 'stash', 'stools', 'table', 'trophies', 'tv', 'wardrobe'],
+  );
   assert.ok(homeWall(ROOM[0] + 0.05, ROOM[1] + 3, R) && !homeWall(HOME.door[0], (ROOM[1] + ROOM[3]) / 2, R));
   // From inside the front door you can walk to inside the side door and up to everything (a flood over a fine grid)
   const step = 0.1;
@@ -230,6 +233,34 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
   const dx = HOME.door[0];
   for (let z = ROOM[1] + HALL_W / 2 + 0.05; z < HOME.sideDoor[1]; z += 0.2) assert.ok(!homeWall(dx, z, HALL_W / 2), `the way in blocked at ${z}`);
   for (let x = dx; x < ROOM[2] - HALL_W / 2 - 0.05; x += 0.2) assert.ok(!homeWall(x, HOME.sideDoor[1], 0.3), `the way to the side door blocked at ${x}`);
+});
+
+test('the refit (docs/compound-plan.md Phase 2): the lounge west, the kitchen at the back, the hall clear, the prompts where they were', () => {
+  const at = (k: string) => FURNITURE.find((f) => f.kind === k)!.rect;
+  const [rx0, rz0, rx1, rz1] = ROOM;
+  const dx = HOME.door[0];
+  // The stash's and the wardrobe's prompts stand where they always have (the smoke test's scenes start there)
+  const use = (id: string) => HOME_USES.find((u) => u.id === id)!;
+  assert.deepEqual([use('home:stash').x, use('home:stash').z].map((n) => Math.round(n * 100) / 100), [-236.3, 386.15]);
+  assert.deepEqual([use('home:wardrobe').x, use('home:wardrobe').z].map((n) => Math.round(n * 100) / 100), [-229.85, 388.6]);
+  for (const u of HOME_USES) assert.ok(!homeWall(u.x, u.z, R), `${u.id}'s prompt in something`);
+  const up = HOME_PORTALS.find((p) => p.id === 'home:up')!;
+  assert.ok(!homeWall(up.x, up.z, R), 'the stairs\' prompt');
+  // The lounge west of the hall: the corner sofa (its run under the front window, the chaise at its east end), the
+  // telly facing it across the coffee table, the trophy wall on the west wall between them
+  for (const k of ['sofa', 'chaise', 'table', 'tv', 'trophies', 'lamp', 'stash']) assert.ok(at(k)[2] < dx - HALL_W / 2, `${k} in the lounge`);
+  const [sofa, chaise, table, tv, wall] = ['sofa', 'chaise', 'table', 'tv', 'trophies'].map(at);
+  assert.ok(Math.abs(chaise[2] - sofa[2]) < 1e-9 && Math.abs(chaise[1] - sofa[3]) < 1e-9, 'the chaise turns the sofa\'s east corner');
+  assert.ok(table[1] > sofa[3] && table[3] < tv[1], 'the coffee table between the sofa and the telly');
+  assert.ok(Math.abs(wall[0] - rx0) < 1e-9 && wall[1] > sofa[3] && wall[3] < tv[1] + 0.1, 'the trophy wall on the west wall, in the lounge');
+  // The kitchen along the back wall: the island with room to walk round it, its stools on the lounge's side
+  const [island, stools, counter] = ['island', 'stools', 'counter'].map(at);
+  assert.ok(Math.abs(counter[3] - rz1) < 1e-9);
+  assert.ok(counter[1] - island[3] > 2 * R + 0.2, 'a way between the island and the counter');
+  assert.ok(stools[3] <= island[1] && stools[1] - tv[3] > 2 * R + 0.2, 'the stools on the lounge\'s side, with a way past them');
+  assert.ok(island[2] < dx - HALL_W / 2, 'the island off the hall');
+  // The stairs along the east wall by the front, as before
+  assert.deepEqual(at('stairs'), [rx1 - 0.95, rz0, rx1, rz0 + 2.8]);
 });
 
 test('the doors: a prompt outside and in for the front and the side, each fade landing somewhere you can stand', () => {
