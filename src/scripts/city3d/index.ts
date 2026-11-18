@@ -1162,6 +1162,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         walk.releaseMouse();
         return open('shop', true);
       }
+      // (upstairs, the office's desk: the business card, as the Dorras pill opens it)
+      if (id === 'home:desk') {
+        walk.releaseMouse();
+        return tycoon?.openCard();
+      }
       if (id === 'home:stash')
         return void loadStash()
           .then((ui) => ui.open())

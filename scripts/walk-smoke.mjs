@@ -157,17 +157,47 @@ await scene('homegarage', '-238.35,380', async (t) => {
   await t.step('the garage menu closed');
 });
 
-// The roof terrace (docs/ends-far-west-plan.md Phase 3): at the stairs' foot in his room, up (a fade to the roof), a few
-// steps along the rail, and down again
+// Up through the house (docs/compound-plan.md Phase 3): at the stairs' foot in his room, up to the landing (a fade),
+// on up through the hatch to the roof terrace, a few steps along the rail, and down to the landing again
+const shows = (label) => (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes(l);
 await scene('hometerrace', '-230.25,387.5,3.14', async (t) => {
   await t.prompt('Upstairs');
-  await t.until('the way down to show (he is on the terrace)', () => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes('Downstairs'), null, 120000);
+  await t.until('the way up to the roof to show (he is on the landing)', shows(), 'Roof', 120000);
+  await t.step(`up on the landing, at ${(await t.where()).join(', ')}`);
+  await t.prompt('Roof');
+  await t.until('the way down to show (he is on the terrace)', shows(), 'Downstairs', 120000);
   await t.step(`up on the terrace, at ${(await t.where()).join(', ')}`);
   await t.go('w', 1.5, 'walked along the terrace');
   await t.go('s', 1.3, 'and back to the hatch');
   await t.prompt('Downstairs');
-  await t.until('the way up to show (he is back in the room)', () => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes('Upstairs'), null, 120000);
-  await t.step('down in the room again');
+  await t.until('the way up to the roof to show (he is back on the landing)', shows(), 'Roof', 120000);
+  await t.step('down on the landing again');
+});
+
+// Upstairs, the office's desk (docs/compound-plan.md Phase 3): it opens the business card, which closes again
+await scene('homedesk', '-235.25,389.95,3.14,1.45', async (t) => {
+  await t.prompt('Desk');
+  await t.until('the business card', () => !!document.querySelector('.city.is-hub'), null, 60000);
+  await t.step('the business card opened at the desk');
+  await t.page.keyboard.press('Escape');
+  await t.until('the card to close', () => !document.querySelector('.city.is-hub'), null, 60000);
+  await t.step('the card closed');
+});
+
+// Down to his basement (docs/compound-plan.md Phase 4): by the stairs in his room, down the steps (a fade), a few
+// steps into the den, back, and up again
+await scene('homeden', '-230.25,385.65,3.14', async (t) => {
+  const z = () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/)?.[2] ?? NaN);
+  await t.prompt('Basement');
+  await t.until('him down in the den (past the steps\' foot)', `(${z})() > 387.3`, null, 120000);
+  await t.step(`down in the den, at ${(await t.where()).join(', ')}`);
+  const foot = await t.where();
+  await t.go('w', 1.2, 'walked into the den');
+  const there = await t.where();
+  await t.go('s', Math.hypot(there[0] - foot[0], there[1] - foot[1]), 'and back to the steps');
+  await t.prompt('Upstairs');
+  await t.until('him back in the room by the stairs', `(${z})() < 387`, null, 120000);
+  await t.step('up in the room again');
 });
 
 // His workshop's roller door (docs/ends-far-west-plan.md Phase 2): the garage's menu, opened on its kit

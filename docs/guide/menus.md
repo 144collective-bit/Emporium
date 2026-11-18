@@ -90,7 +90,8 @@ keep it up to date when what it describes changes.
   styles `.mk-hub` in `menus.css`), the pause screen: tabs Map (World map,
   every place, More's comic and store, PulseChain native, X and Telegram),
   Bag (opens the inventory; what you carry is Business's Bag), Business
-  (the business card `[data-biz]`, moved in), Missions (level and badges),
+  (the business card `[data-biz]`, moved in; also opened by the desk in Degen's office upstairs, home.ts
+  `home:desk`), Missions (level and badges),
   Profile (look, finish, wardrobe, wallet), Settings (`[data-controls]`:
   time, sky, sound, reset view; the walk controls; keys; credits) and Online
   with a game server (`[data-mp]` is its tab). The page makes it (its own

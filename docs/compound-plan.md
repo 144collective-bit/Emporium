@@ -192,12 +192,56 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
 3. **The upstairs**: the first floor (the landing, the bedroom, the office), its walking and prompts (the desk), the
    stairs' fades re-routed (room ↔ upstairs ↔ terrace). The smoke test gains scenes for the upstairs and the desk;
    its terrace scene goes by the landing.
+   *Built (the owner's go-ahead, 2026-11-18: "continue all remaining steps as I sleep, then merge to main"), waiting
+   on the owner's look.* `home.ts`: **the floors** (`homeLevel()` by his height: the room under 0.9 over the slab, the
+   upstairs under 2.1, the roof over that, each line well over a jump (0.52) above its floor), `UP_Y` (CEIL + 0.1, the
+   floor slab's top) and `UP_CEIL` (the eaves); `inHouse()` is any indoor floor, `homeWall(x, z, r, y)` asks that
+   floor's things, `homeFloorY()` (groundheight.ts's `home` layer, was `homeroof`) gives the upstairs' or the roof's
+   floor, `homeCamera(y)` the camera's ceilings and floors for each (walk.ts `cameraRoom()`). **Upstairs**
+   (`UPSTAIRS`): the landing along the east wall with the railed stairwell over the stairs (the steep steps on up to
+   the hatch rise in its north end), a shut bathroom door at its back; partitions to the ceiling with a doorway into
+   each room (`UP_DOORS`); the bedroom at the front (a big low bed between two bedside tables with lamps, a dresser,
+   his caps on a rail, a rug); the office at the back (the desk with two glowing screens (lines of light, nothing to
+   read), a keyboard and a tower with a lit side; his chair; a bookshelf; a plant). The three front windows inside
+   where they are outside; ceiling lights. **The stairs re-routed** (`HOME_PORTALS`, each with its `level`): `home:up`
+   room → landing, `home:down` landing → room, `home:roof` landing → terrace ("Roof"), `home:roofdown` terrace →
+   landing. **The desk** (`HOME_USES` `home:desk`, upstairs) opens the business card as the Dorras pill does
+   (index.ts: `tycoon.openCard()`; the card has no live switch of its own, so there's none to ask). `homePlaces(y)`
+   gives each floor its own prompts. walk.ts: `?spawn=x,z,yaw,y` takes a height (to start on a floor). Tests:
+   `tests/home.test.ts` (the floors by height, the upstairs' things apart and all reachable through the doorways, its
+   prompts, the stairs both ways, the camera's floors; the terrace from the landing), `tests/groundheight.test.ts`
+   (the `home` layer). The smoke test: `hometerrace` goes room → landing → terrace → landing, `homedesk` opens the
+   card at the desk.
 4. **The basement**: the den's floor, walls and ceiling, its stair down and up (fades), the trading desk and its
    screens' chart texture, the cave's things, its walking, its sound; tests in `tests/home.test.ts` and
    `tests/groundheight.test.ts`; a smoke scene (down, round the desk, up). Shots by its own light.
+   *Built (the owner's go-ahead, 2026-11-18), waiting on the owner's look.* `home.ts`: a fourth floor, `base`
+   (`homeLevel()`: under -0.5 over the slab), `BASE_Y` -1.32 to `BASE_CEIL` -0.12; `BASEMENT` (the steps down along
+   the east wall from under the stairs' high end; the telly on the front wall, a table, a low sofa facing it, a
+   beanbag, an arcade cabinet on the west wall; the trading desk along the back wall, his chair, the tower; the bar
+   along the east wall with its lit shelf of bottles behind, stools, a mini fridge; a plant); `homeWall()`,
+   `homeFloorY()` and `homeCamera()` know it (the camera down there has the basement's own four walls: the city's
+   don't reach under the ground); `home:cellar` (room → basement, "Basement", by the stairs) and `home:cellarup`
+   (basement → room, "Upstairs"). `home3d.ts` `basement()` (in the room's batch: dark walls, LED strips along the
+   ceiling's edge in his magenta and cyan, his D in neon on the west wall, a rug, the furniture; the way down a dark
+   opening under the stairs in the room) and `denCharts()` (south3d.ts, the main thread: one mesh for the six
+   screens' faces sharing one baked canvas of made-up candle charts, depth bars and a line, **no words, numbers,
+   tickers, coin names or logos**; the texture's offset creeps along, still under reduced motion; shown only while
+   the camera is down there). The arcade's art and the bottles are made-up colours, no names. Sound: the house's
+   hum, as the room. Looks only: nothing down there does anything in the game, and nothing about it is real money.
+   Tests: `tests/home.test.ts` (the floor by height, everything apart and reachable, the steps under the stairs, the
+   ways down and up, the camera's walls). The smoke test's `homeden` scene (down, into the den, back up).
 5. **The terrace and polish**: the terrace's new things, the telescope; `?bench` views of the room, the upstairs and the basement
    as well as `ends-home`; every width (320, 375, 768, 1024, 1440, phones both ways) for the prompts and the hub from
    the desk; the guides (`endswood.md`, `tests.md`, `menus.md` if the desk's way in is listed there); the plan done.
+   *Built (the owner's go-ahead, 2026-11-18), waiting on the owner's look.* `home.ts` `ROOF_THINGS`: the outdoor sofa
+   where the two chairs stood (facing the front rail, the low table before it), the telescope in the front corner
+   (home3d.ts turns it to the Emporium downtown; looks only), his sign on a stand at the east rail (`sign`: his D in
+   neon facing down the Close, drawn at every distance), a third planter along the back. `bench.ts`: `ends-room`
+   (his lounge) and `ends-den` (the basement) beside `ends-home`. The guides: `endswood.md`, `tests.md`, `menus.md`
+   (the desk's way into the business card), `vehicles.md` (`?spawn`'s height). Tests: `tests/home.test.ts` (the
+   terrace's new things, and the way the smoke test walks up there kept clear). **The plan is complete**, every
+   phase waiting on the owner's look.
 
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:wide`, a build, `npm run budget`,
 `npm run smoke`, `?bench` before and after, and shots in `docs/compound-shots/`.
