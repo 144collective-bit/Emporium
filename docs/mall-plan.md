@@ -210,6 +210,14 @@ passengers, rebuilt "realistic and of a high standard". Their picks:
      `linkWall()` in walk.ts. Up there only the edges and what stands on
      your floor stop you (`LINK_SOLIDS`). `LINK_CAMERA` is for the walk
      camera.
+   - **Checks:** the type check, lint and `npm test` pass. The build and
+     budget pass (boot 741.2 of 750 KB). Browser shots were taken outside
+     and in.
+   - **Draw calls** at the mall's views (counted from the page's WebGL,
+     before and after, headless):
+     - Unchanged: desktop 325 and 318, phone 171. Its geometry merges into
+       the mall's batches.
+     - Triangles up about 0.5% (its people in the crowd).
 2. **The station.** Starlight Mall station moves into the bridge's top
    floor:
    - The platform, canopy, signs and roundel.
