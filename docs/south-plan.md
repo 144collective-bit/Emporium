@@ -390,7 +390,7 @@ From the Circus west, patchy as high roads are:
      brook** west of the village (plots, sheds, water butts, bean poles, a
      gate and a path); **corner shops** at a few junctions and **the
      derelict community centre** on a corner of the council estate.
-     Built, waiting on the owner's sign-off: `council.ts` (DOM-free,
+     Built, signed off by the owner 2026-11-18: `council.ts` (DOM-free,
      `tests/council.test.ts`): `lay()` puts lots along the streets where
      they fit (every point of their edges in the block, clear of what's
      there: the High Road's buildings, the terraces' plots, the estate's
