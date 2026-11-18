@@ -320,6 +320,18 @@ await scene('stair', '-56.6,377.6,-1.786', async (t) => {
   await t.step(`up the stair (${(await t.page.evaluate(upNow)).toFixed(1)})`);
 });
 
+// The Circus below ground (circus.ts, docs/south-plan.md Phase 4b): from the top of the north-east subway's ramp, down it,
+// under the road and out on to the sunken plaza's floor
+const downNow = () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0);
+await scene('circus', '-76.05,395.78,2.88', async (t) => {
+  await t.go('w', 8, 'walked down the ramp');
+  await t.until('down in the subway', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.5, null, 60000);
+  await t.step(`down in the subway (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('w', 9, 'walked under the road into the plaza');
+  await t.until('on the plaza floor', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.8, null, 60000);
+  await t.step(`on the plaza floor (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
 await scene(
   'pad',

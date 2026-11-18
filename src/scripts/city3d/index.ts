@@ -2168,7 +2168,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
+          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
           // reads here as under the ground, or the near plane, or the view gone wrong)
           ...(walking
