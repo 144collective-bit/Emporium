@@ -5,8 +5,9 @@ The military base by the north wall, from the build-out plan's land plan
 base with its own airfield. It guards the wall and holds the wall's first
 exit gate (the wall plan's exits, `docs/wall-plan.md`), shut until the
 storyline opens it. Built one phase at a time, each with the owner's
-sign-off. Keep this plan up to date. Nothing is built yet: the plan waits on
-the owner's sign-off, then Phase 0.
+sign-off. Keep this plan up to date. Nothing is built yet. The owner has
+answered the plan's questions (the second round, below); Phase 0 is next, on
+the owner's go.
 
 ## The owner's answers (2026-11-18)
 
@@ -17,6 +18,10 @@ the owner's sign-off, then Phase 0.
 | Performance | **Built lean, measured each phase on the phone tier** (2A). It doesn't wait for the build-out plan's Phases 2 and 3. If a phase's numbers say it must, it waits. |
 | Getting in | **A guarded main gate and a visitors' area.** The rest is seen through the fence (3A). |
 | Gameplay | **Scenery first** (4A). Places come in later phases (the range, the hangar), each in a plan of its own. |
+| The base's name (the second round) | **Northgate Air Base** (made up; it holds the wall's gate). |
+| The two country roads | **Both end at the base's gates**: `ns0-n` at the main gate, `ns3-n` at the service gate, each with a turning loop there. |
+| Flying your own aircraft over it | **Allowed**, like anywhere else: no turn-back at its fence. |
+| The fence | **See-through chain-link with wire on top**, the base seen through it. |
 
 ## The site (measured, 2026-11-18)
 
@@ -65,11 +70,13 @@ In world numbers, x across and z north to south (north is −z).
   - it bends round the woods, which stay outside it as a screen, or inside it
     round the shelters;
   - a scrub-and-hedge belt runs along its outside, never a straight edge;
+  - chain-link on posts with wire on top (the owner's pick), see-through,
+    the panels instanced;
   - it's lit at night (lamps in `lampStyle()`);
   - it's solid for walking, driving and the camera's ground.
 - **The main gate** is on `ns0-n` at about z −300, north of the stadium: the
   north avenue from town ends at it. It has a guardhouse, a barrier that stays
-  down and the base's name (made up) in raised letters.
+  down and NORTHGATE AIR BASE in raised letters.
   - **The visitors' area** is outside the barrier: a car park, a visitors'
     centre (a place, coming soon) and a viewing terrace looking north over
     the field.
@@ -263,24 +270,8 @@ In world numbers, x across and z north to south (north is −z).
 - landing your own aircraft on its runway;
 - the wall gate opening with the storyline.
 
-## Open questions for the owner
+## The owner's second round (2026-11-18)
 
-1. **The base's name** (made up):
-   - A) Northgate Air Base *(suggested: it holds the wall's gate)*
-   - B) Sector 7 Air Base
-   - C) Fort Halden
-   - D) the owner's own
-2. **The two country roads:**
-   - A) both end at the base's gates, `ns0-n` at the main gate and `ns3-n` at
-     the service gate *(suggested)*
-   - B) `ns0-n` ends at the main gate, `ns3-n` goes on round the fence's east
-     side
-   - C) both stay as they are, the base built round them
-3. **Flying your own aircraft over it:**
-   - A) allowed, like anywhere else *(suggested)*
-   - B) restricted: turned back at its fence, as at the wall
-4. **The fence:**
-   - A) chain-link with wire on top, see-through *(suggested: the base is
-     seen through it)*
-   - B) a concrete wall like a small copy of the city's wall, with the
-     airfield behind it seen from the terrace and the air
+All four suggestions: the name **Northgate Air Base**, **both country roads
+ending at the gates**, **flying over it allowed**, and **a see-through
+chain-link fence**. They're in the table at the top and the layout above.
