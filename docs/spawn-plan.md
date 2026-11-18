@@ -158,10 +158,8 @@ home, homegarage, hometerrace, homeworkshop, homestash, homewardrobe, car, foot,
 pad, touch); at 320, 375, 768, 1024 and 1440 wide and a phone upright and on its side, no sideways scroll, the doors'
 prompt and the guide's Head out card on screen and apart, no page errors. Not yet: a real phone's `?bench`.
 
-## Open questions for the owner
+## The owner's answers (2026-11-18)
 
-- **Getting started's first step** is stocking the stall at the market hall downtown, a long way from the house.
-  Keep it (the beam and a taxi or the car get you there), or add a first step at home ("Head out": walk out of the
-  front door), which changes `GUIDE_STEPS` and needs a migration?
-- **The City view** is still there behind the City button. Should the title screen keep a way straight into it
-  (say a "City view" line under Single player), or is the room the only way in?
+- **Getting started's first step:** a new one at home, **Head out** (built in Phase 1).
+- **The City view from the title screen:** no; it's to be for the admin only, behind a password, later (not in
+  this plan).
