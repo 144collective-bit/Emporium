@@ -554,3 +554,11 @@ straight bare hedges; the open slopes were bare grass and scattered scrub.
 Nothing that stood moved: the pads, houses, drives, lots and places are where they were; only the terraces' heights
 follow the ground now.
 
+**Measured:** Crestmont's chunk's geometry, every site built (counted headless): drawn at every distance 384k triangles
+before, 513k after on the desktop (near-only details 153k to 220k); on phones 174k to 234k (phones draw the shrubs and
+the specimen trees' crowns plainer, the banks every other plant and their walls without copings). The hills' grass
+47k to 68k triangles (the boot's, both tiers). The `?fps` readout in the review mode (`?shots&fps`, every district
+built, so whole-city totals): phones over the Flats 193 draws, 16.12M to 16.19M triangles, over the hills 186 draws,
+16.06M to 16.13M (no new draws); the desktop over the Flats 245 draws, 42.52M to 42.73M. The boot 737.5 to 737.9 of
+750 KB (the grid's lines and `drawnAt()` in terrain.ts); the chunk 37.7 KB.
+

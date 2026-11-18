@@ -187,7 +187,8 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
         for (let k = 0; k < n; k++) {
           const t = (k + 0.5) / n;
           const [x, z] = along ? [u0 + t * (u1 - u0), cv] : [cu, v0 + t * (v1 - v0)];
-          if (f.kind === 'shrubs') ball(0.3, x, 0.28, z, k % 2 ? LEAF : LEAF_DARK);
+          // (phones: a plainer ball)
+          if (f.kind === 'shrubs') ball(0.3, x, 0.28, z, k % 2 ? LEAF : LEAF_DARK, low ? 0 : 1);
           else if (f.kind === 'roses') {
             ball(0.2, x, 0.3, z, LEAF_DARK, 0);
             b.detail(() => {
@@ -273,9 +274,9 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
       case 'specimen': {
         // (a flowering tree by the boundary: a short trunk, a broad round crown, near its blossom)
         cyl(0.07, 1.25, cu, 0, cv, WOOD, 6, 0.1, true);
-        ball(0.78, cu, 2.15, cv, LEAF_DARK);
-        ball(0.55, cu + 0.35, 1.85, cv - 0.25, LEAF);
-        ball(0.5, cu - 0.32, 1.9, cv + 0.28, LEAF_DARK);
+        ball(0.78, cu, 2.15, cv, LEAF_DARK, low ? 0 : 1);
+        ball(0.55, cu + 0.35, 1.85, cv - 0.25, LEAF, low ? 0 : 1);
+        ball(0.5, cu - 0.32, 1.9, cv + 0.28, LEAF_DARK, low ? 0 : 1);
         b.detail(() => {
           if (!low) for (let k = 0; k < 8; k++) add(clump.clone().translate(cu + Math.cos(k * 0.8 + cu) * 0.62, 2.0 + (k % 3) * 0.22, cv + Math.sin(k * 0.8 + cu) * 0.62), BLOSSOM);
         });

@@ -406,7 +406,8 @@ function drawBank(into: THREE.Object3D, bank: Bank, low: boolean) {
   const b = new Batch();
   for (const w of bank.walls) {
     b.add(wallGeometry(w, 0.17), DRY_STONE);
-    b.add(wallGeometry(w, 0.21, 0.07), COPING);
+    // (its coping: not on phones)
+    if (!low) b.add(wallGeometry(w, 0.21, 0.07), COPING);
   }
   // The beds: strips of soil over the grass along each run, a little over the ground as drawn
   const ON_BED = 0.05;
