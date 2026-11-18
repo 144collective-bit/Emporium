@@ -72,8 +72,8 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
  */
 export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket';
 export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel';
-export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer';
-export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer'];
+export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber';
+export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber'];
 export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket'];
 /*
  * Separates (docs/wardrobe-plan.md Phase 2): the top, the bottoms and the shoes are chosen on their own, worn in any

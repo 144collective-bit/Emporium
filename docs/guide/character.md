@@ -272,6 +272,12 @@ keep it up to date when what it describes changes.
     (`laceArcs()`), the side stripe a strip along the side's curve
     (`swoop`). The legs' last few centimetres ride partly with the foot
     (`weigh()`), so a hem stays on the shoe as the ankle bends.
+  - **The bomber** (`docs/wardrobe-plan.md` Phase 5): the jacket's body
+    fuller (`BK`), ribbed collar, cuffs and hem, a front zip, a zip pocket on
+    the left sleeve; in every per-top table (`TORSOS`, `CHAINS`, `TOPS`).
+    A new top needs all three, its card in `fitting.ts`, its name in
+    `charscreen.ts`, a nearest kind for the crowd (`fit()` in crowdlook.ts)
+    and its line in `clothing.test.ts`'s `OUTFITS`.
   - **The separates** (`docs/wardrobe-plan.md` Phase 2): the top, the
     bottoms and the shoes are items of their own, worn in any pairing:
     `trousers`, `joggers` (and track pants, the joggers with

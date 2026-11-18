@@ -538,8 +538,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   }
   buildFloor();
 
-  // (`outfit=hoodie|track|varsity|puffer|soldier` in the address: the player's look in another kind of top)
-  const kind = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'soldier'] as const).find((k) => k === q.get('outfit'));
+  // (`outfit=hoodie|track|varsity|puffer|bomber|soldier` in the address: the player's look in another kind of top)
+  const kind = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'soldier'] as const).find((k) => k === q.get('outfit'));
   // (`clip`: the clipping view, docs/clothing-plan.md: the top, the trousers and the shoes in colours far apart, so a
   // layer coming through another shows at a glance)
   const clip = q.has('clip') ? { top: '#d0463e', bottom: '#3f73c8', shoes: '#ece9e0', tie: '#f2c230' } : {};

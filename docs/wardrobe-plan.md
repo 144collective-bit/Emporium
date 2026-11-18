@@ -346,6 +346,22 @@ A proposed first set; the owner picks what goes in:
   gathered cuff; a bellows pocket on the outside of each thigh, its flap on
   the desktop only (phones keep their 18k). Every top over them and every
   shoe under them pass the clipping tests.
+- **As built, the bomber jacket (Phase 5c, 18 November 2026):** a new top
+  (`LookKind` `bomber`, Streetwear): the jacket's body 5% fuller (`BK`), a
+  ribbed stand collar, ribbed cuffs and a ribbed hem it blouses over (the
+  ribbing a shade darker), a zip up the front with its pull in metal grey,
+  the small zip pocket high on the left sleeve (the right keeps the merch's
+  sleeve mark). Wired into every per-top table: the bags and straps
+  (`TORSOS`), the shades' chain (`CHAINS`), the merch's marks (`TOPS`), the
+  crowd's nearest kind (`fit()` in crowdlook.ts: the crowd doesn't wear it),
+  the lab (`outfit=bomber`). Over every bottoms it clips nowhere (0.0
+  thousandths, both levels).
+- **Phase 5's first set: built**, 18 November 2026. Still open from the
+  plan's list: the coach jacket, the heavyweight hoodie refresh, the puffer
+  vest, the technical shell, the trucker jacket and the tee, relaxed denim
+  and shorts, chunky runners and slides, the fitted cap and skully, the
+  sling, chest and waist bags with the backpack and duffel rebuilt, the
+  headphones at the collar, and the dark-outfit fix.
 
 ### Phase 6: work wear
 
@@ -390,5 +406,7 @@ A proposed first set; the owner picks what goes in:
 - **Phase 2 (the three ranges and the separates): built**, 14 November
   2026.
 - **Phase 3 (the hood up, rebuilt): built**, 14 November 2026.
-- **Phase 4 (eyewear and face gear): built**, 14 November 2026, waiting for
-  the owner's look before Phase 5.
+- **Phase 4 (eyewear and face gear): built**, 14 November 2026.
+- **Phase 5, the first set (the bomber, cargo pants, high-tops and the shoe
+  fixes): built**, 18 November 2026, waiting for the owner's look and the
+  next set.

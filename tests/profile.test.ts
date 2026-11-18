@@ -50,7 +50,7 @@ test('the default look is itself valid and comes back unchanged', () => {
 
 test('every fit, hat and bag is accepted, and the watch', () => {
   for (const kind of KINDS) assert.equal(cleanLook({ ...DEFAULT_LOOK, kind }).kind, kind);
-  assert.deepEqual(KINDS, ['suit', 'hoodie', 'track', 'varsity', 'puffer']);
+  assert.deepEqual(KINDS, ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber']);
   for (const hat of HATS) assert.equal(cleanLook({ ...DEFAULT_LOOK, hat }).hat, hat);
   for (const bag of BAGS) assert.equal(cleanLook({ ...DEFAULT_LOOK, bag }).bag, bag);
   assert.equal(cleanLook({ ...DEFAULT_LOOK, watch: true }).watch, true);

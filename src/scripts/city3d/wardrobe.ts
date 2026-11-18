@@ -15,10 +15,10 @@ import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, ty
 
 /* ---------- Outfits ---------- */
 
-export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'soldier';
+export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'soldier';
 export interface Outfit {
   kind: OutfitKind;
-  /** Jacket, hoodie, track jacket, varsity or puffer jacket, or fatigues */
+  /** Jacket, hoodie, track jacket, varsity, puffer or bomber jacket, or fatigues */
   top: string;
   /** The bottoms' colour, and which (left out: what the top comes with, `bottomsOf()`) */
   bottom: string;
@@ -1088,6 +1088,7 @@ export function items(q: Detail, hero = false): Item[] {
   const track = (o: Outfit) => o.kind === 'track';
   const soldier = (o: Outfit) => o.kind === 'soldier';
   const varsity = (o: Outfit) => o.kind === 'varsity';
+  const bomber = (o: Outfit) => o.kind === 'bomber';
   const puffer = (o: Outfit) => o.kind === 'puffer';
   /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
   const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
@@ -2445,6 +2446,27 @@ export function items(q: Detail, hero = false): Item[] {
   };
   const varsityPatch = patchAt(-0.084, 0.275);
 
+  /*
+   * The bomber (docs/wardrobe-plan.md Phase 5): the jacket's body a little fuller (a padded flight jacket), a ribbed
+   * stand collar, ribbed cuffs and a ribbed hem it blouses over, a zip up the front with its pull, and the small zip
+   * pocket high on one sleeve (the other sleeve keeps the merch's mark)
+   */
+  const BK = smooth(grow(JACKET, 1.05));
+  const bomberFront = surface(BK, SN);
+  const bomberBody = loft(BK, TOP_RINGS, SN);
+  const bomberHem = ribBand(-0.098, -0.046, 0.152, 0.102, 0, TOP_RINGS, SN).band;
+  const bomberCollar = ribBand(0.398, 0.442, 0.068, 0.062, -0.004, R(16)).band;
+  const bomberCuff = ribBand(-0.212, -0.17, 0.039, 0.041, 0.001, R(14)).band;
+  const bomberZip = [
+    tape(-0.005, 0.005, -0.044, 0.398, 0.004, bomberFront, 0.001),
+    rb(0.012, 0.02, 0.006, 0.002, 0, 0.372, bomberFront(0, 0.372) + 0.007),
+  ];
+  const bomberPocket = (() => {
+    const side = sideSurface(grow(LOOSE_U, 1.14));
+    const x = side(0.004, -0.072) + 0.0032;
+    return [rb(0.007, 0.05, 0.036, 0.0025, -x, -0.072, 0.004), rb(0.004, 0.003, 0.03, 0.001, -x - 0.003, -0.05, 0.004)];
+  })();
+
   // Puffer: a fat quilted body with a high collar, fat quilted sleeves, visibly wider than the body
   const PUFFER_BODY: Sec[] = [
     [-0.1, 0.168, 0.116, 0],
@@ -2535,6 +2557,7 @@ export function items(q: Detail, hero = false): Item[] {
     ['hoodie', chainOn(hoodieFront)],
     ['track', chainOn(trackFront)],
     ['varsity', chainOn(varsityFront)],
+    ['bomber', chainOn(bomberFront, 0.003)],
     // (over the puffer's high collar where it stands)
     ['puffer', chainOn((x, y) => Math.max(pufferFront(x, y), y >= 0.395 ? collarFront(x, y) : 0))],
   ];
@@ -2547,6 +2570,7 @@ export function items(q: Detail, hero = false): Item[] {
     { kind: 'hoodie', shells: [[HK, HN2]], over: 0, strapX: 0.118 },
     { kind: 'track', shells: [[TK, HN2]], over: 0.002, strapX: 0.085 },
     { kind: 'varsity', shells: [[VK, SN]], over: 0.003, strapX: 0.085 },
+    { kind: 'bomber', shells: [[BK, SN]], over: 0.004, strapX: 0.088 },
     { kind: 'puffer', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
   ];
   /** A top's outline as tests: inside it, its middle (z) at a height, and the top of its shoulder at x */
@@ -2784,6 +2808,7 @@ export function items(q: Detail, hero = false): Item[] {
     { is: track, front: trackFront, back: surface(TK, HN2, -1), chest: [0.075, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     // (the varsity's chest mark goes on its badge)
     { is: varsity, front: varsityFront, back: surface(VK, SN, -1), chest: null, sleeve: grow(LOOSE_U, 1.14) },
+    { is: bomber, front: bomberFront, back: surface(BK, SN, -1), chest: [0.078, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     { is: puffer, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(UPPER_S, 1.44) },
   ];
   /** Where the top's mark goes (a suit's front is its shirt and tie: a big front mark goes on its chest) */
@@ -3065,6 +3090,20 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('fore', looseFore, CREAM),
         ...both('fore', varsityCuff.band, 'top', { shade: 0.72 }),
         ...both('fore', varsityCuff.stripe, CREAM, { detail: true }),
+      ],
+    },
+    {
+      id: 'bomber',
+      when: bomber,
+      pieces: [
+        P('torso', bomberBody, 'top', TOP),
+        P('torso', bomberHem, 'top', { shade: 0.72, ...TOP }),
+        P('torso', bomberCollar, 'top', { shade: 0.72 }),
+        P('torso', one(bomberZip), '#b8b6c4', { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', bomberCuff, 'top', { shade: 0.72 }),
+        P('armL', one(bomberPocket), 'top', { shade: 0.82, detail: true }),
       ],
     },
     {

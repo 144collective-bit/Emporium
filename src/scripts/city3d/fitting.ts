@@ -211,6 +211,7 @@ const TABS: Tab[] = [
       top('track', 'Track Jacket', 'M9 4h6l5 3-2 5h-2v9H8v-9H6L4 7z M12 4v17 M6 8l1.5 3 M18 8l-1.5 3', 'Jacket', STREET),
       top('varsity', 'Varsity Jacket', 'M8 3l4 2 4-2 4 3-2 5h-2v10H8V11H6L4 6z M12 5v16 M8 18h2 M14 18h2 M9 12l1.5-1.5L12 12l-1.5 1.5z', 'Jacket', STREET),
       top('puffer', 'Puffer Jacket', 'M7 4h10l4 4-2 4h-2v9H7v-9H5L3 8z M7 11h10 M7 15h10 M7 19h10', 'Jacket', STREET),
+      top('bomber', 'Bomber Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 3v2h8V3 M12 5v15 M8 18h8 M5 9l2.5-1', 'Jacket', STREET),
     ],
   },
   {
