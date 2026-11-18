@@ -21,6 +21,7 @@ import { CHANCEL, CHURCH_BASE, CHURCH_LOW, CHURCH_PATH, GRAVES, HEIGHTS, LYCHGAT
 import { CHURCHYARD } from './south';
 import { PLANT } from './palette';
 import { registerHighRoad } from './highroad3d';
+import { registerCouncil } from './council3d';
 
 export const SELF = import.meta.url;
 
@@ -384,6 +385,8 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   }
   // The High Road's places (highroad3d.ts, 3c)
   registerHighRoad(low);
+  // The council rows, the bungalows, the corner shops, the community centre, the allotments (council3d.ts, 3d)
+  registerCouncil(low);
   // St Aldwyn's: the church level on its plinth, its churchyard on the hill
   site('village st aldwyns', [CHURCHYARD.reduce((v, p) => Math.min(v, p[0]), Infinity) - 2, CHURCHYARD.reduce((v, p) => Math.min(v, p[1]), Infinity) - 10, CHURCHYARD.reduce((v, p) => Math.max(v, p[0]), -Infinity) + 2, CHURCHYARD.reduce((v, p) => Math.max(v, p[1]), -Infinity) + 2], (into) => {
     const b = new Batch();
