@@ -3351,10 +3351,10 @@ export function createWalk(d: WalkDeps) {
         mk.seat!.y = y + seat.h;
         pos.set(mk.x, y, mk.z);
         face = mk.face;
-        // (the camera at his front, a three-quarter view of him on the seat: the room's back wall is behind him)
-        pickBenchYaw(mk);
+        // (the camera in front of him, looking back at him on the seat: behind him is the sofa's back and the wall;
+        // once he's up it swings round behind him, `wakeYaw`)
         wakeYaw = spawn?.yaw ?? wrap(mk.face - Math.PI);
-        yaw = benchYaw;
+        yaw = wrap(mk.face + 0.35);
         moments.sit(mk);
       } else wakeYaw = null;
       hotbar?.reset();
