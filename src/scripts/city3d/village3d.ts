@@ -371,7 +371,7 @@ function drawChurchyard(b: Batch, low: boolean) {
 
 /** The houses in sites of about ten (in the order they were laid: along a street) */
 export const CHUNK = 10;
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   for (let i = 0; i < HOUSES.length; i += CHUNK) {
     const list = HOUSES.slice(i, i + CHUNK);
     site(`village houses ${i}`, rectOf(list.flatMap((h) => plotOf(h)), 1.5), (into) => {
@@ -386,7 +386,7 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   // The High Road's places (highroad3d.ts, 3c)
   registerHighRoad(low);
   // The council rows, the bungalows, the corner shops, the community centre, the allotments (council3d.ts, 3d)
-  registerCouncil(low);
+  registerCouncil(low, scene);
   // St Aldwyn's: the church level on its plinth, its churchyard on the hill
   site('village st aldwyns', [CHURCHYARD.reduce((v, p) => Math.min(v, p[0]), Infinity) - 2, CHURCHYARD.reduce((v, p) => Math.min(v, p[1]), Infinity) - 10, CHURCHYARD.reduce((v, p) => Math.max(v, p[0]), -Infinity) + 2, CHURCHYARD.reduce((v, p) => Math.max(v, p[1]), -Infinity) + 2], (into) => {
     const b = new Batch();

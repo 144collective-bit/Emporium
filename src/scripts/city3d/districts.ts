@@ -33,11 +33,10 @@ import { SF_RECT } from './southfield';
 import { STRIP_RECT } from './strip';
 import { SUNRIDGE_RECT } from './sunridge';
 import { LOT9_RECT } from './lot9';
-import { SOUTH_DRAWN } from './south';
+import { COUNCIL_LAND, SOUTH_DRAWN } from './south';
 import { BLOCKS_RECT } from './southblocks';
 import { TERRACES_RECT } from './southterraces';
 import { HIGHROAD_RECT } from './highroad';
-import { COUNCIL_RECT } from './council';
 import { HIGHWAY_BOX } from './highway';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
@@ -88,11 +87,12 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Endswood's blocks (southblocks.ts, docs/south-plan.md Phase 2; southblocks3d.ts): the Rampart, the twin towers, the
   // stairwell blocks and the sky network; their towers seen from further off, as Uptown's
   { id: 'south-blocks', rect: BLOCKS_RECT, load: () => import('./southblocks3d') },
-  // Aldwyn's Green's terraces (southterraces.ts, docs/south-plan.md Phase 3a; village3d.ts)
+  // Aldwyn's Green's terraces (southterraces.ts, docs/south-plan.md Phase 3a; village3d.ts), and the council rows, the
+  // bungalows and the allotments (council.ts, Phase 3d: laid out only with the chunk, their solids joining then)
   {
     id: 'village',
     // (its terraces' land, the High Road's, the council rows', the bungalows' and the allotments' together)
-    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0], COUNCIL_RECT[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1], COUNCIL_RECT[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2], COUNCIL_RECT[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3], COUNCIL_RECT[3])],
+    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0], COUNCIL_LAND[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1], COUNCIL_LAND[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2], COUNCIL_LAND[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3], COUNCIL_LAND[3])],
     load: () => import('./village3d'),
   },
   // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the

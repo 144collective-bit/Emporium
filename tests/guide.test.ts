@@ -6,8 +6,11 @@ import assert from 'node:assert/strict';
 import { GUIDE, advanceGuide, guideAt, guideDone, guideStep, hideGuide } from '../src/scripts/city3d/guide';
 import { BACKUP_KEYS, BACKUP_MAX, TYCOON_KEY, backupName, packBackup, readBackup } from '../src/scripts/city3d/backup';
 import { GUIDE_STEPS, addXp, cleanSave, level, newSave } from '../src/scripts/city3d/tycoon';
-import { DOORS, SOLIDS } from '../src/scripts/city3d/solids';
+import { DOORS, SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { pointIn, pointOnSlab } from './world';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const NOW = Date.UTC(2026, 9, 21, 12);
 /** Degen's radius in walk mode (walk.ts RADIUS) */

@@ -97,8 +97,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`registerHighRoad()`, from village3d.ts): every kind in a building's own frame, the signs one atlas (`siteMat`).
 - **The council rows, bungalows, allotments** (`council.ts`, DOM-free, tested in `tests/council.test.ts`, 3d): `lay()`
   (lots along a block's runs where they fit, in zones), `lotRing()`, `SEMIS`, `BUNGALOWS`, `CORNER_SHOPS`,
-  `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT` (the
-  village's chunk covers it). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
+  `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT`
+  (what's laid; inside `COUNCIL_LAND`, fixed in south.ts, which the village's chunk covers: tested). **Not in the
+  boot**: only the village's chunk imports it (laying it out took seconds as the page loaded), so its solids join
+  there, `registerCouncil()` calling `addSolids()` on the main thread (the houses' with `lift` false, their tops
+  already over their plinths), as Sunridge's houses do; tests that check against `SOLIDS` across the south add them
+  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
 - **The rolling ground** (`southground.ts`, docs/south-plan.md Phase 1c, tested in `tests/southground.test.ts`): the
   village's hill (`HILL_H` 2.4, St Aldwyn's on top), swells in the fields, the brook's valley, today's ground wherever
   the south meets what's fixed (`freedom()`); each street on a bed (`ROAD_BEDS`, one in ten at most, level across, the

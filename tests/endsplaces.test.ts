@@ -6,10 +6,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ENDS_DOORS, ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS } from '../src/scripts/city3d/endsplaces';
 import { inEndswood } from '../src/scripts/city3d/endswood';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { PLACES } from '../src/scripts/city3d/places';
 import { LIVE_PLACES } from '../src/scripts/city3d/live';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const inBox = (b: readonly number[], x: number, z: number, m = 0) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m;
 

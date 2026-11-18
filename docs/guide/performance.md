@@ -487,6 +487,13 @@ keep it up to date when what it describes changes.
   `nearLine()` (streetfaces.ts) with the brook's stretches bucketed by cell: exactly `distTo` within 14, which is all
   that's asked of it (`keptOff()`, the bridges, the valley in southground.ts). The same streets, blocks and heights
   to the bit; about 1 s less of the main thread's time at load, the boot about 0.5 s shorter measured headless.
+- **The council rows out of the boot** (2026-11-18): the boot's code had reached 741.3 KB of 750 after Phase 3d;
+  council.ts (the council rows, bungalows and allotments) was in it only for its solids and its rect. Now only the
+  village's chunk imports it (its solids join there through `addSolids()`, its rect fixed as `COUNCIL_LAND` in
+  south.ts): the boot's code 738.6 KB. Laying it out had run as the page's modules loaded, **before the boot's own
+  clock starts**, so the `?fps` boot line never showed it: from opening the page to the boot line, headless, the
+  phone tier 12.6 to 10.3 s and desktop 13.6 to 11.4 s. A module's top-level work is the page's load time too:
+  measure from the page's start (`performance.now()` at the boot line), not only the boot line.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is

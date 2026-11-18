@@ -6,13 +6,16 @@ import { RESORTS } from '../src/scripts/city3d/resorts';
 import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import assert from 'node:assert/strict';
 import { PLACES, PLACE_IDS, SEEN_R, seen } from '../src/scripts/city3d/places';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { RIVER, STRIP_BLVD, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { cleanSave, newSave, visit } from '../src/scripts/city3d/tycoon';
 import { pathBetween, pointOn, rideTime } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const R = 0.3;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => x > b[0] - R && x < b[2] + R && z > b[1] - R && z < b[3] + R);
