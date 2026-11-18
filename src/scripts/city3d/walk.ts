@@ -3298,7 +3298,12 @@ export function createWalk(d: WalkDeps) {
       vel.set(0, 0);
     },
     /** Start walking; `spawn` puts Degen somewhere else (the kart park's gate from its panel) */
-    enter(spawn?: { x: number; z: number; yaw: number }) {
+    /**
+     * Into walk mode: at the walk's start, `?spawn=`, or `spawn`; `seat` given, sat on it already (a bench's middle and
+     * the way its sitter faces, `h` its seat over the ground: waking on his sofa at home, docs/spawn-plan.md), up off
+     * it with `standUp()` or the first push of the keys
+     */
+    enter(spawn?: { x: number; z: number; yaw: number }, seat?: { x: number; z: number; ry: number; h: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -3333,10 +3338,25 @@ export function createWalk(d: WalkDeps) {
       baseFov = camera.fov;
       fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
+      if (seat) {
+        const y = groundAt(seat.x, seat.z, pos.y);
+        const mk = benchMark(seat, y);
+        mk.seat!.y = y + seat.h;
+        pos.set(mk.x, y, mk.z);
+        face = mk.face;
+        // (the camera at his front, a three-quarter view of him on the seat: the room's back wall is behind him)
+        pickBenchYaw(mk);
+        yaw = benchYaw;
+        moments.sit(mk);
+      }
       hotbar?.reset();
       void loadHotbar();
       void loadFists();
       root.dataset.mode = 'walk';
+    },
+    /** Up off the seat he was sat on as walking started (`enter()`'s `seat`), if he's still on it */
+    standUp() {
+      if (moments.active && moments.phase === 'hold' && moments.mark?.kind === 'bench') moments.release();
     },
     exit() {
       hideCard();

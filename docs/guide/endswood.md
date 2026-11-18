@@ -132,7 +132,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `PLOT` and `GATES` (all that file is now), its gates on Gate Lane at `HEAD`; the wall and gates, the double garage
   (`CAR_HOME`, `BIKE_HOME`, `HOME_GARAGE_DOOR`), the workshop (`HOME_WORKSHOP_DOOR`), the house with its room
   (`ROOM`, `FURNITURE`, `HOME_PORTALS`, `HOME_USES`: the wardrobe and the stash; `HOME_WAKE`, where every visit
-  starts, and `HOME_WAITS`, the ways out that wait while the street loads: `spawn.ts`, `docs/spawn-plan.md`) and its roof terrace (`ROOF_Y`,
+  starts, `SOFA_SEAT`, where he sits as he wakes, `HOME_WAITS`, the ways out that wait while the street loads, and
+  the room's curtains, `ROOM_WINDOWS`, `CURTAIN`, `curtainPanels()`, drawn by home3d.ts `addCurtains()`, following
+  spawn.ts `curtains`: `docs/spawn-plan.md`) and its roof terrace (`ROOF_Y`,
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the

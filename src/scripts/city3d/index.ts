@@ -47,8 +47,8 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, homePlaces, HOME_SPAWN, inHouse } from './home';
-import { READY_AT, READY_REACH, dueDistricts, streetReady } from './spawn';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, homePlaces, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -1116,6 +1116,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (now - street.at < 300) return false;
     const due = dueDistricts(LAZY_DISTRICTS, districts.loaded()).length;
     street = { ready: streetReady({ due, waiting: works.waitingNear(READY_AT[0], READY_AT[1], READY_REACH), waitedMs: now - wokeAt }), at: now };
+    // (and the curtains drawn back: home3d.ts follows it)
+    if (street.ready) curtains.open = true;
     return street.ready;
   }
   let lifting = false;
@@ -1380,7 +1382,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
-  function startWalking(spawn?: { x: number; z: number; yaw: number }) {
+  function startWalking(spawn?: { x: number; z: number; yaw: number }, seat?: { x: number; z: number; ry: number; h: number }) {
     if (walking) return;
     // (unless the owner has closed it for now: live settings)
     const shut = live.closed('walk');
@@ -1393,7 +1395,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     controls.enabled = false;
     walking = true;
     walker.on = true;
-    walk.enter(spawn);
+    walk.enter(spawn, seat);
     works.want(walk.position.x, walk.position.z, 70);
     mp?.walkChanged(true);
     // The site header steps aside so the city and its mode header fill the screen (city.css)
@@ -2009,6 +2011,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     sky.setShadows(walking && !walk.airborne && !lowered.shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
+    // (waking at home: the street's readiness asked every frame too, so the curtains open even standing still)
+    if (wokeAt && !street.ready) streetUp();
     part('before');
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
     part('sky');
@@ -2297,14 +2301,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       const there = new URLSearchParams(location.search).has('spawn');
       // (unless the owner has closed his house for now: then in the yard outside it)
       const home = live.place('home');
-      const at = there ? undefined : home && !home.open ? HOME_SPAWN : HOME_WAKE;
+      const inside = !there && !(home && !home.open);
+      const at = there ? undefined : inside ? HOME_WAKE : HOME_SPAWN;
+      // (the curtains drawn before his house is drawn: they open once the street's ready, Phase 2)
+      if (inside) curtains.open = false;
       if (!there) {
         await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
         works.want(HOME_WAKE.x, HOME_WAKE.z, 25);
       }
       wokeAt = performance.now();
       street = { ready: false, at: 0 };
-      startWalking(at);
+      // On the sofa as the room appears, up off it a moment after the menu's gone (Phase 2; under reduced motion
+      // he's standing already)
+      startWalking(at, inside && !reduced ? SOFA_SEAT : undefined);
+      if (inside && !reduced) {
+        const up = () => setTimeout(() => (startCovers ? up() : setTimeout(() => walk.standUp(), 700)), 200);
+        up();
+      }
       return true;
     },
     /** The fly-in again, from far out to the home view (the start menu closing: the first one ran behind it) */

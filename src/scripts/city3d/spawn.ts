@@ -15,6 +15,12 @@ import { HOME } from './home';
 import { rectDistance } from './tileplan';
 import type { Rect } from './tiles';
 
+/**
+ * The room's curtains (home.ts `CURTAIN`, drawn by home3d.ts): drawn while he waits, open once the street's ready.
+ * index.ts sets it, home3d.ts's tick follows it; open unless he's waking
+ */
+export const curtains = { open: true };
+
 /** How far round the gates the street has to be built before the doors open */
 export const READY_REACH = 60;
 /** The longest the doors wait (ms since he woke) */

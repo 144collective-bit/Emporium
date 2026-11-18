@@ -21,7 +21,8 @@ to load the rest of the needed assets." The owner's answers:
 - **Getting started** gets a new first step at home (the owner's call, 2026-11-18): **Head out**, out of the front
   door; the stall downtown is the second.
 
-**Status:** Phase 1 built, waiting on the owner's sign-off. Each phase with the owner's sign-off.
+**Status:** Phase 1 built and signed off (2026-11-18); Phase 2 built, waiting on the owner's sign-off. Each phase with
+the owner's sign-off.
 
 ## Today, measured
 
@@ -58,7 +59,7 @@ What it says:
 
 ## The phases
 
-1. **Spawn in the room** (*built*, waiting on the owner's sign-off). Single player (and Multiplayer, where it's on)
+1. **Spawn in the room** (*built*, signed off 2026-11-18). Single player (and Multiplayer, where it's on)
    goes from the title screen straight into Walk mode in the living room (CityMap.astro `enter()`, index.ts
    `city.wake()`): `HOME_WAKE` in home.ts (in `ROOM`, between the sofa and the low table, facing the telly, out of
    reach of every prompt), for every player; `startsAtHome()` and its first-walk rule are gone, and the Walk button
@@ -80,11 +81,21 @@ What it says:
    `cleanSave()`, tested in `tests/guide.test.ts`); the save's version is unchanged. The smoke test's Single player
    goes straight into walking (no Walk toggle) and its `wake` scene starts with no spot: in the room, then out of the
    front door once it stops waiting.
-2. **The wake-up and the curtains.** He's on the sofa as the room appears and stands up (moments.ts's sit-down and
-   stand-up, the seat being the sofa); under `prefers-reduced-motion` he's standing already. Curtains on the two
-   windows (home3d.ts, a pair each side, near only), drawn while the street isn't ready and drawn back when it is
-   (a short slide, or a swap under reduced motion). Their colour is fixed paint (no runtime colour change on a
-   shared material). Shots for `docs/spawn-shots/`.
+2. **The wake-up and the curtains** (*built*, waiting on the owner's sign-off; the owner left the choices to us:
+   deep red curtains, sat on the sofa, the curtains open with the doors). He's on the sofa as the room appears
+   (home.ts `SOFA_SEAT`: moments.ts's bench mark at the sofa's front, its cushion `h` 0.24 up, facing the telly;
+   walk.ts `enter(spawn, seat)` puts him on it with `moments.sit()`, already seated, the camera at his front) and
+   stands up onto `HOME_WAKE` (now just in front of the sofa) about 0.7 s after the menu has gone (walk.ts
+   `standUp()`, the bench's own stand-up; any push of the keys stands him up sooner, as on a bench). Under
+   `prefers-reduced-motion` he's standing at `HOME_WAKE` already. **The curtains**: two on each of the room's
+   windows (home.ts `ROOM_WINDOWS`, which home3d.ts now draws the windows from, unmoved; `CURTAIN`, `curtainPanels(k)`
+   from drawn, 0, to bunched at the ends, 1), deep red (`CURTAIN_RED`), lit from inside as the room is; four panels
+   in one instanced mesh on the main thread (home3d.ts `addCurtains()`, from south3d.ts's register: one draw call,
+   no shadows). Drawn as he wakes (spawn.ts `curtains.open`, set by index.ts before his house is drawn), drawn back
+   over 1.4 s once the street is ready (`streetUp()`, now asked every frame while he waits too, not only by the
+   doors' prompts); under reduced motion they're simply open or shut. Every other way into the house finds them
+   open. Tested in `tests/home.test.ts` (the seat, the panels: covering, bunched, in the room, off the glass, over
+   the furniture) and `tests/moments.test.ts` (`sit()`). Shots: `docs/spawn-shots/`.
 3. **The boot split (the real saving).** The title screen waits only for what the room needs: the renderer, the
    sky, Degen and walk mode, the compound (its own small chunk, out of `south3d.ts`), their shaders. Then you're in,
    and the rest of the city's boot (the landmarks, downtown, the outer districts, traffic and the crowd, the trees
