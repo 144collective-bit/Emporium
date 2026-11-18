@@ -452,10 +452,28 @@ From the Circus west, patchy as high roads are:
      (`radial()`) and a well's seats (`wellFloor()`); Lot 9's tunnel
      unchanged. Sketch `docs/south-shots/18-phase-4a-circus.png`. Not
      wired into walking or drawn yet: 4b.
-   - **4b, the Circus drawn and walked**: the plaza, subways, murals and
-     strip lights drawn (the village's or the estate's chunk), the
-     ground laid back round the hole, the island's ring, walking and the
-     camera (groundheight.ts `UNDER`), solids, shots.
+   - **4b, the Circus drawn and walked**. Built, waiting on the owner's
+     sign-off: `circus3d.ts` (in the south's chunk, a site for the plaza,
+     each subway and the paths) draws the plaza (paved floor, three steps
+     of seats cut where the subways come in, its wall with a lintel over
+     each opening, coping, a railing, a neon strip under the coping,
+     planters) and the subways (the blocks' warm concrete walls, a mural
+     each on one wall, made-up art with no words, strip lights in the
+     ceiling and a pink and a cyan neon line along the walls, the ramps'
+     parapets and coping, a headwall with its SUBWAY plate over each
+     portal, a step on to the slab at each mouth) and each mouth's paved
+     path. The island is a planted ring round the plaza (south3d.ts).
+     `holes.ts` (DOM-free, tested) cuts the plaza and the cuttings out of
+     the blocks' slabs (world.ts `tiled()`, `holedPoly()`) and the
+     junctions' asphalt; the grass goes from under the Circus
+     (`CIRCUS_HOLE`). Walked: groundheight.ts's `UNDER` takes the subways
+     and the plaza with Lot 9's tunnel; down there the planters and lamps
+     stop you (the kit's `boxes`). The trees and lamps at the boot
+     (index.ts). `?fps` reads `down` below street level; the smoke test
+     walks down the north-east ramp into the plaza (`circus`). Shots
+     `docs/south-shots/19-phase-4b-*.webp` (the subway's and the walk-in
+     from the smoke test's screenshots: the review shots' tool stalls in
+     this machine's software renderer with its camera in a subway).
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
