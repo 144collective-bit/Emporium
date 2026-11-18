@@ -148,6 +148,8 @@ import { tilesInView, type Plane } from './tiles';
 import { farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
+import { createQuality, type QualityStep } from './quality';
+import { GPU_KEY, RELOAD_KEY, pickTier, reloadOnRestore, type Device, type Lost, type Picked } from './gputier';
 
 // The south's rolling ground under everything drawn there (docs/south-plan.md Phase 1c): set as this module loads, so
 // the site worker, which loads it too, lifts what it builds the same way
@@ -161,15 +163,29 @@ const TIERS = {
   low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 180, walkers: 15, trees: 90, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
-function pickTier(): Tier {
-  const coarse = matchMedia('(pointer: coarse)').matches;
-  const small = Math.min(innerWidth, innerHeight) < 700;
+/** The device as the tier's rules (gputier.ts) read it; `gpu`, the graphics' name, once there's a renderer */
+function device(gpu = ''): Device {
   const nav = navigator as Navigator & { deviceMemory?: number };
-  // Phones (a short side under 700) take the low tier; a big touch screen (a tablet) the medium one (the owner's call,
-  // docs/polish-plan.md), and little memory or few cores hold a desktop to medium too
-  if (small) return 'low';
-  if (coarse || (nav.deviceMemory ?? 8) <= 4 || (navigator.hardwareConcurrency ?? 8) <= 4) return 'medium';
-  return 'high';
+  let lost: unknown = null;
+  try {
+    lost = JSON.parse(localStorage.getItem(GPU_KEY) ?? 'null');
+  } catch {
+    /* none kept */
+  }
+  return { small: Math.min(innerWidth, innerHeight) < 700, coarse: matchMedia('(pointer: coarse)').matches, memory: nav.deviceMemory, cores: navigator.hardwareConcurrency, gpu, lost: lost as Lost | null, now: Date.now() };
+}
+
+/** The graphics' name as WebGL gives it ('' when the browser hides it): Firefox says it plainly, Chrome behind an extension */
+function gpuName(renderer: THREE.WebGLRenderer): string {
+  try {
+    const gl = renderer.getContext();
+    const plain = String(gl.getParameter(gl.RENDERER) ?? '');
+    if (plain && !/^webkit webgl$/i.test(plain)) return plain;
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '') : '';
+  } catch {
+    return '';
+  }
 }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -181,16 +197,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const tier = (root.dataset.tier as Tier) || pickTier();
-  const Q = TIERS[tier];
-  // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
-  UV.sway = tier !== 'low';
-  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
-  figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // ?anim: the animation lab on its own, over the page (no city behind it)
   if (new URLSearchParams(location.search).has('anim')) {
-    await (await import('./anim-lab')).openLab(root, { reduced, low: tier === 'low' });
+    await (await import('./anim-lab')).openLab(root, { reduced, low: ((root.dataset.tier as Tier) || pickTier(device()).tier) === 'low' });
     return null;
   }
   // When each part of the boot finished (the ?fps readout and the benchmark)
@@ -210,6 +220,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   } catch {
     return null;
   }
+  // The tier (gputier.ts): the screen, memory and cores as before, graphics built into the processor a step down, and
+  // a step down after the 3D graphics stopped here lately. `data-tier` on the page overrides it.
+  const gpu = gpuName(renderer);
+  const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
+  const tier = picked.tier;
+  const Q = TIERS[tier];
+  // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
+  UV.sway = tier !== 'low';
+  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
+  figureDetail(tier === 'low' ? 2 : 3);
   loader.hidden = false;
   progress(0.05);
 
@@ -1691,6 +1711,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // for; without cancelling it, coming back would start a second loop beside it
   // (and each trip away another), each drawing the whole city.
   let raf = 0;
+  // (the frame's CPU by part: `part(k)` adds the time since the last mark to `k`)
+  const parts = { before: 0, sky: 0, works: 0, tiles: 0, lods: 0, ticks: 0, render: 0, between: 0 };
+  let partAt = 0;
+  const part = (k: keyof typeof parts) => {
+    const now = performance.now();
+    parts[k] += now - partAt;
+    partAt = now;
+  };
   const loop = () => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
@@ -1700,6 +1728,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   renderer.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault();
     running = false;
+    // Kept, so the next start is a tier lower (gputier.ts, for LOST_DAYS)
+    try {
+      localStorage.setItem(GPU_KEY, JSON.stringify({ tier, at: Date.now() } satisfies Lost));
+    } catch {
+      /* not kept */
+    }
     cancelAnimationFrame(raf);
     if (sound.on) sound.toggle();
     root.dataset.view = 'none';
@@ -1712,6 +1746,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (note) note.textContent = 'The device ran out of graphics memory, or its driver reset. Your save is kept.';
     const reload = card.querySelector<HTMLElement>('[data-no3d-reload]');
     if (reload) reload.hidden = false;
+  });
+  // The GPU came back (the stability plan's Phase 6.2): the city reloads itself, the save kept and the tier a step
+  // lower, instead of waiting on Reload. Once a minute at most (gputier.ts); where the tab can't note it, Reload it is.
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    try {
+      if (!reloadOnRestore(sessionStorage.getItem(RELOAD_KEY), Date.now())) return;
+      sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+    } catch {
+      return;
+    }
+    location.reload();
   });
   // Fast screens (120 / 144 Hz) draw every other refresh: a steady 60-72fps
   // rather than an uneven, hotter 120. The refresh rate is read from the
@@ -1771,7 +1816,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
     // (where the geometry memory is, for the console: perf.ts)
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
+    // (the texture breakdown is its own chunk: only ?fps and ?bench load it, texrows.ts)
+    let texRows: ((s: THREE.Object3D) => unknown) | null = null;
+    void import('./texrows').then((m) => (texRows = m.textureRows));
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -1853,6 +1901,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (++tickN % skip) return spare(2);
     if (!onScreen && !walking) return;
     const cpuStart = performance.now();
+    // Where the frame's CPU goes, for the benchmark's slowest frame (bench.ts `worstParts`, the stability plan's 6.3)
+    partAt = cpuStart;
+    for (const k in parts) parts[k as keyof typeof parts] = 0;
     timer.update();
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
@@ -1932,10 +1983,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Shadows only while walking or driving, never in the City view or up in an aircraft (shadows.ts, the owner's call),
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
-    sky.setShadows(walking && !walk.airborne);
+    sky.setShadows(walking && !walk.airborne && !lowered.shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
+    part('before');
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
+    part('sky');
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -1960,17 +2013,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
     if (bench || shots) districts.all();
-    districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
+    // (the texture bake loads them itself, in turn, once the boot is over: below)
+    if (!BAKING_TEXTURES) districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
     const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
     const waiting = works.pending();
+    part('between');
     works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : share, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
     if (works.pending() !== waiting) builtShows();
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
+    part('works');
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
+    part('tiles');
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
+    part('lods');
     if (!reduced || frames === 0) for (const f of ticks) f(env);
+    part('ticks');
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
     updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);
@@ -2059,7 +2118,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         renderer.info.reset();
         post.shadowStat.calls = post.shadowStat.tris = 0;
       }
+      part('between');
       post.render();
+      part('render');
       shots?.drawn();
       dirty = false;
       if (!bootAt.first) {
@@ -2072,7 +2133,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         stat.tris += triangles;
         stat.shadowDraws += post.shadowStat.calls;
         stat.shadowTris += post.shadowStat.tris;
-        if (bench?.active) bench.sample(t, performance.now(), performance.now() - cpuStart, calls, triangles, post.shadowStat.calls, post.shadowStat.tris);
+        part('between');
+        if (bench?.active) bench.sample(t, performance.now(), performance.now() - cpuStart, calls, triangles, post.shadowStat.calls, post.shadowStat.tris, parts);
       }
     }
     if (statsEl) {
@@ -2099,7 +2161,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
-          `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
+          `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
@@ -2139,41 +2201,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
   }
 
-  // Too slow: fewer pixels, then no shadows, then no bloom. The ink outlines always stay.
+  // Too slow: fewer pixels, then no shadows, then no bloom; fast again for a while, they come back (quality.ts: the
+  // order, each step back once). The ink outlines always stay. Shadows go by their intensity (sky.setShadows(), above),
+  // never the shadow map or castShadow, which recompiled every material in one frame (the stability plan's 6.1)
   const fullPixels = renderer.getPixelRatio();
-  const lowered = { pixels: false, shadows: false, bloom: false };
+  const quality = createQuality();
+  const lowered = quality.lowered;
+  const canDegrade = () => quality.canDegrade();
   let fastWindows = 0;
-  // A stage put back and then lost again stays off (no see-sawing)
-  const settled = new Set<keyof typeof lowered>();
-  const canDegrade = () => !lowered.pixels || !lowered.shadows || !lowered.bloom;
-  function degrade() {
-    if (!lowered.pixels) {
-      lowered.pixels = true;
-      renderer.setPixelRatio(Math.max(1, fullPixels - 0.5));
+  function apply(step: QualityStep | null) {
+    if (step === 'pixels') {
+      renderer.setPixelRatio(lowered.pixels ? Math.max(1, fullPixels - 0.5) : fullPixels);
       resize();
-    } else if (!lowered.shadows) {
-      lowered.shadows = true;
-      renderer.shadowMap.enabled = false;
-      scene.traverse((o) => {
-        if ((o as THREE.DirectionalLight).isDirectionalLight) (o as THREE.DirectionalLight).castShadow = false;
-      });
-    } else lowered.bloom = true;
-    post.bloom.enabled = !lowered.bloom;
+    } else if (step === 'bloom') post.bloom.enabled = !lowered.bloom;
+    // ('shadows': the frame asks sky.setShadows() with `lowered.shadows`, and they ease out or in)
   }
-  // Fast again for a while: bloom, then pixels, come back. Shadows don't
-  // (turning them back on recompiles every material, a visible hitch).
-  function restore() {
-    if (lowered.bloom && !settled.has('bloom')) {
-      lowered.bloom = false;
-      settled.add('bloom');
-      post.bloom.enabled = true;
-    } else if (lowered.pixels && !settled.has('pixels')) {
-      lowered.pixels = false;
-      settled.add('pixels');
-      renderer.setPixelRatio(fullPixels);
-      resize();
-    }
-  }
+  const degrade = () => apply(quality.degrade());
+  const restore = () => apply(quality.restore());
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -2188,8 +2232,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Reveal ---------- */
   root.dataset.view = '3d';
-  // (the texture bake keeps what the boot painted, up to here: kit.ts)
+  // (the texture bake keeps what the boot painted, up to here: kit.ts; then every district, one after another, in
+  // the list's order or with ?bake-textures=reverse the other way round, and says when they're all in)
   bootTexturesPainted();
+  if (BAKING_TEXTURES)
+    void districts.inTurn(new URLSearchParams(location.search).get('bake-textures') === 'reverse').then(() => ((globalThis as { __texBakeDistricts?: { loaded: string[]; of: number } }).__texBakeDistricts = { loaded: districts.loaded(), of: districts.total() }));
   loader.classList.add('is-done');
   setTimeout(() => (loader.hidden = true), 600);
   const start = home();

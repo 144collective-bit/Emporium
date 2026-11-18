@@ -103,6 +103,10 @@ export interface BenchStats {
   worst: number;
   /** The frame's script and draw submission, ms */
   cpu: number;
+  /** ... in the slowest frame: a hitch (a big trim, a district arriving, shaders compiling; docs/stability-plan.md 6.3) */
+  worstCpu: number;
+  /** Where that frame's CPU went (index.ts's parts: the sky, building, tiles, far forms, ticks, rendering...), ms */
+  worstParts: Record<string, number>;
   draws: number;
   maxDraws: number;
   tris: number;
@@ -126,6 +130,8 @@ export interface BenchResult {
 class Sampler {
   gaps: number[] = [];
   cpu = 0;
+  worstCpu = 0;
+  worstParts: Record<string, number> = {};
   draws = 0;
   maxDraws = 0;
   tris = 0;
@@ -134,11 +140,15 @@ class Sampler {
   shadowTris = 0;
   last = 0;
   start = 0;
-  add(now: number, cpu: number, draws: number, tris: number, sDraws: number, sTris: number) {
+  add(now: number, cpu: number, draws: number, tris: number, sDraws: number, sTris: number, parts?: Record<string, number>) {
     if (this.last) this.gaps.push(now - this.last);
     else this.start = now;
     this.last = now;
     this.cpu += cpu;
+    if (cpu > this.worstCpu) {
+      this.worstCpu = cpu;
+      this.worstParts = Object.fromEntries(Object.entries(parts ?? {}).map(([k, v]) => [k, Math.round(v * 10) / 10]));
+    }
     this.draws += draws;
     this.tris += tris;
     this.shadowDraws += sDraws;
@@ -158,6 +168,8 @@ class Sampler {
       p95: r(g[Math.min(g.length - 1, Math.floor(g.length * 0.95))] ?? 0),
       worst: r(g[g.length - 1] ?? 0),
       cpu: r(this.cpu / n),
+      worstCpu: r(this.worstCpu),
+      worstParts: this.worstParts,
       draws: Math.round(this.draws / n),
       maxDraws: this.maxDraws,
       tris: Math.round(this.tris / n),
@@ -243,12 +255,12 @@ export function createBench(d: BenchDeps, night: boolean) {
 
   function show() {
     const lines = [`Benchmark · ${d.tier} · px ${d.pixelRatio().toFixed(2)}${night ? ' · night' : ''}`];
-    for (const r of results) lines.push(`${r.name.padEnd(32).slice(0, 32)} ${String(r.fps).padStart(5)} fps · ${String(r.p95).padStart(5)} ms p95 · ${r.draws} draws · ${(r.tris / 1e6).toFixed(2)}M`);
+    for (const r of results) lines.push(`${r.name.padEnd(32).slice(0, 32)} ${String(r.fps).padStart(5)} fps · ${String(r.p95).padStart(5)} ms p95 · cpu ${r.worstCpu} ms at most · ${r.draws} draws · ${(r.tris / 1e6).toFixed(2)}M`);
     if (phase === 'views') lines.push(`… ${views[index].name}`);
     if (phase === 'route') lines.push('… flying the route');
     if (out) {
       const r = out.route;
-      lines.push(`${'Route'.padEnd(32)} ${String(r.fps).padStart(5)} fps · ${String(r.p95).padStart(5)} ms p95 · worst ${r.worst} ms · ${r.draws} draws · ${(r.tris / 1e6).toFixed(2)}M`);
+      lines.push(`${'Route'.padEnd(32)} ${String(r.fps).padStart(5)} fps · ${String(r.p95).padStart(5)} ms p95 · worst ${r.worst} ms · cpu ${r.worstCpu} ms at most · ${r.draws} draws · ${(r.tris / 1e6).toFixed(2)}M`);
       lines.push(`Memory: geometry ${mb(out.memory.geometry)} · textures ${mb(out.memory.textures)} · targets ${mb(out.targets)} · ${out.memory.objects} objects`);
       lines.push(`Boot: ${Object.entries(out.boot).map(([k, v]) => `${k} ${(v / 1000).toFixed(2)} s`).join(' · ')}`);
       lines.push('Done. Full results in the console (window.__bench), or Copy results.');
@@ -287,9 +299,9 @@ export function createBench(d: BenchDeps, night: boolean) {
       camera.lookAt(target);
     },
     /** One frame drawn: its time, the CPU's share, and what it drew */
-    sample(t: number, now: number, cpu: number, draws: number, tris: number, sDraws: number, sTris: number) {
+    sample(t: number, now: number, cpu: number, draws: number, tris: number, sDraws: number, sTris: number, parts?: Record<string, number>) {
       if (phase === 'views') {
-        if (t - since >= SETTLE) sampler.add(now, cpu, draws, tris, sDraws, sTris);
+        if (t - since >= SETTLE) sampler.add(now, cpu, draws, tris, sDraws, sTris, parts);
         if (t - since >= SETTLE + MEASURE) {
           results.push({ id: views[index].id, name: views[index].name, ...sampler.stats() });
           sampler = new Sampler();
@@ -298,7 +310,7 @@ export function createBench(d: BenchDeps, night: boolean) {
           show();
         }
       } else if (phase === 'route') {
-        sampler.add(now, cpu, draws, tris, sDraws, sTris);
+        sampler.add(now, cpu, draws, tris, sDraws, sTris, parts);
         if (t - since >= ROUTE_SECONDS) {
           phase = 'done';
           const host = d.host.getBoundingClientRect();
@@ -314,7 +326,7 @@ export function createBench(d: BenchDeps, night: boolean) {
             boot: d.boot(),
           };
           (window as unknown as { __bench?: BenchResult }).__bench = out;
-          console.table(results.map(({ name, fps, avg, p95, worst, cpu, draws, tris, shadowDraws, shadowTris }) => ({ name, fps, avg, p95, worst, cpu, draws, tris, shadowDraws, shadowTris })));
+          console.table(results.map(({ name, fps, avg, p95, worst, cpu, worstCpu, draws, tris, shadowDraws, shadowTris }) => ({ name, fps, avg, p95, worst, cpu, worstCpu, draws, tris, shadowDraws, shadowTris })));
           console.log('Benchmark', out);
           restore?.();
           show();

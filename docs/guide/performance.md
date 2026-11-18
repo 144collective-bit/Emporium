@@ -9,11 +9,23 @@ keep it up to date when what it describes changes.
   once a second (`builtShows()`). Sound is always off until the visitor
   turns it on.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
-  (fewer cars and people, no shadows, smaller bloom on phones), runs phones
+  (fewer cars and people, no shadows, smaller bloom on phones) by the rules
+  in `gputier.ts` (DOM-free, `tests/gputier.test.ts`; the stability plan's
+  "The tier by the graphics"): a phone's screen takes low; a touch screen,
+  4 GB or less, 4 cores or fewer, or graphics built into the processor
+  (Intel's, AMD's Radeon Graphics / Vega, a plain Apple M chip, by WebGL's
+  name for them) take medium; and for 14 days after the 3D graphics stopped
+  (`webglcontextlost`, kept in `degen-city-gpu-v1`, not in the backup) a
+  start is a tier below the one that stopped. `?fps` says which and why.
+  It runs phones
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
-  slow. When frames stay fast again, bloom and then pixels come back (once
-  each; shadows stay off, re-enabling them recompiles every material).
+  slow. When frames stay fast again, bloom, shadows and then pixels come
+  back (once each; `quality.ts`, DOM-free, `tests/quality.test.ts`).
+  Shadows go by their intensity (`sky.setShadows()`, eased, as in the City
+  view), never `renderer.shadowMap.enabled` or a light's `castShadow`:
+  those change every material's shader, and turning them off recompiled
+  the whole city in one frame (the stability plan's Phase 6.1).
   The trim (the owner's call, phones only; `docs/performance-plan.md`):
   trees are lighter near (a dodecahedron canopy, four-sided trunks, open
   five-sided cones) and two crossed flat cards far (`crossedCards()` in
@@ -133,12 +145,20 @@ keep it up to date when what it describes changes.
     each (a fresh save at noon, a well-used one at midnight): only what
     both runs painted the same is kept, so a key (`texKey()`: what draws
     it, its size, how many like it came before) stands for one picture.
-    Only what the boot painted counts: index.ts calls
-    `bootTexturesPainted()` (kit.ts) as the loader goes, and the bake keeps
-    the textures painted up to then (`__texBakeBoot`). A district loaded as
-    you approach paints its own whenever it arrives, so counting those made
-    the set differ run to run (2026-11: two extra kept on one run tipped
-    `texLow` over its budget); the bake logs any it left out.
+    What the boot painted counts (index.ts calls `bootTexturesPainted()`
+    (kit.ts) as the loader goes: `__texBakeBoot`), and since the stability
+    plan's Phase 4.3 what every district paints as it loads: in bake mode
+    the districts don't load during the boot, then load one after another
+    (`inTurn()` in `districts.ts`), in the list's order on the noon run and
+    the reverse on the midnight one (`?bake-textures=reverse`), so a key that
+    depends on the order the districts arrive in comes out different and
+    isn't kept; a run where a district wouldn't load is tried once more.
+    What a district's sites paint as they're built later is left out (how
+    many are built by then varies run to run: 2026-11, two extra kept on one
+    run tipped `texLow` over its budget); the bake logs any it left out. A
+    texture a site's builder paints is counted within the site
+    (`texscope.ts`, `inTexScope()` from `site()` in `tilework.ts`), so its
+    key doesn't depend on which sites were built first.
     Each is GPU-compressed (KTX2: Basis ETC1S, UASTC where ETC1S loses
     too much), written to `_astro/tex/` and listed in the page
     (`#city-tex`); `loadBuiltTextures()` loads them with three's
@@ -381,7 +401,12 @@ keep it up to date when what it describes changes.
   `userData.paint`) as 16-bit shares, both `normalized`, 29 bytes a vertex
   where there were 44. A new shared material whose colours stay 0 to 1 can
   be marked `paint` too; one whose colours pass 1 must not be.
-  `window.__mem()` under `?fps` says where the geometry memory is.
+  `window.__mem()` under `?fps` says where the geometry memory is;
+  `textureRows` in it, where the texture memory is (`textureRows()` in
+  `texrows.ts`, its own chunk, loaded only under `?fps` and `?bench`, so it's
+  null for a moment at first: under them a painted texture is named after the
+  start of what drew it, `named()` in `kit.ts`), and `gl`, what three holds
+  on the GPU (a count above the scene's that keeps growing is a leak).
   The uv is left out where nothing reads it (`dropsUv()` in
   `tilebatch.ts`, the stability plan's Phase 3b): the shared materials
   have no texture, and only the paint's trees' sway reads the uv
@@ -419,8 +444,10 @@ keep it up to date when what it describes changes.
 - **Memory ceilings** (`docs/stability-plan.md`, Phase 5; the owner's
   picks): `MEMORY_CEILINGS` in `targets.ts` (MiB). `npm run memcheck`
   (after a build and `npm run bake:textures`; `scripts/memcheck.mjs`, about
-  13 minutes) builds the whole city on a headless phone under `?bench` and
-  holds its geometry, textures and render targets to the phone's; `npm run
+  an hour since the south's re-laying) builds the whole city on a headless
+  phone under `?bench` and holds its geometry, textures and render targets
+  to the phone's, and the benchmark's slowest CPU frames to
+  `HITCH_CEILINGS` (the stability plan's 6.3); `npm run
   memcheck -- soak` adds the leak check (`SOAK_MIN`, 20: half the City
   view, half walking). The "Memory" Action runs it by hand only. The
   desktop's render targets are held by a formula (`pictureTargets()`,
@@ -438,7 +465,11 @@ keep it up to date when what it describes changes.
   Southfield and Lot 9 (`BLEND_VIEWS` has the same six for the shots)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,
-  average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
+  average / 95th-percentile / slowest frame, CPU ms, the slowest frame's CPU
+  and where it went (`worstCpu`, `worstParts`: index.ts's `part()` marks
+  the sky, building, tiles, far forms, ticks and rendering; the stability
+  plan's 6.3, which `npm run memcheck` holds to `HITCH_CEILINGS` in
+  `targets.ts`: 250 ms a view on its headless phone), draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`; the card's **Copy results** button copies them with the
   device (its user agent and screen), so a real phone's numbers can be
