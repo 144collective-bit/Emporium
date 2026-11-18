@@ -593,8 +593,14 @@ export function createWalk(d: WalkDeps) {
   let momentDy = 0;
   /** Sitting down, where the camera goes: a three-quarter view from whichever side of him has the room */
   let benchYaw = 0;
-  /** Woken on a seat (`enter()`'s `seat`): once he's up, the camera comes round behind him to this, then it's yours */
+  /**
+   * Woken on a seat (`enter()`'s `seat`): once he's up, the camera comes round behind him to this, then it's yours.
+   * Any turn of the view by hand ends it at once (`look()`), and it gives up after `WAKE_SWING` s whatever happens:
+   * it must never hold the view against you (it did, turning while it swung, until both were added)
+   */
   let wakeYaw: number | null = null;
+  const WAKE_SWING = 2.5;
+  let wakeLeft = 0;
   const benchEye = new THREE.Vector3();
   const benchDir = new THREE.Vector3();
   function pickBenchYaw(mk: { face: number; y: number; seat?: { x: number; z: number } }) {
@@ -1620,6 +1626,8 @@ export function createWalk(d: WalkDeps) {
       d.touched();
       return;
     }
+    // (the view turned by hand: waking's swing round behind him lets go, `wakeYaw`)
+    wakeYaw = null;
     // Finer control down the sight
     k *= 1 - combat.aimed * 0.4;
     const dyaw = -dx * k * settings.sens;
@@ -2495,7 +2503,8 @@ export function createWalk(d: WalkDeps) {
     // (woken on his sofa, docs/spawn-plan.md: up off it, the view swings round behind him, so ahead is into the room)
     if (wakeYaw !== null && !(moments.active && moments.phase === 'hold')) {
       yaw += wrap(wakeYaw - yaw) * damp(3, dt);
-      if (Math.abs(wrap(wakeYaw - yaw)) < 0.01) wakeYaw = null;
+      wakeLeft -= dt;
+      if (Math.abs(wrap(wakeYaw - yaw)) < 0.01 || wakeLeft <= 0) wakeYaw = null;
     }
     // (a kick or the dodge: he stands for it; the guard up, he faces where you look, as aiming)
     const gx = mg ? mg.dx * mg.speed : rooted ? 0 : dirX * top;
@@ -3354,6 +3363,7 @@ export function createWalk(d: WalkDeps) {
         // (the camera in front of him, looking back at him on the seat: behind him is the sofa's back and the wall;
         // once he's up it swings round behind him, `wakeYaw`)
         wakeYaw = spawn?.yaw ?? wrap(mk.face - Math.PI);
+        wakeLeft = WAKE_SWING;
         yaw = wrap(mk.face + 0.35);
         moments.sit(mk);
       } else wakeYaw = null;

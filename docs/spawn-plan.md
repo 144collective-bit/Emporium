@@ -88,7 +88,9 @@ What it says:
    stands up onto `HOME_WAKE` (now just in front of the sofa) about 0.7 s after the menu has gone (walk.ts
    `standUp()`, the bench's own stand-up; any push of the keys stands him up sooner, as on a bench). The view starts
    in front of him, looking back at him on the sofa (behind him is the wall); once he's up the
-   view swings round behind him (walk.ts `wakeYaw`), so ahead is into the room. Under
+   view swings round behind him (walk.ts `wakeYaw`), so ahead is into the room. It lets go the moment the view is
+   turned by hand (`look()`) and after 2.5 s whatever happens (`WAKE_SWING`): the owner found it held the view
+   against him after the couch (2026-11-18); the smoke test's `wakelook` scene turns the view as he gets up. Under
    `prefers-reduced-motion` he's standing at `HOME_WAKE` already. **The curtains**: two on each of the room's
    windows (home.ts `ROOM_WINDOWS`, which home3d.ts now draws the windows from, unmoved; `CURTAIN`, `curtainPanels(k)`
    from drawn, 0, to bunched at the ends, 1), deep red (`CURTAIN_RED`), lit from inside as the room is; four panels
