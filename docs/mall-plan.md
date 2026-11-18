@@ -251,13 +251,25 @@ passengers, rebuilt "realistic and of a high standard". Their picks:
      (its metro ride steps out on the new platform). Browser shots were
      taken of the platform, the gates, the lift and the station from
      outside.
-3. **Palm Court enclosed.** A full rebuild as a two-floor indoor wing of the
-   mall:
+3. **Palm Court enclosed** (the owner's picks: a glass barrel vault, shops
+   on both floors, bridges across, an upstairs food hall, the cinema's
+   upstairs entry). The rules are `courtinside.ts`, the drawing
+   `courtinside3d.ts`. Built: a full rebuild as a two-floor indoor wing of
+   the mall:
    - A glass roof over the promenade, upper galleries over both rows, and
      bridges across.
    - The fountain, trees and cinema kept inside.
    - Shops on both floors, made-up names.
    - Walking, people, and the panel's Walk in.
+   - What went: the promenade's street lamps, festoon lights and the
+     city's trees (indoor trees in white planters now), the PALM COURT
+     gateway (its name over the south entrance now), the shops' single
+     storeys, the cinema's canopy (the food hall's terrace runs over its
+     doors) and the Skywalk pavilion's door canopies.
+   - **Checks:** the type check, lint and `npm test` (1521) pass. The
+     build and budget pass (boot 743.9 of 750 KB: little room left). The
+     walk smoke test passes (80 of 80). Browser shots were taken from
+     above, the entrance, the promenade, a gallery and the food hall.
 4. **The whole mall finished.**
    - One name and directory (Starlight Mall, Palm Court its wing).
    - The bare land south of the multi-storey becomes a bus and coach stop

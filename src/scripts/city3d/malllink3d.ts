@@ -56,6 +56,7 @@ import {
   type Flight,
 } from './malllink';
 import { STEPS_DOWN, STEPS_UP } from './mallinside3d';
+import { CONNECTOR_Z } from './courtinside';
 import { CHARCOAL, CLAD, CLAD_DARK, CURTAIN, DARK, FLOOR, GLASS, GOLD, GREY, LED, LIGHT, MID, PANEL, STEEL, STONE, TIMBER, WHITE, WOOD, Y, YELLOW, box, cyl, face, flat, glassX, glassZ, tree, type Sign } from './mallkit';
 
 const PX: [number, number] = [1, 0];
@@ -186,16 +187,21 @@ function shell(b: Batch) {
   }
   glassX(b, x, 1, at + 0.1, Z1 - 1.1, Y + 0.1, Y + DOOR_H);
   for (const d of doors) {
-    // (the doorway: a black frame, open; a canopy over it with a timber soffit and a LED edge)
+    // (the doorway: a black frame, open; no canopy since Palm Court is indoors, its gallery over the doors)
     box(b, x - 0.05, Y, d.z0 - 0.1, x + 0.12, Y + DOOR_H + 0.1, d.z0, STEEL);
     box(b, x - 0.05, Y, d.z1, x + 0.12, Y + DOOR_H + 0.1, d.z1 + 0.1, STEEL);
     box(b, x - 0.05, Y + DOOR_H, d.z0, x + 0.12, Y + DOOR_H + 0.1, d.z1, STEEL);
-    box(b, x, Y + DOOR_H + 0.15, d.z0 - 0.6, x + 1.6, Y + DOOR_H + 0.35, d.z1 + 0.6, STEEL);
-    under(b, x + 0.02, d.z0 - 0.58, x + 1.58, d.z1 + 0.58, Y + DOOR_H + 0.145, TIMBER);
-    box(b, x + 1.58, Y + DOOR_H + 0.18, d.z0 - 0.6, x + 1.63, Y + DOOR_H + 0.24, d.z1 + 0.6, LED);
   }
   face(b, CLAD_DARK, x, Z0 + 1.0, x, Z1 - 1.0, Y + DOOR_H + 0.1, L1 + 0.15, PX, 0.02);
-  face(b, CURTAIN, x, Z0 + 1.0, x, Z1 - 1.0, L1 + 0.15, BAND_TOP - 0.9, PX);
+  // (open upstairs onto Palm Court's gallery where its door is: courtinside.ts `CONNECTOR`)
+  const [c0, c1] = CONNECTOR_Z;
+  const ch = L1 + 2.75;
+  face(b, CURTAIN, x, Z0 + 1.0, x, c0, L1 + 0.15, BAND_TOP - 0.9, PX);
+  face(b, CURTAIN, x, c1, x, Z1 - 1.0, L1 + 0.15, BAND_TOP - 0.9, PX);
+  face(b, CURTAIN, x, c0, x, c1, ch, BAND_TOP - 0.9, PX);
+  box(b, x - 0.05, L1, c0 - 0.1, x + 0.12, ch + 0.1, c0, STEEL);
+  box(b, x - 0.05, L1, c1, x + 0.12, ch + 0.1, c1 + 0.1, STEEL);
+  box(b, x - 0.05, ch, c0, x + 0.12, ch + 0.1, c1, STEEL);
   face(b, CLAD_DARK, x, Z0 + 1.0, x, Z1 - 1.0, BAND_TOP - 0.9, ROOF, PX, 0.02);
   sign(b, MALL_NAME, x + 0.04, BAND_TOP - 0.05, ZM + 0.9, 7.2, 0.8, Math.PI / 2);
   star(b, x + 0.03, BAND_TOP - 0.05, ZM - 3.8, 0.55);
@@ -203,7 +209,7 @@ function shell(b: Batch) {
   mSign(b, x + 0.03, L1 + 1.6, Z1 - 0.5, 0.8, Math.PI / 2);
   sign(b, BOARD.text, x + 0.03, L1 + 0.95, Z1 - 0.5, 0.86, 0.26, Math.PI / 2);
   b.detail(() => {
-    for (let z = Z0 + 2.4; z < Z1 - 1.2; z += 1.5) box(b, x, L1 + 0.15, z - 0.04, x + 0.16, BAND_TOP - 0.9, z + 0.04, STEEL);
+    for (let z = Z0 + 2.4; z < Z1 - 1.2; z += 1.5) if (z < c0 - 0.2 || z > c1 + 0.2) box(b, x, L1 + 0.15, z - 0.04, x + 0.16, BAND_TOP - 0.9, z + 0.04, STEEL);
   });
   // Its door on the avenue's sidewalk (street level: over it the bridge runs in), cladding and a window either side
   const w = PAVILION[0];
@@ -332,7 +338,14 @@ function floors(b: Batch) {
     ])
       b.add(new THREE.PlaneGeometry(x1 - x0, BAND_TOP - L1 - 0.15).translate((x0 + x1) / 2, (L1 + 0.15 + BAND_TOP) / 2, z), GLASS);
   }
-  b.add(new THREE.PlaneGeometry(Z1 - Z0 - 2, BAND_TOP - 0.9 - L1).rotateY(Math.PI / 2).translate(X1 - 0.03, (BAND_TOP - 0.9 + L1) / 2, ZM), GLASS);
+  // (the promenade's side, open where the way through upstairs is)
+  const [c0, c1] = CONNECTOR_Z;
+  for (const [za, zb, ya] of [
+    [Z0 + 1, c0, L1],
+    [c1, Z1 - 1, L1],
+    [c0, c1, L1 + 2.85],
+  ])
+    b.add(new THREE.PlaneGeometry(zb - za, BAND_TOP - 0.9 - ya).rotateY(Math.PI / 2).translate(X1 - 0.03, (BAND_TOP - 0.9 + ya) / 2, (za + zb) / 2), GLASS);
   // The pavilion's walls inside at street level (the outside's faces are one-sided): white, the doorways left open
   const low = L1 - L1_T;
   box(b, PAV_IN[0], Y, PAV_IN[1] - 0.02, PAV_IN[2], low, PAV_IN[1], WHITE);
@@ -386,7 +399,8 @@ function side(b: Batch, f: Flight, pts: [number, number][], x: number, w: number
   if (f.rise === -1) b.add(g.rotateY(Math.PI / 2).translate(x, f.y0, comb), mat);
   else b.add(g.rotateY(-Math.PI / 2).translate(x + w, f.y0, comb), mat);
 }
-function escalator(b: Batch, f: Flight) {
+/** A pair of escalators (Palm Court's too: courtinside3d.ts) */
+export function escalator(b: Batch, f: Flight) {
   const comb = f.foot - f.rise * COMB;
   const L = Math.abs(f.land - comb);
   const H = f.y1 - f.y0;
@@ -399,7 +413,7 @@ function escalator(b: Batch, f: Flight) {
   ];
   const [a, c] = f.stairs;
   // The trusses: down to the floor on the street; a deep band under the steps where it spans the atrium
-  const onFloor = f === ESC_G;
+  const onFloor = f.y0 < 1;
   const truss: [number, number][] = onFloor ? [[0, 0], [L, 0], ...line(0.15).reverse()] : [...line(-0.9), ...line(0.15).reverse()];
   for (const [x0, x1, k] of [
     [a.x0 - BALUSTRADE, a.x0, 0],

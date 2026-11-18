@@ -23,6 +23,7 @@
  */
 import { ANCHORS, LINK_LIFT, LINK_Z, PAVILION, type Pt, type Rect } from './mall';
 import { CORRIDOR_Z, IN, UP, floorsAt } from './mallinside';
+import { CONNECTOR_Z } from './courtinside';
 import { DECK_HALF, HIGH_Y, LINE_X, PILLARS, PILLAR_HALF, PLATFORM_UP } from './metro';
 
 type Box = [number, number, number, number, number];
@@ -73,7 +74,7 @@ export const MEZZ_L1: Rect = [PAVILION[0], PAV_IN[1], PAV_IN[2], PAVILION[1] + 7
  * `rise` is the way it climbs along z
  */
 export interface Flight {
-  id: 'street' | 'platform';
+  id: 'street' | 'platform' | 'court';
   stairs: { x0: number; x1: number; dir: 1 | -1 }[];
   y0: number;
   y1: number;
@@ -112,7 +113,8 @@ export const flightZ = (f: Flight): Pt => [Math.min(f.foot, f.land), Math.max(f.
 export const flightY = (f: Flight, z: number) => f.y0 + Math.min(1, Math.max(0, ((z - f.foot) * f.rise) / f.run)) * (f.y1 - f.y0);
 /** The doors: on the promenade (east) and the avenue's sidewalk (west), under the lower floor's mezzanine (z0, z1 on its wall) */
 export const PAV_DOORS: { x: number; face: 1 | -1; z0: number; z1: number }[] = [
-  { x: PAVILION[2], face: 1, z0: MEZZ_L1[1] + 1.2, z1: MEZZ_L1[3] - 1.4 },
+  // (the way through from Palm Court indoors, both floors: courtinside.ts `CONNECTOR`)
+  { x: PAVILION[2], face: 1, z0: CONNECTOR_Z[0], z1: CONNECTOR_Z[1] },
   { x: PAVILION[2], face: 1, z0: MEZZ_L2[1] + 0.4, z1: PAV_IN[3] - 0.6 },
   // (clear of the lift in the north-west corner)
   { x: PAVILION[0], face: -1, z0: MEZZ_L1[1] + 2.6, z1: MEZZ_L1[3] - 0.9 },
@@ -122,7 +124,7 @@ export const DOOR_H = 2.8;
 /* ---------- The floors ---------- */
 
 /** The lower floor: the corridor, the bridge (inside its glass ends), the pavilion's north mezzanine */
-export const L1_FLOORS: Rect[] = [CORRIDOR, [LINK[0], LINK[1] + SKIN, LINK[2], LINK[3] - SKIN], MEZZ_L1];
+export const L1_FLOORS: Rect[] = [CORRIDOR, [LINK[0], LINK[1] + SKIN, LINK[2], LINK[3] - SKIN], MEZZ_L1, [PAV_IN[2], CONNECTOR_Z[0], PAVILION[2] + 0.3, CONNECTOR_Z[1]]];
 /** The platform floor: along the track behind the screen, and the pavilion's south mezzanine */
 export const L2_FLOORS: Rect[] = [[SCREEN_X + 0.05, LINK[1] + SKIN, LINK[2], LINK[3] - SKIN], MEZZ_L2];
 const inR = (r: Rect, x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;

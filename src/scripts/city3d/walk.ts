@@ -96,6 +96,7 @@ import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallWall } from './mallinside';
 import { LINK_CAMERA, linkUp, linkWall } from './malllink';
+import { COURT_CAMERA, courtWall } from './courtinside';
 import { skyUp, skyWall } from './southsky';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
@@ -784,8 +785,8 @@ export function createWalk(d: WalkDeps) {
     // Up in Starlight Mall's Skywalk (malllink.ts): only its edges and what stands on your floor stop you
     if (linkUp(x, z, y)) return linkWall(x, z, y, RADIUS);
     // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor; in the Skywalk's
-    // pavilion at street level, its escalators' sides
-    if (mallWall(x, z, y, RADIUS) || linkWall(x, z, y, RADIUS)) return true;
+    // pavilion at street level, its escalators' sides; in Palm Court (courtinside.ts), its upper floor's edges
+    if (mallWall(x, z, y, RADIUS) || linkWall(x, z, y, RADIUS) || courtWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // ...and the swing bridge's barriers while they're down (swingbridge.ts)
@@ -823,7 +824,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, ...LINK_CAMERA, HOME_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, ...LINK_CAMERA, ...COURT_CAMERA, HOME_CAMERA] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];

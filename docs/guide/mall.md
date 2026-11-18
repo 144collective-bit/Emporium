@@ -160,3 +160,42 @@ keep it up to date when what it describes changes.
     - Its words are in the outside's atlas (mall3d.ts `CELLS`, all 32).
     - Bright & Co.'s box and avenue face, the hall's east wall and the units'
       east strip are drawn open round the corridor.
+  - **Palm Court indoors** (docs/mall-plan.md "One mall" Phase 3, built; the
+    owner's picks: a glass barrel vault, shops on both floors, bridges
+    across, an upstairs food hall, the cinema's upstairs entry):
+    `courtinside.ts` (DOM-free, tested in `tests/courtinside.test.ts`).
+    - **The rows** (mall.ts `SHOPS`, `ROW_H`) are two storeys: the shops
+      downstairs, more upstairs (`UPPER_UNITS`, `UPPER_NAMES`). The
+      promenade is under a glass barrel vault (`VAULT_RISE`).
+    - **Upstairs** (`UPPER`, at `L1`, the hall's and the Skywalk's height):
+      - the galleries (`GALLERY_W`);
+      - the food hall's terrace across the north end (`TERRACE`, `TABLES`;
+        its stalls in the east row's north end, `FOOD_STALLS`), with
+        Paradise Cinema's doors up there (`CINEMA_DOORS`);
+      - three glass bridges over the void (`BRIDGES`);
+      - the way into the Skywalk's pavilion (`CONNECTOR`, where its
+        promenade door is: malllink.ts `PAV_DOORS`, `L1_FLOORS`).
+    - **The void** (`VOID`): the fountain, its benches, trees in white
+      planters (`COURT_PLANTERS`; the city's trees and the promenade's
+      lamps and festoons went, mall.ts), and the escalators by the south
+      entrance up to the south bridge (`ESCALATORS`, `escalatorY()`).
+    - **The entrances** (`ENTRANCES`): the south end (where the PALM COURT
+      gateway was, `ARCH.z`), the west passage from the avenue's zebra, and
+      the east one. `COURT_INSIDE_SOLIDS` (in `SOLIDS`) are their walls, the
+      cinema's corners and the escalators' balustrades.
+    - **Walking:** groundheight.ts's `court` layer is `courtFloor()`;
+      walk.ts asks `courtWall()` (off the upper floor's edges, under an
+      escalator, `LEVEL_SOLIDS`). `COURT_CAMERA` is for the walk camera,
+      and `COURT_INSIDE_PEOPLE` are in the crowd.
+    - **Drawn by `courtinside3d.ts`** (`registerCourt()`, from mall3d.ts,
+      which keeps the cinema without its canopy and the fountain):
+      - Outside: the rows' cladding with a ribbon of glass upstairs, the
+        vault on its curbs with ribs and gables, the entrances under PALM
+        COURT, the stone floor.
+      - Inside (near only): the shopfronts on both floors (downstairs
+        names from the outside's atlas, upstairs from `court-signs`), the
+        food hall, the slabs and soffits, the balustrades, the escalators
+        (malllink3d.ts `escalator()`), the trees.
+    - The Skywalk's pavilion front is open upstairs at the `CONNECTOR`, and
+      its door canopies went (the gallery is over them).
+
