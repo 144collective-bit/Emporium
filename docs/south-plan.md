@@ -380,7 +380,27 @@ From the Circus west, patchy as high roads are:
      fronts, doors, Walk in on the sidewalk; their panels in
      CityMap.astro, coming soon; `LIVE_PLACES`). Drawn by `highroad3d.ts`
      in the village's chunk, the signs from one atlas lit at night.
-   - **3d, the council rows, the bungalows and the allotments.**
+   - **3d, the council rows, the bungalows and the allotments.** The
+     owner's answers (2026-11-17): the council land north of the High
+     Road **postwar semis** (1950s pairs and short rows of four, pale
+     brick or render, hipped roofs, front gardens behind hedges, some
+     porches and pebble-dash); the land west of Degen's compound **neat
+     60s bungalows** (detached on wide plots, low hipped roofs, garages,
+     tidy lawns, a caravan here and there); **the allotments by the
+     brook** west of the village (plots, sheds, water butts, bean poles, a
+     gate and a path); **corner shops** at a few junctions and **the
+     derelict community centre** on a corner of the council estate.
+     Built, signed off by the owner 2026-11-18: `council.ts` (DOM-free,
+     `tests/council.test.ts`): `lay()` puts lots along the streets where
+     they fit (every point of their edges in the block, clear of what's
+     there: the High Road's buildings, the terraces' plots, the estate's
+     blocks, Degen's compound); the corner shops and the community centre
+     first, then 13 pairs of semis on the council land (along Fennel Way
+     and its closes: the council land is small, the High Road's frontage
+     and the closes take most of it) and 18 bungalows round the compound;
+     the allotments' strip on the brook's north bank with its plots and
+     sheds; the solids. Drawn by `council3d.ts` in the village's chunk
+     (copied shapes; gardens, hedges and drives on the rolling ground).
    - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):

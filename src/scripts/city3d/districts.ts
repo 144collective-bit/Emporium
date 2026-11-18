@@ -37,6 +37,7 @@ import { SOUTH_DRAWN } from './south';
 import { BLOCKS_RECT } from './southblocks';
 import { TERRACES_RECT } from './southterraces';
 import { HIGHROAD_RECT } from './highroad';
+import { COUNCIL_RECT } from './council';
 import { HIGHWAY_BOX } from './highway';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
@@ -90,8 +91,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Aldwyn's Green's terraces (southterraces.ts, docs/south-plan.md Phase 3a; village3d.ts)
   {
     id: 'village',
-    // (its terraces' land and the High Road's together)
-    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3])],
+    // (its terraces' land, the High Road's, the council rows', the bungalows' and the allotments' together)
+    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0], COUNCIL_RECT[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1], COUNCIL_RECT[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2], COUNCIL_RECT[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3], COUNCIL_RECT[3])],
     load: () => import('./village3d'),
   },
   // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the
