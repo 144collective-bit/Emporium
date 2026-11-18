@@ -341,6 +341,17 @@ MiB (the quality step had lowered its pixels to 1x; the formula gave 9.0
 for the same). On foot, past the haze, a phone holds less (about 113-127
 MiB of geometry, the memory steps' figures).
 
+### Memcheck, 2026-11-18 (main at #167)
+
+The whole city built in about 13 minutes (774 s). Geometry **191.2** MiB,
+over the 187 ceiling: the south's Phases 2-3 (blocks, terraces, the High
+Road, St Aldwyn's, council semis), about 21 MiB of new city over Phase 3b's
+169.8, not a leak. *The owner's call: raised on purpose to 210* (191 and
+10%). Textures **32.9** (half of Phase 5's 64.3: the districts' textures
+baked, Phase 4.3; *the owner's call: the ceiling stays 70*, room for new
+districts). Render targets 9.0 (the formula's 9.0). The hitches: every view
+21-46 ms, the route 46, all under 250.
+
 ## Phase 6: smoother frames (S-M, low risk)
 
 1. **The quality step-down without the hitch** (built, 2026-11-14): turning
@@ -369,10 +380,11 @@ MiB of geometry, the memory steps' figures).
    Lot 9 180 and the route 493 (*the owner's call: find those spikes
    first*); a second, on a quiet machine, read every view 20-104 ms (the
    wall's corner the slowest) and the route 71, mostly the render: the first
-   run had the test suite beside it. Since the south's re-laying the phone's
-   city takes about 55 minutes to build there, so memcheck now waits up to
-   75 (the Action's job allows 120). Its geometry reads 330-400 MiB against
-   the 187 ceiling, the same on `main`: not this phase's, still to find.
+   run had the test suite beside it. memcheck waits up to 75 minutes for the
+   city to build (the Action's job allows 120): for a while it took about
+   55, and its geometry read 330-400 MiB, both from the south's Phase 1c lift
+   splitting every batch that reached its ground, which #177 narrowed to the
+   faces over the south (found 2026-11-18; see "Memcheck, 2026-11-18" below).
 
 ## The tier by the graphics (built, 2026-11-14; waiting on the owner's laptop)
 
@@ -418,3 +430,6 @@ measured → Phases 3 and 4 → Phase 6. Real-device numbers (`?bench`'s
 - **The tier by the graphics** (2026-11-14): built-in graphics start on
   medium, plain Apple M chips included; a lost GPU keeps the device a tier
   lower for 14 days. **Phase 6.2 next** (the reload on a restored GPU).
+- **The phone's ceilings** (2026-11-18): geometry raised on purpose from 187
+  to 210 MiB (the south's Phases 2-3, 191.2 measured, and 10%); textures
+  kept at 70 MiB though 32.9 measured, room for new districts.

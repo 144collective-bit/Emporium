@@ -441,7 +441,7 @@ keep it up to date when what it describes changes.
 - **Memory ceilings** (`docs/stability-plan.md`, Phase 5; the owner's
   picks): `MEMORY_CEILINGS` in `targets.ts` (MiB). `npm run memcheck`
   (after a build and `npm run bake:textures`; `scripts/memcheck.mjs`, about
-  an hour since the south's re-laying) builds the whole city on a headless
+  15 minutes, up to 75 allowed) builds the whole city on a headless
   phone under `?bench` and holds its geometry, textures and render targets
   to the phone's, and the benchmark's slowest CPU frames to
   `HITCH_CEILINGS` (the stability plan's 6.3); `npm run

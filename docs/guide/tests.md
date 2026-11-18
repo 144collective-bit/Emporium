@@ -72,7 +72,7 @@ keep it up to date when what it describes changes.
   `scripts/memcheck.mjs`): the whole city built on a headless phone, held
   to `MEMORY_CEILINGS` (`targets.ts`) and its benchmark's slowest CPU frame
   a view to `HITCH_CEILINGS`, red on a page error or NaN; `--
-  soak` adds the leak check. About an hour (more with the soak), so it's
+  soak` adds the leak check. About 15 minutes (more with the soak), so it's
   run by hand or by the "Memory" Action, which only runs when started.
   `tests/targets.test.ts` holds the desktop's render targets (by formula)
   to their ceilings on every `npm test`. `tests/gputier.test.ts` holds the
