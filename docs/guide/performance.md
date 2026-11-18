@@ -497,6 +497,14 @@ keep it up to date when what it describes changes.
   clock starts**, so the `?fps` boot line never showed it: from opening the page to the boot line, headless, the
   phone tier 12.6 to 10.3 s and desktop 13.6 to 11.4 s. A module's top-level work is the page's load time too:
   measure from the page's start (`performance.now()` at the boot line), not only the boot line.
+- **What runs as the page loads** (2026-11-18): a CPU profile from the page's start, adding up the time under each
+  chunk's top-level code, found about 1.8 s of it on desktop, before the boot's clock: the south's street web (south.ts,
+  its `Near` now keyed by number), Endswood's land grid (endswood.ts `CELLS`: each block's rows now crossed once,
+  streetfaces.ts `rowCrossings()` / `insideRow()`, exactly `inside()`, tested) and Aldwyn's Green's back alleys
+  (southterraces.ts `ALLEYS`: every house against every other, now only those whose box it reaches). The same output to
+  the bit; about 0.35 s less, from opening the page to the boot line 9.45 to 9.14 s (phone tier) and 10.67 to 10.25 s
+  (desktop), headless. What's left at the top: the street web's layout itself (about 0.4 s), the viaduct's dressing
+  and the solids.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is

@@ -214,10 +214,12 @@ const NAMES = ['Alder', 'Birch', 'Cobble', 'Dove', 'Elder', 'Fern', 'Gorse', 'He
 /** A spatial hash of every line's points, to ask how near the nearest is */
 class Near {
   cell = 6;
-  map = new Map<string, { p: Pt; tag: number }[]>();
+  map = new Map<number, { p: Pt; tag: number }[]>();
+  /** A cell's key (a number: the layout asks many thousands of times as the city loads) */
+  static key = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
   add(pts: Pt[], tag: number) {
     for (const p of pts) {
-      const k = `${Math.floor(p[0] / this.cell)},${Math.floor(p[1] / this.cell)}`;
+      const k = Near.key(Math.floor(p[0] / this.cell), Math.floor(p[1] / this.cell));
       if (!this.map.has(k)) this.map.set(k, []);
       this.map.get(k)!.push({ p, tag });
     }
@@ -229,7 +231,7 @@ class Near {
     const [cx, cz] = [Math.floor(p[0] / this.cell), Math.floor(p[1] / this.cell)];
     for (let i = -c; i <= c; i++)
       for (let j = -c; j <= c; j++)
-        for (const e of this.map.get(`${cx + i},${cz + j}`) ?? []) {
+        for (const e of this.map.get(Near.key(cx + i, cz + j)) ?? []) {
           if (skip(e.tag, e.p)) continue;
           m = Math.min(m, Math.hypot(e.p[0] - p[0], e.p[1] - p[1]));
         }
