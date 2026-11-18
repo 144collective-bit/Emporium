@@ -593,6 +593,8 @@ export function createWalk(d: WalkDeps) {
   let momentDy = 0;
   /** Sitting down, where the camera goes: a three-quarter view from whichever side of him has the room */
   let benchYaw = 0;
+  /** Woken on a seat (`enter()`'s `seat`): once he's up, the camera comes round behind him to this, then it's yours */
+  let wakeYaw: number | null = null;
   const benchEye = new THREE.Vector3();
   const benchDir = new THREE.Vector3();
   function pickBenchYaw(mk: { face: number; y: number; seat?: { x: number; z: number } }) {
@@ -2490,6 +2492,11 @@ export function createWalk(d: WalkDeps) {
     // (sitting down he turns his back to the bench, where the camera would be: it comes round to his front-left,
     // a three-quarter view of him on the bench, and is yours again once he's seated)
     if (moments.active && moments.mark?.kind === 'bench' && (moments.phase === 'approach' || moments.phase === 'play')) yaw += wrap(benchYaw - yaw) * damp(4, dt);
+    // (woken on his sofa, docs/spawn-plan.md: up off it, the view swings round behind him, so ahead is into the room)
+    if (wakeYaw !== null && !(moments.active && moments.phase === 'hold')) {
+      yaw += wrap(wakeYaw - yaw) * damp(3, dt);
+      if (Math.abs(wrap(wakeYaw - yaw)) < 0.01) wakeYaw = null;
+    }
     // (a kick or the dodge: he stands for it; the guard up, he faces where you look, as aiming)
     const gx = mg ? mg.dx * mg.speed : rooted ? 0 : dirX * top;
     const gz = mg ? mg.dz * mg.speed : rooted ? 0 : dirZ * top;
@@ -3346,9 +3353,10 @@ export function createWalk(d: WalkDeps) {
         face = mk.face;
         // (the camera at his front, a three-quarter view of him on the seat: the room's back wall is behind him)
         pickBenchYaw(mk);
+        wakeYaw = spawn?.yaw ?? wrap(mk.face - Math.PI);
         yaw = benchYaw;
         moments.sit(mk);
-      }
+      } else wakeYaw = null;
       hotbar?.reset();
       void loadHotbar();
       void loadFists();

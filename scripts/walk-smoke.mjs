@@ -130,6 +130,15 @@ await scene('wake', null, async (t) => {
   const [x, z] = await t.where();
   if (!(z > 385.0 && z < 391.3 && x > -237.7 && x < -228.9)) throw new Error(`woke at ${x}, ${z}, not in the room`);
   await t.step(`woke in the room, at ${x}, ${z}`);
+  // (sat on the sofa: up off it a moment after the menu's gone, onto the spot in front of it, the view swung behind him)
+  await t.until('him to stand up', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) > 385.95;
+  });
+  await t.step(`stood up, at ${(await t.where()).join(', ')}`);
+  // (the camera looking south, into the room: its forward is -z of its matrix)
+  await t.until('the view to swing round behind him', () => -(window.__city?.camera.matrixWorld.elements[10] ?? 0) > 0.85);
+  await t.step('the view behind him');
   // (to the front door: he faces the telly, south, so A takes him east along the room past the sofa's end and S back
   // north to the door; its prompt reads "Getting ready…" until the street is in)
   await t.go('a', 1.6, 'walked across the room');
