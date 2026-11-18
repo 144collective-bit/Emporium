@@ -28,7 +28,7 @@ const LIGHTS: { id: StageLight; name: string }[] = [
 ];
 
 const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Jacket', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket' };
-const BOTTOMS: Record<Look['bottoms'], string> = { trousers: 'Suit Trousers', joggers: 'Joggers', trackpants: 'Track Pants' };
+const BOTTOMS: Record<Look['bottoms'], string> = { trousers: 'Suit Trousers', joggers: 'Joggers', trackpants: 'Track Pants', cargo: 'Cargo Pants' };
 const HATS: Record<NonNullable<Look['hat']>, string> = { cap: 'Diamond Cap', backcap: 'Backwards Cap', beanie: 'Street Beanie', bucket: 'Bucket Hat' };
 const BAGS: Record<NonNullable<Look['bag']>, string> = { backpack: 'Backpack', crossbody: 'Crossbody', board: 'Skate Deck', duffel: 'Duffel Bag' };
 const markName = (id: MarkId) => MARKS.find((m) => m.id === id)?.name ?? id;

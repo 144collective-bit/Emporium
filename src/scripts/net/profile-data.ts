@@ -80,8 +80,8 @@ export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket'];
  * pairing. A look saved before them wears what its top came with: the suit its trousers and dress shoes, the track
  * top its track pants, the rest joggers, all but the suit sneakers (`bottomsFor()`, `shoesFor()`).
  */
-export type Bottoms = 'trousers' | 'joggers' | 'trackpants';
-export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants'];
+export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo';
+export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo'];
 export type ShoeStyle = 'dress' | 'sneaker' | 'hightop';
 export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop'];
 /** The bottoms a top came with before the separates */

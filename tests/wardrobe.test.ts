@@ -84,7 +84,8 @@ for (const q of [3, 2] as const) {
       const d = dress(o, q);
       const ids = new Set(d.worn.map((w) => w.item));
       assert.equal(ids.has('trousers'), look.bottoms === 'trousers');
-      assert.equal(ids.has('joggers'), look.bottoms !== 'trousers');
+      assert.equal(ids.has('joggers'), look.bottoms === 'joggers' || look.bottoms === 'trackpants');
+      assert.equal(ids.has('cargoPants'), look.bottoms === 'cargo');
       assert.equal(ids.has('trackStripes'), look.bottoms === 'trackpants');
       assert.equal(ids.has('dressShoes'), look.shoeStyle === 'dress');
       assert.equal(ids.has('sneakers'), look.shoeStyle === 'sneaker');

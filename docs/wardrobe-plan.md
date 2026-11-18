@@ -338,6 +338,14 @@ A proposed first set; the owner picks what goes in:
     the ankle, a padded rim round the opening, laces up to the collar.
     Streetwear; `kicks()` takes the stripe and the shoe's mark on both.
   - The budget held at 40k: the new laces and stripe are lean tubes.
+- **As built, the cargo pants (Phase 5b, 18 November 2026):** `cargoPants`
+  (`Bottoms` `cargo`, Streetwear and Work): on the one `SEAT` every bottoms
+  shares, as narrow as the joggers right under the tops' hems (fuller there,
+  the suit's and the puffer's hems sank 3.8 thousandths into the thighs as
+  the legs swung), fuller from the upper thigh to the knee, tapering to a
+  gathered cuff; a bellows pocket on the outside of each thigh, its flap on
+  the desktop only (phones keep their 18k). Every top over them and every
+  shoe under them pass the clipping tests.
 
 ### Phase 6: work wear
 

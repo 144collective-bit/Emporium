@@ -2091,6 +2091,35 @@ export function items(q: Detail, hero = false): Item[] {
   // Cargo pockets on the outside of each thigh
   const cargoPockets = [-1, 1].map((s) => rb(0.02, 0.07, 0.06, 0.008, s * 0.07, -0.16, 0.004));
   const kneePads = q === 0 ? [] : [rb(0.06, 0.06, 0.025, 0.01, 0, -0.01, 0.054)];
+  /*
+   * Cargo pants (docs/wardrobe-plan.md Phase 5): the fatigues' fuller legs on the one seat every bottoms shares (so
+   * every top's hips stay over them), tapering under the knee to a gathered cuff like the joggers', a bellows pocket
+   * on the outside of each thigh under its flap
+   */
+  // (right under the tops' hems as narrow as the joggers, which every hem swings clear of; fuller from there down)
+  const CARGO_S = legs([
+    [-0.12, 0.062, 0.064, 0.002],
+    [-0.15, 0.064, 0.066, 0.003],
+    [-0.21, 0.063, 0.067, 0.001],
+    ...knee(0.056, 0.06),
+    ...onShin([
+      [-0.02, 0.057, 0.061, 0],
+      [-0.11, 0.055, 0.059, -0.004],
+      [-0.18, 0.049, 0.052, 0],
+      [-0.2, 0.048, 0.051, 0.001],
+      [-0.215, 0.047, 0.05, 0.001],
+      [-0.235, 0.04, 0.043, 0],
+    ]),
+  ]);
+  const cargoPants = trousers(hips(SEAT), CARGO_S, LEGS);
+  const cargoCuff = loft(
+    [
+      [-0.258, 0.043, 0.046, 0.002],
+      [-0.224, 0.044, 0.047, 0.002],
+    ],
+    R(16)
+  );
+  const cargoFlaps = [-1, 1].map((s) => rb(0.024, 0.016, 0.064, 0.005, s * 0.072, -0.12, 0.004));
 
   /* ----- Arms and hands ----- */
   const UPPER_S: Sec[] = [
@@ -2963,6 +2992,17 @@ export function items(q: Detail, hero = false): Item[] {
       id: 'joggers',
       when: (o) => bottomsOf(o) === 'joggers' || bottomsOf(o) === 'trackpants',
       pieces: [P('pelvis', joggers, 'bottom', BOTTOM), ...both('shin', joggerCuff, 'bottom', { shade: 0.8 })],
+    },
+    {
+      id: 'cargoPants',
+      when: (o) => bottomsOf(o) === 'cargo',
+      pieces: [
+        P('pelvis', cargoPants, 'bottom', BOTTOM),
+        ...both('shin', cargoCuff, 'bottom', { shade: 0.8 }),
+        ...both('leg', cargoPockets, 'bottom', { shade: 0.88 }),
+        // (the pockets' flaps on the desktop only: fine detail, and phones keep their budget)
+        ...(q === 3 ? both('leg', cargoFlaps, 'bottom', { shade: 0.72, detail: true }) : []),
+      ],
     },
     // Track pants: the joggers with the track suit's stripes down the outside of each leg
     {

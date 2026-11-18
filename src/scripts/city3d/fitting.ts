@@ -220,6 +220,7 @@ const TABS: Tab[] = [
       bottoms('trousers', 'Suit Trousers', 'M7 3h10l1 18h-4l-2-11-2 11H6z M12 3v4', BUSINESS),
       bottoms('joggers', 'Joggers', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7 6h10', STREET),
       bottoms('trackpants', 'Track Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7.5 4l-1 14 M16.5 4l1 14', STREET),
+      bottoms('cargo', 'Cargo Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M5.5 9h2.5v4H5.5z M16 9h2.5v4H16z', ['street', 'work']),
     ],
   },
   {

@@ -275,7 +275,7 @@ keep it up to date when what it describes changes.
   - **The separates** (`docs/wardrobe-plan.md` Phase 2): the top, the
     bottoms and the shoes are items of their own, worn in any pairing:
     `trousers`, `joggers` (and track pants, the joggers with
-    `trackStripes`), `dressShoes` and `sneakers`, picked by `bottomsOf()` and
+    `trackStripes`), `cargoPants` (fuller below the hems, thigh pockets), `dressShoes` and `sneakers`, picked by `bottomsOf()` and
     `shoesOf()` (the outfit's `bottoms` / `shoeStyle`, or what its top comes
     with: the crowd's, `bottomsFor()` / `shoesFor()`); the suit's shirt,
     collar and cuffs take the outfit's `shirt` colour (the crowd's the shirt
