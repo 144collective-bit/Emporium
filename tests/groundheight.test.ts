@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { onSouthGround, southLift } from '../src/scripts/city3d/southground';
 import { SKY_LIFTS, skyFloorAt } from '../src/scripts/city3d/southsky';
 import { floorY } from '../src/scripts/city3d/southblocks';
+import { BRIDGE as REC_BRIDGE, recBridgeY } from '../src/scripts/city3d/rec';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
 import { HOME, ROOF_Y, homeRoofY } from '../src/scripts/city3d/home';
@@ -52,6 +53,9 @@ function reference(leavesOpen: () => boolean) {
     // (Endswood's sky network, southsky.ts: new since the old groundAt(), so the reference takes it as the layers do)
     const sky = skyFloorAt(x, z, yNow);
     if (sky !== null) return sky;
+    // (the rec's footbridge, rec.ts: new since the old groundAt() too)
+    const rb = recBridgeY(x, z);
+    if (rb !== null && Math.abs(yNow - rb) < 1.2) return rb;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
     // (the south's rolling ground, southground.ts: new since the old groundAt(), so the reference takes it as the layers do)
     if (onSouthGround(x, z) && (slab === SLAB || slab === 0.035)) {
@@ -172,6 +176,7 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     // (the south's rolling ground on the village's hill, St Aldwyn's churchyard)
     south: [-205, 462, 0],
     // (Endswood's sky network: The Core's landing at the third floor)
+    recbridge: [REC_BRIDGE.x, (REC_BRIDGE.z0 + REC_BRIDGE.z1) / 2, recBridgeY(REC_BRIDGE.x, (REC_BRIDGE.z0 + REC_BRIDGE.z1) / 2)!],
     sky: [SKY_LIFTS.find((l) => l.id === 'twin-core')!.at[0], SKY_LIFTS.find((l) => l.id === 'twin-core')!.at[1], floorY(SKY_LIFTS[0].base, 3)],
     tunnel: [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2, -2],
     hills: [HILL[0], HILL[1], 0],

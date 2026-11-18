@@ -37,6 +37,7 @@ import { COUNCIL_LAND, SOUTH_DRAWN } from './south';
 import { BLOCKS_RECT } from './southblocks';
 import { TERRACES_RECT } from './southterraces';
 import { HIGHROAD_RECT } from './highroad';
+import { REC_RECT } from './rec';
 import { HIGHWAY_BOX } from './highway';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
@@ -92,7 +93,7 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   {
     id: 'village',
     // (its terraces' land, the High Road's, the council rows', the bungalows' and the allotments' together)
-    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0], COUNCIL_LAND[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1], COUNCIL_LAND[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2], COUNCIL_LAND[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3], COUNCIL_LAND[3])],
+    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0], COUNCIL_LAND[0], REC_RECT[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1], COUNCIL_LAND[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2], COUNCIL_LAND[2], REC_RECT[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3], COUNCIL_LAND[3], REC_RECT[3])],
     load: () => import('./village3d'),
   },
   // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the
