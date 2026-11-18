@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CEIL, CIRCUS_HOLE, CIRCUS_SOLIDS, CUTTINGS, FLOOR, ISLAND_R, MOUTHS, MOUTH_PATHS, OUTER_R, PATH_HALF, PLANTERS, PLAZA, PLAZA_LAMPS, SUBWAYS, SUBWAY, SUBWAY_WAYS, fromSidewalks, inCircusOpen, subwayOf,
+  CEIL, CIRCUS_CUTS, CIRCUS_HOLE, CIRCUS_SOLIDS, CUTTINGS, FLOOR, ISLAND_R, MOUTHS, MOUTH_PATHS, OUTER_R, PATH_HALF, PLANTERS, PLAZA, PLAZA_LAMPS, SUBWAYS, SUBWAY, SUBWAY_WAYS, fromSidewalks, inCircusOpen, subwayOf,
 } from '../src/scripts/city3d/circus';
 import { DOWN, GROUND_Y, acrossOf, alongOf, floorOf, pointOf, radial, underworld, wellFloor, type Passage } from '../src/scripts/city3d/underground';
 import { CIRCUS, FOOTPATHS, PATH_HALF as FOOT_HALF, SOUTH_STREETS, type Pt } from '../src/scripts/city3d/south';
@@ -18,6 +18,7 @@ import { DECKS, COURTS } from '../src/scripts/city3d/southblocks';
 import { southLift } from '../src/scripts/city3d/southground';
 import { ENDS_SPAWNS } from '../src/scripts/city3d/endsplaces';
 import { LOT9_PASSAGE, TUNNEL } from '../src/scripts/city3d/lot9';
+import { SLAB, UNDER, createGroundHeight } from '../src/scripts/city3d/groundheight';
 
 /** Points over a cutting (its corners, edges and inside), `m` out past its walls */
 function over(c: Pt[], m = 0): Pt[] {
@@ -195,4 +196,42 @@ test("the subways don't cross each other or the Circus's spokes' carriageways in
   }
   const _: Passage[] = SUBWAYS;
   assert.ok(_.every((p) => typeof p.axis === 'number'));
+});
+
+test("walked in the city (groundheight.ts): down the ramp, under the road, the plaza's floor and seats; the street over it all", () => {
+  const ground = createGroundHeight({ leavesOpen: () => true });
+  const p = subwayOf('nw');
+  // (the slab at the mouth's top, the ramp halfway down, the floor under the road from down there, the street from up)
+  const top = pointOf(p, p.a1 + 0.6);
+  assert.ok(Math.abs(ground(top[0], top[1], 0.2) - SLAB) < 0.01, 'on the slab past the mouth');
+  const mid = (p.ramp1 + p.a1) / 2;
+  assert.ok(Math.abs(ground(...pointOf(p, mid), 0) - floorOf(p, mid)) < 1e-9, 'halfway down the ramp');
+  const under = (p.roofs[0][0] + p.roofs[0][1]) / 2;
+  assert.equal(ground(...pointOf(p, under), FLOOR), FLOOR, 'down in it under the road');
+  assert.ok(ground(...pointOf(p, under), 0.1) > 0, 'up on the road over it');
+  assert.equal(ground(CIRCUS.x, CIRCUS.z, FLOOR), FLOOR, "the plaza's floor");
+  assert.ok(Math.abs(ground(CIRCUS.x - 6.9, CIRCUS.z, FLOOR + 0.5) - (FLOOR + 0.66)) < 1e-9, 'its top seat');
+});
+
+test("down there the planters and lamps stop you, as its walls do (the kit's boxes: walking's solids don't reach down there)", () => {
+  for (const { at: [x, z] } of PLANTERS) {
+    assert.ok(UNDER.wall(x, z, FLOOR, 0.3), 'a planter');
+    assert.ok(!UNDER.wall(x, z, SLAB, 0.3) || inCircusOpen(x, z), 'nothing of it at street level');
+  }
+  for (const [x, z] of PLAZA_LAMPS) assert.ok(UNDER.wall(x, z, FLOOR, 0.3), 'a lamp');
+  assert.ok(!UNDER.wall(CIRCUS.x, CIRCUS.z, FLOOR, 0.3), "the plaza's middle is clear");
+});
+
+test("the slabs' and junctions' holes (holes.ts) are the plaza, round its wall, and each cutting", () => {
+  assert.equal(CIRCUS_CUTS.length, 1 + CUTTINGS.length);
+  const [round, ...cuts] = CIRCUS_CUTS;
+  for (const [x, z] of round) assert.ok(Math.hypot(x - PLAZA.x, z - PLAZA.z) >= PLAZA.r + PLAZA.wall - 1e-9);
+  // (its edges outside the wall's round outside, inside the coping's reach)
+  for (let i = 0; i < round.length; i++) {
+    const [a, b] = [round[i], round[(i + 1) % round.length]];
+    const m: Pt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const d = Math.hypot(m[0] - PLAZA.x, m[1] - PLAZA.z);
+    assert.ok(d >= PLAZA.r + PLAZA.wall - 1e-6 && d < PLAZA.r + PLAZA.wall + 0.1);
+  }
+  assert.deepEqual(cuts, CUTTINGS);
 });

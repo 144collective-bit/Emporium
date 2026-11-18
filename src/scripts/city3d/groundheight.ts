@@ -37,6 +37,7 @@ import { mallFloor } from './mallinside';
 import { inChannel, shoreY } from './river';
 import { LOT9_PASSAGE } from './lot9';
 import { underworld } from './underground';
+import { CIRCUS_SOLIDS, PLAZA, SUBWAYS } from './circus';
 import { heightAt, onHills } from './terrain';
 import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
@@ -82,14 +83,15 @@ export function baseAt(x: number, z: number): { base: number; open: boolean; sla
   return { base: STREET, open: true, slab: false };
 }
 
-/** What's below street level for walking (underground.ts): Lot 9's tunnel under the highway, Endswood's subways and its well */
-export const UNDER = underworld([LOT9_PASSAGE], []);
+/** What's below street level for walking (underground.ts): Lot 9's tunnel under the highway, the Circus's subways and its
+ * sunken plaza (circus.ts, docs/south-plan.md Phase 4b) */
+export const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS], [PLAZA], CIRCUS_SOLIDS);
 
 export const GROUND_LAYERS: GroundLayer[] = [
   // Degen's roof terrace, when `yNow` is up there (home.ts; the room is under it)
   { id: 'homeroof', how: 'take', at: (x, z, yNow) => homeRoofY(x, z, yNow) },
-  // Below ground (underground.ts): Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
-  // open floors, and a floor under a roof when `yNow` is down there
+  // Below ground (underground.ts): Lot 9's tunnel under the highway and the Circus's subways and plaza, their ramps,
+  // open floors and seats, and a floor under a roof when `yNow` is down there
   { id: 'tunnel', how: 'take', at: (x, z, yNow) => UNDER.y(x, z, yNow) },
   // Endswood's sky network (southsky.ts, docs/south-plan.md Phase 2c), when `yNow` is up there: the galleries, bridges,
   // the podium deck, the cores' landings and The Core's stair

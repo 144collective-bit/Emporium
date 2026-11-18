@@ -762,7 +762,7 @@ export function createWalk(d: WalkDeps) {
     if (inHouse(x, z, y)) return homeWall(x, z, RADIUS);
     // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
     if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
-    // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
+    // Below ground (underground.ts: Lot 9's tunnel, the Circus's subways and plaza): down there only their walls stop you;
     // at street level the open cuttings' and the well's edges do
     if (UNDER.inZone(x, z)) {
       if (y < UNDER_DOWN) return UNDER.wall(x, z, y, RADIUS);
@@ -800,7 +800,7 @@ export function createWalk(d: WalkDeps) {
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
-    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, Endswood's subways and its well)
+    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, the Circus's subways and its plaza)
     const under = from.y < 0.6 && UNDER.inZone(from.x, from.z);
     if (under) t = UNDER.room(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
     // Ground (and kerb) below

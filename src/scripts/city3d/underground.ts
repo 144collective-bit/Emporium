@@ -160,8 +160,9 @@ export const wellHole = (w: Well): Rect => {
   return [w.x - e, w.z - e, w.x + e, w.z + e];
 };
 
-/** What's below ground in one place: its passages and wells together, as walking and the walk camera ask about it */
-export function underworld(passages: readonly Passage[], wells: readonly Well[] = []) {
+/** What's below ground in one place: its passages and wells together, as walking and the walk camera ask about it;
+ * `boxes` what stands down there (a plaza's planters and lamps: solid to a walker down there, their tops absolute) */
+export function underworld(passages: readonly Passage[], wells: readonly Well[] = [], boxes: readonly Box[] = []) {
   const zones = [...passages.map(passageZone), ...wells.map(wellZone)];
   const inZone = (x: number, z: number) => zones.some((r) => x > r[0] && x < r[2] && z > r[1] && z < r[3]);
   /** The floor under x, z (null: on none of it) and whether that's under a roof */
@@ -220,11 +221,11 @@ export function underworld(passages: readonly Passage[], wells: readonly Well[] 
     },
     /**
      * Whether a walker `r` round at x, z (his feet at `y`) is stopped: down there, by the walls (he keeps to the
-     * floor); at street level, by an open cutting's or a well's edge where the floor is more than a step under him
+     * floor) and what stands there; at street level, by an open cutting's or a well's edge where the floor is more than a step under him
      */
     wall(x: number, z: number, y: number, r: number) {
       if (!inZone(x, z)) return false;
-      if (y < DOWN) return !fits(x, z, r);
+      if (y < DOWN) return !fits(x, z, r) || boxes.some((b) => y < b[4] && x > b[0] - r && x < b[2] + r && z > b[1] - r && z < b[3] + r);
       for (const [px, pz] of [
         [x, z],
         [x - r, z],

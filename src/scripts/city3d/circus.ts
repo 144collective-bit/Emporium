@@ -12,6 +12,7 @@
 import { CIRCUS, SOUTH_STREETS, type Pt } from './south';
 import { BLOCKS, CORES } from './southblocks';
 import { distTo, inside } from './streetfaces';
+import { disc } from './holes';
 import { cutOf, openOf, pointOf, radial, wellHole, type Box, type Passage, type Rect, type Well } from './underground';
 
 /** The floor down there, the subways' ceiling (a tunnel's headroom, as Lot 9's), the walls' thickness */
@@ -112,7 +113,8 @@ function at(deg: number, r: number): Pt {
   return [CIRCUS.x + r * Math.cos(a), CIRCUS.z + r * Math.sin(a)];
 }
 
-/** The planters and lamps as solids (down on the plaza's floor: under street level, absolute heights) */
+/** The planters and lamps as solids down on the plaza's floor (absolute heights; the underground kit's, groundheight.ts
+ * `UNDER`: down there only it stops a walker) */
 export const CIRCUS_SOLIDS: Box[] = [
   ...PLANTERS.map(({ at: [x, z], r }): Box => [x - r * 0.85, z - r * 0.85, x + r * 0.85, z + r * 0.85, FLOOR + PLANTER_H]),
   ...PLAZA_LAMPS.map(([x, z]): Box => [x - 0.12, z - 0.12, x + 0.12, z + 0.12, FLOOR + 3]),
@@ -130,6 +132,10 @@ export const CIRCUS_HOLE: Rect = (() => {
   const e = Math.max(...pts.map(([x, z]) => Math.max(Math.abs(x - CIRCUS.x), Math.abs(z - CIRCUS.z)))) + 0.2;
   return [CIRCUS.x - e, CIRCUS.z - e, CIRCUS.x + e, CIRCUS.z + e];
 })();
+
+/** The holes cut out of the blocks' slabs and the junctions' asphalt over it (holes.ts): the plaza (a polygon round its
+ * wall's outside, its edges clear of it) and each cutting, walls and all */
+export const CIRCUS_CUTS: Pt[][] = [disc(PLAZA.x, PLAZA.z, (PLAZA.r + PLAZA.wall) / Math.cos(Math.PI / 48), 48), ...CUTTINGS];
 
 /** Is x, z in an open cutting or the plaza (`m` out past their walls) */
 export function inCircusOpen(x: number, z: number, m = 0) {

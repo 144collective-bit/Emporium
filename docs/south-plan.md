@@ -439,7 +439,7 @@ From the Circus west, patchy as high roads are:
      lights inside; life with Phase 6; four subways, nothing that's built
      moving: the west and south-west corners are built up to the Circus's
      sidewalk, the parade's back and Church Road's end house, and keep
-     their zebra crossings). Built, waiting on the owner's sign-off:
+     their zebra crossings). Built and signed off (2026-11-18):
      `circus.ts` (DOM-free, `tests/circus.test.ts`): the plaza
      (`PLAZA`, a well of the kit inside the island, three steps of seats
      round its edge you walk up, `tiers`), planters with trees and lamps
