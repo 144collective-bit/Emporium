@@ -75,7 +75,9 @@ keep it up to date when what it describes changes.
     highway's deck (`viadress.ts` `UNDER`), and since the south's Phase 3e
     Aldwyn's Green's layouts: its terraces and ginnels (`southterraces.ts`, key
     `terraces`), the High Road's buildings (`highroad.ts`, `highroad`) and the
-    council rows, corner shops and community centre (`council.ts`, `council`). A new module that bakes goes in `MODULES` in
+    council rows, corner shops and community centre (`council.ts`, `council`), and since the spawn plan's Phase 3a
+    the south's closes, crescents and their footpaths (`south.ts` `GROWN`, key `south-grown`: about a second of a
+    phone's start-up). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.

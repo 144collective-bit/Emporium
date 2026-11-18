@@ -22,6 +22,7 @@
  * The blocks are the faces of the street graph (streetfaces.ts), each with the zone it's in (`zoneAt()`): the tall
  * band along the ring road, the estate round the Circus, the council rows, the village, the bungalows.
  */
+import { BUILT, baked } from './baked';
 import { GATES, HEAD, PLOT } from './endsfar';
 import { NS_SOUTH_END } from './layout';
 import { LOT9_FENCE } from './lot9';
@@ -256,7 +257,12 @@ export interface Footpath {
   from: string;
 }
 
-const grown = (() => {
+/**
+ * The closes and crescents grown off the main streets, and their footpaths through: a seeded search, the same every
+ * time, and the slowest thing the south works out (about a second of a phone's start-up), so it's worked out when the
+ * site is built (baked.ts, key `south-grown`, docs/spawn-plan.md Phase 3a) and read from the build's data in the page
+ */
+function growStreets(): { streets: SouthStreet[]; paths: Footpath[] } {
   const rnd = seeded(14112026);
   const streets: SouthStreet[] = [];
   const paths: Footpath[] = [];
@@ -396,7 +402,9 @@ const grown = (() => {
     if (streets.length >= 64) break;
   }
   return { streets, paths };
-})();
+}
+export const GROWN = baked('south-grown', BUILT ? undefined : growStreets);
+const grown = GROWN;
 
 /** Every street the south adds to the street plan */
 export const SOUTH_STREETS: SouthStreet[] = [...MAIN, ...grown.streets];
