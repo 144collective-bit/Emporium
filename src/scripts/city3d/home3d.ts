@@ -24,11 +24,13 @@
  * phones leave out the finest (the shelves, the rail's bars, the string lights).
  */
 import * as THREE from 'three';
-import { Batch, PAL, neon, toon } from './kit';
+import { Batch, PAL, moving, neon, toon } from './kit';
 import { site } from './tilework';
 import { COVER, KERB, TREE } from './palette';
 import { glow, METAL } from './infill';
-import { CEIL, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, ROOF_THINGS, ROOF_Y, ROOM, SHELL, WALL, WALL_H, WALL_T, type Furniture } from './home';
+import { CEIL, CURTAIN, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, WALL, WALL_H, WALL_T, curtainPanels, type Furniture } from './home';
+import { curtains } from './spawn';
+import type { Tick } from './world';
 import type { Rect } from './endswood';
 
 const S = HOME_SLAB;
@@ -315,6 +317,42 @@ function gardens(b: Batch, low: boolean) {
   });
 }
 
+/** The curtains' cloth: a deep red, lit from inside as the room is (docs/spawn-plan.md Phase 2) */
+const CURTAIN_RED = '#8e2333';
+/** How long they take to draw back (s) */
+const DRAW_BACK = 1.4;
+
+/**
+ * The room's curtains (home.ts `CURTAIN`, `curtainPanels()`; docs/spawn-plan.md Phase 2): four panels in one instanced
+ * mesh on the main thread, drawn while he wakes and the street outside loads, drawn back once it's ready
+ * (spawn.ts `curtains`); under reduced motion they're simply open or shut
+ */
+export function addCurtains(scene: THREE.Scene, tick: (f: Tick) => void) {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const g = new THREE.BoxGeometry(1, CURTAIN.y1 - CURTAIN.y0, 1);
+  g.deleteAttribute('uv');
+  const mesh = moving(new THREE.InstancedMesh(g, neon(new THREE.Color(CURTAIN_RED).multiplyScalar(SIDE_Z), DAY, NIGHT), 4));
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.castShadow = mesh.receiveShadow = false;
+  mesh.name = 'home-curtains';
+  const m4 = new THREE.Matrix4();
+  const y = S + (CURTAIN.y0 + CURTAIN.y1) / 2;
+  let k = curtains.open ? 1 : 0;
+  const place = () => {
+    curtainPanels(k).forEach(([x0, z0, x1, z1], i) => mesh.setMatrixAt(i, m4.makeScale(x1 - x0, 1, z1 - z0).setPosition((x0 + x1) / 2, y, (z0 + z1) / 2)));
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  };
+  place();
+  scene.add(mesh);
+  tick(({ dt }) => {
+    const want = curtains.open ? 1 : 0;
+    if (k === want) return;
+    k = reduced ? want : want > k ? Math.min(want, k + dt / DRAW_BACK) : Math.max(want, k - dt / DRAW_BACK);
+    place();
+  });
+}
+
 export function registerHome(low: boolean) {
   site('home', [HOME_LAND[0] - 1, HOME_LAND[1] - 1, HOME_LAND[2] + 1, HOME_LAND[3] + 1], (into) => {
     const b = new Batch();
@@ -404,8 +442,8 @@ function inside(into: THREE.Object3D, low: boolean) {
   const sz = HOME.sideDoor[1];
   icube(b, [dx - 0.3, z0 + 0.006, dx + 0.3, z0 + 0.04], S, S + 1.08, FRONT_DOOR);
   icube(b, [x1 - 0.04, sz - 0.28, x1 - 0.006, sz + 0.28], S, S + 1.05, WOOD_DARK);
-  // A window over the sofa in the front wall, and one over the counter in the back
-  for (const [z, s, wa, wb] of [[z0, 1, x0 + 0.5, dx - 0.75], [z1, -1, x0 + 0.8, x0 + 4.2]] as [number, number, number, number][]) {
+  // A window over the sofa in the front wall, and one over the counter in the back (home.ts `ROOM_WINDOWS`)
+  for (const [z, s, wa, wb] of ROOM_WINDOWS.map((w) => [w.into > 0 ? z0 : z1, w.into, w.x0, w.x1]) as [number, number, number, number][]) {
     icube(b, [wa, Math.min(z + s * 0.006, z + s * 0.02), wb, Math.max(z + s * 0.006, z + s * 0.02)], S + 0.6, S + 1.02, WINDOW);
     b.detail(() => {
       icube(b, [wa - 0.04, Math.min(z + s * 0.006, z + s * 0.035), wb + 0.04, Math.max(z + s * 0.006, z + s * 0.035)], S + 0.56, S + 0.6, FRAME);

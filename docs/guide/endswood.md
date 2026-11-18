@@ -21,7 +21,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
     the links (`FENNEL_WAY`, `RUNWAY_VIEW`, `LOT_LANE` in through Lot 9's west gate onto its lane, `BRAMBLE_LANE`,
     `BROOKSIDE`), the village's streets (Bell Street, Yew Walk, Chapel Row round the churchyard, Orchard, Lark, Hill,
     Mill, Thorn).
-  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes), every
+  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes; worked
+    out when the site is built, `GROWN`, baked.ts key `south-grown`, `docs/spawn-plan.md` Phase 3a), every
     one in a council, village or bungalow zone, clear of the other streets by `CLEAR`, with **a footpath through**
     (`FOOTPATHS`, the owner's rule: nowhere is a dead end on foot), on ahead past the close's end or out from the
     crescent's back, never back to the street it grew off. A new street joins `MAIN` (and `GROWS` decides where
@@ -97,8 +98,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`registerHighRoad()`, from village3d.ts): every kind in a building's own frame, the signs one atlas (`siteMat`).
 - **The council rows, bungalows, allotments** (`council.ts`, DOM-free, tested in `tests/council.test.ts`, 3d): `lay()`
   (lots along a block's runs where they fit, in zones), `lotRing()`, `SEMIS`, `BUNGALOWS`, `CORNER_SHOPS`,
-  `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT` (the
-  village's chunk covers it). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
+  `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT`
+  (what's laid; inside `COUNCIL_LAND`, fixed in south.ts, which the village's chunk covers: tested). **Not in the
+  boot**: only the village's chunk imports it (laying it out took seconds as the page loaded), so its solids join
+  there, `registerCouncil()` calling `addSolids()` on the main thread (the houses' with `lift` false, their tops
+  already over their plinths), as Sunridge's houses do; tests that check against `SOLIDS` across the south add them
+  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
 - **Aldwyn's Green Rec** (`rec.ts`, DOM-free, tested in `tests/rec.test.ts`, 3e): `PITCH`, `GOALS`, `PAVILION`, `VERANDA`,
   `SKATE` and its features, `PLAYGROUND`, `BENCHES`, `GATE`, `FOOTPATH`, `BRIDGE` / `recBridgeY()` (groundheight.ts's
   `recbridge` layer), `REC_PATH`, `REC_SPAWN`, `REC_SOLIDS`, `REC_RECT`; a place (`rec`, endsplaces.ts). Drawn by
@@ -131,7 +136,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
   `PLOT` and `GATES` (all that file is now), its gates on Gate Lane at `HEAD`; the wall and gates, the double garage
   (`CAR_HOME`, `BIKE_HOME`, `HOME_GARAGE_DOOR`), the workshop (`HOME_WORKSHOP_DOOR`), the house with its room
-  (`ROOM`, `FURNITURE`, `HOME_PORTALS`, `HOME_USES`: the wardrobe and the stash) and its roof terrace (`ROOF_Y`,
+  (`ROOM`, `FURNITURE`, `HOME_PORTALS`, `HOME_USES`: the wardrobe and the stash; `HOME_WAKE`, where every visit
+  starts, `SOFA_SEAT`, where he sits as he wakes, `HOME_WAITS`, the ways out that wait while the street loads, and
+  the room's curtains, `ROOM_WINDOWS`, `CURTAIN`, `curtainPanels()`, drawn by home3d.ts `addCurtains()`, following
+  spawn.ts `curtains`: `docs/spawn-plan.md`) and its roof terrace (`ROOF_Y`,
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the

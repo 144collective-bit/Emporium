@@ -593,6 +593,14 @@ export function createWalk(d: WalkDeps) {
   let momentDy = 0;
   /** Sitting down, where the camera goes: a three-quarter view from whichever side of him has the room */
   let benchYaw = 0;
+  /**
+   * Woken on a seat (`enter()`'s `seat`): once he's up, the camera comes round behind him to this, then it's yours.
+   * Any turn of the view by hand ends it at once (`look()`), and it gives up after `WAKE_SWING` s whatever happens:
+   * it must never hold the view against you (it did, turning while it swung, until both were added)
+   */
+  let wakeYaw: number | null = null;
+  const WAKE_SWING = 2.5;
+  let wakeLeft = 0;
   const benchEye = new THREE.Vector3();
   const benchDir = new THREE.Vector3();
   function pickBenchYaw(mk: { face: number; y: number; seat?: { x: number; z: number } }) {
@@ -1618,6 +1626,8 @@ export function createWalk(d: WalkDeps) {
       d.touched();
       return;
     }
+    // (the view turned by hand: waking's swing round behind him lets go, `wakeYaw`)
+    wakeYaw = null;
     // Finer control down the sight
     k *= 1 - combat.aimed * 0.4;
     const dyaw = -dx * k * settings.sens;
@@ -2490,6 +2500,12 @@ export function createWalk(d: WalkDeps) {
     // (sitting down he turns his back to the bench, where the camera would be: it comes round to his front-left,
     // a three-quarter view of him on the bench, and is yours again once he's seated)
     if (moments.active && moments.mark?.kind === 'bench' && (moments.phase === 'approach' || moments.phase === 'play')) yaw += wrap(benchYaw - yaw) * damp(4, dt);
+    // (woken on his sofa, docs/spawn-plan.md: up off it, the view swings round behind him, so ahead is into the room)
+    if (wakeYaw !== null && !(moments.active && moments.phase === 'hold')) {
+      yaw += wrap(wakeYaw - yaw) * damp(3, dt);
+      wakeLeft -= dt;
+      if (Math.abs(wrap(wakeYaw - yaw)) < 0.01 || wakeLeft <= 0) wakeYaw = null;
+    }
     // (a kick or the dodge: he stands for it; the guard up, he faces where you look, as aiming)
     const gx = mg ? mg.dx * mg.speed : rooted ? 0 : dirX * top;
     const gz = mg ? mg.dz * mg.speed : rooted ? 0 : dirZ * top;
@@ -3298,7 +3314,12 @@ export function createWalk(d: WalkDeps) {
       vel.set(0, 0);
     },
     /** Start walking; `spawn` puts Degen somewhere else (the kart park's gate from its panel) */
-    enter(spawn?: { x: number; z: number; yaw: number }) {
+    /**
+     * Into walk mode: at the walk's start, `?spawn=`, or `spawn`; `seat` given, sat on it already (a bench's middle and
+     * the way its sitter faces, `h` its seat over the ground: waking on his sofa at home, docs/spawn-plan.md), up off
+     * it with `standUp()` or the first push of the keys
+     */
+    enter(spawn?: { x: number; z: number; yaw: number }, seat?: { x: number; z: number; ry: number; h: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -3333,10 +3354,27 @@ export function createWalk(d: WalkDeps) {
       baseFov = camera.fov;
       fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
+      if (seat) {
+        const y = groundAt(seat.x, seat.z, pos.y);
+        const mk = benchMark(seat, y);
+        mk.seat!.y = y + seat.h;
+        pos.set(mk.x, y, mk.z);
+        face = mk.face;
+        // (the camera in front of him, looking back at him on the seat: behind him is the sofa's back and the wall;
+        // once he's up it swings round behind him, `wakeYaw`)
+        wakeYaw = spawn?.yaw ?? wrap(mk.face - Math.PI);
+        wakeLeft = WAKE_SWING;
+        yaw = wrap(mk.face + 0.35);
+        moments.sit(mk);
+      } else wakeYaw = null;
       hotbar?.reset();
       void loadHotbar();
       void loadFists();
       root.dataset.mode = 'walk';
+    },
+    /** Up off the seat he was sat on as walking started (`enter()`'s `seat`), if he's still on it */
+    standUp() {
+      if (moments.active && moments.phase === 'hold' && moments.mark?.kind === 'bench') moments.release();
     },
     exit() {
       hideCard();

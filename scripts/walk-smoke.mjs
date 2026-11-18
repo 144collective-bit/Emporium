@@ -1,5 +1,6 @@
 // A smoke test of walk mode in the built site (`npm run smoke` after `npm run build`): a headless Chromium opens the
-// city and plays through it a scene at a time, each from a fresh page at its own spot: home (in through Degen's front
+// city and plays through it a scene at a time, each from a fresh page at its own spot: waking in his room (out of
+// the front door once the street is in), home (in through Degen's front
 // door, down the hall, out again), his garage's menu, the car (in at his garage, out through its door, a drive, out), on foot (walk, sprint,
 // jump, crouch, the hub open and closed), the gun store's counter, the metro (the station's card, a ride, skipped to
 // the end), a kart race (the clubhouse's menu, a single race, quit), flying (into your aircraft in the hangar,
@@ -104,12 +105,12 @@ async function scene(name, spawn, play, init) {
   };
   let why = '';
   try {
-    // (no spot given: walking starts where it does for everyone, at home)
+    // (no spot given: he wakes where everyone does, in his room at home, docs/spawn-plan.md)
     await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}`);
     await t.click('[data-start-guest]');
+    // (Single player goes straight into walking)
     await t.click('[data-start-single]');
     await until('the start menu to go', () => !document.querySelector('.has-start'), null, 600000);
-    await t.click('[data-walk-toggle]');
     await until('walk mode', () => document.body.classList.contains('is-walking') && /at -?[\d.]+, -?[\d.]+/.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 300000);
     await step(`walking, at ${(await where()).join(', ')}`);
     await play(t);
@@ -122,6 +123,60 @@ async function scene(name, spawn, play, init) {
   for (const e of errors) console.error(`[smoke] ${name}: page error: ${e}`);
   if (why || errors.length) failed++;
 }
+
+// Waking up (docs/spawn-plan.md): no spot given, so he starts where every visit does, in his room; the front door
+// waits ("Getting ready…") until the street outside is built, then out he goes
+await scene('wake', null, async (t) => {
+  const [x, z] = await t.where();
+  if (!(z > 385.0 && z < 391.3 && x > -237.7 && x < -228.9)) throw new Error(`woke at ${x}, ${z}, not in the room`);
+  await t.step(`woke in the room, at ${x}, ${z}`);
+  // (sat on the sofa: up off it a moment after the menu's gone, onto the spot in front of it, the view swung behind him)
+  await t.until('him to stand up', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) > 385.95;
+  });
+  await t.step(`stood up, at ${(await t.where()).join(', ')}`);
+  // (the camera looking south, into the room: its forward is -z of its matrix)
+  await t.until('the view to swing round behind him', () => -(window.__city?.camera.matrixWorld.elements[10] ?? 0) > 0.85);
+  await t.step('the view behind him');
+  // (to the front door: he faces the telly, south, so A takes him east along the room past the sofa's end and S back
+  // north to the door; its prompt reads "Getting ready…" until the street is in)
+  await t.go('a', 1.6, 'walked across the room');
+  await t.go('s', 0.75, 'and back to the front door');
+  await t.prompt('Front door');
+  await t.until('him to be outside', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) < 384.5;
+  });
+  await t.step('out by the front door');
+});
+
+// Turning while he gets up (the owner's report, 2026-11-18: after the couch the view wouldn't turn): the view dragged
+// round by hand as he stands must stay where it's put, not be pulled back behind him
+await scene('wakelook', null, async (t) => {
+  await t.until('him to stand up', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) > 385.95;
+  });
+  await t.step('stood up');
+  // (a drag across the canvas: the view turns, walk.ts look())
+  const yawOf = () => t.page.evaluate(() => { const e = window.__city.camera.matrixWorld.elements; return Math.atan2(-e[8], -e[10]); });
+  const box = await t.page.locator('canvas').first().boundingBox();
+  const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
+  await t.page.mouse.move(cx, cy);
+  await t.page.mouse.down();
+  for (let i = 1; i <= 10; i++) await t.page.mouse.move(cx + i * 30, cy);
+  await t.page.mouse.up();
+  const turned = await yawOf();
+  await t.step(`turned the view by hand, to ${turned.toFixed(2)}`);
+  // (some frames later it's still where it was put: the swing behind him let go)
+  await t.until('a few frames', () => true);
+  await t.page.waitForTimeout(4000);
+  const after = await yawOf();
+  const off = Math.abs(Math.atan2(Math.sin(after - turned), Math.cos(after - turned)));
+  if (off > 0.15) throw new Error(`the view was pulled back: ${turned.toFixed(2)} to ${after.toFixed(2)}`);
+  await t.step(`still there (${after.toFixed(2)})`);
+});
 
 // Home (home.ts): in the yard of Degen's compound in the far west, in through his front door (a fade into the room), a
 // few steps in, and out again by the same door
