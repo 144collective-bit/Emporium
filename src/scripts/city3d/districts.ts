@@ -35,6 +35,8 @@ import { SUNRIDGE_RECT } from './sunridge';
 import { LOT9_RECT } from './lot9';
 import { SOUTH_DRAWN } from './south';
 import { BLOCKS_RECT } from './southblocks';
+import { TERRACES_RECT } from './southterraces';
+import { HIGHROAD_RECT } from './highroad';
 import { HIGHWAY_BOX } from './highway';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
@@ -85,6 +87,13 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Endswood's blocks (southblocks.ts, docs/south-plan.md Phase 2; southblocks3d.ts): the Rampart, the twin towers, the
   // stairwell blocks and the sky network; their towers seen from further off, as Uptown's
   { id: 'south-blocks', rect: BLOCKS_RECT, load: () => import('./southblocks3d') },
+  // Aldwyn's Green's terraces (southterraces.ts, docs/south-plan.md Phase 3a; village3d.ts)
+  {
+    id: 'village',
+    // (its terraces' land and the High Road's together)
+    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3])],
+    load: () => import('./village3d'),
+  },
   // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the
   // town, so it comes in as soon as the city's up
   { id: 'viaduct', rect: [HIGHWAY_BOX[0] - 10, HIGHWAY_BOX[1] - 10, HIGHWAY_BOX[2] + 10, HIGHWAY_BOX[3] + 10], load: () => import('./viaduct3d') },

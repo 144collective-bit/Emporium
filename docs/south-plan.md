@@ -220,8 +220,17 @@ From the Circus west, patchy as high roads are:
   entered). The cores' lift houses stand 1.8 over the roofs (`CORE_OVER`).
   The smoke test rides The Core's lift up and down and walks its stair;
   the `?fps` readout says how high you are when you're off the ground.
-- **2d, the ground round them**: courts with cars and bins, grass and
-  desire lines, the play area, the podium decks' planters and benches.
+- **2d, the ground round them** (built, signed off by the owner 2026-11-16):
+  `southyard.ts` (DOM-free, `tests/southyard.test.ts`): the courts' bays
+  (`BAYS`, rows inside each court) with cars in about two in three
+  (`YARD_CARS`, cars.ts `parkedCars()`), bin stores and bike sheds by the
+  courts, the play area's climbing frame, sandpit and fenced ball court
+  (a way in at its west side), eleven trees on the grass (`YARD_TREES`,
+  placed at the boot, under no bridge), planters and benches along the
+  podium deck's open edges (`DECK_PROPS`: they stop you up there,
+  southsky.ts) and its columns (`DECK_COLUMNS`); `YARD_SOLIDS` in the
+  city's. Drawn in southblocks3d.ts (the courts' asphalt and bay lines,
+  the grass and its worn desire lines, all on the rolling ground).
 
 ## The phases (each with the owner's sign-off)
 
@@ -309,7 +318,70 @@ From the Circus west, patchy as high roads are:
 3. **Aldwyn's Green.** The photo's terraces (a new kit: bays, slate roofs,
    chimneys, dormers, front yards, back alleys), the High Road's places,
    St Aldwyn's on its hill, the council rows, the bungalows and the
-   allotments re-laid, the rec ground.
+   allotments re-laid, the rec ground. The owner's answers (2026-11-16):
+   the rows **mostly as the photo** (red brick, slate, white bays), with
+   a few painted fronts, some yellow brick and the odd pebble-dashed
+   house; **two storeys** with a two-storey white bay, a dormer on about
+   one house in four, chimneys every pair, a low wall and a small front
+   yard; St Aldwyn's **Victorian Gothic** (grey stone, its 22.5 spire,
+   pointed windows lit at night, a lychgate, gravestones). Its steps,
+   each signed off:
+   - **3a, the terraces** (built, signed off by the owner 2026-11-16):
+     `southterraces.ts` (DOM-free, `tests/southterraces.test.ts`): 246
+     houses (`HOUSES`) laid block by block along the village's streets
+     (not the High Road's frontage, 3c's), a short row facing Degen's
+     gates; each a yard back from the sidewalk, level on its base (a
+     plinth where the hill falls), its front (red, yellow, painted,
+     pebble-dash), door, dormer, chimney, lit rooms and row ends; the
+     back alleys (`ALLEYS`, behind 208, taking some rear yard where rows
+     back on), ginnels (`GINNELS`) through long rows, front walls with
+     a gate (`frontWalls()`), `TERRACE_SOLIDS` / `TERRACE_GROUND_SOLIDS`.
+     Drawn by `village3d.ts` (`LAZY_DISTRICTS` id `village`,
+     `TERRACES_RECT`): one house's pieces copied to every house
+     (`Batch.instances()`), sills, fanlights and pots near only and not
+     on phones; yards, walls, alleys and ginnels on the rolling ground.
+     About 30k triangles at every distance on phones. Shots `12-` (the
+     plan) and `13-phase-3a-*`.
+   - **3b, St Aldwyn's** on its hill in its churchyard (built, signed off
+     by the owner 2026-11-17): `aldwyns.ts` (DOM-free, `tests/aldwyns.test.ts`):
+     Victorian Gothic, laid east to west (the tower and its octagonal
+     broach spire west, its tip 22.5 over the church's base, the nave,
+     the narrower chancel east, the north porch), level on a plinth on
+     the hilltop; the lychgate on the churchyard's north edge in line
+     with the porch, the gravel path from Church Road (the terraces leave
+     a gap for it), the low stone wall round the churchyard, about ninety
+     graves (headstones, crosses, chest tombs), yews; its solids; the
+     porch door is St Aldwyn's (`ENDS_DOORS`), its pin over the porch.
+     Drawn in village3d.ts: lancets lit amber at night, three tall ones
+     in the east end, the belfry, oak doors; buttresses and dressed
+     corners near only. With it, the terraces' polish (the owner's B):
+     windows on the bays' slanted sides, lower, thinner front walls, and
+     white window frames with a sash bar up close.
+   - **3c, the High Road's places** (the table above). The owner's
+     answers (2026-11-17): the big four are places (a pin, a panel,
+     coming soon): the Brook & Lantern, Rosa's Café, Kestrel Fuel and the
+     bus garage; the rest shopfronts with their signs; buildings on both
+     sides of the High Road; two to three storeys with flats over the
+     shops (the parade two, the pub two under a big gable, the petrol
+     station and the car wash low); the station's site left behind a
+     hoarding for Phase 4. Built, signed off by the owner 2026-11-17:
+     `highroad.ts` (DOM-free, `tests/highroad.test.ts`): 23 buildings
+     (`SHOPS`) laid along the High Road's runs, first (the terraces fit
+     round them): south side, from the Circus, Endswood Parade (five
+     shops), Rosa's Café, Golden Wing, Sharp Lines, the Brook & Lantern on
+     Bell Street's corner; past Bell Street, a launderette, phone repair,
+     fish bar, off-licence, the gap site, a greengrocer, a hardware shop,
+     a bookshop and Mo's Corner Store; north side, Sparkle Hand Wash by
+     Degen's gates, the station's site with Kestrel Fuel past it (laid
+     where every point of its edges is on the block), the bus garage in
+     the small block by the close, the boarded Duke of
+     Endswood by the Circus. Each level on its base; `SHOP_SOLIDS`; the
+     four are places (endsplaces.ts `HIGH_ROAD_PLACES`: pins over their
+     fronts, doors, Walk in on the sidewalk; their panels in
+     CityMap.astro, coming soon; `LIVE_PLACES`). Drawn by `highroad3d.ts`
+     in the village's chunk, the signs from one atlas lit at night.
+   - **3d, the council rows, the bungalows and the allotments.**
+   - **3e, the rec ground** (pitches, pavilion, skate park).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
    street entrances, stairs, ticket halls, platforms walked on, the ride

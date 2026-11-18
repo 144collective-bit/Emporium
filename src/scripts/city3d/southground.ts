@@ -13,9 +13,15 @@
  * - **The ground** (`southHeightAt()`): the land, eased onto the beds near the roads (`BED_EASE` past the sidewalk), so
  *   a block's edge meets its kerb, as Crestmont's hill roads' banks do (terrain.ts).
  */
-import { BROOK, BROOK_HALF, CHURCHYARD, COMPOUND, EDGE_Z, LOT9_EDGE, SOUTH_STREETS, type Pt } from './south';
+import { BROOK_HALF, brookDist, CHURCHYARD, COMPOUND, EDGE_Z, LOT9_EDGE, SOUTH_STREETS, type Pt } from './south';
 import { distTo, inside } from './streetfaces';
 import { smooth } from './hills';
+
+/** An outline's or a line's box, and whether a point is at least `m` from it (so at least `m` from the line: the
+ * ground's grid asks millions of times, and most of the south is far from Lot 9's fence and the brook) */
+const boxOf = (pts: Pt[]) => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))] as const;
+const farFrom = (b: readonly [number, number, number, number], x: number, z: number, m: number) => x <= b[0] - m || x >= b[2] + m || z <= b[1] - m || z >= b[3] + m;
+const LOT9_BOX = boxOf(LOT9_EDGE);
 
 type Rect = [number, number, number, number];
 
@@ -63,8 +69,11 @@ export function freedom(x: number, z: number) {
   // (the south avenue and everything east of it)
   f *= 1 - smooth(-44, -14, x);
   // (Lot 9's fence, and inside it)
-  if (inside(LOT9_EDGE, [x, z])) return 0;
-  f *= smooth(2, 16, distTo(LOT9_EDGE, [x, z], true));
+  // (far from it, nothing: a full 1)
+  if (!farFrom(LOT9_BOX, x, z, 16)) {
+    if (inside(LOT9_EDGE, [x, z])) return 0;
+    f *= smooth(2, 16, distTo(LOT9_EDGE, [x, z], true));
+  }
   // (Degen's plot: level at today's height, eased round its walls)
   const [px0, pz0, px1, pz1] = COMPOUND;
   f *= smooth(1, 14, Math.hypot(Math.max(px0 - x, 0, x - px1), Math.max(pz0 - z, 0, z - pz1)));
@@ -85,7 +94,7 @@ export function landAt(x: number, z: number) {
     const d = Math.hypot(u, v);
     if (d < 1) h += s.h * 0.5 * (1 + Math.cos(Math.PI * d));
   }
-  const b = distTo(BROOK, [x, z]);
+  const b = brookDist([x, z]);
   if (b < BROOK_HALF + VALLEY.side) h -= VALLEY.depth * (1 - smooth(BROOK_HALF, BROOK_HALF + VALLEY.side, b));
   return h * f;
 }
@@ -105,7 +114,8 @@ export interface Bed {
 function pinned(x: number, z: number) {
   const [px0, pz0, px1, pz1] = COMPOUND;
   const d = Math.min(
-    inside(LOT9_EDGE, [x, z]) ? 0 : distTo(LOT9_EDGE, [x, z], true),
+    // (far from Lot 9 its distance can't be the nearest under 10, where the easing's done)
+    farFrom(LOT9_BOX, x, z, 10) ? 10 : inside(LOT9_EDGE, [x, z]) ? 0 : distTo(LOT9_EDGE, [x, z], true),
     Math.hypot(Math.max(px0 - x, 0, x - px1), Math.max(pz0 - z, 0, z - pz1)),
     Math.hypot(x + 112, z - 337),
     Math.max(0, -14 - x),
@@ -136,7 +146,7 @@ function profileOf(pts: Pt[]): number[] {
       w += k;
     }
     let y = (s / w) * pinned(pts[i][0], pts[i][1]);
-    if (distTo(BROOK, pts[i]) < BROOK_HALF + 8) y = Math.max(y, -VALLEY.depth + BRIDGE_CLEAR);
+    if (brookDist(pts[i]) < BROOK_HALF + 8) y = Math.max(y, -VALLEY.depth + BRIDGE_CLEAR);
     return y;
   });
 }
@@ -232,7 +242,7 @@ export function southHeightAt(x: number, z: number) {
   const bed = bedAt(x, z);
   if (bed) h += (bed.y - h) * bed.w;
   // (and right up to Lot 9's fence, today's ground: a road's bank by it eased down to it)
-  if (x > -140 && z > 455) h *= smooth(2, 8, inside(LOT9_EDGE, [x, z]) ? 0 : distTo(LOT9_EDGE, [x, z], true));
+  if (x > -140 && z > 455 && !farFrom(LOT9_BOX, x, z, 8)) h *= smooth(2, 8, inside(LOT9_EDGE, [x, z]) ? 0 : distTo(LOT9_EDGE, [x, z], true));
   // (and Degen's plot level at today's height to its edge, the lane's bank by his gates eased down to it)
   const [px0, pz0, px1, pz1] = COMPOUND;
   if (x > px0 - 8 && x < px1 + 8 && z > pz0 - 8 && z < pz1 + 8) h *= smooth(0, 6, Math.hypot(Math.max(px0 - x, 0, x - px1), Math.max(pz0 - z, 0, z - pz1)));

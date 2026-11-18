@@ -74,12 +74,36 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's
   card, `[data-metro]`, its words put back after; index.ts `rideTo()`). A bridge to a tower ends at its door: the towers
   aren't entered. The smoke test's `sky` and `stair` scenes.
+- **The ground round the blocks** (`southyard.ts`, DOM-free, tested in `tests/southyard.test.ts`, 2d): `BAYS` and
+  `YARD_CARS` (drawn by cars.ts `parkedCars()` on the main thread), `BIN_STORES`, `BIKE_SHEDS`, the play area's `FRAME`,
+  `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
+  `DECK_PROPS` (`onDeckProp()`: southsky.ts keeps you out of them), `DECK_COLUMNS`, `YARD_SOLIDS` (solids.ts, lifted onto
+  the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
+- **Aldwyn's Green's terraces** (`southterraces.ts`, DOM-free, tested in `tests/southterraces.test.ts`, 3a): `HOUSES`
+  (each its front's middle `at`, its `face`, frontage `w`, street, block, front, paint, door, dormer, chimney, `lit`,
+  `endL` / `endR`, `base` / `low`), `houseFoot()`, `plotOf()`, `ALLEYS`, `GINNELS`, `frontWalls()`, the solids,
+  `TERRACES_RECT`. Drawn by `village3d.ts` (lazy chunk `village`): `PIECES` (one house's shapes in its own frame,
+  `frameOf()` stretches each to its frontage, right-handed) copied by `Batch.instances()`, built with `lift: false`; the
+  yards, walls, alleys and ginnels in a lifted Batch. Bench view `village-terraces`.
+- **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
+  (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
+  `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,
+  `CHURCH_SOLIDS` (unlifted) / `CHURCHYARD_SOLIDS` (lifted). Drawn by village3d.ts (`drawChurch()`, `drawChurchyard()`).
+  Bench view `village-church`.
+- **The High Road's places** (`highroad.ts`, DOM-free, tested in `tests/highroad.test.ts`, 3c): `SHOPS` (each its
+  kind, name, front `at`, `face`, `w`, `d`, storeys, colour, base), `KINDS`, `HEIGHT`, `shopFoot()`, `topOf()`, `doorOf()`,
+  `SHOP_SOLIDS`, `HIGHROAD_RECT` (the village's chunk covers it); laid before the terraces (southterraces.ts keeps out of
+  them). The big four (`brook`, `rosas`, `kestrel`, `busgarage`) are places in endsplaces.ts. Drawn by `highroad3d.ts`
+  (`registerHighRoad()`, from village3d.ts): every kind in a building's own frame, the signs one atlas (`siteMat`).
 - **The rolling ground** (`southground.ts`, docs/south-plan.md Phase 1c, tested in `tests/southground.test.ts`): the
   village's hill (`HILL_H` 2.4, St Aldwyn's on top), swells in the fields, the brook's valley, today's ground wherever
   the south meets what's fixed (`freedom()`); each street on a bed (`ROAD_BEDS`, one in ten at most, level across, the
   same height where streets meet, a bridge over the brook); `southHeightAt()` exactly, `southLift()` off a cached grid.
   **Everything in the south stands on it**: kit.ts `Batch.build()` lifts what's drawn there (`setGroundLift()`, set in
-  index.ts for the main thread and the site worker; faces split to `LIFT_EDGE`), terrain.ts reads it (cars, taxis, trees,
+  index.ts for the main thread and the site worker; faces split to `LIFT_EDGE`, but only the faces over the south's
+  rect: the rest of a batch keeps its faces whole and its corners shared, so the city's ground and every batch that
+  only reaches into the south aren't split and unshared whole, which had tripled the boot's work and doubled the
+  geometry), terrain.ts reads it (cars, taxis, trees,
   cameras), groundheight.ts's `south` layer walks on it, solids.ts's `onGround()` lifts the boxes, the lamps carry their
   lifted height. Anything new drawn in the south is lifted for free; anything placed outside a Batch (a lamp, a tree, a
   pin, a pool of light, a person) adds `southLift(x, z)` itself.

@@ -81,7 +81,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster' || id === 'karts' || id === 'metro-kart';
       // (and Endswood Estate's places south of the highway's south-west bend, docs/estate-plan.md Phase 8: from
       // Crestmont's grand hotel about 66 s)
-      const ends = (id: string) => id === 'endswood' || id === 'aldwyns' || id === 'bunker';
+      // (and the High Road's places, docs/south-plan.md Phase 3c: as far out as the rest of the south)
+      const ends = (id: string) => ['endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage'].includes(id);
       // (and Degen's home: first at the far end of the Close in Endswood carried west, docs/home-plan.md, as far out
       // as Lot 9; since it moved to his compound past the Close's end in the far west, the owner's call,
       // docs/ends-far-west-plan.md Phase 2, a little further: from Crestmont's grand hotel about 85 s)

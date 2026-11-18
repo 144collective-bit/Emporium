@@ -46,7 +46,7 @@ import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
-import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
+import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
 import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, homePlaces, HOME_SPAWN, inHouse, startsAtHome } from './home';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
@@ -98,6 +98,7 @@ import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
 import type { SkyLiftUI } from './skylift-ui';
 import { skyLiftDoors } from './southsky';
+import { YARD_TREES } from './southyard';
 import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
@@ -144,7 +145,7 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { farForm, farLods, freedNear, updateLods } from './lod';
+import { farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
@@ -444,6 +445,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
   // The south's (endswood.ts, docs/south-plan.md Phase 1b): sodium along every street of the re-laid estate and village
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
+  // Endswood's trees on the grass round its towers (southyard.ts, docs/south-plan.md 2d), on the rolling ground
+  for (const [x, z, sc] of YARD_TREES) addTree(x, z, sc, false, ENDS_SLAB + southLift(x, z));
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
@@ -640,10 +643,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const nextFar = () => {
     const g = farQueue.shift();
     if (!g) return;
-    farForm(g);
-    // (its shader now, not the first time it's seen from far off)
-    compileFor(g);
-    idle(nextFar);
+    // (its painted textures' averages read back from the GPU first, without the page waiting on it: lod.ts)
+    void primeAverages(renderer, g).then(() => {
+      farForm(g);
+      // (its shader now, not the first time it's seen from far off)
+      compileFor(g);
+      idle(nextFar);
+    });
   };
   bootAt.built = performance.now();
   // (in parallel where the GPU can: the page stays free while they compile)
@@ -907,8 +913,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(HM_SPAWN);
       });
-    // Endswood's panels (the estate, St Aldwyn's, Bunker Sound): Walk in in front of each door, facing it
-    if (id === 'endswood' || id === 'aldwyns' || id === 'bunker')
+    // The south's panels (the estate, St Aldwyn's, Bunker Sound, the High Road's four): Walk in in front of each door
+    if ((ENDS_PLACE_IDS as string[]).includes(id))
       panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(ENDS_SPAWNS[id as EndsPlaceId]);

@@ -120,8 +120,9 @@ test('the city reads it: walking on its slabs and streets, what is drawn lifted 
   const up = draw(-205, 462);
   const pos = up.getAttribute('position');
   for (let i = 0; i < pos.count; i++) assert.ok(Math.abs(pos.getY(i) - (0.2 + southLift(pos.getX(i), pos.getZ(i)))) < 1e-5, 'a vertex not on the ground');
-  for (let i = 0; i + 2 < pos.count; i += 3)
-    for (const [a, c] of [[i, i + 1], [i + 1, i + 2], [i + 2, i]]) assert.ok(Math.hypot(pos.getX(a) - pos.getX(c), pos.getZ(a) - pos.getZ(c)) <= LIFT_EDGE + 1e-6, 'an edge too long to follow the ground');
+  const ix = up.index!;
+  for (let i = 0; i + 2 < ix.count; i += 3)
+    for (const [a, c] of [[ix.getX(i), ix.getX(i + 1)], [ix.getX(i + 1), ix.getX(i + 2)], [ix.getX(i + 2), ix.getX(i)]]) assert.ok(Math.hypot(pos.getX(a) - pos.getX(c), pos.getZ(a) - pos.getZ(c)) <= LIFT_EDGE + 1e-6, 'an edge too long to follow the ground');
   const flat = draw(30, 30).getAttribute('position');
   for (let i = 0; i < flat.count; i++) assert.ok(Math.abs(flat.getY(i) - 0.2) < 1e-6, 'downtown lifted');
   // The solids: each bollard's top over the ground it stands on
@@ -141,5 +142,44 @@ test("what's lifted keeps an index (the site worker hands back only indexed mesh
   const g = new THREE.Group();
   b.build(g);
   const geo = (g.children[0] as InstanceType<typeof THREE.Mesh>).geometry;
-  assert.ok(geo.index && geo.index.count === geo.getAttribute('position').count);
+  assert.ok(geo.index && geo.index.count >= 6);
+  for (let i = 0; i < geo.index.count; i++) assert.ok(geo.index.getX(i) < geo.getAttribute('position').count);
+});
+
+test("a batch mostly off the south's ground: only its faces on it split and lifted, the rest kept whole and shared", async () => {
+  const THREE = await import('three');
+  const { Batch, setGroundLift } = await import('../src/scripts/city3d/kit');
+  const { southLift } = await import('../src/scripts/city3d/southground');
+  setGroundLift(southLift, SOUTH_GROUND_RECT);
+  const b = new Batch();
+  // (a box downtown, then a strip on the village's hill: one material, so one merged geometry over the rect's edge)
+  const box = new THREE.BoxGeometry(4, 4, 4).translate(30, 2, 30);
+  const boxTris = box.index!.count / 3;
+  const boxVerts = box.getAttribute('position').count;
+  const mat = new THREE.MeshBasicMaterial();
+  b.add(box, mat);
+  b.add(new THREE.PlaneGeometry(30, 2).rotateX(-Math.PI / 2).translate(-205, 0.2, 462), mat);
+  const g = new THREE.Group();
+  b.build(g);
+  const geo = (g.children[0] as InstanceType<typeof THREE.Mesh>).geometry;
+  const pos = geo.getAttribute('position');
+  const ix = geo.index!;
+  // The box downtown: its faces as they were (none split), its corners still shared, none lifted
+  const downtown = (t: number) => [0, 1, 2].every((c) => pos.getX(ix.getX(3 * t + c)) > 0);
+  let [faces, corners] = [0, new Set<number>()];
+  for (let t = 0; t < ix.count / 3; t++)
+    if (downtown(t)) {
+      faces++;
+      for (let c = 0; c < 3; c++) corners.add(ix.getX(3 * t + c));
+    }
+  assert.equal(faces, boxTris);
+  assert.equal(corners.size, boxVerts);
+  for (const v of corners) assert.ok([0, 4].some((y) => Math.abs(pos.getY(v) - y) < 1e-6), 'downtown lifted');
+  // The strip on the hill: split and on the ground
+  for (let t = 0; t < ix.count / 3; t++)
+    if (!downtown(t)) for (let c = 0; c < 3; c++) {
+      const v = ix.getX(3 * t + c);
+      assert.ok(Math.abs(pos.getY(v) - (0.2 + southLift(pos.getX(v), pos.getZ(v)))) < 1e-5, 'a vertex not on the ground');
+    }
+  assert.ok(ix.count / 3 - faces > 2, 'the strip not split');
 });

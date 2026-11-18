@@ -65,6 +65,8 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'south-high', name: 'The High Road, from the Circus', pos: [-102, 2.2, 413.4], target: [-150, 1.5, 395] },
   { id: 'south-blocks', name: "The Ends' blocks, the towers over the Circus", pos: [-104, 14, 432], target: [-50, 8, 372] },
   { id: 'south-rampart', name: 'The Rampart, along the ring road', pos: [-150, 9, 372], target: [-60, 6, 345] },
+  { id: 'village-church', name: "St Aldwyn's on its hill, from Church Road", pos: [-196, 6, 440], target: [-208, 6, 462] },
+  { id: 'village-terraces', name: "Aldwyn's Green's terraces, along Bell Street", pos: [-142, 5, 404], target: [-160, 2, 420] },
   { id: 'south-village', name: "The village, round St Aldwyn's hill", pos: [-168, 26, 506], target: [-205, 0, 462] },
   // Degen's compound (docs/ends-far-west-plan.md Phase 2): from the High Road's end, through the gates to the garage
   { id: 'ends-home', name: "The far west, Degen's compound", pos: [-208, 2.6, 381.2], target: [-238, 1.2, 380] },

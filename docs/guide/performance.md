@@ -299,7 +299,16 @@ keep it up to date when what it describes changes.
     still can. `addLod()` / `addLodSwitch()` swap them (`updateLods()`
     from `index.ts`). They're made after the first frame, a place at a
     time in spare moments (`farQueue` in `index.ts`); until then a place
-    stays near. Once a place's far form has shown `FREE_AFTER` (15 s), its
+    stays near. A far form's colours take each texture's average: a
+    texture made at build time carries it (`userData.average`); one the
+    city painted is averaged on the GPU first and read back without the
+    page waiting (`primeAverages()` in `lod.ts`: a 32 x 32 grid of samples,
+    weighted by cover, a texel each, `readRenderTargetPixelsAsync()`), as
+    reading the canvas back (`average()`, still there for anything missed)
+    stalled the page till the GPU had done all it was given: measured
+    headless with no textures baked (2026-11-16), 22 textures' averages
+    took 23.7 s of the page's time read from their canvases and 3.1 s
+    averaged on the GPU (most of it each texture's first upload). Once a place's far form has shown `FREE_AFTER` (15 s), its
     near form's geometries are freed on the GPU (`release()` on its switch,
     `geometry.dispose()`: the arrays stay, three uploads them again as
     they're next drawn; the stability plan's Phase 3, item 6); `?fps` says
@@ -462,6 +471,21 @@ keep it up to date when what it describes changes.
   device (its user agent and screen), so a real phone's numbers can be
   pasted back. Run it before and after anything that could make the
   city heavier, on a phone and a laptop.
+- **Measured, the south's lift** (2026-11-15, headless, the medium tier at 1280 x 800, the City view): Phase 1c's
+  lift (kit.ts `liftOnto()`) split and unshared every batch that so much as reached into the south's rect, the city's
+  ground among them: the boot went from 6.6 s to 19.0 s (its own work 3.3 to 14.3 s) and geometry from 262 to 546 MB.
+  Now only the faces over the rect are split (the rest kept whole and shared), and southground.ts and south.ts skip
+  the outline tests (Lot 9's fence, the brook, the churchyard, the rec ground) for points well clear of their boxes,
+  which gives the same numbers. Measured after the lift's fix the same way: the boot 8.8 s (its work 4.7 s),
+  geometry 265 MB, triangles back to 0.39M in the City view (from 0.49M).
+- **The south's layout as the city loads** (2026-11-16): `?bench` across every view, against the build before
+  Phase 1c, found draws, triangles and memory back in line (the south's new blocks add up to 9% triangles in the views
+  that see them), and the boot's work about 1.9 s longer, half of it the south's street web laid out at load. Its
+  hot tests now skip the far: `zoneAt()` tests Lot 9's fence only within its box, each footpath laid has its box
+  for the closes' and crescents' clearance tests, and the brook's distance is `brookDist` (south.ts), a
+  `nearLine()` (streetfaces.ts) with the brook's stretches bucketed by cell: exactly `distTo` within 14, which is all
+  that's asked of it (`keptOff()`, the bridges, the valley in southground.ts). The same streets, blocks and heights
+  to the bit; about 1 s less of the main thread's time at load, the boot about 0.5 s shorter measured headless.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is
