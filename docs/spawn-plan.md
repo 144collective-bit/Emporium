@@ -106,6 +106,32 @@ What it says:
    (`scripts/budget.mjs`) not raised. `?bench` and the texture bake keep the whole boot first (they need
    everything there). The riskiest phase: much of the boot expects the city to exist (places, pins, solids,
    the crowd), so it's done in small steps, each with the smoke test.
+
+   **Measured first** (2026-11-18, the same headless desktop on software graphics: a CPU profile of the page and the
+   boot's own steps as its loader bar moves; the earlier "15.9 s to ready" was the measuring script's own polling
+   held up by the software renderer: the city is really ready at 8.2 s here):
+
+   | From the page opening | | What |
+   |---|---|---|
+   | 0 to 0.45 s | 0.45 s | the page itself (HTML, styles) |
+   | 0.45 to 0.7 s | 0.2 s | waiting on the live settings before the city's code is asked for (`await liveFirst` in `go3d()`: up to `LIVE_TIMEOUT`, 1.5 s, on the live site when the backend is slow; it failed fast here) |
+   | 0.7 to 2.9 s | 2.2 s | the city's code downloaded (about 50 ms here) and run as it loads: the south's street web laid out (`south.ts`, about 1.2 s of it), three.js, kit.ts, the highway's dressing (`viadress.ts`), the south's ground (`southground.ts`), world.ts, the street plan, the solids |
+   | 2.9 to 3.2 s | 0.25 s | the boot: fonts and art |
+   | 3.2 to 4.6 s | 1.5 s | the boot: the whole city's ground (`buildGround()`) |
+   | 4.6 to 6.5 s | 1.8 s | the boot: the landmarks, downtown, the outer districts, the garage, the wall |
+   | 6.5 to 6.7 s | 0.25 s | the boot: trees, lamps, bus stops |
+   | 6.7 to 7.1 s | 0.4 s | the boot: traffic, the crowd, the sky |
+   | 7.1 to 8.2 s | 1.1 s | the boot: the tiles and sites round the home view, the shaders, the built textures; walk mode and the rest set up; ready |
+
+   What the room needs of that: the page, the code (not all of it run), the art, the ground round the house, Degen,
+   walk mode and the sky. What it doesn't: the rest of the city's ground, the landmarks, downtown and the districts,
+   traffic and the crowd (about 3.5 s of the boot here, all of it able to come in behind the walls). So Phase 3 in
+   two steps:
+
+   - **3a, the quick wins (low risk):** ask for the city's code at once, beside the live settings, not after them
+     (up to 1.5 s on the live site); and lay out the south's street web when the site is built, not in the browser
+     (`baked()`, as the traffic's routes are: about 1.2 s here, more on a phone).
+   - **3b, the split:** the boot builds the room's needs first and the rest behind the walls in slices.
 4. **Polish.** A small loading line in the room while the street gets ready (in `chrome`), the copy (draft), the
    room's light by day and at night with the curtains, every width (320, 375, 768, 1024, 1440, phones on their
    side), the guide files (`menus.md`'s start menu, `endswood.md`'s home, `performance.md`'s start-up,
