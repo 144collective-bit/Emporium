@@ -505,8 +505,8 @@ keep it up to date when what it describes changes.
   streetfaces.ts `rowCrossings()` / `insideRow()`, exactly `inside()`, tested) and Aldwyn's Green's back alleys
   (southterraces.ts `ALLEYS`: every house against every other, now only those whose box it reaches). The same output to
   the bit; about 0.35 s less, from opening the page to the boot line 9.45 to 9.14 s (phone tier) and 10.67 to 10.25 s
-  (desktop), headless. What's left at the top: the street web's layout itself (about 0.4 s), the viaduct's dressing
-  and the solids.
+  (desktop), headless. What was left at the top then: the street web's layout itself (about 0.4 s; since baked,
+  `south-grown`, above), the viaduct's dressing and the solids.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is
