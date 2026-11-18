@@ -135,7 +135,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the
-  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`.
+  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`. **The upgrade** (the owner's call, 2026-11-18) is planned in
+  `docs/compound-plan.md`: the outside done up with his neon, the ground floor refitted, an upstairs (a bedroom, an
+  office with a desk), a trophy wall; nothing built until its phase is signed off.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
