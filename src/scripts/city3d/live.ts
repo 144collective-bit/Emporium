@@ -70,6 +70,7 @@ export const LIVE_PLACES = [
   { id: 'rosas', name: "Rosa's Café" },
   { id: 'kestrel', name: 'Kestrel Fuel' },
   { id: 'busgarage', name: "Aldwyn's Green Bus Garage" },
+  { id: 'rec', name: "Aldwyn's Green Rec" },
   { id: 'cityhall', name: 'City Hall' },
   { id: 'police', name: 'Sector 7 Police' },
   { id: 'courthouse', name: 'The Courthouse' },

@@ -43,6 +43,7 @@ import { harbourY } from './harbour';
 import { vergeY } from './verges';
 import { onSouthGround, southLift } from './southground';
 import { skyFloorAt } from './southsky';
+import { recBridgeY } from './rec';
 import { GARAGE_SITE } from './solids';
 import { PLAN, inPoly, type Pt } from './streetplan';
 
@@ -93,6 +94,8 @@ export const GROUND_LAYERS: GroundLayer[] = [
   // Endswood's sky network (southsky.ts, docs/south-plan.md Phase 2c), when `yNow` is up there: the galleries, bridges,
   // the podium deck, the cores' landings and The Core's stair
   { id: 'sky', how: 'take', at: (x, z, yNow) => skyFloorAt(x, z, yNow) },
+  // The rec's footbridge over the brook (rec.ts), humped over the valley: its deck when you're near it
+  { id: 'recbridge', how: 'take', at: (x, z, yNow) => { const y = recBridgeY(x, z); return y !== null && Math.abs(yNow - y) < 1.2 ? y : null; } },
   // The south's rolling ground (southground.ts, docs/south-plan.md Phase 1c): its slabs, sidewalks, streets and land
   // all lifted by the ground under them, as what's drawn there is (kit.ts `Batch.build()`)
   {
