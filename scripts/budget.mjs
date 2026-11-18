@@ -44,9 +44,13 @@ const BUDGETS = {
    * and for the views plan on main (docs/views-plan.md Phases 1-4, under the same standing call): one camera system
    * for every vehicle, ride, race and the ring, and the control card's hooks in walk mode (the key table itself is
    * its own chunk); the two together from 720; and from 730 for Endswood Estate (docs/estate-plan.md Phases 2-5,
-   * under the same standing call): its streets' routes, its blocks' and street level's solids, and its decks walked on
+   * under the same standing call): its streets' routes, its blocks' and street level's solids, and its decks walked on;
+   * and from 740 on purpose (the owner's call, 2026-11-18): main had grown to 739.8 with the south's re-laying, and
+   * the stability plan's tier by the graphics, its step-down order and the texture keys (gputier.ts, quality.ts,
+   * texscope.ts: ~1.7 KB, which must run before the city builds) took it over; the ?fps-only texture breakdown went
+   * to its own chunk (texrows.ts) first
    */
-  bootJs: 740,
+  bootJs: 750,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**

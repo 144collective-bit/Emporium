@@ -400,7 +400,8 @@ keep it up to date when what it describes changes.
   be marked `paint` too; one whose colours pass 1 must not be.
   `window.__mem()` under `?fps` says where the geometry memory is;
   `textureRows` in it, where the texture memory is (`textureRows()` in
-  `perf.ts`: under `?fps` and `?bench` a painted texture is named after the
+  `texrows.ts`, its own chunk, loaded only under `?fps` and `?bench`, so it's
+  null for a moment at first: under them a painted texture is named after the
   start of what drew it, `named()` in `kit.ts`), and `gl`, what three holds
   on the GPU (a count above the scene's that keeps growing is a leak).
   The uv is left out where nothing reads it (`dropsUv()` in
