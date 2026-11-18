@@ -21,8 +21,8 @@ to load the rest of the needed assets." The owner's answers:
 - **Getting started** gets a new first step at home (the owner's call, 2026-11-18): **Head out**, out of the front
   door; the stall downtown is the second.
 
-**Status:** Phases 1 and 2 built and signed off (2026-11-18), and with 3a merged to `main` (PR #189); 3b waits on
-the owner. Each phase with the owner's sign-off.
+**Status:** Phases 1 and 2 built and signed off (2026-11-18), and with 3a merged to `main` (PR #189, the turning fix
+PR #190); 3b planned, waiting on the owner's choice. Each phase with the owner's sign-off.
 
 ## Today, measured
 
@@ -148,6 +148,37 @@ What it says:
    blocks). The live settings' saving doesn't show here (they fail at once in this sandbox); on the live site it's up
    to 1.5 s when the backend is slow. The runs differ by more than the saving, so 3a is a small step; the boot's own
    5.3 s is 3b's.
+   **3b planned** (2026-11-18, for the owner's choice). What reading `bootCity()` found: the boot isn't a list of
+   separate pieces. The landmark builders fill shared lists as they go (`spots`, the `crowd`, the trees and lamps
+   collected for `buildTrees()` / `buildLamps()`), traffic and the crowd are made from those lists (`buildLife()`),
+   the tiles merge everything built so far (`tileBatch()`), and walk mode is made after all of it, from the garage,
+   the places, the solids and the crowd. So "walk mode first, the city after" means taking the boot apart. Two ways:
+
+   - **Option 1, the room on its own first (recommended).** While the boot runs, a small scene of its own draws the
+     room only: home3d.ts's `inside()` and the curtains (drawn, the same builders), Degen sat on the sofa in a still
+     sitting pose, the same camera as the wake-up's. The title screen lifts onto it as soon as the code and that
+     scene are ready (about 3 s here, not 8.2), with "Getting ready…" in the room; you can look round, not walk. The
+     boot carries on underneath in short slices (its long stages broken up so the room keeps drawing), and when it's
+     done the city's scene takes over on the same frame: the same room, Degen on the same sofa, the same view, so
+     nothing changes on screen; then he stands up (Phase 2) and the rest is as now. Steps:
+     1. **Slice the boot** (no change on screen): an `await` between the builders, so no stretch holds the page
+        much over 100 ms (today's longest are 1.5 s, the ground, and 1.8 s, the landmarks); measured before and
+        after, the boot no longer than now.
+     2. **The room scene** (`wakeroom.ts`, a lazy chunk, view only): what it draws, when the title lifts onto it.
+     3. **The hand-over**: the city's first frame is the room's last, Degen and the camera where they were; then
+        the stand-up. `?spawn=`, `?bench`, the texture bake and walking closed by the owner keep today's boot.
+     4. **Measured** with `?fps` and `?bench`, on the phone tier too; the smoke test; every width.
+
+     Risks: the room scene draws while the boot builds, on the same thread, so on a slow phone the room may stutter
+     between slices (step 1 is what keeps it smooth). CLAUDE.md's "one render loop only" rule: the room scene needs
+     a small draw loop of its own before `loop()` exists, stopped for good at the hand-over. It needs the owner's
+     OK as an exception to that rule.
+   - **Option 2, the boot taken apart.** Walk mode made first, in the room, and the city's builders run after it,
+     behind the walls, with everything that reads the shared lists (traffic, the crowd, the pins, the solids, the
+     garage, the places' panels) taught to cope with a city that isn't all there yet. You could walk about the room
+     sooner and nothing is drawn twice, but it touches most of `index.ts` and `walk.ts`: many steps, each one able
+     to break something far from the room. Not recommended now.
+
 4. **Polish.** A small loading line in the room while the street gets ready (in `chrome`), the copy (draft), the
    room's light by day and at night with the curtains, every width (320, 375, 768, 1024, 1440, phones on their
    side), the guide files (`menus.md`'s start menu, `endswood.md`'s home, `performance.md`'s start-up,
