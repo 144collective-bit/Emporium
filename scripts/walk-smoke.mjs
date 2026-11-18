@@ -151,6 +151,33 @@ await scene('wake', null, async (t) => {
   await t.step('out by the front door');
 });
 
+// Turning while he gets up (the owner's report, 2026-11-18: after the couch the view wouldn't turn): the view dragged
+// round by hand as he stands must stay where it's put, not be pulled back behind him
+await scene('wakelook', null, async (t) => {
+  await t.until('him to stand up', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) > 385.95;
+  });
+  await t.step('stood up');
+  // (a drag across the canvas: the view turns, walk.ts look())
+  const yawOf = () => t.page.evaluate(() => { const e = window.__city.camera.matrixWorld.elements; return Math.atan2(-e[8], -e[10]); });
+  const box = await t.page.locator('canvas').first().boundingBox();
+  const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
+  await t.page.mouse.move(cx, cy);
+  await t.page.mouse.down();
+  for (let i = 1; i <= 10; i++) await t.page.mouse.move(cx + i * 30, cy);
+  await t.page.mouse.up();
+  const turned = await yawOf();
+  await t.step(`turned the view by hand, to ${turned.toFixed(2)}`);
+  // (some frames later it's still where it was put: the swing behind him let go)
+  await t.until('a few frames', () => true);
+  await t.page.waitForTimeout(4000);
+  const after = await yawOf();
+  const off = Math.abs(Math.atan2(Math.sin(after - turned), Math.cos(after - turned)));
+  if (off > 0.15) throw new Error(`the view was pulled back: ${turned.toFixed(2)} to ${after.toFixed(2)}`);
+  await t.step(`still there (${after.toFixed(2)})`);
+});
+
 // Home (home.ts): in the yard of Degen's compound in the far west, in through his front door (a fade into the room), a
 // few steps in, and out again by the same door
 await scene('home', '-232.8,383.45,3.14', async (t) => {

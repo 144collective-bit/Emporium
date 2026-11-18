@@ -21,8 +21,8 @@ to load the rest of the needed assets." The owner's answers:
 - **Getting started** gets a new first step at home (the owner's call, 2026-11-18): **Head out**, out of the front
   door; the stall downtown is the second.
 
-**Status:** Phases 1 and 2 built and signed off (2026-11-18); Phase 3 started with its measuring. Each phase with the
-owner's sign-off.
+**Status:** Phases 1 and 2 built and signed off (2026-11-18), and with 3a merged to `main` (PR #189); 3b waits on
+the owner. Each phase with the owner's sign-off.
 
 ## Today, measured
 
@@ -88,7 +88,9 @@ What it says:
    stands up onto `HOME_WAKE` (now just in front of the sofa) about 0.7 s after the menu has gone (walk.ts
    `standUp()`, the bench's own stand-up; any push of the keys stands him up sooner, as on a bench). The view starts
    in front of him, looking back at him on the sofa (behind him is the wall); once he's up the
-   view swings round behind him (walk.ts `wakeYaw`), so ahead is into the room. Under
+   view swings round behind him (walk.ts `wakeYaw`), so ahead is into the room. It lets go the moment the view is
+   turned by hand (`look()`) and after 2.5 s whatever happens (`WAKE_SWING`): the owner found it held the view
+   against him after the couch (2026-11-18); the smoke test's `wakelook` scene turns the view as he gets up. Under
    `prefers-reduced-motion` he's standing at `HOME_WAKE` already. **The curtains**: two on each of the room's
    windows (home.ts `ROOM_WINDOWS`, which home3d.ts now draws the windows from, unmoved; `CURTAIN`, `curtainPanels(k)`
    from drawn, 0, to bunched at the ends, 1), deep red (`CURTAIN_RED`), lit from inside as the room is; four panels
@@ -132,15 +134,34 @@ What it says:
      (up to 1.5 s on the live site); and lay out the south's street web when the site is built, not in the browser
      (`baked()`, as the traffic's routes are: about 1.2 s here, more on a phone).
    - **3b, the split:** the boot builds the room's needs first and the rest behind the walls in slices.
+
+   **3a built** (merged to `main` with Phases 1 and 2, PR #189): `go3d()` asks for the code before awaiting the live
+   settings, and the closes and crescents are baked (`GROWN`, `south-grown`). Measured again, the same way, two runs
+   each:
+
+   | | the boot starts | ready |
+   |---|---|---|
+   | before | 2.86 s, 2.91 s | 8.19 s, 8.21 s |
+   | after 3a | 2.70 s, 2.24 s | 8.09 s, 7.42 s |
+
+   `south.ts` as it loads went from about 1.2 s to 0.5-0.65 s (what's left is noding the street web and tracing its
+   blocks). The live settings' saving doesn't show here (they fail at once in this sandbox); on the live site it's up
+   to 1.5 s when the backend is slow. The runs differ by more than the saving, so 3a is a small step; the boot's own
+   5.3 s is 3b's.
 4. **Polish.** A small loading line in the room while the street gets ready (in `chrome`), the copy (draft), the
    room's light by day and at night with the curtains, every width (320, 375, 768, 1024, 1440, phones on their
    side), the guide files (`menus.md`'s start menu, `endswood.md`'s home, `performance.md`'s start-up,
    `walk-mode.md`), and the home plan's note that walking starts in the room.
 
-## Open questions for the owner
+## Checked after the merge (2026-11-18)
 
-- **Getting started's first step** is stocking the stall at the market hall downtown, a long way from the house.
-  Keep it (the beam and a taxi or the car get you there), or add a first step at home ("Head out": walk out of the
-  front door), which changes `GUIDE_STEPS` and needs a migration?
-- **The City view** is still there behind the City button. Should the title screen keep a way straight into it
-  (say a "City view" line under Single player), or is the room the only way in?
+On `main` as merged (PR #189): the "Build site" Action (run 302) passed every step; every smoke scene passed (wake,
+home, homegarage, hometerrace, homeworkshop, homestash, homewardrobe, car, foot, guns, metro, karts, fly, sky, stair,
+pad, touch); at 320, 375, 768, 1024 and 1440 wide and a phone upright and on its side, no sideways scroll, the doors'
+prompt and the guide's Head out card on screen and apart, no page errors. Not yet: a real phone's `?bench`.
+
+## The owner's answers (2026-11-18)
+
+- **Getting started's first step:** a new one at home, **Head out** (built in Phase 1).
+- **The City view from the title screen:** no; it's to be for the admin only, behind a password, later (not in
+  this plan).
