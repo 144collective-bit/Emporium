@@ -11,6 +11,7 @@
 import { SOUTH_BLOCKS, type Pt } from './south';
 import { inside } from './streetfaces';
 import { southLift } from './southground';
+import { BUILT, baked } from './baked';
 import { cover, type Box } from './southblocks';
 
 export type ShopKind = 'parade' | 'row' | 'pub' | 'gap' | 'petrol' | 'garage' | 'station' | 'carwash' | 'boarded';
@@ -114,7 +115,9 @@ export function shopFoot(s: Pick<Shop, 'at' | 'face' | 'w' | 'd'>): Pt[] {
   ];
 }
 
-export const SHOPS: Shop[] = (() => {
+/** The High Road's buildings laid (worked out when the site is built: baked.ts) */
+function layShops(): Shop[] {
+  return (() => {
   const out: Shop[] = [];
   for (const { from, items } of ITEMS) {
     // (the block whose High Road run starts nearest `from`)
@@ -166,7 +169,9 @@ export const SHOPS: Shop[] = (() => {
     }
   }
   return out;
-})();
+  })();
+}
+export const SHOPS: Shop[] = baked('highroad', BUILT ? undefined : layShops);
 
 /** A shop's top over its base: its roof (or a shed's ridge, a canopy's top) */
 export function topOf(s: Shop) {

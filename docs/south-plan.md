@@ -416,7 +416,11 @@ From the Circus west, patchy as high roads are:
      them); `rec` a place (endsplaces.ts: its pin over the veranda's door,
      Walk in inside the gate facing it; its panel; the travel test's
      furthest pair now the overlook to it, about 114 s). Drawn in the
-     village's chunk (`drawRec()`, `drawRecBridge()`).
+     village's chunk (`drawRec()`, `drawRecBridge()`). The boot's JS went
+     0.8 KB over its budget with it; kept the budget (the owner's call) and
+     baked the terraces', High Road's and council rows' layouts instead
+     (`baked.ts`: their laying code leaves the boot, 738 KB). Shots
+     `docs/south-shots/17-phase-3e-*.webp`.
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
    street entrances, stairs, ticket halls, platforms walked on, the ride
