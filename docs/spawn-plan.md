@@ -21,8 +21,8 @@ to load the rest of the needed assets." The owner's answers:
 - **Getting started** gets a new first step at home (the owner's call, 2026-11-18): **Head out**, out of the front
   door; the stall downtown is the second.
 
-**Status:** Phase 1 built and signed off (2026-11-18); Phase 2 built, waiting on the owner's sign-off. Each phase with
-the owner's sign-off.
+**Status:** Phases 1 and 2 built and signed off (2026-11-18); Phase 3 started with its measuring. Each phase with the
+owner's sign-off.
 
 ## Today, measured
 
@@ -81,7 +81,7 @@ What it says:
    `cleanSave()`, tested in `tests/guide.test.ts`); the save's version is unchanged. The smoke test's Single player
    goes straight into walking (no Walk toggle) and its `wake` scene starts with no spot: in the room, then out of the
    front door once it stops waiting.
-2. **The wake-up and the curtains** (*built*, waiting on the owner's sign-off; the owner left the choices to us:
+2. **The wake-up and the curtains** (*built*, signed off 2026-11-18; the owner left the choices to us:
    deep red curtains, sat on the sofa, the curtains open with the doors). He's on the sofa as the room appears
    (home.ts `SOFA_SEAT`: moments.ts's bench mark at the sofa's front, its cushion `h` 0.24 up, facing the telly;
    walk.ts `enter(spawn, seat)` puts him on it with `moments.sit()`, already seated) and
