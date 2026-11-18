@@ -246,6 +246,15 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:wide`, a build, `npm run budget`,
 `npm run smoke`, `?bench` before and after, and shots in `docs/compound-shots/`.
 
+## The shots
+
+`docs/compound-shots/`: Phase 1's before and after (desktop by day and night, the phone at night); the trophy wall and
+the lounge as he wakes (`phase-2-*`); the bedroom, the office, the landing and the desk's card (`phase-3-*`); the den
+through the walk camera (`phase-4-*`: the review camera can't go under the ground, it's kept over it once it rests);
+the terrace through the walk camera (`phase-5-*`). (The review shots of the terrace from over the yard couldn't be
+taken: after main's spawn plan Phase 3a, a `?shots` page in the headless browser never finishes loading, the same on
+main's own build, so it's main's to look into; the site itself loads and plays, as the smoke test shows.)
+
 ## Merged with the spawn plan (2026-11-18)
 
 `main` gained docs/spawn-plan.md while this was built: every visit wakes on the sofa in the room (`HOME_WAKE`,
