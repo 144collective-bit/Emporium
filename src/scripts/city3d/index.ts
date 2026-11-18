@@ -57,6 +57,7 @@ import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
+import { LINK_PEOPLE } from './malllink';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -489,7 +490,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and the walk between Westlake Park and Uptown North's towers (parkedge.ts, docs/blend-plan.md Phase 6e)
   for (const [x, z, ry] of PARK_EDGE_LAMPS) addLamp(x, z, ry);
   for (const [x, z, s] of PARK_EDGE_TREES) addTree(x, z, s, false, SLAB + 0.02);
-  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...LINK_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Someone waiting at every third bus shelter (transit.ts, the polish plan's Phase 6; phones: half of them)
   SHELTER_IDLES.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.promenade ? 0.05 : SLAB, ry: p.ry, act: 'wait' }));
   // The wall round the city and the murk past it (wall3d.ts, docs/wall-plan.md Phase 2)

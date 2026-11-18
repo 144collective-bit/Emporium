@@ -34,6 +34,7 @@ import { civicY } from './civic';
 import { viaductY } from './viaground';
 import { skyDeckY } from './skydeck';
 import { mallFloor } from './mallinside';
+import { linkFloorAt } from './malllink';
 import { inChannel, shoreY } from './river';
 import { LOT9_PASSAGE } from './lot9';
 import { underworld } from './underground';
@@ -140,6 +141,9 @@ export const GROUND_LAYERS: GroundLayer[] = [
   { id: 'departures', how: 'over', at: (x, z, yNow) => lift(departuresY(x, z, yNow)) },
   // Liberty Bridge's decks, when `yNow` is up there (liberty.ts; the leaves only while they're down)
   { id: 'liberty', how: 'over', at: (x, z, yNow, g) => footbridgeY(x, z, yNow, 0, g.leavesOpen) },
+  // Starlight Mall's Skywalk over the east ring avenue (malllink.ts): the corridor, the bridge's two floors, the
+  // pavilion's and its escalators, by `yNow` (under the bridge the avenue is the street)
+  { id: 'link', how: 'take', at: (x, z, yNow) => linkFloorAt(x, z, yNow) },
   // Inside Starlight Mall: its two floors and the escalators between them, by `yNow` (mallinside.ts)
   { id: 'mall', how: 'take', at: (x, z, yNow) => mallFloor(x, z, yNow) },
   // The river's banks sloping down to the water (river plan step 2)

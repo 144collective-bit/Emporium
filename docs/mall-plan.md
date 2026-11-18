@@ -158,3 +158,76 @@ old land).
 Checks: `npm test` and `npm run test:wide` (664 passing), the type check,
 the build and the budget (boot 661.8 of 670 KB), browser shots by day and
 night and on a phone.
+
+## One mall: the Skywalk, the metro inside, Palm Court enclosed (the owner's call, 2026-11-18)
+
+The owner asked to "connect these two buildings and create 1 giant mall",
+with the train between them running through it and stopping there for
+passengers, rebuilt "realistic and of a high standard". Their picks:
+
+- **The link:** a two-floor glass bridge over the east ring avenue (ns3),
+  with traffic still driving under it. No street moves.
+- **The train:** the metro. The raised line between the mall and Palm Court
+  is the metro's (the monorail is the Neon Mile's, further south). It runs
+  through the bridge's top floor.
+- **The station:** the metro's Starlight Mall station moves from north of
+  the highway into the bridge. It keeps its name and its place in the
+  timetable.
+- **The floors:** a shopping floor at the mall's upper-floor height, with
+  the station's platform floor above it, where the metro runs.
+- **Palm Court:** a full rebuild later, as an enclosed two-floor wing
+  matching the mall's interior.
+
+### Phases (each with the owner's sign-off)
+
+1. **The Skywalk** (built). The bridge, its pavilion on Palm Court, and the
+   corridor through Bright & Co. Data in `malllink.ts`, drawing in
+   `malllink3d.ts`.
+   - **The bridge** (`LINK`): spans the avenue from Bright & Co.'s east face
+     to Palm Court's west row, clear of traffic (`CLEAR`). It has two floors:
+     - The lower floor (`L1`) is at the mall's upper-floor height.
+     - The platform floor (`L2`) is at the el's raised height, east of the
+       track.
+     - A glass barrel roof runs over both.
+   - **The el through it:** raised through the bridge (`LINK_Z` in mall.ts,
+     metro.ts `needAt()`). It enters and leaves through portals in the
+     bridge's glass ends, and its pillar on the median is a column in the
+     lower floor.
+   - **The corridor** (`CORRIDOR`): from the hall's east gallery (in place
+     of the east upper unit, `CORRIDOR_Z`) through Bright & Co.'s upper floor
+     to the bridge, with the store's windows either side.
+   - **The pavilion** (`PAVILION`): in place of Palm Court's two northern
+     west-row shops. Its triple-height atrium is crossed by two pairs of
+     escalators:
+     - street to the lower floor (`ESC_G`)
+     - lower floor to the platform floor (`ESC_UP`)
+   - Its glass front on the promenade carries the mall's name and star, with
+     doors on the promenade and the avenue's sidewalk.
+   - **The platform floor** for now: the walk along the track behind a glass
+     screen, benches, and a "Metro · coming soon" board. Trains pass through
+     without stopping until Phase 2.
+   - **Walking:** `linkFloorAt()` in groundheight.ts; `linkUp()` and
+     `linkWall()` in walk.ts. Up there only the edges and what stands on
+     your floor stop you (`LINK_SOLIDS`). `LINK_CAMERA` is for the walk
+     camera.
+2. **The station.** Starlight Mall station moves into the bridge's top
+   floor:
+   - The platform, canopy, signs and roundel.
+   - The fare gates, a lift from the street to both floors, and the door
+     prompt.
+   - The timetable and rides, including Crestmont's spur, which now turns
+     round at the north end.
+   - The old station, tower and stair north of the highway come down.
+3. **Palm Court enclosed.** A full rebuild as a two-floor indoor wing of the
+   mall:
+   - A glass roof over the promenade, upper galleries over both rows, and
+     bridges across.
+   - The fountain, trees and cinema kept inside.
+   - Shops on both floors, made-up names.
+   - Walking, people, and the panel's Walk in.
+4. **The whole mall finished.**
+   - One name and directory (Starlight Mall, Palm Court its wing).
+   - The bare land south of the multi-storey becomes a bus and coach stop
+     with a plaza.
+   - The roofs dressed: skylights, plant, solar panels.
+   - Phones and `?bench` checked.

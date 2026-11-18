@@ -95,6 +95,7 @@ import {
   MSCP,
   MSCP_CARS,
   PARKED,
+  PAVILION,
   PAY_STATIONS,
   PLANTER,
   PLANTERS,
@@ -109,16 +110,21 @@ import {
   type Rect,
   type Shop,
 } from './mall';
-import { BOLLARD, BOLLARDS, DOOR, WALL, WALLS } from './mallinside';
+import { BOLLARD, BOLLARDS, CORRIDOR_Z, DOOR, WALL, WALLS } from './mallinside';
 import { registerInside } from './mallinside3d';
+import { BOARD, CORRIDOR_H, KIOSK, L1 } from './malllink';
+import { registerLink } from './malllink3d';
 import { COVER } from './palette';
 
 export const SELF = import.meta.url;
 
 /* ---------- Signs ---------- */
 
-/** The outside's signs (4 x 8, full): the shops, the anchors, the cinema, the mall, the court, and the rest */
-const CELLS = [...SHOP_NAMES.map((s) => s.name), ...ANCHORS.map((a) => a.name), CINEMA.name, 'NOW SHOWING', MALL_NAME, 'PALM COURT', 'TAXI', 'BUS', 'P', 'ENTRANCE'];
+/**
+ * The outside's signs (4 x 8, full): the shops, the anchors, the cinema, the mall, the court, and the rest; and the
+ * Skywalk's (malllink3d.ts): the café the pavilion moved to its kiosk, the platform floor's board
+ */
+const CELLS = [...SHOP_NAMES.map((s) => s.name).filter((n) => n === KIOSK.name || SHOPS.some((s) => s.name === n)), ...ANCHORS.map((a) => a.name), CINEMA.name, 'NOW SHOWING', MALL_NAME, 'PALM COURT', 'TAXI', 'BUS', 'P', 'ENTRANCE', BOARD.text];
 /** Charcoal letters on white for the rendered and timber shops' signs and Bright & Co. (on its dark panels) */
 const LIGHT_SIGNS = new Set([...SHOPS.filter((s) => s.style === 'render' || s.style === 'timber').map((s) => s.name), ANCHORS[1].name]);
 const sign = signAtlas('mall-signs', CELLS, LIGHT_SIGNS);
@@ -328,7 +334,7 @@ function court(b: Batch, z0: number, z1: number, f: Batch, low: boolean) {
   f.detail(() => {
     for (let z = CINEMA.rect[3] + 8; z < ARCH.z - 4; z += 12) {
       if (z < z0 || z >= z1 || Math.abs(z - FOUNTAIN.z) < 6) continue;
-      const hold = (x: number, zz: number) => SHOPS.some((s) => zz > s.rect[1] && zz < s.rect[3] && (x === PROM[0] ? s.face === 1 : s.face === -1));
+      const hold = (x: number, zz: number) => SHOPS.some((s) => zz > s.rect[1] && zz < s.rect[3] && (x === PROM[0] ? s.face === 1 : s.face === -1)) || (x === PROM[0] && zz > PAVILION[1] && zz < PAVILION[3]);
       if (!hold(PROM[0], z) || !hold(PROM[1], z + 5)) continue;
       // a sagging line from one row to the other, bulbs along it
       const pts: THREE.Vector3[] = [];
@@ -422,16 +428,30 @@ function anchor(b: Batch, k: number) {
   const h = a.h;
   const dark = a.wall === 'dark';
   const clad = dark ? CLAD_DARK : CLAD;
-  box(b, x0, Y, z0, x1, Y + h, z1, dark ? CHARCOAL : LIGHT);
+  // (Bright & Co.'s upper floor has the Skywalk's corridor through it, malllink.ts: the store round it)
+  const [c0, c1] = CORRIDOR_Z;
+  const [lo, hi] = [L1, L1 + CORRIDOR_H];
+  if (k) {
+    box(b, x0, Y, z0, x1, Y + h, c0, CHARCOAL);
+    box(b, x0, Y, c1, x1, Y + h, z1, CHARCOAL);
+    box(b, x0, Y, c0, x1, lo, c1, CHARCOAL);
+    box(b, x0, hi, c0, x1, Y + h, c1, CHARCOAL);
+  } else box(b, x0, Y, z0, x1, Y + h, z1, LIGHT);
   coping(b, x0, z0, x1, z1, Y + h);
   plant(b, xm - 3, (z0 + z1) / 2, Y + h);
   plant(b, xm + 2, z0 + 6, Y + h);
   // The sides: panels all round (above the hall on its inner side), its avenue side with its name
   const outer = k ? x1 : x0;
   const on: [number, number] = k ? PX : NX;
-  face(b, clad, outer, z0, outer, z1, Y, Y + h, on);
+  if (k) {
+    // (its avenue side: open at the corridor, where the Skywalk's bridge meets it; its name north of the bridge)
+    face(b, clad, outer, z0, outer, c0, Y, Y + h, on);
+    face(b, clad, outer, c1, outer, z1, Y, Y + h, on);
+    face(b, clad, outer, c0, outer, c1, Y, lo, on);
+    face(b, clad, outer, c0, outer, c1, hi, Y + h, on);
+  } else face(b, clad, outer, z0, outer, z1, Y, Y + h, on);
   face(b, clad, k ? x0 : x1, z0, k ? x0 : x1, z1, Y + HALL.h, Y + h, k ? NX : PX);
-  sign(b, a.name, outer + on[0] * 0.03, Y + h - 1.4, (z0 + z1) / 2 + 4, 9, 0.95, on[0] * (Math.PI / 2));
+  sign(b, a.name, outer + on[0] * 0.03, Y + h - 1.4, k ? z0 + 6.5 : (z0 + z1) / 2 + 4, 9, 0.95, on[0] * (Math.PI / 2));
   face(b, CURTAIN, outer, (z0 + z1) / 2 - 8, outer, (z0 + z1) / 2 - 4.8, Y + 0.6, Y + h - 0.8, on, 0.014);
   // The back: panels, the loading dock (two roller doors, bumpers, a canopy)
   face(b, clad, x0, z0, x1, z0, Y, Y + h, NZ);
@@ -475,8 +495,11 @@ function anchor(b: Batch, k: number) {
 function hall(b: Batch) {
   const [x0, z0, x1, z1] = HALL.rect;
   const h = HALL.h;
-  // Its walls (hollow: mallinside3d.ts draws inside), open at the doors behind the porch, a wall over them
+  // Its walls (hollow: mallinside3d.ts draws inside), open at the doors behind the porch, a wall over them; the east
+  // wall open on the upper floor where the Skywalk's corridor goes through (malllink.ts)
   for (const [a0, c0, a1, c1] of WALLS) box(b, a0, Y, c0, a1, Y + h, c1, LIGHT);
+  box(b, x1 - WALL, Y, CORRIDOR_Z[0], x1, L1, CORRIDOR_Z[1], LIGHT);
+  box(b, x1 - WALL, L1 + CORRIDOR_H, CORRIDOR_Z[0], x1, Y + h, CORRIDOR_Z[1], LIGHT);
   box(b, DOOR.x0, Y + DOOR.h, z1 - WALL, DOOR.x1, Y + h, z1, LIGHT);
   // The front: clad piers at the ends, the curtain wall between, a floor band across it, a dark band at the top
   const [p0, p1] = [x0 + 2.2, x1 - 2.2];
@@ -819,6 +842,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   site('mall multi-storey', MSCP.rect, build(multiStorey));
   // Inside the hall (step 2: near only)
   registerInside({ low, tick });
+  // The Skywalk over the east ring avenue to Palm Court (malllink3d.ts)
+  registerLink({ build, signs: sign });
   if (!scene) return;
   // The cabs at the rank, the cars in the car park and on the multi-storey's decks
   type Car = [CarId, number, number, number, string];

@@ -53,7 +53,8 @@ keep it up to date when what it describes changes.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
     an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
     Park station north of the ring highway (the north side's stage 2: it
-    crosses the raised highway high, metro.ts `trackY()`; Starlight Mall
+    crosses the raised highway high, metro.ts `trackY()`, and stays up through
+    Starlight Mall's Skywalk over the avenue, `needAt()`, `mall.md`; Starlight Mall
     station since the kart park moved west, `docs/kart-west-plan.md`) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the

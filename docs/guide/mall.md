@@ -94,3 +94,52 @@ keep it up to date when what it describes changes.
     main thread's tick, still under reduced motion), the timber food court,
     the kiosks, the glass lift, a ring of light over the fountain, one sign
     atlas (`mall-signs-in`).
+  - **The Skywalk** (docs/mall-plan.md "One mall" Phase 1, built; the
+    owner's call, 2026-11-18: the mall and Palm Court made one, the metro
+    through it): `malllink.ts` (DOM-free, tested in
+    `tests/malllink.test.ts`). It is made of three parts:
+    - **The bridge** (`LINK`) over the east ring avenue from Bright & Co.'s
+      east face to the pavilion, with traffic under it (`CLEAR`). It has two
+      floors:
+      - the lower floor (`L1`, the hall's upper floor's height): benches,
+        trees, the BRISK COFFEE kiosk (`KIOSK`, the café from the shops the
+        pavilion took), the el's pillar a white column (`COLUMNS`);
+      - the platform floor (`L2`, the el's deck's top: metro.ts `needAt()`
+        raises the el through `LINK_Z`, mall.ts) east of the track behind a
+        glass screen (`SCREEN_X`), with benches and a METRO COMING SOON
+        board (`BOARD`) until the station moves in (Phase 2).
+    - **The corridor** (`CORRIDOR`): from the hall's east gallery, where
+      the east upper unit third from the north was (mallinside.ts
+      `CORRIDOR_Z`, `CORRIDOR_IN` in `UPPER`; `UNITS` is fifteen), through
+      Bright & Co.'s upper floor between its windows.
+    - **The pavilion** (mall.ts `PAVILION`, in place of the west row's two
+      northern shops: `SHOPS` leaves them out). It has a triple-height
+      atrium, the lower floor's mezzanine across its north end (`MEZZ_L1`)
+      and the platform floor's across its south end (`MEZZ_L2`). Two pairs
+      of escalators cross the atrium (`FLIGHTS`: `ESC_G` up from the street
+      rising north, `ESC_UP` from the lower floor rising south, each with
+      `flightY()`). Its doors (`PAV_DOORS`) are on the promenade and the
+      avenue's sidewalk.
+
+    Walking:
+    - `linkFloorAt()` is groundheight.ts's `link` layer: under the bridge
+      the avenue is the street.
+    - walk.ts asks `linkUp()`, then only `linkWall()` up there (off every
+      floor is an edge; `LINK_SOLIDS` between heights). In the pavilion's
+      street floor, `linkWall()` keeps you from the escalators' sides and
+      from under them.
+    - `LINK_WALLS` (in `SOLIDS`) are its walls at street level; `LINK_CAMERA`
+      is for the walk camera; `LINK_PEOPLE` are in the crowd.
+
+    Drawn by `malllink3d.ts` (`registerLink()`, from mall3d.ts's
+    `register()`):
+    - Outside: the slab and its lit soffit, the glazed ends with the el's
+      portals, one roof with a glass barrel vault, and the pavilion's front
+      with the mall's name and gold star.
+    - Inside (near only): the floors, timber soffits, balustrades, the
+      platform screen, the escalators (on the hall's running steps,
+      mallinside3d.ts `STEPS_UP` / `STEPS_DOWN`), the corridor, the
+      furniture and the signs.
+    - Its words are in the outside's atlas (mall3d.ts `CELLS`, all 32).
+    - Bright & Co.'s box and avenue face, the hall's east wall and the units'
+      east strip are drawn open round the corridor.

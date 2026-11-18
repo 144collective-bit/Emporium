@@ -68,6 +68,15 @@ export const EAST_GAP: Pt = [ZEBRA.z - 3, ZEBRA.z + 3];
 export const ARCH = { z: COURT[3] - 3, h: 5.2 };
 export const FOUNTAIN = { x: PROM_X, z: ZEBRA.z, r: 2.4 };
 
+/**
+ * The Skywalk (docs/mall-plan.md, "One mall", Phase 1; the rest is malllink.ts): its band along the avenue (z0, z1),
+ * from the west row's north end to its passage; the bridge over the east ring avenue from Bright & Co.'s east face to
+ * the west row, and the pavilion in place of the west row's two northern shops
+ */
+export const LINK_Z: Pt = [CINEMA.rect[3] + 4.1, ZEBRA.z - 3.1];
+export const PAVILION: Rect = [COURT[0] + 0.5, LINK_Z[0], PROM[0], LINK_Z[1]];
+/** (whether a shop stands where the pavilion is) */
+const underPavilion = (r: Rect) => r[0] < PAVILION[2] && r[2] > PAVILION[0] && r[1] < PAVILION[3] && r[3] > PAVILION[1];
 export type ShopKind = 'cafe' | 'fashion' | 'books' | 'home' | 'beauty' | 'sports' | 'bakery' | 'shoes' | 'gifts' | 'tech' | 'kids' | 'restaurant';
 /** The shops' made-up names, in turn along the rows, and their kinds */
 export const SHOP_NAMES: { name: string; kind: ShopKind }[] = [
@@ -144,7 +153,8 @@ export const SHOPS: Shop[] = (() => {
         k++;
       }
     }
-  return out;
+  // (the pavilion stands where the west row's two northern shops were: the rest keep their names and fronts)
+  return out.filter((s) => !underPavilion(s.rect));
 })();
 /** Trees in square planters down the promenade's edges, clear of the shops' doors' middles and the fountain */
 export const COURT_TREES: Pt[] = (() => {

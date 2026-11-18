@@ -51,6 +51,7 @@ import { DOCKS_NAME, EL_STATION, EL_X } from './docks';
 import { PLAN, distToStreet, type Street } from './streetplan';
 import { AVENUE_Z, NS_X } from './trenches';
 import type { Box } from './solids';
+import { LINK_Z } from './mall';
 import { BUILT, baked } from './baked';
 import { DECK_HALF as RING_HALF, DECK_Y as RING_DECK, RAMPS, RAMP_HALF, ringS } from './viaduct';
 
@@ -270,8 +271,13 @@ const MERGE = 180;
 /** How near the highway a point must be for its ramps to be looked at */
 const RAMP_LOOK = 130;
 
-/** How high the el's deck must be over a point on the ground (0: anything goes) */
+/**
+ * How high the el's deck must be over a point on the ground (0: anything goes): over the raised highway and its ramps,
+ * and through Starlight Mall's Skywalk over the east ring avenue (docs/mall-plan.md, "One mall": its platform floor is
+ * the deck's height, malllink.ts), level a little past its glass ends
+ */
 function needAt(p: Pt) {
+  if (Math.abs(p[0] - LINE_X) < 3 && p[1] > LINK_Z[0] - 2 && p[1] < LINK_Z[1] + 2) return HIGH_Y;
   const { o } = ringS(p[0], p[1]);
   if (Math.abs(o) > RAMP_LOOK) return 0;
   let need = Math.abs(o) < RING_HALF + 1.5 ? HIGH_Y : 0;

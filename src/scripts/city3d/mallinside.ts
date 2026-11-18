@@ -56,11 +56,21 @@ export const TERRACE_Z = HALL.rect[1] + 10;
 const XM = (IN[0] + IN[2]) / 2;
 /** The atrium: open from the ground floor to the roof, between the galleries, the terrace and the lobby */
 export const VOID: Rect = [IN[0] + UNIT_D + GALLERY_W, TERRACE_Z, IN[2] - UNIT_D - GALLERY_W, LOBBY_Z];
-/** The upper floor: the terrace across the north end and the two galleries */
+/** How long a unit is along its strip (four a side, `NORTH_Z` to the lobby) */
+export const UNIT_L = (LOBBY_Z - NORTH_Z) / 4;
+/**
+ * The Skywalk's corridor (docs/mall-plan.md, "One mall", Phase 1; malllink.ts): the east upper unit third from the
+ * north is the way through, its band along the hall (z0, z1); the ground floor's unit under it stays
+ */
+export const CORRIDOR_Z: [number, number] = [NORTH_Z + 2 * UNIT_L, NORTH_Z + 3 * UNIT_L];
+/** The corridor's part in the units' strip, on the upper floor */
+export const CORRIDOR_IN: Rect = [IN[2] - UNIT_D, CORRIDOR_Z[0], IN[2], CORRIDOR_Z[1]];
+/** The upper floor: the terrace across the north end, the two galleries, and the corridor off the east one */
 export const UPPER: Rect[] = [
   [IN[0], STALL_Z, IN[2], TERRACE_Z],
   [IN[0] + UNIT_D, TERRACE_Z, VOID[0], LOBBY_Z],
   [VOID[2], TERRACE_Z, IN[2] - UNIT_D, LOBBY_Z],
+  CORRIDOR_IN,
 ];
 
 /* ---------- The escalators ---------- */
@@ -120,7 +130,8 @@ export const UNITS: Unit[] = (() => {
         const [x0, x1] = face === 1 ? [IN[0], IN[0] + UNIT_D] : [IN[2] - UNIT_D, IN[2]];
         out.push({ rect: [x0, NORTH_Z + i * L, x1, NORTH_Z + (i + 1) * L], level, face, name: UNIT_NAMES[out.length], k: out.length });
       }
-  return out;
+  // (the corridor to the Skywalk is where the east upper unit third from the north was)
+  return out.filter((u) => !(u.level === 1 && u.face === -1 && u.rect[1] === CORRIDOR_Z[0]));
 })();
 /** The food court's stalls along the north wall, upstairs (made-up names), facing south */
 export const FOOD_NAMES = ['TACO VERDE', 'NOODLE BAR', 'BURGER CO.', 'GREEN BOWL', 'SUSHI GO ROUND', 'GELATO LAB'];
@@ -205,7 +216,9 @@ export const WALLS: Box[] = (() => {
   return [
     [x0, z0, x1, z0 + WALL, h],
     [x0, z0, x0 + WALL, z1, h],
-    [x1 - WALL, z0, x1, z1, h],
+    // (the east wall open on the upper floor at the corridor: under it the ground floor's unit stands, `LEVEL_SOLIDS`)
+    [x1 - WALL, z0, x1, CORRIDOR_Z[0], h],
+    [x1 - WALL, CORRIDOR_Z[1], x1, z1, h],
     [x0, z1 - WALL, DOOR.x0, z1, h],
     [DOOR.x1, z1 - WALL, x1, z1, h],
   ];
@@ -225,7 +238,8 @@ export const MALL_INSIDE_SOLIDS: Box[] = [
   ...WALLS,
   // (the units on both floors, a strip a side; the stalls' strip across the north end)
   [IN[0], NORTH_Z, IN[0] + UNIT_D, LOBBY_Z, HALL.h],
-  [IN[2] - UNIT_D, NORTH_Z, IN[2], LOBBY_Z, HALL.h],
+  [IN[2] - UNIT_D, NORTH_Z, IN[2], CORRIDOR_Z[0], HALL.h],
+  [IN[2] - UNIT_D, CORRIDOR_Z[1], IN[2], LOBBY_Z, HALL.h],
   [IN[0], IN[1], IN[2], STALL_Z, HALL.h],
   ...COLUMNS.map(([x, z]) => sq(x, z, COLUMN_R, HALL.h)),
   ...ESC_SOLIDS,
@@ -239,6 +253,8 @@ export const MALL_INSIDE_SOLIDS: Box[] = [
 ];
 /** What stands on one floor only, with a floor over or under it (x0, z0, x1, z1, level) */
 export const LEVEL_SOLIDS: [number, number, number, number, 0 | 1][] = [
+  // (the ground floor's unit under the corridor, and the east wall behind it)
+  [CORRIDOR_IN[0], CORRIDOR_IN[1], CORRIDOR_IN[2] + WALL, CORRIDOR_IN[3], 0],
   ...GROUND_THINGS.map((t): [number, number, number, number, 0 | 1] => [...t.rect, 0]),
   ...TABLES.map(([x, z]): [number, number, number, number, 0 | 1] => [x - TABLE_R, z - TABLE_R, x + TABLE_R, z + TABLE_R, 1]),
 ];
