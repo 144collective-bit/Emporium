@@ -82,8 +82,8 @@ export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket'];
  */
 export type Bottoms = 'trousers' | 'joggers' | 'trackpants';
 export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants'];
-export type ShoeStyle = 'dress' | 'sneaker';
-export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker'];
+export type ShoeStyle = 'dress' | 'sneaker' | 'hightop';
+export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop'];
 /** The bottoms a top came with before the separates */
 export const bottomsFor = (kind: string): Bottoms => (kind === 'suit' ? 'trousers' : kind === 'track' ? 'trackpants' : 'joggers');
 /** The shoes a top came with before the separates */

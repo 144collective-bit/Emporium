@@ -319,6 +319,26 @@ A proposed first set; the owner picks what goes in:
 - **The dark-outfit fix:** rims and seams a shade lighter so a black fit
   still reads, every piece, both tiers.
 
+- **The owner's pick for the first set:** the bomber jacket, cargo pants and
+  high-top sneakers, with the shoe fixes found in Phase 2 (the ankle and the
+  laces).
+- **As built, the shoes (Phase 5a, 18 November 2026):**
+  - The ankle: the legs' last few centimetres ride partly with the foot
+    (`weigh()` in skeleton.ts: up to 0.85 of the foot from `ANKLE_H` + 0.11
+    down, as a hem resting on the shoe does), so the shoe's collar no longer
+    swings into the cloth as the ankle bends: the deepest any bottoms goes
+    into any shoe fell from 0.034 to 0.0082 (the trousers over sneakers at a
+    still crouch); `clothing.test.ts` holds every pairing to `ANKLE` 0.009.
+  - The laces lie on the shoe as arcs following its rounded top
+    (`laceArcs()`), and the side stripe (`swoop`) runs along the side's own
+    curve: the old flat bar and plate stood off the rounded top and the
+    curving sides (the "laces sticking out" was mostly the stripe).
+  - High-tops (`hightops`, `ShoeStyle` `hightop`): the sneaker's own lower
+    half (its stripe and mark fit as they are), the collar carried up round
+    the ankle, a padded rim round the opening, laces up to the collar.
+    Streetwear; `kicks()` takes the stripe and the shoe's mark on both.
+  - The budget held at 40k: the new laces and stripe are lean tubes.
+
 ### Phase 6: work wear
 
 - A hi-vis vest and a hi-vis jacket (reflective tape), a chore coat,

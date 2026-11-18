@@ -1089,8 +1089,10 @@ export function items(q: Detail, hero = false): Item[] {
   const soldier = (o: Outfit) => o.kind === 'soldier';
   const varsity = (o: Outfit) => o.kind === 'varsity';
   const puffer = (o: Outfit) => o.kind === 'puffer';
-  /** On his feet: sneakers or dress shoes (docs/wardrobe-plan.md Phase 2: any with any top) */
+  /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
   const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
+  /** Either sneaker, low or high: the stripe and the shoe's mark go on its side */
+  const kicks = (o: Outfit) => shoesOf(o) === 'sneaker' || shoesOf(o) === 'hightop';
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
   const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && bare(o);
 
@@ -2243,8 +2245,65 @@ export function items(q: Detail, hero = false): Item[] {
   const sneaker = shoe(SNEAKER, SG, 2.6, SS);
   const sneakerSole = shoe(sole(SNEAKER, 0.003, 0.009, 0.006), SG, 3, SS);
   // (the laces lie on its top, the stripe on its side)
-  const laces = q === 0 ? [] : [0.03, 0.055, 0.08].map((u) => new THREE.BoxGeometry(0.05, 0.005, 0.008).rotateX(0.4).translate(0, secAt(SNEAKER, u)[3]! + 0.001, u));
-  const swoop = [-1, 1].map((s) => new THREE.BoxGeometry(0.004, 0.012, 0.11).rotateX(-0.2).translate(s * (secAt(SNEAKER, 0.05)[1] + 0.002), G + 0.05, 0.05));
+  /**
+   * Laces lying on a shoe's rounded top (docs/wardrobe-plan.md Phase 5): each an arc across it at u, following the
+   * section's own curve a hair over it (a flat bar laid across stood out past the sides)
+   */
+  const laceArcs = (secs: ShoeSec[], us: number[], n: number) =>
+    us.map((u) => {
+      const [, hw, b, t] = secAt(secs, u) as unknown as ShoeSec;
+      const c = (b + t) / 2;
+      const hh = (t - b) / 2;
+      const pts = [-1, -0.5, 0, 0.5, 1].map((k): [number, number, number] => {
+        const x = k * 0.5 * hw;
+        return [x, c + hh * (1 - Math.abs(x / hw) ** n) ** (1 / n) + 0.0018, u - k * k * 0.004];
+      });
+      return tube(pts, q === 3 ? 0.0022 : 0.0028, 6, q === 3 ? 4 : 3);
+    });
+  const laces = q === 0 ? [] : laceArcs(SNEAKER, [0.03, 0.05, 0.07, 0.09], 2.6);
+  /*
+   * High-tops (docs/wardrobe-plan.md Phase 5): the sneaker's own lower half (so its stripe and mark fit as they are),
+   * the collar carried up round the ankle, highest at the back, a padded rim round the opening, the tongue standing up
+   * at the front, laces up the instep to the collar
+   */
+  const HIGHTOP: ShoeSec[] = up([
+    [-0.065, 0.029, 0.015, 0.155],
+    [-0.058, 0.04, 0.015, 0.168],
+    [-0.03, 0.044, 0.015, 0.172],
+    [0.0, 0.045, 0.015, 0.162],
+    [0.035, 0.045, 0.015, 0.105],
+    [0.07, 0.045, 0.016, 0.074],
+    [0.105, 0.044, 0.017, 0.058],
+    ...toe(0.105, 0.065, [0.044, 0.017, 0.058], 0.004),
+  ]);
+  const hightop = shoe(HIGHTOP, SG, 2.6, SS);
+  const hightopSole = shoe(sole(HIGHTOP, 0.003, 0.009, 0.006), SG, 3, SS);
+  const hightopLaces = q === 0 ? [] : laceArcs(HIGHTOP, [0.012, 0.03, 0.048, 0.066, 0.084], 2.6);
+  // (the padded rim: round the opening at the collar's top, a touch inside its outline)
+  const hightopCollar = (() => {
+    const pts: [number, number, number][] = [];
+    const n = q === 3 ? 20 : 12;
+    for (let k = 0; k <= n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const u = -0.032 + 0.034 * Math.sin(a);
+      const [, hw, , t] = secAt(HIGHTOP, u) as unknown as ShoeSec;
+      pts.push([Math.cos(a) * hw * 0.82, t - 0.004 - 0.006 * Math.max(0, Math.sin(a)), u]);
+    }
+    return tube(pts, q === 3 ? 0.0055 : 0.0065, q === 3 ? 24 : 14, q === 3 ? 6 : 4);
+  })();
+  // (the side stripe laid along the shoe's own side, rising to the heel: a straight plate stood off where the side
+  // curves in at the heel and the toe; docs/wardrobe-plan.md Phase 5)
+  const swoop = [-1, 1].map((s) => {
+    const pts: [number, number, number][] = [];
+    for (let u = -0.025; u <= 0.1001; u += 0.0125) {
+      const [, hw, b, t] = secAt(SNEAKER, u) as unknown as ShoeSec;
+      const c = (b + t) / 2;
+      const hh = (t - b) / 2;
+      const y = G + 0.04 + 0.15 * (0.1 - u);
+      pts.push([s * (hw * Math.max(0, 1 - Math.abs((y - c) / hh) ** 2.6) ** (1 / 2.6) + 0.0016), y, u]);
+    }
+    return tube(pts, q === 3 ? 0.0024 : 0.003, q === 3 ? 12 : 8, 4);
+  });
   const DRESS: ShoeSec[] = up([
     [-0.062, 0.026, 0.016, 0.062],
     [-0.055, 0.034, 0.016, 0.077],
@@ -2712,7 +2771,7 @@ export function items(q: Detail, hero = false): Item[] {
     for (const [at, piece] of marks) merch.push({ id: `mark-${i}-${at}`, when: (o) => t.is(o) && !!o.mark && slot(o) === at, pieces: [piece] });
   });
   const shoeMark = ([-1, 1] as const).map((s) => decal(0.034, (u, v) => [s * 0.049, G + 0.054 + v, 0.045 - s * u]));
-  merch.push({ id: 'shoeMarks', when: (o) => sneakers(o) && !!o.shoeMark, pieces: both('shin', shoeMark, 'ink', { mat: 'logo', logo: 'shoe', ...SHOE }) });
+  merch.push({ id: 'shoeMarks', when: (o) => kicks(o) && !!o.shoeMark, pieces: both('shin', shoeMark, 'ink', { mat: 'logo', logo: 'shoe', ...SHOE }) });
   const all: Item[] = [
     {
       id: 'head',
@@ -2925,10 +2984,20 @@ export function items(q: Detail, hero = false): Item[] {
         ...(laces.length ? both('shin', one(laces), SHIRT, { detail: true, ...SHOE }) : []),
       ],
     },
+    {
+      id: 'hightops',
+      when: (o) => shoesOf(o) === 'hightop',
+      pieces: [
+        ...both('shin', hightop, 'shoes', UPPER),
+        ...both('shin', hightopSole, SHIRT, SHOE),
+        ...both('shin', hightopCollar, 'shoes', { shade: 0.7, ...SHOE }),
+        ...(hightopLaces.length ? both('shin', one(hightopLaces), SHIRT, { detail: true, ...SHOE }) : []),
+      ],
+    },
     // The sneakers' side stripe, unless a mark is printed there instead
     {
       id: 'swoop',
-      when: (o) => sneakers(o) && !(hero && o.shoeMark),
+      when: (o) => kicks(o) && !(hero && o.shoeMark),
       pieces: both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true, ...SHOE }),
     },
     // (the puffer's high collar covers the headphones, and the necklace, below; so does the hood up, where it meets the

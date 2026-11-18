@@ -266,6 +266,12 @@ keep it up to date when what it describes changes.
     `joggers`, `backpack`, `watch`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
+  - **Shoes** (`docs/wardrobe-plan.md` Phase 5): dress shoes, sneakers and
+    high-tops (`hightops`: the sneaker's lower half, the collar up round the
+    ankle, a padded rim); the laces are arcs on the rounded top
+    (`laceArcs()`), the side stripe a strip along the side's curve
+    (`swoop`). The legs' last few centimetres ride partly with the foot
+    (`weigh()`), so a hem stays on the shoe as the ankle bends.
   - **The separates** (`docs/wardrobe-plan.md` Phase 2): the top, the
     bottoms and the shoes are items of their own, worn in any pairing:
     `trousers`, `joggers` (and track pants, the joggers with
@@ -276,11 +282,8 @@ keep it up to date when what it describes changes.
     white). Every bottoms is cut on the one `SEAT` inside every top's hips,
     so `tests/clothing.test.ts` holds every top over every bottoms (both
     detail levels, every pose); the shoes' uppers are `shell: 'shoe'` and
-    the same file holds each bottoms over each shoe to no deeper into the
-    upper than the pairings the clothes were built in (`ANKLE`: at the
-    ankle, as the foot flexes, the legs' cloth goes some way into the shoe
-    in every pairing, the original ones too; the plan's Phase 5 rebuilds the
-    shoes and the laces, which stand out past the sneaker's side).
+    the same file holds each bottoms over each shoe to `ANKLE` (0.009) at
+    the ankle as the foot flexes.
   - Four detail levels (`Detail`): 3 for single figures on desktops and 2
     on phones (`createDegen()`: the player, other players, the fitting
     room, the hologram; about 23-38k triangles at 3, 14-17k at 2, by what

@@ -193,7 +193,7 @@ function merchItems(of: MerchFor): Item[] {
 /** Can what the Merch tab is dressing be seen? (Else a note says what shows it) */
 function merchNote(of: MerchFor, l: Look): string | null {
   if (of === 'hat' && !((l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie') && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
-  if (of === 'kicks' && l.shoeStyle !== 'sneaker') return 'Shows on sneakers';
+  if (of === 'kicks' && l.shoeStyle === 'dress') return 'Shows on sneakers';
   return null;
 }
 
@@ -228,6 +228,7 @@ const TABS: Tab[] = [
     items: [
       shoes('dress', 'Dress Shoes', 'M3 16h14c2 0 4 1 4 2.5V19H3z M3 16v-3h5l3 3', BUSINESS),
       shoes('sneaker', 'Sneakers', 'M3 13h5l3 3h6c2 0 4 1 4 3v1H3z M3 18h18 M10 15l1-1 M12 16l1-1', STREET),
+      shoes('hightop', 'High-Tops', 'M4 6h5v7l3 3h5c2 0 4 1 4 3v1H4z M4 18h17 M9 9h-2 M9 12h-2', STREET),
     ],
   },
   {

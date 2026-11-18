@@ -46,7 +46,7 @@ export function describe(l: Look): [string, string, string[]][] {
     ['Face', l.face ? (FACE_GEAR.find((f) => f.id === l.face)?.name ?? '') : 'Nothing', l.face ? [l.gear] : []],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],
     ['Extras', extras.length ? extras.join(', ') : 'None', l.headphones ? [l.headphones] : []],
-    ['Shoes', l.shoeStyle === 'dress' ? 'Dress Shoes' : `Sneakers${l.shoeMark ? ` · ${markName(l.shoeMark)}` : ''}`, [l.shoes]],
+    ['Shoes', l.shoeStyle === 'dress' ? 'Dress Shoes' : `${l.shoeStyle === 'hightop' ? 'High-Tops' : 'Sneakers'}${l.shoeMark ? ` · ${markName(l.shoeMark)}` : ''}`, [l.shoes]],
   ];
   const where = MARK_SLOTS.find((m) => m.id === l.markAt)?.name ?? '';
   rows.push(['Merch', l.mark ? `${markName(l.mark)} · ${l.kind === 'suit' && l.markAt === 'centre' ? 'Pin' : where}` : 'No mark', l.mark || l.shoeMark || patched ? [l.ink] : []]);

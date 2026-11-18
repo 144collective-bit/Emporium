@@ -576,9 +576,13 @@ export function weigh(region: Region, x: number, y: number, z: number): Influenc
       // (the trousers are one piece on the pelvis: each leg by its side)
       const s = region === 'pelvis' ? S : region.endsWith('L') ? 'L' : 'R';
       const shin = step(THIGH - 0.03, THIGH + 0.03, HIP_Y - y);
+      // (the cuff's last few centimetres ride partly with the foot, as a hem resting on the shoe does: the shoe's
+      // collar no longer swings into the cloth when the ankle bends; docs/wardrobe-plan.md Phase 5)
+      const foot = 0.85 * step(ANKLE_H + 0.11, ANKLE_H - 0.005, y);
       return norm([
-        [`leg${s}`, 1 - shin],
-        [`shin${s}`, shin],
+        [`leg${s}`, (1 - shin) * (1 - foot)],
+        [`shin${s}`, shin * (1 - foot)],
+        [`foot${s}`, foot],
       ]);
     }
     case 'armL':

@@ -144,15 +144,14 @@ for (const o of OUTFITS)
   });
 
 /*
- * The bottoms over the shoes (docs/wardrobe-plan.md Phase 2): every bottoms with every shoe. A leg is cut to go down
- * into the shoe's opening (the cloth there is inside the upper, out of sight); what shouldn't happen is the cloth that
- * hangs clear of the shoe at rest sinking into it as he moves, so the shoe shows through. Measured when the separates
- * came in (14 November 2026), the pairings the clothes were built in (the suit's trousers over dress shoes, the
- * joggers over sneakers) already do it at the ankle as the foot flexes, up to `ANKLE` deep (the clothing plan never
- * held the shoes to the legs; the wardrobe plan's Phase 5 rebuilds the shoes): until then this holds every pairing to
- * no deeper than that, so a new piece can't make it worse. Only the legs' lowest part is looked at.
+ * The bottoms over the shoes (docs/wardrobe-plan.md Phases 2 and 5): every bottoms with every shoe. A leg is cut to go
+ * down into the shoe's opening (the cloth there is inside the upper, out of sight); what mustn't happen is the cloth
+ * that hangs clear of the shoe at rest sinking into it as he moves, so the shoe shows through. When the separates came
+ * in it went up to 0.034 at the ankle as the foot flexed, in the pairings the clothes were built in too; since the
+ * cuff's last few centimetres ride partly with the foot (skeleton.ts, Phase 5) no pairing goes past `ANKLE` (the
+ * worst, measured: the trousers over sneakers at a still crouch, 0.0082). Only the legs' lowest part is looked at.
  */
-const ANKLE = 0.034;
+const ANKLE = 0.009;
 for (const q of [2, 3] as const)
   for (const bottoms of BOTTOMS)
     for (const shoeStyle of SHOE_STYLES)
