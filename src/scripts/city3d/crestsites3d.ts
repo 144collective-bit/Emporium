@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { waterMat } from './world';
-import { heightAt } from './terrain';
+import { drawnAt, heightAt } from './terrain';
 import { CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y, TEE, bunkersOf, flagOf, type Hole } from './crestsites';
 import { WINDOW, hip, poolOf } from './estates3d';
 import { BULB, LED, PAVING, SPRAY, WATER, flat } from './mallkit';
@@ -100,7 +100,7 @@ function windowsRound(b: Batch, r: Rect, y0: number, floors: number, ground: num
 /** A flat shape laid on the ground (its vertices at the ground's height and `off` over it) */
 function drape(g: THREE.BufferGeometry, off: number) {
   const pos = g.attributes.position;
-  for (let i = 0; i < pos.count; i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)) + off);
+  for (let i = 0; i < pos.count; i++) pos.setY(i, drawnAt(pos.getX(i), pos.getZ(i)) + off);
   g.computeVertexNormals();
   return g;
 }
@@ -299,7 +299,8 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
         if (Math.hypot(mx - pb[0], mz - pb[1]) < 1.6) continue;
         const out = heightAt(mx + n[0] * 2, mz + n[1] * 2) - y;
         const [lx0, lz0, lx1, lz1] = [Math.min(sx, ex) - (n[0] ? 0.15 : 0), Math.min(sz, ez) - (n[1] ? 0.15 : 0), Math.max(sx, ex) + (n[0] ? 0.15 : 0), Math.max(sz, ez) + (n[1] ? 0.15 : 0)];
-        if (out > 0.4) box(b, lx0, y - 0.3, lz0, lx1, y + Math.min(2.2, out + 0.2), lz1, STONE_SHADE);
+        // (a retaining wall topped just over the ground it holds back, not standing proud of the bank)
+        if (out > 0.4) box(b, lx0, y - 0.3, lz0, lx1, Math.max(y + 0.45, drawnAt(mx + n[0] * 0.45, mz + n[1] * 0.45) + 0.28), lz1, STONE_SHADE);
         else {
           box(b, lx0, y - 0.4, lz0, lx1, y + 0.2, lz1, STONE);
           box(b, lx0, y + 0.85, lz0, lx1, y + 1.0, lz1, STONE);

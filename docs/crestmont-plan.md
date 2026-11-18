@@ -510,3 +510,47 @@ clear of the joggers' lanes).
 triangles, in the hills 135 and 0.43M; the phone over the Flats 120 and 0.25M: no heavier than Phase 11 measured (the
 counts swing by about a fifth from run to run). The boot is 666.8 of 670 KB: the gardens and the land are the chunk's.
 
+### The grounds pass (built, the owner's call, 2026-11: "Run a set of improvements along Crestmont hills. The landscape needs adjusting around buildings. Improve the area and the grounds around the houses")
+
+The owner picked all four: the pads' banks, the footings on the slopes, the Flats' plot edges and the hills' ground
+cover, built straight away.
+
+**What the review shots showed** (`npm run shots` with close cameras on each mansion and the Flats): where a pad is cut
+into the hills, its "retaining walls" were boxes standing up to 2.4 tall at the pad's edge with the grass bank rising
+behind from their foot, never meeting their tops; the hills' grass grid (a vertex every 2 tiles) cut a pad's edge
+across its squares, so the pad's lawn and paving were buried or floated along it and the ground under the drives,
+trees and piers sat up to 0.6 off the hills' own shape; a villa's terraces, fixed at 0.9 and 1.8 under the pad, were
+buried in the bank behind wherever it didn't fall that far (their vines poking out as wedges); the Flats' lots met in
+straight bare hedges; the open slopes were bare grass and scattered scrub.
+
+**What's built:**
+
+- **The ground as drawn** (terrain.ts `hillLines()`, `drawnAt()`; world.ts `hillsPlane()`): the hills' grass grid has a
+  line on each level's edges and one every `LEVEL_STEP` (1) through its bank, so a pad is drawn flat right to its edge
+  (within 0.02) and the ground by every pad within about 0.1 of the hills' shape (it was up to 0.6 off). `drawnAt()`
+  reads the grass as drawn; the drives, the banks, the hills' oaks, scrub and palms, the groves, vineyards, meadows,
+  cypresses and piers, and the landmarks' draped ground stand on it. The hills' grass is about 68k triangles (47k
+  before).
+- **The banks** (`crestbanks.ts`, drawn by mansions3d.ts in each mansion's site): spokes out from each pad's edge;
+  **cut** banks terraced (dry-stone walls with a coping along the contours at `TIERS`, each topped 0.28 over the ground it
+  holds back, its foot in the ground below; soil beds between planted by the house's kind: a villa's lavender and
+  rosemary, a glass house's grasses, agaves and boulders, a compound's bougainvillea, the summit's box and lavender);
+  **fill** banks keep the glass balustrade and step down past it (a lower wall where the bank falls far enough, drifts
+  and boulders down the slope); **level** edges a planted border. None on a drive, a road's shoulder, a landmark, a
+  villa's terraces or under a glass house's cantilever. The tall walls at the pads' edges are gone.
+- **The footings:** the drives laid on the ground as drawn with a stone kerb down each side; a villa's terraces stand
+  on the ground behind it (`TERRACES`: in up to four bays across, each topped over the highest ground under it, its
+  face down to its lowest, a coping; `TERRACE_SOLIDS` join the grids with the chunk); the overlook's walls where the
+  ground rises topped just over the ground they hold.
+- **The Flats' plot edges** (crestgardens.ts): trees and runs of shrubs by turns along each lot's side and back hedges
+  (an olive at a modern house, a citrus at a Spanish one, a cypress at a villa, a flowering `specimen` tree at a Tudor
+  or Georgian house), and the verges outside the hedges planted (`vergeOf()`: runs of shrubs and flower beds before the
+  front hedge and outside a block-edge hedge, clear of the gateway, the street's palms and jacarandas and the lamps).
+- **The hills' ground cover** (`crestcover.ts`, drawn by crestgardens3d.ts `registerCover()`): drifts of the hills'
+  own shrubs (lilac, sage, the red-stemmed bush, poppies) on the open slopes, outcrops of boulders on the steeper
+  ground, and gravel footpaths where a hill road doubles back on itself or passes another (`TRAILS`, never steeper than
+  `TRAIL.grade`, bollards at each end).
+
+Nothing that stood moved: the pads, houses, drives, lots and places are where they were; only the terraces' heights
+follow the ground now.
+

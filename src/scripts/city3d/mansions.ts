@@ -77,7 +77,7 @@ export interface Mansion {
   court: [number, number, number, number];
   /** The pool (u0, v0, u1, v1); a glass mansion's runs along the pad's back edge (an infinity edge) */
   pool: [number, number, number, number];
-  /** A villa's terraces stepping down behind the pad: v from and to, each a step lower */
+  /** A villa's terraces behind the pad: v from and to (their heights from the ground behind, crestbanks.ts `TERRACES`) */
   terraces: [number, number][];
   /** A glass mansion's cantilever: how far its upper floor reaches past the pad's back */
   reach: number;
@@ -317,8 +317,7 @@ export const MANSION_SOLIDS: Box[] = MANSIONS.flatMap((m): Box[] => {
     ...m.parts.map((p) => box(p.u0, p.v0, p.u1, p.v1, topOf(p))),
     ...wallsOf(m).map(([u0, v0, u1, v1]) => box(u0, v0, u1, v1, WALL.h)),
     box(pu0, pv0, pu1, pv1, 0.3),
-    // (a villa's terraces, each a step lower)
-    ...m.terraces.map(([v0, v1], i) => box(-m.W / 2 + 1, v0, m.W / 2 - 1, v1, -0.9 * (i + 1))),
+    // (a villa's terraces are crestbanks.ts's, on the ground behind it: `TERRACE_SOLIDS`, in the chunk)
   ];
 }).concat(
   MANSION_CARS.map(({ y, car: [, x, z, yaw] }): Box => {

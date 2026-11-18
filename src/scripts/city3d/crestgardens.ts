@@ -31,6 +31,9 @@ import { ESTATES, ESTATE_CARS, COURT_HALF, FOUNTAIN, GATE, HEDGE, SLAB_Y, founta
 import { MANSIONS, MANSION_CARS, WALL, type MPart, type Mansion, type MansionKind } from './mansions';
 import { GARDENERS } from './crestlife';
 import { CIVIC, CLUB, HOTEL } from './crestsites';
+import { CREST_LAMPS } from './crestmont';
+import { JACARANDAS, PALMS } from './landscape';
+import { rng } from './recipes';
 
 type Pt = [number, number];
 /** A box in a frame: u0..u1 along the front, v0..v1 (v0 the further back, more negative) */
@@ -68,7 +71,8 @@ export type FeatKind =
   | 'stones'
   | 'hedge'
   | 'flag'
-  | 'putting';
+  | 'putting'
+  | 'specimen';
 export interface Feat {
   kind: FeatKind;
   /** Where it stands in its frame */
@@ -112,6 +116,7 @@ export const HEIGHT: Record<FeatKind, number> = {
   hedge: 0.55,
   flag: 4.8,
   putting: 0,
+  specimen: 3.4,
 };
 /** The planner's cell */
 export const CELL = 0.5;
@@ -240,6 +245,9 @@ export const loggiaPiers = (r: FR): number[] => {
 export interface Garden {
   feats: Feat[];
   lawn: { r: FR; row: number }[];
+  /** An estate's planting outside its hedges: the strip before its front hedge, and on a block's edge the strip outside
+   * its side or back hedge (`vergeOf()`) */
+  verge?: Feat[];
 }
 
 const partsOf = (e: Estate) => [e.house.main, e.house.wing, e.house.tower].filter((p): p is Part => !!p);
@@ -435,7 +443,79 @@ function estateGarden(e: Estate): Garden {
     if (c - a >= 0.5) put('shrubs', [a, w.v1 + 0.2, c, Math.min(w.v0, motor ? motor[1] : w.v0) - 0.3]);
   }
 
-  return { feats, lawn: P.lawn() };
+  /* The boundaries: trees and shrubs along the side and back hedges, so no line between two lots runs straight and bare */
+  const rand = rng(7300 + ESTATES.indexOf(e) * 17);
+  const tree: FeatKind = style === 'modern' ? 'olive' : style === 'spanish' ? 'citrus' : style === 'villa' ? 'cypress' : 'specimen';
+  const treeHalf = tree === 'cypress' ? 0.3 : tree === 'citrus' ? 0.4 : 0.55;
+  /** Along one hedge (its inner line `at`, from `a` to `b` along it; `across` the way into the garden), runs and trees by turns */
+  const boundary = (along: 'u' | 'v', at: number, across: 1 | -1, a: number, b: number) => {
+    let t = a + 0.3 + rand() * 1.2;
+    while (t < b - 0.6) {
+      const r = (lo: number, hi: number, depth: number): FR => (along === 'v' ? norm(at, lo, at + across * depth, hi) : norm(lo, at, hi, at + across * depth));
+      if (rand() < 0.3) {
+        const c = across * (treeHalf + 0.05);
+        if (put(tree, along === 'v' ? at_(at + c, t + treeHalf, treeHalf) : at_(t + treeHalf, at + c, treeHalf))) {
+          t += treeHalf * 2 + 0.6 + rand() * 1.4;
+          continue;
+        }
+      }
+      const L = Math.min(b - t, 0.9 + rand() * 1.8);
+      if (L >= 0.7) put('shrubs', r(t, t + L, 0.5));
+      t += L + 0.5 + rand() * 1.6;
+    }
+  };
+  // (u runs along the front; the sides are at the box's u ends, the back at its v start)
+  boundary('v', box[0], 1, box[1], box[3] - 0.45);
+  boundary('v', box[2], -1, box[1], box[3] - 0.45);
+  boundary('u', box[1], 1, box[0], box[2]);
+
+  return { feats, lawn: P.lawn(), verge: vergeOf(e) };
+}
+const at_ = (u: number, v: number, h: number): FR => [u - h, v - h, u + h, v + h];
+
+/** How far a verge's planting keeps off the street's palms and jacarandas, its lamps and the gateway */
+export const VERGE_CLEAR = { tree: 0.75, lamp: 0.8, gate: 0.4 } as const;
+/**
+ * An estate's verge: runs of shrubs and flower beds by turns, with gaps, in the strip before its front hedge (behind the
+ * street's palms), and where its lot is on a block's edge, in the strip outside that hedge too; clear of the gateway,
+ * the palms, the jacarandas and the lamps
+ */
+export function vergeOf(e: Estate): Feat[] {
+  const rand = rng(7700 + ESTATES.indexOf(e) * 13);
+  const out = estateOut(e);
+  const origin = estateOrigin(e);
+  const trees = [...PALMS, ...JACARANDAS].filter(({ x, z }) => x > e.rect[0] - 1 && x < e.rect[2] + 1 && z > e.rect[1] - 1 && z < e.rect[3] + 1).map(({ x, z }) => fromWorld(out, origin, x, z));
+  const lamps = CREST_LAMPS.filter(([x, z]) => x > e.rect[0] - 1 && x < e.rect[2] + 1 && z > e.rect[1] - 1 && z < e.rect[3] + 1).map(([x, z]) => fromWorld(out, origin, x, z));
+  const gate = GATE.half + GATE.pier * 2 + VERGE_CLEAR.gate;
+  const clearOf = (r: FR) =>
+    !(r[0] < e.hc + gate && r[2] > e.hc - gate && r[3] > e.court[0] - 0.2) &&
+    trees.every(([u, v]) => !(u > r[0] - VERGE_CLEAR.tree && u < r[2] + VERGE_CLEAR.tree && v > r[1] - VERGE_CLEAR.tree && v < r[3] + VERGE_CLEAR.tree)) &&
+    lamps.every(([u, v]) => !(u > r[0] - VERGE_CLEAR.lamp && u < r[2] + VERGE_CLEAR.lamp && v > r[1] - VERGE_CLEAR.lamp && v < r[3] + VERGE_CLEAR.lamp));
+  const feats: Feat[] = [];
+  /** Along a strip (its middle line `at` across, from `a` to `b` along) */
+  const strip = (along: 'u' | 'v', at: number, a: number, b: number) => {
+    let t = a + rand() * 0.6;
+    while (t < b - 0.7) {
+      const L = Math.min(b - t, 1 + rand() * 2);
+      const kind: FeatKind = rand() < 0.6 ? 'shrubs' : 'border';
+      const hw = kind === 'shrubs' ? 0.28 : 0.22;
+      // (shortened till it's clear, or passed over)
+      let l = L;
+      const rOf = (len: number): FR => (along === 'u' ? [t, at - hw, t + len, at + hw] : [at - hw, t, at + hw, t + len]);
+      while (l >= 0.7 && !clearOf(rOf(l))) l -= 0.25;
+      if (l >= 0.7) {
+        feats.push({ kind, r: rOf(l), tone: e.style });
+        t += l + 0.4 + rand() * 1.4;
+      } else t += 0.5;
+    }
+  };
+  const hedge = -HEDGE.front;
+  strip('u', hedge / 2 - 0.05, -e.W / 2 + 0.35, e.W / 2 - 0.35);
+  // (a block's edge: the strip outside the side or back hedge set in from it)
+  if (e.outer[0]) strip('v', -e.W / 2 + HEDGE.outer / 2, -e.D + 0.4, hedge - 0.2);
+  if (e.outer[1]) strip('v', e.W / 2 - HEDGE.outer / 2, -e.D + 0.4, hedge - 0.2);
+  if (e.outer[2]) strip('u', -e.D + HEDGE.outer / 2, -e.W / 2 + 0.4, e.W / 2 - 0.4);
+  return feats;
 }
 const overlaps = (r: FR, list: FR[]) => list.some((t) => r[0] < t[2] && t[0] < r[2] && r[1] < t[3] && t[1] < r[3]);
 

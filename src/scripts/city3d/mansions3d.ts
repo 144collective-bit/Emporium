@@ -15,7 +15,9 @@ import * as THREE from 'three';
 import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
-import { heightAt } from './terrain';
+import { drawnAt } from './terrain';
+import { BANKS, TERRACES, type Bank, type PlantKind, type Post } from './crestbanks';
+import { COVER, PLANT, SOIL } from './palette';
 import { MANSIONS, MANSION_CARS, STOREY, WALL, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
 import { WINDOW, hip, poolOf } from './estates3d';
 import { CURTAIN, PAVING, BULB, flat } from './mallkit';
@@ -80,7 +82,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
         add(g.rotateY(Math.atan2(n[0], n[1])).translate(u + n[0] * off, 0, v + n[1] * off), mat);
       };
       /** The ground's height in the frame, over the pad */
-      const ground = (u: number, v: number) => heightAt(...toWorld(m, u, v)) - m.y;
+      const ground = (u: number, v: number) => drawnAt(...toWorld(m, u, v)) - m.y;
       const { kind, W, D } = m;
 
       /* ---------- The pad's edges ---------- */
@@ -95,8 +97,8 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
           if (n[1] > 0.5 && Math.abs(um - m.du) < 2) continue;
           const out = ground(um + n[0] * 2, vm + n[1] * 2);
           const [lu0, lv0, lu1, lv1] = [Math.min(ua, uc) - (n[0] ? 0.15 : 0), Math.min(va, vc) - (n[1] ? 0.15 : 0), Math.max(ua, uc) + (n[0] ? 0.15 : 0), Math.max(va, vc) + (n[1] ? 0.15 : 0)];
-          if (out > 0.35) box(lu0, -0.3, lv0, lu1, Math.min(2.4, out + 0.2), lv1, STONE_SHADE);
-          else if (out < -0.6 && !m.walled) {
+          // (where the hills rise past it, the bank's terraces stand instead: crestbanks.ts, drawn below)
+          if (out < -0.6 && !m.walled) {
             box(lu0, -0.05, lv0, lu1, 0.15, lv1, STONE);
             b.detail(() => box(lu0 + (n[0] ? 0.1 : 0), 0.15, lv0 + (n[1] ? 0.1 : 0), lu1 - (n[0] ? 0.1 : 0), 1.05, lv1 - (n[1] ? 0.1 : 0), GLASS_RAIL));
           }
@@ -228,13 +230,14 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       });
 
       /* ---------- A villa's terraces stepping down behind ---------- */
-      m.terraces.forEach(([v0, v1], i) => {
-        const top = -0.9 * (i + 1);
-        const lo = Math.min(ground(-W / 2 + 1, v1), ground(W / 2 - 1, v1), ground(0, v1), top) - 0.6;
-        box(-W / 2 + 1, lo, v0, W / 2 - 1, top, v1, STONE_SHADE);
-        add(new THREE.PlaneGeometry(W - 2.2, Math.abs(v1 - v0) - 0.2).rotateX(-Math.PI / 2).translate(0, top + 0.006, (v0 + v1) / 2), TERRACOTTA);
+      // (each on the ground behind as it is, crestbanks.ts: topped over the highest ground under it, a coping round it)
+      for (const t of TERRACES[MANSIONS.indexOf(m)]) {
+        const [u0, v0, u1, v1] = t.r;
+        box(u0, t.foot, v0, u1, t.top, v1, STONE_SHADE);
+        box(u0 - 0.05, t.top, v1 + 0.15, u1 + 0.05, t.top + 0.08, v1 - 0.05, COPING);
+        add(new THREE.PlaneGeometry(u1 - u0 - 0.2, Math.abs(v1 - v0) - 0.2).rotateX(-Math.PI / 2).translate(0, t.top + 0.006, (v0 + v1) / 2), TERRACOTTA);
         // (planted as a vineyard: crestgardens3d.ts)
-      });
+      }
 
       /* ---------- The pool ---------- */
       const [pu0, pv0, pu1, pv1] = m.pool;
@@ -293,7 +296,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       const at = (t: number) => [d0[0] + (d1[0] - d0[0]) * t, d0[1] + (d1[1] - d0[1]) * t];
       for (let i = 0; i < k; i++) {
         const [a, c] = [at(i / k), at((i + 1) / k)];
-        const y = (x: number, z: number) => heightAt(x, z) + 0.06;
+        const y = (x: number, z: number) => drawnAt(x, z) + 0.06;
         const quad = [
           [a[0] - px, a[1] - pz],
           [a[0] + px, a[1] + pz],
@@ -316,6 +319,20 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       }
       g.computeVertexNormals();
       q.add(g, STONE);
+      // (its edging: a stone kerb down each side, its foot in the ground, a little over the drive)
+      const kerb = new Batch();
+      for (const s of [-1, 1]) {
+        const line: Post[] = [];
+        for (let i = 0; i <= k; i++) {
+          const [x, z] = at(i / k);
+          const [ex, ez] = [x + s * px * 1.08, z + s * pz * 1.08];
+          const top = drawnAt(x + s * px, z + s * pz) + 0.14;
+          line.push({ x: ex, z: ez, y0: Math.min(top - 0.2, drawnAt(ex + s * px * 0.15, ez + s * pz * 0.15) - 0.15), y1: top });
+        }
+        kerb.add(wallGeometry(line, 0.1), STONE_SHADE);
+      }
+      kerb.build(into, { cast: false, receive: true });
+      drawBank(into, BANKS[MANSIONS.indexOf(m)], low);
       const pave = (r: [number, number, number, number], y: number, mat: THREE.Material) => flat(q, r[0], r[1], r[2], r[3], m.y + y, mat, 8);
       const [cu0, cv0, cu1, cv1] = m.court;
       pave(rectToWorld(m, Math.max(-W / 2 + 1, cu0), Math.min(-1, cv0), Math.min(W / 2 - 1, cu1), cv1), 0.02, PAVING);
@@ -327,4 +344,120 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
   }
   // The cars on the forecourts (the main thread's), each at its pad's height
   if (scene) for (const { y, car } of MANSION_CARS) parkedCars(scene, y, [[car[0] as CarId, car[1], car[2], car[3], car[4]]]);
+}
+
+/* ---------- The banks round the pads (crestbanks.ts) ---------- */
+
+const DRY_STONE = toon('#b9ab8f');
+const COPING = toon('#d3c8b0');
+const BED_SOIL = toon(SOIL.bed);
+const ROCK = toon('#8e8a84');
+/** A bank's plants: the mound's colour, and (near) its flowers' or its leaves' */
+const PLANT_MAT: Record<PlantKind, { body: THREE.Material; top?: THREE.Material }> = {
+  lavender: { body: toon('#7d9070'), top: toon('#9b7ddb') },
+  rosemary: { body: toon('#5f7d5a') },
+  sage: { body: toon('#8aa073') },
+  box: { body: toon(PLANT.clipped) },
+  bougainvillea: { body: toon('#3f7a40'), top: toon('#d0287a') },
+  grass: { body: toon(COVER.dry) },
+  agave: { body: toon('#7fa3a0') },
+};
+const mound = new THREE.IcosahedronGeometry(1, 0);
+
+/**
+ * A wall along a run of posts (world numbers): `half` thick either side of the line, each stretch from its posts'
+ * feet to their tops (a sloping top where the ground slopes), faces flat-shaded and wound outward
+ */
+export function wallGeometry(posts: Post[], half: number, cap = 0) {
+  const pos: number[] = [];
+  const tri = (a: number[], b: number[], c: number[], out: [number, number, number]) => {
+    const [ux, uy, uz] = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const [vx, vy, vz] = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    const n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+    if (n[0] * out[0] + n[1] * out[1] + n[2] * out[2] < 0) pos.push(...a, ...c, ...b);
+    else pos.push(...a, ...b, ...c);
+  };
+  const quad = (a: number[], b: number[], c: number[], d: number[], out: [number, number, number]) => {
+    tri(a, b, c, out);
+    tri(a, c, d, out);
+  };
+  for (let i = 0; i + 1 < posts.length; i++) {
+    const [p, q] = [posts[i], posts[i + 1]];
+    const L = Math.hypot(q.x - p.x, q.z - p.z) || 1;
+    const [tx, tz] = [(q.x - p.x) / L, (q.z - p.z) / L];
+    const [sx, sz] = [-tz * half, tx * half];
+    const [p0, p1, q0, q1] = cap ? [p.y1, p.y1 + cap, q.y1, q.y1 + cap] : [p.y0, p.y1, q.y0, q.y1];
+    const P = (s: number, y: number) => [p.x + sx * s, y, p.z + sz * s];
+    const Q = (s: number, y: number) => [q.x + sx * s, y, q.z + sz * s];
+    quad(P(1, p1), P(-1, p1), Q(-1, q1), Q(1, q1), [0, 1, 0]);
+    quad(P(1, p0), P(1, p1), Q(1, q1), Q(1, q0), [sx, 0, sz]);
+    quad(P(-1, p0), P(-1, p1), Q(-1, q1), Q(-1, q0), [-sx, 0, -sz]);
+    if (i === 0) quad(P(1, p0), P(1, p1), P(-1, p1), P(-1, p0), [-tx, 0, -tz]);
+    if (i + 2 === posts.length) quad(Q(1, q0), Q(1, q1), Q(-1, q1), Q(-1, q0), [tx, 0, tz]);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/** A pad's bank: its terraces' walls and copings, the soil beds, the plants and boulders (world numbers) */
+function drawBank(into: THREE.Object3D, bank: Bank, low: boolean) {
+  const b = new Batch();
+  for (const w of bank.walls) {
+    b.add(wallGeometry(w, 0.17), DRY_STONE);
+    b.add(wallGeometry(w, 0.21, 0.07), COPING);
+  }
+  // The beds: strips of soil over the grass along each run, a little over the ground as drawn
+  const ON_BED = 0.05;
+  for (const bed of bank.beds) {
+    const pos: number[] = [];
+    for (let i = 0; i + 1 < bed.length; i++) {
+      const [s, t] = [bed[i], bed[i + 1]];
+      const quad = [
+        [s.ax, s.ay, s.az],
+        [s.bx, s.by, s.bz],
+        [t.bx, t.by, t.bz],
+        [t.ax, t.ay, t.az],
+      ];
+      for (const j of [0, 1, 2, 0, 2, 3]) pos.push(quad[j][0], quad[j][1] + ON_BED, quad[j][2]);
+    }
+    // (wound to face up)
+    for (let k = 0; k < pos.length; k += 9) {
+      const [ax, az, bx, bz, cx, cz] = [pos[k], pos[k + 2], pos[k + 3], pos[k + 5], pos[k + 6], pos[k + 8]];
+      if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) < 0) for (let c = 0; c < 3; c++) [pos[k + 3 + c], pos[k + 6 + c]] = [pos[k + 6 + c], pos[k + 3 + c]];
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    b.add(g, BED_SOIL);
+  }
+  // The plants: a mound each by its kind (phones every other), and near, its flowers or its spikes
+  bank.plants.forEach((p, i) => {
+    if (low && i % 2) return;
+    const { body, top } = PLANT_MAT[p.kind];
+    const s = p.s;
+    if (p.kind === 'agave' || p.kind === 'grass') {
+      // (a rosette of blades)
+      const n = p.kind === 'agave' ? 6 : 5;
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2 + p.x;
+        const blade = new THREE.ConeGeometry(p.kind === 'agave' ? 0.09 * s : 0.07 * s, (p.kind === 'agave' ? 0.6 : 0.75) * s, 4, 1, true);
+        b.add(blade.rotateZ(p.kind === 'agave' ? 0.7 : 0.25).rotateY(a).translate(p.x, p.y + 0.22 * s, p.z), body);
+      }
+      if (p.kind === 'agave') b.add(new THREE.ConeGeometry(0.07 * s, 0.55 * s, 4, 1, true).translate(p.x, p.y + 0.25 * s, p.z), body);
+      return;
+    }
+    const [r, h] = p.kind === 'box' ? [0.34, 0.3] : p.kind === 'bougainvillea' ? [0.42, 0.3] : [0.36, 0.26];
+    b.add(mound.clone().scale(r * s, h * s, r * s).translate(p.x, p.y + h * s * 0.75, p.z), body);
+    if (top)
+      b.detail(() => {
+        if (p.kind === 'lavender') {
+          if (!low) for (let k = 0; k < 5; k++) b.add(new THREE.CylinderGeometry(0.03, 0.02, 0.22, 4).translate(p.x + Math.cos(k * 1.3 + p.z) * 0.2 * s, p.y + 0.5 * s, p.z + Math.sin(k * 1.3 + p.z) * 0.2 * s), top);
+          else b.add(mound.clone().scale(0.26 * s, 0.08, 0.26 * s).translate(p.x, p.y + 0.48 * s, p.z), top);
+        } else b.add(mound.clone().scale(0.38 * s, 0.18 * s, 0.38 * s).translate(p.x + 0.05, p.y + 0.4 * s, p.z - 0.04), top);
+      });
+  });
+  for (const r of bank.rocks) b.add(new THREE.DodecahedronGeometry(0.32 * r.s, 0).scale(1.15, 0.7, 0.9).rotateY(r.turn).translate(r.x, r.y + 0.1 * r.s, r.z), ROCK);
+  b.build(into, { cast: true, receive: true });
 }

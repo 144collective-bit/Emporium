@@ -117,4 +117,30 @@ keep it up to date when what it describes changes.
   `crestgardens3d.ts`, their solids (`GARDEN_SOLIDS`) joining the grids through
   `addSolids()` when the chunk loads; the land round them is `crestland.ts`
   (vineyards, olive groves, meadows, the mansions' cypress avenues and drive
-  piers, `onLand()` keeping the oaks and scrub off). Made-up names only.
+  piers, `onLand()` keeping the oaks and scrub off). The grounds pass (the
+  owner's call, 2026-11: "the landscape needs adjusting around buildings...
+  improve the grounds around the houses"; `docs/crestmont-plan.md`, the
+  grounds pass) is built: the hills' grass is drawn on a grid with a line on
+  every level's edges and every `LEVEL_STEP` through its bank (terrain.ts
+  `hillLines()`, world.ts `hillsPlane()`), and `drawnAt()` reads the ground as
+  that grid draws it, so a pad is flat to its edge and what stands on the hills
+  stands on the grass it's seen on (the drives, the trees, vines, piers,
+  flowers and the landmarks' draped ground read it); the banks round the
+  mansions' pads are `crestbanks.ts` (DOM-free, the chunk's, tested in
+  `tests/crestbanks.test.ts`: spokes round each pad, cut banks terraced with
+  dry-stone walls along the contours, `TIERS`, topped just over the ground they
+  hold, soil beds planted by the house's kind, `KIND_PLANTS`; fill banks a lower
+  wall and drifts down the slope; level edges a border), drawn in each
+  mansion's own site by mansions3d.ts (which no longer stands tall walls on a
+  pad's edge; its drive has a stone kerb each side); a villa's terraces stand
+  on the ground behind it (`TERRACES`: bays each topped over the highest ground
+  under it, `TERRACE_SOLIDS` joining the grids with the chunk, no longer in
+  `MANSION_SOLIDS`); the Flats' lots' boundaries are planted (trees and shrub
+  runs along the side and back hedges, a `specimen` tree for a Tudor or
+  Georgian house) and their verges outside the hedges (`vergeOf()`, clear of
+  the gateway, the street's trees and lamps); the open slopes' cover is
+  `crestcover.ts` (DOM-free, the chunk's, tested in `tests/crestcover.test.ts`:
+  `DRIFTS` of the hills' shrubs, `OUTCROPS` of boulders, `TRAILS`, gravel
+  footpaths where a hill road doubles back or passes another, never steeper
+  than `TRAIL.grade`, `BOLLARDS` at each end), drawn by crestgardens3d.ts
+  (`registerCover()`). Made-up names only.

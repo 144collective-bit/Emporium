@@ -24,9 +24,12 @@ import { ESTATE_GARDENS, MANSION_GARDENS, SITE_GARDENS, POST, SPA_R, TERRACE_VIN
 import { hip, poolOf } from './estates3d';
 import { DRIVE_PIER, DRIVE_PIERS, DRIVE_TREES, GROVES, MEADOWS, VINEYARDS, type Tree } from './crestland';
 import { MANSIONS as HILL_HOUSES } from './mansions';
-import { heightAt } from './terrain';
+import { drawnAt } from './terrain';
 import { BULB, SPRAY, WATER } from './mallkit';
 import { PLANT } from './palette';
+import { TERRACES } from './crestbanks';
+import { BOLLARDS, DRIFTS, OUTCROPS, TRAIL, TRAILS, type DriftKind } from './crestcover';
+import { TILE as GROUND_TILE } from './tiles';
 
 type Tone = EstateStyle | MansionKind;
 
@@ -69,6 +72,7 @@ const FLOWER = ['#ff5c9a', '#ffd23f', '#f7f5f0', '#b06cff', '#ff8a3d', '#e23b3b'
 const ROSE = ['#e23b5a', '#ff8fb0', '#f7f5f0', '#c2185b'].map((c) => toon(c));
 const BOUGAINVILLEA = toon('#d0287a');
 const GRAPE = toon('#5a2a6e');
+const BLOSSOM = toon('#f6d6e4');
 const FRUIT = [toon('#f2d43c'), toon('#ff9a2e')];
 const FLAME = neon('#ff8a3d', 0.9, 2.2);
 const LAMP = neon('#ffe2a8', 0.25, 1.3);
@@ -110,7 +114,7 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
     else if (Math.floor(row / 2) % 2 === 0) flatRect(r[0], r[1], r[2], r[3], 0.004, STRIPE);
   }
 
-  for (const f of g.feats) {
+  for (const f of [...g.feats, ...(g.verge ?? [])]) {
     const [u0, v0, u1, v1] = f.r;
     const [cu, cv] = [(u0 + u1) / 2, (v0 + v1) / 2];
     const [hu, hv] = [(u1 - u0) / 2, (v1 - v0) / 2];
@@ -264,6 +268,17 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
       case 'cypress': {
         cyl(0.06, 0.5, cu, 0, cv, WOOD, 5, 0.07, true);
         add(new THREE.SphereGeometry(1, low ? 8 : 10, low ? 6 : 8).scale(0.32, 1.85, 0.32).translate(cu, 2.3, cv), LEAF_DARK);
+        break;
+      }
+      case 'specimen': {
+        // (a flowering tree by the boundary: a short trunk, a broad round crown, near its blossom)
+        cyl(0.07, 1.25, cu, 0, cv, WOOD, 6, 0.1, true);
+        ball(0.78, cu, 2.15, cv, LEAF_DARK);
+        ball(0.55, cu + 0.35, 1.85, cv - 0.25, LEAF);
+        ball(0.5, cu - 0.32, 1.9, cv + 0.28, LEAF_DARK);
+        b.detail(() => {
+          if (!low) for (let k = 0; k < 8; k++) add(clump.clone().translate(cu + Math.cos(k * 0.8 + cu) * 0.62, 2.0 + (k % 3) * 0.22, cv + Math.sin(k * 0.8 + cu) * 0.62), BLOSSOM);
+        });
         break;
       }
       case 'olive':
@@ -542,8 +557,8 @@ export function registerGardens(low: boolean) {
     const [x0, z0, x1, z1] = m.rect;
     const [ox, oz] = m.face === 'e' ? [1, 0] : m.face === 'w' ? [-1, 0] : m.face === 's' ? [0, 1] : [0, -1];
     const origin: [number, number] = m.face === 'e' ? [x1, (z0 + z1) / 2] : m.face === 'w' ? [x0, (z0 + z1) / 2] : m.face === 's' ? [(x0 + x1) / 2, z1] : [(x0 + x1) / 2, z0];
-    // (a villa's terraces stepping down past its back: mansions3d.ts's, a step lower each)
-    const terraces = m.terraces.map(([v0, v1], k) => ({ u: [-m.W / 2 + 1.5, m.W / 2 - 1.5] as [number, number], rows: [[v0, v1]] as [number, number][], y: -0.9 * (k + 1) + 0.006 }));
+    // (a villa's terraces past its back, on the ground there: crestbanks.ts `TERRACES`)
+    const terraces = TERRACES[i].map((t) => ({ u: [t.r[0] + 0.5, t.r[2] - 0.5] as [number, number], rows: [[t.r[1], t.r[3]]] as [number, number][], y: t.top + 0.006 }));
     const R = 6;
     site(`crestmont garden ${m.id}`, [x0 - R, z0 - R, x1 + R, z1 + R], (into) => drawGarden(into, MANSION_GARDENS[i], frame([ox, oz], origin, m.y), low, true, 100 + i, terraces));
   });
@@ -551,7 +566,8 @@ export function registerGardens(low: boolean) {
 
 /** An olive tree at a world point: a gnarled trunk in two stems, its crown in soft clumps */
 function olive(b: Batch, t: Tree) {
-  const { x, z, y, s } = t;
+  const { x, z, s } = t;
+  const y = drawnAt(x, z);
   b.add(new THREE.CylinderGeometry(0.06 * s, 0.11 * s, 1.2 * s, 6, 1, true).rotateZ(0.18).translate(x - 0.08 * s, y + 0.6 * s, z), WOOD);
   b.add(new THREE.CylinderGeometry(0.05 * s, 0.09 * s, 1.1 * s, 6, 1, true).rotateZ(-0.3).rotateY(1.1).translate(x + 0.1 * s, y + 0.55 * s, z + 0.05 * s), WOOD);
   for (const [dx, dy, dz, r] of [
@@ -564,8 +580,9 @@ function olive(b: Batch, t: Tree) {
 }
 /** A cypress at a world point */
 function cypress(b: Batch, t: Tree, low: boolean) {
-  const { x, z, y, s } = t;
-  b.add(new THREE.CylinderGeometry(0.06, 0.07, 0.5, 5, 1, true).translate(x, y + 0.25, z), WOOD);
+  const { x, z, s } = t;
+  const y = drawnAt(x, z);
+  b.add(new THREE.CylinderGeometry(0.06, 0.07, 0.7, 5, 1, true).translate(x, y + 0.15, z), WOOD);
   b.add(new THREE.SphereGeometry(1, low ? 8 : 10, low ? 6 : 8).scale(0.32 * s, 1.85 * s, 0.32 * s).translate(x, y + 0.45 + 1.85 * s, z), LEAF_DARK);
 }
 
@@ -579,15 +596,15 @@ export function registerLand(low: boolean) {
         // (each row in pieces a tile long, each at its ground, its foot a little under it)
         for (let x = row.x0; x < row.x1 - 0.01; x += 1) {
           const x1 = Math.min(row.x1, x + 1);
-          const y = heightAt((x + x1) / 2, row.z);
+          const y = drawnAt((x + x1) / 2, row.z);
           b.box(x, y - 0.15, row.z - 0.16, x1 - x, 0.78, 0.32, VINE);
         }
         for (let x = row.x0; x <= row.x1 + 0.01; x += (row.x1 - row.x0) / Math.round((row.x1 - row.x0) / 3)) {
-          const y = heightAt(x, row.z);
+          const y = drawnAt(x, row.z);
           b.box(x - 0.04, y - 0.1, row.z - 0.04, 0.08, 1.05, 0.08, WOOD);
         }
         b.detail(() => {
-          if (!low) for (let x = row.x0 + 0.4; x < row.x1 - 0.2; x += 0.7) b.add(new THREE.IcosahedronGeometry(0.06, 0).translate(x, heightAt(x, row.z) + 0.38, row.z + (Math.round(x * 3) % 2 ? 0.17 : -0.17)), GRAPE);
+          if (!low) for (let x = row.x0 + 0.4; x < row.x1 - 0.2; x += 0.7) b.add(new THREE.IcosahedronGeometry(0.06, 0).translate(x, drawnAt(x, row.z) + 0.38, row.z + (Math.round(x * 3) % 2 ? 0.17 : -0.17)), GRAPE);
         });
       }
       b.build(into, { cast: true, receive: true });
@@ -606,10 +623,10 @@ export function registerLand(low: boolean) {
       const b = new Batch();
       m.flowers.forEach((f, i) => {
         if (low && i % 2) return;
-        b.add(clump.clone().scale(1.3, 1.3, 1.3).translate(f.x, f.y + 0.12, f.z), FLOWER[f.c]);
+        b.add(clump.clone().scale(1.3, 1.3, 1.3).translate(f.x, drawnAt(f.x, f.z) + 0.12, f.z), FLOWER[f.c]);
       });
       b.detail(() => {
-        if (!low) m.flowers.forEach((f, i) => b.add(clump.clone().translate(f.x + 0.25, f.y + 0.1, f.z - 0.2), FLOWER[(f.c + i) % FLOWER.length]));
+        if (!low) m.flowers.forEach((f, i) => b.add(clump.clone().translate(f.x + 0.25, drawnAt(f.x + 0.25, f.z - 0.2) + 0.1, f.z - 0.2), FLOWER[(f.c + i) % FLOWER.length]));
       });
       b.build(into, { cast: false, receive: true });
     });
@@ -622,7 +639,8 @@ export function registerLand(low: boolean) {
     site(`crestmont drive ${k}`, [Math.min(a[0], c[0]) - 3, Math.min(a[1], c[1]) - 3, Math.max(a[0], c[0]) + 3, Math.max(a[1], c[1]) + 3], (into) => {
       const b = new Batch();
       for (const t of trees) cypress(b, t, low);
-      for (const p of piers) {
+      for (const t of piers) {
+        const p = { ...t, y: drawnAt(t.x, t.z) };
         const h = DRIVE_PIER.half;
         b.box(p.x - h, p.y - 0.2, p.z - h, h * 2, DRIVE_PIER.h + 0.2, h * 2, STONE);
         b.box(p.x - h - 0.05, p.y + DRIVE_PIER.h, p.z - h - 0.05, h * 2 + 0.1, 0.1, h * 2 + 0.1, STONE_SHADE);
@@ -637,4 +655,92 @@ function near(t: Tree, a: [number, number], c: [number, number]) {
   const [vx, vz] = [c[0] - a[0], c[1] - a[1]];
   const s = Math.max(0, Math.min(1, ((t.x - a[0]) * vx + (t.z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
   return Math.hypot(t.x - a[0] - vx * s, t.z - a[1] - vz * s) < 2.5;
+}
+
+/* ---------- The open slopes' cover (crestcover.ts) ---------- */
+
+/** A drift's clumps by kind: the mound's colour and (near) its flowers' */
+const DRIFT_MAT: Record<DriftKind, { body: THREE.Material; top?: THREE.Material }> = {
+  lilac: { body: toon('#4f6b45'), top: toon('#8f86d6') },
+  sage: { body: toon('#8f9c74') },
+  redbush: { body: toon('#3f5a35'), top: toon('#8a3a2c') },
+  poppy: { body: toon('#6f8a48'), top: toon('#ff8a2e') },
+};
+const TRAIL_GRAVEL = toon('#cbbf9f');
+const mound = new THREE.IcosahedronGeometry(1, 0);
+
+/** The slopes' drifts and outcrops, a site a ground tile; the footpaths, a site each with their bollards */
+export function registerCover(low: boolean) {
+  const tiles = new Map<string, { drifts: typeof DRIFTS; rocks: (typeof OUTCROPS)[number] }>();
+  const tileOf = (x: number, z: number) => {
+    const key = `${Math.floor(x / GROUND_TILE)},${Math.floor(z / GROUND_TILE)}`;
+    if (!tiles.has(key)) tiles.set(key, { drifts: [], rocks: [] });
+    return tiles.get(key)!;
+  };
+  for (const d of DRIFTS) tileOf(d.x, d.z).drifts.push(d);
+  for (const o of OUTCROPS) if (o.length) tileOf(o[0].x, o[0].z).rocks.push(...o);
+  for (const [key, t] of tiles) {
+    const [i, j] = key.split(',').map(Number);
+    site(`crestmont cover ${key}`, [i * GROUND_TILE - 6, j * GROUND_TILE - 6, (i + 1) * GROUND_TILE + 6, (j + 1) * GROUND_TILE + 6], (into) => {
+      const b = new Batch();
+      for (const d of t.drifts) {
+        const { body, top } = DRIFT_MAT[d.kind];
+        d.clumps.forEach((c, k) => {
+          if (low && k % 2) return;
+          const y = drawnAt(c.x, c.z);
+          if (d.kind === 'poppy') {
+            // (poppies: a low tussock of grass, its flowers near only)
+            b.add(mound.clone().scale(0.42 * c.s, 0.14 * c.s, 0.42 * c.s).translate(c.x, y + 0.06, c.z), body);
+          } else b.add(mound.clone().scale(0.6 * c.s, 0.42 * c.s, 0.55 * c.s).rotateY(c.x).translate(c.x, y + 0.24 * c.s, c.z), body);
+          if (top)
+            b.detail(() => {
+              if (low) return;
+              const n = d.kind === 'poppy' ? 5 : 3;
+              for (let f = 0; f < n; f++) {
+                const a = f * 2.1 + c.z;
+                const rr = (d.kind === 'poppy' ? 0.3 : 0.4) * c.s;
+                b.add(clump.clone().translate(c.x + Math.cos(a) * rr, y + (d.kind === 'poppy' ? 0.2 : 0.5 * c.s), c.z + Math.sin(a) * rr), top);
+              }
+            });
+        });
+      }
+      for (const r of t.rocks) b.add(new THREE.DodecahedronGeometry(0.4 * r.s, 0).scale(1.2, 0.7, 0.95).rotateY(r.turn).translate(r.x, drawnAt(r.x, r.z) + 0.08 * r.s, r.z), BOULDER);
+      b.build(into, { cast: true, receive: true });
+    });
+  }
+  // The footpaths: gravel laid on the ground as drawn, a little over it, and their bollards
+  for (const [k, t] of TRAILS.entries()) {
+    const xs = t.pts.map((p) => p[0]);
+    const zs = t.pts.map((p) => p[1]);
+    site(`crestmont trail ${k}`, [Math.min(...xs) - 2, Math.min(...zs) - 2, Math.max(...xs) + 2, Math.max(...zs) + 2], (into) => {
+      const b = new Batch();
+      const pos: number[] = [];
+      const edge = (i: number, s: number) => {
+        const [p, q] = [t.pts[Math.max(0, i - 1)], t.pts[Math.min(t.pts.length - 1, i + 1)]];
+        const [dx, dz] = [q[0] - p[0], q[1] - p[1]];
+        const l = Math.hypot(dx, dz) || 1;
+        const [x, z] = [t.pts[i][0] - (dz / l) * s * TRAIL.half, t.pts[i][1] + (dx / l) * s * TRAIL.half];
+        return [x, drawnAt(x, z) + 0.045, z];
+      };
+      for (let i = 0; i + 1 < t.pts.length; i++) {
+        const [a, c, d, e] = [edge(i, -1), edge(i, 1), edge(i + 1, 1), edge(i + 1, -1)];
+        for (const v of [a, c, d, a, d, e]) pos.push(...v);
+      }
+      for (let n = 0; n < pos.length; n += 9) {
+        const [ax, az, bx, bz, cx, cz] = [pos[n], pos[n + 2], pos[n + 3], pos[n + 5], pos[n + 6], pos[n + 8]];
+        if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) < 0) for (let c = 0; c < 3; c++) [pos[n + 3 + c], pos[n + 6 + c]] = [pos[n + 6 + c], pos[n + 3 + c]];
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.computeVertexNormals();
+      b.add(g, TRAIL_GRAVEL);
+      const ends = [t.pts[0], t.pts[t.pts.length - 1]];
+      for (const [x, z] of BOLLARDS.filter(([x, z]) => ends.some((p) => Math.hypot(p[0] - x, p[1] - z) < 3))) {
+        const y = drawnAt(x, z);
+        b.add(new THREE.CylinderGeometry(0.09, 0.1, 0.95, 8).translate(x, y + 0.4, z), WOOD);
+        b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 8).translate(x, y + 0.75, z), STONE);
+      }
+      b.build(into, { cast: false, receive: true });
+    });
+  }
 }

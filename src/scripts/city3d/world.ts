@@ -24,7 +24,7 @@ import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
-import { TERRAIN_RECT, heightAt, onCrest, onHills, slopeAt } from './terrain';
+import { TERRAIN_RECT, heightAt, hillLines, onCrest, onHills, slopeAt } from './terrain';
 import { DRIVE_BLOCKS } from './coral';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
@@ -576,23 +576,33 @@ function riverBanks(b: Batch, e0: number, e1: number) {
  * A piece of grass over Crestmont's hills (terrain.ts): a grid a vertex every `HILL_STEP` with its heights, or
  * null where the piece is flat (most of the world: one plane, two triangles)
  */
-const HILL_STEP = 2;
 function hillsPlane(x0: number, z0: number, x1: number, z1: number) {
   if (x1 <= TERRAIN_RECT[0] || x0 >= TERRAIN_RECT[2] || z1 <= TERRAIN_RECT[1] || z0 >= TERRAIN_RECT[3]) return null;
-  const nx = Math.max(1, Math.ceil((x1 - x0) / HILL_STEP));
-  const nz = Math.max(1, Math.ceil((z1 - z0) / HILL_STEP));
-  const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0, nx, nz).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
-  const pos = g.getAttribute('position');
+  // (its lines terrain.ts's: every HILL_STEP, closer through a pad's bank and one on each of its edges; split as
+  // terrain.ts `drawnAt()` reads it)
+  const xs = hillLines(x0, x1, z0, z1, 0);
+  const zs = hillLines(z0, z1, x0, x1, 1);
+  const pos: number[] = [];
   let any = false;
-  for (let i = 0; i < pos.count; i++) {
-    const h = heightAt(pos.getX(i), pos.getZ(i));
-    if (h > 0) any = true;
-    pos.setY(i, h);
-  }
-  if (!any) {
-    g.dispose();
-    return null;
-  }
+  for (const z of zs)
+    for (const x of xs) {
+      const h = heightAt(x, z);
+      if (h > 0) any = true;
+      pos.push(x, h, z);
+    }
+  if (!any) return null;
+  const idx: number[] = [];
+  const n = xs.length;
+  for (let j = 0; j + 1 < zs.length; j++)
+    for (let i = 0; i + 1 < n; i++) {
+      const a = j * n + i;
+      const [b, c, d] = [a + 1, a + n + 1, a + n];
+      idx.push(a, c, b, a, d, c);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((pos.length / 3) * 2).fill(0), 2));
+  g.setIndex(idx);
   g.computeVertexNormals();
   return g;
 }

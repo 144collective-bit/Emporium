@@ -13,6 +13,10 @@ import { TILE } from './tiles';
 import { SWAY } from './dusk';
 import { JACARANDAS, OAKS, PALMS, SCRUB, WALLS, type Edge, type Palm, type Plant } from './landscape';
 import { crown, trunk } from './palms3d';
+import { drawnAt } from './terrain';
+
+/** On the hills, at the ground as drawn (terrain.ts `drawnAt()`): no trunk over the grass where its grid cuts under the hills' curve */
+const onGrass = <T extends { x: number; z: number; y: number }>(list: T[]): T[] => list.map((p) => (p.y > 0 ? { ...p, y: drawnAt(p.x, p.z) } : p));
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -117,7 +121,7 @@ export function registerLandscape(low: boolean) {
     site(`crestmont landscape ${key}`, [i * TILE, j * TILE, (i + 1) * TILE, (j + 1) * TILE], (into) => {
       const b = new Batch();
       // The palms: trunks, the fan palms' skirts, the crowns at the tops of their bends
-      const palms = rec.palms;
+      const palms = onGrass(rec.palms);
       const trunks: THREE.Matrix4[][] = BENDS.map(() => []);
       const litTrunks: THREE.Matrix4[][] = BENDS.map(() => []);
       const dates: THREE.Matrix4[] = [];
@@ -162,7 +166,7 @@ export function registerLandscape(low: boolean) {
       );
 
       // Live oaks: a stout trunk and two broad lumps of canopy, the second off to one side
-      const oaks = rec.oaks;
+      const oaks = onGrass(rec.oaks);
       b.instances(stick, paint.bark, oaks.map((o) => m(o.x, o.y - 0.05, o.z, 0, o.s * 2.2, 1.1 * o.s, o.s * 2.2)));
       paint.oak.forEach((mat, k) => {
         const mine = oaks.filter((o) => o.tone === k);
@@ -177,7 +181,7 @@ export function registerLandscape(low: boolean) {
 
       // Scrub: low lumps on the slopes (near only on phones)
       if (low) b.lod = 'near';
-      const scrub = rec.scrub;
+      const scrub = onGrass(rec.scrub);
       paint.scrub.forEach((mat, k) =>
         b.instances(bush, mat, scrub.filter((p) => p.tone === k).map((p) => m(p.x, p.y + 0.12 * p.s, p.z, p.x * 1.3, 1.4 * p.s, 0.85 * p.s, 1.3 * p.s)))
       );

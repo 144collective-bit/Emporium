@@ -108,6 +108,73 @@ export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS
   return h;
 }
 
+/* ---------- The ground as drawn (world.ts `hillsPlane()`) ---------- */
+
+/** The hills' grass grid: a line every `HILL_STEP`, on its multiples */
+export const HILL_STEP = 2;
+/** Through a level's bank (its ease round it) the grid's lines `LEVEL_STEP` apart, and one on each of its edges */
+export const LEVEL_STEP = 1;
+/** The ground's pieces (world.ts: its 30-tile tiles, tiles.ts `TILE`) */
+const PIECE = 30;
+/**
+ * The hills' grid's lines along one way (x if `axis` is 0) over a piece of ground from `a` to `b` (and `c` to `d` the
+ * other way): its ends, every `HILL_STEP` between, and where a level's ground meets it, a line on each of the level's
+ * edges and every `LEVEL_STEP` across its bank, so a pad is drawn flat to its edge and its bank bends where it bends
+ * (on the coarse grid alone, a square straddling a pad's edge cut its corner under the grass or left it in the air)
+ */
+export function hillLines(a: number, b: number, c: number, d: number, axis: 0 | 1, levels: readonly Level[] = LEVELS) {
+  const out = [a, b];
+  for (let v = (Math.floor(a / HILL_STEP) + 1) * HILL_STEP; v < b - 1e-6; v += HILL_STEP) out.push(v);
+  for (const l of levels) {
+    const [lo, hi, olo, ohi] = axis === 0 ? [l.rect[0], l.rect[2], l.rect[1], l.rect[3]] : [l.rect[1], l.rect[3], l.rect[0], l.rect[2]];
+    if (hi + l.ease <= a || lo - l.ease >= b || ohi + l.ease <= c || olo - l.ease >= d) continue;
+    for (let k = 0; k <= Math.ceil(l.ease / LEVEL_STEP); k++) {
+      const e = Math.min(l.ease, k * LEVEL_STEP);
+      for (const v of [lo - e, hi + e]) if (v > a + 1e-6 && v < b - 1e-6) out.push(v);
+    }
+  }
+  out.sort((p, q) => p - q);
+  return out.filter((v, i) => i === 0 || v - out[i - 1] > 0.05);
+}
+/** Each piece's lines, worked out once */
+const PIECE_LINES = new Map<number, [number[], number[]]>();
+/** The last line at or before `v` in a sorted list (its index) */
+function cellOf(lines: number[], v: number) {
+  let lo = 0;
+  let hi = lines.length - 2;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (lines[mid] <= v) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
+}
+/**
+ * The ground's height as the hills' grass draws it (world.ts `hillsPlane()`): `heightAt()` at its grid's corners
+ * (`hillLines()`), each square split from its low corner (x0, z0) to its high one (x1, z1), each triangle flat. What
+ * stands on the hills and wants its foot on the grass it's seen on (crestbanks.ts) reads this.
+ */
+export function drawnAt(x: number, z: number) {
+  if (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3]) return heightAt(x, z);
+  const [p0, q0] = [Math.floor(x / PIECE) * PIECE, Math.floor(z / PIECE) * PIECE];
+  const key = p0 * 7919 + q0;
+  let lines = PIECE_LINES.get(key);
+  if (!lines) PIECE_LINES.set(key, (lines = [hillLines(p0, p0 + PIECE, q0, q0 + PIECE, 0), hillLines(q0, q0 + PIECE, p0, p0 + PIECE, 1)]));
+  const [xs, zs] = lines;
+  const [i, j] = [cellOf(xs, x), cellOf(zs, z)];
+  const [x0, x1, z0, z1] = [xs[i], xs[i + 1], zs[j], zs[j + 1]];
+  const [fx, fz] = [(x - x0) / (x1 - x0), (z - z0) / (z1 - z0)];
+  const a = heightAt(x0, z0);
+  const c = heightAt(x1, z1);
+  // (the triangle with the (x1, z0) corner, or the one with the (x0, z1) corner)
+  if (fx >= fz) {
+    const b = heightAt(x1, z0);
+    return a + (b - a) * fx + (c - b) * fz;
+  }
+  const dd = heightAt(x0, z1);
+  return a + (dd - a) * fz + (c - dd) * fx;
+}
+
 /** The hills' height before the roads were cut in (the tests compare) */
 export const naturalAt = (x: number, z: number) => (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3] ? 0 : natural(x, z));
 

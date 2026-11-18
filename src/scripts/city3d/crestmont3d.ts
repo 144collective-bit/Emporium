@@ -21,8 +21,9 @@ import { registerEstates } from './estates3d';
 import { registerMansions } from './mansions3d';
 import { registerSites } from './crestsites3d';
 import { registerLife } from './crestlife3d';
-import { registerGardens, registerLand } from './crestgardens3d';
+import { registerCover, registerGardens, registerLand } from './crestgardens3d';
 import { LAND_SOLIDS } from './crestland';
+import { TERRACE_SOLIDS } from './crestbanks';
 import { GARDEN_SOLIDS } from './crestgardens';
 import { addSolids } from './solids';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS } from './crestmont';
@@ -51,7 +52,9 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // them is solid joins the grids
   registerGardens(low);
   registerLand(low);
-  if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS]);
+  // The open slopes' drifts, outcrops and footpaths (crestcover.ts)
+  registerCover(low);
+  if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS, ...TERRACE_SOLIDS]);
   const asphalt = toon(ROAD.asphalt);
   const kerbTop = toon(KERB.town);
   const grass = toon(COVER.planted);

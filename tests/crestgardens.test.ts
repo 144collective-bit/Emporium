@@ -4,8 +4,9 @@
 // style's own features where they belong.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ESTATE_GARDENS, GARDEN_SOLIDS, HEIGHT, MANSION_GARDENS, SITE_GARDENS, deckOf, extrasOf, loggiaPiers, type FR, type Feat } from '../src/scripts/city3d/crestgardens';
-import { COURT_HALF, ESTATES, TALLEST, fountainOf, gardenPalmsOf, hedgesOf, motorCourt, toWorld, type Part } from '../src/scripts/city3d/estates';
+import { ESTATE_GARDENS, GARDEN_SOLIDS, HEIGHT, MANSION_GARDENS, SITE_GARDENS, VERGE_CLEAR, deckOf, extrasOf, loggiaPiers, type FR, type Feat } from '../src/scripts/city3d/crestgardens';
+import { COURT_HALF, ESTATES, GATE, HEDGE, TALLEST, fountainOf, gardenPalmsOf, hedgesOf, motorCourt, toWorld, type Part } from '../src/scripts/city3d/estates';
+import { JACARANDAS } from '../src/scripts/city3d/landscape';
 import { MANSIONS, TALLEST as MANSION_TALLEST, toWorld as mansionAt } from '../src/scripts/city3d/mansions';
 import { CREST_IDLE, GARDENERS } from '../src/scripts/city3d/crestlife';
 import { CREST_LAMPS } from '../src/scripts/city3d/crestmont';
@@ -135,4 +136,33 @@ test("the landmarks' gardens: the hotel's terrace and pool garden, the civic hal
   for (const f of SITE_GARDENS[0].g.feats) assert.ok(f.r[0] >= HOTEL.block[0] && f.r[2] <= HOTEL.block[2] && f.r[1] >= HOTEL.body[3] && f.r[3] <= HOTEL.deck[3] + 0.6);
   for (const f of SITE_GARDENS[1].g.feats) assert.ok(f.r[0] >= CIVIC.pad[0] && f.r[2] <= CIVIC.pad[2] && f.r[1] >= CIVIC.pad[1] && f.r[3] <= CIVIC.pad[3]);
   for (const f of SITE_GARDENS[2].g.feats) assert.ok(f.r[0] >= CLUB.pad[0] && f.r[2] <= CLUB.pad[2] && f.r[1] >= CLUB.pad[1] && f.r[3] <= CLUB.pad[3], `the club's ${f.kind} off its pad`);
+});
+
+test("the estates' boundaries and verges: trees and shrubs along the hedges, the strips outside them planted, clear of the gate, the street's trees and lamps", () => {
+  let verge = 0;
+  let edge = 0;
+  for (const [i, e] of ESTATES.entries()) {
+    const g = ESTATE_GARDENS[i];
+    const lot: FR = [-e.W / 2, -e.D, e.W / 2, 0];
+    const fixed: FR[] = [...hedgesOf(e).map(norm), ...parts(e).map((p) => norm([p.u0, p.v1, p.u1, p.v0]))];
+    for (const f of g.verge ?? []) {
+      verge++;
+      assert.ok(f.kind === 'shrubs' || f.kind === 'border');
+      // (in its lot, outside its hedges: before the front one, or on a block's edge outside a side or the back)
+      assert.ok(f.r[0] >= lot[0] && f.r[2] <= lot[2] && f.r[1] >= lot[1] && f.r[3] <= lot[3], `${e.id}'s verge off its lot`);
+      const front = f.r[1] > -HEDGE.front;
+      const side = (e.outer[0] && f.r[2] < lot[0] + HEDGE.outer) || (e.outer[1] && f.r[0] > lot[2] - HEDGE.outer) || (e.outer[2] && f.r[3] < lot[1] + HEDGE.outer);
+      assert.ok(front || side, `${e.id}'s verge inside its hedges`);
+      for (const r of fixed) assert.ok(!overlap(f.r, r, 1e-6), `${e.id}'s verge in a hedge`);
+      assert.ok(!(f.r[0] < e.hc + GATE.half + GATE.pier * 2 && f.r[2] > e.hc - GATE.half - GATE.pier * 2 && f.r[3] > e.court[0]), `${e.id}'s verge in its gateway`);
+      const [a, b] = [toWorld(e, f.r[0], f.r[1]), toWorld(e, f.r[2], f.r[3])];
+      const w: FR = [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
+      for (const p of [...PALMS, ...JACARANDAS]) assert.ok(!inside(w, p.x, p.z, VERGE_CLEAR.tree - 0.01), `${e.id}'s verge on a street tree`);
+      for (const [x, z] of CREST_LAMPS) assert.ok(!inside(w, x, z, VERGE_CLEAR.lamp - 0.01), `${e.id}'s verge on a lamp`);
+    }
+    edge += g.feats.filter((f) => f.kind === 'specimen' || ((f.kind === 'shrubs' || f.kind === 'olive' || f.kind === 'citrus') && (f.r[0] < lot[0] + 2.5 || f.r[2] > lot[2] - 2.5))).length;
+  }
+  assert.ok(verge > 150, 'the verges are bare');
+  assert.ok(edge > 40, "the lots' boundaries are bare");
+  assert.ok(ESTATE_GARDENS.some((g) => g.feats.some((f) => f.kind === 'specimen')));
 });
