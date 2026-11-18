@@ -51,11 +51,14 @@ keep it up to date when what it describes changes.
     `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
     wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
-    an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
-    Park station north of the ring highway (the north side's stage 2: it
-    crosses the raised highway high, metro.ts `trackY()`, and stays up through
-    Starlight Mall's Skywalk over the avenue, `needAt()`, `mall.md`; Starlight Mall
-    station since the kart park moved west, `docs/kart-west-plan.md`) down the east ring avenue's
+    an elevated line on a viaduct as tracks (`TRACKS`: `main` from its north
+    end north of the ring highway (the north side's stage 2: it crosses the
+    raised highway high, metro.ts `trackY()`, and stays up through Starlight
+    Mall's Skywalk over the avenue, `needAt()`, `mall.md`; Starlight Mall
+    station is in the Skywalk since docs/mall-plan.md "One mall" Phase 2,
+    `inside`: its platform floor, its door up there (index.ts shows its
+    Metro prompt only up there), its glass lift the mall's; it was at the
+    north end, Kart Park's until the park moved west) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches, and on (via the
@@ -76,12 +79,14 @@ keep it up to date when what it describes changes.
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
     the highway to Airport Station by Airport Drive, `AIRPORT_END`; and
-    `crest` (Crestmont's Phase 9): off the main line just south of Starlight Mall
-    station (`CREST_S`), east between the old Kart Road's line and the highway, round
+    `crest` (Crestmont's Phase 9): off the main line north of Starlight Mall
+    station (`CREST_S`; a train between them runs on past it and turns round,
+    `TURN`, `TURN_S`, then through Starlight Mall without stopping on a ride), east between the old Kart Road's line and the highway, round
     outside the highway's north-east corner and south to Crestmont station
     past Alder Way (`CREST`, `CREST_END`; nothing grows under it,
-    `SPUR_CLEAR`), facing north, so its runs but Starlight Mall's turn round
-    there; runs on the branch, the spur and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
+    `SPUR_CLEAR`), facing north, so its runs turn round past it (`TURN_S`;
+    the timetable's legs to and from the turn stand `TURN_STOP` there, not a
+    station's dwell, `LEGS`); runs on the branch, the spur and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river

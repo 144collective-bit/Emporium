@@ -75,6 +75,11 @@ export const FOUNTAIN = { x: PROM_X, z: ZEBRA.z, r: 2.4 };
  */
 export const LINK_Z: Pt = [CINEMA.rect[3] + 4.1, ZEBRA.z - 3.1];
 export const PAVILION: Rect = [COURT[0] + 0.5, LINK_Z[0], PROM[0], LINK_Z[1]];
+/**
+ * The metro station's glass lift in the pavilion's north-west corner (Phase 2): the street, the lower floor and the
+ * platform floor (metro.ts's Starlight Mall station has it for its tower; malllink.ts its doors)
+ */
+export const LINK_LIFT: Rect = [PAVILION[0] + 0.25, PAVILION[1] + 0.25, PAVILION[0] + 2.05, PAVILION[1] + 2.05];
 /** (whether a shop stands where the pavilion is) */
 const underPavilion = (r: Rect) => r[0] < PAVILION[2] && r[2] > PAVILION[0] && r[1] < PAVILION[3] && r[3] > PAVILION[1];
 export type ShopKind = 'cafe' | 'fashion' | 'books' | 'home' | 'beauty' | 'sports' | 'bakery' | 'shoes' | 'gifts' | 'tech' | 'kids' | 'restaurant';

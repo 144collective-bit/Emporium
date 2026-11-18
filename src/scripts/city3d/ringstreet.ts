@@ -59,7 +59,8 @@ const point = (sd: Side, p: number, off: number): Pt => (sd.alongX ? [p, sd.c + 
 const onOtherStreet = (sd: Side, q: Pt, m: number) => PLAN.streets.some((s) => s !== sd.street && !raised(s) && distToStreet(s, q) < s.half + m);
 const inBox = (r: readonly number[], q: Pt, m: number) => q[0] > r[0] - m && q[0] < r[2] + m && q[1] > r[1] - m && q[1] < r[3] + m;
 const solidAt = (q: Pt, m: number) => SOLIDS.some((b) => inBox(b, q, m));
-const metroDoors: Pt[] = STATIONS.map((s) => [s.door.x, s.door.z] as Pt);
+// (on the street: Starlight Mall's door is up on its platform in the Skywalk)
+const metroDoors: Pt[] = STATIONS.filter((s) => !s.inside).map((s) => [s.door.x, s.door.z] as Pt);
 
 /** A lamp: where its pole stands and the way its arm reaches (`ry`, as `addLamp()` takes it) */
 /** Where along a side its lamps go: each stretch between its junctions (beside downtown) spread evenly, `JUNCTION_CLEAR` from each end */

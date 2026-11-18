@@ -104,10 +104,27 @@ keep it up to date when what it describes changes.
       - the lower floor (`L1`, the hall's upper floor's height): benches,
         trees, the BRISK COFFEE kiosk (`KIOSK`, the café from the shops the
         pavilion took), the el's pillar a white column (`COLUMNS`);
-      - the platform floor (`L2`, the el's deck's top: metro.ts `needAt()`
-        raises the el through `LINK_Z`, mall.ts) east of the track behind a
-        glass screen (`SCREEN_X`), with benches and a METRO COMING SOON
-        board (`BOARD`) until the station moves in (Phase 2).
+      - the platform floor (`L2`, the train's floor over the el's deck,
+        metro.ts `PLATFORM_UP`: `needAt()` raises the el through `LINK_Z`,
+        mall.ts) east of the track behind a glass screen (`SCREEN_X`), with
+        benches: since Phase 2 the metro's **Starlight Mall station**
+        (metro.ts `inside`; `docs/guide/getting-about.md`). It has:
+        - the screen's doors and a yellow line along the platform, the
+          station's name and the metro's M over it;
+        - the fare gates (`GATES`, for the look: rides are free) between
+          the platform and the platform floor's mezzanine, METRO and the M
+          over them (`BOARD`);
+        - the next-train boards (`NEXT_BOARDS`): words from metro.ts
+          `nextTrain()`, no numbers; drawn on the main thread on a `liveTex()`
+          as the timetable goes (`METRO_CLOCK`), held still under reduced
+          motion;
+        - the glass lift in the pavilion's north-west corner (mall.ts
+          `LINK_LIFT`, the station's `tower`; `STATION_LIFT`: Street, Mall,
+          Metro; its prompt `stationLiftDoors()` on the floor you're on, the
+          floor picker skylift-ui.ts `openStation()`);
+        - the Metro prompt (the station's door) on the platform, and the
+          metro's M with the station's name on the bridge's glazed ends and
+          the pavilion's south pier.
     - **The corridor** (`CORRIDOR`): from the hall's east gallery, where
       the east upper unit third from the north was (mallinside.ts
       `CORRIDOR_Z`, `CORRIDOR_IN` in `UPPER`; `UNITS` is fifteen), through

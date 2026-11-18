@@ -843,7 +843,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // Inside the hall (step 2: near only)
   registerInside({ low, tick });
   // The Skywalk over the east ring avenue to Palm Court (malllink3d.ts)
-  registerLink({ build, signs: sign });
+  registerLink({ build, signs: sign, scene, tick });
   if (!scene) return;
   // The cabs at the rank, the cars in the car park and on the multi-storey's decks
   type Car = [CarId, number, number, number, string];

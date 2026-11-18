@@ -21,21 +21,21 @@
  * under them. `LINK_WALLS` (in `SOLIDS`) are the pavilion's walls at street level, its doors open. `LINK_CAMERA` is
  * the slabs and the roof for the walk camera. Made-up names only; no prices on any sign.
  */
-import { ANCHORS, LINK_Z, PAVILION, type Pt, type Rect } from './mall';
+import { ANCHORS, LINK_LIFT, LINK_Z, PAVILION, type Pt, type Rect } from './mall';
 import { CORRIDOR_Z, IN, UP, floorsAt } from './mallinside';
-import { DECK_HALF, HIGH_Y, LINE_X, PILLARS, PILLAR_HALF } from './metro';
+import { DECK_HALF, HIGH_Y, LINE_X, PILLARS, PILLAR_HALF, PLATFORM_UP } from './metro';
 
 type Box = [number, number, number, number, number];
 
 /** The slab (world.ts `SLAB`): the mall's blocks and Palm Court stand on it */
 const SLAB = 0.15;
-/** The lower floor (the mall's upper floor's height) and the platform floor (the el's deck's top, raised through here) */
+/** The lower floor (the mall's upper floor's height) and the platform floor (the train's floor over the el's deck, raised through here) */
 export const L1 = SLAB + UP;
-export const L2 = HIGH_Y;
+export const L2 = HIGH_Y + PLATFORM_UP;
 /** Their slabs' thickness, and the roof's top (a parapet round the barrel vault, under the pylon: mall.ts `TALLEST`) */
 export const L1_T = 0.4;
 export const L2_T = 0.45;
-export const ROOF = L2 + 3.2;
+export const ROOF = L2 + 2.9;
 /** The barrel vault's rise over the roof */
 export const VAULT = 0.45;
 /** What the avenue keeps under the bridge (the slab's underside over the street) */
@@ -114,7 +114,8 @@ export const flightY = (f: Flight, z: number) => f.y0 + Math.min(1, Math.max(0, 
 export const PAV_DOORS: { x: number; face: 1 | -1; z0: number; z1: number }[] = [
   { x: PAVILION[2], face: 1, z0: MEZZ_L1[1] + 1.2, z1: MEZZ_L1[3] - 1.4 },
   { x: PAVILION[2], face: 1, z0: MEZZ_L2[1] + 0.4, z1: PAV_IN[3] - 0.6 },
-  { x: PAVILION[0], face: -1, z0: MEZZ_L1[1] + 1.6, z1: MEZZ_L1[3] - 1.8 },
+  // (clear of the lift in the north-west corner)
+  { x: PAVILION[0], face: -1, z0: MEZZ_L1[1] + 2.6, z1: MEZZ_L1[3] - 0.9 },
 ];
 export const DOOR_H = 2.8;
 
@@ -173,8 +174,58 @@ export const PLANTER_R = 0.55;
 export const KIOSK = { rect: [LINK[0] + 0.6, LINK[3] - 5.2, LINK[0] + 2.4, LINK[3] - 3.2] as Rect, name: 'BRISK COFFEE' };
 /** Benches on the platform floor along the screen, facing the track (x, z, facing) */
 export const PLATFORM_BENCHES: { x: number; z: number; ry: number }[] = [-4, 2.5].map((dz) => ({ x: LINK[2] - 0.7, z: (LINK[1] + LINK[3]) / 2 + dz, ry: -Math.PI / 2 }));
-/** The board on the platform floor's mezzanine wall: what's to come (Phase 2) */
-export const BOARD = { x: (MEZZ_L2[0] + MEZZ_L2[2]) / 2 - 1.5, z: PAV_IN[3] - 0.08, text: 'METRO COMING SOON' };
+/* ---------- The station (Phase 2: metro.ts's Starlight Mall, its door on the platform) ---------- */
+
+/** The METRO sign over the fare gates */
+export const BOARD = { x: PAVILION[0] + 0.6, z: (MEZZ_L2[1] + PAV_IN[3]) / 2, text: 'METRO' };
+/**
+ * The fare gates across the way from the platform floor's mezzanine onto the platform (for the look: the rides are
+ * free): their cabinets' footprints, the gaps between them to walk through
+ */
+export const GATES: Rect[] = (() => {
+  const [z0, z1] = [MEZZ_L2[1], PAV_IN[3]];
+  const n = 4;
+  const w = 0.2;
+  const gap = (z1 - z0 - n * w) / (n - 1);
+  return Array.from({ length: n }, (_, i): Rect => [PAVILION[0] - 0.6, z0 + i * (w + gap), PAVILION[0] + 0.6, z0 + i * (w + gap) + w]);
+})();
+/** The next-train boards (malllink3d.ts, from metro.ts `nextTrain()`), `BOARD_W` by `BOARD_H`: hung under the ceiling over the platform (both faces), on the mezzanine's south wall (facing north) */
+export const BOARD_W = 1.7;
+export const BOARD_H = BOARD_W / 4;
+export const NEXT_BOARDS: { x: number; y: number; z: number; ry: number }[] = [
+  { x: (SCREEN_X + LINK[2]) / 2, y: ROOF - 0.4 - 0.08 - BOARD_H / 2, z: (LINK[1] + LINK[3]) / 2 - 3.2, ry: 0 },
+  { x: (SCREEN_X + LINK[2]) / 2, y: ROOF - 0.4 - 0.08 - BOARD_H / 2, z: (LINK[1] + LINK[3]) / 2 - 3.2, ry: Math.PI },
+  { x: (MEZZ_L2[0] + MEZZ_L2[2]) / 2 + 1, y: L2 + 2.1, z: PAV_IN[3] - 0.06, ry: Math.PI },
+];
+/** The glass lift (mall.ts `LINK_LIFT`): its floors, each with its door (where its prompt is, and where it lets you out: walk mode faces (-sin yaw, -cos yaw)) */
+export interface LiftFloor {
+  name: string;
+  y: number;
+  door: { x: number; z: number; yaw: number };
+}
+const LX = (LINK_LIFT[0] + LINK_LIFT[2]) / 2;
+const LZ = (LINK_LIFT[1] + LINK_LIFT[3]) / 2;
+export const STATION_LIFT: { id: string; name: string; floors: LiftFloor[] } = {
+  id: 'skywalk',
+  name: 'Starlight Mall',
+  floors: [
+    { name: 'Street', y: SLAB, door: { x: LX, z: LINK_LIFT[3] + 0.75, yaw: Math.PI } },
+    { name: 'Mall', y: L1, door: { x: LX, z: LINK_LIFT[3] + 0.75, yaw: Math.PI } },
+    { name: 'Metro', y: L2, door: { x: LINK_LIFT[0] - 0.75, z: LZ, yaw: Math.PI / 2 } },
+  ],
+};
+/** Which of the lift's floors someone (feet at `y`, world) is on, by its index, or null */
+export const liftFloorAt = (y: number) => {
+  const i = STATION_LIFT.floors.findIndex((f) => Math.abs(f.y - y) < 0.8);
+  return i < 0 ? null : i;
+};
+/** The lift's call point walk mode prompts at, for someone `y` high: the door on their floor */
+export function stationLiftDoors(y: number): { id: string; x: number; z: number; label: string }[] {
+  const i = liftFloorAt(y);
+  if (i === null) return [];
+  const d = STATION_LIFT.floors[i].door;
+  return [{ id: `station-lift:${STATION_LIFT.id}`, x: d.x, z: d.z, label: 'Lift' }];
+}
 /** Solid between two heights (x0, z0, x1, z1, from, to: world): stops someone whose feet are between them */
 export type Solid = [number, number, number, number, number, number];
 const sq = (x: number, z: number, r: number, y0: number, y1: number): Solid => [x - r, z - r, x + r, z + r, y0, y1];
@@ -195,6 +246,9 @@ export const LINK_SOLIDS: Solid[] = [
   ...PLANTERS.map(([x, z]) => sq(x, z, PLANTER_R, L1, L1 + 0.6)),
   [...KIOSK.rect, L1, L1 + 2.4] as Solid,
   ...PLATFORM_BENCHES.map((b): Solid => [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, L2, L2 + 0.9]),
+  // (the fare gates' cabinets; the lift's shaft, all the way up)
+  ...GATES.map((g): Solid => [...g, L2, L2 + 1.1] as Solid),
+  [...LINK_LIFT, SLAB, ROOF] as Solid,
 ];
 
 /* ---------- Walking ---------- */
@@ -204,7 +258,8 @@ const RAISED: Rect[] = [CORRIDOR, LINK];
 /** Whether someone (feet at `y`, world) is up in the Skywalk: then only `linkWall()` stops them (walk.ts) */
 export function linkUp(x: number, z: number, y: number): boolean {
   if (inR(PAVILION, x, z)) return y > SLAB + 0.9;
-  return y > L1 - DROP && RAISED.some((r) => inR(r, x, z));
+  // (a hair over its edges: where the bridge meets the pavilion counts as up there)
+  return y > L1 - DROP && RAISED.some((r) => inR(r, x, z, 0.01));
 }
 /** The floors someone at `y` can stand on at a point: the Skywalk's, and the hall's (the corridor starts in its strip) */
 function reach(x: number, z: number, y: number): boolean {

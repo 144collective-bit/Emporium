@@ -6,7 +6,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BOARD,
+  BOARD_H,
   CLEAR,
+  GATES,
+  NEXT_BOARDS,
+  STATION_LIFT,
+  liftFloorAt,
+  stationLiftDoors,
   COLUMNS,
   CORRIDOR,
   ESC_G,
@@ -26,6 +32,7 @@ import {
   PAV_IN,
   ROOF,
   SCREEN_X,
+  SKIN,
   TRACK,
   flightX,
   flightY,
@@ -37,7 +44,9 @@ import {
 } from '../src/scripts/city3d/malllink';
 import { ANCHORS, LINK_Z, PAVILION, PROM, SHOPS, SHOP_NAMES, TALLEST } from '../src/scripts/city3d/mall';
 import { CORRIDOR_IN, CORRIDOR_Z, IN, UNITS, VOID, mallFloor, mallWall } from '../src/scripts/city3d/mallinside';
-import { HIGH_Y, LINE_X, NORTH_END, PILLARS, trackY } from '../src/scripts/city3d/metro';
+import { DECK_HALF, HIGH_Y, LINE_X, NORTH_END, PILLARS, PLATFORM, PLATFORM_UP, STATIONS, sideAt, stationAt, stationY, trackY } from '../src/scripts/city3d/metro';
+import { PLACES } from '../src/scripts/city3d/places';
+import { LINK_LIFT } from '../src/scripts/city3d/mall';
 import { NS_ROADS } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 
@@ -50,7 +59,8 @@ const NS3 = NS_ROADS[NS_ROADS.length - 1];
 test('the bridge spans the avenue clear of its traffic, the el level through its top floor, under the Emporium', () => {
   assert.ok(LINK[0] <= NS3.c - NS3.half - 0.8 && LINK[2] >= NS3.c + NS3.half + 0.8, 'from sidewalk to sidewalk');
   assert.ok(CLEAR > 2.8, `the avenue keeps ${CLEAR.toFixed(2)} under it`);
-  assert.equal(L2, HIGH_Y);
+  // (the platform floor level with the train's: metro.ts `PLATFORM_UP` over the deck)
+  assert.equal(L2, HIGH_Y + PLATFORM_UP);
   for (let z = LINK_Z[0] - 1; z <= LINK_Z[1] + 1; z += 0.5) assert.equal(trackY('main', z - NORTH_END), HIGH_Y, `the el level at ${z}`);
   assert.ok(TRACK[0] < LINE_X && TRACK[1] > LINE_X && SCREEN_X > TRACK[1]);
   assert.ok(ROOF > L2 + 2.6, 'room for a train under the roof');
@@ -197,3 +207,58 @@ test('walking in from the promenade, up to the bridge, through to the mall\'s ga
     }
   }
 });
+
+test("Starlight Mall station in the bridge: its platform along the screen, its door and arrival on the platform floor, its lift the tower", () => {
+  const st = STATIONS.find((q) => q.id === 'starlight')!;
+  assert.ok(st.inside, 'built into the Skywalk');
+  const mid = stationAt(st);
+  assert.ok(Math.abs(mid.at[0] - LINE_X) < 1e-6 && mid.at[1] - PLATFORM.half > LINK[1] + SKIN && mid.at[1] + PLATFORM.half < LINK[3] - SKIN, 'its platform inside the bridge');
+  assert.equal(stationY(st) + PLATFORM_UP, L2);
+  // On the track's east side: the platform floor's, behind the screen
+  assert.equal(sideAt(st), -1);
+  assert.ok(SCREEN_X - LINE_X >= DECK_HALF && SCREEN_X - LINE_X < PLATFORM.from + 0.3);
+  // The door (its Metro prompt) and where you arrive: on the platform floor, clear of what stands there
+  assert.ok(linkFloors(st.door.x, st.door.z).includes(L2) && !linkWall(st.door.x, st.door.z, L2, 0.2));
+  const place = PLACES.find((p) => p.id === 'metro-starlight')!;
+  assert.equal(SLAB + place.at.y!, st.inside!.y + SLAB);
+  assert.ok(Math.abs(SLAB + st.inside!.y - L2) < 1e-6);
+  assert.ok(linkFloors(place.at.x, place.at.z).includes(L2) && !linkWall(place.at.x, place.at.z, L2, 0.2), 'arriving on the platform');
+  assert.equal(linkFloorAt(place.at.x, place.at.z, L2 + 0.1), L2);
+  // The lift is its tower, in the pavilion
+  assert.deepEqual(st.tower, LINK_LIFT);
+  assert.ok(LINK_LIFT[0] >= PAV_IN[0] && LINK_LIFT[2] <= PAV_IN[2] && LINK_LIFT[1] >= PAV_IN[1] && LINK_LIFT[3] <= PAV_IN[3]);
+});
+
+test('the glass lift: a door on each floor, on that floor and clear; its prompt only on a floor; it stops you', () => {
+  assert.deepEqual(STATION_LIFT.floors.map((f) => f.y), [SLAB, L1, L2]);
+  STATION_LIFT.floors.forEach((f, i) => {
+    const { x, z } = f.door;
+    assert.ok(linkFloors(x, z).some((y) => Math.abs(y - f.y) < 1e-6), `${f.name}: its door on its floor`);
+    assert.ok(!linkWall(x, z, f.y, 0.2), `${f.name}: its door clear`);
+    if (i === 0) assert.ok(!SOLIDS.some((b) => inBox(b, x, z, 0.2)), 'the street door clear of the walls');
+    assert.equal(liftFloorAt(f.y), i);
+    const doors = stationLiftDoors(f.y);
+    assert.equal(doors.length, 1);
+    assert.ok(Math.hypot(doors[0].x - x, doors[0].z - z) < 1e-9);
+    // (you step out facing away from the shaft: walk mode faces (-sin yaw, -cos yaw))
+    const [fx, fz] = [-Math.sin(f.door.yaw), -Math.cos(f.door.yaw)];
+    const [cx, cz] = [(LINK_LIFT[0] + LINK_LIFT[2]) / 2, (LINK_LIFT[1] + LINK_LIFT[3]) / 2];
+    assert.ok((x - cx) * fx + (z - cz) * fz > 0, `${f.name}: out facing away`);
+  });
+  assert.deepEqual(stationLiftDoors((L1 + L2) / 2), []);
+  const [cx, cz] = [(LINK_LIFT[0] + LINK_LIFT[2]) / 2, (LINK_LIFT[1] + LINK_LIFT[3]) / 2];
+  for (const y of [SLAB, L1]) assert.ok(linkWall(cx, cz, y, 0.17), 'the shaft is solid');
+});
+
+test('the fare gates: walked through, their cabinets in the way; the boards over the platform and the mezzanine', () => {
+  for (let i = 1; i < GATES.length; i++) {
+    const gap = GATES[i][1] - GATES[i - 1][3];
+    assert.ok(gap > 2 * R + 0.3 && gap < 1.4, `a gate's way ${gap.toFixed(2)}`);
+    const z = (GATES[i][1] + GATES[i - 1][3]) / 2;
+    assert.ok(!linkWall(PAVILION[0], z, L2, R), 'through the gate');
+  }
+  for (const g of GATES) assert.ok(linkWall(PAVILION[0], (g[1] + g[3]) / 2, L2, R), 'a cabinet');
+  assert.ok(!/\d/.test(BOARD.text));
+  for (const b of NEXT_BOARDS) assert.ok(b.y - BOARD_H / 2 > L2 + 1.8 && b.y + BOARD_H / 2 < ROOF - 0.4, 'a board over heads, under the ceiling');
+});
+

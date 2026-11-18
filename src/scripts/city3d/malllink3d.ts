@@ -10,17 +10,23 @@
  * - **Inside** (sites, near only, no shadows): the floors and their slabs, timber soffits with slots of light, glass
  *   balustrades on the edges, the platform screen along the track, the escalators (their steps run with the hall's:
  *   mallinside3d.ts), the corridor through Bright & Co. between its windows, the column round the el's pillar, the
- *   benches, the trees, the coffee kiosk, the board on the platform floor (coming soon), the signs.
+ *   benches, the trees, the coffee kiosk, the signs.
+ * - **The station** (Phase 2): the fare gates and METRO over them, the platform's yellow line and the screen's doors,
+ *   the station's name and the metro's M, the glass lift; on the main thread the next-train boards (`liveTex()`).
  */
 import * as THREE from 'three';
-import type { Batch } from './kit';
+import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, liveTex, siteMat } from './kit';
+import type { Tick } from './world';
 import { site } from './tilework';
-import { ANCHORS, MALL_NAME, PAVILION } from './mall';
+import { ANCHORS, LINK_LIFT, MALL_NAME, PAVILION } from './mall';
+import { HIGH_Y, PLATFORM, STATIONS, metroNow, nextTrain, stationAt, type NextTrain } from './metro';
 import { CORRIDOR_IN, CORRIDOR_Z } from './mallinside';
 import {
   BALUSTRADE,
   BENCHES,
   BOARD,
+  BOARD_H,
+  BOARD_W,
   COLUMNS,
   COLUMN_R,
   COMB,
@@ -28,6 +34,7 @@ import {
   DOOR_H,
   ESC_G,
   FLIGHTS,
+  GATES,
   KIOSK,
   L1,
   L1_T,
@@ -36,6 +43,7 @@ import {
   LINK,
   MEZZ_L1,
   MEZZ_L2,
+  NEXT_BOARDS,
   PAV_DOORS,
   PAV_IN,
   PLANTERS,
@@ -48,7 +56,7 @@ import {
   type Flight,
 } from './malllink';
 import { STEPS_DOWN, STEPS_UP } from './mallinside3d';
-import { CHARCOAL, CLAD, CLAD_DARK, CURTAIN, DARK, FLOOR, GLASS, GOLD, GREY, LED, LIGHT, MID, PANEL, STEEL, STONE, TIMBER, WHITE, WOOD, Y, box, cyl, face, flat, glassX, glassZ, tree, type Sign } from './mallkit';
+import { CHARCOAL, CLAD, CLAD_DARK, CURTAIN, DARK, FLOOR, GLASS, GOLD, GREY, LED, LIGHT, MID, PANEL, STEEL, STONE, TIMBER, WHITE, WOOD, Y, YELLOW, box, cyl, face, flat, glassX, glassZ, tree, type Sign } from './mallkit';
 
 const PX: [number, number] = [1, 0];
 const NX: [number, number] = [-1, 0];
@@ -58,8 +66,37 @@ const [X0, Z0, , Z1] = LINK;
 /** The bridge and the pavilion as one, east to the promenade */
 const X1 = PAVILION[2];
 const ZM = (Z0 + Z1) / 2;
-/** The el's portal in each glazed end: round the deck and a train on it */
-const PORTAL = { x0: TRACK[0] - 0.35, x1: TRACK[1] + 0.35, y0: L2 - 0.75, y1: L2 + 2.4 };
+/** The el's portal in each glazed end: round the deck (its top `HIGH_Y`) and a train on it */
+const PORTAL = { x0: TRACK[0] - 0.35, x1: TRACK[1] + 0.35, y0: HIGH_Y - 0.75, y1: HIGH_Y + 2.3 };
+/** The station's middle along the avenue, and its platform's half length (metro.ts) */
+const STATION = STATIONS.find((q) => q.id === 'starlight')!;
+const SZ = stationAt(STATION).at[1];
+/** The metro's round M (metro3d.ts's, drawn the same: a magenta disc, a white M), named for the sites built off the main thread */
+const ROUNDEL = siteMat(
+  'mall-link-roundel',
+  lit(
+    new THREE.MeshBasicMaterial({
+      map: canvasTex(128, 128, (ctx) => {
+        ctx.fillStyle = '#100d1e';
+        ctx.fillRect(0, 0, 128, 128);
+        ctx.fillStyle = PAL.magenta;
+        ctx.beginPath();
+        ctx.arc(64, 64, 58, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = `900 84px ${FONT_DISPLAY}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('M', 64, 70);
+      }),
+      toneMapped: true,
+    }),
+    0.95,
+    1.3
+  )
+);
+/** A round M sign facing `ry` (0: +z), d across */
+const mSign = (b: Batch, x: number, y: number, z: number, d: number, ry: number) => b.add(new THREE.PlaneGeometry(d, d).rotateY(ry).translate(x, y, z), ROUNDEL);
 /** The bands: the lower floor's slab's edge, and the parapet's at the top */
 const BAND_LOW = L1 - L1_T - 0.1;
 const BAND_TOP = ROOF - 0.7;
@@ -115,6 +152,11 @@ function end(b: Batch, z: number, n: [number, number]) {
   box(b, PORTAL.x0 - 0.18, PORTAL.y1, fa, PORTAL.x1 + 0.18, PORTAL.y1 + 0.18, fb, STEEL);
   // A floor band where the platform floor meets the glass (east of the track), the mullions standing out (near only)
   box(b, PORTAL.x1, L2 - L2_T, fa, X1, L2, fb, CHARCOAL);
+  // The station on it: the metro's M and the station's name, east of the portal, on the glass
+  const ry = n[1] > 0 ? 0 : Math.PI;
+  mSign(b, PORTAL.x1 + 1.0, L2 + 1.1, z + n[1] * 0.2, 0.95, ry);
+  sign(b, MALL_NAME, PORTAL.x1 + 3.6, L2 + 1.1, z + n[1] * 0.2, 3.4, 0.42, ry);
+  box(b, PORTAL.x1 + 0.45, L2 + 0.75, Math.min(z, z + n[1] * 0.19), PORTAL.x1 + 5.4, L2 + 1.45, Math.max(z, z + n[1] * 0.19), CHARCOAL);
   b.detail(() => {
     const [ma, mb] = out(0, 0.16);
     for (let x = X0 + 1.5; x < X1 - 0.3; x += 1.5) if (x < PORTAL.x0 - 0.3 || x > PORTAL.x1 + 0.3) box(b, x - 0.04, L1 + 0.15, ma, x + 0.04, BAND_TOP, mb, STEEL);
@@ -157,6 +199,9 @@ function shell(b: Batch) {
   face(b, CLAD_DARK, x, Z0 + 1.0, x, Z1 - 1.0, BAND_TOP - 0.9, ROOF, PX, 0.02);
   sign(b, MALL_NAME, x + 0.04, BAND_TOP - 0.05, ZM + 0.9, 7.2, 0.8, Math.PI / 2);
   star(b, x + 0.03, BAND_TOP - 0.05, ZM - 3.8, 0.55);
+  // (the metro's M and its name on the south pier: the station's up there)
+  mSign(b, x + 0.03, L1 + 1.6, Z1 - 0.5, 0.8, Math.PI / 2);
+  sign(b, BOARD.text, x + 0.03, L1 + 0.95, Z1 - 0.5, 0.86, 0.26, Math.PI / 2);
   b.detail(() => {
     for (let z = Z0 + 2.4; z < Z1 - 1.2; z += 1.5) box(b, x, L1 + 0.15, z - 0.04, x + 0.16, BAND_TOP - 0.9, z + 0.04, STEEL);
   });
@@ -246,8 +291,14 @@ function floors(b: Batch) {
   // The lower floor: the corridor (from the hall's strip), the bridge, the pavilion's north mezzanine; its slab there
   flat(b, CORRIDOR_IN[0], CORRIDOR_Z[0], X0, CORRIDOR_Z[1], L1 + 0.006, FLOOR, 8);
   flat(b, X0, s0, LINK[2], s1, L1 + 0.006, FLOOR, 8);
-  box(b, MEZZ_L1[0], L1 - L1_T, MEZZ_L1[1], MEZZ_L1[2], L1, MEZZ_L1[3], WHITE);
-  flat(b, MEZZ_L1[0], MEZZ_L1[1], MEZZ_L1[2], MEZZ_L1[3], L1 + 0.006, FLOOR, 8);
+  // (round the lift's shaft in its north-west corner)
+  for (const [x0, z0, x1, z1] of [
+    [MEZZ_L1[0], LINK_LIFT[3], MEZZ_L1[2], MEZZ_L1[3]],
+    [LINK_LIFT[2], MEZZ_L1[1], MEZZ_L1[2], LINK_LIFT[3]],
+  ]) {
+    box(b, x0, L1 - L1_T, z0, x1, L1, z1, WHITE);
+    flat(b, x0, z0, x1, z1, L1 + 0.006, FLOOR, 8);
+  }
   // The pavilion's street floor (over Palm Court's paving)
   flat(b, PAV_IN[0], PAV_IN[1], PAV_IN[2], PAV_IN[3], Y + 0.012, FLOOR, 8);
   // The platform floor: along the track, the south mezzanine; their slabs
@@ -320,7 +371,8 @@ function edges(b: Batch) {
   box(b, sx - 0.04, L2 + 2.15, s0, sx + 0.04, L2 + 2.25, s1, STEEL);
   box(b, sx - 0.03, L2 + 2.1, s0, sx + 0.03, L2 + 2.14, s1, LED);
   for (let z = s0; z <= s1 + 0.01; z += (s1 - s0) / 8) box(b, sx - 0.04, L2, z - 0.04, sx + 0.04, L2 + 2.2, z + 0.04, STEEL);
-  balustrade(b, LINK[2], s0, LINK[2], MEZZ_L2[1], L2);
+  balustrade(b, LINK[2], LINK_LIFT[3], LINK[2], MEZZ_L2[1], L2);
+  balustrade(b, LINK[2], s0, LINK[2], LINK_LIFT[1], L2);
   balustrade(b, LINK[2], MEZZ_L2[1], u0, MEZZ_L2[1], L2);
   balustrade(b, u1, MEZZ_L2[1], PAV_IN[2], MEZZ_L2[1], L2);
 }
@@ -439,15 +491,86 @@ function things(b: Batch) {
   sign(b, KIOSK.name, kx1 + 0.12, L1 + 2.6, (kz0 + kz1) / 2, 1.9, 0.38, Math.PI / 2);
   box(b, kx1 + 0.08, L1 + 2.4, kz0, kx1 + 0.12, L1 + 2.82, kz1, CHARCOAL);
   b.add(new THREE.CylinderGeometry(0.16, 0.13, 0.3, 10).translate(kx0 + 0.5, L1 + 1.27, kz0 + 0.5), CHARCOAL);
-  // The board on the platform floor: what's to come
-  box(b, BOARD.x - 1.8, L2 + 1.2, BOARD.z - 0.06, BOARD.x + 1.8, L2 + 2.0, BOARD.z, CHARCOAL);
-  sign(b, BOARD.text, BOARD.x, L2 + 1.6, BOARD.z - 0.065, 3.4, 0.62, Math.PI);
+  station(b);
   // The way signs: PALM COURT over the escalators down, the mall's name over the corridor's mouth on the bridge,
   // Bright & Co. over its mouth on the hall's gallery
   sign(b, 'PALM COURT', (ESC_G.stairs[0].x0 + ESC_G.stairs[1].x1) / 2, L1 + 2.6, MEZZ_L1[3] - 0.05, 2.6, 0.42, Math.PI);
   box(b, ESC_G.stairs[0].x0 - 0.1, L1 + 2.35, MEZZ_L1[3] - 0.04, ESC_G.stairs[1].x1 + 0.1, L1 + 2.85, MEZZ_L1[3], CHARCOAL);
   sign(b, MALL_NAME, X0 + 0.06, L1 + CORRIDOR_H + 0.45, (CORRIDOR_Z[0] + CORRIDOR_Z[1]) / 2, 3.6, 0.5, Math.PI / 2);
   sign(b, ANCHORS[1].name, CORRIDOR_IN[0] - 0.02, L1 + CORRIDOR_H - 0.35, (CORRIDOR_Z[0] + CORRIDOR_Z[1]) / 2, 3.2, 0.42, -Math.PI / 2);
+}
+
+/** Starlight Mall station (Phase 2): the fare gates and the METRO sign over them, the platform's yellow line, the doors in its screen, its names, the boards' backs, the glass lift */
+function station(b: Batch) {
+  const [g0, g1] = [GATES[0][1], GATES[GATES.length - 1][3]];
+  // The gates: white cabinets, steel tops with a green light, glass paddles across the ways between
+  for (const [x0, z0, x1, z1] of GATES) {
+    box(b, x0, L2, z0, x1, L2 + 1.0, z1, WHITE);
+    box(b, x0 - 0.02, L2 + 1.0, z0 - 0.02, x1 + 0.02, L2 + 1.06, z1 + 0.02, STEEL);
+    box(b, x1 - 0.25, L2 + 1.06, z0 + 0.04, x1 - 0.1, L2 + 1.08, z1 - 0.04, LED);
+  }
+  for (let i = 1; i < GATES.length; i++) {
+    const [za, zb] = [GATES[i - 1][3], GATES[i][1]];
+    const w = (zb - za) / 2 - 0.08;
+    for (const [z, f] of [
+      [za, 1],
+      [zb, -1],
+    ] as const)
+      b.add(new THREE.PlaneGeometry(w, 0.5).rotateY(Math.PI / 2).translate(PAVILION[0], L2 + 0.75, z + (f * w) / 2), GLASS);
+  }
+  // Over them: a dark beam with METRO and the M, facing the mezzanine
+  box(b, PAVILION[0] - 0.2, L2 + 2.2, g0, PAVILION[0] + 0.2, L2 + 2.65, g1, CHARCOAL);
+  sign(b, BOARD.text, PAVILION[0] + 0.21, L2 + 2.42, BOARD.z - 0.5, 1.3, 0.34, Math.PI / 2);
+  mSign(b, PAVILION[0] + 0.21, L2 + 2.42, BOARD.z + 0.8, 0.4, Math.PI / 2);
+  // The platform: a yellow line along the screen, the screen's doors where the train's are, the station's name over it
+  const [p0, p1] = [SZ - PLATFORM.half, SZ + PLATFORM.half];
+  box(b, SCREEN_X + 0.25, L2 + 0.006, p0, SCREEN_X + 0.4, L2 + 0.012, p1, YELLOW);
+  for (let z = p0 + 1.2; z < p1 - 0.8; z += 2.6) {
+    box(b, SCREEN_X - 0.1, L2, z - 0.62, SCREEN_X + 0.02, L2 + 2.15, z - 0.55, STEEL);
+    box(b, SCREEN_X - 0.1, L2, z + 0.55, SCREEN_X + 0.02, L2 + 2.15, z + 0.62, STEEL);
+    box(b, SCREEN_X - 0.06, L2 + 1.95, z - 0.55, SCREEN_X - 0.01, L2 + 2.0, z + 0.55, LED);
+  }
+  for (const z of [p0 + 1.5, p1 - 1.5]) {
+    box(b, SCREEN_X - 0.02, L2 + 2.3, z - 1.4, SCREEN_X + 0.04, L2 + 2.75, z + 1.4, CHARCOAL);
+    sign(b, MALL_NAME, SCREEN_X + 0.05, L2 + 2.52, z + 0.25, 2.1, 0.3, Math.PI / 2);
+    mSign(b, SCREEN_X + 0.05, L2 + 2.52, z - 1.05, 0.34, Math.PI / 2);
+  }
+  // The next-train boards' backs and hangers (their faces are live: `registerLink()`)
+  const [bw, bh] = [BOARD_W / 2 + 0.06, BOARD_H / 2 + 0.06];
+  for (const nb of NEXT_BOARDS)
+    if (nb.ry === 0) {
+      box(b, nb.x - bw, nb.y - bh, nb.z - 0.05, nb.x + bw, nb.y + bh, nb.z + 0.05, CHARCOAL);
+      for (const dx of [-0.6, 0.6]) box(b, nb.x + dx - 0.02, nb.y + bh, nb.z - 0.02, nb.x + dx + 0.02, ROOF - 0.4, nb.z + 0.02, STEEL);
+    } else if (nb.z > ZM + 3) box(b, nb.x - bw, nb.y - bh, nb.z - 0.05, nb.x + bw, nb.y + bh, nb.z + 0.01, CHARCOAL);
+  // The glass lift: steel posts at its corners, glass all round, a steel band at each floor, its doors, its car at the street
+  const [lx0, lz0, lx1, lz1] = LINK_LIFT;
+  const top = ROOF - 0.4;
+  for (const [x, z] of [
+    [lx0, lz0],
+    [lx1, lz0],
+    [lx0, lz1],
+    [lx1, lz1],
+  ])
+    box(b, x - 0.05, Y, z - 0.05, x + 0.05, top, z + 0.05, STEEL);
+  for (const [x0, z0, x1, z1] of [
+    [lx0, lz0, lx1, lz0],
+    [lx0, lz1, lx1, lz1],
+    [lx0, lz0, lx0, lz1],
+    [lx1, lz0, lx1, lz1],
+  ]) {
+    const along = x1 !== x0;
+    const len = along ? x1 - x0 : z1 - z0;
+    const g = new THREE.PlaneGeometry(len, top - Y);
+    if (!along) g.rotateY(Math.PI / 2);
+    b.add(g.translate((x0 + x1) / 2, (Y + top) / 2, (z0 + z1) / 2), GLASS);
+  }
+  for (const y of [L1 - L1_T, L2 - L2_T, top - 0.2]) box(b, lx0 - 0.04, y, lz0 - 0.04, lx1 + 0.04, y + (y === top - 0.2 ? 0.2 : 0.3), lz1 + 0.04, STEEL);
+  const lxm = (lx0 + lx1) / 2;
+  const lzm = (lz0 + lz1) / 2;
+  for (const y of [Y, L1]) box(b, lxm - 0.55, y, lz1, lxm + 0.55, y + 2.15, lz1 + 0.04, DARK);
+  box(b, lx0 - 0.04, L2, lzm - 0.55, lx0, L2 + 2.15, lzm + 0.55, DARK);
+  box(b, lx0 + 0.12, Y, lz0 + 0.12, lx1 - 0.12, Y + 2.3, lz1 - 0.12, WHITE);
+  box(b, lx0 + 0.1, Y + 2.3, lz0 + 0.1, lx1 - 0.1, Y + 2.4, lz1 - 0.1, STEEL);
 }
 
 function corridor(b: Batch) {
@@ -481,9 +604,54 @@ function corridor(b: Batch) {
 /** The outside's sign atlas (mall3d.ts's: the Skywalk's words are in it) */
 let sign: Sign = () => {};
 
-/** The Skywalk's sites: outside (from afar, with shadows) and inside (near only) */
-export function registerLink({ build, signs }: { build: (draw: (b: Batch) => void, cast?: boolean) => (into: THREE.Object3D) => void; signs: Sign }) {
+/** The next-train boards' face: where the next train goes and how near it is, in words (no numbers on a sign) */
+function drawBoard(c: CanvasRenderingContext2D, w: number, h: number, n: NextTrain) {
+  c.fillStyle = '#121317';
+  c.fillRect(0, 0, w, h);
+  c.textBaseline = 'middle';
+  c.font = '600 22px Inter, "Helvetica Neue", Arial, sans-serif';
+  c.fillStyle = '#9a9ca4';
+  c.textAlign = 'left';
+  c.fillText('NEXT TRAIN', 18, 30);
+  c.fillStyle = n.status === 'BOARDING' ? '#7fe08a' : n.status === 'ARRIVING' ? '#f2c12e' : '#d9dbe2';
+  c.textAlign = 'right';
+  c.fillText(n.status, w - 18, 30);
+  c.fillStyle = '#ffcf7a';
+  c.textAlign = 'left';
+  c.font = '700 40px Inter, "Helvetica Neue", Arial, sans-serif';
+  c.fillText(`TO ${n.to.toUpperCase()}`, 18, 88);
+}
+
+/** The Skywalk's sites: outside (from afar, with shadows) and inside (near only); on the main thread, the next-train boards */
+export function registerLink({ build, signs, scene, tick }: { build: (draw: (b: Batch) => void, cast?: boolean) => (into: THREE.Object3D) => void; signs: Sign; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   sign = signs;
+  if (scene) {
+    // The boards: one face drawn as the timetable goes (metro.ts `nextTrain()`, on the metro's own clock), held still
+    // under reduced motion as the train is
+    const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let now: NextTrain = nextTrain(STATION.id, still ? 0 : metroNow());
+    const tex = liveTex(512, 128, (c, w, h) => drawBoard(c, w, h, now));
+    const mat = lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.9, 1.2);
+    const b = new Batch();
+    for (const nb of NEXT_BOARDS) b.add(new THREE.PlaneGeometry(BOARD_W, BOARD_H).rotateY(nb.ry).translate(nb.x, nb.y, nb.z + (nb.ry === 0 ? 0.06 : -0.06)), mat);
+    const g = new THREE.Group();
+    g.name = 'mall-link-boards';
+    b.build(g, { cast: false, receive: false });
+    scene.add(g);
+    let next = 0;
+    if (!still)
+      tick?.(({ t }) => {
+        if (t < next) return;
+        next = t + 1;
+        const n = nextTrain(STATION.id, metroNow());
+        if (n.status === now.status && n.to === now.to) return;
+        now = n;
+        const c = (tex.image as HTMLCanvasElement).getContext('2d');
+        if (!c) return;
+        drawBoard(c, 512, 128, now);
+        tex.needsUpdate = true;
+      });
+  }
   const area: [number, number, number, number] = [X0, Z0, X1, Z1];
   site('mall link shell', [X0, Z0 - 0.5, X1, Z1 + 0.5], build(shell));
   site('mall link roof', area, build(roof));

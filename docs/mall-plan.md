@@ -218,14 +218,39 @@ passengers, rebuilt "realistic and of a high standard". Their picks:
      - Unchanged: desktop 325 and 318, phone 171. Its geometry merges into
        the mall's batches.
      - Triangles up about 0.5% (its people in the crowd).
-2. **The station.** Starlight Mall station moves into the bridge's top
-   floor:
-   - The platform, canopy, signs and roundel.
-   - The fare gates, a lift from the street to both floors, and the door
-     prompt.
-   - The timetable and rides, including Crestmont's spur, which now turns
-     round at the north end.
-   - The old station, tower and stair north of the highway come down.
+2. **The station** (built; the owner's picks: the glass lift, fare gates,
+   a next-train board, the metro's sign outside). Starlight Mall station
+   moved into the bridge's top floor (metro.ts `inside`); the old station,
+   its tower and stair north of the highway are gone.
+   - **The platform floor** is level with the train's floor now (`L2`,
+     metro.ts `PLATFORM_UP` over the deck; the roof came down to keep
+     under the pylon). It has:
+     - the screen's doors and a yellow line, the station's name and the M;
+     - the Metro prompt on the platform (index.ts shows it only up there);
+       a ride ends there (places.ts gives the place a height,
+       `walk.placeAt()` / `enter()` take it).
+   - **The fare gates** (`GATES`, for the look: rides stay free) are
+     between the platform and the mezzanine, under METRO and the M.
+   - **The next-train boards** (`NEXT_BOARDS`, metro.ts `nextTrain()`): only
+     words, no numbers on a sign. They show where the next train goes and
+     ON ITS WAY, DUE, ARRIVING or BOARDING, on the metro's own clock
+     (`METRO_CLOCK`).
+   - **The glass lift** (`LINK_LIFT`, `STATION_LIFT`) stops at the street,
+     the mall's floor and the metro's. Its floor picker is Endswood's card
+     (skylift-ui.ts `openStation()`).
+   - **Outside:** the M and the station's name on both glazed ends, the M
+     and METRO on the pavilion's south pier.
+   - **The timetable:** Crestmont's spur leaves the main line north of the
+     station, facing north. A train between them runs on past the spur and
+     turns round where the old station was (metro.ts `TURN`, `TURN_S`:
+     `LEGS` two longer, the round trip about 439 s). A ride runs through
+     Starlight Mall without stopping, so Uptown to Crestmont is still about
+     75 s.
+   - **Checks:** the type check, lint and `npm test` (1516) pass. The build
+     and budget pass (boot 742.5 of 750 KB). The walk smoke test passes
+     (its metro ride steps out on the new platform). Browser shots were
+     taken of the platform, the gates, the lift and the station from
+     outside.
 3. **Palm Court enclosed.** A full rebuild as a two-floor indoor wing of the
    mall:
    - A glass roof over the promenade, upper galleries over both rows, and

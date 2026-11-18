@@ -3302,7 +3302,7 @@ export function createWalk(d: WalkDeps) {
       vel.set(0, 0);
     },
     /** Start walking; `spawn` puts Degen somewhere else (the kart park's gate from its panel) */
-    enter(spawn?: { x: number; z: number; yaw: number }) {
+    enter(spawn?: { x: number; z: number; yaw: number; y?: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -3324,7 +3324,8 @@ export function createWalk(d: WalkDeps) {
         if (at.length > 2) yaw = at[2];
       }
       if (spawn) {
-        pos.set(spawn.x, groundAt(spawn.x, spawn.z), spawn.z);
+        // (`y`: up on a floor over the slab, as `placeAt()`: Starlight Mall's station in the Skywalk)
+        pos.set(spawn.x, groundAt(spawn.x, spawn.z, spawn.y === undefined ? 0 : SLAB + spawn.y), spawn.z);
         yaw = spawn.yaw;
       }
       // (his body facing the way the camera looks: the place in front of him, not always the same way)
