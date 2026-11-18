@@ -434,6 +434,28 @@ From the Circus west, patchy as high roads are:
    covered walk between them, both lines on one card and the map);
    round-top tube trains in the city's style; the underpasses first,
    then the line.
+   - **4a, the Circus's plaza and subways as data** (the owner's answers,
+     2026-11-18: the Circus first; a sunken plaza; murals and strip
+     lights inside; life with Phase 6; four subways, nothing that's built
+     moving: the west and south-west corners are built up to the Circus's
+     sidewalk, the parade's back and Church Road's end house, and keep
+     their zebra crossings). Built, waiting on the owner's sign-off:
+     `circus.ts` (DOM-free, `tests/circus.test.ts`): the plaza
+     (`PLAZA`, a well of the kit inside the island, three steps of seats
+     round its edge you walk up, `tiers`), planters with trees and lamps
+     on its floor, four subways (`SUBWAYS`, north-west, north-east,
+     south-east and south: roofed from the plaza's wall to past the
+     sidewalk, a ramp about one in four up to each mouth), each mouth's
+     paved path on to the nearest sidewalk (the south-east's, boxed in by
+     blocks, joins the south's), the ground's hole (`CIRCUS_HOLE`), the
+     solids. The kit (`underground.ts`) takes a passage at any angle
+     (`radial()`) and a well's seats (`wellFloor()`); Lot 9's tunnel
+     unchanged. Sketch `docs/south-shots/18-phase-4a-circus.png`. Not
+     wired into walking or drawn yet: 4b.
+   - **4b, the Circus drawn and walked**: the plaza, subways, murals and
+     strip lights drawn (the village's or the estate's chunk), the
+     ground laid back round the hole, the island's ring, walking and the
+     camera (groundheight.ts `UNDER`), solids, shots.
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new

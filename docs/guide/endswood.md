@@ -124,8 +124,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   when their buildings stand (the owner's call); `ENDS_SPAWNS` on a sidewalk by each.
 - **Its sound** (ambience.ts `ends`): on its land and 25 past it. Bunker Sound's beat and St Aldwyn's bell are off
   until their buildings come back (`studio`, `bell` are 0).
-- **Below ground**: Lot 9's tunnel only (groundheight.ts `UNDER`, underground.ts); the Circus's well and its subways
-  are Phase 4's.
+- **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
+  subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
+  north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_SOLIDS`), drawn and walked from 4b. The kit
+  takes a passage at any angle (`radial()`) and a well's stepped seats (`tiers`, `wellFloor()`).
 - **`?bench` views**: `south-circus`, `south-high`, `south-village`, and `ends-home` (the compound from the High Road's
   end).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
