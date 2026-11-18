@@ -19,7 +19,8 @@ keep it up to date when what it describes changes.
     center reads these lists from here, so a new place or feature is added
     once, here.
   - `live-client.ts` fetches it: once at the boot (the 3D city's boot waits
-    at most `LIVE_TIMEOUT` for it, while its code downloads), again every
+    at most `LIVE_TIMEOUT` for it, while its code downloads: `go3d()` in
+    CityMap.astro asks for the code first, docs/spawn-plan.md Phase 3a), again every
     `POLL_MS` while the tab is showing, the last copy kept in localStorage
     (`degen-city-live-v1`); off under `?bake-textures` and `?bench`.
     Everything gated asks `live` as it happens: a closed place's panel
