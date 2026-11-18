@@ -473,8 +473,8 @@ function estateGarden(e: Estate): Garden {
 }
 const at_ = (u: number, v: number, h: number): FR => [u - h, v - h, u + h, v + h];
 
-/** How far a verge's planting keeps off the street's palms and jacarandas, its lamps and the gateway */
-export const VERGE_CLEAR = { tree: 0.75, lamp: 0.8, gate: 0.4 } as const;
+/** How far a verge's planting keeps off the street's palms and jacarandas, its lamps and the gateway; on a block's edge, its middle this far out from the hedge */
+export const VERGE_CLEAR = { tree: 0.75, lamp: 0.8, gate: 0.4, hedge: 0.3 } as const;
 /**
  * An estate's verge: runs of shrubs and flower beds by turns, with gaps, in the strip before its front hedge (behind the
  * street's palms), and where its lot is on a block's edge, in the strip outside that hedge too; clear of the gateway,
@@ -511,10 +511,11 @@ export function vergeOf(e: Estate): Feat[] {
   };
   const hedge = -HEDGE.front;
   strip('u', hedge / 2 - 0.05, -e.W / 2 + 0.35, e.W / 2 - 0.35);
-  // (a block's edge: the strip outside the side or back hedge set in from it)
-  if (e.outer[0]) strip('v', -e.W / 2 + HEDGE.outer / 2, -e.D + 0.4, hedge - 0.2);
-  if (e.outer[1]) strip('v', e.W / 2 - HEDGE.outer / 2, -e.D + 0.4, hedge - 0.2);
-  if (e.outer[2]) strip('u', -e.D + HEDGE.outer / 2, -e.W / 2 + 0.4, e.W / 2 - 0.4);
+  // (a block's edge: the strip outside the side or back hedge set in from it, against the hedge's foot, off the sidewalk)
+  const foot = HEDGE.outer - VERGE_CLEAR.hedge;
+  if (e.outer[0]) strip('v', -e.W / 2 + foot, -e.D + 0.4, hedge - 0.2);
+  if (e.outer[1]) strip('v', e.W / 2 - foot, -e.D + 0.4, hedge - 0.2);
+  if (e.outer[2]) strip('u', -e.D + foot, -e.W / 2 + 0.4, e.W / 2 - 0.4);
   return feats;
 }
 const overlaps = (r: FR, list: FR[]) => list.some((t) => r[0] < t[2] && t[0] < r[2] && r[1] < t[3] && t[1] < r[3]);

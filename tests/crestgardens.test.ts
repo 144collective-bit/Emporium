@@ -153,6 +153,8 @@ test("the estates' boundaries and verges: trees and shrubs along the hedges, the
       const front = f.r[1] > -HEDGE.front;
       const side = (e.outer[0] && f.r[2] < lot[0] + HEDGE.outer) || (e.outer[1] && f.r[0] > lot[2] - HEDGE.outer) || (e.outer[2] && f.r[3] < lot[1] + HEDGE.outer);
       assert.ok(front || side, `${e.id}'s verge inside its hedges`);
+      // (on a block's edge, at the hedge's foot: half a tile and more in from the lot's edge, off the sidewalk)
+      if (!front) assert.ok(Math.min(f.r[0] - lot[0], lot[2] - f.r[2], f.r[1] - lot[1]) > 0.35, `${e.id}'s verge out by the sidewalk`);
       for (const r of fixed) assert.ok(!overlap(f.r, r, 1e-6), `${e.id}'s verge in a hedge`);
       assert.ok(!(f.r[0] < e.hc + GATE.half + GATE.pier * 2 && f.r[2] > e.hc - GATE.half - GATE.pier * 2 && f.r[3] > e.court[0]), `${e.id}'s verge in its gateway`);
       const [a, b] = [toWorld(e, f.r[0], f.r[1]), toWorld(e, f.r[2], f.r[3])];
