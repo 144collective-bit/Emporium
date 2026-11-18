@@ -8,6 +8,11 @@
  * on the spot, the fighter's guard or an emote; `setLight()` picks the
  * studio, daylight or night. Under reduced motion he stands still and is
  * drawn only when something changes (drag still turns him).
+ *
+ * Its renderer is a GPU context of its own, beside the city's (with its own picture buffers, MSAA on desktop):
+ * `RELEASE_AFTER` once its panel closes it's let go, the figure, the podium and the backdrops freed and the context
+ * lost on purpose, so a closed panel holds no graphics memory (docs/stability-plan.md, Phase 4.2). Opened again
+ * sooner, it's all still there; later, it's made again (a moment's work, the scene is small).
  */
 import * as THREE from 'three';
 import type { Look } from '../net/profile-data';
@@ -52,6 +57,9 @@ const LIGHTS: Record<StageLight, { bg: [number, string][]; sky: string; ground: 
   night: { bg: [[0, '#2a1f55'], [0.55, '#140f2e'], [1, '#07060f']], sky: '#6f7fd6', ground: '#1a1236', hemi: 0.9, key: '#b9c6ff', keyI: 1.2, rims: [2.6, 2.4] },
 };
 
+/** How long a closed panel's stage keeps its GPU context, for opening again at once (ms) */
+export const RELEASE_AFTER = 15_000;
+
 export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?: boolean } = {}): Stage {
   // One renderer per stage, moved to whichever canvas its panel has now
   let renderer: THREE.WebGLRenderer | null = null;
@@ -95,6 +103,7 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
   const pointers = new Map<number, { x: number; y: number }>();
   let pinch = 0;
   let ro: ResizeObserver | null = null;
+  let releaseTimer = 0;
   const fight = newFightPose();
   // The captured idle and walk (the polish plan's Phase 8): the crowd pack's takes on his bones (captureplay.ts), the
   // formula poses until it's in (it's fetched at the boot, so it usually is)
@@ -107,7 +116,9 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
     () => {},
   );
 
+  let lightId: StageLight = 'studio';
   function light(id: StageLight) {
+    lightId = id;
     const L = LIGHTS[id];
     scene.background = backdrops[id] ??= backdrop(L.bg);
     hemi.color.set(L.sky);
@@ -260,8 +271,36 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
     }
   }
 
+  // The panel stayed closed: everything this stage put on the GPU let go (what it shares with the city, the clothes'
+  // textures, isn't disposed: the city still draws with them; the context lost frees this stage's copies)
+  function release() {
+    releaseTimer = 0;
+    if (canvas || !renderer) return;
+    if (fig) {
+      turn.remove(fig.g);
+      fig.dispose();
+      fig = null;
+    }
+    // (its geometry only: toon() materials are shared through its cache, and lit() keeps its own list)
+    podium.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+    for (const k of Object.keys(backdrops) as StageLight[]) {
+      backdrops[k]!.dispose();
+      delete backdrops[k];
+    }
+    scene.background = null;
+    renderer.dispose();
+    renderer.forceContextLoss();
+    // (a canvas whose context is lost never gets another: a blank one, the same element otherwise, in its place)
+    const old = renderer.domElement;
+    if (old.isConnected) old.replaceWith(old.cloneNode(false));
+    renderer = null;
+    post = null;
+  }
+
   return {
     attach(c, l) {
+      clearTimeout(releaseTimer);
+      releaseTimer = 0;
       canvas = c;
       if (!renderer) {
         try {
@@ -276,6 +315,8 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
         post.bloom.strength = 0.4;
         post.bloom.threshold = 0.97;
         post.ink.uniforms.fadeNear.value = 40;
+        // (made again after a release: the backdrop with it)
+        light(lightId);
       } else {
         // The panel's markup is new each time it opens: move the drawing surface over
         c.replaceWith(renderer.domElement);
@@ -313,6 +354,8 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
       canvas = null;
       drag = null;
       pointers.clear();
+      clearTimeout(releaseTimer);
+      releaseTimer = window.setTimeout(release, RELEASE_AFTER);
     },
     dress(l) {
       if (canvas) dress(l);

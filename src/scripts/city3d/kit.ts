@@ -4,6 +4,7 @@
  * merges static geometry into a few draw calls.
  */
 import * as THREE from 'three';
+import { scopedKey, texScope } from './texscope';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ---------- Layers ---------- */
@@ -375,8 +376,15 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
   const made = BUILT?.[key];
   if (made) return builtTexture(made, () => paint(w, h, draw));
   const c = paint(w, h, draw);
-  if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160) });
-  return canvasTexOf(c);
+  if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160), scope: texScope() });
+  return named(canvasTexOf(c), draw);
+}
+/** Under ?fps or ?bench a painted texture carries the start of what drew it, for `textureRows()` (perf.ts) */
+let nameTex: boolean | undefined;
+function named(t: THREE.CanvasTexture, draw: Draw) {
+  nameTex ??= !NO_DOM && /[?&](fps|bench)\b/.test(location.search);
+  if (nameTex) t.name = draw.toString().replace(/\s+/g, ' ').slice(0, 90);
+  return t;
 }
 
 /**
@@ -385,7 +393,7 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
  */
 export function liveTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
   if (NO_DOM) return canvasTex(w, h, draw);
-  return canvasTexOf(paint(w, h, draw));
+  return named(canvasTexOf(paint(w, h, draw)), draw);
 }
 
 function paint(w: number, h: number, draw: Draw) {
@@ -420,7 +428,7 @@ export interface BuiltTex {
   avg: [number, number, number, number];
 }
 /** ?bake-textures: the build's own run, recording what's painted (each texture's key and canvas) */
-const BAKING: { key: string; canvas: HTMLCanvasElement; src: string }[] | null =
+const BAKING: { key: string; canvas: HTMLCanvasElement; src: string; scope: string }[] | null =
   !NO_DOM && /[?&]bake-textures\b/.test(location.search) ? ((globalThis as { __texBake?: unknown[] }).__texBake = []) as never : null;
 /**
  * ?bake-textures: the boot is done (index.ts, as the loader goes). The bake keeps only what was painted by now
@@ -456,15 +464,12 @@ const BUILT: Record<string, BuiltTex> | null = (() => {
  * (the boot paints in the same order every time). The build keeps only the keys that came out the same
  * with two different saves and clocks, so a key always stands for the same picture.
  */
-const texCounts = new Map<string, number>();
 function texKey(w: number, h: number, draw: Draw) {
   const src = draw.toString();
   let x = 2166136261;
   for (let i = 0; i < src.length; i++) x = Math.imul(x ^ src.charCodeAt(i), 16777619);
-  const base = `${(x >>> 0).toString(36)}-${w}x${h}`;
-  const n = texCounts.get(base) ?? 0;
-  texCounts.set(base, n + 1);
-  return `${base}-${n}`;
+  // (counted within the site being built, if any: texscope.ts)
+  return scopedKey(`${(x >>> 0).toString(36)}-${w}x${h}`);
 }
 
 /** One made at build time: the texture standing in for it, and its painted fallback */
