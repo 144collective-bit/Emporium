@@ -21,8 +21,8 @@ to load the rest of the needed assets." The owner's answers:
 - **Getting started** gets a new first step at home (the owner's call, 2026-11-18): **Head out**, out of the front
   door; the stall downtown is the second.
 
-**Status:** Phases 1 and 2 built and signed off (2026-11-18); Phase 3 started with its measuring. Each phase with the
-owner's sign-off.
+**Status:** Phases 1 and 2 built and signed off (2026-11-18), and with 3a merged to `main` (PR #189); 3b waits on
+the owner. Each phase with the owner's sign-off.
 
 ## Today, measured
 
@@ -132,6 +132,20 @@ What it says:
      (up to 1.5 s on the live site); and lay out the south's street web when the site is built, not in the browser
      (`baked()`, as the traffic's routes are: about 1.2 s here, more on a phone).
    - **3b, the split:** the boot builds the room's needs first and the rest behind the walls in slices.
+
+   **3a built** (merged to `main` with Phases 1 and 2, PR #189): `go3d()` asks for the code before awaiting the live
+   settings, and the closes and crescents are baked (`GROWN`, `south-grown`). Measured again, the same way, two runs
+   each:
+
+   | | the boot starts | ready |
+   |---|---|---|
+   | before | 2.86 s, 2.91 s | 8.19 s, 8.21 s |
+   | after 3a | 2.70 s, 2.24 s | 8.09 s, 7.42 s |
+
+   `south.ts` as it loads went from about 1.2 s to 0.5-0.65 s (what's left is noding the street web and tracing its
+   blocks). The live settings' saving doesn't show here (they fail at once in this sandbox); on the live site it's up
+   to 1.5 s when the backend is slow. The runs differ by more than the saving, so 3a is a small step; the boot's own
+   5.3 s is 3b's.
 4. **Polish.** A small loading line in the room while the street gets ready (in `chrome`), the copy (draft), the
    room's light by day and at night with the curtains, every width (320, 375, 768, 1024, 1440, phones on their
    side), the guide files (`menus.md`'s start menu, `endswood.md`'s home, `performance.md`'s start-up,
