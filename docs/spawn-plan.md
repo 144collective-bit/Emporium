@@ -4,19 +4,24 @@ The owner's call (2026-11-18): "can we have degen spawning in to his house upon 
 to load the rest of the needed assets." The owner's answers:
 
 - **Where:** in the living room (home.ts `ROOM`), by the sofa, straight into Walk mode. Single player no longer
-  flies in over the City view first; the City / Walk switch still goes out to the City view.
+  flies in over the City view first; the City / Walk switch still goes out to the City view. The title screen has no
+  way straight into the City view: it's to be for the admin only, behind a password, later (the owner's call,
+  2026-11-18: not in this plan).
 - **What covers the loading:**
-  - **The doors wait.** The front and back doors' prompts read "Getting ready…" until the street outside is built,
-    then "Go out" as now. Nothing outside is ever seen half-built.
+  - **The doors wait.** The ways out of the room (the front door, the side door, the stairs up to the terrace, which
+    looks out over the Close) read "Getting ready…" until the street outside is built, then as they were. Nothing
+    outside is ever seen half-built.
   - **The curtains.** The room's two windows (front, over the sofa; back, over the counter) have curtains drawn
     while the city loads, and they open when it's ready. (The windows are painted panels today, not glass you see
     through, so the curtains are the "ready" sign, not what hides the city.)
   - **The wake-up.** He gets up off the sofa as you arrive: a second or two of cover, and a start that feels like
     his morning.
 - **Who:** every player, new ones too. A new player's first walk no longer starts downtown by the Emporium
-  (`startsAtHome()` goes); Getting started's beam points the way from the house.
+  (`startsAtHome()` goes).
+- **Getting started** gets a new first step at home (the owner's call, 2026-11-18): **Head out**, out of the front
+  door; the stall downtown is the second.
 
-**Status:** planned, nothing built. Each phase with the owner's sign-off.
+**Status:** Phase 1 built, waiting on the owner's sign-off. Each phase with the owner's sign-off.
 
 ## Today, measured
 
@@ -53,17 +58,28 @@ What it says:
 
 ## The phases
 
-1. **Spawn in the room.** Single player (and Multiplayer, where it's on) goes from the title screen straight into
-   Walk mode in the living room: a new spot `HOME_WAKE` in home.ts (in `ROOM`, in front of the sofa, facing the
-   telly, clear of `FURNITURE`, tested), for every player (`startsAtHome()` and its first-walk rule go; `?spawn=`
-   still wins). The south's chunk and the compound's sites are asked for first (`works.wantView()` on the room,
-   the district ahead of the rest), so the room is there before the title screen lifts. **The doors wait**: a
-   DOM-free rule (`spawn.ts`, tested, on `DOM_FREE`) says when the street is ready (the districts round the
-   compound loaded, no site waiting within reach of the gates); until then the four portals' prompts read
-   "Getting ready…" and F does nothing but a short toast. The City button's first trip out flies to the home view,
-   as the fly-in did. The smoke test starts in the room (its scenes that start elsewhere keep `?spawn=`), and gets
-   a scene for the doors waiting. Getting started's first step is unchanged; its beam and the walk tracker point
-   from the house.
+1. **Spawn in the room** (*built*, waiting on the owner's sign-off). Single player (and Multiplayer, where it's on)
+   goes from the title screen straight into Walk mode in the living room (CityMap.astro `enter()`, index.ts
+   `city.wake()`): `HOME_WAKE` in home.ts (in `ROOM`, between the sofa and the low table, facing the telly, out of
+   reach of every prompt), for every player; `startsAtHome()` and its first-walk rule are gone, and the Walk button
+   from the City view starts in the yard (`HOME_SPAWN`) as the panel and fast travel do. `?spawn=` still wins. While
+   the title screen still covers the page, the south's chunk (with his house) is loaded (`districts.load()`, given
+   10 s at most) and what's within 25 of the room is built (`works.want()`), so the room is whole when it lifts.
+   Where the owner has closed walking (live settings) Single player does the fly-in as before; where they've closed
+   his house, he wakes in the yard. **The doors wait**: `spawn.ts` (DOM-free, tested in `tests/spawn.test.ts`, on
+   `DOM_FREE`) says the street is ready once every lazy district within `READY_REACH` (60) of the gates has loaded
+   (`dueDistricts()`) and no site within that reach is waiting (tilework.ts `waitingNear()`), or `GIVE_UP_MS` (25 s)
+   has passed; index.ts asks it a few times a second (`streetUp()`) and keeps the answer once it's yes. Until then the
+   ways out (home.ts `HOME_WAITS`: the front door, the side door, the stairs up) read `WAITING` ("Getting ready…",
+   `homePlaces(y, ready)`) and F toasts "Nearly ready · the street is loading". The City button's first trip out
+   flies to the home view (where the fly-in ran behind the title screen). **Getting started's first step**
+   (guide.ts `GUIDE`): **Head out** ("Walk out of your front door", 100 Dorras, 20 XP), its beam over the yard, done
+   when the save's new lifetime counter `leftHome` (out of the front or the side door) is 1; `GUIDE_STEPS` is 8. The
+   save's `guide` carries `steps` (how many there were when it was saved): a guide saved before (no `steps`) counts
+   one on past its first step, and one that hadn't started starts with Head out (tycoon.ts `guideStepOf()`, in
+   `cleanSave()`, tested in `tests/guide.test.ts`); the save's version is unchanged. The smoke test's Single player
+   goes straight into walking (no Walk toggle) and its `wake` scene starts with no spot: in the room, then out of the
+   front door once it stops waiting.
 2. **The wake-up and the curtains.** He's on the sofa as the room appears and stands up (moments.ts's sit-down and
    stand-up, the seat being the sofa); under `prefers-reduced-motion` he's standing already. Curtains on the two
    windows (home3d.ts, a pair each side, near only), drawn while the street isn't ready and drawn back when it is

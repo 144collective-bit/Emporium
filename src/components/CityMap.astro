@@ -1598,7 +1598,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       : Promise.resolve(null);
 
     /* ---------- The 3D city ---------- */
-    let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
+    let city: { stop(): void; start(): void; open(id: string): void; intro(): void; wake(): Promise<boolean> } | null = null;
     let booting = false;
     const NO_3D = 'The Trenches needs 3D graphics (WebGL 2).';
     /** No 3D here: the page says so, and so does the start menu (the header's Menu keeps the comic page and the links) */
@@ -1733,15 +1733,19 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       start.setAttribute('aria-hidden', 'true');
       setTimeout(() => (start.hidden = true), 450);
     }
-    /** Into the city with its fly-in once it's up; with no 3D here, onto the page that says so */
+    /**
+     * Into the city once it's up: waking in Degen's room at home (docs/spawn-plan.md), or the fly-in where walking is
+     * closed for now; with no 3D here, onto the page that says so
+     */
     async function enter(multi: boolean) {
       if (entering) return;
       entering = true;
       status.textContent = gl ? 'Entering…' : NO_3D;
       await booted;
       if (multi && server && city) root!.querySelector<HTMLButtonElement>('[data-online-set="on"]')?.click();
+      const woke = city ? await city.wake() : false;
       closeStart();
-      if (city) city.intro();
+      if (city && !woke) city.intro();
       entering = false;
     }
     start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));

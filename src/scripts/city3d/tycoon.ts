@@ -380,9 +380,11 @@ export interface Counters {
   streetSpars: number;
   partnersBeaten: number;
   streetChains: number;
+  /** Times he's gone out of his house's front or side door (Getting started's first step, docs/spawn-plan.md) */
+  leftHome: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains', 'streetSpars', 'partnersBeaten', 'streetChains'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains', 'streetSpars', 'partnersBeaten', 'streetChains', 'leftHome'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A mission you've taken on: the counters as they stood when you did */
 export interface ActiveMission {
@@ -502,8 +504,11 @@ export interface TycoonSave {
   /** Badges (achievements) earned */
   badges: string[];
   counters: Counters;
-  /** Getting started (guide.ts): the step you're on (GUIDE_STEPS once done), and whether it's hidden */
-  guide: { step: number; hidden: boolean };
+  /**
+   * Getting started (guide.ts): the step you're on (GUIDE_STEPS once done), whether it's hidden, and how many steps
+   * the guide had when it was saved (`steps`: a save from before "Head out" was put first has none, docs/spawn-plan.md)
+   */
+  guide: { step: number; hidden: boolean; steps: number };
   /** When the save was last downloaded as a backup (ms since 1970; 0 never) */
   backup: number;
   /** The places you've walked to (places.ts), where fast travel can take you */
@@ -522,7 +527,18 @@ export interface Prizes {
 }
 export const emptyPrizes = (): Prizes => ({ day: '', races: 0, bouts: 0 });
 /** How many steps Getting started has (guide.ts's GUIDE) */
-export const GUIDE_STEPS = 7;
+export const GUIDE_STEPS = 8;
+
+/**
+ * The saved guide's step, in today's list. A guide saved before "Head out" was put first (docs/spawn-plan.md: no
+ * `steps`, seven of them) counts one on: whoever was past the first step was out of the house long ago, so they go
+ * on where they were; whoever hadn't started starts with Head out.
+ */
+function guideStepOf(gd: Record<string, unknown>) {
+  if (gd.steps === GUIDE_STEPS) return Math.round(num(gd.step, 0, GUIDE_STEPS, 0));
+  const old = Math.round(num(gd.step, 0, GUIDE_STEPS - 1, 0));
+  return old > 0 ? old + 1 : 0;
+}
 
 export function newSave(now: number): TycoonSave {
   return {
@@ -553,7 +569,7 @@ export function newSave(now: number): TycoonSave {
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
-    guide: { step: 0, hidden: false },
+    guide: { step: 0, hidden: false, steps: GUIDE_STEPS },
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
@@ -663,7 +679,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     missions: { active: [], done: [] },
     badges: [],
     counters: newCounters(),
-    guide: { step: 0, hidden: false },
+    guide: { step: 0, hidden: false, steps: GUIDE_STEPS },
     backup: 0,
     visited: [],
     inventory: emptyInventory(),
@@ -2105,7 +2121,7 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   for (const k of COUNTER_IDS) s.counters[k] = Math.floor(num(obj(o.counters)[k], 0, 1e15, 0));
   // Getting started: a save from before it that's past level 1 has it done already (no rewards for steps long behind you)
   const gd = obj(o.guide);
-  s.guide = 'guide' in o ? { step: Math.round(num(gd.step, 0, GUIDE_STEPS, 0)), hidden: gd.hidden === true } : { step: level(s) > 1 ? GUIDE_STEPS : 0, hidden: false };
+  s.guide = 'guide' in o ? { step: guideStepOf(gd), hidden: gd.hidden === true, steps: GUIDE_STEPS } : { step: level(s) > 1 ? GUIDE_STEPS : 0, hidden: false, steps: GUIDE_STEPS };
   s.backup = num(o.backup, 0, now, 0);
   // (the daily prize cap, v13: today's count kept, any other day's starts over; a save from before it starts at zero)
   const pz = obj(o.prizes);

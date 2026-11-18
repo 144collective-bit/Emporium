@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BIKE_HOME, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, HOME_CAMERA, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
-  HOME_WORKSHOP_DOOR, HATCH, PIER, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, homePlaces, homeRoofY, homeWall, inHouse, onHome, onRoof, roofWall, startsAtHome,
+  HOME_WORKSHOP_DOOR, HATCH, PIER, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, homePlaces, homeRoofY, homeWall, inHouse, onHome, onRoof, roofWall, HOME_WAITS, HOME_WAKE, WAITING,
 } from '../src/scripts/city3d/home';
 import { GATES, HEAD, LANE_HALF, LANE_X, PLOT, ROAD_HALF, ROAD_Z } from '../src/scripts/city3d/endsfar';
 import { SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
@@ -141,9 +141,6 @@ test('the place: a spot with a panel, its pin over the house, walking starts in 
   assert.equal(HOME_SPAWN.yaw, Math.PI);
   const go = HOME_PORTALS.find((p) => p.id === 'home:in')!;
   assert.ok(Math.hypot(go.x - HOME_SPAWN.x, go.z - HOME_SPAWN.z) < 1);
-  // A new player's first walk starts downtown; every one after, at home
-  assert.equal(startsAtHome([]), false);
-  assert.equal(startsAtHome(['emporium']), true);
   // Its land is the plot
   assert.ok(onHome(HOME_SPAWN.x, HOME_SPAWN.z) && !onHome(LANE_X, ROAD_Z));
 });
@@ -222,6 +219,29 @@ test('the doors: a prompt outside and in for the front and the side, each fade l
   assert.ok(inRect(HOME.lawns[1], sout.to.x, sout.to.z));
   // Facing in as you come in, out as you go out (walking's yaw: 0 north, π south, π/2 west, -π/2 east)
   assert.deepEqual([fin.to.yaw, fout.to.yaw, sout.to.yaw, sin.to.yaw], [Math.PI, 0, -Math.PI / 2, Math.PI / 2]);
+});
+
+test('every visit wakes in the room: clear of the furniture, facing the telly, out of reach of every prompt', () => {
+  assert.ok(inHouse(HOME_WAKE.x, HOME_WAKE.z) && !homeWall(HOME_WAKE.x, HOME_WAKE.z, R), 'somewhere he can stand in the room');
+  assert.equal(HOME_WAKE.yaw, Math.PI, 'facing south');
+  const tv = FURNITURE.find((f) => f.kind === 'tv')!.rect;
+  const sofa = FURNITURE.find((f) => f.kind === 'sofa')!.rect;
+  assert.ok(HOME_WAKE.z > sofa[3] && HOME_WAKE.z < tv[1] && HOME_WAKE.x > tv[0] && HOME_WAKE.x < tv[2], 'between the sofa and the telly');
+  // (a prompt shows within 1 of him, walk.ts: none as he wakes)
+  for (const p of homePlaces(0)) assert.ok(Math.hypot(p.x - HOME_WAKE.x, p.z - HOME_WAKE.z) > 1.05, `${p.id} shows as he wakes`);
+});
+
+test('while the street is loading, the ways out of the room wait and the rest are as they were', () => {
+  assert.deepEqual([...HOME_WAITS].sort(), ['home:out', 'home:up', 'home:yard']);
+  assert.ok(WAITING.split(' ').length <= 3);
+  for (const y of [0, SLAB_Y + ROOF_Y]) {
+    const ready = homePlaces(y);
+    const waiting = homePlaces(y, false);
+    assert.deepEqual(waiting.map((p) => p.id), ready.map((p) => p.id), 'the same prompts');
+    for (const [i, p] of waiting.entries()) assert.equal(p.label, HOME_WAITS.includes(p.id) ? WAITING : ready[i].label, p.id);
+  }
+  // Going in from the yard and coming down from the terrace never wait
+  assert.ok(!HOME_WAITS.includes('home:in') && !HOME_WAITS.includes('home:back') && !HOME_WAITS.includes('home:down'));
 });
 
 test("the wardrobe's and the trunk's prompts stand in the room where he can, by the thing, apart from the doors'", () => {

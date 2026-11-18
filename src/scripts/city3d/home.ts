@@ -16,8 +16,9 @@
  *   (`HOME_WORKSHOP_DOOR`) opens the garage's menu on its kit.
  * - **The yard** between them, block paving (the wide drive), and **the gardens**: the lawn in the north-west corner
  *   and the one east of the house (`HOME.lawns`).
- * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where walking
- *   starts (`HOME_SPAWN`: in the yard, facing the front door).
+ * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where the Walk
+ *   button starts you (`HOME_SPAWN`: in the yard, facing the front door). Every visit starts inside, in the room
+ *   (`HOME_WAKE`, docs/spawn-plan.md).
  * - **Inside**: one room on the ground floor (`ROOM`, `FURNITURE`), sealed: the doors are fades (`HOME_PORTALS`).
  * - **The roof terrace** (Phase 3): up the stairs (a fade too) to the roof inside its rail (`TERRACE`, `ROOF_THINGS`,
  *   `onRoof()`, `roofWall()`), the yard and the Close below.
@@ -88,15 +89,10 @@ export const HOME = {
   ] as Rect[],
 } as const;
 
-/** Where you arrive, and where walking starts: in the yard, facing the front door (yaw π faces south) */
+/** Where you arrive by the Walk button, the panel and fast travel: in the yard, facing the front door (yaw π faces south) */
 // (within a door prompt's reach of his front door's, so "Go in" shows as you arrive)
 export const HOME_SPAWN = { x: HOME.door[0] + 0.5, z: HOME.door[1] - 1.45, yaw: Math.PI };
 
-/**
- * Does walking start at home? Not a new player's very first walk (the owner's call): that starts downtown by the
- * Emporium, where Getting started's first steps are; once anywhere has been walked to (the save's `visited`), home.
- */
-export const startsAtHome = (visited: readonly string[]) => visited.length > 0;
 
 /** The place's pick boxes (over the slab), the land its ring goes round, and its pin over the house */
 export const HOME_PICK: { rect: Rect; h: number }[] = [
@@ -231,6 +227,13 @@ export function homeWall(x: number, z: number, r: number) {
   return FURNITURE.some(({ rect: f }) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3]);
 }
 
+/**
+ * Where every visit starts (docs/spawn-plan.md Phase 1, the owner's call): in the room, between the sofa and the low
+ * table, facing the telly (yaw π faces south), clear of the trunk's and the doors' prompts. The rest of the city
+ * loads behind the walls while the doors out wait (`HOME_WAITS`).
+ */
+export const HOME_WAKE = { x: rx0 + 2.5, z: rz0 + 1.15, yaw: Math.PI };
+
 /* ---------- The roof terrace (Phase 3) ---------- */
 
 /** The terrace's floor over the slab (the roof's felt), and the roof inside its parapet and rail */
@@ -295,10 +298,18 @@ const at = (kind: FurnitureKind) => FURNITURE.find((f) => f.kind === kind)!.rect
  * The home's prompts for someone `y` high: on the terrace only the way down; anywhere else everything but that (the
  * room's and the terrace's stand over one another, so each shows on its own floor)
  */
-export function homePlaces(y: number): { id: string; x: number; z: number; label: string }[] {
+export function homePlaces(y: number, ready = true): { id: string; x: number; z: number; label: string }[] {
   const up = y >= UP;
-  return [...HOME_PORTALS.filter((p) => (p.id === 'home:down') === up), ...(up ? [] : HOME_USES)];
+  const doors = HOME_PORTALS.filter((p) => (p.id === 'home:down') === up).map((p) => (ready || !HOME_WAITS.includes(p.id) ? p : { ...p, label: WAITING }));
+  return [...doors, ...(up ? [] : HOME_USES)];
 }
+/**
+ * The ways out of the room that wait while the street outside is still loading (docs/spawn-plan.md Phase 1): the
+ * front door, the side door and the stairs to the terrace (which looks out over the Close); spawn.ts says when
+ */
+export const HOME_WAITS: readonly string[] = ['home:out', 'home:yard', 'home:up'];
+/** Their prompt meanwhile */
+export const WAITING = 'Getting ready…';
 /** The wardrobe (stood in front of, on its west side: the fitting room) and the trunk (from its east end: the stash) */
 export const HOME_USES: HomeUse[] = [
   { id: 'home:wardrobe', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },

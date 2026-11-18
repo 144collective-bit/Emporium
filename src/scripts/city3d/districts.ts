@@ -120,6 +120,8 @@ export interface Districts {
   step(x: number, z: number, far: number): void;
   /** Load every district now (the benchmark: it measures the whole city) */
   all(): void;
+  /** Load one district now, by its id (waking at home: the south's chunk, with his house, before the room shows) */
+  load(id: string): Promise<void>;
   /**
    * Load every district one after another, in the list's order or the reverse (the texture bake: the textures a
    * district paints as it loads are counted in the order the districts arrive, so the bake's two runs load them in
@@ -166,6 +168,10 @@ export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker
     },
     all() {
       list.forEach(load);
+    },
+    load(id) {
+      const d = list.find((q) => q.id === id);
+      return d ? load(d) : Promise.resolve();
     },
     async inTurn(reverse) {
       for (const d of reverse ? [...list].reverse() : list) await load(d);
