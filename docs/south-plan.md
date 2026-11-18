@@ -405,8 +405,8 @@ From the Circus west, patchy as high roads are:
      answers (2026-11-18): a football pitch, a pavilion, a skate park, a
      playground and benches; a place (Aldwyn's Green Rec: a pin, a panel,
      coming soon, Walk in at its gate); a footbridge over the brook from
-     the village's nearest street to its gate. Built, waiting on the
-     owner's sign-off: `rec.ts` (DOM-free, `tests/rec.test.ts`): the pitch
+     the village's nearest street to its gate. Built and signed off
+     (2026-11-18): `rec.ts` (DOM-free, `tests/rec.test.ts`): the pitch
      (lines, boxes, centre circle, goals), the pavilion with its veranda
      facing the pitch, the skate park (a bowl, a quarter pipe, a funbox, a
      rail), the playground (swings, a slide, bark), benches; the footbridge
