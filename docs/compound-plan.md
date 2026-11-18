@@ -246,6 +246,21 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:wide`, a build, `npm run budget`,
 `npm run smoke`, `?bench` before and after, and shots in `docs/compound-shots/`.
 
+## Merged with the spawn plan (2026-11-18)
+
+`main` gained docs/spawn-plan.md while this was built: every visit wakes on the sofa in the room (`HOME_WAKE`,
+`SOFA_SEAT`), the room's curtains draw back once the street is in (`ROOM_WINDOWS`, `CURTAIN`), and the ways out wait
+meanwhile (`HOME_WAITS`). To fit both:
+
+- The corner sofa's run is a little longer (to `rx0 + 3.45`) and its chaise narrower (from `rx0 + 2.72`), so the wake
+  spot stands clear in front of the sofa, where the spawn plan put it.
+- The room's front windows are back to their first heights (0.5 to 1.05 outside, 0.6 to 1.02 inside: Phase 1 had
+  made them taller), so the curtains hang over the sofa's back; the second front window (east of the door) is in
+  `ROOM_WINDOWS` and has its curtains too, and the hall's plant moved to the hall's back corner, clear of them.
+- `homePlaces(y, ready)` gives each floor's prompts and the waiting label; `home:up` (now to the landing) waits, the
+  basement's steps don't (nothing down there looks out).
+- The smoke test's `wake` scene walks out past the coffee table, round the chaise, to the hall and the front door.
+
 ## Questions for later phases
 
 All answered (2026-11-18): the trophy wall in the lounge, the telescope as decoration, a hoop on the garage and no

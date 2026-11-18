@@ -8,16 +8,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BIKE_HOME, BOLLARD, BOLLARDS, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, homeCamera, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
-  HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, BASE_CEIL, BASE_Y, BASEMENT, homeFloorY, homeLevel, homePlaces, homeWall, inHouse, UP_CEIL, UP_DOORS, UP_Y, UPSTAIRS, onHome, onRoof, roofWall, startsAtHome,
+  HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, BASE_CEIL, BASE_Y, BASEMENT, homeFloorY, homeLevel, homePlaces, homeWall, inHouse, UP_CEIL, UP_DOORS, UP_Y, UPSTAIRS, onHome, onRoof, roofWall,
+  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels,
 } from '../src/scripts/city3d/home';
 import { GATES, HEAD, LANE_HALF, LANE_X, PLOT, ROAD_HALF, ROAD_Z } from '../src/scripts/city3d/endsfar';
 import { SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { PLACES } from '../src/scripts/city3d/places';
 import { LIVE_PLACES } from '../src/scripts/city3d/live';
 import { CARS } from '../src/scripts/city3d/carspec';
 import { PLAYER_CARS } from '../src/scripts/city3d/mycar';
 import { BENCH_VIEWS } from '../src/scripts/city3d/bench';
+import { benchMark } from '../src/scripts/city3d/moments';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 type Rect = [number, number, number, number];
 const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
@@ -176,9 +181,6 @@ test('the place: a spot with a panel, its pin over the house, walking starts in 
   assert.equal(HOME_SPAWN.yaw, Math.PI);
   const go = HOME_PORTALS.find((p) => p.id === 'home:in')!;
   assert.ok(Math.hypot(go.x - HOME_SPAWN.x, go.z - HOME_SPAWN.z) < 1);
-  // A new player's first walk starts downtown; every one after, at home
-  assert.equal(startsAtHome([]), false);
-  assert.equal(startsAtHome(['emporium']), true);
   // Its land is the plot
   assert.ok(onHome(HOME_SPAWN.x, HOME_SPAWN.z) && !onHome(LANE_X, ROAD_Z));
 });
@@ -288,6 +290,60 @@ test('the doors: a prompt outside and in for the front and the side, each fade l
   assert.ok(inRect(HOME.lawns[1], sout.to.x, sout.to.z));
   // Facing in as you come in, out as you go out (walking's yaw: 0 north, π south, π/2 west, -π/2 east)
   assert.deepEqual([fin.to.yaw, fout.to.yaw, sout.to.yaw, sin.to.yaw], [Math.PI, 0, -Math.PI / 2, Math.PI / 2]);
+});
+
+test('every visit wakes in the room: clear of the furniture, facing the telly, out of reach of every prompt', () => {
+  assert.ok(inHouse(HOME_WAKE.x, HOME_WAKE.z) && !homeWall(HOME_WAKE.x, HOME_WAKE.z, R), 'somewhere he can stand in the room');
+  assert.equal(HOME_WAKE.yaw, Math.PI, 'facing south');
+  const tv = FURNITURE.find((f) => f.kind === 'tv')!.rect;
+  const sofa = FURNITURE.find((f) => f.kind === 'sofa')!.rect;
+  assert.ok(HOME_WAKE.z > sofa[3] && HOME_WAKE.z < tv[1] && HOME_WAKE.x > tv[0] && HOME_WAKE.x < tv[2], 'between the sofa and the telly');
+  // (a prompt shows within 1 of him, walk.ts: none as he wakes)
+  for (const p of homePlaces(0)) assert.ok(Math.hypot(p.x - HOME_WAKE.x, p.z - HOME_WAKE.z) > 1.05, `${p.id} shows as he wakes`);
+});
+
+test('he wakes sat on the sofa, its cushion under him, and stands up onto the wake spot', () => {
+  const sofa = FURNITURE.find((f) => f.kind === 'sofa')!;
+  const m = benchMark(SOFA_SEAT, SLAB_Y);
+  assert.ok(Math.abs(m.x - HOME_WAKE.x) < 1e-9 && Math.abs(m.z - HOME_WAKE.z) < 1e-9, 'stood up onto HOME_WAKE');
+  // (facing the telly: the bench mark's face, 0 south, is walking's yaw π turned round, walk.ts face = yaw + π)
+  assert.ok(Math.abs(Math.cos(m.face - (HOME_WAKE.yaw + Math.PI))) > 0.999);
+  assert.ok(inRect(sofa.rect, m.seat!.x, m.seat!.z), 'the seat is on the sofa');
+  assert.ok(SOFA_SEAT.h > 0.15 && SOFA_SEAT.h < sofa.h, 'on its cushion, under its back');
+});
+
+test('the curtains: drawn, they cover both windows; open, they bunch at the ends; always in the room, off the glass, over the furniture', () => {
+  const panels = (k: number) => curtainPanels(k);
+  assert.equal(panels(0).length, ROOM_WINDOWS.length * 2);
+  for (const [i, w] of ROOM_WINDOWS.entries()) {
+    const [a, b] = [panels(0)[i * 2], panels(0)[i * 2 + 1]];
+    assert.ok(a[0] < w.x0 && b[2] > w.x1, 'drawn: past both ends');
+    assert.ok(Math.abs(a[2] - b[0]) < 1e-9, 'drawn: meeting in the middle');
+    const [c, d] = [panels(1)[i * 2], panels(1)[i * 2 + 1]];
+    assert.ok(c[2] - c[0] <= CURTAIN.bunched + 1e-9 && d[2] - d[0] <= CURTAIN.bunched + 1e-9, 'open: bunched');
+    assert.ok(d[0] - c[2] > (w.x1 - w.x0) * 0.8, 'open: most of the window clear');
+    // (in the room, a few cm off the glass and its frame: nothing flush)
+    for (const p of [a, b, c, d]) {
+      assert.ok(within(p, ROOM, 1e-9), 'in the room');
+      assert.ok(Math.min(Math.abs(p[1] - w.z), Math.abs(p[3] - w.z)) >= 0.035 + 0.005, 'off the window');
+    }
+  }
+  for (const k of [0.25, 0.5, 0.75]) for (const p of panels(k)) assert.ok(p[2] > p[0], 'never inside out');
+  assert.ok(CURTAIN.y0 > Math.max(...FURNITURE.filter((f) => f.kind === 'sofa' || f.kind === 'counter').map((f) => f.h)), 'over the sofa and the counter');
+  assert.ok(CURTAIN.y1 < CEIL, 'under the ceiling');
+});
+
+test('while the street is loading, the ways out of the room wait and the rest are as they were', () => {
+  assert.deepEqual([...HOME_WAITS].sort(), ['home:out', 'home:up', 'home:yard']);
+  assert.ok(WAITING.split(' ').length <= 3);
+  for (const y of [0, SLAB_Y + ROOF_Y]) {
+    const ready = homePlaces(y);
+    const waiting = homePlaces(y, false);
+    assert.deepEqual(waiting.map((p) => p.id), ready.map((p) => p.id), 'the same prompts');
+    for (const [i, p] of waiting.entries()) assert.equal(p.label, HOME_WAITS.includes(p.id) ? WAITING : ready[i].label, p.id);
+  }
+  // Going in from the yard and coming down from the terrace never wait
+  assert.ok(!HOME_WAITS.includes('home:in') && !HOME_WAITS.includes('home:back') && !HOME_WAITS.includes('home:down'));
 });
 
 test("the wardrobe's and the trunk's prompts stand in the room where he can, by the thing, apart from the doors'", () => {

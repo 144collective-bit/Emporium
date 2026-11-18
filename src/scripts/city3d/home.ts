@@ -16,8 +16,9 @@
  *   (`HOME_WORKSHOP_DOOR`) opens the garage's menu on its kit.
  * - **The yard** between them, block paving (the wide drive), and **the gardens**: the lawn in the north-west corner
  *   and the one east of the house (`HOME.lawns`).
- * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where walking
- *   starts (`HOME_SPAWN`: in the yard, facing the front door).
+ * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where the Walk
+ *   button starts you (`HOME_SPAWN`: in the yard, facing the front door). Every visit starts inside, in the room
+ *   (`HOME_WAKE`, docs/spawn-plan.md).
  * - **Done up** (docs/compound-plan.md Phase 1): the yard's lit bollards (`BOLLARDS`) and the planters by the front
  *   door (`PLANTERS`), both solid; the rest of the upgrade (steel, neon, his mark, the hoop) is home3d.ts's drawing.
  * - **Inside**: one room on the ground floor (`ROOM`, `FURNITURE`), sealed: the doors are fades (`HOME_PORTALS`).
@@ -90,15 +91,10 @@ export const HOME = {
   ] as Rect[],
 } as const;
 
-/** Where you arrive, and where walking starts: in the yard, facing the front door (yaw π faces south) */
+/** Where you arrive by the Walk button, the panel and fast travel: in the yard, facing the front door (yaw π faces south) */
 // (within a door prompt's reach of his front door's, so "Go in" shows as you arrive)
 export const HOME_SPAWN = { x: HOME.door[0] + 0.5, z: HOME.door[1] - 1.45, yaw: Math.PI };
 
-/**
- * Does walking start at home? Not a new player's very first walk (the owner's call): that starts downtown by the
- * Emporium, where Getting started's first steps are; once anywhere has been walked to (the save's `visited`), home.
- */
-export const startsAtHome = (visited: readonly string[]) => visited.length > 0;
 
 /** The place's pick boxes (over the slab), the land its ring goes round, and its pin over the house */
 export const HOME_PICK: { rect: Rect; h: number }[] = [
@@ -248,13 +244,14 @@ export const HALL_W = 1.25;
  * on it facing the sofa, the trunk at the sofa's west end (the stash), a floor lamp, and **the trophy wall** on the
  * west wall); **the kitchen** along the back wall (the counter, the fridge at its end, a plant at its west end, an
  * island with its stools on the lounge's side); **the hall** from the front door to the side door, clear (a console
- * table and a plant under the front window east of the door), the stairs open along the east wall by the front and the
+ * table under the front window east of the door, a plant in its back corner), the stairs open along the east wall by the front and the
  * wardrobe past them. The stash's, the wardrobe's and the doors' prompts stand where they always have
  */
 export const FURNITURE: Furniture[] = [
   { kind: 'stairs', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: CEIL },
-  { kind: 'sofa', rect: [rx0 + 0.3, rz0 + 0.04, rx0 + 3.2, rz0 + 0.78], h: 0.42 },
-  { kind: 'chaise', rect: [rx0 + 2.46, rz0 + 0.78, rx0 + 3.2, rz0 + 1.9], h: 0.42 },
+  // (the corner sofa's run a little longer than the old sofa and its chaise turning past the wake spot, `HOME_WAKE`)
+  { kind: 'sofa', rect: [rx0 + 0.3, rz0 + 0.04, rx0 + 3.45, rz0 + 0.78], h: 0.42 },
+  { kind: 'chaise', rect: [rx0 + 2.72, rz0 + 0.78, rx0 + 3.45, rz0 + 1.9], h: 0.42 },
   { kind: 'stash', rect: [rx0 + 0.3, rz0 + 0.9, rx0 + 1.0, rz0 + 1.3], h: 0.3 },
   { kind: 'table', rect: [rx0 + 1.6, rz0 + 1.3, rx0 + 2.2, rz0 + 1.9], h: 0.2 },
   { kind: 'tv', rect: [rx0 + 0.4, rz0 + 2.75, rx0 + 3.0, rz0 + 3.1], h: 0.24 },
@@ -262,7 +259,7 @@ export const FURNITURE: Furniture[] = [
   { kind: 'lamp', rect: [rx0 + 0.05, rz0 + 2.8, rx0 + 0.3, rz0 + 3.05], h: 1.0 },
   { kind: 'plant', rect: [rx0 + 0.06, rz1 - 1.75, rx0 + 0.36, rz1 - 1.45], h: 0.75 },
   { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
-  { kind: 'plant', rect: [DX + 2.2, rz0 + 0.03, DX + 2.48, rz0 + 0.31], h: 0.55 },
+  { kind: 'plant', rect: [rx1 - 0.36, rz1 - 0.36, rx1 - 0.06, rz1 - 0.06], h: 0.55 },
   { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
   { kind: 'stools', rect: [rx0 + 1.15, rz1 - 2.25, rx0 + 3.05, rz1 - 1.88], h: 0.3 },
   { kind: 'counter', rect: [rx0 + 0.2, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
@@ -317,6 +314,48 @@ export function homeCamera(y: number): [number, number, number, number, number, 
     ];
   return [[hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, -1]];
 }
+
+/**
+ * Where every visit starts (docs/spawn-plan.md Phase 1, the owner's call): in the room, in front of the sofa, facing
+ * the telly (yaw π faces south), clear of the trunk's and the doors' prompts. The rest of the city loads behind the
+ * walls while the doors out wait (`HOME_WAITS`). He's sat on the sofa as the room appears and stands up onto it
+ * (Phase 2, `SOFA_SEAT`), but under reduced motion, where he's standing there already.
+ */
+export const HOME_WAKE = { x: rx0 + 2.5, z: rz0 + 0.95, yaw: Math.PI };
+/**
+ * The sofa as a seat (moments.ts's bench mark: its middle, `ry` the way the sitter faces, 0 south; he stands up onto
+ * `HOME_WAKE`, `MOMENT.stand.bench` in front of it), its cushion `h` over the floor
+ */
+export const SOFA_SEAT = { x: HOME_WAKE.x, z: HOME_WAKE.z - 0.33, ry: 0, h: 0.24 };
+
+/**
+ * The room's windows (home3d.ts draws them: the front one over the sofa, the one east of the front door over the
+ * hall's console table (docs/compound-plan.md Phase 2, as it is outside), the back one over the counter), each
+ * across x0 to x1 in the wall at z, `into` the way into the room
+ */
+export const ROOM_WINDOWS = [
+  { x0: rx0 + 0.506, x1: DX - 0.75, z: rz0 + 0.006, into: 1 },
+  { x0: DX + 0.9, x1: rx1 - 1.05, z: rz0 + 0.006, into: 1 },
+  { x0: rx0 + 0.806, x1: rx0 + 4.206, z: rz1 - 0.006, into: -1 },
+] as const;
+/**
+ * Their curtains (docs/spawn-plan.md Phase 2): drawn while the street outside loads, drawn back once it's ready. Each
+ * window has two, from its ends (`over` past them) to its middle; open, each is bunched `bunched` wide at its end.
+ * They hang `off` into the room from the wall (clear of the glass and its frame), from `y0` to `y1` over the slab
+ */
+export const CURTAIN = { over: 0.08, off: 0.07, thick: 0.02, y0: 0.53, y1: 1.12, bunched: 0.16 };
+/** The curtains' panels `k` open (0 drawn, 1 open): each a rect in the room */
+export function curtainPanels(k: number): Rect[] {
+  const u = Math.min(1, Math.max(0, k));
+  return ROOM_WINDOWS.flatMap(({ x0, x1, z, into }) => {
+    const [a, b] = [x0 - CURTAIN.over, x1 + CURTAIN.over];
+    const w = ((b - a) / 2) * (1 - u) + CURTAIN.bunched * u;
+    const [za, zb] = [z + into * CURTAIN.off, z + into * (CURTAIN.off + CURTAIN.thick)];
+    const [z0, z1] = [Math.min(za, zb), Math.max(za, zb)];
+    return [[a, z0, a + w, z1], [b - w, z0, b, z1]] as Rect[];
+  });
+}
+
 
 /* ---------- Upstairs (Phase 3) ---------- */
 
@@ -494,16 +533,26 @@ export interface HomeUse {
 }
 const at = (kind: FurnitureKind) => FURNITURE.find((f) => f.kind === kind)!.rect;
 const upAt = (kind: UpKind) => UPSTAIRS.find((f) => f.kind === kind)!.rect;
+/**
+ * The ways out of the room that wait while the street outside is still loading (docs/spawn-plan.md Phase 1): the
+ * front door, the side door and the stairs up (the landing and the terrace look out over the Close); spawn.ts says when
+ */
+export const HOME_WAITS: readonly string[] = ['home:out', 'home:yard', 'home:up'];
+/** Their prompt meanwhile */
+export const WAITING = 'Getting ready…';
 /** The wardrobe (stood in front of, on its west side: the fitting room), the trunk (from its east end: the stash), the desk (behind its chair: the business card) */
 export const HOME_USES: HomeUse[] = [
   { id: 'home:wardrobe', level: 'room', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },
   { id: 'home:stash', level: 'room', x: at('stash')[2] + 0.35, z: (at('stash')[1] + at('stash')[3]) / 2, label: 'Stash' },
   { id: 'home:desk', level: 'up', x: (upAt('chair')[0] + upAt('chair')[2]) / 2, z: upAt('chair')[1] - 0.25, label: 'Desk' },
 ];
-/** The home's prompts for someone `y` high: each floor's own (the floors' stand over one another, so each shows on its own) */
-export function homePlaces(y: number): { id: string; x: number; z: number; label: string }[] {
+/**
+ * The home's prompts for someone `y` high: each floor's own (the floors stand over one another, so each shows on its
+ * own); while the street outside is still loading (`ready` false), the ways out of the room say so (`HOME_WAITS`)
+ */
+export function homePlaces(y: number, ready = true): { id: string; x: number; z: number; label: string }[] {
   const lv = homeLevel(y);
-  return [...HOME_PORTALS, ...HOME_USES].filter((p) => p.level === lv);
+  return [...HOME_PORTALS, ...HOME_USES].filter((p) => p.level === lv).map((p) => (ready || !HOME_WAITS.includes(p.id) ? p : { ...p, label: WAITING }));
 }
 
 /** Pools of light at night (docs/ends-far-west-plan.md Phase 5): on Gate Lane under each of the gates' lamps, in the

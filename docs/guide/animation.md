@@ -68,7 +68,9 @@ keep it up to date when what it describes changes.
   targets or the seat), `createMoment()` with the phases approach → play
   → (hold → back) → done (`update()` gives walk.ts the approach's goal:
   the walk's own last steps onto the mark, or `timeout`; `skip()` on F
-  again; `release()` when the menu closes or to stand up; `cancel()`),
+  again; `release()` when the menu closes or to stand up; `sit()` starts
+  him seated already, in hold: waking on his sofa, `docs/spawn-plan.md`;
+  `cancel()`),
   and `momentPose()` (in `momentposes.ts`, walk mode's on-foot chunk),
   keyed on the `Pose` rig as the vault's (the hands
   on the thing by `reachArm()`, within 1.5 cm in the test). Doors (every

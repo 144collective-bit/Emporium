@@ -363,7 +363,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
       if (said) return;
       said = true;
       watch?.disconnect();
-      toast(`${fmt.format(START_DORRAS)} Dorras to start · stock your stall at the market hall`, 7000);
+      toast(`${fmt.format(START_DORRAS)} Dorras to start · head out the front door`, 7000);
     };
     const watch = hud && cardUp() ? new MutationObserver(() => !cardUp() && say()) : null;
     if (!watch) say();

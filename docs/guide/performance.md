@@ -75,7 +75,9 @@ keep it up to date when what it describes changes.
     highway's deck (`viadress.ts` `UNDER`), and since the south's Phase 3e
     Aldwyn's Green's layouts: its terraces and ginnels (`southterraces.ts`, key
     `terraces`), the High Road's buildings (`highroad.ts`, `highroad`) and the
-    council rows, corner shops and community centre (`council.ts`, `council`). A new module that bakes goes in `MODULES` in
+    council rows, corner shops and community centre (`council.ts`, `council`), and since the spawn plan's Phase 3a
+    the south's closes, crescents and their footpaths (`south.ts` `GROWN`, key `south-grown`: about a second of a
+    phone's start-up). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
@@ -444,7 +446,7 @@ keep it up to date when what it describes changes.
 - **Memory ceilings** (`docs/stability-plan.md`, Phase 5; the owner's
   picks): `MEMORY_CEILINGS` in `targets.ts` (MiB). `npm run memcheck`
   (after a build and `npm run bake:textures`; `scripts/memcheck.mjs`, about
-  an hour since the south's re-laying) builds the whole city on a headless
+  15 minutes, up to 75 allowed) builds the whole city on a headless
   phone under `?bench` and holds its geometry, textures and render targets
   to the phone's, and the benchmark's slowest CPU frames to
   `HITCH_CEILINGS` (the stability plan's 6.3); `npm run
@@ -490,6 +492,21 @@ keep it up to date when what it describes changes.
   `nearLine()` (streetfaces.ts) with the brook's stretches bucketed by cell: exactly `distTo` within 14, which is all
   that's asked of it (`keptOff()`, the bridges, the valley in southground.ts). The same streets, blocks and heights
   to the bit; about 1 s less of the main thread's time at load, the boot about 0.5 s shorter measured headless.
+- **The council rows out of the boot** (2026-11-18): the boot's code had reached 741.3 KB of 750 after Phase 3d;
+  council.ts (the council rows, bungalows and allotments) was in it only for its solids and its rect. Now only the
+  village's chunk imports it (its solids join there through `addSolids()`, its rect fixed as `COUNCIL_LAND` in
+  south.ts): the boot's code 738.6 KB. Laying it out had run as the page's modules loaded, **before the boot's own
+  clock starts**, so the `?fps` boot line never showed it: from opening the page to the boot line, headless, the
+  phone tier 12.6 to 10.3 s and desktop 13.6 to 11.4 s. A module's top-level work is the page's load time too:
+  measure from the page's start (`performance.now()` at the boot line), not only the boot line.
+- **What runs as the page loads** (2026-11-18): a CPU profile from the page's start, adding up the time under each
+  chunk's top-level code, found about 1.8 s of it on desktop, before the boot's clock: the south's street web (south.ts,
+  its `Near` now keyed by number), Endswood's land grid (endswood.ts `CELLS`: each block's rows now crossed once,
+  streetfaces.ts `rowCrossings()` / `insideRow()`, exactly `inside()`, tested) and Aldwyn's Green's back alleys
+  (southterraces.ts `ALLEYS`: every house against every other, now only those whose box it reaches). The same output to
+  the bit; about 0.35 s less, from opening the page to the boot line 9.45 to 9.14 s (phone tier) and 10.67 to 10.25 s
+  (desktop), headless. What was left at the top then: the street web's layout itself (about 0.4 s; since baked,
+  `south-grown`, above), the viaduct's dressing and the solids.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is
