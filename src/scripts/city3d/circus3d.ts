@@ -13,7 +13,7 @@ import { site } from './tilework';
 import { SLAB } from './world';
 import { STONE } from './palette';
 import { CONCRETE } from './southblocks';
-import { CEIL, FLOOR, MOUTH_PATHS, PATH_HALF, PLANTERS, PLANTER_H, PLAZA, SUBWAYS, SUBWAY_WAYS, type SubwayId } from './circus';
+import { CEIL, FLOOR, MOUTH_PATHS, SUBWAY, PATH_HALF, PLANTERS, PLANTER_H, PLAZA, SUBWAYS, SUBWAY_WAYS, type SubwayId } from './circus';
 import { floorOf, openOf, pointOf, type Passage, type Pt } from './underground';
 import { ROW, sign } from './tunnel3d';
 
@@ -293,6 +293,8 @@ function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
   const [roof0, roof1] = p.roofs[0];
   const [ramp1, a1] = openOf(p).at(-1)!;
   const start = p.a0 + 0.1;
+  // (the plaza's wall along it: along-values are measured through the world's origin, circus.ts's from the Circus's middle)
+  const wallAt = p.a0 - SUBWAY.from + PLAZA.r;
   const n = acrossDir(p);
   // The floor: level from the plaza to the ramp, then up it (5 mm over the plaza's floor where they meet)
   const floorPts = [start, roof0, roof1, (ramp1 + a1) / 2, a1];
@@ -303,22 +305,22 @@ function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
     upQuad(b, [[c[0][0], y0, c[0][1]], [c[1][0], y0, c[1][1]], [c[2][0], y1, c[2][1]], [c[3][0], y1, c[3][1]]], FLOOR_MAT);
   }
   // Under the roof: the walls (from the plaza's wall to the portal), the ceiling, its strip lights and the neon lines
-  for (const side of [-1, 1]) along(b, p, PLAZA.r, roof1, side * h, side * (h + p.wall), FLOOR, 0, CONC);
+  for (const side of [-1, 1]) along(b, p, wallAt, roof1, side * h, side * (h + p.wall), FLOOR, 0, CONC);
   // (the ceiling, facing down)
   const under = new THREE.BufferGeometry();
-  const cs = [P(p, PLAZA.r, -h), P(p, roof1, -h), P(p, roof1, h), P(p, PLAZA.r, h)];
+  const cs = [P(p, wallAt, -h), P(p, roof1, -h), P(p, roof1, h), P(p, wallAt, h)];
   under.setAttribute('position', new THREE.Float32BufferAttribute(cs.flatMap(([x, z]) => [x, CEIL, z]), 3));
   under.setIndex([0, 1, 2, 0, 2, 3]);
   under.computeVertexNormals();
   if (under.attributes.normal.getY(0) > 0) under.setIndex([0, 2, 1, 0, 3, 2]);
   under.computeVertexNormals();
   b.add(under, CEIL_MAT);
-  for (let s = PLAZA.r + 0.9; s < roof1 - 0.4; s += 1.5) {
+  for (let s = wallAt + 0.9; s < roof1 - 0.4; s += 1.5) {
     const [x, z] = P(p, s, 0);
     const yaw = Math.atan2(-alongDir(p)[1], alongDir(p)[0]);
     b.add(new THREE.BoxGeometry(0.9, 0.04, 0.1).rotateY(yaw).translate(x, CEIL - 0.03, z), TUBE);
   }
-  for (const side of [-1, 1]) along(b, p, PLAZA.r + 0.1, roof1 - 0.1, side * (h - 0.012), side * (h - 0.004), CEIL - 0.1, CEIL - 0.06, side < 0 ? STRIP : STRIP_WARM);
+  for (const side of [-1, 1]) along(b, p, wallAt + 0.1, roof1 - 0.1, side * (h - 0.012), side * (h - 0.004), CEIL - 0.1, CEIL - 0.06, side < 0 ? STRIP : STRIP_WARM);
   // The mural on its left wall (facing across into the subway), under the neon line
   const [m0, m1] = [roof0 + 0.25, roof1 - 0.35];
   const mw = m1 - m0;
