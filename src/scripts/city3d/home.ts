@@ -18,6 +18,8 @@
  *   and the one east of the house (`HOME.lawns`).
  * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where walking
  *   starts (`HOME_SPAWN`: in the yard, facing the front door).
+ * - **Done up** (docs/compound-plan.md Phase 1): the yard's lit bollards (`BOLLARDS`) and the planters by the front
+ *   door (`PLANTERS`), both solid; the rest of the upgrade (steel, neon, his mark, the hoop) is home3d.ts's drawing.
  * - **Inside**: one room on the ground floor (`ROOM`, `FURNITURE`), sealed: the doors are fades (`HOME_PORTALS`).
  * - **The roof terrace** (Phase 3): up the stairs (a fade too) to the roof inside its rail (`TERRACE`, `ROOF_THINGS`,
  *   `onRoof()`, `roofWall()`), the yard and the Close below.
@@ -109,6 +111,26 @@ export const HOME_PIN: Pt = [(HOUSE[0] + HOUSE[2]) / 2, (HOUSE[1] + HOUSE[3]) / 
 export const HOME_PIN_H = RIDGE + 1.6;
 export const HOME_SLAB = SLAB_Y;
 
+/* ---------- Done up (docs/compound-plan.md Phase 1, the owner's pick: made good, with his neon) ---------- */
+
+/** A low bollard with a lit cap: its radius and height (over the slab) */
+export const BOLLARD = { r: 0.07, h: 0.38 };
+/**
+ * The yard's bollards, at its edges, clear of the drive: along the east lawn (the house's front's line, from a little
+ * past the house's corner, so the way round to the side door stays open, to the wall by the gates) and along the
+ * north strip from the workshop to the wall
+ */
+export const BOLLARDS: Pt[] = [
+  ...[0, 1, 2, 3, 4].map((k): Pt => [HOUSE[2] + 1.4 + k * 1.95, HOUSE[1] - 0.25]),
+  ...[0, 1, 2, 3, 4].map((k): Pt => [WORKSHOP[2] + 1.0 + k * 2.4, WORKSHOP[3] + 0.25]),
+];
+/** A planter each side of the front door, between the door and the windows, at the wall's foot */
+export const PLANTER_H = 0.32;
+export const PLANTERS: Rect[] = [-1, 1].map((s): Rect => {
+  const x = (HOUSE[0] + HOUSE[2]) / 2 + s * 0.72;
+  return [x - 0.15, HOUSE[1] - 0.46, x + 0.15, HOUSE[1] - 0.06];
+});
+
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
 export const SHELL = 0.15;
@@ -154,6 +176,9 @@ export const HOME_SOLIDS: Box[] = (() => {
     [wx0, wz0, wx0 + WALL, wz1, wtop],
     [wx1 - WALL, wz0, wx1, wz1, wtop],
     [wx0, wz1 - WALL, wx1, wz1, wtop],
+    // Done up (docs/compound-plan.md Phase 1): the yard's lit bollards and the planters by the front door
+    ...BOLLARDS.map(([x, z]): Box => [x - BOLLARD.r, z - BOLLARD.r, x + BOLLARD.r, z + BOLLARD.r, SLAB_Y + BOLLARD.h]),
+    ...PLANTERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + PLANTER_H]),
   ];
 })();
 

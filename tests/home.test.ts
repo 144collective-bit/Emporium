@@ -7,8 +7,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BIKE_HOME, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, HOME_CAMERA, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
-  HOME_WORKSHOP_DOOR, HATCH, PIER, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, homePlaces, homeRoofY, homeWall, inHouse, onHome, onRoof, roofWall, startsAtHome,
+  BIKE_HOME, BOLLARD, BOLLARDS, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, HOME_CAMERA, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
+  HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, homePlaces, homeRoofY, homeWall, inHouse, onHome, onRoof, roofWall, startsAtHome,
 } from '../src/scripts/city3d/home';
 import { GATES, HEAD, LANE_HALF, LANE_X, PLOT, ROAD_HALF, ROAD_Z } from '../src/scripts/city3d/endsfar';
 import { SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
@@ -99,6 +99,41 @@ test("what's solid: the buildings' walls, the garage's two doors open, the works
   // The workshop is shut all round
   const [wx0, wz0, wx1, wz1] = HOME.workshop;
   for (let x = wx0 + 0.05; x < wx1; x += 0.2) for (const z of [wz0 + WALL / 2, wz1 - WALL / 2]) assert.ok(solidAt(x, z), `a gap in the workshop at ${x}`);
+});
+
+test('done up (docs/compound-plan.md Phase 1): the bollards and the planters at the yard\'s edges, clear of the drive, the doors and the prompts', () => {
+  const buildings = [HOME.house, HOME.garage, HOME.workshop];
+  const [, , px1] = PLOT;
+  // The bollards: in the yard (not on a lawn or in a building), well off the drive from the garage to the gates
+  assert.ok(BOLLARDS.length >= 6);
+  for (const [x, z] of BOLLARDS) {
+    assert.ok(inRect(HOME.inner, x, z, -BOLLARD.r - 0.1), `a bollard off the yard at ${x}, ${z}`);
+    for (const r of [...buildings, ...HOME.lawns]) assert.ok(!inRect(r, x, z, BOLLARD.r), `a bollard in something at ${x}, ${z}`);
+    assert.ok(Math.abs(z - ROAD_Z) > 4, `a bollard on the drive at ${x}, ${z}`);
+    assert.ok(Math.hypot(px1 - x, z - ROAD_Z) > 3, 'clear of the gates');
+    assert.ok(BOLLARD.h < 0.6, 'low');
+  }
+  for (let i = 0; i < BOLLARDS.length; i++)
+    for (let j = i + 1; j < BOLLARDS.length; j++) assert.ok(Math.hypot(BOLLARDS[i][0] - BOLLARDS[j][0], BOLLARDS[i][1] - BOLLARDS[j][1]) > 1.5, 'room to walk between');
+  // The planters: one each side of the front door, against the house's front, the door's way between them clear
+  assert.equal(PLANTERS.length, 2);
+  const [dx, dz] = HOME.door;
+  const [west, east] = [...PLANTERS].sort((a, b) => a[0] - b[0]);
+  assert.ok(west[2] < dx - 0.45 && east[0] > dx + 0.45, 'the door between them');
+  for (const r of PLANTERS) {
+    assert.ok(r[3] < dz && dz - r[3] < 0.2, 'at the wall\'s foot');
+    assert.ok(PLANTER_H < 0.5);
+  }
+  // Nothing new in a prompt's way: the front door's, the garage's, the workshop's, where walking starts, the menu's
+  // camera; the path from the spawn to the front door clear
+  const inPortal = HOME_PORTALS.find((p) => p.id === 'home:in')!;
+  for (const p of [inPortal, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, HOME_SPAWN, { x: HOME_VIEW.eye[0], z: HOME_VIEW.eye[2] }]) assert.ok(stands(p.x, p.z), `a prompt blocked at ${p.x}, ${p.z}`);
+  for (let k = 0; k <= 20; k++) {
+    const t = k / 20;
+    assert.ok(stands(HOME_SPAWN.x + (inPortal.x - HOME_SPAWN.x) * t, HOME_SPAWN.z + (inPortal.z - HOME_SPAWN.z) * t), 'the way to the front door');
+  }
+  // The side door's from the yard round the house's east end, past the bollards
+  for (let z = HOME.house[1] - 1; z < HOME.sideDoor[1]; z += 0.2) assert.ok(stands(HOME.house[2] + 0.5, z), `the way to the side door at ${z}`);
 });
 
 test('the car and the bike live in the garage, a door each, noses out; the garage\'s and the workshop\'s prompts in the yard', () => {

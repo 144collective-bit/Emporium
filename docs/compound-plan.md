@@ -142,6 +142,31 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
    and inside, the yard's bollards, monogram and planter, the workshop's frame. `home.ts` (anything solid: the
    planter, the bollards, in `HOME_SOLIDS`), `home3d.ts`, `tests/home.test.ts` (nothing new blocks the gates, the
    car's way out or the doors' prompts). Bench and shots by day and night from the Close and the yard.
+   *Built, waiting on the owner's sign-off.* `home.ts`: `BOLLARDS` (ten, `BOLLARD` 0.07 by 0.38: five along the east
+   lawn's edge from a little past the house's corner, so the way round to the side door stays open, and five along
+   the north strip past the workshop) and `PLANTERS` (`PLANTER_H`), both in `HOME_SOLIDS`. `home3d.ts`: `STEEL_BLACK`
+   and `HIS_NEON` (`PAL.magenta`, 0.6 by day, 2.4 at night: thin tubes only, one shared neon paint, so no draw call
+   of its own); `mark()` draws his D as neon tubes or laid flat. What's drawn: the gates' leaves in black steel with a
+   kick plate and a neon top rail; the plaque on the south pier (where the plain one was) black with his neon D; the
+   neon under the roof's edge on the yard and Close sides; the canopy in black steel with a neon lip and a downlight;
+   every window's frame black, the ground floor's front pair taller (`FRONT_SILL` 0.4 to `FRONT_HEAD` 1.08, the room's
+   front window with them); the garage's black fascia with neon along its foot and a downlight over each door (in
+   place of the caged lamp; the yard's pool stays), the hoop on the pier between the doors, a pegboard of tools
+   inside; the workshop's door in a black steel frame under a plain lightbox; the planters with clipped shrubs; the
+   bollards with soft lit caps; his D in the coping's stone in the paving before the garage.
+   **How it differs from the sketch:** the planters stand either side of the front door rather than a tree in a
+   planter by the north-west lawn (the yard keeps its turning room, and the door is what you walk to); the plaque is
+   on the south pier, where the old one was.
+   Tests: `tests/home.test.ts` (the bollards and planters at the yard's edges, off the drive and clear of the gates,
+   the prompts, the spawn, the menu's camera, the way to the front door and round to the side door).
+   **Measured** (the compound's site built in Node, before and after, every mesh counted): still **6 draw calls**
+   (every new part is in the batch's shared paint or shared neon); triangles 4,328 to 5,978 on desktops, 3,144 to
+   4,578 on phones (the bollards six-sided there), against about 0.39M in the City view. The boot's script grew 0.1 KB
+   (739.6 of 750 KB). The full headless `?bench` was too slow to finish on the container's software renderer (over 30
+   minutes for one build) and was stopped; worth a run on a real phone and laptop at sign-off.
+   **Seen:** the neon holds as a line from the Close, the yard and the door; from high over the compound at night it
+   breaks into dashes (the ink outlines over a line that thin at that distance; making it half again as thick didn't
+   change it). Shots: `docs/compound-shots/phase-1-*` (before and after, desktop by day and night, the phone after).
 2. **The ground floor refit**: the lounge, the kitchen, the hall, the open stairs; `FURNITURE`'s new kinds;
    `homeWall()` round them; the stash and wardrobe prompts unmoved. Shots of the room by day and night, on a phone.
 3. **The upstairs and the trophy wall**: the first floor (the landing, the bedroom, the office), its walking and
