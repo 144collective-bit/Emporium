@@ -57,59 +57,98 @@ In world numbers, x across and z north to south (north is −z).
   rolls. North of the stadium (z −270) to the wall is about 490 deep, and
   from the west wall to the hills (x −760 to 285) about 1,045 across.
 
-## The layout (rough: settled in Phase 0)
+## The layout (drafted in Phase 0, for the owner's sign-off)
 
-- **The base's land** (`BASE_AREA`): about x −720 to 280, z −735 to −300.
-  That's about 1,000 by 435 tiles, 1.8 km by 0.8 km, about a fifth of the
-  land inside the wall. **That's about the size of the whole built city
-  today** (the build-out plan measured the built city at 18% of the land). Most
-  of it is grass, runway, taxiways and aprons, which are cheap to draw. The
-  buildings stand in a few clusters.
-- **The fence** follows the land, so no straight rectangle of land meets
-  another (the project's rule):
-  - it bends round the woods, which stay outside it as a screen, or inside it
-    round the shelters;
-  - a scrub-and-hedge belt runs along its outside, never a straight edge;
-  - chain-link on posts with wire on top (the owner's pick), see-through,
-    the panels instanced;
-  - it's lit at night (lamps in `lampStyle()`);
-  - it's solid for walking, driving and the camera's ground.
-- **The main gate** is on `ns0-n` at about z −300, north of the stadium: the
-  north avenue from town ends at it. It has a guardhouse, a barrier that stays
-  down and NORTHGATE AIR BASE in raised letters.
-  - **The visitors' area** is outside the barrier: a car park, a visitors'
-    centre (a place, coming soon) and a viewing terrace looking north over
-    the field.
-  - Past the barrier, **the parade avenue** runs on north in line with ns0 to
-    the wall gate. It's one of the few streets that may be straight (the
-    project's rule: a street planned straight).
-- **The service gate** is on `ns3-n` at about the same z: trucks only, its
-  barrier down. Traffic on both roads drives up, turns at the gate and goes
-  back.
-- **The airfield**, in the middle band, west of the avenue:
-  - **The runway:** east-west, about 500 long (the airport's is 300), at
-    about z −540, from x about −600 to −100, clear of the avenue at its east
-    end, with the approach lights stopping short of it.
-  - **On the ground:** the parallel taxiway on its south side and the main
-    apron, with the big hangars, the control tower, the fire station and the
-    fuel farm along it.
-  - **Hardened shelters:** in loops off the taxiway on the north side, among
-    the woods.
-- **The cantonment**, the base's town, in the south band (z −300 to −420)
-  between the field and the stadium:
-  - the HQ facing the parade ground on the avenue, with flags;
-  - barracks blocks, the mess hall, the gym and the medical centre;
-  - the motor pool east towards the service gate;
-  - the heliport, a row of pads;
-  - a radar dome on a low mound, a water tower and watchtowers with
-    searchlights on the fence.
-- **The firing range** in the far west by the west wall: scenery first, its
-  building a place later.
-- **The wall gate** at the avenue's north end (x −4.5, z −760): a gatehouse
-  in the wall's face with blast doors, shut. The wall stays solid behind
-  them (the wall plan: solid all round until the exits come).
-- **The north-east** past the hills (x 285 to 800, z −760 to −450) stays open
-  land and woods. It isn't the base's.
+The map is `docs/military-map.png`: today's north with the draft lines on it.
+The numbers are world numbers, x across and z north to south (north is −z).
+They go into `airbase.ts` in Phase 1, where the tests hold them.
+
+- **The fence** (`FENCE`) is a closed line that wanders, so no straight
+  rectangle of land meets another (the project's rule). Inside it is about
+  416,600 square tiles, about 1.8 km by 0.8 km and a sixth of the land inside
+  the wall: **about the size of the whole built city today** (the build-out
+  plan measured the built city at 18% of the land). About 15% of it is pine
+  woods today. They stay as woods round the shelters and along the
+  avenue; the open ground's trees go.
+  - **The south side:** from (−730, −330) east by (−640, −318), (−520, −326),
+    (−400, −312), (−300, −318), (−200, −306), (−110, −312), (−40, −308),
+    (30, −308), (120, −314) and (200, −322) to (262, −336). That's 44 north of
+    the stadium's north edge (−262).
+  - **The east side:** from (262, −336) north by (272, −420), (266, −500),
+    (276, −600) and (266, −690) to (258, −730). It stays west of Crestmont's
+    hills, which start at x 285. All the fence's corners are on flat ground.
+  - **The north side:** from (258, −730) west by (150, −736) and (40, −734) to
+    the wall gate's yard, which meets the wall from (2, −736) to (−70, −736).
+    Then west by (−150, −730), (−300, −738), (−450, −732) and (−600, −736)
+    to (−700, −730).
+  - **The west side:** from (−700, −730) south by (−722, −650), (−732, −560),
+    (−724, −460) and (−732, −380) back to the start.
+  - **Clear of the wall's floodlights:** the closest is 18 from the fence.
+    About 25 of grass is left between the fence and the wall's foot all the
+    way round, but at the gate's yard.
+  - **The fence itself:** chain-link on posts with wire on top (the owner's
+    pick), see-through, the panels instanced. It's lit at night (lamps in
+    `lampStyle()`) and solid for walking, driving and the camera's ground.
+    A scrub-and-hedge belt runs along its outside.
+- **The main gate** (`GATES`) is on `ns0-n` at z −305, its barrier down.
+  The north avenue from town ends there, with a turning loop in front of the
+  barrier at (−4.5, −292). It has a guardhouse, the barrier and NORTHGATE AIR
+  BASE in raised letters.
+  - **The visitors' area** is outside the barrier, west of the road: a car
+    park (x −90 to −20, z −298 to −262), clear of the stadium's car-park loop
+    (which reaches −251), and the visitors' centre (x −62 to −32, z −298 to
+    −286). The centre is a place (coming soon), with a viewing terrace on its
+    roof looking north over the field.
+- **The service gate** is on `ns3-n` at z −306, trucks only, its barrier
+  down. Its turning loop is at (64.5, −294).
+- **The parade avenue** runs north from the main gate in line with ns0 to
+  z −700. It's one of the few streets that may be straight (the project's
+  rule: a street planned straight). Then it bends west to the wall gate.
+- **The wall gate** is at x −49 to −19 against the wall, z −758 to −746, in
+  the gap between the wall's floodlights at x −52 and −16. A gate on the
+  avenue's own line (x −4.5) would have meant moving two floodlights and a
+  camera, so it stands in the gap and nothing that exists moves. It's a
+  gatehouse in the wall's face with blast doors, shut; the wall stays solid
+  behind them (the wall plan: solid all round until the exits come).
+- **The airfield,** west of the avenue:
+
+  | Part | Where |
+  | --- | --- |
+  | The runway | x −620 to −120 at z −540, 12 wide (the airport's: 300 long, 10 wide). Approach lights out to x −680 and to x −60, short of the avenue. |
+  | The parallel taxiway | x −610 to −130 at z −516, 7 wide. Connectors to the runway at x −600, −480, −370, −250 and −140. |
+  | The north taxiway | x −580 to −140 at z −578. Links to the runway at x −580, −360 and −140. |
+  | The hardened shelters | nine, in threes, at x −560 to −140, z about −606 to −612, each 16 by 20, on stubs off the north taxiway among the woods |
+  | The main apron | x −470 to −200, z −508 to −462 |
+  | Three big hangars | each 40 by 26, along the apron's south side at z −458 to −432 |
+  | The control tower | (−262, −452), its top under the Emporium's roof (12.5) |
+  | The fire station | x −238 to −214, z −462 to −446 |
+  | The fuel farm | x −575 to −520, z −490 to −450 |
+
+  The runway's west end is 140 from the wall. The base's own flights take
+  off and land over the east (Phase 4) and keep their circuits inside the
+  wall.
+- **The cantonment**, the base's town, between the field and the gates:
+
+  | Part | Where |
+  | --- | --- |
+  | The parade ground | x −80 to −12, z −360 to −322, on the avenue |
+  | The HQ | x −72 to −18, z −392 to −368, facing the parade ground |
+  | Twelve barracks blocks | three rows of four, x −262 to −112, z −388 to −324 |
+  | The mess hall, the gym and the medical centre | east of the avenue, x 10 to 50, z −400 to −320 |
+  | The motor pool | x 80 to 165, z −400 to −328, off the service gate's road |
+  | The heliport | four pads, x 185 to 250, z −440 to −350 |
+  | The radar dome | on a low mound at (205, −505) |
+  | The water tower | (−120, −432) |
+  | The watchtowers | along the fence, with searchlights |
+
+- **The firing range** is in the far west by the fence, x −716 to −600,
+  z −420 to −340. It has six lanes firing west into a berm at x −716.
+  Scenery first; its building becomes a place later.
+- **Room left inside:** the north-east of the base (east of the avenue,
+  north of the heliport) is kept as woods and open ground for later.
+- **Outside the base:** the north-east past the hills (x 285 to 800, z −760
+  to −450) stays open land and woods, and so does the band between the
+  fence and the stadium, the highway and the kart park.
 
 ## The rules it keeps
 
@@ -161,11 +200,14 @@ In world numbers, x across and z north to south (north is −z).
   The numbers go in this plan. Phase 0 sets each phase's allowance (draw
   calls, triangles, phones' geometry memory). **If a phase goes over, the
   phase is trimmed, never the budgets** (`scripts/budget.mjs`).
-- **The boot's code budget** (740 KB) is close to full. The base's boot data
+- **The boot's code budget** (750 KB) is close to full: 736.9 KB in the
+  build of 2026-11-18. The base's boot data
   must be small. If it doesn't fit, more features move to `lazy()` first, as
   the stadium's stage did (`docs/north-plan.md`).
-- **Phones are already past their geometry target** (the performance plan: about 210 MB
-  with every district loaded, against 150). That's why the base loads as two
+- **Phones are already past their geometry target.** The performance plan
+  set 150 MB; it measured about 210 MB with every district loaded. Packing
+  the vertices brought that to about 170, and `npm run memcheck` holds it to
+  187 (`MEMORY_CEILINGS.phone`). That's why the base loads as two
   chunks and never all at the start. If Phase 0 shows phones can't take it, the
   build-out plan's Phase 2 (letting far districts go) comes first, the
   owner's call.
@@ -255,7 +297,7 @@ In world numbers, x across and z north to south (north is −z).
 ### Phase 5: polish
 
 - **The views:** `airbase-gate`, `airbase-runway` and `airbase-overview`
-  in `BENCH_VIEWS` and `BLEND_VIEWS`.
+  in `BLEND_VIEWS` (they've been in `BENCH_VIEWS` since Phase 0).
 - **Checks:**
   - the seams (`npm run seams`);
   - the phone tier's trims;
