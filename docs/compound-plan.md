@@ -16,6 +16,11 @@ in `home.ts` and drawn by `home3d.ts` (`docs/guide/endswood.md`).
 | The inside | Refit the ground floor into its areas, and add an upstairs (a bedroom and an office) |
 | What the house does | A trophy wall (what you've won, from the save) and an office desk (opens the hub's Business tab) |
 | How | The plan first, then a phase at a time with the owner's sign-off |
+| The trophy wall | In the lounge |
+| The telescope | Decoration only |
+| Extras | A hoop on the garage wall; no mural |
+| A basement (added 2026-11-18) | "A basement that he uses to trade in. A real degen man cave": charts and computers for his crypto trading, under the house's footprint, built after the upstairs |
+| The upstairs office | Kept: its desk runs the business; the basement's screens are his trading |
 
 ## What holds
 
@@ -51,6 +56,8 @@ in `home.ts` and drawn by `home3d.ts` (`docs/guide/endswood.md`).
 - **The yard**: low lit bollards along the drive's edges (instanced), the monogram set into the paving in front of
   the garage (a decal over the paving, nothing flush), a tree in a big planter where the yard meets the north-west
   lawn (clear of the car's way out).
+- **A basketball hoop** on the garage's wall facing the yard (the owner's pick): a backboard and a hoop, for looks,
+  clear of the car's doors.
 - **The workshop**: its roller door's frame in the same black steel, a lit sign-less lightbox over it.
 
 ### Inside: the ground floor refit
@@ -61,8 +68,7 @@ side door (`HALL_W`).
 - **The lounge** (west half): an L-shaped corner sofa where the sofa is, a wide wall-hung telly on a long low media
   unit with a light strip behind it and a games console, a rug, a floor lamp, two plants. The trunk (the stash) stays
   where its prompt is.
-- **The trophy wall** (the lounge's west wall, or the hall's: decided in Phase 3 by what reads best from the door):
-  lit shelves, see below.
+- **The trophy wall** on the lounge's west wall (the owner's pick): lit shelves, see below.
 - **The kitchen** (along the back wall): the counter with a splashback and a light strip under its wall cupboards,
   the fridge tall, an island with three stools in place of the dining table, a pendant over it.
 - **The hall**: a console table by the front door, a mirror, a mat; a framed print or two on the walls (his style,
@@ -86,6 +92,33 @@ between the ground floor's ceiling and the roof without the house growing.
   own prompts; a `homeup` layer in groundheight.ts; walk.ts's `blocked()` asks the upstairs' walls up there; the
   camera keeps under each floor's ceiling.
 
+### The basement: his trading den (new)
+
+The owner's call: "a basement that he uses to trade in. A real degen man cave", with charts and computers for his
+crypto trading. Under the house's footprint (about 8.7 by 6.2, the room's size), reached by a stair down from the
+ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
+
+- **The trading desk** along the back wall: a long desk under a curved bank of six screens on arms, a big gaming
+  chair, a tower PC with a lit side, keyboard and mouse glow, cables tidied into a tray. **Looks only** (the owner's
+  pick): no prompt, nothing it does in the game.
+- **What's on the screens**: made-up candle charts and depth bars in green and red, with lines but **no words, no
+  numbers, no tickers, no coin names or logos**: never the token, never a real coin, exchange or brand, never a
+  price (the content guardrails). One baked canvas (`canvasTex()`) shared by the screens, each showing a different
+  part of it; the charts creep along slowly (a texture offset, not a redraw), and stand still under
+  `prefers-reduced-motion`.
+- **The cave**: a low sofa facing a wall-hung telly, a small bar with a back-lit shelf of made-up bottles and a
+  mini fridge, an arcade cabinet (made-up art, decoration), a rug, LED strips along the ceiling's edge in the
+  PulseChain neon, a neon monogram on the wall, made-up posters, a beanbag. No windows; lit from inside as the house
+  is.
+- **Walking**: a fourth floor for `inHouse()` (below the slab); `homePlaces(y)` gives it its own prompts (the stair up
+  only); a layer in groundheight.ts for its floor; walk.ts's `blocked()` asks its walls and what stands in it; the
+  camera keeps under its ceiling (the slab). Rain and the street's sound stay out (as the room); the den has its own
+  low hum.
+- **Drawing**: its own site, built only once you're near the house and shown only while you're in it (nothing
+  below ground is seen from outside), so it costs nothing in the city's view.
+- Nothing about it is a real-money or investment thing: it's his room and his hobby, and Dorras stay the city's
+  money only.
+
 ### The trophy wall
 
 - **What it shows**, worked out from the save in a DOM-free file (`hometrophies.ts`, tested): the kart cups you've
@@ -101,8 +134,7 @@ between the ground floor's ceiling and the roof without the house growing.
 - An outdoor sofa and a low table in place of the two chairs, more planters, the string of lights kept, and a small
   neon monogram on the parapet facing down the Close (the one bright thing up there, under the bloom's threshold
   but for its line).
-- A telescope at the front rail, pointed at the Emporium (decoration; whether it's a prompt that turns the view to
-  the skyline is the owner's call in Phase 4).
+- A telescope at the front rail, pointed at the Emporium (decoration only, the owner's pick).
 
 ## The phases (each with the owner's sign-off)
 
@@ -115,7 +147,10 @@ between the ground floor's ceiling and the roof without the house growing.
 3. **The upstairs and the trophy wall**: the first floor (the landing, the bedroom, the office), its walking and
    prompts (the desk), the stairs' fades re-routed (room ↔ upstairs ↔ terrace), `hometrophies.ts` and its tests,
    the wall drawn. The smoke test gains scenes for the upstairs and the desk; its terrace scene goes by the landing.
-4. **The terrace and polish**: the terrace's new things, the telescope; `?bench` views of the room and the upstairs
+4. **The basement**: the den's floor, walls and ceiling, its stair down and up (fades), the trading desk and its
+   screens' chart texture, the cave's things, its walking, its sound; tests in `tests/home.test.ts` and
+   `tests/groundheight.test.ts`; a smoke scene (down, round the desk, up). Shots by its own light.
+5. **The terrace and polish**: the terrace's new things, the telescope; `?bench` views of the room, the upstairs and the basement
    as well as `ends-home`; every width (320, 375, 768, 1024, 1440, phones both ways) for the prompts and the hub from
    the desk; the guides (`endswood.md`, `tests.md`, `menus.md` if the desk's way in is listed there); the plan done.
 
@@ -124,6 +159,5 @@ Each phase: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:wide`
 
 ## Questions for later phases
 
-- **Phase 3**: the trophy wall in the lounge or the hall?
-- **Phase 4**: the telescope as decoration, or a prompt that turns the view to the Emporium?
-- **Any phase**: a mural on the wall's outside, or a hoop on the garage wall (both suggested, neither picked)?
+All answered (2026-11-18): the trophy wall in the lounge, the telescope as decoration, a hoop on the garage and no
+mural, the basement under the house after the upstairs, the office kept.
