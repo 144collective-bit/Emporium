@@ -401,7 +401,11 @@ From the Circus west, patchy as high roads are:
      the allotments' strip on the brook's north bank with its plots and
      sheds; the solids. Drawn by `council3d.ts` in the village's chunk
      (copied shapes; gardens, hedges and drives on the rolling ground).
-   - **3e, the rec ground** (pitches, pavilion, skate park).
+   - **3e, the rec ground** (pitches, pavilion, skate park). The owner's
+     answers (2026-11-18): a football pitch, a pavilion, a skate park, a
+     playground and benches; a place (Aldwyn's Green Rec: a pin, a panel,
+     coming soon, Walk in at its gate); a footbridge over the brook from
+     the village's nearest street to its gate.
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
    street entrances, stairs, ticket halls, platforms walked on, the ride
