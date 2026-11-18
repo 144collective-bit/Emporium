@@ -20,6 +20,7 @@ import { southLift } from './southground';
 import { BLOCKS, CORES, COURTS, cover, type Box } from './southblocks';
 import { SHOPS, shopFoot } from './highroad';
 import { HOUSES, plotOf } from './southterraces';
+import { BUILT, baked } from './baked';
 
 const SLAB = 0.15;
 
@@ -155,7 +156,7 @@ export interface Semi extends Lot {
   lit: number;
 }
 const DOORS = ['#1f3a5f', '#2f6a3c', '#7a1f2b', '#f3f2f7', '#d6a12a', '#2c9a92'];
-const taken = [...TAKEN];
+
 /* ---------- Corner shops and the community centre ---------- */
 
 export interface CornerShop extends Lot {
@@ -168,33 +169,7 @@ const CORNER_NAMES: [string, string][] = [
   ['Hilltop News', '#7a1f2b'],
 ];
 export const CORNER = { w: [5.2, 5.6] as [number, number], front: 0.3, depth: 6, rear: 2, gap: 0, storeys: 2 };
-/** A shop on a corner: the first lot that fits by a crossing of two of the village's or council's streets */
-export const CORNER_SHOPS: CornerShop[] = (() => {
-  const all = lay({ zones: ['council', 'village'], w: CORNER.w, front: CORNER.front, depth: CORNER.depth, rear: CORNER.rear, gap: 40, seed: 1990, prefix: 'corner', bend: 0.6 }, taken.map((t) => t));
-  const picked: Lot[] = [];
-  for (const l of all) if (picked.every((p) => Math.hypot(p.at[0] - l.at[0], p.at[1] - l.at[1]) > 60) && picked.length < CORNER_NAMES.length) picked.push(l);
-  return picked.map((l, i) => ({ ...l, name: CORNER_NAMES[i][0], colour: CORNER_NAMES[i][1] }));
-})();
-for (const c of CORNER_SHOPS) taken.push(lotRing(c, CORNER.front, CORNER.depth + CORNER.rear));
 export const CENTRE = { w: [12, 12] as [number, number], front: 2.5, depth: 7, rear: 1.5, eaves: 3 };
-/** The derelict community centre: on the council land, the first plot that fits */
-export const COMMUNITY_CENTRE: Lot | null = lay({ zones: ['council'], w: CENTRE.w, front: CENTRE.front, depth: CENTRE.depth, rear: CENTRE.rear, gap: 999, seed: 1971, prefix: 'centre', bend: 0.25 }, [...taken])[0] ?? null;
-if (COMMUNITY_CENTRE) taken.push(lotRing(COMMUNITY_CENTRE, CENTRE.front, CENTRE.depth + CENTRE.rear));
-
-export const SEMIS: Semi[] = (() => {
-  const r = seeded(1951);
-  return lay({ zones: ['council'], w: SEMI.w, front: SEMI.front, depth: SEMI.depth, rear: SEMI.rear, gap: SEMI.gap, seed: 1952, prefix: 'semi', bend: 0.75 }, taken).map((l): Semi => {
-    const f = r();
-    return {
-      ...l,
-      four: false,
-      finish: f < 0.55 ? 'brick' : f < 0.85 ? 'render' : 'pebbledash',
-      porch: [r() < 0.5, r() < 0.5],
-      doors: [DOORS[Math.floor(r() * DOORS.length)], DOORS[Math.floor(r() * DOORS.length)]],
-      lit: Math.floor(r() * 16),
-    };
-  });
-})();
 
 /* ---------- The bungalows ---------- */
 
@@ -207,17 +182,51 @@ export interface Bungalow extends Lot {
   door: string;
   lit: number;
 }
-export const BUNGALOWS: Bungalow[] = (() => {
-  const r = seeded(1966);
-  return lay({ zones: ['bungalow'], w: BUNGALOW.w, front: BUNGALOW.front, depth: BUNGALOW.depth, rear: BUNGALOW.rear, gap: BUNGALOW.gap, seed: 1967, prefix: 'bungalow', bend: 0.9 }, taken).map((l): Bungalow => ({
+
+/* ---------- All of it laid, in turn (worked out when the site is built: baked.ts) ---------- */
+
+/**
+ * The corner shops (a shop on a corner: the first lots that fit, apart), the derelict community centre (the first plot
+ * on the council land that fits), the semis on the council land, the bungalows round the compound: each laid where
+ * the ones before it left room
+ */
+function layCouncil(): { corner: CornerShop[]; centre: Lot | null; semis: Semi[]; bungalows: Bungalow[] } {
+  const taken = [...TAKEN];
+  const all = lay({ zones: ['council', 'village'], w: CORNER.w, front: CORNER.front, depth: CORNER.depth, rear: CORNER.rear, gap: 40, seed: 1990, prefix: 'corner', bend: 0.6 }, taken.map((t) => t));
+  const picked: Lot[] = [];
+  for (const l of all) if (picked.every((p) => Math.hypot(p.at[0] - l.at[0], p.at[1] - l.at[1]) > 60) && picked.length < CORNER_NAMES.length) picked.push(l);
+  const corner = picked.map((l, i) => ({ ...l, name: CORNER_NAMES[i][0], colour: CORNER_NAMES[i][1] }));
+  for (const c of corner) taken.push(lotRing(c, CORNER.front, CORNER.depth + CORNER.rear));
+  const centre = lay({ zones: ['council'], w: CENTRE.w, front: CENTRE.front, depth: CENTRE.depth, rear: CENTRE.rear, gap: 999, seed: 1971, prefix: 'centre', bend: 0.25 }, [...taken])[0] ?? null;
+  if (centre) taken.push(lotRing(centre, CENTRE.front, CENTRE.depth + CENTRE.rear));
+  const rs = seeded(1951);
+  const semis = lay({ zones: ['council'], w: SEMI.w, front: SEMI.front, depth: SEMI.depth, rear: SEMI.rear, gap: SEMI.gap, seed: 1952, prefix: 'semi', bend: 0.75 }, taken).map((l): Semi => {
+    const f = rs();
+    return {
+      ...l,
+      four: false,
+      finish: f < 0.55 ? 'brick' : f < 0.85 ? 'render' : 'pebbledash',
+      porch: [rs() < 0.5, rs() < 0.5],
+      doors: [DOORS[Math.floor(rs() * DOORS.length)], DOORS[Math.floor(rs() * DOORS.length)]],
+      lit: Math.floor(rs() * 16),
+    };
+  });
+  const rb = seeded(1966);
+  const bungalows = lay({ zones: ['bungalow'], w: BUNGALOW.w, front: BUNGALOW.front, depth: BUNGALOW.depth, rear: BUNGALOW.rear, gap: BUNGALOW.gap, seed: 1967, prefix: 'bungalow', bend: 0.9 }, taken).map((l): Bungalow => ({
     ...l,
-    garageLeft: r() < 0.5,
-    caravan: r() < 0.15,
-    finish: r() < 0.6 ? 'brick' : 'render',
-    door: DOORS[Math.floor(r() * DOORS.length)],
-    lit: Math.floor(r() * 8),
+    garageLeft: rb() < 0.5,
+    caravan: rb() < 0.15,
+    finish: rb() < 0.6 ? 'brick' : 'render',
+    door: DOORS[Math.floor(rb() * DOORS.length)],
+    lit: Math.floor(rb() * 8),
   }));
-})();
+  return { corner, centre, semis, bungalows };
+}
+const LAID = baked('council', BUILT ? undefined : layCouncil);
+export const CORNER_SHOPS: CornerShop[] = LAID.corner;
+export const COMMUNITY_CENTRE: Lot | null = LAID.centre;
+export const SEMIS: Semi[] = LAID.semis;
+export const BUNGALOWS: Bungalow[] = LAID.bungalows;
 
 /* ---------- The allotments ---------- */
 

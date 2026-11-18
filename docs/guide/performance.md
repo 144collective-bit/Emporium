@@ -72,7 +72,10 @@ keep it up to date when what it describes changes.
     amenities (`commons.ts`), the blocks' verges and the rolls, and since the
     start-up profile (`docs/performance-plan.md`) the metro's pillars and
     raised stretches (`metro.ts` `PILLARS`, `PLATEAUS`) and what's under the
-    highway's deck (`viadress.ts` `UNDER`). A new module that bakes goes in `MODULES` in
+    highway's deck (`viadress.ts` `UNDER`), and since the south's Phase 3e
+    Aldwyn's Green's layouts: its terraces and ginnels (`southterraces.ts`, key
+    `terraces`), the High Road's buildings (`highroad.ts`, `highroad`) and the
+    council rows, corner shops and community centre (`council.ts`, `council`). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.

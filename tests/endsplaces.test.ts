@@ -3,6 +3,8 @@
 // map ("coming soon") with its pin where it's to be built, no door until its building stands, and somewhere clear to
 // arrive, on a sidewalk, facing it.
 import { test } from 'node:test';
+import { inside } from '../src/scripts/city3d/streetfaces';
+import { REC } from '../src/scripts/city3d/south';
 import assert from 'node:assert/strict';
 import { ENDS_DOORS, ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS } from '../src/scripts/city3d/endsplaces';
 import { inEndswood } from '../src/scripts/city3d/endswood';
@@ -23,7 +25,7 @@ test('each is a place on the map and in the live settings, with a spot and where
   }
   // (Bunker Sound's under Teasel House, Phase 2; the others' buildings are Phase 3's)
   // (Bunker Sound's under Teasel House, St Aldwyn's porch, the High Road's four: Phases 2, 3b and 3c)
-  assert.deepEqual(ENDS_DOORS.map((d) => d.id), ['bunker', 'aldwyns', 'brook', 'rosas', 'kestrel', 'busgarage']);
+  assert.deepEqual(ENDS_DOORS.map((d) => d.id), ['bunker', 'aldwyns', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec']);
   for (const door of ENDS_DOORS) {
     assert.ok(!SOLIDS.some((b) => inBox(b, door.x, door.z, 0.2)), `${door.id}'s door in something solid`);
     const pin = ENDS_SPOTS.find((q) => q.id === door.id)!.pin;
@@ -35,7 +37,8 @@ test('you arrive on a sidewalk by each, clear of the asphalt and of anything sol
   for (const id of ENDS_PLACE_IDS) {
     const at = ENDS_SPAWNS[id];
     const s = ENDS_SPOTS.find((q) => q.id === id)!;
-    assert.ok(inEndswood(at.x, at.z), `${id} arrives off the estate`);
+    // (the rec ground's across the brook, the village's: its arrival on it)
+    assert.ok(id === 'rec' ? inside(REC, [at.x, at.z]) : inEndswood(at.x, at.z), `${id} arrives off the estate`);
     for (const st of PLAN.streets) if (st.kind !== 'highway' && st.kind !== 'ramp') assert.ok(distToStreet(st, [at.x, at.z]) > st.half + 0.1, `${id} arrives on ${st.id}`);
     assert.ok(!SOLIDS.some((b) => inBox(b, at.x, at.z, 0.35)), `${id} arrives in something solid`);
     const [dx, dz] = [s.pin[0] - at.x, s.pin[1] - at.z];

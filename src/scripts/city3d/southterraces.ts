@@ -13,6 +13,7 @@
 import { CHURCHYARD, COMPOUND_GATES, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, type Pt } from './south';
 import { distTo, inside, seeded } from './streetfaces';
 import { southLift } from './southground';
+import { BUILT, baked } from './baked';
 import { cover, type Box } from './southblocks';
 import { CHURCH_PATH, PATH_W } from './aldwyns';
 import { SHOPS, shopFoot } from './highroad';
@@ -117,8 +118,10 @@ const NOT_TERRACED = new Set(['south-high']);
 
 /** The block's slab (world.ts `SLAB`) */
 const SLAB = 0.15;
-const GINNEL_LIST: Ginnel[] = [];
-export const HOUSES: House[] = (() => {
+/** Every house laid, and the ginnels left through long rows (worked out when the site is built: baked.ts) */
+function layTerraces(): { houses: House[]; ginnels: Ginnel[] } {
+  const GINNEL_LIST: Ginnel[] = [];
+  const houses = (() => {
   const r = seeded(16112026);
   const out: House[] = [];
   const plots: Pt[][] = [];
@@ -225,7 +228,11 @@ export const HOUSES: House[] = (() => {
     h.low = SLAB + Math.min(...lifts);
   }
   return out;
-})();
+  })();
+  return { houses, ginnels: GINNEL_LIST };
+}
+const LAID = baked('terraces', BUILT ? undefined : layTerraces);
+export const HOUSES: House[] = LAID.houses;
 
 /* ---------- The back alleys and ginnels ---------- */
 
@@ -234,7 +241,7 @@ export const backOf = (h: House): [Pt, Pt] => {
   const p = plotOf(h);
   return [p[2], p[3]];
 };
-export const GINNELS: Ginnel[] = GINNEL_LIST;
+export const GINNELS: Ginnel[] = LAID.ginnels;
 
 /**
  * A strip behind a house's rear yard, the alley's width: kept where it's in the block and in no one else's plot; where
