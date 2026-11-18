@@ -12,13 +12,16 @@ import {
 } from '../src/scripts/city3d/home';
 import { GATES, HEAD, LANE_HALF, LANE_X, PLOT, ROAD_HALF, ROAD_Z } from '../src/scripts/city3d/endsfar';
 import { SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { PLACES } from '../src/scripts/city3d/places';
 import { LIVE_PLACES } from '../src/scripts/city3d/live';
 import { CARS } from '../src/scripts/city3d/carspec';
 import { PLAYER_CARS } from '../src/scripts/city3d/mycar';
 import { BENCH_VIEWS } from '../src/scripts/city3d/bench';
 import { benchMark } from '../src/scripts/city3d/moments';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 type Rect = [number, number, number, number];
 const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;

@@ -453,7 +453,7 @@ function drawRecBridge(b: Batch) {
 
 /** The houses in sites of about ten (in the order they were laid: along a street) */
 export const CHUNK = 10;
-export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   for (let i = 0; i < HOUSES.length; i += CHUNK) {
     const list = HOUSES.slice(i, i + CHUNK);
     site(`village houses ${i}`, rectOf(list.flatMap((h) => plotOf(h)), 1.5), (into) => {
@@ -468,7 +468,7 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   // The High Road's places (highroad3d.ts, 3c)
   registerHighRoad(low);
   // The council rows, the bungalows, the corner shops, the community centre, the allotments (council3d.ts, 3d)
-  registerCouncil(low);
+  registerCouncil(low, scene);
   // Aldwyn's Green Rec (rec.ts, 3e): its ground on the rolling ground, its footbridge level on its own
   site('village rec', [PITCH[0] - 16, PITCH[1] - 4, SKATE[2] + 4, PITCH[3] + 6], (into) => {
     const b = new Batch();

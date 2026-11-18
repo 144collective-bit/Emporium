@@ -483,6 +483,10 @@ export const BRIDGES: { street: string; at: Pt }[] = (() => {
 export const ESTATE_LAND: Rect = [-176, EDGE_Z, AVE.ns3.x, 470];
 export const VILLAGE_LAND: Rect = [-322, EDGE_Z, -104, 530];
 
+/** Where the council rows, the bungalows and the allotments stand (council.ts lays them inside it, tested): fixed here
+ * so the village's chunk can load round them (districts.ts) without the boot laying them out */
+export const COUNCIL_LAND: Rect = [-355, 336, -96, 528];
+
 /** What the south's drawing covers (districts.ts: its chunk loads as you come near): the streets, the brook, the
  * hedges and the fields' edge, the tunnel's mouth */
 export const SOUTH_DRAWN: Rect = [-432, 300, 66, 615];

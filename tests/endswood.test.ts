@@ -8,9 +8,12 @@ import { ENDSWOOD_RECT, ENDS_LAMPS, ENDS_SOLIDS, PATH_BOLLARDS, SLAB_Y, inEndswo
 import { FOOTPATHS, LOT9_EDGE, NS_BENDS, SOUTH_BLOCKS, SOUTH_STREETS, type Pt } from '../src/scripts/city3d/south';
 import { distTo, inside } from '../src/scripts/city3d/streetfaces';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { HW_EDGE } from '../src/scripts/city3d/endswood';
 import { southLift } from '../src/scripts/city3d/southground';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const centroid = (poly: Pt[]): Pt => [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
 

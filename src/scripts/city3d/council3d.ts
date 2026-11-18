@@ -13,8 +13,9 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, roundRect, siteMat, toon } from './kit';
 import { site } from './tilework';
+import { addSolids } from './solids';
 import { COVER, PLANT, SOIL, STONE } from './palette';
-import { ALLOTMENTS, ALLOTMENT_GATE, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, PLOTS, SEMI, SEMIS, lotRing, type Bungalow, type Finish, type Lot, type Semi } from './council';
+import { ALLOTMENTS, ALLOTMENT_GATE, ALLOTMENT_SOLIDS, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, COUNCIL_SOLIDS, PLOTS, SEMI, SEMIS, lotRing, type Bungalow, type Finish, type Lot, type Semi } from './council';
 
 type Pt = [number, number];
 
@@ -305,7 +306,13 @@ function drawAllotments(b: Batch, low: boolean) {
 /* ---------- Registered ---------- */
 
 const rectOf = (pts: Pt[], pad: number): [number, number, number, number] => [Math.min(...pts.map((p) => p[0])) - pad, Math.min(...pts.map((p) => p[1])) - pad, Math.max(...pts.map((p) => p[0])) + pad, Math.max(...pts.map((p) => p[1])) + pad];
-export function registerCouncil(low: boolean) {
+export function registerCouncil(low: boolean, scene: THREE.Scene | null) {
+  // (on the main thread: the houses, shops and sheds join the grids, so walking, driving and shots meet them; the
+  // houses' tops already over their plinths, the sheds on the ground and lifted with it)
+  if (scene) {
+    addSolids(COUNCIL_SOLIDS, false);
+    addSolids(ALLOTMENT_SOLIDS);
+  }
   const lifted = { cast: true, receive: true };
   const level = { cast: true, receive: true, lift: false };
   for (let i = 0; i < SEMIS.length; i += 8) {
