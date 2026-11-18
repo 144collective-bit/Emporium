@@ -1616,12 +1616,17 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     async function go3d() {
       if (booting || city) return;
       if (!gl) return no3d();
+      // The city's code asked for at once, beside the live settings (docs/spawn-plan.md Phase 3a: it waited on them, up
+      // to their 1.5 s, before): it downloads and runs as they come in, and the boot itself still waits for them
+      const code = import('../scripts/city3d/index');
+      // (a chunk that won't load is caught where it's awaited, below)
+      code.catch(() => {});
       // (never behind the maintenance cover: the page reloads when it lifts)
       await liveFirst;
       if (live.now.maintenance) return;
       booting = true;
       try {
-        const { bootCity } = await import('../scripts/city3d/index');
+        const { bootCity } = await code;
         city = await bootCity(root!, await wallet, await hubReady);
       } catch (err) {
         console.error(err);

@@ -21,7 +21,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
     the links (`FENNEL_WAY`, `RUNWAY_VIEW`, `LOT_LANE` in through Lot 9's west gate onto its lane, `BRAMBLE_LANE`,
     `BROOKSIDE`), the village's streets (Bell Street, Yew Walk, Chapel Row round the churchyard, Orchard, Lark, Hill,
     Mill, Thorn).
-  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes), every
+  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes; worked
+    out when the site is built, `GROWN`, baked.ts key `south-grown`, `docs/spawn-plan.md` Phase 3a), every
     one in a council, village or bungalow zone, clear of the other streets by `CLEAR`, with **a footpath through**
     (`FOOTPATHS`, the owner's rule: nowhere is a dead end on foot), on ahead past the close's end or out from the
     crescent's back, never back to the street it grew off. A new street joins `MAIN` (and `GROWS` decides where
