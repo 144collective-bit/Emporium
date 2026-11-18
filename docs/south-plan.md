@@ -427,6 +427,13 @@ From the Circus west, patchy as high roads are:
    with the tunnel seen; the underpasses under the ring road, the spokes
    and the bent avenues, into the ticket halls. All in `underground.ts`'s
    one kit.
+   The owner's answers (2026-11-18): the stations mixed by area (one kit,
+   each finished as the land over it: tiled at Aldwyn's Green and the
+   High Road, the blocks' concrete at Lot 9 and the Circus, gritty at The
+   Trenches); a change to the raised metro at The Trenches (a short
+   covered walk between them, both lines on one card and the map);
+   round-top tube trains in the city's style; the underpasses first,
+   then the line.
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
