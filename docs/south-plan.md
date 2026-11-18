@@ -405,7 +405,18 @@ From the Circus west, patchy as high roads are:
      answers (2026-11-18): a football pitch, a pavilion, a skate park, a
      playground and benches; a place (Aldwyn's Green Rec: a pin, a panel,
      coming soon, Walk in at its gate); a footbridge over the brook from
-     the village's nearest street to its gate.
+     the village's nearest street to its gate. Built, waiting on the
+     owner's sign-off: `rec.ts` (DOM-free, `tests/rec.test.ts`): the pitch
+     (lines, boxes, centre circle, goals), the pavilion with its veranda
+     facing the pitch, the skate park (a bowl, a quarter pipe, a funbox, a
+     rail), the playground (swings, a slide, bark), benches; the footbridge
+     from Brookside's sidewalk over the brook to the gate (`recBridgeY()`,
+     groundheight.ts's `recbridge` layer: humped over the valley), the
+     path on to the pavilion; `REC_SOLIDS` (open land: the solids test lets
+     them); `rec` a place (endsplaces.ts: its pin over the veranda's door,
+     Walk in inside the gate facing it; its panel; the travel test's
+     furthest pair now the overlook to it, about 114 s). Drawn in the
+     village's chunk (`drawRec()`, `drawRecBridge()`).
 4. **Below ground.** The underground's south line (The Trenches, Circus,
    Lot 9, Aldwyn's Green, High Road; later on west and to the airport):
    street entrances, stairs, ticket halls, platforms walked on, the ride

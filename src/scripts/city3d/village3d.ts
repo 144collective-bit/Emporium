@@ -22,6 +22,7 @@ import { CHURCHYARD } from './south';
 import { PLANT } from './palette';
 import { registerHighRoad } from './highroad3d';
 import { registerCouncil } from './council3d';
+import { BENCHES, BOWL, BRIDGE, FOOTPATH, FUNBOX, GOALS, PAVILION, PAVILION_H, PITCH, PLAYGROUND, QUARTER, RAIL, REC_PATH, SKATE, SLIDE, SWINGS, VERANDA, PATH_W as REC_PATH_W, recBridgeY } from './rec';
 
 export const SELF = import.meta.url;
 
@@ -369,6 +370,87 @@ function drawChurchyard(b: Batch, low: boolean) {
   }
 }
 
+/* ---------- Aldwyn's Green Rec (rec.ts, 3e) ---------- */
+
+const LINE = toon('#f2f0e8');
+const NET = toon('#d8d4e6');
+const SKATE_CONC = toon('#b8b3ab');
+const BARK = toon('#7a5a3c');
+const PAINT_RED = toon('#c43c2c');
+const PAINT_BLUE = toon('#2aabee');
+type R4b = [number, number, number, number];
+const rb = (b: Batch, r: R4b, y0: number, y1: number, m: THREE.Material) => b.add(box(r[2] - r[0], y1 - y0, r[3] - r[1], (r[0] + r[2]) / 2, (y0 + y1) / 2, (r[1] + r[3]) / 2), m);
+const ringOf = (r: R4b): Pt[] => [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]];
+function drawRec(b: Batch, low: boolean) {
+  const G = 0.15;
+  // The pitch's lines (touchlines, goal lines, halfway, the centre circle in eight, the boxes) and its goals
+  const [x0, z0, x1, z1] = PITCH;
+  const zm = (z0 + z1) / 2;
+  const xm = (x0 + x1) / 2;
+  const strip = (a: Pt, c: Pt) => along(b, a, c, 0.12, G + 0.004, G + 0.012, LINE);
+  for (const [a, c] of [[[x0, z0], [x1, z0]], [[x0, z1], [x1, z1]], [[x0, z0], [x0, z1]], [[x1, z0], [x1, z1]], [[xm, z0], [xm, z1]]] as [Pt, Pt][]) strip(a, c);
+  for (let k = 0; k < 12; k++) {
+    const [a0, a1] = [(k / 12) * Math.PI * 2, ((k + 1) / 12) * Math.PI * 2];
+    strip([xm + Math.cos(a0) * 2.6, zm + Math.sin(a0) * 2.6], [xm + Math.cos(a1) * 2.6, zm + Math.sin(a1) * 2.6]);
+  }
+  for (const s of [1, -1]) {
+    const gx = s > 0 ? x0 : x1;
+    strip([gx, zm - 4.5], [gx + s * 4, zm - 4.5]);
+    strip([gx + s * 4, zm - 4.5], [gx + s * 4, zm + 4.5]);
+    strip([gx + s * 4, zm + 4.5], [gx, zm + 4.5]);
+  }
+  for (const g of GOALS) {
+    const s = g.at[0] < xm ? -1 : 1;
+    for (const e of [-1, 1]) along(b, [g.at[0], g.at[1] + (e * g.w) / 2], [g.at[0] + 0.01, g.at[1] + (e * g.w) / 2], 0.12, G, G + g.h, LINE);
+    along(b, [g.at[0], g.at[1] - g.w / 2], [g.at[0], g.at[1] + g.w / 2], 0.12, G + g.h - 0.12, G + g.h, LINE);
+    if (!low) b.detail(() => along(b, [g.at[0] + s * 0.9, g.at[1] - g.w / 2], [g.at[0] + s * 0.9, g.at[1] + g.w / 2], 0.02, G, G + g.h * 0.8, NET));
+  }
+  // The pavilion: brick, a pitched roof, its veranda on posts facing the pitch, its windows and door
+  rb(b, PAVILION as R4b, G - 0.3, G + PAVILION_H.eaves, FRONTS.red);
+  gabled(b, [VERANDA[0], PAVILION[1], PAVILION[2], PAVILION[3]], G + PAVILION_H.eaves, PAVILION_H.ridge, false, SPIRE, FRONTS.red, 0.2);
+  for (const z of [VERANDA[1] + 0.3, (VERANDA[1] + VERANDA[3]) / 2 - 1.4, (VERANDA[1] + VERANDA[3]) / 2 + 1.4, VERANDA[3] - 0.3]) along(b, [VERANDA[0] + 0.2, z], [VERANDA[0] + 0.21, z], 0.14, G, G + PAVILION_H.eaves, OAK);
+  rb(b, [VERANDA[0], VERANDA[1], VERANDA[2], VERANDA[3]] as R4b, G, G + 0.12, CAP);
+  b.add(lancet(PAVILION[0], (PAVILION[1] + PAVILION[3]) / 2, [-1, 0], 0.9, G + 0.12, G + 1.5).applyMatrix4(new THREE.Matrix4()), OAK);
+  for (const dz of [-1.8, 1.8]) b.add(tris(quad([PAVILION[0] - 0.012, G + 0.7, (PAVILION[1] + PAVILION[3]) / 2 + dz - 0.6], [PAVILION[0] - 0.012, G + 0.7, (PAVILION[1] + PAVILION[3]) / 2 + dz + 0.6], [PAVILION[0] - 0.012, G + 1.6, (PAVILION[1] + PAVILION[3]) / 2 + dz + 0.6], [PAVILION[0] - 0.012, G + 1.6, (PAVILION[1] + PAVILION[3]) / 2 + dz - 0.6], [-1, 0, 0])), WIN_LIT);
+  // The skate park: its concrete, the bowl's rim, a quarter pipe, a funbox, a rail
+  flat(b, ringOf(SKATE as R4b), G + 0.006, SKATE_CONC);
+  flat(b, ringOf(BOWL as R4b), G + 0.01, toon(STONE.edge));
+  for (const [a, c] of [[[BOWL[0], BOWL[1]], [BOWL[2], BOWL[1]]], [[BOWL[2], BOWL[1]], [BOWL[2], BOWL[3]]], [[BOWL[2], BOWL[3]], [BOWL[0], BOWL[3]]], [[BOWL[0], BOWL[3]], [BOWL[0], BOWL[1]]]] as [Pt, Pt][]) along(b, a, c, 0.3, G, G + 0.35, SKATE_CONC);
+  {
+    const [qx0, qz0, qx1, qz1] = QUARTER;
+    b.add(tris([...quad([qx0, G, qz1], [qx1, G, qz1], [qx1, G + 1.1, qz0], [qx0, G + 1.1, qz0], [0, 1, 1]), ...quad([qx0, G, qz0], [qx1, G, qz0], [qx1, G + 1.1, qz0], [qx0, G + 1.1, qz0], [0, 0, -1])]), SKATE_CONC);
+    b.add(tris([{ p: [[qx0, G, qz0], [qx0, G, qz1], [qx0, G + 1.1, qz0]], n: [-1, 0, 0] }, { p: [[qx1, G, qz0], [qx1, G, qz1], [qx1, G + 1.1, qz0]], n: [1, 0, 0] }]), SKATE_CONC);
+  }
+  rb(b, FUNBOX as R4b, G, G + 0.5, SKATE_CONC);
+  along(b, RAIL[0], RAIL[1], 0.06, G + 0.45, G + 0.52, PAINT_RED);
+  for (const p of RAIL) along(b, p, [p[0] + 0.01, p[1]], 0.06, G, G + 0.5, PAINT_RED);
+  // The playground: bark under it, the swings' frame, a slide
+  flat(b, ringOf(PLAYGROUND as R4b), G + 0.006, BARK);
+  for (const x of [SWINGS[0] + 0.08, SWINGS[2] - 0.08]) along(b, [x, SWINGS[1]], [x, SWINGS[3]], 0.1, G, G + 1.6, PAINT_BLUE);
+  along(b, [SWINGS[0], (SWINGS[1] + SWINGS[3]) / 2], [SWINGS[2], (SWINGS[1] + SWINGS[3]) / 2], 0.1, G + 1.5, G + 1.6, PAINT_BLUE);
+  rb(b, [SLIDE[0], SLIDE[1], SLIDE[0] + 0.6, SLIDE[3]], G, G + 1.3, PAINT_RED);
+  b.add(tris(quad([SLIDE[0] + 0.6, G + 1.3, SLIDE[1]], [SLIDE[0] + 0.6, G + 1.3, SLIDE[3]], [SLIDE[2], G + 0.1, SLIDE[3]], [SLIDE[2], G + 0.1, SLIDE[1]], [0.4, 1, 0])), PAINT_BLUE);
+  // The benches
+  for (const { at, yaw } of BENCHES) {
+    const t: Pt = [Math.cos(yaw), -Math.sin(yaw)];
+    along(b, [at[0] - t[0] * 0.7, at[1] - t[1] * 0.7], [at[0] + t[0] * 0.7, at[1] + t[1] * 0.7], 0.45, G + 0.38, G + 0.45, OAK);
+  }
+  // The paths: from Brookside to the bridge and on from the gate to the pavilion
+  for (const line of [FOOTPATH, REC_PATH]) for (let i = 1; i < line.length; i++) along(b, line[i - 1], line[i], REC_PATH_W, G - 0.02, G + 0.008, GRAVEL);
+}
+/** The footbridge (level on its own: its deck humped over the brook's valley, its rails) */
+function drawRecBridge(b: Batch) {
+  const n = 10;
+  for (let k = 0; k < n; k++) {
+    const [za, zc] = [BRIDGE.z0 + ((BRIDGE.z1 - BRIDGE.z0) * k) / n, BRIDGE.z0 + ((BRIDGE.z1 - BRIDGE.z0) * (k + 1)) / n];
+    const [ya, yc] = [recBridgeY(BRIDGE.x, za)!, recBridgeY(BRIDGE.x, zc)!];
+    const mid = (ya + yc) / 2;
+    b.add(box(BRIDGE.half * 2, 0.12, zc - za + 0.02, BRIDGE.x, mid - 0.06, (za + zc) / 2).applyMatrix4(new THREE.Matrix4().makeRotationX(0)), OAK);
+    for (const s of [-1, 1]) b.add(box(0.06, 0.06, zc - za + 0.02, BRIDGE.x + s * (BRIDGE.half - 0.05), mid + 0.9, (za + zc) / 2), OAK);
+    for (const s of [-1, 1]) b.add(box(0.07, 0.95, 0.07, BRIDGE.x + s * (BRIDGE.half - 0.05), ya + 0.45, za), OAK);
+  }
+}
+
 /** The houses in sites of about ten (in the order they were laid: along a street) */
 export const CHUNK = 10;
 export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
@@ -387,6 +469,17 @@ export function register({ low }: { low: boolean; scene: THREE.Scene | null; tic
   registerHighRoad(low);
   // The council rows, the bungalows, the corner shops, the community centre, the allotments (council3d.ts, 3d)
   registerCouncil(low);
+  // Aldwyn's Green Rec (rec.ts, 3e): its ground on the rolling ground, its footbridge level on its own
+  site('village rec', [PITCH[0] - 16, PITCH[1] - 4, SKATE[2] + 4, PITCH[3] + 6], (into) => {
+    const b = new Batch();
+    drawRec(b, low);
+    b.build(into, { cast: true, receive: true });
+  });
+  site('village rec bridge', [BRIDGE.x - 3, FOOTPATH[0][1] - 1, BRIDGE.x + 3, BRIDGE.z1 + 1], (into) => {
+    const b = new Batch();
+    drawRecBridge(b);
+    b.build(into, { cast: true, receive: true, lift: false });
+  });
   // St Aldwyn's: the church level on its plinth, its churchyard on the hill
   site('village st aldwyns', [CHURCHYARD.reduce((v, p) => Math.min(v, p[0]), Infinity) - 2, CHURCHYARD.reduce((v, p) => Math.min(v, p[1]), Infinity) - 10, CHURCHYARD.reduce((v, p) => Math.max(v, p[0]), -Infinity) + 2, CHURCHYARD.reduce((v, p) => Math.max(v, p[1]), -Infinity) + 2], (into) => {
     const b = new Batch();
