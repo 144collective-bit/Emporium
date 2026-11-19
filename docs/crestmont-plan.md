@@ -639,8 +639,8 @@ it. The yard is mown (mansions3d.ts); the banks, the planting, the land and the 
 The owner: "this is the premium high end part of town. ask me a lot of questions about improving the area further."
 Their answers, in three rounds:
 
-- **Arrival:** an entrance gateway where the boulevard enters the Flats: stone gate piers and a planted roundabout with a
-  fountain.
+- **Arrival:** an entrance gateway where the boulevard enters the Flats: stone gate piers and a fountain (the owner, at
+  Phase 1: the streets kept, no roundabout).
 - **New places** (each a place with its own panel, `PLACES` and `LIVE_PLACES`, a door, a pin): a spa and wellness
   retreat, a fine-dining restaurant with a view terrace, a car showroom of the game's own made-up cars; grouped round a
   new **hilltop quarter**, a plaza high on the ridge with lookouts over the city.
@@ -662,8 +662,13 @@ Their answers, in three rounds:
 
 **The phases, in the owner's order (look first, then places), each with the owner's sign-off before the next:**
 
-1. **Arrival and the night glow:** the entrance gateway and roundabout; lit windows, pools lit under water, garden
-   lanterns and festoon lights, the landmarks floodlit.
+1. **Arrival and the night glow** (built; the owner's answers: "Gateway, streets kept", no roundabout, and the night
+   "Glamorous": most windows lit, bright turquoise pools, festoon lights everywhere, the landmarks strongly floodlit,
+   under the bloom): the gateway at the boulevard's mouth on the bank avenue (`crestgate.ts`, `crestgate3d.ts`: stone
+   pylons with lanterns, wing walls with CRESTMONT on a plaque, a fountain on the median's nose); the night's rules in
+   `crestnight.ts` (lit windows, festoons, the pools' lights, the landmarks' uplights), drawn by estates3d.ts,
+   mansions3d.ts, crestgardens3d.ts and crestsites3d.ts. Phones: fewer lit windows, festoons with every other bulb,
+   no pool lights.
 2. **The houses upgraded:** balconies, roof terraces and better gates on the estates and the mansions.
 3. **New hill mansions:** 3 to 6 on terraced lots on the open slopes, Art Deco and French chateau, each on its own level
    with a yard, a graded drive and a planted bank, as the others.
