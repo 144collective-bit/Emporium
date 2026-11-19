@@ -499,7 +499,7 @@ From the Circus west, patchy as high roads are:
      Trenches (the change to the raised metro), the Circus, Lot 9,
      Aldwyn's Green, the High Road by Degen's gates (on west and to the
      airport later); free to ride, as the raised metro is. In steps:
-     - **4d, the line as data**. Built, waiting on the owner's sign-off:
+     - **4d, the line as data**. Built and signed off (2026-11-19):
        `southline.ts` (DOM-free, `tests/southline.test.ts`): the line
        (`LINE`, 599 long, its straights through the stations joined by
        the shortest bends no tighter than 25 round, Dubins paths:
