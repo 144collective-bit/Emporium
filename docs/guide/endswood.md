@@ -143,7 +143,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `SOUTH_STATIONS` with their platform, hall, escalator and way in, `LINE_PASSAGES`), drawn and walked from 4e; the kit
   has levels for it (`y0` / `y1`, `LEVEL`). The stations built (`BUILT_STATIONS`: the High Road's in 4e, all five since 4f) are walked
   (`BUILT_PASSAGES` in `UNDER`), drawn (`line3d.ts`, the south's chunk, a site each) and their stairs cut
-  (`STAIR_CUTS`); the High Road's station building is highroad.ts's `station` kind (`stationWalls()`).
+  (`STAIR_CUTS`); the High Road's station building is highroad.ts's `station` kind (`stationWalls()`). The line's
+  running tunnels between the stations are line3d.ts's `registerTunnels()` (`TUNNEL_HALF` wide enough for the cars on
+  the bends). Its trains (the south plan's 4g): the rules in `southtrains.ts` (`TUBE`, the timetable `LEGS` / `ROUND`,
+  `trainAt()`, `trackOf()`, `carPose()`, a ride's `rideAt()`), drawn by `tube3d.ts` (a lazy chunk, loaded and drawn
+  only while you're down in a station or riding, index.ts), ridden from a **Tube** door on each platform
+  (`PLAT_DOOR` along from its middle) through `tube-ui.ts` (the raised metro's card and ride bar, `data-tube-to`).
 - **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
   end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
