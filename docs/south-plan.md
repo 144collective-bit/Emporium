@@ -624,7 +624,25 @@ From the Circus west, patchy as high roads are:
        320 to 1440 wide and on a phone on its side; the map's key has the
        tube. Shots `docs/south-shots/25-phase-4h-*.webp`.
 5. **The exits.** South-west and west, as the ring's others
-   (`viaduct.ts`), and their roads in.
+   (`viaduct.ts`), and their roads in. The owner's answers (2026-11-19,
+   `docs/south-shots/26-phase-5-corner.png`): the two planned spots sit at
+   the ends of the ring's south-west corner curve (radius 70), hard against
+   exit 6's ramps (to x -96) and exit 7's (to z 229), so **one corner
+   exit** instead, at the curve's middle (about (-195, 300)), numbered
+   **6A** (every sign keeps its number), **slip ramps both sides** lying
+   round the curve towards the south side (clear of exit 6's), and its
+   **road in** from The Trenches' south-west corner, angled under the ring,
+   meeting the Docks' ring road outside and running on down to the south's
+   streets (following the land, meeting them at angles). The west exit is
+   dropped as the south-east one was. Steps, each with the owner's
+   sign-off:
+   - **5a, as data**: exit 6A in `EXITS` (its label beside the numbers),
+     its slips (`rampsOf()`), the road in in the street plan, the routes,
+     the land kept clear; tests (nothing that exists moves, the ramps clear
+     of exits 6 and 7, every route still joined); a sketch.
+   - **5b, drawn and driven**: the ramps on the viaduct, the road and its
+     junctions, the gantries and signs with 6A's made-up names, lamps,
+     traffic using it; walked and driven, shots.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
    roads, the blocks' lights at night, sound by district, `?bench` views,
    phones checked and trimmed, every width, the guides.
