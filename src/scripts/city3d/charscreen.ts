@@ -27,7 +27,7 @@ const LIGHTS: { id: StageLight; name: string }[] = [
   { id: 'night', name: 'Night' },
 ];
 
-const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Jacket', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket', bomber: 'Bomber Jacket', coach: 'Coach Jacket', vest: 'Puffer Vest', tee: 'Heavy Tee' };
+const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Jacket', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket', bomber: 'Bomber Jacket', coach: 'Coach Jacket', vest: 'Puffer Vest', tee: 'Heavy Tee', shell: 'Tech Shell', trucker: 'Trucker Jacket' };
 const BOTTOMS: Record<Look['bottoms'], string> = { trousers: 'Suit Trousers', joggers: 'Joggers', trackpants: 'Track Pants', cargo: 'Cargo Pants', shorts: 'Shorts' };
 const HATS: Record<NonNullable<Look['hat']>, string> = { cap: 'Diamond Cap', backcap: 'Backwards Cap', beanie: 'Street Beanie', bucket: 'Bucket Hat' };
 const BAGS: Record<NonNullable<Look['bag']>, string> = { backpack: 'Backpack', crossbody: 'Crossbody', board: 'Skate Deck', duffel: 'Duffel Bag' };

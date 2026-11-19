@@ -15,10 +15,10 @@ import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, ty
 
 /* ---------- Outfits ---------- */
 
-export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'soldier';
+export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'soldier';
 export interface Outfit {
   kind: OutfitKind;
-  /** Jacket, hoodie, track jacket, varsity, puffer, bomber or coach jacket, puffer vest, tee, or fatigues */
+  /** Jacket, hoodie, track jacket, varsity, puffer, bomber, coach or trucker jacket, puffer vest, tee, shell, or fatigues */
   top: string;
   /** The bottoms' colour, and which (left out: what the top comes with, `bottomsOf()`) */
   bottom: string;
@@ -1127,6 +1127,10 @@ export function items(q: Detail, hero = false): Item[] {
   const coach = (o: Outfit) => o.kind === 'coach';
   const gilet = (o: Outfit) => o.kind === 'vest';
   const tee = (o: Outfit) => o.kind === 'tee';
+  const shell = (o: Outfit) => o.kind === 'shell';
+  const trucker = (o: Outfit) => o.kind === 'trucker';
+  /** A high collar round the neck (the puffer's, the vest's, the shell's): the headphones and the necklace go under it */
+  const highNeck = (o: Outfit) => quilted(o) || shell(o);
   /** The puffer's quilted body: the jacket's, or the vest's (its high collar, its zip) */
   const quilted = (o: Outfit) => puffer(o) || gilet(o);
   /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
@@ -1924,10 +1928,12 @@ export function items(q: Detail, hero = false): Item[] {
   })();
   const ROLL = q === 3 ? 0.0055 : 0.0065;
   const hoodRim = tube(hoodEdge.filter((_, i) => i % (q === 3 ? 1 : 2) === 0 || i === hoodEdge.length - 1), ROLL, q === 3 ? R(64) : R(32), q === 3 ? R(10) : R(6));
+  // (heavyweight ribbing, docs/wardrobe-plan.md Phase 5: a deep band, deepened upward only: its foot lower sank into
+  // the thighs at a sprint)
   const hem = loft(
     [
       [-0.095, 0.152, 0.104, 0],
-      [-0.05, 0.155, 0.106, 0],
+      [-0.038, 0.157, 0.107, 0],
     ],
     TOP_RINGS,
     HN2
@@ -1977,10 +1983,14 @@ export function items(q: Detail, hero = false): Item[] {
         [s * 0.032, 0.36, hoodieFront(s * 0.032, 0.36) + 0.006],
         [s * 0.034, 0.3, hoodieFront(s * 0.034, 0.3) + 0.006],
       ],
-      0.004,
+      0.0048,
       R(8),
       4
     )
+  );
+  // (metal tips on the drawcords' ends: single figures)
+  const aglets = [-1, 1].map((s) =>
+    new THREE.CylinderGeometry(0.0056, 0.0052, 0.014, R(8)).translate(s * 0.034, 0.293, hoodieFront(s * 0.034, 0.3) + 0.006)
   );
   const TRACK = grow(HOODIE, 0.96);
   const TK = smooth(TRACK);
@@ -2268,14 +2278,14 @@ export function items(q: Detail, hero = false): Item[] {
     R(14)
   );
   // Two stripes down the outside of each sleeve and trouser leg (track suits): flat tape lying on the cloth
-  // (`side` of the loft it's on, `n` its squareness), bending with it
-  const stripe = (secs: Sec[], s: number, from: number, to: number, n = 2) => {
-    const W = 0.0035;
+  // (`side` of the loft it's on, `n` its squareness), bending with it; or as many as `dzs` asks, `W` either side
+  // of each line (a taped seam, a felled seam's stitching)
+  const stripe = (secs: Sec[], s: number, from: number, to: number, n = 2, dzs = [-0.009, 0.009], W = 0.0035) => {
     const side = sideSurface(secs, n);
     const ys: number[] = [];
     for (let y = from; y > to + 1e-6; y -= 0.01) ys.push(y);
     ys.push(to);
-    return [-0.009, 0.009].map((dz) => {
+    return dzs.map((dz) => {
       const pos: number[] = [];
       const idx: number[] = [];
       ys.forEach((y, k) => {
@@ -2293,6 +2303,32 @@ export function items(q: Detail, hero = false): Item[] {
   };
   const sleeveStripes = (secs: Sec[], to: number) => [-1, 1].map((s) => mergeGeometries(stripe(grow(secs, 1.14), s, 0.0, to))!);
   const upperStripes = sleeveStripes(LOOSE_U, -0.2);
+  /*
+   * The heavyweight hoodie (docs/wardrobe-plan.md Phase 5, the refresh): deep ribbed cuffs, the shoulder's seam
+   * dropped down the arm (a felled seam round the sleeve under the shoulder's point), and felled seams down the
+   * body's sides, each a pair of stitch lines (the seams single figures only)
+   */
+  const hoodieCuff = loft(
+    [
+      [-0.212, 0.034, 0.036, 0.001],
+      [-0.164, 0.038, 0.04, 0.001],
+    ],
+    R(14)
+  );
+  const DROP = -0.04;
+  const dropSeam = (() => {
+    const [, hw, hd, z = 0] = secAt(grow(LOOSE_U, 1.14), DROP);
+    return loft(
+      [
+        [DROP - 0.0018, hw + 0.0013, hd + 0.0013, z],
+        [DROP + 0.0018, hw + 0.0013, hd + 0.0013, z],
+      ],
+      R(14),
+      2,
+      true
+    );
+  })();
+  const sideSeams = mergeGeometries([-1, 1].flatMap((s) => stripe(HK, s, 0.31, -0.08, HN2, [-0.0028, 0.0028], 0.0009)))!;
   // (stopping short of the cuff, which is narrower than the sleeve)
   const foreStripes = sleeveStripes(LOOSE_F, -0.172);
   const thighStripes = [-1, 1].map((s) => mergeGeometries(stripe(JOG_S, s, -0.12, -0.265, 2.2))!);
@@ -2588,11 +2624,137 @@ export function items(q: Detail, hero = false): Item[] {
   const coachPlacket = tape(-0.011, 0.011, -0.07, 0.392, 0.003, coachFront, 0.001);
   const coachSnaps = [0.04, 0.13, 0.22, 0.31].map((y) => new THREE.CylinderGeometry(0.0065, 0.0065, 0.004, R(10)).rotateX(Math.PI / 2).translate(0, y, coachFront(0, y) + 0.006));
   // (the drawcord out of the hem's channel at each side, a toggle on its end)
-  const coachToggles = [-1, 1].flatMap((s) => {
-    const x = s * 0.1;
-    const z = coachFront(x, -0.08) + 0.004;
-    return [rb(0.003, 0.022, 0.003, 0.001, x, -0.096, z), rb(0.011, 0.016, 0.009, 0.003, x, -0.112, z)];
+  const toggles = (front: (x: number, y: number) => number) =>
+    [-1, 1].flatMap((s) => {
+      const x = s * 0.1;
+      const z = front(x, -0.08) + 0.004;
+      return [rb(0.003, 0.022, 0.003, 0.001, x, -0.096, z), rb(0.011, 0.016, 0.009, 0.003, x, -0.112, z)];
+    });
+  const coachToggles = toggles(coachFront);
+  /** A hem's band round a body (a drawcord's channel, a waistband) from `y0` to `y1`, `out` proud of its widest */
+  const hemBand = (secs: Sec[], n: number, y0: number, y1: number, out: number) => {
+    const [, hw, hd] = secAt(secs, Math.min(...secs.map(([y]) => y)));
+    return loft(
+      [
+        [y0, hw + out, hd + out, 0],
+        [y1, hw + out, hd + out, 0],
+      ],
+      TOP_RINGS,
+      n
+    );
+  };
+
+  /*
+   * The technical shell (docs/wardrobe-plan.md Phase 5): a rain shell a little fuller than the coach, a tall funnel
+   * collar fuller at the back where its hood packs away, a storm flap over the zip up the front and the collar, taped
+   * seams (a yoke across the chest, the side panels, along the top of each sleeve) a shade lighter than the cloth, a
+   * zipped chest pocket, a drawcord hem and a tab at each cuff
+   */
+  const SHK = smooth(grow(JACKET, 1.04));
+  const shellFront = surface(SHK, SN);
+  const shellBody = loft(SHK, TOP_RINGS, SN);
+  const SHELL_COLLAR: Sec[] = [
+    [0.37, 0.1, 0.078, -0.004],
+    [0.4, 0.095, 0.082, -0.006],
+    [0.43, 0.09, 0.083, -0.009],
+    [0.456, 0.085, 0.079, -0.011],
+    [0.466, 0.078, 0.072, -0.011],
+    [0.47, 0.068, 0.062, -0.011],
+  ];
+  const shellCollarFront = surface(SHELL_COLLAR, 2.2);
+  const shellCollar = loft(SHELL_COLLAR, R(18), 2.2);
+  /** The shell's outside at the front: its body, and its collar where that stands proud */
+  const shellUp = (x: number, y: number) => Math.max(shellFront(x, y), y >= 0.37 ? shellCollarFront(x, y) : -1);
+  const shellHem = hemBand(SHK, SN, -0.09, -0.07, 0.0025);
+  const shellFlap = tape(-0.003, 0.024, -0.075, 0.464, 0.004, shellUp, 0.002);
+  crisp = true;
+  const shellTape = one([
+    onBody(
+      [
+        [-0.135, 0.331],
+        [0.135, 0.331],
+        [0.135, 0.335],
+        [-0.135, 0.335],
+      ],
+      0.0012,
+      shellFront,
+      0.0006
+    ),
+    ...[-1, 1].map((s) => tape(s * 0.12 - 0.0018, s * 0.12 + 0.0018, -0.07, 0.3, 0.0012, shellFront, 0.0006)),
+  ]);
+  crisp = false;
+  const shellPocket = tape(-0.088, -0.083, 0.19, 0.29, 0.002, shellFront, 0.001);
+  const shellPull = rb(0.008, 0.014, 0.004, 0.0015, -0.0855, 0.279, shellFront(-0.0855, 0.279) + 0.004);
+  const shellToggles = toggles(shellFront);
+  const shellArmTape = [-1, 1].map((s) => mergeGeometries(stripe(grow(LOOSE_U, 1.14), s, 0.0, -0.2, 2, [0], 0.0022))!);
+  const shellForeTape = [-1, 1].map((s) => mergeGeometries(stripe(grow(LOOSE_F, 1.14), s, 0.0, -0.17, 2, [0], 0.0022))!);
+  // (a tab across the outside of each cuff)
+  const shellTabs = [-1, 1].map((s) => rb(0.004, 0.022, 0.016, 0.0015, s * 0.0375, -0.193, 0.001));
+
+  /*
+   * The trucker jacket (docs/wardrobe-plan.md Phase 5): a denim jacket's lines on the jacket's body, a buttoned
+   * waistband with an adjuster tab at each side, a point collar on a stand, a buttoned placket, two chest pockets
+   * under pointed button flaps, the yoke's seams rising from the placket to the shoulders, a pleat seam from each
+   * pocket down to the band, buttoned cuffs; the buttons in copper
+   */
+  const DK = smooth(grow(JACKET, 1.03));
+  const truckerFront = surface(DK, SN);
+  const truckerBody = loft(DK, TOP_RINGS, SN);
+  const truckerBand = hemBand(DK, SN, -0.091, -0.052, 0.003);
+  const truckerStand = ribBand(0.398, 0.428, 0.065, 0.059, -0.004, R(16)).band;
+  const COPPER = '#b07a3c';
+  crisp = true;
+  const TRUCKER_COLLAR: [number, number][] = [
+    [-0.078, 0.413],
+    [-0.012, 0.399],
+    [-0.026, 0.328],
+    [-0.106, 0.364],
+  ];
+  const truckerCollar = [onBody(TRUCKER_COLLAR, 0.007, truckerFront, 0.003), onBody(mirror(TRUCKER_COLLAR), 0.007, truckerFront, 0.003)];
+  const truckerFlaps = [-1, 1].map((s) => {
+    const x = s * 0.072;
+    return onBody(
+      [
+        [x - 0.034, 0.3],
+        [x + 0.034, 0.3],
+        [x + 0.034, 0.276],
+        [x, 0.262],
+        [x - 0.034, 0.276],
+      ],
+      0.005,
+      truckerFront,
+      0.002
+    );
   });
+  const YOKE: [number, number][] = [
+    [0.014, 0.312],
+    [0.14, 0.333],
+    [0.14, 0.337],
+    [0.014, 0.316],
+  ];
+  const truckerSeams = [
+    onBody(YOKE, 0.0012, truckerFront, 0.0006),
+    onBody(mirror(YOKE), 0.0012, truckerFront, 0.0006),
+    ...[-1, 1].map((s) => tape(s * 0.072 - 0.0012, s * 0.072 + 0.0012, -0.052, 0.26, 0.0012, truckerFront, 0.0006)),
+  ];
+  crisp = false;
+  const truckerPlacket = tape(-0.013, 0.013, -0.052, 0.392, 0.003, truckerFront, 0.001);
+  const stud = (x: number, y: number, z: number) => new THREE.CylinderGeometry(0.0068, 0.0068, 0.004, R(10)).rotateX(Math.PI / 2).translate(x, y, z);
+  const truckerButtons = [
+    stud(0, -0.071, truckerFront(0, -0.071) + 0.008),
+    ...[0.02, 0.11, 0.2, 0.29, 0.37].map((y) => stud(0, y, truckerFront(0, y) + 0.006)),
+    ...[-1, 1].map((s) => stud(s * 0.072, 0.27, truckerFront(s * 0.072, 0.27) + 0.009)),
+    ...[-1, 1].map((s) => stud(s * 0.112, -0.071, truckerFront(s * 0.112, -0.071) + 0.008)),
+  ];
+  const truckerTabs = [-1, 1].map((s) => rb(0.032, 0.012, 0.004, 0.0015, s * 0.124, -0.071, truckerFront(s * 0.124, -0.071) + 0.005));
+  const truckerCuff = loft(
+    [
+      [-0.21, 0.036, 0.038, 0.001],
+      [-0.178, 0.039, 0.041, 0.001],
+    ],
+    R(14)
+  );
+  const cuffButtons = [-1, 1].map((s) => new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, R(10)).rotateZ(Math.PI / 2).translate(s * 0.0405, -0.194, 0.006));
 
   /*
    * The heavyweight tee (docs/wardrobe-plan.md Phase 5): the hoodie's roomy body without its hood, pouch or ribbing,
@@ -2766,6 +2928,8 @@ export function items(q: Detail, hero = false): Item[] {
     ['bomber', chainOn(bomberFront, 0.003)],
     ['coach', chainOn(coachFront, 0.006)],
     ['tee', chainOn(hoodieFront)],
+    ['shell', chainOn(shellUp, 0.006)],
+    ['trucker', chainOn(truckerFront, 0.007)],
     // (over the puffer's high collar where it stands)
     ['puffer', chainOn((x, y) => Math.max(pufferFront(x, y), y >= 0.395 ? collarFront(x, y) : 0))],
   ];
@@ -2783,6 +2947,8 @@ export function items(q: Detail, hero = false): Item[] {
     { kind: 'bomber', shells: [[BK, SN]], over: 0.004, strapX: 0.088 },
     { kind: 'coach', shells: [[CK, SN]], over: 0.006, strapX: 0.088 },
     { kind: 'tee', shells: [[HK, HN2]], over: 0, strapX: 0.118 },
+    { kind: 'shell', shells: [[SHK, SN], [SHELL_COLLAR, 2.2]], over: 0.006, strapX: 0.104 },
+    { kind: 'trucker', shells: [[DK, SN]], over: 0.007, strapX: 0.088 },
     { kind: 'puffer', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
     { kind: 'vest', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
   ];
@@ -2954,7 +3120,7 @@ export function items(q: Detail, hero = false): Item[] {
     const is = (o: Outfit) => o.kind === t.kind;
     const k = t.kind;
     return [
-      ...(k === 'puffer' || k === 'vest' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
+      ...(k === 'puffer' || k === 'vest' || k === 'shell' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
       { id: `backpack-${k}`, when: (o) => !!o.backpack && is(o), pieces: [P('torso', one(backpack), 'backpack', CHEST)] },
       { id: `crossbody-${k}`, when: (o) => !!o.crossbody && is(o), pieces: [P('torso', one(crossbody), 'crossbody')] },
       {
@@ -3024,6 +3190,9 @@ export function items(q: Detail, hero = false): Item[] {
     { is: bomber, front: bomberFront, back: surface(BK, SN, -1), chest: [0.078, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     { is: coach, front: coachFront, back: surface(CK, SN, -1), chest: [0.078, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     { is: tee, front: hoodieFront, back: BACK, chest: [0.075, 0.28], sleeve: TEE_U },
+    { is: shell, front: shellFront, back: surface(SHK, SN, -1), chest: [0.078, 0.27], sleeve: grow(LOOSE_U, 1.14) },
+    // (the trucker's chest mark goes small on its left pocket's flap)
+    { is: trucker, front: truckerFront, back: surface(DK, SN, -1), chest: [0.072, 0.284, 0.026, 0.008], sleeve: grow(LOOSE_U, 1.14) },
     // (the vest's sleeve mark goes on the long-sleeve under it)
     { is: gilet, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     { is: puffer, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(UPPER_S, 1.44) },
@@ -3167,7 +3336,15 @@ export function items(q: Detail, hero = false): Item[] {
         P('torso', one(strings), SHIRT, { detail: true }),
         ...both('arm', looseUpper, 'top'),
         ...both('fore', looseFore, 'top'),
-        ...both('fore', ribCuff, 'top', { shade: 0.8 }),
+        ...both('fore', hoodieCuff, 'top', { shade: 0.8 }),
+        // (the heavyweight's seams and the cords' tips: single figures)
+        ...(hero
+          ? [
+              P('torso', sideSeams, 'top', { shade: 0.78, detail: true }),
+              ...both('arm', dropSeam, 'top', { shade: 0.78, detail: true }),
+              P('torso', one(aglets), '#b8b6c4', { detail: true }),
+            ]
+          : []),
       ],
     },
     {
@@ -3293,11 +3470,11 @@ export function items(q: Detail, hero = false): Item[] {
       when: (o) => kicks(o) && !(hero && o.shoeMark),
       pieces: both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true, ...SHOE }),
     },
-    // (the puffer's and the vest's high collar covers the headphones, and the necklace, below; so does the hood up, where it meets the
+    // (the puffer's, the vest's and the shell's high collar covers the headphones, and the necklace, below; so does the hood up, where it meets the
     // sweater round the neck)
     {
       id: 'headphones',
-      when: (o) => !!o.headphones && !quilted(o) && !(hoodie(o) && o.hood),
+      when: (o) => !!o.headphones && !highNeck(o) && !(hoodie(o) && o.hood),
       pieces: [P('torso', one(headphones), 'headphones', { detail: true }), ...(cushions.length ? [P('torso', one(cushions), 'headphones', { shade: 0.45, detail: true })] : [])],
     },
     // (the necklace, bags, boards and wings on the top he's wearing: each top its own)
@@ -3376,6 +3553,41 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('arm', looseUpper, 'shirt'),
         ...both('fore', looseFore, 'shirt'),
         ...both('fore', ribCuff, 'shirt', { shade: 0.8 }),
+      ],
+    },
+    {
+      id: 'shell',
+      when: shell,
+      pieces: [
+        P('torso', shellBody, 'top', TOP),
+        P('torso', shellHem, 'top', { shade: 0.85, ...TOP }),
+        P('torso', shellCollar, 'top'),
+        P('torso', shellFlap, 'top', { shade: 0.88 }),
+        P('torso', shellTape, 'top', { shade: 1.25, detail: true }),
+        P('torso', shellPocket, 'top', { shade: 0.55, detail: true }),
+        P('torso', one([shellPull, ...shellToggles]), '#2b2a33', { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', ribCuff, 'top', { shade: 0.85 }),
+        ...both('arm', shellArmTape, 'top', { shade: 1.25, detail: true }),
+        ...both('fore', shellForeTape, 'top', { shade: 1.25, detail: true }),
+        ...both('fore', shellTabs, 'top', { shade: 0.85 }),
+      ],
+    },
+    {
+      id: 'trucker',
+      when: trucker,
+      pieces: [
+        P('torso', truckerBody, 'top', TOP),
+        P('torso', truckerBand, 'top', { shade: 0.88, ...TOP }),
+        P('torso', one([truckerStand, truckerPlacket, ...truckerTabs]), 'top', { shade: 0.88 }),
+        P('torso', one([...truckerCollar, ...truckerFlaps]), 'top', { shade: 0.8 }),
+        P('torso', one(truckerSeams), 'top', { shade: 0.7, detail: true }),
+        P('torso', one(truckerButtons), COPPER, { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', truckerCuff, 'top', { shade: 0.88 }),
+        ...both('fore', cuffButtons, COPPER, { detail: true }),
       ],
     },
     {

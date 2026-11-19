@@ -214,6 +214,8 @@ const TABS: Tab[] = [
       top('bomber', 'Bomber Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 3v2h8V3 M12 5v15 M8 18h8 M5 9l2.5-1', 'Jacket', STREET),
       top('coach', 'Coach Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 3l4 4 4-4 M12 7v13 M7 19h10', 'Jacket', STREET),
       top('vest', 'Puffer Vest', 'M8 3h8l2 4v14H6V7z M6 10h12 M6 14h12 M6 18h12 M12 3v18', 'Vest', ['street', 'work'], [{ key: 'shirt', label: 'Sleeves', list: PALETTE.shirt }]),
+      top('shell', 'Tech Shell', 'M8 2h8v3l4 2-2 5h-2v9H8v-9H6L4 7l4-2z M13 2v19 M8 9h8 M5 9l3 0', 'Shell', ['street', 'work']),
+      top('trucker', 'Trucker Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 3l4 4 4-4 M12 7v13 M8 9h3v2.5H8z M13 9h3v2.5h-3z M7 18h10', 'Jacket', ['street', 'work']),
       top('tee', 'Heavy Tee', 'M8 4c1 1.5 2.5 2 4 2s3-.5 4-2l5 3-2 4h-3v10H8V11H5L3 7z', 'Tee', STREET),
     ],
   },

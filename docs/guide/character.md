@@ -292,6 +292,14 @@ keep it up to date when what it describes changes.
     sleeves (`TEE_U`) over bare arms (`BARE_U`, `BARE_F`, `SKIN`). The
     first-person arms dress them too (`dress()` in viewmodel.ts,
     `armPieces()` in fistsview.ts).
+  - **The shell and the trucker** (`docs/wardrobe-plan.md` Phase 5): the
+    shell (`SHK`) with a funnel collar of its own (`SHELL_COLLAR`, a second
+    shell in `TORSOS`; `highNeck()` hides the headphones and necklace under
+    it), a storm flap, taped seams (`stripe()` with one line) and a drawcord
+    hem (`toggles()`, `hemBand()`); the trucker (`DK`) with its waistband,
+    point collar, pocket flaps, yoke seams and copper buttons. The hoodie is
+    a heavyweight: deep ribbing, and on single figures felled seams
+    (`sideSeams`, `dropSeam`) and metal-tipped cords (`aglets`).
   - **The separates** (`docs/wardrobe-plan.md` Phase 2): the top, the
     bottoms and the shoes are items of their own, worn in any pairing:
     `trousers`, `joggers` (and track pants, the joggers with

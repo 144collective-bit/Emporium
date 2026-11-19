@@ -413,8 +413,37 @@ A proposed first set; the owner picks what goes in:
     they were hidden inside the body), and the phones' worst is 17.7k of
     18k. The new tops are lighter than the puffer; the shorts lighter than
     the cargo pants.
-- Still open from the plan's list: the heavyweight hoodie refresh, the
-  technical shell, the trucker jacket, relaxed denim, chunky runners and
+- **The owner's pick for the third set (19 November 2026):** the rest of the
+  jackets: the technical shell, the trucker jacket and the heavyweight
+  hoodie refresh.
+- **As built, the third set (Phase 5e, 19 November 2026):**
+  - The technical shell (`LookKind` `shell`, "Tech Shell", Streetwear and
+    Work): the jacket's body 4% fuller (`SHK`), a tall funnel collar fuller
+    at the back where its hood packs away (`SHELL_COLLAR`, its own shell in
+    `TORSOS`), a storm flap over the zip up the front and the collar
+    (`shellUp()`: the body, or the collar where it stands proud), taped seams
+    a shade lighter (a yoke across the chest, the side panels, along the top
+    of each sleeve: `stripe()` now lays a single line too), a zipped chest
+    pocket on the right, a drawcord hem with toggles and a tab on each cuff.
+    Its collar covers the headphones and the necklace (`highNeck()`).
+  - The trucker jacket (`LookKind` `trucker`, Streetwear and Work): the
+    jacket's body 3% fuller (`DK`), a buttoned waistband with an adjuster
+    tab at each side, a point collar on a stand, a buttoned placket, two
+    chest pockets under pointed button flaps, the yoke's seams rising from
+    the placket, a pleat seam from each pocket to the band, buttoned cuffs;
+    the buttons copper. The chest mark goes small on the left pocket's flap.
+  - The hoodie refreshed as a heavyweight: a deeper hem rib standing proud
+    (deepened upward: lower, its foot sank into the thighs at a sprint),
+    deeper cuffs (`hoodieCuff`), thicker drawcords with metal tips
+    (`aglets`), the shoulder's seam dropped down the arm (`dropSeam`) and
+    felled seams down the body's sides (`sideSeams`, two stitch lines each).
+    The seams and tips are single figures only (the crowd's hoodies keep
+    their triangles); the hem and cuffs are everyone's.
+  - The coach jacket's drawcord toggles and hem band became shared helpers
+    (`toggles()`, `hemBand()`), used by the shell and the trucker too.
+  - Every top over every bottoms passes the clipping test at both levels;
+    the phones' worst look is 17.9k of 18k, the desktop's 38.9k of 40k.
+- Still open from the plan's list: relaxed denim, chunky runners and
   slides, the fitted cap and skully, the sling, chest and waist bags with
   the backpack and duffel rebuilt, and the headphones at the collar.
 
@@ -466,4 +495,7 @@ A proposed first set; the owner picks what goes in:
   fixes): built**, 18 November 2026; the dark-outfit fix, 19 November 2026.
 - **Phase 5, the second set (the coach jacket, the puffer vest, the
   heavyweight tee and shorts, his bare arms and legs): built**, 19 November
-  2026, waiting for the owner's look and the next set.
+  2026.
+- **Phase 5, the third set (the technical shell, the trucker jacket, the
+  heavyweight hoodie): built**, 19 November 2026, waiting for the owner's
+  look and the next set.
