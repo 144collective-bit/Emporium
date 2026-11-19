@@ -28,7 +28,7 @@ export const PLAT_CEIL = -4.0;
 export const TUNNEL_TOP = PLAT_CEIL + 0.5;
 /** Across the line: the island platform's walkable half, each track's middle out from the line, the tunnel's half */
 export const PLAT_HALF = 1.5;
-export const TRACK_OFF = 2.3;
+export const TRACK_OFF = 2.6;
 export const TUNNEL_HALF = TRACK_OFF + 1.4;
 /** Along the line: a platform's length, an escalator's run (about 30 degrees down), a hall's length and half width */
 export const PLAT_LEN = 26;
