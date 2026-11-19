@@ -262,7 +262,7 @@ Still holding: nothing that exists moves (the gates, doors, car bays, prompts, f
 made-up names only, no lettering; nothing threatening (no guards, nothing armed: the gate stands open); minimal bloom;
 draw calls in the house's own batches.
 
-6a. **The house's new shell (the mockup).** *Built, waiting on the owner's sign-off.* home3d.ts `house()`: black brick
+6a. **The house's new shell (the mockup).** *Built, signed off by the owner (2026-11-19), live.* home3d.ts `house()`: black brick
     (`LOFT_BRICK`) with a darker plinth, piers proud of the front at its corners and either side of the door's bay,
     a stone soldier course between the floors, the parapet stepped up over the door's bay under a stone coping, his
     neon under the coping (front and the Close's side); steel factory windows (`houseWindows()`: two big bays and a
