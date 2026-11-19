@@ -39,7 +39,7 @@ import { TERRACES_RECT } from './southterraces';
 import { HIGHROAD_RECT } from './highroad';
 import { REC_RECT } from './rec';
 import { HIGHWAY_BOX } from './highway';
-import { AIRBASE_RECT, VISITORS } from './airbase';
+import { AIRBASE_RECT, AIRFIELD_RECT, VISITORS } from './airbase';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
 const UPTOWN_REACH = 240;
@@ -111,8 +111,9 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // The country roads past the highway (rural.ts, docs/highway-plan.md Phase 7; rural3d.ts): all four ways out of town
   { id: 'rural', rect: [EXT[0], EXT[0], EXT[1], EXT[1]], load: () => import('./rural3d') },
   // Northgate Air Base (airbase.ts, docs/military-plan.md; airbase3d.ts): its fence, gates, avenue and visitors' area
-  // (the airfield's own chunk, airbase-field, comes with the plan's Phase 2)
   { id: 'airbase-camp', rect: [AIRBASE_RECT[0], AIRBASE_RECT[1], AIRBASE_RECT[2], VISITORS[3]], load: () => import('./airbase3d') },
+  // ...and its airfield (Phase 2; airbasefield3d.ts): the runway, the taxiways, the apron and its road
+  { id: 'airbase-field', rect: AIRFIELD_RECT, load: () => import('./airbasefield3d') },
 ];
 
 

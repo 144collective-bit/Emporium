@@ -119,3 +119,30 @@ test("the visitors' car park and centre outside the main gate, off the road, cle
 test('the lots kept for the airfield and the base are inside the fence', () => {
   for (const k of KEPT) for (const [x, z] of [[k.rect[0], k.rect[1]], [k.rect[2], k.rect[3]], [k.rect[0], k.rect[3]], [k.rect[2], k.rect[1]]] as Pt[]) assert.ok(inAirbase(x, z), `${k.id} outside at ${x}, ${z}`);
 });
+
+test("the airfield (Phase 2): the runway, taxiways, apron and buildings inside the fence, clear of each other, under the Emporium", async () => {
+  const { APPROACH, APRON, APRON_ROAD, CONNECTORS, FIRE_STATION, FUEL_FARM, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, RUNWAY, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_TOP } = await import('../src/scripts/city3d/airbase');
+  const corners = (r: readonly number[]): Pt[] => [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]];
+  const runway = [RUNWAY.x0, RUNWAY.z - RUNWAY.half, RUNWAY.x1, RUNWAY.z + RUNWAY.half];
+  const taxi = [TAXIWAY.x0, TAXIWAY.z - TAXIWAY.half, TAXIWAY.x1, TAXIWAY.z + TAXIWAY.half];
+  const north = [NORTH_TAXI.x0, NORTH_TAXI.z - NORTH_TAXI.half, NORTH_TAXI.x1, NORTH_TAXI.z + NORTH_TAXI.half];
+  const shelters = SHELTERS.map(([x, z]) => [x - SHELTER.w / 2, z - SHELTER.d, x + SHELTER.w / 2, z]);
+  const parts: [string, readonly number[]][] = [['runway', runway], ['taxiway', taxi], ['north taxiway', north], ['apron', APRON], ['fire station', FIRE_STATION], ['fuel farm', FUEL_FARM], ...HANGARS.map((h, i): [string, readonly number[]] => [`hangar ${i}`, h]), ...shelters.map((s, i): [string, readonly number[]] => [`shelter ${i}`, s])];
+  // Inside the fence, 15 or more from it (the approach lights too)
+  for (const [id, r] of parts) for (const p of corners(r)) assert.ok(inAirbase(...p) && fenceDist(p) > 15, `${id} at ${p}`);
+  for (const [x0, x1] of APPROACH) for (const x of [x0, x1]) assert.ok(inAirbase(x, RUNWAY.z) && fenceDist([x, RUNWAY.z]) > 10);
+  // The runway's west end 140 from the wall (the base's flights come and go over the east)
+  assert.ok(RUNWAY.x0 - WALL_INNER[0] >= 140);
+  // Nothing built overlaps anything else (the hangars face the apron, the shelters the north taxiway)
+  const overlap = (a: readonly number[], b: readonly number[]) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+  for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) assert.ok(!overlap(parts[i][1], parts[j][1]), `${parts[i][0]} on ${parts[j][0]}`);
+  // The connectors and links run between the taxiways and the runway
+  for (const x of CONNECTORS) assert.ok(x > TAXIWAY.x0 && x < TAXIWAY.x1 && x > RUNWAY.x0 && x < RUNWAY.x1);
+  for (const x of NORTH_LINKS) assert.ok(x >= NORTH_TAXI.x0 && x <= NORTH_TAXI.x1);
+  // The tower on its own, its top under the Emporium's roof (12.5); the hangars too
+  assert.ok(TOWER_TOP < 12.5 && HANGAR_H < 12.5);
+  for (const [id, r] of parts) assert.ok(!inRect(r, TOWER[0], TOWER[1], 3), `the tower in the ${id}`);
+  // The apron's road from the avenue: inside the fence, clear of the kept lots of Phase 3
+  for (const p of APRON_ROAD) assert.ok(inAirbase(...p));
+  for (const k of KEPT.filter((q) => q.phase === 3)) assert.ok(APRON_ROAD[0][1] < k.rect[1] - 5 || APRON_ROAD[0][1] > k.rect[3] + 5, `the apron road through ${k.id}`);
+});

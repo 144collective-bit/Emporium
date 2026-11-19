@@ -47,3 +47,32 @@ test("the base's sites build: the fence a stretch a site, the gates, the avenue,
   low.build(lg);
   lg.traverse((o) => assert.ok(!(o as InstanceType<typeof THREE.Mesh>).isMesh || o.userData.lod !== 'near', 'near detail on a phone'));
 });
+
+test("the airfield's strips build (Phase 2): runway, taxiways, apron, its lights small and lit", async () => {
+  const THREE = await import('three');
+  const { takeSites } = await import('../src/scripts/city3d/tilework');
+  const { AIRFIELD_RECT } = await import('../src/scripts/city3d/airbase');
+  const mod = await import('../src/scripts/city3d/airbasefield3d');
+  for (const low of [false, true]) {
+    takeSites();
+    mod.register({ low });
+    const sites = takeSites();
+    assert.equal(sites.length, Math.ceil((AIRFIELD_RECT[2] - AIRFIELD_RECT[0]) / 30));
+    let tris = 0;
+    for (const s of sites) {
+      const g = new THREE.Group();
+      s.build(g);
+      const box = new THREE.Box3().setFromObject(g);
+      if (box.isEmpty()) continue;
+      // (inside its strip, but for a connector's or a stub's half straddling its edge, and under 2.5 high: the approach lights)
+      assert.ok(box.min.x > s.rect[0] - 8 && box.max.x < s.rect[2] + 8 && box.min.z > s.rect[1] - 1 && box.max.z < s.rect[3] + 1, `${s.id} spills out`);
+      assert.ok(box.max.y < 2.5, `${s.id} stands ${box.max.y.toFixed(2)} high`);
+      g.traverse((o) => {
+        const m = o as InstanceType<typeof THREE.Mesh>;
+        if (m.isMesh) tris += (m.geometry.index?.count ?? m.geometry.getAttribute('position').count) / 3;
+      });
+    }
+    // (cheap: the whole field's flat ground and lights)
+    assert.ok(tris > 2000 && tris < (low ? 60000 : 90000), `${tris} triangles`);
+  }
+});

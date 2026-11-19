@@ -228,6 +228,9 @@ export function airbaseKeep(x: number, z: number, m = 0): boolean {
   if (FENCE_RUNS.some((r) => toRun(x, z, r) < FENCE_CLEAR + m)) return true;
   if (GATES.some((g) => Math.abs(x - g.x) < g.half + 8 + m && z > g.z - 10 - m && z < g.z + 4 + m)) return true;
   for (let i = 1; i < AVENUE.length; i++) if (toRun(x, z, [AVENUE[i - 1], AVENUE[i]]) < AVENUE_CLEAR + m) return true;
+  // (the airfield's road in from the avenue, and the approach lights past the runway's east end, outside its lot)
+  if (APRON_ROAD.length && Math.abs(z - APRON_ROAD[0][1]) < 3.5 + 3 + m && x > APRON_ROAD[1][0] - m && x < APRON_ROAD[0][0] + m) return true;
+  if (Math.abs(z - RUNWAY.z) < 4 + m && x > APPROACH[1][0] - 2 - m && x < APPROACH[1][1] + 2 + m) return true;
   return [VISITORS, VISITORS_DRIVE, WALL_GATE, ...KEPT.map((k) => k.rect)].some((r) => inR(r, x, z, 2 + m));
 }
 
@@ -253,3 +256,41 @@ export const AIRBASE_LAMPS: [number, number, number, number][] = (() => {
   for (const x of [VISITORS[0] + 8, (VISITORS[0] + VISITORS[2]) / 2, VISITORS[2] - 8]) out.push([x, VISITORS[3] - 2, Math.PI / 2, LAMP_Y]);
   return out;
 })();
+
+/* ---------- The airfield (docs/military-plan.md Phase 2): the plan's signed-off layout ---------- */
+
+/** The runway: west to east at z, its half width; the approach lights out past each end */
+export const RUNWAY = { x0: -620, x1: -120, z: -540, half: 6 };
+export const APPROACH: [number, number][] = [
+  [-680, RUNWAY.x0 - 3],
+  [RUNWAY.x1 + 3, -60],
+];
+/** The parallel taxiway south of the runway, its connectors to it (x), and the north taxiway with its links */
+export const TAXIWAY = { x0: -610, x1: -130, z: -516, half: 3.5 };
+export const CONNECTORS = [-600, -480, -370, -250, -140];
+export const NORTH_TAXI = { x0: -580, x1: -140, z: -578, half: 3 };
+export const NORTH_LINKS = [-580, -360, -140];
+/** The nine hardened shelters in threes on stubs north of the north taxiway (their middles; each 16 wide, 20 deep) */
+export const SHELTER = { w: 16, d: 20, h: 6.5 };
+export const SHELTERS: Pt[] = [-560, -520, -480, -380, -340, -300, -220, -180, -140].map((x, i) => [x, i % 2 ? -612 : -606] as Pt);
+/** The main apron, the three hangars along its south side (each 40 by 26), the control tower, the fire station, the fuel farm */
+export const APRON: Rect = [-470, -508, -200, -462];
+export const HANGARS: Rect[] = [
+  [-460, -458, -420, -432],
+  [-400, -458, -360, -432],
+  [-340, -458, -300, -432],
+];
+export const HANGAR_H = 11;
+export const TOWER: Pt = [-262, -452];
+/** The tower's cab's top (under the Emporium's roof, 12.5) */
+export const TOWER_TOP = 11.6;
+export const FIRE_STATION: Rect = [-238, -462, -214, -446];
+export const FUEL_FARM: Rect = [-575, -490, -520, -450];
+/** Where the apron's road from the avenue comes in (from the parade avenue along z, to the apron's east side) */
+export const APRON_ROAD: Pt[] = [
+  [MAIN_GATE.x - AVENUE_HALF, -470],
+  [APRON[2], -470],
+];
+/** The airfield's chunk's land (districts.ts `airbase-field`: airbasefield3d.ts draws it in strips across it) */
+export const AIRFIELD_RECT: Rect = [-700, -640, 0, -440];
+
