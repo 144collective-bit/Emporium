@@ -277,7 +277,7 @@ draw calls in the house's own batches.
     clear of the side door and the way round to it). Shots: `docs/compound-shots/phase-6a-*`.
 6b. **The gatehouse and the crest gate.** A small lit gatehouse inside the gates, the gate leaves as a sliding black
     gate stood open with a gold D crest, the compound's wall taller and dark with lit caps and wall lights.
-    *Built, waiting on the owner's sign-off.* home.ts: `WALL_H` 1.8 (about twice his height; it was 1.3, "about head
+    *Built, signed off by the owner (2026-11-19), live.* home.ts: `WALL_H` 1.8 (about twice his height; it was 1.3, "about head
     high"), `PIER.h` 2.25; `GATEHOUSE` (a booth inside the gates on their south side, solid) and `GATE_LEAF` (one leaf
     slid open along the inside of the wall north of the gates, solid), in `HOME_SOLIDS`. home3d.ts: the wall and piers
     in the loft's black brick under stone copings, a darker course, lights on its outer faces and small lit caps along
