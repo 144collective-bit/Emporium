@@ -225,6 +225,7 @@ function gateAt(m: Mansion, g: Gate, d: number): Pt {
   return [x + wx * d, z + wz * d];
 }
 const inPad = (m: Mansion, x: number, z: number, e = 0) => x > m.rect[0] - e && x < m.rect[2] + e && z > m.rect[1] - e && z < m.rect[3] + e;
+const inYard = (m: Mansion, x: number, z: number, e = 0) => x > m.yard[0] - e && x < m.yard[2] + e && z > m.yard[1] - e && z < m.yard[3] + e;
 const toSeg = (x: number, z: number, [a, b]: [Pt, Pt]) => {
   const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
   const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
@@ -250,7 +251,7 @@ function gardenPathBetween(a: Pt, b: Pt, own: Mansion[], toRoad: boolean, seed: 
     for (const m of MANSIONS) {
       const mine = own.includes(m);
       // (never across a pad; over a bank only its own, near its gate)
-      if (inPad(m, x, z, mine ? -0.05 : PAD_EASE + 1)) return null;
+      if (mine ? inPad(m, x, z, -0.05) : inYard(m, x, z, PAD_EASE + 1)) return null;
       if (toSeg(x, z, m.drive) < GARDEN_PATH.driveGap) return null;
     }
     if (!roadEnd && nearHillRoad(x, z, BED.shoulder + 1)) return null;

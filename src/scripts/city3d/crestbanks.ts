@@ -96,7 +96,8 @@ export interface Ground {
  * terraces or under its cantilever, nor on a garden path */
 export const mansionGround = (m: Mansion): Ground => ({
   id: m.id,
-  rect: m.rect,
+  // (its bank begins at its yard's edge: mansions.ts `yard`)
+  rect: m.yard,
   y: m.y,
   kind: m.kind,
   stop: (x, z) => nearHillRoad(x, z, ROAD_GAP) || onSite(x, z, 0.5),

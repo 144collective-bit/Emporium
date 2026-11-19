@@ -22,7 +22,7 @@ import { GATES } from './crestcover';
 /** A gate's half width in the pad's edge */
 const GATE_GAP = 0.9;
 import { COVER, PLANT, SOIL } from './palette';
-import { MANSIONS, MANSION_CARS, STOREY, WALL, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
+import { MANSIONS, MANSION_CARS, PAD_EASE, STOREY, WALL, YARD, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
 import { WINDOW, hip, poolOf } from './estates3d';
 import { CURTAIN, PAVING, BULB, flat } from './mallkit';
 
@@ -55,8 +55,8 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
   for (const m of MANSIONS) {
     const [x0, z0, x1, z1] = m.rect;
     const [d0, d1] = m.drive;
-    // (the site reaches over the drive, the cantilever and the terraces too)
-    const R = 6;
+    // (the site reaches over the drive, the cantilever, the terraces, the yard and its bank too)
+    const R = YARD + PAD_EASE + 1;
     const rect: [number, number, number, number] = [Math.min(x0, d0[0]) - R, Math.min(z0, d0[1]) - R, Math.max(x1, d0[0]) + R, Math.max(z1, d0[1]) + R];
     site(`crestmont ${m.id}`, rect, (into) => {
       const b = new Batch();
@@ -363,6 +363,15 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       pave(rectToWorld(m, Math.max(-W / 2 + 1, cu0), Math.min(-1, cv0), Math.min(W / 2 - 1, cu1), cv1), 0.02, PAVING);
       pave(rectToWorld(m, pu0 - 1, pv0 + 1.8, pu1 + 1, pv1 - (kind === 'glass' ? 0.4 : 0.8)), 0.014, PAVING);
       pave(rectToWorld(m, pu0, pv0, pu1, pv1), 0.024, poolOf(low));
+      // Its yard round the pad (mansions.ts `yard`): level, mown, a little over the grass
+      const [y0, y1, y2, y3] = m.yard;
+      for (const r of [
+        [y0, y1, x0, y3],
+        [x1, y1, y2, y3],
+        [x0, y1, x1, z0],
+        [x0, z1, x1, y3],
+      ] as [number, number, number, number][])
+        if (r[2] - r[0] > 0.2 && r[3] - r[1] > 0.2) flat(q, r[0], r[1], r[2], r[3], m.y + 0.02, YARD_LAWN, 8);
       q.build(into, { cast: false, receive: true });
       void low;
     });
@@ -383,6 +392,8 @@ const DRY_STONE = toon('#b9ab8f');
 const COPING = toon('#d3c8b0');
 const BED_SOIL = toon(SOIL.bed);
 const ROCK = toon('#8e8a84');
+/** A pad's yard, mown (the palette's lawns) */
+const YARD_LAWN = toon(COVER.garden);
 /** The grounds' low lights at night: small, warm, just past the bloom's threshold */
 const WALL_GLOW = neon('#ffe2a8', 0.15, 1.25);
 /** A bank's plants: the mound's colour, and (near) its flowers' or its leaves' */

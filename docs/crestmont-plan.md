@@ -601,3 +601,17 @@ rolling ground is drawn from the lattice it's walked on.
 198k to 204k on phones; the hills' grass (the boot's, both tiers) 68k to 123k. The boot 739.4 to 739.5 of 750 KB, the
 chunk 37.8 to 40.3 KB.
 
+### The hill houses on the hillside (built, the owner's call, 2026-11-19: "rather than sinking the buildings in to the hill, can you raise the hill and flatten the surrounding area so it looks more like how a house would be built?")
+
+The owner's picks: each pad at the hill's level, about 4 tiles of flat ground round it.
+
+The pads had been held at their road's height give or take `RISE`, as much as `CUT` under the hills round them: the
+glass house on Ridge Road (mansion-1) sat 3 under its ground, in a pit walled all round; mansion-7 1.9, mansion-2 0.7.
+Now (`settle()` in mansions.ts, after the layout, so nothing moves) each pad's level is the middle of the hills under it,
+never further from its road's height than its drive can climb at `DRIVE_GRADE` (0.3: only mansion-1's is held, 0.4 under
+its middle); mansion-1 rose 11.7 to 14.3, its deepest corner now 0.8 under its ground. Its level ground is widened by up
+to `YARD` (4) a side, each side as far as it stays clear (`yardOf()`): 0 to 4 tiles, narrower where a road, a neighbour
+or the overlook is near or the hill rises too steeply past it. On the steepest slopes a pad at the hill's middle is
+still cut into its uphill corner (2.5 to 2.9 at mansions 3 to 6), as a house on a hillside is: the terraced banks hold
+it. The yard is mown (mansions3d.ts); the banks, the planting, the land and the cover keep off it.
+

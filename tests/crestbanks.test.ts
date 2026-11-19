@@ -26,7 +26,8 @@ test('a bank to every pad, walked all round it, its spokes sorted by the ground'
     for (const s of b.spokes) {
       // (each leaves the pad's edge, its way out a unit)
       assert.ok(Math.abs(Math.hypot(s.nx, s.nz) - 1) < 1e-9);
-      assert.ok(s.x >= m.rect[0] - 1e-9 && s.x <= m.rect[2] + 1e-9 && s.z >= m.rect[1] - 1e-9 && s.z <= m.rect[3] + 1e-9);
+      // (from its yard's edge: mansions.ts `yard`)
+      assert.ok(s.x >= m.yard[0] - 1e-9 && s.x <= m.yard[2] + 1e-9 && s.z >= m.yard[1] - 1e-9 && s.z <= m.yard[3] + 1e-9);
       if (s.kind === 'none') continue;
       const g = heightAt(s.x + s.nx * READ.at, s.z + s.nz * READ.at) - m.y;
       assert.ok(s.kind === 'cut' ? g > READ.by : s.kind === 'fill' ? g < -READ.by : Math.abs(g) <= READ.by, `${m.id}'s ${s.kind} spoke at ${s.x.toFixed(1)}, ${s.z.toFixed(1)}`);

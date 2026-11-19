@@ -158,4 +158,14 @@ keep it up to date when what it describes changes.
   bank's `lights` in its walls; phones every other); the banks laid round any
   level's ground (`Ground`, `mansionGround()`), the civic hall's and the
   club's pads banked too (`SITE_BANKS`), and the grand hotel's block's edges
-  planted (`hotelVerge()`, `HOTEL_VERGE`). Made-up names only.
+  planted (`hotelVerge()`, `HOTEL_VERGE`). The hill houses are built on the
+  hillside, not sunk in it (the owner's call, 2026-11-19): `settle()` in
+  mansions.ts sets each pad's level to the middle of the hills under it (never
+  further from its road's height than `DRIVE_GRADE` lets its drive climb) and
+  widens its level ground by up to `YARD` a side where that stays clear
+  (`yard`, `yardOf()`: off the roads with its bank, the other yards, the
+  overlook, never cut or built up past `CUT` along its edges nor `CUT` and a
+  half halfway through its bank); `MANSION_LEVELS` hold the yard level,
+  `onMansion()` keeps the planting off it and its bank, the banks start at its
+  edge, mansions3d.ts mows it. The pads, drives and houses stand where they
+  stood. Made-up names only.
