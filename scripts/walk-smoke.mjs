@@ -453,7 +453,7 @@ await scene('trenches', '-101.03,180.75,-2.581', async (t) => {
 // Lot 9's and Aldwyn's Green's underground stations (Phase 4f): down each one's stairs from the street into its ticket hall
 for (const [name, spawn, far] of [
   ['lot9station', '-115.58,471.00,-3.062', 10],
-  ['aldwynsstation', '-225.94,453.65,-1.933', 24],
+  ['aldwynsstation', '-230.49,458.34,-1.736', 27],
 ]) {
   await scene(name, spawn, async (t) => {
     await t.go('w', far, 'down the stairs into the ticket hall');

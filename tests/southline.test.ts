@@ -7,9 +7,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ESC_RUN, HALL_Y, LINE, LINE_LENGTH, LINE_PASSAGES, LINE_S, MIN_R, PLAT_HALF, PLAT_LEN, PLAT_Y, SOUTH_STATIONS, STAIR_RUN, TUNNEL_TOP, lineAt, sOn, stationOf,
+  ESC_RUN, HALL_Y, LINE, surfaceAt, LINE_LENGTH, LINE_PASSAGES, LINE_S, MIN_R, PLAT_HALF, PLAT_LEN, PLAT_Y, SOUTH_STATIONS, TUNNEL_TOP, lineAt, sOn, stationOf,
 } from '../src/scripts/city3d/southline';
-import { GROUND_Y, acrossOf, alongOf, floorOf, inPassage, pointOf, underworld, type Passage } from '../src/scripts/city3d/underground';
+import { acrossOf, alongOf, floorOf, inPassage, pointOf, underworld, type Passage } from '../src/scripts/city3d/underground';
 import { CHURCHYARD, CIRCUS, FOOTPATHS, PATH_HALF, SOUTH_STREETS, type Pt } from '../src/scripts/city3d/south';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { distTo, inside } from '../src/scripts/city3d/streetfaces';
@@ -92,13 +92,14 @@ test('each way in: stairs down from clear ground at street level (or the plaza, 
     }
     const top = pointOf(w, w.a0);
     const b = SHOPS.find((q) => q.kind === 'station')!;
-    const level = st.entrance.kind === 'building' ? b.base : GROUND_Y + southLift(...top);
-    assert.ok(Math.abs(floorOf(w, w.a0) - level) < 1e-9, `${st.id}: from the ground's (or its building's floor's) height at its top`);
-    const slope = (Math.atan2(GROUND_Y - HALL_Y, STAIR_RUN) * 180) / Math.PI;
+    const level = st.entrance.kind === 'building' ? b.base : surfaceAt(...top);
+    assert.ok(Math.abs(floorOf(w, w.a0) - level) < 1e-9, `${st.id}: from the surface's (or its building's floor's) height at its top`);
+    // (a flight as long as it takes to keep the stairs gentle: longer from higher up, Aldwyn's Green on its hill)
+    const slope = (Math.atan2(floorOf(w, w.a0) - HALL_Y, w.ramp0 - w.a0) * 180) / Math.PI;
     assert.ok(slope < 28, `${st.id}: its stairs ${slope.toFixed(1)} degrees`);
-    // (the ground about as high all round its opening: it stays level with the ground it opens through)
+    // (the ground rolls no more across its opening than its parapets, drawn on the ground, take in)
     const lifts = st.entrance.kind === 'building' ? [0] : [-1.5, 0, 1.5].flatMap((u) => [w.a0, w.ramp0].map((s) => southLift(...pointOf(w, s, u))));
-    assert.ok(Math.max(...lifts) - Math.min(...lifts) < 0.15, `${st.id}: its stairs on ground near enough level`);
+    assert.ok(Math.max(...lifts) - Math.min(...lifts) < 0.6, `${st.id}: the ground across its opening`);
     if (st.entrance.kind === 'building') {
       // (inside the building: within its frontage and depth)
       for (const s of [w.a0, w.ramp0]) {
