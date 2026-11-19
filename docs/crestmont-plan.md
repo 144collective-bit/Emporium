@@ -597,3 +597,7 @@ rolling ground is drawn from the lattice it's walked on.
   now; `server/src/env.d.ts` declares `import.meta.url`. The site's build, the multiplayer build and the Worker's bundle
   (Cloudflare's, `wrangler deploy --dry-run`) pass here; Cloudflare's own failing check on the PR is the paused deploy.
 
+**Measured:** Crestmont's chunk drawn at every distance 513k to 531k triangles on the desktop (near-only 220k to 231k),
+198k to 204k on phones; the hills' grass (the boot's, both tiers) 68k to 123k. The boot 739.4 to 739.5 of 750 KB, the
+chunk 37.8 to 40.3 KB.
+
