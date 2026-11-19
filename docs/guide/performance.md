@@ -458,7 +458,9 @@ keep it up to date when what it describes changes.
   post.ts or sky.ts make goes in `pictureTargets()` too.** Lower a ceiling
   when a change cuts it; raise one only on purpose.
 - `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
-  into the 3D city, clear day (`?bench=night` for night), quality held, the
+  into the 3D city's City view (the fly-in, never the wake-up at home: on
+  foot, sites past the haze wait unbuilt and it never begins; `?shots` the
+  same, `enter(false, true)` in `CityMap.astro`), clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
   The Trenches round The Block, Degen's home in the Ends, the Neon Mile from over its boulevard and down it,

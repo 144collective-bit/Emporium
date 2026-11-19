@@ -1740,15 +1740,16 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     }
     /**
      * Into the city once it's up: waking in Degen's room at home (docs/spawn-plan.md), or the fly-in where walking is
-     * closed for now; with no 3D here, onto the page that says so
+     * closed for now; with no 3D here, onto the page that says so. `cityView`: the fly-in into the City view instead
+     * (?bench and ?shots, which measure and shoot from it: on foot, past the haze waits unbuilt and they never begin)
      */
-    async function enter(multi: boolean) {
+    async function enter(multi: boolean, cityView = false) {
       if (entering) return;
       entering = true;
       status.textContent = gl ? 'Entering…' : NO_3D;
       await booted;
       if (multi && server && city) root!.querySelector<HTMLButtonElement>('[data-online-set="on"]')?.click();
-      const woke = city ? await city.wake() : false;
+      const woke = city && !cityView ? await city.wake() : false;
       closeStart();
       if (city && !woke) city.intro();
       entering = false;
@@ -1830,6 +1831,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     // (a notice's from and until come round on their own)
     setInterval(() => paintBanner(live.now), 60_000);
     // ?bench (the benchmark, bench.ts) and ?shots (the review shots, shots.ts): straight into the 3D city, no menu
-    if ((new URLSearchParams(location.search).has('bench') || new URLSearchParams(location.search).has('shots')) && gl) enter(false);
+    if ((new URLSearchParams(location.search).has('bench') || new URLSearchParams(location.search).has('shots')) && gl) enter(false, true);
   }
 </script>
