@@ -571,9 +571,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
         hd.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         hd.computeVertexNormals();
         b.add(hd, pier);
-        b.detail(() => {
-          for (const o of [-(DECK_HALF - WEB) + 0.5, DECK_HALF - WEB - 0.5]) b.add(ringBox(p.s, o, top, 0.5, 0.5, 0.11), bearing);
-        });
+        // (at every distance, and up into the girder by 5 mm: near only, the deck floated 12 cm over its piers from afar)
+        for (const o of [-(DECK_HALF - WEB) + 0.5, DECK_HALF - WEB - 0.5]) b.add(ringBox(p.s, o, top, 0.5, 0.5, 0.125), bearing);
         if (p.i % JOINT_EVERY === 0) b.add(ringBox(p.s, 0, DECK_Y + ROAD_UP, 0.12, 2 * HIGHWAY_HALF - 0.02, 0.005), joint);
       }
       b.build(into, { cast: true, receive: true });

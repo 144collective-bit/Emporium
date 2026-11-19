@@ -13,7 +13,7 @@ import { HIGHWAY_BOX, HIGHWAY_HALF } from './highway';
 import type { Box, Pt, Rect } from './underground';
 import { CIRCUS, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, BRIDGES, BULB } from './south';
 import { distTo, insideRow, rowCrossings } from './streetfaces';
-import { southLift } from './southground';
+import { SHOPS } from './highroad';
 
 export type { Rect, Pt, Box };
 
@@ -98,6 +98,18 @@ const offRoad = ([x, z]: Pt, m: number) =>
 /** Sodium lamps (x, z, the way the arm reaches, the ground's height; lampmix.ts): along every street's sidewalks,
  * either side in turn about every 15, clear of the crossings, the bridges and the footpaths' ends; round the Circus's
  * outer sidewalk. A lamp's arm reaches along (cos ry, -sin ry) (world.ts `buildLamps()`): over the carriageway */
+/**
+ * Is a point in a High Road shop or under its front (the parade's canopy reaches 1.0 out over the sidewalk: a lamp
+ * there stood through it; the map polish plan's Phase 1)
+ */
+function underShop(x: number, z: number) {
+  return SHOPS.some((s) => {
+    const [nx, nz] = s.face;
+    const [dx, dz] = [x - s.at[0], z - s.at[1]];
+    const [u, v] = [dx * -nz + dz * nx, dx * nx + dz * nz];
+    return Math.abs(u) < s.w / 2 + 0.3 && v > -s.d - 0.3 && v < (s.kind === 'parade' ? 1.35 : 0.35);
+  });
+}
 export const ENDS_LAMPS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const crossings = SOUTH_CROSSINGS.map((c) => c.at);
@@ -107,7 +119,8 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
     ends.every((e) => Math.hypot(e[0] - x, e[1] - z) > 2.5) &&
     FOOTPATHS.every((f) => distTo(f.pts, [x, z]) > PATH_HALF + 0.8) &&
     BRIDGES.every((b) => Math.hypot(b.at[0] - x, b.at[1] - z) > 6) &&
-    out.every((l) => Math.hypot(l[0] - x, l[1] - z) > 6);
+    out.every((l) => Math.hypot(l[0] - x, l[1] - z) > 6) &&
+    !underShop(x, z);
   for (const s of SOUTH_STREETS) {
     if (s.loop) continue;
     let d = 6;
@@ -126,7 +139,7 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
       // (and clear of every other street's asphalt)
       const onRoad = !offRoad([x, z], 0.3);
       if (clear(x, z) && !onRoad) {
-        out.push([x, z, Math.atan2(nz, -nx), SLAB_Y + southLift(x, z)]);
+        out.push([x, z, Math.atan2(nz, -nx), SLAB_Y]);
         side = -side;
         d = run + (s.kind === 'close' || s.kind === 'crescent' ? 13 : 15);
       } else d = run + 2;
@@ -136,7 +149,7 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
   const R = CIRCUS.r + CIRCUS.half + 0.45;
   for (const a of [40, 130, 220, 310].map((v) => (v * Math.PI) / 180)) {
     const [x, z] = [CIRCUS.x + R * Math.cos(a), CIRCUS.z + R * Math.sin(a)];
-    if (SOUTH_STREETS.every((o) => o.loop || o.pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > o.half + 0.6))) out.push([x, z, Math.PI - a, SLAB_Y + southLift(x, z)]);
+    if (SOUTH_STREETS.every((o) => o.loop || o.pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > o.half + 0.6))) out.push([x, z, Math.PI - a, SLAB_Y]);
   }
   return out;
 })();

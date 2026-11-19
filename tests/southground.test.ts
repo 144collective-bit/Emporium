@@ -183,3 +183,26 @@ test("a batch mostly off the south's ground: only its faces on it split and lift
     }
   assert.ok(ix.count / 3 - faces > 2, 'the strip not split');
 });
+
+test("a lamp is lifted once: its post by the Batch, its halo and pool by liftAt() by as much (the map polish plan's Phase 0)", async () => {
+  const THREE = await import('three');
+  const { Batch, setGroundLift, liftAt } = await import('../src/scripts/city3d/kit');
+  const { southLift } = await import('../src/scripts/city3d/southground');
+  const { ENDS_LAMPS, SLAB_Y } = await import('../src/scripts/city3d/endswood');
+  setGroundLift(southLift, SOUTH_GROUND_RECT);
+  const hilly = ENDS_LAMPS.filter(([x, z]) => Math.abs(southLift(x, z)) > 0.3);
+  assert.ok(hilly.length > 5, 'some lamps on the hills');
+  for (const [x, z, , y] of hilly) {
+    assert.equal(y, SLAB_Y, 'a lamp lifted in its data');
+    assert.equal(liftAt(x, z), southLift(x, z));
+    // (the post's foot, drawn: on the ground, not the lift over it)
+    const b = new Batch();
+    b.add(new THREE.BoxGeometry(0.08, 1.6, 0.08).translate(x, y + 0.8, z), new THREE.MeshBasicMaterial());
+    const g = new THREE.Group();
+    b.build(g);
+    const pos = (g.children[0] as InstanceType<typeof THREE.Mesh>).geometry.getAttribute('position');
+    let foot = Infinity;
+    for (let i = 0; i < pos.count; i++) foot = Math.min(foot, pos.getY(i));
+    assert.ok(Math.abs(foot - (SLAB_Y + southLift(x, z))) < 0.01, `a post at ${x.toFixed(1)}, ${z.toFixed(1)} off its ground by ${(foot - SLAB_Y - southLift(x, z)).toFixed(2)}`);
+  }
+});

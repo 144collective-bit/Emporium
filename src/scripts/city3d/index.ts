@@ -23,7 +23,7 @@ import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, build
 import { PARK_LAMPS, PARK_TREES } from './westlake';
 import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER, CIVIC_IDLE, FLOOD_POOLS, civicDay, flagCeremony } from './civic';
 import { CREST_LAMPS } from './crestmont';
-import { SUN_LAMPS } from './sunridge';
+import { SUN_LAMPS } from './sunlamps';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND, SUN_PLACE_LAMPS, SUN_SPAWNS } from './sunplaces';
 import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
@@ -455,7 +455,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The south's (endswood.ts, docs/south-plan.md Phase 1b): sodium along every street of the re-laid estate and village
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
   // Endswood's trees on the grass round its towers (southyard.ts, docs/south-plan.md 2d), on the rolling ground
-  for (const [x, z, sc] of YARD_TREES) addTree(x, z, sc, false, ENDS_SLAB + southLift(x, z));
+  // (at the slab's height: the trees' Batch lifts them onto the rolling ground, as it does every lamp post)
+  for (const [x, z, sc] of YARD_TREES) addTree(x, z, sc, false, ENDS_SLAB);
   // The Circus's sunken plaza (circus.ts, docs/south-plan.md Phase 4b): a tree in each planter, lamps by the seats
   for (const { at: [x, z] } of PLANTERS) addTree(x, z, 0.75, false, FLOOR + PLANTER_H);
   for (const [x, z] of CIRCUS_LAMPS) addLamp(x, z, Math.atan2(x - CIRCUS_MID[0], z - CIRCUS_MID[1]), FLOOR);

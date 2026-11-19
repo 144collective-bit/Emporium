@@ -407,7 +407,7 @@ function drawGate(b: Batch, low: boolean) {
   for (const n of [-1, 1] as const) sign(b, 0, x + n * 0.3, h - 0.6, (z0 + z1) / 2, [n, 0], (z1 - z0) * 0.86, 1.0, LIT_SIGN);
   const [bx0, bz0, bx1, bz1] = booth;
   box(b, bx0, S, bz0, bx1, 2.0, bz1, WHITE);
-  box(b, bx0 - 0.003, 1.2, bz0 - 0.003, bx1 + 0.003, 1.9, bz1 + 0.003, GLASS);
+  box(b, bx0 - 0.008, 1.2, bz0 - 0.008, bx1 + 0.008, 1.9, bz1 + 0.008, GLASS);
   box(b, bx0 - 0.4, 2.0, bz0 - 0.4, bx1 + 0.4, 2.25, bz1 + 0.4, RED);
   // The lanes' paint: a centre line from the booth through the gate to the apron
   for (let px = bx1 + 0.5; px < -358; px += 2.2) box(b, px, S + 0.004, (z0 + z1) / 2 - 0.06, px + 1.2, S + 0.012, (z0 + z1) / 2 + 0.06, PAINT_Y);

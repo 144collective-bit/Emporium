@@ -8,7 +8,7 @@ import { UPTOWN_LAMPS } from '../src/scripts/city3d/uptown';
 import { NORTH_LAMPS } from '../src/scripts/city3d/uptownnorth';
 import { MALL_LAMPS } from '../src/scripts/city3d/mall';
 import { CREST_LAMPS } from '../src/scripts/city3d/crestmont';
-import { SUN_LAMPS } from '../src/scripts/city3d/sunridge';
+import { SUN_LAMPS } from '../src/scripts/city3d/sunlamps';
 import { SUN_PLACE_LAMPS } from '../src/scripts/city3d/sunplaces';
 import { PARK_LAMPS as WESTLAKE_LAMPS } from '../src/scripts/city3d/westlake';
 import { GARDEN_LAMPS } from '../src/scripts/city3d/gardens';

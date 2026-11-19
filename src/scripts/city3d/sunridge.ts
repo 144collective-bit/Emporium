@@ -17,7 +17,7 @@
  *   off) and the land's edge, round the turning circles), with the runs of the land's edge on each (`walls`: the
  *   perimeter wall) and of each street (`fronts`: where the lots face).
  * - **The footpath** from Palm Court's way out east (`PATH`, mall.ts `EAST_GAP`) through the lots to the loop.
- * - **Lamps** (`SUN_LAMPS`) along both sidewalks of every street.
+ * - **Lamps** (`SUN_LAMP_STATIONS`, slid clear of the drives: sunlamps.ts `SUN_LAMPS`) along both sidewalks of every street.
  *
  * Names are made up. Written in fixed world numbers (north of the river: no `SOUTH_SHIFT` / `WIDEN`).
  */
@@ -465,8 +465,11 @@ export const SUN_BLOCKS: SunBlock[] = faces();
 
 /* ---------- Lamps ---------- */
 
-/** Lamps: x, z, the way the arm reaches, the ground's height (the sidewalk's top: world.ts SLAB) */
-export const SUN_LAMPS: [number, number, number, number][] = (() => {
+/**
+ * Where the lamps would stand at a steady stride: x, z, the way the arm reaches, the ground's height (the sidewalk's
+ * top: world.ts SLAB). The lamps themselves are these slid clear of the driveways (sunlamps.ts `SUN_LAMPS`)
+ */
+export const SUN_LAMP_STATIONS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const crossings = SUN_CROSSINGS.map((c) => c.at);
   for (const s of SUN_STREETS) {

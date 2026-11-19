@@ -5,10 +5,11 @@
 import * as THREE from 'three';
 import { Batch, canvasTex, lit, neon, rng, siteMat, toon } from './kit';
 
-/** Ground surfaces sit just under the roads' height, markings just over it */
+/** Ground surfaces sit just under the roads' height, markings just over it (8 mm: the 5 mm rule, with room under for
+ * the taxilane's line; 2 mm flickered from the air) */
 export const G = 0.004;
 export const TOP = 0.03;
-export const MARK = 0.032;
+export const MARK = TOP + 0.008;
 
 export const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: THREE.Material) => b.box(x0, y0, z0, x1 - x0, y1 - y0, z1 - z0, mat);
 /** A flat marking lying on the ground */

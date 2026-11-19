@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { WALLS, YARDS, YARD_SOLIDS } from '../src/scripts/city3d/sunyards';
 import { HOUSES, toWorld } from '../src/scripts/city3d/sunhouses';
 import { LOTS, outline } from '../src/scripts/city3d/sunridgelots';
-import { SUN_LAMPS, SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
+import { SUN_LAMPS } from '../src/scripts/city3d/sunlamps';
+import { SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { WALK_W } from '../src/scripts/city3d/layout';
 
 const houses = new Map(HOUSES.map((h) => [h.id, h]));

@@ -9,7 +9,7 @@ import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { PARK_LAMPS } from '../src/scripts/city3d/westlake';
 import { SQUARE_LAMPS } from '../src/scripts/city3d/civic';
 import { CREST_LAMPS } from '../src/scripts/city3d/crestmont';
-import { SUN_LAMPS } from '../src/scripts/city3d/sunridge';
+import { SUN_LAMPS } from '../src/scripts/city3d/sunlamps';
 import { SUN_PLACE_LAMPS } from '../src/scripts/city3d/sunplaces';
 import { DOCK_LAMPS } from '../src/scripts/city3d/docks';
 import { STRIP_LAMPS } from '../src/scripts/city3d/strip';

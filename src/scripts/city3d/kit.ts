@@ -748,6 +748,8 @@ let groundLift: { lift: (x: number, z: number) => number; rect: readonly [number
 export function setGroundLift(lift: (x: number, z: number) => number, rect: readonly [number, number, number, number]) {
   groundLift = { lift, rect };
 }
+/** The ground's lift at a point (0 where it's flat): for what's drawn outside a Batch (a lamp's halo and pool) */
+export const liftAt = (x: number, z: number) => (groundLift ? groundLift.lift(x, z) : 0);
 /** The longest an edge may run along the ground once lifted (the south's ground bends by under a centimetre in it) */
 export const LIFT_EDGE = 5;
 /**

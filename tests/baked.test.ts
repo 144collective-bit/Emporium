@@ -15,6 +15,7 @@ import { SHOPS } from '../src/scripts/city3d/highroad';
 import { BUNGALOWS, COMMUNITY_CENTRE, CORNER_SHOPS, SEMIS } from '../src/scripts/city3d/council';
 import { LINE, SOUTH_STATIONS } from '../src/scripts/city3d/southline';
 import { FOOTPATHS, GROWN, SOUTH_STREETS } from '../src/scripts/city3d/south';
+import { SUN_LAMPS } from '../src/scripts/city3d/sunlamps';
 
 const made: Record<string, unknown> = await bake({ quiet: true });
 /** Into the page and back, as the browser gets it */
@@ -31,7 +32,7 @@ function assertPlain(v: unknown, path: string) {
 }
 
 test('everything baked is plain data: it comes into the page as it was made', () => {
-  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'council', 'highroad', 'jog-cycle', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'south-grown', 'southline', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
+  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'council', 'highroad', 'jog-cycle', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'south-grown', 'southline', 'sunlamps', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
   for (const [key, v] of Object.entries(made)) assertPlain(v, key);
 });
 
@@ -85,4 +86,8 @@ test("the south's closes, crescents and their footpaths from the page are the on
 
 test("the underground's south line and its stations from the page are the ones laid here", () => {
   assert.deepStrictEqual(viaPage(made.southline), viaPage({ line: LINE, stations: SOUTH_STATIONS }));
+});
+
+test("Sunridge's lamps, clear of the drives, from the page are the ones placed here", () => {
+  assert.deepStrictEqual(viaPage(made.sunlamps), viaPage(SUN_LAMPS));
 });

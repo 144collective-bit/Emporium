@@ -4,7 +4,7 @@
  * fronds and a small crown; a date palm's thick trunk, the crown's knob and long arching fronds; the crowns
  * swaying in the wind, dusk.ts `SWAY`), jacarandas in bloom, live oaks and chaparral scrub on the hills, and the
  * hill roads' stone retaining walls with their caps and white post-and-rail guards. Phones leave out half the
- * scrub, fewer fronds to a crown and the rails' posts.
+ * scrub, fewer fronds to a crown and every other of the rails' posts.
  */
 import * as THREE from 'three';
 import { Batch, lit, neon, siteMat, toon } from './kit';
@@ -185,24 +185,22 @@ export function registerLandscape(low: boolean) {
 
       // The hill roads' edges: stone walls with a cap where they're cut in; a white rail on posts where built up
       const edges = rec.edges;
-      const rails: THREE.Matrix4[] = [];
       const posts: THREE.Matrix4[] = [];
+      let k = 0;
       for (const e of edges) {
         const [dx, dz] = [e.b[0] - e.a[0], e.b[1] - e.a[1]];
-        const len = Math.hypot(dx, dz) + 0.06;
         const yaw = Math.atan2(-dz, dx);
-        const [cx, cz] = [(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2];
-        const y = (e.ya + e.yb) / 2;
         if (e.kind === 'wall') {
           // Along the road's grade, its top eased from piece to piece, its foot a little under the bed; the cap over it
           b.add(prism(e.a, e.b, e.ya - 0.15, e.yb - 0.15, e.ya + e.ha, e.yb + e.hb, 0.34), paint.stone);
           b.add(prism(e.a, e.b, e.ya + e.ha - 0.02, e.yb + e.hb - 0.02, e.ya + e.ha + 0.08, e.yb + e.hb + 0.08, 0.46), paint.cap);
         } else {
-          rails.push(m(cx, y + 0.62, cz, yaw, len, 0.1, 0.07));
-          if (!low) posts.push(m(e.a[0], y + 0.3, e.a[1], yaw, 0.1, 0.75, 0.1));
+          // (the rail along the grade, as the wall is: a level box at each piece's mean stepped 10 cm on the steep;
+          // its post at the piece's start, at that point's own height, on phones every other one, so it never floats)
+          b.add(prism(e.a, e.b, e.ya + 0.57, e.yb + 0.57, e.ya + 0.67, e.yb + 0.67, 0.07), paint.rail);
+          if (!low || (k++ & 1) === 0) posts.push(m(e.a[0], e.ya + 0.3, e.a[1], yaw, 0.1, 0.75, 0.1));
         }
       }
-      b.instances(block, paint.rail, rails);
       b.instances(block, paint.rail, posts);
       b.build(into);
     });

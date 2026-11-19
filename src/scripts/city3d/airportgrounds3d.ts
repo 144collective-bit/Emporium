@@ -225,7 +225,7 @@ function runway(b: Batch, sx0: number, sx1: number, low: boolean) {
           mark(b, Math.min(end + dir * 1, end + dir * 7), zz, Math.max(end + dir * 1, end + dir * 7), zz + s * 0.36, WHITE);
         }
     // The runway's number, read from the approach: 09 at the west end, 27 at the east
-    if (inS(end + dir * 12)) decal(b, PAINT, cellUv(dir === 1 ? 5 : 6, 1), end + dir * 12, MARK + 0.002, z, 6.4, 6.4, dir === 1 ? -Math.PI / 2 : Math.PI / 2, true);
+    if (inS(end + dir * 12)) decal(b, PAINT, cellUv(dir === 1 ? 5 : 6, 1), end + dir * 12, MARK + 0.005, z, 6.4, 6.4, dir === 1 ? -Math.PI / 2 : Math.PI / 2, true);
     // The touchdown zone: pairs of bars, three, two, one
     for (const [d, n] of [
       [22, 3],
@@ -314,7 +314,7 @@ function taxiways(b: Batch, sx0: number, sx1: number, low: boolean) {
     box(b, a, G, T.z - T.half, Math.min(a + 15, T.x1 + T.half, sx1), TOP, T.z + T.half, TAXI_ASPHALT);
   alongMark(b, sx0, sx1, T.x0, T.x1, T.z - 0.08, T.z + 0.08, YELLOW);
   // The taxilane's centre line across the aprons
-  alongMark(b, sx0, sx1, TAXILANE.x0, TAXILANE.x1, TAXILANE.z - 0.08, TAXILANE.z + 0.08, YELLOW, TOP + 0.004);
+  alongMark(b, sx0, sx1, TAXILANE.x0, TAXILANE.x1, TAXILANE.z - 0.08, TAXILANE.z + 0.08, YELLOW, TOP + 0.003);
   // Connectors down to the runway: A from the taxilane, the rest from the taxiway; a hold-short bar (two solid, two
   // dashed) and a sign before each, red with the runway's numbers, and its letter in yellow on black
   CONNECTORS.forEach((cx, i) => {
@@ -355,7 +355,7 @@ function taxiways(b: Batch, sx0: number, sx1: number, low: boolean) {
 function aprons(b: Batch, sx0: number, sx1: number) {
   const inS = (x: number) => x >= sx0 && x < sx1;
   for (const [x0, z0, x1, z1] of [APRON, GA_APRON, CARGO_APRON]) {
-    for (let a = Math.max(x0, sx0); a < Math.min(x1, sx1); a += 15) box(b, a, G, z0, Math.min(a + 15, x1, sx1), TOP - 0.002, z1, CONCRETE);
+    for (let a = Math.max(x0, sx0); a < Math.min(x1, sx1); a += 15) box(b, a, G, z0, Math.min(a + 15, x1, sx1), TOP - 0.006, z1, CONCRETE);
     // Expansion joints every 6
     for (let x = Math.ceil(x0 / 6) * 6; x < x1; x += 6) if (inS(x)) mark(b, x - 0.03, z0, x + 0.03, z1, JOINT, TOP);
     for (let zz = z0 + 6; zz < z1; zz += 6) alongMark(b, sx0, sx1, x0, x1, zz - 0.03, zz + 0.03, JOINT, TOP);
@@ -366,7 +366,7 @@ function aprons(b: Batch, sx0: number, sx1: number) {
     mark(b, sx - 0.09, sz - 9.5, sx + 0.09, TAXILANE.z, YELLOW);
     mark(b, sx - 1.2, sz - 9.9, sx + 1.2, sz - 9.6, YELLOW);
     for (const s of [-1, 1]) mark(b, sx + s * 10.2 - 0.07, sz - 10.5, sx + s * 10.2 + 0.07, sz + 11, RED);
-    decal(b, PAINT, cellUv(k, 0), sx + 3.2, MARK + 0.002, sz + 9, 2.6, 2.6, 0, true);
+    decal(b, PAINT, cellUv(k, 0), sx + 3.2, MARK + 0.005, sz + 9, 2.6, 2.6, 0, true);
   });
   // The cargo stands (step 3): the same, their lead-ins in from the taxiway, C1 and C2; the cargo lane the freighter is
   // pushed back onto, across from the passenger apron
@@ -375,7 +375,7 @@ function aprons(b: Batch, sx0: number, sx1: number) {
     for (let z = sz - 9.5; z < TAXIWAY.z - TAXIWAY.half - 0.01; z += 15) mark(b, sx - 0.09, z, sx + 0.09, Math.min(z + 15, TAXIWAY.z - TAXIWAY.half), YELLOW);
     mark(b, sx - 1.2, sz - 9.9, sx + 1.2, sz - 9.6, YELLOW);
     for (const s of [-1, 1]) mark(b, sx + s * 10.2 - 0.07, sz - 10.5, sx + s * 10.2 + 0.07, sz + 11, RED);
-    decal(b, PAINT, cellUv(6 + k, 10), sx + 3.2, MARK + 0.002, sz + 9, 2.6, 2.6, 0, true);
+    decal(b, PAINT, cellUv(6 + k, 10), sx + 3.2, MARK + 0.005, sz + 9, 2.6, 2.6, 0, true);
   });
   alongMark(b, sx0, sx1, CARGO_APRON[0], CARGO_STANDS[0][0], CARGO_STANDS[0][1] + 24 - 0.08, CARGO_STANDS[0][1] + 24 + 0.08, YELLOW);
   // The prop plane's line in from the taxilane
@@ -599,6 +599,15 @@ function fuelFarm(b: Batch) {
   box(b, x0, 0, z0, x1, 0.6, z0 + 0.3, PALE);
   box(b, x0, 0, z1 - 0.3, x1, 0.6, z1, PALE);
   box(b, x0, 0, z0, x0 + 0.3, 0.6, z1, PALE);
+  // (and its east side, closed as a bund is, with a steel stile over it: steps up, a platform, steps down)
+  box(b, x1 - 0.3, 0, z0, x1, 0.6, z1, PALE);
+  const zm = (z0 + z1) / 2;
+  for (const [a, c, top] of [
+    [x1 - 1.1, x1 - 0.7, 0.3],
+    [x1 - 0.7, x1 + 0.4, 0.7],
+    [x1 + 0.4, x1 + 0.8, 0.3],
+  ])
+    box(b, a, 0, zm - 0.45, c, top, zm + 0.45, STEEL);
   box(b, x0, G, z0, x1, TOP, z1, PAVING);
   box(b, x0, 0.8, z1 + 0.6, x1 - 2, 1.0, z1 + 0.8, STEEL);
 }
@@ -671,7 +680,7 @@ function forecourt(b: Batch) {
   arrow(b, (D.foot + L.x1) / 2, MARK, L.kerb, 1, 0);
   // The car park: asphalt and bay lines
   const [cx0, cz0, cx1, cz1] = CAR_PARK;
-  boxes(b, cx0 - 0.6, G, cz0 - 0.4, cx1 + 0.6, TOP - 0.002, cz1 + 0.4, toon('#302d48'));
+  boxes(b, cx0 - 0.6, G, cz0 - 0.4, cx1 + 0.6, TOP - 0.006, cz1 + 0.4, toon('#302d48'));
   for (let x = cx0 + 0.35; x < cx1 - 0.5; x += 1.7)
     for (const [za, zb] of [
       [cz0, cz0 + 3.1],
@@ -755,7 +764,7 @@ function departures(b: Batch, low: boolean) {
     }
   // Down at the street under it: paving to the hall's doors, the taxi rank's lane and its bays, the bus bay, a
   // shelter and the signs at their heads
-  boxes(b, D.x0, G, D.z0, D.x1, TOP - 0.003, D.z1 - 0.02, PAVING);
+  boxes(b, D.x0, G, D.z0, D.x1, TOP - 0.006, D.z1 - 0.02, PAVING);
   const r0 = RANK[0][1] - 3;
   const r1 = BUS_BAY.x + 4;
   boxes(b, r0, G, RANK_Z - 1.6, r1, TOP, RANK_Z + 1.6, TAR);
@@ -872,7 +881,7 @@ function gaRoad(b: Batch) {
   box(b, g.loopX + h, G, g.loopZ - h, g.x1 - h, TOP, g.loopZ + h, tar);
   for (let x = g.x0 + 6; x < g.loopX - 1; x += 3) mark(b, x, g.z - 0.07, x + 1.6, g.z + 0.07, WHITE);
   const [cx0, cz0, cx1, cz1] = GA_CAR_PARK;
-  box(b, cx0 - 0.6, G, cz0 - 0.4, cx1 + 0.6, TOP - 0.002, cz1 + 0.4, toon('#302d48'));
+  box(b, cx0 - 0.6, G, cz0 - 0.4, cx1 + 0.6, TOP - 0.006, cz1 + 0.4, toon('#302d48'));
   for (let x = cx0 + 0.35; x < cx1 - 0.5; x += 1.7)
     for (const [za, zb] of [
       [cz0, cz0 + 3.1],

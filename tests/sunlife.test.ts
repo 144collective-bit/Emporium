@@ -6,7 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DRIVEWAY_CARS, DRIVEWAY_SOLIDS, KERB_IN, LANES, LEAD, SUN_DOGS, SUN_IDLE, SUN_PEOPLE, SWING_SEATS } from '../src/scripts/city3d/sunlife';
-import { MESA, PARKWAY_LOOP, SCHOOL_BUS_PAINT, SUN_LAMPS, SUN_MIX, SUN_STREETS, distTo, inSunridge, inside, type Pt } from '../src/scripts/city3d/sunridge';
+import { SUN_LAMPS } from '../src/scripts/city3d/sunlamps';
+import { MESA, PARKWAY_LOOP, SCHOOL_BUS_PAINT, SUN_MIX, SUN_STREETS, distTo, inSunridge, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { SUN_PLACE_LAMPS } from '../src/scripts/city3d/sunplaces';
 import { HOUSES, HOUSE_SOLIDS, toWorld } from '../src/scripts/city3d/sunhouses';
 import { YARDS, YARD_SOLIDS } from '../src/scripts/city3d/sunyards';

@@ -299,7 +299,14 @@ function drawAllotments(b: Batch, low: boolean) {
     const m: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
     if (Math.hypot(m[0] - ALLOTMENT_GATE[0], m[1] - ALLOTMENT_GATE[1]) < 1.5) continue;
     along(b, a, c, 0.06, 0.95, 1.02, FENCE);
-    if (!low) b.detail(() => along(b, a, [a[0] + 0.01, a[1] + 0.01], 0.08, 0.15, 1.05, FENCE));
+    // (square posts at every distance, so the rail never floats: at the corner, and every 2.5 along on desktops)
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const n = low ? 1 : Math.max(1, Math.round(l / 2.5));
+    for (let k = 0; k < n; k++) {
+      const t = k / n;
+      const q: Pt = [a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t];
+      b.add(new THREE.BoxGeometry(0.08, 0.9, 0.08).translate(q[0], 0.15 + 0.45, q[1]), FENCE);
+    }
   }
 }
 

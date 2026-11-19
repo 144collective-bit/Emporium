@@ -19,8 +19,9 @@ keep it up to date when what it describes changes.
   worked out from the streets by `faces()`, each with its `runs`: a street's
   kerb or the land's edge), the amenities' land (`ZONES`), the footpath from
   Palm Court (`PATH`), the perimeter wall and the entrance monuments
-  (`WALL_RUNS`, `MONUMENTS`, `SUN_SOLIDS` in `SOLIDS`), `SUN_LAMPS` at the
-  boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 101, 6.6 x 13,
+  (`WALL_RUNS`, `MONUMENTS`, `SUN_SOLIDS` in `SOLIDS`), the lamps' stride
+  (`SUN_LAMP_STATIONS`), slid clear of the drives by `sunlamps.ts`
+  (`SUN_LAMPS`, baked: the houses aren't in the boot) at the boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 101, 6.6 x 13,
   pie-shaped round the turning circles). Drawn by `sunridge3d.ts`
   (`LAZY_DISTRICTS` id `sunridge`); the road helpers are `roads3d.ts`
   (shared with Crestmont). Phase 2 (the houses) is built: `sunhouses.ts`

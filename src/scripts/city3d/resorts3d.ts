@@ -496,6 +496,17 @@ const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: numbe
 const rectBox = (b: Batch, [x0, z0, x1, z1]: Rect, y0: number, y1: number, m: THREE.Material) => box(b, x0, y0, z0, x1, y1, z1, m);
 const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, m: THREE.Material, seg = 12, r0 = r, open = false) =>
   b.add(new THREE.CylinderGeometry(r, r0, h, seg, 1, open).translate(x, y + h / 2, z), m);
+/** A deck slab from x0 to x1, sloping along z from (y, z) `p` to `q`, `th` thick under that line */
+function deck(b: Batch, x0: number, x1: number, [ya, za]: [number, number], [yb, zb]: [number, number], th: number, m: THREE.Material) {
+  const [dy, dz] = [yb - ya, zb - za];
+  const len = Math.hypot(dy, dz);
+  if (len < 1e-4) return;
+  const a = -Math.atan2(dy, dz);
+  // (the slab's up after the turn is (0, cos a, sin a): its middle half a thickness under the line)
+  const g = new THREE.BoxGeometry(x1 - x0, th, len).rotateX(a);
+  g.translate((x0 + x1) / 2, (ya + yb) / 2 - (Math.cos(a) * th) / 2, (za + zb) / 2 - (Math.sin(a) * th) / 2);
+  b.add(g, m);
+}
 /** A square bar between two points */
 function beam(b: Batch, p: V3, q: V3, th: number, m: THREE.Material) {
   const d = new THREE.Vector3(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
@@ -1131,7 +1142,8 @@ function gondolier(b: Batch, r: Resort, low: boolean) {
     const ya = SLAB + (Math.abs(za - zm) < 1e-6 ? B.rise : 0.02);
     const yb = SLAB + (Math.abs(zb - zm) < 1e-6 ? B.rise : 0.02);
     for (const x of [rx0, rx1]) beam(b, [x, ya + 0.5, za], [x, yb + 0.5, zb], 0.1, WHITE);
-    beam(b, [(rx0 + rx1) / 2, ya, za], [(rx0 + rx1) / 2, yb, zb], rx1 - rx0 - 0.1, STONE);
+    // (a thin slab with its top on the walking line: a square bar this wide would be as deep, burying the door)
+    deck(b, rx0 + 0.05, rx1 - 0.05, [ya, za], [yb, zb], 0.25, STONE);
   }
   // The gondolas at the steps and their striped mooring poles
   const black = toon('#16141f');

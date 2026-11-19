@@ -117,9 +117,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   rect: the rest of a batch keeps its faces whole and its corners shared, so the city's ground and every batch that
   only reaches into the south aren't split and unshared whole, which had tripled the boot's work and doubled the
   geometry), terrain.ts reads it (cars, taxis, trees,
-  cameras), groundheight.ts's `south` layer walks on it, solids.ts's `onGround()` lifts the boxes, the lamps carry their
-  lifted height. Anything new drawn in the south is lifted for free; anything placed outside a Batch (a lamp, a tree, a
-  pin, a pool of light, a person) adds `southLift(x, z)` itself.
+  cameras), groundheight.ts's `south` layer walks on it, solids.ts's `onGround()` lifts the boxes. Anything new drawn in
+  the south is lifted for free, the street lamps' posts and the trees too (`addLamp()` / `addTree()` take the slab's
+  height, not the lifted one: `ENDS_LAMPS` and `YARD_TREES` carried the lift in their data as well and floated by it
+  twice, fixed in the map polish plan's Phase 0, `tests/southground.test.ts`); what's placed outside a Batch (a lamp's
+  halo and pool, world.ts, by kit.ts `liftAt()`; a pin, a person) adds the lift itself.
 - **The ground** (ground.ts): worn grass and bare patches round the estate (`ESTATE_LAND`), a worn lawn through the
   village and the rows (`VILLAGE_LAND`), the brook's banks lush. **Trees keep off** (landuse.ts `KEEPS`) the estate's
   land, the brook and the rec ground; the fields keep theirs.

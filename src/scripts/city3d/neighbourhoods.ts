@@ -263,7 +263,8 @@ function parks(b: Batch, crowd: Idle[], low: boolean) {
       bench(b, q.at, q.ry);
       if (k === 0 && !low) crowd.push({ x: q.at[0], z: q.at[1], y: SEAT, ry: q.ry, act: 'sit' });
     });
-    addLamp(cx, cz, 0);
+    // (a park's lantern where its paths cross, not a street lamp's arm over the lawn)
+    addLamp(cx, cz, 0, undefined, 'park');
   }
   // Phones plant every other one (the lawn trees kept off the walks, beds and benches: outerdress.ts)
   DRESS.trees.forEach(([x, z], i) => (!low || i % 2 === 0) && addTree(x, z, 0.85 + ((i * 53) % 10) / 22, i % 3 === 0));

@@ -11,7 +11,6 @@ import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
 import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { HW_EDGE } from '../src/scripts/city3d/endswood';
-import { southLift } from '../src/scripts/city3d/southground';
 /** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
 const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
@@ -36,8 +35,9 @@ test("its land: every street and block on it; the fields, Lot 9 and the ring roa
 test('sodium lamps along every street: on its sidewalk, never on the asphalt, apart, plenty of them', () => {
   assert.ok(ENDS_LAMPS.length > 80, `${ENDS_LAMPS.length} lamps`);
   for (const [x, z, ry, y] of ENDS_LAMPS) {
-    // (on the sidewalk's top, lifted by the south's rolling ground: southground.ts)
-    assert.equal(y, SLAB_Y + southLift(x, z));
+    // (on the sidewalk's top, under the lift: the lamps' Batch lifts the post onto the south's rolling ground, and
+    // world.ts its halo and pool by the same (kit.ts `liftAt()`); lifted here too, it floated by the lift twice)
+    assert.equal(y, SLAB_Y);
     assert.ok(inEndswood(x, z), `a lamp at ${x}, ${z} off the land`);
     for (const s of PLAN.streets) if (s.kind !== 'highway' && s.kind !== 'ramp') assert.ok(distToStreet(s, [x, z]) > s.half + 0.2, `a lamp on ${s.id} at ${x.toFixed(1)}, ${z.toFixed(1)}`);
     // (its arm over the nearest street: (cos ry, -sin ry) points at its asphalt)

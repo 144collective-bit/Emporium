@@ -21,6 +21,7 @@ const DOM_FREE = [
   'src/scripts/city3d/highroad.ts',
   'src/scripts/city3d/council.ts',
   'src/scripts/city3d/southline.ts',
+  'src/scripts/city3d/sunlamps.ts',
   'src/scripts/city3d/southtrains.ts',
   'src/scripts/city3d/rec.ts',
   'src/scripts/city3d/circus.ts',

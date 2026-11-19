@@ -4,7 +4,8 @@
 // about 120 of them; its wall solid with gaps at the entrances and the footpath; its lamps on the sidewalks.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ENTRIES, LAND, LOT_D, MESA, PARKWAY_LOOP, PATH, SUN_BLOCKS, SUN_CROSSINGS, SUN_LAMPS, SUN_SOLIDS, SUN_STREETS, SUNRIDGE_RECT, WALL_RUNS, ZONES, distTo, inSunridge, inside, type Pt } from '../src/scripts/city3d/sunridge';
+import { SUN_LAMPS } from '../src/scripts/city3d/sunlamps';
+import { ENTRIES, LAND, LOT_D, MESA, PARKWAY_LOOP, PATH, SUN_BLOCKS, SUN_CROSSINGS, SUN_SOLIDS, SUN_STREETS, SUNRIDGE_RECT, WALL_RUNS, ZONES, distTo, inSunridge, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { LOTS, MIN_D, MIN_W, outline } from '../src/scripts/city3d/sunridgelots';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { COURT } from '../src/scripts/city3d/mall';

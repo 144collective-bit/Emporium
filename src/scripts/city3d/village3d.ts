@@ -223,6 +223,13 @@ function along(b: Batch, a: Pt, c: Pt, w: number, y0: number, y1: number, m: THR
   b.add(g, m);
 }
 
+/** A square post at p, `w` on a side, y0 to y1 (on the ground: lifted with it) */
+function post(b: Batch, p: Pt, w: number, y0: number, y1: number, m: THREE.Material) {
+  const g = new THREE.BoxGeometry(w, y1 - y0, w).translate(p[0], (y0 + y1) / 2, p[1]);
+  g.deleteAttribute('uv');
+  b.add(g, m);
+}
+
 const ON = 0.15 + 0.006;
 function drawGround(b: Batch, list: House[], low: boolean) {
   for (const h of list) {
@@ -351,7 +358,7 @@ function drawChurchyard(b: Batch, low: boolean) {
   // The low stone wall round the churchyard, and the lychgate (posts, a small gabled roof)
   for (const [p, q] of YARD_WALL) along(b, p, q, 0.24, 0.15, 0.15 + YARD_WALL_H, KIRK);
   const g = LYCHGATE;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) along(b, [g.at[0] + sx * (g.w / 2 - 0.15), g.at[1] + sz * (g.d / 2 - 0.15) - 0.01], [g.at[0] + sx * (g.w / 2 - 0.15), g.at[1] + sz * (g.d / 2 - 0.15) + 0.01], 0.22, 0.15, 0.15 + g.h - 0.6, OAK);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(b, [g.at[0] + sx * (g.w / 2 - 0.15), g.at[1] + sz * (g.d / 2 - 0.15)], 0.22, 0.15, 0.15 + g.h - 0.6, OAK);
   gabled(b, [g.at[0] - g.w / 2, g.at[1] - g.d / 2, g.at[0] + g.w / 2, g.at[1] + g.d / 2], 0.15 + g.h - 0.6, 0.7, true, SPIRE, OAK, 0.25);
   // The graves: headstones, crosses, a few chest tombs
   const m = new THREE.Matrix4();
@@ -401,14 +408,14 @@ function drawRec(b: Batch, low: boolean) {
   }
   for (const g of GOALS) {
     const s = g.at[0] < xm ? -1 : 1;
-    for (const e of [-1, 1]) along(b, [g.at[0], g.at[1] + (e * g.w) / 2], [g.at[0] + 0.01, g.at[1] + (e * g.w) / 2], 0.12, G, G + g.h, LINE);
+    for (const e of [-1, 1]) post(b, [g.at[0], g.at[1] + (e * g.w) / 2], 0.12, G, G + g.h, LINE);
     along(b, [g.at[0], g.at[1] - g.w / 2], [g.at[0], g.at[1] + g.w / 2], 0.12, G + g.h - 0.12, G + g.h, LINE);
     if (!low) b.detail(() => along(b, [g.at[0] + s * 0.9, g.at[1] - g.w / 2], [g.at[0] + s * 0.9, g.at[1] + g.w / 2], 0.02, G, G + g.h * 0.8, NET));
   }
   // The pavilion: brick, a pitched roof, its veranda on posts facing the pitch, its windows and door
   rb(b, PAVILION as R4b, G - 0.3, G + PAVILION_H.eaves, FRONTS.red);
   gabled(b, [VERANDA[0], PAVILION[1], PAVILION[2], PAVILION[3]], G + PAVILION_H.eaves, PAVILION_H.ridge, false, SPIRE, FRONTS.red, 0.2);
-  for (const z of [VERANDA[1] + 0.3, (VERANDA[1] + VERANDA[3]) / 2 - 1.4, (VERANDA[1] + VERANDA[3]) / 2 + 1.4, VERANDA[3] - 0.3]) along(b, [VERANDA[0] + 0.2, z], [VERANDA[0] + 0.21, z], 0.14, G, G + PAVILION_H.eaves, OAK);
+  for (const z of [VERANDA[1] + 0.3, (VERANDA[1] + VERANDA[3]) / 2 - 1.4, (VERANDA[1] + VERANDA[3]) / 2 + 1.4, VERANDA[3] - 0.3]) post(b, [VERANDA[0] + 0.2, z], 0.14, G, G + PAVILION_H.eaves, OAK);
   rb(b, [VERANDA[0], VERANDA[1], VERANDA[2], VERANDA[3]] as R4b, G, G + 0.12, CAP);
   b.add(lancet(PAVILION[0], (PAVILION[1] + PAVILION[3]) / 2, [-1, 0], 0.9, G + 0.12, G + 1.5).applyMatrix4(new THREE.Matrix4()), OAK);
   for (const dz of [-1.8, 1.8]) b.add(tris(quad([PAVILION[0] - 0.012, G + 0.7, (PAVILION[1] + PAVILION[3]) / 2 + dz - 0.6], [PAVILION[0] - 0.012, G + 0.7, (PAVILION[1] + PAVILION[3]) / 2 + dz + 0.6], [PAVILION[0] - 0.012, G + 1.6, (PAVILION[1] + PAVILION[3]) / 2 + dz + 0.6], [PAVILION[0] - 0.012, G + 1.6, (PAVILION[1] + PAVILION[3]) / 2 + dz - 0.6], [-1, 0, 0])), WIN_LIT);
@@ -423,7 +430,7 @@ function drawRec(b: Batch, low: boolean) {
   }
   rb(b, FUNBOX as R4b, G, G + 0.5, SKATE_CONC);
   along(b, RAIL[0], RAIL[1], 0.06, G + 0.45, G + 0.52, PAINT_RED);
-  for (const p of RAIL) along(b, p, [p[0] + 0.01, p[1]], 0.06, G, G + 0.5, PAINT_RED);
+  for (const p of RAIL) post(b, p, 0.06, G, G + 0.5, PAINT_RED);
   // The playground: bark under it, the swings' frame, a slide
   flat(b, ringOf(PLAYGROUND as R4b), G + 0.006, BARK);
   for (const x of [SWINGS[0] + 0.08, SWINGS[2] - 0.08]) along(b, [x, SWINGS[1]], [x, SWINGS[3]], 0.1, G, G + 1.6, PAINT_BLUE);

@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import { WALL, WALL_LAND, WALL_OUTER } from './wall';
 /** How far past the wall's outer face the river runs on, into the murk (docs/wall-plan.md Phase 5) */
 const RIVER_PAST = 30;
-import { Batch, canvasTex, flickerTogether, fx, glowMat, glowTex, lit, neon, PAL, rand, rng, siteMat, toon } from './kit';
+import { Batch, canvasTex, flickerTogether, fx, glowMat, glowTex, liftAt, lit, neon, PAL, rand, rng, siteMat, toon } from './kit';
 import { TOWER_ZEBRA, ZEBRA as COURT_ZEBRA } from './mall';
 import { BLOCKS, BRIDGED_NS, BS, CENTER_XZ, CORE_ROADS, DISTRICTS, DOWNTOWN, EW_ROADS, EXT, LANE, MEDIAN, NS_ROADS, RING_HI, RIVER, SEATS, SHORT_NS, SOUTH_ROAD, STRIP_GAP, WALK_W, type Road } from './layout';
 import { PLAN, insetPoly, offsetLine, riverBridges, type Pt } from './streetplan';
@@ -66,15 +66,16 @@ export function addTree(x: number, z: number, s = 0.8 + rand() * 0.45, pine = ra
   trees.push({ x, z, s, pine, y });
 }
 
-const lamps: { x: number; z: number; ry: number; y: number }[] = [];
+const lamps: { x: number; z: number; ry: number; y: number; kind?: LampKind }[] = [];
 /** How many trees and lamps are placed so far (landmarks.ts moves a landmark's own ones with it) */
 export const placedMark = () => ({ trees: trees.length, lamps: lamps.length });
 export function shiftPlaced(from: { trees: number; lamps: number }, dx: number, dz: number) {
   for (const t of trees.slice(from.trees)) (t.x += dx), (t.z += dz);
   for (const l of lamps.slice(from.lamps)) (l.x += dx), (l.z += dz);
 }
-export function addLamp(x: number, z: number, ry = 0, y = SLAB) {
-  lamps.push({ x, z, ry, y });
+/** A street lamp; `kind` a post of its own where the district's (`lampStyle()`) doesn't fit (a park's lantern) */
+export function addLamp(x: number, z: number, ry = 0, y = SLAB, kind?: LampKind) {
+  lamps.push(kind ? { x, z, ry, y, kind } : { x, z, ry, y });
 }
 /** A pool of lamplight on the ground with no street lamp over it (alley wall lamps): drawn with the street lamps' pools */
 const pools: { x: number; z: number; y: number; size: number; sodium: boolean }[] = [];
@@ -1422,7 +1423,7 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
     return k === 'flicker' ? (i % 2 ? 'flickA' : 'flickB') : k;
   });
   // A post per district (lampposts.ts, the polish plan's Phase 10): which post each lamp is, from where it stands
-  const kinds = lamps.map((l) => lampStyle(l.x, l.z));
+  const kinds = lamps.map((l) => l.kind ?? lampStyle(l.x, l.z));
   // The lamps themselves are merged with the city's fixed geometry (split by tile: tileBatch() in kit.ts)
   const poles: THREE.Matrix4[] = [];
   const arms: THREE.Matrix4[] = [];
@@ -1447,14 +1448,15 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
     bulbs.push(at(l.x + dir.x * out, l.y + hy, l.z + dir.z * out));
     const tone = toneOf[i];
     if (tone === 'dead') return;
-    halos[tone].push(l.x + dir.x * out, l.y + hy - 0.03, l.z + dir.z * out);
+    // (a lamp's height is the ground's under the slab: its post is drawn in a Batch, lifted onto the south's rolling
+    // ground with it; the halo and the pool aren't, so they take the lift here)
+    halos[tone].push(l.x + dir.x * out, l.y + liftAt(l.x, l.z) + hy - 0.03, l.z + dir.z * out);
     // (on Crestmont's hill roads the ground under the bulb: a pool flat on a slope sits a little up, terrain.ts)
     const [px, pz] = [l.x + dir.x * out, l.z + dir.z * out];
-    // (the south's lamps stand on its rolling ground already, their own height lifted: endswood.ts `ENDS_LAMPS`)
-    const py = onCrest(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + 0.02 + 1.3 * slopeAt(px, pz) * (onHills(px, pz) ? 1 : 0);
+    const py = onCrest(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + liftAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) * (onHills(px, pz) ? 1 : 0);
     poolsOf[tone].push(new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
-  for (const p of pools) poolsOf[p.sodium ? 'sodium' : 'white'].push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size)));
+  for (const p of pools) poolsOf[p.sodium ? 'sodium' : 'white'].push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y + liftAt(p.x, p.z) + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size)));
   // Each tone's materials: the flickering ones going out together
   const flicker = (t: Tone) => (t === 'flickA' || t === 'flickB' ? 1.3 : 0);
   const mats = Object.fromEntries(
