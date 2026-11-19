@@ -291,6 +291,15 @@ draw calls in the house's own batches.
     `docs/compound-shots/phase-6b-*`.
 6c. **The fountain and the palms.** A fountain in the yard's middle (clear of the car's way out and the drive), palms
     with uplights along the edges, lit paving lines.
+    *Built, waiting on the owner's sign-off.* The drive runs through the yard's middle (the gates to the garage, kept
+    clear), so the fountain stands north of it. home.ts: `FOUNTAIN` (a round stone basin, its solid a square inside
+    it), `PALMS` (four: either side of the gates inside, at the house's west corner, by the workshop) and
+    `PALM_PLANTER`, in `HOME_SOLIDS`. home3d.ts `showpiece()`: the basin with its water, a pedestal and two bowls with
+    water falling from their rims in thin streams, a gold finial, lights in the basin in his magenta and cyan; the
+    palms (palms3d.ts's `trunk()` and `crown()`, as the Neon Mile's, in the palette's tree colours, swaying with the
+    wind) in round stone planters with a warm uplight; two lit lines set in the paving along the drive's edges. Tests:
+    `tests/home.test.ts` (inside the wall, off the drive, clear of everything, the bollards, every prompt, the bays'
+    ways out and the way round to the side door). Shots: `docs/compound-shots/phase-6c-*`.
 6d. **The pool and the cabana.** On the east lawn: a lit pool, a cabana and loungers (the side door's way kept).
 6e. **The helipad.** On the garage's roof: its pad, its markings (no lettering or numbers), edge lights; looks only.
 
