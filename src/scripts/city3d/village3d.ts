@@ -16,7 +16,7 @@ import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { COVER, STONE } from './palette';
 import { shift } from './streetfaces';
-import { ALLEYS, DOOR_U, GINNELS, HOUSES, TERRACE, WALL_H, frontWalls, houseFoot, plotOf, type House } from './southterraces';
+import { ALLEYS, DOOR_U, GINNELS, HOUSES, OUTRIGGER, OUTRIGGERS, REAR_WALL_H, TERRACE, WALL_H, frontWalls, houseFoot, plotOf, rearWalls, type House } from './southterraces';
 import { CHANCEL, CHURCH_BASE, CHURCH_LOW, CHURCH_PATH, GRAVES, HEIGHTS, LYCHGATE, NAVE, PATH_W, PORCH, PORCH_DOOR, SPIRE_TIP, TOWER, YARD_WALL, YARD_WALL_H, YEWS } from './aldwyns';
 import { CHURCHYARD } from './south';
 import { PLANT } from './palette';
@@ -154,7 +154,35 @@ const PIECES = (() => {
   const dy = E + R * (-dz1 / (D / 2));
   const dormer = merge([box(1.0, 0.75, dz1 - dz0, -0.35, dy + 0.3, (dz0 + dz1) / 2), box(1.12, 0.08, dz1 - dz0 + 0.12, -0.35, dy + 0.72, (dz0 + dz1) / 2)]);
   const dormerWin = win(-0.35, dy + 0.05, dy + 0.55, dz1 + 0.012, 0.66);
-  return { body, plinth, roof, gableL: gable(1), gableR: gable(-1), bay, bayLid, bayLidEdge, winDown, winUp, frames, door, fan, sills, chimney, pots, dormer, dormerWin };
+  // The back (the map polish plan's Phase 2): a kitchen window and the back door down, two bedroom windows up, a
+  // gutter and its downpipe (near only); a window each storey in a row's end gable
+  const back = (x: number, y0: number, y1: number, w: number) => tris(quad([x - w / 2, y0, -D - 0.012], [x + w / 2, y0, -D - 0.012], [x + w / 2, y1, -D - 0.012], [x - w / 2, y1, -D - 0.012], [0, 0, -1]));
+  const backDown = back(-0.05, 0.38, 0.95, 0.5);
+  const backUp = merge([back(-0.7, 1.45, 2.0, 0.55), back(0.7, 1.45, 2.0, 0.55)]);
+  const backDoor = back(-0.75, 0.04, 1.02, 0.6);
+  const backSills = merge([box(0.58, 0.05, 0.08, -0.05, 0.36, -D - 0.04), box(0.63, 0.05, 0.08, -0.7, 1.43, -D - 0.04), box(0.63, 0.05, 0.08, 0.7, 1.43, -D - 0.04)]);
+  const gutter = merge([box(W0, 0.07, 0.08, 0, E - 0.03, -D - OVER - 0.03), box(0.06, E - 0.05, 0.06, -h + 0.14, (E - 0.05) / 2, -D - 0.05)]);
+  const end = (s: number, z: number, y0: number, y1: number) => tris(quad([s * (h + 0.012), y0, z - 0.28], [s * (h + 0.012), y0, z + 0.28], [s * (h + 0.012), y1, z + 0.28], [s * (h + 0.012), y1, z - 0.28], [s, 0, 0]));
+  const gableWinL = merge([end(1, -D * 0.3, 0.38, 0.98), end(1, -D / 2, 1.45, 2.0)]);
+  const gableWinR = merge([end(-1, -D * 0.3, 0.38, 0.98), end(-1, -D / 2, 1.45, 2.0)]);
+  // The back kitchen against the left party wall (southterraces.ts `OUTRIGGER`, in this 2.8 frame): its walls up to
+  // the low eaves, the lean-to's sides up to the house, its slate roof, a window to the yard and one at its end
+  const { u0, u1, out, high, low: lo } = OUTRIGGER;
+  const [ox0, ox1] = [-u1, -u0];
+  const [oz0, oz1] = [-D + 0.01, -D - out];
+  const outBody = merge([
+    box(ox1 - ox0, lo, oz0 - oz1, (ox0 + ox1) / 2, lo / 2, (oz0 + oz1) / 2),
+    tris([
+      { p: [[ox0, lo, oz0], [ox0, high, oz0], [ox0, lo, oz1]], n: [-1, 0, 0] },
+      { p: [[ox1, lo, oz0], [ox1, high, oz0], [ox1, lo, oz1]], n: [1, 0, 0] },
+    ]),
+  ]);
+  const outRoof = tris(quad([ox0 - 0.06, high + 0.04, oz0], [ox1 + 0.02, high + 0.04, oz0], [ox1 + 0.02, lo - 0.02, oz1 - 0.12], [ox0 - 0.06, lo - 0.02, oz1 - 0.12], [0, out, lo - high]));
+  const outWin = merge([
+    tris(quad([ox0 - 0.012, 0.4, oz1 + 0.35], [ox0 - 0.012, 0.4, oz1 + 0.95], [ox0 - 0.012, 0.95, oz1 + 0.95], [ox0 - 0.012, 0.95, oz1 + 0.35], [-1, 0, 0])),
+    tris(quad([(ox0 + ox1) / 2 - 0.25, 0.45, oz1 - 0.012], [(ox0 + ox1) / 2 + 0.25, 0.45, oz1 - 0.012], [(ox0 + ox1) / 2 + 0.25, 0.9, oz1 - 0.012], [(ox0 + ox1) / 2 - 0.25, 0.9, oz1 - 0.012], [0, 0, -1])),
+  ]);
+  return { body, plinth, roof, gableL: gable(1), gableR: gable(-1), bay, bayLid, bayLidEdge, winDown, winUp, frames, door, fan, sills, chimney, pots, dormer, dormerWin, backDown, backUp, backDoor, backSills, gutter, gableWinL, gableWinR, outBody, outRoof, outWin };
 })();
 
 /** A house's frame: x along its front (against t: a right-handed frame), z out of its front, stretched to its frontage */
@@ -196,6 +224,18 @@ function drawHouses(b: Batch, list: House[], low: boolean) {
     b.instances(P.dormer, RENDER, dormers.map((h) => frameOf(h)));
     b.instances(P.dormerWin, WIN_LIT, dormers.filter((h) => h.lit & 4).map((h) => frameOf(h)));
     b.instances(P.dormerWin, WIN_DARK, dormers.filter((h) => !(h.lit & 4)).map((h) => frameOf(h)));
+    // The backs, the end gables' windows and the back kitchens (at every distance: a row seen from behind isn't blank)
+    b.instances(P.backDown, WIN_LIT, list.filter((h) => h.lit & 1).map((h) => frameOf(h)));
+    b.instances(P.backDown, WIN_DARK, list.filter((h) => !(h.lit & 1)).map((h) => frameOf(h)));
+    b.instances(P.backUp, WIN_LIT, list.filter((h) => h.lit & 2).map((h) => frameOf(h)));
+    b.instances(P.backUp, WIN_DARK, list.filter((h) => !(h.lit & 2)).map((h) => frameOf(h)));
+    for (const [c, hs] of by((h) => h.door)) b.instances(P.backDoor, doorOf(c), hs.map((h) => frameOf(h)));
+    b.instances(P.gableWinL, WIN_DARK, list.filter((h) => h.endL).map((h) => frameOf(h)));
+    b.instances(P.gableWinR, WIN_DARK, list.filter((h) => h.endR).map((h) => frameOf(h)));
+    const outs = list.filter((h) => OUTRIGGERS.has(h.id));
+    for (const [mat, hs] of by(wallOf)) b.instances(P.outBody, mat, hs.filter((h) => OUTRIGGERS.has(h.id)).map((h) => frameOf(h)));
+    b.instances(P.outRoof, SLATE, outs.map((h) => frameOf(h)));
+    b.instances(P.outWin, WIN_DARK, outs.map((h) => frameOf(h)));
   }, 'all');
   if (low) return;
   b.detail(() => {
@@ -204,6 +244,8 @@ function drawHouses(b: Batch, list: House[], low: boolean) {
     b.instances(P.fan, WIN_LIT, list.filter((h) => h.lit & 8).map((h) => frameOf(h)));
     b.instances(P.fan, WIN_DARK, list.filter((h) => !(h.lit & 8)).map((h) => frameOf(h)));
     b.instances(P.pots, POT, list.filter((h) => h.chimney).map((h) => frameOf(h)));
+    b.instances(P.backSills, SILL, list.map((h) => frameOf(h)));
+    b.instances(P.gutter, LEAD, list.map((h) => frameOf(h)));
   });
 }
 
@@ -248,10 +290,12 @@ function drawGround(b: Batch, list: House[], low: boolean) {
     const rear = alley?.rear ?? TERRACE.rear;
     const back = houseFoot({ ...h, at: [h.at[0] - nx * TERRACE.depth, h.at[1] - nz * TERRACE.depth] }, rear);
     flat(b, back, ON, YARD);
-    if (alley) {
-      flat(b, alley.poly, ON + 0.002, ALLEY);
-      // (its back wall along the alley, near only)
-      if (!low) b.detail(() => along(b, alley.poly[0], alley.poly[1], 0.12, 0.15, 1.15, FRONTS.red));
+    if (alley) flat(b, alley.poly, ON + 0.006, ALLEY);
+    // The yard's walls, at every distance: its party wall, its back wall with a gate's gap by the back door (and its
+    // other side at a row's end), capped up close (a back wall alone along the alley stood loose in the grass)
+    for (const [a, c] of rearWalls(h).flat()) {
+      along(b, a, c, 0.1, 0.15, 0.15 + REAR_WALL_H, FRONTS.red);
+      if (!low) b.detail(() => along(b, a, c, 0.14, 0.15 + REAR_WALL_H, 0.15 + REAR_WALL_H + 0.04, CAP));
     }
   }
 }
@@ -264,7 +308,8 @@ function drawGinnels(b: Batch) {
       [g.at[0] + nx * (TERRACE.yard - L), g.at[1] + nz * (TERRACE.yard - L)],
     ];
     const [l, r] = [shift(line, -g.w / 2), shift(line, g.w / 2)];
-    flat(b, [l[0], l[1], r[1], r[0]], ON + 0.003, ALLEY);
+    // (over the alleys it meets by 6 mm: the 5 mm rule)
+    flat(b, [l[0], l[1], r[1], r[0]], ON + 0.012, ALLEY);
   }
 }
 

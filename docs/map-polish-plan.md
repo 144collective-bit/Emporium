@@ -208,6 +208,36 @@ empty lots (the owner's call). M-L.
   before, so the rail floated).
 - **The Docks' booth glass** 8 mm proud of the booth (was 3).
 
+### Phase 2: the south's houses (built, waiting on the owner's sign-off)
+
+Seen in a render of the village's sites alone (a small three.js page, the
+city's builders run into it: headless, in seconds, where the whole city
+can't be).
+
+- **The terraces' backs**: a kitchen window and a back door down, two
+  windows up, a gutter and downpipe near; a window each storey in a row's
+  end gable; a single-storey back kitchen with a slate lean-to on about
+  three deep yards in four (clear of every other house and alley, solid).
+- **The yards walled round**: a party wall and a back wall with a gate
+  behind the back door, at every distance, solid, clipped clear of the
+  next row's house at the corners. No more loose walls in the grass.
+- **The semis**: every window framed (a mullion across the wide ones) at
+  every distance, sills near; the backs windowed with back doors; a landing
+  window in each end wall; the back gardens fenced (panels and posts,
+  drawn, not solid yet). The bungalows the same at the back.
+- **The High Road**: the gap plot a hoarding of boards on posts with bills
+  and a tag, rough ground, rubble, weeds and a skip behind; every end wall
+  without a neighbour against it windowed.
+- **The placeholders**: the corner shops a door by their window and backs
+  windowed; the community centre's boards framed, a canopy, bills, downpipes;
+  the allotment sheds pitched with a door, a window and a water butt; the
+  caravan windowed on its wheels and hitch (no bungalow has one at present).
+- The ginnels 6 mm over the alleys they meet (were 3 mm under them).
+- Left for later: the rows of four (`four` is off; turning it on lays the
+  council's lots again, so things would move: the owner's call), the
+  wedges on the terraces' bends, the semis' fences as solids.
+- The boot: 749.8 of 750 KB (the backs' data and solids are in it).
+
 Checked and left: the High Road's buildings are drawn at every distance
 (the outer `detail()` is `'all'`); the under-deck props casting shadows
 (they stand in the deck's own shade); the deck's joints (5 mm over the

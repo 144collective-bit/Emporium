@@ -274,6 +274,69 @@ export const ALLEYS: { house: string; poly: Pt[]; rear: number }[] = HOUSES.flat
   return [];
 });
 
+/* ---------- The backs: a back kitchen, the rear yard's walls (the map polish plan's Phase 2) ---------- */
+
+/** A house's rear yard's depth: to its alley (where the alley took some), or its plot's end */
+const ALLEY_OF = new Map(ALLEYS.map((a) => [a.house, a]));
+export const rearOf = (h: House) => ALLEY_OF.get(h.id)?.rear ?? TERRACE.rear;
+/**
+ * The single-storey back kitchen (an outrigger) against a house's left party wall (the bay's side; u < 0 along its
+ * front, as the front walls'): from `u0` to `u1` (in a 2.8 house: stretched with it), `out` into the yard, its lean-to
+ * roof from `high` at the house down to `low`. On about three houses in four whose yard is deep enough for it
+ */
+export const OUTRIGGER = { u0: -1.4, u1: -0.25, out: 1.3, high: 1.55, low: 1.15 };
+/** A point of a house's plan: u along its front (t), v out of it (its front wall's line at 0, the house behind it < 0) */
+const atUV = (h: House, u: number, v: number): Pt => [h.at[0] - h.face[1] * u + h.face[0] * v, h.at[1] + h.face[0] * u + h.face[1] * v];
+/** Where a house's outrigger would stand */
+function outriggerAt(h: House): Pt[] {
+  const k = h.w / 2.8;
+  const [u0, u1, v0, v1] = [OUTRIGGER.u0 * k, OUTRIGGER.u1 * k, -TERRACE.depth - OUTRIGGER.out, -TERRACE.depth];
+  return [atUV(h, u0, v1), atUV(h, u1, v1), atUV(h, u1, v0), atUV(h, u0, v0)];
+}
+// (where it's clear of every other house and alley: on the inside of a bend a neighbour's back comes round into it)
+export const OUTRIGGERS = new Set(
+  HOUSES.filter((h) => {
+    if (rearOf(h) < 1.9 || (Math.abs(h.at[0] * 12.9898 + h.at[1] * 78.233) * 43.7585) % 1 >= 0.75) return false;
+    const f = shrink(outriggerAt(h), 0.02);
+    return !HOUSES.some((o) => o !== h && Math.hypot(o.at[0] - h.at[0], o.at[1] - h.at[1]) < 12 && overlaps(f, houseFoot(o))) && !ALLEYS.some((a) => a.house !== h.id && overlaps(f, a.poly));
+  }).map((h) => h.id)
+);
+/** Its outrigger's foot (none without one) */
+export const outriggerFoot = (h: House): Pt[] => (OUTRIGGERS.has(h.id) ? outriggerAt(h) : []);
+/**
+ * The rear yard's walls: its left party wall (and its right at a row's end), its back wall with a gate by the back
+ * door; each in its runs clear of the other houses (at a corner the next row's end house stands in the yard's way)
+ */
+export const REAR_WALL_H = 1.0;
+const WALLS = new Map<string, [Pt, Pt][][]>();
+export function rearWalls(h: House): [Pt, Pt][][] {
+  const had = WALLS.get(h.id);
+  if (had) return had;
+  const [v0, v1] = [-TERRACE.depth, -TERRACE.depth - rearOf(h) + 0.05];
+  const w = h.w / 2;
+  const lines: [Pt, Pt][] = [
+    [atUV(h, -w, v0), atUV(h, -w, v1)],
+    [atUV(h, -w, v1), atUV(h, DOOR_U - GATE_W / 2, v1)],
+    [atUV(h, DOOR_U + GATE_W / 2, v1), atUV(h, w, v1)],
+  ];
+  if (h.endR) lines.push([atUV(h, w, v0), atUV(h, w, v1)]);
+  const feet = HOUSES.filter((o) => o !== h && Math.hypot(o.at[0] - h.at[0], o.at[1] - h.at[1]) < 12).map((o) => houseFoot(o));
+  const runs = lines.map(([a, c]) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.2));
+    const at = (f: number): Pt => [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f];
+    const out: [Pt, Pt][] = [];
+    let from = -1;
+    for (let i = 0; i <= n; i++) {
+      const free = i < n && !feet.some((f) => inside(f, at((i + 0.5) / n)));
+      if (free && from < 0) from = i;
+      if (!free && from >= 0) (out.push([at(from / n), at(i / n)]), (from = -1));
+    }
+    return out;
+  });
+  WALLS.set(h.id, runs);
+  return runs;
+}
+
 /* ---------- The front walls, the solids ---------- */
 
 /** Where the door is along the front (from the middle, along t): the bay to the other side */
@@ -294,14 +357,14 @@ export function frontWalls(h: House): [Pt, Pt][] {
 }
 export const WALL_H = 0.32;
 /** The houses (their tops over their bases: not lifted again) and their front walls (on the ground: lifted, solids.ts) */
-export const TERRACE_SOLIDS: Box[] = HOUSES.flatMap((h) => cover(houseFoot(h), h.base + TERRACE.eaves + TERRACE.ridge, 0.6));
+export const TERRACE_SOLIDS: Box[] = HOUSES.flatMap((h) => [...cover(houseFoot(h), h.base + TERRACE.eaves + TERRACE.ridge, 0.6), ...(OUTRIGGERS.has(h.id) ? cover(outriggerFoot(h), h.base + OUTRIGGER.high, 0.6) : [])]);
 export const TERRACE_GROUND_SOLIDS: Box[] = HOUSES.flatMap((h) =>
-  frontWalls(h).flatMap(([a, c]) => {
+  [...frontWalls(h).map((l) => [l, WALL_H] as const), ...rearWalls(h).flat().map((l) => [l, REAR_WALL_H] as const)].flatMap(([[a, c], top]) => {
     // (in short pieces, so a slanting wall's boxes don't fill the yard behind it)
     const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.5));
     return Array.from({ length: n }, (_, i): Box => {
       const [p, q] = [i / n, (i + 1) / n].map((f): Pt => [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f]);
-      return [Math.min(p[0], q[0]) - 0.07, Math.min(p[1], q[1]) - 0.07, Math.max(p[0], q[0]) + 0.07, Math.max(p[1], q[1]) + 0.07, WALL_H];
+      return [Math.min(p[0], q[0]) - 0.07, Math.min(p[1], q[1]) - 0.07, Math.max(p[0], q[0]) + 0.07, Math.max(p[1], q[1]) + 0.07, top];
     });
   })
 );

@@ -4,7 +4,7 @@
 // a row facing Degen's gates; no row longer than twelve before a ginnel.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALLEYS, GINNELS, HOUSES, TERRACE, houseFoot, plotOf } from '../src/scripts/city3d/southterraces';
+import { ALLEYS, DOOR_U, GINNELS, HOUSES, OUTRIGGERS, TERRACE, houseFoot, outriggerFoot, plotOf, rearOf, rearWalls } from '../src/scripts/city3d/southterraces';
 import { southLift } from '../src/scripts/city3d/southground';
 import { CHURCHYARD, COMPOUND_GATES, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, type Pt } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
@@ -91,4 +91,44 @@ test('behind the rows: a back alley behind most houses, in no one else\'s plot; 
     for (const p of houseFoot(h)) assert.ok(h.base - 0.15 >= southLift(p[0], p[1]) - 1e-6, `${h.id} under the ground`);
   }
   assert.ok(Math.max(...HOUSES.map((h) => h.base)) > 1, "some up the village's hill");
+});
+
+test("the backs (the map polish plan's Phase 2): a back kitchen on most deep yards, in its own yard; the yard walled round, a gate by the back door", () => {
+  const deep = HOUSES.filter((h) => rearOf(h) >= 1.9);
+  assert.ok(OUTRIGGERS.size > deep.length * 0.6 && OUTRIGGERS.size < deep.length * 0.9, `${OUTRIGGERS.size} back kitchens of ${deep.length} deep yards`);
+  const plots = new Map(HOUSES.map((h) => [h.id, plotOf(h)]));
+  for (const h of HOUSES) {
+    const foot = outriggerFoot(h);
+    if (!OUTRIGGERS.has(h.id)) {
+      assert.equal(foot.length, 0);
+      continue;
+    }
+    // (inside its own plot, behind the house, short of the yard's end; in no other house, plot or alley)
+    const c: Pt = [foot.reduce((s, p) => s + p[0], 0) / 4, foot.reduce((s, p) => s + p[1], 0) / 4];
+    assert.ok(inside(plots.get(h.id)!, c), `${h.id}'s back kitchen off its plot`);
+    // (its corners pulled in 2%: a corner on a neighbour's party line touches it, it isn't in it)
+    const inner = foot.map((p): Pt => [p[0] * 0.98 + c[0] * 0.02, p[1] * 0.98 + c[1] * 0.02]);
+    for (const o of HOUSES) if (o !== h) for (const p of inner) assert.ok(!inside(houseFoot(o), p), `${h.id}'s back kitchen in ${o.id}`);
+    for (const a of ALLEYS) if (a.house !== h.id) for (const p of inner) assert.ok(!inside(a.poly, p), `${h.id}'s back kitchen in an alley`);
+  }
+  let clipped = HOUSES.length;
+  for (const h of HOUSES) {
+    const walls = rearWalls(h);
+    assert.equal(walls.length, h.endR ? 4 : 3);
+    // (no wall through a house: a run stops where the next row's house stands in the yard)
+    for (const [a, b] of walls.flat())
+      for (const o of HOUSES)
+        for (const f of [0.25, 0.5, 0.75]) assert.ok(!inside(houseFoot(o), [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]), `${h.id}'s yard wall through ${o.id}`);
+    // (the gate's gap behind the back door: the back wall's two runs either side of it, where nothing cut them)
+    if (walls[1].length !== 1 || walls[2].length !== 1) continue;
+    clipped--;
+    const [r0, r1] = [walls[1][0], walls[2][0]];
+    const gap = Math.hypot(r1[0][0] - r0[1][0], r1[0][1] - r0[1][1]);
+    assert.ok(Math.abs(gap - 0.8) < 1e-6, `${h.id}'s gate ${gap}`);
+    const mid: Pt = [(r0[1][0] + r1[0][0]) / 2, (r0[1][1] + r1[0][1]) / 2];
+    const door: Pt = [h.at[0] - h.face[1] * DOOR_U, h.at[1] + h.face[0] * DOOR_U];
+    assert.ok(Math.abs(Math.hypot(mid[0] - door[0], mid[1] - door[1]) - (TERRACE.depth + rearOf(h) - 0.05)) < 1e-6, `${h.id}'s gate not behind its door`);
+  }
+  // (only the corners cut: nearly every back wall whole)
+  assert.ok(clipped < HOUSES.length * 0.1, `${clipped} back walls cut`);
 });

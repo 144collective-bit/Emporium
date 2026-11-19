@@ -82,10 +82,14 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
 - **Aldwyn's Green's terraces** (`southterraces.ts`, DOM-free, tested in `tests/southterraces.test.ts`, 3a): `HOUSES`
   (each its front's middle `at`, its `face`, frontage `w`, street, block, front, paint, door, dormer, chimney, `lit`,
-  `endL` / `endR`, `base` / `low`), `houseFoot()`, `plotOf()`, `ALLEYS`, `GINNELS`, `frontWalls()`, the solids,
-  `TERRACES_RECT`. Drawn by `village3d.ts` (lazy chunk `village`): `PIECES` (one house's shapes in its own frame,
-  `frameOf()` stretches each to its frontage, right-handed) copied by `Batch.instances()`, built with `lift: false`; the
-  yards, walls, alleys and ginnels in a lifted Batch. Bench view `village-terraces`.
+  `endL` / `endR`, `base` / `low`), `houseFoot()`, `plotOf()`, `ALLEYS`, `GINNELS`, `frontWalls()`, the backs (the map
+  polish plan's Phase 2: `rearOf()` the yard's depth, `OUTRIGGER` / `OUTRIGGERS` / `outriggerFoot()` the back kitchen
+  on about three deep yards in four, clear of every other house and alley; `rearWalls()` the yard's party wall and
+  back wall with a gate behind the back door, in runs clipped clear of other houses at the corners), the solids (the
+  back kitchens in `TERRACE_SOLIDS`, the yard walls in `TERRACE_GROUND_SOLIDS`), `TERRACES_RECT`. Drawn by `village3d.ts` (lazy chunk `village`): `PIECES` (one house's shapes in its own frame,
+  `frameOf()` stretches each to its frontage, right-handed; the back's windows and door, the end gables' windows and
+  the back kitchens at every distance, the gutters and downpipes near) copied by `Batch.instances()`, built with
+  `lift: false`; the yards, walls, alleys and ginnels in a lifted Batch. Bench view `village-terraces`.
 - **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
   (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
   `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,
@@ -95,7 +99,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   kind, name, front `at`, `face`, `w`, `d`, storeys, colour, base), `KINDS`, `HEIGHT`, `shopFoot()`, `topOf()`, `doorOf()`,
   `SHOP_SOLIDS`, `HIGHROAD_RECT` (the village's chunk covers it); laid before the terraces (southterraces.ts keeps out of
   them). The big four (`brook`, `rosas`, `kestrel`, `busgarage`) are places in endsplaces.ts. Drawn by `highroad3d.ts`
-  (`registerHighRoad()`, from village3d.ts): every kind in a building's own frame, the signs one atlas (`siteMat`).
+  (`registerHighRoad()`, from village3d.ts): every kind in a building's own frame, the signs one atlas (`siteMat`); an
+  end wall with no neighbour against it (`exposed()`) gets windows up its side; the gap plot is a hoarding of boards on
+  posts with bills and a tag (grime.ts), rough ground, rubble, weeds and a skip behind it.
 - **The council rows, bungalows, allotments** (`council.ts`, DOM-free, tested in `tests/council.test.ts`, 3d): `lay()`
   (lots along a block's runs where they fit, in zones), `lotRing()`, `SEMIS`, `BUNGALOWS`, `CORNER_SHOPS`,
   `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT`
@@ -103,7 +109,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   boot**: only the village's chunk imports it (laying it out took seconds as the page loaded), so its solids join
   there, `registerCouncil()` calling `addSolids()` on the main thread (the houses' with `lift` false, their tops
   already over their plinths), as Sunridge's houses do; tests that check against `SOLIDS` across the south add them
-  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
+  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts):
+  every window framed at every distance (`frameAround()`), sills near; the semis' and bungalows' backs windowed with a
+  back door, the semis' end walls a landing window; the back gardens fenced (lap panels and posts, a fence between a
+  pair's gardens, clipped clear of the houses: drawn, not solid); the corner shops a door beside their window, their
+  backs windowed; the community centre's boards framed, a canopy, bills; the allotment sheds pitched, a door, a window
+  and a water butt; the caravan windowed on its wheels and hitch.
 - **Aldwyn's Green Rec** (`rec.ts`, DOM-free, tested in `tests/rec.test.ts`, 3e): `PITCH`, `GOALS`, `PAVILION`, `VERANDA`,
   `SKATE` and its features, `PLAYGROUND`, `BENCHES`, `GATE`, `FOOTPATH`, `BRIDGE` / `recBridgeY()` (groundheight.ts's
   `recbridge` layer), `REC_PATH`, `REC_SPAWN`, `REC_SOLIDS`, `REC_RECT`; a place (`rec`, endsplaces.ts). Drawn by

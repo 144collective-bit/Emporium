@@ -11,6 +11,8 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, neon, roundRect, siteMat, toon } from './kit';
 import { site } from './tilework';
+import { poster, tag } from './grime';
+import { PLANT, SOIL, STONE as STONE_PAL } from './palette';
 import { BACK_IN, HEIGHT, SHOPS, STATION_DOOR, STATION_WALL, shopFoot, type Shop } from './highroad';
 import { BUILDING_STAIRS as STATION_STAIRS, LINE_COLOUR, STAIR_RUN as STATION_STAIR_RUN } from './southline';
 
@@ -56,6 +58,12 @@ const GLASS_LIT = neon('#ffd99a', 0.14, 1.05);
 const GLASS_DARK = toon('#27324a');
 const SHOP_GLASS = neon('#ffe7b8', 0.22, 1.2);
 const PLY = toon('#a3804f');
+const PLY_DARK = toon('#8c6c42');
+const TIMBER = toon('#6a4e33');
+const ROUGH = toon(SOIL.garden);
+const RUBBLE = toon(STONE_PAL.gravel);
+const WEEDS = toon(PLANT.shrub);
+const SKIP = toon('#d6a12a');
 const STATION_STONE = toon('#e3dccd');
 const HOARD_LINE = toon(LINE_COLOUR);
 /** The city's M mark (as the raised metro's, metro3d.ts): a magenta disc with a white M, over the station's door */
@@ -158,12 +166,25 @@ function kit(b: Batch, s: Shop) {
     g.computeVertexNormals();
     put(g, roof);
   };
-  return { box, pane, sign, gable };
+  return { box, pane, sign, gable, put };
 }
 
 /** A sash window's glass on the front, lit or dark by a seeded pick */
 const pick = (s: Shop, k: number) => ((s.at[0] * 13.1 + s.at[1] * 7.7 + k * 3.3) % 1 + 1) % 1;
 
+/** Does a shop's end wall (its left looking at its front, e -1; its right, 1) stand with no neighbour against it */
+function exposed(s: Shop, e: -1 | 1) {
+  const [nx, nz] = s.face;
+  // (a point just past that end, half way back)
+  const [x, z] = [s.at[0] + nz * e * (s.w / 2 + 0.5) - nx * (s.d / 2), s.at[1] - nx * e * (s.w / 2 + 0.5) - nz * (s.d / 2)];
+  return !SHOPS.some((o) => {
+    if (o === s) return false;
+    const f = shopFoot(o);
+    let c = false;
+    for (let i = 0, j = f.length - 1; i < f.length; j = i++) if (f[i][1] > z !== f[j][1] > z && x < ((f[j][0] - f[i][0]) * (z - f[i][1])) / (f[j][1] - f[i][1]) + f[i][0]) c = !c;
+    return c;
+  });
+}
 function drawShop(b: Batch, s: Shop, low: boolean) {
   const k = kit(b, s);
   const w = s.w / 2;
@@ -197,6 +218,18 @@ function drawShop(b: Batch, s: Shop, low: boolean) {
           const y0 = floor + (f - 1) * HEIGHT.storey + 0.25;
           if (parade) glass(0, y0, y0 + 0.55, s.w - 0.6, f);
           else if (s.kind !== 'boarded') for (const x of pub ? [-w + 1.5, -w + 4, w - 4, w - 1.5] : [-w + 1.1, w - 1.1]) glass(x, y0, y0 + 0.62, 0.7, f * 7 + x);
+        }
+        // (an end wall with no neighbour against it: windows up its side, a storey at a time, not blank brick; the map
+        // polish plan's Phase 2)
+        for (const e of [-1, 1] as const) {
+          if (!exposed(s, e)) continue;
+          const side = (zc: number, y0: number, y1: number, ww: number, m: THREE.Material) =>
+            k.put(new THREE.PlaneGeometry(ww, y1 - y0).rotateY((e * Math.PI) / 2).translate(e * (w + 0.012), (y0 + y1) / 2, zc), m);
+          for (let f = 1; f < s.storeys; f++) {
+            const y0 = floor + (f - 1) * HEIGHT.storey + 0.25;
+            for (const zc of [-s.d * 0.3, -s.d * 0.7]) side(zc, y0, y0 + 0.62, 0.7, s.kind === 'boarded' ? PLY : pick(s, f * 3 + zc) < 0.55 ? GLASS_LIT : GLASS_DARK);
+          }
+          if (s.kind !== 'boarded') side(-s.d * 0.6, 0.35, floor - 0.4, 1.0, GLASS_DARK);
         }
         if (pub) k.gable(-w, w, -s.d - 0.2, 0.2, top, 2.2, false, SLATE, s.kind === 'boarded' ? DARK : brick);
         else {
@@ -286,8 +319,36 @@ function drawShop(b: Batch, s: Shop, low: boolean) {
         break;
       }
       case 'gap': {
-        // A hoarding along the front, rough ground behind it
-        k.box(-w, w, -plinth, HEIGHT.hoarding, -0.3, 0, PLY);
+        // A hoarding along the front (the map polish plan's Phase 2: it was one plywood slab): its boards a sheet
+        // each, two tones, on a timber frame with posts, bills pasted on it and a tag; rough ground behind, a heap of
+        // rubble, weeds and a skip
+        const H = HEIGHT.hoarding;
+        k.box(-w, w, -plinth, 0.02, -0.3, 0, CONCRETE);
+        const sheets = Math.max(1, Math.round(s.w / 1.2));
+        for (let i = 0; i < sheets; i++) {
+          const [x0, x1] = [-w + (i * s.w) / sheets + 0.012, -w + ((i + 1) * s.w) / sheets - 0.012];
+          k.box(x0, x1, 0.02, H, -0.06, 0, pick(s, i) < 0.5 ? PLY : PLY_DARK);
+        }
+        for (let i = 0; i <= sheets; i++) k.box(-w + (i * s.w) / sheets - 0.05, -w + (i * s.w) / sheets + 0.05, 0, H + 0.08, -0.22, -0.06, TIMBER);
+        k.box(-w, w, H - 0.25, H - 0.17, -0.14, -0.06, TIMBER);
+        k.box(-w, w, 0.35, 0.43, -0.14, -0.06, TIMBER);
+        // (the bills and a tag on its front, in the world's frame: grime.ts's atlases)
+        const at = (x: number, y: number): [number, number, number] => [s.at[0] + s.face[1] * x + s.face[0] * 0.012, s.base + y, s.at[1] - s.face[0] * x + s.face[1] * 0.012];
+        for (let i = 0; i < 4; i++) {
+          const x = -w + 0.9 + (i * (s.w - 1.8)) / 3 + (pick(s, 20 + i) - 0.5) * 0.4;
+          poster(b, Math.floor(pick(s, 30 + i) * 97), 1.15, s.face, ...at(x, 0.95 + (pick(s, 40 + i) - 0.5) * 0.2));
+        }
+        tag(b, Math.floor(pick(s, 50) * 97), 1.6, s.face, ...at((pick(s, 51) - 0.5) * (s.w - 2), 0.45));
+        // Behind: the rough ground, a heap and weeds, a skip by the back
+        k.box(-w + 0.1, w - 0.1, -plinth, 0.03, -s.d + 0.1, -0.3, ROUGH);
+        k.box(-w + 1.2, -w + 3.4, 0.03, 0.4, -s.d + 1.2, -s.d + 3.0, RUBBLE);
+        k.box(-w + 1.6, -w + 3.0, 0.4, 0.7, -s.d + 1.6, -s.d + 2.6, RUBBLE);
+        for (let i = 0; i < 9; i++) {
+          const [x, z] = [-w + 0.6 + pick(s, 60 + i) * (s.w - 1.2), -0.7 - pick(s, 70 + i) * (s.d - 1.4)];
+          k.box(x - 0.18, x + 0.18, 0.03, 0.25 + pick(s, 80 + i) * 0.2, z - 0.18, z + 0.18, WEEDS);
+        }
+        k.box(w - 2.9, w - 0.5, 0.03, 0.95, -s.d + 0.5, -s.d + 1.9, SKIP);
+        if (!low) k.box(w - 2.95, w - 0.45, 0.95, 1.02, -s.d + 0.45, -s.d + 1.95, DARK);
         break;
       }
     }
