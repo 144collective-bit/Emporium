@@ -60,7 +60,7 @@ const BUILDING_DEG = (Math.atan2(BUILDING_FWD[1], BUILDING_FWD[0]) * 180) / Math
 /** The High Road's platform on the building's axis, west of it: its hall's far end just west of the building */
 const HIGHROAD_AT: Pt = local(-BUILDING.w / 2 - 0.5 - (HALL_LEN + ESC_RUN - 2) - PLAT_LEN / 2, -BUILDING.d / 2);
 /** Where each station's stairs start at street level (clear ground: tests/southline.test.ts); they run down towards its hall */
-const TOPS: Record<'trenches' | 'lot9' | 'aldwyns', Pt> = { trenches: [-99, 193.5], lot9: [-115.5, 472], aldwyns: [-225, 454] };
+const TOPS: Record<'trenches' | 'lot9' | 'aldwyns', Pt> = { trenches: [-100.5, 181.6], lot9: [-115.5, 472], aldwyns: [-225, 454] };
 
 /**
  * A station as laid: its platform's middle and the way the line runs through it (degrees, from +x towards +z); its
@@ -76,8 +76,8 @@ interface StationSpec {
   way: { kind: 'stairs' | 'building' | 'plaza'; top: Pt; deg: number };
 }
 const SPECS: StationSpec[] = [
-  // Under The Trenches' el street and the block south of it, its hall under the block; its stairs down on the block
-  // behind the raised station's tower (the change between them, a few steps)
+  // Under The Trenches' el street and The Block south of it, its hall under The Block; its stairs down in The Block's
+  // plaza beside the raised station's stair tower (the change between them, a few steps), clear of its playground
   { id: 'trenches', name: 'The Trenches', at: [RAISED_TRENCHES.door.x, 170], deg: 90, hall: 'end', way: { kind: 'stairs', top: TOPS.trenches, deg: 0 } },
   // Under the Circus's west side, its hall reached from the sunken plaza (west, between its subways)
   { id: 'circus', name: 'Circus', at: [CIRCUS.x - 14, 441], deg: 92, hall: 'start', way: { kind: 'plaza', top: [CIRCUS.x, CIRCUS.z], deg: 180 } },

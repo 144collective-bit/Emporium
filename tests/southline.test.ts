@@ -165,3 +165,16 @@ test('walked: down the stairs to the hall, down the escalator to the platform; i
     assert.ok(U.wall(...pointOf(st.hall, (st.hall.a0 + st.hall.a1) / 2, side * (st.hall.half + 0.2)), HALL_Y, 0.3), `${st.id}: its hall's wall`);
   }
 });
+
+test("The Trenches' stairs open in The Block's plaza by the raised station's tower, clear of its playground and benches", async () => {
+  const { THE_BLOCK } = await import('../src/scripts/city3d/projects');
+  const w = stationOf('trenches').way;
+  const inRect = (r: readonly number[], [x, z]: Pt, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+  for (let s = w.a0 - 0.3; s <= w.ramp0 + 0.3; s += 0.3)
+    for (const u of [-1.5, 0, 1.5]) {
+      const p = pointOf(w, s, u);
+      assert.ok(inRect(THE_BLOCK.plaza, p), 'in the plaza');
+      assert.ok(!inRect(THE_BLOCK.playground, p, 0.5) && !inRect(THE_BLOCK.fence, p, 0.5), 'clear of the playground and the court');
+      for (const [x, z] of THE_BLOCK.benches) assert.ok(Math.hypot(x - p[0], z - p[1]) > 1.2, 'clear of a bench');
+    }
+});
