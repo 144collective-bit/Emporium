@@ -187,11 +187,18 @@ export const OVERLOOK = (() => {
 
 /* ---------- The reservoir ---------- */
 
-/** The basin (x0, z0, x1, z1) held at `floor`, the water at `y` over it */
+/**
+ * The basin's water sits a little under its stone coping (`crest`), the ground round it held level at the coping's height
+ * for `apron` (a walk round the water, the embankment on the low sides past it), the basin's floor just under the water:
+ * a drop from the apron to the floor under the coping no more than the ground's no-steps rule allows (terrain.ts's test)
+ */
+export const BASIN_DEPTH = 0.25;
+const BASIN = (y: number) => ({ crest: y + 0.15, apron: 1.5, coping: 0.9 });
+/** The basin (x0, z0, x1, z1) held at `floor`, the water at `y` over it, its coping at `crest`, its apron round it */
 export const RESERVOIR = (() => {
   const rect: Rect = [408, -284, 428, -268];
   const y = 16.4;
-  const floor = y - 1.5;
+  const floor = y - BASIN_DEPTH;
   // A dam on each side where the hills just past it fall below the water (west, north, east, south)
   const sideLow = (pts: Pt[]) => Math.min(...pts.map(([x, z]) => natural(x, z))) < y + 0.3;
   const along = (a: Pt, b: Pt): Pt[] => Array.from({ length: 11 }, (_, k): Pt => [a[0] + ((b[0] - a[0]) * k) / 10, a[1] + ((b[1] - a[1]) * k) / 10]);
@@ -204,7 +211,8 @@ export const RESERVOIR = (() => {
   };
   // The water: out over the banks where the hills rise past it (its edge under the ground there), to the dams' faces
   const water: Rect = [rect[0] - (dams.w ? 0 : e), rect[1] - (dams.n ? 0 : e), rect[2] + (dams.e ? 0 : e), rect[3] + (dams.s ? 0 : e)];
-  return { rect, y, floor, dams, water, dam: 1.4, tower: { x: rect[0] + 6, z: rect[1] + 6, r: 1, h: 3 } };
+  // (the owner's call, 2026-11-19, the reservoir's water spread up its banks: now held in a stone-edged basin)
+  return { rect, y, floor, dams, water, dam: 1.4, tower: { x: rect[0] + 6, z: rect[1] + 6, r: 1, h: 3 }, ...BASIN(y) };
 })();
 /** The fence round it: just outside the water (on a dam, along its crest's outer side) */
 export const FENCE: Rect = (() => {
@@ -247,11 +255,13 @@ export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' |
 
 /* ---------- The ground held level, what's solid, where the planting keeps off ---------- */
 
-export const SITE_LEVELS = [
+export const SITE_LEVELS: { rect: Rect; y: number; ease: number; of?: string }[] = [
   { rect: CIVIC.pad, y: CIVIC.y, ease: EASE },
   { rect: CLUB.pad, y: CLUB.y, ease: EASE },
   { rect: OVERLOOK.rect, y: OVERLOOK.y, ease: EASE },
-  { rect: RESERVOIR.rect, y: RESERVOIR.floor, ease: EASE },
+  // (the reservoir's apron at its coping's height, then its basin a little lower inside it, eased under the coping)
+  { rect: [RESERVOIR.rect[0] - RESERVOIR.apron, RESERVOIR.rect[1] - RESERVOIR.apron, RESERVOIR.rect[2] + RESERVOIR.apron, RESERVOIR.rect[3] + RESERVOIR.apron] as Rect, y: RESERVOIR.crest, ease: EASE, of: 'reservoir' },
+  { rect: RESERVOIR.rect, y: RESERVOIR.floor, ease: 0.45, of: 'reservoir' },
 ];
 
 const box = (r: Rect, top: number): Box => [r[0], r[1], r[2], r[3], top];

@@ -13,6 +13,8 @@ import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { waterMat } from './world';
 import { drawnAt, heightAt } from './terrain';
+import { DRAPE, OVERLOOK_PATH, discMesh, lineMesh } from './crestdrape';
+import { meshGeometry } from './mansions3d';
 import { CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y, TEE, bunkersOf, flagOf, type Hole } from './crestsites';
 import { WINDOW, hip, poolOf } from './estates3d';
 import { BULB, LED, PAVING, SPRAY, WATER, flat } from './mallkit';
@@ -97,22 +99,10 @@ function windowsRound(b: Batch, r: Rect, y0: number, floors: number, ground: num
     }
   }
 }
-/** A flat shape laid on the ground (its vertices at the ground's height and `off` over it) */
-function drape(g: THREE.BufferGeometry, off: number) {
-  const pos = g.attributes.position;
-  for (let i = 0; i < pos.count; i++) pos.setY(i, drawnAt(pos.getX(i), pos.getZ(i)) + off);
-  g.computeVertexNormals();
-  return g;
-}
-/** A disc (or an ellipse) on the ground */
-const disc = (x: number, z: number, rx: number, rz: number, off: number, seg = 18) => drape(new THREE.CircleGeometry(1, seg).rotateX(-Math.PI / 2).scale(rx, 1, rz).translate(x, 0, z), off);
-/** A strip along a line on the ground, `w` either side, in pieces about a tile long */
-function strip(a: Pt, c: Pt, w: number, off: number) {
-  const L = Math.hypot(c[0] - a[0], c[1] - a[1]);
-  const g = new THREE.PlaneGeometry(2 * w, L, 2, Math.max(1, Math.ceil(L))).rotateX(-Math.PI / 2);
-  g.rotateY(Math.atan2(c[0] - a[0], c[1] - a[1])).translate((a[0] + c[0]) / 2, 0, (a[1] + c[1]) / 2);
-  return drape(g, off);
-}
+/** A disc (or an ellipse) on the ground: dense, on the grass as drawn (crestdrape.ts) */
+const disc = (x: number, z: number, rx: number, rz: number, off: number) => meshGeometry(discMesh(x, z, rx, rz, off));
+/** A strip along a line on the ground, `w` either side: dense, on the grass as drawn (crestdrape.ts) */
+const strip = (a: Pt, c: Pt, w: number, off: number) => meshGeometry(lineMesh([a, c], w, off));
 
 export function registerSites(low: boolean, scene: THREE.Scene | null) {
   /* ---------- The grand hotel ---------- */
@@ -335,7 +325,7 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     b.build(into, { cast: true, receive: true });
     const p = new Batch();
     flat(p, x0, z0, x1, z1, y + 0.02, PAVING, 8);
-    p.add(strip(pa, pb, 1.1, 0.08), STONE);
+    p.add(strip(pa, pb, OVERLOOK_PATH.half, OVERLOOK_PATH.lift), STONE);
     p.build(into, { cast: false, receive: true });
   });
 
@@ -344,16 +334,19 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
   site('crestmont reservoir', [FENCE[0] - 4, FENCE[1] - 4, FENCE[2] + 4, FENCE[3] + 4], (into) => {
     const b = new Batch();
     const [x0, z0, x1, z1] = R.rect;
-    const crest = R.y + 0.5;
-    const dam = (r: Rect) => {
-      const lo = Math.min(heightAt(r[0], r[1]), heightAt(r[2], r[1]), heightAt(r[0], r[3]), heightAt(r[2], r[3]), R.floor) - 0.8;
-      box(b, r[0], lo, r[1], r[2], crest, r[3], CONCRETE);
-      box(b, r[0] - 0.02, crest, r[1] - 0.02, r[2] + 0.02, crest + 0.06, r[3] + 0.02, CONCRETE_TOP);
-    };
-    if (R.dams.e) dam([x1, R.water[1], x1 + R.dam, R.water[3] + (R.dams.s ? R.dam : 0)]);
-    if (R.dams.w) dam([x0 - R.dam, R.water[1], x0, R.water[3]]);
-    if (R.dams.s) dam([R.water[0], z1, x1, z1 + R.dam]);
-    if (R.dams.n) dam([R.water[0], z0 - R.dam, R.water[2], z0]);
+    const crest = R.crest;
+    // The coping round the basin: stone from under the floor to a little over the apron, the water just under it
+    // (the owner's call, 2026-11-19: the water held in a stone-edged basin, not spread up its banks)
+    const c = R.coping / 2;
+    for (const r of [
+      [x0 - c, z0 - c, x1 + c, z0 + c],
+      [x0 - c, z1 - c, x1 + c, z1 + c],
+      [x0 - c, z0 + c, x0 + c, z1 - c],
+      [x1 - c, z0 + c, x1 + c, z1 - c],
+    ] as Rect[]) {
+      box(b, r[0], R.floor - 0.15, r[1], r[2], crest + 0.1, r[3], CONCRETE);
+      box(b, r[0] - 0.03, crest + 0.1, r[1] - 0.03, r[2] + 0.03, crest + 0.16, r[3] + 0.03, CONCRETE_TOP);
+    }
     // The valve tower: concrete from the floor, a little roof
     const { x, z, r, h } = R.tower;
     cyl(b, r, R.y + h - R.floor, x, R.floor, z, CONCRETE, 16);
@@ -361,10 +354,8 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     b.add(new THREE.ConeGeometry(r + 0.2, 0.7, 16).translate(x, R.y + h + 0.6, z), TILE);
     // The fence: iron posts and two rails, following the ground (on a dam, its crest)
     const [fx0, fz0, fx1, fz1] = FENCE;
-    const ground = (px: number, pz: number) => {
-      const onDam = (R.dams.e && px > x1 - 0.1) || (R.dams.s && pz > z1 - 0.1) || (R.dams.w && px < x0 + 0.1) || (R.dams.n && pz < z0 + 0.1);
-      return onDam ? crest : heightAt(px, pz);
-    };
+    // (on the ground as it's drawn: the apron, or the bank eased past it)
+    const ground = (px: number, pz: number) => drawnAt(px, pz);
     for (const [ax, az, bx, bz] of [[fx0, fz0, fx1, fz0], [fx0, fz1, fx1, fz1], [fx0, fz0, fx0, fz1], [fx1, fz0, fx1, fz1]]) {
       const L = Math.hypot(bx - ax, bz - az);
       const k = Math.max(1, Math.round(L / 2));
@@ -383,7 +374,8 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
   });
   // The water itself, on the main thread (the city's water shader)
   if (scene) {
-    const [a, c, e, d] = R.water;
+    // (the basin only: its coping all round)
+    const [a, c, e, d] = R.rect;
     const water = new THREE.Mesh(new THREE.PlaneGeometry(e - a, d - c).rotateX(-Math.PI / 2).translate((a + e) / 2, R.y, (c + d) / 2), waterMat);
     water.name = 'crestmont reservoir water';
     scene.add(water);
@@ -399,12 +391,11 @@ function drawHole(h: Hole, into: THREE.Object3D, low: boolean) {
   // (the fairway from just past the tee to the fringe's edge)
   const start: Pt = [h.tee[0] + ux * 3, h.tee[1] + uz * 3];
   const end: Pt = [h.green[0] - ux * (FRINGE - 0.4), h.green[1] - uz * (FRINGE - 0.4)];
-  b.add(strip(start, end, FAIRWAY, 0.1), FAIR);
-  const tee = new THREE.PlaneGeometry(TEE.half[0] * 2, TEE.half[1] * 2).rotateX(-Math.PI / 2).rotateY(Math.atan2(ux, uz)).translate(h.tee[0], 0, h.tee[1]);
-  b.add(drape(tee, 0.12), TEE_GREEN);
-  b.add(disc(h.green[0], h.green[1], FRINGE, FRINGE, 0.12), FRINGE_GREEN);
-  b.add(disc(h.green[0], h.green[1], GREEN_R, GREEN_R, 0.14), GREEN);
-  for (const [x, z] of bunkersOf(h)) b.add(disc(x, z, BUNKER_R, BUNKER_R * 0.75, 0.13, 14), SAND);
+  b.add(strip(start, end, FAIRWAY, DRAPE.fairway), FAIR);
+  b.add(strip([h.tee[0] - ux * TEE.half[1], h.tee[1] - uz * TEE.half[1]], [h.tee[0] + ux * TEE.half[1], h.tee[1] + uz * TEE.half[1]], TEE.half[0], DRAPE.tee), TEE_GREEN);
+  b.add(disc(h.green[0], h.green[1], FRINGE, FRINGE, DRAPE.fringe), FRINGE_GREEN);
+  b.add(disc(h.green[0], h.green[1], GREEN_R, GREEN_R, DRAPE.green), GREEN);
+  for (const [x, z] of bunkersOf(h)) b.add(disc(x, z, BUNKER_R, BUNKER_R * 0.75, DRAPE.bunker), SAND);
   // The flag, the tee's markers
   const [fx, fz] = flagOf(h);
   const gy = heightAt(fx, fz);

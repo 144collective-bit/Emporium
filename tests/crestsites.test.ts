@@ -8,7 +8,7 @@ import { CIVIC, CLUB, EASE, FAIRWAY, FENCE, FRINGE, HOLES, HOTEL, HOTEL_PALMS, O
 import { BED, CREST_LAMPS, FLATS_X, BOULEVARD, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { KEPT } from '../src/scripts/city3d/estates';
 import { MANSIONS } from '../src/scripts/city3d/mansions';
-import { LEVELS, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
+import { LEVELS, drawnAt, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { PALMS, hillPlanting } from '../src/scripts/city3d/landscape';
 
@@ -24,11 +24,14 @@ test('their ground: held level, off every road, mansion and each other, never a 
   for (const l of SITE_LEVELS) {
     assert.ok(LEVELS.includes(l));
     const [x0, z0, x1, z1] = l.rect;
-    for (let x = x0; x <= x1; x += 2) for (let z = z0; z <= z1; z += 2) assert.ok(Math.abs(heightAt(x, z) - l.y) < 1e-6);
+    // (a level nested inside it later, of the same site: the reservoir's basin in its apron, its own height)
+    const inner = SITE_LEVELS.filter((o) => o !== l && o.of && o.of === l.of && SITE_LEVELS.indexOf(o) > SITE_LEVELS.indexOf(l));
+    const nested = (x: number, z: number) => inner.some((o) => x > o.rect[0] - o.ease && x < o.rect[2] + o.ease && z > o.rect[1] - o.ease && z < o.rect[3] + o.ease);
+    for (let x = x0; x <= x1; x += 2) for (let z = z0; z <= z1; z += 2) if (!nested(x, z)) assert.ok(Math.abs(heightAt(x, z) - l.y) < 1e-6);
     for (let x = x0 - EASE; x <= x1 + EASE; x += 1) for (let z = z0 - EASE; z <= z1 + EASE; z += 1) assert.ok(!nearHillRoad(x, z, BED.shoulder), `a site's ground reaches a road at ${x}, ${z}`);
     for (const m of MANSIONS) assert.ok(apart(m.rect, l.rect, 2 * EASE), `a site on ${m.id}`);
     for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) assert.ok(Math.abs(naturalAt(x, z) - l.y) <= SITE_CUT);
-    for (const o of SITE_LEVELS) if (o !== l) assert.ok(apart(o.rect, l.rect, 2 * EASE));
+    for (const o of SITE_LEVELS) if (o !== l && !(o.of && o.of === l.of)) assert.ok(apart(o.rect, l.rect, 2 * EASE));
   }
   // The streets' own ground stays flat (the civic hall and the clubhouse sit at the Flats' level)
   assert.equal(CIVIC.y, 0);
@@ -87,6 +90,21 @@ test('the overlook high on the ridge, the reservoir held in by its banks and dam
     if (!dam) assert.ok(heightAt(x, z) > y, `the reservoir's water over its bank at ${x}, ${z}`);
   assert.ok(Object.values(dams).some((d) => d), 'a reservoir with no dam');
   assert.ok(FENCE[0] < water[0] && FENCE[2] > water[2] && FENCE[1] < water[1] && FENCE[3] > water[3]);
+  // The basin (the owner's call, 2026-11-19): its water held by its coping all round, the ground just outside the coping
+  // over the water everywhere (no edge over air), the floor under it, the coping over it
+  const { rect, crest, coping, floor } = RESERVOIR;
+  assert.ok(floor < y && crest > y);
+  const out = coping / 2 + 0.05;
+  const [a, b, c, d] = [rect[0] - out, rect[1] - out, rect[2] + out, rect[3] + out];
+  for (let t = 0; t <= 1; t += 0.02)
+    for (const [x, z] of [
+      [a + (c - a) * t, b],
+      [a + (c - a) * t, d],
+      [a, b + (d - b) * t],
+      [c, b + (d - b) * t],
+    ])
+      assert.ok(drawnAt(x, z) > y, `the reservoir's water over air at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+  for (let x = rect[0] + 0.5; x < rect[2]; x += 1) for (let z = rect[1] + 0.5; z < rect[3]; z += 1) assert.ok(drawnAt(x, z) < y - 0.1, 'the basin floor over its water');
 });
 
 test('nothing grows on them, and no lamp stands there', () => {

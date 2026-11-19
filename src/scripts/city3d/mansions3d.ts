@@ -18,6 +18,7 @@ import { parkedCars, type CarId } from './cars';
 import { drawnAt } from './terrain';
 import { SITE_GROUNDS, TERRACES, banks, driveLights, siteBanks, type Bank, type PlantKind, type Post } from './crestbanks';
 import { GATES } from './crestcover';
+import { DRAPE, bandMesh, lineMesh, type Mesh } from './crestdrape';
 
 /** A gate's half width in the pad's edge */
 const GATE_GAP = 0.9;
@@ -304,34 +305,12 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       const q = new Batch();
       const [ox, oz] = outOf(m.face);
       const L = Math.hypot(d1[0] - d0[0], d1[1] - d0[1]);
-      const k = Math.max(1, Math.ceil(L));
-      const pos: number[] = [];
       const [px, pz] = [-oz * 1.2, ox * 1.2];
       const at = (t: number) => [d0[0] + (d1[0] - d0[0]) * t, d0[1] + (d1[1] - d0[1]) * t];
-      for (let i = 0; i < k; i++) {
-        const [a, c] = [at(i / k), at((i + 1) / k)];
-        const y = (x: number, z: number) => drawnAt(x, z) + 0.06;
-        const quad = [
-          [a[0] - px, a[1] - pz],
-          [a[0] + px, a[1] + pz],
-          [c[0] + px, c[1] + pz],
-          [c[0] - px, c[1] - pz],
-        ];
-        for (const j of [0, 1, 2, 0, 2, 3]) pos.push(quad[j][0], y(quad[j][0], quad[j][1]), quad[j][1]);
-      }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      // (wound to face up)
-      const idx = g.attributes.position;
-      for (let t = 0; t < idx.count; t += 3) {
-        const [ax, az, bx, bz, cx, cz] = [idx.getX(t), idx.getZ(t), idx.getX(t + 1), idx.getZ(t + 1), idx.getX(t + 2), idx.getZ(t + 2)];
-        if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) < 0) {
-          const [x, y, z] = [idx.getX(t + 1), idx.getY(t + 1), idx.getZ(t + 1)];
-          idx.setXYZ(t + 1, idx.getX(t + 2), idx.getY(t + 2), idx.getZ(t + 2));
-          idx.setXYZ(t + 2, x, y, z);
-        }
-      }
-      g.computeVertexNormals();
+      // (dense, on the grass as drawn: crestdrape.ts, so the grass never shows through it)
+      const g = meshGeometry(lineMesh(m.drive, DRAPE.drive.half, DRAPE.drive.lift));
+      // (its kerbs a post every tile)
+      const k = Math.max(1, Math.ceil(L));
       q.add(g, STONE);
       const near = (x: number, z: number) => {
         const [vx, vz] = [d1[0] - d0[0], d1[1] - d0[1]];
@@ -453,30 +432,8 @@ function drawBank(into: THREE.Object3D, bank: Bank, low: boolean) {
     // (its coping: not on phones)
     if (!low) b.add(wallGeometry(w, 0.21, 0.07), COPING);
   }
-  // The beds: strips of soil over the grass along each run, a little over the ground as drawn
-  const ON_BED = 0.05;
-  for (const bed of bank.beds) {
-    const pos: number[] = [];
-    for (let i = 0; i + 1 < bed.length; i++) {
-      const [s, t] = [bed[i], bed[i + 1]];
-      const quad = [
-        [s.ax, s.ay, s.az],
-        [s.bx, s.by, s.bz],
-        [t.bx, t.by, t.bz],
-        [t.ax, t.ay, t.az],
-      ];
-      for (const j of [0, 1, 2, 0, 2, 3]) pos.push(quad[j][0], quad[j][1] + ON_BED, quad[j][2]);
-    }
-    // (wound to face up)
-    for (let k = 0; k < pos.length; k += 9) {
-      const [ax, az, bx, bz, cx, cz] = [pos[k], pos[k + 2], pos[k + 3], pos[k + 5], pos[k + 6], pos[k + 8]];
-      if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) < 0) for (let c = 0; c < 3; c++) [pos[k + 3 + c], pos[k + 6 + c]] = [pos[k + 6 + c], pos[k + 3 + c]];
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.computeVertexNormals();
-    b.add(g, BED_SOIL);
-  }
+  // The beds: strips of soil laid densely on the grass as drawn (crestdrape.ts)
+  for (const bed of bank.beds) b.add(meshGeometry(bandMesh(bed.map((s) => [s.ax, s.az]), bed.map((s) => [s.bx, s.bz]), DRAPE.bed)), BED_SOIL);
   // The plants: a mound each by its kind (phones every other), and near, its flowers or its spikes
   // (phones: near only, as the hills' scrub; the walls, beds and boulders at every distance)
   if (low) b.lod = 'near';
@@ -513,4 +470,13 @@ function drawBank(into: THREE.Object3D, bank: Bank, low: boolean) {
   });
   for (const r of bank.rocks) b.add(new THREE.DodecahedronGeometry(0.32 * r.s, 0).scale(1.15, 0.7, 0.9).rotateY(r.turn).translate(r.x, r.y + 0.1 * r.s, r.z), ROCK);
   b.build(into, { cast: true, receive: true });
+}
+
+/** A mesh laid on the grass (crestdrape.ts) as geometry */
+export function meshGeometry(m: Mesh) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3));
+  g.setIndex(m.idx);
+  g.computeVertexNormals();
+  return g;
 }

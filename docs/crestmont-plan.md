@@ -615,3 +615,22 @@ or the overlook is near or the hill rises too steeply past it. On the steepest s
 still cut into its uphill corner (2.5 to 2.9 at mansions 3 to 6), as a house on a hillside is: the terraced banks hold
 it. The yard is mown (mansions3d.ts); the banks, the planting, the land and the cover keep off it.
 
+### The fix pass (built, the owner's call, 2026-11-19: three pictures, "fix this. do another pass to ensure nothing is missed")
+
+- **The reservoir:** its water was a sheet spreading up its banks to where the grass crossed it. Now a basin: the water
+  exactly over it, a stone coping all round 0.15 over the water (0.9 wide), the ground round it held level at the
+  coping's height for 1.5 (an apron; an earth embankment on the low sides past it, where the concrete dams stood), the
+  basin's floor a little under the water, eased under the coping within the ground's no-steps and steepest-bank rules;
+  the fence on the ground as drawn. The fence's line, the door and the arrival are where they were.
+- **The drives:** the ground under each graded from its road's height at the mouth to its pad's (terrain.ts `RAMP`:
+  held level across the drive and its kerbs, eased into the slope over 4), never on a road's bed nor its pad's level
+  ground; the drive meets the road flush.
+- **What's laid on the hills** (`crestdrape.ts`): the drives, the footpaths, the banks' beds, the golf course's
+  fairways, tees, fringes, greens and bunkers and the overlook's path, drawn a point every half tile along and across on
+  the grass as drawn (they were two points across, a green a middle and a rim, the grass bending up through them); the
+  hill roads' asphalt every half tile over the higher of its bed and the grass. `tests/crestdrape.test.ts` holds the
+  grass at least 5 mm under every one of them.
+- **Found on the pass:** the hill roads' retaining walls stood over the bank behind them by 1.2 on average (1.8 at
+  most, 358 of 359 pieces), their height taken from the hills 4 out where the road's bank eases over 12; now topped
+  0.28 over the ground right behind them (a kerb of 0.35 at least), tested.
+

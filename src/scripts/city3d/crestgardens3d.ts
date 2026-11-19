@@ -28,6 +28,8 @@ import { TERRAIN_RECT, drawnAt } from './terrain';
 import { BULB, SPRAY, WATER } from './mallkit';
 import { PLANT } from './palette';
 import { TERRACES } from './crestbanks';
+import { DRAPE, lineMesh } from './crestdrape';
+import { meshGeometry } from './mansions3d';
 import { BOLLARDS, GARDEN_PATHS, PATH_BOLLARDS, PATH_LIGHTS, TRAIL, TRAILS, cover, type DriftKind } from './crestcover';
 import { TILE as GROUND_TILE } from './tiles';
 
@@ -724,25 +726,8 @@ export function registerCover(low: boolean) {
     const zs = t.pts.map((p) => p[1]);
     site(`crestmont trail ${k}`, [Math.min(...xs) - 2, Math.min(...zs) - 2, Math.max(...xs) + 2, Math.max(...zs) + 2], (into) => {
       const b = new Batch();
-      const pos: number[] = [];
-      const edge = (i: number, s: number) => {
-        const [p, q] = [t.pts[Math.max(0, i - 1)], t.pts[Math.min(t.pts.length - 1, i + 1)]];
-        const [dx, dz] = [q[0] - p[0], q[1] - p[1]];
-        const l = Math.hypot(dx, dz) || 1;
-        const [x, z] = [t.pts[i][0] - (dz / l) * s * TRAIL.half, t.pts[i][1] + (dx / l) * s * TRAIL.half];
-        return [x, drawnAt(x, z) + 0.045, z];
-      };
-      for (let i = 0; i + 1 < t.pts.length; i++) {
-        const [a, c, d, e] = [edge(i, -1), edge(i, 1), edge(i + 1, 1), edge(i + 1, -1)];
-        for (const v of [a, c, d, a, d, e]) pos.push(...v);
-      }
-      for (let n = 0; n < pos.length; n += 9) {
-        const [ax, az, bx, bz, cx, cz] = [pos[n], pos[n + 2], pos[n + 3], pos[n + 5], pos[n + 6], pos[n + 8]];
-        if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) < 0) for (let c = 0; c < 3; c++) [pos[n + 3 + c], pos[n + 6 + c]] = [pos[n + 6 + c], pos[n + 3 + c]];
-      }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      g.computeVertexNormals();
+      // (dense, on the grass as drawn: crestdrape.ts)
+      const g = meshGeometry(lineMesh(t.pts.map((p): [number, number] => [p[0], p[1]]), TRAIL.half, DRAPE.path));
       b.add(g, TRAIL_GRAVEL);
       const ends = [t.pts[0], t.pts[t.pts.length - 1]];
       for (const [x, z] of [...BOLLARDS, ...PATH_BOLLARDS].filter(([x, z]) => ends.some((p) => Math.hypot(p[0] - x, p[1] - z) < 3))) {

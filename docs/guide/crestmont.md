@@ -171,4 +171,16 @@ keep it up to date when what it describes changes.
   stood. Its chunk's setup is light on the main thread: the footpaths are
   baked (`crest-paths`), the banks and the slopes' drifts laid when their
   sites are built (`banks()`, `siteBanks()`, `driveLights()`, `cover()`).
-  Made-up names only.
+  The fix pass (the owner's call, 2026-11-19, three pictures: the reservoir's
+  water spread up its banks, a drive standing on a slab at its road, the grass
+  through a drive in stripes): the reservoir's water is a stone-edged basin
+  (crestsites.ts `RESERVOIR` `crest`, `apron`, `coping`, `BASIN_DEPTH`: its
+  apron held at the coping's height and its basin a little lower inside it,
+  levels `of` one site, terrain.ts `Level`); the ground under each drive is
+  graded from its road to its pad (terrain.ts `RAMP`, never on a road's bed or
+  its pad's level ground); what's laid on the hills is dense on the grass as
+  drawn (`crestdrape.ts`: the drives, the footpaths, the banks' beds, the golf
+  course, the overlook's path; the hill roads' asphalt every half tile over the
+  higher of its bed and the grass, `ROAD_LIFT`), `tests/crestdrape.test.ts`
+  holding the grass under every one; the hill roads' walls topped just over
+  the bank behind them (landscape.ts `EDGE_AT`). Made-up names only.

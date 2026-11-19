@@ -11,7 +11,7 @@
  */
 import { HILLS, TERRAIN_RECT, natural, smooth, swell, type Rect } from './hills';
 import { BED, HILL_ROADS } from './crestmont';
-import { MANSION_LEVELS } from './mansions';
+import { MANSIONS, MANSION_LEVELS } from './mansions';
 import { SITE_LEVELS } from './crestsites';
 import { SOUTH_GROUND_RECT, onSouthGround, southLift } from './southground';
 import { BUILT, baked } from './baked';
@@ -23,6 +23,8 @@ export interface Level {
   rect: Rect;
   y: number;
   ease: number;
+  /** One site's levels nested in each other (the reservoir's basin in its apron): which site they're all of */
+  of?: string;
 }
 /** The hills' mansions' pads (mansions.ts, Phase 6) and the landmarks' ground (crestsites.ts, Phase 7) */
 export const LEVELS: Level[] = [...MANSION_LEVELS, ...SITE_LEVELS];
@@ -106,8 +108,42 @@ export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS
     const w = hold(l, x, z);
     if (w > 0) h += (l.y - h) * w;
   }
+  // The drives graded from their roads up to their pads (never on a road's bed, which holds its own height)
+  if (levels === LEVELS)
+    for (const r of RAMPS) {
+      if (x < r.box[0] || x > r.box[2] || z < r.box[1] || z > r.box[3]) continue;
+      const t = Math.max(0, Math.min(1, ((x - r.ax) * r.vx + (z - r.az) * r.vz) / r.l2));
+      const d = Math.hypot(x - r.ax - r.vx * t, z - r.az - r.vz * t);
+      // (and never on its pad's level ground, which holds its own height: the ramp eases into it as into the road)
+      const w = (1 - smooth(RAMP.half, RAMP.half + RAMP.ease, d)) * (1 - (bed?.w ?? 0)) * (1 - hold(r.level, x, z));
+      if (w > 0) h += (r.ya + (r.yb - r.ya) * t - h) * w;
+    }
   return h;
 }
+
+/**
+ * Each hill mansion's drive, the ground under it graded (the owner's call, 2026-11-19: the drive met its road on a
+ * slab standing out of the bank): from the road's height at its mouth to the pad's at its front, straight, held level
+ * across the drive and its kerbs (`half`), eased back into the slope either side (`ease`)
+ */
+export const RAMP = { half: 1.6, ease: 4 } as const;
+const RAMPS = MANSIONS.map((m, i) => {
+  const [a, b] = m.drive;
+  const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+  const reach = RAMP.half + RAMP.ease;
+  const bed = bedAt(a[0], a[1]);
+  return {
+    ax: a[0],
+    az: a[1],
+    vx,
+    vz,
+    l2: vx * vx + vz * vz || 1,
+    ya: bed ? bed.y : natural(a[0], a[1]),
+    yb: m.y,
+    level: MANSION_LEVELS[i],
+    box: [Math.min(a[0], b[0]) - reach, Math.min(a[1], b[1]) - reach, Math.max(a[0], b[0]) + reach, Math.max(a[1], b[1]) + reach],
+  };
+});
 
 /* ---------- The ground as drawn (world.ts `hillsPlane()`) ---------- */
 

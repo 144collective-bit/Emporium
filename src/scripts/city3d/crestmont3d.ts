@@ -14,7 +14,8 @@ import { offsetLine, type Pt } from './streetplan';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
 import { EW_ROADS, MEDIAN } from './layout';
 import { SLAB } from './world';
-import { heightAt } from './terrain';
+import { drawnAt, heightAt } from './terrain';
+import { ROAD_LIFT, STEP, resample } from './crestdrape';
 import { registerLandscape } from './landscape3d';
 import { registerCoral } from './coral3d';
 import { registerEstates } from './estates3d';
@@ -34,7 +35,7 @@ export const SELF = import.meta.url;
 /** The Flats' asphalt, level with the city's other district streets */
 const Y = 0.031;
 /** How far over the hills' ground the hill roads' asphalt lies */
-const ON = 0.04;
+const ON = ROAD_LIFT;
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // The palms, jacarandas, oaks and scrub, the hill roads' walls and rails (Phase 3: landscape3d.ts)
   registerLandscape(low);
@@ -139,10 +140,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   }
 
   /* ---------- The hill roads, on their beds ---------- */
-  const ground = (x: number, z: number) => heightAt(x, z) + ON;
+  // (over the higher of its bed and the grass as drawn, laid densely: tests/crestdrape.test.ts)
+  const ground = (x: number, z: number) => Math.max(heightAt(x, z), drawnAt(x, z)) + ON;
   const atFoot = (_x: number, z: number) => z > FOOTHILL_Z - 3;
   for (const r of HILL_ROADS)
-    pieces(r.pts, r.half + 0.5).forEach((pc, k) =>
+    pieces(resample(r.pts, STEP), r.half + 0.5).forEach((pc, k) =>
       site(`crestmont hill road ${r.id} ${k}`, pc.rect, (into) => {
         const b = new Batch();
         b.add(ribbon(pc.pts, -r.half, r.half, ground), asphalt);

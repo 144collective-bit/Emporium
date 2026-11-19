@@ -233,8 +233,9 @@ export interface Edge {
   /** Which side of the road (right of its points' way is 1) */
   side: 1 | -1;
 }
-/** How deep a cut or how high a fill is before it gets a wall or a rail */
-export const EDGE_AT = { cut: 0.6, fill: 0.9, step: 1.5 } as const;
+/** How deep a cut or how high a fill is before it gets a wall or a rail; a wall's top `over` the ground `behind` it (at
+ * least `low`, a kerb) */
+export const EDGE_AT = { cut: 0.6, fill: 0.9, step: 1.5, behind: 0.45, over: 0.28, low: 0.35 } as const;
 /** How far out from the centre line the walls and rails stand: just past the asphalt, on the bed's shoulder */
 export const EDGE_OUT = LANE + 0.55;
 
@@ -262,7 +263,10 @@ export const WALLS: Edge[] = (() => {
         if (onMansion(...a) || onMansion(...b) || onSite(...a) || onSite(...b)) continue;
         const base = { road: r.id, a, b, ya: roadY(r, d), yb: roadY(r, d + EDGE_AT.step), side: side as 1 | -1 };
         if (there - y > EDGE_AT.cut) {
-          const h = Math.min(1.8, 0.35 + (there - y) * 0.35);
+          // (topped just over the ground it holds back, right behind it, as the pads' terraces are: crestbanks.ts; the
+          // owner's call, 2026-11-19, the walls stood proud of the bank, slabs beside the drives)
+          const behind: Pt = [fm.p[0] + fm.n[0] * side * (EDGE_OUT + EDGE_AT.behind), fm.p[1] + fm.n[1] * side * (EDGE_OUT + EDGE_AT.behind)];
+          const h = Math.max(EDGE_AT.low, Math.min(1.8, heightAt(...behind) - y + EDGE_AT.over));
           out.push({ ...base, h, ha: h, hb: h, kind: 'wall' });
         } else if (y - there > EDGE_AT.fill) out.push({ ...base, h: 0, ha: 0, hb: 0, kind: 'rail' });
       }
