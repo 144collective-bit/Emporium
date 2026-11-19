@@ -20,6 +20,11 @@
  * - Snacks are sold at the diners downtown and the Night Market's stalls
  *   (`SNACK_BARS`) for Dorras, `ITEM_MAX` at most; they restore health in a
  *   spar (Phase 3), so using one anywhere else does nothing yet.
+ * - Phase 5 (things worth carrying): the energy drink (on foot), the nitro
+ *   can (in your car) and the flyers (at your stall), each used only where it
+ *   works (`useItem()` with `Here`; what they do is boosts.ts) and sold at
+ *   its own places (`SELLERS`: the snack bars, Uptown's coffee carts and
+ *   newsstands, Kestrel Fuel's kiosk).
  *
  * The save's side (its shape and cleaning, the hand) is inventory-save.ts, which the boot needs; this file loads with the
  * hotbar and the gun store. Nothing here is real money or tied to the token
@@ -32,6 +37,9 @@ import { ownsGun, pay, type BuyResult, type TycoonSave } from './tycoon';
 import { INFILL, SIGNS, bodyOf } from './downtown';
 import { STALLS } from './nightmarket';
 import { BAR } from './avenue';
+import { CART, CARTS } from './streetlife';
+import { SHOPS } from './highroad';
+import { FLYERS, type BoostId } from './boosts';
 
 // The save's side (the boot's): its shape and cleaning, the hand kept in step with the look, where snacks are sold
 import { GRID_SIZE, STASH_MAX, heldOk } from './inventory-save';
@@ -45,17 +53,23 @@ export type Slot =
   | { kind: 'item'; item: ItemId; n: number };
 /** The most slots a hotbar holds (1-7) */
 export const SLOTS_MAX = 7;
-/** The hotbar in his order: weapon slots 1 and 2 (empty or not), the thing in his hand, the consumables he has */
-export function slots(s: Pick<TycoonSave, 'inventory'>): Slot[] {
+/**
+ * The hotbar in his order: weapon slots 1 and 2 (empty or not), the thing in his hand, the consumables he has. A
+ * touch screen's is shorter (`max`, touchlayout.ts `HOT_SLOTS`), its consumables in the order `first` puts them
+ * (the one that works where he is first: Phase 5); the rest wait in the bag.
+ */
+export function slots(s: Pick<TycoonSave, 'inventory'>, max = SLOTS_MAX, first: ItemId[] = ITEM_IDS): Slot[] {
   const inv = s.inventory;
   const out: Slot[] = [{ kind: 'gun', i: 0, weapon: inv.guns[0] }, { kind: 'gun', i: 1, weapon: inv.guns[1] }];
   if (inv.held) out.push({ kind: 'held', held: inv.held });
-  for (const id of ITEM_IDS) {
+  for (const id of [...new Set([...first, ...ITEM_IDS])]) {
     const n = inv.items[id] ?? 0;
     if (n > 0) out.push({ kind: 'item', item: id, n });
   }
-  return out.slice(0, SLOTS_MAX);
+  return out.slice(0, Math.min(max, SLOTS_MAX));
 }
+/** A touch hotbar's consumables, the one that works where he is first: the flyers at his stall, else the energy drink (the nitro has its own button in the car) */
+export const touchFirst = (atStall: boolean): ItemId[] => (atStall ? ['flyers', 'energy', 'snack', 'nitro'] : ['energy', 'snack', 'flyers', 'nitro']);
 /** A slot's key, the same while it's the same thing (the view compares them); 'hands' is nothing out (his fists) */
 export const slotKey = (x: Slot) => (x.kind === 'gun' ? `gun${x.i}` : x.kind === 'held' ? 'held' : `item:${x.item}`);
 
@@ -189,7 +203,7 @@ export function swapSlots(s: TycoonSave) {
 
 /* ---------- Changing it ---------- */
 
-export type InvResult = { ok: true } | { ok: false; why: 'owned' | 'place' | 'max' | 'money' | 'level' | 'stock' | 'room' };
+export type InvResult = { ok: true } | { ok: false; why: 'owned' | 'place' | 'max' | 'money' | 'level' | 'stock' | 'room' | 'active' | 'empty' };
 
 /**
  * The two weapon slots at once: guns he may carry (`may`: owned, and for the starters
@@ -222,11 +236,40 @@ export function buyItem(s: TycoonSave, id: ItemId): BuyResult | { ok: false; why
   s.inventory.items[id] = have + 1;
   return r;
 }
-/** Use one up: only in a spar (Phase 3), where a snack restores health; anywhere else nothing happens */
-export function useItem(s: TycoonSave, id: ItemId, inSpar: boolean): InvResult {
+/** Where Degen is when he uses something, and what's on already (walk mode, the ring) */
+export interface Here {
+  /** In a spar or a street spar (the snack) */
+  spar?: boolean;
+  /** On foot in walk mode, not in the ring (the energy drink) */
+  onFoot?: boolean;
+  /** At the wheel of your own car or motorbike, not in a kart race (the nitro can) */
+  car?: boolean;
+  /** Standing at your stall (the flyers) */
+  atStall?: boolean;
+  /** The clock (ms) for the flyers' time in the save */
+  now?: number;
+  /** Is this boost on already (boosts.ts) */
+  on?(id: BoostId): boolean;
+}
+/**
+ * Use one up, where it works (Phase 5): the snack in a spar, the energy drink on foot, the nitro can in your car,
+ * the flyers at your stall while it has something on its shelves. 'place': not here; 'active': one's on already;
+ * 'empty': the stall has nothing to sell. The flyers' time goes in the save (`flyers`); the rest are the caller's to start.
+ */
+export function useItem(s: TycoonSave, id: ItemId, here: Here): InvResult {
   const have = s.inventory.items[id] ?? 0;
   if (have <= 0) return { ok: false, why: 'stock' };
-  if (!inSpar) return { ok: false, why: 'place' };
+  const now = here.now ?? Date.now();
+  if (id === 'snack' && !here.spar) return { ok: false, why: 'place' };
+  if (id === 'energy' && !here.onFoot) return { ok: false, why: 'place' };
+  if (id === 'nitro' && !here.car) return { ok: false, why: 'place' };
+  if ((id === 'energy' || id === 'nitro') && here.on?.(id)) return { ok: false, why: 'active' };
+  if (id === 'flyers') {
+    if (!here.atStall) return { ok: false, why: 'place' };
+    if (s.flyers > now) return { ok: false, why: 'active' };
+    if (!s.stall.slots.some((sl) => sl.qty > 0)) return { ok: false, why: 'empty' };
+    s.flyers = now + FLYERS.minutes * 60000;
+  }
   if (have > 1) s.inventory.items[id] = have - 1;
   else delete s.inventory.items[id];
   return { ok: true };
@@ -291,4 +334,32 @@ export const SNACK_BARS: SnackBar[] = [
     return { id: `diner${i}`, ...at, name: title(SIGNS[f.sign ?? 'diner'].name) };
   }),
   ...STALLS.map((st, i): SnackBar => ({ id: `market${i}`, x: (st.rect[0] + st.rect[2]) / 2, z: st.front + COUNTER_OUT, name: title(st.name) })),
+];
+
+/* ---------- Where everything is sold (Phase 5) ---------- */
+
+export interface Seller extends SnackBar {
+  sells: ItemId;
+}
+/** In front of an Uptown cart, on the street side of it (its vendor is behind it, its customers at its ends) */
+const CART_OUT = CART.depth + 0.45;
+/** In front of a petrol station's kiosk, on its forecourt */
+const KIOSK_OUT = 0.6;
+/** The cart kinds that sell something: the coffee carts the energy drink, the newsstands the flyers */
+const CART_SELLS: Partial<Record<(typeof CARTS)[number]['kind'], { sells: ItemId; name: string }>> = {
+  coffee: { sells: 'energy', name: 'Coffee cart' },
+  news: { sells: 'flyers', name: 'Newsstand' },
+};
+/** Every place a consumable is sold, a prompt each ("Coffee cart · Energy drink"), one thing a place */
+export const SELLERS: Seller[] = [
+  ...SNACK_BARS.map((b): Seller => ({ ...b, sells: 'snack' })),
+  ...CARTS.flatMap((c, i): Seller[] => {
+    const k = CART_SELLS[c.kind];
+    return k ? [{ id: `cart${i}`, x: c.x + c.n[0] * CART_OUT, z: c.z + c.n[1] * CART_OUT, name: k.name, sells: k.sells }] : [];
+  }),
+  // (the kiosk at the back of the forecourt, highroad.ts SHOP_SOLIDS: its front is the plot's depth less 4 in)
+  ...SHOPS.filter((sh) => sh.kind === 'petrol').map((sh, i): Seller => {
+    const back = sh.d - 4 - KIOSK_OUT;
+    return { id: `fuel${i}`, x: sh.at[0] - sh.face[0] * back, z: sh.at[1] - sh.face[1] * back, name: sh.name, sells: 'nitro' };
+  }),
 ];

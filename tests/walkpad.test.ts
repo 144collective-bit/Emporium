@@ -185,6 +185,11 @@ test('at the wheel: the car, the kart, the aircraft and the boat each read their
   assert.deepEqual([s.drive.steer, s.drive.throttle, s.drive.handbrake], [-1, 0.75, true]);
   assert.deepEqual(log, ['nextCam', 'worldMap', 'act']);
   assert.deepEqual(log2, ['horn']);
+  // X a nitro can from the bag (the inventory plan's Phase 5)
+  h.nitro = () => void log2.push('nitro');
+  pollPad(gp(), 0.016, s, h);
+  pollPad(gp({ down: [X] }), 0.016, s, h);
+  assert.deepEqual(log2, ['horn', 'nitro']);
   // The world map open: the car coasts
   const m = host({ drive: { active: true, horn: () => {} } });
   m.h.d.mapOpen = () => true;
