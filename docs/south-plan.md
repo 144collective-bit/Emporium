@@ -554,7 +554,15 @@ From the Circus west, patchy as high roads are:
        and the benches); Lot 9's on its open ground with the grass laid
        back round their opening (`STAIR_INFILL`). Smoke walks: down The
        Trenches', Lot 9's and Aldwyn's Green's stairs into their halls
-       (`trenches`, `lot9station`, `aldwynsstation`).
+       (`trenches`, `lot9station`, `aldwynsstation`). Aldwyn's Green's
+       stairs moved on to the sidewalk of the street along the
+       churchyard's west side (they had opened in the terrace's back
+       gardens, out of reach); the village stands on its hill, so every
+       flight now starts at the surface at its top (`surfaceAt()`: a
+       block's slab or the open ground, rolling) and runs as long as it
+       takes to stay gentle (`STAIR_SLOPE`), its parapets and walls drawn
+       on the surface beside them. A slanting way's walls and floor run on
+       to meet its hall's side. Shots `docs/south-shots/23-phase-4f-*.webp`.
      - **4g, the trains and the ride** (round-top tube trains, the tunnel
        seen, Skip), the change at The Trenches, on the map and the
        station card.
