@@ -297,10 +297,11 @@ function drawWay(b: Batch, st: Station, style: Style): void {
       const g = st.entrance.kind === 'building' ? top : Math.max(top, surfaceAt(...P(w, s0, u)), surfaceAt(...P(w, s1, u)));
       along(b, w, s0, s1, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, g, wall);
     }
-    along(b, w, w.ramp0, hallEdge, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, wall);
-    face(b, w, w.ramp0, hallEdge, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
+    const end = wallEnd(st, side);
+    along(b, w, w.ramp0, end, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, wall);
+    face(b, w, w.ramp0, end, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
   }
-  ceiling(b, w, w.ramp0, hallEdge, -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
+  ceiling(b, w, w.ramp0, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
   const headTop = st.entrance.kind === 'building' ? top : Math.max(top, surfaceAt(...P(w, w.ramp0, -w.half)), surfaceAt(...P(w, w.ramp0, w.half)));
   across(b, w, w.ramp0, -w.half - w.wall, w.half + w.wall, HALL_CEIL, headTop, -1, wall);
   // (handrails down the steps)
@@ -392,14 +393,27 @@ function drawPlazaCorridor(b: Batch, st: Station, style: Style) {
   const hallEdge = edgeOf(st);
   floor(b, w, from, hallEdge, -w.half, w.half, HALL_Y + 0.003, FLOOR);
   for (const side of [-1, 1]) {
-    along(b, w, from, hallEdge, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, WALLS[style]);
-    face(b, w, from, hallEdge, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
+    const end = wallEnd(st, side);
+    along(b, w, from, end, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, WALLS[style]);
+    face(b, w, from, end, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
   }
-  ceiling(b, w, from, hallEdge, -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
+  ceiling(b, w, from, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
   for (let s = from + 0.9; s < hallEdge - 0.3; s += 1.6) {
     const [x, z] = P(w, s, 0);
     b.add(new THREE.BoxGeometry(1.0, 0.04, 0.1).rotateY(yawOf(w)).translate(x, HALL_CEIL - 0.03, z), TUBE);
   }
+}
+/** Where a way's wall on `side` meets its hall's wall (a slanting way's two walls reach it at different places: each runs
+ * on to it, so no gap is left between them) */
+function wallEnd(st: Station, side: number) {
+  const [w, h] = [st.way, st.hall];
+  const u = side * (w.half + w.wall);
+  for (let s = w.ramp0; s <= w.a1; s += 0.02) {
+    const q = P(w, s, u);
+    const t = alongOf(h, ...q);
+    if (t > h.a0 - 0.01 && t < h.a1 + 0.01 && Math.abs(acrossOf(h, ...q)) < h.half + 0.01) return s;
+  }
+  return edgeOf(st);
 }
 /** Where a station's way meets its hall (its walls go no further in) */
 function edgeOf(st: Station) {
