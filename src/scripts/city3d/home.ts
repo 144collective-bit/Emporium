@@ -182,6 +182,13 @@ export const CABANA_POSTS: Pt[] = [
 ];
 export const CABANA_H = 1.45;
 
+/**
+ * The helipad on the garage's roof (docs/compound-plan.md Phase 6e): a round pad in its middle with his D and a ring
+ * painted on it, lights round its edge, a windsock at the roof's corner; looks only (nobody walks up there, nothing
+ * lands)
+ */
+export const HELIPAD = { x: (GARAGE[0] + GARAGE[2]) / 2, z: AXIS, r: 2.2 };
+
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
 export const SHELL = 0.15;

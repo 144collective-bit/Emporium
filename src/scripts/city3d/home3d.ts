@@ -42,7 +42,7 @@ import { COVER, KERB, TREE, VERGE } from './palette';
 import { glow, METAL } from './infill';
 import { SHELF, type TrophySlot } from './hometrophies';
 import {
-  BASE_CEIL, BASE_Y, BASEMENT, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, UPSTAIRS, WALL, WALL_H, WALL_T,
+  BASE_CEIL, BASE_Y, BASEMENT, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, UPSTAIRS, WALL, WALL_H, WALL_T,
   curtainPanels, type BaseThing, type Furniture, type UpThing,
 } from './home';
 import { curtains } from './spawn';
@@ -316,6 +316,40 @@ function showpiece(b: Batch, low: boolean) {
   const AX = (HOME.gates.z0 + HOME.gates.z1) / 2;
   flat(b, [gx1 + 0.6, AX - 3.3 - 0.025, px1 - WALL_T - 0.7, AX - 3.3 + 0.025], OVER + 0.006, CAP);
   flat(b, [HOME.house[0] + 0.8, AX + 3.6 - 0.025, px1 - WALL_T - 3.2, AX + 3.6 + 0.025], OVER + 0.006, CAP);
+}
+
+/* ---------- The helipad on the garage's roof (docs/compound-plan.md Phase 6e) ---------- */
+
+const PAD = toon('#3a3840');
+const PAD_PAINT = toon('#f1eee8');
+const PAD_MARK = toon('#f2c94c');
+const SOCK = toon('#ff7a1a');
+
+/** The helipad (home.ts `HELIPAD`): a round deck on the garage's roof, a white ring and his D in yellow painted on it (read from the Close), lights round its edge, a windsock at the roof's corner */
+function helipad(b: Batch, low: boolean) {
+  const { x, z, r } = HELIPAD;
+  const y = S + HOME.garageTop + 0.012;
+  const n = low ? 16 : 32;
+  const deck = new THREE.CylinderGeometry(r, r, 0.06, n);
+  deck.deleteAttribute('uv');
+  b.add(deck.translate(x, y + 0.03, z), PAD);
+  const ring = new THREE.RingGeometry(r - 0.35, r - 0.22, n).rotateX(-Math.PI / 2);
+  ring.deleteAttribute('uv');
+  b.add(ring.translate(x, y + 0.066, z), PAD_PAINT);
+  mark(b, PAD_MARK, 1.9, V(x, y + 0.066, z), V(0, 0, -1), V(-1, 0, 0), V(0, 1, 0), { t: 0.3 });
+  // The edge lights, green, and a windsock on its pole at the roof's north-west corner (looks only)
+  b.detail(() => {
+    const k = low ? 8 : 12;
+    for (let i = 0; i < k; i++) {
+      const a = (i / k) * Math.PI * 2;
+      b.add(new THREE.SphereGeometry(0.065, 6, 4).translate(x + Math.cos(a) * (r - 0.1), y + 0.12, z + Math.sin(a) * (r - 0.1)), glow('#7dff9a'));
+    }
+    const [px, pz] = [HOME.garage[0] + 0.25, HOME.garage[1] + 0.25];
+    rod(b, V(px, y, pz), V(px, y + 0.95, pz), 0.015, STEEL_BLACK);
+    const sock = new THREE.ConeGeometry(0.09, 0.45, low ? 6 : 8, 1, true).rotateZ(Math.PI / 2);
+    sock.deleteAttribute('uv');
+    b.add(sock.translate(px + 0.24, y + 0.9, pz), SOCK);
+  });
 }
 
 /** The double garage */
@@ -810,6 +844,7 @@ export function registerHome(low: boolean) {
     gardens(b, low);
     showpiece(b, low);
     poolside(b, low);
+    helipad(b, low);
     b.build(into, { cast: true, receive: true });
     inside(into, low);
   });

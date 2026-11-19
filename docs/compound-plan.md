@@ -311,6 +311,11 @@ draw calls in the house's own batches.
     `tests/home.test.ts` (on the east lawn, apart, solid where they should be, room under the cabana, the side door and
     the way round to it and along the pool clear). Shots: `docs/compound-shots/phase-6d-*`.
 6e. **The helipad.** On the garage's roof: its pad, its markings (no lettering or numbers), edge lights; looks only.
+    *Built, waiting on the owner's sign-off.* home.ts `HELIPAD` (the garage roof's middle, a round pad inside its
+    edges). home3d.ts `helipad()`: a dark round deck on the roof, a white ring and his D in yellow painted on it (read
+    from the Close: no "H", no numbers), green lights round its edge, a windsock on a pole at the roof's north-west
+    corner. Nothing solid (nobody walks up there; nothing lands). Tests: `tests/home.test.ts` (on the roof, inside its
+    edges, low). Shots: `docs/compound-shots/phase-6e-*`. With it, Phase 6 is built.
 
 Each with the owner's sign-off.
 
