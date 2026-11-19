@@ -320,3 +320,22 @@ export const AIRFIELD_SOLIDS: Box[] = [
   ...FUEL_TANKS.map(([x, z, r, h]): Box => [x - r, z - r, x + r, z + r, h]),
   ...SHELTERS.map(([x, z]): Box => [x - SHELTER.w / 2, z - SHELTER.d, x + SHELTER.w / 2, z, SHELTER.h]),
 ];
+
+/**
+ * What's parked on the airfield (Phase 2): made-up, unarmed aircraft in the base's greys (the airport's models, its
+ * titles left off), each [x, z, yaw] (yaw π/2: the nose north, to the taxiway); a transport in the open hangar
+ */
+export const PARKED: { kind: 'freighter' | 'prop' | 'heli'; livery: string; at: [number, number, number] }[] = [
+  { kind: 'freighter', livery: '#6f7a8c', at: [(HANGARS[OPEN_HANGAR][0] + HANGARS[OPEN_HANGAR][2]) / 2, -444, Math.PI / 2] },
+  { kind: 'freighter', livery: '#5d6b52', at: [-290, -488, Math.PI / 2] },
+  { kind: 'freighter', livery: '#6f7a8c', at: [-250, -488, Math.PI / 2] },
+  ...[-462, -448, -434, -420].map((x) => ({ kind: 'prop' as const, livery: '#8a93a3', at: [x, -496, Math.PI / 2] as [number, number, number] })),
+  { kind: 'heli', livery: '#5d6b52', at: [-340, -496, Math.PI / 2] },
+  { kind: 'heli', livery: '#6f7a8c', at: [-318, -496, Math.PI / 2] },
+];
+/** The apron's vehicles: a tug and a fuel bowser (x, z, yaw), and the windsock between the runway and the taxiway */
+export const APRON_VEHICLES: { kind: 'tug' | 'bowser'; at: [number, number, number] }[] = [
+  { kind: 'tug', at: [-274, -480, 0] },
+  { kind: 'bowser', at: [-392, -482, Math.PI / 2] },
+];
+export const WINDSOCK: Pt = [-420, -526];

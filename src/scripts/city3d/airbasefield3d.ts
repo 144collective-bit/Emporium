@@ -14,10 +14,12 @@
  */
 import * as THREE from 'three';
 import { Batch, toon } from './kit';
+import { createFleet } from './aircraft';
+import type { Tick } from './world';
 import { site } from './tilework';
 import { ROAD } from './palette';
 import { MARK, G, TOP, box, cyl, light, mark } from './airportkit';
-import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, RUNWAY, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
+import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, APRON_VEHICLES, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, PARKED, RUNWAY, WINDSOCK, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
 import type { Rect } from './tiles';
 
 /** This module's address, for the site worker (districts.ts) */
@@ -273,7 +275,48 @@ function shelter(b: Batch, x: number, z: number, low: boolean) {
   });
 }
 
-export function register({ low }: { low: boolean }) {
+/* ---------- What's parked (Phase 2) ---------- */
+
+const ORANGE = toon('#ff8a3d');
+const TYRE = toon('#1d1c26');
+/** An apron vehicle: a tug (low, a cab at one end) or a fuel bowser (a cab and its tank), its nose along +x turned by yaw */
+function vehicle(b: Batch, kind: 'tug' | 'bowser', x: number, z: number, yaw: number) {
+  const g = new Batch();
+  const [len, w] = kind === 'tug' ? [4.2, 2.2] : [7.5, 2.4];
+  box(g, -len / 2, 0.45, -w / 2, len / 2, 1.2, w / 2, YELLOW);
+  if (kind === 'tug') box(g, len / 2 - 1.4, 1.2, -w / 2 + 0.2, len / 2 - 0.1, 2.3, w / 2 - 0.2, GLASS);
+  else {
+    box(g, len / 2 - 2, 1.2, -w / 2 + 0.1, len / 2 - 0.1, 2.6, w / 2 - 0.1, YELLOW);
+    box(g, len / 2 - 1.9, 1.9, -w / 2 + 0.05, len / 2 - 0.05, 2.5, w / 2 - 0.05, GLASS);
+    cyl(g, 1.05, len - 2.6, 0, 0, 0, TANK, 14);
+  }
+  for (const [wx, wz] of [
+    [-len / 2 + 0.9, -w / 2],
+    [len / 2 - 0.9, -w / 2],
+    [-len / 2 + 0.9, w / 2],
+    [len / 2 - 0.9, w / 2],
+  ])
+    cyl(g, 0.45, 0.3, wx, 0, wz, TYRE, 10);
+  // (the tank lies along x: turned from upright once its own cylinder's in, the rest as drawn)
+  const grp = new THREE.Group();
+  g.build(grp);
+  grp.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const geo = m.geometry.clone();
+    geo.rotateY(yaw).translate(x, 0, z);
+    b.add(geo, m.material as THREE.Material);
+  });
+}
+/** The windsock: a striped pole and its cone, blown out a little */
+function windsock(b: Batch) {
+  const [x, z] = WINDSOCK;
+  cyl(b, 0.07, 4.2, x, 0, z, WHITE, 8);
+  const cone = new THREE.CylinderGeometry(0.42, 0.18, 2.4, 10, 1, true).rotateZ(Math.PI / 2 - 0.25);
+  b.add(cone.translate(x + 1.2, 3.85, z), ORANGE);
+}
+
+export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | null; tick?: (f: Tick) => void }) {
   for (let sx0 = FIELD[0]; sx0 < FIELD[2]; sx0 += STRIP) {
     const sx1 = sx0 + STRIP;
     site(`airbase field ${sx0}`, [sx0, FIELD[1], sx1, FIELD[3]], (into) => {
@@ -308,6 +351,12 @@ export function register({ low }: { low: boolean }) {
     fuelFarm(b, low);
     b.build(into, { cast: true, receive: true });
   });
+  site('airbase apron kit', [-480, -540, -200, -470], (into) => {
+    const b = new Batch();
+    for (const v of APRON_VEHICLES) vehicle(b, v.kind, ...v.at);
+    windsock(b);
+    b.build(into, { cast: true, receive: true });
+  });
   for (let i = 0; i < SHELTERS.length; i += 3) {
     const three = SHELTERS.slice(i, i + 3);
     const xs = three.map((p) => p[0]);
@@ -316,5 +365,19 @@ export function register({ low }: { low: boolean }) {
       for (const [x, z] of three) shelter(b, x, z, low);
       b.build(into, { cast: true, receive: true });
     });
+  }
+  // The parked aircraft: the airport's fleets of each kind, in the base's greys, their titles left off (main thread only)
+  if (!scene) return;
+  for (const kind of ['freighter', 'prop', 'heli'] as const) {
+    const mine = PARKED.filter((p) => p.kind === kind);
+    const f = createFleet(kind, mine.map((p) => p.livery));
+    f.group.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && (m.material as THREE.MeshToonMaterial).map && (m.material as THREE.Material).alphaTest > 0) m.visible = false;
+    });
+    mine.forEach(({ at: [x, z, yaw] }, i) => f.set(i, { x, y: 0, z, yaw, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 }));
+    f.update(0, 0);
+    f.group.name = `airbase-${kind}`;
+    scene.add(f.group);
   }
 }

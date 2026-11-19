@@ -146,3 +146,24 @@ test("the airfield (Phase 2): the runway, taxiways, apron and buildings inside t
   for (const p of APRON_ROAD) assert.ok(inAirbase(...p));
   for (const k of KEPT.filter((q) => q.phase === 3)) assert.ok(APRON_ROAD[0][1] < k.rect[1] - 5 || APRON_ROAD[0][1] > k.rect[3] + 5, `the apron road through ${k.id}`);
 });
+
+test("what's parked (Phase 2): on the apron or in the open hangar, clear of each other and of the buildings", async () => {
+  const { APRON, APRON_VEHICLES, AIRFIELD_SOLIDS, HANGARS, OPEN_HANGAR, PARKED, RUNWAY, TAXIWAY, WINDSOCK } = await import('../src/scripts/city3d/airbase');
+  // (each one's reach: an airliner-sized transport 11, a trainer 4, a helicopter 4)
+  const reach = { freighter: 11, prop: 4, heli: 4 } as const;
+  const hangar = HANGARS[OPEN_HANGAR];
+  for (const p of PARKED) {
+    const [x, z] = p.at;
+    const inHangar = inRect(hangar, x, z);
+    assert.ok(inHangar || (x - reach[p.kind] > APRON[0] && x + reach[p.kind] < APRON[2] && z - reach[p.kind] > TAXIWAY.z + TAXIWAY.half && z + reach[p.kind] < HANGARS[0][1]), `a ${p.kind} off the apron at ${x}, ${z}`);
+    for (const b of AIRFIELD_SOLIDS) if (!(inHangar && b[0] === hangar[0] && b[1] === hangar[1])) assert.ok(!inRect(b, x, z, reach[p.kind] - 2), `a ${p.kind} in a building at ${x}, ${z}`);
+  }
+  for (let i = 0; i < PARKED.length; i++)
+    for (let j = i + 1; j < PARKED.length; j++) {
+      const [a, b] = [PARKED[i], PARKED[j]];
+      assert.ok(Math.hypot(a.at[0] - b.at[0], a.at[1] - b.at[1]) > Math.max(reach[a.kind], reach[b.kind]) + 2, `${a.kind} on ${b.kind}`);
+    }
+  for (const v of APRON_VEHICLES) assert.ok(inRect(APRON, v.at[0], v.at[1], -4));
+  // The windsock between the runway's lights and the taxiway
+  assert.ok(WINDSOCK[1] > RUNWAY.z + RUNWAY.half + 2 && WINDSOCK[1] < TAXIWAY.z - TAXIWAY.half - 2);
+});

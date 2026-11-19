@@ -95,6 +95,7 @@ test("the airfield's buildings (Phase 2): each on its own ground, standing on it
     assert.ok(box.min.x > s.rect[0] - 1 && box.max.x < s.rect[2] + 1 && box.min.z > s.rect[1] - 1 && box.max.z < s.rect[3] + 1, `${s.id} spills out`);
     // (what's drawn stands inside the solids round it, near enough: a solid for every building)
     const mid: [number, number] = [(box.min.x + box.max.x) / 2, (box.min.z + box.max.z) / 2];
-    assert.ok(AIRFIELD_SOLIDS.some((b) => mid[0] > b[0] - 30 && mid[0] < b[2] + 30 && mid[1] > b[1] - 30 && mid[1] < b[3] + 30), `${s.id} has no solid`);
+    // (but the apron's kit: its tug, its bowser and the windsock, small things in the open, as the airport's)
+    if (s.id !== 'airbase apron kit') assert.ok(AIRFIELD_SOLIDS.some((b) => mid[0] > b[0] - 30 && mid[0] < b[2] + 30 && mid[1] > b[1] - 30 && mid[1] < b[3] + 30), `${s.id} has no solid`);
   }
 });
