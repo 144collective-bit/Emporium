@@ -236,3 +236,16 @@ test("in Degen's house the street is shut out (not from over its roof, nor out i
   assert.equal(ambienceAt(x, z, 30, 0).home, 0, 'the City view over the roof');
   assert.equal(ambienceAt(HOME_SPAWN.x, HOME_SPAWN.z, 0, 0).home, 0);
 });
+
+test("indoors on the Skywalk's floors (not on the street under it) and along Palm Court's promenade", async () => {
+  const { LINK, L1 } = await import('../src/scripts/city3d/malllink');
+  const { WEST_X, EAST_X, NORTH, SOUTH, COURT_TALLEST } = await import('../src/scripts/city3d/courtinside');
+  const lx = (LINK[0] + LINK[2]) / 2;
+  const lz = (LINK[1] + LINK[3]) / 2;
+  assert.equal(ambienceAt(lx, lz, 0, 0, L1).indoor, 1, 'on the bridge');
+  assert.equal(ambienceAt(lx, lz, 0, 0, 0).indoor, 0, 'on the street under it');
+  const cx = (WEST_X + EAST_X) / 2;
+  const cz = (NORTH + SOUTH) / 2;
+  assert.equal(ambienceAt(cx, cz, 0, 0).indoor, 1, 'in Palm Court');
+  assert.equal(ambienceAt(cx, cz, COURT_TALLEST + 20, 0).indoor, 0, 'the City view over its roof');
+});

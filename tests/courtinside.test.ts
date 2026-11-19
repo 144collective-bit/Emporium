@@ -99,7 +99,7 @@ test('the entrances: open doors, nothing in the way; its people on their floors,
   }
   assert.ok(!SOLIDS.some((b) => inBox(b, COURT_SPAWN.x, COURT_SPAWN.z, R)), 'the spawn is clear');
   for (const p of COURT_INSIDE_PEOPLE) {
-    if (p.act === 'sit') continue;
+    if (p.act === 'sit' || p.act === 'eat') continue;
     assert.ok(floorsAt(p.x, p.z).includes(p.y), `someone at ${p.x.toFixed(1)}, ${p.z.toFixed(1)} off their floor`);
     assert.ok(!SOLIDS.some((b) => inBox(b, p.x, p.z, 0.15)) && !LEVEL_SOLIDS.some((b) => (b[4] === 1) === p.y > 1 && inBox(b, p.x, p.z, 0.15)), `someone at ${p.x.toFixed(1)}, ${p.z.toFixed(1)} in something`);
   }

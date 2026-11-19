@@ -210,6 +210,26 @@ keep it up to date when what it describes changes.
     - The plant (`ROW_PLANT`, `CINEMA_PLANT`; the anchors' and the hall's
       `ANCHOR_PLANT`, `HALL_PLANT` are drawn by mall3d.ts).
     - Drawn by `mallroofs3d.ts` (`registerRoofs()`, from mall3d.ts) in
-      three sites, with mallkit.ts's `ROOF` and `SOLAR`; the rooflights and
-      the plant near only.
+      three sites, with mallkit.ts's `ROOF` and `SOLAR`. The plant's box is
+      drawn at every distance (so the patch the arrays keep clear isn't
+      bare from afar), its fans and louvres and the rooflights near only;
+      mall3d.ts's `plant()` the same.
+  - **Fittings at Degen's size** (the owner's call, 2026-11-19): every
+    fitting in the mall, inside and out, is sized from `FIT` in `mall.ts`
+    (Degen stands 0.845, hips 0.41, knees 0.22): `seat` (the city's
+    benches' `SEAT_H`), `back`, `table`, `counter` (the market's), `rail`
+    (balustrades, escalator and lift handrails), `door` (shopfronts, lifts,
+    the platform's screen) and `entrance` (the anchors', the Skywalk's,
+    Palm Court's; the hall's `DOOR.h` is `entrance + 0.6`). Tables,
+    stools, benches, kiosks, food stalls and their boards, directories,
+    kiddie rides, fare gates, the NEXT TRAIN boards, the bus shelter, the
+    pay stations and the bollards follow it, and their solids with them;
+    the buildings keep their size. Sitters sit at `FIT.seat`, diners
+    (`act: 'eat'`) at their stools. `tests/malllink.test.ts` holds `FIT`
+    to Degen.
+  - **Indoor sound** (ambience.ts `indoor`): the hall, the Skywalk's floors
+    (a walker's height is passed in, so the street under the bridge
+    doesn't hear it), the pavilion and Palm Court's promenade.
+  - **The world map** draws the mall as one: the hall, anchors, cinema,
+    multi-storey, Palm Court's whole block, the pavilion and the Skywalk.
 

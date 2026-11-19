@@ -36,7 +36,9 @@ import { HARBOUR_MASTER, SHED, STACK_BLOCKS, WAREHOUSES } from './docksport';
 import { CIVIC, CLUB as GOLF_CLUB, HOTEL as CREST_HOTEL } from './crestsites';
 import { LAUNDRY as LOT9_LAUNDRY, LOT9_FENCE, OFFICE as LOT9_OFFICE } from './lot9';
 import { CLUBHOUSE as SUN_CLUBHOUSE, SCHOOL as SUN_SCHOOL } from './sunplaces';
-import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, SHOPS as MALL_SHOPS } from './mall';
+import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, PAVILION as MALL_PAVILION, SHOPS as MALL_SHOPS } from './mall';
+import { LINK as SKYWALK } from './malllink';
+import { EAST_X as COURT_EAST, NORTH as COURT_NORTH, SOUTH as COURT_SOUTH, WEST_X as COURT_WEST } from './courtinside';
 import { TERRAIN_RECT, heightAt } from './terrain';
 import { EXITS } from './viaduct';
 import { exitBadge } from './viadress';
@@ -247,8 +249,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
         ctx.fill();
       } else rect(p.rect, C.tower);
     }
-    // Palm Court's shops and cinema, Starlight Mall and its anchors, the multi-storey (mall.ts)
-    for (const r of [MALL_CINEMA.rect, MALL_HALL.rect, MALL_MSCP.rect, ...MALL_ANCHORS.map((a) => a.rect), ...MALL_SHOPS.map((s) => s.rect)]) rect([...r], C.tower);
+    // Palm Court's shops, cinema and roofed promenade, Starlight Mall and its anchors, the multi-storey, the Skywalk and
+    // its pavilion joining them (mall.ts, malllink.ts, courtinside.ts): one mall on the map
+    const court = [COURT_WEST, COURT_NORTH, COURT_EAST, COURT_SOUTH] as const;
+    for (const r of [MALL_CINEMA.rect, MALL_HALL.rect, MALL_MSCP.rect, ...MALL_ANCHORS.map((a) => a.rect), ...MALL_SHOPS.map((s) => s.rect), court, MALL_PAVILION, SKYWALK]) rect([...r], C.tower);
     // The places that had no footprint (the polish plan's Phase 7), in the same muted tone: the stadium's bowl, the
     // Neon Mile's resorts, the Docks' sheds, warehouses and stacks, Crestmont's landmarks, Sunridge's club and school,
     // Lot 9's huts inside its fence

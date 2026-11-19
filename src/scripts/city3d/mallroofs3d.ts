@@ -35,17 +35,20 @@ function panels(b: Batch, [x0, z0, x1, z1]: [number, number, number, number], y:
     box(b, x0, y, z1 - 0.1, x1, yf - 0.02, z1 - 0.05, STEEL);
   });
 }
-/** An air handler: a grey box with its fans, a louvred screen east of it (as mall3d.ts's) */
+/** An air handler: a grey box (seen from afar, so the patch the solar arrays keep clear for it isn't bare), its fans
+ * and a louvred screen east of it near only (as mall3d.ts's) */
 function plant(b: Batch, x: number, z: number, y: number) {
   box(b, x - 1, y, z - 0.6, x + 1, y + 0.9, z + 0.6, GREY);
-  for (const dx of [-0.5, 0.5]) b.add(new THREE.CircleGeometry(0.32, 12).rotateX(-Math.PI / 2).translate(x + dx, y + 0.905, z), STEEL);
-  for (let i = 0; i < 6; i++) box(b, x + 1.3 + i * 0.25, y, z - 0.7, x + 1.36 + i * 0.25, y + 1.1, z + 0.7, MID);
+  b.detail(() => {
+    for (const dx of [-0.5, 0.5]) b.add(new THREE.CircleGeometry(0.32, 12).rotateX(-Math.PI / 2).translate(x + dx, y + 0.905, z), STEEL);
+    for (let i = 0; i < 6; i++) box(b, x + 1.3 + i * 0.25, y, z - 0.7, x + 1.36 + i * 0.25, y + 1.1, z + 0.7, MID);
+  });
 }
 function roof(b: Batch, r: Roof) {
   if (r.membrane) flat(b, r.rect[0], r.rect[1], r.rect[2], r.rect[3], r.y + 0.006, ROOF, 12);
   for (const p of PANELS) if (p.roof === r.id) panels(b, p.rect, p.y);
+  for (const [x, z] of r.plant) plant(b, x, z, r.y);
   b.detail(() => {
-    for (const [x, z] of r.plant) plant(b, x, z, r.y);
     // (the rooflights over Palm Court's upper floor: a curb, glass on it)
     if (!r.id.startsWith('court-')) return;
     for (const l of ROOFLIGHTS) {

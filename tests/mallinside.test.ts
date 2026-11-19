@@ -98,7 +98,7 @@ test("what's solid: the walls with the doors open, nothing in the way of the doo
   assert.ok(BOLLARDS.every(([, bz]) => bz > HALL.rect[3] && bz < PORCH.rect[3]));
   for (const p of MALL_INSIDE_PEOPLE)
     // (the food court's cooks stand behind their counters, in the stalls' strip)
-    if (p.act !== 'sit' && p.z > STALL_Z) {
+    if (p.act !== 'sit' && p.act !== 'eat' && p.z > STALL_Z) {
       assert.ok(!MALL_INSIDE_SOLIDS.some((b) => inBox(b, p.x, p.z, 0.15)), `someone at ${p.x}, ${p.z} in something`);
       assert.ok(!LEVEL_SOLIDS.some((b) => (b[4] === 1) === p.y > 1 && inBox(b, p.x, p.z, 0.15)), `someone at ${p.x}, ${p.z} in something on their floor`);
       assert.ok(floorsAt(p.x, p.z).includes(p.y), `someone at ${p.x}, ${p.z} off their floor`);

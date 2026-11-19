@@ -20,7 +20,7 @@
  * `courtWall()` stops him off the upper floor's edges and in what stands on his floor (`LEVEL_SOLIDS`); the rows are
  * solid (`SHOPS`). `COURT_CAMERA` is for the walk camera. Made-up names only; no prices on any sign.
  */
-import { ARCH, CINEMA, COURT, EAST_GAP, FOUNTAIN, PAVILION, PROM, PROM_X, ROW_H, SHOPS, ZEBRA, type Pt, type Rect } from './mall';
+import { ARCH, CINEMA, COURT, EAST_GAP, FIT, FOUNTAIN, PAVILION, PROM, PROM_X, ROW_H, SHOPS, ZEBRA, type Pt, type Rect } from './mall';
 import { FLOOR_T, UP } from './mallinside';
 
 type Box = [number, number, number, number, number];
@@ -161,7 +161,7 @@ export const ESC_SOLIDS: Box[] = (() => {
     [b.x1, LAND_Z, b.x1 + BALUSTRADE, z1, L1 + 1],
   ];
 })();
-export const COURT_INSIDE_SOLIDS: Box[] = [...COURT_WALLS, ...ESC_SOLIDS, ...COURT_PLANTERS.map(([x, z]) => sq(x, z, PLANTER_R, 0.6))];
+export const COURT_INSIDE_SOLIDS: Box[] = [...COURT_WALLS, ...ESC_SOLIDS, ...COURT_PLANTERS.map(([x, z]) => sq(x, z, PLANTER_R, 0.4))];
 /** What stands on one floor only, with a floor over or under it (x0, z0, x1, z1, level): the food hall's tables */
 export const LEVEL_SOLIDS: [number, number, number, number, 0 | 1][] = TABLES.map(([x, z]): [number, number, number, number, 0 | 1] => [x - TABLE_R, z - TABLE_R, x + TABLE_R, z + TABLE_R, 1]);
 
@@ -223,7 +223,7 @@ export interface CourtPerson {
   x: number;
   z: number;
   ry: number;
-  act: 'look' | 'chat' | 'sit';
+  act: 'look' | 'chat' | 'sit' | 'eat';
   /** Over the slab */
   y: number;
 }
@@ -239,8 +239,8 @@ export const COURT_INSIDE_PEOPLE: CourtPerson[] = (() => {
   for (const s of FOOD_STALLS) out.push({ x: PROM[1] - 1.0, z: (s.z0 + s.z1) / 2, ry: -Math.PI / 2, act: 'look', y: UP });
   TABLES.forEach(([x, z], i) => {
     if (i % 3 === 2) return;
-    out.push({ x: x - TABLE_R - 0.3, z, ry: Math.PI / 2, act: 'sit', y: UP + 0.32 });
-    if (i % 2 === 0) out.push({ x: x + TABLE_R + 0.3, z, ry: -Math.PI / 2, act: 'sit', y: UP + 0.32 });
+    out.push({ x: x - TABLE_R - 0.3, z, ry: Math.PI / 2, act: 'eat', y: UP + FIT.seat });
+    if (i % 2 === 0) out.push({ x: x + TABLE_R + 0.3, z, ry: -Math.PI / 2, act: 'eat', y: UP + FIT.seat });
   });
   // Leaning on the bridges' rails, looking down into the void
   BRIDGES.forEach(([z0, z1], i) => out.push({ x: (VOID[0] + VOID[2]) / 2 + (i - 1) * 1.6, z: i % 2 ? z0 + 0.45 : z1 - 0.45, ry: i % 2 ? Math.PI : 0, act: 'look', y: UP }));
