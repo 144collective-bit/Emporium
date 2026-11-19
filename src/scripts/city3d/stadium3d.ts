@@ -199,6 +199,8 @@ export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
   b.add(ring(FACADE.a - 0.6, FACADE.b - 0.6, FACADE.a, FACADE.b, FACADE.h), RIB);
   for (let k = 0; k < N; k += 4) {
     if (Math.abs(k - gateK) <= gateSpan) continue;
+    // (none across the turnstile entrances: stadiumgrounds3d.ts)
+    if ([0, N / 2, (3 * N) / 4].some((g) => Math.abs(k - g) < 3)) continue;
     const [x, z] = at(FACADE.a + 0.12, FACADE.b + 0.12, k);
     b.box(x - 0.18, S, z - 0.18, 0.36, FACADE.h - S + 0.1, 0.36, RIB);
   }
@@ -208,6 +210,8 @@ export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
   for (let i = 0; i < 4; i++) b.box(GATE.x - gw / 2 + 0.15 + i * ((gw - 0.3) / 4), S, GATE.z - 0.62, (gw - 0.3) / 4 - 0.1, GATE.h - 0.25, 0.08, toon('#3b3656'));
   b.box(GATE.x - gw / 2 - 0.2, S + GATE.h, GATE.z - 0.2, gw + 0.4, 0.12, 0.3, neon(PAL.cyan, 0.7, 1.8));
   for (const sx of [-1, 1]) b.box(GATE.x + sx * (gw / 2 + 0.1) - 0.06, S, GATE.z - 0.2, 0.12, GATE.h, 0.3, neon(PAL.cyan, 0.7, 1.8));
+  // (the turnstile entrances and the banners round the rest of the ring: stadiumgrounds3d.ts `dressRing()`, loaded with
+  // the park, not at the boot)
   // The cyan line round the top
   b.add(ring(FACADE.a + 0.02, FACADE.b + 0.02, FACADE.a + 0.14, FACADE.b + 0.14, FACADE.h - 0.4), neon(PAL.cyan, 0.6, 2.0));
   b.add(band(FACADE.a + 0.14, FACADE.b + 0.14, FACADE.h - 0.52, FACADE.h - 0.4, false), neon(PAL.cyan, 0.6, 2.0));

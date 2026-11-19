@@ -90,6 +90,12 @@ function rowOutside(b: Batch, s: Shop) {
   const ox = s.face === 1 ? x0 : x1;
   const n = s.face === 1 ? NX : PX;
   face(b, CLAD, ox, za, ox, zb, Y, L1 + 0.3, n);
+  // (a shop's window onto the avenue at street level, in a dark frame: the map polish plan's Phase 4, the whole row's
+  // outer face was blank cladding to the first floor)
+  if (z1 - z0 > 2.4) {
+    face(b, CLAD_DARK, ox, z0 + 0.5, ox, z1 - 0.5, Y + 0.35, L1 - 0.15, n, 0.018);
+    face(b, CURTAIN, ox, z0 + 0.62, ox, z1 - 0.62, Y + 0.47, L1 - 0.27, n, 0.024);
+  }
   face(b, CURTAIN, ox, za, ox, zb, L1 + 0.3, L1 + 2.5, n);
   face(b, CLAD, ox, za, ox, zb, L1 + 2.5, TOP - 0.55, n);
   face(b, CLAD_DARK, ox, za, ox, zb, TOP - 0.55, TOP, n, 0.02);
@@ -107,6 +113,10 @@ function ends(b: Batch) {
   ]) {
     face(b, CLAD, x0, SOUTH, x1, SOUTH, Y, TOP - 0.55, PZ);
     face(b, CLAD_DARK, x0, SOUTH, x1, SOUTH, TOP - 0.55, TOP, PZ, 0.02);
+    // (and glazed: a window down, the ribbon up, as the rows' outer faces; they were cladding to the top)
+    face(b, CLAD_DARK, x0 + 1, SOUTH, x1 - 1, SOUTH, Y + 0.35, L1 - 0.15, PZ, 0.018);
+    face(b, CURTAIN, x0 + 1.12, SOUTH, x1 - 1.12, SOUTH, Y + 0.47, L1 - 0.27, PZ, 0.024);
+    face(b, CURTAIN, x0 + 0.6, SOUTH, x1 - 0.6, SOUTH, L1 + 0.3, L1 + 2.5, PZ, 0.018);
   }
   // The square in front of the cinema, by the rows' north ends, and the passages: roofed over at the rows' height
   const roofs: [number, number, number, number][] = [

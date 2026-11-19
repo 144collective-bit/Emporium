@@ -11,9 +11,10 @@
  * (stadium3d.ts).
  */
 import * as THREE from 'three';
-import { Batch, neon, toon } from './kit';
+import { Batch, PAL, neon, toon } from './kit';
 import { site } from './tilework';
-import { BAY, BAYS, CAR_PARK, IN, LOOP, ROAD, ROAD_LINE, WALK, ZEBRA } from './stadium';
+import { BAY, BAYS, CAR_PARK, CENTRE, FACADE, IN, LOOP, ROAD, ROAD_LINE, WALK, ZEBRA, ovalAt } from './stadium';
+import { SLAB as S } from './world';
 import { along, pieces as runs, ribbon } from './roads3d';
 import { ROAD as PAL_ROAD } from './palette';
 
@@ -39,7 +40,44 @@ function flatRect(b: Batch, x0: number, z0: number, x1: number, z1: number, y: n
     }
 }
 
+/**
+ * The stadium's ring dressed (the map polish plan's Phase 4: a blank dark band but for the south gate): a turnstile
+ * entrance at the east, west and north (stadium3d.ts leaves its ribs out there), shutters in a recess under a lit
+ * header, and banners hung down the facade between them. Each a plane on the facade's face at k (of stadium3d.ts's 96
+ * round the oval), `off` out of it, `along` it in metres
+ */
+const RING_N = 96;
+function dressRing(b: Batch) {
+  const at = (k: number) => ovalAt(FACADE.a, FACADE.b, (2 * Math.PI * k) / RING_N);
+  const onFace = (k: number, w: number, h: number, y: number, m: THREE.Material, off: number, along = 0) => {
+    const [p, q] = [at(k - 0.05), at(k + 0.05)];
+    let [nx, nz] = [q[1] - p[1], -(q[0] - p[0])];
+    const [x, z] = at(k);
+    if (nx * (x - CENTRE[0]) + nz * (z - CENTRE[1]) < 0) [nx, nz] = [-nx, -nz];
+    const l = Math.hypot(nx, nz);
+    const [tx, tz] = [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
+    b.add(new THREE.PlaneGeometry(w, h).rotateY(Math.atan2(nx, nz)).translate(x + (nx / l) * off + tx * along, y, z + (nz / l) * off + tz * along), m);
+  };
+  const recess = toon('#141221');
+  const shutter = toon('#3b3656');
+  const header = neon(PAL.cyan, 0.7, 1.8);
+  for (const k of [0, RING_N / 2, (3 * RING_N) / 4]) {
+    onFace(k, 4.2, 2.8, S + 1.4, recess, 0.03);
+    for (const d of [-1.3, 0, 1.3]) onFace(k, 1.1, 2.4, S + 1.25, shutter, 0.05, d);
+    onFace(k, 4.4, 0.14, S + 2.9, header, 0.06);
+  }
+  const banners = [PAL.magenta, '#e2b43c', PAL.cyan].map((c) => toon(c));
+  for (let k = 6; k < RING_N; k += 12) {
+    if ([0, RING_N / 4, RING_N / 2, (3 * RING_N) / 4].some((g) => Math.abs(k - g) < 4)) continue;
+    onFace(k, 1.3, 3.4, FACADE.h - 2.4, banners[(k / 6) % banners.length | 0], 0.04);
+  }
+}
 export function register() {
+  site('stadium ring dress', [CENTRE[0] - FACADE.a - 2, CENTRE[1] - FACADE.b - 2, CENTRE[0] + FACADE.a + 2, CENTRE[1] + FACADE.b + 2], (into) => {
+    const b = new Batch();
+    dressRing(b);
+    b.build(into, { cast: false, receive: true });
+  });
   // Stadium Road's way in, from the north road's west edge west and round the bend (in pieces), and a dashed centre
   // line but across the loop's ways in
   const [, bendTop] = ROAD_LINE;

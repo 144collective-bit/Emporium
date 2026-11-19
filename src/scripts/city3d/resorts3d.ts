@@ -460,6 +460,7 @@ const DRIVE = toon('#4a4752');
 const STONE = toon('#e6dccb');
 const DARK = toon('#16141f');
 const GOLD = toon('#e2b43c');
+const LOBBY = siteMat('strip-lobby', lit(toon('#3a3348', { emissive: '#ffd59a' }), 0, 0.9));
 const WHITE = toon('#f1f0f6');
 const SAND = toon('#d9b97a');
 const WOOD = toon('#7a5233');
@@ -519,6 +520,12 @@ function beam(b: Batch, p: V3, q: V3, th: number, m: THREE.Material) {
 /** A flat plane facing n, its middle at (x, y, z) */
 function pane(b: Batch, x: number, y: number, z: number, n: Pt, w: number, h: number, m: THREE.Material, off = 0.01) {
   b.add(new THREE.PlaneGeometry(w, h).rotateY(Math.atan2(n[0], n[1])).translate(x + n[0] * off, y, z + n[1] * off), m);
+}
+/** A pair of lit glass doors in a doorway facing n (on the wall at x, z: its foot on the slab), w wide, h high */
+function doors(b: Batch, x: number, z: number, n: Pt, w: number, h: number) {
+  const [tx, tz] = [-n[1], n[0]];
+  for (const e of [-1, 1]) pane(b, x + tx * e * (w / 4), SLAB + h / 2, z + tz * e * (w / 4), n, w / 2 - 0.12, h - 0.16, LOBBY, 0.03);
+  for (const e of [-1, 0, 1]) beam(b, [x + tx * e * (w / 2), SLAB, z + tz * e * (w / 2) + n[1] * 0.04], [x + tx * e * (w / 2), SLAB + h, z + tz * e * (w / 2) + n[1] * 0.04], e === 0 ? 0.06 : 0.1, GOLD);
 }
 /** A sign from the atlas facing n */
 function sign(b: Batch, text: string, x: number, y: number, z: number, n: Pt, w: number, h: number, off = 0.015) {
@@ -805,6 +812,9 @@ function front(b: Batch, r: Resort, low: boolean) {
   // (the door's spot is a little in front of the wall: the doorway on the wall itself)
   pane(b, dx, SLAB + 1.1, dz - n[1] * 0.35, n, 1.6, 2.2, DARK, 0.02);
   beam(b, [dx - 0.85, SLAB + 2.25, dz - n[1] * 0.3], [dx + 0.85, SLAB + 2.25, dz - n[1] * 0.3], 0.08, GOLD);
+  // (glass doors lit from the lobby in the doorway, gold jambs and a gold bar between the leaves: the map polish plan's
+  // Phase 4, it was a flat dark slab)
+  doors(b, dx, dz - n[1] * 0.35, n, 1.6, 2.2);
 }
 
 /* ---------- Each resort's own ---------- */
@@ -998,6 +1008,7 @@ function scarab(b: Batch, r: Resort, low: boolean) {
   rectBox(b, P.rect, SLAB, SLAB + P.h, SAND);
   const pz = r.face > 0 ? P.rect[3] : P.rect[1];
   pane(b, (P.rect[0] + P.rect[2]) / 2, SLAB + (P.h - 0.6) / 2, pz, n, P.rect[2] - P.rect[0] - 1.1, P.h - 0.6, DARK, 0.02);
+  doors(b, (P.rect[0] + P.rect[2]) / 2, pz, n, 2.4, 2.4);
   box(b, P.rect[0] - 0.2, SLAB + P.h, P.rect[1] - 0.1, P.rect[2] + 0.2, SLAB + P.h + 0.4, P.rect[3] + 0.1, GOLD);
   sign(b, 'THE GOLDEN SCARAB', (x0 + x1) / 2, SLAB + P.h + 1.3, pz - n[1] * 0.05, n, 7, 0.9);
   // The stepped towers' terraces in neon

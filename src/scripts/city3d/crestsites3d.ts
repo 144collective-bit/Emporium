@@ -73,7 +73,14 @@ const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: numbe
 const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, m: THREE.Material, seg = 12, r0 = r, open = false) => b.add(new THREE.CylinderGeometry(r, r0, h, seg, 1, open).translate(x, y + h / 2, z), m);
 /** A window on a wall facing `n` (a unit x, z), its middle along the wall at (x, z), w x h from y */
 function pane(b: Batch, x: number, z: number, n: Pt, w: number, y: number, h: number, m: THREE.Material = WINDOW) {
-  b.add(new THREE.PlaneGeometry(w, h).translate(0, y + h / 2, 0).rotateY(Math.atan2(n[0], n[1])).translate(x + n[0] * 0.012, 0, z + n[1] * 0.012), m);
+  const at = (pw: number, ph: number, py: number, off: number, mm: THREE.Material) =>
+    b.add(new THREE.PlaneGeometry(pw, ph).translate(0, py, 0).rotateY(Math.atan2(n[0], n[1])).translate(x + n[0] * off, 0, z + n[1] * off), mm);
+  // (a window gets a white surround and a glazing bar down it, at every distance: the map polish plan's Phase 4, they
+  // were bare panes on the wall; a door, any other material, is laid as it was)
+  if (m === WINDOW) at(w + 0.16, h + 0.16, y + h / 2, 0.006, WHITE);
+  else if (m === WOOD) at(w + 0.3, h + 0.15, y + (h + 0.15) / 2, 0.006, STONE_SHADE);
+  at(w, h, y + h / 2, 0.012, m);
+  if (m === WINDOW && w > 0.5) at(0.05, h, y + h / 2, 0.018, WHITE);
 }
 /** Windows round a box (x0..x1, z0..z1), a row a storey from `y0`, a window every `step` */
 function windowsRound(b: Batch, r: Rect, y0: number, floors: number, ground: number, upper: number, step = 1.7, skip?: (x: number, z: number, f: number) => boolean) {
@@ -143,12 +150,19 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     box(b, H.body[0] + 0.9, bodyTop + 0.4, nz - 4, H.body[0] + 1.0, bodyTop + 2.4, nz + 4, IRON);
     // The balconies (near): a white slab and rail under every other upper window on the front
     b.detail(() => {
+      // (under every other window, centred on it as windowsRound() lays them, its rail open: a top rail, a bottom
+      // rail and bars, not a solid black slab off the window's line: the map polish plan's Phase 4)
+      const k = Math.max(1, Math.floor((H.body[3] - H.body[1]) / 1.6));
       for (let f = 1; f < H.floors; f++)
-        for (let z = H.body[1] + 1.2; z < H.body[3] - 1; z += 3.2) {
+        for (let i = 0; i < k; i += 2) {
+          const z = H.body[1] + ((i + 0.5) * (H.body[3] - H.body[1])) / k;
           if (z > T[1] - 0.5 && z < T[3] + 0.5 && f >= 1) continue;
           const y = y0 + ground + (f - 1) * upper + 0.3;
-          box(b, H.body[0] - 0.7, y, z - 0.6, H.body[0], y + 0.08, z + 0.6, WHITE);
-          box(b, H.body[0] - 0.72, y + 0.08, z - 0.6, H.body[0] - 0.66, y + 0.85, z + 0.6, IRON);
+          const [x0, x1] = [H.body[0] - 0.7, H.body[0]];
+          box(b, x0, y, z - 0.6, x1, y + 0.08, z + 0.6, WHITE);
+          for (const ry of [0.2, 0.82]) box(b, x0 - 0.02, y + ry, z - 0.6, x0 + 0.03, y + ry + 0.04, z + 0.6, IRON);
+          for (const sz of [-0.58, 0.58]) box(b, x0, y + 0.82, z + sz - 0.02, x1, y + 0.86, z + sz + 0.02, IRON);
+          for (let bz = z - 0.55; bz <= z + 0.56; bz += 0.22) box(b, x0 - 0.01, y + 0.08, bz - 0.012, x0 + 0.02, y + 0.84, bz + 0.012, IRON);
         }
     });
     // The porte-cochère: a white canopy lit along its edge on two posts, over the drive at the door

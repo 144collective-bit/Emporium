@@ -541,6 +541,10 @@ function mro(b: Batch) {
   box(b, x0, 0, z0, x1, wallH, z1, CLAD);
   // Ribbed cladding: a rib every 2
   for (let z = z0 + 1; z < z1; z += 2) for (const x of [x0 - 0.06, x1 - 0.02]) box(b, x, 0, z - 0.06, x + 0.08, wallH, z + 0.06, toon('#4f6398'));
+  // (and round its back, the north wall, with a band of windows and a door: the map polish plan's Phase 4, it was bare)
+  for (let x = x0 + 1; x < x1; x += 2) box(b, x - 0.06, 0, z0 - 0.08, x + 0.06, wallH, z0 + 0.02, toon('#4f6398'));
+  box(b, x0 + 0.5, wallH - 1.6, z0 - 0.1, x1 - 0.5, wallH - 0.9, z0 - 0.06, toon('#26315f'));
+  box(b, (x0 + x1) / 2 - 0.6, 0, z0 - 0.1, (x0 + x1) / 2 + 0.6, 2.1, z0 - 0.06, toon('#8a86a8'));
   // A low curved roof
   barrel(b, (x0 + x1) / 2, (z0 + z1) / 2, 'z', z1 - z0 + 0.6, x1 - x0, 2.4, wallH, toon('#d6d2ea'));
   // The doors on the south: panels with a band of windows, a yellow stripe over them, the sign
@@ -567,6 +571,18 @@ function fireStation(b: Batch) {
     for (let y = 0.6; y < H - 1; y += 0.75) box(b, x + 0.5, y, z1 + 0.1, x + bay - 0.5, y + 0.06, z1 + 0.14, toon('#a3121f'));
     box(b, x + 0.7, H - 1.9, z1 + 0.1, x + bay - 0.7, H - 1.4, z1 + 0.14, toon('#26315f'));
   }
+  // Its sides and back (a brick box before, the map polish plan's Phase 4): windows each side and along the back, a
+  // door at the back, a pale band under the parapet
+  const winAt = (x: number, z: number, nx: number, nz: number, w: number) => {
+    const [hx, hz] = [Math.abs(nz) * w / 2 + Math.abs(nx) * 0.04, Math.abs(nx) * w / 2 + Math.abs(nz) * 0.04];
+    box(b, x - hx - Math.abs(nz) * 0.1 + nx * 0.02, 1.5, z - hz - Math.abs(nx) * 0.1 + nz * 0.02, x + hx + Math.abs(nz) * 0.1 + nx * 0.02, 2.9, z + hz + Math.abs(nx) * 0.1 + nz * 0.02, PALE);
+    box(b, x - hx + nx * 0.05, 1.6, z - hz + nz * 0.05, x + hx + nx * 0.05, 2.8, z + hz + nz * 0.05, toon('#26315f'));
+  };
+  for (let z = z0 + 2; z < z1 - 1; z += 3) winAt(x0, z, -1, 0, 1.4);
+  for (let z = z0 + 4.5; z < z1 - 1; z += 3) winAt(x1, z, 1, 0, 1.4);
+  for (let x = x0 + 2; x < x1 - 5; x += 3) winAt(x, z0, 0, -1, 1.4);
+  box(b, x1 - 5.6, 0, z0 - 0.06, x1 - 4.6, 2.2, z0, toon('#a3121f'));
+  box(b, x0 - 0.03, H - 0.45, z0 - 0.03, x1 + 0.03, H - 0.25, z1 + 0.03, PALE);
   // The hose tower at the back, its lantern
   box(b, x1 - 4, 0, z0, x1 - 0.5, H + 3.2, z0 + 3.5, BRICK);
   box(b, x1 - 4.1, H + 3.2, z0 - 0.1, x1 - 0.4, H + 3.5, z0 + 3.6, PALE);

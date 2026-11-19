@@ -66,7 +66,9 @@ keep it up to date when what it describes changes.
     (`ROOF`), the pitch (`PITCH`) and its track (`TRACK`), four floodlight
     masts (`MASTS`, `MAST`; `TALLEST` under the Emporium), the big screen
     over the north stand (`SCREEN`) and the main gate in the south facade
-    (`GATE`, under `NAME`, fixed made-up copy), `STADIUM_SPAWN` on the
+    (`GATE`, under `NAME`, fixed made-up copy), turnstile entrances east,
+    west and north and banners down the facade (stadiumgrounds3d.ts
+    `dressRing()`, with the park: the map polish plan's Phase 4), `STADIUM_SPAWN` on the
     forecourt. Stadium Road (`ROAD`) runs west off the north road (ns0) past
     its front, and the car park (`CAR_PARK`, `BAY_ROWS`, `BAYS`, `PARKED`) is
     inside a one-way loop off it east of the stadium (`LOOP`), as the

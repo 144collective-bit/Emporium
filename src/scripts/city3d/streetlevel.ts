@@ -95,7 +95,7 @@ export function sidesOf([x0, z0, x1, z1]: Rect): Side[] {
   ];
 }
 export const OPPOSITE: Record<Face, Face> = { n: 's', s: 'n', e: 'w', w: 'e' };
-const NORMAL: Record<Face, Pt> = { w: [-1, 0], s: [0, 1], e: [1, 0], n: [0, -1] };
+export const NORMAL: Record<Face, Pt> = { w: [-1, 0], s: [0, 1], e: [1, 0], n: [0, -1] };
 
 const inRect = (p: Pt, r: Rect, m = 0) => p[0] > r[0] - m && p[0] < r[2] + m && p[1] > r[1] - m && p[1] < r[3] + m;
 function inPoly(poly: Pt[], p: Pt) {

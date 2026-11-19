@@ -29,6 +29,7 @@ const SOLAR = toon('#1d2740');
 const SOLAR_FRAME = toon('#9aa3b0');
 const METAL = toon('#3a3a3e');
 const AC = toon('#c9cbc8');
+const SIDE_DOOR = toon('#6b5846');
 const LAMP = neon('#ffd9a0', 0.25, 1.6);
 
 /** Window glass: about half lit from inside at night, the rest dark */
@@ -304,8 +305,9 @@ function drawHouse(b: Batch, h: House, low: boolean) {
   // The L's garage wing: a window on its side facing the entry court
   if (h.plan === 'ell') win(s < 0 ? 'right' : 'left', s < 0 ? garage.u1 : garage.u0, (garage.v0 + garage.v1) / 2 + 0.3, 0.9, sill, 0.8);
 
-  // Near only: the side and back windows, a slider onto the back yard
-  b.detail(() => {
+  // The side and back windows, a slider onto the back yard: at every distance (the map polish plan's Phase 4: near
+  // only, a house's side to a corner street and its back read blank from the road)
+  {
     for (let f = 0; f < main.storeys; f++) {
       const y = f === 0 ? sill : FLOOR + STOREY + 0.5;
       for (const side of ['left', 'right'] as const) {
@@ -320,11 +322,19 @@ function drawHouse(b: Batch, h: House, low: boolean) {
         else win('back', u, main.v1, 1.0, y, 0.8);
       }
     }
-    // The air conditioner in the side yard off the rooms (not on phones)
-    if (low) return;
-    const au = s < 0 ? main.u1 + 0.26 : main.u0 - 0.26;
-    box(au - 0.22, au + 0.22, main.v1 - 1.6, main.v1 - 1.1, 0, 0.42, AC);
-  });
+  }
+  // The air conditioner in the side yard off the rooms (near only, not on phones)
+  if (!low)
+    b.detail(() => {
+      const au = s < 0 ? main.u1 + 0.26 : main.u0 - 0.26;
+      box(au - 0.22, au + 0.22, main.v1 - 1.6, main.v1 - 1.1, 0, 0.42, AC);
+    });
+  // A side door into the garage from the side yard, opposite the house (the garage's sides were blank)
+  {
+    const [face, u, v] = [s < 0 ? ('left' as const) : ('right' as const), s < 0 ? garage.u0 : garage.u1, (garage.v0 + garage.v1) / 2 + 0.4];
+    plate(face, u, v, 0.9, 0.02, 1.33, trim, 0.02);
+    plate(face, u, v, 0.72, 0.02, 1.25, SIDE_DOOR, 0.03);
+  }
 
   // A porch across the rooms' front: its roof on posts
   if (h.porch) {

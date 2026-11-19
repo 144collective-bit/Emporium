@@ -228,14 +228,17 @@ function drawClub(b: Batch, low: boolean) {
   const [qx0, , qx1, qz1] = PORTICO;
   for (const x of [qx0 + 0.25, qx1 - 0.25]) boxOn(b, x - 0.16, qz1 - 0.36, x + 0.16, qz1 - 0.04, 0, 1.7, STUCCO_TRIM);
   tileRoof(b, [qx0, z1 - 0.3, qx1, qz1], 1.7, 0);
+  // Side and back windows, the back door to the pool (at every distance: the map polish plan's Phase 4), lamps by the
+  // front door up close
+  for (const z of [z0 + 2, z1 - 2]) {
+    pane(b, 'w', x0, z, 1.36, 0.72, 0.96, STUCCO_TRIM, 0.012);
+    pane(b, 'w', x0, z, 1.2, 0.8, 0.8, GLASS, 0.02);
+    pane(b, 'e', x1, z, 1.36, 0.72, 0.96, STUCCO_TRIM, 0.012);
+    pane(b, 'e', x1, z, 1.2, 0.8, 0.8, GLASS, 0.02);
+  }
+  for (const x of [x0 + 2.5, x1 - 2.5]) pane(b, 'n', x, z0, 1.4, 0.8, 0.85, GLASS_LIT, 0.02);
+  pane(b, 'n', 150.5, z0, 1.2, 0.1, 1.35, GLASS, 0.02);
   b.detail(() => {
-    // Side and back windows, the back door to the pool, lamps by the front door
-    for (const z of [z0 + 2, z1 - 2]) {
-      pane(b, 'w', x0, z, 1.2, 0.8, 0.8, GLASS, 0.02);
-      pane(b, 'e', x1, z, 1.2, 0.8, 0.8, GLASS, 0.02);
-    }
-    for (const x of [x0 + 2.5, x1 - 2.5]) pane(b, 'n', x, z0, 1.4, 0.8, 0.85, GLASS_LIT, 0.02);
-    pane(b, 'n', 150.5, z0, 1.2, 0.1, 1.35, GLASS, 0.02);
     for (const x of [149.4, 151.6]) boxOn(b, x - 0.07, z1, x + 0.07, z1 + 0.08, 1.05, 1.25, LAMP);
   });
   // The name on its low wall
@@ -435,6 +438,25 @@ function drawSchool(b: Batch, low: boolean) {
   for (let z = sz0 + 1.2; z < sz1 - 0.6; z += 1.8) {
     pane(b, 'e', sx1, z, 1.46, 0.54, 1.06, STUCCO_TRIM, 0.012);
     pane(b, 'e', sx1, z, 1.3, 0.62, 0.9, (z * 5) % 3 < 1.5 ? GLASS_LIT : GLASS, 0.02);
+  }
+  // The other faces (the map polish plan's Phase 4: the west wing's west wall ran 17.5 blank to the park, the ends and
+  // the hall's sides had nothing): classroom windows along the west wing's park side and the front wing's back, one in
+  // each end, a high band round the hall
+  const win = (face: 'n' | 's' | 'e' | 'w', x: number, z: number, k: number) => {
+    pane(b, face, x, z, 1.46, 0.54, 1.06, STUCCO_TRIM, 0.012);
+    pane(b, face, x, z, 1.3, 0.62, 0.9, k % 3 < 1.5 ? GLASS_LIT : GLASS, 0.02);
+  };
+  const [wx0, wz0] = SCHOOL.wings[1];
+  for (let z = wz0 + 1.2; z < sz1 - 0.6; z += 1.8) win('w', wx0, z, z * 3);
+  win('n', (wx0 + sx1) / 2, wz0, 7);
+  for (let x = sx1 + 1.2; x < fx1 - 0.8; x += 1.8) win('n', x, SCHOOL.wings[0][1], x * 11);
+  win('w', fx0, (SCHOOL.wings[0][1] + fz1) / 2, 5);
+  win('e', fx1, (SCHOOL.wings[0][1] + fz1) / 2, 4);
+  {
+    const [hx0, hz0, hx1, hz1] = SCHOOL.hall.rect;
+    for (let z = hz0 + 1; z < hz1 - 0.6; z += 1.6)
+      for (const [f, x] of [['w', hx0], ['e', hx1]] as const) pane(b, f, x, z, 1.1, SCHOOL.hall.h - 0.9, 0.5, GLASS, 0.02);
+    for (let x = hx0 + 1; x < hx1 - 0.6; x += 1.6) pane(b, 'n', x, hz0, 1.1, SCHOOL.hall.h - 0.9, 0.5, GLASS, 0.02);
   }
   // The hall's clerestory band
   {

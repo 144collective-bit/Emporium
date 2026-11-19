@@ -31,7 +31,7 @@ import { CORE, CORE_RECT, DECK, RIBS, SPIRE, VIEWERS } from './skydeck';
 import { OFFICE, OFFICE_GLSL, beaconOn, officeShare } from './skyline';
 import type { Pt, Rect } from './uptown';
 import { ROOF_TERRACES } from './boulevard';
-import { FRONTAGES, SHOP_NAMES, UNIT, nameAlong, type ShopCharacter } from './streetlevel';
+import { FRONTAGES, NORMAL, SHOP_NAMES, UNIT, frontage, nameAlong, type ShopCharacter } from './streetlevel';
 
 /* ---------- The atlas ---------- */
 
@@ -819,7 +819,12 @@ function podium(b: Batch, t: Highrise, p: Part) {
   const set = (f: Face) => f === t.front ? t.lobby === 'colonnade' || t.lobby === 'arcade' : (t.arcades ?? []).includes(f);
   for (const { f, a, c } of sides(p.rect)) {
     if (f === OPPOSITE[t.front] && !set(f)) {
-      wall(b, ATLAS.service, a, c, SLAB, H, 0);
+      // (a back on a real street, 19 of the 32, gets a glazed ground floor and the ribbon over it, not louvres and a
+      // steel door to the road: the map polish plan's Phase 4; a back on a lane or a yard keeps its service wall)
+      if (frontage(t, a, c, NORMAL[f]).char !== 'service') {
+        wall(b, ATLAS.bronze, a, c, SLAB, G, 0);
+        wall(b, ATLAS.ribbon, a, c, G, H, 0);
+      } else wall(b, ATLAS.service, a, c, SLAB, H, 0);
       continue;
     }
     const fr = FRONTAGES.find((q) => q.tower === t.id && q.side === f);

@@ -148,8 +148,9 @@ function lay(): Boutique[] {
         if (b - z - w < WIDE[0]) w = b - z;
         const floors = r() < 0.4 ? 3 : 2;
         const style = styles[Math.floor(r() * styles.length)];
-        // (next to the lane, its side on the lane carries windows)
-        const side: Face | undefined = id === VIA_BLOCK ? (Math.abs(z + w - (VIA.z - VIA.half)) < 1e-6 ? 's' : Math.abs(z - (VIA.z + VIA.half)) < 1e-6 ? 'n' : undefined) : undefined;
+        // (next to the lane, or at its block's end on a cross street, its side carries windows: the map polish plan's
+        // Phase 4, the block's end shops showed a bare stone end to the cross streets)
+        const side: Face | undefined = Math.abs(z + w - b) < 1e-6 ? 's' : Math.abs(z - a) < 1e-6 ? 'n' : undefined;
         out.push({ id: `drive-${out.length}`, name: name(), rect: [bx0, z, bx1, z + w], face: west ? 'e' : 'w', side, floors, style, awning: awnings[Math.floor(r() * awnings.length)], cafe: false, flags: floors === 3 || style === 'stone' });
         // (a hair between neighbours: never two walls in one plane)
         z += w + 0.02;
@@ -159,7 +160,9 @@ function lay(): Boutique[] {
   // The cafés: the two widest fronts with no bay in front of them, one on each side of the street
   for (const west of [true, false]) {
     // (a bay may reach a little way along its front: its tables stop short of it)
-    const free = out.filter((b) => (b.face === 'e') === west && !b.side && b.rect[3] - b.rect[1] - CORAL_BAYS.filter((y) => westOf(y.block) === west).reduce((m, y) => m + Math.max(0, Math.min(b.rect[3], y.to + 1) - Math.max(b.rect[1], y.from - 1)), 0) > 4);
+    // (not one on the lane: an end shop's windowed side on a cross street doesn't count, so the cafés stay where they were)
+    const onLane = (b: Boutique) => Math.abs(b.rect[3] - (VIA.z - VIA.half)) < 1e-6 || Math.abs(b.rect[1] - (VIA.z + VIA.half)) < 1e-6;
+    const free = out.filter((b) => (b.face === 'e') === west && !(b.side && onLane(b)) && b.rect[3] - b.rect[1] - CORAL_BAYS.filter((y) => westOf(y.block) === west).reduce((m, y) => m + Math.max(0, Math.min(b.rect[3], y.to + 1) - Math.max(b.rect[1], y.from - 1)), 0) > 4);
     const best = free.sort((p, q) => q.rect[3] - q.rect[1] - (p.rect[3] - p.rect[1]))[0];
     if (best) {
       best.cafe = true;

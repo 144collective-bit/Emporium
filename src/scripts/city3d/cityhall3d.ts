@@ -136,6 +136,18 @@ export function windows(b: Batch, axis: 'x' | 'z', at: number, sign: 1 | -1, a: 
     for (const [y0, y1] of rows) {
       const [cx, cz] = axis === 'x' ? [at + sign * 0.02, u] : [u, at + sign * 0.02];
       b.add(pane(cx, (y0 + y1) / 2, cz, 1.1, y1 - y0, axis, sign), WIN);
+      // Its stone surround standing off the wall, a mullion and a transom: at every distance (the map polish plan's
+      // Phase 4: a flat dark slot from across the square)
+      const bar = (along: number, ay: number, w: number, h: number) => {
+        const [bx, bz, bw, bd] = axis === 'x' ? [at + (sign > 0 ? 0 : -0.07), along - w / 2, 0.07, w] : [along - w / 2, at + (sign > 0 ? 0 : -0.07), w, 0.07];
+        b.box(bx, ay, bz, bw, h, bd, SHADE);
+      };
+      bar(u - 0.62, y0 - 0.08, 0.14, y1 - y0 + 0.16);
+      bar(u + 0.62, y0 - 0.08, 0.14, y1 - y0 + 0.16);
+      bar(u, y0 - 0.08, 1.38, 0.1);
+      bar(u, y1 - 0.02, 1.38, 0.1);
+      bar(u, y0, 0.06, y1 - y0);
+      bar(u, y0 + (y1 - y0) * 0.68, 1.1, 0.06);
       // A stone sill under each, and a lintel over it (near only)
       b.detail(() => {
         const [sx, sz, sw, sd] = axis === 'x' ? [at + (sign > 0 ? 0 : -0.18), u - 0.75, 0.18, 1.5] : [u - 0.75, at + (sign > 0 ? 0 : -0.18), 1.5, 0.18];
@@ -202,6 +214,12 @@ function front(b: Batch) {
     b.add(g, BANNER_MAT);
     b.box(x - BANNER.w / 2 - 0.1, PODIUM_Y + BANNER.top, fz1 + 0.02, BANNER.w + 0.2, 0.08, 0.1, BRONZE);
   }
+  // The front range's back, where it shows either side of the back block (blank stubs by the walks: Phase 4)
+  {
+    const [bx0, , bx1] = HALL.back;
+    windows(b, 'z', fz0, -1, fx0 + 0.4, bx0 - 0.3, 3, [[G + 1.4, G + 4.6], [G + 6, G + 9.2]]);
+    windows(b, 'z', fz0, -1, bx1 + 0.3, fx1 - 0.4, 3, [[G + 1.4, G + 4.6], [G + 6, G + 9.2]]);
+  }
   // Tall windows in the front range's ends
   for (const [x, s] of [
     [fx0, -1],
@@ -223,7 +241,17 @@ function back(b: Batch) {
   ];
   windows(b, 'x', x0, -1, z0 + 0.6, z1 - 0.6, 3, rows);
   windows(b, 'x', x1, 1, z0 + 0.6, z1 - 0.6, 3, rows);
-  windows(b, 'z', z0, -1, x0 + 0.6, x1 - 0.6, 3, rows);
+  // The back: its windows either side of the back door onto the Mall (the map polish plan's Phase 4: the Mall ended at
+  // a wall), the door bronze in a stone surround, a transom over it, a canopy on brackets
+  windows(b, 'z', z0, -1, x0 + 0.6, AXIS - 1.6, 3, rows);
+  windows(b, 'z', z0, -1, AXIS + 1.6, x1 - 0.6, 3, rows);
+  windows(b, 'z', z0, -1, AXIS - 1.4, AXIS + 1.4, 3, [rows[1]]);
+  const [rw, rh] = [1.8, 3.2];
+  b.box(AXIS - rw / 2 - 0.3, G, z0 - 0.08, rw + 0.6, rh + 0.4, 0.08, SHADE);
+  b.box(AXIS - rw / 2, G, z0 - 0.12, rw, rh, 0.08, BRONZE);
+  b.add(pane(AXIS, G + rh + 0.2, z0 - 0.13, rw, 0.3, 'z', -1), WIN);
+  b.box(AXIS - rw / 2 - 0.5, G + rh + 0.45, z0 - 1.3, rw + 1.0, 0.14, 1.3, SHADE);
+  for (const x of [AXIS - rw / 2 - 0.4, AXIS + rw / 2 + 0.3]) b.box(x, G + rh + 0.05, z0 - 0.5, 0.1, 0.4, 0.5, BRONZE);
   // The tower's tiers: each a stone block ribbed with piers, slit windows between, a cornice; the lantern on top
   const [cx, cz] = TOWER_C;
   let y0 = BACK_H + 0.25;

@@ -116,7 +116,10 @@ keep it up to date when what it describes changes.
     side of a narrow lobby door, awnings and names from `SHOP_NAMES`, made
     up), the flatiron's shops all round its foot, and the spire's glass
     pavilion. A podium's sides are shops or glass, its back a service wall
-    (louvres, a steel door). **Facades** vary by tower (`facade()`): fins
+    (louvres, a steel door) where it faces a lane or a yard, but a glazed
+    ground floor and the ribbon over it where `frontage()` finds a street
+    there (the map polish plan's Phase 4: drawing only, `FRONTAGES` as it
+    was). **Facades** vary by tower (`facade()`): fins
     down the glass, ledges every four floors, or corner piers; the tallest
     slab carries the executive helicopter's helipad (`ROOF_PAD`: a steel
     deck on legs over its plant room, its mast left off for it). Planters

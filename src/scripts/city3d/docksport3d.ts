@@ -92,6 +92,8 @@ const CLAD = toon('#6f8a7a');
 const CLAD_ROOF = toon('#4a4f5c');
 const CLAD_RIB = toon('#62796c');
 const DOOR = toon('#3b3f4a');
+const SHUTTER = toon('#8a8f99');
+const SLAT = toon('#6c717c');
 const STONE = toon('#d4cbb6');
 const COPPER = toon('#3f8f7a');
 const TANK = toon('#e9e7ee');
@@ -210,6 +212,25 @@ function beam(b: Batch, p: V3, q: V3, th: number, m: THREE.Material) {
 /** A flat plane facing n (x, z), its middle at (x, y, z), w x h, laid `off` proud */
 function pane(b: Batch, x: number, y: number, z: number, n: Pt, w: number, h: number, m: THREE.Material, off = 0.008) {
   b.add(new THREE.PlaneGeometry(w, h).rotateY(Math.atan2(n[0], n[1])).translate(x + n[0] * off, y, z + n[1] * off), m);
+}
+/**
+ * A roller shutter in a wall facing n, its middle at (x, y, z) (the map polish plan's Phase 4: they were flat dark
+ * panes): the shutter in a steel frame standing off the wall, a box over it for the roll; its slats near
+ */
+function shutter(b: Batch, x: number, y: number, z: number, n: Pt, w: number, h: number, low: boolean, m: THREE.Material = SHUTTER) {
+  pane(b, x, y, z, n, w, h, m);
+  const [tx, tz] = [-n[1], n[0]];
+  const bar = (u: number, v: number, bw: number, bh: number, out: number) => {
+    const [cx, cz] = [x + tx * u + n[0] * out / 2, z + tz * u + n[1] * out / 2];
+    const [hx, hz] = [Math.abs(tx) * bw / 2 + Math.abs(n[0]) * out / 2, Math.abs(tz) * bw / 2 + Math.abs(n[1]) * out / 2];
+    box(b, cx - hx, v - bh / 2, cz - hz, cx + hx, v + bh / 2, cz + hz, STEEL);
+  };
+  bar(-w / 2 - 0.08, y, 0.16, h + 0.1, 0.1);
+  bar(w / 2 + 0.08, y, 0.16, h + 0.1, 0.1);
+  bar(0, y + h / 2 + 0.2, w + 0.36, 0.4, 0.22);
+  if (!low) b.detail(() => {
+    for (let v = y - h / 2 + 0.25; v < y + h / 2 - 0.1; v += 0.25) pane(b, x, v, z, n, w, 0.035, SLAT, 0.014);
+  });
 }
 /** A sign from the atlas facing n, its middle at (x, y, z) */
 function sign(b: Batch, cell: number, x: number, y: number, z: number, n: Pt, w: number, h: number, m: THREE.Material = PAINTED, f0 = 0, f1 = 1, off = 0.012) {
@@ -463,7 +484,15 @@ function drawShed(b: Batch, low: boolean) {
   // Its big doors on the quay side (west) and the yard side, its name on the west front and the north gable
   const doors = (n: number) => (n < 0 ? [0, 1, 2].map((k) => z0 + 3 + k * 5.8) : [0, 1].map((k) => z0 + 5 + k * 7.6));
   const doorAt = (z: number, n: number) => doors(n).some((d) => Math.abs(z - d) < 1.8);
-  for (const n of [-1, 1]) for (const d of doors(n)) pane(b, n < 0 ? x0 : x1, S + 1.75, d, [n, 0], 3.4, 3.2, DOOR);
+  for (const n of [-1, 1]) for (const d of doors(n)) shutter(b, n < 0 ? x0 : x1, S + 1.75, d, [n, 0], 3.4, 3.2, low);
+  // Its gables (were blank, the south one bare): a shutter and a door in each end, a row of windows up under the ridge
+  for (const [z, n] of [[z1, 1], [z0, -1]] as const) {
+    const cx = (x0 + x1) / 2;
+    shutter(b, cx - 2.2, S + 1.6, z, [0, n], 3.0, 2.9, low);
+    pane(b, cx + 1.6, S + 1.05, z, [0, n], 0.95, 1.9, DOOR);
+    // (the gable itself is the roof prism's end, 0.3 out past the wall)
+    for (const dx of [-2.4, -0.8, 0.8, 2.4]) pane(b, cx + dx, eaves + 0.3, z + n * 0.3, [0, n], 1.1, 0.45, GLASS);
+  }
   sign(b, CELL_OF(SHED.name), x0, eaves - 0.55, (z0 + z1) / 2, [-1, 0], 3.6, 0.6);
   sign(b, CELL_OF(SHED.name), (x0 + x1) / 2, eaves + 0.4, z0 - 0.3, [0, -1], 3.0, 0.5);
   b.detail(() => {
@@ -574,7 +603,7 @@ function drawWarehouse(b: Batch, w: (typeof WAREHOUSES)[number], low: boolean) {
   sign(b, CELL_OF(`WAREHOUSE ${w.n}`), (x0 + x1) / 2, top - 1.3, z0 - 0.08, [0, -1], 6.4, 0.8);
   // The loading dock behind: a platform the trucks back up to, roll-up doors over it
   box(b, x0 + 1, S, z1, x1 - 1, S + 0.95, z1 + 1.6, CONCRETE);
-  for (let u = x0 + 2.5; u < x1 - 2; u += 4.2) pane(b, u + 1.4, S + 0.95 + 1.5, z1, [0, 1], 2.8, 3.0, DOOR);
+  for (let u = x0 + 2.5; u < x1 - 2; u += 4.2) shutter(b, u + 1.4, S + 0.95 + 1.5, z1, [0, 1], 2.8, 3.0, low);
   b.detail(() => {
     for (let u = x0 + 2.5; u < x1 - 2; u += 4.2) box(b, u + 0.3, S + 0.2, z1 + 1.6, u + 0.6, S + 0.85, z1 + 1.75, TYRE);
     if (!low) for (let u = x0 + 3; u < x1 - 2; u += 6) box(b, u, top, (z0 + z1) / 2 - 0.6, u + 1.4, top + 0.9, (z0 + z1) / 2 + 0.6, GREY);
@@ -646,6 +675,9 @@ function drawHarbourMaster(b: Batch, low: boolean) {
   const { x: dx } = H.door;
   box(b, dx - 0.95, S, z0 - 0.12, dx + 0.95, S + 2.6, z0, STONE);
   pane(b, dx, S + 1.15, z0 - 0.12, [0, -1], 1.2, 2.1, toon('#3a2a20'));
+  // (its door panelled, a fanlight over it: it was a flat dark slab)
+  for (const v of [0.6, 1.55]) pane(b, dx, S + v, z0 - 0.12, [0, -1], 0.9, 0.7, toon('#4b3628'), 0.02);
+  pane(b, dx, S + 2.35, z0 - 0.12, [0, -1], 1.2, 0.28, GLASS, 0.01);
   box(b, dx - 1.3, S + 2.6, z0 - 1.0, dx + 1.3, S + 2.75, z0, toon('#122038'));
   box(b, x0 - 0.05, S, z0 - 0.05, x1 + 0.05, S + 0.45, z1 + 0.05, STONE);
   b.detail(() => {

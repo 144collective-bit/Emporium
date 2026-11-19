@@ -265,6 +265,42 @@ moved, the lock-ups' solids as they were, the boot unchanged.
 - Left: the lock-ups' even stride (their places are the solids' and the
   data's: moving them is the owner's call).
 
+### Phase 4: blank faces (built, waiting on the owner's sign-off)
+
+Each district seen in a render of its own sites (as Phases 2 and 3).
+
+- **Sunridge**: the houses' side and back windows at every distance (near
+  only before), a side door into each garage; the school's west wing,
+  north end, the front wing's back and the hall's sides windowed; the
+  clubhouse's side and back windows at every distance, in surrounds.
+- **The civic quarter**: every window (City Hall, the police headquarters,
+  the courthouse) in a stone surround with a mullion and a transom at every
+  distance; City Hall's back door onto the Mall (bronze, a canopy); the
+  front range's back windowed where it shows by the walks.
+- **The Docks**: the roller doors (SHED 3's, the warehouses' loading
+  doors) framed in steel with a roll box, slatted near; SHED 3's gables a
+  shutter, a door and windows under the ridge; the Harbour Master's door
+  panelled under a fanlight.
+- **The airport**: the hangar's north wall ribbed with windows and a door;
+  the fire station windowed down its sides and back, a back door, a band.
+- **The resorts**: lit glass doors in gold jambs in every entrance and
+  Scarab's portal. The Gondolier's bridge (Phase 1) seen right.
+- **Uptown**: a tower's back on a real street (21 of them) a glazed ground
+  floor and ribbon, not louvres and a steel door (drawing only: the shops'
+  data as it was).
+- **Coral Drive**: each block's end boutique windowed on its cross street
+  (the cafés where they were).
+- **Crestmont**: the hotel's, civic hall's and clubhouse's windows in white
+  surrounds with a glazing bar, the doors in stone; the hotel's balconies
+  under every other window (they were off the windows' line) with open rails
+  (they were solid black slabs).
+- **Palm Court**: a shop window at street level on every row's outer face
+  and on the south ends, the ribbon over them.
+- **The stadium**: turnstile entrances east, west and north, banners down
+  the facade (stadiumgrounds3d.ts, with the park: the stadium itself is in
+  the boot).
+- The boot: 749.9 of 750 KB.
+
 Checked and left: the High Road's buildings are drawn at every distance
 (the outer `detail()` is `'all'`); the under-deck props casting shadows
 (they stand in the deck's own shade); the deck's joints (5 mm over the
