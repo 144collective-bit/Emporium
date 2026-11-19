@@ -618,7 +618,11 @@ From the Circus west, patchy as high roads are:
        boot at 747.9 of 750 KB, lower than before. Smoke: the metro and
        tube scenes on the new card, `change` (Downtown's metro door to the
        tube's High Road) and `taxi` (the map, the tube's Trenches station,
-       Taxi here). Shots `docs/south-shots/25-phase-4h-*.webp`.
+       Taxi here), which found M not opening the world map while walking
+       (your business card sits un-hidden in the hub: index.ts now asks
+       whether a panel's actually on screen; fixed). The card checked at
+       320 to 1440 wide and on a phone on its side; the map's key has the
+       tube. Shots `docs/south-shots/25-phase-4h-*.webp`.
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new

@@ -120,6 +120,10 @@
 .wm-key-metro {
   background: #e219e5;
 }
+/* (the south's tube, southline.ts LINE_COLOUR) */
+.wm-key-tube {
+  background: #2bb3c0;
+}
 .wm-key-car {
   background: #ffc23d;
   border-radius: 2px;

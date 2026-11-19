@@ -1552,7 +1552,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape' && hub?.close()) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
     // (and at the wheel: keymap.ts's M is the map in every mode that has it)
-    if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
+    // (a panel actually on screen: your business card lives in the hub, un-hidden, while the hub's shut)
+    const shown = [...root.querySelectorAll<HTMLElement>('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])')].some((el) => el.getClientRects().length > 0);
+    if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
         if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
