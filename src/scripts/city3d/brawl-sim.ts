@@ -92,6 +92,11 @@ export function createBrawl(style: StyleId, seed = 7) {
     get stamina() {
       return f.stamina / T.stamina;
     },
+    /** His breath back in full (an energy drink on, the inventory plan's Phase 5: never out of breath) */
+    refill() {
+      f.stamina = T.stamina;
+      f.empty = false;
+    },
     /** The guard is up: held (and not sprinting), or a move still playing out */
     get up() {
       return guardOn || !!f.move;

@@ -31,6 +31,23 @@ keep it up to date when what it describes changes.
   doors, the Night Market's stalls and, since the polish plan's Phase 7,
   The Rusty Nail's door, walk prompts `snack:<id>` that buy one there and
   then).
+- **Things worth carrying** (Phase 5, the owner's go): three consumables
+  that work outside a spar, their effects in `boosts.ts` (DOM-free, tested
+  in `tests/boosts.test.ts`): the **energy drink** (on foot: his run and
+  sprint `ENERGY.speed` times as fast and the fists never out of breath,
+  brawl-sim.ts `refill()`, for 30 s), the **nitro can** (at the wheel of
+  your own car or bike: `NITRO`, drive-sim.ts `DriveInput.boost`, 4 s,
+  under protocol.ts `SPEEDS.drive`) and the **flyers** (at your stall:
+  twice the customers for 5 min, the save's `flyers`, `flyersShare()` in
+  `advance()`). `useItem(s, id, here)` (inventory.ts, `Here`: in a spar,
+  on foot, at the wheel, at the stall) uses one only where it works, one
+  at a time; walk mode keeps the two boosts on Degen (`createBoosts()`).
+  Sold at their own places (`SELLERS`: the snack bars, Uptown's coffee
+  carts and newsstands, Kestrel Fuel's kiosk; prompts `buy:<id>`). On
+  screen: chips with the time left (`[data-boosts]`, `paintBoosts()`),
+  the nitro's cell in the speed readout (`[data-drive-nitro]`,
+  `.has-nitro`, a tap fires it; N, X on a pad), a touch hotbar of four
+  (`touchFirst()`), the bag's line saying where each is sold.
 - **The stash** (the home plan's Phase 4): the trunk in Degen's house
   keeps consumables he doesn't carry. The save's `stash` (how many of
   each, up to `STASH_MAX` 20; `cleanStash()` in inventory-save.ts, run by

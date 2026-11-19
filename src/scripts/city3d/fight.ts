@@ -679,7 +679,7 @@ export function createFight(d: FightDeps): Fight {
         d.ui.pop('Full health');
         return false;
       }
-      if (!useItem(d.game.save(), 'snack', true).ok) {
+      if (!useItem(d.game.save(), 'snack', { spar: true }).ok) {
         d.ui.pop('No snacks · diners or Night Market', 'bad');
         return false;
       }

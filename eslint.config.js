@@ -58,6 +58,7 @@ const DOM_FREE = [
   'src/scripts/city3d/missions.ts',
   'src/scripts/city3d/combat-sim.ts',
   'src/scripts/city3d/drive-sim.ts',
+  'src/scripts/city3d/boosts.ts',
   'src/scripts/city3d/solids.ts',
   'src/scripts/city3d/layout.ts',
   'src/scripts/city3d/wall.ts',
