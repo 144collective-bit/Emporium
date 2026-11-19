@@ -301,7 +301,7 @@ draw calls in the house's own batches.
     `tests/home.test.ts` (inside the wall, off the drive, clear of everything, the bollards, every prompt, the bays'
     ways out and the way round to the side door). Shots: `docs/compound-shots/phase-6c-*`.
 6d. **The pool and the cabana.** On the east lawn: a lit pool, a cabana and loungers (the side door's way kept).
-    *Built, waiting on the owner's sign-off.* home.ts: `POOL` (along the lawn's middle, `POOL_EDGE`), `LOUNGERS` (three
+    *Built, signed off by the owner (2026-11-19), live.* home.ts: `POOL` (along the lawn's middle, `POOL_EDGE`), `LOUNGERS` (three
     on its north side), `CABANA` in the lawn's far corner with `CABANA_SOFA` and `CABANA_POSTS` (`CABANA_H`); the pool,
     the loungers, the sofa and the posts in `HOME_SOLIDS` (the pool's edge solid: no swimming, looks only; the cabana
     open under its roof). home3d.ts `poolside()`: the stone edge, the water (lit from under it: glowing softly at night; deeper blue at its far end, a lane line),
