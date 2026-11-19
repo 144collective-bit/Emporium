@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
   BIKE_HOME, BOLLARD, BOLLARDS, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, homeCamera, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
   HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, BASE_CEIL, BASE_Y, BASEMENT, homeFloorY, homeLevel, homePlaces, homeWall, inHouse, UP_CEIL, UP_DOORS, UP_Y, UPSTAIRS, onHome, onRoof, roofWall,
-  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels,
+  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels, FIRE_ESCAPE, GATEHOUSE, GATEHOUSE_H, GATE_LEAF, GATE_LEAF_H, FOUNTAIN, PALMS, PALM_PLANTER, POOL, LOUNGERS, CABANA, CABANA_SOFA, CABANA_POSTS, HELIPAD,
 } from '../src/scripts/city3d/home';
 import { GATES, HEAD, LANE_HALF, LANE_X, PLOT, ROAD_HALF, ROAD_Z } from '../src/scripts/city3d/endsfar';
 import { SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
@@ -46,7 +46,7 @@ test('the compound is on its plot at the head of the Close: the wall round it, t
     assert.equal(solidAt(x0 + WALL_T / 2, z), !(z > B.z0 && z < B.z1), `the west wall at ${z}`);
     assert.equal(solidAt(x1 - WALL_T / 2, z), !(z > GATES.z0 && z < GATES.z1), `the east wall at ${z}`);
   }
-  assert.ok(WALL_H > 1.1 && WALL_H < 1.5, 'about head high');
+  assert.ok(WALL_H > 1.6 && WALL_H < 2.0, 'about twice his height (the kingpin\'s compound, docs/compound-plan.md Phase 6b)');
   // The gates: on the Close's line, as wide as the road and a little more, a pier each side, taller than the wall
   assert.equal((GATES.z0 + GATES.z1) / 2, ROAD_Z);
   assert.ok(GATES.z1 - GATES.z0 >= ROAD_HALF * 2);
@@ -584,4 +584,80 @@ test('the terrace done up (docs/compound-plan.md Phase 5): the sofa at the front
   // The way the smoke test walks from the hatch along the terrace (west, then back) stays clear
   const down = HOME_PORTALS.find((p) => p.id === 'home:roof')!.to;
   for (let x = down.x; x > down.x - 1.6; x -= 0.1) assert.ok(!roofWall(x, down.z, R), `the way along at ${x}`);
+});
+
+test('the loft (docs/compound-plan.md Phase 6): the fire escape up the east side, solid, clear of the side door and the way round to it', () => {
+  const [fx0, fz0, fx1, fz1] = FIRE_ESCAPE;
+  const [, hz0, hx1, hz1] = HOME.house;
+  assert.ok(Math.abs(fx0 - hx1) < 1e-9 && fx1 - fx0 < 0.4, 'against the east wall, narrow');
+  assert.ok(fz0 > hz0 && fz1 < HOME.sideDoor[1] - 0.6 && fz1 < hz1, 'along the wall, short of the side door');
+  assert.ok(HOME_SOLIDS.some((b) => b[0] === fx0 && b[1] === fz0 && b[2] === fx1 && b[3] === fz1), 'solid');
+  const back = HOME_PORTALS.find((p) => p.id === 'home:back')!;
+  assert.ok(stands(back.x, back.z), 'the side door\'s prompt clear');
+  for (let z = hz0 - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(hx1 + 0.5, z), `the way round to the side door at ${z}`);
+  assert.ok(!overlap(FIRE_ESCAPE, HOME.lawns[1]), 'off the lawn');
+});
+
+test('the gates (docs/compound-plan.md Phase 6b): the gatehouse inside them and the leaf slid open along the wall, solid, the way in clear', () => {
+  const [, , px1] = PLOT;
+  for (const [r, h, what] of [[GATEHOUSE, GATEHOUSE_H, 'the gatehouse'], [GATE_LEAF, GATE_LEAF_H, 'the gate\'s leaf']] as [Rect, number, string][]) {
+    assert.ok(within(r, HOME.inner, 1e-9), `${what} inside the wall`);
+    assert.ok(HOME_SOLIDS.some((b) => b[0] === r[0] && b[1] === r[1] && b[2] === r[2] && b[3] === r[3] && b[4] === SLAB_Y + h), `${what} solid`);
+    assert.ok(r[3] < GATES.z0 - PIER.w || r[1] > GATES.z1 + PIER.w, `${what} out of the gates' opening`);
+    assert.ok(h < WALL_H + 0.1, `${what} no taller than the wall`);
+    for (const r2 of [HOME.house, HOME.garage, HOME.workshop, ...HOME.lawns, ...PLANTERS]) assert.ok(!overlap(r, r2), `${what} on something`);
+    for (const [x, z] of BOLLARDS) assert.ok(!inRect(r, x, z, BOLLARD.r + 0.2), `${what} on a bollard`);
+  }
+  // The gatehouse by the gates on their south side; the leaf against the wall north of them
+  assert.ok(GATEHOUSE[1] > GATES.z1 && GATEHOUSE[2] > px1 - 1 && GATEHOUSE[3] - GATEHOUSE[1] < 2);
+  assert.ok(GATE_LEAF[3] < GATES.z0 && px1 - GATE_LEAF[2] < WALL_T + 0.1 && Math.abs(GATE_LEAF[3] - GATE_LEAF[1] - (GATES.z1 - GATES.z0)) < 0.2, 'as long as the gates are wide');
+  // The way in: the Close's line and a car's width either side clear from the lane to the garage's doors
+  for (let x = px1 + 1; x > HOME.garage[2] + 0.3; x -= 0.25) for (const z of [ROAD_Z - 1.2, ROAD_Z, ROAD_Z + 1.2]) assert.ok(stands(x, z), `the way in at ${x}, ${z}`);
+  // The prompts and where you arrive still stand clear
+  for (const p of [HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, HOME_SPAWN]) assert.ok(stands(p.x, p.z));
+});
+
+test('the fountain and the palms (docs/compound-plan.md Phase 6c): in the yard, off the drive, clear of everything and every prompt', () => {
+  const things: [string, Rect][] = [
+    ['the fountain', [FOUNTAIN.x - FOUNTAIN.r, FOUNTAIN.z - FOUNTAIN.r, FOUNTAIN.x + FOUNTAIN.r, FOUNTAIN.z + FOUNTAIN.r]],
+    ...PALMS.map(([x, z], i): [string, Rect] => [`palm ${i}`, [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r]]),
+  ];
+  for (const [what, r] of things) {
+    assert.ok(within(r, HOME.inner, 1e-9), `${what} inside the wall`);
+    for (const r2 of [HOME.house, HOME.garage, HOME.workshop, ...HOME.lawns, ...PLANTERS, GATEHOUSE, GATE_LEAF, FIRE_ESCAPE]) assert.ok(!overlap(r, r2), `${what} on something`);
+    for (const [x, z] of BOLLARDS) assert.ok(!inRect(r, x, z, BOLLARD.r + 0.3), `${what} by a bollard`);
+    // (off the drive: the Close's line and a car's width either side, from the gates to the garage)
+    assert.ok(r[3] < ROAD_Z - 1.6 || r[1] > ROAD_Z + 1.6, `${what} on the drive`);
+  }
+  for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++) assert.ok(!overlap(things[i][1], things[j][1], -0.4), `${things[i][0]} by ${things[j][0]}`);
+  assert.ok(HOME_SOLIDS.filter((b) => b[4] === SLAB_Y + PALM_PLANTER.h).length >= PALMS.length, 'the planters solid');
+  // Every prompt, where you arrive and the menu's camera still stand clear, and the ways round
+  for (const p of [HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, HOME_SPAWN, ...HOME_PORTALS.filter((q) => !inHouse(q.x, q.z) && q.level === 'room'), { x: HOME_VIEW.eye[0], z: HOME_VIEW.eye[2] }]) assert.ok(stands(p.x, p.z), `blocked at ${p.x}, ${p.z}`);
+  for (let z = HOME.house[1] - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(HOME.house[2] + 0.5, z), 'the way round to the side door');
+  for (const z of [CAR_HOME.z, BIKE_HOME.z]) for (let x = CAR_HOME.x; x < HOME.garage[2] + 3; x += 0.2) assert.ok(!solidAt(x, z, 0.3), 'a bay\'s way out');
+});
+
+test('the pool and the cabana (docs/compound-plan.md Phase 6d): on the east lawn, apart, solid, the way round to the side door clear', () => {
+  const lawn = HOME.lawns[1];
+  const things: [string, Rect][] = [['the pool', POOL], ['the cabana', CABANA], ...LOUNGERS.map((r, i): [string, Rect] => [`lounger ${i}`, r])];
+  for (const [what, r] of things) {
+    assert.ok(within(r, lawn, 1e-9), `${what} on the east lawn`);
+    for (const r2 of [HOME.house, FIRE_ESCAPE, GATEHOUSE]) assert.ok(!overlap(r, r2), `${what} on something`);
+  }
+  for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++) assert.ok(!overlap(things[i][1], things[j][1]), `${things[i][0]} on ${things[j][0]}`);
+  assert.ok(within(CABANA_SOFA, CABANA, 1e-9) && CABANA_POSTS.every(([x, z]) => inRect(CABANA, x, z)), 'the sofa and posts in the cabana');
+  // Solid, the pool and the loungers; the cabana open under its roof between its posts
+  assert.ok(solidAt((POOL[0] + POOL[2]) / 2, (POOL[1] + POOL[3]) / 2) && LOUNGERS.every((r) => solidAt((r[0] + r[2]) / 2, (r[1] + r[3]) / 2)));
+  assert.ok(stands((CABANA[0] + CABANA[2]) / 2, CABANA[1] + 0.4), 'room under the cabana\'s roof');
+  // The way from the side door out onto the lawn, round the house's end to the yard, and to the cabana
+  const back = HOME_PORTALS.find((p) => p.id === 'home:back')!;
+  assert.ok(stands(back.x, back.z) && stands(back.to.x, back.to.z));
+  for (let z = HOME.house[1] - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(HOME.house[2] + 0.5, z), 'the way round to the side door');
+  for (let x = back.x; x < (CABANA[0] + CABANA[2]) / 2; x += 0.1) assert.ok(stands(x, POOL[3] + 0.4) || x > CABANA[0], `the way along the pool's south side at ${x}`);
+});
+
+test('the helipad (docs/compound-plan.md Phase 6e): on the garage\'s roof, inside its edges, low', () => {
+  const [gx0, gz0, gx1, gz1] = HOME.garage;
+  assert.ok(HELIPAD.x - HELIPAD.r > gx0 && HELIPAD.x + HELIPAD.r < gx1 && HELIPAD.z - HELIPAD.r > gz0 && HELIPAD.z + HELIPAD.r < gz1, 'on the roof');
+  assert.ok(SLAB_Y + HOME.garageTop + 1 < 6, 'under the Emporium, with its windsock');
 });

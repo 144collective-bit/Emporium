@@ -6,14 +6,11 @@
  * black steel, timber soffits, stone paving, warm white light; every name
  * made up, from one sign atlas. The paint and the surfaces are mallkit.ts's.
  *
- * - **Palm Court** (sites): stone paving; the shops, each its own front
- *   (`style`: a glass box in black steel under a timber canopy, white render
- *   round a deep window, cladding with fins over the glass, timber over the
- *   glass), two storeys every third; Paradise Cinema (a dark clad box, a
- *   double-height glazed lobby under a canopy, poster lightboxes); the water
- *   feature with its steel ring, benches, trees in planters (the trees
- *   themselves are the city's, mall.ts `MALL_TREES`), festoon lights across
- *   the promenade and the PALM COURT gateway.
+ * - **Palm Court** (sites): Paradise Cinema (a dark clad box, a
+ *   double-height glazed lobby, poster lightboxes), the water feature with
+ *   its steel ring and benches; the wing round them, indoors since the joined
+ *   mall's Phase 3, is courtinside3d.ts's (its rows, vault, entrances, and
+ *   inside the shopfronts on both floors, galleries, bridges, food hall).
  * - **Starlight Mall** (sites): the hall's curtain wall between clad piers,
  *   the entrance's dark feature wall with the mall's name and its star, the
  *   cantilevered canopy with a timber soffit, the doors open behind bollards;
@@ -35,7 +32,6 @@ import { TAXI_YELLOW } from './kerbside';
 import { FILMS } from './uptownsites';
 import {
   ASPHALT,
-  BULB,
   CHARCOAL,
   CLAD,
   CLAD_DARK,
@@ -52,7 +48,6 @@ import {
   PANEL,
   PAVING,
   PERF,
-  RENDER,
   SHRUB,
   SOIL,
   SPRAY,
@@ -68,25 +63,21 @@ import {
   cyl,
   face,
   flat,
-  glassX,
   glassZ,
   planter,
   signAtlas,
 } from './mallkit';
 import {
   ANCHORS,
-  ARCH,
-  ARCH_POSTS,
   BAY,
   BAYS,
   BENCHES,
   CINEMA,
-  COURT,
-  COURT_TREES,
   FOUNTAIN,
   HALL,
   ISLANDS,
   ISLAND_WALK,
+  FIT,
   LOOP,
   LOOP_ZEBRA,
   TOWER_ZEBRA,
@@ -99,7 +90,6 @@ import {
   PLANTER,
   PLANTERS,
   PORCH,
-  PROM,
   PYLON,
   RANK_CABS,
   SHELTER,
@@ -107,18 +97,25 @@ import {
   SHOP_NAMES,
   ZEBRA,
   type Rect,
-  type Shop,
 } from './mall';
-import { BOLLARD, BOLLARDS, DOOR, WALL, WALLS } from './mallinside';
+import { BOLLARD, BOLLARDS, CORRIDOR_Z, DOOR, WALL, WALLS } from './mallinside';
 import { registerInside } from './mallinside3d';
+import { BOARD, CORRIDOR_H, KIOSK, L1 } from './malllink';
+import { registerLink } from './malllink3d';
+import { registerCourt } from './courtinside3d';
+import { ANCHOR_PLANT, HALL_PLANT } from './mallroofs';
+import { registerRoofs } from './mallroofs3d';
 import { COVER } from './palette';
 
 export const SELF = import.meta.url;
 
 /* ---------- Signs ---------- */
 
-/** The outside's signs (4 x 8, full): the shops, the anchors, the cinema, the mall, the court, and the rest */
-const CELLS = [...SHOP_NAMES.map((s) => s.name), ...ANCHORS.map((a) => a.name), CINEMA.name, 'NOW SHOWING', MALL_NAME, 'PALM COURT', 'TAXI', 'BUS', 'P', 'ENTRANCE'];
+/**
+ * The outside's signs (4 x 8, full): the shops, the anchors, the cinema, the mall, the court, and the rest; and the
+ * Skywalk's (malllink3d.ts): the café the pavilion moved to its kiosk, the platform floor's board
+ */
+const CELLS = [...SHOP_NAMES.map((s) => s.name).filter((n) => n === KIOSK.name || SHOPS.some((s) => s.name === n)), ...ANCHORS.map((a) => a.name), CINEMA.name, 'NOW SHOWING', MALL_NAME, 'PALM COURT', 'TAXI', 'BUS', 'P', 'ENTRANCE', BOARD.text];
 /** Charcoal letters on white for the rendered and timber shops' signs and Bright & Co. (on its dark panels) */
 const LIGHT_SIGNS = new Set([...SHOPS.filter((s) => s.style === 'render' || s.style === 'timber').map((s) => s.name), ANCHORS[1].name]);
 const sign = signAtlas('mall-signs', CELLS, LIGHT_SIGNS);
@@ -237,10 +234,11 @@ function under(b: Batch, x0: number, z0: number, x1: number, z1: number, y: numb
   }
   b.add(g, mat);
 }
-/** Rooftop plant: an air handler (a box with a fan grille) and a louvred screen beside it (near only) */
+/** Rooftop plant: an air handler (a box, seen from afar so its patch of roof isn't bare; its fan grille near only)
+ * and a louvred screen beside it (near only) */
 function plant(b: Batch, x: number, z: number, y: number) {
+  box(b, x - 1, y, z - 0.6, x + 1, y + 0.9, z + 0.6, GREY);
   b.detail(() => {
-    box(b, x - 1, y, z - 0.6, x + 1, y + 0.9, z + 0.6, GREY);
     for (const dx of [-0.5, 0.5]) b.add(new THREE.CircleGeometry(0.32, 12).rotateX(-Math.PI / 2).translate(x + dx, y + 0.905, z), STEEL);
     for (let i = 0; i < 6; i++) box(b, x + 1.3 + i * 0.25, y, z - 0.7, x + 1.36 + i * 0.25, y + 1.1, z + 0.7, MID);
   });
@@ -255,92 +253,6 @@ function coping(b: Batch, x0: number, z0: number, x1: number, z1: number, y: num
 }
 
 /* ---------- Palm Court ---------- */
-
-function shop(b: Batch, s: Shop, i: number) {
-  const [x0, z0, x1, z1] = s.rect;
-  const f = s.face;
-  const fx = f === 1 ? x1 : x0;
-  const n: [number, number] = f === 1 ? PX : NX;
-  const h = s.h;
-  const tall = h > 6;
-  const zm = (z0 + z1) / 2;
-  const w = z1 - z0;
-  /** A box out from the front by d0..d1 */
-  const out = (d0: number, d1: number, y0: number, y1: number, za: number, zb: number, mat: THREE.Material) => box(b, Math.min(fx + f * d0, fx + f * d1), y0, za, Math.max(fx + f * d0, fx + f * d1), y1, zb, mat);
-  const body = s.style === 'render' ? WHITE : s.style === 'clad' ? LIGHT : CHARCOAL;
-  box(b, x0, Y, z0, x1, Y + h, z1, body);
-  coping(b, x0, z0, x1, z1, Y + h);
-  if (i % 2 === 0) plant(b, (x0 + x1) / 2 - f * 1.5, zm, Y + h);
-  // Each style's front (the shop window on the ground floor, its frame, the sign, the door)
-  const gw = [z0 + 0.5, z1 - 0.5];
-  if (s.style === 'glass') {
-    // a glass box in black steel: shop window below, curtain wall above, a timber canopy between with a LED edge
-    glassX(b, fx, f, gw[0], gw[1], Y + 0.1, Y + 3.0);
-    if (tall) face(b, CURTAIN, fx, z0 + 0.3, fx, z1 - 0.3, Y + 3.7, Y + h - 0.3, n);
-    for (const z of [z0 + 0.3, zm - 0.04, z1 - 0.38]) out(0, 0.1, Y, Y + h - 0.2, z, z + 0.08, STEEL);
-    out(0, 1.3, Y + 3.0, Y + 3.25, z0 + 0.2, z1 - 0.2, STEEL);
-    b.add(new THREE.PlaneGeometry(1.3, w - 0.4).rotateX(Math.PI / 2).translate(fx + f * 0.65, Y + 2.995, zm), WOOD);
-    out(1.28, 1.33, Y + 3.05, Y + 3.12, z0 + 0.25, z1 - 0.25, LED);
-    out(0.02, 0.06, Y + 3.3, Y + 3.68, z0 + 0.6, z1 - 0.6, DARK);
-    sign(b, s.name, fx + f * 0.065, Y + 3.49, zm, Math.min(4.6, w - 1.4), 0.34, f * (Math.PI / 2));
-  } else if (s.style === 'render') {
-    // white render round a deep window: the frame stands out, the sign on the render over it, lamps either side
-    face(b, RENDER, fx, z0, fx, z1, Y, Y + h, n);
-    glassX(b, fx, f, gw[0] + 0.3, gw[1] - 0.3, Y + 0.1, Y + 2.9);
-    out(0, 0.45, Y + 2.9, Y + 3.2, gw[0], gw[1], WHITE);
-    out(0, 0.45, Y, Y + 3.2, gw[0], gw[0] + 0.3, WHITE);
-    out(0, 0.45, Y, Y + 3.2, gw[1] - 0.3, gw[1], WHITE);
-    sign(b, s.name, fx + f * 0.02, Y + 3.75, zm, Math.min(4.2, w - 1.6), 0.5, f * (Math.PI / 2));
-    if (tall) for (const z of [zm - 1.6, zm + 0.4]) glassX(b, fx + f * 0.005, f, z, z + 1.2, Y + 4.6, Y + 6.2, CURTAIN);
-    b.detail(() => {
-      for (const z of [gw[0] - 0.15, gw[1] + 0.15]) out(0, 0.18, Y + 2.3, Y + 2.6, z - 0.08, z + 0.08, STEEL);
-    });
-  } else if (s.style === 'clad') {
-    // cladding panels, the glass across the ground floor in a black frame, a charcoal fascia, fins upstairs
-    face(b, CLAD, fx, z0, fx, z1, Y + 3.4, Y + h, n);
-    glassX(b, fx, f, z0 + 0.2, z1 - 0.2, Y + 0.1, Y + 2.85);
-    out(0, 0.12, Y + 2.85, Y + 3.4, z0 + 0.1, z1 - 0.1, CHARCOAL);
-    sign(b, s.name, fx + f * 0.125, Y + 3.12, zm, Math.min(4.6, w - 1.2), 0.42, f * (Math.PI / 2));
-    out(0, 0.08, Y, Y + 2.85, z0 + 0.1, z0 + 0.22, STEEL);
-    out(0, 0.08, Y, Y + 2.85, z1 - 0.22, z1 - 0.1, STEEL);
-    if (tall) for (let z = z0 + 0.5; z < z1 - 0.3; z += 0.8) out(0, 0.3, Y + 3.6, Y + h - 0.4, z, z + 0.07, STEEL);
-  } else {
-    // timber over glass: a black steel canopy box, the sign on a white panel on the timber
-    face(b, TIMBER, fx, z0, fx, z1, Y + 3.0, Y + h, n);
-    glassX(b, fx, f, z0 + 0.25, z1 - 0.25, Y + 0.1, Y + 2.9);
-    out(0, 1.1, Y + 2.9, Y + 3.15, z0 + 0.1, z1 - 0.1, STEEL);
-    out(1.08, 1.12, Y + 2.95, Y + 3.02, z0 + 0.15, z1 - 0.15, LED);
-    sign(b, s.name, fx + f * 0.02, Y + 3.7, zm, Math.min(3.8, w - 1.8), 0.46, f * (Math.PI / 2));
-    if (tall) glassX(b, fx + f * 0.005, f, zm - 1.4, zm + 1.4, Y + 4.7, Y + 6.3, CURTAIN);
-  }
-  // The door in the middle (glass in a black frame, a steel pull)
-  out(0.014, 0.03, Y, Y + 2.4, zm - 0.7, zm + 0.7, DARK);
-  b.detail(() => out(0.03, 0.08, Y + 0.9, Y + 1.6, zm + 0.45, zm + 0.5, GREY));
-}
-
-function court(b: Batch, z0: number, z1: number, f: Batch, low: boolean) {
-  // Stone paving across the court, the shops in this stretch, the trees' planters, festoon lights over the promenade
-  flat(b, COURT[0], Math.max(z0, CINEMA.rect[3]), COURT[2], Math.min(z1, COURT[3] - 0.2), Y + 0.006, PAVING, 12);
-  SHOPS.forEach((s, i) => s.rect[1] >= z0 && s.rect[1] < z1 && shop(b, s, i));
-  for (const [x, z] of COURT_TREES) if (z >= z0 && z < z1) planter(b, x, z, Y, 1.4, 0.5);
-  // (the festoons in the FX layer: a thin cable and its bulbs drawn with ink outlines read as thick black ropes; none on phones)
-  if (low) return;
-  f.detail(() => {
-    for (let z = CINEMA.rect[3] + 8; z < ARCH.z - 4; z += 12) {
-      if (z < z0 || z >= z1 || Math.abs(z - FOUNTAIN.z) < 6) continue;
-      const hold = (x: number, zz: number) => SHOPS.some((s) => zz > s.rect[1] && zz < s.rect[3] && (x === PROM[0] ? s.face === 1 : s.face === -1));
-      if (!hold(PROM[0], z) || !hold(PROM[1], z + 5)) continue;
-      // a sagging line from one row to the other, bulbs along it
-      const pts: THREE.Vector3[] = [];
-      for (let k = 0; k <= 12; k++) {
-        const t = k / 12;
-        pts.push(new THREE.Vector3(PROM[0] + (PROM[1] - PROM[0]) * t, Y + 4.4 - Math.sin(Math.PI * t) * 0.9, z + 5 * t));
-      }
-      f.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.012, 3, false), MID);
-      for (let k = 1; k < 12; k++) f.add(new THREE.SphereGeometry(0.06, 6, 4).translate(pts[k].x, pts[k].y - 0.08, pts[k].z), BULB);
-    }
-  });
-}
 
 function centre(b: Batch) {
   // The water feature: a round pool in a stone rim, a steel ring standing in it, jets round it
@@ -357,22 +269,9 @@ function centre(b: Batch) {
   b.add(new THREE.TorusGeometry(r - 0.02, 0.025, 4, 40).rotateX(Math.PI / 2).translate(x, Y + 0.47, z), LED);
   // Benches: timber slats on concrete plinths
   for (const s of BENCHES) {
-    for (const sd of [-1, 1]) box(b, s.x + sd * 0.85 - 0.18, Y, s.z - 0.25, s.x + sd * 0.85 + 0.18, Y + 0.4, s.z + 0.25, CONCRETE);
-    box(b, s.x - 1.15, Y + 0.4, s.z - 0.28, s.x + 1.15, Y + 0.48, s.z + 0.28, WOOD);
+    for (const sd of [-1, 1]) box(b, s.x + sd * 0.85 - 0.18, Y, s.z - 0.25, s.x + sd * 0.85 + 0.18, Y + FIT.seat - 0.06, s.z + 0.25, CONCRETE);
+    box(b, s.x - 1.15, Y + FIT.seat - 0.06, s.z - 0.28, s.x + 1.15, Y + FIT.seat, s.z + 0.28, WOOD);
   }
-}
-
-function arch(b: Batch) {
-  // The gateway: two stone pylons, a black steel beam across with PALM COURT on a lit panel both ways
-  for (const [x0, z0, x1, z1] of ARCH_POSTS) {
-    box(b, x0, Y, z0, x1, Y + ARCH.h + 0.4, z1, STONE);
-    box(b, x0 - 0.04, Y + ARCH.h + 0.4, z0 - 0.04, x1 + 0.04, Y + ARCH.h + 0.5, z1 + 0.04, MID);
-    box(b, x0 - 0.02, Y + 0.3, z1, x1 + 0.02, Y + 0.36, z1 + 0.03, LED);
-  }
-  const [a, c] = [ARCH_POSTS[0][2], ARCH_POSTS[1][0]];
-  box(b, a, Y + ARCH.h - 0.6, ARCH.z - 0.2, c, Y + ARCH.h, ARCH.z + 0.2, STEEL);
-  for (const s of [1, -1]) sign(b, 'PALM COURT', (a + c) / 2, Y + ARCH.h - 0.3, ARCH.z + s * 0.205, Math.min(4.4, c - a - 1), 0.42, s === 1 ? 0 : Math.PI);
-  box(b, a, Y + ARCH.h - 0.66, ARCH.z - 0.16, c, Y + ARCH.h - 0.6, ARCH.z + 0.16, LED);
 }
 
 function cinema(b: Batch) {
@@ -394,16 +293,11 @@ function cinema(b: Batch) {
   face(b, CURTAIN, xm - 7, z1, xm + 7, z1, Y, Y + 6.2, PZ);
   for (let x = xm - 7; x <= xm + 7.01; x += 3.5) box(b, x - 0.06, Y, z1, x + 0.06, Y + 6.2, z1 + 0.25, STEEL);
   glassZ(b, z1 + 0.25, 1, xm - 3, xm + 3, Y, Y + 2.6, GLASS);
-  // (the canopy: steel, a timber soffit, LED along its edge)
-  box(b, xm - 8, Y + 3.9, z1, xm + 8, Y + 4.25, z1 + 3, STEEL);
-  under(b, xm - 8, z1, xm + 8, z1 + 3, Y + 3.895, TIMBER);
-  box(b, xm - 8, Y + 3.95, z1 + 2.98, xm + 8, Y + 4.05, z1 + 3.03, LED);
-  b.detail(() => {
-    for (let x = xm - 7; x < xm + 7.5; x += 2) b.add(new THREE.CircleGeometry(0.16, 10).rotateX(Math.PI / 2).translate(x, Y + 3.885, z1 + 1.5), PANEL);
-  });
+  // (no canopy since Palm Court was enclosed: the food hall's terrace runs across over its doors, courtinside3d.ts)
   // The name in lit letters on the band over the glass; NOW SHOWING over the canopy
   sign(b, CINEMA.name, xm, Y + 7.4, z1 + 0.03, 12, 1.1, 0);
-  sign(b, 'NOW SHOWING', xm, Y + 4.7, z1 + 0.03, 4.6, 0.55, 0);
+  // (over its doors upstairs, on the food hall's terrace since Palm Court was enclosed)
+  sign(b, 'NOW SHOWING', xm, Y + 6.45, z1 + 0.03, 4.6, 0.55, 0);
   // Poster lightboxes either side of the lobby
   for (let k = 0; k < FILMS.length; k++) {
     const side = k < 3 ? -1 : 1;
@@ -422,16 +316,30 @@ function anchor(b: Batch, k: number) {
   const h = a.h;
   const dark = a.wall === 'dark';
   const clad = dark ? CLAD_DARK : CLAD;
-  box(b, x0, Y, z0, x1, Y + h, z1, dark ? CHARCOAL : LIGHT);
+  // (Bright & Co.'s upper floor has the Skywalk's corridor through it, malllink.ts: the store round it)
+  const [c0, c1] = CORRIDOR_Z;
+  const [lo, hi] = [L1, L1 + CORRIDOR_H];
+  if (k) {
+    box(b, x0, Y, z0, x1, Y + h, c0, CHARCOAL);
+    box(b, x0, Y, c1, x1, Y + h, z1, CHARCOAL);
+    box(b, x0, Y, c0, x1, lo, c1, CHARCOAL);
+    box(b, x0, hi, c0, x1, Y + h, c1, CHARCOAL);
+  } else box(b, x0, Y, z0, x1, Y + h, z1, LIGHT);
   coping(b, x0, z0, x1, z1, Y + h);
-  plant(b, xm - 3, (z0 + z1) / 2, Y + h);
-  plant(b, xm + 2, z0 + 6, Y + h);
+  // (where mallroofs.ts keeps its solar arrays clear of)
+  for (const [px, pz] of ANCHOR_PLANT[k]) plant(b, px, pz, Y + h);
   // The sides: panels all round (above the hall on its inner side), its avenue side with its name
   const outer = k ? x1 : x0;
   const on: [number, number] = k ? PX : NX;
-  face(b, clad, outer, z0, outer, z1, Y, Y + h, on);
+  if (k) {
+    // (its avenue side: open at the corridor, where the Skywalk's bridge meets it; its name north of the bridge)
+    face(b, clad, outer, z0, outer, c0, Y, Y + h, on);
+    face(b, clad, outer, c1, outer, z1, Y, Y + h, on);
+    face(b, clad, outer, c0, outer, c1, Y, lo, on);
+    face(b, clad, outer, c0, outer, c1, hi, Y + h, on);
+  } else face(b, clad, outer, z0, outer, z1, Y, Y + h, on);
   face(b, clad, k ? x0 : x1, z0, k ? x0 : x1, z1, Y + HALL.h, Y + h, k ? NX : PX);
-  sign(b, a.name, outer + on[0] * 0.03, Y + h - 1.4, (z0 + z1) / 2 + 4, 9, 0.95, on[0] * (Math.PI / 2));
+  sign(b, a.name, outer + on[0] * 0.03, Y + h - 1.4, k ? z0 + 6.5 : (z0 + z1) / 2 + 4, 9, 0.95, on[0] * (Math.PI / 2));
   face(b, CURTAIN, outer, (z0 + z1) / 2 - 8, outer, (z0 + z1) / 2 - 4.8, Y + 0.6, Y + h - 0.8, on, 0.014);
   // The back: panels, the loading dock (two roller doors, bumpers, a canopy)
   face(b, clad, x0, z0, x1, z0, Y, Y + h, NZ);
@@ -475,8 +383,11 @@ function anchor(b: Batch, k: number) {
 function hall(b: Batch) {
   const [x0, z0, x1, z1] = HALL.rect;
   const h = HALL.h;
-  // Its walls (hollow: mallinside3d.ts draws inside), open at the doors behind the porch, a wall over them
+  // Its walls (hollow: mallinside3d.ts draws inside), open at the doors behind the porch, a wall over them; the east
+  // wall open on the upper floor where the Skywalk's corridor goes through (malllink.ts)
   for (const [a0, c0, a1, c1] of WALLS) box(b, a0, Y, c0, a1, Y + h, c1, LIGHT);
+  box(b, x1 - WALL, Y, CORRIDOR_Z[0], x1, L1, CORRIDOR_Z[1], LIGHT);
+  box(b, x1 - WALL, L1 + CORRIDOR_H, CORRIDOR_Z[0], x1, Y + h, CORRIDOR_Z[1], LIGHT);
   box(b, DOOR.x0, Y + DOOR.h, z1 - WALL, DOOR.x1, Y + h, z1, LIGHT);
   // The front: clad piers at the ends, the curtain wall between, a floor band across it, a dark band at the top
   const [p0, p1] = [x0 + 2.2, x1 - 2.2];
@@ -505,8 +416,7 @@ function hall(b: Batch) {
   ])
     box(b, a0, Y + h - 0.25, c0, a1, Y + h - 0.006, c1, GREY);
   coping(b, x0, z0, x1, z1, Y + h);
-  plant(b, x0 + 4, z0 + 2, Y + h);
-  plant(b, x1 - 6, z0 + 2, Y + h);
+  for (const [px, pz] of HALL_PLANT) plant(b, px, pz, Y + h);
   // The skylight: a glass vault over the opening on a grey curb, black steel ribs over it
   for (const [a0, c0, a1, c1] of [
     [vx0 - 0.5, vz0 - 0.4, vx1 + 0.5, vz0],
@@ -564,11 +474,11 @@ function porch(b: Batch) {
     [DOOR.x1 - 1.1, DOOR.x1],
   ])
     b.add(new THREE.PlaneGeometry(c - a, DOOR.h - 0.1).translate((a + c) / 2, Y + DOOR.h / 2, z0 - 0.12), GLASS);
-  sign(b, 'ENTRANCE', xm, Y + 3.75, z0 + 0.03, 2.2, 0.42, 0);
+  sign(b, 'ENTRANCE', xm, Y + DOOR.h + 0.45, z0 + 0.03, 2.2, 0.42, 0);
   // The bollards across the doors: brushed steel, a LED ring near the top
   for (const [bx, bz] of BOLLARDS) {
-    cyl(b, BOLLARD, 0.85, bx, Y, bz, GREY, 12);
-    cyl(b, BOLLARD + 0.006, 0.04, bx, Y + 0.72, bz, LED, 12);
+    cyl(b, BOLLARD, 0.48, bx, Y, bz, GREY, 12);
+    cyl(b, BOLLARD + 0.006, 0.04, bx, Y + 0.38, bz, LED, 12);
   }
 }
 
@@ -578,10 +488,10 @@ function forecourt(b: Batch) {
   flat(b, ANCHORS[0].rect[2], HALL.rect[3], ANCHORS[1].rect[0], ANCHORS[0].rect[3], Y + 0.006, PAVING, 12);
   for (const [x, z] of PLANTERS) planter(b, x, z, Y, PLANTER, 0.55);
   for (const [x, z] of PAY_STATIONS) {
-    box(b, x - 0.35, Y, z - 0.25, x + 0.35, Y + 1.6, z + 0.25, STEEL);
-    box(b, x - 0.25, Y + 1.05, z + 0.25, x + 0.25, Y + 1.4, z + 0.27, PANEL);
-    sign(b, 'P', x, Y + 1.75, z + 0.02, 0.3, 0.3, 0);
-    box(b, x - 0.12, Y + 1.6, z - 0.01, x + 0.12, Y + 1.9, z + 0.01, STEEL);
+    box(b, x - 0.25, Y, z - 0.18, x + 0.25, Y + 0.85, z + 0.18, STEEL);
+    box(b, x - 0.18, Y + 0.5, z + 0.18, x + 0.18, Y + 0.75, z + 0.2, PANEL);
+    sign(b, 'P', x, Y + 1.0, z + 0.02, 0.24, 0.24, 0);
+    box(b, x - 0.08, Y + 0.85, z - 0.01, x + 0.08, Y + 1.12, z + 0.01, STEEL);
   }
   b.detail(() => {
     for (let i = 0; i < 4; i++) {
@@ -604,13 +514,14 @@ function pylon(b: Batch) {
 function shelter(b: Batch) {
   const [x0, z0, x1, z1] = SHELTER;
   // A black steel frame, glass back and roof, a timber bench, a lit ad panel at its end, the BUS sign on a post
-  for (const x of [x0, x1 - 0.08]) box(b, x, Y, z0, x + 0.08, Y + 2.3, z1, STEEL);
-  b.add(new THREE.PlaneGeometry(x1 - x0, 2.1).translate((x0 + x1) / 2, Y + 1.1, z0 + 0.04), GLASS);
-  box(b, x0 - 0.1, Y + 2.3, z0 - 0.1, x1 + 0.1, Y + 2.38, z1 + 0.15, STEEL);
-  box(b, x0 + 0.2, Y + 0.42, z0 + 0.1, x1 - 0.2, Y + 0.48, z0 + 0.5, WOOD);
-  box(b, x1 - 0.06, Y + 0.3, z0 + 0.1, x1 - 0.02, Y + 2.1, z1 - 0.1, PANEL);
-  box(b, x1 + 0.3, Y, z1 - 0.05, x1 + 0.38, Y + 2.5, z1 + 0.03, STEEL);
-  sign(b, 'BUS', x1 + 0.34, Y + 2.65, z1 + 0.04, 0.6, 0.3, 0);
+  const top = Y + FIT.door + 0.1;
+  for (const x of [x0, x1 - 0.08]) box(b, x, Y, z0, x + 0.08, top, z1, STEEL);
+  b.add(new THREE.PlaneGeometry(x1 - x0, top - Y - 0.2).translate((x0 + x1) / 2, (Y + top) / 2, z0 + 0.04), GLASS);
+  box(b, x0 - 0.1, top, z0 - 0.1, x1 + 0.1, top + 0.08, z1 + 0.15, STEEL);
+  box(b, x0 + 0.2, Y + FIT.seat - 0.06, z0 + 0.1, x1 - 0.2, Y + FIT.seat, z0 + 0.45, WOOD);
+  box(b, x1 - 0.06, Y + 0.2, z0 + 0.1, x1 - 0.02, top - 0.15, z1 - 0.1, PANEL);
+  box(b, x1 + 0.3, Y, z1 - 0.05, x1 + 0.38, top + 0.15, z1 + 0.03, STEEL);
+  sign(b, 'BUS', x1 + 0.34, top + 0.3, z1 + 0.04, 0.6, 0.3, 0);
 }
 
 /* ---------- The loop, the car parks ---------- */
@@ -794,14 +705,12 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     fx(g);
     for (const c of [...g.children]) into.add(c);
   };
-  // Palm Court: the cinema, the rows in stretches, the water feature and the gateway
+  // Palm Court: the cinema, the water feature; the wing round them, indoors (courtinside3d.ts)
   site('mall cinema', [CINEMA.rect[0] - 1, CINEMA.rect[1] - 1, CINEMA.rect[2] + 1, CINEMA.rect[3] + 3], build(cinema));
-  for (let z = CINEMA.rect[3]; z < COURT[3]; z += 24) {
-    const z1 = Math.min(COURT[3], z + 24);
-    site(`mall court ${Math.round(z)}`, [COURT[0], z, COURT[2], z1], build((b, f) => court(b, z, z1, f, low)));
-  }
   site('mall fountain', [FOUNTAIN.x - 4, FOUNTAIN.z - 5, FOUNTAIN.x + 4, FOUNTAIN.z + 5], build(centre));
-  site('mall arch', [PROM[0], ARCH.z - 1, PROM[1], ARCH.z + 1], build(arch));
+  registerCourt({ build, signs: sign });
+  // The roofs dressed: membranes, solar arrays, rooflights, plant (mallroofs3d.ts)
+  registerRoofs(build);
   // (the zebra over the east ring avenue from its west row's passage to the mall's forecourt)
   site('mall court zebra', [NS3.c - NS3.half, ZEBRA.z - ZEBRA.half, NS3.c + NS3.half, ZEBRA.z + ZEBRA.half], build((b) => b.detail(() => zebraOver(b, NS3, ZEBRA)), false));
   // Starlight Mall: each anchor, the hall, the porch, the forecourt, the totem and the shelter
@@ -819,6 +728,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   site('mall multi-storey', MSCP.rect, build(multiStorey));
   // Inside the hall (step 2: near only)
   registerInside({ low, tick });
+  // The Skywalk over the east ring avenue to Palm Court (malllink3d.ts)
+  registerLink({ build, signs: sign, scene, tick });
   if (!scene) return;
   // The cabs at the rank, the cars in the car park and on the multi-storey's decks
   type Car = [CarId, number, number, number, string];

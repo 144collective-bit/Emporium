@@ -4,8 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { HAIR_CUTS, items, lookOutfit, PLAYER, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
-import { CUT_IDS, DEFAULT_LOOK, PALETTE, cleanLook, type Look } from '../src/scripts/net/profile-data';
+import { HAIR_CUTS, HEAD_SCALE, items, lookOutfit, PLAYER, shapeHead, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
+import { CUT_IDS, DEFAULT_LOOK, PALETTE, SHAPE_IDS, cleanLook, type Look } from '../src/scripts/net/profile-data';
 import { headFront, headGeometry, headRow, inHead, HEAD_TOP } from '../src/scripts/city3d/body';
 import { HAIR_COLORS, HAIR_DYES, MASKED_SHARE, SKIN_TONES, cityOutfit, seeded } from '../src/scripts/city3d/crowdlook';
 
@@ -37,6 +37,8 @@ test('faces: the mask, the shades and their chain only on the masked; the face a
     assert.ok(!ids(q, { ...FACE, hair: undefined }).some((id) => id.startsWith('hair-')), `detail ${q}: bald`);
     assert.ok(!ids(q, { ...FACE, kind: 'hoodie', hood: true }).some((id) => id.startsWith('hair-')), `detail ${q}: under the hood`);
     for (const h of HATS) assert.deepEqual(ids(q, { ...FACE, ...h }).filter((id) => id.startsWith('hair-')), ['hair-nape'], `detail ${q}: under ${Object.keys(h)[0]}`);
+    // (long hair still hangs below a hat on single figures: the crowd's, the nape)
+    assert.deepEqual(ids(q, { ...FACE, cut: 'long', beanie: '#3355ff' }).filter((id) => id.startsWith('hair-')), [q > 1 ? 'hair-longunder' : 'hair-nape'], `detail ${q}: long under a beanie`);
     assert.ok(ids(q, { ...FACE, halo: true }).includes('hair-crop'), `detail ${q}: the halo floats over the hair`);
   }
 });
@@ -64,7 +66,8 @@ test('faces: every cut clear of the head, the edge on the scalp, the top over th
         top = Math.max(top, v.y);
       });
       assert.ok(top > HEAD_TOP, `detail ${q} ${cut}: over the crown`);
-      assert.ok(top < HEAD_TOP + 0.04, `detail ${q} ${cut}: not a tower`);
+      // (the high-top stands tall on purpose, flat on top)
+      assert.ok(top < HEAD_TOP + (cut === 'hightop' ? 0.07 : 0.04), `detail ${q} ${cut}: not a tower`);
     }
 });
 
@@ -79,11 +82,12 @@ const hit = (m: THREE.Mesh, o: THREE.Vector3, d: THREE.Vector3, last: boolean) =
 test('faces: the hair at the nape stays inside every hat, and the head inside it', () => {
   for (const q of LEVELS) {
     const head = new THREE.Mesh(headGeometry(64, q), side);
-    for (const h of HATS) {
-      const o = { ...FACE, ...h };
+    for (const [h, cut] of HATS.flatMap((h) => [[h, 'crop'] as const, ...(q > 1 ? [[h, 'long'] as const] : [])])) {
+      const o = { ...FACE, ...h, cut };
       const list = worn(q, o);
-      const nape = new THREE.Mesh(list.find((i) => i.id === 'hair-nape')!.pieces[0].geo, side);
-      const hats = list.filter((i) => i.pieces[0]?.joint === 'head' && !['head', 'features', 'hair-nape'].includes(i.id));
+      const under = cut === 'long' ? 'hair-longunder' : 'hair-nape';
+      const nape = new THREE.Mesh(list.find((i) => i.id === under)!.pieces[0].geo, side);
+      const hats = list.filter((i) => i.pieces[0]?.joint === 'head' && !['head', 'features', under].includes(i.id));
       assert.ok(hats.length, `detail ${q}: a hat`);
       const hatMesh = hats.flatMap((i) => i.pieces.filter((p) => !p.detail).map((p) => new THREE.Mesh(p.geo, side)));
       for (let y = 0.07; y < 0.162; y += 0.004) {
@@ -94,10 +98,10 @@ test('faces: the hair at the nape stays inside every hat, and the head inside it
           const d = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
           const n = hit(nape, o3, d, true);
           if (!Number.isFinite(n)) continue;
-          assert.ok(n - hit(head, o3, d, true) > -0.0003, `detail ${q}: the head through the nape at ${y.toFixed(3)}`);
+          assert.ok(n - hit(head, o3, d, true) > -0.0003, `detail ${q}: the head through the ${cut} nape at ${y.toFixed(3)}, ${(a * 57.3).toFixed(0)} deg, ${((n - hit(head, o3, d, true)) * 1000).toFixed(2)} mm`);
           for (const m of hatMesh) {
             const g = hit(m, o3, d, false);
-            if (Number.isFinite(g)) assert.ok(g > n, `detail ${q} ${Object.keys(h)[0]}: the nape through the hat at ${y.toFixed(3)}`);
+            if (Number.isFinite(g)) assert.ok(g > n, `detail ${q} ${Object.keys(h)[0]}: the ${cut} nape through the hat at ${y.toFixed(3)}, ${(a * 57.3).toFixed(0)} deg, ${((g - n) * 1000).toFixed(2)} mm`);
           }
         }
       }
@@ -154,4 +158,35 @@ test('faces: the look on the figure: the cut, bald, the shades and their chain o
 test("faces: the crowd's skin tones and hair are the players' own", () => {
   for (const c of [...SKIN_TONES]) assert.ok(PALETTE.tone.includes(c), c);
   for (const c of [...HAIR_COLORS, ...HAIR_DYES]) assert.ok(PALETTE.hair.includes(c), c);
+});
+
+test('faces: the head shapes stretch about the head bone by the weight on it, within a tenth or so; unmasked only', () => {
+  const pivot: [number, number, number] = [0, 1, 0];
+  for (const id of SHAPE_IDS) {
+    const s = HEAD_SCALE[id];
+    for (const k of s) assert.ok(k >= 0.9 && k <= 1.12, `${id}: ${k}`);
+    assert.deepEqual(shapeHead([0, 1, 0], 1, pivot, s), pivot, `${id}: the pivot stays`);
+    assert.deepEqual(shapeHead([0.1, 1.2, 0.1], 0, pivot, s), [0.1, 1.2, 0.1], `${id}: nothing off the head moves`);
+    const [x, y, z] = shapeHead([0.1, 1.2, 0.1], 1, pivot, s);
+    assert.ok(Math.abs(x - 0.1 * s[0]) < 1e-9 && Math.abs(y - (1 + 0.2 * s[1])) < 1e-9 && Math.abs(z - 0.1 * s[2]) < 1e-9, id);
+  }
+  assert.deepEqual(HEAD_SCALE.standard, [1, 1, 1]);
+  const face: Look = { ...DEFAULT_LOOK, face: true, shape: 'long' };
+  assert.equal(lookOutfit(face).headShape, 'long');
+  assert.equal(lookOutfit({ ...face, face: false }).headShape, undefined, 'the balaclava keeps the art head');
+  assert.equal(lookOutfit({ ...face, shape: 'standard' }).headShape, undefined);
+  for (const v of SHAPE_IDS) assert.equal(cleanLook({ ...face, shape: v }).shape, v);
+  assert.equal(cleanLook({ ...face, shape: 'cube' }).shape, 'standard');
+});
+
+test("faces: the crowd wears every cut and shape, seeded", () => {
+  const seen = new Set<string>();
+  for (let i = 0; i < 600; i++) {
+    const o = cityOutfit(seeded((i + 0.5) / 600), { district: 'town' });
+    if (!o.face) continue;
+    seen.add(`cut-${o.hair ? (o.cut ?? 'crop') : 'bald'}`);
+    seen.add(`shape-${o.headShape ?? 'standard'}`);
+  }
+  for (const c of [...HAIR_CUTS, 'bald']) assert.ok(seen.has(`cut-${c}`), c);
+  for (const v of SHAPE_IDS) assert.ok(seen.has(`shape-${v}`), v);
 });

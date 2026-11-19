@@ -20,14 +20,15 @@ export const DOWN = -0.5;
 const STEP = 0.35;
 
 /**
- * A straight passage: along `axis` (its ends `a0` < `a1` along it), its centre line at `c` across, its walkable width
+ * A straight passage: along `axis` (x, z, or any way: an angle, from +x towards +z, as the Circus's subways run out
+ * from its well; its ends `a0` < `a1` along it), its centre line at `c` across, its walkable width
  * `half` either side, its walls' thickness, its floor and ceiling (under the ground), the floor's ramps (down from `a0`
  * to `ramp0`, up from `ramp1` to `a1`: an end with no ramp has its ramp at the end, opening flat into a well), the
  * stretches roofed over (`roofs`) and the parapets' height over the ground
  */
 export interface Passage {
   id: string;
-  axis: 'x' | 'z';
+  axis: 'x' | 'z' | number;
   c: number;
   half: number;
   wall: number;
@@ -39,8 +40,17 @@ export interface Passage {
   a1: number;
   roofs: [number, number][];
   rail: number;
+  /** The level at each end (the street's, GROUND_Y, unless it starts or ends down in a hall: an underground station's
+   * stairs from the street to its ticket hall, its escalator from the hall down to the platform) */
+  y0?: number;
+  y1?: number;
 }
-/** A well: round, sunken to `floor`, open to the sky, its retaining wall `wall` thick round it, a railing on its rim */
+/** How far over or under a floor a walker's feet can be and still be on it (stacked floors: a hall over a platform) */
+export const LEVEL = 0.6;
+/**
+ * A well: round, sunken to `floor`, open to the sky, its retaining wall `wall` thick round it, a railing on its rim;
+ * `tiers` steps round its edge (seats you can walk up: from `r0` out to its wall, `n` of them, each `rise` higher)
+ */
 export interface Well {
   id: string;
   x: number;
@@ -49,20 +59,66 @@ export interface Well {
   floor: number;
   wall: number;
   rail: number;
+  tiers?: { r0: number; n: number; rise: number };
 }
 
+/** A passage's way along and its way across (x and z keep their old sides: across a z passage is +x, an x one's +z) */
+const along = (p: Passage): Pt => (p.axis === 'z' ? [0, 1] : p.axis === 'x' ? [1, 0] : [Math.cos(p.axis), Math.sin(p.axis)]);
+const across = (p: Passage): Pt => (p.axis === 'z' ? [1, 0] : p.axis === 'x' ? [0, 1] : [-Math.sin(p.axis), Math.cos(p.axis)]);
+
 /** Where x, z is along a passage, and across it from its centre line */
-export const alongOf = (p: Passage, x: number, z: number) => (p.axis === 'z' ? z : x);
-export const acrossOf = (p: Passage, x: number, z: number) => (p.axis === 'z' ? x : z) - p.c;
+export const alongOf = (p: Passage, x: number, z: number) => {
+  const [dx, dz] = along(p);
+  return x * dx + z * dz;
+};
+export const acrossOf = (p: Passage, x: number, z: number) => {
+  const [nx, nz] = across(p);
+  return x * nx + z * nz - p.c;
+};
 /** A point along it (s), across it (u) */
-export const pointOf = (p: Passage, s: number, u = 0): Pt => (p.axis === 'z' ? [p.c + u, s] : [s, p.c + u]);
+export const pointOf = (p: Passage, s: number, u = 0): Pt => {
+  const [[dx, dz], [nx, nz]] = [along(p), across(p)];
+  return [s * dx + (p.c + u) * nx, s * dz + (p.c + u) * nz];
+};
+/**
+ * A passage running out from (x, z) at `deg` (from +x towards +z), its ends `from` and `to` out from there, its ramp
+ * up from `rampAt` out, roofed from `roof0` to `roof1` out (opening flat at `from`, into a well)
+ */
+export function radial(id: string, x: number, z: number, deg: number, o: { from: number; roof0: number; roof1: number; rampAt: number; to: number; half: number; wall: number; floor: number; ceil: number; rail: number }): Passage {
+  return straight(id, x, z, deg, { ...o, a0: o.from, ramp0: o.from, ramp1: o.rampAt, a1: o.to });
+}
+/**
+ * A straight passage through (x, z) at `deg` (from +x towards +z), its ends, ramps and roof measured along it from
+ * there (a crossing under a road: a ramp down on one side, the roofed stretch under it, a ramp up the other)
+ */
+export function straight(id: string, x: number, z: number, deg: number, o: { a0: number; ramp0: number; roof0: number; roof1: number; ramp1: number; a1: number; half: number; wall: number; floor: number; ceil: number; rail: number }): Passage {
+  const a = (deg * Math.PI) / 180;
+  const s0 = x * Math.cos(a) + z * Math.sin(a);
+  return {
+    id,
+    axis: a,
+    c: -x * Math.sin(a) + z * Math.cos(a),
+    half: o.half,
+    wall: o.wall,
+    floor: o.floor,
+    ceil: o.ceil,
+    a0: s0 + o.a0,
+    ramp0: s0 + o.ramp0,
+    ramp1: s0 + o.ramp1,
+    a1: s0 + o.a1,
+    roofs: [[s0 + o.roof0, s0 + o.roof1]],
+    rail: o.rail,
+  };
+}
 
 /** The floor along a passage: its ramps, the flat between */
 export function floorOf(p: Passage, s: number) {
-  if (s <= p.a0 || s >= p.a1) return GROUND_Y;
-  if (s < p.ramp0) return GROUND_Y + (p.floor - GROUND_Y) * ((s - p.a0) / (p.ramp0 - p.a0));
+  const [y0, y1] = [p.y0 ?? GROUND_Y, p.y1 ?? GROUND_Y];
+  if (s <= p.a0) return y0;
+  if (s >= p.a1) return y1;
+  if (s < p.ramp0) return y0 + (p.floor - y0) * ((s - p.a0) / (p.ramp0 - p.a0));
   if (s <= p.ramp1) return p.floor;
-  return p.floor + (GROUND_Y - p.floor) * ((s - p.ramp1) / (p.a1 - p.ramp1));
+  return p.floor + (y1 - p.floor) * ((s - p.ramp1) / (p.a1 - p.ramp1));
 }
 /** Is x, z on a passage's floor (its walkable width, `m` in from its walls), ramps and all */
 export const inPassage = (p: Passage, x: number, z: number, m = 0) => {
@@ -73,20 +129,26 @@ export const inPassage = (p: Passage, x: number, z: number, m = 0) => {
 export const roofedAt = (p: Passage, s: number) => p.roofs.some(([r0, r1]) => s > r0 && s < r1);
 /** Is x, z in a well (`m` in from its wall) */
 export const inWell = (w: Well, x: number, z: number, m = 0) => Math.hypot(x - w.x, z - w.z) < w.r - m;
+/** A well's floor `d` out from its middle: its tiers' steps up round its edge */
+export function wellFloor(w: Well, d: number) {
+  const t = w.tiers;
+  if (!t || d <= t.r0) return w.floor;
+  return w.floor + t.rise * Math.min(t.n, Math.ceil(((d - t.r0) / (w.r - t.r0)) * t.n));
+}
 
 /** The box round a passage, its walls and a margin: what walking and the camera ask about it first */
 export const passageZone = (p: Passage): Rect => {
   const e = p.half + p.wall + 0.6;
-  const [a, b] = [pointOf(p, p.a0 - 0.6, -e), pointOf(p, p.a1 + 0.6, e)];
-  return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
+  return boundsOf([pointOf(p, p.a0 - 0.6, -e), pointOf(p, p.a1 + 0.6, e), pointOf(p, p.a0 - 0.6, e), pointOf(p, p.a1 + 0.6, -e)]);
 };
-export const wellZone = (w: Well): Rect => {
-  const e = w.r + w.wall + 0.6;
-  return [w.x - e, w.z - e, w.x + e, w.z + e];
+const boundsOf = (pts: Pt[]): Rect => [Math.min(...pts.map((q) => q[0])), Math.min(...pts.map((q) => q[1])), Math.max(...pts.map((q) => q[0])), Math.max(...pts.map((q) => q[1]))];
+/** A passage's open stretch from `s0` to `s1` along it, walls and all, as its four corners */
+export const cutOf = (p: Passage, s0: number, s1: number): Pt[] => {
+  const e = p.half + p.wall;
+  return [pointOf(p, s0, -e), pointOf(p, s1, -e), pointOf(p, s1, e), pointOf(p, s0, e)];
 };
-
-/** The ground cut away over a passage's open stretches (its walls go down to its floor) */
-export function holesOf(p: Passage): Rect[] {
+/** Its open stretches along it (out of its roofs) */
+export function openOf(p: Passage): [number, number][] {
   const cuts = [...p.roofs].sort((a, b) => a[0] - b[0]);
   const open: [number, number][] = [];
   let at = p.a0;
@@ -95,11 +157,17 @@ export function holesOf(p: Passage): Rect[] {
     at = Math.max(at, r1);
   }
   if (at < p.a1) open.push([at, p.a1]);
-  const e = p.half + p.wall;
-  return open.map(([s0, s1]) => {
-    const [a, b] = [pointOf(p, s0, -e), pointOf(p, s1, e)];
-    return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
-  });
+  return open;
+}
+export const wellZone = (w: Well): Rect => {
+  const e = w.r + w.wall + 0.6;
+  return [w.x - e, w.z - e, w.x + e, w.z + e];
+};
+
+/** The ground cut away over a passage's open stretches (its walls go down to its floor; one at an angle: the box round
+ * each, what draws round it covering the rest) */
+export function holesOf(p: Passage): Rect[] {
+  return openOf(p).map(([s0, s1]) => boundsOf(cutOf(p, s0, s1)));
 }
 /** The ground cut away over a well: the square round it and its wall (what draws round it covers the corners) */
 export const wellHole = (w: Well): Rect => {
@@ -107,28 +175,46 @@ export const wellHole = (w: Well): Rect => {
   return [w.x - e, w.z - e, w.x + e, w.z + e];
 };
 
-/** What's below ground in one place: its passages and wells together, as walking and the walk camera ask about it */
-export function underworld(passages: readonly Passage[], wells: readonly Well[] = []) {
+/** What's below ground in one place: its passages and wells together, as walking and the walk camera ask about it;
+ * `boxes` what stands down there (a plaza's planters and lamps: solid to a walker down there, their tops absolute) */
+export function underworld(passages: readonly Passage[], wells: readonly Well[] = [], boxes: readonly Box[] = []) {
   const zones = [...passages.map(passageZone), ...wells.map(wellZone)];
   const inZone = (x: number, z: number) => zones.some((r) => x > r[0] && x < r[2] && z > r[1] && z < r[3]);
-  /** The floor under x, z (null: on none of it) and whether that's under a roof */
-  const under = (x: number, z: number): { floor: number; roofed: boolean } | null => {
+  /**
+   * The floor under x, z (null: on none of it) and whether that's under a roof. Where pieces stack (a station's hall
+   * over its platform), the highest floor within a step over `yNow`'s feet; without `yNow`, the first roofed one. A
+   * passage before a well (a subway's floor through the plaza's seats it's cut through)
+   */
+  const under = (x: number, z: number, yNow?: number): { floor: number; roofed: boolean } | null => {
     let hit: { floor: number; roofed: boolean } | null = null;
+    let open: { floor: number; roofed: boolean } | null = null;
     for (const p of passages)
       if (inPassage(p, x, z)) {
         const s = alongOf(p, x, z);
-        if (roofedAt(p, s)) return { floor: floorOf(p, s), roofed: true };
-        hit ??= { floor: floorOf(p, s), roofed: false };
+        const here = { floor: floorOf(p, s), roofed: roofedAt(p, s) };
+        if (yNow === undefined) {
+          if (here.roofed) return here;
+          open ??= here;
+          continue;
+        }
+        // (a roofed floor only from down there; then the highest within a step over his feet)
+        if (here.roofed && yNow >= DOWN) continue;
+        if (here.floor > yNow + LEVEL) continue;
+        if (!hit || here.floor > hit.floor) hit = here;
       }
     if (hit) return hit;
-    for (const w of wells) if (inWell(w, x, z)) return { floor: w.floor, roofed: false };
+    if (open) return open;
+    for (const w of wells) if (inWell(w, x, z)) return { floor: wellFloor(w, Math.hypot(x - w.x, z - w.z)), roofed: false };
     return null;
   };
-  /** Does a walker `r` round, centred at x, z, fit down there (in one piece of it, or each side of him in some piece) */
-  const fits = (x: number, z: number, r: number) => {
+  /** Is x, z on a passage's floor at a walker's level (his feet at `y`: within a step of it) */
+  const onLevel = (p: Passage, x: number, z: number, y: number, m = 0) => inPassage(p, x, z, m) && Math.abs(floorOf(p, alongOf(p, x, z)) - y) < LEVEL;
+  /** Does a walker `r` round, centred at x, z, his feet at `y`, fit down there (in one piece of it at his level, or each
+   * side of him in some piece at his level: a hall's floor over a platform is no floor to someone on the platform) */
+  const fits = (x: number, z: number, r: number, y: number) => {
     for (const p of passages) {
       const s = alongOf(p, x, z);
-      if (Math.abs(acrossOf(p, x, z)) <= p.half - r && s >= p.a0 && s <= p.a1) return true;
+      if (Math.abs(acrossOf(p, x, z)) <= p.half - r && s >= p.a0 && s <= p.a1 && Math.abs(floorOf(p, s) - y) < LEVEL) return true;
     }
     for (const w of wells) if (Math.hypot(x - w.x, z - w.z) <= w.r - r) return true;
     const pts: Pt[] = [
@@ -137,7 +223,7 @@ export function underworld(passages: readonly Passage[], wells: readonly Well[] 
       [x, z - r],
       [x, z + r],
     ];
-    return pts.every(([px, pz]) => passages.some((p) => inPassage(p, px, pz)) || wells.some((w) => inWell(w, px, pz)));
+    return pts.every(([px, pz]) => passages.some((p) => onLevel(p, px, pz, y)) || wells.some((w) => inWell(w, px, pz)));
   };
   /** Is (x, y, z) open air down there, `m` in from its faces */
   const air = (x: number, y: number, z: number, m: number) => {
@@ -148,27 +234,27 @@ export function underworld(passages: readonly Passage[], wells: readonly Well[] 
       if (y < floorOf(p, s) + m) continue;
       if (!roofedAt(p, s) || y < p.ceil - m) return true;
     }
-    for (const w of wells) if (Math.hypot(x - w.x, z - w.z) <= w.r - m && y >= w.floor + m) return true;
+    for (const w of wells) {
+      const d = Math.hypot(x - w.x, z - w.z);
+      if (d <= w.r - m && y >= wellFloor(w, d) + m) return true;
+    }
     return false;
   };
   return {
     inZone,
     /** Is x, z under a roof down here (a passage's roofed stretch; the wells and the cuttings are open to the sky) */
-    roofed: (x: number, z: number) => under(x, z)?.roofed ?? false,
+    roofed: (x: number, z: number, yNow?: number) => under(x, z, yNow)?.roofed ?? false,
     /** The ground under x, z down here: ramps, open floors wherever; under a roof only when `yNow` is down there (null: not here's) */
     y(x: number, z: number, yNow: number): number | null {
-      const u = under(x, z);
-      if (!u) return null;
-      if (u.roofed) return yNow < DOWN ? u.floor : null;
-      return u.floor;
+      return under(x, z, yNow)?.floor ?? null;
     },
     /**
      * Whether a walker `r` round at x, z (his feet at `y`) is stopped: down there, by the walls (he keeps to the
-     * floor); at street level, by an open cutting's or a well's edge where the floor is more than a step under him
+     * floor) and what stands there; at street level, by an open cutting's or a well's edge where the floor is more than a step under him
      */
     wall(x: number, z: number, y: number, r: number) {
       if (!inZone(x, z)) return false;
-      if (y < DOWN) return !fits(x, z, r);
+      if (y < DOWN) return !fits(x, z, r, y) || boxes.some((b) => y < b[4] && x > b[0] - r && x < b[2] + r && z > b[1] - r && z < b[3] + r);
       for (const [px, pz] of [
         [x, z],
         [x - r, z],

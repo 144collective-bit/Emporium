@@ -143,7 +143,8 @@ await scene('wake', null, async (t) => {
   // chaise (docs/compound-plan.md Phase 2), A east to the hall and S back north to the door; its prompt reads
   // "Getting ready…" until the street is in)
   await t.go('w', 1.2, 'walked past the coffee table');
-  await t.go('a', 1.9, 'across the room to the hall');
+  // (asked short: at a frame or two a second he coasts on half a tile or more, and the door's prompt is within 1 of it)
+  await t.go('a', 1.5, 'across the room to the hall');
   await t.go('s', 1.85, 'and up the hall to the front door');
   await t.prompt('Front door');
   await t.until('him to be outside', () => {
@@ -405,6 +406,82 @@ await scene('stair', '-56.6,377.6,-1.786', async (t) => {
   await t.go('w', 4, 'walked up the stair');
   await t.until('up the stair', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 2, null, 60000);
   await t.step(`up the stair (${(await t.page.evaluate(upNow)).toFixed(1)})`);
+});
+
+// The Circus below ground (circus.ts, docs/south-plan.md Phase 4b): from the top of the north-east subway's ramp, down it,
+// under the road and out on to the sunken plaza's floor
+const downNow = () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0);
+await scene('circus', '-76.05,395.78,2.88', async (t) => {
+  await t.go('w', 8, 'walked down the ramp');
+  await t.until('down in the subway', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.5, null, 60000);
+  await t.step(`down in the subway (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('w', 9, 'walked under the road into the plaza');
+  await t.until('on the plaza floor', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.8, null, 60000);
+  await t.step(`on the plaza floor (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// An underpass (underpasses.ts, docs/south-plan.md Phase 4c): through the one under Endswood Road's bend, down one
+// side, under the road and up the other
+await scene('underpass', '23.67,384.43,1.198', async (t) => {
+  await t.go('w', 10, 'walked down under the road');
+  await t.until('down under the road', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.5, null, 60000);
+  await t.step(`under the road (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('w', 12, 'walked up the far side');
+  await t.until('up at street level again', () => !/ · down /.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 60000);
+  await t.step('up at street level on the far side');
+});
+
+// The High Road's underground station (southline.ts, docs/south-plan.md Phase 4e): from the sidewalk in through its
+// door, down its stairs (west), along the ticket hall and down the escalator to the platform
+await scene('station', '-158.47,389.10,-0.295', async (t) => {
+  await t.go('w', 2.9, 'in through the door to the middle of the landing');
+  await t.go('a', 9, 'down the stairs to the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('a', 16, 'along the hall and down the escalator');
+  await t.until('down on the platform', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 6, null, 60000);
+  await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// The Trenches' underground station (southline.ts, Phase 4f): from The Block's plaza by the raised station's tower,
+// down its stairs (south-east) and on into the side of its ticket hall (the High Road's walk goes on down to a platform)
+await scene('trenches', '-101.03,180.75,-2.581', async (t) => {
+  await t.go('w', 12, 'down the stairs into the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// Lot 9's and Aldwyn's Green's underground stations (Phase 4f): down each one's stairs from the street into its ticket hall
+for (const [name, spawn, far] of [
+  ['lot9station', '-115.58,471.00,-3.062', 10],
+  ['aldwynsstation', '-230.49,458.34,-1.736', 27],
+]) {
+  await scene(name, spawn, async (t) => {
+    await t.go('w', far, 'down the stairs into the ticket hall');
+    await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+    await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  });
+}
+
+// The tube (tube-ui.ts, docs/south-plan.md Phase 4g): on Aldwyn's Green's platform, its card, a ride to the High Road
+// seen from inside the carriage, skipped, stepping out on the High Road's platform
+await scene('tube', '-213.5,440.4,0,-6.55', async (t) => {
+  await t.prompt('Tube');
+  await t.until('the tube card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-tube-to]'));
+  await t.step('the tube card opened');
+  await t.click('[data-metro] [data-tube-to="highroad"]');
+  await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
+  await t.step('riding, inside the carriage');
+  await t.page.waitForTimeout(7000);
+  await t.step('riding on, the tunnel going by');
+  await t.click('[data-metro-skip]');
+  await t.until('the ride to end', () => !document.querySelector('.city.is-riding'));
+  // (by the High Road platform's Tube door: the readout's once a second, so not the train's last place mid-ride)
+  await t.until('him to step out at the High Road', ([x, z]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) < 3;
+  }, [-189.1, 376.8], 60000);
+  await t.step(`stepped out at ${(await t.where()).join(', ')} (${(await t.page.evaluate(downNow)).toFixed(1)} down)`);
 });
 
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub

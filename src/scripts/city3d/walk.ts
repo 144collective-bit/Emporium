@@ -95,6 +95,8 @@ import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallWall } from './mallinside';
+import { LINK_CAMERA, linkUp, linkWall } from './malllink';
+import { COURT_CAMERA, courtWall } from './courtinside';
 import { skyUp, skyWall } from './southsky';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
@@ -770,7 +772,7 @@ export function createWalk(d: WalkDeps) {
     if (inHouse(x, z, y)) return homeWall(x, z, RADIUS, y);
     // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
     if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
-    // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
+    // Below ground (underground.ts: Lot 9's tunnel, the Circus's subways and plaza): down there only their walls stop you;
     // at street level the open cuttings' and the well's edges do
     if (UNDER.inZone(x, z)) {
       if (y < UNDER_DOWN) return UNDER.wall(x, z, y, RADIUS);
@@ -788,8 +790,11 @@ export function createWalk(d: WalkDeps) {
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // Up in Endswood's sky network (southsky.ts): only its railings stop you (off its galleries, bridges and decks)
     if (skyUp(x, z, y)) return skyWall(x, z, y, RADIUS);
-    // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
-    if (mallWall(x, z, y, RADIUS)) return true;
+    // Up in Starlight Mall's Skywalk (malllink.ts): only its edges and what stands on your floor stop you
+    if (linkUp(x, z, y)) return linkWall(x, z, y, RADIUS);
+    // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor; in the Skywalk's
+    // pavilion at street level, its escalators' sides; in Palm Court (courtinside.ts), its upper floor's edges
+    if (mallWall(x, z, y, RADIUS) || linkWall(x, z, y, RADIUS) || courtWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // ...and the swing bridge's barriers while they're down (swingbridge.ts)
@@ -808,7 +813,7 @@ export function createWalk(d: WalkDeps) {
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
-    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, Endswood's subways and its well)
+    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, the Circus's subways and its plaza)
     const under = from.y < 0.6 && UNDER.inZone(from.x, from.z);
     if (under) t = UNDER.room(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
     // Ground (and kerb) below
@@ -827,7 +832,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, ...homeCamera(pos.y)] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, ...LINK_CAMERA, ...COURT_CAMERA, ...homeCamera(pos.y)] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -3319,7 +3324,7 @@ export function createWalk(d: WalkDeps) {
      * the way its sitter faces, `h` its seat over the ground: waking on his sofa at home, docs/spawn-plan.md), up off
      * it with `standUp()` or the first push of the keys
      */
-    enter(spawn?: { x: number; z: number; yaw: number }, seat?: { x: number; z: number; ry: number; h: number }) {
+    enter(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -3342,7 +3347,8 @@ export function createWalk(d: WalkDeps) {
         if (at.length > 2) yaw = at[2];
       }
       if (spawn) {
-        pos.set(spawn.x, groundAt(spawn.x, spawn.z), spawn.z);
+        // (`y`: up on a floor over the slab, as `placeAt()`: Starlight Mall's station in the Skywalk)
+        pos.set(spawn.x, groundAt(spawn.x, spawn.z, spawn.y === undefined ? 0 : SLAB + spawn.y), spawn.z);
         yaw = spawn.yaw;
       }
       // (his body facing the way the camera looks: the place in front of him, not always the same way)

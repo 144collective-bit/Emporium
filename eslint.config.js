@@ -7,6 +7,9 @@ import tseslint from 'typescript-eslint';
 
 /** The DOM-free rules files: no `document`, `window` or `localStorage` in them (a test or the server would fail to load; three.js's maths is fine in Node) */
 const DOM_FREE = [
+  'src/scripts/city3d/malllink.ts',
+  'src/scripts/city3d/courtinside.ts',
+  'src/scripts/city3d/mallroofs.ts',
   'src/scripts/city3d/spawn.ts',
   'src/scripts/city3d/south.ts',
   'src/scripts/city3d/crestbanks.ts',
@@ -21,7 +24,12 @@ const DOM_FREE = [
   'src/scripts/city3d/aldwyns.ts',
   'src/scripts/city3d/highroad.ts',
   'src/scripts/city3d/council.ts',
+  'src/scripts/city3d/southline.ts',
+  'src/scripts/city3d/southtrains.ts',
   'src/scripts/city3d/rec.ts',
+  'src/scripts/city3d/circus.ts',
+  'src/scripts/city3d/underpasses.ts',
+  'src/scripts/city3d/holes.ts',
   'src/scripts/city3d/streetfaces.ts',
   'src/scripts/city3d/freecam.ts',
   'src/scripts/city3d/targets.ts',

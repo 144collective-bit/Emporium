@@ -3,7 +3,7 @@
  * Road, from the Circus west to Degen's gates, patchy as high roads are: Endswood Parade (a 60s parade, two storeys),
  * Victorian rows of three storeys with shops under flats (Rosa's Café among them), the Brook & Lantern on the corner of
  * Bell Street (two storeys under a big gable), a gap site behind a hoarding, Kestrel Fuel, Aldwyn's Green Bus Garage
- * (Victorian brick), the underground station's site behind a hoarding (Phase 4), Sparkle Hand Wash by Degen's gates,
+ * (Victorian brick), the underground station's building (Phase 4e: its stairs down to the line, southline.ts), Sparkle Hand Wash by Degen's gates,
  * and the boarded Duke of Endswood on the estate's edge. Made-up names only, no numbers on any sign. The big four (the
  * pub, the café, the petrol station, the bus garage) are places (endsplaces.ts). DOM-free, tested in
  * tests/highroad.test.ts; drawn by village3d.ts.
@@ -17,7 +17,7 @@ import { cover, type Box } from './southblocks';
 export type ShopKind = 'parade' | 'row' | 'pub' | 'gap' | 'petrol' | 'garage' | 'station' | 'carwash' | 'boarded';
 export interface Shop {
   id: string;
-  /** Its sign (made up; none on a gap site or the station's hoarding) */
+  /** Its sign (made up; none on a gap site; the station's its name)  */
   name: string;
   kind: ShopKind;
   /** Its front's middle on the sidewalk's edge, the way it faces (out to the High Road), its frontage, its depth */
@@ -47,7 +47,11 @@ export const KINDS: Record<ShopKind, { w: number; d: number; storeys: number }> 
   boarded: { w: 9, d: 7, storeys: 2 },
 };
 /** The shop floor's height, a storey's, a canopy's (the petrol station's, the car wash's), the bus garage's eaves */
-export const HEIGHT = { shop: 1.4, storey: 1, canopy: 2.6, garage: 4.6, garageRidge: 2.2, hoarding: 1.8 };
+export const HEIGHT = { shop: 1.4, storey: 1, canopy: 2.6, garage: 4.6, garageRidge: 2.2, hoarding: 1.8, station: 2.1 };
+/** The underground station's building (docs/south-plan.md Phase 4e): its walls' thickness, its door in its front (along
+ * its frontage from its middle, east +), at its east end, on to the landing inside (southline.ts `BUILDING_STAIRS`) */
+export const STATION_WALL = 0.15;
+export const STATION_DOOR: [number, number] = [1.6, 3.5];
 
 /** What stands along each stretch of the High Road (a block's run on it), in order from the run's start */
 type Item = { kind: ShopKind; name: string; colour?: string; id?: string };
@@ -82,7 +86,7 @@ const ITEMS: { block: string; from: Pt; items: Item[] }[] = [
   },
   // North side: by Degen's gates, then east to the estate's edge
   { block: 'north-gates', from: [-213, 378], items: [{ kind: 'carwash', name: 'Sparkle Hand Wash', colour: '#2aabee' }] },
-  { block: 'north-mid', from: [-166, 386], items: [{ kind: 'station', name: '' }, { kind: 'petrol', name: 'Kestrel Fuel', id: 'kestrel', colour: '#d6a12a' }] },
+  { block: 'north-mid', from: [-166, 386], items: [{ kind: 'station', name: 'High Road' }, { kind: 'petrol', name: 'Kestrel Fuel', id: 'kestrel', colour: '#d6a12a' }] },
   // (the small block between the High Road and its close: the bus garage)
   { block: 'north-garage', from: [-128, 399], items: [{ kind: 'garage', name: "Aldwyn's Green Bus Garage", id: 'busgarage', colour: '#7a1f2b' }] },
   { block: 'north-east', from: [-107, 409], items: [{ kind: 'boarded', name: 'The Duke of Endswood', colour: '#3b3846' }] },
@@ -177,7 +181,8 @@ export const SHOPS: Shop[] = baked('highroad', BUILT ? undefined : layShops);
 export function topOf(s: Shop) {
   if (s.kind === 'garage') return HEIGHT.garage + HEIGHT.garageRidge;
   if (s.kind === 'petrol' || s.kind === 'carwash') return HEIGHT.canopy + 0.5;
-  if (s.kind === 'gap' || s.kind === 'station') return HEIGHT.hoarding;
+  if (s.kind === 'gap') return HEIGHT.hoarding;
+  if (s.kind === 'station') return HEIGHT.station + 0.25;
   const roof = s.kind === 'pub' || s.kind === 'boarded' ? 2.2 : 0.35;
   return HEIGHT.shop + (s.storeys - 1) * HEIGHT.storey + roof;
 }
@@ -187,7 +192,8 @@ export const BACK_IN = 0.6;
 export const doorOf = (s: Shop): Pt => [s.at[0] + s.face[0] * 0.6, s.at[1] + s.face[1] * 0.6];
 
 /** The solids: the buildings (their tops over their bases); the forecourts' and the car wash's canopies stand on
- * posts (only the kiosk and the wash bay are solid); a gap site's and the station's hoarding along their fronts */
+ * posts (only the kiosk and the wash bay are solid); a gap site's hoarding along its front; the station building's walls
+ * round its landing and stairs, its door left open */
 export const SHOP_SOLIDS: Box[] = SHOPS.flatMap((s): Box[] => {
   if (s.kind === 'petrol' || s.kind === 'carwash') {
     // (the kiosk or the bay at the back of the plot)
@@ -195,11 +201,23 @@ export const SHOP_SOLIDS: Box[] = SHOPS.flatMap((s): Box[] => {
     const back = shopFoot({ ...s, at: [s.at[0] - s.face[0] * (s.d - 4), s.at[1] - s.face[1] * (s.d - 4)], d: 4 - BACK_IN, w: s.w * 0.45 });
     return cover(shrink(back, 0.04), s.base + 2.2, 0.25);
   }
-  if (s.kind === 'gap' || s.kind === 'station') return cover(shrink(shopFoot({ ...s, d: 0.3 }), 0.02), s.base + HEIGHT.hoarding, 0.5);
+  if (s.kind === 'gap') return cover(shrink(shopFoot({ ...s, d: 0.3 }), 0.02), s.base + HEIGHT.hoarding, 0.5);
+  if (s.kind === 'station') return stationWalls(s).flatMap((w) => cover(w, s.base + topOf(s), 0.25));
   // (in fine strips: a slanted front's strips stand out from it no more than a hand)
   // (pulled a little in, so a strip at a slanted back never stands past the block's edge)
   return cover(shrink(shopFoot(s), 0.02), s.base + topOf(s), 0.25);
 });
+/** The station building's walls (round its landing and stairs, its door in its front), each as its four corners:
+ * local x along its frontage (east +, from its middle), z out of its front (its back at -d) */
+export function stationWalls(s: Shop): Pt[][] {
+  const [nx, nz] = s.face;
+  const t: Pt = nx < 0 ? [-nz, nx] : [nz, -nx];
+  const fwd: Pt = t[0] > 0 ? t : [-t[0], -t[1]];
+  const p = (x: number, z: number): Pt => [s.at[0] + fwd[0] * x + nx * z, s.at[1] + fwd[1] * x + nz * z];
+  const quad = (x0: number, x1: number, z0: number, z1: number): Pt[] => [p(x0, z0), p(x1, z0), p(x1, z1), p(x0, z1)];
+  const [w, d, k] = [s.w / 2, s.d, STATION_WALL];
+  return [quad(-w, STATION_DOOR[0], -k, 0), quad(STATION_DOOR[1], w, -k, 0), quad(-w, w, -d, -d + k), quad(-w, -w + k, -d, 0), quad(w - k, w, -d, 0)];
+}
 /** Where the High Road's buildings stand, all of them */
 export const HIGHROAD_RECT: [number, number, number, number] = (() => {
   const pts = SHOPS.flatMap((s) => shopFoot(s));

@@ -29,12 +29,13 @@ import * as THREE from 'three';
 import { Batch, toon } from './kit';
 import type { Tick } from './world';
 import { site } from './tilework';
-import { ANCHORS, HALL, MALL_NAME } from './mall';
+import { ANCHORS, FIT, HALL, MALL_NAME } from './mall';
 import {
   ANCHOR_DOORS,
   BALUSTRADE,
   BENCHES_IN,
   COLUMNS,
+  CORRIDOR_Z,
   COLUMN_R,
   DIRECTORY,
   ESCALATORS,
@@ -62,6 +63,7 @@ import {
   VOID,
   type Unit,
 } from './mallinside';
+import { CORRIDOR_H } from './malllink';
 import {
   CHARCOAL,
   DARK,
@@ -95,8 +97,9 @@ import {
 /** The inside's signs: the units, the stalls and the rest (fixed made-up words; 32, the atlas's all) */
 const LIGHT_IN = new Set([...UNIT_NAMES.filter((_, k) => k % 2), 'PHOTOS', 'KIDS RIDES', ...KIOSKS.map((k) => k.name)]);
 const signIn = signAtlas('mall-signs-in', [...UNIT_NAMES, ...FOOD_NAMES, 'FOOD COURT', 'DIRECTORY', 'PHOTOS', 'INFO', 'KIDS RIDES', ...KIOSKS.map((k) => k.name), MALL_NAME, ...ANCHORS.map((a) => a.name)], LIGHT_IN);
-const STEPS_UP = stepsMat(1);
-const STEPS_DOWN = stepsMat(-1);
+/** (the Skywalk's escalators run on these too: malllink3d.ts) */
+export const STEPS_UP = stepsMat(1);
+export const STEPS_DOWN = stepsMat(-1);
 /** A few plain colours of the fit-out's own (folded into the shared paint) */
 const PALE_GLASS = toon('#c9dbe4');
 const MENU = toon('#26282c');
@@ -179,9 +182,12 @@ function unit(b: Batch, u: Unit) {
   bx(0, 0.1, y0 + 0.08, y0 + 0.14, z0 + 0.42, z1 - 0.42, STEEL);
   glassX(b, fx, f, z0 + 0.42, z1 - 0.42, y0 + 0.14, top - 0.75);
   // The door in the middle, open (warm inside), a steel frame; the fascia with its name, a LED line under it
-  bx(0.015, 0.03, y0, top - 0.85, zm - 0.65, zm + 0.65, PALE_GLASS);
-  bx(0.03, 0.08, y0, top - 0.8, zm - 0.7, zm - 0.65, STEEL);
-  bx(0.03, 0.08, y0, top - 0.8, zm + 0.65, zm + 0.7, STEEL);
+  // (the door in scale with the people, mall.ts `FIT`: a steel head over it, the glass on up)
+  const dt = y0 + FIT.door;
+  bx(0.015, 0.03, y0, dt, zm - 0.42, zm + 0.42, PALE_GLASS);
+  bx(0.03, 0.08, y0, dt + 0.05, zm - 0.47, zm - 0.42, STEEL);
+  bx(0.03, 0.08, y0, dt + 0.05, zm + 0.42, zm + 0.47, STEEL);
+  bx(0.03, 0.08, dt, dt + 0.05, zm - 0.42, zm + 0.42, STEEL);
   bx(0, 0.12, top - 0.7, top - 0.04, z0 + 0.3, z1 - 0.3, pale ? WHITE : CHARCOAL);
   signIn(b, u.name, out(0.13), top - 0.37, zm, Math.min(3.6, z1 - z0 - 1.2), 0.42, f * (Math.PI / 2));
   bx(0.1, 0.13, top - 0.74, top - 0.71, z0 + 0.4, z1 - 0.4, LED);
@@ -189,7 +195,13 @@ function unit(b: Batch, u: Unit) {
 
 function units(b: Batch) {
   // The two strips the units are in (both floors), their ends' walls
-  for (const x0 of [IN[0], IN[2] - UNIT_D]) box(b, x0, Y, NORTH_Z, x0 + UNIT_D, CEIL, LOBBY_Z, LIGHT);
+  box(b, IN[0], Y, NORTH_Z, IN[0] + UNIT_D, CEIL, LOBBY_Z, LIGHT);
+  // (the east strip open on the upper floor where the Skywalk's corridor goes through: malllink3d.ts draws it)
+  const x0 = IN[2] - UNIT_D;
+  box(b, x0, Y, NORTH_Z, IN[2], CEIL, CORRIDOR_Z[0], LIGHT);
+  box(b, x0, Y, CORRIDOR_Z[1], IN[2], CEIL, LOBBY_Z, LIGHT);
+  box(b, x0, Y, CORRIDOR_Z[0], IN[2], Y + UP, CORRIDOR_Z[1], LIGHT);
+  box(b, x0, Y + UP + CORRIDOR_H, CORRIDOR_Z[0], IN[2], CEIL, CORRIDOR_Z[1], LIGHT);
   for (const u of UNITS) unit(b, u);
 }
 
@@ -200,24 +212,25 @@ function balustrade(b: Batch, x0: number, z0: number, x1: number, z1: number) {
   const y = Y + UP;
   const along = x1 - x0 !== 0;
   const len = Math.hypot(x1 - x0, z1 - z0);
-  const g = new THREE.PlaneGeometry(len, 0.9);
+  const r = FIT.rail;
+  const g = new THREE.PlaneGeometry(len, r - 0.08);
   if (!along) g.rotateY(Math.PI / 2);
-  b.add(g.translate((x0 + x1) / 2, y + 0.5, (z0 + z1) / 2), GLASS);
-  if (along) box(b, x0, y + 0.95, z0 - 0.035, x1, y + 1.0, z0 + 0.035, STEEL);
-  else box(b, x0 - 0.035, y + 0.95, z0, x0 + 0.035, y + 1.0, z1, STEEL);
+  b.add(g.translate((x0 + x1) / 2, y + (r - 0.08) / 2 + 0.02, (z0 + z1) / 2), GLASS);
+  if (along) box(b, x0, y + r - 0.05, z0 - 0.03, x1, y + r, z0 + 0.03, STEEL);
+  else box(b, x0 - 0.03, y + r - 0.05, z0, x0 + 0.03, y + r, z1, STEEL);
   const n = Math.max(1, Math.round(len / 1.6));
   for (let i = 0; i <= n; i++) {
     const [x, z] = [x0 + ((x1 - x0) * i) / n, z0 + ((z1 - z0) * i) / n];
-    box(b, x - 0.025, y, z - 0.025, x + 0.025, y + 0.96, z + 0.025, STEEL);
+    box(b, x - 0.02, y, z - 0.02, x + 0.02, y + FIT.rail - 0.04, z + 0.02, STEEL);
   }
 }
 
 /** A tree in a round white planter */
 function indoorTree(b: Batch, x: number, z: number, s: number) {
-  cyl(b, 0.55, 0.6, x, Y, z, WHITE, 18);
-  cyl(b, 0.6, 0.05, x, Y + 0.6, z, STEEL, 18);
-  b.add(new THREE.CircleGeometry(0.5, 16).rotateX(-Math.PI / 2).translate(x, Y + 0.55, z), STONE);
-  tree(b, x, z, Y + 0.55, s);
+  cyl(b, 0.5, 0.38, x, Y, z, WHITE, 18);
+  cyl(b, 0.54, 0.04, x, Y + 0.38, z, STEEL, 18);
+  b.add(new THREE.CircleGeometry(0.46, 16).rotateX(-Math.PI / 2).translate(x, Y + 0.35, z), STONE);
+  tree(b, x, z, Y + 0.35, s);
 }
 
 function atrium(b: Batch) {
@@ -235,9 +248,9 @@ function atrium(b: Batch) {
   // Benches either side of it: timber on steel, a back away from it
   for (const s of BENCHES_IN) {
     const back = s.ry > 0 ? -1 : 1;
-    box(b, s.x - 0.24, Y + 0.38, s.z - 1.05, s.x + 0.24, Y + 0.45, s.z + 1.05, WOOD);
-    box(b, s.x + back * 0.22 - 0.03, Y + 0.45, s.z - 1.05, s.x + back * 0.22 + 0.03, Y + 0.85, s.z + 1.05, WOOD);
-    for (const sd of [-1, 1]) box(b, s.x - 0.2, Y, s.z + sd * 0.9 - 0.04, s.x + 0.2, Y + 0.38, s.z + sd * 0.9 + 0.04, STEEL);
+    box(b, s.x - 0.2, Y + FIT.seat - 0.06, s.z - 1.05, s.x + 0.2, Y + FIT.seat, s.z + 1.05, WOOD);
+    box(b, s.x + back * 0.18 - 0.03, Y + FIT.seat, s.z - 1.05, s.x + back * 0.18 + 0.03, Y + FIT.back, s.z + 1.05, WOOD);
+    for (const sd of [-1, 1]) box(b, s.x - 0.17, Y, s.z + sd * 0.9 - 0.04, s.x + 0.17, Y + FIT.seat - 0.06, s.z + sd * 0.9 + 0.04, STEEL);
   }
   for (const [px, pz] of PALMS_IN) indoorTree(b, px, pz, 0.85);
   // The columns under the upper floor's edges: white, a steel shoe at the foot
@@ -281,20 +294,22 @@ function atrium(b: Batch) {
     const [x0, z0, x1, z1] = k.rect;
     const xm = (x0 + x1) / 2;
     const zm = (z0 + z1) / 2;
-    box(b, x0 + 0.1, Y, z0 + 0.1, x1 - 0.1, Y + 1.0, z1 - 0.1, WOOD);
-    box(b, x0, Y + 1.0, z0, x1, Y + 1.06, z1, WHITE);
+    const ct = Y + FIT.counter;
+    const cy = Y + FIT.door;
+    box(b, x0 + 0.1, Y, z0 + 0.1, x1 - 0.1, ct, z1 - 0.1, WOOD);
+    box(b, x0, ct, z0, x1, ct + 0.05, z1, WHITE);
     for (const [px, pz] of [
       [x0 + 0.05, z0 + 0.05],
       [x1 - 0.1, z0 + 0.05],
       [x0 + 0.05, z1 - 0.1],
       [x1 - 0.1, z1 - 0.1],
     ])
-      box(b, px, Y + 1.06, pz, px + 0.05, Y + 2.1, pz + 0.05, STEEL);
-    box(b, x0 - 0.1, Y + 2.1, z0 - 0.1, x1 + 0.1, Y + 2.4, z1 + 0.1, WHITE);
-    for (const s of [1, -1]) signIn(b, k.name, xm, Y + 2.25, s === 1 ? z1 + 0.11 : z0 - 0.11, x1 - x0 - 0.1, 0.26, s === 1 ? 0 : Math.PI);
-    box(b, x0 - 0.1, Y + 2.08, z1 + 0.08, x1 + 0.1, Y + 2.1, z1 + 0.1, LED);
+      box(b, px, ct + 0.05, pz, px + 0.05, cy, pz + 0.05, STEEL);
+    box(b, x0 - 0.1, cy, z0 - 0.1, x1 + 0.1, cy + 0.26, z1 + 0.1, WHITE);
+    for (const s of [1, -1]) signIn(b, k.name, xm, cy + 0.13, s === 1 ? z1 + 0.11 : z0 - 0.11, x1 - x0 - 0.1, 0.24, s === 1 ? 0 : Math.PI);
+    box(b, x0 - 0.1, cy - 0.02, z1 + 0.08, x1 + 0.1, cy, z1 + 0.1, LED);
     // (what's on the counter: a coffee machine or a rack of shades; not on phones)
-    if (!LOW) box(b, xm - 0.35, Y + 1.06, zm - 0.2, xm + 0.15, Y + 1.5, zm + 0.15, k.rect[0] < XM ? STEEL : MID);
+    if (!LOW) box(b, xm - 0.2, ct + 0.05, zm - 0.12, xm + 0.1, ct + 0.3, zm + 0.1, k.rect[0] < XM ? STEEL : MID);
   }
   // The glass lift: a steel frame at its corners and floors, glass all round, its car waiting downstairs
   const [lx0, lz0, lx1, lz1] = LIFT_SHAFT;
@@ -323,10 +338,11 @@ function atrium(b: Batch) {
     b.add(g.translate((gx0 + gx1) / 2, (Y + CEIL) / 2, (gz0 + gz1) / 2), GLASS);
   }
   box(b, lx0 + 0.15, Y + 0.02, lz0 + 0.15, lx1 - 0.15, Y + 0.12, lz1 - 0.15, STEEL);
-  box(b, lx0 + 0.15, Y + 2.3, lz0 + 0.15, lx1 - 0.15, Y + 2.45, lz1 - 0.15, WHITE);
-  box(b, lx0 + 0.15, Y + 2.28, lz0 + 0.15, lx1 - 0.15, Y + 2.3, lz1 - 0.15, LED);
-  for (const pz of [lz0 + 0.15, lz1 - 0.2]) box(b, lx0 + 0.15, Y + 0.12, pz, lx1 - 0.15, Y + 2.28, pz + 0.05, STEEL);
-  box(b, lx1 - 0.2, Y + 0.9, lz0 + 0.2, lx1 - 0.15, Y + 0.95, lz1 - 0.2, STEEL);
+  const car = Y + FIT.door + 0.12;
+  box(b, lx0 + 0.15, car, lz0 + 0.15, lx1 - 0.15, car + 0.15, lz1 - 0.15, WHITE);
+  box(b, lx0 + 0.15, car - 0.02, lz0 + 0.15, lx1 - 0.15, car, lz1 - 0.15, LED);
+  for (const pz of [lz0 + 0.15, lz1 - 0.2]) box(b, lx0 + 0.15, Y + 0.12, pz, lx1 - 0.15, car - 0.02, pz + 0.05, STEEL);
+  box(b, lx1 - 0.2, Y + FIT.rail - 0.1, lz0 + 0.2, lx1 - 0.15, Y + FIT.rail - 0.06, lz1 - 0.2, STEEL);
 }
 
 /* ---------- The escalators ---------- */
@@ -358,7 +374,7 @@ function escalators(b: Batch) {
   ] as const) {
     side(b, truss, x0, x1 - x0, k === 1 ? LIGHT : GREY);
     // (and the glass over it)
-    const glass: [number, number][] = [...line(0.15), ...line(1.0).reverse()];
+    const glass: [number, number][] = [...line(0.15), ...line(FIT.rail - 0.02).reverse()];
     side(b, glass, (x0 + x1) / 2 - 0.02, 0.04, GLASS);
   }
   // Closed off under the landing, from the ground floor
@@ -386,11 +402,11 @@ function escalators(b: Batch) {
     b.add(g, e.dir === 1 ? STEPS_UP : STEPS_DOWN);
     // The handrails either side, black, over the glass
     for (const hx of [e.x0 + 0.04, e.x1 - 0.04]) {
-      const rail = line(1.02);
+      const rail = line(FIT.rail);
       for (let i = 0; i < rail.length - 1; i++) {
         const p0 = new THREE.Vector3(hx, Y + rail[i][1], FOOT_Z + 0.8 - rail[i][0]);
         const p1 = new THREE.Vector3(hx, Y + rail[i + 1][1], FOOT_Z + 0.8 - rail[i + 1][0]);
-        b.add(new THREE.TubeGeometry(new THREE.LineCurve3(p0, p1), 1, 0.05, 6), DARK);
+        b.add(new THREE.TubeGeometry(new THREE.LineCurve3(p0, p1), 1, 0.035, 6), DARK);
       }
     }
     // Comb plates at the foot and the top
@@ -404,40 +420,44 @@ function escalators(b: Batch) {
 function foodCourt(b: Batch) {
   const y0 = Y + UP;
   // Over the stalls: the bulkhead to the roof in timber over a charcoal band; under them, the strip's ground-floor face
-  box(b, IN[0], y0 + 2.9, IN[1], IN[2], CEIL, STALL_Z, LIGHT);
+  // (the stalls' fronts in scale with the people, mall.ts `FIT`: the fascia a little over a door's height)
+  const ft = y0 + FIT.door + 0.55;
+  box(b, IN[0], ft, IN[1], IN[2], CEIL, STALL_Z, LIGHT);
   box(b, IN[0], Y, IN[1], IN[2], LOW_CEIL, STALL_Z, LIGHT);
   box(b, IN[0], Y + 2.2, STALL_Z, IN[2], Y + 2.24, STALL_Z + 0.03, LED);
   FOOD_STALLS.forEach((s, i) => {
     const { x0, x1 } = s;
     const xm = (x0 + x1) / 2;
     // Partitions, the kitchen's tiled back with its dark menu boards (no prices), the grill and a fridge
-    if (i) box(b, x0 - 0.06, y0, IN[1], x0 + 0.06, y0 + 2.9, STALL_Z, WHITE);
-    box(b, x0, y0, IN[1], x1, y0 + 2.9, IN[1] + 0.05, i % 2 ? WHITE : LIGHT);
-    box(b, xm - 1.4, y0 + 1.6, IN[1] + 0.05, xm + 1.4, y0 + 2.5, IN[1] + 0.1, MENU);
+    if (i) box(b, x0 - 0.06, y0, IN[1], x0 + 0.06, ft, STALL_Z, WHITE);
+    box(b, x0, y0, IN[1], x1, ft, IN[1] + 0.05, i % 2 ? WHITE : LIGHT);
+    // (in scale with the people, mall.ts `FIT`: the boards over a cook's head, the grill at the counter's height)
+    box(b, xm - 1.4, y0 + 0.8, IN[1] + 0.05, xm + 1.4, y0 + 1.36, IN[1] + 0.1, MENU);
     for (let k = 0; k < 3; k++) {
-      box(b, xm - 1.25 + k * 0.88, y0 + 2.22, IN[1] + 0.1, xm - 0.55 + k * 0.88, y0 + 2.38, IN[1] + 0.12, [WOOD, TEAL, YELLOW][k]);
-      for (let r = 0; r < 3; r++) box(b, xm - 1.25 + k * 0.88, y0 + 1.75 + r * 0.13, IN[1] + 0.1, xm - 0.75 + k * 0.88, y0 + 1.8 + r * 0.13, IN[1] + 0.12, WHITE);
+      box(b, xm - 1.25 + k * 0.88, y0 + 1.2, IN[1] + 0.1, xm - 0.55 + k * 0.88, y0 + 1.3, IN[1] + 0.12, [WOOD, TEAL, YELLOW][k]);
+      for (let r = 0; r < 3; r++) box(b, xm - 1.25 + k * 0.88, y0 + 0.88 + r * 0.09, IN[1] + 0.1, xm - 0.75 + k * 0.88, y0 + 0.91 + r * 0.09, IN[1] + 0.12, WHITE);
     }
-    box(b, xm - 1.2, y0, IN[1] + 0.15, xm + 0.4, y0 + 0.95, IN[1] + 0.75, GREY);
-    box(b, xm + 0.7, y0, IN[1] + 0.15, xm + 1.6, y0 + 1.8, IN[1] + 0.7, STEEL);
-    b.add(new THREE.PlaneGeometry(0.75, 1.5).translate(xm + 1.15, y0 + 0.95, IN[1] + 0.705), FRONT);
+    box(b, xm - 1.2, y0, IN[1] + 0.15, xm + 0.4, y0 + FIT.counter - 0.04, IN[1] + 0.75, GREY);
+    box(b, xm + 0.7, y0, IN[1] + 0.15, xm + 1.4, y0 + 0.95, IN[1] + 0.7, STEEL);
+    b.add(new THREE.PlaneGeometry(0.55, 0.8).translate(xm + 1.05, y0 + 0.5, IN[1] + 0.705), FRONT);
     // The counter in timber slats, a white top, the fascia over it with the name and a LED line
-    box(b, x0 + 0.2, y0, STALL_Z - 0.7, x1 - 0.2, y0 + 1.0, STALL_Z - 0.05, WOOD);
-    for (let x = x0 + 0.35; x < x1 - 0.3; x += 0.18) box(b, x, y0 + 0.05, STALL_Z - 0.06, x + 0.1, y0 + 0.95, STALL_Z - 0.03, TIMBER_SLAT);
-    box(b, x0 + 0.15, y0 + 1.0, STALL_Z - 0.75, x1 - 0.15, y0 + 1.06, STALL_Z, WHITE);
-    box(b, x0, y0 + 2.4, STALL_Z - 0.3, x1, y0 + 2.9, STALL_Z + 0.22, CHARCOAL);
-    signIn(b, s.name, xm, y0 + 2.65, STALL_Z + 0.23, Math.min(3.6, x1 - x0 - 0.6), 0.42, 0);
-    box(b, x0 + 0.2, y0 + 2.37, STALL_Z + 0.18, x1 - 0.2, y0 + 2.4, STALL_Z + 0.21, LED);
+    const ct = y0 + FIT.counter;
+    box(b, x0 + 0.2, y0, STALL_Z - 0.7, x1 - 0.2, ct, STALL_Z - 0.05, WOOD);
+    for (let x = x0 + 0.35; x < x1 - 0.3; x += 0.18) box(b, x, y0 + 0.04, STALL_Z - 0.06, x + 0.1, ct - 0.04, STALL_Z - 0.03, TIMBER_SLAT);
+    box(b, x0 + 0.15, ct, STALL_Z - 0.75, x1 - 0.15, ct + 0.05, STALL_Z, WHITE);
+    box(b, x0, ft - 0.45, STALL_Z - 0.3, x1, ft, STALL_Z + 0.22, CHARCOAL);
+    signIn(b, s.name, xm, ft - 0.225, STALL_Z + 0.23, Math.min(3.6, x1 - x0 - 0.6), 0.36, 0);
+    box(b, x0 + 0.2, ft - 0.48, STALL_Z + 0.18, x1 - 0.2, ft - 0.45, STALL_Z + 0.21, LED);
   });
   // Tables: a round white top on a steel pedestal, a timber stool each side (no stools on phones)
   for (const [x, z] of TABLES) {
-    cyl(b, TABLE_R, 0.04, x, y0 + 0.72, z, WHITE, 16);
-    cyl(b, 0.05, 0.72, x, y0, z, STEEL, 8);
+    cyl(b, TABLE_R, 0.04, x, y0 + FIT.table - 0.04, z, WHITE, 16);
+    cyl(b, 0.05, FIT.table - 0.04, x, y0, z, STEEL, 8);
     cyl(b, 0.25, 0.03, x, y0, z, STEEL, 12);
     if (LOW) continue;
     for (const sx of [-1, 1]) {
-      cyl(b, 0.2, 0.06, x + sx * (TABLE_R + 0.3), y0 + 0.42, z, WOOD, 12);
-      cyl(b, 0.035, 0.42, x + sx * (TABLE_R + 0.3), y0, z, STEEL, 6);
+      cyl(b, 0.17, 0.05, x + sx * (TABLE_R + 0.3), y0 + FIT.seat - 0.05, z, WOOD, 12);
+      cyl(b, 0.03, FIT.seat - 0.05, x + sx * (TABLE_R + 0.3), y0, z, STEEL, 6);
     }
   }
 }
@@ -449,63 +469,66 @@ function downstairs(b: Batch) {
     const [x0, z0, x1, z1] = t.rect;
     const [xm, zm] = [(x0 + x1) / 2, (z0 + z1) / 2];
     if (t.kind === 'ride') {
-      cyl(b, 0.65, 0.25, xm, Y, zm, GREY, 18);
+      // (sized for a child of Degen's scale: mall.ts `FIT`)
+      cyl(b, 0.55, 0.12, xm, Y, zm, GREY, 18);
       if (x0 < XM) {
         // A rocket: white, teal nose and fins, a porthole
-        cyl(b, 0.3, 1.2, xm, Y + 0.25, zm, WHITE, 14);
-        b.add(new THREE.ConeGeometry(0.3, 0.6, 14).translate(xm, Y + 1.75, zm), TEAL);
+        cyl(b, 0.18, 0.62, xm, Y + 0.12, zm, WHITE, 14);
+        b.add(new THREE.ConeGeometry(0.18, 0.34, 14).translate(xm, Y + 0.91, zm), TEAL);
         for (let k = 0; k < 3; k++) {
           const a = (k / 3) * Math.PI * 2;
-          b.add(new THREE.BoxGeometry(0.05, 0.45, 0.32).rotateY(a).translate(xm + Math.cos(a) * 0.36, Y + 0.5, zm - Math.sin(a) * 0.36), TEAL);
+          b.add(new THREE.BoxGeometry(0.04, 0.24, 0.18).rotateY(a).translate(xm + Math.cos(a) * 0.22, Y + 0.25, zm - Math.sin(a) * 0.22), TEAL);
         }
-        b.add(new THREE.CircleGeometry(0.11, 12).translate(xm, Y + 1.15, zm + 0.302), PALE_GLASS);
+        b.add(new THREE.CircleGeometry(0.06, 12).translate(xm, Y + 0.6, zm + 0.182), PALE_GLASS);
       } else {
         // A little car
-        box(b, xm - 0.32, Y + 0.3, zm - 0.55, xm + 0.32, Y + 0.7, zm + 0.55, YELLOW);
-        box(b, xm - 0.25, Y + 0.7, zm - 0.15, xm + 0.25, Y + 0.95, zm + 0.3, PALE_GLASS);
+        box(b, xm - 0.2, Y + 0.18, zm - 0.34, xm + 0.2, Y + 0.38, zm + 0.34, YELLOW);
+        box(b, xm - 0.16, Y + 0.38, zm - 0.1, xm + 0.16, Y + 0.5, zm + 0.18, PALE_GLASS);
         for (const [wx, wz] of [
-          [-0.34, -0.35],
-          [0.34, -0.35],
-          [-0.34, 0.35],
-          [0.34, 0.35],
+          [-0.21, -0.22],
+          [0.21, -0.22],
+          [-0.21, 0.22],
+          [0.21, 0.22],
         ])
-          b.add(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 10).rotateZ(Math.PI / 2).translate(xm + wx, Y + 0.38, zm + wz), DARK);
+          b.add(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 10).rotateZ(Math.PI / 2).translate(xm + wx, Y + 0.2, zm + wz), DARK);
       }
       // (a coin box beside it, and the sign)
-      box(b, x1 - 0.3, Y, z1 - 0.3, x1 - 0.05, Y + 0.9, z1 - 0.05, CHARCOAL);
+      box(b, x1 - 0.25, Y, z1 - 0.25, x1 - 0.05, Y + 0.5, z1 - 0.05, CHARCOAL);
       if (x0 < XM) signIn(b, 'KIDS RIDES', xm, LOW_CEIL - 0.45, z1 + 0.6, 1.8, 0.45, 0);
     } else if (t.kind === 'desk') {
       // The information desk: a timber-slatted counter, a white top, INFO hung over it both ways
-      box(b, x0, Y, z0, x1, Y + 1.0, z1, WOOD);
-      box(b, x0 - 0.05, Y + 1.0, z0 - 0.05, x1 + 0.05, Y + 1.05, z1 + 0.05, WHITE);
+      box(b, x0, Y, z0, x1, Y + FIT.counter, z1, WOOD);
+      box(b, x0 - 0.05, Y + FIT.counter, z0 - 0.05, x1 + 0.05, Y + FIT.counter + 0.05, z1 + 0.05, WHITE);
       box(b, xm - 0.7, LOW_CEIL - 0.75, zm - 0.04, xm + 0.7, LOW_CEIL - 0.25, zm + 0.04, CHARCOAL);
       signIn(b, 'INFO', xm, LOW_CEIL - 0.5, zm + 0.05, 1.3, 0.42, 0);
       signIn(b, 'INFO', xm, LOW_CEIL - 0.5, zm - 0.05, 1.3, 0.42, Math.PI);
     } else {
       // The photo booth: a charcoal box, its grey curtain, PHOTOS on top
-      box(b, x0, Y, z0, x1, Y + 2.1, z1, CHARCOAL);
-      box(b, xm - 0.35, Y + 0.1, z1, xm + 0.35, Y + 1.8, z1 + 0.04, MID);
-      signIn(b, 'PHOTOS', xm, Y + 2.3, z1 - 0.05, 1.3, 0.35, 0);
+      box(b, x0, Y, z0, x1, Y + FIT.door + 0.15, z1, CHARCOAL);
+      box(b, xm - 0.3, Y + 0.06, z1, xm + 0.3, Y + FIT.door, z1 + 0.04, MID);
+      signIn(b, 'PHOTOS', xm, Y + FIT.door + 0.3, z1 - 0.05, 1.1, 0.28, 0);
     }
   }
   // The department stores' doors on the walls under the terrace: a steel frame, windows, the name over them
   ANCHOR_DOORS.forEach((d, k) => {
     const zm = (d.z0 + d.z1) / 2;
     const fx = d.x + d.face * 0.01;
-    box(b, Math.min(fx, fx + d.face * 0.1), Y, d.z0 - 0.15, Math.max(fx, fx + d.face * 0.1), Y + 2.75, d.z1 + 0.15, STEEL);
-    glassX(b, fx + d.face * 0.1, d.face, d.z0, d.z1, Y, Y + 2.55);
+    // (an entrance's doors in scale with the people, mall.ts `FIT`; the wall over them the strip's)
+    box(b, Math.min(fx, fx + d.face * 0.1), Y, d.z0 - 0.15, Math.max(fx, fx + d.face * 0.1), Y + FIT.entrance + 0.2, d.z1 + 0.15, STEEL);
+    glassX(b, fx + d.face * 0.1, d.face, d.z0, d.z1, Y, Y + FIT.entrance);
     signIn(b, ANCHORS[k].name, fx + d.face * 0.12, LOW_CEIL - 0.3, zm, Math.min(3.4, d.z1 - d.z0), 0.45, d.face * (Math.PI / 2));
   });
   // The directory boards in the lobby: a map of the floors in pale blocks on charcoal, DIRECTORY over it, both ways
   for (const [x, z] of DIRECTORY) {
-    box(b, x - 0.9, Y, z - 0.15, x + 0.9, Y + 2.2, z + 0.15, CHARCOAL);
+    // (a board a little over Degen's head, its map at his eyes: mall.ts `FIT`)
+    box(b, x - 0.7, Y, z - 0.12, x + 0.7, Y + FIT.door - 0.1, z + 0.12, CHARCOAL);
     for (const s of [-1, 1]) {
-      const zf = z + s * 0.151;
-      signIn(b, 'DIRECTORY', x, Y + 1.95, zf + s * 0.005, 1.6, 0.36, s === 1 ? 0 : Math.PI);
+      const zf = z + s * 0.121;
+      signIn(b, 'DIRECTORY', x, Y + FIT.door - 0.24, zf + s * 0.005, 1.2, 0.24, s === 1 ? 0 : Math.PI);
       for (let r = 0; r < 4; r++)
         for (let q = 0; q < 3; q++) {
-          const [bx, by] = [x - 0.6 + q * 0.42, Y + 0.6 + r * 0.3];
-          box(b, bx, by, Math.min(zf, zf + s * 0.02), bx + 0.34, by + 0.22, Math.max(zf, zf + s * 0.02), (r * 3 + q) % 5 === 2 ? TEAL : (r + q) % 2 ? LIGHT : WHITE);
+          const [bx, by] = [x - 0.48 + q * 0.33, Y + 0.42 + r * 0.16];
+          box(b, bx, by, Math.min(zf, zf + s * 0.02), bx + 0.27, by + 0.12, Math.max(zf, zf + s * 0.02), (r * 3 + q) % 5 === 2 ? TEAL : (r + q) % 2 ? LIGHT : WHITE);
         }
     }
   }

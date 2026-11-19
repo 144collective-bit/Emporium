@@ -34,8 +34,9 @@ import type { Box } from './solids';
 const [px0, pz0, px1, pz1] = PLOT;
 /** The compound wall's thickness and height, and its piers' at the gates */
 export const WALL_T = 0.3;
-export const WALL_H = 1.3;
-export const PIER = { w: 0.5, h: 1.6 };
+// (since docs/compound-plan.md Phase 6b, the kingpin's compound: about twice his height, the gates' piers over it)
+export const WALL_H = 1.8;
+export const PIER = { w: 0.5, h: 2.25 };
 /** Inside the wall */
 const [ix0, iz0, ix1, iz1] = [px0 + WALL_T, pz0 + WALL_T, px1 - WALL_T, pz1 - WALL_T];
 /** The Close's line through the plot (the gates are on it) */
@@ -127,6 +128,67 @@ export const PLANTERS: Rect[] = [-1, 1].map((s): Rect => {
   return [x - 0.15, HOUSE[1] - 0.46, x + 0.15, HOUSE[1] - 0.06];
 });
 
+/**
+ * The fire escape up the house's east side, facing the gates (docs/compound-plan.md Phase 6: the house as a black brick
+ * loft): a landing at the upper floor and a flight down to the ground, its footprint solid; narrow enough that the
+ * way round the house's east end to the side door stays open beside it
+ */
+export const FIRE_ESCAPE: Rect = [HOUSE[2], HOUSE[1] + 0.5, HOUSE[2] + 0.34, HOUSE[1] + 3.7];
+
+/**
+ * The gatehouse (docs/compound-plan.md Phase 6b): a small lit booth of black brick just inside the gates on their south
+ * side, its window on the gates; solid, clear of the drive, the bollards and the cars' way in
+ */
+export const GATEHOUSE: Rect = [px1 - WALL_T - 1.6, GATES.z1 + PIER.w + 0.25, px1 - WALL_T - 0.05, GATES.z1 + PIER.w + 1.65];
+export const GATEHOUSE_H = 1.35;
+/**
+ * The gate (Phase 6b): one black steel leaf, slid open along the inside of the wall north of the gates (the way in
+ * always open: nothing in the city is shut to you), on its track; solid
+ */
+export const GATE_LEAF: Rect = [px1 - WALL_T - 0.13, GATES.z0 - PIER.w - (GATES.z1 - GATES.z0) - 0.1, px1 - WALL_T - 0.05, GATES.z0 - PIER.w - 0.05];
+export const GATE_LEAF_H = 1.7;
+
+/**
+ * The fountain (docs/compound-plan.md Phase 6c): in the yard north of the drive (clear of the cars' way in and out and
+ * of the bollards along the north strip), a round stone basin with a pedestal and two bowls; its basin solid
+ */
+export const FOUNTAIN = { x: (GARAGE[2] + px1) / 2 + 2.2, z: AXIS - 4.6, r: 0.95, h: 0.3 };
+/** The palms (Phase 6c), each in a round stone planter with an uplight: either side of the gates inside, at the house's west corner, by the workshop */
+export const PALMS: Pt[] = [
+  [px1 - WALL_T - 1.3, AXIS - 3.9],
+  [px1 - WALL_T - 2.2, AXIS + 3.3],
+  [HOUSE[0] + 0.3, HOUSE[1] - 0.75],
+  [WORKSHOP[0] - 0.1, WORKSHOP[3] + 1.9],
+];
+export const PALM_PLANTER = { r: 0.35, h: 0.32 };
+
+/**
+ * The pool and the cabana on the east lawn (docs/compound-plan.md Phase 6d; the washing line gone): the pool along the
+ * lawn's middle, its stone edge solid (no swimming: looks only), three loungers on its north side, the cabana in the
+ * lawn's far corner (an open front on posts, a sofa under its roof); the way round to the side door kept clear
+ */
+const [lx0, lz0, lx1, lz1] = [HOUSE[2] + 0.5, HOUSE[1], ix1, iz1];
+export const POOL: Rect = [lx0 + 1.7, lz0 + 1.3, lx1 - 1.6, lz0 + 4.5];
+export const POOL_EDGE = 0.15;
+export const LOUNGERS: Rect[] = [0, 1, 2].map((k): Rect => [lx0 + 2.2 + k * 1.6, lz0 + 0.2, lx0 + 2.62 + k * 1.6, lz0 + 1.1]);
+export const CABANA: Rect = [lx1 - 3.2, lz1 - 1.6, lx1 - 0.1, lz1 - 0.1];
+/** Under the cabana's roof: its sofa against the back, and the roof's four posts (each a small solid) */
+export const CABANA_SOFA: Rect = [CABANA[0] + 0.4, CABANA[3] - 0.65, CABANA[2] - 0.4, CABANA[3] - 0.05];
+export const CABANA_POSTS: Pt[] = [
+  [CABANA[0] + 0.06, CABANA[1] + 0.06],
+  [CABANA[2] - 0.06, CABANA[1] + 0.06],
+  [CABANA[0] + 0.06, CABANA[3] - 0.06],
+  [CABANA[2] - 0.06, CABANA[3] - 0.06],
+];
+export const CABANA_H = 1.45;
+
+/**
+ * The helipad on the garage's roof (docs/compound-plan.md Phase 6e): a round pad in its middle with his D and a ring
+ * painted on it, lights round its edge, a windsock at the roof's corner; looks only (nobody walks up there, nothing
+ * lands)
+ */
+export const HELIPAD = { x: (GARAGE[0] + GARAGE[2]) / 2, z: AXIS, r: 2.2 };
+
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
 export const SHELL = 0.15;
@@ -175,6 +237,18 @@ export const HOME_SOLIDS: Box[] = (() => {
     // Done up (docs/compound-plan.md Phase 1): the yard's lit bollards and the planters by the front door
     ...BOLLARDS.map(([x, z]): Box => [x - BOLLARD.r, z - BOLLARD.r, x + BOLLARD.r, z + BOLLARD.r, SLAB_Y + BOLLARD.h]),
     ...PLANTERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + PLANTER_H]),
+    [FIRE_ESCAPE[0], FIRE_ESCAPE[1], FIRE_ESCAPE[2], FIRE_ESCAPE[3], SLAB_Y + RIDGE + 0.3],
+    // The gatehouse, and the gate's leaf slid open along the wall (Phase 6b)
+    [GATEHOUSE[0], GATEHOUSE[1], GATEHOUSE[2], GATEHOUSE[3], SLAB_Y + GATEHOUSE_H],
+    [GATE_LEAF[0], GATE_LEAF[1], GATE_LEAF[2], GATE_LEAF[3], SLAB_Y + GATE_LEAF_H],
+    // The fountain's basin and the palms' planters (Phase 6c)
+    [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, SLAB_Y + FOUNTAIN.h],
+    ...PALMS.map(([x, z]): Box => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r, SLAB_Y + PALM_PLANTER.h]),
+    // The pool, the loungers, the cabana's sofa and posts (Phase 6d)
+    [POOL[0], POOL[1], POOL[2], POOL[3], SLAB_Y + 0.3],
+    ...LOUNGERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + 0.25]),
+    [CABANA_SOFA[0], CABANA_SOFA[1], CABANA_SOFA[2], CABANA_SOFA[3], SLAB_Y + 0.4],
+    ...CABANA_POSTS.map(([x, z]): Box => [x - 0.05, z - 0.05, x + 0.05, z + 0.05, SLAB_Y + CABANA_H]),
   ];
 })();
 

@@ -246,6 +246,79 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:wide`, a build, `npm run budget`,
 `npm run smoke`, `?bench` before and after, and shots in `docs/compound-shots/`.
 
+## Phase 6: the kingpin compound (the owner's call, 2026-11-19)
+
+The owner, on the outside as built: "the colour is wrong and it's too basic ... its his base of operations. Think of a
+kingpin compound." The owner's answers:
+
+| Question | Answer |
+| --- | --- |
+| The look | Black brick loft: black-painted brick, steel factory windows, a big neon sign |
+| The house | Same size, a new shell: the footprint, floors, doors and prompts as they are, so every room inside still works |
+| The features | A gatehouse and a crest gate, a pool and cabana, a fountain and palms, a helipad on the garage |
+| How | A plan and a mockup first: the new shell built and shown before the rest |
+
+Still holding: nothing that exists moves (the gates, doors, car bays, prompts, floors); everything under the Emporium;
+made-up names only, no lettering; nothing threatening (no guards, nothing armed: the gate stands open); minimal bloom;
+draw calls in the house's own batches.
+
+6a. **The house's new shell (the mockup).** *Built, signed off by the owner (2026-11-19), live.* home3d.ts `house()`: black brick
+    (`LOFT_BRICK`) with a darker plinth, piers proud of the front at its corners and either side of the door's bay,
+    a stone soldier course between the floors, the parapet stepped up over the door's bay under a stone coping, his
+    neon under the coping (front and the Close's side); steel factory windows (`houseWindows()`: two big bays and a
+    narrow light either side of the door downstairs, three tall ones upstairs, one up the east side) in slate glass
+    with black steel grids, stone lintels and sills, lit warm at night by `houseLights()` (south3d.ts, the main
+    thread: one additive mesh, nothing by day); a tall black pivot door with a gold bar under a deep steel canopy, a
+    wall light either side; the fire escape up the east side facing the gates (home.ts `FIRE_ESCAPE`, solid: a
+    landing at the upper floor, a flight to the ground, a ladder to the parapet); a steel frame over the roof
+    terrace; the roof sign made the loft's big sign (a black panel on steel legs, a neon border, his D in neon,
+    facing down the Close). The garage and the workshop in the same black brick. Gone: the orange render, the old
+    canopy and windows, Phase 5's small sign stand. Tests: `tests/home.test.ts` (the fire escape: solid, narrow,
+    clear of the side door and the way round to it). Shots: `docs/compound-shots/phase-6a-*`.
+6b. **The gatehouse and the crest gate.** A small lit gatehouse inside the gates, the gate leaves as a sliding black
+    gate stood open with a gold D crest, the compound's wall taller and dark with lit caps and wall lights.
+    *Built, signed off by the owner (2026-11-19), live.* home.ts: `WALL_H` 1.8 (about twice his height; it was 1.3, "about head
+    high"), `PIER.h` 2.25; `GATEHOUSE` (a booth inside the gates on their south side, solid) and `GATE_LEAF` (one leaf
+    slid open along the inside of the wall north of the gates, solid), in `HOME_SOLIDS`. home3d.ts: the wall and piers
+    in the loft's black brick under stone copings, a darker course, lights on its outer faces and small lit caps along
+    its top (near only; phones every other one), a camera on each pier (looks only); over the gates, pier to pier, a
+    black steel beam with his crest on it (a gold ring round a black disc, his D in neon on both faces); the sliding
+    leaf on its track (a solid lower half, bars, his neon along its top); `gatehouse()`: black brick under an
+    overhanging steel roof, his neon under its edge, a window on the gates (lit at night with the house's windows,
+    `houseLights()`), a door on the yard, a lamp, a camera, a mast. The two hinged leaves are gone. Tests:
+    `tests/home.test.ts` (the wall's height; the gatehouse and the leaf inside the wall, solid, out of the opening, off
+    the drive, the bollards and everything else; the way in clear from the lane to the garage). Shots:
+    `docs/compound-shots/phase-6b-*`.
+6c. **The fountain and the palms.** A fountain in the yard's middle (clear of the car's way out and the drive), palms
+    with uplights along the edges, lit paving lines.
+    *Built, signed off by the owner (2026-11-19), live.* The drive runs through the yard's middle (the gates to the garage, kept
+    clear), so the fountain stands north of it. home.ts: `FOUNTAIN` (a round stone basin, its solid a square inside
+    it), `PALMS` (four: either side of the gates inside, at the house's west corner, by the workshop) and
+    `PALM_PLANTER`, in `HOME_SOLIDS`. home3d.ts `showpiece()`: the basin with its water, a pedestal and two bowls with
+    water falling from their rims in thin streams, a gold finial, lights in the basin in his magenta and cyan; the
+    palms (palms3d.ts's `trunk()` and `crown()`, as the Neon Mile's, in the palette's tree colours, swaying with the
+    wind) in round stone planters with a warm uplight; two lit lines set in the paving along the drive's edges. Tests:
+    `tests/home.test.ts` (inside the wall, off the drive, clear of everything, the bollards, every prompt, the bays'
+    ways out and the way round to the side door). Shots: `docs/compound-shots/phase-6c-*`.
+6d. **The pool and the cabana.** On the east lawn: a lit pool, a cabana and loungers (the side door's way kept).
+    *Built, signed off by the owner (2026-11-19), live.* home.ts: `POOL` (along the lawn's middle, `POOL_EDGE`), `LOUNGERS` (three
+    on its north side), `CABANA` in the lawn's far corner with `CABANA_SOFA` and `CABANA_POSTS` (`CABANA_H`); the pool,
+    the loungers, the sofa and the posts in `HOME_SOLIDS` (the pool's edge solid: no swimming, looks only; the cabana
+    open under its roof). home3d.ts `poolside()`: the stone edge, the water (lit from under it: glowing softly at night; deeper blue at its far end, a lane line),
+    cyan lights along its sides; the loungers (white frames, magenta cushions) and a magenta umbrella; the cabana
+    (black steel posts and roof, his neon along the roof's front, its back in the loft's brick, a teal sofa with
+    magenta cushions, white drapes at the front posts, a string of lights). The washing line is gone. Tests:
+    `tests/home.test.ts` (on the east lawn, apart, solid where they should be, room under the cabana, the side door and
+    the way round to it and along the pool clear). Shots: `docs/compound-shots/phase-6d-*`.
+6e. **The helipad.** On the garage's roof: its pad, its markings (no lettering or numbers), edge lights; looks only.
+    *Built, signed off by the owner (2026-11-19), live.* home.ts `HELIPAD` (the garage roof's middle, a round pad inside its
+    edges). home3d.ts `helipad()`: a dark round deck on the roof, a white ring and his D in yellow painted on it (read
+    from the Close: no "H", no numbers), green lights round its edge, a windsock on a pole at the roof's north-west
+    corner. Nothing solid (nobody walks up there; nothing lands). Tests: `tests/home.test.ts` (on the roof, inside its
+    edges, low). Shots: `docs/compound-shots/phase-6e-*`. With it, Phase 6 is built, and the plan is done.
+
+Each with the owner's sign-off.
+
 ## The shots
 
 `docs/compound-shots/`: Phase 1's before and after (desktop by day and night, the phone at night); the trophy wall and

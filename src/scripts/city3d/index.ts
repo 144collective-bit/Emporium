@@ -58,6 +58,9 @@ import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
+import { LINK_PEOPLE, stationLiftDoors } from './malllink';
+import { COURT_INSIDE_PEOPLE } from './courtinside';
+import { STATIONS } from './metro';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -97,9 +100,14 @@ import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { TubeUI } from './tube-ui';
+import type { Tube } from './tube3d';
+import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
 import type { SkyLiftUI } from './skylift-ui';
 import { skyLiftDoors } from './southsky';
 import { YARD_TREES } from './southyard';
+import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
+const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
 import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
@@ -448,6 +456,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
   // Endswood's trees on the grass round its towers (southyard.ts, docs/south-plan.md 2d), on the rolling ground
   for (const [x, z, sc] of YARD_TREES) addTree(x, z, sc, false, ENDS_SLAB + southLift(x, z));
+  // The Circus's sunken plaza (circus.ts, docs/south-plan.md Phase 4b): a tree in each planter, lamps by the seats
+  for (const { at: [x, z] } of PLANTERS) addTree(x, z, 0.75, false, FLOOR + PLANTER_H);
+  for (const [x, z] of CIRCUS_LAMPS) addLamp(x, z, Math.atan2(x - CIRCUS_MID[0], z - CIRCUS_MID[1]), FLOOR);
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
@@ -490,7 +501,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and the walk between Westlake Park and Uptown North's towers (parkedge.ts, docs/blend-plan.md Phase 6e)
   for (const [x, z, ry] of PARK_EDGE_LAMPS) addLamp(x, z, ry);
   for (const [x, z, s] of PARK_EDGE_TREES) addTree(x, z, s, false, SLAB + 0.02);
-  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...LINK_PEOPLE, ...COURT_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Someone waiting at every third bus shelter (transit.ts, the polish plan's Phase 6; phones: half of them)
   SHELTER_IDLES.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.promenade ? 0.05 : SLAB, ry: p.ry, act: 'wait' }));
   // The wall round the city and the murk past it (wall3d.ts, docs/wall-plan.md Phase 2)
@@ -1033,6 +1044,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           monoUI?.close();
           skyLiftUI?.close();
         },
@@ -1063,12 +1075,67 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           riverBusUI?.close();
           skyLiftUI?.close();
         },
       }))
     ),
     'the monorail'
+  );
+  // The south's underground line (southline.ts, docs/south-plan.md Phase 4g): its trains (tube3d.ts) loaded the first
+  // time you're down by its platforms or ride, running on their timetable from the clock; a door on each platform's
+  // middle ("Tube", only down there), its card and rides (tube-ui.ts) loaded the first time one opens
+  let tube: Tube | null = null;
+  let tubeUI: TubeUI | null = null;
+  const TUBE_DOORS = SOUTH_STATIONS.map((s) => {
+    const [x, z] = lineAt((s.p0 + s.p1) / 2 + PLAT_DOOR).at;
+    return { id: `tube:${s.id}`, x, z, label: 'Tube' };
+  });
+  const tubeDoors = () => (walk.position.y < PLAT_Y + 1.5 ? TUBE_DOORS : []);
+  const loadTube = lazy(
+    () =>
+      import('./tube3d').then(({ buildTube }) => (tube = buildTube(scene, { reduced, low: tier === 'low' }))),
+    'the tube'
+  );
+  // (down in a station's ticket hall or on its platforms, or riding)
+  tick(() => {
+    const below = walking && walk.position.y < HALL_Y + 0.8 && SOUTH_STATIONS.some((s) => Math.hypot(s.at[0] - walk.position.x, s.at[1] - walk.position.z) < 80);
+    if (!tube) {
+      if (below) void loadTube().catch(() => {});
+      return;
+    }
+    // (the clock's own seconds: the same trains at the same platforms for everyone, every visit; drawn only down there)
+    tube.update(Date.now() / 1000, below || walk.riding);
+  });
+  const loadTubeUI = lazy(
+    () =>
+      import('./tube-ui').then(({ createTubeUI }) =>
+      (tubeUI = createTubeUI(root, {
+        tube: () => loadTube(),
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (at) => {
+          works.want(at.x, at.z, 70);
+          walk.placeAt({ x: at.x, z: at.z, yaw: at.yaw, y: at.y - SLAB });
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+          skyLiftUI?.close();
+        },
+      }))
+    ),
+    'the tube'
   );
   // Endswood's lifts (southsky.ts, docs/south-plan.md Phase 2c): a door at every core's foot and a call point on each
   // of its landings; the floor picker (the metro's card) loaded the first time one's used
@@ -1085,6 +1152,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           riverBusUI?.close();
           monoUI?.close();
         },
@@ -1102,6 +1170,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
     return LIBERTY_LIFTS.map((l, i) => (up ? { id: `liberty:down:${i}`, ...l.high, label: 'Lift · Deck' } : { id: `liberty:up:${i}`, ...l.low, label: 'Lift · High walkway' }));
   };
+  // The metro stations' doors; Starlight Mall's is up on its platform in the Skywalk (metro.ts `inside`): its prompt
+  // only up there, not on the floor under it or the street
+  const metroDoors = () =>
+    (metroUI?.doors ?? []).filter((d) => {
+      const st = STATIONS.find((s) => `metro:${s.id}` === d.id);
+      return !st?.inside || walk.position.y > SLAB + st.inside.y - 1;
+    });
   // Starlight Mall's glass lift (mallinside.ts): a door on the ground floor and one on the east gallery
   const mallDoors = () => (walk.position.y > SLAB + MALL_UP / 2 ? [{ id: 'mall-lift:down', ...MALL_LIFT.high, label: 'Lift · Ground floor' }] : [{ id: 'mall-lift:up', ...MALL_LIFT.low, label: 'Lift · Upper floor' }]);
   /**
@@ -1169,7 +1244,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1202,6 +1277,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
       if (id.startsWith('sky-lift:')) return void loadSkyLift().then((ui) => ui.open(id.slice('sky-lift:'.length)));
+      // (Starlight Mall station's glass lift in the Skywalk, malllink.ts: the same floor picker)
+      if (id.startsWith('station-lift:')) return void loadSkyLift().then((ui) => ui.openStation());
       if (id === 'mall-lift:up' || id === 'mall-lift:down') {
         const up = id === 'mall-lift:up';
         return rideTo(up ? MALL_LIFT.up : MALL_LIFT.down, 'mall', 'Starlight Mall', up ? 'Starlight Mall · Upper floor' : 'Starlight Mall · Ground floor');
@@ -1217,6 +1294,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         return void loadMono()
           .then((ui) => ui.open(id.slice(5)))
           .catch(() => game.toast('Monorail not running · try again'));
+      }
+      if (id.startsWith('tube:')) {
+        // (the raised metro's and the tube's one switch, live.ts)
+        const shut = live.closed('metro');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadTubeUI()
+          .then((ui) => ui.open(id.slice(5)))
+          .catch(() => game.toast('Tube not running · try again'));
       }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
@@ -1253,7 +1338,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     fightClub,
     // The world map at the wheel (the gamepad's View; travel is made below, before anything can ask)
     worldMap: () => travel.toggle(),
-    skipRide: () => void (taxis.skip() || metroUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
+    skipRide: () => void (taxis.skip() || metroUI?.skip() || tubeUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
     mapOpen: () => travel.isOpen,
     reduced,
     low: tier === 'low',
@@ -1387,7 +1472,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
-  function startWalking(spawn?: { x: number; z: number; yaw: number }, seat?: { x: number; z: number; ry: number; h: number }) {
+  function startWalking(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
     if (walking) return;
     // (unless the owner has closed it for now: live settings)
     const shut = live.closed('walk');
@@ -1417,6 +1502,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     hub?.close();
     taxis.reset();
     metroUI?.close();
+    tubeUI?.close();
     riverBusUI?.close();
     monoUI?.close();
     skyLiftUI?.close();
@@ -1467,7 +1553,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1671,6 +1757,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       walk.releaseMouse();
       close();
       tycoon?.closeCard();
+      tubeUI?.close();
       riverBusUI?.close();
       monoUI?.close();
       skyLiftUI?.close();
@@ -2134,7 +2221,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     ambT -= dt;
     if (ambT <= 0) {
       ambT = 0.25;
-      amb = walking ? ambienceAt(walk.position.x, walk.position.z) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
+      amb = walking ? ambienceAt(walk.position.x, walk.position.z, 0, undefined, walk.position.y) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
       // (up on his roof terrace he's out of doors: home.ts)
       if (walking && amb.home && !inHouse(walk.position.x, walk.position.z, walk.position.y)) amb = { ...amb, home: 0 };
     }
@@ -2195,7 +2282,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
+          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
           // reads here as under the ground, or the near plane, or the view gone wrong)
           ...(walking

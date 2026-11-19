@@ -43,7 +43,8 @@ const SLAB = 0.15;
 const R = 0.22;
 
 test('the units, two floors of them, made-up names; the food court upstairs; all under the roof', () => {
-  assert.equal(UNITS.length, 16);
+  // (sixteen, less the east upper one the Skywalk's corridor goes through: malllink.ts)
+  assert.equal(UNITS.length, 15);
   assert.equal(new Set(UNITS.map((u) => u.name)).size, UNITS.length);
   for (const n of [...UNIT_NAMES, ...FOOD_STALLS.map((s) => s.name)]) assert.ok(!/\d/.test(n), `${n}: no numbers`);
   for (const u of UNITS) assert.ok(inBox(IN, u.rect[0], u.rect[1], 1e-6) && inBox(IN, u.rect[2], u.rect[3], 1e-6));
@@ -97,7 +98,7 @@ test("what's solid: the walls with the doors open, nothing in the way of the doo
   assert.ok(BOLLARDS.every(([, bz]) => bz > HALL.rect[3] && bz < PORCH.rect[3]));
   for (const p of MALL_INSIDE_PEOPLE)
     // (the food court's cooks stand behind their counters, in the stalls' strip)
-    if (p.act !== 'sit' && p.z > STALL_Z) {
+    if (p.act !== 'sit' && p.act !== 'eat' && p.z > STALL_Z) {
       assert.ok(!MALL_INSIDE_SOLIDS.some((b) => inBox(b, p.x, p.z, 0.15)), `someone at ${p.x}, ${p.z} in something`);
       assert.ok(!LEVEL_SOLIDS.some((b) => (b[4] === 1) === p.y > 1 && inBox(b, p.x, p.z, 0.15)), `someone at ${p.x}, ${p.z} in something on their floor`);
       assert.ok(floorsAt(p.x, p.z).includes(p.y), `someone at ${p.x}, ${p.z} off their floor`);
