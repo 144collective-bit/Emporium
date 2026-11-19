@@ -310,10 +310,18 @@ Each district seen in a render of its own sites (as Phases 2 and 3).
   beach of sand to a shore that wanders, not the rim's rectangle.
 - **The kart park's lawn**: a strip of rough grass along the fence, its
   inner edge ragged (the circuit's run-off is 15 clear of it).
-- **Sunridge, held for the owner**: its straight land edges and wall, its
-  zones' rectangles and the three cul-de-sacs with no footpath through all
-  move things (the lots round the turning circles, the wall), so they wait
-  on the owner's call.
+- **Sunridge** (the owner's calls, 2026-11-19: footpaths through, yes; the
+  wall left straight, a walled estate's):
+  - a footpath from each cul-de-sac's turning circle north to the loop's
+    sidewalk (sunridgelots.ts `COURT_PATHS`), paved between the lots' side
+    walls, a kerb either side, three bollards at each end; the lots laid
+    clear of them (101 lots to 97), the lamps out of their mouths;
+    `tests/sunpaths.test.ts`;
+  - a lot no house fitted on stays open grass (its walls stood loose in
+    the open); the fanned lots round the turning circles in their back
+    yard's ground to their walls (the walls stood in grass beyond the yard);
+  - a loose, wandering row of shrubs where the club's, the park's and the
+    school's land meet.
 
 Checked and left: the High Road's buildings are drawn at every distance
 (the outer `detail()` is `'all'`); the under-deck props casting shadows

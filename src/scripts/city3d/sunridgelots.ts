@@ -6,7 +6,7 @@
  * shallower where the land runs out (to `MIN_D`); the loop's first, then the cul-de-sacs', then Mesa Drive's, none
  * over another, the amenities' land (`ZONES`) or the footpath (`PATH`).
  */
-import { LOT_D, PATH, SUN_BLOCKS, ZONES, distTo, inside, type Pt, type Rect } from './sunridge';
+import { BULB, COURTS, HALF, LOT_D, PARKWAY_LOOP, PATH, SUN_BLOCKS, ZONES, distTo, inside, type Pt, type Rect } from './sunridge';
 
 /** A lot's width along the street (about 12.6 m), and the shallowest a lot may be */
 export const LOT_W = 6.6;
@@ -100,9 +100,22 @@ function fit(b: (typeof SUN_BLOCKS)[number], street: string, pts: Pt[], cum: num
   return null;
 }
 
+/**
+ * A footpath from each cul-de-sac's turning circle north to the loop's sidewalk behind it, between the lots (the map
+ * polish plan's Phase 7, the owner's call: nowhere a dead end on foot). Straight north from the court's end, from just
+ * inside the circle to the loop's kerb there; the lots are laid clear of them, as of the footpath from Palm Court
+ */
+export const PATH_W = 2.4;
+export const COURT_PATHS: Rect[] = COURTS.map((c) => {
+  const [x, z] = c.pts[c.pts.length - 1];
+  // (the loop's north side at x: its nearest point north of the court)
+  const north = PARKWAY_LOOP.filter((p) => p[1] < z - 10).reduce((a, b) => (Math.abs(b[0] - x) < Math.abs(a[0] - x) ? b : a));
+  return [x - PATH_W / 2, north[1] + HALF, x + PATH_W / 2, z - BULB + 0.4];
+});
+
 function lay(): Lot[] {
   const out: Lot[] = [];
-  const keep = [...ZONES.map((z) => rectPoly(z.rect)), rectPoly(PATH)];
+  const keep = [...ZONES.map((z) => rectPoly(z.rect)), rectPoly(PATH), ...COURT_PATHS.map(rectPoly)];
   const runs = SUN_BLOCKS.flatMap((b) => b.runs.filter((r) => r.street && !r.street.startsWith('sun-entry')).map((r) => ({ b, r, street: r.street! })));
   runs.sort((p, q) => ORDER(p.street) - ORDER(q.street));
   for (const { b, r, street } of runs) {

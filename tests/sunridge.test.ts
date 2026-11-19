@@ -85,7 +85,8 @@ test('the blocks: the land between the streets, wound as the plan wants, never o
 });
 
 test('the lots: about a hundred and ten, on their blocks, none over another, a street, the amenities or the footpath', () => {
-  assert.ok(LOTS.length >= 100 && LOTS.length <= 135, `${LOTS.length} lots`);
+  // (95 since the cul-de-sacs' footpaths through to the loop: the map polish plan's Phase 7, the owner's call)
+  assert.ok(LOTS.length >= 95 && LOTS.length <= 135, `${LOTS.length} lots`);
   const blocks = new Map(SUN_BLOCKS.map((b) => [b.id, b]));
   for (const l of LOTS) {
     const b = blocks.get(l.block)!;

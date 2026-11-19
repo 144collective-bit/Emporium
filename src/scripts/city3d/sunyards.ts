@@ -219,10 +219,13 @@ function walls(): WallSeg[] {
   const rears: [Pt, Pt][] = [];
   for (const l of LOTS) {
     const h = houseOf.get(l.id);
+    // (a lot no house fitted on stays open grass: walls round nothing stood loose in the open; the map polish plan's
+    // Phase 7)
+    if (!h) continue;
     // Its right side, always (from where the walls start, behind the house's front, to the back); its left side
-    // only where no lot's right side is there already
-    const right = LOTS.find((q) => q !== l && near(q.front[0], l.front[1], 0.05));
-    const left = LOTS.find((q) => q !== l && near(q.front[1], l.front[0], 0.05));
+    // only where no built lot's right side is there already
+    const right = LOTS.find((q) => q !== l && houseOf.has(q.id) && near(q.front[0], l.front[1], 0.05));
+    const left = LOTS.find((q) => q !== l && houseOf.has(q.id) && near(q.front[1], l.front[0], 0.05));
     const tR = Math.min(sideT(l, h, 1), right ? sideT(right, houseOf.get(right.id), 0) : 1);
     const segR: [Pt, Pt] = [lerp(l.front[1], l.back[1], tR), l.back[1]];
     if (!onPerimeter(...segR)) out.push({ a: segR[0], b: segR[1] });

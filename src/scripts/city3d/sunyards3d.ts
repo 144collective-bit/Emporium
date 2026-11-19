@@ -55,6 +55,7 @@ const BIN_B = toon('#3a5a8a');
 /** A house's frame: local x along the street, z out to it (-v), y up from the lot's top (sunhouses3d.ts) */
 const frameOf = (h: House) => new THREE.Matrix4().set(h.u[0], 0, -h.v[0], h.o[0], 0, 1, 0, SLAB, h.u[1], 0, -h.v[1], h.o[1], 0, 0, 0, 1);
 
+const LOT_OF = new Map(LOTS.map((l) => [l.id, l]));
 function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   const M = frameOf(h);
   const add = (g: THREE.BufferGeometry, m: THREE.Material) => b.add(g.applyMatrix4(M), m);
@@ -178,6 +179,14 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   {
     const [u0, v0, u1, v1] = y.back;
     rect(u0, u1, v0, v1, 0.006, DG[(y.groundTone + 1) % DG.length]);
+    // (and the lot's whole back half in the same ground, to its walls: round a turning circle the lots fan out wide at
+    // the back, and their walls stood in the open grass beyond the yard; the map polish plan's Phase 7)
+    const l = LOT_OF.get(h.lot);
+    if (l) {
+      const local = ([x, z]: Pt): Pt => [(x - h.o[0]) * h.u[0] + (z - h.o[1]) * h.u[1], (x - h.o[0]) * h.v[0] + (z - h.o[1]) * h.v[1]];
+      const mid = (a: Pt, c: Pt): Pt => [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+      flat([mid(l.front[0], l.back[0]), l.back[0], l.back[1], mid(l.front[1], l.back[1])].map(local), 0.006, DG[(y.groundTone + 1) % DG.length]);
+    }
     if (!y.pool && v1 - v0 > 2) rect(u0 + 0.5, u1 - 0.5, y.patio[3] + 0.35, v1 - 0.45, 0.011, LAWN);
   }
   // The back yard: its patio, the ramada over it, the grill

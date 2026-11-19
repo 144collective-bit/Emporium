@@ -20,6 +20,7 @@ import { registerFringes } from './fringes3d';
 import { COURT } from './mall';
 import { EW_ROADS, MEDIAN, WALK_W } from './layout';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
+import { COURT_PATHS } from './sunridgelots';
 import { BULB, COURTS, ENTRIES, ENTRY_MEDIAN, MONUMENTS, PATH, SUN_CROSSINGS, SUN_NAME, SUN_STREETS, WALL, WALL_RUNS, WEST_EDGE, type Pt, type Rect } from './sunridge';
 import { COVER, KERB as KERB_C, ROAD } from './palette';
 
@@ -40,6 +41,8 @@ const STUCCO_DARK = toon('#c4a77a');
 const CAP = toon('#b39468');
 const STONE = toon('#8b7b68');
 const PAVING = toon('#cbbfa6');
+const STONE_EDGE = toon(KERB_C.town);
+const BOLLARD = toon('#3a3846');
 const UPLIGHT = neon('#ffd9a0', 0.15, 1.3);
 
 /** The name on the monuments: bronze letters on a stone plaque */
@@ -257,4 +260,20 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       b.build(into, { cast: false, receive: true });
     });
   }
+
+  /* ---------- The footpaths from the cul-de-sacs to the loop (the map polish plan's Phase 7) ---------- */
+  // (paved between the lots' side walls, a kerb either side, three bollards at each end: walking and bikes only)
+  COURT_PATHS.forEach(([x0, z0, x1, z1], i) =>
+    site(`sunridge court path ${i}`, [x0 - 1, z0 - 1, x1 + 1, z1 + 1], (into) => {
+      const b = new Batch();
+      b.box(x0, SLAB, z0, x1 - x0, 0.006, z1 - z0, PAVING);
+      for (const x of [x0, x1 - 0.12]) b.box(x, SLAB, z0 + 0.6, 0.12, 0.06, z1 - z0 - 1.2, STONE_EDGE);
+      for (const z of [z0 + 0.35, z1 - 0.35])
+        for (const f of [0.22, 0.5, 0.78]) {
+          const x = x0 + (x1 - x0) * f;
+          b.add(new THREE.CylinderGeometry(0.07, 0.08, 0.75, 8).translate(x, SLAB + 0.375, z), BOLLARD);
+        }
+      b.build(into, { cast: true, receive: true });
+    })
+  );
 }

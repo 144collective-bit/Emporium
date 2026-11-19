@@ -15,6 +15,9 @@ import { SUN_LAMP_STATIONS } from './sunridge';
  */
 declare const __CITY_BUILT__: boolean | undefined;
 const HOUSES: House[] = typeof __CITY_BUILT__ !== 'undefined' && __CITY_BUILT__ === true ? [] : (await import('./sunhouses')).HOUSES;
+/** The cul-de-sacs' footpaths to the loop (sunridgelots.ts), as the houses: only where the lamps are worked out */
+const PATHS: [number, number, number, number][] = typeof __CITY_BUILT__ !== 'undefined' && __CITY_BUILT__ === true ? [] : (await import('./sunridgelots')).COURT_PATHS;
+const inPath = (x: number, z: number, paths = PATHS) => paths.some(([x0, z0, x1, z1]) => x > x0 - 0.7 && x < x1 + 0.7 && z > z0 - 1.5 && z < z1 + 0.7);
 
 export type Lamp = [number, number, number, number];
 
@@ -37,13 +40,20 @@ export function inDriveMouth(x: number, z: number, clear = DRIVE_CLEAR - 0.05, h
 }
 
 /** The lamps slid clear of the drives (and those that can't be, left out) */
-export function clearOfDrives(stations: Lamp[], houses: House[] = HOUSES): Lamp[] {
+export function clearOfDrives(stations: Lamp[], houses: House[] = HOUSES, paths = PATHS): Lamp[] {
   const out: Lamp[] = [];
-  const free = (x: number, z: number) => !inDriveMouth(x, z, DRIVE_CLEAR - 0.05, houses) && out.every(([ox, oz]) => Math.hypot(ox - x, oz - z) > 3);
+  const free = (x: number, z: number) => !inDriveMouth(x, z, DRIVE_CLEAR - 0.05, houses) && !inPath(x, z, paths) && out.every(([ox, oz]) => Math.hypot(ox - x, oz - z) > 3);
   for (const [x, z, ry, y] of stations) {
     const h = inDriveMouth(x, z, DRIVE_CLEAR - 0.05, houses);
     if (!h) {
       if (free(x, z)) out.push([x, z, ry, y]);
+      // (in a footpath's mouth: along the loop's sidewalk, east-west there, past it)
+      else if (inPath(x, z, paths)) {
+        // (along the street: square to the arm, which reaches over the carriageway as (cos ry, -sin ry))
+        const [tx, tz] = [Math.sin(ry), Math.cos(ry)];
+        const d = [-2.2, 2.2].find((k) => free(x + tx * k, z + tz * k));
+        if (d !== undefined) out.push([x + tx * d, z + tz * d, ry, y]);
+      }
       continue;
     }
     // (along the kerb, the lot's u, to the nearer side of the drive first)

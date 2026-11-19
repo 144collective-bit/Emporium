@@ -64,7 +64,7 @@ import {
   UMBRELLAS,
   WALK_W,
 } from './sunamenities';
-import { COVER } from './palette';
+import { COVER, PLANT } from './palette';
 
 type Pt = [number, number];
 
@@ -573,6 +573,28 @@ export function registerAmenities(low: boolean, scene: THREE.Scene | null) {
   site('sunridge school', [SCHOOL_LAND[0] - 2, SCHOOL_LAND[1] - 2, SCHOOL_LAND[2] + 2, SCHOOL_LAND[3] + 4], (into) => {
     const b = new Batch();
     drawSchool(b, low);
+    b.build(into, { cast: true, receive: true });
+  });
+  // Where the club's, the park's and the school's land meet (straight lines, side by side): a loose row of shrubs
+  // down each, gapped and wandering, so the three don't meet in a ruler line (the map polish plan's Phase 7)
+  site('sunridge zone edges', [CLUB_LAND[2] - 3, Math.min(PARK_LAND[1], SCHOOL_LAND[1]) - 2, SCHOOL_LAND[0] + 3, PARK_LAND[3] + 2], (into) => {
+    const b = new Batch();
+    const shrubs = [PLANT.shrub, PLANT.shrubDark, PLANT.hedge].map((c) => toon(c));
+    const mats: THREE.Matrix4[][] = [[], [], []];
+    const q = new THREE.Quaternion();
+    for (const [x, z0, z1] of [
+      [PARK_LAND[0], Math.max(CLUB_LAND[1], PARK_LAND[1]) + 1, Math.min(CLUB_LAND[3], PARK_LAND[3]) - 1],
+      [SCHOOL_LAND[0], Math.max(PARK_LAND[1], SCHOOL_LAND[1]) + 1, Math.min(PARK_LAND[3], SCHOOL_LAND[3]) - 1],
+    ])
+      for (let z = z0, k = 0; z < z1; z += 1.25, k++) {
+        const h = Math.abs(Math.sin(x * 12.9898 + k * 78.233) * 43758.5453) % 1;
+        if (h < 0.22) continue;
+        const bx = x + Math.sin(k * 0.9 + x) * 0.7;
+        if (AMENITY_SOLIDS.some((r) => bx > r[0] - 0.7 && bx < r[2] + 0.7 && z > r[1] - 0.7 && z < r[3] + 0.7)) continue;
+        const sc = 0.45 + h * 0.45;
+        mats[k % 3].push(new THREE.Matrix4().compose(new THREE.Vector3(bx, SLAB + sc * 0.55, z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), h * 6), new THREE.Vector3(sc * 1.3, sc, sc * 1.2)));
+      }
+    mats.forEach((m, i) => b.instances(new THREE.DodecahedronGeometry(0.6, 0), shrubs[i], m));
     b.build(into, { cast: true, receive: true });
   });
   // (on the main thread: the cars, the bus and what's solid)
