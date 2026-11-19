@@ -28,6 +28,8 @@ import { HALL } from '../src/scripts/city3d/mall';
 import { TERRAIN_RECT } from '../src/scripts/city3d/terrain';
 import { SPIRE_LOT } from '../src/scripts/city3d/highrise';
 import { UP, UPPER, mallFloor } from '../src/scripts/city3d/mallinside';
+import { L1 as LINK_L1, LINK, linkFloorAt } from '../src/scripts/city3d/malllink';
+import { L1 as COURT_L1, VOID as COURT_VOID, courtFloor } from '../src/scripts/city3d/courtinside';
 import { inChannel, shoreY } from '../src/scripts/city3d/river';
 import { TUNNEL } from '../src/scripts/city3d/lot9';
 import { heightAt, onHills } from '../src/scripts/city3d/terrain';
@@ -81,8 +83,14 @@ function reference(leavesOpen: () => boolean) {
     if (dep !== null) return Math.max(slab, dep + 0.035);
     const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
     if (fb !== null) return Math.max(slab, fb);
+    // (Starlight Mall's Skywalk came after, malllink.ts: its floors by height, the one term added before the mall's)
+    const link = linkFloorAt(x, z, yNow);
+    if (link !== null) return link;
     const mall = mallFloor(x, z, yNow);
     if (mall !== null) return mall;
+    // (Palm Court indoors came after, courtinside.ts: its floors by height, the one term added after the mall's)
+    const court = courtFloor(x, z, yNow);
+    if (court !== null) return court;
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
     // (the civic quarter's steps and porticos came after, civic.ts: the one term added to the old groundAt())
@@ -132,6 +140,8 @@ const SPOTS: [number, number][] = [
   [TUNNEL.x, TUNNEL.z0 + 1],
   mid(HALL.rect),
   GALLERY,
+  [LINK[0] + 2, -128],
+  [COURT_VOID[0] - 1, -90],
   SHORE,
   [FOOTBRIDGE_X, (TOWERS[0] + TOWERS[1]) / 2],
   [FOOTBRIDGE_X, TOWERS[0] - 6],
@@ -186,6 +196,8 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     viaduct: [ring(0.3)[0], ring(0.3)[1], VIADUCT_Y],
     departures: [DEPARTURES.x0 + 2, (DEPARTURES.z0 + DEPARTURES.z1) / 2, DEPARTURES.y],
     liberty: [FOOTBRIDGE_X, (TOWERS[0] + TOWERS[1]) / 2, LOW_Y],
+    link: [LINK[0] + 2, -128, LINK_L1],
+    court: [COURT_VOID[0] - 1, -90, COURT_L1],
     mall: [GALLERY[0], GALLERY[1], UP],
     shore: [SHORE[0], SHORE[1], 0],
     turntable: [DISC.x, DISC.z, 0],

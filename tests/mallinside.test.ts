@@ -43,7 +43,8 @@ const SLAB = 0.15;
 const R = 0.22;
 
 test('the units, two floors of them, made-up names; the food court upstairs; all under the roof', () => {
-  assert.equal(UNITS.length, 16);
+  // (sixteen, less the east upper one the Skywalk's corridor goes through: malllink.ts)
+  assert.equal(UNITS.length, 15);
   assert.equal(new Set(UNITS.map((u) => u.name)).size, UNITS.length);
   for (const n of [...UNIT_NAMES, ...FOOD_STALLS.map((s) => s.name)]) assert.ok(!/\d/.test(n), `${n}: no numbers`);
   for (const u of UNITS) assert.ok(inBox(IN, u.rect[0], u.rect[1], 1e-6) && inBox(IN, u.rect[2], u.rect[3], 1e-6));

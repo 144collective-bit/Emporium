@@ -23,7 +23,6 @@ import {
   MALL_SOLIDS,
   MALL_SPAWN,
   MSCP,
-  COURT_TREES,
   ISLANDS,
   ISLAND_WALK,
   MALL_TREES,
@@ -87,7 +86,8 @@ test("Palm Court: two rows facing across the promenade, open to the zebra and th
     assert.ok(s.rect[1] > CINEMA.rect[3] && s.rect[3] < ARCH.z, 'between the cinema and the arch');
     assert.ok(!/\d/.test(s.name), 'made-up names, no numbers');
   }
-  for (const [x, z] of COURT_TREES) assert.ok(x > PROM[0] && x < PROM[1] && Math.hypot(x - FOUNTAIN.x, z - FOUNTAIN.z) > FOUNTAIN.r + 1);
+  // (its trees are indoors since Palm Court was enclosed: tests/courtinside.test.ts)
+  assert.ok(FOUNTAIN.x > PROM[0] && FOUNTAIN.x < PROM[1]);
 });
 
 test('the mall: the anchors at the hall\'s ends, the porch on its front, the car parks inside the loop', () => {

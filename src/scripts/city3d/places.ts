@@ -40,8 +40,8 @@ export interface Place {
   /** A place with a pin and a panel: its spot id (its name is its pin's); otherwise its own name */
   spot?: string;
   name?: string;
-  /** Where you arrive: standing here, facing along yaw (forward is (-sin yaw, -cos yaw), as in walk.ts) */
-  at: { x: number; z: number; yaw: number };
+  /** Where you arrive: standing here, facing along yaw (forward is (-sin yaw, -cos yaw), as in walk.ts); `y`, up on a floor over the slab (walk.ts `placeAt()`) */
+  at: { x: number; z: number; yaw: number; y?: number };
 }
 
 /** Is a spot clear of everything solid (a body's width round it) */
@@ -109,8 +109,9 @@ export const PLACES: Place[] = [
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },
   { id: 'market', kind: 'lot', name: 'Market square', at: { x: STALL_SPOT.x, z: STALL_SPOT.z + 0.4, yaw: 0 } },
-  // The metro's stations: on the sidewalk at the foot of each stair tower, facing its door
-  ...STATIONS.map((s): Place => ({ id: `metro-${s.id}`, kind: 'metro', name: `${s.name} station`, at: { x: s.door.x + s.face[0] * 0.4, z: s.door.z + s.face[1] * 0.4, yaw: Math.atan2(s.face[0], s.face[1]) } })),
+  // The metro's stations: on the sidewalk at the foot of each stair tower, facing its door (Starlight Mall's on its
+  // platform, up in the Skywalk: malllink.ts)
+  ...STATIONS.map((s): Place => ({ id: `metro-${s.id}`, kind: 'metro', name: `${s.name} station`, at: { x: s.door.x + s.face[0] * 0.4, z: s.door.z + s.face[1] * 0.4, yaw: Math.atan2(s.face[0], s.face[1]), ...(s.inside ? { y: s.inside.y } : {}) } })),
   // The river bus's stops (river plan step 4b): at the top of each landing's gangway, facing the river
   ...STOPS.map((s): Place => ({ id: `riverbus-${s.id}`, kind: 'riverbus', name: s.pier, at: s.arrive })),
   // The Neon Mile's monorail (monorail.ts): at each station's door

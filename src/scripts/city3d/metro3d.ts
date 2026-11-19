@@ -34,9 +34,11 @@ import {
   DECK_T,
   DECK_Y,
   HANGERS,
+  METRO_CLOCK,
   PILLARS,
   PILLAR_HALF,
   PLATFORM,
+  PLATFORM_UP,
   PORTAL,
   PORTALS,
   ROUND_TRIP,
@@ -48,6 +50,7 @@ import {
   along,
   archY,
   carAt,
+  metroNow,
   pointOn,
   sideAt,
   sideOf,
@@ -65,7 +68,7 @@ import { deckY, onHarbour } from './harbour';
 import { LAMP } from './palette';
 
 /** The platform's top and the train's floor, over the deck (where the deck's at `DECK_Y`: a station's frame is raised with its deck, `stationY()`) */
-export const PLATFORM_Y = DECK_Y + 0.4;
+export const PLATFORM_Y = DECK_Y + PLATFORM_UP;
 /** The rails' top over the deck, where the wheels run */
 const RAIL_UP = 0.08;
 const CANOPY_Y = PLATFORM_Y + 2.4;
@@ -114,7 +117,7 @@ function signAtlas() {
   return { mat, board };
 }
 
-/** A round M sign facing +z: a disc of magenta with a white M (a little texture of its own, shared) */
+/** A round M sign facing +z: a disc of magenta with a white M (a little texture of its own, shared; the Skywalk draws the same, malllink3d.ts) */
 const roundel = (() => {
   let mat: THREE.Material | null = null;
   return () =>
@@ -364,7 +367,8 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   }
 
   /* ---------- The stations ---------- */
-  STATIONS.forEach((s, i) => station(s, i));
+  // (Starlight Mall's is built into the Skywalk: its platform, lift and signs are malllink3d.ts's)
+  STATIONS.forEach((s, i) => !s.inside && station(s, i));
   function station(s: Station, i: number) {
     const mid = stationAt(s);
     // The station's frame: x along the track, z out to the platform's side (so the platform is at +z)
@@ -464,10 +468,9 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
   train.add(front, back);
   scene.add(train);
   const GAP = (TRAIN.len - 0.2) / 4 + 0.05;
-  // The timetable runs on the clock (the same for everyone); a ride moves it on (`offset`)
-  let offset = 0;
+  // The timetable runs on the clock (the same for everyone); a ride moves it on (metro.ts `METRO_CLOCK`)
   let held: { run: Run; d: number } | null = null;
-  const now = () => Date.now() / 1000 + offset;
+  const now = metroNow;
   const place = (car: THREE.Object3D, tr: { run: Run; d: number }, off: number) => {
     const c = carAt(tr, off);
     car.position.set(c.at[0], c.y + RAIL_UP, c.at[1]);
@@ -560,7 +563,7 @@ export function buildMetro(scene: THREE.Scene, tick: (f: Tick) => void, opts: { 
     },
     /** Back on the timetable at the time `t` into the round trip (`timetableAt()`), from now */
     resume(t: number) {
-      offset += t - (now() % ROUND_TRIP);
+      METRO_CLOCK.offset += t - (now() % ROUND_TRIP);
       held = null;
     },
   };
