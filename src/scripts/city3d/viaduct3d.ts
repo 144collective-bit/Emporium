@@ -30,6 +30,7 @@ import { BAY, LOCKUP, SOFFIT_Y, UNDER, UNDER_CARS, UNDER_LIGHTS, skateParts, typ
 import { buildFx, tag } from './grime';
 import { EXIT_SIGNS, GANTRIES, GANTRY, MURALS, MURAL_ART, RAMP_SIGNS, SOUND_WALL, gantryPanel, soundWall, type Gantry } from './viasigns';
 import { ROAD } from './palette';
+import { registerCorner } from './corner3d';
 
 export const SELF = import.meta.url;
 
@@ -649,5 +650,6 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
         b.build(into, { cast: true, receive: true });
       });
     }
-  void low;
+  // Exit 6A's road in (corner3d.ts, docs/south-plan.md Phase 5b): Corner Road and Gate Hill
+  registerCorner(low);
 }

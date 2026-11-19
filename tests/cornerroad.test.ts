@@ -56,3 +56,29 @@ test('gently bent, clear of everything solid and of the other streets between it
     }
   }
 });
+
+// 5b: drawn, lit and kept clear
+import { CORNER_LAMPS } from '../src/scripts/city3d/cornerroad';
+import { UNDER_CARS } from '../src/scripts/city3d/viadress';
+import { outskirtsTrees } from '../src/scripts/city3d/outskirts';
+import { fromHighway } from '../src/scripts/city3d/highway';
+import { DECK_HALF } from '../src/scripts/city3d/viaduct';
+
+test('its lamps stand along it on the verge, clear of the junctions, the deck, the ramps and everything solid', () => {
+  assert.ok(CORNER_LAMPS.length >= 4, `${CORNER_LAMPS.length} lamps`);
+  for (const [x, z] of CORNER_LAMPS) {
+    const d = Math.min(distToStreet(road, [x, z]), distToStreet(link, [x, z]));
+    assert.ok(d > road.half + 0.5 && d < road.half + 2, `a lamp ${d.toFixed(1)} from the road`);
+    assert.ok(fromHighway(x, z) > DECK_HALF + 2, 'off the deck');
+    for (const r of RAMPS) for (const p of r.pts) assert.ok(Math.hypot(p[0] - x, p[1] - z) > 2.5, `a lamp on ${r.id}`);
+    for (const s of PLAN.streets) if (s.kind !== 'highway') assert.ok(distToStreet(s, [x, z]) > s.half + 0.4, `a lamp on ${s.id}`);
+    for (const b of SOLIDS) assert.ok(!(x > b[0] - 0.3 && x < b[2] + 0.3 && z > b[1] - 0.3 && z < b[3] + 0.3), `a lamp in a solid at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+  }
+});
+
+test("no tree and no car parked under the deck stands on Corner Road or Gate Hill", () => {
+  for (const s of [road, link]) {
+    for (const t of outskirtsTrees(900)) assert.ok(distToStreet(s, [t.x, t.z]) > s.half + 0.5, `a tree on ${s.id} at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}`);
+    for (const c of UNDER_CARS) assert.ok(distToStreet(s, [c[1], c[2]]) > s.half + 1.5, `a parked car on ${s.id}`);
+  }
+});

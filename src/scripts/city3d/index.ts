@@ -29,6 +29,7 @@ import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
 import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
+import { CORNER_LAMPS } from './cornerroad';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { RURAL_LAMPS } from './ruraldress';
@@ -463,6 +464,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
   for (const [x, z, ry, y] of RAMP_LAMPS) addLamp(x, z, ry, y);
+  // ...and along exit 6A's road in, Corner Road and Gate Hill (cornerroad.ts, docs/south-plan.md Phase 5b)
+  for (const [x, z, ry, y] of CORNER_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z] of UNDER_LIGHTS) addPool(x, z, 4.2, 0.03);
   // The swing bridge's lamps on its fixed approaches (swingbridge.ts, Phase 5; the span's swing with it)
   for (const [x, z, ry, y] of SWING_LAMPS) addLamp(x, z, ry, y);

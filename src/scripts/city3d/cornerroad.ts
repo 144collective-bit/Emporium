@@ -63,3 +63,39 @@ export const CORNER_STREETS = [
   { id: 'corner-road', name: 'Corner Road', pts: CORNER_ROAD, half: CORNER_HALF },
   { id: 'corner-link', name: 'Gate Hill', pts: CORNER_LINK, half: CORNER_HALF },
 ];
+
+/** Between the roads' lamps, and how far out from the asphalt's edge they stand (on the verge: no sidewalk out here) */
+export const CORNER_LAMP_GAP = 16;
+const LAMP_OUT = 1.0;
+/** Where the lamps keep away from: each junction, the ring's deck (its own lights under it), the exit's ramps */
+const JUNCTIONS: Pt[] = [CORNER_FROM, DOCKS_CORNER, SOUTH_HUB];
+/**
+ * The roads' lamps (x, z, the way the arm faces, the foot's height): along Corner Road's south side and Gate Hill's
+ * east, about every `CORNER_LAMP_GAP`, clear of the junctions, of the deck and the ramps' land
+ */
+export const CORNER_LAMPS: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  for (const [pts, side] of [
+    [CORNER_ROAD, 1],
+    [CORNER_LINK, 1],
+  ] as const) {
+    let run = CORNER_LAMP_GAP / 2;
+    for (let i = 1; i < pts.length; i++) {
+      const [a, b] = [pts[i - 1], pts[i]];
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      run += l;
+      if (run < CORNER_LAMP_GAP) continue;
+      // (to the left of the way it's laid: south of Corner Road heading out, east of Gate Hill heading down)
+      const [ux, uz] = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+      const [nx, nz] = [uz * side, -ux * side];
+      const o = CORNER_HALF + LAMP_OUT;
+      const [x, z] = [b[0] + nx * o, b[1] + nz * o];
+      if (JUNCTIONS.some((j) => Math.hypot(j[0] - x, j[1] - z) < 9)) continue;
+      if (Math.abs(ringS(x, z).o) < SLIP.at + RAMP_HALF + 3) continue;
+      // (the arm out over the road)
+      out.push([x, z, Math.atan2(nz, -nx), 0]);
+      run = 0;
+    }
+  }
+  return out;
+})();
