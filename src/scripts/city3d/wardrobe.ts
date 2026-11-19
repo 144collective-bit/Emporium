@@ -1185,8 +1185,6 @@ export function items(q: Detail, hero = false): Item[] {
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
   /** In the balaclava and shades (everyone but the unmasked: docs/faces-plan.md) */
   const masked = (o: Outfit) => !o.face;
-  /** In the shades: the balaclava's always, a face's when chosen */
-  const shaded = (o: Outfit) => masked(o) || !!o.shades;
   /** Hair that shows: unmasked, not bald, the hood down */
   const hairy = (o: Outfit) => !!o.face && !!o.hair && !(o.kind === 'hoodie' && o.hood);
   /** A hat or a helmet over it (the hard hat too): only the hair at the nape shows */
