@@ -5,9 +5,9 @@ The military base by the north wall, from the build-out plan's land plan
 base with its own airfield. It guards the wall and holds the wall's first
 exit gate (the wall plan's exits, `docs/wall-plan.md`), shut until the
 storyline opens it. Built one phase at a time, each with the owner's
-sign-off. Keep this plan up to date. Nothing is built yet. The owner has
-answered the plan's questions (the second round, below); Phase 0 is next, on
-the owner's go.
+sign-off. Keep this plan up to date. Nothing is built yet. **Phase 0 is
+under way**: the lines are drawn and signed off (2026-11-19, below); the
+baseline measure is still to go in. Phase 1 waits for the owner's go.
 
 ## The owner's answers (2026-11-18)
 
@@ -57,7 +57,7 @@ In world numbers, x across and z north to south (north is −z).
   rolls. North of the stadium (z −270) to the wall is about 490 deep, and
   from the west wall to the hills (x −760 to 285) about 1,045 across.
 
-## The layout (drafted in Phase 0, for the owner's sign-off)
+## The layout (drafted in Phase 0, signed off 2026-11-19)
 
 The map is `docs/military-map.png`: today's north with the draft lines on it.
 The numbers are world numbers, x across and z north to south (north is −z).
@@ -317,3 +317,15 @@ They go into `airbase.ts` in Phase 1, where the tests hold them.
 All four suggestions: the name **Northgate Air Base**, **both country roads
 ending at the gates**, **flying over it allowed**, and **a see-through
 chain-link fence**. They're in the table at the top and the layout above.
+
+## The owner's sign-off on the lines (2026-11-19)
+
+All four suggestions, on the map (`docs/military-map.png`):
+
+| Question | Answer |
+| --- | --- |
+| The wall gate | **Kept in the floodlights' gap** (x −49 to −19). The avenue bends to it near the wall, and no light or camera moves. |
+| The band between the fence and the stadium | **Grass and trees**, so the fence's line wanders behind a soft edge. No road there. |
+| The base's north-east, east of the heliport | **Kept as today's woods.** They hide the fence's corner and cost little to draw. |
+| The runway and the camp | **As drawn**: one runway, x −620 to −120 at z −540, 12 wide, with the apron and hangars to its south. |
+
