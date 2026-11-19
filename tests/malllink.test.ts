@@ -42,7 +42,7 @@ import {
   linkUp,
   linkWall,
 } from '../src/scripts/city3d/malllink';
-import { ANCHORS, LINK_Z, PAVILION, PROM, SHOPS, SHOP_NAMES, TALLEST } from '../src/scripts/city3d/mall';
+import { ANCHORS, FIT, LINK_Z, PAVILION, PROM, SHOPS, SHOP_NAMES, TALLEST } from '../src/scripts/city3d/mall';
 import { CORRIDOR_IN, CORRIDOR_Z, IN, UNITS, VOID, mallFloor, mallWall } from '../src/scripts/city3d/mallinside';
 import { DECK_HALF, HIGH_Y, LINE_X, NORTH_END, PILLARS, PLATFORM, PLATFORM_UP, STATIONS, sideAt, stationAt, stationY, trackY } from '../src/scripts/city3d/metro';
 import { PLACES } from '../src/scripts/city3d/places';
@@ -259,6 +259,17 @@ test('the fare gates: walked through, their cabinets in the way; the boards over
   }
   for (const g of GATES) assert.ok(linkWall(PAVILION[0], (g[1] + g[3]) / 2, L2, R), 'a cabinet');
   assert.ok(!/\d/.test(BOARD.text));
-  for (const b of NEXT_BOARDS) assert.ok(b.y - BOARD_H / 2 > L2 + 1.8 && b.y + BOARD_H / 2 < ROOF - 0.4, 'a board over heads, under the ceiling');
+  for (const b of NEXT_BOARDS) assert.ok(b.y - BOARD_H / 2 > L2 + FIT.door && b.y + BOARD_H / 2 < ROOF - 0.4, 'a board over heads, under the ceiling');
 });
 
+
+test("the mall's fittings are made to Degen's size: seats as the city's benches, rails at his chest, doors over his head", async () => {
+  const { SEAT_H } = await import('../src/scripts/city3d/pedestrians');
+  const { FIGURE_SCALE } = await import('../src/scripts/city3d/figure');
+  const tall = FIGURE_SCALE * 1.28;
+  assert.equal(FIT.seat, SEAT_H);
+  assert.ok(FIT.seat < FIT.table && FIT.table < FIT.counter && FIT.counter < FIT.rail, 'seat, table, counter, rail');
+  assert.ok(FIT.rail > tall * 0.5 && FIT.rail < tall * 0.8, 'a rail between his hips and his shoulders');
+  assert.ok(FIT.door > tall * 1.3 && FIT.door < tall * 2, 'a door over his head, not twice his height');
+  assert.ok(FIT.entrance > FIT.door && FIT.back > FIT.seat);
+});

@@ -2221,7 +2221,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     ambT -= dt;
     if (ambT <= 0) {
       ambT = 0.25;
-      amb = walking ? ambienceAt(walk.position.x, walk.position.z) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
+      amb = walking ? ambienceAt(walk.position.x, walk.position.z, 0, undefined, walk.position.y) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
       // (up on his roof terrace he's out of doors: home.ts)
       if (walking && amb.home && !inHouse(walk.position.x, walk.position.z, walk.position.y)) amb = { ...amb, home: 0 };
     }

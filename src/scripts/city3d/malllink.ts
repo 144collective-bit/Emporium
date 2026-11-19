@@ -21,7 +21,7 @@
  * under them. `LINK_WALLS` (in `SOLIDS`) are the pavilion's walls at street level, its doors open. `LINK_CAMERA` is
  * the slabs and the roof for the walk camera. Made-up names only; no prices on any sign.
  */
-import { ANCHORS, LINK_LIFT, LINK_Z, PAVILION, type Pt, type Rect } from './mall';
+import { ANCHORS, FIT, LINK_LIFT, LINK_Z, PAVILION, type Pt, type Rect } from './mall';
 import { CORRIDOR_Z, IN, UP, floorsAt } from './mallinside';
 import { CONNECTOR_Z } from './courtinside';
 import { DECK_HALF, HIGH_Y, LINE_X, PILLARS, PILLAR_HALF, PLATFORM_UP } from './metro';
@@ -51,6 +51,8 @@ export const LINK: Rect = [ANCHORS[1].rect[2], LINK_Z[0], PAVILION[0], LINK_Z[1]
 /** The el's track through it (x0, x1: its deck), and the platform screen's line east of it */
 export const TRACK: Pt = [LINE_X - DECK_HALF, LINE_X + DECK_HALF];
 export const SCREEN_X = TRACK[1] + 0.12;
+/** The platform screen's height (a door's, less a little: mall.ts `FIT`) */
+export const SCREEN_H = FIT.door - 0.15;
 /** The el's pillars inside the bridge: columns in its lower floor */
 export const COLUMNS: Pt[] = PILLARS.filter((p) => p.track === 'main' && p.at[1] > LINK[1] && p.at[1] < LINK[3]).map((p) => p.at);
 export const COLUMN_R = PILLAR_HALF + 0.1;
@@ -119,7 +121,8 @@ export const PAV_DOORS: { x: number; face: 1 | -1; z0: number; z1: number }[] = 
   // (clear of the lift in the north-west corner)
   { x: PAVILION[0], face: -1, z0: MEZZ_L1[1] + 2.6, z1: MEZZ_L1[3] - 0.9 },
 ];
-export const DOOR_H = 2.8;
+/** The doors' height (an entrance's, in scale with the people: mall.ts `FIT`) */
+export const DOOR_H = FIT.entrance;
 
 /* ---------- The floors ---------- */
 
@@ -186,7 +189,7 @@ export const BOARD = { x: PAVILION[0] + 0.6, z: (MEZZ_L2[1] + PAV_IN[3]) / 2, te
  */
 export const GATES: Rect[] = (() => {
   const [z0, z1] = [MEZZ_L2[1], PAV_IN[3]];
-  const n = 4;
+  const n = 5;
   const w = 0.2;
   const gap = (z1 - z0 - n * w) / (n - 1);
   return Array.from({ length: n }, (_, i): Rect => [PAVILION[0] - 0.6, z0 + i * (w + gap), PAVILION[0] + 0.6, z0 + i * (w + gap) + w]);
@@ -195,9 +198,10 @@ export const GATES: Rect[] = (() => {
 export const BOARD_W = 1.7;
 export const BOARD_H = BOARD_W / 4;
 export const NEXT_BOARDS: { x: number; y: number; z: number; ry: number }[] = [
-  { x: (SCREEN_X + LINK[2]) / 2, y: ROOF - 0.4 - 0.08 - BOARD_H / 2, z: (LINK[1] + LINK[3]) / 2 - 3.2, ry: 0 },
-  { x: (SCREEN_X + LINK[2]) / 2, y: ROOF - 0.4 - 0.08 - BOARD_H / 2, z: (LINK[1] + LINK[3]) / 2 - 3.2, ry: Math.PI },
-  { x: (MEZZ_L2[0] + MEZZ_L2[2]) / 2 + 1, y: L2 + 2.1, z: PAV_IN[3] - 0.06, ry: Math.PI },
+  // (hung just over heads, mall.ts `FIT`, on rods from the ceiling; on the wall at the same height)
+  { x: (SCREEN_X + LINK[2]) / 2, y: L2 + FIT.door + 0.25 + BOARD_H / 2, z: (LINK[1] + LINK[3]) / 2 - 3.2, ry: 0 },
+  { x: (SCREEN_X + LINK[2]) / 2, y: L2 + FIT.door + 0.25 + BOARD_H / 2, z: (LINK[1] + LINK[3]) / 2 - 3.2, ry: Math.PI },
+  { x: (MEZZ_L2[0] + MEZZ_L2[2]) / 2 + 1, y: L2 + FIT.door + 0.25 + BOARD_H / 2, z: PAV_IN[3] - 0.06, ry: Math.PI },
 ];
 /** The glass lift (mall.ts `LINK_LIFT`): its floors, each with its door (where its prompt is, and where it lets you out: walk mode faces (-sin yaw, -cos yaw)) */
 export interface LiftFloor {
@@ -244,12 +248,12 @@ const balustrades = (f: Flight): Solid[] => {
 export const LINK_SOLIDS: Solid[] = [
   ...FLIGHTS.flatMap(balustrades),
   ...COLUMNS.map(([x, z]) => sq(x, z, COLUMN_R, L1, L2)),
-  ...BENCHES.map((b): Solid => (b.ry === 0 || b.ry === Math.PI ? [b.x - 1.05, b.z - 0.25, b.x + 1.05, b.z + 0.25, L1, L1 + 0.9] : [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, L1, L1 + 0.9])),
-  ...PLANTERS.map(([x, z]) => sq(x, z, PLANTER_R, L1, L1 + 0.6)),
-  [...KIOSK.rect, L1, L1 + 2.4] as Solid,
-  ...PLATFORM_BENCHES.map((b): Solid => [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, L2, L2 + 0.9]),
+  ...BENCHES.map((b): Solid => (b.ry === 0 || b.ry === Math.PI ? [b.x - 1.05, b.z - 0.22, b.x + 1.05, b.z + 0.22, L1, L1 + FIT.back] : [b.x - 0.22, b.z - 1.05, b.x + 0.22, b.z + 1.05, L1, L1 + FIT.back])),
+  ...PLANTERS.map(([x, z]) => sq(x, z, PLANTER_R, L1, L1 + 0.4)),
+  [...KIOSK.rect, L1, L1 + FIT.door + 0.42] as Solid,
+  ...PLATFORM_BENCHES.map((b): Solid => [b.x - 0.22, b.z - 1.05, b.x + 0.22, b.z + 1.05, L2, L2 + FIT.back]),
   // (the fare gates' cabinets; the lift's shaft, all the way up)
-  ...GATES.map((g): Solid => [...g, L2, L2 + 1.1] as Solid),
+  ...GATES.map((g): Solid => [...g, L2, L2 + FIT.counter + 0.05] as Solid),
   [...LINK_LIFT, SLAB, ROOF] as Solid,
 ];
 
@@ -334,7 +338,7 @@ export const LINK_PEOPLE: LinkPerson[] = (() => {
   const y1 = L1 - SLAB;
   const y2 = L2 - SLAB;
   // On the lower floor's benches, looking out along the avenue
-  for (const b of BENCHES.slice(0, 2)) out.push({ x: b.x - 0.4, z: b.z + (b.ry === 0 ? -0.05 : 0.05), ry: b.ry, act: 'sit', y: y1 + 0.32 });
+  for (const b of BENCHES.slice(0, 2)) out.push({ x: b.x - 0.4, z: b.z + (b.ry === 0 ? -0.05 : 0.05), ry: b.ry, act: 'sit', y: y1 + FIT.seat });
   // At the kiosk, and two chatting by the corridor's mouth
   out.push({ x: KIOSK.rect[2] + 0.55, z: (KIOSK.rect[1] + KIOSK.rect[3]) / 2, ry: Math.PI / 2, act: 'look', y: y1 });
   out.push({ x: LINK[0] + 3.2, z: CORRIDOR[3] + 1.2, ry: Math.PI / 2, act: 'chat', y: y1 }, { x: LINK[0] + 3.9, z: CORRIDOR[3] + 1.3, ry: -Math.PI / 2, act: 'chat', y: y1 });

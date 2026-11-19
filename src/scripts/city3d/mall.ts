@@ -44,6 +44,16 @@ export type Pt = [number, number];
 export type Rect = [number, number, number, number];
 type Box = [number, number, number, number, number];
 
+/**
+ * The mall's fittings in scale with the people who use them (the owner's call, after the joined mall: they were made
+ * for someone twice Degen's size). Degen stands 0.845 to his crown (figure.ts `FIGURE_SCALE` × skeleton.ts's 1.28),
+ * his hips at 0.41 and his knees at 0.22: a seat at the city's bench height (pedestrians.ts `SEAT_H`), a backrest to his
+ * shoulder blades, a table a forearm over the seat, a counter at the market's (market.ts `COUNTER`), a rail at his
+ * waist, a door half again his height, an entrance's doors a little more. Every mall file draws to these (mallinside3d,
+ * malllink3d, courtinside3d, mall3d) and its sitters sit at `seat`.
+ */
+export const FIT = { seat: 0.3, back: 0.55, table: 0.47, counter: 0.5, rail: 0.55, door: 1.3, entrance: 1.6 } as const;
+
 const NS0 = NS_ROADS[0];
 const NS3 = NS_ROADS[NS_ROADS.length - 1];
 /** The blocks' north edge (clear of the highway's slip lanes) and the land's south edge (clear of the Parkway's outer sidewalk) */
@@ -333,10 +343,10 @@ export const MALL_SOLIDS: Box[] = [
   [PORCH.rect[0], PORCH.rect[3] - 0.4, PORCH.rect[0] + 0.4, PORCH.rect[3], PORCH.h],
   [PORCH.rect[2] - 0.4, PORCH.rect[3] - 0.4, PORCH.rect[2], PORCH.rect[3], PORCH.h],
   [PYLON.x - PYLON.w / 2, PYLON.z - PYLON.d / 2, PYLON.x + PYLON.w / 2, PYLON.z + PYLON.d / 2, PYLON.h],
-  box([SHELTER[0], SHELTER[1], SHELTER[2], SHELTER[1] + 0.25], 2.4),
+  box([SHELTER[0], SHELTER[1], SHELTER[2], SHELTER[1] + 0.25], FIT.door + 0.2),
   box(MSCP.rect, MSCP.deck * (MSCP.decks + 1) + 0.9),
   ...PLANTERS.map(([x, z]): Box => [x - PLANTER / 2, z - PLANTER / 2, x + PLANTER / 2, z + PLANTER / 2, 0.55]),
-  ...PAY_STATIONS.map(([x, z]): Box => [x - 0.35, z - 0.25, x + 0.35, z + 0.25, 1.7]),
+  ...PAY_STATIONS.map(([x, z]): Box => [x - 0.25, z - 0.18, x + 0.25, z + 0.18, 0.9]),
   ...ISLANDS.map((r) => box(r, 0.25)),
   ...[...RANK_CABS.map((c) => carBox(c.x, c.z, c.yaw)), ...PARKED.map(([, x, z, yaw]) => carBox(x, z, yaw))],
 ];
@@ -365,7 +375,7 @@ export const MALL_PEOPLE: MallPerson[] = (() => {
   // The cinema's queue
   for (let i = 0; i < 5; i++) out.push({ x: PROM_X - 3 + i * 0.8, z: CINEMA.rect[3] + 1.6, ry: Math.PI, act: 'look', y: 0 });
   // On the benches by the fountain
-  for (const b of BENCHES) out.push({ x: b.x - 0.4, z: b.z + (b.ry === 0 ? 0.05 : -0.05), ry: b.ry, act: 'sit', y: 0.32 });
+  for (const b of BENCHES) out.push({ x: b.x - 0.4, z: b.z + (b.ry === 0 ? 0.05 : -0.05), ry: b.ry, act: 'sit', y: FIT.seat });
   // At the mall's porch and the bus shelter
   const px = (PORCH.rect[0] + PORCH.rect[2]) / 2;
   out.push({ x: px - 2.2, z: PORCH.rect[3] + 1.4, ry: Math.PI, act: 'chat', y: 0 }, { x: px - 1.4, z: PORCH.rect[3] + 1.6, ry: Math.PI, act: 'chat', y: 0 }, { x: px + 2.5, z: PORCH.rect[3] + 2, ry: Math.PI, act: 'look', y: 0 });

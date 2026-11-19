@@ -297,3 +297,15 @@ passengers, rebuilt "realistic and of a high standard". Their picks:
    - **Checks:** the type check, lint and `npm test` (1524) pass. The build
      and budget pass (boot 743.9 of 750 KB, unchanged by the roofs: they
      load with the mall).
+
+## The polish after "One mall" (2026-11-19, built)
+
+- **Fittings to Degen's size** (the owner's call: "the mall assets are made
+  for a larger character"): one `FIT` in `mall.ts` sizes every seat,
+  table, counter, rail, door and entrance across the hall, the Skywalk and
+  its station, Palm Court and the forecourt; the solids follow; the
+  buildings stay as they are (docs/guide/mall.md).
+- **Polish:** Palm Court's and the mall's panel lines say what's inside
+  now; the indoor murmur reaches the Skywalk and Palm Court; the world map
+  draws the Skywalk, the pavilion and Palm Court's promenade; the rooftop
+  plant shows from afar.

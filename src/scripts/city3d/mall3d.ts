@@ -77,6 +77,7 @@ import {
   HALL,
   ISLANDS,
   ISLAND_WALK,
+  FIT,
   LOOP,
   LOOP_ZEBRA,
   TOWER_ZEBRA,
@@ -233,10 +234,11 @@ function under(b: Batch, x0: number, z0: number, x1: number, z1: number, y: numb
   }
   b.add(g, mat);
 }
-/** Rooftop plant: an air handler (a box with a fan grille) and a louvred screen beside it (near only) */
+/** Rooftop plant: an air handler (a box, seen from afar so its patch of roof isn't bare; its fan grille near only)
+ * and a louvred screen beside it (near only) */
 function plant(b: Batch, x: number, z: number, y: number) {
+  box(b, x - 1, y, z - 0.6, x + 1, y + 0.9, z + 0.6, GREY);
   b.detail(() => {
-    box(b, x - 1, y, z - 0.6, x + 1, y + 0.9, z + 0.6, GREY);
     for (const dx of [-0.5, 0.5]) b.add(new THREE.CircleGeometry(0.32, 12).rotateX(-Math.PI / 2).translate(x + dx, y + 0.905, z), STEEL);
     for (let i = 0; i < 6; i++) box(b, x + 1.3 + i * 0.25, y, z - 0.7, x + 1.36 + i * 0.25, y + 1.1, z + 0.7, MID);
   });
@@ -267,8 +269,8 @@ function centre(b: Batch) {
   b.add(new THREE.TorusGeometry(r - 0.02, 0.025, 4, 40).rotateX(Math.PI / 2).translate(x, Y + 0.47, z), LED);
   // Benches: timber slats on concrete plinths
   for (const s of BENCHES) {
-    for (const sd of [-1, 1]) box(b, s.x + sd * 0.85 - 0.18, Y, s.z - 0.25, s.x + sd * 0.85 + 0.18, Y + 0.4, s.z + 0.25, CONCRETE);
-    box(b, s.x - 1.15, Y + 0.4, s.z - 0.28, s.x + 1.15, Y + 0.48, s.z + 0.28, WOOD);
+    for (const sd of [-1, 1]) box(b, s.x + sd * 0.85 - 0.18, Y, s.z - 0.25, s.x + sd * 0.85 + 0.18, Y + FIT.seat - 0.06, s.z + 0.25, CONCRETE);
+    box(b, s.x - 1.15, Y + FIT.seat - 0.06, s.z - 0.28, s.x + 1.15, Y + FIT.seat, s.z + 0.28, WOOD);
   }
 }
 
@@ -472,11 +474,11 @@ function porch(b: Batch) {
     [DOOR.x1 - 1.1, DOOR.x1],
   ])
     b.add(new THREE.PlaneGeometry(c - a, DOOR.h - 0.1).translate((a + c) / 2, Y + DOOR.h / 2, z0 - 0.12), GLASS);
-  sign(b, 'ENTRANCE', xm, Y + 3.75, z0 + 0.03, 2.2, 0.42, 0);
+  sign(b, 'ENTRANCE', xm, Y + DOOR.h + 0.45, z0 + 0.03, 2.2, 0.42, 0);
   // The bollards across the doors: brushed steel, a LED ring near the top
   for (const [bx, bz] of BOLLARDS) {
-    cyl(b, BOLLARD, 0.85, bx, Y, bz, GREY, 12);
-    cyl(b, BOLLARD + 0.006, 0.04, bx, Y + 0.72, bz, LED, 12);
+    cyl(b, BOLLARD, 0.48, bx, Y, bz, GREY, 12);
+    cyl(b, BOLLARD + 0.006, 0.04, bx, Y + 0.38, bz, LED, 12);
   }
 }
 
@@ -486,10 +488,10 @@ function forecourt(b: Batch) {
   flat(b, ANCHORS[0].rect[2], HALL.rect[3], ANCHORS[1].rect[0], ANCHORS[0].rect[3], Y + 0.006, PAVING, 12);
   for (const [x, z] of PLANTERS) planter(b, x, z, Y, PLANTER, 0.55);
   for (const [x, z] of PAY_STATIONS) {
-    box(b, x - 0.35, Y, z - 0.25, x + 0.35, Y + 1.6, z + 0.25, STEEL);
-    box(b, x - 0.25, Y + 1.05, z + 0.25, x + 0.25, Y + 1.4, z + 0.27, PANEL);
-    sign(b, 'P', x, Y + 1.75, z + 0.02, 0.3, 0.3, 0);
-    box(b, x - 0.12, Y + 1.6, z - 0.01, x + 0.12, Y + 1.9, z + 0.01, STEEL);
+    box(b, x - 0.25, Y, z - 0.18, x + 0.25, Y + 0.85, z + 0.18, STEEL);
+    box(b, x - 0.18, Y + 0.5, z + 0.18, x + 0.18, Y + 0.75, z + 0.2, PANEL);
+    sign(b, 'P', x, Y + 1.0, z + 0.02, 0.24, 0.24, 0);
+    box(b, x - 0.08, Y + 0.85, z - 0.01, x + 0.08, Y + 1.12, z + 0.01, STEEL);
   }
   b.detail(() => {
     for (let i = 0; i < 4; i++) {
@@ -512,13 +514,14 @@ function pylon(b: Batch) {
 function shelter(b: Batch) {
   const [x0, z0, x1, z1] = SHELTER;
   // A black steel frame, glass back and roof, a timber bench, a lit ad panel at its end, the BUS sign on a post
-  for (const x of [x0, x1 - 0.08]) box(b, x, Y, z0, x + 0.08, Y + 2.3, z1, STEEL);
-  b.add(new THREE.PlaneGeometry(x1 - x0, 2.1).translate((x0 + x1) / 2, Y + 1.1, z0 + 0.04), GLASS);
-  box(b, x0 - 0.1, Y + 2.3, z0 - 0.1, x1 + 0.1, Y + 2.38, z1 + 0.15, STEEL);
-  box(b, x0 + 0.2, Y + 0.42, z0 + 0.1, x1 - 0.2, Y + 0.48, z0 + 0.5, WOOD);
-  box(b, x1 - 0.06, Y + 0.3, z0 + 0.1, x1 - 0.02, Y + 2.1, z1 - 0.1, PANEL);
-  box(b, x1 + 0.3, Y, z1 - 0.05, x1 + 0.38, Y + 2.5, z1 + 0.03, STEEL);
-  sign(b, 'BUS', x1 + 0.34, Y + 2.65, z1 + 0.04, 0.6, 0.3, 0);
+  const top = Y + FIT.door + 0.1;
+  for (const x of [x0, x1 - 0.08]) box(b, x, Y, z0, x + 0.08, top, z1, STEEL);
+  b.add(new THREE.PlaneGeometry(x1 - x0, top - Y - 0.2).translate((x0 + x1) / 2, (Y + top) / 2, z0 + 0.04), GLASS);
+  box(b, x0 - 0.1, top, z0 - 0.1, x1 + 0.1, top + 0.08, z1 + 0.15, STEEL);
+  box(b, x0 + 0.2, Y + FIT.seat - 0.06, z0 + 0.1, x1 - 0.2, Y + FIT.seat, z0 + 0.45, WOOD);
+  box(b, x1 - 0.06, Y + 0.2, z0 + 0.1, x1 - 0.02, top - 0.15, z1 - 0.1, PANEL);
+  box(b, x1 + 0.3, Y, z1 - 0.05, x1 + 0.38, top + 0.15, z1 + 0.03, STEEL);
+  sign(b, 'BUS', x1 + 0.34, top + 0.3, z1 + 0.04, 0.6, 0.3, 0);
 }
 
 /* ---------- The loop, the car parks ---------- */

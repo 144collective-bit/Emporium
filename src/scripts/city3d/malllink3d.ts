@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, liveTex, siteMat } from './kit';
 import type { Tick } from './world';
 import { site } from './tilework';
-import { ANCHORS, LINK_LIFT, MALL_NAME, PAVILION } from './mall';
+import { ANCHORS, FIT, LINK_LIFT, MALL_NAME, PAVILION } from './mall';
 import { HIGH_Y, PLATFORM, STATIONS, metroNow, nextTrain, stationAt, type NextTrain } from './metro';
 import { CORRIDOR_IN, CORRIDOR_Z } from './mallinside';
 import {
@@ -49,6 +49,7 @@ import {
   PLANTERS,
   PLATFORM_BENCHES,
   ROOF,
+  SCREEN_H,
   SCREEN_X,
   SKIN,
   TRACK,
@@ -192,7 +193,9 @@ function shell(b: Batch) {
     box(b, x - 0.05, Y, d.z1, x + 0.12, Y + DOOR_H + 0.1, d.z1 + 0.1, STEEL);
     box(b, x - 0.05, Y + DOOR_H, d.z0, x + 0.12, Y + DOOR_H + 0.1, d.z1, STEEL);
   }
-  face(b, CLAD_DARK, x, Z0 + 1.0, x, Z1 - 1.0, Y + DOOR_H + 0.1, L1 + 0.15, PX, 0.02);
+  // (over the doors, in scale with the people since the polish (mall.ts `FIT`), glass up to the floor's band)
+  face(b, CURTAIN, x, Z0 + 1.0, x, Z1 - 1.0, Y + DOOR_H + 0.1, L1 - 0.35, PX);
+  face(b, CLAD_DARK, x, Z0 + 1.0, x, Z1 - 1.0, L1 - 0.35, L1 + 0.15, PX, 0.02);
   // (open upstairs onto Palm Court's gallery where its door is: courtinside.ts `CONNECTOR`)
   const [c0, c1] = CONNECTOR_Z;
   const ch = L1 + 2.75;
@@ -280,15 +283,16 @@ function balustrade(b: Batch, x0: number, z0: number, x1: number, z1: number, y:
   const along = x1 - x0 !== 0;
   const len = Math.hypot(x1 - x0, z1 - z0);
   if (len < 0.05) return;
-  const g = new THREE.PlaneGeometry(len, 0.9);
+  const r = FIT.rail;
+  const g = new THREE.PlaneGeometry(len, r - 0.08);
   if (!along) g.rotateY(Math.PI / 2);
-  b.add(g.translate((x0 + x1) / 2, y + 0.5, (z0 + z1) / 2), GLASS);
-  if (along) box(b, x0, y + 0.95, z0 - 0.035, x1, y + 1.0, z0 + 0.035, STEEL);
-  else box(b, x0 - 0.035, y + 0.95, z0, x0 + 0.035, y + 1.0, z1, STEEL);
+  b.add(g.translate((x0 + x1) / 2, y + (r - 0.08) / 2 + 0.02, (z0 + z1) / 2), GLASS);
+  if (along) box(b, x0, y + r - 0.05, z0 - 0.03, x1, y + r, z0 + 0.03, STEEL);
+  else box(b, x0 - 0.03, y + r - 0.05, z0, x0 + 0.03, y + r, z1, STEEL);
   const n = Math.max(1, Math.round(len / 1.6));
   for (let i = 0; i <= n; i++) {
     const [x, z] = [x0 + ((x1 - x0) * i) / n, z0 + ((z1 - z0) * i) / n];
-    box(b, x - 0.025, y, z - 0.025, x + 0.025, y + 0.96, z + 0.025, STEEL);
+    box(b, x - 0.02, y, z - 0.02, x + 0.02, y + FIT.rail - 0.04, z + 0.02, STEEL);
   }
 }
 
@@ -380,10 +384,11 @@ function edges(b: Batch) {
     balustrade(b, x0, MEZZ_L1[3], x1, MEZZ_L1[3], L1);
   // The platform floor: along the track a glass screen (taller), the strip's edge over the atrium, the south mezzanine's
   const sx = SCREEN_X - 0.04;
-  b.add(new THREE.PlaneGeometry(s1 - s0, 2.1).rotateY(Math.PI / 2).translate(sx, L2 + 1.1, ZM), GLASS);
-  box(b, sx - 0.04, L2 + 2.15, s0, sx + 0.04, L2 + 2.25, s1, STEEL);
-  box(b, sx - 0.03, L2 + 2.1, s0, sx + 0.03, L2 + 2.14, s1, LED);
-  for (let z = s0; z <= s1 + 0.01; z += (s1 - s0) / 8) box(b, sx - 0.04, L2, z - 0.04, sx + 0.04, L2 + 2.2, z + 0.04, STEEL);
+  const sh = SCREEN_H;
+  b.add(new THREE.PlaneGeometry(s1 - s0, sh - 0.05).rotateY(Math.PI / 2).translate(sx, L2 + (sh - 0.05) / 2, ZM), GLASS);
+  box(b, sx - 0.04, L2 + sh, s0, sx + 0.04, L2 + sh + 0.08, s1, STEEL);
+  box(b, sx - 0.03, L2 + sh - 0.04, s0, sx + 0.03, L2 + sh, s1, LED);
+  for (let z = s0; z <= s1 + 0.01; z += (s1 - s0) / 8) box(b, sx - 0.04, L2, z - 0.04, sx + 0.04, L2 + sh + 0.05, z + 0.04, STEEL);
   balustrade(b, LINK[2], LINK_LIFT[3], LINK[2], MEZZ_L2[1], L2);
   balustrade(b, LINK[2], s0, LINK[2], LINK_LIFT[1], L2);
   balustrade(b, LINK[2], MEZZ_L2[1], u0, MEZZ_L2[1], L2);
@@ -421,7 +426,7 @@ export function escalator(b: Batch, f: Flight) {
     [c.x1, c.x1 + BALUSTRADE, 2],
   ] as const) {
     side(b, f, truss, x0, x1 - x0, k === 1 ? LIGHT : GREY);
-    side(b, f, [...line(0.15), ...line(1.0).reverse()], (x0 + x1) / 2 - 0.02, 0.04, GLASS);
+    side(b, f, [...line(0.15), ...line(FIT.rail - 0.02).reverse()], (x0 + x1) / 2 - 0.02, 0.04, GLASS);
   }
   // (under a spanning flight, its soffit across the three)
   if (!onFloor) side(b, f, [...line(-0.9), ...line(-0.86).reverse()], a.x0 - BALUSTRADE, c.x1 - a.x0 + 2 * BALUSTRADE, LIGHT);
@@ -447,11 +452,11 @@ export function escalator(b: Batch, f: Flight) {
     g.computeVertexNormals();
     b.add(g, e.dir === 1 ? STEPS_UP : STEPS_DOWN);
     for (const hx of [e.x0 + 0.04, e.x1 - 0.04]) {
-      const rail = line(1.02);
+      const rail = line(FIT.rail);
       for (let i = 0; i < rail.length - 1; i++) {
         const p0 = new THREE.Vector3(hx, f.y0 + rail[i][1], zAt(rail[i][0]));
         const p1 = new THREE.Vector3(hx, f.y0 + rail[i + 1][1], zAt(rail[i + 1][0]));
-        b.add(new THREE.TubeGeometry(new THREE.LineCurve3(p0, p1), 1, 0.05, 6), DARK);
+        b.add(new THREE.TubeGeometry(new THREE.LineCurve3(p0, p1), 1, 0.035, 6), DARK);
       }
     }
     const [zc0, zc1] = [zAt(0), zAt(COMB * 0.3)];
@@ -463,23 +468,23 @@ export function escalator(b: Batch, f: Flight) {
 
 /** A tree in a round white planter */
 function indoorTree(b: Batch, x: number, z: number, y: number, r: number) {
-  cyl(b, r, 0.6, x, y, z, WHITE, 18);
-  cyl(b, r + 0.05, 0.05, x, y + 0.6, z, STEEL, 18);
-  b.add(new THREE.CircleGeometry(r - 0.05, 16).rotateX(-Math.PI / 2).translate(x, y + 0.55, z), STONE);
-  tree(b, x, z, y + 0.55, 0.85);
+  cyl(b, r, 0.38, x, y, z, WHITE, 18);
+  cyl(b, r + 0.04, 0.04, x, y + 0.38, z, STEEL, 18);
+  b.add(new THREE.CircleGeometry(r - 0.05, 16).rotateX(-Math.PI / 2).translate(x, y + 0.35, z), STONE);
+  tree(b, x, z, y + 0.35, 0.85);
 }
 /** A timber bench on steel, facing `ry` (0 is +z), a back behind */
 function bench(b: Batch, x: number, z: number, y: number, ry: number) {
   const across = ry === 0 || ry === Math.PI;
   const back = across ? (ry === 0 ? -1 : 1) : ry > 0 ? -1 : 1;
   if (across) {
-    box(b, x - 1.05, y + 0.38, z - 0.24, x + 1.05, y + 0.45, z + 0.24, WOOD);
-    box(b, x - 1.05, y + 0.45, z + back * 0.22 - 0.03, x + 1.05, y + 0.85, z + back * 0.22 + 0.03, WOOD);
-    for (const s of [-1, 1]) box(b, x + s * 0.9 - 0.04, y, z - 0.2, x + s * 0.9 + 0.04, y + 0.38, z + 0.2, STEEL);
+    box(b, x - 1.05, y + FIT.seat - 0.06, z - 0.2, x + 1.05, y + FIT.seat, z + 0.2, WOOD);
+    box(b, x - 1.05, y + FIT.seat, z + back * 0.18 - 0.03, x + 1.05, y + FIT.back, z + back * 0.18 + 0.03, WOOD);
+    for (const s of [-1, 1]) box(b, x + s * 0.9 - 0.04, y, z - 0.17, x + s * 0.9 + 0.04, y + FIT.seat - 0.06, z + 0.17, STEEL);
   } else {
-    box(b, x - 0.24, y + 0.38, z - 1.05, x + 0.24, y + 0.45, z + 1.05, WOOD);
-    box(b, x + back * 0.22 - 0.03, y + 0.45, z - 1.05, x + back * 0.22 + 0.03, y + 0.85, z + 1.05, WOOD);
-    for (const s of [-1, 1]) box(b, x - 0.2, y, z + s * 0.9 - 0.04, x + 0.2, y + 0.38, z + s * 0.9 + 0.04, STEEL);
+    box(b, x - 0.2, y + FIT.seat - 0.06, z - 1.05, x + 0.2, y + FIT.seat, z + 1.05, WOOD);
+    box(b, x + back * 0.18 - 0.03, y + FIT.seat, z - 1.05, x + back * 0.18 + 0.03, y + FIT.back, z + 1.05, WOOD);
+    for (const s of [-1, 1]) box(b, x - 0.17, y, z + s * 0.9 - 0.04, x + 0.17, y + FIT.seat - 0.06, z + s * 0.9 + 0.04, STEEL);
   }
 }
 
@@ -494,22 +499,24 @@ function things(b: Batch) {
   for (const [x, z] of PLANTERS) indoorTree(b, x, z, L1, 0.5);
   // The coffee kiosk: a timber counter, a white canopy with its name
   const [kx0, kz0, kx1, kz1] = KIOSK.rect;
-  box(b, kx0, L1, kz0, kx1, L1 + 1.05, kz1, WOOD);
-  box(b, kx0 - 0.05, L1 + 1.05, kz0 - 0.05, kx1 + 0.05, L1 + 1.12, kz1 + 0.05, STONE);
+  const kt = L1 + FIT.counter;
+  const kc = L1 + FIT.door;
+  box(b, kx0, L1, kz0, kx1, kt, kz1, WOOD);
+  box(b, kx0 - 0.05, kt, kz0 - 0.05, kx1 + 0.05, kt + 0.05, kz1 + 0.05, STONE);
   for (const [x, z] of [
     [kx0 + 0.1, kz0 + 0.1],
     [kx0 + 0.1, kz1 - 0.1],
   ])
-    box(b, x - 0.04, L1 + 1.1, z - 0.04, x + 0.04, L1 + 2.3, z + 0.04, STEEL);
-  box(b, kx0 - 0.1, L1 + 2.3, kz0 - 0.1, kx1 + 0.1, L1 + 2.4, kz1 + 0.1, WHITE);
-  sign(b, KIOSK.name, kx1 + 0.12, L1 + 2.6, (kz0 + kz1) / 2, 1.9, 0.38, Math.PI / 2);
-  box(b, kx1 + 0.08, L1 + 2.4, kz0, kx1 + 0.12, L1 + 2.82, kz1, CHARCOAL);
-  b.add(new THREE.CylinderGeometry(0.16, 0.13, 0.3, 10).translate(kx0 + 0.5, L1 + 1.27, kz0 + 0.5), CHARCOAL);
+    box(b, x - 0.04, kt + 0.05, z - 0.04, x + 0.04, kc, z + 0.04, STEEL);
+  box(b, kx0 - 0.1, kc, kz0 - 0.1, kx1 + 0.1, kc + 0.1, kz1 + 0.1, WHITE);
+  sign(b, KIOSK.name, kx1 + 0.12, kc + 0.25, (kz0 + kz1) / 2, 1.7, 0.32, Math.PI / 2);
+  box(b, kx1 + 0.08, kc + 0.1, kz0, kx1 + 0.12, kc + 0.42, kz1, CHARCOAL);
+  b.add(new THREE.CylinderGeometry(0.1, 0.08, 0.2, 10).translate(kx0 + 0.45, kt + 0.15, kz0 + 0.45), CHARCOAL);
   station(b);
   // The way signs: PALM COURT over the escalators down, the mall's name over the corridor's mouth on the bridge,
   // Bright & Co. over its mouth on the hall's gallery
-  sign(b, 'PALM COURT', (ESC_G.stairs[0].x0 + ESC_G.stairs[1].x1) / 2, L1 + 2.6, MEZZ_L1[3] - 0.05, 2.6, 0.42, Math.PI);
-  box(b, ESC_G.stairs[0].x0 - 0.1, L1 + 2.35, MEZZ_L1[3] - 0.04, ESC_G.stairs[1].x1 + 0.1, L1 + 2.85, MEZZ_L1[3], CHARCOAL);
+  sign(b, 'PALM COURT', (ESC_G.stairs[0].x0 + ESC_G.stairs[1].x1) / 2, L1 + FIT.door + 0.42, MEZZ_L1[3] - 0.05, 2.2, 0.34, Math.PI);
+  box(b, ESC_G.stairs[0].x0 - 0.1, L1 + FIT.door + 0.22, MEZZ_L1[3] - 0.04, ESC_G.stairs[1].x1 + 0.1, L1 + FIT.door + 0.62, MEZZ_L1[3], CHARCOAL);
   sign(b, MALL_NAME, X0 + 0.06, L1 + CORRIDOR_H + 0.45, (CORRIDOR_Z[0] + CORRIDOR_Z[1]) / 2, 3.6, 0.5, Math.PI / 2);
   sign(b, ANCHORS[1].name, CORRIDOR_IN[0] - 0.02, L1 + CORRIDOR_H - 0.35, (CORRIDOR_Z[0] + CORRIDOR_Z[1]) / 2, 3.2, 0.42, -Math.PI / 2);
 }
@@ -519,9 +526,10 @@ function station(b: Batch) {
   const [g0, g1] = [GATES[0][1], GATES[GATES.length - 1][3]];
   // The gates: white cabinets, steel tops with a green light, glass paddles across the ways between
   for (const [x0, z0, x1, z1] of GATES) {
-    box(b, x0, L2, z0, x1, L2 + 1.0, z1, WHITE);
-    box(b, x0 - 0.02, L2 + 1.0, z0 - 0.02, x1 + 0.02, L2 + 1.06, z1 + 0.02, STEEL);
-    box(b, x1 - 0.25, L2 + 1.06, z0 + 0.04, x1 - 0.1, L2 + 1.08, z1 - 0.04, LED);
+    const gt = L2 + FIT.counter;
+    box(b, x0, L2, z0, x1, gt, z1, WHITE);
+    box(b, x0 - 0.02, gt, z0 - 0.02, x1 + 0.02, gt + 0.04, z1 + 0.02, STEEL);
+    box(b, x1 - 0.22, gt + 0.04, z0 + 0.04, x1 - 0.1, gt + 0.055, z1 - 0.04, LED);
   }
   for (let i = 1; i < GATES.length; i++) {
     const [za, zb] = [GATES[i - 1][3], GATES[i][1]];
@@ -530,24 +538,26 @@ function station(b: Batch) {
       [za, 1],
       [zb, -1],
     ] as const)
-      b.add(new THREE.PlaneGeometry(w, 0.5).rotateY(Math.PI / 2).translate(PAVILION[0], L2 + 0.75, z + (f * w) / 2), GLASS);
+      b.add(new THREE.PlaneGeometry(w, 0.26).rotateY(Math.PI / 2).translate(PAVILION[0], L2 + FIT.counter - 0.12, z + (f * w) / 2), GLASS);
   }
   // Over them: a dark beam with METRO and the M, facing the mezzanine
-  box(b, PAVILION[0] - 0.2, L2 + 2.2, g0, PAVILION[0] + 0.2, L2 + 2.65, g1, CHARCOAL);
-  sign(b, BOARD.text, PAVILION[0] + 0.21, L2 + 2.42, BOARD.z - 0.5, 1.3, 0.34, Math.PI / 2);
-  mSign(b, PAVILION[0] + 0.21, L2 + 2.42, BOARD.z + 0.8, 0.4, Math.PI / 2);
+  const gb = L2 + FIT.door + 0.25;
+  box(b, PAVILION[0] - 0.15, gb, g0, PAVILION[0] + 0.15, gb + 0.34, g1, CHARCOAL);
+  for (let q = 0; q < 2; q++) box(b, PAVILION[0] - 0.01, gb + 0.34, g0 + 0.3 + q * (g1 - g0 - 0.6), PAVILION[0] + 0.01, ROOF - 0.4, g0 + 0.32 + q * (g1 - g0 - 0.6), STEEL);
+  sign(b, BOARD.text, PAVILION[0] + 0.16, gb + 0.17, BOARD.z - 0.45, 1.0, 0.26, Math.PI / 2);
+  mSign(b, PAVILION[0] + 0.16, gb + 0.17, BOARD.z + 0.6, 0.3, Math.PI / 2);
   // The platform: a yellow line along the screen, the screen's doors where the train's are, the station's name over it
   const [p0, p1] = [SZ - PLATFORM.half, SZ + PLATFORM.half];
   box(b, SCREEN_X + 0.25, L2 + 0.006, p0, SCREEN_X + 0.4, L2 + 0.012, p1, YELLOW);
   for (let z = p0 + 1.2; z < p1 - 0.8; z += 2.6) {
-    box(b, SCREEN_X - 0.1, L2, z - 0.62, SCREEN_X + 0.02, L2 + 2.15, z - 0.55, STEEL);
-    box(b, SCREEN_X - 0.1, L2, z + 0.55, SCREEN_X + 0.02, L2 + 2.15, z + 0.62, STEEL);
-    box(b, SCREEN_X - 0.06, L2 + 1.95, z - 0.55, SCREEN_X - 0.01, L2 + 2.0, z + 0.55, LED);
+    box(b, SCREEN_X - 0.1, L2, z - 0.47, SCREEN_X + 0.02, L2 + SCREEN_H, z - 0.42, STEEL);
+    box(b, SCREEN_X - 0.1, L2, z + 0.42, SCREEN_X + 0.02, L2 + SCREEN_H, z + 0.47, STEEL);
+    box(b, SCREEN_X - 0.06, L2 + SCREEN_H - 0.14, z - 0.42, SCREEN_X - 0.01, L2 + SCREEN_H - 0.1, z + 0.42, LED);
   }
   for (const z of [p0 + 1.5, p1 - 1.5]) {
-    box(b, SCREEN_X - 0.02, L2 + 2.3, z - 1.4, SCREEN_X + 0.04, L2 + 2.75, z + 1.4, CHARCOAL);
-    sign(b, MALL_NAME, SCREEN_X + 0.05, L2 + 2.52, z + 0.25, 2.1, 0.3, Math.PI / 2);
-    mSign(b, SCREEN_X + 0.05, L2 + 2.52, z - 1.05, 0.34, Math.PI / 2);
+    box(b, SCREEN_X - 0.02, L2 + SCREEN_H + 0.2, z - 1.2, SCREEN_X + 0.04, L2 + SCREEN_H + 0.5, z + 1.2, CHARCOAL);
+    sign(b, MALL_NAME, SCREEN_X + 0.05, L2 + SCREEN_H + 0.35, z + 0.2, 1.8, 0.24, Math.PI / 2);
+    mSign(b, SCREEN_X + 0.05, L2 + SCREEN_H + 0.35, z - 0.9, 0.26, Math.PI / 2);
   }
   // The next-train boards' backs and hangers (their faces are live: `registerLink()`)
   const [bw, bh] = [BOARD_W / 2 + 0.06, BOARD_H / 2 + 0.06];
@@ -581,10 +591,10 @@ function station(b: Batch) {
   for (const y of [L1 - L1_T, L2 - L2_T, top - 0.2]) box(b, lx0 - 0.04, y, lz0 - 0.04, lx1 + 0.04, y + (y === top - 0.2 ? 0.2 : 0.3), lz1 + 0.04, STEEL);
   const lxm = (lx0 + lx1) / 2;
   const lzm = (lz0 + lz1) / 2;
-  for (const y of [Y, L1]) box(b, lxm - 0.55, y, lz1, lxm + 0.55, y + 2.15, lz1 + 0.04, DARK);
-  box(b, lx0 - 0.04, L2, lzm - 0.55, lx0, L2 + 2.15, lzm + 0.55, DARK);
-  box(b, lx0 + 0.12, Y, lz0 + 0.12, lx1 - 0.12, Y + 2.3, lz1 - 0.12, WHITE);
-  box(b, lx0 + 0.1, Y + 2.3, lz0 + 0.1, lx1 - 0.1, Y + 2.4, lz1 - 0.1, STEEL);
+  for (const y of [Y, L1]) box(b, lxm - 0.42, y, lz1, lxm + 0.42, y + FIT.door, lz1 + 0.04, DARK);
+  box(b, lx0 - 0.04, L2, lzm - 0.42, lx0, L2 + FIT.door, lzm + 0.42, DARK);
+  box(b, lx0 + 0.12, Y, lz0 + 0.12, lx1 - 0.12, Y + FIT.door + 0.12, lz1 - 0.12, WHITE);
+  box(b, lx0 + 0.1, Y + FIT.door + 0.12, lz0 + 0.1, lx1 - 0.1, Y + FIT.door + 0.2, lz1 - 0.1, STEEL);
 }
 
 function corridor(b: Batch) {
