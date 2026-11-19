@@ -32,7 +32,7 @@ import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { RURAL_LAMPS } from './ruraldress';
-import { AIRBASE_LAMPS, VISITORS, VISITOR_CENTRE, VISITOR_CENTRE_H, VISITOR_SPAWN } from './airbase';
+import { AIRBASE_LAMPS, AVENUE_LAMPS, VISITORS, VISITOR_CENTRE, VISITOR_CENTRE_H, VISITOR_SPAWN } from './airbase';
 import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
@@ -462,7 +462,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and the odd lamp along the country roads past the highway (ruraldress.ts, Phase 7)
   for (const [x, z, ry, y] of RURAL_LAMPS) addLamp(x, z, ry, y);
   // Northgate Air Base's (airbase.ts): along its south fence, at its gates, round the visitors' car park
-  for (const [x, z, ry, y] of AIRBASE_LAMPS) addLamp(x, z, ry, y);
+  for (const [x, z, ry, y] of [...AIRBASE_LAMPS, ...AVENUE_LAMPS]) addLamp(x, z, ry, y);
   for (const [x, z, s] of LOT9_TREES) addTree(x, z, s, false, LOT9_Y);
   LOT9_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)

@@ -23,8 +23,9 @@ test("the base's sites build: the fence a stretch a site, the gates, the avenue,
     assert.ok(g.children.length, `${s.id} drew nothing`);
     const box = new THREE.Box3().setFromObject(g);
     assert.ok(box.min.x > s.rect[0] - 1 && box.max.x < s.rect[2] + 1 && box.min.z > s.rect[1] - 1 && box.max.z < s.rect[3] + 1, `${s.id} spills out of its site`);
-    // (nothing over the Emporium's roof, 12.5: the visitors' centre's terrace rail the highest)
-    assert.ok(box.max.y < VISITOR_CENTRE_H + 1.2, `${s.id} stands ${box.max.y.toFixed(1)} high`);
+    // (nothing over the Emporium's roof, 12.5; Phase 1's no higher than the visitors' centre's terrace rail)
+    const phase1 = /^airbase (fence|gate|avenue|visitors|name|service board)/.test(s.id);
+    assert.ok(box.max.y < (phase1 ? VISITOR_CENTRE_H + 1.2 : 12.5), `${s.id} stands ${box.max.y.toFixed(1)} high`);
   }
   // A stretch of fence: its mesh in the FX layer, its arms and wire near only
   const g = new THREE.Group();

@@ -181,3 +181,53 @@ test("the base's aircraft all grey (the owner's call): as light as they were, no
   // (lighter stays lighter: the white body over the dark glass)
   assert.ok(baseGrey(1, 1, 1)[0] > baseGrey(0.1, 0.1, 0.15)[0] * 3);
 });
+
+test('the base itself (Phase 3): inside the fence, clear of each other, the airfield and the roads, under the Emporium', async () => {
+  const A = await import('../src/scripts/city3d/airbase');
+  const parts: [string, readonly number[]][] = [
+    ['parade', A.PARADE],
+    ['hq', A.HQ],
+    ...A.BARRACKS.map((r, i): [string, readonly number[]] => [`barracks ${i}`, r]),
+    ...A.SERVICES.map((s): [string, readonly number[]] => [s.id, s.rect]),
+    ['motor pool', A.MOTOR_POOL],
+    ...A.HELI_PADS.map(([x, z, r], i): [string, readonly number[]] => [`pad ${i}`, [x - r, z - r, x + r, z + r]]),
+    ['heli hut', A.HELI_HUT],
+    ['radar', [A.RADAR.x - A.RADAR.mound, A.RADAR.z - A.RADAR.mound, A.RADAR.x + A.RADAR.mound, A.RADAR.z + A.RADAR.mound]],
+    ['water tower', [A.WATER_TOWER.x - A.WATER_TOWER.r, A.WATER_TOWER.z - A.WATER_TOWER.r, A.WATER_TOWER.x + A.WATER_TOWER.r, A.WATER_TOWER.z + A.WATER_TOWER.r]],
+    ['range', A.RANGE],
+    ...A.WATCHTOWERS.map(([x, z], i): [string, readonly number[]] => [`watchtower ${i}`, [x - 1.6, z - 1.6, x + 1.6, z + 1.6]]),
+  ];
+  const airfield: [string, readonly number[]][] = [
+    ['runway', [A.RUNWAY.x0, A.RUNWAY.z - A.RUNWAY.half, A.RUNWAY.x1, A.RUNWAY.z + A.RUNWAY.half]],
+    ['taxiway', [A.TAXIWAY.x0, A.TAXIWAY.z - A.TAXIWAY.half, A.TAXIWAY.x1, A.TAXIWAY.z + A.TAXIWAY.half]],
+    ['apron', A.APRON],
+    ['fire station', A.FIRE_STATION],
+    ['fuel farm', A.FUEL_FARM],
+    ...A.HANGARS.map((h, i): [string, readonly number[]] => [`hangar ${i}`, h]),
+    ['apron road', [A.APRON_ROAD[1][0], A.APRON_ROAD[0][1] - 3.5, A.APRON_ROAD[0][0], A.APRON_ROAD[0][1] + 3.5]],
+    ['avenue', [A.MAIN_GATE.x - A.AVENUE_HALF, -700, A.MAIN_GATE.x + A.AVENUE_HALF, A.MAIN_GATE.z]],
+  ];
+  const overlap = (a: readonly number[], b: readonly number[]) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+  for (const [id, r] of parts) {
+    for (const p of [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]] as Pt[]) assert.ok(inAirbase(...p) && fenceDist(p) > 4, `${id} at ${p}`);
+    for (const [other, q] of airfield) assert.ok(!overlap(r, q), `${id} on the ${other}`);
+  }
+  for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) assert.ok(!overlap(parts[i][1], parts[j][1]), `${parts[i][0]} on ${parts[j][0]}`);
+  // Each in the plan's kept lot for it (Phase 3's)
+  const kept = (id: string) => A.KEPT.find((k) => k.id === id)!.rect;
+  assert.ok(inRect(kept('parade'), A.PARADE[0] + 0.5, A.PARADE[1] + 0.5) && inRect(kept('hq'), A.HQ[0] + 0.5, A.HQ[1] + 0.5));
+  for (const b of A.BARRACKS) assert.ok(inRect(kept('barracks'), b[0] + 0.1, b[1] + 0.1, 0.01) && inRect(kept('barracks'), b[2] - 0.1, b[3] - 0.1, 0.01));
+  // Under the Emporium (12.5): the water tower, the radar dome, the HQ, the flags
+  assert.ok(A.WATER_TOWER.top < 12.5 && A.RADAR.moundH + A.RADAR.plinth + A.RADAR.r < 12.5 && A.HQ_H < 12.5 && A.FLAG_H < 12.5 && A.GATEHOUSE_H < 12.5);
+  for (const b of A.BASE_SOLIDS) assert.ok(b[4] < 12.5 && b[0] < b[2] && b[1] < b[3]);
+  // The watchtowers round the fence, a handful, none by a gate
+  assert.ok(A.WATCHTOWERS.length >= 6 && A.WATCHTOWERS.length <= 12);
+  for (const [x, z] of A.WATCHTOWERS) assert.ok(fenceDist([x, z]) > 5 && fenceDist([x, z]) < 7 && A.GATES.every((g) => Math.hypot(x - g.x, z - g.z) > 25));
+  // The avenue's lamps beside it, clear of everything built
+  for (const [x, z] of A.AVENUE_LAMPS) {
+    assert.ok(Math.abs(x - A.MAIN_GATE.x) > A.AVENUE_HALF && Math.abs(x - A.MAIN_GATE.x) < A.AVENUE_HALF + 2);
+    for (const [id, r] of parts) assert.ok(!inRect(r, x, z, 0.5), `an avenue lamp in the ${id}`);
+  }
+  // The service road from the gate to the motor pool, inside the fence
+  for (const p of A.SERVICE_ROAD) assert.ok(inAirbase(...p));
+});

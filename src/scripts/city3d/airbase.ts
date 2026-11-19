@@ -231,6 +231,10 @@ export function airbaseKeep(x: number, z: number, m = 0): boolean {
   // (the airfield's road in from the avenue, and the approach lights past the runway's east end, outside its lot)
   if (APRON_ROAD.length && Math.abs(z - APRON_ROAD[0][1]) < 3.5 + 3 + m && x > APRON_ROAD[1][0] - m && x < APRON_ROAD[0][0] + m) return true;
   if (Math.abs(z - RUNWAY.z) < 4 + m && x > APPROACH[1][0] - 2 - m && x < APPROACH[1][1] + 2 + m) return true;
+  // (Phase 3's outside its lots: the radar's mound, the water tower, the watchtowers, the road to the motor pool)
+  if (Math.hypot(x - RADAR.x, z - RADAR.z) < RADAR.mound + 3 + m || Math.hypot(x - WATER_TOWER.x, z - WATER_TOWER.z) < WATER_TOWER.r + 3 + m) return true;
+  if (WATCHTOWERS.some(([wx, wz]) => Math.hypot(x - wx, z - wz) < 4 + m)) return true;
+  for (let i = 1; i < SERVICE_ROAD.length; i++) if (toRun(x, z, [SERVICE_ROAD[i - 1], SERVICE_ROAD[i]]) < 6 + m) return true;
   return [VISITORS, VISITORS_DRIVE, WALL_GATE, ...KEPT.map((k) => k.rect)].some((r) => inR(r, x, z, 2 + m));
 }
 
@@ -348,3 +352,101 @@ export function baseGrey(r: number, g: number, b: number): [number, number, numb
   const v = 0.12 + l * 0.88;
   return [v * BASE_GREY[0], v * BASE_GREY[1], v * BASE_GREY[2]];
 }
+
+/* ---------- The base itself (docs/military-plan.md Phase 3): the plan's signed-off layout ---------- */
+
+/** The parade ground (west of the avenue), its three flagpoles along its north edge and the monument by the HQ */
+export const PARADE: Rect = [-80, -360, -12, -322];
+export const FLAGPOLES: Pt[] = [-62, -46, -30].map((x) => [x, -358] as Pt);
+export const FLAG_H = 9;
+export const MONUMENT: Pt = [-45, -364];
+/** The HQ facing the parade ground (its door south), three storeys */
+export const HQ: Rect = [-72, -392, -18, -368];
+export const HQ_H = 9.6;
+/** Twelve barracks blocks, three rows of four, two storeys, their doors south */
+export const BARRACKS: Rect[] = [0, 1, 2].flatMap((r) => [0, 1, 2, 3].map((c): Rect => [-262 + c * 40, -336 - r * 26, -232 + c * 40, -324 - r * 26]));
+export const BARRACKS_H = 6.4;
+/** East of the avenue: the mess hall, the gym and the medical centre (x0, z0, x1, z1, height) */
+export const SERVICES: { id: 'mess' | 'gym' | 'medical'; rect: Rect; h: number }[] = [
+  { id: 'mess', rect: [10, -340, 50, -320], h: 5.2 },
+  { id: 'gym', rect: [10, -372, 46, -350], h: 7.2 },
+  { id: 'medical', rect: [10, -400, 44, -382], h: 5.6 },
+];
+/** The motor pool: its yard, its shed along the north side, and the road in from the service gate */
+export const MOTOR_POOL: Rect = [80, -400, 165, -328];
+export const MOTOR_SHED: Rect = [86, -398, 160, -384];
+export const MOTOR_SHED_H = 6;
+export const SERVICE_ROAD: Pt[] = [
+  [GATES[1].x, GATES[1].z - 10],
+  [GATES[1].x, -330],
+  [MOTOR_POOL[0], -340],
+];
+/** The heliport's four pads (x, z, radius) and its hut */
+export const HELI_PADS: [number, number, number][] = [
+  [200, -420, 9],
+  [235, -420, 9],
+  [200, -370, 9],
+  [235, -370, 9],
+];
+export const HELI_HUT: Rect = [190, -398, 204, -390];
+/** The radar dome on its low mound (x, z, the mound's radius and height, the dome's radius and its plinth's height) */
+export const RADAR = { x: 205, z: -505, mound: 12, moundH: 2, r: 4.5, plinth: 3 };
+/** The water tower: its legs' footprint half, its tank (from, to, radius) and its cap's top */
+export const WATER_TOWER = { x: -120, z: -432, half: 2.6, tank: [8, 11.2] as [number, number], r: 3.4, top: 12.1 };
+/** The firing range (scenery: lanes, the berm the lanes face, the range house; no targets, nothing on show) */
+export const RANGE: Rect = [-716, -420, -600, -340];
+export const BERM: Rect = [-716, -418, -706, -342];
+export const BERM_H = 4;
+export const RANGE_HOUSE: Rect = [-612, -396, -600, -364];
+export const RANGE_LANES = 6;
+/** The wall gate's gatehouse against the wall (its blast doors shut on its south face) */
+export const GATEHOUSE_H = 9;
+
+/** The watchtowers: every so far round the fence, 6 inside it, clear of the gates and the wall gate's yard (x, z) */
+export const TOWER_GAP = 300;
+export const WATCHTOWER_H = 8;
+export const WATCHTOWERS: Pt[] = (() => {
+  const out: Pt[] = [];
+  let run = 0;
+  let next = TOWER_GAP / 2;
+  for (const [a, b] of FENCE_RUNS) {
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    while (next <= run + len) {
+      const t = (next - run) / len;
+      const [x, z] = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+      // (6 in from the fence, on its inside)
+      const [nx, nz] = [-(b[1] - a[1]) / len, (b[0] - a[0]) / len];
+      const p: Pt = inAirbase(x + nx * 6, z + nz * 6) ? [x + nx * 6, z + nz * 6] : [x - nx * 6, z - nz * 6];
+      if (!GATES.some((g) => Math.hypot(p[0] - g.x, p[1] - g.z) < 30) && !(p[0] > WALL_GATE[0] - 40 && p[0] < WALL_GATE[2] + 40 && p[1] < -720)) out.push(p);
+      next += TOWER_GAP;
+    }
+    run += len;
+  }
+  return out;
+})();
+
+/** The lamp standards down both sides of the parade avenue, from the main gate to its bend (added to the city's lamps) */
+export const AVENUE_LAMP_GAP = 40;
+export const AVENUE_LAMPS: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  for (let z = MAIN_GATE.z - 20; z > AVENUE[1][1] + 10; z -= AVENUE_LAMP_GAP)
+    for (const s of [-1, 1]) out.push([MAIN_GATE.x + s * (AVENUE_HALF + 1.2), z, s < 0 ? 0 : Math.PI, 0.02]);
+  return out;
+})();
+
+/** The base's buildings' solids (in `SOLIDS`) */
+export const BASE_SOLIDS: Box[] = [
+  [...HQ, HQ_H],
+  ...BARRACKS.map((r): Box => [...r, BARRACKS_H]),
+  ...SERVICES.map(({ rect, h }): Box => [...rect, h]),
+  [...MOTOR_SHED, MOTOR_SHED_H],
+  [...HELI_HUT, 3],
+  [RADAR.x - RADAR.r, RADAR.z - RADAR.r, RADAR.x + RADAR.r, RADAR.z + RADAR.r, RADAR.moundH + RADAR.plinth + RADAR.r],
+  [WATER_TOWER.x - WATER_TOWER.r, WATER_TOWER.z - WATER_TOWER.r, WATER_TOWER.x + WATER_TOWER.r, WATER_TOWER.z + WATER_TOWER.r, WATER_TOWER.top],
+  [...BERM, BERM_H],
+  [...RANGE_HOUSE, 4],
+  [...WALL_GATE, GATEHOUSE_H],
+  ...WATCHTOWERS.map(([x, z]): Box => [x - 1.6, z - 1.6, x + 1.6, z + 1.6, WATCHTOWER_H]),
+  ...FLAGPOLES.map(([x, z]): Box => [x - 0.15, z - 0.15, x + 0.15, z + 0.15, FLAG_H]),
+  [MONUMENT[0] - 1.6, MONUMENT[1] - 1.6, MONUMENT[0] + 1.6, MONUMENT[1] + 1.6, 6],
+];
