@@ -23,7 +23,7 @@
 import * as THREE from 'three';
 import { Batch, canvasTex, FONT_DISPLAY, fx, glowTex, lit, neon, PAL, rng, shadeHex, siteMat, toon } from './kit';
 import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type Pt, type SignId } from './downtown';
-import { CORE_ROADS, DOWNTOWN, LANE, THIRDS } from './layout';
+import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
 import { BALCONY_DOOR, CASEMENT_BANDS, CELL_W, COLS, LINTEL, PAIR_SASH, PANES, PX, PX_H, PX_W, ROWS, baysOf, styleOf, windowsOf, type Bays, type FacadeStyle } from './facade';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
@@ -854,12 +854,12 @@ interface Fine {
   bays: Bays;
   row: number;
 }
-/** The pilot: the centre block's buildings (the Emporium's own block), downtown's only */
-const PILOT = [THIRDS[1][0], THIRDS[1][0], THIRDS[1][1], THIRDS[1][1]];
+/**
+ * A building's modelled front: every infill building downtown and every one a district's kit lays in a site (the
+ * buildings plan's Phases 2 and 3, the map polish plan's Phase 5; the pilot was the Emporium's block alone)
+ */
 function fineOf(f: Infill, kind: WallKind, w: number, col: number): Fine | null {
-  if (IN_SITE || f.floors < 1) return null;
-  const [cx, cz] = [(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2];
-  if (cx < PILOT[0] || cx > PILOT[2] || cz < PILOT[1] || cz > PILOT[3]) return null;
+  if (f.floors < 1) return null;
   const style = styleOf(kind);
   if (!style) return null;
   const bays = baysOf(w, style, col);

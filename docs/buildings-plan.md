@@ -76,12 +76,12 @@ picture is unchanged (the textures made at build time are the same).
 Measured before and after (`docs/blend-shots/buildings-before/`,
 `buildings-after/`): see "Numbers" below.
 
-### Phase 2: the rest of downtown
+### Phase 2: the rest of downtown (built with Phase 3, the map polish plan's Phase 5, waiting on sign-off)
 
 Every infill building in `INFILL`; the fronts' side walls where they face
 a street or a lane.
 
-### Phase 3: the kits
+### Phase 3: the kits (built with Phase 2: `fineOf()` no longer stops at the pilot's block or in a site)
 
 The buildings the kits lay (The Trenches' tenements and rows, the
 recipes' districts): `IN_SITE` buildings take a modelled front too, built

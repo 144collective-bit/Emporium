@@ -323,6 +323,18 @@ Each district seen in a render of its own sites (as Phases 2 and 3).
   - a loose, wandering row of shrubs where the club's, the park's and the
     school's land meet.
 
+### Phase 5: modelled windows (built, waiting on the owner's sign-off)
+
+The buildings plan's Phases 2 and 3 together: every infill building
+downtown and every building a district's kit lays (The Trenches'
+tenements and rows, the recipes' districts) has the pilot's modelled
+front (centred bays, frames, sills, lintels near; piers, the cornice's
+course and the parapet at every distance). `fineOf()` lost its two
+checks (the pilot's block, `IN_SITE`): no new code, the boot 749.8 KB.
+Seen in renders of downtown and The Trenches, before and after. Not
+measured: the triangles near the camera on phones (`?bench` needs a GPU;
+the pilot's numbers were 20 a window on phones, near only).
+
 Checked and left: the High Road's buildings are drawn at every distance
 (the outer `detail()` is `'all'`); the under-deck props casting shadows
 (they stand in the deck's own shade); the deck's joints (5 mm over the
