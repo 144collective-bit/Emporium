@@ -499,10 +499,27 @@ From the Circus west, patchy as high roads are:
      Trenches (the change to the raised metro), the Circus, Lot 9,
      Aldwyn's Green, the High Road by Degen's gates (on west and to the
      airport later); free to ride, as the raised metro is. In steps:
-     - **4d, the line as data**: its tunnel's line, the five stations,
-       their platforms, ticket halls, escalators and entrances, tested,
-       with a sketch for the owner; the kit taught levels (a hall over a
-       platform, an escalator between them).
+     - **4d, the line as data**. Built, waiting on the owner's sign-off:
+       `southline.ts` (DOM-free, `tests/southline.test.ts`): the line
+       (`LINE`, 599 long, its straights through the stations joined by
+       the shortest bends no tighter than 25 round, Dubins paths:
+       `bend()`); five stations (`SOUTH_STATIONS`): The Trenches under the
+       el street (its stairs on the block behind the raised station's
+       tower, a few steps from its door), the Circus (its hall off the
+       sunken plaza, west, between its subways), Lot 9 (by the hole in
+       its fence, the stairs just inside beside the path), Aldwyn's Green
+       (its hall under the churchyard's east side, the stairs just west
+       of its wall) and the High Road (its stairs inside the station
+       building, along its front); each a ticket hall a flight down
+       (`HALL_Y`, the subways' level), an escalator (about 30 degrees)
+       down to an island platform between the twin tracks (`PLAT_Y`), the
+       tunnels deep under everything else below ground. The kit
+       (`underground.ts`) has levels: a passage's own end heights (`y0`,
+       `y1`), the floor under you the highest within a step of your
+       feet, walls only from the pieces at your level; Lot 9's tunnel,
+       the Circus and the underpasses unchanged. Sketches
+       `docs/south-shots/21-phase-4d-*.png`. Not wired into walking or
+       drawn yet: 4e.
      - **4e, the High Road's station end to end**: drawn and walked from
        the street to the platform.
      - **4f, the other four stations.**

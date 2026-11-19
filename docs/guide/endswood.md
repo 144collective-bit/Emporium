@@ -139,7 +139,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   takes a passage at any angle (`radial()`) and a well's stepped seats (`tiers`, `wellFloor()`). The underpasses under
   the avenue crossings (`underpasses.ts`, the south plan's 4c: under the wide south avenue and Endswood Road's and
   Marsh Lane's bends, `straight()` passages, plain: `underpass3d.ts`) share the Circus's cuts (`SLAB_CUTS`,
-  `GROUND_HOLES`) and walking (`UNDER`).
+  `GROUND_HOLES`) and walking (`UNDER`). The underground's south line as data (`southline.ts`, the south plan's 4d: `LINE`,
+  `SOUTH_STATIONS` with their platform, hall, escalator and way in, `LINE_PASSAGES`), drawn and walked from 4e; the kit
+  has levels for it (`y0` / `y1`, `LEVEL`).
 - **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
   end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
