@@ -520,8 +520,26 @@ From the Circus west, patchy as high roads are:
        the Circus and the underpasses unchanged. Sketches
        `docs/south-shots/21-phase-4d-*.png`. Not wired into walking or
        drawn yet: 4e.
-     - **4e, the High Road's station end to end**: drawn and walked from
-       the street to the platform.
+     - **4e, the High Road's station end to end**. Built and signed off
+       (2026-11-19): the station building replaces the hoarding
+       (highroad.ts `stationWalls()`, `STATION_DOOR`: pale walls, its door
+       at its front's east end on to a landing, the stairs down inside
+       west along it, a band in the line's colour with its name, the
+       city's M mark over the door; highroad3d.ts); its platform turned to
+       run on the building's axis west of it, so its stairs reach the
+       hall's far end clear of its escalator. `line3d.ts` (the south's
+       chunk) draws a station by its area's finish: the way in (steps,
+       walls, the header, the corridor), the ticket hall (tiles, the line's
+       band, ticket machines, the gate line, its name board, strip lights),
+       the escalator (steps, balustrades, handrails, its shaft) and the
+       island platform (yellow edges, the tracks in their beds, the tunnel's
+       walls with its name boards across the tracks, benches, a buffer stop
+       at the line's end). Walked: `BUILT_STATIONS` (the High Road's)
+       joins groundheight.ts's `UNDER`; its stairs cut out of the slab and
+       the grass (`STAIR_CUTS`). The line and its stations are baked
+       (`baked.ts` key `southline`: the boot stays at 746 KB). The smoke
+       test walks from the sidewalk to the platform (`station`). Shots
+       `docs/south-shots/22-phase-4e-*.webp` (the smoke test's).
      - **4f, the other four stations.**
      - **4g, the trains and the ride** (round-top tube trains, the tunnel
        seen, Skip), the change at The Trenches, on the map and the

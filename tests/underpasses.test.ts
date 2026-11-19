@@ -18,6 +18,7 @@ import { BLOCKS, CORES, COURTS, DECKS } from '../src/scripts/city3d/southblocks'
 import { southLift } from '../src/scripts/city3d/southground';
 import { SLAB, UNDER, createGroundHeight } from '../src/scripts/city3d/groundheight';
 import { TUNNEL } from '../src/scripts/city3d/lot9';
+import { STAIR_CUTS } from '../src/scripts/city3d/southline';
 
 /** Every street near the south, the street plan's (the avenues) and the south's own */
 const STREETS = [
@@ -115,12 +116,12 @@ test('walked: down one side, under the road (its floor from down there, the road
   }
 });
 
-test('their ramps are cut out of the slabs and the grass, with the Circus\'s', () => {
-  assert.deepEqual(SLAB_CUTS, [...CIRCUS_CUTS, ...UNDER_CUTTINGS.flat()]);
+test("their ramps are cut out of the slabs and the grass, with the Circus's and the built stations' stairs", () => {
+  assert.deepEqual(SLAB_CUTS, [...CIRCUS_CUTS, ...UNDER_CUTTINGS.flat(), ...STAIR_CUTS]);
   for (const c of UNDER_CUTTINGS.flat()) assert.ok(GROUND_HOLES.some((h) => c.every((p) => inBox(h, p, 0.01))), 'a ramp inside a hole in the grass');
   // (the grass's hole round an angled ramp reaches past it: the slab or a street covers the rest)
   for (const [i, h] of GROUND_HOLES.slice(1).entries()) {
-    const c = UNDER_CUTTINGS.flat()[i];
+    const c = [...UNDER_CUTTINGS.flat(), ...STAIR_CUTS][i];
     for (let x = h[0] + 0.05; x < h[2]; x += 0.5)
       for (let z = h[1] + 0.05; z < h[3]; z += 0.5) {
         // (inside the ramp, or under its coping's lip)

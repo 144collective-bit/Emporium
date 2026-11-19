@@ -10,10 +10,11 @@
  */
 import { CIRCUS, type Pt } from './south';
 import { CEIL, FLOOR } from './circus';
-import { GROUND_Y, pointOf, radial, straight, type Passage } from './underground';
+import { GROUND_Y, cutOf, pointOf, radial, straight, type Passage } from './underground';
 import { SHOPS } from './highroad';
 import { STATIONS as RAISED } from './metro';
 import { southLift } from './southground';
+import { BUILT, baked } from './baked';
 
 /** The levels: the ticket halls' (the Circus's subways' floor and ceiling), the platforms' and the tunnels' crowns */
 export const HALL_Y = FLOOR;
@@ -35,6 +36,8 @@ export const HALL_HALF = 2.8;
 /** The stairs from the street: their run (steps down a flight) and the walkable half */
 export const STAIR_RUN = 3.8;
 export const STAIR_HALF = 1.0;
+/** The line's colour (its band on the stations' walls, its name boards' edge, the station building's band; on the map later) */
+export const LINE_COLOUR = '#2bb3c0';
 /** How tight the line may bend (a tube train's) */
 export const MIN_R = 20;
 
@@ -45,8 +48,15 @@ const BUILDING = SHOPS.find((s) => s.kind === 'station')!;
 /** Inside the station building: from its west end, half way back from its front, down along its frontage (east) */
 const BUILDING_ALONG: Pt = [-BUILDING.face[1], BUILDING.face[0]];
 const BUILDING_FWD: Pt = BUILDING_ALONG[0] > 0 ? BUILDING_ALONG : [-BUILDING_ALONG[0], -BUILDING_ALONG[1]];
-const BUILDING_TOP: Pt = [BUILDING.at[0] - BUILDING.face[0] * (BUILDING.d / 2) - BUILDING_FWD[0] * (BUILDING.w / 2 - 0.6), BUILDING.at[1] - BUILDING.face[1] * (BUILDING.d / 2) - BUILDING_FWD[1] * (BUILDING.w / 2 - 0.6)];
+/** Inside the station building (highroad.ts `STATION_DOOR`): a landing inside its door at its east end, the stairs from
+ * `at` (along its frontage from its middle, east +) down west along it, as wide as the building is deep inside, then on
+ * level under the street into the hall's far end (clear of its escalator at the other) */
+export const BUILDING_STAIRS = { at: 1.0, half: 1.5 };
+const local = (x: number, z: number): Pt => [BUILDING.at[0] + BUILDING_FWD[0] * x + BUILDING.face[0] * z, BUILDING.at[1] + BUILDING_FWD[1] * x + BUILDING.face[1] * z];
+const BUILDING_TOP: Pt = local(BUILDING_STAIRS.at, -BUILDING.d / 2);
 const BUILDING_DEG = (Math.atan2(BUILDING_FWD[1], BUILDING_FWD[0]) * 180) / Math.PI;
+/** The High Road's platform on the building's axis, west of it: its hall's far end just west of the building */
+const HIGHROAD_AT: Pt = local(-BUILDING.w / 2 - 0.5 - (HALL_LEN + ESC_RUN - 2) - PLAT_LEN / 2, -BUILDING.d / 2);
 /** Where each station's stairs start at street level (clear ground: tests/southline.test.ts); they run down towards its hall */
 const TOPS: Record<'trenches' | 'lot9' | 'aldwyns', Pt> = { trenches: [-99, 193.5], lot9: [-115.5, 472], aldwyns: [-225, 454] };
 
@@ -74,7 +84,7 @@ const SPECS: StationSpec[] = [
   // Under Church Road by St Aldwyn's, its stairs down near the lychgate
   { id: 'aldwyns', name: "Aldwyn's Green", at: [-212, 443], deg: 240, hall: 'start', way: { kind: 'stairs', top: TOPS.aldwyns, deg: 0 } },
   // Under the High Road by Degen's gates, its hall past the station building, its stairs down inside it along its front
-  { id: 'highroad', name: 'High Road', at: [BUILDING.at[0] - 16, BUILDING.at[1] - 5], deg: 17, hall: 'end', way: { kind: 'building', top: BUILDING_TOP, deg: BUILDING_DEG } },
+  { id: 'highroad', name: 'High Road', at: HIGHROAD_AT, deg: BUILDING_DEG, hall: 'end', way: { kind: 'building', top: BUILDING_TOP, deg: BUILDING_DEG + 180 } },
 ];
 
 /* ---------- The line ---------- */
@@ -166,7 +176,7 @@ export function bend(a: Pt, da: number, b: Pt, db: number, r = BEND_R, step = 1)
 /** Each station's run along its line: before the platform (its hall and escalator, if they're at its start) and after */
 const LEAD = HALL_LEN + ESC_RUN - 2;
 /** The line from end to end, a point a metre or so: every station's straight (hall, escalator, platform), the bends between */
-export const LINE: Pt[] = (() => {
+function layLine(): Pt[] {
   const out: Pt[] = [];
   SPECS.forEach((st, i) => {
     const d = dir(st.deg);
@@ -183,30 +193,29 @@ export const LINE: Pt[] = (() => {
     for (let k = 1; k <= n; k++) out.push([a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n]);
   });
   return out;
-})();
-/** How far along the line each point is */
-export const LINE_S: number[] = LINE.reduce<number[]>((acc, p, i) => (acc.push(i ? acc[i - 1] + Math.hypot(p[0] - LINE[i - 1][0], p[1] - LINE[i - 1][1]) : 0), acc), []);
-export const LINE_LENGTH = LINE_S[LINE_S.length - 1];
-/** The point `s` along the line, and the way it's heading there */
-export function lineAt(s: number): { at: Pt; dir: Pt } {
-  const t = Math.max(0, Math.min(LINE_LENGTH, s));
+}
+/** How far along a line each of its points is */
+const measure = (line: Pt[]) => line.reduce<number[]>((acc, p, i) => (acc.push(i ? acc[i - 1] + Math.hypot(p[0] - line[i - 1][0], p[1] - line[i - 1][1]) : 0), acc), []);
+/** The point `s` along a line (its points measured `ls`), and the way it's heading there */
+function lineAtIn(line: Pt[], ls: number[], s: number): { at: Pt; dir: Pt } {
+  const t = Math.max(0, Math.min(ls[ls.length - 1], s));
   let i = 1;
-  while (i < LINE.length - 1 && LINE_S[i] < t) i++;
-  const [a, b] = [LINE[i - 1], LINE[i]];
-  const l = LINE_S[i] - LINE_S[i - 1] || 1;
-  const k = (t - LINE_S[i - 1]) / l;
+  while (i < line.length - 1 && ls[i] < t) i++;
+  const [a, b] = [line[i - 1], line[i]];
+  const l = ls[i] - ls[i - 1] || 1;
+  const k = (t - ls[i - 1]) / l;
   return { at: [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k], dir: [(b[0] - a[0]) / l, (b[1] - a[1]) / l] };
 }
-/** How far along the line its nearest point to p is */
-export function sOn(p: Pt) {
+/** How far along a line its nearest point to p is */
+function sOnIn(line: Pt[], ls: number[], p: Pt) {
   let best = { d: Infinity, s: 0 };
-  for (let i = 1; i < LINE.length; i++) {
-    const [a, b] = [LINE[i - 1], LINE[i]];
+  for (let i = 1; i < line.length; i++) {
+    const [a, b] = [line[i - 1], line[i]];
     const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
     const l2 = vx * vx + vz * vz || 1;
     const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vz) / l2));
     const d = Math.hypot(p[0] - a[0] - vx * t, p[1] - a[1] - vz * t);
-    if (d < best.d) best = { d, s: LINE_S[i - 1] + Math.sqrt(l2) * t };
+    if (d < best.d) best = { d, s: ls[i - 1] + Math.sqrt(l2) * t };
   }
   return best.s;
 }
@@ -226,13 +235,16 @@ export interface Station {
   hall: Passage;
   escalator: Passage;
   way: Passage;
+  /** The station building's landing inside its door (the High Road's), level at its floor */
+  landing: Passage | null;
   /** Its way in's kind and where it starts at street level (the top of the stairs, the building's door, the plaza) */
   entrance: StationSpec['way'];
 }
-export const SOUTH_STATIONS: Station[] = SPECS.map((st) => {
-  const s = sOn(st.at);
+/** Every station laid on the line */
+const layStations = (line: Pt[], ls: number[]): Station[] => SPECS.map((st) => {
+  const s = sOnIn(line, ls, st.at);
   const [p0, p1] = [s - PLAT_LEN / 2, s + PLAT_LEN / 2];
-  const { at } = lineAt(s);
+  const { at } = lineAtIn(line, ls, s);
   // (the passages run along the line's straight through the station: measured from its platform's middle)
   const run = (id: string, a0: number, a1: number, half: number, floor: number, ceil: number, y0 = floor, y1 = floor, ramp0 = a0, ramp1 = a1): Passage => {
     const p = straight(id, at[0], at[1], st.deg, { a0, ramp0, roof0: a0, roof1: a1, ramp1, a1, half, wall: 0.3, floor, ceil, rail: 0 });
@@ -264,13 +276,47 @@ export const SOUTH_STATIONS: Station[] = SPECS.map((st) => {
     st.way.deg = deg;
     const a = rad(deg);
     const reach = (hallMid[0] - tx) * Math.cos(a) + (hallMid[1] - tz) * Math.sin(a);
-    const p = straight(`${st.id}-way`, tx, tz, deg, { a0: 0, ramp0: STAIR_RUN, roof0: STAIR_RUN, roof1: reach + 1, ramp1: reach + 1, a1: reach + 1, half: STAIR_HALF, wall: 0.25, floor: HALL_Y, ceil: HALL_CEIL, rail: 0.9 });
+    const half = st.way.kind === 'building' ? BUILDING_STAIRS.half : STAIR_HALF;
+    const p = straight(`${st.id}-way`, tx, tz, deg, { a0: 0, ramp0: STAIR_RUN, roof0: STAIR_RUN, roof1: reach + 1, ramp1: reach + 1, a1: reach + 1, half, wall: 0.25, floor: HALL_Y, ceil: HALL_CEIL, rail: 0.9 });
     // (from the ground's height at its top, the south's ground rolling a little by the churchyard; inside the station
     // building, from its floor: its slab over the highest ground under it, highroad.ts `base`)
     way = { ...p, y0: st.way.kind === 'building' ? BUILDING.base : GROUND_Y + southLift(tx, tz), y1: HALL_Y };
   }
-  return { id: st.id, name: st.name, at, deg: st.deg, p0, p1, platform, hall, escalator, way, entrance: st.way };
+  // (the station building's landing inside its door, level at its floor, up to the stairs' top)
+  const landing =
+    st.way.kind === 'building'
+      ? (() => {
+          const [lx, lz] = local((BUILDING.w / 2 - 0.15 + BUILDING_STAIRS.at) / 2, -BUILDING.d / 2);
+          const l = (BUILDING.w / 2 - 0.15 - BUILDING_STAIRS.at) / 2;
+          const q = straight(`${st.id}-landing`, lx, lz, st.way.deg, { a0: -l, ramp0: -l, roof0: -l, roof1: -l, ramp1: l + 0.1, a1: l + 0.1, half: BUILDING.d / 2 - 0.25, wall: 0.1, floor: BUILDING.base, ceil: HALL_CEIL, rail: 0 });
+          return { ...q, roofs: [] as [number, number][], y0: BUILDING.base, y1: BUILDING.base };
+        })()
+      : null;
+  return { id: st.id, name: st.name, at, deg: st.deg, p0, p1, platform, hall, escalator, way, landing, entrance: { ...st.way } };
 });
+
+/** The line and its stations, worked out when the site is built (baked.ts: the bends' and stations' laying stays out
+ * of the boot) */
+const LAID = baked('southline', BUILT ? undefined : () => {
+  const line = layLine();
+  return { line, stations: layStations(line, measure(line)) };
+});
+export const LINE: Pt[] = LAID.line;
+/** How far along the line each point is */
+export const LINE_S: number[] = measure(LINE);
+export const LINE_LENGTH = LINE_S[LINE_S.length - 1];
+/** The point `s` along the line, and the way it's heading there */
+export const lineAt = (s: number) => lineAtIn(LINE, LINE_S, s);
+/** How far along the line its nearest point to p is */
+export const sOn = (p: Pt) => sOnIn(LINE, LINE_S, p);
+export const SOUTH_STATIONS: Station[] = LAID.stations;
 export const stationOf = (id: StationId) => SOUTH_STATIONS.find((s) => s.id === id)!;
-/** Every walkable piece of the line's stations, for the underground kit (groundheight.ts `UNDER`) */
-export const LINE_PASSAGES: Passage[] = SOUTH_STATIONS.flatMap((s) => [s.platform, s.hall, s.escalator, s.way]);
+/** Every walkable piece of a station */
+export const piecesOf = (s: Station): Passage[] => [s.platform, s.hall, s.escalator, s.way, ...(s.landing ? [s.landing] : [])];
+export const LINE_PASSAGES: Passage[] = SOUTH_STATIONS.flatMap(piecesOf);
+/** The stations built so far (the south plan's 4e: the High Road's; the rest in 4f): walked (groundheight.ts `UNDER`),
+ * drawn (line3d.ts), their stairs cut out of the ground */
+export const BUILT_STATIONS: StationId[] = ['highroad'];
+export const BUILT_PASSAGES: Passage[] = SOUTH_STATIONS.filter((s) => BUILT_STATIONS.includes(s.id)).flatMap(piecesOf);
+/** Each built station's stairs' opening (from the street: its flight, walls and all), cut out of the slab and the ground */
+export const STAIR_CUTS: Pt[][] = SOUTH_STATIONS.filter((s) => BUILT_STATIONS.includes(s.id) && s.entrance.kind !== 'plaza').map((s) => cutOf(s.way, s.way.a0, s.way.ramp0));

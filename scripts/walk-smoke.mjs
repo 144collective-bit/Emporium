@@ -430,6 +430,18 @@ await scene('underpass', '23.67,384.43,1.198', async (t) => {
   await t.step('up at street level on the far side');
 });
 
+// The High Road's underground station (southline.ts, docs/south-plan.md Phase 4e): from the sidewalk in through its
+// door, down its stairs (west), along the ticket hall and down the escalator to the platform
+await scene('station', '-158.47,389.10,-0.295', async (t) => {
+  await t.go('w', 2.9, 'in through the door to the middle of the landing');
+  await t.go('a', 9, 'down the stairs to the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('a', 16, 'along the hall and down the escalator');
+  await t.until('down on the platform', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 6, null, 60000);
+  await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
 await scene(
   'pad',
