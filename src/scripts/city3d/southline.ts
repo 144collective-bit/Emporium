@@ -14,6 +14,8 @@ import { GROUND_Y, cutOf, pointOf, radial, straight, type Passage } from './unde
 import { SHOPS } from './highroad';
 import { STATIONS as RAISED } from './metro';
 import { southLift } from './southground';
+import { PLAN } from './streetplan';
+import { inside } from './streetfaces';
 import { BUILT, baked } from './baked';
 
 /** The levels: the ticket halls' (the Circus's subways' floor and ceiling), the platforms' and the tunnels' crowns */
@@ -314,9 +316,17 @@ export const stationOf = (id: StationId) => SOUTH_STATIONS.find((s) => s.id === 
 /** Every walkable piece of a station */
 export const piecesOf = (s: Station): Passage[] => [s.platform, s.hall, s.escalator, s.way, ...(s.landing ? [s.landing] : [])];
 export const LINE_PASSAGES: Passage[] = SOUTH_STATIONS.flatMap(piecesOf);
-/** The stations built so far (the south plan's 4e: the High Road's; the rest in 4f): walked (groundheight.ts `UNDER`),
- * drawn (line3d.ts), their stairs cut out of the ground */
-export const BUILT_STATIONS: StationId[] = ['highroad'];
+/** The stations built (the south plan's 4e: the High Road's; 4f, the rest): walked (groundheight.ts `UNDER`), drawn
+ * (line3d.ts), their stairs cut out of the ground */
+export const BUILT_STATIONS: StationId[] = ['trenches', 'circus', 'lot9', 'aldwyns', 'highroad'];
 export const BUILT_PASSAGES: Passage[] = SOUTH_STATIONS.filter((s) => BUILT_STATIONS.includes(s.id)).flatMap(piecesOf);
 /** Each built station's stairs' opening (from the street: its flight, walls and all), cut out of the slab and the ground */
 export const STAIR_CUTS: Pt[][] = SOUTH_STATIONS.filter((s) => BUILT_STATIONS.includes(s.id) && s.entrance.kind !== 'plaza').map((s) => cutOf(s.way, s.way.a0, s.way.ramp0));
+/** Where a stairs' opening isn't on a block's slab (Lot 9's, on its open ground): the box round it the grass is cut from
+ * (underpasses.ts `GROUND_HOLES`) less the opening, laid back over in the ground's own colour (line3d.ts) */
+export const STAIR_INFILL: { box: Pt[]; cut: Pt[] }[] = STAIR_CUTS.filter((c) => !c.every((p) => PLAN.slabs.some((slab) => inside(slab as Pt[], p)))).map((cut) => {
+  const xs = cut.map((p) => p[0]);
+  const zs = cut.map((p) => p[1]);
+  const [x0, z0, x1, z1] = [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
+  return { box: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]], cut };
+});

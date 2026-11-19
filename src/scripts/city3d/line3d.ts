@@ -13,8 +13,11 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { CONCRETE } from './southblocks';
-import { BUILT_STATIONS, ESC_HALF, LINE_COLOUR, HALL_CEIL, HALL_Y, PLAT_CEIL, PLAT_HALF, PLAT_Y, SOUTH_STATIONS, TRACK_OFF, TUNNEL_HALF, type Station, type StationId } from './southline';
-import { alongOf, floorOf, pointOf, type Passage } from './underground';
+import { BUILT_STATIONS, ESC_HALF, LINE_COLOUR, STAIR_INFILL, HALL_CEIL, HALL_Y, PLAT_CEIL, PLAT_HALF, PLAT_Y, SOUTH_STATIONS, TRACK_OFF, TUNNEL_HALF, type Station, type StationId } from './southline';
+import { acrossOf, alongOf, floorOf, pointOf, type Passage } from './underground';
+import { buildFx, poster, tag } from './grime';
+import { holedPoly } from './world';
+import { colourAt } from './ground';
 import { P, along, alongDir, upQuad, wallQuad } from './circus3d';
 
 type Style = 'tiled' | 'concrete' | 'gritty';
@@ -212,11 +215,20 @@ function drawHall(b: Batch, st: Station, style: Style, row: number, low: boolean
   const [a0, a1] = [h.a0, h.a1];
   floor(b, h, a0, a1, -h.half, h.half, HALL_Y, FLOOR);
   ceiling(b, h, a0, a1, -h.half, h.half, HALL_CEIL, CEIL);
+  // Its sides: open where the way in comes through one (its stairs or the plaza's corridor at an angle to it)
+  const gaps = [-1, 1].map((side) => sideGap(h, st.way, side));
   for (const side of [-1, 1]) {
-    face(b, h, a0, a1, side * h.half, HALL_Y, HALL_Y + 0.45, LOW[style]);
-    face(b, h, a0, a1, side * h.half * 0.999, HALL_Y + 0.45, HALL_Y + 0.6, BAND);
-    face(b, h, a0, a1, side * h.half, HALL_Y + 0.6, HALL_CEIL, wall);
+    const g = gaps[(side + 1) / 2];
+    const runs: [number, number][] = g ? [[a0, g.at - g.half], [g.at + g.half, a1]] : [[a0, a1]];
+    for (const [r0, r1] of runs) {
+      if (r1 - r0 < 0.05) continue;
+      face(b, h, r0, r1, side * h.half, HALL_Y, HALL_Y + 0.45, LOW[style]);
+      face(b, h, r0, r1, side * h.half * 0.999, HALL_Y + 0.45, HALL_Y + 0.6, BAND);
+      face(b, h, r0, r1, side * h.half, HALL_Y + 0.6, HALL_CEIL, wall);
+    }
   }
+  // (the ticket machines and the name board on the side without the way in)
+  const quiet = gaps[1] ? -1 : 1;
   // Its ends: open where the escalator goes down (one end) and the way comes in (the other end, or its side)
   const escAt = sIn(h, st.escalator, floorOf(st.escalator, st.escalator.a0) > floorOf(st.escalator, st.escalator.a1) ? st.escalator.a0 : st.escalator.a1);
   const escEnd = Math.abs(escAt - a0) < Math.abs(escAt - a1) ? a0 : a1;
@@ -246,8 +258,8 @@ function drawHall(b: Batch, st: Station, style: Style, row: number, low: boolean
   }
   const mid = (a0 + a1) / 2;
   for (const s of [mid - 1.6, mid - 0.6]) {
-    along(b, h, s - 0.35, s + 0.35, h.half - 0.45, h.half - 0.05, HALL_Y, HALL_Y + 1.1, MACHINE);
-    const [x, z] = P(h, s, h.half - 0.46);
+    along(b, h, s - 0.35, s + 0.35, quiet * (h.half - 0.45), quiet * (h.half - 0.05), HALL_Y, HALL_Y + 1.1, MACHINE);
+    const [x, z] = P(h, s, quiet * (h.half - 0.46));
     const c = P(h, s, 0);
     const g = new THREE.PlaneGeometry(0.4, 0.25).rotateY(Math.atan2(c[0] - x, c[1] - z)).translate(x, HALL_Y + 0.8, z);
     g.deleteAttribute('uv');
@@ -255,26 +267,18 @@ function drawHall(b: Batch, st: Station, style: Style, row: number, low: boolean
   }
   const gate = escEnd === a0 ? a0 + 2.6 : a1 - 2.6;
   if (!low) for (let u = -h.half + 0.5; u < h.half - 0.3; u += 0.9) along(b, h, gate - 0.25, gate + 0.25, u - 0.08, u + 0.08, HALL_Y, HALL_Y + 0.75, HANDRAIL);
-  const [bx, bz] = P(h, mid + 1.6, -h.half * 0.995);
+  const [bx, bz] = P(h, mid + 1.6, quiet * h.half * 0.995);
   const c = P(h, mid + 1.6, 0);
   board(b, row, bx, HALL_Y + 1.15, bz, [c[0] - bx, c[1] - bz], 2.2);
 }
 
-function drawWay(b: Batch, st: Station, style: Style) {
+function drawWay(b: Batch, st: Station, style: Style): void {
   const w = st.way;
-  if (st.entrance.kind === 'plaza') return;
+  if (st.entrance.kind === 'plaza') return drawPlazaCorridor(b, st, style);
   const wall = WALLS[style];
   const top = floorOf(w, w.a0);
   // (it ends where it meets the hall: its walls go no further in)
-  const hallEdge = (() => {
-    const h = st.hall;
-    for (let s = w.a0; s <= w.a1; s += 0.05) {
-      const q = pointOf(w, s);
-      const t = alongOf(h, ...q);
-      if (t > h.a0 && t < h.a1) return s;
-    }
-    return w.a1;
-  })();
+  const hallEdge = edgeOf(st);
   // The steps down, a flight
   const n = 10;
   for (let i = 0; i < n; i++) {
@@ -297,6 +301,126 @@ function drawWay(b: Batch, st: Station, style: Style) {
   b.add(new THREE.BoxGeometry(1.0, 0.04, 0.1).rotateY(yawOf(w)).translate(x, HALL_CEIL - 0.03, z), TUBE);
 }
 
+/** Where a way in crosses a hall's side `side` (u = side * half): its middle along the hall and its half width there
+ * (wider the more slanting it crosses), or null if it doesn't */
+function sideGap(h: Passage, w: Passage, side: number): { at: number; half: number } | null {
+  const f = (s: number) => acrossOf(h, ...pointOf(w, s)) - side * h.half;
+  const [f0, f1] = [f(w.a0), f(w.a1)];
+  if (Math.sign(f0) === Math.sign(f1) || f0 === f1) return null;
+  const s = w.a0 + ((w.a1 - w.a0) * f0) / (f0 - f1);
+  const [hd, wd] = [alongDir(h), alongDir(w)];
+  const sin = Math.abs(hd[0] * wd[1] - hd[1] * wd[0]);
+  if (sin < 0.3) return null;
+  return { at: alongOf(h, ...pointOf(w, s)), half: (w.half + 0.05) / sin };
+}
+
+/** The city's M mark on a disc (as the raised metro's, metro3d.ts), for the stairs' posts */
+let markMat: THREE.Material | null = null;
+const MARK = () =>
+  (markMat ??= siteMat(
+    'line-mark',
+    lit(
+      new THREE.MeshBasicMaterial({
+        map: canvasTex(128, 128, (c) => {
+          c.fillStyle = '#100d1e';
+          c.fillRect(0, 0, 128, 128);
+          c.fillStyle = PAL.magenta;
+          c.beginPath();
+          c.arc(64, 64, 58, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = '#ffffff';
+          c.font = `900 84px ${FONT_DISPLAY}`;
+          c.textAlign = 'center';
+          c.textBaseline = 'middle';
+          c.fillText('M', 64, 70);
+        }),
+      }),
+      0.9,
+      1.2
+    )
+  ));
+const POST = toon('#2a2838');
+
+/** The stairs down from the street: parapets round their opening, coping, railings on them, the M mark on a post at the
+ * mouth (the near end, open) */
+function drawStreetStairs(b: Batch, st: Station, style: Style, low: boolean) {
+  const w = st.way;
+  const top = floorOf(w, w.a0);
+  const wall = WALLS[style];
+  const k = w.wall;
+  // (the sides and the far end, over the header)
+  for (const side of [-1, 1]) {
+    along(b, w, w.a0, w.ramp0 + k, side * w.half, side * (w.half + k), top, top + 0.3, wall);
+    along(b, w, w.a0 - 0.03, w.ramp0 + k + 0.03, side * (w.half - 0.03), side * (w.half + k + 0.03), top + 0.3, top + 0.36, BALUSTRADE);
+  }
+  along(b, w, w.ramp0, w.ramp0 + k, -w.half, w.half, top, top + 0.3, wall);
+  along(b, w, w.ramp0 - 0.03, w.ramp0 + k + 0.03, -w.half - k, w.half + k, top + 0.3, top + 0.36, BALUSTRADE);
+  const rail = top + 0.95;
+  for (const side of [-1, 1]) {
+    const u = side * (w.half + k / 2);
+    along(b, w, w.a0, w.ramp0 + k / 2, u - 0.03, u + 0.03, rail - 0.03, rail + 0.03, POST);
+    if (!low) for (let s = w.a0 + 0.1; s <= w.ramp0 + 0.05; s += 1.2) along(b, w, s - 0.03, s + 0.03, u - 0.03, u + 0.03, top + 0.36, rail, POST);
+  }
+  along(b, w, w.ramp0 + k / 2 - 0.03, w.ramp0 + k / 2 + 0.03, -w.half - k / 2, w.half + k / 2, rail - 0.03, rail + 0.03, POST);
+  // The M mark on its post by the mouth, facing out
+  const [px, pz] = P(w, w.a0 - 0.35, w.half + k + 0.25);
+  b.add(new THREE.CylinderGeometry(0.05, 0.05, 1.9, 6, 1, true).translate(px, top + 0.95, pz), POST);
+  const [dx, dz] = alongDir(w);
+  for (const facing of [-1, 1]) {
+    const g = new THREE.CircleGeometry(0.32, low ? 16 : 24).rotateY(Math.atan2(-dx * facing, -dz * facing)).translate(px - dx * facing * 0.03, top + 2.0, pz - dz * facing * 0.03);
+    b.add(g, MARK());
+  }
+}
+
+/** The Circus's way: the corridor out of its sunken plaza's wall to the hall (as its subways are, circus3d.ts) */
+function drawPlazaCorridor(b: Batch, st: Station, style: Style) {
+  const w = st.way;
+  const from = w.a0 - 4.6 + 7.2;
+  const hallEdge = edgeOf(st);
+  floor(b, w, from, hallEdge, -w.half, w.half, HALL_Y + 0.003, FLOOR);
+  for (const side of [-1, 1]) {
+    along(b, w, from, hallEdge, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, WALLS[style]);
+    face(b, w, from, hallEdge, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
+  }
+  ceiling(b, w, from, hallEdge, -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
+  for (let s = from + 0.9; s < hallEdge - 0.3; s += 1.6) {
+    const [x, z] = P(w, s, 0);
+    b.add(new THREE.BoxGeometry(1.0, 0.04, 0.1).rotateY(yawOf(w)).translate(x, HALL_CEIL - 0.03, z), TUBE);
+  }
+}
+/** Where a station's way meets its hall (its walls go no further in) */
+function edgeOf(st: Station) {
+  const [w, h] = [st.way, st.hall];
+  for (let s = w.a0; s <= w.a1; s += 0.05) {
+    const t = alongOf(h, ...pointOf(w, s));
+    if (t > h.a0 && t < h.a1 && Math.abs(acrossOf(h, ...pointOf(w, s))) < h.half) return s;
+  }
+  return w.a1;
+}
+
+/** Tags and a bill or two on The Trenches' walls (the gritty finish), on the FX layer */
+function grit(fx: Batch, st: Station) {
+  const h = st.hall;
+  const p = st.platform;
+  for (const [piece, u, y, n] of [
+    [h, h.half - 0.012, HALL_Y + 1.0, 4],
+    [h, -h.half + 0.012, HALL_Y + 0.9, 3],
+    [p, TUNNEL_HALF - 0.012, PLAT_Y + 1.0, 5],
+    [p, -TUNNEL_HALF + 0.012, PLAT_Y + 1.1, 5],
+  ] as const) {
+    for (let i = 0; i < n; i++) {
+      const s = piece.a0 + ((i + 0.6) / (n + 0.2)) * (piece.a1 - piece.a0);
+      const [x, z] = P(piece, s, u);
+      const c = P(piece, s, 0);
+      const nn: [number, number] = [c[0] - x, c[1] - z];
+      const l = Math.hypot(...nn) || 1;
+      if (i % 3 === 2) poster(fx, i + 3, 1, [nn[0] / l, nn[1] / l], x, y + 0.2, z);
+      else tag(fx, i * 5 + 2, 1.0, [nn[0] / l, nn[1] / l], x, y, z);
+    }
+  }
+}
+
+const RGB: [number, number, number] = [0, 0, 0];
 /** Each built station, a site */
 export function registerLine(low: boolean) {
   for (const st of SOUTH_STATIONS) {
@@ -312,7 +436,18 @@ export function registerLine(low: boolean) {
       drawEscalator(b, st, style, low);
       drawHall(b, st, style, row, low);
       drawWay(b, st, style);
+      if (st.entrance.kind === 'stairs') drawStreetStairs(b, st, style, low);
+      // (on open ground, the grass laid back round its opening in the ground's own colour: underpasses.ts cuts a box)
+      for (const f of STAIR_INFILL)
+        if (f.cut.some((p) => Math.hypot(p[0] - pointOf(st.way, st.way.a0)[0], p[1] - pointOf(st.way, st.way.a0)[1]) < 6))
+          b.shade(holedPoly(f.box, 0.002, [f.cut]), (x, _y, z, c) => {
+            const [r, g, bl] = colourAt(x, z, RGB);
+            c.setRGB(r, g, bl, THREE.SRGBColorSpace);
+          });
+      const fx = new Batch();
+      if (style === 'gritty') grit(fx, st);
       b.build(into, { cast: false, receive: true, lift: false });
+      buildFx(fx, into);
     });
   }
 }

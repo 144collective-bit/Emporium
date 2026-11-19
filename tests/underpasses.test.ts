@@ -18,7 +18,7 @@ import { BLOCKS, CORES, COURTS, DECKS } from '../src/scripts/city3d/southblocks'
 import { southLift } from '../src/scripts/city3d/southground';
 import { SLAB, UNDER, createGroundHeight } from '../src/scripts/city3d/groundheight';
 import { TUNNEL } from '../src/scripts/city3d/lot9';
-import { STAIR_CUTS } from '../src/scripts/city3d/southline';
+import { STAIR_CUTS, STAIR_INFILL } from '../src/scripts/city3d/southline';
 
 /** Every street near the south, the street plan's (the avenues) and the south's own */
 const STREETS = [
@@ -126,7 +126,7 @@ test("their ramps are cut out of the slabs and the grass, with the Circus's and 
       for (let z = h[1] + 0.05; z < h[3]; z += 0.5) {
         // (inside the ramp, or under its coping's lip)
         if (inside(c, [x, z]) || distTo(c, [x, z], true) < 0.05) continue;
-        const covered = PLAN.slabs.some((s) => inside(s as Pt[], [x, z])) || STREETS.some((s) => distTo(s.pts, [x, z]) < s.half + 0.8);
+        const covered = PLAN.slabs.some((s) => inside(s as Pt[], [x, z])) || STREETS.some((s) => distTo(s.pts, [x, z]) < s.half + 0.8) || STAIR_INFILL.some((f) => f.cut === c && inside(f.box, [x, z]));
         assert.ok(covered, `bare at ${x.toFixed(1)}, ${z.toFixed(1)} round a ramp`);
       }
   }

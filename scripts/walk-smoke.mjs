@@ -442,6 +442,17 @@ await scene('station', '-158.47,389.10,-0.295', async (t) => {
   await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
 });
 
+// The Trenches' underground station (southline.ts, Phase 4f): from the street down its stairs (east) into the side of
+// its ticket hall, then north along the hall and down its escalator to the platform
+await scene('trenches', '-100,193.5,-1.5708', async (t) => {
+  await t.go('w', 7, 'down the stairs into the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('a', 14, 'along the hall and down the escalator');
+  await t.until('down on the platform', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 6, null, 60000);
+  await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
 await scene(
   'pad',
