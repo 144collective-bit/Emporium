@@ -110,3 +110,40 @@ for (const q of [3, 2] as const) {
     if (process.env.WARDROBE_REPORT) console.log(`detail ${q}: at most ${most} triangles over ${LOOKS} looks`);
   });
 }
+
+/*
+ * The dark-outfit fix (docs/wardrobe-plan.md Phase 5): a detail's shade (ribbing, a pocket, a seam, a lapel) is the
+ * old linear multiply on every mid and light colour, exactly; on near-black cloth a darker shade lifts it toward grey
+ * and a lighter one lifts it more, so a black fit still shows its seams.
+ */
+test('details on near-black cloth show; on every other colour they shade as they always did', async () => {
+  const THREE = await import('three');
+  const { shadeRGB, DARK } = await import('../src/scripts/city3d/wardrobe');
+  const seen = (hex: string) => new THREE.Color(hex).getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
+  const lum = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  // As before on mid and light colours: the colour's light times the shade
+  for (const hex of ['#d0463e', '#3f73c8', '#f3f2f7', '#c8b58a', '#1f9d6a', '#8f3dff', '#ffd23f', '#1d2550', '#2a2350', '#3a2418', '#4a4a5a'])
+    for (const s of [0.55, 0.72, 0.8, 0.88, 1.2, 1.45]) {
+      const c = seen(hex);
+      const was = new THREE.Color(hex).multiplyScalar(s).getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
+      const now = shadeRGB(c.r, c.g, c.b, s);
+      for (const [a, b] of [[now[0], Math.min(1, was.r)], [now[1], Math.min(1, was.g)], [now[2], Math.min(1, was.b)]]) assert.ok(Math.abs(a - b) < 1 / 255, `${hex} at ${s}: ${a} for ${b}`);
+    }
+  // On near-black (Degen's own black, the frames' black, the darkest swatches) a detail stands clear of its cloth
+  for (const hex of ['#16141f', '#0d0c14', '#1b1830', '#000000', '#14121f']) {
+    const c = seen(hex);
+    const cloth = lum([c.r, c.g, c.b]);
+    assert.ok(cloth < DARK.at, hex);
+    for (const s of [0.55, 0.72, 0.8, 0.88]) assert.ok(lum(shadeRGB(c.r, c.g, c.b, s)) - cloth > 0.03, `${hex} at ${s}: a darker detail shows lighter`);
+    for (const s of [1.2, 1.45]) assert.ok(lum(shadeRGB(c.r, c.g, c.b, s)) - cloth > 0.02, `${hex} at ${s}: a lighter detail shows`);
+    // (the more a detail was meant to stand off, the more it does)
+    assert.ok(lum(shadeRGB(c.r, c.g, c.b, 0.55)) > lum(shadeRGB(c.r, c.g, c.b, 0.88)));
+  }
+  // (the dark-but-not-black swatches keep the old darkening, which shows on them: navy's ribbing a tenth darker or more)
+  for (const hex of ['#1d2550', '#2a2350', '#3a2418']) {
+    const c = seen(hex);
+    assert.ok(lum([c.r, c.g, c.b]) - lum(shadeRGB(c.r, c.g, c.b, 0.8)) > 0.012, hex);
+  }
+  // Never past white
+  for (const v of shadeRGB(0.95, 0.95, 0.95, 1.45)) assert.ok(v <= 1);
+});

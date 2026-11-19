@@ -356,6 +356,23 @@ A proposed first set; the owner picks what goes in:
   crowd's nearest kind (`fit()` in crowdlook.ts: the crowd doesn't wear it),
   the lab (`outfit=bomber`). Over every bottoms it clips nowhere (0.0
   thousandths, both levels).
+- **As built, the dark-outfit fix (19 November 2026, the owner's pick):** a
+  detail drawn a shade off its cloth (ribbing, pockets, seams, lapels, the
+  hood's rim, cuffs) multiplied the cloth's colour, so on near-black it
+  stayed near-black and a black fit read as one silhouette. `shadeRGB()` in
+  `wardrobe.ts`: on cloth seen darker than `DARK.at` (0.115, Degen's own
+  black and the darkest swatches) a darker shade lifts the detail toward
+  grey (`DARK.under`) and a lighter one lifts it more (`DARK.over`); on every
+  other colour it's the old linear multiply exactly (a switch, not a blend:
+  blended, the two cancelled somewhere between and a navy detail matched its
+  cloth). The single figures (`colorOf()` in character.ts), the crowd's
+  shader (`SHADE_GLSL`, from the same numbers) and the first-person sleeves
+  (`viewmodel.ts`) all take it. The puffer's quilting, its baffles' shape
+  alone, gained stitched seams in each pinch (`seamsAt()`), a shade off, so
+  it reads in any colour. Tests in `wardrobe.test.ts`: the old multiply
+  exactly on mid, light and dark-but-not-black colours; near-black details
+  stand clear of their cloth; the more a detail was meant to stand off, the
+  more it does. Phones' worst look 17.96k of 18k with the seams.
 - **Phase 5's first set: built**, 18 November 2026. Still open from the
   plan's list: the coach jacket, the heavyweight hoodie refresh, the puffer
   vest, the technical shell, the trucker jacket and the tee, relaxed denim

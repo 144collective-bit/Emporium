@@ -272,6 +272,12 @@ keep it up to date when what it describes changes.
     (`laceArcs()`), the side stripe a strip along the side's curve
     (`swoop`). The legs' last few centimetres ride partly with the foot
     (`weigh()`), so a hem stays on the shoe as the ankle bends.
+  - **Details on dark cloth** (`docs/wardrobe-plan.md` Phase 5): a piece's
+    `shade` goes through `shadeRGB()` (single figures, the first-person
+    sleeves) or `SHADE_GLSL` (the crowd's shader): the old linear multiply,
+    but on near-black cloth (under `DARK.at`) a lift toward grey, so black
+    fits keep their seams. The puffer's quilting has stitched seams
+    (`seamsAt()`).
   - **The bomber** (`docs/wardrobe-plan.md` Phase 5): the jacket's body
     fuller (`BK`), ribbed collar, cuffs and hem, a front zip, a zip pocket on
     the left sleeve; in every per-top table (`TORSOS`, `CHAINS`, `TOPS`).

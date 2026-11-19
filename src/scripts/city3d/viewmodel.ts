@@ -21,6 +21,7 @@ import { newReloadFrame, reloadAt } from './gunfit';
 import type { WeaponId } from './combat-sim';
 import { PLAYER, type Outfit } from './character';
 import { bakedHand } from './body';
+import { shadeRGB } from './wardrobe';
 
 const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
@@ -76,7 +77,12 @@ const flats = new Map<string, Tintable>();
 const shared = (c: string) => flats.get(c) ?? flats.set(c, flat(c)).get(c)!;
 const UP = new THREE.Vector3(0, 1, 0);
 
-const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
+// (a detail's shade on the sleeve's colour, lifted on near-black cloth as on the figure: shadeRGB() in wardrobe.ts)
+const shade = (c: string, k: number) => {
+  const col = new THREE.Color(c);
+  const v = col.getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
+  return '#' + col.setRGB(...shadeRGB(v.r, v.g, v.b, k), THREE.SRGBColorSpace).getHexString();
+};
 
 /**
  * One of Degen's own hands (body.ts: palm, fingers and thumb), closed to

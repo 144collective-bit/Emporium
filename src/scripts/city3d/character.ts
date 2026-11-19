@@ -29,7 +29,7 @@ import { lit, liveTex, moving, neon, toon } from './kit';
 import { crowdFrame, type CrowdClip } from './crowdclips';
 import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setWardrobeRow } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
-import { COLOR_KEYS, PLAYER, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
+import { COLOR_KEYS, PLAYER, items as wardrobe, paintMerge, restSkin, shadeRGB, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
 import { onLens } from './lens';
 
 export { PLAYER, SOLDIER, lookOutfit, type Detail, type Outfit, type OutfitKind } from './wardrobe';
@@ -45,8 +45,12 @@ const tmp = new THREE.Color();
 function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
   if (p.color.startsWith('#')) return out.set(p.color);
   out.set(outfitColor(o, p.color as ColorKey));
-  return p.shade ? out.multiplyScalar(p.shade) : out;
+  if (!p.shade) return out;
+  // (a detail's shade, lifted on near-black cloth so it still shows: shadeRGB() in wardrobe.ts)
+  const c = out.getRGB(rgb, THREE.SRGBColorSpace);
+  return out.setRGB(...shadeRGB(c.r, c.g, c.b, p.shade), THREE.SRGBColorSpace);
 }
+const rgb = { r: 0, g: 0, b: 0 };
 /** An outfit's colour for a key (the lenses are green as in the art, the shirt white and the frames black, when an outfit doesn't say) */
 const outfitColor = (o: Outfit, k: ColorKey) => (o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : k === 'shirt' ? '#cfcedb' : k === 'frame' ? '#0d0c14' : k === 'gear' ? '#2b2a33' : '#ff00ff');
 

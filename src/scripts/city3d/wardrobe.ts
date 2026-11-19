@@ -98,6 +98,38 @@ export const SOLDIER: Outfit = {
   rifle: 'right',
 };
 
+/*
+ * A detail's shade on its cloth (docs/wardrobe-plan.md Phase 5, the dark-outfit fix): a piece drawn a shade off its
+ * outfit colour (ribbing, a pocket, a seam, a lapel) multiplies it, as before; but on near-black cloth multiplying
+ * leaves it near-black, so the detail is lost in a black silhouette. There a darker shade lifts it toward grey
+ * instead, and a lighter one lifts it a little more, so a black fit still shows its seams and shape. Worked in the
+ * colour as seen (sRGB, 0..1); mid and light colours are untouched. `SHADE_GLSL` is the crowd's shader's copy.
+ */
+export const DARK = { at: 0.115, under: 0.32, over: 0.12 };
+const toLin = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const toSrgb = (c: number) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
+/**
+ * A colour as seen (sRGB) with a detail's shade: as it always was (the colour's light times the shade), or on
+ * near-black cloth (seen brightness under `DARK.at`) lifted. A switch, not a blend: blended, the lift and the
+ * darkening cancel somewhere in between and a detail there matches its cloth.
+ */
+export function shadeRGB(r: number, g: number, b: number, s: number): [number, number, number] {
+  const dark = 0.2126 * r + 0.7152 * g + 0.0722 * b < DARK.at;
+  const one = (c: number) => {
+    const plain = toSrgb(toLin(c) * s);
+    return Math.min(1, !dark ? plain : s < 1 ? c + (1 - s) * DARK.under : plain + (s - 1) * DARK.over);
+  };
+  return [one(r), one(g), one(b)];
+}
+/** The crowd's shader's copy: its tint arrives in linear light, and the plain case stays the linear multiply it was */
+export const SHADE_GLSL = `vec3 crowdShade(vec3 lin, float s) {
+  vec3 plain = lin * s;
+  vec3 c = pow(max(lin, vec3(0.0)), vec3(1.0 / 2.2));
+  if (dot(c, vec3(0.2126, 0.7152, 0.0722)) >= ${DARK.at.toFixed(3)}) return plain;
+  vec3 dark = s < 1.0 ? c + (1.0 - s) * ${DARK.under.toFixed(3)} : pow(plain, vec3(1.0 / 2.2)) + (s - 1.0) * ${DARK.over.toFixed(3)};
+  return pow(min(dark, vec3(1.0)), vec3(2.2));
+}`;
+
 /** What an outfit wears on its legs: its own, or what its top comes with (the crowd's); soldiers wear their fatigues */
 export const bottomsOf = (o: Outfit): Bottoms | null => (o.kind === 'soldier' ? null : (o.bottoms ?? bottomsFor(o.kind)));
 /** What an outfit wears on its feet: its own, or what its top comes with; soldiers wear their boots */
@@ -2509,6 +2541,32 @@ export function items(q: Detail, hero = false): Item[] {
     ],
     R(14)
   );
+  /*
+   * The quilting's stitched seams (docs/wardrobe-plan.md Phase 5, the dark-outfit fix): a thin band in each pinch
+   * between the baffles, a shade off the cloth, so the quilting reads in any colour (in black the baffles' shape
+   * alone was lost)
+   */
+  const seamsAt = (secs: Sec[], from: number, to: number, step: number, fat: number, seg: number, n: number) => {
+    const out: THREE.BufferGeometry[] = [];
+    for (let y = from + step; y < to - 1e-6; y += step) {
+      const [, hw, hd, z = 0] = secAt(secs, y);
+      const k = fat * 0.92;
+      out.push(
+        loft(
+          [
+            [y - 0.0016, hw * k + 0.0012, hd * k + 0.0012, z],
+            [y + 0.0016, hw * k + 0.0012, hd * k + 0.0012, z],
+          ],
+          seg,
+          n
+        )
+      );
+    }
+    return out;
+  };
+  const pufferSeams = one(seamsAt(HOODIE, -0.08, 0.36, 0.064, 1.18, TOP_RINGS, HN2));
+  const pufferArmSeams = one(seamsAt(UPPER_S, -0.22, 0.0, 0.055, 1.4, R(14), 2));
+  const pufferForeSeams = one(seamsAt(FORE_S, -0.19, 0.0, 0.055, 1.35, R(14), 2));
 
 
   // The gold chain from the shades' arms, down past the jaw and over the collar onto the chest, lying on the top
@@ -3113,6 +3171,9 @@ export function items(q: Detail, hero = false): Item[] {
         P('torso', pufferBody, 'top', TOP),
         P('torso', pufferCollar, 'top'),
         P('torso', one(pufferZip), SHIRT, { detail: true }),
+        P('torso', pufferSeams, 'top', { shade: 0.7, detail: true }),
+        ...both('arm', pufferArmSeams, 'top', { shade: 0.7, detail: true }),
+        ...both('fore', pufferForeSeams, 'top', { shade: 0.7, detail: true }),
         ...both('arm', pufferUpper, 'top'),
         ...both('fore', pufferFore, 'top'),
         ...both('fore', pufferCuff, 'top', { shade: 0.75 }),

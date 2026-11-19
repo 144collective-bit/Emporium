@@ -18,6 +18,7 @@
  */
 import * as THREE from 'three';
 import { CROWD_BONES, CROWD_ROWS, bakeCrowdClips } from './crowdclips';
+import { SHADE_GLSL } from './wardrobe';
 
 /** The baked clips, shared by every crowd and every pass (filled the first time a crowd is made) */
 export const crowdBones: { value: THREE.DataTexture | null } = { value: null };
@@ -118,11 +119,13 @@ export function crowdVersion<M extends THREE.Material>(base: M, key: string): M 
       .replace('void main() {', 'varying vec3 vCrowdTint;\nvoid main() {')
       .replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\n  vCrowdTint = crowdSlot.x < -0.5 ? vec3(1.0) : texelFetch(crowdWardrobe, ivec2(int(crowdSlot.x + 0.5), int(crowdAnim.w + 0.5)), 0).rgb;'
+        '#include <begin_vertex>\n  vCrowdTint = crowdSlot.x < -0.5 ? vec3(-1.0) : texelFetch(crowdWardrobe, ivec2(int(crowdSlot.x + 0.5), int(crowdAnim.w + 0.5)), 0).rgb;'
       );
     sh.fragmentShader = sh.fragmentShader
-      .replace('void main() {', 'varying vec3 vCrowdTint;\nvoid main() {')
-      .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= vCrowdTint;');
+      // (the vertex's colour is its piece's shade on the person's tint: lifted on near-black cloth, as on single
+      // figures, shadeRGB() in wardrobe.ts)
+      .replace('void main() {', `varying vec3 vCrowdTint;\n${SHADE_GLSL}\nvoid main() {`)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = vCrowdTint.r < -0.5 ? diffuseColor.rgb : crowdShade(vCrowdTint, diffuseColor.r);');
   };
   const baseKey = base.customProgramCacheKey();
   m.customProgramCacheKey = () => `${baseKey}|crowd|${key}`;
