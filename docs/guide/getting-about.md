@@ -33,7 +33,7 @@ keep it up to date when what it describes changes.
     **Fast travel** fades out, stands you at the place (`walk.placeAt()`)
     and fades in. **Bring my car** (`walk.bringCar()`, `drive.bring()`):
     the nearest lane spot round you, clear of traffic.
-  - **Taxis** are `taxi.ts`: a Cruiser in taxi yellow with a lit TAXI sign
+  - **Taxis** are `taxi.ts` (loaded the first time one's called): a Cruiser in taxi yellow with a lit TAXI sign
     comes from a spot on the roads a way off to the kerb nearest you, along
     `pathBetween()` (`routes.ts`: the shortest drive between two points on
     the streets, in the right lanes, ending at the kerb nearest the place),
@@ -50,6 +50,14 @@ keep it up to date when what it describes changes.
   - **Rides** (taxi, metro and river bus) go through `walk.setRide()` (`Ride` in
     `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
     wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
+  - **The tube**, the south's underground line (The Trenches to the High
+    Road, the south plan's Phase 4), is its own: `endswood.md` (`southline.ts`,
+    `southtrains.ts`, `tube3d.ts`, `tube-ui.ts`); it shares the metro's card
+    (one card for both lines at every station, `trips.ts`), its ride bar and
+    its one switch (`live.closed('metro')`). Its stations are places
+    (`tube-<id>`, kind `tube`, at street level by each way in: southline.ts
+    `TUBE_SPOTS`) and the world map draws its line, teal, dashed on a dark
+    casing.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
     an elevated line on a viaduct as tracks (`TRACKS`: `main` from its north
     end north of the ring highway (the north side's stage 2: it crosses the
@@ -124,10 +132,14 @@ keep it up to date when what it describes changes.
     station in its own frame along its track: platform, canopy with the
     station names from one sign atlas, skybridge, tower with an M roundel
     over the door, totem; two cars, `userData.keep`). Its rides are
-    `metro-ui.ts`: the station door's "Metro" prompt (a walk `places` entry,
-    `metro:<id>`) opens the station card (`[data-metro]`), a ride runs
-    alongside the train (`[data-metro-bar]`, Skip ride / Esc) and you step
-    out at the destination's door.
+    `metro-ui.ts` (loaded the first time it's needed): the station door's
+    "Metro" prompt (a walk `places` entry, `metro:<id>`) opens the card for
+    both lines (`[data-metro]`, tube-ui.ts since the south plan's 4h: every
+    stop on the metro and the tube, a trip to the other line changing at The
+    Trenches, trips.ts; metro-ui.ts's own card only if that won't load), a
+    ride runs alongside the train (`[data-metro-bar]`, Skip ride / Esc) and
+    you step out at the destination's door (or, on a trip's first ride, the
+    change goes on: `ride(a, b, then)`).
   - **Sound by district** is `ambience.ts` (DOM-free, tested in
     `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
     hum, the river (and Westlake's lake), the traffic's rush (the highway,

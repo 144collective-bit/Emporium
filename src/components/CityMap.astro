@@ -968,7 +968,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
         <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </div>
-    <p class="metro-note">Pick a station. Free.</p>
+    <p class="metro-note">Pick a stop. Free.</p>
     <ul class="metro-list" data-metro-list></ul>
   </section>
   <div class="taxi-bar metro-bar mk-skin" data-metro-bar hidden aria-live="polite">
@@ -1027,6 +1027,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <li><i class="wm-key wm-key-you"></i>You</li>
       <li><i class="wm-key wm-key-place"></i>Place</li>
       <li><i class="wm-key wm-key-metro"></i>Metro</li>
+      <li><i class="wm-key wm-key-tube"></i>Tube</li>
       <li><i class="wm-key wm-key-car"></i>Your car</li>
       <li><i class="wm-key wm-key-way"></i>Waypoint</li>
     </ul>
@@ -1210,14 +1211,14 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <template data-panel-tpl="palmcourt" data-marquee="Shops, a fountain, a late film">
     <p class="kicker"><span class="kicker-num">19</span> North of downtown</p>
     <h2 id="city-panel-title" class="city-panel-title">Palm Court</h2>
-    <p class="city-panel-text">Shops, a cinema and festoon lights.</p>
+    <p class="city-panel-text">Two floors of shops, a food hall and a cinema.</p>
     <button type="button" class="chip-link kart-walkin" data-palmcourt-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="mall" data-marquee="Two floors of shops">
     <p class="kicker"><span class="kicker-num">20</span> North of downtown</p>
     <h2 id="city-panel-title" class="city-panel-title">Starlight Mall</h2>
-    <p class="city-panel-text">Two floors of shops and a food court.</p>
+    <p class="city-panel-text">Two floors of shops, a food court and the metro.</p>
     <button type="button" class="chip-link kart-walkin" data-mall-walkin>Walk in</button>
   </template>
 

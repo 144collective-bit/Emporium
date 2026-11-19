@@ -5,7 +5,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DRIVE_PIERS, DRIVE_TREES, GROVES, LAND_SOLIDS, MEADOWS, VINEYARDS, clear, onLand } from '../src/scripts/city3d/crestland';
-import { OAKS, SCRUB } from '../src/scripts/city3d/landscape';
+import { hillPlanting } from '../src/scripts/city3d/landscape';
+
+const { oaks: OAKS, scrub: SCRUB } = hillPlanting();
 import { CREST_LAMPS, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { heightAt } from '../src/scripts/city3d/terrain';
 import { MANSIONS } from '../src/scripts/city3d/mansions';

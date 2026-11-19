@@ -111,15 +111,19 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
       return { x: p[0], z: p[1], y: carAt(r, 0).y + 0.4 };
     },
     end() {
-      // Walk mode stopped mid-ride: the train goes back on its timetable
+      // Walk mode stopped mid-ride: the train goes back on its timetable (and a trip's on stops here)
       d.metro.hold(null);
       from = to = null;
+      next = null;
       bar.hidden = true;
     },
   };
-  function go(a: Station, b: Station) {
+  /** On a trip's first ride (trips.ts), what comes after instead of stepping out: the change at The Trenches */
+  let next: ((skipped: boolean) => void) | null = null;
+  function go(a: Station, b: Station, then: ((skipped: boolean) => void) | null = null) {
     close();
-    if (!d.free() || !d.setRide(ride)) return;
+    if (!d.free() || !d.setRide(ride)) return false;
+    next = then;
     from = a;
     to = b;
     t = 0;
@@ -133,22 +137,29 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
     bar.hidden = false;
     text.textContent = `Metro to ${b.name}`;
     if (d.reduced) finish();
+    return true;
   }
-  function finish() {
+  function finish(skipped = false) {
     if (!to || !from) return;
     const b = to;
+    const then = next;
+    next = null;
     // The train carries on its timetable from this station, the way it came in
     const runs = (last ?? rideAt(from.id, b.id, 0)).runs;
     const lastRun = runs[runs.length - 1];
     from = to = null;
     d.metro.resume(timetableAt(b.id, lastRun.pieces[lastRun.pieces.length - 1]));
     d.setRide(null);
+    bar.hidden = true;
+    if (then) return then(skipped);
+    arrive(b);
+  }
+  function arrive(b: Station) {
     d.arrive(b.id);
     d.sfx('door');
-    bar.hidden = true;
     d.toast(`${b.name} station`);
   }
-  bar.querySelector('[data-metro-skip]')?.addEventListener('click', () => finish());
+  bar.querySelector('[data-metro-skip]')?.addEventListener('click', () => finish(true));
 
   return {
     open,
@@ -159,11 +170,19 @@ export function createMetroUI(root: HTMLElement, d: MetroDeps) {
     /** Esc on the metro: skip to the end */
     skip() {
       if (!to) return false;
-      finish();
+      finish(true);
       return true;
     },
-    /** The stations' doors, for walk mode's prompts */
-    doors: STATIONS.map((s) => ({ id: `metro:${s.id}`, x: s.door.x, z: s.door.z, label: 'Metro' })),
+    /** A trip's ride from one station to another (trips.ts, tube-ui.ts): `then` instead of stepping out at its end */
+    ride(a: string, b: string, then: ((skipped: boolean) => void) | null = null) {
+      const [sa, sb] = [STATIONS.find((o) => o.id === a), STATIONS.find((o) => o.id === b)];
+      return !!sa && !!sb && go(sa, sb, then);
+    },
+    /** Step out at a station's door (a trip's end with no ride on this line) */
+    arriveAt(id: string) {
+      const s = STATIONS.find((o) => o.id === id);
+      if (s) arrive(s);
+    },
   };
 }
 export type MetroUI = ReturnType<typeof createMetroUI>;

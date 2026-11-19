@@ -17,6 +17,7 @@
  */
 import * as THREE from 'three';
 import { mb, sceneMemory, type SceneMemory } from './perf';
+import { texSourceLine, texSourceWarns, type TexSources } from './texsource';
 import { CORE_ROADS, EXT, LANE, RING_HI, RIVER, WIDEN } from './layout';
 import { WALL_INNER } from './wall';
 
@@ -128,6 +129,8 @@ export interface BenchResult {
   /** What the picture's render targets and shadow maps hold, in bytes (docs/stability-plan.md, Phase 2) */
   targets: number;
   boot: Record<string, number>;
+  /** Where the textures came from (kit.ts): a live site without the build's holds about four times the memory */
+  textures?: TexSources;
 }
 
 class Sampler {
@@ -194,6 +197,8 @@ export interface BenchDeps {
   /** Clear day (or night) for the run; the visitor's own sky back after */
   conditions(night: boolean): () => void;
   boot(): Record<string, number>;
+  /** Where the textures came from (kit.ts `texSources()`) */
+  textures?(): TexSources;
   /** More views after the fixed ones (a district's, while one is being measured) */
   extra?: BenchView[];
 }
@@ -265,6 +270,7 @@ export function createBench(d: BenchDeps, night: boolean) {
       const r = out.route;
       lines.push(`${'Route'.padEnd(32)} ${String(r.fps).padStart(5)} fps · ${String(r.p95).padStart(5)} ms p95 · worst ${r.worst} ms · cpu ${r.worstCpu} ms at most · ${r.draws} draws · ${(r.tris / 1e6).toFixed(2)}M`);
       lines.push(`Memory: geometry ${mb(out.memory.geometry)} · textures ${mb(out.memory.textures)} · targets ${mb(out.targets)} · ${out.memory.objects} objects`);
+      if (out.textures) lines.push(`${texSourceWarns(out.textures) ? '⚠ ' : ''}${texSourceLine(out.textures)}`);
       lines.push(`Boot: ${Object.entries(out.boot).map(([k, v]) => `${k} ${(v / 1000).toFixed(2)} s`).join(' · ')}`);
       lines.push('Done. Full results in the console (window.__bench), or Copy results.');
     }
@@ -327,6 +333,7 @@ export function createBench(d: BenchDeps, night: boolean) {
             memory: sceneMemory(d.scene),
             targets: d.targets?.() ?? 0,
             boot: d.boot(),
+            textures: d.textures?.(),
           };
           (window as unknown as { __bench?: BenchResult }).__bench = out;
           console.table(results.map(({ name, fps, avg, p95, worst, cpu, worstCpu, draws, tris, shadowDraws, shadowTris }) => ({ name, fps, avg, p95, worst, cpu, worstCpu, draws, tris, shadowDraws, shadowTris })));

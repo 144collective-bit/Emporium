@@ -9,7 +9,7 @@
  * It's an overlay on the city: × or Esc closes it (Esc only closes it, it
  * never stops walking), and nothing else hears the keys while it's open.
  */
-import { CUTS, EYE_STYLES, FACE_GEAR, MARKS, coversEyes, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
+import { CUTS, EYE_STYLES, FACE_GEAR, HEAD_SHAPES, MARKS, coversEyes, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
 import type { Stage, StageLight, StagePose } from './stage';
 
 const POSES: { id: StagePose; name: string }[] = [
@@ -49,7 +49,7 @@ export function describe(l: Look): [string, string, string[]][] {
     ['Bottoms', l.kind === 'coveralls' ? 'Coveralls' : BOTTOMS[l.bottoms], l.kind === 'coveralls' ? [l.top] : [l.bottom]],
     ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : stitched ? ` · ${markName(l.hatMark)}` : '') : 'Nothing', !hood && l.hat ? [l.hatColor] : []],
     // (docs/faces-plan.md: the balaclava, or his face with a haircut)
-    ['Face', l.face ? (l.cut === 'bald' ? 'Bald' : `${CUTS.find((c) => c.id === l.cut)!.name} cut`) : 'Balaclava', l.face && l.cut !== 'bald' ? [l.tone, l.hair] : [l.tone]],
+    ['Face', l.face ? [l.cut === 'bald' ? 'Bald' : `${CUTS.find((c) => c.id === l.cut)!.name} cut`, l.shape !== 'standard' && `${HEAD_SHAPES.find((h) => h.id === l.shape)!.name} head`].filter(Boolean).join(' · ') : 'Balaclava', l.face && l.cut !== 'bald' ? [l.tone, l.hair] : [l.tone]],
     ['Eyewear', coversEyes(l.faceGear) ? 'Off (face gear)' : !shaded ? 'None' : (EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic'), shaded ? [l.frame, l.lens] : []],
     ['Gear', l.faceGear ? (FACE_GEAR.find((f) => f.id === l.faceGear)?.name ?? '') : 'Nothing', l.faceGear ? [l.gear] : []],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],

@@ -48,9 +48,13 @@ const BUDGETS = {
    * and from 740 on purpose (the owner's call, 2026-11-18): main had grown to 739.8 with the south's re-laying, and
    * the stability plan's tier by the graphics, its step-down order and the texture keys (gputier.ts, quality.ts,
    * texscope.ts: ~1.7 KB, which must run before the city builds) took it over; the ?fps-only texture breakdown went
-   * to its own chunk (texrows.ts) first; and from 750 to 760 on purpose (the owner's call, 2026-11-19): the
-   * wardrobe plan's Phases 1-7 (docs/wardrobe-plan.md) on main came to 756.7, the player's figure drawing every piece he
-   * can wear at the boot (wardrobe.ts); the fitting room is its own chunk
+   * to its own chunk (texrows.ts) first; and from 750 to 760 on purpose (the owner's call, 2026-11-19, "raise it to
+   * 760"): main stood at 749.9 and Crestmont's ground fixes took it to 750.7 (the hills' grass grid's lines on every
+   * level and finer where the hills curve, the drives graded from their roads, the reservoir's basin; what only the
+   * chunks read went to drawn.ts and the searches were baked first), leaving room for the premium upgrade's phases;
+   * the wardrobe plan's Phases 1-8 (docs/wardrobe-plan.md, raised for it on its own branch the same day, the owner's
+   * call) take about 8 of that room: the player's figure draws every piece he can wear at the boot (wardrobe.ts), the
+   * crowd dresses by district (crowdlook.ts); the fitting room is its own chunk
    */
   bootJs: 760,
   /** Any one piece loaded later (a feature, when it's used) */

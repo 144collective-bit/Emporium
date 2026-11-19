@@ -11,9 +11,12 @@
 import { CIRCUS, type Pt } from './south';
 import { CEIL, FLOOR } from './circus';
 import { GROUND_Y, cutOf, pointOf, radial, straight, type Passage } from './underground';
-import { SHOPS } from './highroad';
+import { SHOPS, STATION_DOOR } from './highroad';
 import { STATIONS as RAISED } from './metro';
 import { southLift } from './southground';
+import { SLAB_Y as SLAB_TOP } from './endswood';
+import { PLAN } from './streetplan';
+import { inside } from './streetfaces';
 import { BUILT, baked } from './baked';
 
 /** The levels: the ticket halls' (the Circus's subways' floor and ceiling), the platforms' and the tunnels' crowns */
@@ -25,10 +28,14 @@ export const PLAT_CEIL = -4.0;
 export const TUNNEL_TOP = PLAT_CEIL + 0.5;
 /** Across the line: the island platform's walkable half, each track's middle out from the line, the tunnel's half */
 export const PLAT_HALF = 1.5;
-export const TRACK_OFF = 2.3;
-export const TUNNEL_HALF = TRACK_OFF + 1.4;
+export const TRACK_OFF = 2.6;
+/** (the tunnel wide enough that a train's straight cars, swinging out at their ends on the line's tightest bends,
+ * southtrains.ts, stay clear of its walls) */
+export const TUNNEL_HALF = TRACK_OFF + 1.9;
 /** Along the line: a platform's length, an escalator's run (about 30 degrees down), a hall's length and half width */
 export const PLAT_LEN = 26;
+/** The tube's door on a platform (tube-ui.ts): this far along the line from its middle, between its benches */
+export const PLAT_DOOR = 3;
 export const ESC_RUN = 7.8;
 export const ESC_HALF = 1.0;
 export const HALL_LEN = 10;
@@ -38,6 +45,13 @@ export const STAIR_RUN = 3.8;
 export const STAIR_HALF = 1.0;
 /** The line's colour (its band on the stations' walls, its name boards' edge, the station building's band; on the map later) */
 export const LINE_COLOUR = '#2bb3c0';
+/** The stairs' slope from the street down a flight to a hall (a rise over a run) */
+export const STAIR_SLOPE = (GROUND_Y - FLOOR) / 3.8;
+/** The surface at x, z at street level: a block's slab (its top) or the open ground, on the south's rolling ground */
+export function surfaceAt(x: number, z: number) {
+  const onSlab = PLAN.slabs.some((slab) => inside(slab as Pt[], [x, z]));
+  return (onSlab ? SLAB_TOP : GROUND_Y) + southLift(x, z);
+}
 /** How tight the line may bend (a tube train's) */
 export const MIN_R = 20;
 
@@ -58,7 +72,7 @@ const BUILDING_DEG = (Math.atan2(BUILDING_FWD[1], BUILDING_FWD[0]) * 180) / Math
 /** The High Road's platform on the building's axis, west of it: its hall's far end just west of the building */
 const HIGHROAD_AT: Pt = local(-BUILDING.w / 2 - 0.5 - (HALL_LEN + ESC_RUN - 2) - PLAT_LEN / 2, -BUILDING.d / 2);
 /** Where each station's stairs start at street level (clear ground: tests/southline.test.ts); they run down towards its hall */
-const TOPS: Record<'trenches' | 'lot9' | 'aldwyns', Pt> = { trenches: [-99, 193.5], lot9: [-115.5, 472], aldwyns: [-225, 454] };
+const TOPS: Record<'trenches' | 'lot9' | 'aldwyns', Pt> = { trenches: [-100.5, 181.6], lot9: [-115.5, 472], aldwyns: [-229.5, 458.5] };
 
 /**
  * A station as laid: its platform's middle and the way the line runs through it (degrees, from +x towards +z); its
@@ -74,14 +88,15 @@ interface StationSpec {
   way: { kind: 'stairs' | 'building' | 'plaza'; top: Pt; deg: number };
 }
 const SPECS: StationSpec[] = [
-  // Under The Trenches' el street and the block south of it, its hall under the block; its stairs down on the block
-  // behind the raised station's tower (the change between them, a few steps)
+  // Under The Trenches' el street and The Block south of it, its hall under The Block; its stairs down in The Block's
+  // plaza beside the raised station's stair tower (the change between them, a few steps), clear of its playground
   { id: 'trenches', name: 'The Trenches', at: [RAISED_TRENCHES.door.x, 170], deg: 90, hall: 'end', way: { kind: 'stairs', top: TOPS.trenches, deg: 0 } },
   // Under the Circus's west side, its hall reached from the sunken plaza (west, between its subways)
   { id: 'circus', name: 'Circus', at: [CIRCUS.x - 14, 441], deg: 92, hall: 'start', way: { kind: 'plaza', top: [CIRCUS.x, CIRCUS.z], deg: 180 } },
   // Under Lot 9's north side, its hall by the hole in its fence, its stairs down there
   { id: 'lot9', name: 'Lot 9', at: [-135, 495], deg: 150, hall: 'start', way: { kind: 'stairs', top: TOPS.lot9, deg: 0 } },
-  // Under Church Road by St Aldwyn's, its stairs down near the lychgate
+  // By St Aldwyn's, its hall under the churchyard's east side; its stairs down off the sidewalk of the street along the
+  // churchyard's west side, its way on under the churchyard
   { id: 'aldwyns', name: "Aldwyn's Green", at: [-212, 443], deg: 240, hall: 'start', way: { kind: 'stairs', top: TOPS.aldwyns, deg: 0 } },
   // Under the High Road by Degen's gates, its hall past the station building, its stairs down inside it along its front
   { id: 'highroad', name: 'High Road', at: HIGHROAD_AT, deg: BUILDING_DEG, hall: 'end', way: { kind: 'building', top: BUILDING_TOP, deg: BUILDING_DEG + 180 } },
@@ -277,10 +292,13 @@ const layStations = (line: Pt[], ls: number[]): Station[] => SPECS.map((st) => {
     const a = rad(deg);
     const reach = (hallMid[0] - tx) * Math.cos(a) + (hallMid[1] - tz) * Math.sin(a);
     const half = st.way.kind === 'building' ? BUILDING_STAIRS.half : STAIR_HALF;
-    const p = straight(`${st.id}-way`, tx, tz, deg, { a0: 0, ramp0: STAIR_RUN, roof0: STAIR_RUN, roof1: reach + 1, ramp1: reach + 1, a1: reach + 1, half, wall: 0.25, floor: HALL_Y, ceil: HALL_CEIL, rail: 0.9 });
-    // (from the ground's height at its top, the south's ground rolling a little by the churchyard; inside the station
-    // building, from its floor: its slab over the highest ground under it, highroad.ts `base`)
-    way = { ...p, y0: st.way.kind === 'building' ? BUILDING.base : GROUND_Y + southLift(tx, tz), y1: HALL_Y };
+    // (from the surface at its top: the street's, a block's slab, the south's rolling ground, Aldwyn's Green up on its
+    // hill; inside the station building, from its floor, highroad.ts `base`), a flight as long as it takes to keep the
+    // stairs' slope, longer from higher up
+    const y0 = st.way.kind === 'building' ? BUILDING.base : surfaceAt(tx, tz);
+    const run = Math.max(STAIR_RUN, (y0 - HALL_Y) / STAIR_SLOPE);
+    const p = straight(`${st.id}-way`, tx, tz, deg, { a0: 0, ramp0: run, roof0: run, roof1: reach + 1, ramp1: reach + 1, a1: reach + 1, half, wall: 0.25, floor: HALL_Y, ceil: HALL_CEIL, rail: 0.9 });
+    way = { ...p, y0, y1: HALL_Y };
   }
   // (the station building's landing inside its door, level at its floor, up to the stairs' top)
   const landing =
@@ -314,9 +332,37 @@ export const stationOf = (id: StationId) => SOUTH_STATIONS.find((s) => s.id === 
 /** Every walkable piece of a station */
 export const piecesOf = (s: Station): Passage[] => [s.platform, s.hall, s.escalator, s.way, ...(s.landing ? [s.landing] : [])];
 export const LINE_PASSAGES: Passage[] = SOUTH_STATIONS.flatMap(piecesOf);
-/** The stations built so far (the south plan's 4e: the High Road's; the rest in 4f): walked (groundheight.ts `UNDER`),
- * drawn (line3d.ts), their stairs cut out of the ground */
-export const BUILT_STATIONS: StationId[] = ['highroad'];
+/** The stations built (the south plan's 4e: the High Road's; 4f, the rest): walked (groundheight.ts `UNDER`), drawn
+ * (line3d.ts), their stairs cut out of the ground */
+export const BUILT_STATIONS: StationId[] = ['trenches', 'circus', 'lot9', 'aldwyns', 'highroad'];
 export const BUILT_PASSAGES: Passage[] = SOUTH_STATIONS.filter((s) => BUILT_STATIONS.includes(s.id)).flatMap(piecesOf);
 /** Each built station's stairs' opening (from the street: its flight, walls and all), cut out of the slab and the ground */
 export const STAIR_CUTS: Pt[][] = SOUTH_STATIONS.filter((s) => BUILT_STATIONS.includes(s.id) && s.entrance.kind !== 'plaza').map((s) => cutOf(s.way, s.way.a0, s.way.ramp0));
+/** Where a stairs' opening isn't on a block's slab (Lot 9's, on its open ground): the box round it the grass is cut from
+ * (underpasses.ts `GROUND_HOLES`) less the opening, laid back over in the ground's own colour (line3d.ts) */
+export const STAIR_INFILL: { box: Pt[]; cut: Pt[] }[] = STAIR_CUTS.filter((c) => !c.every((p) => PLAN.slabs.some((slab) => inside(slab as Pt[], p)))).map((cut) => {
+  const xs = cut.map((p) => p[0]);
+  const zs = cut.map((p) => p[1]);
+  const [x0, z0, x1, z1] = [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
+  return { box: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]], cut };
+});
+
+/**
+ * Each station's place on the map (places.ts, the south plan's 4h): at street level by its way in, facing it. Behind the
+ * top of its stairs, looking down them; outside the station building's door, facing it; in the Circus's sunken plaza
+ * before its corridor, facing west into it (`y`: the plaza's floor, under the street, as walk.ts `placeAt()` reads it)
+ */
+export const TUBE_SPOTS: Record<StationId, { x: number; z: number; yaw: number; y?: number }> = Object.fromEntries(
+  SOUTH_STATIONS.map((s) => {
+    const a = rad(s.entrance.deg);
+    const [dx, dz] = [Math.cos(a), Math.sin(a)];
+    if (s.entrance.kind === 'building') {
+      const [x, z] = local((STATION_DOOR[0] + STATION_DOOR[1]) / 2, 1.3);
+      return [s.id, { x, z, yaw: Math.atan2(BUILDING.face[0], BUILDING.face[1]) }];
+    }
+    if (s.entrance.kind === 'plaza') return [s.id, { x: CIRCUS.x + dx * 3.5, z: CIRCUS.z + dz * 3.5, yaw: Math.atan2(-dx, -dz), y: HALL_Y - 0.15 }];
+    // (a step back from the top: Lot 9's stairs are just inside its fence)
+    const [tx, tz] = s.entrance.top;
+    return [s.id, { x: tx - dx * 0.9, z: tz - dz * 0.9, yaw: Math.atan2(-dx, -dz) }];
+  })
+) as Record<StationId, { x: number; z: number; yaw: number; y?: number }>;

@@ -15,16 +15,21 @@ import { along, dashes, pieces, ribbon, unit } from './roads3d';
 import { EW_ROADS, MEDIAN } from './layout';
 import { SLAB } from './world';
 import { heightAt } from './terrain';
+import { drawnAt } from './drawn';
+import { ROAD_LIFT, STEP, resample } from './crestdrape';
 import { registerLandscape } from './landscape3d';
 import { registerCoral } from './coral3d';
 import { registerEstates } from './estates3d';
 import { registerMansions } from './mansions3d';
 import { registerSites } from './crestsites3d';
 import { registerLife } from './crestlife3d';
-import { registerGardens, registerLand } from './crestgardens3d';
+import { registerCover, registerGardens, registerLand } from './crestgardens3d';
 import { LAND_SOLIDS } from './crestland';
+import { TERRACE_SOLIDS } from './crestbanks';
 import { GARDEN_SOLIDS } from './crestgardens';
 import { addSolids } from './solids';
+import { GATEWAY_SOLIDS } from './crestgate';
+import { registerGate } from './crestgate3d';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS } from './crestmont';
 import { COVER, KERB, ROAD } from './palette';
 
@@ -33,7 +38,7 @@ export const SELF = import.meta.url;
 /** The Flats' asphalt, level with the city's other district streets */
 const Y = 0.031;
 /** How far over the hills' ground the hill roads' asphalt lies */
-const ON = 0.04;
+const ON = ROAD_LIFT;
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // The palms, jacarandas, oaks and scrub, the hill roads' walls and rails (Phase 3: landscape3d.ts)
   registerLandscape(low);
@@ -51,7 +56,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   // them is solid joins the grids
   registerGardens(low);
   registerLand(low);
-  if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS]);
+  // The open slopes' drifts, outcrops and footpaths (crestcover.ts)
+  registerCover(low);
+  // The gateway where the boulevard leaves the bank avenue (the premium upgrade's Phase 1: crestgate3d.ts)
+  registerGate(low);
+  if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS, ...TERRACE_SOLIDS, ...GATEWAY_SOLIDS]);
   const asphalt = toon(ROAD.asphalt);
   const kerbTop = toon(KERB.town);
   const grass = toon(COVER.planted);
@@ -136,10 +145,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   }
 
   /* ---------- The hill roads, on their beds ---------- */
-  const ground = (x: number, z: number) => heightAt(x, z) + ON;
+  // (over the higher of its bed and the grass as drawn, laid densely: tests/crestdrape.test.ts)
+  const ground = (x: number, z: number) => Math.max(heightAt(x, z), drawnAt(x, z)) + ON;
   const atFoot = (_x: number, z: number) => z > FOOTHILL_Z - 3;
   for (const r of HILL_ROADS)
-    pieces(r.pts, r.half + 0.5).forEach((pc, k) =>
+    pieces(resample(r.pts, STEP), r.half + 0.5).forEach((pc, k) =>
       site(`crestmont hill road ${r.id} ${k}`, pc.rect, (into) => {
         const b = new Batch();
         b.add(ribbon(pc.pts, -r.half, r.half, ground), asphalt);

@@ -32,7 +32,7 @@ import { DOWN as UNDER_DOWN, floorOf, inPassage, passageZone, roofedAt, underwor
 import { NS_ROADS, nsStreet } from './layout';
 import { CARS } from './carspec';
 import type { CarId } from './carspec';
-import type { Idle } from './landmarks';
+import type { Idle } from './idle';
 import type { Moment, ParkPerson } from './parklife';
 
 export type Pt = [number, number];

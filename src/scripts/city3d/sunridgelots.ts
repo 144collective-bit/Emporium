@@ -7,6 +7,7 @@
  * over another, the amenities' land (`ZONES`) or the footpath (`PATH`).
  */
 import { LOT_D, PATH, SUN_BLOCKS, ZONES, distTo, inside, type Pt, type Rect } from './sunridge';
+import { BUILT, baked } from './baked';
 
 /** A lot's width along the street (about 12.6 m), and the shallowest a lot may be */
 export const LOT_W = 6.6;
@@ -121,4 +122,6 @@ function lay(): Lot[] {
   }
   return out;
 }
-export const LOTS: Lot[] = lay();
+/** The lots, laid when the site is built (baked.ts; scripts/bake.mjs: about half a second as the chunk loaded, a freeze on
+ * screen as Sunridge came into reach), not on the visit */
+export const LOTS: Lot[] = baked('sun-lots', BUILT ? undefined : lay);

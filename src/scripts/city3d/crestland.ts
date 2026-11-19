@@ -18,6 +18,7 @@ import { MANSIONS, onMansion } from './mansions';
 import { onSite } from './crestsites';
 import { underSpur } from './metro';
 import { rng } from './recipes';
+import { BUILT, baked } from './baked';
 import { LANES } from './crestlife';
 
 type Rect = [number, number, number, number];
@@ -76,13 +77,22 @@ function search(w: number, d: number, slope: number, n: number, taken: Rect[]): 
   return out;
 }
 
-const vineRects = search(22, 12, 0.45, 3, []);
+/**
+ * Where the vineyards, groves and meadows lie: searched for when the site is built (baked.ts; scripts/bake.mjs), not as
+ * Crestmont's chunk loads on the main thread
+ */
+const RECTS: { vines: Rect[]; groves: Rect[]; meadows: Rect[] } = baked('crest-land', BUILT ? undefined : () => {
+  const vines = search(22, 12, 0.45, 3, []);
+  const groves = search(16, 12, 0.55, 3, vines);
+  return { vines, groves, meadows: search(14, 14, 0.7, 5, [...vines, ...groves]) };
+});
+const vineRects = RECTS.vines;
 export const VINEYARDS: Vineyard[] = vineRects.map((rect) => {
   const rows: Vineyard['rows'] = [];
   for (let z = rect[1] + 0.8; z < rect[3] - 0.5; z += ROW) rows.push({ z, x0: rect[0] + 0.6, x1: rect[2] - 0.6 });
   return { rect, rows };
 });
-const groveRects = search(16, 12, 0.55, 3, vineRects);
+const groveRects = RECTS.groves;
 export const GROVES: Tree[][] = groveRects.map((r, k) => {
   const rand = rng(4410 + k);
   const out: Tree[] = [];
@@ -93,7 +103,7 @@ export const GROVES: Tree[][] = groveRects.map((r, k) => {
     }
   return out;
 });
-const meadowRects = search(14, 14, 0.7, 5, [...vineRects, ...groveRects]);
+const meadowRects = RECTS.meadows;
 export const MEADOWS: Meadow[] = meadowRects.map((r, k) => {
   const rand = rng(5520 + k);
   const [x, z] = [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];

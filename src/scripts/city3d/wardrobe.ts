@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bottomsFor, coversEyes, shoesFor, type Bottoms, type EyeStyle, type FaceGear, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
+import { bottomsFor, coversEyes, shoesFor, type Bottoms, type EyeStyle, type FaceGear, type HeadShape, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
@@ -17,8 +17,27 @@ import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, ty
 
 export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls' | 'blazer' | 'shirt' | 'double' | 'waistcoat' | 'overcoat' | 'soldier';
 /** The unmasked hair's styles (docs/faces-plan.md); bald is no `hair` */
-export type HairCut = 'buzz' | 'crop' | 'curls' | 'bun';
-export const HAIR_CUTS: readonly HairCut[] = ['buzz', 'crop', 'curls', 'bun'];
+export type HairCut = 'buzz' | 'crop' | 'curls' | 'bun' | 'twists' | 'hightop' | 'long';
+export const HAIR_CUTS: readonly HairCut[] = ['buzz', 'crop', 'curls', 'bun', 'twists', 'hightop', 'long'];
+/**
+ * The head's proportions (docs/faces-plan.md Phase 3): a stretch across, up and front to back about the head bone,
+ * hats, hair, the face's ink and the shades with it (`shapeHead()`)
+ */
+export const HEAD_SCALE: Record<HeadShape, [x: number, y: number, z: number]> = {
+  standard: [1, 1, 1],
+  round: [1.07, 0.95, 1.04],
+  long: [0.95, 1.09, 0.98],
+  wide: [1.11, 1, 1.03],
+  narrow: [0.91, 1.03, 0.97],
+  big: [1.1, 1.1, 1.1],
+};
+/**
+ * A point at rest (the rig's space) stretched with the head: `w` its weight on the head bone, `pivot` the head
+ * bone's own point at rest. The crowd's shader does the same (crowdskin.ts); a figure's mesh has it done once.
+ */
+export function shapeHead(p: [number, number, number], w: number, pivot: [number, number, number], s: readonly [number, number, number]): [number, number, number] {
+  return [0, 1, 2].map((k) => pivot[k] + (p[k] - pivot[k]) * (1 + (s[k] - 1) * w)) as [number, number, number];
+}
 export interface Outfit {
   kind: OutfitKind;
   /** Jacket, hoodie, track jacket, varsity, puffer, bomber, coach or trucker jacket, puffer vest, tee, shell, hi-vis vest or
@@ -68,6 +87,8 @@ export interface Outfit {
   cut?: HairCut;
   /** The shades on an unmasked face (the balaclava always wears them) */
   shades?: boolean;
+  /** The head's proportions, unmasked (the standard if not said) */
+  headShape?: HeadShape;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -213,6 +234,7 @@ export function lookOutfit(l: Look): Outfit {
     hair: l.face && l.cut !== 'bald' ? l.hair : undefined,
     cut: l.cut === 'bald' ? undefined : l.cut,
     shades: l.face && l.shades ? true : undefined,
+    headShape: l.face && l.shape !== 'standard' ? l.shape : undefined,
   };
 }
 
@@ -236,6 +258,13 @@ const sorted = (secs: Sec[]) => [...secs].sort((a, b) => a[0] - b[0]);
  * Ending on a tiny section makes a dome.
  */
 // (`open`: its ends left open, for a band that lies on a body whose ends would only be hidden inside it)
+/** A loft's sides only, its ends left open (for a lid of its own that shades flat) */
+function openLoft(secs: Sec[], seg: number, n: number) {
+  const g = loft(secs, seg, n);
+  g.setIndex(Array.from(g.index!.array).slice(0, (secs.length - 1) * seg * 6));
+  g.computeVertexNormals();
+  return g;
+}
 function loft(secs: Sec[], seg: number, n = 2, open = false) {
   const ss = sorted(secs);
   const R = ss.length;
@@ -1704,21 +1733,25 @@ export function items(q: Detail, hero = false): Item[] {
    * the hairline up, carried out `gap(y, a)` along its normal; the edge tucked onto the scalp so it reads as a line.
    * Up to y1 (and open there) for the hair left showing under a hat, else over the top to a point.
    */
-  const hairShell = (gap: (y: number, a: number) => number, y1 = Infinity) => {
+  const hairShell = (gap: (y: number, a: number) => number, y1 = Infinity, o: { line?: (a: number) => number; hang?: number; more?: number; top?: (a: number) => number } = {}) => {
     const seg = R(24);
-    const rows = [3, 5, 8, 11][q];
+    const rows = Math.round([3, 5, 8, 11][q] * (o.more ?? 1));
+    const line = o.line ?? hairline;
+    const hang = o.hang ?? -Infinity;
     const closed = y1 > HEAD_HI;
     const pos: number[] = [];
     for (let k = 0; k < seg; k++) {
       const a = (k / seg) * Math.PI * 2;
       const dx = Math.cos(a);
       const dz = Math.sin(a);
-      const top = Math.min(y1, HEAD_HI - 0.0005);
+      const top = Math.min(y1, o.top?.(a) ?? Infinity, HEAD_HI - 0.0005);
       // (under a hat, none at the sides where the hairline's already above the band: a point there, folded away)
-      const y0 = Math.min(hairline(a), top);
-      // The outline from the hairline up (its points every 2 mm), and its length along the way
+      const y0 = Math.min(line(a), top);
+      // The outline from the hairline up (its points every 2 mm), and its length along the way; below `hang` it
+      // falls straight down rather than in round the jaw and the neck
+      const rHang = hang > -Infinity ? headR(hang, dx, dz) : 0;
       const prof: [r: number, y: number, zc: number][] = [];
-      for (let y = y0; y < top; y += 0.002) prof.push([headR(y, dx, dz), y, (headAt(y).zf + headAt(y).zb) / 2]);
+      for (let y = y0; y < top; y += 0.002) prof.push([y < hang ? Math.max(headR(y, dx, dz), rHang) : headR(y, dx, dz), y, (headAt(Math.max(y, hang)).zf + headAt(Math.max(y, hang)).zb) / 2]);
       prof.push([headR(top, dx, dz), top, (headAt(top).zf + headAt(top).zb) / 2]);
       const len = [0];
       for (let i = 1; i < prof.length; i++) len.push(len[i - 1] + Math.hypot(prof[i][0] - prof[i - 1][0], prof[i][1] - prof[i - 1][1]));
@@ -1776,23 +1809,90 @@ export function items(q: Detail, hero = false): Item[] {
     return g;
   };
   const ease = THREE.MathUtils.smoothstep;
+  /** Hair falling past the ears stands out over them (they stand out of the head about a centimetre) */
+  const overEars = (y: number, a: number) => 0.0125 * ease(Math.abs(Math.cos(a)), 0.72, 0.92) * ease(y, 0.088, 0.104) * (1 - ease(y, 0.145, 0.158));
   /** Each cut's thickness off the scalp by height (and way round, for the curls) */
   const CUT_GAP: Record<HairCut, (y: number, a: number) => number> = {
     buzz: () => 0.0016,
     crop: (y) => 0.0025 + 0.0075 * ease(y, 0.18, 0.226),
     curls: (y, a) => 0.006 + 0.015 * ease(y, 0.12, 0.215) + 0.0035 * (0.5 + 0.5 * Math.sin(a * 9)) * (0.5 + 0.5 * Math.sin(y * 260)),
     bun: () => 0.0024,
+    twists: (y) => 0.003 + 0.004 * ease(y, 0.18, 0.226),
+    hightop: () => 0.0014,
+    // (fuller towards the ends, the way long hair falls)
+    long: (y, a) => 0.0035 + 0.005 * ease(y, 0.17, 0.226) + 0.006 * (1 - ease(y, 0.03, 0.13)) + overEars(y, a),
   };
-  const hairs = Object.fromEntries(HAIR_CUTS.map((c) => [c, hairShell(CUT_GAP[c])])) as Record<HairCut, THREE.BufferGeometry>;
   // The bun: a ball high on the back of the head, sunk into the hair
   const bun = (() => {
     const y = 0.206;
     const { zb } = headAt(y);
     return new THREE.SphereGeometry(0.03, R(12), R(9)).scale(1, 0.9, 0.85).translate(0, y + 0.006, zb - 0.012);
   })();
+  // Twists: locs from the crown hanging round the back and sides, clear of the ears (above them at the sides, to the
+  // nape at the back), never over the face
+  const twists = (() => {
+    const n = [0, 8, 14, 18][q];
+    const out: THREE.BufferGeometry[] = [];
+    for (let k = 0; k < n; k++) {
+      // (from one side round the back to the other: the front third left to the crop under them)
+      const a = Math.PI * (0.88 + (1.24 * (k + 0.5)) / n);
+      const dx = Math.cos(a);
+      const dz = Math.sin(a);
+      const yEnd = 0.152 - 0.09 * ease(-dz, 0.3, 0.85);
+      const pts: [number, number, number][] = [];
+      for (let t = 0; t <= 1.0001; t += q === 1 ? 0.34 : 0.2) {
+        const y = 0.205 + (yEnd - 0.205) * t;
+        const { zf, zb } = headAt(y);
+        const r = headR(y, dx, dz) + 0.0115 + 0.003 * t;
+        pts.push([dx * r, y, (zf + zb) / 2 + dz * r]);
+      }
+      out.push(tube(pts, 0.0065, q === 3 ? 8 : q === 2 ? 6 : 4, q === 1 ? 3 : q === 2 ? 5 : 6));
+    }
+    return out;
+  })();
+  // The high-top: a tall flat top over a fade, snug to the head at its foot (`hightopHair`: `hightop` is the sneaker)
+  const hightopHair = (() => {
+    // (sized from the head itself, its brow and all, every way out from its middle)
+    const at = (y: number, g: number): Sec => {
+      const { zf, zb } = headAt(y);
+      const zc = (zf + zb) / 2;
+      const front = headR(y, 0, 1);
+      const back = headR(y, 0, -1);
+      return [y, Math.max(headR(y, 1, 0), headR(y, 0.7071, 0.7071), headR(y, 0.7071, -0.7071)) + g + SAG, (front + back) / 2 + g + SAG, zc + (front - back) / 2];
+    };
+    const [, hw, hd, zc] = at(0.178, 0.006);
+    const secs: Sec[] = [at(0.166, 0.0012), at(0.172, 0.004), [0.178, hw, hd, zc], [0.23, hw * 1.04, hd * 1.03, zc], [0.282, hw * 1.05, hd * 1.04, zc], [0.29, hw, hd, zc], [0.2915, 0.002, 0.002, zc]];
+    return openLoft(secs, R(20), 3.2);
+  })();
+  // Long: to the jaw at the sides and the back, framing the face, falling straight below the cheekbones
+  const LONG_END = 0.02;
+  const LONG_HANG = 0.12;
+  const longLine = (a: number) => {
+    const f = Math.sin(a);
+    return f > 0.55 ? hairline(a) : LONG_END + (hairline(a) - LONG_END) * ease(f, 0.2, 0.55);
+  };
+  const hairs: Record<HairCut, THREE.BufferGeometry[]> = {
+    buzz: [hairShell(CUT_GAP.buzz)],
+    crop: [hairShell(CUT_GAP.crop)],
+    curls: [hairShell(CUT_GAP.curls)],
+    bun: [hairShell(CUT_GAP.bun), bun],
+    twists: [hairShell(CUT_GAP.twists)],
+    // (the fade in fewer rows: above its foot the block hides it)
+    hightop: [hairShell(CUT_GAP.hightop, Infinity, { more: 0.6 }), hightopHair],
+    long: [hairShell(CUT_GAP.long, Infinity, { line: longLine, hang: LONG_HANG, more: q === 1 ? 1.6 : 2.2 })],
+  };
   /** The hair left showing under a hat (or a helmet): close to the scalp at the back, below the lowest hat's band */
   const NAPE_TOP = 0.162;
   const nape = hairShell(() => 0.0012, NAPE_TOP);
+  // (long hair still hangs below a hat)
+  // (only round the sides and the back, rising to the band at the sides, clear of the brow)
+  const longUnder = hairShell((y, a) => 0.0012 + overEars(y, a), NAPE_TOP, {
+    line: (a) => LONG_END + (NAPE_TOP + 0.01 - LONG_END) * ease(Math.sin(a), -0.05, 0.2),
+    hang: LONG_HANG,
+    more: 2.2,
+    // (lower at the sides, under the tips of a cap's brim, which curl down there)
+    top: (a) => NAPE_TOP - 0.009 * Math.abs(Math.cos(a)) ** 3,
+  });
 
   // The cap: six panels close over the crown, rising a touch higher than the head, the brim from the band
   const CAP_GAP = (y: number) => 0.003 + 0.011 * THREE.MathUtils.smoothstep(y, 0.176, HEAD_HI);
@@ -4413,10 +4513,13 @@ export function items(q: Detail, hero = false): Item[] {
       (c): Item => ({
         id: `hair-${c}`,
         when: (o) => hairy(o) && !covered(o) && (far || (o.cut ?? 'crop') === c),
-        pieces: [P('head', c === 'bun' ? one([hairs[c], bun]) : hairs[c], 'hair')],
+        // (the locs a detail: the phones' light crowd keeps the hair under them)
+        pieces: [P('head', one(hairs[c]), 'hair'), ...(c === 'twists' && twists.length ? [P('head', one(twists), 'hair', { detail: true })] : [])],
       })
     ),
-    { id: 'hair-nape', when: (o) => hairy(o) && covered(o), pieces: [P('head', nape, 'hair')] },
+    // (long hair below a hat on single figures only: the crowd's, the nape)
+    { id: 'hair-nape', when: (o) => hairy(o) && covered(o) && (q < 2 || o.cut !== 'long'), pieces: [P('head', nape, 'hair')] },
+    ...(q < 2 ? [] : [{ id: 'hair-longunder', when: (o: Outfit) => hairy(o) && covered(o) && o.cut === 'long', pieces: [P('head', longUnder, 'hair')] }]),
     ...CHAINS.map(([kind, geo]): Item => ({
       id: `chain-${kind}`,
       when: (o) => !!o.chain && !!eyesOf(o) && o.kind === kind && !(hoodie(o) && o.hood),

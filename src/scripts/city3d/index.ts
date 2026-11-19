@@ -6,7 +6,8 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, setGroundLift, updateLights, updateWind } from './kit';
+import { texSourceLine } from './texsource';
+import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, glName, loadBuiltTextures, loadImage, loadTex, setGroundLift, texSources, updateLights, updateWind } from './kit';
 import { SOUTH_GROUND_RECT, southLift } from './southground';
 import { CROWD_PACK, loadMocap } from './mocap-load';
 import type { MoData } from './mocap';
@@ -47,7 +48,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, homePlaces, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
 import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
@@ -93,13 +94,16 @@ import { buildCornerShops } from './cornershops';
 import { buildBeacons } from './beacons';
 import { createTravelUI } from './travel-ui';
 import { ambienceAt } from './ambience';
-import { createTaxis } from './taxi';
+import type { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
-import { createMetroUI, type MetroUI } from './metro-ui';
+import type { MetroUI } from './metro-ui';
 import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { TubeUI } from './tube-ui';
+import type { Tube } from './tube3d';
+import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
 import type { SkyLiftUI } from './skylift-ui';
 import { skyLiftDoors } from './southsky';
 import { YARD_TREES } from './southyard';
@@ -181,17 +185,8 @@ function device(gpu = ''): Device {
 
 /** The graphics' name as WebGL gives it ('' when the browser hides it): Firefox says it plainly, Chrome behind an extension */
 function gpuName(renderer: THREE.WebGLRenderer): string {
-  try {
-    const gl = renderer.getContext();
-    const plain = String(gl.getParameter(gl.RENDERER) ?? '');
-    if (plain && !/^webkit webgl$/i.test(plain)) return plain;
-    const ext = gl.getExtension('WEBGL_debug_renderer_info');
-    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '') : '';
-  } catch {
-    return '';
-  }
+  return glName(renderer.getContext());
 }
-
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -1039,6 +1034,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           monoUI?.close();
           skyLiftUI?.close();
         },
@@ -1069,12 +1065,69 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           riverBusUI?.close();
           skyLiftUI?.close();
         },
       }))
     ),
     'the monorail'
+  );
+  // The south's underground line (southline.ts, docs/south-plan.md Phase 4g): its trains (tube3d.ts) loaded the first
+  // time you're down by its platforms or ride, running on their timetable from the clock; a door on each platform's
+  // middle ("Tube", only down there), its card and rides (tube-ui.ts) loaded the first time one opens
+  let tube: Tube | null = null;
+  let tubeUI: TubeUI | null = null;
+  const TUBE_DOORS = SOUTH_STATIONS.map((s) => {
+    const [x, z] = lineAt((s.p0 + s.p1) / 2 + PLAT_DOOR).at;
+    return { id: `tube:${s.id}`, x, z, label: 'Tube' };
+  });
+  const tubeDoors = () => (walk.position.y < PLAT_Y + 1.5 ? TUBE_DOORS : []);
+  const loadTube = lazy(
+    () =>
+      import('./tube3d').then(({ buildTube }) => (tube = buildTube(scene, { reduced, low: tier === 'low' }))),
+    'the tube'
+  );
+  // (down in a station's ticket hall or on its platforms, or riding)
+  tick(() => {
+    const below = walking && walk.position.y < HALL_Y + 0.8 && SOUTH_STATIONS.some((s) => Math.hypot(s.at[0] - walk.position.x, s.at[1] - walk.position.z) < 80);
+    if (!tube) {
+      if (below) void loadTube().catch(() => {});
+      return;
+    }
+    // (the clock's own seconds: the same trains at the same platforms for everyone, every visit; drawn only down there)
+    tube.update(Date.now() / 1000, below || walk.riding);
+  });
+  const loadTubeUI = lazy(
+    () =>
+      import('./tube-ui').then(({ createTubeUI }) =>
+      (tubeUI = createTubeUI(root, {
+        tube: () => loadTube(),
+        metro: () => loadMetroUI(),
+        fade: (on) => root.classList.toggle('is-fading', on),
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (at) => {
+          works.want(at.x, at.z, 70);
+          walk.placeAt({ x: at.x, z: at.z, yaw: at.yaw, y: at.y - SLAB });
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+          skyLiftUI?.close();
+        },
+      }))
+    ),
+    'the tube'
   );
   // Endswood's lifts (southsky.ts, docs/south-plan.md Phase 2c): a door at every core's foot and a call point on each
   // of its landings; the floor picker (the metro's card) loaded the first time one's used
@@ -1091,6 +1144,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           riverBusUI?.close();
           monoUI?.close();
         },
@@ -1110,11 +1164,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
   // The metro stations' doors; Starlight Mall's is up on its platform in the Skywalk (metro.ts `inside`): its prompt
   // only up there, not on the floor under it or the street
-  const metroDoors = () =>
-    (metroUI?.doors ?? []).filter((d) => {
-      const st = STATIONS.find((s) => `metro:${s.id}` === d.id);
-      return !st?.inside || walk.position.y > SLAB + st.inside.y - 1;
-    });
+  const METRO_DOORS = STATIONS.map((s) => ({ id: `metro:${s.id}`, x: s.door.x, z: s.door.z, label: 'Metro', st: s }));
+  const metroDoors = () => METRO_DOORS.filter((d) => !d.st.inside || walk.position.y > SLAB + d.st.inside.y - 1);
   // Starlight Mall's glass lift (mallinside.ts): a door on the ground floor and one on the east gallery
   const mallDoors = () => (walk.position.y > SLAB + MALL_UP / 2 ? [{ id: 'mall-lift:down', ...MALL_LIFT.high, label: 'Lift · Ground floor' }] : [{ id: 'mall-lift:up', ...MALL_LIFT.low, label: 'Lift · Upper floor' }]);
   /**
@@ -1182,7 +1233,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     openPlace: (id) => {
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
@@ -1231,6 +1282,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           .then((ui) => ui.open(id.slice(5)))
           .catch(() => game.toast('Monorail not running · try again'));
       }
+      if (id.startsWith('tube:')) {
+        // (the raised metro's and the tube's one switch, live.ts)
+        const shut = live.closed('metro');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadTubeUI()
+          .then((ui) => ui.open('tube', id.slice(5)))
+          .catch(() => game.toast('Tube not running · try again'));
+      }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
         if (shut) return tycoon?.toast(shut, 3500);
@@ -1240,8 +1299,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       }
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');
-      if (shut) tycoon?.toast(shut, 3500);
-      else metroUI?.open(id.slice(6));
+      if (shut) return tycoon?.toast(shut, 3500);
+      // (the card for both lines, tube-ui.ts: the metro's own if it won't load)
+      void loadTubeUI()
+        .then((ui) => ui.open('metro', id.slice(6)))
+        .catch(() => loadMetroUI().then((ui) => ui.open(id.slice(6))));
     },
     game,
     kartPark,
@@ -1266,7 +1328,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     fightClub,
     // The world map at the wheel (the gamepad's View; travel is made below, before anything can ask)
     worldMap: () => travel.toggle(),
-    skipRide: () => void (taxis.skip() || metroUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
+    skipRide: () => void (taxis?.skip() || metroUI?.skip() || tubeUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
     mapOpen: () => travel.isOpen,
     reduced,
     low: tier === 'low',
@@ -1421,8 +1483,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walker.on = false;
     walk.exit();
     hub?.close();
-    taxis.reset();
+    taxis?.reset();
     metroUI?.close();
+    tubeUI?.close();
     riverBusUI?.close();
     monoUI?.close();
     skyLiftUI?.close();
@@ -1470,10 +1533,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape' && hub?.close()) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
     // (and at the wheel: keymap.ts's M is the map in every mode that has it)
-    if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
+    // (a panel actually on screen: your business card lives in the hub, un-hidden, while the hub's shut)
+    const shown = [...root.querySelectorAll<HTMLElement>('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])')].some((el) => el.getClientRects().length > 0);
+    if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1638,10 +1703,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     open: (id) => open(id),
     startWalking: (at) => startWalking(at),
     want: (x, z, r) => works.want(x, z, r),
-    taxi: (p) => taxis.call(p),
+    taxi: (p) =>
+      void loadTaxis()
+        .then((t) => t.call(p))
+        .catch(() => game.toast('No taxis · try again')),
     riding: () => walk.riding,
   });
-  const taxis = createTaxis(root, {
+  // The taxis (taxi.ts): loaded the first time one's called (the world map's Taxi here)
+  let taxis: ReturnType<typeof createTaxis> | null = null;
+  const loadTaxis = lazy(
+    () =>
+      import('./taxi').then(({ createTaxis }) =>
+      (taxis = createTaxis(root, {
     scene,
     camera,
     reduced,
@@ -1658,8 +1731,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     name: (p) => placeName(root, p).name,
     toast: (text) => game.toast(text),
     sfx: (kind) => sound.sfx(kind),
-  });
-  metroUI = createMetroUI(root, {
+  }))
+    ),
+    'the taxis'
+  );
+  // The raised metro's rides (metro-ui.ts): loaded the first time a station's card opens (the card for both lines is
+  // tube-ui.ts's) or a trip rides it
+  const loadMetroUI = lazy(
+    () =>
+      import('./metro-ui').then(({ createMetroUI }) =>
+      (metroUI = createMetroUI(root, {
     metro,
     camera,
     reduced,
@@ -1677,11 +1758,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       walk.releaseMouse();
       close();
       tycoon?.closeCard();
+      tubeUI?.close();
       riverBusUI?.close();
       monoUI?.close();
       skyLiftUI?.close();
     },
-  });
+  }))
+    ),
+    'the metro'
+  );
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
@@ -1808,7 +1893,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let bench: Bench | null = null;
   if (query.has('bench'))
     void import('./bench').then(({ createBench }) => {
-      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
+      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, textures: texSources, extra: [] }, query.get('bench') === 'night');
     });
   // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
   let shots: Shots | null = null;
@@ -1855,7 +1940,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (the texture breakdown is its own chunk: only ?fps and ?bench load it, texrows.ts)
     let texRows: ((s: THREE.Object3D) => unknown) | null = null;
     void import('./texrows').then((m) => (texRows = m.textureRows));
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -1976,7 +2061,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     } else if (walking) {
       walk.update(dt, reduced ? 0 : t);
       travel.update(dt);
-      taxis.update(dt, reduced ? 0 : t);
+      taxis?.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
       walker.y = walk.position.y;
@@ -2140,7 +2225,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     ambT -= dt;
     if (ambT <= 0) {
       ambT = 0.25;
-      amb = walking ? ambienceAt(walk.position.x, walk.position.z) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
+      amb = walking ? ambienceAt(walk.position.x, walk.position.z, 0, undefined, walk.position.y) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
       // (up on his roof terrace he's out of doors: home.ts)
       if (walking && amb.home && !inHouse(walk.position.x, walk.position.z, walk.position.y)) amb = { ...amb, home: 0 };
     }
@@ -2200,6 +2285,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
+          texSourceLine(texSources()),
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
@@ -2294,6 +2380,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       addTrafficBikes(m.bikeGeometry);
     })
   );
+  // What stands in his house (homerooms.ts: out of the boot, the owner's call), fetched as the city starts; waking in
+  // the room waits for it (`wake()`)
+  const houseRooms = lazy(() => import('./homerooms').then((m) => {
+    const r = m.houseRooms(HOUSE_GEO);
+    setRooms({ room: r.FURNITURE, up: r.UPSTAIRS, base: r.BASEMENT });
+  }), "the house's rooms");
+  void houseRooms().catch(() => {});
   loop();
 
   return {
@@ -2320,6 +2413,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
         works.want(HOME_WAKE.x, HOME_WAKE.z, 25);
       }
+      await Promise.race([houseRooms().catch(() => {}), new Promise((r) => setTimeout(r, 10000))]);
       wokeAt = performance.now();
       street = { ready: false, at: 0 };
       // On the sofa as the room appears, up off it a moment after the menu's gone (Phase 2; under reduced motion

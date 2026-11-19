@@ -27,9 +27,9 @@ import { MARK_IDS, type MarkId, type PatternId } from '../net/profile-data';
 import { ATLAS_COLS, ATLAS_ROWS, MARK_ART } from './marks';
 import { lit, liveTex, moving, neon, toon } from './kit';
 import { crowdFrame, type CrowdClip } from './crowdclips';
-import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setWardrobeRow } from './crowdskin';
+import { SHAPE_TEXEL, WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setCrowdHead, setWardrobeRow } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
-import { BLACK, COLOR_KEYS, PLAYER, SKIN, items as wardrobe, paintMerge, restSkin, shadeRGB, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
+import { BLACK, COLOR_KEYS, HEAD_SCALE, PLAYER, SKIN, items as wardrobe, shapeHead, paintMerge, restSkin, shadeRGB, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
 import { onLens } from './lens';
 
 export { PLAYER, SOLDIER, lookOutfit, type Detail, type Outfit, type OutfitKind } from './wardrobe';
@@ -314,6 +314,24 @@ function skinPiece(p: Piece, rest: THREE.Matrix4, color: THREE.Color) {
   return g;
 }
 
+/** An outfit's head stretch (docs/faces-plan.md Phase 3): unmasked only, the balaclava keeps the art's head */
+const stretchOf = (o: Outfit) => HEAD_SCALE[(o.face && o.headShape) || 'standard'];
+/** A skinned piece at rest stretched with the head (wardrobe.ts `shapeHead()`), about the head bone's point */
+function stretchHead(g: THREE.BufferGeometry, s: readonly [number, number, number], pivot: THREE.Vector3) {
+  const p = g.attributes.position as THREE.BufferAttribute;
+  const idx = g.attributes.skinIndex as THREE.BufferAttribute;
+  const wt = g.attributes.skinWeight as THREE.BufferAttribute;
+  const head = BONE_INDEX.head;
+  const at: [number, number, number] = [pivot.x, pivot.y, pivot.z];
+  for (let i = 0; i < p.count; i++) {
+    let w = 0;
+    for (let k = 0; k < 4; k++) if (idx.getComponent(i, k) === head) w += wt.getComponent(i, k);
+    if (!w) continue;
+    const [x, y, z] = shapeHead([p.getX(i), p.getY(i), p.getZ(i)], w, at, s);
+    p.setXYZ(i, x, y, z);
+  }
+}
+
 /** The mark a logo piece prints for an outfit (null: none there) */
 function markFor(of: LogoOf, o: Outfit): MarkId | null {
   if (of === 'top') return o.mark ?? null;
@@ -350,6 +368,8 @@ export function createDegen(o: Outfit = PLAYER, q: Detail = figure): Degen {
   const skinned = new Map<string, { mat?: Mat; list: THREE.BufferGeometry[] }>();
   const rigid = new Map<string, { joint: Joint; held: boolean; mat?: Mat; list: { geo: THREE.BufferGeometry; color: THREE.Color }[] }>();
   const print = o.pattern && o.pattern !== 'plain' ? o.pattern : null;
+  const stretch = stretchOf(o);
+  const pivot = sk.bones.head.getWorldPosition(new THREE.Vector3());
   for (const it of items(q, true)) {
     if (!it.when(o)) continue;
     for (const src of it.pieces) {
@@ -373,6 +393,7 @@ export function createDegen(o: Outfit = PLAYER, q: Detail = figure): Degen {
       const key = mat ?? '';
       if (!skinned.has(key)) skinned.set(key, { mat, list: [] });
       const g = skinPiece(p, sk.j[p.joint].matrixWorld, color);
+      if (stretch !== HEAD_SCALE.standard) stretchHead(g, stretch, pivot);
       if (p.logo) p.geo.dispose();
       // (the print is laid out on the cloth where it is at rest, so it moves with it)
       if (mat === 'pattern') {
@@ -567,6 +588,8 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
   crowdTexture();
   const sk = makeSkeleton();
   sk.root.updateMatrixWorld(true);
+  if (COLOR_KEYS.length >= SHAPE_TEXEL) throw new Error('crowd wardrobe: the colours run into the head stretch');
+  setCrowdHead(BONE_INDEX.head, sk.bones.head.getWorldPosition(new THREE.Vector3()));
   const near = opts.light ? CROWD_NEAR_LIGHT : CROWD_NEAR;
   const meshes: THREE.InstancedMesh[] = [];
   /** A person's row: their colours, then which items they wear (`allow` leaves out items the meshes can't draw: `dress()`) */
@@ -579,6 +602,8 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
       row[c * 4 + 2] = tmp.b;
     });
     for (const q of [1, 0] as Detail[]) for (const it of items(q, true)) if (it.when(o) && allow(q, it)) row[itemCol(it.id) * 4 + 3] = 1;
+    // (the head's stretch less one: the shader's, crowdskin.ts)
+    stretchOf(o).forEach((v, k) => (row[SHAPE_TEXEL * 4 + k] = v - 1));
     return row;
   };
   const rowOf = addWardrobe(outfits.map((o) => rowFor(o)));

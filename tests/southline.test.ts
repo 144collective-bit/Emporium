@@ -7,9 +7,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ESC_RUN, HALL_Y, LINE, LINE_LENGTH, LINE_PASSAGES, LINE_S, MIN_R, PLAT_HALF, PLAT_LEN, PLAT_Y, SOUTH_STATIONS, STAIR_RUN, TUNNEL_TOP, lineAt, sOn, stationOf,
+  ESC_RUN, HALL_Y, LINE, TUBE_SPOTS, surfaceAt, LINE_LENGTH, LINE_PASSAGES, LINE_S, MIN_R, PLAT_HALF, PLAT_LEN, PLAT_Y, SOUTH_STATIONS, TUNNEL_TOP, lineAt, sOn, stationOf,
 } from '../src/scripts/city3d/southline';
-import { GROUND_Y, acrossOf, alongOf, floorOf, inPassage, pointOf, underworld, type Passage } from '../src/scripts/city3d/underground';
+import { acrossOf, alongOf, floorOf, inPassage, pointOf, underworld, type Passage } from '../src/scripts/city3d/underground';
 import { CHURCHYARD, CIRCUS, FOOTPATHS, PATH_HALF, SOUTH_STREETS, type Pt } from '../src/scripts/city3d/south';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { distTo, inside } from '../src/scripts/city3d/streetfaces';
@@ -92,13 +92,14 @@ test('each way in: stairs down from clear ground at street level (or the plaza, 
     }
     const top = pointOf(w, w.a0);
     const b = SHOPS.find((q) => q.kind === 'station')!;
-    const level = st.entrance.kind === 'building' ? b.base : GROUND_Y + southLift(...top);
-    assert.ok(Math.abs(floorOf(w, w.a0) - level) < 1e-9, `${st.id}: from the ground's (or its building's floor's) height at its top`);
-    const slope = (Math.atan2(GROUND_Y - HALL_Y, STAIR_RUN) * 180) / Math.PI;
+    const level = st.entrance.kind === 'building' ? b.base : surfaceAt(...top);
+    assert.ok(Math.abs(floorOf(w, w.a0) - level) < 1e-9, `${st.id}: from the surface's (or its building's floor's) height at its top`);
+    // (a flight as long as it takes to keep the stairs gentle: longer from higher up, Aldwyn's Green on its hill)
+    const slope = (Math.atan2(floorOf(w, w.a0) - HALL_Y, w.ramp0 - w.a0) * 180) / Math.PI;
     assert.ok(slope < 28, `${st.id}: its stairs ${slope.toFixed(1)} degrees`);
-    // (the ground about as high all round its opening: it stays level with the ground it opens through)
+    // (the ground rolls no more across its opening than its parapets, drawn on the ground, take in)
     const lifts = st.entrance.kind === 'building' ? [0] : [-1.5, 0, 1.5].flatMap((u) => [w.a0, w.ramp0].map((s) => southLift(...pointOf(w, s, u))));
-    assert.ok(Math.max(...lifts) - Math.min(...lifts) < 0.15, `${st.id}: its stairs on ground near enough level`);
+    assert.ok(Math.max(...lifts) - Math.min(...lifts) < 0.6, `${st.id}: the ground across its opening`);
     if (st.entrance.kind === 'building') {
       // (inside the building: within its frontage and depth)
       for (const s of [w.a0, w.ramp0]) {
@@ -163,5 +164,41 @@ test('walked: down the stairs to the hall, down the escalator to the platform; i
     // (its wall on the side away from where its way comes in)
     const side = -Math.sign(acrossOf(st.hall, ...pointOf(w, w.a0))) || 1;
     assert.ok(U.wall(...pointOf(st.hall, (st.hall.a0 + st.hall.a1) / 2, side * (st.hall.half + 0.2)), HALL_Y, 0.3), `${st.id}: its hall's wall`);
+  }
+});
+
+test("The Trenches' stairs open in The Block's plaza by the raised station's tower, clear of its playground and benches", async () => {
+  const { THE_BLOCK } = await import('../src/scripts/city3d/projects');
+  const w = stationOf('trenches').way;
+  const inRect = (r: readonly number[], [x, z]: Pt, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+  for (let s = w.a0 - 0.3; s <= w.ramp0 + 0.3; s += 0.3)
+    for (const u of [-1.5, 0, 1.5]) {
+      const p = pointOf(w, s, u);
+      assert.ok(inRect(THE_BLOCK.plaza, p), 'in the plaza');
+      assert.ok(!inRect(THE_BLOCK.playground, p, 0.5) && !inRect(THE_BLOCK.fence, p, 0.5), 'clear of the playground and the court');
+      for (const [x, z] of THE_BLOCK.benches) assert.ok(Math.hypot(x - p[0], z - p[1]) > 1.2, 'clear of a bench');
+    }
+});
+
+test("each station's place on the map stands by its way in, facing it, off its stairs (the south plan's 4h)", () => {
+  for (const s of SOUTH_STATIONS) {
+    const p = TUBE_SPOTS[s.id];
+    assert.ok(Number.isFinite(p.x) && Number.isFinite(p.z) && Number.isFinite(p.yaw));
+    const ahead: Pt = [-Math.sin(p.yaw), -Math.cos(p.yaw)];
+    if (s.entrance.kind === 'plaza') {
+      // (down in the Circus's sunken plaza, at its floor, looking into the station's corridor)
+      assert.ok(Math.hypot(p.x - CIRCUS.x, p.z - CIRCUS.z) < PLAZA.r - 2);
+      assert.equal(p.y, HALL_Y - 0.15);
+      assert.ok(inPassage(s.way, p.x + ahead[0] * 2, p.z + ahead[1] * 2), 'facing its corridor');
+      continue;
+    }
+    const [tx, tz] = s.entrance.top;
+    // (the station building's stairs start inside it, half way back: its door out on the street)
+    assert.ok(Math.hypot(p.x - tx, p.z - tz) < (s.entrance.kind === 'building' ? 6 : 3), `${s.id}: by its way in`);
+    assert.ok(!inPassage(s.way, p.x, p.z) || s.entrance.kind === 'building', `${s.id}: not on its stairs`);
+    // (facing its way in: the stairs' top or the building's door a step or two ahead)
+    const d0 = Math.hypot(p.x - tx, p.z - tz);
+    const d1 = Math.hypot(p.x + ahead[0] - tx, p.z + ahead[1] - tz);
+    assert.ok(d1 < d0, `${s.id}: facing its way in`);
   }
 });

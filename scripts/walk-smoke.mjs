@@ -133,18 +133,19 @@ await scene('wake', null, async (t) => {
   // (sat on the sofa: up off it a moment after the menu's gone, onto the spot in front of it, the view swung behind him)
   await t.until('him to stand up', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[2]) > 385.95;
+    return !!m && Number(m[1]) < -235.0;
   });
   await t.step(`stood up, at ${(await t.where()).join(', ')}`);
-  // (the camera looking south, into the room: its forward is -z of its matrix)
-  await t.until('the view to swing round behind him', () => -(window.__city?.camera.matrixWorld.elements[10] ?? 0) > 0.85);
+  // (the camera looking west, at the media wall: its forward is -z of its matrix, so -x of the world is its +x)
+  await t.until('the view to swing round behind him', () => (window.__city?.camera.matrixWorld.elements[8] ?? 0) > 0.85);
   await t.step('the view behind him');
-  // (to the front door: he faces the telly, south, so W takes him past the coffee table, clear of the corner sofa's
-  // chaise (docs/compound-plan.md Phase 2), A east to the hall and S back north to the door; its prompt reads
-  // "Getting ready…" until the street is in)
-  await t.go('w', 1.2, 'walked past the coffee table');
-  await t.go('a', 1.9, 'across the room to the hall');
-  await t.go('s', 1.85, 'and up the hall to the front door');
+  // (to the front door: he faces the telly on the media wall, west (docs/interior-plan.md Phase 1), so W takes him a
+  // step off the sofa, D north past its end and S back east along the front wall to the hall and the door; its prompt
+  // reads "Getting ready…" until the street is in)
+  await t.go('w', 0.2, 'stepped off the sofa');
+  await t.go('d', 1.3, 'past the sofa\'s end');
+  // (asked short: at a frame or two a second he coasts on half a tile or more, and the door's prompt is within 1 of it)
+  await t.go('s', 1.6, 'and along to the front door');
   await t.prompt('Front door');
   await t.until('him to be outside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
@@ -191,7 +192,7 @@ await scene('home', '-232.8,383.45,3.14', async (t) => {
   await inside();
   await t.step(`inside, at ${(await t.where()).join(', ')}`);
   // (back as far as he went: a fixed 1.0 left him wherever the walk in's coasting put him, at a frame or two a
-  // second sometimes nearer the stash's prompt than the door's)
+  // second sometimes nearer another prompt than the door's)
   const hall = await t.where();
   await t.go('w', 1.2, 'walked down the hall');
   const down = await t.where();
@@ -267,9 +268,9 @@ await scene('homeworkshop', '-233.7,373.15', async (t) => {
   await t.step('the garage menu closed');
 });
 
-// In his room (home.ts HOME_USES, the home plan's Phase 4): at the trunk, the stash's card opens and closes; at the
-// wardrobe, the fitting room opens in Drop 001's panel and closes
-await scene('homestash', '-236.3,386.15', async (t) => {
+// In his house (home.ts HOME_USES): at the den's vault (docs/interior-plan.md Phase 1), the stash's card opens and
+// closes; at the wardrobe upstairs, the fitting room opens in Drop 001's panel and closes
+await scene('homestash', '-232.5,385.55,0,-1.17', async (t) => {
   await t.prompt('Stash');
   await t.until('the stash card', () => !!document.querySelector('[data-stash]:not([hidden]) [data-stash-inv]'));
   await t.step('the stash opened');
@@ -277,7 +278,8 @@ await scene('homestash', '-236.3,386.15', async (t) => {
   await t.until('the stash to close', () => !document.querySelector('[data-stash]:not([hidden])'), null, 60000);
   await t.step('the stash closed');
 });
-await scene('homewardrobe', '-229.85,388.6', async (t) => {
+// (the wardrobe is the dressing room's rails upstairs now, docs/interior-plan.md Phase 3)
+await scene('homewardrobe', '-233.05,387.27,3.14,1.45', async (t) => {
   await t.prompt('Wardrobe');
   await t.until('the fitting room', () => !!document.querySelector('[data-panel]:not([hidden]) [data-fit-items]'));
   await t.step('the fitting room opened at the wardrobe');
@@ -334,9 +336,9 @@ await scene('guns', '50.7,54.7', async (t) => {
 await scene('metro', '68.4,37.5', async (t) => {
   const from = await t.where();
   await t.prompt('Metro');
-  await t.until('the station card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-metro-to]'));
-  await t.step('the station card opened');
-  await t.click('[data-metro] [data-metro-to]');
+  await t.until('the station card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-trip^="metro:"]'));
+  await t.step('the station card opened (both lines)');
+  await t.click('[data-metro] [data-trip^="metro:"]');
   await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
   await t.step('riding');
   await t.page.waitForTimeout(4000);
@@ -440,6 +442,82 @@ await scene('station', '-158.47,389.10,-0.295', async (t) => {
   await t.go('a', 16, 'along the hall and down the escalator');
   await t.until('down on the platform', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 6, null, 60000);
   await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// The Trenches' underground station (southline.ts, Phase 4f): from The Block's plaza by the raised station's tower,
+// down its stairs (south-east) and on into the side of its ticket hall (the High Road's walk goes on down to a platform)
+await scene('trenches', '-101.03,180.75,-2.581', async (t) => {
+  await t.go('w', 12, 'down the stairs into the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// Lot 9's and Aldwyn's Green's underground stations (Phase 4f): down each one's stairs from the street into its ticket hall
+for (const [name, spawn, far] of [
+  ['lot9station', '-115.58,471.00,-3.062', 10],
+  ['aldwynsstation', '-230.49,458.34,-1.736', 27],
+]) {
+  await scene(name, spawn, async (t) => {
+    await t.go('w', far, 'down the stairs into the ticket hall');
+    await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+    await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  });
+}
+
+// The tube (tube-ui.ts, docs/south-plan.md Phase 4g): on Aldwyn's Green's platform, its card, a ride to the High Road
+// seen from inside the carriage, skipped, stepping out on the High Road's platform
+await scene('tube', '-213.5,440.4,0,-6.55', async (t) => {
+  await t.prompt('Tube');
+  await t.until('the tube card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-trip="tube:highroad"]'));
+  await t.step('the tube card opened');
+  await t.click('[data-metro] [data-trip="tube:highroad"]');
+  await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
+  await t.step('riding, inside the carriage');
+  await t.page.waitForTimeout(7000);
+  await t.step('riding on, the tunnel going by');
+  await t.click('[data-metro-skip]');
+  await t.until('the ride to end', () => !document.querySelector('.city.is-riding'));
+  // (by the High Road platform's Tube door: the readout's once a second, so not the train's last place mid-ride)
+  await t.until('him to step out at the High Road', ([x, z]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) < 3;
+  }, [-189.1, 376.8], 60000);
+  await t.step(`stepped out at ${(await t.where()).join(', ')} (${(await t.page.evaluate(downNow)).toFixed(1)} down)`);
+});
+
+// Changing lines (trips.ts, tube-ui.ts, docs/south-plan.md Phase 4h): at Downtown's metro door, the card for both
+// lines, a trip to the tube's High Road (the metro to The Trenches, the change, the tube on), skipped to its very end
+await scene('change', '68.4,37.5', async (t) => {
+  await t.prompt('Metro');
+  await t.until('the card for both lines', () => !!document.querySelector('[data-metro]:not([hidden]) [data-trip="tube:highroad"]'));
+  await t.step('the card for both lines');
+  await t.click('[data-metro] [data-trip="tube:highroad"]');
+  await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
+  await t.step('riding the metro towards The Trenches');
+  await t.click('[data-metro-skip]');
+  await t.until('the ride to end', () => !document.querySelector('.city.is-riding'));
+  // (on the High Road's platform, by its Tube door)
+  await t.until('him to step out at the High Road', ([x, z]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) < 3;
+  }, [-189.1, 376.8], 60000);
+  await t.step(`stepped out at ${(await t.where()).join(', ')} (${(await t.page.evaluate(downNow)).toFixed(1)} down)`);
+});
+
+// The world map and a taxi (worldmap.ts, taxi.ts, loaded the first time one's called): the map open (M), the tube's
+// Trenches station found (its line drawn, docs/south-plan.md Phase 4h), Taxi here, the taxi on its way, cancelled
+await scene('taxi', '68.4,37.5', async (t) => {
+  await t.page.keyboard.press('KeyM');
+  await t.until('the world map', () => !!document.querySelector('[data-worldmap]:not([hidden])'));
+  await t.page.selectOption('[data-wm-find]', 'tube-trenches');
+  await t.until("the tube station's card", () => !!document.querySelector('[data-wm-card]:not([hidden]) [data-wm-act="taxi"]:not(:disabled)'));
+  await t.step("the map: the tube's Trenches station");
+  await t.click('[data-wm-act="taxi"]');
+  await t.until('the taxi on its way', () => !!document.querySelector('[data-taxi]:not([hidden])'));
+  await t.step(`the taxi called: ${await t.page.evaluate(() => document.querySelector('[data-taxi-text]')?.textContent ?? '')}`);
+  await t.click('[data-taxi-cancel]');
+  await t.until('the taxi sent away', () => !!document.querySelector('[data-taxi][hidden]'));
+  await t.step('the taxi cancelled');
 });
 
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
