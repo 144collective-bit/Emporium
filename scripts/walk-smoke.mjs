@@ -443,6 +443,26 @@ await scene('station', '-158.47,389.10,-0.295', async (t) => {
   await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
 });
 
+// The Trenches' underground station (southline.ts, Phase 4f): from The Block's plaza by the raised station's tower,
+// down its stairs (south-east) and on into the side of its ticket hall (the High Road's walk goes on down to a platform)
+await scene('trenches', '-101.03,180.75,-2.581', async (t) => {
+  await t.go('w', 12, 'down the stairs into the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// Lot 9's and Aldwyn's Green's underground stations (Phase 4f): down each one's stairs from the street into its ticket hall
+for (const [name, spawn, far] of [
+  ['lot9station', '-115.58,471.00,-3.062', 10],
+  ['aldwynsstation', '-230.49,458.34,-1.736', 27],
+]) {
+  await scene(name, spawn, async (t) => {
+    await t.go('w', far, 'down the stairs into the ticket hall');
+    await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+    await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  });
+}
+
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
 await scene(
   'pad',

@@ -16,6 +16,7 @@ import { CONCRETE } from './southblocks';
 import { CEIL, FLOOR, MOUTH_PATHS, SUBWAY, PATH_HALF, PLANTERS, PLANTER_H, PLAZA, SUBWAYS, SUBWAY_WAYS, type SubwayId } from './circus';
 import { floorOf, openOf, pointOf, type Passage, type Pt } from './underground';
 import { ROW, sign } from './tunnel3d';
+import { BUILT_STATIONS, stationOf } from './southline';
 
 const CONC = toon(CONCRETE);
 const CONC_DARK = toon('#8b8277');
@@ -202,7 +203,9 @@ export const alongDir = (p: Passage): Pt => {
 
 const RAD = Math.PI / 180;
 /** The subways' ways round the plaza, in order */
-const WAYS = (Object.values(SUBWAY_WAYS) as number[]).map((d) => d * RAD).sort((a, b) => a - b);
+/** The ways out of the plaza: its subways' and, once its station's built, the corridor to the underground's ticket hall
+ * (southline.ts: as wide as a subway, so its seats and wall are cut the same) */
+const WAYS = [...(Object.values(SUBWAY_WAYS) as number[]), ...(BUILT_STATIONS.includes('circus') ? [stationOf('circus').entrance.deg] : [])].map((d) => d * RAD).sort((a, b) => a - b);
 const HALF = SUBWAYS[0].half;
 /** Round the plaza at radius r between two subways (k to k+1): where their cuts meet it */
 const gapAt = (r: number) => Math.asin(Math.min(1, HALF / r));

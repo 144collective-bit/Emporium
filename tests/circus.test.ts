@@ -172,8 +172,9 @@ test('you walk down from a mouth, under the road, into the plaza and up its seat
   // (into the plaza, its floor open to the sky; up its seats away from the subways)
   assert.equal(U.y(CIRCUS.x, CIRCUS.z, FLOOR), FLOOR);
   assert.ok(!U.roofed(CIRCUS.x, CIRCUS.z));
-  const seat: Pt = [CIRCUS.x + 6.9 * Math.cos(Math.PI), CIRCUS.z + 6.9 * Math.sin(Math.PI)];
-  assert.ok(Math.abs(U.y(...seat, FLOOR)! - (FLOOR + 0.66)) < 1e-9, 'the top seat (west, away from every subway)');
+  const a = (140 * Math.PI) / 180;
+  const seat: Pt = [CIRCUS.x + 6.9 * Math.cos(a), CIRCUS.z + 6.9 * Math.sin(a)];
+  assert.ok(Math.abs(U.y(...seat, FLOOR)! - (FLOOR + 0.66)) < 1e-9, "the top seat (south-west, away from every subway and the station's corridor west)");
   // (down there, the walls stop you: out of the subway's side under the road; not along it)
   assert.ok(U.wall(...pointOf(p, under, p.half + 0.2), FLOOR, 0.3));
   assert.ok(!U.wall(...along(under), FLOOR, 0.3));
@@ -210,7 +211,11 @@ test("walked in the city (groundheight.ts): down the ramp, under the road, the p
   assert.equal(ground(...pointOf(p, under), FLOOR), FLOOR, 'down in it under the road');
   assert.ok(ground(...pointOf(p, under), 0.1) > 0, 'up on the road over it');
   assert.equal(ground(CIRCUS.x, CIRCUS.z, FLOOR), FLOOR, "the plaza's floor");
-  assert.ok(Math.abs(ground(CIRCUS.x - 6.9, CIRCUS.z, FLOOR + 0.5) - (FLOOR + 0.66)) < 1e-9, 'its top seat');
+  // (south-west: due west is the underground station's corridor out of the plaza now, southline.ts)
+  const sw = (140 * Math.PI) / 180;
+  assert.ok(Math.abs(ground(CIRCUS.x + 6.9 * Math.cos(sw), CIRCUS.z + 6.9 * Math.sin(sw), FLOOR + 0.5) - (FLOOR + 0.66)) < 1e-9, 'its top seat');
+  // (and due west, level on out of the plaza into the station's corridor)
+  assert.equal(ground(CIRCUS.x - 6.9, CIRCUS.z, FLOOR + 0.1), FLOOR, "the station's corridor through the seats");
 });
 
 test("down there the planters and lamps stop you, as its walls do (the kit's boxes: walking's solids don't reach down there)", () => {

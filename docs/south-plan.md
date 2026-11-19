@@ -540,7 +540,29 @@ From the Circus west, patchy as high roads are:
        (`baked.ts` key `southline`: the boot stays at 746 KB). The smoke
        test walks from the sidewalk to the platform (`station`). Shots
        `docs/south-shots/22-phase-4e-*.webp` (the smoke test's).
-     - **4f, the other four stations.**
+     - **4f, the other four stations**. Built and signed off
+       (2026-11-19): every station built (`BUILT_STATIONS`): walked, drawn
+       and its stairs cut. Halls open at their sides where a way in
+       crosses one (`sideGap()`); stairs from the street have parapets,
+       coping and railings round their openings and the city's M mark on
+       a post at the mouth; the Circus's corridor out of its sunken plaza,
+       west (its seats and wall opened there, circus3d.ts); The Trenches'
+       finish gritty (tags and bills on the FX layer), the Circus's and Lot
+       9's the blocks' concrete, Aldwyn's Green's tiled. The Trenches'
+       stairs moved into The Block's plaza by the raised station's tower
+       (they had opened in its playground; tested clear of it, the court
+       and the benches); Lot 9's on its open ground with the grass laid
+       back round their opening (`STAIR_INFILL`). Smoke walks: down The
+       Trenches', Lot 9's and Aldwyn's Green's stairs into their halls
+       (`trenches`, `lot9station`, `aldwynsstation`). Aldwyn's Green's
+       stairs moved on to the sidewalk of the street along the
+       churchyard's west side (they had opened in the terrace's back
+       gardens, out of reach); the village stands on its hill, so every
+       flight now starts at the surface at its top (`surfaceAt()`: a
+       block's slab or the open ground, rolling) and runs as long as it
+       takes to stay gentle (`STAIR_SLOPE`), its parapets and walls drawn
+       on the surface beside them. A slanting way's walls and floor run on
+       to meet its hall's side. Shots `docs/south-shots/23-phase-4f-*.webp`.
      - **4g, the trains and the ride** (round-top tube trains, the tunnel
        seen, Skip), the change at The Trenches, on the map and the
        station card.
