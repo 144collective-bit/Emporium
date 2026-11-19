@@ -100,7 +100,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
-import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse, onRoof, roofWall } from './home';
+import { HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeCamera, homeWall, inHouse, onRoof, roofWall } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { HARBOUR_MASTER } from './docksport';
@@ -593,6 +593,14 @@ export function createWalk(d: WalkDeps) {
   let momentDy = 0;
   /** Sitting down, where the camera goes: a three-quarter view from whichever side of him has the room */
   let benchYaw = 0;
+  /**
+   * Woken on a seat (`enter()`'s `seat`): once he's up, the camera comes round behind him to this, then it's yours.
+   * Any turn of the view by hand ends it at once (`look()`), and it gives up after `WAKE_SWING` s whatever happens:
+   * it must never hold the view against you (it did, turning while it swung, until both were added)
+   */
+  let wakeYaw: number | null = null;
+  const WAKE_SWING = 2.5;
+  let wakeLeft = 0;
   const benchEye = new THREE.Vector3();
   const benchDir = new THREE.Vector3();
   function pickBenchYaw(mk: { face: number; y: number; seat?: { x: number; z: number } }) {
@@ -759,7 +767,7 @@ export function createWalk(d: WalkDeps) {
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     // Inside Degen's house (home.ts, docs/home-plan.md Phase 3): only the room's walls and what stands in it stop you
-    if (inHouse(x, z, y)) return homeWall(x, z, RADIUS);
+    if (inHouse(x, z, y)) return homeWall(x, z, RADIUS, y);
     // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
     if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
     // Below ground (underground.ts: Lot 9's tunnel, the Circus's subways and plaza): down there only their walls stop you;
@@ -819,7 +827,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, HOME_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, ...homeCamera(pos.y)] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -1618,6 +1626,8 @@ export function createWalk(d: WalkDeps) {
       d.touched();
       return;
     }
+    // (the view turned by hand: waking's swing round behind him lets go, `wakeYaw`)
+    wakeYaw = null;
     // Finer control down the sight
     k *= 1 - combat.aimed * 0.4;
     const dyaw = -dx * k * settings.sens;
@@ -2490,6 +2500,12 @@ export function createWalk(d: WalkDeps) {
     // (sitting down he turns his back to the bench, where the camera would be: it comes round to his front-left,
     // a three-quarter view of him on the bench, and is yours again once he's seated)
     if (moments.active && moments.mark?.kind === 'bench' && (moments.phase === 'approach' || moments.phase === 'play')) yaw += wrap(benchYaw - yaw) * damp(4, dt);
+    // (woken on his sofa, docs/spawn-plan.md: up off it, the view swings round behind him, so ahead is into the room)
+    if (wakeYaw !== null && !(moments.active && moments.phase === 'hold')) {
+      yaw += wrap(wakeYaw - yaw) * damp(3, dt);
+      wakeLeft -= dt;
+      if (Math.abs(wrap(wakeYaw - yaw)) < 0.01 || wakeLeft <= 0) wakeYaw = null;
+    }
     // (a kick or the dodge: he stands for it; the guard up, he faces where you look, as aiming)
     const gx = mg ? mg.dx * mg.speed : rooted ? 0 : dirX * top;
     const gz = mg ? mg.dz * mg.speed : rooted ? 0 : dirZ * top;
@@ -3298,7 +3314,12 @@ export function createWalk(d: WalkDeps) {
       vel.set(0, 0);
     },
     /** Start walking; `spawn` puts Degen somewhere else (the kart park's gate from its panel) */
-    enter(spawn?: { x: number; z: number; yaw: number }) {
+    /**
+     * Into walk mode: at the walk's start, `?spawn=`, or `spawn`; `seat` given, sat on it already (a bench's middle and
+     * the way its sitter faces, `h` its seat over the ground: waking on his sofa at home, docs/spawn-plan.md), up off
+     * it with `standUp()` or the first push of the keys
+     */
+    enter(spawn?: { x: number; z: number; yaw: number }, seat?: { x: number; z: number; ry: number; h: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -3313,10 +3334,11 @@ export function createWalk(d: WalkDeps) {
       moments.cancel();
       dropCrate();
       momentAmt = momentDy = 0;
-      // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
+      // ?spawn=x,z[,yaw[,y]] in the address: start walking somewhere else (for checking a place on real devices); `y`,
+      // how high, picks the floor where floors stand over one another (Degen's house upstairs: home.ts)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
-        pos.set(at[0], groundAt(at[0], at[1]), at[1]);
+        pos.set(at[0], groundAt(at[0], at[1], at[3] ?? 0), at[1]);
         if (at.length > 2) yaw = at[2];
       }
       if (spawn) {
@@ -3333,10 +3355,27 @@ export function createWalk(d: WalkDeps) {
       baseFov = camera.fov;
       fov = camera.fov;
       hero.g.visible = hero.ring.visible = true;
+      if (seat) {
+        const y = groundAt(seat.x, seat.z, pos.y);
+        const mk = benchMark(seat, y);
+        mk.seat!.y = y + seat.h;
+        pos.set(mk.x, y, mk.z);
+        face = mk.face;
+        // (the camera in front of him, looking back at him on the seat: behind him is the sofa's back and the wall;
+        // once he's up it swings round behind him, `wakeYaw`)
+        wakeYaw = spawn?.yaw ?? wrap(mk.face - Math.PI);
+        wakeLeft = WAKE_SWING;
+        yaw = wrap(mk.face + 0.35);
+        moments.sit(mk);
+      } else wakeYaw = null;
       hotbar?.reset();
       void loadHotbar();
       void loadFists();
       root.dataset.mode = 'walk';
+    },
+    /** Up off the seat he was sat on as walking started (`enter()`'s `seat`), if he's still on it */
+    standUp() {
+      if (moments.active && moments.phase === 'hold' && moments.mark?.kind === 'bench') moments.release();
     },
     exit() {
       hideCard();

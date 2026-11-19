@@ -8,10 +8,13 @@ import { EDGE_AT, EDGE_OUT, JACARANDAS, OAKS, PALMS, PALM_TALLEST, SCRUB, WALLS,
 import { BOULEVARD, BOULEVARD_MEDIAN, CREST_LAMPS, FLATS_X, HILL_ROADS, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { PLAN, distToStreet, onSlab } from '../src/scripts/city3d/streetplan';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { treeSpot } from '../src/scripts/city3d/outskirts';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 type Pt = [number, number];
 const streets = PLAN.streets.filter((s) => s.kind !== 'alley');

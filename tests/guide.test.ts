@@ -6,8 +6,11 @@ import assert from 'node:assert/strict';
 import { GUIDE, advanceGuide, guideAt, guideDone, guideStep, hideGuide } from '../src/scripts/city3d/guide';
 import { BACKUP_KEYS, BACKUP_MAX, TYCOON_KEY, backupName, packBackup, readBackup } from '../src/scripts/city3d/backup';
 import { GUIDE_STEPS, addXp, cleanSave, level, newSave } from '../src/scripts/city3d/tycoon';
-import { DOORS, SOLIDS } from '../src/scripts/city3d/solids';
+import { DOORS, SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { pointIn, pointOnSlab } from './world';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const NOW = Date.UTC(2026, 9, 21, 12);
 /** Degen's radius in walk mode (walk.ts RADIUS) */
@@ -24,9 +27,10 @@ test('the guide has GUIDE_STEPS steps with their own ids, and ends on the backup
   }
 });
 
-test('a fresh save starts on the first step, and nothing is done yet', () => {
+test('a fresh save starts on the first step, out of the front door, and nothing is done yet', () => {
   const s = newSave(NOW);
-  assert.equal(guideStep(s)?.id, 'stock');
+  assert.equal(GUIDE[0].id, 'out');
+  assert.equal(guideStep(s)?.id, 'out');
   assert.deepEqual(advanceGuide(s), []);
   assert.equal(s.dorras, newSave(NOW).dorras);
 });
@@ -34,19 +38,22 @@ test('a fresh save starts on the first step, and nothing is done yet', () => {
 test('steps finish in order, pay once, and the beam follows the step', () => {
   const s = newSave(NOW);
   const start = s.dorras;
-  // Selling counts for the first two steps, but driving doesn't skip the queue
+  // Nothing moves on until he's been out of the house
   s.counters.driven = 500;
   s.counters.sold = 5;
+  assert.deepEqual(advanceGuide(s), [], 'still in the house');
+  s.counters.leftHome = 1;
+  // Selling counts for the next two steps, but driving doesn't skip the queue
   const done = advanceGuide(s);
   assert.deepEqual(
     done.map((g) => g.id),
-    ['stock', 'sell', 'drive']
+    ['out', 'stock', 'sell', 'drive']
   );
   assert.equal(s.dorras, start + done.reduce((a, g) => a + g.reward, 0));
   assert.equal(s.ledger.totals.missions, done.reduce((a, g) => a + g.reward, 0));
   assert.equal(s.counters.earned, done.reduce((a, g) => a + g.reward, 0), 'the rewards are Dorras taken');
   assert.equal(guideStep(s)?.id, 'contract');
-  assert.deepEqual(guideAt(s), { x: GUIDE[3].at.x, z: GUIDE[3].at.z });
+  assert.deepEqual(guideAt(s), { x: GUIDE[4].at.x, z: GUIDE[4].at.z });
   assert.deepEqual(advanceGuide(s), [], 'nothing pays twice');
   hideGuide(s, true);
   assert.equal(guideAt(s), null, 'hidden: no beam');
@@ -68,12 +75,16 @@ test('steps finish in order, pay once, and the beam follows the step', () => {
 
 test('the guide carries through a save, and older saves past level 1 have it done', () => {
   const s = newSave(NOW);
-  s.guide = { step: 3, hidden: true };
+  s.guide = { step: 3, hidden: true, steps: GUIDE_STEPS };
   s.backup = NOW - 1000;
   const back = cleanSave(JSON.parse(JSON.stringify(s)), NOW);
-  assert.deepEqual(back.guide, { step: 3, hidden: true });
+  assert.deepEqual(back.guide, { step: 3, hidden: true, steps: GUIDE_STEPS });
   assert.equal(back.backup, NOW - 1000);
-  assert.equal(cleanSave({ ...s, guide: { step: 99 } }, NOW).guide.step, GUIDE_STEPS, 'clamped');
+  assert.equal(cleanSave({ ...s, guide: { step: 99, steps: GUIDE_STEPS } }, NOW).guide.step, GUIDE_STEPS, 'clamped');
+  // A guide saved before Head out was put first (seven steps, no count): past the first step, one on; not started, Head out
+  for (const [was, now] of [[0, 0], [1, 2], [3, 4], [6, 7], [7, GUIDE_STEPS], [99, GUIDE_STEPS]])
+    assert.equal(cleanSave({ ...s, guide: { step: was, hidden: false } }, NOW).guide.step, now, `old step ${was}`);
+  assert.equal(GUIDE[cleanSave({ ...s, guide: { step: 1, hidden: false } }, NOW).guide.step].id, 'sell', 'the step they were on');
   assert.equal(cleanSave({ ...s, backup: NOW + 1e9 }, NOW).backup, NOW, 'no backup from the future');
   // A save from before the guide
   const old = JSON.parse(JSON.stringify(newSave(NOW)));

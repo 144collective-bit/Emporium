@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BRIDGES, BROOK, BROOK_HALF, brookDist, BULB, CHURCHYARD, CIRCUS, COMPOUND, EDGE_Z, FOOTPATHS, GATE_LANE, HEDGES, LOT9_BOUNDS, LOT9_EDGE, LOT9_W, LOT_LANE, NODED, PATH_HALF, REC, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, zoneAt, type Pt } from '../src/scripts/city3d/south';
-import { area, cross, distTo, inside, nearLine, selfCrossings } from '../src/scripts/city3d/streetfaces';
+import { area, cross, distTo, inside, insideRow, nearLine, rowCrossings, selfCrossings } from '../src/scripts/city3d/streetfaces';
 import { HEAD, PLOT } from '../src/scripts/city3d/endsfar';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
 import { rampLand } from '../src/scripts/city3d/viaduct';
@@ -218,4 +218,15 @@ test('the fast line distance: exactly distTo within its reach, and its reach or 
         else assert.ok(fast >= reach, `at ${x},${z}: ${fast} beyond its reach`);
       }
     }
+});
+
+test("the scan-line test: exactly inside() along every row, on the south's blocks (hundreds of points each), points on their corners too", () => {
+  for (const b of SOUTH_BLOCKS) {
+    const zs = [...b.poly.map((p) => p[1]), ...b.poly.map((p) => p[1] + 0.37)];
+    for (const z of zs.slice(0, 40)) {
+      const row = rowCrossings(b.poly, z);
+      for (const x of [...b.poly.map((p) => p[0]), ...row, ...row.map((v) => v + 1e-9)].slice(0, 120)) assert.equal(insideRow(row, x), inside(b.poly, [x, z]), `${b.id} at ${x}, ${z}`);
+      for (let x = Math.min(...b.poly.map((p) => p[0])) - 2; x < Math.max(...b.poly.map((p) => p[0])) + 2; x += 0.9) assert.equal(insideRow(row, x), inside(b.poly, [x, z]), `${b.id} at ${x}, ${z}`);
+    }
+  }
 });

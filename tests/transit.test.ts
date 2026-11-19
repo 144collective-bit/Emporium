@@ -6,7 +6,10 @@ import { APPROACH, BUS_STOPS, DWELL, PULL_IN, PULL_OUT, SHELTER_EVERY, SHELTER_H
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { LANE, RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { ROUTES } from '../src/scripts/city3d/routes';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const streetOf = (id: string) => PLAN.streets.find((s) => s.id === id)!;
 

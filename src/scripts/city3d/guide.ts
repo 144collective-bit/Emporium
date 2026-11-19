@@ -4,6 +4,7 @@
  * way there from the City view). Free of the DOM and of scene code; the
  * save's counters (tycoon.ts) are what the steps are checked against.
  *
+ * - The first is out of the front door (docs/spawn-plan.md): every visit starts in Degen's room at home.
  * - The steps run in order. A step is done the moment the save shows it
  *   (lifetime counters, so a player who's already done it moves straight
  *   on); it pays a small reward of Dorras and XP and the next one starts.
@@ -17,6 +18,7 @@
 import { DOORS, GARAGE_SITE, RACK, STALL_SPOT } from './solids';
 import { design } from './layout';
 import { HUT_DOOR } from './kartcircuit';
+import { HOME_SPAWN, HOME_WAKE } from './home';
 import { GUIDE_STEPS, addXp, book, count, type TycoonSave } from './tycoon';
 
 type At = { x: number; z: number };
@@ -47,6 +49,17 @@ const facing = (from: At, to: At): GuideWalk => ({ x: from.x, z: from.z, yaw: Ma
 const COUNTER = (([x, z]) => ({ x, z }))(design(24.7, 27.1));
 
 export const GUIDE: GuideStep[] = [
+  {
+    id: 'out',
+    name: 'Head out',
+    hint: 'Walk out of your front door',
+    // (the beam over the yard, outside the front door; from the City view, into the room to walk out)
+    at: HOME_SPAWN,
+    go: { walk: HOME_WAKE },
+    met: (s) => s.counters.leftHome >= 1,
+    reward: 100,
+    xp: 20,
+  },
   {
     id: 'stock',
     name: 'Stock your stall',

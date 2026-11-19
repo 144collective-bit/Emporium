@@ -247,6 +247,11 @@ export const GINNELS: Ginnel[] = LAID.ginnels;
  * A strip behind a house's rear yard, the alley's width: kept where it's in the block and in no one else's plot; where
  * rows back onto each other close, the alley takes some of the rear yard (`rear`: how deep the yard is left)
  */
+/** Each house's reach (its plot and its foot together, in a box): another's alley can only meet it within it */
+const REACH = HOUSES.map((o) => {
+  const pts = [...plotOf(o), ...houseFoot(o)];
+  return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+});
 export const ALLEYS: { house: string; poly: Pt[]; rear: number }[] = HOUSES.flatMap((h) => {
   const [a0, c0] = backOf(h);
   const [nx, nz] = h.face;
@@ -257,7 +262,13 @@ export const ALLEYS: { house: string; poly: Pt[]; rear: number }[] = HOUSES.flat
     const poly: Pt[] = [a, c, [c[0] - nx * w, c[1] - nz * w], [a[0] - nx * w, a[1] - nz * w]];
     const ok =
       shrink(poly, 0.1).every((q) => inside(b.poly, q)) &&
-      !HOUSES.some((o) => o !== h && (overlaps(shrink(poly, 0.15), shrink(plotOf(o), 0.05)) || overlaps(poly, houseFoot(o))));
+      !HOUSES.some((o, i) => {
+        if (o === h) return false;
+        // (a box clear of its reach can't meet it: shrinking keeps an outline in its box)
+        const r = REACH[i];
+        if (poly.every((p) => p[0] < r[0]) || poly.every((p) => p[0] > r[2]) || poly.every((p) => p[1] < r[1]) || poly.every((p) => p[1] > r[3])) return false;
+        return overlaps(shrink(poly, 0.15), shrink(plotOf(o), 0.05)) || overlaps(poly, houseFoot(o));
+      });
     if (ok) return [{ house: h.id, poly, rear: TERRACE.rear - into }];
   }
   return [];

@@ -53,6 +53,8 @@ export interface TileWork {
   step(ms: number, x: number, y: number, z: number, dt: number, far: number, look?: readonly [number, number]): void;
   /** How many sites are still waiting to be built (cheap: every frame) */
   pending(): number;
+  /** How many of them are within `r` of a point (spawn.ts: the street round Degen's house) */
+  waitingNear(x: number, z: number, r: number): number;
   /** Take on the sites registered since (a district loaded as you approach: districts.ts) */
   adopt(): number;
   /** Build now everything waiting within `r` of a point (walking in, a fly-in's end) */
@@ -319,6 +321,7 @@ export function createTileWork(
       }
     },
     pending: () => queue.length,
+    waitingNear: (x, z, r) => sitesNear(queue, x, z, r).length,
     adopt() {
       const more = SITES.splice(0);
       for (const s of more) byId.set(s.id, s);

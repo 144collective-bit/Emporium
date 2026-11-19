@@ -6,9 +6,12 @@ import assert from 'node:assert/strict';
 import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, floorName, liftArrival, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
 import { BLOCKS_RECT, BRIDGES, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { inside } from '../src/scripts/city3d/streetfaces';
 import { createGroundHeight } from '../src/scripts/city3d/groundheight';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const STREETS = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
 const offStreet = (p: Pt) => Math.min(...STREETS.map((s) => distToStreet(s, p) - s.half - 0.8));
