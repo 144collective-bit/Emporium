@@ -17,7 +17,7 @@ import { COVER, KERB, PLANT, ROAD, STONE, VERGE } from './palette';
 import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, FOOTPATHS, HEDGES, PATH_HALF, REC, SOUTH_CROSSINGS, SOUTH_STREETS, type Pt } from './south';
 import { BOLLARD, PATH_BOLLARDS } from './endswood';
 import { PLOT } from './endsfar';
-import { addCurtains, denCharts, registerHome, trophyWall } from './home3d';
+import { addCurtains, denCharts, houseLights, registerHome, trophyWall } from './home3d';
 import { HOME_POOLS } from './home';
 import { registerTunnel } from './tunnel3d';
 import { registerCircus } from './circus3d';
@@ -304,4 +304,6 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   trophyWall(scene, low);
   // The trading desk's screens in his basement (docs/compound-plan.md Phase 4): made-up charts, shown only down there
   denCharts(scene, tick, low);
+  // The house's windows lit at night (docs/compound-plan.md Phase 6: its factory windows, slate glass by day)
+  houseLights(scene);
 }

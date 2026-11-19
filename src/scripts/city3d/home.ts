@@ -127,6 +127,13 @@ export const PLANTERS: Rect[] = [-1, 1].map((s): Rect => {
   return [x - 0.15, HOUSE[1] - 0.46, x + 0.15, HOUSE[1] - 0.06];
 });
 
+/**
+ * The fire escape up the house's east side, facing the gates (docs/compound-plan.md Phase 6: the house as a black brick
+ * loft): a landing at the upper floor and a flight down to the ground, its footprint solid; narrow enough that the
+ * way round the house's east end to the side door stays open beside it
+ */
+export const FIRE_ESCAPE: Rect = [HOUSE[2], HOUSE[1] + 0.5, HOUSE[2] + 0.34, HOUSE[1] + 3.7];
+
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
 export const SHELL = 0.15;
@@ -175,6 +182,7 @@ export const HOME_SOLIDS: Box[] = (() => {
     // Done up (docs/compound-plan.md Phase 1): the yard's lit bollards and the planters by the front door
     ...BOLLARDS.map(([x, z]): Box => [x - BOLLARD.r, z - BOLLARD.r, x + BOLLARD.r, z + BOLLARD.r, SLAB_Y + BOLLARD.h]),
     ...PLANTERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + PLANTER_H]),
+    [FIRE_ESCAPE[0], FIRE_ESCAPE[1], FIRE_ESCAPE[2], FIRE_ESCAPE[3], SLAB_Y + RIDGE + 0.3],
   ];
 })();
 
