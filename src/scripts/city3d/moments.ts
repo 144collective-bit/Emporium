@@ -393,6 +393,15 @@ export function createMoment() {
     return null;
   }
 
+  /** Already sat at a bench's `m` (waking on his sofa at home, docs/spawn-plan.md): seated now, no sit-down */
+  function sit(m: Mark) {
+    start(m);
+    from = { x: m.x, z: m.z };
+    phase = 'hold';
+    t = 0;
+    u = 1;
+  }
+
   /** F again: an approach or a door cut short, what it opens opened now */
   function skip() {
     if (!mark || phase === 'done') return;
@@ -468,6 +477,7 @@ export function createMoment() {
 
   return {
     start,
+    sit,
     update,
     skip,
     release,

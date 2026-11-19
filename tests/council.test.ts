@@ -5,8 +5,8 @@
 // anyone's way.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALLOTMENTS, ALLOTMENT_SOLIDS, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, COUNCIL_SOLIDS, PLOTS, SEMI, SEMIS, lotRing } from '../src/scripts/city3d/council';
-import { BROOK, COMPOUND, FOOTPATHS, PATH_HALF, REC, zoneAt, type Pt } from '../src/scripts/city3d/south';
+import { ALLOTMENTS, ALLOTMENT_SOLIDS, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, COUNCIL_RECT, COUNCIL_SOLIDS, PLOTS, SEMI, SEMIS, lotRing } from '../src/scripts/city3d/council';
+import { BROOK, COMPOUND, COUNCIL_LAND, FOOTPATHS, PATH_HALF, REC, zoneAt, type Pt } from '../src/scripts/city3d/south';
 import { HOUSES, houseFoot } from '../src/scripts/city3d/southterraces';
 import { SHOPS, shopFoot } from '../src/scripts/city3d/highroad';
 import { BLOCKS } from '../src/scripts/city3d/southblocks';
@@ -65,4 +65,10 @@ test('the corner shops and the derelict community centre: placed, named, clear o
 test("nothing solid in anyone's way: the places' arrivals, the High Road's doors", () => {
   for (const at of Object.values(ENDS_SPAWNS)) assert.ok(![...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS].some((b) => inBox(b, at.x, at.z, 0.4)), `an arrival at ${at.x}, ${at.z} blocked`);
   for (const b of COUNCIL_SOLIDS) for (const p of [[b[0], b[1]], [b[2], b[3]]] as Pt[]) assert.ok(offStreet(p) > 0, `a solid on a street at ${p}`);
+});
+
+test("the council's land (fixed in south.ts, what the village's chunk loads round) holds everything laid", () => {
+  const [x0, z0, x1, z1] = COUNCIL_LAND;
+  assert.ok(COUNCIL_RECT[0] >= x0 && COUNCIL_RECT[1] >= z0 && COUNCIL_RECT[2] <= x1 && COUNCIL_RECT[3] <= z1, `laid over ${COUNCIL_RECT.join(',')}, the land ${COUNCIL_LAND.join(',')}`);
+  for (const b of [...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]) assert.ok(b[0] >= x0 && b[1] >= z0 && b[2] <= x1 && b[3] <= z1, `a solid at ${b[0]},${b[1]} past the land`);
 });

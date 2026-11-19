@@ -212,5 +212,6 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   streetSpars: 'street spars',
   partnersBeaten: 'sparring partners beaten',
   streetChains: 'chains of three on a dummy',
+  leftHome: 'times out of the house',
 };
 export type { Counters };

@@ -21,7 +21,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
     the links (`FENNEL_WAY`, `RUNWAY_VIEW`, `LOT_LANE` in through Lot 9's west gate onto its lane, `BRAMBLE_LANE`,
     `BROOKSIDE`), the village's streets (Bell Street, Yew Walk, Chapel Row round the churchyard, Orchard, Lark, Hill,
     Mill, Thorn).
-  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes), every
+  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes; worked
+    out when the site is built, `GROWN`, baked.ts key `south-grown`, `docs/spawn-plan.md` Phase 3a), every
     one in a council, village or bungalow zone, clear of the other streets by `CLEAR`, with **a footpath through**
     (`FOOTPATHS`, the owner's rule: nowhere is a dead end on foot), on ahead past the close's end or out from the
     crescent's back, never back to the street it grew off. A new street joins `MAIN` (and `GROWS` decides where
@@ -97,8 +98,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`registerHighRoad()`, from village3d.ts): every kind in a building's own frame, the signs one atlas (`siteMat`).
 - **The council rows, bungalows, allotments** (`council.ts`, DOM-free, tested in `tests/council.test.ts`, 3d): `lay()`
   (lots along a block's runs where they fit, in zones), `lotRing()`, `SEMIS`, `BUNGALOWS`, `CORNER_SHOPS`,
-  `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT` (the
-  village's chunk covers it). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
+  `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT`
+  (what's laid; inside `COUNCIL_LAND`, fixed in south.ts, which the village's chunk covers: tested). **Not in the
+  boot**: only the village's chunk imports it (laying it out took seconds as the page loaded), so its solids join
+  there, `registerCouncil()` calling `addSolids()` on the main thread (the houses' with `lift` false, their tops
+  already over their plinths), as Sunridge's houses do; tests that check against `SOLIDS` across the south add them
+  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
 - **Aldwyn's Green Rec** (`rec.ts`, DOM-free, tested in `tests/rec.test.ts`, 3e): `PITCH`, `GOALS`, `PAVILION`, `VERANDA`,
   `SKATE` and its features, `PLAYGROUND`, `BENCHES`, `GATE`, `FOOTPATH`, `BRIDGE` / `recBridgeY()` (groundheight.ts's
   `recbridge` layer), `REC_PATH`, `REC_SPAWN`, `REC_SOLIDS`, `REC_RECT`; a place (`rec`, endsplaces.ts). Drawn by
@@ -124,18 +129,45 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   when their buildings stand (the owner's call); `ENDS_SPAWNS` on a sidewalk by each.
 - **Its sound** (ambience.ts `ends`): on its land and 25 past it. Bunker Sound's beat and St Aldwyn's bell are off
   until their buildings come back (`studio`, `bell` are 0).
-- **Below ground**: Lot 9's tunnel only (groundheight.ts `UNDER`, underground.ts); the Circus's well and its subways
-  are Phase 4's.
-- **`?bench` views**: `south-circus`, `south-high`, `south-village`, and `ends-home` (the compound from the High Road's
-  end).
+- **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
+  subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
+  north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by
+  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk) and walked (groundheight.ts
+  `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
+  `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it
+  (`CIRCUS_HOLE`); the island is a planted ring round the plaza. Its trees and lamps at the boot (index.ts). The kit
+  takes a passage at any angle (`radial()`) and a well's stepped seats (`tiers`, `wellFloor()`).
+- **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
+  end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
   `PLOT` and `GATES` (all that file is now), its gates on Gate Lane at `HEAD`; the wall and gates, the double garage
   (`CAR_HOME`, `BIKE_HOME`, `HOME_GARAGE_DOOR`), the workshop (`HOME_WORKSHOP_DOOR`), the house with its room
-  (`ROOM`, `FURNITURE`, `HOME_PORTALS`, `HOME_USES`: the wardrobe and the stash) and its roof terrace (`ROOF_Y`,
+  (`ROOM`, `FURNITURE`, `HOME_PORTALS`, `HOME_USES`: the wardrobe and the stash; `HOME_WAKE`, where every visit
+  starts, `SOFA_SEAT`, where he sits as he wakes, `HOME_WAITS`, the ways out that wait while the street loads, and
+  the room's curtains, `ROOM_WINDOWS`, `CURTAIN`, `curtainPanels()`, drawn by home3d.ts `addCurtains()`, following
+  spawn.ts `curtains`: `docs/spawn-plan.md`) and its roof terrace (`ROOF_Y`,
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the
-  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`.
+  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`. **The upgrade** (the owner's call, 2026-11-18) is planned in
+  `docs/compound-plan.md`: the outside done up with his neon, the ground floor refitted, an upstairs (a bedroom, an
+  office with a desk), a trophy wall, a basement trading den; nothing built until its phase is signed off.
+  Phase 1 (the outside) is built: black steel and his neon (home3d.ts `STEEL_BLACK`, `HIS_NEON`, his D by `mark()` on
+  the gate pier's plaque and in the paving), a hoop on the garage's pier, and the yard's lit bollards and the planters
+  by the front door (home.ts `BOLLARDS`, `PLANTERS`, in `HOME_SOLIDS`).
+  Phase 2 (the ground floor refit) is built: the lounge, kitchen island and hall in `FURNITURE`, the open stairs, and
+  the trophy wall (`hometrophies.ts`: `trophies()` from the save, the `SHELF` feed set by tycoon-boot.ts; drawn on the
+  main thread by home3d.ts `trophyWall()`, added by south3d.ts).
+  Phase 3 (the upstairs) is built: the house's floors by height (home.ts `homeLevel()`, `UP_Y`, `UP_CEIL`;
+  `homeWall(x, z, r, y)`, `homeFloorY()` for groundheight.ts's `home` layer, `homeCamera(y)` for walk.ts), `UPSTAIRS`
+  (the landing, bedroom and office), the stairs re-routed room ↔ landing ↔ terrace (`HOME_PORTALS`, each with its
+  `level`), and the office's desk (`home:desk`, the business card). A new thing upstairs goes in `UPSTAIRS`.
+  Phase 4 (the basement, his trading den) is built: the `base` floor (`BASE_Y`, `BASE_CEIL`), `BASEMENT`, the steps
+  down from under the stairs (`home:cellar`, `home:cellarup`), drawn in the room's batch (home3d.ts `basement()`), the
+  trading desk's screens on the main thread (`denCharts()`, made-up charts, nothing legible). A new thing down there
+  goes in `BASEMENT`.
+  Phase 5 (the terrace and polish) is built: the outdoor sofa, the telescope, his sign at the east rail, a third
+  planter (`ROOF_THINGS`); `?bench` views `ends-room` and `ends-den`. The plan is complete.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

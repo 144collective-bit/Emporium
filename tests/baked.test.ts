@@ -13,6 +13,7 @@ import { UNDER } from '../src/scripts/city3d/viadress';
 import { GINNELS, HOUSES } from '../src/scripts/city3d/southterraces';
 import { SHOPS } from '../src/scripts/city3d/highroad';
 import { BUNGALOWS, COMMUNITY_CENTRE, CORNER_SHOPS, SEMIS } from '../src/scripts/city3d/council';
+import { FOOTPATHS, GROWN, SOUTH_STREETS } from '../src/scripts/city3d/south';
 
 const made: Record<string, unknown> = await bake({ quiet: true });
 /** Into the page and back, as the browser gets it */
@@ -29,7 +30,7 @@ function assertPlain(v: unknown, path: string) {
 }
 
 test('everything baked is plain data: it comes into the page as it was made', () => {
-  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'council', 'highroad', 'jog-cycle', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
+  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'council', 'highroad', 'jog-cycle', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'south-grown', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
   for (const [key, v] of Object.entries(made)) assertPlain(v, key);
 });
 
@@ -72,4 +73,11 @@ test("Aldwyn's Green's terraces, the High Road's buildings and the council rows 
   assert.deepStrictEqual(viaPage(made.terraces), viaPage({ houses: HOUSES, ginnels: GINNELS }));
   assert.deepStrictEqual(viaPage(made.highroad), viaPage(SHOPS));
   assert.deepStrictEqual(viaPage(made.council), viaPage({ corner: CORNER_SHOPS, centre: COMMUNITY_CENTRE, semis: SEMIS, bungalows: BUNGALOWS }));
+});
+
+test("the south's closes, crescents and their footpaths from the page are the ones grown here", () => {
+  assert.deepStrictEqual(viaPage(made['south-grown']), viaPage(GROWN));
+  assert.ok(GROWN.streets.length > 10 && GROWN.paths.length >= GROWN.streets.length);
+  for (const s of GROWN.streets) assert.ok(SOUTH_STREETS.includes(s), `${s.id} is one of the south's streets`);
+  for (const p of GROWN.paths) assert.ok(FOOTPATHS.includes(p), `${p.id} is one of its footpaths`);
 });

@@ -34,8 +34,10 @@ keep it up to date when what it describes changes.
   sends and keeps nothing (the password is cleared) and says accounts are
   coming soon; Play as guest goes on to the menu, whose "Playing as guest ·
   Log in" goes back. A phone's keyboard stays down until a field is tapped.
-  Single player enters the city (the fly-in runs again, `city.intro()` in
-  `index.ts`); every visit opens at Day and Clear (the owner's call: Live
+  Single player wakes Degen in his room at home, walking (`city.wake()` in
+  `index.ts`, docs/spawn-plan.md: the room is built behind the menu and the
+  rest of the city loads while the ways out wait; where the owner has closed
+  walking, the fly-in runs again instead, `city.intro()`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
   that visit only); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
   and flips the Online switch on and enters with one; Options holds Time,
@@ -90,7 +92,8 @@ keep it up to date when what it describes changes.
   styles `.mk-hub` in `menus.css`), the pause screen: tabs Map (World map,
   every place, More's comic and store, PulseChain native, X and Telegram),
   Bag (opens the inventory; what you carry is Business's Bag), Business
-  (the business card `[data-biz]`, moved in), Missions (level and badges),
+  (the business card `[data-biz]`, moved in; also opened by the desk in Degen's office upstairs, home.ts
+  `home:desk`), Missions (level and badges),
   Profile (look, finish, wardrobe, wallet), Settings (`[data-controls]`:
   time, sky, sound, reset view; the walk controls; keys; credits) and Online
   with a game server (`[data-mp]` is its tab). The page makes it (its own

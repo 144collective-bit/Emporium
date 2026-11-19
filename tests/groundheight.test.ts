@@ -9,7 +9,7 @@ import { floorY } from '../src/scripts/city3d/southblocks';
 import { BRIDGE as REC_BRIDGE, recBridgeY } from '../src/scripts/city3d/rec';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
-import { HOME, ROOF_Y, homeRoofY } from '../src/scripts/city3d/home';
+import { HOME, ROOF_Y, homeFloorY } from '../src/scripts/city3d/home';
 import { DECK_Y, MARKET_DECK, onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
 import { DEPARTURES, departuresY } from '../src/scripts/city3d/airfield';
@@ -47,8 +47,8 @@ const DISC = { ...GARAGE_SITE.turntable, top: 0.07 };
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 function reference(leavesOpen: () => boolean) {
   return (x: number, z: number, yNow = 0) => {
-    // (Degen's roof terrace, home.ts: new since the old groundAt(), so the reference takes it as the layers do)
-    const roof = homeRoofY(x, z, yNow);
+    // (Degen's upstairs and roof terrace, home.ts: new since the old groundAt(), so the reference takes them as the layers do)
+    const roof = homeFloorY(x, z, yNow);
     if (roof !== null) return roof;
     const tn = UNDER.y(x, z, yNow);
     if (tn !== null) return tn;
@@ -182,7 +182,7 @@ test('the layered ground agrees with the old groundAt() everywhere, at every hei
 test('every layer answers alone where it stands, and nowhere on the open street downtown', () => {
   const g = (x: number, z: number) => ({ ...baseAt(x, z), leavesOpen: true });
   const where: Record<string, [number, number, number]> = {
-    homeroof: [(HOME.house[0] + HOME.house[2]) / 2, (HOME.house[1] + HOME.house[3]) / 2, SLAB + ROOF_Y],
+    home: [(HOME.house[0] + HOME.house[2]) / 2, (HOME.house[1] + HOME.house[3]) / 2, SLAB + ROOF_Y],
     // (the south's rolling ground on the village's hill, St Aldwyn's churchyard)
     south: [-205, 462, 0],
     // (Endswood's sky network: The Core's landing at the third floor)

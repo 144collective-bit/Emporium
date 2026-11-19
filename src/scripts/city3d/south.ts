@@ -22,6 +22,7 @@
  * The blocks are the faces of the street graph (streetfaces.ts), each with the zone it's in (`zoneAt()`): the tall
  * band along the ring road, the estate round the Circus, the council rows, the village, the bungalows.
  */
+import { BUILT, baked } from './baked';
 import { GATES, HEAD, PLOT } from './endsfar';
 import { NS_SOUTH_END } from './layout';
 import { LOT9_FENCE } from './lot9';
@@ -214,10 +215,12 @@ const NAMES = ['Alder', 'Birch', 'Cobble', 'Dove', 'Elder', 'Fern', 'Gorse', 'He
 /** A spatial hash of every line's points, to ask how near the nearest is */
 class Near {
   cell = 6;
-  map = new Map<string, { p: Pt; tag: number }[]>();
+  map = new Map<number, { p: Pt; tag: number }[]>();
+  /** A cell's key (a number: the layout asks many thousands of times as the city loads) */
+  static key = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
   add(pts: Pt[], tag: number) {
     for (const p of pts) {
-      const k = `${Math.floor(p[0] / this.cell)},${Math.floor(p[1] / this.cell)}`;
+      const k = Near.key(Math.floor(p[0] / this.cell), Math.floor(p[1] / this.cell));
       if (!this.map.has(k)) this.map.set(k, []);
       this.map.get(k)!.push({ p, tag });
     }
@@ -229,7 +232,7 @@ class Near {
     const [cx, cz] = [Math.floor(p[0] / this.cell), Math.floor(p[1] / this.cell)];
     for (let i = -c; i <= c; i++)
       for (let j = -c; j <= c; j++)
-        for (const e of this.map.get(`${cx + i},${cz + j}`) ?? []) {
+        for (const e of this.map.get(Near.key(cx + i, cz + j)) ?? []) {
           if (skip(e.tag, e.p)) continue;
           m = Math.min(m, Math.hypot(e.p[0] - p[0], e.p[1] - p[1]));
         }
@@ -254,7 +257,12 @@ export interface Footpath {
   from: string;
 }
 
-const grown = (() => {
+/**
+ * The closes and crescents grown off the main streets, and their footpaths through: a seeded search, the same every
+ * time, and the slowest thing the south works out (about a second of a phone's start-up), so it's worked out when the
+ * site is built (baked.ts, key `south-grown`, docs/spawn-plan.md Phase 3a) and read from the build's data in the page
+ */
+function growStreets(): { streets: SouthStreet[]; paths: Footpath[] } {
   const rnd = seeded(14112026);
   const streets: SouthStreet[] = [];
   const paths: Footpath[] = [];
@@ -394,7 +402,9 @@ const grown = (() => {
     if (streets.length >= 64) break;
   }
   return { streets, paths };
-})();
+}
+export const GROWN = baked('south-grown', BUILT ? undefined : growStreets);
+const grown = GROWN;
 
 /** Every street the south adds to the street plan */
 export const SOUTH_STREETS: SouthStreet[] = [...MAIN, ...grown.streets];
@@ -474,6 +484,10 @@ export const BRIDGES: { street: string; at: Pt }[] = (() => {
  * covers their ground) */
 export const ESTATE_LAND: Rect = [-176, EDGE_Z, AVE.ns3.x, 470];
 export const VILLAGE_LAND: Rect = [-322, EDGE_Z, -104, 530];
+
+/** Where the council rows, the bungalows and the allotments stand (council.ts lays them inside it, tested): fixed here
+ * so the village's chunk can load round them (districts.ts) without the boot laying them out */
+export const COUNCIL_LAND: Rect = [-355, 336, -96, 528];
 
 /** What the south's drawing covers (districts.ts: its chunk loads as you come near): the streets, the brook, the
  * hedges and the fields' edge, the tunnel's mouth */

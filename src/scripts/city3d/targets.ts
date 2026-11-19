@@ -109,9 +109,12 @@ export const pictureBytes = (o: PictureOpts) => pictureTargets(o).reduce((n, t) 
 export const MEMORY_CEILINGS = {
   /**
    * Measured 2026-11-13: geometry 188, textures 64, render targets 9; geometry lowered to 187 when Phase 3b left the
-   * unused uv out (169.8 measured)
+   * unused uv out (169.8 measured). Geometry raised on purpose to 210 (the owner's call, 2026-11-18): 191.2 measured
+   * with the south's Phases 2-3 built (its blocks, terraces, the High Road, St Aldwyn's, council semis), plus 10%.
+   * Textures measured 32.9 then (the districts' textures baked, the stability plan's 4.3); kept at 70 for new
+   * districts' room (the owner's call)
    */
-  phone: { geometry: 187, textures: 70, targets: 10 },
+  phone: { geometry: 210, textures: 70, targets: 10 },
   /** Phase 2's measured 291 (a retina 1440 x 900 at 2x, SMAA) and 175 (1x, 4x MSAA) */
   desktop: { retina: 320, standard: 193 },
 } as const;

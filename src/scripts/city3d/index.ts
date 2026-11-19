@@ -41,13 +41,14 @@ import { STREET_PEOPLE } from './streetlevel';
 import { STREETLIFE_PEOPLE } from './streetlife';
 import { GARDEN_TREES as UPTOWN_GARDEN_TREES, SITE_PEOPLE } from './uptownsites';
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
-import { createDistricts } from './districts';
+import { LAZY_DISTRICTS, createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, homePlaces, HOME_SPAWN, inHouse, startsAtHome } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, homePlaces, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -102,6 +103,8 @@ import type { MonoUI } from './monorail-ui';
 import type { SkyLiftUI } from './skylift-ui';
 import { skyLiftDoors } from './southsky';
 import { YARD_TREES } from './southyard';
+import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
+const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
 import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
@@ -131,7 +134,7 @@ import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-records';
 import { kartRecordsHtml } from './kart-records';
-import { destAt } from './tycoon';
+import { count, destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW, figureDetail } from './character';
@@ -450,6 +453,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
   // Endswood's trees on the grass round its towers (southyard.ts, docs/south-plan.md 2d), on the rolling ground
   for (const [x, z, sc] of YARD_TREES) addTree(x, z, sc, false, ENDS_SLAB + southLift(x, z));
+  // The Circus's sunken plaza (circus.ts, docs/south-plan.md Phase 4b): a tree in each planter, lamps by the seats
+  for (const { at: [x, z] } of PLANTERS) addTree(x, z, 0.75, false, FLOOR + PLANTER_H);
+  for (const [x, z] of CIRCUS_LAMPS) addLamp(x, z, Math.atan2(x - CIRCUS_MID[0], z - CIRCUS_MID[1]), FLOOR);
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
@@ -1113,6 +1119,22 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     });
   // Starlight Mall's glass lift (mallinside.ts): a door on the ground floor and one on the east gallery
   const mallDoors = () => (walk.position.y > SLAB + MALL_UP / 2 ? [{ id: 'mall-lift:down', ...MALL_LIFT.high, label: 'Lift · Ground floor' }] : [{ id: 'mall-lift:up', ...MALL_LIFT.low, label: 'Lift · Upper floor' }]);
+  /**
+   * Waking at home (spawn.ts, docs/spawn-plan.md): is the street outside his house built yet? Asked a few times a
+   * second while he's in the room, and once it's ready it stays ready for the visit
+   */
+  let wokeAt = 0;
+  let street = { ready: false, at: 0 };
+  function streetUp() {
+    if (street.ready || !wokeAt) return true;
+    const now = performance.now();
+    if (now - street.at < 300) return false;
+    const due = dueDistricts(LAZY_DISTRICTS, districts.loaded()).length;
+    street = { ready: streetReady({ due, waiting: works.waitingNear(READY_AT[0], READY_AT[1], READY_REACH), waitedMs: now - wokeAt }), at: now };
+    // (and the curtains drawn back: home3d.ts follows it)
+    if (street.ready) curtains.open = true;
+    return street.ready;
+  }
   let lifting = false;
   /** Up or down in Sector 7 Tower's lift */
   const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
@@ -1162,7 +1184,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y)],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1172,13 +1194,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         walk.releaseMouse();
         return open('shop', true);
       }
+      // (upstairs, the office's desk: the business card, as the Dorras pill opens it)
+      if (id === 'home:desk') {
+        walk.releaseMouse();
+        return tycoon?.openCard();
+      }
       if (id === 'home:stash')
         return void loadStash()
           .then((ui) => ui.open())
           .catch(() => game.toast('Stash stuck · try again'));
       if (id.startsWith('home:')) {
         const p = HOME_PORTALS.find((q) => q.id === id);
-        return p ? rideTo(p.to, 'home', 'Home', p.arrived) : undefined;
+        if (!p) return;
+        // (waking at home: the ways out wait until the street outside is built, spawn.ts)
+        if (HOME_WAITS.includes(id) && !streetUp()) return tycoon?.toast('Nearly ready · the street is loading', 2500);
+        // (out of the front or side door: Getting started's first step counts it)
+        if (id === 'home:out' || id === 'home:yard') {
+          count(game.save(), 'leftHome');
+          game.commit();
+        }
+        return rideTo(p.to, 'home', 'Home', p.arrived);
       }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
       if (id.startsWith('sky-lift:')) return void loadSkyLift().then((ui) => ui.open(id.slice('sky-lift:'.length)));
@@ -1369,7 +1404,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
-  function startWalking(spawn?: { x: number; z: number; yaw: number; y?: number }) {
+  function startWalking(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
     if (walking) return;
     // (unless the owner has closed it for now: live settings)
     const shut = live.closed('walk');
@@ -1382,7 +1417,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     controls.enabled = false;
     walking = true;
     walker.on = true;
-    walk.enter(spawn);
+    walk.enter(spawn, seat);
     works.want(walk.position.x, walk.position.z, 70);
     mp?.walkChanged(true);
     // The site header steps aside so the city and its mode header fill the screen (city.css)
@@ -1417,7 +1452,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walking starts at home, on Degen's front path in the Ends (home.ts, the owner's call), but a new player's very
   // first walk, which starts downtown by the Emporium as it always did. `?spawn=x,z` in the address still says
   // otherwise (walk.ts reads it when no spot is given)
-  walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') || !startsAtHome(game.save().visited) ? undefined : HOME_SPAWN));
+  walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') ? undefined : HOME_SPAWN));
   walkBtn.hidden = false;
   // The mode header's City button: back to the city view from walking
   const head = createCityHead(root);
@@ -1998,6 +2033,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     sky.setShadows(walking && !walk.airborne && !lowered.shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
+    // (waking at home: the street's readiness asked every frame too, so the curtains open even standing still)
+    if (wokeAt && !street.ready) streetUp();
     part('before');
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
     part('sky');
@@ -2175,7 +2212,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
+          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
           // reads here as under the ground, or the near plane, or the view gone wrong)
           ...(walking
@@ -2274,6 +2311,36 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     /** Open a building's panel (the owner's notices' Go button comes here) */
     open(id: string) {
       open(id);
+    },
+    /**
+     * Into the game from the start menu (docs/spawn-plan.md, the owner's call): walking, in Degen's room at home
+     * (`HOME_WAKE`), the south's chunk and what's round his house built first, behind the menu, so the room is
+     * whole when it lifts; the rest of the city loads behind the walls while the ways out wait (spawn.ts). False
+     * when walking can't start (the owner has closed it for now): the menu does the fly-in instead
+     */
+    async wake() {
+      if (root.dataset.mode !== 'explore' || live.closed('walk')) return false;
+      const there = new URLSearchParams(location.search).has('spawn');
+      // (unless the owner has closed his house for now: then in the yard outside it)
+      const home = live.place('home');
+      const inside = !there && !(home && !home.open);
+      const at = there ? undefined : inside ? HOME_WAKE : HOME_SPAWN;
+      // (the curtains drawn before his house is drawn: they open once the street's ready, Phase 2)
+      if (inside) curtains.open = false;
+      if (!there) {
+        await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
+        works.want(HOME_WAKE.x, HOME_WAKE.z, 25);
+      }
+      wokeAt = performance.now();
+      street = { ready: false, at: 0 };
+      // On the sofa as the room appears, up off it a moment after the menu's gone (Phase 2; under reduced motion
+      // he's standing already)
+      startWalking(at, inside && !reduced ? SOFA_SEAT : undefined);
+      if (inside && !reduced) {
+        const up = () => setTimeout(() => (startCovers ? up() : setTimeout(() => walk.standUp(), 700)), 200);
+        up();
+      }
+      return true;
     },
     /** The fly-in again, from far out to the home view (the start menu closing: the first one ran behind it) */
     intro() {

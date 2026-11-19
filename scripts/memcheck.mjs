@@ -67,8 +67,8 @@ const sample = () =>
 
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}/?bench&fps`, { timeout: 600000 });
-  // Every site built: nothing waiting twice in a row (a district arriving adds more), 75 minutes at the most (since the
-  // south's re-laying the phone's city takes about 55 here; the Action's job allows 120)
+  // Every site built: nothing waiting twice in a row (a district arriving adds more), 75 minutes at the most (about 13
+  // in 2026-11; it took 55 while the south's lift split every batch near it; the Action's job allows 120)
   let still = 0;
   let s = null;
   for (let last = -1; secs() < 4500; ) {

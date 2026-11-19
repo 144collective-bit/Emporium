@@ -48,6 +48,27 @@ export function inside(poly: Pt[], [x, z]: Pt) {
   }
   return c;
 }
+/** Where a row at z crosses an outline's edges, sorted (the very sums `inside()` does): with `insideRow()`, `inside()`'s
+ * answer for every point along the row for the cost of one */
+export function rowCrossings(poly: Pt[], z: number) {
+  const xs: number[] = [];
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i];
+    const [xj, zj] = poly[j];
+    if (zi > z !== zj > z) xs.push(((xj - xi) * (z - zi)) / (zj - zi) + xi);
+  }
+  return xs.sort((a, b) => a - b);
+}
+/** Is a point on a row inside the outline (exactly `inside()`: an odd count of the row's crossings past it) */
+export function insideRow(xs: number[], x: number) {
+  let [lo, hi] = [0, xs.length];
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if (xs[m] > x) hi = m;
+    else lo = m + 1;
+  }
+  return (xs.length - lo) % 2 === 1;
+}
 /** How far a point is from a line (closed: back to its first point too) */
 export function distTo(pts: Pt[], [x, z]: Pt, closed = false) {
   let m = Infinity;

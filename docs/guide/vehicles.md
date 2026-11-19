@@ -192,7 +192,7 @@ keep it up to date when what it describes changes.
 
 - `drive.update()` returns the tiles moved; walk mode counts them on the
   save every ten tiles (`counters.driven`, for missions and badges).
-- `?spawn=x,z[,yaw]` in the address starts walk mode at a spot, and `?fps`
+- `?spawn=x,z[,yaw[,y]]` in the address starts walk mode at a spot (`y`, how high, picks the floor where floors stand over one another: Degen's upstairs), and `?fps`
   shows where Degen stands: use them to check a place on a real device.
 - **The street races were retired** (the owner's call): no start line,
   gantry or board on the south bank avenue, no race menu, HUD or results,
