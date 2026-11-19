@@ -68,7 +68,33 @@ Each with the owner's sign-off.
    players see it (the look is their profile's). The tabs sit five and four
    in two rows. Shots: `docs/faces-shots/fitting.png`,
    `fitting-shades.png`.
-3. **Faces that move (optional; not started, the owner's call: stop after
-   Phase 2 for now).** A blink and two or three expressions
-   (a grin, a frown) for emotes and the Fight Club, still within the same
-   draw calls; held still under `prefers-reduced-motion`.
+3. **More heads and hair** (the owner's call, 2026-11-14: built, signed off
+   by the owner, 2026-11-19). The
+   owner's answers: head shapes as presets, no free moulding; proportions
+   (stretches), not jaws or whole cartoon head types; three more cuts
+   (noses were tried and taken out: the sculpted nose stays, the owner's
+   call); the crowd keeps its one in seven masked; in the fitting room
+   the Face tab first, more tones and colours, and the shades kept on when
+   you unmask.
+   - **Head shapes** (`Look.shape`, `HEAD_SHAPES`: Standard, Round, Long,
+     Wide, Narrow, Big): a stretch of everything on the head about the
+     head bone, by each vertex's weight on it (`shapeHead()` in
+     wardrobe.ts), so hats, hair, ink and shades stretch with it and
+     nothing clips. The player's figure is stretched once as it's built; the
+     crowd in its shader, the stretch read from the person's wardrobe row
+     (no geometry, no draw calls). Unmasked only: the balaclava keeps the
+     art's head.
+   - **Cuts:** Twists (locs hanging round the back and sides), High-top (a
+     tall flat top over a fade) and Long (to the jaw at the sides and the
+     back, framing the face); under a hat, long hair still hangs below it.
+   - **The fitting room:** the Face tab before Head, a Shape row on it, more skin tones and natural hair shades, and unmasking keeps the
+     shades on until you take them off.
+   - **The crowd:** seeded shapes and the new cuts.
+   - **The cost:** no draw calls; the near crowd's meshes carry about 12%
+     more vertices than after Phase 2 (the locs a `detail`, off the phones'
+     light crowd; long hair under a hat on single figures only), the far
+     crowd's the same (one hair shape far off). Shots:
+     `docs/faces-shots/phase3-cuts.png`, `phase3-fitting.png`.
+4. **Faces that move (optional; not started).** A blink and two or three
+   expressions (a grin, a frown) for emotes and the Fight Club, still
+   within the same draw calls; held still under `prefers-reduced-motion`.

@@ -15,7 +15,7 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { CUTS, DEFAULT_LOOK, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Cut, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
+import { CUTS, DEFAULT_LOOK, HEAD_SHAPES, MARKS, MARK_SLOTS, PACKS, PACK_IDS, PALETTE, PATTERNS, type Bag, type Cut, type Hat, type Held, type Look, type MarkId, type PackId, type PatternId } from '../net/profile-data';
 import { markItem, patternItem, wardrobeEntry, type WardrobeEntry } from './catalog';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
@@ -104,6 +104,9 @@ const CUT_ICONS: Record<Cut, string> = {
   crop: `${HEAD} M6.4 12c-.3-5 2.3-7.6 5.6-7.6s5.9 2.6 5.6 7.6c-1.6-1.8-3.6-2.6-5.6-2.6s-4 .8-5.6 2.6z`,
   curls: `${HEAD} M6.3 12c-1.6-2.4-.4-5.9 2.2-6.2.6-2.4 6.4-2.4 7 0 2.6.3 3.8 3.8 2.2 6.2`,
   bun: `${HEAD} M12 6.5a2.3 2.3 0 1 1 0-4.6 2.3 2.3 0 0 1 0 4.6z M7.4 10c1.3-1.8 2.8-2.6 4.6-2.6s3.3.8 4.6 2.6`,
+  twists: `${HEAD} M7.4 10c1.3-1.8 2.8-2.6 4.6-2.6s3.3.8 4.6 2.6 M6.6 10.5v5 M8.4 8.6v5 M17.4 10.5v5 M15.6 8.6v5`,
+  hightop: `${HEAD} M7.2 10.5V2.8h9.6v7.7`,
+  long: `${HEAD} M6.4 12c-.3-5 2.3-7.6 5.6-7.6s5.9 2.6 5.6 7.6 M6.4 12v7.5 M17.6 12v7.5`,
   bald: `${HEAD} M10 14h.01 M14 14h.01`,
 };
 const toneColors: Colors = { key: 'tone', label: 'Skin', list: PALETTE.tone };
@@ -123,7 +126,8 @@ const faceItems: Item[] = [
       name: c.name,
       icon: CUT_ICONS[c.id],
       on: (l) => l.face && l.cut === c.id,
-      wear: (l) => ({ ...l, face: true, cut: c.id }),
+      // (unmasking keeps the shades on until they're taken off)
+      wear: (l) => ({ ...l, face: true, cut: c.id, shades: l.face ? l.shades : true }),
       colors: c.id === 'bald' ? [toneColors] : [toneColors, hairColors],
     })
   ),
@@ -256,6 +260,7 @@ const TABS: Tab[] = [
       },
     ],
   },
+  { id: 'face', label: 'Face', items: faceItems },
   {
     id: 'head',
     label: 'Head',
@@ -285,7 +290,6 @@ const TABS: Tab[] = [
       },
     ],
   },
-  { id: 'face', label: 'Face', items: faceItems },
   {
     id: 'shades',
     label: 'Shades',
@@ -447,12 +451,22 @@ export function createFitting(d: FittingDeps) {
   function paintMerch(l: Look) {
     const box = el?.querySelector<HTMLElement>('[data-fit-merch]');
     if (!box) return;
-    box.hidden = tab.id !== 'merch';
-    if (box.hidden) return box.replaceChildren();
     const chips = (label: string, attr: string, opts: { id: string; name: string; on: boolean }[]) =>
       `<div class="fit-row"><span>${label}</span><div class="fit-chips" role="group" aria-label="${label}">` +
       opts.map((o) => `<button type="button" class="fit-chip" ${attr}="${o.id}" aria-pressed="${o.on}">${o.name}</button>`).join('') +
       '</div></div>';
+    // The Face tab's row, a face's only: the head's proportions (docs/faces-plan.md Phase 3)
+    const faceRows = tab.id === 'face' && l.face;
+    box.hidden = tab.id !== 'merch' && !faceRows;
+    if (box.hidden) return box.replaceChildren(), void (box.dataset.html = '');
+    if (faceRows) {
+      const html = chips('Shape', 'data-face-shape', HEAD_SHAPES.map((h) => ({ ...h, on: h.id === l.shape })));
+      if (box.dataset.html !== html) {
+        box.dataset.html = html;
+        box.innerHTML = html;
+      }
+      return;
+    }
     let html = chips(
       'Dress',
       'data-merch-for',
@@ -650,6 +664,13 @@ export function createFitting(d: FittingDeps) {
       pending = null;
       paint();
       el?.querySelector<HTMLButtonElement>(`[data-merch-for="${merchFor}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    const fs = t.closest<HTMLButtonElement>('[data-face-shape]');
+    if (fs) {
+      const shape = fs.dataset.faceShape as Look['shape'];
+      wear({ ...d.look(), shape }, false);
+      el?.querySelector<HTMLButtonElement>(`[data-face-shape="${shape}"]`)?.focus({ preventScroll: true });
       return;
     }
     const ma = t.closest<HTMLButtonElement>('[data-mark-at]');
