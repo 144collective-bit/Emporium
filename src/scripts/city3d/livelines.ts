@@ -46,6 +46,7 @@ export const LIVE_IDS = [
   'overlook',
   'reservoir',
   'lot9',
+  'northgate',
   'pier',
   'nightmarket',
   'trenches',
@@ -207,6 +208,10 @@ export function liveLine(id: string, t = Date.now()): string | null {
       if (between(h, 8, 18)) return "Office open till six · Laundry's on";
       if (between(h, 18, 2)) return 'Fire pit lit · Radio on';
       return 'Lights out · Dogs asleep';
+    case 'northgate':
+      if (between(h, 9, 17)) return "Gates shut · Visitors' centre opening soon";
+      if (between(h, 17, 22)) return 'Fence lights on · Gates shut';
+      return 'Fence lights on · All quiet past the wire';
     case 'pier': {
       const b = pierSailing(s + BUS_VIEW.offset);
       return b.here ? 'River bus at the landing · Leaving soon' : `Next river bus in ${mmss(b.wait)}`;

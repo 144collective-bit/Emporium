@@ -158,6 +158,11 @@ export const barrierOf = (g: Gate): [Pt, Pt] => [
   [g.x + g.half, g.z + 1.2],
 ];
 
+/** The base's name on a low wall outside the main gate, east of the road past its fence, facing the way in (x0, z0,
+ * x1, z1), and its height */
+export const SIGN_WALL: Rect = [MAIN_GATE.x + MAIN_GATE.half + 2, MAIN_GATE.z + 4.6, MAIN_GATE.x + MAIN_GATE.half + 12, MAIN_GATE.z + 5.1];
+export const SIGN_WALL_H = 1.5;
+
 /** The visitors' car park outside the main gate, west of the road (clear of the stadium's car park's loop, -251) */
 export const VISITORS: Rect = [-90, -298, -20, -262];
 /** Its drive from the north avenue's loop (x0, z0, x1, z1: across to the road's verge) */
@@ -201,4 +206,50 @@ export const AIRBASE_SOLIDS: Box[] = [
     return [p[0] - 0.2, p[1] - 0.2, p[0] + 0.2, p[1] + 0.2, BARRIER_Y + 0.2];
   }),
   [...VISITOR_CENTRE, VISITOR_CENTRE_H],
+  [...SIGN_WALL, SIGN_WALL_H],
 ];
+
+/** The nearest a point is to a run */
+function toRun(x: number, z: number, [a, b]: [Pt, Pt]) {
+  const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
+  const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+  return Math.hypot(x - (a[0] + dx * t), z - (a[1] + dz * t));
+}
+const inR = (r: Rect, x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+/** How far trees keep from the fence (its belt either side), and from the parade avenue's middle */
+export const FENCE_CLEAR = 4;
+export const AVENUE_CLEAR = AVENUE_HALF + 4;
+/**
+ * The base's land kept clear of trees (landuse.ts `KEEPS`), `m` further: the fence's line, the gates, the visitors'
+ * area and its drive, the avenue and the lots kept for later. The rest of it keeps its woods (the plan's: round the
+ * shelters, along the avenue, the north-east), today's open ground as it is till its phase builds on it
+ */
+export function airbaseKeep(x: number, z: number, m = 0): boolean {
+  if (FENCE_RUNS.some((r) => toRun(x, z, r) < FENCE_CLEAR + m)) return true;
+  if (GATES.some((g) => Math.abs(x - g.x) < g.half + 8 + m && z > g.z - 10 - m && z < g.z + 4 + m)) return true;
+  for (let i = 1; i < AVENUE.length; i++) if (toRun(x, z, [AVENUE[i - 1], AVENUE[i]]) < AVENUE_CLEAR + m) return true;
+  return [VISITORS, VISITORS_DRIVE, WALL_GATE, ...KEPT.map((k) => k.rect)].some((r) => inR(r, x, z, 2 + m));
+}
+
+/** How far x, z is from the fence's line (any run of it) */
+export const fromFence = (x: number, z: number) => Math.min(...FENCE_RUNS.map((r) => toRun(x, z, r)));
+
+/** The lamps' spacing along the south fence (inside it, reaching to it: the side the town sees), and their foot (on the
+ * open ground, as the country roads' are) */
+export const FENCE_LAMP_GAP = 90;
+const LAMP_Y = 0.02;
+/**
+ * The base's lamps (x, z, ry, y; world.ts `addLamp()`: ry 0 reaches east, a half turn up north): along the inside of
+ * the south fence, every `FENCE_LAMP_GAP` and clear of the gates; one outside each gate, by its barrier's post, over
+ * the way in; and round the visitors' car park
+ */
+export const AIRBASE_LAMPS: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  for (let x = FENCE[0][0] + FENCE_LAMP_GAP / 2; x < FENCE[SOUTH_RUNS][0]; x += FENCE_LAMP_GAP) {
+    if (GATES.some((g) => Math.abs(x - g.x) < 20)) continue;
+    out.push([x, southFenceZ(x) - 2.5, -Math.PI / 2, LAMP_Y]);
+  }
+  for (const g of GATES) out.push([g.x - g.half - 2.2, g.z + 3, 0, LAMP_Y]);
+  for (const x of [VISITORS[0] + 8, (VISITORS[0] + VISITORS[2]) / 2, VISITORS[2] - 8]) out.push([x, VISITORS[3] - 2, Math.PI / 2, LAMP_Y]);
+  return out;
+})();
