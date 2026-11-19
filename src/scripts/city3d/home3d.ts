@@ -875,6 +875,9 @@ const WOOD = '#7a5236';
 const WOOD_DARK = '#4a2f1d';
 const MARBLE = '#24232a';
 const VEIN = '#cfc9bf';
+/** The bathroom's stone: a softer charcoal marble than the tables' black, so the small room doesn't read as a void */
+const BATH_STONE = '#57545f';
+const BATH_FLOOR = '#3a3842';
 const BRASS = '#c9a24a';
 const COGNAC = '#a0602f';
 const CREAM = '#e9e1d2';
@@ -1274,11 +1277,11 @@ function upstairs(b: Batch, low: boolean) {
   face(b, x0 + 0.004, (z0 + SPLIT) / 2, SPLIT - z0 - 0.06, fy, top, Math.PI / 2, FEATURE, 0.9);
   // The bathroom in black marble: its floor and walls (the back, the east, the landing's partition and its own wall)
   const [bx0, bz0] = [LAND + 0.05, BATH_Z + 0.1];
-  iflat(b, [bx0, bz0, x1, z1], fy + G + 0.004, MARBLE);
-  face(b, (bx0 + x1) / 2, z1 - 0.004, x1 - bx0, fy, top, Math.PI, MARBLE, 0.95);
-  face(b, x1 - 0.004, (bz0 + z1) / 2, z1 - bz0, fy, top, -Math.PI / 2, MARBLE, 0.85);
-  face(b, bx0 + 0.004, (bz0 + z1) / 2, z1 - bz0, fy, top, Math.PI / 2, MARBLE, 0.85);
-  for (const [a, c] of [[bx0, BATH_DOOR[0]], [BATH_DOOR[1], x1]]) face(b, (a + c) / 2, bz0 + 0.004, c - a, fy, top, 0, MARBLE, 0.9);
+  iflat(b, [bx0, bz0, x1, z1], fy + G + 0.004, BATH_FLOOR);
+  face(b, (bx0 + x1) / 2, z1 - 0.004, x1 - bx0, fy, top, Math.PI, BATH_STONE, 1);
+  face(b, x1 - 0.004, (bz0 + z1) / 2, z1 - bz0, fy, top, -Math.PI / 2, BATH_STONE, 0.9);
+  face(b, bx0 + 0.004, (bz0 + z1) / 2, z1 - bz0, fy, top, Math.PI / 2, BATH_STONE, 0.9);
+  for (const [a, c] of [[bx0, BATH_DOOR[0]], [BATH_DOOR[1], x1]]) face(b, (a + c) / 2, bz0 + 0.004, c - a, fy, top, 0, BATH_STONE, 0.95);
   b.detail(() => {
     // (pale veins across the marble's back wall, and the doorways' black steel frames)
     if (!low)
