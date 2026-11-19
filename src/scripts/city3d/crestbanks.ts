@@ -342,9 +342,15 @@ export const BANKS: Bank[] = MANSIONS.map((m, k) => bankOf(mansionGround(m), k))
 
 /* ---------- The landmarks' banks ---------- */
 
-/** On a Flats street or its sidewalk (padded `m`) */
-const onStreet = (x: number, z: number, m: number) => STREETS.some((st) => distToStreet(st, [x, z]) < st.half + WALK_W + m);
 const STREETS = PLAN.streets.filter((st) => st.kind !== 'alley');
+/** The streets that come anywhere near a rect's banks (so a spoke asks only those, not the whole city's) */
+const streetsNear = (r: readonly number[]) => {
+  const [cx, cz] = [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
+  const reach = Math.hypot(r[2] - r[0], r[3] - r[1]) / 2 + PAD_EASE + 2;
+  return STREETS.filter((st) => distToStreet(st, [cx, cz]) < st.half + WALK_W + reach);
+};
+/** On one of these streets or its sidewalk (padded `m`) */
+const onStreet = (near: typeof STREETS, x: number, z: number, m: number) => near.some((st) => distToStreet(st, [x, z]) < st.half + WALK_W + m);
 /** On the golf course: a fairway, or round a green (crestsites.ts's reach for them) */
 const onHole = (x: number, z: number) =>
   HOLES.some((h) => {
@@ -364,19 +370,20 @@ const inRect = (r: readonly number[], x: number, z: number, m: number) => x > r[
 export const SITE_BANKS: Bank[] = [
   { id: 'civic', rect: CIVIC.pad, y: CIVIC.y, kind: 'summit' as MansionKind, walk: CIVIC.walk as readonly number[] | null },
   { id: 'club', rect: CLUB.pad, y: CLUB.y, kind: 'villa' as MansionKind, walk: null },
-].map(({ id, rect, y, kind, walk }, k) =>
-  bankOf(
+].map(({ id, rect, y, kind, walk }, k) => {
+  const near = streetsNear(rect);
+  return bankOf(
     {
       id,
       rect: rect as [number, number, number, number],
       y,
       kind,
-      stop: (x, z) => nearHillRoad(x, z, ROAD_GAP) || onStreet(x, z, 0.4) || onMansion(x, z, 0.5) || onHole(x, z) || SITE_LEVELS.some((l) => l.rect !== rect && inRect(l.rect, x, z, l.ease)),
+      stop: (x, z) => nearHillRoad(x, z, ROAD_GAP) || onStreet(near, x, z, 0.4) || onMansion(x, z, 0.5) || onHole(x, z) || SITE_LEVELS.some((l) => l.rect !== rect && inRect(l.rect, x, z, l.ease)),
       skip: (x, z) => (walk ? inRect(walk, x, z, 1.2) : false) || onGardenPath(x, z, PATH_GAP),
     },
     40 + k
-  )
-);
+  );
+});
 
 /* ---------- A villa's terraces, on the ground behind it ---------- */
 
