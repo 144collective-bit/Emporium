@@ -148,6 +148,20 @@ export const GATEHOUSE_H = 1.35;
 export const GATE_LEAF: Rect = [px1 - WALL_T - 0.13, GATES.z0 - PIER.w - (GATES.z1 - GATES.z0) - 0.1, px1 - WALL_T - 0.05, GATES.z0 - PIER.w - 0.05];
 export const GATE_LEAF_H = 1.7;
 
+/**
+ * The fountain (docs/compound-plan.md Phase 6c): in the yard north of the drive (clear of the cars' way in and out and
+ * of the bollards along the north strip), a round stone basin with a pedestal and two bowls; its basin solid
+ */
+export const FOUNTAIN = { x: (GARAGE[2] + px1) / 2 + 2.2, z: AXIS - 4.6, r: 0.95, h: 0.3 };
+/** The palms (Phase 6c), each in a round stone planter with an uplight: either side of the gates inside, at the house's west corner, by the workshop */
+export const PALMS: Pt[] = [
+  [px1 - WALL_T - 1.3, AXIS - 3.9],
+  [px1 - WALL_T - 2.2, AXIS + 3.3],
+  [HOUSE[0] + 0.3, HOUSE[1] - 0.75],
+  [WORKSHOP[0] - 0.1, WORKSHOP[3] + 1.9],
+];
+export const PALM_PLANTER = { r: 0.35, h: 0.32 };
+
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
 export const SHELL = 0.15;
@@ -200,6 +214,9 @@ export const HOME_SOLIDS: Box[] = (() => {
     // The gatehouse, and the gate's leaf slid open along the wall (Phase 6b)
     [GATEHOUSE[0], GATEHOUSE[1], GATEHOUSE[2], GATEHOUSE[3], SLAB_Y + GATEHOUSE_H],
     [GATE_LEAF[0], GATE_LEAF[1], GATE_LEAF[2], GATE_LEAF[3], SLAB_Y + GATE_LEAF_H],
+    // The fountain's basin and the palms' planters (Phase 6c)
+    [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, SLAB_Y + FOUNTAIN.h],
+    ...PALMS.map(([x, z]): Box => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r, SLAB_Y + PALM_PLANTER.h]),
   ];
 })();
 

@@ -36,11 +36,13 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CROWD_VIEW } from './character';
 import type { Tick } from './world';
 import { site } from './tilework';
+import { crown, trunk } from './palms3d';
+import { SWAY } from './dusk';
 import { COVER, KERB, TREE, VERGE } from './palette';
 import { glow, METAL } from './infill';
 import { SHELF, type TrophySlot } from './hometrophies';
 import {
-  BASE_CEIL, BASE_Y, BASEMENT, BOLLARD, BOLLARDS, CEIL, CURTAIN, FIRE_ESCAPE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, UPSTAIRS, WALL, WALL_H, WALL_T,
+  BASE_CEIL, BASE_Y, BASEMENT, BOLLARD, BOLLARDS, CEIL, CURTAIN, FIRE_ESCAPE, FOUNTAIN, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, UPSTAIRS, WALL, WALL_H, WALL_T,
   curtainPanels, type BaseThing, type Furniture, type UpThing,
 } from './home';
 import { curtains } from './spawn';
@@ -243,6 +245,80 @@ function gatehouse(b: Batch, low: boolean) {
     cube(b, [gx1 - 0.1, gz0 - 0.08, gx1 + 0.06, gz0 + 0.02], S + H - 0.16, S + H - 0.06, PALE_CAM);
     if (!low) cube(b, [gx0 + 0.3, gz0 + 0.3, gx0 + 0.34, gz0 + 0.34], S + H + 0.1, S + H + 0.5, STEEL_BLACK);
   });
+}
+
+/* ---------- The yard as a showpiece (docs/compound-plan.md Phase 6c): the fountain, the palms, the lit lines ---------- */
+
+const WATER = toon('#3a8fd0');
+/** The fountain's falling water: a pale blue sheet lit a little at night */
+const FALL = neon('#9fe0ff', 0.75, 0.95);
+const PALM_TRUNK = toon(TREE.trunk);
+const PALM_FRONDS = toon(TREE.crowns[2]);
+
+/** The fountain, the palms in their planters with their uplights, and the two lit lines along the drive's edges */
+function showpiece(b: Batch, low: boolean) {
+  const { x, z, r, h } = FOUNTAIN;
+  const n = low ? 10 : 16;
+  const ring = (rr: number, y0: number, y1: number, m: THREE.Material, r1 = rr, open = false) => {
+    const g = new THREE.CylinderGeometry(rr, r1, y1 - y0, n, 1, open);
+    g.deleteAttribute('uv');
+    b.add(g.translate(x, (y0 + y1) / 2, z), m);
+  };
+  // The basin: a stone rim, the water in it a hair under the rim's top
+  ring(r, S, S + h, LOFT_STONE);
+  ring(r - 0.08, S + h - 0.06, S + h - 0.04, WATER);
+  // The pedestal and its two bowls, the water falling from each in a sheet, a gold finial on top
+  ring(0.12, S + h - 0.04, S + 1.0, LOFT_STONE, 0.16);
+  ring(0.5, S + 0.62, S + 0.7, LOFT_STONE, 0.3);
+  ring(0.46, S + 0.7, S + 0.705, WATER);
+
+  ring(0.28, S + 0.98, S + 1.04, LOFT_STONE, 0.16);
+  ring(0.26, S + 1.04, S + 1.045, WATER);
+  // (the water falling from each bowl's rim in thin streams round it)
+  const streams = (rr: number, k: number, y0: number, y1: number) => {
+    for (let i = 0; i < k; i++) {
+      const a = (i / k) * Math.PI * 2;
+      const g = new THREE.BoxGeometry(0.035, y1 - y0, 0.012).rotateY(-a + Math.PI / 2);
+      g.deleteAttribute('uv');
+      b.add(g.translate(x + Math.cos(a) * rr, (y0 + y1) / 2, z + Math.sin(a) * rr), FALL);
+    }
+  };
+  streams(0.5, low ? 6 : 12, S + h - 0.05, S + 0.62);
+  streams(0.29, low ? 4 : 8, S + 0.7, S + 0.98);
+  b.add(new THREE.SphereGeometry(0.07, 10, 8).translate(x, S + 1.12, z), GOLD);
+  // Lights in the basin turned up at the water, his magenta and cyan in turn
+  b.detail(() => {
+    for (let k = 0; k < 4; k++) {
+      const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+      b.add(new THREE.SphereGeometry(0.03, 5, 4).translate(x + Math.cos(a) * (r - 0.2), S + h - 0.04, z + Math.sin(a) * (r - 0.2)), glow(k % 2 ? PAL.cyan : PAL.magenta));
+    }
+  });
+  // The palms: a round stone planter each, the trunk leaning a little, the crown, an uplight at its foot
+  const palmTrunk = trunk(0.11, 0.08, 0.25, low ? 5 : 7);
+  const palmCrown = crown(low ? 9 : 13, 0.8, 0.28, 0.35, 0.65, 0.05);
+  const ts: THREE.Matrix4[] = [];
+  const cs: THREE.Matrix4[] = [];
+  PALMS.forEach(([px, pz], k) => {
+    const P = PALM_PLANTER;
+    const pl = new THREE.CylinderGeometry(P.r, P.r * 0.9, P.h, low ? 8 : 12);
+    pl.deleteAttribute('uv');
+    b.add(pl.translate(px, S + P.h / 2, pz), LOFT_STONE);
+    flat(b, [px - P.r * 0.7, pz - P.r * 0.7, px + P.r * 0.7, pz + P.r * 0.7], S + P.h + 0.004, LOFT_BRICK_DARK);
+    const hh = 3.2 + (k % 2) * 0.4;
+    const turn = k * 1.9;
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), turn);
+    ts.push(new THREE.Matrix4().compose(new THREE.Vector3(px, S + P.h - 0.02, pz), q, new THREE.Vector3(1, hh, 1)));
+    cs.push(new THREE.Matrix4().compose(new THREE.Vector3(px + Math.cos(turn) * 0.25, S + P.h + hh, pz - Math.sin(turn) * 0.25), q, new THREE.Vector3(1, 1, 1)));
+    b.detail(() => b.add(new THREE.SphereGeometry(0.035, 5, 4).translate(px + P.r * 0.55, S + P.h + 0.03, pz), glow(PAL.warm)));
+  });
+  b.instances(palmTrunk, PALM_TRUNK, ts);
+  b.instances(palmCrown, PALM_FRONDS, cs, low ? 0 : SWAY);
+  // Two lit lines set in the paving along the drive's edges, from the garage's side to the gates' (clear of the palms
+  // and the gatehouse), a hair over the paving
+  const [gx1, px1] = [HOME.garage[2], HOME.plot[2]];
+  const AX = (HOME.gates.z0 + HOME.gates.z1) / 2;
+  flat(b, [gx1 + 0.6, AX - 3.3 - 0.025, px1 - WALL_T - 0.7, AX - 3.3 + 0.025], OVER + 0.006, CAP);
+  flat(b, [HOME.house[0] + 0.8, AX + 3.6 - 0.025, px1 - WALL_T - 3.2, AX + 3.6 + 0.025], OVER + 0.006, CAP);
 }
 
 /** The double garage */
@@ -682,6 +758,7 @@ export function registerHome(low: boolean) {
     house(b, low);
     workshop(b, low);
     gardens(b, low);
+    showpiece(b, low);
     b.build(into, { cast: true, receive: true });
     inside(into, low);
   });
