@@ -8,9 +8,9 @@ storyline opens it. Built one phase at a time, each with the owner's
 sign-off. Keep this plan up to date. Nothing is built yet. **Phase 0 is
 under way**: the lines are drawn and signed off (2026-11-19, below) and the
 baseline is measured (below). The phone is over its geometry ceiling before
-the base adds anything; the owner's pick (2026-11-19) is to trim first:
-find what grew since 2026-11-14 and bring the phone back under 187 MiB with
-room for the base's 8. Phase 1 follows, on the owner's go.
+the base adds anything; the owner's pick (2026-11-19) was to trim first,
+and it's done: 192.0 to 168.9 MiB (below). **Phase 0 is done**; Phase 1
+follows, on the owner's go.
 
 ## The owner's answers (2026-11-18)
 
@@ -239,14 +239,15 @@ For scale, the phone's busiest views today: the far edge 427 draws, a
 downtown street 331, the outskirts 313; the most triangles 0.60M (the far
 edge).
 
-- **Memory, with every district loaded** (what `npm run memcheck` holds):
-  phone geometry **191.8 MiB**, textures 32.9, render targets 9.0; desktop
+- **Memory, with every district loaded,** at the benchmark's end (a
+  little over what `npm run memcheck` reads, below): phone geometry
+  **191.8 MiB**, textures 32.9, render targets 9.0; desktop
   geometry 352.1, textures 76.0, targets 53.8.
-- **The phone is over its geometry ceiling already** (187,
-  `MEMORY_CEILINGS.phone`; 169.8 measured 2026-11-14). The south's
-  re-laying, Degen's home and the spawn plan came in since, while
-  memcheck couldn't run. The base adds nothing until the owner picks what
-  comes first (below).
+- **The phone was over its geometry ceiling** (187,
+  `MEMORY_CEILINGS.phone`; 169.8 measured 2026-11-14; memcheck read 192.0
+  on 90dee3e). The south's re-laying, Degen's home and the spawn plan came
+  in since, while memcheck couldn't run. Trimmed back to 168.9 in this
+  phase (the phone trim, below).
 - **The boot:** 736.9 KB of 750 KB.
 
 ### Each phase's allowance (added to the baseline; signed off 2026-11-19)
@@ -400,20 +401,24 @@ own three corners (about 24 a square of the 5 m ground grid, where 4 do).
 
 | Trim (the owner's picks) | Phone geometry |
 | --- | ---: |
-| Before | 192.0 MiB |
-| 1. The split faces share their corners (nothing on screen changes; 37d5244) | **179.2 MiB** (−12.8) |
-| 2. The south's small parts near only (the footpaths' bollards, Lot 9's fence posts and rail, the village's front walls; f7e6ab2) | 179.5 MiB (no change) |
+| Before (`npm run memcheck` on 90dee3e: fails) | 192.0 MiB |
+| 1. The split faces share their corners (nothing on screen changes; 37d5244) | |
+| 2. The south's small parts near only (the footpaths' bollards, Lot 9's fence posts and rail, the village's front walls; f7e6ab2) | |
+| **After both** (`npm run memcheck` on f7e6ab2: passes every ceiling, every view's slowest frame under 250 ms) | **168.9 MiB** (−23.1) |
 
-The second step took 0.6 MiB off what's drawn at every distance, but in the
-City view the phone's near pieces fill their budget (32 MiB) whatever they
-are, so others took the room: no change in the measure the ceiling holds.
-It helps on the street and far off, and keeps the south's small parts near
-only as the city's rule is, so it stays.
+The first step did nearly all of it: a reading taken a little later (once
+the benchmark has begun flying round its views, which reads about 10 MiB
+over memcheck's) went 192.0 to 179.2 with it alone, and didn't move with
+the second (179.5): in the City view the phone's near pieces fill their
+budget (32 MiB) whatever they are, so the second step's 0.6 MiB off what's
+drawn at every distance was taken up by others. It helps on the street and
+far off, and keeps the south's small parts near only as the city's rule is,
+so it stays.
 
-**Where it ends:** 179.5 MiB of the 187 ceiling, 7.5 MiB free. The ceiling
-stays 187 (it's the base's room). The base's own allowance (8 MiB, the
-table above) is measured as the City view sees it: what the base draws at
-every distance counts in full, its near detail only as far as the near
-budget lets it.
+**Where it ends:** 168.9 MiB of the 187 ceiling (memcheck's measure, the
+one the ceiling holds), 18 MiB free: room for the base's 8 MiB with 10 to
+spare. The ceiling stays 187. Each phase of the base is held to it with
+`npm run memcheck` (now runnable again: `?bench` was stuck since the spawn
+plan's Phase 1, fixed in this phase).
 
 
