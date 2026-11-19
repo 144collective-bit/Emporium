@@ -136,7 +136,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
   `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it
   (`CIRCUS_HOLE`); the island is a planted ring round the plaza. Its trees and lamps at the boot (index.ts). The kit
-  takes a passage at any angle (`radial()`) and a well's stepped seats (`tiers`, `wellFloor()`).
+  takes a passage at any angle (`radial()`) and a well's stepped seats (`tiers`, `wellFloor()`). The underpasses under
+  the avenue crossings (`underpasses.ts`, the south plan's 4c: under the wide south avenue and Endswood Road's and
+  Marsh Lane's bends, `straight()` passages, plain: `underpass3d.ts`) share the Circus's cuts (`SLAB_CUTS`,
+  `GROUND_HOLES`) and walking (`UNDER`).
 - **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
   end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s

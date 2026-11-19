@@ -79,6 +79,13 @@ export const pointOf = (p: Passage, s: number, u = 0): Pt => {
  * up from `rampAt` out, roofed from `roof0` to `roof1` out (opening flat at `from`, into a well)
  */
 export function radial(id: string, x: number, z: number, deg: number, o: { from: number; roof0: number; roof1: number; rampAt: number; to: number; half: number; wall: number; floor: number; ceil: number; rail: number }): Passage {
+  return straight(id, x, z, deg, { ...o, a0: o.from, ramp0: o.from, ramp1: o.rampAt, a1: o.to });
+}
+/**
+ * A straight passage through (x, z) at `deg` (from +x towards +z), its ends, ramps and roof measured along it from
+ * there (a crossing under a road: a ramp down on one side, the roofed stretch under it, a ramp up the other)
+ */
+export function straight(id: string, x: number, z: number, deg: number, o: { a0: number; ramp0: number; roof0: number; roof1: number; ramp1: number; a1: number; half: number; wall: number; floor: number; ceil: number; rail: number }): Passage {
   const a = (deg * Math.PI) / 180;
   const s0 = x * Math.cos(a) + z * Math.sin(a);
   return {
@@ -89,10 +96,10 @@ export function radial(id: string, x: number, z: number, deg: number, o: { from:
     wall: o.wall,
     floor: o.floor,
     ceil: o.ceil,
-    a0: s0 + o.from,
-    ramp0: s0 + o.from,
-    ramp1: s0 + o.rampAt,
-    a1: s0 + o.to,
+    a0: s0 + o.a0,
+    ramp0: s0 + o.ramp0,
+    ramp1: s0 + o.ramp1,
+    a1: s0 + o.a1,
     roofs: [[s0 + o.roof0, s0 + o.roof1]],
     rail: o.rail,
   };
