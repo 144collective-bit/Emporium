@@ -29,7 +29,7 @@ import { deckHip } from './roofs3d';
 import { POOL_LIGHTS, poolLights } from './crestnight';
 import { DECK_HIP, MANSION_BALCONIES, MANSION_CHIMNEY, MANSION_GATE, ROOF_DECKS, mansionPiers } from './crestgrand';
 import { drawBalcony, drawDeck, drawLeaf, drawPierTop, type Draw } from './crestgrand3d';
-import { CURTAIN, PAVING, BULB, flat } from './mallkit';
+import { CURTAIN, PAVING, flat } from './mallkit';
 
 const WHITE = toon('#f4f1ea');
 const OCHRE = toon('#e6c493');

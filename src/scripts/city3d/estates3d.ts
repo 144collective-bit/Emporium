@@ -22,7 +22,7 @@ import { Batch, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { COURT_HALF, ESTATES, ESTATE_CARS, FOUNTAIN, GATE, HEDGE, ROOF_H, SLAB_Y, STOREY, fountainOf, hedgesOf, motorCourt, outOf, originOf, piersOf, rectToWorld, wallTop, type Estate, type EstateStyle, type Part } from './estates';
-import { CURTAIN, PAVING, TIMBER as SLATS, WATER, SPRAY, BULB, flat } from './mallkit';
+import { CURTAIN, PAVING, TIMBER as SLATS, WATER, SPRAY, flat } from './mallkit';
 import { PIER, extrasOf, loggiaPiers } from './crestgardens';
 import { PLANT, SOIL } from './palette';
 import { POOL_LIGHTS, poolLights, windowGlow } from './crestnight';
