@@ -58,6 +58,11 @@ keep it up to date when what it describes changes.
   own shots. New rules go in `combat-sim.ts` (shared), never only in the view.
 - Shared code the server bundles must stay free of DOM and scene code:
   `src/scripts/net/*` (except `client.ts`), `combat-sim.ts`, `solids.ts`.
+  The server's type check (`npm run check --prefix server`, in the "Deploy
+  game server" Action) follows type-only imports too: a rules file names a
+  type from a drawing file's neighbour, never the drawing file (a crowd's
+  `Idle` is `idle.ts`'s; `landmarks.ts` re-exports it), and
+  `server/src/env.d.ts` declares the `import.meta.url` that `baked.ts` reads.
   `src/scripts/net/protocol.ts` is the wire format; bump `PROTOCOL` when it
   changes incompatibly.
 - Nothing typed by players ever shows: guest names come from the word lists

@@ -15,6 +15,7 @@ import { LIBERTY_SPAWN } from './liberty';
 import { HARBOUR_SPAWN } from './harbour';
 import { STATIONS } from './metro';
 import { STOPS } from './riverbus';
+import { SOUTH_STATIONS, TUBE_SPOTS } from './southline';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { PIER_SPAWN } from './waterfront';
@@ -33,7 +34,7 @@ import { RESORTS } from './resorts';
 import { SPHERE_SPAWN } from './stripmarks';
 import { MONO_STATIONS } from './monorail';
 
-export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono';
+export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono' | 'tube';
 export interface Place {
   id: string;
   kind: PlaceKind;
@@ -116,6 +117,9 @@ export const PLACES: Place[] = [
   ...STOPS.map((s): Place => ({ id: `riverbus-${s.id}`, kind: 'riverbus', name: s.pier, at: s.arrive })),
   // The Neon Mile's monorail (monorail.ts): at each station's door
   ...MONO_STATIONS.map((s): Place => ({ id: `mono-${s.id}`, kind: 'mono', name: s.name, at: s.at })),
+  // The south's underground line, the tube (southline.ts, the south plan's 4h): at street level by each station's way
+  // in, facing it (the Circus's in its sunken plaza)
+  ...SOUTH_STATIONS.map((s): Place => ({ id: `tube-${s.id}`, kind: 'tube', name: `${s.name} station`, at: TUBE_SPOTS[s.id] })),
 ];
 export const PLACE_IDS = PLACES.map((p) => p.id);
 
@@ -130,7 +134,7 @@ interface Copy {
 }
 /** A place's name and a line under it: the copy on its pin (CityMap.astro's directory, found under `root`), or its own */
 export function placeName(root: Copy, p: Place) {
-  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'riverbus' ? 'River bus' : p.kind === 'mono' ? 'Monorail' : '' };
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'tube' ? 'Tube' : p.kind === 'riverbus' ? 'River bus' : p.kind === 'mono' ? 'Monorail' : '' };
   const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
   return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
 }

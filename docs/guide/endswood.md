@@ -148,7 +148,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   the bends). Its trains (the south plan's 4g): the rules in `southtrains.ts` (`TUBE`, the timetable `LEGS` / `ROUND`,
   `trainAt()`, `trackOf()`, `carPose()`, a ride's `rideAt()`), drawn by `tube3d.ts` (a lazy chunk, loaded and drawn
   only while you're down in a station or riding, index.ts), ridden from a **Tube** door on each platform
-  (`PLAT_DOOR` along from its middle) through `tube-ui.ts` (the raised metro's card and ride bar, `data-tube-to`).
+  (`PLAT_DOOR` along from its middle) through `tube-ui.ts` (the raised metro's card and ride bar). Since 4h that card is
+  both lines' at every station (`data-trip`): a trip to the other line (`trips.ts`: `tripOf()`, `tripTime()`,
+  `CHANGE_AT`) rides to The Trenches, changes under a fade and rides on; the stations are places (`TUBE_SPOTS`) and on
+  the world map.
 - **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
   end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s

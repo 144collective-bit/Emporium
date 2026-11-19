@@ -22,6 +22,7 @@ import { BED, CREST_LAMPS, HILL_ROADS, nearHillRoad, roadY, type HillRoad, type 
 import { HILLS, TERRAIN_RECT, natural } from './hills';
 import { rng } from './recipes';
 import { CAR_SCALE } from './carspec';
+import { BUILT, baked } from './baked';
 
 type Pt = [number, number];
 type Box = [number, number, number, number, number];
@@ -77,13 +78,16 @@ export interface Mansion {
   court: [number, number, number, number];
   /** The pool (u0, v0, u1, v1); a glass mansion's runs along the pad's back edge (an infinity edge) */
   pool: [number, number, number, number];
-  /** A villa's terraces stepping down behind the pad: v from and to, each a step lower */
+  /** A villa's terraces behind the pad: v from and to (their heights from the ground behind, crestbanks.ts `TERRACES`) */
   terraces: [number, number][];
   /** A glass mansion's cantilever: how far its upper floor reaches past the pad's back */
   reach: number;
   /** A wall round it (compounds, the summit) */
   walled: boolean;
   car: boolean;
+  /** The ground held level round it (the owner's call, 2026-11-19: built on the hillside, not sunk in it): the pad
+   * widened by up to `YARD` a side where that stays clear (`yardOf()`), at the pad's height */
+  yard: Rect;
 }
 
 /** A road's point, its way along and the left of it, at a distance along it */
@@ -179,6 +183,7 @@ function layout(): Mansion[] {
       reach: kind === 'glass' ? 3 : 0,
       walled: kind === 'compound' || kind === 'summit',
       car: kind !== 'glass' || r() < 0.6,
+      yard: rect,
     } satisfies Mansion;
   };
 
@@ -252,10 +257,81 @@ function layout(): Mansion[] {
   }
   return out;
 }
+/** A flat yard this wide round each pad, a side at most (the owner's call: about 4 tiles), where it fits */
+export const YARD = 4;
+/** The steepest a drive climbs from its road to the pad: the pad's level is never further from the road's than this */
+export const DRIVE_GRADE = 0.3;
+/**
+ * Each mansion on the hillside as a house is built (the owner's call, 2026-11-19, "rather than sinking the buildings in
+ * to the hill"): its pad's level the middle of the hills under it (cut and filled alike), never further from its road's
+ * height than its drive can climb (`DRIVE_GRADE`); then its level ground widened round it by up to `YARD` a side, each
+ * side as far as it stays clear of the roads (its bank too), of the other mansions' and the overlook, and cut or built up
+ * no more than `CUT`. The pads, their drives and the houses stand where they stood; only the ground's height moves.
+ */
+function settle(list: Mansion[]) {
+  for (const m of list) {
+    const [x0, z0, x1, z1] = m.rect;
+    const hs: number[] = [];
+    for (let i = 0; i <= 6; i++) for (let j = 0; j <= 6; j++) hs.push(natural(x0 + ((x1 - x0) * i) / 6, z0 + ((z1 - z0) * j) / 6));
+    const mid = (Math.min(...hs) + Math.max(...hs)) / 2;
+    const [a, b] = m.drive;
+    const road = HILL_ROADS.find((q) => q.id === m.road)!;
+    let j = 0;
+    road.pts.forEach((q, i) => (Math.hypot(q[0] - a[0], q[1] - a[1]) < Math.hypot(road.pts[j][0] - a[0], road.pts[j][1] - a[1]) ? (j = i) : 0));
+    const reach = DRIVE_GRADE * Math.hypot(b[0] - a[0], b[1] - a[1]);
+    m.y = Math.max(road.y[j] - reach, Math.min(road.y[j] + reach, mid));
+  }
+  for (const m of list) m.yard = yardOf(m, list);
+}
+/** A pad's yard: each side widened in half-tile steps up to `YARD` while the whole stays clear */
+function yardOf(m: Mansion, list: Mansion[]): Rect {
+  const ridge = HILL_ROADS.find((q) => q.id === 'crest-ridge')!;
+  const overlook = ridge.pts[ridge.pts.length - 1];
+  const ok = (r: Rect) => {
+    if (r[0] <= TERRAIN_RECT[0] + 8 || r[2] >= 446 || r[1] <= TERRAIN_RECT[1] + 8 || r[3] >= HILLS.foot.z - 8 || !clearOfRoads(r)) return false;
+    if (list.some((o) => o !== m && !apart(o.yard, r, 2 * PAD_EASE + 1))) return false;
+    // (clear of the overlook at the ridge's end, as the pads are)
+    const [cx, cz] = [Math.max(r[0], Math.min(r[2], overlook[0])), Math.max(r[1], Math.min(r[3], overlook[1]))];
+    if (Math.hypot(cx - overlook[0], cz - overlook[1]) < OVERLOOK_R - 6) return false;
+    // (never a quarry: along its edges cut or built up at most CUT, and halfway out through its bank, where the bank is
+    // steepest, at most CUT and a half, as the pads were chosen)
+    for (const [e, most] of [
+      [0, CUT],
+      [PAD_EASE / 2, CUT + 0.5],
+    ] as [number, number][]) {
+      const [a0, b0, a1, b1] = [r[0] - e, r[1] - e, r[2] + e, r[3] + e];
+      for (let t = 0; t <= 1 + 1e-9; t += 0.125)
+        for (const [x, z] of [
+          [a0 + (a1 - a0) * t, b0],
+          [a0 + (a1 - a0) * t, b1],
+          [a0, b0 + (b1 - b0) * t],
+          [a1, b0 + (b1 - b0) * t],
+        ])
+          if (Math.abs(natural(x, z) - m.y) > most) return false;
+    }
+    return true;
+  };
+  const out: Rect = [...m.rect];
+  for (const side of [0, 1, 2, 3])
+    for (let w = 0.5; w <= YARD + 1e-9; w += 0.5) {
+      const r: Rect = [...out];
+      r[side] = m.rect[side] + (side < 2 ? -w : w);
+      if (!ok(r)) break;
+      out[side] = r[side];
+    }
+  return out;
+}
 export const MANSIONS: Mansion[] = layout();
+/** Each pad's height and yard, settled when the site is built (baked.ts; scripts/bake.mjs), so the boot holds the answer
+ * and not the search */
+const SETTLED: { y: number; yard: Rect }[] = baked('mansion-ground', BUILT ? undefined : () => {
+  settle(MANSIONS);
+  return MANSIONS.map((m) => ({ y: m.y, yard: m.yard }));
+});
+MANSIONS.forEach((m, i) => Object.assign(m, SETTLED[i]));
 
-/** The ground held level under each pad (terrain.ts's `LEVELS`) */
-export const MANSION_LEVELS = MANSIONS.map((m) => ({ rect: m.rect, y: m.y, ease: PAD_EASE }));
+/** The ground held level under each pad and its yard (terrain.ts's `LEVELS`) */
+export const MANSION_LEVELS = MANSIONS.map((m) => ({ rect: m.yard, y: m.y, ease: PAD_EASE }));
 
 /* ---------- The mansion's frame ---------- */
 
@@ -317,8 +393,7 @@ export const MANSION_SOLIDS: Box[] = MANSIONS.flatMap((m): Box[] => {
     ...m.parts.map((p) => box(p.u0, p.v0, p.u1, p.v1, topOf(p))),
     ...wallsOf(m).map(([u0, v0, u1, v1]) => box(u0, v0, u1, v1, WALL.h)),
     box(pu0, pv0, pu1, pv1, 0.3),
-    // (a villa's terraces, each a step lower)
-    ...m.terraces.map(([v0, v1], i) => box(-m.W / 2 + 1, v0, m.W / 2 - 1, v1, -0.9 * (i + 1))),
+    // (a villa's terraces are crestbanks.ts's, on the ground behind it: `TERRACE_SOLIDS`, in the chunk)
   ];
 }).concat(
   MANSION_CARS.map(({ y, car: [, x, z, yaw] }): Box => {
@@ -327,11 +402,11 @@ export const MANSION_SOLIDS: Box[] = MANSIONS.flatMap((m): Box[] => {
     return [x - hx, z - hz, x + hx, z + hz, y + 1.2];
   })
 );
-/** On a pad (with its ease, padded `m`) or its drive: the hills' oaks, scrub and palms keep off */
+/** On a pad's level ground (its yard and its ease, padded `m`) or its drive: the hills' oaks, scrub and palms keep off */
 export function onMansion(x: number, z: number, m = 0) {
   for (const s of MANSIONS) {
     const e = PAD_EASE + m;
-    if (x > s.rect[0] - e && x < s.rect[2] + e && z > s.rect[1] - e && z < s.rect[3] + e) return true;
+    if (x > s.yard[0] - e && x < s.yard[2] + e && z > s.yard[1] - e && z < s.yard[3] + e) return true;
     // (the villa's terraces and the glass mansion's cantilever stand past the pad's back)
     const [a, b] = s.drive;
     const [vx, vz] = [b[0] - a[0], b[1] - a[1]];

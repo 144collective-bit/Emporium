@@ -11,9 +11,10 @@
  */
 import { HILLS, TERRAIN_RECT, natural, smooth, swell, type Rect } from './hills';
 import { BED, HILL_ROADS } from './crestmont';
-import { MANSION_LEVELS } from './mansions';
+import { MANSIONS, MANSION_LEVELS } from './mansions';
 import { SITE_LEVELS } from './crestsites';
 import { SOUTH_GROUND_RECT, onSouthGround, southLift } from './southground';
+import { BUILT, baked } from './baked';
 
 export { HILLS, TERRAIN_RECT, swell, type Rect };
 
@@ -22,6 +23,8 @@ export interface Level {
   rect: Rect;
   y: number;
   ease: number;
+  /** One site's levels nested in each other (the reservoir's basin in its apron): which site they're all of */
+  of?: string;
 }
 /** The hills' mansions' pads (mansions.ts, Phase 6) and the landmarks' ground (crestsites.ts, Phase 7) */
 export const LEVELS: Level[] = [...MANSION_LEVELS, ...SITE_LEVELS];
@@ -105,9 +108,123 @@ export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS
     const w = hold(l, x, z);
     if (w > 0) h += (l.y - h) * w;
   }
+  // The drives graded from their roads up to their pads (never on a road's bed, which holds its own height)
+  if (levels === LEVELS)
+    for (const r of RAMPS) {
+      if (x < r.box[0] || x > r.box[2] || z < r.box[1] || z > r.box[3]) continue;
+      const t = Math.max(0, Math.min(1, ((x - r.ax) * r.vx + (z - r.az) * r.vz) / r.l2));
+      const d = Math.hypot(x - r.ax - r.vx * t, z - r.az - r.vz * t);
+      // (and never on its pad's level ground, which holds its own height: the ramp eases into it as into the road)
+      const w = (1 - smooth(RAMP.half, RAMP.half + RAMP.ease, d)) * (1 - (bed?.w ?? 0)) * (1 - hold(r.level, x, z));
+      if (w > 0) h += (r.ya + (r.yb - r.ya) * t - h) * w;
+    }
   return h;
 }
 
+/**
+ * Each hill mansion's drive, the ground under it graded (the owner's call, 2026-11-19: the drive met its road on a
+ * slab standing out of the bank): from the road's height at its mouth to the pad's at its front, straight, held level
+ * across the drive and its kerbs (`half`), eased back into the slope either side (`ease`)
+ */
+export const RAMP = { half: 1.6, ease: 4 } as const;
+const RAMPS = MANSIONS.map((m, i) => {
+  const [a, b] = m.drive;
+  const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+  const reach = RAMP.half + RAMP.ease;
+  const bed = bedAt(a[0], a[1]);
+  return {
+    ax: a[0],
+    az: a[1],
+    vx,
+    vz,
+    l2: vx * vx + vz * vz || 1,
+    ya: bed ? bed.y : natural(a[0], a[1]),
+    yb: m.y,
+    level: MANSION_LEVELS[i],
+    box: [Math.min(a[0], b[0]) - reach, Math.min(a[1], b[1]) - reach, Math.max(a[0], b[0]) + reach, Math.max(a[1], b[1]) + reach],
+  };
+});
+
+/* ---------- The ground as drawn (world.ts `hillsPlane()`) ---------- */
+
+/** The hills' grass grid: a line every `HILL_STEP`, on its multiples */
+export const HILL_STEP = 2;
+/** Through a level's bank (its ease round it) the grid's lines `LEVEL_STEP` apart, and one on each of its edges */
+export const LEVEL_STEP = 1;
+/** The ground's pieces (world.ts: its 30-tile tiles, tiles.ts `TILE`) */
+export const PIECE = 30;
+/**
+ * The hills' grid's lines along one way (x if `axis` is 0) over a piece of ground from `a` to `b` (and `c` to `d` the
+ * other way): its ends, every `HILL_STEP` between, and where a level's ground meets it, a line on each of the level's
+ * edges and every `LEVEL_STEP` across its bank, so a pad is drawn flat to its edge and its bank bends where it bends
+ * (on the coarse grid alone, a square straddling a pad's edge cut its corner under the grass or left it in the air)
+ */
+function plainLines(a: number, b: number, c: number, d: number, axis: 0 | 1, levels: readonly Level[]) {
+  const out = [a, b];
+  for (let v = (Math.floor(a / HILL_STEP) + 1) * HILL_STEP; v < b - 1e-6; v += HILL_STEP) out.push(v);
+  for (const l of levels) {
+    const [lo, hi, olo, ohi] = axis === 0 ? [l.rect[0], l.rect[2], l.rect[1], l.rect[3]] : [l.rect[1], l.rect[3], l.rect[0], l.rect[2]];
+    if (hi + l.ease <= a || lo - l.ease >= b || ohi + l.ease <= c || olo - l.ease >= d) continue;
+    for (let k = 0; k <= Math.ceil(l.ease / LEVEL_STEP); k++) {
+      const e = Math.min(l.ease, k * LEVEL_STEP);
+      for (const v of [lo - e, hi + e]) if (v > a + 1e-6 && v < b - 1e-6) out.push(v);
+    }
+  }
+  out.sort((p, q) => p - q);
+  return out.filter((v, i) => i === 0 || v - out[i - 1] > 0.05);
+}
+/** A piece whose grass on the plain grid strays further than this from the hills' shape gets a line every `FINE_STEP` */
+export const FINE_GAP = 0.06;
+export const FINE_STEP = 1;
+/**
+ * The pieces of the hills drawn on the fine grid (each by its north-west corner, `x,z`): where, on the plain lines, the
+ * grass strays more than `FINE_GAP` from the hills' shape anywhere in it, looked at every half tile (the ridges, the
+ * hill roads' banks, the hollows). Worked out when the site is built (baked.ts; scripts/bake.mjs), not on the visit.
+ */
+export const FINE_PIECES: string[] = baked('hill-fine', BUILT ? undefined : finePieces);
+const FINE = new Set(FINE_PIECES);
+function finePieces() {
+  const out: string[] = [];
+  for (let x0 = Math.floor(TERRAIN_RECT[0] / PIECE) * PIECE; x0 < TERRAIN_RECT[2]; x0 += PIECE)
+    for (let z0 = Math.floor(TERRAIN_RECT[1] / PIECE) * PIECE; z0 < TERRAIN_RECT[3]; z0 += PIECE) {
+      const xs = plainLines(x0, x0 + PIECE, z0, z0 + PIECE, 0, LEVELS);
+      const zs = plainLines(z0, z0 + PIECE, x0, x0 + PIECE, 1, LEVELS);
+      const H = zs.map((z) => xs.map((x) => heightAt(x, z)));
+      if (!H.some((row) => row.some((h) => h > 0))) continue;
+      let i = 0;
+      let j = 0;
+      search: for (let x = x0 + 0.25; x < x0 + PIECE; x += 0.5)
+        for (let z = z0 + 0.25; z < z0 + PIECE; z += 0.5) {
+          while (i + 2 < xs.length && xs[i + 1] <= x) i++;
+          j = 0;
+          while (j + 2 < zs.length && zs[j + 1] <= z) j++;
+          const [fx, fz] = [(x - xs[i]) / (xs[i + 1] - xs[i]), (z - zs[j]) / (zs[j + 1] - zs[j])];
+          const [ha, hb, hc, hd] = [H[j][i], H[j][i + 1], H[j + 1][i + 1], H[j + 1][i]];
+          const drawn = fx >= fz ? ha + (hb - ha) * fx + (hc - hb) * fz : ha + (hd - ha) * fz + (hc - hd) * fx;
+          if (Math.abs(drawn - heightAt(x, z)) > FINE_GAP) {
+            out.push(`${x0},${z0}`);
+            break search;
+          }
+        }
+    }
+  return out;
+}
+/** Whether a piece (from x0, z0) is drawn fine */
+const finePiece = (x0: number, z0: number) => FINE.has(`${x0},${z0}`);
+/**
+ * The hills' grid's lines along one way (x if `axis` is 0) over a piece of ground from `a` to `b` (and `c` to `d` the
+ * other way): its ends, every `HILL_STEP` between, and where a level's ground meets it, a line on each of the level's
+ * edges and every `LEVEL_STEP` across its bank, so a pad is drawn flat to its edge and its bank bends where it bends
+ * (on the coarse grid alone, a square straddling a pad's edge cut its corner under the grass or left it in the air);
+ * where the hills curve more than the plain grid follows (`finePiece()`), a line every `FINE_STEP` across the piece
+ */
+export function hillLines(a: number, b: number, c: number, d: number, axis: 0 | 1, levels: readonly Level[] = LEVELS) {
+  const out = plainLines(a, b, c, d, axis, levels);
+  if (levels !== LEVELS || !(axis === 0 ? finePiece(a, c) : finePiece(c, a))) return out;
+  for (let v = (Math.floor(a / FINE_STEP) + 1) * FINE_STEP; v < b - 1e-6; v += FINE_STEP) out.push(v);
+  out.sort((p, q) => p - q);
+  return out.filter((v, i) => i === 0 || v - out[i - 1] > 0.05);
+}
 /** The hills' height before the roads were cut in (the tests compare) */
 export const naturalAt = (x: number, z: number) => (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3] ? 0 : natural(x, z));
 

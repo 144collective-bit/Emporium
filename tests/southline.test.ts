@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ESC_RUN, HALL_Y, LINE, surfaceAt, LINE_LENGTH, LINE_PASSAGES, LINE_S, MIN_R, PLAT_HALF, PLAT_LEN, PLAT_Y, SOUTH_STATIONS, TUNNEL_TOP, lineAt, sOn, stationOf,
+  ESC_RUN, HALL_Y, LINE, TUBE_SPOTS, surfaceAt, LINE_LENGTH, LINE_PASSAGES, LINE_S, MIN_R, PLAT_HALF, PLAT_LEN, PLAT_Y, SOUTH_STATIONS, TUNNEL_TOP, lineAt, sOn, stationOf,
 } from '../src/scripts/city3d/southline';
 import { acrossOf, alongOf, floorOf, inPassage, pointOf, underworld, type Passage } from '../src/scripts/city3d/underground';
 import { CHURCHYARD, CIRCUS, FOOTPATHS, PATH_HALF, SOUTH_STREETS, type Pt } from '../src/scripts/city3d/south';
@@ -178,4 +178,27 @@ test("The Trenches' stairs open in The Block's plaza by the raised station's tow
       assert.ok(!inRect(THE_BLOCK.playground, p, 0.5) && !inRect(THE_BLOCK.fence, p, 0.5), 'clear of the playground and the court');
       for (const [x, z] of THE_BLOCK.benches) assert.ok(Math.hypot(x - p[0], z - p[1]) > 1.2, 'clear of a bench');
     }
+});
+
+test("each station's place on the map stands by its way in, facing it, off its stairs (the south plan's 4h)", () => {
+  for (const s of SOUTH_STATIONS) {
+    const p = TUBE_SPOTS[s.id];
+    assert.ok(Number.isFinite(p.x) && Number.isFinite(p.z) && Number.isFinite(p.yaw));
+    const ahead: Pt = [-Math.sin(p.yaw), -Math.cos(p.yaw)];
+    if (s.entrance.kind === 'plaza') {
+      // (down in the Circus's sunken plaza, at its floor, looking into the station's corridor)
+      assert.ok(Math.hypot(p.x - CIRCUS.x, p.z - CIRCUS.z) < PLAZA.r - 2);
+      assert.equal(p.y, HALL_Y - 0.15);
+      assert.ok(inPassage(s.way, p.x + ahead[0] * 2, p.z + ahead[1] * 2), 'facing its corridor');
+      continue;
+    }
+    const [tx, tz] = s.entrance.top;
+    // (the station building's stairs start inside it, half way back: its door out on the street)
+    assert.ok(Math.hypot(p.x - tx, p.z - tz) < (s.entrance.kind === 'building' ? 6 : 3), `${s.id}: by its way in`);
+    assert.ok(!inPassage(s.way, p.x, p.z) || s.entrance.kind === 'building', `${s.id}: not on its stairs`);
+    // (facing its way in: the stairs' top or the building's door a step or two ahead)
+    const d0 = Math.hypot(p.x - tx, p.z - tz);
+    const d1 = Math.hypot(p.x + ahead[0] - tx, p.z + ahead[1] - tz);
+    assert.ok(d1 < d0, `${s.id}: facing its way in`);
+  }
 });

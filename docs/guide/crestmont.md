@@ -117,4 +117,70 @@ keep it up to date when what it describes changes.
   `crestgardens3d.ts`, their solids (`GARDEN_SOLIDS`) joining the grids through
   `addSolids()` when the chunk loads; the land round them is `crestland.ts`
   (vineyards, olive groves, meadows, the mansions' cypress avenues and drive
-  piers, `onLand()` keeping the oaks and scrub off). Made-up names only.
+  piers, `onLand()` keeping the oaks and scrub off). The grounds pass (the
+  owner's call, 2026-11: "the landscape needs adjusting around buildings...
+  improve the grounds around the houses"; `docs/crestmont-plan.md`, the
+  grounds pass) is built: the hills' grass is drawn on a grid with a line on
+  every level's edges and every `LEVEL_STEP` through its bank (terrain.ts
+  `hillLines()`, world.ts `hillsPlane()`), and `drawnAt()` reads the ground as
+  that grid draws it, so a pad is flat to its edge and what stands on the hills
+  stands on the grass it's seen on (the drives, the trees, vines, piers,
+  flowers and the landmarks' draped ground read it); the banks round the
+  mansions' pads are `crestbanks.ts` (DOM-free, the chunk's, tested in
+  `tests/crestbanks.test.ts`: spokes round each pad, cut banks terraced with
+  dry-stone walls along the contours, `TIERS`, topped just over the ground they
+  hold, soil beds planted by the house's kind, `KIND_PLANTS`; fill banks a lower
+  wall and drifts down the slope; level edges a border), drawn in each
+  mansion's own site by mansions3d.ts (which no longer stands tall walls on a
+  pad's edge; its drive has a stone kerb each side); a villa's terraces stand
+  on the ground behind it (`TERRACES`: bays each topped over the highest ground
+  under it, `TERRACE_SOLIDS` joining the grids with the chunk, no longer in
+  `MANSION_SOLIDS`); the Flats' lots' boundaries are planted (trees and shrub
+  runs along the side and back hedges, a `specimen` tree for a Tudor or
+  Georgian house) and their verges outside the hedges (`vergeOf()`, clear of
+  the gateway, the street's trees and lamps); the open slopes' cover is
+  `crestcover.ts` (DOM-free, the chunk's, tested in `tests/crestcover.test.ts`:
+  `DRIFTS` of the hills' shrubs, `OUTCROPS` of boulders, `TRAILS`, gravel
+  footpaths where a hill road doubles back or passes another, never steeper
+  than `TRAIL.grade`, `BOLLARDS` at each end), drawn by crestgardens3d.ts
+  (`registerCover()`; on phones the drifts, the banks' planting and the verges
+  are near only). The second grounds pass (the owner's call, 2026-11-19: the
+  next passes, "fix the terrain and any errors in the build") is built: the
+  hills' grass is drawn fine (a line every `FINE_STEP`) on the pieces where
+  the plain grid strayed more than `FINE_GAP` from the hills' shape
+  (`FINE_PIECES`, baked as `hill-fine`), so the ridges and hollows aren't
+  blocky and what stands on them meets the grass; garden paths from the
+  mansions' gates (`GARDEN_PATHS`, `GATES`: none on a walled pad) to a
+  neighbour's garden or down to a hill road, the banks opening for them
+  (`PATH_GAP`), the pads' balustrades opening at the gates with a pier each
+  side, the gardens keeping the way in clear with stepping stones; low lights
+  at night (`PATH_LIGHTS` by the footpaths, `DRIVE_LIGHTS` by the drives, a
+  bank's `lights` in its walls; phones every other); the banks laid round any
+  level's ground (`Ground`, `mansionGround()`), the civic hall's and the
+  club's pads banked too (`SITE_BANKS`), and the grand hotel's block's edges
+  planted (`hotelVerge()`, `HOTEL_VERGE`). The hill houses are built on the
+  hillside, not sunk in it (the owner's call, 2026-11-19): `settle()` in
+  mansions.ts sets each pad's level to the middle of the hills under it (never
+  further from its road's height than `DRIVE_GRADE` lets its drive climb) and
+  widens its level ground by up to `YARD` a side where that stays clear
+  (`yard`, `yardOf()`: off the roads with its bank, the other yards, the
+  overlook, never cut or built up past `CUT` along its edges nor `CUT` and a
+  half halfway through its bank); `MANSION_LEVELS` hold the yard level,
+  `onMansion()` keeps the planting off it and its bank, the banks start at its
+  edge, mansions3d.ts mows it. The pads, drives and houses stand where they
+  stood. Its chunk's setup is light on the main thread: the footpaths are
+  baked (`crest-paths`), the banks and the slopes' drifts laid when their
+  sites are built (`banks()`, `siteBanks()`, `driveLights()`, `cover()`).
+  The fix pass (the owner's call, 2026-11-19, three pictures: the reservoir's
+  water spread up its banks, a drive standing on a slab at its road, the grass
+  through a drive in stripes): the reservoir's water is a stone-edged basin
+  (crestsites.ts `RESERVOIR` `crest`, `apron`, `coping`, `BASIN_DEPTH`: its
+  apron held at the coping's height and its basin a little lower inside it,
+  levels `of` one site, terrain.ts `Level`); the ground under each drive is
+  graded from its road to its pad (terrain.ts `RAMP`, never on a road's bed or
+  its pad's level ground); what's laid on the hills is dense on the grass as
+  drawn (`crestdrape.ts`: the drives, the footpaths, the banks' beds, the golf
+  course, the overlook's path; the hill roads' asphalt every half tile over the
+  higher of its bed and the grass, `ROAD_LIFT`), `tests/crestdrape.test.ts`
+  holding the grass under every one; the hill roads' walls topped just over
+  the bank behind them (landscape.ts `EDGE_AT`). Made-up names only.
