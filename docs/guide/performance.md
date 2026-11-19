@@ -77,7 +77,8 @@ keep it up to date when what it describes changes.
     `terraces`), the High Road's buildings (`highroad.ts`, `highroad`) and the
     council rows, corner shops and community centre (`council.ts`, `council`), and since the spawn plan's Phase 3a
     the south's closes, crescents and their footpaths (`south.ts` `GROWN`, key `south-grown`: about a second of a
-    phone's start-up). A new module that bakes goes in `MODULES` in
+    phone's start-up), and since Crestmont's second grounds pass which of the hills' 30-tile pieces are drawn on the
+    fine grid (`terrain.ts` `FINE_PIECES`, key `hill-fine`: each piece's grass looked at every half tile). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
