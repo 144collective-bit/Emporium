@@ -16,7 +16,11 @@ import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { drawnAt } from './terrain';
-import { BANKS, TERRACES, type Bank, type PlantKind, type Post } from './crestbanks';
+import { BANKS, DRIVE_LIGHTS, SITE_BANKS, TERRACES, type Bank, type PlantKind, type Post } from './crestbanks';
+import { GATES } from './crestcover';
+
+/** A gate's half width in the pad's edge */
+const GATE_GAP = 0.9;
 import { COVER, PLANT, SOIL } from './palette';
 import { MANSIONS, MANSION_CARS, STOREY, WALL, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
 import { WINDOW, hip, poolOf } from './estates3d';
@@ -95,6 +99,8 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
           const [um, vm] = [(ua + uc) / 2, (va + vc) / 2];
           // (in the drive's mouth on the front: open)
           if (n[1] > 0.5 && Math.abs(um - m.du) < 2) continue;
+          // (at a garden path's gate: open, crestcover.ts)
+          if (gates.some((g) => Math.hypot(um - g.u, vm - g.v) < GATE_GAP)) continue;
           const out = ground(um + n[0] * 2, vm + n[1] * 2);
           const [lu0, lv0, lu1, lv1] = [Math.min(ua, uc) - (n[0] ? 0.15 : 0), Math.min(va, vc) - (n[1] ? 0.15 : 0), Math.max(ua, uc) + (n[0] ? 0.15 : 0), Math.max(va, vc) + (n[1] ? 0.15 : 0)];
           // (where the hills rise past it, the bank's terraces stand instead: crestbanks.ts, drawn below)
@@ -104,6 +110,14 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
           }
         }
       };
+      // The gates where a garden path leaves the pad: a stone pier either side
+      const gates = GATES.filter((g) => g.m === m.id);
+      for (const g of gates)
+        for (const s of [-1, 1]) {
+          const [pu, pv] = [g.u + g.out[1] * s * -GATE_GAP + g.out[0] * 0.15, g.v + g.out[0] * s * GATE_GAP + g.out[1] * 0.15];
+          box(pu - 0.2, -0.3, pv - 0.2, pu + 0.2, 1.1, pv + 0.2, STONE);
+          box(pu - 0.25, 1.1, pv - 0.25, pu + 0.25, 1.18, pv + 0.25, STONE_SHADE);
+        }
       edge(-W / 2, 0, W / 2, 0, [0, 1]);
       edge(-W / 2, -D, W / 2, -D, [0, -1]);
       edge(-W / 2, 0, -W / 2, -D, [-1, 0]);
@@ -319,6 +333,11 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       }
       g.computeVertexNormals();
       q.add(g, STONE);
+      const near = (x: number, z: number) => {
+        const [vx, vz] = [d1[0] - d0[0], d1[1] - d0[1]];
+        const t = Math.max(0, Math.min(1, ((x - d0[0]) * vx + (z - d0[1]) * vz) / (vx * vx + vz * vz || 1)));
+        return Math.hypot(x - d0[0] - vx * t, z - d0[1] - vz * t) < 2.5;
+      };
       // (its edging: a stone kerb down each side, its foot in the ground, a little over the drive)
       const kerb = new Batch();
       for (const s of [-1, 1]) {
@@ -331,6 +350,12 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
         }
         kerb.add(wallGeometry(line, 0.1), STONE_SHADE);
       }
+      // Its low lights by turns either side (crestbanks.ts): a dark post near, its glowing cap at every distance
+      DRIVE_LIGHTS.filter(([x, z]) => near(x, z)).forEach(([x, z, y], i) => {
+        if (low && i % 2) return;
+        kerb.detail(() => kerb.add(new THREE.CylinderGeometry(0.045, 0.055, 0.42, 6).translate(x, y + 0.16, z), GUTTER));
+        kerb.add(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 8).translate(x, y + 0.4, z), WALL_GLOW);
+      });
       kerb.build(into, { cast: false, receive: true });
       drawBank(into, BANKS[MANSIONS.indexOf(m)], low);
       const pave = (r: [number, number, number, number], y: number, mat: THREE.Material) => flat(q, r[0], r[1], r[2], r[3], m.y + y, mat, 8);
@@ -342,6 +367,12 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       void low;
     });
   }
+  // The civic hall's and the country club's banks (crestbanks.ts), a site each
+  for (const bank of SITE_BANKS) {
+    const xs = bank.spokes.map((sp) => sp.x);
+    const zs = bank.spokes.map((sp) => sp.z);
+    site(`crestmont bank ${bank.id}`, [Math.min(...xs) - 7, Math.min(...zs) - 7, Math.max(...xs) + 7, Math.max(...zs) + 7], (into) => drawBank(into, bank, low));
+  }
   // The cars on the forecourts (the main thread's), each at its pad's height
   if (scene) for (const { y, car } of MANSION_CARS) parkedCars(scene, y, [[car[0] as CarId, car[1], car[2], car[3], car[4]]]);
 }
@@ -352,6 +383,8 @@ const DRY_STONE = toon('#b9ab8f');
 const COPING = toon('#d3c8b0');
 const BED_SOIL = toon(SOIL.bed);
 const ROCK = toon('#8e8a84');
+/** The grounds' low lights at night: small, warm, just past the bloom's threshold */
+const WALL_GLOW = neon('#ffe2a8', 0.15, 1.25);
 /** A bank's plants: the mound's colour, and (near) its flowers' or its leaves' */
 const PLANT_MAT: Record<PlantKind, { body: THREE.Material; top?: THREE.Material }> = {
   lavender: { body: toon('#7d9070'), top: toon('#9b7ddb') },
@@ -462,6 +495,11 @@ function drawBank(into: THREE.Object3D, bank: Bank, low: boolean) {
       });
   });
   b.lod = 'all';
+  // The walls' lights: a small glowing puck in the face (phones: every other)
+  bank.lights.forEach(([x, z, y], i) => {
+    if (low && i % 2) return;
+    b.add(new THREE.SphereGeometry(0.06, 6, 4).scale(1, 0.7, 1).translate(x, y, z), WALL_GLOW);
+  });
   for (const r of bank.rocks) b.add(new THREE.DodecahedronGeometry(0.32 * r.s, 0).scale(1.15, 0.7, 0.9).rotateY(r.turn).translate(r.x, r.y + 0.1 * r.s, r.z), ROCK);
   b.build(into, { cast: true, receive: true });
 }

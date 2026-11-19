@@ -14,7 +14,7 @@
  */
 import { BED, HILL_ROADS, nearHillRoad } from './crestmont';
 import { HILLS, TERRAIN_RECT, heightAt, slopeAt } from './terrain';
-import { onMansion } from './mansions';
+import { MANSIONS, PAD_EASE, onMansion, outOf, toWorld, type Mansion } from './mansions';
 import { onSite } from './crestsites';
 import { underSpur } from './metro';
 import { onLand } from './crestland';
@@ -186,10 +186,166 @@ export const BOLLARDS: Pt[] = TRAILS.flatMap((t) =>
     return [1, -1].map((s): Pt => [p[0] - (dz / l) * s * (TRAIL.half + 0.25), p[1] + (dx / l) * s * (TRAIL.half + 0.25)]);
   })
 );
-/** On a footpath (padded `m`) */
+/** On a footpath across the slopes (padded `m`) */
 export function onTrail(x: number, z: number, m = 0) {
   return TRAILS.some((t) => t.pts.some((p) => Math.hypot(p[0] - x, p[1] - z) < TRAIL.half + TRAIL.step / 2 + m));
 }
+/* ---------- Footpaths from the mansions' gardens ---------- */
+
+/** A gate in a pad's edge where a garden path leaves it: the mansion, where in its frame (u, v), the way out */
+export interface Gate {
+  m: string;
+  u: number;
+  v: number;
+  out: Pt;
+}
+export interface GardenPath extends Trail {
+  /** The gate at its start, and at its end if it runs to another garden (else it ends at a road's verge) */
+  gates: Gate[];
+}
+/** How far apart two neighbours' pads may be for a path between them; how far a path to a road may run */
+export const GARDEN_PATH = { neighbours: 52, road: 34, perHouse: 2, driveGap: 2.6 } as const;
+/** A walled pad (a compound, the summit) keeps its walls whole: no gates */
+const gatesOf = (m: Mansion): Gate[] => {
+  if (m.walled) return [];
+  const sides: Gate[] = [
+    { m: m.id, u: -m.W / 2, v: -m.D * 0.55, out: [-1, 0] },
+    { m: m.id, u: m.W / 2, v: -m.D * 0.55, out: [1, 0] },
+  ];
+  // (and its back, where nothing stands past it: not a villa's terraces nor a glass house's cantilever)
+  if (!m.terraces.length && !m.reach) sides.push({ m: m.id, u: 0, v: -m.D, out: [0, -1] });
+  return sides;
+};
+/** A gate's point in the world, `d` out past the pad's edge */
+function gateAt(m: Mansion, g: Gate, d: number): Pt {
+  const [x, z] = toWorld(m, g.u, g.v);
+  const [ox, oz] = outOf(m.face);
+  // (the frame's u runs along (oz, -ox), v along out)
+  const [wx, wz] = [oz * g.out[0] + ox * g.out[1], -ox * g.out[0] + oz * g.out[1]];
+  return [x + wx * d, z + wz * d];
+}
+const inPad = (m: Mansion, x: number, z: number, e = 0) => x > m.rect[0] - e && x < m.rect[2] + e && z > m.rect[1] - e && z < m.rect[3] + e;
+const toSeg = (x: number, z: number, [a, b]: [Pt, Pt]) => {
+  const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+  const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
+  return Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t);
+};
+/**
+ * A garden path from a (a gate) to b (a gate, or a road's verge), wandering a little: its points, or null where it
+ * can't go. Over its own pads' banks near its ends; elsewhere clear of every pad and its bank, every drive and its
+ * cypresses, the roads' shoulders, the landmarks, the land round the houses, the spur and the hills' footpaths; never
+ * steeper than `TRAIL.grade`
+ */
+function gardenPathBetween(a: Pt, b: Pt, own: Mansion[], toRoad: boolean, seed: number): [number, number, number][] | null {
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  if (L < 4 || Math.abs(heightAt(b[0], b[1]) - heightAt(a[0], a[1])) > TRAIL.grade * L) return null;
+  const [ux, uz] = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
+  const n = Math.max(2, Math.round(L / TRAIL.step));
+  const pts: [number, number, number][] = [];
+  for (let k = 0; k <= n; k++) {
+    const t = k / n;
+    const w = Math.sin(t * Math.PI) * Math.sin(t * Math.PI * 2 + seed) * 0.9;
+    const [x, z] = [a[0] + (b[0] - a[0]) * t - uz * w, a[1] + (b[1] - a[1]) * t + ux * w];
+    const roadEnd = toRoad && (1 - t) * L < 1.6;
+    for (const m of MANSIONS) {
+      const mine = own.includes(m);
+      // (never across a pad; over a bank only its own, near its gate)
+      if (inPad(m, x, z, mine ? -0.05 : PAD_EASE + 1)) return null;
+      if (toSeg(x, z, m.drive) < GARDEN_PATH.driveGap) return null;
+    }
+    if (!roadEnd && nearHillRoad(x, z, BED.shoulder + 1)) return null;
+    if (roadEnd && nearHillRoad(x, z, BED.shoulder + 0.2)) return null;
+    if (onSite(x, z, 1) || underSpur(x, z) || onLand(x, z, 0.5) || onTrail(x, z, 1.5)) return null;
+    if (x <= TERRAIN_RECT[0] + 6 || x >= 468 || z <= -432 || z >= HILLS.foot.z - 6) return null;
+    pts.push([x, z, heightAt(x, z)]);
+  }
+  for (let k = 1; k < pts.length; k++) {
+    const run = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+    if (Math.abs(pts[k][2] - pts[k - 1][2]) > TRAIL.grade * run) return null;
+  }
+  return pts;
+}
+export const GARDEN_PATHS: GardenPath[] = (() => {
+  const out: GardenPath[] = [];
+  const count = new Map<string, number>();
+  const used = new Set<string>();
+  const key = (g: Gate) => `${g.m} ${g.u} ${g.v}`;
+  const free = (g: Gate) => !used.has(key(g)) && (count.get(g.m) ?? 0) < GARDEN_PATH.perHouse;
+  const take = (p: GardenPath) => {
+    out.push(p);
+    for (const g of p.gates) {
+      used.add(key(g));
+      count.set(g.m, (count.get(g.m) ?? 0) + 1);
+    }
+  };
+  const apartFromPaths = (pts: [number, number, number][]) => out.every((o) => o.pts.every((p) => pts.every((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) > 2.5)));
+  // Neighbours: the shortest path between any two gates, closest pairs first
+  const pairs: { a: Mansion; b: Mansion; d: number }[] = [];
+  for (const [i, a] of MANSIONS.entries())
+    for (const b of MANSIONS.slice(i + 1)) {
+      const d = Math.hypot((a.rect[0] + a.rect[2] - b.rect[0] - b.rect[2]) / 2, (a.rect[1] + a.rect[3] - b.rect[1] - b.rect[3]) / 2);
+      if (d < GARDEN_PATH.neighbours) pairs.push({ a, b, d });
+    }
+  pairs.sort((p, q) => p.d - q.d);
+  for (const [k, { a, b }] of pairs.entries()) {
+    let best: GardenPath | null = null;
+    for (const ga of gatesOf(a).filter(free))
+      for (const gb of gatesOf(b).filter(free)) {
+        const pts = gardenPathBetween(gateAt(a, ga, 0.3), gateAt(b, gb, 0.3), [a, b], false, k * 0.53);
+        if (pts && apartFromPaths(pts) && (!best || pts.length < best.pts.length)) best = { pts, from: a.id, to: b.id, gates: [ga, gb] };
+      }
+    if (best) take(best);
+  }
+  // A house with no path yet: one down to the nearest road it can reach, off its own drive's mouth
+  for (const [k, m] of MANSIONS.entries()) {
+    if ((count.get(m.id) ?? 0) > 0) continue;
+    let best: GardenPath | null = null;
+    for (const g of gatesOf(m).filter(free)) {
+      const a = gateAt(m, g, 0.3);
+      for (const mouth of MOUTHS) {
+        const L = Math.hypot(mouth.p[0] - a[0], mouth.p[1] - a[1]);
+        if (L > GARDEN_PATH.road || Math.hypot(mouth.p[0] - m.drive[0][0], mouth.p[1] - m.drive[0][1]) < 6) continue;
+        if (best && L > Math.hypot(best.pts[best.pts.length - 1][0] - best.pts[0][0], best.pts[best.pts.length - 1][1] - best.pts[0][1])) continue;
+        const pts = gardenPathBetween(a, mouth.p, [m], true, k * 0.71);
+        if (pts && apartFromPaths(pts)) best = { pts, from: m.id, to: mouth.road, gates: [g] };
+      }
+    }
+    if (best) take(best);
+  }
+  return out;
+})();
+/** The gates garden paths leave from, all of them */
+export const GATES: Gate[] = GARDEN_PATHS.flatMap((p) => p.gates);
+/** A garden path's bollards where it meets a road (a pair either side, a little in from the verge) */
+export const PATH_BOLLARDS: Pt[] = GARDEN_PATHS.filter((p) => p.gates.length === 1).flatMap((t) => {
+  const [p, q] = [t.pts[t.pts.length - 2], t.pts[t.pts.length - 3]];
+  const [dx, dz] = [q[0] - p[0], q[1] - p[1]];
+  const l = Math.hypot(dx, dz) || 1;
+  return [1, -1].map((s): Pt => [p[0] - (dz / l) * s * (TRAIL.half + 0.25), p[1] + (dx / l) * s * (TRAIL.half + 0.25)]);
+});
+/** On a garden path (padded `m`) */
+export function onGardenPath(x: number, z: number, m = 0) {
+  return GARDEN_PATHS.some((t) => t.pts.some((p) => Math.hypot(p[0] - x, p[1] - z) < TRAIL.half + TRAIL.step / 2 + m));
+}
+
 // (the drifts and outcrops off the footpaths)
-for (const d of DRIFTS) d.clumps = d.clumps.filter((c) => !onTrail(c.x, c.z, 0.4));
-for (const [k, o] of OUTCROPS.entries()) OUTCROPS[k] = o.filter((c) => !onTrail(c.x, c.z, 0.6));
+for (const d of DRIFTS) d.clumps = d.clumps.filter((c) => !onTrail(c.x, c.z, 0.4) && !onGardenPath(c.x, c.z, 0.4));
+for (const [k, o] of OUTCROPS.entries()) OUTCROPS[k] = o.filter((c) => !onTrail(c.x, c.z, 0.6) && !onGardenPath(c.x, c.z, 0.6));
+
+/* ---------- Lights along the footpaths ---------- */
+
+/** A footpath's low lights: this far out from its middle, every so many of its points, by turns each side */
+export const PATH_LIGHT = { off: TRAIL.half + 0.35, every: 7 } as const;
+/** The footpaths across the slopes and from the gardens lit at night: low lights by turns either side, none by their ends */
+export const PATH_LIGHTS: [number, number, number][] = [...TRAILS, ...GARDEN_PATHS].flatMap((t) => {
+  const out: [number, number, number][] = [];
+  let side = 1;
+  for (let k = 3; k < t.pts.length - 3; k += PATH_LIGHT.every, side = -side) {
+    const [p, q] = [t.pts[k - 1], t.pts[k + 1]];
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
+    const [x, z] = [t.pts[k][0] - ((q[1] - p[1]) / l) * side * PATH_LIGHT.off, t.pts[k][1] + ((q[0] - p[0]) / l) * side * PATH_LIGHT.off];
+    if (nearHillRoad(x, z, BED.shoulder + 0.5)) continue;
+    out.push([x, z, heightAt(x, z)]);
+  }
+  return out;
+});

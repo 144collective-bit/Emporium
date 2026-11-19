@@ -6,8 +6,8 @@
  *
  * Each pad's bank is walked round in spokes (`Spoke`): out from the pad's edge, square to its sides and fanned round
  * its corners, as the ease runs. A spoke is **cut** where the hills rise past the pad, **fill** where they fall away,
- * **level** between, or nothing where the drive, the road and its shoulders, a landmark, a villa's terraces or a glass
- * mansion's cantilever come:
+ * **level** between, or nothing where the drive, the road and its shoulders, a landmark, a villa's terraces, a glass
+ * mansion's cantilever or a garden path (crestcover.ts `GARDEN_PATHS`) come:
  *
  * - **Cut banks** are terraced: low dry-stone walls along the bank's contours (`TIERS`: the toe at the pad's edge, two
  *   more up the bank where there's ground to hold), each topped a little over the ground it holds back, its foot down
@@ -21,8 +21,12 @@
  */
 import { BED, nearHillRoad } from './crestmont';
 import { drawnAt, heightAt } from './terrain';
-import { MANSIONS, PAD_EASE, outOf, originOf, rectToWorld, type Mansion, type MansionKind } from './mansions';
-import { onSite } from './crestsites';
+import { MANSIONS, PAD_EASE, onMansion, outOf, originOf, rectToWorld, type Mansion, type MansionKind } from './mansions';
+import { CIVIC, CLUB, FAIRWAY, FRINGE, HOLES, SITE_LEVELS, onSite } from './crestsites';
+import { PLAN, distToStreet } from './streetplan';
+import { WALK_W } from './layout';
+import { onGardenPath } from './crestcover';
+import { DRIVE_PIER, DRIVE_PIERS } from './crestland';
 import { rng } from './recipes';
 
 type Pt = [number, number];
@@ -46,6 +50,8 @@ export const SPOKE = { step: 1, fan: 5 } as const;
 export const READ = { at: 3, by: 0.5 } as const;
 /** Clear of a hill road's shoulder (and the joggers on it) by this */
 const ROAD_GAP = BED.shoulder + 1;
+/** A bank's walls and planting keep this far off a garden path (crestcover.ts) */
+export const PATH_GAP = 0.6;
 /** Clear of a mansion's drive's middle by this */
 export const DRIVE_GAP = 2.4;
 
@@ -74,7 +80,29 @@ function behind(m: Mansion, x: number, z: number) {
 }
 
 /** A pad's spokes, in order round it (north side west to east, then clockwise) */
-export function spokesOf(m: Mansion): Spoke[] {
+/** A level's ground a bank is laid round: a mansion's pad (`BANKS`) or a landmark's (`SITE_BANKS`) */
+export interface Ground {
+  id: string;
+  rect: [number, number, number, number];
+  y: number;
+  /** Whose planting it takes */
+  kind: MansionKind;
+  /** Where a spoke stops short (what else's ground begins) */
+  stop: (x: number, z: number) => boolean;
+  /** Where a spoke has no bank at all (a drive, what stands past the pad, a path, a walk) */
+  skip: (x: number, z: number) => boolean;
+}
+/** A mansion's pad as a bank's ground: stopped by the roads' shoulders and the landmarks, none on its drive, its
+ * terraces or under its cantilever, nor on a garden path */
+export const mansionGround = (m: Mansion): Ground => ({
+  id: m.id,
+  rect: m.rect,
+  y: m.y,
+  kind: m.kind,
+  stop: (x, z) => nearHillRoad(x, z, ROAD_GAP) || onSite(x, z, 0.5),
+  skip: (x, z) => toDrive(m, x, z) < DRIVE_GAP || behind(m, x, z) || onGardenPath(x, z, PATH_GAP),
+});
+export function spokesOf(m: Ground): Spoke[] {
   const [x0, z0, x1, z1] = m.rect;
   const raw: [number, number, number, number][] = [];
   const side = (ax: number, az: number, bx: number, bz: number, nx: number, nz: number) => {
@@ -100,13 +128,13 @@ export function spokesOf(m: Mansion): Spoke[] {
     let reach = PAD_EASE;
     for (let d = 0; d <= PAD_EASE; d += 0.5) {
       const [px, pz] = [x + nx * d, z + nz * d];
-      if (nearHillRoad(px, pz, ROAD_GAP) || onSite(px, pz, 0.5)) {
+      if (m.stop(px, pz)) {
         reach = d - 0.4;
         break;
       }
     }
     let kind: SpokeKind = 'none';
-    const blocked = [0, 1.5, 3, 4.5, PAD_EASE].some((d) => toDrive(m, x + nx * d, z + nz * d) < DRIVE_GAP || behind(m, x + nx * d, z + nz * d));
+    const blocked = [0, 1.5, 3, 4.5, PAD_EASE].some((d) => m.skip(x + nx * d, z + nz * d));
     if (!blocked && reach >= 1.2) {
       const g = heightAt(x + nx * READ.at, z + nz * READ.at) - m.y;
       kind = g > READ.by ? 'cut' : g < -READ.by ? 'fill' : 'level';
@@ -149,6 +177,8 @@ export interface Bank {
   beds: Bed[];
   plants: Plant[];
   rocks: Rock[];
+  /** Lights set in the walls' faces on their low side, lit at night (x, z, y) */
+  lights: [number, number, number][];
 }
 
 /** A cut bank's walls: how far out each stands (the toe at the pad's edge) */
@@ -157,6 +187,8 @@ export const TIERS = [0.2, 2.2, 4.2] as const;
 export const FILL_TIER = { at: 2.6, drop: 0.6 } as const;
 /** A wall's top over the ground it holds back, read this far behind it; its foot under the ground in front */
 export const WALL_TOP = { over: 0.28, behind: 0.45, foot: 0.3 } as const;
+/** A wall's lights: every so many posts, this far out from its middle line (on its face), this far under its top */
+export const WALL_LIGHT = { every: 5, out: 0.19, down: 0.16 } as const;
 /** A wall stands only where it holds back at least this much ground (the toe always) */
 const HOLDS = 0.25;
 /** The planting by the house's kind: a cut bank's beds, a fill bank's drifts */
@@ -169,7 +201,7 @@ export const KIND_PLANTS: Record<MansionKind, { beds: PlantKind[]; drift: PlantK
 /** The tallest a bank's plant stands over the ground (a little over a tier wall) */
 export const PLANT_TALLEST = 0.9;
 
-function bankOf(m: Mansion, k: number): Bank {
+function bankOf(m: Ground, k: number): Bank {
   const r = rng(8800 + k * 31);
   const spokes = spokesOf(m);
   const at = (s: Spoke, d: number): Pt => [s.x + s.nx * d, s.z + s.nz * d];
@@ -290,10 +322,61 @@ function bankOf(m: Mansion, k: number): Bank {
     run.forEach((s, i) => i % 3 !== 2 && plant(s, 0.8, kinds.drift[i % kinds.drift.length], 0.2));
   }
 
-  return { id: m.id, spokes, walls, beds, plants, rocks };
+  /* Lights in the walls: every `WALL_LIGHT.every` posts, in the face on its low side, under the coping */
+  const lights: [number, number, number][] = [];
+  for (const w of walls)
+    for (let k = 2; k < w.length - 2; k += WALL_LIGHT.every) {
+      const [p, q] = [w[k - 1], w[k + 1]];
+      const l = Math.hypot(q.x - p.x, q.z - p.z) || 1;
+      let [nx, nz] = [-(q.z - p.z) / l, (q.x - p.x) / l];
+      const c = w[k];
+      if (drawnAt(c.x + nx * 0.5, c.z + nz * 0.5) > drawnAt(c.x - nx * 0.5, c.z - nz * 0.5)) [nx, nz] = [-nx, -nz];
+      const [x, z] = [c.x + nx * WALL_LIGHT.out, c.z + nz * WALL_LIGHT.out];
+      // (only where the face shows: the ground under it lower than the light)
+      if (c.y1 - WALL_LIGHT.down > drawnAt(x, z) + 0.12) lights.push([x, z, c.y1 - WALL_LIGHT.down]);
+    }
+  return { id: m.id, spokes, walls, beds, plants, rocks, lights };
 }
 
-export const BANKS: Bank[] = MANSIONS.map(bankOf);
+export const BANKS: Bank[] = MANSIONS.map((m, k) => bankOf(mansionGround(m), k));
+
+/* ---------- The landmarks' banks ---------- */
+
+/** On a Flats street or its sidewalk (padded `m`) */
+const onStreet = (x: number, z: number, m: number) => STREETS.some((st) => distToStreet(st, [x, z]) < st.half + WALK_W + m);
+const STREETS = PLAN.streets.filter((st) => st.kind !== 'alley');
+/** On the golf course: a fairway, or round a green (crestsites.ts's reach for them) */
+const onHole = (x: number, z: number) =>
+  HOLES.some((h) => {
+    const [a, b] = [h.tee, h.green];
+    const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
+    return Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t) < FAIRWAY + 1.5 || Math.hypot(x - b[0], z - b[1]) < FRINGE + 3;
+  });
+/** In a rect, padded */
+const inRect = (r: readonly number[], x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+/**
+ * The civic hall's and the country club's pads, banked as the mansions' are (the grand hotel stands on the Flats, its
+ * edges planted by crestgardens.ts): stopped by the streets and their sidewalks, the hill roads, the mansions and the
+ * golf course; none across the civic hall's walk in from the boulevard. The civic hall takes the summit's formal box
+ * and lavender, the club a villa's lavender and rosemary
+ */
+export const SITE_BANKS: Bank[] = [
+  { id: 'civic', rect: CIVIC.pad, y: CIVIC.y, kind: 'summit' as MansionKind, walk: CIVIC.walk as readonly number[] | null },
+  { id: 'club', rect: CLUB.pad, y: CLUB.y, kind: 'villa' as MansionKind, walk: null },
+].map(({ id, rect, y, kind, walk }, k) =>
+  bankOf(
+    {
+      id,
+      rect: rect as [number, number, number, number],
+      y,
+      kind,
+      stop: (x, z) => nearHillRoad(x, z, ROAD_GAP) || onStreet(x, z, 0.4) || onMansion(x, z, 0.5) || onHole(x, z) || SITE_LEVELS.some((l) => l.rect !== rect && inRect(l.rect, x, z, l.ease)),
+      skip: (x, z) => (walk ? inRect(walk, x, z, 1.2) : false) || onGardenPath(x, z, PATH_GAP),
+    },
+    40 + k
+  )
+);
 
 /* ---------- A villa's terraces, on the ground behind it ---------- */
 
@@ -342,3 +425,22 @@ function toWorldOf(m: Mansion, u: number, v: number): Pt {
 }
 /** The terraces, solid to their tops (joining the grids when the chunk comes in, crestmont3d.ts) */
 export const TERRACE_SOLIDS: [number, number, number, number, number][] = MANSIONS.flatMap((m, i) => TERRACES[i].map((t): [number, number, number, number, number] => [...rectToWorld(m, t.r[0], t.r[1], t.r[2], t.r[3]), m.y + t.top]));
+
+/* ---------- Lights along the drives ---------- */
+
+/** A drive's low lights: this far out from its middle (just past its kerb), this far apart along it, by turns each side */
+export const DRIVE_LIGHT = { off: 1.48, step: 3.2, clear: 0.55 } as const;
+/** Each mansion's drive lit at night: low lights by turns either side, clear of its piers (crestland.ts) and the road */
+export const DRIVE_LIGHTS: [number, number, number][] = MANSIONS.flatMap((m) => {
+  const [a, b] = m.drive;
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const [ux, uz] = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
+  const out: [number, number, number][] = [];
+  let side = 1;
+  for (let d = 2.4; d < L - 0.8; d += DRIVE_LIGHT.step, side = -side) {
+    const [x, z] = [a[0] + ux * d - uz * side * DRIVE_LIGHT.off, a[1] + uz * d + ux * side * DRIVE_LIGHT.off];
+    if (nearHillRoad(x, z, BED.shoulder + 0.3) || DRIVE_PIERS.some((p) => Math.hypot(p.x - x, p.z - z) < DRIVE_PIER.half + DRIVE_LIGHT.clear)) continue;
+    out.push([x, z, drawnAt(x, z)]);
+  }
+  return out;
+});

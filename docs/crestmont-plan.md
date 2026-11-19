@@ -567,3 +567,33 @@ built, so whole-city totals): phones over the Flats 193 draws, 16.12M to 16.19M 
 **The bench on real hardware** (the owner's, 2026-11-19: `?bench` on a phone and a computer, the live site against this
 pass's preview): good.
 
+### The second grounds pass (built, the owner's call, 2026-11-19: the garden footpaths, night lighting and the landmarks' grounds, "and fix the terrain and any errors in the build")
+
+**The terrain** (the owner saw the hills blocky, things floating or sinking, steps and seams): measured, 20 of the
+hills' 104 pieces of grass strayed more than 0.1 from the hills' shape on the plain 2-tile grid (4 more than 0.2, at the
+ridges and hollows: 360,-270 the worst at 0.26). Now a piece the plain grid leaves more than `FINE_GAP` (0.06) off,
+looked at every half tile when the site is built (`FINE_PIECES`, baked as `hill-fine`: 33 pieces), is drawn with a line
+every tile; `drawnAt()` reads the same grid. 109 of 436,000 points of the hills are left more than 0.06 off (the
+rounded corners of the levels' banks, at most 0.12). The hills' grass is 123k triangles (68k after the first pass, 47k
+before it). The hill roads' asphalt was already clear of the grass (at most 0.05 under it at 4 points); the south's
+rolling ground is drawn from the lattice it's walked on.
+
+**What's built:**
+
+- **Garden paths** (crestcover.ts `GARDEN_PATHS`): from a gate in a mansion's pad's side or back (`GATES`; none in a
+  walled pad's walls) to a neighbour's gate, or down to a hill road's verge for a house with none (bollards there); over
+  their own pads' banks only, clear of every other pad and its bank, the drives and their cypresses, the roads, the
+  landmarks, the land and the slopes' footpaths, never steeper than `TRAIL.grade`. Four: two villas' gardens joined, and
+  three houses down to Ridge Road and Canyon Drive. The banks open for them (`PATH_GAP`), the balustrade opens at a
+  gate with a stone pier each side, and the garden keeps the way in clear with stepping stones.
+- **Night lighting**: low lights by the footpaths (`PATH_LIGHTS`) and the drives (`DRIVE_LIGHTS`, just past the kerb,
+  clear of the piers) and set in the terrace walls (a bank's `lights`), warm and small, just past the bloom's
+  threshold; their posts near only, phones every other.
+- **The landmarks' grounds**: the banks laid round any level (`Ground`): the civic hall's pad terraced on its uphill
+  side and bordered, the country club's bordered (`SITE_BANKS`; stopped by the streets, the golf course and the
+  mansions, none across the civic hall's walk); the grand hotel's block's edges planted (`hotelVerge()`).
+- **The build**: the game server's type check (`npm run check --prefix server`) had 62 errors, on main too: a rules file
+  (`lot9.ts`) named a type from `landmarks.ts`, so the check followed it into the drawing code. `Idle` is `idle.ts`'s
+  now; `server/src/env.d.ts` declares `import.meta.url`. The site's build, the multiplayer build and the Worker's bundle
+  (Cloudflare's, `wrangler deploy --dry-run`) pass here; Cloudflare's own failing check on the PR is the paused deploy.
+

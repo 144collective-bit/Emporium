@@ -168,3 +168,25 @@ test("the estates' boundaries and verges: trees and shrubs along the hedges, the
   assert.ok(edge > 40, "the lots' boundaries are bare");
   assert.ok(ESTATE_GARDENS.some((g) => g.feats.some((f) => f.kind === 'specimen')));
 });
+
+test("the landmarks' grounds: the hotel's edges planted clear of its drive, buildings, palms, lamps and people; the civic hall's and club's pads banked", async () => {
+  const { SITE_BANKS } = await import('../src/scripts/city3d/crestbanks');
+  const streets = PLAN.streets.filter((s) => s.kind !== 'alley');
+  const hotel = SITE_GARDENS.find((g) => g.id === 'hotel')!;
+  const verge = hotel.g.verge ?? [];
+  assert.ok(verge.length >= 10, "the hotel's edges are bare");
+  const [x0, z0, x1, z1] = HOTEL.block;
+  for (const f of verge) {
+    assert.ok(f.r[0] >= x0 && f.r[2] <= x1 && f.r[1] >= z0 && f.r[3] <= z1, "a hotel verge off its block");
+    for (const r of [HOTEL.drive, HOTEL.body, HOTEL.deck] as FR[]) assert.ok(!overlap(f.r, r), "a hotel verge on its drive or building");
+    for (const p of PALMS) assert.ok(!inside(f.r, p.x, p.z, 0.5), 'a hotel verge on a palm');
+    for (const [x, z] of CREST_LAMPS) assert.ok(!inside(f.r, x, z, 0.5));
+    for (const p of CREST_IDLE) assert.ok(!inside(f.r, p.x, p.z, 0.25), `a hotel verge on someone (${p.act})`);
+    for (const g of hotel.g.feats) assert.ok(!overlap(f.r, g.r), `a hotel verge on its ${g.kind}`);
+  }
+  assert.deepEqual(SITE_BANKS.map((b) => b.id), ['civic', 'club']);
+  for (const b of SITE_BANKS) {
+    assert.ok(b.plants.length > 30, `the ${b.id}'s bank is bare`);
+    for (const t of [...b.plants, ...b.walls.flat()]) for (const st of streets) assert.ok(distToStreet(st, [t.x, t.z]) > st.half + 0.5, `the ${b.id}'s bank on a street`);
+  }
+});

@@ -144,4 +144,18 @@ keep it up to date when what it describes changes.
   footpaths where a hill road doubles back or passes another, never steeper
   than `TRAIL.grade`, `BOLLARDS` at each end), drawn by crestgardens3d.ts
   (`registerCover()`; on phones the drifts, the banks' planting and the verges
-  are near only). Made-up names only.
+  are near only). The second grounds pass (the owner's call, 2026-11-19: the
+  next passes, "fix the terrain and any errors in the build") is built: the
+  hills' grass is drawn fine (a line every `FINE_STEP`) on the pieces where
+  the plain grid strayed more than `FINE_GAP` from the hills' shape
+  (`FINE_PIECES`, baked as `hill-fine`), so the ridges and hollows aren't
+  blocky and what stands on them meets the grass; garden paths from the
+  mansions' gates (`GARDEN_PATHS`, `GATES`: none on a walled pad) to a
+  neighbour's garden or down to a hill road, the banks opening for them
+  (`PATH_GAP`), the pads' balustrades opening at the gates with a pier each
+  side, the gardens keeping the way in clear with stepping stones; low lights
+  at night (`PATH_LIGHTS` by the footpaths, `DRIVE_LIGHTS` by the drives, a
+  bank's `lights` in its walls; phones every other); the banks laid round any
+  level's ground (`Ground`, `mansionGround()`), the civic hall's and the
+  club's pads banked too (`SITE_BANKS`), and the grand hotel's block's edges
+  planted (`hotelVerge()`, `HOTEL_VERGE`). Made-up names only.

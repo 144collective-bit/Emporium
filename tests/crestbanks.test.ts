@@ -4,7 +4,7 @@
 // ground as drawn.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BANKS, DRIVE_GAP, PLANT_TALLEST, READ, TERRACES, TERRACE_SOLIDS, TIERS, toFrame } from '../src/scripts/city3d/crestbanks';
+import { BANKS, DRIVE_GAP, DRIVE_LIGHT, DRIVE_LIGHTS, PATH_GAP, PLANT_TALLEST, READ, TERRACES, TERRACE_SOLIDS, TIERS, toFrame } from '../src/scripts/city3d/crestbanks';
 import { MANSIONS, PAD_EASE, toWorld } from '../src/scripts/city3d/mansions';
 import { BED, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { drawnAt, heightAt } from '../src/scripts/city3d/terrain';
@@ -111,4 +111,30 @@ test("a villa's terraces on the ground behind it: never buried, their feet in th
   }
   assert.ok(n >= 2);
   assert.equal(TERRACE_SOLIDS.length, n);
+});
+
+test("the banks open where a garden path comes through: no wall, plant or boulder on it", async () => {
+  const { onGardenPath, GARDEN_PATHS } = await import('../src/scripts/city3d/crestcover');
+  assert.ok(GARDEN_PATHS.length > 0);
+  for (const b of BANKS) for (const t of [...b.plants, ...b.rocks, ...b.walls.flat()]) assert.ok(!onGardenPath(t.x, t.z, PATH_GAP - 0.55), `${b.id}'s bank across a garden path at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}`);
+});
+
+test("the grounds lit at night: lights in the terrace walls' faces, low lights by the drives off the drive, its piers and the road", async () => {
+  const { DRIVE_PIERS } = await import('../src/scripts/city3d/crestland');
+  let walls = 0;
+  for (const b of BANKS)
+    for (const [x, z, y] of b.lights) {
+      walls++;
+      // (by a wall, under its top, over the ground in front)
+      const p = b.walls.flat().reduce((best, q) => (Math.hypot(q.x - x, q.z - z) < Math.hypot(best.x - x, best.z - z) ? q : best));
+      assert.ok(Math.hypot(p.x - x, p.z - z) < 0.6 && y < p.y1 && y > drawnAt(x, z), `${b.id}'s wall light off its wall`);
+    }
+  assert.ok(walls >= 20, 'the terraces are dark');
+  assert.ok(DRIVE_LIGHTS.length >= 8);
+  for (const [x, z, y] of DRIVE_LIGHTS) {
+    const m = MANSIONS.find((q) => toDrive(q, x, z) < DRIVE_LIGHT.off + 0.2);
+    assert.ok(m && toDrive(m, x, z) > 1.35, `a drive light on a drive at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+    assert.ok(!nearHillRoad(x, z, BED.shoulder) && Math.abs(y - drawnAt(x, z)) < 1e-9);
+    for (const p of DRIVE_PIERS) assert.ok(Math.hypot(p.x - x, p.z - z) > 0.6, 'a drive light in a pier');
+  }
 });

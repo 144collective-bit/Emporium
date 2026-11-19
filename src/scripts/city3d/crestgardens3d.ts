@@ -28,7 +28,7 @@ import { drawnAt } from './terrain';
 import { BULB, SPRAY, WATER } from './mallkit';
 import { PLANT } from './palette';
 import { TERRACES } from './crestbanks';
-import { BOLLARDS, DRIFTS, OUTCROPS, TRAIL, TRAILS, type DriftKind } from './crestcover';
+import { BOLLARDS, GARDEN_PATHS, PATH_BOLLARDS, PATH_LIGHTS, DRIFTS, OUTCROPS, TRAIL, TRAILS, type DriftKind } from './crestcover';
 import { TILE as GROUND_TILE } from './tiles';
 
 type Tone = EstateStyle | MansionKind;
@@ -672,6 +672,8 @@ const DRIFT_MAT: Record<DriftKind, { body: THREE.Material; top?: THREE.Material 
   poppy: { body: toon('#6f8a48'), top: toon('#ff8a2e') },
 };
 const TRAIL_GRAVEL = toon('#cbbf9f');
+/** The footpaths' low lights at night: small, warm, just past the bloom's threshold */
+const PATH_GLOW = neon('#ffe2a8', 0.15, 1.25);
 const mound = new THREE.IcosahedronGeometry(1, 0);
 
 /** The slopes' drifts and outcrops, a site a ground tile; the footpaths, a site each with their bollards */
@@ -716,8 +718,9 @@ export function registerCover(low: boolean) {
       b.build(into, { cast: true, receive: true });
     });
   }
-  // The footpaths: gravel laid on the ground as drawn, a little over it, and their bollards
-  for (const [k, t] of TRAILS.entries()) {
+  // The footpaths across the slopes and from the gardens: gravel laid on the ground as drawn, a little over it, and
+  // their bollards where they meet a road
+  for (const [k, t] of [...TRAILS, ...GARDEN_PATHS].entries()) {
     const xs = t.pts.map((p) => p[0]);
     const zs = t.pts.map((p) => p[1]);
     site(`crestmont trail ${k}`, [Math.min(...xs) - 2, Math.min(...zs) - 2, Math.max(...xs) + 2, Math.max(...zs) + 2], (into) => {
@@ -743,11 +746,19 @@ export function registerCover(low: boolean) {
       g.computeVertexNormals();
       b.add(g, TRAIL_GRAVEL);
       const ends = [t.pts[0], t.pts[t.pts.length - 1]];
-      for (const [x, z] of BOLLARDS.filter(([x, z]) => ends.some((p) => Math.hypot(p[0] - x, p[1] - z) < 3))) {
+      for (const [x, z] of [...BOLLARDS, ...PATH_BOLLARDS].filter(([x, z]) => ends.some((p) => Math.hypot(p[0] - x, p[1] - z) < 3))) {
         const y = drawnAt(x, z);
         b.add(new THREE.CylinderGeometry(0.09, 0.1, 0.95, 8).translate(x, y + 0.4, z), WOOD);
         b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 8).translate(x, y + 0.75, z), STONE);
       }
+      // Its low lights (crestcover.ts): a dark post near, its glowing cap at every distance (phones: every other)
+      const lights = PATH_LIGHTS.filter(([x, z]) => t.pts.some((p) => Math.hypot(p[0] - x, p[1] - z) < TRAIL.half + 0.6));
+      lights.forEach(([x, z], i) => {
+        if (low && i % 2) return;
+        const y = drawnAt(x, z);
+        b.detail(() => b.add(new THREE.CylinderGeometry(0.045, 0.055, 0.42, 6).translate(x, y + 0.16, z), IRON));
+        b.add(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 8).translate(x, y + 0.4, z), PATH_GLOW);
+      });
       b.build(into, { cast: false, receive: true });
     });
   }
