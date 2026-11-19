@@ -33,6 +33,7 @@ import { DRAPE, lineMesh } from './crestdrape';
 import { meshGeometry } from './mansions3d';
 import { BOLLARDS, GARDEN_PATHS, PATH_BOLLARDS, PATH_LIGHTS, TRAIL, TRAILS, cover, type DriftKind } from './crestcover';
 import { TILE as GROUND_TILE } from './tiles';
+import { FESTOON, festoon, pairRuns, type V3 } from './crestnight';
 
 type Tone = EstateStyle | MansionKind;
 
@@ -50,6 +51,9 @@ const COPPER = toon('#5f9e8a');
 const WOOD = toon('#6b4630');
 const TEAK = toon('#a8743f');
 const IRON = toon('#1e1d22');
+/** Festoon lights' bulbs: small and warm, among the few things bright enough to bloom (crestnight.ts) */
+const FESTOON_BULB = neon('#ffd98c', 0.2, 1.5);
+const BULB_GEO = new THREE.OctahedronGeometry(FESTOON.bulb, 0);
 const BRONZE = toon('#8a6a3e');
 const LEAD = toon('#55595f');
 const TERRACOTTA = toon('#c26f4a');
@@ -413,6 +417,17 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
   }
   b.lod = 'all';
 
+  /* Festoon lights between the lamps level with each other, on slim posts raised from them (near: crestnight.ts) */
+  const lamps = g.feats.filter((f) => f.kind === 'lamp').map((f): [number, number] => [(f.r[0] + f.r[2]) / 2, (f.r[1] + f.r[3]) / 2]);
+  const runs = pairRuns(lamps);
+  b.detail(() => {
+    for (const [i, j] of runs) festoonString([lamps[i][0], FESTOON.h, lamps[i][1]], [lamps[j][0], FESTOON.h, lamps[j][1]], FESTOON.sag);
+    for (const k of new Set(runs.flat())) {
+      cyl(0.022, FESTOON.h - 0.62 + 0.05, lamps[k][0], 0.62, lamps[k][1], IRON, 5);
+      ball(0.035, lamps[k][0], FESTOON.h + 0.06, lamps[k][1], IRON, 0);
+    }
+  });
+
   /* A villa mansion's terraces as a vineyard: rows of vines on posts and wires */
   if (terraces)
     for (const t of terraces)
@@ -426,6 +441,14 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
           });
         }
   b.build(into, { cast: true, receive: true });
+
+  /** A string of festoon lights from `a` to `b` (garden numbers), sagging `sag`: its bulbs and, between them, the wire */
+  function festoonString(a: V3, c: V3, sag: number) {
+    const bulbs = festoon(a, c, sag, low ? FESTOON.stepLow : FESTOON.step);
+    for (const [u, y, v] of bulbs) add(BULB_GEO.clone().translate(u, y, v), FESTOON_BULB);
+    const curve = new THREE.CatmullRomCurve3([a, ...bulbs, c].map(([u, y, v]) => new THREE.Vector3(u, y + FESTOON.bulb, v)));
+    add(new THREE.TubeGeometry(curve, bulbs.length + 1, 0.007, 3, false), IRON);
+  }
 
   /** A pool house: its back and sides walled, a porch under the roof on two columns, glass doors */
   function poolHouse(f: Feat, tone: Tone) {
@@ -518,6 +541,18 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
         // (a lantern hung over it)
         add(new THREE.SphereGeometry(0.1, 8, 6).translate(cu, H - 0.3, cv), BULB);
       }
+      // (festoon lights criss-crossed under its beams, corner to corner)
+      for (const [a, c] of [
+        [
+          [u0 + m, v0 + m],
+          [u1 - m, v1 - m],
+        ],
+        [
+          [u1 - m, v0 + m],
+          [u0 + m, v1 - m],
+        ],
+      ] as [number, number][][])
+        festoonString([a[0], H - 0.04, a[1]], [c[0], H - 0.04, c[1]], 0.12);
     });
   }
 
