@@ -42,10 +42,22 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
 2. **The kitchen and dining.** A working kitchen along the back wall: a hob with an extractor over it, an oven and
    the fridge in tall walnut units, a sink with its tap under the window, open brass shelves; the island in black
    marble with leather stools; a dining table for four with its pendant.
-3. **Upstairs: the bathroom and the walk-in wardrobe.** The bathroom behind the landing's shut door (a walk-in shower,
-   a double basin under a lit mirror, a toilet, a towel rail); a dressing room off the bedroom (lit rails, a shoe
-   wall, a mirror; the wardrobe's prompt moves there); the bedroom and the office in the palette (an upholstered bed
-   on a green headboard wall, a TV on the wall facing the bed).
+3. **Upstairs: the bathroom and the walk-in wardrobe.** *Built, signed off by the owner (2026-11-19), live.* (Built second, the
+   owner's order.) First the rooms' lists left the boot, which was full (the owner's pick): `homerooms.ts` lays them
+   out on home.ts's `HOUSE_GEO`, in its own small chunk that imports nothing, fetched as the city starts (index.ts);
+   `homeWall()` gets them by `setRooms()` and waking waits for them. Then upstairs (`UPSTAIRS`): **the dressing room**
+   off the landing, walked through to the bedroom (its partition at `DRESS_X`, west of the middle front window, its
+   doorway `BED_DOOR`): lit walnut rails along its back hung with his clothes (the wardrobe's prompt, `WARDROBE_RECT`,
+   moved up here from the ground floor, where the old wardrobe is a cupboard now), an island of drawers in walnut and
+   black marble before the window with his watch on a tray, his shoe wall (lit shelves of trainers), his caps on a
+   brass rail, a tall brass-framed mirror. **The bedroom**: the bed's head on a deep green wall, a tall buttoned
+   cognac headboard, a walnut frame, a charcoal duvet and an emerald throw, walnut bedside tables with brass lamps, a
+   cognac bench at its foot on a rug, the telly on the wall facing it. **The bathroom** behind the landing (its doorway
+   `BATH_DOOR`, a pocket door): black marble floor and walls with pale veins, a wall-hung toilet with a brass plate, a
+   double basin in walnut and marble with brass taps under a mirror lit from behind, a walk-in shower behind a black
+   steel-framed screen with a brass rain head, a brass towel rail. **The office** in the palette (a walnut desk, a
+   cognac chair). The upstairs windows drawn where they are outside (`houseWindows()`). Shots:
+   `docs/interior-shots/phase-3-*`.
 4. **The utility and boot room, and the den in the palette.** By the side door: a washer and a dryer, coat hooks and a
    bench. The den keeps its screens and LEDs, its furniture in the palette.
 5. **Polish.** Lighting (strips, wall lights), art of his own, plants, the review shots and the phone checks.
