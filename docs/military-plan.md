@@ -9,8 +9,8 @@ sign-off. Keep this plan up to date. Nothing is built yet. **Phase 0 is
 under way**: the lines are drawn and signed off (2026-11-19, below) and the
 baseline is measured (below). The phone is over its geometry ceiling before
 the base adds anything; the owner's pick (2026-11-19) was to trim first,
-and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built** (2026-11-19,
-measured below), waiting on the owner's sign-off.
+and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
+measured below). Next, the owner's picks: a full tile batch grows by small steps (the phone's room), then Phase 2.
 
 ## The owner's answers (2026-11-18)
 
@@ -446,4 +446,12 @@ long stretch of `ns0-n` past the gate.) All within the allowance; every view's s
   run isn't ruler-straight (the main gate at z -307.5, its loop at -291.5); the parade avenue drawn but not in the street
   plan till its traffic comes (Phase 4); trees kept off only what's built and the kept lots, not the whole base (the
   base held 69 of the woods' trees: clearing them would have broken the woods' count); the lamps the town's post, white.
+
+## The owner's sign-off on Phase 1 (2026-11-19)
+
+| Question | Answer |
+| --- | --- |
+| Phase 1, as built (its departures included) | **Signed off.** |
+| A full tile batch growing by a quarter at once (about 14 MiB on the phone's biggest) | **Grow by small steps** (tilebatch.ts), before Phase 2: nothing on screen changes, measured before and after. |
+| Next | **Degen is ready**: the batch growth first, then Phase 2 (the airfield). |
 

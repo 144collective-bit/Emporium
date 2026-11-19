@@ -345,7 +345,7 @@ keep it up to date when what it describes changes.
     view nearest what it looks at (`look`, `CROWD_VIEW.focus`), walking
     round Degen, and ahead of the camera when it moves fast (`focusOf()`,
     `LOOK_AHEAD`). What's built later joins the same batched meshes
-    (`TileBatches.add()`; a mesh grows when it's full).
+    (`TileBatches.add()`; a mesh grows when it's full: `ROOM`, a quarter over what it holds, but at most `ROOM_MAX`, 4 MiB, over, so a big one grows a step at a time rather than a quarter of itself at once; `roomFor()`, docs/military-plan.md).
   - Places ask first: `flyTo()` (every panel's fly-in), walking in
     (`startWalking()`) and the intro (`works.wantView()`) build what's
     waiting where they're going, so nothing pops in on screen.
