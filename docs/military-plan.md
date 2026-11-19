@@ -10,7 +10,8 @@ under way**: the lines are drawn and signed off (2026-11-19, below) and the
 baseline is measured (below). The phone is over its geometry ceiling before
 the base adds anything; the owner's pick (2026-11-19) was to trim first,
 and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
-measured below). Next, the owner's picks: a full tile batch grows by small steps (the phone's room), then Phase 2.
+measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
+airfield) is next**, the owner's go.
 
 ## The owner's answers (2026-11-18)
 
@@ -454,4 +455,18 @@ long stretch of `ns0-n` past the gate.) All within the allowance; every view's s
 | Phase 1, as built (its departures included) | **Signed off.** |
 | A full tile batch growing by a quarter at once (about 14 MiB on the phone's biggest) | **Grow by small steps** (tilebatch.ts), before Phase 2: nothing on screen changes, measured before and after. |
 | Next | **Degen is ready**: the batch growth first, then Phase 2 (the airfield). |
+
+## A full tile batch grows a step at a time (2026-11-19, c3053c7)
+
+tilebatch.ts: a batched mesh's room past what it holds is a quarter, but at most `ROOM_MAX` (4 MiB), when it grows and
+when its room is given back (`roomFor()`, tested in tests/tilebatch.test.ts). On the phone, every district loaded:
+
+| | memcheck (every site built) | A minute into the benchmark |
+| --- | ---: | ---: |
+| Phase 1, before | 179.7 MiB | 179.6 MiB |
+| Phase 1, a step at a time | **170.7 MiB** | **170.6 MiB** |
+
+The two readings agree now (the jump with the big batch's growth is gone), about 16 MiB under the ceiling (187): room
+for the base's 6.5 MiB of allowance left, and more. Every view's slowest CPU frame passes memcheck's 250 ms, none worse
+(the route 34 ms, 40 before). The ceiling stays 187.
 
