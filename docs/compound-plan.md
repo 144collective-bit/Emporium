@@ -277,6 +277,18 @@ draw calls in the house's own batches.
     clear of the side door and the way round to it). Shots: `docs/compound-shots/phase-6a-*`.
 6b. **The gatehouse and the crest gate.** A small lit gatehouse inside the gates, the gate leaves as a sliding black
     gate stood open with a gold D crest, the compound's wall taller and dark with lit caps and wall lights.
+    *Built, waiting on the owner's sign-off.* home.ts: `WALL_H` 1.8 (about twice his height; it was 1.3, "about head
+    high"), `PIER.h` 2.25; `GATEHOUSE` (a booth inside the gates on their south side, solid) and `GATE_LEAF` (one leaf
+    slid open along the inside of the wall north of the gates, solid), in `HOME_SOLIDS`. home3d.ts: the wall and piers
+    in the loft's black brick under stone copings, a darker course, lights on its outer faces and small lit caps along
+    its top (near only; phones every other one), a camera on each pier (looks only); over the gates, pier to pier, a
+    black steel beam with his crest on it (a gold ring round a black disc, his D in neon on both faces); the sliding
+    leaf on its track (a solid lower half, bars, his neon along its top); `gatehouse()`: black brick under an
+    overhanging steel roof, his neon under its edge, a window on the gates (lit at night with the house's windows,
+    `houseLights()`), a door on the yard, a lamp, a camera, a mast. The two hinged leaves are gone. Tests:
+    `tests/home.test.ts` (the wall's height; the gatehouse and the leaf inside the wall, solid, out of the opening, off
+    the drive, the bollards and everything else; the way in clear from the lane to the garage). Shots:
+    `docs/compound-shots/phase-6b-*`.
 6c. **The fountain and the palms.** A fountain in the yard's middle (clear of the car's way out and the drive), palms
     with uplights along the edges, lit paving lines.
 6d. **The pool and the cabana.** On the east lawn: a lit pool, a cabana and loungers (the side door's way kept).

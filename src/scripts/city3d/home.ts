@@ -34,8 +34,9 @@ import type { Box } from './solids';
 const [px0, pz0, px1, pz1] = PLOT;
 /** The compound wall's thickness and height, and its piers' at the gates */
 export const WALL_T = 0.3;
-export const WALL_H = 1.3;
-export const PIER = { w: 0.5, h: 1.6 };
+// (since docs/compound-plan.md Phase 6b, the kingpin's compound: about twice his height, the gates' piers over it)
+export const WALL_H = 1.8;
+export const PIER = { w: 0.5, h: 2.25 };
 /** Inside the wall */
 const [ix0, iz0, ix1, iz1] = [px0 + WALL_T, pz0 + WALL_T, px1 - WALL_T, pz1 - WALL_T];
 /** The Close's line through the plot (the gates are on it) */
@@ -134,6 +135,19 @@ export const PLANTERS: Rect[] = [-1, 1].map((s): Rect => {
  */
 export const FIRE_ESCAPE: Rect = [HOUSE[2], HOUSE[1] + 0.5, HOUSE[2] + 0.34, HOUSE[1] + 3.7];
 
+/**
+ * The gatehouse (docs/compound-plan.md Phase 6b): a small lit booth of black brick just inside the gates on their south
+ * side, its window on the gates; solid, clear of the drive, the bollards and the cars' way in
+ */
+export const GATEHOUSE: Rect = [px1 - WALL_T - 1.6, GATES.z1 + PIER.w + 0.25, px1 - WALL_T - 0.05, GATES.z1 + PIER.w + 1.65];
+export const GATEHOUSE_H = 1.35;
+/**
+ * The gate (Phase 6b): one black steel leaf, slid open along the inside of the wall north of the gates (the way in
+ * always open: nothing in the city is shut to you), on its track; solid
+ */
+export const GATE_LEAF: Rect = [px1 - WALL_T - 0.13, GATES.z0 - PIER.w - (GATES.z1 - GATES.z0) - 0.1, px1 - WALL_T - 0.05, GATES.z0 - PIER.w - 0.05];
+export const GATE_LEAF_H = 1.7;
+
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
 export const SHELL = 0.15;
@@ -183,6 +197,9 @@ export const HOME_SOLIDS: Box[] = (() => {
     ...BOLLARDS.map(([x, z]): Box => [x - BOLLARD.r, z - BOLLARD.r, x + BOLLARD.r, z + BOLLARD.r, SLAB_Y + BOLLARD.h]),
     ...PLANTERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + PLANTER_H]),
     [FIRE_ESCAPE[0], FIRE_ESCAPE[1], FIRE_ESCAPE[2], FIRE_ESCAPE[3], SLAB_Y + RIDGE + 0.3],
+    // The gatehouse, and the gate's leaf slid open along the wall (Phase 6b)
+    [GATEHOUSE[0], GATEHOUSE[1], GATEHOUSE[2], GATEHOUSE[3], SLAB_Y + GATEHOUSE_H],
+    [GATE_LEAF[0], GATE_LEAF[1], GATE_LEAF[2], GATE_LEAF[3], SLAB_Y + GATE_LEAF_H],
   ];
 })();
 
