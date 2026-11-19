@@ -120,6 +120,10 @@
 .wm-key-metro {
   background: #e219e5;
 }
+/* (the south's tube, southline.ts LINE_COLOUR) */
+.wm-key-tube {
+  background: #2bb3c0;
+}
 .wm-key-car {
   background: #ffc23d;
   border-radius: 2px;
@@ -592,6 +596,22 @@
   padding: 0;
   list-style: none;
 }
+/* (the stations' card lists both lines, docs/south-plan.md Phase 4h: a heading each, the list scrolling where it's long) */
+[data-metro] .metro-list {
+  max-height: calc(100dvh - var(--head-h) - 140px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.metro-head {
+  margin: 6px 0 0;
+  font: 700 10.5px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p-cyan);
+}
+.metro-head:first-child {
+  margin-top: 0;
+}
 .metro-go {
   display: flex;
   align-items: baseline;
@@ -628,6 +648,9 @@
     linear-gradient(90deg, #e219e5, #8000ff) border-box;
 }
 @media (max-width: 640px) {
+  [data-metro] .metro-list {
+    max-height: 50dvh;
+  }
   .metro-card {
     top: auto;
     right: 8px;

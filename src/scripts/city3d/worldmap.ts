@@ -3,7 +3,7 @@
  * city from the ☰ Menu (and M, or the Map tab, while walking), drawn from the
  * street plan's data on a canvas: the roads, the highway, the river and its
  * bridges, the blocks and squares, the airport, the kart park's circuit, the
- * metro line and its stations, every place (places.ts), you, your car and
+ * metro line and its stations, the tube under the south (dashed), every place (places.ts), you, your car and
  * your aircraft, and your waypoint. Drag (or two fingers) to pan, scroll or
  * pinch to zoom. Tapping a place opens a card: open its panel (City view),
  * set a waypoint, take a taxi there, or fast travel (places you've walked
@@ -19,6 +19,7 @@ import { PLAN, type Pt } from './streetplan';
 import { PLACES, placeName, type Place } from './places';
 import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
 import { TRACKS } from './metro';
+import { LINE, LINE_COLOUR } from './southline';
 import { MONO } from './monorail';
 import { AIRPORT_AREAS, APRON, CARGO_APRON, CARGO_OFFICE, CARGO_SHED, CONCOURSES, CONNECTORS, DEPARTURES, GA_APRON, HALL, HOTEL, MSCP, RUNWAY, TAXILANE, TAXIWAY, YARD } from './airfield';
 import { ROUTE } from './riverroute';
@@ -84,6 +85,8 @@ const C = {
   metro: '#e219e5',
   riverbus: '#1fb5d6',
   mono: '#ffb21e',
+  /** The south's underground line, the tube (southline.ts): its own teal, dashed on a dark casing (under the streets) */
+  tube: LINE_COLOUR,
   place: '#00eaff',
   placeDim: '#4f8fa0',
   you: '#00eaff',
@@ -361,6 +364,17 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     ctx.closePath();
     ctx.stroke();
     ctx.setLineDash([]);
+    // The tube, under the south's streets (docs/south-plan.md Phase 4h): a dark casing, its teal dashed along it
+    ctx.strokeStyle = C.edge;
+    ctx.lineWidth = Math.max(3.5, 1.4 * view.s);
+    poly(LINE);
+    ctx.stroke();
+    ctx.strokeStyle = C.tube;
+    ctx.lineWidth = Math.max(2, 0.9 * view.s);
+    ctx.setLineDash([4, 3]);
+    poly(LINE);
+    ctx.stroke();
+    ctx.setLineDash([]);
     // The places: a dot each (bright where you can fast travel), with its name
     const visited = d.visited();
     const foot = d.state() === 'foot';
@@ -374,9 +388,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       const metro = p.kind === 'metro';
       const bus = p.kind === 'riverbus';
       const mono = p.kind === 'mono';
+      const tube = p.kind === 'tube';
       ctx.beginPath();
-      ctx.arc(x, y, metro || bus || mono ? 5 : 6, 0, Math.PI * 2);
-      ctx.fillStyle = metro ? C.metro : bus ? C.riverbus : mono ? C.mono : lit ? C.place : C.placeDim;
+      ctx.arc(x, y, metro || bus || mono || tube ? 5 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = metro ? C.metro : bus ? C.riverbus : mono ? C.mono : tube ? C.tube : lit ? C.place : C.placeDim;
       ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = C.edge;
@@ -663,7 +678,8 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
   // Find a place (the keyboard's way in too): centre on it and open its card
   const find = el.querySelector<HTMLSelectElement>('[data-wm-find]');
   if (find) {
-    for (const p of PLACES) find.add(new Option(nameOf(p).name, p.id));
+    // (the tube's stations named as the metro's: its line said, The Trenches' two apart)
+    for (const p of PLACES) find.add(new Option(nameOf(p).name + (p.kind === 'tube' ? ' · Tube' : ''), p.id));
     find.addEventListener('change', () => {
       const p = PLACES.find((o) => o.id === find.value);
       find.value = '';

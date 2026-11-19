@@ -93,9 +93,9 @@ import { buildCornerShops } from './cornershops';
 import { buildBeacons } from './beacons';
 import { createTravelUI } from './travel-ui';
 import { ambienceAt } from './ambience';
-import { createTaxis } from './taxi';
+import type { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
-import { createMetroUI, type MetroUI } from './metro-ui';
+import type { MetroUI } from './metro-ui';
 import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
@@ -1113,6 +1113,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       import('./tube-ui').then(({ createTubeUI }) =>
       (tubeUI = createTubeUI(root, {
         tube: () => loadTube(),
+        metro: () => loadMetroUI(),
+        fade: (on) => root.classList.toggle('is-fading', on),
         camera,
         reduced,
         free: () => walking && walk.onFoot,
@@ -1172,11 +1174,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   };
   // The metro stations' doors; Starlight Mall's is up on its platform in the Skywalk (metro.ts `inside`): its prompt
   // only up there, not on the floor under it or the street
-  const metroDoors = () =>
-    (metroUI?.doors ?? []).filter((d) => {
-      const st = STATIONS.find((s) => `metro:${s.id}` === d.id);
-      return !st?.inside || walk.position.y > SLAB + st.inside.y - 1;
-    });
+  const METRO_DOORS = STATIONS.map((s) => ({ id: `metro:${s.id}`, x: s.door.x, z: s.door.z, label: 'Metro', st: s }));
+  const metroDoors = () => METRO_DOORS.filter((d) => !d.st.inside || walk.position.y > SLAB + d.st.inside.y - 1);
   // Starlight Mall's glass lift (mallinside.ts): a door on the ground floor and one on the east gallery
   const mallDoors = () => (walk.position.y > SLAB + MALL_UP / 2 ? [{ id: 'mall-lift:down', ...MALL_LIFT.high, label: 'Lift · Ground floor' }] : [{ id: 'mall-lift:up', ...MALL_LIFT.low, label: 'Lift · Upper floor' }]);
   /**
@@ -1300,7 +1299,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         const shut = live.closed('metro');
         if (shut) return tycoon?.toast(shut, 3500);
         return void loadTubeUI()
-          .then((ui) => ui.open(id.slice(5)))
+          .then((ui) => ui.open('tube', id.slice(5)))
           .catch(() => game.toast('Tube not running · try again'));
       }
       if (id.startsWith('riverbus:')) {
@@ -1312,8 +1311,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       }
       if (!id.startsWith('metro:')) return tycoon?.openCard(id as 'stall');
       const shut = live.closed('metro');
-      if (shut) tycoon?.toast(shut, 3500);
-      else metroUI?.open(id.slice(6));
+      if (shut) return tycoon?.toast(shut, 3500);
+      // (the card for both lines, tube-ui.ts: the metro's own if it won't load)
+      void loadTubeUI()
+        .then((ui) => ui.open('metro', id.slice(6)))
+        .catch(() => loadMetroUI().then((ui) => ui.open(id.slice(6))));
     },
     game,
     kartPark,
@@ -1338,7 +1340,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     fightClub,
     // The world map at the wheel (the gamepad's View; travel is made below, before anything can ask)
     worldMap: () => travel.toggle(),
-    skipRide: () => void (taxis.skip() || metroUI?.skip() || tubeUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
+    skipRide: () => void (taxis?.skip() || metroUI?.skip() || tubeUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
     mapOpen: () => travel.isOpen,
     reduced,
     low: tier === 'low',
@@ -1500,7 +1502,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     walker.on = false;
     walk.exit();
     hub?.close();
-    taxis.reset();
+    taxis?.reset();
     metroUI?.close();
     tubeUI?.close();
     riverBusUI?.close();
@@ -1550,10 +1552,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (e.key === 'Escape' && hub?.close()) return;
     // The world map: M opens it walking (no panel or menu open) or in City view, M or Esc closes it
     // (and at the wheel: keymap.ts's M is the map in every mode that has it)
-    if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
+    // (a panel actually on screen: your business card lives in the hub, un-hidden, while the hub's shut)
+    const shown = [...root.querySelectorAll<HTMLElement>('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])')].some((el) => el.getClientRects().length > 0);
+    if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1718,10 +1722,18 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     open: (id) => open(id),
     startWalking: (at) => startWalking(at),
     want: (x, z, r) => works.want(x, z, r),
-    taxi: (p) => taxis.call(p),
+    taxi: (p) =>
+      void loadTaxis()
+        .then((t) => t.call(p))
+        .catch(() => game.toast('No taxis · try again')),
     riding: () => walk.riding,
   });
-  const taxis = createTaxis(root, {
+  // The taxis (taxi.ts): loaded the first time one's called (the world map's Taxi here)
+  let taxis: ReturnType<typeof createTaxis> | null = null;
+  const loadTaxis = lazy(
+    () =>
+      import('./taxi').then(({ createTaxis }) =>
+      (taxis = createTaxis(root, {
     scene,
     camera,
     reduced,
@@ -1738,8 +1750,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     name: (p) => placeName(root, p).name,
     toast: (text) => game.toast(text),
     sfx: (kind) => sound.sfx(kind),
-  });
-  metroUI = createMetroUI(root, {
+  }))
+    ),
+    'the taxis'
+  );
+  // The raised metro's rides (metro-ui.ts): loaded the first time a station's card opens (the card for both lines is
+  // tube-ui.ts's) or a trip rides it
+  const loadMetroUI = lazy(
+    () =>
+      import('./metro-ui').then(({ createMetroUI }) =>
+      (metroUI = createMetroUI(root, {
     metro,
     camera,
     reduced,
@@ -1762,7 +1782,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       monoUI?.close();
       skyLiftUI?.close();
     },
-  });
+  }))
+    ),
+    'the metro'
+  );
 
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
@@ -2057,7 +2080,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     } else if (walking) {
       walk.update(dt, reduced ? 0 : t);
       travel.update(dt);
-      taxis.update(dt, reduced ? 0 : t);
+      taxis?.update(dt, reduced ? 0 : t);
       walker.x = walk.position.x;
       walker.z = walk.position.z;
       walker.y = walk.position.y;

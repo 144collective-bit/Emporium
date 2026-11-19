@@ -102,7 +102,12 @@ keep it up to date when what it describes changes.
     demo, the benchmark (`?bench`, `bench.ts`), Drop 001's fitting room
     (`fitting.ts`, when its panel first opens: `loadFitting()` in index.ts)
     the world map (`worldmap.ts`, when it first opens: `loadMap()` in
-    travel-ui.ts; `placeName()` is places.ts's), the gun store, the
+    travel-ui.ts; `placeName()` is places.ts's), the taxis (`taxi.ts`, the
+    first time one's called: `loadTaxis()` in index.ts), the metro's rides
+    (`metro-ui.ts`, `loadMetroUI()`) and the card for both lines with the
+    tube's rides (`tube-ui.ts`, `loadTubeUI()`; the tube's trains,
+    `tube3d.ts`, `loadTube()`: the south plan's 4h moved the first two out
+    of the boot to make room for it), the gun store, the
     garage's and the hangar's menus (`gunshop.ts`, `garage-ui.ts`,
     `hangar-ui.ts`: each loads the first time its door or counter opens
     it, `lazyMenu()` in walk.ts; the saved car and aircraft are read by
