@@ -34,8 +34,8 @@ export const ESTATE_BLOCKS = CREST_BLOCKS.map((b) => b.id).filter((id) => !(DRIV
 export const LOT_W = 16.5;
 /** The hedges: the front one's street face this far in from the lot's edge (behind the street's palms), its thickness, a side's, the height */
 export const HEDGE = { front: 1, thick: 0.45, side: 0.24, outer: 1, h: 1.05 } as const;
-/** The gate: half the gap, the piers' half side and height */
-export const GATE = { half: 1.3, pier: 0.25, h: 1.7 } as const;
+/** The gate: half the gap, the piers' half side and height (2.1 since the premium upgrade's Phase 2, crestgrand.ts) */
+export const GATE = { half: 1.3, pier: 0.25, h: 2.1 } as const;
 /** The forecourt's half width; the fountain's radius and height */
 export const COURT_HALF = 4;
 export const FOUNTAIN = { r: 0.6, h: 1.1 } as const;
