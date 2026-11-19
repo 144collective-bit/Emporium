@@ -22,10 +22,11 @@
  * The blocks are the faces of the street graph (streetfaces.ts), each with the zone it's in (`zoneAt()`): the tall
  * band along the ring road, the estate round the Circus, the council rows, the village, the bungalows.
  */
+import { BUILT, baked } from './baked';
 import { GATES, HEAD, PLOT } from './endsfar';
 import { NS_SOUTH_END } from './layout';
 import { LOT9_FENCE } from './lot9';
-import { area, cross, distTo, faces, inside, nearestIndex, node, seeded, selfCrossings, smooth, type FaceBlock, type GraphLine, type Pt } from './streetfaces';
+import { area, cross, distTo, faces, inside, nearestIndex, nearLine, node, seeded, selfCrossings, smooth, type FaceBlock, type GraphLine, type Pt } from './streetfaces';
 
 export type { Pt };
 type Rect = [number, number, number, number];
@@ -174,6 +175,15 @@ export const HEDGES: Pt[][] = [
   [[-214, 580], [-220, 610]],
 ].map((h) => smooth(h as Pt[], 3));
 
+/** An outline's or a line's box, and whether a point is within `m` of it (a point farther off is farther from the
+ * line too: a cheap test first, the street web's layout asks many thousands of times as the city loads) */
+const boxOf = (pts: Pt[]) => [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))] as const;
+const nearBox = (b: readonly [number, number, number, number], x: number, z: number, m: number) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m;
+const [CHURCH_BOX, LOT9_BOX, REC_BOX] = [boxOf(CHURCHYARD), boxOf(LOT9_EDGE), boxOf(REC)];
+/** How far a point is from the brook, exact within 14 of it (beyond, 14 or more): what keeps streets off it, finds
+ * its bridges, and cuts its valley (southground.ts) */
+export const brookDist = nearLine(BROOK, 14);
+
 /* ---------- The zones ---------- */
 
 export type Zone = 'tall' | 'estate' | 'council' | 'village' | 'bungalow' | 'lot9' | 'fields';
@@ -182,7 +192,7 @@ const zAt = (pts: Pt[], x: number) => pts.reduce((b, p) => (Math.abs(p[0] - x) <
 /** Which part of the south a point is in: the tall band along the ring road, the estate round the Circus and east,
  * the council rows north of the High Road, the old village, the bungalows round Degen's compound, Lot 9, the fields */
 export function zoneAt(x: number, z: number): Zone {
-  if (inside(LOT9_EDGE, [x, z])) return 'lot9';
+  if (nearBox(LOT9_BOX, x, z, 1) && inside(LOT9_EDGE, [x, z])) return 'lot9';
   if (z < 362 && x > -176 && x < AVE.ns3.x) return 'tall';
   if (x > -104 && x < AVE.ns3.x && z < 470) return 'estate';
   if (x > -216 && x <= -104) return z < zAt(HIGH_ROAD.pts, x) ? 'council' : z < 532 ? 'village' : 'fields';
@@ -205,10 +215,12 @@ const NAMES = ['Alder', 'Birch', 'Cobble', 'Dove', 'Elder', 'Fern', 'Gorse', 'He
 /** A spatial hash of every line's points, to ask how near the nearest is */
 class Near {
   cell = 6;
-  map = new Map<string, { p: Pt; tag: number }[]>();
+  map = new Map<number, { p: Pt; tag: number }[]>();
+  /** A cell's key (a number: the layout asks many thousands of times as the city loads) */
+  static key = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
   add(pts: Pt[], tag: number) {
     for (const p of pts) {
-      const k = `${Math.floor(p[0] / this.cell)},${Math.floor(p[1] / this.cell)}`;
+      const k = Near.key(Math.floor(p[0] / this.cell), Math.floor(p[1] / this.cell));
       if (!this.map.has(k)) this.map.set(k, []);
       this.map.get(k)!.push({ p, tag });
     }
@@ -220,7 +232,7 @@ class Near {
     const [cx, cz] = [Math.floor(p[0] / this.cell), Math.floor(p[1] / this.cell)];
     for (let i = -c; i <= c; i++)
       for (let j = -c; j <= c; j++)
-        for (const e of this.map.get(`${cx + i},${cz + j}`) ?? []) {
+        for (const e of this.map.get(Near.key(cx + i, cz + j)) ?? []) {
           if (skip(e.tag, e.p)) continue;
           m = Math.min(m, Math.hypot(e.p[0] - p[0], e.p[1] - p[1]));
         }
@@ -231,11 +243,11 @@ class Near {
 /** Kept clear of streets: the compound, the churchyard, Lot 9, the brook and the rec ground */
 const keptOff = (x: number, z: number, m: number) =>
   (x > COMPOUND[0] - m && x < COMPOUND[2] + m && z > COMPOUND[1] - m && z < COMPOUND[3] + m) ||
-  inside(CHURCHYARD, [x, z]) || distTo(CHURCHYARD, [x, z], true) < m ||
-  inside(LOT9_EDGE, [x, z]) || distTo(LOT9_EDGE, [x, z], true) < m ||
+  (nearBox(CHURCH_BOX, x, z, m) && (inside(CHURCHYARD, [x, z]) || distTo(CHURCHYARD, [x, z], true) < m)) ||
+  (nearBox(LOT9_BOX, x, z, m) && (inside(LOT9_EDGE, [x, z]) || distTo(LOT9_EDGE, [x, z], true) < m)) ||
   LOT9_BOUNDS.some((r) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m) ||
-  distTo(BROOK, [x, z]) < BROOK_HALF + m + 2 ||
-  inside(REC, [x, z]);
+  brookDist([x, z]) < BROOK_HALF + m + 2 ||
+  (nearBox(REC_BOX, x, z, 1) && inside(REC, [x, z]));
 
 export interface Footpath {
   id: string;
@@ -245,10 +257,19 @@ export interface Footpath {
   from: string;
 }
 
-const grown = (() => {
+/**
+ * The closes and crescents grown off the main streets, and their footpaths through: a seeded search, the same every
+ * time, and the slowest thing the south works out (about a second of a phone's start-up), so it's worked out when the
+ * site is built (baked.ts, key `south-grown`, docs/spawn-plan.md Phase 3a) and read from the build's data in the page
+ */
+function growStreets(): { streets: SouthStreet[]; paths: Footpath[] } {
   const rnd = seeded(14112026);
   const streets: SouthStreet[] = [];
   const paths: Footpath[] = [];
+  /** Each footpath's box, to skip the far ones */
+  const pathBoxes: (readonly [number, number, number, number])[] = [];
+  /** Is a point within `r` of a footpath laid already */
+  const nearPath = (p: Pt, r: number) => paths.some((fp, i) => nearBox(pathBoxes[i], p[0], p[1], r) && distTo(fp.pts, p) < r);
   const near = new Near();
   const all = [...MAIN];
   all.forEach((s, i) => near.add(s.pts, i));
@@ -272,7 +293,7 @@ const grown = (() => {
       const p: Pt = [a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n];
       if (keptOff(p[0], p[1], 1)) return false;
       if (k > 2 && k < n - 2 && near.dist(p, 4, (t) => own.includes(t)) < HALF + PATH_HALF + 0.5) return false;
-      for (const fp of paths) if (distTo(fp.pts, p) < 3) return false;
+      if (nearPath(p, 3)) return false;
     }
     return true;
   };
@@ -345,7 +366,7 @@ const grown = (() => {
       const zn = zoneAt(p[0], p[1]);
       if (!GROWS.includes(zn) || keptOff(p[0], p[1], crescent ? 3 : 4)) ok = false;
       // (and over no footpath laid already)
-      if (ok && paths.some((fp) => distTo(fp.pts, p) < HALF + PATH_HALF + 0.5)) ok = false;
+      if (ok && nearPath(p, HALF + PATH_HALF + 0.5)) ok = false;
       // (clear of every other street; of its parent but where it leaves it, and comes back to it)
       const fromStart = Math.hypot(p[0] - sx0, p[1] - sz0);
       const fromEnd = Math.hypot(p[0] - end[0], p[1] - end[1]);
@@ -377,10 +398,13 @@ const grown = (() => {
     if (crescent) crescents++;
     near.add(pts, all.length - 1);
     paths.push({ id: `${id}-path`, pts: [[from[0], from[1]], to], from: id });
+    pathBoxes.push(boxOf(paths[paths.length - 1].pts));
     if (streets.length >= 64) break;
   }
   return { streets, paths };
-})();
+}
+export const GROWN = baked('south-grown', BUILT ? undefined : growStreets);
+const grown = GROWN;
 
 /** Every street the south adds to the street plan */
 export const SOUTH_STREETS: SouthStreet[] = [...MAIN, ...grown.streets];
@@ -451,7 +475,7 @@ export const BRIDGES: { street: string; at: Pt }[] = (() => {
   for (const s of SOUTH_STREETS)
     for (let i = 1; i < s.pts.length; i++) {
       const p = s.pts[i];
-      if (distTo(BROOK, p) < 1 && !out.some((b) => b.street === s.id && Math.hypot(b.at[0] - p[0], b.at[1] - p[1]) < 6)) out.push({ street: s.id, at: [p[0], p[1]] });
+      if (brookDist(p) < 1 && !out.some((b) => b.street === s.id && Math.hypot(b.at[0] - p[0], b.at[1] - p[1]) < 6)) out.push({ street: s.id, at: [p[0], p[1]] });
     }
   return out;
 })();
@@ -460,6 +484,10 @@ export const BRIDGES: { street: string; at: Pt }[] = (() => {
  * covers their ground) */
 export const ESTATE_LAND: Rect = [-176, EDGE_Z, AVE.ns3.x, 470];
 export const VILLAGE_LAND: Rect = [-322, EDGE_Z, -104, 530];
+
+/** Where the council rows, the bungalows and the allotments stand (council.ts lays them inside it, tested): fixed here
+ * so the village's chunk can load round them (districts.ts) without the boot laying them out */
+export const COUNCIL_LAND: Rect = [-355, 336, -96, 528];
 
 /** What the south's drawing covers (districts.ts: its chunk loads as you come near): the streets, the brook, the
  * hedges and the fields' edge, the tunnel's mouth */

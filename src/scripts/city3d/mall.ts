@@ -15,8 +15,10 @@
  *   avenue to the mall's forecourt (`ZEBRA`); the east row across from it,
  *   at the way out east (`EAST_GAP`). Paradise Cinema (`CINEMA`) stands
  *   across the north end; the fountain (`FOUNTAIN`) is in the middle, with
- *   trees in planters (`COURT_TREES`), benches and the PALM COURT gateway at
- *   the south end (`ARCH`). Each shop has its own front (`style`: glass,
+ *   benches, and the south end's line (`ARCH`). Since the joined mall's
+ *   Phase 3 it's indoors, two storeys under a glass vault (courtinside.ts:
+ *   its galleries, bridges, food hall, escalators, trees, entrances). Each
+ *   shop has its own front (`style`: glass,
  *   render, cladding or timber).
  * - **Starlight Mall** (`MALL_BLOCK`): the mall's hall (`HALL`) with its
  *   entrance porch (`PORCH`), the two anchors at its ends (`ANCHORS`) and the
@@ -64,10 +66,24 @@ export const ZEBRA = { z: -112, half: 1.6 };
 export const TOWER_ZEBRA = { z: -112, half: 1.6 };
 /** The east row's gap across from the passage: the way out east onto the open land (z0, z1) */
 export const EAST_GAP: Pt = [ZEBRA.z - 3, ZEBRA.z + 3];
-/** The south end's arch over the promenade (z), and the fountain in the middle */
+/** The south end's line (z: since Palm Court was enclosed, its entrance there, courtinside.ts; it was a gateway, `h`), and the fountain in the middle */
 export const ARCH = { z: COURT[3] - 3, h: 5.2 };
 export const FOUNTAIN = { x: PROM_X, z: ZEBRA.z, r: 2.4 };
 
+/**
+ * The Skywalk (docs/mall-plan.md, "One mall", Phase 1; the rest is malllink.ts): its band along the avenue (z0, z1),
+ * from the west row's north end to its passage; the bridge over the east ring avenue from Bright & Co.'s east face to
+ * the west row, and the pavilion in place of the west row's two northern shops
+ */
+export const LINK_Z: Pt = [CINEMA.rect[3] + 4.1, ZEBRA.z - 3.1];
+export const PAVILION: Rect = [COURT[0] + 0.5, LINK_Z[0], PROM[0], LINK_Z[1]];
+/**
+ * The metro station's glass lift in the pavilion's north-west corner (Phase 2): the street, the lower floor and the
+ * platform floor (metro.ts's Starlight Mall station has it for its tower; malllink.ts its doors)
+ */
+export const LINK_LIFT: Rect = [PAVILION[0] + 0.25, PAVILION[1] + 0.25, PAVILION[0] + 2.05, PAVILION[1] + 2.05];
+/** (whether a shop stands where the pavilion is) */
+const underPavilion = (r: Rect) => r[0] < PAVILION[2] && r[2] > PAVILION[0] && r[1] < PAVILION[3] && r[3] > PAVILION[1];
 export type ShopKind = 'cafe' | 'fashion' | 'books' | 'home' | 'beauty' | 'sports' | 'bakery' | 'shoes' | 'gifts' | 'tech' | 'kids' | 'restaurant';
 /** The shops' made-up names, in turn along the rows, and their kinds */
 export const SHOP_NAMES: { name: string; kind: ShopKind }[] = [
@@ -98,6 +114,12 @@ export const SHOP_NAMES: { name: string; kind: ShopKind }[] = [
 export type ShopStyle = 'glass' | 'render' | 'clad' | 'timber';
 export const SHOP_STYLES: ShopStyle[] = ['glass', 'render', 'clad', 'timber'];
 
+/**
+ * Palm Court is indoors since the joined mall's Phase 3 (docs/mall-plan.md "One mall"; courtinside.ts): both rows are
+ * two storeys, shops on both floors, this high to their roofs' parapet (the mall's upper floor's height, mallinside.ts
+ * `UP`, twice, and a parapet)
+ */
+export const ROW_H = 6.75;
 export interface Shop {
   /** Its footprint (x0, z0, x1, z1) */
   rect: Rect;
@@ -106,7 +128,7 @@ export interface Shop {
   name: string;
   kind: ShopKind;
   style: ShopStyle;
-  /** Its height: one storey, or two (every third) */
+  /** Its height: two storeys, the row's (`ROW_H`) */
   h: number;
 }
 
@@ -140,21 +162,14 @@ export const SHOPS: Shop[] = (() => {
       const n = Math.max(1, Math.round((b - a) / 7));
       for (let i = 0; i < n; i++) {
         const s = SHOP_NAMES[k % SHOP_NAMES.length];
-        out.push({ rect: [row.x0, a + ((b - a) * i) / n + 0.1, row.x1, a + ((b - a) * (i + 1)) / n - 0.1], face: row.face, name: s.name, kind: s.kind, style: SHOP_STYLES[(k * 3 + (k >> 2)) % SHOP_STYLES.length], h: k % 3 === 1 ? 7 : 4.8 });
+        out.push({ rect: [row.x0, a + ((b - a) * i) / n + 0.1, row.x1, a + ((b - a) * (i + 1)) / n - 0.1], face: row.face, name: s.name, kind: s.kind, style: SHOP_STYLES[(k * 3 + (k >> 2)) % SHOP_STYLES.length], h: ROW_H });
         k++;
       }
     }
-  return out;
+  // (the pavilion stands where the west row's two northern shops were: the rest keep their names and fronts)
+  return out.filter((s) => !underPavilion(s.rect));
 })();
-/** Trees in square planters down the promenade's edges, clear of the shops' doors' middles and the fountain */
-export const COURT_TREES: Pt[] = (() => {
-  const out: Pt[] = [];
-  for (let z = CINEMA.rect[3] + 6; z < ARCH.z - 2; z += 9) {
-    if (Math.abs(z - FOUNTAIN.z) < FOUNTAIN.r + 2.5) continue;
-    out.push([PROM[0] + 1.4, z], [PROM[1] - 1.4, z]);
-  }
-  return out;
-})();
+/** (Palm Court's trees are indoors since it was enclosed: courtinside.ts `COURT_PLANTERS`, drawn in their white planters) */
 /** Benches facing the fountain (x, z, facing: 0 is +z) */
 export const BENCHES: { x: number; z: number; ry: number }[] = [
   { x: FOUNTAIN.x, z: FOUNTAIN.z - FOUNTAIN.r - 1.6, ry: 0 },
@@ -280,13 +295,13 @@ export const MALL_CROSSINGS: { id: string; at: Pt; streets: string[] }[] = [
 
 /* ---------- Lamps ---------- */
 
-/** Lamps round the loop, outside it and on its car park's side, and down the promenade (x, z, arm's facing, ground's height) */
+/** Lamps round the loop, outside it and on its car park's side (x, z, arm's facing, ground's height) */
 export const MALL_LAMPS: [number, number, number, number][] = (() => {
   const out: [number, number, number, number][] = [];
   const SLAB_Y = 0.15;
   for (let x = 6; x < LOOP.xE - 4; x += 12) out.push([x, LOOP.zN + LOOP.half + 0.45, Math.PI, SLAB_Y], [x, LOOP.zS - LOOP.half - 0.45, 0, 0.02]);
   for (let z = LOOP.zN + 8; z < LOOP.zS - 4; z += 12) out.push([LOOP.xE + LOOP.half + 0.45, z, -Math.PI / 2, 0.02]);
-  for (let z = CINEMA.rect[3] + 10; z < ARCH.z - 2; z += 18) if (Math.abs(z - FOUNTAIN.z) > FOUNTAIN.r + 2) out.push([PROM[0] + 0.5, z, Math.PI / 2, SLAB_Y], [PROM[1] - 0.5, z + 9, -Math.PI / 2, SLAB_Y]);
+  // (none down the promenade since Palm Court was enclosed: courtinside3d.ts lights it)
   // (a light beside the walk down every car park island)
   for (const [x0, z0, x1, z1] of ISLANDS) out.push([(x0 + x1) / 2 + ISLAND_WALK / 2 + 0.35, (z0 + z1) / 2, 0, SLAB_Y]);
   return out;
@@ -294,9 +309,8 @@ export const MALL_LAMPS: [number, number, number, number][] = (() => {
 
 /* ---------- Trees ---------- */
 
-/** Where the trees stand (x, z, height of the ground under them over the slab): the court's planters, the forecourt's, two to a car park island */
+/** Where the trees stand (x, z, height of the ground under them over the slab): the forecourt's planters, two to a car park island */
 export const MALL_TREES: [number, number, number][] = [
-  ...COURT_TREES.map(([x, z]): [number, number, number] => [x, z, 0.5]),
   ...PLANTERS.map(([x, z]): [number, number, number] => [x, z, 0.5]),
   ...ISLANDS.flatMap((r) => islandTrees(r).map(([x, z]): [number, number, number] => [x, z, 0.25])),
 ];
@@ -309,15 +323,9 @@ const carBox = (x: number, z: number, yaw: number, h = 1.3): Box => {
   const [hx, hz] = along ? [CAR_HALF.l, CAR_HALF.w] : [CAR_HALF.w, CAR_HALF.l];
   return [x - hx, z - hz, x + hx, z + hz, h];
 };
-/** The arch's two posts either side of the promenade */
-export const ARCH_POSTS: Rect[] = [
-  [PROM[0] + 0.3, ARCH.z - 0.4, PROM[0] + 1.1, ARCH.z + 0.4],
-  [PROM[1] - 1.1, ARCH.z - 0.4, PROM[1] - 0.3, ARCH.z + 0.4],
-];
 export const MALL_SOLIDS: Box[] = [
   ...SHOPS.map((s) => box(s.rect, s.h)),
   box(CINEMA.rect, CINEMA.h),
-  ...ARCH_POSTS.map((r) => box(r, ARCH.h)),
   [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, 0.6],
   ...ANCHORS.map((a) => box(a.rect, a.h)),
   // (the hall is hollow since step 2: its walls and what's inside are mallinside.ts's)

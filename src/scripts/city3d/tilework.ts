@@ -23,6 +23,7 @@ import * as THREE from 'three';
 import type { TileBatches } from './tilebatch';
 import type { BuiltSite, SiteWorker } from './sitework';
 import { boxInView, tileKey, type Plane, type Rect, type TileIx } from './tiles';
+import { inTexScope } from './texscope';
 import { HORIZON_OUT, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, toReturn, toVanish } from './tileplan';
 
 export interface Site {
@@ -38,7 +39,8 @@ const SITES: Site[] = [];
 export const takeSites = () => SITES.splice(0);
 /** Register a site of the fixed city (built at the boot if it's round the home view, otherwise later) */
 export function site(id: string, rect: Rect, build: (into: THREE.Object3D) => void) {
-  SITES.push({ id, rect, build });
+  // (the textures its builder paints are counted within the site: texscope.ts)
+  SITES.push({ id, rect, build: (into) => inTexScope(id, () => build(into)) });
 }
 
 export interface TileWork {
@@ -51,6 +53,8 @@ export interface TileWork {
   step(ms: number, x: number, y: number, z: number, dt: number, far: number, look?: readonly [number, number]): void;
   /** How many sites are still waiting to be built (cheap: every frame) */
   pending(): number;
+  /** How many of them are within `r` of a point (spawn.ts: the street round Degen's house) */
+  waitingNear(x: number, z: number, r: number): number;
   /** Take on the sites registered since (a district loaded as you approach: districts.ts) */
   adopt(): number;
   /** Build now everything waiting within `r` of a point (walking in, a fly-in's end) */
@@ -317,6 +321,7 @@ export function createTileWork(
       }
     },
     pending: () => queue.length,
+    waitingNear: (x, z, r) => sitesNear(queue, x, z, r).length,
     adopt() {
       const more = SITES.splice(0);
       for (const s of more) byId.set(s.id, s);

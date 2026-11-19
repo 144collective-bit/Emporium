@@ -19,18 +19,24 @@
  * - **Stations** (`STATIONS`): each a platform beside its track (on the
  *   left of the way the track runs, the side `PLATFORM_SIDE`), a stair tower
  *   on the ground with its door at street level (where you board: "Metro"),
- *   the way out of the door (`face`).
+ *   the way out of the door (`face`). Starlight Mall's is built into the
+ *   mall's Skywalk over the east ring avenue (`inside`, docs/mall-plan.md
+ *   "One mall" Phase 2): its platform floor, door and glass lift are the
+ *   mall's (malllink.ts), its door up on the platform.
  * - **Pillars** (`PILLARS`): along the tracks wherever the ground under them
  *   is clear: an avenue's median (clear of its junctions), or open land off
  *   every road; never in the river; never more than 12 apart where they can
  *   stand. Where the line runs over a street with no median, portal frames
  *   (`PORTALS`: a leg each side, on the blocks' edges), and over the river to
  *   Uptown the arch (`ARCH`), its deck hung from it (`HANGERS`).
- * - **Crestmont's spur** (`crest`, docs/crestmont-plan.md Phase 9): from just
- *   south of Starlight Mall station east round the highway's north-east corner and south
- *   to Crestmont station by the Flats (`CREST`).
+ * - **Crestmont's spur** (`crest`, docs/crestmont-plan.md Phase 9): from the
+ *   main line north of Starlight Mall station east round the highway's north-east corner and south
+ *   to Crestmont station by the Flats (`CREST`). It leaves the main line
+ *   facing north: a train between it and Starlight Mall (or anywhere south)
+ *   runs on north past it and turns round (`TURN`, `TURN_S`).
  * - **The train** shuttles on a timetable from the clock (`trainAt()`, the
- *   same for everyone): Starlight Mall, Downtown, South Bank, The Trenches,
+ *   same for everyone; `METRO_CLOCK`, `metroNow()`; `nextTrain()` for a
+ *   station's board): Crestmont, Starlight Mall, Downtown, South Bank, The Trenches,
  *   Southbank Docks, Kart Park, Uptown, back through Kart Park, the Docks and The Trenches to South Bank, out to the
  *   Airport, back, and up to Starlight Mall. A ride (`rideAt()`) goes straight to the
  *   station you pick (from the west to the Airport it turns round at South
@@ -51,6 +57,7 @@ import { DOCKS_NAME, EL_STATION, EL_X } from './docks';
 import { PLAN, distToStreet, type Street } from './streetplan';
 import { AVENUE_Z, NS_X } from './trenches';
 import type { Box } from './solids';
+import { LINK_LIFT, LINK_Z } from './mall';
 import { BUILT, baked } from './baked';
 import { DECK_HALF as RING_HALF, DECK_Y as RING_DECK, RAMPS, RAMP_HALF, ringS } from './viaduct';
 
@@ -63,10 +70,14 @@ export const LINE_X = NS_ROADS[NS_ROADS.length - 1].c;
 export const DECK_Y = 5.2;
 export const DECK_HALF = 1.0;
 export const DECK_T = 0.5;
+/** The deck's height where it crosses the raised ring highway and its ramps: the tallest in its traffic under it with room */
+export const HIGH_Y = 7.4;
 /** Pillar half width (in a median, 0.5 across) */
 export const PILLAR_HALF = 0.25;
 /** The platforms: from the deck's edge out, 2 wide, either side of the station's middle along the track */
 export const PLATFORM = { from: DECK_HALF, to: DECK_HALF + 2, half: 5.2 };
+/** A platform's floor over the deck: the train's floor (metro3d.ts `PLATFORM_Y`) */
+export const PLATFORM_UP = 0.4;
 /** Which side of the track the platforms are on: the left of the way the track runs (-1; +1 is its right) */
 export const PLATFORM_SIDE = -1;
 
@@ -74,7 +85,7 @@ export const PLATFORM_SIDE = -1;
 export const SWITCH_Z = 116 + WIDEN;
 /** The bend's radius: it comes out of it running west along Trench Avenue */
 export const BEND_R = AVENUE_Z - SWITCH_Z;
-/** The north end of the main line (past Starlight Mall's station, Kart Park's until the park moved west) */
+/** The north end of the main line (where Starlight Mall's station was until it moved into the Skywalk, and Kart Park's before; trains to and from Crestmont turn round by it, `TURN_S`) */
 export const NORTH_END = -204;
 /**
  * West of The Trenches (docs/docks-plan.md Phase 2, the owner's pick: "metro via the docks"; Uptown's extension of
@@ -211,6 +222,12 @@ export interface Station {
   face: Pt;
   /** Which side of the track its platform is on (`PLATFORM_SIDE` but where the ground's only clear on the other) */
   side?: 1 | -1;
+  /**
+   * Built into a building (Starlight Mall's, in the Skywalk: malllink.ts): its platform, lift and door are the
+   * building's, metro3d.ts draws none of its own; its door is up on the platform floor, `y` over the slab, and its
+   * `tower` is the lift's shaft
+   */
+  inside?: { y: number };
 }
 /** A stair tower 2.4 by 2.5 beside the east avenue, its west face at x 69.6, centred on z; its door facing west */
 /** The Airport's station's middle along its track (east of Airport Drive) */
@@ -230,10 +247,21 @@ const NORTH_AVENUE_Z = 64.5;
 const kartTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [KART_STATION_X - 1.2, NORTH_AVENUE_Z - 7.8, KART_STATION_X + 1.2, NORTH_AVENUE_Z - 5.3], door: { x: KART_STATION_X, z: NORTH_AVENUE_Z - 4.9 }, face: [0, 1] };
 const trenchTower: Pick<Station, 'tower' | 'door' | 'face'> = { tower: [TRENCH_X - 1.2, AVENUE_Z + 5.3, TRENCH_X + 1.2, AVENUE_Z + 7.8], door: { x: TRENCH_X, z: AVENUE_Z + 4.9 }, face: [0, -1] };
 
+/** Starlight Mall station's middle (z): in the Skywalk over the east ring avenue, its platform floor east of the track */
+const STARLIGHT_Z = (LINK_Z[0] + LINK_Z[1]) / 2;
 export const STATIONS: Station[] = [
-  // (the main line's north end, past the ring highway: Kart Park's until the park moved west, docs/kart-west-plan.md
-  // Phase 1; renamed for the mall over the highway)
-  { id: 'starlight', name: 'Starlight Mall', track: 'main', s: -196 - NORTH_END, ...eastTower(-196) },
+  // (in Starlight Mall's Skywalk over the east ring avenue, docs/mall-plan.md "One mall" Phase 2, the owner's call: it
+  // was at the main line's north end past the ring highway; the door on its platform, the lift its tower)
+  {
+    id: 'starlight',
+    name: 'Starlight Mall',
+    track: 'main',
+    s: STARLIGHT_Z - NORTH_END,
+    tower: LINK_LIFT,
+    door: { x: LINE_X + DECK_HALF + 1.1, z: STARLIGHT_Z },
+    face: [1, 0],
+    inside: { y: HIGH_Y + PLATFORM_UP - 0.15 },
+  },
   { id: 'downtown', name: 'Downtown', track: 'main', s: 33 - NORTH_END, ...eastTower(37.5) },
   { id: 'southbank', name: 'South Bank', track: 'main', s: 109 + WIDEN - NORTH_END, ...eastTower(109.5 + WIDEN) },
   { id: 'trenches', name: 'The Trenches', track: 'main', s: along('main', [TRENCH_X, AVENUE_Z]), ...trenchTower },
@@ -259,8 +287,6 @@ export const sideAt = (st: Station) => st.side ?? PLATFORM_SIDE;
 
 /* ---------- Its height: up over the raised ring highway (docs/highway-plan.md Phase 2) ---------- */
 
-/** The deck's height where it crosses the raised ring highway and its ramps: the tallest in its traffic under it with room */
-export const HIGH_Y = 7.4;
 /** What the el keeps over the highway's surface (its deck's and its ramps'): the tallest vehicle, its own depth, room */
 const OVER = HIGH_Y - RING_DECK;
 /** Its climb up to `HIGH_Y` and down again, eased in and out (about 6% at its steepest) */
@@ -270,8 +296,13 @@ const MERGE = 180;
 /** How near the highway a point must be for its ramps to be looked at */
 const RAMP_LOOK = 130;
 
-/** How high the el's deck must be over a point on the ground (0: anything goes) */
+/**
+ * How high the el's deck must be over a point on the ground (0: anything goes): over the raised highway and its ramps,
+ * and through Starlight Mall's Skywalk over the east ring avenue (docs/mall-plan.md, "One mall": its platform floor is
+ * the deck's height, malllink.ts), level a little past its glass ends
+ */
 function needAt(p: Pt) {
+  if (Math.abs(p[0] - LINE_X) < 3 && p[1] > LINK_Z[0] - 2 && p[1] < LINK_Z[1] + 2) return HIGH_Y;
   const { o } = ringS(p[0], p[1]);
   if (Math.abs(o) > RAMP_LOOK) return 0;
   let need = Math.abs(o) < RING_HALF + 1.5 ? HIGH_Y : 0;
@@ -477,8 +508,16 @@ export const METRO_SOLIDS: Box[] = [
  * on the runs out to the Airport and back, the long way out to the world's south edge, it goes faster (`express`)
  */
 export const TRAIN = { len: 10, speed: 14, accel: 2.5, dwell: 8, express: 24 };
-/** How long it stops to turn round at South Bank on a ride from The Trenches to the Airport */
+/** How long it stops to turn round at South Bank on a ride from The Trenches to the Airport, or past Crestmont's spur */
 export const TURN_STOP = 2;
+/**
+ * Where a train to or from Crestmont turns round on the main line (docs/mall-plan.md "One mall" Phase 2): Starlight
+ * Mall station moved south into the Skywalk, and the spur leaves the main line facing north, so between the two the
+ * train runs on north past the spur (its back clear of it) and turns round there, where the old station was. Not a
+ * station: its runs are to and from `TURN`
+ */
+export const TURN = 'turn';
+export const TURN_S = CREST_S - TRAIN.len / 2 - 1.5;
 
 /**
  * A run from one distance to another (either way): how far along it is t
@@ -536,11 +575,21 @@ export function runsBetween(a: string, b: string): Run[] {
   const A = station(a);
   const B = station(b);
   if (A.track === B.track) return [runOf(a, b, [{ track: A.track, s0: A.s, s1: B.s }])];
-  // Crestmont's spur leaves the main line facing north, past Starlight Mall: straight to and from there, turning round there for the rest
+  // Crestmont's spur leaves the main line facing north, north of Starlight Mall: on north past it to turn round
+  // (`TURN_S`), then down the spur or the main line; through Starlight Mall for the rest
   if (A.track === 'crest' || B.track === 'crest') {
-    if (a === 'starlight') return [runOf(a, b, [{ track: 'main', s0: A.s, s1: CREST_S }, { track: 'crest', s0: 0, s1: B.s }])];
-    if (b === 'starlight') return [runOf(a, b, [{ track: 'crest', s0: A.s, s1: 0 }, { track: 'main', s0: CREST_S, s1: B.s }])];
-    return [...runsBetween(a, 'starlight'), ...runsBetween('starlight', b)];
+    if (a === 'starlight') return [runOf(a, TURN, [{ track: 'main', s0: A.s, s1: TURN_S }]), runOf(TURN, b, [{ track: 'main', s0: TURN_S, s1: CREST_S }, { track: 'crest', s0: 0, s1: B.s }])];
+    if (b === 'starlight') return [runOf(a, TURN, [{ track: 'crest', s0: A.s, s1: 0 }, { track: 'main', s0: CREST_S, s1: TURN_S }]), runOf(TURN, b, [{ track: 'main', s0: TURN_S, s1: B.s }])];
+    // (through Starlight Mall without stopping: the run there carried on to the turn round, or the one from there
+    // started at it)
+    if (A.track === 'crest') {
+      const [first, ...rest] = runsBetween('starlight', b);
+      return [runsBetween(a, 'starlight')[0], runOf(TURN, first.to, [{ ...first.pieces[0], s0: TURN_S }, ...first.pieces.slice(1)]), ...rest];
+    }
+    const before = runsBetween(a, 'starlight');
+    const last = before[before.length - 1];
+    const end = last.pieces[last.pieces.length - 1];
+    return [...before.slice(0, -1), runOf(last.from, TURN, [...last.pieces.slice(0, -1), { ...end, s1: TURN_S }]), runsBetween('starlight', b)[1]];
   }
   if (A.track === 'main' && northOfSwitch(A)) return [runOf(a, b, [{ track: 'main', s0: A.s, s1: SWITCH_S }, { track: 'branch', s0: 0, s1: B.s }])];
   if (B.track === 'main' && northOfSwitch(B)) return [runOf(a, b, [{ track: 'branch', s0: A.s, s1: 0 }, { track: 'main', s0: SWITCH_S, s1: B.s }])];
@@ -563,12 +612,18 @@ export function placeOn(run: Run, d: number): { track: TrackId; s: number; dir: 
 
 /** The timetable's stops: from Crestmont to Starlight Mall, down to South Bank, out through The Trenches, the Docks and Kart Park to Uptown and back, out to the Airport and back, and up again */
 const STOPS = ['crestmont', 'starlight', 'downtown', 'southbank', 'trenches', 'docks', 'kart', 'uptown', 'kart', 'docks', 'trenches', 'southbank', 'airport', 'southbank', 'downtown', 'starlight'];
-export const LEGS = STOPS.map((from, i) => {
-  const run = runsBetween(from, STOPS[(i + 1) % STOPS.length])[0];
-  return { run, time: runAt(run.len, 0, speedOf(run)).total };
-});
+/** Each run on the timetable, and how long it stands before it (at a station, or a turn round between two: `TURN_STOP`) */
+export const LEGS = STOPS.flatMap((from, i) =>
+  runsBetween(from, STOPS[(i + 1) % STOPS.length]).map((run, k) => ({ run, time: runAt(run.len, 0, speedOf(run)).total, dwell: k ? TURN_STOP : TRAIN.dwell }))
+);
 /** One round trip, in seconds */
-export const ROUND_TRIP = LEGS.reduce((a, l) => a + TRAIN.dwell + l.time, 0);
+export const ROUND_TRIP = LEGS.reduce((a, l) => a + l.dwell + l.time, 0);
+/**
+ * The timetable's clock: seconds on from the wall clock (a ride moves the train on: metro3d.ts sets it), shared so
+ * what reads the timetable (the Skywalk's board, malllink3d.ts) sees the train that's drawn
+ */
+export const METRO_CLOCK = { offset: 0 };
+export const metroNow = () => Date.now() / 1000 + METRO_CLOCK.offset;
 
 /** Where the train is: its middle (track, distance, the way it faces along the track), its speed, the station it's standing at */
 export interface TrainAt {
@@ -586,8 +641,8 @@ export interface TrainAt {
 export function trainAt(t: number): TrainAt {
   let k = ((t % ROUND_TRIP) + ROUND_TRIP) % ROUND_TRIP;
   for (const l of LEGS) {
-    if (k < TRAIN.dwell) return { run: l.run, d: 0, ...placeOn(l.run, 0), speed: 0, at: l.run.from };
-    k -= TRAIN.dwell;
+    if (k < l.dwell) return { run: l.run, d: 0, ...placeOn(l.run, 0), speed: 0, at: l.run.from === TURN ? null : l.run.from };
+    k -= l.dwell;
     if (k < l.time) {
       const r = runAt(l.run.len, k, speedOf(l.run));
       return { run: l.run, d: r.s, ...placeOn(l.run, r.s), speed: r.speed, at: null };
@@ -615,13 +670,44 @@ export function timetableAt(stationId: string, last: Piece) {
   let k = 0;
   let fallback = -1;
   for (const l of LEGS) {
-    k += TRAIN.dwell + l.time;
+    k += l.dwell + l.time;
     if (l.run.to !== stationId) continue;
     const p = l.run.pieces[l.run.pieces.length - 1];
     if (p.track === last.track && Math.sign(p.s1 - p.s0) === way) return (k % ROUND_TRIP) + 1e-3;
     if (fallback < 0) fallback = (k % ROUND_TRIP) + 1e-3;
   }
   return fallback;
+}
+
+/** What a station's board says (no numbers: words for how near): the train standing there, coming in, due, or on its way; and where it goes next */
+export type NextTrain = { status: 'BOARDING' | 'ARRIVING' | 'DUE' | 'ON ITS WAY'; to: string };
+/** How near (seconds off) a train is "arriving", and "due" */
+export const ARRIVING = 20;
+export const DUE = 75;
+/** The next train at a station at time t (any clock): where it stands, or the next to come in there, and its next stop */
+export function nextTrain(stationId: string, t: number): NextTrain {
+  const k = ((t % ROUND_TRIP) + ROUND_TRIP) % ROUND_TRIP;
+  // (the legs twice round, from the start, so the next arrival is found past the round trip's end)
+  const legs = [...LEGS, ...LEGS];
+  /** Where a run from the station goes next: past a turn round, the one after it */
+  const onward = (i: number) => {
+    let j = i;
+    while (legs[j].run.to === TURN) j++;
+    return station(legs[j].run.to).name;
+  };
+  let at = 0;
+  for (let i = 0; i < legs.length; i++) {
+    const l = legs[i];
+    // Standing there before this run
+    if (l.run.from === stationId && k >= at && k < at + l.dwell) return { status: 'BOARDING', to: onward(i) };
+    at += l.dwell + l.time;
+    // Coming in at the end of this run
+    if (l.run.to === stationId && at > k) {
+      const off = at - k;
+      return { status: off <= ARRIVING ? 'ARRIVING' : off <= DUE ? 'DUE' : 'ON ITS WAY', to: onward(i + 1) };
+    }
+  }
+  return { status: 'ON ITS WAY', to: station(stationId).name };
 }
 
 /** A ride from one station to another: its runs (with a stop to turn round between two), how long it takes, and where the train is t seconds in */

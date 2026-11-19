@@ -209,9 +209,30 @@ phones' trees don't sway.
   **187** to keep it. Walk mode on the phone tier and a desktop, six
   frames in a row each: every frame drawn right. Budget: boot 715.8 of 740
   KB.
-6. **Places' near forms let go when far**: their GPU buffers freed past the
-   far distance and uploaded again on the way back (the arrays stay in
-   JavaScript, so it's quick).
+6. **Places' near forms let go when far** (built, 2026-11-14, below).
+
+**Item 6 (built, 2026-11-14).** The owner's pick after item 4 (districts
+loaded nearest first, far ones unloaded) was measured first and left out:
+what districts draw on the main thread is about 1 MiB on phones and 15 on a
+desktop, the rest is sites, which the near budget and the haze already let
+go. Item 7 (the JavaScript copies) is held up by picking: a click raycasts
+every mesh of a place, so the places' arrays must stay.
+
+- **Built.** lod.ts: a place's far form (`farForm()`) frees its near form's
+  geometries on the GPU (`geometry.dispose()`: the arrays stay in
+  JavaScript, and three uploads them again as they're next drawn) once it
+  has shown far for `FREE_AFTER` (15 s), once; coming near holds them again,
+  and going far starts the wait over, so a camera on the line never churns.
+  Textures and materials are left alone (shared). `freedNear()`: `?fps`
+  (after the far forms' count) and `__mem().freedNear`. Tested in
+  `tests/lod.test.ts`.
+- **Measured** (headless, the City view, then walking at Degen's home, then
+  the City view again): walking far, **22 places' near forms freed: 13 MB on
+  the phone tier, 15 MB on a desktop**; even in the City view 9 (4.2 MB) far
+  from where it looks. Back in the City view the 13 that came near again
+  were drawn as before (the frames before and after: the same picture, but
+  the LED wall's animation), no errors. `memcheck` counts the arrays, so
+  its numbers don't move: this saving is on the GPU.
 7. **The JavaScript copies dropped** for geometry that's uploaded and never
    read again (three's `onUpload`), halving what fixed geometry costs the
    page's own memory. What a batched mesh needs to grow or pack (`optimize()`,
@@ -228,6 +249,50 @@ phones' trees don't sway.
 3. **Smaller where it doesn't show**: canvas textures that are only ever seen
    far away drawn at half size on every tier (phones already do), and no
    mipmaps on textures only seen face-on near.
+
+### What Phase 4 found (2026-11-14)
+
+- **The climb isn't a leak.** The desktop's high tier, the City view, idle
+  for 5 minutes (headless, baked textures): textures 37.6 → 97.9 MB as the
+  scene's textures went 128 → 182; what three holds on the GPU stayed 11-23
+  above the scene's the whole time (`__mem().gl`), so nothing painted again
+  is left behind. The repainted ones (the stadium's fixture board, the
+  crowd's wardrobe) dispose the old.
+- **It's the districts' painted textures.** After 150 s: 84.5 MB, of which
+  **55 MB painted in the browser** (uncompressed, mipmapped) and 29 MB
+  baked. The bake keeps only what the boot paints (`__texBakeBoot`), so
+  every district's atlases arrive as full-size canvases: the Neon Mile's
+  resorts (`resorts3d.ts`, two 1024 x 1024, 5.3 MB each), the Strip's signs
+  (`stripmarks3d.ts`), Uptown's high-rises (`highrise3d.ts`, 3 MB), street
+  life, the riverside, the boulevard, the corner shops.
+- **The stages held a GPU context each.** The fitting room's preview and
+  the character screen kept their renderer (a second and third context,
+  with MSAA picture buffers at the panel's size) after closing, forever.
+  **Built**: 15 s after its panel closes (`RELEASE_AFTER` in `stage.ts`)
+  the stage frees its figure, podium and backdrops, disposes the renderer,
+  loses its context on purpose and puts a blank canvas in place of its
+  own; the next open makes it again (checked: the same picture, no errors;
+  reopened sooner, it's kept). The garage and the gun store draw in the
+  city's own renderer: nothing to free there.
+- **Measuring**: `__mem()` has `gl` and `textureRows` (performance.md).
+
+### Phase 4.3: the districts' textures baked (built, 2026-11-14; the owner's pick over the plan's half sizes)
+
+- The bake loads every district after the boot, one after another, forwards
+  on one run and in reverse on the other, and keeps what each paints as it
+  loads (performance.md, "Textures made at build time"); a site's builder
+  counts its textures within the site (`texscope.ts`). 189 textures a set
+  (was 118), the same on two whole bakes in a row; one drawing (a 1024 x 512
+  sign atlas drawn differently at noon and midnight) is left to paint.
+- **The desktop's high tier, 150 s idle in the City view: textures 84.5 →
+  51.8 MB, painted 55.2 → 11.6 MB** (the Neon Mile's resorts, the Strip's
+  signs, Uptown's facades and the rest now arrive GPU-compressed). The
+  Neon Mile and Uptown photographed baked and painted (`?textures=0`): the
+  same signs and facades.
+- The download grows: phones' set 2432 → 3282 KB, everyone else's 3480 →
+  4729 KB; `texLow` and `texFull` raised on purpose to 3450 and 4950 (the
+  owner's call). A bake takes about 8 minutes here (all four runs load every
+  district).
 
 ## Phase 5: budgets that hold as the city grows (built, 2026-11-13)
 
@@ -276,17 +341,75 @@ MiB (the quality step had lowered its pixels to 1x; the formula gave 9.0
 for the same). On foot, past the haze, a phone holds less (about 113-127
 MiB of geometry, the memory steps' figures).
 
+### Memcheck, 2026-11-18 (main at #167)
+
+The whole city built in about 13 minutes (774 s). Geometry **191.2** MiB,
+over the 187 ceiling: the south's Phases 2-3 (blocks, terraces, the High
+Road, St Aldwyn's, council semis), about 21 MiB of new city over Phase 3b's
+169.8, not a leak. *The owner's call: raised on purpose to 210* (191 and
+10%). Textures **32.9** (half of Phase 5's 64.3: the districts' textures
+baked, Phase 4.3; *the owner's call: the ceiling stays 70*, room for new
+districts). Render targets 9.0 (the formula's 9.0). The hitches: every view
+21-46 ms, the route 46, all under 250.
+
 ## Phase 6: smoother frames (S-M, low risk)
 
-1. **The quality step-down without the hitch**: today, turning shadows off on
-   a slow desktop recompiles every material in one frame (a freeze of a
-   second or more on a laptop). Shadows go by their intensity (already 0 in
-   the City view) instead, so nothing recompiles.
-2. **A lost GPU comes back**: on `webglcontextrestored` the city reloads
-   itself once (the save is kept), instead of waiting on Reload.
+1. **The quality step-down without the hitch** (built, 2026-11-14): turning
+   shadows off on a slow desktop recompiled every material in one frame (a
+   freeze of a second or more on a laptop). Now shadows go by their
+   intensity (`sky.setShadows()`, as in the City view): they ease out, the
+   shadow maps stop being drawn, and nothing recompiles, so they can come
+   back too when frames are fast again (`quality.ts`: bloom, shadows, then
+   pixels, each once). The shaders still read the maps (as in the City
+   view); what's saved is the shadow pass's draws.
+2. **A lost GPU comes back** (built, 2026-11-14): on `webglcontextrestored`
+   the city reloads itself (the save is kept, the tier a step lower: "The
+   tier by the graphics"), instead of waiting on Reload. Once a minute at
+   most (`reloadOnRestore()` in `gputier.ts`, `RELOAD_GAP`, noted in the
+   tab's sessionStorage): a GPU that keeps dropping out stays on the card,
+   and so does a tab that can't note it.
 3. **Hitches measured and capped**: `?bench`'s slowest frame per view goes in
    the budget, so a step that freezes (a big `trim()`, a district arriving)
-   is red.
+   is red. **Built (2026-11-14).** The
+   benchmark keeps each view's and the route's slowest frame by CPU
+   (`worstCpu`, the frame's own script and draw submission, which a freeze
+   from the city's own work shows in whatever the renderer's pace) and where
+   it went (`worstParts`), and `npm run memcheck` holds them to
+   `HITCH_CEILINGS` (`targets.ts`): **250 ms** a view and the route on its
+   headless phone. The first run read Sunridge 547, the south circus 300,
+   Lot 9 180 and the route 493 (*the owner's call: find those spikes
+   first*); a second, on a quiet machine, read every view 20-104 ms (the
+   wall's corner the slowest) and the route 71, mostly the render: the first
+   run had the test suite beside it. memcheck waits up to 75 minutes for the
+   city to build (the Action's job allows 120): for a while it took about
+   55, and its geometry read 330-400 MiB, both from the south's Phase 1c lift
+   splitting every batch that reached its ground, which #177 narrowed to the
+   faces over the south (found 2026-11-18; see "Memcheck, 2026-11-18" below).
+
+## The tier by the graphics (built, 2026-11-14; waiting on the owner's laptop)
+
+The owner's laptop (a Ryzen 5 4000: AMD's Radeon Graphics, built into the
+processor) showed "The city's 3D graphics stopped". It reports plenty of
+memory and cores, so it took the high tier: 2x pixels, a 2048 shadow map,
+MSAA, the 96 MB near budget, all from the memory the computer shares with
+everything else.
+
+1. **Graphics built into the processor start on medium** (`gputier.ts`,
+   DOM-free, `tests/gputier.test.ts`): the name WebGL gives the graphics
+   (Firefox plainly, Chrome through `WEBGL_debug_renderer_info`) is read once
+   the renderer exists. Intel's, AMD's Radeon Graphics / Vega and the 3-digit
+   M ones, Linux's chip names (Renoir...) and a plain Apple M chip take
+   medium; NVIDIA, Radeon RX / Pro, Intel Arc A / B and Apple Pro / Max /
+   Ultra keep high. A hidden name (Safari's "Apple GPU") changes nothing.
+2. **A step down after a lost GPU**: `webglcontextlost` keeps the tier that
+   stopped (`degen-city-gpu-v1`, the device's own, not in the backup); for
+   `LOST_DAYS` (14) the next start is a tier below it, and a second loss
+   steps down again, to low at the least.
+3. `?fps`'s tier line says why (`medium (shared graphics)`) and the
+   graphics' name. `data-tier` on the page still overrides it.
+
+*The owner's calls* (2026-11-14): plain Apple M chips stay on medium; a
+loss keeps the device lower for 14 days.
 
 ## Suggested order
 
@@ -304,3 +427,9 @@ measured → Phases 3 and 4 → Phase 6. Real-device numbers (`?bench`'s
   and 10%; the desktop's render targets by formula; the leak check too.
 - **Phase 3** (2026-11-13): 3a first (the haze on every tier, the lower near
   budgets); the City view keeps everything (item 2 left out).
+- **The tier by the graphics** (2026-11-14): built-in graphics start on
+  medium, plain Apple M chips included; a lost GPU keeps the device a tier
+  lower for 14 days. **Phase 6.2 next** (the reload on a restored GPU).
+- **The phone's ceilings** (2026-11-18): geometry raised on purpose from 187
+  to 210 MiB (the south's Phases 2-3, 191.2 measured, and 10%); textures
+  kept at 70 MiB though 32.9 measured, room for new districts.

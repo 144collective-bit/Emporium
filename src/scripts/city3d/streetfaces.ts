@@ -48,6 +48,27 @@ export function inside(poly: Pt[], [x, z]: Pt) {
   }
   return c;
 }
+/** Where a row at z crosses an outline's edges, sorted (the very sums `inside()` does): with `insideRow()`, `inside()`'s
+ * answer for every point along the row for the cost of one */
+export function rowCrossings(poly: Pt[], z: number) {
+  const xs: number[] = [];
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i];
+    const [xj, zj] = poly[j];
+    if (zi > z !== zj > z) xs.push(((xj - xi) * (z - zi)) / (zj - zi) + xi);
+  }
+  return xs.sort((a, b) => a - b);
+}
+/** Is a point on a row inside the outline (exactly `inside()`: an odd count of the row's crossings past it) */
+export function insideRow(xs: number[], x: number) {
+  let [lo, hi] = [0, xs.length];
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if (xs[m] > x) hi = m;
+    else lo = m + 1;
+  }
+  return (xs.length - lo) % 2 === 1;
+}
 /** How far a point is from a line (closed: back to its first point too) */
 export function distTo(pts: Pt[], [x, z]: Pt, closed = false) {
   let m = Infinity;
@@ -60,6 +81,39 @@ export function distTo(pts: Pt[], [x, z]: Pt, closed = false) {
     m = Math.min(m, Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t));
   }
   return m;
+}
+/** A line's distance from points, fast (its stretches bucketed by the cells they pass near): exactly `distTo` for a
+ * point within `reach` of it, and `reach` or more (Infinity where nothing's near) for one farther off. For a long
+ * line asked of many thousands of points: only "how near, if within reach" */
+export function nearLine(pts: Pt[], reach: number, closed = false, cell = 8) {
+  const n = pts.length;
+  const buckets = new Map<number, number[]>();
+  const key = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
+  for (let k = 0; k < (closed ? n : n - 1); k++) {
+    const [a, b] = [pts[k], pts[(k + 1) % n]];
+    const [i0, i1] = [Math.floor((Math.min(a[0], b[0]) - reach) / cell), Math.floor((Math.max(a[0], b[0]) + reach) / cell)];
+    const [j0, j1] = [Math.floor((Math.min(a[1], b[1]) - reach) / cell), Math.floor((Math.max(a[1], b[1]) + reach) / cell)];
+    for (let i = i0; i <= i1; i++)
+      for (let j = j0; j <= j1; j++) {
+        const at = key(i, j);
+        const list = buckets.get(at);
+        if (list) list.push(k);
+        else buckets.set(at, [k]);
+      }
+  }
+  return ([x, z]: Pt) => {
+    const list = buckets.get(key(Math.floor(x / cell), Math.floor(z / cell)));
+    let m = Infinity;
+    if (!list) return m;
+    for (const k of list) {
+      const [a, b] = [pts[k], pts[(k + 1) % n]];
+      const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
+      const l2 = dx * dx + dz * dz;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)) : 0;
+      m = Math.min(m, Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t));
+    }
+    return m;
+  };
 }
 /** A line's length */
 export const lengthOf = (pts: Pt[]) => pts.reduce((s, p, i) => (i ? s + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0), 0);

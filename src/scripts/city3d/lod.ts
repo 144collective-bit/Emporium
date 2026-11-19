@@ -19,8 +19,18 @@ interface Switch {
   apply(near: boolean): void;
   box: THREE.Box3;
   isNear: boolean;
+  /**
+   * A place's far form (`farForm()`): frees its near form's buffers on the GPU, giving the bytes freed. Done once it
+   * has been far `FREE_AFTER` (the stability plan's Phase 3, item 6); three uploads them again when they're next drawn
+   */
+  release?: () => number;
+  /** When it last went far (ms), and the bytes it has freed (0: holding them) */
+  farSince?: number;
+  freed?: number;
 }
 const SWITCHES: Switch[] = [];
+/** How long a place's far form shows before its near form's buffers are freed (a camera on the line never churns) */
+export const FREE_AFTER = 15000;
 
 /** Call `apply(near)` whenever the camera crosses the swap distance from `box` (world numbers); it starts near */
 export function addLodSwitch(apply: (near: boolean) => void, box: THREE.Box3) {
@@ -38,19 +48,28 @@ export function addLod(near: THREE.Object3D[], far: THREE.Object3D[], box: THREE
   }, box);
 }
 
-/** Swap every switch for a camera at x, y, z (near within `far`) */
-export function updateLods(x: number, y: number, z: number, far: number) {
+/** Swap every switch for a camera at x, y, z (near within `far`); `now` (ms) times the freeing of near forms */
+export function updateLods(x: number, y: number, z: number, far: number, now = performance.now()) {
   for (const s of SWITCHES) {
     const { min, max } = s.box;
     const near = isNear(boxDistance(x, y, z, min.x, min.y, min.z, max.x, max.y, max.z), far, s.isNear);
-    if (near === s.isNear) continue;
-    s.isNear = near;
-    s.apply(near);
+    if (near !== s.isNear) {
+      s.isNear = near;
+      s.apply(near);
+      s.farSince = now;
+      // (coming near: what was freed is uploaded again as it's drawn)
+      if (near) s.freed = 0;
+    } else if (!near && s.release && !s.freed && now - (s.farSince ?? now) > FREE_AFTER) s.freed = s.release() || 1;
   }
 }
 
 /** How many switches are showing their far form (the ?fps readout) */
 export const farLods = () => SWITCHES.filter((s) => !s.isNear).length;
+/** The places whose near forms are freed on the GPU, and the bytes (the ?fps readout, `__mem()`) */
+export const freedNear = () => {
+  const list = SWITCHES.filter((s) => s.freed);
+  return { places: list.length, bytes: list.reduce((n, s) => n + (s.freed ?? 0), 0) };
+};
 
 /* ---------- A place's far form ---------- */
 
@@ -81,6 +100,8 @@ export function farFormMaterial() {
 /** A texture's average colour and cover (alpha), from a few pixels of it; white if it can't be read */
 const averages = new WeakMap<THREE.Texture, { color: THREE.Color; alpha: number }>();
 let avgCtx: CanvasRenderingContext2D | null = null;
+/** While set, average() only notes the textures it would read here (`wanted()`) */
+let collecting: Set<THREE.Texture> | null = null;
 function average(tex: THREE.Texture | null | undefined) {
   if (!tex) return null;
   const hit = averages.get(tex);
@@ -94,6 +115,11 @@ function average(tex: THREE.Texture | null | undefined) {
     return out;
   }
   const img = tex.image as CanvasImageSource & { width?: number; height?: number; complete?: boolean };
+  // (only noting which textures a far form would read: primeAverages())
+  if (collecting) {
+    if (img && (img.width ?? 0) > 0 && img.complete !== false) collecting.add(tex);
+    return null;
+  }
   try {
     if (img && (img.width ?? 0) > 0 && img.complete !== false) {
       if (!avgCtx) {
@@ -124,6 +150,99 @@ function average(tex: THREE.Texture | null | undefined) {
   }
   averages.set(tex, out);
   return out;
+}
+
+/**
+ * The averages of the painted textures under `root` (none made at build time, so no average written down) worked out
+ * on the GPU and read back without waiting on it (three's `readRenderTargetPixelsAsync()`): reading a painted canvas
+ * back in `average()` stalls the page till the GPU has done all it was given, a second or more a texture as the city
+ * starts. Each texture is sampled at a 32 x 32 grid's centres (`average()` reads an 8 x 8 grid: within a hundredth
+ * of it for most, nearer the true average for a fine pattern), weighted by its cover, into a texel of its own; what can't be done here is left to `average()`. Called before `farForm()`.
+ */
+export async function primeAverages(renderer: THREE.WebGLRenderer, group: THREE.Object3D) {
+  const want = wanted(group);
+  if (!want.size) return;
+  const list = [...want];
+  const rt = new THREE.WebGLRenderTarget(list.length, 1, { depthBuffer: false, type: THREE.UnsignedByteType, format: THREE.RGBAFormat });
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { map: { value: null }, srgb: { value: 0 } },
+    vertexShader: 'void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: `uniform sampler2D map;
+uniform float srgb;
+vec3 encode(vec3 c) { return mix(1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, c * 12.92, step(c, vec3(0.0031308))); }
+void main() {
+  vec3 sum = vec3(0.0);
+  float cover = 0.0;
+  for (int y = 0; y < 32; y++)
+    for (int x = 0; x < 32; x++) {
+      vec4 c = textureLod(map, (vec2(float(x), float(y)) + 0.5) / 32.0, 0.0);
+      // (an sRGB texture is read back linear: its bytes, as the canvas holds them, again)
+      vec3 rgb = srgb > 0.5 ? encode(c.rgb) : c.rgb;
+      sum += rgb * c.a;
+      cover += c.a;
+    }
+  gl_FragColor = vec4(sum / max(cover, 1e-3), cover / 1024.0);
+}`,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+  quad.frustumCulled = false;
+  const cam = new THREE.Camera();
+  const [before, autoClear] = [renderer.getRenderTarget(), renderer.autoClear];
+  const buf = new Uint8Array(list.length * 4);
+  try {
+    renderer.autoClear = false;
+    list.forEach((t, i) => {
+      mat.uniforms.map.value = t;
+      mat.uniforms.srgb.value = t.colorSpace === THREE.SRGBColorSpace ? 1 : 0;
+      rt.viewport.set(i, 0, 1, 1);
+      renderer.setRenderTarget(rt);
+      renderer.render(quad, cam);
+    });
+    renderer.setRenderTarget(before);
+    renderer.autoClear = autoClear;
+    await renderer.readRenderTargetPixelsAsync(rt, 0, 0, list.length, 1, buf);
+    list.forEach((t, i) => {
+      // (read back, the same as average() makes of the canvas)
+      if (averages.has(t)) return;
+      const [r, g, b, a] = [buf[i * 4] / 255, buf[i * 4 + 1] / 255, buf[i * 4 + 2] / 255, buf[i * 4 + 3] / 255];
+      averages.set(t, { color: new THREE.Color().setRGB(r, g, b, t.colorSpace === THREE.SRGBColorSpace ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace), alpha: a });
+    });
+  } catch {
+    // (left to average(): it reads the canvas as before)
+  } finally {
+    renderer.setRenderTarget(before);
+    renderer.autoClear = autoClear;
+    rt.dispose();
+    mat.dispose();
+    quad.geometry.dispose();
+  }
+}
+
+/** The textures a place's far form would read for its colours (none read yet): what `farForm()` flattens, as
+ * `flatten()` picks it (its parts but the kept ones, the facades, hidden things and small signs) */
+function wanted(group: THREE.Object3D) {
+  const want = new Set<THREE.Texture>();
+  group.updateMatrixWorld(true);
+  const parts = group.children.filter((c) => !keeps(c));
+  const facades = new Set(parts.filter(isFacade));
+  collecting = want;
+  try {
+    for (const part of parts)
+      part.traverse((o) => {
+        if (facades.has(o)) return;
+        const mesh = o as THREE.Mesh & Partial<THREE.InstancedMesh>;
+        if (!mesh.isMesh || (mesh as unknown as THREE.SkinnedMesh).isSkinnedMesh) return;
+        for (let p: THREE.Object3D | null = o; p && p !== group; p = p.parent) if (!p.visible) return;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        if (!mesh.isInstancedMesh && mats.some((x) => (x as THREE.MeshBasicMaterial).map) && areaOf(mesh) < SMALL_SIGN) return;
+        for (const m of mats) lookOf(m);
+      });
+  } finally {
+    collecting = null;
+  }
+  return want;
 }
 
 /** What a material looks like from far away: its diffuse colour, its glow and how that follows the time of day; null to leave it out */
@@ -370,5 +489,23 @@ export function farForm(group: THREE.Object3D) {
   if (!farRoot.children.length) return null;
   group.add(farRoot);
   const box = new THREE.Box3().setFromObject(nearRoot);
-  return addLod([nearRoot], [farRoot], box);
+  const sw = addLod([nearRoot], [farRoot], box);
+  // Far for a while, the near form's geometries are freed on the GPU (the arrays stay, so they come back as they're
+  // next drawn). Its textures and materials are left alone (others share them); a geometry another mesh draws too
+  // is uploaded again by that mesh, once
+  sw.release = () => {
+    const geos = new Set<THREE.BufferGeometry>();
+    nearRoot.traverse((o) => {
+      const g = (o as THREE.Mesh).geometry;
+      if (g) geos.add(g);
+    });
+    let bytes = 0;
+    for (const g of geos) {
+      for (const a of Object.values(g.attributes)) bytes += (a as THREE.BufferAttribute).array?.byteLength ?? 0;
+      bytes += g.index?.array.byteLength ?? 0;
+      g.dispose();
+    }
+    return bytes;
+  };
+  return sw;
 }

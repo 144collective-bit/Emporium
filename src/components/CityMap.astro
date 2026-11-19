@@ -77,12 +77,17 @@ const spots: Record<SpotId, Spot> = {
   endswood: { title: 'Endswood Estate', sub: 'The Ends' },
   aldwyns: { title: "St Aldwyn's", sub: 'Church' },
   bunker: { title: 'Bunker Sound', sub: 'Studio' },
+  brook: { title: 'The Brook & Lantern', sub: 'Pub' },
+  rosas: { title: "Rosa's Café", sub: 'Café' },
+  kestrel: { title: 'Kestrel Fuel', sub: 'Petrol station' },
+  busgarage: { title: "Aldwyn's Green Bus Garage", sub: 'Bus garage' },
+  rec: { title: "Aldwyn's Green Rec", sub: 'Rec ground' },
   cityhall: { title: 'City Hall', sub: 'Sector 7' },
   police: { title: 'Sector 7 Police', sub: 'Headquarters' },
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
   home: { title: 'Home', sub: "Degen's place" },
 };
-const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker'];
+const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1363,6 +1368,41 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
   </template>
 
+  <template data-panel-tpl="brook" data-marquee="Last orders by the brook">
+    <p class="kicker"><span class="kicker-num">46</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Brook &amp; Lantern</h2>
+    <p class="city-panel-text">The village's old corner pub. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="rosas" data-marquee="Full breakfast all day">
+    <p class="kicker"><span class="kicker-num">47</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">Rosa's Café</h2>
+    <p class="city-panel-text">Tea, toast and the full works. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="kestrel" data-marquee="Fill up, head out">
+    <p class="kicker"><span class="kicker-num">48</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">Kestrel Fuel</h2>
+    <p class="city-panel-text">Pumps, a kiosk and an air line. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="busgarage" data-marquee="The night buses start here">
+    <p class="kicker"><span class="kicker-num">49</span> The High Road</p>
+    <h2 id="city-panel-title" class="city-panel-title">Aldwyn's Green Bus Garage</h2>
+    <p class="city-panel-text">Victorian brick, the buses' home. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="rec" data-marquee="Jumpers for goalposts">
+    <p class="kicker"><span class="kicker-num">50</span> Aldwyn's Green</p>
+    <h2 id="city-panel-title" class="city-panel-title">Aldwyn's Green Rec</h2>
+    <p class="city-panel-text">A pitch, a pavilion and a skate park on the brook. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
   <template data-panel-tpl="cityhall" data-marquee="The city keeps its records">
     <p class="kicker"><span class="kicker-num">42</span> The civic square</p>
     <h2 id="city-panel-title" class="city-panel-title">City Hall</h2>
@@ -1558,7 +1598,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       : Promise.resolve(null);
 
     /* ---------- The 3D city ---------- */
-    let city: { stop(): void; start(): void; open(id: string): void; intro(): void } | null = null;
+    let city: { stop(): void; start(): void; open(id: string): void; intro(): void; wake(): Promise<boolean> } | null = null;
     let booting = false;
     const NO_3D = 'The Trenches needs 3D graphics (WebGL 2).';
     /** No 3D here: the page says so, and so does the start menu (the header's Menu keeps the comic page and the links) */
@@ -1576,12 +1616,17 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     async function go3d() {
       if (booting || city) return;
       if (!gl) return no3d();
+      // The city's code asked for at once, beside the live settings (docs/spawn-plan.md Phase 3a: it waited on them, up
+      // to their 1.5 s, before): it downloads and runs as they come in, and the boot itself still waits for them
+      const code = import('../scripts/city3d/index');
+      // (a chunk that won't load is caught where it's awaited, below)
+      code.catch(() => {});
       // (never behind the maintenance cover: the page reloads when it lifts)
       await liveFirst;
       if (live.now.maintenance) return;
       booting = true;
       try {
-        const { bootCity } = await import('../scripts/city3d/index');
+        const { bootCity } = await code;
         city = await bootCity(root!, await wallet, await hubReady);
       } catch (err) {
         console.error(err);
@@ -1693,15 +1738,19 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       start.setAttribute('aria-hidden', 'true');
       setTimeout(() => (start.hidden = true), 450);
     }
-    /** Into the city with its fly-in once it's up; with no 3D here, onto the page that says so */
+    /**
+     * Into the city once it's up: waking in Degen's room at home (docs/spawn-plan.md), or the fly-in where walking is
+     * closed for now; with no 3D here, onto the page that says so
+     */
     async function enter(multi: boolean) {
       if (entering) return;
       entering = true;
       status.textContent = gl ? 'Entering…' : NO_3D;
       await booted;
       if (multi && server && city) root!.querySelector<HTMLButtonElement>('[data-online-set="on"]')?.click();
+      const woke = city ? await city.wake() : false;
       closeStart();
-      if (city) city.intro();
+      if (city && !woke) city.intro();
       entering = false;
     }
     start.querySelector('[data-start-single]')!.addEventListener('click', () => enter(false));

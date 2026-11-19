@@ -35,6 +35,7 @@ import {
   BALUSTRADE,
   BENCHES_IN,
   COLUMNS,
+  CORRIDOR_Z,
   COLUMN_R,
   DIRECTORY,
   ESCALATORS,
@@ -62,6 +63,7 @@ import {
   VOID,
   type Unit,
 } from './mallinside';
+import { CORRIDOR_H } from './malllink';
 import {
   CHARCOAL,
   DARK,
@@ -95,8 +97,9 @@ import {
 /** The inside's signs: the units, the stalls and the rest (fixed made-up words; 32, the atlas's all) */
 const LIGHT_IN = new Set([...UNIT_NAMES.filter((_, k) => k % 2), 'PHOTOS', 'KIDS RIDES', ...KIOSKS.map((k) => k.name)]);
 const signIn = signAtlas('mall-signs-in', [...UNIT_NAMES, ...FOOD_NAMES, 'FOOD COURT', 'DIRECTORY', 'PHOTOS', 'INFO', 'KIDS RIDES', ...KIOSKS.map((k) => k.name), MALL_NAME, ...ANCHORS.map((a) => a.name)], LIGHT_IN);
-const STEPS_UP = stepsMat(1);
-const STEPS_DOWN = stepsMat(-1);
+/** (the Skywalk's escalators run on these too: malllink3d.ts) */
+export const STEPS_UP = stepsMat(1);
+export const STEPS_DOWN = stepsMat(-1);
 /** A few plain colours of the fit-out's own (folded into the shared paint) */
 const PALE_GLASS = toon('#c9dbe4');
 const MENU = toon('#26282c');
@@ -189,7 +192,13 @@ function unit(b: Batch, u: Unit) {
 
 function units(b: Batch) {
   // The two strips the units are in (both floors), their ends' walls
-  for (const x0 of [IN[0], IN[2] - UNIT_D]) box(b, x0, Y, NORTH_Z, x0 + UNIT_D, CEIL, LOBBY_Z, LIGHT);
+  box(b, IN[0], Y, NORTH_Z, IN[0] + UNIT_D, CEIL, LOBBY_Z, LIGHT);
+  // (the east strip open on the upper floor where the Skywalk's corridor goes through: malllink3d.ts draws it)
+  const x0 = IN[2] - UNIT_D;
+  box(b, x0, Y, NORTH_Z, IN[2], CEIL, CORRIDOR_Z[0], LIGHT);
+  box(b, x0, Y, CORRIDOR_Z[1], IN[2], CEIL, LOBBY_Z, LIGHT);
+  box(b, x0, Y, CORRIDOR_Z[0], IN[2], Y + UP, CORRIDOR_Z[1], LIGHT);
+  box(b, x0, Y + UP + CORRIDOR_H, CORRIDOR_Z[0], IN[2], CEIL, CORRIDOR_Z[1], LIGHT);
   for (const u of UNITS) unit(b, u);
 }
 

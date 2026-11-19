@@ -6,7 +6,8 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, updateLights, updateWind } from './kit';
+import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, setGroundLift, updateLights, updateWind } from './kit';
+import { SOUTH_GROUND_RECT, southLift } from './southground';
 import { CROWD_PACK, loadMocap } from './mocap-load';
 import type { MoData } from './mocap';
 import { setCrowdCapture } from './crowdclips';
@@ -40,13 +41,14 @@ import { STREET_PEOPLE } from './streetlevel';
 import { STREETLIFE_PEOPLE } from './streetlife';
 import { GARDEN_TREES as UPTOWN_GARDEN_TREES, SITE_PEOPLE } from './uptownsites';
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
-import { createDistricts } from './districts';
+import { LAZY_DISTRICTS, createDistricts } from './districts';
 import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
-import { ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, homePlaces, HOME_SPAWN, inHouse, startsAtHome } from './home';
+import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, homePlaces, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
@@ -56,6 +58,9 @@ import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
 import { CREST_IDLE } from './crestlife';
 import { INSIDE_SPAWN, MALL_INSIDE_PEOPLE, MALL_LIFT, UP as MALL_UP } from './mallinside';
+import { LINK_PEOPLE, stationLiftDoors } from './malllink';
+import { COURT_INSIDE_PEOPLE } from './courtinside';
+import { STATIONS } from './metro';
 import { LIFT, TOWER_SPAWN } from './skydeck';
 import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
 import { buildLandmarks, type Spot } from './landmarks';
@@ -95,6 +100,11 @@ import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { SkyLiftUI } from './skylift-ui';
+import { skyLiftDoors } from './southsky';
+import { YARD_TREES } from './southyard';
+import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
+const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
 import { MONO_STATIONS } from './monorail';
 import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
@@ -124,7 +134,7 @@ import { AVENUE_SPAWNS } from './avenue';
 import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-records';
 import { kartRecordsHtml } from './kart-records';
-import { destAt } from './tycoon';
+import { count, destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW, figureDetail } from './character';
@@ -141,9 +151,15 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { farForm, farLods, updateLods } from './lod';
+import { farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
+import { createQuality, type QualityStep } from './quality';
+import { GPU_KEY, RELOAD_KEY, pickTier, reloadOnRestore, type Device, type Lost, type Picked } from './gputier';
+
+// The south's rolling ground under everything drawn there (docs/south-plan.md Phase 1c): set as this module loads, so
+// the site worker, which loads it too, lifts what it builds the same way
+setGroundLift(southLift, SOUTH_GROUND_RECT);
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -153,15 +169,29 @@ const TIERS = {
   low: { dpr: 1.25, shadows: 0, msaa: 0, bloomScale: 0.3, cars: 16, buses: 2, trucks: 2, police: 2, bikes: 3, crest: 3, sun: 1, strip: 4, reserve: 180, walkers: 15, trees: 90, rain: 1200, clouds: 4, far: 90, nearBudget: 32 },
 };
 
-function pickTier(): Tier {
-  const coarse = matchMedia('(pointer: coarse)').matches;
-  const small = Math.min(innerWidth, innerHeight) < 700;
+/** The device as the tier's rules (gputier.ts) read it; `gpu`, the graphics' name, once there's a renderer */
+function device(gpu = ''): Device {
   const nav = navigator as Navigator & { deviceMemory?: number };
-  // Phones (a short side under 700) take the low tier; a big touch screen (a tablet) the medium one (the owner's call,
-  // docs/polish-plan.md), and little memory or few cores hold a desktop to medium too
-  if (small) return 'low';
-  if (coarse || (nav.deviceMemory ?? 8) <= 4 || (navigator.hardwareConcurrency ?? 8) <= 4) return 'medium';
-  return 'high';
+  let lost: unknown = null;
+  try {
+    lost = JSON.parse(localStorage.getItem(GPU_KEY) ?? 'null');
+  } catch {
+    /* none kept */
+  }
+  return { small: Math.min(innerWidth, innerHeight) < 700, coarse: matchMedia('(pointer: coarse)').matches, memory: nav.deviceMemory, cores: navigator.hardwareConcurrency, gpu, lost: lost as Lost | null, now: Date.now() };
+}
+
+/** The graphics' name as WebGL gives it ('' when the browser hides it): Firefox says it plainly, Chrome behind an extension */
+function gpuName(renderer: THREE.WebGLRenderer): string {
+  try {
+    const gl = renderer.getContext();
+    const plain = String(gl.getParameter(gl.RENDERER) ?? '');
+    if (plain && !/^webkit webgl$/i.test(plain)) return plain;
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '') : '';
+  } catch {
+    return '';
+  }
 }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -173,16 +203,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const loader = root.querySelector<HTMLElement>('[data-loader]')!;
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const tier = (root.dataset.tier as Tier) || pickTier();
-  const Q = TIERS[tier];
-  // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
-  UV.sway = tier !== 'low';
-  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
-  figureDetail(tier === 'low' ? 2 : 3);
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
   // ?anim: the animation lab on its own, over the page (no city behind it)
   if (new URLSearchParams(location.search).has('anim')) {
-    await (await import('./anim-lab')).openLab(root, { reduced, low: tier === 'low' });
+    await (await import('./anim-lab')).openLab(root, { reduced, low: ((root.dataset.tier as Tier) || pickTier(device()).tier) === 'low' });
     return null;
   }
   // When each part of the boot finished (the ?fps readout and the benchmark)
@@ -202,6 +226,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   } catch {
     return null;
   }
+  // The tier (gputier.ts): the screen, memory and cores as before, graphics built into the processor a step down, and
+  // a step down after the 3D graphics stopped here lately. `data-tier` on the page overrides it.
+  const gpu = gpuName(renderer);
+  const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
+  const tier = picked.tier;
+  const Q = TIERS[tier];
+  // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
+  UV.sway = tier !== 'low';
+  // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
+  figureDetail(tier === 'low' ? 2 : 3);
   loader.hidden = false;
   progress(0.05);
 
@@ -355,7 +389,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Endswood Estate's (endsplaces.ts, docs/estate-plan.md Phase 8): the estate on its tenants' hall, St Aldwyn's
   // and Bunker Sound (drawn in its chunk)
   for (const e of ENDS_SPOTS) {
-    const s = pickSpot(scene, e.id, ENDS_SLAB, e.boxes, e.land, e.pinH, e.pin);
+    const s = pickSpot(scene, e.id, ENDS_SLAB + southLift(e.pin[0], e.pin[1]), e.boxes, e.land, e.pinH, e.pin);
     spots.push(e.faces ? { ...s, faces: e.faces } : s);
   }
   // ...and Degen's home at the west end of the row by the Close (home.ts, docs/home-plan.md; drawn in Endswood
@@ -417,6 +451,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of LOT9_LAMPS) addLamp(x, z, ry, y);
   // The south's (endswood.ts, docs/south-plan.md Phase 1b): sodium along every street of the re-laid estate and village
   for (const [x, z, ry, y] of ENDS_LAMPS) addLamp(x, z, ry, y);
+  // Endswood's trees on the grass round its towers (southyard.ts, docs/south-plan.md 2d), on the rolling ground
+  for (const [x, z, sc] of YARD_TREES) addTree(x, z, sc, false, ENDS_SLAB + southLift(x, z));
+  // The Circus's sunken plaza (circus.ts, docs/south-plan.md Phase 4b): a tree in each planter, lamps by the seats
+  for (const { at: [x, z] } of PLANTERS) addTree(x, z, 0.75, false, FLOOR + PLANTER_H);
+  for (const [x, z] of CIRCUS_LAMPS) addLamp(x, z, Math.atan2(x - CIRCUS_MID[0], z - CIRCUS_MID[1]), FLOOR);
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
@@ -459,7 +498,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and the walk between Westlake Park and Uptown North's towers (parkedge.ts, docs/blend-plan.md Phase 6e)
   for (const [x, z, ry] of PARK_EDGE_LAMPS) addLamp(x, z, ry);
   for (const [x, z, s] of PARK_EDGE_TREES) addTree(x, z, s, false, SLAB + 0.02);
-  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
+  [...MALL_PEOPLE, ...MALL_INSIDE_PEOPLE, ...LINK_PEOPLE, ...COURT_INSIDE_PEOPLE, ...NORTH_PEOPLE].forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: SLAB + p.y, ry: p.ry, act: p.act }));
   // Someone waiting at every third bus shelter (transit.ts, the polish plan's Phase 6; phones: half of them)
   SHELTER_IDLES.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.promenade ? 0.05 : SLAB, ry: p.ry, act: 'wait' }));
   // The wall round the city and the murk past it (wall3d.ts, docs/wall-plan.md Phase 2)
@@ -613,10 +652,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const nextFar = () => {
     const g = farQueue.shift();
     if (!g) return;
-    farForm(g);
-    // (its shader now, not the first time it's seen from far off)
-    compileFor(g);
-    idle(nextFar);
+    // (its painted textures' averages read back from the GPU first, without the page waiting on it: lod.ts)
+    void primeAverages(renderer, g).then(() => {
+      farForm(g);
+      // (its shader now, not the first time it's seen from far off)
+      compileFor(g);
+      idle(nextFar);
+    });
   };
   bootAt.built = performance.now();
   // (in parallel where the GPU can: the page stays free while they compile)
@@ -880,8 +922,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(HM_SPAWN);
       });
-    // Endswood's panels (the estate, St Aldwyn's, Bunker Sound): Walk in in front of each door, facing it
-    if (id === 'endswood' || id === 'aldwyns' || id === 'bunker')
+    // The south's panels (the estate, St Aldwyn's, Bunker Sound, the High Road's four): Walk in in front of each door
+    if ((ENDS_PLACE_IDS as string[]).includes(id))
       panelBody.querySelector('[data-ends-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(ENDS_SPAWNS[id as EndsPlaceId]);
@@ -1000,6 +1042,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           tycoon?.closeCard();
           metroUI?.close();
           monoUI?.close();
+          skyLiftUI?.close();
         },
       }))
     ),
@@ -1029,10 +1072,33 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           tycoon?.closeCard();
           metroUI?.close();
           riverBusUI?.close();
+          skyLiftUI?.close();
         },
       }))
     ),
     'the monorail'
+  );
+  // Endswood's lifts (southsky.ts, docs/south-plan.md Phase 2c): a door at every core's foot and a call point on each
+  // of its landings; the floor picker (the metro's card) loaded the first time one's used
+  let skyLiftUI: SkyLiftUI | null = null;
+  const loadSkyLift = lazy(
+    () =>
+      import('./skylift-ui').then(({ createSkyLiftUI }) =>
+      (skyLiftUI = createSkyLiftUI(root, {
+        free: () => walking && walk.onFoot,
+        height: () => walk.position.y,
+        ride: (to, arrived) => rideTo({ ...to, y: to.y ?? 0 }, null, 'Endswood', arrived),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+        },
+      }))
+    ),
+    'the lifts'
   );
   // Sector 7 Tower's lift (skydeck.ts): a door in the pavilion at its foot and one at the lift house on the sky deck
   const LIFT_DOORS = [
@@ -1044,8 +1110,31 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const up = walk.position.y > (LIBERTY_LOW + LIBERTY_HIGH) / 2;
     return LIBERTY_LIFTS.map((l, i) => (up ? { id: `liberty:down:${i}`, ...l.high, label: 'Lift · Deck' } : { id: `liberty:up:${i}`, ...l.low, label: 'Lift · High walkway' }));
   };
+  // The metro stations' doors; Starlight Mall's is up on its platform in the Skywalk (metro.ts `inside`): its prompt
+  // only up there, not on the floor under it or the street
+  const metroDoors = () =>
+    (metroUI?.doors ?? []).filter((d) => {
+      const st = STATIONS.find((s) => `metro:${s.id}` === d.id);
+      return !st?.inside || walk.position.y > SLAB + st.inside.y - 1;
+    });
   // Starlight Mall's glass lift (mallinside.ts): a door on the ground floor and one on the east gallery
   const mallDoors = () => (walk.position.y > SLAB + MALL_UP / 2 ? [{ id: 'mall-lift:down', ...MALL_LIFT.high, label: 'Lift · Ground floor' }] : [{ id: 'mall-lift:up', ...MALL_LIFT.low, label: 'Lift · Upper floor' }]);
+  /**
+   * Waking at home (spawn.ts, docs/spawn-plan.md): is the street outside his house built yet? Asked a few times a
+   * second while he's in the room, and once it's ready it stays ready for the visit
+   */
+  let wokeAt = 0;
+  let street = { ready: false, at: 0 };
+  function streetUp() {
+    if (street.ready || !wokeAt) return true;
+    const now = performance.now();
+    if (now - street.at < 300) return false;
+    const due = dueDistricts(LAZY_DISTRICTS, districts.loaded()).length;
+    street = { ready: streetReady({ due, waiting: works.waitingNear(READY_AT[0], READY_AT[1], READY_REACH), waitedMs: now - wokeAt }), at: now };
+    // (and the curtains drawn back: home3d.ts follows it)
+    if (street.ready) curtains.open = true;
+    return street.ready;
+  }
   let lifting = false;
   /** Up or down in Sector 7 Tower's lift */
   const ride = (up: boolean) => rideTo(up ? LIFT.up : LIFT.down, 'tower', 'Sector 7 Tower', up ? 'Sector 7 Tower · Sky deck' : 'Sector 7 Tower · Lobby');
@@ -1095,7 +1184,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...(metroUI?.doors ?? []), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...homePlaces(walk.position.y)],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1105,15 +1194,31 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         walk.releaseMouse();
         return open('shop', true);
       }
+      // (upstairs, the office's desk: the business card, as the Dorras pill opens it)
+      if (id === 'home:desk') {
+        walk.releaseMouse();
+        return tycoon?.openCard();
+      }
       if (id === 'home:stash')
         return void loadStash()
           .then((ui) => ui.open())
           .catch(() => game.toast('Stash stuck · try again'));
       if (id.startsWith('home:')) {
         const p = HOME_PORTALS.find((q) => q.id === id);
-        return p ? rideTo(p.to, 'home', 'Home', p.arrived) : undefined;
+        if (!p) return;
+        // (waking at home: the ways out wait until the street outside is built, spawn.ts)
+        if (HOME_WAITS.includes(id) && !streetUp()) return tycoon?.toast('Nearly ready · the street is loading', 2500);
+        // (out of the front or side door: Getting started's first step counts it)
+        if (id === 'home:out' || id === 'home:yard') {
+          count(game.save(), 'leftHome');
+          game.commit();
+        }
+        return rideTo(p.to, 'home', 'Home', p.arrived);
       }
       if (id === 'lift:up' || id === 'lift:down') return ride(id === 'lift:up');
+      if (id.startsWith('sky-lift:')) return void loadSkyLift().then((ui) => ui.open(id.slice('sky-lift:'.length)));
+      // (Starlight Mall station's glass lift in the Skywalk, malllink.ts: the same floor picker)
+      if (id.startsWith('station-lift:')) return void loadSkyLift().then((ui) => ui.openStation());
       if (id === 'mall-lift:up' || id === 'mall-lift:down') {
         const up = id === 'mall-lift:up';
         return rideTo(up ? MALL_LIFT.up : MALL_LIFT.down, 'mall', 'Starlight Mall', up ? 'Starlight Mall · Upper floor' : 'Starlight Mall · Ground floor');
@@ -1299,7 +1404,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   });
   const walkBtn = root.querySelector<HTMLButtonElement>('[data-walk-toggle]')!;
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
-  function startWalking(spawn?: { x: number; z: number; yaw: number }) {
+  function startWalking(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
     if (walking) return;
     // (unless the owner has closed it for now: live settings)
     const shut = live.closed('walk');
@@ -1312,7 +1417,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     controls.enabled = false;
     walking = true;
     walker.on = true;
-    walk.enter(spawn);
+    walk.enter(spawn, seat);
     works.want(walk.position.x, walk.position.z, 70);
     mp?.walkChanged(true);
     // The site header steps aside so the city and its mode header fill the screen (city.css)
@@ -1331,6 +1436,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     metroUI?.close();
     riverBusUI?.close();
     monoUI?.close();
+    skyLiftUI?.close();
     stashUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
@@ -1346,7 +1452,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Walking starts at home, on Degen's front path in the Ends (home.ts, the owner's call), but a new player's very
   // first walk, which starts downtown by the Emporium as it always did. `?spawn=x,z` in the address still says
   // otherwise (walk.ts reads it when no spot is given)
-  walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') || !startsAtHome(game.save().visited) ? undefined : HOME_SPAWN));
+  walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') ? undefined : HOME_SPAWN));
   walkBtn.hidden = false;
   // The mode header's City button: back to the city view from walking
   const head = createCityHead(root);
@@ -1378,7 +1484,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1584,6 +1690,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       tycoon?.closeCard();
       riverBusUI?.close();
       monoUI?.close();
+      skyLiftUI?.close();
     },
   });
 
@@ -1651,6 +1758,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // for; without cancelling it, coming back would start a second loop beside it
   // (and each trip away another), each drawing the whole city.
   let raf = 0;
+  // (the frame's CPU by part: `part(k)` adds the time since the last mark to `k`)
+  const parts = { before: 0, sky: 0, works: 0, tiles: 0, lods: 0, ticks: 0, render: 0, between: 0 };
+  let partAt = 0;
+  const part = (k: keyof typeof parts) => {
+    const now = performance.now();
+    parts[k] += now - partAt;
+    partAt = now;
+  };
   const loop = () => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
@@ -1660,6 +1775,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   renderer.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault();
     running = false;
+    // Kept, so the next start is a tier lower (gputier.ts, for LOST_DAYS)
+    try {
+      localStorage.setItem(GPU_KEY, JSON.stringify({ tier, at: Date.now() } satisfies Lost));
+    } catch {
+      /* not kept */
+    }
     cancelAnimationFrame(raf);
     if (sound.on) sound.toggle();
     root.dataset.view = 'none';
@@ -1672,6 +1793,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (note) note.textContent = 'The device ran out of graphics memory, or its driver reset. Your save is kept.';
     const reload = card.querySelector<HTMLElement>('[data-no3d-reload]');
     if (reload) reload.hidden = false;
+  });
+  // The GPU came back (the stability plan's Phase 6.2): the city reloads itself, the save kept and the tier a step
+  // lower, instead of waiting on Reload. Once a minute at most (gputier.ts); where the tab can't note it, Reload it is.
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    try {
+      if (!reloadOnRestore(sessionStorage.getItem(RELOAD_KEY), Date.now())) return;
+      sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+    } catch {
+      return;
+    }
+    location.reload();
   });
   // Fast screens (120 / 144 Hz) draw every other refresh: a steady 60-72fps
   // rather than an uneven, hotter 120. The refresh rate is read from the
@@ -1731,7 +1863,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     statsEl.setAttribute('aria-hidden', 'true');
     host.append(statsEl);
     // (where the geometry memory is, for the console: perf.ts)
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped });
+    // (the texture breakdown is its own chunk: only ?fps and ?bench load it, texrows.ts)
+    let texRows: ((s: THREE.Object3D) => unknown) | null = null;
+    void import('./texrows').then((m) => (texRows = m.textureRows));
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -1813,6 +1948,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (++tickN % skip) return spare(2);
     if (!onScreen && !walking) return;
     const cpuStart = performance.now();
+    // Where the frame's CPU goes, for the benchmark's slowest frame (bench.ts `worstParts`, the stability plan's 6.3)
+    partAt = cpuStart;
+    for (const k in parts) parts[k as keyof typeof parts] = 0;
     timer.update();
     const t = timer.getElapsed();
     // The benchmark starts once the start menu has gone, the city is showing and every site is built (growth plan Phase 3)
@@ -1892,10 +2030,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Shadows only while walking or driving, never in the City view or up in an aircraft (shadows.ts, the owner's call),
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
-    sky.setShadows(walking && !walk.airborne);
+    sky.setShadows(walking && !walk.airborne && !lowered.shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
+    // (waking at home: the street's readiness asked every frame too, so the curtains open even standing still)
+    if (wokeAt && !street.ready) streetUp();
+    part('before');
     const s = sky.update(reduced ? 0 : t, dt, controls.target, camera.position, look, walking && !walk.flying);
+    part('sky');
     env.t = reduced ? 0 : t;
     env.dt = reduced ? 0 : dt;
     env.night = s.night;
@@ -1920,17 +2062,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     viewSpot[1] = CROWD_VIEW.focus.z;
     // A district within reach of what's looked at (or of Degen) is loaded (the benchmark loads them all)
     if (bench || shots) districts.all();
-    districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
+    // (the texture bake loads them itself, in turn, once the boot is over: below)
+    if (!BAKING_TEXTURES) districts.step(walking ? walk.position.x : viewSpot[0], walking ? walk.position.z : viewSpot[1], Q.far);
     // (a share of the time since the last frame, not a fixed slice: a slow phone draws few frames, and while its
     // GPU draws the next one its CPU is free; at 60fps that's the 2-3 ms it always was)
     const share = Math.min(10, Math.max(tier === 'low' ? 2 : 3, gap * 1000 * 0.15));
     const waiting = works.pending();
+    part('between');
     works.step(covered ? 24 : bench && !bench.active && !bench.done ? 12 : share, CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, dt, Q.far, walking ? undefined : viewSpot);
     if (works.pending() !== waiting) builtShows();
     // Near and far forms (growth plan Phase 2): the details only within the tier's `far` of the camera
+    part('works');
     tiled.update(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
+    part('tiles');
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
+    part('lods');
     if (!reduced || frames === 0) for (const f of ticks) f(env);
+    part('ticks');
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
     updateWind(env.t, windStrength(s.rain), tier === 'low' ? 0 : SWAY);
@@ -2019,7 +2167,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         renderer.info.reset();
         post.shadowStat.calls = post.shadowStat.tris = 0;
       }
+      part('between');
       post.render();
+      part('render');
       shots?.drawn();
       dirty = false;
       if (!bootAt.first) {
@@ -2032,7 +2182,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         stat.tris += triangles;
         stat.shadowDraws += post.shadowStat.calls;
         stat.shadowTris += post.shadowStat.tris;
-        if (bench?.active) bench.sample(t, performance.now(), performance.now() - cpuStart, calls, triangles, post.shadowStat.calls, post.shadowStat.tris);
+        part('between');
+        if (bench?.active) bench.sample(t, performance.now(), performance.now() - cpuStart, calls, triangles, post.shadowStat.calls, post.shadowStat.tris, parts);
       }
     }
     if (statsEl) {
@@ -2055,13 +2206,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
           `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
           stat.mem,
-          `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms`,
+          `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms${((f) => (f.places ? ` (${f.places} near forms freed, ${mb(f.bytes)})` : ''))(freedNear())}`,
           `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
-          `${tier} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''}`,
+          `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)} · motion capture ${walk.mocap}`] : []),
+          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
           // reads here as under the ground, or the near plane, or the view gone wrong)
           ...(walking
@@ -2099,41 +2250,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     }
   }
 
-  // Too slow: fewer pixels, then no shadows, then no bloom. The ink outlines always stay.
+  // Too slow: fewer pixels, then no shadows, then no bloom; fast again for a while, they come back (quality.ts: the
+  // order, each step back once). The ink outlines always stay. Shadows go by their intensity (sky.setShadows(), above),
+  // never the shadow map or castShadow, which recompiled every material in one frame (the stability plan's 6.1)
   const fullPixels = renderer.getPixelRatio();
-  const lowered = { pixels: false, shadows: false, bloom: false };
+  const quality = createQuality();
+  const lowered = quality.lowered;
+  const canDegrade = () => quality.canDegrade();
   let fastWindows = 0;
-  // A stage put back and then lost again stays off (no see-sawing)
-  const settled = new Set<keyof typeof lowered>();
-  const canDegrade = () => !lowered.pixels || !lowered.shadows || !lowered.bloom;
-  function degrade() {
-    if (!lowered.pixels) {
-      lowered.pixels = true;
-      renderer.setPixelRatio(Math.max(1, fullPixels - 0.5));
+  function apply(step: QualityStep | null) {
+    if (step === 'pixels') {
+      renderer.setPixelRatio(lowered.pixels ? Math.max(1, fullPixels - 0.5) : fullPixels);
       resize();
-    } else if (!lowered.shadows) {
-      lowered.shadows = true;
-      renderer.shadowMap.enabled = false;
-      scene.traverse((o) => {
-        if ((o as THREE.DirectionalLight).isDirectionalLight) (o as THREE.DirectionalLight).castShadow = false;
-      });
-    } else lowered.bloom = true;
-    post.bloom.enabled = !lowered.bloom;
+    } else if (step === 'bloom') post.bloom.enabled = !lowered.bloom;
+    // ('shadows': the frame asks sky.setShadows() with `lowered.shadows`, and they ease out or in)
   }
-  // Fast again for a while: bloom, then pixels, come back. Shadows don't
-  // (turning them back on recompiles every material, a visible hitch).
-  function restore() {
-    if (lowered.bloom && !settled.has('bloom')) {
-      lowered.bloom = false;
-      settled.add('bloom');
-      post.bloom.enabled = true;
-    } else if (lowered.pixels && !settled.has('pixels')) {
-      lowered.pixels = false;
-      settled.add('pixels');
-      renderer.setPixelRatio(fullPixels);
-      resize();
-    }
-  }
+  const degrade = () => apply(quality.degrade());
+  const restore = () => apply(quality.restore());
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -2148,8 +2281,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
 
   /* ---------- Reveal ---------- */
   root.dataset.view = '3d';
-  // (the texture bake keeps what the boot painted, up to here: kit.ts)
+  // (the texture bake keeps what the boot painted, up to here: kit.ts; then every district, one after another, in
+  // the list's order or with ?bake-textures=reverse the other way round, and says when they're all in)
   bootTexturesPainted();
+  if (BAKING_TEXTURES)
+    void districts.inTurn(new URLSearchParams(location.search).get('bake-textures') === 'reverse').then(() => ((globalThis as { __texBakeDistricts?: { loaded: string[]; of: number } }).__texBakeDistricts = { loaded: districts.loaded(), of: districts.total() }));
   loader.classList.add('is-done');
   setTimeout(() => (loader.hidden = true), 600);
   const start = home();
@@ -2175,6 +2311,36 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     /** Open a building's panel (the owner's notices' Go button comes here) */
     open(id: string) {
       open(id);
+    },
+    /**
+     * Into the game from the start menu (docs/spawn-plan.md, the owner's call): walking, in Degen's room at home
+     * (`HOME_WAKE`), the south's chunk and what's round his house built first, behind the menu, so the room is
+     * whole when it lifts; the rest of the city loads behind the walls while the ways out wait (spawn.ts). False
+     * when walking can't start (the owner has closed it for now): the menu does the fly-in instead
+     */
+    async wake() {
+      if (root.dataset.mode !== 'explore' || live.closed('walk')) return false;
+      const there = new URLSearchParams(location.search).has('spawn');
+      // (unless the owner has closed his house for now: then in the yard outside it)
+      const home = live.place('home');
+      const inside = !there && !(home && !home.open);
+      const at = there ? undefined : inside ? HOME_WAKE : HOME_SPAWN;
+      // (the curtains drawn before his house is drawn: they open once the street's ready, Phase 2)
+      if (inside) curtains.open = false;
+      if (!there) {
+        await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
+        works.want(HOME_WAKE.x, HOME_WAKE.z, 25);
+      }
+      wokeAt = performance.now();
+      street = { ready: false, at: 0 };
+      // On the sofa as the room appears, up off it a moment after the menu's gone (Phase 2; under reduced motion
+      // he's standing already)
+      startWalking(at, inside && !reduced ? SOFA_SEAT : undefined);
+      if (inside && !reduced) {
+        const up = () => setTimeout(() => (startCovers ? up() : setTimeout(() => walk.standUp(), 700)), 200);
+        up();
+      }
+      return true;
     },
     /** The fly-in again, from far out to the home view (the start menu closing: the first one ran behind it) */
     intro() {

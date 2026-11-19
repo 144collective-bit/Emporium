@@ -33,7 +33,11 @@ import { SF_RECT } from './southfield';
 import { STRIP_RECT } from './strip';
 import { SUNRIDGE_RECT } from './sunridge';
 import { LOT9_RECT } from './lot9';
-import { SOUTH_DRAWN } from './south';
+import { COUNCIL_LAND, SOUTH_DRAWN } from './south';
+import { BLOCKS_RECT } from './southblocks';
+import { TERRACES_RECT } from './southterraces';
+import { HIGHROAD_RECT } from './highroad';
+import { REC_RECT } from './rec';
 import { HIGHWAY_BOX } from './highway';
 
 /** How much further out than its land Uptown loads (its towers stand over the whole town) */
@@ -81,6 +85,17 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // South of The Trenches, re-laid (south.ts, docs/south-plan.md; south3d.ts): its streets, footpaths, brook, hedges and
   // the Circus, Degen's compound (home3d.ts) and Lot 9's tunnel's dressing
   { id: 'south', rect: SOUTH_DRAWN, load: () => import('./south3d') },
+  // Endswood's blocks (southblocks.ts, docs/south-plan.md Phase 2; southblocks3d.ts): the Rampart, the twin towers, the
+  // stairwell blocks and the sky network; their towers seen from further off, as Uptown's
+  { id: 'south-blocks', rect: BLOCKS_RECT, load: () => import('./southblocks3d') },
+  // Aldwyn's Green's terraces (southterraces.ts, docs/south-plan.md Phase 3a; village3d.ts), and the council rows, the
+  // bungalows and the allotments (council.ts, Phase 3d: laid out only with the chunk, their solids joining then)
+  {
+    id: 'village',
+    // (its terraces' land, the High Road's, the council rows', the bungalows' and the allotments' together)
+    rect: [Math.min(TERRACES_RECT[0], HIGHROAD_RECT[0], COUNCIL_LAND[0], REC_RECT[0]), Math.min(TERRACES_RECT[1], HIGHROAD_RECT[1], COUNCIL_LAND[1]), Math.max(TERRACES_RECT[2], HIGHROAD_RECT[2], COUNCIL_LAND[2], REC_RECT[2]), Math.max(TERRACES_RECT[3], HIGHROAD_RECT[3], COUNCIL_LAND[3], REC_RECT[3])],
+    load: () => import('./village3d'),
+  },
   // The raised ring highway's viaduct (viaduct.ts, docs/highway-plan.md Phase 2; viaduct3d.ts): all the way round the
   // town, so it comes in as soon as the city's up
   { id: 'viaduct', rect: [HIGHWAY_BOX[0] - 10, HIGHWAY_BOX[1] - 10, HIGHWAY_BOX[2] + 10, HIGHWAY_BOX[3] + 10], load: () => import('./viaduct3d') },
@@ -105,19 +120,30 @@ export interface Districts {
   step(x: number, z: number, far: number): void;
   /** Load every district now (the benchmark: it measures the whole city) */
   all(): void;
+  /** Load one district now, by its id (waking at home: the south's chunk, with his house, before the room shows) */
+  load(id: string): Promise<void>;
+  /**
+   * Load every district one after another, in the list's order or the reverse (the texture bake: the textures a
+   * district paints as it loads are counted in the order the districts arrive, so the bake's two runs load them in
+   * opposite orders, and a key that depends on the order comes out different and isn't kept)
+   */
+  inTurn(reverse: boolean): Promise<void>;
   /** How many are loading, or within reach and not loaded yet */
   pending(): number;
   loaded(): string[];
+  /** How many there are in all */
+  total(): number;
 }
 
 export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; tick?: (f: Tick) => void; list?: LazyDistrict[] }): Districts {
   const list = opts.list ?? LAZY_DISTRICTS;
   const state = new Map<string, 'loading' | 'done' | 'failed'>();
   let near = 0;
-  function load(d: LazyDistrict) {
-    if (state.has(d.id)) return;
+  function load(d: LazyDistrict): Promise<void> {
+    if (state.has(d.id)) return Promise.resolve();
     state.set(d.id, 'loading');
-    d.load()
+    return d
+      .load()
       .then(async (m) => {
         m.register({ low: opts.low, scene: opts.scene, tick: opts.tick });
         // The worker registers the same sites before they're queued here, so it can take them (a few seconds at most)
@@ -143,7 +169,15 @@ export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker
     all() {
       list.forEach(load);
     },
+    load(id) {
+      const d = list.find((q) => q.id === id);
+      return d ? load(d) : Promise.resolve();
+    },
+    async inTurn(reverse) {
+      for (const d of reverse ? [...list].reverse() : list) await load(d);
+    },
     pending: () => Math.max(near, [...state.values()].filter((s) => s === 'loading').length),
     loaded: () => list.filter((d) => state.get(d.id) === 'done').map((d) => d.id),
+    total: () => list.length,
   };
 }

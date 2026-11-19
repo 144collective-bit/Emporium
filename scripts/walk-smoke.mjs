@@ -1,5 +1,6 @@
 // A smoke test of walk mode in the built site (`npm run smoke` after `npm run build`): a headless Chromium opens the
-// city and plays through it a scene at a time, each from a fresh page at its own spot: home (in through Degen's front
+// city and plays through it a scene at a time, each from a fresh page at its own spot: waking in his room (out of
+// the front door once the street is in), home (in through Degen's front
 // door, down the hall, out again), his garage's menu, the car (in at his garage, out through its door, a drive, out), on foot (walk, sprint,
 // jump, crouch, the hub open and closed), the gun store's counter, the metro (the station's card, a ride, skipped to
 // the end), a kart race (the clubhouse's menu, a single race, quit), flying (into your aircraft in the hangar,
@@ -104,12 +105,12 @@ async function scene(name, spawn, play, init) {
   };
   let why = '';
   try {
-    // (no spot given: walking starts where it does for everyone, at home)
+    // (no spot given: he wakes where everyone does, in his room at home, docs/spawn-plan.md)
     await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}`);
     await t.click('[data-start-guest]');
+    // (Single player goes straight into walking)
     await t.click('[data-start-single]');
     await until('the start menu to go', () => !document.querySelector('.has-start'), null, 600000);
-    await t.click('[data-walk-toggle]');
     await until('walk mode', () => document.body.classList.contains('is-walking') && /at -?[\d.]+, -?[\d.]+/.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 300000);
     await step(`walking, at ${(await where()).join(', ')}`);
     await play(t);
@@ -122,6 +123,63 @@ async function scene(name, spawn, play, init) {
   for (const e of errors) console.error(`[smoke] ${name}: page error: ${e}`);
   if (why || errors.length) failed++;
 }
+
+// Waking up (docs/spawn-plan.md): no spot given, so he starts where every visit does, in his room; the front door
+// waits ("Getting ready…") until the street outside is built, then out he goes
+await scene('wake', null, async (t) => {
+  const [x, z] = await t.where();
+  if (!(z > 385.0 && z < 391.3 && x > -237.7 && x < -228.9)) throw new Error(`woke at ${x}, ${z}, not in the room`);
+  await t.step(`woke in the room, at ${x}, ${z}`);
+  // (sat on the sofa: up off it a moment after the menu's gone, onto the spot in front of it, the view swung behind him)
+  await t.until('him to stand up', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) > 385.95;
+  });
+  await t.step(`stood up, at ${(await t.where()).join(', ')}`);
+  // (the camera looking south, into the room: its forward is -z of its matrix)
+  await t.until('the view to swing round behind him', () => -(window.__city?.camera.matrixWorld.elements[10] ?? 0) > 0.85);
+  await t.step('the view behind him');
+  // (to the front door: he faces the telly, south, so W takes him past the coffee table, clear of the corner sofa's
+  // chaise (docs/compound-plan.md Phase 2), A east to the hall and S back north to the door; its prompt reads
+  // "Getting ready…" until the street is in)
+  await t.go('w', 1.2, 'walked past the coffee table');
+  // (asked short: at a frame or two a second he coasts on half a tile or more, and the door's prompt is within 1 of it)
+  await t.go('a', 1.5, 'across the room to the hall');
+  await t.go('s', 1.85, 'and up the hall to the front door');
+  await t.prompt('Front door');
+  await t.until('him to be outside', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) < 384.5;
+  });
+  await t.step('out by the front door');
+});
+
+// Turning while he gets up (the owner's report, 2026-11-18: after the couch the view wouldn't turn): the view dragged
+// round by hand as he stands must stay where it's put, not be pulled back behind him
+await scene('wakelook', null, async (t) => {
+  await t.until('him to stand up', () => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Number(m[2]) > 385.95;
+  });
+  await t.step('stood up');
+  // (a drag across the canvas: the view turns, walk.ts look())
+  const yawOf = () => t.page.evaluate(() => { const e = window.__city.camera.matrixWorld.elements; return Math.atan2(-e[8], -e[10]); });
+  const box = await t.page.locator('canvas').first().boundingBox();
+  const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
+  await t.page.mouse.move(cx, cy);
+  await t.page.mouse.down();
+  for (let i = 1; i <= 10; i++) await t.page.mouse.move(cx + i * 30, cy);
+  await t.page.mouse.up();
+  const turned = await yawOf();
+  await t.step(`turned the view by hand, to ${turned.toFixed(2)}`);
+  // (some frames later it's still where it was put: the swing behind him let go)
+  await t.until('a few frames', () => true);
+  await t.page.waitForTimeout(4000);
+  const after = await yawOf();
+  const off = Math.abs(Math.atan2(Math.sin(after - turned), Math.cos(after - turned)));
+  if (off > 0.15) throw new Error(`the view was pulled back: ${turned.toFixed(2)} to ${after.toFixed(2)}`);
+  await t.step(`still there (${after.toFixed(2)})`);
+});
 
 // Home (home.ts): in the yard of Degen's compound in the far west, in through his front door (a fade into the room), a
 // few steps in, and out again by the same door
@@ -157,17 +215,47 @@ await scene('homegarage', '-238.35,380', async (t) => {
   await t.step('the garage menu closed');
 });
 
-// The roof terrace (docs/ends-far-west-plan.md Phase 3): at the stairs' foot in his room, up (a fade to the roof), a few
-// steps along the rail, and down again
+// Up through the house (docs/compound-plan.md Phase 3): at the stairs' foot in his room, up to the landing (a fade),
+// on up through the hatch to the roof terrace, a few steps along the rail, and down to the landing again
+const shows = (label) => (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes(l);
 await scene('hometerrace', '-230.25,387.5,3.14', async (t) => {
   await t.prompt('Upstairs');
-  await t.until('the way down to show (he is on the terrace)', () => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes('Downstairs'), null, 120000);
+  await t.until('the way up to the roof to show (he is on the landing)', shows(), 'Roof', 120000);
+  await t.step(`up on the landing, at ${(await t.where()).join(', ')}`);
+  await t.prompt('Roof');
+  await t.until('the way down to show (he is on the terrace)', shows(), 'Downstairs', 120000);
   await t.step(`up on the terrace, at ${(await t.where()).join(', ')}`);
   await t.go('w', 1.5, 'walked along the terrace');
   await t.go('s', 1.3, 'and back to the hatch');
   await t.prompt('Downstairs');
-  await t.until('the way up to show (he is back in the room)', () => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes('Upstairs'), null, 120000);
-  await t.step('down in the room again');
+  await t.until('the way up to the roof to show (he is back on the landing)', shows(), 'Roof', 120000);
+  await t.step('down on the landing again');
+});
+
+// Upstairs, the office's desk (docs/compound-plan.md Phase 3): it opens the business card, which closes again
+await scene('homedesk', '-235.25,389.95,3.14,1.45', async (t) => {
+  await t.prompt('Desk');
+  await t.until('the business card', () => !!document.querySelector('.city.is-hub'), null, 60000);
+  await t.step('the business card opened at the desk');
+  await t.page.keyboard.press('Escape');
+  await t.until('the card to close', () => !document.querySelector('.city.is-hub'), null, 60000);
+  await t.step('the card closed');
+});
+
+// Down to his basement (docs/compound-plan.md Phase 4): by the stairs in his room, down the steps (a fade), a few
+// steps into the den, back, and up again
+await scene('homeden', '-230.25,385.65,3.14', async (t) => {
+  const z = () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/)?.[2] ?? NaN);
+  await t.prompt('Basement');
+  await t.until('him down in the den (past the steps\' foot)', `(${z})() > 387.3`, null, 120000);
+  await t.step(`down in the den, at ${(await t.where()).join(', ')}`);
+  const foot = await t.where();
+  await t.go('w', 1.2, 'walked into the den');
+  const there = await t.where();
+  await t.go('s', Math.hypot(there[0] - foot[0], there[1] - foot[1]), 'and back to the steps');
+  await t.prompt('Upstairs');
+  await t.until('him back in the room by the stairs', `(${z})() < 387`, null, 120000);
+  await t.step('up in the room again');
 });
 
 // His workshop's roller door (docs/ends-far-west-plan.md Phase 2): the garage's menu, opened on its kit
@@ -298,6 +386,83 @@ await scene('fly', '126.8,347.4', async (t) => {
   await t.go('w', 4, 'rolled out');
 });
 
+// Endswood's sky network (southsky.ts): at The Core's lift door (its north face), up to the third floor and down again;
+// then from the foot of its stair (its south face, facing up it) walked up to its landing
+const upNow = () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0);
+await scene('sky', '-50.15,370.6,2.926', async (t) => {
+  await t.prompt('Lift');
+  await t.until('the lift card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-lift-to="3"]'));
+  await t.step('the lift card opened');
+  await t.click('[data-lift-to="3"]');
+  await t.until('up on the third floor', (f) => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 3, null, 120000);
+  await t.step(`up on the third floor (${(await t.page.evaluate(upNow)).toFixed(1)})`);
+  await t.prompt('Lift');
+  await t.until('the lift card again', () => !!document.querySelector('[data-metro]:not([hidden]) [data-lift-to="0"]'));
+  await t.click('[data-lift-to="0"]');
+  await t.until('back on the ground', () => !/ · up /.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 120000);
+  await t.step('back on the ground');
+});
+await scene('stair', '-56.6,377.6,-1.786', async (t) => {
+  await t.go('w', 4, 'walked up the stair');
+  await t.until('up the stair', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 2, null, 60000);
+  await t.step(`up the stair (${(await t.page.evaluate(upNow)).toFixed(1)})`);
+});
+
+// The Circus below ground (circus.ts, docs/south-plan.md Phase 4b): from the top of the north-east subway's ramp, down it,
+// under the road and out on to the sunken plaza's floor
+const downNow = () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0);
+await scene('circus', '-76.05,395.78,2.88', async (t) => {
+  await t.go('w', 8, 'walked down the ramp');
+  await t.until('down in the subway', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.5, null, 60000);
+  await t.step(`down in the subway (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('w', 9, 'walked under the road into the plaza');
+  await t.until('on the plaza floor', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.8, null, 60000);
+  await t.step(`on the plaza floor (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// An underpass (underpasses.ts, docs/south-plan.md Phase 4c): through the one under Endswood Road's bend, down one
+// side, under the road and up the other
+await scene('underpass', '23.67,384.43,1.198', async (t) => {
+  await t.go('w', 10, 'walked down under the road');
+  await t.until('down under the road', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.5, null, 60000);
+  await t.step(`under the road (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('w', 12, 'walked up the far side');
+  await t.until('up at street level again', () => !/ · down /.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 60000);
+  await t.step('up at street level on the far side');
+});
+
+// The High Road's underground station (southline.ts, docs/south-plan.md Phase 4e): from the sidewalk in through its
+// door, down its stairs (west), along the ticket hall and down the escalator to the platform
+await scene('station', '-158.47,389.10,-0.295', async (t) => {
+  await t.go('w', 2.9, 'in through the door to the middle of the landing');
+  await t.go('a', 9, 'down the stairs to the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.go('a', 16, 'along the hall and down the escalator');
+  await t.until('down on the platform', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 6, null, 60000);
+  await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// The Trenches' underground station (southline.ts, Phase 4f): from The Block's plaza by the raised station's tower,
+// down its stairs (south-east) and on into the side of its ticket hall (the High Road's walk goes on down to a platform)
+await scene('trenches', '-101.03,180.75,-2.581', async (t) => {
+  await t.go('w', 12, 'down the stairs into the ticket hall');
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+});
+
+// Lot 9's and Aldwyn's Green's underground stations (Phase 4f): down each one's stairs from the street into its ticket hall
+for (const [name, spawn, far] of [
+  ['lot9station', '-115.58,471.00,-3.062', 10],
+  ['aldwynsstation', '-230.49,458.34,-1.736', 27],
+]) {
+  await scene(name, spawn, async (t) => {
+    await t.go('w', far, 'down the stairs into the ticket hall');
+    await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+    await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  });
+}
+
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
 await scene(
   'pad',
@@ -322,7 +487,9 @@ await scene(
     await press(9);
     await t.until('Start to open the hub', () => !!document.querySelector('.city.is-hub'), null, 60000);
     await t.step('Start opened the hub');
-    await press(1);
+    // (held longer: headless, in software, the hub's frames come a second or two apart, so a shorter press can fall
+    // between two of them; a real pad is read every frame)
+    await press(1, 4000);
     await t.until('B to close the hub', () => !document.querySelector('.city.is-hub'), null, 60000);
     await t.step('B closed the hub');
   },

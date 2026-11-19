@@ -9,11 +9,23 @@ keep it up to date when what it describes changes.
   once a second (`builtShows()`). Sound is always off until the visitor
   turns it on.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
-  (fewer cars and people, no shadows, smaller bloom on phones), runs phones
+  (fewer cars and people, no shadows, smaller bloom on phones) by the rules
+  in `gputier.ts` (DOM-free, `tests/gputier.test.ts`; the stability plan's
+  "The tier by the graphics"): a phone's screen takes low; a touch screen,
+  4 GB or less, 4 cores or fewer, or graphics built into the processor
+  (Intel's, AMD's Radeon Graphics / Vega, a plain Apple M chip, by WebGL's
+  name for them) take medium; and for 14 days after the 3D graphics stopped
+  (`webglcontextlost`, kept in `degen-city-gpu-v1`, not in the backup) a
+  start is a tier below the one that stopped. `?fps` says which and why.
+  It runs phones
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
-  slow. When frames stay fast again, bloom and then pixels come back (once
-  each; shadows stay off, re-enabling them recompiles every material).
+  slow. When frames stay fast again, bloom, shadows and then pixels come
+  back (once each; `quality.ts`, DOM-free, `tests/quality.test.ts`).
+  Shadows go by their intensity (`sky.setShadows()`, eased, as in the City
+  view), never `renderer.shadowMap.enabled` or a light's `castShadow`:
+  those change every material's shader, and turning them off recompiled
+  the whole city in one frame (the stability plan's Phase 6.1).
   The trim (the owner's call, phones only; `docs/performance-plan.md`):
   trees are lighter near (a dodecahedron canopy, four-sided trunks, open
   five-sided cones) and two crossed flat cards far (`crossedCards()` in
@@ -60,7 +72,13 @@ keep it up to date when what it describes changes.
     amenities (`commons.ts`), the blocks' verges and the rolls, and since the
     start-up profile (`docs/performance-plan.md`) the metro's pillars and
     raised stretches (`metro.ts` `PILLARS`, `PLATEAUS`) and what's under the
-    highway's deck (`viadress.ts` `UNDER`). A new module that bakes goes in `MODULES` in
+    highway's deck (`viadress.ts` `UNDER`), and since the south's Phase 3e
+    Aldwyn's Green's layouts: its terraces and ginnels (`southterraces.ts`, key
+    `terraces`), the High Road's buildings (`highroad.ts`, `highroad`) and the
+    council rows, corner shops and community centre (`council.ts`, `council`), and since the spawn plan's Phase 3a
+    the south's closes, crescents and their footpaths (`south.ts` `GROWN`, key `south-grown`: about a second of a
+    phone's start-up), and since the south's 4e the underground's south line and its stations (`southline.ts`,
+    `southline`: its bends and stations' laying out of the boot). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
@@ -130,12 +148,20 @@ keep it up to date when what it describes changes.
     each (a fresh save at noon, a well-used one at midnight): only what
     both runs painted the same is kept, so a key (`texKey()`: what draws
     it, its size, how many like it came before) stands for one picture.
-    Only what the boot painted counts: index.ts calls
-    `bootTexturesPainted()` (kit.ts) as the loader goes, and the bake keeps
-    the textures painted up to then (`__texBakeBoot`). A district loaded as
-    you approach paints its own whenever it arrives, so counting those made
-    the set differ run to run (2026-11: two extra kept on one run tipped
-    `texLow` over its budget); the bake logs any it left out.
+    What the boot painted counts (index.ts calls `bootTexturesPainted()`
+    (kit.ts) as the loader goes: `__texBakeBoot`), and since the stability
+    plan's Phase 4.3 what every district paints as it loads: in bake mode
+    the districts don't load during the boot, then load one after another
+    (`inTurn()` in `districts.ts`), in the list's order on the noon run and
+    the reverse on the midnight one (`?bake-textures=reverse`), so a key that
+    depends on the order the districts arrive in comes out different and
+    isn't kept; a run where a district wouldn't load is tried once more.
+    What a district's sites paint as they're built later is left out (how
+    many are built by then varies run to run: 2026-11, two extra kept on one
+    run tipped `texLow` over its budget); the bake logs any it left out. A
+    texture a site's builder paints is counted within the site
+    (`texscope.ts`, `inTexScope()` from `site()` in `tilework.ts`), so its
+    key doesn't depend on which sites were built first.
     Each is GPU-compressed (KTX2: Basis ETC1S, UASTC where ETC1S loses
     too much), written to `_astro/tex/` and listed in the page
     (`#city-tex`); `loadBuiltTextures()` loads them with three's
@@ -279,7 +305,21 @@ keep it up to date when what it describes changes.
     still can. `addLod()` / `addLodSwitch()` swap them (`updateLods()`
     from `index.ts`). They're made after the first frame, a place at a
     time in spare moments (`farQueue` in `index.ts`); until then a place
-    stays near.
+    stays near. A far form's colours take each texture's average: a
+    texture made at build time carries it (`userData.average`); one the
+    city painted is averaged on the GPU first and read back without the
+    page waiting (`primeAverages()` in `lod.ts`: a 32 x 32 grid of samples,
+    weighted by cover, a texel each, `readRenderTargetPixelsAsync()`), as
+    reading the canvas back (`average()`, still there for anything missed)
+    stalled the page till the GPU had done all it was given: measured
+    headless with no textures baked (2026-11-16), 22 textures' averages
+    took 23.7 s of the page's time read from their canvases and 3.1 s
+    averaged on the GPU (most of it each texture's first upload). Once a place's far form has shown `FREE_AFTER` (15 s), its
+    near form's geometries are freed on the GPU (`release()` on its switch,
+    `geometry.dispose()`: the arrays stay, three uploads them again as
+    they're next drawn; the stability plan's Phase 3, item 6); `?fps` says
+    how many and how much (`freedNear()`). Code that changes a near part's
+    geometry while it's far needs nothing special: it's uploaded when drawn.
   - Cars far away (parked and traffic) are their model's far form
     (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
     extruded, block wheels, about a hundred triangles), all in one
@@ -364,7 +404,12 @@ keep it up to date when what it describes changes.
   `userData.paint`) as 16-bit shares, both `normalized`, 29 bytes a vertex
   where there were 44. A new shared material whose colours stay 0 to 1 can
   be marked `paint` too; one whose colours pass 1 must not be.
-  `window.__mem()` under `?fps` says where the geometry memory is.
+  `window.__mem()` under `?fps` says where the geometry memory is;
+  `textureRows` in it, where the texture memory is (`textureRows()` in
+  `texrows.ts`, its own chunk, loaded only under `?fps` and `?bench`, so it's
+  null for a moment at first: under them a painted texture is named after the
+  start of what drew it, `named()` in `kit.ts`), and `gl`, what three holds
+  on the GPU (a count above the scene's that keeps growing is a leak).
   The uv is left out where nothing reads it (`dropsUv()` in
   `tilebatch.ts`, the stability plan's Phase 3b): the shared materials
   have no texture, and only the paint's trees' sway reads the uv
@@ -402,8 +447,10 @@ keep it up to date when what it describes changes.
 - **Memory ceilings** (`docs/stability-plan.md`, Phase 5; the owner's
   picks): `MEMORY_CEILINGS` in `targets.ts` (MiB). `npm run memcheck`
   (after a build and `npm run bake:textures`; `scripts/memcheck.mjs`, about
-  13 minutes) builds the whole city on a headless phone under `?bench` and
-  holds its geometry, textures and render targets to the phone's; `npm run
+  15 minutes, up to 75 allowed) builds the whole city on a headless
+  phone under `?bench` and holds its geometry, textures and render targets
+  to the phone's, and the benchmark's slowest CPU frames to
+  `HITCH_CEILINGS` (the stability plan's 6.3); `npm run
   memcheck -- soak` adds the leak check (`SOAK_MIN`, 20: half the City
   view, half walking). The "Memory" Action runs it by hand only. The
   desktop's render targets are held by a formula (`pictureTargets()`,
@@ -421,12 +468,46 @@ keep it up to date when what it describes changes.
   Southfield and Lot 9 (`BLEND_VIEWS` has the same six for the shots)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,
-  average / 95th-percentile / slowest frame, CPU ms, draws and triangles,
+  average / 95th-percentile / slowest frame, CPU ms, the slowest frame's CPU
+  and where it went (`worstCpu`, `worstParts`: index.ts's `part()` marks
+  the sky, building, tiles, far forms, ticks and rendering; the stability
+  plan's 6.3, which `npm run memcheck` holds to `HITCH_CEILINGS` in
+  `targets.ts`: 250 ms a view on its headless phone), draws and triangles,
   the shadow map's, memory, boot) go in a card on the page, the console and
   `window.__bench`; the card's **Copy results** button copies them with the
   device (its user agent and screen), so a real phone's numbers can be
   pasted back. Run it before and after anything that could make the
   city heavier, on a phone and a laptop.
+- **Measured, the south's lift** (2026-11-15, headless, the medium tier at 1280 x 800, the City view): Phase 1c's
+  lift (kit.ts `liftOnto()`) split and unshared every batch that so much as reached into the south's rect, the city's
+  ground among them: the boot went from 6.6 s to 19.0 s (its own work 3.3 to 14.3 s) and geometry from 262 to 546 MB.
+  Now only the faces over the rect are split (the rest kept whole and shared), and southground.ts and south.ts skip
+  the outline tests (Lot 9's fence, the brook, the churchyard, the rec ground) for points well clear of their boxes,
+  which gives the same numbers. Measured after the lift's fix the same way: the boot 8.8 s (its work 4.7 s),
+  geometry 265 MB, triangles back to 0.39M in the City view (from 0.49M).
+- **The south's layout as the city loads** (2026-11-16): `?bench` across every view, against the build before
+  Phase 1c, found draws, triangles and memory back in line (the south's new blocks add up to 9% triangles in the views
+  that see them), and the boot's work about 1.9 s longer, half of it the south's street web laid out at load. Its
+  hot tests now skip the far: `zoneAt()` tests Lot 9's fence only within its box, each footpath laid has its box
+  for the closes' and crescents' clearance tests, and the brook's distance is `brookDist` (south.ts), a
+  `nearLine()` (streetfaces.ts) with the brook's stretches bucketed by cell: exactly `distTo` within 14, which is all
+  that's asked of it (`keptOff()`, the bridges, the valley in southground.ts). The same streets, blocks and heights
+  to the bit; about 1 s less of the main thread's time at load, the boot about 0.5 s shorter measured headless.
+- **The council rows out of the boot** (2026-11-18): the boot's code had reached 741.3 KB of 750 after Phase 3d;
+  council.ts (the council rows, bungalows and allotments) was in it only for its solids and its rect. Now only the
+  village's chunk imports it (its solids join there through `addSolids()`, its rect fixed as `COUNCIL_LAND` in
+  south.ts): the boot's code 738.6 KB. Laying it out had run as the page's modules loaded, **before the boot's own
+  clock starts**, so the `?fps` boot line never showed it: from opening the page to the boot line, headless, the
+  phone tier 12.6 to 10.3 s and desktop 13.6 to 11.4 s. A module's top-level work is the page's load time too:
+  measure from the page's start (`performance.now()` at the boot line), not only the boot line.
+- **What runs as the page loads** (2026-11-18): a CPU profile from the page's start, adding up the time under each
+  chunk's top-level code, found about 1.8 s of it on desktop, before the boot's clock: the south's street web (south.ts,
+  its `Near` now keyed by number), Endswood's land grid (endswood.ts `CELLS`: each block's rows now crossed once,
+  streetfaces.ts `rowCrossings()` / `insideRow()`, exactly `inside()`, tested) and Aldwyn's Green's back alleys
+  (southterraces.ts `ALLEYS`: every house against every other, now only those whose box it reaches). The same output to
+  the bit; about 0.35 s less, from opening the page to the boot line 9.45 to 9.14 s (phone tier) and 10.67 to 10.25 s
+  (desktop), headless. What was left at the top then: the street web's layout itself (about 0.4 s; since baked,
+  `south-grown`, above), the viaduct's dressing and the solids.
 - `tests/snapshot.test.ts` holds every place, door, pad, lot, spawn,
   landmark, downtown building and street where it stands
   (`tests/fixtures/layout.json`; a street's end at the world's edge is

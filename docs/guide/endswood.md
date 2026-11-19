@@ -21,7 +21,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
     the links (`FENNEL_WAY`, `RUNWAY_VIEW`, `LOT_LANE` in through Lot 9's west gate onto its lane, `BRAMBLE_LANE`,
     `BROOKSIDE`), the village's streets (Bell Street, Yew Walk, Chapel Row round the churchyard, Orchard, Lark, Hill,
     Mill, Thorn).
-  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes), every
+  - **The closes and crescents**, grown off them (seeded, the same every time: crescents first, then closes; worked
+    out when the site is built, `GROWN`, baked.ts key `south-grown`, `docs/spawn-plan.md` Phase 3a), every
     one in a council, village or bungalow zone, clear of the other streets by `CLEAR`, with **a footpath through**
     (`FOOTPATHS`, the owner's rule: nowhere is a dead end on foot), on ahead past the close's end or out from the
     crescent's back, never back to the street it grew off. A new street joins `MAIN` (and `GROWS` decides where
@@ -47,26 +48,138 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   brook between its banks and the bridge's parapets, the hedges, the rec ground's and the churchyard's grass, the
   compound's paved plot and the compound itself (`registerHome()`, home3d.ts), and Lot 9's tunnel under the ring road
   (`tunnel3d.ts`, the estate's subway dressing it always had).
+- **The blocks** (`southblocks.ts`, DOM-free, tested in `tests/southblocks.test.ts`, docs/south-plan.md Phase 2): drawn
+  by `southblocks3d.ts` (2b; `LAZY_DISTRICTS` id `south-blocks`, `BLOCKS_RECT`), walked on in 2c. `BLOCKS` (the Rampart, Harrier and Kite Points, The Core, Linnet, Marten
+  and Wren Courts, Sorrel, Fennel and Teasel Houses: each its footprint, spine, depth, galleried side, steps of storeys,
+  base, accent; the Rampart's `arch`, Teasel's `refit`), `CORES` (the stair cores), `GALLERIES` (every third floor,
+  `SKY_FLOORS`), `BRIDGES` and `DECKS` (the sky network), `COURTS`, `GRASS`, `DESIRE_LINES`, `PLAY`, `BUNKER` (Bunker
+  Sound's door), `BLOCK_SOLIDS` (strips over each footprint, `cover()`; not in solids.ts until they're drawn). Heights
+  by `floorY()` / `roofY()` / `topOf()`: a storey 1, the ground floor `GROUND_H` 1.4. The slabs round the Circus follow
+  their streets (`alongStreet()`: the street moved off to its side); a block's base is its slab over the highest ground
+  under it. `stepShape()` gives each step's outline with its edges tagged (its sides, rounded corners, ends, the cuts
+  where steps meet; `outward()` their normals), which is what's drawn.
+- **The blocks drawn** (`southblocks3d.ts`, sites a step, a tower, a core, a bridge span, the deck): the wall atlas's
+  `panel` band (precast panels, ribbon windows lit at night) over a glazed ground floor (`lobby` band and an accent
+  fascia) on the galleried side and the ends, concrete on the other; the taller step's wall where steps meet; roofs and
+  parapets; the Rampart's arch (soffit, piers' faces); galleries at every third floor (deck, accent upstand, warm strip
+  light under it); balconies with accent fronts on the slabs' other sides, Teasel's boarded windows and hoarding, sky
+  garden planters on the roofs (near only, not on phones); the towers' ledge rings, flared plant room and beacon; the
+  cores' lit stair slots; the bridges (concrete, a glass band each side lit warm at night, a strip light under); the
+  podium deck on its columns; Bunker Sound's door with its neon. Built with `lift: false` (kit.ts `Batch.build()`):
+  they stand level on their plinths, not on the rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in
+  solids.ts. Bench views `south-blocks` and `south-rampart`.
+- **The sky network walked** (`southsky.ts`, DOM-free, tested in `tests/southsky.test.ts`, docs/south-plan.md 2c):
+  `SKY_SHAPES` (the galleries, the bridges, the podium deck, the cores' open landings, the ways through the Rampart's
+  gallery fronts, The Core's stair and landing), `skyFloorAt()` (groundheight.ts's `sky` layer, before `south`),
+  `skyUp()` / `skyWall()` (walk.ts's `blocked()`: up there only the railings stop you, the solids don't); the lifts
+  (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's
+  card, `[data-metro]`, its words put back after; index.ts `rideTo()`). A bridge to a tower ends at its door: the towers
+  aren't entered. The smoke test's `sky` and `stair` scenes.
+- **The ground round the blocks** (`southyard.ts`, DOM-free, tested in `tests/southyard.test.ts`, 2d): `BAYS` and
+  `YARD_CARS` (drawn by cars.ts `parkedCars()` on the main thread), `BIN_STORES`, `BIKE_SHEDS`, the play area's `FRAME`,
+  `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
+  `DECK_PROPS` (`onDeckProp()`: southsky.ts keeps you out of them), `DECK_COLUMNS`, `YARD_SOLIDS` (solids.ts, lifted onto
+  the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
+- **Aldwyn's Green's terraces** (`southterraces.ts`, DOM-free, tested in `tests/southterraces.test.ts`, 3a): `HOUSES`
+  (each its front's middle `at`, its `face`, frontage `w`, street, block, front, paint, door, dormer, chimney, `lit`,
+  `endL` / `endR`, `base` / `low`), `houseFoot()`, `plotOf()`, `ALLEYS`, `GINNELS`, `frontWalls()`, the solids,
+  `TERRACES_RECT`. Drawn by `village3d.ts` (lazy chunk `village`): `PIECES` (one house's shapes in its own frame,
+  `frameOf()` stretches each to its frontage, right-handed) copied by `Batch.instances()`, built with `lift: false`; the
+  yards, walls, alleys and ginnels in a lifted Batch. Bench view `village-terraces`.
+- **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
+  (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
+  `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,
+  `CHURCH_SOLIDS` (unlifted) / `CHURCHYARD_SOLIDS` (lifted). Drawn by village3d.ts (`drawChurch()`, `drawChurchyard()`).
+  Bench view `village-church`.
+- **The High Road's places** (`highroad.ts`, DOM-free, tested in `tests/highroad.test.ts`, 3c): `SHOPS` (each its
+  kind, name, front `at`, `face`, `w`, `d`, storeys, colour, base), `KINDS`, `HEIGHT`, `shopFoot()`, `topOf()`, `doorOf()`,
+  `SHOP_SOLIDS`, `HIGHROAD_RECT` (the village's chunk covers it); laid before the terraces (southterraces.ts keeps out of
+  them). The big four (`brook`, `rosas`, `kestrel`, `busgarage`) are places in endsplaces.ts. Drawn by `highroad3d.ts`
+  (`registerHighRoad()`, from village3d.ts): every kind in a building's own frame, the signs one atlas (`siteMat`).
+- **The council rows, bungalows, allotments** (`council.ts`, DOM-free, tested in `tests/council.test.ts`, 3d): `lay()`
+  (lots along a block's runs where they fit, in zones), `lotRing()`, `SEMIS`, `BUNGALOWS`, `CORNER_SHOPS`,
+  `COMMUNITY_CENTRE`, `ALLOTMENTS`, `PLOTS`, `COUNCIL_SOLIDS` (unlifted), `ALLOTMENT_SOLIDS` (lifted), `COUNCIL_RECT`
+  (what's laid; inside `COUNCIL_LAND`, fixed in south.ts, which the village's chunk covers: tested). **Not in the
+  boot**: only the village's chunk imports it (laying it out took seconds as the page loaded), so its solids join
+  there, `registerCouncil()` calling `addSolids()` on the main thread (the houses' with `lift` false, their tops
+  already over their plinths), as Sunridge's houses do; tests that check against `SOLIDS` across the south add them
+  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
+- **Aldwyn's Green Rec** (`rec.ts`, DOM-free, tested in `tests/rec.test.ts`, 3e): `PITCH`, `GOALS`, `PAVILION`, `VERANDA`,
+  `SKATE` and its features, `PLAYGROUND`, `BENCHES`, `GATE`, `FOOTPATH`, `BRIDGE` / `recBridgeY()` (groundheight.ts's
+  `recbridge` layer), `REC_PATH`, `REC_SPAWN`, `REC_SOLIDS`, `REC_RECT`; a place (`rec`, endsplaces.ts). Drawn by
+  village3d.ts (`drawRec()`, `drawRecBridge()`).
+- **The rolling ground** (`southground.ts`, docs/south-plan.md Phase 1c, tested in `tests/southground.test.ts`): the
+  village's hill (`HILL_H` 2.4, St Aldwyn's on top), swells in the fields, the brook's valley, today's ground wherever
+  the south meets what's fixed (`freedom()`); each street on a bed (`ROAD_BEDS`, one in ten at most, level across, the
+  same height where streets meet, a bridge over the brook); `southHeightAt()` exactly, `southLift()` off a cached grid.
+  **Everything in the south stands on it**: kit.ts `Batch.build()` lifts what's drawn there (`setGroundLift()`, set in
+  index.ts for the main thread and the site worker; faces split to `LIFT_EDGE`, but only the faces over the south's
+  rect: the rest of a batch keeps its faces whole and its corners shared, so the city's ground and every batch that
+  only reaches into the south aren't split and unshared whole, which had tripled the boot's work and doubled the
+  geometry), terrain.ts reads it (cars, taxis, trees,
+  cameras), groundheight.ts's `south` layer walks on it, solids.ts's `onGround()` lifts the boxes, the lamps carry their
+  lifted height. Anything new drawn in the south is lifted for free; anything placed outside a Batch (a lamp, a tree, a
+  pin, a pool of light, a person) adds `southLift(x, z)` itself.
 - **The ground** (ground.ts): worn grass and bare patches round the estate (`ESTATE_LAND`), a worn lawn through the
   village and the rows (`VILLAGE_LAND`), the brook's banks lush. **Trees keep off** (landuse.ts `KEEPS`) the estate's
   land, the brook and the rec ground; the fields keep theirs.
 - **Its places** (`endsplaces.ts`, tested in `tests/endsplaces.test.ts`): the estate (pin over the Circus), St
-  Aldwyn's (over its churchyard) and Bunker Sound (by Endswood Road), still "coming soon", their pins where they're to
-  be built, no doors until their buildings stand (the owner's call), `ENDS_SPAWNS` on a sidewalk by each.
+  Aldwyn's (over its churchyard) and Bunker Sound (its door under Teasel House's hoarded half, `southblocks.ts`
+  `BUNKER`, off Endswood Road: its pin over it and a door prompt, `ENDS_DOORS`), still "coming soon"; the others' doors
+  when their buildings stand (the owner's call); `ENDS_SPAWNS` on a sidewalk by each.
 - **Its sound** (ambience.ts `ends`): on its land and 25 past it. Bunker Sound's beat and St Aldwyn's bell are off
   until their buildings come back (`studio`, `bell` are 0).
-- **Below ground**: Lot 9's tunnel only (groundheight.ts `UNDER`, underground.ts); the Circus's well and its subways
-  are Phase 4's.
-- **`?bench` views**: `south-circus`, `south-high`, `south-village`, and `ends-home` (the compound from the High Road's
-  end).
+- **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
+  subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
+  north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by
+  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk) and walked (groundheight.ts
+  `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
+  `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it
+  (`CIRCUS_HOLE`); the island is a planted ring round the plaza. Its trees and lamps at the boot (index.ts). The kit
+  takes a passage at any angle (`radial()`) and a well's stepped seats (`tiers`, `wellFloor()`). The underpasses under
+  the avenue crossings (`underpasses.ts`, the south plan's 4c: under the wide south avenue and Endswood Road's and
+  Marsh Lane's bends, `straight()` passages, plain: `underpass3d.ts`) share the Circus's cuts (`SLAB_CUTS`,
+  `GROUND_HOLES`) and walking (`UNDER`). The underground's south line as data (`southline.ts`, the south plan's 4d: `LINE`,
+  `SOUTH_STATIONS` with their platform, hall, escalator and way in, `LINE_PASSAGES`), drawn and walked from 4e; the kit
+  has levels for it (`y0` / `y1`, `LEVEL`). The stations built (`BUILT_STATIONS`: the High Road's in 4e, all five since 4f) are walked
+  (`BUILT_PASSAGES` in `UNDER`), drawn (`line3d.ts`, the south's chunk, a site each) and their stairs cut
+  (`STAIR_CUTS`); the High Road's station building is highroad.ts's `station` kind (`stationWalls()`).
+- **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
+  end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
   `PLOT` and `GATES` (all that file is now), its gates on Gate Lane at `HEAD`; the wall and gates, the double garage
   (`CAR_HOME`, `BIKE_HOME`, `HOME_GARAGE_DOOR`), the workshop (`HOME_WORKSHOP_DOOR`), the house with its room
-  (`ROOM`, `FURNITURE`, `HOME_PORTALS`, `HOME_USES`: the wardrobe and the stash) and its roof terrace (`ROOF_Y`,
+  (`ROOM`, `FURNITURE`, `HOME_PORTALS`, `HOME_USES`: the wardrobe and the stash; `HOME_WAKE`, where every visit
+  starts, `SOFA_SEAT`, where he sits as he wakes, `HOME_WAITS`, the ways out that wait while the street loads, and
+  the room's curtains, `ROOM_WINDOWS`, `CURTAIN`, `curtainPanels()`, drawn by home3d.ts `addCurtains()`, following
+  spawn.ts `curtains`: `docs/spawn-plan.md`) and its roof terrace (`ROOF_Y`,
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the
-  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`.
+  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`. **The upgrade** (the owner's call, 2026-11-18) is planned in
+  `docs/compound-plan.md`: the outside done up with his neon, the ground floor refitted, an upstairs (a bedroom, an
+  office with a desk), a trophy wall, a basement trading den; nothing built until its phase is signed off.
+  Phase 1 (the outside) is built: black steel and his neon (home3d.ts `STEEL_BLACK`, `HIS_NEON`, his D by `mark()` on
+  the gate pier's plaque and in the paving), a hoop on the garage's pier, and the yard's lit bollards and the planters
+  by the front door (home.ts `BOLLARDS`, `PLANTERS`, in `HOME_SOLIDS`).
+  Phase 2 (the ground floor refit) is built: the lounge, kitchen island and hall in `FURNITURE`, the open stairs, and
+  the trophy wall (`hometrophies.ts`: `trophies()` from the save, the `SHELF` feed set by tycoon-boot.ts; drawn on the
+  main thread by home3d.ts `trophyWall()`, added by south3d.ts).
+  Phase 3 (the upstairs) is built: the house's floors by height (home.ts `homeLevel()`, `UP_Y`, `UP_CEIL`;
+  `homeWall(x, z, r, y)`, `homeFloorY()` for groundheight.ts's `home` layer, `homeCamera(y)` for walk.ts), `UPSTAIRS`
+  (the landing, bedroom and office), the stairs re-routed room ↔ landing ↔ terrace (`HOME_PORTALS`, each with its
+  `level`), and the office's desk (`home:desk`, the business card). A new thing upstairs goes in `UPSTAIRS`.
+  Phase 4 (the basement, his trading den) is built: the `base` floor (`BASE_Y`, `BASE_CEIL`), `BASEMENT`, the steps
+  down from under the stairs (`home:cellar`, `home:cellarup`), drawn in the room's batch (home3d.ts `basement()`), the
+  trading desk's screens on the main thread (`denCharts()`, made-up charts, nothing legible). A new thing down there
+  goes in `BASEMENT`.
+  Phase 5 (the terrace and polish) is built: the outdoor sofa, the telescope, his sign at the east rail, a third
+  planter (`ROOF_THINGS`); `?bench` views `ends-room` and `ends-den`.
+  Phase 6 (the kingpin compound, the owner's call after seeing Phase 1) is built: the loft shell in charcoal brick and
+  steel (home3d.ts `house()`, `houseLights()`, home.ts `FIRE_ESCAPE`, `WALL_H` 1.8), the gatehouse and the crest gate
+  (`GATEHOUSE`, `GATE_LEAF`, `wall()`, `gatehouse()`), the fountain and palms on the drive (`FOUNTAIN`, `PALMS`,
+  `showpiece()`), the pool and cabana on the east lawn (`POOL`, `LOUNGERS`, `CABANA`, `poolside()`) and the helipad on
+  the garage's roof (`HELIPAD`, `helipad()`, looks only). Their solids are in `HOME_SOLIDS`. The plan is complete.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

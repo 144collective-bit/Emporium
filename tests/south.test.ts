@@ -6,8 +6,8 @@
 // owner's rule: no ruler-straight edges).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, COMPOUND, EDGE_Z, FOOTPATHS, GATE_LANE, HEDGES, LOT9_BOUNDS, LOT9_EDGE, LOT9_W, LOT_LANE, NODED, PATH_HALF, REC, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, zoneAt, type Pt } from '../src/scripts/city3d/south';
-import { area, cross, distTo, inside, selfCrossings } from '../src/scripts/city3d/streetfaces';
+import { BRIDGES, BROOK, BROOK_HALF, brookDist, BULB, CHURCHYARD, CIRCUS, COMPOUND, EDGE_Z, FOOTPATHS, GATE_LANE, HEDGES, LOT9_BOUNDS, LOT9_EDGE, LOT9_W, LOT_LANE, NODED, PATH_HALF, REC, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, zoneAt, type Pt } from '../src/scripts/city3d/south';
+import { area, cross, distTo, inside, insideRow, nearLine, rowCrossings, selfCrossings } from '../src/scripts/city3d/streetfaces';
 import { HEAD, PLOT } from '../src/scripts/city3d/endsfar';
 import { HIGHWAY_HALF, fromHighway } from '../src/scripts/city3d/highway';
 import { rampLand } from '../src/scripts/city3d/viaduct';
@@ -203,4 +203,30 @@ test('the Circus: the heart, five ways in', () => {
   assert.ok(circus.pts.every((p) => Math.abs(Math.hypot(p[0] - CIRCUS.x, p[1] - CIRCUS.z) - CIRCUS.r) < 1e-6));
   const arms = SOUTH_CROSSINGS.filter((c) => c.streets.includes(circus.id));
   assert.equal(arms.length, 5, `its arms: ${arms.map((a) => a.streets.join('+')).join(' / ')}`);
+});
+
+test('the fast line distance: exactly distTo within its reach, and its reach or more beyond (the brook, a closed outline)', () => {
+  const ring = nearLine(LOT9_EDGE, 6, true);
+  for (let x = -440; x <= 70; x += 1.3)
+    for (let z = 300; z <= 640; z += 1.3) {
+      const p: Pt = [x, z];
+      for (const [fast, exact, reach] of [
+        [brookDist(p), distTo(BROOK, p), 14],
+        [ring(p), distTo(LOT9_EDGE, p, true), 6],
+      ]) {
+        if (exact < reach) assert.equal(fast, exact, `at ${x},${z}`);
+        else assert.ok(fast >= reach, `at ${x},${z}: ${fast} beyond its reach`);
+      }
+    }
+});
+
+test("the scan-line test: exactly inside() along every row, on the south's blocks (hundreds of points each), points on their corners too", () => {
+  for (const b of SOUTH_BLOCKS) {
+    const zs = [...b.poly.map((p) => p[1]), ...b.poly.map((p) => p[1] + 0.37)];
+    for (const z of zs.slice(0, 40)) {
+      const row = rowCrossings(b.poly, z);
+      for (const x of [...b.poly.map((p) => p[0]), ...row, ...row.map((v) => v + 1e-9)].slice(0, 120)) assert.equal(insideRow(row, x), inside(b.poly, [x, z]), `${b.id} at ${x}, ${z}`);
+      for (let x = Math.min(...b.poly.map((p) => p[0])) - 2; x < Math.max(...b.poly.map((p) => p[0])) + 2; x += 0.9) assert.equal(insideRow(row, x), inside(b.poly, [x, z]), `${b.id} at ${x}, ${z}`);
+    }
+  }
 });

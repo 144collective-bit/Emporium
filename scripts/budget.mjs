@@ -44,9 +44,13 @@ const BUDGETS = {
    * and for the views plan on main (docs/views-plan.md Phases 1-4, under the same standing call): one camera system
    * for every vehicle, ride, race and the ring, and the control card's hooks in walk mode (the key table itself is
    * its own chunk); the two together from 720; and from 730 for Endswood Estate (docs/estate-plan.md Phases 2-5,
-   * under the same standing call): its streets' routes, its blocks' and street level's solids, and its decks walked on
+   * under the same standing call): its streets' routes, its blocks' and street level's solids, and its decks walked on;
+   * and from 740 on purpose (the owner's call, 2026-11-18): main had grown to 739.8 with the south's re-laying, and
+   * the stability plan's tier by the graphics, its step-down order and the texture keys (gputier.ts, quality.ts,
+   * texscope.ts: ~1.7 KB, which must run before the city builds) took it over; the ?fps-only texture breakdown went
+   * to its own chunk (texrows.ts) first
    */
-  bootJs: 740,
+  bootJs: 750,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**
@@ -61,11 +65,14 @@ const BUDGETS = {
    * The textures made at build time (scripts/bake-textures.mjs), as phones fetch them (KTX2, already compressed).
    * Raised from 2300 on purpose (the owner's call, 2026-11): with every one of the 118 phone textures baked (as most
    * bakes now do: a texture is only left to paint when its noon and midnight runs differ), the set is about 2340 KB,
-   * which held the Worker's build red on main
+   * which held the Worker's build red on main. Raised again on purpose (the owner's call, 2026-11-14: the stability
+   * plan's Phase 4.3): the districts' textures are baked too, 189 a set (3282 KB for phones, 4729 for the rest), a
+   * download about 0.9 MB (phones) to 1.3 MB bigger that took the desktop's painted textures from 55 to 12 MB on the
+   * GPU
    */
-  texLow: 2450,
+  texLow: 3450,
   /** ... and as everyone else does */
-  texFull: 3500,
+  texFull: 4950,
   /** Their transcoder (three's Basis wasm and its script) */
   transcoder: 300,
   /**

@@ -68,9 +68,9 @@ const ATLAS = canvasTex(ATLAS_W, ROW_H * ROWS.length, (c) => {
   });
 });
 const SIGN = siteMat('ends-sign', lit(new THREE.MeshBasicMaterial({ map: ATLAS, alphaTest: 0.3 }), 0.85, 1.05));
-const ROW = { subway: 0, nick: 1 } as const;
+export const ROW = { subway: 0, nick: 1 } as const;
 /** A sign from the atlas facing n (x, z), its middle at (x, y, z) */
-function sign(b: Batch, row: number, x: number, y: number, z: number, n: Pt, w: number, h: number) {
+export function sign(b: Batch, row: number, x: number, y: number, z: number, n: Pt, w: number, h: number) {
   const g = new THREE.PlaneGeometry(w, h);
   const [v0, v1] = [1 - (row * ROW_H + ROW_H) / (ROW_H * ROWS.length), 1 - (row * ROW_H) / (ROW_H * ROWS.length)];
   g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v1, 1, v1, 0, v0, 1, v0], 2));

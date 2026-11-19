@@ -12,7 +12,8 @@
 import { HIGHWAY_BOX, HIGHWAY_HALF } from './highway';
 import type { Box, Pt, Rect } from './underground';
 import { CIRCUS, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, BRIDGES, BULB } from './south';
-import { distTo, inside } from './streetfaces';
+import { distTo, insideRow, rowCrossings } from './streetfaces';
+import { southLift } from './southground';
 
 export type { Rect, Pt, Box };
 
@@ -57,8 +58,14 @@ const CELLS = new Set<number>();
   for (const b of SOUTH_BLOCKS) {
     const xs = b.poly.map((p) => p[0]);
     const zs = b.poly.map((p) => p[1]);
-    for (let x = Math.floor(Math.min(...xs) / CELL) * CELL; x <= Math.max(...xs); x += CELL)
-      for (let z = Math.floor(Math.min(...zs) / CELL) * CELL; z <= Math.max(...zs); z += CELL) if (inside(b.poly, [x + CELL / 2, z + CELL / 2])) mark(x + CELL / 2, z + CELL / 2);
+    const [z0, z1] = [Math.floor(Math.min(...zs) / CELL) * CELL, Math.max(...zs)];
+    // (each row's crossings of the block's edge worked out once: a block's outline runs to hundreds of points)
+    const rows: number[][] = [];
+    for (let z = z0; z <= z1; z += CELL) rows.push(rowCrossings(b.poly, z + CELL / 2));
+    for (let x = Math.floor(Math.min(...xs) / CELL) * CELL; x <= Math.max(...xs); x += CELL) {
+      let r = 0;
+      for (let z = z0; z <= z1; z += CELL, r++) if (insideRow(rows[r], x + CELL / 2)) mark(x + CELL / 2, z + CELL / 2);
+    }
     for (const [x, z] of b.poly) mark(x, z);
   }
 }
@@ -119,7 +126,7 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
       // (and clear of every other street's asphalt)
       const onRoad = !offRoad([x, z], 0.3);
       if (clear(x, z) && !onRoad) {
-        out.push([x, z, Math.atan2(nz, -nx), SLAB_Y]);
+        out.push([x, z, Math.atan2(nz, -nx), SLAB_Y + southLift(x, z)]);
         side = -side;
         d = run + (s.kind === 'close' || s.kind === 'crescent' ? 13 : 15);
       } else d = run + 2;
@@ -129,7 +136,7 @@ export const ENDS_LAMPS: [number, number, number, number][] = (() => {
   const R = CIRCUS.r + CIRCUS.half + 0.45;
   for (const a of [40, 130, 220, 310].map((v) => (v * Math.PI) / 180)) {
     const [x, z] = [CIRCUS.x + R * Math.cos(a), CIRCUS.z + R * Math.sin(a)];
-    if (SOUTH_STREETS.every((o) => o.loop || o.pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > o.half + 0.6))) out.push([x, z, Math.PI - a, SLAB_Y]);
+    if (SOUTH_STREETS.every((o) => o.loop || o.pts.every((p) => Math.hypot(p[0] - x, p[1] - z) > o.half + 0.6))) out.push([x, z, Math.PI - a, SLAB_Y + southLift(x, z)]);
   }
   return out;
 })();

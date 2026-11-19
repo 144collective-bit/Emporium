@@ -1,10 +1,15 @@
 // Textures made at build time (performance phase 4, item 3 in docs/performance-plan.md). Run after
 // `astro build` (`npm run bake:textures`; the "Build site" Action runs it). It opens the built site in a
 // headless Chromium with ?bake-textures, where kit.ts's canvasTex() records every texture the boot paints
-// with its key (what draws it, its size and how many like it came before), as phones see it ('low': big
-// ones half size) and as everyone else does ('full'). Each set runs twice, with a fresh save at noon and a
-// well-used one at midnight: only keys that come out the same both times are kept (a drawing function
-// whose pictures or count differ is dropped whole), so a key always stands for the same picture. Those
+// with its key (what draws it, its size and how many like it came before; inside a site, within the site:
+// texscope.ts), as phones see it ('low': big ones half size) and as everyone else does ('full'). Then every
+// district loads, one after another, and what each paints as it loads is kept too (the stability plan's
+// Phase 4.3: the districts' atlases were most of the desktop's texture memory); what a district's sites
+// paint as they're built later is left out (how many are built by then varies). Each set runs twice, with a
+// fresh save at noon and the districts in the list's order, and a well-used one at midnight with them in
+// reverse: only keys that come out the same both times are kept (a drawing function whose pictures or
+// count differ is dropped whole), so a key always stands for the same picture, whatever order the
+// districts arrive in. Those
 // are GPU-compressed to KTX2 (Basis ETC1S, or UASTC where ETC1S loses too much: checked by decoding it
 // again), written to _astro/tex/, and listed in the page (#city-tex in index.html) with the transcoder.
 import { createServer } from 'node:http';
@@ -83,8 +88,8 @@ const SETS = {
   full: { viewport: { width: 1280, height: 800 } },
 };
 const RUNS = [
-  { name: 'fresh', time: '2026-06-01T12:00:00Z', save: null },
-  { name: 'rich', time: '2026-06-01T23:30:00Z', save: RICH },
+  { name: 'fresh', time: '2026-06-01T12:00:00Z', save: null, query: 'bake-textures' },
+  { name: 'rich', time: '2026-06-01T23:30:00Z', save: RICH, query: 'bake-textures=reverse' },
 ];
 if (process.env.BAKE_SAME) RUNS[1] = { ...RUNS[0], name: 'fresh again' };
 /** Anything going wrong: nothing is made at build time, and the site paints its textures as before */
@@ -116,8 +121,13 @@ async function paintRun(set, run) {
   }, run.save);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto(`${origin}/?bake-textures`);
+  await page.goto(`${origin}/?${run.query}`);
   await page.waitForFunction(() => document.querySelector('[data-loader]')?.classList.contains('is-done'), null, { timeout: 600000, polling: 500 });
+  // (then every district, in turn: index.ts; one that wouldn't load would leave its textures out of this run only)
+  await page.waitForFunction(() => globalThis.__texBakeDistricts, null, { timeout: 900000, polling: 500 });
+  const districts = await page.evaluate(() => globalThis.__texBakeDistricts);
+  if (districts.loaded.length !== districts.of) await ctx.close();
+  if (districts.loaded.length !== districts.of) throw new Error(`${set}/${run.name}: ${districts.loaded.length} of ${districts.of} districts loaded`);
   // Painted with the site's own fonts, or not at all (a stand-in font would be baked in for everyone)
   const fonts = await page.evaluate(() => ['900 64px "Big Shoulders Display"', '700 32px "JetBrains Mono"'].every((f) => document.fonts.check(f)));
   if (!fonts) throw new Error(`${set}/${run.name}: the web fonts didn't load`);
@@ -126,9 +136,11 @@ async function paintRun(set, run) {
     const tiny = document.createElement('canvas');
     tiny.width = tiny.height = 8;
     const t = tiny.getContext('2d', { willReadFrequently: true });
-    // (only what the boot painted: kit.ts `bootTexturesPainted()`; a district arriving after it would make the set differ run to run)
+    // (what the boot painted, kit.ts `bootTexturesPainted()`, and what the districts painted as they loaded; not what
+    // their sites painted as they were built, which depends on how many were built by now)
     const painted = globalThis.__texBake ?? [];
-    for (const { key, canvas, src } of painted.slice(0, globalThis.__texBakeBoot ?? painted.length)) {
+    const boot = globalThis.__texBakeBoot ?? painted.length;
+    for (const { key, canvas, src } of painted.filter((p, i) => i < boot || !p.scope)) {
       // The far forms' average colour (lod.ts `average()`, worked out the same way)
       t.clearRect(0, 0, 8, 8);
       t.drawImage(canvas, 0, 0, 8, 8);
@@ -146,7 +158,7 @@ async function paintRun(set, run) {
     }
     return { out, after: painted.length - Object.keys(out).length };
   }).then(({ out, after }) => {
-    if (after) log(`${set}/${run.name}: ${after} painted after the boot (a district arriving), left out`);
+    if (after) log(`${set}/${run.name}: ${after} painted by a district's sites as they were built, left out`);
     return out;
   });
   await ctx.close();
@@ -168,7 +180,7 @@ function keep(runs) {
     if (ok) kept.push(...keys);
     else {
       dropped += keys.size;
-      if (process.env.BAKE_VERBOSE) log('dropped', [...keys][0], JSON.stringify((runs[0][[...keys][0]] ?? runs[1][[...keys][0]])?.src?.replace(/\s+/g, ' ').slice(0, 110)), runs.map((r) => [...keys].filter((k) => r[k]).length).join(' / '), [...keys].map((k) => (runs[0][k]?.png.length ?? 0) + (runs[1][k]?.png.length ?? 0)).reduce((a, b) => a + b, 0));
+      if (process.env.BAKE_VERBOSE) log('dropped', [...keys].some((k) => runs.some((r) => !r[k])) ? '(missing from a run)' : '(drawn differently)', [...keys][0], JSON.stringify((runs[0][[...keys][0]] ?? runs[1][[...keys][0]])?.src?.replace(/\s+/g, ' ').slice(0, 110)), runs.map((r) => [...keys].filter((k) => r[k]).length).join(' / '), [...keys].map((k) => (runs[0][k]?.png.length ?? 0) + (runs[1][k]?.png.length ?? 0)).reduce((a, b) => a + b, 0));
     }
   }
   return { kept, dropped };
@@ -240,7 +252,8 @@ const files = new Map();
 try {
   for (const set of Object.keys(SETS)) {
     const runs = [];
-    for (const run of RUNS) runs.push(await paintRun(set, run));
+    // (a run where a district wouldn't load is tried once more before giving up)
+    for (const run of RUNS) runs.push(await paintRun(set, run).catch((e) => (log(`${e.message ?? e}: once more`), paintRun(set, run))));
     const { kept, dropped } = keep(runs);
     const list = {};
     let etc1s = 0;

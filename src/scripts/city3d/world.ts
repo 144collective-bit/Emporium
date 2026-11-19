@@ -24,7 +24,7 @@ import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
 import { outskirtsTrees } from './outskirts';
-import { TERRAIN_RECT, heightAt, onHills, slopeAt } from './terrain';
+import { TERRAIN_RECT, heightAt, onCrest, onHills, slopeAt } from './terrain';
 import { DRIVE_BLOCKS } from './coral';
 import { keyRect } from './tileplan';
 import { site } from './tilework';
@@ -34,6 +34,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEDGE as RING_HEDGE, RING_MEDIAN } from './ringstreet';
 import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import { TUNNEL_HOLES } from './lot9';
+import { GROUND_HOLES, SLAB_CUTS } from './underpasses';
+import { boundsOf, fan, minusAll } from './holes';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF } from './waterfront';
 import { SWAY, lampGlow, newLamp, type Lamp } from './dusk';
@@ -243,7 +245,34 @@ function tiled(poly: Pt[], y: number, repeat?: number): THREE.BufferGeometry[] {
   return tilesIn(Math.min(...xs), Math.min(...zs), Math.max(...xs) - 1e-6, Math.max(...zs) - 1e-6)
     .map(([i, j]) => clipRect(poly, i * TILE, j * TILE, (i + 1) * TILE, (j + 1) * TILE))
     .filter((piece) => piece.length >= 3)
-    .map((piece) => flatPoly(piece, y, repeat));
+    .map((piece) => (holesIn(piece).length ? holedPoly(piece, y, holesIn(piece), repeat) : flatPoly(piece, y, repeat)));
+}
+/** The holes cut out of the slabs (the Circus's plaza and its subways' cuttings, circus.ts; the underpasses' ramps,
+ * underpasses.ts) a piece meets */
+const CUT_BOUNDS = SLAB_CUTS.map(boundsOf);
+const holesIn = (piece: Pt[]) => {
+  const [x0, z0, x1, z1] = boundsOf(piece);
+  return SLAB_CUTS.filter((_, i) => CUT_BOUNDS[i][0] < x1 && CUT_BOUNDS[i][2] > x0 && CUT_BOUNDS[i][1] < z1 && CUT_BOUNDS[i][3] > z0);
+};
+/** A flat outline at y, facing up, with convex holes cut out of it (holes.ts; its UVs as `flatPoly()`'s) */
+export function holedPoly(poly: Pt[], y: number, holes: Pt[][], repeat = BS - 0.8) {
+  const contour = poly.map(([x, z]) => new THREE.Vector2(x, z));
+  const pos: number[] = [];
+  const uv: number[] = [];
+  for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(contour, []))
+    for (const t of fan(minusAll([poly[a], poly[b], poly[c]], holes))) {
+      // (each triangle wound to face up)
+      const up = (t[1][1] - t[0][1]) * (t[2][0] - t[0][0]) - (t[1][0] - t[0][0]) * (t[2][1] - t[0][1]) > 0;
+      for (const v of up ? t : [t[0], t[2], t[1]]) {
+        pos.push(v[0], y, v[1]);
+        uv.push(v[0] / repeat, -v[1] / repeat);
+      }
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  return g;
 }
 /**
  * The ring of a sidewalk `w` wide just inside an outline, at y: its edges cut every few tiles so no triangle is long
@@ -864,9 +893,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     ])
       if (c > a)
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts; nor over Lot 9's
-        // tunnel's open cuttings, lot9.ts: its walls go down to its floor, lot9-3d.ts; nor over Endswood's subways and
-        // its well, endswood.ts, endswood3d.ts)
-        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES])) {
+        // tunnel's open cuttings, lot9.ts: its walls go down to its floor, lot9-3d.ts; nor under the Circus, its sunken
+        // plaza and subways, circus.ts, nor the underpasses' ramps, underpasses.ts: the streets and the blocks' slabs,
+        // holed over them, cover the rest)
+        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES, ...GROUND_HOLES])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
           // (the open land outside the town rolls, rolls.ts; flat everywhere anything stands)
           const flat = hill ? null : (rolledPlane(px0, pz0, px1, pz1, low) ?? groundPlane(px0, pz0, px1, pz1, low));
@@ -1420,7 +1450,8 @@ export function buildLamps(scene: THREE.Scene, low = false, tick?: (f: Tick) => 
     halos[tone].push(l.x + dir.x * out, l.y + hy - 0.03, l.z + dir.z * out);
     // (on Crestmont's hill roads the ground under the bulb: a pool flat on a slope sits a little up, terrain.ts)
     const [px, pz] = [l.x + dir.x * out, l.z + dir.z * out];
-    const py = onHills(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + 0.02;
+    // (the south's lamps stand on its rolling ground already, their own height lifted: endswood.ts `ENDS_LAMPS`)
+    const py = onCrest(px, pz) ? heightAt(px, pz) + 0.02 + 1.3 * slopeAt(px, pz) : l.y + 0.02 + 1.3 * slopeAt(px, pz) * (onHills(px, pz) ? 1 : 0);
     poolsOf[tone].push(new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), flat, new THREE.Vector3(2.6, 2.6, 2.6)));
   });
   for (const p of pools) poolsOf[p.sodium ? 'sodium' : 'white'].push(new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y + 0.02, p.z), flat, new THREE.Vector3(p.size, p.size, p.size)));

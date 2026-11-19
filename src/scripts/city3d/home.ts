@@ -16,8 +16,11 @@
  *   (`HOME_WORKSHOP_DOOR`) opens the garage's menu on its kit.
  * - **The yard** between them, block paving (the wide drive), and **the gardens**: the lawn in the north-west corner
  *   and the one east of the house (`HOME.lawns`).
- * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where walking
- *   starts (`HOME_SPAWN`: in the yard, facing the front door).
+ * - **The place**: spot `home` (its pin over the house, a panel with Walk in), where you arrive and where the Walk
+ *   button starts you (`HOME_SPAWN`: in the yard, facing the front door). Every visit starts inside, in the room
+ *   (`HOME_WAKE`, docs/spawn-plan.md).
+ * - **Done up** (docs/compound-plan.md Phase 1): the yard's lit bollards (`BOLLARDS`) and the planters by the front
+ *   door (`PLANTERS`), both solid; the rest of the upgrade (steel, neon, his mark, the hoop) is home3d.ts's drawing.
  * - **Inside**: one room on the ground floor (`ROOM`, `FURNITURE`), sealed: the doors are fades (`HOME_PORTALS`).
  * - **The roof terrace** (Phase 3): up the stairs (a fade too) to the roof inside its rail (`TERRACE`, `ROOF_THINGS`,
  *   `onRoof()`, `roofWall()`), the yard and the Close below.
@@ -31,8 +34,9 @@ import type { Box } from './solids';
 const [px0, pz0, px1, pz1] = PLOT;
 /** The compound wall's thickness and height, and its piers' at the gates */
 export const WALL_T = 0.3;
-export const WALL_H = 1.3;
-export const PIER = { w: 0.5, h: 1.6 };
+// (since docs/compound-plan.md Phase 6b, the kingpin's compound: about twice his height, the gates' piers over it)
+export const WALL_H = 1.8;
+export const PIER = { w: 0.5, h: 2.25 };
 /** Inside the wall */
 const [ix0, iz0, ix1, iz1] = [px0 + WALL_T, pz0 + WALL_T, px1 - WALL_T, pz1 - WALL_T];
 /** The Close's line through the plot (the gates are on it) */
@@ -88,15 +92,10 @@ export const HOME = {
   ] as Rect[],
 } as const;
 
-/** Where you arrive, and where walking starts: in the yard, facing the front door (yaw π faces south) */
+/** Where you arrive by the Walk button, the panel and fast travel: in the yard, facing the front door (yaw π faces south) */
 // (within a door prompt's reach of his front door's, so "Go in" shows as you arrive)
 export const HOME_SPAWN = { x: HOME.door[0] + 0.5, z: HOME.door[1] - 1.45, yaw: Math.PI };
 
-/**
- * Does walking start at home? Not a new player's very first walk (the owner's call): that starts downtown by the
- * Emporium, where Getting started's first steps are; once anywhere has been walked to (the save's `visited`), home.
- */
-export const startsAtHome = (visited: readonly string[]) => visited.length > 0;
 
 /** The place's pick boxes (over the slab), the land its ring goes round, and its pin over the house */
 export const HOME_PICK: { rect: Rect; h: number }[] = [
@@ -108,6 +107,87 @@ export const HOME_LAND: Rect = PLOT;
 export const HOME_PIN: Pt = [(HOUSE[0] + HOUSE[2]) / 2, (HOUSE[1] + HOUSE[3]) / 2];
 export const HOME_PIN_H = RIDGE + 1.6;
 export const HOME_SLAB = SLAB_Y;
+
+/* ---------- Done up (docs/compound-plan.md Phase 1, the owner's pick: made good, with his neon) ---------- */
+
+/** A low bollard with a lit cap: its radius and height (over the slab) */
+export const BOLLARD = { r: 0.07, h: 0.38 };
+/**
+ * The yard's bollards, at its edges, clear of the drive: along the east lawn (the house's front's line, from a little
+ * past the house's corner, so the way round to the side door stays open, to the wall by the gates) and along the
+ * north strip from the workshop to the wall
+ */
+export const BOLLARDS: Pt[] = [
+  ...[0, 1, 2, 3, 4].map((k): Pt => [HOUSE[2] + 1.4 + k * 1.95, HOUSE[1] - 0.25]),
+  ...[0, 1, 2, 3, 4].map((k): Pt => [WORKSHOP[2] + 1.0 + k * 2.4, WORKSHOP[3] + 0.25]),
+];
+/** A planter each side of the front door, between the door and the windows, at the wall's foot */
+export const PLANTER_H = 0.32;
+export const PLANTERS: Rect[] = [-1, 1].map((s): Rect => {
+  const x = (HOUSE[0] + HOUSE[2]) / 2 + s * 0.72;
+  return [x - 0.15, HOUSE[1] - 0.46, x + 0.15, HOUSE[1] - 0.06];
+});
+
+/**
+ * The fire escape up the house's east side, facing the gates (docs/compound-plan.md Phase 6: the house as a black brick
+ * loft): a landing at the upper floor and a flight down to the ground, its footprint solid; narrow enough that the
+ * way round the house's east end to the side door stays open beside it
+ */
+export const FIRE_ESCAPE: Rect = [HOUSE[2], HOUSE[1] + 0.5, HOUSE[2] + 0.34, HOUSE[1] + 3.7];
+
+/**
+ * The gatehouse (docs/compound-plan.md Phase 6b): a small lit booth of black brick just inside the gates on their south
+ * side, its window on the gates; solid, clear of the drive, the bollards and the cars' way in
+ */
+export const GATEHOUSE: Rect = [px1 - WALL_T - 1.6, GATES.z1 + PIER.w + 0.25, px1 - WALL_T - 0.05, GATES.z1 + PIER.w + 1.65];
+export const GATEHOUSE_H = 1.35;
+/**
+ * The gate (Phase 6b): one black steel leaf, slid open along the inside of the wall north of the gates (the way in
+ * always open: nothing in the city is shut to you), on its track; solid
+ */
+export const GATE_LEAF: Rect = [px1 - WALL_T - 0.13, GATES.z0 - PIER.w - (GATES.z1 - GATES.z0) - 0.1, px1 - WALL_T - 0.05, GATES.z0 - PIER.w - 0.05];
+export const GATE_LEAF_H = 1.7;
+
+/**
+ * The fountain (docs/compound-plan.md Phase 6c): in the yard north of the drive (clear of the cars' way in and out and
+ * of the bollards along the north strip), a round stone basin with a pedestal and two bowls; its basin solid
+ */
+export const FOUNTAIN = { x: (GARAGE[2] + px1) / 2 + 2.2, z: AXIS - 4.6, r: 0.95, h: 0.3 };
+/** The palms (Phase 6c), each in a round stone planter with an uplight: either side of the gates inside, at the house's west corner, by the workshop */
+export const PALMS: Pt[] = [
+  [px1 - WALL_T - 1.3, AXIS - 3.9],
+  [px1 - WALL_T - 2.2, AXIS + 3.3],
+  [HOUSE[0] + 0.3, HOUSE[1] - 0.75],
+  [WORKSHOP[0] - 0.1, WORKSHOP[3] + 1.9],
+];
+export const PALM_PLANTER = { r: 0.35, h: 0.32 };
+
+/**
+ * The pool and the cabana on the east lawn (docs/compound-plan.md Phase 6d; the washing line gone): the pool along the
+ * lawn's middle, its stone edge solid (no swimming: looks only), three loungers on its north side, the cabana in the
+ * lawn's far corner (an open front on posts, a sofa under its roof); the way round to the side door kept clear
+ */
+const [lx0, lz0, lx1, lz1] = [HOUSE[2] + 0.5, HOUSE[1], ix1, iz1];
+export const POOL: Rect = [lx0 + 1.7, lz0 + 1.3, lx1 - 1.6, lz0 + 4.5];
+export const POOL_EDGE = 0.15;
+export const LOUNGERS: Rect[] = [0, 1, 2].map((k): Rect => [lx0 + 2.2 + k * 1.6, lz0 + 0.2, lx0 + 2.62 + k * 1.6, lz0 + 1.1]);
+export const CABANA: Rect = [lx1 - 3.2, lz1 - 1.6, lx1 - 0.1, lz1 - 0.1];
+/** Under the cabana's roof: its sofa against the back, and the roof's four posts (each a small solid) */
+export const CABANA_SOFA: Rect = [CABANA[0] + 0.4, CABANA[3] - 0.65, CABANA[2] - 0.4, CABANA[3] - 0.05];
+export const CABANA_POSTS: Pt[] = [
+  [CABANA[0] + 0.06, CABANA[1] + 0.06],
+  [CABANA[2] - 0.06, CABANA[1] + 0.06],
+  [CABANA[0] + 0.06, CABANA[3] - 0.06],
+  [CABANA[2] - 0.06, CABANA[3] - 0.06],
+];
+export const CABANA_H = 1.45;
+
+/**
+ * The helipad on the garage's roof (docs/compound-plan.md Phase 6e): a round pad in its middle with his D and a ring
+ * painted on it, lights round its edge, a windsock at the roof's corner; looks only (nobody walks up there, nothing
+ * lands)
+ */
+export const HELIPAD = { x: (GARAGE[0] + GARAGE[2]) / 2, z: AXIS, r: 2.2 };
 
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
@@ -154,6 +234,21 @@ export const HOME_SOLIDS: Box[] = (() => {
     [wx0, wz0, wx0 + WALL, wz1, wtop],
     [wx1 - WALL, wz0, wx1, wz1, wtop],
     [wx0, wz1 - WALL, wx1, wz1, wtop],
+    // Done up (docs/compound-plan.md Phase 1): the yard's lit bollards and the planters by the front door
+    ...BOLLARDS.map(([x, z]): Box => [x - BOLLARD.r, z - BOLLARD.r, x + BOLLARD.r, z + BOLLARD.r, SLAB_Y + BOLLARD.h]),
+    ...PLANTERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + PLANTER_H]),
+    [FIRE_ESCAPE[0], FIRE_ESCAPE[1], FIRE_ESCAPE[2], FIRE_ESCAPE[3], SLAB_Y + RIDGE + 0.3],
+    // The gatehouse, and the gate's leaf slid open along the wall (Phase 6b)
+    [GATEHOUSE[0], GATEHOUSE[1], GATEHOUSE[2], GATEHOUSE[3], SLAB_Y + GATEHOUSE_H],
+    [GATE_LEAF[0], GATE_LEAF[1], GATE_LEAF[2], GATE_LEAF[3], SLAB_Y + GATE_LEAF_H],
+    // The fountain's basin and the palms' planters (Phase 6c)
+    [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, SLAB_Y + FOUNTAIN.h],
+    ...PALMS.map(([x, z]): Box => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r, SLAB_Y + PALM_PLANTER.h]),
+    // The pool, the loungers, the cabana's sofa and posts (Phase 6d)
+    [POOL[0], POOL[1], POOL[2], POOL[3], SLAB_Y + 0.3],
+    ...LOUNGERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + 0.25]),
+    [CABANA_SOFA[0], CABANA_SOFA[1], CABANA_SOFA[2], CABANA_SOFA[3], SLAB_Y + 0.4],
+    ...CABANA_POSTS.map(([x, z]): Box => [x - 0.05, z - 0.05, x + 0.05, z + 0.05, SLAB_Y + CABANA_H]),
   ];
 })();
 
@@ -183,16 +278,29 @@ export const onHome = (x: number, z: number, m = 0) => x > HOME_LAND[0] - m && x
  * slab. It's sealed: the front door and the side door are fades (index.ts `rideTo()`, as the lifts are), each a
  * prompt outside and one inside (`HOME_PORTALS`). Standing in it you're inside the house's footprint, which nothing
  * else reaches, so walking asks `homeWall()` there in place of the city's solids (walk.ts `blocked()`), and the
- * camera stays under `HOME_CAMERA`, the ceiling.
+ * camera stays under its ceiling (`homeCamera()`). Upstairs (Phase 3) is a floor of its own over it (`UPSTAIRS`).
  */
 const [hx0, hz0, hx1, hz1] = HOUSE;
 export const ROOM: Rect = [hx0 + SHELL, hz0 + SHELL, hx1 - SHELL, hz1 - SHELL];
 export const CEIL = 1.2;
-/** The walk camera can't pass the ceiling (a box with a bottom: x0, z0, x1, z1, top, bottom) */
-export const HOME_CAMERA: [number, number, number, number, number, number] = [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + CEIL];
 
 /** A thing in the room: its footprint, how tall, and what it is (home3d.ts draws each kind) */
-export type FurnitureKind = 'stairs' | 'sofa' | 'table' | 'tv' | 'counter' | 'fridge' | 'dining' | 'wardrobe' | 'stash';
+export type FurnitureKind =
+  | 'stairs'
+  | 'sofa'
+  | 'chaise'
+  | 'table'
+  | 'tv'
+  | 'lamp'
+  | 'plant'
+  | 'trophies'
+  | 'counter'
+  | 'fridge'
+  | 'island'
+  | 'stools'
+  | 'console'
+  | 'wardrobe'
+  | 'stash';
 export interface Furniture {
   kind: FurnitureKind;
   rect: Rect;
@@ -205,33 +313,215 @@ const SZ = HOME.sideDoor[1];
 /** The way through the room from the front door to the side door, kept clear: this wide */
 export const HALL_W = 1.25;
 /**
- * The room: the sitting room in its west half (the sofa under the front window facing the telly on its unit across
- * a low table, the trunk at the sofa's end: the stash), the kitchen along the back wall (a counter, the fridge at
- * its end, a table), the stairs boxed in along the east wall by the front and the wardrobe past them; the middle
- * clear from the front door to the side door
+ * The room, refitted (docs/compound-plan.md Phase 2): **the lounge** in its west half (the corner sofa: its long run
+ * under the front window and a chaise at its east end, a coffee table, the media unit across the room with the telly
+ * on it facing the sofa, the trunk at the sofa's west end (the stash), a floor lamp, and **the trophy wall** on the
+ * west wall); **the kitchen** along the back wall (the counter, the fridge at its end, a plant at its west end, an
+ * island with its stools on the lounge's side); **the hall** from the front door to the side door, clear (a console
+ * table under the front window east of the door, a plant in its back corner), the stairs open along the east wall by the front and the
+ * wardrobe past them. The stash's, the wardrobe's and the doors' prompts stand where they always have
  */
 export const FURNITURE: Furniture[] = [
   { kind: 'stairs', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: CEIL },
-  { kind: 'sofa', rect: [rx0 + 0.3, rz0 + 0.04, rx0 + 3.2, rz0 + 0.78], h: 0.42 },
+  // (the corner sofa's run a little longer than the old sofa and its chaise turning past the wake spot, `HOME_WAKE`)
+  { kind: 'sofa', rect: [rx0 + 0.3, rz0 + 0.04, rx0 + 3.45, rz0 + 0.78], h: 0.42 },
+  { kind: 'chaise', rect: [rx0 + 2.72, rz0 + 0.78, rx0 + 3.45, rz0 + 1.9], h: 0.42 },
   { kind: 'stash', rect: [rx0 + 0.3, rz0 + 0.9, rx0 + 1.0, rz0 + 1.3], h: 0.3 },
-  { kind: 'table', rect: [rx0 + 1.3, rz0 + 1.5, rx0 + 2.7, rz0 + 1.95], h: 0.24 },
-  { kind: 'tv', rect: [rx0 + 0.6, rz0 + 2.75, rx0 + 3.0, rz0 + 3.1], h: 0.36 },
-  { kind: 'wardrobe', rect: [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15], h: 1.1 },
-  { kind: 'dining', rect: [rx0 + 1.3, rz1 - 2.0, rx0 + 2.5, rz1 - 1.4], h: 0.42 },
+  { kind: 'table', rect: [rx0 + 1.6, rz0 + 1.3, rx0 + 2.2, rz0 + 1.9], h: 0.2 },
+  { kind: 'tv', rect: [rx0 + 0.4, rz0 + 2.75, rx0 + 3.0, rz0 + 3.1], h: 0.24 },
+  { kind: 'trophies', rect: [rx0, rz0 + 1.5, rx0 + 0.22, rz0 + 2.6], h: 1.1 },
+  { kind: 'lamp', rect: [rx0 + 0.05, rz0 + 2.8, rx0 + 0.3, rz0 + 3.05], h: 1.0 },
+  { kind: 'plant', rect: [rx0 + 0.06, rz1 - 1.75, rx0 + 0.36, rz1 - 1.45], h: 0.75 },
+  { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
+  { kind: 'plant', rect: [rx1 - 0.36, rz1 - 0.36, rx1 - 0.06, rz1 - 0.06], h: 0.55 },
+  { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
+  { kind: 'stools', rect: [rx0 + 1.15, rz1 - 2.25, rx0 + 3.05, rz1 - 1.88], h: 0.3 },
   { kind: 'counter', rect: [rx0 + 0.2, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
   { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.02 },
+  { kind: 'wardrobe', rect: [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15], h: 1.1 },
 ];
-/** How high someone is once he's up on the roof and no longer in the room (between the ceiling and the roof) */
-const UP = SLAB_Y + CEIL + 0.5;
-/** Inside the house (its footprint, on the ground floor: `y` is how high he is; up on the roof is `onRoof()`)? */
-export const inHouse = (x: number, z: number, y = 0) => y < UP && x > hx0 && x < hx1 && z > hz0 && z < hz1;
-/** Does someone `r` wide at x, z in the room touch its walls or anything standing in it? */
-export function homeWall(x: number, z: number, r: number) {
+/* ---------- The floors (docs/compound-plan.md Phase 3: the upstairs between the room and the roof) ---------- */
+
+/** The upstairs' floor over the slab (the floor slab's top, CEIL + 0.1) and its ceiling (the roof's underside) */
+export const UP_Y = CEIL + 0.1;
+export const UP_CEIL = EAVES;
+/** The basement's floor and ceiling over the slab (docs/compound-plan.md Phase 4): a room's height under the room */
+export const BASE_Y = -1.32;
+export const BASE_CEIL = -0.12;
+/** Which of the house's floors someone `y` high is on (his jump tops out about 0.52 over a floor, so each line is well over that above the floor under it) */
+export type HomeLevel = 'base' | 'room' | 'up' | 'roof';
+export function homeLevel(y: number): HomeLevel {
+  const h = y - SLAB_Y;
+  return h < -0.5 ? 'base' : h < 0.9 ? 'room' : h < 2.1 ? 'up' : 'roof';
+}
+const inFoot = (x: number, z: number) => x > hx0 && x < hx1 && z > hz0 && z < hz1;
+/** Inside the house (its footprint, on one of its indoor floors: `y` is how high he is; up on the roof is `onRoof()`)? */
+export const inHouse = (x: number, z: number, y = 0) => inFoot(x, z) && homeLevel(y) !== 'roof';
+const hits = (list: readonly { rect: Rect }[], x: number, z: number, r: number) => list.some(({ rect: f }) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3]);
+/** Does someone `r` wide at x, z, `y` high, inside the house, touch its walls or anything standing on his floor? */
+export function homeWall(x: number, z: number, r: number, y = SLAB_Y) {
   if (x - r < rx0 || x + r > rx1 || z - r < rz0 || z + r > rz1) return true;
-  return FURNITURE.some(({ rect: f }) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3]);
+  const lv = homeLevel(y);
+  return hits(lv === 'up' ? UPSTAIRS : lv === 'base' ? BASEMENT : FURNITURE, x, z, r);
+}
+/**
+ * The walk camera's ceilings and floors in the house for someone `y` high (boxes with a bottom: x0, z0, x1, z1, top,
+ * bottom): in the room, everything over its ceiling; upstairs, the room under its floor and the roof over its
+ * ceiling; on the roof, the whole house under it
+ */
+export function homeCamera(y: number): [number, number, number, number, number, number][] {
+  const lv = homeLevel(y);
+  if (lv === 'room') return [[hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + CEIL]];
+  if (lv === 'up')
+    return [
+      [hx0, hz0, hx1, hz1, SLAB_Y + UP_Y - 0.16, -1],
+      [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + UP_CEIL],
+    ];
+  if (lv === 'base')
+    // (under the ground the city's walls don't reach: the basement's own four, round its room, and the house over it)
+    return [
+      [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + BASE_CEIL],
+      [hx0 - 1, hz0 - 1, rx0, hz1 + 1, SLAB_Y, SLAB_Y + BASE_Y - 1],
+      [rx1, hz0 - 1, hx1 + 1, hz1 + 1, SLAB_Y, SLAB_Y + BASE_Y - 1],
+      [hx0 - 1, hz0 - 1, hx1 + 1, rz0, SLAB_Y, SLAB_Y + BASE_Y - 1],
+      [hx0 - 1, rz1, hx1 + 1, hz1 + 1, SLAB_Y, SLAB_Y + BASE_Y - 1],
+    ];
+  return [[hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, -1]];
 }
 
-/* ---------- The roof terrace (Phase 3) ---------- */
+/**
+ * Where every visit starts (docs/spawn-plan.md Phase 1, the owner's call): in the room, in front of the sofa, facing
+ * the telly (yaw π faces south), clear of the trunk's and the doors' prompts. The rest of the city loads behind the
+ * walls while the doors out wait (`HOME_WAITS`). He's sat on the sofa as the room appears and stands up onto it
+ * (Phase 2, `SOFA_SEAT`), but under reduced motion, where he's standing there already.
+ */
+export const HOME_WAKE = { x: rx0 + 2.5, z: rz0 + 0.95, yaw: Math.PI };
+/**
+ * The sofa as a seat (moments.ts's bench mark: its middle, `ry` the way the sitter faces, 0 south; he stands up onto
+ * `HOME_WAKE`, `MOMENT.stand.bench` in front of it), its cushion `h` over the floor
+ */
+export const SOFA_SEAT = { x: HOME_WAKE.x, z: HOME_WAKE.z - 0.33, ry: 0, h: 0.24 };
+
+/**
+ * The room's windows (home3d.ts draws them: the front one over the sofa, the one east of the front door over the
+ * hall's console table (docs/compound-plan.md Phase 2, as it is outside), the back one over the counter), each
+ * across x0 to x1 in the wall at z, `into` the way into the room
+ */
+export const ROOM_WINDOWS = [
+  { x0: rx0 + 0.506, x1: DX - 0.75, z: rz0 + 0.006, into: 1 },
+  { x0: DX + 0.9, x1: rx1 - 1.05, z: rz0 + 0.006, into: 1 },
+  { x0: rx0 + 0.806, x1: rx0 + 4.206, z: rz1 - 0.006, into: -1 },
+] as const;
+/**
+ * Their curtains (docs/spawn-plan.md Phase 2): drawn while the street outside loads, drawn back once it's ready. Each
+ * window has two, from its ends (`over` past them) to its middle; open, each is bunched `bunched` wide at its end.
+ * They hang `off` into the room from the wall (clear of the glass and its frame), from `y0` to `y1` over the slab
+ */
+export const CURTAIN = { over: 0.08, off: 0.07, thick: 0.02, y0: 0.53, y1: 1.12, bunched: 0.16 };
+/** The curtains' panels `k` open (0 drawn, 1 open): each a rect in the room */
+export function curtainPanels(k: number): Rect[] {
+  const u = Math.min(1, Math.max(0, k));
+  return ROOM_WINDOWS.flatMap(({ x0, x1, z, into }) => {
+    const [a, b] = [x0 - CURTAIN.over, x1 + CURTAIN.over];
+    const w = ((b - a) / 2) * (1 - u) + CURTAIN.bunched * u;
+    const [za, zb] = [z + into * CURTAIN.off, z + into * (CURTAIN.off + CURTAIN.thick)];
+    const [z0, z1] = [Math.min(za, zb), Math.max(za, zb)];
+    return [[a, z0, a + w, z1], [b - w, z0, b, z1]] as Rect[];
+  });
+}
+
+
+/* ---------- Upstairs (Phase 3) ---------- */
+
+/** The partition between the landing (east, by the stairs) and his two rooms, and between the bedroom (front) and the office (back) */
+const LAND_X = rx1 - 2.6;
+const SPLIT_Z = rz0 + 3.0;
+const PART = 0.05;
+/**
+ * Upstairs (docs/compound-plan.md Phase 3), on the slab over the room: **the landing** along the east wall (the
+ * stairwell over the stairs, railed, with the steep steps on up to the roof's hatch over it; a shut door at its back
+ * end, the bathroom's), **the bedroom** at the front (a big low bed against the west wall between its bedside tables,
+ * a dresser, his caps on the wall), **the office** at the back (the desk against the back wall with its screens and
+ * chair: its prompt opens the business card; a bookshelf, a plant). Partitions to the ceiling with a doorway into
+ * each room off the landing. Its own list, asked by `homeWall()` up there
+ */
+export type UpKind = 'wall' | 'well' | 'bathdoor' | 'bed' | 'bedside' | 'dresser' | 'caps' | 'desk' | 'chair' | 'shelf' | 'plant';
+export interface UpThing {
+  kind: UpKind;
+  rect: Rect;
+  h: number;
+}
+/** The doorways in the landing's partition, into the bedroom and into the office (from, to along z) */
+export const UP_DOORS: [number, number][] = [
+  [rz0 + 1.2, rz0 + 2.1],
+  [rz0 + 4.1, rz0 + 5.0],
+];
+const UH = UP_CEIL - UP_Y;
+export const UPSTAIRS: UpThing[] = [
+  // The partitions: the landing's (but for its two doorways), the one between the rooms, the bathroom's at the landing's back
+  { kind: 'wall', rect: [LAND_X - PART, rz0, LAND_X + PART, UP_DOORS[0][0]], h: UH },
+  { kind: 'wall', rect: [LAND_X - PART, UP_DOORS[0][1], LAND_X + PART, UP_DOORS[1][0]], h: UH },
+  { kind: 'wall', rect: [LAND_X - PART, UP_DOORS[1][1], LAND_X + PART, rz1], h: UH },
+  { kind: 'wall', rect: [rx0, SPLIT_Z - PART, LAND_X - PART, SPLIT_Z + PART], h: UH },
+  { kind: 'wall', rect: [LAND_X + PART, rz0 + 5.1, rx1, rz0 + 5.2], h: UH },
+  { kind: 'bathdoor', rect: [rx1 - 1.6, rz0 + 4.98, rx1 - 0.9, rz0 + 5.1], h: 1.0 },
+  // The stairwell over the stairs, railed (the steps on up to the hatch rise in it)
+  { kind: 'well', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: 0.45 },
+  // The bedroom
+  { kind: 'bed', rect: [rx0, rz0 + 0.85, rx0 + 1.3, rz0 + 2.15], h: 0.3 },
+  { kind: 'bedside', rect: [rx0, rz0 + 0.45, rx0 + 0.32, rz0 + 0.8], h: 0.24 },
+  { kind: 'bedside', rect: [rx0, rz0 + 2.2, rx0 + 0.32, rz0 + 2.55], h: 0.24 },
+  { kind: 'dresser', rect: [rx0 + 3.6, SPLIT_Z - PART - 0.38, rx0 + 4.9, SPLIT_Z - PART], h: 0.42 },
+  { kind: 'caps', rect: [rx0 + 2.1, SPLIT_Z - PART - 0.12, rx0 + 3.3, SPLIT_Z - PART], h: 0.95 },
+  // The office
+  { kind: 'desk', rect: [rx0 + 1.4, rz1 - 0.55, rx0 + 3.4, rz1], h: 0.38 },
+  { kind: 'chair', rect: [rx0 + 2.15, rz1 - 1.05, rx0 + 2.65, rz1 - 0.6], h: 0.5 },
+  { kind: 'shelf', rect: [rx0, SPLIT_Z + PART + 0.3, rx0 + 0.3, SPLIT_Z + PART + 1.7], h: 1.0 },
+  { kind: 'plant', rect: [LAND_X - PART - 0.4, rz1 - 0.4, LAND_X - PART - 0.1, rz1 - 0.1], h: 0.7 },
+];
+/** Where you arrive at the top of the stairs, by the stairwell's head */
+const LANDING = { x: rx1 - 1.3, z: rz0 + 0.75 };
+
+/* ---------- The basement (docs/compound-plan.md Phase 4) ---------- */
+
+/**
+ * His basement, his trading den (the owner's call: "a basement that he uses to trade in. A real degen man cave"):
+ * under the house, a room's height (`BASE_Y` to `BASE_CEIL`), down steps under the open stairs (their way down a fade,
+ * `home:cellar`). **The trading desk** along the back wall: six screens on arms (made-up charts, no words, numbers or
+ * names: home3d.ts `denCharts()`), his chair, the tower with its lit side; **the cave**: a wall-hung telly on the front
+ * wall, a low sofa facing it across a table, a beanbag, a bar along the east wall (its counter, a lit shelf of made-up
+ * bottles behind it, stools, a mini fridge), an arcade cabinet on the west wall, a plant. Looks only: nothing in it does
+ * anything in the game. Its own list, asked by `homeWall()` down there
+ */
+export type BaseKind = 'steps' | 'tv' | 'table' | 'sofa' | 'beanbag' | 'arcade' | 'desk' | 'chair' | 'tower' | 'bar' | 'barshelf' | 'stools' | 'fridge' | 'plant';
+export interface BaseThing {
+  kind: BaseKind;
+  rect: Rect;
+  h: number;
+}
+const BH = BASE_CEIL - BASE_Y;
+export const BASEMENT: BaseThing[] = [
+  // The steps down, along the east wall from under the stairs (their top at the front, at the room's floor)
+  { kind: 'steps', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.2], h: BH },
+  // The cave: the telly on the front wall, the table, the sofa facing it, a beanbag
+  { kind: 'tv', rect: [rx0 + 1.0, rz0, rx0 + 3.0, rz0 + 0.12], h: 0.9 },
+  { kind: 'table', rect: [rx0 + 1.55, rz0 + 0.75, rx0 + 2.45, rz0 + 1.2], h: 0.2 },
+  { kind: 'sofa', rect: [rx0 + 0.8, rz0 + 1.55, rx0 + 3.2, rz0 + 2.25], h: 0.42 },
+  { kind: 'beanbag', rect: [rx0 + 3.5, rz0 + 1.0, rx0 + 4.0, rz0 + 1.5], h: 0.25 },
+  { kind: 'arcade', rect: [rx0, rz0 + 3.0, rx0 + 0.5, rz0 + 3.55], h: 1.0 },
+  // The trading desk along the back wall, his chair, the tower
+  { kind: 'desk', rect: [rx0 + 1.6, rz1 - 0.6, rx0 + 4.8, rz1], h: 0.38 },
+  { kind: 'chair', rect: [rx0 + 2.95, rz1 - 1.15, rx0 + 3.45, rz1 - 0.65], h: 0.55 },
+  { kind: 'tower', rect: [rx0 + 4.9, rz1 - 0.5, rx0 + 5.15, rz1 - 0.05], h: 0.4 },
+  // The bar along the east wall: the counter, the lit shelf behind it, the stools, the mini fridge
+  { kind: 'bar', rect: [rx1 - 0.8, rz0 + 3.3, rx1 - 0.4, rz0 + 5.3], h: 0.5 },
+  { kind: 'barshelf', rect: [rx1 - 0.25, rz0 + 3.3, rx1, rz0 + 5.3], h: 1.05 },
+  { kind: 'stools', rect: [rx1 - 1.2, rz0 + 3.5, rx1 - 0.85, rz0 + 5.1], h: 0.3 },
+  { kind: 'fridge', rect: [rx1 - 0.55, rz1 - 0.55, rx1, rz1], h: 0.45 },
+  { kind: 'plant', rect: [rx0 + 0.05, rz1 - 0.4, rx0 + 0.35, rz1 - 0.1], h: 0.7 },
+];
+
+/* ---------- The roof terrace (docs/ends-far-west-plan.md Phase 3) ---------- */
 
 /** The terrace's floor over the slab (the roof's felt), and the roof inside its parapet and rail */
 export const ROOF_Y = EAVES + 0.06;
@@ -240,70 +530,104 @@ export const TERRACE: Rect = [hx0 + SHELL + 0.1, hz0 + SHELL + 0.1, hx1 - SHELL 
 export const HATCH: Rect = [rx1 - 1.05, rz0 + 0.3, rx1 - 0.1, rz0 + 1.7];
 /** What stands on the terrace: its footprint, how tall (over the roof), and what it is (home3d.ts draws each) */
 export interface RoofThing {
-  kind: 'hatch' | 'chair' | 'table' | 'planter';
+  kind: 'hatch' | 'sofa' | 'table' | 'planter' | 'telescope' | 'sign';
   rect: Rect;
   h: number;
 }
 const [tx0, tz0, tx1, tz1] = TERRACE;
-/** Two chairs and a low table at the front rail, looking over the yard and down the Close; planters in the back corners */
+/**
+ * The terrace (done up, docs/compound-plan.md Phase 5): an outdoor sofa facing the front rail over the yard with the
+ * low table before it, the telescope in the front corner turned to the Emporium (looks only), his D in neon on a
+ * small stand at the east rail facing down the Close, planters in the back corners and one more along the back
+ */
 export const ROOF_THINGS: RoofThing[] = [
   { kind: 'hatch', rect: HATCH, h: 0.5 },
-  { kind: 'chair', rect: [tx0 + 2.4, tz0 + 0.9, tx0 + 2.9, tz0 + 1.45], h: 0.5 },
-  { kind: 'chair', rect: [tx0 + 4.0, tz0 + 0.9, tx0 + 4.5, tz0 + 1.45], h: 0.5 },
+  { kind: 'sofa', rect: [tx0 + 2.3, tz0 + 1.0, tx0 + 4.6, tz0 + 1.6], h: 0.4 },
   { kind: 'table', rect: [tx0 + 3.2, tz0 + 0.5, tx0 + 3.7, tz0 + 0.95], h: 0.22 },
+  { kind: 'telescope', rect: [tx0 + 0.9, tz0 + 0.1, tx0 + 1.3, tz0 + 0.5], h: 0.6 },
+  { kind: 'sign', rect: [tx1 - 0.1, (tz0 + tz1) / 2 - 0.25, tx1, (tz0 + tz1) / 2 + 0.25], h: 0.6 },
   { kind: 'planter', rect: [tx0 + 0.1, tz1 - 0.6, tx0 + 1.5, tz1 - 0.1], h: 0.3 },
+  { kind: 'planter', rect: [tx0 + 5.0, tz1 - 0.5, tx0 + 6.0, tz1 - 0.1], h: 0.3 },
   { kind: 'planter', rect: [tx1 - 1.5, tz1 - 0.6, tx1 - 0.1, tz1 - 0.1], h: 0.3 },
 ];
-/** Up on the roof (over the house's footprint, above the room)? */
-export const onRoof = (x: number, z: number, y: number) => y >= UP && x > hx0 && x < hx1 && z > hz0 && z < hz1;
-/** The roof under someone `yNow` high (null: not up there), for groundheight.ts */
-export const homeRoofY = (x: number, z: number, yNow: number) => (onRoof(x, z, yNow) ? SLAB_Y + ROOF_Y : null);
+/** Up on the roof (over the house's footprint, above the upstairs)? */
+export const onRoof = (x: number, z: number, y: number) => homeLevel(y) === 'roof' && inFoot(x, z);
+/**
+ * The floor under someone `yNow` high in the house's footprint, for groundheight.ts: the upstairs', the roof's or the basement's (null
+ * in the room, whose floor is the plot's own ground, and outside the footprint)
+ */
+export function homeFloorY(x: number, z: number, yNow: number) {
+  if (!inFoot(x, z)) return null;
+  const lv = homeLevel(yNow);
+  return lv === 'up' ? SLAB_Y + UP_Y : lv === 'roof' ? SLAB_Y + ROOF_Y : lv === 'base' ? SLAB_Y + BASE_Y : null;
+}
 /** Does someone `r` wide at x, z on the terrace touch its rail or anything standing on it? */
 export function roofWall(x: number, z: number, r: number) {
   if (x - r < tx0 || x + r > tx1 || z - r < tz0 || z + r > tz1) return true;
-  return ROOF_THINGS.some(({ rect: f }) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3]);
+  return hits(ROOF_THINGS, x, z, r);
 }
 
-/** A door's two sides: where its prompt stands, its label, and where the fade puts you (walking's yaw: 0 north, π south, π/2 west) */
+/** A door's two sides: where its prompt stands (and on which floor), its label, and where the fade puts you (walking's yaw: 0 north, π south, π/2 west) */
 export interface Portal {
   id: string;
+  level: HomeLevel;
   x: number;
   z: number;
   label: string;
   to: { x: number; z: number; y: number; yaw: number };
   arrived: string;
 }
-/** The front door (on the yard, north) and the side door (onto the east lawn), outside and in */
+/**
+ * The front door (on the yard, north) and the side door (onto the east lawn), outside and in; the stairs, from the
+ * room up to the landing and down again; the steps from the landing up through the hatch to the terrace, and down
+ */
 export const HOME_PORTALS: Portal[] = [
-  { id: 'home:in', x: DX, z: hz0 - 0.75, label: 'Go in', to: { x: DX, z: rz0 + 0.55, y: SLAB_Y, yaw: Math.PI }, arrived: 'Home' },
-  { id: 'home:out', x: DX, z: rz0 + 0.3, label: 'Front door', to: { x: DX + 0.5, z: hz0 - 1.75, y: SLAB_Y, yaw: 0 }, arrived: 'The yard' },
-  { id: 'home:yard', x: rx1 - 0.3, z: SZ, label: 'Side door', to: { x: hx1 + 0.6, z: SZ, y: SLAB_Y, yaw: -Math.PI / 2 }, arrived: 'The garden' },
-  { id: 'home:back', x: hx1 + 0.5, z: SZ, label: 'Go in', to: { x: rx1 - 0.55, z: SZ, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
-  // The stairs (Phase 3): from the room at their foot up to the hatch's side on the terrace, and down again
-  { id: 'home:up', x: rx1 - 1.3, z: rz0 + 2.45, label: 'Upstairs', to: { x: HATCH[0] - 0.55, z: (HATCH[1] + HATCH[3]) / 2, y: SLAB_Y + ROOF_Y, yaw: Math.PI / 2 }, arrived: 'The terrace' },
-  { id: 'home:down', x: HATCH[0] - 0.35, z: (HATCH[1] + HATCH[3]) / 2, label: 'Downstairs', to: { x: rx1 - 1.75, z: rz0 + 2.45, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
+  { id: 'home:in', level: 'room', x: DX, z: hz0 - 0.75, label: 'Go in', to: { x: DX, z: rz0 + 0.55, y: SLAB_Y, yaw: Math.PI }, arrived: 'Home' },
+  { id: 'home:out', level: 'room', x: DX, z: rz0 + 0.3, label: 'Front door', to: { x: DX + 0.5, z: hz0 - 1.75, y: SLAB_Y, yaw: 0 }, arrived: 'The yard' },
+  { id: 'home:yard', level: 'room', x: rx1 - 0.3, z: SZ, label: 'Side door', to: { x: hx1 + 0.6, z: SZ, y: SLAB_Y, yaw: -Math.PI / 2 }, arrived: 'The garden' },
+  { id: 'home:back', level: 'room', x: hx1 + 0.5, z: SZ, label: 'Go in', to: { x: rx1 - 0.55, z: SZ, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
+  // The stairs: from the room at their foot up to the landing by the stairwell's head, and down
+  { id: 'home:up', level: 'room', x: rx1 - 1.3, z: rz0 + 2.45, label: 'Upstairs', to: { x: LANDING.x, z: LANDING.z + 0.6, y: SLAB_Y + UP_Y, yaw: Math.PI }, arrived: 'Upstairs' },
+  { id: 'home:down', level: 'up', x: LANDING.x, z: LANDING.z + 1.4, label: 'Downstairs', to: { x: rx1 - 1.75, z: rz0 + 2.45, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
+  // The steps from the landing up through the hatch, and down
+  { id: 'home:roof', level: 'up', x: LANDING.x, z: LANDING.z, label: 'Roof', to: { x: HATCH[0] - 0.55, z: (HATCH[1] + HATCH[3]) / 2, y: SLAB_Y + ROOF_Y, yaw: Math.PI / 2 }, arrived: 'The terrace' },
+  { id: 'home:roofdown', level: 'roof', x: HATCH[0] - 0.35, z: (HATCH[1] + HATCH[3]) / 2, label: 'Downstairs', to: { x: LANDING.x, z: LANDING.z + 0.5, y: SLAB_Y + UP_Y, yaw: Math.PI }, arrived: 'Upstairs' },
+  // The steps down under the open stairs (Phase 4): from the room by their top to the basement by their foot, and up
+  // (down there he arrives west of the bar's stools, facing into the den with the way south clear)
+  { id: 'home:cellar', level: 'room', x: rx1 - 1.3, z: rz0 + 0.6, label: 'Basement', to: { x: rx1 - 1.65, z: rz0 + 2.75, y: SLAB_Y + BASE_Y, yaw: Math.PI }, arrived: 'The den' },
+  { id: 'home:cellarup', level: 'base', x: rx1 - 1.5, z: rz0 + 2.15, label: 'Upstairs', to: { x: rx1 - 1.3, z: rz0 + 1.2, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
 ];
-/** A thing in the room to use: where its prompt stands and its label (walk `places`; index.ts opens what it's for) */
+/** A thing in the house to use: where its prompt stands, on which floor, and its label (walk `places`; index.ts opens what it's for) */
 export interface HomeUse {
-  id: 'home:wardrobe' | 'home:stash';
+  id: 'home:wardrobe' | 'home:stash' | 'home:desk';
+  level: HomeLevel;
   x: number;
   z: number;
   label: string;
 }
 const at = (kind: FurnitureKind) => FURNITURE.find((f) => f.kind === kind)!.rect;
+const upAt = (kind: UpKind) => UPSTAIRS.find((f) => f.kind === kind)!.rect;
 /**
- * The home's prompts for someone `y` high: on the terrace only the way down; anywhere else everything but that (the
- * room's and the terrace's stand over one another, so each shows on its own floor)
+ * The ways out of the room that wait while the street outside is still loading (docs/spawn-plan.md Phase 1): the
+ * front door, the side door and the stairs up (the landing and the terrace look out over the Close); spawn.ts says when
  */
-export function homePlaces(y: number): { id: string; x: number; z: number; label: string }[] {
-  const up = y >= UP;
-  return [...HOME_PORTALS.filter((p) => (p.id === 'home:down') === up), ...(up ? [] : HOME_USES)];
-}
-/** The wardrobe (stood in front of, on its west side: the fitting room) and the trunk (from its east end: the stash) */
+export const HOME_WAITS: readonly string[] = ['home:out', 'home:yard', 'home:up'];
+/** Their prompt meanwhile */
+export const WAITING = 'Getting ready…';
+/** The wardrobe (stood in front of, on its west side: the fitting room), the trunk (from its east end: the stash), the desk (behind its chair: the business card) */
 export const HOME_USES: HomeUse[] = [
-  { id: 'home:wardrobe', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },
-  { id: 'home:stash', x: at('stash')[2] + 0.35, z: (at('stash')[1] + at('stash')[3]) / 2, label: 'Stash' },
+  { id: 'home:wardrobe', level: 'room', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },
+  { id: 'home:stash', level: 'room', x: at('stash')[2] + 0.35, z: (at('stash')[1] + at('stash')[3]) / 2, label: 'Stash' },
+  { id: 'home:desk', level: 'up', x: (upAt('chair')[0] + upAt('chair')[2]) / 2, z: upAt('chair')[1] - 0.25, label: 'Desk' },
 ];
+/**
+ * The home's prompts for someone `y` high: each floor's own (the floors stand over one another, so each shows on its
+ * own); while the street outside is still loading (`ready` false), the ways out of the room say so (`HOME_WAITS`)
+ */
+export function homePlaces(y: number, ready = true): { id: string; x: number; z: number; label: string }[] {
+  const lv = homeLevel(y);
+  return [...HOME_PORTALS, ...HOME_USES].filter((p) => p.level === lv).map((p) => (ready || !HOME_WAITS.includes(p.id) ? p : { ...p, label: WAITING }));
+}
 
 /** Pools of light at night (docs/ends-far-west-plan.md Phase 5): on Gate Lane under each of the gates' lamps, in the
  * yard by the garage's lamp and at his front door (x, z, size; drawn by south3d.ts, dark by day as the lamps' pools) */

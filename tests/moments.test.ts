@@ -173,6 +173,26 @@ test('a bench: down onto the seat, the root dropping to the seat and back onto i
   assert.equal(mo.root(), null);
 });
 
+test('sat already (waking on his sofa, docs/spawn-plan.md): on the seat from the first frame, and stood up back to the stand spot', () => {
+  const m = benchMark({ x: -2, z: 4, ry: 0 }, 0.2);
+  const mo = createMoment();
+  mo.scale = SCALE;
+  mo.sit(m);
+  assert.ok(mo.active);
+  assert.equal(mo.phase, 'hold', 'no sit-down');
+  assert.equal(mo.amount(), 1);
+  const r = mo.root()!;
+  assert.ok(Math.abs(r.x - m.seat!.x) < 1e-9 && Math.abs(r.z - m.seat!.z) < 1e-9, 'on the seat');
+  mo.update({ dt: DT, x: m.x, z: m.z, face: m.face, speed: 0 });
+  assert.equal(mo.phase, 'hold', 'stays sat until he is stood up');
+  mo.release();
+  assert.equal(mo.phase, 'back');
+  let frames = 0;
+  while (mo.phase === 'back') (mo.update({ dt: DT, x: m.x, z: m.z, face: m.face, speed: 0 }), frames++);
+  assert.ok(frames >= Math.floor(MOMENT.bench.up / DT) - 1, 'the stand-up plays out');
+  assert.equal(mo.phase, 'done');
+});
+
 /** A bone's world position for a figure at (x, y, z) facing `face` at SCALE in pose `p` */
 function boneAt(sk: ReturnType<typeof makeSkeleton>, p: ReturnType<typeof newPose>, name: 'handL' | 'handR' | 'hips' | 'footL' | 'footR', x: number, y: number, z: number, face: number) {
   poseSkeleton(sk, p);
