@@ -564,3 +564,6 @@ built, so whole-city totals): phones over the Flats 193 draws, 16.12M to 16.19M 
 16.06M to 16.13M (no new draws); the desktop over the Flats 245 draws, 42.52M to 42.73M. The boot 737.5 to 737.9 of
 750 KB (the grid's lines and `drawnAt()` in terrain.ts); the chunk 37.7 KB.
 
+**The bench on real hardware** (the owner's, 2026-11-19: `?bench` on a phone and a computer, the live site against this
+pass's preview): good.
+
