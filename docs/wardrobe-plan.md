@@ -593,6 +593,49 @@ A proposed first set; the owner picks what goes in:
   - The chinos' hem first sank 9.9 thousandths into the work boots at a
     crouch; it ends a little higher now, as the denim's does.
 
+### Phase 8: the crowd dressed by district
+
+- **The owner's call (19 November 2026):** the crowd in the new clothes,
+  by where they are: "well dressed in the north and street wear in the
+  Ends and The Trenches etc".
+- **As built:** each district's style in `crowdlook.ts` (`STYLES`) gained
+  its own legs and feet, with a casual top (`legs`, `feet`) and with a
+  suit (`suitLegs`, `suitFeet`), how many of its caps are fitted and of
+  its beanies skullies, and its sling and waist bags. The Ends (Endswood)
+  are a district of their own (`districtAt()`, `inEndswood()`).
+  - **The north, well dressed:** Uptown's suits in trousers or chinos with
+    dress shoes, derbies and loafers, its coats over chinos with derbies
+    or loafers. Crestmont in chinos and loafers, shorts in the summer
+    look, the collar open.
+  - **The Trenches and the Ends, streetwear:** joggers, denim, cargo and
+    shorts; sneakers, runners, high-tops and slides (more slides in the
+    Ends); fitted caps, skullies, slings and waist bags.
+  - **The port and the yards:** the workers in hi-vis over work trousers or
+    cargo and boots, hard hats on a good share. Lot 9 worn: cargo and
+    boots, skullies.
+  - **The rest:** the cove in shorts and slides, the park in shorts and
+    runners, the Neon Mile in denim with fitted caps and waist bags, the
+    mall, the airport and Sunridge in a mix.
+  - **The joggers** in shorts or track pants with runners.
+- **What it costs:** the crowd's meshes are one per kind of top (four on
+  the desktop, three on phones: unchanged, so no new draw calls), and
+  everyone of a kind runs over every piece anyone of that kind wears. So:
+  - the smart pieces stay with the suits and the coats (no chinos or
+    loafers under a hoodie);
+  - the chest rig is the players' only;
+  - the crowd draws pieces it can't tell apart at its distance alike
+    (`wornLegs()`, `wornFeet()` in wardrobe.ts: near, chinos as trousers,
+    work trousers as cargo, derbies as dress shoes, high-tops as sneakers;
+    far, denim and cargo as joggers, runners, boots and slides as
+    sneakers, loafers as dress shoes, the fitted cap as a cap, the skully
+    as a beanie, the slings and waist bags left off). Single figures wear
+    every piece as it is.
+  - **Measured** over each kind's mesh at each level: the far crowd (most of
+    it, past 12 m) went from 59k to 67k vertices on the desktop and 44k
+    to 48k on phones; the near crowd (within 12 m, a handful of people)
+    from 161k to 262k and 95k to 153k. `tests/crowdlook.test.ts` holds
+    these with a little room. The boot's code grew 1 KB (757.8 of 760).
+
 ## Testing (every phase)
 
 - `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:wide`,
@@ -638,4 +681,6 @@ A proposed first set; the owner picks what goes in:
   19 November 2026: Phase 5's streetwear list is done.
 - **Phase 6 (work wear): built**, 19 November 2026.
 - **Phase 7 (business wear): built**, 19 November 2026: every phase of the
-  plan is built, waiting for the owner's look.
+  plan is built.
+- **Phase 8 (the crowd dressed by district): built**, 19 November 2026,
+  waiting for the owner's look.

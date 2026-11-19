@@ -60,7 +60,9 @@ for (const q of LEVELS) {
     const head = new THREE.Mesh(headGeometry(64, q), side);
     for (const [id, extra] of HATS) {
       const o = { ...PLAYER, ...extra };
-      const it = items(q, true).find((i) => i.id === id && i.when(o))!;
+      // (far off, the crowd's fitted cap is drawn as a cap and its skully as a beanie: docs/wardrobe-plan.md Phase 8)
+      const shown = q === 0 ? ({ fitted: 'cap', skully: 'beanie' } as Record<string, string>)[id] ?? id : id;
+      const it = items(q, true).find((i) => i.id === shown && i.when(o))!;
       assert.ok(it, id);
       const { geo, bottom } = crownOf(it.pieces[0].geo);
       const hat = new THREE.Mesh(geo, side);

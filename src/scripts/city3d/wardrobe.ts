@@ -1179,9 +1179,28 @@ export function items(q: Detail, hero = false): Item[] {
   const overcoatOn = (o: Outfit) => o.kind === 'overcoat';
   const trucker = (o: Outfit) => o.kind === 'trucker';
   /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
-  const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
+  /*
+   * The crowd's stand-ins (docs/wardrobe-plan.md Phase 8): a crowd's mesh of a kind holds every piece anyone of that
+   * kind wears, and every person's vertex work runs over all of it, so pieces a crowd can't tell apart at its distance
+   * share a shape (the colours stay their own). Near (detail 1): chinos as trousers, work trousers as cargo, derbies
+   * as dress shoes, high-tops as sneakers; far (0) too: denim and cargo as joggers, runners, boots and slides as
+   * sneakers, loafers as dress shoes. Single figures (2 and 3) wear every piece as it is.
+   */
+  const LEGS_NEAR: Partial<Record<Bottoms, Bottoms>> = { chinos: 'trousers', work: 'cargo' };
+  const LEGS_FAR: Partial<Record<Bottoms, Bottoms>> = { chinos: 'trousers', work: 'joggers', denim: 'joggers', cargo: 'joggers' };
+  const FEET_NEAR: Partial<Record<ShoeStyle, ShoeStyle>> = { derby: 'dress', hightop: 'sneaker' };
+  const FEET_FAR: Partial<Record<ShoeStyle, ShoeStyle>> = { derby: 'dress', hightop: 'sneaker', runner: 'sneaker', boot: 'sneaker', slide: 'sneaker', loafer: 'dress' };
+  const wornLegs = (o: Outfit): Bottoms | null => {
+    const b = bottomsOf(o);
+    return q >= 2 || !b ? b : ((q === 1 ? LEGS_NEAR : LEGS_FAR)[b] ?? b);
+  };
+  const wornFeet = (o: Outfit): ShoeStyle | null => {
+    const f = shoesOf(o);
+    return q >= 2 || !f ? f : ((q === 1 ? FEET_NEAR : FEET_FAR)[f] ?? f);
+  };
+  const sneakers = (o: Outfit) => wornFeet(o) === 'sneaker';
   /** Either sneaker, low or high: the stripe and the shoe's mark go on its side */
-  const kicks = (o: Outfit) => shoesOf(o) === 'sneaker' || shoesOf(o) === 'hightop';
+  const kicks = (o: Outfit) => wornFeet(o) === 'sneaker' || wornFeet(o) === 'hightop';
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
   /** In the balaclava and shades (everyone but the unmasked: docs/faces-plan.md) */
   const masked = (o: Outfit) => !o.face;
@@ -1191,7 +1210,8 @@ export function items(q: Detail, hero = false): Item[] {
   const covered = (o: Outfit) => !!(o.cap || o.beanie || o.bucket || o.hardhat || o.helmet) || o.kind === 'soldier';
   const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && !o.hardhat && bare(o);
   /** Which cap: the fitted, worn straight (`capFlat`), or the curved cap, either way round */
-  const curvedCap = (o: Outfit) => hasCap(o) && !o.capFlat;
+  // (far off, the crowd's fitted caps are drawn as caps, its skullies as beanies: docs/wardrobe-plan.md Phase 8)
+  const curvedCap = (o: Outfit) => hasCap(o) && (!o.capFlat || far);
 
   /* ----- Head: the balaclava over a real head shape, the eye opening, the shades ----- */
   const HEAD: Sec[] = [
@@ -4214,7 +4234,8 @@ export function items(q: Detail, hero = false): Item[] {
       },
       {
         id: `sling-${k}`,
-        when: (o) => !!o.sling && is(o),
+        // (the small bags left off the far crowd: a few pixels, and a shape more on every person of the kind)
+        when: (o) => !!o.sling && is(o) && !far,
         pieces: [
           P('torso', slingBody, 'sling', CHEST),
           ...(slingDetail.length ? [P('torso', one(slingDetail), 'sling', { shade: 0.7, detail: true, ...CHEST })] : []),
@@ -4232,7 +4253,7 @@ export function items(q: Detail, hero = false): Item[] {
       },
       {
         id: `waist-${k}`,
-        when: (o) => !!o.waist && is(o),
+        when: (o) => !!o.waist && is(o) && !far,
         pieces: [
           P('torso', waistBody, 'waist'),
           ...(waistDetail.length ? [P('torso', one(waistDetail), 'waist', { shade: 0.65, detail: true })] : []),
@@ -4422,7 +4443,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'fitted',
-      when: (o) => hasCap(o) && !!o.capFlat,
+      when: (o) => hasCap(o) && !!o.capFlat && !far,
       pieces: [
         P('head', one(fitted.crown), 'cap'),
         P('head', one(fitted.seams), 'cap', { shade: 0.62, detail: true }),
@@ -4437,7 +4458,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'beanie',
-      when: (o) => !!o.beanie && !o.skully && bare(o),
+      when: (o) => !!o.beanie && (!o.skully || far) && bare(o),
       pieces: [P('head', one(beanie), 'beanie'), P('head', beanieCuff, 'beanie', { shade: 0.82 }), ...hatPatch(beaniePatch, beanieLogo)],
     },
     {
@@ -4447,7 +4468,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'skully',
-      when: (o) => !!o.beanie && !!o.skully && bare(o),
+      when: (o) => !!o.beanie && !!o.skully && !far && bare(o),
       pieces: [P('head', skully, 'beanie'), P('head', skullyHem, 'beanie', { shade: 0.85 }), ...hatPatch(skullyPatch, skullyLogo)],
     },
     {
@@ -4649,17 +4670,17 @@ export function items(q: Detail, hero = false): Item[] {
     // The bottoms and the shoes, each on its own (docs/wardrobe-plan.md Phase 2): any with any top
     {
       id: 'trousers',
-      when: (o) => bottomsOf(o) === 'trousers',
+      when: (o) => wornLegs(o) === 'trousers',
       pieces: [P('pelvis', trouserLegs, 'bottom', BOTTOM), ...(crease ? both('shin', crease, 'bottom', { shade: 0.75, detail: true }) : [])],
     },
     {
       id: 'joggers',
-      when: (o) => bottomsOf(o) === 'joggers' || bottomsOf(o) === 'trackpants',
+      when: (o) => wornLegs(o) === 'joggers' || wornLegs(o) === 'trackpants',
       pieces: [P('pelvis', joggers, 'bottom', BOTTOM), ...both('shin', joggerCuff, 'bottom', { shade: 0.8 })],
     },
     {
       id: 'cargoPants',
-      when: (o) => bottomsOf(o) === 'cargo',
+      when: (o) => wornLegs(o) === 'cargo',
       pieces: [
         P('pelvis', cargoPants, 'bottom', BOTTOM),
         ...both('shin', cargoCuff, 'bottom', { shade: 0.8 }),
@@ -4670,7 +4691,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'shorts',
-      when: (o) => bottomsOf(o) === 'shorts',
+      when: (o) => wornLegs(o) === 'shorts',
       pieces: [
         P('pelvis', shorts, 'bottom', BOTTOM),
         ...both('leg', shortsHem, 'bottom', { shade: 0.82 }),
@@ -4681,7 +4702,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'denim',
-      when: (o) => bottomsOf(o) === 'denim',
+      when: (o) => wornLegs(o) === 'denim',
       pieces: [
         P('pelvis', denim, 'bottom', BOTTOM),
         ...both('shin', denimCuff, 'bottom', { shade: 1.15 }),
@@ -4690,12 +4711,12 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'chinos',
-      when: (o) => bottomsOf(o) === 'chinos',
+      when: (o) => wornLegs(o) === 'chinos',
       pieces: [P('pelvis', chinos, 'bottom', BOTTOM), ...both('shin', chinoHem, 'bottom', { shade: 0.88 })],
     },
     {
       id: 'workPants',
-      when: (o) => bottomsOf(o) === 'work',
+      when: (o) => wornLegs(o) === 'work',
       pieces: [
         P('pelvis', workPants, 'bottom', BOTTOM),
         ...both('shin', workHem, 'bottom', { shade: 0.85 }),
@@ -4706,12 +4727,12 @@ export function items(q: Detail, hero = false): Item[] {
     // Track pants: the joggers with the track suit's stripes down the outside of each leg
     {
       id: 'trackStripes',
-      when: (o) => bottomsOf(o) === 'trackpants',
+      when: (o) => wornLegs(o) === 'trackpants',
       pieces: [...both('leg', thighStripes, SHIRT, { detail: true }), ...both('shin', shinStripes, SHIRT, { detail: true })],
     },
     {
       id: 'dressShoes',
-      when: (o) => shoesOf(o) === 'dress',
+      when: (o) => wornFeet(o) === 'dress',
       pieces: [...both('shin', dress, 'shoes', UPPER), ...both('shin', dressSole, '#14121a', SHOE)],
     },
     {
@@ -4725,7 +4746,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'hightops',
-      when: (o) => shoesOf(o) === 'hightop',
+      when: (o) => wornFeet(o) === 'hightop',
       pieces: [
         ...both('shin', hightop, 'shoes', UPPER),
         ...both('shin', hightopSole, SHIRT, SHOE),
@@ -4735,7 +4756,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'runners',
-      when: (o) => shoesOf(o) === 'runner',
+      when: (o) => wornFeet(o) === 'runner',
       pieces: [
         ...both('shin', runner, 'shoes', UPPER),
         ...both('shin', one(runnerPanels), 'shoes', { shade: 0.72, ...SHOE }),
@@ -4746,7 +4767,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'loafers',
-      when: (o) => shoesOf(o) === 'loafer',
+      when: (o) => wornFeet(o) === 'loafer',
       pieces: [
         ...both('shin', loafer, 'shoes', UPPER),
         ...both('shin', loaferStrap, 'shoes', { shade: 0.78, ...SHOE }),
@@ -4756,7 +4777,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'derbies',
-      when: (o) => shoesOf(o) === 'derby',
+      when: (o) => wornFeet(o) === 'derby',
       pieces: [
         ...both('shin', dress, 'shoes', UPPER),
         ...both('shin', derbyQuarters, 'shoes', { shade: 0.85, ...SHOE }),
@@ -4766,7 +4787,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'workBoots',
-      when: (o) => shoesOf(o) === 'boot',
+      when: (o) => wornFeet(o) === 'boot',
       pieces: [
         ...both('shin', workBoot, 'shoes', UPPER),
         ...both('shin', workBootCap, 'shoes', { shade: 0.72, ...SHOE }),
@@ -4777,7 +4798,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'slides',
-      when: (o) => shoesOf(o) === 'slide',
+      when: (o) => wornFeet(o) === 'slide',
       pieces: [
         ...both('shin', sockFoot, WHITE, UPPER),
         ...both('shin', footbed, 'shoes', { shade: 0.8, ...SHOE }),

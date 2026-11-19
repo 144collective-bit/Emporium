@@ -339,6 +339,15 @@ keep it up to date when what it describes changes.
     (`WK`) and overcoat (`OCK`) are tops of their own; `tieOn()` lays a tie
     on any front; `tailored()` puts a big front mark on as a pin. Chinos
     (`CHINO_S`), loafers (`LOAFER`) and derbies (on `DRESS`).
+  - **The crowd by district** (`docs/wardrobe-plan.md` Phase 8): each
+    district's style in crowdlook.ts names its legs, feet, hats and bags
+    (`legs`, `feet`, `suitLegs`, `suitFeet`, `fitted`, `skully`, `sling`,
+    `waist`); the Ends are a district (`inEndswood()`). The crowd draws
+    look-alike pieces alike (`wornLegs()`, `wornFeet()`, and far off the
+    fitted cap as a cap, the skully as a beanie, no small bags), so each
+    kind's mesh stays near its old vertex work; `tests/crowdlook.test.ts`
+    holds it. A new piece in the crowd: give it a stand-in there or check
+    that test's numbers.
   - **Headphones** are per top (`headphones-<kind>`), fitted to its collar
     by `fitPhones()` from `NECKS` (the collar's rings, the hood's roll, a
     margin for laid-on pieces); a new top with headphones needs its line
