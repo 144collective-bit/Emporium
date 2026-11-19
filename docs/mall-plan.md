@@ -158,3 +158,142 @@ old land).
 Checks: `npm test` and `npm run test:wide` (664 passing), the type check,
 the build and the budget (boot 661.8 of 670 KB), browser shots by day and
 night and on a phone.
+
+## One mall: the Skywalk, the metro inside, Palm Court enclosed (the owner's call, 2026-11-18)
+
+The owner asked to "connect these two buildings and create 1 giant mall",
+with the train between them running through it and stopping there for
+passengers, rebuilt "realistic and of a high standard". Their picks:
+
+- **The link:** a two-floor glass bridge over the east ring avenue (ns3),
+  with traffic still driving under it. No street moves.
+- **The train:** the metro. The raised line between the mall and Palm Court
+  is the metro's (the monorail is the Neon Mile's, further south). It runs
+  through the bridge's top floor.
+- **The station:** the metro's Starlight Mall station moves from north of
+  the highway into the bridge. It keeps its name and its place in the
+  timetable.
+- **The floors:** a shopping floor at the mall's upper-floor height, with
+  the station's platform floor above it, where the metro runs.
+- **Palm Court:** a full rebuild later, as an enclosed two-floor wing
+  matching the mall's interior.
+
+### Phases (each with the owner's sign-off)
+
+1. **The Skywalk** (built). The bridge, its pavilion on Palm Court, and the
+   corridor through Bright & Co. Data in `malllink.ts`, drawing in
+   `malllink3d.ts`.
+   - **The bridge** (`LINK`): spans the avenue from Bright & Co.'s east face
+     to Palm Court's west row, clear of traffic (`CLEAR`). It has two floors:
+     - The lower floor (`L1`) is at the mall's upper-floor height.
+     - The platform floor (`L2`) is at the el's raised height, east of the
+       track.
+     - A glass barrel roof runs over both.
+   - **The el through it:** raised through the bridge (`LINK_Z` in mall.ts,
+     metro.ts `needAt()`). It enters and leaves through portals in the
+     bridge's glass ends, and its pillar on the median is a column in the
+     lower floor.
+   - **The corridor** (`CORRIDOR`): from the hall's east gallery (in place
+     of the east upper unit, `CORRIDOR_Z`) through Bright & Co.'s upper floor
+     to the bridge, with the store's windows either side.
+   - **The pavilion** (`PAVILION`): in place of Palm Court's two northern
+     west-row shops. Its triple-height atrium is crossed by two pairs of
+     escalators:
+     - street to the lower floor (`ESC_G`)
+     - lower floor to the platform floor (`ESC_UP`)
+   - Its glass front on the promenade carries the mall's name and star, with
+     doors on the promenade and the avenue's sidewalk.
+   - **The platform floor** for now: the walk along the track behind a glass
+     screen, benches, and a "Metro · coming soon" board. Trains pass through
+     without stopping until Phase 2.
+   - **Walking:** `linkFloorAt()` in groundheight.ts; `linkUp()` and
+     `linkWall()` in walk.ts. Up there only the edges and what stands on
+     your floor stop you (`LINK_SOLIDS`). `LINK_CAMERA` is for the walk
+     camera.
+   - **Checks:** the type check, lint and `npm test` pass. The build and
+     budget pass (boot 741.2 of 750 KB). Browser shots were taken outside
+     and in.
+   - **Draw calls** at the mall's views (counted from the page's WebGL,
+     before and after, headless):
+     - Unchanged: desktop 325 and 318, phone 171. Its geometry merges into
+       the mall's batches.
+     - Triangles up about 0.5% (its people in the crowd).
+2. **The station** (built; the owner's picks: the glass lift, fare gates,
+   a next-train board, the metro's sign outside). Starlight Mall station
+   moved into the bridge's top floor (metro.ts `inside`); the old station,
+   its tower and stair north of the highway are gone.
+   - **The platform floor** is level with the train's floor now (`L2`,
+     metro.ts `PLATFORM_UP` over the deck; the roof came down to keep
+     under the pylon). It has:
+     - the screen's doors and a yellow line, the station's name and the M;
+     - the Metro prompt on the platform (index.ts shows it only up there);
+       a ride ends there (places.ts gives the place a height,
+       `walk.placeAt()` / `enter()` take it).
+   - **The fare gates** (`GATES`, for the look: rides stay free) are
+     between the platform and the mezzanine, under METRO and the M.
+   - **The next-train boards** (`NEXT_BOARDS`, metro.ts `nextTrain()`): only
+     words, no numbers on a sign. They show where the next train goes and
+     ON ITS WAY, DUE, ARRIVING or BOARDING, on the metro's own clock
+     (`METRO_CLOCK`).
+   - **The glass lift** (`LINK_LIFT`, `STATION_LIFT`) stops at the street,
+     the mall's floor and the metro's. Its floor picker is Endswood's card
+     (skylift-ui.ts `openStation()`).
+   - **Outside:** the M and the station's name on both glazed ends, the M
+     and METRO on the pavilion's south pier.
+   - **The timetable:** Crestmont's spur leaves the main line north of the
+     station, facing north. A train between them runs on past the spur and
+     turns round where the old station was (metro.ts `TURN`, `TURN_S`:
+     `LEGS` two longer, the round trip about 439 s). A ride runs through
+     Starlight Mall without stopping, so Uptown to Crestmont is still about
+     75 s.
+   - **Checks:** the type check, lint and `npm test` (1516) pass. The build
+     and budget pass (boot 742.5 of 750 KB). The walk smoke test passes
+     (its metro ride steps out on the new platform). Browser shots were
+     taken of the platform, the gates, the lift and the station from
+     outside.
+3. **Palm Court enclosed** (the owner's picks: a glass barrel vault, shops
+   on both floors, bridges across, an upstairs food hall, the cinema's
+   upstairs entry). The rules are `courtinside.ts`, the drawing
+   `courtinside3d.ts`. Built: a full rebuild as a two-floor indoor wing of
+   the mall:
+   - A glass roof over the promenade, upper galleries over both rows, and
+     bridges across.
+   - The fountain, trees and cinema kept inside.
+   - Shops on both floors, made-up names.
+   - Walking, people, and the panel's Walk in.
+   - What went: the promenade's street lamps, festoon lights and the
+     city's trees (indoor trees in white planters now), the PALM COURT
+     gateway (its name over the south entrance now), the shops' single
+     storeys, the cinema's canopy (the food hall's terrace runs over its
+     doors) and the Skywalk pavilion's door canopies.
+   - **Checks:** the type check, lint and `npm test` (1521) pass. The
+     build and budget pass (boot 743.9 of 750 KB: little room left). The
+     walk smoke test passes (80 of 80). Browser shots were taken from
+     above, the entrance, the promenade, a gallery and the food hall.
+4. **The whole mall finished** (the owner's picks: the roofs dressed and a
+   phone check; the one name and directory, and the bus and coach stop on
+   the bare land south of the multi-storey, left for later):
+   - **The roofs dressed** (built): `mallroofs.ts` (DOM-free, tested; in the
+     mall's chunk, not the boot), drawn by `mallroofs3d.ts` in three sites.
+     It covers Palm Court's rows, Maxwell's, Bright & Co., the hall round
+     its vault, and Paradise Cinema:
+     - a grey membrane over the light roofs;
+     - rows of solar panels tilted to face south, clear of the vaults, the
+       edges and the plant;
+     - rooflights over Palm Court's upper floor;
+     - plant on the rows and the cinema. The anchors' and the hall's plant
+       now come from the same list (`ANCHOR_PLANT`, `HALL_PLANT`).
+   - **The phone check:** draw calls and triangles counted from the page's
+     WebGL (headless, by the frame), `main` before Phase 1 against all four
+     phases, at the mall's views (the bench's `mall`, from above, Palm Court
+     from above, the avenue under the bridge, the promenade, a gallery):
+     - desktop: 325 to 329 draws at the mall's view (+4 in every view),
+       triangles up about 1.7%;
+     - phones: 171 to 173-176 draws, triangles up about 2.9%.
+     - The same rise in every view, inside and out, so it's what's drawn
+       everywhere (the mall's new people in the crowd, which phones already
+       halve), not the buildings: their geometry merges into the mall's
+       batches, and the inside is near only. Nothing needed trimming.
+   - **Checks:** the type check, lint and `npm test` (1524) pass. The build
+     and budget pass (boot 743.9 of 750 KB, unchanged by the roofs: they
+     load with the mall).

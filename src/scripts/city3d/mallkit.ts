@@ -111,6 +111,28 @@ export const CURTAIN = (() => {
   };
   return surface('mall-curtain', 256, 256, [3.2, 3.2], (c) => panes(c, false), { draw: (c) => panes(c, true), day: 0.04, lit: 0.95 });
 })();
+/** Solar panels (the joined mall's roofs, mallroofs3d.ts): dark blue cells in a silver frame, a panel 1.6 by 1 */
+export const SOLAR = surface('mall-solar', 128, 64, [1.6, 1.0], (c) => {
+  c.fillStyle = '#c9ccd2';
+  c.fillRect(0, 0, 128, 64);
+  for (let i = 0; i < 6; i++)
+    for (let j = 0; j < 3; j++) {
+      c.fillStyle = (i + j) % 2 ? '#1d2b4a' : '#22335a';
+      c.fillRect(3 + i * 20.5, 3 + j * 19.5, 19, 18);
+    }
+});
+/** A roof's membrane (the light roofs from above): pale grey sheets with their welded seams, a faint mottle */
+export const ROOF = surface('mall-roof', 128, 128, [6, 6], (c) => {
+  const r = seeded(53);
+  c.fillStyle = '#b9bdc2';
+  c.fillRect(0, 0, 128, 128);
+  for (let k = 0; k < 90; k++) {
+    c.fillStyle = r() > 0.5 ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)';
+    c.fillRect(r() * 128, r() * 128, 6 + r() * 14, 3 + r() * 6);
+  }
+  c.fillStyle = '#a3a8ae';
+  for (const y of [0, 32, 64, 96]) c.fillRect(0, y, 128, 2);
+});
 /** Large-format cladding panels (2.4 x 1.2) with fine joints: light, and dark */
 function cladding(key: string, base: string, joint: string) {
   return surface(key, 256, 128, [4.8, 2.4], (c) => {
