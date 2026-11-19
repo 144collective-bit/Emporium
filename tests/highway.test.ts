@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HIGHWAY, HIGHWAY_BOX, HIGHWAY_HALF, fromHighway, insideHighway } from '../src/scripts/city3d/highway';
-import { PLAN, RING_MEETS, riverBridges, riverCrossings, streetLength } from '../src/scripts/city3d/streetplan';
+import { PLAN, RING_MEETS, distToStreet, riverBridges, riverCrossings, streetLength } from '../src/scripts/city3d/streetplan';
+import { ringPoint, ringS } from '../src/scripts/city3d/viaduct';
 import { EW_ROADS, NS_ROADS, SHORT_NS, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { PARKWAY, SOUTHSIDE } from '../src/scripts/city3d/outer';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
@@ -44,11 +45,17 @@ test('well outside the town, and clear of the kart park north of it and the airp
 test('raised: nothing meets it at street level but its ramps, and every arterial passes under it where it crossed it', () => {
   // (but its ramps, onto its deck: docs/highway-plan.md Phase 3)
   assert.ok(PLAN.crossings.filter((c) => c.streets.includes('highway')).every((c) => c.streets.some((id) => id.startsWith('ramp-'))));
-  // (but the short north-south streets stop at the Parkway: they never reach it, docs/mall-plan.md)
-  assert.equal(RING_MEETS.length, (NS_ROADS.length + EW_ROADS.length) * 2 - Object.keys(SHORT_NS).length);
+  // (but the short north-south streets stop at the Parkway: they never reach it, docs/mall-plan.md; and exit 6A's road
+  // in passes under the south-west corner, docs/south-plan.md Phase 5)
+  assert.equal(RING_MEETS.length, (NS_ROADS.length + EW_ROADS.length) * 2 - Object.keys(SHORT_NS).length + 1);
   for (const m of RING_MEETS) {
     assert.ok(fromHighway(m.at[0], m.at[1]) < 1e-6);
     const art = PLAN.streets.find((t) => t.id === m.street)!;
+    // (the corner road square on under the curve: on it either side)
+    if (m.id === 'corner-6a') {
+      for (const d of [-8, 8]) assert.ok(distToStreet(art, ringPoint(ringS(m.at[0], m.at[1]).s, d)) < 0.05, `${m.street} under ${m.id}`);
+      continue;
+    }
     // The arterial runs on under it, on both sides
     for (const d of [-8, 8]) {
       const p: [number, number] = m.along === 1 ? [m.at[0], m.at[1] + d] : [m.at[0] + d, m.at[1]];

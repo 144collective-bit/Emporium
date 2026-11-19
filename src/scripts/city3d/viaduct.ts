@@ -133,8 +133,10 @@ export const OUTER_LANE = MEDIAN / 2 + LANE * 1.5;
 /* ---------- The exits ---------- */
 
 export interface Exit {
-  /** Numbered clockwise from the stadium */
+  /** Numbered clockwise from the stadium (the order they were built: 6A is 9) */
   n: number;
+  /** Its number on the signs: `n`, but 6A at the south-west corner (between 6 and 7, every other sign keeping its own) */
+  label: string;
   /** The crossing at the arterial today (streetplan.ts) */
   crossing: string;
   /** The arterial (its street in the plan) */
@@ -171,7 +173,18 @@ const EXIT_DATA: [string, string, Pt, string, 1 | -1, Form, Form][] = [
   ['highway-ew4-1', 'ew4', [-215, 137], 'Southbank Docks', -1, 'slip', 'slip'],
   ['highway-ew0-1', 'ew0', [-215, -4.5], 'Uptown · Kart Park', 1, 'full', 'full'],
 ];
-export const EXITS: Exit[] = EXIT_DATA.map(([crossing, street, at, name, side, inner, outer], i) => ({ n: i + 1, crossing, street, at, name, side, inner, outer }));
+/**
+ * Exit 6A (docs/south-plan.md Phase 5, the owner's calls, 2026-11-19): one exit at the ring's south-west corner, where
+ * the plan's two (the south side's and the west side's) didn't fit between exit 6's ramps and exit 7's. Its road in
+ * (cornerroad.ts) runs from The Trenches' south-west corner (`CORNER_FROM`, where trench-ns0 meets trench-ew1) straight
+ * out under the curve, square on to it, so its slip ramps' feet are on it; the ramps lie round the curve towards the
+ * south side (clear of exit 6's)
+ */
+export const CORNER_FROM: Pt = [-188, 261];
+export const EXITS: Exit[] = [
+  ...EXIT_DATA.map(([crossing, street, at, name, side, inner, outer], i): Exit => ({ n: i + 1, label: String(i + 1), crossing, street, at, name, side, inner, outer })),
+  { n: 9, label: '6A', crossing: 'corner-6a', street: 'corner-road', at: ringPoint(ringS(CORNER_FROM[0], CORNER_FROM[1]).s, 0), name: "Aldwyn's Green · Southbank Docks", side: -1, inner: 'slip', outer: 'slip' },
+];
 /** Each exit's place along the ring */
 export const exitS = (e: Exit) => ringS(e.at[0], e.at[1]).s;
 
