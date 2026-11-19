@@ -25,7 +25,7 @@
  * or a hoodie, track to a hoodie).
  */
 import type { HairCut, Outfit, OutfitKind } from './wardrobe';
-import { PALETTE } from '../net/profile-data';
+import { HAIR_DYE, HAIR_NATURAL, PALETTE, SHAPE_IDS } from '../net/profile-data';
 import type { IdleAct, CrowdClip } from './crowdclips';
 import { inTrenches } from './trenches';
 import { inUptown } from './uptown';
@@ -410,14 +410,17 @@ export const MASKED_SHARE = 0.15;
 // (the players' own: profile-data.ts `PALETTE`)
 export const SKIN_TONES: readonly string[] = PALETTE.tone;
 /** Hair: the natural shades (black twice as often), and now and then a dyed one (more of those on the Neon Mile and in The Trenches) */
-export const HAIR_COLORS: readonly string[] = ['#16141f', ...PALETTE.hair.slice(0, 7)];
-export const HAIR_DYES: readonly string[] = PALETTE.hair.slice(7);
+export const HAIR_COLORS: readonly string[] = ['#16141f', ...HAIR_NATURAL];
+export const HAIR_DYES: readonly string[] = HAIR_DYE;
 /** The cuts and how often each is seen (and bald for the rest) */
 const CUTS: readonly [HairCut, number][] = [
-  ['buzz', 0.24],
-  ['crop', 0.34],
-  ['curls', 0.2],
-  ['bun', 0.13],
+  ['buzz', 0.2],
+  ['crop', 0.26],
+  ['curls', 0.14],
+  ['bun', 0.1],
+  ['twists', 0.08],
+  ['hightop', 0.06],
+  ['long', 0.08],
 ];
 
 /** Unmasked, a skin tone and hair, seeded (all but `MASKED_SHARE` of the crowd, and never the bouncers) */
@@ -429,8 +432,10 @@ export function unmask(r: () => number, o: Outfit, role: Role = 'walk', district
   const cut = CUTS.find(([, p]) => (acc += p) > u)?.[0];
   const dyed = r() < (district === 'strip' || district === 'trenches' ? 0.14 : 0.05);
   const hair = dyed ? pick(r, HAIR_DYES) : pick(r, HAIR_COLORS);
+  // (Phase 3: the head's proportions; half the crowd the standard)
+  const shape = r() < 0.5 ? 'standard' : pick(r, SHAPE_IDS.slice(1));
   if (role === 'guard' || masked) return o;
-  return { ...o, face: true, skin, ...(cut || role === 'kid' ? { hair, cut: cut ?? 'crop' } : {}) };
+  return { ...o, face: true, skin, headShape: shape, ...(cut || role === 'kid' ? { hair, cut: cut ?? 'crop' } : {}) };
 }
 
 function clothed(r: () => number, where: Where): Outfit {

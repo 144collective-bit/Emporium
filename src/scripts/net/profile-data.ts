@@ -124,15 +124,32 @@ export const PATTERN_IDS = PATTERNS.map((p) => p.id);
  * The face (docs/faces-plan.md Phase 2): Degen in the balaclava and shades as in the art, or unmasked, his face in a
  * skin tone with a haircut and its colour (all free), the shades on or off.
  */
-export type Cut = 'buzz' | 'crop' | 'curls' | 'bun' | 'bald';
+export type Cut = 'buzz' | 'crop' | 'curls' | 'bun' | 'twists' | 'hightop' | 'long' | 'bald';
 export const CUTS: { id: Cut; name: string }[] = [
   { id: 'buzz', name: 'Buzz' },
   { id: 'crop', name: 'Crop' },
   { id: 'curls', name: 'Curls' },
   { id: 'bun', name: 'Bun' },
+  { id: 'twists', name: 'Twists' },
+  { id: 'hightop', name: 'High-top' },
+  { id: 'long', name: 'Long' },
   { id: 'bald', name: 'Bald' },
 ];
 export const CUT_IDS = CUTS.map((c) => c.id);
+/** The head's proportions, unmasked (Phase 3: presets, no free moulding; the stretch is wardrobe.ts `HEAD_SCALE`) */
+export type HeadShape = 'standard' | 'round' | 'long' | 'wide' | 'narrow' | 'big';
+export const HEAD_SHAPES: { id: HeadShape; name: string }[] = [
+  { id: 'standard', name: 'Standard' },
+  { id: 'round', name: 'Round' },
+  { id: 'long', name: 'Long' },
+  { id: 'wide', name: 'Wide' },
+  { id: 'narrow', name: 'Narrow' },
+  { id: 'big', name: 'Big' },
+];
+export const SHAPE_IDS = HEAD_SHAPES.map((h) => h.id);
+/** Hair: the natural shades (the crowd's, crowdlook.ts), then the dyes (a few of the crowd dye theirs) */
+export const HAIR_NATURAL = ['#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#c9a86a', '#d8c08a', '#8a3a22', '#b4532a', '#9d9aa8', '#cfccd6'];
+export const HAIR_DYE = ['#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'];
 
 export interface Look {
   kind: LookKind;
@@ -176,6 +193,8 @@ export interface Look {
   cut: Cut;
   /** The shades on an unmasked face (the balaclava always has them) */
   shades: boolean;
+  /** The head's proportions, unmasked */
+  shape: HeadShape;
 }
 
 export const PALETTE = {
@@ -193,9 +212,9 @@ export const PALETTE = {
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
   /** Skin tones, pale to deep (the crowd's too, crowdlook.ts): flat tones, none bright enough to bloom */
-  tone: ['#f1d2b6', '#e8c39e', '#dcae86', '#c99068', '#b07650', '#8f5a3a', '#6e4129', '#52301f'],
+  tone: ['#f7e0cc', '#f1d2b6', '#e8c39e', '#dcae86', '#d29f78', '#c99068', '#b07650', '#a06640', '#8f5a3a', '#6e4129', '#52301f', '#3f2418'],
   /** Hair: the natural shades, then the dyes */
-  hair: ['#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#8a3a22', '#9d9aa8', '#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'],
+  hair: [...HAIR_NATURAL, ...HAIR_DYE],
 };
 /** The colour packs sold at Drop 001 (ids are the catalog's), each a list of top and bottom colours */
 export const PACKS = { gold: PALETTE.gold, holo: PALETTE.holo } as const;
@@ -239,6 +258,7 @@ export const DEFAULT_LOOK: Look = {
   hair: '#16141f',
   cut: 'crop',
   shades: false,
+  shape: 'standard',
 };
 
 /** Anything from a player, made safe: unknown values fall back to Degen's own look */
@@ -286,6 +306,7 @@ export function cleanLook(raw: unknown): Look {
     hair: from(o.hair, PALETTE.hair, DEFAULT_LOOK.hair),
     cut: from(o.cut, CUT_IDS, DEFAULT_LOOK.cut),
     shades: o.shades === true,
+    shape: from(o.shape, SHAPE_IDS, DEFAULT_LOOK.shape),
   };
 }
 
