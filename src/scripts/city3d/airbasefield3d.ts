@@ -19,7 +19,7 @@ import type { Tick } from './world';
 import { site } from './tilework';
 import { ROAD } from './palette';
 import { MARK, G, TOP, box, cyl, light, mark } from './airportkit';
-import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, APRON_VEHICLES, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, PARKED, RUNWAY, WINDSOCK, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
+import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, APRON_VEHICLES, baseGrey, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, PARKED, RUNWAY, WINDSOCK, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
 import type { Rect } from './tiles';
 
 /** This module's address, for the site worker (districts.ts) */
@@ -382,7 +382,16 @@ export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | n
     const f = createFleet(kind, mine.map((p) => p.livery));
     f.group.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (m.isMesh && (m.material as THREE.MeshToonMaterial).map && (m.material as THREE.Material).alphaTest > 0) m.visible = false;
+      if (!m.isMesh) return;
+      if ((m.material as THREE.MeshToonMaterial).map && (m.material as THREE.Material).alphaTest > 0) m.visible = false;
+      // (the painted parts all grey, the owner's call: the base's own copy of each, the airport's left as they are)
+      const c = m.geometry.getAttribute('color');
+      if (!c) return;
+      const g = m.geometry.clone();
+      const col = g.getAttribute('color') as THREE.BufferAttribute;
+      for (let i = 0; i < col.count; i++) col.setXYZ(i, ...baseGrey(col.getX(i), col.getY(i), col.getZ(i)));
+      col.needsUpdate = true;
+      m.geometry = g;
     });
     mine.forEach(({ at: [x, z, yaw] }, i) => f.set(i, { x, y: 0, z, yaw, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 }));
     f.update(0, 0);

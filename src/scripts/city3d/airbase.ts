@@ -339,3 +339,12 @@ export const APRON_VEHICLES: { kind: 'tug' | 'bowser'; at: [number, number, numb
   { kind: 'bowser', at: [-392, -482, Math.PI / 2] },
 ];
 export const WINDSOCK: Pt = [-420, -526];
+
+/** The base's aircraft's grey (the owner's call: all grey): a colour as light as it was, in the base's cool grey */
+export const BASE_GREY = [0.62, 0.66, 0.7] as const;
+export function baseGrey(r: number, g: number, b: number): [number, number, number] {
+  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  // (the lights' and the glass's darks stay dark; the body's white comes down to the grey)
+  const v = 0.12 + l * 0.88;
+  return [v * BASE_GREY[0], v * BASE_GREY[1], v * BASE_GREY[2]];
+}

@@ -11,7 +11,7 @@ baseline is measured (below). The phone is over its geometry ceiling before
 the base adds anything; the owner's pick (2026-11-19) was to trim first,
 and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
-airfield) is built** (2026-11-19, measured below), waiting on the owner's sign-off.
+airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is next**, the owner's go.
 
 ## The owner's answers (2026-11-18)
 
@@ -492,4 +492,12 @@ chunk (`airbase-field`).
 
 - **Memory:** memcheck 170.7 MiB of 187, as before the airfield (its geometry within the step's room).
 - **The boot:** 739.3 → 740.6 KB of 750 (+1.3, the allowance +2). **Textures:** none new.
+
+## The owner's sign-off on Phase 2 (2026-11-19)
+
+| Question | Answer |
+| --- | --- |
+| Phase 2, the airfield, as built | **Signed off.** |
+| The parked transports (the airport's airliner, its white body and stripe) | **All grey**: the base's fleets' bodies in grey (theirs only; the airport's own aircraft as they are). |
+| Next | **Degen is ready**: the grey first, then Phase 3 (the base). |
 

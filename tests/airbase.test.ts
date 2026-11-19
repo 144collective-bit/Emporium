@@ -167,3 +167,17 @@ test("what's parked (Phase 2): on the apron or in the open hangar, clear of each
   // The windsock between the runway's lights and the taxiway
   assert.ok(WINDSOCK[1] > RUNWAY.z + RUNWAY.half + 2 && WINDSOCK[1] < TAXIWAY.z - TAXIWAY.half - 2);
 });
+
+test("the base's aircraft all grey (the owner's call): as light as they were, no colour left", async () => {
+  const { baseGrey, BASE_GREY } = await import('../src/scripts/city3d/airbase');
+  const ratio = (c: [number, number, number]) => c.map((v, i) => v / BASE_GREY[i]);
+  for (const c of [[1, 1, 1], [0.9, 0.1, 0.4], [0.1, 0.5, 0.9], [0.05, 0.05, 0.08], [0.95, 0.42, 0.24]] as [number, number, number][]) {
+    const g = baseGrey(...c);
+    // (one grey: each channel the same share of the base's grey)
+    const r = ratio(g);
+    assert.ok(Math.abs(r[0] - r[1]) < 1e-9 && Math.abs(r[1] - r[2]) < 1e-9);
+    assert.ok(g.every((v) => v >= 0 && v <= 1));
+  }
+  // (lighter stays lighter: the white body over the dark glass)
+  assert.ok(baseGrey(1, 1, 1)[0] > baseGrey(0.1, 0.1, 0.15)[0] * 3);
+});
