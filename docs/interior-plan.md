@@ -42,7 +42,7 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
 2. **The kitchen and dining.** A working kitchen along the back wall: a hob with an extractor over it, an oven and
    the fridge in tall walnut units, a sink with its tap under the window, open brass shelves; the island in black
    marble with leather stools; a dining table for four with its pendant.
-3. **Upstairs: the bathroom and the walk-in wardrobe.** *Built, waiting on the owner's sign-off.* (Built second, the
+3. **Upstairs: the bathroom and the walk-in wardrobe.** *Built, signed off by the owner (2026-11-19), live.* (Built second, the
    owner's order.) First the rooms' lists left the boot, which was full (the owner's pick): `homerooms.ts` lays them
    out on home.ts's `HOUSE_GEO`, in its own small chunk that imports nothing, fetched as the city starts (index.ts);
    `homeWall()` gets them by `setRooms()` and waking waits for them. Then upstairs (`UPSTAIRS`): **the dressing room**
