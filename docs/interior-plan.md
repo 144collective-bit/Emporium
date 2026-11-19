@@ -38,7 +38,7 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    niches either side. The corner sofa re-laid to face it (its long run with its back to the hall, a chaise at its
    south end), a cognac armchair under the front window, a black marble coffee table on a rug, a brass arc lamp. He
    wakes on the sofa facing the TV (`HOME_WAKE`, `SOFA_SEAT`). The trophy wall moves along the west wall, south of the
-   media wall. The stash box goes: the stash is a vault door in the den's north wall (`home:stash` in the basement).
+   media wall. The stash box goes: the stash is a vault door in the den's north wall (`home:stash` in the basement). Shots: `docs/interior-shots/phase-1-*`.
 2. **The kitchen and dining.** A working kitchen along the back wall: a hob with an extractor over it, an oven and
    the fridge in tall walnut units, a sink with its tap under the window, open brass shelves; the island in black
    marble with leather stools; a dining table for four with its pendant.
