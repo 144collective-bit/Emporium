@@ -291,7 +291,7 @@ draw calls in the house's own batches.
     `docs/compound-shots/phase-6b-*`.
 6c. **The fountain and the palms.** A fountain in the yard's middle (clear of the car's way out and the drive), palms
     with uplights along the edges, lit paving lines.
-    *Built, waiting on the owner's sign-off.* The drive runs through the yard's middle (the gates to the garage, kept
+    *Built, signed off by the owner (2026-11-19), live.* The drive runs through the yard's middle (the gates to the garage, kept
     clear), so the fountain stands north of it. home.ts: `FOUNTAIN` (a round stone basin, its solid a square inside
     it), `PALMS` (four: either side of the gates inside, at the house's west corner, by the workshop) and
     `PALM_PLANTER`, in `HOME_SOLIDS`. home3d.ts `showpiece()`: the basin with its water, a pedestal and two bowls with
