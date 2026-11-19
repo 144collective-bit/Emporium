@@ -301,6 +301,15 @@ draw calls in the house's own batches.
     `tests/home.test.ts` (inside the wall, off the drive, clear of everything, the bollards, every prompt, the bays'
     ways out and the way round to the side door). Shots: `docs/compound-shots/phase-6c-*`.
 6d. **The pool and the cabana.** On the east lawn: a lit pool, a cabana and loungers (the side door's way kept).
+    *Built, waiting on the owner's sign-off.* home.ts: `POOL` (along the lawn's middle, `POOL_EDGE`), `LOUNGERS` (three
+    on its north side), `CABANA` in the lawn's far corner with `CABANA_SOFA` and `CABANA_POSTS` (`CABANA_H`); the pool,
+    the loungers, the sofa and the posts in `HOME_SOLIDS` (the pool's edge solid: no swimming, looks only; the cabana
+    open under its roof). home3d.ts `poolside()`: the stone edge, the water (lit from under it: glowing softly at night; deeper blue at its far end, a lane line),
+    cyan lights along its sides; the loungers (white frames, magenta cushions) and a magenta umbrella; the cabana
+    (black steel posts and roof, his neon along the roof's front, its back in the loft's brick, a teal sofa with
+    magenta cushions, white drapes at the front posts, a string of lights). The washing line is gone. Tests:
+    `tests/home.test.ts` (on the east lawn, apart, solid where they should be, room under the cabana, the side door and
+    the way round to it and along the pool clear). Shots: `docs/compound-shots/phase-6d-*`.
 6e. **The helipad.** On the garage's roof: its pad, its markings (no lettering or numbers), edge lights; looks only.
 
 Each with the owner's sign-off.

@@ -143,7 +143,8 @@ await scene('wake', null, async (t) => {
   // chaise (docs/compound-plan.md Phase 2), A east to the hall and S back north to the door; its prompt reads
   // "Getting ready…" until the street is in)
   await t.go('w', 1.2, 'walked past the coffee table');
-  await t.go('a', 1.9, 'across the room to the hall');
+  // (asked short: at a frame or two a second he coasts on half a tile or more, and the door's prompt is within 1 of it)
+  await t.go('a', 1.5, 'across the room to the hall');
   await t.go('s', 1.85, 'and up the hall to the front door');
   await t.prompt('Front door');
   await t.until('him to be outside', () => {

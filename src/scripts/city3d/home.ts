@@ -162,6 +162,26 @@ export const PALMS: Pt[] = [
 ];
 export const PALM_PLANTER = { r: 0.35, h: 0.32 };
 
+/**
+ * The pool and the cabana on the east lawn (docs/compound-plan.md Phase 6d; the washing line gone): the pool along the
+ * lawn's middle, its stone edge solid (no swimming: looks only), three loungers on its north side, the cabana in the
+ * lawn's far corner (an open front on posts, a sofa under its roof); the way round to the side door kept clear
+ */
+const [lx0, lz0, lx1, lz1] = [HOUSE[2] + 0.5, HOUSE[1], ix1, iz1];
+export const POOL: Rect = [lx0 + 1.7, lz0 + 1.3, lx1 - 1.6, lz0 + 4.5];
+export const POOL_EDGE = 0.15;
+export const LOUNGERS: Rect[] = [0, 1, 2].map((k): Rect => [lx0 + 2.2 + k * 1.6, lz0 + 0.2, lx0 + 2.62 + k * 1.6, lz0 + 1.1]);
+export const CABANA: Rect = [lx1 - 3.2, lz1 - 1.6, lx1 - 0.1, lz1 - 0.1];
+/** Under the cabana's roof: its sofa against the back, and the roof's four posts (each a small solid) */
+export const CABANA_SOFA: Rect = [CABANA[0] + 0.4, CABANA[3] - 0.65, CABANA[2] - 0.4, CABANA[3] - 0.05];
+export const CABANA_POSTS: Pt[] = [
+  [CABANA[0] + 0.06, CABANA[1] + 0.06],
+  [CABANA[2] - 0.06, CABANA[1] + 0.06],
+  [CABANA[0] + 0.06, CABANA[3] - 0.06],
+  [CABANA[2] - 0.06, CABANA[3] - 0.06],
+];
+export const CABANA_H = 1.45;
+
 /** The garage's and the workshop's walls' thickness, and the house's */
 export const WALL = 0.12;
 export const SHELL = 0.15;
@@ -217,6 +237,11 @@ export const HOME_SOLIDS: Box[] = (() => {
     // The fountain's basin and the palms' planters (Phase 6c)
     [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, SLAB_Y + FOUNTAIN.h],
     ...PALMS.map(([x, z]): Box => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r, SLAB_Y + PALM_PLANTER.h]),
+    // The pool, the loungers, the cabana's sofa and posts (Phase 6d)
+    [POOL[0], POOL[1], POOL[2], POOL[3], SLAB_Y + 0.3],
+    ...LOUNGERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + 0.25]),
+    [CABANA_SOFA[0], CABANA_SOFA[1], CABANA_SOFA[2], CABANA_SOFA[3], SLAB_Y + 0.4],
+    ...CABANA_POSTS.map(([x, z]): Box => [x - 0.05, z - 0.05, x + 0.05, z + 0.05, SLAB_Y + CABANA_H]),
   ];
 })();
 
