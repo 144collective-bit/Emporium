@@ -238,6 +238,28 @@ can't be).
   wedges on the terraces' bends, the semis' fences as solids.
 - The boot: 749.8 of 750 KB (the backs' data and solids are in it).
 
+### Phase 3: under the highway (built, waiting on the owner's sign-off)
+
+Seen in a render of the highway's sites round the lock-ups and the skate
+spot (as Phase 2's). Drawing only, in the highway's lazy chunk: nothing
+moved, the lock-ups' solids as they were, the boot unchanged.
+
+- **The lock-ups** (the owner's first screenshot): each in one of five
+  paints, a felt cap over its roof, a concrete frame round a roller door in
+  one of four colours, the door's slats near, a number plate on the lintel,
+  a padlock near; one in six half up with the dark inside under it; bills
+  or a tag on about half. Seeded from where each stands.
+- **The ground under the deck**: every stretch (car parks, lock-ups,
+  courts, the skate spot) on worn gravel a little wider than the deck, its
+  edges and ends wandering (the blend plan's Phase 9), not a straight slab
+  on the grass.
+- **The skate spot** (the owner's second screenshot): joints across the
+  slab every 2, a yellow line along its edges, the ledges' feet and the
+  quarter pipe's coping painted, the pieces a warmer concrete than the
+  slab, tags on the slab.
+- Left: the lock-ups' even stride (their places are the solids' and the
+  data's: moving them is the owner's call).
+
 Checked and left: the High Road's buildings are drawn at every distance
 (the outer `detail()` is `'all'`); the under-deck props casting shadows
 (they stand in the deck's own shade); the deck's joints (5 mm over the

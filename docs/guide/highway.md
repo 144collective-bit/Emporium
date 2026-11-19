@@ -67,7 +67,13 @@ keep it up to date when what it describes changes.
   the piers there, `MURALS`, made-up words; `UNDER_SOLIDS` in `SOLIDS`), the
   soffit's lights over every street under it (`UNDER_LIGHTS`, pools at the
   boot) and lamps up the ramps (`RAMP_LAMPS`, at the boot), and each exit's
-  number on the world map (`exitBadge()`); drawn by viaduct3d.ts. Phase 5
+  number on the world map (`exitBadge()`); drawn by viaduct3d.ts (the map
+  polish plan's Phase 3: every stretch under the deck on worn gravel with a
+  wandering edge, `underGravel()`; each lock-up, `lockup()`, in one of a few
+  paints with a felt cap, a framed roller door, its slats near, a number
+  plate, one in six half up, bills or a tag on some, all seeded from where
+  it stands, nothing moved; the skate spot's joints, painted edges and
+  coping, its pieces a warmer concrete than its slab). Phase 5
   (the swing bridge, Uptown to The Trenches) is built: see Kestrel Bridge
   below. Phase 6 (turn lanes and signals) is built: at the busiest avenue
   junctions (routes.ts `arrowsAt()`, `Junction.arrows`: lit four-way

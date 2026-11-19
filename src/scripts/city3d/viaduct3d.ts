@@ -27,9 +27,9 @@ import { DECK_HALF, DECK_Y, GIRDER, OUTER_LANE, PARAPET, PIER, RAMPS, RAMP_HALF,
 import { BARRIER_TOP, JOINT_EVERY, PIERS } from './viapiers';
 import { RAMP_PARAPET, RAMP_PIER, RAMP_PIERS, deckGap, rampSegs } from './viaground';
 import { BAY, LOCKUP, SOFFIT_Y, UNDER, UNDER_CARS, UNDER_LIGHTS, skateParts, type Under } from './viadress';
-import { buildFx, tag } from './grime';
+import { buildFx, poster, tag } from './grime';
 import { EXIT_SIGNS, GANTRIES, GANTRY, MURALS, MURAL_ART, RAMP_SIGNS, SOUND_WALL, gantryPanel, soundWall, type Gantry } from './viasigns';
-import { ROAD } from './palette';
+import { ROAD, STONE } from './palette';
 
 export const SELF = import.meta.url;
 
@@ -300,14 +300,26 @@ function ringShape(s: number, o: number, y: number, shape: THREE.Shape, across: 
 }
 /** A skate spot under the deck by Endswood (viadress.ts `skateParts()`): smooth concrete, a ledge with a steel edge, a
  * manual pad, a flat rail, a quarter pipe at the far end with its coping, tags on the ledge and the pipe's back */
-function skate(b: Batch, fx: Batch, u: Under, m: Record<'steel' | 'smooth' | 'concrete', THREE.Material>) {
+function skate(b: Batch, fx: Batch, u: Under, m: Record<'steel' | 'smooth' | 'concrete' | 'paint' | 'joint', THREE.Material>, low: boolean) {
   const Y = 0.03;
   b.add(band(-3.4, 3.4, u.s0 + 0.6, u.s1, Y), m.smooth);
+  // (the map polish plan's Phase 3: the slab's joints every 2, a painted kerb along the ledge's top edge and the pad's,
+  // more tags; it was grey on grey)
+  for (let s = u.s0 + 2.6; s < u.s1 - 2; s += 2) b.add(band(-3.4, 3.4, s - 0.025, s + 0.025, Y + 0.006), m.joint);
+  for (const o of [-3.35, 3.35]) b.add(band(o - 0.05, o + 0.05, u.s0 + 0.6, u.s1, Y + 0.006), m.paint);
+  if (!low)
+    for (const [k, sa] of [u.s0 + 6.2, (u.s0 + u.s1) / 2 - 1.4].entries()) {
+      const r = ringAt(sa);
+      const [x, z] = ringPoint(sa, -1.4);
+      tag(fx, 13 + k * 17, 1.0, [r.nx, r.nz], x, Y + 0.012, z, Math.PI / 2);
+    }
   for (const p of skateParts(u)) {
     const [sm, om] = [(p.s0 + p.s1) / 2, (p.o0 + p.o1) / 2];
     if (p.kind === 'ledge' || p.kind === 'pad') {
       b.add(ringBox(sm, om, Y, p.s1 - p.s0, p.o1 - p.o0, p.h), m.concrete);
       if (p.kind === 'ledge') b.add(ringBox(sm, p.o0 + 0.03, Y + p.h - 0.04, p.s1 - p.s0 + 0.01, 0.07, 0.05), m.steel);
+      // (its long face painted yellow at the foot, where the boards scuff it)
+      b.add(ringBox(sm, p.o1 + 0.006, Y, p.s1 - p.s0, 0.012, 0.12), m.paint);
       if (p.kind === 'ledge') {
         const r = ringAt(sm);
         const [x, z] = ringPoint(sm, p.o0 - 0.012);
@@ -331,6 +343,8 @@ function skate(b: Batch, fx: Batch, u: Under, m: Record<'steel' | 'smooth' | 'co
       sh.lineTo(0, 0);
       b.add(ringShape(p.s0, om, Y, sh, p.o1 - p.o0), m.concrete);
       b.add(ringBox(p.s0 + R, om, Y + R - 0.02, 0.08, p.o1 - p.o0, 0.08), m.steel);
+      // (its deck's top painted, a yellow line along the coping)
+      b.add(ringBox(p.s0 + R + 0.12, om, Y + R, 0.06, p.o1 - p.o0, 0.012), m.paint);
       const r = ringAt(p.s1);
       const [x, z] = ringPoint(p.s1 + 0.012, om + 1.2);
       tag(fx, 9, 1.0, [r.tx, r.tz], x, Y + R / 2, z);
@@ -339,7 +353,76 @@ function skate(b: Batch, fx: Batch, u: Under, m: Record<'steel' | 'smooth' | 'co
 }
 
 /** Under the deck between two piers: a car park's bays, lock-ups, or a court (its hoop at the far end) */
-function under(b: Batch, u: Under, m: Record<'asphalt' | 'white' | 'yellow' | 'steel' | 'lockup' | 'door' | 'court' | 'board', THREE.Material>) {
+/**
+ * A lock-up (the map polish plan's Phase 3: they were beige boxes with a blank cream slab): its walls in one of a few
+ * paints, a felt cap over its roof, a concrete frame round its roller door, the door's slats near, its number plate and
+ * a padlock; one in six left half up, the dark inside under it; bills or a tag on some
+ */
+const LOCKUP_PAINT = ['#8a7f6a', '#6f7a86', '#7d4a3a', '#5f6e58', '#9a9182'].map((c) => toon(c));
+const LOCKUP_DOOR = ['#c9c5b8', '#9aa3ad', '#b9a27a', '#7f8c7a'].map((c) => toon(c));
+const LM = { felt: toon('#2c2a33'), frame: toon('#b9b3a6'), inside: toon('#141218'), plate: toon('#f3f0e6'), slat: toon('#8d897e'), lock: toon('#d6a12a') };
+function lockup(b: Batch, fx: Batch, s: number, q: number, seed: number, low: boolean) {
+  const Y = 0.03;
+  const h = (k: number) => (((Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453) % 1) + 1) % 1;
+  const { w, d, h: H, from } = LOCKUP;
+  b.add(ringBox(s, q * (from + d / 2), Y, w, d, H), LOCKUP_PAINT[Math.floor(h(1) * LOCKUP_PAINT.length)]);
+  b.add(ringBox(s, q * (from + d / 2), Y + H, w + 0.14, d + 0.14, 0.08), LM.felt);
+  const face = q * (from + d);
+  const [dw, dh] = [w - 0.5, H - 0.45];
+  // (the frame: two jambs and a lintel standing off the face)
+  for (const e of [-1, 1]) b.add(ringBox(s + e * (dw / 2 + 0.08), face + q * 0.04, Y, 0.16, 0.08, dh + 0.12), LM.frame);
+  b.add(ringBox(s, face + q * 0.04, Y + dh + 0.05, dw + 0.32, 0.08, 0.16), LM.frame);
+  const open = h(2) < 1 / 6;
+  const top = open ? dh * 0.55 : 0;
+  const door = LOCKUP_DOOR[Math.floor(h(3) * LOCKUP_DOOR.length)];
+  b.add(ringBox(s, face + q * 0.01, Y + 0.05 + top, dw, 0.02, dh - top), door);
+  // (the dark inside under a half-up door: a panel just proud of the face, the door's opening)
+  if (open) b.add(ringBox(s, face + q * 0.005, Y + 0.02, dw, 0.006, top + 0.06), LM.inside);
+  // (its number up on the lintel; the slats and the padlock up close)
+  b.add(ringBox(s + dw / 2 - 0.25, face + q * 0.085, Y + dh + 0.08, 0.3, 0.01, 0.1), LM.plate);
+  if (!low)
+    b.detail(() => {
+      for (let y = top + 0.2; y < dh - 0.05; y += 0.2) b.add(ringBox(s, face + q * 0.025, Y + 0.05 + y, dw, 0.012, 0.025), LM.slat);
+      if (!open) b.add(ringBox(s, face + q * 0.03, Y + 0.12, 0.08, 0.03, 0.1), LM.lock);
+    });
+  // (bills or a tag on some: grime.ts's atlases, on the door's face)
+  const r = ringAt(s);
+  const n: Pt = [r.nx * q, r.nz * q];
+  if (h(4) < 0.35) {
+    const [x, z] = ringPoint(s - dw * 0.2, face + q * 0.03);
+    tag(fx, Math.floor(h(5) * 97), 1.1, n, x, Y + 0.7 + top, z);
+  } else if (h(4) < 0.55) {
+    const [x, z] = ringPoint(s + dw * 0.25, face + q * 0.03);
+    poster(fx, Math.floor(h(6) * 97), 0.9, n, x, Y + 1.2, z);
+  }
+}
+/**
+ * The ground under the deck where something stands on it (the map polish plan's Phase 3, the blend plan's Phase 9):
+ * worn gravel a little wider than the deck, its edges and ends wandering, not a ruler-straight slab on the grass
+ */
+function underGravel(b: Batch, u: Under, m: THREE.Material) {
+  const [s0, s1] = [u.s0 - 1.4, u.s1 + 1.4];
+  const n = Math.max(2, Math.ceil((s1 - s0) / 1.2));
+  const wob = (k: number, e: number) => Math.sin(u.s0 * 3.1 + k * 1.7 + e * 4.4) * 0.35 + Math.sin(k * 0.61 + e * 2.3 + u.s1) * 0.25;
+  const pos: number[] = [];
+  const y = 0.022;
+  for (let k = 0; k < n; k++) {
+    const [sa, sb] = [s0 + ((s1 - s0) * k) / n, s0 + ((s1 - s0) * (k + 1)) / n];
+    // (the ends taper in: the first and last steps narrower)
+    const taper = (j: number) => (j === 0 || j === n ? 0.55 : 1);
+    const edge = (j: number, e: number) => e * (DECK_HALF + 0.7 + wob(j, e)) * taper(j);
+    const v = [ringPoint(sa, edge(k, -1)), ringPoint(sa, edge(k, 1)), ringPoint(sb, edge(k + 1, 1)), ringPoint(sb, edge(k + 1, -1))].map(([x, z]) => new THREE.Vector3(x, y, z));
+    const nn = new THREE.Vector3().subVectors(v[1], v[0]).cross(new THREE.Vector3().subVectors(v[3], v[0]));
+    const quad = nn.y >= 0 ? [v[0], v[1], v[2], v[0], v[2], v[3]] : [v[0], v[2], v[1], v[0], v[3], v[2]];
+    for (const w of quad) pos.push(w.x, w.y, w.z);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  g.setIndex([...Array(pos.length / 3).keys()]);
+  b.add(g, m);
+}
+function under(b: Batch, fx: Batch, u: Under, m: Record<'asphalt' | 'white' | 'yellow' | 'steel' | 'court' | 'board', THREE.Material>, low: boolean) {
   const Y = 0.03;
   if (u.kind === 'park') {
     b.add(band(-(DECK_HALF - 0.3), DECK_HALF - 0.3, u.s0, u.s1, Y), m.asphalt);
@@ -356,11 +439,7 @@ function under(b: Batch, u: Under, m: Record<'asphalt' | 'white' | 'yellow' | 's
     const n = Math.floor((u.s1 - u.s0) / (LOCKUP.w + 0.2));
     for (let k = 0; k < n; k++)
       for (const q of [-1, 1]) {
-        const s = u.s0 + (k + 0.5) * ((u.s1 - u.s0) / n);
-        const o = q * (LOCKUP.from + LOCKUP.d / 2);
-        b.add(ringBox(s, o, Y, LOCKUP.w, LOCKUP.d, LOCKUP.h), m.lockup);
-        // (its roll-up door on the face away from the piers, a hair proud of it)
-        b.add(ringBox(s, q * (LOCKUP.from + LOCKUP.d + 0.01), Y + 0.05, LOCKUP.w - 0.5, 0.02, LOCKUP.h - 0.45), m.door);
+        lockup(b, fx, u.s0 + (k + 0.5) * ((u.s1 - u.s0) / n), q, Math.floor(u.s0 * 7.31) + k * 2 + (q + 1) / 2, low);
       }
   } else {
     // A half court: its asphalt in court green, the lines, a hoop on a post at the far end
@@ -597,15 +676,19 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     })
   );
   const SKATE_SMOOTH = toon('#9c99a6');
-  const SKATE_CONCRETE = toon('#b2afba');
-  const um = { asphalt, white, yellow, steel: sm.steel, lockup: toon('#8a7f6a'), door: toon('#c9c5b8'), court: toon('#3f6b56'), board: toon(ROAD.zebra) };
+  const SKATE_CONCRETE = toon('#c4bfb2');
+  const SKATE_PAINT = toon('#d6a12a');
+  const SKATE_JOINT = toon('#7d7a88');
+  const um = { asphalt, white, yellow, steel: sm.steel, court: toon('#3f6b56'), board: toon(ROAD.zebra) };
+  const gravel = toon(STONE.gravel);
   UNDER.forEach((u, i) => {
     const pts = [ringPoint(u.s0, -DECK_HALF), ringPoint(u.s0, DECK_HALF), ringPoint(u.s1, -DECK_HALF), ringPoint(u.s1, DECK_HALF)];
     site(`viaduct under ${i}`, [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))], (into) => {
       const b = new Batch();
       const fx = new Batch();
-      if (u.kind === 'skate') skate(b, fx, u, { steel: sm.steel, smooth: SKATE_SMOOTH, concrete: SKATE_CONCRETE });
-      else under(b, u, um);
+      underGravel(b, u, gravel);
+      if (u.kind === 'skate') skate(b, fx, u, { steel: sm.steel, smooth: SKATE_SMOOTH, concrete: SKATE_CONCRETE, paint: SKATE_PAINT, joint: SKATE_JOINT }, low);
+      else under(b, fx, u, um, low);
       b.build(into, { cast: false, receive: true });
       buildFx(fx, into);
     });
