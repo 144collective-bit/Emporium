@@ -563,9 +563,15 @@ From the Circus west, patchy as high roads are:
        takes to stay gentle (`STAIR_SLOPE`), its parapets and walls drawn
        on the surface beside them. A slanting way's walls and floor run on
        to meet its hall's side. Shots `docs/south-shots/23-phase-4f-*.webp`.
-     - **4g, the trains and the ride** (round-top tube trains, the tunnel
-       seen, Skip), the change at The Trenches, on the map and the
-       station card.
+     - **4g, the trains and the ride** (the owner's answers, 2026-11-19):
+       round-top tube trains running the line on a timetable from the
+       clock, so a platform has trains pulling in and out; a ride from
+       inside the carriage, the tunnel's walls and lights going by the
+       windows, pulling in at each platform, Skip as the raised metro's;
+       the line's own station card.
+     - **4h, the change and the map**: one card for both lines at either
+       Trenches station (every stop on both, the change made for you),
+       the line on the world map.
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
