@@ -8,8 +8,9 @@ storyline opens it. Built one phase at a time, each with the owner's
 sign-off. Keep this plan up to date. Nothing is built yet. **Phase 0 is
 under way**: the lines are drawn and signed off (2026-11-19, below) and the
 baseline is measured (below). The phone is over its geometry ceiling before
-the base adds anything, so what comes first is the owner's pick. Phase 1
-waits for that and the owner's go.
+the base adds anything; the owner's pick (2026-11-19) is to trim first:
+find what grew since 2026-11-14 and bring the phone back under 187 MiB with
+room for the base's 8. Phase 1 follows, on the owner's go.
 
 ## The owner's answers (2026-11-18)
 
@@ -248,7 +249,7 @@ edge).
   comes first (below).
 - **The boot:** 736.9 KB of 750 KB.
 
-### Each phase's allowance (added to the baseline; the owner to sign off)
+### Each phase's allowance (added to the baseline; signed off 2026-11-19)
 
 | Phase | Phone draws, any base view | Phone tris | Desktop draws | Phone geometry | Boot |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -380,3 +381,9 @@ All four suggestions, on the map (`docs/military-map.png`):
 | The base's north-east, east of the heliport | **Kept as today's woods.** They hide the fence's corner and cost little to draw. |
 | The runway and the camp | **As drawn**: one runway, x −620 to −120 at z −540, 12 wide, with the apron and hangars to its south. |
 
+## The owner's picks on the baseline (2026-11-19)
+
+| Question | Answer |
+| --- | --- |
+| The phone over its geometry ceiling (191.8 of 187 MiB) | **Trim first**: find what grew since 2026-11-14 and trim it back under 187, with room for the base's 8 MiB (about 179 or less), before Phase 1. |
+| Each phase's allowance | **As set** (the table above). |
