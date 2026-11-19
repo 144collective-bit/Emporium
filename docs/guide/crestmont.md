@@ -143,4 +143,5 @@ keep it up to date when what it describes changes.
   `DRIFTS` of the hills' shrubs, `OUTCROPS` of boulders, `TRAILS`, gravel
   footpaths where a hill road doubles back or passes another, never steeper
   than `TRAIL.grade`, `BOLLARDS` at each end), drawn by crestgardens3d.ts
-  (`registerCover()`). Made-up names only.
+  (`registerCover()`; on phones the drifts, the banks' planting and the verges
+  are near only). Made-up names only.

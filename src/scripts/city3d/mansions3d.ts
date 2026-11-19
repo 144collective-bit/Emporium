@@ -434,6 +434,8 @@ function drawBank(into: THREE.Object3D, bank: Bank, low: boolean) {
     b.add(g, BED_SOIL);
   }
   // The plants: a mound each by its kind (phones every other), and near, its flowers or its spikes
+  // (phones: near only, as the hills' scrub; the walls, beds and boulders at every distance)
+  if (low) b.lod = 'near';
   bank.plants.forEach((p, i) => {
     if (low && i % 2) return;
     const { body, top } = PLANT_MAT[p.kind];
@@ -459,6 +461,7 @@ function drawBank(into: THREE.Object3D, bank: Bank, low: boolean) {
         } else b.add(mound.clone().scale(0.38 * s, 0.18 * s, 0.38 * s).translate(p.x + 0.05, p.y + 0.4 * s, p.z - 0.04), top);
       });
   });
+  b.lod = 'all';
   for (const r of bank.rocks) b.add(new THREE.DodecahedronGeometry(0.32 * r.s, 0).scale(1.15, 0.7, 0.9).rotateY(r.turn).translate(r.x, r.y + 0.1 * r.s, r.z), ROCK);
   b.build(into, { cast: true, receive: true });
 }

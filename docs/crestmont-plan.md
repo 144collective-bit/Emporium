@@ -555,8 +555,10 @@ Nothing that stood moved: the pads, houses, drives, lots and places are where th
 follow the ground now.
 
 **Measured:** Crestmont's chunk's geometry, every site built (counted headless): drawn at every distance 384k triangles
-before, 513k after on the desktop (near-only details 153k to 220k); on phones 174k to 234k (phones draw the shrubs and
-the specimen trees' crowns plainer, the banks every other plant and their walls without copings). The hills' grass
+before, 513k after on the desktop (near-only details 153k to 220k); on phones 174k to 198k (phones draw the shrubs and
+the specimen trees' crowns plainer, the banks every other plant and their walls without copings, and the slopes'
+drifts, the banks' planting and the verges outside the hedges near only, as the hills' scrub: the owner's pick, before
+the bench on real hardware; the banks' walls, beds and boulders, the outcrops and footpaths stay at every distance). The hills' grass
 47k to 68k triangles (the boot's, both tiers). The `?fps` readout in the review mode (`?shots&fps`, every district
 built, so whole-city totals): phones over the Flats 193 draws, 16.12M to 16.19M triangles, over the hills 186 draws,
 16.06M to 16.13M (no new draws); the desktop over the Flats 245 draws, 42.52M to 42.73M. The boot 737.5 to 737.9 of

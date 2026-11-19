@@ -114,7 +114,10 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
     else if (Math.floor(row / 2) % 2 === 0) flatRect(r[0], r[1], r[2], r[3], 0.004, STRIPE);
   }
 
-  for (const f of [...g.feats, ...(g.verge ?? [])]) {
+  // (phones: the verges outside the hedges near only)
+  const verge = new Set(g.verge ?? []);
+  for (const f of [...g.feats, ...verge]) {
+    b.lod = low && verge.has(f) ? 'near' : 'all';
     const [u0, v0, u1, v1] = f.r;
     const [cu, cv] = [(u0 + u1) / 2, (v0 + v1) / 2];
     const [hu, hv] = [(u1 - u0) / 2, (v1 - v0) / 2];
@@ -405,6 +408,7 @@ function drawGarden(into: THREE.Object3D, g: Garden, M: THREE.Matrix4, low: bool
       }
     }
   }
+  b.lod = 'all';
 
   /* A villa mansion's terraces as a vineyard: rows of vines on posts and wires */
   if (terraces)
@@ -684,6 +688,8 @@ export function registerCover(low: boolean) {
     const [i, j] = key.split(',').map(Number);
     site(`crestmont cover ${key}`, [i * GROUND_TILE - 6, j * GROUND_TILE - 6, (i + 1) * GROUND_TILE + 6, (j + 1) * GROUND_TILE + 6], (into) => {
       const b = new Batch();
+      // (phones: the drifts near only, as the hills' scrub; the outcrops at every distance)
+      if (low) b.lod = 'near';
       for (const d of t.drifts) {
         const { body, top } = DRIFT_MAT[d.kind];
         d.clumps.forEach((c, k) => {
@@ -705,6 +711,7 @@ export function registerCover(low: boolean) {
             });
         });
       }
+      b.lod = 'all';
       for (const r of t.rocks) b.add(new THREE.DodecahedronGeometry(0.4 * r.s, 0).scale(1.2, 0.7, 0.95).rotateY(r.turn).translate(r.x, drawnAt(r.x, r.z) + 0.08 * r.s, r.z), BOULDER);
       b.build(into, { cast: true, receive: true });
     });
