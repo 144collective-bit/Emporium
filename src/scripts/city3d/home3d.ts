@@ -49,7 +49,7 @@ import { houseRooms, type BaseThing, type Furniture, type UpThing } from './home
 import { curtains } from './spawn';
 import type { Rect } from './endswood';
 
-const { FURNITURE, UPSTAIRS, BASEMENT } = houseRooms(HOUSE_GEO);
+const { FURNITURE, UPSTAIRS, BASEMENT, DRESS_X, BED_DOOR, BATH_DOOR, BATH_Z } = houseRooms(HOUSE_GEO);
 
 const S = HOME_SLAB;
 /** On the plot: what lies on its ground 24 mm over the slab (the paving is at 6 and its darker courses at 12:
@@ -925,7 +925,6 @@ const STEEL = '#8a8d96';
 const INK = '#1d1c22';
 const DARK_UNIT = '#24222b';
 const PALE_TOP = '#e9e6e1';
-const SHADE = '#efe2c4';
 const LEAF = TREE.crowns[0];
 const SHELF_BACK = '#2a2733';
 const PRINT_PAPER = '#f1eee8';
@@ -1170,7 +1169,7 @@ function furnish(b: Batch, { kind, rect, h }: Furniture, low: boolean) {
       drum(b, sx, sz, 0.09, 0.09, S + 0.006, S + 0.02, STEEL);
       b.detail(() => drum(b, sx, sz, 0.08, 0.08, S + 0.12, S + 0.13, STEEL));
     }
-  } else if (kind === 'wardrobe') {
+  } else if (kind === 'cupboard') {
     icube(b, rect, y, S + h, WOOD);
     b.detail(() => {
       const m = (z0 + z1) / 2;
@@ -1255,32 +1254,57 @@ function upstairs(b: Batch, low: boolean) {
   const [cx, cz, w, d] = [(x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0];
   const fy = S + UP_Y;
   const top = S + UP_CEIL - G;
+  const SPLIT = ROOM[1] + 3.0 - 0.05;
+  const LAND = ROOM[2] - 2.6;
   face(b, cx, z0, w, fy, top, 0, WALLS_IN, 0.94);
   face(b, cx, z1, w, fy, top, Math.PI, WALLS_IN, 0.9);
   face(b, x0, cz, d, fy, top, Math.PI / 2, WALLS_IN, 0.82);
   face(b, x1, cz, d, fy, top, -Math.PI / 2, WALLS_IN, 0.82);
   iflat(b, ROOM, fy + G, LAMINATE);
   sheet(b, w, d, Math.PI / 2, 0, cx, top, cz, paint(CEILING_IN));
-  // The three front windows, where they are outside (home3d.ts `house()`), a hair off the wall
-  const [hx0, , hx1] = HOME.house;
-  const dx = HOME.door[0];
-  for (const [wa, wb] of [[hx0 + 0.65, hx0 + 2.65], [dx - 1.0, dx + 1.0], [hx1 - 2.65, hx1 - 0.65]]) {
-    icube(b, [wa, z0 + G, wb, z0 + 0.02], S + 1.55, S + 2.15, WINDOW);
+  // The three tall front windows, where they are outside (`houseWindows()`), a hair off the wall
+  for (const { a0: wa, a1: wb, y0, y1 } of houseWindows().filter((w) => w.face === 'n' && w.y0 > 1)) {
+    icube(b, [wa, z0 + G, wb, z0 + 0.02], S + y0, S + y1, WINDOW);
     b.detail(() => {
-      for (const y of [1.51, 2.15]) icube(b, [wa - 0.04, z0 + G, wb + 0.04, z0 + 0.035], S + y, S + y + 0.04, FRAME);
-      icube(b, [(wa + wb) / 2 - 0.02, z0 + 0.021, (wa + wb) / 2 + 0.02, z0 + 0.035], S + 1.55, S + 2.15, FRAME);
+      for (const y of [y0 - 0.04, y1]) icube(b, [wa - 0.04, z0 + G, wb + 0.04, z0 + 0.035], S + y, S + y + 0.04, FRAME);
+      icube(b, [(wa + wb) / 2 - 0.02, z0 + 0.021, (wa + wb) / 2 + 0.02, z0 + 0.035], S + y0, S + y1, FRAME);
     });
   }
+  // The bedroom's west wall in the deep green, behind the bed (docs/interior-plan.md Phase 3)
+  face(b, x0 + 0.004, (z0 + SPLIT) / 2, SPLIT - z0 - 0.06, fy, top, Math.PI / 2, FEATURE, 0.9);
+  // The bathroom in black marble: its floor and walls (the back, the east, the landing's partition and its own wall)
+  const [bx0, bz0] = [LAND + 0.05, BATH_Z + 0.1];
+  iflat(b, [bx0, bz0, x1, z1], fy + G + 0.004, MARBLE);
+  face(b, (bx0 + x1) / 2, z1 - 0.004, x1 - bx0, fy, top, Math.PI, MARBLE, 0.95);
+  face(b, x1 - 0.004, (bz0 + z1) / 2, z1 - bz0, fy, top, -Math.PI / 2, MARBLE, 0.85);
+  face(b, bx0 + 0.004, (bz0 + z1) / 2, z1 - bz0, fy, top, Math.PI / 2, MARBLE, 0.85);
+  for (const [a, c] of [[bx0, BATH_DOOR[0]], [BATH_DOOR[1], x1]]) face(b, (a + c) / 2, bz0 + 0.004, c - a, fy, top, 0, MARBLE, 0.9);
+  b.detail(() => {
+    // (pale veins across the marble's back wall, and the doorways' black steel frames)
+    if (!low)
+      for (const [a, c, ya, yc] of [[0.1, 0.45, 0.2, 0.9], [0.5, 0.9, 0.1, 0.7], [0.3, 0.7, 0.5, 1.1]]) {
+        const [p, q] = [V(bx0 + a * (x1 - bx0), fy + ya, z1 - 0.008), V(bx0 + c * (x1 - bx0), fy + yc, z1 - 0.008)];
+        rod(b, p, q, 0.003, paint(VEIN));
+      }
+    const jamb = (r: Rect) => icube(b, r, fy, fy + 1.02, INK);
+    for (const z of BED_DOOR) jamb([DRESS_X - 0.06, z - 0.02, DRESS_X + 0.06, z + 0.02]);
+    for (const x of BATH_DOOR) jamb([x - 0.02, BATH_Z - 0.01, x + 0.02, BATH_Z + 0.11]);
+    icube(b, [BATH_DOOR[0], BATH_Z - 0.01, BATH_DOOR[1], BATH_Z + 0.11], fy + 1.0, fy + 1.04, INK);
+  });
   for (const u of UPSTAIRS) upFurnish(b, u, fy, low);
   b.detail(() => {
-    // Ceiling lights, flat discs: the bedroom's, the office's, the landing's
-    const lights: [number, number][] = [[x0 + 3.0, z0 + 1.5], [x0 + 3.0, z1 - 1.6], [x1 - 1.3, z0 + 3.4]];
-    for (const [lx, lz] of lights) b.add(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 12).translate(lx, top - 0.01, lz), glow(PAL.warm));
-    // A rug by the bed
+    // Ceiling lights, flat discs: the bedroom's, the dressing room's, the office's, the landing's, the bathroom's
+    const lights: [number, number][] = [[x0 + 1.6, z0 + 1.4], [DRESS_X + 1.45, z0 + 1.6], [x0 + 3.0, z1 - 1.6], [x1 - 1.3, z0 + 3.4], [x1 - 1.3, z1 - 0.5]];
+    for (const [lx, lz] of lights) b.add(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 12).translate(lx, top - 0.01, lz), glow(PAL.warm));
+    // The rug under the bed, a border round its field
     const bed = UPSTAIRS.find((u) => u.kind === 'bed')!.rect;
-    iflat(b, [bed[2], bed[1] - 0.15, bed[2] + 1.0, bed[3] + 0.15], fy + G + 0.006, RUG);
+    iflat(b, [bed[0] + 0.5, bed[1] - 0.45, bed[2] + 0.55, bed[3] + 0.45], fy + G + 0.006, RUG_EDGE);
+    iflat(b, [bed[0] + 0.58, bed[1] - 0.37, bed[2] + 0.47, bed[3] + 0.37], fy + G + 0.01, RUG_FIELD);
   });
 }
+
+/** The dressing room's boxes on the shelf over the rails, in turn */
+const k2 = (x: number) => [CREAM, INK, COGNAC][Math.abs(Math.floor(x * 7)) % 3];
 
 /** One thing upstairs, by its kind, standing on the floor at `fy` */
 function upFurnish(b: Batch, { kind, rect, h }: UpThing, fy: number, low: boolean) {
@@ -1288,11 +1312,7 @@ function upFurnish(b: Batch, { kind, rect, h }: UpThing, fy: number, low: boolea
   const y = fy + 0.012;
   const [mx, mz] = [(x0 + x1) / 2, (z0 + z1) / 2];
   if (kind === 'wall') icube(b, rect, fy, fy + h, WALLS_IN);
-  else if (kind === 'bathdoor') {
-    // The bathroom's door, shut (there's nothing behind it to go into), a handle
-    icube(b, rect, fy, fy + h, WOOD_DARK);
-    b.detail(() => icube(b, [x1 - 0.12, z0 - 0.02, x1 - 0.08, z0], fy + 0.48, fy + 0.52, STEEL));
-  } else if (kind === 'well') {
+  else if (kind === 'well') {
     // The stairwell: the opening over the flight below (dark), railed on its two open sides; in its north end the
     // steep steps up to the roof's hatch, and the hatch's opening in the ceiling over them
     iflat(b, [x0, z0 + 0.9, x1, z1], fy + 0.008, SHELF_BACK);
@@ -1308,40 +1328,150 @@ function upFurnish(b: Batch, { kind, rect, h }: UpThing, fy: number, low: boolea
     rod(b, V(x0 + 0.08, fy + 0.45, z0 + 0.9), V(x0 + 0.08, S + UP_CEIL + 0.2, z0 + 0.05), 0.012, paint(INK));
     sheet(b, x1 - x0, 0.9, Math.PI / 2, 0, mx, S + UP_CEIL - 0.012, z0 + 0.45, paint(SHELF_BACK));
   } else if (kind === 'bed') {
-    // A big low bed, its head against the west wall: the frame, the mattress, the duvet in his purple, two pillows
-    icube(b, rect, y, fy + 0.16, INK);
-    icube(b, [x0 + 0.04, z0 + 0.04, x1 - 0.04, z1 - 0.04], fy + 0.16, fy + 0.24, PALE_TOP);
-    icube(b, [x0 + 0.42, z0 + 0.02, x1 - 0.02, z1 - 0.02], fy + 0.24, fy + h, SOFA);
-    icube(b, [x0, z0, x0 + 0.06, z1], y, fy + 0.62, INK);
+    // A big low bed, its head against the green wall: a walnut frame, a tall cognac headboard, the mattress, a charcoal
+    // duvet turned back, cream pillows, an emerald throw across its foot
+    icube(b, [x0 + 0.08, z0, x1, z1], y, fy + 0.14, WOOD);
+    icube(b, [x0 + 0.004, z0 - 0.06, x0 + 0.08, z1 + 0.06], y, fy + 0.66, COGNAC);
+    icube(b, [x0 + 0.1, z0 + 0.03, x1 - 0.03, z1 - 0.03], fy + 0.14, fy + 0.22, CREAM);
+    icube(b, [x0 + 0.5, z0 + 0.02, x1 - 0.02, z1 - 0.02], fy + 0.22, fy + h, '#33313b');
     b.detail(() => {
-      for (const z of [z0 + 0.12, mz + 0.06]) icube(b, [x0 + 0.08, z, x0 + 0.36, z + (z1 - z0) / 2 - 0.18], fy + 0.24, fy + 0.32, PRINT_PAPER);
-      icube(b, [x0 + 0.42, z0 + 0.02, x0 + 0.5, z1 - 0.02], fy + h, fy + h + 0.006, CUSHION);
+      for (const z of [z0 + 0.1, mz + 0.04]) icube(b, [x0 + 0.12, z, x0 + 0.4, z + (z1 - z0) / 2 - 0.14], fy + 0.22, fy + 0.31, CREAM);
+      icube(b, [x0 + 0.5, z0 + 0.02, x0 + 0.62, z1 - 0.02], fy + h, fy + h + 0.008, CREAM);
+      icube(b, [x1 - 0.32, z0 + 0.01, x1 - 0.12, z1 - 0.01], fy + h, fy + h + 0.012, SOFA);
+      // (the headboard's buttoned rows)
+      if (!low) for (let z = z0 + 0.1; z < z1; z += 0.22) for (const yy of [0.4, 0.55]) icube(b, [x0 + 0.08, z - 0.01, x0 + 0.086, z + 0.01], fy + yy - 0.01, fy + yy + 0.01, '#7a4622');
     });
   } else if (kind === 'bedside') {
-    icube(b, rect, y, fy + h, WOOD_DARK);
-    drum(b, mx, mz, 0.05, 0.07, fy + h + 0.14, fy + h + 0.24, SHADE);
-    drum(b, mx, mz, 0.01, 0.01, fy + h, fy + h + 0.14, INK, 5);
-    b.detail(() => b.add(new THREE.SphereGeometry(0.025, 5, 4).translate(mx, fy + h + 0.15, mz), glow(PAL.warm)));
-  } else if (kind === 'dresser') {
+    // Walnut, a drawer, a brass lamp with a cream shade
     icube(b, rect, y, fy + h, WOOD);
+    drum(b, mx, mz, 0.05, 0.07, fy + h + 0.14, fy + h + 0.24, CREAM);
+    drum(b, mx, mz, 0.01, 0.012, fy + h, fy + h + 0.14, BRASS, 5);
     b.detail(() => {
-      for (const t of [0.14, 0.28]) icube(b, [x0 + 0.04, z0 - 0.006, x1 - 0.04, z0], fy + t, fy + t + 0.012, WOOD_DARK);
-      icube(b, [x0 + 0.2, z0 + 0.1, x0 + 0.42, z0 + 0.28], fy + h, fy + h + 0.2, INK);
+      icube(b, [x1, z0 + 0.04, x1 + 0.006, z1 - 0.04], fy + 0.13, fy + 0.14, WOOD_DARK);
+      icube(b, [x1 + 0.006, mz - 0.03, x1 + 0.016, mz + 0.03], fy + 0.17, fy + 0.18, BRASS);
+      b.add(new THREE.SphereGeometry(0.025, 5, 4).translate(mx, fy + h + 0.15, mz), glow(PAL.warm));
     });
-  } else if (kind === 'caps') {
-    // His caps on a rail on the wall (his red one first)
-    icube(b, [x0, z1 - 0.03, x1, z1 - 0.006], fy + 0.78, fy + 0.8, INK);
-    CAP_COLOURS.forEach((c, k) => {
-      const cx = x0 + ((x1 - x0) * (k + 0.5)) / CAP_COLOURS.length;
-      const g = new THREE.SphereGeometry(0.09, low ? 6 : 8, low ? 3 : 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.7, 0.8);
+  } else if (kind === 'bench') {
+    // A cognac leather bench at the bed's foot on brass legs
+    icube(b, [x0, z0, x1, z1], fy + h - 0.07, fy + h, COGNAC);
+    for (const [fx, fz] of [[x0 + 0.04, z0 + 0.04], [x1 - 0.04, z0 + 0.04], [x0 + 0.04, z1 - 0.04], [x1 - 0.04, z1 - 0.04]]) drum(b, fx, fz, 0.012, 0.01, fy + 0.006, fy + h - 0.07, BRASS, 5);
+  } else if (kind === 'tv') {
+    // The bedroom's telly on the dressing room's wall facing the bed: a thin black bezel, dark glass, a sheen
+    const [ty0, ty1] = [0.32, 0.88];
+    icube(b, [x0, z0, x1 - 0.004, z1], fy + ty0 - 0.01, fy + ty1 + 0.01, '#0b0a10');
+    sheet(b, z1 - z0 - 0.024, ty1 - ty0, 0, -Math.PI / 2, x0 - 0.002, fy + (ty0 + ty1) / 2, mz, paint(SCREEN));
+    b.detail(() => {
+      const g = new THREE.PlaneGeometry(0.1, (ty1 - ty0) * 1.05).rotateZ(0.5).rotateY(-Math.PI / 2);
       g.deleteAttribute('uv');
-      b.add(g.translate(cx, fy + 0.68, z1 - 0.1), paint(c));
-      icube(b, [cx - 0.08, z1 - 0.26, cx + 0.08, z1 - 0.1], fy + 0.675, fy + 0.69, c);
+      b.add(g.translate(x0 - 0.005, fy + (ty0 + ty1) / 2, mz + (z1 - z0) * 0.2), paint('#2c2b36'));
     });
+  } else if (kind === 'rails') {
+    // The dressing room's rails along its back wall: a walnut back and cap, a brass rail, his clothes hung on it (dark
+    // to light, his magenta jacket among them), a lit strip under the cap, boxes on the shelf over it
+    icube(b, [x0, z1 - 0.04, x1, z1 - 0.004], y, fy + h + 0.1, WOOD_DARK);
+    icube(b, [x0, z0, x1, z1 - 0.04], fy + h, fy + h + 0.04, WOOD);
+    for (const xa of [x0, x1 - 0.04]) icube(b, [xa, z0, xa + 0.04, z1 - 0.04], y, fy + h, WOOD);
+    icube(b, [x0, z0 + 0.1, x1, z1 - 0.04], y, fy + 0.08, WOOD);
+    rod(b, V(x0 + 0.04, fy + 0.86, mz), V(x1 - 0.04, fy + 0.86, mz), 0.008, paint(BRASS));
+    const cloth = ['#1d1c22', '#33313b', '#55525e', CREAM, COGNAC, PAL.magenta, '#1d1c22', '#2f5546', '#8a8592', CREAM, '#33313b', '#7a5236'];
+    const n = low ? 8 : cloth.length * 2;
+    for (let k = 0; k < n; k++) {
+      const x = x0 + 0.1 + ((x1 - x0 - 0.2) * (k + 0.5)) / n;
+      const long = k % 5 === 2;
+      icube(b, [x - 0.035, z0 + 0.06, x + 0.035, z1 - 0.07], fy + (long ? 0.2 : 0.42), fy + 0.84, cloth[k % cloth.length]);
+    }
+    b.detail(() => {
+      icube(b, [x0 + 0.05, z0 + 0.02, x1 - 0.05, z0 + 0.04], fy + h - 0.012, fy + h - 0.002, '#ffd58a');
+      for (let x = x0 + 0.2; x < x1 - 0.3; x += 0.45) icube(b, [x, z0 + 0.06, x + 0.3, z1 - 0.06], fy + h + 0.04, fy + h + 0.12, k2(x));
+    });
+  } else if (kind === 'drawers') {
+    // The island of drawers before the window: walnut, a black marble top, brass pulls, a tray with his watch on it
+    icube(b, [x0 + 0.03, z0 + 0.03, x1 - 0.03, z1 - 0.03], y, fy + h - 0.03, WOOD);
+    icube(b, [x0, z0, x1, z1], fy + h - 0.03, fy + h, MARBLE);
+    b.detail(() => {
+      for (const side of [z0 + 0.03, z1 - 0.03])
+        for (const t of [0.12, 0.25])
+          for (const x of [x0 + (x1 - x0) * 0.25, x0 + (x1 - x0) * 0.75]) icube(b, [x - 0.06, side - 0.008, x + 0.06, side + 0.008], fy + t, fy + t + 0.012, BRASS);
+      icube(b, [mx - 0.15, mz - 0.08, mx + 0.15, mz + 0.08], fy + h, fy + h + 0.01, CREAM);
+      drum(b, mx - 0.05, mz, 0.03, 0.03, fy + h + 0.01, fy + h + 0.022, METALS[1], 10);
+    });
+  } else if (kind === 'shoes') {
+    // His shoe wall: a walnut case of lit shelves, his trainers in pairs on them (white, black, red, his magenta)
+    icube(b, [x0 + 0.04, z0, x1 - 0.004, z1], y, fy + h, WOOD_DARK);
+    for (const xa of [z0, z1 - 0.03]) icube(b, [x0, xa, x1 - 0.004, xa + 0.03], y, fy + h, WOOD);
+    const pairs = [PRINT_PAPER, INK, '#d42b2b', PAL.magenta, PRINT_PAPER, CREAM];
+    for (let r = 0; r < 5; r++) {
+      const sy = fy + 0.08 + r * 0.2;
+      icube(b, [x0, z0 + 0.03, x1 - 0.04, z1 - 0.03], sy - 0.015, sy, WOOD);
+      for (let k = 0; k < 4; k++) {
+        const z = z0 + 0.1 + k * 0.23;
+        const c = pairs[(r + k) % pairs.length];
+        for (const dz of [0, 0.08]) icube(b, [x0 + 0.06, z + dz, x0 + 0.24, z + dz + 0.06], sy, sy + 0.05, c);
+      }
+      if (r > 0) b.detail(() => icube(b, [x0 + 0.02, z0 + 0.05, x0 + 0.04, z1 - 0.05], sy - 0.025, sy - 0.015, '#ffd58a'));
+    }
+  } else if (kind === 'caps') {
+    // His caps in a row on a brass rail on the dressing room's west wall (his red one first)
+    icube(b, [x0, z0, x0 + 0.02, z1], fy + 0.78, fy + 0.8, BRASS);
+    CAP_COLOURS.forEach((c, k) => {
+      const cz = z0 + ((z1 - z0) * (k + 0.5)) / CAP_COLOURS.length;
+      const g = new THREE.SphereGeometry(0.09, low ? 6 : 8, low ? 3 : 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.8, 0.7, 1);
+      g.deleteAttribute('uv');
+      b.add(g.translate(x0 + 0.1, fy + 0.68, cz), paint(c));
+      icube(b, [x0 + 0.1, cz - 0.08, x0 + 0.26, cz + 0.08], fy + 0.675, fy + 0.69, c);
+    });
+  } else if (kind === 'mirror') {
+    // A tall mirror on the wall, a brass frame round it
+    icube(b, [x0, z0, x1 - 0.004, z1], fy + 0.06, fy + h, BRASS);
+    sheet(b, z1 - z0 - 0.05, h - 0.1, 0, -Math.PI / 2, x0 - 0.002, fy + 0.06 + (h - 0.06) / 2, mz, paint('#a9bccb'));
+    b.detail(() => {
+      const g = new THREE.PlaneGeometry(0.06, h * 0.7).rotateZ(0.4).rotateY(-Math.PI / 2);
+      g.deleteAttribute('uv');
+      b.add(g.translate(x0 - 0.004, fy + 0.6, mz - 0.05), paint('#d6e2ea'));
+    });
+  } else if (kind === 'vanity') {
+    // The double basin: a walnut unit hung on the back wall, a black marble top, two white basins with brass taps,
+    // the mirror over it lit from behind
+    icube(b, [x0, z0, x1, z1 - 0.004], fy + 0.12, fy + h - 0.03, WOOD);
+    icube(b, [x0 - 0.01, z0 - 0.01, x1 + 0.01, z1 - 0.004], fy + h - 0.03, fy + h, MARBLE);
+    for (const k of [0.27, 0.73]) {
+      const bx = x0 + (x1 - x0) * k;
+      drum(b, bx, mz - 0.02, 0.12, 0.09, fy + h, fy + h + 0.06, PRINT_PAPER, low ? 8 : 12);
+      rod(b, V(bx, fy + h, z1 - 0.06), V(bx, fy + h + 0.15, z1 - 0.06), 0.008, paint(BRASS));
+      rod(b, V(bx, fy + h + 0.15, z1 - 0.06), V(bx, fy + h + 0.13, mz - 0.03), 0.007, paint(BRASS));
+    }
+    icube(b, [x0 + 0.05, z1 - 0.03, x1 - 0.05, z1 - 0.008], fy + h + 0.2, fy + h + 0.62, BRASS);
+    icube(b, [x0 + 0.07, z1 - 0.034, x1 - 0.07, z1 - 0.03], fy + h + 0.22, fy + h + 0.6, '#a9bccb');
+    b.detail(() => {
+      icube(b, [x0 + 0.05, z1 - 0.02, x1 - 0.05, z1 - 0.012], fy + h + 0.63, fy + h + 0.64, '#ffd58a');
+      for (const t of [0.2, 0.3]) icube(b, [x0 + 0.04, z0 - 0.006, x1 - 0.04, z0], fy + t, fy + t + 0.008, WOOD_DARK);
+    });
+  } else if (kind === 'toilet') {
+    // A white toilet hung on the back wall, its brass flush plate over it
+    icube(b, [x0 + 0.04, z1 - 0.12, x1 - 0.04, z1 - 0.004], fy + 0.08, fy + h, PRINT_PAPER);
+    const g = new THREE.CylinderGeometry(0.11, 0.09, h - 0.1, low ? 8 : 12).scale(1, 1, 1.25);
+    g.deleteAttribute('uv');
+    b.add(g.translate(mx, fy + 0.1 + (h - 0.1) / 2, z1 - 0.24), paint(PRINT_PAPER));
+    icube(b, [mx - 0.05, z1 - 0.012, mx + 0.05, z1 - 0.004], fy + h + 0.2, fy + h + 0.27, BRASS);
+  } else if (kind === 'shower') {
+    // The walk-in shower behind a steel-framed screen (no glass to see: the frame's grid), its dark stone tray, a brass
+    // rain head from the ceiling and a niche in the marble
+    const [sx0, sx1] = [x1, ROOM[2] - 0.006];
+    for (const z of [z0, (z0 + z1) / 2]) icube(b, [x0, z, x1, z + 0.02], fy, fy + h, INK);
+    for (const yy of [0.01, 0.5, h - 0.02]) icube(b, [x0, z0, x1, z1 - 0.004], fy + yy, fy + yy + 0.02, INK);
+    iflat(b, [sx0 + 0.02, z0 - 0.3, sx1, z1 - 0.004], fy + 0.016, '#2a2930');
+    rod(b, V((sx0 + sx1) / 2, S + UP_CEIL - 0.01, z1 - 0.3), V((sx0 + sx1) / 2, fy + 1.0, z1 - 0.3), 0.008, paint(BRASS));
+    drum(b, (sx0 + sx1) / 2, z1 - 0.3, 0.1, 0.1, fy + 0.98, fy + 1.0, BRASS, 12);
+    b.detail(() => icube(b, [sx0 + 0.15, z1 - 0.02, sx0 + 0.55, z1 - 0.006], fy + 0.5, fy + 0.62, '#2a2930'));
+  } else if (kind === 'towels') {
+    // A brass towel rail on the wall, two towels on it (cream and charcoal)
+    rod(b, V(x0, fy + h, z1 + 0.02), V(x1, fy + h, z1 + 0.02), 0.008, paint(BRASS));
+    icube(b, [x0 + 0.03, z0 + 0.02, (x0 + x1) / 2 - 0.01, z1 + 0.035], fy + h - 0.36, fy + h + 0.01, CREAM);
+    icube(b, [(x0 + x1) / 2 + 0.01, z0 + 0.02, x1 - 0.03, z1 + 0.035], fy + h - 0.3, fy + h + 0.01, '#33313b');
   } else if (kind === 'desk') {
     // The office's desk against the back wall: two screens glowing (lines of light, nothing to read), the keyboard,
     // the tower under it with its lit side
-    icube(b, [x0, z0, x1, z1], fy + h - 0.03, fy + h, DARK_UNIT);
+    icube(b, [x0, z0, x1, z1], fy + h - 0.03, fy + h, WOOD);
     for (const x of [x0 + 0.04, x1 - 0.08]) icube(b, [x, z0 + 0.04, x + 0.04, z1 - 0.04], y, fy + h - 0.03, INK);
     for (const s of [-1, 1]) {
       const c = mx + s * 0.36;
@@ -1357,8 +1487,8 @@ function upFurnish(b: Batch, { kind, rect, h }: UpThing, fy: number, low: boolea
   } else if (kind === 'chair') {
     // His chair, turned to the desk (its back to the room): black, his magenta in its seat
     drum(b, mx, mz, 0.2, 0.2, fy + 0.22, fy + 0.27, INK, low ? 6 : 10);
-    icube(b, [mx - 0.16, mz - 0.12, mx + 0.16, mz + 0.12], fy + 0.27, fy + 0.29, CUSHION);
-    icube(b, [mx - 0.18, z0, mx + 0.18, z0 + 0.06], fy + 0.27, fy + h + 0.12, INK);
+    icube(b, [mx - 0.16, mz - 0.12, mx + 0.16, mz + 0.12], fy + 0.27, fy + 0.29, COGNAC);
+    icube(b, [mx - 0.18, z0, mx + 0.18, z0 + 0.06], fy + 0.27, fy + h + 0.12, COGNAC);
     drum(b, mx, mz, 0.02, 0.02, fy + 0.04, fy + 0.22, STEEL, 5);
     drum(b, mx, mz, 0.18, 0.18, fy + 0.01, fy + 0.04, INK, 5);
   } else if (kind === 'shelf') {

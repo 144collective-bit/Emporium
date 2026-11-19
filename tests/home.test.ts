@@ -203,7 +203,7 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
   for (let i = 0; i < FURNITURE.length; i++) for (let j = i + 1; j < FURNITURE.length; j++) assert.ok(!overlap(FURNITURE[i].rect, FURNITURE[j].rect), `${FURNITURE[i].kind} on ${FURNITURE[j].kind}`);
   assert.deepEqual(
     [...new Set(FURNITURE.map((f) => f.kind))].sort(),
-    ['armchair', 'chaise', 'console', 'counter', 'fridge', 'island', 'lamp', 'media', 'plant', 'sofa', 'stairs', 'stools', 'table', 'trophies', 'wardrobe'],
+    ['armchair', 'chaise', 'console', 'counter', 'cupboard', 'fridge', 'island', 'lamp', 'media', 'plant', 'sofa', 'stairs', 'stools', 'table', 'trophies'],
   );
   assert.ok(homeWall(ROOM[0] + 0.05, ROOM[1] + 3, R) && !homeWall(HOME.door[0], (ROOM[1] + ROOM[3]) / 2, R));
   // From inside the front door you can walk to inside the side door and up to everything (a flood over a fine grid)
@@ -246,9 +246,9 @@ test('the refit (docs/compound-plan.md Phase 2, docs/interior-plan.md Phase 1): 
   const at = (k: string) => FURNITURE.find((f) => f.kind === k)!.rect;
   const [rx0, rz0, rx1, rz1] = ROOM;
   const dx = HOME.door[0];
-  // The wardrobe's prompt stands where it always has (the smoke test's scene starts there); the stash is the den's vault
+  // The wardrobe's prompt is upstairs in the dressing room now (docs/interior-plan.md Phase 3); the stash is the den's vault
   const use = (id: string) => HOME_USES.find((u) => u.id === id)!;
-  assert.deepEqual([use('home:wardrobe').x, use('home:wardrobe').z].map((n) => Math.round(n * 100) / 100), [-229.85, 388.6]);
+  assert.equal(use('home:wardrobe').level, 'up');
   assert.equal(use('home:stash').level, 'base');
   for (const u of HOME_USES.filter((x) => x.level === 'room')) assert.ok(!homeWall(u.x, u.z, R), `${u.id}'s prompt in something`);
   const up = HOME_PORTALS.find((p) => p.id === 'home:up')!;
@@ -362,10 +362,10 @@ test('while the street is loading, the ways out of the room wait and the rest ar
 
 test("the wardrobe's and the vault's prompts stand where he can, by the thing, apart from the doors'", () => {
   assert.deepEqual(HOME_USES.map((u) => u.id), ['home:wardrobe', 'home:stash', 'home:desk']);
-  for (const u of HOME_USES.filter((x) => x.level !== 'up')) {
-    const fy = u.level === 'base' ? SLAB_Y + BASE_Y : SLAB_Y;
+  for (const u of HOME_USES.filter((x) => x.id !== 'home:desk')) {
+    const fy = u.level === 'base' ? SLAB_Y + BASE_Y : SLAB_Y + UP_Y;
     assert.ok(inHouse(u.x, u.z, fy) && !homeWall(u.x, u.z, R, fy), `${u.id} is somewhere he can stand`);
-    const f = u.id === 'home:wardrobe' ? FURNITURE.find((x) => x.kind === 'wardrobe')!.rect : BASEMENT.find((x) => x.kind === 'vault')!.rect;
+    const f = u.id === 'home:wardrobe' ? UPSTAIRS.find((x) => x.kind === 'rails')!.rect : BASEMENT.find((x) => x.kind === 'vault')!.rect;
     const d = Math.hypot(u.x - Math.max(f[0], Math.min(f[2], u.x)), u.z - Math.max(f[1], Math.min(f[3], u.z)));
     assert.ok(d < 0.5, `${u.id} is at its ${u.label.toLowerCase()}`);
     assert.ok(u.label.split(' ').length <= 3);
@@ -418,15 +418,25 @@ test('upstairs (docs/compound-plan.md Phase 3): its own floor between the room a
   }
   const reach = (x: number, z: number, r: number) => [...seen].some((k) => { const [px, pz] = at(...(k.split(',').map(Number) as [number, number])); return Math.hypot(px - x, pz - z) < r; });
   for (const u of UPSTAIRS) {
-    if (u.kind === 'wall' || u.kind === 'bathdoor') continue;
+    if (u.kind === 'wall') continue;
     const [x0, z0, x1, z1] = u.rect;
     assert.ok(reach((x0 + x1) / 2, (z0 + z1) / 2, Math.max(x1 - x0, z1 - z0) / 2 + 0.5), `${u.kind} can't be walked up to`);
   }
-  // (the bedroom at the front and the office at the back, each through its own doorway)
-  assert.ok(reach(ROOM[0] + 2, ROOM[1] + 1.5, 0.3) && reach(ROOM[0] + 2, ROOM[3] - 1.6, 0.3), 'both rooms');
+  // (the bedroom through the dressing room at the front, the office at the back, the bathroom behind the landing, each
+  // through its own doorway: docs/interior-plan.md Phase 3)
+  assert.ok(reach(ROOM[0] + 2.45, ROOM[1] + 1.4, 0.3), 'the bedroom');
+  assert.ok(reach(ROOM[0] + 4.5, ROOM[1] + 1.8, 0.3), 'the dressing room');
+  assert.ok(reach(ROOM[0] + 2, ROOM[3] - 1.6, 0.3), 'the office');
+  assert.ok(reach(ROOM[2] - 1.5, ROOM[3] - 0.65, 0.2), 'the bathroom');
   assert.equal(UP_DOORS.length, 2);
-  // Its prompts: the way down, the way up to the roof, the desk; standing where he can, apart, all reached
-  assert.deepEqual(homePlaces(floor).map((p) => p.id), ['home:down', 'home:roof', 'home:desk']);
+  // The bedroom's telly faces the bed across the room, the bed's head on the west wall
+  const [bed, tv] = ['bed', 'tv'].map((k) => UPSTAIRS.find((u) => u.kind === k)!.rect);
+  assert.ok(Math.abs(bed[0] - ROOM[0]) < 1e-9 && Math.abs((bed[1] + bed[3]) / 2 - (tv[1] + tv[3]) / 2) < 0.1 && tv[0] - bed[2] > 1, 'the telly facing the bed');
+  // The middle front window in the dressing room, whole (the partition clear of it)
+  const dress = UPSTAIRS.filter((u) => u.kind === 'wall' && u.rect[2] - u.rect[0] < 0.2 && u.rect[2] < ROOM[2] - 3).map((u) => u.rect[0]);
+  for (const x of dress) assert.ok(x < ROOM[0] + 3.2, 'the dressing room\'s partition west of the middle window');
+  // Its prompts: the way down, the way up to the roof, the wardrobe, the desk; standing where he can, apart, all reached
+  assert.deepEqual(homePlaces(floor).map((p) => p.id), ['home:down', 'home:roof', 'home:wardrobe', 'home:desk']);
   for (const p of homePlaces(floor)) {
     assert.ok(!homeWall(p.x, p.z, R, floor) && reach(p.x, p.z, 0.2), `${p.id}'s prompt`);
     for (const q of homePlaces(floor)) if (q !== p) assert.ok(Math.hypot(p.x - q.x, p.z - q.z) > 0.6, `${p.id} and ${q.id} apart`);
@@ -514,7 +524,7 @@ test('the roof terrace: up from the landing to the roof inside its rail, the hou
   // Each floor shows its own prompts: on the terrace only the way down; in the room and the yard, theirs
   assert.deepEqual(homePlaces(roof).map((p) => p.id), ['home:roofdown']);
   const low = homePlaces(SLAB_Y).map((p) => p.id);
-  assert.deepEqual(low, ['home:in', 'home:out', 'home:yard', 'home:back', 'home:up', 'home:cellar', 'home:wardrobe']);
+  assert.deepEqual(low, ['home:in', 'home:out', 'home:yard', 'home:back', 'home:up', 'home:cellar']);
   const stairUp = HOME_PORTALS.find((p) => p.id === 'home:up')!;
   for (const p of homePlaces(SLAB_Y)) if (p.id !== 'home:up') assert.ok(Math.hypot(p.x - stairUp.x, p.z - stairUp.z) > 0.6, `home:up and ${p.id} apart`);
   // The camera's box on the roof is the whole house under the parapet's top, so the camera stays over it up there

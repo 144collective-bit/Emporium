@@ -292,7 +292,8 @@ const SZ = HOME.sideDoor[1];
  * What the house's prompts stand at (`HOME_USES`): the wardrobe, the den's vault (the stash) and the office's chair (the
  * desk). Here, in the boot, for the prompts; the rooms' lists (homerooms.ts) put the things themselves on them
  */
-export const WARDROBE_RECT: Rect = [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15];
+/** (the dressing room's rails upstairs, docs/interior-plan.md Phase 3: along its back, by the partition to the office) */
+export const WARDROBE_RECT: Rect = [rx0 + 3.3, rz0 + 2.57, rx1 - 2.8, rz0 + 2.95];
 export const VAULT_RECT: Rect = [rx0 + 4.75, rz0, rx0 + 5.55, rz0 + 0.1];
 export const DESK_CHAIR_RECT: Rect = [rx0 + 2.15, rz1 - 1.05, rx0 + 2.65, rz1 - 0.6];
 
@@ -501,9 +502,9 @@ const [wa, va, ca] = [WARDROBE_RECT, VAULT_RECT, DESK_CHAIR_RECT];
 export const HOME_WAITS: readonly string[] = ['home:out', 'home:yard', 'home:up'];
 /** Their prompt meanwhile */
 export const WAITING = 'Getting ready…';
-/** The wardrobe (stood in front of, on its west side: the fitting room), the den's vault (in front of it: the stash), the desk (behind its chair: the business card) */
+/** The wardrobe (in front of the dressing room's rails upstairs: the fitting room), the den's vault (in front of it: the stash), the desk (behind its chair: the business card) */
 export const HOME_USES: HomeUse[] = [
-  { id: 'home:wardrobe', level: 'room', x: wa[0] - 0.35, z: (wa[1] + wa[3]) / 2, label: 'Wardrobe' },
+  { id: 'home:wardrobe', level: 'up', x: (wa[0] + wa[2]) / 2, z: wa[1] - 0.35, label: 'Wardrobe' },
   { id: 'home:stash', level: 'base', x: (va[0] + va[2]) / 2, z: va[3] + 0.4, label: 'Stash' },
   { id: 'home:desk', level: 'up', x: (ca[0] + ca[2]) / 2, z: ca[1] - 0.25, label: 'Desk' },
 ];

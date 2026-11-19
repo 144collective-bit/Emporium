@@ -161,7 +161,7 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the
-  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`. **The upgrade** (the owner's call, 2026-11-18) is planned in
+  room goes in `FURNITURE` (homerooms.ts), on the terrace in `ROOF_THINGS`. **The upgrade** (the owner's call, 2026-11-18) is planned in
   `docs/compound-plan.md`: the outside done up with his neon, the ground floor refitted, an upstairs (a bedroom, an
   office with a desk), a trophy wall, a basement trading den; nothing built until its phase is signed off.
   Phase 1 (the outside) is built: black steel and his neon (home3d.ts `STEEL_BLACK`, `HIS_NEON`, his D by `mark()` on
@@ -191,6 +191,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   mounted over a long fire, lit niches), the corner sofa facing it with its chaise, an armchair and an arc lamp, the
   trophy wall past the media wall; he wakes facing west at it (`HOME_WAKE`, `SOFA_SEAT`). The stash is a vault door in
   the den's north wall (`BASEMENT` `vault`, `home:stash` on the `base` floor).
+  The rooms' lists (`FURNITURE`, `UPSTAIRS`, `BASEMENT`) are in `homerooms.ts`, out of the boot (the owner's call): laid
+  out by `houseRooms(HOUSE_GEO)` (it imports nothing, so the boot's modules aren't split), fetched as the city starts
+  (index.ts), handed to `homeWall()` by `setRooms()`; waking waits for them. A new thing in a room goes there. Phase 3
+  (upstairs) is built: the dressing room off the landing (the wardrobe's prompt, `WARDROBE_RECT`), the bedroom past
+  it, the bathroom behind the landing (`DRESS_X`, `BED_DOOR`, `BATH_DOOR`, `BATH_Z`).
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
