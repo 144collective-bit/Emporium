@@ -29,9 +29,13 @@ export const TUNNEL_TOP = PLAT_CEIL + 0.5;
 /** Across the line: the island platform's walkable half, each track's middle out from the line, the tunnel's half */
 export const PLAT_HALF = 1.5;
 export const TRACK_OFF = 2.6;
-export const TUNNEL_HALF = TRACK_OFF + 1.4;
+/** (the tunnel wide enough that a train's straight cars, swinging out at their ends on the line's tightest bends,
+ * southtrains.ts, stay clear of its walls) */
+export const TUNNEL_HALF = TRACK_OFF + 1.9;
 /** Along the line: a platform's length, an escalator's run (about 30 degrees down), a hall's length and half width */
 export const PLAT_LEN = 26;
+/** The tube's door on a platform (tube-ui.ts): this far along the line from its middle, between its benches */
+export const PLAT_DOOR = 3;
 export const ESC_RUN = 7.8;
 export const ESC_HALF = 1.0;
 export const HALL_LEN = 10;

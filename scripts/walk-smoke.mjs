@@ -463,6 +463,27 @@ for (const [name, spawn, far] of [
   });
 }
 
+// The tube (tube-ui.ts, docs/south-plan.md Phase 4g): on Aldwyn's Green's platform, its card, a ride to the High Road
+// seen from inside the carriage, skipped, stepping out on the High Road's platform
+await scene('tube', '-213.5,440.4,0,-6.55', async (t) => {
+  const from = await t.where();
+  await t.prompt('Tube');
+  await t.until('the tube card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-tube-to]'));
+  await t.step('the tube card opened');
+  await t.click('[data-metro] [data-tube-to="highroad"]');
+  await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
+  await t.step('riding, inside the carriage');
+  await t.page.waitForTimeout(7000);
+  await t.step('riding on, the tunnel going by');
+  await t.click('[data-metro-skip]');
+  await t.until('the ride to end', () => !document.querySelector('.city.is-riding'));
+  await t.until('him to step out at the High Road', ([x, z]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) > 30;
+  }, from, 60000);
+  await t.step(`stepped out at ${(await t.where()).join(', ')} (${(await t.page.evaluate(downNow)).toFixed(1)} down)`);
+});
+
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub
 await scene(
   'pad',

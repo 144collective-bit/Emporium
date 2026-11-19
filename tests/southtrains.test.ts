@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LEGS, ROUND, STOPS, TRAIN_LEN, TUBE, carOffset, carPose, rideAt, runDist, runTime, trackOf, trainAt } from '../src/scripts/city3d/southtrains';
-import { ESC_HALF, LINE, LINE_LENGTH, SOUTH_STATIONS, TRACK_OFF } from '../src/scripts/city3d/southline';
+import { ESC_HALF, LINE, LINE_LENGTH, SOUTH_STATIONS, TRACK_OFF, TUNNEL_HALF } from '../src/scripts/city3d/southline';
 import { distTo } from '../src/scripts/city3d/streetfaces';
 
 test('a run speeds up, cruises if it can and slows to a stand, getting there exactly', () => {
@@ -83,4 +83,18 @@ test('a ride: boarding, the runs between with a stop at each station between, pu
     for (let i = ia; i !== ib + r.dir; i += r.dir) assert.ok(stoppedAt.has(i), `${a} to ${b}: a stop at ${STOPS[i].id}`);
     assert.ok(r.total < 120, `${a} to ${b}: ${r.total.toFixed(0)} s`);
   }
+});
+
+test("a train's straight cars stay inside the tunnel round the line's bends", () => {
+  const CAR_HALF = 1.2;
+  for (const u of [trackOf(0), trackOf(1)])
+    for (let s = TUBE.carLen; s < LINE_LENGTH - TUBE.carLen; s += 0.5) {
+      const { at, dir } = carPose(s, u);
+      // (each corner of the car, its middle on the track there, pointing along it)
+      for (const a of [-1, 1])
+        for (const b of [-1, 1]) {
+          const c: [number, number] = [at[0] + dir[0] * a * (TUBE.carLen / 2) - dir[1] * b * CAR_HALF, at[1] + dir[1] * a * (TUBE.carLen / 2) + dir[0] * b * CAR_HALF];
+          assert.ok(distTo(LINE, c) < TUNNEL_HALF - 0.1, `s ${s.toFixed(1)}: a corner ${distTo(LINE, c).toFixed(2)} out`);
+        }
+    }
 });
