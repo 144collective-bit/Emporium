@@ -452,8 +452,8 @@ From the Circus west, patchy as high roads are:
      (`radial()`) and a well's seats (`wellFloor()`); Lot 9's tunnel
      unchanged. Sketch `docs/south-shots/18-phase-4a-circus.png`. Not
      wired into walking or drawn yet: 4b.
-   - **4b, the Circus drawn and walked**. Built, waiting on the owner's
-     sign-off: `circus3d.ts` (in the south's chunk, a site for the plaza,
+   - **4b, the Circus drawn and walked**. Built and signed off
+     (2026-11-19): `circus3d.ts` (in the south's chunk, a site for the plaza,
      each subway and the paths) draws the plaza (paved floor, three steps
      of seats cut where the subways come in, its wall with a lintel over
      each opening, coping, a railing, a neon strip under the coping,
