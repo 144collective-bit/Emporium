@@ -6,8 +6,10 @@ base with its own airfield. It guards the wall and holds the wall's first
 exit gate (the wall plan's exits, `docs/wall-plan.md`), shut until the
 storyline opens it. Built one phase at a time, each with the owner's
 sign-off. Keep this plan up to date. Nothing is built yet. **Phase 0 is
-under way**: the lines are drawn and signed off (2026-11-19, below); the
-baseline measure is still to go in. Phase 1 waits for the owner's go.
+under way**: the lines are drawn and signed off (2026-11-19, below) and the
+baseline is measured (below). The phone is over its geometry ceiling before
+the base adds anything, so what comes first is the owner's pick. Phase 1
+waits for that and the owner's go.
 
 ## The owner's answers (2026-11-18)
 
@@ -211,6 +213,55 @@ They go into `airbase.ts` in Phase 1, where the tests hold them.
   chunks and never all at the start. If Phase 0 shows phones can't take it, the
   build-out plan's Phase 2 (letting far districts go) comes first, the
   owner's call.
+
+## Phase 0's baseline (measured 2026-11-19)
+
+`?bench` on the build of 2026-11-19 (17bd863), headless Chromium in the
+software renderer: a phone (390 x 844 at 1x, touch: the **low** tier) and a
+desktop (1280 x 800 at 1x: the software renderer counts as shared graphics,
+so the **medium** tier). Frame times there mean nothing; draws, triangles
+and memory do. The run found `?bench` broken since the spawn plan's Phase 1
+(on foot at home, the far sites never built, so it never began): fixed in
+the same Phase 0 (`enter(false, true)`, `performance.md`).
+
+| View | Phone draws | Phone tris | Desktop draws | Desktop tris |
+| --- | ---: | ---: | ---: | ---: |
+| Home view | 286 | 0.34M | 465 | 1.23M |
+| Every district, from high | 212 | 0.37M | 468 | 1.36M |
+| The north, from over the stadium | 59 | 0.09M | 74 | 0.33M |
+| Northgate Air Base, from high | 54 | 0.09M | 56 | 0.14M |
+| The main gate | 103 | 0.16M | 126 | 0.30M |
+| The runway | 54 | 0.09M | 62 | 0.22M |
+| The route | 239 | 0.37M | 399 | 1.30M |
+
+For scale, the phone's busiest views today: the far edge 427 draws, a
+downtown street 331, the outskirts 313; the most triangles 0.60M (the far
+edge).
+
+- **Memory, with every district loaded** (what `npm run memcheck` holds):
+  phone geometry **191.8 MiB**, textures 32.9, render targets 9.0; desktop
+  geometry 352.1, textures 76.0, targets 53.8.
+- **The phone is over its geometry ceiling already** (187,
+  `MEMORY_CEILINGS.phone`; 169.8 measured 2026-11-14). The south's
+  re-laying, Degen's home and the spawn plan came in since, while
+  memcheck couldn't run. The base adds nothing until the owner picks what
+  comes first (below).
+- **The boot:** 736.9 KB of 750 KB.
+
+### Each phase's allowance (added to the baseline; the owner to sign off)
+
+| Phase | Phone draws, any base view | Phone tris | Desktop draws | Phone geometry | Boot |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1: the land, fence and gates | +40 | +0.08M | +60 | +1.5 MiB | +4 KB |
+| 2: the airfield | +50 | +0.12M | +75 | +3 MiB | +2 KB |
+| 3: the base | +50 | +0.15M | +75 | +3 MiB | +2 KB |
+| 4: life, night and sound | +15 | +0.03M | +25 | +0.5 MiB | 0 (lazy) |
+| **All of it** | **+155** | **+0.38M** | **+235** | **+8 MiB** | **+8 KB** |
+
+All of it leaves the gate at about 258 draws and 0.54M triangles on a
+phone, under the far edge and a downtown street today. The home view and
+the overview take at most +10 draws in all (the base's far forms). Over an
+allowance, the phase is trimmed, never the budget.
 
 ## Phases
 
