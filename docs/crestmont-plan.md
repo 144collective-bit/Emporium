@@ -634,3 +634,41 @@ it. The yard is mown (mansions3d.ts); the banks, the planting, the land and the 
   most, 358 of 359 pieces), their height taken from the hills 4 out where the road's bank eases over 12; now topped
   0.28 over the ground right behind them (a kerb of 0.35 at least), tested.
 
+## The premium upgrade (planned, the owner's answers, 2026-11-19)
+
+The owner: "this is the premium high end part of town. ask me a lot of questions about improving the area further."
+Their answers, in three rounds:
+
+- **Arrival:** an entrance gateway where the boulevard enters the Flats: stone gate piers and a planted roundabout with a
+  fountain.
+- **New places** (each a place with its own panel, `PLACES` and `LIVE_PLACES`, a door, a pin): a spa and wellness
+  retreat, a fine-dining restaurant with a view terrace, a car showroom of the game's own made-up cars; grouped round a
+  new **hilltop quarter**, a plaza high on the ridge with lookouts over the city.
+- **Homes:** both more and better. New hill mansions on terraced lots on the open slopes (3 to 6, the owner's call to
+  build on that land), in two new styles, **Art Deco** (streamlined white, curved corners, porthole windows, vertical
+  fins) and **French chateau** (mansard roofs, dormers, parterres, gravel courts); and the existing houses upgraded
+  (balconies, roof terraces, better gates).
+- **Leisure:** a walking trail up to the ridge with benches, a stone belvedere and lookouts; a botanical garden with a
+  glasshouse (by the reservoir).
+- **Night:** lit windows (a few rooms at a time), pools lit under water, garden lanterns and festoon lights, the
+  landmarks and the new places softly floodlit; all under the bloom's threshold.
+- **Life:** residents at leisure (on terraces and balconies, dining out, swimming, tennis where there's a court) and
+  road cyclists climbing the hill roads.
+- **Names:** Claude picks them, made up, in the hotel's manner (THE CORALLINE); the owner may change them. Proposed: the
+  quarter **Highcrest**, the restaurant **THE ASTERLY**, the spa **SOLENNE**, the showroom **VELLANO MOTOR SALON**, the
+  garden **the Crestmont Glasshouse**, the trail **the Ridgeline Walk**, the lookout **the Belvedere**.
+- **Phones:** trimmed as now (the buildings and lights, fewer people, plainer planting, fewer lit windows).
+- **Owning a home:** later (Phase 10 stays for another time).
+
+**The phases, in the owner's order (look first, then places), each with the owner's sign-off before the next:**
+
+1. **Arrival and the night glow:** the entrance gateway and roundabout; lit windows, pools lit under water, garden
+   lanterns and festoon lights, the landmarks floodlit.
+2. **The houses upgraded:** balconies, roof terraces and better gates on the estates and the mansions.
+3. **New hill mansions:** 3 to 6 on terraced lots on the open slopes, Art Deco and French chateau, each on its own level
+   with a yard, a graded drive and a planted bank, as the others.
+4. **Highcrest:** the hilltop quarter's plaza with THE ASTERLY, SOLENNE and VELLANO MOTOR SALON (or the showroom on
+   Coral Drive: asked at this phase), each a place; a metro or taxi way up.
+5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
+6. **Residents at leisure and cyclists on the hills.**
+
