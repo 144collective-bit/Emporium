@@ -446,7 +446,7 @@ await scene('station', '-158.47,389.10,-0.295', async (t) => {
 // down its stairs (south-east) and on into the side of its ticket hall (the High Road's walk goes on down to a platform)
 await scene('trenches', '-101.03,180.75,-2.581', async (t) => {
   await t.go('w', 12, 'down the stairs into the ticket hall');
-  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+  await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
   await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
 });
 
@@ -457,7 +457,7 @@ for (const [name, spawn, far] of [
 ]) {
   await scene(name, spawn, async (t) => {
     await t.go('w', far, 'down the stairs into the ticket hall');
-    await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
+    await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
     await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
   });
 }

@@ -540,7 +540,21 @@ From the Circus west, patchy as high roads are:
        (`baked.ts` key `southline`: the boot stays at 746 KB). The smoke
        test walks from the sidewalk to the platform (`station`). Shots
        `docs/south-shots/22-phase-4e-*.webp` (the smoke test's).
-     - **4f, the other four stations.**
+     - **4f, the other four stations**. Built, waiting on the owner's
+       sign-off: every station built (`BUILT_STATIONS`): walked, drawn
+       and its stairs cut. Halls open at their sides where a way in
+       crosses one (`sideGap()`); stairs from the street have parapets,
+       coping and railings round their openings and the city's M mark on
+       a post at the mouth; the Circus's corridor out of its sunken plaza,
+       west (its seats and wall opened there, circus3d.ts); The Trenches'
+       finish gritty (tags and bills on the FX layer), the Circus's and Lot
+       9's the blocks' concrete, Aldwyn's Green's tiled. The Trenches'
+       stairs moved into The Block's plaza by the raised station's tower
+       (they had opened in its playground; tested clear of it, the court
+       and the benches); Lot 9's on its open ground with the grass laid
+       back round their opening (`STAIR_INFILL`). Smoke walks: down The
+       Trenches', Lot 9's and Aldwyn's Green's stairs into their halls
+       (`trenches`, `lot9station`, `aldwynsstation`).
      - **4g, the trains and the ride** (round-top tube trains, the tunnel
        seen, Skip), the change at The Trenches, on the map and the
        station card.
