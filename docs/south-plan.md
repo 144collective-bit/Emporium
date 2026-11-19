@@ -656,7 +656,11 @@ From the Circus west, patchy as high roads are:
      the piers and the lights under the deck keep to it. The snapshot only
      gains the two roads and the two ramps (nothing that exists moved).
      `turnsOf()` (traffic.ts) keeps a turn at a route's very end inside it.
-     Sketch `docs/south-shots/27-phase-5a-exit-6a.png`.
+     Sketch `docs/south-shots/27-phase-5a-exit-6a.png`. The signs' atlas
+     and the map's badges read an exit's `label` (6A, not 9). Not merged
+     on its own: the roads and ramps aren't drawn until 5b, and a push to
+     main goes live (traffic would drive them unseen), so 5a and 5b go to
+     main together.
    - **5b, drawn and driven**: the ramps on the viaduct, the road and its
      junctions, the gantries and signs with 6A's made-up names, lamps,
      traffic using it; walked and driven, shots.

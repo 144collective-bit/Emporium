@@ -207,8 +207,8 @@ const SIGN_TEX = canvasTex(1024, SIGN_ROWS * ROW_H, (c) => {
       c.fillStyle = '#17161c';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      fit(`EXIT ${e.n}`, 130, 40);
-      c.fillText(`EXIT ${e.n}`, 99, y + ROW_H / 2 + 2);
+      fit(`EXIT ${e.label}`, 130, 40);
+      c.fillText(`EXIT ${e.label}`, 99, y + ROW_H / 2 + 2);
       c.fillStyle = '#f2f0ea';
       c.textAlign = 'left';
       fit(e.name.toUpperCase(), 800, 50);
@@ -219,8 +219,8 @@ const SIGN_TEX = canvasTex(1024, SIGN_ROWS * ROW_H, (c) => {
       c.fillStyle = '#f2f0ea';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      fit(`EXIT ${e.n}`, 600, 60);
-      c.fillText(`EXIT ${e.n}`, 420, y + ROW_H / 2 + 3);
+      fit(`EXIT ${e.label}`, 600, 60);
+      c.fillText(`EXIT ${e.label}`, 420, y + ROW_H / 2 + 3);
       c.lineWidth = 10;
       c.strokeStyle = '#f2f0ea';
       c.beginPath();
