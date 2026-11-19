@@ -540,10 +540,60 @@ From the Circus west, patchy as high roads are:
        (`baked.ts` key `southline`: the boot stays at 746 KB). The smoke
        test walks from the sidewalk to the platform (`station`). Shots
        `docs/south-shots/22-phase-4e-*.webp` (the smoke test's).
-     - **4f, the other four stations.**
-     - **4g, the trains and the ride** (round-top tube trains, the tunnel
-       seen, Skip), the change at The Trenches, on the map and the
-       station card.
+     - **4f, the other four stations**. Built and signed off
+       (2026-11-19): every station built (`BUILT_STATIONS`): walked, drawn
+       and its stairs cut. Halls open at their sides where a way in
+       crosses one (`sideGap()`); stairs from the street have parapets,
+       coping and railings round their openings and the city's M mark on
+       a post at the mouth; the Circus's corridor out of its sunken plaza,
+       west (its seats and wall opened there, circus3d.ts); The Trenches'
+       finish gritty (tags and bills on the FX layer), the Circus's and Lot
+       9's the blocks' concrete, Aldwyn's Green's tiled. The Trenches'
+       stairs moved into The Block's plaza by the raised station's tower
+       (they had opened in its playground; tested clear of it, the court
+       and the benches); Lot 9's on its open ground with the grass laid
+       back round their opening (`STAIR_INFILL`). Smoke walks: down The
+       Trenches', Lot 9's and Aldwyn's Green's stairs into their halls
+       (`trenches`, `lot9station`, `aldwynsstation`). Aldwyn's Green's
+       stairs moved on to the sidewalk of the street along the
+       churchyard's west side (they had opened in the terrace's back
+       gardens, out of reach); the village stands on its hill, so every
+       flight now starts at the surface at its top (`surfaceAt()`: a
+       block's slab or the open ground, rolling) and runs as long as it
+       takes to stay gentle (`STAIR_SLOPE`), its parapets and walls drawn
+       on the surface beside them. A slanting way's walls and floor run on
+       to meet its hall's side. Shots `docs/south-shots/23-phase-4f-*.webp`.
+     - **4g, the trains and the ride** (the owner's answers, 2026-11-19):
+       round-top tube trains running the line on a timetable from the
+       clock, so a platform has trains pulling in and out; a ride from
+       inside the carriage, the tunnel's walls and lights going by the
+       windows, pulling in at each platform, Skip as the raised metro's;
+       the line's own station card. Built and signed off
+       (2026-11-19): `southtrains.ts` the rules (DOM-free, tested: a
+       run speeds up, cruises and slows; one round out from The Trenches
+       to the High Road and back calling everywhere; two trains half a
+       round apart on their own tracks, standing within their platforms;
+       a ride boarding at one station and stopping at each between),
+       `tube3d.ts` the trains (two cars each: silver sides, the line's
+       teal band, open windows, a cab each end with its windscreen and
+       lights; inside, benches, yellow poles and a strip light), loaded
+       the first time you're down in a station and drawn only down there,
+       on the clock's own seconds so they're the same trains for everyone.
+       A **Tube** door on each platform, by its middle and off its bench
+       (`PLAT_DOOR`), opens the line's card (`tube-ui.ts`, the raised
+       metro's card and ride bar, one switch for both: `live.closed('metro')`);
+       the ride is seen from inside the front car (near: stood at its
+       back looking down the car and out of the windscreen; far: from the
+       car behind; the window seat by the tunnel's wall), Skip and Esc cut
+       to the end, under reduced motion it's a cut. The running tunnels
+       between the stations are drawn (`registerTunnels()`, line3d.ts, a
+       site each) and widened so a train's straight cars clear the walls on
+       the bends (`TUNNEL_HALF`, tested). The smoke test rides from
+       Aldwyn's Green to the High Road (`tube`). Shots
+       `docs/south-shots/24-phase-4g-*.webp`.
+     - **4h, the change and the map**: one card for both lines at either
+       Trenches station (every stop on both, the change made for you),
+       the line on the world map.
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new

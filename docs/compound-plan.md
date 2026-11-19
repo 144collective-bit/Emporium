@@ -291,8 +291,31 @@ draw calls in the house's own batches.
     `docs/compound-shots/phase-6b-*`.
 6c. **The fountain and the palms.** A fountain in the yard's middle (clear of the car's way out and the drive), palms
     with uplights along the edges, lit paving lines.
+    *Built, signed off by the owner (2026-11-19), live.* The drive runs through the yard's middle (the gates to the garage, kept
+    clear), so the fountain stands north of it. home.ts: `FOUNTAIN` (a round stone basin, its solid a square inside
+    it), `PALMS` (four: either side of the gates inside, at the house's west corner, by the workshop) and
+    `PALM_PLANTER`, in `HOME_SOLIDS`. home3d.ts `showpiece()`: the basin with its water, a pedestal and two bowls with
+    water falling from their rims in thin streams, a gold finial, lights in the basin in his magenta and cyan; the
+    palms (palms3d.ts's `trunk()` and `crown()`, as the Neon Mile's, in the palette's tree colours, swaying with the
+    wind) in round stone planters with a warm uplight; two lit lines set in the paving along the drive's edges. Tests:
+    `tests/home.test.ts` (inside the wall, off the drive, clear of everything, the bollards, every prompt, the bays'
+    ways out and the way round to the side door). Shots: `docs/compound-shots/phase-6c-*`.
 6d. **The pool and the cabana.** On the east lawn: a lit pool, a cabana and loungers (the side door's way kept).
+    *Built, signed off by the owner (2026-11-19), live.* home.ts: `POOL` (along the lawn's middle, `POOL_EDGE`), `LOUNGERS` (three
+    on its north side), `CABANA` in the lawn's far corner with `CABANA_SOFA` and `CABANA_POSTS` (`CABANA_H`); the pool,
+    the loungers, the sofa and the posts in `HOME_SOLIDS` (the pool's edge solid: no swimming, looks only; the cabana
+    open under its roof). home3d.ts `poolside()`: the stone edge, the water (lit from under it: glowing softly at night; deeper blue at its far end, a lane line),
+    cyan lights along its sides; the loungers (white frames, magenta cushions) and a magenta umbrella; the cabana
+    (black steel posts and roof, his neon along the roof's front, its back in the loft's brick, a teal sofa with
+    magenta cushions, white drapes at the front posts, a string of lights). The washing line is gone. Tests:
+    `tests/home.test.ts` (on the east lawn, apart, solid where they should be, room under the cabana, the side door and
+    the way round to it and along the pool clear). Shots: `docs/compound-shots/phase-6d-*`.
 6e. **The helipad.** On the garage's roof: its pad, its markings (no lettering or numbers), edge lights; looks only.
+    *Built, signed off by the owner (2026-11-19), live.* home.ts `HELIPAD` (the garage roof's middle, a round pad inside its
+    edges). home3d.ts `helipad()`: a dark round deck on the roof, a white ring and his D in yellow painted on it (read
+    from the Close: no "H", no numbers), green lights round its edge, a windsock on a pole at the roof's north-west
+    corner. Nothing solid (nobody walks up there; nothing lands). Tests: `tests/home.test.ts` (on the roof, inside its
+    edges, low). Shots: `docs/compound-shots/phase-6e-*`. With it, Phase 6 is built, and the plan is done.
 
 Each with the owner's sign-off.
 

@@ -60,7 +60,9 @@ keep it up to date when what it describes changes.
   stash's card at his trunk, the fitting room at his wardrobe, the car
   (in at his garage, out through its door, a drive, out), on foot (walk,
   sprint, jump, crouch, the hub), the gun store's counter, the metro (the
-  card, a ride, skipped), a kart race (a single race started and quit),
+  card, a ride, skipped), the south's underground (the Circus, an underpass,
+  down each station's stairs, the High Road's to its platform, and the tube:
+  Aldwyn's Green's platform card, a ride to the High Road, skipped), a kart race (a single race started and quit),
   flying (into your aircraft, rolling out), the gamepad (a made-up pad:
   the stick, A, Start, B) and the touch controls (made-up fingers: the
   stick, Aim, Gas); it fails on any page error, any NaN warning in

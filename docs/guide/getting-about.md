@@ -50,6 +50,10 @@ keep it up to date when what it describes changes.
   - **Rides** (taxi, metro and river bus) go through `walk.setRide()` (`Ride` in
     `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
     wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
+  - **The tube**, the south's underground line (The Trenches to the High
+    Road, the south plan's Phase 4), is its own: `endswood.md` (`southline.ts`,
+    `southtrains.ts`, `tube3d.ts`, `tube-ui.ts`); it shares the metro's card
+    and ride bar and its one switch (`live.closed('metro')`).
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
     an elevated line on a viaduct as tracks (`TRACKS`: `main` from its north
     end north of the ring highway (the north side's stage 2: it crosses the

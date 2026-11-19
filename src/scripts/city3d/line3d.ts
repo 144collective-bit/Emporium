@@ -13,8 +13,11 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { CONCRETE } from './southblocks';
-import { BUILT_STATIONS, ESC_HALF, LINE_COLOUR, HALL_CEIL, HALL_Y, PLAT_CEIL, PLAT_HALF, PLAT_Y, SOUTH_STATIONS, TRACK_OFF, TUNNEL_HALF, type Station, type StationId } from './southline';
-import { alongOf, floorOf, pointOf, type Passage } from './underground';
+import { BUILT_STATIONS, ESC_HALF, LINE_COLOUR, STAIR_INFILL, lineAt, surfaceAt, HALL_CEIL, HALL_Y, PLAT_CEIL, PLAT_HALF, PLAT_Y, SOUTH_STATIONS, TRACK_OFF, TUNNEL_HALF, type Station, type StationId } from './southline';
+import { acrossOf, alongOf, floorOf, pointOf, type Passage } from './underground';
+import { buildFx, poster, tag } from './grime';
+import { holedPoly } from './world';
+import { colourAt } from './ground';
 import { P, along, alongDir, upQuad, wallQuad } from './circus3d';
 
 type Style = 'tiled' | 'concrete' | 'gritty';
@@ -166,7 +169,8 @@ function drawPlatform(b: Batch, st: Station, style: Style, row: number, low: boo
   ] as const) {
     // (the line's ends: before the first station's platform, past the last's)
     const end = (i === 0 && dir > 0) || (i === SOUTH_STATIONS.length - 1 && dir < 0) ? 'end' : 'on';
-    across(b, p, s - dir * 0.6, -TUNNEL_HALF, TUNNEL_HALF, trackY, PLAT_CEIL, dir, end === 'end' ? wall : DARK);
+    // (on: the running tunnel carries on, registerTunnels(); the line's ends: a wall)
+    if (end === 'end') across(b, p, s - dir * 0.6, -TUNNEL_HALF, TUNNEL_HALF, trackY, PLAT_CEIL, dir, wall);
     if (end === 'end') for (const side of [-1, 1]) along(b, p, s + dir * 0.2 - 0.25, s + dir * 0.2 + 0.25, side * TRACK_OFF - 0.6, side * TRACK_OFF + 0.6, trackY, trackY + 0.6, BUFFER);
   }
   // Benches down the middle, away from the escalator's foot
@@ -212,11 +216,20 @@ function drawHall(b: Batch, st: Station, style: Style, row: number, low: boolean
   const [a0, a1] = [h.a0, h.a1];
   floor(b, h, a0, a1, -h.half, h.half, HALL_Y, FLOOR);
   ceiling(b, h, a0, a1, -h.half, h.half, HALL_CEIL, CEIL);
+  // Its sides: open where the way in comes through one (its stairs or the plaza's corridor at an angle to it)
+  const gaps = [-1, 1].map((side) => sideGap(h, st.way, side));
   for (const side of [-1, 1]) {
-    face(b, h, a0, a1, side * h.half, HALL_Y, HALL_Y + 0.45, LOW[style]);
-    face(b, h, a0, a1, side * h.half * 0.999, HALL_Y + 0.45, HALL_Y + 0.6, BAND);
-    face(b, h, a0, a1, side * h.half, HALL_Y + 0.6, HALL_CEIL, wall);
+    const g = gaps[(side + 1) / 2];
+    const runs: [number, number][] = g ? [[a0, g.at - g.half], [g.at + g.half, a1]] : [[a0, a1]];
+    for (const [r0, r1] of runs) {
+      if (r1 - r0 < 0.05) continue;
+      face(b, h, r0, r1, side * h.half, HALL_Y, HALL_Y + 0.45, LOW[style]);
+      face(b, h, r0, r1, side * h.half * 0.999, HALL_Y + 0.45, HALL_Y + 0.6, BAND);
+      face(b, h, r0, r1, side * h.half, HALL_Y + 0.6, HALL_CEIL, wall);
+    }
   }
+  // (the ticket machines and the name board on the side without the way in)
+  const quiet = gaps[1] ? -1 : 1;
   // Its ends: open where the escalator goes down (one end) and the way comes in (the other end, or its side)
   const escAt = sIn(h, st.escalator, floorOf(st.escalator, st.escalator.a0) > floorOf(st.escalator, st.escalator.a1) ? st.escalator.a0 : st.escalator.a1);
   const escEnd = Math.abs(escAt - a0) < Math.abs(escAt - a1) ? a0 : a1;
@@ -246,8 +259,8 @@ function drawHall(b: Batch, st: Station, style: Style, row: number, low: boolean
   }
   const mid = (a0 + a1) / 2;
   for (const s of [mid - 1.6, mid - 0.6]) {
-    along(b, h, s - 0.35, s + 0.35, h.half - 0.45, h.half - 0.05, HALL_Y, HALL_Y + 1.1, MACHINE);
-    const [x, z] = P(h, s, h.half - 0.46);
+    along(b, h, s - 0.35, s + 0.35, quiet * (h.half - 0.45), quiet * (h.half - 0.05), HALL_Y, HALL_Y + 1.1, MACHINE);
+    const [x, z] = P(h, s, quiet * (h.half - 0.46));
     const c = P(h, s, 0);
     const g = new THREE.PlaneGeometry(0.4, 0.25).rotateY(Math.atan2(c[0] - x, c[1] - z)).translate(x, HALL_Y + 0.8, z);
     g.deleteAttribute('uv');
@@ -255,50 +268,263 @@ function drawHall(b: Batch, st: Station, style: Style, row: number, low: boolean
   }
   const gate = escEnd === a0 ? a0 + 2.6 : a1 - 2.6;
   if (!low) for (let u = -h.half + 0.5; u < h.half - 0.3; u += 0.9) along(b, h, gate - 0.25, gate + 0.25, u - 0.08, u + 0.08, HALL_Y, HALL_Y + 0.75, HANDRAIL);
-  const [bx, bz] = P(h, mid + 1.6, -h.half * 0.995);
+  const [bx, bz] = P(h, mid + 1.6, quiet * h.half * 0.995);
   const c = P(h, mid + 1.6, 0);
   board(b, row, bx, HALL_Y + 1.15, bz, [c[0] - bx, c[1] - bz], 2.2);
 }
 
-function drawWay(b: Batch, st: Station, style: Style) {
+function drawWay(b: Batch, st: Station, style: Style): void {
   const w = st.way;
-  if (st.entrance.kind === 'plaza') return;
+  if (st.entrance.kind === 'plaza') return drawPlazaCorridor(b, st, style);
   const wall = WALLS[style];
   const top = floorOf(w, w.a0);
   // (it ends where it meets the hall: its walls go no further in)
-  const hallEdge = (() => {
-    const h = st.hall;
-    for (let s = w.a0; s <= w.a1; s += 0.05) {
-      const q = pointOf(w, s);
-      const t = alongOf(h, ...q);
-      if (t > h.a0 && t < h.a1) return s;
-    }
-    return w.a1;
-  })();
+  const hallEdge = edgeOf(st);
   // The steps down, a flight
   const n = 10;
   for (let i = 0; i < n; i++) {
     const [s0, s1] = [w.a0 + ((w.ramp0 - w.a0) * i) / n, w.a0 + ((w.ramp0 - w.a0) * (i + 1)) / n];
     along(b, w, s0, s1, -w.half, w.half, HALL_Y - 0.05, floorOf(w, s1) + (top - HALL_Y) / n, STEP);
   }
-  floor(b, w, w.ramp0, hallEdge, -w.half, w.half, HALL_Y + 0.002, FLOOR);
+  // (on as far as the further of its walls reaches the hall: a slanting way's floor meets the hall's all along; 5 mm over it)
+  floor(b, w, w.ramp0, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half, w.half, HALL_Y + 0.005, FLOOR);
   // Its walls: down beside the steps from the street (or the building's floor) and on to the hall, the ceiling over the
   // level part, the header where the roof starts over the steps
   for (const side of [-1, 1]) {
-    along(b, w, w.a0, w.ramp0, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, top, wall);
-    along(b, w, w.ramp0, hallEdge, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, wall);
-    face(b, w, w.ramp0, hallEdge, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
+    // (beside the steps, up to the surface there: in pieces, the ground rolling; inside the station building, its floor)
+    const n = Math.max(2, Math.ceil((w.ramp0 - w.a0) / 0.8));
+    for (let i = 0; i < n; i++) {
+      const [s0, s1] = [w.a0 + ((w.ramp0 - w.a0) * i) / n, w.a0 + ((w.ramp0 - w.a0) * (i + 1)) / n];
+      const u = side * (w.half + w.wall / 2);
+      const g = st.entrance.kind === 'building' ? top : Math.max(top, surfaceAt(...P(w, s0, u)), surfaceAt(...P(w, s1, u)));
+      along(b, w, s0, s1, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, g, wall);
+    }
+    const end = wallEnd(st, side);
+    along(b, w, w.ramp0, end, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, wall);
+    face(b, w, w.ramp0, end, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
   }
-  ceiling(b, w, w.ramp0, hallEdge, -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
-  across(b, w, w.ramp0, -w.half - w.wall, w.half + w.wall, HALL_CEIL, top, -1, wall);
+  ceiling(b, w, w.ramp0, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
+  const headTop = st.entrance.kind === 'building' ? top : Math.max(top, surfaceAt(...P(w, w.ramp0, -w.half)), surfaceAt(...P(w, w.ramp0, w.half)));
+  across(b, w, w.ramp0, -w.half - w.wall, w.half + w.wall, HALL_CEIL, headTop, -1, wall);
   // (handrails down the steps)
   for (const side of [-1, 1]) tilted(b, w, w.a0, w.ramp0, side * (w.half - 0.06) - 0.03, side * (w.half - 0.06) + 0.03, HALL_Y + 0.85 - 0.03, HALL_Y + 0.85 + 0.03, top - HALL_Y, HANDRAIL);
   const [x, z] = P(w, (w.ramp0 + hallEdge) / 2, 0);
   b.add(new THREE.BoxGeometry(1.0, 0.04, 0.1).rotateY(yawOf(w)).translate(x, HALL_CEIL - 0.03, z), TUBE);
 }
 
+/** Where a way in crosses a hall's side `side` (u = side * half): its middle along the hall and its half width there
+ * (wider the more slanting it crosses), or null if it doesn't */
+function sideGap(h: Passage, w: Passage, side: number): { at: number; half: number } | null {
+  const f = (s: number) => acrossOf(h, ...pointOf(w, s)) - side * h.half;
+  const [f0, f1] = [f(w.a0), f(w.a1)];
+  if (Math.sign(f0) === Math.sign(f1) || f0 === f1) return null;
+  const s = w.a0 + ((w.a1 - w.a0) * f0) / (f0 - f1);
+  const [hd, wd] = [alongDir(h), alongDir(w)];
+  const sin = Math.abs(hd[0] * wd[1] - hd[1] * wd[0]);
+  if (sin < 0.3) return null;
+  return { at: alongOf(h, ...pointOf(w, s)), half: (w.half + 0.05) / sin };
+}
+
+/** The city's M mark on a disc (as the raised metro's, metro3d.ts), for the stairs' posts */
+let markMat: THREE.Material | null = null;
+const MARK = () =>
+  (markMat ??= siteMat(
+    'line-mark',
+    lit(
+      new THREE.MeshBasicMaterial({
+        map: canvasTex(128, 128, (c) => {
+          c.fillStyle = '#100d1e';
+          c.fillRect(0, 0, 128, 128);
+          c.fillStyle = PAL.magenta;
+          c.beginPath();
+          c.arc(64, 64, 58, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = '#ffffff';
+          c.font = `900 84px ${FONT_DISPLAY}`;
+          c.textAlign = 'center';
+          c.textBaseline = 'middle';
+          c.fillText('M', 64, 70);
+        }),
+      }),
+      0.9,
+      1.2
+    )
+  ));
+const POST = toon('#2a2838');
+
+/** The stairs down from the street: parapets round their opening, coping, railings on them, the M mark on a post at the
+ * mouth (the near end, open) */
+function drawStreetStairs(b: Batch, st: Station, style: Style, low: boolean) {
+  const w = st.way;
+  const wall = WALLS[style];
+  const k = w.wall;
+  // (in pieces along the opening, each on the surface beside it: Aldwyn's Green's goes down its hill)
+  const n = Math.max(3, Math.ceil((w.ramp0 - w.a0) / 0.8));
+  const ground = (s: number, u: number) => surfaceAt(...P(w, s, u));
+  for (const side of [-1, 1]) {
+    const u = side * (w.half + k / 2);
+    for (let i = 0; i < n; i++) {
+      const [s0, s1] = [w.a0 + ((w.ramp0 + k - w.a0) * i) / n, w.a0 + ((w.ramp0 + k - w.a0) * (i + 1)) / n];
+      const g = Math.max(ground(s0, u), ground(s1, u));
+      along(b, w, s0, s1, side * w.half, side * (w.half + k), g, g + 0.3, wall);
+      along(b, w, s0 - 0.01, s1 + 0.01, side * (w.half - 0.03), side * (w.half + k + 0.03), g + 0.3, g + 0.36, BALUSTRADE);
+      along(b, w, s0, s1, u - 0.03, u + 0.03, g + 0.92, g + 0.98, POST);
+      if (!low || i % 2 === 0) along(b, w, s0 - 0.03, s0 + 0.03, u - 0.03, u + 0.03, g + 0.36, g + 0.95, POST);
+    }
+  }
+  // (across the far end, over its header)
+  const ge = Math.max(ground(w.ramp0, -w.half), ground(w.ramp0, w.half));
+  along(b, w, w.ramp0, w.ramp0 + k, -w.half, w.half, ge, ge + 0.3, wall);
+  along(b, w, w.ramp0 - 0.03, w.ramp0 + k + 0.03, -w.half - k, w.half + k, ge + 0.3, ge + 0.36, BALUSTRADE);
+  along(b, w, w.ramp0 + k / 2 - 0.03, w.ramp0 + k / 2 + 0.03, -w.half - k / 2, w.half + k / 2, ge + 0.92, ge + 0.98, POST);
+  // The M mark on its post by the mouth, facing out
+  const [px, pz] = P(w, w.a0 - 0.35, w.half + k + 0.25);
+  const gp = surfaceAt(px, pz);
+  b.add(new THREE.CylinderGeometry(0.05, 0.05, 1.9, 6, 1, true).translate(px, gp + 0.95, pz), POST);
+  const [dx, dz] = alongDir(w);
+  for (const facing of [-1, 1]) {
+    const g = new THREE.CircleGeometry(0.32, low ? 16 : 24).rotateY(Math.atan2(-dx * facing, -dz * facing)).translate(px - dx * facing * 0.03, gp + 2.0, pz - dz * facing * 0.03);
+    b.add(g, MARK());
+  }
+}
+
+/** The Circus's way: the corridor out of its sunken plaza's wall to the hall (as its subways are, circus3d.ts) */
+function drawPlazaCorridor(b: Batch, st: Station, style: Style) {
+  const w = st.way;
+  const from = w.a0 - 4.6 + 7.2;
+  const hallEdge = edgeOf(st);
+  floor(b, w, from, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half, w.half, HALL_Y + 0.005, FLOOR);
+  for (const side of [-1, 1]) {
+    const end = wallEnd(st, side);
+    along(b, w, from, end, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, WALLS[style]);
+    face(b, w, from, end, side * (w.half - 0.004), HALL_Y, HALL_Y + 0.45, LOW[style]);
+  }
+  ceiling(b, w, from, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half - w.wall, w.half + w.wall, HALL_CEIL, CEIL);
+  for (let s = from + 0.9; s < hallEdge - 0.3; s += 1.6) {
+    const [x, z] = P(w, s, 0);
+    b.add(new THREE.BoxGeometry(1.0, 0.04, 0.1).rotateY(yawOf(w)).translate(x, HALL_CEIL - 0.03, z), TUBE);
+  }
+}
+/** Where a way's wall on `side` meets its hall's wall (a slanting way's two walls reach it at different places: each runs
+ * on to it, so no gap is left between them) */
+function wallEnd(st: Station, side: number) {
+  const [w, h] = [st.way, st.hall];
+  const u = side * (w.half + w.wall);
+  for (let s = w.ramp0; s <= w.a1; s += 0.02) {
+    const q = P(w, s, u);
+    const t = alongOf(h, ...q);
+    if (t > h.a0 - 0.01 && t < h.a1 + 0.01 && Math.abs(acrossOf(h, ...q)) < h.half + 0.01) return s;
+  }
+  return edgeOf(st);
+}
+/** Where a station's way meets its hall (its walls go no further in) */
+function edgeOf(st: Station) {
+  const [w, h] = [st.way, st.hall];
+  for (let s = w.a0; s <= w.a1; s += 0.05) {
+    const t = alongOf(h, ...pointOf(w, s));
+    if (t > h.a0 && t < h.a1 && Math.abs(acrossOf(h, ...pointOf(w, s))) < h.half) return s;
+  }
+  return w.a1;
+}
+
+/** Tags and a bill or two on The Trenches' walls (the gritty finish), on the FX layer */
+function grit(fx: Batch, st: Station) {
+  const h = st.hall;
+  const p = st.platform;
+  for (const [piece, u, y, n] of [
+    [h, h.half - 0.012, HALL_Y + 1.0, 4],
+    [h, -h.half + 0.012, HALL_Y + 0.9, 3],
+    [p, TUNNEL_HALF - 0.012, PLAT_Y + 1.0, 5],
+    [p, -TUNNEL_HALF + 0.012, PLAT_Y + 1.1, 5],
+  ] as const) {
+    for (let i = 0; i < n; i++) {
+      const s = piece.a0 + ((i + 0.6) / (n + 0.2)) * (piece.a1 - piece.a0);
+      const [x, z] = P(piece, s, u);
+      const c = P(piece, s, 0);
+      const nn: [number, number] = [c[0] - x, c[1] - z];
+      const l = Math.hypot(...nn) || 1;
+      if (i % 3 === 2) poster(fx, i + 3, 1, [nn[0] / l, nn[1] / l], x, y + 0.2, z);
+      else tag(fx, i * 5 + 2, 1.0, [nn[0] / l, nn[1] / l], x, y, z);
+    }
+  }
+}
+
+const RGB: [number, number, number] = [0, 0, 0];
+/** The running tunnels between the stations (what a ride sees out of the windows): in pieces along the line, each a
+ * site; ballast and both tracks' rails, the walls (dark low, a pale band, dark above), the ceiling, a light on each wall
+ * every few metres. Not where a station's own drawing reaches (its platform and a few metres past each end) */
+function registerTunnels(low: boolean) {
+  const trackY = PLAT_Y - 0.95;
+  const runs: [number, number][] = [];
+  const stations = [...SOUTH_STATIONS].sort((a, b) => a.p0 - b.p0);
+  for (let i = 0; i + 1 < stations.length; i++) runs.push([stations[i].p1 + 3, stations[i + 1].p0 - 3]);
+  const PIECE = 24;
+  const STEP = 3;
+  for (const [r0, r1] of runs) {
+    const n = Math.max(1, Math.ceil((r1 - r0) / PIECE));
+    for (let k = 0; k < n; k++) {
+      const [s0, s1] = [r0 + ((r1 - r0) * k) / n, r0 + ((r1 - r0) * (k + 1)) / n];
+      const at = (s: number, u: number): [number, number] => {
+        const { at: c, dir } = lineAt(s);
+        return [c[0] - dir[1] * u, c[1] + dir[0] * u];
+      };
+      const pts = [at(s0, -TUNNEL_HALF - 1), at(s0, TUNNEL_HALF + 1), at(s1, -TUNNEL_HALF - 1), at(s1, TUNNEL_HALF + 1)];
+      const xs = pts.map((q) => q[0]);
+      const zs = pts.map((q) => q[1]);
+      site(`line tunnel ${Math.round(s0)}`, [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], (into) => {
+        const b = new Batch();
+        const m = Math.max(1, Math.ceil((s1 - s0) / STEP));
+        const quad = (a: [number, number, number], c: [number, number, number], d: [number, number, number], e: [number, number, number], mat: THREE.Material, facing: [number, number, number]) => {
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...c, ...d, ...e], 3));
+          g.setIndex([0, 1, 2, 0, 2, 3]);
+          g.computeVertexNormals();
+          const nrm = g.attributes.normal;
+          if (nrm.getX(0) * facing[0] + nrm.getY(0) * facing[1] + nrm.getZ(0) * facing[2] < 0) g.setIndex([0, 2, 1, 0, 3, 2]);
+          g.computeVertexNormals();
+          b.add(g, mat);
+        };
+        for (let i = 0; i < m; i++) {
+          const [sa, sb] = [s0 + ((s1 - s0) * i) / m, s0 + ((s1 - s0) * (i + 1)) / m];
+          const p3 = (s: number, u: number, y: number): [number, number, number] => {
+            const [x, z] = at(s, u);
+            return [x, y, z];
+          };
+          // (the ballast floor, the ceiling facing down)
+          quad(p3(sa, -TUNNEL_HALF, trackY), p3(sb, -TUNNEL_HALF, trackY), p3(sb, TUNNEL_HALF, trackY), p3(sa, TUNNEL_HALF, trackY), BALLAST, [0, 1, 0]);
+          quad(p3(sa, -TUNNEL_HALF, PLAT_CEIL), p3(sb, -TUNNEL_HALF, PLAT_CEIL), p3(sb, TUNNEL_HALF, PLAT_CEIL), p3(sa, TUNNEL_HALF, PLAT_CEIL), CEIL, [0, -1, 0]);
+          for (const side of [-1, 1]) {
+            const u = side * TUNNEL_HALF;
+            const { dir } = lineAt((sa + sb) / 2);
+            const inward: [number, number, number] = [dir[1] * side, 0, -dir[0] * side];
+            for (const [y0, y1, mat] of [
+              [trackY, PLAT_Y + 0.4, DARK],
+              [PLAT_Y + 0.4, PLAT_Y + 0.55, BAND],
+              [PLAT_Y + 0.55, PLAT_CEIL, CEIL],
+            ] as const)
+              quad(p3(sa, u, y0), p3(sb, u, y0), p3(sb, u, y1), p3(sa, u, y1), mat, inward);
+            // (the rails of the track on this side)
+            for (const r of [-0.42, 0.42]) {
+              const ur = side * TRACK_OFF + r;
+              quad(p3(sa, ur - 0.04, trackY + 0.16), p3(sb, ur - 0.04, trackY + 0.16), p3(sb, ur + 0.04, trackY + 0.16), p3(sa, ur + 0.04, trackY + 0.16), RAIL, [0, 1, 0]);
+            }
+          }
+        }
+        // A light on each wall every few metres (staggered)
+        for (let s = s0 + 2; s < s1; s += low ? 12 : 8)
+          for (const side of [-1, 1]) {
+            const [x, z] = at(s + (side > 0 ? 4 : 0), side * (TUNNEL_HALF - 0.05));
+            b.add(new THREE.BoxGeometry(0.5, 0.08, 0.08).rotateY(-Math.atan2(lineAt(s).dir[1], lineAt(s).dir[0])).translate(x, PLAT_Y + 1.6, z), TUBE);
+          }
+        b.build(into, { cast: false, receive: false, lift: false });
+      });
+    }
+  }
+}
+
 /** Each built station, a site */
 export function registerLine(low: boolean) {
+  registerTunnels(low);
   for (const st of SOUTH_STATIONS) {
     if (!BUILT_STATIONS.includes(st.id)) continue;
     const style = STYLE[st.id];
@@ -312,7 +538,18 @@ export function registerLine(low: boolean) {
       drawEscalator(b, st, style, low);
       drawHall(b, st, style, row, low);
       drawWay(b, st, style);
+      if (st.entrance.kind === 'stairs') drawStreetStairs(b, st, style, low);
+      // (on open ground, the grass laid back round its opening in the ground's own colour: underpasses.ts cuts a box)
+      for (const f of STAIR_INFILL)
+        if (f.cut.some((p) => Math.hypot(p[0] - pointOf(st.way, st.way.a0)[0], p[1] - pointOf(st.way, st.way.a0)[1]) < 6))
+          b.shade(holedPoly(f.box, 0.002, [f.cut]), (x, _y, z, c) => {
+            const [r, g, bl] = colourAt(x, z, RGB);
+            c.setRGB(r, g, bl, THREE.SRGBColorSpace);
+          });
+      const fx = new Batch();
+      if (style === 'gritty') grit(fx, st);
       b.build(into, { cast: false, receive: true, lift: false });
+      buildFx(fx, into);
     });
   }
 }
