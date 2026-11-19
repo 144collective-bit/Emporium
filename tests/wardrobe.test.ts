@@ -60,9 +60,10 @@ function randomLook(r: () => number): Record<string, unknown> {
 
 const RETIRED = ['crown', 'cowboy', 'tophat', 'halo', 'coffee', 'boombox', 'phone', 'briefcase', 'shopping'];
 /**
- * A single figure's most triangles, whatever he wears: the worst of these looks measured 38.2k on the desktop and 16.8k
- * on phones (14 November 2026, with the merch and the suit's tailoring), each held here with a little room, so a new
- * piece that would make him heavier says so
+ * A single figure's most triangles, whatever he wears: the worst of these looks measured 38.9k on the desktop and 17.7k
+ * on phones (19 November 2026, with the coach jacket, the vest, the tee and the shorts in the draw: the puffer's
+ * quilting seams left open at their hidden ends to stay under it), each held here with a little room, so a new piece
+ * that would make him heavier says so
  */
 const BUDGET = { 3: 40_000, 2: 18_000 } as const;
 const LOOKS = 60;
@@ -87,6 +88,7 @@ for (const q of [3, 2] as const) {
       assert.equal(ids.has('joggers'), look.bottoms === 'joggers' || look.bottoms === 'trackpants');
       assert.equal(ids.has('cargoPants'), look.bottoms === 'cargo');
       assert.equal(ids.has('trackStripes'), look.bottoms === 'trackpants');
+      assert.equal(ids.has('shorts'), look.bottoms === 'shorts');
       assert.equal(ids.has('dressShoes'), look.shoeStyle === 'dress');
       assert.equal(ids.has('sneakers'), look.shoeStyle === 'sneaker');
       // (one pair of shades, the look's, unless face gear is worn in their place; the face gear if any)

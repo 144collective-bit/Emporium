@@ -19,6 +19,8 @@ keep it up to date when what it describes changes.
   kicks with a mark, or the top with a print; where the top's mark goes
   and the ink are rows of their own; a note says when it won't show (no
   cap or beanie, a suit's dress shoes).
+- A top's own extra colours are rows on its card (`top()`'s `more`): the
+  suit's shirt and tie, the puffer vest's sleeves (the look's `shirt`).
 - **The character screen** (`charscreen.ts`, markup `[data-char]` in
   `CityMap.astro`, styles in `fitting.css`), from the hub's Profile tab's "See
   your Degen": an overlay under the header with the same stage

@@ -212,6 +212,9 @@ const TABS: Tab[] = [
       top('varsity', 'Varsity Jacket', 'M8 3l4 2 4-2 4 3-2 5h-2v10H8V11H6L4 6z M12 5v16 M8 18h2 M14 18h2 M9 12l1.5-1.5L12 12l-1.5 1.5z', 'Jacket', STREET),
       top('puffer', 'Puffer Jacket', 'M7 4h10l4 4-2 4h-2v9H7v-9H5L3 8z M7 11h10 M7 15h10 M7 19h10', 'Jacket', STREET),
       top('bomber', 'Bomber Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 3v2h8V3 M12 5v15 M8 18h8 M5 9l2.5-1', 'Jacket', STREET),
+      top('coach', 'Coach Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 3l4 4 4-4 M12 7v13 M7 19h10', 'Jacket', STREET),
+      top('vest', 'Puffer Vest', 'M8 3h8l2 4v14H6V7z M6 10h12 M6 14h12 M6 18h12 M12 3v18', 'Vest', ['street', 'work'], [{ key: 'shirt', label: 'Sleeves', list: PALETTE.shirt }]),
+      top('tee', 'Heavy Tee', 'M8 4c1 1.5 2.5 2 4 2s3-.5 4-2l5 3-2 4h-3v10H8V11H5L3 7z', 'Tee', STREET),
     ],
   },
   {
@@ -222,6 +225,7 @@ const TABS: Tab[] = [
       bottoms('joggers', 'Joggers', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7 6h10', STREET),
       bottoms('trackpants', 'Track Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7.5 4l-1 14 M16.5 4l1 14', STREET),
       bottoms('cargo', 'Cargo Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M5.5 9h2.5v4H5.5z M16 9h2.5v4H16z', ['street', 'work']),
+      bottoms('shorts', 'Shorts', 'M6 4h12l1 11h-5l-2-6-2 6H5z M6 6h12 M5.2 13h4.6 M14.2 13h4.6', STREET),
     ],
   },
   {

@@ -284,10 +284,20 @@ keep it up to date when what it describes changes.
     A new top needs all three, its card in `fitting.ts`, its name in
     `charscreen.ts`, a nearest kind for the crowd (`fit()` in crowdlook.ts)
     and its line in `clothing.test.ts`'s `OUTFITS`.
+  - **The coach jacket, the puffer vest and the tee** (`docs/wardrobe-plan.md`
+    Phase 5): the coach (`CK`) a light shell with a fold-over collar, snaps
+    and a drawcord hem; the vest the puffer's body over long sleeves in the
+    outfit's `shirt` colour (`quilted()` covers what the puffer's collar
+    covers); the tee the hoodie's body (`HK`) with a crew neck and short
+    sleeves (`TEE_U`) over bare arms (`BARE_U`, `BARE_F`, `SKIN`). The
+    first-person arms dress them too (`dress()` in viewmodel.ts,
+    `armPieces()` in fistsview.ts).
   - **The separates** (`docs/wardrobe-plan.md` Phase 2): the top, the
     bottoms and the shoes are items of their own, worn in any pairing:
     `trousers`, `joggers` (and track pants, the joggers with
-    `trackStripes`), `cargoPants` (fuller below the hems, thigh pockets), `dressShoes` and `sneakers`, picked by `bottomsOf()` and
+    `trackStripes`), `cargoPants` (fuller below the hems, thigh pockets), `shorts`
+    (over the knee, bare legs `BARE_LEG` and white crew socks, the socks the
+    `bottom` shell so the ankle test holds them), `dressShoes` and `sneakers`, picked by `bottomsOf()` and
     `shoesOf()` (the outfit's `bottoms` / `shoeStyle`, or what its top comes
     with: the crowd's, `bottomsFor()` / `shoesFor()`); the suit's shirt,
     collar and cuffs take the outfit's `shirt` colour (the crowd's the shirt

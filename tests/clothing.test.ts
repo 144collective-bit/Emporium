@@ -25,7 +25,7 @@ import { atRest, distance, dress, inside, layers, posed, shells, type Dressed } 
 const TOL = 0.002;
 const report = !!process.env.CLOTHING_REPORT;
 
-const OUTFITS: Outfit[] = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber'] as OutfitKind[])
+const OUTFITS: Outfit[] = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee'] as OutfitKind[])
   .flatMap((kind) => BOTTOMS.map((bottoms): Outfit => ({ ...PLAYER, kind, bottoms })))
   .concat([SOLDIER]);
 const named = (o: Outfit) => (o.bottoms ? `${o.kind} over the ${o.bottoms}` : o.kind);

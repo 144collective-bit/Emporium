@@ -104,23 +104,33 @@ function armPieces(o: Outfit, thumb: -1 | 1, loose = 0, low = false) {
   const suit = o.kind === 'suit';
   const varsity = o.kind === 'varsity';
   const puffer = o.kind === 'puffer';
-  const sleeve = varsity ? FP_VARSITY : top;
+  const tee = o.kind === 'tee';
+  // (the vest's sleeves are the long-sleeve's under it)
+  const sleeve = varsity ? FP_VARSITY : o.kind === 'vest' ? (o.shirt ?? FP_SHIRT) : top;
   // (a tailored sleeve is slimmer; a puffer's fuller)
   const r = suit ? 0.047 : puffer ? 0.064 : 0.055;
   // (the sleeves' radii at each end: the stripes lie on them)
   const up = [r * 1.06, r * 0.94, ARM.upper] as const;
   const lo = [r * 0.94, r * 0.84, ARM.fore - 0.05] as const;
-  const upper: THREE.BufferGeometry[] = [paint(sleeveGeometry(...up), sleeve)];
+  const upper: THREE.BufferGeometry[] = [];
   const fore: THREE.BufferGeometry[] = [];
   const end = ARM.fore;
-  if (suit) {
+  if (tee) {
+    // The tee: a short boxy sleeve to mid-arm, his arm bare under it and all the forearm
+    upper.push(paint(sleeveGeometry(r * 1.1, r * 1.08, ARM.upper * 0.55), sleeve));
+    upper.push(paint(sleeveGeometry(r * 0.8, r * 0.66, ARM.upper), FP_SKIN));
+    fore.push(paint(sleeveGeometry(r * 0.64, r * 0.46, end - 0.02, false), FP_SKIN));
+  } else upper.push(paint(sleeveGeometry(...up), sleeve));
+  if (tee) {
+    // (nothing more: no cuff)
+  } else if (suit) {
     // A tailored sleeve, the shirt cuff showing past it
     fore.push(paint(sleeveGeometry(r * 0.94, r * 0.8, end - 0.04, false), sleeve));
     fore.push(paint(cuffGeometry(0.034, 0.033, end - 0.05, end - 0.012), FP_SHIRT));
   } else {
     // A looser sleeve gathered into a ribbed cuff (the varsity's in its top's colour)
     fore.push(paint(sleeveGeometry(...lo, false), sleeve));
-    fore.push(paint(cuffGeometry(r * 0.78, 0.037, end - 0.056, end - 0.008, 3), fpShade(top, varsity ? 0.72 : 0.8)));
+    fore.push(paint(cuffGeometry(r * 0.78, 0.037, end - 0.056, end - 0.008, 3), fpShade(varsity ? top : sleeve, varsity ? 0.72 : 0.8)));
     if (puffer)
       for (const k of [0.35, 0.65]) {
         // (the puffer's quilting: a seam round the sleeve)

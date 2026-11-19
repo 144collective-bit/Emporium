@@ -373,12 +373,50 @@ A proposed first set; the owner picks what goes in:
   exactly on mid, light and dark-but-not-black colours; near-black details
   stand clear of their cloth; the more a detail was meant to stand off, the
   more it does. Phones' worst look 17.96k of 18k with the seams.
-- **Phase 5's first set: built**, 18 November 2026. Still open from the
-  plan's list: the coach jacket, the heavyweight hoodie refresh, the puffer
-  vest, the technical shell, the trucker jacket and the tee, relaxed denim
-  and shorts, chunky runners and slides, the fitted cap and skully, the
-  sling, chest and waist bags with the backpack and duffel rebuilt, the
-  headphones at the collar, and the dark-outfit fix.
+- **Phase 5's first set: built**, 18 November 2026.
+- **The owner's pick for the second set (19 November 2026):** the coach
+  jacket, the puffer vest, the heavyweight tee and shorts, with his arms and
+  legs drawn under the short sleeves and the shorts.
+- **As built, the second set (Phase 5d, 19 November 2026):** three new tops
+  (`LookKind` `coach`, `vest`, `tee`) and one new bottoms (`Bottoms`
+  `shorts`), each wired into every per-top table (`TORSOS`, `CHAINS`,
+  `TOPS`, crowdlook.ts `fit()`, the lab's `outfit=`, charscreen.ts, the
+  first-person sleeves in viewmodel.ts and fistsview.ts):
+  - The coach jacket (`CK`, Streetwear): a light unpadded shell on the
+    jacket's lines 2.5% fuller, straight to a drawcord hem (the channel a
+    band round the bottom, a cord and toggle at each side), a fold-over
+    collar on a low stand (the collar's wings as thick as the suit's lapels
+    so their edges ink), snaps down a placket, elastic cuffs.
+  - The puffer vest (Streetwear and Work): the puffer's quilted body, high
+    collar, zip and seams over a long-sleeve in the look's shirt colour
+    (the fitting room's "Sleeves" swatches; the character screen shows
+    both colours). It hides the headphones and the necklace as the puffer
+    does (`quilted()`).
+  - The heavyweight tee (Streetwear): the hoodie's roomy body (`HK`, the
+    shape every bottoms already sits under) without the hood, pouch or
+    ribbing, a stitched hem, a ribbed crew neck, boxy short sleeves to
+    mid-arm with their own hems, and his arms bare under them (`BARE_U`,
+    `BARE_F` in the skin colour, the forearm tapering into the hand's
+    wrist; the watch sits on the bare wrist).
+  - Shorts (Streetwear): on the one `SEAT`, roomy legs to just over the knee
+    with a stitched hem; his legs bare under them (`BARE_LEG`: the thigh
+    from inside the shorts, the knee, the calf, the ankle into the sock) and
+    white crew socks with a ribbed top (the socks are the `bottom` shell, so
+    the ankle test holds them in every shoe: 4.4 thousandths at worst, under
+    `ANKLE`).
+  - Every one of the 9 tops over every one of the 5 bottoms passes the
+    clipping test at both levels (the new tops 1.9 thousandths at worst,
+    the vest at a crouch, under `TOL`).
+  - The budget: with the longer lists the random looks drew an existing
+    puffer, cargo, cap and bag look at 18,046 triangles on phones; the
+    puffer's quilting seams now leave their ends open (`loft(..., open)`:
+    they were hidden inside the body), and the phones' worst is 17.7k of
+    18k. The new tops are lighter than the puffer; the shorts lighter than
+    the cargo pants.
+- Still open from the plan's list: the heavyweight hoodie refresh, the
+  technical shell, the trucker jacket, relaxed denim, chunky runners and
+  slides, the fitted cap and skully, the sling, chest and waist bags with
+  the backpack and duffel rebuilt, and the headphones at the collar.
 
 ### Phase 6: work wear
 
@@ -425,5 +463,7 @@ A proposed first set; the owner picks what goes in:
 - **Phase 3 (the hood up, rebuilt): built**, 14 November 2026.
 - **Phase 4 (eyewear and face gear): built**, 14 November 2026.
 - **Phase 5, the first set (the bomber, cargo pants, high-tops and the shoe
-  fixes): built**, 18 November 2026, waiting for the owner's look and the
-  next set.
+  fixes): built**, 18 November 2026; the dark-outfit fix, 19 November 2026.
+- **Phase 5, the second set (the coach jacket, the puffer vest, the
+  heavyweight tee and shorts, his bare arms and legs): built**, 19 November
+  2026, waiting for the owner's look and the next set.

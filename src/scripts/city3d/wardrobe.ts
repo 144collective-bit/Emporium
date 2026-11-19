@@ -15,10 +15,10 @@ import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, ty
 
 /* ---------- Outfits ---------- */
 
-export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'soldier';
+export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'soldier';
 export interface Outfit {
   kind: OutfitKind;
-  /** Jacket, hoodie, track jacket, varsity, puffer or bomber jacket, or fatigues */
+  /** Jacket, hoodie, track jacket, varsity, puffer, bomber or coach jacket, puffer vest, tee, or fatigues */
   top: string;
   /** The bottoms' colour, and which (left out: what the top comes with, `bottomsOf()`) */
   bottom: string;
@@ -27,7 +27,7 @@ export interface Outfit {
   shoes: string;
   shoeStyle?: ShoeStyle;
   tie?: string;
-  /** The suit's shirt (left out: the shirt white, `SHIRT`) */
+  /** The suit's shirt, or the long-sleeve under the puffer vest (left out: the shirt white, `SHIRT`) */
   shirt?: string;
   /** Cap colour; leave out for no cap */
   cap?: string;
@@ -197,7 +197,8 @@ const sorted = (secs: Sec[]) => [...secs].sort((a, b) => a[0] - b[0]);
  * (`n` 2 is an ellipse, higher is boxier), each end closed on its middle.
  * Ending on a tiny section makes a dome.
  */
-function loft(secs: Sec[], seg: number, n = 2) {
+// (`open`: its ends left open, for a band that lies on a body whose ends would only be hidden inside it)
+function loft(secs: Sec[], seg: number, n = 2, open = false) {
   const ss = sorted(secs);
   const R = ss.length;
   const pos: number[] = [];
@@ -218,10 +219,11 @@ function loft(secs: Sec[], seg: number, n = 2) {
     }
   const lo = R * seg;
   pos.push(0, ss[0][0], ss[0][3] ?? 0, 0, ss[R - 1][0], ss[R - 1][3] ?? 0);
-  for (let k = 0; k < seg; k++) {
-    const k1 = (k + 1) % seg;
-    idx.push(lo, k, k1, lo + 1, (R - 1) * seg + k1, (R - 1) * seg + k);
-  }
+  if (!open)
+    for (let k = 0; k < seg; k++) {
+      const k1 = (k + 1) % seg;
+      idx.push(lo, k, k1, lo + 1, (R - 1) * seg + k1, (R - 1) * seg + k);
+    }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
@@ -1122,6 +1124,11 @@ export function items(q: Detail, hero = false): Item[] {
   const varsity = (o: Outfit) => o.kind === 'varsity';
   const bomber = (o: Outfit) => o.kind === 'bomber';
   const puffer = (o: Outfit) => o.kind === 'puffer';
+  const coach = (o: Outfit) => o.kind === 'coach';
+  const gilet = (o: Outfit) => o.kind === 'vest';
+  const tee = (o: Outfit) => o.kind === 'tee';
+  /** The puffer's quilted body: the jacket's, or the vest's (its high collar, its zip) */
+  const quilted = (o: Outfit) => puffer(o) || gilet(o);
   /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
   const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
   /** Either sneaker, low or high: the stripe and the shoe's mark go on its side */
@@ -2153,6 +2160,55 @@ export function items(q: Detail, hero = false): Item[] {
     R(16)
   );
   const cargoFlaps = [-1, 1].map((s) => rb(0.024, 0.016, 0.064, 0.005, s * 0.072, -0.12, 0.004));
+  /*
+   * Shorts (docs/wardrobe-plan.md Phase 5): on the one seat every bottoms shares, roomy legs to just over the knee with
+   * a stitched hem; his legs bare under them (`BARE_LEG`, in the leg's numbers: the thigh from inside the shorts, the
+   * knee, the calf full at the back, the ankle into the sock) and white crew socks into the shoes
+   */
+  const SHORTS_S: Sec[] = [
+    [-0.12, 0.063, 0.065, 0.002],
+    [-0.15, 0.065, 0.067, 0.003],
+    [-0.19, 0.066, 0.068, 0.002],
+    [-0.226, 0.066, 0.068, 0.002],
+  ];
+  const shorts = trousers(hips(SEAT), SHORTS_S, LEGS);
+  const shortsHem = loft(
+    [
+      [-0.233, 0.0685, 0.0705, 0.002],
+      [-0.213, 0.0685, 0.0705, 0.002],
+    ],
+    R(16)
+  );
+  const BARE_LEG: Sec[] = [
+    [-0.17, 0.052, 0.055, 0],
+    [-0.21, 0.049, 0.052, 0],
+    [-0.25, 0.045, 0.047, 0.002],
+    [-0.28, 0.042, 0.045, 0.004],
+    [-0.3, 0.041, 0.044, 0.003],
+    ...onShin([
+      [-0.04, 0.042, 0.046, -0.003],
+      [-0.09, 0.043, 0.047, -0.006],
+      [-0.15, 0.036, 0.04, -0.003],
+      [-0.2, 0.031, 0.034, 0],
+      [-0.24, 0.029, 0.031, 0.001],
+    ]),
+  ];
+  const bareLeg = loft(q === 3 ? curve(BARE_LEG, 0.02) : BARE_LEG, R(14));
+  // (in the shin's numbers: over the ankle's skin all the way, into every shoe's opening)
+  const SOCK: Sec[] = [
+    [-0.165, 0.037, 0.04, -0.002],
+    [-0.19, 0.0355, 0.0385, -0.001],
+    [-0.225, 0.034, 0.037, 0.001],
+    [-0.265, 0.036, 0.039, 0.003],
+  ];
+  const sock = loft(SOCK, R(14));
+  const sockRib = loft(
+    [
+      [-0.181, 0.0378, 0.0408, -0.002],
+      [-0.163, 0.0378, 0.0408, -0.002],
+    ],
+    R(14)
+  );
 
   /* ----- Arms and hands ----- */
   const UPPER_S: Sec[] = [
@@ -2499,6 +2555,97 @@ export function items(q: Detail, hero = false): Item[] {
     return [rb(0.007, 0.05, 0.036, 0.0025, -x, -0.072, 0.004), rb(0.004, 0.003, 0.03, 0.001, -x - 0.003, -0.05, 0.004)];
   })();
 
+  /*
+   * The coach jacket (docs/wardrobe-plan.md Phase 5): a light unpadded shell on the jacket's lines, hanging straight to a
+   * drawcord hem (its channel a band round the bottom, a cord and toggle at each side), a fold-over collar on a low
+   * stand, snaps down a placket, the sleeves gathered into plain elastic cuffs
+   */
+  const CK = smooth(grow(JACKET, 1.025));
+  const coachFront = surface(CK, SN);
+  const coachBody = loft(CK, TOP_RINGS, SN);
+  const coachHem = (() => {
+    const [, hw, hd] = secAt(CK, -0.08);
+    return loft(
+      [
+        [-0.09, hw + 0.0025, hd + 0.0025, 0],
+        [-0.07, hw + 0.0025, hd + 0.0025, 0],
+      ],
+      TOP_RINGS,
+      SN
+    );
+  })();
+  const coachStand = ribBand(0.398, 0.43, 0.066, 0.06, -0.004, R(16)).band;
+  crisp = true;
+  const COACH_COLLAR: [number, number][] = [
+    [-0.074, 0.412],
+    [-0.012, 0.399],
+    [-0.03, 0.338],
+    [-0.098, 0.37],
+  ];
+  // (as thick as the suit's lapels and lifted off the front, so its edges ink)
+  const coachCollar = [onBody(COACH_COLLAR, 0.007, coachFront, 0.003), onBody(mirror(COACH_COLLAR), 0.007, coachFront, 0.003)];
+  crisp = false;
+  const coachPlacket = tape(-0.011, 0.011, -0.07, 0.392, 0.003, coachFront, 0.001);
+  const coachSnaps = [0.04, 0.13, 0.22, 0.31].map((y) => new THREE.CylinderGeometry(0.0065, 0.0065, 0.004, R(10)).rotateX(Math.PI / 2).translate(0, y, coachFront(0, y) + 0.006));
+  // (the drawcord out of the hem's channel at each side, a toggle on its end)
+  const coachToggles = [-1, 1].flatMap((s) => {
+    const x = s * 0.1;
+    const z = coachFront(x, -0.08) + 0.004;
+    return [rb(0.003, 0.022, 0.003, 0.001, x, -0.096, z), rb(0.011, 0.016, 0.009, 0.003, x, -0.112, z)];
+  });
+
+  /*
+   * The heavyweight tee (docs/wardrobe-plan.md Phase 5): the hoodie's roomy body without its hood, pouch or ribbing,
+   * a stitched hem, a ribbed crew neck, boxy short sleeves to mid-arm with a hem of their own, and his arms bare under
+   * them (`BARE_U`, `BARE_F`: slimmer than any sleeve, the forearm tapering into the hand's wrist)
+   */
+  const teeHem = (() => {
+    const [, hw, hd] = secAt(HOODIE, -0.085);
+    return loft(
+      [
+        [-0.091, hw + 0.0018, hd + 0.0018, 0],
+        [-0.075, hw + 0.0018, hd + 0.0018, 0],
+      ],
+      TOP_RINGS,
+      HN2
+    );
+  })();
+  const teeNeck = loft(
+    [0.401, 0.409, 0.417, 0.426].map((y): Sec => {
+      const [, hw, hd, z = 0] = secAt(HK, Math.min(y, 0.422));
+      return [y, hw + 0.003, hd + 0.003, z];
+    }),
+    TOP_RINGS,
+    HN2
+  );
+  const TEE_U: Sec[] = [...grow(LOOSE_U, 1.16).filter(([y]) => y > -0.11), [-0.13, 0.0565, 0.0575, 0]];
+  const teeSleeve = loft(TEE_U, R(14));
+  const teeCuff = loft(
+    [
+      [-0.134, 0.0585, 0.0595, 0],
+      [-0.118, 0.0585, 0.0595, 0],
+    ],
+    R(14)
+  );
+  const BARE_U: Sec[] = [
+    [-0.03, 0.044, 0.046, 0.001],
+    [-0.07, 0.043, 0.045, 0.001],
+    [-0.12, 0.039, 0.041, 0],
+    [-0.17, 0.035, 0.037, 0],
+    [-0.215, 0.032, 0.034, 0],
+    [-0.238, 0.026, 0.028, 0],
+  ];
+  const BARE_F: Sec[] = [
+    [0.022, 0.025, 0.027, 0],
+    [0.0, 0.032, 0.034, 0.001],
+    [-0.04, 0.035, 0.036, 0.002],
+    [-0.1, 0.031, 0.032, 0.004],
+    [-0.16, 0.026, 0.028, 0.009],
+    [-0.212, 0.0225, 0.024, 0.013],
+  ];
+  const bareUpper = loft(q === 3 ? curve(BARE_U, 0.015) : BARE_U, R(12));
+  const bareFore = loft(q === 3 ? curve(BARE_F, 0.015) : BARE_F, R(12));
+
   // Puffer: a fat quilted body with a high collar, fat quilted sleeves, visibly wider than the body
   const PUFFER_BODY: Sec[] = [
     [-0.1, 0.168, 0.116, 0],
@@ -2558,7 +2705,8 @@ export function items(q: Detail, hero = false): Item[] {
             [y + 0.0016, hw * k + 0.0012, hd * k + 0.0012, z],
           ],
           seg,
-          n
+          n,
+          true
         )
       );
     }
@@ -2616,9 +2764,13 @@ export function items(q: Detail, hero = false): Item[] {
     ['track', chainOn(trackFront)],
     ['varsity', chainOn(varsityFront)],
     ['bomber', chainOn(bomberFront, 0.003)],
+    ['coach', chainOn(coachFront, 0.006)],
+    ['tee', chainOn(hoodieFront)],
     // (over the puffer's high collar where it stands)
     ['puffer', chainOn((x, y) => Math.max(pufferFront(x, y), y >= 0.395 ? collarFront(x, y) : 0))],
   ];
+  // (the vest's body is the puffer's: the same chain)
+  CHAINS.push(['vest', CHAINS.find(([k]) => k === 'puffer')![1]]);
 
   /* ----- What's worn over a top (docs/clothing-plan.md Phase 5): each on that top's own outline ----- */
   // Per top: its sections and roundness (its collar's too), how far its laid-on pieces stand on the front, and
@@ -2629,7 +2781,10 @@ export function items(q: Detail, hero = false): Item[] {
     { kind: 'track', shells: [[TK, HN2]], over: 0.002, strapX: 0.085 },
     { kind: 'varsity', shells: [[VK, SN]], over: 0.003, strapX: 0.085 },
     { kind: 'bomber', shells: [[BK, SN]], over: 0.004, strapX: 0.088 },
+    { kind: 'coach', shells: [[CK, SN]], over: 0.006, strapX: 0.088 },
+    { kind: 'tee', shells: [[HK, HN2]], over: 0, strapX: 0.118 },
     { kind: 'puffer', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
+    { kind: 'vest', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
   ];
   /** A top's outline as tests: inside it, its middle (z) at a height, and the top of its shoulder at x */
   // (once per top: every strap and bag on it asks)
@@ -2799,7 +2954,7 @@ export function items(q: Detail, hero = false): Item[] {
     const is = (o: Outfit) => o.kind === t.kind;
     const k = t.kind;
     return [
-      ...(k === 'puffer' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
+      ...(k === 'puffer' || k === 'vest' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
       { id: `backpack-${k}`, when: (o) => !!o.backpack && is(o), pieces: [P('torso', one(backpack), 'backpack', CHEST)] },
       { id: `crossbody-${k}`, when: (o) => !!o.crossbody && is(o), pieces: [P('torso', one(crossbody), 'crossbody')] },
       {
@@ -2867,6 +3022,10 @@ export function items(q: Detail, hero = false): Item[] {
     // (the varsity's chest mark goes on its badge)
     { is: varsity, front: varsityFront, back: surface(VK, SN, -1), chest: null, sleeve: grow(LOOSE_U, 1.14) },
     { is: bomber, front: bomberFront, back: surface(BK, SN, -1), chest: [0.078, 0.28], sleeve: grow(LOOSE_U, 1.14) },
+    { is: coach, front: coachFront, back: surface(CK, SN, -1), chest: [0.078, 0.28], sleeve: grow(LOOSE_U, 1.14) },
+    { is: tee, front: hoodieFront, back: BACK, chest: [0.075, 0.28], sleeve: TEE_U },
+    // (the vest's sleeve mark goes on the long-sleeve under it)
+    { is: gilet, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     { is: puffer, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(UPPER_S, 1.44) },
   ];
   /** Where the top's mark goes (a suit's front is its shirt and tie: a big front mark goes on its chest) */
@@ -3087,6 +3246,17 @@ export function items(q: Detail, hero = false): Item[] {
         ...(q === 3 ? both('leg', cargoFlaps, 'bottom', { shade: 0.72, detail: true }) : []),
       ],
     },
+    {
+      id: 'shorts',
+      when: (o) => bottomsOf(o) === 'shorts',
+      pieces: [
+        P('pelvis', shorts, 'bottom', BOTTOM),
+        ...both('leg', shortsHem, 'bottom', { shade: 0.82 }),
+        ...both('leg', bareLeg, SKIN),
+        ...both('shin', sock, WHITE, BOTTOM),
+        ...both('shin', sockRib, WHITE, { shade: 0.88 }),
+      ],
+    },
     // Track pants: the joggers with the track suit's stripes down the outside of each leg
     {
       id: 'trackStripes',
@@ -3123,11 +3293,11 @@ export function items(q: Detail, hero = false): Item[] {
       when: (o) => kicks(o) && !(hero && o.shoeMark),
       pieces: both('shin', one(swoop), 'shoes', { shade: 0.6, detail: true, ...SHOE }),
     },
-    // (the puffer's high collar covers the headphones, and the necklace, below; so does the hood up, where it meets the
+    // (the puffer's and the vest's high collar covers the headphones, and the necklace, below; so does the hood up, where it meets the
     // sweater round the neck)
     {
       id: 'headphones',
-      when: (o) => !!o.headphones && !puffer(o) && !(hoodie(o) && o.hood),
+      when: (o) => !!o.headphones && !quilted(o) && !(hoodie(o) && o.hood),
       pieces: [P('torso', one(headphones), 'headphones', { detail: true }), ...(cushions.length ? [P('torso', one(cushions), 'headphones', { shade: 0.45, detail: true })] : [])],
     },
     // (the necklace, bags, boards and wings on the top he's wearing: each top its own)
@@ -3177,6 +3347,48 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('arm', pufferUpper, 'top'),
         ...both('fore', pufferFore, 'top'),
         ...both('fore', pufferCuff, 'top', { shade: 0.75 }),
+      ],
+    },
+    {
+      id: 'coach',
+      when: coach,
+      pieces: [
+        P('torso', coachBody, 'top', TOP),
+        P('torso', coachHem, 'top', { shade: 0.82, ...TOP }),
+        P('torso', one([coachStand, coachPlacket]), 'top', { shade: 0.85 }),
+        P('torso', one(coachCollar), 'top', { shade: 0.78 }),
+        P('torso', one(coachSnaps), '#b8b6c4', { detail: true }),
+        P('torso', one(coachToggles), '#2b2a33', { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', ribCuff, 'top', { shade: 0.82 }),
+      ],
+    },
+    // The puffer vest: the puffer's quilted body, collar and zip over a long-sleeve in the look's shirt colour
+    {
+      id: 'vest',
+      when: gilet,
+      pieces: [
+        P('torso', pufferBody, 'top', TOP),
+        P('torso', pufferCollar, 'top'),
+        P('torso', one(pufferZip), SHIRT, { detail: true }),
+        P('torso', pufferSeams, 'top', { shade: 0.7, detail: true }),
+        ...both('arm', looseUpper, 'shirt'),
+        ...both('fore', looseFore, 'shirt'),
+        ...both('fore', ribCuff, 'shirt', { shade: 0.8 }),
+      ],
+    },
+    {
+      id: 'tee',
+      when: tee,
+      pieces: [
+        P('torso', hoodieBody, 'top', TOP),
+        P('torso', teeHem, 'top', { shade: 0.85, ...TOP }),
+        P('torso', teeNeck, 'top', { shade: 0.8 }),
+        ...both('arm', teeSleeve, 'top'),
+        ...both('arm', teeCuff, 'top', { shade: 0.85 }),
+        ...both('arm', bareUpper, SKIN),
+        ...both('fore', bareFore, SKIN),
       ],
     },
     {

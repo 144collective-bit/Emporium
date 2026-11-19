@@ -72,16 +72,16 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
  */
 export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket';
 export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel';
-export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber';
-export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber'];
+export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee';
+export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee'];
 export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket'];
 /*
  * Separates (docs/wardrobe-plan.md Phase 2): the top, the bottoms and the shoes are chosen on their own, worn in any
  * pairing. A look saved before them wears what its top came with: the suit its trousers and dress shoes, the track
  * top its track pants, the rest joggers, all but the suit sneakers (`bottomsFor()`, `shoesFor()`).
  */
-export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo';
-export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo'];
+export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts';
+export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts'];
 export type ShoeStyle = 'dress' | 'sneaker' | 'hightop';
 export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop'];
 /** The bottoms a top came with before the separates */
@@ -169,7 +169,7 @@ export interface Look {
   bottoms: Bottoms;
   bottom: string;
   tie: string;
-  /** The shirt under the suit's jacket */
+  /** The shirt under the suit's jacket, or the long-sleeve under the puffer vest */
   shirt: string;
   /** What's on his feet, and its colour */
   shoeStyle: ShoeStyle;
