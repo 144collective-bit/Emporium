@@ -402,8 +402,18 @@ own three corners (about 24 a square of the 5 m ground grid, where 4 do).
 | --- | ---: |
 | Before | 192.0 MiB |
 | 1. The split faces share their corners (nothing on screen changes; 37d5244) | **179.2 MiB** (−12.8) |
-| 2. The south's small parts near only | to measure |
+| 2. The south's small parts near only (the footpaths' bollards, Lot 9's fence posts and rail, the village's front walls; f7e6ab2) | 179.5 MiB (no change) |
 
-The ceiling stays 187; with the first trim the base's 8 MiB nearly fits
-(187.2).
+The second step took 0.6 MiB off what's drawn at every distance, but in the
+City view the phone's near pieces fill their budget (32 MiB) whatever they
+are, so others took the room: no change in the measure the ceiling holds.
+It helps on the street and far off, and keeps the south's small parts near
+only as the city's rule is, so it stays.
+
+**Where it ends:** 179.5 MiB of the 187 ceiling, 7.5 MiB free. The ceiling
+stays 187 (it's the base's room). The base's own allowance (8 MiB, the
+table above) is measured as the City view sees it: what the base draws at
+every distance counts in full, its near detail only as far as the near
+budget lets it.
+
 
