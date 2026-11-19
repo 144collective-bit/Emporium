@@ -27,7 +27,8 @@ keep it up to date when what it describes changes.
   suit's shirt and tie, the puffer vest's sleeves (the look's `shirt`).
 - **The character screen** (`charscreen.ts`, markup `[data-char]` in
   `CityMap.astro`, outside the walk HUD so it opens in City view too: inside
-  it, it opened hidden there, styles in `fitting.css`), from the hub's Profile tab's "See
+  it, it opened hidden there, styles in `fitting.css`; its own chunk, loaded the
+  first time it's opened, `loadChar` in index.ts), from the hub's Profile tab's "See
   your Degen": an overlay under the header with the same stage
   (`createStage(..., { zoom: true })`): drag turns him, scroll, pinch or
   Full / Face zoom to his face, poses (idle, walk, the fighter's guard and

@@ -77,7 +77,6 @@ import { LENS, cityNear, nearFor } from './lens';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
-import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './soundlazy';
 import type { Account } from './account';
@@ -1400,18 +1399,25 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     setLook: (o) => walk.setLook(o),
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
-    openChar: () => charScreen.open(),
+    // (the character screen comes in its own chunk the first time it's opened: lazy())
+    openChar: () => void loadChar().then((c) => c.open()).catch(() => {}),
   });
   // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
   kartPark.trophies(game.save().karts.trophies);
-  const charScreen = createCharScreen({
-    root,
-    look: () => profileUI.look,
-    onChange: (fn) => profileUI.onChange(fn),
-    openFitting: () => open('shop', true),
-    reduced,
-    low: tier === 'low',
-  });
+  const loadChar = lazy(
+    () =>
+      import('./charscreen').then(({ createCharScreen }) =>
+        createCharScreen({
+          root,
+          look: () => profileUI.look,
+          onChange: (fn) => profileUI.onChange(fn),
+          openFitting: () => open('shop', true),
+          reduced,
+          low: tier === 'low',
+        })
+      ),
+    'the character screen'
+  );
   loadFitting = lazy(
     () =>
       import('./fitting').then(({ createFitting }) =>
