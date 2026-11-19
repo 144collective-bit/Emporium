@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
   BIKE_HOME, BOLLARD, BOLLARDS, CAR_HOME, CEIL, FURNITURE, HALL_W, HOME, homeCamera, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
   HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, BASE_CEIL, BASE_Y, BASEMENT, homeFloorY, homeLevel, homePlaces, homeWall, inHouse, UP_CEIL, UP_DOORS, UP_Y, UPSTAIRS, onHome, onRoof, roofWall,
-  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels,
+  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels, FIRE_ESCAPE,
 } from '../src/scripts/city3d/home';
 import { GATES, HEAD, LANE_HALF, LANE_X, PLOT, ROAD_HALF, ROAD_Z } from '../src/scripts/city3d/endsfar';
 import { SLAB_Y, inEndswood } from '../src/scripts/city3d/endswood';
@@ -584,4 +584,16 @@ test('the terrace done up (docs/compound-plan.md Phase 5): the sofa at the front
   // The way the smoke test walks from the hatch along the terrace (west, then back) stays clear
   const down = HOME_PORTALS.find((p) => p.id === 'home:roof')!.to;
   for (let x = down.x; x > down.x - 1.6; x -= 0.1) assert.ok(!roofWall(x, down.z, R), `the way along at ${x}`);
+});
+
+test('the loft (docs/compound-plan.md Phase 6): the fire escape up the east side, solid, clear of the side door and the way round to it', () => {
+  const [fx0, fz0, fx1, fz1] = FIRE_ESCAPE;
+  const [, hz0, hx1, hz1] = HOME.house;
+  assert.ok(Math.abs(fx0 - hx1) < 1e-9 && fx1 - fx0 < 0.4, 'against the east wall, narrow');
+  assert.ok(fz0 > hz0 && fz1 < HOME.sideDoor[1] - 0.6 && fz1 < hz1, 'along the wall, short of the side door');
+  assert.ok(HOME_SOLIDS.some((b) => b[0] === fx0 && b[1] === fz0 && b[2] === fx1 && b[3] === fz1), 'solid');
+  const back = HOME_PORTALS.find((p) => p.id === 'home:back')!;
+  assert.ok(stands(back.x, back.z), 'the side door\'s prompt clear');
+  for (let z = hz0 - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(hx1 + 0.5, z), `the way round to the side door at ${z}`);
+  assert.ok(!overlap(FIRE_ESCAPE, HOME.lawns[1]), 'off the lawn');
 });

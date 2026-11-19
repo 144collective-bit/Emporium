@@ -246,6 +246,44 @@ ground floor (a fade, "Downstairs" / "Upstairs", as the house's other stairs).
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:wide`, a build, `npm run budget`,
 `npm run smoke`, `?bench` before and after, and shots in `docs/compound-shots/`.
 
+## Phase 6: the kingpin compound (the owner's call, 2026-11-19)
+
+The owner, on the outside as built: "the colour is wrong and it's too basic ... its his base of operations. Think of a
+kingpin compound." The owner's answers:
+
+| Question | Answer |
+| --- | --- |
+| The look | Black brick loft: black-painted brick, steel factory windows, a big neon sign |
+| The house | Same size, a new shell: the footprint, floors, doors and prompts as they are, so every room inside still works |
+| The features | A gatehouse and a crest gate, a pool and cabana, a fountain and palms, a helipad on the garage |
+| How | A plan and a mockup first: the new shell built and shown before the rest |
+
+Still holding: nothing that exists moves (the gates, doors, car bays, prompts, floors); everything under the Emporium;
+made-up names only, no lettering; nothing threatening (no guards, nothing armed: the gate stands open); minimal bloom;
+draw calls in the house's own batches.
+
+6a. **The house's new shell (the mockup).** *Built, waiting on the owner's sign-off.* home3d.ts `house()`: black brick
+    (`LOFT_BRICK`) with a darker plinth, piers proud of the front at its corners and either side of the door's bay,
+    a stone soldier course between the floors, the parapet stepped up over the door's bay under a stone coping, his
+    neon under the coping (front and the Close's side); steel factory windows (`houseWindows()`: two big bays and a
+    narrow light either side of the door downstairs, three tall ones upstairs, one up the east side) in slate glass
+    with black steel grids, stone lintels and sills, lit warm at night by `houseLights()` (south3d.ts, the main
+    thread: one additive mesh, nothing by day); a tall black pivot door with a gold bar under a deep steel canopy, a
+    wall light either side; the fire escape up the east side facing the gates (home.ts `FIRE_ESCAPE`, solid: a
+    landing at the upper floor, a flight to the ground, a ladder to the parapet); a steel frame over the roof
+    terrace; the roof sign made the loft's big sign (a black panel on steel legs, a neon border, his D in neon,
+    facing down the Close). The garage and the workshop in the same black brick. Gone: the orange render, the old
+    canopy and windows, Phase 5's small sign stand. Tests: `tests/home.test.ts` (the fire escape: solid, narrow,
+    clear of the side door and the way round to it). Shots: `docs/compound-shots/phase-6a-*`.
+6b. **The gatehouse and the crest gate.** A small lit gatehouse inside the gates, the gate leaves as a sliding black
+    gate stood open with a gold D crest, the compound's wall taller and dark with lit caps and wall lights.
+6c. **The fountain and the palms.** A fountain in the yard's middle (clear of the car's way out and the drive), palms
+    with uplights along the edges, lit paving lines.
+6d. **The pool and the cabana.** On the east lawn: a lit pool, a cabana and loungers (the side door's way kept).
+6e. **The helipad.** On the garage's roof: its pad, its markings (no lettering or numbers), edge lights; looks only.
+
+Each with the owner's sign-off.
+
 ## The shots
 
 `docs/compound-shots/`: Phase 1's before and after (desktop by day and night, the phone at night); the trophy wall and

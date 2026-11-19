@@ -31,7 +31,7 @@
  * phones leave out the finest (the shelves, the rail's bars, the string lights).
  */
 import * as THREE from 'three';
-import { Batch, PAL, canvasTex, moving, neon, rng, toon } from './kit';
+import { Batch, PAL, canvasTex, fx, lit, moving, neon, rng, toon } from './kit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CROWD_VIEW } from './character';
 import type { Tick } from './world';
@@ -40,7 +40,7 @@ import { COVER, KERB, TREE, VERGE } from './palette';
 import { glow, METAL } from './infill';
 import { SHELF, type TrophySlot } from './hometrophies';
 import {
-  BASE_CEIL, BASE_Y, BASEMENT, BOLLARD, BOLLARDS, CEIL, CURTAIN, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, UPSTAIRS, WALL, WALL_H, WALL_T,
+  BASE_CEIL, BASE_Y, BASEMENT, BOLLARD, BOLLARDS, CEIL, CURTAIN, FIRE_ESCAPE, FURNITURE, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, UPSTAIRS, WALL, WALL_H, WALL_T,
   curtainPanels, type BaseThing, type Furniture, type UpThing,
 } from './home';
 import { curtains } from './spawn';
@@ -58,7 +58,6 @@ const FELT = toon('#2e2b36');
 const JOINT = toon('#6a6772');
 const FLAGS = toon(KERB.grit);
 const DOOR = toon('#4a3270');
-const SIDE_DOOR = toon('#2f2540');
 const MAT = toon('#2a2622');
 const LINTEL = toon('#8b8791');
 const GATE = toon('#24222b');
@@ -68,13 +67,8 @@ const GARAGE_BRICK = '#7a4337';
 const BENCH = toon('#7a5a3a');
 const TOOLBOX = toon('#b8322c');
 const TYRE = toon('#1f1e25');
-/** The house's front: the one bold colour, and its trim */
-const RENDER = toon('#e8a23a');
+/** The washing line's posts */
 const TRIM = toon('#f1eee8');
-const GLASS = toon('#22304a');
-/** A window with a lamp on behind it (Phase 5): dark by day, warm at night, under the bloom's threshold */
-const LIT_GLASS = neon('#ffd58a', 0.14, 0.95);
-const HIS_DOOR = toon('#e0563a');
 const LAWN = toon(COVER.lawn);
 const TRUNK_M = toon(TREE.trunk);
 const CROWN = toon(TREE.crowns[1]);
@@ -185,13 +179,13 @@ function garage(b: Batch, low: boolean) {
   const [gx0, gz0, gx1, gz1] = HOME.garage;
   const { garageH: H, garageTop: TOP, carDoor: C, bikeDoor: K } = HOME;
   const W = WALL;
-  cube(b, [gx0, gz0, gx1, gz0 + W], S, S + H, BRICK);
-  cube(b, [gx0, gz1 - W, gx1, gz1], S, S + H, BRICK);
-  cube(b, [gx0, gz0 + W, gx0 + W, gz1 - W], S, S + H, BRICK);
+  cube(b, [gx0, gz0, gx1, gz0 + W], S, S + H, LOFT_BRICK);
+  cube(b, [gx0, gz1 - W, gx1, gz1], S, S + H, LOFT_BRICK);
+  cube(b, [gx0, gz0 + W, gx0 + W, gz1 - W], S, S + H, LOFT_BRICK);
   // (the east wall: its two ends and the pier between the doors, a lintel over each)
-  cube(b, [gx1 - W, gz0 + W, gx1, C.z0], S, S + H, BRICK);
-  cube(b, [gx1 - W, C.z1, gx1, K.z0], S, S + H, BRICK);
-  cube(b, [gx1 - W, K.z1, gx1, gz1 - W], S, S + H, BRICK);
+  cube(b, [gx1 - W, gz0 + W, gx1, C.z0], S, S + H, LOFT_BRICK);
+  cube(b, [gx1 - W, C.z1, gx1, K.z0], S, S + H, LOFT_BRICK);
+  cube(b, [gx1 - W, K.z1, gx1, gz1 - W], S, S + H, LOFT_BRICK);
   for (const D of [C, K]) cube(b, [gx1 - W, D.z0, gx1, D.z1], S + D.h, S + H, LINTEL);
   // (inside it's lit as the room is: the floor, the ceiling and the three walls' inner faces in the shared neon paint)
   {
@@ -238,10 +232,69 @@ function garage(b: Batch, low: boolean) {
     }
     for (let k = 0; k < 3; k++) b.add(new THREE.CylinderGeometry(0.3, 0.3, 0.16, 12).translate(bx + 0.4, S + 0.09 + k * 0.17, gz1 - W - 0.4), TYRE);
     // (the course at the walls' foot: on the three walls without doors)
-    cube(b, [gx0 - 0.012, gz0 - 0.012, gx1, gz0 + 0.018], S, S + 0.12, BRICK_DARK);
-    cube(b, [gx0 - 0.012, gz1 - 0.018, gx1, gz1 + 0.012], S, S + 0.12, BRICK_DARK);
-    cube(b, [gx0 - 0.012, gz0 + 0.018, gx0 + 0.018, gz1 - 0.018], S, S + 0.12, BRICK_DARK);
+    cube(b, [gx0 - 0.012, gz0 - 0.012, gx1, gz0 + 0.018], S, S + 0.12, LOFT_BRICK_DARK);
+    cube(b, [gx0 - 0.012, gz1 - 0.018, gx1, gz1 + 0.012], S, S + 0.12, LOFT_BRICK_DARK);
+    cube(b, [gx0 - 0.012, gz0 + 0.018, gx0 + 0.018, gz1 - 0.018], S, S + 0.12, LOFT_BRICK_DARK);
   });
+}
+
+/* ---------- The house as a black brick loft (docs/compound-plan.md Phase 6, the owner's pick: a kingpin's base) ---------- */
+
+/**
+ * Black-painted brick, a charcoal light enough to keep its detail on the side in shade (a true black read as a hole
+ * there), its mortar lines a step lighter; the plinth darker
+ */
+const LOFT_BRICK = toon('#423e4a');
+const LOFT_MORTAR = toon('#5b5664');
+const LOFT_BRICK_DARK = toon('#26232c');
+/** The soldier courses, the lintels and sills, the coping: a pale stone against the black */
+const LOFT_STONE = toon('#8a8592');
+/** Factory glass by day (slate blue: his windows read as glass, not boards); at night lit from inside: `houseLights()` */
+const LOFT_GLASS = toon('#4f6178');
+const GOLD = toon('#c9a23a');
+
+/** The house's front bays: its piers' middles along x (the corners, either side of the door's bay) */
+const BAY = 3.05;
+/**
+ * The house's factory windows, each a pane of glass in its steel grid: along the front (`n`: x from a0 to a1, over the
+ * slab from y0 to y1) and up the east side over the fire escape (`e`: z from a0 to a1); `houseLights()` lights them
+ */
+export function houseWindows(): { face: 'n' | 'e'; a0: number; a1: number; y0: number; y1: number }[] {
+  const [x0, z0, x1] = HOME.house;
+  const dx = HOME.door[0];
+  return [
+    // (ground floor: the two big bays, and a narrow light either side of the door)
+    { face: 'n', a0: x0 + 0.45, a1: x0 + BAY - 0.3, y0: 0.3, y1: 1.12 },
+    { face: 'n', a0: x1 - BAY + 0.3, a1: x1 - 0.45, y0: 0.3, y1: 1.12 },
+    { face: 'n', a0: x0 + BAY + 0.3, a1: dx - 0.5, y0: 0.3, y1: 1.12 },
+    { face: 'n', a0: dx + 0.5, a1: x1 - BAY - 0.3, y0: 0.3, y1: 1.12 },
+    // (upstairs: three tall ones, a bay each)
+    { face: 'n', a0: x0 + 0.45, a1: x0 + BAY - 0.3, y0: 1.45, y1: 2.3 },
+    { face: 'n', a0: x0 + BAY + 0.3, a1: x1 - BAY - 0.3, y0: 1.45, y1: 2.3 },
+    { face: 'n', a0: x1 - BAY + 0.3, a1: x1 - 0.45, y0: 1.45, y1: 2.3 },
+    // (the east side, over the fire escape's landing)
+    { face: 'e', a0: z0 + 0.9, a1: z0 + 3.0, y0: 1.45, y1: 2.3 },
+  ];
+}
+
+/**
+ * The house's windows lit at night (Phase 6): a warm pane over each window's glass, behind its steel grid, its light
+ * added to what's under it, so by day (none added) the slate glass shows and at night the windows glow warm, under the
+ * bloom's threshold. Drawn on the main thread (south3d.ts adds it, as the yard's pools): one mesh in the FX layer
+ */
+export function houseLights(scene: THREE.Scene) {
+  const [, z0, x1] = HOME.house;
+  const parts = houseWindows().map((w) => {
+    const g = new THREE.PlaneGeometry(w.a1 - w.a0, w.y1 - w.y0);
+    g.deleteAttribute('uv');
+    const [mid, my] = [(w.a0 + w.a1) / 2, S + (w.y0 + w.y1) / 2];
+    return w.face === 'n' ? g.rotateY(Math.PI).translate(mid, my, z0 - 0.024) : g.rotateY(Math.PI / 2).translate(x1 + 0.024, my, mid);
+  });
+  const mat = lit(new THREE.MeshBasicMaterial({ color: '#ffcf8a', blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }), 0, 0.6);
+  const mesh = new THREE.Mesh(mergeGeometries(parts, false)!, mat);
+  mesh.name = 'home-window-light';
+  mesh.castShadow = mesh.receiveShadow = false;
+  scene.add(fx(mesh));
 }
 
 /** The house's outside: its shell, the roof and its terrace, the doors and windows */
@@ -249,55 +302,108 @@ function house(b: Batch, low: boolean) {
   const [x0, z0, x1, z1] = HOME.house;
   const { eaves: E, ridge: R } = HOME;
   const T = SHELL;
-  // The shell: the front in render, the rest in brick; the upper floor's slab and the roof's
-  cube(b, [x0, z0, x1, z0 + T], S, S + E, RENDER);
-  cube(b, [x0, z1 - T, x1, z1], S, S + E, BRICK);
-  cube(b, [x0, z0 + T, x0 + T, z1 - T], S, S + E, BRICK);
-  cube(b, [x1 - T, z0 + T, x1, z1 - T], S, S + E, BRICK);
+  // The shell in black brick; the upper floor's slab and the roof's
+  cube(b, [x0, z0, x1, z0 + T], S, S + E, LOFT_BRICK);
+  cube(b, [x0, z1 - T, x1, z1], S, S + E, LOFT_BRICK);
+  cube(b, [x0, z0 + T, x0 + T, z1 - T], S, S + E, LOFT_BRICK);
+  cube(b, [x1 - T, z0 + T, x1, z1 - T], S, S + E, LOFT_BRICK);
   cube(b, [x0 + T, z0 + T, x1 - T, z1 - T], S + CEIL + 0.004, S + CEIL + 0.1, COPING);
   cube(b, [x0, z0, x1, z1], S + E, S + E + 0.06, FELT);
-  // The parapet round the roof, under a coping
+  // The parapet round the roof under a stone coping; over the door's bay on the front it steps up
+  const dx = HOME.door[0];
   for (const r of [
     [x0, z0, x1, z0 + T],
     [x0, z1 - T, x1, z1],
     [x0, z0 + T, x0 + T, z1 - T],
     [x1 - T, z0 + T, x1, z1 - T],
   ] as Rect[]) {
-    cube(b, r, S + E + 0.06, S + R - 0.05, r[1] === z0 && r[3] === z0 + T ? RENDER : BRICK);
-    cube(b, [r[0] - 0.03, r[1] - 0.03, r[2] + 0.03, r[3] + 0.03], S + R - 0.05, S + R, COPING);
+    cube(b, r, S + E + 0.06, S + R - 0.05, LOFT_BRICK);
+    cube(b, [r[0] - 0.03, r[1] - 0.03, r[2] + 0.03, r[3] + 0.03], S + R - 0.05, S + R, LOFT_STONE);
   }
-  // His neon under the roof's edge, along the front (the yard) and the east side (the Close), a hair off the wall
-  cube(b, [x0 + 0.1, z0 - 0.046, x1 - 0.1, z0 - 0.01], S + E - 0.09, S + E - 0.054, HIS_NEON);
-  cube(b, [x1 + 0.01, z0 + 0.1, x1 + 0.046, z1 - 0.1], S + E - 0.09, S + E - 0.054, HIS_NEON);
-  // The front: the door under its black steel canopy (his neon along its lip, a downlight under it), a wide window
-  // each side of it, three upstairs; a hair off the wall
-  const dx = HOME.door[0];
+  cube(b, [x0 + BAY, z0, x1 - BAY, z0 + T], S + R, S + R + 0.24, LOFT_BRICK);
+  cube(b, [x0 + BAY - 0.03, z0 - 0.03, x1 - BAY + 0.03, z0 + T + 0.03], S + R + 0.24, S + R + 0.29, LOFT_STONE);
+  // Piers a hair proud of the front, full height: the corners and either side of the door's bay
+  const P = 0.045;
+  for (const [a, w] of [[x0, 0.24], [x1 - 0.24, 0.24], [x0 + BAY - 0.12, 0.24], [x1 - BAY - 0.12, 0.24]] as [number, number][]) cube(b, [a, z0 - P, a + w, z0], S, S + R - 0.05, LOFT_BRICK);
+  // The soldier course between the floors, and his neon along the top under the coping (front and the Close's side)
+  cube(b, [x0 + 0.24, z0 - 0.02, x1 - 0.24, z0], S + CEIL + 0.02, S + CEIL + 0.13, LOFT_STONE);
+  cube(b, [x0 + 0.1, z0 - 0.08, x1 - 0.1, z0 - 0.044], S + R - 0.12, S + R - 0.084, HIS_NEON);
+  cube(b, [x1 + 0.044, z0 + 0.1, x1 + 0.08, z1 - 0.1], S + R - 0.12, S + R - 0.084, HIS_NEON);
+  // The door: a tall black pivot door with a gold bar, under a deep steel canopy (his neon on its lip, a downlight)
   const F = z0 - 0.02;
-  cube(b, [dx - 0.34, F, dx + 0.34, z0 - 0.004], S, S + 1.12, HIS_DOOR);
-  cube(b, [dx - 0.7, z0 - 0.75, dx + 0.7, z0], S + 1.22, S + 1.3, STEEL_BLACK);
-  cube(b, [dx - 0.68, z0 - 0.774, dx + 0.68, z0 - 0.75], S + 1.25, S + 1.274, HIS_NEON);
-  b.add(new THREE.SphereGeometry(0.035, 6, 4).translate(dx, S + 1.21, z0 - 0.4), glow(PAL.warm));
-  const win = (wa: number, wb: number, y0: number, y1: number, on = true) => {
-    cube(b, [wa, F, wb, z0 - 0.004], S + y0, S + y1, on ? LIT_GLASS : GLASS);
-    b.detail(() => {
-      cube(b, [wa - 0.05, F - 0.012, wb + 0.05, z0 - 0.004], S + y0 - 0.05, S + y0, STEEL_BLACK);
-      cube(b, [wa - 0.05, F - 0.012, wb + 0.05, z0 - 0.004], S + y1, S + y1 + 0.05, STEEL_BLACK);
-      for (const x of [wa - 0.05, wb]) cube(b, [x, F - 0.012, x + 0.05, z0 - 0.004], S + y0, S + y1, STEEL_BLACK);
-      if (!low) cube(b, [(wa + wb) / 2 - 0.02, F - 0.012, (wa + wb) / 2 + 0.02, z0 - 0.004], S + y0, S + y1, STEEL_BLACK);
-    });
-  };
-  win(x0 + 0.65, dx - 0.9, 0.5, 1.05);
-  win(dx + 0.9, x1 - 0.65, 0.5, 1.05);
-  // (upstairs: the middle one's lamp is off)
-  [[x0 + 0.65, x0 + 2.65], [dx - 1.0, dx + 1.0], [x1 - 2.65, x1 - 0.65]].forEach(([wa, wb], k) => win(wa, wb, 1.55, 2.15, k !== 1));
-  // The side door onto the lawn, and a window in the back wall
+  cube(b, [dx - 0.36, F, dx + 0.36, z0 - 0.004], S, S + 1.16, STEEL_BLACK);
+  cube(b, [dx + 0.2, F - 0.02, dx + 0.24, F], S + 0.3, S + 0.95, GOLD);
+  cube(b, [dx - 0.8, z0 - 0.85, dx + 0.8, z0], S + 1.22, S + 1.32, STEEL_BLACK);
+  cube(b, [dx - 0.78, z0 - 0.874, dx + 0.78, z0 - 0.85], S + 1.25, S + 1.274, HIS_NEON);
+  b.add(new THREE.SphereGeometry(0.035, 6, 4).translate(dx, S + 1.21, z0 - 0.45), glow(PAL.warm));
+  // The factory windows: slate glass in a black steel grid, a stone lintel over each and a sill under it
+  for (const w of houseWindows()) {
+    const n = w.face === 'n';
+    const box = (a: number, c: number, out0: number, out1: number, y0: number, y1: number, m: THREE.Material) =>
+      n ? cube(b, [a, z0 - out1, c, z0 - out0], y0, y1, m) : cube(b, [x1 + out0, a, x1 + out1, c], y0, y1, m);
+    box(w.a0, w.a1, 0.004, 0.02, S + w.y0, S + w.y1, LOFT_GLASS);
+    box(w.a0 - 0.06, w.a1 + 0.06, 0.004, 0.05, S + w.y1, S + w.y1 + 0.07, LOFT_STONE);
+    box(w.a0 - 0.04, w.a1 + 0.04, 0.004, 0.06, S + w.y0 - 0.05, S + w.y0, LOFT_STONE);
+    // (the grid: its frame, mullions about 0.45 apart, two transoms; phones: the frame and one transom)
+    const fr = (a: number, c: number, y0: number, y1: number) => box(a, c, 0.004, 0.034, y0, y1, STEEL_BLACK);
+    fr(w.a0 - 0.03, w.a1 + 0.03, S + w.y0, S + w.y0 + 0.03);
+    fr(w.a0 - 0.03, w.a1 + 0.03, S + w.y1 - 0.03, S + w.y1);
+    fr(w.a0 - 0.03, w.a0, S + w.y0, S + w.y1);
+    fr(w.a1, w.a1 + 0.03, S + w.y0, S + w.y1);
+    const span = w.a1 - w.a0;
+    const cols = low ? 1 : Math.max(1, Math.round(span / 0.45));
+    for (let k = 1; k < cols; k++) {
+      const a = w.a0 + (span * k) / cols;
+      fr(a - 0.012, a + 0.012, S + w.y0, S + w.y1);
+    }
+    const rows = low ? 2 : 3;
+    for (let k = 1; k < rows; k++) {
+      const y = S + w.y0 + ((w.y1 - w.y0) * k) / rows;
+      fr(w.a0, w.a1, y - 0.012, y + 0.012);
+    }
+  }
+  // The side door onto the lawn
   const sz = HOME.sideDoor[1];
-  cube(b, [x1 + 0.004, sz - 0.3, x1 + 0.02, sz + 0.3], S, S + 1.08, SIDE_DOOR);
+  cube(b, [x1 + 0.004, sz - 0.3, x1 + 0.02, sz + 0.3], S, S + 1.08, STEEL_BLACK);
+  // The fire escape up the east side, facing the gates (home.ts `FIRE_ESCAPE`): a landing at the upper floor on
+  // brackets, a flight down to the ground under it, a ladder on up to the parapet; black steel
+  {
+    const [fx0, fz0, fx1, fz1] = FIRE_ESCAPE;
+    const fy = S + UP_Y;
+    cube(b, [fx0 + 0.004, fz0, fx1, fz1], fy - 0.04, fy, STEEL_BLACK);
+    for (const z of [fz0 + 0.1, fz1 - 0.14]) cube(b, [fx0 + 0.004, z, fx1, z + 0.04], fy - 0.3, fy - 0.04, STEEL_BLACK);
+    // (its rail along the outside and the ends)
+    cube(b, [fx1 - 0.03, fz0, fx1, fz1], fy + 0.42, fy + 0.45, STEEL_BLACK);
+    for (let z = fz0; z <= fz1 - 0.02; z += (fz1 - fz0) / 6) cube(b, [fx1 - 0.03, z, fx1, z + 0.025], fy, fy + 0.42, STEEL_BLACK);
+    for (const z of [fz0, fz1 - 0.03]) cube(b, [fx0 + 0.004, z, fx1, z + 0.03], fy + 0.42, fy + 0.45, STEEL_BLACK);
+    // (the flight: from the landing's south end down to the ground at its north end, treads and two stringers)
+    const n = low ? 6 : 10;
+    for (let k = 0; k < n; k++) {
+      const t = (k + 0.5) / n;
+      const z = fz1 - 0.15 - t * (fz1 - fz0 - 0.4);
+      const yy = fy - t * (fy - S);
+      cube(b, [fx0 + 0.04, z - 0.05, fx1 - 0.04, z + 0.05], yy - 0.02, yy, STEEL_BLACK);
+    }
+    for (const x of [fx0 + 0.03, fx1 - 0.03]) rod(b, V(x, fy - 0.02, fz1 - 0.15), V(x, S + 0.02, fz0 + 0.25), 0.015, STEEL_BLACK);
+    // (the ladder up to the parapet)
+    for (const z of [fz0 + 0.15, fz0 + 0.45]) cube(b, [fx1 - 0.06, z, fx1 - 0.03, z + 0.03], fy, S + R + 0.3, STEEL_BLACK);
+    if (!low) for (let yy = fy + 0.12; yy < S + R + 0.25; yy += 0.12) cube(b, [fx1 - 0.06, fz0 + 0.15, fx1 - 0.03, fz0 + 0.48], yy, yy + 0.015, STEEL_BLACK);
+  }
   b.detail(() => {
-    course(b, HOME.house, 0.14, BRICK_DARK);
-    // A mat at the front door, the canopy's two brackets
+    course(b, HOME.house, 0.14, LOFT_BRICK_DARK);
+    // The brick's mortar courses on the front and the Close's side (near only; phones: every other one), a hair proud
+    const step = low ? 0.3 : 0.15;
+    for (let y = S + 0.2; y < S + E; y += step) {
+      cube(b, [x0 + 0.24, z0 - 0.008, x1 - 0.24, z0 - 0.002], y, y + 0.01, LOFT_MORTAR);
+      cube(b, [x1 + 0.002, z0 + 0.05, x1 + 0.008, z1 - 0.05], y, y + 0.01, LOFT_MORTAR);
+    }
+    // A mat at the front door, the canopy's two brackets, a wall light either side of the door
     flat(b, [dx - 0.3, z0 - 0.52, dx + 0.3, z0 - 0.16], OVER + 0.004, MAT);
-    for (const x of [dx - 0.62, dx + 0.56]) cube(b, [x, z0 - 0.5, x + 0.06, z0 - 0.004], S + 1.12, S + 1.22, STEEL_BLACK);
+    for (const x of [dx - 0.72, dx + 0.66]) cube(b, [x, z0 - 0.6, x + 0.06, z0 - 0.004], S + 1.12, S + 1.22, STEEL_BLACK);
+    for (const x of [dx - 0.43, dx + 0.43]) {
+      cube(b, [x - 0.03, z0 - 0.06, x + 0.03, z0 - 0.004], S + 0.9, S + 1.02, STEEL_BLACK);
+      b.add(new THREE.SphereGeometry(0.03, 6, 4).translate(x, S + 0.96, z0 - 0.08), glow(PAL.warm));
+    }
     // The terrace: a rail on the parapet's inside (posts and a top rail; phones: the top rail only), two chairs and a
     // low table, a string of lights across it from the front to the back
     const [tx0, tz0, tx1, tz1] = [x0 + T + 0.05, z0 + T + 0.05, x1 - T - 0.05, z1 - T - 0.05];
@@ -355,16 +461,31 @@ function house(b: Batch, low: boolean) {
       }
     }
   });
-  // His sign on the terrace's east rail, facing down the Close (Phase 5): a black panel on two posts, his D in neon on
-  // it; at every distance, as the gate pier's
+  // His sign on the roof at the east rail, facing down the Close (Phase 5; Phase 6 made it the loft's big sign): a
+  // black panel on two steel legs over the rail, a neon border round it and his D in neon on it; at every distance
   const sign = ROOF_THINGS.find((t) => t.kind === 'sign')!;
   {
     const [, c0, a1, c1] = sign.rect;
     const y = S + ROOF_Y;
     const px = a1 - 0.08;
-    for (const z of [c0 + 0.04, c1 - 0.08]) cube(b, [px - 0.02, z, px + 0.02, z + 0.04], y, y + 0.12, STEEL_BLACK);
-    cube(b, [px - 0.015, c0, px + 0.015, c1], y + 0.12, y + sign.h, STEEL_BLACK);
-    mark(b, HIS_NEON, 0.34, V(px + 0.03, y + 0.12 + (sign.h - 0.12) / 2, (c0 + c1) / 2 + 0.02), V(0, 0, -1), V(0, 1, 0), V(1, 0, 0), { tube: 0.013 });
+    const mz = (c0 + c1) / 2;
+    const [bot, top] = [y + 0.5, y + 1.4];
+    for (const z of [mz - 0.5, mz + 0.46]) cube(b, [px - 0.025, z, px + 0.025, z + 0.04], y, top, STEEL_BLACK);
+    cube(b, [px - 0.015, mz - 0.55, px + 0.015, mz + 0.55], bot, top, STEEL_BLACK);
+    const nx = px + 0.022;
+    cube(b, [nx, mz - 0.52, nx + 0.018, mz + 0.52], top - 0.05, top - 0.032, HIS_NEON);
+    cube(b, [nx, mz - 0.52, nx + 0.018, mz + 0.52], bot + 0.032, bot + 0.05, HIS_NEON);
+    for (const z of [mz - 0.52, mz + 0.502]) cube(b, [nx, z, nx + 0.018, z + 0.018], bot + 0.032, top - 0.032, HIS_NEON);
+    mark(b, HIS_NEON, 0.62, V(nx + 0.03, (bot + top) / 2, mz + 0.04), V(0, 0, -1), V(0, 1, 0), V(1, 0, 0), { tube: 0.02 });
+  }
+  // A steel frame over the terrace (Phase 6): a post in each corner inside the rail, beams round the top and across
+  {
+    const [tx0, tz0, tx1, tz1] = [x0 + T + 0.08, z0 + T + 0.08, x1 - T - 0.08, z1 - T - 0.08];
+    const [y0, y1] = [S + R - 0.05, S + R + 1.05];
+    for (const [px, pz] of [[tx0, tz0], [tx1 - 0.06, tz0], [tx0, tz1 - 0.06], [tx1 - 0.06, tz1 - 0.06]]) cube(b, [px, pz, px + 0.06, pz + 0.06], y0, y1, STEEL_BLACK);
+    cube(b, [tx0, tz0, tx1, tz0 + 0.06], y1 - 0.06, y1, STEEL_BLACK);
+    cube(b, [tx0, tz1 - 0.06, tx1, tz1], y1 - 0.06, y1, STEEL_BLACK);
+    for (let x = tx0; x <= tx1 - 0.05; x += (tx1 - tx0 - 0.05) / (low ? 3 : 7)) cube(b, [x, tz0, x + 0.05, tz1], y1 - 0.05, y1 - 0.01, STEEL_BLACK);
   }
 }
 
@@ -373,11 +494,11 @@ function workshop(b: Batch, low: boolean) {
   const [x0, z0, x1, z1] = HOME.workshop;
   const { workshopH: H, workshopDoor: D } = HOME;
   const W = WALL;
-  cube(b, [x0, z0, x1, z0 + W], S, S + H, BRICK);
-  cube(b, [x0, z0 + W, x0 + W, z1], S, S + H, BRICK);
-  cube(b, [x1 - W, z0 + W, x1, z1], S, S + H, BRICK);
-  cube(b, [x0 + W, z1 - W, D.x0, z1], S, S + H, BRICK);
-  cube(b, [D.x1, z1 - W, x1 - W, z1], S, S + H, BRICK);
+  cube(b, [x0, z0, x1, z0 + W], S, S + H, LOFT_BRICK);
+  cube(b, [x0, z0 + W, x0 + W, z1], S, S + H, LOFT_BRICK);
+  cube(b, [x1 - W, z0 + W, x1, z1], S, S + H, LOFT_BRICK);
+  cube(b, [x0 + W, z1 - W, D.x0, z1], S, S + H, LOFT_BRICK);
+  cube(b, [D.x1, z1 - W, x1 - W, z1], S, S + H, LOFT_BRICK);
   cube(b, [D.x0, z1 - W, D.x1, z1], S + D.h, S + H, LINTEL);
   // The roller door half up: the shutter over the opening's top half, the dark of the workshop behind the bottom
   cube(b, [D.x0, z1 - 0.07, D.x1, z1 - 0.03], S + D.h * 0.5, S + D.h, SHUTTER);
@@ -393,7 +514,7 @@ function workshop(b: Batch, low: boolean) {
       cube(b, [D.x0 + 0.3, z1 - W - 0.62, D.x0 + 0.62, z1 - W - 0.36], S + 0.5, S + 0.62, TOOLBOX);
       for (let y = D.h * 0.5 + 0.1; y < D.h - 0.04; y += 0.12) cube(b, [D.x0, z1 - 0.026, D.x1, z1 - 0.018], S + y, S + y + 0.02, JOINT);
     }
-    course(b, HOME.workshop, 0.12, BRICK_DARK);
+    course(b, HOME.workshop, 0.12, LOFT_BRICK_DARK);
     flat(b, [D.x0 + 0.1, z1 + 0.1, D.x1 - 0.1, z1 + 0.34], OVER, JOINT);
     // The door's frame in black steel, and a plain lightbox over it (no sign on it)
     for (const x of [D.x0 - 0.06, D.x1]) cube(b, [x, z1 + 0.004, x + 0.06, z1 + 0.04], S, S + D.h + 0.06, STEEL_BLACK);
