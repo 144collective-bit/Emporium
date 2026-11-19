@@ -48,9 +48,11 @@ const BUDGETS = {
    * and from 740 on purpose (the owner's call, 2026-11-18): main had grown to 739.8 with the south's re-laying, and
    * the stability plan's tier by the graphics, its step-down order and the texture keys (gputier.ts, quality.ts,
    * texscope.ts: ~1.7 KB, which must run before the city builds) took it over; the ?fps-only texture breakdown went
-   * to its own chunk (texrows.ts) first
+   * to its own chunk (texrows.ts) first; and from 750 to 760 on purpose (the owner's call, 2026-11-19): the
+   * wardrobe plan's Phases 1-7 (docs/wardrobe-plan.md) on main came to 756.7, the player's figure drawing every piece he
+   * can wear at the boot (wardrobe.ts); the fitting room is its own chunk
    */
-  bootJs: 750,
+  bootJs: 760,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**
