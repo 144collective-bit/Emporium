@@ -11,9 +11,9 @@ import { Batch, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { TILE } from './tiles';
 import { SWAY } from './dusk';
-import { JACARANDAS, OAKS, PALMS, SCRUB, WALLS, type Edge, type Palm, type Plant } from './landscape';
+import { JACARANDAS, PALMS, WALLS, hillPlanting, type Edge, type Palm, type Plant } from './landscape';
 import { crown, trunk } from './palms3d';
-import { drawnAt } from './terrain';
+import { TERRAIN_RECT, drawnAt } from './terrain';
 
 /** On the hills, at the ground as drawn (terrain.ts `drawnAt()`): no trunk over the grass where its grid cuts under the hills' curve */
 const onGrass = <T extends { x: number; z: number; y: number }>(list: T[]): T[] => list.map((p) => (p.y > 0 ? { ...p, y: drawnAt(p.x, p.z) } : p));
@@ -73,10 +73,28 @@ function byTile(low: boolean) {
   // (phones: every other palm, Phase 11)
   PALMS.forEach((p, i) => (!low || i % 2 === 0) && at(p.x, p.z).palms.push(p));
   for (const j of JACARANDAS) at(j.x, j.z).jacarandas.push(j);
-  for (const o of OAKS) at(o.x, o.z).oaks.push(o);
-  SCRUB.forEach((p, i) => (!low || i % 2 === 0) && at(p.x, p.z).scrub.push(p));
   for (const e of WALLS) at((e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2).edges.push(e);
+  // (and every tile over the hills: their oaks and scrub are laid when the first of those sites is built, `hillsIn()`)
+  for (let i = Math.floor(TERRAIN_RECT[0] / TILE); i * TILE < TERRAIN_RECT[2]; i++) for (let j = Math.floor(TERRAIN_RECT[1] / TILE); j * TILE < TERRAIN_RECT[3]; j++) at(i * TILE + 1, j * TILE + 1);
   return tiles;
+}
+/** The hills' oaks and scrub in a tile (phones: every other scrub), worked out once, in the site worker */
+let HILLS_BY_TILE: Map<string, { oaks: Plant[]; scrub: Plant[] }> | null = null;
+function hillsIn(key: string, low: boolean) {
+  if (!HILLS_BY_TILE) {
+    HILLS_BY_TILE = new Map();
+    const { oaks, scrub } = hillPlanting();
+    const at = (x: number, z: number) => {
+      const k = `${Math.floor(x / TILE)},${Math.floor(z / TILE)}`;
+      let t = HILLS_BY_TILE!.get(k);
+      if (!t) HILLS_BY_TILE!.set(k, (t = { oaks: [], scrub: [] }));
+      return t;
+    };
+    for (const o of oaks) at(o.x, o.z).oaks.push(o);
+    scrub.forEach((p, i) => at(p.x, p.z).scrub.push(Object.assign({}, p, { every: i % 2 })));
+  }
+  const t = HILLS_BY_TILE.get(key);
+  return { oaks: t?.oaks ?? [], scrub: (t?.scrub ?? []).filter((p) => !low || !(p as Plant & { every: number }).every) };
 }
 
 export function registerLandscape(low: boolean) {
@@ -166,7 +184,8 @@ export function registerLandscape(low: boolean) {
       );
 
       // Live oaks: a stout trunk and two broad lumps of canopy, the second off to one side
-      const oaks = onGrass(rec.oaks);
+      const hills = hillsIn(key, low);
+      const oaks = onGrass(hills.oaks);
       b.instances(stick, paint.bark, oaks.map((o) => m(o.x, o.y - 0.05, o.z, 0, o.s * 2.2, 1.1 * o.s, o.s * 2.2)));
       paint.oak.forEach((mat, k) => {
         const mine = oaks.filter((o) => o.tone === k);
@@ -181,7 +200,7 @@ export function registerLandscape(low: boolean) {
 
       // Scrub: low lumps on the slopes (near only on phones)
       if (low) b.lod = 'near';
-      const scrub = onGrass(rec.scrub);
+      const scrub = onGrass(hills.scrub);
       paint.scrub.forEach((mat, k) =>
         b.instances(bush, mat, scrub.filter((p) => p.tone === k).map((p) => m(p.x, p.y + 0.12 * p.s, p.z, p.x * 1.3, 1.4 * p.s, 0.85 * p.s, 1.3 * p.s)))
       );

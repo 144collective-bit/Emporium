@@ -10,7 +10,9 @@ import { KEPT } from '../src/scripts/city3d/estates';
 import { MANSIONS } from '../src/scripts/city3d/mansions';
 import { LEVELS, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
-import { OAKS, PALMS, SCRUB } from '../src/scripts/city3d/landscape';
+import { PALMS, hillPlanting } from '../src/scripts/city3d/landscape';
+
+const { oaks: OAKS, scrub: SCRUB } = hillPlanting();
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 

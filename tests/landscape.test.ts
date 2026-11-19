@@ -4,7 +4,9 @@
 // built up. Nothing on the asphalt or a sidewalk, everything on the ground, every palm under the Emporium.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EDGE_AT, EDGE_OUT, JACARANDAS, OAKS, PALMS, PALM_TALLEST, SCRUB, WALLS, frameAt } from '../src/scripts/city3d/landscape';
+import { EDGE_AT, EDGE_OUT, JACARANDAS, PALMS, PALM_TALLEST, WALLS, frameAt, hillPlanting } from '../src/scripts/city3d/landscape';
+
+const { oaks: OAKS, scrub: SCRUB } = hillPlanting();
 import { BOULEVARD, BOULEVARD_MEDIAN, CREST_LAMPS, FLATS_X, HILL_ROADS, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { PLAN, distToStreet, onSlab } from '../src/scripts/city3d/streetplan';

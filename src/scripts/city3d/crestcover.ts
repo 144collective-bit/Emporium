@@ -18,7 +18,7 @@ import { MANSIONS, PAD_EASE, onMansion, outOf, toWorld, type Mansion } from './m
 import { onSite } from './crestsites';
 import { underSpur } from './metro';
 import { onLand } from './crestland';
-import { OAKS } from './landscape';
+import { hillPlanting } from './landscape';
 import { rng } from './recipes';
 import { BUILT, baked } from './baked';
 
@@ -70,7 +70,7 @@ export function open(x: number, z: number, m = 0) {
   );
 }
 /** Clear of the hills' oaks' trunks */
-const offOaks = (x: number, z: number, m: number) => OAKS.every((o) => Math.abs(o.x - x) > m || Math.abs(o.z - z) > m);
+const offOaks = (x: number, z: number, m: number) => hillPlanting().oaks.every((o) => Math.abs(o.x - x) > m || Math.abs(o.z - z) > m);
 
 /* ---------- Drifts and outcrops ---------- */
 

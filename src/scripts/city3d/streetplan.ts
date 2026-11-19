@@ -308,7 +308,15 @@ export function insetPoly(poly: Pt[], d: number): Pt[] {
 /** A block's raised slab: its lot and the sidewalk round it */
 export const slabOf = (b: Block): Pt[] => outset(b.poly, b.walk);
 /** Is a point on a raised slab (a lot or its sidewalk) */
-export const onSlab = (plan: StreetPlan, p: Pt) => plan.slabs.some((s) => inPoly(s, p));
+export const onSlab = (plan: StreetPlan, p: Pt) => {
+  // (each slab's box first: most are nowhere near; the same answer, called for every point along the kerbs)
+  let boxes = SLAB_BOXES.get(plan.slabs);
+  if (!boxes) SLAB_BOXES.set(plan.slabs, (boxes = plan.slabs.map((s) => [Math.min(...s.map((q) => q[0])), Math.min(...s.map((q) => q[1])), Math.max(...s.map((q) => q[0])), Math.max(...s.map((q) => q[1]))])));
+  const bx = boxes;
+  return plan.slabs.some((s, i) => p[0] >= bx[i][0] && p[0] <= bx[i][2] && p[1] >= bx[i][1] && p[1] <= bx[i][3] && inPoly(s, p));
+};
+/** The slabs' boxes, by plan */
+const SLAB_BOXES = new WeakMap<Pt[][], number[][]>();
 
 /* ---------- The grid, and the city as built ---------- */
 

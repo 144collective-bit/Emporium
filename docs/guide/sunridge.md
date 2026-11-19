@@ -20,7 +20,7 @@ keep it up to date when what it describes changes.
   kerb or the land's edge), the amenities' land (`ZONES`), the footpath from
   Palm Court (`PATH`), the perimeter wall and the entrance monuments
   (`WALL_RUNS`, `MONUMENTS`, `SUN_SOLIDS` in `SOLIDS`), `SUN_LAMPS` at the
-  boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 101, 6.6 x 13,
+  boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, baked as `sun-lots`, 101, 6.6 x 13,
   pie-shaped round the turning circles). Drawn by `sunridge3d.ts`
   (`LAZY_DISTRICTS` id `sunridge`); the road helpers are `roads3d.ts`
   (shared with Crestmont). Phase 2 (the houses) is built: `sunhouses.ts`

@@ -8,7 +8,9 @@ import { CUT, DRIVE_GRADE, MANSIONS, MANSION_CARS, MANSION_LEVELS, MANSION_SOLID
 import { BED, CREST_LAMPS, HILL_ROADS, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { LEVELS, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
-import { OAKS, PALMS, SCRUB } from '../src/scripts/city3d/landscape';
+import { PALMS, hillPlanting } from '../src/scripts/city3d/landscape';
+
+const { oaks: OAKS, scrub: SCRUB } = hillPlanting();
 import { SOLIDS } from '../src/scripts/city3d/solids';
 
 type Rect = [number, number, number, number];

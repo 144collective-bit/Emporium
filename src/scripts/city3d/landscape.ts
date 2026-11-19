@@ -207,9 +207,14 @@ function planting(): { oaks: Plant[]; scrub: Plant[] } {
     }
   return { oaks, scrub };
 }
-const PLANTING = planting();
-export const OAKS: Plant[] = PLANTING.oaks;
-export const SCRUB: Plant[] = PLANTING.scrub;
+/**
+ * The hills' own planting, laid the first time it's asked for: by the landscape's sites that draw it (landscape3d.ts, in
+ * the site worker) and the slopes' cover (crestcover.ts `cover()`), never as Crestmont's chunk loads on the main thread
+ */
+export function hillPlanting(): { oaks: Plant[]; scrub: Plant[] } {
+  return (PLANTING ??= planting());
+}
+let PLANTING: { oaks: Plant[]; scrub: Plant[] } | null = null;
 
 /* ---------- The hill roads' edges: retaining walls and guard rails ---------- */
 
