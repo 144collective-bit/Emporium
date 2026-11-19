@@ -22,6 +22,7 @@ import { HOME_POOLS } from './home';
 import { registerTunnel } from './tunnel3d';
 import { registerCircus } from './circus3d';
 import { registerUnderpasses } from './underpass3d';
+import { registerLine } from './line3d';
 import { PLAZA } from './circus';
 import { SLAB_CUTS } from './underpasses';
 import { boundsOf, disc } from './holes';
@@ -151,6 +152,7 @@ function registerStreets(low: boolean) {
   });
   registerCircus(low);
   registerUnderpasses();
+  registerLine(low);
 }
 
 /** The footpaths out of the closes (paved, over the blocks they cross) and the bollards at their ends */

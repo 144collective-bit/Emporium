@@ -40,13 +40,13 @@ test('both sides of the High Road: each building on a block, facing it, off the 
   }
 });
 
-test('what stands there: the big four, the parade, the rows, the gap site, the station site, the car wash, the boarded pub', () => {
+test('what stands there: the big four, the parade, the rows, the gap site, the station, the car wash, the boarded pub', () => {
   for (const id of ['brook', 'rosas', 'kestrel', 'busgarage']) assert.ok(SHOPS.some((s) => s.id === id), `${id} isn't on the High Road`);
   for (const k of ['parade', 'row', 'pub', 'gap', 'petrol', 'garage', 'station', 'carwash', 'boarded']) assert.ok(SHOPS.some((s) => s.kind === k), `no ${k}`);
-  // (made-up names, no numbers on any sign; a gap site and the station site have none)
+  // (made-up names, no numbers on any sign; a gap site has none, the station its name)
   for (const s of SHOPS) {
     assert.ok(!/\d/.test(s.name), `a number on ${s.name}`);
-    assert.equal(s.name === '', s.kind === 'gap' || s.kind === 'station');
+    assert.equal(s.name === '', s.kind === 'gap');
   }
   assert.equal(new Set(SHOPS.map((s) => s.id)).size, SHOPS.length);
 });
@@ -59,4 +59,24 @@ test('the way in to each: its door on the sidewalk, clear of anything solid', ()
   }
   // (nothing solid of the High Road's in a house)
   for (const b of SHOP_SOLIDS) for (const h of HOUSES) if (Math.hypot(h.at[0] - b[0], h.at[1] - b[1]) < 20) assert.ok(!houseFoot(h).some((p) => inBox(b, p[0], p[1], -0.2)), `a shop's solid in ${h.id}`);
+});
+
+test("the underground station's building: walls round it with its door open at its front's west end, on to the landing inside", async () => {
+  const { stationWalls, STATION_DOOR, STATION_WALL } = await import('../src/scripts/city3d/highroad');
+  const { stationOf } = await import('../src/scripts/city3d/southline');
+  const { inPassage, pointOf } = await import('../src/scripts/city3d/underground');
+  const st = SHOPS.find((s) => s.kind === 'station')!;
+  assert.equal(st.name, 'High Road');
+  const walls = stationWalls(st);
+  assert.equal(walls.length, 5);
+  const hr = stationOf('highroad');
+  // (the door's middle, a step in from the front, is on the landing; the landing and the stairs' top inside the walls)
+  const fwd: [number, number] = st.face[0] < 0 ? [-st.face[1], st.face[0]] : [st.face[1], -st.face[0]];
+  const f = fwd[0] > 0 ? fwd : ([-fwd[0], -fwd[1]] as [number, number]);
+  const door = (STATION_DOOR[0] + STATION_DOOR[1]) / 2;
+  const inside: [number, number] = [st.at[0] + f[0] * door - st.face[0] * (STATION_WALL + 0.3), st.at[1] + f[1] * door - st.face[1] * (STATION_WALL + 0.3)];
+  assert.ok(hr.landing && inPassage(hr.landing, ...inside), 'in through the door on to the landing');
+  const top = pointOf(hr.way, hr.way.a0 + 0.2);
+  const back = (x: number, z: number) => -((x - st.at[0]) * st.face[0] + (z - st.at[1]) * st.face[1]);
+  assert.ok(back(...top) > STATION_WALL && back(...top) < st.d - STATION_WALL, "the stairs' top inside");
 });

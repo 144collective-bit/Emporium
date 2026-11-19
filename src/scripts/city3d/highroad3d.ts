@@ -9,9 +9,10 @@
  * Each building level on its base (a plinth where the hill falls), not lifted onto the ground.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, neon, roundRect, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, neon, roundRect, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { BACK_IN, HEIGHT, SHOPS, shopFoot, type Shop } from './highroad';
+import { BACK_IN, HEIGHT, SHOPS, STATION_DOOR, STATION_WALL, shopFoot, type Shop } from './highroad';
+import { BUILDING_STAIRS as STATION_STAIRS, LINE_COLOUR, STAIR_RUN as STATION_STAIR_RUN } from './southline';
 
 type Pt = [number, number];
 
@@ -55,7 +56,33 @@ const GLASS_LIT = neon('#ffd99a', 0.14, 1.05);
 const GLASS_DARK = toon('#27324a');
 const SHOP_GLASS = neon('#ffe7b8', 0.22, 1.2);
 const PLY = toon('#a3804f');
-const HOARD = toon('#3a4a5e');
+const STATION_STONE = toon('#e3dccd');
+const HOARD_LINE = toon(LINE_COLOUR);
+/** The city's M mark (as the raised metro's, metro3d.ts): a magenta disc with a white M, over the station's door */
+let mark: THREE.Material | null = null;
+const stationMark = () =>
+  (mark ??= siteMat(
+    'station-mark',
+    lit(
+      new THREE.MeshBasicMaterial({
+        map: canvasTex(256, 128, (c) => {
+          c.fillStyle = '#100d1e';
+          c.fillRect(0, 0, 256, 128);
+          c.fillStyle = PAL.magenta;
+          c.beginPath();
+          c.arc(128, 64, 56, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = '#ffffff';
+          c.font = `900 80px ${FONT_DISPLAY}`;
+          c.textAlign = 'center';
+          c.textBaseline = 'middle';
+          c.fillText('M', 128, 68);
+        }),
+      }),
+      0.9,
+      1.2
+    )
+  ));
 const POST = toon('#d8d4e6');
 const PUMP = toon('#2b2d3a');
 const paints = new Map<string, THREE.Material>();
@@ -77,7 +104,8 @@ function frameOf(s: Shop) {
 function kit(b: Batch, s: Shop) {
   const M = frameOf(s);
   const put = (g: THREE.BufferGeometry, m: THREE.Material) => {
-    if (g.getAttribute('uv') && m !== SIGNS.mat) g.deleteAttribute('uv');
+    // (a textured material keeps its uv: the signs, the station's M mark)
+    if (g.getAttribute('uv') && m !== SIGNS.mat && !(m as THREE.MeshBasicMaterial).map) g.deleteAttribute('uv');
     if (!g.index) g.setIndex([...Array(g.getAttribute('position').count).keys()]);
     b.add(g.applyMatrix4(M), m);
   };
@@ -233,10 +261,33 @@ function drawShop(b: Batch, s: Shop, low: boolean) {
         k.box(-kw, kw, -plinth, 2.2, -s.d + BACK_IN, -s.d + 4, CONCRETE);
         break;
       }
-      case 'gap':
       case 'station': {
-        // A hoarding along the front (the station's in the line's blue), rough ground behind it
-        k.box(-w, w, -plinth, HEIGHT.hoarding, -0.3, 0, s.kind === 'station' ? HOARD : PLY);
+        // The underground station's building (docs/south-plan.md Phase 4e): pale walls round it, its door at its
+        // front's east end on to the landing, the stairs down inside (no floor over them: southline.ts), a band in the
+        // line's colour with its name, the city's M mark over the door, glass along the rest of its front, a flat roof
+        const h = HEIGHT.station;
+        const t = STATION_WALL;
+        const [d0, d1] = STATION_DOOR;
+        k.box(-w, d0, -plinth, h, -t, 0, STATION_STONE);
+        k.box(d1, w, -plinth, h, -t, 0, STATION_STONE);
+        k.box(d0, d1, 1.55, h, -t, 0, STATION_STONE);
+        k.box(-w, w, -plinth, h, -s.d, -s.d + t, STATION_STONE);
+        for (const x of [-w, w - t]) k.box(x, x + t, -plinth, h, -s.d + t, -t, STATION_STONE);
+        k.box(-w - 0.08, w + 0.08, h, h + 0.12, -s.d - 0.08, 0.08, CONCRETE);
+        k.box(-w, w, h - 0.42, h, 0, 0.06, HOARD_LINE);
+        k.sign(-w + 0.5, d0 - 0.3, h - 0.21, 0.3, 0.065);
+        k.pane(-w + 0.4, d0 - 0.3, 0.35, 1.45, 0.012, SHOP_GLASS);
+        k.pane(d0 + 0.45, d1 - 0.45, h - 0.38, h - 0.04, 0.07, stationMark());
+        // The floor inside: the landing inside the door, and past the stairs' foot at the west end (none over them)
+        const [top, foot] = [STATION_STAIRS.at, STATION_STAIRS.at - STATION_STAIR_RUN];
+        k.box(top, w - t, -plinth, 0, -s.d + t, -t, CONCRETE);
+        k.box(-w + t, foot, -plinth, 0, -s.d + t, -t, CONCRETE);
+        if (!low) k.box(top - 0.1, top + 0.1, 0, 0.9, -s.d + t, -s.d + t + 0.1, HOARD_LINE);
+        break;
+      }
+      case 'gap': {
+        // A hoarding along the front, rough ground behind it
+        k.box(-w, w, -plinth, HEIGHT.hoarding, -0.3, 0, PLY);
         break;
       }
     }
