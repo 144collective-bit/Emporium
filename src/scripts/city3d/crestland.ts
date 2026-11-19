@@ -106,7 +106,6 @@ const RECTS: { vines: Rect[]; groves: Rect[]; meadows: Rect[] } = baked('crest-l
   const groves = keep(LAID.groves, 16, 12, 0.55, [...vines, ...LAID.meadows]);
   return { vines, groves, meadows: keep(LAID.meadows, 14, 14, 0.7, [...vines, ...groves]) };
 });
-export const LAND_RECTS = RECTS;
 const vineRects = RECTS.vines;
 export const VINEYARDS: Vineyard[] = vineRects.map((rect) => {
   const rows: Vineyard['rows'] = [];
