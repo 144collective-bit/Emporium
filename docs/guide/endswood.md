@@ -116,7 +116,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   index.ts for the main thread and the site worker; faces split to `LIFT_EDGE`, but only the faces over the south's
   rect: the rest of a batch keeps its faces whole and its corners shared, so the city's ground and every batch that
   only reaches into the south aren't split and unshared whole, which had tripled the boot's work and doubled the
-  geometry), terrain.ts reads it (cars, taxis, trees,
+  geometry; the split faces share their corners too, each corner once where it's the same in every attribute, as the
+  plane they came from did: the military plan's Phase 0 trim, `docs/military-plan.md`), terrain.ts reads it (cars, taxis, trees,
   cameras), groundheight.ts's `south` layer walks on it, solids.ts's `onGround()` lifts the boxes, the lamps carry their
   lifted height. Anything new drawn in the south is lifted for free; anything placed outside a Batch (a lamp, a tree, a
   pin, a pool of light, a person) adds `southLift(x, z)` itself.

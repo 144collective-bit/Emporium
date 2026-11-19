@@ -800,8 +800,27 @@ function liftOnto(g: THREE.BufferGeometry): THREE.BufferGeometry {
     }
   }
   const kept = keptFrom.length;
-  // The split faces' corners after them, a face's own three each (all of a corner's attributes in a row: `stride`)
+  // The split faces' corners after them (all of a corner's attributes in a row: `stride`), each once: a corner the
+  // faces round it share is the same in every attribute (an edge is halved the same way from either side), so it's
+  // kept once and shared, as the plane it came from shared its own (the same faces, a fraction of the vertices)
   const out: number[] = [];
+  const seen = new Map<string, number[]>();
+  const madeIx: number[] = [];
+  const corner1 = (v: number[]) => {
+    const key = `${v[P]},${v[P + 1]},${v[P + 2]}`;
+    const list = seen.get(key);
+    if (list)
+      for (const m of list) {
+        let same = true;
+        for (let i = 0; i < stride && same; i++) same = out[m * stride + i] === v[i];
+        if (same) return m;
+      }
+    const m = out.length / stride;
+    for (let i = 0; i < stride; i++) out.push(v[i]);
+    if (list) list.push(m);
+    else seen.set(key, [m]);
+    return m;
+  };
   const read = (v: number) => {
     const r = new Array<number>(stride);
     attrs.forEach((a, k) => {
@@ -820,12 +839,12 @@ function liftOnto(g: THREE.BufferGeometry): THREE.BufferGeometry {
       emit(m1, m2, m3, depth + 1);
       return;
     }
-    for (const v of [a, b, c]) for (let i = 0; i < stride; i++) out.push(v[i]);
+    for (const v of [a, b, c]) madeIx.push(corner1(v));
   };
   for (let t = 0; t < tris; t++) if (onto[t]) emit(read(corner(3 * t)), read(corner(3 * t + 1)), read(corner(3 * t + 2)), 0);
   const made = out.length / stride;
   const n = kept + made;
-  for (let i = 0; i < made; i++) ix.push(kept + i);
+  for (const m of madeIx) ix.push(kept + m);
   const res = new THREE.BufferGeometry();
   const { lift } = groundLift;
   names.forEach((name, k) => {
