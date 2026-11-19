@@ -78,14 +78,35 @@ function search(w: number, d: number, slope: number, n: number, taken: Rect[]): 
 }
 
 /**
+ * The land as the search laid it before the premium upgrade's Phase 3 (the owner's call, 2026-11-19: "deeper terraces +
+ * vineyard"): it stays where it stood, but where a new hill house's lot or drive now takes its ground (two vineyards
+ * and a grove), that piece is moved aside whole to the first clear place the search finds (`keep()`)
+ */
+const LAID: { vines: Rect[]; groves: Rect[]; meadows: Rect[] } = {
+  vines: [[393, -111, 415, -99], [442, -153, 464, -141], [400, -244, 422, -232]],
+  groves: [[428, -118, 444, -106], [365, -146, 381, -134], [435, -181, 451, -169]],
+  meadows: [[449, -211, 463, -197], [323, -225, 337, -211], [449, -239, 463, -225], [323, -253, 337, -239], [442, -267, 456, -253]],
+};
+/** Each laid piece kept where it's still clear, or moved aside to the search's first clear place apart from the rest */
+function keep(laid: Rect[], w: number, d: number, slope: number, taken: Rect[]): Rect[] {
+  const out: Rect[] = [];
+  laid.forEach((r, i) => {
+    if (clearBox(r, slope)) return out.push(r);
+    const [moved] = search(w, d, slope, 1, [...taken, ...out, ...laid.slice(i + 1)]);
+    if (moved) out.push(moved);
+  });
+  return out;
+}
+/**
  * Where the vineyards, groves and meadows lie: searched for when the site is built (baked.ts; scripts/bake.mjs), not as
  * Crestmont's chunk loads on the main thread
  */
 const RECTS: { vines: Rect[]; groves: Rect[]; meadows: Rect[] } = baked('crest-land', BUILT ? undefined : () => {
-  const vines = search(22, 12, 0.45, 3, []);
-  const groves = search(16, 12, 0.55, 3, vines);
-  return { vines, groves, meadows: search(14, 14, 0.7, 5, [...vines, ...groves]) };
+  const vines = keep(LAID.vines, 22, 12, 0.45, [...LAID.groves, ...LAID.meadows]);
+  const groves = keep(LAID.groves, 16, 12, 0.55, [...vines, ...LAID.meadows]);
+  return { vines, groves, meadows: keep(LAID.meadows, 14, 14, 0.7, [...vines, ...groves]) };
 });
+export const LAND_RECTS = RECTS;
 const vineRects = RECTS.vines;
 export const VINEYARDS: Vineyard[] = vineRects.map((rect) => {
   const rows: Vineyard['rows'] = [];
