@@ -47,7 +47,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, homePlaces, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
 import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
@@ -2375,6 +2375,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       addTrafficBikes(m.bikeGeometry);
     })
   );
+  // What stands in his house (homerooms.ts: out of the boot, the owner's call), fetched as the city starts; waking in
+  // the room waits for it (`wake()`)
+  const houseRooms = lazy(() => import('./homerooms').then((m) => {
+    const r = m.houseRooms(HOUSE_GEO);
+    setRooms({ room: r.FURNITURE, up: r.UPSTAIRS, base: r.BASEMENT });
+  }), "the house's rooms");
+  void houseRooms().catch(() => {});
   loop();
 
   return {
@@ -2401,6 +2408,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
         works.want(HOME_WAKE.x, HOME_WAKE.z, 25);
       }
+      await Promise.race([houseRooms().catch(() => {}), new Promise((r) => setTimeout(r, 10000))]);
       wokeAt = performance.now();
       street = { ready: false, at: 0 };
       // On the sofa as the room appears, up off it a moment after the menu's gone (Phase 2; under reduced motion
