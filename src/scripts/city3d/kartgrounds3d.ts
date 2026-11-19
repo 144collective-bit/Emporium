@@ -95,6 +95,7 @@ const PAVED_V = SITE.garages.v0 - 0.6;
 
 const ASPHALT = toon(PAL_ROAD.asphalt);
 const LAWN_C = toon(COVER.lawn);
+const ROUGH = toon(COVER.dryGrass);
 const GRASS = toon('#3a8a5b');
 const BANK_C = toon('#357f55');
 const GRAVEL = toon('#c2a878');
@@ -352,6 +353,34 @@ function grounds(b: Batch) {
   const outside = (i: number) => (Math.abs(c.k[i]) > 0.04 ? -Math.sign(c.k[i]) : 0);
 
   flatRect(b, P.x0 + 0.3, P.z0 + 0.3, P.x1 - 0.3, P.z1 - 0.3, LAWN, LAWN_C);
+  // (a strip of rough grass along the fence, its inner edge ragged, so the lawn's edge wanders, not a ruler line along
+  // the outskirts: the map polish plan's Phase 7)
+  {
+    const sides: [number, number, number, number, number, number][] = [
+      [P.x0 + 0.3, P.z0 + 0.3, P.x1 - 0.3, P.z0 + 0.3, 0, 1],
+      [P.x1 - 0.3, P.z0 + 0.3, P.x1 - 0.3, P.z1 - 0.3, -1, 0],
+      [P.x1 - 0.3, P.z1 - 0.3, P.x0 + 0.3, P.z1 - 0.3, 0, -1],
+      [P.x0 + 0.3, P.z1 - 0.3, P.x0 + 0.3, P.z0 + 0.3, 1, 0],
+    ];
+    const pos: number[] = [];
+    const y = LAWN + 0.006;
+    for (const [ax, az, bx, bz, nx, nz] of sides) {
+      const L = Math.hypot(bx - ax, bz - az);
+      const n = Math.max(2, Math.ceil(L / 1.6));
+      const depth = (k: number) => (k === 0 || k === n ? 0.35 : 0.4 + 0.45 * (0.5 + 0.5 * Math.sin(k * 1.9 + ax * 0.3)) + 0.3 * (0.5 + 0.5 * Math.sin(k * 0.7 + az * 0.2)));
+      for (let k = 0; k < n; k++) {
+        const [f0, f1] = [k / n, (k + 1) / n];
+        const [p0, p1]: [number, number][] = [[ax + (bx - ax) * f0, az + (bz - az) * f0], [ax + (bx - ax) * f1, az + (bz - az) * f1]];
+        const [q0, q1] = [[p0[0] + nx * depth(k), p0[1] + nz * depth(k)], [p1[0] + nx * depth(k + 1), p1[1] + nz * depth(k + 1)]];
+        for (const [u, v, w] of [[p0, p1, q1], [p0, q1, q0]]) pos.push(u[0], y, u[1], v[0], y, v[1], w[0], y, w[1], u[0], y, u[1], w[0], y, w[1], v[0], y, v[1]);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    g.setIndex([...Array(pos.length / 3).keys()]);
+    b.add(g, ROUGH);
+  }
   // The paving along the pits (the garages, the hut, the tower), the plaza and the paddock, a pad under the stand
   flatL(b, { u0: SITE.hut.u0 - 2, v0: PAVED_V, u1: TOWER.u1 + 1.5, v1: SITE.garages.v1 + 1.2 }, PAVING, PAVE);
   flatL(b, PLAZA, PAVING, PLAZA_C);

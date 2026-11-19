@@ -1209,6 +1209,37 @@ function lagoon(b: Batch, r: Resort, low: boolean) {
     for (let k = 0; k < 5; k++) rocks[k % 2].push(mat4(x + (rr() - 0.5) * 1.6, SLAB + 0.6 + k * 0.85, backZ - n[1] * (0.4 + k * 0.1), rr() * 6, 0.9 - k * 0.08, 0.8));
     pane(b, x, SLAB + 2.4, backZ + n[1] * 0.25, n, 1.4, 4.6, FALLS, 0.02);
   }
+  // A beach round the lagoon inside its rim (the map polish plan's Phase 7: the water was the rim's rectangle): sand from
+  // the rim in to a shore that wanders, so the water reads as a lagoon's
+  {
+    const [lx0, lz0, lx1, lz1] = lagoonR;
+    const [cx, cz] = [(lx0 + lx1) / 2, (lz0 + lz1) / 2];
+    const K = 56;
+    const rim = (k: number): Pt => {
+      const a = (k / K) * Math.PI * 2;
+      const [dx, dz] = [Math.cos(a), Math.sin(a)];
+      const t = Math.min(Math.abs(dx) > 1e-6 ? (lx1 - lx0) / 2 / Math.abs(dx) : Infinity, Math.abs(dz) > 1e-6 ? (lz1 - lz0) / 2 / Math.abs(dz) : Infinity);
+      return [cx + dx * t, cz + dz * t];
+    };
+    const shore = (k: number): Pt => {
+      const a = (k / K) * Math.PI * 2;
+      const [px, pz] = rim(k);
+      const f = 0.8 + 0.07 * Math.sin(3 * a + 0.6) + 0.05 * Math.sin(5 * a + 2.1);
+      return [cx + (px - cx) * f, cz + (pz - cz) * f];
+    };
+    const pos: number[] = [];
+    const y = SLAB + 0.275;
+    for (let k = 0; k < K; k++) {
+      const [a, c, d, e] = [rim(k), rim(k + 1), shore(k + 1), shore(k)];
+      // (both ways round: up whichever way the ring runs)
+      for (const [p, q, w] of [[a, c, d], [a, d, e]]) pos.push(p[0], y, p[1], w[0], y, w[1], q[0], y, q[1], p[0], y, p[1], q[0], y, q[1], w[0], y, w[1]);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    g.setIndex([...Array(pos.length / 3).keys()]);
+    b.add(g, SAND);
+  }
   b.instances(new THREE.DodecahedronGeometry(1, 0), rock, rocks[0]);
   b.instances(new THREE.DodecahedronGeometry(1, 0), rock2, rocks[1]);
   // Palms round the lagoon
@@ -1290,19 +1321,29 @@ export function registerResorts({ low, scene, tick }: { low: boolean; scene: THR
   // The water: the lake, the lagoon, the canal, the moat, Big City's pool, under their rims (the rims themselves too)
   const wb = new Batch();
   const rims = new Batch();
-  for (const r of RESORTS)
-    for (const [x0, z0, x1, z1] of r.water) {
+  const BASIN = toon('#1d3a58');
+  for (const r of RESORTS) {
+    // (where two waters run on in one line with a bridge between, the moat and the canal: one water under the bridge,
+    // a little under its deck, and no rim at their facing ends poking up through it; the map polish plan's Phase 7)
+    const joins = r.water.flatMap((a) => r.water.filter((c) => c !== a && c[1] === a[1] && c[3] === a[3] && c[0] > a[2] && c[0] - a[2] < 4).map((c) => [a, c] as const));
+    for (const [a, c] of joins) {
+      wb.add(new THREE.PlaneGeometry(c[0] - a[2], a[3] - a[1]).rotateX(-Math.PI / 2).translate((a[2] + c[0]) / 2, SLAB + 0.08, (a[1] + a[3]) / 2), waterMat);
+      box(rims, a[2], SLAB, a[1], c[0], SLAB + 0.02, a[3], BASIN);
+    }
+    for (const w of r.water) {
+      const [x0, z0, x1, z1] = w;
       const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, SLAB + 0.26, (z0 + z1) / 2);
       wb.add(g, waterMat);
       const t = 0.25;
       const y = SLAB + RIM;
       box(rims, x0 - t, SLAB, z0 - t, x1 + t, y, z0, RIM_MAT);
       box(rims, x0 - t, SLAB, z1, x1 + t, y, z1 + t, RIM_MAT);
-      box(rims, x0 - t, SLAB, z0, x0, y, z1, RIM_MAT);
-      box(rims, x1, SLAB, z0, x1 + t, y, z1, RIM_MAT);
+      if (!joins.some(([, c]) => c === w)) box(rims, x0 - t, SLAB, z0, x0, y, z1, RIM_MAT);
+      if (!joins.some(([a]) => a === w)) box(rims, x1, SLAB, z0, x1 + t, y, z1, RIM_MAT);
       // (the basin's floor, dark under the water)
-      box(rims, x0, SLAB, z0, x1, SLAB + 0.02, z1, toon('#1d3a58'));
+      box(rims, x0, SLAB, z0, x1, SLAB + 0.02, z1, BASIN);
     }
+  }
   const water = new THREE.Group();
   wb.build(water, { cast: false, receive: false });
   rims.build(water, { cast: true, receive: true });

@@ -301,6 +301,20 @@ Each district seen in a render of its own sites (as Phases 2 and 3).
   the boot).
 - The boot: 749.9 of 750 KB.
 
+### Phase 7: the rules and the water (in part, waiting on the owner's sign-off)
+
+- **The resorts' water**: Dragonspire's moat and the Gondolier's canal run
+  on under their bridges (a water a little under the deck, no rim at the
+  two pieces' facing ends poking up through it; the solids as they were,
+  those rims at the bridges' sides); Lava Lagoon's water inside its rim a
+  beach of sand to a shore that wanders, not the rim's rectangle.
+- **The kart park's lawn**: a strip of rough grass along the fence, its
+  inner edge ragged (the circuit's run-off is 15 clear of it).
+- **Sunridge, held for the owner**: its straight land edges and wall, its
+  zones' rectangles and the three cul-de-sacs with no footpath through all
+  move things (the lots round the turning circles, the wall), so they wait
+  on the owner's call.
+
 Checked and left: the High Road's buildings are drawn at every distance
 (the outer `detail()` is `'all'`); the under-deck props casting shadows
 (they stand in the deck's own shade); the deck's joints (5 mm over the
