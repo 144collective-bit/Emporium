@@ -294,6 +294,36 @@ every mesh of a place, so the places' arrays must stay.
   owner's call). A bake takes about 8 minutes here (all four runs load every
   district).
 
+### The live site's textures (built, 2026-11-19; the owner's pick: the Action deploys)
+
+- **What the owner's laptop showed** (`?bench`, medium tier, 1920 x 1080):
+  textures 267 MB for 222 textures. A whole-city census here
+  (`__mem().textureRows`, the same 222) counts 81.8 MiB: 61.7 from the
+  build, 20.1 painted. 61.7 x 4 + 20.1 = 266.9: everything the build
+  makes was being painted in the browser (four bytes a pixel, against
+  BC7's one). The bake writes its list into `dist/index.html` after the
+  build (`scripts/bake-textures.mjs`), and only the "Build site" Action
+  runs it; Hostinger built `main` itself with a plain `npm run build`
+  (the polish plan's open Hosting check), so the live site had no list.
+  At the boot here: 37.6 MiB baked, 125.5 painted.
+- **The fix, the owner's pick:** the Action publishes the finished site
+  (checked, baked, under budget, `#city-tex` in the page) to the `deploy`
+  branch, one commit replaced each time, and Hostinger deploys that branch
+  with no build of its own (the owner's switch in Hostinger's Git
+  settings). A build whose bake failed isn't published: the live site
+  keeps the last good one.
+- **Seen at once:** the `?fps` panel and the benchmark's card show where
+  the textures came from (`texsource.ts`): "textures: 197 from the build
+  (BC7) · 25 painted", with a ⚠ when the page has no list, a file
+  wouldn't load, or the GPU takes none of the compressed formats
+  ("uncompressed"); `__mem().textureSources` and `__bench.textures` carry
+  the counts.
+- **The safety net:** a page with no list, on graphics built into the
+  processor (`sharedGpu()`, gputier.ts), paints its big textures half size
+  as phones do (kit.ts `paintsHalf()`, the graphics' name read from a
+  throwaway context since the modules paint before the city's renderer
+  exists): at the boot, 125.5 → 59.2 MiB. Not with `?textures=0`.
+
 ## Phase 5: budgets that hold as the city grows (built, 2026-11-13)
 
 The owner's picks: **on demand only** (a full city takes too long in CI to
@@ -433,3 +463,7 @@ measured → Phases 3 and 4 → Phase 6. Real-device numbers (`?bench`'s
 - **The phone's ceilings** (2026-11-18): geometry raised on purpose from 187
   to 210 MiB (the south's Phases 2-3, 191.2 measured, and 10%); textures
   kept at 70 MiB though 32.9 measured, room for new districts.
+- **The live site's textures** (2026-11-19): the "Build site" Action
+  deploys (the `deploy` branch, Hostinger with no build of its own); the
+  source line in `?fps` and the bench; big textures half size on shared
+  graphics when the page has no list.
