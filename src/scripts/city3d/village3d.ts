@@ -15,7 +15,7 @@ import type { Tick } from './world';
 import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { COVER, STONE } from './palette';
-import { shift } from './streetfaces';
+import { inside, shift } from './streetfaces';
 import { ALLEYS, DOOR_U, GINNELS, HOUSES, OUTRIGGER, OUTRIGGERS, REAR_WALL_H, TERRACE, WALL_H, frontWalls, houseFoot, plotOf, rearWalls, type House } from './southterraces';
 import { CHANCEL, CHURCH_BASE, CHURCH_LOW, CHURCH_PATH, GRAVES, HEIGHTS, LYCHGATE, NAVE, PATH_W, PORCH, PORCH_DOOR, SPIRE_TIP, TOWER, YARD_WALL, YARD_WALL_H, YEWS } from './aldwyns';
 import { CHURCHYARD } from './south';
@@ -236,6 +236,7 @@ function drawHouses(b: Batch, list: House[], low: boolean) {
     for (const [mat, hs] of by(wallOf)) b.instances(P.outBody, mat, hs.filter((h) => OUTRIGGERS.has(h.id)).map((h) => frameOf(h)));
     b.instances(P.outRoof, SLATE, outs.map((h) => frameOf(h)));
     b.instances(P.outWin, WIN_DARK, outs.map((h) => frameOf(h)));
+    drawWedges(b, list, wallOf);
   }, 'all');
   if (low) return;
   b.detail(() => {
@@ -247,6 +248,59 @@ function drawHouses(b: Batch, list: House[], low: boolean) {
     b.instances(P.backSills, SILL, list.map((h) => frameOf(h)));
     b.instances(P.gutter, LEAD, list.map((h) => frameOf(h)));
   });
+}
+
+/* ---------- The wedges on a row's bends (the map polish plan's Phase 2) ---------- */
+
+/**
+ * Where a row bends each house turns a little from the last (southterraces.ts), so their fronts meet and their backs
+ * open a wedge (up to 1.3 at the back), its roofs apart: sky through it. Each pair whose fronts meet: its right side
+ * (u = +w/2) and the next house's left (u = -w/2), the gap between filled, a wall front and back from the lower one's
+ * foot to each house's eaves, the roof across from each's profile (front eaves, ridge, back eaves)
+ */
+const WEDGES: { h: House; n: House }[] = (() => {
+  const feet = new Map(HOUSES.map((h) => [h.id, houseFoot(h)]));
+  const out: { h: House; n: House }[] = [];
+  for (const h of HOUSES) {
+    const f = feet.get(h.id)!;
+    const n = HOUSES.find((o) => o !== h && Math.hypot(feet.get(o.id)![0][0] - f[1][0], feet.get(o.id)![0][1] - f[1][1]) < 0.3);
+    if (!n) continue;
+    const g = feet.get(n.id)!;
+    // (where the backs cross, the inside of a bend, there's no gap to fill)
+    if (inside(f, g[3]) || inside(g, f[2]) || Math.hypot(f[2][0] - g[3][0], f[2][1] - g[3][1]) < 0.02) continue;
+    out.push({ h, n });
+  }
+  return out;
+})();
+function drawWedges(b: Batch, list: House[], wallOf: (h: House) => THREE.Material) {
+  const mine = new Set(list.map((h) => h.id));
+  /** A point on a house's side u, v in from its front, y over its base */
+  const P = (h: House, u: number, v: number, y: number) => new THREE.Vector3(h.at[0] - h.face[1] * u + h.face[0] * v, h.base + y, h.at[1] + h.face[0] * u + h.face[1] * v);
+  for (const { h, n } of WEDGES) {
+    if (!mine.has(h.id)) continue;
+    const [uh, un] = [(h.w / 2) * 1.0, -(n.w / 2)];
+    const low = Math.min(h.low, n.low) - h.base;
+    const lowN = Math.min(h.low, n.low) - n.base;
+    const wall: number[] = [];
+    const roof: number[] = [];
+    const quad = (out: number[], a: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3, e: THREE.Vector3) => {
+      // (both ways round: whichever way it's seen from)
+      for (const [p, q, r] of [[a, c, d], [a, d, e], [a, d, c], [a, e, d]]) out.push(p.x, p.y, p.z, q.x, q.y, q.z, r.x, r.y, r.z);
+    };
+    // The walls: across the front (where the fronts don't quite meet) and across the back
+    quad(wall, P(h, uh, -0.02, low), P(n, un, -0.02, lowN), P(n, un, -0.02, E), P(h, uh, -0.02, E));
+    quad(wall, P(h, uh, -D + 0.02, low), P(n, un, -D + 0.02, lowN), P(n, un, -D + 0.02, E), P(h, uh, -D + 0.02, E));
+    // The roof: each slope from one house's profile to the other's
+    quad(roof, P(h, uh, OVER, E), P(n, un, OVER, E), P(n, un, -D / 2, E + R), P(h, uh, -D / 2, E + R));
+    quad(roof, P(h, uh, -D / 2, E + R), P(n, un, -D / 2, E + R), P(n, un, -D - OVER, E), P(h, uh, -D - OVER, E));
+    for (const [pos, m] of [[wall, wallOf(h)], [roof, SLATE]] as const) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.computeVertexNormals();
+      g.setIndex([...Array(pos.length / 3).keys()]);
+      b.add(g, m);
+    }
+  }
 }
 
 /** A flat outline at y, facing up (its triangles small: it's lifted onto the rolling ground) */

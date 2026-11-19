@@ -89,7 +89,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   back kitchens in `TERRACE_SOLIDS`, the yard walls in `TERRACE_GROUND_SOLIDS`), `TERRACES_RECT`. Drawn by `village3d.ts` (lazy chunk `village`): `PIECES` (one house's shapes in its own frame,
   `frameOf()` stretches each to its frontage, right-handed; the back's windows and door, the end gables' windows and
   the back kitchens at every distance, the gutters and downpipes near) copied by `Batch.instances()`, built with
-  `lift: false`; the yards, walls, alleys and ginnels in a lifted Batch. Bench view `village-terraces`.
+  `lift: false`; the yards, walls, alleys and ginnels in a lifted Batch. Where a row bends, the wedge between two
+  houses whose fronts meet is filled (`WEDGES`, `drawWedges()`: a wall front and back, the roof across). Bench view `village-terraces`.
 - **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
   (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
   `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,
@@ -112,7 +113,7 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts):
   every window framed at every distance (`frameAround()`), sills near; the semis' and bungalows' backs windowed with a
   back door, the semis' end walls a landing window; the back gardens fenced (lap panels and posts, a fence between a
-  pair's gardens, clipped clear of the houses: drawn, not solid); the corner shops a door beside their window, their
+  pair's gardens, clipped clear of the houses: council.ts `GARDEN_FENCES`, solid as `FENCE_SOLIDS`); the corner shops a door beside their window, their
   backs windowed; the community centre's boards framed, a canopy, bills; the allotment sheds pitched, a door, a window
   and a water butt; the caravan windowed on its wheels and hitch.
 - **Aldwyn's Green Rec** (`rec.ts`, DOM-free, tested in `tests/rec.test.ts`, 3e): `PITCH`, `GOALS`, `PAVILION`, `VERANDA`,

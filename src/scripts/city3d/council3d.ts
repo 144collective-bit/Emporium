@@ -16,7 +16,7 @@ import { site } from './tilework';
 import { poster, tag } from './grime';
 import { addSolids } from './solids';
 import { COVER, PLANT, SOIL, STONE } from './palette';
-import { ALLOTMENTS, ALLOTMENT_GATE, ALLOTMENT_SOLIDS, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, COUNCIL_SOLIDS, PLOTS, SEMI, SEMIS, lotRing, type Bungalow, type Finish, type Lot, type Semi } from './council';
+import { ALLOTMENTS, ALLOTMENT_GATE, ALLOTMENT_SOLIDS, FENCE_H, FENCE_SOLIDS, GARDEN_FENCES, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, COUNCIL_SOLIDS, PLOTS, SEMI, SEMIS, lotRing, type Bungalow, type Finish, type Lot, type Semi } from './council';
 
 type Pt = [number, number];
 
@@ -284,12 +284,6 @@ function along(b: Batch, a: Pt, c: Pt, w: number, y0: number, y1: number, m: THR
   g.deleteAttribute('uv');
   b.add(g, m);
 }
-/** Is a point inside a ring (even-odd) */
-const insideRing = (r: Pt[], [x, z]: Pt) => {
-  let c = false;
-  for (let i = 0, j = r.length - 1; i < r.length; j = i++) if (r[i][1] > z !== r[j][1] > z && x < ((r[j][0] - r[i][0]) * (z - r[i][1])) / (r[j][1] - r[i][1]) + r[i][0]) c = !c;
-  return c;
-};
 const inFrame = (l: Lot, u: number, v: number): Pt => [l.at[0] + l.face[1] * u + l.face[0] * v, l.at[1] - l.face[0] * u + l.face[1] * v];
 function drawGardens(b: Batch, semis: Semi[], bungalows: Bungalow[]) {
   for (const s of semis) {
@@ -303,43 +297,20 @@ function drawGardens(b: Batch, semis: Semi[], bungalows: Bungalow[]) {
     for (const [u0, u1] of runs) along(b, inFrame(s, -u0, v), inFrame(s, -u1, v), 0.5, 0.15, 0.85, HEDGE);
     for (const u of gaps) along(b, inFrame(s, -u, 0.05), inFrame(s, -u, SEMI.front - 0.05), 0.8, ON, ON + 0.004, PATH);
   }
-  // The back gardens fenced (the map polish plan's Phase 2: they ran open into each other and the fields): a lap fence
-  // round each, one between a pair's two gardens, clear of the houses round it (a bend brings a neighbour's back in)
-  const others = [...SEMIS.map((s) => lotRing(s, 0, SEMI.depth)), ...BUNGALOWS.map((s) => lotRing(s, 0, BUNGALOW.depth))];
-  const fence = (l: Lot, depth: number, rear: number, middle: boolean, own: Pt[]) => {
-    const back = -depth - rear + 0.05;
-    const lines: [Pt, Pt][] = [
-      [inFrame(l, -l.w / 2, -depth), inFrame(l, -l.w / 2, back)],
-      [inFrame(l, -l.w / 2, back), inFrame(l, l.w / 2, back)],
-      [inFrame(l, l.w / 2, back), inFrame(l, l.w / 2, -depth)],
-    ];
-    if (middle) lines.push([inFrame(l, 0, -depth), inFrame(l, 0, back)]);
-    const near = others.filter((o) => o !== own && Math.hypot(o[0][0] - l.at[0], o[0][1] - l.at[1]) < 16);
-    for (const [a, c] of lines) {
-      const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.3));
-      const at = (f: number): Pt => [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f];
-      let from = -1;
-      for (let i = 0; i <= n; i++) {
-        const free = i < n && !near.some((o) => insideRing(o, at((i + 0.5) / n)));
-        if (free && from < 0) from = i;
-        if (!free && from >= 0) {
-          // (lap panels to 1.05, a post every 1.8 standing over them)
-          const [p, q] = [at(from / n), at(i / n)];
-          along(b, p, q, 0.04, 0.15, 1.05, TIMBER);
-          const k = Math.max(1, Math.round(Math.hypot(q[0] - p[0], q[1] - p[1]) / 1.8));
-          for (let j = 0; j <= k; j++) {
-            const [x, z] = [p[0] + ((q[0] - p[0]) * j) / k, p[1] + ((q[1] - p[1]) * j) / k];
-            b.add(new THREE.BoxGeometry(0.09, 1.0, 0.09).translate(x, 0.15 + 0.5, z), POST);
-          }
-          from = -1;
-        }
-      }
+  // The back gardens fenced (the map polish plan's Phase 2: they ran open into each other and the fields): lap panels
+  // to `FENCE_H`, a post every 1.8 over them (council.ts `GARDEN_FENCES`, solid)
+  const mine = new Set([...semis, ...bungalows].map((l) => l.id));
+  for (const { lot, run: [p, q] } of GARDEN_FENCES) {
+    if (!mine.has(lot)) continue;
+    along(b, p, q, 0.04, 0.15, FENCE_H, TIMBER);
+    const k = Math.max(1, Math.round(Math.hypot(q[0] - p[0], q[1] - p[1]) / 1.8));
+    for (let j = 0; j <= k; j++) {
+      const [x, z] = [p[0] + ((q[0] - p[0]) * j) / k, p[1] + ((q[1] - p[1]) * j) / k];
+      b.add(new THREE.BoxGeometry(0.09, 1.0, 0.09).translate(x, 0.15 + 0.5, z), POST);
     }
-  };
-  for (const s of semis) fence(s, SEMI.depth, SEMI.rear, true, others[SEMIS.indexOf(s)]);
+  }
   bungalows.forEach((s) => {
     flat(b, lotRing({ ...s, at: [s.at[0] - s.face[0] * BUNGALOW.depth, s.at[1] - s.face[1] * BUNGALOW.depth] }, 0, BUNGALOW.rear), ON, LAWN);
-    fence(s, BUNGALOW.depth, BUNGALOW.rear, false, others[SEMIS.length + BUNGALOWS.indexOf(s)]);
   });
   for (const s of bungalows) {
     flat(b, lotRing(s, BUNGALOW.front - 0.05, 0), ON, LAWN);
@@ -458,6 +429,7 @@ export function registerCouncil(low: boolean, scene: THREE.Scene | null) {
   if (scene) {
     addSolids(COUNCIL_SOLIDS, false);
     addSolids(ALLOTMENT_SOLIDS);
+    addSolids(FENCE_SOLIDS);
   }
   const lifted = { cast: true, receive: true };
   const level = { cast: true, receive: true, lift: false };

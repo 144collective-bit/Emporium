@@ -292,6 +292,46 @@ export const COUNCIL_SOLIDS: Box[] = [
 ];
 /** The allotments' sheds (on the ground: lifted with it, solids.ts) */
 export const ALLOTMENT_SOLIDS: Box[] = PLOTS.filter((p) => p.shed).map((p): Box => [p.shed![0] - 0.7, p.shed![1] - 0.6, p.shed![0] + 0.7, p.shed![1] + 0.6, 1.6]);
+/**
+ * The back gardens' fences (the map polish plan's Phase 2): round each semi's and bungalow's back garden, one between a
+ * pair's two gardens, in runs clipped clear of every house (a bend brings a neighbour's back round into the line).
+ * Drawn by council3d.ts, solid (`FENCE_SOLIDS`, on the ground: lifted)
+ */
+export const FENCE_H = 1.05;
+const at = (l: Lot, u: number, v: number): Pt => [l.at[0] + l.face[1] * u + l.face[0] * v, l.at[1] - l.face[0] * u + l.face[1] * v];
+export const GARDEN_FENCES: { lot: string; run: [Pt, Pt] }[] = (() => {
+  const homes = [...SEMIS.map((s) => lotRing(s, 0, SEMI.depth)), ...BUNGALOWS.map((s) => lotRing(s, 0, BUNGALOW.depth))];
+  const out: { lot: string; run: [Pt, Pt] }[] = [];
+  const lots: [Lot, number, number, boolean][] = [...SEMIS.map((l): [Lot, number, number, boolean] => [l, SEMI.depth, SEMI.rear, true]), ...BUNGALOWS.map((l): [Lot, number, number, boolean] => [l, BUNGALOW.depth, BUNGALOW.rear, false])];
+  lots.forEach(([l, depth, rear, middle], i) => {
+    const back = -depth - rear + 0.05;
+    const lines: [Pt, Pt][] = [
+      [at(l, -l.w / 2, -depth), at(l, -l.w / 2, back)],
+      [at(l, -l.w / 2, back), at(l, l.w / 2, back)],
+      [at(l, l.w / 2, back), at(l, l.w / 2, -depth)],
+    ];
+    if (middle) lines.push([at(l, 0, -depth), at(l, 0, back)]);
+    const near = homes.filter((o, j) => j !== i && Math.hypot(o[0][0] - l.at[0], o[0][1] - l.at[1]) < 16);
+    for (const [a, c] of lines) {
+      const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.3));
+      const p = (f: number): Pt => [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f];
+      let from = -1;
+      for (let k = 0; k <= n; k++) {
+        const free = k < n && !near.some((o) => inside(o, p((k + 0.5) / n)));
+        if (free && from < 0) from = k;
+        if (!free && from >= 0) (out.push({ lot: l.id, run: [p(from / n), p(k / n)] }), (from = -1));
+      }
+    }
+  });
+  return out;
+})();
+export const FENCE_SOLIDS: Box[] = GARDEN_FENCES.flatMap(({ run: [a, c] }) => {
+  const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.5));
+  return Array.from({ length: n }, (_, i): Box => {
+    const [p, q] = [i / n, (i + 1) / n].map((f): Pt => [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f]);
+    return [Math.min(p[0], q[0]) - 0.05, Math.min(p[1], q[1]) - 0.05, Math.max(p[0], q[0]) + 0.05, Math.max(p[1], q[1]) + 0.05, FENCE_H];
+  });
+});
 /** Where it all stands (the village's chunk covers it) */
 export const COUNCIL_RECT: [number, number, number, number] = (() => {
   const pts = [...SEMIS.flatMap((s) => lotRing(s, SEMI.front, SEMI.depth + SEMI.rear)), ...BUNGALOWS.flatMap((s) => lotRing(s, BUNGALOW.front, BUNGALOW.depth + BUNGALOW.rear)), ...ALLOTMENTS];

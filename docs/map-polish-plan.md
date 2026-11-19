@@ -233,9 +233,14 @@ can't be).
   the allotment sheds pitched with a door, a window and a water butt; the
   caravan windowed on its wheels and hitch (no bungalow has one at present).
 - The ginnels 6 mm over the alleys they meet (were 3 mm under them).
-- Left for later: the rows of four (`four` is off; turning it on lays the
-  council's lots again, so things would move: the owner's call), the
-  wedges on the terraces' bends, the semis' fences as solids.
+- The rows of four stay off (the owner's call, 2026-11-19: turning them on
+  lays the council's lots again, so things would move).
+- **The extras** (the owner's go, 2026-11-19): the wedges on the terraces'
+  bends filled (village3d.ts `WEDGES`, `drawWedges()`: 106 of the 128 pairs
+  whose fronts meet opened a gap at the back, up to 1.34: a wall front and
+  back, the roof across from each house's profile; sky no longer through
+  it); the semis' and bungalows' fences solid (council.ts `GARDEN_FENCES`,
+  `FENCE_SOLIDS`, added with the council's solids; tested).
 - The boot: 749.8 of 750 KB (the backs' data and solids are in it).
 
 ### Phase 3: under the highway (built, waiting on the owner's sign-off)

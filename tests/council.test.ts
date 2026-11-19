@@ -5,7 +5,7 @@
 // anyone's way.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALLOTMENTS, ALLOTMENT_SOLIDS, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, COUNCIL_RECT, COUNCIL_SOLIDS, PLOTS, SEMI, SEMIS, lotRing } from '../src/scripts/city3d/council';
+import { ALLOTMENTS, ALLOTMENT_SOLIDS, BUNGALOW, BUNGALOWS, CENTRE, COMMUNITY_CENTRE, CORNER, CORNER_SHOPS, COUNCIL_RECT, COUNCIL_SOLIDS, FENCE_SOLIDS, GARDEN_FENCES, PLOTS, SEMI, SEMIS, lotRing } from '../src/scripts/city3d/council';
 import { BROOK, COMPOUND, COUNCIL_LAND, FOOTPATHS, PATH_HALF, REC, zoneAt, type Pt } from '../src/scripts/city3d/south';
 import { HOUSES, houseFoot } from '../src/scripts/city3d/southterraces';
 import { SHOPS, shopFoot } from '../src/scripts/city3d/highroad';
@@ -71,4 +71,17 @@ test("the council's land (fixed in south.ts, what the village's chunk loads roun
   const [x0, z0, x1, z1] = COUNCIL_LAND;
   assert.ok(COUNCIL_RECT[0] >= x0 && COUNCIL_RECT[1] >= z0 && COUNCIL_RECT[2] <= x1 && COUNCIL_RECT[3] <= z1, `laid over ${COUNCIL_RECT.join(',')}, the land ${COUNCIL_LAND.join(',')}`);
   for (const b of [...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]) assert.ok(b[0] >= x0 && b[1] >= z0 && b[2] <= x1 && b[3] <= z1, `a solid at ${b[0]},${b[1]} past the land`);
+});
+
+test("the back gardens fenced (the map polish plan's Phase 2): round every one, through no house, off the streets, solid", () => {
+  const lots = [...SEMIS, ...BUNGALOWS];
+  for (const l of lots) assert.ok(GARDEN_FENCES.some((f) => f.lot === l.id), `${l.id}'s garden not fenced`);
+  const homes = [...SEMIS.map((s) => lotRing(s, 0, SEMI.depth)), ...BUNGALOWS.map((s) => lotRing(s, 0, BUNGALOW.depth)), ...HOUSES.map((h) => houseFoot(h))];
+  for (const { lot, run: [a, c] } of GARDEN_FENCES)
+    for (const f of [0.25, 0.5, 0.75]) {
+      const p: Pt = [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f];
+      assert.ok(!homes.some((r) => inside(r, p)), `${lot}'s fence through a house at ${p[0].toFixed(1)}, ${p[1].toFixed(1)}`);
+      for (const s of PLAN.streets) if (s.kind !== 'highway' && s.kind !== 'ramp') assert.ok(distToStreet(s, p) > s.half, `${lot}'s fence on ${s.id}`);
+    }
+  assert.ok(FENCE_SOLIDS.length > GARDEN_FENCES.length);
 });
