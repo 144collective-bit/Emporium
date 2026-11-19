@@ -11,7 +11,8 @@ baseline is measured (below). The phone is over its geometry ceiling before
 the base adds anything; the owner's pick (2026-11-19) was to trim first,
 and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
-airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is next**, the owner's go.
+airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built** (2026-11-19,
+measured below), waiting on the owner's sign-off.
 
 ## The owner's answers (2026-11-18)
 
@@ -500,4 +501,30 @@ chunk (`airbase-field`).
 | Phase 2, the airfield, as built | **Signed off.** |
 | The parked transports (the airport's airliner, its white body and stripe) | **All grey**: the base's fleets' bodies in grey (theirs only; the airport's own aircraft as they are). |
 | Next | **Degen is ready**: the grey first, then Phase 3 (the base). |
+
+## Phase 3's measure (2026-11-19, the build of 776b315, the phone tier)
+
+Built: the parade ground (paved, kerbed) with three flags in the city's colours and a monument, the HQ facing it (three
+storeys, a portico), twelve barracks blocks in three rows, the mess hall, the gym, the medical centre (a green band, not
+a cross: that emblem isn't ours to use), the motor pool (its yard, its open shed, six olive trucks) and its road from the
+service gate, the heliport's four pads (each its ring and H) and hut, the radar dome on its grassy mound, the water tower
+(its top 12.1), eight watchtowers round the fence (their searchlights `light()`s), the firing range as scenery (lanes,
+the earth berm, the range house: no targets), the wall gate's gatehouse with its blast doors shut (the wall solid behind
+them), and twenty lamp standards down the parade avenue. All solid (`BASE_SOLIDS`), under the Emporium, tested.
+
+| View | Draws, Phase 2 → 3 (allowance +50) | Triangles (allowance +0.15M) |
+| --- | --- | --- |
+| The north, from over the stadium | 79 → 68 | 0.11M → 0.10M |
+| Northgate Air Base, from high | 70 → 67 | 0.11M → 0.10M |
+| The main gate | 103 → 112 (+9) | 0.18M → 0.21M (+0.03M) |
+| The runway | 69 → 70 (+1) | 0.09M → 0.09M |
+| The home view | 271 → 290 (+19) | 0.33M → 0.43M |
+| Every district, from high | 191 → 225 (+34) | 0.36M → 0.46M |
+
+The home view and the overview look south over the town, the base behind them; they moved −27 the run before, so
+this +19 and +34 are taken for the runs' own swing (the traffic, the people), not the base: to watch in Phase 4's.
+Every view's slowest CPU frame under 250 ms.
+
+- **Memory:** memcheck 170.7 → 171.5 MiB of 187 (+0.8, the allowance +3).
+- **The boot:** 740.6 → 741.6 KB of 750 (+1.0, the allowance +2). **Textures:** none new.
 

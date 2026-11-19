@@ -6,7 +6,7 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
 - **Northgate Air Base** (the owner's call, 2026-11: a very large military base and airfield across the whole north,
   from the west wall to Crestmont's hills; made up; nothing threatening: no weapons on show, nothing attacks you, a
   guarded gate and the rest seen through the fence). Built a phase at a time, each with the owner's sign-off. Phase 1
-  (the land, the fence and the gates) and Phase 2 (the airfield) are built; the base itself (Phase 3), its life
+  (the land, the fence and the gates), Phase 2 (the airfield) and Phase 3 (the base itself) are built; its life
   (Phase 4) and the polish (Phase 5) are to come.
 - **`airbase.ts`** (DOM-free, on `DOM_FREE`, the boot's; tested in `tests/airbase.test.ts`): the plan's lines in fixed
   world numbers, but where the base meets the wall (worked out from `WALL_INNER`, `FLOODS` and `CAMERAS`, so it holds
@@ -76,4 +76,18 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
   tower, the fire station, the fuel farm, the shelters in their threes (a flattened half-cylinder, doors south) and the
   apron's kit (the tug, the bowser, the windsock). On the main thread only (`register()` with a scene), the parked
   aircraft: `createFleet()` per kind (aircraft.ts), the titles' meshes hidden, set once (parked, nothing turns).
+- **The base itself (Phase 3)**, in `airbase.ts`: `PARADE`, `FLAGPOLES` (`FLAG_H`), `MONUMENT`, `HQ` (`HQ_H`),
+  `BARRACKS` (twelve, `BARRACKS_H`), `SERVICES` (the mess hall, the gym, the medical centre: id, rect, height),
+  `MOTOR_POOL`, `MOTOR_SHED`, `SERVICE_ROAD` (from the service gate), `HELI_PADS`, `HELI_HUT`, `RADAR` (its mound,
+  plinth and dome), `WATER_TOWER` (its top 12.1), `RANGE`, `BERM`, `RANGE_HOUSE`, `RANGE_LANES` (scenery: no targets),
+  `GATEHOUSE_H` (the wall gate's), `WATCHTOWERS` (every `TOWER_GAP` round the fence, 6 inside it, clear of the gates and
+  the yard), `AVENUE_LAMPS` (both sides of the avenue every `AVENUE_LAMP_GAP`, added to the city's lamps in index.ts)
+  and `BASE_SOLIDS` (in `SOLIDS`). `airbaseKeep()` keeps trees off the radar's mound, the water tower, the watchtowers
+  and the service road too.
+- **Drawn** in `airbase3d.ts` (the camp chunk), a site each (the barracks a row a site): the parade ground's paving,
+  kerb, flags (magenta and cyan, the city's) and monument; flat-roofed blocks (`building()`: walls, parapet, a window
+  band a storey, a door south, a canopy near only) for the HQ (its portico), the barracks, the services (the medical
+  centre's green band), the heliport's hut and the range house; the motor pool's yard, shed and trucks; the heliport's
+  pads; the radar's mound and dome; the water tower; the range's lanes and berm; the watchtowers (legs, cabin, roof,
+  searchlight); the gatehouse with its blast doors and hazard band (near only).
 
