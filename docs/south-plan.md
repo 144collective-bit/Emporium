@@ -599,8 +599,8 @@ From the Circus west, patchy as high roads are:
        the very end); every station's card lists every stop on both lines;
        the map draws the line (its teal, dashed: underground) and its five
        stations are places (pins, waypoints, taxis, fast travel); the boot
-       trimmed first to make room, its budget kept. Built (2026-11-19,
-       waiting for the owner's sign-off): `trips.ts` (DOM-free, tested: every
+       trimmed first to make room, its budget kept. Built and signed off
+       (2026-11-19): `trips.ts` (DOM-free, tested: every
        stop on both lines, a trip's rides, `tripOf()`, the change at The
        Trenches, `CHANGE_AT`, `CHANGE_S`, `tripTime()`); the card for both
        lines is `tube-ui.ts`'s, opened from every metro door and tube
