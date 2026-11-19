@@ -33,7 +33,7 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
 
 ## Phases
 
-1. **The lounge and the palette, and the vault.** *Built, waiting on the owner's sign-off.* The ground floor in the palette (its walls, floor, ceiling, the
+1. **The lounge and the palette, and the vault.** *Built, signed off by the owner (2026-11-19), live.* The ground floor in the palette (its walls, floor, ceiling, the
    doors' and windows' frames). The media wall on the west wall: the TV mounted on it over a long low fire, lit
    niches either side. The corner sofa re-laid to face it (its long run with its back to the hall, a chaise at its
    south end), a cognac armchair under the front window, a black marble coffee table on a rug, a brass arc lamp. He
@@ -50,4 +50,4 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    bench. The den keeps its screens and LEDs, its furniture in the palette.
 5. **Polish.** Lighting (strips, wall lights), art of his own, plants, the review shots and the phone checks.
 
-Each with the owner's sign-off.
+Each with the owner's sign-off. The owner's order (2026-11-19): Phase 3 (upstairs) after Phase 1, then the kitchen.
