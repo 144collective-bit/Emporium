@@ -175,11 +175,20 @@ function hangar(b: Batch, r: Rect, open: boolean, low: boolean) {
   // (the roof: a flat crown between two sloping halves, the gable ends filled)
   const w = z1 - z0;
   // (each half falling to its eave: the north one to the north, -x about x lowers +z)
-  const slope = new THREE.BoxGeometry(x1 - x0 + 0.6, 0.3, w * 0.36);
+  const slope = new THREE.BoxGeometry(x1 - x0 + 0.2, 0.3, w * 0.36);
   b.add(slope.clone().rotateX(-0.32).translate((x0 + x1) / 2, wall + 0.95, z0 + w * 0.17), HANGAR_ROOF);
   b.add(slope.rotateX(0.32).translate((x0 + x1) / 2, wall + 0.95, z1 - w * 0.17), HANGAR_ROOF);
   box(b, x0 - 0.3, HANGAR_H - 0.35, z0 + w * 0.33, x1 + 0.3, HANGAR_H, z1 - w * 0.33, HANGAR_ROOF);
-  for (const x of [x0, x1 - 0.4]) box(b, x, wall, z0 + w * 0.05, x + 0.4, HANGAR_H - 0.3, z1 - w * 0.05, CLAD_DARK);
+  // (the gable ends: the roof's own line, from each eave up to the crown and down again; drawn in z, y and set
+  // across x: a shape's x is -z once turned a quarter about y)
+  const gable = new THREE.Shape([
+    new THREE.Vector2(-z0, wall),
+    new THREE.Vector2(-(z0 + w * 0.33), HANGAR_H - 0.35),
+    new THREE.Vector2(-(z1 - w * 0.33), HANGAR_H - 0.35),
+    new THREE.Vector2(-z1, wall),
+  ]);
+  const end = new THREE.ExtrudeGeometry(gable, { depth: 0.4, bevelEnabled: false }).rotateY(Math.PI / 2);
+  for (const x of [x0, x1 - 0.4]) b.add(end.clone().translate(x, 0, 0), CLAD_DARK);
   // The doors' face: panels shut, or the hall open between the stacked panels at each side
   const dw = (x1 - x0 - 2) / 6;
   if (open) {
