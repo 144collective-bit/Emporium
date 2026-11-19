@@ -10,7 +10,6 @@
  * people and spot. Anything a tick places or compares by position (walker
  * checks, the post office's paper) goes through `design()` too.
  */
-import type { IdleAct } from './crowdclips';
 import { nearGate } from './nearby';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
@@ -53,21 +52,9 @@ export interface Spot {
   faces?: 'n';
 }
 
-export interface Idle {
-  x: number;
-  z: number;
-  /** Facing: 0 is +z, PI / 2 is +x */
-  ry: number;
-  /** Standing height, or for `sit` the seat height */
-  y?: number;
-  /** What they're doing: looking around (default), chatting, sitting, queueing, reading their phone, or at work (crowdclips.ts `IdleAct`) */
-  act?: IdleAct;
-  /** How big (a grown-up by default; kids at play are smaller) */
-  scale?: number;
-  /** Only sometimes there (the stadium's queue on match night, the civic square's by day: given the city's hour):
-   * out of the world while this says no (life.ts) */
-  when?: (hour: number) => boolean;
-}
+/** A person standing about at a place (idle.ts: DOM-free, so the rules files and the game server can name it) */
+import type { Idle } from './idle';
+export type { Idle };
 
 export interface LandmarkCtx {
   degen: HTMLImageElement | null;

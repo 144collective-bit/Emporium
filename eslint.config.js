@@ -11,6 +11,7 @@ const DOM_FREE = [
   'src/scripts/city3d/south.ts',
   'src/scripts/city3d/crestbanks.ts',
   'src/scripts/city3d/crestcover.ts',
+  'src/scripts/city3d/idle.ts',
   'src/scripts/city3d/southground.ts',
   'src/scripts/city3d/southblocks.ts',
   'src/scripts/city3d/southsky.ts',
