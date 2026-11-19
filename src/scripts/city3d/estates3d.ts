@@ -25,6 +25,7 @@ import { COURT_HALF, ESTATES, ESTATE_CARS, FOUNTAIN, GATE, HEDGE, ROOF_H, SLAB_Y
 import { CURTAIN, PAVING, TIMBER as SLATS, WATER, SPRAY, BULB, flat } from './mallkit';
 import { PIER, extrasOf, loggiaPiers } from './crestgardens';
 import { PLANT, SOIL } from './palette';
+import { POOL_LIGHTS, poolLights, windowGlow } from './crestnight';
 
 const RENDER_WHITE = toon('#f4efe4');
 const OCHRE = toon('#e6c493');
@@ -60,8 +61,18 @@ const DOOR: Record<EstateStyle, THREE.Material> = { spanish: toon('#5a3a26'), vi
 const HEDGE_TOP = toon(PLANT.hedgeTop);
 /** Windows: dark glass by day, warm light at night */
 export const WINDOW = siteMat('estate-window', lit(toon('#3b4c60', { emissive: '#ffd59a' }), 0, 0.85));
-/** A pool's water: lit from under at night, a soft glowing turquoise (Phase 8; under the bloom's threshold) */
-export const POOL = siteMat('crest-pool', lit(toon('#56b6d6', { emissive: '#2fd2ff' }), 0, 0.6));
+/** A softer room further in, and a dark one (the premium upgrade's Phase 1: most lit, a few dark, crestnight.ts) */
+export const WINDOW_SOFT = siteMat('estate-window-soft', lit(toon('#3b4c60', { emissive: '#ffe8c4' }), 0, 0.5));
+export const WINDOW_DARK = toon('#3b4c60');
+/** A window's glass by how it's lit at night (`windowGlow()`: the same window the same every time) */
+export function windowOf(seed: string, x: number, y: number, z: number, low: boolean): THREE.Material {
+  const g = windowGlow(seed, x, y, z, low);
+  return g === 'warm' ? WINDOW : g === 'soft' ? WINDOW_SOFT : WINDOW_DARK;
+}
+/** A pool's water: lit from under at night, a bright turquoise (Phase 8, brighter in the premium upgrade's Phase 1; under the bloom's threshold) */
+export const POOL = siteMat('crest-pool', lit(toon('#56b6d6', { emissive: '#2fd2ff' }), 0, 0.78));
+/** The small lights under a pool's water (crestnight.ts `poolLights()`) */
+export const POOL_LED = neon('#c8f8ff', 0.1, 1.4);
 /** The pools' water: glowing, but plain water on phones (Phase 11: one material fewer, no glow to draw) */
 export const poolOf = (low: boolean) => (low ? WATER : POOL);
 
@@ -138,7 +149,7 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
       const wing = e.house.wing;
       /** A window: its pane, and near it, its surround or sill, its glazing bars, shutters or grille by style */
       const win = (u: number, v: number, n: [number, number], w: number, y: number, h: number, arch: boolean, front: boolean, ground: boolean) => {
-        pane(u, v, n, w, y, h, WINDOW, arch, 0.035);
+        pane(u, v, n, w, y, h, windowOf(e.id, u, y, v, low), arch, 0.035);
         b.detail(() => {
           const along: [number, number] = [n[1], -n[0]];
           /** A box on the wall: `a` along it from the window's middle, `o` out from the wall, y0..y1 */
@@ -213,7 +224,7 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
               if (f === 0 && garage) continue;
               // (behind a Tudor's bay)
               if (extras.bay && isMain && u > extras.bay[0] - 0.4 && u < extras.bay[2] + 0.4) {
-                pane(u, backV, [0, -1], 0.75, y, 1.05, WINDOW, false, 0.035);
+                pane(u, backV, [0, -1], 0.75, y, 1.05, windowOf(e.id, u, y, backV, low), false, 0.035);
                 continue;
               }
               const arch = (style === 'spanish' || style === 'villa') && f === 0;
@@ -299,7 +310,7 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
             const yf = top + (h * (p.v0 + o - vf)) / (d / 2);
             for (const du of [p.u0 + W * 0.26, p.u1 - W * 0.26]) {
               box(du - 0.42, yf - 0.15, vf, du + 0.42, yf + 0.75, vf - 1.1, TRIM);
-              pane(du, vf, [0, 1], 0.5, yf, 0.62, WINDOW, false, 0.012);
+              pane(du, vf, [0, 1], 0.5, yf, 0.62, windowOf(e.id, du, yf, vf, low), false, 0.012);
               const [dr, ds] = hip(du - 0.42, vf, du + 0.42, vf - 1.1, yf + 0.75, 0.32, 0.08);
               add(dr, SLATE);
               add(ds, TRIM);
@@ -538,6 +549,8 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
       box(pu0 - 0.15, 0.012, pv1, pu1 + 0.15, 0.06, pv1 - 0.15, STONE);
       box(pu0 - 0.15, 0.012, pv0, pu0, 0.06, pv1, STONE);
       box(pu1, 0.012, pv0, pu1 + 0.15, 0.06, pv1, STONE);
+      // (the lights under its water, small bright points at night: crestnight.ts; none in the phones' plain water)
+      if (!low) for (const [u, v] of poolLights(pu0, pv0, pu1, pv1)) add(new THREE.CircleGeometry(POOL_LIGHTS.r, 8).rotateX(-Math.PI / 2).translate(u, 0.02, v), POOL_LED);
       b.build(into, { cast: true, receive: true });
 
       // The paving, in world numbers (the frame's boxes are axis-aligned): the drive, the forecourt, the pool's deck and water

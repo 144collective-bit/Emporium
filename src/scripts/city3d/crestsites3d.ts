@@ -20,6 +20,8 @@ import { CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, H
 import { WINDOW, hip, poolOf } from './estates3d';
 import { BULB, LED, PAVING, SPRAY, WATER, flat } from './mallkit';
 import { COVER } from './palette';
+import { UPLIGHT as UPLIGHT_AT, alongWall } from './crestnight';
+import { windowOf } from './estates3d';
 
 type Rect = [number, number, number, number];
 type Pt = [number, number];
@@ -48,6 +50,31 @@ const STRIPE = toon('#2f7f9e');
 const CART = toon('#f1ede2');
 const CART_ROOF = toon('#2f6a3a');
 const LAMP = neon('#ffe2a8', 0.2, 1.3);
+/**
+ * The landmarks floodlit at night (the premium upgrade's Phase 1, "Glamorous"): their main walls warm a little (an
+ * emissive well under the bloom's threshold), the small uplights at their feet the only bright things
+ */
+const flood = (key: string, c: string, night = 0.26) => siteMat(key, lit(toon(c, { emissive: '#ffd2a0' }), 0, night));
+const PINK_LIT = flood('crest-flood-pink', '#f2b8b0');
+const PINK_DEEP_LIT = flood('crest-flood-pink-deep', '#e79a92');
+const WHITE_LIT = flood('crest-flood-white', '#f6f3ec', 0.22);
+const UPLIGHT = neon('#fff0d0', 0.1, 1.5);
+/** Uplights along the foot of each wall of a box (x0, z0, x1, z1) at `y`, out from it, but where `skip` says */
+function uplights(b: Batch, r: Rect, y: number, skip?: (x: number, z: number) => boolean) {
+  const [x0, z0, x1, z1] = r;
+  const o = UPLIGHT_AT.out;
+  for (const [a, c, n] of [
+    [[x0, z0], [x1, z0], [0, -1]],
+    [[x0, z1], [x1, z1], [0, 1]],
+    [[x0, z0], [x0, z1], [-1, 0]],
+    [[x1, z0], [x1, z1], [1, 0]],
+  ] as [Pt, Pt, Pt][])
+    for (const [x, z] of alongWall(a, c)) {
+      if (skip?.(x, z)) continue;
+      const [px, pz] = [x + n[0] * o, z + n[1] * o];
+      b.box(px - 0.06, y, pz - 0.06, 0.12, 0.05, 0.12, UPLIGHT);
+    }
+}
 
 /** The hotel's name in script, gold on deep teal, lit a little at night */
 const NAME_SIGN = siteMat(
@@ -79,7 +106,7 @@ function pane(b: Batch, x: number, z: number, n: Pt, w: number, y: number, h: nu
   b.add(new THREE.PlaneGeometry(w, h).translate(0, y + h / 2, 0).rotateY(Math.atan2(n[0], n[1])).translate(x + n[0] * 0.012, 0, z + n[1] * 0.012), m);
 }
 /** Windows round a box (x0..x1, z0..z1), a row a storey from `y0`, a window every `step` */
-function windowsRound(b: Batch, r: Rect, y0: number, floors: number, ground: number, upper: number, step = 1.7, skip?: (x: number, z: number, f: number) => boolean) {
+function windowsRound(b: Batch, r: Rect, y0: number, floors: number, ground: number, upper: number, step = 1.7, skip?: (x: number, z: number, f: number) => boolean, seed = '', low = false) {
   const [x0, z0, x1, z1] = r;
   for (let f = 0; f < floors; f++) {
     const y = y0 + (f === 0 ? 0.55 : ground + (f - 1) * upper + 0.4);
@@ -95,7 +122,7 @@ function windowsRound(b: Batch, r: Rect, y0: number, floors: number, ground: num
         const t = a + ((i + 0.5) * (c - a)) / k;
         const [x, z] = alongX ? [t, fixed] : [fixed, t];
         if (skip?.(x, z, f)) continue;
-        pane(b, x, z, n, 0.8, y, h);
+        pane(b, x, z, n, 0.8, y, h, seed ? windowOf(seed, x, y, z, low) : WINDOW);
       }
     }
   }
@@ -114,17 +141,18 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     const { ground, upper } = H.storey;
     const bodyTop = y0 + ground + (H.floors - 1) * upper;
     // The body: pink storeys over a white ground floor, a white cornice a storey, a parapet
-    box(b, H.body[0], y0, H.body[1], H.body[2], y0 + ground, H.body[3], WHITE);
-    box(b, H.body[0] + 0.05, y0 + ground, H.body[1] + 0.05, H.body[2] - 0.05, bodyTop, H.body[3] - 0.05, PINK);
+    box(b, H.body[0], y0, H.body[1], H.body[2], y0 + ground, H.body[3], WHITE_LIT);
+    box(b, H.body[0] + 0.05, y0 + ground, H.body[1] + 0.05, H.body[2] - 0.05, bodyTop, H.body[3] - 0.05, PINK_LIT);
     for (let f = 1; f < H.floors; f++) box(b, H.body[0] - 0.08, y0 + ground + (f - 1) * upper - 0.1, H.body[1] - 0.08, H.body[2] + 0.08, y0 + ground + (f - 1) * upper + 0.05, H.body[3] + 0.08, WHITE);
     box(b, H.body[0] - 0.12, bodyTop, H.body[1] - 0.12, H.body[2] + 0.12, bodyTop + 0.4, H.body[3] + 0.12, WHITE);
     const door = (x: number, z: number, f: number) => f === 0 && x < H.body[0] + 0.1 && z > H.porte[1] && z < H.porte[3];
-    windowsRound(b, H.body, y0, H.floors, ground, upper, 1.6, door);
+    windowsRound(b, H.body, y0, H.floors, ground, upper, 1.6, door, 'hotel', low);
+    uplights(b, H.body, y0, (x, z) => x < H.body[0] + 0.1 && z > H.porte[1] - 0.5 && z < H.porte[3] + 0.5);
     // The tower: two storeys more, deeper pink, its crown stepped in, the name on its front
     const T = H.tower;
     const towerTop = y0 + ground + (H.towerFloors - 1) * upper;
-    box(b, T[0], bodyTop, T[1], T[2], towerTop, T[3], PINK_DEEP);
-    windowsRound(b, T, y0, H.towerFloors, ground, upper, 1.6, (_x, _z, f) => f < H.floors);
+    box(b, T[0], bodyTop, T[1], T[2], towerTop, T[3], PINK_DEEP_LIT);
+    windowsRound(b, T, y0, H.towerFloors, ground, upper, 1.6, (_x, _z, f) => f < H.floors, 'hotel-tower', low);
     box(b, T[0] - 0.15, towerTop, T[1] - 0.15, T[2] + 0.15, towerTop + 0.3, T[3] + 0.15, WHITE);
     box(b, T[0] + 0.8, towerTop + 0.3, T[1] + 0.8, T[2] - 0.8, towerTop + 0.8, T[3] - 0.8, PINK);
     cyl(b, 0.08, 0.6, (T[0] + T[2]) / 2, towerTop + 0.8, (T[1] + T[3]) / 2, GOLD, 6);
@@ -185,20 +213,22 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     const [hx0, hz0, hx1, hz1] = C.hall;
     // The hall on its plinth, a cornice and parapet; tall windows
     box(b, hx0 - 0.4, y0, hz0 - 0.4, hx1 + 0.4, y0 + 0.35, hz1 + 0.4, STONE);
-    box(b, hx0, y0 + 0.35, hz0, hx1, top, hz1, WHITE);
+    box(b, hx0, y0 + 0.35, hz0, hx1, top, hz1, WHITE_LIT);
     box(b, hx0 - 0.15, top, hz0 - 0.15, hx1 + 0.15, top + 0.5, hz1 + 0.15, STONE_SHADE);
     const axis = (hx0 + hx1) / 2;
-    windowsRound(b, C.hall, y0 + 0.35, 2, ground, upper, 1.7, (x, z, f) => f === 0 && Math.abs(x - axis) < 1.2 && z > hz1 - 0.1);
+    windowsRound(b, C.hall, y0 + 0.35, 2, ground, upper, 1.7, (x, z, f) => f === 0 && Math.abs(x - axis) < 1.2 && z > hz1 - 0.1, 'civic', low);
+    // (its uplights on the plinth, none in front under the colonnade)
+    uplights(b, [hx0 - 0.4, hz0 - 0.4, hx1 + 0.4, hz1 + 0.4], y0 + 0.35, (_x, z) => z > hz1);
     pane(b, axis, hz1, [0, 1], 1.8, y0 + 0.35, 2.3, WOOD);
     // The colonnade along its front: columns under an entablature, steps
     const cz = C.colonnade.z;
-    for (let i = 0; i < C.colonnade.n; i++) cyl(b, 0.2, ground + upper - 0.4, hx0 + 0.8 + (i * (hx1 - hx0 - 1.6)) / (C.colonnade.n - 1), y0 + 0.35, cz, WHITE, 12);
+    for (let i = 0; i < C.colonnade.n; i++) cyl(b, 0.2, ground + upper - 0.4, hx0 + 0.8 + (i * (hx1 - hx0 - 1.6)) / (C.colonnade.n - 1), y0 + 0.35, cz, WHITE_LIT, 12);
     box(b, hx0 + 0.3, top - 0.05, hz1, hx1 - 0.3, top + 0.45, cz + 0.4, WHITE);
     box(b, hx0 + 0.3, y0, hz1, hx1 - 0.3, y0 + 0.35, cz + 0.7, STONE);
     // The tower, a drum and the tiled dome, a gold finial
     const [tx0, tz0, tx1, tz1] = C.tower;
     const [tcx, tcz] = [(tx0 + tx1) / 2, (tz0 + tz1) / 2];
-    box(b, tx0, top, tz0, tx1, y0 + C.towerTop, tz1, WHITE);
+    box(b, tx0, top, tz0, tx1, y0 + C.towerTop, tz1, WHITE_LIT);
     box(b, tx0 - 0.15, y0 + C.towerTop - 0.3, tz0 - 0.15, tx1 + 0.15, y0 + C.towerTop, tz1 + 0.15, STONE_SHADE);
     for (const [n, x, z] of [[[0, 1], tcx, tz1], [[0, -1], tcx, tz0], [[1, 0], tx1, tcz], [[-1, 0], tx0, tcz]] as [Pt, number, number][]) pane(b, x, z, n, 1, top + 1, 2.2, WINDOW);
     cyl(b, C.dome * 0.95, 0.6, tcx, y0 + C.towerTop, tcz, WHITE, 20);
@@ -234,8 +264,9 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     const y0 = K.y;
     const { ground, upper } = K.storey;
     const top = y0 + ground + upper;
-    box(b, K.house[0], y0, K.house[1], K.house[2], top, K.house[3], WHITE);
-    windowsRound(b, K.house, y0, 2, ground, upper, 1.7);
+    box(b, K.house[0], y0, K.house[1], K.house[2], top, K.house[3], WHITE_LIT);
+    windowsRound(b, K.house, y0, 2, ground, upper, 1.7, undefined, 'club', low);
+    uplights(b, K.house, y0, (x, z) => x > K.terrace[0] - 0.3 && x < K.terrace[2] + 0.3 && z > K.terrace[1] - 0.3 && z < K.terrace[3] + 0.3);
     // (hip() takes its front (v0) before its back (v1): here, the house's south side and north side)
     const [r, soffit] = hip(K.house[0], K.house[3], K.house[2], K.house[1], top, 1.3, 0.4);
     b.add(r, TILE);

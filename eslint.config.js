@@ -13,6 +13,8 @@ const DOM_FREE = [
   'src/scripts/city3d/spawn.ts',
   'src/scripts/city3d/south.ts',
   'src/scripts/city3d/crestbanks.ts',
+  'src/scripts/city3d/crestgate.ts',
+  'src/scripts/city3d/crestnight.ts',
   'src/scripts/city3d/crestcover.ts',
   'src/scripts/city3d/crestdrape.ts',
   'src/scripts/city3d/drawn.ts',

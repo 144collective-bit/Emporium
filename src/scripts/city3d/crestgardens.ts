@@ -27,11 +27,12 @@
  *
  * Nothing taller than the house it's beside. Made-up and generic only.
  */
-import { ESTATES, ESTATE_CARS, COURT_HALF, FOUNTAIN, GATE, HEDGE, SLAB_Y, fountainOf, gardenPalmsOf, motorCourt, wingSide, type Estate, type EstateStyle, type Part } from './estates';
+import { ESTATES, ESTATE_CARS, COURT_HALF, FOUNTAIN, GATE, HEDGE, SLAB_Y, fountainOf, gardenPalmsOf, motorCourt, rectToWorld, wingSide, type Estate, type EstateStyle, type Part } from './estates';
 import { MANSIONS, MANSION_CARS, WALL, type MPart, type Mansion, type MansionKind } from './mansions';
 import { CREST_IDLE, GARDENERS } from './crestlife';
 import { CIVIC, CLUB, HOTEL } from './crestsites';
 import { GATES } from './crestcover';
+import { nearGateway } from './crestgate';
 import { CREST_LAMPS } from './crestmont';
 import { JACARANDAS, PALMS } from './landscape';
 import { rng } from './recipes';
@@ -479,7 +480,7 @@ export const VERGE_CLEAR = { tree: 0.75, lamp: 0.8, gate: 0.4, hedge: 0.3 } as c
 /**
  * An estate's verge: runs of shrubs and flower beds by turns, with gaps, in the strip before its front hedge (behind the
  * street's palms), and where its lot is on a block's edge, in the strip outside that hedge too; clear of the gateway,
- * the palms, the jacarandas and the lamps
+ * the palms, the jacarandas, the lamps and Crestmont's gateway
  */
 export function vergeOf(e: Estate): Feat[] {
   const rand = rng(7700 + ESTATES.indexOf(e) * 13);
@@ -491,7 +492,9 @@ export function vergeOf(e: Estate): Feat[] {
   const clearOf = (r: FR) =>
     !(r[0] < e.hc + gate && r[2] > e.hc - gate && r[3] > e.court[0] - 0.2) &&
     trees.every(([u, v]) => !(u > r[0] - VERGE_CLEAR.tree && u < r[2] + VERGE_CLEAR.tree && v > r[1] - VERGE_CLEAR.tree && v < r[3] + VERGE_CLEAR.tree)) &&
-    lamps.every(([u, v]) => !(u > r[0] - VERGE_CLEAR.lamp && u < r[2] + VERGE_CLEAR.lamp && v > r[1] - VERGE_CLEAR.lamp && v < r[3] + VERGE_CLEAR.lamp));
+    lamps.every(([u, v]) => !(u > r[0] - VERGE_CLEAR.lamp && u < r[2] + VERGE_CLEAR.lamp && v > r[1] - VERGE_CLEAR.lamp && v < r[3] + VERGE_CLEAR.lamp)) &&
+    // (and Crestmont's gateway on the corners of the boulevard's mouth: crestgate.ts)
+    !nearGateway(rectToWorld(e, r[0], r[1], r[2], r[3]), VERGE_CLEAR.gate);
   const feats: Feat[] = [];
   /** Along a strip (its middle line `at` across, from `a` to `b` along) */
   const strip = (along: 'u' | 'v', at: number, a: number, b: number) => {
