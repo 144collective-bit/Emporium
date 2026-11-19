@@ -285,7 +285,8 @@ function drawWay(b: Batch, st: Station, style: Style): void {
     const [s0, s1] = [w.a0 + ((w.ramp0 - w.a0) * i) / n, w.a0 + ((w.ramp0 - w.a0) * (i + 1)) / n];
     along(b, w, s0, s1, -w.half, w.half, HALL_Y - 0.05, floorOf(w, s1) + (top - HALL_Y) / n, STEP);
   }
-  floor(b, w, w.ramp0, hallEdge, -w.half, w.half, HALL_Y + 0.002, FLOOR);
+  // (on as far as the further of its walls reaches the hall: a slanting way's floor meets the hall's all along; 5 mm over it)
+  floor(b, w, w.ramp0, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half, w.half, HALL_Y + 0.005, FLOOR);
   // Its walls: down beside the steps from the street (or the building's floor) and on to the hall, the ceiling over the
   // level part, the header where the roof starts over the steps
   for (const side of [-1, 1]) {
@@ -391,7 +392,7 @@ function drawPlazaCorridor(b: Batch, st: Station, style: Style) {
   const w = st.way;
   const from = w.a0 - 4.6 + 7.2;
   const hallEdge = edgeOf(st);
-  floor(b, w, from, hallEdge, -w.half, w.half, HALL_Y + 0.003, FLOOR);
+  floor(b, w, from, Math.max(wallEnd(st, -1), wallEnd(st, 1)), -w.half, w.half, HALL_Y + 0.005, FLOOR);
   for (const side of [-1, 1]) {
     const end = wallEnd(st, side);
     along(b, w, from, end, side * w.half, side * (w.half + w.wall), HALL_Y - 0.05, HALL_CEIL, WALLS[style]);
