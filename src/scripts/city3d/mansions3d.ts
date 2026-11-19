@@ -25,7 +25,10 @@ const GATE_GAP = 0.9;
 import { COVER, PLANT, SOIL } from './palette';
 import { MANSIONS, MANSION_CARS, PAD_EASE, STOREY, WALL, YARD, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
 import { POOL_LED, WINDOW, hip, poolOf, windowOf } from './estates3d';
+import { deckHip } from './roofs3d';
 import { POOL_LIGHTS, poolLights } from './crestnight';
+import { DECK_HIP, MANSION_BALCONIES, MANSION_CHIMNEY, MANSION_GATE, ROOF_DECKS, mansionPiers } from './crestgrand';
+import { drawBalcony, drawDeck, drawLeaf, drawPierTop, type Draw } from './crestgrand3d';
 import { CURTAIN, PAVING, BULB, flat } from './mallkit';
 
 const WHITE = toon('#f4f1ea');
@@ -90,6 +93,8 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       /** The ground's height in the frame, over the pad */
       const ground = (u: number, v: number) => drawnAt(...toWorld(m, u, v)) - m.y;
       const { kind, W, D } = m;
+      /** The premium upgrade's helpers (crestgrand3d.ts), in this frame */
+      const G: Draw = { box, add, detail: (f) => b.detail(f), low };
 
       /* ---------- The pad's edges ---------- */
       const edge = (u0: number, v0: number, u1: number, v1: number, n: [number, number]) => {
@@ -134,14 +139,18 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
         for (const s of [-1, 1]) {
           const u = m.du + s * (WALL.gate + 0.3);
           box(u - 0.3, -0.2, -0.3, u + 0.3, 2.2, -0.9, STONE);
-          add(new THREE.SphereGeometry(0.13, 8, 6).translate(u, 2.45, -0.6), BULB);
-          // (its gates, swung open: rails, bars and spear tops)
-          b.detail(() => {
-            const gu = m.du + s * (WALL.gate - 0.05);
-            for (const y of [0.15, 1.5]) box(gu - 0.025, y, -1, gu + 0.025, y + 0.05, -2.4, STEEL);
-            if (!low) for (let k = 0; k <= 9; k++) box(gu - 0.015, 0.15, -1 - (k * 1.4) / 9 - 0.015, gu + 0.015, 1.62 + (k % 2) * 0.08, -1 - (k * 1.4) / 9 + 0.015, STEEL);
-          });
+          // (a lantern and a plain plaque on each pier; its gates swung open, wrought iron with gilded tips: the
+          // premium upgrade's Phase 2, crestgrand.ts)
+          drawPierTop(G, u, -0.6, 2.2, 0.3, false);
+          b.detail(() => drawLeaf(G, m.du + s * (WALL.gate - 0.05), -1, 1.4, false));
         }
+      // (a hill house without a wall: piers either side of its drive's mouth, its gates swung open inside)
+      for (const [u, v] of mansionPiers(m)) {
+        const h = MANSION_GATE.half;
+        box(u - h, -0.3, v - h, u + h, MANSION_GATE.h, v + h, kind === 'glass' ? WHITE : STONE);
+        drawPierTop(G, u, v, MANSION_GATE.h, h, kind === 'glass');
+        b.detail(() => drawLeaf(G, m.du + Math.sign(u - m.du) * MANSION_GATE.leaf, v, 1.6, kind === 'glass'));
+      }
 
       /* ---------- The house ---------- */
       const wall = kind === 'villa' ? OCHRE : kind === 'summit' ? STONE : WHITE;
@@ -210,20 +219,25 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
             add(new THREE.SphereGeometry(0.12, 8, 6).translate((p.u0 + p.u1) / 2, top + 0.85, (p.v0 + p.v1) / 2), LAMP);
           });
         } else {
-          const [r, soffit] = hip(p.u0, p.v0, p.u1, p.v1, top, 1.3, 0.4);
+          // (the main block's hip cut flat for its roof terrace: the premium upgrade's Phase 2, crestgrand.ts)
+          const [r, soffit] = isMain ? deckHip(p.u0, p.v0, p.u1, p.v1, top, DECK_HIP.h, DECK_HIP.o, DECK_HIP.f) : hip(p.u0, p.v0, p.u1, p.v1, top, DECK_HIP.h, DECK_HIP.o);
           add(r, roof);
           add(soffit, WOOD);
+          if (isMain) drawDeck(G, ROOF_DECKS[MANSIONS.indexOf(m)], kind === 'summit' ? 'stone' : 'iron');
           b.detail(() => {
             for (const v of [p.v0 + 0.38, p.v1 - 0.38]) box(p.u0 - 0.4, top - 0.08, v - 0.05, p.u1 + 0.4, top + 0.02, v + 0.05, GUTTER);
           });
           // (a chimney on the main block, rendered, or stone at the summit)
           if (isMain) {
-            const cu = p.u0 + 1.1;
-            box(cu - 0.32, top, p.v1 + 1.5, cu + 0.32, top + 1.75, p.v1 + 0.86, kind === 'summit' ? STONE_SHADE : wall);
-            box(cu - 0.38, top + 1.75, p.v1 + 1.56, cu + 0.38, top + 1.87, p.v1 + 0.8, kind === 'summit' ? SLATE : TILE);
+            const cu = p.u0 + MANSION_CHIMNEY.at;
+            const ch = MANSION_CHIMNEY.half;
+            box(cu - ch, top, p.v1 + 1.5, cu + ch, top + 1.75, p.v1 + 0.86, kind === 'summit' ? STONE_SHADE : wall);
+            box(cu - ch - 0.06, top + 1.75, p.v1 + 1.56, cu + ch + 0.06, top + 1.87, p.v1 + 0.8, kind === 'summit' ? SLATE : TILE);
           }
         }
       }
+      // The balconies at the back, over the view (the premium upgrade's Phase 2: crestgrand.ts)
+      for (const bal of MANSION_BALCONIES[MANSIONS.indexOf(m)]) drawBalcony(G, bal);
       // The front door, on the main block's front; a step before it; a villa's balcony over it
       const main = m.parts[0];
       const fu = (main.u0 + main.u1) / 2;
@@ -302,6 +316,8 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
         }
         // (the infinity pool's edge: a glass rail along the pad's back, beyond the pool)
         b.detail(() => box(m.pool[0] - 1, 0.1, -D + 0.3, m.pool[2] + 1, 1.0, -D + 0.36, GLASS_RAIL));
+        // (its roof a terrace: decked, railed in glass, furnished: the premium upgrade's Phase 2, crestgrand.ts)
+        drawDeck(G, ROOF_DECKS[MANSIONS.indexOf(m)], 'glass');
       }
 
       // The drive (following the ground), the forecourt, the pool's deck and water, in world numbers
