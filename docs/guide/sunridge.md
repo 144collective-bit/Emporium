@@ -21,7 +21,8 @@ keep it up to date when what it describes changes.
   Palm Court (`PATH`), the perimeter wall and the entrance monuments
   (`WALL_RUNS`, `MONUMENTS`, `SUN_SOLIDS` in `SOLIDS`), the lamps' stride
   (`SUN_LAMP_STATIONS`), slid clear of the drives by `sunlamps.ts`
-  (`SUN_LAMPS`, baked: the houses aren't in the boot) at the boot. The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 101, 6.6 x 13,
+  (`SUN_LAMPS`, baked: the houses aren't in the boot) at the boot. The cul-de-sacs' footpaths through to the loop are `COURT_PATHS` (sunridgelots.ts: the lots keep clear
+  of them; the map polish plan's Phase 7). The lots are `sunridgelots.ts` (the chunk's: `LOTS`, 97, 6.6 x 13,
   pie-shaped round the turning circles). Drawn by `sunridge3d.ts`
   (`LAZY_DISTRICTS` id `sunridge`); the road helpers are `roads3d.ts`
   (shared with Crestmont). Phase 2 (the houses) is built: `sunhouses.ts`
