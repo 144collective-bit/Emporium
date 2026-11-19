@@ -11,6 +11,7 @@ import { ENDSWOOD_ROAD, MARSH_LANE, type Pt } from './south';
 import { CEIL, CIRCUS_CUTS, CIRCUS_HOLE, FLOOR } from './circus';
 import { cutOf, openOf, pointOf, straight, type Passage, type Rect } from './underground';
 import { boundsOf } from './holes';
+import { STAIR_CUTS } from './southline';
 import { PLAN } from './streetplan';
 import { inside, nearestIndex } from './streetfaces';
 
@@ -60,7 +61,8 @@ export const UNDER_MOUTHS: [Pt, Pt][] = UNDERPASSES.map((p) => [pointOf(p, p.a0)
 /** Whether each mouth comes up on a block's slab (a step up on to it, over the ramp's top) or on open ground */
 export const MOUTH_ON_SLAB: [boolean, boolean][] = UNDER_MOUTHS.map((pair) => pair.map((p) => PLAN.slabs.some((slab) => inside(slab as Pt[], p))) as [boolean, boolean]);
 
-/** What's cut out of the blocks' slabs and the junctions' asphalt (holes.ts): the Circus's and every underpass's ramps */
-export const SLAB_CUTS: Pt[][] = [...CIRCUS_CUTS, ...UNDER_CUTTINGS.flat()];
+/** What's cut out of the blocks' slabs and the junctions' asphalt (holes.ts): the Circus's, every underpass's ramps and
+ * the built underground stations' stairs (southline.ts) */
+export const SLAB_CUTS: Pt[][] = [...CIRCUS_CUTS, ...UNDER_CUTTINGS.flat(), ...STAIR_CUTS];
 /** The grass cut away under them (the streets and the slabs, holed, cover the rest) */
-export const GROUND_HOLES: Rect[] = [CIRCUS_HOLE, ...UNDER_CUTTINGS.flat().map((c): Rect => boundsOf(c))];
+export const GROUND_HOLES: Rect[] = [CIRCUS_HOLE, ...[...UNDER_CUTTINGS.flat(), ...STAIR_CUTS].map((c): Rect => boundsOf(c))];

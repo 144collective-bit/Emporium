@@ -41,6 +41,7 @@ import { LOT9_PASSAGE } from './lot9';
 import { underworld } from './underground';
 import { CIRCUS_SOLIDS, PLAZA, SUBWAYS } from './circus';
 import { UNDERPASSES } from './underpasses';
+import { BUILT_PASSAGES } from './southline';
 import { heightAt, onHills } from './terrain';
 import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
@@ -87,8 +88,9 @@ export function baseAt(x: number, z: number): { base: number; open: boolean; sla
 }
 
 /** What's below street level for walking (underground.ts): Lot 9's tunnel under the highway, the Circus's subways and its
- * sunken plaza (circus.ts, docs/south-plan.md Phase 4b), the underpasses under the avenue crossings (underpasses.ts, 4c) */
-export const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS, ...UNDERPASSES], [PLAZA], CIRCUS_SOLIDS);
+ * sunken plaza (circus.ts, docs/south-plan.md Phase 4b), the underpasses under the avenue crossings (underpasses.ts, 4c),
+ * the underground line's stations built so far (southline.ts, 4e) */
+export const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS, ...UNDERPASSES, ...BUILT_PASSAGES], [PLAZA], CIRCUS_SOLIDS);
 
 export const GROUND_LAYERS: GroundLayer[] = [
   // Degen's house's upper floors, when `yNow` is on one (home.ts: the upstairs, the roof terrace; the room under them)
