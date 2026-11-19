@@ -239,8 +239,12 @@ guide file listed in the index above.
 - degenemporium.com is a static build hosted on Hostinger, deployed from
   GitHub (the owner linked them, 2026-11: a push to `main` goes live by
   itself; no more zips extracted into `public_html` by hand). The "Build
-  site" GitHub Action still builds every push to `main` into a downloadable
-  zip (artifact `degenemporium-site`) and runs the checks.
+  site" GitHub Action builds every push to `main`, runs the checks, makes
+  the textures, and publishes the finished site to the `deploy` branch,
+  which Hostinger deploys with no build of its own (2026-11-19: Hostinger's
+  own plain build had no textures list, so every browser painted them, 4x
+  the graphics memory; `docs/stability-plan.md`). Never commit to `deploy`
+  by hand. The zip (artifact `degenemporium-site`) is still attached.
 - If the live site ever shows the procedural walk instead of the motion
   capture, the clips file didn't fetch: walk.ts says so once in a toast and
   `?fps` reads `motion capture failed` (a stale or partial upload is the

@@ -269,7 +269,7 @@ await scene('homeworkshop', '-233.7,373.15', async (t) => {
 });
 
 // In his house (home.ts HOME_USES): at the den's vault (docs/interior-plan.md Phase 1), the stash's card opens and
-// closes; at the wardrobe, the fitting room opens in Drop 001's panel and closes
+// closes; at the wardrobe upstairs, the fitting room opens in Drop 001's panel and closes
 await scene('homestash', '-232.5,385.55,0,-1.17', async (t) => {
   await t.prompt('Stash');
   await t.until('the stash card', () => !!document.querySelector('[data-stash]:not([hidden]) [data-stash-inv]'));
@@ -278,7 +278,8 @@ await scene('homestash', '-232.5,385.55,0,-1.17', async (t) => {
   await t.until('the stash to close', () => !document.querySelector('[data-stash]:not([hidden])'), null, 60000);
   await t.step('the stash closed');
 });
-await scene('homewardrobe', '-229.85,388.6', async (t) => {
+// (the wardrobe is the dressing room's rails upstairs now, docs/interior-plan.md Phase 3)
+await scene('homewardrobe', '-233.05,387.27,3.14,1.45', async (t) => {
   await t.prompt('Wardrobe');
   await t.until('the fitting room', () => !!document.querySelector('[data-panel]:not([hidden]) [data-fit-items]'));
   await t.step('the fitting room opened at the wardrobe');

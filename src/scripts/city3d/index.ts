@@ -6,7 +6,8 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, loadBuiltTextures, loadImage, loadTex, setGroundLift, updateLights, updateWind } from './kit';
+import { texSourceLine } from './texsource';
+import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, glName, loadBuiltTextures, loadImage, loadTex, setGroundLift, texSources, updateLights, updateWind } from './kit';
 import { SOUTH_GROUND_RECT, southLift } from './southground';
 import { CROWD_PACK, loadMocap } from './mocap-load';
 import type { MoData } from './mocap';
@@ -47,7 +48,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, homePlaces, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
 import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
@@ -186,17 +187,8 @@ function device(gpu = ''): Device {
 
 /** The graphics' name as WebGL gives it ('' when the browser hides it): Firefox says it plainly, Chrome behind an extension */
 function gpuName(renderer: THREE.WebGLRenderer): string {
-  try {
-    const gl = renderer.getContext();
-    const plain = String(gl.getParameter(gl.RENDERER) ?? '');
-    if (plain && !/^webkit webgl$/i.test(plain)) return plain;
-    const ext = gl.getExtension('WEBGL_debug_renderer_info');
-    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '') : '';
-  } catch {
-    return '';
-  }
+  return glName(renderer.getContext());
 }
-
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)));
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -1912,7 +1904,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let bench: Bench | null = null;
   if (query.has('bench'))
     void import('./bench').then(({ createBench }) => {
-      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, extra: [] }, query.get('bench') === 'night');
+      bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, textures: texSources, extra: [] }, query.get('bench') === 'night');
     });
   // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
   let shots: Shots | null = null;
@@ -1959,7 +1951,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (the texture breakdown is its own chunk: only ?fps and ?bench load it, texrows.ts)
     let texRows: ((s: THREE.Object3D) => unknown) | null = null;
     void import('./texrows').then((m) => (texRows = m.textureRows));
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -2304,6 +2296,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
           (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
           `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
+          texSourceLine(texSources()),
           // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
           ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
           // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
@@ -2398,6 +2391,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       addTrafficBikes(m.bikeGeometry);
     })
   );
+  // What stands in his house (homerooms.ts: out of the boot, the owner's call), fetched as the city starts; waking in
+  // the room waits for it (`wake()`)
+  const houseRooms = lazy(() => import('./homerooms').then((m) => {
+    const r = m.houseRooms(HOUSE_GEO);
+    setRooms({ room: r.FURNITURE, up: r.UPSTAIRS, base: r.BASEMENT });
+  }), "the house's rooms");
+  void houseRooms().catch(() => {});
   loop();
 
   return {
@@ -2424,6 +2424,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
         works.want(HOME_WAKE.x, HOME_WAKE.z, 25);
       }
+      await Promise.race([houseRooms().catch(() => {}), new Promise((r) => setTimeout(r, 10000))]);
       wokeAt = performance.now();
       street = { ready: false, at: 0 };
       // On the sofa as the room appears, up off it a moment after the menu's gone (Phase 2; under reduced motion

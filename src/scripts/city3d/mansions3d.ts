@@ -24,7 +24,8 @@ import { DRAPE, bandMesh, lineMesh, type Mesh } from './crestdrape';
 const GATE_GAP = 0.9;
 import { COVER, PLANT, SOIL } from './palette';
 import { MANSIONS, MANSION_CARS, PAD_EASE, STOREY, WALL, YARD, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
-import { WINDOW, hip, poolOf } from './estates3d';
+import { POOL_LED, WINDOW, hip, poolOf, windowOf } from './estates3d';
+import { POOL_LIGHTS, poolLights } from './crestnight';
 import { CURTAIN, PAVING, BULB, flat } from './mallkit';
 
 const WHITE = toon('#f4f1ea');
@@ -147,7 +148,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       const roof = kind === 'summit' ? SLATE : TILE;
       /** A window and, near, its surround or sill, its glazing bars, a summit's shutters */
       const win = (u: number, v: number, n: [number, number], w: number, y: number, h: number, arch: boolean, front: boolean) => {
-        pane(u, v, n, w, y, h, WINDOW, arch, 0, 0.035);
+        pane(u, v, n, w, y, h, windowOf(m.id, u, y, v, low), arch, 0, 0.035);
         b.detail(() => {
           const along: [number, number] = [n[1], -n[0]];
           const on = (a0: number, a1: number, o0: number, o1: number, y0: number, y1: number, mat: THREE.Material) => {
@@ -263,6 +264,8 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       b.detail(() => {
         for (const u of [pu0 + 0.6, pu0 + 1.6]) box(u - 0.25, 0.012, pv0 + 0.6, u + 0.25, 0.25, pv0 + 1.7, LOUNGER);
       });
+      // (the lights under its water, small bright points at night: crestnight.ts; none in the phones' plain water)
+      if (!low) for (const [u, v] of poolLights(pu0, pv0, pu1, pv1)) add(new THREE.CircleGeometry(POOL_LIGHTS.r, 8).rotateX(-Math.PI / 2).translate(u, 0.03, v), POOL_LED);
       b.build(into, { cast: true, receive: true });
 
       /** The glass mansion's main block: glass below, the white upper floor out over the slope on two legs */

@@ -28,6 +28,8 @@ import { LAND_SOLIDS } from './crestland';
 import { TERRACE_SOLIDS } from './crestbanks';
 import { GARDEN_SOLIDS } from './crestgardens';
 import { addSolids } from './solids';
+import { GATEWAY_SOLIDS } from './crestgate';
+import { registerGate } from './crestgate3d';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS } from './crestmont';
 import { COVER, KERB, ROAD } from './palette';
 
@@ -56,7 +58,9 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerLand(low);
   // The open slopes' drifts, outcrops and footpaths (crestcover.ts)
   registerCover(low);
-  if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS, ...TERRACE_SOLIDS]);
+  // The gateway where the boulevard leaves the bank avenue (the premium upgrade's Phase 1: crestgate3d.ts)
+  registerGate(low);
+  if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS, ...TERRACE_SOLIDS, ...GATEWAY_SOLIDS]);
   const asphalt = toon(ROAD.asphalt);
   const kerbTop = toon(KERB.town);
   const grass = toon(COVER.planted);

@@ -184,3 +184,27 @@ keep it up to date when what it describes changes.
   higher of its bed and the grass, `ROAD_LIFT`), `tests/crestdrape.test.ts`
   holding the grass under every one; the hill roads' walls topped just over
   the bank behind them (landscape.ts `EDGE_AT`). Made-up names only.
+- **The premium upgrade** (the owner's answers, 2026-11-19; `docs/crestmont-plan.md`,
+  "The premium upgrade", a phase at a time with the owner's sign-off). Phase 1,
+  arrival and the night glow ("Gateway, streets kept"; "Glamorous"): the
+  gateway is `crestgate.ts` (DOM-free, the chunk's, tested in
+  `tests/crestgate.test.ts`), drawn by `crestgate3d.ts` as one site: a
+  limestone pylon with an iron lantern on each corner where the boulevard
+  leaves the bank avenue (`PYLONS`), a low wing wall along the avenue from each
+  with CRESTMONT gilded on a dark stone plaque facing it (`WINGS`, `PLAQUE`),
+  all in the corner lots' strip outside their hedges, and a fountain on the
+  median's nose (`BASIN`); `GATEWAY_SOLIDS` join the grids with the chunk, the
+  verges' planting keeps off it (`nearGateway()`). The streets, lots and
+  estates stand where they stood. The night's rules are `crestnight.ts`
+  (DOM-free, tested in `tests/crestnight.test.ts`): which windows are lit
+  (`windowGlow()`, the same window the same every time: `WINDOW_SHARE` warm or
+  soft, the rest dark, fewer on phones, `WINDOW_SHARE_LOW`; estates3d.ts
+  `windowOf()`, `WINDOW_SOFT`, `WINDOW_DARK`, on the estates, the mansions and
+  the landmarks), festoon lights (`FESTOON`, `festoon()`: strung between each
+  garden's lamps level with each other on slim posts raised from them,
+  `pairRuns()`, and criss-crossed under the pergolas; near only, every other
+  bulb on phones), the lights under the pools' water (`poolLights()`,
+  `POOL_LED`; the pools' glow brighter, still none on phones) and the
+  landmarks' uplights (`alongWall()`, `UPLIGHT`): the hotel, the civic hall and
+  the clubhouse floodlit (their main walls' faint warm emissive in
+  crestsites3d.ts, `flood()`), all under the bloom's threshold.
