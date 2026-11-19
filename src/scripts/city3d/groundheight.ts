@@ -20,7 +20,7 @@
  * (`yNow` says which floor), the kart park's circuit last (its flyover over the track below). `createGroundHeight()`
  * gives `groundAt(x, z, yNow)`; `yNow` is how high Degen (or his vehicle) is now, for the layers with two levels.
  */
-import { homeRoofY } from './home';
+import { homeFloorY } from './home';
 import { DECK_Y, onDeck } from './waterfront';
 import { onEsplanade } from './boulevard';
 import { departuresY } from './airfield';
@@ -86,8 +86,8 @@ export function baseAt(x: number, z: number): { base: number; open: boolean; sla
 export const UNDER = underworld([LOT9_PASSAGE], []);
 
 export const GROUND_LAYERS: GroundLayer[] = [
-  // Degen's roof terrace, when `yNow` is up there (home.ts; the room is under it)
-  { id: 'homeroof', how: 'take', at: (x, z, yNow) => homeRoofY(x, z, yNow) },
+  // Degen's house's upper floors, when `yNow` is on one (home.ts: the upstairs, the roof terrace; the room under them)
+  { id: 'home', how: 'take', at: (x, z, yNow) => homeFloorY(x, z, yNow) },
   // Below ground (underground.ts): Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
   // open floors, and a floor under a roof when `yNow` is down there
   { id: 'tunnel', how: 'take', at: (x, z, yNow) => UNDER.y(x, z, yNow) },

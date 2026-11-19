@@ -100,7 +100,7 @@ import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
-import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse, onRoof, roofWall } from './home';
+import { HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeCamera, homeWall, inHouse, onRoof, roofWall } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { HARBOUR_MASTER } from './docksport';
@@ -767,7 +767,7 @@ export function createWalk(d: WalkDeps) {
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     // Inside Degen's house (home.ts, docs/home-plan.md Phase 3): only the room's walls and what stands in it stop you
-    if (inHouse(x, z, y)) return homeWall(x, z, RADIUS);
+    if (inHouse(x, z, y)) return homeWall(x, z, RADIUS, y);
     // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
     if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
     // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
@@ -827,7 +827,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, HOME_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, ...homeCamera(pos.y)] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -3334,10 +3334,11 @@ export function createWalk(d: WalkDeps) {
       moments.cancel();
       dropCrate();
       momentAmt = momentDy = 0;
-      // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
+      // ?spawn=x,z[,yaw[,y]] in the address: start walking somewhere else (for checking a place on real devices); `y`,
+      // how high, picks the floor where floors stand over one another (Degen's house upstairs: home.ts)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
-        pos.set(at[0], groundAt(at[0], at[1]), at[1]);
+        pos.set(at[0], groundAt(at[0], at[1], at[3] ?? 0), at[1]);
         if (at.length > 2) yaw = at[2];
       }
       if (spawn) {

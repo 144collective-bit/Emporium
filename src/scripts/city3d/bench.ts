@@ -70,6 +70,9 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'south-village', name: "The village, round St Aldwyn's hill", pos: [-168, 26, 506], target: [-205, 0, 462] },
   // Degen's compound (docs/ends-far-west-plan.md Phase 2): from the High Road's end, through the gates to the garage
   { id: 'ends-home', name: "The far west, Degen's compound", pos: [-208, 2.6, 381.2], target: [-238, 1.2, 380] },
+  // ...and inside it (docs/compound-plan.md Phase 5): his lounge, and his den in the basement
+  { id: 'ends-room', name: "Degen's lounge", pos: [-232.7, 1.1, 385.7], target: [-237.4, 0.55, 387.6] },
+  { id: 'ends-den', name: "Degen's den, the basement", pos: [-232.6, -0.3, 389.6], target: [-236.8, -0.75, 386.0] },
   { id: 'outskirts', name: 'Where the edge was, looking back', pos: [-180, 14, -180], target: [30, 0, 30] },
   { id: 'edge', name: 'The far edge, looking back', pos: [EXT[0] + 20, 14, EXT[0] + 20], target: [30, 0, 30] },
   // The vehicle plan's (Phase 0): where your car's detail and the traffic's show most

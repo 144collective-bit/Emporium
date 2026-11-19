@@ -131,8 +131,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   until their buildings come back (`studio`, `bell` are 0).
 - **Below ground**: Lot 9's tunnel only (groundheight.ts `UNDER`, underground.ts); the Circus's well and its subways
   are Phase 4's.
-- **`?bench` views**: `south-circus`, `south-high`, `south-village`, and `ends-home` (the compound from the High Road's
-  end).
+- **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
+  end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
   `PLOT` and `GATES` (all that file is now), its gates on Gate Lane at `HEAD`; the wall and gates, the double garage
   (`CAR_HOME`, `BIKE_HOME`, `HOME_GARAGE_DOOR`), the workshop (`HOME_WORKSHOP_DOOR`), the house with its room
@@ -143,7 +143,25 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the
-  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`.
+  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`. **The upgrade** (the owner's call, 2026-11-18) is planned in
+  `docs/compound-plan.md`: the outside done up with his neon, the ground floor refitted, an upstairs (a bedroom, an
+  office with a desk), a trophy wall, a basement trading den; nothing built until its phase is signed off.
+  Phase 1 (the outside) is built: black steel and his neon (home3d.ts `STEEL_BLACK`, `HIS_NEON`, his D by `mark()` on
+  the gate pier's plaque and in the paving), a hoop on the garage's pier, and the yard's lit bollards and the planters
+  by the front door (home.ts `BOLLARDS`, `PLANTERS`, in `HOME_SOLIDS`).
+  Phase 2 (the ground floor refit) is built: the lounge, kitchen island and hall in `FURNITURE`, the open stairs, and
+  the trophy wall (`hometrophies.ts`: `trophies()` from the save, the `SHELF` feed set by tycoon-boot.ts; drawn on the
+  main thread by home3d.ts `trophyWall()`, added by south3d.ts).
+  Phase 3 (the upstairs) is built: the house's floors by height (home.ts `homeLevel()`, `UP_Y`, `UP_CEIL`;
+  `homeWall(x, z, r, y)`, `homeFloorY()` for groundheight.ts's `home` layer, `homeCamera(y)` for walk.ts), `UPSTAIRS`
+  (the landing, bedroom and office), the stairs re-routed room ↔ landing ↔ terrace (`HOME_PORTALS`, each with its
+  `level`), and the office's desk (`home:desk`, the business card). A new thing upstairs goes in `UPSTAIRS`.
+  Phase 4 (the basement, his trading den) is built: the `base` floor (`BASE_Y`, `BASE_CEIL`), `BASEMENT`, the steps
+  down from under the stairs (`home:cellar`, `home:cellarup`), drawn in the room's batch (home3d.ts `basement()`), the
+  trading desk's screens on the main thread (`denCharts()`, made-up charts, nothing legible). A new thing down there
+  goes in `BASEMENT`.
+  Phase 5 (the terrace and polish) is built: the outdoor sofa, the telescope, his sign at the east rail, a third
+  planter (`ROOF_THINGS`); `?bench` views `ends-room` and `ends-den`. The plan is complete.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
