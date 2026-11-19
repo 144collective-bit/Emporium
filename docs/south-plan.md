@@ -491,6 +491,24 @@ From the Circus west, patchy as high roads are:
      mouth on one. The smoke test walks through the one under Endswood
      Road (`underpass`). Shots `docs/south-shots/20-phase-4c-*.webp`
      (from the smoke test's screenshots).
+   - **The line** (the owner's answers, 2026-11-19): stairs from the
+     street into a ticket hall, then escalators down to the platforms,
+     walkable all the way; entrances mixed (a station building where
+     there's room, the High Road's saved site, and stairs down from the
+     pavement under a roundel elsewhere); the route as planned: The
+     Trenches (the change to the raised metro), the Circus, Lot 9,
+     Aldwyn's Green, the High Road by Degen's gates (on west and to the
+     airport later); free to ride, as the raised metro is. In steps:
+     - **4d, the line as data**: its tunnel's line, the five stations,
+       their platforms, ticket halls, escalators and entrances, tested,
+       with a sketch for the owner; the kit taught levels (a hall over a
+       platform, an escalator between them).
+     - **4e, the High Road's station end to end**: drawn and walked from
+       the street to the platform.
+     - **4f, the other four stations.**
+     - **4g, the trains and the ride** (round-top tube trains, the tunnel
+       seen, Skip), the change at The Trenches, on the map and the
+       station card.
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
