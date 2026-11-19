@@ -170,7 +170,7 @@ test("the estates' boundaries and verges: trees and shrubs along the hedges, the
 });
 
 test("the landmarks' grounds: the hotel's edges planted clear of its drive, buildings, palms, lamps and people; the civic hall's and club's pads banked", async () => {
-  const { SITE_BANKS } = await import('../src/scripts/city3d/crestbanks');
+  const SITE_BANKS = (await import('../src/scripts/city3d/crestbanks')).siteBanks();
   const streets = PLAN.streets.filter((s) => s.kind !== 'alley');
   const hotel = SITE_GARDENS.find((g) => g.id === 'hotel')!;
   const verge = hotel.g.verge ?? [];

@@ -24,11 +24,11 @@ import { ESTATE_GARDENS, MANSION_GARDENS, SITE_GARDENS, POST, SPA_R, TERRACE_VIN
 import { hip, poolOf } from './estates3d';
 import { DRIVE_PIER, DRIVE_PIERS, DRIVE_TREES, GROVES, MEADOWS, VINEYARDS, type Tree } from './crestland';
 import { MANSIONS as HILL_HOUSES } from './mansions';
-import { drawnAt } from './terrain';
+import { TERRAIN_RECT, drawnAt } from './terrain';
 import { BULB, SPRAY, WATER } from './mallkit';
 import { PLANT } from './palette';
 import { TERRACES } from './crestbanks';
-import { BOLLARDS, GARDEN_PATHS, PATH_BOLLARDS, PATH_LIGHTS, DRIFTS, OUTCROPS, TRAIL, TRAILS, type DriftKind } from './crestcover';
+import { BOLLARDS, GARDEN_PATHS, PATH_BOLLARDS, PATH_LIGHTS, TRAIL, TRAILS, cover, type DriftKind } from './crestcover';
 import { TILE as GROUND_TILE } from './tiles';
 
 type Tone = EstateStyle | MansionKind;
@@ -678,17 +678,16 @@ const mound = new THREE.IcosahedronGeometry(1, 0);
 
 /** The slopes' drifts and outcrops, a site a ground tile; the footpaths, a site each with their bollards */
 export function registerCover(low: boolean) {
-  const tiles = new Map<string, { drifts: typeof DRIFTS; rocks: (typeof OUTCROPS)[number] }>();
-  const tileOf = (x: number, z: number) => {
-    const key = `${Math.floor(x / GROUND_TILE)},${Math.floor(z / GROUND_TILE)}`;
-    if (!tiles.has(key)) tiles.set(key, { drifts: [], rocks: [] });
-    return tiles.get(key)!;
-  };
-  for (const d of DRIFTS) tileOf(d.x, d.z).drifts.push(d);
-  for (const o of OUTCROPS) if (o.length) tileOf(o[0].x, o[0].z).rocks.push(...o);
-  for (const [key, t] of tiles) {
-    const [i, j] = key.split(',').map(Number);
+  // (a site a ground tile over the hills: what's in each is laid when the first of them is built, crestcover.ts
+  // `cover()`, in the site worker, never as the chunk loads)
+  const of = (x: number, z: number) => `${Math.floor(x / GROUND_TILE)},${Math.floor(z / GROUND_TILE)}`;
+  for (let i = Math.floor(TERRAIN_RECT[0] / GROUND_TILE); i * GROUND_TILE < TERRAIN_RECT[2]; i++)
+    for (let j = Math.floor(TERRAIN_RECT[1] / GROUND_TILE); j * GROUND_TILE < TERRAIN_RECT[3]; j++) {
+    const key = `${i},${j}`;
     site(`crestmont cover ${key}`, [i * GROUND_TILE - 6, j * GROUND_TILE - 6, (i + 1) * GROUND_TILE + 6, (j + 1) * GROUND_TILE + 6], (into) => {
+      const { drifts, outcrops } = cover();
+      const t = { drifts: drifts.filter((d) => of(d.x, d.z) === key), rocks: outcrops.filter((o) => o.length && of(o[0].x, o[0].z) === key).flat() };
+      if (!t.drifts.length && !t.rocks.length) return;
       const b = new Batch();
       // (phones: the drifts near only, as the hills' scrub; the outcrops at every distance)
       if (low) b.lod = 'near';

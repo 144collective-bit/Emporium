@@ -78,7 +78,9 @@ keep it up to date when what it describes changes.
     council rows, corner shops and community centre (`council.ts`, `council`), and since the spawn plan's Phase 3a
     the south's closes, crescents and their footpaths (`south.ts` `GROWN`, key `south-grown`: about a second of a
     phone's start-up), and since Crestmont's second grounds pass which of the hills' 30-tile pieces are drawn on the
-    fine grid (`terrain.ts` `FINE_PIECES`, key `hill-fine`: each piece's grass looked at every half tile). A new module that bakes goes in `MODULES` in
+    fine grid (`terrain.ts` `FINE_PIECES`, key `hill-fine`: each piece's grass looked at every half tile) and its
+    footpaths (`crestcover.ts`, key `crest-paths`: the slopes' and the gardens' paths, a search over every pair of mouths
+    and gates). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
@@ -529,3 +531,10 @@ keep it up to date when what it describes changes.
   places) is DOM-free data in the boot, so nothing waits on the chunk.
   `?bench` loads every district before it starts. A new district comes
   the same way.
+- **A district's chunk does little as it loads** (2026-11-19): a chunk's top-level code runs on the main thread when the
+  district comes into reach, all at once, a freeze on screen. Work only its sites draw is laid the first time a site
+  asks for it (in the site worker): Crestmont's banks (`crestbanks.ts` `banks()`, `siteBanks()`, `driveLights()`) and
+  the slopes' drifts (`crestcover.ts` `cover()`, its sites a tile each over the hills, `registerCover()`); searches
+  whose answer never changes are baked (`crest-paths`). What the main thread needs (the solids, the gardens' gates)
+  stays eager. Crestmont's chunk's setup on the main thread, headless desktop: about 600 ms to 34 ms.
+

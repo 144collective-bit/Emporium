@@ -339,7 +339,14 @@ function bankOf(m: Ground, k: number): Bank {
   return { id: m.id, spokes, walls, beds, plants, rocks, lights };
 }
 
-export const BANKS: Bank[] = MANSIONS.map((m, k) => bankOf(mansionGround(m), k));
+/**
+ * Each mansion's bank, laid the first time it's asked for: by the sites that draw them (mansions3d.ts, in the site
+ * worker), never as the chunk loads on the main thread
+ */
+export function banks(): Bank[] {
+  return (BANKS ??= MANSIONS.map((m, k) => bankOf(mansionGround(m), k)));
+}
+let BANKS: Bank[] | null = null;
 
 /* ---------- The landmarks' banks ---------- */
 
@@ -368,7 +375,16 @@ const inRect = (r: readonly number[], x: number, z: number, m: number) => x > r[
  * golf course; none across the civic hall's walk in from the boulevard. The civic hall takes the summit's formal box
  * and lavender, the club a villa's lavender and rosemary
  */
-export const SITE_BANKS: Bank[] = [
+export function siteBanks(): Bank[] {
+  return (SITE_BANKS ??= laySiteBanks());
+}
+let SITE_BANKS: Bank[] | null = null;
+/** The landmarks banked, and the ground each stands on (where their sites go, without laying the banks) */
+export const SITE_GROUNDS = [
+  { id: 'civic', rect: CIVIC.pad as readonly number[] },
+  { id: 'club', rect: CLUB.pad as readonly number[] },
+] as const;
+const laySiteBanks = (): Bank[] => [
   { id: 'civic', rect: CIVIC.pad, y: CIVIC.y, kind: 'summit' as MansionKind, walk: CIVIC.walk as readonly number[] | null },
   { id: 'club', rect: CLUB.pad, y: CLUB.y, kind: 'villa' as MansionKind, walk: null },
 ].map(({ id, rect, y, kind, walk }, k) => {
@@ -439,7 +455,11 @@ export const TERRACE_SOLIDS: [number, number, number, number, number][] = MANSIO
 /** A drive's low lights: this far out from its middle (just past its kerb), this far apart along it, by turns each side */
 export const DRIVE_LIGHT = { off: 1.48, step: 3.2, clear: 0.55 } as const;
 /** Each mansion's drive lit at night: low lights by turns either side, clear of its piers (crestland.ts) and the road */
-export const DRIVE_LIGHTS: [number, number, number][] = MANSIONS.flatMap((m) => {
+export function driveLights(): [number, number, number][] {
+  return (DRIVE_LIGHTS ??= layDriveLights());
+}
+let DRIVE_LIGHTS: [number, number, number][] | null = null;
+const layDriveLights = (): [number, number, number][] => MANSIONS.flatMap((m) => {
   const [a, b] = m.drive;
   const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const [ux, uz] = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];

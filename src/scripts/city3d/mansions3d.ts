@@ -16,7 +16,7 @@ import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { drawnAt } from './terrain';
-import { BANKS, DRIVE_LIGHTS, SITE_BANKS, TERRACES, type Bank, type PlantKind, type Post } from './crestbanks';
+import { SITE_GROUNDS, TERRACES, banks, driveLights, siteBanks, type Bank, type PlantKind, type Post } from './crestbanks';
 import { GATES } from './crestcover';
 
 /** A gate's half width in the pad's edge */
@@ -351,13 +351,13 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
         kerb.add(wallGeometry(line, 0.1), STONE_SHADE);
       }
       // Its low lights by turns either side (crestbanks.ts): a dark post near, its glowing cap at every distance
-      DRIVE_LIGHTS.filter(([x, z]) => near(x, z)).forEach(([x, z, y], i) => {
+      driveLights().filter(([x, z]) => near(x, z)).forEach(([x, z, y], i) => {
         if (low && i % 2) return;
         kerb.detail(() => kerb.add(new THREE.CylinderGeometry(0.045, 0.055, 0.42, 6).translate(x, y + 0.16, z), GUTTER));
         kerb.add(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 8).translate(x, y + 0.4, z), WALL_GLOW);
       });
       kerb.build(into, { cast: false, receive: true });
-      drawBank(into, BANKS[MANSIONS.indexOf(m)], low);
+      drawBank(into, banks()[MANSIONS.indexOf(m)], low);
       const pave = (r: [number, number, number, number], y: number, mat: THREE.Material) => flat(q, r[0], r[1], r[2], r[3], m.y + y, mat, 8);
       const [cu0, cv0, cu1, cv1] = m.court;
       pave(rectToWorld(m, Math.max(-W / 2 + 1, cu0), Math.min(-1, cv0), Math.min(W / 2 - 1, cu1), cv1), 0.02, PAVING);
@@ -377,10 +377,10 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
     });
   }
   // The civic hall's and the country club's banks (crestbanks.ts), a site each
-  for (const bank of SITE_BANKS) {
-    const xs = bank.spokes.map((sp) => sp.x);
-    const zs = bank.spokes.map((sp) => sp.z);
-    site(`crestmont bank ${bank.id}`, [Math.min(...xs) - 7, Math.min(...zs) - 7, Math.max(...xs) + 7, Math.max(...zs) + 7], (into) => drawBank(into, bank, low));
+  // (their banks laid when the site's built, in the site worker: crestbanks.ts `siteBanks()`)
+  for (const [k, g] of SITE_GROUNDS.entries()) {
+    const [x0, z0, x1, z1] = g.rect;
+    site(`crestmont bank ${g.id}`, [x0 - PAD_EASE - 1, z0 - PAD_EASE - 1, x1 + PAD_EASE + 1, z1 + PAD_EASE + 1], (into) => drawBank(into, siteBanks()[k], low));
   }
   // The cars on the forecourts (the main thread's), each at its pad's height
   if (scene) for (const { y, car } of MANSION_CARS) parkedCars(scene, y, [[car[0] as CarId, car[1], car[2], car[3], car[4]]]);

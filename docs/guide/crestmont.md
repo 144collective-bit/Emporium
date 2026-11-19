@@ -168,4 +168,7 @@ keep it up to date when what it describes changes.
   half halfway through its bank); `MANSION_LEVELS` hold the yard level,
   `onMansion()` keeps the planting off it and its bank, the banks start at its
   edge, mansions3d.ts mows it. The pads, drives and houses stand where they
-  stood. Made-up names only.
+  stood. Its chunk's setup is light on the main thread: the footpaths are
+  baked (`crest-paths`), the banks and the slopes' drifts laid when their
+  sites are built (`banks()`, `siteBanks()`, `driveLights()`, `cover()`).
+  Made-up names only.

@@ -4,10 +4,13 @@
 // ground as drawn.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BANKS, DRIVE_GAP, DRIVE_LIGHT, DRIVE_LIGHTS, PATH_GAP, PLANT_TALLEST, READ, TERRACES, TERRACE_SOLIDS, TIERS, toFrame } from '../src/scripts/city3d/crestbanks';
+import { DRIVE_GAP, DRIVE_LIGHT, PATH_GAP, banks, driveLights, PLANT_TALLEST, READ, TERRACES, TERRACE_SOLIDS, TIERS, toFrame } from '../src/scripts/city3d/crestbanks';
 import { MANSIONS, PAD_EASE, toWorld } from '../src/scripts/city3d/mansions';
 import { BED, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { drawnAt, heightAt } from '../src/scripts/city3d/terrain';
+
+const BANKS = banks();
+const DRIVE_LIGHTS = driveLights();
 import { onSite } from '../src/scripts/city3d/crestsites';
 
 const toDrive = (m: (typeof MANSIONS)[number], x: number, z: number) => {

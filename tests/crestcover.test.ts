@@ -3,7 +3,7 @@
 // long way round, gentle enough to walk, with bollards at each end.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BOLLARDS, DRIFTS, GARDEN_PATHS, GARDEN_PATH, GATES, OUTCROPS, PATH_BOLLARDS, PATH_LIGHTS, TRAIL, TRAILS, onGardenPath, onTrail, open } from '../src/scripts/city3d/crestcover';
+import { BOLLARDS, GARDEN_PATHS, cover, GARDEN_PATH, GATES, PATH_BOLLARDS, PATH_LIGHTS, TRAIL, TRAILS, onGardenPath, onTrail, open } from '../src/scripts/city3d/crestcover';
 import { BED, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { heightAt } from '../src/scripts/city3d/terrain';
 import { MANSIONS, PAD_EASE, onMansion, toWorld } from '../src/scripts/city3d/mansions';
@@ -11,6 +11,7 @@ import { onSite } from '../src/scripts/city3d/crestsites';
 import { onLand } from '../src/scripts/city3d/crestland';
 
 test('the drifts and outcrops: on the open slopes, off everything there and the footpaths', () => {
+  const { drifts: DRIFTS, outcrops: OUTCROPS } = cover();
   assert.ok(DRIFTS.length >= 40 && OUTCROPS.length >= 10);
   for (const d of DRIFTS) {
     assert.ok(d.clumps.length >= 3);
@@ -76,7 +77,7 @@ test("the garden paths: from a mansion's gate to a neighbour's or down to a road
   for (const m of MANSIONS) assert.ok(GATES.filter((g) => g.m === m.id).length <= GARDEN_PATH.perHouse);
   assert.equal(PATH_BOLLARDS.length, GARDEN_PATHS.filter((p) => p.gates.length === 1).length * 2);
   // (the slopes' drifts keep off them)
-  for (const d of DRIFTS) for (const c of d.clumps) assert.ok(!onGardenPath(c.x, c.z, 0.3));
+  for (const d of cover().drifts) for (const c of d.clumps) assert.ok(!onGardenPath(c.x, c.z, 0.3));
 });
 
 test('the footpaths lit at night: low lights beside them, never on them nor on a road', () => {

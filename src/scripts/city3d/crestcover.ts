@@ -20,6 +20,7 @@ import { underSpur } from './metro';
 import { onLand } from './crestland';
 import { OAKS } from './landscape';
 import { rng } from './recipes';
+import { BUILT, baked } from './baked';
 
 type Pt = [number, number];
 
@@ -77,38 +78,52 @@ const offOaks = (x: number, z: number, m: number) => OAKS.every((o) => Math.abs(
 export const DRIFT = { grid: 16, r: 3.4, clumps: 11 } as const;
 export const OUTCROP = { grid: 17, rocks: 5 } as const;
 
-const r = rng(9090);
-export const DRIFTS: Drift[] = [];
-export const OUTCROPS: Rock[][] = [];
-for (let gz = TERRAIN_RECT[1]; gz < TERRAIN_RECT[3]; gz += DRIFT.grid)
-  for (let gx = TERRAIN_RECT[0]; gx < TERRAIN_RECT[2]; gx += DRIFT.grid) {
-    const [x, z] = [gx + r() * DRIFT.grid, gz + r() * DRIFT.grid];
-    const kind = DRIFT_KINDS[Math.floor(r() * DRIFT_KINDS.length)];
-    if (!open(x, z, DRIFT.r) || slopeAt(x, z) > 0.9) continue;
-    const clumps: Clump[] = [];
-    for (let k = 0; k < DRIFT.clumps; k++) {
-      const a = r() * Math.PI * 2;
-      const d = Math.sqrt(r()) * DRIFT.r;
-      // (stretched along the contour a little, as the hills' own cover runs)
-      const [cx, cz] = [x + Math.cos(a) * d * 1.3, z + Math.sin(a) * d * 0.8];
-      if (!open(cx, cz) || !offOaks(cx, cz, 1)) continue;
-      clumps.push({ x: cx, z: cz, y: heightAt(cx, cz), s: 0.7 + r() * 0.6 });
+/**
+ * The slopes' drifts and outcrops, laid the first time they're asked for: by the sites that draw them (crestgardens3d.ts
+ * `registerCover()`, in the site worker), never as the chunk loads on the main thread
+ */
+export function cover(): { drifts: Drift[]; outcrops: Rock[][] } {
+  return (COVER ??= layCover());
+}
+let COVER: { drifts: Drift[]; outcrops: Rock[][] } | null = null;
+function layCover() {
+  const r = rng(9090);
+  const DRIFTS: Drift[] = [];
+  const OUTCROPS: Rock[][] = [];
+  for (let gz = TERRAIN_RECT[1]; gz < TERRAIN_RECT[3]; gz += DRIFT.grid)
+    for (let gx = TERRAIN_RECT[0]; gx < TERRAIN_RECT[2]; gx += DRIFT.grid) {
+      const [x, z] = [gx + r() * DRIFT.grid, gz + r() * DRIFT.grid];
+      const kind = DRIFT_KINDS[Math.floor(r() * DRIFT_KINDS.length)];
+      if (!open(x, z, DRIFT.r) || slopeAt(x, z) > 0.9) continue;
+      const clumps: Clump[] = [];
+      for (let k = 0; k < DRIFT.clumps; k++) {
+        const a = r() * Math.PI * 2;
+        const d = Math.sqrt(r()) * DRIFT.r;
+        // (stretched along the contour a little, as the hills' own cover runs)
+        const [cx, cz] = [x + Math.cos(a) * d * 1.3, z + Math.sin(a) * d * 0.8];
+        if (!open(cx, cz) || !offOaks(cx, cz, 1)) continue;
+        clumps.push({ x: cx, z: cz, y: heightAt(cx, cz), s: 0.7 + r() * 0.6 });
+      }
+      if (clumps.length >= 6) DRIFTS.push({ x, z, r: DRIFT.r * 1.3, kind, clumps });
     }
-    if (clumps.length >= 6) DRIFTS.push({ x, z, r: DRIFT.r * 1.3, kind, clumps });
-  }
-for (let gz = TERRAIN_RECT[1] + 5; gz < TERRAIN_RECT[3]; gz += OUTCROP.grid)
-  for (let gx = TERRAIN_RECT[0] + 5; gx < TERRAIN_RECT[2]; gx += OUTCROP.grid) {
-    const [x, z] = [gx + r() * OUTCROP.grid, gz + r() * OUTCROP.grid];
-    // (on the steeper ground, clear of the drifts)
-    if (!open(x, z, 2) || slopeAt(x, z) < 0.35 || DRIFTS.some((d) => Math.hypot(d.x - x, d.z - z) < d.r + 2)) continue;
-    const rocks: Rock[] = [];
-    for (let k = 0; k < OUTCROP.rocks; k++) {
-      const [rx, rz] = [x + (r() - 0.5) * 3.2, z + (r() - 0.5) * 2.4];
-      if (!open(rx, rz) || !offOaks(rx, rz, 1)) continue;
-      rocks.push({ x: rx, z: rz, y: heightAt(rx, rz), s: (k === 0 ? 1.4 : 0.6) + r() * 0.7, turn: r() * Math.PI * 2 });
+  for (let gz = TERRAIN_RECT[1] + 5; gz < TERRAIN_RECT[3]; gz += OUTCROP.grid)
+    for (let gx = TERRAIN_RECT[0] + 5; gx < TERRAIN_RECT[2]; gx += OUTCROP.grid) {
+      const [x, z] = [gx + r() * OUTCROP.grid, gz + r() * OUTCROP.grid];
+      // (on the steeper ground, clear of the drifts)
+      if (!open(x, z, 2) || slopeAt(x, z) < 0.35 || DRIFTS.some((d) => Math.hypot(d.x - x, d.z - z) < d.r + 2)) continue;
+      const rocks: Rock[] = [];
+      for (let k = 0; k < OUTCROP.rocks; k++) {
+        const [rx, rz] = [x + (r() - 0.5) * 3.2, z + (r() - 0.5) * 2.4];
+        if (!open(rx, rz) || !offOaks(rx, rz, 1)) continue;
+        rocks.push({ x: rx, z: rz, y: heightAt(rx, rz), s: (k === 0 ? 1.4 : 0.6) + r() * 0.7, turn: r() * Math.PI * 2 });
+      }
+      if (rocks.length >= 3) OUTCROPS.push(rocks);
     }
-    if (rocks.length >= 3) OUTCROPS.push(rocks);
-  }
+  // (off the footpaths)
+  for (const d of DRIFTS) d.clumps = d.clumps.filter((c) => !onTrail(c.x, c.z, 0.4) && !onGardenPath(c.x, c.z, 0.4));
+  for (const [k, o] of OUTCROPS.entries()) OUTCROPS[k] = o.filter((c) => !onTrail(c.x, c.z, 0.6) && !onGardenPath(c.x, c.z, 0.6));
+  return { drifts: DRIFTS, outcrops: OUTCROPS };
+}
 
 /* ---------- Footpaths between the roads ---------- */
 
@@ -152,7 +167,7 @@ function trailBetween(a: Pt, b: Pt, seed: number): [number, number, number][] | 
   }
   return pts;
 }
-export const TRAILS: Trail[] = (() => {
+function findTrails(): Trail[] {
   const found: (Trail & { gain: number })[] = [];
   for (const [i, m] of MOUTHS.entries())
     for (const q of MOUTHS.slice(i + 1)) {
@@ -174,21 +189,12 @@ export const TRAILS: Trail[] = (() => {
       out.push({ pts: t.pts, from: t.from, to: t.to });
   }
   return out;
-})();
-/** A footpath's bollards: a pair at each end, either side of it, a little in from the road */
-export const BOLLARDS: Pt[] = TRAILS.flatMap((t) =>
-  [
-    [t.pts[1], t.pts[2]],
-    [t.pts[t.pts.length - 2], t.pts[t.pts.length - 3]],
-  ].flatMap(([p, q]) => {
-    const [dx, dz] = [q[0] - p[0], q[1] - p[1]];
-    const l = Math.hypot(dx, dz) || 1;
-    return [1, -1].map((s): Pt => [p[0] - (dz / l) * s * (TRAIL.half + 0.25), p[1] + (dx / l) * s * (TRAIL.half + 0.25)]);
-  })
-);
+}
+/** On one of these footpaths (padded `m`) */
+const onTrailIn = (trails: Trail[], x: number, z: number, m: number) => trails.some((t) => t.pts.some((p) => Math.hypot(p[0] - x, p[1] - z) < TRAIL.half + TRAIL.step / 2 + m));
 /** On a footpath across the slopes (padded `m`) */
 export function onTrail(x: number, z: number, m = 0) {
-  return TRAILS.some((t) => t.pts.some((p) => Math.hypot(p[0] - x, p[1] - z) < TRAIL.half + TRAIL.step / 2 + m));
+  return onTrailIn(TRAILS, x, z, m);
 }
 /* ---------- Footpaths from the mansions' gardens ---------- */
 
@@ -237,7 +243,7 @@ const toSeg = (x: number, z: number, [a, b]: [Pt, Pt]) => {
  * cypresses, the roads' shoulders, the landmarks, the land round the houses, the spur and the hills' footpaths; never
  * steeper than `TRAIL.grade`
  */
-function gardenPathBetween(a: Pt, b: Pt, own: Mansion[], toRoad: boolean, seed: number): [number, number, number][] | null {
+function gardenPathBetween(a: Pt, b: Pt, own: Mansion[], toRoad: boolean, seed: number, trails: Trail[]): [number, number, number][] | null {
   const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
   if (L < 4 || Math.abs(heightAt(b[0], b[1]) - heightAt(a[0], a[1])) > TRAIL.grade * L) return null;
   const [ux, uz] = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
@@ -256,7 +262,7 @@ function gardenPathBetween(a: Pt, b: Pt, own: Mansion[], toRoad: boolean, seed: 
     }
     if (!roadEnd && nearHillRoad(x, z, BED.shoulder + 1)) return null;
     if (roadEnd && nearHillRoad(x, z, BED.shoulder + 0.2)) return null;
-    if (onSite(x, z, 1) || underSpur(x, z) || onLand(x, z, 0.5) || onTrail(x, z, 1.5)) return null;
+    if (onSite(x, z, 1) || underSpur(x, z) || onLand(x, z, 0.5) || onTrailIn(trails, x, z, 1.5)) return null;
     if (x <= TERRAIN_RECT[0] + 6 || x >= 468 || z <= -432 || z >= HILLS.foot.z - 6) return null;
     pts.push([x, z, heightAt(x, z)]);
   }
@@ -266,7 +272,7 @@ function gardenPathBetween(a: Pt, b: Pt, own: Mansion[], toRoad: boolean, seed: 
   }
   return pts;
 }
-export const GARDEN_PATHS: GardenPath[] = (() => {
+function findGardenPaths(trails: Trail[]): GardenPath[] {
   const out: GardenPath[] = [];
   const count = new Map<string, number>();
   const used = new Set<string>();
@@ -292,7 +298,7 @@ export const GARDEN_PATHS: GardenPath[] = (() => {
     let best: GardenPath | null = null;
     for (const ga of gatesOf(a).filter(free))
       for (const gb of gatesOf(b).filter(free)) {
-        const pts = gardenPathBetween(gateAt(a, ga, 0.3), gateAt(b, gb, 0.3), [a, b], false, k * 0.53);
+        const pts = gardenPathBetween(gateAt(a, ga, 0.3), gateAt(b, gb, 0.3), [a, b], false, k * 0.53, trails);
         if (pts && apartFromPaths(pts) && (!best || pts.length < best.pts.length)) best = { pts, from: a.id, to: b.id, gates: [ga, gb] };
       }
     if (best) take(best);
@@ -307,14 +313,35 @@ export const GARDEN_PATHS: GardenPath[] = (() => {
         const L = Math.hypot(mouth.p[0] - a[0], mouth.p[1] - a[1]);
         if (L > GARDEN_PATH.road || Math.hypot(mouth.p[0] - m.drive[0][0], mouth.p[1] - m.drive[0][1]) < 6) continue;
         if (best && L > Math.hypot(best.pts[best.pts.length - 1][0] - best.pts[0][0], best.pts[best.pts.length - 1][1] - best.pts[0][1])) continue;
-        const pts = gardenPathBetween(a, mouth.p, [m], true, k * 0.71);
+        const pts = gardenPathBetween(a, mouth.p, [m], true, k * 0.71, trails);
         if (pts && apartFromPaths(pts)) best = { pts, from: m.id, to: mouth.road, gates: [g] };
       }
     }
     if (best) take(best);
   }
   return out;
-})();
+}
+/**
+ * The footpaths across the slopes and from the gardens, searched for when the site is built (baked.ts; scripts/bake.mjs:
+ * the search tries every pair of mouths and gates, about a tenth of a second a load), not as the chunk loads
+ */
+const PATHS: { trails: Trail[]; paths: GardenPath[] } = baked('crest-paths', BUILT ? undefined : () => {
+  const trails = findTrails();
+  return { trails, paths: findGardenPaths(trails) };
+});
+export const TRAILS: Trail[] = PATHS.trails;
+/** A footpath's bollards: a pair at each end, either side of it, a little in from the road */
+export const BOLLARDS: Pt[] = TRAILS.flatMap((t) =>
+  [
+    [t.pts[1], t.pts[2]],
+    [t.pts[t.pts.length - 2], t.pts[t.pts.length - 3]],
+  ].flatMap(([p, q]) => {
+    const [dx, dz] = [q[0] - p[0], q[1] - p[1]];
+    const l = Math.hypot(dx, dz) || 1;
+    return [1, -1].map((s): Pt => [p[0] - (dz / l) * s * (TRAIL.half + 0.25), p[1] + (dx / l) * s * (TRAIL.half + 0.25)]);
+  })
+);
+export const GARDEN_PATHS: GardenPath[] = PATHS.paths;
 /** The gates garden paths leave from, all of them */
 export const GATES: Gate[] = GARDEN_PATHS.flatMap((p) => p.gates);
 /** A garden path's bollards where it meets a road (a pair either side, a little in from the verge) */
@@ -329,9 +356,6 @@ export function onGardenPath(x: number, z: number, m = 0) {
   return GARDEN_PATHS.some((t) => t.pts.some((p) => Math.hypot(p[0] - x, p[1] - z) < TRAIL.half + TRAIL.step / 2 + m));
 }
 
-// (the drifts and outcrops off the footpaths)
-for (const d of DRIFTS) d.clumps = d.clumps.filter((c) => !onTrail(c.x, c.z, 0.4) && !onGardenPath(c.x, c.z, 0.4));
-for (const [k, o] of OUTCROPS.entries()) OUTCROPS[k] = o.filter((c) => !onTrail(c.x, c.z, 0.6) && !onGardenPath(c.x, c.z, 0.6));
 
 /* ---------- Lights along the footpaths ---------- */
 
