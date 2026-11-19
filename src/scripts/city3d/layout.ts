@@ -131,7 +131,10 @@ export const BRIDGED_NS = [NS_ROADS.length - 1];
  */
 export const SHORT_NS: Record<number, number> = { 1: -39, 2: -39 };
 /** Does north-south road `i` run at z (the short ones not north of the Parkway) */
-export const nsRuns = (i: number, z: number) => !(i in SHORT_NS) || z > SHORT_NS[i];
+/** ...and where the south's two side streets end, bent in to the re-laid estate (docs/south-plan.md Phase 1b, the
+ * owner's pick: ns1s into Endswood Road, ns2s into Marsh Lane, south.ts; their straight runs end at their bends) */
+export const NS_SOUTH_END: Record<number, number> = { 1: 350, 2: 358 };
+export const nsRuns = (i: number, z: number) => (!(i in SHORT_NS) || z > SHORT_NS[i]) && (!(i in NS_SOUTH_END) || z <= NS_SOUTH_END[i]);
 /**
  * The Neon Mile (docs/strip-plan.md Phase 1, strip.ts): downtown's two small east-west roads (`ew1`, `ew2`) stop at
  * the Parkway's east side (x, a hair inside its line: streetplan.ts ends each exactly at its crossing) and start again

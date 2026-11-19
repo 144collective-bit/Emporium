@@ -257,7 +257,7 @@ for (const q of [3, 2] as Detail[])
   for (const face of FACE_IDS)
     test(`accessories: the ${face} on the face, under every hat, clear of the hood and the shades (detail ${q})`, () => {
       const all = items(q, true);
-      const o: Outfit = { ...PLAYER, face, chain: true };
+      const o: Outfit = { ...PLAYER, faceGear: face, chain: true };
       const gear = all.find((i) => i.id === `face-${face}` && i.when(o))!;
       assert.ok(gear, `the ${face} is worn`);
       const shadesOn = all.filter((i) => (i.id.startsWith('shades-') || i.id.startsWith('chain-')) && i.when(o));

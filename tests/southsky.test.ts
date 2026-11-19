@@ -1,0 +1,152 @@
+// Endswood's sky network walked (southsky.ts; docs/south-plan.md Phase 2c, the owner's calls): every gallery, bridge,
+// landing and the podium deck joined into one network at the third floor, every shape reached by a lift or the stair,
+// the floor under you by your height, only the railings stopping you up there, a lift in every core.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, floorName, liftArrival, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
+import { BLOCKS_RECT, BRIDGES, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
+import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
+import { inside } from '../src/scripts/city3d/streetfaces';
+import { createGroundHeight } from '../src/scripts/city3d/groundheight';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
+
+const STREETS = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
+const offStreet = (p: Pt) => Math.min(...STREETS.map((s) => distToStreet(s, p) - s.half - 0.8));
+const inBox = (b: readonly number[], x: number, z: number, m = 0) => x > b[0] - m && x < b[2] + m && z > b[1] - m && z < b[3] + m;
+const centre = (poly: Pt[]): Pt => [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
+/** Points spread over a shape: its corners pulled in a little, and its middle */
+const samples = (s: SkyShape): Pt[] => {
+  const c = centre(s.poly);
+  return [c, ...s.poly.map((p): Pt => [p[0] + (c[0] - p[0]) * 0.08, p[1] + (c[1] - p[1]) * 0.08])].filter((p) => inside(s.poly, p));
+};
+const L3 = floorY(blockById('rampart').base, 3);
+
+test('one network: at the third floor every gallery, bridge, landing and the deck joined; every shape reached by a lift or the stair', () => {
+  // (two shapes join where one's edge crosses into the other at the same height)
+  const touch = (a: SkyShape, b: SkyShape) =>
+    [...a.poly, ...samples(a)].some((p) => {
+      for (const q of [p, ...[[0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]].map(([dx, dz]): Pt => [p[0] + dx, p[1] + dz])])
+        if (inside(b.poly, q) && inside(a.poly, q) && Math.abs(a.y(q[0], q[1]) - b.y(q[0], q[1])) <= REACH) return true;
+      return false;
+    });
+  const n = SKY_SHAPES.length;
+  const adj: number[][] = SKY_SHAPES.map(() => []);
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (touch(SKY_SHAPES[i], SKY_SHAPES[j]) || touch(SKY_SHAPES[j], SKY_SHAPES[i])) (adj[i].push(j), adj[j].push(i));
+  const reach = (from: number[]) => {
+    const seen = new Set(from);
+    const todo = [...from];
+    while (todo.length) for (const j of adj[todo.pop()!]) if (!seen.has(j)) (seen.add(j), todo.push(j));
+    return seen;
+  };
+  // (from every lift's landings and the stair's foot)
+  const starts = SKY_SHAPES.map((s, i) => (s.id.startsWith('landing') || s.id.startsWith('stair twin-core') ? i : -1)).filter((i) => i >= 0);
+  const all = reach(starts);
+  for (let i = 0; i < n; i++) assert.ok(all.has(i), `${SKY_SHAPES[i].id} can't be reached`);
+  // (the third floor walked end to end: from the Rampart's gallery to Wren's, Fennel's, the deck and The Core's stair)
+  const at3 = reach([SKY_SHAPES.findIndex((s) => s.id.startsWith('gallery rampart') && s.id.endsWith(' 3'))]);
+  for (const id of ['gallery wren', 'gallery fennel', 'gallery teasel', 'gallery sorrel', 'gallery linnet', 'gallery marten', 'deck podium', 'stair twin-core', 'landing twin-core 3'])
+    assert.ok([...at3].some((i) => SKY_SHAPES[i].id.startsWith(id)), `${id} isn't on the third floor's network`);
+  // (every gallery the blocks have, and every bridge, is a shape)
+  assert.equal(SKY_SHAPES.filter((s) => s.id.startsWith('gallery')).length, GALLERIES.length);
+  assert.equal(SKY_SHAPES.filter((s) => s.id.startsWith('bridge')).length, BRIDGES.length);
+});
+
+test('the floor under you by your height: the gallery up there, the ground under it; a bridge over the street; the stair rising', () => {
+  const g = SKY_SHAPES.find((s) => s.id.startsWith('gallery linnet'))!;
+  const p = centre(g.poly);
+  assert.equal(skyFloorAt(p[0], p[1], g.lo), g.lo);
+  assert.equal(skyFloorAt(p[0], p[1], g.lo + 0.3), g.lo);
+  assert.equal(skyFloorAt(p[0], p[1], 0.15), null, 'walking under the gallery: the ground');
+  assert.equal(skyUp(p[0], p[1], 0.15), false);
+  assert.equal(skyUp(p[0], p[1], g.lo), true);
+  // (a bridge over a street: up there on it, under it the street)
+  const over = SKY_SHAPES.filter((s) => s.id.startsWith('bridge')).find((s) => samples(s).some((q) => offStreet(q) < -0.5))!;
+  const q = samples(over).find((r) => offStreet(r) < -0.5)!;
+  assert.ok(over, 'a bridge over a street');
+  assert.equal(skyFloorAt(q[0], q[1], over.lo), over.y(q[0], q[1]));
+  assert.equal(skyFloorAt(q[0], q[1], 0.04), null);
+  // (the stair: its foot at the ground, its head at the third floor, half way between)
+  const s = SKY_SHAPES.find((r) => r.id === 'stair twin-core')!;
+  assert.ok(Math.abs(s.lo - STAIR.base) < 1e-9 && Math.abs(s.hi - STAIR.top) < 1e-9);
+  assert.ok(Math.abs(STAIR.top - L3) < 1e-9, 'the stair to the third floor');
+  const [fx, fz] = STAIR.foot;
+  assert.ok(Math.abs((skyFloorAt(fx, fz, 0.15) ?? -1) - STAIR.base) < 0.3, 'the stair from the ground');
+  const mid: Pt = [(STAIR.foot[0] + STAIR.head[0]) / 2, (STAIR.foot[1] + STAIR.head[1]) / 2];
+  const ym = skyFloorAt(mid[0], mid[1], (STAIR.base + STAIR.top) / 2)!;
+  assert.ok(Math.abs(ym - (STAIR.base + STAIR.top) / 2) < 0.1, `half way up ${ym}`);
+  // (walk.ts's ground: groundheight.ts's sky layer the same)
+  const ground = createGroundHeight({ leavesOpen: () => false });
+  assert.ok(Math.abs(ground(p[0], p[1], g.lo) - g.lo) < 1e-9);
+  assert.ok(ground(p[0], p[1], 0.15) < 1);
+});
+
+test('only the railings stop you up there: across a bridge, along a gallery, into a landing; not over an edge', () => {
+  const m = 0.3;
+  for (const br of SKY_SHAPES.filter((s) => s.id.startsWith('bridge'))) {
+    const c = centre(br.poly);
+    assert.equal(skyWall(c[0], c[1], br.y(c[0], c[1]), m), false, `${br.id}: its middle`);
+  }
+  // (off a gallery's outer edge: a step past its upstand)
+  for (const g of SKY_SHAPES.filter((s) => s.id.startsWith('gallery')).slice(0, 12)) {
+    const c = centre(g.poly);
+    assert.equal(skyWall(c[0], c[1], g.lo, 0.2), false, `${g.id}: its middle`);
+    const far = g.poly[Math.floor(g.poly.length * 0.75)];
+    const out: Pt = [far[0] + (far[0] - c[0]) * 0.05, far[1] + (far[1] - c[1]) * 0.05];
+    const free = SKY_SHAPES.some((s) => s !== g && inside(s.poly, out) && Math.abs(s.y(out[0], out[1]) - g.lo) <= REACH);
+    if (!free) assert.equal(skyWall(out[0], out[1], g.lo, 0.2), true, `${g.id}: over its edge`);
+  }
+  // (not up there at the ground, nor outside the estate's blocks)
+  assert.equal(skyUp(-200, 500, L3), false);
+  assert.ok(UP_FROM > 0.5);
+  assert.ok(!SKY_SHAPES.some((s) => s.poly.some((p) => !inBox(BLOCKS_RECT, p[0], p[1]))), 'a shape outside the blocks\' rect');
+});
+
+test('a lift in every core: its door at its foot off the street and clear of anything solid, out at each floor on its landing', () => {
+  assert.equal(SKY_LIFTS.length, new Set(SKY_LIFTS.map((l) => l.id)).size);
+  assert.ok(SKY_LIFTS.some((l) => l.id === 'twin-core'));
+  for (const l of SKY_LIFTS) {
+    assert.ok(l.floors.length >= 1 && l.floors.includes(3), `${l.id} doesn't reach the third floor`);
+    const { x, z } = l.door;
+    assert.ok(offStreet([x, z]) > 0, `${l.id}'s door on a street`);
+    assert.ok(!SOLIDS.some((b) => inBox(b, x, z, 0.3)), `${l.id}'s door in something solid`);
+    assert.ok(!inBlock([x, z]), `${l.id}'s door in a block`);
+    // (facing out from its core: yaw 0 looks north, -z)
+    const [fx, fz] = [-Math.sin(l.door.yaw), -Math.cos(l.door.yaw)];
+    assert.ok((x - l.at[0]) * fx + (z - l.at[1]) * fz > 0, `${l.id}'s door faces in`);
+    for (const f of l.floors) {
+      const a = liftArrival(l, f);
+      const y = floorY(l.base, f);
+      assert.equal(skyFloorAt(a.x, a.z, y), y, `${l.id} lets you out off its landing at the ${floorName(f)}`);
+      assert.equal(liftFloorOf(l, y), f);
+      assert.equal(skyWall(a.x, a.z, y, 0.3), false, `${l.id}: hemmed in on its landing at the ${floorName(f)}`);
+    }
+    assert.equal(liftFloorOf(l, 0.15), 0);
+  }
+  // (the prompts by your height: the doors at the foot, the landings up there)
+  assert.equal(skyLiftDoors(0.15).length, SKY_LIFTS.length);
+  assert.equal(skyLiftDoors(L3).length, SKY_LIFTS.filter((l) => l.floors.includes(3)).length);
+  assert.equal(skyLiftDoors(L3 + 1.5).length, 0);
+  assert.equal(floorName(0), 'Ground');
+  assert.equal(floorName(3), '3rd floor');
+  assert.equal(floorName(12), '12th floor');
+  assert.equal(floorName(21), '21st floor');
+});
+
+test("The Core's stair: from the grass by it, clear of the towers, the street and anything solid, up to its landing", () => {
+  const s = SKY_SHAPES.find((r) => r.id === 'stair twin-core')!;
+  for (const p of s.poly) {
+    assert.ok(!inBlock(p), 'the stair in a block');
+    assert.ok(offStreet(p) > 1, 'the stair by a street');
+  }
+  const [fx, fz] = STAIR.foot;
+  assert.ok(!SOLIDS.some((b) => inBox(b, fx, fz, 0.3)), 'its foot blocked');
+  // (its head against The Core: its landing joins The Core's at the third floor)
+  const land = SKY_SHAPES.find((r) => r.id === 'landing twin-core 3')!;
+  const door = SKY_SHAPES.find((r) => r.id === 'stair door twin-core')!;
+  assert.ok(door.poly.some((p) => inside(land.poly, p)), 'its landing into The Core');
+  // (and the bridges' heights: over every street, a bus's clearance)
+  for (const br of BRIDGES) assert.ok(Math.min(...br.ys) - 0.3 > 3, br.id);
+});

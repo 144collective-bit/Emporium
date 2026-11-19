@@ -13,11 +13,11 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { DEFAULT_LOOK, MARKS, coversEyes, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type EyeStyle, type FaceGear, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
+import { CUTS, DEFAULT_LOOK, MARKS, coversEyes, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type Cut, type EyeStyle, type FaceGear, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
 
-type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'frame' | 'gear' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink';
+type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'frame' | 'gear' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink' | 'tone' | 'hair';
 interface Colors {
   key: ColorKey;
   label: string;
@@ -118,9 +118,10 @@ const eyes = (id: EyeStyle, name: string, icon: string, ranges: Range[]): Item =
   id: `eyes-${id}`,
   name,
   icon,
-  // (picking shades takes off a gas mask or goggles: they're worn in the shades' place)
-  on: (l) => l.eyewear === id && !coversEyes(l.face),
-  wear: (l) => ({ ...l, eyewear: id, face: coversEyes(l.face) ? null : l.face }),
+  // (picking shades takes off a gas mask or goggles: they're worn in the shades' place; on an unmasked face it puts
+  // them on, docs/faces-plan.md)
+  on: (l) => l.eyewear === id && !coversEyes(l.faceGear) && (!l.face || l.shades),
+  wear: (l) => ({ ...l, eyewear: id, shades: true, faceGear: coversEyes(l.faceGear) ? null : l.faceGear }),
   colors: frameColors,
   in: ranges,
 });
@@ -130,13 +131,47 @@ const gear = (id: FaceGear, name: string, icon: string, ranges: Range[], lenses 
   id: `face-${id}`,
   name,
   icon,
-  on: (l) => l.face === id,
-  wear: (l) => ({ ...l, face: id }),
+  on: (l) => l.faceGear === id,
+  wear: (l) => ({ ...l, faceGear: id }),
   colors: lenses ? [...gearColors, { key: 'lens', label: 'Lenses', list: PALETTE.lens }] : gearColors,
   in: ranges,
 });
 /** The range his top is from: where the fitting room opens */
 const rangeOf = (l: Look): Range => (l.kind === 'suit' ? 'business' : 'street');
+
+/* ----- The face (docs/faces-plan.md Phase 2): the balaclava, or a face with a haircut; all free ----- */
+
+/** A head's outline, for the face cards' icons */
+const HEAD = 'M12 6.5c-3.4 0-5.5 2.9-5.5 7.2S8.6 21 12 21s5.5-3 5.5-7.3S15.4 6.5 12 6.5z';
+const CUT_ICONS: Record<Cut, string> = {
+  buzz: `${HEAD} M7.4 10c1.3-1.8 2.8-2.6 4.6-2.6s3.3.8 4.6 2.6`,
+  crop: `${HEAD} M6.4 12c-.3-5 2.3-7.6 5.6-7.6s5.9 2.6 5.6 7.6c-1.6-1.8-3.6-2.6-5.6-2.6s-4 .8-5.6 2.6z`,
+  curls: `${HEAD} M6.3 12c-1.6-2.4-.4-5.9 2.2-6.2.6-2.4 6.4-2.4 7 0 2.6.3 3.8 3.8 2.2 6.2`,
+  bun: `${HEAD} M12 6.5a2.3 2.3 0 1 1 0-4.6 2.3 2.3 0 0 1 0 4.6z M7.4 10c1.3-1.8 2.8-2.6 4.6-2.6s3.3.8 4.6 2.6`,
+  bald: `${HEAD} M10 14h.01 M14 14h.01`,
+};
+const toneColors: Colors = { key: 'tone', label: 'Skin', list: PALETTE.tone };
+const hairColors: Colors = { key: 'hair', label: 'Hair', list: PALETTE.hair };
+const faceItems: Item[] = [
+  {
+    id: 'mask',
+    name: 'Balaclava',
+    icon: `${HEAD} M8.6 12h6.8v2.6H8.6z`,
+    on: (l) => !l.face,
+    wear: (l) => ({ ...l, face: false }),
+    colors: [toneColors],
+  },
+  ...CUTS.map(
+    (c): Item => ({
+      id: `cut-${c.id}`,
+      name: c.name,
+      icon: CUT_ICONS[c.id],
+      on: (l) => l.face && l.cut === c.id,
+      wear: (l) => ({ ...l, face: true, cut: c.id }),
+      colors: c.id === 'bald' ? [toneColors] : [toneColors, hairColors],
+    })
+  ),
+];
 
 /* ----- The merch: marks for the top, the hat and the sneakers, and prints for the top ----- */
 
@@ -295,6 +330,8 @@ const TABS: Tab[] = [
       },
     ],
   },
+  // (the faces plan's: every range has them)
+  { id: 'face', label: 'Face', items: faceItems.map((it) => ({ ...it, in: ['street', 'business', 'work'] as Range[] })) },
   {
     id: 'shades',
     label: 'Eyewear',
@@ -304,18 +341,20 @@ const TABS: Tab[] = [
       eyes('round', 'Round', 'M6.5 15a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M17.5 15a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M10 11h4', ['street', 'business']),
       eyes('slim', 'Slim', 'M2.5 10h8v3h-8z M13.5 10h8v3h-8z M10.5 11h3', ['street', 'business']),
       eyes('wrap', 'Sport Wrap', 'M2 11c2-2 6-2 9-1v3c-3 1-7 1-9-2z M22 11c-2-2-6-2-9-1v3c3 1 7 1 9-2z', ['street', 'work']),
+      // (a face can go without: docs/faces-plan.md; the balaclava always wears them)
+      { id: 'shades-off', name: 'No shades', icon: NONE, only: (l) => l.face, on: (l) => !l.shades, wear: (l) => ({ ...l, shades: false }) },
     ],
     colors: [{ key: 'lens', label: 'Lenses', list: PALETTE.lens }],
   },
   {
-    id: 'face',
-    label: 'Face',
+    id: 'gear',
+    label: 'Gear',
     items: [
       gear('gasmask', 'Gas Mask', 'M12 3c4 0 7 3 7 8 0 5-3 9-7 9s-7-4-7-9c0-5 3-8 7-8z M9 10a1.6 1.6 0 1 0 0.01 0z M15 10a1.6 1.6 0 1 0 0.01 0z M5 16l-2 2 M19 16l2 2 M12 17v2', ['work', 'street']),
       gear('respirator', 'Respirator', 'M7 11c0-2 2-3 5-3s5 1 5 3c0 4-2 7-5 7s-5-3-5-7z M4 13h3 M17 13h3 M12 15v2', ['work', 'street']),
       gear('safety', 'Safety Goggles', 'M3 9h18v6H3z M3 12H1 M21 12h2 M12 9v6', ['work'], true),
       gear('ski', 'Ski Goggles', 'M2 8h20v8H2z M2 12H0 M22 12h2 M12 14l-2 2h4z', ['street'], true),
-      { id: 'face-none', name: 'Nothing', icon: NONE, on: (l) => !l.face, wear: (l) => ({ ...l, face: null }) },
+      { id: 'face-none', name: 'Nothing', icon: NONE, on: (l) => !l.faceGear, wear: (l) => ({ ...l, faceGear: null }) },
     ],
   },
   {
@@ -357,6 +396,8 @@ const TABS: Tab[] = [
       {
         id: 'chain',
         name: 'Shades Chain',
+        // (it hangs from the shades)
+        only: (l) => (!l.face || l.shades) && !coversEyes(l.faceGear),
         icon: 'M3 7h7v4H3z M14 7h7v4h-7z M10 9h4 M4 11c0 6 4 9 8 9s8-3 8-9',
         on: (l) => l.chain,
         wear: (l) => ({ ...l, chain: !l.chain }),

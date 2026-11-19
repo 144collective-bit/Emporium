@@ -8,10 +8,14 @@ keep it up to date when what it describes changes.
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
   fitting room (`fitting.ts`): the ranges (Streetwear, Business, Work:
   `RANGES` in `profile-data.ts`, `[data-fit-ranges]`), then item cards by
-  slot (Tops, Bottoms, Shoes, Head, Eyewear, Face, Bags, Extras, Merch:
-  `TABS`, two rows of five), colours, and a turning preview of the player's Degen drawn by a
+  slot (Tops, Bottoms, Shoes, Head, Face, Eyewear, Gear, Bags, Extras,
+  Merch: `TABS`, two rows of five; Face is the faces plan's, docs/faces-plan.md:
+  the balaclava or a haircut, the skin tone and hair colour; Gear the face
+  gear), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is
-  open (still under reduced motion; drag turns him); its idle and walk
+  open (still under reduced motion; drag turns him); 15 s after the panel
+  closes (`RELEASE_AFTER`) that renderer, a GPU context of its own, is let go
+  and made again on the next open (the stability plan's Phase 4.2); its idle and walk
   are the crowd pack's captured takes on his bones (`captureplay.ts`:
   the three idles in turn, crossfaded, the looped walk on the spot; the
   formula poses until the pack is in). The **Merch** tab
@@ -31,6 +35,12 @@ keep it up to date when what it describes changes.
   he's wearing (`describe()`) and the way to Drop 001. × or Esc closes it;
   while it's open no other key handler hears the keyboard (Esc never
   stops walking). Check it upright and on its side at phone widths.
+- **The Face tab** (`docs/faces-plan.md` Phase 2; `faceItems`): the
+  Balaclava, or a face with a cut (`CUTS`: Buzz, Crop, Curls, Bun, Bald),
+  one of them, with Skin (`tone`) and Hair (`hair`) rows from
+  `PALETTE.tone` / `PALETTE.hair`; all free. On a face the Shades tab
+  offers Shades or No shades (`shades`), and Extras' Shades Chain shows
+  only with them on. The character screen's `describe()` has a Face row.
 - The look belongs to `profile-ui.ts` (browser and player profile); the
   fitting room only calls `wear()`. Everything is cosmetic and only for the
   city: never tied to the Shopify store or the token, never real money.

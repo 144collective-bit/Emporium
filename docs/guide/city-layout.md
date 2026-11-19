@@ -17,7 +17,11 @@ keep it up to date when what it describes changes.
     `CityMap.astro`; `data-view` is `loading`, then `3d` or `none`). A
     running city whose GPU context is lost (`webglcontextlost` on the
     renderer's canvas, index.ts) stops its loop and sound and shows the
-    same card saying its 3D graphics stopped, with a Reload button.
+    same card saying its 3D graphics stopped, with a Reload button, and
+    keeps the tier that stopped so the next start is a tier lower
+    (`gputier.ts`, `performance.md`). When the browser gives the GPU back
+    (`webglcontextrestored`) the city reloads itself, once a minute at
+    most (`reloadOnRestore()`).
     `src/lib/city.ts` holds only the place ids (`SpotId`) and pin copy type.
     Don't bring the 2D map back without the owner.
   Pin copy and panel copy live in `src/components/CityMap.astro`.
@@ -80,6 +84,19 @@ keep it up to date when what it describes changes.
     wraps), every sign from one sign atlas, and details are bottomless
     boxes in the shared paint: keep new infill going through them. Phones
     (`LOW` in `infill.ts`) leave out the finest details.
+  - **Modelled fronts** (the owner's call, `docs/buildings-plan.md`; Phase 1,
+    the pilot, is built on the Emporium's block only, `PILOT` in
+    `infill.ts`): the painted windows get real frames, sills and lintels
+    near, by their window type (windows.ts: hoods on the round-headed
+    ones, shutters on stucco, a post between a pair, the casements'
+    concrete bands, steel on the lofts; a window box or an air conditioner
+    here and there; phones the sills and lintels alone), the bays are
+    centred between corner piers so no window is cut by a wall's end, and
+    the piers, cornice and parapet are drawn at every distance. Where each
+    window's opening stands is `facade.ts` (DOM-free, tested in
+    `tests/facade.test.ts`: `PANES`, `baysOf()`, `windowsOf()`), which the
+    atlas's painter reads too: change an opening there, never in one of
+    the two.
   - The hangout square (`SQUARE`) is the whole south block, a block from the
     Emporium: an open plaza (the owner had the stage and its screen taken
     out; don't put them back), with the fountain, benches facing it, kiosks,

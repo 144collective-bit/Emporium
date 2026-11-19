@@ -1,5 +1,8 @@
 # Endswood Estate (plan)
 
+> **Superseded (2026-11-14):** the south of The Trenches was re-laid (`docs/south-plan.md` Phase 1b, the owner's
+> call). What this plan built was taken up; it's kept as the history of how the estate was. Degen's compound stayed.
+
 The owner's call (2026-11): a rough London council estate, **Endswood Estate**,
 known as **the Ends** ("TheEnds"): a concrete jungle of brutalist blocks with
 subways, underpasses and abandoned buildings, corner shops, an old but large

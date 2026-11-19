@@ -162,6 +162,20 @@ export const PATTERNS: { id: PatternId; name: string }[] = [
 ];
 export const PATTERN_IDS = PATTERNS.map((p) => p.id);
 
+/*
+ * The face (docs/faces-plan.md Phase 2): Degen in the balaclava and shades as in the art, or unmasked, his face in a
+ * skin tone with a haircut and its colour (all free), the shades on or off.
+ */
+export type Cut = 'buzz' | 'crop' | 'curls' | 'bun' | 'bald';
+export const CUTS: { id: Cut; name: string }[] = [
+  { id: 'buzz', name: 'Buzz' },
+  { id: 'crop', name: 'Crop' },
+  { id: 'curls', name: 'Curls' },
+  { id: 'bun', name: 'Bun' },
+  { id: 'bald', name: 'Bald' },
+];
+export const CUT_IDS = CUTS.map((c) => c.id);
+
 export interface Look {
   kind: LookKind;
   top: string;
@@ -183,8 +197,8 @@ export interface Look {
   eyewear: EyeStyle;
   frame: string;
   lens: string;
-  /** Face gear (or none), and its colour */
-  face: FaceGear | null;
+  /** Face gear (or none), and its colour (`faceGear`: `face` is the faces plan's, unmasked or not) */
+  faceGear: FaceGear | null;
   gear: string;
   /** One bag at a time */
   bag: Bag | null;
@@ -206,6 +220,13 @@ export interface Look {
   shoeMark: MarkId | null;
   /** An all-over print on the top */
   pattern: PatternId;
+  /** Unmasked: no balaclava, the face in `tone` with the hair (`cut`, `hair`) */
+  face: boolean;
+  tone: string;
+  hair: string;
+  cut: Cut;
+  /** The shades on an unmasked face (the balaclava always has them) */
+  shades: boolean;
 }
 
 export const PALETTE = {
@@ -222,6 +243,10 @@ export const PALETTE = {
   frame: ['#0d0c14', '#f3f2f7', '#c99a4a', '#8b889c', '#3a2418', '#d8312f', '#1d2550'],
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
+  /** Skin tones, pale to deep (the crowd's too, crowdlook.ts): flat tones, none bright enough to bloom */
+  tone: ['#f1d2b6', '#e8c39e', '#dcae86', '#c99068', '#b07650', '#8f5a3a', '#6e4129', '#52301f'],
+  /** Hair: the natural shades, then the dyes */
+  hair: ['#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#8a3a22', '#9d9aa8', '#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'],
 };
 
 /*
@@ -260,7 +285,7 @@ export const DEFAULT_LOOK: Look = {
   eyewear: 'classic',
   frame: '#0d0c14',
   lens: '#22d07a',
-  face: null,
+  faceGear: null,
   gear: '#2b2a33',
   bag: null,
   bagColor: '#00b8d8',
@@ -274,6 +299,11 @@ export const DEFAULT_LOOK: Look = {
   hatMark: 'diamond',
   shoeMark: null,
   pattern: 'plain',
+  face: false,
+  tone: '#e8c39e',
+  hair: '#16141f',
+  cut: 'crop',
+  shades: false,
 };
 
 /** The hats retired with the costume pieces (docs/wardrobe-plan.md Phase 1): a look saved in one is bare-headed */
@@ -312,7 +342,7 @@ export function cleanLook(raw: unknown): Look {
     eyewear: from(o.eyewear, EYE_IDS, DEFAULT_LOOK.eyewear),
     frame: colour(o.frame, DEFAULT_LOOK.frame),
     lens: colour(o.lens, DEFAULT_LOOK.lens),
-    face: orNull(o.face, FACE_IDS, null),
+    faceGear: orNull(o.faceGear, FACE_IDS, null),
     gear: colour(o.gear, DEFAULT_LOOK.gear),
     bag: orNull(o.bag, BAGS, null),
     bagColor: colour(o.bagColor, DEFAULT_LOOK.bagColor),
@@ -327,6 +357,12 @@ export function cleanLook(raw: unknown): Look {
     hatMark: from(o.hatMark, MARK_IDS, DEFAULT_LOOK.hatMark),
     shoeMark: orNull(o.shoeMark, MARK_IDS, null),
     pattern: from(o.pattern, PATTERN_IDS, DEFAULT_LOOK.pattern),
+    // (looks saved before faces had none of these: in the balaclava, as in the art)
+    face: o.face === true,
+    tone: from(o.tone, PALETTE.tone, DEFAULT_LOOK.tone),
+    hair: from(o.hair, PALETTE.hair, DEFAULT_LOOK.hair),
+    cut: from(o.cut, CUT_IDS, DEFAULT_LOOK.cut),
+    shades: o.shades === true,
   };
 }
 

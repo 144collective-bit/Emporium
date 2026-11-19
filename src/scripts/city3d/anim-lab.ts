@@ -548,7 +548,7 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   const wear: Record<string, string | boolean | undefined> = {};
   for (const w of (q.get('wear') ?? '').split(',').filter(Boolean)) {
     const [k, v] = w.split(':');
-    wear[k] = v === '' ? undefined : v ?? (['hood', 'chain', 'necklace', 'watch', 'capBack'].includes(k) ? true : '#4f7fd0');
+    wear[k] = v === '' ? undefined : v ?? (['hood', 'chain', 'necklace', 'watch', 'capBack', 'capFlat', 'skully', 'face', 'shades'].includes(k) ? true : '#4f7fd0');
   }
   const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), ...(wear as {}), ...clip };
   const detail = q.get('detail') === '2' ? 2 : 3;

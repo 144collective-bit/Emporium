@@ -26,7 +26,9 @@ test('downtown is 60 across, cut in thirds by two cross streets, inside the ring
 test('no road runs over a slab (a block, district or lot, with its sidewalk)', () => {
   // (the short north-south streets only from the Parkway south: docs/mall-plan.md)
   NS_ROADS.forEach((r, i) => {
-    for (const s of SLABS) assert.ok(s.every((p) => p[0] <= r.c - r.half + 1e-6) || s.every((p) => p[0] >= r.c + r.half - 1e-6) || s.every((p) => !nsRuns(i, p[1])), `north-south road at x ${r.c} crosses a slab at ${bounds(s)}`);
+    // (a slab all one side of it, or none of it where the road runs; a block that wraps round a road's end, as the
+    // south's round ns1s's and ns2s's bends, docs/south-plan.md, has every corner off it where it runs)
+    for (const s of SLABS) assert.ok(s.every((p) => p[0] <= r.c - r.half + 1e-6) || s.every((p) => p[0] >= r.c + r.half - 1e-6) || s.every((p) => !nsRuns(i, p[1]) || p[0] <= r.c - r.half + 1e-6 || p[0] >= r.c + r.half - 1e-6), `north-south road at x ${r.c} crosses a slab at ${bounds(s)}`);
   });
   // (downtown's two small east-west roads don't run across the Strip: layout.ts STRIP_GAP, strip.ts)
   EW_ROADS.forEach((r, i) => {

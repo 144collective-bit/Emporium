@@ -15,8 +15,11 @@ import { rollsAt } from '../src/scripts/city3d/rolls';
 import { heightAt } from '../src/scripts/city3d/terrain';
 import { inWater } from '../src/scripts/city3d/river';
 import { treeSpot } from '../src/scripts/city3d/outskirts';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { PILLARS } from '../src/scripts/city3d/metro';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 test('every grid road out past the highway carries on as a country road to near the edge, with its turning loop', () => {
   assert.ok(RURAL_RUNS.length >= 12, `${RURAL_RUNS.length} country roads`);

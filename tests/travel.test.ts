@@ -6,13 +6,16 @@ import { RESORTS } from '../src/scripts/city3d/resorts';
 import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import assert from 'node:assert/strict';
 import { PLACES, PLACE_IDS, SEEN_R, seen } from '../src/scripts/city3d/places';
-import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
+import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
 import { RIVER, STRIP_BLVD, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { cleanSave, newSave, visit } from '../src/scripts/city3d/tycoon';
 import { pathBetween, pointOn, rideTime } from '../src/scripts/city3d/routes';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
+/** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
+const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
 const R = 0.3;
 const blocked = (x: number, z: number) => SOLIDS.some((b) => x > b[0] - R && x < b[2] + R && z > b[1] - R && z < b[3] + R);
@@ -81,11 +84,17 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       const docks = (id: string) => id === 'metro-docks' || id === 'harbourmaster' || id === 'karts' || id === 'metro-kart';
       // (and Endswood Estate's places south of the highway's south-west bend, docs/estate-plan.md Phase 8: from
       // Crestmont's grand hotel about 66 s)
-      const ends = (id: string) => id === 'endswood' || id === 'aldwyns' || id === 'bunker';
+      // (and the High Road's places, docs/south-plan.md Phase 3c: as far out as the rest of the south)
+      const ends = (id: string) => ['endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage'].includes(id);
+      // (and Aldwyn's Green Rec across the brook, docs/south-plan.md Phase 3e: the furthest of them, from Crestmont's grand
+      // hotel about 91 s)
+      const rec = (id: string) => id === 'rec';
       // (and Degen's home: first at the far end of the Close in Endswood carried west, docs/home-plan.md, as far out
       // as Lot 9; since it moved to his compound past the Close's end in the far west, the owner's call,
       // docs/ends-far-west-plan.md Phase 2, a little further: from Crestmont's grand hotel about 85 s)
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) || ends(id) ? 12 : id === 'lot9' ? 18 : id === 'home' || id === 'overlook' || id === 'reservoir' ? 22 : 0);
+      // (since the south was re-laid, docs/south-plan.md Phase 1b, St Aldwyn's on the village's hill is as far out as
+      // Degen's compound: from Crestmont's grand hotel about 86 s)
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'lot9' ? 18 : id === 'home' || ends(id) || id === 'overlook' || id === 'reservoir' ? 22 : rec(id) ? 28 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
       // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
       // round through town: the overlook to the airport's metro station about 94 s)
@@ -94,7 +103,9 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // corner to the far south-west, about 100 s)
       // (and Degen's compound in the far west, docs/ends-far-west-plan.md Phase 2, the owner's call: the overlook to it,
       // the far north-east corner to further south-west still, about 107 s)
-      const most = 110;
+      // (and Aldwyn's Green Rec across the brook in the far south-west, docs/south-plan.md Phase 3e: the overlook to it,
+      // the furthest two places apart, about 114 s)
+      const most = 116;
       // (Stadium Road's way in from the north road went up past the raised highway's exit 1, docs/highway-plan.md
       // Phase 1b: from the stadium to Crestmont's civic hall about 63 s, to its overlook about 85 s)
       // (and since its Phase 2 the ring highway is up on its viaduct, its exits to come in Phase 3: a taxi goes the

@@ -159,13 +159,18 @@ test('the shades: five styles, the frames any colour; a look from before them we
 
 test("face gear: a gas mask, a respirator, safety and ski goggles, or none; the masks and goggles in the shades' place (the wardrobe plan, Phase 4)", () => {
   assert.deepEqual(FACE_IDS, ['gasmask', 'respirator', 'safety', 'ski']);
-  assert.equal(DEFAULT_LOOK.face, null);
-  for (const face of FACE_IDS) assert.equal(cleanLook({ ...DEFAULT_LOOK, face }).face, face);
-  assert.equal(cleanLook({ ...DEFAULT_LOOK, face: 'clown' }).face, null);
-  assert.equal(cleanLook({ ...DEFAULT_LOOK, face: null }).face, null);
-  const { face: _f, gear: _g, ...old } = DEFAULT_LOOK;
+  // (as `faceGear`: `face` is the faces plan's, unmasked or not)
+  assert.equal(DEFAULT_LOOK.faceGear, null);
+  for (const faceGear of FACE_IDS) assert.equal(cleanLook({ ...DEFAULT_LOOK, faceGear }).faceGear, faceGear);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, faceGear: 'clown' }).faceGear, null);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, faceGear: null }).faceGear, null);
+  const { faceGear: _f, gear: _g, ...old } = DEFAULT_LOOK;
   void _f, _g;
-  assert.deepEqual([cleanLook(old).face, cleanLook(old).gear], [null, DEFAULT_LOOK.gear]);
+  assert.deepEqual([cleanLook(old).faceGear, cleanLook(old).gear], [null, DEFAULT_LOOK.gear]);
+  // (the two never mixed: an unmasked face keeps its gear, and gear never unmasks him)
+  const both = cleanLook({ ...DEFAULT_LOOK, face: true, faceGear: 'respirator' });
+  assert.deepEqual([both.face, both.faceGear], [true, 'respirator']);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, faceGear: 'gasmask' }).face, false);
   assert.deepEqual(FACE_IDS.map(coversEyes), [true, false, true, true]);
   assert.equal(coversEyes(null), false);
 });

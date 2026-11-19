@@ -13,6 +13,7 @@ import { HILLS, TERRAIN_RECT, natural, smooth, swell, type Rect } from './hills'
 import { BED, HILL_ROADS } from './crestmont';
 import { MANSION_LEVELS } from './mansions';
 import { SITE_LEVELS } from './crestsites';
+import { SOUTH_GROUND_RECT, onSouthGround, southLift } from './southground';
 
 export { HILLS, TERRAIN_RECT, swell, type Rect };
 
@@ -93,9 +94,10 @@ function bedAt(x: number, z: number): { y: number; w: number } | null {
   return most > 0 ? { y: sum / weight, w: most } : null;
 }
 
-/** The ground's height at a point (tiles; 0 outside `TERRAIN_RECT`) */
+/** The ground's height at a point (tiles; 0 outside `TERRAIN_RECT` and the south's rolling ground, southground.ts:
+ * docs/south-plan.md Phase 1c, read off its grid, `southLift()`) */
 export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS) {
-  if (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3]) return 0;
+  if (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3]) return southLift(x, z);
   let h = natural(x, z);
   const bed = bedAt(x, z);
   if (bed) h += (bed.y - h) * bed.w;
@@ -109,9 +111,12 @@ export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS
 /** The hills' height before the roads were cut in (the tests compare) */
 export const naturalAt = (x: number, z: number) => (x <= TERRAIN_RECT[0] || x >= TERRAIN_RECT[2] || z <= TERRAIN_RECT[1] || z >= TERRAIN_RECT[3] ? 0 : natural(x, z));
 
-/** Whether a point (with `m` round it) is on the hills' land at all: a cheap test before heightAt() */
-export const onHills = (x: number, z: number, m = 0) =>
+/** Whether a point (with `m` round it) is on Crestmont's hills' land at all */
+export const onCrest = (x: number, z: number, m = 0) =>
   x > TERRAIN_RECT[0] - m && x < TERRAIN_RECT[2] + m && z > TERRAIN_RECT[1] - m && z < TERRAIN_RECT[3] + m;
+/** Whether a point (with `m` round it) is on ground that isn't flat at all (Crestmont's hills, the south's rolling
+ * ground): a cheap test before heightAt() */
+export const onHills = (x: number, z: number, m = 0) => onCrest(x, z, m) || onSouthGround(x, z, m);
 
 /** The ground's slope at a point: rise over run, the steepest way */
 export function slopeAt(x: number, z: number, levels: readonly Level[] = LEVELS) {
@@ -133,12 +138,16 @@ export function riseAlong(x: number, z: number, dx: number, dz: number) {
  * `rayBoxes()`). Only the stretch over `TERRAIN_RECT` is looked at, marched in steps of about `step` tiles.
  */
 export function hillsAlong(from: { x: number; y: number; z: number }, dir: { x: number; y: number; z: number }, t: number, pad = 0.3, step = 0.8) {
-  // The stretch of the ray over the hills' rectangle (in the ray's own lengths)
+  // (Crestmont's hills, then the south's rolling ground: the nearer stop wins)
+  return Math.min(alongOver(TERRAIN_RECT, from, dir, t, pad, step), alongOver(SOUTH_GROUND_RECT, from, dir, t, pad, step));
+}
+function alongOver(R: Rect, from: { x: number; y: number; z: number }, dir: { x: number; y: number; z: number }, t: number, pad: number, step: number) {
+  // The stretch of the ray over the rectangle (in the ray's own lengths)
   let a = 0;
   let b = t;
   for (const [o, v, lo, hi] of [
-    [from.x, dir.x, TERRAIN_RECT[0], TERRAIN_RECT[2]],
-    [from.z, dir.z, TERRAIN_RECT[1], TERRAIN_RECT[3]],
+    [from.x, dir.x, R[0], R[2]],
+    [from.z, dir.z, R[1], R[3]],
   ]) {
     if (Math.abs(v) < 1e-9) {
       if (o <= lo || o >= hi) return t;

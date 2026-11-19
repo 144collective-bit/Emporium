@@ -15,7 +15,7 @@ import { Batch, FONT_DISPLAY, canvasTex, fx, glowMat, lit, neon, siteMat, toon }
 import { site } from './tilework';
 import { buildFx, chainMesh, poster } from './grime';
 import { COVER } from './palette';
-import { FIELD, FIELD_TREES, PARK_X0, TRACK_HALF, TRACK_LOOP, TRACK_SPUR, rng, type Pt, type Rect } from './lot9';
+import { CAMP_X1, FIELD, FIELD_TREES, TRACK_HALF, TRACK_LOOP, TRACK_SPUR, rng, type Pt, type Rect } from './lot9';
 import { DROPS, POLE, POLE_LINES, type Home, type YardThing } from './lot9homes';
 import {
   BEDS, CIRCLE, COOP, COOP_RUN, CORRAL, DUMPSTERS, FIELD_ARCH, GARDEN, GATE_DUMPSTERS, GRILL, ICE, KITCHEN, KITCHEN_TABLES, LOGS, NOTICE, PITCHES, POTTIES, POTTY_H, PROPANE_CAGE,
@@ -692,7 +692,7 @@ export function registerCamp(low: boolean) {
     b.build(into, { cast: true, receive: true });
   });
   // The dumpster corral (pallets round three sides), the notice board with its bills, THE FIELD over the old fence's gap
-  site('lot9 field corral', [CORRAL[0] - 1, NOTICE[1] - 1, PARK_X0 + 1, CORRAL[3] + 1], (into) => {
+  site('lot9 field corral', [CORRAL[0] - 1, NOTICE[1] - 1, CAMP_X1 + 1, CORRAL[3] + 1], (into) => {
     const b = new Batch();
     const fx0 = new Batch();
     for (const q of DUMPSTERS) {

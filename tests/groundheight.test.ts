@@ -3,10 +3,13 @@
 // with it everywhere, at every height. Then each layer answers alone where it stands, and the order resolves the
 // overlaps (a deck over the water, the tunnel under the highway, the mall's upper floor).
 import { test } from 'node:test';
+import { onSouthGround, southLift } from '../src/scripts/city3d/southground';
+import { SKY_LIFTS, skyFloorAt } from '../src/scripts/city3d/southsky';
+import { floorY } from '../src/scripts/city3d/southblocks';
+import { BRIDGE as REC_BRIDGE, recBridgeY } from '../src/scripts/city3d/rec';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
-import { ENDS_FLOORS, endsDeckY } from '../src/scripts/city3d/endsdecks';
-import { HOME, ROOF_Y, homeRoofY } from '../src/scripts/city3d/home';
+import { HOME, ROOF_Y, homeFloorY } from '../src/scripts/city3d/home';
 import { DECK_Y, MARKET_DECK, onDeck } from '../src/scripts/city3d/waterfront';
 import { onEsplanade } from '../src/scripts/city3d/boulevard';
 import { DEPARTURES, departuresY } from '../src/scripts/city3d/airfield';
@@ -25,6 +28,8 @@ import { HALL } from '../src/scripts/city3d/mall';
 import { TERRAIN_RECT } from '../src/scripts/city3d/terrain';
 import { SPIRE_LOT } from '../src/scripts/city3d/highrise';
 import { UP, UPPER, mallFloor } from '../src/scripts/city3d/mallinside';
+import { L1 as LINK_L1, LINK, linkFloorAt } from '../src/scripts/city3d/malllink';
+import { L1 as COURT_L1, VOID as COURT_VOID, courtFloor } from '../src/scripts/city3d/courtinside';
 import { inChannel, shoreY } from '../src/scripts/city3d/river';
 import { TUNNEL } from '../src/scripts/city3d/lot9';
 import { heightAt, onHills } from '../src/scripts/city3d/terrain';
@@ -42,14 +47,23 @@ const DISC = { ...GARAGE_SITE.turntable, top: 0.07 };
 const inBox = (b: Box, x: number, z: number, pad = 0) => x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad;
 function reference(leavesOpen: () => boolean) {
   return (x: number, z: number, yNow = 0) => {
-    const ends = endsDeckY(x, z, yNow);
-    if (ends !== null) return ends;
-    // (Degen's roof terrace, home.ts: new since the old groundAt(), so the reference takes it as the layers do)
-    const roof = homeRoofY(x, z, yNow);
+    // (Degen's upstairs and roof terrace, home.ts: new since the old groundAt(), so the reference takes them as the layers do)
+    const roof = homeFloorY(x, z, yNow);
     if (roof !== null) return roof;
     const tn = UNDER.y(x, z, yNow);
     if (tn !== null) return tn;
+    // (Endswood's sky network, southsky.ts: new since the old groundAt(), so the reference takes it as the layers do)
+    const sky = skyFloorAt(x, z, yNow);
+    if (sky !== null) return sky;
+    // (the rec's footbridge, rec.ts: new since the old groundAt() too)
+    const rb = recBridgeY(x, z);
+    if (rb !== null && Math.abs(yNow - rb) < 1.2) return rb;
     const slab = slabs.some((s) => inBox(s.box, x, z) && inPoly(s.poly, [x, z])) ? SLAB : onDeck(x, z) || onEsplanade(x, z) ? DECK_Y : 0.035;
+    // (the south's rolling ground, southground.ts: new since the old groundAt(), so the reference takes it as the layers do)
+    if (onSouthGround(x, z) && (slab === SLAB || slab === 0.035)) {
+      const l = southLift(x, z);
+      if (l !== 0) return (slab === SLAB ? SLAB : 0.035 + Math.max(0, vergeY(x, z))) + l;
+    }
     if (slab === 0.035) {
       const v = vergeY(x, z);
       if (v > 0) return v + 0.035;
@@ -69,8 +83,14 @@ function reference(leavesOpen: () => boolean) {
     if (dep !== null) return Math.max(slab, dep + 0.035);
     const fb = footbridgeY(x, z, yNow, 0, leavesOpen());
     if (fb !== null) return Math.max(slab, fb);
+    // (Starlight Mall's Skywalk came after, malllink.ts: its floors by height, the one term added before the mall's)
+    const link = linkFloorAt(x, z, yNow);
+    if (link !== null) return link;
     const mall = mallFloor(x, z, yNow);
     if (mall !== null) return mall;
+    // (Palm Court indoors came after, courtinside.ts: its floors by height, the one term added after the mall's)
+    const court = courtFloor(x, z, yNow);
+    if (court !== null) return court;
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
     // (the civic quarter's steps and porticos came after, civic.ts: the one term added to the old groundAt())
@@ -107,8 +127,6 @@ const JETTY_AT: [number, number] = [JETTY.x, (JETTY.z0 + JETTY.z1) / 2];
 const SHORE = find([-150, 60, 150, 150], (x, z) => inChannel(x, z) && baseAt(x, z).open && !onDeck(x, z));
 /** The mall's east gallery, upstairs */
 const GALLERY = mid(UPPER[2]);
-/** One of Endswood's galleries (a level floor, not a stair or its foot): the estate's decks walked on (endsdecks.ts) */
-const GALLERY_FLOOR = ENDS_FLOORS.find((f) => !f.stair && !f.ground && !f.slope)!;
 /** The places the layers are: a point on each, and the heights they're asked at */
 const SPOTS: [number, number][] = [
   // City Hall's steps (half way up) and its portico
@@ -117,12 +135,13 @@ const SPOTS: [number, number][] = [
   // and the courthouse's
   [COURT_PORTICO[0] - 1, (COURT_PORTICO[1] + COURT_PORTICO[3]) / 2],
   [(COURT_PORTICO[0] + COURT_PORTICO[2]) / 2, (COURT_PORTICO[1] + COURT_PORTICO[3]) / 2],
-  mid(GALLERY_FLOOR.rect),
   mid(MARKET_DECK),
   [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2],
   [TUNNEL.x, TUNNEL.z0 + 1],
   mid(HALL.rect),
   GALLERY,
+  [LINK[0] + 2, -128],
+  [COURT_VOID[0] - 1, -90],
   SHORE,
   [FOOTBRIDGE_X, (TOWERS[0] + TOWERS[1]) / 2],
   [FOOTBRIDGE_X, TOWERS[0] - 6],
@@ -163,8 +182,12 @@ test('the layered ground agrees with the old groundAt() everywhere, at every hei
 test('every layer answers alone where it stands, and nowhere on the open street downtown', () => {
   const g = (x: number, z: number) => ({ ...baseAt(x, z), leavesOpen: true });
   const where: Record<string, [number, number, number]> = {
-    endsdecks: [mid(GALLERY_FLOOR.rect)[0], mid(GALLERY_FLOOR.rect)[1], GALLERY_FLOOR.y],
-    homeroof: [(HOME.house[0] + HOME.house[2]) / 2, (HOME.house[1] + HOME.house[3]) / 2, SLAB + ROOF_Y],
+    home: [(HOME.house[0] + HOME.house[2]) / 2, (HOME.house[1] + HOME.house[3]) / 2, SLAB + ROOF_Y],
+    // (the south's rolling ground on the village's hill, St Aldwyn's churchyard)
+    south: [-205, 462, 0],
+    // (Endswood's sky network: The Core's landing at the third floor)
+    recbridge: [REC_BRIDGE.x, (REC_BRIDGE.z0 + REC_BRIDGE.z1) / 2, recBridgeY(REC_BRIDGE.x, (REC_BRIDGE.z0 + REC_BRIDGE.z1) / 2)!],
+    sky: [SKY_LIFTS.find((l) => l.id === 'twin-core')!.at[0], SKY_LIFTS.find((l) => l.id === 'twin-core')!.at[1], floorY(SKY_LIFTS[0].base, 3)],
     tunnel: [TUNNEL.x, (TUNNEL.z0 + TUNNEL.z1) / 2, -2],
     hills: [HILL[0], HILL[1], 0],
     rolls: [ROLL[0], ROLL[1], 0],
@@ -173,6 +196,8 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     viaduct: [ring(0.3)[0], ring(0.3)[1], VIADUCT_Y],
     departures: [DEPARTURES.x0 + 2, (DEPARTURES.z0 + DEPARTURES.z1) / 2, DEPARTURES.y],
     liberty: [FOOTBRIDGE_X, (TOWERS[0] + TOWERS[1]) / 2, LOW_Y],
+    link: [LINK[0] + 2, -128, LINK_L1],
+    court: [COURT_VOID[0] - 1, -90, COURT_L1],
     mall: [GALLERY[0], GALLERY[1], UP],
     shore: [SHORE[0], SHORE[1], 0],
     turntable: [DISC.x, DISC.z, 0],

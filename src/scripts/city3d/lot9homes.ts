@@ -8,7 +8,7 @@
  * (`PORCH_SITTERS`); the boot never carries any of it.
  */
 import { CARS, type CarId } from './carspec';
-import { COL0, COLS, FENCE, FIRE_COLS, HOLE, LANE_HALF, LANE_N, LANE_S, LOT_W, ROAD_HALF, ROAD_Z, boxOf, carBox, rng, type Box, type Pt, type Rect } from './lot9';
+import { COL0, COLS, FIRE_COLS, HOLE, LANE_HALF, LANE_N, LANE_S, LOT_W, PARK, ROAD_HALF, ROAD_Z, boxOf, carBox, rng, type Box, type Pt, type Rect } from './lot9';
 import type { Idle } from './landmarks';
 
 
@@ -85,15 +85,15 @@ export interface Lot {
 /** The rows: their fronts (on a lane), backs and the way they face (their lane: 'n' north of them, 's' south) */
 const ROWS: { front: number; back: number; face: Face }[] = [
   // R0: between the fence and the north lane, facing it (south)
-  { front: LANE_N - LANE_HALF - 0.2, back: FENCE[1] + 0.4, face: 's' },
+  { front: LANE_N - LANE_HALF - 0.2, back: PARK[1] + 0.4, face: 's' },
   // R1, R2: back to back between the north lane and the middle
   { front: LANE_N + LANE_HALF + 0.2, back: (LANE_N + ROAD_Z) / 2, face: 'n' },
   { front: ROAD_Z - ROAD_HALF - 0.2, back: (LANE_N + ROAD_Z) / 2, face: 's' },
   // R3, R4: between the middle and the south lane
   { front: ROAD_Z + ROAD_HALF + 0.2, back: (ROAD_Z + LANE_S) / 2, face: 'n' },
   { front: LANE_S - LANE_HALF - 0.2, back: (ROAD_Z + LANE_S) / 2, face: 's' },
-  // R5: between the south lane and the fence
-  { front: LANE_S + LANE_HALF + 0.2, back: FENCE[3] - 0.4, face: 'n' },
+  // R5: between the south lane and the park's old south side
+  { front: LANE_S + LANE_HALF + 0.2, back: PARK[3] - 0.4, face: 'n' },
 ];
 /** The burnt-out shell and the two condemned units (row, col), set by hand; and the vacant pads */
 const BURNT: [number, number] = [4, 8];

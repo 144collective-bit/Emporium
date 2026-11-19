@@ -4,6 +4,7 @@
  * merges static geometry into a few draw calls.
  */
 import * as THREE from 'three';
+import { scopedKey, texScope } from './texscope';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ---------- Layers ---------- */
@@ -173,6 +174,8 @@ export function paintMat() {
     // (its colours are all 0 to 1: tilebatch.ts packs them smaller)
     paintShared.userData.paint = true;
     paintShared.userData.siteKey = 'paint';
+    // (its trees sway, read from the uv: tilebatch.ts keeps the uv while they do, `dropsUv()`)
+    paintShared.userData.wind = true;
     paintShared.onBeforeCompile = (sh) => injectWind(sh);
     paintShared.customProgramCacheKey = () => 'paint-wind';
   }
@@ -373,8 +376,15 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
   const made = BUILT?.[key];
   if (made) return builtTexture(made, () => paint(w, h, draw));
   const c = paint(w, h, draw);
-  if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160) });
-  return canvasTexOf(c);
+  if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160), scope: texScope() });
+  return named(canvasTexOf(c), draw);
+}
+/** Under ?fps or ?bench a painted texture carries the start of what drew it, for `textureRows()` (perf.ts) */
+let nameTex: boolean | undefined;
+function named(t: THREE.CanvasTexture, draw: Draw) {
+  nameTex ??= !NO_DOM && /[?&](fps|bench)\b/.test(location.search);
+  if (nameTex) t.name = draw.toString().replace(/\s+/g, ' ').slice(0, 90);
+  return t;
 }
 
 /**
@@ -383,7 +393,7 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
  */
 export function liveTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
   if (NO_DOM) return canvasTex(w, h, draw);
-  return canvasTexOf(paint(w, h, draw));
+  return named(canvasTexOf(paint(w, h, draw)), draw);
 }
 
 function paint(w: number, h: number, draw: Draw) {
@@ -418,7 +428,7 @@ export interface BuiltTex {
   avg: [number, number, number, number];
 }
 /** ?bake-textures: the build's own run, recording what's painted (each texture's key and canvas) */
-const BAKING: { key: string; canvas: HTMLCanvasElement; src: string }[] | null =
+const BAKING: { key: string; canvas: HTMLCanvasElement; src: string; scope: string }[] | null =
   !NO_DOM && /[?&]bake-textures\b/.test(location.search) ? ((globalThis as { __texBake?: unknown[] }).__texBake = []) as never : null;
 /**
  * ?bake-textures: the boot is done (index.ts, as the loader goes). The bake keeps only what was painted by now
@@ -454,15 +464,12 @@ const BUILT: Record<string, BuiltTex> | null = (() => {
  * (the boot paints in the same order every time). The build keeps only the keys that came out the same
  * with two different saves and clocks, so a key always stands for the same picture.
  */
-const texCounts = new Map<string, number>();
 function texKey(w: number, h: number, draw: Draw) {
   const src = draw.toString();
   let x = 2166136261;
   for (let i = 0; i < src.length; i++) x = Math.imul(x ^ src.charCodeAt(i), 16777619);
-  const base = `${(x >>> 0).toString(36)}-${w}x${h}`;
-  const n = texCounts.get(base) ?? 0;
-  texCounts.set(base, n + 1);
-  return `${base}-${n}`;
+  // (counted within the site being built, if any: texscope.ts)
+  return scopedKey(`${(x >>> 0).toString(36)}-${w}x${h}`);
 }
 
 /** One made at build time: the texture standing in for it, and its painted fallback */
@@ -731,6 +738,116 @@ function ensureUv(g: THREE.BufferGeometry) {
  */
 export type Lod = 'all' | 'near' | 'far';
 
+/**
+ * The ground the city's fixed geometry stands on, where it isn't flat (the south's rolling ground, southground.ts:
+ * docs/south-plan.md Phase 1c): set once at the start (index.ts, on the main thread and in the site worker alike).
+ * `Batch.build()` lifts every vertex inside `rect` by `lift(x, z)`, its faces first split so no edge runs longer than
+ * `LIFT_EDGE` along the ground (so a big slab or a long wall follows the slope); everything else is left as it was.
+ */
+let groundLift: { lift: (x: number, z: number) => number; rect: readonly [number, number, number, number] } | null = null;
+export function setGroundLift(lift: (x: number, z: number) => number, rect: readonly [number, number, number, number]) {
+  groundLift = { lift, rect };
+}
+/** The longest an edge may run along the ground once lifted (the south's ground bends by under a centimetre in it) */
+export const LIFT_EDGE = 5;
+/**
+ * A geometry lifted onto the ground: the faces that reach onto the lifted ground split till no edge is longer than
+ * `LIFT_EDGE` across x and z, then each of their corners raised by the lift under it; the rest of it kept as it was,
+ * its corners still shared (the lift is 0 off the ground's rect, so they'd only be split into more of the same flat
+ * faces: a batch that's mostly elsewhere, the city's ground for one, isn't split or unshared whole). The same geometry
+ * where none of it is on the lifted ground.
+ */
+function liftOnto(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  if (!groundLift) return g;
+  const [rx0, rz0, rx1, rz1] = groundLift.rect;
+  g.computeBoundingBox();
+  const bb = g.boundingBox!;
+  if (bb.max.x <= rx0 || bb.min.x >= rx1 || bb.max.z <= rz0 || bb.min.z >= rz1) return g;
+  const pos = g.getAttribute('position');
+  const index = g.index;
+  const tris = Math.floor((index ? index.count : pos.count) / 3);
+  const corner = (k: number) => (index ? index.getX(k) : k);
+  // Which faces reach onto the lifted ground (their box over its rect)
+  const onto = new Uint8Array(tris);
+  let split = 0;
+  for (let t = 0; t < tris; t++) {
+    const [a, b, c] = [corner(3 * t), corner(3 * t + 1), corner(3 * t + 2)];
+    const [xa, xb, xc, za, zb, zc] = [pos.getX(a), pos.getX(b), pos.getX(c), pos.getZ(a), pos.getZ(b), pos.getZ(c)];
+    if (Math.max(xa, xb, xc) <= rx0 || Math.min(xa, xb, xc) >= rx1 || Math.max(za, zb, zc) <= rz0 || Math.min(za, zb, zc) >= rz1) continue;
+    onto[t] = 1;
+    split++;
+  }
+  if (!split) return g;
+  const names = Object.keys(g.attributes);
+  const attrs = names.map((n) => g.getAttribute(n) as THREE.BufferAttribute);
+  const sizes = attrs.map((a) => a.itemSize);
+  const offs = sizes.map((_, k) => sizes.slice(0, k).reduce((s, n) => s + n, 0));
+  const stride = sizes.reduce((s, n) => s + n, 0);
+  const P = offs[names.indexOf('position')];
+  // The kept faces' corners, each once (renumbered in the order they're met)
+  const keptOf = new Int32Array(pos.count).fill(-1);
+  const keptFrom: number[] = [];
+  const ix: number[] = [];
+  for (let t = 0; t < tris; t++) {
+    if (onto[t]) continue;
+    for (let c = 0; c < 3; c++) {
+      const v = corner(3 * t + c);
+      if (keptOf[v] < 0) {
+        keptOf[v] = keptFrom.length;
+        keptFrom.push(v);
+      }
+      ix.push(keptOf[v]);
+    }
+  }
+  const kept = keptFrom.length;
+  // The split faces' corners after them, a face's own three each (all of a corner's attributes in a row: `stride`)
+  const out: number[] = [];
+  const read = (v: number) => {
+    const r = new Array<number>(stride);
+    attrs.forEach((a, k) => {
+      for (let c = 0; c < sizes[k]; c++) r[offs[k] + c] = a.getComponent(v, c);
+    });
+    return r;
+  };
+  const mid = (a: number[], b: number[]) => a.map((x, i) => (x + b[i]) / 2);
+  const flat2 = (a: number[], b: number[]) => Math.hypot(a[P] - b[P], a[P + 2] - b[P + 2]);
+  const emit = (a: number[], b: number[], c: number[], depth: number) => {
+    if (depth < 6 && Math.max(flat2(a, b), flat2(b, c), flat2(c, a)) > LIFT_EDGE) {
+      const [m1, m2, m3] = [mid(a, b), mid(b, c), mid(c, a)];
+      emit(a, m1, m3, depth + 1);
+      emit(m1, b, m2, depth + 1);
+      emit(m3, m2, c, depth + 1);
+      emit(m1, m2, m3, depth + 1);
+      return;
+    }
+    for (const v of [a, b, c]) for (let i = 0; i < stride; i++) out.push(v[i]);
+  };
+  for (let t = 0; t < tris; t++) if (onto[t]) emit(read(corner(3 * t)), read(corner(3 * t + 1)), read(corner(3 * t + 2)), 0);
+  const made = out.length / stride;
+  const n = kept + made;
+  for (let i = 0; i < made; i++) ix.push(kept + i);
+  const res = new THREE.BufferGeometry();
+  const { lift } = groundLift;
+  names.forEach((name, k) => {
+    const [a, size, o] = [attrs[k], sizes[k], offs[k]];
+    const arr = new Float32Array(n * size);
+    for (let i = 0; i < kept; i++) for (let c = 0; c < size; c++) arr[i * size + c] = a.getComponent(keptFrom[i], c);
+    for (let i = 0; i < made; i++) for (let c = 0; c < size; c++) arr[(kept + i) * size + c] = out[i * stride + o + c];
+    if (o === P) for (let i = kept; i < n; i++) arr[i * 3 + 1] += lift(arr[i * 3], arr[i * 3 + 2]);
+    // (a split face's normals are the means of its corners': made whole again)
+    if (name === 'normal')
+      for (let i = kept; i < n; i++) {
+        const l = Math.hypot(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2]) || 1;
+        for (let c = 0; c < 3; c++) arr[i * 3 + c] /= l;
+      }
+    res.setAttribute(name, new THREE.Float32BufferAttribute(arr, size, a.normalized));
+  });
+  // (indexed as everything a Batch builds is: the site worker hands back only indexed meshes, sitework.ts)
+  res.setIndex(new THREE.BufferAttribute(n > 65535 ? new Uint32Array(ix) : new Uint16Array(ix), 1));
+  g.dispose();
+  return res;
+}
+
 export class Batch {
   private parts = new Map<string, { mat: THREE.Material; lod: Lod; geos: THREE.BufferGeometry[] }>();
   /** The level what's added now is drawn at (see `Lod`; `detail()` sets it for a while) */
@@ -855,10 +972,13 @@ export class Batch {
   private lastAdded: { geo: THREE.BufferGeometry; mat: THREE.Material } | null = null;
 
   /** `details`: whether the near-only details cast shadows too (they don't: small, and the shadow map's triangles are dear) */
-  build(parent: THREE.Object3D, { cast = true, receive = true, details = false } = {}) {
+  build(parent: THREE.Object3D, { cast = true, receive = true, details = false, lift = true } = {}) {
     for (const { mat, lod, geos } of this.parts.values()) {
-      const merged = mergeGeometries(geos, false);
-      if (!merged) continue;
+      const joined = mergeGeometries(geos, false);
+      if (!joined) continue;
+      // (onto the ground where it isn't flat: the south's rolling ground; `lift` false for what stands level on its own
+      // plinth there, drawn at its own heights: the south's blocks, southblocks3d.ts)
+      const merged = lift ? liftOnto(joined) : joined;
       const mesh = new THREE.Mesh(merged, mat);
       if (lod !== 'all') mesh.userData.lod = lod;
       mesh.castShadow = cast && (lod !== 'near' || details);

@@ -137,15 +137,19 @@ keep it up to date when what it describes changes.
   changes the save and commits gets badges and level-ups checked. Rewards
   are Dorras and XP only: no prizes, nothing real.
 - **Getting started** (the new player's first steps): the rules are
-  `guide.ts` (DOM-free, tested in `tests/guide.test.ts`): `GUIDE`, seven
-  steps in order (stock your stall at the market hall, make 5 sales, take
+  `guide.ts` (DOM-free, tested in `tests/guide.test.ts`): `GUIDE`, eight
+  steps in order (head out of the front door at home, the save's counter
+  `leftHome`, docs/spawn-plan.md; stock your stall at the market hall, make 5 sales, take
   your car out, deliver a contract, target practice, a race at the kart park, back up
   your save at the Vault), each with a beam spot (`at`), a way in from the
   City view (`go`: open a panel, or start walking at a free spot facing
   it) and a check on the save (`met()`, lifetime counters, so a step
   already done moves straight on). `advanceGuide()` (run first in
   `missions.onCommit()`) pays each step's small reward (Dorras and XP, the
-  ledger's Missions line) once. The save carries `guide` { step, hidden }
+  ledger's Missions line) once. The save carries `guide` { step, hidden, steps }
+  (`steps`: how many there were when it was saved; a guide from before Head
+  out was put first has none and counts one on past its first step,
+  `guideStepOf()`)
   (`GUIDE_STEPS` in `tycoon.ts`; a save from before it that's past level 1
   has it done) and `backup` (when it was last downloaded). On screen
   (`missions-ui.ts`, styles `src/styles/guide.css`): the City view's card

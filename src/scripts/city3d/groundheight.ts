@@ -20,7 +20,7 @@
  * (`yNow` says which floor), the kart park's circuit last (its flyover over the track below). `createGroundHeight()`
  * gives `groundAt(x, z, yNow)`; `yNow` is how high Degen (or his vehicle) is now, for the layers with two levels.
  */
-import { homeRoofY } from './home';
+import { homeFloorY } from './home';
 import { DECK_Y, onDeck } from './waterfront';
 import { onEsplanade } from './boulevard';
 import { departuresY } from './airfield';
@@ -34,15 +34,21 @@ import { civicY } from './civic';
 import { viaductY } from './viaground';
 import { skyDeckY } from './skydeck';
 import { mallFloor } from './mallinside';
+import { linkFloorAt } from './malllink';
+import { courtFloor } from './courtinside';
 import { inChannel, shoreY } from './river';
 import { LOT9_PASSAGE } from './lot9';
-import { SUBWAYS, WELL } from './endswood';
 import { underworld } from './underground';
-import { endsDeckY } from './endsdecks';
+import { CIRCUS_SOLIDS, PLAZA, SUBWAYS } from './circus';
+import { UNDERPASSES } from './underpasses';
+import { BUILT_PASSAGES } from './southline';
 import { heightAt, onHills } from './terrain';
 import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
 import { vergeY } from './verges';
+import { onSouthGround, southLift } from './southground';
+import { skyFloorAt } from './southsky';
+import { recBridgeY } from './rec';
 import { GARAGE_SITE } from './solids';
 import { PLAN, inPoly, type Pt } from './streetplan';
 
@@ -81,17 +87,34 @@ export function baseAt(x: number, z: number): { base: number; open: boolean; sla
   return { base: STREET, open: true, slab: false };
 }
 
-/** What's below street level for walking (underground.ts): Lot 9's tunnel under the highway, Endswood's subways and its well */
-export const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS], [WELL]);
+/** What's below street level for walking (underground.ts): Lot 9's tunnel under the highway, the Circus's subways and its
+ * sunken plaza (circus.ts, docs/south-plan.md Phase 4b), the underpasses under the avenue crossings (underpasses.ts, 4c),
+ * the underground line's stations built so far (southline.ts, 4e) */
+export const UNDER = underworld([LOT9_PASSAGE, ...SUBWAYS, ...UNDERPASSES, ...BUILT_PASSAGES], [PLAZA], CIRCUS_SOLIDS);
 
 export const GROUND_LAYERS: GroundLayer[] = [
-  // Endswood's galleries and bridges, when `yNow` is up there (endsdecks.ts; over the subways' ramps too)
-  { id: 'endsdecks', how: 'take', at: (x, z, yNow) => endsDeckY(x, z, yNow) },
-  // Degen's roof terrace, when `yNow` is up there (home.ts; the room is under it)
-  { id: 'homeroof', how: 'take', at: (x, z, yNow) => homeRoofY(x, z, yNow) },
-  // Below ground (underground.ts): Lot 9's tunnel under the highway and Endswood's subways and well, their ramps and
-  // open floors, and a floor under a roof when `yNow` is down there
+  // Degen's house's upper floors, when `yNow` is on one (home.ts: the upstairs, the roof terrace; the room under them)
+  { id: 'home', how: 'take', at: (x, z, yNow) => homeFloorY(x, z, yNow) },
+  // Below ground (underground.ts): Lot 9's tunnel under the highway and the Circus's subways and plaza, their ramps,
+  // open floors and seats, and a floor under a roof when `yNow` is down there
   { id: 'tunnel', how: 'take', at: (x, z, yNow) => UNDER.y(x, z, yNow) },
+  // Endswood's sky network (southsky.ts, docs/south-plan.md Phase 2c), when `yNow` is up there: the galleries, bridges,
+  // the podium deck, the cores' landings and The Core's stair
+  { id: 'sky', how: 'take', at: (x, z, yNow) => skyFloorAt(x, z, yNow) },
+  // The rec's footbridge over the brook (rec.ts), humped over the valley: its deck when you're near it
+  { id: 'recbridge', how: 'take', at: (x, z, yNow) => { const y = recBridgeY(x, z); return y !== null && Math.abs(yNow - y) < 1.2 ? y : null; } },
+  // The south's rolling ground (southground.ts, docs/south-plan.md Phase 1c): its slabs, sidewalks, streets and land
+  // all lifted by the ground under them, as what's drawn there is (kit.ts `Batch.build()`)
+  {
+    id: 'south',
+    how: 'take',
+    at: (x, z, _y, g) => {
+      if (!onSouthGround(x, z) || (!g.slab && !g.open)) return null;
+      const l = southLift(x, z);
+      if (l === 0) return null;
+      return (g.slab ? SLAB : STREET + Math.max(0, vergeY(x, z))) + l;
+    },
+  },
   // A block's edge onto open land eases down to the ground (verges.ts: the bank's slope)
   {
     id: 'verge',
@@ -124,8 +147,13 @@ export const GROUND_LAYERS: GroundLayer[] = [
   { id: 'departures', how: 'over', at: (x, z, yNow) => lift(departuresY(x, z, yNow)) },
   // Liberty Bridge's decks, when `yNow` is up there (liberty.ts; the leaves only while they're down)
   { id: 'liberty', how: 'over', at: (x, z, yNow, g) => footbridgeY(x, z, yNow, 0, g.leavesOpen) },
+  // Starlight Mall's Skywalk over the east ring avenue (malllink.ts): the corridor, the bridge's two floors, the
+  // pavilion's and its escalators, by `yNow` (under the bridge the avenue is the street)
+  { id: 'link', how: 'take', at: (x, z, yNow) => linkFloorAt(x, z, yNow) },
   // Inside Starlight Mall: its two floors and the escalators between them, by `yNow` (mallinside.ts)
   { id: 'mall', how: 'take', at: (x, z, yNow) => mallFloor(x, z, yNow) },
+  // Palm Court indoors (courtinside.ts): its galleries, bridges, food hall and escalators over the promenade, by `yNow`
+  { id: 'court', how: 'take', at: (x, z, yNow) => courtFloor(x, z, yNow) },
   // The river's banks sloping down to the water (river plan step 2)
   { id: 'shore', how: 'take', at: (x, z, _y, g) => (g.open && inChannel(x, z) ? shoreY(x, z) + STREET : null) },
   // The garage's turntable: its disc's top, where your car stands and you step on to get in

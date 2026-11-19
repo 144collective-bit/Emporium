@@ -107,8 +107,31 @@ export const pictureBytes = (o: PictureOpts) => pictureTargets(o).reduce((n, t) 
  * Lower one when a phase cuts it, to keep the saving; raise one only on purpose (scripts/budget.mjs's rule).
  */
 export const MEMORY_CEILINGS = {
-  /** Measured 2026-11-13: geometry 188, textures 64, render targets 9 */
-  phone: { geometry: 207, textures: 70, targets: 10 },
+  /**
+   * Measured 2026-11-13: geometry 188, textures 64, render targets 9; geometry lowered to 187 when Phase 3b left the
+   * unused uv out (169.8 measured). Geometry raised on purpose to 210 (the owner's call, 2026-11-18): 191.2 measured
+   * with the south's Phases 2-3 built (its blocks, terraces, the High Road, St Aldwyn's, council semis), plus 10%.
+   * Textures measured 32.9 then (the districts' textures baked, the stability plan's 4.3); kept at 70 for new
+   * districts' room (the owner's call)
+   */
+  phone: { geometry: 210, textures: 70, targets: 10 },
   /** Phase 2's measured 291 (a retina 1440 x 900 at 2x, SMAA) and 175 (1x, 4x MSAA) */
   desktop: { retina: 320, standard: 193 },
 } as const;
+
+/**
+ * The hitch ceilings (docs/stability-plan.md, Phase 6.3), ms: the most CPU one frame of `?bench` may take, in any of
+ * its views and on its route (`worstCpu`, bench.ts), on the headless phone `npm run memcheck` runs (scripts/memcheck.mjs).
+ * A frame's CPU is its own script and draw submission: a step that freezes the city (a big trim, a district arriving,
+ * every shader recompiling, as the step-down's shadows did) shows here, whatever the software renderer's own pace.
+ * Set from what that phone measured, with room for a slower machine; lower one when a change cuts it.
+ */
+export const HITCH_CEILINGS: { phone: { view: number; route: number } | null } = {
+  /**
+   * Measured 2026-11-14 (a quiet machine): every view 20-104 ms (the wall's corner the slowest), the route 71, mostly
+   * the render. 250 holds a freeze of a quarter second or more (the old shadow recompile took seconds) and leaves room
+   * for a slower or busier machine: a first run beside the test suite read 300-547 ms on a few views, none of it the
+   * city's (the same views read 24-31 ms alone)
+   */
+  phone: { view: 250, route: 250 },
+};

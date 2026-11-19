@@ -19,6 +19,7 @@ import { EXT } from './layout';
 import { insideHighway } from './highway';
 import { keptOff } from './landuse';
 import { TERRAIN_RECT } from './hills';
+import { SOUTH_GROUND_RECT } from './southground';
 import { BUILT, baked } from './baked';
 
 export const ROLL = {
@@ -69,6 +70,8 @@ const J0 = I0;
 function kept(x: number, z: number) {
   if (x < EXT[0] || x > EXT[1] || z < EXT[0] || z > EXT[1]) return true;
   if (x > TERRAIN_RECT[0] && x < TERRAIN_RECT[2] && z > TERRAIN_RECT[1] && z < TERRAIN_RECT[3]) return true;
+  // (and the south's rolling ground, its own shape: southground.ts)
+  if (x > SOUTH_GROUND_RECT[0] && x < SOUTH_GROUND_RECT[2] && z > SOUTH_GROUND_RECT[1] && z < SOUTH_GROUND_RECT[3]) return true;
   return insideHighway(x, z) || keptOff(x, z) !== null;
 }
 

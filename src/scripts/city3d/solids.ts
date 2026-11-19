@@ -23,8 +23,6 @@ import type { LotKind, UnitKind } from './tycoon';
 import { BoxGrid } from './boxgrid';
 import { METRO_SOLIDS } from './metro';
 import { DECK_CAMERA, PIER_SOLIDS } from './viapiers';
-import { ENDS_CAMERA } from './endsdecks';
-import { COMMON_SOLIDS as ENDS_COMMON_SOLIDS } from './endsblend';
 import { RAMP_PIER_SOLIDS } from './viaground';
 import { UNDER_SOLIDS } from './viadress';
 import { SWING_SOLIDS } from './swingbridge';
@@ -60,15 +58,27 @@ import { MONO_SOLIDS } from './monorail';
 import { SOUTHFIELD_SOLIDS } from './southfield';
 import { LOT9_SOLIDS } from './lot9';
 import { ENDS_SOLIDS } from './endswood';
+import { BLOCK_SOLIDS as SOUTH_BLOCK_SOLIDS } from './southblocks';
+import { YARD_SOLIDS as ENDS_YARD_SOLIDS } from './southyard';
+import { TERRACE_GROUND_SOLIDS, TERRACE_SOLIDS } from './southterraces';
+import { CHURCH_SOLIDS, CHURCHYARD_SOLIDS } from './aldwyns';
+import { SHOP_SOLIDS } from './highroad';
+import { REC_SOLIDS } from './rec';
 import { HOME_SOLIDS } from './home';
-import { BLOCK_SOLIDS as ENDS_BLOCK_SOLIDS } from './endsblocks';
-import { LYCH_CAMERA, STREET_SOLIDS as ENDS_STREET_SOLIDS } from './endsstreet';
 import { FRINGE_SOLIDS } from './fringes';
 import { NORTH_SOLIDS } from './uptownnorth';
 import { MALL_INSIDE_SOLIDS } from './mallinside';
+import { LINK_WALLS } from './malllink';
+import { COURT_INSIDE_SOLIDS } from './courtinside';
 import { UPTOWN_SITE_SOLIDS } from './uptownsites';
 import { SKYDECK_SOLIDS } from './skydeck';
 import { hillsAlong } from './terrain';
+import { southLift } from './southground';
+/** A box's top lifted by the ground under its middle (0 off the south's rolling ground) */
+const onGround = (boxes: Box[]): Box[] => boxes.map((b) => {
+  const l = southLift((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
+  return l === 0 ? b : [b[0], b[1], b[2], b[3], b[4] + l];
+});
 import { rollsAlong } from './rolls';
 import { VERGE_SOLIDS } from './verges';
 import { FLOOD_SOLIDS, WALL_SOLIDS } from './wall';
@@ -308,7 +318,20 @@ export const FIGHTCLUB_SITE: Box[] = [
 
 /** The outer squares' centrepieces, planters and kiosks (outer.ts); the pocket parks and lawns stay walkable */
 /** ...and the kart park's fence, hut, garages and stand (kartcircuit.ts), the airport's buildings, masts and parked vehicles (airfield.ts), the Fight Club (fightsite.ts), Liberty Bridge, the metro and The Trenches' towers, rows and The Block (projects.ts) */
-export const SOLIDS: Box[] = [...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...HARBOUR_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...YARD_SOLIDS, ...WATERFRONT_SOLIDS, ...NIGHT_MARKET_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS, ...FACILITY_SOLIDS, ...GARDEN_SOLIDS, ...CITYHALL_SOLIDS, ...FLANK_SOLIDS, ...FLAG_SOLIDS, ...FOUNTAIN_SOLIDS, ...PLAZA_SOLIDS, ...HIGHRISE_SOLIDS, ...KERBSIDE_SOLIDS, ...STREETLEVEL_SOLIDS, ...UPTOWN_SITE_SOLIDS, ...STREETLIFE_SOLIDS, ...WHEEL_SOLIDS, ...MALL_SOLIDS, ...MALL_INSIDE_SOLIDS, ...NORTH_SOLIDS, ...SKYDECK_SOLIDS, ...CORAL_SOLIDS, ...ESTATE_SOLIDS, ...MANSION_SOLIDS, ...SITE_SOLIDS, ...PORT_SOLIDS, ...SUN_SOLIDS, ...SUNPLACE_SOLIDS, ...RESORT_SOLIDS, ...MARK_SOLIDS, ...MONO_SOLIDS, ...SOUTHFIELD_SOLIDS, ...FRINGE_SOLIDS, ...VERGE_SOLIDS, ...LOT9_SOLIDS, ...ENDS_SOLIDS, ...ENDS_BLOCK_SOLIDS, ...ENDS_STREET_SOLIDS, ...ENDS_COMMON_SOLIDS, ...HOME_SOLIDS, ...PIER_SOLIDS, ...RAMP_PIER_SOLIDS, ...UNDER_SOLIDS, ...SWING_SOLIDS, ...WALL_SOLIDS, ...FLOOD_SOLIDS];
+/** Every solid where it stands (the boxes on the south's rolling ground lifted with it: southground.ts, docs/south-plan.md
+ * Phase 1c; their tops are heights over today's ground) */
+export const SOLIDS: Box[] = onGround([...DRAWN.map(designBox), ...DOWNTOWN_SOLIDS, ...SQUARE_SOLIDS, ...GARAGE_SOLIDS, ...MARKET_SOLIDS, ...DUMMY_SOLIDS, ...KART_SOLIDS, ...AIRPORT_SOLIDS, ...FIGHTCLUB_SITE, ...LIBERTY_SOLIDS, ...HARBOUR_SOLIDS, ...METRO_SOLIDS, ...PROJECT_SOLIDS, ...COMMONS_SOLIDS, ...GRIT_SOLIDS, ...STREETWALL_SOLIDS, ...AVENUE_SOLIDS, ...RIVERSIDE_SOLIDS, ...YARD_SOLIDS, ...WATERFRONT_SOLIDS, ...NIGHT_MARKET_SOLIDS, ...WESTLAKE_SOLIDS, ...STADIUM_SOLIDS, ...FACILITY_SOLIDS, ...GARDEN_SOLIDS, ...CITYHALL_SOLIDS, ...FLANK_SOLIDS, ...FLAG_SOLIDS, ...FOUNTAIN_SOLIDS, ...PLAZA_SOLIDS, ...HIGHRISE_SOLIDS, ...KERBSIDE_SOLIDS, ...STREETLEVEL_SOLIDS, ...UPTOWN_SITE_SOLIDS, ...STREETLIFE_SOLIDS, ...WHEEL_SOLIDS, ...MALL_SOLIDS, ...MALL_INSIDE_SOLIDS, ...LINK_WALLS, ...COURT_INSIDE_SOLIDS, ...NORTH_SOLIDS, ...SKYDECK_SOLIDS, ...CORAL_SOLIDS, ...ESTATE_SOLIDS, ...MANSION_SOLIDS, ...SITE_SOLIDS, ...PORT_SOLIDS, ...SUN_SOLIDS, ...SUNPLACE_SOLIDS, ...RESORT_SOLIDS, ...MARK_SOLIDS, ...MONO_SOLIDS, ...SOUTHFIELD_SOLIDS, ...FRINGE_SOLIDS, ...VERGE_SOLIDS, ...LOT9_SOLIDS, ...ENDS_SOLIDS, ...HOME_SOLIDS, ...PIER_SOLIDS, ...RAMP_PIER_SOLIDS, ...UNDER_SOLIDS, ...SWING_SOLIDS, ...WALL_SOLIDS, ...FLOOD_SOLIDS, ...ENDS_YARD_SOLIDS, ...TERRACE_GROUND_SOLIDS, ...CHURCHYARD_SOLIDS, ...REC_SOLIDS]).concat(
+  // (Endswood's blocks: their tops already over their plinths, southblocks.ts, so not lifted again)
+  SOUTH_BLOCK_SOLIDS,
+  // (Aldwyn's Green's houses: theirs too, southterraces.ts)
+  TERRACE_SOLIDS,
+  // (St Aldwyn's: its tops over its base too, aldwyns.ts)
+  CHURCH_SOLIDS,
+  // (the High Road's buildings: theirs too, highroad.ts)
+  SHOP_SOLIDS
+  // (the council rows', the bungalows', the corner shops', the community centre's and the allotments' sheds join with the
+  // village's chunk: council3d.ts `registerCouncil()`, through `addSolids()`)
+);
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
 
@@ -344,7 +367,7 @@ export const SOLID_GRID = new BoxGrid(SOLIDS);
 /** What the walk camera bumps into (and the raised ring highway's deck, which you walk under: its boxes have a bottom, [5]) */
 // (and Endswood's galleries' slabs, their lintels and the bridges' floors and roofs, which he walks under and along:
 // boxes with a bottom, endsdecks.ts)
-export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY, ...(DECK_CAMERA as Box[]), ...(ENDS_CAMERA as unknown as Box[]), LYCH_CAMERA as unknown as Box]);
+export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY, ...(DECK_CAMERA as Box[])]);
 /** What bullets stop on */
 const SHOT_GRID = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY]);
 /** Every grid that holds the solids (walk.ts adds the car's, which leaves out the turntable) */
@@ -355,7 +378,9 @@ export const SOLID_GRIDS: BoxGrid[] = [SOLID_GRID, CAMERA_GRID, SHOT_GRID];
  * growth plan Phase 4): into `SOLIDS` and every grid, so walking, the
  * camera, bullets, driving and flying all meet them
  */
-export function addSolids(boxes: readonly Box[]) {
+export function addSolids(given: readonly Box[], lift = true) {
+  // (on the south's rolling ground, lifted with it; `lift` false for boxes whose tops are already over their plinths)
+  const boxes = lift ? onGround([...given]) : [...given];
   SOLIDS.push(...boxes);
   SHOT_SOLIDS.push(...boxes);
   for (const g of SOLID_GRIDS) g.add(boxes);

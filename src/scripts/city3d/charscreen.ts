@@ -9,7 +9,7 @@
  * It's an overlay on the city: × or Esc closes it (Esc only closes it, it
  * never stops walking), and nothing else hears the keys while it's open.
  */
-import { EYE_STYLES, FACE_GEAR, MARKS, coversEyes, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
+import { CUTS, EYE_STYLES, FACE_GEAR, MARKS, coversEyes, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
 import type { Stage, StageLight, StagePose } from './stage';
 
 const POSES: { id: StagePose; name: string }[] = [
@@ -41,13 +41,17 @@ export function describe(l: Look): [string, string, string[]][] {
   const hood = l.kind === 'hoodie' && l.hood;
   const patched = !hood && (l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie' || l.hat === 'skully');
   const stitched = !hood && l.hat === 'fitted';
-  const extras = [l.headphones && 'Headphones', l.chain && 'Shades Chain', l.necklace && 'Diamond Chain', l.watch && 'Gold Watch'].filter(Boolean) as string[];
+  // (the shades: always in the balaclava, a choice on a face; off for a gas mask or goggles)
+  const shaded = (!l.face || l.shades) && !coversEyes(l.faceGear);
+  const extras = [l.headphones && 'Headphones', l.chain && shaded && 'Shades Chain', l.necklace && 'Diamond Chain', l.watch && 'Gold Watch'].filter(Boolean) as string[];
   const rows: [string, string, string[]][] = [
     ['Top', FITS[l.kind], l.kind === 'suit' || l.kind === 'double' || l.kind === 'waistcoat' || l.kind === 'overcoat' ? [l.top, l.shirt, l.tie] : l.kind === 'blazer' ? [l.top, l.shirt] : l.kind === 'vest' || l.kind === 'hivis' ? [l.top, l.shirt] : [l.top]],
     ['Bottoms', l.kind === 'coveralls' ? 'Coveralls' : BOTTOMS[l.bottoms], l.kind === 'coveralls' ? [l.top] : [l.bottom]],
     ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : stitched ? ` · ${markName(l.hatMark)}` : '') : 'Nothing', !hood && l.hat ? [l.hatColor] : []],
-    ['Eyewear', coversEyes(l.face) ? 'Off (face gear)' : (EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic'), coversEyes(l.face) ? [] : [l.frame, l.lens]],
-    ['Face', l.face ? (FACE_GEAR.find((f) => f.id === l.face)?.name ?? '') : 'Nothing', l.face ? [l.gear] : []],
+    // (docs/faces-plan.md: the balaclava, or his face with a haircut)
+    ['Face', l.face ? (l.cut === 'bald' ? 'Bald' : `${CUTS.find((c) => c.id === l.cut)!.name} cut`) : 'Balaclava', l.face && l.cut !== 'bald' ? [l.tone, l.hair] : [l.tone]],
+    ['Eyewear', coversEyes(l.faceGear) ? 'Off (face gear)' : !shaded ? 'None' : (EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic'), shaded ? [l.frame, l.lens] : []],
+    ['Gear', l.faceGear ? (FACE_GEAR.find((f) => f.id === l.faceGear)?.name ?? '') : 'Nothing', l.faceGear ? [l.gear] : []],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],
     ['Extras', extras.length ? extras.join(', ') : 'None', l.headphones ? [l.headphones] : []],
     ['Shoes', l.shoeStyle === 'sneaker' || l.shoeStyle === 'hightop' ? `${SHOES[l.shoeStyle]}${l.shoeMark ? ` · ${markName(l.shoeMark)}` : ''}` : SHOES[l.shoeStyle], [l.shoes]],

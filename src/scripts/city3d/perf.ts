@@ -22,7 +22,8 @@ export interface SceneMemory {
 
 const bytesOf = (a: { array: ArrayLike<number> & { byteLength?: number } } | null | undefined) => (a?.array && 'byteLength' in a.array ? (a.array.byteLength ?? 0) : 0);
 
-function textureBytes(t: THREE.Texture) {
+/** What a texture holds on the GPU, mipmaps included (texrows.ts reads it too) */
+export function textureBytes(t: THREE.Texture) {
   // A compressed one (made at build time, kit.ts): what its levels hold on the GPU
   const mips = (t as THREE.CompressedTexture).isCompressedTexture ? ((t as THREE.CompressedTexture).mipmaps as { data?: ArrayBufferView }[]) : null;
   if (mips?.length) return mips.reduce((n, m) => n + (m.data?.byteLength ?? 0), 0);
@@ -157,3 +158,4 @@ export function memoryRows(scene: THREE.Object3D): MemoryRow[] {
   });
   return rows.sort((a, b) => b.bytes - a.bytes);
 }
+
