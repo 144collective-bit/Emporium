@@ -78,11 +78,13 @@ keep it up to date when what it describes changes.
     deck (`WALK`, the deck's piers keep off it) to a zebra over Stadium
     Road (`ZEBRA`). `STADIUM_SOLIDS` (in `SOLIDS`): the facade all round,
     the gates shut until there are events, the masts, the parked cars;
-    `STADIUM_LAMPS`, `STADIUM_RECTS` (the outskirts' trees keep off). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
-    place built at the boot: seats in sections of magenta, purple and cyan,
+    `STADIUM_LAMPS`, `STADIUM_RECTS` (the outskirts' trees keep off). The stadium is a place at the boot (`stadiumspot.ts`: its spot,
+    the match night's queue, the parked cars) drawn by `stadium3d.ts`
+    (`drawStadium()`, from Westlake's chunk as you approach, into the spot's
+    group: docs/boot-plan.md): seats in sections of magenta, purple and cyan,
     the roof's neon edge, lamp heads on the masts and their pools of light
     on the pitch at night, the screen and the name board from one small
-    atlas, the parked cars); its grounds (the road, the car park with its
+    atlas); its grounds (the road, the car park with its
     bays, one-way arrows and P sign, the walk and the zebra) by
     `stadiumgrounds3d.ts`, loaded as you approach with the park's chunk
     (`LAZY_DISTRICTS`: `westlake`, whose land covers it too).

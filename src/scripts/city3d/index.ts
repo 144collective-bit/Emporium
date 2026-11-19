@@ -42,7 +42,7 @@ import { STREETLIFE_PEOPLE } from './streetlife';
 import { GARDEN_TREES as UPTOWN_GARDEN_TREES, SITE_PEOPLE } from './uptownsites';
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { LAZY_DISTRICTS, createDistricts } from './districts';
-import { buildStadium } from './stadium3d';
+import { buildStadiumSpot } from './stadiumspot';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
@@ -113,7 +113,7 @@ import { setHeld } from './inventory-save';
 import type { Held } from '../net/profile-data';
 import { PLACES } from './places';
 import { placeName } from './places';
-import { buildKartPark } from './kartpark3d';
+import { buildKartSpot } from './kartspot';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
@@ -319,8 +319,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const corners = buildCornerShops(scene, { low: tier === 'low' });
   // Beams of light over your contracts' drop-offs
   const beacons = buildBeacons(scene, tick, reduced);
-  // The kart park north of the ring highway in the north-east: a place like the landmarks (its pin and panel); its grounds load as you approach
-  const kartPark = buildKartPark(scene, crowd, { tick, reduced, low: tier === 'low' });
+  // The kart park west of the ring highway: a place like the landmarks (its pin and panel, its people); its buildings
+  // and grounds load as you approach (kartspot.ts, docs/boot-plan.md)
+  const kartPark = buildKartSpot(scene, crowd, { low: tier === 'low' });
   spots.push(kartPark.spot, airport.spot);
   // The Fight Club on the south bank: a place too (its pin and panel)
   const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
@@ -357,8 +358,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The Night Market on its deck in front of Harbor Stores, a place
   const nightMarket = buildNightMarket(scene, crowd, { tick, low: tier === 'low' });
   spots.push(nightMarket.spot);
-  // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
-  spots.push(buildStadium(scene, crowd, { low: tier === 'low', tick }).spot);
+  // Westlake Park's stadium (step 2): a place (its pin, panel and queue); it's drawn with the park as you approach
+  // (stadiumspot.ts, docs/boot-plan.md)
+  spots.push(buildStadiumSpot(scene, crowd, { low: tier === 'low' }).spot);
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
@@ -642,7 +644,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
   });
   // Districts loaded as you approach (performance phase 4, item 10): their drawing a chunk of its own each
-  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick });
+  // (a place a district draws on the main thread, into its spot's group: compiled, and its far form queued as the
+  // boot's places' are, below)
+  const drawnPlace = (g: THREE.Object3D) => {
+    void compileFor(g, (o) => renderer.compileAsync(o, camera, scene));
+    farQueue.push(g);
+    if (bootAt.first && !farBusy) {
+      farBusy = true;
+      idle(nextFar);
+    }
+  };
+  const districts = createDistricts({ scene, low: tier === 'low', worker: siteWorker, adopt: () => works.adopt(), tick, place: drawnPlace });
   const atBoot = works.boot([...new Set([...viewTiles(h0.pos, h0.target), ...viewTiles(introFrom(h0), h0.target)].map((t) => t.join()))].map((k) => k.split(',').map(Number) as [number, number]));
   const tiled = tileBatch(scene, [scene, ...['airport', 'kartpark'].flatMap((n) => scene.getObjectByName(n) ?? []), ...atBoot]);
   for (const g of atBoot) g.removeFromParent();
@@ -652,8 +664,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Made after the boot, a place at a time in spare moments (each stays near until it has one)
   const farQueue = [...spots.map((sp) => sp.group), ...['garage', 'market'].flatMap((n) => scene.getObjectByName(n) ?? [])];
   const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(() => f(), { timeout: 400 }) : setTimeout(f, 60));
+  let farBusy = false;
   const nextFar = () => {
     const g = farQueue.shift();
+    farBusy = !!g;
     if (!g) return;
     // (its painted textures' averages read back from the GPU first, without the page waiting on it: lod.ts)
     void primeAverages(renderer, g).then(() => {
@@ -2244,6 +2258,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       dirty = false;
       if (!bootAt.first) {
         bootAt.first = performance.now();
+        farBusy = true;
         idle(nextFar);
       }
       if (statsEl) {

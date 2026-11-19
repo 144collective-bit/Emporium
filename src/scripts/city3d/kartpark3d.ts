@@ -1,7 +1,10 @@
 /*
  * The kart park in 3D, the place (west of the ring highway since
- * docs/kart-west-plan.md, off Kart Road): what's built at the boot, in the
- * spot's group (what City view lifts on hover, and its far form):
+ * docs/kart-west-plan.md, off Kart Road): its buildings and stands, drawn
+ * into the spot's group (what City view lifts on hover, and its far form)
+ * when the grounds load as you approach (kartgrounds3d.ts `register()`;
+ * the spot itself, its people, trees, lamps and cars are kartspot.ts, at
+ * the boot: docs/boot-plan.md Phase 1):
  *
  * - The team garages along the pit lane with their numbers, and three LED
  *   screens (on the garages' roof and the north and east banks' tops)
@@ -18,41 +21,22 @@
  * - The podium on the plaza, the flags up the gate's path, the gate's arch
  *   on Kart Road with SECTOR 7 KART PARK both ways, the ticket kiosk; the
  *   totem and the signs on ew0, the coaches and the teams' trucks.
- * - Its people (kartfacility.ts `KART_PEOPLE`: the banks, the stand, the
- *   terrace, the café, the plaza, the paddock; half on phones), its trees
- *   and lamps, the car park's cars.
  *
  * Everything else round the circuit (the circuit itself, trackside, the
- * paddock, the road and the car park) is kartgrounds3d.ts, loaded as you
- * approach; `KART_VIEW` is how the race's `setCourse()` and `racing()`
- * reach it, whenever it comes.
+ * paddock, the road and the car park) is kartgrounds3d.ts; `KART_VIEW`
+ * (kartspot.ts) is how the race's `setCourse()`, `racing()`, `board()` and
+ * `trophies()` reach them, whenever they come.
  */
 import * as THREE from 'three';
-import type { SpotId } from '../../lib/city';
-import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, liveTex, neon, neonSign, occlude, place, plane, rng, toon } from './kit';
+import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, lit, liveTex, neon, neonSign, occlude, place, plane, rng, toon } from './kit';
 import { GATE, toWorld } from './kartpark';
-import { BAYS, CIRCUIT, HUT_DOOR, SITE, type CourseId } from './kartcircuit';
+import { BAYS, HUT_DOOR, SITE } from './kartcircuit';
 import { CUP_IDS, type CupId } from './kart-cups';
-import type { Flag } from './kartcrowd';
-import { APPROACH_SIGNS, ARCH, CAFE, CLUBHOUSE, COACHES, FLAGS, GRANDSTAND, KART_LAMPS, KART_PEOPLE, KART_TREES, KIOSK, PARKED, PODIUM, PODIUM_RECT, SCREENS, TEAM_COLOURS, TERRACE, TOTEM, TOWER, TRANSPORTERS, bankY, tierAt } from './kartfacility';
+import { APPROACH_SIGNS, ARCH, CAFE, CLUBHOUSE, FLAGS, GRANDSTAND, KIOSK, PODIUM, PODIUM_RECT, SCREENS, TEAM_COLOURS, TERRACE, TOTEM, TOWER, bankY, tierAt } from './kartfacility';
 import { atlasTex, cellNumber, chequerBands, glowText, quad, spacing } from './kartsigns';
-import { parkedCars, type CarId } from './cars';
-import type { KartBoard, KartPark } from './kart-types';
-import type { Idle, Spot } from './landmarks';
-import { addLamp, addTree, type Tick } from './world';
-
-/** The place's id (city.ts adds it to SpotId) */
-const ID = 'karts' as unknown as SpotId;
-
-/**
- * Which way round the guidance points, whether a race has the pits closed and the flag at each marshal post
- * (kartcrowd.ts `marshalFlags()`, null between races): the race sets it
- * (`setCourse()`, `racing()`), the grounds (kartgrounds3d.ts) show it once they've loaded (`apply`)
- */
-export const KART_VIEW: { course: CourseId; racing: boolean; apply: (() => void) | null; flags: Flag[] | null } = { course: 'circuit', racing: false, apply: null, flags: null };
-
-const PAVING = 0.025;
-const PIT_Y = 0.04;
+import type { KartBoard } from './kart-types';
+import { KART_VIEW, PAVING } from './kartspot';
+import type { Tick } from './world';
 const INK = toon('#1b1830');
 const STEEL = toon('#2b2a40');
 const RED = toon('#e23b3b');
@@ -153,19 +137,11 @@ const towerTex = () =>
     });
   });
 
-export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (f: Tick) => void; reduced: boolean; low: boolean }): KartPark {
+/** Draw the buildings and the stands into the spot's group (`places`: kartspot.ts), and show what the race asked */
+export function drawKartPark(places: THREE.Group, opts: { tick?: (f: Tick) => void; reduced: boolean; low: boolean }) {
   const { low, reduced } = opts;
   const r = rng(4747);
-  const group = new THREE.Group();
-  group.name = 'kartpark';
-  scene.add(group);
-  /** The buildings and the stands: the spot's group, lifted on hover */
-  const places = new THREE.Group();
-  places.name = ID;
-  group.add(places);
   const pb = new Batch();
-  const c = CIRCUIT;
-  const n = c.x.length;
   const flat = (batch: Batch, x0: number, z0: number, x1: number, z1: number, y: number, mat: THREE.Material) =>
     batch.add(place(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x0 + x1) / 2, y, (z0 + z1) / 2, 1, 1, 1, -Math.PI / 2), mat);
 
@@ -642,14 +618,6 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
 
   pb.build(places);
 
-  /* ----- Its people, trees, lamps and the car park's cars ----- */
-
-  for (const p of KART_PEOPLE) if (!(low && p.trim)) crowd.push({ x: p.x, z: p.z, y: p.y, ry: p.ry, act: p.act });
-  for (const [x, z, s, pine] of KART_TREES) if (!low || r() < 0.6) addTree(x, z, s, pine, 0);
-  for (const [x, z, ry, y] of KART_LAMPS) addLamp(x, z, ry, y);
-  parkedCars(scene, 0.04, PARKED as [CarId, number, number, number, string][]);
-  parkedCars(scene, 0.05, [...COACHES, ...TRANSPORTERS] as [CarId, number, number, number, string][]);
-
   /* ----- The trophy cabinet's trophies: the cups you've won, painted from the save (trophies()) ----- */
 
   const cabinet = new THREE.Group();
@@ -684,51 +652,22 @@ export function buildKartPark(scene: THREE.Scene, crowd: Idle[], opts: { tick: (
     });
   };
 
-  /* ----- The spot ----- */
+  if (opts.tick)
+    opts.tick(({ t }) => {
+      if (reduced) return;
+      paintFans(t);
+    });
 
-  let bx0 = Infinity;
-  let bx1 = -Infinity;
-  let bz0 = Infinity;
-  let bz1 = -Infinity;
-  for (let i = 0; i < n; i++) {
-    bx0 = Math.min(bx0, c.x[i]);
-    bx1 = Math.max(bx1, c.x[i]);
-    bz0 = Math.min(bz0, c.z[i]);
-    bz1 = Math.max(bz1, c.z[i]);
-  }
-  const focus = V((bx0 + bx1) / 2, 0, (bz0 + bz1) / 2);
-  const pin = V((hx0 + hx1) / 2, HUT_H + 2.6, (hz0 + hz1) / 2);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.64, 48), glowMat(PAL.cyan, 0, null));
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.set(HUT_DOOR.x, PAVING + 0.014, HUT_DOOR.z);
-  group.add(fx(ring));
-  const spot: Spot = { id: ID, group: places, focus, size: 110, pin, ring };
-  // The show kart waits in the middle bay, nose to the pit lane (kart.ts: yaw π/2 faces -z)
-  const [bayX, bayZ] = BAYS[3];
-  const showSpot = { x: bayX, y: PAVING + PIT_Y, z: bayZ + 0.45, yaw: Math.PI / 2 };
-
-  opts.tick(({ t }) => {
-    if (reduced) return;
-    paintFans(t);
-  });
-
-  return {
-    group,
-    spot,
-    setCourse(id) {
-      KART_VIEW.course = id;
-      KART_VIEW.apply?.();
-    },
-    racing(on) {
-      KART_VIEW.racing = on;
-      KART_VIEW.apply?.();
-    },
-    showSpot,
-    board(b) {
+  // What the race asked before the drawing came, shown now; what it asks from here on comes straight here
+  const show = {
+    board(b: KartBoard | null) {
       repaint((c, w, h) => (b ? raceScreen(c, w, h, b) : idleScreen(c, w, h)));
     },
-    trophies(won) {
+    trophies(won: Partial<Record<CupId, number>>) {
       showTrophies(won);
     },
   };
+  KART_VIEW.show = show;
+  if (KART_VIEW.board) show.board(KART_VIEW.board);
+  show.trophies(KART_VIEW.trophies);
 }

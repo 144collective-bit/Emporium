@@ -43,7 +43,7 @@ import { KART_AREA, bankY } from './kartfacility';
 import { BOXES, ITEM, ITEM_NAMES } from './kartitems';
 import { CEREMONY, CONFETTI, ceremonyAt, ceremonyCam, confettiAt, confettiColour, excited, marshalFlags, podiumSpot, type Seen } from './kartcrowd';
 import { CHEER } from './life';
-import { KART_VIEW } from './kartpark3d';
+import { KART_VIEW } from './kartspot';
 import { F, along } from './kartpark';
 import { createKart, type Kart } from './karts';
 import { fx, glowMat, glowTex } from './kit';

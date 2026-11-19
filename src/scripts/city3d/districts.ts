@@ -135,7 +135,7 @@ export interface Districts {
   total(): number;
 }
 
-export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; tick?: (f: Tick) => void; list?: LazyDistrict[] }): Districts {
+export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; tick?: (f: Tick) => void; place?: (group: THREE.Object3D) => void; list?: LazyDistrict[] }): Districts {
   const list = opts.list ?? LAZY_DISTRICTS;
   const state = new Map<string, 'loading' | 'done' | 'failed'>();
   let near = 0;
@@ -145,7 +145,7 @@ export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker
     return d
       .load()
       .then(async (m) => {
-        m.register({ low: opts.low, scene: opts.scene, tick: opts.tick });
+        m.register({ low: opts.low, scene: opts.scene, tick: opts.tick, place: opts.place });
         // The worker registers the same sites before they're queued here, so it can take them (a few seconds at most)
         if (opts.worker) await Promise.race([opts.worker.load(m.SELF), new Promise((r) => setTimeout(r, 4000))]);
         opts.adopt();

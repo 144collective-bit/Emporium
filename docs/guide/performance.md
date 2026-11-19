@@ -527,5 +527,10 @@ keep it up to date when what it describes changes.
   queues them. Everything else about a district (its blocks and streets
   in the street plan, its solids, where its trees and lamps stand, its
   places) is DOM-free data in the boot, so nothing waits on the chunk.
+  A place's drawing can come in a district's chunk too (docs/boot-plan.md:
+  the kart park, the stadium): its spot, people, trees, lamps and cars stay
+  at the boot, the drawing is built on the main thread into the spot's
+  group, and `register()`'s `place()` has index.ts compile it and queue its
+  far form.
   `?bench` loads every district before it starts. A new district comes
   the same way.

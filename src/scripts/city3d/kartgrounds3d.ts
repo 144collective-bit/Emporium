@@ -67,7 +67,8 @@ import {
 import { COACH_LOT, FLAGS, KART_AREA, STATION_WALK } from './kartfacility';
 import { CELL_ARROW, CELL_CHEVRON, atlasTex, cellMarker, cellNumber, chequerBands, glowText, quad, spacing } from './kartsigns';
 import { BOARDS, BOOTH, MARSHALS, cornersOf } from './kartside';
-import { KART_VIEW } from './kartpark3d';
+import { KART_VIEW } from './kartspot';
+import { drawKartPark } from './kartpark3d';
 import { buildFx, chainMesh } from './grime';
 import type { Tick } from './world';
 import { COVER, ROAD as PAL_ROAD } from './palette';
@@ -1039,8 +1040,13 @@ function guidance(cc: Course, gb: Batch, signs: Batch, pads: Batch, atlas: THREE
 /** The site's tiles: pieces 30 on a side over the whole park, each drawing what's in it of the trackside, the fence and the lights */
 const SITE_TILE = 30;
 
-export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick, place }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void; place?: (group: THREE.Object3D) => void }) {
   const P = KART_PARK;
+  // The buildings and the stands (kartpark3d.ts) into the spot's group the boot made (kartspot.ts), on the main thread
+  if (scene && KART_VIEW.places) {
+    drawKartPark(KART_VIEW.places, { tick, low, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches });
+    place?.(KART_VIEW.places);
+  }
   site('kart park grounds', KART_AREA, (into) => {
     const b = new Batch();
     grounds(b);

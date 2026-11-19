@@ -242,13 +242,17 @@ keep it up to date when what it describes changes.
   missions and five badges in `missions.ts`. Global boards wait for the
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
-  on. `kartpark3d.ts` (`buildKartPark()`, at the boot) is the place: the
-  spot's group (the garages with their numbers and the screens, the clubhouse and
+  on. `kartspot.ts` (`buildKartSpot()`, at the boot: docs/boot-plan.md) is
+  the place: its spot (the pin, the ring, the buildings as `PICK` boxes),
+  the show bay, its people, trees, lamps and parked cars, and `KART_VIEW`
+  (the way round and whether the pits are closed, which `setCourse()` /
+  `racing()` set and the grounds apply when they've come; the LED
+  screens' order and the trophies, which `board()` / `trophies()` keep and
+  the buildings show when they've come). `kartpark3d.ts`
+  (`drawKartPark()`, from the grounds' `register()`) draws into the spot's
+  group: the garages with their numbers and the screens, the clubhouse and
   its terrace, the timing tower with its board, both grandstands, the
-  gate's arch with SECTOR 7 KART PARK both ways, the kiosk), its people,
-  trees, lamps and parked cars, and `KART_VIEW` (the way round and whether
-  the pits are closed, which `setCourse()` / `racing()` set and the
-  grounds apply when they've come). `kartgrounds3d.ts` (a district loaded
+  gate's arch with SECTOR 7 KART PARK both ways, the kiosk. `kartgrounds3d.ts` (a district loaded
   as you approach, `LAZY_DISTRICTS` id `karts`; signs shared through
   `kartsigns.ts`) draws the rest as sites: the lawn, the paving and the
   banks; the circuit:

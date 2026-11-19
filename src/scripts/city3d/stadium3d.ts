@@ -1,7 +1,10 @@
 /*
  * Sector 7 Stadium on screen (Westlake Park's step 2; the numbers are
- * stadium.ts). A place like the landmarks, built at the boot: a spot with a
- * pin, a panel and a far form (lod.ts), standing on the park's big block.
+ * stadium.ts). A place like the landmarks: its spot (the pin, the panel,
+ * the hover ring), its queue and its cars are stadiumspot.ts, at the boot;
+ * this draws it into the spot's group when Westlake Park loads as you
+ * approach (westlake3d.ts, docs/boot-plan.md Phase 1), and its far form
+ * (lod.ts) is made then. It stands on the park's big block.
  *
  * - The facade: dark panels between pale ribs, a cyan line round its top
  *   and the gate in the middle of its south side, SECTOR 7 STADIUM over it.
@@ -32,11 +35,8 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, liveTex, neon, toon } from './kit';
 import { SLAB, type Tick } from './world';
-import { parkedCars, type CarId } from './cars';
-import type { Idle, Spot } from './landmarks';
-import { CENTRE, CONCOURSE, FACADE, FIXTURE, GATE, MAST, MASTS, NAME, PARKED, PITCH, ROOF, SCREEN, TIERS, TRACK, clockText, fixtureAt, fixtureLines, matchOn, ovalAt, type Pt } from './stadium';
+import { CENTRE, CONCOURSE, FACADE, FIXTURE, GATE, MAST, MASTS, NAME, PITCH, ROOF, SCREEN, TIERS, TRACK, clockText, fixtureAt, fixtureLines, matchOn, ovalAt, type Pt } from './stadium';
 
-const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 /** Points round each oval: enough that its corners read round */
 const N = 96;
 const SEATS = ['#e219e5', '#8000ff', '#00c2ff'].map((c) => toon(c));
@@ -172,13 +172,10 @@ function boardTex(lines: [string, string]) {
 }
 
 /**
- * The stadium, a place; `crowd` takes its match-night queue (life.ts `Idle.when`), `tick` runs its match night
- * (stadium.ts: the floodlights, the screen, the fixture board from the clock)
+ * Draw the stadium into its spot's group (stadiumspot.ts); `tick` runs its match night (stadium.ts: the floodlights,
+ * the screen, the fixture board from the clock)
  */
-export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boolean; tick: (f: Tick) => void }): { spot: Spot } {
-  const group = new THREE.Group();
-  group.name = 'stadium';
-  scene.add(group);
+export function drawStadium(group: THREE.Group, opts: { low: boolean; tick: (f: Tick) => void }) {
   const b = new Batch();
   const S = SLAB;
   // The floodlights' lamps (one material, the tick's) and the fixture board's (its texture repainted when the board changes)
@@ -322,13 +319,6 @@ export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
     if ((o as THREE.Mesh).material === floods) o.userData.keep = true;
   });
 
-  // The hover ring round it
-  const ringMesh = new THREE.Mesh(new THREE.RingGeometry(FACADE.a + 3.6, FACADE.a + 3.9, 96), glowMat(PAL.cyan, 0, null));
-  ringMesh.rotation.x = -Math.PI / 2;
-  ringMesh.scale.set(1, FACADE.b / FACADE.a, 1);
-  ringMesh.position.set(CENTRE[0], S + 0.05, CENTRE[1]);
-  group.add(fx(ringMesh));
-
   // The floodlights' light on the pitch: pools over it, on a match night only (their own glow, the tick's)
   const poolMat = glowMat('#fff2c8', 0);
   for (const sx of [-1, 0, 1])
@@ -338,10 +328,6 @@ export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
       pool.userData.keep = true;
       group.add(fx(pool));
     }
-
-  // On a match night a few people queue at the shut gate (life.ts `Idle.when`: out of the world the rest of the time),
-  // along the forecourt west of the gate's prompt, facing it, shuffling (the crowd's `wait` act)
-  for (let k = 0; k < (opts.low ? 3 : 5); k++) crowd.push({ x: GATE.x - 1.7 - k * 0.78 - (k % 2) * 0.12, z: GATE.z + 1.45 + (k % 2) * 0.38, ry: Math.PI / 2 + ((k % 3) - 1) * 0.3, act: 'wait', when: () => matchOn(Date.now()) });
 
   // The match night and the fixture board, from the clock (stadium.ts), looked at once a second
   const was = { on: null as boolean | null, board: '', slide: -1, at: -Infinity };
@@ -375,11 +361,5 @@ export function buildStadium(scene: THREE.Scene, crowd: Idle[], opts: { low: boo
       boardMat.needsUpdate = true;
     }
   });
-
-  // The car park's cars, on its asphalt (the grounds, roads, car park and footbridge, are a chunk loaded as you
-  // approach: stadiumgrounds3d.ts, districts.ts)
-  parkedCars(scene, 0.04, PARKED as [CarId, number, number, number, string][]);
-
-  return { spot: { id: 'stadium', group, focus: V(CENTRE[0], 4, CENTRE[1]), size: 62, pin: V(CENTRE[0], S + ROOF.y1 + 3.6, CENTRE[1]), ring: ringMesh } };
 }
 

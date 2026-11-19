@@ -18,6 +18,8 @@ import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit'
 import { SLAB, flatPoly, waterMat, type Tick } from './world';
 import { registerParkLife, registerParkSites } from './parklife3d';
 import { register as registerGrounds } from './stadiumgrounds3d';
+import { drawStadium } from './stadium3d';
+import { STADIUM_VIEW } from './stadiumspot';
 import { site } from './tilework';
 import { PATH_Y, PAVE_Y, bench, registerGardens } from './gardens3d';
 import { isMain } from './gardens';
@@ -122,7 +124,12 @@ function nameSign() {
   return siteMat('westlake-sign', lit(new THREE.MeshBasicMaterial({ map: tex, toneMapped: true }), 0.95, 1.15));
 }
 
-export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick, place }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void; place?: (group: THREE.Object3D) => void }) {
+  // The stadium (stadium3d.ts) into the spot's group the boot made (stadiumspot.ts), on the main thread
+  if (scene && tick && STADIUM_VIEW.group) {
+    drawStadium(STADIUM_VIEW.group, { low, tick });
+    place?.(STADIUM_VIEW.group);
+  }
   // Step 3: the boathouse, the jetty, the courts and the picnics as sites; on the main thread, what moves
   registerParkSites();
   // The stadium's grounds north of the highway, loaded with the park (stadiumgrounds3d.ts)

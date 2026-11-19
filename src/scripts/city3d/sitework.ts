@@ -69,8 +69,12 @@ interface Scope {
 export interface DistrictModule {
   /** Its own address, for the site worker to load it too */
   SELF: string;
-  /** On the main thread with the scene (and a tick for what moves); in the site worker with neither */
-  register(opts: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }): void;
+  /**
+   * On the main thread with the scene (and a tick for what moves); in the site worker with neither. `place` takes a
+   * place's group the district drew on the main thread (a spot's, made at the boot: kartspot.ts): its shaders compiled
+   * and its far form made, as the boot does for the places it draws (docs/boot-plan.md)
+   */
+  register(opts: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void; place?: (group: THREE.Object3D) => void }): void;
 }
 
 /** In the worker: register the sites, then build each one when it's asked for */
