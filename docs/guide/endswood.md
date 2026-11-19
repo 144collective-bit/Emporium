@@ -174,7 +174,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   trading desk's screens on the main thread (`denCharts()`, made-up charts, nothing legible). A new thing down there
   goes in `BASEMENT`.
   Phase 5 (the terrace and polish) is built: the outdoor sofa, the telescope, his sign at the east rail, a third
-  planter (`ROOF_THINGS`); `?bench` views `ends-room` and `ends-den`. The plan is complete.
+  planter (`ROOF_THINGS`); `?bench` views `ends-room` and `ends-den`.
+  Phase 6 (the kingpin compound, the owner's call after seeing Phase 1) is built: the loft shell in charcoal brick and
+  steel (home3d.ts `house()`, `houseLights()`, home.ts `FIRE_ESCAPE`, `WALL_H` 1.8), the gatehouse and the crest gate
+  (`GATEHOUSE`, `GATE_LEAF`, `wall()`, `gatehouse()`), the fountain and palms on the drive (`FOUNTAIN`, `PALMS`,
+  `showpiece()`), the pool and cabana on the east lawn (`POOL`, `LOUNGERS`, `CABANA`, `poolside()`) and the helipad on
+  the garage's roof (`HELIPAD`, `helipad()`, looks only). Their solids are in `HOME_SOLIDS`. The plan is complete.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
