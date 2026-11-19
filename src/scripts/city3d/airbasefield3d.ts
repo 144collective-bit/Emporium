@@ -173,7 +173,16 @@ const PIPE = toon('#8a8aa0');
 function hangar(b: Batch, r: Rect, open: boolean, low: boolean) {
   const [x0, z0, x1, z1] = r;
   const wall = HANGAR_H - 2.2;
-  box(b, x0, 0, z0 + 0.4, x1, wall, z1, CLAD);
+  // (shut: one block; open: a shell you see into, its back and sides, dark inside, a ceiling and a floor)
+  if (!open) box(b, x0, 0, z0 + 0.4, x1, wall, z1, CLAD);
+  else {
+    box(b, x0, 0, z1 - 0.4, x1, wall, z1, CLAD);
+    for (const x of [x0, x1 - 0.4]) box(b, x, 0, z0 + 0.4, x + 0.4, wall, z1 - 0.4, CLAD);
+    box(b, x0 + 0.4, 0.006, z1 - 0.45, x1 - 0.4, wall - 0.05, z1 - 0.4, DARK);
+    for (const x of [x0 + 0.4, x1 - 0.45]) box(b, x, 0.006, z0 + 0.45, x + 0.05, wall - 0.05, z1 - 0.45, DARK);
+    box(b, x0 + 0.4, wall - 0.3, z0 + 0.4, x1 - 0.4, wall, z1 - 0.4, DARK);
+    box(b, x0 + 0.4, 0, z0 + 0.4, x1 - 0.4, 0.03, z1 - 0.4, CONCRETE_WALL);
+  }
   // (the roof: a flat crown between two sloping halves, the gable ends filled)
   const w = z1 - z0;
   // (each half falling to its eave: the north one to the north, -x about x lowers +z)
@@ -194,8 +203,8 @@ function hangar(b: Batch, r: Rect, open: boolean, low: boolean) {
   // The doors' face: panels shut, or the hall open between the stacked panels at each side
   const dw = (x1 - x0 - 2) / 6;
   if (open) {
-    box(b, x0 + 1 + dw, 0, z0 + 0.38, x1 - 1 - dw, wall - 0.6, z0 + 0.42, DARK);
-    for (const x of [x0 + 1, x1 - 1 - dw]) box(b, x, 0, z0 + 0.1, x + dw, wall - 0.5, z0 + 0.4, DOORS);
+    // (the door panels slid aside, stacked at each end of the opening)
+    for (const x of [x0 + 0.4, x1 - 0.4 - dw]) box(b, x, 0, z0 + 0.1, x + dw, wall - 0.5, z0 + 0.4, DOORS);
   } else for (let k = 0; k < 6; k++) box(b, x0 + 1 + k * dw + 0.05, 0, z0 + 0.1, x0 + 1 + (k + 1) * dw - 0.05, wall - 0.5, z0 + 0.4, DOORS);
   box(b, x0 + 0.8, wall - 0.5, z0 + 0.05, x1 - 0.8, wall, z0 + 0.4, CLAD_DARK);
   if (!low) b.detail(() => {

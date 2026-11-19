@@ -6,8 +6,8 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
 - **Northgate Air Base** (the owner's call, 2026-11: a very large military base and airfield across the whole north,
   from the west wall to Crestmont's hills; made up; nothing threatening: no weapons on show, nothing attacks you, a
   guarded gate and the rest seen through the fence). Built a phase at a time, each with the owner's sign-off. Phase 1
-  (the land, the fence and the gates) is built; the airfield (Phase 2), the base itself (Phase 3), its life (Phase 4)
-  and the polish (Phase 5) are to come.
+  (the land, the fence and the gates) and Phase 2 (the airfield) are built; the base itself (Phase 3), its life
+  (Phase 4) and the polish (Phase 5) are to come.
 - **`airbase.ts`** (DOM-free, on `DOM_FREE`, the boot's; tested in `tests/airbase.test.ts`): the plan's lines in fixed
   world numbers, but where the base meets the wall (worked out from `WALL_INNER`, `FLOODS` and `CAMERAS`, so it holds
   under `npm run test:wide`).
@@ -61,3 +61,19 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
 - **The world map** (worldmap.ts) draws its fence, the avenue, the car park, the centre and the guardhouses.
 - **The views**: `BENCH_VIEWS` has `north-stadium`, `airbase-overview`, `airbase-gate` and `airbase-runway` since
   Phase 0; each phase is measured against them (the plan's baseline and allowances).
+- **The airfield (Phase 2)**, in `airbase.ts`: `RUNWAY` (x -620 to -120 at z -540, half 6), `APPROACH`, `TAXIWAY`
+  and its `CONNECTORS`, `NORTH_TAXI` and its `NORTH_LINKS`, `SHELTER` / `SHELTERS` (nine, in threes, their doors south
+  on stubs), `APRON`, `HANGARS` (`HANGAR_H` 11, `OPEN_HANGAR` the middle one), `TOWER` (`TOWER_TOP` 11.6,
+  `TOWER_BASE`, `TOWER_SHAFT`), `FIRE_STATION` (`FIRE_H`), `FUEL_FARM` (`FUEL_TANKS`, `BUND_H`), `APRON_ROAD` (from the
+  avenue along z -470), `PARKED` (the aircraft: kind, livery, x, z, yaw), `APRON_VEHICLES`, `WINDSOCK`,
+  `AIRFIELD_RECT` (the chunk's land) and `AIRFIELD_SOLIDS` (the buildings, in `SOLIDS`). `airbaseKeep()` keeps trees off
+  the apron's road and the approach lights past the runway's east end too. Tested in `tests/airbase.test.ts`.
+- **The airfield drawn, `airbasefield3d.ts`** (its chunk `airbase-field`; tested in `tests/airbase3d.test.ts`): strips
+  30 across (`airbase field <x>`): the runway (shoulders, edge lines, dashes, threshold and touchdown bars: no numbers;
+  edge lights white, the ends' green and red, `light()`), the approach lights, the taxiways (yellow centre lines, blue
+  edge lights near only), the apron (concrete, joints) and its road, in the airport's colours and kit (`airportkit.ts`).
+  A site each for the hangars (a shut one a block; the open one a shell, dark inside, the doors stacked at its ends), the
+  tower, the fire station, the fuel farm, the shelters in their threes (a flattened half-cylinder, doors south) and the
+  apron's kit (the tug, the bowser, the windsock). On the main thread only (`register()` with a scene), the parked
+  aircraft: `createFleet()` per kind (aircraft.ts), the titles' meshes hidden, set once (parked, nothing turns).
+

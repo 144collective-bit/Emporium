@@ -11,7 +11,7 @@ baseline is measured (below). The phone is over its geometry ceiling before
 the base adds anything; the owner's pick (2026-11-19) was to trim first,
 and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
-airfield) is next**, the owner's go.
+airfield) is built** (2026-11-19, measured below), waiting on the owner's sign-off.
 
 ## The owner's answers (2026-11-18)
 
@@ -469,4 +469,27 @@ when its room is given back (`roomFor()`, tested in tests/tilebatch.test.ts). On
 The two readings agree now (the jump with the big batch's growth is gone), about 16 MiB under the ceiling (187): room
 for the base's 6.5 MiB of allowance left, and more. Every view's slowest CPU frame passes memcheck's 250 ms, none worse
 (the route 34 ms, 40 before). The ceiling stays 187.
+
+## Phase 2's measure (2026-11-19, the build of 0cfc25b, the phone tier)
+
+Built: the runway (its markings, no numbers, its edge, threshold and end lights, the approach lights), the parallel and
+north taxiways with their connectors, links and the shelters' stubs, the apron and its road from the avenue, the three
+hangars (the middle one open on a transport), the control tower (its top 11.6), the fire station, the fuel farm, the nine
+hardened shelters, and what's parked: three transports, four trainers and two helicopters (the airport's made-up,
+unarmed models in the base's greys, their titles left off), a tug, a fuel bowser and the windsock. The airfield is its own
+chunk (`airbase-field`).
+
+| View | Draws, Phase 1 → 2 (allowance +50) | Triangles (allowance +0.12M) |
+| --- | --- | --- |
+| The north, from over the stadium | 78 → 79 (+1) | 0.17M → 0.11M |
+| Northgate Air Base, from high | 70 → 70 | 0.17M → 0.11M |
+| The main gate | 106 → 103 | 0.20M → 0.18M |
+| The runway | 39 → 69 (+30) | 0.06M → 0.09M (+0.03M) |
+| The home view | 266 → 271 (+5) | 0.40M → 0.33M |
+
+(The triangles fell where the tile batches' step, c3053c7, came in between.) Every view's slowest CPU frame under
+250 ms (the runway's 36 ms).
+
+- **Memory:** memcheck 170.7 MiB of 187, as before the airfield (its geometry within the step's room).
+- **The boot:** 739.3 → 740.6 KB of 750 (+1.3, the allowance +2). **Textures:** none new.
 
