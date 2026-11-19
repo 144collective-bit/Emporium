@@ -68,8 +68,8 @@ Each with the owner's sign-off.
    players see it (the look is their profile's). The tabs sit five and four
    in two rows. Shots: `docs/faces-shots/fitting.png`,
    `fitting-shades.png`.
-3. **More heads and hair** (the owner's call, 2026-11-14: built, waiting on
-   the owner's sign-off). The
+3. **More heads and hair** (the owner's call, 2026-11-14: built, signed off
+   by the owner, 2026-11-19). The
    owner's answers: head shapes as presets, no free moulding; proportions
    (stretches), not jaws or whole cartoon head types; three more cuts
    (noses were tried and taken out: the sculpted nose stays, the owner's
