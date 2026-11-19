@@ -70,20 +70,20 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
  * gold and holo colour packs went once any colour could be picked; looks
  * saved with them come back without them (`cleanLook()`).
  */
-export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'fitted' | 'skully';
+export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'fitted' | 'skully' | 'hardhat';
 export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel' | 'sling' | 'chestrig' | 'waist';
-export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker';
-export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker'];
-export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'skully'];
+export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls';
+export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore', 'coveralls'];
+export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'skully', 'hardhat'];
 /*
  * Separates (docs/wardrobe-plan.md Phase 2): the top, the bottoms and the shoes are chosen on their own, worn in any
  * pairing. A look saved before them wears what its top came with: the suit its trousers and dress shoes, the track
  * top its track pants, the rest joggers, all but the suit sneakers (`bottomsFor()`, `shoesFor()`).
  */
-export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts' | 'denim';
-export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim'];
-export type ShoeStyle = 'dress' | 'sneaker' | 'hightop' | 'runner' | 'slide';
-export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop', 'runner', 'slide'];
+export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts' | 'denim' | 'work';
+export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim', 'work'];
+export type ShoeStyle = 'dress' | 'sneaker' | 'hightop' | 'runner' | 'slide' | 'boot';
+export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop', 'runner', 'slide', 'boot'];
 /** The bottoms a top came with before the separates */
 export const bottomsFor = (kind: string): Bottoms => (kind === 'suit' ? 'trousers' : kind === 'track' ? 'trackpants' : 'joggers');
 /** The shoes a top came with before the separates */
@@ -209,9 +209,10 @@ export interface Look {
 }
 
 export const PALETTE = {
-  top: ['#16141f', '#2a2350', '#1d2550', '#3b2a6a', '#e219e5', '#00a8d8', '#f3f2f7', '#ff6a3d', '#1f9d6a', '#8f3dff', '#4a4a5a', '#d8312f'],
+  // (the last two the work wear's hi-vis yellow and orange, docs/wardrobe-plan.md Phase 6)
+  top: ['#16141f', '#2a2350', '#1d2550', '#3b2a6a', '#e219e5', '#00a8d8', '#f3f2f7', '#ff6a3d', '#1f9d6a', '#8f3dff', '#4a4a5a', '#d8312f', '#d4ec3a', '#ff8a1e'],
   bottom: ['#16141f', '#2a2350', '#1d2550', '#4a4a5a', '#f3f2f7', '#3a2418'],
-  cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f', '#a0652f', '#3a2418'],
+  cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f', '#a0652f', '#3a2418', '#ff8a1e'],
   tie: ['#1f9d55', '#e219e5', '#00b8d8', '#d8312f', '#c99a4a', '#16141f'],
   shirt: ['#cfcedb', '#16141f', '#9fb4d8', '#e4dcc4', '#d8a0b8', '#4a4a5a'],
   extra: ['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8', '#d8312f', '#1f9d6a', '#8f3dff'],

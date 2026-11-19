@@ -18,6 +18,7 @@ const HATS: [string, Partial<Outfit>][] = [
   ['bucket', { bucket: '#3355ff' }],
   ['fitted', { capFlat: true }],
   ['skully', { beanie: '#3355ff', skully: true }],
+  ['hardhat', { hardhat: '#ff8a1e' }],
 ];
 
 /** The crown of a hat's first piece: of its parts (a brim, a button, the points) the one that reaches furthest up and down */

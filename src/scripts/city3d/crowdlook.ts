@@ -364,7 +364,7 @@ const pick = <T>(r: () => number, a: readonly T[]) => a[Math.min(a.length - 1, M
 /** The nearest kind the crowd carries */
 function fit(kind: OutfitKind, kinds: readonly OutfitKind[]): OutfitKind {
   if (kinds.includes(kind)) return kind;
-  const next: Record<OutfitKind, OutfitKind[]> = { puffer: ['suit', 'hoodie'], track: ['hoodie', 'suit'], varsity: ['hoodie', 'suit'], bomber: ['hoodie', 'suit'], coach: ['track', 'hoodie', 'suit'], vest: ['puffer', 'hoodie', 'suit'], tee: ['hoodie', 'suit'], shell: ['track', 'hoodie', 'suit'], trucker: ['hoodie', 'suit'], hoodie: ['track', 'suit'], suit: ['puffer', 'hoodie'], soldier: ['suit'] };
+  const next: Record<OutfitKind, OutfitKind[]> = { puffer: ['suit', 'hoodie'], track: ['hoodie', 'suit'], varsity: ['hoodie', 'suit'], bomber: ['hoodie', 'suit'], coach: ['track', 'hoodie', 'suit'], vest: ['puffer', 'hoodie', 'suit'], tee: ['hoodie', 'suit'], shell: ['track', 'hoodie', 'suit'], trucker: ['hoodie', 'suit'], hivis: ['track', 'hoodie', 'suit'], hivisjacket: ['track', 'hoodie', 'suit'], chore: ['hoodie', 'suit'], coveralls: ['suit', 'hoodie'], hoodie: ['track', 'suit'], suit: ['puffer', 'hoodie'], soldier: ['suit'] };
   return next[kind].find((k) => kinds.includes(k)) ?? kinds[0];
 }
 /** A kind from the style's mix */

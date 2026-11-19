@@ -312,6 +312,12 @@ keep it up to date when what it describes changes.
     buckles) are plain boxes (`bx()`): a rounded box costs hundreds of
     triangles. "Single figures only" means `q >= 2`: the crowd draws
     skinned bodies too (`items(q, true)`), at detail 0 and 1.
+  - **Work wear** (`docs/wardrobe-plan.md` Phase 6): the hi-vis vest and
+    jacket (reflective tape in `TAPE`: `ring()`, `braces()`,
+    `sleeveTape()`), the chore coat, coveralls (their own legs:
+    `bottomsOf()` returns null for them as for soldiers), work trousers
+    (`WORK_S`, knee panels from `legPatch()`, a hammer loop), work boots
+    (`WORKBOOT`) and the hard hat (`hardhat` colour key).
   - **Headphones** are per top (`headphones-<kind>`), fitted to its collar
     by `fitPhones()` from `NECKS` (the collar's rings, the hood's roll, a
     margin for laid-on pieces); a new top with headphones needs its line

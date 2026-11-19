@@ -58,8 +58,8 @@ keep it up to date when what it describes changes.
   card's `in` says which ranges show it (left out, every range: "Nothing",
   "No bag", the shades chain, the watch), and `cardsIn()` picks them; the
   room opens on his top's range (`rangeOf()`). A slot with nothing of a
-  range's own says so (`[data-fit-empty]`: "Work wear is coming soon." until
-  the plan's Phase 6). The colour rows are what he wears in the slot,
+  range's own says so (`[data-fit-empty]`: "No eyewear in Work yet."), and
+  with coveralls on, the Bottoms tab says they cover the legs. The colour rows are what he wears in the slot,
   whichever range it's from. The look carries the separates: `bottoms`
   (`BOTTOMS`: trousers, joggers, track pants), `shoeStyle` (`SHOE_STYLES`:
   dress shoes, sneakers) and the suit's `shirt` colour; a look from before

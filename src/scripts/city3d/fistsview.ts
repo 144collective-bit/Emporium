@@ -106,7 +106,7 @@ function armPieces(o: Outfit, thumb: -1 | 1, loose = 0, low = false) {
   const puffer = o.kind === 'puffer';
   const tee = o.kind === 'tee';
   // (the vest's sleeves are the long-sleeve's under it)
-  const sleeve = varsity ? FP_VARSITY : o.kind === 'vest' ? (o.shirt ?? FP_SHIRT) : top;
+  const sleeve = varsity ? FP_VARSITY : o.kind === 'vest' || o.kind === 'hivis' ? (o.shirt ?? FP_SHIRT) : top;
   // (a tailored sleeve is slimmer; a puffer's fuller)
   const r = suit ? 0.047 : puffer ? 0.064 : 0.055;
   // (the sleeves' radii at each end: the stripes lie on them)

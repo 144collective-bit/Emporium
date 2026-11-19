@@ -50,7 +50,7 @@ test('the default look is itself valid and comes back unchanged', () => {
 
 test('every fit, hat and bag is accepted, and the watch', () => {
   for (const kind of KINDS) assert.equal(cleanLook({ ...DEFAULT_LOOK, kind }).kind, kind);
-  assert.deepEqual(KINDS, ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker']);
+  assert.deepEqual(KINDS, ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore', 'coveralls']);
   for (const hat of HATS) assert.equal(cleanLook({ ...DEFAULT_LOOK, hat }).hat, hat);
   for (const bag of BAGS) assert.equal(cleanLook({ ...DEFAULT_LOOK, bag }).bag, bag);
   assert.equal(cleanLook({ ...DEFAULT_LOOK, watch: true }).watch, true);
@@ -65,7 +65,7 @@ test('every fit, hat and bag is accepted, and the watch', () => {
 });
 
 test('the retired pieces are gone, and looks that wore them lose them (the wardrobe plan, Phase 1)', () => {
-  assert.deepEqual(HATS, ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'skully']);
+  assert.deepEqual(HATS, ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'skully', 'hardhat']);
   assert.deepEqual(BAGS, ['backpack', 'crossbody', 'board', 'duffel', 'sling', 'chestrig', 'waist']);
   // A retired hat comes back bare-headed (not the default cap: he took his hat off for it)
   for (const hat of ['crown', 'cowboy', 'tophat', 'halo']) assert.equal(cleanLook({ ...DEFAULT_LOOK, hat }).hat, null, hat);
@@ -115,8 +115,8 @@ test('every palette colour is a lower-case six-digit hex', () => {
 });
 
 test('the separates: any top, bottoms and shoes together; a look from before them wears what its top came with (the wardrobe plan, Phase 2)', () => {
-  assert.deepEqual(BOTTOMS, ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim']);
-  assert.deepEqual(SHOE_STYLES, ['dress', 'sneaker', 'hightop', 'runner', 'slide']);
+  assert.deepEqual(BOTTOMS, ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim', 'work']);
+  assert.deepEqual(SHOE_STYLES, ['dress', 'sneaker', 'hightop', 'runner', 'slide', 'boot']);
   assert.deepEqual(RANGES.map((r) => r.id), ['street', 'business', 'work']);
   // Degen as in the art: the suit, its trousers, dress shoes and a white shirt
   assert.equal(DEFAULT_LOOK.bottoms, 'trousers');

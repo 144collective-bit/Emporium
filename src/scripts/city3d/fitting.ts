@@ -53,6 +53,7 @@ interface Tab {
 }
 const STREET: Range[] = ['street'];
 const BUSINESS: Range[] = ['business'];
+const WORK: Range[] = ['work'];
 
 /** The last headphones colour, so taking them off and on again keeps it */
 let lastHeadphones = PALETTE.extra[1];
@@ -192,7 +193,7 @@ function merchItems(of: MerchFor): Item[] {
 }
 /** Can what the Merch tab is dressing be seen? (Else a note says what shows it) */
 function merchNote(of: MerchFor, l: Look): string | null {
-  if (of === 'hat' && !(l.hat && l.hat !== 'bucket' && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
+  if (of === 'hat' && !(l.hat && l.hat !== 'bucket' && l.hat !== 'hardhat' && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
   if (of === 'kicks' && l.shoeStyle !== 'sneaker' && l.shoeStyle !== 'hightop') return 'Shows on sneakers';
   return null;
 }
@@ -216,6 +217,10 @@ const TABS: Tab[] = [
       top('vest', 'Puffer Vest', 'M8 3h8l2 4v14H6V7z M6 10h12 M6 14h12 M6 18h12 M12 3v18', 'Vest', ['street', 'work'], [{ key: 'shirt', label: 'Sleeves', list: PALETTE.shirt }]),
       top('shell', 'Tech Shell', 'M8 2h8v3l4 2-2 5h-2v9H8v-9H6L4 7l4-2z M13 2v19 M8 9h8 M5 9l3 0', 'Shell', ['street', 'work']),
       top('trucker', 'Trucker Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 3l4 4 4-4 M12 7v13 M8 9h3v2.5H8z M13 9h3v2.5h-3z M7 18h10', 'Jacket', ['street', 'work']),
+      top('hivis', 'Hi-Vis Vest', 'M8 3h8l2 4v14H6V7z M10 3l2 5 2-5 M6 12h12 M6 15.5h12 M9 7v5 M15 7v5', 'Vest', WORK, [{ key: 'shirt', label: 'Sleeves', list: PALETTE.shirt }]),
+      top('hivisjacket', 'Hi-Vis Jacket', 'M8 3h8l4 3-2 5h-2v9H8v-9H6L4 6z M8 15h8 M8 17.5h8 M10 5v9 M14 5v9 M5 8.5l2.5-1 M19 8.5l-2.5-1', 'Jacket', WORK),
+      top('chore', 'Chore Coat', 'M8 3h8l4 3-2 5h-2v10H8V11H6L4 6z M8 3l4 4 4-4 M12 7v14 M13.5 9h3v3h-3z M8 15h3v3H8z M13 15h3v3h-3z', 'Coat', ['street', 'work']),
+      top('coveralls', 'Coveralls', 'M8 2h8l3 3-2 4h-1v4l1 9h-4l-1-7-1 7H7l1-9V9H7L5 5z M12 2v9 M9 6h2 M13 6h2', 'Coveralls', WORK),
       top('tee', 'Heavy Tee', 'M8 4c1 1.5 2.5 2 4 2s3-.5 4-2l5 3-2 4h-3v10H8V11H5L3 7z', 'Tee', STREET),
     ],
   },
@@ -228,6 +233,7 @@ const TABS: Tab[] = [
       bottoms('trackpants', 'Track Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7.5 4l-1 14 M16.5 4l1 14', STREET),
       bottoms('cargo', 'Cargo Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M5.5 9h2.5v4H5.5z M16 9h2.5v4H16z', ['street', 'work']),
       bottoms('denim', 'Relaxed Denim', 'M7 3h10l1.5 16h-4.5l-2-9-2 9H5.5z M5.5 17h4.5 M14 17h4.5 M8.5 3l-.5 14 M15.5 3l.5 14', ['street', 'work']),
+      bottoms('work', 'Work Trousers', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M6.5 12h3v3h-3z M14.5 12h3v3h-3z M17.5 5v4', WORK),
       bottoms('shorts', 'Shorts', 'M6 4h12l1 11h-5l-2-6-2 6H5z M6 6h12 M5.2 13h4.6 M14.2 13h4.6', STREET),
     ],
   },
@@ -239,6 +245,7 @@ const TABS: Tab[] = [
       shoes('sneaker', 'Sneakers', 'M3 13h5l3 3h6c2 0 4 1 4 3v1H3z M3 18h18 M10 15l1-1 M12 16l1-1', STREET),
       shoes('hightop', 'High-Tops', 'M4 6h5v7l3 3h5c2 0 4 1 4 3v1H4z M4 18h17 M9 9h-2 M9 12h-2', STREET),
       shoes('runner', 'Chunky Runners', 'M3 11h5l3 3h6c2 0 4 1 4 3v1H3z M2.5 18h19v2.5h-19z M3 14.5h4 M10 13l1-1 M12 14l1-1', STREET),
+      shoes('boot', 'Work Boots', 'M5 4h6v8l3 2h4c2 0 3 1 3 3v2H5z M4.5 19h17v2h-17z M7 7h3 M7 10h3', ['street', 'work']),
       shoes('slide', 'Slides', 'M3 17h18v2.5H3z M8 13h8l1 4H7z M5 17c0-2 2-3 3-4 M19 17c0-2-2-3-3-4', STREET),
     ],
   },
@@ -250,6 +257,7 @@ const TABS: Tab[] = [
       hat('backcap', 'Backwards Cap', 'M5 15a7 7 0 0 1 14 0z M3 15h9 M10 11h4', STREET),
       hat('beanie', 'Street Beanie', 'M6 15a6 7 0 0 1 12 0z M5 15h14v3H5z M12 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z', ['street', 'work']),
       hat('bucket', 'Bucket Hat', 'M8 7h8l1 7H7z M3 17l4-3h10l4 3z', STREET),
+      hat('hardhat', 'Hard Hat', 'M5 15a7 7 0 0 1 14 0z M3 15h18v2H3z M12 8v7', WORK),
       hat('fitted', 'Fitted Cap', 'M5 14a7 7.5 0 0 1 14 0z M5 14h16v1.5H5z M10 9.5l2-2 2 2-2 2z', STREET),
       hat('skully', 'Skully', 'M5.5 16a6.5 8 0 0 1 13 0z M5.5 16h13 M11 14.5h2', ['street', 'work']),
       {
@@ -494,9 +502,11 @@ export function createFitting(d: FittingDeps) {
     // (a slot the range has nothing of its own in yet: say so over its "Nothing" card)
     const empty = el.querySelector<HTMLElement>('[data-fit-empty]');
     if (empty) {
+      // (coveralls bring their own legs: the bottoms wait for another top)
+      const legs = tab.id === 'bottoms' && l.kind === 'coveralls';
       const none = tab.items.length > 0 && !ownIn(tab.items, range);
-      empty.hidden = !none;
-      empty.textContent = none ? (range === 'work' ? 'Work wear is coming soon.' : `No ${tab.label.toLowerCase()} in ${RANGES.find((r) => r.id === range)!.name} yet.`) : '';
+      empty.hidden = !none && !legs;
+      empty.textContent = legs ? 'Coveralls cover the legs.' : none ? `No ${tab.label.toLowerCase()} in ${RANGES.find((r) => r.id === range)!.name} yet.` : '';
     }
     for (const it of list) {
       const on = it.on(l);

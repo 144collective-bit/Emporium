@@ -15,10 +15,11 @@ import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, ty
 
 /* ---------- Outfits ---------- */
 
-export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'soldier';
+export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls' | 'soldier';
 export interface Outfit {
   kind: OutfitKind;
-  /** Jacket, hoodie, track jacket, varsity, puffer, bomber, coach or trucker jacket, puffer vest, tee, shell, or fatigues */
+  /** Jacket, hoodie, track jacket, varsity, puffer, bomber, coach or trucker jacket, puffer vest, tee, shell, hi-vis vest or
+   * jacket, chore coat, coveralls, or fatigues */
   top: string;
   /** The bottoms' colour, and which (left out: what the top comes with, `bottomsOf()`) */
   bottom: string;
@@ -35,6 +36,8 @@ export interface Outfit {
   capBack?: boolean;
   /** The cap a fitted one, its brim flat (docs/wardrobe-plan.md Phase 5) */
   capFlat?: boolean;
+  /** A hard hat's colour (docs/wardrobe-plan.md Phase 6) */
+  hardhat?: string;
   /** Beanie or bucket hat colour (instead of a cap); the beanie a skully (close, no cuff, no pompom) */
   beanie?: string;
   skully?: boolean;
@@ -137,8 +140,9 @@ export const SHADE_GLSL = `vec3 crowdShade(vec3 lin, float s) {
   return pow(min(dark, vec3(1.0)), vec3(2.2));
 }`;
 
-/** What an outfit wears on its legs: its own, or what its top comes with (the crowd's); soldiers wear their fatigues */
-export const bottomsOf = (o: Outfit): Bottoms | null => (o.kind === 'soldier' ? null : (o.bottoms ?? bottomsFor(o.kind)));
+/** What an outfit wears on its legs: its own, or what its top comes with (the crowd's); soldiers wear their fatigues, and
+ * coveralls their own legs */
+export const bottomsOf = (o: Outfit): Bottoms | null => (o.kind === 'soldier' || o.kind === 'coveralls' ? null : (o.bottoms ?? bottomsFor(o.kind)));
 /** What an outfit wears on its feet: its own, or what its top comes with; soldiers wear their boots */
 export const shoesOf = (o: Outfit): ShoeStyle | null => (o.kind === 'soldier' ? null : (o.shoeStyle ?? shoesFor(o.kind)));
 
@@ -163,6 +167,7 @@ export function lookOutfit(l: Look): Outfit {
     capFlat: hat === 'fitted',
     beanie: hat === 'beanie' || hat === 'skully' ? l.hatColor : undefined,
     skully: hat === 'skully',
+    hardhat: hat === 'hardhat' ? l.hatColor : undefined,
     bucket: hat === 'bucket' ? l.hatColor : undefined,
     hood: l.kind === 'hoodie' && l.hood,
     lens: l.lens,
@@ -701,9 +706,9 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'frame' | 'gear' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'sling' | 'chestrig' | 'waist' | 'headphones' | 'lens' | 'ink' | 'helmet';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'frame' | 'gear' | 'cap' | 'beanie' | 'bucket' | 'hardhat' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'sling' | 'chestrig' | 'waist' | 'headphones' | 'lens' | 'ink' | 'helmet';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'frame', 'gear', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'sling', 'chestrig', 'waist', 'headphones', 'lens', 'ink', 'helmet'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'frame', 'gear', 'cap', 'beanie', 'bucket', 'hardhat', 'backpack', 'crossbody', 'board', 'duffel', 'sling', 'chestrig', 'waist', 'headphones', 'lens', 'ink', 'helmet'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
  * the raised hood (both sides drawn), neon (a crowd phone's screen: unlit,
@@ -1140,13 +1145,17 @@ export function items(q: Detail, hero = false): Item[] {
   const gilet = (o: Outfit) => o.kind === 'vest';
   const tee = (o: Outfit) => o.kind === 'tee';
   const shell = (o: Outfit) => o.kind === 'shell';
+  const hivis = (o: Outfit) => o.kind === 'hivis';
+  const hivisJacket = (o: Outfit) => o.kind === 'hivisjacket';
+  const chore = (o: Outfit) => o.kind === 'chore';
+  const coveralls = (o: Outfit) => o.kind === 'coveralls';
   const trucker = (o: Outfit) => o.kind === 'trucker';
   /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
   const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
   /** Either sneaker, low or high: the stripe and the shoe's mark go on its side */
   const kicks = (o: Outfit) => shoesOf(o) === 'sneaker' || shoesOf(o) === 'hightop';
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
-  const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && bare(o);
+  const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && !o.hardhat && bare(o);
   /** Which cap: the fitted, worn straight (`capFlat`), or the curved cap, either way round */
   const curvedCap = (o: Outfit) => hasCap(o) && !o.capFlat;
 
@@ -1698,6 +1707,42 @@ export function items(q: Detail, hero = false): Item[] {
   const hemFront = frontAt(SKULLY_Y + 0.001, HEM);
   const skullyPatch = new THREE.PlaneGeometry(0.03, 0.016).translate(0, SKULLY_Y + 0.001, hemFront + 0.0025);
   const skullyLogo = new THREE.PlaneGeometry(0.013, 0.013).translate(0, SKULLY_Y + 0.001, hemFront + 0.0045);
+  /*
+   * The hard hat (docs/wardrobe-plan.md Phase 6): a rigid shell standing off the head on its harness (the gap the
+   * suspension leaves), a raised ridge from front to back, a narrow brim all round reaching out into a short peak at
+   * the front
+   */
+  const HARD_Y = 0.17;
+  const HARD_GAP = (y: number) => 0.008 + 0.007 * THREE.MathUtils.smoothstep(y, 0.18, HEAD_HI);
+  const HARD = headShell(HARD_Y, HARD_GAP);
+  const hardCrown = snug(loft(HARD, R(20), HN_HAT), HARD_Y + 0.004, HARD_GAP);
+  const hardRidge = [Math.PI / 2, (Math.PI * 3) / 2].map((a) => meridian(HARD, HN_HAT, a, HARD_Y + 0.012, 0.0045, 1.0, q === 3 ? 0.006 : 0));
+  const hardBrim = (() => {
+    const [, hw, hd, z0 = 0] = secAt(HARD, HARD_Y + 0.004);
+    const r0 = Math.min(hw, hd) - 0.004;
+    const g = new THREE.LatheGeometry(
+      [
+        [r0, HARD_Y + 0.008],
+        [r0 + 0.02, HARD_Y + 0.002],
+        [r0 + 0.02, HARD_Y - 0.003],
+        [r0, HARD_Y + 0.003],
+      ].map(([x, y]) => new THREE.Vector2(x, y)),
+      R(28)
+    );
+    const p = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i);
+      const z = p.getZ(i);
+      const r = Math.hypot(x, z);
+      const out = (r - r0) / 0.02;
+      const front = Math.max(0, z / (r || 1)) ** 3;
+      // (stretched to the head's own oval, the peak reaching forward)
+      const k = (r + out * 0.03 * front) / (r || 1);
+      p.setXYZ(i, x * k * (hw / (r0 + 0.004)), p.getY(i) - out * 0.006 * front, z0 + z * k * (hd / (r0 + 0.004)));
+    }
+    g.computeVertexNormals();
+    return g;
+  })();
   // The bucket hat: a crown with straight sides on a band fitted to the head, the brim sloping down clear of the shades
   const BUCKET = fitTo(
     [
@@ -2243,22 +2288,110 @@ export function items(q: Detail, hero = false): Item[] {
     ...onShin([
       [-0.02, 0.057, 0.061, 0],
       [-0.11, 0.057, 0.061, -0.003],
-      [-0.19, 0.056, 0.06, 0],
-      [-0.225, 0.055, 0.059, 0.002],
-      [-0.238, 0.055, 0.059, 0.003],
+      [-0.185, 0.056, 0.06, 0],
+      [-0.22, 0.055, 0.059, 0.002],
+      [-0.233, 0.055, 0.059, 0.003],
     ]),
   ]);
   const denim = trousers(hips(SEAT), DENIM_S, LEGS);
-  // (the cuff sits just over the shoe's collar: an inch lower, it took the runners' and high-tops' collars as the foot
-  // flexed at a crouch)
+  // (the cuff sits just over the shoe's collar: lower, it took the runners', high-tops' and work boots' collars as the
+  // foot flexed at a crouch)
   const denimCuff = loft(
     [
-      [-0.245, 0.0575, 0.0615, 0.003],
-      [-0.212, 0.0575, 0.0615, 0.003],
+      [-0.24, 0.0575, 0.0615, 0.003],
+      [-0.207, 0.0575, 0.0615, 0.003],
     ],
     R(16)
   );
   const STITCH = '#c99a4e';
+  /*
+   * Work trousers (docs/wardrobe-plan.md Phase 6): on the one seat, straight and roomy (the coveralls' legs too), a
+   * hem; reinforced panels over the knees (laid on the leg's own surface, so they bend with it) and a hammer loop on
+   * the right thigh
+   */
+  const WORK_S = legs([
+    ...JOG_THIGH,
+    ...knee(0.057, 0.061),
+    ...onShin([
+      [-0.02, 0.057, 0.061, 0],
+      [-0.11, 0.056, 0.06, -0.003],
+      [-0.185, 0.054, 0.058, 0],
+      [-0.218, 0.054, 0.058, 0.002],
+      [-0.232, 0.054, 0.058, 0.003],
+    ]),
+  ]);
+  const workPants = trousers(hips(SEAT), WORK_S, LEGS);
+  // (ending just over the boot's collar, as the denim's cuff does)
+  const workHem = loft(
+    [
+      [-0.239, 0.0555, 0.0595, 0.003],
+      [-0.223, 0.0555, 0.0595, 0.003],
+    ],
+    R(16)
+  );
+  /** A panel laid on a leg's front (`secs`, rounded `n`) from y0 to y1 and from angle a0 to a1 round it, `lift` off and `thick` */
+  const legPatch = (secs: Sec[], n: number, y0: number, y1: number, a0: number, a1: number, lift: number, thick: number) => {
+    const ny = q === 3 ? 8 : 5;
+    const na = q === 3 ? 8 : 5;
+    const e = 2 / n;
+    const at = (i: number, j: number, out: number) => {
+      const y = y0 + ((y1 - y0) * i) / ny;
+      const a = a0 + ((a1 - a0) * j) / na;
+      const [, hw, hd, z = 0] = secAt(secs, y);
+      const c = Math.cos(a);
+      const sn = Math.sin(a);
+      return [Math.sign(c) * Math.abs(c) ** e * (hw + out), y, z + Math.sign(sn) * Math.abs(sn) ** e * (hd + out)];
+    };
+    const pos: number[] = [];
+    const idx: number[] = [];
+    const grid = (out: number, flip: boolean) => {
+      const b = pos.length / 3;
+      for (let i = 0; i <= ny; i++) for (let j = 0; j <= na; j++) pos.push(...at(i, j, out));
+      for (let i = 0; i < ny; i++)
+        for (let j = 0; j < na; j++) {
+          const v = b + i * (na + 1) + j;
+          const t = [v, v + 1, v + na + 1, v + 1, v + na + 2, v + na + 1];
+          idx.push(...(flip ? [t[0], t[2], t[1], t[3], t[5], t[4]] : t));
+        }
+      return b;
+    };
+    const o = grid(lift + thick, false);
+    const inn = grid(lift, true);
+    // (its four edges closed between the two sheets)
+    const edge = (list: number[]) => {
+      for (let k = 0; k < list.length - 1; k++) {
+        const [a, b] = [list[k], list[k + 1]];
+        idx.push(o + a, inn + a, o + b, o + b, inn + a, inn + b);
+      }
+    };
+    const W = na + 1;
+    edge(Array.from({ length: W }, (_, j) => j).reverse());
+    edge(Array.from({ length: ny + 1 }, (_, i) => i * W + na).reverse());
+    edge(Array.from({ length: W }, (_, j) => ny * W + j));
+    edge(Array.from({ length: ny + 1 }, (_, i) => i * W));
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  };
+  // (over each knee, from the thigh down past the joint, across the front)
+  const kneePanels = legPatch(WORK_S, 2.2, -0.31, -0.235, Math.PI / 2 - 0.62, Math.PI / 2 + 0.62, 0.0012, 0.0028);
+  // (on the right leg, the rig's -x side: the loop of the cloth down the outside of the thigh)
+  const hammerLoop = (() => {
+    const side = (y: number) => secAt(WORK_S, y)[1];
+    return tube(
+      [
+        [-side(-0.13) - 0.001, -0.13, 0.022],
+        [-side(-0.14) - 0.011, -0.142, 0.022],
+        [-side(-0.18) - 0.012, -0.18, 0.02],
+        [-side(-0.195) - 0.001, -0.195, 0.018],
+      ],
+      0.0035,
+      R(10),
+      4
+    );
+  })();
   /*
    * Shorts (docs/wardrobe-plan.md Phase 5): on the one seat every bottoms shares, roomy legs to just over the knee with
    * a stitched hem; his legs bare under them (`BARE_LEG`, in the leg's numbers: the thigh from inside the shorts, the
@@ -2424,7 +2557,7 @@ export function items(q: Detail, hero = false): Item[] {
   const shinStripes = [-1, 1].map((s) => mergeGeometries(stripe(offShin(JOG_S), s, 0.025, -0.2, 2.2))!);
   // (the denim's outseam: one line of stitching, from under the hems to the cuff)
   const denimThighSeam = [-1, 1].map((s) => mergeGeometries(stripe(DENIM_S, s, -0.12, -0.265, 2.2, [0], 0.0011))!);
-  const denimShinSeam = [-1, 1].map((s) => mergeGeometries(stripe(offShin(DENIM_S), s, 0.025, -0.208, 2.2, [0], 0.0011))!);
+  const denimShinSeam = [-1, 1].map((s) => mergeGeometries(stripe(offShin(DENIM_S), s, 0.025, -0.203, 2.2, [0], 0.0011))!);
   // A hand at rest: palm towards the leg, fingers curled, the thumb along the front.
   // Drawn in the forearm's numbers and moved into the wrist's space (`onWrist`), so the wrist turns it
   const onWrist = (list: THREE.BufferGeometry[]) => list.map((g) => g.translate(0, -WRIST_Y, -WRIST_Z));
@@ -2552,21 +2685,20 @@ export function items(q: Detail, hero = false): Item[] {
     [0.105, 0.047, 0.032, 0.064],
     ...toe(0.105, 0.062, [0.047, 0.032, 0.064], 0.006),
   ]);
-  // (on phones, the flat parts round fewer: a sole and an outsole, every other section of the outsole and the panels,
-  // so a pair costs what the sneakers do)
+  // (the flat parts round fewer: on phones the soles; at every level the outsole and the panels, every other section
+  // and not curved between them, so a pair costs about what the sneakers do)
   const SGF = q === 3 ? SG : R(12);
-  const SGL = q === 3 ? SG : R(10);
-  const lean = (secs: ShoeSec[]) => (q === 3 ? secs : secs.filter((_, i) => i % 2 === 0 || i === secs.length - 1));
+  const SGL = q === 3 ? R(12) : R(10);
+  const lean = (secs: ShoeSec[]) => secs.filter((_, i) => i % 2 === 0 || i === secs.length - 1);
   const runner = shoe(RUNNER, SG, 2.6, SS);
   const runnerSole = shoe(sole(RUNNER, 0.007, 0.008, 0.01), SGF, 3, SS);
-  const runnerOut = shoe(lean(sole(RUNNER, 0.0085, -0.021, 0.0115)), SGL, 3, SS);
+  const runnerOut = shoe(lean(sole(RUNNER, 0.0085, -0.021, 0.0115)), SGL, 3);
   /** A panel laid over the upper from `u0` to `u1`, `share` of the way up its side */
   const overlay = (secs: ShoeSec[], u0: number, u1: number, share: number) =>
     shoe(
       lean(secs.filter(([u]) => u >= u0 && u <= u1)).map(([u, hw, b, t]): ShoeSec => [u, hw + 0.0022, b - 0.001, b + (t - b) * share]),
       SGL,
-      2.6,
-      SS
+      2.6
     );
   const runnerPanels = [overlay(RUNNER, -1, -0.012, 0.62), overlay(RUNNER, 0.07, 1, 0.55)];
   const runnerLaces = q === 0 ? [] : laceArcs(RUNNER, q === 3 ? [0.025, 0.045, 0.065, 0.085] : [0.03, 0.055, 0.08], 2.6);
@@ -2587,13 +2719,45 @@ export function items(q: Detail, hero = false): Item[] {
   ]);
   const sockFoot = shoe(SOCK_FOOT, SG, 2.4, SS);
   const footbed = shoe(sole(SOCK_FOOT, 0.008, 0.004, 0.012), SGF, 3, SS);
-  const slideSole = shoe(lean(sole(SOCK_FOOT, 0.0088, -0.008, 0.0125)), SGL, 3, SS);
+  const slideSole = shoe(lean(sole(SOCK_FOOT, 0.0088, -0.008, 0.0125)), SGL, 3);
   const slideStrap = shoe(
     SOCK_FOOT.filter(([u]) => u >= 0.0 && u <= 0.075).map(([u, hw, b, t]): ShoeSec => [u, hw + 0.007, b - 0.004, t + 0.007]),
     SG,
     2.4,
     SS
   );
+
+  /*
+   * Work boots (docs/wardrobe-plan.md Phase 6): the fatigues' boot's last up over the ankle, a toe cap laid over it a
+   * shade darker, laces up the instep, a padded collar round the opening, a heel tab, on a deep lugged sole
+   */
+  // (round the ankle the high-top's own line, the instep falling away in front of the shin: with the fatigues' boot's
+  // taller, wider front the shin tipped it into every trouser leg at a crouch; a chunkier toe past the ball of the foot)
+  const WORKBOOT: ShoeSec[] = up([
+    [-0.066, 0.029, 0.018, 0.15],
+    [-0.058, 0.039, 0.018, 0.164],
+    [-0.03, 0.043, 0.018, 0.168],
+    [0.0, 0.044, 0.018, 0.156],
+    [0.035, 0.045, 0.018, 0.104],
+    [0.07, 0.046, 0.018, 0.08],
+    [0.105, 0.047, 0.019, 0.07],
+    ...toe(0.105, 0.064, [0.047, 0.019, 0.07], 0.004),
+  ]);
+  const workBoot = shoe(WORKBOOT, SG, 2.8, SS);
+  const workBootSole = shoe(sole(WORKBOOT, 0.005, 0.008, 0.008), SGF, 3.2, SS);
+  const workBootCap = overlay(WORKBOOT, 0.105, 1, 0.8);
+  const workBootLaces = q === 0 ? [] : laceArcs(WORKBOOT, q === 3 ? [0.012, 0.03, 0.048, 0.066, 0.084] : [0.015, 0.05, 0.085], 2.8);
+  const workBootCollar = (() => {
+    const pts: [number, number, number][] = [];
+    const n = q === 3 ? 20 : 12;
+    for (let k = 0; k <= n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const u = -0.03 + 0.034 * Math.sin(a);
+      const [, hw, , t] = secAt(WORKBOOT, u) as unknown as ShoeSec;
+      pts.push([Math.cos(a) * hw * 0.84, t - 0.004 - 0.005 * Math.max(0, Math.sin(a)), u]);
+    }
+    return tube(pts, q === 3 ? 0.006 : 0.007, q === 3 ? 24 : 14, q === 3 ? 6 : 4);
+  })();
 
   // (the side stripe laid along the shoe's own side, rising to the heel: a straight plate stood off where the side
   // curves in at the heel and the toe; docs/wardrobe-plan.md Phase 5)
@@ -2906,6 +3070,110 @@ export function items(q: Detail, hero = false): Item[] {
   );
   const cuffButtons = [-1, 1].map((s) => new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, R(10)).rotateZ(Math.PI / 2).translate(s * 0.0405, -0.194, 0.006));
 
+  /* ----- Work wear (docs/wardrobe-plan.md Phase 6) ----- */
+  /** Reflective tape: a fixed silver, under white so it never blooms */
+  const TAPE = '#c4c8d4';
+  /** A band round a body from `y0` to `y1`, `out` proud of it at each height (open: its ends would only be hidden) */
+  const ring = (secs: Sec[], n: number, y0: number, y1: number, out: number, seg = TOP_RINGS) => {
+    const at = (y: number): Sec => {
+      const [, hw, hd, z = 0] = secAt(secs, y);
+      return [y, hw + out, hd + out, z];
+    };
+    return loft([at(y0), at(y1)], seg, n, true);
+  };
+  /** Tape up the front from `y0` over the chest to `y1`, either side of the middle at `x` */
+  const braces = (front: (x: number, y: number) => number, x: number, y0: number, y1: number) =>
+    [-1, 1].map((s) => tape(s * x - 0.009, s * x + 0.009, y0, y1, 0.0015, front, 0.0012));
+  const sleeveTape = (secs: Sec[], y: number, seg: number) => ring(grow(secs, 1.14), 2, y - 0.009, y + 0.009, 0.0016, seg);
+  /*
+   * The hi-vis vest: over a long-sleeve in the look's shirt colour (as the puffer vest), on the hoodie's roomy body
+   * (the shape every bottoms sits under), a V at the neck showing the shirt, the closure down the front, two bands of
+   * reflective tape round the body and two up the front over the shoulders
+   */
+  const hivisV = (() => {
+    crisp = true;
+    const g = onBody(
+      [
+        [-0.052, 0.408],
+        [0, 0.318],
+        [0.052, 0.408],
+      ],
+      0.003,
+      hoodieFront,
+      0.001
+    );
+    crisp = false;
+    return g;
+  })();
+  const hivisTape = one([ring(HK, HN2, 0.045, 0.067, 0.002), ring(HK, HN2, 0.115, 0.137, 0.002), ...braces(hoodieFront, 0.075, 0.137, 0.37)]);
+  const hivisClosure = tape(-0.003, 0.003, -0.085, 0.318, 0.002, hoodieFront, 0.0008);
+  /*
+   * The hi-vis jacket: the jacket's lines 3.5% fuller, a stand collar and a zip, two bands of tape round the body low
+   * down, two up the front over the shoulders, two round each sleeve
+   */
+  const HJK = smooth(grow(JACKET, 1.035));
+  const hjFront = surface(HJK, SN);
+  const hjBody = loft(HJK, TOP_RINGS, SN);
+  const hjCollar = ribBand(0.396, 0.44, 0.067, 0.061, -0.004, R(16)).band;
+  const hjZip = tape(-0.005, 0.005, -0.08, 0.398, 0.004, hjFront, 0.001);
+  const hjTape = one([ring(HJK, SN, -0.01, 0.01, 0.0022), ring(HJK, SN, 0.06, 0.08, 0.0022), ...braces(hjFront, 0.072, 0.08, 0.37)]);
+  const hjArmTape = sleeveTape(LOOSE_U, -0.1, R(14));
+  const hjForeTape = sleeveTape(LOOSE_F, -0.12, R(14));
+  /*
+   * The chore coat: a work jacket in heavy canvas on the jacket's lines, a point collar on a stand, dark buttons down a
+   * placket, three patch pockets (one on the chest, two at the hips), plain cuffs with a button
+   */
+  const CHK = smooth(grow(JACKET, 1.035));
+  const choreFront = surface(CHK, SN);
+  const choreBody = loft(CHK, TOP_RINGS, SN);
+  const choreStand = ribBand(0.398, 0.428, 0.065, 0.059, -0.004, R(16)).band;
+  const HORN_DARK = '#3a2418';
+  crisp = true;
+  const choreCollar = [onBody(TRUCKER_COLLAR, 0.007, choreFront, 0.003), onBody(mirror(TRUCKER_COLLAR), 0.007, choreFront, 0.003)];
+  const pocketAt = (x: number, y: number, w: number, h: number) =>
+    onBody(
+      [
+        [x - w / 2, y - h / 2],
+        [x + w / 2, y - h / 2],
+        [x + w / 2, y + h / 2],
+        [x - w / 2, y + h / 2],
+      ],
+      0.004,
+      choreFront,
+      0.0015
+    );
+  const chorePockets = [pocketAt(0.075, 0.24, 0.062, 0.07), pocketAt(-0.085, 0.015, 0.08, 0.085), pocketAt(0.085, 0.015, 0.08, 0.085)];
+  crisp = false;
+  const chorePlacket = tape(-0.013, 0.013, -0.085, 0.392, 0.003, choreFront, 0.001);
+  const choreButtons = [0.01, 0.1, 0.19, 0.28, 0.37].map((y) => stud(0, y, choreFront(0, y) + 0.006));
+  /*
+   * Coveralls: one piece, its legs its own (`bottomsOf()` says none): the jacket's body with a zip to the collar, a
+   * point collar, two zipped chest pockets, a belt of the cloth at the waist; the legs the work trousers' cut in the
+   * same colour, hemmed
+   */
+  const CVK = smooth(grow(JACKET, 1.035));
+  const cvFront = surface(CVK, SN);
+  const cvBody = loft(CVK, TOP_RINGS, SN);
+  crisp = true;
+  const cvCollar = [onBody(TRUCKER_COLLAR, 0.007, cvFront, 0.003), onBody(mirror(TRUCKER_COLLAR), 0.007, cvFront, 0.003)];
+  // (each chest pocket's zip, a line across)
+  const cvPockets = [-1, 1].map((s) =>
+    onBody(
+      [
+        [s * 0.075 - 0.026, 0.267],
+        [s * 0.075 + 0.026, 0.267],
+        [s * 0.075 + 0.026, 0.272],
+        [s * 0.075 - 0.026, 0.272],
+      ],
+      0.002,
+      cvFront,
+      0.001
+    )
+  );
+  crisp = false;
+  const cvZip = tape(-0.005, 0.005, -0.08, 0.398, 0.004, cvFront, 0.001);
+  const cvBelt = ring(CVK, SN, 0.0, 0.032, 0.0025);
+
   /*
    * The heavyweight tee (docs/wardrobe-plan.md Phase 5): the hoodie's roomy body without its hood, pouch or ribbing,
    * a stitched hem, a ribbed crew neck, boxy short sleeves to mid-arm with a hem of their own, and his arms bare under
@@ -3080,6 +3348,10 @@ export function items(q: Detail, hero = false): Item[] {
     ['tee', chainOn(hoodieFront)],
     ['shell', chainOn(shellUp, 0.006)],
     ['trucker', chainOn(truckerFront, 0.007)],
+    ['hivis', chainOn(hoodieFront, 0.004)],
+    ['hivisjacket', chainOn(hjFront, 0.004)],
+    ['chore', chainOn(choreFront, 0.007)],
+    ['coveralls', chainOn(cvFront, 0.007)],
     // (over the puffer's high collar where it stands)
     ['puffer', chainOn((x, y) => Math.max(pufferFront(x, y), y >= 0.395 ? collarFront(x, y) : 0))],
   ];
@@ -3099,6 +3371,10 @@ export function items(q: Detail, hero = false): Item[] {
     { kind: 'tee', shells: [[HK, HN2]], over: 0, strapX: 0.118 },
     { kind: 'shell', shells: [[SHK, SN], [SHELL_COLLAR, 2.2]], over: 0.006, strapX: 0.104 },
     { kind: 'trucker', shells: [[DK, SN]], over: 0.007, strapX: 0.088 },
+    { kind: 'hivis', shells: [[HK, HN2]], over: 0.004, strapX: 0.118 },
+    { kind: 'hivisjacket', shells: [[HJK, SN]], over: 0.005, strapX: 0.088 },
+    { kind: 'chore', shells: [[CHK, SN]], over: 0.007, strapX: 0.088 },
+    { kind: 'coveralls', shells: [[CVK, SN]], over: 0.007, strapX: 0.088 },
     { kind: 'puffer', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
     { kind: 'vest', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
   ];
@@ -3192,6 +3468,10 @@ export function items(q: Detail, hero = false): Item[] {
     coach: { rings: [[0.396, 0.432, 0.068, 0.062, -0.004]], margin: 0.012 },
     trucker: { rings: [[0.396, 0.43, 0.067, 0.061, -0.004]], margin: 0.012 },
     tee: { rings: [], margin: 0.006 },
+    hivis: { rings: [], margin: 0.006 },
+    hivisjacket: { rings: [[0.394, 0.442, 0.069, 0.063, -0.004]], margin: 0.006 },
+    chore: { rings: [[0.396, 0.43, 0.067, 0.061, -0.004]], margin: 0.012 },
+    coveralls: { rings: [], margin: 0.012 },
   };
   const PHONE_PTS = (() => {
     const pts: THREE.Vector3[] = [];
@@ -3584,6 +3864,12 @@ export function items(q: Detail, hero = false): Item[] {
     { is: shell, front: shellFront, back: surface(SHK, SN, -1), chest: [0.078, 0.27], sleeve: grow(LOOSE_U, 1.14) },
     // (the trucker's chest mark goes small on its left pocket's flap)
     { is: trucker, front: truckerFront, back: surface(DK, SN, -1), chest: [0.072, 0.284, 0.026, 0.008], sleeve: grow(LOOSE_U, 1.14) },
+    // (the hi-vis tops keep their chest clear of the tape: the mark goes on the left, small, between the braces' line
+    // and the arm; the chore coat's on its chest pocket)
+    { is: hivis, front: hoodieFront, back: BACK, chest: [0.115, 0.25, 0.04], sleeve: grow(LOOSE_U, 1.14) },
+    { is: hivisJacket, front: hjFront, back: surface(HJK, SN, -1), chest: [0.112, 0.25, 0.04], sleeve: grow(LOOSE_U, 1.14) },
+    { is: chore, front: choreFront, back: surface(CHK, SN, -1), chest: [0.075, 0.24, 0.04, 0.006], sleeve: grow(LOOSE_U, 1.14) },
+    { is: coveralls, front: cvFront, back: surface(CVK, SN, -1), chest: [0.075, 0.22, 0.045], sleeve: grow(LOOSE_U, 1.14) },
     // (the vest's sleeve mark goes on the long-sleeve under it)
     { is: gilet, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     { is: puffer, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(UPPER_S, 1.44) },
@@ -3685,6 +3971,11 @@ export function items(q: Detail, hero = false): Item[] {
       id: 'beanie',
       when: (o) => !!o.beanie && !o.skully && bare(o),
       pieces: [P('head', one(beanie), 'beanie'), P('head', beanieCuff, 'beanie', { shade: 0.82 }), ...hatPatch(beaniePatch, beanieLogo)],
+    },
+    {
+      id: 'hardhat',
+      when: (o) => !!o.hardhat && bare(o),
+      pieces: [P('head', one([hardCrown, hardBrim]), 'hardhat'), P('head', one(hardRidge), 'hardhat', { shade: 0.88 })],
     },
     {
       id: 'skully',
@@ -3849,6 +4140,16 @@ export function items(q: Detail, hero = false): Item[] {
         ...(q >= 2 ? [...both('leg', denimThighSeam, STITCH, { detail: true }), ...both('shin', denimShinSeam, STITCH, { detail: true })] : []),
       ],
     },
+    {
+      id: 'workPants',
+      when: (o) => bottomsOf(o) === 'work',
+      pieces: [
+        P('pelvis', workPants, 'bottom', BOTTOM),
+        ...both('shin', workHem, 'bottom', { shade: 0.85 }),
+        ...both('leg', kneePanels, 'bottom', { shade: 0.78 }),
+        P('legL', hammerLoop, 'bottom', { shade: 0.8, detail: true }),
+      ],
+    },
     // Track pants: the joggers with the track suit's stripes down the outside of each leg
     {
       id: 'trackStripes',
@@ -3888,6 +4189,17 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('shin', runnerSole, SHIRT, SHOE),
         ...both('shin', runnerOut, '#2b2a33', SHOE),
         ...(runnerLaces.length ? both('shin', one([...runnerLaces, runnerTab]), SHIRT, { detail: true, ...SHOE }) : []),
+      ],
+    },
+    {
+      id: 'workBoots',
+      when: (o) => shoesOf(o) === 'boot',
+      pieces: [
+        ...both('shin', workBoot, 'shoes', UPPER),
+        ...both('shin', workBootCap, 'shoes', { shade: 0.72, ...SHOE }),
+        ...both('shin', workBootCollar, 'shoes', { shade: 0.6, ...SHOE }),
+        ...both('shin', workBootSole, '#14121a', SHOE),
+        ...(workBootLaces.length ? both('shin', one(workBootLaces), '#c99a4e', { detail: true, ...SHOE }) : []),
       ],
     },
     {
@@ -4020,6 +4332,67 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('fore', looseFore, 'top'),
         ...both('fore', truckerCuff, 'top', { shade: 0.88 }),
         ...both('fore', cuffButtons, COPPER, { detail: true }),
+      ],
+    },
+    // Work wear (docs/wardrobe-plan.md Phase 6)
+    {
+      id: 'hivis',
+      when: hivis,
+      pieces: [
+        P('torso', hoodieBody, 'top', TOP),
+        P('torso', teeHem, 'top', { shade: 0.85, ...TOP }),
+        P('torso', one([hivisV, teeNeck]), 'shirt'),
+        P('torso', hivisClosure, 'top', { shade: 0.8, detail: true }),
+        P('torso', hivisTape, TAPE),
+        ...both('arm', looseUpper, 'shirt'),
+        ...both('fore', looseFore, 'shirt'),
+        ...both('fore', ribCuff, 'shirt', { shade: 0.8 }),
+      ],
+    },
+    {
+      id: 'hivisjacket',
+      when: hivisJacket,
+      pieces: [
+        P('torso', hjBody, 'top', TOP),
+        P('torso', hemBand(HJK, SN, -0.09, -0.07, 0.0025), 'top', { shade: 0.85, ...TOP }),
+        P('torso', hjCollar, 'top', { shade: 0.85 }),
+        P('torso', hjZip, '#2b2a33', { detail: true }),
+        P('torso', hjTape, TAPE),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', ribCuff, 'top', { shade: 0.85 }),
+        ...both('arm', hjArmTape, TAPE),
+        ...both('fore', hjForeTape, TAPE),
+      ],
+    },
+    {
+      id: 'chore',
+      when: chore,
+      pieces: [
+        P('torso', choreBody, 'top', TOP),
+        P('torso', one([choreStand, chorePlacket]), 'top', { shade: 0.88 }),
+        P('torso', one([...choreCollar, ...chorePockets]), 'top', { shade: 0.82 }),
+        P('torso', one(choreButtons), HORN_DARK, { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', truckerCuff, 'top', { shade: 0.88 }),
+        ...both('fore', cuffButtons, HORN_DARK, { detail: true }),
+      ],
+    },
+    {
+      id: 'coveralls',
+      when: coveralls,
+      pieces: [
+        P('torso', cvBody, 'top', TOP),
+        P('torso', cvBelt, 'top', { shade: 0.85 }),
+        P('torso', one(cvCollar), 'top', { shade: 0.82 }),
+        P('torso', one([cvZip, ...cvPockets]), '#2b2a33', { detail: true }),
+        ...both('arm', looseUpper, 'top'),
+        ...both('fore', looseFore, 'top'),
+        ...both('fore', ribCuff, 'top', { shade: 0.85 }),
+        // (its own legs: the work trousers' cut, in the top's colour)
+        P('pelvis', workPants, 'top', BOTTOM),
+        ...both('shin', workHem, 'top', { shade: 0.85 }),
       ],
     },
     {

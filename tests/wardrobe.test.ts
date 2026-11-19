@@ -80,18 +80,21 @@ for (const q of [3, 2] as const) {
       for (const k of ['top', 'bottom', 'tie', 'shirt', 'frame', 'gear', 'shoes', 'hatColor', 'lens', 'bagColor', 'ink'] as const) assert.equal(look[k], safeColour(raw[k]), k);
       const o = lookOutfit(look);
       assert.equal(o.held, undefined, 'nothing in his hand');
-      // (the separates as picked: one bottoms, one pair of shoes)
-      assert.deepEqual([bottomsOf(o), shoesOf(o)], [look.bottoms, look.shoeStyle]);
+      // (the separates as picked: one bottoms, one pair of shoes; coveralls bring their own legs)
+      const legs = look.kind === 'coveralls' ? null : look.bottoms;
+      assert.deepEqual([bottomsOf(o), shoesOf(o)], [legs, look.shoeStyle]);
       const d = dress(o, q);
       const ids = new Set(d.worn.map((w) => w.item));
-      assert.equal(ids.has('trousers'), look.bottoms === 'trousers');
-      assert.equal(ids.has('joggers'), look.bottoms === 'joggers' || look.bottoms === 'trackpants');
-      assert.equal(ids.has('cargoPants'), look.bottoms === 'cargo');
-      assert.equal(ids.has('trackStripes'), look.bottoms === 'trackpants');
-      assert.equal(ids.has('shorts'), look.bottoms === 'shorts');
-      assert.equal(ids.has('denim'), look.bottoms === 'denim');
+      assert.equal(ids.has('trousers'), legs === 'trousers');
+      assert.equal(ids.has('joggers'), legs === 'joggers' || legs === 'trackpants');
+      assert.equal(ids.has('cargoPants'), legs === 'cargo');
+      assert.equal(ids.has('trackStripes'), legs === 'trackpants');
+      assert.equal(ids.has('shorts'), legs === 'shorts');
+      assert.equal(ids.has('denim'), legs === 'denim');
       assert.equal(ids.has('runners'), look.shoeStyle === 'runner');
       assert.equal(ids.has('slides'), look.shoeStyle === 'slide');
+      assert.equal(ids.has('workPants'), legs === 'work');
+      assert.equal(ids.has('workBoots'), look.shoeStyle === 'boot');
       assert.equal(ids.has('dressShoes'), look.shoeStyle === 'dress');
       assert.equal(ids.has('sneakers'), look.shoeStyle === 'sneaker');
       // (one pair of shades, the look's, unless face gear is worn in their place; the face gear if any)

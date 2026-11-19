@@ -514,6 +514,45 @@ A proposed first set; the owner picks what goes in:
   coveralls, work trousers (knee panels, a hammer loop), work boots and a
   hard hat. Goggles and the half respirator from Phase 4 belong to this
   range too. Nothing is a real brand or logo.
+- **As built (19 November 2026, the owner's pick after Phase 5):** all of
+  the list, in the Work range (`WORK` in fitting.ts):
+  - The hi-vis vest (`LookKind` `hivis`): over a long-sleeve in the look's
+    shirt colour (the card's "Sleeves" swatches, as the puffer vest's), on
+    the hoodie's roomy body, a V at the neck showing the shirt, the closure
+    down the front, reflective tape in a fixed silver (`TAPE`, under white:
+    no bloom) in two bands round the body (`ring()`) and two up the front
+    over the shoulders (`braces()`).
+  - The hi-vis jacket (`hivisjacket`): the jacket's lines 3.5% fuller
+    (`HJK`), a stand collar and a zip, two bands of tape low on the body,
+    two up the front, two round each sleeve (`sleeveTape()`).
+  - The chore coat (`chore`, Work and Streetwear): a point collar on a
+    stand, dark buttons down a placket, three patch pockets, buttoned cuffs.
+  - Coveralls (`coveralls`): one piece, the jacket's body with a zip to the
+    collar, two zipped chest pockets and a belt of the cloth, its own legs
+    in the top's colour (the work trousers' cut): `bottomsOf()` says none,
+    the Bottoms tab says "Coveralls cover the legs", the character screen
+    names them. The tests hold their legs as any bottoms (over the top's
+    hips, into every shoe).
+  - Work trousers (`Bottoms` `work`): straight and roomy (`WORK_S`) with a
+    hem, reinforced panels over the knees laid on the leg's own surface so
+    they bend with it (`legPatch()`), a hammer loop on the right thigh.
+  - Work boots (`ShoeStyle` `boot`, Work and Streetwear): over the ankle,
+    a toe cap laid over a shade darker, a padded collar, laces up the
+    instep in a tan thread, a deep dark sole. Round the ankle they take the
+    high-tops' line: first built on the fatigues' boot, its taller, wider
+    front was tipped by the shin into every trouser leg at a crouch (up to
+    17.9 thousandths into it); the work trousers' hem and the denim's cuff
+    now end just over the boot's collar too, and every bottoms over every
+    shoe is back under `ANKLE`.
+  - The hard hat (`Hat` `hardhat`, its own colour key): a rigid shell
+    standing off the head on its harness, a raised ridge front to back, a
+    narrow brim all round reaching into a short peak. It shows no mark (the
+    Merch tab says the hat's mark shows on a cap or beanie).
+  - Two hi-vis swatches in the tops' palette (yellow `#d4ec3a`, orange
+    `#ff8a1e`), orange in the hats'.
+  - The budget: the runners' and slides' outsole and panels (Phase 5g) are
+    thinned at every level now (the desktop's worst look had reached 39.9k
+    of 40k with them); the desktop's worst is 38.4k, the phones' 17.5k.
 
 ### Phase 7: business wear
 
@@ -563,5 +602,6 @@ A proposed first set; the owner picks what goes in:
   rig and waist bags, the backpack and duffel rebuilt, the headphones on
   the collar): built**, 19 November 2026.
 - **Phase 5, the fifth set (relaxed denim, chunky runners, slides): built**,
-  19 November 2026: Phase 5's streetwear list is done, waiting for the
-  owner's look and Phase 6 or 7.
+  19 November 2026: Phase 5's streetwear list is done.
+- **Phase 6 (work wear): built**, 19 November 2026, waiting for the owner's
+  look and Phase 7.

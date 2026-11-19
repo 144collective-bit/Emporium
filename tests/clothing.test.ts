@@ -25,9 +25,10 @@ import { atRest, distance, dress, inside, layers, posed, shells, type Dressed } 
 const TOL = 0.002;
 const report = !!process.env.CLOTHING_REPORT;
 
-const OUTFITS: Outfit[] = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker'] as OutfitKind[])
+const OUTFITS: Outfit[] = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore'] as OutfitKind[])
   .flatMap((kind) => BOTTOMS.map((bottoms): Outfit => ({ ...PLAYER, kind, bottoms })))
-  .concat([SOLDIER]);
+  // (coveralls bring their own legs, docs/wardrobe-plan.md Phase 6: once)
+  .concat([{ ...PLAYER, kind: 'coveralls' }, SOLDIER]);
 const named = (o: Outfit) => (o.bottoms ? `${o.kind} over the ${o.bottoms}` : o.kind);
 
 /* ---------- The poses ---------- */
@@ -153,10 +154,11 @@ for (const o of OUTFITS)
  */
 const ANKLE = 0.009;
 for (const q of [2, 3] as const)
-  for (const bottoms of BOTTOMS)
+  for (const bottoms of [...BOTTOMS, 'coveralls'] as const)
     for (const shoeStyle of SHOE_STYLES)
       test(`clothes: the ${bottoms} over ${shoeStyle} shoes: no deeper into the shoe than the clothes were built (detail ${q})`, () => {
-        const d = dress({ ...PLAYER, kind: 'hoodie', bottoms, shoeStyle }, q);
+        // (the coveralls' own legs, as any bottoms)
+        const d = dress(bottoms === 'coveralls' ? { ...PLAYER, kind: 'coveralls', shoeStyle } : { ...PLAYER, kind: 'hoodie', bottoms, shoeStyle }, q);
         const legs = d.worn.filter((w) => w.piece.shell === 'bottom');
         const shoes = d.worn.filter((w) => w.piece.shell === 'shoe');
         assert.ok(legs.length && shoes.length);
@@ -216,7 +218,7 @@ for (const q of [2, 3] as const)
  */
 for (const q of [2, 3] as const)
   test(`clothes: the headphones rest on every top's collar, none in its cloth (detail ${q})`, () => {
-    for (const o of OUTFITS.filter((x) => x.kind !== 'soldier' && x.bottoms === 'joggers')) {
+    for (const o of OUTFITS.filter((x) => x.kind !== 'soldier' && (x.bottoms === 'joggers' || x.kind === 'coveralls'))) {
       const d = dress({ ...o, headphones: '#ff0000', chain: false }, q);
       const hp = d.worn.filter((w) => w.item.startsWith('headphones'));
       if (['puffer', 'vest', 'shell'].includes(o.kind)) {

@@ -128,7 +128,7 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
       } else {
         // A looser sleeve gathered into a ribbed cuff (the hoodie, the track top, the jackets wear their top's colour;
         // under the puffer vest, the long-sleeve its shirt colour)
-        const sleeve = o.kind === 'vest' ? (o.shirt ?? SHIRT) : top;
+        const sleeve = o.kind === 'vest' || o.kind === 'hivis' ? (o.shirt ?? SHIRT) : top;
         clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.042, 0.4, 3, 12), 0.29), shared(sleeve)));
         clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.038, 0.04, 0.05, 14), 0.06), shared(shade(sleeve, 0.8))));
         if (o.kind === 'track')
