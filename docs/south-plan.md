@@ -639,7 +639,24 @@ From the Circus west, patchy as high roads are:
    - **5a, as data**: exit 6A in `EXITS` (its label beside the numbers),
      its slips (`rampsOf()`), the road in in the street plan, the routes,
      the land kept clear; tests (nothing that exists moves, the ramps clear
-     of exits 6 and 7, every route still joined); a sketch.
+     of exits 6 and 7, every route still joined); a sketch. Built
+     (2026-11-19, waiting for the owner's sign-off): exit 6A is `EXITS`'
+     ninth (`n` 9 for its ids, `label` '6A' for the signs; every exit has
+     a `label` now), at `CORNER_FROM`'s ring point (the road in square on
+     to the curve there), `side` -1, slips inside and out, named
+     "Aldwyn's Green · Southbank Docks" (made up, the owner to change);
+     its ramps end at about x -145, clear of exit 6's (x -96). The road in
+     is `cornerroad.ts` (DOM-free, tested in tests/cornerroad.test.ts):
+     **Corner Road** (`corner-road`) from trench-ns0 and trench-ew1's
+     corner (-188, 261) straight out under the ring and on in an even bend
+     to the Docks' ring road's corner (Dock Road into Yard Road, -248,
+     286), and **Gate Hill** (`corner-link`) bending down from there to
+     the south's Gate Lane and Field Lane (-229, 340.5); junctions at all
+     three, lit at the ramps' feet; `RING_MEETS` has it (`corner-6a`), so
+     the piers and the lights under the deck keep to it. The snapshot only
+     gains the two roads and the two ramps (nothing that exists moved).
+     `turnsOf()` (traffic.ts) keeps a turn at a route's very end inside it.
+     Sketch `docs/south-shots/27-phase-5a-exit-6a.png`.
    - **5b, drawn and driven**: the ramps on the viaduct, the road and its
      junctions, the gantries and signs with 6A's made-up names, lamps,
      traffic using it; walked and driven, shots.
