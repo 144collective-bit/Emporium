@@ -387,3 +387,23 @@ All four suggestions, on the map (`docs/military-map.png`):
 | --- | --- |
 | The phone over its geometry ceiling (191.8 of 187 MiB) | **Trim first**: find what grew since 2026-11-14 and trim it back under 187, with room for the base's 8 MiB (about 179 or less), before Phase 1. |
 | Each phase's allowance | **As set** (the table above). |
+
+## The phone trim (2026-11-19, the owner's pick: trim first)
+
+Where the 22 MiB since 2026-11-14 went (`__mem()` row by row, today against
+the build of 2026-11-14, every district loaded): all of it in the tiles, all
+of it in the re-laid south-west. The ground built at the boot went from 10.0
+to 18.4 MiB, and the sites drawn at every distance from 47.7 to 55.0 (the
+south's 4.3 to 11.5); the near pieces didn't grow. The cause was kit.ts
+`liftOnto()`: the faces split onto the south's rolling ground each had their
+own three corners (about 24 a square of the 5 m ground grid, where 4 do).
+
+| Trim (the owner's picks) | Phone geometry |
+| --- | ---: |
+| Before | 192.0 MiB |
+| 1. The split faces share their corners (nothing on screen changes; 37d5244) | **179.2 MiB** (−12.8) |
+| 2. The south's small parts near only | to measure |
+
+The ceiling stays 187; with the first trim the base's 8 MiB nearly fits
+(187.2).
+
