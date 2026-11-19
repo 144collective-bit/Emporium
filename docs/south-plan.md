@@ -438,8 +438,9 @@ From the Circus west, patchy as high roads are:
      2026-11-18: the Circus first; a sunken plaza; murals and strip
      lights inside; life with Phase 6; four subways, nothing that's built
      moving: the west and south-west corners are built up to the Circus's
-     sidewalk, the parade's back and Church Road's end house, and keep
-     their zebra crossings). Built and signed off (2026-11-18):
+     sidewalk, the parade's back and Church Road's end house: there you
+     cross the road at street level; the south's streets have no painted
+     zebras). Built and signed off (2026-11-18):
      `circus.ts` (DOM-free, `tests/circus.test.ts`): the plaza
      (`PLAZA`, a well of the kit inside the island, three steps of seats
      round its edge you walk up, `tiers`), planters with trees and lamps
@@ -474,6 +475,22 @@ From the Circus west, patchy as high roads are:
      `docs/south-shots/19-phase-4b-*.webp` (the subway's and the walk-in
      from the smoke test's screenshots: the review shots' tool stalls in
      this machine's software renderer with its camera in a subway).
+   - **4c, the avenue crossings' underpasses** (the owner's answers,
+     2026-11-19: the avenue crossings; plainer than the Circus's;
+     where an underpass crossed a zebra, the zebra would go, but the
+     south's streets have none). Built and signed off (2026-11-19):
+     `underpasses.ts` (DOM-free, `tests/underpasses.test.ts`): three
+     straight passages of the kit (`straight()`), square across their
+     roads, roofed under them and their sidewalks, a ramp down and up
+     each side: under the wide south avenue between Marsh Lane and Lot
+     9's road (on open ground), and under Endswood Road and Marsh Lane on
+     their bends (on the blocks' slabs); `SLAB_CUTS` and `GROUND_HOLES`
+     with the Circus's (world.ts, south3d.ts); walked (groundheight.ts
+     `UNDER`). `underpass3d.ts` draws them plain: concrete, strip lights,
+     parapets, headwalls with SUBWAY plates, a step on to a slab at a
+     mouth on one. The smoke test walks through the one under Endswood
+     Road (`underpass`). Shots `docs/south-shots/20-phase-4c-*.webp`
+     (from the smoke test's screenshots).
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new

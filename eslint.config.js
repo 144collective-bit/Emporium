@@ -19,6 +19,7 @@ const DOM_FREE = [
   'src/scripts/city3d/council.ts',
   'src/scripts/city3d/rec.ts',
   'src/scripts/city3d/circus.ts',
+  'src/scripts/city3d/underpasses.ts',
   'src/scripts/city3d/holes.ts',
   'src/scripts/city3d/streetfaces.ts',
   'src/scripts/city3d/freecam.ts',

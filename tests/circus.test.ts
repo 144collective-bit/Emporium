@@ -75,7 +75,7 @@ test("the plaza sits inside the Circus's island, its seats three steps up round 
   assert.ok(FLOOR + t.rise * t.n < GROUND_Y - 1, 'the top seat well below the street');
 });
 
-test('four subways, into the clear corners: the west and south-west corners keep their crossings', () => {
+test('four subways, into the clear corners: the west and south-west corners are crossed at street level', () => {
   assert.deepEqual(Object.keys(SUBWAY_WAYS).sort(), ['ne', 'nw', 's', 'se']);
   assert.equal(SUBWAYS.length, 4);
   for (const p of SUBWAYS) {

@@ -21,8 +21,10 @@ import { addCurtains, denCharts, registerHome, trophyWall } from './home3d';
 import { HOME_POOLS } from './home';
 import { registerTunnel } from './tunnel3d';
 import { registerCircus } from './circus3d';
-import { CIRCUS_CUTS, PLAZA } from './circus';
-import { disc } from './holes';
+import { registerUnderpasses } from './underpass3d';
+import { PLAZA } from './circus';
+import { SLAB_CUTS } from './underpasses';
+import { boundsOf, disc } from './holes';
 
 export const SELF = import.meta.url;
 
@@ -118,9 +120,13 @@ function registerStreets(low: boolean) {
     const r = c.streets.includes('south-circus') ? 6.2 : 4.4;
     site(`south junction ${i}`, [c.at[0] - r - 0.5, c.at[1] - r - 0.5, c.at[0] + r + 0.5, c.at[1] + r + 0.5], (into) => {
       const b = new Batch();
-      // (round the Circus, the plaza's and subways' cuttings cut out of it: circus.ts)
+      // (by the Circus or an underpass, their cuttings cut out of it: circus.ts, underpasses.ts)
       const round = disc(c.at[0], c.at[1], r, low ? 16 : 24);
-      b.add(c.streets.includes('south-circus') ? holedPoly(round, Y - 0.003, CIRCUS_CUTS) : new THREE.CircleGeometry(r, low ? 16 : 24).rotateX(-Math.PI / 2).translate(c.at[0], Y - 0.003, c.at[1]), ASPHALT);
+      const cuts = SLAB_CUTS.filter((h) => {
+        const [x0, z0, x1, z1] = boundsOf(h);
+        return x0 < c.at[0] + r && x1 > c.at[0] - r && z0 < c.at[1] + r && z1 > c.at[1] - r;
+      });
+      b.add(cuts.length ? holedPoly(round, Y - 0.003, cuts) : new THREE.CircleGeometry(r, low ? 16 : 24).rotateX(-Math.PI / 2).translate(c.at[0], Y - 0.003, c.at[1]), ASPHALT);
       b.build(into, { cast: false, receive: true });
     });
   }
@@ -144,6 +150,7 @@ function registerStreets(low: boolean) {
     b.build(into, { cast: true, receive: true });
   });
   registerCircus(low);
+  registerUnderpasses();
 }
 
 /** The footpaths out of the closes (paved, over the blocks they cross) and the bollards at their ends */

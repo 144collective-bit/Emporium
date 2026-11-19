@@ -34,7 +34,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEDGE as RING_HEDGE, RING_MEDIAN } from './ringstreet';
 import { BASIN, CAISSON, CHANNEL, DOCK_BRIDGE, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
 import { TUNNEL_HOLES } from './lot9';
-import { CIRCUS_CUTS, CIRCUS_HOLE } from './circus';
+import { GROUND_HOLES, SLAB_CUTS } from './underpasses';
 import { boundsOf, fan, minusAll } from './holes';
 import { AXIS_X, AXIS_ZEBRAS, LANE_HALF } from './uptown';
 import { BRIDGE_PIERS, PIER_HALF } from './waterfront';
@@ -247,11 +247,12 @@ function tiled(poly: Pt[], y: number, repeat?: number): THREE.BufferGeometry[] {
     .filter((piece) => piece.length >= 3)
     .map((piece) => (holesIn(piece).length ? holedPoly(piece, y, holesIn(piece), repeat) : flatPoly(piece, y, repeat)));
 }
-/** The holes cut out of the slabs (the Circus's plaza and its subways' cuttings, circus.ts) a piece meets */
-const CUT_BOUNDS = CIRCUS_CUTS.map(boundsOf);
+/** The holes cut out of the slabs (the Circus's plaza and its subways' cuttings, circus.ts; the underpasses' ramps,
+ * underpasses.ts) a piece meets */
+const CUT_BOUNDS = SLAB_CUTS.map(boundsOf);
 const holesIn = (piece: Pt[]) => {
   const [x0, z0, x1, z1] = boundsOf(piece);
-  return CIRCUS_CUTS.filter((_, i) => CUT_BOUNDS[i][0] < x1 && CUT_BOUNDS[i][2] > x0 && CUT_BOUNDS[i][1] < z1 && CUT_BOUNDS[i][3] > z0);
+  return SLAB_CUTS.filter((_, i) => CUT_BOUNDS[i][0] < x1 && CUT_BOUNDS[i][2] > x0 && CUT_BOUNDS[i][1] < z1 && CUT_BOUNDS[i][3] > z0);
 };
 /** A flat outline at y, facing up, with convex holes cut out of it (holes.ts; its UVs as `flatPoly()`'s) */
 export function holedPoly(poly: Pt[], y: number, holes: Pt[][], repeat = BS - 0.8) {
@@ -893,8 +894,9 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
       if (c > a)
         // (nor over the Docks' basin and its mouth, their water down under the quays: docks.ts; nor over Lot 9's
         // tunnel's open cuttings, lot9.ts: its walls go down to its floor, lot9-3d.ts; nor under the Circus, its sunken
-        // plaza and subways, circus.ts: the streets and the blocks' slabs, holed over them, cover the rest)
-        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES, CIRCUS_HOLE])) {
+        // plaza and subways, circus.ts, nor the underpasses' ramps, underpasses.ts: the streets and the blocks' slabs,
+        // holed over them, cover the rest)
+        for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES, ...GROUND_HOLES])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
           // (the open land outside the town rolls, rolls.ts; flat everywhere anything stands)
           const flat = hill ? null : (rolledPlane(px0, pz0, px1, pz1, low) ?? groundPlane(px0, pz0, px1, pz1, low));

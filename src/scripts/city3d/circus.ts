@@ -5,7 +5,8 @@
  * north-west (between Underhill Lane and the High Road), the north-east (Underhill Lane and Endswood Road), and two on
  * the wide side between Endswood Road and Southfold Lane: the south-east (towards the blocks) and the south (towards
  * Lot 9). The west and south-west corners are built up to the
- * Circus's sidewalk (the parade's back, Church Road's end house) and keep their zebra crossings (the owner's call).
+ * Circus's sidewalk (the parade's back, Church Road's end house): you cross there at street level (the owner's call;
+ * the south's streets have no painted zebras).
  * Murals and strip lights inside (the drawing's, Phase 4b). All of it in the underground kit (underground.ts): what
  * walking, the walk camera and the ground's holes ask about it. DOM-free, tested in tests/circus.test.ts.
  */

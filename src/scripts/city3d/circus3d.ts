@@ -160,9 +160,9 @@ const MURAL = siteMat('circus-murals', lit(new THREE.MeshBasicMaterial({ map: MU
 /* ---------- Helpers ---------- */
 
 /** A point of a passage: `s` along, `u` across (underground.ts) */
-const P = (p: Passage, s: number, u: number): Pt => pointOf(p, s, u);
+export const P = (p: Passage, s: number, u: number): Pt => pointOf(p, s, u);
 /** A flat or sloping quad of four corners at their own heights, facing up */
-function upQuad(b: Batch, c: [number, number, number][], m: THREE.Material) {
+export function upQuad(b: Batch, c: [number, number, number][], m: THREE.Material) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(c.flat(), 3));
   g.setIndex([0, 2, 1, 0, 3, 2]);
@@ -172,7 +172,7 @@ function upQuad(b: Batch, c: [number, number, number][], m: THREE.Material) {
   b.add(g, m);
 }
 /** A vertical quad from a to c (their own bottoms and tops), facing n */
-function wallQuad(b: Batch, a: Pt, c: Pt, ya0: number, ya1: number, yc0: number, yc1: number, n: Pt, m: THREE.Material) {
+export function wallQuad(b: Batch, a: Pt, c: Pt, ya0: number, ya1: number, yc0: number, yc1: number, n: Pt, m: THREE.Material) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute([a[0], ya0, a[1], c[0], yc0, c[1], c[0], yc1, c[1], a[0], ya1, a[1]], 3));
   const face = new THREE.Vector3(c[0] - a[0], yc0 - ya0, c[1] - a[1]).cross(new THREE.Vector3(0, 1, 0));
@@ -181,7 +181,7 @@ function wallQuad(b: Batch, a: Pt, c: Pt, ya0: number, ya1: number, yc0: number,
   b.add(g, m);
 }
 /** A slab along a passage from s0 to s1, across from u0 to u1, from y0 up to y1 (a wall, a parapet, a coping) */
-function along(b: Batch, p: Passage, s0: number, s1: number, ua: number, ub: number, y0: number, y1: number, m: THREE.Material) {
+export function along(b: Batch, p: Passage, s0: number, s1: number, ua: number, ub: number, y0: number, y1: number, m: THREE.Material) {
   const [u0, u1] = [Math.min(ua, ub), Math.max(ua, ub)];
   const [a, c] = [P(p, s0, (u0 + u1) / 2), P(p, s1, (u0 + u1) / 2)];
   const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
@@ -189,11 +189,11 @@ function along(b: Batch, p: Passage, s0: number, s1: number, ua: number, ub: num
   b.add(new THREE.BoxGeometry(len, y1 - y0, u1 - u0).rotateY(yaw).translate((a[0] + c[0]) / 2, (y0 + y1) / 2, (a[1] + c[1]) / 2), m);
 }
 /** The way into the passage across it (+u), as x, z */
-const acrossDir = (p: Passage): Pt => {
+export const acrossDir = (p: Passage): Pt => {
   const a = p.axis as number;
   return [-Math.sin(a), Math.cos(a)];
 };
-const alongDir = (p: Passage): Pt => {
+export const alongDir = (p: Passage): Pt => {
   const a = p.axis as number;
   return [Math.cos(a), Math.sin(a)];
 };
