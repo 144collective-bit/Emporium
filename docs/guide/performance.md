@@ -183,6 +183,12 @@ keep it up to date when what it describes changes.
     in `neonSign()` / `facade()`) uses `liveTex()`: always painted, never
     baked. A drawing that changes means a new bake (every build makes
     one). `?textures=0` paints them all in the browser, to compare.
+    The `?fps` panel and the benchmark's card say where they came from
+    (`texsource.ts`: how many from the build, by GPU format, and how many
+    painted, ⚠ when the page has no list); a page with no list on graphics
+    built into the processor paints its big ones half size (kit.ts
+    `paintsHalf()`). The live site gets the list from the Action's
+    `deploy` branch (docs/stability-plan.md, "The live site's textures").
   - **Sites built off the main thread** (performance phase 4,
     `sitework.ts`): a worker imports the city's own chunk, registers the
     same sites the boot does (The Trenches' builders, every tile's trees
