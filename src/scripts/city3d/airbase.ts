@@ -294,3 +294,29 @@ export const APRON_ROAD: Pt[] = [
 /** The airfield's chunk's land (districts.ts `airbase-field`: airbasefield3d.ts draws it in strips across it) */
 export const AIRFIELD_RECT: Rect = [-700, -640, 0, -440];
 
+
+/** The fire station's height, the fuel farm's tanks (x, z middles, radius, height) and its bund wall's height */
+export const FIRE_H = 5.2;
+export const FUEL_TANKS: [number, number, number, number][] = [
+  [-562, -478, 4.6, 6],
+  [-547, -478, 4.6, 6],
+  [-562, -462, 4.6, 6],
+  [-547, -462, 4.6, 6],
+  [-530, -470, 3.2, 4.4],
+];
+export const BUND_H = 1.1;
+/** Which hangar stands open, a transport inside (Phase 2's parked aircraft) */
+export const OPEN_HANGAR = 1;
+/** The tower's footprint (its base building) and its shaft's (x0, z0, x1, z1) */
+export const TOWER_BASE: Rect = [TOWER[0] - 6, TOWER[1] - 4, TOWER[0] + 6, TOWER[1] + 4];
+export const TOWER_SHAFT: Rect = [TOWER[0] - 1.8, TOWER[1] - 1.8, TOWER[0] + 1.8, TOWER[1] + 1.8];
+
+/** The airfield's buildings' solids (in `AIRBASE_SOLIDS`): for flying, the camera and anything that reaches them */
+export const AIRFIELD_SOLIDS: Box[] = [
+  ...HANGARS.map((h): Box => [...h, HANGAR_H]),
+  [...TOWER_BASE, 3.6],
+  [...TOWER_SHAFT, TOWER_TOP],
+  [...FIRE_STATION, FIRE_H],
+  ...FUEL_TANKS.map(([x, z, r, h]): Box => [x - r, z - r, x + r, z + r, h]),
+  ...SHELTERS.map(([x, z]): Box => [x - SHELTER.w / 2, z - SHELTER.d, x + SHELTER.w / 2, z, SHELTER.h]),
+];

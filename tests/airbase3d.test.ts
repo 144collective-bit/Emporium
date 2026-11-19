@@ -56,7 +56,7 @@ test("the airfield's strips build (Phase 2): runway, taxiways, apron, its lights
   for (const low of [false, true]) {
     takeSites();
     mod.register({ low });
-    const sites = takeSites();
+    const sites = takeSites().filter((s) => s.id.startsWith('airbase field '));
     assert.equal(sites.length, Math.ceil((AIRFIELD_RECT[2] - AIRFIELD_RECT[0]) / 30));
     let tris = 0;
     for (const s of sites) {
@@ -74,5 +74,27 @@ test("the airfield's strips build (Phase 2): runway, taxiways, apron, its lights
     }
     // (cheap: the whole field's flat ground and lights)
     assert.ok(tris > 2000 && tris < (low ? 60000 : 90000), `${tris} triangles`);
+  }
+});
+
+test("the airfield's buildings (Phase 2): each on its own ground, standing on it, under the Emporium", async () => {
+  const THREE = await import('three');
+  const { takeSites } = await import('../src/scripts/city3d/tilework');
+  const { AIRFIELD_SOLIDS } = await import('../src/scripts/city3d/airbase');
+  const mod = await import('../src/scripts/city3d/airbasefield3d');
+  takeSites();
+  mod.register({ low: false });
+  const built = takeSites().filter((s) => !s.id.startsWith('airbase field '));
+  assert.ok(built.length >= 3 + 1 + 1 + 1 + 3, built.map((s) => s.id).join());
+  for (const s of built) {
+    const g = new THREE.Group();
+    s.build(g);
+    const box = new THREE.Box3().setFromObject(g);
+    assert.ok(box.min.y > -0.01, `${s.id} below the ground (${box.min.y.toFixed(2)})`);
+    assert.ok(box.max.y < 12.5, `${s.id} over the Emporium (${box.max.y.toFixed(2)})`);
+    assert.ok(box.min.x > s.rect[0] - 1 && box.max.x < s.rect[2] + 1 && box.min.z > s.rect[1] - 1 && box.max.z < s.rect[3] + 1, `${s.id} spills out`);
+    // (what's drawn stands inside the solids round it, near enough: a solid for every building)
+    const mid: [number, number] = [(box.min.x + box.max.x) / 2, (box.min.z + box.max.z) / 2];
+    assert.ok(AIRFIELD_SOLIDS.some((b) => mid[0] > b[0] - 30 && mid[0] < b[2] + 30 && mid[1] > b[1] - 30 && mid[1] < b[3] + 30), `${s.id} has no solid`);
   }
 });
