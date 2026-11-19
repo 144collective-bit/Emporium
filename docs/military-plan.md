@@ -9,8 +9,8 @@ sign-off. Keep this plan up to date. Nothing is built yet. **Phase 0 is
 under way**: the lines are drawn and signed off (2026-11-19, below) and the
 baseline is measured (below). The phone is over its geometry ceiling before
 the base adds anything; the owner's pick (2026-11-19) was to trim first,
-and it's done: 192.0 to 168.9 MiB (below). **Phase 0 is done**; Phase 1
-follows, on the owner's go.
+and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built** (2026-11-19,
+measured below), waiting on the owner's sign-off.
 
 ## The owner's answers (2026-11-18)
 
@@ -246,8 +246,8 @@ edge).
 - **The phone was over its geometry ceiling** (187,
   `MEMORY_CEILINGS.phone`; 169.8 measured 2026-11-14; memcheck read 192.0
   on 90dee3e). The south's re-laying, Degen's home and the spawn plan came
-  in since, while memcheck couldn't run. Trimmed back to 168.9 in this
-  phase (the phone trim, below).
+  in since, while memcheck couldn't run. Trimmed back to about 179.5 in
+  this phase (the phone trim, below).
 - **The boot:** 736.9 KB of 750 KB.
 
 ### Each phase's allowance (added to the baseline; signed off 2026-11-19)
@@ -404,7 +404,7 @@ own three corners (about 24 a square of the 5 m ground grid, where 4 do).
 | Before (`npm run memcheck` on 90dee3e: fails) | 192.0 MiB |
 | 1. The split faces share their corners (nothing on screen changes; 37d5244) | |
 | 2. The south's small parts near only (the footpaths' bollards, Lot 9's fence posts and rail, the village's front walls; f7e6ab2) | |
-| **After both** (`npm run memcheck` on f7e6ab2: passes every ceiling, every view's slowest frame under 250 ms) | **168.9 MiB** (−23.1) |
+| **After both** (f7e6ab2, a minute into the benchmark; `npm run memcheck` read 168.9, before the big batch grew: below) | **179.5 MiB** (−12.5) |
 
 The first step did nearly all of it: a reading taken a little later (once
 the benchmark has begun flying round its views, which reads about 10 MiB
@@ -415,10 +415,35 @@ drawn at every distance was taken up by others. It helps on the street and
 far off, and keeps the south's small parts near only as the city's rule is,
 so it stays.
 
-**Where it ends:** 168.9 MiB of the 187 ceiling (memcheck's measure, the
-one the ceiling holds), 18 MiB free: room for the base's 8 MiB with 10 to
-spare. The ceiling stays 187. Each phase of the base is held to it with
-`npm run memcheck` (now runnable again: `?bench` was stuck since the spawn
-plan's Phase 1, fixed in this phase).
+**Where it ends, corrected (2026-11-19):** memcheck reads the phone's memory the moment every site is built, and that
+reading jumps by 10 to 14 MiB with whether the city's biggest tile batch (57 MiB of the paint material, about 80% full)
+has grown yet: a batch is made again a quarter bigger than what it holds when it fills (tilebatch.ts `ROOM`, 1.25).
+The post-trim build read 168.9 twice (before that batch grew), Phase 1's build 179.6 and 179.7 (after); a minute
+later, once the benchmark is under way, both read the same: **179.5 MiB after the trim, 179.6 with Phase 1**. So the
+trim took 192.0 to about 179.5 (−12.5, not −23.1), and the room under the ceiling is about **7.4 MiB**, not 18: the
+base's Phases 2 to 4 have 6.5 MiB of allowance left, and one more growth of that batch would put the phone over 187.
+The owner's call what comes first (below, Phase 1's measure).
 
+## Phase 1's measure (2026-11-19, the build of 0f777fa, the phone tier)
+
+| View | Draws before → after (allowance +40) | Triangles before → after (allowance +0.08M) |
+| --- | --- | --- |
+| The north, from over the stadium | 59 → 78 (+19) | 0.09M → 0.17M (+0.08M) |
+| Northgate Air Base, from high | 54 → 70 (+16) | 0.09M → 0.17M (+0.08M) |
+| The main gate | 103 → 106 (+3) | 0.16M → 0.20M (+0.04M) |
+| The runway | 54 → 39 (−15) | 0.09M → 0.06M |
+| The home view | 286 → 266 | 0.34M → 0.40M |
+| Every district, from high | 212 → 218 (+6) | 0.37M → 0.44M |
+
+(The baseline is Phase 0's, before the phone trim and the road cut: the runway's and the country road's views lost the
+long stretch of `ns0-n` past the gate.) All within the allowance; every view's slowest CPU frame under 250 ms.
+
+- **Memory:** what the base draws is 1.16 MiB on a phone, built alone (the fence 1.08 of it); in the city, at the same
+  moment as before, 179.5 → 179.6 MiB (what's drawn at every distance +0.6, the near pieces' budget the rest). Within the
+  allowance (+1.5). memcheck passes (179.7 of 187), but see the trim's correction above: 7.4 MiB of room.
+- **The boot:** 736.9 → 739.3 KB of 750 (+2.4, the allowance +4). **Textures:** one more, the signs' atlas (192).
+- **Departures from the plan, for the owner's sign-off:** one corner of the south fence 1 m north, (-40, -307), so that
+  run isn't ruler-straight (the main gate at z -307.5, its loop at -291.5); the parade avenue drawn but not in the street
+  plan till its traffic comes (Phase 4); trees kept off only what's built and the kept lots, not the whole base (the
+  base held 69 of the woods' trees: clearing them would have broken the woods' count); the lamps the town's post, white.
 
