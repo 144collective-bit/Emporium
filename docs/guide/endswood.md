@@ -141,7 +141,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   Marsh Lane's bends, `straight()` passages, plain: `underpass3d.ts`) share the Circus's cuts (`SLAB_CUTS`,
   `GROUND_HOLES`) and walking (`UNDER`). The underground's south line as data (`southline.ts`, the south plan's 4d: `LINE`,
   `SOUTH_STATIONS` with their platform, hall, escalator and way in, `LINE_PASSAGES`), drawn and walked from 4e; the kit
-  has levels for it (`y0` / `y1`, `LEVEL`).
+  has levels for it (`y0` / `y1`, `LEVEL`). The stations built so far (`BUILT_STATIONS`: the High Road's, 4e) are walked
+  (`BUILT_PASSAGES` in `UNDER`), drawn (`line3d.ts`, the south's chunk, a site each) and their stairs cut
+  (`STAIR_CUTS`); the High Road's station building is highroad.ts's `station` kind (`stationWalls()`).
 - **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
   end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
