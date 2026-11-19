@@ -81,8 +81,8 @@ const slot = (b: Batch, x0: number, z0: number, x1: number, z1: number, y: numbe
 
 /* ---------- Outside ---------- */
 
-/** A shop's row's body, its outer face (cladding, a ribbon of glass upstairs, the dark band at the top), its roof's coping and plant */
-function rowOutside(b: Batch, s: Shop, i: number) {
+/** A shop's row's body, its outer face (cladding, a ribbon of glass upstairs, the dark band at the top), its roof's coping */
+function rowOutside(b: Batch, s: Shop) {
   const [x0, z0, x1, z1] = s.rect;
   // (to the next shop's: the rows read as one building)
   const [za, zb] = [z0 - 0.1, z1 + 0.1];
@@ -96,13 +96,7 @@ function rowOutside(b: Batch, s: Shop, i: number) {
   // (the coping along the outer edge and the promenade's, where the vault's curb sits)
   const [ix0, ix1] = s.face === 1 ? [x0 - 0.04, x0 + 0.25] : [x1 - 0.25, x1 + 0.04];
   box(b, ix0, TOP, za, ix1, TOP + 0.12, zb, MID);
-  if (i % 3 === 0)
-    b.detail(() => {
-      const px = (x0 + x1) / 2;
-      const pz = (z0 + z1) / 2;
-      box(b, px - 1, TOP, pz - 0.6, px + 1, TOP + 0.9, pz + 0.6, GREY);
-      for (const dx of [-0.5, 0.5]) b.add(new THREE.CircleGeometry(0.32, 12).rotateX(-Math.PI / 2).translate(px + dx, TOP + 0.905, pz), STEEL);
-    });
+  // (its plant, solar arrays and rooflights: mallroofs3d.ts)
 }
 /** The rows' south ends and the square's corners and the passages: their roofs and outer faces */
 function ends(b: Batch) {
@@ -329,7 +323,7 @@ export function registerCourt({ build, signs }: { build: (draw: (b: Batch) => vo
   const near = (draw: (b: Batch) => void) => build((b) => b.detail(() => draw(b)), false);
   for (let z = NORTH; z < SOUTH; z += STRETCH) {
     const z1 = Math.min(SOUTH, z + STRETCH);
-    site(`court rows ${Math.round(z)}`, [WEST_X, z, EAST_X, z1], build((b) => SHOPS.forEach((s, i) => s.rect[1] >= z && s.rect[1] < z1 && rowOutside(b, s, i))));
+    site(`court rows ${Math.round(z)}`, [WEST_X, z, EAST_X, z1], build((b) => SHOPS.forEach((s) => s.rect[1] >= z && s.rect[1] < z1 && rowOutside(b, s))));
     site(`court vault ${Math.round(z)}`, [PROM[0], z, PROM[1], z1], build((b) => vault(b, z, z1), false));
     site(`court fronts ${Math.round(z)}`, [WEST_X, z, EAST_X, z1], near((b) => (shopsDown(b, z, z1, signs), shopsUp(b, z, z1))));
   }

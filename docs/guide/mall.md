@@ -198,4 +198,18 @@ keep it up to date when what it describes changes.
         (malllink3d.ts `escalator()`), the trees.
     - The Skywalk's pavilion front is open upstairs at the `CONNECTOR`, and
       its door canopies went (the gallery is over them).
+  - **The roofs dressed** (docs/mall-plan.md "One mall" Phase 4):
+    `mallroofs.ts` (DOM-free, tested in `tests/mallroofs.test.ts`, in the
+    mall's chunk, not the boot).
+    - `ROOFS`: Palm Court's rows as runs, the anchors, the hall round its
+      vault, the cinema; each with its `membrane` and what it keeps clear
+      of.
+    - `PANELS`: solar arrays along x, tilted to face south (`PANEL_D`,
+      `PANEL_RISE`, `PANEL_GAP`).
+    - `ROOFLIGHTS`: over Palm Court's upper floor.
+    - The plant (`ROW_PLANT`, `CINEMA_PLANT`; the anchors' and the hall's
+      `ANCHOR_PLANT`, `HALL_PLANT` are drawn by mall3d.ts).
+    - Drawn by `mallroofs3d.ts` (`registerRoofs()`, from mall3d.ts) in
+      three sites, with mallkit.ts's `ROOF` and `SOLAR`; the rooflights and
+      the plant near only.
 

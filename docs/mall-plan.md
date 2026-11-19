@@ -270,9 +270,30 @@ passengers, rebuilt "realistic and of a high standard". Their picks:
      build and budget pass (boot 743.9 of 750 KB: little room left). The
      walk smoke test passes (80 of 80). Browser shots were taken from
      above, the entrance, the promenade, a gallery and the food hall.
-4. **The whole mall finished.**
-   - One name and directory (Starlight Mall, Palm Court its wing).
-   - The bare land south of the multi-storey becomes a bus and coach stop
-     with a plaza.
-   - The roofs dressed: skylights, plant, solar panels.
-   - Phones and `?bench` checked.
+4. **The whole mall finished** (the owner's picks: the roofs dressed and a
+   phone check; the one name and directory, and the bus and coach stop on
+   the bare land south of the multi-storey, left for later):
+   - **The roofs dressed** (built): `mallroofs.ts` (DOM-free, tested; in the
+     mall's chunk, not the boot), drawn by `mallroofs3d.ts` in three sites.
+     It covers Palm Court's rows, Maxwell's, Bright & Co., the hall round
+     its vault, and Paradise Cinema:
+     - a grey membrane over the light roofs;
+     - rows of solar panels tilted to face south, clear of the vaults, the
+       edges and the plant;
+     - rooflights over Palm Court's upper floor;
+     - plant on the rows and the cinema. The anchors' and the hall's plant
+       now come from the same list (`ANCHOR_PLANT`, `HALL_PLANT`).
+   - **The phone check:** draw calls and triangles counted from the page's
+     WebGL (headless, by the frame), `main` before Phase 1 against all four
+     phases, at the mall's views (the bench's `mall`, from above, Palm Court
+     from above, the avenue under the bridge, the promenade, a gallery):
+     - desktop: 325 to 329 draws at the mall's view (+4 in every view),
+       triangles up about 1.7%;
+     - phones: 171 to 173-176 draws, triangles up about 2.9%.
+     - The same rise in every view, inside and out, so it's what's drawn
+       everywhere (the mall's new people in the crowd, which phones already
+       halve), not the buildings: their geometry merges into the mall's
+       batches, and the inside is near only. Nothing needed trimming.
+   - **Checks:** the type check, lint and `npm test` (1524) pass. The build
+     and budget pass (boot 743.9 of 750 KB, unchanged by the roofs: they
+     load with the mall).

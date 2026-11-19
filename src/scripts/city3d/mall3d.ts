@@ -102,6 +102,8 @@ import { registerInside } from './mallinside3d';
 import { BOARD, CORRIDOR_H, KIOSK, L1 } from './malllink';
 import { registerLink } from './malllink3d';
 import { registerCourt } from './courtinside3d';
+import { ANCHOR_PLANT, HALL_PLANT } from './mallroofs';
+import { registerRoofs } from './mallroofs3d';
 import { COVER } from './palette';
 
 export const SELF = import.meta.url;
@@ -322,8 +324,8 @@ function anchor(b: Batch, k: number) {
     box(b, x0, hi, c0, x1, Y + h, c1, CHARCOAL);
   } else box(b, x0, Y, z0, x1, Y + h, z1, LIGHT);
   coping(b, x0, z0, x1, z1, Y + h);
-  plant(b, xm - 3, (z0 + z1) / 2, Y + h);
-  plant(b, xm + 2, z0 + 6, Y + h);
+  // (where mallroofs.ts keeps its solar arrays clear of)
+  for (const [px, pz] of ANCHOR_PLANT[k]) plant(b, px, pz, Y + h);
   // The sides: panels all round (above the hall on its inner side), its avenue side with its name
   const outer = k ? x1 : x0;
   const on: [number, number] = k ? PX : NX;
@@ -412,8 +414,7 @@ function hall(b: Batch) {
   ])
     box(b, a0, Y + h - 0.25, c0, a1, Y + h - 0.006, c1, GREY);
   coping(b, x0, z0, x1, z1, Y + h);
-  plant(b, x0 + 4, z0 + 2, Y + h);
-  plant(b, x1 - 6, z0 + 2, Y + h);
+  for (const [px, pz] of HALL_PLANT) plant(b, px, pz, Y + h);
   // The skylight: a glass vault over the opening on a grey curb, black steel ribs over it
   for (const [a0, c0, a1, c1] of [
     [vx0 - 0.5, vz0 - 0.4, vx1 + 0.5, vz0],
@@ -705,6 +706,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   site('mall cinema', [CINEMA.rect[0] - 1, CINEMA.rect[1] - 1, CINEMA.rect[2] + 1, CINEMA.rect[3] + 3], build(cinema));
   site('mall fountain', [FOUNTAIN.x - 4, FOUNTAIN.z - 5, FOUNTAIN.x + 4, FOUNTAIN.z + 5], build(centre));
   registerCourt({ build, signs: sign });
+  // The roofs dressed: membranes, solar arrays, rooflights, plant (mallroofs3d.ts)
+  registerRoofs(build);
   // (the zebra over the east ring avenue from its west row's passage to the mall's forecourt)
   site('mall court zebra', [NS3.c - NS3.half, ZEBRA.z - ZEBRA.half, NS3.c + NS3.half, ZEBRA.z + ZEBRA.half], build((b) => b.detail(() => zebraOver(b, NS3, ZEBRA)), false));
   // Starlight Mall: each anchor, the hall, the porch, the forecourt, the totem and the shelter
