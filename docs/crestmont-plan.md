@@ -510,3 +510,165 @@ clear of the joggers' lanes).
 triangles, in the hills 135 and 0.43M; the phone over the Flats 120 and 0.25M: no heavier than Phase 11 measured (the
 counts swing by about a fifth from run to run). The boot is 666.8 of 670 KB: the gardens and the land are the chunk's.
 
+### The grounds pass (built, the owner's call, 2026-11: "Run a set of improvements along Crestmont hills. The landscape needs adjusting around buildings. Improve the area and the grounds around the houses")
+
+The owner picked all four: the pads' banks, the footings on the slopes, the Flats' plot edges and the hills' ground
+cover, built straight away.
+
+**What the review shots showed** (`npm run shots` with close cameras on each mansion and the Flats): where a pad is cut
+into the hills, its "retaining walls" were boxes standing up to 2.4 tall at the pad's edge with the grass bank rising
+behind from their foot, never meeting their tops; the hills' grass grid (a vertex every 2 tiles) cut a pad's edge
+across its squares, so the pad's lawn and paving were buried or floated along it and the ground under the drives,
+trees and piers sat up to 0.6 off the hills' own shape; a villa's terraces, fixed at 0.9 and 1.8 under the pad, were
+buried in the bank behind wherever it didn't fall that far (their vines poking out as wedges); the Flats' lots met in
+straight bare hedges; the open slopes were bare grass and scattered scrub.
+
+**What's built:**
+
+- **The ground as drawn** (terrain.ts `hillLines()`, drawn.ts `drawnAt()`; world.ts `hillsPlane()`): the hills' grass grid has a
+  line on each level's edges and one every `LEVEL_STEP` (1) through its bank, so a pad is drawn flat right to its edge
+  (within 0.02) and the ground by every pad within about 0.1 of the hills' shape (it was up to 0.6 off). `drawnAt()`
+  reads the grass as drawn; the drives, the banks, the hills' oaks, scrub and palms, the groves, vineyards, meadows,
+  cypresses and piers, and the landmarks' draped ground stand on it. The hills' grass is about 68k triangles (47k
+  before).
+- **The banks** (`crestbanks.ts`, drawn by mansions3d.ts in each mansion's site): spokes out from each pad's edge;
+  **cut** banks terraced (dry-stone walls with a coping along the contours at `TIERS`, each topped 0.28 over the ground it
+  holds back, its foot in the ground below; soil beds between planted by the house's kind: a villa's lavender and
+  rosemary, a glass house's grasses, agaves and boulders, a compound's bougainvillea, the summit's box and lavender);
+  **fill** banks keep the glass balustrade and step down past it (a lower wall where the bank falls far enough, drifts
+  and boulders down the slope); **level** edges a planted border. None on a drive, a road's shoulder, a landmark, a
+  villa's terraces or under a glass house's cantilever. The tall walls at the pads' edges are gone.
+- **The footings:** the drives laid on the ground as drawn with a stone kerb down each side; a villa's terraces stand
+  on the ground behind it (`TERRACES`: in up to four bays across, each topped over the highest ground under it, its
+  face down to its lowest, a coping; `TERRACE_SOLIDS` join the grids with the chunk); the overlook's walls where the
+  ground rises topped just over the ground they hold.
+- **The Flats' plot edges** (crestgardens.ts): trees and runs of shrubs by turns along each lot's side and back hedges
+  (an olive at a modern house, a citrus at a Spanish one, a cypress at a villa, a flowering `specimen` tree at a Tudor
+  or Georgian house), and the verges outside the hedges planted (`vergeOf()`: runs of shrubs and flower beds before the
+  front hedge and outside a block-edge hedge, clear of the gateway, the street's palms and jacarandas and the lamps).
+- **The hills' ground cover** (`crestcover.ts`, drawn by crestgardens3d.ts `registerCover()`): drifts of the hills'
+  own shrubs (lilac, sage, the red-stemmed bush, poppies) on the open slopes, outcrops of boulders on the steeper
+  ground, and gravel footpaths where a hill road doubles back on itself or passes another (`TRAILS`, never steeper than
+  `TRAIL.grade`, bollards at each end).
+
+Nothing that stood moved: the pads, houses, drives, lots and places are where they were; only the terraces' heights
+follow the ground now.
+
+**Measured:** Crestmont's chunk's geometry, every site built (counted headless): drawn at every distance 384k triangles
+before, 513k after on the desktop (near-only details 153k to 220k); on phones 174k to 198k (phones draw the shrubs and
+the specimen trees' crowns plainer, the banks every other plant and their walls without copings, and the slopes'
+drifts, the banks' planting and the verges outside the hedges near only, as the hills' scrub: the owner's pick, before
+the bench on real hardware; the banks' walls, beds and boulders, the outcrops and footpaths stay at every distance). The hills' grass
+47k to 68k triangles (the boot's, both tiers). The `?fps` readout in the review mode (`?shots&fps`, every district
+built, so whole-city totals): phones over the Flats 193 draws, 16.12M to 16.19M triangles, over the hills 186 draws,
+16.06M to 16.13M (no new draws); the desktop over the Flats 245 draws, 42.52M to 42.73M. The boot 737.5 to 737.9 of
+750 KB (the grid's lines and `drawnAt()` in terrain.ts); the chunk 37.7 KB.
+
+**The bench on real hardware** (the owner's, 2026-11-19: `?bench` on a phone and a computer, the live site against this
+pass's preview): good.
+
+### The second grounds pass (built, the owner's call, 2026-11-19: the garden footpaths, night lighting and the landmarks' grounds, "and fix the terrain and any errors in the build")
+
+**The terrain** (the owner saw the hills blocky, things floating or sinking, steps and seams): measured, 20 of the
+hills' 104 pieces of grass strayed more than 0.1 from the hills' shape on the plain 2-tile grid (4 more than 0.2, at the
+ridges and hollows: 360,-270 the worst at 0.26). Now a piece the plain grid leaves more than `FINE_GAP` (0.06) off,
+looked at every half tile when the site is built (`FINE_PIECES`, baked as `hill-fine`: 33 pieces), is drawn with a line
+every tile; `drawnAt()` reads the same grid. 109 of 436,000 points of the hills are left more than 0.06 off (the
+rounded corners of the levels' banks, at most 0.12). The hills' grass is 123k triangles (68k after the first pass, 47k
+before it). The hill roads' asphalt was already clear of the grass (at most 0.05 under it at 4 points); the south's
+rolling ground is drawn from the lattice it's walked on.
+
+**What's built:**
+
+- **Garden paths** (crestcover.ts `GARDEN_PATHS`): from a gate in a mansion's pad's side or back (`GATES`; none in a
+  walled pad's walls) to a neighbour's gate, or down to a hill road's verge for a house with none (bollards there); over
+  their own pads' banks only, clear of every other pad and its bank, the drives and their cypresses, the roads, the
+  landmarks, the land and the slopes' footpaths, never steeper than `TRAIL.grade`. Four: two villas' gardens joined, and
+  three houses down to Ridge Road and Canyon Drive. The banks open for them (`PATH_GAP`), the balustrade opens at a
+  gate with a stone pier each side, and the garden keeps the way in clear with stepping stones.
+- **Night lighting**: low lights by the footpaths (`PATH_LIGHTS`) and the drives (`DRIVE_LIGHTS`, just past the kerb,
+  clear of the piers) and set in the terrace walls (a bank's `lights`), warm and small, just past the bloom's
+  threshold; their posts near only, phones every other.
+- **The landmarks' grounds**: the banks laid round any level (`Ground`): the civic hall's pad terraced on its uphill
+  side and bordered, the country club's bordered (`SITE_BANKS`; stopped by the streets, the golf course and the
+  mansions, none across the civic hall's walk); the grand hotel's block's edges planted (`hotelVerge()`).
+- **The build**: the game server's type check (`npm run check --prefix server`) had 62 errors, on main too: a rules file
+  (`lot9.ts`) named a type from `landmarks.ts`, so the check followed it into the drawing code. `Idle` is `idle.ts`'s
+  now; `server/src/env.d.ts` declares `import.meta.url`. The site's build, the multiplayer build and the Worker's bundle
+  (Cloudflare's, `wrangler deploy --dry-run`) pass here; Cloudflare's own failing check on the PR is the paused deploy.
+
+**Measured:** Crestmont's chunk drawn at every distance 513k to 531k triangles on the desktop (near-only 220k to 231k),
+198k to 204k on phones; the hills' grass (the boot's, both tiers) 68k to 123k. The boot 739.4 to 739.5 of 750 KB, the
+chunk 37.8 to 40.3 KB.
+
+### The hill houses on the hillside (built, the owner's call, 2026-11-19: "rather than sinking the buildings in to the hill, can you raise the hill and flatten the surrounding area so it looks more like how a house would be built?")
+
+The owner's picks: each pad at the hill's level, about 4 tiles of flat ground round it.
+
+The pads had been held at their road's height give or take `RISE`, as much as `CUT` under the hills round them: the
+glass house on Ridge Road (mansion-1) sat 3 under its ground, in a pit walled all round; mansion-7 1.9, mansion-2 0.7.
+Now (`settle()` in mansions.ts, after the layout, so nothing moves) each pad's level is the middle of the hills under it,
+never further from its road's height than its drive can climb at `DRIVE_GRADE` (0.3: only mansion-1's is held, 0.4 under
+its middle); mansion-1 rose 11.7 to 14.3, its deepest corner now 0.8 under its ground. Its level ground is widened by up
+to `YARD` (4) a side, each side as far as it stays clear (`yardOf()`): 0 to 4 tiles, narrower where a road, a neighbour
+or the overlook is near or the hill rises too steeply past it. On the steepest slopes a pad at the hill's middle is
+still cut into its uphill corner (2.5 to 2.9 at mansions 3 to 6), as a house on a hillside is: the terraced banks hold
+it. The yard is mown (mansions3d.ts); the banks, the planting, the land and the cover keep off it.
+
+### The fix pass (built, the owner's call, 2026-11-19: three pictures, "fix this. do another pass to ensure nothing is missed")
+
+- **The reservoir:** its water was a sheet spreading up its banks to where the grass crossed it. Now a basin: the water
+  exactly over it, a stone coping all round 0.15 over the water (0.9 wide), the ground round it held level at the
+  coping's height for 1.5 (an apron; an earth embankment on the low sides past it, where the concrete dams stood), the
+  basin's floor a little under the water, eased under the coping within the ground's no-steps and steepest-bank rules;
+  the fence on the ground as drawn. The fence's line, the door and the arrival are where they were.
+- **The drives:** the ground under each graded from its road's height at the mouth to its pad's (terrain.ts `RAMP`:
+  held level across the drive and its kerbs, eased into the slope over 4), never on a road's bed nor its pad's level
+  ground; the drive meets the road flush.
+- **What's laid on the hills** (`crestdrape.ts`): the drives, the footpaths, the banks' beds, the golf course's
+  fairways, tees, fringes, greens and bunkers and the overlook's path, drawn a point every half tile along and across on
+  the grass as drawn (they were two points across, a green a middle and a rim, the grass bending up through them); the
+  hill roads' asphalt every half tile over the higher of its bed and the grass. `tests/crestdrape.test.ts` holds the
+  grass at least 5 mm under every one of them.
+- **Found on the pass:** the hill roads' retaining walls stood over the bank behind them by 1.2 on average (1.8 at
+  most, 358 of 359 pieces), their height taken from the hills 4 out where the road's bank eases over 12; now topped
+  0.28 over the ground right behind them (a kerb of 0.35 at least), tested.
+
+## The premium upgrade (planned, the owner's answers, 2026-11-19)
+
+The owner: "this is the premium high end part of town. ask me a lot of questions about improving the area further."
+Their answers, in three rounds:
+
+- **Arrival:** an entrance gateway where the boulevard enters the Flats: stone gate piers and a planted roundabout with a
+  fountain.
+- **New places** (each a place with its own panel, `PLACES` and `LIVE_PLACES`, a door, a pin): a spa and wellness
+  retreat, a fine-dining restaurant with a view terrace, a car showroom of the game's own made-up cars; grouped round a
+  new **hilltop quarter**, a plaza high on the ridge with lookouts over the city.
+- **Homes:** both more and better. New hill mansions on terraced lots on the open slopes (3 to 6, the owner's call to
+  build on that land), in two new styles, **Art Deco** (streamlined white, curved corners, porthole windows, vertical
+  fins) and **French chateau** (mansard roofs, dormers, parterres, gravel courts); and the existing houses upgraded
+  (balconies, roof terraces, better gates).
+- **Leisure:** a walking trail up to the ridge with benches, a stone belvedere and lookouts; a botanical garden with a
+  glasshouse (by the reservoir).
+- **Night:** lit windows (a few rooms at a time), pools lit under water, garden lanterns and festoon lights, the
+  landmarks and the new places softly floodlit; all under the bloom's threshold.
+- **Life:** residents at leisure (on terraces and balconies, dining out, swimming, tennis where there's a court) and
+  road cyclists climbing the hill roads.
+- **Names:** Claude picks them, made up, in the hotel's manner (THE CORALLINE); the owner may change them. Proposed: the
+  quarter **Highcrest**, the restaurant **THE ASTERLY**, the spa **SOLENNE**, the showroom **VELLANO MOTOR SALON**, the
+  garden **the Crestmont Glasshouse**, the trail **the Ridgeline Walk**, the lookout **the Belvedere**.
+- **Phones:** trimmed as now (the buildings and lights, fewer people, plainer planting, fewer lit windows).
+- **Owning a home:** later (Phase 10 stays for another time).
+
+**The phases, in the owner's order (look first, then places), each with the owner's sign-off before the next:**
+
+1. **Arrival and the night glow:** the entrance gateway and roundabout; lit windows, pools lit under water, garden
+   lanterns and festoon lights, the landmarks floodlit.
+2. **The houses upgraded:** balconies, roof terraces and better gates on the estates and the mansions.
+3. **New hill mansions:** 3 to 6 on terraced lots on the open slopes, Art Deco and French chateau, each on its own level
+   with a yard, a graded drive and a planted bank, as the others.
+4. **Highcrest:** the hilltop quarter's plaza with THE ASTERLY, SOLENNE and VELLANO MOTOR SALON (or the showroom on
+   Coral Drive: asked at this phase), each a place; a metro or taxi way up.
+5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
+6. **Residents at leisure and cyclists on the hills.**
+

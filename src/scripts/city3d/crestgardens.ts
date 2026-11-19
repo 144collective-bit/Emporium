@@ -29,8 +29,12 @@
  */
 import { ESTATES, ESTATE_CARS, COURT_HALF, FOUNTAIN, GATE, HEDGE, SLAB_Y, fountainOf, gardenPalmsOf, motorCourt, wingSide, type Estate, type EstateStyle, type Part } from './estates';
 import { MANSIONS, MANSION_CARS, WALL, type MPart, type Mansion, type MansionKind } from './mansions';
-import { GARDENERS } from './crestlife';
+import { CREST_IDLE, GARDENERS } from './crestlife';
 import { CIVIC, CLUB, HOTEL } from './crestsites';
+import { GATES } from './crestcover';
+import { CREST_LAMPS } from './crestmont';
+import { JACARANDAS, PALMS } from './landscape';
+import { rng } from './recipes';
 
 type Pt = [number, number];
 /** A box in a frame: u0..u1 along the front, v0..v1 (v0 the further back, more negative) */
@@ -68,7 +72,8 @@ export type FeatKind =
   | 'stones'
   | 'hedge'
   | 'flag'
-  | 'putting';
+  | 'putting'
+  | 'specimen';
 export interface Feat {
   kind: FeatKind;
   /** Where it stands in its frame */
@@ -112,6 +117,7 @@ export const HEIGHT: Record<FeatKind, number> = {
   hedge: 0.55,
   flag: 4.8,
   putting: 0,
+  specimen: 3.4,
 };
 /** The planner's cell */
 export const CELL = 0.5;
@@ -240,6 +246,9 @@ export const loggiaPiers = (r: FR): number[] => {
 export interface Garden {
   feats: Feat[];
   lawn: { r: FR; row: number }[];
+  /** An estate's planting outside its hedges: the strip before its front hedge, and on a block's edge the strip outside
+   * its side or back hedge (`vergeOf()`) */
+  verge?: Feat[];
 }
 
 const partsOf = (e: Estate) => [e.house.main, e.house.wing, e.house.tower].filter((p): p is Part => !!p);
@@ -435,7 +444,80 @@ function estateGarden(e: Estate): Garden {
     if (c - a >= 0.5) put('shrubs', [a, w.v1 + 0.2, c, Math.min(w.v0, motor ? motor[1] : w.v0) - 0.3]);
   }
 
-  return { feats, lawn: P.lawn() };
+  /* The boundaries: trees and shrubs along the side and back hedges, so no line between two lots runs straight and bare */
+  const rand = rng(7300 + ESTATES.indexOf(e) * 17);
+  const tree: FeatKind = style === 'modern' ? 'olive' : style === 'spanish' ? 'citrus' : style === 'villa' ? 'cypress' : 'specimen';
+  const treeHalf = tree === 'cypress' ? 0.3 : tree === 'citrus' ? 0.4 : 0.55;
+  /** Along one hedge (its inner line `at`, from `a` to `b` along it; `across` the way into the garden), runs and trees by turns */
+  const boundary = (along: 'u' | 'v', at: number, across: 1 | -1, a: number, b: number) => {
+    let t = a + 0.3 + rand() * 1.2;
+    while (t < b - 0.6) {
+      const r = (lo: number, hi: number, depth: number): FR => (along === 'v' ? norm(at, lo, at + across * depth, hi) : norm(lo, at, hi, at + across * depth));
+      if (rand() < 0.3) {
+        const c = across * (treeHalf + 0.05);
+        if (put(tree, along === 'v' ? at_(at + c, t + treeHalf, treeHalf) : at_(t + treeHalf, at + c, treeHalf))) {
+          t += treeHalf * 2 + 0.6 + rand() * 1.4;
+          continue;
+        }
+      }
+      const L = Math.min(b - t, 0.9 + rand() * 1.8);
+      if (L >= 0.7) put('shrubs', r(t, t + L, 0.5));
+      t += L + 0.5 + rand() * 1.6;
+    }
+  };
+  // (u runs along the front; the sides are at the box's u ends, the back at its v start)
+  boundary('v', box[0], 1, box[1], box[3] - 0.45);
+  boundary('v', box[2], -1, box[1], box[3] - 0.45);
+  boundary('u', box[1], 1, box[0], box[2]);
+
+  return { feats, lawn: P.lawn(), verge: vergeOf(e) };
+}
+const at_ = (u: number, v: number, h: number): FR => [u - h, v - h, u + h, v + h];
+
+/** How far a verge's planting keeps off the street's palms and jacarandas, its lamps and the gateway; on a block's edge, its middle this far out from the hedge */
+export const VERGE_CLEAR = { tree: 0.75, lamp: 0.8, gate: 0.4, hedge: 0.3 } as const;
+/**
+ * An estate's verge: runs of shrubs and flower beds by turns, with gaps, in the strip before its front hedge (behind the
+ * street's palms), and where its lot is on a block's edge, in the strip outside that hedge too; clear of the gateway,
+ * the palms, the jacarandas and the lamps
+ */
+export function vergeOf(e: Estate): Feat[] {
+  const rand = rng(7700 + ESTATES.indexOf(e) * 13);
+  const out = estateOut(e);
+  const origin = estateOrigin(e);
+  const trees = [...PALMS, ...JACARANDAS].filter(({ x, z }) => x > e.rect[0] - 1 && x < e.rect[2] + 1 && z > e.rect[1] - 1 && z < e.rect[3] + 1).map(({ x, z }) => fromWorld(out, origin, x, z));
+  const lamps = CREST_LAMPS.filter(([x, z]) => x > e.rect[0] - 1 && x < e.rect[2] + 1 && z > e.rect[1] - 1 && z < e.rect[3] + 1).map(([x, z]) => fromWorld(out, origin, x, z));
+  const gate = GATE.half + GATE.pier * 2 + VERGE_CLEAR.gate;
+  const clearOf = (r: FR) =>
+    !(r[0] < e.hc + gate && r[2] > e.hc - gate && r[3] > e.court[0] - 0.2) &&
+    trees.every(([u, v]) => !(u > r[0] - VERGE_CLEAR.tree && u < r[2] + VERGE_CLEAR.tree && v > r[1] - VERGE_CLEAR.tree && v < r[3] + VERGE_CLEAR.tree)) &&
+    lamps.every(([u, v]) => !(u > r[0] - VERGE_CLEAR.lamp && u < r[2] + VERGE_CLEAR.lamp && v > r[1] - VERGE_CLEAR.lamp && v < r[3] + VERGE_CLEAR.lamp));
+  const feats: Feat[] = [];
+  /** Along a strip (its middle line `at` across, from `a` to `b` along) */
+  const strip = (along: 'u' | 'v', at: number, a: number, b: number) => {
+    let t = a + rand() * 0.6;
+    while (t < b - 0.7) {
+      const L = Math.min(b - t, 1 + rand() * 2);
+      const kind: FeatKind = rand() < 0.6 ? 'shrubs' : 'border';
+      const hw = kind === 'shrubs' ? 0.28 : 0.22;
+      // (shortened till it's clear, or passed over)
+      let l = L;
+      const rOf = (len: number): FR => (along === 'u' ? [t, at - hw, t + len, at + hw] : [at - hw, t, at + hw, t + len]);
+      while (l >= 0.7 && !clearOf(rOf(l))) l -= 0.25;
+      if (l >= 0.7) {
+        feats.push({ kind, r: rOf(l), tone: e.style });
+        t += l + 0.4 + rand() * 1.4;
+      } else t += 0.5;
+    }
+  };
+  const hedge = -HEDGE.front;
+  strip('u', hedge / 2 - 0.05, -e.W / 2 + 0.35, e.W / 2 - 0.35);
+  // (a block's edge: the strip outside the side or back hedge set in from it, against the hedge's foot, off the sidewalk)
+  const foot = HEDGE.outer - VERGE_CLEAR.hedge;
+  if (e.outer[0]) strip('v', -e.W / 2 + foot, -e.D + 0.4, hedge - 0.2);
+  if (e.outer[1]) strip('v', e.W / 2 - foot, -e.D + 0.4, hedge - 0.2);
+  if (e.outer[2]) strip('u', -e.D + foot, -e.W / 2 + 0.4, e.W / 2 - 0.4);
+  return feats;
 }
 const overlaps = (r: FR, list: FR[]) => list.some((t) => r[0] < t[2] && t[0] < r[2] && r[1] < t[3] && t[1] < r[3]);
 
@@ -463,6 +545,10 @@ function mansionGarden(m: Mansion): Garden {
     // (the lounger by the pool, crestlife.ts's sunbather on it)
     norm(pu0 + 0.3, pv0 + 0.5, pu0 + 1.9, pv0 + 1.8),
   ];
+  // (a garden path's gate: its way in kept clear, crestcover.ts)
+  const gates = GATES.filter((g) => g.m === m.id);
+  for (const g of gates)
+    taken.push(g.out[0] ? norm(g.u, g.v - 0.8, g.u - g.out[0] * 2.4, g.v + 0.8) : norm(g.u - 0.8, g.v, g.u + 0.8, g.v - g.out[1] * 2.4));
   // (a glass mansion's legs under the cantilever, off the pad: nothing there)
   const P = new Planner(box, taken);
   const feats: Feat[] = [];
@@ -509,6 +595,8 @@ function mansionGarden(m: Mansion): Garden {
     const r = at(fu + s * (kind === 'glass' ? 1.5 : 1.35), main.v0 + 0.45, 0.3);
     if (!overlaps(r, cars)) feats.push({ kind: pair, r, tone: kind });
   }
+  // Stepping stones in from each gate
+  for (const g of gates) feats.push({ kind: 'stones', r: norm(g.u - g.out[0] * 2.2 - (g.out[1] ? 0.25 : 0), g.v - g.out[1] * 2.2 - (g.out[0] ? 0.25 : 0), g.u - g.out[0] * 0.5 + (g.out[1] ? 0.25 : 0), g.v - g.out[1] * 0.5 + (g.out[0] ? 0.25 : 0)), tone: kind });
   // Lamps by the drive's mouth
   for (const s of [-1, 1]) feats.push({ kind: 'lamp', r: at(du + s * 1.6, -0.7, 0.08), tone: kind });
   return { feats, lawn: P.lawn() };
@@ -516,6 +604,10 @@ function mansionGarden(m: Mansion): Garden {
 export const MANSION_GARDENS: Garden[] = MANSIONS.map(mansionGarden);
 
 /* ---------- The landmarks' gardens (in world numbers: u is x, v is z) ---------- */
+
+/** The grand hotel's edges planted (`hotelVerge()`): the strip's middle in from its block's edges, the runs' half widths */
+export const HOTEL_VERGE = { inset: 0.6, half: { shrubs: 0.28, border: 0.22 } } as const;
+
 
 /**
  * The grand hotel's pool garden (a formal terrace between the hotel's back and the deck: a tiled fountain on its axis
@@ -565,7 +657,7 @@ export const SITE_GARDENS: { id: string; y: number; g: Garden }[] = (() => {
   for (const x of [K.terrace[0] - 0.45, K.terrace[2] + 0.45]) k('cone', at(x, (K.terrace[1] + K.terrace[3]) / 2, 0.28));
   for (const x of [K.house[0] - 0.8, K.house[2] + 0.8]) k('flag', at(x, K.pad[3] - 1.2, 0.1));
   return [
-    { id: 'hotel', y: SLAB_Y, g: { feats: hotel, lawn: [] } },
+    { id: 'hotel', y: SLAB_Y, g: { feats: hotel, lawn: [], verge: hotelVerge(hotel) } },
     { id: 'civic', y: C.y, g: { feats: civic, lawn: [] } },
     { id: 'club', y: K.y, g: { feats: club, lawn: [] } },
   ];
@@ -629,4 +721,39 @@ function worldBox(out: Pt, origin: Pt, r: FR, top: number): Box {
   const w = (u: number, v: number): Pt => [origin[0] + oz * u + ox * v, origin[1] - ox * u + oz * v];
   const [a, b] = [w(r[0], r[1]), w(r[2], r[3])];
   return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), top];
+}
+
+/**
+ * The grand hotel's grounds' edges (the grounds pass, the owner's call): runs of shrubs and flower beds by turns, with
+ * gaps, in a strip just inside its block's four edges, as the estates' verges; clear of its drive, the hotel and its
+ * deck, the cabanas, its garden, the palms, the lamps and the people standing about (world numbers: u is x, v is z)
+ */
+function hotelVerge(garden: Feat[]): Feat[] {
+  const H = HOTEL;
+  const rand = rng(8181);
+  const [x0, z0, x1, z1] = H.block;
+  const keep: FR[] = [pad(H.drive as FR, 0.4), pad(H.body as FR, 0.4), pad(H.deck as FR, 0.4), ...H.cabanas.map(([x, z]): FR => [x - 1.5, z - 1.5, x + 1.5, z + 1.5]), ...garden.map((f) => pad(f.r, 0.2))];
+  const points: Pt[] = [...PALMS.map((p): Pt => [p.x, p.z]), ...CREST_LAMPS.map(([x, z]): Pt => [x, z]), ...CREST_IDLE.map((p): Pt => [p.x, p.z])];
+  const clearOf = (r: FR) => !overlaps(r, keep) && points.every(([x, z]) => !(x > r[0] - 0.75 && x < r[2] + 0.75 && z > r[1] - 0.75 && z < r[3] + 0.75));
+  const feats: Feat[] = [];
+  const strip = (along: 'x' | 'z', at: number, a: number, b: number) => {
+    let t = a + rand() * 0.6;
+    while (t < b - 0.7) {
+      const kind: FeatKind = rand() < 0.6 ? 'shrubs' : 'border';
+      const hw = HOTEL_VERGE.half[kind as 'shrubs' | 'border'];
+      const rOf = (len: number): FR => (along === 'x' ? [t, at - hw, t + len, at + hw] : [at - hw, t, at + hw, t + len]);
+      let l = Math.min(b - t, 1 + rand() * 2);
+      while (l >= 0.7 && !clearOf(rOf(l))) l -= 0.25;
+      if (l >= 0.7) {
+        feats.push({ kind, r: rOf(l), tone: 'spanish' });
+        t += l + 0.4 + rand() * 1.4;
+      } else t += 0.5;
+    }
+  };
+  const i = HOTEL_VERGE.inset;
+  strip('x', z0 + i, x0 + 0.4, x1 - 0.4);
+  strip('x', z1 - i, x0 + 0.4, x1 - 0.4);
+  strip('z', x0 + i, z0 + 0.4, z1 - 0.4);
+  strip('z', x1 - i, z0 + 0.4, z1 - 0.4);
+  return feats;
 }

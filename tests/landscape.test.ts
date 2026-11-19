@@ -4,7 +4,9 @@
 // built up. Nothing on the asphalt or a sidewalk, everything on the ground, every palm under the Emporium.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EDGE_AT, EDGE_OUT, JACARANDAS, OAKS, PALMS, PALM_TALLEST, SCRUB, WALLS, frameAt } from '../src/scripts/city3d/landscape';
+import { EDGE_AT, EDGE_OUT, JACARANDAS, PALMS, PALM_TALLEST, WALLS, frameAt, hillPlanting } from '../src/scripts/city3d/landscape';
+
+const { oaks: OAKS, scrub: SCRUB } = hillPlanting();
 import { BOULEVARD, BOULEVARD_MEDIAN, CREST_LAMPS, FLATS_X, HILL_ROADS, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { PLAN, distToStreet, onSlab } from '../src/scripts/city3d/streetplan';
@@ -89,4 +91,17 @@ test("the hill roads' edges: a wall where the road is cut in, a rail where it's 
     else assert.ok(y - naturalAt(...out) > EDGE_AT.fill - 0.6, `a rail where ${w.road} isn't built up`);
   }
   assert.ok(frameAt(HILL_ROADS[0], 10).u.every(Number.isFinite));
+});
+
+test("the hill roads' walls hold their ground: topped just over the bank right behind them, never standing proud of it", () => {
+  for (const w of WALLS.filter((q) => q.kind === 'wall')) {
+    const r = HILL_ROADS.find((q) => q.id === w.road)!;
+    const [mx, mz] = [(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2];
+    // (outward: away from the road's nearest point)
+    const p = r.pts.reduce((best, q) => (Math.hypot(q[0] - mx, q[1] - mz) < Math.hypot(best[0] - mx, best[1] - mz) ? q : best));
+    const l = Math.hypot(mx - p[0], mz - p[1]) || 1;
+    const behind = heightAt(mx + ((mx - p[0]) / l) * EDGE_AT.behind, mz + ((mz - p[1]) / l) * EDGE_AT.behind);
+    const top = (w.ya + w.ha + w.yb + w.hb) / 2;
+    assert.ok(top - behind < 0.6, `a wall on ${w.road} standing ${(top - behind).toFixed(2)} over its bank at ${mx.toFixed(1)}, ${mz.toFixed(1)}`);
+  }
 });

@@ -77,8 +77,12 @@ keep it up to date when what it describes changes.
     `terraces`), the High Road's buildings (`highroad.ts`, `highroad`) and the
     council rows, corner shops and community centre (`council.ts`, `council`), and since the spawn plan's Phase 3a
     the south's closes, crescents and their footpaths (`south.ts` `GROWN`, key `south-grown`: about a second of a
-    phone's start-up), and since the south's 4e the underground's south line and its stations (`southline.ts`,
-    `southline`: its bends and stations' laying out of the boot). A new module that bakes goes in `MODULES` in
+    phone's start-up), and since Crestmont's second grounds pass which of the hills' 30-tile pieces are drawn on the
+    fine grid (`terrain.ts` `FINE_PIECES`, key `hill-fine`: each piece's grass looked at every half tile) and its
+    footpaths (`crestcover.ts`, key `crest-paths`: the slopes' and the gardens' paths, a search over every pair of mouths
+    and gates) and its vineyards', groves' and meadows' places (`crestland.ts`, key `crest-land`), and Sunridge's lots
+    (`sunridgelots.ts`, key `sun-lots`: about half a second as its chunk loaded), and since the south's 4e the
+    underground's south line and its stations (`southline.ts`, `southline`: its bends and stations' laying out of the boot). A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
@@ -534,3 +538,19 @@ keep it up to date when what it describes changes.
   places) is DOM-free data in the boot, so nothing waits on the chunk.
   `?bench` loads every district before it starts. A new district comes
   the same way.
+- **A district's chunk does little as it loads** (2026-11-19): a chunk's top-level code runs on the main thread when the
+  district comes into reach, all at once, a freeze on screen. Work only its sites draw is laid the first time a site
+  asks for it (in the site worker): Crestmont's banks (`crestbanks.ts` `banks()`, `siteBanks()`, `driveLights()`) and
+  the slopes' drifts (`crestcover.ts` `cover()`, its sites a tile each over the hills, `registerCover()`); searches
+  whose answer never changes are baked (`crest-paths`). What the main thread needs (the solids, the gardens' gates)
+  stays eager. Crestmont's chunk's setup on the main thread, headless desktop: about 600 ms to 34 ms.
+  - **The audit** (the same day, the owner's ask: "a lot of jittering as the game loads"): every district's chunk's
+    setup timed headless (the boot's modules loaded first, the site's baked data given, each district in a process of
+    its own, profiled from its import: `node --cpu-prof`), desktop: Sunridge 386 ms (its lots' layout, now baked:
+    52 ms), Crestmont 169 ms (the hills' oaks and scrub, laid now when their sites are built, landscape.ts
+    `hillPlanting()`, landscape3d.ts a site every tile over the hills; the land's places baked: 94 ms, what's left
+    spread thin), the viaduct 119 ms (`ringS()` searching every piece of the ring for everything placed along it; now
+    nearest first, none whose box is further than the best: 38 ms), the streets' wear 95 ms (`onSlab()` testing every
+    slab's outline; now its box first: 23 ms), Lot 9 69 ms (its camp, left), the rest 20 ms or under. The same answers
+    to the bit (the tests, `baked.test.ts`). A phone takes about three to four times as long.
+
