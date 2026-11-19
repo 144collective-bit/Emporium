@@ -540,8 +540,8 @@ From the Circus west, patchy as high roads are:
        (`baked.ts` key `southline`: the boot stays at 746 KB). The smoke
        test walks from the sidewalk to the platform (`station`). Shots
        `docs/south-shots/22-phase-4e-*.webp` (the smoke test's).
-     - **4f, the other four stations**. Built, waiting on the owner's
-       sign-off: every station built (`BUILT_STATIONS`): walked, drawn
+     - **4f, the other four stations**. Built and signed off
+       (2026-11-19): every station built (`BUILT_STATIONS`): walked, drawn
        and its stairs cut. Halls open at their sides where a way in
        crosses one (`sideGap()`); stairs from the street have parapets,
        coping and railings round their openings and the city's M mark on
