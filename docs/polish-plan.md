@@ -903,8 +903,9 @@ For the owner, in the morning:
 
 ## Still open
 
-- **Hosting:** what Hostinger runs on a push to main (Phase 4's check).
-  And Workers.dev's first build after Phase 4: it now fetches Playwright's
+- **Hosting:** answered 2026-11-19: Hostinger built `main` itself, with no
+  textures list; the Action now publishes the `deploy` branch for it
+  (docs/stability-plan.md, "The live site's textures"). And Workers.dev's first build after Phase 4: it now fetches Playwright's
   Chromium, makes the textures and runs the budget, which is red without
   them; if Chromium can't run on Cloudflare's builder the deploy stops
   there (then the texture steps come out of `wrangler.jsonc`'s build, or

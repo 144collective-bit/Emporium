@@ -38,6 +38,7 @@ const DOM_FREE = [
   'src/scripts/city3d/gputier.ts',
   'src/scripts/city3d/texscope.ts',
   'src/scripts/city3d/quality.ts',
+  'src/scripts/city3d/texsource.ts',
   'src/scripts/city3d/freecollide.ts',
   'src/scripts/city3d/walkpad.ts',
   'src/scripts/city3d/facade.ts',

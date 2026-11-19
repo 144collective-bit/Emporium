@@ -1,8 +1,10 @@
-# Builds the site on every push to main (or on demand) and attaches it as a
-# downloadable zip, ready to extract into public_html on Hostinger.
-#
-# To get it: GitHub -> Actions -> "Build site" -> the latest run ->
-# Artifacts -> degenemporium-site.
+# Builds the site on every push to main (or on demand), checks it, makes its textures, and:
+# - on a push to main, publishes the finished site to the `deploy` branch, which Hostinger's Git link
+#   deploys to degenemporium.com (docs/stability-plan.md, "The live site's textures": a plain build on
+#   Hostinger had none of the textures made here, so every visitor's browser painted them, about four
+#   times the graphics memory). Only a build that passed every check and made its textures is published;
+# - attaches it as a downloadable zip too (GitHub -> Actions -> "Build site" -> the latest run ->
+#   Artifacts -> degenemporium-site), ready to extract into public_html by hand if ever needed.
 name: Build site
 
 on:
@@ -11,7 +13,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # (write: the push to the `deploy` branch below)
+  contents: write
+
+# A newer push to main replaces a run still going, so an older build never lands after a newer one
+concurrency:
+  group: build-site-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -54,8 +62,10 @@ jobs:
       - run: npx playwright-core install chromium
         continue-on-error: true
       - name: Make the textures
+        id: bake
         timeout-minutes: 30
-        # (stopped by the timeout, the site still builds: its list goes into the page last)
+        # (stopped by the timeout, the site still builds: its list goes into the page last; but it isn't
+        # published to the live site, below)
         continue-on-error: true
         run: npm run bake:textures
       # What a visitor downloads before the city is up, held to fixed sizes (scripts/budget.mjs):
@@ -69,3 +79,20 @@ jobs:
           # .htaccess starts with a dot, and hidden files are left out unless asked for
           include-hidden-files: true
           retention-days: 30
+
+      # The live site: the finished build, as one commit on the `deploy` branch (its whole history is
+      # this one build, replaced each time). Hostinger deploys that branch as it is, with no build of its
+      # own. Not when the textures weren't made: the live site keeps the last good build instead.
+      - name: Publish to the deploy branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.bake.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          grep -q 'id="city-tex"' dist/index.html || { echo "dist/index.html has no texture list: not published"; exit 1; }
+          cd dist
+          git init -q -b deploy
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Site built from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" deploy
