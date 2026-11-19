@@ -663,7 +663,18 @@ From the Circus west, patchy as high roads are:
      main together.
    - **5b, drawn and driven**: the ramps on the viaduct, the road and its
      junctions, the gantries and signs with 6A's made-up names, lamps,
-     traffic using it; walked and driven, shots.
+     traffic using it; walked and driven, shots. Built (2026-11-19,
+     waiting for the owner's sign-off): 6A's ramps, gantries, signs (its
+     label on them), ramp lamps, piers and the lights under the deck come
+     from the exit's data as every exit's (viaduct3d.ts, viadress.ts,
+     viasigns.ts); `corner3d.ts` draws Corner Road and Gate Hill in the
+     viaduct's chunk (asphalt 5 mm over the district streets' where they
+     meet, a dashed centre line, edge lines, the junctions' mouths filled at
+     The Trenches' corner and the Docks'), their lamps along the verge are
+     the boot's (`CORNER_LAMPS`, tested clear of the junctions, the deck,
+     the ramps and every solid), no tree or under-deck car on them
+     (tested); traffic drives them from the routes as built (5a). The boot
+     at 749.0 of 750 KB. Shots `docs/south-shots/28-phase-5b-*.webp`.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
    roads, the blocks' lights at night, sound by district, `?bench` views,
    phones checked and trimmed, every width, the guides.
