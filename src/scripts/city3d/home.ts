@@ -289,8 +289,9 @@ export type FurnitureKind =
   | 'stairs'
   | 'sofa'
   | 'chaise'
+  | 'armchair'
   | 'table'
-  | 'tv'
+  | 'media'
   | 'lamp'
   | 'plant'
   | 'trophies'
@@ -299,8 +300,7 @@ export type FurnitureKind =
   | 'island'
   | 'stools'
   | 'console'
-  | 'wardrobe'
-  | 'stash';
+  | 'wardrobe';
 export interface Furniture {
   kind: FurnitureKind;
   rect: Rect;
@@ -313,25 +313,28 @@ const SZ = HOME.sideDoor[1];
 /** The way through the room from the front door to the side door, kept clear: this wide */
 export const HALL_W = 1.25;
 /**
- * The room, refitted (docs/compound-plan.md Phase 2): **the lounge** in its west half (the corner sofa: its long run
- * under the front window and a chaise at its east end, a coffee table, the media unit across the room with the telly
- * on it facing the sofa, the trunk at the sofa's west end (the stash), a floor lamp, and **the trophy wall** on the
- * west wall); **the kitchen** along the back wall (the counter, the fridge at its end, a plant at its west end, an
- * island with its stools on the lounge's side); **the hall** from the front door to the side door, clear (a console
- * table under the front window east of the door, a plant in its back corner), the stairs open along the east wall by the front and the
- * wardrobe past them. The stash's, the wardrobe's and the doors' prompts stand where they always have
+ * The room, refitted (docs/compound-plan.md Phase 2) and fitted out (docs/interior-plan.md Phase 1, the owner's
+ * call: the telly on the wall, not in the middle): **the lounge** in its west half (the media wall on the west wall,
+ * the telly mounted on it over a long low fire between lit niches; the corner sofa facing it, its long run with its
+ * back to the hall and a chaise at its south end; an armchair under the front window, an arc lamp by it, a coffee
+ * table on a rug; **the trophy wall** along the west wall past the media wall); **the kitchen** along the back wall
+ * (the counter, the fridge at its end, a plant at its west end, an island with its stools on the lounge's side);
+ * **the hall** from the front door to the side door, clear (a console table under the front window east of the door,
+ * a plant in its back corner), the stairs open along the east wall by the front and the wardrobe past them. The stash
+ * is the den's vault now (`BASEMENT`)
  */
 export const FURNITURE: Furniture[] = [
   { kind: 'stairs', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: CEIL },
-  // (the corner sofa's run a little longer than the old sofa and its chaise turning past the wake spot, `HOME_WAKE`)
-  { kind: 'sofa', rect: [rx0 + 0.3, rz0 + 0.04, rx0 + 3.45, rz0 + 0.78], h: 0.42 },
-  { kind: 'chaise', rect: [rx0 + 2.72, rz0 + 0.78, rx0 + 3.45, rz0 + 1.9], h: 0.42 },
-  { kind: 'stash', rect: [rx0 + 0.3, rz0 + 0.9, rx0 + 1.0, rz0 + 1.3], h: 0.3 },
-  { kind: 'table', rect: [rx0 + 1.6, rz0 + 1.3, rx0 + 2.2, rz0 + 1.9], h: 0.2 },
-  { kind: 'tv', rect: [rx0 + 0.4, rz0 + 2.75, rx0 + 3.0, rz0 + 3.1], h: 0.24 },
-  { kind: 'trophies', rect: [rx0, rz0 + 1.5, rx0 + 0.22, rz0 + 2.6], h: 1.1 },
-  { kind: 'lamp', rect: [rx0 + 0.05, rz0 + 2.8, rx0 + 0.3, rz0 + 3.05], h: 1.0 },
-  { kind: 'plant', rect: [rx0 + 0.06, rz1 - 1.75, rx0 + 0.36, rz1 - 1.45], h: 0.75 },
+  { kind: 'media', rect: [rx0, rz0 + 0.7, rx0 + 0.16, rz0 + 3.6], h: CEIL },
+  // (the sofa's run facing west at the media wall, the chaise turning its south end toward it; he wakes in front of
+  // the run, `HOME_WAKE`)
+  { kind: 'sofa', rect: [rx0 + 2.7, rz0 + 0.85, rx0 + 3.44, rz0 + 3.55], h: 0.42 },
+  { kind: 'chaise', rect: [rx0 + 1.8, rz0 + 2.83, rx0 + 2.7, rz0 + 3.55], h: 0.42 },
+  { kind: 'armchair', rect: [rx0 + 0.95, rz0 + 0.08, rx0 + 1.65, rz0 + 0.78], h: 0.44 },
+  { kind: 'lamp', rect: [rx0 + 0.65, rz0 + 0.1, rx0 + 0.9, rz0 + 0.35], h: 1.05 },
+  { kind: 'table', rect: [rx0 + 1.15, rz0 + 1.65, rx0 + 1.95, rz0 + 2.65], h: 0.2 },
+  { kind: 'trophies', rect: [rx0, rz0 + 3.85, rx0 + 0.22, rz0 + 4.95], h: 1.1 },
+  { kind: 'plant', rect: [rx0 + 0.06, rz0 + 5.02, rx0 + 0.36, rz0 + 5.32], h: 0.75 },
   { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
   { kind: 'plant', rect: [rx1 - 0.36, rz1 - 0.36, rx1 - 0.06, rz1 - 0.06], h: 0.55 },
   { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
@@ -391,16 +394,18 @@ export function homeCamera(y: number): [number, number, number, number, number, 
 
 /**
  * Where every visit starts (docs/spawn-plan.md Phase 1, the owner's call): in the room, in front of the sofa, facing
- * the telly (yaw π faces south), clear of the trunk's and the doors' prompts. The rest of the city loads behind the
+ * the telly on the media wall (yaw π/2 faces west: docs/interior-plan.md Phase 1), clear of the doors' prompts. The rest of the city loads behind the
  * walls while the doors out wait (`HOME_WAITS`). He's sat on the sofa as the room appears and stands up onto it
  * (Phase 2, `SOFA_SEAT`), but under reduced motion, where he's standing there already.
  */
-export const HOME_WAKE = { x: rx0 + 2.5, z: rz0 + 0.95, yaw: Math.PI };
+const SEAT_X = rx0 + 2.86;
+const SEAT_Z = rz0 + 1.84;
+export const HOME_WAKE = { x: SEAT_X - 0.33, z: SEAT_Z, yaw: Math.PI / 2 };
 /**
  * The sofa as a seat (moments.ts's bench mark: its middle, `ry` the way the sitter faces, 0 south; he stands up onto
  * `HOME_WAKE`, `MOMENT.stand.bench` in front of it), its cushion `h` over the floor
  */
-export const SOFA_SEAT = { x: HOME_WAKE.x, z: HOME_WAKE.z - 0.33, ry: 0, h: 0.24 };
+export const SOFA_SEAT = { x: SEAT_X, z: SEAT_Z, ry: -Math.PI / 2, h: 0.24 };
 
 /**
  * The room's windows (home3d.ts draws them: the front one over the sofa, the one east of the front door over the
@@ -493,7 +498,7 @@ const LANDING = { x: rx1 - 1.3, z: rz0 + 0.75 };
  * bottles behind it, stools, a mini fridge), an arcade cabinet on the west wall, a plant. Looks only: nothing in it does
  * anything in the game. Its own list, asked by `homeWall()` down there
  */
-export type BaseKind = 'steps' | 'tv' | 'table' | 'sofa' | 'beanbag' | 'arcade' | 'desk' | 'chair' | 'tower' | 'bar' | 'barshelf' | 'stools' | 'fridge' | 'plant';
+export type BaseKind = 'steps' | 'vault' | 'tv' | 'table' | 'sofa' | 'beanbag' | 'arcade' | 'desk' | 'chair' | 'tower' | 'bar' | 'barshelf' | 'stools' | 'fridge' | 'plant';
 export interface BaseThing {
   kind: BaseKind;
   rect: Rect;
@@ -505,6 +510,8 @@ export const BASEMENT: BaseThing[] = [
   { kind: 'steps', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.2], h: BH },
   // The cave: the telly on the front wall, the table, the sofa facing it, a beanbag
   { kind: 'tv', rect: [rx0 + 1.0, rz0, rx0 + 3.0, rz0 + 0.12], h: 0.9 },
+  // The stash's vault (docs/interior-plan.md Phase 1, the owner's pick): a round steel door in the north wall
+  { kind: 'vault', rect: [rx0 + 4.75, rz0, rx0 + 5.55, rz0 + 0.1], h: 0.95 },
   { kind: 'table', rect: [rx0 + 1.55, rz0 + 0.75, rx0 + 2.45, rz0 + 1.2], h: 0.2 },
   { kind: 'sofa', rect: [rx0 + 0.8, rz0 + 1.55, rx0 + 3.2, rz0 + 2.25], h: 0.42 },
   { kind: 'beanbag', rect: [rx0 + 3.5, rz0 + 1.0, rx0 + 4.0, rz0 + 1.5], h: 0.25 },
@@ -606,6 +613,7 @@ export interface HomeUse {
   label: string;
 }
 const at = (kind: FurnitureKind) => FURNITURE.find((f) => f.kind === kind)!.rect;
+const baseAt = (kind: BaseKind) => BASEMENT.find((f) => f.kind === kind)!.rect;
 const upAt = (kind: UpKind) => UPSTAIRS.find((f) => f.kind === kind)!.rect;
 /**
  * The ways out of the room that wait while the street outside is still loading (docs/spawn-plan.md Phase 1): the
@@ -614,10 +622,10 @@ const upAt = (kind: UpKind) => UPSTAIRS.find((f) => f.kind === kind)!.rect;
 export const HOME_WAITS: readonly string[] = ['home:out', 'home:yard', 'home:up'];
 /** Their prompt meanwhile */
 export const WAITING = 'Getting ready…';
-/** The wardrobe (stood in front of, on its west side: the fitting room), the trunk (from its east end: the stash), the desk (behind its chair: the business card) */
+/** The wardrobe (stood in front of, on its west side: the fitting room), the den's vault (in front of it: the stash), the desk (behind its chair: the business card) */
 export const HOME_USES: HomeUse[] = [
   { id: 'home:wardrobe', level: 'room', x: at('wardrobe')[0] - 0.35, z: (at('wardrobe')[1] + at('wardrobe')[3]) / 2, label: 'Wardrobe' },
-  { id: 'home:stash', level: 'room', x: at('stash')[2] + 0.35, z: (at('stash')[1] + at('stash')[3]) / 2, label: 'Stash' },
+  { id: 'home:stash', level: 'base', x: (baseAt('vault')[0] + baseAt('vault')[2]) / 2, z: baseAt('vault')[3] + 0.4, label: 'Stash' },
   { id: 'home:desk', level: 'up', x: (upAt('chair')[0] + upAt('chair')[2]) / 2, z: upAt('chair')[1] - 0.25, label: 'Desk' },
 ];
 /**

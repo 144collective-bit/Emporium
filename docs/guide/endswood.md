@@ -180,6 +180,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`GATEHOUSE`, `GATE_LEAF`, `wall()`, `gatehouse()`), the fountain and palms on the drive (`FOUNTAIN`, `PALMS`,
   `showpiece()`), the pool and cabana on the east lawn (`POOL`, `LOUNGERS`, `CABANA`, `poolside()`) and the helipad on
   the garage's roof (`HELIPAD`, `helipad()`, looks only). Their solids are in `HOME_SOLIDS`. The plan is complete.
+  **The interior** (the owner's call, 2026-11-19) is planned in `docs/interior-plan.md`: the house fitted out to a high
+  standard in a dark luxe palette (home3d.ts's colours under "The house's palette"), a phase at a time. Phase 1 (the
+  lounge and the vault) is built: the media wall on the west wall (`FURNITURE` `media`, home3d.ts `media()`: the telly
+  mounted over a long fire, lit niches), the corner sofa facing it with its chaise, an armchair and an arc lamp, the
+  trophy wall past the media wall; he wakes facing west at it (`HOME_WAKE`, `SOFA_SEAT`). The stash is a vault door in
+  the den's north wall (`BASEMENT` `vault`, `home:stash` on the `base` floor).
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

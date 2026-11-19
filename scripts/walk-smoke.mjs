@@ -133,19 +133,19 @@ await scene('wake', null, async (t) => {
   // (sat on the sofa: up off it a moment after the menu's gone, onto the spot in front of it, the view swung behind him)
   await t.until('him to stand up', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[2]) > 385.95;
+    return !!m && Number(m[1]) < -235.0;
   });
   await t.step(`stood up, at ${(await t.where()).join(', ')}`);
-  // (the camera looking south, into the room: its forward is -z of its matrix)
-  await t.until('the view to swing round behind him', () => -(window.__city?.camera.matrixWorld.elements[10] ?? 0) > 0.85);
+  // (the camera looking west, at the media wall: its forward is -z of its matrix, so -x of the world is its +x)
+  await t.until('the view to swing round behind him', () => (window.__city?.camera.matrixWorld.elements[8] ?? 0) > 0.85);
   await t.step('the view behind him');
-  // (to the front door: he faces the telly, south, so W takes him past the coffee table, clear of the corner sofa's
-  // chaise (docs/compound-plan.md Phase 2), A east to the hall and S back north to the door; its prompt reads
-  // "Getting ready…" until the street is in)
-  await t.go('w', 1.2, 'walked past the coffee table');
+  // (to the front door: he faces the telly on the media wall, west (docs/interior-plan.md Phase 1), so W takes him a
+  // step off the sofa, D north past its end and S back east along the front wall to the hall and the door; its prompt
+  // reads "Getting ready…" until the street is in)
+  await t.go('w', 0.2, 'stepped off the sofa');
+  await t.go('d', 1.3, 'past the sofa\'s end');
   // (asked short: at a frame or two a second he coasts on half a tile or more, and the door's prompt is within 1 of it)
-  await t.go('a', 1.5, 'across the room to the hall');
-  await t.go('s', 1.85, 'and up the hall to the front door');
+  await t.go('s', 1.6, 'and along to the front door');
   await t.prompt('Front door');
   await t.until('him to be outside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
@@ -192,7 +192,7 @@ await scene('home', '-232.8,383.45,3.14', async (t) => {
   await inside();
   await t.step(`inside, at ${(await t.where()).join(', ')}`);
   // (back as far as he went: a fixed 1.0 left him wherever the walk in's coasting put him, at a frame or two a
-  // second sometimes nearer the stash's prompt than the door's)
+  // second sometimes nearer another prompt than the door's)
   const hall = await t.where();
   await t.go('w', 1.2, 'walked down the hall');
   const down = await t.where();
@@ -268,9 +268,9 @@ await scene('homeworkshop', '-233.7,373.15', async (t) => {
   await t.step('the garage menu closed');
 });
 
-// In his room (home.ts HOME_USES, the home plan's Phase 4): at the trunk, the stash's card opens and closes; at the
-// wardrobe, the fitting room opens in Drop 001's panel and closes
-await scene('homestash', '-236.3,386.15', async (t) => {
+// In his house (home.ts HOME_USES): at the den's vault (docs/interior-plan.md Phase 1), the stash's card opens and
+// closes; at the wardrobe, the fitting room opens in Drop 001's panel and closes
+await scene('homestash', '-232.5,385.55,0,-1.17', async (t) => {
   await t.prompt('Stash');
   await t.until('the stash card', () => !!document.querySelector('[data-stash]:not([hidden]) [data-stash-inv]'));
   await t.step('the stash opened');
