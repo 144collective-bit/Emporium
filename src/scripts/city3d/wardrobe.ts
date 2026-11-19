@@ -33,8 +33,11 @@ export interface Outfit {
   cap?: string;
   /** The cap worn backwards */
   capBack?: boolean;
-  /** Beanie or bucket hat colour (instead of a cap) */
+  /** The cap a fitted one, its brim flat (docs/wardrobe-plan.md Phase 5) */
+  capFlat?: boolean;
+  /** Beanie or bucket hat colour (instead of a cap); the beanie a skully (close, no cuff, no pompom) */
   beanie?: string;
+  skully?: boolean;
   bucket?: string;
   /** A kart driver's helmet colour (docs/kart-west-plan.md Phase 6: the kart park's races; no hat with it) */
   helmet?: string;
@@ -54,6 +57,10 @@ export interface Outfit {
   board?: string;
   /** Duffel bag slung across the back */
   duffel?: string;
+  /** A sling bag on the back, a chest rig, a waist bag across the chest (docs/wardrobe-plan.md Phase 5) */
+  sling?: string;
+  chestrig?: string;
+  waist?: string;
   headphones?: string;
   /** Gold chain on the shades */
   chain?: boolean;
@@ -151,9 +158,11 @@ export function lookOutfit(l: Look): Outfit {
     shoeStyle: l.shoeStyle,
     tie: l.kind === 'suit' ? l.tie : undefined,
     shirt: l.shirt,
-    cap: hat === 'cap' || hat === 'backcap' ? l.hatColor : undefined,
+    cap: hat === 'cap' || hat === 'backcap' || hat === 'fitted' ? l.hatColor : undefined,
     capBack: hat === 'backcap',
-    beanie: hat === 'beanie' ? l.hatColor : undefined,
+    capFlat: hat === 'fitted',
+    beanie: hat === 'beanie' || hat === 'skully' ? l.hatColor : undefined,
+    skully: hat === 'skully',
     bucket: hat === 'bucket' ? l.hatColor : undefined,
     hood: l.kind === 'hoodie' && l.hood,
     lens: l.lens,
@@ -166,6 +175,9 @@ export function lookOutfit(l: Look): Outfit {
     crossbody: bag('crossbody'),
     board: bag('board'),
     duffel: bag('duffel'),
+    sling: bag('sling'),
+    chestrig: bag('chestrig'),
+    waist: bag('waist'),
     chain: l.chain,
     necklace: l.necklace,
     watch: l.watch,
@@ -689,9 +701,9 @@ export function paintMerge(list: { geo: THREE.BufferGeometry; color: THREE.Color
 
 /* ---------- The wardrobe: items, each a set of pieces on the rig's joints ---------- */
 
-export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'frame' | 'gear' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'headphones' | 'lens' | 'ink' | 'helmet';
+export type ColorKey = 'top' | 'bottom' | 'shoes' | 'tie' | 'shirt' | 'frame' | 'gear' | 'cap' | 'beanie' | 'bucket' | 'backpack' | 'crossbody' | 'board' | 'duffel' | 'sling' | 'chestrig' | 'waist' | 'headphones' | 'lens' | 'ink' | 'helmet';
 /** Every outfit colour a piece can take (the crowd works each figure's out once) */
-export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'frame', 'gear', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'headphones', 'lens', 'ink', 'helmet'];
+export const COLOR_KEYS: ColorKey[] = ['top', 'bottom', 'shoes', 'tie', 'shirt', 'frame', 'gear', 'cap', 'beanie', 'bucket', 'backpack', 'crossbody', 'board', 'duffel', 'sling', 'chestrig', 'waist', 'headphones', 'lens', 'ink', 'helmet'];
 /**
  * Pieces with a material of their own: the shades' lenses, the cap patch,
  * the raised hood (both sides drawn), neon (a crowd phone's screen: unlit,
@@ -1129,16 +1141,14 @@ export function items(q: Detail, hero = false): Item[] {
   const tee = (o: Outfit) => o.kind === 'tee';
   const shell = (o: Outfit) => o.kind === 'shell';
   const trucker = (o: Outfit) => o.kind === 'trucker';
-  /** A high collar round the neck (the puffer's, the vest's, the shell's): the headphones and the necklace go under it */
-  const highNeck = (o: Outfit) => quilted(o) || shell(o);
-  /** The puffer's quilted body: the jacket's, or the vest's (its high collar, its zip) */
-  const quilted = (o: Outfit) => puffer(o) || gilet(o);
   /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
   const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
   /** Either sneaker, low or high: the stripe and the shoe's mark go on its side */
   const kicks = (o: Outfit) => shoesOf(o) === 'sneaker' || shoesOf(o) === 'hightop';
   const bare = (o: Outfit) => !o.hood && o.kind !== 'soldier';
   const hasCap = (o: Outfit) => !!o.cap && !o.beanie && !o.bucket && bare(o);
+  /** Which cap: the fitted, worn straight (`capFlat`), or the curved cap, either way round */
+  const curvedCap = (o: Outfit) => hasCap(o) && !o.capFlat;
 
   /* ----- Head: the balaclava over a real head shape, the eye opening, the shades ----- */
   const HEAD: Sec[] = [
@@ -1612,6 +1622,44 @@ export function items(q: Detail, hero = false): Item[] {
     const y = (x: number, z: number, u: number) => CAP_Y + 0.012 - (x * x * 1.9 + Math.max(0, z - front + 0.01) * 0.13) * u;
     return brimSweep(at, y, 0.007, R(20), [1, 1, 2, 3][q], [2, 2, 3, 4][q]);
   })();
+  /*
+   * The fitted cap (docs/wardrobe-plan.md Phase 5): the cap's crown with its front panels standing up structured, a
+   * flat brim (barely pitched, square to the face, its sides kept level) reaching a little further, and the hat's mark
+   * embroidered straight onto the front, bigger, with no patch
+   */
+  const flatBrim = (() => {
+    const [, hw, hd, z0 = 0] = secAt(CAP, CAP_Y + 0.004);
+    const e = 2 / HN_HAT;
+    const at = (t: number) => {
+      const a = t * Math.PI;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      const x = Math.sign(c) * Math.abs(c) ** e * (hw - 0.004);
+      const z = z0 + Math.abs(s) ** e * (hd - 0.004);
+      return {
+        inner: [x, z] as [number, number],
+        outer: [x * (1 + 0.12 * s) + Math.sign(c) * 0.004 * (1 - s), z + 0.004 + 0.092 * s ** 1.2] as [number, number],
+      };
+    };
+    const front = z0 + hd;
+    const y = (x: number, z: number, u: number) => CAP_Y + 0.012 - (x * x * 0.25 + Math.max(0, z - front + 0.01) * 0.04) * u;
+    return brimSweep(at, y, 0.0065, R(20), [1, 1, 2, 3][q], [2, 2, 3, 4][q]);
+  })();
+  // (the front panels a touch fuller and higher: a structured crown)
+  const FIT_GAP = (y: number) => CAP_GAP(y) + 0.003 * THREE.MathUtils.smoothstep(y, 0.18, 0.23);
+  const FITTED = headShell(CAP_Y, FIT_GAP);
+  const fittedFront = surface(FITTED, HN_HAT);
+  const fitted = {
+    crown: [
+      snug(loft(FITTED, R(20), HN_HAT), CAP_Y + 0.004, FIT_GAP),
+      flatBrim,
+      new THREE.SphereGeometry(0.011, R(8), R(6)).translate(0, FITTED[FITTED.length - 1][0] + 0.001, FITTED[FITTED.length - 1][3] ?? 0),
+    ],
+    seams: [Math.PI / 6, (Math.PI * 5) / 6, (Math.PI * 7) / 6, (Math.PI * 11) / 6, (Math.PI * 3) / 2].map((a) => meridian(FITTED, HN_HAT, a, CAP_Y + 0.02, 0.0022, 1.012, q === 3 ? 0.006 : 0)),
+    // (the crowd's: the diamond on a patch, as on their caps)
+    patch: new THREE.PlaneGeometry(0.044, 0.03).rotateX(-0.5).translate(0, 0.205, fittedFront(0, 0.205) + 0.004),
+    logo: new THREE.PlaneGeometry(0.042, 0.042).rotateX(-0.5).translate(0, 0.205, fittedFront(0, 0.205) + 0.0035),
+  };
   const capCrown = snug(loft(CAP, R(20), HN_HAT), CAP_Y + 0.004, CAP_GAP);
   const capParts = (flip: boolean) => {
     // (worn back to front: the crown stays seated as it is, and the brim, seams and patch turn round its middle)
@@ -1638,6 +1686,18 @@ export function items(q: Detail, hero = false): Item[] {
   const cuffFront = frontAt(0.178, CUFF);
   const beaniePatch = new THREE.PlaneGeometry(0.042, 0.026).translate(0, 0.178, cuffFront + 0.0025);
   const beanieLogo = new THREE.PlaneGeometry(0.023, 0.023).translate(0, 0.178, cuffFront + 0.0055);
+  /*
+   * The skully (docs/wardrobe-plan.md Phase 5): a fine knit pulled close over the head, no cuff and no pompom, its hem
+   * rolled thin just over the brow and the ears, a small woven label on the hem at the front
+   */
+  const SKULLY_Y = 0.176;
+  const SKULLY_GAP = (y: number) => 0.0035 + 0.003 * THREE.MathUtils.smoothstep(y, SKULLY_Y, HEAD_HI);
+  const skully = snug(loft(headShell(SKULLY_Y, SKULLY_GAP), R(20), HN_HAT), SKULLY_Y + 0.004, SKULLY_GAP);
+  const HEM = 0.0068;
+  const skullyHem = snug(loft(headShell(SKULLY_Y - 0.002, () => HEM, SKULLY_Y + 0.006), R(20), HN_HAT), SKULLY_Y + 0.008, () => HEM, 0.001);
+  const hemFront = frontAt(SKULLY_Y + 0.001, HEM);
+  const skullyPatch = new THREE.PlaneGeometry(0.03, 0.016).translate(0, SKULLY_Y + 0.001, hemFront + 0.0025);
+  const skullyLogo = new THREE.PlaneGeometry(0.013, 0.013).translate(0, SKULLY_Y + 0.001, hemFront + 0.0045);
   // The bucket hat: a crown with straight sides on a band fitted to the head, the brim sloping down clear of the shades
   const BUCKET = fitTo(
     [
@@ -1954,20 +2014,22 @@ export function items(q: Detail, hero = false): Item[] {
 
   // The hood down (Phase 4): rolled round the neck from one side of the front to the other, thickest and riding
   // highest at the back where it bunches, tapering to the front where the drawstrings come out
+  /** The hood down's roll: its line round the neck (k 0 to 1, front to front by the back) and how thick it is there */
+  const rollAt = (k: number) => {
+    const f = Math.sin(Math.PI * k);
+    const a = (Math.PI / 3) * (1 + 4 * k);
+    return new THREE.Vector3(Math.sin(a) * (0.08 + 0.006 * f), 0.398 + 0.03 * f, -0.012 + Math.cos(a) * (0.064 + 0.018 * f));
+  };
+  const rollR = (k: number) => 0.012 + 0.022 * Math.sin(Math.PI * k) ** 0.6;
   const hoodDown = (() => {
     const N = R(24);
-    const at = (k: number) => {
-      const f = Math.sin(Math.PI * k);
-      const a = (Math.PI / 3) * (1 + 4 * k);
-      return new THREE.Vector3(Math.sin(a) * (0.08 + 0.006 * f), 0.398 + 0.03 * f, -0.012 + Math.cos(a) * (0.064 + 0.018 * f));
-    };
-    const path = new THREE.CatmullRomCurve3(Array.from({ length: 9 }, (_, i) => at(i / 8)));
+    const path = new THREE.CatmullRomCurve3(Array.from({ length: 9 }, (_, i) => rollAt(i / 8)));
     const g = new THREE.TubeGeometry(path, N, 1, R(10), false);
     const p = g.attributes.position as THREE.BufferAttribute;
     const c = new THREE.Vector3();
     for (let i = 0; i <= N; i++) {
       path.getPointAt(i / N, c);
-      const r = 0.012 + 0.022 * Math.sin(Math.PI * (i / N)) ** 0.6;
+      const r = rollR(i / N);
       for (let j = 0; j <= R(10); j++) {
         const v = i * (R(10) + 1) + j;
         p.setXYZ(v, c.x + (p.getX(v) - c.x) * r, c.y + (p.getY(v) - c.y) * r, c.z + (p.getZ(v) - c.z) * r);
@@ -3024,6 +3086,67 @@ export function items(q: Detail, hero = false): Item[] {
     // (phones and crowds: about as many segments as the straps had before they were laid on, docs/clothing-plan.md Phase 5)
     return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(laid), q === 3 ? n : R(Math.max(16, Math.round(len / 0.04))), r, q === 3 ? 6 : 4);
   };
+  /*
+   * The headphones round the neck, fitted to each top's collar (docs/wardrobe-plan.md Phase 5): they used to sit in one
+   * place on every top, the cups a centimetre into a jacket's shoulders and three into the hoodie's rolled hood. Each
+   * top lists what stands round its neck (`NECKS`: its collar's rings, the hood's roll, how far laid-on pieces stand
+   * off its front), and `fitPhones()` lifts them, opens them out and tips their band back until none of them is in
+   * the top's cloth: resting on the collar, as a pair round the neck does. The puffer's, the vest's and the shell's
+   * high collars cover them: those tops have no line in `NECKS`, so no headphones.
+   */
+  type Neck = { rings: [y0: number, y1: number, hw: number, hd: number, z: number][]; roll?: boolean; margin: number };
+  const NECKS: Partial<Record<OutfitKind, Neck>> = {
+    suit: { rings: [[0.395, 0.433, 0.062, 0.062, -0.004]], margin: 0.012 },
+    hoodie: { rings: [], roll: true, margin: 0.003 },
+    track: { rings: [[0.393, 0.447, 0.068, 0.068, -0.004]], margin: 0.004 },
+    varsity: { rings: [[0.398, 0.448, 0.068, 0.062, -0.004]], margin: 0.005 },
+    bomber: { rings: [[0.396, 0.444, 0.07, 0.064, -0.004]], margin: 0.006 },
+    coach: { rings: [[0.396, 0.432, 0.068, 0.062, -0.004]], margin: 0.012 },
+    trucker: { rings: [[0.396, 0.43, 0.067, 0.061, -0.004]], margin: 0.012 },
+    tee: { rings: [], margin: 0.006 },
+  };
+  const PHONE_PTS = (() => {
+    const pts: THREE.Vector3[] = [];
+    for (const g of [...headphones, ...cushions]) {
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i += 2) pts.push(new THREE.Vector3().fromBufferAttribute(p, i));
+    }
+    return pts;
+  })();
+  /** Where the headphones go on a top: raised `dy`, opened out by `spread` at the cups, the band tipped back `tilt` */
+  const phoneAt = (dy: number, spread: number, tilt: number) =>
+    new THREE.Matrix4()
+      .makeTranslation(0, 0.43 + dy, 0)
+      .multiply(new THREE.Matrix4().makeRotationX(tilt))
+      .multiply(new THREE.Matrix4().makeTranslation(0, -0.43, 0))
+      .multiply(new THREE.Matrix4().makeScale(1 + spread / 0.077, 1, 1));
+  const fitPhones = (t: (typeof TORSOS)[number], neck: Neck) => {
+    const o = torsoOf(t);
+    const v = new THREE.Vector3();
+    const rollPts = neck.roll ? Array.from({ length: 41 }, (_, i) => ({ c: rollAt(i / 40), r: rollR(i / 40) })) : [];
+    const inCloth = (p: THREE.Vector3) => {
+      const zc = o.mid(p.y);
+      const r = Math.hypot(p.x, p.z - zc);
+      const k = r > neck.margin ? (r - neck.margin) / r : 0;
+      if (o.inside(p.x * k, p.y, zc + (p.z - zc) * k)) return true;
+      for (const [y0, y1, hw, hd, z] of neck.rings) if (p.y > y0 && p.y < y1 && (p.x / (hw + 0.003)) ** 2 + ((p.z - z) / (hd + 0.003)) ** 2 < 1) return true;
+      for (const { c, r: rr } of rollPts) if (p.distanceToSquared(c) < (rr + 0.003) ** 2) return true;
+      return false;
+    };
+    let best: { m: THREE.Matrix4; cost: number } | null = null;
+    for (const tilt of [0, 0.12, 0.24, 0.36])
+      for (const spread of [0, 0.004, 0.008, 0.012])
+        for (let dy = 0; dy <= 0.06 + 1e-9; dy += 0.002) {
+          const cost = dy + spread * 0.5 + tilt * 0.02;
+          if (best && cost >= best.cost) break;
+          const m = phoneAt(dy, spread, tilt);
+          if (!PHONE_PTS.some((p) => inCloth(v.copy(p).applyMatrix4(m)))) {
+            best = { m, cost };
+            break;
+          }
+        }
+    return (best ?? { m: phoneAt(0.06, 0.012, 0.36) }).m;
+  };
   const F = 0.3;
   const B = -0.3;
   // Per top, its items: the necklace and its pendant (the puffer's high collar covers it), the backpack and its
@@ -3117,11 +3240,159 @@ export function items(q: Detail, hero = false): Item[] {
       [-0.15, 0.03, 0],
       [-0.12, 0.05, B],
     ], 0.011);
+    /*
+     * The bags of Phase 5 (docs/wardrobe-plan.md): a sling bag diagonal on the back, its strap over the right shoulder
+     * and down the chest to the left hip; a chest rig, a wide pouch on the chest on two shoulder straps that cross on
+     * the back and a strap round the ribs; a waist bag worn across the chest, rising to the left shoulder. Each laid
+     * clear of the top it's on (`seat()`: its back face off the cloth at every corner), zips and buckles on single
+     * figures. The backpack and the duffel rebuilt (single figures): the backpack's grab handle, zips, a sternum strap
+     * and side straps; the duffel's zip and pulls along its top, a wrap on its handle.
+     */
+    const detailed = q >= 2;
+    /** How far out a box `w` by `h` turned `a` round its middle at (x, y) sits: its back face clear of the front (or the back) */
+    const seat = (x: number, y: number, w: number, h: number, a: number, side: 1 | -1) => {
+      let z = side > 0 ? -9 : 9;
+      for (const u of [-0.5, 0, 0.5])
+        for (const v of [-0.5, 0, 0.5]) {
+          const px = x + Math.cos(a) * u * w - Math.sin(a) * v * h;
+          const py = y + Math.sin(a) * u * w + Math.cos(a) * v * h;
+          z = side > 0 ? Math.max(z, o.front(px, py) + t.over) : Math.min(z, o.back(px, py));
+        }
+      return z;
+    };
+    const placed = (g: THREE.BufferGeometry, a: number, x: number, y: number, z: number) => g.rotateZ(a).translate(x, y, z);
+    // (zips, pulls and buckles: plain boxes, a dozen triangles each; a rounded box is hundreds)
+    const bx = (w: number, h: number, d: number, _r = 0, x = 0, y = 0, z = 0) => new THREE.BoxGeometry(w, h, d).translate(x, y, z);
+    const pull = (x: number, y: number, z: number, a = 0) => placed(bx(0.007, 0.013, 0.004), a, x, y, z);
+    // The sling: on the back, from high on the left (-x) down to the right
+    const SA = -0.88;
+    const [slX, slY, slW, slH, slD] = [0.01, 0.245, 0.2, 0.09, 0.05];
+    const slZ = seat(slX, slY, slW, slH, SA, -1) - slD / 2 - 0.004;
+    const slingBody = placed(rb(slW, slH, slD, 0.03), SA, slX, slY, slZ);
+    const slingDetail = detailed
+      ? [
+          // (a zip along its outer face's top edge, its pull, and a small zipped pocket lower down)
+          placed(bx(slW - 0.04, 0.0035, 0.003, 0.001), SA, slX - Math.sin(SA) * 0.022, slY + Math.cos(SA) * 0.022, slZ - slD / 2 - 0.001),
+          pull(slX + Math.cos(SA) * 0.07 - Math.sin(SA) * 0.022, slY + Math.sin(SA) * 0.07 + Math.cos(SA) * 0.022, slZ - slD / 2 - 0.004, SA),
+          placed(bx(0.09, 0.035, 0.006, 0.006), SA, slX + Math.sin(SA) * 0.014, slY - Math.cos(SA) * 0.014, slZ - slD / 2 - 0.002),
+        ]
+      : [];
+    const slingStrap = strapOver(t, [
+      [slX - Math.cos(SA) * 0.1, slY - Math.sin(SA) * 0.1, B],
+      [-sx, top(-sx), o.mid(0.36)],
+      [-0.085, 0.34, F],
+      [0.02, 0.2, F],
+      [0.12, 0.07, F],
+      [0.155, 0.06, 0],
+      [slX + Math.cos(SA) * 0.1, slY + Math.sin(SA) * 0.1, B],
+    ], 0.008);
+    // The chest rig: its pouch across the chest
+    const [rgY, rgW, rgH, rgD] = [0.205, 0.2, 0.085, 0.045];
+    const rgZ = seat(0, rgY, rgW, rgH, 0, 1) + rgD / 2 + 0.004;
+    const rigBody = rb(rgW, rgH, rgD, 0.016, 0, rgY, rgZ);
+    const rigDetail = detailed
+      ? [
+          // (two zips across its front, a pull on each, and a buckle where each side strap meets it)
+          ...[0.022, -0.004].map((dy) => bx(rgW - 0.03, 0.0035, 0.003, 0.001, 0, rgY + dy, rgZ + rgD / 2 + 0.001)),
+          ...[0.022, -0.004].map((dy, i) => pull((i ? -1 : 1) * 0.07, rgY + dy - 0.006, rgZ + rgD / 2 + 0.003)),
+          ...[-1, 1].map((s) => bx(0.012, 0.024, 0.008, 0.002, s * (rgW / 2 + 0.006), rgY, rgZ - 0.004)),
+        ]
+      : [];
+    const rigStraps = [-1, 1].flatMap((s) => [
+      strapOver(t, [
+        [s * 0.075, rgY + rgH / 2 - 0.004, F],
+        [s * 0.085, 0.33, F],
+        [s * sx, top(s * sx), o.mid(0.36)],
+        [s * 0.07, 0.33, B],
+        [-s * 0.03, 0.24, B],
+        [-s * 0.11, 0.17, B],
+      ], 0.007),
+      strapOver(t, [
+        [s * 0.04, 0.17, B],
+        [s * 0.13, 0.19, B],
+        [s * 0.16, 0.2, 0],
+        [s * (rgW / 2 + 0.004), rgY, F],
+      ], 0.006),
+    ]);
+    // The waist bag across the chest: rising to the left (+x) shoulder
+    const WA = 0.42;
+    const [wbX, wbY, wbW, wbH, wbD] = [0.015, 0.25, 0.17, 0.068, 0.05];
+    const wbZ = seat(wbX, wbY, wbW, wbH, WA, 1) + wbD / 2 + 0.004;
+    const waistBody = placed(rb(wbW, wbH, wbD, 0.026), WA, wbX, wbY, wbZ);
+    const waistDetail = detailed
+      ? [
+          placed(bx(wbW - 0.04, 0.0035, 0.003, 0.001), WA, wbX - Math.sin(WA) * 0.016, wbY + Math.cos(WA) * 0.016, wbZ + wbD / 2 + 0.001),
+          pull(wbX + Math.cos(WA) * 0.055 - Math.sin(WA) * 0.016, wbY + Math.sin(WA) * 0.055 + Math.cos(WA) * 0.016 - 0.006, wbZ + wbD / 2 + 0.003, WA),
+          // (the strap's buckle where it comes off the bag's low end)
+          placed(bx(0.026, 0.016, 0.007, 0.002), WA, wbX - Math.cos(WA) * (wbW / 2 + 0.03), wbY - Math.sin(WA) * (wbW / 2 + 0.03), seat(wbX - Math.cos(WA) * (wbW / 2 + 0.03), wbY - Math.sin(WA) * (wbW / 2 + 0.03), 0.03, 0.02, WA, 1) + 0.008),
+        ]
+      : [];
+    const waistStrap = strapOver(t, [
+      [wbX + Math.cos(WA) * (wbW / 2 - 0.01), wbY + Math.sin(WA) * (wbW / 2 - 0.01), F],
+      [0.1, 0.34, F],
+      [sx, top(sx), o.mid(0.36)],
+      [0.08, 0.33, B],
+      [-0.06, 0.18, B],
+      [-0.14, 0.12, B],
+      [-0.16, 0.13, 0],
+      [wbX - Math.cos(WA) * (wbW / 2 - 0.01), wbY - Math.sin(WA) * (wbW / 2 - 0.01), F],
+    ], 0.0075);
+    // The backpack's single-figure detail
+    const packZ = BK(0, 0.24) - 0.04;
+    const packDetail = detailed
+      ? [
+          // (the grab handle over its top, the main zip round its top edge with two pulls, the front pocket's zip)
+          tube([[-0.03, 0.362, packZ + 0.012], [-0.022, 0.382, packZ + 0.008], [0.022, 0.382, packZ + 0.008], [0.03, 0.362, packZ + 0.012]], 0.0045, R(10), 4),
+          bx(0.16, 0.0035, 0.004, 0.001, 0, 0.352, packZ - 0.04),
+          ...[-1, 1].map((s) => bx(0.004, 0.014, 0.008, 0.0015, s * 0.072, 0.344, packZ - 0.045)),
+          bx(0.12, 0.0035, 0.004, 0.001, 0, 0.198, BK(0, 0.17) - 0.106),
+          // (a compression strap down each side)
+          ...[-1, 1].map((s) => bx(0.004, 0.17, 0.016, 0.0015, s * 0.107, 0.24, packZ)),
+        ]
+      : [];
+    const sternum = detailed
+      ? [
+          strapOver(t, [
+            [-0.1, 0.262, F],
+            [0, 0.262, F],
+            [0.1, 0.262, F],
+          ], 0.0045, 0.006),
+          bx(0.024, 0.014, 0.008, 0.002, 0, 0.262, o.front(0, 0.262) + t.over + 0.02),
+        ]
+      : [];
+    // The duffel's: a zip along its top, two pulls, a wrap round the handle
+    const duffelDetail = detailed
+      ? [
+          slung(tube([[0.036, -L + 0.03, -DR * 0.9 + 0.002], [0.036, L - 0.03, -DR * 0.9 + 0.002]], 0.0025, 4, 4)),
+          ...[-0.05, 0.06].map((y) => slung(bx(0.012, 0.007, 0.004, 0.0015, 0.04, y, -DR * 0.92 - 0.004))),
+          slung(bx(0.022, 0.034, 0.022, 0.008, 0, 0, -DR - 0.026)),
+        ]
+      : [];
     const is = (o: Outfit) => o.kind === t.kind;
     const k = t.kind;
+    const phones = NECKS[k] ? fitPhones(t, NECKS[k]!) : null;
     return [
+      ...(phones
+        ? [
+            {
+              id: `headphones-${k}`,
+              when: (o: Outfit) => !!o.headphones && is(o) && !(hoodie(o) && o.hood),
+              pieces: [
+                P('torso', one(headphones.map((g) => g.clone().applyMatrix4(phones))), 'headphones', { detail: true }),
+                ...(cushions.length ? [P('torso', one(cushions.map((g) => g.clone().applyMatrix4(phones))), 'headphones', { shade: 0.45, detail: true })] : []),
+              ],
+            },
+          ]
+        : []),
       ...(k === 'puffer' || k === 'vest' || k === 'shell' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
-      { id: `backpack-${k}`, when: (o) => !!o.backpack && is(o), pieces: [P('torso', one(backpack), 'backpack', CHEST)] },
+      {
+        id: `backpack-${k}`,
+        when: (o) => !!o.backpack && is(o),
+        pieces: [
+          P('torso', one(backpack), 'backpack', CHEST),
+          ...(detailed ? [P('torso', one(packDetail), 'backpack', { shade: 0.7, detail: true, ...CHEST }), P('torso', one(sternum), 'backpack', { shade: 0.6, detail: true })] : []),
+        ],
+      },
       { id: `crossbody-${k}`, when: (o) => !!o.crossbody && is(o), pieces: [P('torso', one(crossbody), 'crossbody')] },
       {
         id: `board-${k}`,
@@ -3131,7 +3402,39 @@ export function items(q: Detail, hero = false): Item[] {
       {
         id: `duffel-${k}`,
         when: (o) => !!o.duffel && is(o),
-        pieces: [P('torso', one([duffelBody, duffelHandle]), 'duffel', CHEST), P('torso', one(duffelEnds), 'duffel', { shade: 0.6, ...CHEST }), P('torso', duffelStrap, 'duffel', { shade: 0.6 })],
+        pieces: [
+          P('torso', one([duffelBody, duffelHandle]), 'duffel', CHEST),
+          P('torso', one(duffelEnds), 'duffel', { shade: 0.6, ...CHEST }),
+          P('torso', duffelStrap, 'duffel', { shade: 0.6 }),
+          ...(detailed ? [P('torso', one(duffelDetail), 'duffel', { shade: 0.6, detail: true, ...CHEST })] : []),
+        ],
+      },
+      {
+        id: `sling-${k}`,
+        when: (o) => !!o.sling && is(o),
+        pieces: [
+          P('torso', slingBody, 'sling', CHEST),
+          ...(slingDetail.length ? [P('torso', one(slingDetail), 'sling', { shade: 0.7, detail: true, ...CHEST })] : []),
+          P('torso', slingStrap, 'sling', { shade: 0.6 }),
+        ],
+      },
+      {
+        id: `chestrig-${k}`,
+        when: (o) => !!o.chestrig && is(o),
+        pieces: [
+          P('torso', rigBody, 'chestrig'),
+          ...(rigDetail.length ? [P('torso', one(rigDetail), 'chestrig', { shade: 0.62, detail: true })] : []),
+          P('torso', one(rigStraps), 'chestrig', { shade: 0.6 }),
+        ],
+      },
+      {
+        id: `waist-${k}`,
+        when: (o) => !!o.waist && is(o),
+        pieces: [
+          P('torso', waistBody, 'waist'),
+          ...(waistDetail.length ? [P('torso', one(waistDetail), 'waist', { shade: 0.65, detail: true })] : []),
+          P('torso', waistStrap, 'waist', { shade: 0.6 }),
+        ],
       },
     ];
   });
@@ -3263,16 +3566,26 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'cap',
-      when: (o) => hasCap(o) && !o.capBack,
+      when: (o) => curvedCap(o) && !o.capBack,
       pieces: [P('head', one(cap.crown), 'cap'), P('head', one(cap.seams), 'cap', { shade: 0.62, detail: true }), ...hatPatch(cap.patch, cap.logo)],
     },
     {
       id: 'capBack',
-      when: (o) => hasCap(o) && !!o.capBack,
+      when: (o) => curvedCap(o) && !!o.capBack,
       pieces: [
         P('head', one(capBack.crown), 'cap'),
         P('head', one(capBack.seams), 'cap', { shade: 0.62, detail: true }),
         ...hatPatch(capBack.patch, capBack.logo),
+      ],
+    },
+    {
+      id: 'fitted',
+      when: (o) => hasCap(o) && !!o.capFlat,
+      pieces: [
+        P('head', one(fitted.crown), 'cap'),
+        P('head', one(fitted.seams), 'cap', { shade: 0.62, detail: true }),
+        // (the mark embroidered straight on the front; far off, the white patch the crowd's hats print)
+        ...(hero ? [P('head', fitted.logo, 'ink', { mat: 'logo', logo: 'hat' })] : [P('head', fitted.patch, '#ffffff', { mat: 'patch', detail: true })]),
       ],
     },
     {
@@ -3282,8 +3595,13 @@ export function items(q: Detail, hero = false): Item[] {
     },
     {
       id: 'beanie',
-      when: (o) => !!o.beanie && bare(o),
+      when: (o) => !!o.beanie && !o.skully && bare(o),
       pieces: [P('head', one(beanie), 'beanie'), P('head', beanieCuff, 'beanie', { shade: 0.82 }), ...hatPatch(beaniePatch, beanieLogo)],
+    },
+    {
+      id: 'skully',
+      when: (o) => !!o.beanie && !!o.skully && bare(o),
+      pieces: [P('head', skully, 'beanie'), P('head', skullyHem, 'beanie', { shade: 0.85 }), ...hatPatch(skullyPatch, skullyLogo)],
     },
     {
       id: 'hoodUp',
@@ -3337,8 +3655,8 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('arm', looseUpper, 'top'),
         ...both('fore', looseFore, 'top'),
         ...both('fore', hoodieCuff, 'top', { shade: 0.8 }),
-        // (the heavyweight's seams and the cords' tips: single figures)
-        ...(hero
+        // (the heavyweight's seams and the cords' tips: single figures, detail 2 and 3; the crowd draws at 0 and 1)
+        ...(q >= 2
           ? [
               P('torso', sideSeams, 'top', { shade: 0.78, detail: true }),
               ...both('arm', dropSeam, 'top', { shade: 0.78, detail: true }),
@@ -3472,11 +3790,7 @@ export function items(q: Detail, hero = false): Item[] {
     },
     // (the puffer's, the vest's and the shell's high collar covers the headphones, and the necklace, below; so does the hood up, where it meets the
     // sweater round the neck)
-    {
-      id: 'headphones',
-      when: (o) => !!o.headphones && !highNeck(o) && !(hoodie(o) && o.hood),
-      pieces: [P('torso', one(headphones), 'headphones', { detail: true }), ...(cushions.length ? [P('torso', one(cushions), 'headphones', { shade: 0.45, detail: true })] : [])],
-    },
+
     // (the necklace, bags, boards and wings on the top he's wearing: each top its own)
     ...OVER,
     {

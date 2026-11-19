@@ -391,7 +391,7 @@ A proposed first set; the owner picks what goes in:
     collar, zip and seams over a long-sleeve in the look's shirt colour
     (the fitting room's "Sleeves" swatches; the character screen shows
     both colours). It hides the headphones and the necklace as the puffer
-    does (`quilted()`).
+    does (no headphones line in `NECKS`).
   - The heavyweight tee (Streetwear): the hoodie's roomy body (`HK`, the
     shape every bottoms already sits under) without the hood, pouch or
     ribbing, a stitched hem, a ribbed crew neck, boxy short sleeves to
@@ -425,7 +425,7 @@ A proposed first set; the owner picks what goes in:
     a shade lighter (a yoke across the chest, the side panels, along the top
     of each sleeve: `stripe()` now lays a single line too), a zipped chest
     pocket on the right, a drawcord hem with toggles and a tab on each cuff.
-    Its collar covers the headphones and the necklace (`highNeck()`).
+    Its collar covers the headphones and the necklace.
   - The trucker jacket (`LookKind` `trucker`, Streetwear and Work): the
     jacket's body 3% fuller (`DK`), a buttoned waistband with an adjuster
     tab at each side, a point collar on a stand, a buttoned placket, two
@@ -437,15 +437,54 @@ A proposed first set; the owner picks what goes in:
     deeper cuffs (`hoodieCuff`), thicker drawcords with metal tips
     (`aglets`), the shoulder's seam dropped down the arm (`dropSeam`) and
     felled seams down the body's sides (`sideSeams`, two stitch lines each).
-    The seams and tips are single figures only (the crowd's hoodies keep
-    their triangles); the hem and cuffs are everyone's.
+    The seams and tips are single figures only (detail 2 and 3: the crowd's
+    hoodies keep their triangles); the hem and cuffs are everyone's.
   - The coach jacket's drawcord toggles and hem band became shared helpers
     (`toggles()`, `hemBand()`), used by the shell and the trucker too.
   - Every top over every bottoms passes the clipping test at both levels;
     the phones' worst look is 17.9k of 18k, the desktop's 38.9k of 40k.
+- **The owner's pick for the fourth set (19 November 2026):** hats and
+  bags: the fitted cap and skully, the sling, chest and waist bags, the
+  backpack and duffel rebuilt, and the headphones fixed at the collar.
+- **As built, the fourth set (Phase 5f, 19 November 2026):**
+  - The fitted cap (`Hat` `fitted`, Streetwear; `Outfit.capFlat`): the
+    cap's crown with structured front panels, a flat brim reaching a little
+    further, the hat's mark embroidered straight on the front, bigger, with
+    no patch.
+  - The skully (`Hat` `skully`, Streetwear and Work; `Outfit.skully` on the
+    beanie's colour): a fine knit close over the head, no cuff or pompom, a
+    thin rolled hem over the brow and ears, a small woven label with the
+    hat's mark. Both hats are in `accessories.test.ts`'s `HATS` (seated on
+    the head, face gear under them).
+  - Three bags (`Bag` `sling`, `chestrig`, `waist`; colour keys of their
+    own): a sling bag diagonal on the back, its strap over the right
+    shoulder to the left hip; a chest rig, a wide pouch on the chest on two
+    shoulder straps crossing on the back and a strap round the ribs; a waist
+    bag worn across the chest, rising to the left shoulder. Each is laid
+    clear of the top it's on (`seat()`), with zips, pulls and buckles on
+    single figures.
+  - The backpack rebuilt (single figures): a grab handle, the main zip with
+    two pulls, the front pocket's zip, a compression strap down each side,
+    a sternum strap with its buckle across the chest. The duffel: a zip
+    along its top with two pulls, a wrap round its handle. The crowd's
+    backpacks and duffels keep their shape and triangles.
+  - The small parts are plain boxes, a dozen triangles each: as rounded
+    boxes the first build put a backpack look at 19.8k on phones; now the
+    phones' worst look is 17.9k of 18k.
+  - The headphones round the neck sat in one place on every top, the cups
+    a centimetre into the jackets' shoulders and three into the hoodie's
+    rolled hood. Now each top lists what stands round its neck (`NECKS`:
+    its collar's rings, the hood's roll, how far its laid-on pieces stand
+    off the front) and `fitPhones()` lifts them, opens them out and tips
+    the band back until none of them is in the cloth: resting on the
+    collar. `clothing.test.ts` holds them out of every top's body at rest;
+    the high collars (puffer, vest, shell: no line in `NECKS`) still cover
+    them.
+  - Found on the way: the crowd draws its figures as skinned bodies too, so
+    the hoodie's felled seams and cord tips (Phase 5e) are now kept to
+    detail 2 and 3 (single figures) rather than to skinned bodies.
 - Still open from the plan's list: relaxed denim, chunky runners and
-  slides, the fitted cap and skully, the sling, chest and waist bags with
-  the backpack and duffel rebuilt, and the headphones at the collar.
+  slides.
 
 ### Phase 6: work wear
 
@@ -497,5 +536,8 @@ A proposed first set; the owner picks what goes in:
   heavyweight tee and shorts, his bare arms and legs): built**, 19 November
   2026.
 - **Phase 5, the third set (the technical shell, the trucker jacket, the
-  heavyweight hoodie): built**, 19 November 2026, waiting for the owner's
-  look and the next set.
+  heavyweight hoodie): built**, 19 November 2026.
+- **Phase 5, the fourth set (the fitted cap, the skully, the sling, chest
+  rig and waist bags, the backpack and duffel rebuilt, the headphones on
+  the collar): built**, 19 November 2026, waiting for the owner's look and
+  the next set.

@@ -287,19 +287,32 @@ keep it up to date when what it describes changes.
   - **The coach jacket, the puffer vest and the tee** (`docs/wardrobe-plan.md`
     Phase 5): the coach (`CK`) a light shell with a fold-over collar, snaps
     and a drawcord hem; the vest the puffer's body over long sleeves in the
-    outfit's `shirt` colour (`quilted()` covers what the puffer's collar
+    outfit's `shirt` colour (its collar covers what the puffer's
     covers); the tee the hoodie's body (`HK`) with a crew neck and short
     sleeves (`TEE_U`) over bare arms (`BARE_U`, `BARE_F`, `SKIN`). The
     first-person arms dress them too (`dress()` in viewmodel.ts,
     `armPieces()` in fistsview.ts).
   - **The shell and the trucker** (`docs/wardrobe-plan.md` Phase 5): the
     shell (`SHK`) with a funnel collar of its own (`SHELL_COLLAR`, a second
-    shell in `TORSOS`; `highNeck()` hides the headphones and necklace under
+    shell in `TORSOS`; it hides the headphones and necklace under
     it), a storm flap, taped seams (`stripe()` with one line) and a drawcord
     hem (`toggles()`, `hemBand()`); the trucker (`DK`) with its waistband,
     point collar, pocket flaps, yoke seams and copper buttons. The hoodie is
     a heavyweight: deep ribbing, and on single figures felled seams
     (`sideSeams`, `dropSeam`) and metal-tipped cords (`aglets`).
+  - **Hats and bags** (`docs/wardrobe-plan.md` Phase 5): the fitted cap
+    (`capFlat`: flat brim, the mark embroidered on the front) and the skully
+    (`skully` on the beanie's colour). The bags over each top (`OVER`): the
+    sling (on the back), the chest rig and the waist bag (across the chest),
+    each seated clear of the top (`seat()`); the backpack and duffel carry
+    zips, pulls and straps on single figures. Small parts (zips, pulls,
+    buckles) are plain boxes (`bx()`): a rounded box costs hundreds of
+    triangles. "Single figures only" means `q >= 2`: the crowd draws
+    skinned bodies too (`items(q, true)`), at detail 0 and 1.
+  - **Headphones** are per top (`headphones-<kind>`), fitted to its collar
+    by `fitPhones()` from `NECKS` (the collar's rings, the hood's roll, a
+    margin for laid-on pieces); a new top with headphones needs its line
+    there, or they're left off it.
   - **The separates** (`docs/wardrobe-plan.md` Phase 2): the top, the
     bottoms and the shoes are items of their own, worn in any pairing:
     `trousers`, `joggers` (and track pants, the joggers with

@@ -209,3 +209,28 @@ for (const q of [2, 3] as const)
     if (report) console.log(`hood q${q}: deepest into the hoodie ${(worst.d * 1000).toFixed(1)} (thousandths) at ${worst.at}`);
     assert.ok(worst.d <= TOL, `the hood goes ${(worst.d * 1000).toFixed(1)} thousandths into the hoodie at ${worst.at}`);
   });
+
+/*
+ * The headphones round the neck rest on each top's collar (docs/wardrobe-plan.md Phase 5, `fitPhones()`): at rest none
+ * of them is in the top's body (its closed shell); the high collars (the puffer's, the vest's, the shell's) cover them.
+ */
+for (const q of [2, 3] as const)
+  test(`clothes: the headphones rest on every top's collar, none in its cloth (detail ${q})`, () => {
+    for (const o of OUTFITS.filter((x) => x.kind !== 'soldier' && x.bottoms === 'joggers')) {
+      const d = dress({ ...o, headphones: '#ff0000', chain: false }, q);
+      const hp = d.worn.filter((w) => w.item.startsWith('headphones'));
+      if (['puffer', 'vest', 'shell'].includes(o.kind)) {
+        assert.equal(hp.length, 0, `${o.kind}: under its collar`);
+        continue;
+      }
+      assert.ok(hp.length, `${o.kind}: headphones worn`);
+      const body = shells(d.worn.filter((w) => w.piece.shell === 'top').map((w) => w.rest));
+      let worst = 0;
+      for (const w of hp)
+        for (let i = 0; i < w.rest.length; i += 3) {
+          const [x, y, z] = [w.rest[i], w.rest[i + 1], w.rest[i + 2]];
+          if (inside(body, x, y, z)) worst = Math.max(worst, distance(body, x, y, z).d);
+        }
+      assert.ok(worst <= 0.001, `${o.kind}: the headphones are ${(worst * 1000).toFixed(1)} thousandths into it`);
+    }
+  });

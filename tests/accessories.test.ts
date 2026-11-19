@@ -16,6 +16,8 @@ const HATS: [string, Partial<Outfit>][] = [
   ['capBack', { capBack: true }],
   ['beanie', { beanie: '#3355ff' }],
   ['bucket', { bucket: '#3355ff' }],
+  ['fitted', { capFlat: true }],
+  ['skully', { beanie: '#3355ff', skully: true }],
 ];
 
 /** The crown of a hat's first piece: of its parts (a brim, a button, the points) the one that reaches furthest up and down */
@@ -193,7 +195,7 @@ for (const q of LEVELS)
     const chain = all.find((i) => i.id === 'chain-hood')!;
     assert.ok(chain.when(o) && !all.some((i) => i.id === 'chain-hoodie' && i.when(o)), "the hood's own chain");
     // (the headphones go under the hood, as under the puffer's collar)
-    assert.ok(!all.some((i) => i.id === 'headphones' && i.when(o)), 'no headphones over the hood up');
+    assert.ok(!all.some((i) => i.id.startsWith('headphones') && i.when(o)), 'no headphones over the hood up');
     const worn: [string, THREE.BufferGeometry, number][] = [['the chain', chain.pieces[0].geo, 0]];
     const v = new THREE.Vector3();
     const o3 = new THREE.Vector3();

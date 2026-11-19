@@ -192,7 +192,7 @@ function merchItems(of: MerchFor): Item[] {
 }
 /** Can what the Merch tab is dressing be seen? (Else a note says what shows it) */
 function merchNote(of: MerchFor, l: Look): string | null {
-  if (of === 'hat' && !((l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie') && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
+  if (of === 'hat' && !(l.hat && l.hat !== 'bucket' && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
   if (of === 'kicks' && l.shoeStyle === 'dress') return 'Shows on sneakers';
   return null;
 }
@@ -247,6 +247,8 @@ const TABS: Tab[] = [
       hat('backcap', 'Backwards Cap', 'M5 15a7 7 0 0 1 14 0z M3 15h9 M10 11h4', STREET),
       hat('beanie', 'Street Beanie', 'M6 15a6 7 0 0 1 12 0z M5 15h14v3H5z M12 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z', ['street', 'work']),
       hat('bucket', 'Bucket Hat', 'M8 7h8l1 7H7z M3 17l4-3h10l4 3z', STREET),
+      hat('fitted', 'Fitted Cap', 'M5 14a7 7.5 0 0 1 14 0z M5 14h16v1.5H5z M10 9.5l2-2 2 2-2 2z', STREET),
+      hat('skully', 'Skully', 'M5.5 16a6.5 8 0 0 1 13 0z M5.5 16h13 M11 14.5h2', ['street', 'work']),
       {
         id: 'hood',
         name: 'Hood Up',
@@ -296,6 +298,9 @@ const TABS: Tab[] = [
       bag('crossbody', 'Crossbody', 'M5 3l12 11 M13 13h7v7h-7z', STREET),
       bag('board', 'Skate Deck', 'M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M5 7h2 M17 7h2 M5 17h2 M17 17h2', STREET),
       bag('duffel', 'Duffel Bag', 'M4 9h16a3 3 0 0 1 0 6H4a3 3 0 0 1 0-6z M9 9V7h6v2 M12 9v6', ['street', 'business', 'work']),
+      bag('sling', 'Sling Bag', 'M6 6l12 12 M9 4l11 11-4 4L5 8z M8 7l9 9', STREET),
+      bag('chestrig', 'Chest Rig', 'M5 10h14v6H5z M5 12.5h14 M7 10L5 3 M17 10l2-7 M5 16l-2 3 M19 16l2 3', ['street', 'work']),
+      bag('waist', 'Waist Bag', 'M4 13c0-3 4-4 8-4s8 1 8 4-4 4-8 4-8-1-8-4z M5 12h14 M3 8l3 3 M21 18l-3-2', STREET),
       { id: 'nobag', name: 'No bag', icon: NONE, on: (l) => !l.bag, wear: (l) => ({ ...l, bag: null }) },
     ],
   },

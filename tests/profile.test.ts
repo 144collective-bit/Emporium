@@ -65,8 +65,8 @@ test('every fit, hat and bag is accepted, and the watch', () => {
 });
 
 test('the retired pieces are gone, and looks that wore them lose them (the wardrobe plan, Phase 1)', () => {
-  assert.deepEqual(HATS, ['cap', 'backcap', 'beanie', 'bucket']);
-  assert.deepEqual(BAGS, ['backpack', 'crossbody', 'board', 'duffel']);
+  assert.deepEqual(HATS, ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'skully']);
+  assert.deepEqual(BAGS, ['backpack', 'crossbody', 'board', 'duffel', 'sling', 'chestrig', 'waist']);
   // A retired hat comes back bare-headed (not the default cap: he took his hat off for it)
   for (const hat of ['crown', 'cowboy', 'tophat', 'halo']) assert.equal(cleanLook({ ...DEFAULT_LOOK, hat }).hat, null, hat);
   // The wings come back as no bag

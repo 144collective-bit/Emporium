@@ -29,19 +29,20 @@ const LIGHTS: { id: StageLight; name: string }[] = [
 
 const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Jacket', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket', bomber: 'Bomber Jacket', coach: 'Coach Jacket', vest: 'Puffer Vest', tee: 'Heavy Tee', shell: 'Tech Shell', trucker: 'Trucker Jacket' };
 const BOTTOMS: Record<Look['bottoms'], string> = { trousers: 'Suit Trousers', joggers: 'Joggers', trackpants: 'Track Pants', cargo: 'Cargo Pants', shorts: 'Shorts' };
-const HATS: Record<NonNullable<Look['hat']>, string> = { cap: 'Diamond Cap', backcap: 'Backwards Cap', beanie: 'Street Beanie', bucket: 'Bucket Hat' };
-const BAGS: Record<NonNullable<Look['bag']>, string> = { backpack: 'Backpack', crossbody: 'Crossbody', board: 'Skate Deck', duffel: 'Duffel Bag' };
+const HATS: Record<NonNullable<Look['hat']>, string> = { cap: 'Diamond Cap', backcap: 'Backwards Cap', beanie: 'Street Beanie', bucket: 'Bucket Hat', fitted: 'Fitted Cap', skully: 'Skully' };
+const BAGS: Record<NonNullable<Look['bag']>, string> = { backpack: 'Backpack', crossbody: 'Crossbody', board: 'Skate Deck', duffel: 'Duffel Bag', sling: 'Sling Bag', chestrig: 'Chest Rig', waist: 'Waist Bag' };
 const markName = (id: MarkId) => MARKS.find((m) => m.id === id)?.name ?? id;
 
 /** What he's wearing, a row a part: [label, what, colours] */
 export function describe(l: Look): [string, string, string[]][] {
   const hood = l.kind === 'hoodie' && l.hood;
-  const patched = !hood && (l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie');
+  const patched = !hood && (l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie' || l.hat === 'skully');
+  const stitched = !hood && l.hat === 'fitted';
   const extras = [l.headphones && 'Headphones', l.chain && 'Shades Chain', l.necklace && 'Diamond Chain', l.watch && 'Gold Watch'].filter(Boolean) as string[];
   const rows: [string, string, string[]][] = [
     ['Top', FITS[l.kind], l.kind === 'suit' ? [l.top, l.shirt, l.tie] : l.kind === 'vest' ? [l.top, l.shirt] : [l.top]],
     ['Bottoms', BOTTOMS[l.bottoms], [l.bottom]],
-    ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : '') : 'Nothing', !hood && l.hat ? [l.hatColor] : []],
+    ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : stitched ? ` · ${markName(l.hatMark)}` : '') : 'Nothing', !hood && l.hat ? [l.hatColor] : []],
     ['Eyewear', coversEyes(l.face) ? 'Off (face gear)' : (EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic'), coversEyes(l.face) ? [] : [l.frame, l.lens]],
     ['Face', l.face ? (FACE_GEAR.find((f) => f.id === l.face)?.name ?? '') : 'Nothing', l.face ? [l.gear] : []],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],
