@@ -520,8 +520,8 @@ From the Circus west, patchy as high roads are:
        the Circus and the underpasses unchanged. Sketches
        `docs/south-shots/21-phase-4d-*.png`. Not wired into walking or
        drawn yet: 4e.
-     - **4e, the High Road's station end to end**. Built, waiting on the
-       owner's sign-off: the station building replaces the hoarding
+     - **4e, the High Road's station end to end**. Built and signed off
+       (2026-11-19): the station building replaces the hoarding
        (highroad.ts `stationWalls()`, `STATION_DOOR`: pale walls, its door
        at its front's east end on to a landing, the stairs down inside
        west along it, a band in the line's colour with its name, the
