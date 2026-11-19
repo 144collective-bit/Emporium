@@ -163,7 +163,8 @@ function registerFootpaths(low: boolean) {
     const run = PATH_BOLLARDS.slice(i, i + 8);
     site(`south bollards ${i}`, rectOf(run, 1), (into) => {
       const b = new Batch();
-      b.instances(post, POST, posts.slice(i, i + 8));
+      // (near only: a post a few hands high is lost at a distance)
+      b.detail(() => b.instances(post, POST, posts.slice(i, i + 8)));
       b.build(into, { cast: true, receive: true });
     });
   }
