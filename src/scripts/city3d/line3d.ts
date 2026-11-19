@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, PAL, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { CONCRETE } from './southblocks';
-import { BUILT_STATIONS, ESC_HALF, LINE_COLOUR, STAIR_INFILL, surfaceAt, HALL_CEIL, HALL_Y, PLAT_CEIL, PLAT_HALF, PLAT_Y, SOUTH_STATIONS, TRACK_OFF, TUNNEL_HALF, type Station, type StationId } from './southline';
+import { BUILT_STATIONS, ESC_HALF, LINE_COLOUR, STAIR_INFILL, lineAt, surfaceAt, HALL_CEIL, HALL_Y, PLAT_CEIL, PLAT_HALF, PLAT_Y, SOUTH_STATIONS, TRACK_OFF, TUNNEL_HALF, type Station, type StationId } from './southline';
 import { acrossOf, alongOf, floorOf, pointOf, type Passage } from './underground';
 import { buildFx, poster, tag } from './grime';
 import { holedPoly } from './world';
@@ -169,7 +169,8 @@ function drawPlatform(b: Batch, st: Station, style: Style, row: number, low: boo
   ] as const) {
     // (the line's ends: before the first station's platform, past the last's)
     const end = (i === 0 && dir > 0) || (i === SOUTH_STATIONS.length - 1 && dir < 0) ? 'end' : 'on';
-    across(b, p, s - dir * 0.6, -TUNNEL_HALF, TUNNEL_HALF, trackY, PLAT_CEIL, dir, end === 'end' ? wall : DARK);
+    // (on: the running tunnel carries on, registerTunnels(); the line's ends: a wall)
+    if (end === 'end') across(b, p, s - dir * 0.6, -TUNNEL_HALF, TUNNEL_HALF, trackY, PLAT_CEIL, dir, wall);
     if (end === 'end') for (const side of [-1, 1]) along(b, p, s + dir * 0.2 - 0.25, s + dir * 0.2 + 0.25, side * TRACK_OFF - 0.6, side * TRACK_OFF + 0.6, trackY, trackY + 0.6, BUFFER);
   }
   // Benches down the middle, away from the escalator's foot
@@ -449,8 +450,81 @@ function grit(fx: Batch, st: Station) {
 }
 
 const RGB: [number, number, number] = [0, 0, 0];
+/** The running tunnels between the stations (what a ride sees out of the windows): in pieces along the line, each a
+ * site; ballast and both tracks' rails, the walls (dark low, a pale band, dark above), the ceiling, a light on each wall
+ * every few metres. Not where a station's own drawing reaches (its platform and a few metres past each end) */
+function registerTunnels(low: boolean) {
+  const trackY = PLAT_Y - 0.95;
+  const runs: [number, number][] = [];
+  const stations = [...SOUTH_STATIONS].sort((a, b) => a.p0 - b.p0);
+  for (let i = 0; i + 1 < stations.length; i++) runs.push([stations[i].p1 + 3, stations[i + 1].p0 - 3]);
+  const PIECE = 24;
+  const STEP = 3;
+  for (const [r0, r1] of runs) {
+    const n = Math.max(1, Math.ceil((r1 - r0) / PIECE));
+    for (let k = 0; k < n; k++) {
+      const [s0, s1] = [r0 + ((r1 - r0) * k) / n, r0 + ((r1 - r0) * (k + 1)) / n];
+      const at = (s: number, u: number): [number, number] => {
+        const { at: c, dir } = lineAt(s);
+        return [c[0] - dir[1] * u, c[1] + dir[0] * u];
+      };
+      const pts = [at(s0, -TUNNEL_HALF - 1), at(s0, TUNNEL_HALF + 1), at(s1, -TUNNEL_HALF - 1), at(s1, TUNNEL_HALF + 1)];
+      const xs = pts.map((q) => q[0]);
+      const zs = pts.map((q) => q[1]);
+      site(`line tunnel ${Math.round(s0)}`, [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], (into) => {
+        const b = new Batch();
+        const m = Math.max(1, Math.ceil((s1 - s0) / STEP));
+        const quad = (a: [number, number, number], c: [number, number, number], d: [number, number, number], e: [number, number, number], mat: THREE.Material, facing: [number, number, number]) => {
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...c, ...d, ...e], 3));
+          g.setIndex([0, 1, 2, 0, 2, 3]);
+          g.computeVertexNormals();
+          const nrm = g.attributes.normal;
+          if (nrm.getX(0) * facing[0] + nrm.getY(0) * facing[1] + nrm.getZ(0) * facing[2] < 0) g.setIndex([0, 2, 1, 0, 3, 2]);
+          g.computeVertexNormals();
+          b.add(g, mat);
+        };
+        for (let i = 0; i < m; i++) {
+          const [sa, sb] = [s0 + ((s1 - s0) * i) / m, s0 + ((s1 - s0) * (i + 1)) / m];
+          const p3 = (s: number, u: number, y: number): [number, number, number] => {
+            const [x, z] = at(s, u);
+            return [x, y, z];
+          };
+          // (the ballast floor, the ceiling facing down)
+          quad(p3(sa, -TUNNEL_HALF, trackY), p3(sb, -TUNNEL_HALF, trackY), p3(sb, TUNNEL_HALF, trackY), p3(sa, TUNNEL_HALF, trackY), BALLAST, [0, 1, 0]);
+          quad(p3(sa, -TUNNEL_HALF, PLAT_CEIL), p3(sb, -TUNNEL_HALF, PLAT_CEIL), p3(sb, TUNNEL_HALF, PLAT_CEIL), p3(sa, TUNNEL_HALF, PLAT_CEIL), CEIL, [0, -1, 0]);
+          for (const side of [-1, 1]) {
+            const u = side * TUNNEL_HALF;
+            const { dir } = lineAt((sa + sb) / 2);
+            const inward: [number, number, number] = [dir[1] * side, 0, -dir[0] * side];
+            for (const [y0, y1, mat] of [
+              [trackY, PLAT_Y + 0.4, DARK],
+              [PLAT_Y + 0.4, PLAT_Y + 0.55, BAND],
+              [PLAT_Y + 0.55, PLAT_CEIL, CEIL],
+            ] as const)
+              quad(p3(sa, u, y0), p3(sb, u, y0), p3(sb, u, y1), p3(sa, u, y1), mat, inward);
+            // (the rails of the track on this side)
+            for (const r of [-0.42, 0.42]) {
+              const ur = side * TRACK_OFF + r;
+              quad(p3(sa, ur - 0.04, trackY + 0.16), p3(sb, ur - 0.04, trackY + 0.16), p3(sb, ur + 0.04, trackY + 0.16), p3(sa, ur + 0.04, trackY + 0.16), RAIL, [0, 1, 0]);
+            }
+          }
+        }
+        // A light on each wall every few metres (staggered)
+        for (let s = s0 + 2; s < s1; s += low ? 12 : 8)
+          for (const side of [-1, 1]) {
+            const [x, z] = at(s + (side > 0 ? 4 : 0), side * (TUNNEL_HALF - 0.05));
+            b.add(new THREE.BoxGeometry(0.5, 0.08, 0.08).rotateY(-Math.atan2(lineAt(s).dir[1], lineAt(s).dir[0])).translate(x, PLAT_Y + 1.6, z), TUBE);
+          }
+        b.build(into, { cast: false, receive: false, lift: false });
+      });
+    }
+  }
+}
+
 /** Each built station, a site */
 export function registerLine(low: boolean) {
+  registerTunnels(low);
   for (const st of SOUTH_STATIONS) {
     if (!BUILT_STATIONS.includes(st.id)) continue;
     const style = STYLE[st.id];

@@ -100,6 +100,9 @@ import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { TubeUI } from './tube-ui';
+import type { Tube } from './tube3d';
+import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
 import type { SkyLiftUI } from './skylift-ui';
 import { skyLiftDoors } from './southsky';
 import { YARD_TREES } from './southyard';
@@ -1041,6 +1044,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           monoUI?.close();
           skyLiftUI?.close();
         },
@@ -1071,12 +1075,67 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           riverBusUI?.close();
           skyLiftUI?.close();
         },
       }))
     ),
     'the monorail'
+  );
+  // The south's underground line (southline.ts, docs/south-plan.md Phase 4g): its trains (tube3d.ts) loaded the first
+  // time you're down by its platforms or ride, running on their timetable from the clock; a door on each platform's
+  // middle ("Tube", only down there), its card and rides (tube-ui.ts) loaded the first time one opens
+  let tube: Tube | null = null;
+  let tubeUI: TubeUI | null = null;
+  const TUBE_DOORS = SOUTH_STATIONS.map((s) => {
+    const [x, z] = lineAt((s.p0 + s.p1) / 2 + PLAT_DOOR).at;
+    return { id: `tube:${s.id}`, x, z, label: 'Tube' };
+  });
+  const tubeDoors = () => (walk.position.y < PLAT_Y + 1.5 ? TUBE_DOORS : []);
+  const loadTube = lazy(
+    () =>
+      import('./tube3d').then(({ buildTube }) => (tube = buildTube(scene, { reduced, low: tier === 'low' }))),
+    'the tube'
+  );
+  // (down in a station's ticket hall or on its platforms, or riding)
+  tick(() => {
+    const below = walking && walk.position.y < HALL_Y + 0.8 && SOUTH_STATIONS.some((s) => Math.hypot(s.at[0] - walk.position.x, s.at[1] - walk.position.z) < 80);
+    if (!tube) {
+      if (below) void loadTube().catch(() => {});
+      return;
+    }
+    // (the clock's own seconds: the same trains at the same platforms for everyone, every visit; drawn only down there)
+    tube.update(Date.now() / 1000, below || walk.riding);
+  });
+  const loadTubeUI = lazy(
+    () =>
+      import('./tube-ui').then(({ createTubeUI }) =>
+      (tubeUI = createTubeUI(root, {
+        tube: () => loadTube(),
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (at) => {
+          works.want(at.x, at.z, 70);
+          walk.placeAt({ x: at.x, z: at.z, yaw: at.yaw, y: at.y - SLAB });
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+          skyLiftUI?.close();
+        },
+      }))
+    ),
+    'the tube'
   );
   // Endswood's lifts (southsky.ts, docs/south-plan.md Phase 2c): a door at every core's foot and a call point on each
   // of its landings; the floor picker (the metro's card) loaded the first time one's used
@@ -1093,6 +1152,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           close();
           tycoon?.closeCard();
           metroUI?.close();
+          tubeUI?.close();
           riverBusUI?.close();
           monoUI?.close();
         },
@@ -1184,7 +1244,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
     hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
@@ -1235,6 +1295,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           .then((ui) => ui.open(id.slice(5)))
           .catch(() => game.toast('Monorail not running · try again'));
       }
+      if (id.startsWith('tube:')) {
+        // (the raised metro's and the tube's one switch, live.ts)
+        const shut = live.closed('metro');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadTubeUI()
+          .then((ui) => ui.open(id.slice(5)))
+          .catch(() => game.toast('Tube not running · try again'));
+      }
       if (id.startsWith('riverbus:')) {
         const shut = live.closed('riverbus');
         if (shut) return tycoon?.toast(shut, 3500);
@@ -1270,7 +1338,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     fightClub,
     // The world map at the wheel (the gamepad's View; travel is made below, before anything can ask)
     worldMap: () => travel.toggle(),
-    skipRide: () => void (taxis.skip() || metroUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
+    skipRide: () => void (taxis.skip() || metroUI?.skip() || tubeUI?.skip() || riverBusUI?.skip() || monoUI?.skip()),
     mapOpen: () => travel.isOpen,
     reduced,
     low: tier === 'low',
@@ -1434,6 +1502,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     hub?.close();
     taxis.reset();
     metroUI?.close();
+    tubeUI?.close();
     riverBusUI?.close();
     monoUI?.close();
     skyLiftUI?.close();
@@ -1484,7 +1553,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !root.querySelector('.shop:not([hidden]), .mk:not([hidden]), [data-char]:not([hidden])') : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis.skip() || metroUI!.skip() || metroUI!.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1688,6 +1757,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       walk.releaseMouse();
       close();
       tycoon?.closeCard();
+      tubeUI?.close();
       riverBusUI?.close();
       monoUI?.close();
       skyLiftUI?.close();
