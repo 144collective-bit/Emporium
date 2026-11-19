@@ -27,7 +27,6 @@ type Rect = [number, number, number, number];
 type Pt = [number, number];
 
 const PINK = toon('#f2b8b0');
-const PINK_DEEP = toon('#e79a92');
 const WHITE = toon('#f6f3ec');
 const STONE = toon('#d9cfbb');
 const STONE_SHADE = toon('#c4b99f');
