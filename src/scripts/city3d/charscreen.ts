@@ -27,9 +27,11 @@ const LIGHTS: { id: StageLight; name: string }[] = [
   { id: 'night', name: 'Night' },
 ];
 
-const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Jacket', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket', bomber: 'Bomber Jacket', coach: 'Coach Jacket', vest: 'Puffer Vest', tee: 'Heavy Tee', shell: 'Tech Shell', trucker: 'Trucker Jacket', hivis: 'Hi-Vis Vest', hivisjacket: 'Hi-Vis Jacket', chore: 'Chore Coat', coveralls: 'Coveralls' };
-const BOTTOMS: Record<Look['bottoms'], string> = { trousers: 'Suit Trousers', joggers: 'Joggers', trackpants: 'Track Pants', cargo: 'Cargo Pants', shorts: 'Shorts', denim: 'Relaxed Denim', work: 'Work Trousers' };
-const SHOES: Record<Look['shoeStyle'], string> = { dress: 'Dress Shoes', sneaker: 'Sneakers', hightop: 'High-Tops', runner: 'Chunky Runners', slide: 'Slides', boot: 'Work Boots' };
+const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Jacket', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket', bomber: 'Bomber Jacket', coach: 'Coach Jacket', vest: 'Puffer Vest', tee: 'Heavy Tee', shell: 'Tech Shell', trucker: 'Trucker Jacket', hivis: 'Hi-Vis Vest', hivisjacket: 'Hi-Vis Jacket', chore: 'Chore Coat', coveralls: 'Coveralls', blazer: 'Blazer', shirt: 'Oxford Shirt', double: 'Double-Breasted', waistcoat: 'Waistcoat', overcoat: 'Overcoat' };
+const BOTTOMS: Record<Look['bottoms'], string> = { trousers: 'Suit Trousers', joggers: 'Joggers', trackpants: 'Track Pants', cargo: 'Cargo Pants', shorts: 'Shorts', denim: 'Relaxed Denim', work: 'Work Trousers', chinos: 'Chinos' };
+/** The tailored tops: a big front mark goes on as a pin (wardrobe.ts `slot()`) */
+const PINNED: Look['kind'][] = ['suit', 'blazer', 'double', 'waistcoat', 'overcoat'];
+const SHOES: Record<Look['shoeStyle'], string> = { dress: 'Dress Shoes', sneaker: 'Sneakers', hightop: 'High-Tops', runner: 'Chunky Runners', slide: 'Slides', boot: 'Work Boots', loafer: 'Loafers', derby: 'Derbies' };
 const HATS: Record<NonNullable<Look['hat']>, string> = { cap: 'Diamond Cap', backcap: 'Backwards Cap', beanie: 'Street Beanie', bucket: 'Bucket Hat', fitted: 'Fitted Cap', skully: 'Skully', hardhat: 'Hard Hat' };
 const BAGS: Record<NonNullable<Look['bag']>, string> = { backpack: 'Backpack', crossbody: 'Crossbody', board: 'Skate Deck', duffel: 'Duffel Bag', sling: 'Sling Bag', chestrig: 'Chest Rig', waist: 'Waist Bag' };
 const markName = (id: MarkId) => MARKS.find((m) => m.id === id)?.name ?? id;
@@ -41,7 +43,7 @@ export function describe(l: Look): [string, string, string[]][] {
   const stitched = !hood && l.hat === 'fitted';
   const extras = [l.headphones && 'Headphones', l.chain && 'Shades Chain', l.necklace && 'Diamond Chain', l.watch && 'Gold Watch'].filter(Boolean) as string[];
   const rows: [string, string, string[]][] = [
-    ['Top', FITS[l.kind], l.kind === 'suit' ? [l.top, l.shirt, l.tie] : l.kind === 'vest' || l.kind === 'hivis' ? [l.top, l.shirt] : [l.top]],
+    ['Top', FITS[l.kind], l.kind === 'suit' || l.kind === 'double' || l.kind === 'waistcoat' || l.kind === 'overcoat' ? [l.top, l.shirt, l.tie] : l.kind === 'blazer' ? [l.top, l.shirt] : l.kind === 'vest' || l.kind === 'hivis' ? [l.top, l.shirt] : [l.top]],
     ['Bottoms', l.kind === 'coveralls' ? 'Coveralls' : BOTTOMS[l.bottoms], l.kind === 'coveralls' ? [l.top] : [l.bottom]],
     ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : stitched ? ` · ${markName(l.hatMark)}` : '') : 'Nothing', !hood && l.hat ? [l.hatColor] : []],
     ['Eyewear', coversEyes(l.face) ? 'Off (face gear)' : (EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic'), coversEyes(l.face) ? [] : [l.frame, l.lens]],
@@ -51,7 +53,7 @@ export function describe(l: Look): [string, string, string[]][] {
     ['Shoes', l.shoeStyle === 'sneaker' || l.shoeStyle === 'hightop' ? `${SHOES[l.shoeStyle]}${l.shoeMark ? ` · ${markName(l.shoeMark)}` : ''}` : SHOES[l.shoeStyle], [l.shoes]],
   ];
   const where = MARK_SLOTS.find((m) => m.id === l.markAt)?.name ?? '';
-  rows.push(['Merch', l.mark ? `${markName(l.mark)} · ${l.kind === 'suit' && l.markAt === 'centre' ? 'Pin' : where}` : 'No mark', l.mark || l.shoeMark || patched ? [l.ink] : []]);
+  rows.push(['Merch', l.mark ? `${markName(l.mark)} · ${PINNED.includes(l.kind) && l.markAt === 'centre' ? 'Pin' : where}` : 'No mark', l.mark || l.shoeMark || patched ? [l.ink] : []]);
   if (l.pattern !== 'plain') rows.push(['Print', PATTERNS.find((p) => p.id === l.pattern)!.name, []]);
   return rows;
 }

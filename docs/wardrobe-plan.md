@@ -559,6 +559,39 @@ A proposed first set; the owner picks what goes in:
 - The suit refined (cuts: single- and double-breasted), a blazer with an
   open-collar shirt, a shirt alone, a waistcoat, an overcoat, chinos, and
   loafers and derbies.
+- **As built (19 November 2026, the owner's pick after Phase 6):** all of
+  the list, in the Business range; each a top of its own (`LookKind`), so
+  the classic suit stays as it was:
+  - The double-breasted suit (`double`): the suit's jacket closed over,
+    wide peak lapels (the wearer's left over the right where they cross),
+    six buttons in two columns, the left front's edge down to the hem, the
+    shirt and tie in its V (`tieOn()`), the suit's sleeves, sleeve buttons
+    and collar round the back.
+  - The blazer (`blazer`, its shirt colour on the card): the suit's jacket
+    and its tailoring over an open-collar shirt, the collar spread over the
+    lapels (`OPEN_COLLAR`), no tie.
+  - The Oxford shirt (`shirt`, Business and Streetwear, in the top colour):
+    a button-down's body on the jacket's lines, its collar band and points,
+    a buttoned placket, a chest pocket, slim sleeves to cuffs.
+  - The waistcoat (`waistcoat`): over a shirt and tie (both on the card),
+    a deep V, five buttons, two welt pockets, the shirt's sleeves.
+  - The overcoat (`overcoat`): a topcoat, the jacket's lines 7% fuller,
+    wide notch lapels and a turned collar a shade lighter, three buttons,
+    flap pockets, fuller sleeves with turned cuffs, shirt and tie in its V.
+    It ends at the same hem as every top: a coat to the knee would need its
+    skirt to part round the legs as they swing (the clipping test holds
+    every top's cloth outside the legs), a bigger job of its own.
+  - Chinos (`Bottoms` `chinos`, Business and Streetwear): slim and
+    straight (`CHINO_S`), a clean hem just over the shoe.
+  - Loafers (`ShoeStyle` `loafer`, Business and Streetwear): the dress
+    shoe's last cut lower round the ankle, a moc-toe seam and a saddle
+    strap. Derbies (`derby`, Business): the quarters laid open over the
+    vamp, laced, on a heavier sole.
+  - A big front mark on any tailored top (the suit, blazer, double-breasted,
+    waistcoat, overcoat) goes on as a pin (`tailored()`): their fronts are
+    shirt and tie.
+  - The chinos' hem first sank 9.9 thousandths into the work boots at a
+    crouch; it ends a little higher now, as the denim's does.
 
 ## Testing (every phase)
 
@@ -603,5 +636,6 @@ A proposed first set; the owner picks what goes in:
   the collar): built**, 19 November 2026.
 - **Phase 5, the fifth set (relaxed denim, chunky runners, slides): built**,
   19 November 2026: Phase 5's streetwear list is done.
-- **Phase 6 (work wear): built**, 19 November 2026, waiting for the owner's
-  look and Phase 7.
+- **Phase 6 (work wear): built**, 19 November 2026.
+- **Phase 7 (business wear): built**, 19 November 2026: every phase of the
+  plan is built, waiting for the owner's look.

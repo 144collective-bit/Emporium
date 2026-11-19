@@ -72,18 +72,18 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
  */
 export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'fitted' | 'skully' | 'hardhat';
 export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel' | 'sling' | 'chestrig' | 'waist';
-export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls';
-export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore', 'coveralls'];
+export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls' | 'blazer' | 'shirt' | 'double' | 'waistcoat' | 'overcoat';
+export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore', 'coveralls', 'blazer', 'shirt', 'double', 'waistcoat', 'overcoat'];
 export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'skully', 'hardhat'];
 /*
  * Separates (docs/wardrobe-plan.md Phase 2): the top, the bottoms and the shoes are chosen on their own, worn in any
  * pairing. A look saved before them wears what its top came with: the suit its trousers and dress shoes, the track
  * top its track pants, the rest joggers, all but the suit sneakers (`bottomsFor()`, `shoesFor()`).
  */
-export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts' | 'denim' | 'work';
-export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim', 'work'];
-export type ShoeStyle = 'dress' | 'sneaker' | 'hightop' | 'runner' | 'slide' | 'boot';
-export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop', 'runner', 'slide', 'boot'];
+export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts' | 'denim' | 'work' | 'chinos';
+export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim', 'work', 'chinos'];
+export type ShoeStyle = 'dress' | 'sneaker' | 'hightop' | 'runner' | 'slide' | 'boot' | 'loafer' | 'derby';
+export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop', 'runner', 'slide', 'boot', 'loafer', 'derby'];
 /** The bottoms a top came with before the separates */
 export const bottomsFor = (kind: string): Bottoms => (kind === 'suit' ? 'trousers' : kind === 'track' ? 'trackpants' : 'joggers');
 /** The shoes a top came with before the separates */

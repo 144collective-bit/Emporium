@@ -25,7 +25,7 @@ import { atRest, distance, dress, inside, layers, posed, shells, type Dressed } 
 const TOL = 0.002;
 const report = !!process.env.CLOTHING_REPORT;
 
-const OUTFITS: Outfit[] = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore'] as OutfitKind[])
+const OUTFITS: Outfit[] = (['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore', 'blazer', 'shirt', 'double', 'waistcoat', 'overcoat'] as OutfitKind[])
   .flatMap((kind) => BOTTOMS.map((bottoms): Outfit => ({ ...PLAYER, kind, bottoms })))
   // (coveralls bring their own legs, docs/wardrobe-plan.md Phase 6: once)
   .concat([{ ...PLAYER, kind: 'coveralls' }, SOLDIER]);

@@ -208,6 +208,20 @@ const TABS: Tab[] = [
         { key: 'shirt', label: 'Shirt', list: PALETTE.shirt },
         { key: 'tie', label: 'Tie', list: PALETTE.tie },
       ]),
+      top('double', 'Double-Breasted', 'M8 3l4 4 4-4 4 3-2 5h-2v10H8V11H6L4 6z M8 3l7 8 M10 13h.01 M14 13h.01 M10 16h.01 M14 16h.01', 'Jacket', BUSINESS, [
+        { key: 'shirt', label: 'Shirt', list: PALETTE.shirt },
+        { key: 'tie', label: 'Tie', list: PALETTE.tie },
+      ]),
+      top('waistcoat', 'Waistcoat', 'M8 3h8l2 4v12l-6 3-6-3V7z M9 3l3 7 3-7 M12 10v10 M8 15h2 M14 15h2', 'Waistcoat', BUSINESS, [
+        { key: 'shirt', label: 'Shirt', list: PALETTE.shirt },
+        { key: 'tie', label: 'Tie', list: PALETTE.tie },
+      ]),
+      top('overcoat', 'Overcoat', 'M8 2l4 4 4-4 4 3-2 6h-2v11H8V11H6L4 5z M7 2l5 9 5-9 M12 11v11 M8 16h3 M13 16h3', 'Coat', BUSINESS, [
+        { key: 'shirt', label: 'Shirt', list: PALETTE.shirt },
+        { key: 'tie', label: 'Tie', list: PALETTE.tie },
+      ]),
+      top('blazer', 'Blazer', 'M8 3l4 4 4-4 4 3-2 5h-2v10H8V11H6L4 6z M10 4l2 6 2-6 M12 10v4 M9 16h2', 'Jacket', BUSINESS, [{ key: 'shirt', label: 'Shirt', list: PALETTE.shirt }]),
+      top('shirt', 'Oxford Shirt', 'M9 3l3 3 3-3 5 3-2 5h-2v10H8V11H6L4 6z M9 3l1 4 2-1 2 1 1-4 M12 6v15 M13.5 9h2.5v2.5h-2.5z', 'Shirt', ['business', 'street']),
       top('hoodie', 'Drop Hoodie', 'M8 4c0 2 2 3 4 3s4-1 4-3l4 3-2 5h-2v9H8v-9H6L4 7z M10 15h4', 'Hoodie', STREET),
       top('track', 'Track Jacket', 'M9 4h6l5 3-2 5h-2v9H8v-9H6L4 7z M12 4v17 M6 8l1.5 3 M18 8l-1.5 3', 'Jacket', STREET),
       top('varsity', 'Varsity Jacket', 'M8 3l4 2 4-2 4 3-2 5h-2v10H8V11H6L4 6z M12 5v16 M8 18h2 M14 18h2 M9 12l1.5-1.5L12 12l-1.5 1.5z', 'Jacket', STREET),
@@ -229,6 +243,7 @@ const TABS: Tab[] = [
     label: 'Bottoms',
     items: [
       bottoms('trousers', 'Suit Trousers', 'M7 3h10l1 18h-4l-2-11-2 11H6z M12 3v4', BUSINESS),
+      bottoms('chinos', 'Chinos', 'M7 3h10l.8 17h-4l-1.8-10-1.8 10h-4z M6.2 19h4 M13.8 19h4 M8 5.5h2 M14 5.5h2', ['business', 'street']),
       bottoms('joggers', 'Joggers', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7 6h10', STREET),
       bottoms('trackpants', 'Track Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M7.5 4l-1 14 M16.5 4l1 14', STREET),
       bottoms('cargo', 'Cargo Pants', 'M7 3h10l1 16h-4l-2-9-2 9H6z M6 19h4 M14 19h4 M5.5 9h2.5v4H5.5z M16 9h2.5v4H16z', ['street', 'work']),
@@ -242,6 +257,8 @@ const TABS: Tab[] = [
     label: 'Shoes',
     items: [
       shoes('dress', 'Dress Shoes', 'M3 16h14c2 0 4 1 4 2.5V19H3z M3 16v-3h5l3 3', BUSINESS),
+      shoes('loafer', 'Loafers', 'M3 16h14c2 0 4 1 4 2.5V19H3z M3 16v-2h6l3 2 M9 14.2h4.5', ['business', 'street']),
+      shoes('derby', 'Derbies', 'M3 16h14c2 0 4 1 4 2.5V19H3z M3 16v-3h5l3 3 M8 13.5l3 2.5 M9.5 13.5l1.5 2.5', BUSINESS),
       shoes('sneaker', 'Sneakers', 'M3 13h5l3 3h6c2 0 4 1 4 3v1H3z M3 18h18 M10 15l1-1 M12 16l1-1', STREET),
       shoes('hightop', 'High-Tops', 'M4 6h5v7l3 3h5c2 0 4 1 4 3v1H4z M4 18h17 M9 9h-2 M9 12h-2', STREET),
       shoes('runner', 'Chunky Runners', 'M3 11h5l3 3h6c2 0 4 1 4 3v1H3z M2.5 18h19v2.5h-19z M3 14.5h4 M10 13l1-1 M12 14l1-1', STREET),
@@ -410,7 +427,7 @@ export function createFitting(d: FittingDeps) {
       html += chips(
         'Where',
         'data-mark-at',
-        MARK_SLOTS.map((m) => ({ id: m.id, name: m.id === 'centre' && l.kind === 'suit' ? 'Front (pin)' : m.name, on: m.id === l.markAt }))
+        MARK_SLOTS.map((m) => ({ id: m.id, name: m.id === 'centre' && ['suit', 'blazer', 'double', 'waistcoat', 'overcoat'].includes(l.kind) ? 'Front (pin)' : m.name, on: m.id === l.markAt }))
       );
     const note = merchNote(merchFor, l);
     if (note) html += `<p class="fit-note">${note}</p>`;

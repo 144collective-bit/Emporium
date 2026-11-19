@@ -15,11 +15,11 @@ import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, ty
 
 /* ---------- Outfits ---------- */
 
-export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls' | 'soldier';
+export type OutfitKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls' | 'blazer' | 'shirt' | 'double' | 'waistcoat' | 'overcoat' | 'soldier';
 export interface Outfit {
   kind: OutfitKind;
   /** Jacket, hoodie, track jacket, varsity, puffer, bomber, coach or trucker jacket, puffer vest, tee, shell, hi-vis vest or
-   * jacket, chore coat, coveralls, or fatigues */
+   * jacket, chore coat, coveralls, blazer, shirt, double-breasted suit, waistcoat, overcoat, or fatigues */
   top: string;
   /** The bottoms' colour, and which (left out: what the top comes with, `bottomsOf()`) */
   bottom: string;
@@ -160,7 +160,7 @@ export function lookOutfit(l: Look): Outfit {
     bottoms: l.bottoms,
     shoes: l.shoes,
     shoeStyle: l.shoeStyle,
-    tie: l.kind === 'suit' ? l.tie : undefined,
+    tie: l.kind === 'suit' || l.kind === 'double' || l.kind === 'waistcoat' || l.kind === 'overcoat' ? l.tie : undefined,
     shirt: l.shirt,
     cap: hat === 'cap' || hat === 'backcap' || hat === 'fitted' ? l.hatColor : undefined,
     capBack: hat === 'backcap',
@@ -1149,6 +1149,11 @@ export function items(q: Detail, hero = false): Item[] {
   const hivisJacket = (o: Outfit) => o.kind === 'hivisjacket';
   const chore = (o: Outfit) => o.kind === 'chore';
   const coveralls = (o: Outfit) => o.kind === 'coveralls';
+  const blazer = (o: Outfit) => o.kind === 'blazer';
+  const shirtOnly = (o: Outfit) => o.kind === 'shirt';
+  const double = (o: Outfit) => o.kind === 'double';
+  const waistcoatOn = (o: Outfit) => o.kind === 'waistcoat';
+  const overcoatOn = (o: Outfit) => o.kind === 'overcoat';
   const trucker = (o: Outfit) => o.kind === 'trucker';
   /** On his feet: sneakers, high-tops or dress shoes (docs/wardrobe-plan.md Phases 2 and 5: any with any top) */
   const sneakers = (o: Outfit) => shoesOf(o) === 'sneaker';
@@ -1910,6 +1915,30 @@ export function items(q: Detail, hero = false): Item[] {
   // The suit's tailoring (docs/tailoring-plan.md Phase 3): single figures on the desktop only, the phones' and
   // the crowds' suit as it was
   const tailor = q === 3 ? tailoring(JK, SN, suitFront, lapelPts, tieKnot) : null;
+  /*
+   * Business wear (docs/wardrobe-plan.md Phase 7). The blazer: the suit's jacket and tailoring over an open-collar
+   * shirt, no tie: the shirt's collar spread open over the lapels, its top buttons undone
+   */
+  const OPEN_COLLAR: [number, number][] = [
+    [-0.06, 0.432],
+    [-0.018, 0.388],
+    [-0.04, 0.37],
+    [-0.094, 0.356],
+    [-0.084, 0.404],
+  ];
+  const openCollar = [onBody(OPEN_COLLAR, 0.004, suitFront, 0.013), onBody(mirror(OPEN_COLLAR), 0.004, suitFront, 0.013)];
+  // (the shirt open lower at the neck than under a tie)
+  const openFront = onBody(
+    [
+      [-0.06, 0.414],
+      [0, 0.25],
+      [0.06, 0.414],
+    ],
+    0.004,
+    suitFront,
+    0.001
+  );
+  const blazerButtons = [0.15, 0.078].map((y) => new THREE.CylinderGeometry(0.008, 0.008, 0.005, R(10)).rotateX(Math.PI / 2).translate(0, y, suitFront(0, y) + 0.003));
   crisp = false;
 
   const HOODIE: Sec[] = [
@@ -1931,6 +1960,169 @@ export function items(q: Detail, hero = false): Item[] {
   // their own, `fine()` through the hips over it, and `TOP_RINGS` round)
   const smooth = (secs: Sec[]) => hips(q === 3 ? curve(secs, 0.02) : secs);
   const HK = smooth(HOODIE);
+  /*
+   * The shirt on its own: a button-down's body on the jacket's lines (untucked, over every bottoms), its collar band
+   * and points, a buttoned placket, a chest pocket, slim sleeves to buttoned cuffs, a narrow hem; the look's top colour
+   */
+  const OXK = smooth(grow(JACKET, 1.01));
+  const shirtFront2 = surface(OXK, SN);
+  const shirtBody = loft(OXK, TOP_RINGS, SN);
+  const SHIRT_COLLAR: [number, number][] = [
+    [-0.064, 0.414],
+    [-0.012, 0.402],
+    [-0.03, 0.354],
+    [-0.08, 0.372],
+  ];
+  crisp = true;
+  const shirtCollar = [onBody(SHIRT_COLLAR, 0.004, shirtFront2, 0.002), onBody(mirror(SHIRT_COLLAR), 0.004, shirtFront2, 0.002)];
+  const shirtPocket = onBody(
+    [
+      [0.05, 0.215],
+      [0.1, 0.215],
+      [0.1, 0.27],
+      [0.05, 0.27],
+    ],
+    0.003,
+    shirtFront2,
+    0.001
+  );
+  crisp = false;
+  const shirtBand = new THREE.CylinderGeometry(0.058, 0.062, 0.032, R(16), 1, true).translate(0, 0.414, -0.004);
+  const shirtPlacket = tape(-0.011, 0.011, -0.085, 0.4, 0.002, shirtFront2, 0.001);
+  const shirtButtons = [-0.05, 0.03, 0.11, 0.19, 0.27, 0.35].map((y) => new THREE.CylinderGeometry(0.0045, 0.0045, 0.003, R(8)).rotateX(Math.PI / 2).translate(0, y, shirtFront2(0, y) + 0.0045));
+  /** A tie laid on a front: its knot at the collar and its blade down to `end` (the suit's own, on another top) */
+  const tieOn = (front: (x: number, y: number) => number, end: number, lift = 0) => [
+    onBody(roundRect(0.032, 0.026, 3, R(16), 0.3, 0.385), 0.01, front, 0.006 + lift),
+    onBody(
+      [
+        [-0.01, 0.374],
+        [0.01, 0.374],
+        [0.022, end + 0.026],
+        [0, end],
+        [-0.022, end + 0.026],
+      ],
+      0.006,
+      front,
+      0.008 + lift
+    ),
+  ];
+  /*
+   * The double-breasted suit (docs/wardrobe-plan.md Phase 7): the suit's jacket closed over to the wearer's right,
+   * wide peak lapels (the left one over the right where they cross), six buttons in two columns, the front edge of
+   * the left front down to the hem; the shirt and tie in its V
+   */
+  crisp = true;
+  const PEAK: [number, number][] = [
+    [-0.062, 0.41],
+    [0.03, 0.214],
+    [0.022, 0.19],
+    [-0.088, 0.262],
+    [-0.11, 0.33],
+    [-0.152, 0.356],
+    [-0.124, 0.378],
+  ];
+  // (the wearer's right lapel under, the left over it, a hair further off the cloth)
+  const peakLapels = [onBody(PEAK, 0.009, suitFront, 0.003), onBody(mirror(PEAK), 0.009, suitFront, 0.0065)];
+  const dbEdge = onBody(
+    [
+      [0.024, 0.19],
+      [0.03, 0.19],
+      [0.04, -0.075],
+      [0.034, -0.075],
+    ],
+    0.002,
+    suitFront,
+    0.001
+  );
+  const dbShirt = onBody(
+    [
+      [-0.064, 0.412],
+      [0, 0.22],
+      [0.064, 0.412],
+    ],
+    0.004,
+    suitFront,
+    0.001
+  );
+  const dbTie = tieOn(suitFront, 0.226);
+  /*
+   * The waistcoat: over a shirt and tie, on the jacket's lines a touch fuller (the shirt's sleeves come out of it), a
+   * deep V showing the shirt and tie, five buttons, two welt pockets
+   */
+  const WK = smooth(grow(JACKET, 1.015));
+  const wkFront = surface(WK, SN);
+  const waistcoat = loft(WK, TOP_RINGS, SN);
+  const wkShirt = onBody(
+    [
+      [-0.066, 0.414],
+      [0, 0.2],
+      [0.066, 0.414],
+    ],
+    0.004,
+    wkFront,
+    0.001
+  );
+  const wkTie = tieOn(wkFront, 0.21);
+  const wkCollar = [onBody(SHIRT_COLLAR, 0.004, wkFront, 0.003), onBody(mirror(SHIRT_COLLAR), 0.004, wkFront, 0.003)];
+  const wkWelts = [-1, 1].map((s) =>
+    onBody(
+      [
+        [s * 0.07 - 0.025, 0.058],
+        [s * 0.07 + 0.025, 0.06],
+        [s * 0.07 + 0.025, 0.066],
+        [s * 0.07 - 0.025, 0.064],
+      ],
+      0.002,
+      wkFront,
+      0.001
+    )
+  );
+  /*
+   * The overcoat: a topcoat over a suit, the jacket's lines 7% fuller (to the same hem as every top: longer, the legs
+   * would come through it), wide notch lapels and a turned collar a shade lighter, three buttons, flap pockets at the
+   * hips; the shirt and tie in its V
+   */
+  const OCK = smooth(grow(JACKET, 1.07));
+  const ocFront = surface(OCK, SN);
+  const overcoat = loft(OCK, TOP_RINGS, SN);
+  const OC_LAPEL: [number, number][] = [
+    [-0.07, 0.418],
+    [-0.002, 0.18],
+    [-0.012, 0.15],
+    [-0.1, 0.24],
+    [-0.124, 0.322],
+    [-0.15, 0.33],
+    [-0.138, 0.384],
+  ];
+  const ocLapels = [onBody(OC_LAPEL, 0.01, ocFront, 0.003), onBody(mirror(OC_LAPEL), 0.01, ocFront, 0.003)];
+  const ocFlaps = [-1, 1].map((s) =>
+    onBody(
+      [
+        [s * 0.05, 0.02],
+        [s * 0.13, 0.016],
+        [s * 0.13, -0.008],
+        [s * 0.05, -0.004],
+      ],
+      0.005,
+      ocFront,
+      0.001
+    )
+  );
+  const ocShirt = onBody(
+    [
+      [-0.07, 0.42],
+      [0, 0.19],
+      [0.07, 0.42],
+    ],
+    0.004,
+    ocFront,
+    0.001
+  );
+  const ocTie = tieOn(ocFront, 0.2);
+  crisp = false;
+  const dbButtons = [0.08, 0.15, 0.215].flatMap((y, i) => [-1, 1].map((sx) => new THREE.CylinderGeometry(0.0075, 0.0075, 0.005, R(10)).rotateX(Math.PI / 2).translate(sx * (i === 2 ? 0.056 : 0.046), y, suitFront(sx * 0.05, y) + (sx > 0 ? 0.004 : 0.003))));
+  const wkButtons = [0.03, 0.075, 0.12, 0.165, 0.205].map((y) => new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, R(8)).rotateX(Math.PI / 2).translate(0, y, wkFront(0, y) + 0.003));
+  const ocButtons = [0.02, 0.085, 0.15].map((y) => new THREE.CylinderGeometry(0.0095, 0.0095, 0.005, R(10)).rotateX(Math.PI / 2).translate(0, y, ocFront(0, y) + 0.003));
   const hoodieFront = surface(HK, HN2);
   const hoodieBody = loft(HK, TOP_RINGS, HN2);
   /*
@@ -2377,6 +2569,30 @@ export function items(q: Detail, hero = false): Item[] {
   };
   // (over each knee, from the thigh down past the joint, across the front)
   const kneePanels = legPatch(WORK_S, 2.2, -0.31, -0.235, Math.PI / 2 - 0.62, Math.PI / 2 + 0.62, 0.0012, 0.0028);
+  /*
+   * Chinos (docs/wardrobe-plan.md Phase 7): on the one seat, slim and straight, tapering a little to a clean hem just
+   * over the shoe
+   */
+  const CHINO_S = legs([
+    ...JOG_THIGH,
+    ...knee(0.052, 0.056),
+    ...onShin([
+      [-0.02, 0.051, 0.055, 0],
+      [-0.11, 0.049, 0.053, -0.003],
+      [-0.185, 0.046, 0.05, 0],
+      [-0.216, 0.045, 0.049, 0.002],
+      [-0.23, 0.045, 0.049, 0.003],
+    ]),
+  ]);
+  const chinos = trousers(hips(SEAT), CHINO_S, LEGS);
+  // (just over the shoe's collar, the work boots' too)
+  const chinoHem = loft(
+    [
+      [-0.237, 0.0465, 0.0505, 0.003],
+      [-0.222, 0.0465, 0.0505, 0.003],
+    ],
+    R(16)
+  );
   // (on the right leg, the rig's -x side: the loop of the cloth down the outside of the thigh)
   const hammerLoop = (() => {
     const side = (y: number) => secAt(WORK_S, y)[1];
@@ -2479,6 +2695,16 @@ export function items(q: Detail, hero = false): Item[] {
   ];
   const suitUpper = loft(SU, R(14));
   const suitFore = loft(q === 3 ? curve(FORE_J, 0.015) : FORE_J, R(14));
+  // (the overcoat's: the suit's, fuller, over them)
+  const ocUpper = loft(grow(SU, 1.1), R(14));
+  const ocFore = loft(grow(q === 3 ? curve(FORE_J, 0.015) : FORE_J, 1.1), R(14));
+  const ocCuff = loft(
+    [
+      [-0.196, 0.0375, 0.0395, 0.001],
+      [-0.17, 0.0405, 0.0425, 0.001],
+    ],
+    R(14)
+  );
   const sleeveBtns = q === 3 ? [-1, 1].map((s) => sleeveButtons(curve(FORE_J, 0.015), s)) : null;
   const shirtCuff = loft(
     [
@@ -2784,6 +3010,35 @@ export function items(q: Detail, hero = false): Item[] {
   ]);
   const dress = shoe(DRESS, SG, 2.4, SS);
   const dressSole = shoe(sole(DRESS, 0.002, 0.004, 0.005, 0.01), SG, 3, SS);
+  /*
+   * Loafers and derbies (docs/wardrobe-plan.md Phase 7), on the dress shoe's last. The loafer: cut lower round the
+   * ankle, a moc-toe seam round the front of the vamp and a saddle strap across it. The derby: the quarters laid open
+   * over the vamp, laced across, on a heavier sole
+   */
+  const LOAFER: ShoeSec[] = DRESS.map(([u, hw, b, t]): ShoeSec => [u, hw, b, t - 0.008 * Math.max(0, 1 - Math.abs(u + 0.01) / 0.06)]);
+  const loafer = shoe(LOAFER, SG, 2.4, SS);
+  const loaferStrap = overlay(
+    LOAFER.filter(([u]) => u >= 0.03 && u <= 0.062),
+    -1,
+    1,
+    1.0
+  );
+  const mocSeam = (() => {
+    const pts: [number, number, number][] = [];
+    for (let k = 0; k <= 10; k++) {
+      const a = Math.PI * (k / 10);
+      const u = 0.07 + 0.06 * Math.sin(a);
+      const [, hw, b, t] = secAt(LOAFER, u) as unknown as ShoeSec;
+      const x = Math.cos(a) * hw * 0.62;
+      const c = (b + t) / 2;
+      const hh = (t - b) / 2;
+      pts.push([x, c + hh * Math.max(0, 1 - Math.abs(x / hw) ** 2.4) ** (1 / 2.4) + 0.0012, u]);
+    }
+    return tube(pts, q === 3 ? 0.0016 : 0.002, q === 3 ? 16 : 10, 3);
+  })();
+  const derbyQuarters = overlay(DRESS, -1, 0.06, 0.92);
+  const derbyLaces = q === 0 ? [] : laceArcs(DRESS, q === 3 ? [0.03, 0.045, 0.06] : [0.035, 0.055], 2.4);
+  const derbySole = shoe(sole(DRESS, 0.003, 0.007, 0.006, 0.008), SGF, 3, SS);
   const BOOT: ShoeSec[] = up([
     [-0.068, 0.03, 0.02, 0.13],
     [-0.06, 0.042, 0.02, 0.15],
@@ -3352,6 +3607,12 @@ export function items(q: Detail, hero = false): Item[] {
     ['hivisjacket', chainOn(hjFront, 0.004)],
     ['chore', chainOn(choreFront, 0.007)],
     ['coveralls', chainOn(cvFront, 0.007)],
+    // (over the open collar where it lies on the lapels)
+    ['blazer', chainOn(suitFront, 0.018)],
+    ['shirt', chainOn(shirtFront2, 0.004)],
+    ['double', chainOn(suitFront, 0.016)],
+    ['waistcoat', chainOn(wkFront, 0.012)],
+    ['overcoat', chainOn(ocFront, 0.016)],
     // (over the puffer's high collar where it stands)
     ['puffer', chainOn((x, y) => Math.max(pufferFront(x, y), y >= 0.395 ? collarFront(x, y) : 0))],
   ];
@@ -3375,6 +3636,11 @@ export function items(q: Detail, hero = false): Item[] {
     { kind: 'hivisjacket', shells: [[HJK, SN]], over: 0.005, strapX: 0.088 },
     { kind: 'chore', shells: [[CHK, SN]], over: 0.007, strapX: 0.088 },
     { kind: 'coveralls', shells: [[CVK, SN]], over: 0.007, strapX: 0.088 },
+    { kind: 'blazer', shells: [[JK, SN]], over: 0.018, strapX: 0.09 },
+    { kind: 'shirt', shells: [[OXK, SN]], over: 0.004, strapX: 0.085 },
+    { kind: 'double', shells: [[JK, SN]], over: 0.016, strapX: 0.09 },
+    { kind: 'waistcoat', shells: [[WK, SN]], over: 0.012, strapX: 0.085 },
+    { kind: 'overcoat', shells: [[OCK, SN]], over: 0.016, strapX: 0.1 },
     { kind: 'puffer', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
     { kind: 'vest', shells: [[[...PUFFER_S, ...PUFFER_BODY.slice(-2)], HN2], [PUFFER_COLLAR, 2.2]], over: 0, strapX: 0.124 },
   ];
@@ -3472,6 +3738,11 @@ export function items(q: Detail, hero = false): Item[] {
     hivisjacket: { rings: [[0.394, 0.442, 0.069, 0.063, -0.004]], margin: 0.006 },
     chore: { rings: [[0.396, 0.43, 0.067, 0.061, -0.004]], margin: 0.012 },
     coveralls: { rings: [], margin: 0.012 },
+    blazer: { rings: [[0.395, 0.433, 0.062, 0.062, -0.004]], margin: 0.02 },
+    shirt: { rings: [[0.396, 0.432, 0.064, 0.064, -0.004]], margin: 0.008 },
+    double: { rings: [[0.395, 0.433, 0.062, 0.062, -0.004]], margin: 0.02 },
+    waistcoat: { rings: [[0.396, 0.432, 0.064, 0.064, -0.004]], margin: 0.016 },
+    overcoat: { rings: [[0.394, 0.454, 0.077, 0.07, -0.004]], margin: 0.02 },
   };
   const PHONE_PTS = (() => {
     const pts: THREE.Vector3[] = [];
@@ -3869,13 +4140,21 @@ export function items(q: Detail, hero = false): Item[] {
     { is: hivis, front: hoodieFront, back: BACK, chest: [0.115, 0.25, 0.04], sleeve: grow(LOOSE_U, 1.14) },
     { is: hivisJacket, front: hjFront, back: surface(HJK, SN, -1), chest: [0.112, 0.25, 0.04], sleeve: grow(LOOSE_U, 1.14) },
     { is: chore, front: choreFront, back: surface(CHK, SN, -1), chest: [0.075, 0.24, 0.04, 0.006], sleeve: grow(LOOSE_U, 1.14) },
+    // (the blazer's chest mark a pin on its lapel, as the suit's; the shirt's on its pocket)
+    { is: blazer, front: suitFront, back: surface(JK, SN, -1), chest: [0.096, 0.296, 0.038, 0.017], sleeve: SU },
+    { is: shirtOnly, front: shirtFront2, back: surface(OXK, SN, -1), chest: [0.075, 0.245, 0.034, 0.004], sleeve: SU },
+    { is: double, front: suitFront, back: surface(JK, SN, -1), chest: [0.11, 0.31, 0.038, 0.021], sleeve: SU },
+    { is: waistcoatOn, front: wkFront, back: surface(WK, SN, -1), chest: [0.085, 0.27, 0.034, 0.004], sleeve: SU },
+    { is: overcoatOn, front: ocFront, back: surface(OCK, SN, -1), chest: [0.115, 0.215, 0.04], sleeve: grow(SU, 1.1) },
     { is: coveralls, front: cvFront, back: surface(CVK, SN, -1), chest: [0.075, 0.22, 0.045], sleeve: grow(LOOSE_U, 1.14) },
     // (the vest's sleeve mark goes on the long-sleeve under it)
     { is: gilet, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(LOOSE_U, 1.14) },
     { is: puffer, front: pufferFront, back: surface(PUFFER_S, HN2, -1), chest: [0.08, 0.28], sleeve: grow(UPPER_S, 1.44) },
   ];
   /** Where the top's mark goes (a suit's front is its shirt and tie: a big front mark goes on its chest) */
-  const slot = (o: Outfit): MarkSlot => (o.markAt === 'centre' && suit(o) ? 'chest' : (o.markAt ?? 'chest'));
+  // (the tailored tops' too: the blazer, the double-breasted, the waistcoat and the overcoat open on a shirt and tie)
+  const tailored = (o: Outfit) => suit(o) || blazer(o) || double(o) || waistcoatOn(o) || overcoatOn(o);
+  const slot = (o: Outfit): MarkSlot => (o.markAt === 'centre' && tailored(o) ? 'chest' : (o.markAt ?? 'chest'));
   const LOGO = (j: Joint, geo: THREE.BufferGeometry, logo: LogoOf, extra: Partial<Piece> = {}) => P(j, geo, 'ink', { mat: 'logo', logo, ...extra });
   const merch: Item[] = [];
   TOPS.forEach((t, i) => {
@@ -4024,6 +4303,86 @@ export function items(q: Detail, hero = false): Item[] {
       ],
     },
     {
+      id: 'blazer',
+      when: blazer,
+      pieces: [
+        P('torso', jacket, 'top', TOP),
+        P('torso', one([...lapels, ...flaps, ...(tailor ? [tailor.collar] : [])]), 'top', { shade: 1.45 }),
+        P('torso', one([openFront, tailor?.stand ?? collarBand, ...openCollar]), 'shirt'),
+        ...(tailor && sleeveBtns
+          ? [
+              P('torso', one(tailor.cloth), 'top', { shade: 1.2 }),
+              P('torso', one(tailor.dark), 'top', { shade: 0.55 }),
+              P('torso', one(tailor.pick), 'top', { shade: 2.1 }),
+              P('torso', one(tailor.horn), HORN),
+              P('torso', one(tailor.thread), HOLE),
+              ...both('fore', sleeveBtns, HORN),
+            ]
+          : [P('torso', one(blazerButtons), BLACK, { detail: true })]),
+        ...both('arm', suitUpper, 'top'),
+        ...both('fore', suitFore, 'top'),
+        ...both('fore', shirtCuff, 'shirt', { detail: true }),
+      ],
+    },
+    {
+      id: 'double',
+      when: double,
+      pieces: [
+        P('torso', jacket, 'top', TOP),
+        P('torso', one([...peakLapels, ...flaps, ...(tailor ? [tailor.collar] : [])]), 'top', { shade: 1.45 }),
+        P('torso', dbEdge, 'top', { shade: 0.7, detail: true }),
+        P('torso', one([dbShirt, tailor?.stand ?? collarBand, ...collars]), 'shirt'),
+        P('torso', pocketSquare, SHIRT),
+        P('torso', one(dbTie), 'tie'),
+        P('torso', one(dbButtons), HORN),
+        ...both('arm', suitUpper, 'top'),
+        ...both('fore', suitFore, 'top'),
+        ...(sleeveBtns ? both('fore', sleeveBtns, HORN) : []),
+        ...both('fore', shirtCuff, 'shirt', { detail: true }),
+      ],
+    },
+    {
+      id: 'waistcoat',
+      when: waistcoatOn,
+      pieces: [
+        P('torso', waistcoat, 'top', TOP),
+        P('torso', one(wkWelts), 'top', { shade: 0.8, detail: true }),
+        P('torso', one([wkShirt, shirtBand, ...wkCollar]), 'shirt'),
+        P('torso', one(wkTie), 'tie'),
+        P('torso', one(wkButtons), HORN, { detail: true }),
+        ...both('arm', suitUpper, 'shirt'),
+        ...both('fore', suitFore, 'shirt'),
+        ...both('fore', ribCuff, 'shirt', { shade: 0.92 }),
+      ],
+    },
+    {
+      id: 'overcoat',
+      when: overcoatOn,
+      pieces: [
+        P('torso', overcoat, 'top', TOP),
+        P('torso', one([...ocLapels, ribBand(0.396, 0.452, 0.075, 0.068, -0.004, R(18)).band, ...ocFlaps]), 'top', { shade: 1.3 }),
+        P('torso', one([ocShirt, ...collars]), 'shirt'),
+        P('torso', one(ocTie), 'tie'),
+        P('torso', one(ocButtons), BLACK, { detail: true }),
+        ...both('arm', ocUpper, 'top'),
+        ...both('fore', ocFore, 'top'),
+        ...both('fore', ocCuff, 'top', { shade: 1.15 }),
+      ],
+    },
+    {
+      id: 'shirt',
+      when: shirtOnly,
+      pieces: [
+        P('torso', shirtBody, 'top', TOP),
+        P('torso', hemBand(OXK, SN, -0.09, -0.079, 0.0015), 'top', { shade: 0.92, ...TOP }),
+        P('torso', one([shirtBand, ...shirtCollar, shirtPlacket, shirtPocket]), 'top', { shade: 0.92 }),
+        P('torso', one(shirtButtons), '#dcdae4', { detail: true }),
+        ...both('arm', suitUpper, 'top'),
+        ...both('fore', suitFore, 'top'),
+        ...both('fore', ribCuff, 'top', { shade: 0.92 }),
+      ],
+    },
+    {
       id: 'hoodie',
       when: hoodie,
       pieces: [
@@ -4141,6 +4500,11 @@ export function items(q: Detail, hero = false): Item[] {
       ],
     },
     {
+      id: 'chinos',
+      when: (o) => bottomsOf(o) === 'chinos',
+      pieces: [P('pelvis', chinos, 'bottom', BOTTOM), ...both('shin', chinoHem, 'bottom', { shade: 0.88 })],
+    },
+    {
       id: 'workPants',
       when: (o) => bottomsOf(o) === 'work',
       pieces: [
@@ -4189,6 +4553,26 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('shin', runnerSole, SHIRT, SHOE),
         ...both('shin', runnerOut, '#2b2a33', SHOE),
         ...(runnerLaces.length ? both('shin', one([...runnerLaces, runnerTab]), SHIRT, { detail: true, ...SHOE }) : []),
+      ],
+    },
+    {
+      id: 'loafers',
+      when: (o) => shoesOf(o) === 'loafer',
+      pieces: [
+        ...both('shin', loafer, 'shoes', UPPER),
+        ...both('shin', loaferStrap, 'shoes', { shade: 0.78, ...SHOE }),
+        ...both('shin', mocSeam, 'shoes', { shade: 0.6, detail: true, ...SHOE }),
+        ...both('shin', dressSole, '#14121a', SHOE),
+      ],
+    },
+    {
+      id: 'derbies',
+      when: (o) => shoesOf(o) === 'derby',
+      pieces: [
+        ...both('shin', dress, 'shoes', UPPER),
+        ...both('shin', derbyQuarters, 'shoes', { shade: 0.85, ...SHOE }),
+        ...(derbyLaces.length ? both('shin', one(derbyLaces), 'shoes', { shade: 0.5, detail: true, ...SHOE }) : []),
+        ...both('shin', derbySole, '#14121a', SHOE),
       ],
     },
     {

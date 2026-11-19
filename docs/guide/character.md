@@ -318,6 +318,11 @@ keep it up to date when what it describes changes.
     `bottomsOf()` returns null for them as for soldiers), work trousers
     (`WORK_S`, knee panels from `legPatch()`, a hammer loop), work boots
     (`WORKBOOT`) and the hard hat (`hardhat` colour key).
+  - **Business wear** (`docs/wardrobe-plan.md` Phase 7): the
+    double-breasted suit (`double`), blazer, Oxford shirt (`OXK`), waistcoat
+    (`WK`) and overcoat (`OCK`) are tops of their own; `tieOn()` lays a tie
+    on any front; `tailored()` puts a big front mark on as a pin. Chinos
+    (`CHINO_S`), loafers (`LOAFER`) and derbies (on `DRESS`).
   - **Headphones** are per top (`headphones-<kind>`), fitted to its collar
     by `fitPhones()` from `NECKS` (the collar's rings, the hood's roll, a
     margin for laid-on pieces); a new top with headphones needs its line
