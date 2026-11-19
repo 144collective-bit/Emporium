@@ -28,7 +28,7 @@
  * gets through, no car does). `MALL_CAMERA` is the roof and the upper floor
  * for the walk camera. Made-up names only; no prices on any sign.
  */
-import { HALL, PORCH } from './mall';
+import { FIT, HALL, PORCH } from './mall';
 
 export type Rect = [number, number, number, number];
 type Box = [number, number, number, number, number];
@@ -42,7 +42,7 @@ export const IN: Rect = [HALL.rect[0] + WALL, HALL.rect[1] + WALL, HALL.rect[2] 
 export const UP = 3.2;
 export const FLOOR_T = 0.3;
 /** The doors in the south wall, behind the porch (open) */
-export const DOOR = { x0: PORCH.rect[0] + 1, x1: PORCH.rect[2] - 1, h: 3.2 };
+export const DOOR = { x0: PORCH.rect[0] + 1, x1: PORCH.rect[2] - 1, h: FIT.entrance + 0.6 };
 /** The entrance lobby (double height) is south of this; the units run from `NORTH_Z` to it */
 export const LOBBY_Z = HALL.rect[3] - 3.5;
 export const NORTH_Z = HALL.rect[1] + 7;
@@ -245,11 +245,11 @@ export const MALL_INSIDE_SOLIDS: Box[] = [
   ...ESC_SOLIDS,
   sq(FOUNTAIN_IN.x, FOUNTAIN_IN.z, FOUNTAIN_IN.r * 0.85, 0.7),
   ...PALMS_IN.map(([x, z]) => sq(x, z, PALM_R, 0.6)),
-  ...BENCHES_IN.map((b): Box => [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, 0.9]),
-  ...DIRECTORY.map(([x, z]): Box => [x - 0.9, z - 0.15, x + 0.9, z + 0.15, 2.2]),
+  ...BENCHES_IN.map((b): Box => [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, FIT.back]),
+  ...DIRECTORY.map(([x, z]): Box => [x - 0.7, z - 0.15, x + 0.7, z + 0.15, FIT.door]),
   [...LIFT_SHAFT, HALL.h] as Box,
-  ...KIOSKS.map((k): Box => [...k.rect, 2.4] as Box),
-  ...BOLLARDS.map(([x, z]) => sq(x, z, BOLLARD, 0.9)),
+  ...KIOSKS.map((k): Box => [...k.rect, FIT.door + 0.15] as Box),
+  ...BOLLARDS.map(([x, z]) => sq(x, z, BOLLARD, 0.5)),
 ];
 /** What stands on one floor only, with a floor over or under it (x0, z0, x1, z1, level) */
 export const LEVEL_SOLIDS: [number, number, number, number, 0 | 1][] = [
@@ -318,7 +318,7 @@ export interface InsidePerson {
   x: number;
   z: number;
   ry: number;
-  act: 'look' | 'chat' | 'sit';
+  act: 'look' | 'chat' | 'sit' | 'eat';
   /** Over the slab (a seat's height for those sitting) */
   y: number;
 }
@@ -331,7 +331,7 @@ export const MALL_INSIDE_PEOPLE: InsidePerson[] = (() => {
     out.push({ x, z: (u.rect[1] + u.rect[3]) / 2 + 0.6, ry: u.face === 1 ? -Math.PI / 2 : Math.PI / 2, act: 'look', y: u.level * UP });
   });
   // On the benches by the fountain
-  for (const b of BENCHES_IN) out.push({ x: b.x + (b.ry > 0 ? -0.05 : 0.05), z: b.z + 0.45, ry: b.ry, act: 'sit', y: 0.32 });
+  for (const b of BENCHES_IN) out.push({ x: b.x + (b.ry > 0 ? -0.05 : 0.05), z: b.z + 0.45, ry: b.ry, act: 'sit', y: FIT.seat });
   // Chatting in the atrium and the lobby
   out.push({ x: XM - 2.6, z: FOOT_Z + 1.2, ry: Math.PI / 2, act: 'chat', y: 0 }, { x: XM - 1.8, z: FOOT_Z + 1.3, ry: -Math.PI / 2, act: 'chat', y: 0 });
   out.push({ x: XM + 4, z: LOBBY_Z + 1.4, ry: Math.PI, act: 'chat', y: 0 }, { x: XM + 4.6, z: LOBBY_Z + 0.8, ry: -Math.PI / 4, act: 'chat', y: 0 });
@@ -340,8 +340,8 @@ export const MALL_INSIDE_PEOPLE: InsidePerson[] = (() => {
   FOOD_STALLS.forEach((s) => out.push({ x: (s.x0 + s.x1) / 2 - 0.4, z: STALL_Z - 1.15, ry: 0, act: 'look', y: UP }));
   TABLES.forEach(([x, z], i) => {
     if (i % 3 === 2) return;
-    out.push({ x: x - TABLE_R - 0.3, z, ry: Math.PI / 2, act: 'sit', y: UP + 0.32 });
-    if (i % 2 === 0) out.push({ x: x + TABLE_R + 0.3, z, ry: -Math.PI / 2, act: 'sit', y: UP + 0.32 });
+    out.push({ x: x - TABLE_R - 0.3, z, ry: Math.PI / 2, act: 'eat', y: UP + FIT.seat });
+    if (i % 2 === 0) out.push({ x: x + TABLE_R + 0.3, z, ry: -Math.PI / 2, act: 'eat', y: UP + FIT.seat });
   });
   // Leaning on the balustrades, looking down into the atrium
   out.push({ x: VOID[0] - 0.45, z: TERRACE_Z + 9, ry: -Math.PI / 2, act: 'look', y: UP }, { x: VOID[2] + 0.45, z: TERRACE_Z + 3.2, ry: Math.PI / 2, act: 'look', y: UP });
