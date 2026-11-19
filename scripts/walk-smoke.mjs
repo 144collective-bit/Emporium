@@ -335,9 +335,9 @@ await scene('guns', '50.7,54.7', async (t) => {
 await scene('metro', '68.4,37.5', async (t) => {
   const from = await t.where();
   await t.prompt('Metro');
-  await t.until('the station card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-metro-to]'));
-  await t.step('the station card opened');
-  await t.click('[data-metro] [data-metro-to]');
+  await t.until('the station card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-trip^="metro:"]'));
+  await t.step('the station card opened (both lines)');
+  await t.click('[data-metro] [data-trip^="metro:"]');
   await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
   await t.step('riding');
   await t.page.waitForTimeout(4000);
@@ -467,9 +467,9 @@ for (const [name, spawn, far] of [
 // seen from inside the carriage, skipped, stepping out on the High Road's platform
 await scene('tube', '-213.5,440.4,0,-6.55', async (t) => {
   await t.prompt('Tube');
-  await t.until('the tube card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-tube-to]'));
+  await t.until('the tube card', () => !!document.querySelector('[data-metro]:not([hidden]) [data-trip="tube:highroad"]'));
   await t.step('the tube card opened');
-  await t.click('[data-metro] [data-tube-to="highroad"]');
+  await t.click('[data-metro] [data-trip="tube:highroad"]');
   await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
   await t.step('riding, inside the carriage');
   await t.page.waitForTimeout(7000);
@@ -482,6 +482,41 @@ await scene('tube', '-213.5,440.4,0,-6.55', async (t) => {
     return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) < 3;
   }, [-189.1, 376.8], 60000);
   await t.step(`stepped out at ${(await t.where()).join(', ')} (${(await t.page.evaluate(downNow)).toFixed(1)} down)`);
+});
+
+// Changing lines (trips.ts, tube-ui.ts, docs/south-plan.md Phase 4h): at Downtown's metro door, the card for both
+// lines, a trip to the tube's High Road (the metro to The Trenches, the change, the tube on), skipped to its very end
+await scene('change', '68.4,37.5', async (t) => {
+  await t.prompt('Metro');
+  await t.until('the card for both lines', () => !!document.querySelector('[data-metro]:not([hidden]) [data-trip="tube:highroad"]'));
+  await t.step('the card for both lines');
+  await t.click('[data-metro] [data-trip="tube:highroad"]');
+  await t.until('the ride', () => !!document.querySelector('.city.is-riding'));
+  await t.step('riding the metro towards The Trenches');
+  await t.click('[data-metro-skip]');
+  await t.until('the ride to end', () => !document.querySelector('.city.is-riding'));
+  // (on the High Road's platform, by its Tube door)
+  await t.until('him to step out at the High Road', ([x, z]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return !!m && Math.hypot(Number(m[1]) - x, Number(m[2]) - z) < 3;
+  }, [-189.1, 376.8], 60000);
+  await t.step(`stepped out at ${(await t.where()).join(', ')} (${(await t.page.evaluate(downNow)).toFixed(1)} down)`);
+});
+
+// The world map and a taxi (worldmap.ts, taxi.ts, loaded the first time one's called): the map open (M), the tube's
+// Trenches station found (its line drawn, docs/south-plan.md Phase 4h), Taxi here, the taxi on its way, cancelled
+await scene('taxi', '68.4,37.5', async (t) => {
+  await t.page.keyboard.press('KeyM');
+  await t.until('the world map', () => !!document.querySelector('[data-worldmap]:not([hidden])'));
+  await t.page.selectOption('[data-wm-find]', 'tube-trenches');
+  await t.until("the tube station's card", () => !!document.querySelector('[data-wm-card]:not([hidden]) [data-wm-act="taxi"]:not(:disabled)'));
+  await t.step("the map: the tube's Trenches station");
+  await t.click('[data-wm-act="taxi"]');
+  await t.until('the taxi on its way', () => !!document.querySelector('[data-taxi]:not([hidden])'));
+  await t.step(`the taxi called: ${await t.page.evaluate(() => document.querySelector('[data-taxi-text]')?.textContent ?? '')}`);
+  await t.click('[data-taxi-cancel]');
+  await t.until('the taxi sent away', () => !!document.querySelector('[data-taxi][hidden]'));
+  await t.step('the taxi cancelled');
 });
 
 // The gamepad (walkpad.ts): a made-up pad in the page, the left stick pushed, A, then Start for the hub

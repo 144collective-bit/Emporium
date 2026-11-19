@@ -11,7 +11,7 @@
 import { CIRCUS, type Pt } from './south';
 import { CEIL, FLOOR } from './circus';
 import { GROUND_Y, cutOf, pointOf, radial, straight, type Passage } from './underground';
-import { SHOPS } from './highroad';
+import { SHOPS, STATION_DOOR } from './highroad';
 import { STATIONS as RAISED } from './metro';
 import { southLift } from './southground';
 import { SLAB_Y as SLAB_TOP } from './endswood';
@@ -346,3 +346,23 @@ export const STAIR_INFILL: { box: Pt[]; cut: Pt[] }[] = STAIR_CUTS.filter((c) =>
   const [x0, z0, x1, z1] = [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
   return { box: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]], cut };
 });
+
+/**
+ * Each station's place on the map (places.ts, the south plan's 4h): at street level by its way in, facing it. Behind the
+ * top of its stairs, looking down them; outside the station building's door, facing it; in the Circus's sunken plaza
+ * before its corridor, facing west into it (`y`: the plaza's floor, under the street, as walk.ts `placeAt()` reads it)
+ */
+export const TUBE_SPOTS: Record<StationId, { x: number; z: number; yaw: number; y?: number }> = Object.fromEntries(
+  SOUTH_STATIONS.map((s) => {
+    const a = rad(s.entrance.deg);
+    const [dx, dz] = [Math.cos(a), Math.sin(a)];
+    if (s.entrance.kind === 'building') {
+      const [x, z] = local((STATION_DOOR[0] + STATION_DOOR[1]) / 2, 1.3);
+      return [s.id, { x, z, yaw: Math.atan2(BUILDING.face[0], BUILDING.face[1]) }];
+    }
+    if (s.entrance.kind === 'plaza') return [s.id, { x: CIRCUS.x + dx * 3.5, z: CIRCUS.z + dz * 3.5, yaw: Math.atan2(-dx, -dz), y: HALL_Y - 0.15 }];
+    // (a step back from the top: Lot 9's stairs are just inside its fence)
+    const [tx, tz] = s.entrance.top;
+    return [s.id, { x: tx - dx * 0.9, z: tz - dz * 0.9, yaw: Math.atan2(-dx, -dz) }];
+  })
+) as Record<StationId, { x: number; z: number; yaw: number; y?: number }>;
