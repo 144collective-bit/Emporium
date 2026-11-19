@@ -13,9 +13,10 @@ import { TILE } from './tiles';
 import { SWAY } from './dusk';
 import { JACARANDAS, PALMS, WALLS, hillPlanting, type Edge, type Palm, type Plant } from './landscape';
 import { crown, trunk } from './palms3d';
-import { TERRAIN_RECT, drawnAt } from './terrain';
+import { TERRAIN_RECT } from './terrain';
+import { drawnAt } from './drawn';
 
-/** On the hills, at the ground as drawn (terrain.ts `drawnAt()`): no trunk over the grass where its grid cuts under the hills' curve */
+/** On the hills, at the ground as drawn (drawn.ts `drawnAt()`): no trunk over the grass where its grid cuts under the hills' curve */
 const onGrass = <T extends { x: number; z: number; y: number }>(list: T[]): T[] => list.map((p) => (p.y > 0 ? { ...p, y: drawnAt(p.x, p.z) } : p));
 
 const UP = new THREE.Vector3(0, 1, 0);

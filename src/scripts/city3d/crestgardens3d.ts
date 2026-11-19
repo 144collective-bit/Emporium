@@ -24,7 +24,8 @@ import { ESTATE_GARDENS, MANSION_GARDENS, SITE_GARDENS, POST, SPA_R, TERRACE_VIN
 import { hip, poolOf } from './estates3d';
 import { DRIVE_PIER, DRIVE_PIERS, DRIVE_TREES, GROVES, MEADOWS, VINEYARDS, type Tree } from './crestland';
 import { MANSIONS as HILL_HOUSES } from './mansions';
-import { TERRAIN_RECT, drawnAt } from './terrain';
+import { TERRAIN_RECT } from './terrain';
+import { drawnAt } from './drawn';
 import { BULB, SPRAY, WATER } from './mallkit';
 import { PLANT } from './palette';
 import { TERRACES } from './crestbanks';

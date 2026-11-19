@@ -9,7 +9,7 @@
  * across), each point at the grass as drawn (`drawnAt()`) and a little over it (`lift`), and `poke()` measures how far
  * the grass rises over it anywhere inside, which the test holds under the lift.
  */
-import { drawnAt } from './terrain';
+import { drawnAt } from './drawn';
 
 type Pt = [number, number];
 /** A mesh: its points (x, y, z, ...) and its triangles (three indices each), wound to face up */

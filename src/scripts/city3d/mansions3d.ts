@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
-import { drawnAt } from './terrain';
+import { drawnAt } from './drawn';
 import { SITE_GROUNDS, TERRACES, banks, driveLights, siteBanks, type Bank, type PlantKind, type Post } from './crestbanks';
 import { GATES } from './crestcover';
 import { DRAPE, bandMesh, lineMesh, type Mesh } from './crestdrape';

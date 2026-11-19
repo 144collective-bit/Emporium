@@ -11,7 +11,8 @@ import { DRAPE, OVERLOOK_PATH, ROAD_LIFT, STEP, resample } from '../src/scripts/
 import { HILL_ROADS } from '../src/scripts/city3d/crestmont';
 import { BUNKER_R, FAIRWAY, FRINGE, GREEN_R, HOLES, OVERLOOK, TEE, bunkersOf } from '../src/scripts/city3d/crestsites';
 import { offsetLine } from '../src/scripts/city3d/streetplan';
-import { drawnAt, heightAt } from '../src/scripts/city3d/terrain';
+import { heightAt } from '../src/scripts/city3d/terrain';
+import { drawnAt } from '../src/scripts/city3d/drawn';
 
 /** The grass stays this far under anything laid on it, at the least */
 const UNDER = 0.005;

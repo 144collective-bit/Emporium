@@ -22,6 +22,7 @@ import { BED, CREST_LAMPS, HILL_ROADS, nearHillRoad, roadY, type HillRoad, type 
 import { HILLS, TERRAIN_RECT, natural } from './hills';
 import { rng } from './recipes';
 import { CAR_SCALE } from './carspec';
+import { BUILT, baked } from './baked';
 
 type Pt = [number, number];
 type Box = [number, number, number, number, number];
@@ -321,7 +322,13 @@ function yardOf(m: Mansion, list: Mansion[]): Rect {
   return out;
 }
 export const MANSIONS: Mansion[] = layout();
-settle(MANSIONS);
+/** Each pad's height and yard, settled when the site is built (baked.ts; scripts/bake.mjs), so the boot holds the answer
+ * and not the search */
+const SETTLED: { y: number; yard: Rect }[] = baked('mansion-ground', BUILT ? undefined : () => {
+  settle(MANSIONS);
+  return MANSIONS.map((m) => ({ y: m.y, yard: m.yard }));
+});
+MANSIONS.forEach((m, i) => Object.assign(m, SETTLED[i]));
 
 /** The ground held level under each pad and its yard (terrain.ts's `LEVELS`) */
 export const MANSION_LEVELS = MANSIONS.map((m) => ({ rect: m.yard, y: m.y, ease: PAD_EASE }));

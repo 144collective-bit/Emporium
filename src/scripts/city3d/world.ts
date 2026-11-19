@@ -608,7 +608,7 @@ function riverBanks(b: Batch, e0: number, e1: number) {
 function hillsPlane(x0: number, z0: number, x1: number, z1: number) {
   if (x1 <= TERRAIN_RECT[0] || x0 >= TERRAIN_RECT[2] || z1 <= TERRAIN_RECT[1] || z0 >= TERRAIN_RECT[3]) return null;
   // (its lines terrain.ts's: every HILL_STEP, closer through a pad's bank and one on each of its edges; split as
-  // terrain.ts `drawnAt()` reads it)
+  // drawn.ts `drawnAt()` reads it)
   const xs = hillLines(x0, x1, z0, z1, 0);
   const zs = hillLines(z0, z1, x0, x1, 1);
   const pos: number[] = [];

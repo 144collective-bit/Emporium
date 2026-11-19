@@ -4,7 +4,8 @@
 // away before the skyline ring, and every aircraft flies well over them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HILLS, HILL_STEP, LEVELS, TERRAIN_RECT, drawnAt, heightAt, hillLines, hillsAlong, naturalAt, onCrest, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { HILLS, HILL_STEP, LEVELS, TERRAIN_RECT, heightAt, hillLines, hillsAlong, naturalAt, onCrest, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { drawnAt } from '../src/scripts/city3d/drawn';
 import { onSouthGround } from '../src/scripts/city3d/southground';
 /** The ground's height but the south's rolling ground (docs/south-plan.md Phase 1c: its own, tests/southground.test.ts) */
 const crestAt = (x: number, z: number) => (onSouthGround(x, z) ? 0 : heightAt(x, z));

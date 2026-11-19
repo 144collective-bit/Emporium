@@ -16,11 +16,12 @@
  *   enough (`FILL_TIER`), planted drifts and boulders down the slope.
  * - **Level ground** round a pad gets a planted border along its edge.
  *
- * Every height is the ground as drawn (terrain.ts `drawnAt()`: the hills' grass grid, world.ts `hillsPlane()`), so
+ * Every height is the ground as drawn (drawn.ts `drawnAt()`: the hills' grass grid, world.ts `hillsPlane()`), so
  * nothing floats over the grass or sinks into it where the grid's flat triangles cut under the hills' curve.
  */
 import { BED, nearHillRoad } from './crestmont';
-import { drawnAt, heightAt } from './terrain';
+import { heightAt } from './terrain';
+import { drawnAt } from './drawn';
 import { MANSIONS, PAD_EASE, onMansion, outOf, originOf, rectToWorld, type Mansion, type MansionKind } from './mansions';
 import { CIVIC, CLUB, FAIRWAY, FRINGE, HOLES, SITE_LEVELS, onSite } from './crestsites';
 import { PLAN, distToStreet } from './streetplan';

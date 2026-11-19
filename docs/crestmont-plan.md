@@ -525,7 +525,7 @@ straight bare hedges; the open slopes were bare grass and scattered scrub.
 
 **What's built:**
 
-- **The ground as drawn** (terrain.ts `hillLines()`, `drawnAt()`; world.ts `hillsPlane()`): the hills' grass grid has a
+- **The ground as drawn** (terrain.ts `hillLines()`, drawn.ts `drawnAt()`; world.ts `hillsPlane()`): the hills' grass grid has a
   line on each level's edges and one every `LEVEL_STEP` (1) through its bank, so a pad is drawn flat right to its edge
   (within 0.02) and the ground by every pad within about 0.1 of the hills' shape (it was up to 0.6 off). `drawnAt()`
   reads the grass as drawn; the drives, the banks, the hills' oaks, scrub and palms, the groves, vineyards, meadows,

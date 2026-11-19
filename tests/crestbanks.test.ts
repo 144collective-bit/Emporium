@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { DRIVE_GAP, DRIVE_LIGHT, PATH_GAP, banks, driveLights, PLANT_TALLEST, READ, TERRACES, TERRACE_SOLIDS, TIERS, toFrame } from '../src/scripts/city3d/crestbanks';
 import { MANSIONS, PAD_EASE, toWorld } from '../src/scripts/city3d/mansions';
 import { BED, nearHillRoad } from '../src/scripts/city3d/crestmont';
-import { drawnAt, heightAt } from '../src/scripts/city3d/terrain';
+import { heightAt } from '../src/scripts/city3d/terrain';
+import { drawnAt } from '../src/scripts/city3d/drawn';
 
 const BANKS = banks();
 const DRIVE_LIGHTS = driveLights();

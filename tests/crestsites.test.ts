@@ -8,7 +8,8 @@ import { CIVIC, CLUB, EASE, FAIRWAY, FENCE, FRINGE, HOLES, HOTEL, HOTEL_PALMS, O
 import { BED, CREST_LAMPS, FLATS_X, BOULEVARD, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { KEPT } from '../src/scripts/city3d/estates';
 import { MANSIONS } from '../src/scripts/city3d/mansions';
-import { LEVELS, drawnAt, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
+import { LEVELS, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
+import { drawnAt } from '../src/scripts/city3d/drawn';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { PALMS, hillPlanting } from '../src/scripts/city3d/landscape';
 
