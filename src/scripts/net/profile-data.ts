@@ -80,10 +80,10 @@ export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'sku
  * pairing. A look saved before them wears what its top came with: the suit its trousers and dress shoes, the track
  * top its track pants, the rest joggers, all but the suit sneakers (`bottomsFor()`, `shoesFor()`).
  */
-export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts';
-export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts'];
-export type ShoeStyle = 'dress' | 'sneaker' | 'hightop';
-export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop'];
+export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts' | 'denim';
+export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim'];
+export type ShoeStyle = 'dress' | 'sneaker' | 'hightop' | 'runner' | 'slide';
+export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop', 'runner', 'slide'];
 /** The bottoms a top came with before the separates */
 export const bottomsFor = (kind: string): Bottoms => (kind === 'suit' ? 'trousers' : kind === 'track' ? 'trackpants' : 'joggers');
 /** The shoes a top came with before the separates */

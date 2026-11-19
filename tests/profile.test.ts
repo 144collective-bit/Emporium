@@ -115,8 +115,8 @@ test('every palette colour is a lower-case six-digit hex', () => {
 });
 
 test('the separates: any top, bottoms and shoes together; a look from before them wears what its top came with (the wardrobe plan, Phase 2)', () => {
-  assert.deepEqual(BOTTOMS, ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts']);
-  assert.deepEqual(SHOE_STYLES, ['dress', 'sneaker', 'hightop']);
+  assert.deepEqual(BOTTOMS, ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim']);
+  assert.deepEqual(SHOE_STYLES, ['dress', 'sneaker', 'hightop', 'runner', 'slide']);
   assert.deepEqual(RANGES.map((r) => r.id), ['street', 'business', 'work']);
   // Degen as in the art: the suit, its trousers, dress shoes and a white shirt
   assert.equal(DEFAULT_LOOK.bottoms, 'trousers');

@@ -89,6 +89,9 @@ for (const q of [3, 2] as const) {
       assert.equal(ids.has('cargoPants'), look.bottoms === 'cargo');
       assert.equal(ids.has('trackStripes'), look.bottoms === 'trackpants');
       assert.equal(ids.has('shorts'), look.bottoms === 'shorts');
+      assert.equal(ids.has('denim'), look.bottoms === 'denim');
+      assert.equal(ids.has('runners'), look.shoeStyle === 'runner');
+      assert.equal(ids.has('slides'), look.shoeStyle === 'slide');
       assert.equal(ids.has('dressShoes'), look.shoeStyle === 'dress');
       assert.equal(ids.has('sneakers'), look.shoeStyle === 'sneaker');
       // (one pair of shades, the look's, unless face gear is worn in their place; the face gear if any)

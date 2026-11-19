@@ -2233,6 +2233,33 @@ export function items(q: Detail, hero = false): Item[] {
   );
   const cargoFlaps = [-1, 1].map((s) => rb(0.024, 0.016, 0.064, 0.005, s * 0.072, -0.12, 0.004));
   /*
+   * Relaxed denim (docs/wardrobe-plan.md Phase 5): on the one seat, as narrow as the joggers right under the tops' hems,
+   * then straight and roomy through the knee to the ankle, the hem turned up into a cuff (its inside showing, lighter),
+   * a line of gold topstitching down the outseam
+   */
+  const DENIM_S = legs([
+    ...JOG_THIGH,
+    ...knee(0.056, 0.06),
+    ...onShin([
+      [-0.02, 0.057, 0.061, 0],
+      [-0.11, 0.057, 0.061, -0.003],
+      [-0.19, 0.056, 0.06, 0],
+      [-0.225, 0.055, 0.059, 0.002],
+      [-0.238, 0.055, 0.059, 0.003],
+    ]),
+  ]);
+  const denim = trousers(hips(SEAT), DENIM_S, LEGS);
+  // (the cuff sits just over the shoe's collar: an inch lower, it took the runners' and high-tops' collars as the foot
+  // flexed at a crouch)
+  const denimCuff = loft(
+    [
+      [-0.245, 0.0575, 0.0615, 0.003],
+      [-0.212, 0.0575, 0.0615, 0.003],
+    ],
+    R(16)
+  );
+  const STITCH = '#c99a4e';
+  /*
    * Shorts (docs/wardrobe-plan.md Phase 5): on the one seat every bottoms shares, roomy legs to just over the knee with
    * a stitched hem; his legs bare under them (`BARE_LEG`, in the leg's numbers: the thigh from inside the shorts, the
    * knee, the calf full at the back, the ankle into the sock) and white crew socks into the shoes
@@ -2395,6 +2422,9 @@ export function items(q: Detail, hero = false): Item[] {
   const foreStripes = sleeveStripes(LOOSE_F, -0.172);
   const thighStripes = [-1, 1].map((s) => mergeGeometries(stripe(JOG_S, s, -0.12, -0.265, 2.2))!);
   const shinStripes = [-1, 1].map((s) => mergeGeometries(stripe(offShin(JOG_S), s, 0.025, -0.2, 2.2))!);
+  // (the denim's outseam: one line of stitching, from under the hems to the cuff)
+  const denimThighSeam = [-1, 1].map((s) => mergeGeometries(stripe(DENIM_S, s, -0.12, -0.265, 2.2, [0], 0.0011))!);
+  const denimShinSeam = [-1, 1].map((s) => mergeGeometries(stripe(offShin(DENIM_S), s, 0.025, -0.208, 2.2, [0], 0.0011))!);
   // A hand at rest: palm towards the leg, fingers curled, the thumb along the front.
   // Drawn in the forearm's numbers and moved into the wrist's space (`onWrist`), so the wrist turns it
   const onWrist = (list: THREE.BufferGeometry[]) => list.map((g) => g.translate(0, -WRIST_Y, -WRIST_Z));
@@ -2507,6 +2537,64 @@ export function items(q: Detail, hero = false): Item[] {
     }
     return tube(pts, q === 3 ? 0.0055 : 0.0065, q === 3 ? 24 : 14, q === 3 ? 6 : 4);
   })();
+  /*
+   * Chunky runners (docs/wardrobe-plan.md Phase 5): a fuller upper on a thick two-layer sole (a midsole in white, the
+   * outsole under it a band of dark), a heel counter and a toe mudguard laid over the upper a shade darker, laces, a
+   * pull tab at the heel
+   */
+  const RUNNER: ShoeSec[] = up([
+    [-0.068, 0.028, 0.03, 0.08],
+    [-0.06, 0.041, 0.03, 0.1],
+    [-0.03, 0.045, 0.03, 0.106],
+    [0.0, 0.046, 0.03, 0.103],
+    [0.035, 0.047, 0.03, 0.092],
+    [0.07, 0.048, 0.031, 0.077],
+    [0.105, 0.047, 0.032, 0.064],
+    ...toe(0.105, 0.062, [0.047, 0.032, 0.064], 0.006),
+  ]);
+  // (on phones, the flat parts round fewer: a sole and an outsole, every other section of the outsole and the panels,
+  // so a pair costs what the sneakers do)
+  const SGF = q === 3 ? SG : R(12);
+  const SGL = q === 3 ? SG : R(10);
+  const lean = (secs: ShoeSec[]) => (q === 3 ? secs : secs.filter((_, i) => i % 2 === 0 || i === secs.length - 1));
+  const runner = shoe(RUNNER, SG, 2.6, SS);
+  const runnerSole = shoe(sole(RUNNER, 0.007, 0.008, 0.01), SGF, 3, SS);
+  const runnerOut = shoe(lean(sole(RUNNER, 0.0085, -0.021, 0.0115)), SGL, 3, SS);
+  /** A panel laid over the upper from `u0` to `u1`, `share` of the way up its side */
+  const overlay = (secs: ShoeSec[], u0: number, u1: number, share: number) =>
+    shoe(
+      lean(secs.filter(([u]) => u >= u0 && u <= u1)).map(([u, hw, b, t]): ShoeSec => [u, hw + 0.0022, b - 0.001, b + (t - b) * share]),
+      SGL,
+      2.6,
+      SS
+    );
+  const runnerPanels = [overlay(RUNNER, -1, -0.012, 0.62), overlay(RUNNER, 0.07, 1, 0.55)];
+  const runnerLaces = q === 0 ? [] : laceArcs(RUNNER, q === 3 ? [0.025, 0.045, 0.065, 0.085] : [0.03, 0.055, 0.08], 2.6);
+  const runnerTab = new THREE.BoxGeometry(0.012, 0.022, 0.005).translate(0, G + 0.098, -0.07);
+  /*
+   * Slides (docs/wardrobe-plan.md Phase 5): worn over white socks, as on the street: the sock's foot on a contoured
+   * footbed, a wide strap over the instep; the sock is the shoe's shell, so the hems go into it as into any shoe
+   */
+  const SOCK_FOOT: ShoeSec[] = up([
+    [-0.064, 0.025, 0.014, 0.07],
+    [-0.056, 0.035, 0.014, 0.086],
+    [-0.03, 0.039, 0.014, 0.092],
+    [0.0, 0.04, 0.014, 0.082],
+    [0.035, 0.041, 0.014, 0.064],
+    [0.07, 0.042, 0.014, 0.048],
+    [0.1, 0.041, 0.014, 0.038],
+    ...toe(0.1, 0.055, [0.041, 0.014, 0.038], 0.0),
+  ]);
+  const sockFoot = shoe(SOCK_FOOT, SG, 2.4, SS);
+  const footbed = shoe(sole(SOCK_FOOT, 0.008, 0.004, 0.012), SGF, 3, SS);
+  const slideSole = shoe(lean(sole(SOCK_FOOT, 0.0088, -0.008, 0.0125)), SGL, 3, SS);
+  const slideStrap = shoe(
+    SOCK_FOOT.filter(([u]) => u >= 0.0 && u <= 0.075).map(([u, hw, b, t]): ShoeSec => [u, hw + 0.007, b - 0.004, t + 0.007]),
+    SG,
+    2.4,
+    SS
+  );
+
   // (the side stripe laid along the shoe's own side, rising to the heel: a straight plate stood off where the side
   // curves in at the heel and the toe; docs/wardrobe-plan.md Phase 5)
   const swoop = [-1, 1].map((s) => {
@@ -3752,6 +3840,15 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('shin', sockRib, WHITE, { shade: 0.88 }),
       ],
     },
+    {
+      id: 'denim',
+      when: (o) => bottomsOf(o) === 'denim',
+      pieces: [
+        P('pelvis', denim, 'bottom', BOTTOM),
+        ...both('shin', denimCuff, 'bottom', { shade: 1.15 }),
+        ...(q >= 2 ? [...both('leg', denimThighSeam, STITCH, { detail: true }), ...both('shin', denimShinSeam, STITCH, { detail: true })] : []),
+      ],
+    },
     // Track pants: the joggers with the track suit's stripes down the outside of each leg
     {
       id: 'trackStripes',
@@ -3780,6 +3877,27 @@ export function items(q: Detail, hero = false): Item[] {
         ...both('shin', hightopSole, SHIRT, SHOE),
         ...both('shin', hightopCollar, 'shoes', { shade: 0.7, ...SHOE }),
         ...(hightopLaces.length ? both('shin', one(hightopLaces), SHIRT, { detail: true, ...SHOE }) : []),
+      ],
+    },
+    {
+      id: 'runners',
+      when: (o) => shoesOf(o) === 'runner',
+      pieces: [
+        ...both('shin', runner, 'shoes', UPPER),
+        ...both('shin', one(runnerPanels), 'shoes', { shade: 0.72, ...SHOE }),
+        ...both('shin', runnerSole, SHIRT, SHOE),
+        ...both('shin', runnerOut, '#2b2a33', SHOE),
+        ...(runnerLaces.length ? both('shin', one([...runnerLaces, runnerTab]), SHIRT, { detail: true, ...SHOE }) : []),
+      ],
+    },
+    {
+      id: 'slides',
+      when: (o) => shoesOf(o) === 'slide',
+      pieces: [
+        ...both('shin', sockFoot, WHITE, UPPER),
+        ...both('shin', footbed, 'shoes', { shade: 0.8, ...SHOE }),
+        ...both('shin', slideSole, '#14121a', SHOE),
+        ...both('shin', slideStrap, 'shoes', SHOE),
       ],
     },
     // The sneakers' side stripe, unless a mark is printed there instead

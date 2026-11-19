@@ -483,8 +483,30 @@ A proposed first set; the owner picks what goes in:
   - Found on the way: the crowd draws its figures as skinned bodies too, so
     the hoodie's felled seams and cord tips (Phase 5e) are now kept to
     detail 2 and 3 (single figures) rather than to skinned bodies.
-- Still open from the plan's list: relaxed denim, chunky runners and
-  slides.
+- **The owner's pick for the fifth set (19 November 2026):** the rest of
+  the streetwear list: relaxed denim, chunky runners and slides.
+- **As built, the fifth set (Phase 5g, 19 November 2026):**
+  - Relaxed denim (`Bottoms` `denim`, Streetwear and Work): on the one
+    `SEAT`, as narrow as the joggers right under the tops' hems, then
+    straight and roomy through the knee to the ankle (`DENIM_S`), the hem
+    turned up into a cuff (its inside showing, a shade lighter), a line of
+    gold topstitching down each outseam (single figures).
+  - Chunky runners (`ShoeStyle` `runner`, Streetwear): a fuller upper on a
+    thick two-layer sole (a white midsole over a dark outsole band), a heel
+    counter and a toe mudguard laid over the upper a shade darker
+    (`overlay()`), laces and a heel tab. No side stripe or shoe mark (those
+    stay on the sneakers and high-tops: the Merch tab says so).
+  - Slides (`ShoeStyle` `slide`, Streetwear): worn over white socks, as on
+    the street: the sock's foot (the shoe's shell, so every hem goes into
+    it as into any shoe) on a contoured footbed, a wide strap over the
+    instep, a dark sole under.
+  - On phones the runners' and the slides' flat parts (soles, outsole,
+    panels) round fewer segments (`SGF`, `SGL`, `lean()`), so a pair costs
+    what the sneakers do (2.26k; drawn as the desktop's, 3.5k, they put a
+    puffer look at 19.1k). The phones' worst look is 17.8k of 18k.
+- **Phase 5's streetwear list is built.** Not built from the plan's first
+  list: nothing; the fitting room's Streetwear range now holds 12 tops,
+  6 bottoms, 5 shoes, 6 hats and 7 bags.
 
 ### Phase 6: work wear
 
@@ -539,5 +561,7 @@ A proposed first set; the owner picks what goes in:
   heavyweight hoodie): built**, 19 November 2026.
 - **Phase 5, the fourth set (the fitted cap, the skully, the sling, chest
   rig and waist bags, the backpack and duffel rebuilt, the headphones on
-  the collar): built**, 19 November 2026, waiting for the owner's look and
-  the next set.
+  the collar): built**, 19 November 2026.
+- **Phase 5, the fifth set (relaxed denim, chunky runners, slides): built**,
+  19 November 2026: Phase 5's streetwear list is done, waiting for the
+  owner's look and Phase 6 or 7.

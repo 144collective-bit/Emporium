@@ -266,9 +266,12 @@ keep it up to date when what it describes changes.
     `joggers`, `backpack`, `watch`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
-  - **Shoes** (`docs/wardrobe-plan.md` Phase 5): dress shoes, sneakers and
+  - **Shoes** (`docs/wardrobe-plan.md` Phase 5): dress shoes, sneakers,
     high-tops (`hightops`: the sneaker's lower half, the collar up round the
-    ankle, a padded rim); the laces are arcs on the rounded top
+    ankle, a padded rim), chunky runners (`runners`: a two-layer sole,
+    overlays from `overlay()`) and slides (`slides`: the white sock's foot
+    is the shell, a footbed and a strap); on phones the flat parts round
+    fewer segments (`SGF`, `SGL`, `lean()`); the laces are arcs on the rounded top
     (`laceArcs()`), the side stripe a strip along the side's curve
     (`swoop`). The legs' last few centimetres ride partly with the foot
     (`weigh()`), so a hem stays on the shoe as the ankle bends.
@@ -318,7 +321,8 @@ keep it up to date when what it describes changes.
     `trousers`, `joggers` (and track pants, the joggers with
     `trackStripes`), `cargoPants` (fuller below the hems, thigh pockets), `shorts`
     (over the knee, bare legs `BARE_LEG` and white crew socks, the socks the
-    `bottom` shell so the ankle test holds them), `dressShoes` and `sneakers`, picked by `bottomsOf()` and
+    `bottom` shell so the ankle test holds them), `denim` (`DENIM_S`: straight
+    and roomy, a turned-up cuff, gold outseam stitching), `dressShoes` and `sneakers`, picked by `bottomsOf()` and
     `shoesOf()` (the outfit's `bottoms` / `shoeStyle`, or what its top comes
     with: the crowd's, `bottomsFor()` / `shoesFor()`); the suit's shirt,
     collar and cuffs take the outfit's `shirt` colour (the crowd's the shirt
