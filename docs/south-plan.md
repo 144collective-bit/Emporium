@@ -478,7 +478,7 @@ From the Circus west, patchy as high roads are:
    - **4c, the avenue crossings' underpasses** (the owner's answers,
      2026-11-19: the avenue crossings; plainer than the Circus's;
      where an underpass crossed a zebra, the zebra would go, but the
-     south's streets have none). Built, waiting on the owner's sign-off:
+     south's streets have none). Built and signed off (2026-11-19):
      `underpasses.ts` (DOM-free, `tests/underpasses.test.ts`): three
      straight passages of the kit (`straight()`), square across their
      roads, roofed under them and their sidewalks, a ramp down and up
