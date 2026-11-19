@@ -427,6 +427,70 @@ From the Circus west, patchy as high roads are:
    with the tunnel seen; the underpasses under the ring road, the spokes
    and the bent avenues, into the ticket halls. All in `underground.ts`'s
    one kit.
+   The owner's answers (2026-11-18): the stations mixed by area (one kit,
+   each finished as the land over it: tiled at Aldwyn's Green and the
+   High Road, the blocks' concrete at Lot 9 and the Circus, gritty at The
+   Trenches); a change to the raised metro at The Trenches (a short
+   covered walk between them, both lines on one card and the map);
+   round-top tube trains in the city's style; the underpasses first,
+   then the line.
+   - **4a, the Circus's plaza and subways as data** (the owner's answers,
+     2026-11-18: the Circus first; a sunken plaza; murals and strip
+     lights inside; life with Phase 6; four subways, nothing that's built
+     moving: the west and south-west corners are built up to the Circus's
+     sidewalk, the parade's back and Church Road's end house: there you
+     cross the road at street level; the south's streets have no painted
+     zebras). Built and signed off (2026-11-18):
+     `circus.ts` (DOM-free, `tests/circus.test.ts`): the plaza
+     (`PLAZA`, a well of the kit inside the island, three steps of seats
+     round its edge you walk up, `tiers`), planters with trees and lamps
+     on its floor, four subways (`SUBWAYS`, north-west, north-east,
+     south-east and south: roofed from the plaza's wall to past the
+     sidewalk, a ramp about one in four up to each mouth), each mouth's
+     paved path on to the nearest sidewalk (the south-east's, boxed in by
+     blocks, joins the south's), the ground's hole (`CIRCUS_HOLE`), the
+     solids. The kit (`underground.ts`) takes a passage at any angle
+     (`radial()`) and a well's seats (`wellFloor()`); Lot 9's tunnel
+     unchanged. Sketch `docs/south-shots/18-phase-4a-circus.png`. Not
+     wired into walking or drawn yet: 4b.
+   - **4b, the Circus drawn and walked**. Built and signed off
+     (2026-11-19): `circus3d.ts` (in the south's chunk, a site for the plaza,
+     each subway and the paths) draws the plaza (paved floor, three steps
+     of seats cut where the subways come in, its wall with a lintel over
+     each opening, coping, a railing, a neon strip under the coping,
+     planters) and the subways (the blocks' warm concrete walls, a mural
+     each on one wall, made-up art with no words, strip lights in the
+     ceiling and a pink and a cyan neon line along the walls, the ramps'
+     parapets and coping, a headwall with its SUBWAY plate over each
+     portal, a step on to the slab at each mouth) and each mouth's paved
+     path. The island is a planted ring round the plaza (south3d.ts).
+     `holes.ts` (DOM-free, tested) cuts the plaza and the cuttings out of
+     the blocks' slabs (world.ts `tiled()`, `holedPoly()`) and the
+     junctions' asphalt; the grass goes from under the Circus
+     (`CIRCUS_HOLE`). Walked: groundheight.ts's `UNDER` takes the subways
+     and the plaza with Lot 9's tunnel; down there the planters and lamps
+     stop you (the kit's `boxes`). The trees and lamps at the boot
+     (index.ts). `?fps` reads `down` below street level; the smoke test
+     walks down the north-east ramp into the plaza (`circus`). Shots
+     `docs/south-shots/19-phase-4b-*.webp` (the subway's and the walk-in
+     from the smoke test's screenshots: the review shots' tool stalls in
+     this machine's software renderer with its camera in a subway).
+   - **4c, the avenue crossings' underpasses** (the owner's answers,
+     2026-11-19: the avenue crossings; plainer than the Circus's;
+     where an underpass crossed a zebra, the zebra would go, but the
+     south's streets have none). Built and signed off (2026-11-19):
+     `underpasses.ts` (DOM-free, `tests/underpasses.test.ts`): three
+     straight passages of the kit (`straight()`), square across their
+     roads, roofed under them and their sidewalks, a ramp down and up
+     each side: under the wide south avenue between Marsh Lane and Lot
+     9's road (on open ground), and under Endswood Road and Marsh Lane on
+     their bends (on the blocks' slabs); `SLAB_CUTS` and `GROUND_HOLES`
+     with the Circus's (world.ts, south3d.ts); walked (groundheight.ts
+     `UNDER`). `underpass3d.ts` draws them plain: concrete, strip lights,
+     parapets, headwalls with SUBWAY plates, a step on to a slab at a
+     mouth on one. The smoke test walks through the one under Endswood
+     Road (`underpass`). Shots `docs/south-shots/20-phase-4c-*.webp`
+     (from the smoke test's screenshots).
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
