@@ -489,7 +489,8 @@ From the Circus west, patchy as high roads are:
      `UNDER`). `underpass3d.ts` draws them plain: concrete, strip lights,
      parapets, headwalls with SUBWAY plates, a step on to a slab at a
      mouth on one. The smoke test walks through the one under Endswood
-     Road (`underpass`).
+     Road (`underpass`). Shots `docs/south-shots/20-phase-4c-*.webp`
+     (from the smoke test's screenshots).
 5. **The exits.** South-west and west, as the ring's others
    (`viaduct.ts`), and their roads in.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
