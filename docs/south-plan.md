@@ -568,8 +568,8 @@ From the Circus west, patchy as high roads are:
        clock, so a platform has trains pulling in and out; a ride from
        inside the carriage, the tunnel's walls and lights going by the
        windows, pulling in at each platform, Skip as the raised metro's;
-       the line's own station card. Built (2026-11-19, waiting for the
-       owner's sign-off): `southtrains.ts` the rules (DOM-free, tested: a
+       the line's own station card. Built and signed off
+       (2026-11-19): `southtrains.ts` the rules (DOM-free, tested: a
        run speeds up, cruises and slows; one round out from The Trenches
        to the High Road and back calling everywhere; two trains half a
        round apart on their own tracks, standing within their platforms;
