@@ -31,16 +31,15 @@ test('four consumables, each priced in Dorras, used somewhere of its own, sold s
     assert.ok(c.price > 0 && c.level >= 1 && c.blurb && c.where && c.use, id);
     assert.ok(SELLERS.some((b) => b.sells === id), `${id} is sold somewhere`);
   }
-  // The hotbar has room for all of them: the two weapon slots, the thing in his hand and the four
+  // The hotbar has room for all of them: the two weapon slots and the four (the held items are retired: the wardrobe plan's Phase 1)
   const s = stocked(2);
-  s.inventory.held = 'coffee';
-  assert.equal(slots(s).length, 7);
-  // A touch screen's bar is HOT_SLOTS long: the weapons, the thing in his hand and the consumable that works where he is
-  assert.deepEqual(slots(s, HOT_SLOTS, touchFirst(false)).map(slotKey), ['gun0', 'gun1', 'held', 'item:energy']);
-  assert.deepEqual(slots(s, HOT_SLOTS, touchFirst(true)).map(slotKey), ['gun0', 'gun1', 'held', 'item:flyers']);
+  assert.equal(slots(s).length, 6);
+  // A touch screen's bar is HOT_SLOTS long: the weapons, the consumable that works where he is first, then the next
+  assert.deepEqual(slots(s, HOT_SLOTS, touchFirst(false)).map(slotKey), ['gun0', 'gun1', 'item:energy', 'item:snack']);
+  assert.deepEqual(slots(s, HOT_SLOTS, touchFirst(true)).map(slotKey), ['gun0', 'gun1', 'item:flyers', 'item:energy']);
   // (with no energy drink, the next he has)
   delete s.inventory.items.energy;
-  assert.deepEqual(slots(s, HOT_SLOTS, touchFirst(false)).map(slotKey), ['gun0', 'gun1', 'held', 'item:snack']);
+  assert.deepEqual(slots(s, HOT_SLOTS, touchFirst(false)).map(slotKey), ['gun0', 'gun1', 'item:snack', 'item:flyers']);
 });
 
 test('each is used only where it works, one at a time, and comes out of the bag', () => {

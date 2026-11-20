@@ -849,6 +849,7 @@
 /* Nine tabs in two rows (five and four), the same on phones: room for the longest label */
 .fit-tabs {
   display: grid;
+  /* (ten slots, docs/wardrobe-plan.md Phases 2 and 4 and docs/faces-plan.md: two rows of five, so the longest names fit the panel at every width) */
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
 }
