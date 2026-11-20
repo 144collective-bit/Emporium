@@ -38,6 +38,9 @@ const ground = (x: number, z: number) => Math.min(heightAt(x, z), drawnAt(x, z))
 const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, m: THREE.Material) => b.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.abs(x1 - x0), y1 - y0, Math.abs(z1 - z0), m);
 const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, m: THREE.Material, seg = 10, r0 = r) => b.add(new THREE.CylinderGeometry(r, r0, h, seg).translate(x, y + h / 2, z), m);
 
+/** On the Belvedere's paved round (its kerb and a little past) */
+const inBelvedere = (x: number, z: number) => Math.hypot(x - BELVEDERE.x, z - BELVEDERE.z) < BELVEDERE.r + 0.8;
+
 export function registerWalk(low: boolean) {
   /* ---------- The walk, a piece every 30 along it ---------- */
   const PIECE = 30;
@@ -66,14 +69,20 @@ export function registerWalk(low: boolean) {
         b.detail(() => {
           for (let d = s0; d <= s1 + 0.01; d += 2) {
             const [x, z] = walkAt(d, WALK.half + 0.12);
-            cyl(b, 0.03, 0.95, x, ground(x, z), z, IRON, 5);
+            if (!inBelvedere(x, z)) cyl(b, 0.03, 0.95, x, ground(x, z), z, IRON, 5);
           }
-          const rail: THREE.Vector3[] = [];
+          // (the rail in runs: none across the Belvedere's paving, where its benches are)
+          let rail: THREE.Vector3[] = [];
+          const run = () => {
+            if (rail.length > 1) b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rail), rail.length, 0.025, 4, false), IRON);
+            rail = [];
+          };
           for (let d = s0; d <= s1 + 0.01; d += 1) {
             const [x, z] = walkAt(d, WALK.half + 0.12);
-            rail.push(new THREE.Vector3(x, ground(x, z) + 0.95, z));
+            if (inBelvedere(x, z)) run();
+            else rail.push(new THREE.Vector3(x, ground(x, z) + 0.95, z));
           }
-          if (rail.length > 1) b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rail), rail.length, 0.025, 4, false), IRON);
+          run();
         });
       }
       // The lamps along its right, the benches along its left

@@ -5,7 +5,7 @@
 // east of the reservoir, its door to the walk; both under the Emporium.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BENCHES, GLASS_PATH, LOOKOUTS, STEPS, WALK, WALK_LAMPS, WALK_LINE, WALK_POINTS, onSteps } from '../src/scripts/city3d/crestwalk';
+import { BENCHES, GLASS_PATH, LOOKOUTS, STEPS, WALK, WALK_LAMPS, WALK_LINE, WALK_POINTS, onSteps, onWalk } from '../src/scripts/city3d/crestwalk';
 import { BELVEDERE, EASE, FENCE, GLASSHOUSE, OVERLOOK, RESERVOIR, SITE_DOORS, SITE_SOLIDS, SITE_SPAWNS, onSite } from '../src/scripts/city3d/crestsites';
 import { CABLE_STATIONS } from '../src/scripts/city3d/cablecar';
 import { CABLE_SOLIDS } from '../src/scripts/city3d/cableline';
@@ -14,6 +14,8 @@ import { onLand } from '../src/scripts/city3d/crestland';
 import { nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { heightAt } from '../src/scripts/city3d/terrain';
+import { hillPlanting } from '../src/scripts/city3d/landscape';
+import { cover } from '../src/scripts/city3d/crestcover';
 
 const EMPORIUM_ROOF = 12.5;
 const inR = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
@@ -95,4 +97,17 @@ test('the glasshouse: east of the reservoir, level, its door to the walk, clear 
   const at = SITE_SPAWNS.glasshouse;
   assert.ok(Math.hypot(at.x - door.x, at.z - door.z) < 4);
   assert.ok(G.dome.h + 0.6 < EMPORIUM_ROOF);
+});
+
+test("nothing growing or lying on the walk: the hills' oaks and scrub, the drifts and the rocks off its gravel, benches and lookouts (the polish pass)", () => {
+  const near = (x: number, z: number) => Math.min(...WALK_POINTS.map((p) => Math.hypot(p.x - x, p.z - z)));
+  const { oaks, scrub } = hillPlanting();
+  for (const o of oaks) assert.ok(near(o.x, o.z) > WALK.half + 1.2, `an oak on the walk at ${o.x.toFixed(0)}, ${o.z.toFixed(0)}`);
+  for (const b of scrub) assert.ok(near(b.x, b.z) > WALK.half + 0.5, 'scrub on the walk');
+  const { drifts, outcrops } = cover();
+  for (const d of drifts) for (const c of d.clumps) assert.ok(!onWalk(c.x, c.z, 0.4), 'a drift on the walk');
+  for (const o of outcrops) for (const r of o) assert.ok(near(r.x, r.z) > WALK.half + 0.6, `a rock on the walk at ${r.x.toFixed(0)}, ${r.z.toFixed(0)}`);
+  // (and onWalk() finds the walk where it is)
+  for (const p of WALK_POINTS) assert.ok(onWalk(p.x, p.z));
+  for (const b of BENCHES) assert.ok(onWalk(b.x, b.z));
 });
