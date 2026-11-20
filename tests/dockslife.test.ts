@@ -22,11 +22,18 @@ import {
   TRUCK_EVERY,
   TRUCK_VISIT,
   WORK,
+  HOIST_FULL,
+  LIGHT,
   boxAt,
   carrierAt,
   craneAt,
+  hoistAt,
+  lanternAt,
   pilotAt,
+  pilotSpeedAt,
+  reversingAt,
   truckAt,
+  truckVisit,
 } from '../src/scripts/city3d/dockslife';
 
 type Box = [number, number, number, number, number];
@@ -172,4 +179,65 @@ test('the dock workers stand out of everything solid and everyone moving', () =>
       if (p) assert.ok(!hits(corners(p.x, p.z, p.yaw, 3.4, 1.0), me), `a worker at ${w.x}, ${w.z} in the truck's way`);
     }
   }
+});
+
+test('the hoist runs only while the crane moves, and never over full', () => {
+  for (const t of times(CYCLE)) {
+    const h = hoistAt(t);
+    assert.ok(h >= 0 && h <= 1, `hoist ${h} at ${t}`);
+  }
+  // (standing over the ship's box as it's taken, and over the quay as it's set down: the keys hold still)
+  for (const t of [7, 31, 54, 93]) assert.ok(hoistAt(t) < 0.02, `the crane stands at ${t}`);
+  // (the trolley halfway across, out and back)
+  for (const t of [19, 42, 68, 105]) assert.ok(hoistAt(t) > 0.3, `the crane travels at ${t}`);
+  // (its fastest is under full, so the whine never clips)
+  let most = 0;
+  for (const t of times(CYCLE)) {
+    const [a, b] = [craneAt(t), craneAt(t + STEP)];
+    most = Math.max(most, Math.hypot(b.trolley - a.trolley, b.spreader - a.spreader) / STEP);
+  }
+  assert.ok(most <= HOIST_FULL, `its fastest ${most}`);
+});
+
+test('the carrier beeps only backing up: out from under the crane, out of the slot, back to its spot', () => {
+  // (forward to the crane, to the slot and back to the crane; standing while the crane works)
+  for (const t of [35, 52, 75, 10, 39, 59, 100]) assert.equal(reversingAt(t), false, `not reversing at ${t}`);
+  for (const t of [43, 66, 83]) assert.equal(reversingAt(t), true, `reversing at ${t}`);
+  // ...and never while it stands
+  for (const t of times(CYCLE)) {
+    const [a, b] = [carrierAt(t - 0.05), carrierAt(t + 0.05)];
+    if (Math.hypot(b.x - a.x, b.z - a.z) < 1e-6) assert.equal(reversingAt(t), false);
+  }
+});
+
+test('a truck keeps its paint all through its visit', () => {
+  for (const v of [0, 3, 17]) {
+    const t0 = v * TRUCK_EVERY;
+    for (const t of times(TRUCK_VISIT, 0.5)) assert.equal(truckVisit(t0 + t), v);
+  }
+  assert.notEqual(truckVisit(0), truckVisit(TRUCK_EVERY));
+});
+
+test('the pilot boat backs out, goes round at speed and lies still at its berth', () => {
+  assert.ok(pilotSpeedAt(1) < 0, 'backing out');
+  assert.ok(pilotSpeedAt(PILOT_TRIP / 2) > 0, 'out round the basin');
+  assert.equal(pilotSpeedAt(PILOT_TRIP + 5), 0, 'moored');
+  assert.equal(pilotSpeedAt(PILOT_EVERY - 1), 0, 'moored till it goes again');
+});
+
+test('the lighthouse flashes twice every ten seconds and is dark between', () => {
+  let on = 0;
+  let flashes = 0;
+  let was = false;
+  for (const t of times(LIGHT.period, 0.01)) {
+    const k = lanternAt(t);
+    assert.ok(k >= 0 && k <= 1);
+    const lit = k > 0.05;
+    if (lit) on++;
+    if (lit && !was) flashes++;
+    was = lit;
+  }
+  assert.equal(flashes, 2);
+  assert.ok(on / (LIGHT.period / 0.01) < 0.15, 'dark most of the time');
+  assert.ok(Math.abs(lanternAt(3.3) - lanternAt(3.3 + LIGHT.period * 7)) < 1e-9, 'the same every period');
 });

@@ -19,12 +19,16 @@
  *   ropes, the one box going round, the carrier that takes it to the stacks' lane and back, a truck in through the
  *   gate now and then and the pilot boat out round the basin, all from the clock (still under reduced motion), and
  *   a few workers (the crowd's). The static drawing leaves those out.
+ * - **Its lights and wake** (Phase 5, `lights()` and `life()`): the cranes' and the ship's warning lights flashing at
+ *   night as Uptown's towers' do, the lighthouse's two flashes every ten seconds (dockslife.ts `lanternAt()`), the
+ *   pilot boat's wake by its speed, each visiting truck in a paint of its own; held steady under reduced motion.
+ *   Sodium floodlights hang under the cranes' portal beams and lamps stand along ORCA STAR's deck.
  *
  * One sign atlas of fixed made-up copy (painted, and the gate's lit). Walls, roofs, hulls and the cranes' main
  * members at every distance (their far form); the fine details near only, and phones leave out the finest.
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, moving, neon, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, fx, glowTex, lit, moving, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { ATLAS, kit } from './infill';
 import { WORLD, flatRoof, walls } from './riverside3d';
@@ -32,7 +36,9 @@ import { carGeometry, carMaterials, parkedCars } from './cars';
 import { nearGate } from './nearby';
 import { addPeople } from './life';
 import type { Tick } from './world';
-import { DOCK_PEOPLE, PILOT, STILL, WORK, boxAt, carrierAt, craneAt, pilotAt, truckAt } from './dockslife';
+import { DOCK_PEOPLE, PILOT, PILOT_SPEED, STILL, WORK, boxAt, carrierAt, craneAt, lanternAt, pilotAt, pilotSpeedAt, truckAt, truckVisit } from './dockslife';
+import { beaconOn } from './skyline';
+import { wakeOf } from './boats';
 import type { CarId } from './carspec';
 import { WATER_Y } from './river';
 import { BASIN, CAISSON, DOCKS_RECT, DOCK_FLOOR, DRY_DOCK, type Rect } from './docks';
@@ -101,6 +107,15 @@ const CYAN = neon('#2ef2ff', 0.5, 2.4);
 const WARN = neon('#ff2d3a', 0.8, 2.4);
 const SODIUM = neon('#ffb35a', 0.3, 1.3);
 const LANTERN = neon('#fff1b8', 0.4, 1.3);
+/**
+ * The cranes' and the ship's warning lights, and the lighthouse's lantern: materials of their own (never a plain
+ * neon()'s), their brightness set each frame by `lights()`: the warning lights flashing at night as Uptown's towers'
+ * do, the lantern a low glow with its two flashes
+ */
+const BEACON_RED = new THREE.Color('#ff2d3a');
+const BEACON = siteMat('docks-beacon', new THREE.MeshBasicMaterial({ color: BEACON_RED.clone().multiplyScalar(0.8), toneMapped: true }));
+const LAMP_WARM = new THREE.Color('#fff1b8');
+const LAMP = siteMat('docks-lighthouse', new THREE.MeshBasicMaterial({ color: LAMP_WARM.clone().multiplyScalar(0.4), toneMapped: true }));
 const BAR = toon('#f3f2f7');
 const BAR_RED = toon('#e23b3b');
 const PAINT_Y = toon('#f2c53d');
@@ -318,8 +333,10 @@ function drawCrane(b: Batch, c: (typeof CRANES)[number], low: boolean) {
   // The machinery house on the back reach, white, and the warning lights
   box(b, back, top, z - 2.4, back + CRANE.house, top + 2.4, z + 2.4, WHITE);
   box(b, back - 0.05, top + 2.4, z - 2.45, back + CRANE.house + 0.05, top + 2.6, z + 2.45, RED);
-  box(b, apex[0] - 0.15, apex[1] + 0.2, z - 0.15, apex[0] + 0.15, apex[1] + 0.55, z + 0.15, WARN);
-  box(b, boomTip[0] - 0.15, boomTip[1] + 0.1, z - 0.15, boomTip[0] + 0.15, boomTip[1] + 0.4, z + 0.15, WARN);
+  box(b, apex[0] - 0.15, apex[1] + 0.2, z - 0.15, apex[0] + 0.15, apex[1] + 0.55, z + 0.15, BEACON);
+  box(b, boomTip[0] - 0.15, boomTip[1] + 0.1, z - 0.15, boomTip[0] + 0.15, boomTip[1] + 0.4, z + 0.15, BEACON);
+  // Sodium floodlights hung under the portal beams, over the quay between the legs (a hair under the beam)
+  for (const x of [LAND_RAIL, SEA_RAIL]) for (const dz of [-CRANE.leg / 2, CRANE.leg / 2]) box(b, x - 0.28, G - 1.58, z + dz - 0.22, x + 0.28, G - 1.405, z + dz + 0.22, SODIUM);
   // The trolley on the girders, the cab under it, the spreader on its ropes (a box in it over the ship's deck); the
   // working crane's move (`life()`, below)
   if (c === WORK) return;
@@ -351,6 +368,8 @@ function drawCrane(b: Batch, c: (typeof CRANES)[number], low: boolean) {
 
 /* ---------- The ship ---------- */
 
+/** Where the ship's deck lamps stand along it: at the ends of its four bays */
+const DECK_LAMPS = [0, 1, 2, 3, 4].map((bay) => 157.2 + bay * (BOX.L + 0.2) - 0.1);
 function drawShip(b: Batch, low: boolean) {
   const [x0, z0, x1, z1] = SHIP.rect;
   const r = SHIP.rect;
@@ -367,7 +386,10 @@ function drawShip(b: Batch, low: boolean) {
   box(b, x0 - 0.2, bridge.top - 1.25, bridge.z0, x1 + 0.2, bridge.top - 1.0, bridge.z0 + 1.6, WHITE);
   pane(b, (x0 + x1) / 2, bridge.top - 0.6, bridge.z0, [0, -1], x1 - x0 - 1.8, 0.7, GLASS);
   box(b, (x0 + x1) / 2 - 0.12, bridge.top, (bridge.z0 + bridge.z1) / 2 - 0.12, (x0 + x1) / 2 + 0.12, bridge.top + 1.4, (bridge.z0 + bridge.z1) / 2 + 0.12, STEEL);
-  box(b, (x0 + x1) / 2 - 0.12, bridge.top + 1.4, (bridge.z0 + bridge.z1) / 2 - 0.12, (x0 + x1) / 2 + 0.12, bridge.top + 1.65, (bridge.z0 + bridge.z1) / 2 + 0.12, WARN);
+  box(b, (x0 + x1) / 2 - 0.12, bridge.top + 1.4, (bridge.z0 + bridge.z1) / 2 - 0.12, (x0 + x1) / 2 + 0.12, bridge.top + 1.65, (bridge.z0 + bridge.z1) / 2 + 0.12, BEACON);
+  // Deck lamps along both sides at the bays' ends, and one on each bridge wing (near, their posts)
+  for (const x of [x0 + 0.15, x1 - 0.15]) for (const lz of DECK_LAMPS) box(b, x - 0.08, SHIP.deck + 1.0, lz - 0.08, x + 0.08, SHIP.deck + 1.16, lz + 0.08, SODIUM);
+  for (const x of [x0 - 0.05, x1 + 0.05]) box(b, x - 0.1, bridge.top - 0.995, bridge.z0 + 0.7, x + 0.1, bridge.top - 0.8, bridge.z0 + 0.9, SODIUM);
   const fx = (x0 + x1) / 2;
   box(b, fx - 1.2, SHIP.deck, funnel.z0, fx + 1.2, funnel.top - 1.4, funnel.z1, LINE_MAT[SHIP.line]);
   box(b, fx - 1.2, funnel.top - 1.4, funnel.z0, fx + 1.2, funnel.top - 1.0, funnel.z1, WHITE);
@@ -380,6 +402,7 @@ function drawShip(b: Batch, low: boolean) {
     sign(b, CELL_OF(SHIP.name), x, SHIP.deck - 0.95, z0 + SHIP.bow + 3, [n, 0], 4.4, 0.62);
   sign(b, CELL_OF(SHIP.name), (x0 + x1) / 2, SHIP.deck - 0.95, z1, [0, 1], 4.2, 0.6);
   b.detail(() => {
+    for (const x of [x0 + 0.15, x1 - 0.15]) for (const lz of DECK_LAMPS) box(b, x - 0.025, SHIP.deck, lz - 0.025, x + 0.025, SHIP.deck + 0.995, lz + 0.025, STEEL);
     // Windows down the bridge's decks, its lines to the quay's bollards
     for (let d = 0; d < 4; d++) for (let k = 0; k < 5; k++) pane(b, x0 + 1.6 + k * ((x1 - x0 - 3.2) / 4), SHIP.deck + 1.0 + d * 1.6, bridge.z0, [0, -1], 0.5, 0.45, GLASS);
     if (!low)
@@ -664,7 +687,7 @@ function drawLighthouse(b: Batch, low: boolean) {
     b.add(new THREE.CylinderGeometry(rb, ra, y1 - y0, seg, 1, true).translate(x, (y0 + y1) / 2, z), i % 2 ? WHITE : RED);
   }
   cyl(b, 1.3, 0.2, x, gallery, z, STEEL, seg);
-  cyl(b, 0.7, 1.1, x, gallery + 0.2, z, LANTERN, seg);
+  cyl(b, 0.7, 1.1, x, gallery + 0.2, z, LAMP, seg);
   b.add(new THREE.SphereGeometry(0.78, seg, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(x, gallery + 1.3, z), RED);
   box(b, x - 0.04, gallery + 2.05, z - 0.04, x + 0.04, top, z + 0.04, STEEL);
   b.detail(() => {
@@ -689,6 +712,9 @@ function drawMast(b: Batch, x: number, z: number, low: boolean) {
   if (!low) b.detail(() => box(b, x + 0.18, S + 2.4, z - 0.15, x + 0.24, MAST_H - 0.8, z + 0.15, STEEL));
 }
 
+/** The rigs' paints: the truck park's parked ones in turn, and the visiting truck's, a visit each */
+const RIG_PAINTS = ['#e23b3b', '#2a3b66', '#f3f2f7', '#1f6b4a', '#ff8a3d'];
+
 /* ---------- Sites ---------- */
 
 const pad = (r: Rect, m: number): Rect => [r[0] - m, r[1] - m, r[2] + m, r[3] + m];
@@ -698,6 +724,24 @@ const each = (id: string, rect: Rect, draw: (b: Batch) => void, cast = true) =>
     draw(b);
     b.build(into, { cast, receive: true });
   });
+
+/* ---------- Its lights (Phase 5) ---------- */
+
+/**
+ * The warning lights and the lighthouse's lantern, set each frame from the city's night and the clock (dockslife.ts
+ * `lanternAt()`, skyline.ts `beaconOn()`): the warning lights flash as Uptown's towers' do, the lantern glows low with
+ * its two flashes. Under reduced motion both hold steady (the warning lights on, the lantern at a flash's middle).
+ */
+function lights(tick: (f: Tick) => void) {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  tick((env) => {
+    const t = Date.now() / 1000;
+    const n = env.night;
+    BEACON.color.copy(BEACON_RED).multiplyScalar((0.3 + 2.1 * n) * (reduced || beaconOn(t) ? 1 : 0.06));
+    const flash = reduced ? 0.6 : lanternAt(t);
+    LAMP.color.copy(LAMP_WARM).multiplyScalar(0.25 + 0.35 * n + flash * (0.3 + 1.9 * n));
+  });
+}
 
 /* ---------- Its life (Phase 4) ---------- */
 
@@ -743,10 +787,17 @@ function life(scene: THREE.Scene, tick: (f: Tick) => void, low: boolean) {
   const crate = part(scene, (b) => container(b, [-BOX.L / 2, -BOX.W / 2, BOX.L / 2, BOX.W / 2], 0, 1, low, true));
   const carrier = part(scene, (b) => straddle(b, 0, 0, low));
   const pilot = part(scene, (b) => drawTug(b, { ...PILOT, x: 0, z: 0 }, low));
+  // Its wake off the stern (+z: the boat's drawn bow north), trailing by its speed as the river's boats' do (life.ts)
+  const wakeMat = new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: glowTex });
+  const wake = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), wakeMat);
+  wake.rotation.x = -Math.PI / 2;
+  pilot.add(fx(wake));
+  // The truck: the traffic's Box Runner, each visit in a paint of its own (a material swapped, never recoloured)
   const truckGeo = carGeometry('truck');
   const truck = new THREE.Group();
-  const paint = toon('#f3f2f7');
-  truck.add(new THREE.Mesh(truckGeo.paint, paint), new THREE.Mesh(truckGeo.detail, carMaterials().detail));
+  const paints = RIG_PAINTS.map((c) => toon(c));
+  const body = new THREE.Mesh(truckGeo.paint, paints[0]);
+  truck.add(body, new THREE.Mesh(truckGeo.detail, carMaterials().detail));
   for (const m of truck.children) m.castShadow = m.receiveShadow = true;
   scene.add(moving(truck));
   // The dock workers (the crowd's spare slots)
@@ -769,11 +820,20 @@ function life(scene: THREE.Scene, tick: (f: Tick) => void, low: boolean) {
     const p = pilotAt(t);
     pilot.position.set(p.x, 0, p.z);
     pilot.rotation.y = p.yaw;
+    const v = pilotSpeedAt(t);
+    wake.visible = v !== 0;
+    if (v) {
+      const w = wakeOf(v, PILOT_SPEED);
+      wake.scale.set(w.width * 2.4, w.len * 2.2, 1);
+      wake.position.set(0, WATER_Y + 0.03, PILOT.L / 2 + (w.len * 2.2) / 2 - 0.4);
+      wakeMat.opacity = 0.35 * w.alpha;
+    }
     const q = truckAt(t);
     truck.visible = !!q;
     if (q) {
       truck.position.set(q.x, S, q.z);
       truck.rotation.y = q.yaw;
+      body.material = paints[(Math.imul(truckVisit(t), 2654435761) >>> 0) % paints.length];
     }
   };
   place(reduced ? STILL : Date.now() / 1000);
@@ -810,7 +870,7 @@ export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Sce
   each('docks lighthouse', pad([LIGHTHOUSE.x, LIGHTHOUSE.z, LIGHTHOUSE.x, LIGHTHOUSE.z], 2), (b) => drawLighthouse(b, low));
   MASTS.forEach(([x, z], i) => each(`docks mast ${i}`, [x - 2, z - 2, x + 2, z + 2], (b) => drawMast(b, x, z, low)));
   // The truck park's rigs: the traffic's own Heavy Haul tractors, parked facing north (+x turned to -z; the main thread's)
-  const paints = ['#e23b3b', '#2a3b66', '#f3f2f7', '#1f6b4a', '#ff8a3d'];
+  if (tick) lights(tick);
   if (scene && tick) life(scene, tick, low);
-  if (scene) parkedCars(scene, S, TRUCKS.map(({ x, z }, i): [CarId, number, number, number, string] => ['rig', x, z - TRUCK_BODY / 2 + 1.5, Math.PI / 2, paints[i % paints.length]]));
+  if (scene) parkedCars(scene, S, TRUCKS.map(({ x, z }, i): [CarId, number, number, number, string] => ['rig', x, z - TRUCK_BODY / 2 + 1.5, Math.PI / 2, RIG_PAINTS[i % RIG_PAINTS.length]]));
 }

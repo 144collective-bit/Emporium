@@ -16,6 +16,10 @@
  *   (`pilotAt()`); the tugs stay moored.
  * - **A few dock workers** standing about (`DOCK_PEOPLE`, the crowd's spare slots; the Docks dress them in hi-vis,
  *   crowdlook.ts).
+ * - **What it sounds and shines like** (docs/docks-plan.md Phase 5): how hard the crane's drives run (`hoistAt()`: the
+ *   hoist's whine follows it), when the carrier backs up (`reversingAt()`: its alarm beeps), which visit a truck is on
+ *   (`truckVisit()`: its paint), the pilot boat's speed (`pilotSpeedAt()`: its wake) and the lighthouse's two flashes
+ *   every ten seconds (`lanternAt()`).
  */
 import { BOX, CRANE, CRANES, LAND_RAIL, S, SEA_RAIL, SHIP, SHIP_STACKS, STRADDLES, TUGS, type Stack } from './docksport';
 import { BASIN, GATE_Z, WEST_X } from './docks';
@@ -260,6 +264,41 @@ export function pilotAt(t: number): { x: number; z: number; yaw: number } {
 }
 /** How long a trip out takes */
 export const PILOT_TRIP = BACK_T + LOOP_T;
+/** The pilot boat's speed at t, along its bow: backing out (negative), out on its trip, or 0 moored */
+export function pilotSpeedAt(t: number): number {
+  const u = ((t % PILOT_EVERY) + PILOT_EVERY) % PILOT_EVERY;
+  if (u < BACK_T) return -PILOT_BACK;
+  return u < BACK_T + LOOP_T ? PILOT_SPEED : 0;
+}
+
+/* ---------- What it sounds and shines like (Phase 5) ---------- */
+
+/** The crane's travel (tiles a second, trolley and spreader together) its drives call full: a little over its fastest */
+export const HOIST_FULL = 3.2;
+/** How hard the working crane's drives run at t: 0 standing, 1 at full travel (the hoist's whine follows it) */
+export function hoistAt(t: number): number {
+  const h = 0.05;
+  const [a, b] = [craneAt(t - h), craneAt(t + h)];
+  return Math.min(1, Math.hypot(b.trolley - a.trolley, b.spreader - a.spreader) / (2 * h) / HOIST_FULL);
+}
+/** Whether the carrier's backing up at t (driving against its heading, as it pulls out from under the crane and out of the slot): its alarm beeps */
+export function reversingAt(t: number): boolean {
+  const h = 0.05;
+  const [a, b] = [carrierAt(t - h), carrierAt(t + h)];
+  const [vx, vz] = [(b.x - a.x) / (2 * h), (b.z - a.z) / (2 * h)];
+  // (its heading: its length along local x turned by yaw, x east and z south)
+  return Math.hypot(vx, vz) > 0.05 && vx * Math.cos(a.yaw) - vz * Math.sin(a.yaw) < 0;
+}
+/** Which truck's visit it is at t (they come every `TRUCK_EVERY`): the same all through a visit, so its paint holds */
+export const truckVisit = (t: number) => Math.floor(t / TRUCK_EVERY);
+/** The lighthouse's light (made up): two flashes every ten seconds, each half a second */
+export const LIGHT = { period: 10, flashes: [0, 1.6], length: 0.5 };
+/** The lighthouse's flash at t, 0 (dark) to 1 (each flash rising and falling) */
+export function lanternAt(t: number): number {
+  const u = ((t % LIGHT.period) + LIGHT.period) % LIGHT.period;
+  for (const f of LIGHT.flashes) if (u >= f && u < f + LIGHT.length) return Math.sin((Math.PI * (u - f)) / LIGHT.length);
+  return 0;
+}
 
 /* ---------- The dock workers ---------- */
 
