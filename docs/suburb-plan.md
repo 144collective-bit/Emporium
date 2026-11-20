@@ -230,7 +230,7 @@ These are my recommendations, made so the plan is complete; any can change.
    `parkedCars()`). Kids on bikes and scooters were left out (they'd need a
    ridden bike of their own); the school bus parked by day and gone in the
    morning waits on a timetable.
-6. **Polish and performance** (built, waiting on the owner's sign-off,
+6. **Polish and performance** (built, signed off by the owner,
    2026-11-20):
    - `?bench` has three more Sunridge views (bench.ts `BENCH_VIEWS`):
      `sun-street` at street level down Sunridge Parkway's west side,
