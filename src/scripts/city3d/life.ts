@@ -19,7 +19,7 @@ import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
-import { JUNCTIONS, ROUTES, SPOTS, climbOn, heightOn, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
+import { JUNCTIONS, ROUTES, SOUTH_BUS_ROUTE, SPOTS, climbOn, heightOn, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { BAR, CARS, CAR_SCALE, PAINTS, carGeometry, carMaterials, theFarCars, trailerGeometry, type CarId } from './cars';
 import { BIKES, type BikeId } from './mybike';
 import { DRIVER_SCALE } from './carinside';
@@ -28,7 +28,7 @@ import { BAYS, BAY_DWELL, BIKE_MIX, BIKE_PAINTS, PIN_TO_MIDDLE, RIG_LEN, barLit,
 import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
-import { SOUTH_WALKS } from './southpeople';
+import { SOUTH_BUS_PAINT, SOUTH_WALKS } from './southpeople';
 import { SLAB_Y as ENDS_SLAB } from './endswood';
 import { southLift } from './southground';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
@@ -219,6 +219,15 @@ const CREST_HOME = homeOf(CREST_RECT, TOUR_PAINT, CREST_MIX);
 const SUN_HOME = homeOf(SUNRIDGE_RECT, SCHOOL_BUS_PAINT, SUN_MIX);
 /** The Neon Mile's (strip.ts, docs/strip-plan.md Phase 5): its party bus, limos, taxis, supercars and town cars */
 const STRIP_HOME = homeOf(STRIP_RECT, '', STRIP_MIX, STRIP_LEAD, STRIP_PAINTS);
+/** The south's bus (docs/south-plan.md Phase 6c): on its own route round the High Road, the Circus and the village
+ * (routes.ts `SOUTH_BUS_ROUTE`), put back only on it, in Aldwyn's Green's green */
+const SOUTH_HOME: Home | null = (() => {
+  const spots = SPOTS.filter((s) => s.r === SOUTH_BUS_ROUTE);
+  if (SOUTH_BUS_ROUTE < 0 || !spots.length) return null;
+  const xs = spots.map((s) => s.x);
+  const zs = spots.map((s) => s.z);
+  return { rect: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], spots, bus: SOUTH_BUS_PAINT, mix: [], lead: 'bus', paints: {} };
+})();
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows, then the trucks and the patrol cars) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup', 'exec'];
 /** The delivery trucks, in turn */
@@ -417,6 +426,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     [CREST_HOME, nCrest],
     [SUN_HOME, nSun],
     [STRIP_HOME, nStrip],
+    ...(SOUTH_HOME ? ([[SOUTH_HOME, 1]] as const) : []),
   ] as const)
     for (let k = 0; k < n && home.spots.length; k++) {
       const v = newVehicle(total + extra++, k === 0 ? home.lead : home.mix[(k - 1) % home.mix.length], false, home.spots[Math.floor((((k * 7919) % 1000) / 1000) * home.spots.length)]);

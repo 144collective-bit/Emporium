@@ -125,3 +125,10 @@ export const SOUTH_PEOPLE: SouthPerson[] = [...HIGH_ROAD, ...PLAZA_PEOPLE, ...DE
 /** The blocks the south's walkers go round (life.ts): the High Road's north side (its south side has the people
  * standing outside its shops) and the village's blocks round St Aldwyn's, on the rolling ground (their height follows it) */
 export const SOUTH_WALKS = ['south-b2', 'south-b6', 'south-b9', 'south-b10', 'south-b18'];
+
+/** The south's bus's livery (life.ts, its own route round the High Road, the Circus and the village: routes.ts
+ * `SOUTH_BUS_ROUTE`), Aldwyn's Green's own green */
+export const SOUTH_BUS_PAINT = '#2e7d5b';
+/** The streets the south's bus stops along (transit.ts): the High Road and Gate Lane, a stop about every `SOUTH_STOP_GAP` */
+export const SOUTH_BUS_STREETS = ['south-high', 'south-gate'];
+export const SOUTH_STOP_GAP = 70;

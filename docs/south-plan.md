@@ -731,7 +731,26 @@ From the Circus west, patchy as high roads are:
      `docs/south-shots/29-phase-6b-*.webp`.
    - **6c, life**: people on the High Road, the estate's decks, the
      Circus's plaza and subways, the village and the rec; the south bus
-     route and its stops; traffic checked on the new roads.
+     route and its stops; traffic checked on the new roads. Built
+     (2026-11-20, waiting for the owner's sign-off): `southpeople.ts`
+     (DOM-free, tested in tests/southpeople.test.ts: each on its surface at
+     its height, in nothing solid, off the roads): on the High Road (a pair
+     and one on the phone outside the pub, queues at the takeaway and the
+     fish bar, at shop windows, a pair outside the corner store: in line
+     along the pavement, under a metre deep there), on the estate's podium
+     deck, sitting round the Circus's second tier and standing on its
+     floor, two in the churchyard, a few at the rec (phones: half);
+     walkers round the High Road's north side and the village's blocks
+     (`SOUTH_WALKS`, life.ts: their feet follow the rolling ground,
+     `lift`); the south's crowd dressed by zone (crowdlook.ts
+     `districtAt()`: the estate and the tall band as The Trenches, the
+     village, bungalows and fields as the suburbs). The south's bus: a
+     route of its own, the last of `ROUTES` (routes.ts `busLoop()`,
+     `SOUTH_BUS_WAY`: the garage, the Circus, the village, each on to the
+     next the shortest way, tested in tests/southbus.test.ts), one bus in
+     Aldwyn's Green's green put back only on it (life.ts `SOUTH_HOME`),
+     stops along the High Road and Gate Lane (transit.ts, `SOUTH_STOP_GAP`).
+     The boot 747.0 of 760 KB. Shots `docs/south-shots/30-phase-6c-*.webp`.
    - **6d, night**: the blocks' and the village's windows, the galleries'
      lights, the High Road's shop fronts, warm and patchy.
    - **6e, sound by district**: the estate, the village, the High Road,
