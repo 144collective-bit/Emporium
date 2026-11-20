@@ -68,6 +68,8 @@ export interface PadHost {
   // The vehicles, the guns, the ring
   fly: { active: boolean };
   drive: { active: boolean; horn(): void };
+  /** X at the wheel of your car or bike: a nitro can (the inventory plan's Phase 5) */
+  nitro?(): void;
   combat: { trigger(on: boolean): void; reload(): void; toggleHolster(): void };
   fightBtns: { punch: boolean; kick: boolean; dodge: boolean };
   moments: { active: boolean };
@@ -278,13 +280,14 @@ export function pollPad(gp: PadLike | null | undefined, dt: number, s: PadState,
     pad.prev = b;
     return;
   }
-  // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, Y gets out, the left stick pressed is the horn
+  // Driving: left stick steers, RT gas, LT brake / reverse, A handbrake, X a nitro can, Y gets out, the left stick pressed is the horn
   if (drive.active) {
     padDrive.steer = pad.x;
     padDrive.throttle = (gp.buttons[7]?.value ?? 0) - (gp.buttons[6]?.value ?? 0);
     padDrive.handbrake = !!b[0];
     if (edge(3)) act();
     if (edge(10)) drive.horn();
+    if (edge(2)) h.nitro?.();
     if (pad.x || padDrive.throttle || b.some(Boolean)) d.touched();
     pad.prev = b;
     return;

@@ -60,6 +60,10 @@ time, each with the owner's sign-off; keep this up to date.
 
 ## How it fits together
 
+(As first planned. The owner changed the controls after Phase 1, no fists
+slot and no Bag list in the walk pop: "The controls and the grid, as
+built" below is how it stands.)
+
 ```
 inventory.ts      the rules, DOM-free, tested in tests/inventory.test.ts
 inventory-ui.ts   the hotbar, the Bag tab and the business card's Bag;
@@ -166,6 +170,19 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
 4. **Online.** When the owner resumes multiplayer: the guard and the
    swings seen by other players, PvP on the south bank (fight plan
    Phase 4).
+5. **Things worth carrying** (built; as built below; the owner's go,
+   2026-11). Three consumables that work outside a spar: the energy
+   drink (on foot: a faster run and sprint, never out of breath, 30 s),
+   the nitro can (in your car or on your bike: a burst of speed, 4 s)
+   and the flyers (at your stall: twice the customers, 5 min), each sold
+   at a place of its own and used only where it works, a chip with its
+   time left, N / X / a tap in the speed readout for the nitro.
+6. **An easier bag** (proposed). Anything dragged onto hotbar slots
+   3-7; a card for each item (what it does, where to buy more, "Set
+   waypoint"); a sort button.
+7. **Finds in the world** (proposed). Hidden collectibles picked up into
+   the bag across the districts, a collection page, a badge for each
+   full set.
 
 ## Phase 1, as built
 
@@ -406,6 +423,61 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   style's own guard idle, taunt and gloves or wraps, and the fight record
   on the Profile tab.
 
+## Phase 5, as built
+
+- **What they do** is `boosts.ts` (DOM-free, tested in
+  `tests/boosts.test.ts`): `ENERGY` (30 s, his run and sprint 1.15 times
+  as fast, the fists' breath topped up every frame through brawl-sim.ts
+  `refill()`), `NITRO` (4 s, more top speed and pick-up through
+  drive-sim.ts `DriveInput.boost`, `nitroTop()` / `nitroAccel()`; the
+  fastest car tuned in full with it on stays under the game server's
+  limit, protocol.ts `SPEEDS`), `FLYERS` (5 min, twice the customers at
+  your stall). `createBoosts()` keeps the two on Degen (walk mode's, on
+  its own clock, cleared when walk mode ends); the flyers' end is the
+  save's (`flyers`, cleaned and capped in `cleanSave()`, still v14), and
+  `advance()` gives the stall its extra customers for the share of each
+  tick they were out (`flyersShare()`), never while you were away.
+- **Where they work** is `useItem(s, id, here)` in inventory.ts: the snack
+  in a spar, the energy drink on foot (not at a wheel, a ride or the
+  ring), the nitro at the wheel of your own car or bike (never a kart),
+  the flyers at your stall while it has something on its shelves. One at
+  a time: a second while one's on is refused ("still going"). Walk mode
+  gives the hotbar `here()` (where he is), `boosts` and `now()`;
+  inventory-ui.ts's `useOne()` uses one up, starts its boost and toasts
+  what happened or why not (each item's `use` line in catalog.ts).
+- **The catalog** (catalog.ts `ITEM_CATALOG`): Energy drink 800 Dorras
+  (level 1), Nitro can 2,500 (level 3), Flyers 1,500 (level 2), five of
+  each at most like the snack; free play makes them free. The bag's line
+  for each says what it does, how many, the price and where it's sold.
+- **Where they're sold** (`SELLERS` in inventory.ts, a prompt each, one
+  thing a place): the snack bars as before; Uptown's coffee carts the
+  energy drink, its newsstands the flyers (streetlife.ts `CARTS`, in front
+  of each cart on the street side); Kestrel Fuel's kiosk on the High Road
+  the nitro (highroad.ts, at the back of the forecourt, well away from the
+  station's own door). The prompts read "Coffee cart · Energy drink"; walk
+  mode routes `place:buy:<id>` to the hotbar's `buy()`. The test holds
+  every spot clear of everything solid and the prompts apart.
+- **On screen**: the boosts on now as chips with the time left
+  (`[data-boosts]`, `paintBoosts()`, every frame in walk mode whatever
+  he's in; over the hotbar's corner on desktops, under the top-left
+  readouts on touch). The nitro has its own cell in the speed readout (a
+  flame and how many, `[data-drive-nitro]`, shown with `.has-nitro` while
+  you're in your car or on your bike with a can), a tap firing one; N on
+  a keyboard, X on a gamepad (keymap.ts `nitro`, walkkeys.ts, walkpad.ts,
+  walktouch.ts). A new arc button didn't fit every phone (a left-handed
+  layout on its side met the readout), so it rides in the readout's
+  reserved room instead. On touch the hotbar stays four slots (the two
+  weapons, the thing in his hand and the consumable that works where he
+  is first, `touchFirst()`: the flyers at the stall, else the energy
+  drink); a keyboard's 1-7 see all seven (`slots(s, max, first)`).
+- **Checks**: the tests above, the key, pad and touch tests, and a smoke
+  scene (`items`: an energy drink bought at a coffee cart and drunk from
+  the hotbar). Checked in a browser on desktop and on phones upright and
+  on their side: bought at each seller, used where each works, refused
+  while one's on, the nitro fired from N and from a tap.
+- **Not changed**: goods still move between your places only by car (the
+  question below), nothing outside the ring hurts or heals Degen.
+
 ## Open questions (small; the owner can answer as they come)
 
 - The snack's price and how many he can stack (assumed 500 Dorras, five
@@ -414,6 +486,9 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   `FIGHT_BOTS`' three, or new ones).
 - Whether the Bag on the business card should also let him Use a snack
   from the City view (assumed no: Use is walk mode's).
+- Whether a few goods may ride in the bag, to deliver a contract on foot
+  (assumed no: goods move between your places only by car, as the
+  economy's rule has it).
 
 ## Not in scope
 

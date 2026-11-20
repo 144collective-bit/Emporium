@@ -208,3 +208,24 @@ keep it up to date when what it describes changes.
   landmarks' uplights (`alongWall()`, `UPLIGHT`): the hotel, the civic hall and
   the clubhouse floodlit (their main walls' faint warm emissive in
   crestsites3d.ts, `flood()`), all under the bloom's threshold.
+  Phase 2, the houses upgraded (balconies "By style", roof terraces "Mansions
+  only", gates "Iron gates, lit piers", phones "Trimmed as now"): the rules
+  are `crestgrand.ts` (DOM-free, the chunk's, tested in
+  `tests/crestgrand.test.ts`), drawn through each house's own helpers by
+  `crestgrand3d.ts` (`drawBalcony()`, `drawDeck()`, `drawPierTop()`,
+  `drawLeaf()`) from estates3d.ts and mansions3d.ts. Balconies
+  (`ESTATE_BALCONIES`, `MANSION_BALCONIES`, a kind by style:
+  `ESTATE_BALCONY`, `MANSION_BALCONY`) on the main block's first upper floor,
+  at the windows as the houses lay them (`windowsAlong()`), clear of a villa's
+  stone balcony over its door (`DOOR_BALCONY`), a Georgian portico
+  (`PORTICO`) and anything tall in the garden under them (`clearOf()`). The
+  hill mansions' roof terraces (`ROOF_DECKS`, `roofDeckOf()`): a glass house's
+  flat roof decked; the others' main hips cut flat at `DECK_HIP.f` of their
+  height (`hipDeck()`, roofs3d.ts `deckHip()`), the rail (`DECK_RAIL`) clear
+  of the chimney (`MANSION_CHIMNEY`) and the summit's tower, furnished inside
+  it. Gates: the estates' piers `GATE.h` 2.1 (estates.ts, solid at that
+  height), a lantern and a plain plaque each (`PIER`), the leaves wrought
+  iron with gilded tips (`GATE_LEAF`, `leavesOf()`; a modern house's slatted,
+  `slatted()`); the hill houses without a wall get piers and gates at their
+  drive's mouth (`MANSION_GATE`, `mansionPiers()`, `MANSION_PIERS` joining the
+  grids with the chunk).

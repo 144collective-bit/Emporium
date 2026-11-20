@@ -25,6 +25,7 @@
  *   it slides along walls and bumps off other cars and people, losing speed,
  *   never hurting anyone.
  */
+import { nitroAccel, nitroTop } from './boosts';
 import type { Box } from './solids';
 import { RIVER, WALL_OUT } from './layout';
 import { edgeSamples, topsAt } from './river';
@@ -115,6 +116,8 @@ export interface DriveInput {
   /** Left (-1) to right (1) */
   steer: number;
   handbrake: boolean;
+  /** A nitro can burning (0..1; the inventory plan's Phase 5, boosts.ts `NITRO`): more top speed and pick-up */
+  boost?: number;
 }
 
 export interface DriveWorld {
@@ -202,9 +205,10 @@ export function circles(c: { x: number; z: number; yaw: number }, t: DriveTune) 
 export function stepCar(c: CarState, inp: DriveInput, t: DriveTune, dt: number, world: DriveWorld, bounds: Box): number {
   // Gas, brake, reverse
   const th = Math.max(-1, Math.min(1, inp.throttle));
+  const boost = Math.max(0, Math.min(1, inp.boost ?? 0));
   if (th > 0.02) {
     if (c.speed < -0.3) c.speed = approach(c.speed, 0, t.brake * th * dt);
-    else c.speed += t.accel * th * Math.max(0, 1 - (c.speed / t.top) ** 2) * dt;
+    else c.speed += nitroAccel(t.accel, boost) * th * Math.max(0, 1 - (c.speed / nitroTop(t.top, boost)) ** 2) * dt;
   } else if (th < -0.02) {
     if (c.speed > 0.3) c.speed = approach(c.speed, 0, t.brake * -th * dt);
     else c.speed = approach(c.speed, -t.reverse * -th, t.accel * 0.7 * -th * dt);
