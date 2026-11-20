@@ -620,6 +620,11 @@ and the textures 4950.5 of 4950. The base's drawing-only data moved to `airbased
 signs' atlas was halved (1024 by 256): the textures 4941.5 (fits), the boot 765.6. The owner's call: **the boot budget
 from 765 to 767 on purpose** (scripts/budget.mjs, its reason written beside it).
 
+Main merged again (b72fbbd, Crestmont's cable car): main alone measured 764.5 KB (boot) and 4942.9 (textures), the
+merge 768.8 and 4952.5. The owner's calls: **the boot budget from 767 to 770 on purpose**, and the signs' atlas cut to
+its three rows (1024 by 192, no spare row). The empty row had compressed to almost nothing (0.4 KB saved, the
+textures 4952.1), so, as that call allowed, **the texture budget from 4950 to 4955 on purpose**.
+
 ## The night sky from high: what it is (2026-11-20, the first of the owner's "Later" picks)
 
 Not the review tool and not the base: `?shots=night` sets the night once for the whole run (shots.ts). sky.ts thickens

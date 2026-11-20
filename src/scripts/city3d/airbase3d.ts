@@ -56,11 +56,11 @@ const BRICK = toon('#6d4a52');
 
 /** The signs: the base's name, the service gate's and the visitors' centre's, a row each */
 const SIGNS = ['NORTHGATE AIR BASE', 'SERVICE GATE', "VISITORS' CENTRE"] as const;
-const ROWS = 4;
-// (1024 by 256: four rows of 64, three used; the build's texture budget is tight)
-const ATLAS = canvasTex(1024, 256, (c) => {
+const ROWS = SIGNS.length;
+// (1024 by 192: a row of 64 a sign, no spare row; the build's texture budget is tight)
+const ATLAS = canvasTex(1024, ROWS * 64, (c) => {
   c.fillStyle = '#10142a';
-  c.fillRect(0, 0, 1024, 256);
+  c.fillRect(0, 0, 1024, ROWS * 64);
   SIGNS.forEach((text, i) => {
     const y = i * 64;
     c.fillStyle = '#1a2148';

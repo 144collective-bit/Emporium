@@ -60,9 +60,10 @@ const BUDGETS = {
    * the boot) took it to 760.7, leaving about 4 KB for the next small feature; and from 765 to 767 on purpose (the
    * owner's call, 2026-11-20): with main merged into Northgate Air Base's branch the boot stood at 765.6 (the base's
    * lines, solids, lamps, keep, look and sound at the boot, about 4.6 KB, its drawing-only data moved to its chunks'
-   * airbasedress.ts first; docs/military-plan.md)
+   * airbasedress.ts first; docs/military-plan.md); and from 767 to 770 on purpose (the owner's call, 2026-11-20):
+   * with main merged again (Crestmont's cable car, main alone at 764.5) the base's boot took it to 768.8
    */
-  bootJs: 767,
+  bootJs: 770,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**
@@ -83,8 +84,11 @@ const BUDGETS = {
    * GPU
    */
   texLow: 3450,
-  /** ... and as everyone else does */
-  texFull: 4950,
+  /**
+   * ... and as everyone else does. From 4950 to 4955 on purpose (the owner's call, 2026-11-20): main alone at 4942.9,
+   * Northgate Air Base's signs' atlas (cut to its three rows, 1024 by 192) took the merge to 4952.1
+   */
+  texFull: 4955,
   /** Their transcoder (three's Basis wasm and its script) */
   transcoder: 300,
   /**
