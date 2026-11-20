@@ -76,6 +76,8 @@ const airportWay = (q: Pt) =>
   (q[0] > GA_ROAD.x0 + 4 && q[0] < GA_ROAD.x1 + 3 && q[1] > GA_ROAD.z && q[1] < GA_ROAD.loopZ + 3);
 
 /** The raised highway's exits (docs/highway-plan.md Phase 3): on a ramp, or on an arterial between the deck and a ramp's foot outside it */
+/** Exit 6A's road in and its link down to the south (cornerroad.ts, docs/south-plan.md Phase 5) */
+const cornerWay = (q: Pt) => PLAN.streets.some((s) => s.id.startsWith('corner-') && distToStreet(s, q) <= s.half + 1);
 const exitWay = (q: Pt) =>
   PLAN.streets.some((s) => s.kind === 'ramp' && distToStreet(s, q) <= s.half + 0.5) ||
   (fromHighway(q[0], q[1]) < 36 && EXITS.some((e) => distToStreet(PLAN.streets.find((s) => s.id === e.street)!, q) <= 5));
@@ -97,7 +99,7 @@ function alongPts(pts: Pt[], p: Pt) {
   return at;
 }
 
-test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks', Lot 9's and Endswood's streets, or the country roads)", () => {
+test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks', Lot 9's and Endswood's streets, exit 6A's road in, or the country roads)", () => {
   // (the country roads past the highway, their joins and turning loops: rural.ts, docs/highway-plan.md Phase 7)
   // (and the grid roads' town pieces out to them, past the last junction: the arterials, `ns` / `ew`)
   const ruralWay = (q: [number, number]) => PLAN.streets.some((s) => (s.kind === 'rural' || /^(ns|ew)\d+[es]?$/.test(s.id)) && distToStreet(s, q) < s.half + 4);
@@ -108,7 +110,7 @@ test("every route stays on the asphalt, a car's width in from the kerb, off ever
         `route ${i} leaves the road at ${q.map((v) => v.toFixed(1))}`
       );
       assert.ok(!onSlab(PLAN, q), `route ${i} drives over a sidewalk at ${q.map((v) => v.toFixed(1))}`);
-      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q) || endsWay(q) || exitWay(q) || ruralWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
+      assert.ok(insideHighway(q[0], q[1]) || fromHighway(q[0], q[1]) < HIGHWAY_HALF || stadiumWay(q) || airportWay(q) || crestWay(q) || docksWay(q) || lot9Way(q) || endsWay(q) || cornerWay(q) || exitWay(q) || ruralWay(q), `route ${i} goes out past the highway at ${q.map((v) => v.toFixed(1))}`);
     }
 });
 

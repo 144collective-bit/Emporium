@@ -115,7 +115,7 @@ export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS
       const t = Math.max(0, Math.min(1, ((x - r.ax) * r.vx + (z - r.az) * r.vz) / r.l2));
       const d = Math.hypot(x - r.ax - r.vx * t, z - r.az - r.vz * t);
       // (and never on its pad's level ground, which holds its own height: the ramp eases into it as into the road)
-      const w = (1 - smooth(RAMP.half, RAMP.half + RAMP.ease, d)) * (1 - (bed?.w ?? 0)) * (1 - hold(r.level, x, z));
+      const w = (1 - smooth(RAMP.half, RAMP.half + r.ease, d)) * (1 - (bed?.w ?? 0)) * (1 - hold(r.level, x, z));
       if (w > 0) h += (r.ya + (r.yb - r.ya) * t - h) * w;
     }
   return h;
@@ -126,20 +126,27 @@ export function heightAt(x: number, z: number, levels: readonly Level[] = LEVELS
  * slab standing out of the bank): from the road's height at its mouth to the pad's at its front, straight, held level
  * across the drive and its kerbs (`half`), eased back into the slope either side (`ease`)
  */
-export const RAMP = { half: 1.6, ease: 4 } as const;
+export const RAMP = { half: 1.6, ease: 4, bank: 0.42 } as const;
 const RAMPS = MANSIONS.map((m, i) => {
   const [a, b] = m.drive;
   const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
-  const reach = RAMP.half + RAMP.ease;
   const bed = bedAt(a[0], a[1]);
+  const [ya, yb] = [bed ? bed.y : natural(a[0], a[1]), m.y];
+  // (a new lot's long drive cut deeper into the hillside eases back over a wider bank, no steeper than `bank`: the
+  // premium upgrade's Phase 3; the others as they were)
+  let cut = 0;
+  for (let t = 0; t <= 1; t += 0.05) cut = Math.max(cut, Math.abs(natural(a[0] + vx * t, a[1] + vz * t) - (ya + (yb - ya) * t)));
+  const ease = m.lot ? Math.max(RAMP.ease, cut / RAMP.bank) : RAMP.ease;
+  const reach = RAMP.half + ease;
   return {
+    ease,
     ax: a[0],
     az: a[1],
     vx,
     vz,
     l2: vx * vx + vz * vz || 1,
-    ya: bed ? bed.y : natural(a[0], a[1]),
-    yb: m.y,
+    ya,
+    yb,
     level: MANSION_LEVELS[i],
     box: [Math.min(a[0], b[0]) - reach, Math.min(a[1], b[1]) - reach, Math.max(a[0], b[0]) + reach, Math.max(a[1], b[1]) + reach],
   };

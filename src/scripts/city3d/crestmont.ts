@@ -373,7 +373,7 @@ export const inBay = (x: number, z: number, m = 0) =>
   });
 
 /** Where Crestmont's streets and blocks are (the outskirts' trees keep off; the drawing's land) */
-export const CREST_RECT: Rect = [FLATS_X[0] - 6, -380, FLATS_EAST + 2, BANK.c + BANK.half];
+export const CREST_RECT: Rect = [FLATS_X[0] - 6, -395, FLATS_EAST + 2, BANK.c + BANK.half];
 
 /* ---------- Lamps ---------- */
 

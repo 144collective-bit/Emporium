@@ -62,7 +62,12 @@ export function turnsOf(pts: Pt[], cum: number[]): Turn[] {
   let run: { start: number; end: number; sum: number } | null = null;
   const close = () => {
     // (a sharp corner at a single point still spans a tile, so a car is indicating as it goes round)
-    if (run && Math.abs(run.sum) >= TURN_SWING && cum[run.end] - cum[run.start] <= TURN_LEN) out.push({ from: cum[run.start], to: Math.max(cum[run.end], cum[run.start] + 1), dir: run.sum < 0 ? 'L' : 'R' });
+    // (and kept inside the route: a corner at its very end spans the tile before it)
+    if (run && Math.abs(run.sum) >= TURN_SWING && cum[run.end] - cum[run.start] <= TURN_LEN) {
+      const end = cum[cum.length - 1];
+      const to = Math.max(cum[run.end], cum[run.start] + 1);
+      out.push({ from: to > end ? Math.max(0, cum[run.start] - (to - end)) : cum[run.start], to: Math.min(to, end), dir: run.sum < 0 ? 'L' : 'R' });
+    }
     run = null;
   };
   for (let k = 1; k < segs.length; k++) {

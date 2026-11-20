@@ -30,6 +30,7 @@ import { BAY, LOCKUP, SOFFIT_Y, UNDER, UNDER_CARS, UNDER_LIGHTS, skateParts, typ
 import { buildFx, tag } from './grime';
 import { EXIT_SIGNS, GANTRIES, GANTRY, MURALS, MURAL_ART, RAMP_SIGNS, SOUND_WALL, gantryPanel, soundWall, type Gantry } from './viasigns';
 import { ROAD } from './palette';
+import { registerCorner } from './corner3d';
 
 export const SELF = import.meta.url;
 
@@ -207,8 +208,8 @@ const SIGN_TEX = canvasTex(1024, SIGN_ROWS * ROW_H, (c) => {
       c.fillStyle = '#17161c';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      fit(`EXIT ${e.n}`, 130, 40);
-      c.fillText(`EXIT ${e.n}`, 99, y + ROW_H / 2 + 2);
+      fit(`EXIT ${e.label}`, 130, 40);
+      c.fillText(`EXIT ${e.label}`, 99, y + ROW_H / 2 + 2);
       c.fillStyle = '#f2f0ea';
       c.textAlign = 'left';
       fit(e.name.toUpperCase(), 800, 50);
@@ -219,8 +220,8 @@ const SIGN_TEX = canvasTex(1024, SIGN_ROWS * ROW_H, (c) => {
       c.fillStyle = '#f2f0ea';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      fit(`EXIT ${e.n}`, 600, 60);
-      c.fillText(`EXIT ${e.n}`, 420, y + ROW_H / 2 + 3);
+      fit(`EXIT ${e.label}`, 600, 60);
+      c.fillText(`EXIT ${e.label}`, 420, y + ROW_H / 2 + 3);
       c.lineWidth = 10;
       c.strokeStyle = '#f2f0ea';
       c.beginPath();
@@ -649,5 +650,6 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
         b.build(into, { cast: true, receive: true });
       });
     }
-  void low;
+  // Exit 6A's road in (corner3d.ts, docs/south-plan.md Phase 5b): Corner Road and Gate Hill
+  registerCorner(low);
 }

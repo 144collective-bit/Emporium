@@ -349,11 +349,13 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       ctx.strokeStyle = C.edge;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(x - 8, y - 7, 16, 14, 3);
+      // (wider for 6A's two characters)
+      const bw = 10 + 6 * e.label.length;
+      ctx.roundRect(x - bw / 2, y - 7, bw, 14, 3);
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = '#fff';
-      ctx.fillText(String(e.n), x, y + 0.5);
+      ctx.fillText(e.label, x, y + 0.5);
     }
     ctx.textAlign = 'start';
     // The river bus's loop, dashed

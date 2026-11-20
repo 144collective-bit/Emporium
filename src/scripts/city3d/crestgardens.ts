@@ -569,9 +569,9 @@ function mansionGarden(m: Mansion): Garden {
   const corners = (pts: Pt[]) => [...pts].sort((a, b) => a[1] - b[1] + (Math.abs(b[0]) - Math.abs(a[0])) * 0.3);
 
   feats.push({ kind: 'spa', r: at(pu1 - 0.6, pv1 - 0.2, SPA_R), tone: kind });
-  if (kind === 'compound' || kind === 'summit') first('poolhouse', 1.5, 1.05, corners(grid), [0, 1]);
+  if (kind === 'compound' || kind === 'summit' || kind === 'chateau') first('poolhouse', 1.5, 1.05, corners(grid), [0, 1]);
   if (kind === 'villa' || kind === 'compound') first('pergola', 1.3, 1.2, corners(grid), [0, 1]);
-  if (kind === 'glass' || kind === 'summit') first('firepit', 1.0, 1.0, corners(grid));
+  if (kind === 'glass' || kind === 'summit' || kind === 'deco') first('firepit', 1.0, 1.0, corners(grid));
   if (kind === 'summit') {
     for (const s of [-1, 1]) first('statue', 0.35, 0.35, grid.filter(([u, v]) => Math.sign(u) === s && v > -6).sort((a, b) => b[1] - a[1]));
     for (const p of m.parts.slice(0, 1)) for (const [u, v] of [[p.u0 - 0.6, p.v0 - 0.3], [p.u1 + 0.6, p.v0 - 0.3], [p.u0 - 0.6, p.v1 + 0.3], [p.u1 + 0.6, p.v1 + 0.3]] as Pt[]) put('cypress', at(u, v, 0.3));
@@ -581,6 +581,12 @@ function mansionGarden(m: Mansion): Garden {
   const olives = kind === 'glass' ? 2 : 3;
   let n = 0;
   for (const p of corners(grid)) if (n < olives && put('olive', at(p[0], p[1], 0.75))) n++;
+  // (the premium upgrade's Phase 3: a chateau's parterre and its statues, an Art Deco house's reflecting pool)
+  if (kind === 'chateau') {
+    first('parterre', 1.6, 1.3, corners(grid));
+    for (const s of [-1, 1]) first('statue', 0.35, 0.35, grid.filter(([u, v]) => Math.sign(u) === s && v > -6).sort((a, b) => b[1] - a[1]));
+  }
+  if (kind === 'deco') first('reflect', 1.4, 0.6, corners(grid));
   // Borders inside a compound's walls, along its back and sides; a glass mansion's grasses
   if (m.walled) {
     put('border', [box[0], box[1], box[2], box[1] + 0.45]);
@@ -588,18 +594,21 @@ function mansionGarden(m: Mansion): Garden {
       // (in pieces round what's in the way)
       for (let v = box[1] + 0.5; v < box[3] - 1; v += 1.5) put('border', [u, v, u + 0.45, Math.min(box[3] - 0.5, v + 1.45)]);
     }
-  } else if (kind === 'glass') for (const p of corners(grid).slice(0, 40)) if (put('grass', at(p[0], p[1], 0.9, 0.3))) break;
+  } else if (kind === 'glass' || kind === 'deco') for (const p of corners(grid).slice(0, 40)) if (put('grass', at(p[0], p[1], 0.9, 0.3))) break;
   // A pair at the door (on the forecourt's paving: clear of the car only)
   const main = m.parts[0];
   const fu = (main.u0 + main.u1) / 2;
-  const pair: FeatKind = kind === 'villa' ? 'lemon' : kind === 'glass' ? 'planter' : kind === 'summit' ? 'cone' : 'urn';
+  const pair: FeatKind = kind === 'villa' ? 'lemon' : kind === 'glass' || kind === 'deco' ? 'planter' : kind === 'summit' || kind === 'chateau' ? 'cone' : 'urn';
   const cars = taken.slice(m.parts.length + 3, -1);
   for (const s of [-1, 1]) {
-    const r = at(fu + s * (kind === 'glass' ? 1.5 : 1.35), main.v0 + 0.45, 0.3);
+    const r = at(fu + s * (kind === 'glass' || kind === 'deco' ? 1.5 : 1.35), main.v0 + 0.45, 0.3);
     if (!overlaps(r, cars)) feats.push({ kind: pair, r, tone: kind });
   }
-  // Stepping stones in from each gate
-  for (const g of gates) feats.push({ kind: 'stones', r: norm(g.u - g.out[0] * 2.2 - (g.out[1] ? 0.25 : 0), g.v - g.out[1] * 2.2 - (g.out[0] ? 0.25 : 0), g.u - g.out[0] * 0.5 + (g.out[1] ? 0.25 : 0), g.v - g.out[1] * 0.5 + (g.out[0] ? 0.25 : 0)), tone: kind });
+  // Stepping stones in from each gate (none where the house or its pool stands in their way: an Art Deco house's tower)
+  for (const g of gates) {
+    const r = norm(g.u - g.out[0] * 2.2 - (g.out[1] ? 0.25 : 0), g.v - g.out[1] * 2.2 - (g.out[0] ? 0.25 : 0), g.u - g.out[0] * 0.5 + (g.out[1] ? 0.25 : 0), g.v - g.out[1] * 0.5 + (g.out[0] ? 0.25 : 0));
+    if (!overlaps(r, taken.slice(0, m.parts.length + 3))) feats.push({ kind: 'stones', r, tone: kind });
+  }
   // Lamps by the drive's mouth
   for (const s of [-1, 1]) feats.push({ kind: 'lamp', r: at(du + s * 1.6, -0.7, 0.08), tone: kind });
   return { feats, lawn: P.lawn() };

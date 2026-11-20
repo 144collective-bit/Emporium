@@ -681,8 +681,19 @@ Their answers, in three rounds:
    lanterns and the same gates; the hill houses without a wall get new piers and gates at their drive's mouth
    (`MANSION_PIERS`, solid with the chunk). Phones: the main shapes; bars, balusters, gilding, furniture and leaves
    near only, the lanterns near only.
-3. **New hill mansions:** 3 to 6 on terraced lots on the open slopes, Art Deco and French chateau, each on its own level
-   with a yard, a graded drive and a planted bank, as the others.
+3. **New hill mansions** (built; the owner's answers: four, "Half and half", "As planned", "All of them"; then, when the
+   real placement rules found only one open spot with the land kept, "deeper terraces + vineyard"): `NEW_LOTS` in
+   mansions.ts, after the eight already there (which stand as they were): two Art Deco (`deco`: white walls with rounded
+   corners, ribbon windows, portholes, speed lines, a parapet, a stepped tower with fins, a sundeck on its flat roof, a
+   curved canopy over its door, a reflecting pool) and two French chateaux (`chateau`: pale stone with quoins and a
+   string course, tall windows, a slate mansard with dormers and a flat terrace on top, two round turrets under slate
+   cones at its front corners, a raked gravel court, a parterre with statues), by turns. Two stand high up on open land
+   (one off the summit's lane, its terraces cut up to a metre deeper than `CUT`), two lower down Ridge Road on land two
+   vineyards had; those vineyards and a grove the lower drive crosses are moved aside whole (crestland.ts `LAID`,
+   `keep()`), the rest of the land as it was laid. Their long drives cut into the hillside ease back over a wider
+   bank (terrain.ts `RAMP.bank`, the new lots only). Crestmont's north edge (`CREST_RECT`) moved from -380 to -395 to
+   take in the highest. No walls: the Phase 2 gates on lit piers at their drives, balconies (glass on the Art Deco,
+   stone on the chateaux), roof terraces, festoons and pool lights as the other hill houses.
 4. **Highcrest:** the hilltop quarter's plaza with THE ASTERLY, SOLENNE and VELLANO MOTOR SALON (or the showroom on
    Coral Drive: asked at this phase), each a place; a metro or taxi way up.
 5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
