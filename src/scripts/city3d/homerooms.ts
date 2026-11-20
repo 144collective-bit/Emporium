@@ -44,7 +44,8 @@ export type FurnitureKind =
   | 'island'
   | 'stools'
   | 'console'
-  | 'cupboard'
+  | 'boots'
+  | 'laundry'
   | 'oven'
   | 'dining'
   | 'chair';
@@ -111,7 +112,6 @@ function layOut(g: HouseGeo) {
     { kind: 'trophies', rect: [rx0, rz0 + 3.85, rx0 + 0.22, rz0 + 4.95], h: 1.1 },
     { kind: 'plant', rect: [rx0 + 0.06, rz0 + 5.02, rx0 + 0.36, rz0 + 5.32], h: 0.75 },
     { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
-    { kind: 'plant', rect: [rx1 - 0.36, rz1 - 0.36, rx1 - 0.06, rz1 - 0.06], h: 0.55 },
     { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
     { kind: 'stools', rect: [rx0 + 1.15, rz1 - 2.25, rx0 + 3.05, rz1 - 1.88], h: 0.3 },
     // The kitchen (docs/interior-plan.md Phase 2): the oven's tall unit at the back wall's west end, the run with its sink
@@ -125,7 +125,10 @@ function layOut(g: HouseGeo) {
     { kind: 'chair', rect: [DX + 1.95, rz0 + 2.9, DX + 2.3, rz0 + 3.25], h: 0.5 },
     { kind: 'chair', rect: [DX + 1.25, rz0 + 4.0, DX + 1.6, rz0 + 4.3], h: 0.5 },
     { kind: 'chair', rect: [DX + 1.95, rz0 + 4.0, DX + 2.3, rz0 + 4.3], h: 0.5 },
-    { kind: 'cupboard', rect: [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15], h: 1.1 },
+    // The boot room by the side door (docs/interior-plan.md Phase 4): the bench under his coats north of it, the laundry's
+    // tall unit in the corner south of it; both clear of the way out
+    { kind: 'boots', rect: [rx1 - 0.45, rz0 + 3.0, rx1, rz0 + 4.1], h: 0.24 },
+    { kind: 'laundry', rect: [rx1 - 0.65, rz1 - 0.9, rx1, rz1], h: 1.12 },
   ];
 
   /* ---------- Upstairs (Phase 3) ---------- */

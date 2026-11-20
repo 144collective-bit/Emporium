@@ -16,7 +16,7 @@ import { heightAt } from './terrain';
 import { drawnAt } from './drawn';
 import { DRAPE, OVERLOOK_PATH, discMesh, lineMesh } from './crestdrape';
 import { meshGeometry } from './mansions3d';
-import { CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y, TEE, bunkersOf, flagOf, type Hole } from './crestsites';
+import { ASTERLY, ASTERLY_NAME, HIGHCREST_NAME, CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y, TEE, bunkersOf, flagOf, type Hole } from './crestsites';
 import { WINDOW, hip, poolOf } from './estates3d';
 import { BULB, LED, PAVING, SPRAY, WATER, flat } from './mallkit';
 import { COVER } from './palette';
@@ -35,6 +35,7 @@ const DOME = toon('#2f7f9e');
 const GOLD = toon('#d9a94a');
 const WOOD = toon('#5a3a26');
 const IRON = toon('#1e1d22');
+const GLASS_RAIL = toon('#a9dcef');
 const CONCRETE = toon('#b9b4aa');
 const CONCRETE_TOP = toon('#cfcac0');
 const FAIR = toon('#6dbb55');
@@ -74,6 +75,46 @@ function uplights(b: Batch, r: Rect, y: number, skip?: (x: number, z: number) =>
       b.box(px - 0.06, y, pz - 0.06, 0.12, 0.05, 0.12, UPLIGHT);
     }
 }
+
+/** THE ASTERLY's name, thin gold capitals on black, lit at night (the premium upgrade's Phase 4) */
+const ASTERLY_SIGN = siteMat(
+  'crest-asterly-name',
+  lit(
+    new THREE.MeshBasicMaterial({
+      map: canvasTex(512, 80, (c) => {
+        c.fillStyle = '#121216';
+        c.fillRect(0, 0, 512, 80);
+        c.fillStyle = '#e8c97e';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.font = '300 46px "Didot", "Bodoni 72", Georgia, "Times New Roman", serif';
+        (c as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '10px';
+        c.fillText(ASTERLY_NAME, 256, 42);
+      }),
+    }),
+    0.95,
+    1.2
+  )
+);
+/** Highcrest's name, cut in a bronze plaque on its marker stone by the overlook's way in */
+const HIGHCREST_SIGN = siteMat(
+  'crest-highcrest-name',
+  new THREE.MeshBasicMaterial({
+    map: canvasTex(256, 64, (c) => {
+      c.fillStyle = '#7a5a32';
+      c.fillRect(0, 0, 256, 64);
+      c.strokeStyle = '#c9a75a';
+      c.lineWidth = 3;
+      c.strokeRect(5, 5, 246, 54);
+      c.fillStyle = '#f0d9a0';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.font = '600 30px Georgia, "Times New Roman", serif';
+      (c as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = '6px';
+      c.fillText(HIGHCREST_NAME, 128, 34);
+    }),
+  })
+);
 
 /** The hotel's name in script, gold on deep teal, lit a little at night */
 const NAME_SIGN = siteMat(
@@ -318,6 +359,9 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
         const [sx, sz, ex, ez] = [ax + (bx - ax) * u0, az + (bz - az) * u0, ax + (bx - ax) * u1, az + (bz - az) * u1];
         const [mx, mz] = [(sx + ex) / 2, (sz + ez) / 2];
         if (Math.hypot(mx - pb[0], mz - pb[1]) < 1.6) continue;
+        // (and open to THE ASTERLY's bridge: Phase 4)
+        const g = ASTERLY.bridge;
+        if (mx > g[0] - 0.3 && mx < g[2] + 0.3 && mz > g[1] - 0.6 && mz < g[3] + 0.6) continue;
         const out = heightAt(mx + n[0] * 2, mz + n[1] * 2) - y;
         const [lx0, lz0, lx1, lz1] = [Math.min(sx, ex) - (n[0] ? 0.15 : 0), Math.min(sz, ez) - (n[1] ? 0.15 : 0), Math.max(sx, ex) + (n[0] ? 0.15 : 0), Math.max(sz, ez) + (n[1] ? 0.15 : 0)];
         // (a retaining wall topped just over the ground it holds back, not standing proud of the bank)
@@ -359,6 +403,97 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     p.add(strip(pa, pb, OVERLOOK_PATH.half, OVERLOOK_PATH.lift), STONE);
     p.build(into, { cast: false, receive: true });
   });
+
+  /* ---------- THE ASTERLY on Highcrest (the premium upgrade's Phase 4) ---------- */
+  const A = ASTERLY;
+  const all: Rect = [Math.min(A.body[0], A.bridge[0]), Math.min(A.body[1], A.terrace[1], A.bridge[1]), Math.max(A.body[2], A.terrace[2]), Math.max(A.body[3], A.terrace[3], A.bridge[3])];
+  site('crestmont asterly', [all[0] - 2, all[1] - 2, all[2] + 2, all[3] + 2], (into) => {
+    const b = new Batch();
+    const y = A.y;
+    const [x0, z0, x1, z1] = A.body;
+    const [tx0, tz0, tx1, tz1] = A.terrace;
+    const top = y + A.h;
+    // The legs: slim white steel columns from under the floor down into the slope, a grid under the body and terrace
+    const leg = (x: number, z: number) => {
+      const g = Math.min(heightAt(x, z), drawnAt(x, z)) - 0.3;
+      if (y - 0.35 - g > 0.05) cyl(b, 0.12, y - 0.35 - g, x, g, z, WHITE, 8);
+    };
+    for (const [a0, b0, a1, b1] of [A.body, A.terrace])
+      for (let x = a0 + 0.6; x <= a1 - 0.5; x += (a1 - a0 - 1.2) / Math.max(1, Math.round((a1 - a0 - 1.2) / 3.2))) for (let z = b0 + 0.5; z <= b1 - 0.4; z += Math.max(1, (b1 - b0 - 1) / Math.max(1, Math.round((b1 - b0 - 1) / 3.2)))) leg(x, z);
+    // The floor slab, the terrace's deck, the bridge
+    box(b, x0 - 0.1, y - 0.35, z0 - 0.1, x1 + 0.1, y, z1 + 0.1, WHITE);
+    box(b, tx0, y - 0.3, tz0, tx1, y - 0.02, tz1, WHITE);
+    b.add(new THREE.PlaneGeometry(tx1 - tx0 - 0.1, tz1 - tz0 - 0.1).rotateX(-Math.PI / 2).translate((tx0 + tx1) / 2, y, (tz0 + tz1) / 2), WOOD);
+    const [gx0, gz0, gx1, gz1] = A.bridge;
+    box(b, gx0, y - 0.25, gz0, gx1, y - 0.02, gz1, STONE);
+    for (const x of [gx0, gx1 - 0.05]) box(b, x, y, gz0 + 0.2, x + 0.05, y + 1.0, gz1, GLASS_RAIL);
+    // The pavilion: glass all round between slim white mullions, warm at night, the roof slab overhanging, its edge lit
+    const glass = (ax: number, az: number, bx: number, bz: number, n: Pt) => {
+      const L = Math.hypot(bx - ax, bz - az);
+      const k = Math.max(1, Math.round(L / 1.6));
+      for (let i = 0; i < k; i++) {
+        const t = (i + 0.5) / k;
+        const [x, z] = [ax + (bx - ax) * t, az + (bz - az) * t];
+        // (its door, on the side facing the overlook, at the bridge)
+        if (n[1] === -A.out && Math.abs(x - (gx0 + gx1) / 2) < 0.9) {
+          pane(b, x, z, n, 1.2, y, 2.3, IRON);
+          continue;
+        }
+        pane(b, x, z, n, L / k - 0.12, y + 0.1, A.h - 0.3, windowOf('asterly', x, y, z, low));
+      }
+      for (let i = 0; i <= k; i++) {
+        const [x, z] = [ax + ((bx - ax) * i) / k, az + ((bz - az) * i) / k];
+        box(b, x - 0.05, y, z - 0.05, x + 0.05, top, z + 0.05, WHITE);
+      }
+    };
+    glass(x0, z0, x1, z0, [0, -1]);
+    glass(x0, z1, x1, z1, [0, 1]);
+    glass(x0, z0, x0, z1, [-1, 0]);
+    glass(x1, z0, x1, z1, [1, 0]);
+    box(b, x0 + 0.05, y, z0 + 0.05, x1 - 0.05, y + 0.08, z1 - 0.05, WOOD);
+    box(b, x0 - 0.7, top, z0 - 0.7, x1 + 0.7, top + A.roof, z1 + 0.7, WHITE);
+    box(b, x0 - 0.72, top + 0.08, z0 - 0.72, x1 + 0.72, top + 0.14, z0 - 0.7, LED);
+    box(b, x0 - 0.72, top + 0.08, z1 + 0.7, x1 + 0.72, top + 0.14, z1 + 0.72, LED);
+    // Its name on the roof's edge over the door, facing the overlook
+    const nz = A.out > 0 ? z0 - 0.72 : z1 + 0.72;
+    b.add(new THREE.PlaneGeometry(4.2, 0.55).rotateY(A.out > 0 ? Math.PI : 0).translate((x0 + x1) / 2, top + A.roof + 0.45, nz - A.out * 0.01), ASTERLY_SIGN);
+    box(b, (x0 + x1) / 2 - 2.2, top + A.roof, nz - 0.06, (x0 + x1) / 2 + 2.2, top + A.roof + 0.75, nz + 0.06, IRON);
+    // The terrace: a glass balustrade round its three open sides, its tables, each with a candle and a parasol furled
+    for (const [a, c, d, e] of [
+      [tx0, tz0, tx0 + 0.05, tz1],
+      [tx1 - 0.05, tz0, tx1, tz1],
+      A.out > 0 ? [tx0, tz1 - 0.05, tx1, tz1] : [tx0, tz0, tx1, tz0 + 0.05],
+    ])
+      box(b, a, y, c, d, y + 1.05, e, GLASS_RAIL);
+    b.detail(() => {
+      const tz = (tz0 + tz1) / 2;
+      for (let x = tx0 + 1.3; x < tx1 - 1; x += 2.4) {
+        cyl(b, 0.42, 0.05, x, y + 0.72, tz, WHITE, 10);
+        cyl(b, 0.05, 0.72, x, y, tz, IRON, 5);
+        for (const s of [-1, 1]) box(b, x + s * 0.7 - 0.2, y + 0.44, tz - 0.2, x + s * 0.7 + 0.2, y + 0.49, tz + 0.2, IRON);
+        b.add(new THREE.SphereGeometry(0.05, 6, 4).translate(x, y + 0.82, tz), LAMP);
+      }
+    });
+    b.build(into, { cast: true, receive: true });
+  });
+  /* ---------- Highcrest's marker at the overlook's way in ---------- */
+  {
+    const [pa, pb] = OVERLOOK.path;
+    const [dx, dz] = [pb[0] - pa[0], pb[1] - pa[1]];
+    const l = Math.hypot(dx, dz) || 1;
+    const [nx, nz] = [-dz / l, dx / l];
+    const [mx, mz] = [pb[0] + nx * 1.9, pb[1] + nz * 1.9];
+    site('crestmont highcrest', [mx - 2, mz - 2, mx + 2, mz + 2], (into) => {
+      const b = new Batch();
+      const g = Math.min(heightAt(mx, mz), drawnAt(mx, mz));
+      const turn = Math.atan2(dx, dz);
+      b.add(new THREE.BoxGeometry(1.6, 1.1, 0.35).translate(0, 0.55, 0).rotateY(turn).translate(mx, g - 0.1, mz), STONE);
+      b.add(new THREE.BoxGeometry(1.7, 0.1, 0.42).translate(0, 1.05, 0).rotateY(turn).translate(mx, g - 0.1, mz), STONE_SHADE);
+      // (its name cut in a bronze plaque on its face to the road)
+      b.add(new THREE.PlaneGeometry(1.3, 0.34).translate(0, 0.6, -0.18).rotateY(turn + Math.PI).translate(mx, g - 0.1, mz), HIGHCREST_SIGN);
+      b.build(into, { cast: true, receive: true });
+    });
+  }
 
   /* ---------- The reservoir: the dams, the fence, the valve tower ---------- */
   const R = RESERVOIR;

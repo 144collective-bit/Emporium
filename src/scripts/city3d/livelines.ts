@@ -45,6 +45,9 @@ export const LIVE_IDS = [
   'golfclub',
   'overlook',
   'reservoir',
+  'asterly',
+  'vellano',
+  'solenne',
   'lot9',
   'northgate',
   'pier',
@@ -200,6 +203,18 @@ export function liveLine(id: string, t = Date.now()): string | null {
       return 'First tee at seven';
     case 'overlook':
       return h >= sunset || h < 5 ? 'City lights below · Stars over the hills' : `Sunset about ${clockText(sunset)} · Benches at the rail`;
+    // (the premium upgrade's Phase 4: Highcrest's restaurant, Coral Drive's showroom and spa)
+    case 'asterly':
+      if (between(h, 12, 15)) return 'Lunch on the terrace · Tables by the glass';
+      if (between(h, 18, 23)) return h >= sunset ? 'Dinner by candlelight · The city below' : 'Dinner from six · Terrace for the sunset';
+      if (between(h, 15, 18)) return 'Closed for the afternoon · Dinner from six';
+      return 'Closed · Lunch from noon';
+    case 'vellano':
+      if (between(h, 10, 19)) return c.dow === 6 || c.dow === 0 ? 'Showroom open · Weekend viewings' : 'Showroom open till seven · The new model in the window';
+      return 'Showroom lit · Open at ten';
+    case 'solenne':
+      if (between(h, 8, 21)) return between(h, 8, 11) ? 'Morning rituals · Pools warm' : 'Open till nine · Treatments coming soon';
+      return 'Closed · Opens at eight';
     case 'reservoir':
       if (between(h, 6, 12)) return 'Still water · Patrol due at noon';
       if (between(h, 12, 18)) return "Still water · Patrol's been · Valve house locked";

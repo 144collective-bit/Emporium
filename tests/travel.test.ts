@@ -99,7 +99,7 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // Degen's compound: from Crestmont's grand hotel about 86 s)
       // (and Northgate Air Base's visitors' centre north of the stadium, out at the base's main gate, docs/military-plan.md
       // Phase 1: from the airport's metro station, the world's far south edge, about 79 s)
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'lot9' || id === 'northgate' ? 18 : id === 'home' || ends(id) || id === 'overlook' || id === 'reservoir' ? 22 : rec(id) ? 28 : id === 'tube-aldwyns' ? 30 : 0);
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'lot9' || id === 'northgate' ? 18 : id === 'home' || ends(id) || id === 'overlook' || id === 'reservoir' || id === 'asterly' ? 22 : rec(id) ? 28 : id === 'tube-aldwyns' ? 30 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
       // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
       // round through town: the overlook to the airport's metro station about 94 s)

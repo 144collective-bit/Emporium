@@ -4,10 +4,12 @@
 // growing on them; the water held in by its banks and dams.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CIVIC, CLUB, EASE, FAIRWAY, FENCE, FRINGE, HOLES, HOTEL, HOTEL_PALMS, OVERLOOK, RESERVOIR, SITE_CUT, SITE_DOORS, SITE_LEVELS, SITE_SOLIDS, SITE_SPAWNS, TALLEST, bunkersOf, onSite } from '../src/scripts/city3d/crestsites';
+import { ASTERLY, CIVIC, CLUB, EASE, FAIRWAY, FENCE, FRINGE, HOLES, HOTEL, HOTEL_PALMS, OVERLOOK, RESERVOIR, SITE_CUT, SITE_DOORS, SITE_LEVELS, SITE_SOLIDS, SITE_SPAWNS, TALLEST, bunkersOf, onSite } from '../src/scripts/city3d/crestsites';
 import { BED, CREST_LAMPS, FLATS_X, BOULEVARD, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { KEPT } from '../src/scripts/city3d/estates';
-import { MANSIONS } from '../src/scripts/city3d/mansions';
+import { MANSIONS, onMansion } from '../src/scripts/city3d/mansions';
+import { onLand } from '../src/scripts/city3d/crestland';
+import { onTrail } from '../src/scripts/city3d/crestcover';
 import { LEVELS, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { drawnAt } from '../src/scripts/city3d/drawn';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
@@ -118,7 +120,7 @@ test('nothing grows on them, and no lamp stands there', () => {
 test("the doors (the polish plan's Phase 7): one a place, on its ground by the building or the view, clear of everything solid, a step from where you arrive", () => {
   assert.deepEqual(
     SITE_DOORS.map((d) => d.id),
-    ['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir']
+    ['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly']
   );
   for (const d of SITE_DOORS) {
     for (const s of SOLIDS) assert.ok(!inside([s[0], s[1], s[2], s[3]], d.x, d.z), `${d.id}'s door in ${s.join()}`);
@@ -134,4 +136,30 @@ test("the doors (the polish plan's Phase 7): one a place, on its ground by the b
   assert.ok(by(CLUB.terrace, door('golfclub').x, door('golfclub').z, 0.1));
   assert.ok(inside(OVERLOOK.rect, door('overlook').x, door('overlook').z), 'the overlook\'s on its pad');
   assert.ok(door('reservoir').x < FENCE[0] && door('reservoir').z > FENCE[1] && door('reservoir').z < FENCE[3], "the reservoir's outside its fence on the west bank");
+  // (THE ASTERLY's on the overlook's pad at its bridge, the premium upgrade's Phase 4)
+  assert.ok(inside(OVERLOOK.rect, door('asterly').x, door('asterly').z), "the asterly's on the overlook's pad");
+  assert.ok(door('asterly').x > ASTERLY.bridge[0] && door('asterly').x < ASTERLY.bridge[2], "the asterly's at its bridge");
+});
+
+test("THE ASTERLY (the premium upgrade's Phase 4): off the overlook's falling side, its floor level with it, over open slope, under the Emporium", () => {
+  const A = ASTERLY;
+  assert.ok(OVERLOOK.look[1] > 0.9, 'the overlook looks south, its pavilion off that side');
+  assert.ok(Math.abs(A.y - OVERLOOK.y - 0.15) < 1e-9);
+  // (off the overlook, touching it only by its bridge; the bridge from the overlook's edge to the pavilion)
+  for (const r of [A.body, A.terrace]) assert.ok(r[1] > OVERLOOK.rect[3] + 1 || r[3] < OVERLOOK.rect[1] - 1, 'the pavilion on the overlook');
+  assert.ok(A.bridge[1] < OVERLOOK.rect[3] && A.bridge[3] >= A.body[1] - 1e-9, "the bridge doesn't reach");
+  // (its floor over the ground all under it: on legs, nothing cut or built up for it)
+  for (const [x0, z0, x1, z1] of [A.body, A.terrace])
+    for (let x = x0; x <= x1; x += 0.5) for (let z = z0; z <= z1; z += 0.5) assert.ok(heightAt(x, z) < A.y - 0.3, `the ground up through THE ASTERLY at ${x}, ${z}`);
+  // (over open slope: no hill house's ground, land, footpath or road under it)
+  for (const [x0, z0, x1, z1] of [A.body, A.terrace])
+    for (let x = x0 - 1; x <= x1 + 1; x += 1)
+      for (let z = z0 - 1; z <= z1 + 1; z += 1) {
+        assert.ok(!onMansion(x, z), `THE ASTERLY over a hill house at ${x}, ${z}`);
+        assert.ok(!onLand(x, z), `THE ASTERLY over land at ${x}, ${z}`);
+        assert.ok(!onTrail(x, z), `THE ASTERLY over a footpath at ${x}, ${z}`);
+        assert.ok(!nearHillRoad(x, z, 1), `THE ASTERLY over a road at ${x}, ${z}`);
+      }
+  assert.ok(A.h + A.roof + 1.3 < TALLEST, 'THE ASTERLY too tall');
+  assert.ok(onSite((A.body[0] + A.body[2]) / 2, (A.body[1] + A.body[3]) / 2), 'the planting under THE ASTERLY');
 });

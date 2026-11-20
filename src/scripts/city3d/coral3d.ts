@@ -8,11 +8,11 @@
  * cars parked in them (`parkedCars()`). Fixed made-up copy only.
  */
 import * as THREE from 'three';
-import { Batch, canvasTex, siteMat, toon } from './kit';
+import { Batch, canvasTex, lit, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { BAY_DEPTH, CORAL_BAYS, bayRect } from './crestmont';
-import { ARCH, CAFES, COBBLES, CORAL_CARS, FOUNTAINS, FRONT, NAMES, PLANTER, PLANTERS, SHOPS, SLAB_Y, SPACE, STAND, STOREY, TABLES, TABLE_R, VALET, VALET_STANDS, VIA, VIA_NAME, doorOf, heightOf, outOf, type Boutique } from './coral';
+import { ARCH, CAFES, CORAL_PLACES, CORAL_PLACE_NAMES, COBBLES, CORAL_CARS, FOUNTAINS, FRONT, NAMES, PLANTER, PLANTERS, SHOPS, SLAB_Y, SPACE, STAND, STOREY, TABLES, TABLE_R, VALET, VALET_STANDS, VIA, VIA_NAME, doorOf, heightOf, outOf, type Boutique } from './coral';
 import { BULB, GOLD, LED, SPRAY, WATER, cyl, flat, planter, signAtlas } from './mallkit';
 import { FRONT as WINDOW, CURTAIN } from './mallkit';
 import { ROAD } from './palette';
@@ -34,6 +34,17 @@ const KERB = toon('#cfc6b4');
 const BALL = toon('#3f7434');
 const FLAG_COLOURS = [toon('#1e2a55'), toon('#6e1f2e'), toon('#f1ece0')];
 const POLE = toon('#c9b07a');
+/**
+ * The premium upgrade's Phase 4 refits (coral.ts `CORAL_PLACES`): VELLANO MOTOR SALON's showroom glass (clear, the car
+ * inside seen through it), its polished floor and the strip lights in its ceiling; SOLENNE's frosted windows, softly
+ * lit at night, under the bloom
+ */
+const SHOW_GLASS = siteMat('coral-show-glass', new THREE.MeshBasicMaterial({ color: '#bfe3ef', transparent: true, opacity: 0.22, depthWrite: false }));
+const SHOW_FLOOR = toon('#e9e6e0');
+const SHOW_WALL = toon('#2a2c33');
+const FROSTED = siteMat('coral-frosted', lit(toon('#e4ece7', { emissive: '#fff0d8' }), 0, 0.4));
+/** The car on show in VELLANO MOTOR SALON, and its paint */
+export const SHOW_CAR = { id: 'super' as CarId, paint: '#d9a94a' };
 
 /** Cobbles, warm grey setts in rows, laid on in world units */
 const COBBLE = (() => {
@@ -73,7 +84,7 @@ function frameOf(b: Boutique) {
 }
 
 export function registerCoral(low: boolean, scene: THREE.Scene | null) {
-  const sign = signAtlas('coral-signs', [...NAMES, ...CAFES, VIA_NAME, VALET], new Set([VIA_NAME]));
+  const sign = signAtlas('coral-signs', [...NAMES, ...CAFES, VIA_NAME, VALET, CORAL_PLACE_NAMES.vellano], new Set([VIA_NAME]));
 
   /* ---------- The boutiques ---------- */
   for (const shop of SHOPS) {
@@ -101,8 +112,17 @@ export function registerCoral(low: boolean, scene: THREE.Scene | null) {
       const [hw] = [W / 2];
       const skin = shop.style === 'render' ? RENDER : STONE;
       const trim = shop.style === 'glass' ? BRONZE : shop.style === 'render' ? BLACK : STONE_SHADE;
-      // The body
-      box(-hw, 0, -D, hw, top, 0, skin);
+      const showroom = shop.place === 'vellano';
+      // The body (VELLANO's ground floor open behind its glass: a showroom, its car inside)
+      if (showroom) {
+        const g = STOREY.ground;
+        box(-hw, g, -D, hw, top, 0, skin);
+        box(-hw, 0, -D, hw, g, -D + 0.25, SHOW_WALL);
+        for (const s of [-1, 1]) box(s > 0 ? hw - 0.2 : -hw, 0, -D + 0.25, s > 0 ? hw : -hw + 0.2, g, -0.1, skin);
+        add(new THREE.PlaneGeometry(W - 0.4, D - 0.35).rotateX(-Math.PI / 2).translate(0, 0.05, -D / 2 + 0.05), SHOW_FLOOR);
+        add(new THREE.PlaneGeometry(W - 0.4, D - 0.35).rotateX(Math.PI / 2).translate(0, g - 0.02, -D / 2 + 0.05), SHOW_WALL);
+        for (const v of [-D * 0.3, -D * 0.65]) box(-hw + 0.5, g - 0.06, v - 0.04, hw - 0.5, g - 0.03, v + 0.04, LED);
+      } else box(-hw, 0, -D, hw, top, 0, skin);
       // The plinth, the pilasters at the front's corners
       box(-hw, 0, 0, hw, 0.22, 0.05, PLINTH);
       for (const s of [-1, 1]) box(s * hw - (s > 0 ? 0.32 : 0), 0.22, 0, s * hw + (s < 0 ? 0.32 : 0), top, 0.07, skin === STONE ? STONE_SHADE : skin);
@@ -114,7 +134,7 @@ export function registerCoral(low: boolean, scene: THREE.Scene | null) {
         [door + 0.12, hw - 0.38],
       ] as [number, number][]) {
         if (c - a < 0.4) continue;
-        pane(WINDOW, a, c, 0.28, g0 - 0.48, 0.012, [4, 0]);
+        pane(showroom ? SHOW_GLASS : shop.place === 'solenne' ? FROSTED : WINDOW, a, c, 0.28, g0 - 0.48, 0.012, [4, 0]);
         // (the frame: sill, head, the jambs)
         box(a - 0.05, 0.22, 0.012, c + 0.05, 0.3, 0.06, BRONZE);
         box(a - 0.05, g0 - 0.5, 0.012, c + 0.05, g0 - 0.44, 0.06, BRONZE);
@@ -294,5 +314,15 @@ export function registerCoral(low: boolean, scene: THREE.Scene | null) {
 
   // The cars in the bays (the main thread's)
   if (scene) parkedCars(scene, BAY_Y, CORAL_CARS.map(([id, x, z, yaw, c]) => [id as CarId, x, z, yaw, c]));
+  // VELLANO MOTOR SALON's car on show, inside its glass, turned a little to the street
+  if (scene) {
+    const s = CORAL_PLACES.vellano;
+    const [dx, dz] = doorOf(s);
+    const [ox, oz] = outOf(s.face);
+    const D = s.face === 'e' || s.face === 'w' ? s.rect[2] - s.rect[0] : s.rect[3] - s.rect[1];
+    const v = -D * 0.45;
+    const yaw = (s.face === 'e' ? Math.PI / 2 : -Math.PI / 2) - 0.35;
+    parkedCars(scene, SLAB_Y + 0.05, [[SHOW_CAR.id, dx + ox * v, dz + oz * v, yaw, SHOW_CAR.paint]]);
+  }
   void low;
 }
