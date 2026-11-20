@@ -886,7 +886,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(INSIDE_SPAWN);
       });
     // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
-    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly') {
+    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
         close();

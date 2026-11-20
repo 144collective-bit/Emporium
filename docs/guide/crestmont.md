@@ -270,3 +270,13 @@ keep it up to date when what it describes changes.
   bar, a `Ride` of kind `cable`), loaded by index.ts the first time a
   station's door is used (behind `live.closed('cablecar')`); the stations
   are places of kind `cable` (`cable-foot`, `cable-top`).
+  Phase 5, the Ridgeline Walk, the Belvedere and the Crestmont Glasshouse:
+  the walk is `crestwalk.ts` (DOM-free, the chunk's: `WALK_LINE` held as a
+  search laid it, `WALK_POINTS` every half tile with their grades, `STEPS`
+  where steep, `BENCHES`, `WALK_LAMPS`, `LOOKOUTS`, `GLASS_PATH` the branch
+  to the glasshouse's door), tested in `tests/crestwalk.test.ts`, drawn in
+  `crestwalk3d.ts` (`registerWalk()`, a site every 30 along it). The
+  Belvedere and the glasshouse are crestsites.ts's (`BELVEDERE` on the
+  ground as it is, its ring at `top`, kept off by `onSite()`; `GLASSHOUSE`
+  held level in `SITE_LEVELS`), places with their doors (`SITE_DOORS`) and
+  arrivals (`SITE_SPAWNS`), their solids in `SITE_SOLIDS`.

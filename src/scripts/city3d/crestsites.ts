@@ -222,6 +222,38 @@ export const ASTERLY = (() => {
   };
 })();
 
+/* ---------- The Belvedere and the Crestmont Glasshouse (the premium upgrade's Phase 5) ---------- */
+
+/**
+ * The Belvedere on the Ridgeline Walk (crestwalk.ts), halfway up its climb (the owner's call, 2026-11-20: "Halfway up"):
+ * a round stone lookout of columns under a small dome, the walk running through it, looking south down the east
+ * valley to the Flats. On the ground as it is (no ground cut or built up, so the meadow by it stays where it was laid):
+ * its paving on the slope, its columns each from the ground up to one level ring (`top`)
+ */
+export const BELVEDERE = (() => {
+  const [x, z] = [444, -275];
+  const r = 3.6;
+  const rect: Rect = [x - r - 0.6, z - r - 0.6, x + r + 0.6, z + r + 0.6];
+  const ring: number[] = [];
+  for (let k = 0; k < 16; k++) ring.push(natural(x + Math.cos((k / 16) * Math.PI * 2) * r, z + Math.sin((k / 16) * Math.PI * 2) * r));
+  const h = 3.2;
+  return { x, z, r, rect, y: natural(x, z), top: Math.max(...ring) + 0.2 + h, columns: 8, h, dome: 2.1, look: [0, 1] as Pt };
+})();
+/**
+ * The Crestmont Glasshouse (the owner's call, 2026-11-20: "East of the reservoir"): a white-framed palm house of a
+ * domed middle and two wings, its botanical garden round it, on the clear ground east of the reservoir held level,
+ * its door on its west side to the Ridgeline Walk
+ */
+export const GLASSHOUSE = (() => {
+  const rect: Rect = [466, -276, 482, -264];
+  const hs: number[] = [];
+  for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) hs.push(natural(rect[0] + ((rect[2] - rect[0]) * i) / 4, rect[1] + ((rect[3] - rect[1]) * j) / 4));
+  const y = (Math.min(...hs) + Math.max(...hs)) / 2;
+  // (the house: its wings along the rect's length, the dome in the middle; the garden the rest)
+  const house: Rect = [rect[0] + 2.5, rect[1] + 3, rect[2] - 2.5, rect[3] - 3];
+  return { rect, y, house, dome: { x: (house[0] + house[2]) / 2, z: (house[1] + house[3]) / 2, r: 3.2, h: 5.4 }, wingH: 3.4 };
+})();
+
 /* ---------- The reservoir ---------- */
 
 /**
@@ -271,6 +303,10 @@ export const SITE_SPAWNS = {
   overlook: { x: (OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2 - OVERLOOK.look[0] * 2, z: (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2 - OVERLOOK.look[1] * 2, yaw: facing(OVERLOOK.look[0], OVERLOOK.look[1]) },
   /** Outside the reservoir's fence on its west bank, facing the water */
   reservoir: { x: FENCE[0] - 1.4, z: (FENCE[1] + FENCE[3]) / 2, yaw: facing(1, 0) },
+  /** In the Belvedere on the walk, facing out over the view */
+  belvedere: { x: BELVEDERE.x, z: BELVEDERE.z - 1.2, yaw: facing(BELVEDERE.look[0], BELVEDERE.look[1]) },
+  /** On the Ridgeline Walk by the glasshouse's door, facing it */
+  glasshouse: { x: GLASSHOUSE.house[0] - 3.2, z: (GLASSHOUSE.house[1] + GLASSHOUSE.house[3]) / 2, yaw: facing(1, 0) },
   /** On the overlook by its rail, at the bridge to THE ASTERLY, facing it */
   asterly: { x: (ASTERLY.bridge[0] + ASTERLY.bridge[2]) / 2, z: (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2 + ASTERLY.out * ((OVERLOOK.rect[3] - OVERLOOK.rect[1]) / 2 - 1.6), yaw: facing(0, ASTERLY.out) },
 };
@@ -280,7 +316,7 @@ export const SITE_SPAWNS = {
  * door under its porte-cochère on the west front, the civic hall's in its colonnade, the clubhouse's off its terrace;
  * the overlook's at its rail, the reservoir's by its fence on the west bank ("Look out")
  */
-export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir' | 'asterly'; x: number; z: number }[] = (() => {
+export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir' | 'asterly' | 'belvedere' | 'glasshouse'; x: number; z: number }[] = (() => {
   const oc: Pt = [(OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2, (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2];
   const half = (OVERLOOK.rect[2] - OVERLOOK.rect[0]) / 2;
   return [
@@ -291,6 +327,9 @@ export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' |
     { id: 'reservoir', x: FENCE[0] - 0.9, z: (FENCE[1] + FENCE[3]) / 2 },
     // (THE ASTERLY's at the overlook's end of its bridge)
     { id: 'asterly', x: (ASTERLY.bridge[0] + ASTERLY.bridge[2]) / 2, z: oc[1] + ASTERLY.out * (half - 0.8) },
+    // (the Belvedere's in its middle, "Look out"; the glasshouse's at its west door)
+    { id: 'belvedere', x: BELVEDERE.x, z: BELVEDERE.z },
+    { id: 'glasshouse', x: GLASSHOUSE.house[0] - 0.7, z: (GLASSHOUSE.house[1] + GLASSHOUSE.house[3]) / 2 },
   ];
 })();
 
@@ -303,6 +342,8 @@ export const SITE_LEVELS: { rect: Rect; y: number; ease: number; of?: string }[]
   // (the reservoir's apron at its coping's height, then its basin a little lower inside it, eased under the coping)
   { rect: [RESERVOIR.rect[0] - RESERVOIR.apron, RESERVOIR.rect[1] - RESERVOIR.apron, RESERVOIR.rect[2] + RESERVOIR.apron, RESERVOIR.rect[3] + RESERVOIR.apron] as Rect, y: RESERVOIR.crest, ease: EASE, of: 'reservoir' },
   { rect: RESERVOIR.rect, y: RESERVOIR.floor, ease: 0.45, of: 'reservoir' },
+  // (the premium upgrade's Phase 5: the glasshouse's garden; the Belvedere stands on the ground as it is)
+  { rect: GLASSHOUSE.rect, y: GLASSHOUSE.y, ease: EASE },
 ];
 
 const box = (r: Rect, top: number): Box => [r[0], r[1], r[2], r[3], top];
@@ -333,6 +374,12 @@ export const SITE_SOLIDS: Box[] = [
     return [box([a, b, c, b + t], top), box([a, d - t, c, d], top), box([a, b, a + t, d], top), box([c - t, b, c, d], top)];
   })(),
   sq([RESERVOIR.tower.x, RESERVOIR.tower.z], RESERVOIR.tower.r, RESERVOIR.y + RESERVOIR.tower.h),
+  // The Belvedere's columns round its edge, the glasshouse (Phase 5)
+  ...Array.from({ length: BELVEDERE.columns }, (_, k): Box => {
+    const a = ((k + 0.5) / BELVEDERE.columns) * Math.PI * 2;
+    return sq([BELVEDERE.x + Math.cos(a) * BELVEDERE.r, BELVEDERE.z + Math.sin(a) * BELVEDERE.r], 0.22, BELVEDERE.top + BELVEDERE.dome);
+  }),
+  box(GLASSHOUSE.house, GLASSHOUSE.y + GLASSHOUSE.dome.h),
   // THE ASTERLY and its terrace's rail, out over the slope (none walks out there: its floor isn't the ground)
   box(ASTERLY.body, ASTERLY.y + ASTERLY.h + ASTERLY.roof),
   box(ASTERLY.terrace, ASTERLY.y + 1.1),
@@ -352,6 +399,8 @@ export function onSite(x: number, z: number, m = 0) {
   };
   if (HOLES.some((h) => near(h.tee, h.green, FAIRWAY + 1.5) || near(h.green, h.green, FRINGE + 3))) return true;
   if (near(OVERLOOK.path[0], OVERLOOK.path[1], 1.6)) return true;
+  // (and the Belvedere's round on the walk)
+  if (Math.hypot(x - BELVEDERE.x, z - BELVEDERE.z) < BELVEDERE.r + 0.8 + m) return true;
   // (and under THE ASTERLY and its terrace, out over the slope)
   const [ax0, az0, ax1, az1] = [ASTERLY.body[0], Math.min(ASTERLY.body[1], ASTERLY.terrace[1]), ASTERLY.body[2], Math.max(ASTERLY.body[3], ASTERLY.terrace[3])];
   if (x > ax0 - 1 - m && x < ax1 + 1 + m && z > az0 - 1 - m && z < az1 + 1 + m) return true;

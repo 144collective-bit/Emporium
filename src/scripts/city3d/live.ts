@@ -51,6 +51,8 @@ export const LIVE_PLACES = [
   { id: 'overlook', name: 'The Overlook' },
   { id: 'reservoir', name: 'The Reservoir' },
   { id: 'asterly', name: 'The Asterly' },
+  { id: 'belvedere', name: 'The Belvedere' },
+  { id: 'glasshouse', name: 'Crestmont Glasshouse' },
   { id: 'vellano', name: 'Vellano Motor Salon' },
   { id: 'solenne', name: 'Solenne' },
   { id: 'harbourmaster', name: "Harbour Master's office" },

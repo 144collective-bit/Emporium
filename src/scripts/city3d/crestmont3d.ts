@@ -32,6 +32,7 @@ import { GATEWAY_SOLIDS } from './crestgate';
 import { MANSION_PIERS } from './crestgrand';
 import { registerGate } from './crestgate3d';
 import { registerCable } from './cablecar3d';
+import { registerWalk } from './crestwalk3d';
 import { CABLE_SOLIDS } from './cableline';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS } from './crestmont';
 import { COVER, KERB, ROAD } from './palette';
@@ -65,6 +66,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerGate(low);
   // Highcrest's cable car (the premium upgrade's Phase 4b: cablecar3d.ts)
   registerCable(low, scene, tick);
+  // The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse (the premium upgrade's Phase 5: crestwalk3d.ts)
+  registerWalk(low);
   if (scene) addSolids([...GARDEN_SOLIDS, ...LAND_SOLIDS, ...TERRACE_SOLIDS, ...GATEWAY_SOLIDS, ...MANSION_PIERS, ...CABLE_SOLIDS]);
   const asphalt = toon(ROAD.asphalt);
   const kerbTop = toon(KERB.town);

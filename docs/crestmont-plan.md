@@ -716,6 +716,16 @@ Their answers, in three rounds:
      a camera alongside the cabin, Skip ride or Esc to cut to the end, then you walk on at the other station (the top
      one's door on the overlook by THE ASTERLY's bridge). Both stations are places on the map; the cable car is a live
      feature (`cablecar`) the owner can close.
-5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
+5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse** (built; the owner's answers, 2026-11-20: "That
+   path, steps where steep", "Halfway up", "East of the reservoir"): `crestwalk.ts` (the walk's line as a search laid
+   it over the hills' clear ground, held fixed; its steps, benches, lamps and lookouts) and `crestwalk3d.ts`. The walk
+   runs about 280 m from Foothill Road by the cable car's foot station, round the station, east along the hills' foot
+   and up the east valley, by the glasshouse (a branch to its door) and through the Belvedere, then up the last climb
+   to the overlook: gravel on the grass, stone steps and an iron handrail where it's steep, low lamps, benches, two
+   lookouts with a rail and a coin viewer. The Belvedere (crestsites.ts `BELVEDERE`), a round of columns under a copper
+   dome, stands on the ground as it is (its ring level over its columns), so the meadow by it stays where it was laid;
+   the glasshouse (`GLASSHOUSE`), a white-framed palm house of a domed middle and two wings with palms inside, its
+   garden of beds and gravel round a fountain, on ground held level east of the reservoir. Both are places with their
+   panels (kickers 54 and 55), live lines, Walk in, doors and pins. No land, house or landmark moved.
 6. **Residents at leisure and cyclists on the hills.**
 
