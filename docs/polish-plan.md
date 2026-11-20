@@ -921,7 +921,7 @@ For the owner, in the morning:
   `Ride` through `walk.setRide()` for one turn in a capsule, Skip ride /
   Esc, `wheel` in `LIVE_FEATURES`; it needs its own card and bar markup, a
   `RideKind` in views.ts and a chunk, so it waits for its own sign-off),
-  the Docks' Phase 4, a real match at the stadium (the gates open, a game
+  the Docks' Phase 4 (built since: docs/docks-plan.md), a real match at the stadium (the gates open, a game
   on the pitch; Phase 7 built the fixtures and the match-night mood).
 - **The shapes helper** (`box`, `cyl`, `V` declared in dozens of files;
   Phase 10 left it): one `shapes3d.ts`, a mechanical move.

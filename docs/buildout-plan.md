@@ -4,8 +4,8 @@ The owner wants the whole map inside the wall built up eventually, and the game 
 running in a browser, on phones too. This plan is how to get there safely: the
 engineering first, measured at every step, then the land filled district by
 district. It's a plan only: nothing here is built until the owner signs off a
-phase. Keep it up to date. The wall itself is `docs/wall-plan.md` (paused at the
-owner's word, Phases 3 to 6 on the branch, not merged).
+phase. Keep it up to date. The wall itself is `docs/wall-plan.md` (all six phases
+built and on main; Phases 2 to 6 waiting on the owner's sign-off).
 
 ## The owner's answers (2026-11-10)
 

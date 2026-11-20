@@ -49,6 +49,11 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'mall', name: 'Starlight Mall and Palm Court', pos: [30, 26, -40], target: [60, 2, -120] },
   { id: 'harbour', name: 'Harbour Bridge, from the south bank', pos: [40, 12, 160], target: [64.5, 4, 100] },
   { id: 'sunridge', name: 'Sunridge, over the loop', pos: [120, 28, 10], target: [180, 0, -80] },
+  // Sunridge's (docs/suburb-plan.md Phase 6): down Sunridge Parkway's west side at street level, round Ocotillo Court's
+  // turning circle, and over the back yards' pools along the west wall
+  { id: 'sun-street', name: 'Sunridge Parkway, street level', pos: [122.8, 2.2, -60], target: [122.2, 1.6, -105] },
+  { id: 'sun-court', name: 'Sunridge, Ocotillo Court', pos: [182, 7, -84], target: [184.4, 1, -105] },
+  { id: 'sun-pools', name: "Sunridge, the back yards' pools", pos: [96, 16, -116], target: [110, 0, -86] },
   { id: 'southfield', name: 'Southfield, the yards and the park', pos: [60, 30, 300], target: [150, 0, 210] },
   { id: 'lot9', name: 'Lot 9, from the south avenue', pos: [-20, 24, 440], target: [-70, 0, 370] },
   // Crestmont's (docs/crestmont-plan.md Phase 11): the Drive at street level, the Flats from over them, the hills
