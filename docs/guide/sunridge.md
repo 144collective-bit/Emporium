@@ -76,8 +76,8 @@ keep it up to date when what it describes changes.
   through `parkedCars()`).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views
   (`sunridge` over the loop, `sun-street`, `sun-court`, `sun-pools`). On
-  phones it's 105-195 draws and 0.18-0.49M triangles, among the city's
-  lightest (downtown's street is 340 and 0.64M), so it has no far forms;
+  phones it's about 120-190 draws and 0.27-0.53M triangles, among the city's
+  lightest (downtown's street is about 320 and 0.6M), so it has no far forms;
   the phone trims are the chunk's (`low` in sunhouses3d.ts, sunyards3d.ts,
   sunamenities3d.ts and sunlife.ts's halved lists). Its share of the boot
   is about 5.3 KB gzipped (sunridge.ts, sunplaces.ts).

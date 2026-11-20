@@ -239,14 +239,16 @@ These are my recommendations, made so the plan is complete; any can change.
      the back yards' pools along the west wall (four of the nineteen pools
      are in that row). With `sunridge`, over the loop, it has four.
    - Measured headless (swiftshader, so draws and triangles count, not frame
-     rates). On the phone tier Sunridge is among the lightest views:
-     105-195 draws and 0.18-0.49M triangles (the street 136 and 0.27M, the
-     court 105 and 0.18M, the pools 195 and 0.32M), against downtown's
-     street at 340 and 0.64M and Crestmont's Coral Drive at 141 and
-     0.56M. On the desktop (medium tier) it's 191-266 draws and 0.95-1.96M
-     triangles, against downtown's 536 and 2.13M and Crestmont's 204-258.
-     Its slowest CPU frames were 24-42 ms on the phone and 58-133 ms on the
-     desktop, all under memcheck's 250 ms. So no more phone trims and no far
+     rates; the counts swing by about a fifth from run to run with the
+     traffic and crowds). On the phone tier Sunridge is among the lightest
+     views: 119-190 draws and 0.27-0.53M triangles (the street 155 and
+     0.34M, the court 119 and 0.27M, the pools 190 and 0.35M, over the loop
+     170 and 0.53M), against downtown's street at 321 and 0.58M and
+     Crestmont's Coral Drive at 156 and 0.56M. On the desktop (medium tier)
+     it's 191-266 draws and 0.95-1.96M triangles (its court measured at
+     Ocotillo Court's, before the view moved), against downtown's 536 and
+     2.13M and Crestmont's 204-258. Its slowest CPU frames were 28-40 ms on
+     the phone and 58-133 ms on the desktop, all under memcheck's 250 ms. So no more phone trims and no far
      forms: the phone trims Phases 2-5 put in (no fine house details, half
      the small plants, no back-yard furniture, the trimmed crowd) are
      enough.
