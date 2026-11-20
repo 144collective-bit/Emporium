@@ -13,7 +13,8 @@ and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
 airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built and signed off**
 (2026-11-19, measured below). **Phase 4 (life, night and sound) is built and
-trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is under way.**
+trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is built** (2026-11-20, below), waiting on
+the owner's sign-off: the last of the plan.
 
 ## The owner's answers (2026-11-18)
 
@@ -574,4 +575,33 @@ left out. Against Phase 3, on the phone:
 All within it. **Memory:** memcheck read 177.5 MiB of 187 (it read 172.4 before the trim, with more drawn): a tile
 batch's growth step (up to 4 MiB of room) landing in this run, not the base. It passes, 9.5 under the ceiling; Phase 5's
 last measure looks at that step. The boot 741.5 KB of 750.
+
+## Phase 5, the polish (2026-11-20)
+
+- **The views:** `airbase-gate`, `airbase-runway` and `airbase-overview` in `BLEND_VIEWS` (f424479). Their review shots
+  by day and at night are in `docs/blend-shots/airbase-phase5/` (`npm run shots`, the desktop tier). At night the main
+  gate's lamps light their pools and the jeep shows behind the shut gate; the view from high (110 up) renders with a day
+  sky in the night set, the whole sky, not the base: the review tool's to look at, not this plan's.
+- **The seams:** `npm run seams` runs clean. The base isn't on the seam map (it's drawn from the street plan's blocks,
+  and the base has none): its edge is its fence, the mown grass fading 6 past it.
+- **The phone tier's trims:** on phones the fence's arms and wire, the near detail, every other person and the
+  helicopter's flight are left out (Phases 1 to 4, tested).
+- **Every width:** the base's panel at 320, 375, 768, 1024 and 1440 wide and a phone on its side (812 by 375): no
+  sideways scroll, nothing clipped.
+- **The last measure, against Phase 0's** (the phone tier):
+
+  | | Phase 0 | Now | The whole base's allowance |
+  | --- | ---: | ---: | ---: |
+  | The north, from over the stadium: draws | 59 | 66 (+7) | +155 |
+  | Northgate Air Base, from high: draws | 54 | 68 (+14) | +155 |
+  | The main gate: draws | 103 | 112 (+9) | +155 |
+  | The runway: draws | 54 | 70 (+16) | +155 |
+  | The busiest base view's triangles | 0.16M | 0.20M (+0.04M) | +0.38M |
+  | The home view: draws | 286 | 265 | +10 |
+  | Phone geometry, a minute into the benchmark | 191.8 MiB | 172.4 MiB | +8 MiB |
+  | The boot | 736.9 KB | 741.5 KB (+4.6) | +8 KB |
+
+  The whole base cost well under its allowance, and the phone holds less than before it was begun (the trims on the
+  way: the south's shared corners and the tile batches' step). memcheck passes (177.5 of 187 in its last run: its
+  reading still moves by a batch's step of up to 4 MiB, the next thing to watch if the north grows again).
 
