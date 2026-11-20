@@ -707,9 +707,17 @@ From the Circus west, patchy as high roads are:
      Trenches 446). Broken down by what draws: the south's own geometry
      about 40; 150 to 170 the city's tiles over 300 away, seen across the
      open land from the south's edge (the camera's far 1340 on every
-     tier). The owner's answer: **merge the far tiles on phones** (the
-     same look, the far city in bigger merged pieces, far fewer draws),
-     measured before and after.
+     tier). Measured again, properly (each batched mesh's pieces tested
+     against the view, one draw a mesh however many tiles show): only 24
+     to 29 batched meshes in view there, 5 to 9 of them far only, so
+     merging far tiles would save almost nothing; the weight is about 390
+     separate meshes from the rest of the city seen across the open ground
+     (the far landmarks, several meshes each; about 43 for the airport's
+     aircraft; about 110 small far glows and parts), against 78 downtown.
+     The south's own drawing is about 40 to 50. The owner's answer: the
+     city-wide far view on phones is **its own performance plan, later**
+     (aircraft merged when far, far landmarks in one piece each, far glows
+     pooled); 6b carries on with the widths and the seams.
    - **6c, life**: people on the High Road, the estate's decks, the
      Circus's plaza and subways, the village and the rec; the south bus
      route and its stops; traffic checked on the new roads.
