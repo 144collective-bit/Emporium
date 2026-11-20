@@ -229,3 +229,18 @@ keep it up to date when what it describes changes.
   `slatted()`); the hill houses without a wall get piers and gates at their
   drive's mouth (`MANSION_GATE`, `mansionPiers()`, `MANSION_PIERS` joining the
   grids with the chunk).
+  Phase 3, the new hill mansions (four, Art Deco and French chateau by
+  turns, "deeper terraces + vineyard"): `NEW_LOTS` in mansions.ts (the road,
+  the distance along it, the side, how far back, the kind, how much deeper
+  than `CUT` its terraces may cut), laid after the eight already there
+  (`lot` marks them), tested in `tests/crestlots.test.ts`. The kinds `deco`
+  (a flat-roofed main block and a stepped tower, a sundeck) and `chateau` (a
+  mansard main block, `MANSARD`, roofs3d.ts `mansard()`, crestgrand.ts
+  `mansardDeck()`; two turrets, `TURRET`, an `MPart`'s `roof: 'cone'`), drawn
+  by mansions3d.ts `drawDeco()` and `drawChateau()`; their gardens in
+  crestgardens.ts (a chateau's parterre and statues, an Art Deco house's
+  reflecting pool), their banks' planting in crestbanks.ts `KIND_PLANTS`. The
+  land is laid as it was (crestland.ts `LAID`), a piece a new lot or drive
+  takes moved aside whole (`keep()`): two vineyards and a grove. A new lot's
+  drive cut into the hillside eases over a wider bank (terrain.ts
+  `RAMP.bank`); Crestmont's north edge is -395 (`CREST_RECT`).

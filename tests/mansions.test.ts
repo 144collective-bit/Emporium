@@ -4,7 +4,7 @@
 // them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CUT, DRIVE_GRADE, MANSIONS, MANSION_CARS, MANSION_LEVELS, MANSION_SOLIDS, PAD_EASE, TALLEST, YARD, rectToWorld, topOf, toWorld } from '../src/scripts/city3d/mansions';
+import { CUT, DRIVE_GRADE, MANSIONS, MANSION_CARS, MANSION_LEVELS, MANSION_SOLIDS, NEW_LOTS, PAD_EASE, TALLEST, YARD, rectToWorld, topOf, toWorld } from '../src/scripts/city3d/mansions';
 import { BED, CREST_LAMPS, HILL_ROADS, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { LEVELS, heightAt, naturalAt } from '../src/scripts/city3d/terrain';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
@@ -29,8 +29,9 @@ test('the pads: on the hills, held level, off the roads and each other, a drive 
     for (let x = x0; x <= x1; x += 2) for (let z = z0; z <= z1; z += 2) assert.ok(Math.abs(heightAt(x, z) - m.y) < 1e-6, `${m.id} isn't level`);
     // Its ease kept off every road's asphalt and shoulder
     for (let x = x0 - PAD_EASE; x <= x1 + PAD_EASE; x += 1) for (let z = z0 - PAD_EASE; z <= z1 + PAD_EASE; z += 1) assert.ok(!nearHillRoad(x, z, BED.shoulder), `${m.id}'s ground reaches a road at ${x.toFixed(0)}, ${z.toFixed(0)}`);
-    // Never a quarry
-    for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) assert.ok(Math.abs(naturalAt(x, z) - m.y) <= CUT + 1e-9);
+    // Never a quarry (a new lot terraced deeper by its own allowance: the premium upgrade's Phase 3, `NEW_LOTS`)
+    const deeper = m.lot ? NEW_LOTS[MANSIONS.filter((q) => q.lot).indexOf(m)][5] : 0;
+    for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) assert.ok(Math.abs(naturalAt(x, z) - m.y) <= CUT + deeper + 1e-9, `${m.id} a quarry`);
     // The drive: from the road's edge to the pad's front, its rise gentle
     const [a, b] = m.drive;
     assert.ok(nearHillRoad(a[0], a[1], 0.6), `${m.id}'s drive doesn't start at a road`);

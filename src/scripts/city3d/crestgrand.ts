@@ -19,7 +19,7 @@
  *   a wall get piers and gates at their drive's mouth (`MANSION_PIERS`, solid with the chunk).
  */
 import { ESTATES, GATE, HEDGE, STOREY as E_STOREY, piersOf, type Estate, type EstateStyle, type Part } from './estates';
-import { MANSIONS, STOREY as M_STOREY, rectToWorld, type Mansion, type MansionKind, type MPart } from './mansions';
+import { MANSARD, MANSIONS, STOREY as M_STOREY, rectToWorld, type Mansion, type MansionKind, type MPart } from './mansions';
 import { ESTATE_GARDENS, HEIGHT, MANSION_GARDENS, type Feat } from './crestgardens';
 import type { Box } from './solids';
 
@@ -40,7 +40,7 @@ export const MANSION_WINDOW = { step: 1.8, w: 0.85 } as const;
 
 export type BalconyKind = 'iron' | 'stone' | 'oak' | 'glass';
 export const ESTATE_BALCONY: Record<EstateStyle, BalconyKind> = { spanish: 'iron', villa: 'iron', tudor: 'oak', georgian: 'stone', modern: 'glass' };
-export const MANSION_BALCONY: Record<MansionKind, BalconyKind | null> = { villa: 'iron', compound: 'iron', summit: 'stone', glass: null };
+export const MANSION_BALCONY: Record<MansionKind, BalconyKind | null> = { villa: 'iron', compound: 'iron', summit: 'stone', glass: null, deco: 'glass', chateau: 'stone' };
 /**
  * A balcony's slab's thickness and its rail's height over it; how deep each kind stands out from its wall; how far
  * past its windows' sides it runs (further where the windows have shutters, so it clears them)
@@ -109,6 +109,8 @@ export function mansionBalconies(m: Mansion): Balcony[] {
   const y = M_STOREY.ground;
   const us = windowsAlong(p.u0, p.u1, MANSION_WINDOW.step);
   const half = MANSION_WINDOW.w / 2;
+  // (an Art Deco house's one long glass balcony across its back, a ship's deck; Phase 3)
+  if (m.kind === 'deco') return [{ u0: p.u0 + 0.3, u1: p.u1 - 0.3, v: p.v1, n: -1, y, d, kind }];
   if (m.kind === 'summit') {
     // (one across its middle windows, three at most)
     const mid = [...us].sort((a, c) => Math.abs(a - (p.u0 + p.u1) / 2) - Math.abs(c - (p.u0 + p.u1) / 2)).slice(0, 3);
@@ -136,8 +138,8 @@ export const DECK_RAIL = { end: 0.5, side: 0.25, h: 0.9, glass: 0.15 } as const;
 export const MANSION_CHIMNEY = { at: 1.1, half: 0.32 } as const;
 
 export interface RoofDeck {
-  /** A cut hip or a glass mansion's flat roof */
-  kind: 'hip' | 'flat';
+  /** A cut hip, a flat roof (a glass mansion's, an Art Deco house's sundeck) or a chateau's mansard's flat top */
+  kind: 'hip' | 'flat' | 'mansard';
   /** The deck's surface (u0, v0, u1, v1, v0 the lower) and its height over the pad */
   r: Rect;
   y: number;
@@ -168,24 +170,39 @@ export function roofDeckOf(m: Mansion): RoofDeck {
     const r: Rect = [p.u0 - 0.4 + 0.3, back + 0.3, p.u1 + 0.4 - 0.3, p.v0 + 0.6 - 0.3];
     const g = DECK_RAIL.glass;
     deck = { kind: 'flat', r, y: partTop(p) + 0.35, rail: [r[0] + g, r[1] + g, r[2] - g, r[3] - g], things: [] };
+  } else if (m.kind === 'deco') {
+    // (its sundeck: the main block's flat roof inside its parapet, its rail glass; Phase 3)
+    const r: Rect = [p.u0 + 0.25, p.v1 + 0.25, p.u1 - 0.25, p.v0 - 0.25];
+    const g = DECK_RAIL.glass;
+    deck = { kind: 'flat', r, y: partTop(p) + 0.05, rail: clear(m, [r[0] + g, r[1] + g, r[2] - g, r[3] - g]), things: [] };
   } else {
-    const { r, y } = hipDeck(p);
+    // (a chateau's mansard's flat top, or a hip cut flat; Phase 3)
+    const { r, y } = m.kind === 'chateau' ? mansardDeck(p) : hipDeck(p);
     let rail: Rect = [r[0] + DECK_RAIL.end, r[1] + DECK_RAIL.side, r[2] - DECK_RAIL.end, r[3] - DECK_RAIL.side];
     // (clear of the chimney at its first end)
     const chimney = p.u0 + MANSION_CHIMNEY.at + MANSION_CHIMNEY.half + 0.15;
     if (rail[0] < chimney) rail = [chimney, rail[1], rail[2], rail[3]];
-    // (and of the summit's tower standing up through it: the deck on its wider side)
-    for (const q of m.parts.slice(1))
-      if (q.u0 < rail[2] && q.u1 > rail[0] && Math.min(q.v0, q.v1) < rail[3] && Math.max(q.v0, q.v1) > rail[1]) {
-        const [west, east] = [q.u0 - 0.3 - rail[0], rail[2] - (q.u1 + 0.3)];
-        rail = east >= west ? [q.u1 + 0.3, rail[1], rail[2], rail[3]] : [rail[0], rail[1], q.u0 - 0.3, rail[3]];
-      }
-    deck = { kind: 'hip', r, y, rail, things: [] };
+    deck = { kind: m.kind === 'chateau' ? 'mansard' : 'hip', r, y, rail: clear(m, rail), things: [] };
   }
   deck.things = furnish(deck.rail);
   return deck;
 }
 
+/** A rail clear of the other parts standing up through its roof (the summit's tower, an Art Deco house's, a chateau's turrets): the deck on the wider side of each */
+function clear(m: Mansion, rail: Rect): Rect {
+  let r = rail;
+  for (const q of m.parts.slice(1))
+    if (q.u0 < r[2] && q.u1 > r[0] && Math.min(q.v0, q.v1) < r[3] && Math.max(q.v0, q.v1) > r[1]) {
+      const [west, east] = [q.u0 - 0.3 - r[0], r[2] - (q.u1 + 0.3)];
+      r = east >= west ? [q.u1 + 0.3, r[1], r[2], r[3]] : [r[0], r[1], q.u0 - 0.3, r[3]];
+    }
+  return r;
+}
+/** A chateau's mansard's flat top: its rect and height (roofs3d.ts `mansard()` draws the same) */
+export function mansardDeck(p: MPart): { r: Rect; y: number } {
+  const { h, inset, o } = MANSARD;
+  return { r: [p.u0 - o + inset, p.v1 - o + inset, p.u1 + o - inset, p.v0 + o - inset], y: partTop(p) + h };
+}
 /** A deck's furniture inside its rail: potted trees in its corners, loungers along its back (the view), a parasol among them, a table and its chairs at the front */
 function furnish(rail: Rect): RoofDeck['things'] {
   const [u0, v0, u1, v1] = rail;

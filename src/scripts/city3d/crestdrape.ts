@@ -18,7 +18,7 @@ export interface Mesh {
   idx: number[];
 }
 /** How far over the grass each drape is laid, and a drive's half width (its kerbs stand just past it) */
-export const DRAPE = { drive: { half: 1.2, lift: 0.06 }, path: 0.045, bed: 0.06, fairway: 0.1, tee: 0.12, fringe: 0.12, green: 0.14, bunker: 0.13 } as const;
+export const DRAPE = { drive: { half: 1.2, lift: 0.06 }, path: 0.06, bed: 0.06, fairway: 0.1, tee: 0.12, fringe: 0.12, green: 0.14, bunker: 0.13 } as const;
 /** The overlook's path up from Ridge Road: its half width and lift */
 export const OVERLOOK_PATH = { half: 1.1, lift: 0.08 } as const;
 /** The hill roads' asphalt over the higher of its bed and the grass as drawn (crestmont3d.ts `ON`) */
