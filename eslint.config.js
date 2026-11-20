@@ -16,6 +16,7 @@ const DOM_FREE = [
   'src/scripts/city3d/cablecar.ts',
   'src/scripts/city3d/cableline.ts',
   'src/scripts/city3d/crestgate.ts',
+  'src/scripts/city3d/crestwalk.ts',
   'src/scripts/city3d/crestgrand.ts',
   'src/scripts/city3d/crestnight.ts',
   'src/scripts/city3d/crestcover.ts',
