@@ -732,7 +732,7 @@ From the Circus west, patchy as high roads are:
    - **6c, life**: people on the High Road, the estate's decks, the
      Circus's plaza and subways, the village and the rec; the south bus
      route and its stops; traffic checked on the new roads. Built
-     (2026-11-20, waiting for the owner's sign-off): `southpeople.ts`
+     and signed off (2026-11-20): `southpeople.ts`
      (DOM-free, tested in tests/southpeople.test.ts: each on its surface at
      its height, in nothing solid, off the roads): on the High Road (a pair
      and one on the phone outside the pub, queues at the takeaway and the
