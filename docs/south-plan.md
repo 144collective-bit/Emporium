@@ -780,7 +780,19 @@ From the Circus west, patchy as high roads are:
      (`tubeRumbleAt()`, ambience's `tube`, mixed with the el's in
      index.ts). Tested in tests/ambience.test.ts.
    - **6f, the guides**: endswood.md and the rest brought up to date, the
-     plan closed.
+     plan closed. Done (2026-11-20): endswood.md's status, places,
+     sound and life brought up to date (the guides each phase touched were
+     kept up as it was built: city-layout, getting-about, highway,
+     city-life, performance, tests).
+
+**The plan is done (2026-11-20).** Left over, each the owner's to pick up:
+- The city-wide far view on phones (6b): its own performance plan (far
+  aircraft merged, far landmarks in one piece each, far glows pooled).
+- A grassed block's edge runs dead straight in the estate band, about
+  (-115, 339) (6b).
+- The tube platforms' benches have no collision boxes (4g).
+- On a two-line trip the ride bar names the first ride's stop, not the
+  trip's last (4h).
 
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`,
 `npm run test:wide`, a build, `npm run budget`, the smoke test, and shots
