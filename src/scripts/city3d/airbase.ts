@@ -448,8 +448,17 @@ export const BASE_POOLS: [number, number, number][] = APRON_MASTS.flatMap(([x, z
 /** A watchtower's searchlight: its sweep about the way into the base (radians either side) and its beam's length */
 export const SWEEP = 0.8;
 export const BEAM_L = 26;
-/** Where a watchtower's searchlight looks at rest: in towards the base's middle (its yaw about y, from +x) */
-export const searchRest = ([x, z]: Pt) => Math.atan2(-((AIRBASE_RECT[1] + AIRBASE_RECT[3]) / 2 - z), (AIRBASE_RECT[0] + AIRBASE_RECT[2]) / 2 - x);
+/** Where a watchtower's searchlight looks at rest: straight in from the run of fence it stands by (its yaw about y,
+ * from +x, as `Math.atan2(-dz, dx)`), so its sweep stays over the base whatever the world's size */
+export function searchRest([x, z]: Pt): number {
+  let best: [Pt, Pt] = FENCE_RUNS[0];
+  for (const r of FENCE_RUNS) if (toRun(x, z, r) < toRun(x, z, best)) best = r;
+  const [a, b] = best;
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  let [nx, nz] = [-(b[1] - a[1]) / len, (b[0] - a[0]) / len];
+  if (!inAirbase(x + nx * 8, z + nz * 8)) [nx, nz] = [-nx, -nz];
+  return Math.atan2(-nz, nx);
+}
 
 /** The base's buildings' solids (in `SOLIDS`) */
 export const BASE_SOLIDS: Box[] = [
