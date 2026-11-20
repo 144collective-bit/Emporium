@@ -766,8 +766,8 @@ From the Circus west, patchy as high roads are:
      Under the bloom's threshold, checked on the phone tier. Shots
      `docs/south-shots/31-phase-6d-*.webp`.
    - **6e, sound by district**: the estate, the village, the High Road,
-     the tube below ground. Built (2026-11-20, waiting for the owner's
-     sign-off), in ambience.ts (fetched after the boot since 6a), with the
+     the tube below ground. Built and signed off (2026-11-20), in
+     ambience.ts (fetched after the boot since 6a), with the
      sounds sound.ts already makes: Bunker Sound's beat out of its garage
      door (`studio`) and St Aldwyn's bell on the hour across the south
      (`bell`), both waiting for their buildings since Phase 1b; the
