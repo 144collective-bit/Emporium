@@ -81,6 +81,7 @@ import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
+import { createStillTicks } from './stillticks';
 import { createSound } from './soundlazy';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
@@ -1890,6 +1891,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0, hour: 12 };
   let running = true;
   let frames = 0;
+  /** When a still city's ticks run (stillticks.ts) */
+  const stillTicks = createStillTicks();
   // Phones run the city at a steady 30fps while nobody is touching it, and at
   // full rate during a drag, a pinch or a fly-in, so moving still feels smooth
   const idleFps = tier === 'low' ? 30 : 0;
@@ -2217,7 +2220,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     part('tiles');
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     part('lods');
-    if (!reduced || frames === 0) for (const f of ticks) f(env);
+    // (a still city's ticks run on the first frame, and again once the sky settles somewhere new: its time held at
+    // 0, nothing moves, but what follows the sky catches up, the murk and the night lights; stillticks.ts)
+    if (!reduced) for (const f of ticks) f(env);
+    else if (stillTicks.due(env) || frames === 0) {
+      for (const f of ticks) f(env);
+      dirty = true;
+    }
     part('ticks');
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)
