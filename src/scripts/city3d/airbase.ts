@@ -434,8 +434,26 @@ export const AVENUE_LAMPS: [number, number, number, number][] = (() => {
   return out;
 })();
 
+/* ---------- At night (docs/military-plan.md Phase 4) ---------- */
+
+/** The apron's floodlight masts, between and beside the hangars (x, z), their height (under the Emporium's 12.5) */
+export const APRON_MASTS: Pt[] = [
+  [-410, -461],
+  [-350, -461],
+  [-284, -461],
+];
+export const MAST_H = 10.5;
+/** Their pools of light on the apron (x, z, size: world.ts `addPool()`, at the boot, as the airport's) */
+export const BASE_POOLS: [number, number, number][] = APRON_MASTS.flatMap(([x, z]) => [8, 17].map((d): [number, number, number] => [x, z - d, 13]));
+/** A watchtower's searchlight: its sweep about the way into the base (radians either side) and its beam's length */
+export const SWEEP = 0.8;
+export const BEAM_L = 26;
+/** Where a watchtower's searchlight looks at rest: in towards the base's middle (its yaw about y, from +x) */
+export const searchRest = ([x, z]: Pt) => Math.atan2(-((AIRBASE_RECT[1] + AIRBASE_RECT[3]) / 2 - z), (AIRBASE_RECT[0] + AIRBASE_RECT[2]) / 2 - x);
+
 /** The base's buildings' solids (in `SOLIDS`) */
 export const BASE_SOLIDS: Box[] = [
+  ...APRON_MASTS.map(([x, z]): Box => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, MAST_H]),
   [...HQ, HQ_H],
   ...BARRACKS.map((r): Box => [...r, BARRACKS_H]),
   ...SERVICES.map(({ rect, h }): Box => [...rect, h]),

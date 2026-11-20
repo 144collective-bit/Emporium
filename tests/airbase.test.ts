@@ -231,3 +231,21 @@ test('the base itself (Phase 3): inside the fence, clear of each other, the airf
   // The service road from the gate to the motor pool, inside the fence
   for (const p of A.SERVICE_ROAD) assert.ok(inAirbase(...p));
 });
+
+test('at night (Phase 4): the apron\'s masts and their pools, the searchlights turned in towards the base', async () => {
+  const A = await import('../src/scripts/city3d/airbase');
+  for (const [x, z] of A.APRON_MASTS) {
+    // (at the apron's south edge, between the hangars, clear of what's parked, under the Emporium)
+    assert.ok(z > A.APRON[3] - 8 && z < A.HANGARS[0][1] && A.HANGARS.every((h) => x < h[0] - 1 || x > h[2] + 1), `a mast at ${x}, ${z}`);
+    for (const p of A.PARKED) assert.ok(Math.hypot(x - p.at[0], z - p.at[1]) > 12, `a mast on a parked ${p.kind}`);
+  }
+  assert.ok(A.MAST_H < 12.5);
+  for (const [x, z] of A.BASE_POOLS) assert.ok(inRect(A.APRON, x, z), `a pool off the apron at ${x}, ${z}`);
+  // Each searchlight at rest looks in: 15 along its way, and all its sweep, inside the fence
+  for (const w of A.WATCHTOWERS)
+    for (const d of [-A.SWEEP, 0, A.SWEEP]) {
+      const a = A.searchRest(w) + d;
+      const p: Pt = [w[0] + Math.cos(a) * 15, w[1] - Math.sin(a) * 15];
+      assert.ok(inAirbase(...p), `the searchlight at ${w} looks out at ${p}`);
+    }
+});

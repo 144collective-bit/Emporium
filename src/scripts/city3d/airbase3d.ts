@@ -12,7 +12,9 @@
  * The lamps along the fence, at the gates and round the car park are the city's own (airbase.ts `AIRBASE_LAMPS`).
  */
 import * as THREE from 'three';
-import { Batch, FONT_DISPLAY, canvasTex, lit, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, fx, lit, moving, siteMat, toon } from './kit';
+import { nearGate } from './nearby';
+import type { Tick } from './world';
 import { site } from './tilework';
 import { COVER, ROAD, STONE } from './palette';
 import { cyl, light } from './airportkit';
@@ -62,6 +64,10 @@ import {
   WATCHTOWERS,
   WATCHTOWER_H,
   WATER_TOWER,
+  AIRBASE_RECT,
+  BEAM_L,
+  SWEEP,
+  searchRest,
 } from './airbase';
 import type { Pt } from './streetplan';
 import type { Rect } from './tiles';
@@ -455,7 +461,48 @@ function gatehouse(b: Batch, low: boolean) {
     });
 }
 
-export function register({ low }: { low: boolean }) {
+/**
+ * The watchtowers' searchlights at night (Phase 4): one instanced cone, each beam from its tower's top down to the
+ * ground, sweeping slowly either side of the way into the base (`SWEEP`); held still under reduced motion (the Strip's
+ * searchlights' way, stripmarks3d.ts)
+ */
+function searchlights(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
+  const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const g = new THREE.CylinderGeometry(2.4, 0.2, BEAM_L, 14, 1, true).translate(0, BEAM_L / 2, 0);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const col = new Float32Array(pos.count * 4);
+  for (let i = 0; i < pos.count; i++) col.set([1, 1, 1, Math.max(0, 1 - pos.getY(i) / BEAM_L) ** 1.4], i * 4);
+  g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+  const mat = new THREE.MeshBasicMaterial({ color: '#fff4dc', vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+  const beams = new THREE.InstancedMesh(g, mat, WATCHTOWERS.length);
+  beams.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  beams.frustumCulled = false;
+  beams.userData.keep = true;
+  beams.name = 'airbase-searchlights';
+  scene.add(fx(moving(beams)));
+  const [M, Q, V, D, UP, ONE] = [new THREE.Matrix4(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 1, 1)];
+  const set = (t: number, night: number) => {
+    mat.opacity = 0.07 * night;
+    beams.visible = night > 0.05;
+    if (!beams.visible) return;
+    WATCHTOWERS.forEach(([x, z], i) => {
+      // (its yaw: at rest in towards the base, swinging either side; the beam down to the ground some 20 off)
+      const a = searchRest([x, z]) + (reduced ? 0 : Math.sin(t * 0.22 + i * 1.7) * SWEEP);
+      D.set(Math.cos(a), -0.42, -Math.sin(a)).normalize();
+      M.compose(V.set(x, WATCHTOWER_H - 0.2, z), Q.setFromUnitVectors(UP, D), ONE);
+      beams.setMatrixAt(i, M);
+    });
+    beams.instanceMatrix.needsUpdate = true;
+  };
+  set(0, 0);
+  const near = nearGate(400);
+  tick?.((env) => {
+    if (!near(...AIRBASE_RECT)) return;
+    set(Date.now() / 1000, env.night);
+  });
+}
+
+export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // The fence, a stretch a site
   FENCE_RUNS.forEach(([a, c], i) => {
     const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
@@ -536,4 +583,6 @@ export function register({ low }: { low: boolean }) {
   one('airbase range', RANGE, (b) => range(b));
   WATCHTOWERS.forEach(([x, z], i) => one(`airbase watchtower ${i}`, [x - 1.6, z - 1.6, x + 1.6, z + 1.6], (b) => watchtower(b, x, z, low)));
   one('airbase wall gate', WALL_GATE, (b) => gatehouse(b, low));
+  // The watchtowers' searchlights (main thread only)
+  if (scene) searchlights(scene, tick);
 }

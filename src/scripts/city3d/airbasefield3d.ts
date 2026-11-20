@@ -19,7 +19,7 @@ import type { Tick } from './world';
 import { site } from './tilework';
 import { ROAD } from './palette';
 import { MARK, G, TOP, box, cyl, light, mark } from './airportkit';
-import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, APRON_VEHICLES, baseGrey, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, PARKED, RUNWAY, WINDSOCK, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
+import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, APRON_MASTS, APRON_VEHICLES, MAST_H, baseGrey, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, PARKED, RUNWAY, WINDSOCK, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
 import type { Rect } from './tiles';
 
 /** This module's address, for the site worker (districts.ts) */
@@ -359,6 +359,16 @@ export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | n
     const b = new Batch();
     fuelFarm(b, low);
     b.build(into, { cast: true, receive: true });
+  });
+  site('airbase masts', [Math.min(...APRON_MASTS.map((p) => p[0])) - 3, Math.min(...APRON_MASTS.map((p) => p[1])) - 2, Math.max(...APRON_MASTS.map((p) => p[0])) + 3, Math.max(...APRON_MASTS.map((p) => p[1])) + 2], (into) => {
+    const b = new Batch();
+    // (a pole, a crossbar at its top, three lamps on it facing the apron, north)
+    for (const [x, z] of APRON_MASTS) {
+      cyl(b, 0.16, MAST_H - 0.6, x, 0, z, POLE, 8, 0.24);
+      box(b, x - 2.2, MAST_H - 0.6, z - 0.15, x + 2.2, MAST_H - 0.35, z + 0.15, POLE);
+      for (const dx of [-1.5, 0, 1.5]) box(b, x + dx - 0.45, MAST_H - 0.35, z - 0.35, x + dx + 0.45, MAST_H, z - 0.05, light('#fff1d0'));
+    }
+    b.build(into, { cast: true, receive: false });
   });
   site('airbase apron kit', [-480, -540, -200, -470], (into) => {
     const b = new Batch();
