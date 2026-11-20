@@ -766,7 +766,19 @@ From the Circus west, patchy as high roads are:
      Under the bloom's threshold, checked on the phone tier. Shots
      `docs/south-shots/31-phase-6d-*.webp`.
    - **6e, sound by district**: the estate, the village, the High Road,
-     the tube below ground.
+     the tube below ground. Built (2026-11-20, waiting for the owner's
+     sign-off), in ambience.ts (fetched after the boot since 6a), with the
+     sounds sound.ts already makes: Bunker Sound's beat out of its garage
+     door (`studio`) and St Aldwyn's bell on the hour across the south
+     (`bell`), both waiting for their buildings since Phase 1b; the
+     village's, the bungalows' and the fields' birdsong by day and owl at
+     night (the park's, `VILLAGE_BIRDS`, by `zoneAt()`, eased over a few
+     points so there's no edge); the High Road's shoppers along its shop
+     fronts (the Neon Mile's crowd, quieter: `HIGH_ROAD_MURMUR`); below
+     ground (`BELOW`: a subway, an underpass, a station) hushed as indoors,
+     and a tube train's rumble as it passes, from the timetable
+     (`tubeRumbleAt()`, ambience's `tube`, mixed with the el's in
+     index.ts). Tested in tests/ambience.test.ts.
    - **6f, the guides**: endswood.md and the rest brought up to date, the
      plan closed.
 
