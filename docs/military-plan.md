@@ -620,3 +620,12 @@ and the textures 4950.5 of 4950. The base's drawing-only data moved to `airbased
 signs' atlas was halved (1024 by 256): the textures 4941.5 (fits), the boot 765.6. The owner's call: **the boot budget
 from 765 to 767 on purpose** (scripts/budget.mjs, its reason written beside it).
 
+## The night sky from high: what it is (2026-11-20, the first of the owner's "Later" picks)
+
+Not the review tool and not the base: `?shots=night` sets the night once for the whole run (shots.ts). sky.ts thickens
+the haze at night (its density about 0.0105 against 0.0037 by day) and colours it the night sky's horizon, a pale
+grey-blue (`NIGHT.hor`); the City view thins it when pulled back, but only to 55% (`thin`, `70 / distance`, at least
+0.55). From the base's view from high (110 up, about 340 from what it looks at) that leaves the ground about 98% the
+haze's pale colour at night (about 37% by day), so the night picture reads as a hazy day. The same holds for the whole
+city's City view at night when pulled far back: a look question for the owner (sky.ts, the whole city), not a bug.
+
