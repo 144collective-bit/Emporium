@@ -431,7 +431,7 @@ What was built:
   cones.
 - **The boot** unchanged at 678.2 of 680.
 
-### The polish: drop-offs, the show's passers-by and the sounds (Phase 7, built, waiting on the owner's sign-off)
+### The polish: drop-offs, the show's passers-by and the sounds (Phase 7, built, signed off 2026-11-20)
 
 The owner's picks (2026-11-20) from the district's audit: the loose ends
 and the sounds. Nothing moved (the snapshot holds); no new solids.
@@ -511,5 +511,5 @@ and the sounds. Nothing moved (the snapshot holds); no new solids.
 5. Life and sound. Built.
 6. Polish and performance. Built: the plan is done.
 7. The polish (the owner's picks after the audit): the drop-offs, the
-   show's passers-by, the moving sounds, the panels. Built, waiting on the
-   owner's sign-off.
+   show's passers-by, the moving sounds, the panels. Built and signed off
+   (2026-11-20).

@@ -90,7 +90,7 @@ keep it up to date when what it describes changes.
   shader on a lighter path (`LOW`) and the coaster at half its samples; the
   fountain's nozzle lights in the FX layer; the volcano's flames shaped as
   flames. It draws lighter than Uptown on desktop and phones. Phase 7 (the
-  polish, the owner's picks) is built, waiting on the owner's sign-off:
+  polish, the owner's picks) is built and signed off (2026-11-20):
   `stripdrop.ts` (DOM-free, tested in `tests/stripdrop.test.ts`: the
   canopy cars of every resort but Big City come and go on the clock,
   `DROPS`, `dropAt()`, `PARKED`, drawn by resorts3d.ts, parked under
