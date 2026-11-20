@@ -37,9 +37,9 @@ the ground. Desktops unchanged. Measured before and after each phase with the sa
 1. **Measure, and name what's far.** Done (below). A draw breakdown under `?fps` (`window.__draws()`, drawrows.ts),
    and under `?made` each unnamed thing tagged by the code that made it (no cost to the boot: each kind is named in its code
    in the phase that changes it); the baseline at six views on the phone tier.
-2. **The aircraft far off, one piece each.** Past the tier's `far`, each aircraft (the airport's fleet, your own when
-   it's away) drawn as one flattened far form (`farForm()` in lod.ts, as the places' are): about 20 draws to about
-   4 at the village. Up close, as now.
+2. **The aircraft far off, one piece each.** Done (below). On phones, past the tier's `far`, each aircraft (the
+   airport's fleets, your own, the hangar's showroom, others' in multiplayer) drawn as its model in one piece
+   (`farGeometry()` in aircraft.ts), a fleet's far ones one draw. Up close, as before; desktops as before.
 3. **The landmarks far off, on phones.** Two parts (Phase 1 found the second is the bigger):
    - their far forms in one piece each, coloured per vertex (`farFormMaterial()`), the textures' average colour baked
      in: about 55 draws to about 20;
@@ -95,6 +95,29 @@ How to measure again: build, serve `dist`, open `/?fps&spawn=x,z` (add `&made` f
 on `[data-city-root]`, walk, wait for the sites, then `await __draws((c) => c.lookAt(...))` in the console. Its
 `rows` are biggest first; `@file.js:line:col` is a built chunk's place, found through `npm run build` with
 `sourcemap: true` set for once in `astro.config.mjs`'s `vite.build` and `environments.client.build`.
+
+## What Phase 2 measured (2026-11-20)
+
+Each aircraft's far piece: its body, livery, nav lights and beacon, the control surfaces at rest and the spinners'
+blades merged (no gear, no titles), coloured per vertex; the livery's colour per aircraft only where the near livery
+is (`accent`), the lights glowing brighter at night as theirs do (the beacon steady, not blinking). Each aircraft is
+near or far by its own distance from the camera (`aircraftNear()`, `LOD_EYE`, with the places' margin); a fleet's near
+parts are drawn only while one of it is near. Start-up code 764.6 of 770 KB (about 0.9 KB more).
+
+The same views and headings as Phase 1, on the phone tier:
+
+| View (worst heading) | Draws before | After | The aircraft's before | After |
+| --- | --- | --- | --- | --- |
+| St Aldwyn's churchyard (N) | 599 | 564 | 20 | 2 |
+| The Docks' quay (E) | 587 | 546 | 47 | 4 |
+| Crestmont Boulevard (W) | 615 | 585 | 20 | 2 |
+| The Trenches (N) | 554 | 555 | 9 | 2 |
+| Exit 6A, Corner Road (N) | 347 | 334 | 9 | 1 |
+
+(The totals move a few draws either way from run to run with what's built and where the traffic is; the aircraft's
+own draws are the measure.) The look: the maintenance hangar's parked airliner from about 45 m, the same camera, with
+Degen 104 m off (drawn far) and 72 m off (drawn near), by day and at night: the far piece's livery, window band and
+stripes as the near model's, its nav lights glowing at night.
 
 ## The owner's decisions (2026-11-20)
 

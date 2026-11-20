@@ -343,6 +343,16 @@ keep it up to date when what it describes changes.
     they're next drawn; the stability plan's Phase 3, item 6); `?fps` says
     how many and how much (`freedNear()`). Code that changes a near part's
     geometry while it's far needs nothing special: it's uploaded when drawn.
+  - On phones each aircraft past `far` is drawn in one piece
+    (`farGeometry()` in `aircraft.ts`: body, livery, nav lights and beacon,
+    the control surfaces at rest and the blades; no gear or titles), a
+    fleet's far ones one instanced mesh with their livery colours
+    (`aircraft-far`: the livery's colour only where `accent` is, the
+    lights' glow following the night), each aircraft swapped by its own
+    distance from the camera (`aircraftNear()`, by `LOD_EYE`, which
+    `updateLods()` keeps), and a fleet's near parts drawn only while one's
+    near (`FAR_FLEETS`, set in `index.ts`; `docs/phone-far-plan.md` Phase
+    2). Desktops draw them as before.
   - Cars far away (parked and traffic) are their model's far form
     (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
     extruded, block wheels, about a hundred triangles), all in one
