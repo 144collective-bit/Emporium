@@ -802,7 +802,8 @@ function poolside(b: Batch, low: boolean) {
 }
 
 /** The curtains' cloth: a deep red, lit from inside as the room is (docs/spawn-plan.md Phase 2) */
-const CURTAIN_RED = '#8e2333';
+/** The curtains in the media wall's deep green (docs/interior-plan.md Phase 4: they were red) */
+const CURTAIN_GREEN = '#2f5546';
 /** How long they take to draw back (s) */
 const DRAW_BACK = 1.4;
 
@@ -815,7 +816,7 @@ export function addCurtains(scene: THREE.Scene, tick: (f: Tick) => void) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const g = new THREE.BoxGeometry(1, CURTAIN.y1 - CURTAIN.y0, 1);
   g.deleteAttribute('uv');
-  const mesh = moving(new THREE.InstancedMesh(g, neon(new THREE.Color(CURTAIN_RED).multiplyScalar(SIDE_Z), DAY, NIGHT), ROOM_WINDOWS.length * 2));
+  const mesh = moving(new THREE.InstancedMesh(g, neon(new THREE.Color(CURTAIN_GREEN).multiplyScalar(SIDE_Z), DAY, NIGHT), ROOM_WINDOWS.length * 2));
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   mesh.castShadow = mesh.receiveShadow = false;
   mesh.name = 'home-curtains';
@@ -868,7 +869,6 @@ const WINDOW = '#bfe3f2';
 const FRAME = '#1d1c22';
 const SOFA = '#1f6b52';
 const CUSHION = '#b0307a';
-const RUG = '#2f7f88';
 const RUG_EDGE = '#7a7068';
 const RUG_FIELD = '#a39a8f';
 const WOOD = '#7a5236';
@@ -1218,13 +1218,47 @@ function furnish(b: Batch, { kind, rect, h }: Furniture, low: boolean) {
     icube(b, [x0 + 0.02, z0 + 0.02, x1 - 0.02, z1 - 0.02], S + 0.22, S + 0.26, COGNAC);
     icube(b, [x0 + 0.03, back, x1 - 0.03, back + 0.05], S + 0.26, S + h, COGNAC);
     for (const [fx, fz] of [[x0 + 0.05, z0 + 0.05], [x1 - 0.05, z0 + 0.05], [x0 + 0.05, z1 - 0.05], [x1 - 0.05, z1 - 0.05]]) drum(b, fx, fz, 0.012, 0.012, S + 0.006, S + 0.22, INK, 5);
-  } else if (kind === 'cupboard') {
-    icube(b, rect, y, S + h, WOOD);
-    b.detail(() => {
-      const m = (z0 + z1) / 2;
-      icube(b, [x0 - 0.012, m - 0.008, x0 - 0.002, m + 0.008], S + 0.05, S + h - 0.05, WOOD_DARK);
-      for (const z of [m - 0.07, m + 0.05]) icube(b, [x0 - 0.03, z, x0 - 0.004, z + 0.02], S + 0.5, S + 0.62, STEEL);
+  } else if (kind === 'boots') {
+    // The boot room by the side door: the east wall behind it in the deep green, a walnut bench with a cognac cushion,
+    // his trainers under it, a brass rail of hooks over it with his jackets and a cap
+    face(b, ROOM[2] - 0.01, (z0 + z1) / 2, z1 - z0 + 0.2, S + 0.006, S + CEIL - 0.006, -Math.PI / 2, FEATURE, 0.95);
+    icube(b, [x0, z0, x1 - 0.01, z1], S + h - 0.06, S + h - 0.03, WOOD);
+    icube(b, [x0 + 0.03, z0 + 0.03, x1 - 0.02, z1 - 0.03], S + h - 0.03, S + h, COGNAC);
+    for (const za of [z0 + 0.02, z1 - 0.06]) icube(b, [x0 + 0.02, za, x1 - 0.02, za + 0.04], y, S + h - 0.06, WOOD);
+    const rail = S + 0.82;
+    icube(b, [x1 - 0.03, z0 + 0.05, x1 - 0.012, z1 - 0.05], rail, rail + 0.03, BRASS);
+    const coats = ['#33313b', COGNAC, CREAM, '#2f5546'];
+    coats.forEach((c, k) => {
+      const z = z0 + 0.18 + k * ((z1 - z0 - 0.36) / (coats.length - 1));
+      icube(b, [x1 - 0.12, z - 0.09, x1 - 0.02, z + 0.09], rail - 0.42, rail + 0.01, c);
     });
+    b.detail(() => {
+      for (let k = 0; k < 3; k++) {
+        const z = z0 + 0.15 + k * 0.32;
+        const c = [PRINT_PAPER, INK, '#d42b2b'][k];
+        for (const dz of [0, 0.08]) icube(b, [x0 + 0.08, z + dz, x0 + 0.26, z + dz + 0.06], y, y + 0.05, c);
+      }
+      const g = new THREE.SphereGeometry(0.08, low ? 6 : 8, low ? 3 : 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.8, 0.7, 1);
+      g.deleteAttribute('uv');
+      b.add(g.translate(x1 - 0.1, rail + 0.08, z1 - 0.12), paint(INK));
+    });
+  } else if (kind === 'laundry') {
+    // The laundry's tall walnut unit in the corner: the washer and the dryer stacked in its open middle (white fronts,
+    // round dark doors), a cupboard over them, a basket at its foot
+    icube(b, [x0 + 0.03, z0, x1, z1], y, S + h, WOOD);
+    const f = x0 + 0.02;
+    icube(b, [f, z0 + 0.06, x0 + 0.04, z1 - 0.06], S + 0.08, S + 0.86, WOOD_DARK);
+    for (const [ya, yc] of [[0.1, 0.46], [0.48, 0.84]]) {
+      icube(b, [f - 0.012, z0 + 0.1, f, z1 - 0.1], S + ya, S + yc, PRINT_PAPER);
+      const g = new THREE.CylinderGeometry(0.12, 0.12, 0.012, low ? 10 : 16).rotateZ(Math.PI / 2);
+      g.deleteAttribute('uv');
+      b.add(g.translate(f - 0.018, S + (ya + yc) / 2, (z0 + z1) / 2), paint('#3a3942'));
+    }
+    b.detail(() => {
+      icube(b, [f - 0.012, z0 + 0.06, f, z1 - 0.06], S + 0.92, S + 0.93, WOOD_DARK);
+      icube(b, [f - 0.02, z1 - 0.3, f - 0.012, z1 - 0.26], S + 0.96, S + 1.04, BRASS);
+    });
+
   }
 }
 
@@ -1553,9 +1587,10 @@ function upFurnish(b: Batch, { kind, rect, h }: UpThing, fy: number, low: boolea
 
 /* ---------- The basement, his trading den (docs/compound-plan.md Phase 4) ---------- */
 
-const DEN_WALL = '#3a3448';
-const DEN_FLOOR = '#4a4652';
-const DEN_CEIL = '#2a2733';
+/** The den in the palette (docs/interior-plan.md Phase 4): charcoal walls, dark walnut boards, a dark ceiling; its LEDs kept */
+const DEN_WALL = '#47444e';
+const DEN_FLOOR = '#5a3d2a';
+const DEN_CEIL = '#2f2d35';
 const LED_MAGENTA = neon(PAL.magenta, 1.2, 1.4);
 const LED_CYAN = neon(PAL.cyan, 1.1, 1.3);
 const BOTTLES = ['#2fae6e', '#c07a3a', '#e6c13c', '#8fd3ff', '#c9302b', PRINT_PAPER];
@@ -1598,7 +1633,8 @@ function basement(b: Batch, low: boolean) {
     // His mark in neon on the west wall over the sofa's end, a rug under the table, two ceiling lights (dim, warm)
     mark(b, LED_MAGENTA, 0.36, V(x0 + 0.02, fy + 0.75, z0 + 2.05), V(0, 0, -1), V(0, 1, 0), V(1, 0, 0), { tube: 0.014 });
     const t = BASEMENT.find((u) => u.kind === 'table')!.rect;
-    iflat(b, [t[0] - 0.6, t[1] - 0.25, t[2] + 0.6, t[3] + 1.3], fy + G + 0.006, RUG);
+    iflat(b, [t[0] - 0.6, t[1] - 0.25, t[2] + 0.6, t[3] + 1.3], fy + G + 0.006, RUG_EDGE);
+    iflat(b, [t[0] - 0.52, t[1] - 0.17, t[2] + 0.52, t[3] + 1.22], fy + G + 0.01, RUG_FIELD);
     for (const [lx, lz] of [[x0 + 2.2, z0 + 1.4], [x0 + 3.2, z1 - 1.6]]) b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 10).translate(lx, top - 0.01, lz), glow(PAL.warm));
   });
 }
@@ -1650,7 +1686,7 @@ function denFurnish(b: Batch, { kind, rect, h }: BaseThing, fy: number, low: boo
     b.add(new THREE.BoxGeometry(x1 - x0 + 0.06, h - 0.3 + 0.06, 0.006).translate(mx, fy + (0.3 + h) / 2, z0 + 0.01), LED_CYAN);
     b.detail(() => b.add(new THREE.SphereGeometry(0.012, 5, 4).translate(x1 - 0.06, fy + 0.33, z1 + 0.004), glow(PAL.cyan)));
   } else if (kind === 'table') {
-    icube(b, rect, fy + h - 0.03, fy + h, DARK_UNIT);
+    icube(b, rect, fy + h - 0.03, fy + h, MARBLE);
     icube(b, [x0 + 0.1, z0 + 0.08, x1 - 0.1, z1 - 0.08], y, fy + h - 0.03, INK);
     b.detail(() => {
       icube(b, [x0 + 0.2, z0 + 0.15, x0 + 0.32, z0 + 0.22], fy + h, fy + h + 0.02, INK);
@@ -1681,7 +1717,7 @@ function denFurnish(b: Batch, { kind, rect, h }: BaseThing, fy: number, low: boo
   } else if (kind === 'desk') {
     // The trading desk: a long dark top, legs; the screens' frames on their arms (what's on them is `denCharts()`,
     // drawn with the page's own texture); keyboards and a mouse
-    icube(b, rect, fy + h - 0.03, fy + h, DARK_UNIT);
+    icube(b, rect, fy + h - 0.03, fy + h, WOOD);
     for (const x of [x0 + 0.04, mx - 0.02, x1 - 0.08]) icube(b, [x, z0 + 0.04, x + 0.04, z1 - 0.04], y, fy + h - 0.03, INK);
     rod(b, V(mx, fy + h, z1 - 0.12), V(mx, fy + 1.12, z1 - 0.12), 0.02, paint(INK));
     for (const sc of denScreens()) {
@@ -1698,7 +1734,7 @@ function denFurnish(b: Batch, { kind, rect, h }: BaseThing, fy: number, low: boo
   } else if (kind === 'chair') {
     // His gaming chair, turned to the desk: black with his magenta down its tall back
     drum(b, mx, mz, 0.22, 0.22, fy + 0.22, fy + 0.27, INK, low ? 6 : 10);
-    icube(b, [mx - 0.17, mz - 0.13, mx + 0.17, mz + 0.13], fy + 0.27, fy + 0.29, CUSHION);
+    icube(b, [mx - 0.17, mz - 0.13, mx + 0.17, mz + 0.13], fy + 0.27, fy + 0.29, COGNAC);
     icube(b, [mx - 0.2, z0, mx + 0.2, z0 + 0.07], fy + 0.27, fy + h + 0.25, INK);
     icube(b, [mx - 0.06, z0 - 0.004, mx + 0.06, z0], fy + 0.35, fy + h + 0.2, PAL.magenta);
     drum(b, mx, mz, 0.02, 0.02, fy + 0.04, fy + 0.22, STEEL, 5);
@@ -1708,8 +1744,8 @@ function denFurnish(b: Batch, { kind, rect, h }: BaseThing, fy: number, low: boo
     b.add(new THREE.BoxGeometry(0.006, h - 0.08, z1 - z0 - 0.08).translate(x0 - 0.004, fy + h / 2, mz), LED_CYAN);
   } else if (kind === 'bar') {
     // The bar's counter facing into the room (west): dark, a pale top, his magenta along its foot
-    icube(b, [x0 + 0.06, z0, x1, z1], y, fy + h - 0.03, DARK_UNIT);
-    icube(b, [x0, z0, x1, z1], fy + h - 0.03, fy + h, PALE_TOP);
+    icube(b, [x0 + 0.06, z0, x1, z1], y, fy + h - 0.03, WOOD);
+    icube(b, [x0, z0, x1, z1], fy + h - 0.03, fy + h, MARBLE);
     b.add(new THREE.BoxGeometry(0.012, 0.012, z1 - z0 - 0.1).translate(x0 + 0.05, fy + 0.04, mz), LED_MAGENTA);
   } else if (kind === 'barshelf') {
     // The lit shelf behind the bar: dark, three shelves with a warm strip under each, bottles of made-up drinks (no labels)
@@ -1724,9 +1760,9 @@ function denFurnish(b: Batch, { kind, rect, h }: BaseThing, fy: number, low: boo
   } else if (kind === 'stools') {
     for (let k = 0; k < 3; k++) {
       const sz = z0 + ((z1 - z0) * (k + 0.5)) / 3;
-      drum(b, mx, sz, 0.1, 0.09, fy + h - 0.04, fy + h, CUSHION);
-      drum(b, mx, sz, 0.015, 0.015, fy + 0.02, fy + h - 0.04, STEEL, 5);
-      drum(b, mx, sz, 0.08, 0.08, fy + 0.006, fy + 0.02, STEEL);
+      drum(b, mx, sz, 0.1, 0.09, fy + h - 0.04, fy + h, COGNAC);
+      drum(b, mx, sz, 0.015, 0.015, fy + 0.02, fy + h - 0.04, BRASS, 5);
+      drum(b, mx, sz, 0.08, 0.08, fy + 0.006, fy + 0.02, BRASS);
     }
   } else if (kind === 'fridge') {
     icube(b, rect, y, fy + h, INK);

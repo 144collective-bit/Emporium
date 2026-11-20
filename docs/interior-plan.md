@@ -63,8 +63,15 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    steel-framed screen with a brass rain head, a brass towel rail. **The office** in the palette (a walnut desk, a
    cognac chair). The upstairs windows drawn where they are outside (`houseWindows()`). Shots:
    `docs/interior-shots/phase-3-*`.
-4. **The utility and boot room, and the den in the palette.** By the side door: a washer and a dryer, coat hooks and a
-   bench. The den keeps its screens and LEDs, its furniture in the palette.
+4. **The utility and boot room, and the den in the palette.** *Built, waiting on the owner's sign-off.* homerooms.ts
+   `FURNITURE`: by the side door, the boot room (`boots`: the east wall behind it in the deep green, a walnut bench with
+   a cognac cushion, his trainers under it, a brass rail of hooks over it with his jackets and a cap; the old cupboard
+   gone) and the laundry's tall walnut unit in the corner south of the door (`laundry`: the washer and the dryer
+   stacked, white fronts with round dark doors, a cupboard over them; the hall's plant gone), the door's way clear
+   between them. The den in the palette: charcoal walls, dark walnut boards, a dark ceiling, a rug in the lounge's,
+   a black marble table, a walnut desk, the bar in walnut and black marble with cognac stools on brass, his chair in
+   cognac; its LEDs, screens, arcade and vault kept. The room's curtains in the media wall's deep green (they were
+   red). Shots: `docs/interior-shots/phase-4-*`.
 5. **Polish.** Lighting (strips, wall lights), art of his own, plants, the review shots and the phone checks.
 
 Each with the owner's sign-off. The owner's order (2026-11-19): Phase 3 (upstairs) after Phase 1, then the kitchen.
