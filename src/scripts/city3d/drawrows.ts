@@ -91,10 +91,10 @@ export function captureDraws(renderer: { renderBufferDirect: Draw }, scene: THRE
 export function makerOf(stack: string, depth = 2) {
   const out: string[] = [];
   for (const line of stack.split('\n')) {
-    const m = line.match(/\/([\w.-]+?)((?:\.[\w-]{8})?\.(?:ts|js|mjs))(?:\?[^:)]*)?:(\d+):?(\d*)/);
-    if (!m || /^(three|drawrows|chunk|BufferGeometryUtils)/.test(m[1])) continue;
-    // (a built chunk's code is all on its first line: its file and column, to look up in its source map)
-    out.push(m[3] === '1' && m[4] ? `${m[1]}${m[2]}:1:${m[4]}` : `${m[1]}:${m[3]}`);
+    const m = line.match(/(\/_astro)?\/([\w.-]+?)((?:\.[\w-]{8})?\.(?:ts|js|mjs))(?:\?[^:)]*)?:(\d+):?(\d*)/);
+    if (!m || /^(three|drawrows|chunk|BufferGeometryUtils)/.test(m[2])) continue;
+    // (a built chunk: its whole file name, line and column, to look up in its source map)
+    out.push(m[1] && m[5] ? `${m[2]}${m[3]}:${m[4]}:${m[5]}` : `${m[2]}:${m[4]}`);
     if (out.length >= depth) break;
   }
   return out.join('<');
