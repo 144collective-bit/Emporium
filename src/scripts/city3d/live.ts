@@ -82,7 +82,7 @@ export const LIVE_PLACES = [
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 
-export type FeatureId = 'walk' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'prizes' | 'taxi' | 'metro' | 'riverbus' | 'monorail' | 'boat' | 'travel';
+export type FeatureId = 'walk' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'prizes' | 'taxi' | 'metro' | 'riverbus' | 'monorail' | 'cablecar' | 'boat' | 'travel';
 /** The features that can be closed, and what closing each one stops */
 export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'walk', name: 'Walk mode', stops: 'Walking into the city (the Walk switch and every Walk in)' },
@@ -96,6 +96,7 @@ export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'metro', name: 'The metro', stops: 'The stations\' doors' },
   { id: 'riverbus', name: 'The river bus', stops: 'Its piers\' gangways' },
   { id: 'monorail', name: 'The monorail', stops: 'The Neon Mile monorail\'s station doors' },
+  { id: 'cablecar', name: 'The cable car', stops: "Highcrest cable car's station doors" },
   { id: 'boat', name: 'Boat hire', stops: 'Taking the hire boat by Downtown pier' },
   { id: 'travel', name: 'Fast travel', stops: "The world map's Fast travel" },
 ];

@@ -706,8 +706,16 @@ Their answers, in three rounds:
      show) and SOLENNE (IVORY HALL's, white render, frosted windows). Each a place with its panel, live line, Walk in,
      door and pin; the showroom's panel sells the game's cars for Dorras through the garage's rules (tycoon-ui.ts
      `showroomView()`, tycoon.ts `buyCar()`), THE ASTERLY's and SOLENNE's insides coming soon.
-   - **4b, the cable car (next):** gondola cabins on a cable from a station in the Flats up over the hills to THE
-     ASTERLY, on a few slim pylons on clear ground.
+   - **4b, the cable car (built; the owner's answers: "Foothill Road's east end", "Ride shown, then walk", "Glass
+     gondolas"):** `cablecar.ts` (the rules), `cablecar3d.ts` (the drawing), `cablecar-ui.ts` (the ride). A station
+     just north of Foothill Road at the Flats' east end, the line about 225 m straight up over the hills and the
+     reservoir to a station on legs beside THE ASTERLY, level with it; three slim white pylons on clear ground, none
+     taller than the Emporium (the rope's room over the ground and the hill houses' real roofs, `CLEAR`, a cabin's foot
+     lower only near the stations); eight glass gondolas round the loop on the clock, lit at night, still under reduced
+     motion. Each station's door ("Cable car") opens the station card: Ride up or Ride down, about twenty seconds under
+     a camera alongside the cabin, Skip ride or Esc to cut to the end, then you walk on at the other station (the top
+     one's door on the overlook by THE ASTERLY's bridge). Both stations are places on the map; the cable car is a live
+     feature (`cablecar`) the owner can close.
 5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
 6. **Residents at leisure and cyclists on the hills.**
 

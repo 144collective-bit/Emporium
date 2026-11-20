@@ -103,6 +103,7 @@ import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { CableUI } from './cablecar-ui';
 import type { TubeUI } from './tube-ui';
 import type { Tube } from './tube3d';
 import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
@@ -112,6 +113,7 @@ import { YARD_TREES } from './southyard';
 import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
 const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
 import { MONO_STATIONS } from './monorail';
+import { CABLE_DOORS } from './cablecar';
 import { PLACES } from './places';
 import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
@@ -1098,6 +1100,37 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     ),
     'the monorail'
   );
+  // Highcrest's cable car (cablecar.ts, the premium upgrade's Phase 4b): its card and rides loaded when a station's door first opens
+  let cableUI: CableUI | null = null;
+  const loadCable = lazy(
+    () =>
+      import('./cablecar-ui').then(({ createCableUI }) =>
+      (cableUI = createCableUI(root, {
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (s) => {
+          works.want(s.at.x, s.at.z, 80);
+          walk.placeAt(s.at);
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          tubeUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+          skyLiftUI?.close();
+        },
+      }))
+    ),
+    'the cable car'
+  );
   // The south's underground line (southline.ts, docs/south-plan.md Phase 4g): its trains (tube3d.ts) loaded the first
   // time you're down by its platforms or ride, running on their timetable from the clock; a door on each platform's
   // middle ("Tube", only down there), its card and rides (tube-ui.ts) loaded the first time one opens
@@ -1258,7 +1291,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     openPlace: (id) => {
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
@@ -1299,6 +1332,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         const [, way, i] = id.split(':');
         const l = LIBERTY_LIFTS[Number(i)];
         return rideTo(way === 'up' ? l.up : l.down, 'liberty', 'Liberty Bridge', way === 'up' ? 'Liberty Bridge · High walkway' : 'Liberty Bridge · Deck');
+      }
+      if (id.startsWith('cable:')) {
+        const shut = live.closed('cablecar');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadCable()
+          .then((ui) => ui.open(id.slice(6)))
+          .catch(() => game.toast('Cable car not running · try again'));
       }
       if (id.startsWith('mono:')) {
         const shut = live.closed('monorail');
@@ -1570,7 +1610,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || cableUI?.skip() || cableUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }

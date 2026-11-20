@@ -403,7 +403,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       const lit = !foot || visited.includes(p.id);
       const metro = p.kind === 'metro';
       const bus = p.kind === 'riverbus';
-      const mono = p.kind === 'mono';
+      const mono = p.kind === 'mono' || p.kind === 'cable';
       const tube = p.kind === 'tube';
       ctx.beginPath();
       ctx.arc(x, y, metro || bus || mono || tube ? 5 : 6, 0, Math.PI * 2);
