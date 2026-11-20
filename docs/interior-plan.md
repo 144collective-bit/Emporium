@@ -72,6 +72,16 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    a black marble table, a walnut desk, the bar in walnut and black marble with cognac stools on brass, his chair in
    cognac; its LEDs, screens, arcade and vault kept. The room's curtains in the media wall's deep green (they were
    red). Shots: `docs/interior-shots/phase-4-*`.
-5. **Polish.** Lighting (strips, wall lights), art of his own, plants, the review shots and the phone checks.
+5. **Polish.** *Built, waiting for the owner's sign-off.* **His art** (home3d.ts `art()`): four framed pieces of his
+   own, made up (shapes in his colours, no words, numbers or faces), brass frames, a brass picture light over each:
+   *dusk* (a brass sun going down behind dark hills, on the deep green) over the bed, *stack* (leaning blocks on cream)
+   in the office on the landing's partition, *bars* (his colours on black, a magenta moon) on the landing's east wall,
+   *tiles* (his neon colours on black) in the den past the arcade. **Lighting**: brass wall lights either side of the
+   front door (`sconce()`); the bedside lamps off the tables, brass reading lights on swing arms off the green wall
+   instead, a book on each table. **Plants**: tall ones (a black pot with a brass rim, a stem, three crowns: `potted()`
+   for any 0.9 or taller) in the lounge's front corner by the armchair, in the bedroom's corner by the window, on the
+   landing by the bathroom's wall (in `FURNITURE` and `UPSTAIRS`, solid), a small one on the bathroom's basin unit.
+   **Phones**: the house's draw calls where he wakes are the same before and after (309 on a desktop, 197 on a phone:
+   every new piece reuses the palette's colours), the boot unchanged. Shots: `docs/interior-shots/phase-5-*`.
 
 Each with the owner's sign-off. The owner's order (2026-11-19): Phase 3 (upstairs) after Phase 1, then the kitchen.
