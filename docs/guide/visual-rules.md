@@ -14,6 +14,17 @@ keep it up to date when what it describes changes.
   use the softer `soft()` (1.3), and never light a whole roof or slab:
   give it a neon trim instead. Check new lights close up at night on the
   phone tier, not just from the home view.
+- **The night from high reads as night** (the owner's calls, 2026-11-20).
+  The haze (`sky.ts`) is about three times thicker at night than by day,
+  and the City view thins it as it pulls back (70 over its distance from
+  what it looks at). By day it thins no further than 0.55, but at night
+  that left the north from 110 up 98% haze, the base not to be seen. So
+  pulled far back at night it thins further, to 0.25 (`thinFloor()`,
+  `hazeThin()`), and its colour goes from the horizon's pale towards the
+  night sky's dark top (`nightHazeMix()`, at most 85%). Both are in
+  `skyhaze.ts` (DOM-free, `tests/skyhaze.test.ts`). On the ground
+  (walking, driving, riding), close in and by day the haze is as it was,
+  so `hazeHorizon()`'s far tiles (`performance.md`) are unchanged.
 - **No NaN reaches the bloom.** The bloom's blur spreads a single NaN or
   infinite pixel over the whole screen, which goes black (blinking as the
   bad pixel comes in and out of view). The ink pass (`post.ts`, just before
