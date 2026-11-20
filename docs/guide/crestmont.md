@@ -259,3 +259,14 @@ keep it up to date when what it describes changes.
   crestspots.ts, their live lines in livelines.ts; the showroom's cars are
   the tycoon's `vellano` panel (tycoon-boot.ts `PANELS`, tycoon-ui.ts
   `showroomView()`), bought with tycoon.ts `buyCar()`.
+  Phase 4b, Highcrest's cable car: the rules are `cablecar.ts` (DOM-free, in
+  the boot; `CABLE_STATIONS` with their doors and arrivals, `PYLON_AT` on
+  clear ground, `SUPPORTS` baked as `cable-supports`, `ropeY()`, `needAt()`
+  and `CLEAR`, `cabinsAt()` on the clock, `rideAt()`, `CABLE_VIEW` for the
+  ride's cabin, `CABLE_DOORS`, `CABLE_SOLIDS` joining the grids with the
+  chunk), tested in `tests/cablecar.test.ts`; the stations, pylons and ropes
+  are sites and the gondolas instanced on the main thread in `cablecar3d.ts`
+  (`registerCable()`); the ride is `cablecar-ui.ts` (the metro's card and
+  bar, a `Ride` of kind `cable`), loaded by index.ts the first time a
+  station's door is used (behind `live.closed('cablecar')`); the stations
+  are places of kind `cable` (`cable-foot`, `cable-top`).

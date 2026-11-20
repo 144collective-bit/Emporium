@@ -92,9 +92,9 @@ export const RING_FAR = { back: 2, up: 2.9, side: 0.9, past: 2.4, ropes: 0.8 };
 
 /* ---------- Rides (the taxi, the metro, the monorail, the river bus: docs/views-plan.md Phase 2) ---------- */
 
-export type RideKind = 'taxi' | 'metro' | 'monorail' | 'riverbus';
+export type RideKind = 'taxi' | 'metro' | 'monorail' | 'riverbus' | 'cable';
 /** What first person is called on each ride */
-export const RIDE_FIRST: Record<RideKind, string> = { taxi: 'Back seat', metro: 'Window seat', monorail: 'Window seat', riverbus: 'Deck' };
+export const RIDE_FIRST: Record<RideKind, string> = { taxi: 'Back seat', metro: 'Window seat', monorail: 'Window seat', riverbus: 'Deck', cable: 'Window seat' };
 
 /** A point in the world */
 export interface P3 {
