@@ -236,3 +236,13 @@ test("in Degen's house the street is shut out (not from over its roof, nor out i
   assert.equal(ambienceAt(x, z, 30, 0).home, 0, 'the City view over the roof');
   assert.equal(ambienceAt(HOME_SPAWN.x, HOME_SPAWN.z, 0, 0).home, 0);
 });
+
+test("Northgate Air Base's far engines: all of it inside the fence, fading past it, none in town or at the airport", async () => {
+  const { ambienceAt: at } = await import('../src/scripts/city3d/ambience');
+  assert.equal(at(-45, -340, 1.7, 0).airbase, 1);
+  assert.equal(at(-300, -540, 1.7, 0).airbase, 1);
+  // (just outside the main gate some of it, the town and the airport none)
+  assert.ok(at(-4.5, -290, 1.7, 0).airbase > 0.3 && at(-4.5, -290, 1.7, 0).airbase < 1);
+  assert.equal(at(30, 30, 1.7, 0).airbase, 0);
+  assert.equal(at(250, 420, 1.7, 0).airbase, 0);
+});

@@ -15,7 +15,8 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, fx, lit, moving, siteMat, toon } from './kit';
 import { nearGate } from './nearby';
 import { addPeople } from './life';
-import { BASE_IDLE, BASE_MOVERS } from './airbaselife';
+import { BASE_IDLE, BASE_MOVERS, BASE_VEHICLES, vehicleAt } from './airbaselife';
+import { carGeometry, carMaterials } from './cars';
 import type { Tick } from './world';
 import { site } from './tilework';
 import { COVER, ROAD, STONE } from './palette';
@@ -504,6 +505,36 @@ function searchlights(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined)
   });
 }
 
+/** The base's vehicles on their loops (airbaselife.ts), olive, as the Docks' truck: on the clock while the camera's
+ * near, still under reduced motion */
+function vehicles(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
+  const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const paint = toon('#5d6b52');
+  const cars = BASE_VEHICLES.map((v) => {
+    const geo = carGeometry(v.car);
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(geo.paint, paint), new THREE.Mesh(geo.detail, carMaterials().detail));
+    for (const m of g.children) m.castShadow = m.receiveShadow = true;
+    g.name = v.id;
+    scene.add(moving(g));
+    return { v, g };
+  });
+  const place = (t: number) => {
+    for (const { v, g } of cars) {
+      const p = vehicleAt(v, t);
+      g.position.set(p.x, 0, p.z);
+      g.rotation.y = p.yaw;
+    }
+  };
+  place(reduced ? 0 : Date.now() / 1000);
+  if (reduced) return;
+  const near = nearGate(300);
+  tick?.(() => {
+    if (!near(...AIRBASE_RECT)) return;
+    place(Date.now() / 1000);
+  });
+}
+
 export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // The fence, a stretch a site
   FENCE_RUNS.forEach(([a, c], i) => {
@@ -593,4 +624,5 @@ export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Sce
     BASE_IDLE.filter((_, i) => !low || i % 2 === 0),
     BASE_MOVERS.filter((p) => !(low && p.trim))
   );
+  vehicles(scene, tick);
 }

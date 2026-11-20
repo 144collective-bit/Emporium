@@ -99,3 +99,57 @@ export const BASE_MOVERS: ParkPerson[] = [
     )
   ),
 ];
+
+/* ---------- Its vehicles (Phase 4): on the base's own roads, as the Docks' truck (scripted, not the street plan) ---------- */
+
+type Way2 = [number, number];
+/** A closed loop's point at distance d along it, and its heading as a car's (cars.ts: atan2(-dz, dx)) */
+export function loopPoint(pts: readonly Way2[], d: number): { x: number; z: number; yaw: number } {
+  const segs = pts.map((p, i) => [p, pts[(i + 1) % pts.length]] as const);
+  const lens = segs.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]));
+  const total = lens.reduce((a, b) => a + b, 0);
+  let u = ((d % total) + total) % total;
+  for (let i = 0; i < segs.length; i++) {
+    if (u <= lens[i] || i === segs.length - 1) {
+      const [a, b] = segs[i];
+      const k = lens[i] ? Math.min(1, u / lens[i]) : 0;
+      return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, yaw: Math.atan2(-(b[1] - a[1]), b[0] - a[0]) };
+    }
+    u -= lens[i];
+  }
+  return { x: pts[0][0], z: pts[0][1], yaw: 0 };
+}
+export const loopLength = (pts: readonly Way2[]) => pts.reduce((n, p, i) => n + Math.hypot(pts[(i + 1) % pts.length][0] - p[0], pts[(i + 1) % pts.length][1] - p[1]), 0);
+
+/**
+ * The base's vehicles: a jeep up the parade avenue on its right, along the apron's road and back down (the base keeps to
+ * the right, as the town does), and a truck round the motor pool's yard; their kinds (cars.ts), loops and paces
+ */
+export const BASE_VEHICLES: { id: string; car: 'offroad' | 'truck'; loop: Way2[]; pace: number }[] = [
+  {
+    id: 'airbase-jeep',
+    car: 'offroad',
+    loop: [
+      [-2, -322],
+      [-2, -471.7],
+      [-200, -471.7],
+      [-200, -468.3],
+      [-7, -468.3],
+      [-7, -322],
+    ],
+    pace: 7,
+  },
+  {
+    id: 'airbase-truck',
+    car: 'truck',
+    loop: [
+      [94, -338],
+      [150, -338],
+      [150, -356],
+      [94, -356],
+    ],
+    pace: 3,
+  },
+];
+/** Where a vehicle is at time t (the same clock for everyone), and its stand under reduced motion (t 0) */
+export const vehicleAt = (v: (typeof BASE_VEHICLES)[number], t: number) => loopPoint(v.loop, t * v.pace);

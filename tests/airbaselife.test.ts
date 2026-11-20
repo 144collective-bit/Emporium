@@ -39,3 +39,25 @@ test('the drill, the walkers and the patrols: round and round, never out of the 
   const kept = BASE_MOVERS.filter((p) => !p.trim).length;
   assert.ok(kept >= BASE_MOVERS.length / 2 - 1 && kept < BASE_MOVERS.length);
 });
+
+test("the base's vehicles: round their loops on the base's own roads, inside the fence, clear of everything solid and of its people", async () => {
+  const { BASE_VEHICLES, vehicleAt, loopLength } = await import('../src/scripts/city3d/airbaselife');
+  const m = moment();
+  for (const v of BASE_VEHICLES) {
+    assert.ok(loopLength(v.loop) > 40);
+    let prev = vehicleAt(v, 0);
+    for (let t = 0; t < 400; t += 0.5) {
+      const p = vehicleAt(v, t);
+      assert.ok(inAirbase(p.x, p.z), `${v.id} out of the base at ${p.x}, ${p.z}`);
+      // (a car's body: about 2.4 across its middle)
+      assert.ok(!SOLIDS.some((b) => p.x > b[0] - 1.4 && p.x < b[2] + 1.4 && p.z > b[1] - 1.4 && p.z < b[3] + 1.4), `${v.id} drives into something at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`);
+      assert.ok(Math.hypot(p.x - prev.x, p.z - prev.z) <= v.pace * 0.5 + 1e-6);
+      for (const s of BASE_IDLE) assert.ok(Math.hypot(p.x - s.x, p.z - s.z) > 2, `${v.id} through someone standing at ${s.x}, ${s.z}`);
+      for (const q of BASE_MOVERS) {
+        q.at(t, m);
+        assert.ok(Math.hypot(p.x - m.x, p.z - m.z) > 1.6, `${v.id} runs into ${q.id} at ${t}`);
+      }
+      prev = p;
+    }
+  }
+});
