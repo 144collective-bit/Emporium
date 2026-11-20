@@ -5,9 +5,9 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
 
 - **Northgate Air Base** (the owner's call, 2026-11: a very large military base and airfield across the whole north,
   from the west wall to Crestmont's hills; made up; nothing threatening: no weapons on show, nothing attacks you, a
-  guarded gate and the rest seen through the fence). Built a phase at a time, each with the owner's sign-off. Phase 1
-  (the land, the fence and the gates), Phase 2 (the airfield), Phase 3 (the base itself) and Phase 4 (its life, night
-  and sound) are built; the polish (Phase 5) is to come.
+  guarded gate and the rest seen through the fence). Built a phase at a time, each with the owner's sign-off. All five
+  phases are built (the land, the fence and the gates; the airfield; the base itself; its life, night and sound; the
+  polish); what's next is the plan's "Later" list, each in a plan of its own.
 - **`airbase.ts`** (DOM-free, on `DOM_FREE`, the boot's; tested in `tests/airbase.test.ts`): the plan's lines in fixed
   world numbers, but where the base meets the wall (worked out from `WALL_INNER`, `FLOODS` and `CAMERAS`, so it holds
   under `npm run test:wide`).
@@ -114,4 +114,6 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
     of the hills), clear of the airport's flights, each other, the parked aircraft and over everything built.
   - **Its sound** (ambience.ts `airbase`, sound.ts): far engines across the field (two low saws through a low-pass,
     swelling slowly), off till the visitor turns sound on.
+- **The review views** (Phase 5): `airbase-gate`, `airbase-runway`, `airbase-overview` in `BLEND_VIEWS` (blendviews.ts),
+  as in `BENCH_VIEWS` since Phase 0; their shots in `docs/blend-shots/airbase-phase5/`.
 
