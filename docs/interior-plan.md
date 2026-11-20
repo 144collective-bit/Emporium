@@ -39,7 +39,7 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    south end), a cognac armchair under the front window, a black marble coffee table on a rug, a brass arc lamp. He
    wakes on the sofa facing the TV (`HOME_WAKE`, `SOFA_SEAT`). The trophy wall moves along the west wall, south of the
    media wall. The stash box goes: the stash is a vault door in the den's north wall (`home:stash` in the basement). Shots: `docs/interior-shots/phase-1-*`.
-2. **The kitchen and dining.** *Built, waiting on the owner's sign-off.* (Built third, the owner's order.) homerooms.ts
+2. **The kitchen and dining.** *Built, signed off by the owner (2026-11-20), live.* (Built third, the owner's order.) homerooms.ts
    `FURNITURE`: the oven's tall walnut unit at the back wall's west end (two ovens stacked, black glass, brass
    handles), the run in walnut with a black marble top and the sink under the window with its brass tap, the fridge's
    tall walnut unit at its east end (the white fridge gone); the island in walnut with a thick black marble top down
