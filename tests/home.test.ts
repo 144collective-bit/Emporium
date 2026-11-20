@@ -457,6 +457,27 @@ test('upstairs (docs/compound-plan.md Phase 3): its own floor between the room a
   assert.ok(Math.hypot(down.x - stairUp.to.x, down.z - stairUp.to.z) < 1.2 && Math.hypot(down.to.x - stairUp.x, down.to.z - stairUp.z) < 1);
 });
 
+test('the polish (docs/interior-plan.md Phase 5): a tall plant in the lounge, the bedroom and on the landing, each in its corner, clear of the rest, the curtains and the doorways', () => {
+  const { BED_DOOR, BATH_DOOR, BATH_Z, DRESS_X } = houseRooms(HOUSE_GEO);
+  const tall = (list: readonly { kind: string; rect: readonly number[]; h: number }[]) => list.filter((f) => f.kind === 'plant' && f.h >= 0.9);
+  const [lounge] = tall(FURNITURE);
+  const up = tall(UPSTAIRS);
+  assert.equal(tall(FURNITURE).length, 1);
+  assert.equal(up.length, 2);
+  // (the lounge's in the front corner west of the window, clear of everything, of the curtains drawn or open, of the wake spot)
+  assert.ok(within(lounge.rect, [ROOM[0], ROOM[1], ROOM[0] + 0.5, ROOM[1] + 0.6]), 'in the corner');
+  for (const f of FURNITURE) if (f !== lounge) assert.ok(!overlap(f.rect, lounge.rect), `on the ${f.kind}`);
+  for (const k of [0, 1]) for (const p of curtainPanels(k)) assert.ok(!overlap(p, lounge.rect, -0.02), 'in the curtains');
+  assert.ok(!inRect(lounge.rect, HOME_WAKE.x, HOME_WAKE.z, 0.5));
+  // (upstairs: apart from the rest, out of every doorway)
+  for (const p of up) {
+    for (const u of UPSTAIRS) if (u !== p) assert.ok(!overlap(u.rect, p.rect), `on the ${u.kind}`);
+    const LAND_X = ROOM[2] - 2.6;
+    const ways = [...UP_DOORS.map(([a, c]) => [LAND_X - 0.6, a, LAND_X + 0.6, c]), [DRESS_X - 0.6, BED_DOOR[0], DRESS_X + 0.6, BED_DOOR[1]], [BATH_DOOR[0], BATH_Z - 0.6, BATH_DOOR[1], BATH_Z + 0.7]];
+    for (const w of ways) assert.ok(!overlap(p.rect, w), `in a doorway at ${w.map((v) => v.toFixed(2))}`);
+  }
+});
+
 test('the benchmark has a view of the compound, from the Close down its line, looking at his land', () => {
   const v = BENCH_VIEWS.find((b) => b.id === 'ends-home')!;
   assert.ok(v, 'the view is there');
