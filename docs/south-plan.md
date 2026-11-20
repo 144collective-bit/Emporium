@@ -687,7 +687,7 @@ From the Circus west, patchy as high roads are:
    - **6a, room in the boot**: the boot has about 1 KB left (749.0 of 750
      KB); a trim before anything else is added (drawing-only data and
      features used later moved out to lazy chunks), its budget kept.
-     Built (2026-11-20, waiting for the owner's sign-off): the character
+     Built and signed off (2026-11-20): the character
      screen (`charscreen.ts`, `loadCharScreen()` in index.ts, the first
      time it opens), the sound by district (`ambience.ts`, fetched after
      the boot; the sound left alone till it's in: nothing's heard till
