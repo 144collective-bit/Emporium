@@ -14,7 +14,7 @@ import { drawnAt } from './drawn';
 import { DRAPE, discMesh, lineMesh } from './crestdrape';
 import { meshGeometry } from './mansions3d';
 import { BELVEDERE, GLASSHOUSE } from './crestsites';
-import { BENCHES, GLASS_PATH, LOOKOUTS, STEP, STEPS, WALK, WALK_LAMPS, WALK_POINTS, walkAt } from './crestwalk';
+import { BELVEDERE_BENCH, BELVEDERE_BENCHES, BENCH, BENCHES, GLASS_FOUNTAIN, GLASS_PATH, LOOKOUTS, STEP, STEPS, WALK, WALK_LAMPS, WALK_POINTS, walkAt } from './crestwalk';
 import { COVER } from './palette';
 
 const GRAVEL = toon('#d8cfbd');
@@ -87,8 +87,8 @@ export function registerWalk(low: boolean) {
         for (const s of BENCHES) {
           if (!pts.some((p) => Math.hypot(p.x - s.x, p.z - s.z) < 2.2)) continue;
           const g = ground(s.x, s.z);
-          b.add(new THREE.BoxGeometry(1.5, 0.07, 0.45).rotateY(s.yaw).translate(s.x, g + 0.44, s.z), WOOD);
-          for (const k of [-0.6, 0.6]) b.add(new THREE.BoxGeometry(0.08, 0.44, 0.4).translate(k, 0.22, 0).rotateY(s.yaw).translate(s.x, g, s.z), IRON);
+          b.add(new THREE.BoxGeometry(BENCH.long, 0.07, BENCH.deep).rotateY(s.yaw).translate(s.x, g + BENCH.seat - 0.035, s.z), WOOD);
+          for (const k of [-0.6, 0.6]) b.add(new THREE.BoxGeometry(0.08, BENCH.seat - 0.035, 0.4).translate(k, (BENCH.seat - 0.035) / 2, 0).rotateY(s.yaw).translate(s.x, g, s.z), IRON);
         }
       });
       b.build(into, { cast: false, receive: true });
@@ -146,10 +146,7 @@ export function registerWalk(low: boolean) {
     cyl(b, 0.05, 0.5, V.x, ringY + 0.4 + V.dome - 0.05, V.z, GOLD, 6);
     // (benches inside, along the back)
     b.detail(() => {
-      for (const a of [-Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5]) {
-        const [x, z] = [V.x + Math.cos(a) * (V.r - 0.9), V.z + Math.sin(a) * (V.r - 0.9)];
-        b.add(new THREE.BoxGeometry(1.3, 0.07, 0.42).rotateY(-a - Math.PI / 2).translate(x, ground(x, z) + 0.45, z), WOOD);
-      }
+      for (const s of BELVEDERE_BENCHES) b.add(new THREE.BoxGeometry(BELVEDERE_BENCH.long, 0.07, BELVEDERE_BENCH.deep).rotateY(s.yaw).translate(s.x, ground(s.x, s.z) + BELVEDERE_BENCH.seat - 0.035, s.z), WOOD);
     });
     b.build(into, { cast: true, receive: true });
   });
@@ -207,9 +204,9 @@ export function registerWalk(low: boolean) {
       if (!low) for (let x = hx0 + 0.6; x < hx1 - 0.5; x += 0.9) for (const z of [hz0 + 0.5, hz1 - 0.5]) b.add(new THREE.IcosahedronGeometry(0.32, 0).translate(x, y + 0.7, z), LEAF);
     });
     // The fountain on the garden's west side, by the walk
-    const [fx, fz] = [(G.rect[0] + hx0) / 2, dz];
-    cyl(b, 0.8, 0.4, fx, y, fz, STONE, 16);
-    b.add(new THREE.CircleGeometry(0.68, 16).rotateX(-Math.PI / 2).translate(fx, y + 0.36, fz), WATER);
+    const { x: fx, z: fz, r: fr } = GLASS_FOUNTAIN;
+    cyl(b, fr, 0.4, fx, y, fz, STONE, 16);
+    b.add(new THREE.CircleGeometry(fr - 0.12, 16).rotateX(-Math.PI / 2).translate(fx, y + 0.36, fz), WATER);
     b.build(into, { cast: true, receive: true });
   });
 }
