@@ -21,6 +21,7 @@ import { newReloadFrame, reloadAt } from './gunfit';
 import type { WeaponId } from './combat-sim';
 import { PLAYER, type Outfit } from './character';
 import { bakedHand } from './body';
+import { shadeRGB } from './wardrobe';
 
 const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
@@ -76,7 +77,12 @@ const flats = new Map<string, Tintable>();
 const shared = (c: string) => flats.get(c) ?? flats.set(c, flat(c)).get(c)!;
 const UP = new THREE.Vector3(0, 1, 0);
 
-const shade = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
+// (a detail's shade on the sleeve's colour, lifted on near-black cloth as on the figure: shadeRGB() in wardrobe.ts)
+const shade = (c: string, k: number) => {
+  const col = new THREE.Color(c);
+  const v = col.getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
+  return '#' + col.setRGB(...shadeRGB(v.r, v.g, v.b, k), THREE.SRGBColorSpace).getHexString();
+};
 
 /**
  * One of Degen's own hands (body.ts: palm, fingers and thumb), closed to
@@ -119,10 +125,15 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
         // The varsity's cream sleeve (wardrobe.ts CREAM) into its ribbed cuff in the top's colour
         clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.042, 0.4, 3, 12), 0.29), shared(VARSITY_SLEEVE)));
         clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.038, 0.04, 0.05, 14), 0.06), shared(shade(top, 0.72))));
+      } else if (o.kind === 'tee') {
+        // The tee's short sleeves end far up the arm, out of shot: his bare forearm
+        clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.031, 0.4, 3, 12), 0.27), shared(SKIN)));
       } else {
-        // A looser sleeve gathered into a ribbed cuff (the hoodie, the track top and the puffer wear their top's colour)
-        clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.042, 0.4, 3, 12), 0.29), shared(top)));
-        clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.038, 0.04, 0.05, 14), 0.06), shared(shade(top, 0.8))));
+        // A looser sleeve gathered into a ribbed cuff (the hoodie, the track top, the jackets wear their top's colour;
+        // under the puffer vest, the long-sleeve its shirt colour)
+        const sleeve = o.kind === 'vest' || o.kind === 'hivis' ? (o.shirt ?? SHIRT) : top;
+        clothes.add(new THREE.Mesh(along(new THREE.CapsuleGeometry(0.042, 0.4, 3, 12), 0.29), shared(sleeve)));
+        clothes.add(new THREE.Mesh(along(new THREE.CylinderGeometry(0.038, 0.04, 0.05, 14), 0.06), shared(shade(sleeve, 0.8))));
         if (o.kind === 'track')
           for (const x of [-0.042, 0.042])
             for (const z of [-0.008, 0.008]) clothes.add(new THREE.Mesh(along(new THREE.BoxGeometry(0.006, 0.36, 0.005).translate(x, 0, z), 0.3), shared(SHIRT)));

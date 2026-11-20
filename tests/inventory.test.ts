@@ -1,12 +1,13 @@
 // The inventory (inventory.ts, docs/inventory-plan.md): the save's two weapon slots (either may be empty:
-// empty hands are his fists), the thing in his hand, his consumables and the 4 x 4 grid's order; the
+// empty hands are his fists), his consumables and the 4 x 4 grid's order (the thing in his hand was retired with the
+// wardrobe's held things, docs/wardrobe-plan.md Phase 1); the
 // hotbar's slots and steps; dragging round the grid and in and out of the weapon slots; snacks bought
 // at the diners and the Night Market; the sim swapping only within the weapon slots; them on the wire;
 // free play off everywhere but a test build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GUN_CATALOG, ITEM_CATALOG, ITEM_MAX } from '../src/scripts/city3d/catalog';
-import { addXp, buyGun, buyWardrobe, cleanSave, newSave, pay } from '../src/scripts/city3d/tycoon';
+import { addXp, buyGun, cleanSave, newSave, pay } from '../src/scripts/city3d/tycoon';
 import {
   GRID_SIZE,
   SLOTS_MAX,
@@ -19,7 +20,6 @@ import {
   layout,
   moveCell,
   pickSlot,
-  setHeld,
   setLoadout,
   slotKey,
   slots,
@@ -50,7 +50,7 @@ const rich = () => {
 
 test('a new save carries the rifle in weapon slot 1 and nothing else', () => {
   const s = newSave(NOW);
-  assert.deepEqual(s.inventory, { guns: ['rifle', null], held: null, items: {}, grid: [] });
+  assert.deepEqual(s.inventory, { guns: ['rifle', null], items: {}, grid: [] });
   assert.deepEqual(cleanSave(null, NOW).inventory, s.inventory);
 });
 
@@ -58,27 +58,31 @@ test('a v10 save carries on into v11 with the rifle and the first gun it bought,
   const old = cleanSave({ v: 10, dorras: 5, armoury: { owned: ['lmg', 'revolver'] } }, NOW);
   assert.equal(old.v, 14);
   assert.deepEqual(old.inventory.guns, ['rifle', 'revolver']);
-  assert.equal(old.inventory.held, null);
+  assert.equal('held' in old.inventory, false);
   // Nothing bought: the rifle alone
   assert.deepEqual(cleanSave({ v: 10 }, NOW).inventory.guns, ['rifle', null]);
 });
 
-test('a loaded inventory is cleaned: owned guns, no gun twice, a bought thing in the hand, counts in range, known keys', () => {
+test('a loaded inventory is cleaned: owned guns, no gun twice, nothing in the hand, counts in range, known keys', () => {
   const s = cleanSave(
     { v: 11, armoury: { owned: ['burst'] }, wardrobe: [], inventory: { guns: ['lmg', 'lmg'], held: 'briefcase', items: { snack: 99, laser: 3 }, grid: ['gun:burst', 'junk', 7, 'item:snack'] } },
     NOW
   );
   // The Belt Feeder isn't bought: the rifle stands in; slot 2 can't be the same as slot 1 anyway
   assert.deepEqual(s.inventory.guns, ['rifle', null]);
-  // The briefcase is premium and not bought
-  assert.equal(s.inventory.held, null);
+  // The thing in his hand is retired: gone, bought or not
+  assert.equal('held' in s.inventory, false);
   assert.deepEqual(s.inventory.items, { snack: ITEM_MAX });
   assert.deepEqual(s.inventory.grid, ['gun:burst', '', '', 'item:snack']);
-  const t = cleanSave({ v: 11, armoury: { owned: ['burst'] }, wardrobe: ['briefcase'], inventory: { guns: ['burst', 'rifle'], held: 'briefcase', items: { snack: 2.7 } } }, NOW);
-  assert.deepEqual(t.inventory, { guns: ['burst', 'rifle'], held: 'briefcase', items: { snack: 2 }, grid: [] });
+  const t = cleanSave(
+    { v: 11, armoury: { owned: ['burst'] }, wardrobe: ['briefcase'], inventory: { guns: ['burst', 'rifle'], held: 'briefcase', items: { snack: 2.7 }, grid: ['held:briefcase', 'gun:lmg', 'held:coffee'] } },
+    NOW
+  );
+  // (its space in the grid emptied too)
+  assert.deepEqual(t.inventory, { guns: ['burst', 'rifle'], items: { snack: 2 }, grid: ['', 'gun:lmg', ''] });
   // Both weapon slots emptied on purpose stay empty (empty hands)
   assert.deepEqual(cleanSave({ v: 11, inventory: { guns: [null, null] } }, NOW).inventory.guns, [null, null]);
-  assert.deepEqual(cleanInventory('junk', { armoury: { owned: [], mods: {} }, wardrobe: [] }).guns, ['rifle', null]);
+  assert.deepEqual(cleanInventory('junk', { armoury: { owned: [], mods: {} } }).guns, ['rifle', null]);
 });
 
 test('the weapon slots: guns he may carry, never one twice, either may be empty', () => {
@@ -108,23 +112,17 @@ test('carrying a gun in a slot (the gun store): one already in the other slot tr
   assert.deepEqual(s.inventory.guns, [null, null]);
 });
 
-test('the hotbar: weapon slots 1 and 2, the thing in his hand, then the consumables he has', () => {
+test('the hotbar: weapon slots 1 and 2, then the consumables he has', () => {
   const s = rich();
   assert.deepEqual(slots(s).map(slotKey), ['gun0', 'gun1']);
-  assert.ok(setHeld(s, 'coffee'));
-  assert.equal(setHeld(s, 'coffee'), false, 'no change');
   s.inventory.items.snack = 3;
   const sl = slots(s);
-  assert.deepEqual(sl.map(slotKey), ['gun0', 'gun1', 'held', 'item:snack']);
+  assert.deepEqual(sl.map(slotKey), ['gun0', 'gun1', 'item:snack']);
   assert.ok(sl.length <= SLOTS_MAX);
   assert.deepEqual(pickSlot(sl[0]), { do: 'draw', weapon: 'rifle' });
   assert.deepEqual(pickSlot(sl[1]), { do: 'empty' });
-  assert.deepEqual(pickSlot(sl[2]), { do: 'held', held: 'coffee' });
-  assert.deepEqual(pickSlot(sl[3]), { do: 'use', item: 'snack' });
+  assert.deepEqual(pickSlot(sl[2]), { do: 'use', item: 'snack' });
   assert.equal(pickSlot(sl[9]), null);
-  // A premium thing in the hand needs buying first
-  assert.equal(setHeld(s, 'phone'), true);
-  assert.equal(s.inventory.held, null);
 });
 
 test('stepping goes round the weapons carried and empty hands (his fists)', () => {
@@ -136,8 +134,9 @@ test('stepping goes round the weapons carried and empty hands (his fists)', () =
   assert.equal(stepKey(s, 'gun0', 1), 'gun1');
   assert.equal(stepKey(s, 'gun1', 1), 'hands');
   assert.equal(stepKey(s, 'hands', -1), 'gun1');
-  assert.equal(stepKey(s, 'held', 1), 'gun0');
-  assert.equal(stepKey(s, 'held', -1), 'gun1');
+  // (from a consumable: forward is the first weapon, back the last)
+  assert.equal(stepKey(s, 'item:snack', 1), 'gun0');
+  assert.equal(stepKey(s, 'item:snack', -1), 'gun1');
   // Only slot 2 filled
   setLoadout(s, [null, 'burst']);
   assert.equal(stepKey(s, 'hands', 1), 'gun1');
@@ -148,13 +147,13 @@ test('stepping goes round the weapons carried and empty hands (his fists)', () =
 test('the grid: everything he carries outside the weapon slots, where he put it, never more than 16', () => {
   const s = rich();
   for (const id of ['revolver', 'burst', 'lmg'] as const) buyGun(s, id);
-  for (const id of ['phone', 'briefcase']) buyWardrobe(s, id);
   s.inventory.items.snack = 2;
-  // Every gun (the starters unlocked), every thing for his hand, the snacks: well under 16
+  // Every gun (the starters unlocked) and the snacks: well under 16
   const all = carried(s, () => true);
   assert.ok(all.length <= GRID_SIZE, `${all.length} things`);
   assert.ok(!all.includes('gun:rifle'), 'the rifle is in weapon slot 1');
-  assert.ok(all.includes('gun:lmg') && all.includes('held:coffee') && all.includes('held:phone') && all.includes('item:snack'));
+  assert.ok(all.includes('gun:lmg') && all.includes('item:snack'));
+  assert.ok(!all.some((k) => k.startsWith('held:')), 'nothing for his hand');
   // The starters his score hasn't unlocked aren't carried
   assert.ok(!carried(s, (id) => WEAPONS[id].need === 0 || GUN_CATALOG[id].price > 0).includes('gun:dmr'));
   const cells = layout(s);

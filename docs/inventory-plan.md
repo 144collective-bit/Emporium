@@ -469,7 +469,10 @@ brawlsite.ts      the sparring partners' spots (DOM-free, tested)
   reserved room instead. On touch the hotbar stays four slots (the two
   weapons, the thing in his hand and the consumable that works where he
   is first, `touchFirst()`: the flyers at the stall, else the energy
-  drink); a keyboard's 1-7 see all seven (`slots(s, max, first)`).
+  drink); a keyboard's 1-7 see all seven (`slots(s, max, first)`). (Since
+  the wardrobe plan's merge the held things are retired, so the bar is
+  the weapons and the consumables: six on a keyboard, and on touch the two
+  that work where he is first.)
 - **Checks**: the tests above, the key, pad and touch tests, and a smoke
   scene (`items`: an energy drink bought at a coffee cart and drunk from
   the hotbar). Checked in a browser on desktop and on phones upright and
