@@ -5,7 +5,7 @@
 // east of the reservoir, its door to the walk; both under the Emporium.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BENCHES, GLASS_PATH, LOOKOUTS, STEPS, WALK, WALK_LAMPS, WALK_LINE, WALK_POINTS, onSteps, onWalk } from '../src/scripts/city3d/crestwalk';
+import { BENCHES, GLASS_PATH, LOOKOUTS, STEPS, WALK, WALK_LAMPS, WALK_LINE, WALK_POINTS, onSteps, onWalk, stepAt, STEP } from '../src/scripts/city3d/crestwalk';
 import { BELVEDERE, EASE, FENCE, GLASSHOUSE, OVERLOOK, RESERVOIR, SITE_DOORS, SITE_SOLIDS, SITE_SPAWNS, onSite } from '../src/scripts/city3d/crestsites';
 import { CABLE_STATIONS } from '../src/scripts/city3d/cablecar';
 import { CABLE_SOLIDS } from '../src/scripts/city3d/cableline';
@@ -110,4 +110,18 @@ test("nothing growing or lying on the walk: the hills' oaks and scrub, the drift
   // (and onWalk() finds the walk where it is)
   for (const p of WALK_POINTS) assert.ok(onWalk(p.x, p.z));
   for (const b of BENCHES) assert.ok(onWalk(b.x, b.z));
+});
+
+test('the steps: solid blocks a run deep, each tread level and over its foot, a walkable rise from one to the next (the polish pass)', () => {
+  for (const [a, c] of STEPS) {
+    let last: ReturnType<typeof stepAt> = null;
+    for (let d = a; d < c; d += STEP.run) {
+      const st = stepAt(d + 1e-6)!;
+      assert.ok(st && Math.abs(st.from - d) < 1e-6, `no step at ${d.toFixed(1)}`);
+      assert.ok(st.top - st.foot >= 0.12, 'a step thinner than a slab');
+      if (last) assert.ok(Math.abs(st.top - last.top) <= STEP.rise * 1.6, `a rise of ${Math.abs(st.top - last.top).toFixed(2)} at ${d.toFixed(0)}`);
+      last = st;
+    }
+  }
+  assert.equal(stepAt(-1), null);
 });

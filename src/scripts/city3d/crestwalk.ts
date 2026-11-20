@@ -10,6 +10,8 @@
  * benches (`BENCHES`) and low lamps (`WALK_LAMPS`) along it, two lookouts off it (`LOOKOUTS`).
  */
 import { heightAt } from './terrain';
+import { drawnAt } from './drawn';
+import { DRAPE } from './crestdrape';
 import { BELVEDERE, GLASSHOUSE, OVERLOOK } from './crestsites';
 import { CABLE_STATIONS } from './cablecar';
 
@@ -108,6 +110,19 @@ export const STEPS: [number, number][] = (() => {
   return out;
 })();
 export const onSteps = (d: number) => STEPS.some(([a, b]) => d >= a && d <= b);
+/** The ground the walk's stone stands on (crestwalk3d.ts's: the lower of the hills' height and the grass as drawn) */
+export const walkGround = (x: number, z: number) => Math.min(heightAt(x, z), drawnAt(x, z));
+/**
+ * The step at `d` along the walk, if it's on a flight: its run (from, to, every flight's steps a run apart from its
+ * start), its tread's top (level, over the higher end's ground) and its foot (under the lower's)
+ */
+export function stepAt(d: number): { from: number; to: number; top: number; foot: number } | null {
+  const f = STEPS.find(([a, b]) => d >= a && d < b);
+  if (!f) return null;
+  const from = f[0] + Math.floor((d - f[0]) / STEP.run) * STEP.run;
+  const ends = [walkAt(from), walkAt(from + STEP.run)].map(([x, z]) => walkGround(x, z) + DRAPE.path);
+  return { from, to: from + STEP.run, top: Math.max(...ends) + 0.04, foot: Math.min(...ends) - 0.08 };
+}
 
 /** A point on the walk at `d` along it, `side` across it (its right +) */
 export function walkAt(d: number, side = 0): Pt {
