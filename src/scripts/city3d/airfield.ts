@@ -729,7 +729,8 @@ export type AircraftKind = 'jet' | 'prop' | 'heli';
 /** How far apart two aircraft must stay (centre to centre): about half a wingspan or rotor each, and a margin */
 export const REACH: Record<AircraftKind, number> = { jet: 10, prop: 3.6, heli: 3.6 };
 
-type Act =
+/** What a flight does next (exported for other airfields' timetables: airbaseflights.ts) */
+export type Act =
   | { kind: 'fly'; path: Path; reverse?: boolean; dur: number }
   | { kind: 'hold'; dur: number; power?: [number, number] }
   | { kind: 'turn'; dur: number; to: number }
@@ -768,7 +769,7 @@ export interface Flight {
   freight?: boolean;
 }
 
-const yawOf = (d: Pt) => Math.atan2(-d[1], d[0]);
+export const yawOf = (d: Pt) => Math.atan2(-d[1], d[0]);
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 
 /** Pose `tau` seconds into a fly act */
@@ -826,7 +827,7 @@ export const PERIOD = 240;
  * takes `cycle` seconds, and the act `at` (its take-off) starts at `when`
  * seconds into the period. The first act must be a fly act.
  */
-function flight(id: string, kind: AircraftKind, acts: Act[], o: { fill: number; cycle: number; at: number; when: number; parked: number }): Flight {
+export function flight(id: string, kind: AircraftKind, acts: Act[], o: { fill: number; cycle: number; at: number; when: number; parked: number }): Flight {
   const rest = acts.reduce((a, x, k) => a + (k === o.fill ? 0 : x.dur), 0);
   acts[o.fill].dur = o.cycle - rest;
   const before = acts.slice(0, o.at).reduce((a, x) => a + x.dur, 0);
@@ -852,11 +853,11 @@ function build(id: string, kind: AircraftKind, acts: Act[], offset: number, park
   return f;
 }
 
-const fly = (ways: Way[], r: number, reverse = false): Act => {
+export const fly = (ways: Way[], r: number, reverse = false): Act => {
   const path = roundPath(ways, r);
   return { kind: 'fly', path, reverse, dur: path.t.at(-1)! };
 };
-const w = (x: number, z: number, y: number, v: number): Way => ({ at: [x, z], y, v });
+export const w = (x: number, z: number, y: number, v: number): Way => ({ at: [x, z], y, v });
 
 /* Speeds, tiles a second (a tile is about 1.8 m) */
 const TAXI = 6;

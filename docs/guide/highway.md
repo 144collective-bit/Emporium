@@ -82,7 +82,9 @@ keep it up to date when what it describes changes.
   along them, the grid's roads run on to the edge as two-lane country roads
   (`rural.ts`: `ruralSplit()` in `cityPlan()`, streets of kind `rural`
   `<id>-w/e/n/s` from an unlit join, routes.ts's `join`, to a one-way turning
-  loop near the edge, a bank avenue's up a stub inland; `RURAL`,
+  loop near the edge, a bank avenue's up a stub inland; the two north of the
+  stadium, `ns0-n` and `ns3-n`, end at Northgate Air Base's gates instead,
+  `gated`, at airbase.ts `GATE_ROAD_ENDS`: `docs/guide/airbase.md`; `RURAL`,
   `RURAL_RUNS`, `onRural()`), with verges, ditches, post-and-rail fences and
   field gates (`ruralfence.ts`: `FENCES`, `GATES`; `ruraldress.ts`: `riverSide()`;
   `RURAL_KEEPS` in landuse.ts), the odd lamp (`RURAL_LAMPS`, at the boot) and
