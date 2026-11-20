@@ -60,7 +60,8 @@ const SLOT = neon('#ffe0a6', 0.14, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
 const BUNKER_NEON = neon('#ff3fb0', 0.6, 1.7);
 const WALL = ATLAS.wall.panel;
-const LOBBY = ATLAS.ground.lobby;
+/** The entrance halls: the city's lobby glazing, warm and patchy at night (infill.ts `lobbyWarm`, Phase 6d) */
+const LOBBY = ATLAS.ground.lobbyWarm;
 /** The lobby band's height (downtown's `SHOP_H`); the ground floor's fascia over it to the first floor */
 const LOBBY_H = 1.25;
 

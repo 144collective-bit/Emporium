@@ -676,7 +676,123 @@ From the Circus west, patchy as high roads are:
      at 749.0 of 750 KB. Shots `docs/south-shots/28-phase-5b-*.webp`.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
    roads, the blocks' lights at night, sound by district, `?bench` views,
-   phones checked and trimmed, every width, the guides.
+   phones checked and trimmed, every width, the guides. The owner's answers
+   (2026-11-20): **polish first**; people on the High Road, the estate's
+   decks, the Circus's plaza and in the village and at the rec; **a south
+   bus route** from the bus garage on the High Road round the Circus and
+   the village, with stops (the city's own buses carry on as they are);
+   night **warm and patchy** (the blocks' windows lit at random, some flats
+   dark, lights along the galleries, the High Road's shop fronts glowing,
+   minimal bloom). Steps, each with the owner's sign-off:
+   - **6a, room in the boot**: the boot has about 1 KB left (749.0 of 750
+     KB); a trim before anything else is added (drawing-only data and
+     features used later moved out to lazy chunks), its budget kept.
+     Built and signed off (2026-11-20): the character
+     screen (`charscreen.ts`, `loadChar()` in index.ts, the first
+     time it opens), the sound by district (`ambience.ts`, fetched after
+     the boot; the sound left alone till it's in: nothing's heard till
+     Sound is on) and the gamepad's handling (`walkpad.ts`, fetched the
+     first time a connected pad's seen: walk.ts `pollPad`) out of the
+     boot: 749.0 to 745.7 KB. The boot's budget is 760 since the owner's
+     call of 2026-11-19 in another session (scripts/budget.mjs), so
+     there's 14.3 KB of room for 6c to 6e. Smoke: on foot, the gamepad,
+     and the character screen and Sound by hand.
+   - **6b, polish**: phones (the low tier's trims on the south's chunks,
+     `?bench` views of the south and their draw calls), every width
+     (320 to 1440, phones upright and on their side) of the south's cards
+     and screens, the seams and edges where the south meets the rest.
+     Measured (2026-11-20, headless, walk mode, `data-tier` low and
+     medium): draws on phones 160 to 203 at the Circus, the High Road and
+     the estate, 515 in the village and 525 at exit 6A (downtown 252, The
+     Trenches 446). Broken down by what draws: the south's own geometry
+     about 40; 150 to 170 the city's tiles over 300 away, seen across the
+     open land from the south's edge (the camera's far 1340 on every
+     tier). Measured again, properly (each batched mesh's pieces tested
+     against the view, one draw a mesh however many tiles show): only 24
+     to 29 batched meshes in view there, 5 to 9 of them far only, so
+     merging far tiles would save almost nothing; the weight is about 390
+     separate meshes from the rest of the city seen across the open ground
+     (the far landmarks, several meshes each; about 43 for the airport's
+     aircraft; about 110 small far glows and parts), against 78 downtown.
+     The south's own drawing is about 40 to 50. The owner's answer: the
+     city-wide far view on phones is **its own performance plan, later**
+     (aircraft merged when far, far landmarks in one piece each, far glows
+     pooled); 6b carries on with the widths and the seams.
+     Widths (2026-11-20): a south place's panel (Kestrel Fuel on the High
+     Road) at 320 x 640, 375 x 812, 812 x 375, 768 x 1024, 1024 x 768 and
+     1440 x 900: on screen, no sideways scroll, nothing clipped (the tube's
+     card, the only other screen of the south's own, was checked in 4h).
+     Seams: the seam map's ranked south seams (Endswood Estate against
+     "open land", about (-179, 417), (-115, 339), (-251, 361)) are the
+     south's own ground between its blocks (greens, the brook's valley,
+     the fields: the village counts as the estate's area), looked at on
+     the ground at each: no gap or hard line. One for the owner: at
+     (-115, 339) a grassed block's edge runs dead straight. Shots
+     `docs/south-shots/29-phase-6b-*.webp`.
+   - **6c, life**: people on the High Road, the estate's decks, the
+     Circus's plaza and subways, the village and the rec; the south bus
+     route and its stops; traffic checked on the new roads. Built
+     and signed off (2026-11-20): `southpeople.ts`
+     (DOM-free, tested in tests/southpeople.test.ts: each on its surface at
+     its height, in nothing solid, off the roads): on the High Road (a pair
+     and one on the phone outside the pub, queues at the takeaway and the
+     fish bar, at shop windows, a pair outside the corner store: in line
+     along the pavement, under a metre deep there), on the estate's podium
+     deck, sitting round the Circus's second tier and standing on its
+     floor, two in the churchyard, a few at the rec (phones: half);
+     walkers round the High Road's north side and the village's blocks
+     (`SOUTH_WALKS`, life.ts: their feet follow the rolling ground,
+     `lift`); the south's crowd dressed by zone (crowdlook.ts
+     `districtAt()`: the estate and the tall band as The Trenches, the
+     village, bungalows and fields as the suburbs). The south's bus: a
+     route of its own, the last of `ROUTES` (routes.ts `busLoop()`,
+     `SOUTH_BUS_WAY`: the garage, the Circus, the village, each on to the
+     next the shortest way, tested in tests/southbus.test.ts), one bus in
+     Aldwyn's Green's green put back only on it (life.ts `SOUTH_HOME`),
+     stops along the High Road and Gate Lane (transit.ts, `SOUTH_STOP_GAP`).
+     The boot 747.0 of 760 KB. Shots `docs/south-shots/30-phase-6c-*.webp`.
+   - **6d, night**: the blocks' and the village's windows, the galleries'
+     lights, the High Road's shop fronts, warm and patchy. Built and signed off
+     (2026-11-20): looked at by night (walk mode, the
+     night sky, medium and phone tiers), the south was mostly there from
+     its phases: the blocks' ribbon windows lit patchily (warm, a few TV
+     blue, many dark), the galleries' and bridges' strip lights, the
+     terraces' and council homes' windows lit house by house, the High
+     Road's sash windows by a seeded pick and its shop fronts glowing. The
+     one thing out of keeping: the blocks' entrance halls, the city's
+     lobby glazing, lit an even cold blue the whole length of every block.
+     Now their own ground band in the facade atlas (infill.ts `lobbyWarm`,
+     the same by day): warm at night, one pane in four dark and one dim.
+     Under the bloom's threshold, checked on the phone tier. Shots
+     `docs/south-shots/31-phase-6d-*.webp`.
+   - **6e, sound by district**: the estate, the village, the High Road,
+     the tube below ground. Built and signed off (2026-11-20), in
+     ambience.ts (fetched after the boot since 6a), with the
+     sounds sound.ts already makes: Bunker Sound's beat out of its garage
+     door (`studio`) and St Aldwyn's bell on the hour across the south
+     (`bell`), both waiting for their buildings since Phase 1b; the
+     village's, the bungalows' and the fields' birdsong by day and owl at
+     night (the park's, `VILLAGE_BIRDS`, by `zoneAt()`, eased over a few
+     points so there's no edge); the High Road's shoppers along its shop
+     fronts (the Neon Mile's crowd, quieter: `HIGH_ROAD_MURMUR`); below
+     ground (`BELOW`: a subway, an underpass, a station) hushed as indoors,
+     and a tube train's rumble as it passes, from the timetable
+     (`tubeRumbleAt()`, ambience's `tube`, mixed with the el's in
+     index.ts). Tested in tests/ambience.test.ts.
+   - **6f, the guides**: endswood.md and the rest brought up to date, the
+     plan closed. Done (2026-11-20): endswood.md's status, places,
+     sound and life brought up to date (the guides each phase touched were
+     kept up as it was built: city-layout, getting-about, highway,
+     city-life, performance, tests).
+
+**The plan is done (2026-11-20).** Left over, each the owner's to pick up:
+- The city-wide far view on phones (6b): its own performance plan (far
+  aircraft merged, far landmarks in one piece each, far glows pooled).
+- A grassed block's edge runs dead straight in the estate band, about
+  (-115, 339) (6b).
+- The tube platforms' benches have no collision boxes (4g).
+- On a two-line trip the ride bar names the first ride's stop, not the
+  trip's last (4h).
 
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`,
 `npm run test:wide`, a build, `npm run budget`, the smoke test, and shots

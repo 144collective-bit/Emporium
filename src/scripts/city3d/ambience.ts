@@ -72,6 +72,12 @@ import { YARDS_RECT, inYards } from './southfield';
 import { ENDSWOOD_RECT, inEndswood } from './endswood';
 import { FOUNTAIN as CIVIC_FOUNTAIN, FOUNTAINS as CIVIC_FOUNTAINS, HALL_BELL, SQUARE as CIVIC_SQUARE } from './civic';
 import { fromWall } from './wall';
+import { ENDS_DOORS } from './endsplaces';
+import { TOWER as ALDWYNS_TOWER } from './aldwyns';
+import { zoneAt } from './south';
+import { SOUTH_GROUND_RECT } from './southground';
+import { SHOPS } from './highroad';
+import { carPose, trackOf, trainAt } from './southtrains';
 
 export interface Ambience {
   /** The town's hum, 0-1 */
@@ -134,6 +140,8 @@ export interface Ambience {
   hallBell: number;
   /** By the wall round the city (docs/wall-plan.md Phase 6): the wind along its face and a low hum off it, 0-1 */
   wall: number;
+  /** Below ground by the south's underground line: a tube train's rumble as it passes (index.ts mixes it with the el's), 0-1 */
+  tube: number;
 }
 /** How far from the wall's inner face its sound carries (full at its foot) */
 export const WALL_SOUND = 70;
@@ -165,6 +173,39 @@ export const HUMS = {
   stadium: { level: 0.5, fade: 40 },
   yards: { level: 0.5, fade: 40 },
 } as const;
+/** The south (docs/south-plan.md Phase 6e): Bunker Sound's garage door, St Aldwyn's tower, the High Road's shop fronts */
+const STUDIO_DOOR = ENDS_DOORS.find((d) => d.id === 'bunker')!;
+const BELL_AT: [number, number] = [(ALDWYNS_TOWER[0] + ALDWYNS_TOWER[2]) / 2, (ALDWYNS_TOWER[1] + ALDWYNS_TOWER[3]) / 2];
+const HIGH_ROAD_FRONTS = SHOPS.filter((s) => s.name).map((s) => s.at);
+/** Below this a walker's under the ground (a subway, an underpass, a station's hall or platform) */
+export const BELOW = -1.2;
+/** How much of the village's birdsong (and its owl) there is, as the park's */
+export const VILLAGE_BIRDS = 0.7;
+/** How loud the High Road's shoppers' murmur is (the Neon Mile's crowd's sound, quieter) */
+export const HIGH_ROAD_MURMUR = 0.4;
+/** The village's, the bungalows' and the fields' share round x, z (a few points: no hard edge as you walk out of it) */
+function villageShare(x: number, z: number) {
+  const [x0, z0, x1, z1] = SOUTH_GROUND_RECT;
+  let n = 0;
+  const pts: [number, number][] = [[x, z], [x + 12, z], [x - 12, z], [x, z + 12], [x, z - 12]];
+  for (const [px, pz] of pts) {
+    if (px < x0 || px > x1 || pz < z0 || pz > z1) continue;
+    const zone = zoneAt(px, pz);
+    if (zone === 'village' || zone === 'bungalow' || zone === 'fields') n++;
+  }
+  return n / pts.length;
+}
+/** A tube train's rumble below ground (southtrains.ts: where the timetable has the two trains now), loudest close by */
+export function tubeRumbleAt(x: number, z: number, t: number) {
+  let r = 0;
+  for (const k of [0, 1]) {
+    const at = trainAt(k, t);
+    const [cx, cz] = carPose(at.s, trackOf(k)).at;
+    // (a standing train idles, a running one rumbles)
+    r = Math.max(r, (at.stop === null ? 1 : 0.3) * (1 - smooth(6, 50, Math.hypot(x - cx, z - cz))));
+  }
+  return r;
+}
 /** How far past the airport's land the jets are listened for (their roar carries) */
 export const JETS_REACH = 200;
 
@@ -309,8 +350,17 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   // (how far off its land: its land is its blocks and streets, not the fields inside its bounds)
   const fromEnds = inEndswood(x, z) ? 0 : ([4, 8, 12, 16, 20, 25].find((m) => inEndswood(x, z, m)) ?? 30) - 4;
   const ends = 1 - smooth(0, 25, Math.max(0, fromEnds));
-  const studio = 0;
-  const bell = 0;
+  // (and since the south's Phase 6e: Bunker Sound's beat out of its garage door, St Aldwyn's bell across the estate and beyond)
+  const studio = 1 - smooth(2, 26, Math.hypot(x - STUDIO_DOOR.x, z - STUDIO_DOOR.z) + lift * 0.5);
+  const bell = 1 - smooth(30, 220, Math.hypot(x - BELL_AT[0], z - BELL_AT[1]) + lift * 0.3);
+  // The village, the bungalows and the fields: birdsong by day, an owl at night (the park's); the High Road's shoppers
+  const birds = VILLAGE_BIRDS * villageShare(x, z);
+  let front = Infinity;
+  for (const [fx, fz] of HIGH_ROAD_FRONTS) front = Math.min(front, Math.hypot(x - fx, z - fz));
+  const shoppers = HIGH_ROAD_MURMUR * (1 - smooth(3, 24, front + lift * 0.5));
+  // Below ground (a subway, an underpass, a station): hushed as indoors, a tube train rumbling by
+  const below = floor < BELOW ? 1 : 0;
+  const tube = below ? tubeRumbleAt(x, z, t) : 0;
   // The civic square: on it, fading over 22 past it and from high over it; City Hall's bell across the park and Uptown
   const civic = near(CIVIC_SQUARE, x, z, 0, 22) * (1 - smooth(8, 40, lift));
   const hallBell = 1 - smooth(30, 200, Math.hypot(x - HALL_BELL[0], z - HALL_BELL[1]) + lift * 0.3);
@@ -323,18 +373,18 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     hood: hood * k,
     boombox,
     club,
-    park: park * k,
+    park: Math.max(park, birds) * k,
     fountain,
     crest: crest * k,
     suburb: suburb * k,
-    strip: strip * k,
+    strip: Math.max(strip, shoppers) * k,
     casino,
     show: show * k,
     waterfront: waterfront * k,
     market: market * k,
     docks: docks * k,
     jets,
-    indoor,
+    indoor: Math.max(indoor, below * 0.85),
     home,
     yards: yards * k,
     karts: karts * k,
@@ -345,5 +395,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     civic: civic * k,
     hallBell,
     wall: (1 - smooth(0, WALL_SOUND, Math.max(0, fromWall(x, z)))) * k,
+    tube,
   };
 }

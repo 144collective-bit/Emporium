@@ -743,6 +743,17 @@ function simplify(pts: Pt[], tol: number, ys: number[]): { pts: Pt[]; ys: number
 }
 
 /** Every route the traffic drives (worked out when the site is built: baked.ts) */
+/**
+ * The south's bus route (docs/south-plan.md Phase 6c, the owner's pick): from outside its bus garage on the High Road
+ * east to the Circus, round it, back west and down to the village by St Aldwyn's, and back up to the garage; each
+ * stretch on to the next the shortest way (`wayBack()`), laid out as every route is. The last of `ROUTES`
+ * (`SOUTH_BUS_ROUTE`).
+ */
+export const SOUTH_BUS_WAY: Pt[] = [
+  [-122.7, 406.1],
+  [-82, 407],
+  [-216, 420],
+];
 export const ROUTES: Route[] = baked('routes', BUILT ? undefined : allRoutes, packRoutes, unpackRoutes);
 function allRoutes(): Route[] {
   const r = rng(7007);
@@ -802,6 +813,9 @@ function allRoutes(): Route[] {
     for (const m of cycle) driven.add(key(m.from));
     routes.push(loopOf(legsOf(cycle, r)));
   }
+  // And the south's bus route last, a loop of its own (docs/south-plan.md Phase 6c): the routes before it as they were
+  const bus = busLoop(SOUTH_BUS_WAY);
+  if (bus) routes.push(bus);
   // (to the millimetre: the baked copy in the page is a third the size, and still exactly what's worked out here)
   return routes.map((raw, i) => {
     const kept = simplify(raw, SIMPLIFY, heightsOf(raw));
@@ -809,6 +823,30 @@ function allRoutes(): Route[] {
     return onDeck(withHeights(makeRoute(pts), kept.ys.map(mm)), i);
   });
 }
+
+
+function busLoop(stops: Pt[]): Pt[] | null {
+  // (each stop's stretch, the way it can be driven: east first, the way a car leaves the garage)
+  const states = stops.map((q): State | null => {
+    const pr = project(q);
+    for (const d of [1, -1] as const) {
+      const st: State = { w: pr.w, i: d === 1 ? pr.i : stepFrom(pr.w, pr.i, 1), d };
+      if (st.i >= 0 && next(st) !== null) return st;
+    }
+    return null;
+  });
+  if (states.some((st) => !st)) return null;
+  const cycle: { from: State; turn: Turn }[] = [];
+  for (let k = 0; k < states.length; k++) {
+    const [a, b] = [states[k]!, states[(k + 1) % states.length]!];
+    const back = wayBack(a.w, next(a)!, a.d, b);
+    if (!back) return null;
+    cycle.push({ from: a, turn: back.turn }, ...back.moves);
+  }
+  return loopOf(legsOf(cycle, rng(8008)));
+}
+/** The south's bus route's place in `ROUTES` (the last), or -1 if it couldn't be laid */
+export const SOUTH_BUS_ROUTE = ROUTES.length - 1;
 
 /**
  * Spots along the routes, every few tiles: where a car can be put on the

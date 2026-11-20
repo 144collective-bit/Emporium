@@ -34,10 +34,13 @@ import { NORTH_RECT } from './uptownnorth';
 import { WESTLAKE_RECT } from './westlake';
 import { inDocks } from './docks';
 import { inYards } from './southfield';
-import { CREST_RECT } from './crestmont';
+import { CREST_RECT, FOOTHILL_Z } from './crestmont';
+import { TERRAIN_RECT } from './terrain';
 import { inStrip } from './strip';
 import { inSunridge } from './sunridge';
 import { inLot9 } from './lot9';
+import { zoneAt } from './south';
+import { SOUTH_GROUND_RECT } from './southground';
 import { MALL_AREA } from './mall';
 import { SITE as AIRPORT_SITE } from './airfield';
 import { KART_AREA } from './kartfacility';
@@ -75,6 +78,8 @@ const inRect = (r: readonly number[], x: number, z: number) => x > r[0] && x < r
 /** The cove below the south row (river.ts's `beach` stretch, x -12 to 47): the blocks along it */
 const BEACH: readonly number[] = [-12, RIVER[0], 47, SOUTH_ROW + 22];
 
+/** Crestmont's hills east of its streets' rect, out to the hills' edge (the Ridgeline Walk and the glasshouse: the premium upgrade's Phases 5-6) */
+const CREST_EAST = [CREST_RECT[2], CREST_RECT[1], TERRAIN_RECT[2], FOOTHILL_Z] as const;
 export function districtAt(x: number, z: number): District {
   if (inTrenches(x, z)) return 'trenches';
   if (inEndswood(x, z)) return 'ends';
@@ -82,9 +87,16 @@ export function districtAt(x: number, z: number): District {
   if (inRect(WESTLAKE_RECT, x, z)) return 'park';
   if (inDocks(x, z)) return 'docks';
   if (inYards(x, z)) return 'yards';
-  if (inRect(CREST_RECT, x, z)) return 'crest';
+  if (inRect(CREST_RECT, x, z) || inRect(CREST_EAST, x, z)) return 'crest';
   if (inStrip(x, z)) return 'strip';
   if (inLot9(x, z)) return 'lot9';
+  // The south (docs/south-plan.md Phase 6c): the estate and the tall band by the ring road dressed as The Trenches, the
+  // village, the bungalows and the fields as the suburbs; the High Road and the council rows as the town
+  if (inRect(SOUTH_GROUND_RECT, x, z)) {
+    const zone = zoneAt(x, z);
+    if (zone === 'estate' || zone === 'tall') return 'trenches';
+    if (zone === 'village' || zone === 'bungalow' || zone === 'fields') return 'suburb';
+  }
   if (inSunridge(x, z)) return 'suburb';
   if (inRect(MALL_AREA, x, z)) return 'mall';
   if (inRect(AIRPORT_SITE, x, z)) return 'airport';

@@ -34,8 +34,9 @@ import { CITYHALL_SPAWN, COURTHOUSE_SPAWN, POLICE_SPAWN } from './civic';
 import { RESORTS } from './resorts';
 import { SPHERE_SPAWN } from './stripmarks';
 import { MONO_STATIONS } from './monorail';
+import { CABLE_STATIONS } from './cablecar';
 
-export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono' | 'tube';
+export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono' | 'tube' | 'cable';
 export interface Place {
   id: string;
   kind: PlaceKind;
@@ -88,7 +89,7 @@ export const PLACES: Place[] = [
   { id: 'palmcourt', kind: 'spot', spot: 'palmcourt', at: COURT_SPAWN },
   { id: 'mall', kind: 'spot', spot: 'mall', at: MALL_SPAWN },
   // Crestmont's landmarks (crestsites.ts): where you arrive at each, facing it
-  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
+  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
   // Coral Drive's refitted showroom and spa (coral.ts, the premium upgrade's Phase 4): on the strip in front of each
   ...(['vellano', 'solenne'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: CORAL_SPAWNS[id] })),
   // Southbank Docks' Harbour Master (docksport.ts): on the sidewalk, facing its door
@@ -120,6 +121,8 @@ export const PLACES: Place[] = [
   ...STOPS.map((s): Place => ({ id: `riverbus-${s.id}`, kind: 'riverbus', name: s.pier, at: s.arrive })),
   // The Neon Mile's monorail (monorail.ts): at each station's door
   ...MONO_STATIONS.map((s): Place => ({ id: `mono-${s.id}`, kind: 'mono', name: s.name, at: s.at })),
+  // Highcrest's cable car (cablecar.ts, the premium upgrade's Phase 4b): where you arrive at each station
+  ...CABLE_STATIONS.map((s): Place => ({ id: `cable-${s.id}`, kind: 'cable', name: s.name, at: s.at })),
   // The south's underground line, the tube (southline.ts, the south plan's 4h): at street level by each station's way
   // in, facing it (the Circus's in its sunken plaza)
   ...SOUTH_STATIONS.map((s): Place => ({ id: `tube-${s.id}`, kind: 'tube', name: `${s.name} station`, at: TUBE_SPOTS[s.id] })),
@@ -137,7 +140,7 @@ interface Copy {
 }
 /** A place's name and a line under it: the copy on its pin (CityMap.astro's directory, found under `root`), or its own */
 export function placeName(root: Copy, p: Place) {
-  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'tube' ? 'Tube' : p.kind === 'riverbus' ? 'River bus' : p.kind === 'mono' ? 'Monorail' : '' };
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'tube' ? 'Tube' : p.kind === 'riverbus' ? 'River bus' : p.kind === 'mono' ? 'Monorail' : p.kind === 'cable' ? 'Cable car' : '' };
   const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
   return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
 }
