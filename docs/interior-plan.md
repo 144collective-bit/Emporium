@@ -72,7 +72,7 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    a black marble table, a walnut desk, the bar in walnut and black marble with cognac stools on brass, his chair in
    cognac; its LEDs, screens, arcade and vault kept. The room's curtains in the media wall's deep green (they were
    red). Shots: `docs/interior-shots/phase-4-*`.
-5. **Polish.** *Built, waiting for the owner's sign-off.* **His art** (home3d.ts `art()`): four framed pieces of his
+5. **Polish.** *Built, signed off by the owner (2026-11-20), live.* **His art** (home3d.ts `art()`): four framed pieces of his
    own, made up (shapes in his colours, no words, numbers or faces), brass frames, a brass picture light over each:
    *dusk* (a brass sun going down behind dark hills, on the deep green) over the bed, *stack* (leaning blocks on cream)
    in the office on the landing's partition, *bars* (his colours on black, a magenta moon) on the landing's east wall,
@@ -85,3 +85,4 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    every new piece reuses the palette's colours), the boot unchanged. Shots: `docs/interior-shots/phase-5-*`.
 
 Each with the owner's sign-off. The owner's order (2026-11-19): Phase 3 (upstairs) after Phase 1, then the kitchen.
+The plan is complete.
