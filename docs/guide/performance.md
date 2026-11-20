@@ -302,7 +302,11 @@ keep it up to date when what it describes changes.
 - **Near and far** (growth plan Phase 2): past the tier's `far` (`TIERS`:
   120 high, 110 medium, 90 low) from the camera, things are drawn in a far
   form; `isNear()` in `tiles.ts` decides, with a margin so nothing flickers
-  on the line.
+  on the line. On phones the open views (the village, exit 6A) draw about
+  520 against downtown's 250, nearly all of it separate far meshes from the
+  rest of the city (landmarks' far forms, the aircraft, small far parts):
+  `docs/phone-far-plan.md` (a draft for the owner's sign-off) is the plan
+  to bring them down.
   - A Batch's details are near only (`Batch.lod`, `Batch.detail()`; Lod
     'all' / 'near' / 'far'): `tileBatch()` keeps each tile's near and far
     pieces apart and swaps them together (`tiled.update()`). The infill's
