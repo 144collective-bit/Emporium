@@ -884,8 +884,6 @@ const CREAM = '#e9e1d2';
 /** The fire's flame along the media wall: small and bright, a line, not a lit panel */
 const FLAME = neon('#ffa24a', 1.1, 1.35);
 const SCREEN = '#15141c';
-const UNIT = '#4a5a6a';
-const FRIDGE = '#dcdce0';
 
 /**
  * The room is lit from inside (Phase 5): its surfaces are in the shared neon paint, which takes no light from the
@@ -931,7 +929,6 @@ const PALE_TOP = '#e9e6e1';
 const LEAF = TREE.crowns[0];
 const SHELF_BACK = '#2a2733';
 const PRINT_PAPER = '#f1eee8';
-const CONSOLE_BOX = '#e8e6ea';
 /** A glow inside, softer than the street's neon: the telly's backlight and the island's strip, his magenta */
 const BACKLIGHT = neon(PAL.magenta, 1.2, 1.4);
 
@@ -1137,41 +1134,90 @@ function furnish(b: Batch, { kind, rect, h }: Furniture, low: boolean) {
     for (const x of [x0 + 0.04, x1 - 0.08]) icube(b, [x, z0 + 0.04, x + 0.04, z1 - 0.04], y, S + h - 0.03, INK);
     b.detail(() => drum(b, x0 + 0.3, (z0 + z1) / 2, 0.08, 0.05, S + h, S + h + 0.04, PAL.magenta));
   } else if (kind === 'counter') {
-    icube(b, [x0, z0 + 0.04, x1, z1], y, S + h - 0.04, DARK_UNIT);
-    icube(b, [x0 - 0.02, z0, x1, z1], S + h - 0.04, S + h, PALE_TOP);
+    // The run along the back wall (docs/interior-plan.md Phase 2): walnut doors, a black marble top, the sink under the
+    // window with its brass tap, a board and a bowl, the doors' brass pulls
+    icube(b, [x0, z0 + 0.04, x1, z1], y, S + h - 0.04, WOOD);
+    icube(b, [x0, z0, x1, z1], S + h - 0.04, S + h, MARBLE);
+    icube(b, [x0, z0 + 0.06, x1, z1], y, S + 0.05, INK);
+    const sx = (ROOM_WINDOWS[2].x0 + ROOM_WINDOWS[2].x1) / 2;
+    icube(b, [sx - 0.3, z0 + 0.12, sx + 0.3, z1 - 0.12], S + h, S + h + 0.004, STEEL);
+    rod(b, V(sx, S + h, z1 - 0.08), V(sx, S + h + 0.22, z1 - 0.08), 0.009, paint(BRASS));
+    rod(b, V(sx, S + h + 0.22, z1 - 0.08), V(sx, S + h + 0.17, z0 + 0.3), 0.008, paint(BRASS));
     b.detail(() => {
-      // A sink, a hob, the cupboards' doors and a kettle
-      icube(b, [x0 + 0.5, z0 + 0.14, x0 + 1.0, z1 - 0.12], S + h, S + h + 0.006, STEEL);
-      icube(b, [x1 - 0.85, z0 + 0.14, x1 - 0.35, z1 - 0.12], S + h, S + h + 0.012, SCREEN);
-      if (!low) for (let x = x0 + 0.5; x < x1 - 0.2; x += 0.55) icube(b, [x - 0.01, z0 + 0.025, x + 0.01, z0 + 0.04], S + 0.06, S + h - 0.08, STEEL);
-      drum(b, x0 + 0.25, z0 + 0.3, 0.07, 0.08, S + h, S + h + 0.16, FRIDGE);
+      if (!low) for (let x = x0 + 0.42; x < x1 - 0.2; x += 0.55) icube(b, [x - 0.06, z0 + 0.028, x + 0.06, z0 + 0.04], S + h - 0.1, S + h - 0.09, BRASS);
+      for (let x = x0 + 0.55; x < x1 - 0.2; x += 0.55) icube(b, [x - 0.004, z0 + 0.034, x + 0.004, z0 + 0.04], S + 0.07, S + h - 0.05, WOOD_DARK);
+      icube(b, [x1 - 0.7, z0 + 0.15, x1 - 0.35, z1 - 0.12], S + h, S + h + 0.015, WOOD);
+      drum(b, x0 + 0.45, z0 + 0.32, 0.1, 0.07, S + h, S + h + 0.05, CREAM, low ? 8 : 12);
     });
-  } else if (kind === 'fridge') {
-    icube(b, rect, y, S + h, FRIDGE);
-    b.detail(() => icube(b, [x0 + 0.06, z0 - 0.02, x0 + 0.09, z0 - 0.004], S + 0.35, S + 0.75, UNIT));
+  } else if (kind === 'oven' || kind === 'fridge') {
+    // The tall walnut units at the run's ends: the oven's (two ovens stacked, their black glass doors with brass
+    // handles) and the fridge's (two doors, long brass pulls)
+    icube(b, rect, y, S + h, WOOD);
+    const f = z0 - 0.004;
+    if (kind === 'oven') {
+      for (const [ya, yc] of [[0.42, 0.66], [0.7, 0.92]]) {
+        icube(b, [x0 + 0.08, f, x1 - 0.08, z0 + 0.004], S + ya, S + yc, INK);
+        icube(b, [x0 + 0.14, f - 0.02, x1 - 0.14, f - 0.004], S + yc - 0.035, S + yc - 0.02, BRASS);
+      }
+      b.detail(() => b.add(new THREE.SphereGeometry(0.008, 4, 3).translate(x1 - 0.12, S + 0.95, f - 0.004), glow(PAL.warm)));
+    } else {
+      b.detail(() => {
+        icube(b, [(x0 + x1) / 2 - 0.004, f - 0.002, (x0 + x1) / 2 + 0.004, z0], S + 0.06, S + h - 0.04, WOOD_DARK);
+        for (const x of [(x0 + x1) / 2 - 0.05, (x0 + x1) / 2 + 0.04]) icube(b, [x, f - 0.03, x + 0.012, f - 0.004], S + 0.45, S + 0.85, BRASS);
+      });
+    }
   } else if (kind === 'island') {
-    // The island: a dark base set back from the stools' side, a pale top over it, his glow under the overhang, a bowl;
-    // the pendant over it on its cord
-    icube(b, [x0 + 0.08, z0 + 0.16, x1 - 0.08, z1], y, S + h - 0.04, DARK_UNIT);
-    icube(b, [x0, z0, x1, z1], S + h - 0.04, S + h, PALE_TOP);
+    // The island: a walnut base set back from the stools' side, a thick black marble top running down its ends, the
+    // hob set in its kitchen side, the extractor hung over it from the ceiling (black, a brass band), two brass pendants
+    icube(b, [x0 + 0.1, z0 + 0.16, x1 - 0.1, z1], y, S + h - 0.05, WOOD);
+    icube(b, [x0, z0, x1, z1], S + h - 0.05, S + h, MARBLE);
+    for (const xa of [x0, x1 - 0.05]) icube(b, [xa, z0, xa + 0.05, z1], y, S + h - 0.05, MARBLE);
     const [mx, mz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+    const hx = x0 + (x1 - x0) * 0.68;
+    icube(b, [hx - 0.3, z0 + 0.32, hx + 0.3, z1 - 0.06], S + h, S + h + 0.006, SCREEN);
+    icube(b, [hx - 0.32, z0 + 0.25, hx + 0.32, z1 + 0.02], S + 0.9, S + 1.0, INK);
+    icube(b, [hx - 0.33, z0 + 0.24, hx + 0.33, z1 + 0.03], S + 0.9, S + 0.92, BRASS);
+    icube(b, [hx - 0.08, mz - 0.04, hx + 0.08, mz + 0.12], S + 1.0, S + CEIL - 0.006, INK);
     b.detail(() => {
-      b.add(new THREE.BoxGeometry(x1 - x0 - 0.3, 0.012, 0.012).translate(mx, S + h - 0.052, z0 + 0.175), BACKLIGHT);
-      drum(b, mx + 0.5, mz, 0.1, 0.06, S + h, S + h + 0.06, CONSOLE_BOX);
-      rod(b, V(mx, S + CEIL - 0.006, mz), V(mx, S + 0.98, mz), 0.006, paint(INK));
-      drum(b, mx, mz, 0.035, 0.14, S + 0.86, S + 0.98, INK, 10);
-      b.add(new THREE.SphereGeometry(0.045, 6, 4).translate(mx, S + 0.86, mz), glow(PAL.warm));
+      for (const [dx, dz] of [[-0.15, 0.12], [0.15, 0.12], [-0.15, 0.34], [0.15, 0.34]]) b.add(new THREE.TorusGeometry(0.06, 0.008, 4, 10).rotateX(Math.PI / 2).translate(hx + dx, S + h + 0.008, z0 + 0.3 + dz), paint('#3a3942'));
+      b.add(new THREE.BoxGeometry(x1 - x0 - 0.3, 0.012, 0.012).translate(mx, S + h - 0.062, z0 + 0.175), BACKLIGHT);
+      drum(b, x0 + 0.4, mz, 0.1, 0.06, S + h, S + h + 0.06, CREAM);
+      for (const px of [x0 + 0.35, x0 + 0.85]) {
+        rod(b, V(px, S + CEIL - 0.006, mz), V(px, S + 0.98, mz), 0.005, paint(INK));
+        drum(b, px, mz, 0.03, 0.11, S + 0.88, S + 0.98, BRASS, 10);
+        b.add(new THREE.SphereGeometry(0.035, 6, 4).translate(px, S + 0.88, mz), glow(PAL.warm));
+      }
     });
   } else if (kind === 'stools') {
-    // Three stools along the island's lounge side: a seat in his magenta on a steel leg and a foot ring
+    // Three stools along the island's lounge side: cognac leather seats with low backs on brass legs and a foot ring
     for (let k = 0; k < 3; k++) {
       const sx = x0 + ((x1 - x0) * (k + 0.5)) / 3;
       const sz = (z0 + z1) / 2;
-      drum(b, sx, sz, 0.11, 0.1, S + h - 0.04, S + h, CUSHION);
-      drum(b, sx, sz, 0.015, 0.015, S + 0.02, S + h - 0.04, STEEL, 5);
-      drum(b, sx, sz, 0.09, 0.09, S + 0.006, S + 0.02, STEEL);
-      b.detail(() => drum(b, sx, sz, 0.08, 0.08, S + 0.12, S + 0.13, STEEL));
+      drum(b, sx, sz, 0.11, 0.1, S + h - 0.04, S + h, COGNAC);
+      icube(b, [sx - 0.1, z0 - 0.01, sx + 0.1, z0 + 0.03], S + h, S + h + 0.1, COGNAC);
+      drum(b, sx, sz, 0.015, 0.015, S + 0.02, S + h - 0.04, BRASS, 5);
+      drum(b, sx, sz, 0.09, 0.09, S + 0.006, S + 0.02, BRASS);
+      b.detail(() => drum(b, sx, sz, 0.08, 0.08, S + 0.12, S + 0.13, BRASS));
     }
+  } else if (kind === 'dining') {
+    // The dining table: a walnut top on two black steel legs, a runner, a bowl; its pendant over it
+    const [mx, mz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+    icube(b, [x0, z0, x1, z1], S + h - 0.035, S + h, WOOD);
+    for (const xa of [x0 + 0.15, x1 - 0.19]) icube(b, [xa, z0 + 0.08, xa + 0.04, z1 - 0.08], y, S + h - 0.035, INK);
+    b.detail(() => {
+      icube(b, [x0 + 0.2, mz - 0.1, x1 - 0.2, mz + 0.1], S + h, S + h + 0.004, CREAM);
+      drum(b, mx, mz, 0.09, 0.05, S + h, S + h + 0.06, BRASS, low ? 8 : 12);
+      rod(b, V(mx, S + CEIL - 0.006, mz), V(mx, S + 0.95, mz), 0.005, paint(INK));
+      drum(b, mx, mz, 0.04, 0.2, S + 0.86, S + 0.95, INK, 12);
+      icube(b, [mx - 0.2, mz - 0.006, mx + 0.2, mz + 0.006], S + 0.855, S + 0.86, BRASS);
+      b.add(new THREE.SphereGeometry(0.04, 6, 4).translate(mx, S + 0.85, mz), glow(PAL.warm));
+    });
+  } else if (kind === 'chair') {
+    // A dining chair, its back to the table's edge away from it: cognac leather seat and back on black legs
+    const back = z0 < (FURNITURE.find((f) => f.kind === 'dining')!.rect[1]) ? z0 : z1 - 0.05;
+    icube(b, [x0 + 0.02, z0 + 0.02, x1 - 0.02, z1 - 0.02], S + 0.22, S + 0.26, COGNAC);
+    icube(b, [x0 + 0.03, back, x1 - 0.03, back + 0.05], S + 0.26, S + h, COGNAC);
+    for (const [fx, fz] of [[x0 + 0.05, z0 + 0.05], [x1 - 0.05, z0 + 0.05], [x0 + 0.05, z1 - 0.05], [x1 - 0.05, z1 - 0.05]]) drum(b, fx, fz, 0.012, 0.012, S + 0.006, S + 0.22, INK, 5);
   } else if (kind === 'cupboard') {
     icube(b, rect, y, S + h, WOOD);
     b.detail(() => {

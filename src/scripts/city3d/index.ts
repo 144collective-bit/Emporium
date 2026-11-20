@@ -79,7 +79,6 @@ import { LENS, cityNear, nearFor } from './lens';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
-import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './soundlazy';
 import type { Account } from './account';
@@ -112,8 +111,6 @@ import { YARD_TREES } from './southyard';
 import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
 const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
 import { MONO_STATIONS } from './monorail';
-import { setHeld } from './inventory-save';
-import type { Held } from '../net/profile-data';
 import { PLACES } from './places';
 import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
@@ -1248,8 +1245,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
     places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
-    // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
-    hold: (held) => profileUI.wear({ ...profileUI.look, held }),
     openPlace: (id) => {
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
@@ -1416,24 +1411,25 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     setLook: (o) => walk.setLook(o),
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
-    openChar: () => charScreen.open(),
+    // (the character screen comes in its own chunk the first time it's opened: lazy())
+    openChar: () => void loadChar().then((c) => c.open()).catch(() => {}),
   });
-  // The thing in his hand is a hotbar slot: the save's inventory keeps in step with the look (inventory.ts)
-  const syncHeld = (l: { held: Held | null }) => {
-    if (setHeld(game.save(), l.held)) game.commit();
-  };
-  syncHeld(profileUI.look);
-  profileUI.onChange(syncHeld);
   // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
   kartPark.trophies(game.save().karts.trophies);
-  const charScreen = createCharScreen({
-    root,
-    look: () => profileUI.look,
-    onChange: (fn) => profileUI.onChange(fn),
-    openFitting: () => open('shop', true),
-    reduced,
-    low: tier === 'low',
-  });
+  const loadChar = lazy(
+    () =>
+      import('./charscreen').then(({ createCharScreen }) =>
+        createCharScreen({
+          root,
+          look: () => profileUI.look,
+          onChange: (fn) => profileUI.onChange(fn),
+          openFitting: () => open('shop', true),
+          reduced,
+          low: tier === 'low',
+        })
+      ),
+    'the character screen'
+  );
   loadFitting = lazy(
     () =>
       import('./fitting').then(({ createFitting }) =>
@@ -1441,7 +1437,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         look: () => profileUI.look,
         apply: (l) => profileUI.wear(l),
         onChange: (fn) => profileUI.onChange(fn),
-        game,
         reduced,
         low: tier === 'low',
       }))

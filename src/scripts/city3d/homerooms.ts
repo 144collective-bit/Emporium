@@ -44,7 +44,10 @@ export type FurnitureKind =
   | 'island'
   | 'stools'
   | 'console'
-  | 'cupboard';
+  | 'cupboard'
+  | 'oven'
+  | 'dining'
+  | 'chair';
 
 export type UpKind =
   | 'wall'
@@ -111,8 +114,17 @@ function layOut(g: HouseGeo) {
     { kind: 'plant', rect: [rx1 - 0.36, rz1 - 0.36, rx1 - 0.06, rz1 - 0.06], h: 0.55 },
     { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
     { kind: 'stools', rect: [rx0 + 1.15, rz1 - 2.25, rx0 + 3.05, rz1 - 1.88], h: 0.3 },
-    { kind: 'counter', rect: [rx0 + 0.2, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
-    { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.02 },
+    // The kitchen (docs/interior-plan.md Phase 2): the oven's tall unit at the back wall's west end, the run with its sink
+    // under the window, the fridge's tall unit at its east end (the island with its hob and stools, above)
+    { kind: 'oven', rect: [rx0, rz1 - 0.6, rx0 + 0.7, rz1], h: 1.12 },
+    { kind: 'counter', rect: [rx0 + 0.75, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
+    { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.12 },
+    // Dining for four in the corner east of the hall, clear of the way to the side door and to the stairs
+    { kind: 'dining', rect: [DX + 1.1, rz0 + 3.3, DX + 2.5, rz0 + 3.95], h: 0.4 },
+    { kind: 'chair', rect: [DX + 1.25, rz0 + 2.9, DX + 1.6, rz0 + 3.25], h: 0.5 },
+    { kind: 'chair', rect: [DX + 1.95, rz0 + 2.9, DX + 2.3, rz0 + 3.25], h: 0.5 },
+    { kind: 'chair', rect: [DX + 1.25, rz0 + 4.0, DX + 1.6, rz0 + 4.3], h: 0.5 },
+    { kind: 'chair', rect: [DX + 1.95, rz0 + 4.0, DX + 2.3, rz0 + 4.3], h: 0.5 },
     { kind: 'cupboard', rect: [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15], h: 1.1 },
   ];
 
