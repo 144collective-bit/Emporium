@@ -669,7 +669,18 @@ Their answers, in three rounds:
    `crestnight.ts` (lit windows, festoons, the pools' lights, the landmarks' uplights), drawn by estates3d.ts,
    mansions3d.ts, crestgardens3d.ts and crestsites3d.ts. Phones: fewer lit windows, festoons with every other bulb,
    no pool lights.
-2. **The houses upgraded:** balconies, roof terraces and better gates on the estates and the mansions.
+2. **The houses upgraded** (built; the owner's answers: balconies "By style", roof terraces "Mansions only", gates
+   "Iron gates, lit piers", phones "Trimmed as now"): `crestgrand.ts` (the rules) and `crestgrand3d.ts` (the
+   drawing). Balconies on the upper floors: wrought iron on the Spanish and villa estates and the hill villas and
+   compound, stone on the Georgian estates and the summit, oak on the Tudor estates, glass on the modern ones; none on
+   a glass mansion, and none where a tall garden feature stands under one. Every hill mansion has a roof terrace: a glass
+   one's flat roof decked; the others' hipped roofs cut flat at half height (roofs3d.ts `deckHip()`), railed clear of
+   the chimney and the summit's tower; all furnished with potted trees, loungers, a parasol and a table. Gates: the
+   estates' piers raised to 2.1 with an iron lantern and a plain bronze plaque each, their gates wrought iron with gilded
+   spear tips (a modern house's rendered piers with a light strip and a slatted gate); the walled mansions' piers get
+   lanterns and the same gates; the hill houses without a wall get new piers and gates at their drive's mouth
+   (`MANSION_PIERS`, solid with the chunk). Phones: the main shapes; bars, balusters, gilding, furniture and leaves
+   near only, the lanterns near only.
 3. **New hill mansions:** 3 to 6 on terraced lots on the open slopes, Art Deco and French chateau, each on its own level
    with a yard, a graded drive and a planted bank, as the others.
 4. **Highcrest:** the hilltop quarter's plaza with THE ASTERLY, SOLENNE and VELLANO MOTOR SALON (or the showroom on

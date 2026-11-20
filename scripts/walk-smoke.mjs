@@ -322,6 +322,18 @@ await scene('foot', '86,138.5', async (t) => {
   await t.step('the hub closed, still walking');
 });
 
+// Things worth carrying (docs/inventory-plan.md Phase 5): an energy drink bought at an Uptown coffee cart (inventory.ts
+// SELLERS), drunk from the hotbar, its boost's chip counting down
+await scene('items', '-184.3,0.55', async (t) => {
+  await t.prompt('Energy drink');
+  await t.until('an energy drink in the hotbar', () => [...document.querySelectorAll('.hb-slot')].some((s) => /Energy/.test(s.getAttribute('aria-label') ?? '')));
+  await t.step('an energy drink bought');
+  const i = await t.page.evaluate(() => [...document.querySelectorAll('.hb-slot')].findIndex((s) => /Energy/.test(s.getAttribute('aria-label') ?? '')));
+  await t.page.keyboard.press(`Digit${i + 1}`);
+  await t.until('its chip counting down', () => /\d+s/.test(document.querySelector('[data-boosts]:not([hidden])')?.textContent ?? ''), null, 60000);
+  await t.step('drunk: its chip counting down');
+});
+
 // The gun store: at the Armoury's counter (solids.ts RACK), the store open and closed
 await scene('guns', '50.7,54.7', async (t) => {
   await t.prompt('Gun store');

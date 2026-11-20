@@ -52,6 +52,7 @@ import { CORNER_SHOPS, type CornerId } from './projects';
 import { MY_STALL_DOOR } from './nightmarket';
 import { cleanInventory, cleanStash, emptyInventory, type Inventory, type Stash } from './inventory-save';
 import { FREE_PLAY } from './freeplay';
+import { FLYERS, flyersShare } from './boosts';
 import {
   BOT_LEVELS,
   type BotLevel,
@@ -518,6 +519,8 @@ export interface TycoonSave {
   inventory: Inventory;
   /** What's put away in the trunk at home (home.ts, docs/home-plan.md Phase 4): consumables; a save from before it has none */
   stash: Stash;
+  /** When the flyers handed out at your stall run out (ms; 0 none out: the inventory plan's Phase 5, boosts.ts `FLYERS`) */
+  flyers: number;
   /** The daily prize cap (save v13, catalog.ts PRIZE_CAP): the day (`dayKey()`), and the cup races and purses paid on it */
   prizes: Prizes;
 }
@@ -575,6 +578,7 @@ export function newSave(now: number): TycoonSave {
     visited: [],
     inventory: emptyInventory(),
     stash: {},
+    flyers: 0,
     prizes: emptyPrizes(),
   };
 }
@@ -685,6 +689,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     visited: [],
     inventory: emptyInventory(),
     stash: {},
+    flyers: 0,
     prizes: emptyPrizes(),
   };
   cleanGame(s, o, now);
@@ -692,6 +697,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   s.inventory = cleanInventory(o.inventory, s);
   // (the trunk at home: a save from before it has nothing put away)
   s.stash = cleanStash(o.stash);
+  // (the flyers out at your stall: never further off than a fresh lot of them; a save from before them has none)
+  s.flyers = Math.floor(num(o.flyers, 0, now + FLYERS.minutes * 60000, 0));
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
   const places = (v: unknown) => PLACE_IDS.find((p) => p === v);
   s.staff = [...new Set((Array.isArray(o.staff) ? o.staff : []).map(places).filter((p): p is PlaceId => !!p && !!roleAt(s, p)))];
@@ -1133,7 +1140,9 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     // A clerk sells half as fast again, and at full pace while you're away
     const clerk = s.staff.includes(p);
     // (the Night Market's stall trades after dusk only: the share of the time since the last tick it was open)
-    const rate = (away ? (clerk ? 1 : OFFLINE_PACE) : at === p ? SERVING : 1) * (clerk ? STAFF_BOOST : 1) * (p === NIGHT_PLACE ? nightShare(from, now) : 1);
+    // (flyers out at your stall: more customers for the share of the tick they were out, not while you were away)
+    const fly = p === 'stall' && !away ? 1 + (FLYERS.customers - 1) * flyersShare(s.flyers, from, now) : 1;
+    const rate = (away ? (clerk ? 1 : OFFLINE_PACE) : at === p ? SERVING : 1) * (clerk ? STAFF_BOOST : 1) * (p === NIGHT_PLACE ? nightShare(from, now) : 1) * fly;
     for (const slot of sh.slots) {
       if (slot.qty <= 0) continue;
       const want = pace(s, slot, p) * rate * minutes + slot.carry;

@@ -56,11 +56,15 @@ test('the deck leaves room under it for the tallest thing in the traffic, a rig 
   assert.ok(DECK_HALF > HIGHWAY_HALF);
 });
 
-test('eight exits, numbered clockwise from the stadium, each at an arterial junction of today', () => {
-  assert.equal(EXITS.length, 8);
+test('nine exits: 1 to 8 numbered clockwise from the stadium and 6A between 6 and 7 at the south-west corner, each where an arterial passes under', () => {
+  assert.equal(EXITS.length, 9);
+  assert.deepEqual(EXITS.map((e) => e.label), ['1', '2', '3', '4', '5', '6', '7', '8', '6A']);
+  assert.equal(new Set(EXITS.map((e) => e.n)).size, EXITS.length);
   let last = -Infinity;
   const start = exitS(EXITS[0]);
-  for (const e of EXITS) {
+  // (round the ring clockwise: 6A comes after 6, before 7)
+  const order = ['1', '2', '3', '4', '5', '6', '6A', '7', '8'].map((l) => EXITS.find((e) => e.label === l)!);
+  for (const e of order) {
     // (where its arterial passes under the deck: the street-level junction it was, streetplan.ts RING_MEETS)
     const c = RING_MEETS.find((k) => k.id === e.crossing)!;
     assert.ok(c && c.street === e.street, e.crossing);

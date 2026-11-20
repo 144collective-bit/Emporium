@@ -44,6 +44,8 @@ export interface KeyHost {
   // The vehicles, the guns, the ring
   fly: { active: boolean };
   drive: { active: boolean; horn(): void };
+  /** N at the wheel of your car or bike: a nitro can from the bag (the inventory plan's Phase 5) */
+  nitro?(): void;
   combat: { reload(): void; toggleHolster(): void };
   fightBtns: { kick: boolean; dodge: boolean };
   moments: { active: boolean };
@@ -154,11 +156,12 @@ export function onKey(e: KeyboardEvent, down: boolean, h: KeyHost) {
     e.preventDefault();
     return true;
   }
-  // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, F gets out
+  // Driving: steer and pedal with the move keys, Space for the handbrake, V swaps camera, H the horn, N a nitro can, F gets out
   if (drive.active) {
     if (down && !e.repeat && c === 'KeyF') act();
     else if (down && !e.repeat && c === 'KeyV') nextCam();
     else if (down && !e.repeat && c === 'KeyH') drive.horn();
+    else if (down && !e.repeat && c === 'KeyN') h.nitro?.();
     else if (c === 'Space') h.jumpHeld = down;
     else if (MOVE.includes(c)) {
       if (down) keys.add(c);

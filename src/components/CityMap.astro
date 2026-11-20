@@ -604,6 +604,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <span class="walk-crosshair" aria-hidden="true"></span>
     {/* The hotbar (inventory-ui.ts): fists, gun 1, gun 2, the thing in his hand, the snacks; 1-7 pick, a tap picks */}
     <div class="hotbar mk-skin" data-hotbar role="toolbar" aria-label="Hotbar"></div>
+    {/* The consumables' boosts on now (docs/inventory-plan.md Phase 5, inventory-ui.ts paintBoosts()): a chip each with the time left */}
+    <div class="boosts mk-skin" data-boosts hidden aria-live="polite"></div>
     <div class="combat-hud">
       <div class="combat-cross" data-cross aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="combat-hit" data-hitmark aria-hidden="true"></div>
@@ -897,6 +899,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     {/* Driving your car (drive.ts): speed readout, touch pedals (the stick steers) */}
     <div class="drive-hud" data-drive-hud hidden aria-hidden="true">
       <b data-drive-speed>0</b><small>km/h</small><span class="drive-gear" data-drive-gear>N</span>
+      {/* A nitro can from the bag (docs/inventory-plan.md Phase 5): in your car or on your bike while there's one (.has-nitro, walk.ts paints the count); a tap fires it, N on a keyboard, X on a gamepad */}
+      <button type="button" class="drive-nitro" data-drive-nitro tabindex="-1" aria-label="Nitro"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-nitro" /></svg><i data-drive-nitro-n>0</i></button>
     </div>
     {/* Flying your aircraft (fly.ts): speed, height over the ground, the throttle (or the rotor) and what it's doing */}
     <div class="fly-hud" data-fly-hud hidden aria-hidden="true">

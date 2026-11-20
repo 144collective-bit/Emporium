@@ -217,15 +217,15 @@ test('snacks: bought for Dorras at a level, ITEM_MAX at most, booked in the ledg
   // (not things bought for the missions: three snacks aren't the Fleet mission's three buys)
   assert.equal(s.counters.bought, 0);
   // Outside a spar nothing is used up
-  assert.equal(useItem(s, 'snack', false).ok, false);
+  assert.equal(useItem(s, 'snack', { onFoot: true }).ok, false);
   assert.equal(s.inventory.items.snack, ITEM_MAX);
-  assert.equal(useItem(s, 'snack', true).ok, true);
+  assert.equal(useItem(s, 'snack', { spar: true }).ok, true);
   assert.equal(s.inventory.items.snack, ITEM_MAX - 1);
   const poor = newSave(NOW);
   poor.dorras = 0;
   const p = buyItem(poor, 'snack');
   assert.equal(!p.ok && p.why, 'money');
-  assert.equal(useItem(poor, 'snack', true).ok, false);
+  assert.equal(useItem(poor, 'snack', { spar: true }).ok, false);
 });
 
 test('snacks are sold at every diner downtown and every Night Market stall, each spot standing clear', () => {

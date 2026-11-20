@@ -22,10 +22,12 @@ import { Batch, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { parkedCars, type CarId } from './cars';
 import { COURT_HALF, ESTATES, ESTATE_CARS, FOUNTAIN, GATE, HEDGE, ROOF_H, SLAB_Y, STOREY, fountainOf, hedgesOf, motorCourt, outOf, originOf, piersOf, rectToWorld, wallTop, type Estate, type EstateStyle, type Part } from './estates';
-import { CURTAIN, PAVING, TIMBER as SLATS, WATER, SPRAY, BULB, flat } from './mallkit';
+import { CURTAIN, PAVING, TIMBER as SLATS, WATER, SPRAY, flat } from './mallkit';
 import { PIER, extrasOf, loggiaPiers } from './crestgardens';
 import { PLANT, SOIL } from './palette';
 import { POOL_LIGHTS, poolLights, windowGlow } from './crestnight';
+import { ESTATE_BALCONIES, leavesOf, slatted } from './crestgrand';
+import { drawBalcony, drawLeaf, drawPierTop, type Draw } from './crestgrand3d';
 
 const RENDER_WHITE = toon('#f4efe4');
 const OCHRE = toon('#e6c493');
@@ -436,6 +438,9 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
       }
 
       b.lod = 'all';
+      // The balconies, by style (the premium upgrade's Phase 2: crestgrand.ts)
+      const D: Draw = { box, add, detail: (f) => b.detail(f), low };
+      for (const bal of ESTATE_BALCONIES[ESTATES.indexOf(e)]) drawBalcony(D, bal);
       // The front door and its surround, on the main block's front; a stone step before it
       const fu = e.hc;
       const dv = m.v0;
@@ -505,24 +510,17 @@ export function registerEstates(low: boolean, scene: THREE.Scene | null) {
         const [a, c, d, f] = [Math.min(u0, u1) + 0.04, Math.max(u0, u1) - 0.04, Math.min(v0, v1) + 0.04, Math.max(v0, v1) - 0.04];
         if (c > a && f > d) box(a, HEDGE.h - 0.01, d, c, HEDGE.h + 0.07, f, HEDGE_TOP);
       }
+      // (the piers taller, a lantern on each and a plain bronze plaque; a modern house's rendered, a light strip down
+      // each: the premium upgrade's Phase 2, crestgrand.ts)
+      const modernGate = slatted(style);
       for (const [u, v] of piersOf(e)) {
-        box(u - GATE.pier, 0, v - GATE.pier, u + GATE.pier, GATE.h, v + GATE.pier, STONE);
-        box(u - GATE.pier - 0.05, GATE.h, v - GATE.pier - 0.05, u + GATE.pier + 0.05, GATE.h + 0.1, v + GATE.pier + 0.05, STONE_SHADE);
+        box(u - GATE.pier, 0, v - GATE.pier, u + GATE.pier, GATE.h, v + GATE.pier, modernGate ? RENDER_WHITE : STONE);
         b.detail(() => box(u - GATE.pier - 0.04, 0, v - GATE.pier - 0.04, u + GATE.pier + 0.04, 0.22, v + GATE.pier + 0.04, STONE_SHADE));
-        // (phones: the piers' globes near only)
-        if (low) b.detail(() => add(new THREE.SphereGeometry(0.12, 8, 6).translate(u, GATE.h + 0.3, v), BULB));
-        else add(new THREE.SphereGeometry(0.12, 8, 6).translate(u, GATE.h + 0.3, v), BULB);
-        b.detail(() => cyl(0.05, 0.2, u, GATE.h + 0.1, v, IRON, 6));
+        drawPierTop(D, u, v, GATE.h, GATE.pier, modernGate);
       }
+      // (the gates, swung open into the forecourt: wrought iron with gilded tips, or slatted)
       b.detail(() => {
-        // (the iron gates, swung open into the forecourt: rails, bars and spear tops)
-        for (const s of [-1, 1]) {
-          const u = e.hc + s * (GATE.half - 0.08);
-          const v = -HEDGE.front - HEDGE.thick;
-          for (const y of [0.15, 1.25]) box(u - 0.025, y, v, u + 0.025, y + 0.05, v - 1.2, IRON);
-          box(u - 0.03, 0.1, v, u + 0.03, 1.45, v - 0.06, IRON);
-          if (!low) for (let k = 1; k <= 8; k++) box(u - 0.015, 0.15, v - (k * 1.2) / 9 - 0.015, u + 0.015, 1.38 + (k % 2) * 0.06, v - (k * 1.2) / 9 + 0.015, IRON);
-        }
+        for (const l of leavesOf(e)) drawLeaf(D, l.u, l.v, l.len, modernGate);
       });
 
       /* ---------- The forecourt's fountain ---------- */

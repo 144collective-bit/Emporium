@@ -17,6 +17,60 @@
 .city[data-view="3d"][data-mode="walk"]:is(.is-driving, .is-karting, .is-fighting, .is-riding, .is-shopping) .hotbar {
   display: none;
 }
+/* The consumables' boosts on now (Phase 5, inventory-ui.ts paintBoosts()): a chip each with the time left, over the
+   hotbar's corner on desktops (and over the speed readout at the wheel), under the top-left readouts on touch */
+.boosts {
+  position: absolute;
+  right: 16px;
+  bottom: 84px;
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+.boosts[hidden],
+.city:not([data-mode="walk"]) .boosts {
+  display: none;
+}
+.boost-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 6px;
+  border: 2px solid #3a3e48;
+  background: #0c0d10e6;
+  box-shadow: 0 0 0 2px #0c0d1099;
+}
+.boost-chip svg {
+  width: 18px;
+  height: 18px;
+}
+.boost-energy svg {
+  color: #7bd88f;
+}
+.boost-nitro svg {
+  color: #ff8a3d;
+}
+.boost-flyers svg {
+  color: #00eaff;
+}
+.boost-chip b {
+  min-width: 3ch;
+  font-family: "Pixelify Sans", var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  color: #ffc531;
+}
+@media (pointer: coarse) {
+  /* (under the readouts at the top left: the mission tracker on foot, the speed at the wheel) */
+  .boosts {
+    top: calc(var(--head-h) + 62px);
+    right: auto;
+    bottom: auto;
+    left: max(12px, env(safe-area-inset-left));
+  }
+}
 .hb-slot {
   position: relative;
   display: grid;

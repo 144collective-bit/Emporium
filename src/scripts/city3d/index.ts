@@ -30,6 +30,7 @@ import { DOCK_LAMPS } from './docks';
 import { STRIP_LAMPS } from './strip';
 import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
+import { CORNER_LAMPS } from './cornerroad';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { RURAL_LAMPS } from './ruraldress';
@@ -452,6 +453,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
   for (const [x, z, ry, y] of RAMP_LAMPS) addLamp(x, z, ry, y);
+  // ...and along exit 6A's road in, Corner Road and Gate Hill (cornerroad.ts, docs/south-plan.md Phase 5b)
+  for (const [x, z, ry, y] of CORNER_LAMPS) addLamp(x, z, ry, y);
   for (const [x, z] of UNDER_LIGHTS) addPool(x, z, 4.2, 0.03);
   // The swing bridge's lamps on its fixed approaches (swingbridge.ts, Phase 5; the span's swing with it)
   for (const [x, z, ry, y] of SWING_LAMPS) addLamp(x, z, ry, y);
@@ -1979,7 +1982,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // times a second (they open, close and move with the layout)
   // The header, its open drop-downs (settings, menu), the welcome card, the guide, the kart, flight, drive and fight HUDs,
   // the toasts while they're up and the draft tag
-  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .ctrl-card, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar, .city-toast, .city-draft-tag')];
+  const chrome = [...root.querySelectorAll<HTMLElement>('.city-head, [data-hub], .city-banner, .city-card, .city-guide, .ctrl-card, .kart-hud, .fly-hud, .drive-hud, .fight-demo, [data-fight-hud], .wm-compass, .hotbar, .boosts, .city-toast, .city-draft-tag')];
   const chromeRects: { x: number; y: number; w: number; h: number }[] = [];
   const readChrome = () => {
     const o = host.getBoundingClientRect();
