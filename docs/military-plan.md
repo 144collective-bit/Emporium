@@ -13,8 +13,8 @@ and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
 airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built and signed off**
 (2026-11-19, measured below). **Phase 4 (life, night and sound) is built and
-trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is built** (2026-11-20, below), waiting on
-the owner's sign-off: the last of the plan.
+trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is built and signed off** (2026-11-20, below).
+**The plan is done.** What's next is its "Later" list, each in a plan of its own (the owner's picks below).
 
 ## The owner's answers (2026-11-18)
 
@@ -604,4 +604,12 @@ last measure looks at that step. The boot 741.5 KB of 750.
   The whole base cost well under its allowance, and the phone holds less than before it was begun (the trims on the
   way: the south's shared corners and the tile batches' step). memcheck passes (177.5 of 187 in its last run: its
   reading still moves by a batch's step of up to 4 MiB, the next thing to watch if the north grows again).
+
+## The owner's sign-off on Phase 5, and what's next (2026-11-20)
+
+| Question | Answer |
+| --- | --- |
+| Phase 5, and the plan | **Signed off: the plan is done.** |
+| The branch | **A pull request into main**, for the owner to review and merge (a push to main goes live). |
+| What to plan next (planning only: nothing built without the owner's go) | **All four**: the range as a place (target practice, dummies and drones only), the hangar as a place (a new made-up, unarmed aircraft to fly from it), opening the wall gate (the storyline's first way out: the owner's story), and the review tool's night sky from high. |
 
