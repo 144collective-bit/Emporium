@@ -6,8 +6,8 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
 - **Northgate Air Base** (the owner's call, 2026-11: a very large military base and airfield across the whole north,
   from the west wall to Crestmont's hills; made up; nothing threatening: no weapons on show, nothing attacks you, a
   guarded gate and the rest seen through the fence). Built a phase at a time, each with the owner's sign-off. Phase 1
-  (the land, the fence and the gates), Phase 2 (the airfield) and Phase 3 (the base itself) are built; its life
-  (Phase 4) and the polish (Phase 5) are to come.
+  (the land, the fence and the gates), Phase 2 (the airfield), Phase 3 (the base itself) and Phase 4 (its life, night
+  and sound) are built; the polish (Phase 5) is to come.
 - **`airbase.ts`** (DOM-free, on `DOM_FREE`, the boot's; tested in `tests/airbase.test.ts`): the plan's lines in fixed
   world numbers, but where the base meets the wall (worked out from `WALL_INNER`, `FLOODS` and `CAMERAS`, so it holds
   under `npm run test:wide`).
@@ -90,4 +90,27 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
   centre's green band), the heliport's hut and the range house; the motor pool's yard, shed and trucks; the heliport's
   pads; the radar's mound and dome; the water tower; the range's lanes and berm; the watchtowers (legs, cabin, roof,
   searchlight); the gatehouse with its blast doors and hazard band (near only).
+- **Its life, night and sound (Phase 4)**:
+  - **At night** (airbase.ts): `APRON_MASTS` (three floodlight masts between the hangars, `MAST_H` 10.5, drawn in the
+    airfield's chunk) and `BASE_POOLS` (their pools, added at the boot in index.ts, as the airport's); the watchtowers'
+    searchlights (airbase3d.ts `searchlights()`: one instanced additive beam each, down to the ground, sweeping `SWEEP`
+    either side of `searchRest()`, in towards the base, at night only; still under reduced motion: the Strip's way).
+  - **Its people** (`airbaselife.ts`, DOM-free, on `DOM_FREE`, tested in `tests/airbaselife.test.ts`; the camp's chunk
+    hands them to the crowd, life.ts `addPeople()`, every other one on phones): `BASE_IDLE` (sentries at the guardhouses
+    acting `wait`, never `guard`: that's the crowd's bouncers; pairs chatting, a queue at the mess, people at the motor
+    pool and the heliport), `BASE_MOVERS` (the drill squad's column round `DRILL_LOOP`, walkers round `ROW_LOOPS`, the
+    patrols on `BEATS` along the south fence, `beatAt()`: back and forth, never stopping or chasing). Their look is
+    crowdlook.ts `STYLES.airbase` (`districtAt()` inside the fence).
+  - **Its vehicles** (`airbaselife.ts` `BASE_VEHICLES`, `vehicleAt()`, `loopPoint()`): a jeep up the avenue on its
+    right, along the apron's road and back, and a truck round the motor pool's yard; the city's own models (cars.ts
+    `carGeometry`), olive, drawn and moved by airbase3d.ts `vehicles()` as the Docks' truck (still under reduced motion).
+  - **Its flying** (`airbaseflights.ts`, DOM-free, the airfield's chunk's only, tested in `tests/airbaseflights.test.ts`):
+    `TRAINER` (circuits: off east from the runway's west end, round the north of the base, landing west from the east,
+    back to `TRAINER_HOLD`) and `ROUNDER` (the helicopter's round of the base from the heliport), built with airfield.ts's
+    own `flight()` / `fly()` / `w()`; `BASE_FLIGHTS` (not in `FLIGHTS`: the airport's tests are the airport's). They fly
+    as more instances of the base's parked fleets (airbasefield3d.ts: no more draw calls), on the clock near the field,
+    at their stands under reduced motion; on phones only the trainer. Tested over the base only (inside the fence, west
+    of the hills), clear of the airport's flights, each other, the parked aircraft and over everything built.
+  - **Its sound** (ambience.ts `airbase`, sound.ts): far engines across the field (two low saws through a low-pass,
+    swelling slowly), off till the visitor turns sound on.
 
