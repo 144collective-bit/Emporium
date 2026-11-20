@@ -2007,7 +2007,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     let texRows: ((s: THREE.Object3D) => unknown) | null = null;
     void import('./texrows').then((m) => (texRows = m.textureRows));
     // (what one frame draws, draw by draw: its own chunk too, drawrows.ts, docs/phone-far-plan.md)
-    (window as unknown as { __draws?: () => Promise<unknown> }).__draws = () => import('./drawrows').then((m) => m.captureDraws(renderer as never, scene, camera, () => post.render(), Q.far));
+    // (`aim` turns the camera just before the frame's drawn, after anything the loop did to it)
+    (window as unknown as { __draws?: (aim?: (c: THREE.Camera) => void) => Promise<unknown> }).__draws = (aim) =>
+      import('./drawrows').then((m) =>
+        m.captureDraws(
+          renderer as never,
+          scene,
+          camera,
+          () => {
+            aim?.(camera);
+            post.render();
+          },
+          Q.far
+        )
+      );
     (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
     renderer.info.autoReset = false;
   }
