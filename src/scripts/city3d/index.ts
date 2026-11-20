@@ -31,6 +31,7 @@ import { STRIP_LAMPS } from './strip';
 import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { CORNER_LAMPS } from './cornerroad';
+import { SOUTH_PEOPLE } from './southpeople';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { RURAL_LAMPS } from './ruraldress';
@@ -451,6 +452,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The Circus's sunken plaza (circus.ts, docs/south-plan.md Phase 4b): a tree in each planter, lamps by the seats
   for (const { at: [x, z] } of PLANTERS) addTree(x, z, 0.75, false, FLOOR + PLANTER_H);
   for (const [x, z] of CIRCUS_LAMPS) addLamp(x, z, Math.atan2(x - CIRCUS_MID[0], z - CIRCUS_MID[1]), FLOOR);
+  // The south's people about (southpeople.ts, docs/south-plan.md Phase 6c): on the High Road, the podium deck, the
+  // Circus's plaza, in the churchyard and at the rec (phones: half of them, the trim)
+  SOUTH_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.y, ry: p.ry, act: p.act }));
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
