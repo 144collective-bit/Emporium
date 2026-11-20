@@ -676,7 +676,30 @@ From the Circus west, patchy as high roads are:
      at 749.0 of 750 KB. Shots `docs/south-shots/28-phase-5b-*.webp`.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
    roads, the blocks' lights at night, sound by district, `?bench` views,
-   phones checked and trimmed, every width, the guides.
+   phones checked and trimmed, every width, the guides. The owner's answers
+   (2026-11-20): **polish first**; people on the High Road, the estate's
+   decks, the Circus's plaza and in the village and at the rec; **a south
+   bus route** from the bus garage on the High Road round the Circus and
+   the village, with stops (the city's own buses carry on as they are);
+   night **warm and patchy** (the blocks' windows lit at random, some flats
+   dark, lights along the galleries, the High Road's shop fronts glowing,
+   minimal bloom). Steps, each with the owner's sign-off:
+   - **6a, room in the boot**: the boot has about 1 KB left (749.0 of 750
+     KB); a trim before anything else is added (drawing-only data and
+     features used later moved out to lazy chunks), its budget kept.
+   - **6b, polish**: phones (the low tier's trims on the south's chunks,
+     `?bench` views of the south and their draw calls), every width
+     (320 to 1440, phones upright and on their side) of the south's cards
+     and screens, the seams and edges where the south meets the rest.
+   - **6c, life**: people on the High Road, the estate's decks, the
+     Circus's plaza and subways, the village and the rec; the south bus
+     route and its stops; traffic checked on the new roads.
+   - **6d, night**: the blocks' and the village's windows, the galleries'
+     lights, the High Road's shop fronts, warm and patchy.
+   - **6e, sound by district**: the estate, the village, the High Road,
+     the tube below ground.
+   - **6f, the guides**: endswood.md and the rest brought up to date, the
+     plan closed.
 
 Each phase: `npm run typecheck`, `npm run lint`, `npm test`,
 `npm run test:wide`, a build, `npm run budget`, the smoke test, and shots
