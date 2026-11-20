@@ -46,12 +46,21 @@ keep it up to date when what it describes changes.
     tape on the cloth (`stripe()`); the puffer's baffles are rounded
     pillows (`quilt()`); the shades' chain lies on each top's collar and
     chest (`chainOn()`, an item per top, `chain-<kind>`).
-  - `tests/clothing.test.ts` (with `tests/dress.ts`: dressed and posed on
-    the CPU as the GPU skins him) holds every outfit's trousers inside its
-    top and the top outside them, within 2 mm, through keyed poses, the
+  - The clipping tests (with `tests/dress.ts`: dressed and posed on the
+    CPU as the GPU skins him) hold every outfit's trousers inside its top
+    and the top outside them, within 2 mm, through keyed poses, the
     emotes, the fight's clips and the animator running, sprinting and
     crouching; `CLOTHING_REPORT=1` prints the worst. Shells it checks are
-    pieces with `shell` (`top`, `bottom`). The lab's clipping view is
+    pieces with `shell` (`top`, `bottom`). `tests/clothing.ts` holds the
+    outfits (`OUTFITS`), the poses (worked out once a file and replayed for
+    every outfit: `each()`) and the layers' check (`layersOf()`);
+    `clothing-layers-1` and `-2` run it on half the outfits each (two files,
+    so the runner checks them side by side: about 4 minutes, from 28 in
+    one), and `clothing.test.ts` the shoes, the hood and the headphones.
+    `inside()` in dress.ts files the shells' triangles by height and depth
+    and skips those behind the point, and `posed()` works in plain numbers:
+    the same answers as three's maths to the last bit, in a fraction of the
+    time (2026-11-20). The lab's clipping view is
     `?anim&clip` (the top, trousers and shoes in colours far apart).
   - The desktop level (Phase 2): `Detail` 3, single figures on the high
     and medium tiers (`figureDetail()` in character.ts, set from the tier
@@ -92,13 +101,52 @@ keep it up to date when what it describes changes.
     ring's sag added to every gap (`SAG`) so the crowd's clear it too; the
     cap's brim from the crown's base (`brimSweep()`); the shades' arms back
     along the head past the ear (`armPath()`), the chain hooked on them;
-    bags, boards, wings and the necklace on each top's own outline
+    bags, boards and the necklace on each top's own outline
     (`TORSOS`, `OVER`, items `backpack-<kind>` and the rest; straps laid on
     by `strapOver()`); the watch on the wrist riding the hand; a held
     thing's handle in the fingers' hook (`HOOK`, `handle()`), the cup
     against the fingers' front. `tests/accessories.test.ts` holds the hats
     clear of the head at every level and the held things clear of the
     fingers. The lab takes `wear=` and `at=x,y,z`.
+  - **The shades** (`docs/wardrobe-plan.md` Phase 4): five styles from one
+    recipe each (`EYES`: classic, aviator, round, slim, sport wrap), thin
+    rims round the lens's outline (`outset()`), the lenses set in and curved
+    (`bend`), a bridge, hinge blocks, and thin arms sampled along the side of
+    the head every centimetre; every style's hinges at one height
+    (`HINGE_DY`), so the arms past the temples and the chain under them
+    (`ARM_EAR`) are alike. Items `shades-<style>` (`eyesOf()`: the crowd's
+    the classic); the frames in the outfit's `frame` colour, the lenses its
+    `lens`.
+  - **Face gear** (`docs/wardrobe-plan.md` Phase 4): the gas mask, the half
+    respirator and the safety and ski goggles (`face-<id>`, single figures
+    only), moulded on the face (`moulded()`: the face's smooth oval pushed
+    out from the head's middle, domed, held off the real face and its nose)
+    with rolled rims and straps on the head's measured surface
+    (`headStrap()`); the gas mask and goggles take the shades' place
+    (`coversEyes()`, `eyesOf()` null: the shades and chain come off). In the
+    outfit's `gear` colour; the goggles' lens in its `lens`.
+  - **The hood up** (`docs/wardrobe-plan.md` Phase 3): cloth over the head,
+    not a helmet, and one with the hoodie (the owner's call: no line between
+    hood and sweater). Its sections are the head's outline carried out
+    (`headShell()`, `HOOD_SIDE` at the sides, fuller behind), tapering under
+    the jaw to the neck (`HOOD_NECK`, about the jaw's width: no bulge round
+    the neck), its back hanging straight from the head to the upper back
+    (`drape`), and growing out of the hoodie's own
+    neckline: its lowest rows lie on the sweater's sections, a little inside
+    then a little out (`HOOD_INTO`), leaving it at a shallow angle so no ink
+    line shows; there it's weighted as the sweater is (the `hood` region in
+    `weigh()`: the trunk's weights, collarbones and all, handed to the
+    neck's and the head's up past the jaw). Its opening (`hoodOpen()`: an
+    angle round each row either side of the front) frames the face behind the
+    shades' frames, closing to a soft point over the brow and to a V at the
+    throat that closes where it meets the sweater, a rolled edge (`hoodRim`)
+    round it. With the hood up the shades' chain is its own (`chain-hood`):
+    inside the hood, out through the opening by the jaw, over the V and down
+    the chest; the headphones go under the hood (not drawn, as under the
+    puffer's collar). `tests/accessories.test.ts` holds the head, ears and
+    the shades' arms inside it and the lenses clear of it, the chain out of
+    its cloth, at every level; `tests/clothing.test.ts` holds it out of the
+    hoodie through every pose.
 - **The suit's tailoring** (the owner's call, after the clothing plan) is
   planned in `docs/tailoring-plan.md`: the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the
@@ -164,7 +212,7 @@ keep it up to date when what it describes changes.
     joint (shoulders take a collarbone share; the trunk by where a point
     is alone, `trunk()`, so a top's hem and the trousers under it bend as
     one); `bone` pins a piece to one
-    bone unbent (bags, boards, wings on the chest); `skin` gives a piece
+    bone unbent (bags and boards on the chest); `skin` gives a piece
     its own weights per vertex (the fingers).
   - **Faces** (`docs/faces-plan.md`: Phases 1, the crowd, 2, the
     player's Face tab, and 3, head shapes and more cuts, built and signed
@@ -200,19 +248,12 @@ keep it up to date when what it describes changes.
     vertex weighted, sized by `HAND` in skeleton.ts: a tenth of his height
     wrist to fingertip, the palm a hand's thickness; relaxed, the fingers
     curl a little, `RELAXED`; `bakedHand()` sets one solid at a grip, for
-    the first-person hands in `viewmodel.ts`). His hands are empty by
-    default (the gummy bag was retired, the owner's call; saved looks that
-    held it come back empty). **What's in his hand behaves** on foot
-    (`heldpose.ts`, DOM-free, tested in `tests/heldpose.test.ts`, in walk
-    mode's on-foot chunk; the polish plan's Phase 8): the coffee comes up
-    for a sip every 14-26 s (never at a sprint), the phone is read standing
-    still (the head down, a glance up now and then) and glanced at on the
-    walk, the briefcase swings on the hand as a pendulum driven by the
-    hand's and his own acceleration; `createHeldLife()` keeps the schedule,
-    `applyHeld()` lays it on the animator's turns before the figure takes
-    them (the arm's reach through contact.ts's `reachArmBones()`), never
-    while something else has his arms (a gun, an emote, a slide, a vault, a
-    moment, the fists, a crate). The boombox hangs as it did.
+    the first-person hands in `viewmodel.ts`). His hands hold only weapons
+    (`docs/wardrobe-plan.md` Phase 1, the owner's call: the coffee, boombox,
+    phone and briefcase were retired with `heldpose.ts`, as the gummy bag
+    was before them; saved looks that held one come back empty-handed). The
+    crowd keeps its phones (`held: 'phone'`) and shopping bags
+    (`held: 'shopping'`), riding the hand bone unbent.
   - **Walking and running** are `locomotion.ts` (DOM-free, tested in
     `tests/locomotion.test.ts`), for your Degen in walk mode
     (`createLocomotion()`; walk.ts feeds it his position, velocity,
@@ -256,12 +297,98 @@ keep it up to date when what it describes changes.
     shirt V, the tie, pockets; zips and plackets are `tape()`). Shoes are
     lofts along their length (`shoe()`).
   - The wardrobe is `items()` in `wardrobe.ts`: each item (`head`, `cap`, `suit`, `hoodie`,
-    `joggers`, `backpack`, `coffee`...) has a `when` rule on the `Outfit` and
+    `joggers`, `backpack`, `watch`...) has a `when` rule on the `Outfit` and
     pieces on joints, each a fixed colour or an outfit colour (`shade`
     darkens or lightens it: lapels, ribbing). New clothes are new items.
+  - **Shoes** (`docs/wardrobe-plan.md` Phase 5): dress shoes, sneakers,
+    high-tops (`hightops`: the sneaker's lower half, the collar up round the
+    ankle, a padded rim), chunky runners (`runners`: a two-layer sole,
+    overlays from `overlay()`) and slides (`slides`: the white sock's foot
+    is the shell, a footbed and a strap); on phones the flat parts round
+    fewer segments (`SGF`, `SGL`, `lean()`); the laces are arcs on the rounded top
+    (`laceArcs()`), the side stripe a strip along the side's curve
+    (`swoop`). The legs' last few centimetres ride partly with the foot
+    (`weigh()`), so a hem stays on the shoe as the ankle bends.
+  - **Details on dark cloth** (`docs/wardrobe-plan.md` Phase 5): a piece's
+    `shade` goes through `shadeRGB()` (single figures, the first-person
+    sleeves) or `SHADE_GLSL` (the crowd's shader): the old linear multiply,
+    but on near-black cloth (under `DARK.at`) a lift toward grey, so black
+    fits keep their seams. The puffer's quilting has stitched seams
+    (`seamsAt()`).
+  - **The bomber** (`docs/wardrobe-plan.md` Phase 5): the jacket's body
+    fuller (`BK`), ribbed collar, cuffs and hem, a front zip, a zip pocket on
+    the left sleeve; in every per-top table (`TORSOS`, `CHAINS`, `TOPS`).
+    A new top needs all three, its card in `fitting.ts`, its name in
+    `charscreen.ts`, a nearest kind for the crowd (`fit()` in crowdlook.ts)
+    and its line in `tests/clothing.ts`'s `OUTFITS`.
+  - **The coach jacket, the puffer vest and the tee** (`docs/wardrobe-plan.md`
+    Phase 5): the coach (`CK`) a light shell with a fold-over collar, snaps
+    and a drawcord hem; the vest the puffer's body over long sleeves in the
+    outfit's `shirt` colour (its collar covers what the puffer's
+    covers); the tee the hoodie's body (`HK`) with a crew neck and short
+    sleeves (`TEE_U`) over bare arms (`BARE_U`, `BARE_F`, `SKIN`). The
+    first-person arms dress them too (`dress()` in viewmodel.ts,
+    `armPieces()` in fistsview.ts).
+  - **The shell and the trucker** (`docs/wardrobe-plan.md` Phase 5): the
+    shell (`SHK`) with a funnel collar of its own (`SHELL_COLLAR`, a second
+    shell in `TORSOS`; it hides the headphones and necklace under
+    it), a storm flap, taped seams (`stripe()` with one line) and a drawcord
+    hem (`toggles()`, `hemBand()`); the trucker (`DK`) with its waistband,
+    point collar, pocket flaps, yoke seams and copper buttons. The hoodie is
+    a heavyweight: deep ribbing, and on single figures felled seams
+    (`sideSeams`, `dropSeam`) and metal-tipped cords (`aglets`).
+  - **Hats and bags** (`docs/wardrobe-plan.md` Phase 5): the fitted cap
+    (`capFlat`: flat brim, the mark embroidered on the front) and the skully
+    (`skully` on the beanie's colour). The bags over each top (`OVER`): the
+    sling (on the back), the chest rig and the waist bag (across the chest),
+    each seated clear of the top (`seat()`); the backpack and duffel carry
+    zips, pulls and straps on single figures. Small parts (zips, pulls,
+    buckles) are plain boxes (`bx()`): a rounded box costs hundreds of
+    triangles. "Single figures only" means `q >= 2`: the crowd draws
+    skinned bodies too (`items(q, true)`), at detail 0 and 1.
+  - **Work wear** (`docs/wardrobe-plan.md` Phase 6): the hi-vis vest and
+    jacket (reflective tape in `TAPE`: `ring()`, `braces()`,
+    `sleeveTape()`), the chore coat, coveralls (their own legs:
+    `bottomsOf()` returns null for them as for soldiers), work trousers
+    (`WORK_S`, knee panels from `legPatch()`, a hammer loop), work boots
+    (`WORKBOOT`) and the hard hat (`hardhat` colour key).
+  - **Business wear** (`docs/wardrobe-plan.md` Phase 7): the
+    double-breasted suit (`double`), blazer, Oxford shirt (`OXK`), waistcoat
+    (`WK`) and overcoat (`OCK`) are tops of their own; `tieOn()` lays a tie
+    on any front; `tailored()` puts a big front mark on as a pin. Chinos
+    (`CHINO_S`), loafers (`LOAFER`) and derbies (on `DRESS`).
+  - **The crowd by district** (`docs/wardrobe-plan.md` Phase 8): each
+    district's style in crowdlook.ts names its legs, feet, hats and bags
+    (`legs`, `feet`, `suitLegs`, `suitFeet`, `fitted`, `skully`, `sling`,
+    `waist`); the Ends are a district (`inEndswood()`). The crowd draws
+    look-alike pieces alike (`wornLegs()`, `wornFeet()`, and far off the
+    fitted cap as a cap, the skully as a beanie, no small bags), so each
+    kind's mesh stays near its old vertex work; `tests/crowdlook.test.ts`
+    holds it. A new piece in the crowd: give it a stand-in there or check
+    that test's numbers.
+  - **Headphones** are per top (`headphones-<kind>`), fitted to its collar
+    by `fitPhones()` from `NECKS` (the collar's rings, the hood's roll, a
+    margin for laid-on pieces); a new top with headphones needs its line
+    there, or they're left off it.
+  - **The separates** (`docs/wardrobe-plan.md` Phase 2): the top, the
+    bottoms and the shoes are items of their own, worn in any pairing:
+    `trousers`, `joggers` (and track pants, the joggers with
+    `trackStripes`), `cargoPants` (fuller below the hems, thigh pockets), `shorts`
+    (over the knee, bare legs `BARE_LEG` and white crew socks, the socks the
+    `bottom` shell so the ankle test holds them), `denim` (`DENIM_S`: straight
+    and roomy, a turned-up cuff, gold outseam stitching), `dressShoes` and `sneakers`, picked by `bottomsOf()` and
+    `shoesOf()` (the outfit's `bottoms` / `shoeStyle`, or what its top comes
+    with: the crowd's, `bottomsFor()` / `shoesFor()`); the suit's shirt,
+    collar and cuffs take the outfit's `shirt` colour (the crowd's the shirt
+    white). Every bottoms is cut on the one `SEAT` inside every top's hips,
+    so `clothing-layers-1` and `-2` hold every top over every bottoms (both
+    detail levels, every pose); the shoes' uppers are `shell: 'shoe'` and
+    `tests/clothing.test.ts` holds each bottoms over each shoe to `ANKLE` (0.009) at
+    the ankle as the foot flexes.
   - Four detail levels (`Detail`): 3 for single figures on desktops and 2
     on phones (`createDegen()`: the player, other players, the fitting
-    room, the hologram; about 23-26k triangles at 3, 14-17k at 2;
+    room, the hologram; about 23-38k triangles at 3, 14-17k at 2, by what
+    he wears, held under 40k and 18k by `tests/wardrobe.test.ts`;
     `figureDetail()` sets which), 1 for crowd people near the camera (the new head, fingers
     and shoes at a crowd's detail, about 7-9k; the phones' `light` crowd
     leaves out the `detail` pieces), 0 for crowd people further away (`far`:
@@ -270,7 +397,7 @@ keep it up to date when what it describes changes.
   - `createDegen()` builds the skinned body (`items(q, true)`: the hero
     wardrobe, with the new head, fingers and shoes on the feet) as one
     `SkinnedMesh` coloured per vertex, plus one each for the lenses, the
-    patches, the raised hood and neon, all on one `Skeleton` (3-5 draw
+    patches and the raised hood, all on one `Skeleton` (3-5 draw
     calls a figure, never frustum-culled); things in the hand stay solid on
     the hand bone. `dispose()` frees a figure's geometry and bones. A
     material swapped onto a figure (the hologram's `ShaderMaterial`, a

@@ -203,7 +203,7 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
   for (let i = 0; i < FURNITURE.length; i++) for (let j = i + 1; j < FURNITURE.length; j++) assert.ok(!overlap(FURNITURE[i].rect, FURNITURE[j].rect), `${FURNITURE[i].kind} on ${FURNITURE[j].kind}`);
   assert.deepEqual(
     [...new Set(FURNITURE.map((f) => f.kind))].sort(),
-    ['armchair', 'chaise', 'console', 'counter', 'cupboard', 'fridge', 'island', 'lamp', 'media', 'plant', 'sofa', 'stairs', 'stools', 'table', 'trophies'],
+    ['armchair', 'boots', 'chair', 'chaise', 'console', 'counter', 'dining', 'fridge', 'island', 'lamp', 'laundry', 'media', 'oven', 'plant', 'sofa', 'stairs', 'stools', 'table', 'trophies'],
   );
   assert.ok(homeWall(ROOM[0] + 0.05, ROOM[1] + 3, R) && !homeWall(HOME.door[0], (ROOM[1] + ROOM[3]) / 2, R));
   // From inside the front door you can walk to inside the side door and up to everything (a flood over a fine grid)
@@ -269,6 +269,12 @@ test('the refit (docs/compound-plan.md Phase 2, docs/interior-plan.md Phase 1): 
   assert.ok(counter[1] - island[3] > 2 * R + 0.2, 'a way between the island and the counter');
   assert.ok(stools[3] <= island[1] && stools[1] - chaise[3] > 2 * R + 0.1, 'the stools on the lounge\'s side, with a way past them');
   assert.ok(island[2] < dx - HALL_W / 2, 'the island off the hall');
+  // The boot room by the side door (docs/interior-plan.md Phase 4): the bench north of it, the laundry south, both on the
+  // east wall, the door's way clear between them
+  const [boots, laundry] = ['boots', 'laundry'].map(at);
+  const sz = HOME.sideDoor[1];
+  assert.ok(Math.abs(boots[2] - rx1) < 1e-9 && Math.abs(laundry[2] - rx1) < 1e-9, 'on the east wall');
+  assert.ok(boots[3] < sz - 0.5 && laundry[1] > sz + 0.4, 'either side of the side door, clear of it');
   // The stairs along the east wall by the front, as before
   assert.deepEqual(at('stairs'), [rx1 - 0.95, rz0, rx1, rz0 + 2.8]);
 });
@@ -449,6 +455,27 @@ test('upstairs (docs/compound-plan.md Phase 3): its own floor between the room a
   assert.ok(down.level === 'up' && down.to.y === SLAB_Y && !homeWall(down.to.x, down.to.z, R));
   const stairUp = HOME_PORTALS.find((p) => p.id === 'home:up')!;
   assert.ok(Math.hypot(down.x - stairUp.to.x, down.z - stairUp.to.z) < 1.2 && Math.hypot(down.to.x - stairUp.x, down.to.z - stairUp.z) < 1);
+});
+
+test('the polish (docs/interior-plan.md Phase 5): a tall plant in the lounge, the bedroom and on the landing, each in its corner, clear of the rest, the curtains and the doorways', () => {
+  const { BED_DOOR, BATH_DOOR, BATH_Z, DRESS_X } = houseRooms(HOUSE_GEO);
+  const tall = (list: readonly { kind: string; rect: readonly number[]; h: number }[]) => list.filter((f) => f.kind === 'plant' && f.h >= 0.9);
+  const [lounge] = tall(FURNITURE);
+  const up = tall(UPSTAIRS);
+  assert.equal(tall(FURNITURE).length, 1);
+  assert.equal(up.length, 2);
+  // (the lounge's in the front corner west of the window, clear of everything, of the curtains drawn or open, of the wake spot)
+  assert.ok(within(lounge.rect, [ROOM[0], ROOM[1], ROOM[0] + 0.5, ROOM[1] + 0.6]), 'in the corner');
+  for (const f of FURNITURE) if (f !== lounge) assert.ok(!overlap(f.rect, lounge.rect), `on the ${f.kind}`);
+  for (const k of [0, 1]) for (const p of curtainPanels(k)) assert.ok(!overlap(p, lounge.rect, -0.02), 'in the curtains');
+  assert.ok(!inRect(lounge.rect, HOME_WAKE.x, HOME_WAKE.z, 0.5));
+  // (upstairs: apart from the rest, out of every doorway)
+  for (const p of up) {
+    for (const u of UPSTAIRS) if (u !== p) assert.ok(!overlap(u.rect, p.rect), `on the ${u.kind}`);
+    const LAND_X = ROOM[2] - 2.6;
+    const ways = [...UP_DOORS.map(([a, c]) => [LAND_X - 0.6, a, LAND_X + 0.6, c]), [DRESS_X - 0.6, BED_DOOR[0], DRESS_X + 0.6, BED_DOOR[1]], [BATH_DOOR[0], BATH_Z - 0.6, BATH_DOOR[1], BATH_Z + 0.7]];
+    for (const w of ways) assert.ok(!overlap(p.rect, w), `in a doorway at ${w.map((v) => v.toFixed(2))}`);
+  }
 });
 
 test('the benchmark has a view of the compound, from the Close down its line, looking at his land', () => {

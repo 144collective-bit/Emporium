@@ -25,7 +25,8 @@
  * or a hoodie, track to a hoodie).
  */
 import type { HairCut, Outfit, OutfitKind } from './wardrobe';
-import { HAIR_DYE, HAIR_NATURAL, PALETTE, SHAPE_IDS } from '../net/profile-data';
+import { HAIR_DYE, HAIR_NATURAL, PALETTE, SHAPE_IDS, type Bottoms, type ShoeStyle } from '../net/profile-data';
+import { inEndswood } from './endswood';
 import type { IdleAct, CrowdClip } from './crowdclips';
 import { inTrenches } from './trenches';
 import { inUptown } from './uptown';
@@ -44,7 +45,7 @@ import { SITE as AIRPORT_SITE } from './airfield';
 import { KART_AREA } from './kartfacility';
 import { RIVER, SOUTH_ROW } from './layout';
 
-export type District = 'town' | 'trenches' | 'uptown' | 'park' | 'docks' | 'yards' | 'crest' | 'strip' | 'beach' | 'suburb' | 'lot9' | 'mall' | 'airport' | 'karts';
+export type District = 'town' | 'trenches' | 'ends' | 'uptown' | 'park' | 'docks' | 'yards' | 'crest' | 'strip' | 'beach' | 'suburb' | 'lot9' | 'mall' | 'airport' | 'karts';
 export type Role = 'walk' | 'idle' | 'jog' | 'kid' | 'worker' | 'guard' | 'shopper' | 'cyclist' | 'boater';
 
 /** The kinds the crowd's meshes carry: the desktop's, and the phones' (one more than the two they had: the owner's call) */
@@ -78,6 +79,7 @@ const BEACH: readonly number[] = [-12, RIVER[0], 47, SOUTH_ROW + 22];
 
 export function districtAt(x: number, z: number): District {
   if (inTrenches(x, z)) return 'trenches';
+  if (inEndswood(x, z)) return 'ends';
   if (inUptown(x, z) || inRect(NORTH_RECT, x, z)) return 'uptown';
   if (inRect(WESTLAKE_RECT, x, z)) return 'park';
   if (inDocks(x, z)) return 'docks';
@@ -137,6 +139,21 @@ interface Style {
   crossbody: number;
   headphones: number;
   chain: number;
+  /*
+   * The wardrobe by district (docs/wardrobe-plan.md Phase 8, the owner's call: "well dressed in the north and street
+   * wear in the Ends and The Trenches"): what's worn on the legs and feet with a casual top (`legs`, `feet`) and with
+   * a suit (`suitLegs`, `suitFeet`), each a share; how many of the caps are fitted (`fitted`) and of the beanies
+   * skullies (`skully`); and the new bags' chances (a sling, a waist bag) after the backpack and crossbody (the chest
+   * rig the players' only: one more shape on every person of a kind)
+   */
+  legs: Partial<Record<Bottoms, number>>;
+  feet: Partial<Record<ShoeStyle, number>>;
+  suitLegs: Partial<Record<Bottoms, number>>;
+  suitFeet: Partial<Record<ShoeStyle, number>>;
+  fitted: number;
+  skully: number;
+  sling: number;
+  waist: number;
 }
 
 const INK = '#16141f';
@@ -163,6 +180,23 @@ const TOWN: Style = {
   crossbody: 0.12,
   headphones: 0.2,
   chain: 0.2,
+  legs: { joggers: 0.4, denim: 0.3, cargo: 0.15, chinos: 0.15 },
+  feet: { sneaker: 0.6, runner: 0.25, hightop: 0.15 },
+  suitLegs: { trousers: 0.85, chinos: 0.15 },
+  suitFeet: { dress: 0.7, derby: 0.2, loafer: 0.1 },
+  fitted: 0.2,
+  skully: 0.3,
+  sling: 0.05,
+  waist: 0.05,
+};
+/** Streetwear: The Trenches and the Ends */
+const STREET = {
+  legs: { joggers: 0.3, denim: 0.3, cargo: 0.25, shorts: 0.15 },
+  feet: { sneaker: 0.3, runner: 0.3, hightop: 0.25, slide: 0.15 },
+  fitted: 0.45,
+  skully: 0.55,
+  sling: 0.12,
+  waist: 0.12,
 };
 export const STYLES: Record<District, Style> = {
   town: TOWN,
@@ -184,8 +218,11 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.1,
     headphones: 0.28,
     chain: 0.3,
+    ...STREET,
   },
-  // Lighter suits and smart coats, quiet ties, no caps to speak of
+  ends: null!,
+  // Lighter suits and smart coats, quiet ties, no caps to speak of; well dressed: trousers or chinos, derbies and loafers
+  // under the suits and the coats alike
   uptown: {
     ...TOWN,
     mix: { suit: 0.7, puffer: 0.22, hoodie: 0.05, track: 0.03 },
@@ -205,6 +242,14 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.14,
     headphones: 0.1,
     chain: 0.12,
+    legs: { chinos: 0.6, trousers: 0.25, denim: 0.15 },
+    feet: { loafer: 0.35, derby: 0.3, sneaker: 0.25, runner: 0.1 },
+    suitLegs: { trousers: 0.7, chinos: 0.3 },
+    suitFeet: { dress: 0.45, derby: 0.35, loafer: 0.2 },
+    fitted: 0,
+    skully: 0.4,
+    sling: 0,
+    waist: 0,
   },
   // The park: track and hoodies in bright colours, caps and buckets
   park: {
@@ -223,6 +268,11 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.06,
     headphones: 0.32,
     chain: 0.08,
+    legs: { joggers: 0.35, shorts: 0.3, chinos: 0.2, denim: 0.15 },
+    feet: { sneaker: 0.4, runner: 0.4, hightop: 0.2 },
+    suitLegs: { chinos: 0.6, trousers: 0.4 },
+    suitFeet: { loafer: 0.5, derby: 0.3, dress: 0.2 },
+    waist: 0.08,
   },
   // The port and the yards: work clothes, hi-vis on the workers
   docks: {
@@ -242,6 +292,12 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.04,
     headphones: 0.12,
     chain: 0.06,
+    legs: { work: 0.45, cargo: 0.3, denim: 0.25 },
+    feet: { boot: 0.6, sneaker: 0.25, runner: 0.15 },
+    skully: 0.5,
+    fitted: 0.1,
+    sling: 0,
+    waist: 0,
   },
   yards: null!,
   // Crestmont: smart casual, pale suits with the collar open, pastels, bucket hats, gold lenses
@@ -264,6 +320,13 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.2,
     headphones: 0.08,
     chain: 0.3,
+    legs: { chinos: 0.45, denim: 0.25, shorts: 0.2, joggers: 0.1 },
+    feet: { loafer: 0.3, sneaker: 0.4, runner: 0.2, slide: 0.1 },
+    suitLegs: { chinos: 0.6, trousers: 0.4 },
+    suitFeet: { loafer: 0.5, derby: 0.25, dress: 0.25 },
+    fitted: 0.1,
+    sling: 0,
+    waist: 0.04,
   },
   // The Neon Mile: party colours, chains, no green lenses
   strip: {
@@ -285,6 +348,12 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.14,
     headphones: 0.18,
     chain: 0.45,
+    legs: { denim: 0.35, joggers: 0.3, cargo: 0.15, chinos: 0.2 },
+    feet: { runner: 0.3, hightop: 0.3, sneaker: 0.3, loafer: 0.1 },
+    suitFeet: { loafer: 0.5, dress: 0.3, derby: 0.2 },
+    fitted: 0.5,
+    sling: 0.08,
+    waist: 0.15,
   },
   // The cove: casual, pale and light, bucket hats, white shoes
   beach: {
@@ -305,6 +374,11 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.08,
     headphones: 0.14,
     chain: 0.06,
+    legs: { shorts: 0.6, chinos: 0.25, denim: 0.15 },
+    feet: { slide: 0.45, sneaker: 0.35, runner: 0.2 },
+    suitLegs: { chinos: 0.7, trousers: 0.3 },
+    suitFeet: { loafer: 0.7, dress: 0.3 },
+    waist: 0.08,
   },
   // Sunridge: light casual, caps
   suburb: {
@@ -325,6 +399,8 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.08,
     headphones: 0.16,
     chain: 0.06,
+    legs: { denim: 0.35, chinos: 0.25, joggers: 0.2, shorts: 0.2 },
+    feet: { sneaker: 0.45, runner: 0.35, slide: 0.1, hightop: 0.1 },
   },
   // Lot 9: worn, faded, dark; beanies and hoods
   lot9: {
@@ -344,11 +420,35 @@ export const STYLES: Record<District, Style> = {
     crossbody: 0.04,
     headphones: 0.1,
     chain: 0.08,
+    legs: { cargo: 0.35, joggers: 0.3, denim: 0.25, work: 0.1 },
+    feet: { boot: 0.35, sneaker: 0.3, hightop: 0.2, runner: 0.15 },
+    fitted: 0.2,
+    skully: 0.6,
   },
   // The mall and Palm Court: shoppers, a lighter town
-  mall: { ...TOWN, mix: { hoodie: 0.45, suit: 0.3, track: 0.15, puffer: 0.1 }, openCollar: 0.3, backpack: 0.1, crossbody: 0.22 },
+  mall: {
+    ...TOWN,
+    mix: { hoodie: 0.45, suit: 0.3, track: 0.15, puffer: 0.1 },
+    openCollar: 0.3,
+    backpack: 0.1,
+    crossbody: 0.22,
+    legs: { denim: 0.3, joggers: 0.25, chinos: 0.25, cargo: 0.1, shorts: 0.1 },
+    feet: { sneaker: 0.4, runner: 0.25, hightop: 0.15, slide: 0.1, loafer: 0.1 },
+    waist: 0.08,
+    sling: 0.06,
+  },
   // The airport: travellers, suits with bags
-  airport: { ...TOWN, mix: { suit: 0.55, hoodie: 0.3, puffer: 0.1, track: 0.05 }, backpack: 0.3, crossbody: 0.2, headphones: 0.3, cap: 0.3 },
+  airport: {
+    ...TOWN,
+    mix: { suit: 0.55, hoodie: 0.3, puffer: 0.1, track: 0.05 },
+    backpack: 0.3,
+    crossbody: 0.2,
+    headphones: 0.3,
+    cap: 0.3,
+    legs: { chinos: 0.35, joggers: 0.35, denim: 0.3 },
+    feet: { sneaker: 0.5, runner: 0.3, loafer: 0.2 },
+    suitFeet: { dress: 0.5, derby: 0.3, loafer: 0.2 },
+  },
   // The kart park: track suits in the teams' colours
   karts: {
     ...TOWN,
@@ -361,9 +461,18 @@ export const STYLES: Record<District, Style> = {
     hood: 0.1,
     hats: ['#d8312f', INK, WHITE, '#00a8d8'],
     headphones: 0.3,
+    legs: { joggers: 0.5, cargo: 0.3, shorts: 0.2 },
+    feet: { sneaker: 0.5, runner: 0.3, hightop: 0.2 },
   },
 };
 STYLES.yards = { ...STYLES.docks, lenses: [GREEN, '#5a5a6a'] };
+// The Ends (Endswood): The Trenches' streetwear, more track and slides, fewer suits still
+STYLES.ends = {
+  ...STYLES.trenches,
+  mix: { hoodie: 0.5, track: 0.4, puffer: 0.05, suit: 0.05 },
+  feet: { sneaker: 0.3, runner: 0.25, hightop: 0.2, slide: 0.25 },
+  waist: 0.15,
+};
 
 /** The joggers' and cyclists' track: bright over dark */
 const JOG = { tops: ['#ff6a3d', '#00a8d8', '#1f9d6a', '#e219e5', '#ffd23f', WHITE, '#8f3dff'], bottoms: [INK, '#3a3a48', '#2a2350'], shoes: [WHITE, '#ff6ad5', '#00b8d8', '#ffd23f'] };
@@ -373,10 +482,17 @@ const KID = { tops: ['#ff6a3d', '#00a8d8', '#ffd23f', '#e219e5', '#1f9d6a', '#8f
 /* ---------- The pick ---------- */
 
 const pick = <T>(r: () => number, a: readonly T[]) => a[Math.min(a.length - 1, Math.floor(r() * a.length))];
+/** One of a style's shares (`{ denim: 0.3, ... }`), by its share */
+function weighted<K extends string>(r: () => number, w: Partial<Record<K, number>>): K {
+  const e = Object.entries(w) as [K, number][];
+  let u = r() * e.reduce((t, [, v]) => t + v, 0);
+  for (const [k, v] of e) if ((u -= v) < 0) return k;
+  return e[e.length - 1][0];
+}
 /** The nearest kind the crowd carries */
 function fit(kind: OutfitKind, kinds: readonly OutfitKind[]): OutfitKind {
   if (kinds.includes(kind)) return kind;
-  const next: Record<OutfitKind, OutfitKind[]> = { puffer: ['suit', 'hoodie'], track: ['hoodie', 'suit'], varsity: ['hoodie', 'suit'], hoodie: ['track', 'suit'], suit: ['puffer', 'hoodie'], soldier: ['suit'] };
+  const next: Record<OutfitKind, OutfitKind[]> = { puffer: ['suit', 'hoodie'], track: ['hoodie', 'suit'], varsity: ['hoodie', 'suit'], bomber: ['hoodie', 'suit'], coach: ['track', 'hoodie', 'suit'], vest: ['puffer', 'hoodie', 'suit'], tee: ['hoodie', 'suit'], shell: ['track', 'hoodie', 'suit'], trucker: ['hoodie', 'suit'], hivis: ['track', 'hoodie', 'suit'], hivisjacket: ['track', 'hoodie', 'suit'], chore: ['hoodie', 'suit'], coveralls: ['suit', 'hoodie'], blazer: ['suit', 'hoodie'], shirt: ['suit', 'hoodie'], double: ['suit'], waistcoat: ['suit'], overcoat: ['suit', 'puffer'], hoodie: ['track', 'suit'], suit: ['puffer', 'hoodie'], soldier: ['suit'] };
   return next[kind].find((k) => kinds.includes(k)) ?? kinds[0];
 }
 /** A kind from the style's mix */
@@ -397,9 +513,15 @@ function hat(r: () => number, s: Style, kind: OutfitKind, out: Outfit) {
     return;
   }
   if (kind === 'hoodie') u -= s.hood;
-  if (u < s.cap) out.cap = colour;
-  else if (u < s.cap + s.beanie) out.beanie = colour;
-  else if (u < s.cap + s.beanie + s.bucket) out.bucket = colour;
+  // (a share of the caps fitted, flat brimmed; of the beanies skullies)
+  const style = r();
+  if (u < s.cap) {
+    out.cap = colour;
+    if (style < s.fitted) out.capFlat = true;
+  } else if (u < s.cap + s.beanie) {
+    out.beanie = colour;
+    if (style < s.skully) out.skully = true;
+  } else if (u < s.cap + s.beanie + s.bucket) out.bucket = colour;
 }
 
 /**
@@ -456,6 +578,13 @@ function clothed(r: () => number, where: Where): Outfit {
   const extras = () => {
     if (r() < s.backpack) out.backpack = pick(r, ['#14121f', '#2a2350', '#d8312f', '#1f9d6a', WHITE]);
     else if (r() < s.crossbody) out.crossbody = pick(r, ['#14121f', '#8f3dff', '#c99a4a']);
+    else {
+      // (the wardrobe's newer bags, by district: Phase 8)
+      const u = r();
+      const bag = pick(r, ['#14121f', '#2b2b36', '#465530', '#c99a4a', '#8f3dff']);
+      if (u < s.sling) out.sling = bag;
+      else if (u < s.sling + s.waist) out.waist = bag;
+    }
     if (r() < s.headphones) out.headphones = pick(r, ['#14121f', WHITE, '#ff6ad5', '#00b8d8']);
     if (r() < s.chain) out.chain = true;
   };
@@ -465,6 +594,9 @@ function clothed(r: () => number, where: Where): Outfit {
     out.top = pick(r, JOG.tops);
     out.bottom = pick(r, JOG.bottoms);
     out.shoes = pick(r, JOG.shoes);
+    // (in shorts or track pants, runners or trainers)
+    out.bottoms = r() < 0.4 ? 'shorts' : out.kind === 'track' ? 'trackpants' : 'joggers';
+    out.shoeStyle = r() < 0.6 ? 'runner' : 'sneaker';
     if (r() < 0.5) out.cap = pick(r, [INK, WHITE, '#d8312f']);
     if (r() < 0.4) out.headphones = pick(r, [WHITE, '#14121f', '#ff6ad5']);
     return out;
@@ -497,7 +629,12 @@ function clothed(r: () => number, where: Where): Outfit {
     out.top = pick(r, HI_VIS);
     out.bottom = pick(r, ['#2b2b36', '#1d2550', '#3a3a48']);
     out.shoes = pick(r, ['#3a2418', INK]);
-    if (r() < 0.6) out.beanie = pick(r, [INK, '#3a3a48', '#ff7a1a']);
+    // (work trousers or cargo, work boots; a hard hat on a good share, else the beanie)
+    out.bottoms = r() < 0.7 ? 'work' : 'cargo';
+    out.shoeStyle = 'boot';
+    const u = r();
+    if (u < 0.4) out.hardhat = pick(r, [WHITE, '#f5c400', '#ff7a1a']);
+    else if (u < 0.75) out.beanie = pick(r, [INK, '#3a3a48', '#ff7a1a']);
     out.lens = pick(r, ['#5a5a6a', GREEN]);
     return out;
   }
@@ -510,6 +647,10 @@ function clothed(r: () => number, where: Where): Outfit {
     // (a pale jacket over dark trousers now and then)
     out.bottom = (top === WHITE || top === '#e9e4d6' || top === '#c9c4b8') && r() < 0.5 ? pick(r, [INK, '#2a3550', '#3a3a48']) : top;
     out.shoes = pick(r, ['#1b1830', '#3a2418', INK, ...(district === 'crest' || district === 'beach' ? [WHITE] : [])]);
+    // (the district's: trousers or chinos, dress shoes, derbies or loafers; chinos in a pale stone or a dark cotton)
+    out.bottoms = weighted(r, s.suitLegs);
+    if (out.bottoms === 'chinos') out.bottom = pick(r, ['#c8b58a', '#e9e4d6', '#3a3a48', '#2a3550']);
+    out.shoeStyle = weighted(r, s.suitFeet);
     if (r() >= s.openCollar) out.tie = pick(r, s.ties);
     hat(r, s, kind, out);
     extras();
@@ -519,6 +660,18 @@ function clothed(r: () => number, where: Where): Outfit {
   out.top = pick(r, s.tops);
   out.bottom = pick(r, s.bottoms);
   out.shoes = pick(r, s.shoes);
+  // The district's legs and feet (a track top mostly with its own pants); leather in a leather's colours
+  out.bottoms = kind === 'track' && r() < 0.7 ? 'trackpants' : weighted(r, s.legs);
+  out.shoeStyle = weighted(r, s.feet);
+  // (the smart pieces stay with the suits and the coats: a hoodie or a track top in chinos and loafers would be one
+  // more set of shapes in every hoodie's and track top's mesh, for a look the crowd hardly wears)
+  if (kind !== 'puffer') {
+    if (out.bottoms === 'chinos' || out.bottoms === 'trousers') out.bottoms = 'denim';
+    if (out.shoeStyle === 'loafer' || out.shoeStyle === 'derby' || out.shoeStyle === 'dress') out.shoeStyle = 'sneaker';
+  }
+  if (out.bottoms === 'denim') out.bottom = pick(r, ['#2a3a5a', '#3f5f9a', '#1d2550', INK, '#5a6a8a']);
+  if (out.bottoms === 'chinos') out.bottom = pick(r, ['#c8b58a', '#e9e4d6', '#3a3a48', '#2a3550']);
+  if (out.shoeStyle === 'boot' || out.shoeStyle === 'loafer' || out.shoeStyle === 'derby') out.shoes = pick(r, ['#3a2418', '#5a3a2a', INK, '#1b1830']);
   // (a worker at a stall or a grill: a plain dark top, no bag)
   if (role === 'worker') {
     out.top = pick(r, [INK, '#2b2b36', '#3a3a48', '#4a3a2a']);

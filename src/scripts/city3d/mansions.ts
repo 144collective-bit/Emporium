@@ -44,7 +44,8 @@ export const STOREY = { ground: 2.2, upper: 1.9 } as const;
 /** The tallest anything stands over its pad (the Emporium's roof is 12.5) */
 export const TALLEST = 9;
 
-export type MansionKind = 'glass' | 'villa' | 'compound' | 'summit';
+/** The kinds; Art Deco and French chateau since the premium upgrade's Phase 3 (the owner's call, 2026-11-19) */
+export type MansionKind = 'glass' | 'villa' | 'compound' | 'summit' | 'deco' | 'chateau';
 export type Face = 'n' | 's' | 'e' | 'w';
 
 /** A box of the house in the mansion's frame (u0..u1, v0 front .. v1 back, more negative), its storeys */
@@ -56,7 +57,13 @@ export interface MPart {
   floors: number;
   /** A tower or a flat-roofed glass box rather than a tiled roof */
   flat?: boolean;
+  /** A chateau's main block's mansard roof, or a round turret under its cone (Phase 3: `MANSARD`, `TURRET`) */
+  roof?: 'mansard' | 'cone';
 }
+/** A chateau's mansard: its height, how far in its slopes come to its flat top, its overhang */
+export const MANSARD = { h: 1.8, inset: 0.7, o: 0.2 } as const;
+/** A chateau's turrets: their radius (a part's half side) and their cones' height */
+export const TURRET = { r: 0.9, cone: 2.2 } as const;
 export interface Mansion {
   id: string;
   kind: MansionKind;
@@ -85,6 +92,8 @@ export interface Mansion {
   /** A wall round it (compounds, the summit) */
   walled: boolean;
   car: boolean;
+  /** One of the premium upgrade's new lots (Phase 3: `NEW_LOTS`), up a long drive cut into the hillside */
+  lot?: boolean;
   /** The ground held level round it (the owner's call, 2026-11-19: built on the hillside, not sunk in it): the pad
    * widened by up to `YARD` a side where that stays clear (`yardOf()`), at the pad's height */
   yard: Rect;
@@ -127,7 +136,7 @@ function layout(): Mansion[] {
     Math.hypot((rect[0] + rect[2]) / 2 - overlook[0], (rect[1] + rect[3]) / 2 - overlook[1]) > OVERLOOK_R;
 
   /** Lay a mansion out in its pad: what stands where in its frame */
-  const make = (kind: MansionKind, road: HillRoad, rect: Rect, yRoad: number, face: Face, drive: [Pt, Pt], rise = RISE) => {
+  const make = (kind: MansionKind, road: HillRoad, rect: Rect, yRoad: number, face: Face, drive: [Pt, Pt], rise = RISE, cut = CUT) => {
     const [cx, cz] = [(rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2];
     const corners = [natural(rect[0], rect[1]), natural(rect[2], rect[1]), natural(rect[0], rect[3]), natural(rect[2], rect[3])];
     // (and halfway out through its ease, where the bank is steepest: the corners and the sides' middles)
@@ -138,20 +147,30 @@ function layout(): Mansion[] {
     const mid = (Math.min(...corners, natural(cx, cz)) + Math.max(...corners, natural(cx, cz))) / 2;
     const y = yRoad + Math.max(-rise, Math.min(rise, mid - yRoad));
     // (not where the hills fall or rise too far round it: a pad, not a quarry; its banks stay walkable)
-    if (corners.some((c) => Math.abs(c - y) > CUT) || ring.some((c) => Math.abs(c - y) > CUT + 0.5)) return null;
+    if (corners.some((c) => Math.abs(c - y) > cut) || ring.some((c) => Math.abs(c - y) > cut + 0.5)) return null;
     const alongX = face === 'n' || face === 's';
     const [W, D] = alongX ? [rect[2] - rect[0], rect[3] - rect[1]] : [rect[3] - rect[1], rect[2] - rect[0]];
     // The drive's line along the front, in the frame
     const [ox, oz] = outOf(face);
     const du = (drive[1][0] - cx) * oz + (drive[1][1] - cz) * -ox;
     const big = kind === 'summit';
-    const mw = Math.min(W - 5, big ? 13 : 9 + r() * 2.5);
+    // (an Art Deco house's main block narrower, its stepped tower beside it; a chateau's, its turrets at its corners and
+    // its parterre beside its pool: Phase 3)
+    const mw = kind === 'deco' || kind === 'chateau' ? Math.min(W - 7, 7.5 + r() * 1.5) : Math.min(W - 5, big ? 13 : 9 + r() * 2.5);
     const hd = big ? 7.5 : D >= 16 ? 6 : 5;
     const front = big ? -6.5 : -4.6;
     const hc = Math.max(-W / 2 + 2.5 + mw / 2, Math.min(W / 2 - 2.5 - mw / 2, du * 0.4));
-    const main: MPart = { u0: hc - mw / 2, u1: hc + mw / 2, v0: front, v1: front - hd, floors: 2, flat: kind === 'glass' };
+    const main: MPart = { u0: hc - mw / 2, u1: hc + mw / 2, v0: front, v1: front - hd, floors: 2, flat: kind === 'glass' || kind === 'deco', ...(kind === 'chateau' ? { roof: 'mansard' as const } : {}) };
     const parts: MPart[] = [main];
     const side = du > hc ? -1 : 1;
+    // An Art Deco house's stepped tower at its end away from the drive; a chateau's round turrets at its front corners
+    if (kind === 'deco') {
+      const tw = 3.2;
+      const u = side < 0 ? main.u0 - tw + 0.6 : main.u1 - 0.6;
+      if (u > -W / 2 + 1.5 && u + tw < W / 2 - 1.5) parts.push({ u0: u, u1: u + tw, v0: front - 0.5, v1: front - hd + 0.5, floors: 3, flat: true });
+    }
+    if (kind === 'chateau')
+      for (const cu of [main.u0, main.u1]) parts.push({ u0: cu - TURRET.r, u1: cu + TURRET.r, v0: front, v1: front - 2 * TURRET.r, floors: 3, roof: 'cone' });
     if (kind === 'villa' || kind === 'compound' || kind === 'summit') {
       // A wing or a guest house to the side away from the drive
       const ww = 3.4;
@@ -182,7 +201,7 @@ function layout(): Mansion[] {
       terraces: kind === 'villa' ? [[back, back - 2.2], [back - 2.2, back - 4.2]] : [],
       reach: kind === 'glass' ? 3 : 0,
       walled: kind === 'compound' || kind === 'summit',
-      car: kind !== 'glass' || r() < 0.6,
+      car: (kind !== 'glass' && kind !== 'deco') || r() < 0.6,
       yard: rect,
     } satisfies Mansion;
   };
@@ -213,6 +232,40 @@ function layout(): Mansion[] {
       break;
     }
   }
+  /**
+   * A mansion off `road` at `d` along it, on its side `s`, its pad `extra` further back than the closest it can be
+   * (`big`: the bigger pad), up a drive straight from the road: or null where it won't fit or would be a quarry
+   */
+  const at = (road: HillRoad, d: number, s: number, extra: number, big: number, kindOf: () => MansionKind, rise = RISE, cut = CUT): Mansion | null => {
+    const { p, u, n } = frameAt(road, d);
+    if (natural(p[0], p[1]) < LOWER || p[1] > HILLS.foot.z - 12) return null;
+    // (no drive where a lamp stands on the verge)
+    const mouth: Pt = [p[0] + n[0] * s * (road.half + 0.3), p[1] + n[1] * s * (road.half + 0.3)];
+    if (CREST_LAMPS.some(([x, z]) => Math.hypot(x - mouth[0], z - mouth[1]) < 3)) return null;
+    const along = Math.abs(u[0]) > Math.abs(u[1]);
+    // (a big pad, or a smaller one where it won't fit)
+    const [a0, a1] = big ? [8, 7] : [6.8, 6.2];
+    const [hx, hz] = along ? [a0, a1] : [a1, a0];
+    const depth = hx * Math.abs(n[0]) + hz * Math.abs(n[1]);
+    const off = road.half + ROAD_CLEAR + PAD_EASE + 0.6 + depth + extra;
+    const c: Pt = [p[0] + n[0] * s * off, p[1] + n[1] * s * off];
+    const rect: Rect = [c[0] - hx, c[1] - hz, c[0] + hx, c[1] + hz];
+    if (!fits(rect)) return null;
+    const face = faceOf([-n[0] * s, -n[1] * s]);
+    const [ox, oz] = outOf(face);
+    // (the drive straight out from the pad's front to the road, along the face's way)
+    const edge: Pt = face === 'e' || face === 'w' ? [face === 'e' ? rect[2] : rect[0], Math.max(rect[1] + 3, Math.min(rect[3] - 3, mouth[1]))] : [Math.max(rect[0] + 3, Math.min(rect[2] - 3, mouth[0])), face === 's' ? rect[3] : rect[1]];
+    // (from where that line meets the road's edge)
+    let t = 0;
+    while (t < 40 && !nearHillRoad(edge[0] + ox * t, edge[1] + oz * t, 0.3)) t += 0.25;
+    if (t >= 40) return null;
+    const kind = kindOf();
+    const start: Pt = [edge[0] + ox * t, edge[1] + oz * t];
+    // (the road's height where the drive meets it)
+    let j = 0;
+    road.pts.forEach((q, i) => (Math.hypot(q[0] - start[0], q[1] - start[1]) < Math.hypot(road.pts[j][0] - start[0], road.pts[j][1] - start[1]) ? (j = i) : 0));
+    return make(kind, road, rect, road.y[j], face, [start, edge], rise, cut);
+  };
   // Along the roads, both sides
   const kinds: MansionKind[] = ['glass', 'villa', 'glass', 'villa', 'compound'];
   let k = 0;
@@ -221,42 +274,34 @@ function layout(): Mansion[] {
     for (let d = 18; d < L - 16; d += 5)
       for (const s of [1, -1])
         for (const [extra, big] of [[0, 1], [3, 1], [6, 1], [9, 1], [0, 0], [4, 0], [8, 0]] as [number, number][]) {
-        const { p, u, n } = frameAt(road, d);
-        if (natural(p[0], p[1]) < LOWER || p[1] > HILLS.foot.z - 12) continue;
-        // (no drive where a lamp stands on the verge)
-        const mouth: Pt = [p[0] + n[0] * s * (road.half + 0.3), p[1] + n[1] * s * (road.half + 0.3)];
-        if (CREST_LAMPS.some(([x, z]) => Math.hypot(x - mouth[0], z - mouth[1]) < 3)) continue;
-        const along = Math.abs(u[0]) > Math.abs(u[1]);
-        // (a big pad, or a smaller one where it won't fit)
-        const [a0, a1] = big ? [8, 7] : [6.8, 6.2];
-        const [hx, hz] = along ? [a0, a1] : [a1, a0];
-        const depth = hx * Math.abs(n[0]) + hz * Math.abs(n[1]);
-        const off = road.half + ROAD_CLEAR + PAD_EASE + 0.6 + depth + extra;
-        const c: Pt = [p[0] + n[0] * s * off, p[1] + n[1] * s * off];
-        const rect: Rect = [c[0] - hx, c[1] - hz, c[0] + hx, c[1] + hz];
-        if (!fits(rect)) continue;
-        const face = faceOf([-n[0] * s, -n[1] * s]);
-        const [ox, oz] = outOf(face);
-        // (the drive straight out from the pad's front to the road, along the face's way)
-        const edge: Pt = face === 'e' || face === 'w' ? [face === 'e' ? rect[2] : rect[0], Math.max(rect[1] + 3, Math.min(rect[3] - 3, mouth[1]))] : [Math.max(rect[0] + 3, Math.min(rect[2] - 3, mouth[0])), face === 's' ? rect[3] : rect[1]];
-        // (from where that line meets the road's edge)
-        let t = 0;
-        while (t < 20 && !nearHillRoad(edge[0] + ox * t, edge[1] + oz * t, 0.3)) t += 0.25;
-        if (t >= 20) continue;
-        const kind = kinds[k % kinds.length];
-        const start: Pt = [edge[0] + ox * t, edge[1] + oz * t];
-        // (the road's height where the drive meets it)
-        let j = 0;
-        road.pts.forEach((q, i) => (Math.hypot(q[0] - start[0], q[1] - start[1]) < Math.hypot(road.pts[j][0] - start[0], road.pts[j][1] - start[1]) ? (j = i) : 0));
-        const m = make(kind, road, rect, road.y[j], face, [start, edge]);
-        if (!m) continue;
-        k++;
-        out.push(m);
-        break;
-      }
+          const m = at(road, d, s, extra, big, () => kinds[k % kinds.length]);
+          if (!m) continue;
+          k++;
+          out.push(m);
+          break;
+        }
+  }
+  // The premium upgrade's Phase 3 (the owner's calls, 2026-11-19: four, Art Deco and chateau by turns; "deeper
+  // terraces + vineyard"): two on terraced lots on the open slopes high up Ridge Road (one cut a metre deeper,
+  // `NEW_LOTS`' cut) and two on vineyard land lower down it (those vineyards moved aside: crestland.ts), each up its
+  // own drive; after the others, so they stand where they stood
+  for (const [id, d, s, extra, kind, deeper] of NEW_LOTS) {
+    const road = HILL_ROADS.find((q) => q.id === id)!;
+    const m = at(road, d, s, extra, 1, () => kind, Math.max(RISE, DRIVE_GRADE * (PAD_EASE + extra)), CUT + deeper);
+    if (m) out.push({ ...m, lot: true });
   }
   return out;
 }
+/**
+ * The new lots (Phase 3): the road, how far along it, which side, how much further back the pad stands than the
+ * closest it can, the kind, and how much deeper than `CUT` its terraces may cut
+ */
+export const NEW_LOTS: [string, number, 1 | -1, number, MansionKind, number][] = [
+  ['crest-ridge', 88, -1, 20, 'deco', 0],
+  ['crest-ridge', 196, 1, 8, 'chateau', 0],
+  ['crest-summit', 19, 1, 0, 'deco', 1],
+  ['crest-ridge', 331, 1, 20, 'chateau', 0],
+];
 /** A flat yard this wide round each pad, a side at most (the owner's call: about 4 tiles), where it fits */
 export const YARD = 4;
 /** The steepest a drive climbs from its road to the pad: the pad's level is never further from the road's than this */
@@ -351,7 +396,7 @@ export function rectToWorld(m: Mansion, u0: number, v0: number, u1: number, v1: 
   return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
 }
 /** A part's top over the pad, roof and all */
-export const topOf = (p: MPart) => STOREY.ground + (p.floors - 1) * STOREY.upper + (p.flat ? 0.35 : 1.4);
+export const topOf = (p: MPart) => STOREY.ground + (p.floors - 1) * STOREY.upper + (p.roof === 'mansard' ? MANSARD.h + 0.1 : p.roof === 'cone' ? TURRET.cone + 0.2 : p.flat ? 0.35 : 1.4);
 /** The wall round a walled pad: its height and thickness, the gate's half gap */
 export const WALL = { h: 1.5, t: 0.4, gate: 1.6 } as const;
 /** The wall's runs in the frame (u0, v0, u1, v1): round the pad just inside its edges, the gate on the drive */

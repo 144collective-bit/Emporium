@@ -61,6 +61,9 @@ const spots: Record<SpotId, Spot> = {
   golfclub: { title: 'Crestmont Hills Club', sub: 'Country club' },
   overlook: { title: 'The Overlook', sub: 'The view' },
   reservoir: { title: 'The Reservoir', sub: 'In the hills' },
+  asterly: { title: 'The Asterly', sub: 'Fine dining' },
+  vellano: { title: 'Vellano Motor Salon', sub: 'Car showroom' },
+  solenne: { title: 'Solenne', sub: 'Spa' },
   harbourmaster: { title: 'Harbour Master', sub: 'Southbank Docks' },
   sunclub: { title: 'Sunridge Club', sub: 'Pool & clubhouse' },
   sunpark: { title: 'Sunridge Park', sub: 'Playground' },
@@ -87,7 +90,7 @@ const spots: Record<SpotId, Spot> = {
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
   home: { title: 'Home', sub: "Degen's place" },
 };
-const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec'];
+const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'vellano', 'solenne', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -640,30 +643,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       </button>
       <ul class="mission-tracker-list" id="mission-tracker-list" data-tracker-list></ul>
     </div>
-    {/* The character screen (charscreen.ts), from the Profile tab: your Degen full size on the podium, turning, zooming to his face, posing, under three lights, with what he wears */}
-    <section class="charscreen mk-skin" data-char hidden role="dialog" aria-modal="true" aria-labelledby="char-title">
-      <header class="char-head">
-        <h2 id="char-title" class="char-title">Your Degen</h2>
-        <button type="button" class="city-panel-close" data-char-close aria-label="Close the character screen">
-          <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
-        </button>
-      </header>
-      <div class="char-stage">
-        <canvas class="char-canvas" data-char-canvas aria-hidden="true"></canvas>
-        <div class="fit-chips char-view" role="group" aria-label="View">
-          <button type="button" class="fit-chip" data-char-view="0" aria-pressed="true">Full</button>
-          <button type="button" class="fit-chip" data-char-view="1" aria-pressed="false">Face</button>
-        </div>
-        <span class="char-hint">Drag to turn · scroll or pinch to zoom</span>
-      </div>
-      <div class="char-side">
-        <div class="fit-row"><span>Pose</span><div class="fit-chips" role="group" aria-label="Pose" data-char-poses></div></div>
-        <div class="fit-row"><span>Light</span><div class="fit-chips" role="group" aria-label="Light" data-char-lights></div></div>
-        <p class="walk-skins-head"><span>Wearing</span></p>
-        <dl class="char-list" data-char-list></dl>
-        <button type="button" class="chip-link char-fit" data-char-fit>Change the look at Drop 001</button>
-      </div>
-    </section>
     {/* The Armoury's store and workbench at its counter (gunshop.ts). The starters unlock with lifetime score; the rest cost Dorras earned in the city, never real money. */}
     {/* The inventory (inventory-ui.ts, Tab): the two weapon slots over a 4 x 4 grid of everything else he carries;
         drag between them, tap to see what a thing does, double tap to use it */}
@@ -951,6 +930,30 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       {tcSymbols.map((ic) => <symbol id={ic.id} viewBox="0 0 16 16"><path d={ic.d} /></symbol>)}
     </svg>
   </div>
+  {/* The character screen (charscreen.ts), from the Profile tab (outside the walk HUD: it opens in City view too): your Degen full size on the podium, turning, zooming to his face, posing, under three lights, with what he wears */}
+  <section class="charscreen mk-skin" data-char hidden role="dialog" aria-modal="true" aria-labelledby="char-title">
+    <header class="char-head">
+      <h2 id="char-title" class="char-title">Your Degen</h2>
+      <button type="button" class="city-panel-close" data-char-close aria-label="Close the character screen">
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
+      </button>
+    </header>
+    <div class="char-stage">
+      <canvas class="char-canvas" data-char-canvas aria-hidden="true"></canvas>
+      <div class="fit-chips char-view" role="group" aria-label="View">
+        <button type="button" class="fit-chip" data-char-view="0" aria-pressed="true">Full</button>
+        <button type="button" class="fit-chip" data-char-view="1" aria-pressed="false">Face</button>
+      </div>
+      <span class="char-hint">Drag to turn · scroll or pinch to zoom</span>
+    </div>
+    <div class="char-side">
+      <div class="fit-row"><span>Pose</span><div class="fit-chips" role="group" aria-label="Pose" data-char-poses></div></div>
+      <div class="fit-row"><span>Light</span><div class="fit-chips" role="group" aria-label="Light" data-char-lights></div></div>
+      <p class="walk-skins-head"><span>Wearing</span></p>
+      <dl class="char-list" data-char-list></dl>
+      <button type="button" class="chip-link char-fit" data-char-fit>Change the look at Drop 001</button>
+    </div>
+  </section>
   <button type="button" class="walk-prompt mk-skin" data-walk-prompt hidden>
     <svg class="tc-icon walk-prompt-tap" viewBox="0 0 16 16" aria-hidden="true"><use href="#tc-act" /></svg>
     <kbd>F</kbd> <span data-walk-label>Enter</span>
@@ -1071,23 +1074,23 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
   <template data-panel-tpl="shop" data-marquee="New fits on the rail">
     <p class="kicker"><span class="kicker-num">02</span> Clothes</p>
     <h2 id="city-panel-title" class="city-panel-title">Drop 001</h2>
-    <p class="city-panel-text">Try on fits. Buy premium pieces.</p>
-    {/* Dress your Degen (fitting.ts): the originals are free, the premium wardrobe costs Dorras earned in the city (never real money, nothing to do with the merch store). */}
+    <p class="city-panel-text">Try on fits. Every piece is free.</p>
+    {/* Dress your Degen (fitting.ts): every piece, colour, mark and print is free, in any colour (docs/wardrobe-plan.md Phase 1; never real money, nothing to do with the merch store). */}
     <section class="fit" data-fit aria-labelledby="fit-title">
       <div class="fit-head">
         <h3 id="fit-title" class="fit-title">Fitting room</h3>
-        <span class="fit-balance" data-fit-balance aria-label="Your Dorras and level"></span>
       </div>
       <div class="fit-stage">
         <canvas class="fit-canvas" data-fit-canvas aria-hidden="true"></canvas>
         <span class="fit-hint" aria-hidden="true">Drag to turn</span>
       </div>
+      <div class="fit-chips fit-ranges" data-fit-ranges role="group" aria-label="Range"></div>
       <div class="fit-tabs" data-fit-tabs role="tablist" aria-label="Wardrobe"></div>
       <div class="fit-merch" data-fit-merch hidden></div>
+      <p class="fit-note" data-fit-empty hidden></p>
       <div class="fit-items" data-fit-items></div>
-      <div class="fit-confirm" data-fit-confirm role="group" aria-label="Confirm the purchase" hidden></div>
       <div class="fit-colors" data-fit-colors></div>
-      <p class="fit-note">Originals are free.</p>
+      <p class="fit-note">Any colour: tap the dropper.</p>
       <button type="button" class="chip-link fit-reset" data-fit-reset>Back to the classic look</button>
     </section>
   </template>
@@ -1259,6 +1262,28 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">The Reservoir</h2>
     <p class="city-panel-text">Still water in the hills. Look, don't swim.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="asterly" data-marquee="Dinner over the city">
+    <p class="kicker"><span class="kicker-num">51</span> Highcrest</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Asterly</h2>
+    <p class="city-panel-text">Fine dining in glass on the ridge, its terrace over the city. Tables coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="vellano" data-marquee="The finest cars in the city">
+    <p class="kicker"><span class="kicker-num">52</span> Coral Drive</p>
+    <h2 id="city-panel-title" class="city-panel-title">Vellano Motor Salon</h2>
+    <p class="city-panel-text">Premium cars for Dorras. Buy one here, drive it from the garage.</p>
+    <div class="market" data-showroom></div>
+    <button type="button" class="chip-link kart-walkin" data-coral-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="solenne" data-marquee="Still water, warm stone">
+    <p class="kicker"><span class="kicker-num">53</span> Coral Drive</p>
+    <h2 id="city-panel-title" class="city-panel-title">Solenne</h2>
+    <p class="city-panel-text">A spa behind frosted glass on Coral Drive. Treatments coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-coral-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="harbourmaster" data-marquee="Ships in, boxes out">
@@ -1745,15 +1770,16 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     }
     /**
      * Into the city once it's up: waking in Degen's room at home (docs/spawn-plan.md), or the fly-in where walking is
-     * closed for now; with no 3D here, onto the page that says so
+     * closed for now (or `view`: the City view, for ?bench and ?shots, which need every site built and him not walking);
+     * with no 3D here, onto the page that says so
      */
-    async function enter(multi: boolean) {
+    async function enter(multi: boolean, view = false) {
       if (entering) return;
       entering = true;
       status.textContent = gl ? 'Entering…' : NO_3D;
       await booted;
       if (multi && server && city) root!.querySelector<HTMLButtonElement>('[data-online-set="on"]')?.click();
-      const woke = city ? await city.wake() : false;
+      const woke = city && !view ? await city.wake() : false;
       closeStart();
       if (city && !woke) city.intro();
       entering = false;
@@ -1834,7 +1860,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     live.onChange(paintLive);
     // (a notice's from and until come round on their own)
     setInterval(() => paintBanner(live.now), 60_000);
-    // ?bench (the benchmark, bench.ts) and ?shots (the review shots, shots.ts): straight into the 3D city, no menu
-    if ((new URLSearchParams(location.search).has('bench') || new URLSearchParams(location.search).has('shots')) && gl) enter(false);
+    // ?bench (the benchmark, bench.ts) and ?shots (the review shots, shots.ts): straight into the 3D city's City view, no
+    // menu and no waking at home (on foot the haze holds the far sites back, and neither starts while he walks)
+    if ((new URLSearchParams(location.search).has('bench') || new URLSearchParams(location.search).has('shots')) && gl) enter(false, true);
   }
 </script>

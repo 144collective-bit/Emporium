@@ -30,6 +30,7 @@ import { ESTATES, ESTATE_SOLIDS, GATE, SLAB_Y, TALLEST as ESTATE_TALLEST, wallTo
 import { MANSIONS, TALLEST as MANSION_TALLEST, toWorld } from '../src/scripts/city3d/mansions';
 import { ESTATE_GARDENS, HEIGHT, MANSION_GARDENS, type Feat } from '../src/scripts/city3d/crestgardens';
 import { deckHip } from '../src/scripts/city3d/roofs3d';
+import { MANSARD } from '../src/scripts/city3d/mansions';
 
 type R = readonly number[];
 const overlap = (a: R, b: R, m = 0) => a[0] < b[2] + m && b[0] < a[2] + m && a[1] < b[3] + m && b[1] < a[3] + m;
@@ -92,13 +93,13 @@ test("the roof terraces: on every hill mansion's roof, railed clear of its chimn
   MANSIONS.forEach((m, i) => {
     const d = ROOF_DECKS[i];
     const p = m.parts[0];
-    assert.equal(d.kind, m.kind === 'glass' ? 'flat' : 'hip');
+    assert.equal(d.kind, m.kind === 'glass' || m.kind === 'deco' ? 'flat' : m.kind === 'chateau' ? 'mansard' : 'hip');
     const [u0, v0, u1, v1] = d.r;
     assert.ok(u1 > u0 + 2 && v1 > v0 + 1.2, `${m.id}'s deck too small`);
     const [a0, b0, a1, b1] = d.rail;
     assert.ok(a0 >= u0 && a1 <= u1 && b0 >= v0 && b1 <= v1 && a1 > a0 + 1.5 && b1 > b0 + 1, `${m.id}'s rail off its deck`);
-    if (d.kind === 'hip') {
-      assert.ok(Math.abs(d.y - (partTop(p) + DECK_HIP.h * DECK_HIP.f)) < 1e-9);
+    if (d.kind === 'hip' || d.kind === 'mansard') {
+      assert.ok(Math.abs(d.y - (d.kind === 'hip' ? partTop(p) + DECK_HIP.h * DECK_HIP.f : partTop(p) + MANSARD.h)) < 1e-9);
       // (the chimney rises outside the rail)
       const cu = p.u0 + MANSION_CHIMNEY.at;
       assert.ok(a0 > cu + MANSION_CHIMNEY.half, `${m.id}'s rail through its chimney`);
@@ -121,7 +122,7 @@ test("the roof terraces: on every hill mansion's roof, railed clear of its chimn
 });
 
 test('the cut hip: drawn to the deck its rules hold', () => {
-  for (const m of MANSIONS.filter((q) => q.kind !== 'glass')) {
+  for (const m of MANSIONS.filter((q) => q.kind !== 'glass' && q.kind !== 'deco' && q.kind !== 'chateau')) {
     const p = m.parts[0];
     const [g] = deckHip(p.u0, p.v0, p.u1, p.v1, partTop(p), DECK_HIP.h, DECK_HIP.o, DECK_HIP.f);
     const pos = g.attributes.position;

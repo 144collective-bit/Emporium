@@ -208,7 +208,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   out by `houseRooms(HOUSE_GEO)` (it imports nothing, so the boot's modules aren't split), fetched as the city starts
   (index.ts), handed to `homeWall()` by `setRooms()`; waking waits for them. A new thing in a room goes there. Phase 3
   (upstairs) is built: the dressing room off the landing (the wardrobe's prompt, `WARDROBE_RECT`), the bedroom past
-  it, the bathroom behind the landing (`DRESS_X`, `BED_DOOR`, `BATH_DOOR`, `BATH_Z`).
+  it, the bathroom behind the landing (`DRESS_X`, `BED_DOOR`, `BATH_DOOR`, `BATH_Z`). Phase 2 (the kitchen and dining)
+  and Phase 4 (the boot room, the laundry, the den in the palette) are built. Phase 5 (polish): his art, made-up shapes
+  in his colours under brass picture lights (home3d.ts `art()`, its looks `Look`: over the bed, in the office, on the
+  landing, in the den), brass wall lights by the front door (`sconce()`), reading lights on swing arms over the
+  bedsides, tall plants (`potted()` draws a plant 0.9 or taller as a tall one: the lounge's front corner, the bedroom,
+  the landing). They reuse the palette's colours: the house's draw calls didn't change.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

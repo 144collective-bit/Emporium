@@ -44,7 +44,11 @@ export type FurnitureKind =
   | 'island'
   | 'stools'
   | 'console'
-  | 'cupboard';
+  | 'boots'
+  | 'laundry'
+  | 'oven'
+  | 'dining'
+  | 'chair';
 
 export type UpKind =
   | 'wall'
@@ -107,13 +111,26 @@ function layOut(g: HouseGeo) {
     { kind: 'table', rect: [rx0 + 1.15, rz0 + 1.65, rx0 + 1.95, rz0 + 2.65], h: 0.2 },
     { kind: 'trophies', rect: [rx0, rz0 + 3.85, rx0 + 0.22, rz0 + 4.95], h: 1.1 },
     { kind: 'plant', rect: [rx0 + 0.06, rz0 + 5.02, rx0 + 0.36, rz0 + 5.32], h: 0.75 },
+    // (a tall one in the lounge's front corner, by the armchair: docs/interior-plan.md Phase 5)
+    { kind: 'plant', rect: [rx0 + 0.06, rz0 + 0.14, rx0 + 0.4, rz0 + 0.48], h: 1.1 },
     { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
-    { kind: 'plant', rect: [rx1 - 0.36, rz1 - 0.36, rx1 - 0.06, rz1 - 0.06], h: 0.55 },
     { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
     { kind: 'stools', rect: [rx0 + 1.15, rz1 - 2.25, rx0 + 3.05, rz1 - 1.88], h: 0.3 },
-    { kind: 'counter', rect: [rx0 + 0.2, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
-    { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.02 },
-    { kind: 'cupboard', rect: [rx1 - 0.55, rz0 + 2.95, rx1, rz0 + 4.15], h: 1.1 },
+    // The kitchen (docs/interior-plan.md Phase 2): the oven's tall unit at the back wall's west end, the run with its sink
+    // under the window, the fridge's tall unit at its east end (the island with its hob and stools, above)
+    { kind: 'oven', rect: [rx0, rz1 - 0.6, rx0 + 0.7, rz1], h: 1.12 },
+    { kind: 'counter', rect: [rx0 + 0.75, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
+    { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.12 },
+    // Dining for four in the corner east of the hall, clear of the way to the side door and to the stairs
+    { kind: 'dining', rect: [DX + 1.1, rz0 + 3.3, DX + 2.5, rz0 + 3.95], h: 0.4 },
+    { kind: 'chair', rect: [DX + 1.25, rz0 + 2.9, DX + 1.6, rz0 + 3.25], h: 0.5 },
+    { kind: 'chair', rect: [DX + 1.95, rz0 + 2.9, DX + 2.3, rz0 + 3.25], h: 0.5 },
+    { kind: 'chair', rect: [DX + 1.25, rz0 + 4.0, DX + 1.6, rz0 + 4.3], h: 0.5 },
+    { kind: 'chair', rect: [DX + 1.95, rz0 + 4.0, DX + 2.3, rz0 + 4.3], h: 0.5 },
+    // The boot room by the side door (docs/interior-plan.md Phase 4): the bench under his coats north of it, the laundry's
+    // tall unit in the corner south of it; both clear of the way out
+    { kind: 'boots', rect: [rx1 - 0.45, rz0 + 3.0, rx1, rz0 + 4.1], h: 0.24 },
+    { kind: 'laundry', rect: [rx1 - 0.65, rz1 - 0.9, rx1, rz1], h: 1.12 },
   ];
 
   /* ---------- Upstairs (Phase 3) ---------- */
@@ -165,6 +182,8 @@ function layOut(g: HouseGeo) {
     { kind: 'bedside', rect: [rx0, rz0 + 2.08, rx0 + 0.34, rz0 + 2.45], h: 0.24 },
     { kind: 'bench', rect: [rx0 + 1.6, rz0 + 0.85, rx0 + 1.9, rz0 + 1.85], h: 0.2 },
     { kind: 'tv', rect: [DRESS_X - PART - 0.05, rz0 + 0.85, DRESS_X - PART, rz0 + 1.85], h: 0.9 },
+    // (a tall plant in its corner by the window: docs/interior-plan.md Phase 5)
+    { kind: 'plant', rect: [DRESS_X - PART - 0.4, rz0 + 0.08, DRESS_X - PART - 0.08, rz0 + 0.4], h: 0.95 },
     // The dressing room: the rails along its back (the wardrobe's prompt), the drawers, the shoe wall, the caps, the mirror
     { kind: 'rails', rect: WARDROBE_RECT, h: 1.05 },
     { kind: 'drawers', rect: [rx0 + 3.95, rz0 + 0.5, rx0 + 5.15, rz0 + 0.9], h: 0.42 },
@@ -176,6 +195,8 @@ function layOut(g: HouseGeo) {
     { kind: 'chair', rect: DESK_CHAIR_RECT, h: 0.5 },
     { kind: 'shelf', rect: [rx0, SPLIT_Z + PART + 0.3, rx0 + 0.3, SPLIT_Z + PART + 1.7], h: 1.0 },
     { kind: 'plant', rect: [LAND_X - PART - 0.4, rz1 - 0.4, LAND_X - PART - 0.1, rz1 - 0.1], h: 0.7 },
+    // The landing's plant, tall, in its corner by the bathroom's wall (Phase 5)
+    { kind: 'plant', rect: [rx1 - 0.42, BATH_Z - 0.42, rx1 - 0.1, BATH_Z - 0.1], h: 1.0 },
     // The bathroom: the toilet and the double basin along its back wall, the shower's screen, the towel rail
     { kind: 'toilet', rect: [LAND_X + PART + 0.05, rz1 - 0.4, LAND_X + PART + 0.35, rz1], h: 0.28 },
     { kind: 'vanity', rect: [rx1 - 2.2, rz1 - 0.4, rx1 - 0.95, rz1], h: 0.42 },

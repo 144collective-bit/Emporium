@@ -476,8 +476,11 @@ export const step = (a: number, b: number, x: number) => {
 /** Up to four bones and their weights, summing to 1 */
 export type Influence = [BoneName, number][];
 
-/** What a piece of the body is, for weighting: where it's drawn (an old rig frame), or a part with rules of its own */
-export type Region = Joint | 'shoe';
+/**
+ * What a piece of the body is, for weighting: where it's drawn (an old rig frame), or a part with rules of its own (a
+ * shoe; the hood up, which grows out of the hoodie's neckline: docs/wardrobe-plan.md Phase 3)
+ */
+export type Region = Joint | 'shoe' | 'hood';
 
 /** Where the joints are at rest, in the figure's space */
 export const REST = {
@@ -541,6 +544,18 @@ function trunk(x: number, y: number): Influence {
   ]);
 }
 
+/** Up the neck: the chest under the collar, the neck, then the head */
+function headWeights(y: number): Influence {
+  const h = y - REST.headY;
+  const t1 = step(-0.065, -0.035, h);
+  const t2 = step(-0.01, 0.03, h);
+  return norm([
+    ['chest', 1 - t1],
+    ['neck', t1 * (1 - t2)],
+    ['head', t1 * t2],
+  ]);
+}
+
 /**
  * The bones a point of the body moves with, by what it's part of (`region`)
  * and where it is at rest (x, y, z in the figure's space). Across each joint
@@ -561,9 +576,13 @@ export function weigh(region: Region, x: number, y: number, z: number): Influenc
       // (the trousers are one piece on the pelvis: each leg by its side)
       const s = region === 'pelvis' ? S : region.endsWith('L') ? 'L' : 'R';
       const shin = step(THIGH - 0.03, THIGH + 0.03, HIP_Y - y);
+      // (the cuff's last few centimetres ride partly with the foot, as a hem resting on the shoe does: the shoe's
+      // collar no longer swings into the cloth when the ankle bends; docs/wardrobe-plan.md Phase 5)
+      const foot = 0.85 * step(ANKLE_H + 0.11, ANKLE_H - 0.005, y);
       return norm([
-        [`leg${s}`, 1 - shin],
-        [`shin${s}`, shin],
+        [`leg${s}`, (1 - shin) * (1 - foot)],
+        [`shin${s}`, shin * (1 - foot)],
+        [`foot${s}`, foot],
       ]);
     }
     case 'armL':
@@ -604,16 +623,16 @@ export function weigh(region: Region, x: number, y: number, z: number): Influenc
         [`shin${S}`, shin],
       ]);
     }
-    case 'head': {
-      // Up the neck: the chest under the collar, the neck, then the head
-      const h = y - REST.headY;
-      const t1 = step(-0.065, -0.035, h);
-      const t2 = step(-0.01, 0.03, h);
-      return norm([
-        ['chest', 1 - t1],
-        ['neck', t1 * (1 - t2)],
-        ['head', t1 * t2],
-      ]);
+    case 'head':
+      return headWeights(y);
+    case 'hood': {
+      // The hood up: where it grows out of the hoodie's neckline, the trunk's own weights (collarbones and all), so it
+      // moves as one with the sweater; handed over to the neck's and the head's up past the jaw
+      const up = step(REST.headY - 0.04, REST.headY + 0.01, y);
+      const w = new Map<BoneName, number>();
+      for (const [n, k] of trunk(x, y)) w.set(n, (w.get(n) ?? 0) + k * (1 - up));
+      for (const [n, k] of headWeights(y)) w.set(n, (w.get(n) ?? 0) + k * up);
+      return norm([...w.entries()]);
     }
   }
 }

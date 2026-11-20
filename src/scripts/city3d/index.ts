@@ -56,6 +56,7 @@ import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
+import { CORAL_SPAWNS } from './coral';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
 import { EDGE_LAMPS as PARK_EDGE_LAMPS, EDGE_TREES as PARK_EDGE_TREES } from './parkedge';
@@ -102,6 +103,7 @@ import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { CableUI } from './cablecar-ui';
 import type { TubeUI } from './tube-ui';
 import type { Tube } from './tube3d';
 import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
@@ -111,8 +113,7 @@ import { YARD_TREES } from './southyard';
 import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
 const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
 import { MONO_STATIONS } from './monorail';
-import { setHeld } from './inventory-save';
-import type { Held } from '../net/profile-data';
+import { CABLE_DOORS } from './cablecar';
 import { PLACES } from './places';
 import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
@@ -889,9 +890,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(INSIDE_SPAWN);
       });
     // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
-    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir') {
+    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(at);
+      });
+    }
+    // Coral Drive's showroom and spa (the premium upgrade's Phase 4): Walk in on the strip in front of each
+    if (id === 'vellano' || id === 'solenne') {
+      const at = CORAL_SPAWNS[id];
+      panelBody.querySelector('[data-coral-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(at);
       });
@@ -1081,6 +1090,37 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     ),
     'the monorail'
   );
+  // Highcrest's cable car (cablecar.ts, the premium upgrade's Phase 4b): its card and rides loaded when a station's door first opens
+  let cableUI: CableUI | null = null;
+  const loadCable = lazy(
+    () =>
+      import('./cablecar-ui').then(({ createCableUI }) =>
+      (cableUI = createCableUI(root, {
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (s) => {
+          works.want(s.at.x, s.at.z, 80);
+          walk.placeAt(s.at);
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          tubeUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+          skyLiftUI?.close();
+        },
+      }))
+    ),
+    'the cable car'
+  );
   // The south's underground line (southline.ts, docs/south-plan.md Phase 4g): its trains (tube3d.ts) loaded the first
   // time you're down by its platforms or ride, running on their timetable from the clock; a door on each platform's
   // middle ("Tube", only down there), its card and rides (tube-ui.ts) loaded the first time one opens
@@ -1241,9 +1281,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
-    // The inventory's "Hold it": the thing goes in his hand on the look (the save's inventory follows it, syncHeld)
-    hold: (held) => profileUI.wear({ ...profileUI.look, held }),
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     openPlace: (id) => {
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
@@ -1284,6 +1322,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         const [, way, i] = id.split(':');
         const l = LIBERTY_LIFTS[Number(i)];
         return rideTo(way === 'up' ? l.up : l.down, 'liberty', 'Liberty Bridge', way === 'up' ? 'Liberty Bridge · High walkway' : 'Liberty Bridge · Deck');
+      }
+      if (id.startsWith('cable:')) {
+        const shut = live.closed('cablecar');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadCable()
+          .then((ui) => ui.open(id.slice(6)))
+          .catch(() => game.toast('Cable car not running · try again'));
       }
       if (id.startsWith('mono:')) {
         const shut = live.closed('monorail');
@@ -1410,18 +1455,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     setLook: (o) => walk.setLook(o),
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
-    openChar: () => void loadCharScreen().then((c) => c.open()),
+    // (the character screen comes in its own chunk the first time it's opened: lazy())
+    openChar: () => void loadChar().then((c) => c.open()).catch(() => {}),
   });
-  // The thing in his hand is a hotbar slot: the save's inventory keeps in step with the look (inventory.ts)
-  const syncHeld = (l: { held: Held | null }) => {
-    if (setHeld(game.save(), l.held)) game.commit();
-  };
-  syncHeld(profileUI.look);
-  profileUI.onChange(syncHeld);
   // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
   kartPark.trophies(game.save().karts.trophies);
-  // The character screen (charscreen.ts): loaded the first time it's opened (the hub's Profile, docs/south-plan.md 6a)
-  const loadCharScreen = lazy(
+  const loadChar = lazy(
     () =>
       import('./charscreen').then(({ createCharScreen }) =>
         createCharScreen({
@@ -1442,7 +1481,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         look: () => profileUI.look,
         apply: (l) => profileUI.wear(l),
         onChange: (fn) => profileUI.onChange(fn),
-        game,
         reduced,
         low: tier === 'low',
       }))
@@ -1562,7 +1600,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || cableUI?.skip() || cableUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }

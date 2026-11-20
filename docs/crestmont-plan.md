@@ -681,10 +681,41 @@ Their answers, in three rounds:
    lanterns and the same gates; the hill houses without a wall get new piers and gates at their drive's mouth
    (`MANSION_PIERS`, solid with the chunk). Phones: the main shapes; bars, balusters, gilding, furniture and leaves
    near only, the lanterns near only.
-3. **New hill mansions:** 3 to 6 on terraced lots on the open slopes, Art Deco and French chateau, each on its own level
-   with a yard, a graded drive and a planted bank, as the others.
-4. **Highcrest:** the hilltop quarter's plaza with THE ASTERLY, SOLENNE and VELLANO MOTOR SALON (or the showroom on
-   Coral Drive: asked at this phase), each a place; a metro or taxi way up.
+3. **New hill mansions** (built; the owner's answers: four, "Half and half", "As planned", "All of them"; then, when the
+   real placement rules found only one open spot with the land kept, "deeper terraces + vineyard"): `NEW_LOTS` in
+   mansions.ts, after the eight already there (which stand as they were): two Art Deco (`deco`: white walls with rounded
+   corners, ribbon windows, portholes, speed lines, a parapet, a stepped tower with fins, a sundeck on its flat roof, a
+   curved canopy over its door, a reflecting pool) and two French chateaux (`chateau`: pale stone with quoins and a
+   string course, tall windows, a slate mansard with dormers and a flat terrace on top, two round turrets under slate
+   cones at its front corners, a raked gravel court, a parterre with statues), by turns. Two stand high up on open land
+   (one off the summit's lane, its terraces cut up to a metre deeper than `CUT`), two lower down Ridge Road on land two
+   vineyards had; those vineyards and a grove the lower drive crosses are moved aside whole (crestland.ts `LAID`,
+   `keep()`), the rest of the land as it was laid. Their long drives cut into the hillside ease back over a wider
+   bank (terrain.ts `RAMP.bank`, the new lots only). Crestmont's north edge (`CREST_RECT`) moved from -380 to -395 to
+   take in the highest. No walls: the Phase 2 gates on lit piers at their drives, balconies (glass on the Art Deco,
+   stone on the chateaux), roof terraces, festoons and pool lights as the other hill houses.
+4. **Highcrest** (the owner's answers, 2026-11-20: "Split", "Panels + the showroom sells", the names kept; the way up
+   an aerial cable car, after the straight funicular lines from the Flats proved long, gentle and over the hill houses'
+   ground; two PRs):
+   - **4a, the places (built):** the hills had no room left for a three-building plaza (every spot beside a road near
+     the overlook on a hill house's ground), so THE ASTERLY (crestsites.ts `ASTERLY`) is a glass pavilion off the
+     overlook's falling side, its floor level with it, standing out over the slope on slim legs (no ground cut or
+     built up), its view terrace beyond, a bridge from a gap in the overlook's rail to its door; a HIGHCREST marker
+     stone at the overlook's way in. On Coral Drive two boutiques are refitted where they stood (coral.ts
+     `CORAL_PLACES`): VELLANO MOTOR SALON (HALCYON's front, now glass, its ground floor open behind it with a car on
+     show) and SOLENNE (IVORY HALL's, white render, frosted windows). Each a place with its panel, live line, Walk in,
+     door and pin; the showroom's panel sells the game's cars for Dorras through the garage's rules (tycoon-ui.ts
+     `showroomView()`, tycoon.ts `buyCar()`), THE ASTERLY's and SOLENNE's insides coming soon.
+   - **4b, the cable car (built; the owner's answers: "Foothill Road's east end", "Ride shown, then walk", "Glass
+     gondolas"):** `cablecar.ts` (the rules), `cablecar3d.ts` (the drawing), `cablecar-ui.ts` (the ride). A station
+     just north of Foothill Road at the Flats' east end, the line about 225 m straight up over the hills and the
+     reservoir to a station on legs beside THE ASTERLY, level with it; three slim white pylons on clear ground, none
+     taller than the Emporium (the rope's room over the ground and the hill houses' real roofs, `CLEAR`, a cabin's foot
+     lower only near the stations); eight glass gondolas round the loop on the clock, lit at night, still under reduced
+     motion. Each station's door ("Cable car") opens the station card: Ride up or Ride down, about twenty seconds under
+     a camera alongside the cabin, Skip ride or Esc to cut to the end, then you walk on at the other station (the top
+     one's door on the overlook by THE ASTERLY's bridge). Both stations are places on the map; the cable car is a live
+     feature (`cablecar`) the owner can close.
 5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
 6. **Residents at leisure and cyclists on the hills.**
 

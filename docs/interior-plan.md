@@ -39,9 +39,14 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    south end), a cognac armchair under the front window, a black marble coffee table on a rug, a brass arc lamp. He
    wakes on the sofa facing the TV (`HOME_WAKE`, `SOFA_SEAT`). The trophy wall moves along the west wall, south of the
    media wall. The stash box goes: the stash is a vault door in the den's north wall (`home:stash` in the basement). Shots: `docs/interior-shots/phase-1-*`.
-2. **The kitchen and dining.** A working kitchen along the back wall: a hob with an extractor over it, an oven and
-   the fridge in tall walnut units, a sink with its tap under the window, open brass shelves; the island in black
-   marble with leather stools; a dining table for four with its pendant.
+2. **The kitchen and dining.** *Built, signed off by the owner (2026-11-20), live.* (Built third, the owner's order.) homerooms.ts
+   `FURNITURE`: the oven's tall walnut unit at the back wall's west end (two ovens stacked, black glass, brass
+   handles), the run in walnut with a black marble top and the sink under the window with its brass tap, the fridge's
+   tall walnut unit at its east end (the white fridge gone); the island in walnut with a thick black marble top down
+   its ends, the hob set in its kitchen side, a black extractor with a brass band hung over it from the ceiling, two
+   brass pendants, cognac leather stools with low backs on brass legs; dining for four in the corner east of the hall
+   (`dining`, four `chair`s: a walnut table on black steel legs, a runner and a brass bowl, cognac chairs, a black
+   pendant over it), clear of the ways to the side door and the stairs. Shots: `docs/interior-shots/phase-2-*`.
 3. **Upstairs: the bathroom and the walk-in wardrobe.** *Built, signed off by the owner (2026-11-19), live.* (Built second, the
    owner's order.) First the rooms' lists left the boot, which was full (the owner's pick): `homerooms.ts` lays them
    out on home.ts's `HOUSE_GEO`, in its own small chunk that imports nothing, fetched as the city starts (index.ts);
@@ -58,8 +63,26 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    steel-framed screen with a brass rain head, a brass towel rail. **The office** in the palette (a walnut desk, a
    cognac chair). The upstairs windows drawn where they are outside (`houseWindows()`). Shots:
    `docs/interior-shots/phase-3-*`.
-4. **The utility and boot room, and the den in the palette.** By the side door: a washer and a dryer, coat hooks and a
-   bench. The den keeps its screens and LEDs, its furniture in the palette.
-5. **Polish.** Lighting (strips, wall lights), art of his own, plants, the review shots and the phone checks.
+4. **The utility and boot room, and the den in the palette.** *Built, signed off by the owner (2026-11-20), live.* homerooms.ts
+   `FURNITURE`: by the side door, the boot room (`boots`: the east wall behind it in the deep green, a walnut bench with
+   a cognac cushion, his trainers under it, a brass rail of hooks over it with his jackets and a cap; the old cupboard
+   gone) and the laundry's tall walnut unit in the corner south of the door (`laundry`: the washer and the dryer
+   stacked, white fronts with round dark doors, a cupboard over them; the hall's plant gone), the door's way clear
+   between them. The den in the palette: charcoal walls, dark walnut boards, a dark ceiling, a rug in the lounge's,
+   a black marble table, a walnut desk, the bar in walnut and black marble with cognac stools on brass, his chair in
+   cognac; its LEDs, screens, arcade and vault kept. The room's curtains in the media wall's deep green (they were
+   red). Shots: `docs/interior-shots/phase-4-*`.
+5. **Polish.** *Built, signed off by the owner (2026-11-20), live.* **His art** (home3d.ts `art()`): four framed pieces of his
+   own, made up (shapes in his colours, no words, numbers or faces), brass frames, a brass picture light over each:
+   *dusk* (a brass sun going down behind dark hills, on the deep green) over the bed, *stack* (leaning blocks on cream)
+   in the office on the landing's partition, *bars* (his colours on black, a magenta moon) on the landing's east wall,
+   *tiles* (his neon colours on black) in the den past the arcade. **Lighting**: brass wall lights either side of the
+   front door (`sconce()`); the bedside lamps off the tables, brass reading lights on swing arms off the green wall
+   instead, a book on each table. **Plants**: tall ones (a black pot with a brass rim, a stem, three crowns: `potted()`
+   for any 0.9 or taller) in the lounge's front corner by the armchair, in the bedroom's corner by the window, on the
+   landing by the bathroom's wall (in `FURNITURE` and `UPSTAIRS`, solid), a small one on the bathroom's basin unit.
+   **Phones**: the house's draw calls where he wakes are the same before and after (309 on a desktop, 197 on a phone:
+   every new piece reuses the palette's colours), the boot unchanged. Shots: `docs/interior-shots/phase-5-*`.
 
 Each with the owner's sign-off. The owner's order (2026-11-19): Phase 3 (upstairs) after Phase 1, then the kitchen.
+The plan is complete.

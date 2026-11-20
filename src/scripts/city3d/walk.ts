@@ -33,7 +33,7 @@ import { SUN_DOORS } from './sunplaces';
 import { FIGURE_SCALE } from './skeleton';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { HOLDING, PLAYER, RELAXED, createDegen, type Outfit } from './character';
+import { PLAYER, RELAXED, createDegen, type Outfit } from './character';
 import { LAND_CROUCH, LAND_ROLL, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { Contact } from './contact';
@@ -49,7 +49,6 @@ import type { Sfx } from './combat';
 import { createCombatLazy } from './combat-lazy';
 import { lazy } from './lazy';
 import type { Hotbar } from './inventory-ui';
-import type { Held } from '../net/profile-data';
 import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
 import { onDeck } from './waterfront';
@@ -108,6 +107,7 @@ import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { HARBOUR_MASTER } from './docksport';
 import { SITE_DOORS } from './crestsites';
+import { CORAL_DOORS } from './coral';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
 import { hillsAlong, onHills } from './terrain';
@@ -140,7 +140,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** The landmarks' doors, Trench Avenue's, the stadium's gate, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, ...CORAL_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }];
 /** Doors with a word of their own (the viewpoints: nothing to enter) */
 const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out' };
 /** Prompts that say their own label (the rest say "Enter ...") */
@@ -316,8 +316,6 @@ export interface WalkDeps {
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
   openPlace(id: string): void;
-  /** Put a thing in Degen's hand from the inventory (the look's `held`: profile-ui.ts wears it, the save follows) */
-  hold(held: Held): void;
   /** The economy, for the shops in walk mode (buying, mods) */
   game: GameDeps;
   /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
@@ -403,9 +401,6 @@ export function createWalk(d: WalkDeps) {
   let contactMod: typeof import('./contact') | null = null;
   let contact: Contact | null = null;
   let contactRot: Float32Array | null = null;
-  /** The thing in his hand behaving (heldpose.ts, with the on-foot chunk): its schedule and swing, and the turns it lays on */
-  let heldLife: ReturnType<typeof import('./heldpose').createHeldLife> | null = null;
-  let heldRot: Float32Array | null = null;
   const contactBoxes: Box[] = [];
   const contactPeople: { x: number; z: number }[] = [];
   /** The peek: how far he's leaning (-1 his left to 1 his right), eased; the gamepad's lean, the touch corner's, and when it was looked for */
@@ -924,7 +919,6 @@ export function createWalk(d: WalkDeps) {
           game: d.game,
           combat,
           touched: d.touched,
-          hold: d.hold,
           // The inventory (Tab): the mouse freed for dragging, Degen stood still, as at a counter
           opened() {
             still();
@@ -2802,7 +2796,6 @@ export function createWalk(d: WalkDeps) {
     if (!combat.armed) owedPitch = owedYaw = 0;
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
-    if (hero.held) hero.held.visible = (hotbar ? hotbar.heldOut : !combat.armed) && !carrying;
     hotbar?.update();
     // Both hands on the gun (after walking and jumping have posed the arms)
     const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
@@ -2831,7 +2824,7 @@ export function createWalk(d: WalkDeps) {
     // The hands on the motion capture: as the playing take closes them (animator.ts GRIP), unless something's in them
     if (animator && mocapW > 0 && !P.grip) {
       const g = RELAXED + (animator.grip - RELAXED) * mocapW;
-      P.grip = [g, hero.held?.visible ? Math.max(g, HOLDING) : g];
+      P.grip = [g, g];
     }
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
@@ -2858,7 +2851,6 @@ export function createWalk(d: WalkDeps) {
           contactMod = cm;
           contact = cm.createContact({ hands: !d.low });
           contactRot = new Float32Array(animator.rot.length);
-          heldRot = new Float32Array(animator.rot.length);
           mocapState = 'on';
         },
         // (it can be tried again: the procedural walk carries on meanwhile; say so once, so a reverted-looking
@@ -2909,27 +2901,11 @@ export function createWalk(d: WalkDeps) {
             rot = contactRot;
           }
         }
-        // The thing in his hand behaving (heldpose.ts, the polish plan's Phase 8): the cup to his lips now and then, the
-        // phone read standing still and glanced at on the walk, the briefcase swinging on his hand; not while something
-        // else has his arms (a gun, an emote, a slide, a vault, a moment, the fists up, a crate)
-        if (onFoot && outfit.held && hero.held?.visible && u < 0.5 && !moments.active && !carrying) {
-          heldLife ??= onFoot.createHeldLife(0.37);
-          heldLife.update(dt, outfit.held, speed, !emote && !slide && !over && guardAmt < 0.05 && !combat.armed);
-          if (heldLife.layer.kind) {
-            if (rot === animator.rot && heldRot) {
-              heldRot.set(animator.rot);
-              rot = heldRot;
-            }
-            onFoot.applyHeld(rot, animator.hips, heldLife, dt);
-          }
-        } else heldLife?.update(dt, null, speed, false);
         anim.applyTo(hero.rig, rot, animator.hips, w, u, face - drawFace);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5 + gazePitch, w * (1 - u));
         // Follow-through (follow.ts): the head a few frames behind the chest as it turns
         const trail = headFollow.update(dt, drawFace + anim.chestYaw(hero.rig));
         if (!firstPerson) anim.addLook(hero.rig, trail, 0, w * (1 - u));
-        // (anything in his hand held out in front of it, clear of his leg; not while it's up at his face)
-        if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u) * (1 - (heldLife?.layer.reach ?? 0)));
       }
       root0.roll = loco.root.roll * (1 - mocapW);
       root0.pitch = loco.root.pitch * (1 - mocapW);
@@ -3317,7 +3293,6 @@ export function createWalk(d: WalkDeps) {
       d.scene.add(hero.g);
       combat.setOutfit(o);
       fistsView?.setOutfit(o);
-      heldLife?.reset();
     },
     playEmote(id: string) {
       emote = { id, t: 0 };

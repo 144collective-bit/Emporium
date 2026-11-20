@@ -199,6 +199,8 @@ export const KIND_PLANTS: Record<MansionKind, { beds: PlantKind[]; drift: PlantK
   glass: { beds: ['grass', 'agave'], drift: ['grass', 'agave', 'sage'] },
   compound: { beds: ['bougainvillea', 'rosemary'], drift: ['rosemary', 'bougainvillea', 'sage'] },
   summit: { beds: ['box', 'lavender'], drift: ['lavender', 'box', 'sage'] },
+  deco: { beds: ['grass', 'agave'], drift: ['grass', 'sage', 'agave'] },
+  chateau: { beds: ['box', 'lavender'], drift: ['lavender', 'box', 'rosemary'] },
 };
 /** The tallest a bank's plant stands over the ground (a little over a tier wall) */
 export const PLANT_TALLEST = 0.9;

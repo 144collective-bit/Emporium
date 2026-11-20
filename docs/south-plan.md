@@ -688,7 +688,7 @@ From the Circus west, patchy as high roads are:
      KB); a trim before anything else is added (drawing-only data and
      features used later moved out to lazy chunks), its budget kept.
      Built and signed off (2026-11-20): the character
-     screen (`charscreen.ts`, `loadCharScreen()` in index.ts, the first
+     screen (`charscreen.ts`, `loadChar()` in index.ts, the first
      time it opens), the sound by district (`ambience.ts`, fetched after
      the boot; the sound left alone till it's in: nothing's heard till
      Sound is on) and the gamepad's handling (`walkpad.ts`, fetched the
