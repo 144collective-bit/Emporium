@@ -54,9 +54,12 @@ const BUDGETS = {
    * chunks read went to drawn.ts and the searches were baked first), leaving room for the premium upgrade's phases;
    * the wardrobe plan's Phases 1-8 (docs/wardrobe-plan.md, raised for it on its own branch the same day, the owner's
    * call) take about 8 of that room: the player's figure draws every piece he can wear at the boot (wardrobe.ts), the
-   * crowd dresses by district (crowdlook.ts); the fitting room is its own chunk
+   * crowd dresses by district (crowdlook.ts); the fitting room is its own chunk; and from 760 to 765 on purpose (the
+   * owner's call, 2026-11-20): with the wardrobe merged the boot stood at 758.8, and the inventory's Phase 5 (the
+   * energy drink, the nitro, the flyers and their boosts, boosts.ts and the sellers, read by tycoon.ts and walk.ts at
+   * the boot) took it to 760.7, leaving about 4 KB for the next small feature
    */
-  bootJs: 760,
+  bootJs: 765,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**
