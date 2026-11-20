@@ -687,6 +687,16 @@ From the Circus west, patchy as high roads are:
    - **6a, room in the boot**: the boot has about 1 KB left (749.0 of 750
      KB); a trim before anything else is added (drawing-only data and
      features used later moved out to lazy chunks), its budget kept.
+     Built (2026-11-20, waiting for the owner's sign-off): the character
+     screen (`charscreen.ts`, `loadCharScreen()` in index.ts, the first
+     time it opens), the sound by district (`ambience.ts`, fetched after
+     the boot; the sound left alone till it's in: nothing's heard till
+     Sound is on) and the gamepad's handling (`walkpad.ts`, fetched the
+     first time a connected pad's seen: walk.ts `pollPad`) out of the
+     boot: 749.0 to 745.7 KB. The boot's budget is 760 since the owner's
+     call of 2026-11-19 in another session (scripts/budget.mjs), so
+     there's 14.3 KB of room for 6c to 6e. Smoke: on foot, the gamepad,
+     and the character screen and Sound by hand.
    - **6b, polish**: phones (the low tier's trims on the south's chunks,
      `?bench` views of the south and their draw calls), every width
      (320 to 1440, phones upright and on their side) of the south's cards

@@ -78,7 +78,6 @@ import { LENS, cityNear, nearFor } from './lens';
 import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
-import { createCharScreen } from './charscreen';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
 import { createSound } from './soundlazy';
 import type { Account } from './account';
@@ -94,7 +93,7 @@ import { buildBigLots } from './biglots';
 import { buildCornerShops } from './cornershops';
 import { buildBeacons } from './beacons';
 import { createTravelUI } from './travel-ui';
-import { ambienceAt } from './ambience';
+import type { Ambience, ambienceAt as AmbienceAt } from './ambience';
 import type { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
 import type { MetroUI } from './metro-ui';
@@ -1407,7 +1406,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     setLook: (o) => walk.setLook(o),
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
-    openChar: () => charScreen.open(),
+    openChar: () => void loadCharScreen().then((c) => c.open()),
   });
   // The thing in his hand is a hotbar slot: the save's inventory keeps in step with the look (inventory.ts)
   const syncHeld = (l: { held: Held | null }) => {
@@ -1417,14 +1416,21 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   profileUI.onChange(syncHeld);
   // The kart park's trophy cabinet shows the cups you've won (kartpark3d.ts; a race updates it as it pays)
   kartPark.trophies(game.save().karts.trophies);
-  const charScreen = createCharScreen({
-    root,
-    look: () => profileUI.look,
-    onChange: (fn) => profileUI.onChange(fn),
-    openFitting: () => open('shop', true),
-    reduced,
-    low: tier === 'low',
-  });
+  // The character screen (charscreen.ts): loaded the first time it's opened (the hub's Profile, docs/south-plan.md 6a)
+  const loadCharScreen = lazy(
+    () =>
+      import('./charscreen').then(({ createCharScreen }) =>
+        createCharScreen({
+          root,
+          look: () => profileUI.look,
+          onChange: (fn) => profileUI.onChange(fn),
+          openFitting: () => open('shop', true),
+          reduced,
+          low: tier === 'low',
+        })
+      ),
+    'the character screen'
+  );
   loadFitting = lazy(
     () =>
       import('./fitting').then(({ createFitting }) =>
@@ -1785,7 +1791,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
   lifeSfx = (k, g) => sound.sfx(k, g);
-  let amb = ambienceAt(controls.target.x, controls.target.z);
+  // The sound by district (ambience.ts): fetched after the boot (docs/south-plan.md 6a; nothing's heard till Sound is
+  // on), the sound left alone till it's in
+  let ambienceAt: typeof AmbienceAt | null = null;
+  void import('./ambience').then((m) => (ambienceAt = m.ambienceAt)).catch(() => {});
+  let amb: Ambience | null = null;
   let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {
     const btns = root.querySelectorAll<HTMLButtonElement>(`[data-${name}]`);
@@ -2237,7 +2247,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // The sound follows the district you're in (ambience.ts): where you walk, or where the City view looks
     // (its height softening it), a few times a second
     ambT -= dt;
-    if (ambT <= 0) {
+    if (ambT <= 0 && ambienceAt) {
       ambT = 0.25;
       amb = walking ? ambienceAt(walk.position.x, walk.position.z, 0, undefined, walk.position.y) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
       // (up on his roof terrace he's out of doors: home.ts)
@@ -2247,7 +2257,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const ear = walking ? walk.position : controls.target;
     const heard = walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120);
     // (the el's rumble overhead, and Lava Lagoon's volcano erupting: stripmarks.ts; still under reduced motion)
-    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * heard, reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard);
+    if (amb) sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * heard, reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard);
 
     if ((!reduced || dirty || flight) && (!covered || frames === 0 || t - coveredAt >= 1)) {
       if (covered) coveredAt = t;

@@ -66,7 +66,7 @@ import type { HangarUI } from './hangar-ui';
 import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
 import { HUT_DOOR, circuitSurfaceAt as trackSurfaceAt } from './kartcircuit';
-import { pollPad as pollPadOf, type PadHost, type PadState } from './walkpad';
+import type { PadHost, PadState, pollPad as PollPad } from './walkpad';
 import { onKey as onKeyOf, type KeyHost } from './walkkeys';
 import { wireTouch, type TouchHost } from './walktouch';
 import { KART_PARK } from './kartpark';
@@ -2112,7 +2112,21 @@ export function createWalk(d: WalkDeps) {
     toggleInv,
     stepSlot,
   };
-  const pollPad = (dt: number) => pollPadOf(Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected), dt, padState, padHost);
+  // The gamepad's handling (walkpad.ts): fetched the first time a pad's connected (docs/south-plan.md 6a), nothing to
+  // poll till then
+  let pollPadOf: typeof PollPad | null = null;
+  let padLoading = false;
+  const pollPad = (dt: number) => {
+    const gp = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
+    if (pollPadOf) return pollPadOf(gp, dt, padState, padHost);
+    if (gp && !padLoading) {
+      padLoading = true;
+      void import('./walkpad').then(
+        (m) => (pollPadOf = m.pollPad),
+        () => (padLoading = false)
+      );
+    }
+  };
 
   /* ---------- Per frame ---------- */
 
