@@ -46,12 +46,21 @@ keep it up to date when what it describes changes.
     tape on the cloth (`stripe()`); the puffer's baffles are rounded
     pillows (`quilt()`); the shades' chain lies on each top's collar and
     chest (`chainOn()`, an item per top, `chain-<kind>`).
-  - `tests/clothing.test.ts` (with `tests/dress.ts`: dressed and posed on
-    the CPU as the GPU skins him) holds every outfit's trousers inside its
-    top and the top outside them, within 2 mm, through keyed poses, the
+  - The clipping tests (with `tests/dress.ts`: dressed and posed on the
+    CPU as the GPU skins him) hold every outfit's trousers inside its top
+    and the top outside them, within 2 mm, through keyed poses, the
     emotes, the fight's clips and the animator running, sprinting and
     crouching; `CLOTHING_REPORT=1` prints the worst. Shells it checks are
-    pieces with `shell` (`top`, `bottom`). The lab's clipping view is
+    pieces with `shell` (`top`, `bottom`). `tests/clothing.ts` holds the
+    outfits (`OUTFITS`), the poses (worked out once a file and replayed for
+    every outfit: `each()`) and the layers' check (`layersOf()`);
+    `clothing-layers-1` and `-2` run it on half the outfits each (two files,
+    so the runner checks them side by side: about 4 minutes, from 28 in
+    one), and `clothing.test.ts` the shoes, the hood and the headphones.
+    `inside()` in dress.ts files the shells' triangles by height and depth
+    and skips those behind the point, and `posed()` works in plain numbers:
+    the same answers as three's maths to the last bit, in a fraction of the
+    time (2026-11-20). The lab's clipping view is
     `?anim&clip` (the top, trousers and shoes in colours far apart).
   - The desktop level (Phase 2): `Detail` 3, single figures on the high
     and medium tiers (`figureDetail()` in character.ts, set from the tier
@@ -311,7 +320,7 @@ keep it up to date when what it describes changes.
     the left sleeve; in every per-top table (`TORSOS`, `CHAINS`, `TOPS`).
     A new top needs all three, its card in `fitting.ts`, its name in
     `charscreen.ts`, a nearest kind for the crowd (`fit()` in crowdlook.ts)
-    and its line in `clothing.test.ts`'s `OUTFITS`.
+    and its line in `tests/clothing.ts`'s `OUTFITS`.
   - **The coach jacket, the puffer vest and the tee** (`docs/wardrobe-plan.md`
     Phase 5): the coach (`CK`) a light shell with a fold-over collar, snaps
     and a drawcord hem; the vest the puffer's body over long sleeves in the
@@ -372,9 +381,9 @@ keep it up to date when what it describes changes.
     with: the crowd's, `bottomsFor()` / `shoesFor()`); the suit's shirt,
     collar and cuffs take the outfit's `shirt` colour (the crowd's the shirt
     white). Every bottoms is cut on the one `SEAT` inside every top's hips,
-    so `tests/clothing.test.ts` holds every top over every bottoms (both
+    so `clothing-layers-1` and `-2` hold every top over every bottoms (both
     detail levels, every pose); the shoes' uppers are `shell: 'shoe'` and
-    the same file holds each bottoms over each shoe to `ANKLE` (0.009) at
+    `tests/clothing.test.ts` holds each bottoms over each shoe to `ANKLE` (0.009) at
     the ankle as the foot flexes.
   - Four detail levels (`Detail`): 3 for single figures on desktops and 2
     on phones (`createDegen()`: the player, other players, the fitting
