@@ -36,9 +36,11 @@ export interface DrawBreakdown {
 
 type Draw = (camera: THREE.Camera, scene: THREE.Object3D, geometry: THREE.BufferGeometry, material: THREE.Material, object: THREE.Object3D, group: unknown) => void;
 
-/** The name a draw goes down to: the mesh's own, or its nearest named parent's; else `?` and what it's drawn with */
+/** The name a draw goes down to: the mesh's own, or its nearest named parent's; else (under ?made) the code that added
+ * it; else `?` and what it's drawn with */
 export function drawName(object: THREE.Object3D, material: THREE.Material) {
   for (let o: THREE.Object3D | null = object; o; o = o.parent) if (o.name) return o.name;
+  for (let o: THREE.Object3D | null = object; o; o = o.parent) if (o.userData.made) return `@${o.userData.made as string}`;
   const c = (material as THREE.MeshBasicMaterial).color;
   return `?${material.name || material.type}${c?.isColor ? ` #${c.getHexString()}` : ''}`;
 }
@@ -83,4 +85,34 @@ export function captureDraws(renderer: { renderBufferDirect: Draw }, scene: THRE
   }
   const out = [...rows.values()].map(({ seen: _, ...r }) => r).sort((a, b) => b.draws - a.draws || a.what.localeCompare(b.what));
   return { total, byPass, far: farDraws, rows: out };
+}
+
+/** The files (and lines) in a stack that aren't three's or this one's: what made a thing */
+export function makerOf(stack: string, depth = 2) {
+  const out: string[] = [];
+  for (const line of stack.split('\n')) {
+    const m = line.match(/\/([\w.-]+?)(?:\.[\w-]{8})?\.(?:ts|js|mjs)(?:\?[^:)]*)?:(\d+)/);
+    if (!m || /^(three|drawrows|chunk|BufferGeometryUtils)/.test(m[1])) continue;
+    out.push(`${m[1]}:${m[2]}`);
+    if (out.length >= depth) break;
+  }
+  return out.join('<');
+}
+
+/**
+ * ?made (with ?fps; docs/phone-far-plan.md Phase 1): from here on, each thing added to the scene with no name of its own
+ * is tagged with the code that added it (`userData.made`, read by `drawName()`), so the breakdown can say what made it.
+ * For measuring only: it reads a stack on every add
+ */
+export function tagMakers() {
+  const add = THREE.Object3D.prototype.add;
+  THREE.Object3D.prototype.add = function (this: THREE.Object3D, ...objs: THREE.Object3D[]) {
+    let made = '';
+    for (const o of objs) {
+      if (o.name || o.userData.made) continue;
+      made ||= makerOf(new Error().stack ?? '');
+      o.userData.made = made;
+    }
+    return add.apply(this, objs);
+  };
 }

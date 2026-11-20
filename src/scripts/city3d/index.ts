@@ -206,6 +206,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     await (await import('./anim-lab')).openLab(root, { reduced, low: ((root.dataset.tier as Tier) || pickTier(device()).tier) === 'low' });
     return null;
   }
+  // ?made (with ?fps): each unnamed thing added to the scene tagged with the code that added it (drawrows.ts)
+  if (new URLSearchParams(location.search).has('made')) (await import('./drawrows')).tagMakers();
   // When each part of the boot finished (the ?fps readout and the benchmark)
   const bootAt = { start: performance.now(), art: 0, scene: 0, tiled: 0, built: 0, compiled: 0, first: 0, waits: 0 };
   // Building, apart from waiting on the browser (a frame drawn between steps, the canvas sized): the city's own work

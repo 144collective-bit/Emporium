@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
-import { captureDraws, drawName } from "../src/scripts/city3d/drawrows";
+import { captureDraws, drawName, makerOf } from "../src/scripts/city3d/drawrows";
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const mesh = (name = "", color = "#ff0000") => {
@@ -99,4 +99,21 @@ test("the draw breakdown counts each draw by what made it and its pass, and the 
     (out.rows.find((r) => r.what === "near-thing" && r.pass === "main")?.near ??
       99) < 10,
   );
+});
+
+test('the draw breakdown names an unnamed thing by the code that made it', () => {
+  const stack = [
+    'Error',
+    '    at Object3D.add (http://x/node_modules/.vite/deps/three.js?v=1:100:5)',
+    '    at tagged (http://x/src/scripts/city3d/drawrows.ts:90:3)',
+    '    at addGlow (http://x/src/scripts/city3d/kit.ts?t=1:412:9)',
+    '    at buildPark (http://x/src/scripts/city3d/westlake3d.ts:88:3)',
+    '    at boot (http://x/src/scripts/city3d/index.ts:900:3)',
+  ].join('\n');
+  assert.equal(makerOf(stack), 'kit:412<westlake3d:88');
+  // (a built chunk's hash left off)
+  assert.equal(makerOf('    at a (http://x/_astro/westlake3d.Bx9_k2Qa.js:1:2000)', 1), 'westlake3d:1');
+  const m = mesh();
+  m.userData.made = 'kit:412<westlake3d:88';
+  assert.equal(drawName(m, m.material), '@kit:412<westlake3d:88');
 });
