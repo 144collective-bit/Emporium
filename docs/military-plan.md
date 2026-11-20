@@ -613,3 +613,10 @@ last measure looks at that step. The boot 741.5 KB of 750.
 | The branch | **A pull request into main**, for the owner to review and merge (a push to main goes live). |
 | What to plan next (planning only: nothing built without the owner's go) | **All four**: the range as a place (target practice, dummies and drones only), the hangar as a place (a new made-up, unarmed aircraft to fly from it), opening the wall gate (the storyline's first way out: the owner's story), and the review tool's night sky from high. |
 
+## The boot budget with main merged (2026-11-20, the owner's call)
+
+With main's 188 commits merged into the branch (ab80986), the build was just over two budgets: the boot 765.9 of 765 KB
+and the textures 4950.5 of 4950. The base's drawing-only data moved to `airbasedress.ts` (its chunks' only) and its
+signs' atlas was halved (1024 by 256): the textures 4941.5 (fits), the boot 765.6. The owner's call: **the boot budget
+from 765 to 767 on purpose** (scripts/budget.mjs, its reason written beside it).
+

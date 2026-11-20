@@ -57,9 +57,12 @@ const BUDGETS = {
    * crowd dresses by district (crowdlook.ts); the fitting room is its own chunk; and from 760 to 765 on purpose (the
    * owner's call, 2026-11-20): with the wardrobe merged the boot stood at 758.8, and the inventory's Phase 5 (the
    * energy drink, the nitro, the flyers and their boosts, boosts.ts and the sellers, read by tycoon.ts and walk.ts at
-   * the boot) took it to 760.7, leaving about 4 KB for the next small feature
+   * the boot) took it to 760.7, leaving about 4 KB for the next small feature; and from 765 to 767 on purpose (the
+   * owner's call, 2026-11-20): with main merged into Northgate Air Base's branch the boot stood at 765.6 (the base's
+   * lines, solids, lamps, keep, look and sound at the boot, about 4.6 KB, its drawing-only data moved to its chunks'
+   * airbasedress.ts first; docs/military-plan.md)
    */
-  bootJs: 765,
+  bootJs: 767,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**
