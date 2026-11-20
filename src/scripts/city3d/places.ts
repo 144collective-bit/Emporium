@@ -24,6 +24,7 @@ import { STADIUM_SPAWN } from './stadium';
 import { TOWER_SPAWN } from './skydeck';
 import { COURT_SPAWN, MALL_SPAWN } from './mall';
 import { SITE_SPAWNS } from './crestsites';
+import { CORAL_SPAWNS } from './coral';
 import { HM_SPAWN } from './docksport';
 import { SUN_SPAWNS } from './sunplaces';
 import { LOT9_SPAWN } from './lot9';
@@ -87,7 +88,9 @@ export const PLACES: Place[] = [
   { id: 'palmcourt', kind: 'spot', spot: 'palmcourt', at: COURT_SPAWN },
   { id: 'mall', kind: 'spot', spot: 'mall', at: MALL_SPAWN },
   // Crestmont's landmarks (crestsites.ts): where you arrive at each, facing it
-  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
+  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
+  // Coral Drive's refitted showroom and spa (coral.ts, the premium upgrade's Phase 4): on the strip in front of each
+  ...(['vellano', 'solenne'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: CORAL_SPAWNS[id] })),
   // Southbank Docks' Harbour Master (docksport.ts): on the sidewalk, facing its door
   { id: 'harbourmaster', kind: 'spot', spot: 'harbourmaster', at: HM_SPAWN },
   // Sunridge's club, park and school (sunplaces.ts): on the loop's sidewalk in front of each, facing it

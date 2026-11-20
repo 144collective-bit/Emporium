@@ -107,6 +107,7 @@ import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { HARBOUR_MASTER } from './docksport';
 import { SITE_DOORS } from './crestsites';
+import { CORAL_DOORS } from './coral';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
 import { hillsAlong, onHills } from './terrain';
@@ -139,7 +140,7 @@ type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | '
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
 /** The landmarks' doors, Trench Avenue's, the stadium's gate, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }];
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, ...CORAL_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }];
 /** Doors with a word of their own (the viewpoints: nothing to enter) */
 const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out' };
 /** Prompts that say their own label (the rest say "Enter ...") */

@@ -8,7 +8,8 @@
 import * as THREE from 'three';
 import { PAL, PICK, fx, glowMat } from './kit';
 import type { Spot } from './landmarks';
-import { CIVIC, CLUB, HOTEL, OVERLOOK, RESERVOIR, SLAB_Y } from './crestsites';
+import { ASTERLY, CIVIC, CLUB, HOTEL, OVERLOOK, RESERVOIR, SLAB_Y } from './crestsites';
+import { CORAL_PLACES, SLAB_Y as CORAL_Y, heightOf } from './coral';
 import type { Rect } from './crestmont';
 import type { SpotId } from '../../lib/city';
 
@@ -46,5 +47,8 @@ export function buildCrestSpots(scene: THREE.Scene): Spot[] {
     spot(scene, 'golfclub', CLUB.y, [{ rect: CLUB.house, h: CLUB.storey.ground + CLUB.storey.upper + 1.3 }], CLUB.pad, 7.4, tower(CLUB.house)),
     spot(scene, 'overlook', OVERLOOK.y, [{ rect: OVERLOOK.rect, h: 1.2 }], OVERLOOK.rect, 4),
     spot(scene, 'reservoir', RESERVOIR.y, [{ rect: RESERVOIR.water, h: 1 }], RESERVOIR.water, valve.h + 3, [valve.x, valve.z]),
+    // (the premium upgrade's Phase 4: THE ASTERLY off the overlook, Coral Drive's showroom and spa)
+    spot(scene, 'asterly', ASTERLY.y, [{ rect: ASTERLY.body, h: ASTERLY.h + ASTERLY.roof }], ASTERLY.body, ASTERLY.h + 3),
+    ...(['vellano', 'solenne'] as const).map((id) => spot(scene, id, CORAL_Y, [{ rect: CORAL_PLACES[id].rect, h: heightOf(CORAL_PLACES[id]) }], CORAL_PLACES[id].rect, heightOf(CORAL_PLACES[id]) + 2.4)),
   ];
 }

@@ -244,3 +244,18 @@ keep it up to date when what it describes changes.
   takes moved aside whole (`keep()`): two vineyards and a grove. A new lot's
   drive cut into the hillside eases over a wider bank (terrain.ts
   `RAMP.bank`); Crestmont's north edge is -395 (`CREST_RECT`).
+  Phase 4a, Highcrest's places ("Split", "Panels + the showroom sells"):
+  THE ASTERLY (crestsites.ts `ASTERLY`, `ASTERLY_NAME`; drawn in
+  crestsites3d.ts as the site `crestmont asterly`) off the overlook's
+  falling side on legs over the slope as it is, its door at a gap in the
+  overlook's rail (`SITE_DOORS`, `SITE_SPAWNS.asterly`), its body and
+  terrace's rail solid (`SITE_SOLIDS`), the planting kept off under it
+  (`onSite()`); the `HIGHCREST_NAME` marker at the overlook's way in. Coral
+  Drive's refits (coral.ts `CORAL_PLACES`, `CORAL_PLACE_NAMES`,
+  `CORAL_DOORS`, `CORAL_SPAWNS`; a `Boutique`'s `place`): VELLANO MOTOR
+  SALON's ground floor open behind clear glass with its car on show
+  (coral3d.ts `SHOW_CAR`), SOLENNE's frosted windows. Their panels are in
+  CityMap.astro (kickers 51 to 53), their walk-ins in index.ts, their pins in
+  crestspots.ts, their live lines in livelines.ts; the showroom's cars are
+  the tycoon's `vellano` panel (tycoon-boot.ts `PANELS`, tycoon-ui.ts
+  `showroomView()`), bought with tycoon.ts `buyCar()`.
