@@ -248,6 +248,20 @@ export function compact(g: THREE.BufferGeometry, paint: boolean, dropUv = false)
 
 /** How much room a batched mesh is made with past what it holds, so sites built later mostly fit */
 const ROOM = 1.25;
+/**
+ * The most room a mesh keeps past what it holds (bytes): a big one grows a step at a time, not a quarter of itself at
+ * once (the phone's biggest, the paint material's, holds about 57 MiB: a quarter was 14 MiB in one go;
+ * docs/military-plan.md, the owner's call). Each step copies and uploads the whole mesh, so it isn't made too small
+ */
+export const ROOM_MAX = 4 * 1024 * 1024;
+/** How many of `n` (vertices or indices, `bytes` each) a mesh is made to hold: `ROOM` over, at most `ROOM_MAX` over */
+export const roomFor = (n: number, bytes: number) => Math.ceil(n + Math.min(n * (ROOM - 1), ROOM_MAX / Math.max(1, bytes)));
+/** A batched mesh's bytes a vertex (its attributes'), and an index's */
+function strides(bm: THREE.BatchedMesh): [number, number] {
+  let v = 0;
+  for (const a of Object.values(bm.geometry.attributes)) v += (a as THREE.BufferAttribute).array.BYTES_PER_ELEMENT * (a as THREE.BufferAttribute).itemSize;
+  return [v, bm.geometry.index ? bm.geometry.index.array.BYTES_PER_ELEMENT : 4];
+}
 /** A mesh is made smaller only when what it holds (and `ROOM`) is under this share of it */
 const TRIM = 0.8;
 
@@ -420,7 +434,8 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
     if (bm.unusedVertexCount < verts || bm.unusedIndexCount < indices) {
       const usedV = fields._maxVertexCount - bm.unusedVertexCount;
       const usedI = fields._maxIndexCount - bm.unusedIndexCount;
-      bm.setGeometrySize(Math.ceil((usedV + verts) * ROOM), Math.ceil((usedI + indices) * ROOM));
+      const [sv, si] = strides(bm);
+      bm.setGeometrySize(roomFor(usedV + verts, sv), roomFor(usedI + indices, si));
     }
     if (bm.instanceCount + count > bm.maxInstanceCount) bm.setInstanceCount(Math.ceil((bm.instanceCount + count) * ROOM));
   }
@@ -487,8 +502,9 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         const f = bm as unknown as { _maxVertexCount: number; _maxIndexCount: number };
         bm.optimize();
         set.holes = 0;
-        const v = Math.max(1, Math.ceil((f._maxVertexCount - bm.unusedVertexCount) * ROOM));
-        const i = Math.max(1, Math.ceil((f._maxIndexCount - bm.unusedIndexCount) * ROOM));
+        const [sv, si] = strides(bm);
+        const v = Math.max(1, roomFor(f._maxVertexCount - bm.unusedVertexCount, sv));
+        const i = Math.max(1, roomFor(f._maxIndexCount - bm.unusedIndexCount, si));
         if (v > f._maxVertexCount * TRIM && i > f._maxIndexCount * TRIM) continue;
         const before = size(bm.geometry);
         bm.setGeometrySize(Math.min(v, f._maxVertexCount), Math.min(i, f._maxIndexCount));

@@ -89,6 +89,7 @@ export function createSound(given?: AudioContext) {
   let marketGain: GainNode | null = null;
   /** The kart park: engines idling in the pits, a tannoy's murmur */
   let kartIdle: { g: GainNode; tannoy: GainNode } | null = null;
+  let baseEngines: GainNode | null = null;
   /** Southfield Yards: a compressor running behind the sheds (a low chug through a low-pass) and a reversing beep now and then */
   let yardGain: GainNode | null = null;
   /** By the wall: a low hum off its face (docs/wall-plan.md Phase 6) */
@@ -1625,6 +1626,35 @@ export function createSound(given?: AudioContext) {
         }
         kartIdle.g.gain.setTargetAtTime(a.karts * 0.016, t, 1.5);
         kartIdle.tannoy.gain.setTargetAtTime(a.karts * 0.012, t, 1.5);
+      }
+      // Northgate Air Base: far engines across the field (two low saws a little apart, through a low-pass, swelling slowly)
+      if (a.airbase > 0.02 || baseEngines) {
+        if (!baseEngines) {
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = 240;
+          lp.Q.value = 0.8;
+          const g = ctx.createGain();
+          g.gain.value = 0;
+          const swell = ctx.createGain();
+          swell.gain.value = 0.7;
+          const lfo = ctx.createOscillator();
+          lfo.frequency.value = 0.07;
+          const depth = ctx.createGain();
+          depth.gain.value = 0.3;
+          lfo.connect(depth).connect(swell.gain);
+          lp.connect(swell).connect(g).connect(master);
+          for (const f of [61, 63.7]) {
+            const o = ctx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.value = f;
+            o.connect(lp);
+            o.start();
+          }
+          lfo.start();
+          baseEngines = g;
+        }
+        baseEngines.gain.setTargetAtTime(a.airbase * 0.009, t, 2);
       }
       // Southfield Yards: a compressor chugging behind the sheds (brown noise through a low-pass, chopped by a fast LFO), a truck reversing now and then
       if (a.yards > 0.02 || yardGain) {

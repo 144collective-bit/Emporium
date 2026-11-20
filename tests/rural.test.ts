@@ -3,6 +3,7 @@
 // traffic drives every one of them (a little), and their verges, ditches, fences, gates and lamps lie beside them on the
 // open land, clear of everything else, the trees kept off.
 import { test } from 'node:test';
+import { GATE_ROAD_ENDS } from '../src/scripts/city3d/airbase';
 import assert from 'node:assert/strict';
 import { PLAN, distToStreet, onSlab, raised } from '../src/scripts/city3d/streetplan';
 import { EXT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
@@ -32,9 +33,11 @@ test('every grid road out past the highway carries on as a country road to near 
     const town = PLAN.streets.find((q) => q.id === r.of)!;
     assert.ok(distToStreet(town, join.at) < 1e-6);
     assert.ok(!insideHighway(...join.at));
-    // (to its loop near the edge, inside where you can drive)
+    // (to its loop near the edge, inside where you can drive; or, the two north of the stadium, at Northgate Air
+    // Base's gates: airbase.test.ts)
     const edge = r.out > 0 ? EXT[1] : EXT[0];
-    assert.ok(Math.abs(edge - r.to) < RURAL.edge + RURAL.turn * 2 + RURAL.half + 1);
+    if (r.gated) assert.equal(r.to, GATE_ROAD_ENDS[r.id]);
+    else assert.ok(Math.abs(edge - r.to) < RURAL.edge + RURAL.turn * 2 + RURAL.half + 1);
     const loop = PLAN.streets.find((q) => q.id === `${r.id}-turn`)!;
     assert.ok(loop && loop.loop && loop.oneway);
     for (const [x, z] of loop.pts) assert.ok(x > WORLD_BOUNDS[0] + RURAL.half && x < WORLD_BOUNDS[2] - RURAL.half && z > WORLD_BOUNDS[1] + RURAL.half && z < WORLD_BOUNDS[3] - RURAL.half);

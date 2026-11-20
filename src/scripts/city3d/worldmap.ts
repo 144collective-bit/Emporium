@@ -43,6 +43,7 @@ import { EAST_X as COURT_EAST, NORTH as COURT_NORTH, SOUTH as COURT_SOUTH, WEST_
 import { TERRAIN_RECT, heightAt } from './terrain';
 import { EXITS } from './viaduct';
 import { exitBadge } from './viadress';
+import { AVENUE, AVENUE_HALF, FENCE, GATES, VISITORS, VISITOR_CENTRE, guardhouseOf } from './airbase';
 
 export interface WorldMapDeps {
   /** Where you are and which way you face (walking), else where the camera looks */
@@ -274,6 +275,19 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     for (const r of [CREST_HOTEL.body, CREST_HOTEL.tower, CIVIC.hall, CIVIC.tower, GOLF_CLUB.house, SUN_CLUBHOUSE.rect, ...SUN_SCHOOL.wings, LOT9_OFFICE.rect, LOT9_LAUNDRY.rect]) rect([...r], C.tower);
     // (Lot 9's fence, wandering round the park and its camp: lot9.ts)
     poly(LOT9_FENCE);
+    ctx.closePath();
+    ctx.strokeStyle = C.tower;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // (Northgate Air Base, airbase.ts: its fence round the north, the parade avenue, the visitors' car park and centre,
+    // the gates' guardhouses)
+    rect(VISITORS, C.slab);
+    for (const r of [VISITOR_CENTRE, ...GATES.map(guardhouseOf)]) rect(r, C.tower);
+    poly(AVENUE);
+    ctx.strokeStyle = C.road;
+    ctx.lineWidth = Math.max(1, AVENUE_HALF * 2 * view.s);
+    ctx.stroke();
+    poly(FENCE);
     ctx.closePath();
     ctx.strokeStyle = C.tower;
     ctx.lineWidth = 1;

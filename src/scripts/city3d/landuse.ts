@@ -48,6 +48,7 @@ import { distTo, inside } from './streetfaces';
 import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
+import { AIRBASE_RECT, VISITORS, airbaseKeep } from './airbase';
 
 /** How far further out a margin may wobble (tiles), and the noise's size (tiles across a swell) */
 export const WOBBLE = 3;
@@ -176,6 +177,9 @@ export const KEEPS: Keep[] = [
   ...line('south-brook', BROOK, BROOK_HALF + 2, false, true),
   { ...shaped('south-rec', boxOf(REC), 1, (x, z, m) => inside(REC, [x, z]) || distTo(REC, [x, z], true) < m), since: true },
   { ...shaped('lot9', LOT9_RECT, 2, inLot9), since: true },
+  // Northgate Air Base (airbase.ts, docs/military-plan.md Phase 1): its fence's line, gates, visitors' area, avenue and
+  // the lots kept for later (the rest of it keeps its woods)
+  { ...shaped('airbase', [AIRBASE_RECT[0], AIRBASE_RECT[1], AIRBASE_RECT[2], VISITORS[3]], 2, airbaseKeep), since: true },
   ...line('lot9-path', LOT9_PATH, 1.5, false, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it
