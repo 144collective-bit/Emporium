@@ -376,8 +376,8 @@ export const wardrobeEntry = (id: string) => WARDROBE_CATALOG.find((w) => w.id =
 
 /* ---------- Consumables (the inventory, docs/inventory-plan.md) ---------- */
 
-/** Things Degen carries a few of and uses up: the snack first, more to follow */
-export type ItemId = 'snack';
+/** Things Degen carries a few of and uses up (the inventory plan's Phase 5 added the three after the snack; what they do: boosts.ts) */
+export type ItemId = 'snack' | 'energy' | 'nitro' | 'flyers';
 export interface ItemEntry {
   name: string;
   price: number;
@@ -386,9 +386,14 @@ export interface ItemEntry {
   blurb: string;
   /** Where it's sold (the Bag says so) */
   where: string;
+  /** Where it's used, as the toast says it when it can't be used here */
+  use: string;
 }
 export const ITEM_CATALOG: Record<ItemId, ItemEntry> = {
-  snack: { name: 'Snack', price: 500, level: 1, blurb: 'Restores health in a spar', where: 'the diners and the Night Market' },
+  snack: { name: 'Snack', price: 500, level: 1, blurb: 'Restores health in a spar', where: 'the diners and the Night Market', use: 'Eat it in a spar' },
+  energy: { name: 'Energy drink', price: 800, level: 1, blurb: 'Run faster, never out of breath, for 30 s', where: "Uptown's coffee carts", use: 'Drink it on foot' },
+  nitro: { name: 'Nitro can', price: 2500, level: 3, blurb: 'A burst of speed in your car (N)', where: "Kestrel Fuel's kiosk", use: 'Use it in your car' },
+  flyers: { name: 'Flyers', price: 1500, level: 2, blurb: 'Twice the customers at your stall for 5 min', where: "Uptown's newsstands", use: 'Hand them out at your stall' },
 };
 export const ITEM_IDS = Object.keys(ITEM_CATALOG) as ItemId[];
 /** How many of each he can carry */

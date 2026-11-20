@@ -15,7 +15,7 @@
 export type Job =
   | 'move' | 'look' | 'sprint' | 'walk' | 'jump' | 'crouch' | 'interact' | 'camera' | 'hotbar' | 'inventory' | 'map' | 'menu'
   | 'emotes' | 'punch' | 'kick' | 'block' | 'guard' | 'dodge' | 'fire' | 'aim' | 'reload' | 'peek' | 'holster' | 'steer' | 'gas'
-  | 'brake' | 'handbrake' | 'horn' | 'climb' | 'drift' | 'item' | 'snack' | 'quit' | 'skip';
+  | 'brake' | 'handbrake' | 'horn' | 'climb' | 'drift' | 'item' | 'snack' | 'nitro' | 'quit' | 'skip';
 
 export interface Binding {
   job: Job;
@@ -49,6 +49,8 @@ const map = (pad = true): Binding => ({ job: 'map', label: 'World map', keys: ['
 const menu = (keys = true): Binding => ({ job: 'menu', label: 'Menu', keys: keys ? ['Esc'] : [], pad: ['Start'], touch: '☰' });
 const quit = (label: string): Binding => ({ job: 'quit', label, keys: ['Esc'], pad: ['Start'], touch: 'Quit' });
 const horn: Binding = { job: 'horn', label: 'Horn', keys: ['H'], pad: ['L3'], touch: 'Horn' };
+/** A nitro can from the bag (docs/inventory-plan.md Phase 5): your car's and your motorbike's */
+const nitro: Binding = { job: 'nitro', label: 'Nitro', keys: ['N'], pad: ['X'], touch: 'Nitro' };
 const steer = (label = 'Steer'): Binding => ({ job: 'steer', label, keys: ['A', 'D', '←', '→'], pad: ['Left stick'], touch: 'Stick' });
 const gas = (label = 'Gas'): Binding => ({ job: 'gas', label, keys: ['W', '↑'], pad: ['RT'], touch: label });
 const brake = (label = 'Brake · reverse', touch = 'Brake'): Binding => ({ job: 'brake', label, keys: ['S', '↓'], pad: ['LT'], touch });
@@ -96,11 +98,11 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
   },
   car: {
     name: 'Your car',
-    binds: [steer(), gas(), brake(), { job: 'handbrake', label: 'Handbrake', keys: ['Space'], pad: ['A'] }, horn, camera('Camera'), look(), interact('Get out'), map(), menu()],
+    binds: [steer(), gas(), brake(), { job: 'handbrake', label: 'Handbrake', keys: ['Space'], pad: ['A'] }, horn, nitro, camera('Camera'), look(), interact('Get out'), map(), menu()],
   },
   bike: {
     name: 'Your motorbike',
-    binds: [steer(), gas(), brake(), horn, camera('Camera'), look(), interact('Get off'), map(), menu()],
+    binds: [steer(), gas(), brake(), horn, nitro, camera('Camera'), look(), interact('Get off'), map(), menu()],
   },
   boat: {
     name: 'The hire boat',

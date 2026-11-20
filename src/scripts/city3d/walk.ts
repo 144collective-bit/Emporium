@@ -84,7 +84,8 @@ import type { KartPark, KartRace, KartUI } from './kart-types';
 import { CUPS } from './kart-cups';
 import type { KartInput } from './kart-sim';
 import { abandonSeries, seriesNext } from './tycoon';
-import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, addSolids, rayBoxes, type Box } from './solids';
+import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, STALL_SPOT, TURNTABLE_BOX, WALK_SPAWN, addSolids, rayBoxes, type Box } from './solids';
+import { ENERGY, createBoosts } from './boosts';
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
@@ -729,8 +730,8 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'car') (drive.active ? getOut() : getIn());
       else if (n.id === 'put') putDown();
       else if (n.id === 'bench' || n.id === 'stand') return;
-      // (a snack is bought there and then: the mouse stays captured)
-      else if (n.id.startsWith('place:snack:')) hotbar?.snack(n.id.slice(12));
+      // (a snack, an energy drink, a nitro can or flyers are bought there and then: the mouse stays captured)
+      else if (n.id.startsWith('place:buy:')) hotbar?.buy(n.id.slice(10));
       else if (n.id.startsWith('place:')) {
         if (document.pointerLockElement === canvas) document.exitPointerLock();
         d.openPlace(n.id.slice(6));
@@ -929,10 +930,25 @@ export function createWalk(d: WalkDeps) {
             still();
           },
           closed: () => canvas.focus({ preventScroll: true }),
+          // (Phase 5: what can be used here; the energy drink on foot, the nitro at your own car's or bike's wheel)
+          here: () => ({
+            onFoot: !drive.active && !fly.active && !karts.active && !boat?.active && !fighting() && !ride,
+            car: drive.active && (drive.vehicle?.kind === 'car' || drive.vehicle?.kind === 'bike'),
+            atStall: !drive.active && Math.hypot(pos.x - STALL_SPOT.x, pos.z - STALL_SPOT.z) < 1.6,
+          }),
+          boosts,
+          now: boostNow,
         });
       }),
     'your bag'
   );
+  /** The consumables' boosts on him (boosts.ts, the inventory plan's Phase 5): the energy drink and the nitro, on this clock */
+  const boosts = createBoosts();
+  const boostNow = () => performance.now() / 1000;
+  /** How many nitro cans, in the speed readout's Nitro button */
+  const nitroN = root.querySelector<HTMLElement>('[data-drive-nitro-n]');
+  /** N in your car (X on a gamepad, the touch Nitro button): a nitro can from the bag */
+  const useNitro = () => void (hotbar ? hotbar.use('nitro') : loadHotbar().then(() => hotbar?.use('nitro')));
   /** Pick a hotbar slot (0-6), or step through the fists and the guns */
   const pickSlot = (n: number) => (hotbar ? hotbar.pick(n) : void loadHotbar().then(() => hotbar?.pick(n)));
   /** Open or close the inventory (Tab, the Bag button, View on a gamepad) */
@@ -1747,6 +1763,7 @@ export function createWalk(d: WalkDeps) {
 
   /** The keyboard (walkkeys.ts, docs/walk-plan.md Phase 2): what it reads and calls of walk mode */
   const keyHost: KeyHost = {
+    nitro: useNitro,
     d,
     get active() {
       return active;
@@ -1948,6 +1965,7 @@ export function createWalk(d: WalkDeps) {
 
   /** The touch controls (walktouch.ts, docs/walk-plan.md Phase 3): the page, walk mode's shared objects, and what they read and call */
   const touchHost: TouchHost = {
+    nitro: useNitro,
     d,
     get active() {
       return active;
@@ -2011,6 +2029,7 @@ export function createWalk(d: WalkDeps) {
   /** The gamepad (walkpad.ts, docs/walk-plan.md Phase 1): what it reads and calls of walk mode, and what it fills */
   const padState: PadState = { pad, drive: padDrive, kart: padKart, fly: padFly, fight: padFight };
   const padHost: PadHost = {
+    nitro: useNitro,
     d,
     get hotbar() {
       return hotbar;
@@ -2210,7 +2229,10 @@ export function createWalk(d: WalkDeps) {
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padDrive.steer) steer = padDrive.steer;
     if (padDrive.throttle) throttle = padDrive.throttle;
-    driven += drive.update(dt, { throttle, steer, handbrake: jumpHeld || padDrive.handbrake });
+    // (a nitro can burning: your car or bike only, never the kart)
+    const kind = drive.vehicle?.kind;
+    const boost = kind !== 'kart' && boosts.on('nitro', boostNow()) ? 1 : 0;
+    driven += drive.update(dt, { throttle, steer, handbrake: jumpHeld || padDrive.handbrake, boost });
     // Every ten tiles the distance goes on the save's counters (missions watch them)
     if (driven >= 10) {
       count(d.game.save(), 'driven', Math.floor(driven));
@@ -2380,6 +2402,11 @@ export function createWalk(d: WalkDeps) {
     if (!drive.active && !karts.active) setNear(baseNear);
     pollPad(dt);
     cardFrame(dt);
+    // (the boosts on now, as chips, whatever he's in; Nitro on touch while there's a can for your car or bike)
+    hotbar?.paintBoosts();
+    const cans = drive.active && drive.vehicle?.kind !== 'kart' ? (d.game.save().inventory.items.nitro ?? 0) : 0;
+    if (cans > 0 !== root.classList.contains('has-nitro')) root.classList.toggle('has-nitro', cans > 0);
+    if (cans > 0 && nitroN && nitroN.textContent !== String(cans)) nitroN.textContent = String(cans);
     kartUI.update(dt);
     fightUI.update(dt);
     if (ride) return rideFrame(dt, t);
@@ -2478,6 +2505,8 @@ export function createWalk(d: WalkDeps) {
       ? fists!.brawl.step(hitStop > 0 ? 0 : dt, pos.x, pos.z, face, { punch: fightBtns.punch, kick: fightBtns.kick, dodge: fightBtns.dodge, guard: guardHeld, sprinting: sprint && mag > 0.1, dx: dirX, dz: dirZ })
       : null;
     if (!fighting()) fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
+    // (an energy drink on: never out of breath)
+    if (fistsOn && boosts.on('energy', boostNow())) fists!.brawl.refill();
     const guardUp = fistsOn && fists!.brawl.up;
     const rooted = fistsOn && fists!.brawl.rooted;
     if (fistsOn !== fistsShown) {
@@ -2491,7 +2520,9 @@ export function createWalk(d: WalkDeps) {
     if (guardUp !== root.classList.contains('is-guard')) root.classList.toggle('is-guard', guardUp);
     // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp ? fistsMod!.BRAWL.guardSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    // (an energy drink on: his run and sprint quicker, boosts.ts ENERGY)
+    const pep = boosts.on('energy', boostNow()) ? ENERGY.speed : 1;
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT * pep : walkLock ? WALK : RUN * pep, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp ? fistsMod!.BRAWL.guardSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
@@ -3386,6 +3417,9 @@ export function createWalk(d: WalkDeps) {
     exit() {
       hideCard();
       lastMode = null;
+      boosts.clear();
+      hotbar?.paintBoosts();
+      root.classList.remove('has-nitro');
       // Leaving walk mode on a ride: it ends where it is
       if (ride) {
         const r = ride;

@@ -1591,6 +1591,34 @@
   text-transform: uppercase;
   color: #9a9ca4;
 }
+/* The nitro in the readout (Phase 5): its can and how many, a tap fires one; only in your car or on your bike with one in the bag */
+.drive-nitro {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 2px 7px 2px 5px;
+  border: 2px solid #ff8a3d;
+  background: #ff8a3d1f;
+  color: #ff8a3d;
+  font-family: "Pixelify Sans", var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.drive-nitro svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+.drive-nitro i {
+  font-style: normal;
+}
+.city.is-driving.has-nitro .drive-nitro {
+  display: inline-flex;
+}
 .drive-gear {
   margin-left: 4px;
   padding: 2px 7px;
