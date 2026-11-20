@@ -12,8 +12,8 @@ the base adds anything; the owner's pick (2026-11-19) was to trim first,
 and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
 airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built and signed off**
-(2026-11-19, measured below). **Phase 4 (life, night and sound) is built** (2026-11-20, measured below: a
-little over its allowance in three numbers), waiting on the owner's call.
+(2026-11-19, measured below). **Phase 4 (life, night and sound) is built and
+trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is under way.**
 
 ## The owner's answers (2026-11-18)
 
@@ -558,4 +558,20 @@ helicopter's round of the base, as more of its parked fleets: on phones only the
   250 ms (the gate's 24 ms). The wide world passes (the searchlights now look in square to their fence: dcb24cd).
 - **Over:** the gate's draws (+21 of 15: the jeep's two and the crowd's near detail on the sentries, most likely), the
   stadium view's triangles (+0.05M of 0.03M) and the memory (+0.9 of 0.5). The owner's call: trim, or take it.
+
+## Phase 4 trimmed (2026-11-20, e13c54a; the owner's call: trim, and Degen ready for Phase 5)
+
+The jeep drawn as one mesh (its paint merged with its detail), the motor pool's moving truck and the gates' sentries
+left out. Against Phase 3, on the phone:
+
+| View | Draws (allowance +15) | Triangles (allowance +0.03M) |
+| --- | --- | --- |
+| The north, from over the stadium | 68 → 66 | 0.103M → 0.100M |
+| Northgate Air Base, from high | 67 → 68 (+1) | 0.104M → 0.104M |
+| The main gate | 112 → 112 | 0.210M → 0.204M |
+| The runway | 70 → 70 | 0.087M → 0.090M |
+
+All within it. **Memory:** memcheck read 177.5 MiB of 187 (it read 172.4 before the trim, with more drawn): a tile
+batch's growth step (up to 4 MiB of room) landing in this run, not the base. It passes, 9.5 under the ceiling; Phase 5's
+last measure looks at that step. The boot 741.5 KB of 750.
 
