@@ -12,7 +12,8 @@ import { site } from './tilework';
 import type { Tick } from './world';
 import { heightAt } from './terrain';
 import { drawnAt } from './drawn';
-import { CABIN_H, CABLE, CABLE_STATIONS, CABLE_VIEW, LINE_DIR, LINE_L, PYLON, PYLON_AT, SUPPORTS, cabinsAt, lineAt, ropeY, type CableStation } from './cablecar';
+import { CABIN_H, CABLE, CABLE_STATIONS, type CableStation } from './cablecar';
+import { CABLE_VIEW, LINE_DIR, LINE_L, PYLON, PYLON_AT, SUPPORTS, cabinsAt, lineAt, ropeY } from './cableline';
 
 const WHITE = toon('#f4f1ea');
 const STONE = toon('#d9cfbb');

@@ -4,7 +4,8 @@
 // ground; the cabins round the loop on the clock; a ride from either end to the other in about twenty seconds.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CABIN_H, CABLE, CABLE_DOORS, CABLE_SOLIDS, CABLE_STATIONS, CLEAR, LINE_L, PYLON_AT, SUPPORTS, cabinAt, cabinsAt, lineAt, needAt, rideAt, ropeY, stationOf } from '../src/scripts/city3d/cablecar';
+import { CABIN_H, CABLE, CABLE_DOORS, CABLE_STATIONS, CLEAR, stationOf } from '../src/scripts/city3d/cablecar';
+import { CABLE_SOLIDS, LINE_L, PYLON_AT, SUPPORTS, cabinAt, cabinsAt, lineAt, needAt, rideAt, ropeY } from '../src/scripts/city3d/cableline';
 import { heightAt } from '../src/scripts/city3d/terrain';
 import { nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { onMansion } from '../src/scripts/city3d/mansions';

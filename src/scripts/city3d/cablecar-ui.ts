@@ -7,7 +7,8 @@
  * monorail. Under reduced motion the ride is a cut.
  */
 import * as THREE from 'three';
-import { CABLE_VIEW, CABIN_H, LINE_DIR, rideAt, stationOf, type CableStation, type CableStationId } from './cablecar';
+import { CABIN_H, stationOf, type CableStation, type CableStationId } from './cablecar';
+import { CABLE_VIEW, LINE_DIR, rideAt } from './cableline';
 import type { Ride } from './walk';
 import { rideView } from './views';
 

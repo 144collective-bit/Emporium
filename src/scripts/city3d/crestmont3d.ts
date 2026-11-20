@@ -32,7 +32,7 @@ import { GATEWAY_SOLIDS } from './crestgate';
 import { MANSION_PIERS } from './crestgrand';
 import { registerGate } from './crestgate3d';
 import { registerCable } from './cablecar3d';
-import { CABLE_SOLIDS } from './cablecar';
+import { CABLE_SOLIDS } from './cableline';
 import { CREST_CROSSINGS, FLATS_STREETS, FOOTHILL_Z, HILL_ROADS } from './crestmont';
 import { COVER, KERB, ROAD } from './palette';
 
