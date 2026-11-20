@@ -210,7 +210,7 @@ export const AIRBASE_SOLIDS: Box[] = [
 ];
 
 /** The nearest a point is to a run */
-function toRun(x: number, z: number, [a, b]: [Pt, Pt]) {
+export function toRun(x: number, z: number, [a, b]: [Pt, Pt]) {
   const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
   const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
   return Math.hypot(x - (a[0] + dx * t), z - (a[1] + dz * t));
@@ -325,34 +325,6 @@ export const AIRFIELD_SOLIDS: Box[] = [
   ...SHELTERS.map(([x, z]): Box => [x - SHELTER.w / 2, z - SHELTER.d, x + SHELTER.w / 2, z, SHELTER.h]),
 ];
 
-/**
- * What's parked on the airfield (Phase 2): made-up, unarmed aircraft in the base's greys (the airport's models, its
- * titles left off), each [x, z, yaw] (yaw π/2: the nose north, to the taxiway); a transport in the open hangar
- */
-export const PARKED: { kind: 'freighter' | 'prop' | 'heli'; livery: string; at: [number, number, number] }[] = [
-  { kind: 'freighter', livery: '#6f7a8c', at: [(HANGARS[OPEN_HANGAR][0] + HANGARS[OPEN_HANGAR][2]) / 2, -444, Math.PI / 2] },
-  { kind: 'freighter', livery: '#5d6b52', at: [-290, -488, Math.PI / 2] },
-  { kind: 'freighter', livery: '#6f7a8c', at: [-250, -488, Math.PI / 2] },
-  ...[-462, -448, -434, -420].map((x) => ({ kind: 'prop' as const, livery: '#8a93a3', at: [x, -496, Math.PI / 2] as [number, number, number] })),
-  { kind: 'heli', livery: '#5d6b52', at: [-340, -496, Math.PI / 2] },
-  { kind: 'heli', livery: '#6f7a8c', at: [-318, -496, Math.PI / 2] },
-];
-/** The apron's vehicles: a tug and a fuel bowser (x, z, yaw), and the windsock between the runway and the taxiway */
-export const APRON_VEHICLES: { kind: 'tug' | 'bowser'; at: [number, number, number] }[] = [
-  { kind: 'tug', at: [-274, -480, 0] },
-  { kind: 'bowser', at: [-392, -482, Math.PI / 2] },
-];
-export const WINDSOCK: Pt = [-420, -526];
-
-/** The base's aircraft's grey (the owner's call: all grey): a colour as light as it was, in the base's cool grey */
-export const BASE_GREY = [0.62, 0.66, 0.7] as const;
-export function baseGrey(r: number, g: number, b: number): [number, number, number] {
-  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  // (the lights' and the glass's darks stay dark; the body's white comes down to the grey)
-  const v = 0.12 + l * 0.88;
-  return [v * BASE_GREY[0], v * BASE_GREY[1], v * BASE_GREY[2]];
-}
-
 /* ---------- The base itself (docs/military-plan.md Phase 3): the plan's signed-off layout ---------- */
 
 /** The parade ground (west of the avenue), its three flagpoles along its north edge and the monument by the HQ */
@@ -398,7 +370,6 @@ export const RANGE: Rect = [-716, -420, -600, -340];
 export const BERM: Rect = [-716, -418, -706, -342];
 export const BERM_H = 4;
 export const RANGE_HOUSE: Rect = [-612, -396, -600, -364];
-export const RANGE_LANES = 6;
 /** The wall gate's gatehouse against the wall (its blast doors shut on its south face) */
 export const GATEHOUSE_H = 9;
 
@@ -445,21 +416,6 @@ export const APRON_MASTS: Pt[] = [
 export const MAST_H = 10.5;
 /** Their pools of light on the apron (x, z, size: world.ts `addPool()`, at the boot, as the airport's) */
 export const BASE_POOLS: [number, number, number][] = APRON_MASTS.flatMap(([x, z]) => [8, 17].map((d): [number, number, number] => [x, z - d, 13]));
-/** A watchtower's searchlight: its sweep about the way into the base (radians either side) and its beam's length */
-export const SWEEP = 0.8;
-export const BEAM_L = 26;
-/** Where a watchtower's searchlight looks at rest: straight in from the run of fence it stands by (its yaw about y,
- * from +x, as `Math.atan2(-dz, dx)`), so its sweep stays over the base whatever the world's size */
-export function searchRest([x, z]: Pt): number {
-  let best: [Pt, Pt] = FENCE_RUNS[0];
-  for (const r of FENCE_RUNS) if (toRun(x, z, r) < toRun(x, z, best)) best = r;
-  const [a, b] = best;
-  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-  let [nx, nz] = [-(b[1] - a[1]) / len, (b[0] - a[0]) / len];
-  if (!inAirbase(x + nx * 8, z + nz * 8)) [nx, nz] = [-nx, -nz];
-  return Math.atan2(-nz, nx);
-}
-
 /** The base's buildings' solids (in `SOLIDS`) */
 export const BASE_SOLIDS: Box[] = [
   ...APRON_MASTS.map(([x, z]): Box => [x - 0.3, z - 0.3, x + 0.3, z + 0.3, MAST_H]),

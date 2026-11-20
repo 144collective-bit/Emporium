@@ -6,7 +6,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BASE_FLIGHTS, TRAINER } from '../src/scripts/city3d/airbaseflights';
 import { FLIGHTS, PERIOD, REACH, poseAt, type Pose } from '../src/scripts/city3d/airfield';
-import { AIRBASE_SOLIDS, AIRFIELD_SOLIDS, BASE_SOLIDS, HELI_PADS, PARKED, RUNWAY, TAXIWAY, inAirbase } from '../src/scripts/city3d/airbase';
+import { AIRBASE_SOLIDS, AIRFIELD_SOLIDS, BASE_SOLIDS, HELI_PADS, RUNWAY, TAXIWAY, inAirbase } from '../src/scripts/city3d/airbase';
+import { PARKED } from '../src/scripts/city3d/airbasedress';
 import { TERRAIN_RECT } from '../src/scripts/city3d/terrain';
 
 const SAMPLES = Array.from({ length: PERIOD * 4 + 1 }, (_, k) => {

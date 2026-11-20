@@ -23,56 +23,8 @@ import { site } from './tilework';
 import { COVER, ROAD, STONE } from './palette';
 import { cyl, light } from './airportkit';
 import { buildFx, chainMesh } from './grime';
-import {
-  AVENUE,
-  AVENUE_HALF,
-  BARRIER_Y,
-  FENCE_H,
-  FENCE_RUNS,
-  GATES,
-  GUARDHOUSE_H,
-  LOOP_SHORT,
-  SIGN_WALL,
-  SIGN_WALL_H,
-  VISITORS,
-  VISITORS_DRIVE,
-  VISITOR_CENTRE,
-  VISITOR_CENTRE_H,
-  barrierOf,
-  guardhouseOf,
-  inAirbase,
-  type Gate,
-  BARRACKS,
-  BARRACKS_H,
-  BERM,
-  BERM_H,
-  FLAGPOLES,
-  FLAG_H,
-  GATEHOUSE_H,
-  HELI_HUT,
-  HELI_PADS,
-  HQ,
-  HQ_H,
-  MONUMENT,
-  MOTOR_POOL,
-  MOTOR_SHED,
-  MOTOR_SHED_H,
-  PARADE,
-  RADAR,
-  RANGE,
-  RANGE_HOUSE,
-  RANGE_LANES,
-  SERVICES,
-  SERVICE_ROAD,
-  WALL_GATE,
-  WATCHTOWERS,
-  WATCHTOWER_H,
-  WATER_TOWER,
-  AIRBASE_RECT,
-  BEAM_L,
-  SWEEP,
-  searchRest,
-} from './airbase';
+import { AVENUE, AVENUE_HALF, BARRIER_Y, FENCE_H, FENCE_RUNS, GATES, GUARDHOUSE_H, LOOP_SHORT, SIGN_WALL, SIGN_WALL_H, VISITORS, VISITORS_DRIVE, VISITOR_CENTRE, VISITOR_CENTRE_H, barrierOf, guardhouseOf, inAirbase, type Gate, BARRACKS, BARRACKS_H, BERM, BERM_H, FLAGPOLES, FLAG_H, GATEHOUSE_H, HELI_HUT, HELI_PADS, HQ, HQ_H, MONUMENT, MOTOR_POOL, MOTOR_SHED, MOTOR_SHED_H, PARADE, RADAR, RANGE, RANGE_HOUSE, SERVICES, SERVICE_ROAD, WALL_GATE, WATCHTOWERS, WATCHTOWER_H, WATER_TOWER, AIRBASE_RECT } from './airbase';
+import { RANGE_LANES, BEAM_L, SWEEP, searchRest } from './airbasedress';
 import type { Pt } from './streetplan';
 import type { Rect } from './tiles';
 
@@ -105,27 +57,28 @@ const BRICK = toon('#6d4a52');
 /** The signs: the base's name, the service gate's and the visitors' centre's, a row each */
 const SIGNS = ['NORTHGATE AIR BASE', 'SERVICE GATE', "VISITORS' CENTRE"] as const;
 const ROWS = 4;
-const ATLAS = canvasTex(1024, 512, (c) => {
+// (1024 by 256: four rows of 64, three used; the build's texture budget is tight)
+const ATLAS = canvasTex(1024, 256, (c) => {
   c.fillStyle = '#10142a';
-  c.fillRect(0, 0, 1024, 512);
+  c.fillRect(0, 0, 1024, 256);
   SIGNS.forEach((text, i) => {
-    const y = i * 128;
+    const y = i * 64;
     c.fillStyle = '#1a2148';
-    c.fillRect(0, y, 1024, 128);
+    c.fillRect(0, y, 1024, 64);
     c.strokeStyle = '#d9dcef';
-    c.lineWidth = 6;
-    c.strokeRect(10, y + 10, 1004, 108);
+    c.lineWidth = 3;
+    c.strokeRect(5, y + 5, 1014, 54);
     c.fillStyle = '#f1f2fa';
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    let size = 76;
+    let size = 40;
     c.font = `800 ${size}px ${FONT_DISPLAY}`;
     const w = c.measureText(text).width;
     if (w > 940) {
       size = Math.floor((size * 940) / w);
       c.font = `800 ${size}px ${FONT_DISPLAY}`;
     }
-    c.fillText(text, 512, y + 68);
+    c.fillText(text, 512, y + 34);
   });
 });
 const SIGN = siteMat('airbase-sign', lit(new THREE.MeshBasicMaterial({ map: ATLAS }), 0.92, 1.1));

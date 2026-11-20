@@ -22,7 +22,8 @@ import type { Tick } from './world';
 import { site } from './tilework';
 import { ROAD } from './palette';
 import { MARK, G, TOP, box, cyl, light, mark } from './airportkit';
-import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, APRON_MASTS, APRON_VEHICLES, MAST_H, baseGrey, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, PARKED, RUNWAY, WINDSOCK, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
+import { AIRFIELD_RECT as FIELD, APPROACH, APRON, APRON_ROAD, BUND_H, CONNECTORS, APRON_MASTS, MAST_H, FIRE_H, FIRE_STATION, FUEL_FARM, FUEL_TANKS, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, OPEN_HANGAR, RUNWAY, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_BASE, TOWER_SHAFT, TOWER_TOP } from './airbase';
+import { APRON_VEHICLES, baseGrey, PARKED, WINDSOCK } from './airbasedress';
 import type { Rect } from './tiles';
 
 /** This module's address, for the site worker (districts.ts) */

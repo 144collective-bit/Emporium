@@ -121,7 +121,7 @@ test('the lots kept for the airfield and the base are inside the fence', () => {
 });
 
 test("the airfield (Phase 2): the runway, taxiways, apron and buildings inside the fence, clear of each other, under the Emporium", async () => {
-  const { APPROACH, APRON, APRON_ROAD, CONNECTORS, FIRE_STATION, FUEL_FARM, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, RUNWAY, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_TOP } = await import('../src/scripts/city3d/airbase');
+  const { APPROACH, APRON, APRON_ROAD, CONNECTORS, FIRE_STATION, FUEL_FARM, HANGARS, HANGAR_H, NORTH_LINKS, NORTH_TAXI, RUNWAY, SHELTER, SHELTERS, TAXIWAY, TOWER, TOWER_TOP } = ({ ...(await import('../src/scripts/city3d/airbase')), ...(await import('../src/scripts/city3d/airbasedress')) });
   const corners = (r: readonly number[]): Pt[] => [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]];
   const runway = [RUNWAY.x0, RUNWAY.z - RUNWAY.half, RUNWAY.x1, RUNWAY.z + RUNWAY.half];
   const taxi = [TAXIWAY.x0, TAXIWAY.z - TAXIWAY.half, TAXIWAY.x1, TAXIWAY.z + TAXIWAY.half];
@@ -148,7 +148,7 @@ test("the airfield (Phase 2): the runway, taxiways, apron and buildings inside t
 });
 
 test("what's parked (Phase 2): on the apron or in the open hangar, clear of each other and of the buildings", async () => {
-  const { APRON, APRON_VEHICLES, AIRFIELD_SOLIDS, HANGARS, OPEN_HANGAR, PARKED, RUNWAY, TAXIWAY, WINDSOCK } = await import('../src/scripts/city3d/airbase');
+  const { APRON, APRON_VEHICLES, AIRFIELD_SOLIDS, HANGARS, OPEN_HANGAR, PARKED, RUNWAY, TAXIWAY, WINDSOCK } = ({ ...(await import('../src/scripts/city3d/airbase')), ...(await import('../src/scripts/city3d/airbasedress')) });
   // (each one's reach: an airliner-sized transport 11, a trainer 4, a helicopter 4)
   const reach = { freighter: 11, prop: 4, heli: 4 } as const;
   const hangar = HANGARS[OPEN_HANGAR];
@@ -169,7 +169,7 @@ test("what's parked (Phase 2): on the apron or in the open hangar, clear of each
 });
 
 test("the base's aircraft all grey (the owner's call): as light as they were, no colour left", async () => {
-  const { baseGrey, BASE_GREY } = await import('../src/scripts/city3d/airbase');
+  const { baseGrey, BASE_GREY } = ({ ...(await import('../src/scripts/city3d/airbase')), ...(await import('../src/scripts/city3d/airbasedress')) });
   const ratio = (c: [number, number, number]) => c.map((v, i) => v / BASE_GREY[i]);
   for (const c of [[1, 1, 1], [0.9, 0.1, 0.4], [0.1, 0.5, 0.9], [0.05, 0.05, 0.08], [0.95, 0.42, 0.24]] as [number, number, number][]) {
     const g = baseGrey(...c);
@@ -183,7 +183,7 @@ test("the base's aircraft all grey (the owner's call): as light as they were, no
 });
 
 test('the base itself (Phase 3): inside the fence, clear of each other, the airfield and the roads, under the Emporium', async () => {
-  const A = await import('../src/scripts/city3d/airbase');
+  const A = ({ ...(await import('../src/scripts/city3d/airbase')), ...(await import('../src/scripts/city3d/airbasedress')) });
   const parts: [string, readonly number[]][] = [
     ['parade', A.PARADE],
     ['hq', A.HQ],
@@ -233,7 +233,7 @@ test('the base itself (Phase 3): inside the fence, clear of each other, the airf
 });
 
 test('at night (Phase 4): the apron\'s masts and their pools, the searchlights turned in towards the base', async () => {
-  const A = await import('../src/scripts/city3d/airbase');
+  const A = ({ ...(await import('../src/scripts/city3d/airbase')), ...(await import('../src/scripts/city3d/airbasedress')) });
   for (const [x, z] of A.APRON_MASTS) {
     // (at the apron's south edge, between the hangars, clear of what's parked, under the Emporium)
     assert.ok(z > A.APRON[3] - 8 && z < A.HANGARS[0][1] && A.HANGARS.every((h) => x < h[0] - 1 || x > h[2] + 1), `a mast at ${x}, ${z}`);
