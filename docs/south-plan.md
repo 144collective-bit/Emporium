@@ -624,7 +624,56 @@ From the Circus west, patchy as high roads are:
        320 to 1440 wide and on a phone on its side; the map's key has the
        tube. Shots `docs/south-shots/25-phase-4h-*.webp`.
 5. **The exits.** South-west and west, as the ring's others
-   (`viaduct.ts`), and their roads in.
+   (`viaduct.ts`), and their roads in. The owner's answers (2026-11-19,
+   `docs/south-shots/26-phase-5-corner.png`): the two planned spots sit at
+   the ends of the ring's south-west corner curve (radius 70), hard against
+   exit 6's ramps (to x -96) and exit 7's (to z 229), so **one corner
+   exit** instead, at the curve's middle (about (-195, 300)), numbered
+   **6A** (every sign keeps its number), **slip ramps both sides** lying
+   round the curve towards the south side (clear of exit 6's), and its
+   **road in** from The Trenches' south-west corner, angled under the ring,
+   meeting the Docks' ring road outside and running on down to the south's
+   streets (following the land, meeting them at angles). The west exit is
+   dropped as the south-east one was. Steps, each with the owner's
+   sign-off:
+   - **5a, as data**: exit 6A in `EXITS` (its label beside the numbers),
+     its slips (`rampsOf()`), the road in in the street plan, the routes,
+     the land kept clear; tests (nothing that exists moves, the ramps clear
+     of exits 6 and 7, every route still joined); a sketch. Built and signed off
+     (2026-11-19): exit 6A is `EXITS`'
+     ninth (`n` 9 for its ids, `label` '6A' for the signs; every exit has
+     a `label` now), at `CORNER_FROM`'s ring point (the road in square on
+     to the curve there), `side` -1, slips inside and out, named
+     "Aldwyn's Green · Southbank Docks" (made up, the owner to change);
+     its ramps end at about x -145, clear of exit 6's (x -96). The road in
+     is `cornerroad.ts` (DOM-free, tested in tests/cornerroad.test.ts):
+     **Corner Road** (`corner-road`) from trench-ns0 and trench-ew1's
+     corner (-188, 261) straight out under the ring and on in an even bend
+     to the Docks' ring road's corner (Dock Road into Yard Road, -248,
+     286), and **Gate Hill** (`corner-link`) bending down from there to
+     the south's Gate Lane and Field Lane (-229, 340.5); junctions at all
+     three, lit at the ramps' feet; `RING_MEETS` has it (`corner-6a`), so
+     the piers and the lights under the deck keep to it. The snapshot only
+     gains the two roads and the two ramps (nothing that exists moved).
+     `turnsOf()` (traffic.ts) keeps a turn at a route's very end inside it.
+     Sketch `docs/south-shots/27-phase-5a-exit-6a.png`. The signs' atlas
+     and the map's badges read an exit's `label` (6A, not 9). Merged with
+     5b, not on its own: a push to main goes live, and the roads and ramps
+     weren't drawn until 5b.
+   - **5b, drawn and driven**: the ramps on the viaduct, the road and its
+     junctions, the gantries and signs with 6A's made-up names, lamps,
+     traffic using it; walked and driven, shots. Built and signed off
+     (2026-11-19): 6A's ramps, gantries, signs (its
+     label on them), ramp lamps, piers and the lights under the deck come
+     from the exit's data as every exit's (viaduct3d.ts, viadress.ts,
+     viasigns.ts); `corner3d.ts` draws Corner Road and Gate Hill in the
+     viaduct's chunk (asphalt 5 mm over the district streets' where they
+     meet, a dashed centre line, edge lines, the junctions' mouths filled at
+     The Trenches' corner and the Docks'), their lamps along the verge are
+     the boot's (`CORNER_LAMPS`, tested clear of the junctions, the deck,
+     the ramps and every solid), no tree or under-deck car on them
+     (tested); traffic drives them from the routes as built (5a). The boot
+     at 749.0 of 750 KB. Shots `docs/south-shots/28-phase-5b-*.webp`.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
    roads, the blocks' lights at night, sound by district, `?bench` views,
    phones checked and trimmed, every width, the guides.

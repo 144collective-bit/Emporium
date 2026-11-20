@@ -66,7 +66,7 @@ export interface Gantry {
   dir: 1 | -1;
 }
 /** The exits' names (the signs read them), their made-up copy */
-export const EXIT_SIGNS: { n: number; name: string }[] = EXITS.map((e) => ({ n: e.n, name: e.name }));
+export const EXIT_SIGNS: { n: number; label: string; name: string }[] = EXITS.map((e) => ({ n: e.n, label: e.label, name: e.name }));
 export const GANTRIES: Gantry[] = RAMPS.filter((r) => r.kind === 'off').flatMap((r): Gantry[] => {
   const dir = r.q < 0 ? 1 : -1;
   const sd = ringS(r.pts[0][0], r.pts[0][1]).s;

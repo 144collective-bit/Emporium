@@ -102,3 +102,9 @@ keep it up to date when what it describes changes.
   out of the boot (the gantries, ramp signs, sound walls and murals are
   `viasigns.ts`, the rural fences and gates `ruralfence.ts`, each its chunk's
   only); keep new drawing-only data in files of that kind.
+- **Exit 6A** (docs/south-plan.md Phase 5, the owner's calls): a ninth exit at the ring's south-west corner, between 6
+  and 7, where the plan's two (south side and west side) didn't fit. `EXITS`' ninth entry (`n` 9 in ids, `label` '6A'
+  on signs: draw and show `label`, never `n`), slips inside and out lying round the curve towards the south side. Its
+  road in is `cornerroad.ts`: Corner Road (`corner-road`) from The Trenches' south-west corner square on under the
+  curve to the Docks' ring road's corner, and Gate Hill (`corner-link`) down to the south's streets; `RING_MEETS`
+  `corner-6a`. They're drawn by `corner3d.ts` (registered by viaduct3d.ts), their lamps `CORNER_LAMPS` (the boot's).

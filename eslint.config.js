@@ -31,6 +31,7 @@ const DOM_FREE = [
   'src/scripts/city3d/southline.ts',
   'src/scripts/city3d/southtrains.ts',
   'src/scripts/city3d/trips.ts',
+  'src/scripts/city3d/cornerroad.ts',
   'src/scripts/city3d/rec.ts',
   'src/scripts/city3d/circus.ts',
   'src/scripts/city3d/underpasses.ts',
